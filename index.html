@@ -140,6 +140,8 @@
   .tab .ic { font-size:20px; display:block; margin-bottom:2px; }
   .tab.on { color:var(--accent); }
   .setup-logo { font-family:var(--serif); font-weight:900; font-size:30px; }
+  .seasonsel { background:var(--bg2); color:var(--text); border:1px solid var(--border);
+               border-radius:8px; padding:6px 10px; font-size:14px; font-weight:800; }
 </style>
 </head>
 <body>
@@ -477,7 +479,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{},
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -513,7 +515,7 @@ function renderSetup() {
       ${su.busy && !su.user ? spinner('') : ''}
       ${su.user && su.leagues.length ? `
         <div class="seclabel">Your leagues for ${esc(su.user.display_name)}</div>
-        <p class="faint" style="font-size:12px;margin:-2px 4px 8px">Pick a past season (e.g. ${esc(String(Number(su.season)-1))}) to read real, completed newsletters.</p>
+        <p class="faint" style="font-size:12px;margin:-2px 4px 8px">Pick your league — then use the Season dropdown in the News Room to jump to any past year on Sleeper.</p>
         ${su.leagues.map(lg=>`
           <button class="card row" style="width:100%;text-align:left;color:var(--text)" data-act="pick-league" data-id="${esc(lg.league_id)}" data-season="${esc(lg.season||su.season)}">
             ${avatarHtml(avatarUrl(lg.avatar),44,lg.name)}
@@ -581,10 +583,37 @@ async function enterApp() {
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster };
     S.values = null; S.newsCache = {}; S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:false };
     S.trade = { partnerId:null, give:new Set(), get:new Set() };
+    // Season history via Sleeper's previous_league_id chain — the reliable way
+    // to see every season a league existed, even 20 years deep. Built in the
+    // background so startup stays fast; the season switcher appears when ready.
+    if (!S.history || !S.history.some(h => h.league_id === S.leagueId)) {
+      S.history = [{ league_id: league.league_id, season: league.season, name: league.name }];
+      buildLeagueHistory(league).then(h => {
+        S.history = h;
+        if (S.tab === 'news' && S.bundle && S.bundle.league.league_id === league.league_id) renderNews();
+      });
+    }
     renderShell(); renderTab();
   } catch (e) {
     app.innerHTML = empty("Couldn't load your league", 'Check your connection, then pull to refresh.');
   }
+}
+
+/**
+ * Walk previous_league_id backward from the newest league to enumerate every
+ * season the league existed on Sleeper. Returns newest → oldest.
+ */
+async function buildLeagueHistory(head) {
+  const out = [];
+  let cur = head, guard = 0;
+  while (cur && guard < 30) {
+    out.push({ league_id: cur.league_id, season: cur.season, name: cur.name });
+    const prev = cur.previous_league_id;
+    if (!prev || prev === '0') break;
+    try { cur = await getLeague(prev); } catch { break; }
+    guard++;
+  }
+  return out;
 }
 function managerName(ownerId) {
   if (!ownerId) return 'Unowned';
@@ -629,8 +658,17 @@ function newsHeader() {
     <div><div class="kick">THE GRIDIRON GAZETTE</div><div class="lg">${esc(S.bundle.league.name)}</div></div>
     <button class="gear" data-act="settings">⚙</button></div>`;
 }
+function seasonBar() {
+  if (!S.history || S.history.length < 2) return '';
+  return `<div class="row" style="justify-content:space-between;margin-bottom:14px">
+    <span class="seclabel" style="margin:0">Season</span>
+    <select class="seasonsel" data-act="season-select">
+      ${S.history.map(h => `<option value="${esc(h.league_id)}" data-season="${esc(h.season)}" ${h.league_id===S.leagueId?'selected':''}>${esc(h.season)} season</option>`).join('')}
+    </select></div>`;
+}
+const newsChrome = () => newsHeader() + seasonBar() + weekStepper();
 async function renderNews() {
-  setContent(newsHeader() + weekStepper() + spinner(`Writing the Week ${S.activeWeek} edition…`));
+  setContent(newsChrome() + spinner(`Writing the Week ${S.activeWeek} edition…`));
   const wk = S.activeWeek;
   let nl = S.newsCache[wk];
   if (!nl) {
@@ -649,7 +687,7 @@ async function renderNews() {
       S.nflState && Number(S.season) >= Number(S.nflState.season)
         ? 'This looks like an upcoming/empty season. Tap ⚙ (top right) and switch to last year’s league to read real, completed newsletters.'
         : 'Use the week arrows to find a completed week — every played week writes itself.';
-    setContent(newsHeader() + weekStepper() + empty(`No games scored for Week ${wk} yet`, seasonHint));
+    setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint));
     return;
   }
   const lead = `<div class="lead"><h1>${esc(nl.lead.headline)}</h1>
@@ -662,7 +700,7 @@ async function renderNews() {
     </div></div>`).join('')}</div>` : '';
   const stories = `<div class="rule">GAME STORIES</div>` + nl.stories.map(storyHtml).join('');
   const colophon = `<div class="colophon">Auto-written from live Sleeper box scores — real stat lines, real fantasy margins. Refreshes whenever you open the app.</div>`;
-  setContent(newsHeader() + weekStepper() + lead + awards + stories + colophon);
+  setContent(newsChrome() + lead + awards + stories + colophon);
 }
 function teamTag(t, win, right) {
   return `<div class="tt ${right?'r':''} ${win?'win':''}">${avatarHtml(t.avatar,28,t.manager)}
@@ -874,11 +912,20 @@ document.body.addEventListener('click', async (e) => {
   }
   if (act === 'settings') return showSettings();
   if (act === 'back') { renderShell(); return renderTab(); }
-  if (act === 'signout') { localStorage.removeItem(SKEY); S.user=S.leagueId=S.season=S.bundle=null; return renderSetup(); }
+  if (act === 'signout') { localStorage.removeItem(SKEY); S.user=S.leagueId=S.season=S.bundle=S.history=null; return renderSetup(); }
   if (act === 'switch-league') { S.leagueId=t.dataset.id; S.season=t.dataset.season; saveSession(); return enterApp(); }
   if (act === 'trade-partner') { S.trade.partnerId = Number(t.dataset.id); S.trade.get = new Set(); return drawTrade(); }
   if (act === 'trade-toggle') { const set=S.trade[t.dataset.side], id=t.dataset.id; set.has(id)?set.delete(id):set.add(id); return drawTrade(); }
   if (act === 'draft-filter') { S.draft.posFilter = t.dataset.pos; return drawDraft(); }
+});
+
+// Season switcher (a <select>, so it fires 'change' not 'click').
+document.body.addEventListener('change', (e) => {
+  const t = e.target.closest('[data-act="season-select"]');
+  if (!t) return;
+  const opt = t.options[t.selectedIndex];
+  S.leagueId = t.value; S.season = opt.dataset.season; saveSession();
+  enterApp();
 });
 
 init();
