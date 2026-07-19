@@ -7,7 +7,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Gridiron GM" />
-<title>Gridiron GM</title>
+<title>Skirt Chasers — Fantasy League Magazine</title>
+<meta property="og:title" content="Skirt Chasers — Fantasy League Magazine" />
+<meta property="og:description" content="This week's issue: game stories, power rankings, and the group-chat drama." />
+<meta property="og:type" content="website" />
+<meta name="description" content="A weekly fantasy football magazine for your league." />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%88%3C/text%3E%3C/svg%3E" />
 <style>
   :root {
@@ -171,6 +175,10 @@
   .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%) translateY(20px); background:var(--text); color:var(--bg);
            font-weight:800; font-size:13px; padding:10px 16px; border-radius:999px; opacity:0; transition:all .25s; z-index:60; pointer-events:none; box-shadow:0 8px 30px rgba(0,0,0,.5); }
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  .guestbar { position:fixed; left:0; right:0; bottom:0; z-index:20; background:var(--bg2); border-top:1px solid var(--border);
+              display:flex; align-items:center; justify-content:space-between; gap:10px;
+              padding:12px 18px calc(12px + env(safe-area-inset-bottom)); font-size:13px; font-weight:700; color:var(--dim); }
+  .guestcta { color:var(--accent); font-weight:800; text-decoration:none; white-space:nowrap; }
 
   /* generic list rows */
   .prow { display:flex; align-items:center; gap:8px; padding:9px 4px; }
@@ -1010,7 +1018,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], currentNl:null, magName:'Skirt Chasers', deskChatText:null,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -1039,15 +1047,38 @@ function magazineToText(nl) {
   L.push(''); L.push(`— Read the full illustrated edition: ${url}`);
   return L.join('\n');
 }
+function b64enc(str) { try { return btoa(unescape(encodeURIComponent(str))); } catch { return ''; } }
+function b64dec(b) { try { return decodeURIComponent(escape(atob(b))); } catch { return ''; } }
+// A deep link that reopens THIS exact issue for anyone (public Sleeper data),
+// with any Water Cooler articles for the week baked in.
+function magazineLink() {
+  const base = location.origin + location.pathname;
+  const p = new URLSearchParams();
+  p.set('league', S.leagueId);
+  p.set('week', String(S.activeWeek));
+  if (S.season) p.set('season', S.season);
+  if (S.magName) p.set('mag', S.magName);
+  const weekDesk = (S.desk || []).filter(a => a.week === S.activeWeek);
+  if (weekDesk.length) { const enc = b64enc(JSON.stringify(weekDesk)); if (enc && enc.length < 6000) p.set('desk', enc); }
+  return base + '?' + p.toString();
+}
 async function shareMagazine() {
-  const text = magazineToText(S.currentNl);
-  if (!text) { toast('Open a week first'); return; }
-  try {
-    if (navigator.share) { await navigator.share({ title: 'The Gridiron Gazette', text }); return; }
-  } catch (e) { if (e && e.name === 'AbortError') return; }
-  try { await navigator.clipboard.writeText(text); toast('Magazine copied — paste into WhatsApp'); return; }
-  catch {}
-  showCopyModal(text);
+  const magName = S.magName || 'Skirt Chasers';
+  // The sample can't be reconstructed by others, so share its text; a real
+  // league shares a live link to the full illustrated issue.
+  if (S.demo) {
+    const text = magazineToText(S.currentNl);
+    try { if (navigator.share) { await navigator.share({ title: magName + ' (Sample)', text }); return; } }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(text); toast('Sample copied. Connect your real league to share a live link.'); return; } catch {}
+    showCopyModal(text); return;
+  }
+  const url = magazineLink();
+  const payload = { title: `${magName} — Fantasy League Magazine`, text: `Week ${S.activeWeek} is out. Read the full issue:`, url };
+  try { if (navigator.share) { await navigator.share(payload); return; } }
+  catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(url); toast('Issue link copied — paste into WhatsApp'); return; } catch {}
+  showCopyModal(url);
 }
 function showCopyModal(text) {
   const wrap = document.createElement('div');
@@ -1074,8 +1105,39 @@ function toast(msg) {
 async function init() {
   loadSession();
   try { S.magName = localStorage.getItem('gg.magname') || 'Skirt Chasers'; } catch {}
+  const params = new URLSearchParams(location.search);
+  if (params.get('league')) return enterGuest(params);
   try { S.nflState = await getNflState(); S.activeWeek = Math.max(1, S.nflState.display_week || S.nflState.week || 1); } catch {}
   if (S.user && S.leagueId) { await enterApp(); } else { renderSetup(); }
+}
+
+// Read-only "shared issue" mode — opens a specific league+week magazine for
+// anyone with the link, no login. Powered entirely by public Sleeper data.
+async function enterGuest(params) {
+  S.guest = true;
+  S.leagueId = params.get('league');
+  S.magName = params.get('mag') || S.magName || 'Skirt Chasers';
+  app.innerHTML = spinner('Opening the issue…');
+  try {
+    const [league, rosters, users, players] = await Promise.all([
+      getLeague(S.leagueId), getRosters(S.leagueId), getLeagueUsers(S.leagueId), getPlayers(),
+    ]);
+    S.season = params.get('season') || league.season;
+    S.activeWeek = Math.max(1, parseInt(params.get('week') || String(league.settings && league.settings.leg || 1), 10) || 1);
+    const usersById = {}; users.forEach(u => usersById[u.user_id] = u);
+    const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
+    S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster: null };
+    S.values = null; S.newsCache = {}; S.history = null; S.desk = [];
+    const d = params.get('desk'); if (d) { try { S.desk = JSON.parse(b64dec(d)) || []; } catch { S.desk = []; } }
+    renderGuestShell(); renderNews();
+  } catch (e) {
+    app.innerHTML = empty("Couldn't open this issue", 'The league may be private, or the link is incomplete.');
+  }
+}
+function renderGuestShell() {
+  app.innerHTML = `<div id="content"></div>
+    <div class="guestbar"><span>📖 Shared issue · read-only</span>
+      <a class="guestcta" href="${esc(location.origin + location.pathname)}">Make your own →</a></div>`;
 }
 
 // ---------------------------------------------------------------------
@@ -1240,8 +1302,9 @@ function renderTab() {
 // ---------------------------------------------------------------------
 function magTitle() { return String(S.magName || 'Skirt Chasers').toUpperCase(); }
 function coverTools() {
-  return `<div class="cover-tools">
-    <button class="ctool" data-act="share" title="Share">⤴</button>
+  const share = `<button class="ctool" data-act="share" title="Share">⤴</button>`;
+  if (S.guest) return `<div class="cover-tools">${share}</div>`;
+  return `<div class="cover-tools">${share}
     <button class="ctool" data-act="desk" title="Newsroom desk">✍️</button>
     <button class="ctool" data-act="settings" title="Settings">⚙</button>
   </div>`;
