@@ -1406,7 +1406,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, espnHist:null, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -1421,6 +1421,61 @@ function saveDesk(){ try { localStorage.setItem(deskKey(), JSON.stringify(S.desk
 function powerKey(){ return 'gg.power.' + (S.leagueId || 'x'); }
 function loadPower(){ try { S.power = JSON.parse(localStorage.getItem(powerKey()) || '{}') || {}; } catch { S.power = {}; } }
 function savePower(){ try { localStorage.setItem(powerKey(), JSON.stringify(S.power || {})); } catch {} }
+
+// ---- Imported league history (e.g. past ESPN seasons) ----------------------
+function histKey(){ return 'gg.espnhist.' + (S.leagueId || 'x'); }
+function loadEspnHist(){ try { S.espnHist = JSON.parse(localStorage.getItem(histKey()) || 'null'); } catch { S.espnHist = null; } }
+function saveEspnHist(){ try { S.espnHist ? localStorage.setItem(histKey(), JSON.stringify(S.espnHist)) : localStorage.removeItem(histKey()); } catch {} }
+// Accept our normalized shape, or a raw ESPN dump, and normalize to seasons[].
+function normalizeHistory(obj) {
+  if (!obj) return null;
+  if (obj.seasons && Array.isArray(obj.seasons)) return obj;             // already our shape
+  const arr = Array.isArray(obj) ? obj : (obj.schedule || obj.teams ? [obj] : null);
+  if (!arr) return null;
+  const seasons = arr.map(d => {
+    const members = {}; (d.members || []).forEach(m => members[m.id] = (m.displayName || m.firstName || '').trim());
+    const tname = t => (t.name || `${t.location || ''} ${t.nickname || ''}`.trim() || `Team ${t.id}`);
+    const owner = t => (t.owners && t.owners.length && members[t.owners[0]]) || tname(t);
+    const teams = (d.teams || []).map(t => ({ id: t.id, name: tname(t), owner: owner(t) }));
+    const standings = (d.teams || []).map(t => ({ teamId: t.id, rank: t.rankCalculatedFinal || t.playoffSeed || 0,
+      wins: t.record?.overall?.wins || 0, losses: t.record?.overall?.losses || 0, ties: t.record?.overall?.ties || 0,
+      pf: Math.round((t.record?.overall?.pointsFor || 0) * 10) / 10, pa: Math.round((t.record?.overall?.pointsAgainst || 0) * 10) / 10 }));
+    const champT = (d.teams || []).find(t => t.rankCalculatedFinal === 1);
+    const matchups = (d.schedule || []).filter(m => m.home && m.away && m.away.teamId).map(m => ({ week: m.matchupPeriodId,
+      home: m.home.teamId, away: m.away.teamId, homeScore: Math.round((m.home.totalPoints || 0) * 10) / 10,
+      awayScore: Math.round((m.away.totalPoints || 0) * 10) / 10, playoff: !!(m.playoffTierType && m.playoffTierType !== 'NONE') }));
+    return { year: d.seasonId || d.seasonYear, champion: champT ? owner(champT) : null, teams, standings, matchups };
+  }).filter(s => s.year && s.teams.length);
+  return seasons.length ? { source: 'espn', leagueName: (arr[0].settings && arr[0].settings.name) || '', seasons } : null;
+}
+// Roll every imported season into champions, an all-time table, and records.
+function computeHistoryStats(h) {
+  const agg = {}, champs = [];
+  let bestGame = null, blowout = null, bestSeasonPF = null;
+  (h.seasons || []).forEach(se => {
+    const tmap = {}; (se.teams || []).forEach(t => tmap[t.id] = t.owner || t.name);
+    const who = id => tmap[id] || ('Team ' + id);
+    if (se.champion) champs.push({ year: se.year, who: se.champion });
+    (se.standings || []).forEach(st => {
+      const key = who(st.teamId);
+      const a = agg[key] || (agg[key] = { name: key, titles: 0, wins: 0, losses: 0, ties: 0, pf: 0, seasons: 0 });
+      a.wins += st.wins || 0; a.losses += st.losses || 0; a.ties += st.ties || 0; a.pf += st.pf || 0; a.seasons += 1;
+      if (se.champion === key) a.titles += 1;
+      if (st.pf && (!bestSeasonPF || st.pf > bestSeasonPF.pf)) bestSeasonPF = { pf: st.pf, who: key, year: se.year };
+    });
+    (se.matchups || []).forEach(m => {
+      const hi = Math.max(m.homeScore, m.awayScore), lo = Math.min(m.homeScore, m.awayScore);
+      const winT = m.homeScore >= m.awayScore ? m.home : m.away, loseT = m.homeScore >= m.awayScore ? m.away : m.home;
+      if (hi > 0 && (!bestGame || hi > bestGame.score)) bestGame = { score: hi, who: who(winT), year: se.year, week: m.week };
+      const marg = Math.round((hi - lo) * 10) / 10;
+      if (hi > 0 && lo > 0 && (!blowout || marg > blowout.margin)) blowout = { margin: marg, win: who(winT), lose: who(loseT), year: se.year, week: m.week, hi, lo };
+    });
+  });
+  const standings = Object.values(agg).map(a => ({ ...a, pf: Math.round(a.pf * 10) / 10, pct: (a.wins + a.losses) ? a.wins / (a.wins + a.losses) : 0 }))
+    .sort((x, y) => y.titles - x.titles || y.pct - x.pct || y.pf - x.pf);
+  return { champs: champs.sort((a, b) => b.year - a.year), standings, bestGame, blowout, bestSeasonPF,
+    seasons: (h.seasons || []).slice().sort((a, b) => b.year - a.year) };
+}
 
 // ---- Back Issues: a self-contained archive frozen on THIS device ------------
 function issuesKey(){ return 'gg.issues.' + (S.leagueId || 'x'); }
@@ -1472,6 +1527,117 @@ function openSavedIssue(id) {
   setContent(coverHtml(snap.nl) + back + issueBodyHtml(snap.nl, snap.desk || [], true));
 }
 function deleteSavedIssue(id) { saveIssues(loadIssues().filter(s => s.id !== id)); showArchive(); }
+
+// ---- League history: The Record Book ---------------------------------------
+// A one-time browser snippet the user runs while logged into ESPN. It's
+// same-origin there, so their login is used automatically (no CORS, no cookie
+// copying), and it downloads all past seasons in the shape normalizeHistory reads.
+const ESPN_SNIPPET = `(async () => {
+  const LID = new URLSearchParams(location.search).get('leagueId') || prompt('ESPN league ID?');
+  if (!LID) return alert('No league ID.');
+  const base = 'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl';
+  const views = 'view=mTeam&view=mMatchupScore&view=mStandings&view=mSettings';
+  const now = new Date().getFullYear();
+  const out = { source:'espn', leagueName:'', seasons:[] };
+  for (let y = 2008; y <= now; y++) {
+    try {
+      const r = await fetch(base + '/leagueHistory/' + LID + '?seasonId=' + y + '&' + views, { credentials:'include' });
+      if (!r.ok) continue;
+      let d = await r.json(); d = Array.isArray(d) ? d[0] : d;
+      if (!d || !d.teams || !d.teams.length) continue;
+      const mem = {}; (d.members||[]).forEach(m => mem[m.id] = (m.displayName||m.firstName||'').trim());
+      const tn = t => (t.name || ((t.location||'')+' '+(t.nickname||'')).trim() || ('Team '+t.id));
+      const ow = t => (t.owners && t.owners[0] && mem[t.owners[0]]) || tn(t);
+      out.leagueName = (d.settings && d.settings.name) || out.leagueName;
+      out.seasons.push({ year:y, champion:(d.teams.find(t=>t.rankCalculatedFinal===1)||0)?ow(d.teams.find(t=>t.rankCalculatedFinal===1)):null,
+        teams: d.teams.map(t=>({id:t.id,name:tn(t),owner:ow(t)})),
+        standings: d.teams.map(t=>({teamId:t.id,rank:t.rankCalculatedFinal||0,wins:t.record?.overall?.wins||0,losses:t.record?.overall?.losses||0,ties:t.record?.overall?.ties||0,pf:Math.round((t.record?.overall?.pointsFor||0)*10)/10,pa:Math.round((t.record?.overall?.pointsAgainst||0)*10)/10})),
+        matchups: (d.schedule||[]).filter(m=>m.home&&m.away&&m.away.teamId).map(m=>({week:m.matchupPeriodId,home:m.home.teamId,away:m.away.teamId,homeScore:Math.round((m.home.totalPoints||0)*10)/10,awayScore:Math.round((m.away.totalPoints||0)*10)/10,playoff:!!(m.playoffTierType&&m.playoffTierType!=='NONE')})) });
+    } catch (e) {}
+  }
+  if (!out.seasons.length) return alert('No seasons found — make sure you are logged in and on your league page.');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out)],{type:'application/json'}));
+  a.download = 'espn-history.json'; a.click();
+  alert('Got ' + out.seasons.length + ' seasons. Upload espn-history.json into the magazine.');
+})();`;
+
+function recTile(label, big, sub) {
+  return `<div class="tile"><div class="tv" style="font-size:18px">${esc(big)}</div><div class="tl">${esc(label)}</div><div class="ts2">${esc(sub || '')}</div></div>`;
+}
+function showHistory() {
+  const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>`;
+  if (!S.espnHist || !S.espnHist.seasons || !S.espnHist.seasons.length) {
+    app.innerHTML = `<div style="padding-bottom:24px">${back}
+      <div class="setup-logo" style="font-size:24px">🏆 The Record Book</div>
+      <p class="muted" style="margin-top:4px">Bring your old ESPN seasons in and the magazine gets a permanent history — champions, all-time standings, and the record book.</p>
+      ${historyImportCard()}</div>`;
+    return;
+  }
+  const st = computeHistoryStats(S.espnHist);
+  const yrs = st.seasons.map(s => s.year);
+  const span = yrs.length ? `${Math.min(...yrs)}–${Math.max(...yrs)}` : '';
+  const champHtml = st.champs.map(c => `<div class="pr"><span class="ovr" style="width:52px;font-size:13px">${c.year}</span>
+    <div style="flex:1"><div class="nm">🏆 ${esc(c.who)}</div></div></div>`).join('');
+  const tableHtml = st.standings.map((a, i) => `<div class="pr">
+    <span class="ovr" style="width:24px">${i + 1}</span>
+    <div style="flex:1"><div class="nm">${esc(a.name)} ${a.titles ? `<span class="faint" style="font-size:12px">${'🏆'.repeat(Math.min(a.titles,5))}${a.titles>5?'×'+a.titles:''}</span>` : ''}</div>
+      <div class="dt">${a.wins}-${a.losses}${a.ties ? '-' + a.ties : ''} · ${a.pf.toFixed(0)} PF · ${a.seasons} seasons</div></div></div>`).join('');
+  const records = `<div class="tiles">
+    ${st.bestGame ? recTile('Highest score', st.bestGame.score.toFixed(1), `${st.bestGame.who} · ${st.bestGame.year} wk ${st.bestGame.week}`) : ''}
+    ${st.blowout ? recTile('Biggest blowout', '+' + st.blowout.margin.toFixed(1), `${st.blowout.win} over ${st.blowout.lose} · ${st.blowout.year}`) : ''}
+    ${st.bestSeasonPF ? recTile('Most points, season', st.bestSeasonPF.pf.toFixed(0), `${st.bestSeasonPF.who} · ${st.bestSeasonPF.year}`) : ''}
+    ${st.standings[0] ? recTile('Most titles', st.standings[0].titles + '×', st.standings[0].name) : ''}
+  </div>`;
+  const seasonCards = st.seasons.map(se => {
+    const tmap = {}; (se.teams || []).forEach(t => tmap[t.id] = t.owner || t.name);
+    const stand = [...(se.standings || [])].sort((a, b) => (a.rank || 99) - (b.rank || 99)).map(s =>
+      `<div class="pr"><span class="ovr" style="width:24px">${s.rank || '–'}</span>
+        <div style="flex:1"><div class="nm">${esc(tmap[s.teamId] || 'Team')}</div>
+        <div class="dt">${s.wins}-${s.losses}${s.ties ? '-' + s.ties : ''} · ${s.pf.toFixed(1)} PF</div></div></div>`).join('');
+    const wks = {}; (se.matchups || []).forEach(m => (wks[m.week] = wks[m.week] || []).push(m));
+    const scores = Object.keys(wks).map(w => Number(w)).sort((a, b) => a - b).map(w =>
+      `<div class="dt" style="margin-top:6px;font-weight:700;color:var(--dim)">Week ${w}</div>` +
+      wks[w].map(m => `<div class="sbrow"><span class="sbn">${esc(tmap[m.home] || 'H')} ${m.homeScore.toFixed(1)}</span><span class="sbn" style="text-align:right">${m.awayScore.toFixed(1)} ${esc(tmap[m.away] || 'A')}</span></div>`).join('')).join('');
+    return `<div class="card">
+      <div class="row" style="justify-content:space-between"><div style="font-family:var(--serif);font-weight:900;font-size:20px">${se.year}</div>
+        ${se.champion ? `<div class="faint" style="font-size:12px">🏆 ${esc(se.champion)}</div>` : ''}</div>
+      <div class="seclabel" style="margin:10px 0 4px">Final standings</div>${stand}
+      ${scores ? `<details style="margin-top:8px"><summary class="linkbtn">Weekly scores</summary><div style="margin-top:6px">${scores}</div></details>` : ''}
+    </div>`;
+  }).join('');
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    <div class="setup-logo" style="font-size:24px">🏆 The Record Book</div>
+    <p class="muted" style="margin-top:4px">${esc(S.espnHist.leagueName || S.magName || '')} · ${st.seasons.length} seasons imported · ${span}</p>
+    <div class="sec">Record Book</div>${records}
+    <div class="sec">Champions</div><div class="card">${champHtml || '<div class="dt">No champions recorded.</div>'}</div>
+    <div class="sec">All-Time Standings</div><div class="card">${tableHtml}</div>
+    <div class="sec">Season by Season</div>${seasonCards}
+    <div style="height:8px"></div>${historyImportCard()}
+  </div>`;
+}
+function historyImportCard() {
+  const n = (S.espnHist && S.espnHist.seasons && S.espnHist.seasons.length) || 0;
+  return `<div class="card">
+    <label class="label">${n ? 'Re-import / update' : 'Import your ESPN history'} (.json)</label>
+    <input id="histFile" type="file" accept=".json,application/json" data-act="history-file" class="fileinput" />
+    <div id="histFileStatus" class="faint" style="font-size:12px;margin-top:8px;line-height:1.5">
+      ${n ? `✓ ${n} seasons loaded.` : 'Upload the <b>espn-history.json</b> file the snippet below creates.'}
+    </div>
+    <details style="margin-top:10px"><summary class="linkbtn">How to get the file from ESPN (private league)</summary>
+      <div class="faint" style="font-size:12px;line-height:1.6;margin-top:8px">
+        <b>On a computer</b> (this needs a desktop browser once):<br>
+        1. Log into <b>ESPN Fantasy</b> and open your old league (the URL should have <b>leagueId=</b>).<br>
+        2. Open the browser console: <b>right-click → Inspect → Console</b> (or press F12).<br>
+        3. Paste the snippet below, press Enter. It downloads <b>espn-history.json</b>.<br>
+        4. Move that file to your phone (AirDrop/email) and upload it here — or just import on the computer, your Back Issues/history sync per browser.<br>
+        <div style="height:8px"></div>
+        <textarea class="input" style="height:90px;font-size:10px" readonly onclick="this.select()">${esc(ESPN_SNIPPET)}</textarea>
+        <button class="btn ghost" data-act="copy-espn" style="margin-top:8px">Copy the snippet</button>
+      </div>
+    </details>
+    ${n ? `<div style="height:10px"></div><button class="btn ghost" data-act="history-clear">Remove imported history</button>` : ''}
+  </div>`;
+}
 
 // ---- Export / share to WhatsApp --------------------------------------------
 function magazineToText(nl) {
@@ -1834,7 +2000,7 @@ async function enterApp() {
     const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
     const myRoster = rosters.find(r => r.owner_id === S.user.user_id) || null;
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster };
-    loadDesk(); loadPower();
+    loadDesk(); loadPower(); loadEspnHist();
     S.values = null; S.newsCache = {}; S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:false };
     S.trade = { partnerId:null, give:new Set(), get:new Set() };
     // Season history via Sleeper's previous_league_id chain — the reliable way
@@ -1914,6 +2080,7 @@ function coverTools() {
   const exit = S.sample ? `<button class="ctool" data-act="exit-sample" title="Exit sample">✕</button>` : '';
   return `<div class="cover-tools">${share}${exit}
     <button class="ctool" data-act="desk" title="Newsroom desk">✍️</button>
+    <button class="ctool" data-act="history" title="Record book">🏆</button>
     <button class="ctool" data-act="archive" title="Back issues">📚</button>
     <button class="ctool" data-act="settings" title="Settings">⚙</button>
   </div>`;
@@ -2600,6 +2767,11 @@ async function showSettings() {
       <div class="faint" style="font-size:12px;margin-bottom:10px;line-height:1.5">See a full issue built from this league — your real teams and managers, with made-up scores and outcomes. Great before the season starts.</div>
       <button class="btn ghost" data-act="sample-league">Preview a sample issue from my league →</button>
     </div>
+    <div class="seclabel">League history</div>
+    <div class="card">
+      <div class="faint" style="font-size:12px;margin-bottom:10px;line-height:1.5">Import your old ESPN seasons for a permanent Record Book — champions, all-time standings, and league records.</div>
+      <button class="btn ghost" data-act="history">🏆 Open the Record Book →</button>
+    </div>
     <div class="seclabel">Your leagues</div>
     ${(leagues||[]).map(lg=>`<button class="card row" style="width:100%;text-align:left;color:var(--text);${lg.league_id===S.leagueId?'border-color:var(--accent)':''}" data-act="switch-league" data-id="${esc(lg.league_id)}" data-season="${esc(lg.season)}">
       ${avatarHtml(avatarUrl(lg.avatar),40,lg.name)}
@@ -2640,6 +2812,9 @@ document.body.addEventListener('click', async (e) => {
     toast('API key removed'); return showSettings(); }
   if (act === 'desk') return showDesk();
   if (act === 'archive') return showArchive();
+  if (act === 'history') return showHistory();
+  if (act === 'copy-espn') { try { await navigator.clipboard.writeText(ESPN_SNIPPET); toast('Snippet copied'); } catch { showCopyModal(ESPN_SNIPPET); } return; }
+  if (act === 'history-clear') { S.espnHist = null; saveEspnHist(); toast('History removed'); return showHistory(); }
   if (act === 'save-issue') return saveCurrentIssue();
   if (act === 'open-issue') return openSavedIssue(t.dataset.id);
   if (act === 'delete-issue') { e.stopPropagation(); return deleteSavedIssue(t.dataset.id); }
@@ -2681,6 +2856,20 @@ document.body.addEventListener('change', async (e) => {
       if (st) st.innerHTML = `Couldn't read that file — ${esc((err && err.message) || 'unknown error')}. You can also paste a snippet below.`;
       S.deskChatText = null;
     }
+  }
+  const hfile = e.target.closest('[data-act="history-file"]');
+  if (hfile && hfile.files && hfile.files[0]) {
+    const f = hfile.files[0]; const st = $('#histFileStatus');
+    if (st) st.textContent = 'Reading your history…';
+    try {
+      const obj = JSON.parse(await f.text());
+      const norm = normalizeHistory(obj);
+      if (!norm || !norm.seasons.length) { if (st) st.innerHTML = 'Couldn’t find any seasons in that file. Make sure it’s the <b>espn-history.json</b> the snippet created.'; return; }
+      S.espnHist = norm; saveEspnHist();
+      if (st) st.innerHTML = `✓ Imported <b>${norm.seasons.length}</b> seasons.`;
+      showHistory();
+    } catch (err) { if (st) st.innerHTML = `Couldn’t read that file — ${esc((err && err.message) || 'invalid JSON')}.`; }
+    return;
   }
   const pfile = e.target.closest('[data-act="power-file"]');
   if (pfile && pfile.files && pfile.files[0]) {
