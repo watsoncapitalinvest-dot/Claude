@@ -564,6 +564,42 @@ function writeFeature(stories, power, week, leagueName) {
 function lc(s) { return s ? s.charAt(0).toLowerCase() + s.slice(1).replace(/\.$/, '') : s; }
 
 // ---- The Water Cooler: turn a pasted group chat into an article -------------
+// WhatsApp on iOS exports a .zip (with _chat.txt inside) even "Without Media".
+// Read the ZIP in-browser: parse the central directory, then inflate the chat
+// entry with the native DecompressionStream (no library needed).
+function u8sig(buf) { try { const b = new Uint8Array(buf, 0, 2); return b[0] === 0x50 && b[1] === 0x4b; } catch { return false; } }
+async function extractChatFromZip(buf) {
+  const dv = new DataView(buf), u8 = new Uint8Array(buf), td = new TextDecoder('utf-8');
+  let eocd = -1;
+  for (let i = buf.byteLength - 22; i >= 0 && i > buf.byteLength - 22 - 65536; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('not a valid zip');
+  const cdOffset = dv.getUint32(eocd + 16, true), cdCount = dv.getUint16(eocd + 10, true);
+  let p = cdOffset, target = null;
+  for (let n = 0; n < cdCount && dv.getUint32(p, true) === 0x02014b50; n++) {
+    const method = dv.getUint16(p + 10, true), compSize = dv.getUint32(p + 20, true);
+    const nameLen = dv.getUint16(p + 28, true), extraLen = dv.getUint16(p + 30, true), commentLen = dv.getUint16(p + 32, true);
+    const localOffset = dv.getUint32(p + 42, true);
+    const name = td.decode(u8.subarray(p + 46, p + 46 + nameLen));
+    const entry = { name, method, compSize, localOffset };
+    if (/_chat\.txt$/i.test(name)) target = entry;
+    else if (!target && /\.txt$/i.test(name)) target = entry;
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  if (!target) throw new Error('no chat text found inside the zip');
+  const lo = target.localOffset;
+  if (dv.getUint32(lo, true) !== 0x04034b50) throw new Error('corrupt zip');
+  const dataStart = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true);
+  const comp = u8.subarray(dataStart, dataStart + target.compSize);
+  if (target.method === 0) return td.decode(comp);
+  if (target.method === 8) {
+    if (typeof DecompressionStream === 'undefined') throw new Error('your browser can’t unzip — update iOS, or paste a snippet');
+    const stream = new Blob([comp]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return td.decode(await new Response(stream).arrayBuffer());
+  }
+  throw new Error('unsupported zip compression');
+}
 const CHAT_NOISE = /(omitted|end-to-end encrypted|changed the (subject|group|icon)|changed this group|added |removed | left\b| joined | was added|deleted this message|this message was deleted|missed (voice|video) call|null|created group|pinned a message|changed their phone number|<Media|GIF omitted|sticker omitted|image omitted|video omitted|audio omitted|document omitted)/i;
 function parseChat(raw) {
   const lines = String(raw || '')
@@ -1716,10 +1752,10 @@ function showDesk() {
     <div class="setup-logo" style="font-size:24px">✍️ Newsroom Desk</div>
     <p class="muted" style="margin-top:4px">Feed the desk your league group chat and it writes a Water Cooler article for Week ${S.activeWeek}. Import the whole exported chat, or paste a snippet.</p>
     <div class="card" style="margin-top:12px">
-      <label class="label">1 · Import your exported chat file</label>
-      <input id="chatFile" type="file" accept=".txt,text/plain" data-act="desk-file" class="fileinput" />
+      <label class="label">1 · Import your exported chat file (.zip or .txt)</label>
+      <input id="chatFile" type="file" accept=".txt,.zip,text/plain,application/zip" data-act="desk-file" class="fileinput" />
       <div id="chatFileStatus" class="faint" style="font-size:12px;margin-top:8px;line-height:1.4">
-        <b>On WhatsApp (iPhone):</b> open the league chat → tap the group name → <b>Export Chat</b> → <b>Without Media</b> → <b>Save to Files</b>. Then tap “Choose File” above and pick it.
+        <b>On WhatsApp (iPhone):</b> open the league chat → tap the group name → <b>Export Chat</b> → <b>Without Media</b> → <b>Save to Files</b>. Pick that file here — <b>the .zip works, I'll unzip it for you.</b>
       </div>
     </div>
     <div class="center faint" style="font-size:12px;margin:2px 0">— or —</div>
@@ -1829,15 +1865,18 @@ document.body.addEventListener('change', async (e) => {
   if (file && file.files && file.files[0]) {
     const f = file.files[0];
     const st = $('#chatFileStatus');
-    if (/\.zip$/i.test(f.name)) { if (st) st.innerHTML = `That's a <b>.zip</b>. Re-export from WhatsApp choosing <b>Without Media</b> — that gives a plain <b>.txt</b> you can pick here.`; return; }
     try {
-      const text = await f.text();
+      const buf = await f.arrayBuffer();
+      const isZip = u8sig(buf) || /\.zip$/i.test(f.name);
+      if (isZip && st) st.textContent = 'Unzipping…';
+      const text = isZip ? await extractChatFromZip(buf) : new TextDecoder('utf-8').decode(buf);
       const n = parseChat(text).length;
-      if (!n) { if (st) st.innerHTML = `Read <b>${esc(f.name)}</b>, but found no chat messages in it. Is it the exported chat .txt?`; S.deskChatText = null; return; }
+      if (!n) { if (st) st.innerHTML = `Read <b>${esc(f.name)}</b>, but found no chat messages inside. Is it the exported chat?`; S.deskChatText = null; return; }
       S.deskChatText = text;
       if (st) st.innerHTML = `✓ Loaded <b>${esc(f.name)}</b> — <b>${n}</b> messages parsed. The desk will write about the most recent chatter. Hit “Write the article” below.`;
-    } catch {
-      if (st) st.textContent = "Couldn't read that file. Try the WhatsApp .txt export.";
+    } catch (err) {
+      if (st) st.innerHTML = `Couldn't read that file — ${esc((err && err.message) || 'unknown error')}. You can also paste a snippet below.`;
+      S.deskChatText = null;
     }
   }
 });
