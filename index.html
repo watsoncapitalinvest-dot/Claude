@@ -92,6 +92,28 @@
   .story h2 { font-family:var(--serif); font-size:21px; line-height:1.2; margin-bottom:4px; }
   .story .dek { color:var(--blue); font-size:13px; font-weight:700; font-style:italic; margin-bottom:8px; }
   .colophon { color:var(--faint); font-size:11px; text-align:center; line-height:1.4; margin-top:8px; }
+  /* magazine graphics */
+  .drop { float:left; font-family:var(--serif); font-weight:800; font-size:46px; line-height:38px; padding:2px 8px 0 0; color:var(--accent); }
+  .scorebar { display:flex; height:6px; border-radius:3px; overflow:hidden; background:var(--red); margin:8px 0 12px; }
+  .scorew { background:var(--accent); height:100%; }
+  .sbgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px; }
+  .sbcard { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 12px; }
+  .sbrow { display:flex; justify-content:space-between; align-items:center; padding:2px 0; color:var(--dim); font-size:14px; }
+  .sbrow.w { color:var(--text); font-weight:800; }
+  .sbrow.w .sbs { color:var(--accent); }
+  .sbn { max-width:70%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sbs { font-variant-numeric:tabular-nums; font-weight:700; }
+  .sbtag { margin-top:6px; padding-top:6px; border-top:1px solid var(--border); color:var(--faint); font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; }
+  .tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+  .tile { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 8px; text-align:center; }
+  .tile .tv { font-size:22px; font-weight:900; color:var(--text); }
+  .tile .tl { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:var(--faint); margin-top:2px; }
+  .tile .ts2 { font-size:11px; color:var(--dim); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pr { display:flex; gap:8px; align-items:flex-start; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.05); }
+  .prbar { height:5px; background:var(--bg2); border-radius:3px; overflow:hidden; margin:4px 0; }
+  .prfill { height:100%; background:linear-gradient(90deg,var(--accent-d),var(--accent)); border-radius:3px; }
+  .sd { display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px solid rgba(255,255,255,.05); }
+  .sd .val { font-size:16px; font-weight:800; font-variant-numeric:tabular-nums; min-width:44px; text-align:right; }
 
   /* generic list rows */
   .prow { display:flex; align-items:center; gap:8px; padding:9px 4px; }
@@ -342,7 +364,66 @@ function buildNewsletter(inp) {
 
   return { week, leagueName: league.name, lead: writeLead(stories, week, league.name),
            stories, awards: writeAwards(stories), powerRankings: computePower(stories, rosterById),
+           scoreboard: buildScoreboard(stories), numbers: buildNumbers(stories),
+           studs: buildStuds(stories), duds: buildDuds(stories), shame: buildShame(stories),
            hasData: anyPoints && stories.length > 0 };
+}
+
+// ---- Magazine sections ------------------------------------------------------
+function buildScoreboard(stories) {
+  return stories.map(s => ({
+    win: { manager: s.winner.manager, avatar: s.winner.avatar, score: s.winner.score },
+    lose: { manager: s.loser.manager, avatar: s.loser.avatar, score: s.loser.score },
+    tie: s.tie, margin: s.margin,
+  }));
+}
+function buildNumbers(stories) {
+  const teams = stories.flatMap(s => [s.winner, s.loser]);
+  const all = teams.map(t => t.score);
+  const hi = [...teams].sort((a,b)=>b.score-a.score)[0];
+  const lo = [...teams].sort((a,b)=>a.score-b.score)[0];
+  const big = [...stories].filter(s=>!s.tie).sort((a,b)=>b.margin-a.margin)[0];
+  const close = [...stories].filter(s=>!s.tie).sort((a,b)=>a.margin-b.margin)[0];
+  const total = round1(sum(all));
+  return [
+    { label: 'High Score', value: hi ? String(hi.score) : '—', sub: hi ? hi.manager : '' },
+    { label: 'Low Score', value: lo ? String(lo.score) : '—', sub: lo ? lo.manager : '' },
+    { label: 'Biggest Blowout', value: big ? `+${big.margin}` : '—', sub: big ? big.winner.manager : '' },
+    { label: 'Closest Game', value: close ? `${close.margin}` : '—', sub: close ? `${close.winner.manager} d. ${close.loser.manager}` : '' },
+    { label: 'Points Scored', value: String(total), sub: `${teams.length} teams` },
+    { label: 'Avg Team', value: all.length ? String(round1(total/all.length)) : '—', sub: 'per lineup' },
+  ];
+}
+function allStarters(stories) {
+  const out = [];
+  stories.forEach(s => [s.winner, s.loser].forEach(t => t.starters.forEach(e =>
+    out.push({ e, manager: t.manager }))));
+  return out;
+}
+function buildStuds(stories) {
+  return allStarters(stories).sort((a,b)=>b.e.points-a.e.points).slice(0,5).map(x => ({
+    name: playerName(x.e.player, x.e.id), pos: x.e.pos, points: x.e.points,
+    line: x.e.line && hasProduction(x.e.stats) ? x.e.line : '', manager: x.manager,
+  }));
+}
+function buildDuds(stories) {
+  // Started skill players who most badly missed a real projection.
+  return allStarters(stories)
+    .filter(x => ['QB','RB','WR','TE'].includes(x.e.pos) && x.e.projected >= 10)
+    .map(x => ({ ...x, miss: x.e.projected - x.e.points }))
+    .filter(x => x.miss >= 6)
+    .sort((a,b)=>b.miss-a.miss).slice(0,5).map(x => ({
+      name: playerName(x.e.player, x.e.id), pos: x.e.pos, points: x.e.points,
+      projected: x.e.projected, manager: x.manager,
+    }));
+}
+function buildShame(stories) {
+  const out = [];
+  stories.forEach(s => [s.winner, s.loser].forEach(t => { if (t.benchRegret) out.push({
+    manager: t.manager, benched: playerName(t.benchRegret.bench.player, t.benchRegret.bench.id),
+    benchPts: t.benchRegret.bench.points, started: playerName(t.benchRegret.starter.player, t.benchRegret.starter.id),
+    startPts: t.benchRegret.starter.points, diff: t.benchRegret.diff }); }));
+  return out.sort((a,b)=>b.diff-a.diff).slice(0,4);
 }
 
 // Power rankings: blend season record (if any) with this week's output, plus a
@@ -358,7 +439,7 @@ function computePower(stories, rosterById) {
   const hasRecords = rows.some(r => r.wins || r.losses);
   rows.sort((a, b) => hasRecords ? (b.wins - a.wins || b.pf - a.pf || b.week - a.week) : (b.week - a.week));
   return rows.map((r, i) => ({
-    rank: i + 1, manager: r.manager,
+    rank: i + 1, manager: r.manager, week: r.week,
     tag: hasRecords ? `${r.wins}-${r.losses}${r.ties ? '-' + r.ties : ''}` : `${r.week.toFixed(1)} pts`,
     note: powerNote(i, rows.length, r),
   }));
@@ -389,22 +470,22 @@ function writeStory(ctx) {
 
   // ---- Marquee ----
   let headline;
-  if (tie) headline = pick([`${W}, ${L} Settle Nothing`, `Nobody Wins, Everybody Loses`], 1);
-  else if (blowout) headline = pick([`${W} Leaves ${L} for Dead`, `${W} ${winner.score}, ${L} ${loser.score}: It Was Never Close`, `${heroName} and ${W} Bully ${L}`], 1);
-  else if (nail) headline = pick([`${heroName} Drags ${W} Past ${L}`, `${W} Survives ${L} by ${margin}`, `${L} Blows It Late Against ${W}`], 1);
-  else headline = pick([`${W} Takes Care of ${L}`, `${W} Grinds Down ${L}`], 1);
+  if (tie) headline = pick([`${W}, ${L} Settle Jack Squat`, `Two Teams, Zero Balls: ${W} Ties ${L}`], 1);
+  else if (blowout) headline = pick([`${W} Beats the Brakes Off ${L}`, `${W} ${winner.score}, ${L} ${loser.score}: A Damn Massacre`, `${heroName} and ${W} Curb-Stomp ${L}`], 1);
+  else if (nail) headline = pick([`${heroName} Drags ${W}'s Ass Past ${L}`, `${W} Survives ${L} by a Nut Hair`, `${L} Shits the Bed Late Against ${W}`], 1);
+  else headline = pick([`${W} Handles ${L}'s Business`, `${W} Grinds ${L} Into Paste`], 1);
 
-  const dek = tie ? `Two teams, zero winners, and one very confused scoreboard.`
-    : heroDifference ? `${heroName} was the whole ballgame — and ${L} has no answer.`
-    : blowout ? `${W} showed up. ${L} apparently did not.`
+  const dek = tie ? `Two teams, zero winners, and one scoreboard that needs a drink.`
+    : heroDifference ? `${heroName} was the whole damn ballgame — and ${L} had no answer.`
+    : blowout ? `${W} showed up. ${L} forgot to.`
     : `Final: ${W} ${winner.score}, ${L} ${loser.score}.`;
 
   // ---- P1: the call ----
   if (tie) {
-    P.push(`${W} and ${L} spent all week clubbing each other and finished in a ${winner.score}-apiece deadlock — the rare fantasy result where both group chats go silent at once. A tie. In football. Somebody explain the point of that.`);
+    P.push(`${W} and ${L} spent all week clubbing each other and finished in a ${winner.score}-apiece deadlock — the rare result where both group chats go dead quiet at once. A tie. In football. Somebody explain the goddamn point of that.`);
   } else {
     P.push(pick([`Here's how it went down: `, `To the tape. `, `Set the scene: `], 2) +
-      `${W} ${blowout ? pick([`took ${L} apart`,`ran ${L} off the field`,`treated ${L} like a tackling dummy`], 3) : nail ? pick([`outlasted ${L}`,`survived ${L}`,`stole one from ${L}`], 3) : pick([`handled ${L}`,`ground down ${L}`,`took care of ${L}`], 3)}, ${winner.score} to ${loser.score}${nail ? `, and the ${margin}-point final undersells how sweaty it got — this thing came down to the wire and ${L} will be replaying it in the shower for a week` : blowout ? `, a beatdown so thorough the box score should come with a trigger warning` : ''}.`);
+      `${W} ${blowout ? pick([`beat the brakes off ${L}`,`ran ${L} off the damn field`,`treated ${L} like a crash-test dummy`], 3) : nail ? pick([`outlasted ${L}`,`survived ${L}`,`ripped ${L}'s heart out`], 3) : pick([`handled ${L}`,`ground ${L} down`,`took care of ${L}`], 3)}, ${winner.score} to ${loser.score}${nail ? `, and the ${margin}-point final doesn't come close to capturing how sweaty it got — ${L} is gonna be sick about this one for a week` : blowout ? `, a beatdown so lopsided it oughta be illegal in most states` : ''}.`);
   }
 
   // ---- P2: the hero, real stat line + swing framing ----
@@ -414,18 +495,18 @@ function writeStory(ctx) {
     p += '. ';
     if (heroDifference && nail) {
       p += (scoredTD(hero.stats)
-        ? pick([`He got into the end zone with the matchup hanging in the balance, and that score is the ballgame: `, `He found paydirt right when ${W} needed it, and that's your difference: `], 4)
-        : pick([`And that output is the entire difference: `, `Here's the kicker: `], 4)) +
-        pick([`his day outweighed the ${margin}-point final margin all by itself. Subtract him and ${W} loses going away. Instead, come-from-behind heroics, and ${L} is left holding the bag.`,
-              `he alone was worth more than the ${margin} points ${W} won by. No ${heroName}, no win — it's that simple, and ${L} knows it.`], 5);
+        ? pick([`He punched it in with the whole thing hanging in the balance, and that score is the entire ballgame: `, `He found the end zone right when ${W} needed it, and there's your difference: `], 4)
+        : pick([`And that output is the whole ballgame: `, `Here's the kick in the nuts for ${L}: `], 4)) +
+        pick([`his day was worth more than the ${margin}-point margin by itself. Take him out and ${W} loses, full stop. Instead — come-from-behind heroics, and ${L} can go pound sand.`,
+              `he alone outscored the ${margin} points ${W} won by. No ${heroName}, no win, and ${L} knows it's eating them alive.`], 5);
     } else if (heroDifference) {
-      p += pick([`Bigger than the margin, bigger than the moment — he's why ${W} is celebrating and ${L} is not.`, `No ${heroName}, no win for ${W}. The math isn't subtle.`], 6);
+      p += pick([`Bigger than the margin, bigger than the moment — the man single-handedly ruined ${L}'s whole week.`, `No ${heroName}, no win for ${W}. Ain't complicated.`], 6);
     } else if (blowout) {
-      p += pick([`By halftime this was less a matchup than a public service announcement.`, `${L} needed a fire extinguisher and showed up with a squirt gun.`], 6);
+      p += pick([`By halftime this stopped being a matchup and became a crime scene.`, `${L} brought a squirt gun to a house fire.`], 6);
     } else if (hero.points >= 22) {
-      p += pick([`That's not stat-padding, that's a mission statement.`, `He didn't need to go that hard. He went that hard anyway.`], 6);
+      p += pick([`That's not stat-padding, that's a damn statement.`, `He didn't have to go that hard. He did it anyway, the animal.`], 6);
     } else {
-      p += pick([`Nothing loud, just enough to cash the ticket.`, `Unspectacular and completely sufficient.`], 6);
+      p += pick([`Nothing flashy, just enough to cash the check.`, `Quietly did his job while everybody else screwed around.`], 6);
     }
     P.push(p.trim());
   }
@@ -434,28 +515,28 @@ function writeStory(ctx) {
   const support = wS.slice(1).filter(e => e.points >= 9).slice(0, 3);
   if (support.length) {
     const items = support.map(e => `${nm(e)} ${e.points>=20?'piled on':e.points>=13?'added':'kicked in'} ${e.points}${e.line&&hasProduction(e.stats)?` (${e.line})`:''}`);
-    P.push(`And ${heroName} had backup. ` + joinList(items) + `. ` +
-      pick([`When the whole lineup shows up, this is what it looks like.`, `Depth wins leagues, and ${W} has it.`, `That's a roster clicking on every cylinder.`], 7));
+    P.push(`And ${heroName} didn't do it alone. ` + joinList(items) + `. ` +
+      pick([`When the whole lineup shows the hell up, this is what it looks like.`, `Depth wins leagues, and ${W}'s got it in spades.`, `That's a roster firing on every damn cylinder.`], 7));
   }
 
   // ---- P4: the QB / trenches note ----
   const wQB = winner.starters.find(e => e.pos === 'QB');
   const wDEF = winner.starters.find(e => e.pos === 'DEF' && e.points >= 10);
   if (wQB && wQB !== hero && !support.includes(wQB) && wQB.points >= 8) {
-    let p = `Under center, ${nm(wQB)} ran a clean shop${wQB.line ? ` — ${wQB.line}` : ''} for ${wQB.points}.`;
+    let p = `Under center, ${nm(wQB)} ran the offense like he owned the place${wQB.line ? ` — ${wQB.line}` : ''} for ${wQB.points}.`;
     if (wDEF) p += ` The ${nm(wDEF)} even chipped in ${wDEF.points}, because when it rains it pours.`;
     P.push(p);
   } else if (wDEF) {
-    P.push(`Don't sleep on the ${nm(wDEF)}, which quietly banked ${wDEF.points} while everyone watched the skill guys.`);
+    P.push(`Don't sleep on the ${nm(wDEF)}, which quietly banked ${wDEF.points} while everyone was busy watching the skill guys.`);
   }
 
   // ---- P5: the losing side's fight ----
   if (goat && goat.points > 0 && !tie) {
-    let p = pick([`It wasn't for lack of a pulse on ${L}'s side. `, `${L} didn't go quietly. `, `Credit where due: ${L} threw a punch. `], 8) +
+    let p = pick([`It wasn't for lack of a pulse on ${L}'s side. `, `${L} didn't go quietly. `, `Credit where it's due — ${L} threw a punch. `], 8) +
       `${nml(goat)} led the resistance with ${goat.points}`;
     const lSup = lS.slice(1).filter(e => e.points >= 11).slice(0, 2);
     if (lSup.length) p += `, with ${joinList(lSup.map(e => `${e.points} from ${nm(e)}`))} keeping it interesting`;
-    p += `. ` + pick([`But a good effort and four bucks buys you a gas-station coffee.`, `Add it all up and it still spells L.`, `All of that, and the scoreboard didn't care.`], 9);
+    p += `. ` + pick([`But a hell of an effort and four bucks gets you a gas-station coffee.`, `Add it all up and it still spells L-O-S-S.`, `All that, and the scoreboard didn't give a shit.`], 9);
     P.push(p);
   }
 
@@ -463,9 +544,9 @@ function writeStory(ctx) {
   if (loser.bust) {
     const b = loser.bust, bn = nm(b), miss = round1(b.projected - b.points);
     P.push(pick([
-      `Then there's the autopsy, and it centers on ${bn}: penciled in for ${b.projected}, turned in ${b.points}. That's not a slump, that's a missing-persons case.`,
-      `${bn} is why ${L}'s manager didn't sleep. Projected ${b.projected}, produced ${b.points} — you'd get more out of a scratch ticket and a prayer.`,
-      `Every loss needs a fall guy, and ${L} nominates ${bn}: ${b.projected} projected, ${b.points} delivered, a ${miss}-point faceplant when it mattered.`,
+      `Now the autopsy, and it's ugly: ${bn} was penciled in for ${b.projected} and turned in a steaming ${b.points}. That's not a slump, that's a hostage situation.`,
+      `${bn} is why ${L}'s manager was up at 3 a.m. staring at the ceiling. Projected ${b.projected}, produced ${b.points} — you'd get more out of a damn Magic 8-Ball.`,
+      `Every loss needs a goat, and ${L} nominates ${bn}: ${b.projected} projected, ${b.points} delivered, a ${miss}-point faceplant with the matchup on the line. Absolute dogshit.`,
     ], 10));
   }
 
@@ -473,8 +554,8 @@ function writeStory(ctx) {
   if (loser.benchRegret) {
     const r = loser.benchRegret, bn = nm(r.bench), sn = nm(r.starter);
     P.push(pick([
-      `And the part ${L} will chew on all week: ${bn} dropped ${r.bench.points} in street clothes on the bench while ${sn} mailed in ${r.starter.points} from the starting lineup — a ${r.diff}-point coaching decision in a ${margin}-point loss. The call is coming from inside the house.`,
-      `File under self-inflicted: ${r.diff} points of ${bn} rotting on ${L}'s bench while ${sn} no-showed in the lineup. In a ${margin}-point loss. You can't fire the GM, but ${L} might try.`,
+      `And here's the part ${L} will choke on all week: ${bn} dropped ${r.bench.points} in street clothes on the bench while ${sn} shit the bed for ${r.starter.points} in the starting lineup — a ${r.diff}-point coaching decision in a ${margin}-point loss. The call is coming from inside the house, jackass.`,
+      `File it under self-inflicted: ${r.diff} points of ${bn} rotting on ${L}'s bench while ${sn} no-showed in the lineup. In a ${margin}-point loss. You can't fire the GM, but ${L} damn well should.`,
     ], 11));
   } else if (winner.benchRegret && !blowout) {
     const r = winner.benchRegret;
@@ -484,19 +565,19 @@ function writeStory(ctx) {
   // ---- P8: by the numbers / what-if ----
   if (loser.bust && (loser.bust.projected - loser.bust.points) >= margin && !tie) {
     const b = loser.bust;
-    P.push(`The cruelest math of the day: ${nm(b)} missed his projection by ${round1(b.projected - b.points)} — more than the entire ${margin}-point final. He hits his number, and we're writing ${L}'s victory column instead. Fantasy football, ladies and gentlemen.`);
+    P.push(`The cruelest math of the day: ${nm(b)} missed his projection by ${round1(b.projected - b.points)} — more than the entire ${margin}-point final. He hits his number and we're writing ${L}'s victory column instead. Fantasy football: a cruel, stupid, beautiful sonofabitch of a game.`);
   } else {
     P.push(pick([
-      `Combined, the two hung ${combined} on the board${combined >= 260 ? ' — a genuine track meet' : combined <= 180 ? ', a rock fight nobody should be proud of' : ''}.`,
-      `Two teams, ${combined} combined points, and exactly one of them gets to feel good about it.`,
+      `Combined, the two hung ${combined} on the board${combined >= 260 ? ' — a genuine track meet' : combined <= 180 ? ', a rock fight nobody should brag about' : ''}.`,
+      `Two teams, ${combined} combined points, and exactly one of them gets to feel good about their damn self.`,
     ], 12));
   }
 
   // ---- P9: the sign-off ----
   P.push(pick([
-    `${W} struts into next week; ${L} has some soul-searching and a waiver claim to make.`,
-    `Print the box score, ${W}. ${L} — burn it and never speak of this again.`,
-    `${W} moves to the good side of the standings. ${L} goes home to a very quiet group chat.`,
+    `${W} struts into next week; ${L} has some soul-searching and a stiff drink ahead.`,
+    `Print the box score, ${W}. ${L} — light it on fire and never speak of it again.`,
+    `${W} moves to the right side of the standings. ${L} goes home to a group chat that just went real quiet.`,
   ], 13));
 
   return { id:'g'+ctx.mid, headline, dek, paragraphs:P, winner, loser, tie, margin, combined };
@@ -519,17 +600,17 @@ function writeLead(stories, week, leagueName) {
     `Week ${week}: ${topName} Runs the Whole Show`,
   ], 1);
   const P = [];
-  let p1 = pick([`Another week in the books, and the scoreboard has jokes. `, `Welcome to the wrap. `, `Let's survey the wreckage. `], 2) +
+  let p1 = pick([`Another week in the books, and the scoreboard's got jokes. `, `Welcome to the wrap, degenerates. `, `Let's survey the wreckage. `], 2) +
     `${high.manager} torched the league for a week-high ${high.score}`;
-  if (top && top.points > 0) p1 += `, and you can thank ${topName}, who ${top.line && hasProduction(top.stats) ? `went off for ${top.points} on ${top.line}` : `dropped ${top.points}`}`;
-  p1 += `. Meanwhile, down in the cellar, ${low.manager} mustered a grand total of ${low.score} — the fantasy equivalent of showing up to a gunfight and forgetting the gun.`;
+  if (top && top.points > 0) p1 += `, and you can thank ${topName}, who ${top.line && hasProduction(top.stats) ? `went nuclear for ${top.points} on ${top.line}` : `dropped ${top.points}`}`;
+  p1 += `. Meanwhile, down in the shitter, ${low.manager} mustered a grand total of ${low.score} — the fantasy equivalent of showing up to a gunfight and forgetting the damn gun.`;
   P.push(p1);
   if (closest && !closest.tie) {
-    let p2 = `The nervous breakdown of the week went to ${closest.winner.manager}, who survived ${closest.loser.manager} by ${closest.margin} — the kind of finish that shaves a year off your life.`;
-    if (biggest && biggest !== closest) p2 += ` On the other end of the dignity spectrum, ${biggest.winner.manager} beat ${biggest.loser.manager} by a frankly rude ${biggest.margin}.`;
+    let p2 = `The heart-attack special went to ${closest.winner.manager}, who survived ${closest.loser.manager} by ${closest.margin} — the kind of finish that takes a year off your life.`;
+    if (biggest && biggest !== closest) p2 += ` On the other end of the dignity spectrum, ${biggest.winner.manager} beat ${biggest.loser.manager} by a frankly obscene ${biggest.margin}.`;
     P.push(p2);
   }
-  P.push(pick([`Enough preamble. To the games.`, `Now — to the tape, where the crimes are documented in full.`, `Here's how it all shook out, matchup by matchup.`], 3));
+  P.push(pick([`Enough preamble. To the carnage.`, `Now — to the tape, where every crime is documented in full.`, `Grab a beer. Here's how it all shook out, matchup by bloody matchup.`], 3));
   return { headline, standfirst:`${leagueName} · Week ${week} · the only wrap that reads the box score so you don't have to`, paragraphs:P };
 }
 
@@ -953,25 +1034,65 @@ async function renderNews() {
     ${nl.awards.map(a=>`<div class="award"><span class="em">${a.emoji}</span><div style="flex:1">
       <div class="lab">${esc(a.title)}</div><div class="nm">${esc(a.name)}</div><div class="dt">${esc(a.detail)}</div>
     </div></div>`).join('')}</div>` : '';
+  const maxW = Math.max(...(nl.powerRankings||[]).map(p=>p.week||0), 1);
   const power = nl.powerRankings && nl.powerRankings.length ? `<div class="card">
     <div class="at">Power Rankings</div>
-    ${nl.powerRankings.map(p=>`<div class="award" style="align-items:flex-start">
-      <span class="ovr" style="width:28px;padding-top:2px">${p.rank}</span>
-      <div style="flex:1"><div class="nm">${esc(p.manager)} <span class="faint" style="font-weight:600;font-size:12px">${esc(p.tag)}</span></div>
-      <div class="dt">${esc(p.note)}</div></div></div>`).join('')}</div>` : '';
+    ${nl.powerRankings.map(p=>`<div class="pr">
+      <span class="ovr" style="width:24px">${p.rank}</span>
+      <div style="flex:1">
+        <div class="nm">${esc(p.manager)} <span class="faint" style="font-weight:600;font-size:12px">${esc(p.tag)}</span></div>
+        <div class="prbar"><div class="prfill" style="width:${Math.round((p.week/maxW)*100)}%"></div></div>
+        <div class="dt">${esc(p.note)}</div>
+      </div></div>`).join('')}</div>` : '';
   const stories = `<div class="rule">GAME STORIES</div>` + nl.stories.map(storyHtml).join('');
-  const colophon = `<div class="colophon">Auto-written from real Sleeper box scores — every stat line and margin is genuine. Voice and jokes are on the house.</div>`;
-  setContent(newsChrome() + lead + awards + power + stories + colophon);
+  const colophon = `<div class="colophon">Auto-written from real Sleeper box scores — every stat line and margin is genuine. The voice, jokes, and profanity are on the house.</div>`;
+  setContent(newsChrome() + scoreboardHtml(nl.scoreboard) + lead + numbersHtml(nl.numbers)
+    + power + studsDudsHtml(nl.studs, nl.duds) + shameHtml(nl.shame) + awards + stories + colophon);
+}
+function scoreboardHtml(sb) {
+  if (!sb || !sb.length) return '';
+  return `<div class="rule">THE SCOREBOARD</div><div class="sbgrid">` + sb.map(g => `
+    <div class="sbcard">
+      <div class="sbrow ${g.tie?'':'w'}"><span class="sbn">${esc(g.win.manager)}</span><span class="sbs">${g.win.score.toFixed(1)}</span></div>
+      <div class="sbrow"><span class="sbn">${esc(g.lose.manager)}</span><span class="sbs">${g.lose.score.toFixed(1)}</span></div>
+      <div class="sbtag">${g.tie ? 'TIE' : 'FINAL · +' + g.margin}</div>
+    </div>`).join('') + `</div>`;
+}
+function numbersHtml(nums) {
+  if (!nums || !nums.length) return '';
+  return `<div class="tiles">` + nums.map(n => `<div class="tile">
+    <div class="tv">${esc(n.value)}</div><div class="tl">${esc(n.label)}</div><div class="ts2">${esc(n.sub)}</div>
+  </div>`).join('') + `</div>`;
+}
+function studsDudsHtml(studs, duds) {
+  const stud = (studs||[]).map((p,i)=>`<div class="sd"><span class="ovr">${i+1}</span>${posBadge(p.pos)}
+    <div style="flex:1"><div class="nm">${esc(p.name)} <span class="faint" style="font-size:11px">· ${esc(p.manager)}</span></div>${p.line?`<div class="dt">${esc(p.line)}</div>`:''}</div>
+    <span class="val" style="color:var(--accent)">${p.points.toFixed(1)}</span></div>`).join('');
+  const dud = (duds && duds.length) ? duds.map(p=>`<div class="sd">${posBadge(p.pos)}
+    <div style="flex:1"><div class="nm">${esc(p.name)} <span class="faint" style="font-size:11px">· ${esc(p.manager)}</span></div><div class="dt">projected ${p.projected}, scored ${p.points}</div></div>
+    <span class="val" style="color:var(--red)">${p.points.toFixed(1)}</span></div>`).join('')
+    : `<div class="dt" style="padding:8px 4px">Nobody laid a truly catastrophic egg this week. Boring, but true.</div>`;
+  return `<div class="card"><div class="at">💪 Studs of the Week</div>${stud}</div>
+    <div class="card"><div class="at">💩 Duds of the Week</div>${dud}</div>`;
+}
+function shameHtml(shame) {
+  if (!shame || !shame.length) return '';
+  return `<div class="card" style="border-color:var(--amber)"><div class="at">🪑 Start/Sit of Shame</div>` +
+    shame.map(s=>`<div class="sd"><div style="flex:1"><div class="nm">${esc(s.manager)}</div>
+      <div class="dt">Benched ${esc(s.benched)} (${s.benchPts}) · started ${esc(s.started)} (${s.startPts})</div></div>
+      <span class="val" style="color:var(--amber)">−${s.diff.toFixed(1)}</span></div>`).join('') + `</div>`;
 }
 function teamTag(t, win, right) {
   return `<div class="tt ${right?'r':''} ${win?'win':''}">${avatarHtml(t.avatar,28,t.manager)}
     <div><div class="tn">${esc(t.manager)}</div><div class="ts">${t.score.toFixed(1)}</div></div></div>`;
 }
 function storyHtml(s) {
+  const wPct = (s.winner.score + s.loser.score) > 0 ? Math.round(s.winner.score / (s.winner.score + s.loser.score) * 100) : 50;
   return `<div class="card story">
     <div class="sl">${teamTag(s.winner,true,false)}<span class="dash">–</span>${teamTag(s.loser,false,true)}</div>
+    <div class="scorebar"><div class="scorew" style="width:${wPct}%"></div></div>
     <h2>${esc(s.headline)}</h2><div class="dek">${esc(s.dek)}</div>
-    ${s.paragraphs.map(p=>`<p class="body">${esc(p)}</p>`).join('')}</div>`;
+    ${s.paragraphs.map((p,i)=>`<p class="body">${i===0?'<span class="drop">'+esc(p.charAt(0))+'</span>'+esc(p.slice(1)):esc(p)}</p>`).join('')}</div>`;
 }
 
 // ---------------------------------------------------------------------
