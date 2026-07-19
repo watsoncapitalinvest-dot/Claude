@@ -129,6 +129,11 @@
   .trrow .nm { font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .trrow .val { font-size:13px; font-weight:800; color:var(--dim); font-variant-numeric:tabular-nums; }
   .trswap { align-self:center; color:var(--faint); font-size:16px; font-weight:900; flex:0 0 auto; }
+  /* per-article share */
+  .sharerow { display:flex; justify-content:flex-end; margin:-8px 0 16px; }
+  .sharebtn { background:var(--bg2); border:1px solid var(--border); color:var(--dim); font-size:12px; font-weight:800;
+              letter-spacing:.3px; padding:6px 13px; border-radius:20px; line-height:1; }
+  .sharebtn:active { background:var(--card2); color:var(--text); }
   /* magazine cover + sections */
   .cover { position:relative; margin:calc(-1 * var(--pad-top)) -16px 16px; padding:calc(var(--pad-top) + 8px) 16px 18px; overflow:hidden;
            background:radial-gradient(130% 120% at 100% 0%, rgba(49,209,88,.22), transparent 55%), linear-gradient(165deg,#10171f,#0b0f14 70%);
@@ -1577,6 +1582,103 @@ async function shareMagazine() {
   try { await navigator.clipboard.writeText(url); toast('Issue link copied — paste into WhatsApp'); return; } catch {}
   showCopyModal(url);
 }
+
+// ---- Per-article share: render one article/section to a branded card image --
+// A generic magazine-card renderer — headline + dek + prose, or a titled list —
+// so every story and section can be saved/shared as its own image.
+async function articleImageBlob(payload) {
+  const W = 1080, PAD = 84, CW = W - PAD * 2;
+  const cv = document.createElement('canvas'); const g = cv.getContext('2d'); if (!g) return null;
+  const ACCENT = '#31d158', INK = '#e8eef5', DIM = '#9fb0c3', FAINT = '#64748b';
+  const SERIF = 'Georgia, "Times New Roman", serif', SANS = 'Arial, sans-serif';
+  const wrap = (text, font, maxW) => {
+    g.font = font; const out = [];
+    String(text).split('\n').forEach(seg => {
+      const words = seg.split(/\s+/); let cur = '';
+      for (const w of words) { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > maxW && cur) { out.push(cur); cur = w; } else cur = t; }
+      out.push(cur);
+    });
+    return out;
+  };
+  // Lay the card out as a list of drawable line-groups, measuring height first.
+  const groups = [];
+  const add = (text, font, size, color, lh, gap, align) => { const lines = wrap(text, `${font}`, CW); groups.push({ lines, font, size, color, lh, gap: gap || 0, align: align || 'left' }); };
+  add((payload.kicker || 'THE MAGAZINE').toUpperCase().split('').join(' '), `900 26px ${SANS}`, 26, ACCENT, 34, 0);
+  add(payload.headline || '', `900 66px ${SERIF}`, 66, INK, 74, 20);
+  if (payload.meta) add(payload.meta, `800 30px ${SANS}`, 30, ACCENT, 40, 14);
+  if (payload.dek) add(payload.dek, `italic 700 34px ${SERIF}`, 34, DIM, 44, 16);
+  (payload.paragraphs || []).forEach((p, i) => add(p, `400 33px ${SERIF}`, 33, INK, 47, i === 0 ? 26 : 18));
+  (payload.lines || []).forEach((l, i) => add('•  ' + l, `600 31px ${SANS}`, 31, i % 2 ? DIM : INK, 44, i === 0 ? 24 : 10));
+  // Height: sum groups + top/bottom pad + footer.
+  let total = PAD;
+  groups.forEach(gr => { total += gr.gap + gr.lines.length * gr.lh; });
+  total += 90; // footer
+  const H = Math.max(1080, Math.min(4400, total + PAD));
+  cv.width = W; cv.height = H;
+  // Background + texture (context state was reset by the resize).
+  const grad = g.createLinearGradient(0, 0, W, H); grad.addColorStop(0, '#111a22'); grad.addColorStop(1, '#090d12');
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(255,255,255,0.045)'; g.lineWidth = 3;
+  for (let i = -2; i < 22; i++) { g.beginPath(); g.moveTo(i * 90, H); g.lineTo(i * 90 + 420, 0); g.stroke(); }
+  const glow = g.createRadialGradient(W * 0.82, 120, 40, W * 0.82, 120, 640);
+  glow.addColorStop(0, 'rgba(49,209,88,0.16)'); glow.addColorStop(1, 'rgba(49,209,88,0)');
+  g.fillStyle = glow; g.fillRect(0, 0, W, H);
+  // Draw the groups.
+  g.textAlign = 'left'; let y = PAD + 40;
+  for (const gr of groups) {
+    y += gr.gap; g.font = gr.font; g.fillStyle = gr.color;
+    for (const line of gr.lines) { g.fillText(line, PAD, y); y += gr.lh; }
+  }
+  // Footer strip.
+  g.fillStyle = ACCENT; g.fillRect(PAD, H - 78, 46, 5);
+  g.fillStyle = FAINT; g.font = `800 24px ${SANS}`;
+  g.fillText(`${(S.magName || 'Skirt Chasers').toUpperCase()} · FANTASY LEAGUE MAGAZINE · WK ${S.activeWeek}`, PAD, H - 44);
+  return await new Promise(res => cv.toBlob(res, 'image/png', 0.92));
+}
+async function shareArticle(id) {
+  const payload = buildSharePayload(id);
+  if (!payload) { toast('Nothing to share here'); return; }
+  const magName = S.magName || 'Skirt Chasers';
+  const url = magazineLink();
+  const caption = `${payload.headline} — ${magName}, Week ${S.activeWeek}`;
+  try {
+    if (typeof navigator !== 'undefined' && navigator.canShare) {
+      const blob = await articleImageBlob(payload);
+      if (blob) {
+        const slug = (payload.kicker || 'article').toLowerCase().replace(/[^\w]+/g, '-');
+        const file = new File([blob], `${magName.replace(/[^\w]+/g, '-')}-wk${S.activeWeek}-${slug}.png`, { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          try { await navigator.share({ files: [file], text: caption, url, title: payload.headline }); return; }
+          catch (e) { if (e && e.name === 'AbortError') return; }
+        }
+      }
+    }
+  } catch {}
+  const body = (payload.paragraphs || payload.lines || []).join('\n\n');
+  const full = `${payload.headline}${payload.dek ? '\n' + payload.dek : ''}\n\n${body}\n\n— ${magName}, Week ${S.activeWeek}\n${url}`;
+  try { if (navigator.share) { await navigator.share({ title: payload.headline, text: full }); return; } }
+  catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(full); toast('Copied — paste to share'); return; } catch {}
+  showCopyModal(full);
+}
+// Reconstruct a shareable payload for a given card id from the open issue.
+function buildSharePayload(id) {
+  const nl = S.currentNl; if (!nl || !id) return null;
+  const wk = nl.week;
+  const score = s => `${s.winner.manager} ${s.winner.score.toFixed(1)} – ${s.loser.score.toFixed(1)} ${s.loser.manager}`;
+  if (id === 'lead') return { kicker: 'The Column', headline: nl.lead.headline, dek: nl.lead.standfirst, paragraphs: nl.lead.paragraphs };
+  if (id === 'feature' && nl.feature) return { kicker: 'League Feature', headline: nl.feature.headline, dek: nl.feature.dek, paragraphs: nl.feature.paragraphs };
+  if (id.startsWith('story:')) { const i = +id.slice(6), s = nl.stories[i]; if (s) return { kicker: i === 0 ? 'Cover Story' : 'Game Story', headline: s.headline, dek: s.dek, meta: score(s), paragraphs: s.paragraphs }; }
+  if (id.startsWith('trade:')) { const t = nl.trades && nl.trades[+id.slice(6)]; if (t) return { kicker: 'The Trade Desk', headline: t.headline, dek: t.dek, paragraphs: [(t.sides || []).map(s => `${s.manager} gets ${(s.received || []).map(p => p.name).join(', ') || 'picks/FAAB'}`).join('   ·   '), ...t.paragraphs] }; }
+  if (id.startsWith('desk:')) { const a = (S.viewDesk || []).find(x => x.id === id.slice(5)); if (a) return { kicker: 'The Water Cooler', headline: a.headline, dek: a.dek, paragraphs: a.paragraphs }; }
+  if (id === 'power' && (nl.powerRankings || []).length) return { kicker: 'Power Rankings', headline: `Week ${wk} Power Rankings`, lines: nl.powerRankings.map(p => `${p.rank}. ${p.manager}${p.tag ? '  (' + p.tag + ')' : ''}${p.note ? ' — ' + p.note : ''}`) };
+  if (id === 'numbers' && (nl.numbers || []).length) return { kicker: 'By the Numbers', headline: `Week ${wk} by the Numbers`, lines: nl.numbers.map(n => `${n.value} — ${n.label}${n.sub ? ' (' + n.sub + ')' : ''}`) };
+  if (id === 'studsduds') { const l = []; (nl.studs || []).forEach((p, i) => l.push(`Stud ${i + 1}: ${p.name} (${p.manager}) — ${p.points.toFixed(1)}`)); (nl.duds || []).forEach(p => l.push(`Dud: ${p.name} (${p.manager}) — ${p.points.toFixed(1)}, projected ${p.projected}`)); if (l.length) return { kicker: 'Studs & Duds', headline: `Week ${wk} Studs & Duds`, lines: l }; }
+  if (id === 'shame' && (nl.shame || []).length) return { kicker: 'Start/Sit of Shame', headline: `Week ${wk} Start/Sit of Shame`, lines: nl.shame.map(s => `${s.manager}: benched ${s.benched} (${s.benchPts}) over ${s.started} (${s.startPts}) — −${s.diff.toFixed(1)}`) };
+  if (id === 'awards' && (nl.awards || []).length) return { kicker: 'Superlatives', headline: `Week ${wk} Superlatives`, lines: nl.awards.map(a => `${a.emoji} ${a.title}: ${a.name} — ${a.detail}`) };
+  return null;
+}
+function shareRow(id) { return `<div class="sharerow"><button class="sharebtn" data-act="share-item" data-id="${esc(id)}">⤴ Share</button></div>`; }
 function showCopyModal(text) {
   const wrap = document.createElement('div');
   wrap.className = 'modal';
@@ -1965,12 +2067,13 @@ async function renderNews() {
 // interactive bits so a saved back-issue renders as a clean, static read.
 function issueBodyHtml(nl, deskArts, frozen) {
   const wk = nl.week;
+  S.viewDesk = deskArts || [];   // what the share buttons read for Water Cooler pieces
   const lead = `<div class="lead"><h1>${esc(nl.lead.headline)}</h1>
     <div class="standfirst">${esc(nl.lead.standfirst)}</div>
     ${nl.lead.paragraphs.map(p=>`<p class="body">${esc(p)}</p>`).join('')}</div>`;
   const feature = nl.feature ? articleHtml(nl.feature, true) : '';
   const desk = (deskArts && deskArts.length)
-    ? deskArts.map(a => articleHtml(a, false, (frozen || S.guest) ? null : a.id)).join('')
+    ? deskArts.map(a => articleHtml(a, false, (frozen || S.guest) ? null : a.id) + shareRow('desk:' + a.id)).join('')
     : ((frozen || S.guest) ? `<div class="card" style="text-align:center"><div class="dt">No group-chat column in this issue.</div></div>`
       : `<div class="card" style="text-align:center"><div class="dt" style="margin-bottom:10px">No dispatches yet. Paste your league group chat and the desk will write one up.</div><button class="btn" data-act="desk">✍️ Write from the group chat</button></div>`);
   const awards = nl.awards.length ? `<div class="card awards" style="border-color:var(--accent-d)">
@@ -1992,17 +2095,21 @@ function issueBodyHtml(nl, deskArts, frozen) {
         <div class="prbar"><div class="prfill" style="width:${pct}%"></div></div>
         ${p.note ? `<div class="dt">${esc(p.note)}</div>` : ''}
       </div></div>`; }).join('')}</div>` : '';
-  const coverStory = nl.stories[0] ? storyHtml(nl.stories[0], true) : '';
-  const otherStories = nl.stories.slice(1).map(s => storyHtml(s, false)).join('');
+  const coverStory = nl.stories[0] ? storyHtml(nl.stories[0], true) + shareRow('story:0') : '';
+  const otherStories = nl.stories.slice(1).map((s, i) => storyHtml(s, false) + shareRow('story:' + (i + 1))).join('');
   const trades = nl.trades && nl.trades.length
-    ? nl.trades.map(tradeCardHtml).join('')
+    ? nl.trades.map((t, i) => tradeCardHtml(t) + shareRow('trade:' + i)).join('')
     : `<div class="card" style="text-align:center"><div class="dt">${seededPick(['Not a single trade this week. A league full of cowards.', 'The trade market was dead. Everybody clutching their roster like it’s worth a damn.', 'No deals went down. Gutless week on the wire.'], (wk || 1) * 5)}</div></div>`;
   const colophon = `<div class="colophon">Auto-written from real Sleeper box scores — every stat line and margin is genuine. The voice, jokes, and profanity are on the house.</div>`;
+  const numbers = numbersHtml(nl.numbers);
   return sec('Cover Story') + coverStory
-    + sec('The Column') + lead
-    + (feature ? sec('League Feature') + feature : '')
-    + sec('By the Numbers') + numbersHtml(nl.numbers)
-    + power + studsDudsHtml(nl.studs, nl.duds) + shameHtml(nl.shame) + awards
+    + sec('The Column') + lead + shareRow('lead')
+    + (feature ? sec('League Feature') + feature + shareRow('feature') : '')
+    + (numbers ? sec('By the Numbers') + numbers + shareRow('numbers') : '')
+    + (power ? power + shareRow('power') : '')
+    + studsDudsHtml(nl.studs, nl.duds) + ((nl.studs && nl.studs.length) || (nl.duds && nl.duds.length) ? shareRow('studsduds') : '')
+    + shameHtml(nl.shame) + ((nl.shame && nl.shame.length) ? shareRow('shame') : '')
+    + awards + (nl.awards.length ? shareRow('awards') : '')
     + sec('The Trade Block') + trades
     + sec('The Water Cooler') + desk
     + (otherStories ? sec('More Game Stories') + otherStories : '')
@@ -2523,6 +2630,7 @@ document.body.addEventListener('click', async (e) => {
   }
   if (act === 'settings') return showSettings();
   if (act === 'share') return shareMagazine();
+  if (act === 'share-item') return shareArticle(t.dataset.id);
   if (act === 'save-magname') { const v = ($('#magName')||{}).value; S.magName = (v && v.trim()) || 'Skirt Chasers';
     try { localStorage.setItem('gg.magname', S.magName); } catch {} toast('Magazine name saved'); return; }
   if (act === 'save-apikey') { const v = (($('#apiKey')||{}).value || '').trim(); S.apiKey = v;
