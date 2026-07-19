@@ -801,6 +801,7 @@ async function generateChatArticleAI(raw, angle) {
   const angleLine = (angle && angle.trim())
     ? `The editor wants this angle front and center: "${angle.trim()}". Build the column around it if the chat supports it.`
     : `Find the angle yourself — the one thread everyone kept circling back to.`;
+  const hist = historyBlurb();
   const system =
 `You are the Water Cooler columnist for "${mag} Fantasy League Magazine," a fantasy-football league magazine written for the guys in the league. Your beat is the league group chat.
 
@@ -813,7 +814,7 @@ Write ONE column that is a SUMMARY and COMMENTARY on the week's group chat — a
 - Length: 3 to 5 tight paragraphs. Every sentence earns its place.
 
 ${angleLine}
-
+${hist ? '\n' + hist + '\n' : ''}
 Return STRICT JSON, no markdown, no preamble, exactly this shape:
 {"headline": "punchy title, no clickbait fluff", "dek": "one-line standfirst under the headline", "paragraphs": ["para 1", "para 2", "..."]}`;
 
@@ -1406,7 +1407,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, espnHist:null, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, espnHist:null, histIndex:null, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -1424,7 +1425,7 @@ function savePower(){ try { localStorage.setItem(powerKey(), JSON.stringify(S.po
 
 // ---- Imported league history (e.g. past ESPN seasons) ----------------------
 function histKey(){ return 'gg.espnhist.' + (S.leagueId || 'x'); }
-function loadEspnHist(){ try { S.espnHist = JSON.parse(localStorage.getItem(histKey()) || 'null'); } catch { S.espnHist = null; } }
+function loadEspnHist(){ try { S.espnHist = JSON.parse(localStorage.getItem(histKey()) || 'null'); } catch { S.espnHist = null; } refreshHistIndex(); }
 function saveEspnHist(){ try { S.espnHist ? localStorage.setItem(histKey(), JSON.stringify(S.espnHist)) : localStorage.removeItem(histKey()); } catch {} }
 // Accept our normalized shape, or a raw ESPN dump, and normalize to seasons[].
 function normalizeHistory(obj) {
@@ -1475,6 +1476,77 @@ function computeHistoryStats(h) {
     .sort((x, y) => y.titles - x.titles || y.pct - x.pct || y.pf - x.pf);
   return { champs: champs.sort((a, b) => b.year - a.year), standings, bestGame, blowout, bestSeasonPF,
     seasons: (h.seasons || []).slice().sort((a, b) => b.year - a.year) };
+}
+
+// ---- History as CONTEXT: an index the narrative engines can reference -------
+// So the magazine can drop real historical references (defending champ, all-time
+// rivalries, title pedigree) instead of the Record Book being a dead-end page.
+function normName(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function buildHistoryIndex(h) {
+  if (!h || !h.seasons || !h.seasons.length) return { hasData: false };
+  const stats = computeHistoryStats(h);
+  const byKey = {};
+  const put = (name, rec) => { const k = normName(name); if (k && !byKey[k]) byKey[k] = rec; };
+  stats.standings.forEach(a => {
+    const rec = { display: a.name, titles: a.titles, wins: a.wins, losses: a.losses, ties: a.ties, pf: a.pf, seasons: a.seasons, titleYears: [] };
+    put(a.name, rec); put(String(a.name).split(/\s+/)[0], rec);   // full name and first name
+  });
+  // team names → owner record, so a Sleeper team name can still resolve.
+  (h.seasons || []).forEach(se => (se.teams || []).forEach(t => { const rec = byKey[normName(t.owner)]; if (rec) put(t.name, rec); }));
+  stats.champs.forEach(c => { const r = byKey[normName(c.who)]; if (r && !r.titleYears.includes(c.year)) r.titleYears.push(c.year); });
+  Object.values(byKey).forEach(r => { r.titleYears.sort((a, b) => b - a); r.lastTitle = r.titleYears[0] || null; });
+  // Head-to-head wins by owner pair across all past seasons.
+  const h2h = {};
+  (h.seasons || []).forEach(se => { const tmap = {}; (se.teams || []).forEach(t => tmap[t.id] = t.owner || t.name);
+    (se.matchups || []).forEach(m => { if (m.homeScore === m.awayScore) return; const a = tmap[m.home], b = tmap[m.away]; if (!a || !b) return;
+      const key = [normName(a), normName(b)].sort().join('|'); const rec = h2h[key] || (h2h[key] = {});
+      const wk = normName(m.homeScore > m.awayScore ? a : b); rec[wk] = (rec[wk] || 0) + 1; }); });
+  const years = stats.seasons.map(s => s.year);
+  return { hasData: true, byKey, h2h, stats, defending: stats.champs[0] ? stats.champs[0].who : null,
+    defendingYear: stats.champs[0] ? stats.champs[0].year : null, span: years.length ? `${Math.min(...years)}–${Math.max(...years)}` : '' };
+}
+function refreshHistIndex() { S.histIndex = buildHistoryIndex(S.espnHist); }
+// Resolve a current-league manager/team name to their historical record (fuzzy).
+function histFor(name) {
+  const i = S.histIndex; if (!i || !i.hasData || !name) return null;
+  const n = normName(name); if (i.byKey[n]) return i.byKey[n];
+  const first = normName(String(name).split(/\s+/)[0]); if (i.byKey[first]) return i.byKey[first];
+  for (const k in i.byKey) if (k.length >= 4 && (k.includes(n) || (n.length >= 4 && n.includes(k)))) return i.byKey[k];
+  return null;
+}
+function histH2H(a, b) {
+  const i = S.histIndex; if (!i || !i.hasData) return null;
+  const ra = histFor(a), rb = histFor(b); if (!ra || !rb) return null;
+  const na = normName(ra.display), nb = normName(rb.display); if (na === nb) return null;
+  const rec = i.h2h[[na, nb].sort().join('|')]; if (!rec) return null;
+  return { aWins: rec[na] || 0, bWins: rec[nb] || 0 };
+}
+function isDefending(name) { const i = S.histIndex, r = histFor(name); return !!(i && i.defending && r && normName(r.display) === normName(i.defending)); }
+// Weave history into an already-built newsletter (rivalries, pedigree, champ flag).
+function applyHistoryContext(nl) {
+  const i = S.histIndex; if (!i || !i.hasData || !nl) return;
+  (nl.stories || []).forEach(s => {
+    if (s.tie) return; const W = s.winner.manager, L = s.loser.manager;
+    const hh = histH2H(W, L); let line = '';
+    if (hh && (hh.aWins + hh.bWins) >= 3) {
+      const w = hh.aWins, l = hh.bWins;
+      if (w > l) line = `These two have history: across past seasons ${W} held a ${w}–${l} edge over ${L}, and the beat goes on.`;
+      else if (l > w) line = `${L} has owned this rivalry — ${l}–${w} across past seasons — which makes ${W} flipping the script this week sting all the more.`;
+      else line = `${W} and ${L} have split their all-time meetings right down the middle, ${w}–${l}. Chalk one up for ${W}.`;
+    } else if (isDefending(W)) line = `And the defending champ keeps looking the part.`;
+    else if (isDefending(L)) line = `So much for the champ's swagger — ${L}, last year's winner, gets taken behind the woodshed.`;
+    if (line) s.paragraphs = [...s.paragraphs, line];
+  });
+  if (i.defending && nl.powerRankings) nl.powerRankings.forEach(p => {
+    if (isDefending(p.manager) && p.note && !/defending champ/i.test(p.note)) p.note = 'Defending champ — ' + p.note.charAt(0).toLowerCase() + p.note.slice(1);
+  });
+}
+// A compact history brief for the AI Water Cooler system prompt.
+function historyBlurb() {
+  const i = S.histIndex; if (!i || !i.hasData) return '';
+  const champs = i.stats.champs.slice(0, 8).map(c => `${c.year} ${c.who}`).join(', ');
+  const top = i.stats.standings.slice(0, 4).map(a => `${a.name} (${a.titles} title${a.titles === 1 ? '' : 's'}, ${a.wins}-${a.losses} all-time)`).join('; ');
+  return `LEAGUE HISTORY (real, past seasons ${i.span}) — champions: ${champs}. All-time leaders: ${top}. Defending champ: ${i.defending}. Use these facts only where the chat naturally invites them; never invent history that isn't listed here.`;
 }
 
 // ---- Back Issues: a self-contained archive frozen on THIS device ------------
@@ -2123,6 +2195,10 @@ function coverPackage(nl) {
   } : null;
 
   const lines = [];
+  // History nugget: title pedigree of the cover subject, when we know it.
+  const subjHist = subject ? histFor(subject.name) : null;
+  if (subjHist && subjHist.titles > 0) lines.push(`${U(subject.name)}: ${subjHist.titles}× CHAMP${subjHist.titleYears.length ? ' (' + subjHist.titleYears.slice(0, 3).join(', ') + ')' : ''}`);
+  else if (S.histIndex && S.histIndex.defending) lines.push(`${U(S.histIndex.defending)} DEFENDS THE CROWN`);
   if (leader && cellar) lines.push(`POWER RANKINGS: ${leader.manager} on top, ${cellar.manager} in the cellar`);
   if (close) lines.push(`${close.winner.manager} edge ${close.loser.manager} by ${close.margin}`);
   if (deskArt) lines.push(`GROUP CHAT: ${deskArt.headline}`);
@@ -2200,6 +2276,7 @@ async function renderNews() {
       nl = buildNewsletter({ week:wk, league:S.bundle.league, matchups, rosters:S.bundle.rosters,
         usersById:S.bundle.usersById, players:S.bundle.players, weeklyStats, weeklyProjections });
       try { nl.trades = await buildTradeReview(wk); } catch { nl.trades = []; }
+      applyHistoryContext(nl);
       S.newsCache[wk] = nl;
     } catch { nl = null; }
   }
@@ -2814,7 +2891,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'archive') return showArchive();
   if (act === 'history') return showHistory();
   if (act === 'copy-espn') { try { await navigator.clipboard.writeText(ESPN_SNIPPET); toast('Snippet copied'); } catch { showCopyModal(ESPN_SNIPPET); } return; }
-  if (act === 'history-clear') { S.espnHist = null; saveEspnHist(); toast('History removed'); return showHistory(); }
+  if (act === 'history-clear') { S.espnHist = null; saveEspnHist(); refreshHistIndex(); S.newsCache = {}; toast('History removed'); return showHistory(); }
   if (act === 'save-issue') return saveCurrentIssue();
   if (act === 'open-issue') return openSavedIssue(t.dataset.id);
   if (act === 'delete-issue') { e.stopPropagation(); return deleteSavedIssue(t.dataset.id); }
@@ -2865,7 +2942,7 @@ document.body.addEventListener('change', async (e) => {
       const obj = JSON.parse(await f.text());
       const norm = normalizeHistory(obj);
       if (!norm || !norm.seasons.length) { if (st) st.innerHTML = 'Couldn’t find any seasons in that file. Make sure it’s the <b>espn-history.json</b> the snippet created.'; return; }
-      S.espnHist = norm; saveEspnHist();
+      S.espnHist = norm; saveEspnHist(); refreshHistIndex(); S.newsCache = {};
       if (st) st.innerHTML = `✓ Imported <b>${norm.seasons.length}</b> seasons.`;
       showHistory();
     } catch (err) { if (st) st.innerHTML = `Couldn’t read that file — ${esc((err && err.message) || 'invalid JSON')}.`; }
