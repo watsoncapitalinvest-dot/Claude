@@ -1469,6 +1469,20 @@ function savePower(){ try { localStorage.setItem(powerKey(), JSON.stringify(S.po
 // ---- Imported league history (e.g. past ESPN seasons) ----------------------
 function histKey(){ return 'gg.espnhist.' + (S.leagueId || 'x'); }
 function loadEspnHist(){ try { S.espnHist = JSON.parse(localStorage.getItem(histKey()) || 'null'); } catch { S.espnHist = null; } loadHistAliases(); refreshHistIndex(); }
+// Baked-in league history: if nobody has imported their own, load the committed
+// history.json so the Record Book and history-aware writing are always there.
+async function loadBundledHistory() {
+  if (S.espnHist && S.espnHist.seasons && S.espnHist.seasons.length) return;
+  try {
+    const r = await fetch('history.json', { cache: 'force-cache' });
+    if (!r.ok) return;
+    const norm = normalizeHistory(await r.json());
+    if (norm && norm.seasons.length) {
+      S.espnHist = norm; refreshHistIndex(); S.newsCache = {};
+      if (S.tab === 'news' && !S.reading) renderNews();
+    }
+  } catch {}
+}
 // Manager aliases: map any name (an old team name, a Sleeper name) to one person.
 function aliasKey(){ return 'gg.histalias.' + (S.leagueId || 'x'); }
 function loadHistAliases(){ try { S.histAliases = JSON.parse(localStorage.getItem(aliasKey()) || '{}') || {}; } catch { S.histAliases = {}; } }
@@ -2066,7 +2080,7 @@ async function enterGuest(params) {
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster: null };
     S.values = null; S.newsCache = {}; S.history = null; S.desk = [];
     const d = params.get('desk'); if (d) { try { S.desk = JSON.parse(b64dec(d)) || []; } catch { S.desk = []; } }
-    renderGuestShell(); renderNews();
+    renderGuestShell(); renderNews(); loadBundledHistory();
   } catch (e) {
     app.innerHTML = empty("Couldn't open this issue", 'The league may be private, or the link is incomplete.');
   }
@@ -2165,7 +2179,7 @@ async function enterApp() {
     const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
     const myRoster = rosters.find(r => r.owner_id === S.user.user_id) || null;
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster };
-    loadDesk(); loadPower(); loadEspnHist();
+    loadDesk(); loadPower(); loadEspnHist(); loadBundledHistory();
     S.values = null; S.newsCache = {}; S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:false };
     S.trade = { partnerId:null, give:new Set(), get:new Set() };
     // Season history via Sleeper's previous_league_id chain — the reliable way
