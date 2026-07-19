@@ -1407,7 +1407,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, espnHist:null, histIndex:null, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, espnHist:null, histIndex:null, histAliases:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -1425,7 +1425,12 @@ function savePower(){ try { localStorage.setItem(powerKey(), JSON.stringify(S.po
 
 // ---- Imported league history (e.g. past ESPN seasons) ----------------------
 function histKey(){ return 'gg.espnhist.' + (S.leagueId || 'x'); }
-function loadEspnHist(){ try { S.espnHist = JSON.parse(localStorage.getItem(histKey()) || 'null'); } catch { S.espnHist = null; } refreshHistIndex(); }
+function loadEspnHist(){ try { S.espnHist = JSON.parse(localStorage.getItem(histKey()) || 'null'); } catch { S.espnHist = null; } loadHistAliases(); refreshHistIndex(); }
+// Manager aliases: map any name (an old team name, a Sleeper name) to one person.
+function aliasKey(){ return 'gg.histalias.' + (S.leagueId || 'x'); }
+function loadHistAliases(){ try { S.histAliases = JSON.parse(localStorage.getItem(aliasKey()) || '{}') || {}; } catch { S.histAliases = {}; } }
+function saveHistAliases(){ try { localStorage.setItem(aliasKey(), JSON.stringify(S.histAliases || {})); } catch {} }
+function aliasOf(name){ const a = S.histAliases || {}; let cur = name, seen = 0; while (a[normName(cur)] && seen < 8) { cur = a[normName(cur)]; seen++; } return cur; }
 function saveEspnHist(){ try { S.espnHist ? localStorage.setItem(histKey(), JSON.stringify(S.espnHist)) : localStorage.removeItem(histKey()); } catch {} }
 // Accept our normalized shape, or a raw ESPN dump, and normalize to seasons[].
 function normalizeHistory(obj) {
@@ -1455,13 +1460,14 @@ function computeHistoryStats(h) {
   let bestGame = null, blowout = null, bestSeasonPF = null;
   (h.seasons || []).forEach(se => {
     const tmap = {}; (se.teams || []).forEach(t => tmap[t.id] = t.owner || t.name);
-    const who = id => tmap[id] || ('Team ' + id);
-    if (se.champion) champs.push({ year: se.year, who: se.champion });
+    const who = id => aliasOf(tmap[id] || ('Team ' + id));
+    const champ = se.champion ? aliasOf(se.champion) : null;
+    if (champ) champs.push({ year: se.year, who: champ });
     (se.standings || []).forEach(st => {
       const key = who(st.teamId);
       const a = agg[key] || (agg[key] = { name: key, titles: 0, wins: 0, losses: 0, ties: 0, pf: 0, seasons: 0 });
       a.wins += st.wins || 0; a.losses += st.losses || 0; a.ties += st.ties || 0; a.pf += st.pf || 0; a.seasons += 1;
-      if (se.champion === key) a.titles += 1;
+      if (champ && champ === key) a.titles += 1;
       if (st.pf && (!bestSeasonPF || st.pf > bestSeasonPF.pf)) bestSeasonPF = { pf: st.pf, who: key, year: se.year };
     });
     (se.matchups || []).forEach(m => {
@@ -1492,13 +1498,15 @@ function buildHistoryIndex(h) {
     put(a.name, rec); put(String(a.name).split(/\s+/)[0], rec);   // full name and first name
   });
   // team names → owner record, so a Sleeper team name can still resolve.
-  (h.seasons || []).forEach(se => (se.teams || []).forEach(t => { const rec = byKey[normName(t.owner)]; if (rec) put(t.name, rec); }));
+  (h.seasons || []).forEach(se => (se.teams || []).forEach(t => { const rec = byKey[normName(aliasOf(t.owner))]; if (rec) { put(t.name, rec); put(t.owner, rec); } }));
+  // user-defined aliases → the canonical person's record.
+  Object.keys(S.histAliases || {}).forEach(al => { const rec = byKey[normName(aliasOf(al))]; if (rec) byKey[al] = rec; });
   stats.champs.forEach(c => { const r = byKey[normName(c.who)]; if (r && !r.titleYears.includes(c.year)) r.titleYears.push(c.year); });
   Object.values(byKey).forEach(r => { r.titleYears.sort((a, b) => b - a); r.lastTitle = r.titleYears[0] || null; });
   // Head-to-head wins by owner pair across all past seasons.
   const h2h = {};
   (h.seasons || []).forEach(se => { const tmap = {}; (se.teams || []).forEach(t => tmap[t.id] = t.owner || t.name);
-    (se.matchups || []).forEach(m => { if (m.homeScore === m.awayScore) return; const a = tmap[m.home], b = tmap[m.away]; if (!a || !b) return;
+    (se.matchups || []).forEach(m => { if (m.homeScore === m.awayScore) return; const a = aliasOf(tmap[m.home]), b = aliasOf(tmap[m.away]); if (!a || !b) return;
       const key = [normName(a), normName(b)].sort().join('|'); const rec = h2h[key] || (h2h[key] = {});
       const wk = normName(m.homeScore > m.awayScore ? a : b); rec[wk] = (rec[wk] || 0) + 1; }); });
   const years = stats.seasons.map(s => s.year);
@@ -1509,8 +1517,9 @@ function refreshHistIndex() { S.histIndex = buildHistoryIndex(S.espnHist); }
 // Resolve a current-league manager/team name to their historical record (fuzzy).
 function histFor(name) {
   const i = S.histIndex; if (!i || !i.hasData || !name) return null;
-  const n = normName(name); if (i.byKey[n]) return i.byKey[n];
-  const first = normName(String(name).split(/\s+/)[0]); if (i.byKey[first]) return i.byKey[first];
+  const canon = aliasOf(name);
+  const n = normName(canon); if (i.byKey[n]) return i.byKey[n];
+  const first = normName(String(canon).split(/\s+/)[0]); if (i.byKey[first]) return i.byKey[first];
   for (const k in i.byKey) if (k.length >= 4 && (k.includes(n) || (n.length >= 4 && n.includes(k)))) return i.byKey[k];
   return null;
 }
@@ -1683,8 +1692,42 @@ function showHistory() {
     <div class="sec">Record Book</div>${records}
     <div class="sec">Champions</div><div class="card">${champHtml || '<div class="dt">No champions recorded.</div>'}</div>
     <div class="sec">All-Time Standings</div><div class="card">${tableHtml}</div>
+    <div class="sec">Who’s Who</div>${whosWhoCard()}
     <div class="sec">Season by Season</div>${seasonCards}
     <div style="height:8px"></div>${historyImportCard()}
+  </div>`;
+}
+// Every distinct identity the app knows: past managers + current league managers.
+function historyIdentities() {
+  const map = new Map();
+  const idx = S.histIndex;
+  ((idx && idx.hasData) ? idx.stats.standings : []).forEach(a => map.set(normName(a.name), { display: a.name, history: true }));
+  if (S.bundle && S.bundle.rosters) S.bundle.rosters.forEach(r => {
+    const nm = managerName(r.owner_id), canon = aliasOf(nm), k = normName(canon);
+    const e = map.get(k) || map.set(k, { display: canon }).get(k); e.current = true;
+    if (normName(nm) !== k) e.currentName = nm;   // remember the raw league name for linking
+  });
+  return [...map.values()].sort((a, b) => a.display.localeCompare(b.display));
+}
+// Editor to merge names that are the same person / link a current team to its past.
+function whosWhoCard() {
+  const ids = historyIdentities();
+  if (ids.length < 2) return `<div class="card"><div class="dt">Import history and load your league to match up managers here.</div></div>`;
+  const rows = ids.map(id => {
+    const others = ids.filter(o => normName(o.display) !== normName(id.display));
+    const linked = id.current && !id.history && !histFor(id.currentName || id.display);
+    return `<div class="pr" style="align-items:center">
+      <div style="flex:1"><div class="nm">${esc(id.display)}</div>
+        <div class="faint" style="font-size:11px">${id.history ? 'in the record book' : ''}${id.history && id.current ? ' · ' : ''}${id.current ? 'in your league now' : ''}${linked ? ' · <span style="color:var(--amber)">no history linked</span>' : ''}</div></div>
+      <select class="seasonsel" data-act="alias-set" data-name="${esc(id.currentName || id.display)}" style="max-width:150px">
+        <option value="">— same as… —</option>
+        ${others.map(o => `<option value="${esc(o.display)}">${esc(o.display)}</option>`).join('')}
+      </select></div>`;
+  }).join('');
+  return `<div class="card">
+    <div class="faint" style="font-size:12px;line-height:1.5;margin-bottom:8px">Team names change over the years. If one person shows up twice, or your current team isn’t linked to its past, pick “same as…” to merge them.</div>
+    ${rows}
+    ${Object.keys(S.histAliases || {}).length ? `<div style="height:10px"></div><button class="btn ghost" data-act="alias-clear">Reset all merges</button>` : ''}
   </div>`;
 }
 function historyImportCard() {
@@ -2892,6 +2935,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'history') return showHistory();
   if (act === 'copy-espn') { try { await navigator.clipboard.writeText(ESPN_SNIPPET); toast('Snippet copied'); } catch { showCopyModal(ESPN_SNIPPET); } return; }
   if (act === 'history-clear') { S.espnHist = null; saveEspnHist(); refreshHistIndex(); S.newsCache = {}; toast('History removed'); return showHistory(); }
+  if (act === 'alias-clear') { S.histAliases = {}; saveHistAliases(); refreshHistIndex(); S.newsCache = {}; toast('Name merges reset'); return showHistory(); }
   if (act === 'save-issue') return saveCurrentIssue();
   if (act === 'open-issue') return openSavedIssue(t.dataset.id);
   if (act === 'delete-issue') { e.stopPropagation(); return deleteSavedIssue(t.dataset.id); }
@@ -2915,6 +2959,15 @@ document.body.addEventListener('change', async (e) => {
     const opt = sel.options[sel.selectedIndex];
     S.leagueId = sel.value; S.season = opt.dataset.season; saveSession();
     return enterApp();
+  }
+  const alias = e.target.closest('[data-act="alias-set"]');
+  if (alias) {
+    const name = alias.dataset.name, target = alias.value;
+    S.histAliases = S.histAliases || {};
+    if (target && normName(target) !== normName(name)) S.histAliases[normName(name)] = target;
+    else delete S.histAliases[normName(name)];
+    saveHistAliases(); refreshHistIndex(); S.newsCache = {};
+    return showHistory();
   }
   const file = e.target.closest('[data-act="desk-file"]');
   if (file && file.files && file.files[0]) {
