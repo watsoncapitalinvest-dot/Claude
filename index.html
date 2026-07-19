@@ -1064,16 +1064,7 @@ function magazineLink() {
 }
 async function shareMagazine() {
   const magName = S.magName || 'Skirt Chasers';
-  // The sample can't be reconstructed by others, so share its text; a real
-  // league shares a live link to the full illustrated issue.
-  if (S.demo) {
-    const text = magazineToText(S.currentNl);
-    try { if (navigator.share) { await navigator.share({ title: magName + ' (Sample)', text }); return; } }
-    catch (e) { if (e && e.name === 'AbortError') return; }
-    try { await navigator.clipboard.writeText(text); toast('Sample copied. Connect your real league to share a live link.'); return; } catch {}
-    showCopyModal(text); return;
-  }
-  const url = magazineLink();
+  const url = magazineLink(); // ?league=demo works too — opens the sample issue read-only
   const payload = { title: `${magName} — Fantasy League Magazine`, text: `Week ${S.activeWeek} is out. Read the full issue:`, url };
   try { if (navigator.share) { await navigator.share(payload); return; } }
   catch (e) { if (e && e.name === 'AbortError') return; }
@@ -1118,6 +1109,13 @@ async function enterGuest(params) {
   S.leagueId = params.get('league');
   S.magName = params.get('mag') || S.magName || 'Skirt Chasers';
   app.innerHTML = spinner('Opening the issue…');
+  const applyDesk = () => { const d = params.get('desk'); if (d) { try { S.desk = JSON.parse(b64dec(d)) || []; } catch { S.desk = []; } } };
+  if (S.leagueId === 'demo') {
+    S.demo = buildDemoBundle(); S.bundle = S.demo.bundle; S.season = '2025';
+    S.activeWeek = Math.max(1, parseInt(params.get('week') || '14', 10) || 14);
+    S.values = null; S.newsCache = {}; S.history = null; S.desk = []; applyDesk();
+    renderGuestShell(); renderNews(); return;
+  }
   try {
     const [league, rosters, users, players] = await Promise.all([
       getLeague(S.leagueId), getRosters(S.leagueId), getLeagueUsers(S.leagueId), getPlayers(),
