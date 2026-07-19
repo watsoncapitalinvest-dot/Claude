@@ -1257,7 +1257,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -1267,6 +1267,57 @@ function loadSession(){ try { const r=localStorage.getItem(SKEY); if(r){ const s
 function deskKey(){ return 'gg.desk.' + (S.leagueId || 'x'); }
 function loadDesk(){ try { S.desk = JSON.parse(localStorage.getItem(deskKey()) || '[]'); } catch { S.desk = []; } }
 function saveDesk(){ try { localStorage.setItem(deskKey(), JSON.stringify(S.desk)); } catch {} }
+
+// ---- Back Issues: a self-contained archive frozen on THIS device ------------
+function issuesKey(){ return 'gg.issues.' + (S.leagueId || 'x'); }
+function loadIssues(){ try { return JSON.parse(localStorage.getItem(issuesKey()) || '[]'); } catch { return []; } }
+function saveIssues(arr){ try { localStorage.setItem(issuesKey(), JSON.stringify(arr)); } catch {} }
+// Freeze the currently-open issue (cover + every article, including the AI
+// Water Cooler column) so it can be re-read later exactly as it is now.
+function saveCurrentIssue() {
+  const nl = S.currentNl;
+  if (!nl) { toast('Open an issue first'); return; }
+  const deskArts = (S.desk || []).filter(a => a.week === nl.week);
+  const snap = { id: `${S.season || ''}-w${nl.week}`, week: nl.week, season: S.season || '',
+    magName: S.magName || 'Skirt Chasers', sample: !!S.sample, savedAt: Date.now(),
+    nl, desk: deskArts, cover: coverPackage(nl) };
+  const list = loadIssues().filter(x => x.id !== snap.id);
+  list.unshift(snap);
+  saveIssues(list.slice(0, 24));
+  toast(`Saved Week ${nl.week} to Back Issues`);
+}
+function issueShelfCard(s) {
+  const c = s.cover || {};
+  return `<div class="card" style="position:relative">
+    <div data-act="open-issue" data-id="${esc(s.id)}" style="cursor:pointer">
+      <div class="cover-sub" style="color:var(--accent);letter-spacing:2px">${esc((s.magName||'SKIRT CHASERS').toUpperCase())} · WEEK ${s.week}${s.sample?' · SAMPLE':''}</div>
+      <div style="font-family:var(--serif);font-weight:900;font-size:21px;line-height:1.12;margin-top:7px">${esc(c.headline||('Week '+s.week+' Edition'))}</div>
+      ${c.subject?`<div class="dt" style="margin-top:5px">${esc(c.subject.name)}${c.subject.tag?` · ${esc(c.subject.tag)}`:''}</div>`:''}
+    </div>
+    <div class="faint" style="font-size:11px;margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+      <span>${esc(s.season||'')} season</span>
+      <button class="linkbtn" data-act="delete-issue" data-id="${esc(s.id)}">delete</button>
+    </div>
+  </div>`;
+}
+function showArchive() {
+  const list = loadIssues();
+  app.innerHTML = `<div style="padding-bottom:24px">
+    <button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>
+    <div class="setup-logo" style="font-size:24px">📚 Back Issues</div>
+    <p class="muted" style="margin-top:4px">Saved editions, frozen exactly as they were — cover, stories, and the Water Cooler column. Kept on this device.</p>
+    ${list.length ? list.map(issueShelfCard).join('') : empty('No saved issues yet', 'Open an issue and tap “Save to Back Issues.”')}
+  </div>`;
+}
+function openSavedIssue(id) {
+  const snap = loadIssues().find(s => s.id === id);
+  if (!snap || !snap.nl) { toast('Issue not found'); return; }
+  S.currentNl = snap.nl; S.activeWeek = snap.week; S.reading = true;
+  app.innerHTML = `<div id="content"></div>`;
+  const back = `<button class="btn ghost" data-act="back-archive" style="width:auto;padding:8px 14px;margin:2px 0 12px">‹ Back Issues</button>`;
+  setContent(coverHtml(snap.nl) + back + issueBodyHtml(snap.nl, snap.desk || [], true));
+}
+function deleteSavedIssue(id) { saveIssues(loadIssues().filter(s => s.id !== id)); showArchive(); }
 
 // ---- Export / share to WhatsApp --------------------------------------------
 function magazineToText(nl) {
@@ -1288,24 +1339,91 @@ function magazineToText(nl) {
 }
 function b64enc(str) { try { return btoa(unescape(encodeURIComponent(str))); } catch { return ''; } }
 function b64dec(b) { try { return decodeURIComponent(escape(atob(b))); } catch { return ''; } }
-// A deep link that reopens THIS exact issue for anyone (public Sleeper data),
-// with any Water Cooler articles for the week baked in.
+// A SHORT deep link that reopens this issue for anyone (public Sleeper data).
+// Deliberately compact: just the league, week, season and magazine name — the
+// cover travels as a shared image (below), so we don't stuff the URL.
 function magazineLink() {
   const base = location.origin + location.pathname;
   const p = new URLSearchParams();
   p.set('league', S.leagueId);
   p.set('week', String(S.activeWeek));
   if (S.season) p.set('season', S.season);
-  if (S.magName) p.set('mag', S.magName);
-  const weekDesk = (S.desk || []).filter(a => a.week === S.activeWeek);
-  if (weekDesk.length) { const enc = b64enc(JSON.stringify(weekDesk)); if (enc && enc.length < 6000) p.set('desk', enc); }
+  if (S.magName && S.magName !== 'Skirt Chasers') p.set('mag', S.magName);
   return base + '?' + p.toString();
+}
+// Render the current issue's cover to a shareable PNG so WhatsApp shows the
+// actual cover image next to the link — no server, no crawler needed.
+async function coverImageBlob(nl) {
+  const W = 1080, H = 1350;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d'); if (!g) return null;
+  const pkg = coverPackage(nl);
+  const ACCENT = '#31d158', GOLD = '#e8eef5', DIM = '#9fb0c3';
+  const grad = g.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, '#111a22'); grad.addColorStop(1, '#090d12');
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+  // Texture: faint diagonal streaks + a corner glow.
+  g.strokeStyle = 'rgba(255,255,255,0.05)'; g.lineWidth = 3;
+  for (let i = -2; i < 20; i++) { g.beginPath(); g.moveTo(i * 90, H); g.lineTo(i * 90 + 380, 0); g.stroke(); }
+  const glow = g.createRadialGradient(W * 0.78, H * 0.14, 40, W * 0.78, H * 0.14, 620);
+  glow.addColorStop(0, 'rgba(49,209,88,0.20)'); glow.addColorStop(1, 'rgba(49,209,88,0)');
+  g.fillStyle = glow; g.fillRect(0, 0, W, H);
+  const PAD = 72;
+  const wrap = (text, font, maxW, maxLines) => {
+    g.font = font; const words = String(text).split(/\s+/); const lines = []; let cur = '';
+    for (const w of words) { const t = cur ? cur + ' ' + w : w;
+      if (g.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; if (lines.length === maxLines) break; } else cur = t; }
+    if (cur && lines.length < maxLines) lines.push(cur); return lines;
+  };
+  // Masthead
+  g.textAlign = 'left'; g.fillStyle = GOLD;
+  g.font = `900 italic 104px ${'Georgia, "Times New Roman", serif'}`;
+  const mast = wrap(magTitle(), g.font, W - PAD * 2, 2);
+  let y = 150; mast.forEach(l => { g.fillText(l, PAD, y); y += 104; });
+  g.fillStyle = ACCENT; g.font = '900 26px Arial, sans-serif';
+  g.fillText(`FANTASY LEAGUE MAGAZINE · WEEK ${nl.week}${S.demo ? ' · SAMPLE' : ''}`.split('').join(' '), PAD, y + 6);
+  // Big cover hook
+  g.fillStyle = GOLD; y += 90;
+  const hookFont = `900 92px ${'Georgia, "Times New Roman", serif'}`;
+  const hook = wrap(pkg.headline, hookFont, W - PAD * 2, 4);
+  g.font = hookFont; hook.forEach(l => { y += 92; g.fillText(l, PAD, y); });
+  // Subject block
+  if (pkg.subject) {
+    y += 70; g.fillStyle = ACCENT; g.font = '900 30px Arial, sans-serif';
+    g.fillText(String(pkg.subject.tag).toUpperCase(), PAD, y);
+    y += 66; g.fillStyle = GOLD; g.font = `900 italic 60px ${'Georgia, serif'}`;
+    wrap(pkg.subject.name, g.font, W - PAD * 2, 2).forEach((l, i) => { if (i) y += 60; g.fillText(l, PAD, y); });
+  }
+  // Cover lines near the bottom
+  g.font = '600 27px Arial, sans-serif'; g.fillStyle = DIM;
+  let by = H - PAD - (pkg.lines.length - 1) * 42;
+  (pkg.lines || []).slice(0, 4).forEach(line => {
+    const one = wrap(line, g.font, W - PAD * 2, 1)[0] || line;
+    g.fillStyle = ACCENT; g.fillText('›', PAD, by);
+    g.fillStyle = DIM; g.fillText(one, PAD + 30, by); by += 42;
+  });
+  return await new Promise(res => cv.toBlob(res, 'image/png', 0.92));
 }
 async function shareMagazine() {
   const magName = S.magName || 'Skirt Chasers';
   const url = magazineLink(); // ?league=demo works too — opens the sample issue read-only
-  const payload = { title: `${magName} — Fantasy League Magazine`, text: `Week ${S.activeWeek} is out. Read the full issue:`, url };
-  try { if (navigator.share) { await navigator.share(payload); return; } }
+  const text = `${magName} — Week ${S.activeWeek} is out. Read the full issue:`;
+  // Preferred path: share the cover as an actual image + the short link.
+  try {
+    const nl = S.currentNl;
+    if (nl && typeof navigator !== 'undefined' && navigator.canShare) {
+      const blob = await coverImageBlob(nl);
+      if (blob) {
+        const file = new File([blob], `${magName.replace(/[^\w]+/g, '-')}-wk${S.activeWeek}.png`, { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          try { await navigator.share({ files: [file], text, url, title: `${magName} — Fantasy League Magazine` }); return; }
+          catch (e) { if (e && e.name === 'AbortError') return; }
+        }
+      }
+    }
+  } catch {}
+  // Fallbacks: plain share sheet, then clipboard, then a copy box.
+  try { if (navigator.share) { await navigator.share({ title: `${magName} — Fantasy League Magazine`, text, url }); return; } }
   catch (e) { if (e && e.name === 'AbortError') return; }
   try { await navigator.clipboard.writeText(url); toast('Issue link copied — paste into WhatsApp'); return; } catch {}
   showCopyModal(url);
@@ -1545,6 +1663,7 @@ function coverTools() {
   const exit = S.sample ? `<button class="ctool" data-act="exit-sample" title="Exit sample">✕</button>` : '';
   return `<div class="cover-tools">${share}${exit}
     <button class="ctool" data-act="desk" title="Newsroom desk">✍️</button>
+    <button class="ctool" data-act="archive" title="Back issues">📚</button>
     <button class="ctool" data-act="settings" title="Settings">⚙</button>
   </div>`;
 }
@@ -1681,14 +1800,24 @@ async function renderNews() {
     return;
   }
   S.currentNl = nl;
+  const deskArts = (S.desk || []).filter(a => a.week === wk);
+  const saveBtn = (!S.guest && !S.sample)
+    ? `<div style="margin:2px 0 4px"><button class="btn ghost" data-act="save-issue">📚 Save to Back Issues</button></div>`
+    : '';
+  setContent(coverHtml(nl) + seasonBar() + weekStepper() + saveBtn + issueBodyHtml(nl, deskArts, false));
+}
+// The full magazine body (everything under the cover). frozen=true drops the
+// interactive bits so a saved back-issue renders as a clean, static read.
+function issueBodyHtml(nl, deskArts, frozen) {
+  const wk = nl.week;
   const lead = `<div class="lead"><h1>${esc(nl.lead.headline)}</h1>
     <div class="standfirst">${esc(nl.lead.standfirst)}</div>
     ${nl.lead.paragraphs.map(p=>`<p class="body">${esc(p)}</p>`).join('')}</div>`;
   const feature = nl.feature ? articleHtml(nl.feature, true) : '';
-  const deskArts = (S.desk || []).filter(a => a.week === wk);
-  const desk = deskArts.length
-    ? deskArts.map(a => articleHtml(a, false, a.id)).join('')
-    : `<div class="card" style="text-align:center"><div class="dt" style="margin-bottom:10px">No dispatches yet. Paste your league group chat and the desk will write one up.</div><button class="btn" data-act="desk">✍️ Write from the group chat</button></div>`;
+  const desk = (deskArts && deskArts.length)
+    ? deskArts.map(a => articleHtml(a, false, (frozen || S.guest) ? null : a.id)).join('')
+    : ((frozen || S.guest) ? `<div class="card" style="text-align:center"><div class="dt">No group-chat column in this issue.</div></div>`
+      : `<div class="card" style="text-align:center"><div class="dt" style="margin-bottom:10px">No dispatches yet. Paste your league group chat and the desk will write one up.</div><button class="btn" data-act="desk">✍️ Write from the group chat</button></div>`);
   const awards = nl.awards.length ? `<div class="card awards" style="border-color:var(--accent-d)">
     <div class="at">Week ${wk} Superlatives</div>
     ${nl.awards.map(a=>`<div class="award"><span class="em">${a.emoji}</span><div style="flex:1">
@@ -1707,15 +1836,14 @@ async function renderNews() {
   const coverStory = nl.stories[0] ? storyHtml(nl.stories[0], true) : '';
   const otherStories = nl.stories.slice(1).map(s => storyHtml(s, false)).join('');
   const colophon = `<div class="colophon">Auto-written from real Sleeper box scores — every stat line and margin is genuine. The voice, jokes, and profanity are on the house.</div>`;
-  setContent(coverHtml(nl) + seasonBar() + weekStepper()
-    + sec('Cover Story') + coverStory
+  return sec('Cover Story') + coverStory
     + sec('The Column') + lead
     + (feature ? sec('League Feature') + feature : '')
     + sec('By the Numbers') + numbersHtml(nl.numbers)
     + power + studsDudsHtml(nl.studs, nl.duds) + shameHtml(nl.shame) + awards
     + sec('The Water Cooler') + desk
     + (otherStories ? sec('More Game Stories') + otherStories : '')
-    + colophon);
+    + colophon;
 }
 // A generic editorial article (feature / desk piece) with byline.
 function articleHtml(a, feature, deskId) {
@@ -2100,10 +2228,15 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'clear-apikey') { S.apiKey = ''; try { localStorage.removeItem('gg.apikey'); } catch {}
     toast('API key removed'); return showSettings(); }
   if (act === 'desk') return showDesk();
+  if (act === 'archive') return showArchive();
+  if (act === 'save-issue') return saveCurrentIssue();
+  if (act === 'open-issue') return openSavedIssue(t.dataset.id);
+  if (act === 'delete-issue') { e.stopPropagation(); return deleteSavedIssue(t.dataset.id); }
+  if (act === 'back-archive') { S.reading = false; return showArchive(); }
   if (act === 'desk-generate') return deskGenerate();
   if (act === 'desk-delete') { S.desk = S.desk.filter(a => a.id !== t.dataset.id); saveDesk(); delete S.newsCache[S.activeWeek];
     if ($('#setbody') || document.querySelector('.setup-logo')) return showDesk(); renderShell(); return renderTab(); }
-  if (act === 'back' || act === 'back-news') { renderShell(); return renderTab(); }
+  if (act === 'back' || act === 'back-news') { S.reading = false; renderShell(); return renderTab(); }
   if (act === 'signout') { localStorage.removeItem(SKEY); S.user=S.leagueId=S.season=S.bundle=S.history=null; return renderSetup(); }
   if (act === 'switch-league') { S.leagueId=t.dataset.id; S.season=t.dataset.season; saveSession(); return enterApp(); }
   if (act === 'trade-partner') { S.trade.partnerId = Number(t.dataset.id); S.trade.get = new Set(); return drawTrade(); }
