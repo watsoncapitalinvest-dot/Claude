@@ -512,13 +512,14 @@ function renderSetup() {
       </div>
       ${su.busy && !su.user ? spinner('') : ''}
       ${su.user && su.leagues.length ? `
-        <div class="seclabel">${esc(su.season)} leagues for ${esc(su.user.display_name)}</div>
+        <div class="seclabel">Your leagues for ${esc(su.user.display_name)}</div>
+        <p class="faint" style="font-size:12px;margin:-2px 4px 8px">Pick a past season (e.g. ${esc(String(Number(su.season)-1))}) to read real, completed newsletters.</p>
         ${su.leagues.map(lg=>`
           <button class="card row" style="width:100%;text-align:left;color:var(--text)" data-act="pick-league" data-id="${esc(lg.league_id)}" data-season="${esc(lg.season||su.season)}">
             ${avatarHtml(avatarUrl(lg.avatar),44,lg.name)}
             <div style="flex:1">
               <div style="font-weight:800;font-size:16px">${esc(lg.name)}</div>
-              <div class="muted" style="font-size:13px">${lg.total_rosters}-team · ${scoringLabel(lg)} · ${esc((lg.status||'').replace('_',' '))}</div>
+              <div class="muted" style="font-size:13px">${esc(lg.season)} · ${lg.total_rosters}-team · ${scoringLabel(lg)}</div>
             </div>
             <span class="faint" style="font-size:26px">›</span>
           </button>`).join('')}
@@ -529,22 +530,33 @@ function renderSetup() {
 }
 function scoringLabel(lg){ const r=lg.scoring_settings?.rec??0; return r>=1?'PPR':r>=0.5?'Half-PPR':'Standard'; }
 
+/**
+ * Fetch a user's NFL leagues across the current season and the two prior ones,
+ * tagging each with its season and sorting newest-first. This is what lets you
+ * pick last year's team to test the News Room on completed, real data.
+ */
+async function leaguesAcrossSeasons(userId, baseSeason) {
+  const base = Number(baseSeason) || new Date().getFullYear();
+  const seasons = [String(base), String(base - 1), String(base - 2)];
+  const results = await Promise.all(seasons.map((s) => getUserLeagues(userId, s).catch(() => [])));
+  const all = [];
+  results.forEach((ls, i) => (ls || []).forEach((lg) => { if (!lg.season) lg.season = seasons[i]; all.push(lg); }));
+  all.sort((a, b) => Number(b.season) - Number(a.season) || String(a.name).localeCompare(String(b.name)));
+  return all;
+}
+
 async function doLookup() {
   const name = (S.setup.username || '').trim();
   if (!name) return;
   S.setup.busy = true; S.setup.error = null; S.setup.user = null; S.setup.leagues = []; renderSetup();
   try {
-    const ssn = (S.nflState && S.nflState.season) || String(new Date().getFullYear());
+    const base = (S.nflState && S.nflState.season) || String(new Date().getFullYear());
     const u = await getUser(name);
     if (!u || !u.user_id) { S.setup.error = `No Sleeper user found for "${name}".`; return; }
-    S.setup.user = u; S.setup.season = ssn;
-    let ls = await getUserLeagues(u.user_id, ssn);
-    if ((!ls || !ls.length) && Number(ssn) > 2020) {
-      const prev = String(Number(ssn)-1); ls = await getUserLeagues(u.user_id, prev);
-      if (ls && ls.length) S.setup.season = prev;
-    }
-    S.setup.leagues = ls || [];
-    if (!ls || !ls.length) S.setup.error = 'That user has no NFL leagues on Sleeper for this season.';
+    S.setup.user = u; S.setup.season = base;
+    const ls = await leaguesAcrossSeasons(u.user_id, base);
+    S.setup.leagues = ls;
+    if (!ls.length) S.setup.error = 'That user has no NFL leagues on Sleeper.';
   } catch (e) { S.setup.error = 'Something went wrong. Check your connection and try again.'; }
   finally { S.setup.busy = false; renderSetup(); }
 }
@@ -633,8 +645,11 @@ async function renderNews() {
   }
   if (S.tab !== 'news' || S.activeWeek !== wk) return; // user moved on
   if (!nl || !nl.hasData) {
-    setContent(newsHeader() + weekStepper() + empty(`No games scored for Week ${wk} yet`,
-      'Once the games kick off, your newsletter writes itself. Try an earlier week with the arrows.'));
+    const seasonHint =
+      S.nflState && Number(S.season) >= Number(S.nflState.season)
+        ? 'This looks like an upcoming/empty season. Tap ⚙ (top right) and switch to last year’s league to read real, completed newsletters.'
+        : 'Use the week arrows to find a completed week — every played week writes itself.';
+    setContent(newsHeader() + weekStepper() + empty(`No games scored for Week ${wk} yet`, seasonHint));
     return;
   }
   const lead = `<div class="lead"><h1>${esc(nl.lead.headline)}</h1>
@@ -825,9 +840,8 @@ async function showSettings() {
     <div id="setbody">${spinner('')}</div>`;
   let leagues = [];
   try {
-    const ssn = S.season || (S.nflState && S.nflState.season) || String(new Date().getFullYear());
-    leagues = await getUserLeagues(S.user.user_id, ssn);
-    if ((!leagues||!leagues.length) && Number(ssn)>2020) leagues = await getUserLeagues(S.user.user_id, String(Number(ssn)-1));
+    const base = (S.nflState && S.nflState.season) || S.season || String(new Date().getFullYear());
+    leagues = await leaguesAcrossSeasons(S.user.user_id, base);
   } catch {}
   const u = S.user;
   $('#setbody').innerHTML = `
