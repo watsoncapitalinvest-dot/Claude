@@ -221,6 +221,9 @@
   .setup-logo { font-family:var(--serif); font-weight:900; font-size:30px; }
   .seasonsel { background:var(--bg2); color:var(--text); border:1px solid var(--border);
                border-radius:8px; padding:6px 10px; font-size:14px; font-weight:800; }
+  .fileinput { width:100%; color:var(--dim); font-size:13px; }
+  .fileinput::file-selector-button { background:var(--accent); color:#04210d; border:none; font-weight:800;
+    padding:9px 14px; border-radius:10px; margin-right:12px; font-size:14px; }
 </style>
 </head>
 <body>
@@ -550,17 +553,20 @@ function writeFeature(stories, power, week, leagueName) {
 function lc(s) { return s ? s.charAt(0).toLowerCase() + s.slice(1).replace(/\.$/, '') : s; }
 
 // ---- The Water Cooler: turn a pasted group chat into an article -------------
+const CHAT_NOISE = /(omitted|end-to-end encrypted|changed the (subject|group|icon)|changed this group|added |removed | left\b| joined | was added|deleted this message|this message was deleted|missed (voice|video) call|null|created group|pinned a message|changed their phone number|<Media|GIF omitted|sticker omitted|image omitted|video omitted|audio omitted|document omitted)/i;
 function parseChat(raw) {
-  const lines = String(raw || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const lines = String(raw || '')
+    .replace(/[‎‏‪-‮]/g, '')   // strip WhatsApp's invisible direction marks
+    .split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const msgs = [];
-  const re = /^(?:\[[^\]]+\]\s*)?(?:\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4},?\s+[\d:]+(?:\s*[APMapm]{2})?\s*[-–—]\s*)?([\p{L}0-9 ._'’-]{1,28}?):\s+(.+)$/u;
+  const re = /^(?:\[[^\]]+\]\s*)?(?:\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4},?\s+[\d:]+(?:\s*[APMapm]{2})?\s*[-–—]\s*)?([\p{L}0-9 ._'’-]{1,28}?):\s+(.+)$/u;
   for (const l of lines) {
     const m = l.match(re);
     if (m && m[2]) msgs.push({ author: m[1].trim(), text: m[2].trim() });
     else if (msgs.length) msgs[msgs.length - 1].text += ' ' + l;
-    else msgs.push({ author: 'Someone', text: l });
+    // else: a stray line with no author — skip it rather than inventing "Someone"
   }
-  return msgs.filter(m => m.text.length);
+  return msgs.filter(m => m.text.length && !CHAT_NOISE.test(m.text));
 }
 const CHAT_THEMES = {
   trade: /\b(trade|deal|offer|swap|veto|package)\b/i,
@@ -572,8 +578,10 @@ const CHAT_THEMES = {
 const THEME_HEAD = { trade: 'Trade Winds Blow Through the Chat', waiver: 'Waiver-Wire Warfare', rules: 'Rules Revolt in the Group Chat', smack: 'The Trash Talk Boils Over', injury: 'Injury Panic Sweeps the League' };
 const CHAT_SAY = ['fired off', 'offered up', 'declared', 'shot back', 'announced', 'insisted', 'typed out', 'ranted'];
 function generateChatArticle(raw, angle) {
-  const msgs = parseChat(raw);
-  if (!msgs.length) return null;
+  const all = parseChat(raw);
+  if (!all.length) return null;
+  // A WhatsApp export can span months; write about the most recent stretch.
+  const msgs = all.slice(-220);
   const counts = {}; msgs.forEach(m => counts[m.author] = (counts[m.author] || 0) + 1);
   const loudest = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
   const questions = msgs.filter(m => /\?\s*$/.test(m.text));
@@ -1002,7 +1010,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], currentNl:null, magName:'Skirt Chasers',
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], currentNl:null, magName:'Skirt Chasers', deskChatText:null,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -1637,17 +1645,27 @@ function drawDraft() {
 //  Settings
 // ---------------------------------------------------------------------
 function showDesk() {
+  S.deskChatText = null;
   const mine = (S.desk || []).filter(a => a.week === S.activeWeek);
   app.innerHTML = `<div style="padding-bottom:24px">
     <button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>
     <div class="setup-logo" style="font-size:24px">✍️ Newsroom Desk</div>
-    <p class="muted" style="margin-top:4px">Paste your league group chat (WhatsApp, Sleeper, iMessage — any format) and the desk will turn it into a Water Cooler article for Week ${S.activeWeek}.</p>
+    <p class="muted" style="margin-top:4px">Feed the desk your league group chat and it writes a Water Cooler article for Week ${S.activeWeek}. Import the whole exported chat, or paste a snippet.</p>
     <div class="card" style="margin-top:12px">
+      <label class="label">1 · Import your exported chat file</label>
+      <input id="chatFile" type="file" accept=".txt,text/plain" data-act="desk-file" class="fileinput" />
+      <div id="chatFileStatus" class="faint" style="font-size:12px;margin-top:8px;line-height:1.4">
+        <b>On WhatsApp (iPhone):</b> open the league chat → tap the group name → <b>Export Chat</b> → <b>Without Media</b> → <b>Save to Files</b>. Then tap “Choose File” above and pick it.
+      </div>
+    </div>
+    <div class="center faint" style="font-size:12px;margin:2px 0">— or —</div>
+    <div class="card">
+      <label class="label">Paste a snippet instead</label>
+      <textarea id="chatText" class="input" style="height:120px" placeholder="Alice: that trade is highway robbery&#10;Bob: name a fairer one then"></textarea>
+    </div>
+    <div class="card">
       <label class="label">Optional headline / angle</label>
       <input id="chatAngle" class="input" placeholder="e.g. Bob's trade offer sparks mutiny" />
-      <div style="height:10px"></div>
-      <label class="label">Paste the chat</label>
-      <textarea id="chatText" class="input" style="height:180px" placeholder="Alice: that trade is highway robbery&#10;Bob: name a fairer one then&#10;Alice: literally anything else"></textarea>
       <div style="height:12px"></div>
       <button class="btn" data-act="desk-generate">Write the article →</button>
       <div id="deskErr" class="err"></div>
@@ -1660,13 +1678,16 @@ function showDesk() {
   </div>`;
 }
 function deskGenerate() {
-  const text = ($('#chatText') || {}).value || '';
+  const pasted = ($('#chatText') || {}).value || '';
+  const text = (S.deskChatText && S.deskChatText.trim()) ? S.deskChatText : pasted;
   const angle = ($('#chatAngle') || {}).value || '';
-  if (text.trim().length < 8) { const e = $('#deskErr'); if (e) e.textContent = 'Paste a bit more chat first.'; return; }
+  const err = $('#deskErr');
+  if (text.trim().length < 8) { if (err) err.textContent = 'Import your chat file or paste a snippet first.'; return; }
   const art = generateChatArticle(text, angle);
-  if (!art) { const e = $('#deskErr'); if (e) e.textContent = "Couldn't parse that — try including who said what."; return; }
+  if (!art) { if (err) err.textContent = "Couldn't find any 'Name: message' lines in that. Make sure it's a chat export."; return; }
   art.week = S.activeWeek;
   S.desk.unshift(art); saveDesk();
+  S.deskChatText = null;
   delete S.newsCache[S.activeWeek];
   S.tab = 'news'; renderShell(); renderTab();
   toast('Article added to The Water Cooler');
@@ -1732,13 +1753,29 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'draft-filter') { S.draft.posFilter = t.dataset.pos; return drawDraft(); }
 });
 
-// Season switcher (a <select>, so it fires 'change' not 'click').
-document.body.addEventListener('change', (e) => {
-  const t = e.target.closest('[data-act="season-select"]');
-  if (!t) return;
-  const opt = t.options[t.selectedIndex];
-  S.leagueId = t.value; S.season = opt.dataset.season; saveSession();
-  enterApp();
+// Change events: season switcher (<select>) and chat-file import (<input file>).
+document.body.addEventListener('change', async (e) => {
+  const sel = e.target.closest('[data-act="season-select"]');
+  if (sel) {
+    const opt = sel.options[sel.selectedIndex];
+    S.leagueId = sel.value; S.season = opt.dataset.season; saveSession();
+    return enterApp();
+  }
+  const file = e.target.closest('[data-act="desk-file"]');
+  if (file && file.files && file.files[0]) {
+    const f = file.files[0];
+    const st = $('#chatFileStatus');
+    if (/\.zip$/i.test(f.name)) { if (st) st.innerHTML = `That's a <b>.zip</b>. Re-export from WhatsApp choosing <b>Without Media</b> — that gives a plain <b>.txt</b> you can pick here.`; return; }
+    try {
+      const text = await f.text();
+      const n = parseChat(text).length;
+      if (!n) { if (st) st.innerHTML = `Read <b>${esc(f.name)}</b>, but found no chat messages in it. Is it the exported chat .txt?`; S.deskChatText = null; return; }
+      S.deskChatText = text;
+      if (st) st.innerHTML = `✓ Loaded <b>${esc(f.name)}</b> — <b>${n}</b> messages parsed. The desk will write about the most recent chatter. Hit “Write the article” below.`;
+    } catch {
+      if (st) st.textContent = "Couldn't read that file. Try the WhatsApp .txt export.";
+    }
+  }
 });
 
 init();
