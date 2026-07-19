@@ -165,6 +165,27 @@
   .cover-line { font-size:12px; font-weight:800; letter-spacing:.3px; text-transform:uppercase; color:var(--text);
                 padding-left:15px; position:relative; line-height:1.25; }
   .cover-line::before { content:'▸'; position:absolute; left:0; color:var(--accent); }
+  /* real magazine cover — white with a red frame, the SCFL logotype up top */
+  .magcover { position:relative; background:#fff; color:#15181d; overflow:hidden;
+              margin:calc(-1 * var(--pad-top)) -16px 16px; border:12px solid #e11b22;
+              padding:calc(var(--pad-top) - 4px) 22px 24px; display:flex; flex-direction:column; }
+  .magcover.full { min-height:90vh; }
+  .mag-logo { display:block; width:100%; max-width:600px; height:auto; margin:2px auto 0; }
+  .mag-issue { text-align:center; color:#c20f16; font-weight:900; font-size:12px; letter-spacing:3px; margin-top:6px; text-transform:uppercase; }
+  .mag-tools { display:flex; gap:8px; justify-content:center; margin:14px 0 2px; flex-wrap:wrap; }
+  .magcover .ctool { background:#f3f3f3; border:1px solid #d9d9d9; color:#222; }
+  .mag-hook { font-family:var(--serif); font-weight:900; font-size:46px; line-height:.98; letter-spacing:-1px;
+              color:#111; margin-top:auto; text-wrap:balance; }
+  .mag-subject { margin-top:16px; }
+  .mag-name { font-family:var(--serif); font-weight:900; font-style:italic; font-size:27px; line-height:1; color:#111; }
+  .mag-row { display:flex; align-items:baseline; gap:12px; margin-top:5px; }
+  .mag-score { font-weight:900; font-size:46px; line-height:1; color:#e11b22; letter-spacing:-1px; }
+  .mag-tag { font-size:11px; font-weight:900; letter-spacing:1px; color:#fff; background:#15181d; padding:3px 9px; border-radius:6px; }
+  .mag-lines { margin-top:18px; border-top:2px solid #e11b22; padding-top:12px; display:flex; flex-direction:column; gap:7px; }
+  .mag-line { font-size:12.5px; font-weight:800; letter-spacing:.2px; text-transform:uppercase; color:#20242c;
+              padding-left:16px; position:relative; line-height:1.25; }
+  .mag-line::before { content:'▸'; position:absolute; left:0; color:#e11b22; }
+  .mag-shield { display:block; width:66px; height:auto; margin:18px auto 0; }
   .sec { font-family:var(--serif); font-weight:800; font-size:13px; letter-spacing:3px; text-transform:uppercase;
          color:var(--text); padding:6px 0 6px 12px; margin:18px 0 12px; border-left:4px solid var(--accent);
          border-bottom:1px solid var(--border); }
@@ -1796,59 +1817,56 @@ function magazineLink() {
 }
 // Render the current issue's cover to a shareable PNG so WhatsApp shows the
 // actual cover image next to the link — no server, no crawler needed.
-// The SCFL crest, loaded once for drawing onto shared images.
-let _logoImg;
-function loadLogoImg() { return _logoImg || (_logoImg = new Promise(r => { const im = new Image(); im.onload = () => r(im); im.onerror = () => r(null); im.src = LOGO; })); }
+// Images loaded once for drawing onto shared covers.
+let _logoImg, _wordImg;
+function loadImgOnce(box, src) { return box.p || (box.p = new Promise(r => { const im = new Image(); im.onload = () => r(im); im.onerror = () => r(null); im.src = src; })); }
+function loadLogoImg() { _logoImg = _logoImg || {}; return loadImgOnce(_logoImg, LOGO); }
+function loadWordImg() { _wordImg = _wordImg || {}; return loadImgOnce(_wordImg, 'wordmark.png'); }
 async function coverImageBlob(nl) {
   const W = 1080, H = 1350;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d'); if (!g) return null;
   const pkg = coverPackage(nl);
-  const ACCENT = '#31d158', GOLD = '#e8eef5', DIM = '#9fb0c3';
-  const grad = g.createLinearGradient(0, 0, W, H);
-  grad.addColorStop(0, '#111a22'); grad.addColorStop(1, '#090d12');
-  g.fillStyle = grad; g.fillRect(0, 0, W, H);
-  // Texture: faint diagonal streaks + a corner glow.
-  g.strokeStyle = 'rgba(255,255,255,0.05)'; g.lineWidth = 3;
-  for (let i = -2; i < 20; i++) { g.beginPath(); g.moveTo(i * 90, H); g.lineTo(i * 90 + 380, 0); g.stroke(); }
-  const glow = g.createRadialGradient(W * 0.78, H * 0.14, 40, W * 0.78, H * 0.14, 620);
-  glow.addColorStop(0, 'rgba(49,209,88,0.20)'); glow.addColorStop(1, 'rgba(49,209,88,0)');
-  g.fillStyle = glow; g.fillRect(0, 0, W, H);
-  const PAD = 72;
+  const RED = '#e11b22', INK = '#111418', DIM = '#20242c';
+  const SERIF = 'Georgia, "Times New Roman", serif', SANS = 'Arial, sans-serif';
+  const BORD = 26; g.fillStyle = RED; g.fillRect(0, 0, W, H); g.fillStyle = '#fff'; g.fillRect(BORD, BORD, W - BORD * 2, H - BORD * 2);
+  const PAD = 68;
   const wrap = (text, font, maxW, maxLines) => {
     g.font = font; const words = String(text).split(/\s+/); const lines = []; let cur = '';
     for (const w of words) { const t = cur ? cur + ' ' + w : w;
-      if (g.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; if (lines.length === maxLines) break; } else cur = t; }
-    if (cur && lines.length < maxLines) lines.push(cur); return lines;
+      if (g.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; if (maxLines && lines.length === maxLines) break; } else cur = t; }
+    if (cur && (!maxLines || lines.length < maxLines)) lines.push(cur); return lines;
   };
-  // SCFL crest, top-right
-  try { const lg = await loadLogoImg(); if (lg) { const lw = 150, lh = lw * lg.naturalHeight / lg.naturalWidth; g.drawImage(lg, W - PAD - lw, 40, lw, lh); } } catch {}
-  // Masthead
-  g.textAlign = 'left'; g.fillStyle = GOLD;
-  g.font = `900 italic 104px ${'Georgia, "Times New Roman", serif'}`;
-  const mast = wrap(magTitle(), g.font, W - PAD * 2 - 172, 2);
-  let y = 150; mast.forEach(l => { g.fillText(l, PAD, y); y += 104; });
-  g.fillStyle = ACCENT; g.font = '900 26px Arial, sans-serif';
-  g.fillText(`FANTASY LEAGUE MAGAZINE · WEEK ${nl.week}${S.demo ? ' · SAMPLE' : ''}`.split('').join(' '), PAD, y + 6);
+  let y = 84;
+  // Logotype at the top
+  try { const wm = await loadWordImg(); if (wm) { const lw = W - PAD * 2, lh = lw * wm.naturalHeight / wm.naturalWidth; g.drawImage(wm, PAD, y, lw, lh); y += lh + 24; } else y += 40; } catch { y += 40; }
+  // Issue line
+  g.textAlign = 'center'; g.fillStyle = RED; g.font = '900 26px ' + SANS;
+  g.fillText(('WEEK ' + nl.week + ' \u00b7 ' + (S.season || '') + ' SEASON' + (S.demo ? ' \u00b7 SAMPLE' : '')).split('').join(' '), W / 2, y); y += 30;
   // Big cover hook
-  g.fillStyle = GOLD; y += 90;
-  const hookFont = `900 92px ${'Georgia, "Times New Roman", serif'}`;
-  const hook = wrap(pkg.headline, hookFont, W - PAD * 2, 4);
-  g.font = hookFont; hook.forEach(l => { y += 92; g.fillText(l, PAD, y); });
-  // Subject block
+  g.textAlign = 'left'; g.fillStyle = INK; y += 40;
+  const hookFont = '900 90px ' + SERIF;
+  wrap(pkg.headline, hookFont, W - PAD * 2, 5).forEach(l => { g.font = hookFont; y += 90; g.fillText(l, PAD, y); });
+  // Subject
   if (pkg.subject) {
-    y += 70; g.fillStyle = ACCENT; g.font = '900 30px Arial, sans-serif';
-    g.fillText(String(pkg.subject.tag).toUpperCase(), PAD, y);
-    y += 66; g.fillStyle = GOLD; g.font = `900 italic 60px ${'Georgia, serif'}`;
-    wrap(pkg.subject.name, g.font, W - PAD * 2, 2).forEach((l, i) => { if (i) y += 60; g.fillText(l, PAD, y); });
+    y += 66; g.fillStyle = INK; g.font = '900 italic 58px ' + SERIF;
+    wrap(pkg.subject.name, g.font, W - PAD * 2, 2).forEach((l, i) => { if (i) y += 58; g.fillText(l, PAD, y); });
+    y += 78; g.fillStyle = RED; g.font = '900 78px ' + SANS;
+    const sc = pkg.subject.score.toFixed(1); g.fillText(sc, PAD, y);
+    const scW = g.measureText(sc).width;
+    const tag = String(pkg.subject.tag).toUpperCase(); g.font = '900 24px ' + SANS; const tw = g.measureText(tag).width;
+    g.fillStyle = INK; g.fillRect(PAD + scW + 24, y - 42, tw + 28, 54);
+    g.fillStyle = '#fff'; g.fillText(tag, PAD + scW + 38, y - 8);
   }
-  // Cover lines near the bottom
-  g.font = '600 27px Arial, sans-serif'; g.fillStyle = DIM;
-  let by = H - PAD - (pkg.lines.length - 1) * 42;
-  (pkg.lines || []).slice(0, 4).forEach(line => {
-    const one = wrap(line, g.font, W - PAD * 2, 1)[0] || line;
-    g.fillStyle = ACCENT; g.fillText('›', PAD, by);
-    g.fillStyle = DIM; g.fillText(one, PAD + 30, by); by += 42;
+  // Cover lines near the bottom, over a red rule
+  const clines = (pkg.lines || []).slice(0, 4);
+  let by = H - PAD - 44 - (clines.length - 1) * 44;
+  g.strokeStyle = RED; g.lineWidth = 3; g.beginPath(); g.moveTo(PAD, by - 34); g.lineTo(W - PAD, by - 34); g.stroke();
+  g.font = '800 26px ' + SANS;
+  clines.forEach(line => {
+    const one = wrap(String(line).toUpperCase(), g.font, W - PAD * 2 - 34, 1)[0] || line;
+    g.fillStyle = RED; g.fillText('\u25b8', PAD, by);
+    g.fillStyle = DIM; g.fillText(one, PAD + 34, by); by += 44;
   });
   return await new Promise(res => cv.toBlob(res, 'image/png', 0.92));
 }
@@ -2054,7 +2072,7 @@ function renderSetup() {
     <div style="padding-top:24px">
       <img class="setup-crest" src="${LOGO}" alt="SCFL">
       <div class="setup-logo" style="text-align:center;font-size:24px">${esc(magTitle())}</div>
-      <p class="muted" style="margin-top:4px;text-align:center">Fantasy League Magazine — powered by Sleeper.</p>
+      <p class="muted" style="margin-top:4px;text-align:center">Dynasty League Magazine — powered by Sleeper.</p>
       <div class="card">
         <label class="label">Sleeper username</label>
         <input id="uname" class="input" autocapitalize="none" autocorrect="off" placeholder="e.g. yourhandle" value="${esc(su.username||'')}" />
@@ -2207,25 +2225,24 @@ function renderTab() {
 //  News Room
 // ---------------------------------------------------------------------
 function magTitle() { return String(S.magName || 'Skirt Chasers').toUpperCase(); }
-function coverTools() {
+function coverToolsInner() {
   const share = `<button class="ctool" data-act="share" title="Share">⤴</button>`;
-  if (S.guest) return `<div class="cover-tools">${share}</div>`;
+  if (S.guest) return share;
   const exit = S.sample ? `<button class="ctool" data-act="exit-sample" title="Exit sample">✕</button>` : '';
-  return `<div class="cover-tools">${share}${exit}
+  return `${share}${exit}
     <button class="ctool" data-act="desk" title="Newsroom desk">✍️</button>
     <button class="ctool" data-act="history" title="Record book">🏆</button>
     <button class="ctool" data-act="archive" title="Back issues">📚</button>
-    <button class="ctool" data-act="settings" title="Settings">⚙</button>
-  </div>`;
+    <button class="ctool" data-act="settings" title="Settings">⚙</button>`;
 }
+function coverTools() { return `<div class="cover-tools">${coverToolsInner()}</div>`; }
 // Lightweight masthead used while loading / empty (no issue data yet).
 function newsHeader() {
-  return `<div class="cover cover-lite">
-    <img class="cover-crest" src="${LOGO}" alt="SCFL">
-    <div class="cover-mast">${esc(magTitle())}</div>
-    <div class="cover-sub">FANTASY LEAGUE MAGAZINE${S.demo ? ' · SAMPLE' : ''}</div>
-    <div class="cover-issue">WEEK ${S.activeWeek} · ${esc(S.season || '')} SEASON</div>
-    ${coverTools()}
+  return `<div class="magcover">
+    <img class="mag-logo" src="wordmark.png" alt="Skirt Chasers — Dynasty League Magazine">
+    <div class="mag-issue">Week ${S.activeWeek} · ${esc(S.season || '')} Season${S.demo ? ' · Sample' : ''}</div>
+    <div class="mag-tools">${coverToolsInner()}</div>
+    <img class="mag-shield" src="${LOGO}" alt="SCFL">
   </div>`;
 }
 // A fun, league-first cover: illustrated art, a matchup-driven headline (chat
@@ -2295,21 +2312,17 @@ function coverArt(seed) {
 }
 function coverHtml(nl) {
   const pkg = coverPackage(nl);
-  const seed = Math.round((nl.week || 1) * 7 + (pkg.subject ? pkg.subject.name.length : 0) + (pkg.headline ? pkg.headline.length : 0));
-  return `<div class="cover cover-full">
-    ${coverArt(seed)}
-    <img class="cover-crest" src="${LOGO}" alt="SCFL">
-    <div class="cover-inner">
-      <div class="cover-mast">${esc(magTitle())}</div>
-      <div class="cover-sub">FANTASY LEAGUE MAGAZINE · WEEK ${nl.week}${S.demo ? ' · SAMPLE' : ''}</div>
-      ${coverTools()}
-      <div class="cover-hook-big">${esc(pkg.headline)}</div>
-      ${pkg.subject ? `<div class="cover-subject">
-        <div class="cs-name">${esc(pkg.subject.name)}</div>
-        <div class="cs-row"><span class="cs-score">${pkg.subject.score.toFixed(1)}</span><span class="cs-tag">${esc(pkg.subject.tag)}</span></div>
-      </div>` : ''}
-      <div class="cover-lines">${pkg.lines.map(l => `<div class="cover-line">${esc(l)}</div>`).join('')}</div>
-    </div>
+  return `<div class="magcover full">
+    <img class="mag-logo" src="wordmark.png" alt="Skirt Chasers — Dynasty League Magazine">
+    <div class="mag-issue">Week ${nl.week} · ${esc(S.season || '')} Season${S.demo ? ' · Sample' : ''}</div>
+    <div class="mag-tools">${coverToolsInner()}</div>
+    <div class="mag-hook">${esc(pkg.headline)}</div>
+    ${pkg.subject ? `<div class="mag-subject">
+      <div class="mag-name">${esc(pkg.subject.name)}</div>
+      <div class="mag-row"><span class="mag-score">${pkg.subject.score.toFixed(1)}</span><span class="mag-tag">${esc(pkg.subject.tag)}</span></div>
+    </div>` : ''}
+    <div class="mag-lines">${pkg.lines.map(l => `<div class="mag-line">${esc(l)}</div>`).join('')}</div>
+    <img class="mag-shield" src="${LOGO}" alt="SCFL">
   </div>`;
 }
 function sec(label) { return `<div class="sec">${esc(label)}</div>`; }
