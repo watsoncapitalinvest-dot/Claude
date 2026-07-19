@@ -132,6 +132,17 @@
   .story.feature h2 { font-size:26px; line-height:1.12; }
   .pullquote { font-family:var(--serif); font-style:italic; font-size:19px; line-height:1.35; color:var(--text);
                border-left:3px solid var(--accent); padding:4px 0 4px 14px; margin:10px 0 12px; }
+  /* how-it-unfolded timeline */
+  .timeline { margin-top:12px; padding-top:10px; border-top:1px solid var(--border); }
+  .tlh { font-size:10px; font-weight:900; letter-spacing:2px; text-transform:uppercase; color:var(--faint); margin-bottom:6px; }
+  .tlnames { display:flex; justify-content:space-between; font-size:11px; font-weight:700; margin-bottom:4px; }
+  .tlnames .wn { color:var(--accent); } .tlnames .ln { color:var(--dim); }
+  .tlrow { display:flex; align-items:center; gap:8px; padding:3px 0; }
+  .tlwin { width:58px; font-size:10px; font-weight:800; color:var(--faint); text-transform:uppercase; letter-spacing:.5px; }
+  .tlnum { width:44px; font-size:13px; font-variant-numeric:tabular-nums; color:var(--dim); text-align:center; }
+  .tlnum.up { color:var(--text); font-weight:800; }
+  .tlbar { flex:1; height:6px; border-radius:3px; background:var(--cardAlt,#1b2532); overflow:hidden; position:relative; }
+  .tlbw { height:100%; background:var(--accent); border-radius:3px; }
 
   /* generic list rows */
   .prow { display:flex; align-items:center; gap:8px; padding:9px 4px; }
@@ -310,10 +321,49 @@ function bustAdj(pts){ return pts<=2?'a total no-show':pts<=5?'a crushing dud':p
 // Game-slot awareness (kickoff window), so articles can reference timing when
 // it's known. Sleeper weekly totals don't carry this, so real leagues will pass
 // null and these degrade to no-timing prose; the sample bakes real slots in.
+const SLOT_ORDER = ['TNF','SUN_EARLY','SUN_LATE','SNF','MNF'];
 const SLOT_LABEL = { TNF:'Thursday night', SUN_EARLY:'the early window', SUN_LATE:'the late window', SNF:'Sunday night', MNF:'Monday night' };
-const SLOT_CLAUSE = { TNF:'in the Thursday night game', SUN_EARLY:'in the early window', SUN_LATE:'in the late window', SNF:'in the Sunday night game', MNF:'in the Monday night game' };
+const SLOT_SHORT = { TNF:'Thu', SUN_EARLY:'Sun early', SUN_LATE:'Sun late', SNF:'SNF', MNF:'Mon' };
+const SLOT_CLAUSE = { TNF:'in the Thursday night game', SUN_EARLY:'in the early Sunday window', SUN_LATE:'in the late Sunday window', SNF:'in the Sunday night game', MNF:'in the Monday night game' };
 const SLOT_LATE = new Set(['SNF','MNF']);
 function slotClause(slot){ return SLOT_CLAUSE[slot] ? ` ${SLOT_CLAUSE[slot]}` : ''; }
+
+/**
+ * Reconstructs how a matchup unfolded across game windows (Thu → Mon) from each
+ * starter's slot. Returns the running scoreboard per active window plus a story
+ * arc (wire / comeback / frontRun / nail / steady). Null when slots are unknown
+ * (real Sleeper data today), so the prose simply omits timing.
+ */
+function buildTimeline(winner, loser) {
+  const hasSlots = [...winner.starters, ...loser.starters].some(e => e.slot);
+  if (!hasSlots) return null;
+  const slotSum = (team, slot) => team.starters.filter(e => e.slot === slot).reduce((s, e) => s + e.points, 0);
+  let wCum = 0, lCum = 0;
+  const windows = [];
+  for (const slot of SLOT_ORDER) {
+    const wPts = round1(slotSum(winner, slot)), lPts = round1(slotSum(loser, slot));
+    if (wPts === 0 && lPts === 0) continue;
+    wCum = round1(wCum + wPts); lCum = round1(lCum + lPts);
+    windows.push({ slot, name: SLOT_LABEL[slot], wPts, lPts, wCum, lCum, lead: round1(wCum - lCum) });
+  }
+  if (!windows.length) return null;
+  const fin = windows.length - 1;
+  const preFinalLead = fin > 0 ? windows[fin - 1].lead : windows[0].lead;
+  const maxDeficit = Math.max(0, ...windows.map(w => -w.lead));  // furthest the winner ever fell behind
+  const earlyShare = winner.score > 0 ? windows[Math.min(1, fin)].wCum / winner.score : 0;
+  let arc;
+  if (preFinalLead < 0 || maxDeficit >= 20) arc = 'comeback';   // down late, or dug out of a real hole
+  else if (maxDeficit <= 3) arc = (earlyShare >= 0.6 && windows.length >= 3) ? 'frontRun' : 'wire';
+  else if (Math.abs(preFinalLead) <= 10) arc = 'nail';          // close going into the last window
+  else arc = 'steady';                                          // traded blows, then pulled clear
+  // Decisive window = the final go-ahead (last flip from behind/tied to ahead);
+  // otherwise the last active window.
+  let dIdx = fin;
+  if (arc === 'comeback') { for (let i = 1; i < windows.length; i++) if (windows[i-1].lead <= 0 && windows[i].lead > 0) dIdx = i; }
+  const dWin = windows[dIdx];
+  const dScorers = winner.starters.filter(e => e.slot === dWin.slot && e.points > 0).sort((a,b)=>b.points-a.points).slice(0, 2);
+  return { windows, arc, decisive: dWin, dScorers, preFinalLead: Math.abs(preFinalLead) };
+}
 
 // Harry Doyle (Bob Uecker) flourishes for the game stories.
 function scoredTD(s){ return (n(s,'rush_td')+n(s,'rec_td')+n(s,'pass_td')+n(s,'def_td')) > 0; }
@@ -515,25 +565,21 @@ function writeStory(ctx) {
       `${W} ${blowout ? pick([`beat the brakes off ${L}`,`ran ${L} off the damn field`,`treated ${L} like a crash-test dummy`], 3) : nail ? pick([`outlasted ${L}`,`survived ${L}`,`ripped ${L}'s heart out`], 3) : pick([`handled ${L}`,`ground ${L} down`,`took care of ${L}`], 3)}, ${winner.score} to ${loser.score}${nail ? `, and the ${margin}-point final doesn't come close to capturing how sweaty it got — ${L} is gonna be sick about this one for a week` : blowout ? `, a beatdown so lopsided it oughta be illegal in most states` : ''}.`);
   }
 
-  // ---- P2: the hero, real stat line + swing framing (+ timing when known) ----
+  // ---- P1.5: how it unfolded across the game windows (Thu → Mon) ----
+  const tl = !tie ? buildTimeline(winner, loser) : null;
+  if (tl) P.push(writeTimeline(tl, W, L, margin, nm));
+
+  // ---- P2: the hero, real stat line + swing framing ----
   if (hero && hero.points > 0) {
-    const late = SLOT_LATE.has(hero.slot);
-    const bigFlourish = heroDifference && nail && late && scoredTD(hero.stats);
     let p = `The engine was ${heroName}, who ${heroHype(hero.points, seed)} ${hero.points}`;
     if (hero.line && hasProduction(hero.stats)) p += ` on ${hero.line}`;
-    p += (bigFlourish ? '' : slotClause(hero.slot)) + '. ';
-    if (bigFlourish) {
-      // The money scenario: a late primetime score that swings the matchup.
-      p += pick([
-        `And it came at the death: with a ${SLOT_LABEL[hero.slot]} touchdown, ${heroName} dragged ${W} in front of ${L} for good — pure come-from-behind heroics, decided after everyone else had already gone to bed. `,
-        `The dagger landed ${slotClause(hero.slot).trim()}: ${heroName} found the end zone with ${W} still trailing, flipped the whole matchup, and left ${L} screaming at a ${SLOT_LABEL[hero.slot]} broadcast. `,
-      ], 4) + pick([`No ${heroName}, no win — ${W} steals it by ${margin}.`, `His day alone outweighed the ${margin}-point final. ${L} can go pound sand.`], 5);
-    } else if (heroDifference && nail) {
+    p += '. ';
+    if (heroDifference && nail) {
       p += (scoredTD(hero.stats)
-        ? pick([`He punched it in with the whole thing hanging in the balance, and that score is the entire ballgame: `, `He found the end zone right when ${W} needed it, and there's your difference: `], 4)
+        ? pick([`He found the end zone right when ${W} needed it, and there's your difference: `, `He punched it in with the matchup hanging in the balance: `], 4)
         : pick([`And that output is the whole ballgame: `, `Here's the kick in the nuts for ${L}: `], 4)) +
-        pick([`his day was worth more than the ${margin}-point margin by itself. Take him out and ${W} loses, full stop. Instead — come-from-behind heroics, and ${L} can go pound sand.`,
-              `he alone outscored the ${margin} points ${W} won by. No ${heroName}, no win, and ${L} knows it's eating them alive.`], 5);
+        pick([`his day was worth more than the ${margin}-point margin by itself. Take him out and ${W} loses, full stop.`,
+              `he alone outscored the ${margin} points ${W} won by. No ${heroName}, no win, and ${L} knows it.`], 5);
     } else if (heroDifference) {
       p += pick([`Bigger than the margin, bigger than the moment — the man single-handedly ruined ${L}'s whole week.`, `No ${heroName}, no win for ${W}. Ain't complicated.`], 6);
     } else if (blowout) {
@@ -615,7 +661,26 @@ function writeStory(ctx) {
     `${W} moves to the right side of the standings. ${L} goes home to a group chat that just went real quiet.`,
   ], 13));
 
-  return { id:'g'+ctx.mid, headline, dek, paragraphs:P, winner, loser, tie, margin, combined };
+  return { id:'g'+ctx.mid, headline, dek, paragraphs:P, winner, loser, tie, margin, combined, timeline: tl };
+}
+
+// Narrate how the matchup moved across game windows, from the timeline arc.
+function writeTimeline(tl, W, L, margin, nm) {
+  const dw = tl.decisive, first = tl.windows[0], last = tl.windows[tl.windows.length - 1];
+  const scorers = tl.dScorers.length ? joinList(tl.dScorers.map(e => `${nm(e)} (${e.points})`)) : 'the late guns';
+  const earlyCum = tl.windows[Math.min(1, tl.windows.length - 1)].wCum;
+  switch (tl.arc) {
+    case 'comeback':
+      return `It didn't start pretty for ${W}, who trailed for a good chunk of the week before ${scorers} caught fire ${slotClause(dw.slot).trim()} and flipped it to ${dw.wCum}–${dw.lCum}. Once ahead, ${W} never gave it back.`;
+    case 'frontRun':
+      return `${W} front-loaded the whole damn thing — ${earlyCum} on the board before the late games even kicked off — then sat back and watched ${L} chase a lead that was never coming back.`;
+    case 'nail':
+      return `This one went the distance. ${L} was still within ${tl.preFinalLead} heading into ${last.name}, but ${scorers} slammed the door ${slotClause(last.slot).trim()} to make it ${last.wCum}–${last.lCum} final.`;
+    case 'wire':
+      return `From the early windows on, ${W} kept ${L} at arm's length, building from ${first.name} through ${last.name} to a comfortable ${last.wCum}–${last.lCum} without ever really sweating it.`;
+    default:
+      return `${W} and ${L} traded haymakers into the afternoon before ${W} pulled clear, turning it into a ${last.wCum}–${last.lCum} final by ${last.name}.`;
+  }
 }
 
 function writeLead(stories, week, leagueName) {
@@ -779,12 +844,9 @@ function buildDemoBundle() {
   const bundle = { league, rosters, users: Object.values(usersById), players, usersById, rostersByOwner,
     myRoster: rosters[0] };
 
-  // A week's worth of stats + storyline overrides (bust, bench blunder, and a
-  // guaranteed late Monday-night hero so the timing flavor is always on display).
+  // A week's worth of stats + a couple of storyline overrides (one bust, one
+  // bench blunder). Game-window timing emerges organically from player slots.
   function week(wk) {
-    // Reset slots to their base each week (we mutate one below).
-    for (const id in players) players[id].slot = SLOTS[players[id].search_rank % SLOTS.length];
-
     const weeklyStats = {}, weeklyProjections = {};
     for (const id in players) weeklyStats[id] = genStats(players[id].position, hashId(id) * 100 + wk * 7);
 
@@ -800,21 +862,6 @@ function buildDemoBundle() {
       ? { rush_att:19, rush_yd:128, rush_td:2, rec:3, rec_yd:24, rec_tgt:4 }
       : { rec:9, rec_yd:151, rec_td:2, rec_tgt:12 };
     weeklyStats[starterId] = { rec:2, rec_yd:16, rec_td:0, rec_tgt:6 };
-
-    // Manufacture a Monday-night thriller in one real matchup: a stud lands a
-    // late rushing TD on MNF, and we tune the opponent so the home side wins by
-    // ~7 — a nail-biter the hero literally swings. Always on display.
-    const mIdx = wk % 4;                    // matchup 0..3
-    const heroTeam = rosters[mIdx * 2];     // home side of that matchup
-    const oppTeam = rosters[mIdx * 2 + 1];  // its opponent
-    const heroId = heroTeam.starters[1];    // an RB
-    weeklyStats[heroId] = { rush_att:21, rush_yd:118, rush_td:2, rec:5, rec_yd:44, rec_tgt:7 };
-    players[heroId].slot = 'MNF';
-    const teamTot = (r) => r.starters.reduce((s, id) => s + scoreStats(weeklyStats[id], DEMO_SCORING), 0);
-    const wrId = oppTeam.starters[3];       // opponent WR1 — dial to set the margin
-    const deltaPts = (teamTot(heroTeam) - 7) - teamTot(oppTeam);
-    const wr = weeklyStats[wrId] || { rec:5, rec_yd:60, rec_tgt:7 };
-    weeklyStats[wrId] = { ...wr, rec_yd: Math.max(0, Math.round((wr.rec_yd || 0) + deltaPts * 10)) };
 
     const matchups = rosters.map((r, i) => {
       const pts = r.starters.reduce((s, id) => s + scoreStats(weeklyStats[id], DEMO_SCORING), 0);
@@ -1157,7 +1204,23 @@ function storyHtml(s, feature) {
     <div class="sl">${teamTag(s.winner,true,false)}<span class="dash">–</span>${teamTag(s.loser,false,true)}</div>
     <div class="scorebar"><div class="scorew" style="width:${wPct}%"></div></div>
     <h2>${esc(s.headline)}</h2>${pull}
-    ${s.paragraphs.map((p,i)=>`<p class="body">${i===0?'<span class="drop">'+esc(p.charAt(0))+'</span>'+esc(p.slice(1)):esc(p)}</p>`).join('')}</div>`;
+    ${s.paragraphs.map((p,i)=>`<p class="body">${i===0?'<span class="drop">'+esc(p.charAt(0))+'</span>'+esc(p.slice(1)):esc(p)}</p>`).join('')}
+    ${timelineHtml(s)}</div>`;
+}
+function timelineHtml(s) {
+  const tl = s.timeline;
+  if (!tl || !tl.windows || !tl.windows.length) return '';
+  const pct = (a, b) => (a + b) > 0 ? Math.round(a / (a + b) * 100) : 50;
+  return `<div class="timeline">
+    <div class="tlh">How It Unfolded</div>
+    <div class="tlnames"><span class="wn">${esc(s.winner.manager)}</span><span class="ln">${esc(s.loser.manager)}</span></div>
+    ${tl.windows.map(w=>`<div class="tlrow">
+      <span class="tlwin">${SLOT_SHORT[w.slot]}</span>
+      <span class="tlnum ${w.lead>=0?'up':''}">${w.wCum}</span>
+      <div class="tlbar"><div class="tlbw" style="width:${pct(w.wCum,w.lCum)}%"></div></div>
+      <span class="tlnum ${w.lead<0?'up':''}">${w.lCum}</span>
+    </div>`).join('')}
+  </div>`;
 }
 
 // ---------------------------------------------------------------------
