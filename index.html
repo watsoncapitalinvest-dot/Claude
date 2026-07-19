@@ -122,6 +122,11 @@
   .pr { display:flex; gap:8px; align-items:flex-start; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.05); }
   .prbar { height:5px; background:var(--bg2); border-radius:3px; overflow:hidden; margin:4px 0; }
   .prfill { height:100%; background:linear-gradient(90deg,var(--accent-d),var(--accent)); border-radius:3px; }
+  .ml { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.05); }
+  .ml-sub { font-weight:800; font-size:14px; flex:1; min-width:0; }
+  .ml-odds { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .ml-line { font-family:var(--mono,ui-monospace,monospace); font-weight:900; font-size:16px; color:var(--accent); font-variant-numeric:tabular-nums; }
+  .ml-chip { font-size:11px; font-weight:800; letter-spacing:.3px; color:var(--faint); background:var(--bg2); border:1px solid var(--border); border-radius:999px; padding:2px 8px; white-space:nowrap; }
   .sd { display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px solid rgba(255,255,255,.05); }
   .sd .val { font-size:16px; font-weight:800; font-variant-numeric:tabular-nums; min-width:44px; text-align:right; }
   /* trade block */
@@ -782,6 +787,65 @@ function parsePowerRows(rows) {
     out.push({ rank, manager: team, tag: idx.tag >= 0 ? String(r[idx.tag] || '').trim() : '', note: idx.note >= 0 ? String(r[idx.note] || '').trim() : '' });
   });
   out.sort((a, b) => a.rank - b.rank).forEach((r, i) => r.rank = i + 1);
+  return out.length ? out : null;
+}
+// Interpret an arbitrary odds grid into [{subject, line, spread, total, note}].
+// Deliberately forgiving: a matchup/team column is required, everything else is
+// optional so a commissioner can hand over whatever board he already keeps.
+function parseMoneyRows(rows) {
+  rows = (rows || []).filter(r => r.some(c => String(c).trim() !== ''));
+  if (!rows.length) return null;
+  const ncols = Math.max(...rows.map(r => r.length));
+  const norm = s => String(s || '').toLowerCase().trim();
+  const oddsish = v => /^[+\-]?\d{2,4}$|^pk$|^ev$|^even$/i.test(String(v).replace(/\s/g, ''));
+  const header = rows[0].map(norm);
+  const headerish = header.some(h => /matchup|team|manager|owner|game|line|money|ml|odds|price|spread|total|over|under|pick|note/.test(h)) &&
+    !header.some(h => oddsish(h));
+  const idx = { subject: -1, line: -1, spread: -1, total: -1, note: -1 };
+  let body = rows;
+  if (headerish) {
+    header.forEach((h, i) => {
+      if (idx.subject < 0 && /matchup|game|team|manager|owner|name|player|title|futures?/.test(h)) idx.subject = i;
+      else if (idx.line < 0 && /money|\bml\b|line|odds|price|to win|win|payout/.test(h)) idx.line = i;
+      else if (idx.spread < 0 && /spread|handicap|pts?|points?|margin/.test(h)) idx.spread = i;
+      else if (idx.total < 0 && /total|o\/?u|over|under/.test(h)) idx.total = i;
+      else if (idx.note < 0 && /note|pick|lean|take|comment|why|analysis|call/.test(h)) idx.note = i;
+    });
+    body = rows.slice(1);
+  }
+  // Fall back to the longest text column for the subject.
+  if (idx.subject < 0) {
+    let best = -1, bestScore = 0;
+    for (let c = 0; c < ncols; c++) {
+      const vals = body.map(r => String(r[c] || '').trim()).filter(Boolean);
+      const textish = vals.filter(v => !oddsish(v) && !/^[+\-]?\d+(\.\d+)?$/.test(v)).length;
+      if (textish > bestScore) { bestScore = textish; best = c; }
+    }
+    idx.subject = best;
+  }
+  if (idx.subject < 0) return null;
+  // If no odds column was named, grab the first column that looks like money-line prices.
+  if (idx.line < 0) for (let c = 0; c < ncols; c++) {
+    if (c === idx.subject) continue;
+    const vals = body.map(r => String(r[c] || '').trim()).filter(Boolean);
+    if (vals.length && vals.every(oddsish)) { idx.line = c; break; }
+  }
+  // Longest remaining text column becomes the note.
+  if (idx.note < 0) {
+    let best = -1, bestLen = 0;
+    for (let c = 0; c < ncols; c++) {
+      if (c === idx.subject || c === idx.line || c === idx.spread || c === idx.total) continue;
+      const avg = body.reduce((s, r) => s + String(r[c] || '').length, 0) / (body.length || 1);
+      if (avg > bestLen) { bestLen = avg; best = c; }
+    }
+    if (bestLen >= 12) idx.note = best;
+  }
+  const cell = (r, i) => (i >= 0 ? String(r[i] || '').trim() : '');
+  const out = [];
+  body.forEach(r => {
+    const subject = cell(r, idx.subject); if (!subject) return;
+    out.push({ subject, line: cell(r, idx.line), spread: cell(r, idx.spread), total: cell(r, idx.total), note: cell(r, idx.note) });
+  });
   return out.length ? out : null;
 }
 const CHAT_NOISE = /(omitted|end-to-end encrypted|changed the (subject|group|icon)|changed this group|added |removed | left\b| joined | was added|deleted this message|this message was deleted|missed (voice|video) call|null|created group|pinned a message|changed their phone number|<Media|GIF omitted|sticker omitted|image omitted|video omitted|audio omitted|document omitted)/i;
@@ -1458,7 +1522,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, money:{}, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -1473,6 +1537,11 @@ function saveDesk(){ try { localStorage.setItem(deskKey(), JSON.stringify(S.desk
 function powerKey(){ return 'gg.power.' + (S.leagueId || 'x'); }
 function loadPower(){ try { S.power = JSON.parse(localStorage.getItem(powerKey()) || '{}') || {}; } catch { S.power = {}; } }
 function savePower(){ try { localStorage.setItem(powerKey(), JSON.stringify(S.power || {})); } catch {} }
+
+// Money Lines — the week's betting board, uploaded from a spreadsheet ({ [week]: rows }).
+function moneyKey(){ return 'gg.money.' + (S.leagueId || 'x'); }
+function loadMoney(){ try { S.money = JSON.parse(localStorage.getItem(moneyKey()) || '{}') || {}; } catch { S.money = {}; } }
+function saveMoney(){ try { localStorage.setItem(moneyKey(), JSON.stringify(S.money || {})); } catch {} }
 
 // Custom cover images (from an external graphics AI), keyed by week.
 function coverImgKey(){ return 'gg.coverimg.' + (S.leagueId || 'x'); }
@@ -1897,7 +1966,8 @@ function magazineToText(nl) {
   L.push(''); L.push('🏈 *GAME STORIES*');
   (nl.stories || []).forEach(s => { L.push(`*${s.headline}*`); if (s.paragraphs[0]) L.push(s.paragraphs[0]); L.push(''); });
   (S.desk || []).filter(a => a.week === nl.week).forEach(a => { L.push(`💬 *${a.headline}*`); if (a.paragraphs[0]) L.push(a.paragraphs[0]); L.push(''); });
-  if (nl.powerRankings) { L.push('🔮 *POWER RANKINGS*'); nl.powerRankings.forEach(p => L.push(`${p.rank}. ${p.manager} (${p.tag})`)); }
+  if (nl.powerRankings) { L.push('🔮 *POWER RANKINGS* — The Machines'); nl.powerRankings.forEach(p => L.push(`${p.rank}. ${p.manager} (${p.tag})`)); }
+  if (nl.moneyLines && nl.moneyLines.length) { L.push(''); L.push('💰 *MONEY LINES* — Pork Chop Express'); nl.moneyLines.forEach(m => L.push(`${m.subject}${m.line ? '  ' + m.line : ''}`)); }
   const url = (typeof location !== 'undefined' && location.href) ? location.href : '';
   L.push(''); L.push(`— Read the full illustrated edition: ${url}`);
   return L.join('\n');
@@ -2116,7 +2186,8 @@ function buildSharePayload(id) {
   if (id.startsWith('story:')) { const i = +id.slice(6), s = nl.stories[i]; if (s) return { kicker: i === 0 ? 'Cover Story' : 'Game Story', headline: s.headline, dek: s.dek, meta: score(s), paragraphs: s.paragraphs }; }
   if (id.startsWith('trade:')) { const t = nl.trades && nl.trades[+id.slice(6)]; if (t) return { kicker: 'The Trade Desk', headline: t.headline, dek: t.dek, paragraphs: [(t.sides || []).map(s => `${s.manager} gets ${(s.received || []).map(p => p.name).join(', ') || 'picks/FAAB'}`).join('   ·   '), ...t.paragraphs] }; }
   if (id.startsWith('desk:')) { const a = (S.viewDesk || []).find(x => x.id === id.slice(5)); if (a) return { kicker: 'The Water Cooler', headline: a.headline, dek: a.dek, paragraphs: a.paragraphs }; }
-  if (id === 'power' && (nl.powerRankings || []).length) return { kicker: 'Power Rankings', headline: `Week ${wk} Power Rankings`, lines: nl.powerRankings.map(p => `${p.rank}. ${p.manager}${p.tag ? '  (' + p.tag + ')' : ''}${p.note ? ' — ' + p.note : ''}`) };
+  if (id === 'power' && (nl.powerRankings || []).length) return { kicker: 'Power Rankings · The Machines', headline: `Week ${wk} Power Rankings`, lines: nl.powerRankings.map(p => `${p.rank}. ${p.manager}${p.tag ? '  (' + p.tag + ')' : ''}${p.note ? ' — ' + p.note : ''}`) };
+  if (id === 'money' && (nl.moneyLines || []).length) return { kicker: 'Money Lines · Pork Chop Express', headline: `Week ${wk} Money Lines`, lines: nl.moneyLines.map(m => `${m.subject}${m.line ? '  ' + m.line : ''}${m.spread ? '  ' + m.spread : ''}${m.total ? '  O/U ' + m.total : ''}${m.note ? ' — ' + m.note : ''}`) };
   if (id === 'numbers' && (nl.numbers || []).length) return { kicker: 'By the Numbers', headline: `Week ${wk} by the Numbers`, lines: nl.numbers.map(n => `${n.value} — ${n.label}${n.sub ? ' (' + n.sub + ')' : ''}`) };
   if (id === 'studsduds') { const l = []; (nl.studs || []).forEach((p, i) => l.push(`Stud ${i + 1}: ${p.name} (${p.manager}) — ${p.points.toFixed(1)}`)); (nl.duds || []).forEach(p => l.push(`Dud: ${p.name} (${p.manager}) — ${p.points.toFixed(1)}, projected ${p.projected}`)); if (l.length) return { kicker: 'Studs & Duds', headline: `Week ${wk} Studs & Duds`, lines: l }; }
   if (id === 'shame' && (nl.shame || []).length) return { kicker: 'Start/Sit of Shame', headline: `Week ${wk} Start/Sit of Shame`, lines: nl.shame.map(s => `${s.manager}: benched ${s.benched} (${s.benchPts}) over ${s.started} (${s.startPts}) — −${s.diff.toFixed(1)}`) };
@@ -2284,7 +2355,7 @@ async function enterApp() {
     const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
     const myRoster = rosters.find(r => r.owner_id === S.user.user_id) || null;
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster };
-    loadDesk(); loadPower(); loadEspnHist(); loadBundledHistory(); loadCoverImg();
+    loadDesk(); loadPower(); loadMoney(); loadEspnHist(); loadBundledHistory(); loadCoverImg();
     S.values = null; S.newsCache = {}; S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:false };
     S.trade = { partnerId:null, give:new Set(), get:new Set() };
     // Season history via Sleeper's previous_league_id chain — the reliable way
@@ -2491,6 +2562,8 @@ async function renderNews() {
   const upow = S.power && S.power[wk];
   if (upow && upow.length) { nl.powerRankings = upow; nl.powerSource = 'commish'; }
   else { nl.powerRankings = nl.autoPower; nl.powerSource = null; }
+  const umoney = S.money && S.money[wk];
+  nl.moneyLines = (umoney && umoney.length) ? umoney : null;
   const deskArts = (S.desk || []).filter(a => a.week === wk);
   setContent(coverHtml(nl) + seasonBar() + weekStepper() + composeBar(wk, deskArts) + issueBodyHtml(nl, deskArts, false));
 }
@@ -2499,6 +2572,7 @@ function composeBar(wk, deskArts) {
   if (S.guest || S.sample) return '';
   const hasChat = deskArts.length > 0;
   const hasPower = !!(S.power && S.power[wk] && S.power[wk].length);
+  const hasMoney = !!(S.money && S.money[wk] && S.money[wk].length);
   const aiOn = !!(S.apiKey || '').trim();
   const line = (done, label, note, act, cta) => `<div class="row" style="justify-content:space-between;align-items:center;padding:6px 0">
       <span style="font-size:14px">${done ? '✅' : '⬜'} ${label}${note ? ` <span class="faint" style="font-size:12px">· ${note}</span>` : ''}</span>
@@ -2508,6 +2582,7 @@ function composeBar(wk, deskArts) {
     <div class="dt" style="margin:2px 0 8px">Add this week's updates, then share the finished magazine or save it as a PDF.</div>
     ${line(hasChat, 'Group chat → Water Cooler', hasChat ? 'written' : (aiOn ? 'AI ready' : 'optional'), 'desk', hasChat ? 'edit' : 'add →')}
     ${line(hasPower, 'Power rankings', hasPower ? 'uploaded' : 'optional', 'desk', hasPower ? 'replace' : 'upload →')}
+    ${line(hasMoney, 'Money Lines', hasMoney ? 'uploaded' : 'optional', 'desk', hasMoney ? 'replace' : 'upload →')}
     ${line(!!curCoverImg(), 'Cover image', curCoverImg() ? 'set' : 'AI direction → upload', 'cover-art', curCoverImg() ? 'change' : 'create →')}
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn" data-act="desk" style="flex:1.4">✍️ Add updates</button>
@@ -2541,6 +2616,7 @@ function issueBodyHtml(nl, deskArts, frozen) {
   const nrows = prRows.length || 1;
   const power = prRows.length ? `<div class="card">
     <div class="at">Power Rankings${nl.powerSource === 'commish' ? ' <span class="faint" style="font-size:11px;font-weight:700;letter-spacing:0">· from the league office</span>' : ''}</div>
+    <div class="byline" style="margin:-2px 0 8px">— The Machines</div>
     ${prRows.map(p => { const pct = usePts ? Math.round((p.week / maxW) * 100) : Math.round(((nrows - p.rank + 1) / nrows) * 100);
       return `<div class="pr">
       <span class="ovr" style="width:24px">${p.rank}</span>
@@ -2549,6 +2625,19 @@ function issueBodyHtml(nl, deskArts, frozen) {
         <div class="prbar"><div class="prfill" style="width:${pct}%"></div></div>
         ${p.note ? `<div class="dt">${esc(p.note)}</div>` : ''}
       </div></div>`; }).join('')}</div>` : '';
+  const mlRows = nl.moneyLines || [];
+  const money = mlRows.length ? `<div class="card">
+    <div class="at">💰 Money Lines <span class="faint" style="font-size:11px;font-weight:700;letter-spacing:0">· the week's board</span></div>
+    <div class="byline" style="margin:-2px 0 8px">— Pork Chop Express</div>
+    ${mlRows.map(m => `<div class="ml">
+      <div class="ml-sub">${esc(m.subject)}</div>
+      <div class="ml-odds">
+        ${m.line ? `<span class="ml-line">${esc(m.line)}</span>` : ''}
+        ${m.spread ? `<span class="ml-chip">${esc(m.spread)}</span>` : ''}
+        ${m.total ? `<span class="ml-chip">O/U ${esc(m.total)}</span>` : ''}
+      </div>
+      ${m.note ? `<div class="dt" style="flex-basis:100%;margin-top:4px">${esc(m.note)}</div>` : ''}
+    </div>`).join('')}</div>` : '';
   const coverStory = nl.stories[0] ? storyHtml(nl.stories[0], true) + shareRow('story:0') : '';
   const otherStories = nl.stories.slice(1).map((s, i) => storyHtml(s, false) + shareRow('story:' + (i + 1))).join('');
   const trades = nl.trades && nl.trades.length
@@ -2561,6 +2650,7 @@ function issueBodyHtml(nl, deskArts, frozen) {
     + (feature ? sec('League Feature') + feature + shareRow('feature') : '')
     + (numbers ? sec('By the Numbers') + numbers + shareRow('numbers') : '')
     + (power ? power + shareRow('power') : '')
+    + (money ? money + shareRow('money') : '')
     + studsDudsHtml(nl.studs, nl.duds) + ((nl.studs && nl.studs.length) || (nl.duds && nl.duds.length) ? shareRow('studsduds') : '')
     + shameHtml(nl.shame) + ((nl.shame && nl.shame.length) ? shareRow('shame') : '')
     + awards + (nl.awards.length ? shareRow('awards') : '')
@@ -2934,6 +3024,7 @@ function showDesk() {
   S.deskChatText = null;
   const mine = (S.desk || []).filter(a => a.week === S.activeWeek);
   const powerHere = (S.power && S.power[S.activeWeek]) || [];
+  const moneyHere = (S.money && S.money[S.activeWeek]) || [];
   app.innerHTML = `<div style="padding-bottom:24px">
     <button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>
     <div class="setup-logo" style="font-size:24px">✍️ Newsroom Desk</div>
@@ -2977,6 +3068,17 @@ function showDesk() {
         <div class="dt" style="font-weight:700;color:var(--accent)">✓ Loaded for Week ${S.activeWeek}: ${powerHere.length} teams ranked.</div>
         <div class="faint" style="font-size:12px;margin-top:4px">${powerHere.slice(0,3).map(p=>`${p.rank}. ${esc(p.manager)}`).join(' · ')}${powerHere.length>3?' …':''}</div>
         <div style="height:10px"></div><button class="btn ghost" data-act="power-clear">Remove uploaded rankings</button>` : ''}
+    </div>
+
+    <div class="seclabel">💰 Money Lines (from Excel)</div>
+    <p class="faint" style="font-size:12px;margin:-2px 4px 8px;line-height:1.5">The week's betting board, by <b>Pork Chop Express</b>. Drop the spreadsheet here and it runs as its own segment. Best columns: <b>Matchup</b> (or Team), <b>Money Line</b> (e.g. −150, +130, PK), and optionally <b>Spread</b>, <b>O/U</b>, <b>Pick</b> (a header row helps; extra columns are fine).</p>
+    <div class="card">
+      <input id="moneyFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-act="money-file" class="fileinput" />
+      <div id="moneyFileStatus" class="faint" style="font-size:12px;margin-top:8px;line-height:1.4">Pick the <b>.xlsx</b> file for Week ${S.activeWeek}.</div>
+      ${moneyHere.length ? `<div style="height:10px"></div>
+        <div class="dt" style="font-weight:700;color:var(--accent)">✓ Loaded for Week ${S.activeWeek}: ${moneyHere.length} lines on the board.</div>
+        <div class="faint" style="font-size:12px;margin-top:4px">${moneyHere.slice(0,3).map(m=>`${esc(m.subject)}${m.line?` ${esc(m.line)}`:''}`).join(' · ')}${moneyHere.length>3?' …':''}</div>
+        <div style="height:10px"></div><button class="btn ghost" data-act="money-clear">Remove uploaded lines</button>` : ''}
     </div>
   </div>`;
 }
@@ -3122,6 +3224,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'back-archive') { S.reading = false; return showArchive(); }
   if (act === 'desk-generate') return deskGenerate();
   if (act === 'power-clear') { if (S.power) delete S.power[S.activeWeek]; savePower(); delete S.newsCache[S.activeWeek]; return showDesk(); }
+  if (act === 'money-clear') { if (S.money) delete S.money[S.activeWeek]; saveMoney(); delete S.newsCache[S.activeWeek]; return showDesk(); }
   if (act === 'desk-delete') { S.desk = S.desk.filter(a => a.id !== t.dataset.id); saveDesk(); delete S.newsCache[S.activeWeek];
     if ($('#setbody') || document.querySelector('.setup-logo')) return showDesk(); renderShell(); return renderTab(); }
   if (act === 'back' || act === 'back-news') { S.reading = false; renderShell(); return renderTab(); }
@@ -3206,6 +3309,25 @@ document.body.addEventListener('change', async (e) => {
       S.power = S.power || {}; S.power[S.activeWeek] = ranked; savePower();
       delete S.newsCache[S.activeWeek];
       if (st) st.innerHTML = `✓ Loaded <b>${esc(f.name)}</b> — <b>${ranked.length}</b> teams ranked for Week ${S.activeWeek}. It's in this week's issue now.`;
+      showDesk();
+    } catch (err) {
+      if (st) st.innerHTML = `Couldn't read that file — ${esc((err && err.message) || 'unknown error')}.`;
+    }
+  }
+  const mfile = e.target.closest('[data-act="money-file"]');
+  if (mfile && mfile.files && mfile.files[0]) {
+    const f = mfile.files[0];
+    const st = $('#moneyFileStatus');
+    if (st) st.textContent = 'Reading the board…';
+    try {
+      const buf = await f.arrayBuffer();
+      if (!u8sig(buf)) throw new Error('that isn’t an .xlsx — export/Save As Excel Workbook (.xlsx)');
+      const rows = await extractRowsFromXlsx(buf);
+      const board = parseMoneyRows(rows);
+      if (!board || !board.length) { if (st) st.innerHTML = `Read <b>${esc(f.name)}</b>, but couldn't find a matchup column. Give it headers like <b>Matchup · Money Line · Spread · O/U · Pick</b>.`; return; }
+      S.money = S.money || {}; S.money[S.activeWeek] = board; saveMoney();
+      delete S.newsCache[S.activeWeek];
+      if (st) st.innerHTML = `✓ Loaded <b>${esc(f.name)}</b> — <b>${board.length}</b> lines on the board for Week ${S.activeWeek}. Pork Chop Express is live in this week's issue.`;
       showDesk();
     } catch (err) {
       if (st) st.innerHTML = `Couldn't read that file — ${esc((err && err.message) || 'unknown error')}.`;

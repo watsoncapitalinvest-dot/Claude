@@ -13,7 +13,8 @@ real Sleeper box scores:
 - **Cover Story & Game Stories** — every matchup written up, real stat lines woven into the drama, Thursday-night-to-Monday-night timeline
 - **The Column** — the state-of-the-league lead
 - **By the Numbers**, **Studs & Duds**, **Start/Sit of Shame**, **Superlatives**
-- **Power Rankings** — auto, or upload the commissioner's from Excel
+- **Power Rankings** — "The Machines" — auto, or upload the commissioner's from Excel
+- **Money Lines** — "Pork Chop Express" — the week's betting board, uploaded from Excel (matchup + money line, plus optional spread / O/U / pick)
 - **The Trade Block** — every completed trade reviewed and graded under your scoring
 - **The Water Cooler** — paste your league group chat and it becomes a column (optional AI writer)
 - **The Record Book** — import your league's ESPN history (champions, all-time standings, records); the writing then references real rivalries and pedigree
