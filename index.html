@@ -121,6 +121,14 @@
   .prfill { height:100%; background:linear-gradient(90deg,var(--accent-d),var(--accent)); border-radius:3px; }
   .sd { display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px solid rgba(255,255,255,.05); }
   .sd .val { font-size:16px; font-weight:800; font-variant-numeric:tabular-nums; min-width:44px; text-align:right; }
+  /* trade block */
+  .trdeal { display:flex; align-items:stretch; gap:8px; margin:6px 0 12px; }
+  .trside { flex:1; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:9px 11px; min-width:0; }
+  .trmgr { font-size:11px; font-weight:900; letter-spacing:.4px; text-transform:uppercase; color:var(--accent); margin-bottom:6px; }
+  .trrow { display:flex; align-items:center; gap:7px; padding:3px 0; }
+  .trrow .nm { font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .trrow .val { font-size:13px; font-weight:800; color:var(--dim); font-variant-numeric:tabular-nums; }
+  .trswap { align-self:center; color:var(--faint); font-size:16px; font-weight:900; flex:0 0 auto; }
   /* magazine cover + sections */
   .cover { position:relative; margin:calc(-1 * var(--pad-top)) -16px 16px; padding:calc(var(--pad-top) + 8px) 16px 18px; overflow:hidden;
            background:radial-gradient(130% 120% at 100% 0%, rgba(49,209,88,.22), transparent 55%), linear-gradient(165deg,#10171f,#0b0f14 70%);
@@ -277,6 +285,7 @@ const getLeagueUsers = (id)     => fetchJson(`${CORE}/league/${id}/users`);
 const getMatchups    = (id,w)   => fetchJson(`${CORE}/league/${id}/matchups/${w}`);
 const getLeagueDrafts= (id)     => fetchJson(`${CORE}/league/${id}/drafts`);
 const getDraftPicks  = (id)     => fetchJson(`${CORE}/draft/${id}/picks`);
+const getTransactions= (id,w)   => fetchJson(`${CORE}/league/${id}/transactions/${w}`);
 
 const POS_QP = '&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF';
 async function getWeeklyStats(s,w)      { try { return rowsToMap(await fetchJson(`${DATA}/stats/nfl/${s}/${w}?season_type=regular${POS_QP}`)); } catch { return {}; } }
@@ -1921,6 +1930,7 @@ async function renderNews() {
       }
       nl = buildNewsletter({ week:wk, league:S.bundle.league, matchups, rosters:S.bundle.rosters,
         usersById:S.bundle.usersById, players:S.bundle.players, weeklyStats, weeklyProjections });
+      try { nl.trades = await buildTradeReview(wk); } catch { nl.trades = []; }
       S.newsCache[wk] = nl;
     } catch { nl = null; }
   }
@@ -1984,12 +1994,16 @@ function issueBodyHtml(nl, deskArts, frozen) {
       </div></div>`; }).join('')}</div>` : '';
   const coverStory = nl.stories[0] ? storyHtml(nl.stories[0], true) : '';
   const otherStories = nl.stories.slice(1).map(s => storyHtml(s, false)).join('');
+  const trades = nl.trades && nl.trades.length
+    ? nl.trades.map(tradeCardHtml).join('')
+    : `<div class="card" style="text-align:center"><div class="dt">${seededPick(['Not a single trade this week. A league full of cowards.', 'The trade market was dead. Everybody clutching their roster like it’s worth a damn.', 'No deals went down. Gutless week on the wire.'], (wk || 1) * 5)}</div></div>`;
   const colophon = `<div class="colophon">Auto-written from real Sleeper box scores — every stat line and margin is genuine. The voice, jokes, and profanity are on the house.</div>`;
   return sec('Cover Story') + coverStory
     + sec('The Column') + lead
     + (feature ? sec('League Feature') + feature : '')
     + sec('By the Numbers') + numbersHtml(nl.numbers)
     + power + studsDudsHtml(nl.studs, nl.duds) + shameHtml(nl.shame) + awards
+    + sec('The Trade Block') + trades
     + sec('The Water Cooler') + desk
     + (otherStories ? sec('More Game Stories') + otherStories : '')
     + colophon;
@@ -2142,6 +2156,134 @@ function judgeTrade(net, giveVal) {
   if (pct > 0.15)  return { label:'You win this trade', detail:"You're getting meaningfully more value than you send.", color:'var(--accent)' };
   if (pct < -0.15) return { label:"You're overpaying", detail:'You send more value than you get back — ask for a sweetener.', color:'var(--red)' };
   return { label:'Fair deal', detail:'Value is close to even. It comes down to fit and need.', color:'var(--blue)' };
+}
+
+// ---------------------------------------------------------------------
+//  The Trade Block — a magazine column reviewing the week's completed trades
+// ---------------------------------------------------------------------
+function ordinal(n) { const s = ['th','st','nd','rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+async function buildTradeReview(wk) {
+  try { await ensureValues(); } catch {}
+  const V = S.values || { value: () => 0, projectionBased: false };
+  if (S.demo) return fabricateTrades(wk, V);
+  let txns = [];
+  try { txns = await getTransactions(S.leagueId, wk); } catch { return []; }
+  const trades = (txns || []).filter(t => t && t.type === 'trade' && t.status === 'complete');
+  return trades.map(t => reviewTrade(t, V)).filter(Boolean).slice(0, 5);
+}
+function reviewTrade(t, V) {
+  const b = S.bundle;
+  const ridMgr = (rid) => { const r = b.rosters.find(x => x.roster_id === rid); return r ? managerName(r.owner_id) : ('Team ' + rid); };
+  const pinfo = (id) => { const p = b.players[id]; return { id, name: playerName(p, id), pos: posOfPlayer(p) || '', val: Math.round(V.value(id)) }; };
+  const parts = (t.roster_ids || []).slice();
+  if (parts.length < 2) return null;
+  const adds = t.adds || {}, budgets = t.waiver_budget || [], picks = t.draft_picks || [];
+  const sides = parts.map(rid => {
+    const received = Object.keys(adds).filter(pid => adds[pid] === rid).map(pinfo).sort((a, b) => b.val - a.val);
+    const faabIn = budgets.filter(w => w.receiver === rid).reduce((s, w) => s + (w.amount || 0), 0);
+    const picksIn = picks.filter(dp => dp.owner_id === rid && dp.previous_owner_id !== rid)
+      .map(dp => `${dp.season} ${ordinal(dp.round)} pick`);
+    const recvVal = sum(received.map(p => p.val)) + faabIn * 0.25;
+    return { rid, manager: ridMgr(rid), received, faabIn, picksIn, recvVal };
+  });
+  const nameList = (arr) => arr.length ? joinList(arr.map(p => p.name)) : '';
+  const extras = (s) => { const e = []; if (s.faabIn) e.push(`$${s.faabIn} FAAB`); s.picksIn.forEach(p => e.push(p)); return e; };
+  const seed = Math.round((t.created || 0) / 1e6) + parts.reduce((a, r) => a + r, 0) + Math.round(sum(sides[0].received.map(p => p.val)));
+  const pick = (arr, o) => seededPick(arr, seed + o);
+
+  // Two-team deal — the common case, and the one worth real commentary.
+  if (sides.length === 2) {
+    const A = sides[0], B = sides[1];
+    const aGot = [...A.received, ...extras(A).map(x => ({ name: x, val: 0 }))];
+    const bGot = [...B.received, ...extras(B).map(x => ({ name: x, val: 0 }))];
+    const aHead = A.received[0], bHead = B.received[0];
+    const diff = Math.round(A.recvVal - B.recvVal);
+    const winner = diff >= 0 ? A : B, loser = diff >= 0 ? B : A;
+    const margin = Math.abs(diff);
+    const scale = Math.max(A.recvVal, B.recvVal, 20);
+    const lopsided = margin >= scale * 0.28 && margin >= 18;
+    const tilted = !lopsided && margin >= scale * 0.12 && margin >= 8;
+    const U = s => String(s || '').toUpperCase();
+
+    let headline;
+    if (lopsided) headline = pick([`${winner.manager} Fleeces ${loser.manager}`, `${loser.manager} Got Robbed in Broad Daylight`, `${winner.manager} Wins the Trade Before the Ink Dries`], 1);
+    else if (tilted) headline = pick([`${winner.manager} Gets the Better of ${loser.manager}`, `Edge to ${winner.manager} in Swap with ${loser.manager}`], 1);
+    else headline = pick([`${A.manager} and ${B.manager} Make an Honest Deal`, `${A.manager}, ${B.manager} Trade Even-Up`], 1);
+
+    const P = [];
+    // The deal itself.
+    const aSent = nameList(B.received) || (extras(A).length ? '' : 'a bag of magic beans');
+    const aExtra = extras(A).length ? ` (plus ${joinList(extras(A))} headed their way)` : '';
+    const bExtra = extras(B).length ? ` (plus ${joinList(extras(B))})` : '';
+    P.push(`${A.manager} shipped ${nameList(B.received) || 'nothing but paperwork'}${bExtra} to ${B.manager} in exchange for ${nameList(A.received) || 'a warm handshake'}${aExtra}.`);
+    // The verdict.
+    if (lopsided && (aHead || bHead)) {
+      P.push(pick([
+        `Let's not dress it up: by our board this is highway robbery. ${winner.manager} walks away +${margin} in projected value, headlined by ${(winner.received[0]||{}).name || 'the haul'}. ${loser.manager}, buddy, call somebody before you do that again.`,
+        `Our valuations have ${winner.manager} winning this by ${margin} points, and it isn't close. ${(winner.received[0]||{}).name || 'The centerpiece'} alone tilts the whole thing. Somewhere ${loser.manager} is telling themselves it was about "fit."`,
+      ], 2));
+    } else if (tilted) {
+      P.push(pick([
+        `Reasonable deal, but the needle tips toward ${winner.manager} — about +${margin} in value, with ${(winner.received[0]||{}).name || 'the return'} the piece that moves it. ${loser.manager} can live with it if the fit's right.`,
+        `Close enough to be defensible, but ${winner.manager} got the slightly fatter end (+${margin}). Both of these clowns will claim they won, as they always do.`,
+      ], 2));
+    } else {
+      P.push(pick([
+        `This one's a genuine coin-flip — value's within ${margin <= 2 ? 'a point or two' : margin + ' points'} either way. Both sides addressed a need, nobody got hosed, and that's honestly the rarest result in this league.`,
+        `Dead even by the numbers. ${A.manager} and ${B.manager} each got a guy they wanted, and for once the group chat has nothing to scream about. Boring. We approve.`,
+      ], 2));
+    }
+    return { id: 'trade_' + (t.transaction_id || seed), kind: 'trade', headline,
+      dek: lopsided ? `A lopsided one — and everybody knows it.` : tilted ? `A slight edge, dissected.` : `A fair swap, for once.`,
+      byline: 'The Trade Desk', paragraphs: P, sides };
+  }
+
+  // Multi-team blockbuster — summarize each haul, crown the biggest winner.
+  const ranked = [...sides].sort((a, b) => b.recvVal - a.recvVal);
+  const P = [`A ${sides.length}-team blockbuster went through. ` +
+    sides.map(s => `${s.manager} lands ${nameList(s.received) || joinList(extras(s)) || 'future considerations'}`).join('; ') + '.'];
+  P.push(`By our board, ${ranked[0].manager} made out best on paper — the rest can argue about it in the chat, which they will.`);
+  return { id: 'trade_' + (t.transaction_id || seed), kind: 'trade',
+    headline: `${sides.length}-Team Blockbuster Shakes Up the League`, dek: `Everybody got something. Somebody got fleeced.`,
+    byline: 'The Trade Desk', paragraphs: P, sides };
+}
+// Sample/demo mode: fabricate a believable trade or two from the roster pool.
+function fabricateTrades(wk, V) {
+  const b = S.bundle, rosters = b.rosters || [];
+  if (rosters.length < 2) return [];
+  const out = [];
+  const mk = (iA, iB, seedbump) => {
+    const A = rosters[iA % rosters.length], B = rosters[iB % rosters.length];
+    if (!A || !B || A.roster_id === B.roster_id) return;
+    const aStart = A.starters || [], bStart = B.starters || [];
+    // First deal: a lopsided 2-for-1. Second: a fair 1-for-1, for variety.
+    const aSend = (seedbump === 0 ? [aStart[1], A.players[A.starters.length]] : [aStart[3]]).filter(id => id && b.players[id]);
+    const bSend = (seedbump === 0 ? [bStart[3]] : [bStart[4]]).filter(id => id && b.players[id]);
+    if (!aSend.length || !bSend.length) return;
+    const adds = {}; aSend.forEach(id => adds[id] = B.roster_id); bSend.forEach(id => adds[id] = A.roster_id);
+    const t = { transaction_id: `demo_${wk}_${seedbump}`, type: 'trade', status: 'complete',
+      roster_ids: [A.roster_id, B.roster_id], adds, drops: {}, waiver_budget: seedbump ? [] : [{ sender: B.roster_id, receiver: A.roster_id, amount: 12 }],
+      draft_picks: [], created: (wk * 864e5) + seedbump * 3600 };
+    const r = reviewTrade(t, V); if (r) out.push(r);
+  };
+  mk(wk, wk * 3 + 1, 0);
+  if (wk % 2 === 0) mk(wk * 5 + 2, wk * 2 + 4, 1);
+  return out.slice(0, 3);
+}
+function tradeCardHtml(tr) {
+  const sideCol = (s) => {
+    const extras = []; if (s.faabIn) extras.push(`$${s.faabIn} FAAB`); (s.picksIn || []).forEach(p => extras.push(p));
+    const items = (s.received || []).map(p => `<div class="trrow">${posBadge(p.pos)}<span class="nm" style="flex:1">${esc(p.name)}</span>${p.val ? `<span class="val">${p.val}</span>` : ''}</div>`).join('')
+      + extras.map(x => `<div class="trrow"><span class="pos" style="color:var(--amber);border-color:var(--amber)">＋</span><span class="nm" style="flex:1">${esc(x)}</span></div>`).join('');
+    return `<div class="trside"><div class="trmgr">${esc(s.manager)} gets</div>${items || '<div class="dt">nothing of note</div>'}</div>`;
+  };
+  return `<div class="card story">
+    <div class="byline">🔀 ${esc(tr.byline || 'The Trade Desk')}</div>
+    <h2>${esc(tr.headline)}</h2>
+    ${tr.dek ? `<div class="dek">${esc(tr.dek)}</div>` : ''}
+    <div class="trdeal">${(tr.sides || []).map(sideCol).join('<div class="trswap">⇄</div>')}</div>
+    ${tr.paragraphs.map(p => `<p class="body">${esc(p)}</p>`).join('')}
+  </div>`;
 }
 
 // ---------------------------------------------------------------------
