@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-title" content="Skirt Chasers" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="manifest" href="manifest.json" />
-<title>Skirt Chasers — Fantasy League Magazine</title>
-<meta property="og:title" content="Skirt Chasers — Fantasy League Magazine" />
+<title>Skirt Chasers — Dynasty League Magazine</title>
+<meta property="og:title" content="Skirt Chasers — Dynasty League Magazine" />
 <meta property="og:description" content="This week's issue: game stories, power rankings, and the group-chat drama." />
 <meta property="og:type" content="website" />
 <meta name="description" content="A weekly fantasy football magazine for your league." />
@@ -186,6 +186,20 @@
               padding-left:16px; position:relative; line-height:1.25; }
   .mag-line::before { content:'▸'; position:absolute; left:0; color:#e11b22; }
   .mag-shield { display:block; width:66px; height:auto; margin:18px auto 0; }
+  /* PDF / print — flip to a light document and drop the app chrome */
+  @media print {
+    :root { --bg:#fff; --bg2:#f3f4f6; --card:#fff; --card2:#f6f7f9; --border:#d7dbe0;
+            --text:#141414; --dim:#3b424b; --faint:#6b7280; --accent:#127a33; --accent-d:#0e5a26; }
+    * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    body { background:#fff; }
+    .no-print, .tabbar, .mag-tools, .sharerow, .week, .guestbar { display:none !important; }
+    #content, .max { padding:0 !important; }
+    .magcover { min-height:auto; break-inside:avoid; page-break-inside:avoid; }
+    .magcover.full { min-height:auto; }
+    .sec { break-after:avoid; }
+    .card, .story, .lead, .magcover { break-inside:avoid; page-break-inside:avoid; }
+    @page { margin:12mm; }
+  }
   .sec { font-family:var(--serif); font-weight:800; font-size:13px; letter-spacing:3px; text-transform:uppercase;
          color:var(--text); padding:6px 0 6px 12px; margin:18px 0 12px; border-left:4px solid var(--accent);
          border-bottom:1px solid var(--border); }
@@ -832,7 +846,7 @@ async function generateChatArticleAI(raw, angle) {
     : `Find the angle yourself — the one thread everyone kept circling back to.`;
   const hist = historyBlurb();
   const system =
-`You are the Water Cooler columnist for "${mag} Fantasy League Magazine," a fantasy-football league magazine written for the guys in the league. Your beat is the league group chat.
+`You are the Water Cooler columnist for "${mag} Dynasty League Magazine," a fantasy-football league magazine written for the guys in the league. Your beat is the league group chat.
 
 Write ONE column that is a SUMMARY and COMMENTARY on the week's group chat — a single narrative arc, not a report. This is the hard rule the editor keeps hammering:
 - It is a story about what went down in the chat and what it says about these guys. Summarize the drama, then editorialize on it with a sharp, funny voice.
@@ -1787,7 +1801,7 @@ function historyImportCard() {
 function magazineToText(nl) {
   if (!nl) return '';
   const L = [];
-  L.push(`*${String(nl.leagueName || '').toUpperCase()}* — FANTASY LEAGUE MAGAZINE`);
+  L.push(`*${String(nl.leagueName || '').toUpperCase()}* — DYNASTY LEAGUE MAGAZINE`);
   L.push(`_Week ${nl.week} Edition_`);
   L.push('');
   L.push('📋 *SCORES*');
@@ -1882,14 +1896,14 @@ async function shareMagazine() {
       if (blob) {
         const file = new File([blob], `${magName.replace(/[^\w]+/g, '-')}-wk${S.activeWeek}.png`, { type: 'image/png' });
         if (navigator.canShare({ files: [file] })) {
-          try { await navigator.share({ files: [file], text, url, title: `${magName} — Fantasy League Magazine` }); return; }
+          try { await navigator.share({ files: [file], text, url, title: `${magName} — Dynasty League Magazine` }); return; }
           catch (e) { if (e && e.name === 'AbortError') return; }
         }
       }
     }
   } catch {}
   // Fallbacks: plain share sheet, then clipboard, then a copy box.
-  try { if (navigator.share) { await navigator.share({ title: `${magName} — Fantasy League Magazine`, text, url }); return; } }
+  try { if (navigator.share) { await navigator.share({ title: `${magName} — Dynasty League Magazine`, text, url }); return; } }
   catch (e) { if (e && e.name === 'AbortError') return; }
   try { await navigator.clipboard.writeText(url); toast('Issue link copied — paste into WhatsApp'); return; } catch {}
   showCopyModal(url);
@@ -1944,7 +1958,7 @@ async function articleImageBlob(payload) {
   // Footer strip.
   g.fillStyle = ACCENT; g.fillRect(PAD, H - 78, 46, 5);
   g.fillStyle = FAINT; g.font = `800 24px ${SANS}`;
-  g.fillText(`${(S.magName || 'Skirt Chasers').toUpperCase()} · FANTASY LEAGUE MAGAZINE · WK ${S.activeWeek}`, PAD, H - 44);
+  g.fillText(`${(S.magName || 'Skirt Chasers').toUpperCase()} · DYNASTY LEAGUE MAGAZINE · WK ${S.activeWeek}`, PAD, H - 44);
   return await new Promise(res => cv.toBlob(res, 'image/png', 0.92));
 }
 async function shareArticle(id) {
@@ -2227,9 +2241,10 @@ function renderTab() {
 function magTitle() { return String(S.magName || 'Skirt Chasers').toUpperCase(); }
 function coverToolsInner() {
   const share = `<button class="ctool" data-act="share" title="Share">⤴</button>`;
-  if (S.guest) return share;
+  const pdf = `<button class="ctool" data-act="pdf" title="Save as PDF">⤓</button>`;
+  if (S.guest) return `${share}${pdf}`;
   const exit = S.sample ? `<button class="ctool" data-act="exit-sample" title="Exit sample">✕</button>` : '';
-  return `${share}${exit}
+  return `${share}${pdf}${exit}
     <button class="ctool" data-act="desk" title="Newsroom desk">✍️</button>
     <button class="ctool" data-act="history" title="Record book">🏆</button>
     <button class="ctool" data-act="archive" title="Back issues">📚</button>
@@ -2301,7 +2316,7 @@ function coverHtml(nl) {
 function sec(label) { return `<div class="sec">${esc(label)}</div>`; }
 function seasonBar() {
   if (!S.history || S.history.length < 2) return '';
-  return `<div class="row" style="justify-content:space-between;margin-bottom:14px">
+  return `<div class="row no-print" style="justify-content:space-between;margin-bottom:14px">
     <span class="seclabel" style="margin:0">Season</span>
     <select class="seasonsel" data-act="season-select">
       ${S.history.map(h => `<option value="${esc(h.league_id)}" data-season="${esc(h.season)}" ${h.league_id===S.leagueId?'selected':''}>${esc(h.season)} season</option>`).join('')}
@@ -2351,10 +2366,29 @@ async function renderNews() {
   if (upow && upow.length) { nl.powerRankings = upow; nl.powerSource = 'commish'; }
   else { nl.powerRankings = nl.autoPower; nl.powerSource = null; }
   const deskArts = (S.desk || []).filter(a => a.week === wk);
-  const saveBtn = (!S.guest && !S.sample)
-    ? `<div style="margin:2px 0 4px"><button class="btn ghost" data-act="save-issue">📚 Save to Back Issues</button></div>`
-    : '';
-  setContent(coverHtml(nl) + seasonBar() + weekStepper() + saveBtn + issueBodyHtml(nl, deskArts, false));
+  setContent(coverHtml(nl) + seasonBar() + weekStepper() + composeBar(wk, deskArts) + issueBodyHtml(nl, deskArts, false));
+}
+// The weekly editor prompt: what this issue still needs, then publish it.
+function composeBar(wk, deskArts) {
+  if (S.guest || S.sample) return '';
+  const hasChat = deskArts.length > 0;
+  const hasPower = !!(S.power && S.power[wk] && S.power[wk].length);
+  const aiOn = !!(S.apiKey || '').trim();
+  const line = (done, label, note, act, cta) => `<div class="row" style="justify-content:space-between;align-items:center;padding:6px 0">
+      <span style="font-size:14px">${done ? '✅' : '⬜'} ${label}${note ? ` <span class="faint" style="font-size:12px">· ${note}</span>` : ''}</span>
+      <button class="linkbtn" data-act="${act}">${cta}</button></div>`;
+  return `<div class="card no-print" style="border-color:var(--accent-d)">
+    <div class="at">📋 Build the Week ${wk} issue</div>
+    <div class="dt" style="margin:2px 0 8px">Add this week's updates, then share the finished magazine or save it as a PDF.</div>
+    ${line(hasChat, 'Group chat → Water Cooler', hasChat ? 'written' : (aiOn ? 'AI ready' : 'optional'), 'desk', hasChat ? 'edit' : 'add →')}
+    ${line(hasPower, 'Power rankings', hasPower ? 'uploaded' : 'optional', 'desk', hasPower ? 'replace' : 'upload →')}
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn" data-act="desk" style="flex:1.4">✍️ Add updates</button>
+      <button class="btn ghost" data-act="save-issue" style="flex:1" title="Save to Back Issues">📚</button>
+      <button class="btn ghost" data-act="share" style="flex:1" title="Share">⤴</button>
+      <button class="btn ghost" data-act="pdf" style="flex:1" title="Save as PDF">⤓</button>
+    </div>
+  </div>`;
 }
 // The full magazine body (everything under the cover). frozen=true drops the
 // interactive bits so a saved back-issue renders as a clean, static read.
@@ -2873,7 +2907,7 @@ async function showSettings() {
     <div class="seclabel">Magazine name</div>
     <div class="card">
       <input id="magName" class="input" value="${esc(S.magName || 'Skirt Chasers')}" placeholder="Skirt Chasers" />
-      <div class="faint" style="font-size:11px;margin:6px 2px 0">Shown big on the cover, above “Fantasy League Magazine.”</div>
+      <div class="faint" style="font-size:11px;margin:6px 2px 0">Shown big on the cover, above “Dynasty League Magazine.”</div>
       <div style="height:10px"></div>
       <button class="btn" data-act="save-magname">Save magazine name</button>
     </div>
@@ -2928,6 +2962,7 @@ document.body.addEventListener('click', async (e) => {
   }
   if (act === 'settings') return showSettings();
   if (act === 'share') return shareMagazine();
+  if (act === 'pdf') { toast('Choose “Save to PDF” in the print dialog'); setTimeout(() => window.print(), 350); return; }
   if (act === 'share-item') return shareArticle(t.dataset.id);
   if (act === 'save-magname') { const v = ($('#magName')||{}).value; S.magName = (v && v.trim()) || 'Skirt Chasers';
     try { localStorage.setItem('gg.magname', S.magName); } catch {} toast('Magazine name saved'); return; }
