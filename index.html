@@ -600,6 +600,125 @@ async function extractChatFromZip(buf) {
   }
   throw new Error('unsupported zip compression');
 }
+// Generic: pull every zip entry whose name matches wantRe, decoded to text.
+// Used to read the XML parts inside an .xlsx (which is just a zip).
+async function unzipTextEntries(buf, wantRe) {
+  const dv = new DataView(buf), u8 = new Uint8Array(buf), td = new TextDecoder('utf-8');
+  let eocd = -1;
+  for (let i = buf.byteLength - 22; i >= 0 && i > buf.byteLength - 22 - 65536; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('not a valid .xlsx (zip) file');
+  const cdOffset = dv.getUint32(eocd + 16, true), cdCount = dv.getUint16(eocd + 10, true);
+  let p = cdOffset; const out = {};
+  for (let n = 0; n < cdCount && dv.getUint32(p, true) === 0x02014b50; n++) {
+    const method = dv.getUint16(p + 10, true), compSize = dv.getUint32(p + 20, true);
+    const nameLen = dv.getUint16(p + 28, true), extraLen = dv.getUint16(p + 30, true), commentLen = dv.getUint16(p + 32, true);
+    const localOffset = dv.getUint32(p + 42, true);
+    const name = td.decode(u8.subarray(p + 46, p + 46 + nameLen));
+    if (!wantRe || wantRe.test(name)) {
+      const lo = localOffset;
+      if (dv.getUint32(lo, true) === 0x04034b50) {
+        const dataStart = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true);
+        const comp = u8.subarray(dataStart, dataStart + compSize);
+        if (method === 0) out[name] = td.decode(comp);
+        else if (method === 8) {
+          if (typeof DecompressionStream === 'undefined') throw new Error('your browser can’t unzip — update iOS');
+          const stream = new Blob([comp]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+          out[name] = td.decode(await new Response(stream).arrayBuffer());
+        }
+      }
+    }
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  return out;
+}
+function decodeXmlEntities(s) {
+  return String(s).replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+}
+function colToIdx(ref) { const m = String(ref).match(/^([A-Z]+)/); if (!m) return -1; let n = 0; for (const ch of m[1]) n = n * 26 + (ch.charCodeAt(0) - 64); return n - 1; }
+// Read the first worksheet of an .xlsx into a 2-D array of cell strings.
+async function extractRowsFromXlsx(buf) {
+  const files = await unzipTextEntries(buf, /xl\/(sharedStrings\.xml|worksheets\/sheet\d+\.xml)/i);
+  const shared = [];
+  const ss = files['xl/sharedStrings.xml'] || '';
+  ss.replace(/<si\b[^>]*>([\s\S]*?)<\/si>/g, (_, inner) => {
+    let s = ''; inner.replace(/<t\b[^>]*>([\s\S]*?)<\/t>/g, (__, t) => { s += t; return ''; });
+    shared.push(decodeXmlEntities(s)); return '';
+  });
+  const sheetKey = Object.keys(files).filter(k => /worksheets\/sheet\d+\.xml$/i.test(k)).sort()[0];
+  const sheet = sheetKey ? files[sheetKey] : '';
+  const rows = [];
+  sheet.replace(/<row\b[^>]*>([\s\S]*?)<\/row>/g, (_, inner) => {
+    const cells = [];
+    inner.replace(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g, (__, attrs, body) => {
+      const col = colToIdx((attrs.match(/r="([A-Z]+\d+)"/) || [])[1] || '');
+      const t = (attrs.match(/t="([^"]+)"/) || [])[1] || '';
+      let val = '';
+      if (body) {
+        if (t === 's') { const vi = (body.match(/<v>([\s\S]*?)<\/v>/) || [])[1]; val = shared[parseInt(vi, 10)] || ''; }
+        else if (t === 'inlineStr' || t === 'str') { const is = (body.match(/<t[^>]*>([\s\S]*?)<\/t>/) || body.match(/<v>([\s\S]*?)<\/v>/) || [])[1] || ''; val = decodeXmlEntities(is); }
+        else { const vi = (body.match(/<v>([\s\S]*?)<\/v>/) || [])[1]; val = vi != null ? decodeXmlEntities(vi) : ''; }
+      }
+      if (col >= 0) cells[col] = val; return '';
+    });
+    rows.push(cells); return '';
+  });
+  return rows.map(r => Array.from(r, x => (x == null ? '' : String(x))));
+}
+// Interpret an arbitrary rankings grid into [{rank, manager, tag, note}].
+function parsePowerRows(rows) {
+  rows = (rows || []).filter(r => r.some(c => String(c).trim() !== ''));
+  if (!rows.length) return null;
+  const ncols = Math.max(...rows.map(r => r.length));
+  const norm = s => String(s || '').toLowerCase().trim();
+  const header = rows[0].map(norm);
+  const headerish = header.some(h => /rank|team|manager|owner|record|note|comment|power|blurb|analysis/.test(h)) &&
+    !header.some(h => /^\d+(\.\d+)?$/.test(h));
+  const idx = { rank: -1, team: -1, tag: -1, note: -1 };
+  let body = rows;
+  if (headerish) {
+    header.forEach((h, i) => {
+      if (idx.rank < 0 && /rank|^#$|^pos/.test(h)) idx.rank = i;
+      else if (idx.team < 0 && /team|manager|owner|name/.test(h)) idx.team = i;
+      else if (idx.tag < 0 && /record|w-?l|tag|pts|points/.test(h)) idx.tag = i;
+      else if (idx.note < 0 && /note|comment|blurb|why|analysis|reason|take/.test(h)) idx.note = i;
+    });
+    body = rows.slice(1);
+  }
+  if (idx.team < 0) {
+    for (let c = 0; c < ncols; c++) {
+      const vals = body.map(r => String(r[c] || '').trim()).filter(Boolean);
+      const textish = vals.filter(v => !/^\d+(\.\d+)?$/.test(v)).length;
+      if (vals.length && textish >= vals.length * 0.6) { idx.team = c; break; }
+    }
+  }
+  if (idx.team < 0) return null;
+  if (idx.rank < 0) for (let c = 0; c < ncols; c++) {
+    if (c === idx.team) continue;
+    const vals = body.map(r => String(r[c] || '').trim()).filter(Boolean);
+    if (vals.length && vals.every(v => /^\d+$/.test(v))) { idx.rank = c; break; }
+  }
+  if (idx.note < 0) {
+    let best = -1, bestLen = 0;
+    for (let c = 0; c < ncols; c++) {
+      if (c === idx.team || c === idx.rank || c === idx.tag) continue;
+      const avg = body.reduce((s, r) => s + String(r[c] || '').length, 0) / (body.length || 1);
+      if (avg > bestLen) { bestLen = avg; best = c; }
+    }
+    if (bestLen >= 12) idx.note = best;
+  }
+  const out = [];
+  body.forEach(r => {
+    const team = String(r[idx.team] || '').trim(); if (!team) return;
+    const rank = (idx.rank >= 0 && /^\d+$/.test(String(r[idx.rank]).trim())) ? parseInt(r[idx.rank], 10) : out.length + 1;
+    out.push({ rank, manager: team, tag: idx.tag >= 0 ? String(r[idx.tag] || '').trim() : '', note: idx.note >= 0 ? String(r[idx.note] || '').trim() : '' });
+  });
+  out.sort((a, b) => a.rank - b.rank).forEach((r, i) => r.rank = i + 1);
+  return out.length ? out : null;
+}
 const CHAT_NOISE = /(omitted|end-to-end encrypted|changed the (subject|group|icon)|changed this group|added |removed | left\b| joined | was added|deleted this message|this message was deleted|missed (voice|video) call|null|created group|pinned a message|changed their phone number|<Media|GIF omitted|sticker omitted|image omitted|video omitted|audio omitted|document omitted)/i;
 function parseChat(raw) {
   const lines = String(raw || '')
@@ -1142,22 +1261,38 @@ function buildSampleBundle(real) {
 
   const sp = {};
   const take = (pl, slot) => { if (!pl) return null; const id = pl.player_id;
-    if (!sp[id]) sp[id] = Object.assign({}, pl, { slot }); return id; };
+    if (!sp[id]) sp[id] = Object.assign({}, pl, { slot });
+    used.add(id); return id; };  // never let the pool hand this player to another team
 
   const rosters = real.rosters.map((r, ri) => {
-    const rs = r.starters || [];
+    const rawStart = r.starters || [];
+    // Every real player actually on THIS team's roster, grouped by position, so
+    // we fill the lineup from the team's own guys before touching the pool.
+    const owned = (r.players || []).filter(id => id && id !== '0' && players[id]);
+    const usedOwn = new Set();
+    const byPos = {};
+    owned.forEach(id => { const pos = posOf(players[id]); (byPos[pos] = byPos[pos] || []).push(id); });
+    const takeOwn = (positions) => {
+      for (const pos of positions) { const arr = byPos[pos] || [];
+        for (const id of arr) if (!usedOwn.has(id)) { usedOwn.add(id); return players[id]; } }
+      return null;
+    };
     const starters = [];
     startSlots.forEach((slotPos, si) => {
       const slot = SAMPLE_SLOTS[(si + ri) % SAMPLE_SLOTS.length];
+      const elig = STARTER_ELIG[slotPos] || [slotPos];
       let pl = null;
-      const rid = rs[si];
-      if (rid && rid !== '0' && players[rid]) pl = players[rid];   // real drafted player
-      if (!pl) pl = draw(STARTER_ELIG[slotPos] || [slotPos]);       // else a plausible real name
+      const rid = rawStart[si];
+      if (rid && rid !== '0' && players[rid]) { pl = players[rid]; usedOwn.add(rid); }  // their set lineup
+      if (!pl) pl = takeOwn(elig);                                                       // their own bench guy
+      if (!pl) pl = draw(elig);                                                          // last resort: pool
       const id = take(pl, slot);
       if (id) starters.push(id);
     });
+    // Fill the bench from the team's remaining real players first.
     const bench = [];
-    for (let b = 0; b < 2; b++) { const id = take(draw(['RB','WR','TE']), SAMPLE_SLOTS[(b + ri) % SAMPLE_SLOTS.length]); if (id) bench.push(id); }
+    owned.filter(id => !usedOwn.has(id)).slice(0, 3).forEach(id => { usedOwn.add(id); const bId = take(players[id], SAMPLE_SLOTS[(bench.length + ri) % SAMPLE_SLOTS.length]); if (bId) bench.push(bId); });
+    while (bench.length < 2) { const id = take(draw(['RB','WR','TE']), SAMPLE_SLOTS[(bench.length + ri) % SAMPLE_SLOTS.length]); if (!id) break; bench.push(id); }
     // A believable win-loss record so Power Rankings read like mid-season.
     const seed = r.roster_id * 13 + ri * 7 + 3;
     const wins = Math.max(0, Math.min(played, Math.round(played * (0.25 + 0.5 * ds(seed)))));
@@ -1206,7 +1341,7 @@ function startDemo() {
   S.bundle = d.bundle; S.demo = d; S.values = null; S.newsCache = {};
   S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:true };
   S.trade = { partnerId:null, give:new Set(), get:new Set() };
-  loadDesk();
+  loadDesk(); loadPower();
   S.activeWeek = 14; S.tab = 'news';
   renderShell(); renderTab();
 }
@@ -1257,7 +1392,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -1267,6 +1402,11 @@ function loadSession(){ try { const r=localStorage.getItem(SKEY); if(r){ const s
 function deskKey(){ return 'gg.desk.' + (S.leagueId || 'x'); }
 function loadDesk(){ try { S.desk = JSON.parse(localStorage.getItem(deskKey()) || '[]'); } catch { S.desk = []; } }
 function saveDesk(){ try { localStorage.setItem(deskKey(), JSON.stringify(S.desk)); } catch {} }
+
+// Commissioner-submitted power rankings, keyed by week ({ [week]: rows }).
+function powerKey(){ return 'gg.power.' + (S.leagueId || 'x'); }
+function loadPower(){ try { S.power = JSON.parse(localStorage.getItem(powerKey()) || '{}') || {}; } catch { S.power = {}; } }
+function savePower(){ try { localStorage.setItem(powerKey(), JSON.stringify(S.power || {})); } catch {} }
 
 // ---- Back Issues: a self-contained archive frozen on THIS device ------------
 function issuesKey(){ return 'gg.issues.' + (S.leagueId || 'x'); }
@@ -1583,7 +1723,7 @@ async function enterApp() {
     const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
     const myRoster = rosters.find(r => r.owner_id === S.user.user_id) || null;
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster };
-    loadDesk();
+    loadDesk(); loadPower();
     S.values = null; S.newsCache = {}; S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:false };
     S.trade = { partnerId:null, give:new Set(), get:new Set() };
     // Season history via Sleeper's previous_league_id chain — the reliable way
@@ -1800,6 +1940,11 @@ async function renderNews() {
     return;
   }
   S.currentNl = nl;
+  // Commissioner's uploaded rankings override the auto ones for this week.
+  if (!nl.autoPower) nl.autoPower = nl.powerRankings;
+  const upow = S.power && S.power[wk];
+  if (upow && upow.length) { nl.powerRankings = upow; nl.powerSource = 'commish'; }
+  else { nl.powerRankings = nl.autoPower; nl.powerSource = null; }
   const deskArts = (S.desk || []).filter(a => a.week === wk);
   const saveBtn = (!S.guest && !S.sample)
     ? `<div style="margin:2px 0 4px"><button class="btn ghost" data-act="save-issue">📚 Save to Back Issues</button></div>`
@@ -1823,16 +1968,20 @@ function issueBodyHtml(nl, deskArts, frozen) {
     ${nl.awards.map(a=>`<div class="award"><span class="em">${a.emoji}</span><div style="flex:1">
       <div class="lab">${esc(a.title)}</div><div class="nm">${esc(a.name)}</div><div class="dt">${esc(a.detail)}</div>
     </div></div>`).join('')}</div>` : '';
-  const maxW = Math.max(...(nl.powerRankings||[]).map(p=>p.week||0), 1);
-  const power = nl.powerRankings && nl.powerRankings.length ? `<div class="card">
-    <div class="at">Power Rankings</div>
-    ${nl.powerRankings.map(p=>`<div class="pr">
+  const prRows = nl.powerRankings || [];
+  const usePts = prRows.some(p => p.week);
+  const maxW = Math.max(...prRows.map(p => p.week || 0), 1);
+  const nrows = prRows.length || 1;
+  const power = prRows.length ? `<div class="card">
+    <div class="at">Power Rankings${nl.powerSource === 'commish' ? ' <span class="faint" style="font-size:11px;font-weight:700;letter-spacing:0">· from the league office</span>' : ''}</div>
+    ${prRows.map(p => { const pct = usePts ? Math.round((p.week / maxW) * 100) : Math.round(((nrows - p.rank + 1) / nrows) * 100);
+      return `<div class="pr">
       <span class="ovr" style="width:24px">${p.rank}</span>
       <div style="flex:1">
-        <div class="nm">${esc(p.manager)} <span class="faint" style="font-weight:600;font-size:12px">${esc(p.tag)}</span></div>
-        <div class="prbar"><div class="prfill" style="width:${Math.round((p.week/maxW)*100)}%"></div></div>
-        <div class="dt">${esc(p.note)}</div>
-      </div></div>`).join('')}</div>` : '';
+        <div class="nm">${esc(p.manager)}${p.tag ? ` <span class="faint" style="font-weight:600;font-size:12px">${esc(p.tag)}</span>` : ''}</div>
+        <div class="prbar"><div class="prfill" style="width:${pct}%"></div></div>
+        ${p.note ? `<div class="dt">${esc(p.note)}</div>` : ''}
+      </div></div>`; }).join('')}</div>` : '';
   const coverStory = nl.stories[0] ? storyHtml(nl.stories[0], true) : '';
   const otherStories = nl.stories.slice(1).map(s => storyHtml(s, false)).join('');
   const colophon = `<div class="colophon">Auto-written from real Sleeper box scores — every stat line and margin is genuine. The voice, jokes, and profanity are on the house.</div>`;
@@ -2081,6 +2230,7 @@ function drawDraft() {
 function showDesk() {
   S.deskChatText = null;
   const mine = (S.desk || []).filter(a => a.week === S.activeWeek);
+  const powerHere = (S.power && S.power[S.activeWeek]) || [];
   app.innerHTML = `<div style="padding-bottom:24px">
     <button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>
     <div class="setup-logo" style="font-size:24px">✍️ Newsroom Desk</div>
@@ -2114,6 +2264,17 @@ function showDesk() {
         <div style="font-weight:800">${esc(a.headline)}</div>
         <button class="linkbtn" data-act="desk-delete" data-id="${esc(a.id)}">delete</button></div>
         <div class="dt" style="margin-top:4px">${esc(a.paragraphs[0]||'')}</div></div>`).join('')}` : ''}
+
+    <div class="seclabel">📊 Power Rankings (from Excel)</div>
+    <p class="faint" style="font-size:12px;margin:-2px 4px 8px;line-height:1.5">Your commissioner does the rankings? Have him send the spreadsheet and drop it here — it replaces the auto rankings in this week's issue. Best columns: <b>Rank</b>, <b>Team</b>, <b>Record</b>, <b>Comment</b> (a header row helps; extra columns are fine).</p>
+    <div class="card">
+      <input id="powerFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-act="power-file" class="fileinput" />
+      <div id="powerFileStatus" class="faint" style="font-size:12px;margin-top:8px;line-height:1.4">Pick the <b>.xlsx</b> file for Week ${S.activeWeek}.</div>
+      ${powerHere.length ? `<div style="height:10px"></div>
+        <div class="dt" style="font-weight:700;color:var(--accent)">✓ Loaded for Week ${S.activeWeek}: ${powerHere.length} teams ranked.</div>
+        <div class="faint" style="font-size:12px;margin-top:4px">${powerHere.slice(0,3).map(p=>`${p.rank}. ${esc(p.manager)}`).join(' · ')}${powerHere.length>3?' …':''}</div>
+        <div style="height:10px"></div><button class="btn ghost" data-act="power-clear">Remove uploaded rankings</button>` : ''}
+    </div>
   </div>`;
 }
 async function deskGenerate() {
@@ -2234,6 +2395,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'delete-issue') { e.stopPropagation(); return deleteSavedIssue(t.dataset.id); }
   if (act === 'back-archive') { S.reading = false; return showArchive(); }
   if (act === 'desk-generate') return deskGenerate();
+  if (act === 'power-clear') { if (S.power) delete S.power[S.activeWeek]; savePower(); delete S.newsCache[S.activeWeek]; return showDesk(); }
   if (act === 'desk-delete') { S.desk = S.desk.filter(a => a.id !== t.dataset.id); saveDesk(); delete S.newsCache[S.activeWeek];
     if ($('#setbody') || document.querySelector('.setup-logo')) return showDesk(); renderShell(); return renderTab(); }
   if (act === 'back' || act === 'back-news') { S.reading = false; renderShell(); return renderTab(); }
@@ -2268,6 +2430,25 @@ document.body.addEventListener('change', async (e) => {
     } catch (err) {
       if (st) st.innerHTML = `Couldn't read that file — ${esc((err && err.message) || 'unknown error')}. You can also paste a snippet below.`;
       S.deskChatText = null;
+    }
+  }
+  const pfile = e.target.closest('[data-act="power-file"]');
+  if (pfile && pfile.files && pfile.files[0]) {
+    const f = pfile.files[0];
+    const st = $('#powerFileStatus');
+    if (st) st.textContent = 'Reading the spreadsheet…';
+    try {
+      const buf = await f.arrayBuffer();
+      if (!u8sig(buf)) throw new Error('that isn’t an .xlsx — export/Save As Excel Workbook (.xlsx)');
+      const rows = await extractRowsFromXlsx(buf);
+      const ranked = parsePowerRows(rows);
+      if (!ranked || !ranked.length) { if (st) st.innerHTML = `Read <b>${esc(f.name)}</b>, but couldn't find a team column. Give it headers like <b>Rank · Team · Record · Comment</b>.`; return; }
+      S.power = S.power || {}; S.power[S.activeWeek] = ranked; savePower();
+      delete S.newsCache[S.activeWeek];
+      if (st) st.innerHTML = `✓ Loaded <b>${esc(f.name)}</b> — <b>${ranked.length}</b> teams ranked for Week ${S.activeWeek}. It's in this week's issue now.`;
+      showDesk();
+    } catch (err) {
+      if (st) st.innerHTML = `Couldn't read that file — ${esc((err && err.message) || 'unknown error')}.`;
     }
   }
 });
