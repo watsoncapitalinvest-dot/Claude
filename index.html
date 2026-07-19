@@ -457,6 +457,124 @@ function startingNeeds(rosterPositions) {
 }
 
 // ---------------------------------------------------------------------
+//  Sample league — a self-contained 8-team demo so the News Room can be
+//  previewed and tuned without a real Sleeper season. Stats are generated
+//  deterministically per week (stable output), scored by the real engine.
+//  Clearly labeled as a sample; not presented as real historical results.
+// ---------------------------------------------------------------------
+function ds(seed) { const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+function genStats(pos, seed) {
+  const r = (a, b, k) => Math.round(a + (b - a) * ds(seed + k));
+  if (pos === 'QB') { const att = r(28,42,1), cmp = Math.round(att*(0.58+0.12*ds(seed+2)));
+    return { pass_att:att, pass_cmp:cmp, pass_yd:r(190,360,3), pass_td:r(0,4,4), pass_int:r(0,2,5),
+      rush_yd: ds(seed+6)>0.7 ? r(10,45,7) : 0, rush_td: ds(seed+8)>0.9 ? 1 : 0 }; }
+  if (pos === 'RB') { const rec = r(1,6,5);
+    return { rush_att:r(7,21,1), rush_yd:r(25,135,2), rush_td: ds(seed+3)>0.6 ? r(0,2,4) : 0,
+      rec, rec_yd:r(2,55,6), rec_td: ds(seed+7)>0.88 ? 1 : 0, rec_tgt: rec + r(0,3,9) }; }
+  if (pos === 'WR') { const rec = r(2,10,1);
+    return { rec, rec_yd:r(18,155,2), rec_td: ds(seed+3)>0.7 ? r(0,2,4) : 0, rec_tgt: rec + r(1,5,5) }; }
+  if (pos === 'TE') { const rec = r(2,8,1);
+    return { rec, rec_yd:r(15,95,2), rec_td: ds(seed+3)>0.8 ? 1 : 0, rec_tgt: rec + r(1,3,5) }; }
+  if (pos === 'K') { const fgm = r(1,4,1);
+    return { fgm, fga: fgm + (ds(seed+3)>0.6?1:0), xpm:r(1,4,2), fgm_50p: ds(seed+4)>0.8?1:0 }; }
+  if (pos === 'DEF') return { sack:r(1,5,1), int:r(0,2,2), ff:r(0,2,3), fum_rec:r(0,1,4),
+      def_td: ds(seed+5)>0.85?1:0, pts_allow:r(7,31,6) };
+  return {};
+}
+
+const DEMO_SCORING = { pass_yd:0.04, pass_td:4, pass_int:-2, rush_yd:0.1, rush_td:6, rec:1, rec_yd:0.1,
+  rec_td:6, fum_lost:-2, fgm:3, fga:-1, xpm:1, fgm_50p:2, sack:1, int:2, ff:1, fum_rec:2, def_td:6, pts_allow:0 };
+
+function buildDemoBundle() {
+  const managers = ['Fourth & Goal','Gronk & Roll','The Kelce Cartel','Purple Reign',
+    'Bijan Mustard','CeeDee Blinders','Ja’Marr the Merrier','Saquon Bon Jovi'];
+  const QB = ['Josh Allen','Lamar Jackson','Jalen Hurts','Patrick Mahomes','Joe Burrow','Jayden Daniels','Jared Goff','Bo Nix'];
+  const RB = ['Bijan Robinson','Saquon Barkley','Jahmyr Gibbs','De’Von Achane','Jonathan Taylor','Derrick Henry','Josh Jacobs','Kyren Williams',
+              'Breece Hall','James Cook','Chase Brown','Bucky Irving','Kenneth Walker III','Chuba Hubbard','James Conner','Joe Mixon'];
+  const WR = ['Ja’Marr Chase','Justin Jefferson','CeeDee Lamb','Amon-Ra St. Brown','Puka Nacua','Malik Nabers','Nico Collins','Brian Thomas Jr.',
+              'Drake London','A.J. Brown','Tyreek Hill','Ladd McConkey','Terry McLaurin','Garrett Wilson','DK Metcalf','Mike Evans',
+              'Davante Adams','Jaylen Waddle','DeVonta Smith','Courtland Sutton','Zay Flowers','Tee Higgins','Jordan Addison','Rome Odunze'];
+  const TE = ['Brock Bowers','Trey McBride','George Kittle','Sam LaPorta','Travis Kelce','Mark Andrews','T.J. Hockenson','David Njoku'];
+  const K = ['Brandon Aubrey','Ka’imi Fairbairn','Jake Bates','Chris Boswell','Cameron Dicker','Jason Sanders','Harrison Butker','Tyler Bass'];
+  const DEF = ['Broncos D/ST','Texans D/ST','Eagles D/ST','Steelers D/ST','Vikings D/ST','Ravens D/ST','Chargers D/ST','Bills D/ST'];
+  const DEPTH = ['Rachaad White','Tyjae Spears','Jaylen Warren','Tank Bigsby','Jerome Ford','Ty Chandler','Roschon Johnson','Tyler Allgeier',
+                 'Wan’Dale Robinson','Khalil Shakir','Jakobi Meyers','Josh Downs','Demarcus Robinson','Dontayvion Wicks','Cedric Tillman','Jalen McMillan'];
+
+  const players = {};
+  let rank = 1;
+  const add = (id, name, pos) => { players[id] = { player_id:id, full_name:name, position:pos, team:'NFL', search_rank: rank++ }; return id; };
+
+  const rosters = [], usersById = {};
+  for (let i = 0; i < 8; i++) {
+    const ownerId = i === 0 ? 'demo-user' : 'u' + i;
+    usersById[ownerId] = { user_id: ownerId, display_name: i === 0 ? 'You' : managers[i], avatar: null,
+      metadata: { team_name: managers[i] } };
+    const starters = [
+      add(`qb${i}`, QB[i], 'QB'),
+      add(`rb${i}a`, RB[i], 'RB'),
+      add(`rb${i}b`, RB[i + 8], 'RB'),
+      add(`wr${i}a`, WR[i], 'WR'),
+      add(`wr${i}b`, WR[i + 8], 'WR'),
+      add(`te${i}`, TE[i], 'TE'),
+      add(`fx${i}`, WR[i + 16], 'WR'),
+      add(`k${i}`, K[i], 'K'),
+      add(`df${i}`, DEF[i], 'DEF'),
+    ];
+    const bench = [
+      add(`bn${i}a`, DEPTH[i], i % 2 ? 'WR' : 'RB'),
+      add(`bn${i}b`, DEPTH[i + 8], i % 2 ? 'RB' : 'WR'),
+    ];
+    rosters.push({ roster_id: i + 1, owner_id: ownerId, players: [...starters, ...bench], starters,
+      settings: { wins: 0, losses: 0, ties: 0, fpts: 0 } });
+  }
+  const rostersByOwner = {}; rosters.forEach(r => rostersByOwner[r.owner_id] = r);
+  const league = { league_id:'demo', name:'Sample League', season:'2025', status:'complete',
+    total_rosters:8, avatar:null, scoring_settings:DEMO_SCORING,
+    roster_positions:['QB','RB','RB','WR','WR','TE','FLEX','K','DEF','BN','BN'], settings:{} };
+  const bundle = { league, rosters, users: Object.values(usersById), players, usersById, rostersByOwner,
+    myRoster: rosters[0] };
+
+  // A week's worth of stats + the storyline overrides (one bust, one bench blunder).
+  function week(wk) {
+    const weeklyStats = {}, weeklyProjections = {};
+    for (const id in players) weeklyStats[id] = genStats(players[id].position, hashId(id) * 100 + wk * 7);
+
+    const bustTeam = rosters[wk % 8];
+    const bustId = bustTeam.starters[1]; // RB1
+    weeklyStats[bustId] = { rush_att:8, rush_yd:14, rush_td:0, rec:1, rec_yd:5, rec_tgt:3 };
+    weeklyProjections[bustId] = { rush_att:16, rush_yd:92, rush_td:1, rec:4, rec_yd:31, rec_tgt:5 };
+
+    const benchTeam = rosters[(wk * 3) % 8];
+    const benchId = benchTeam.players[10]; // BN2
+    const starterId = benchTeam.starters[4]; // WR2
+    weeklyStats[benchId] = players[benchId].position === 'RB'
+      ? { rush_att:19, rush_yd:128, rush_td:2, rec:3, rec_yd:24, rec_tgt:4 }
+      : { rec:9, rec_yd:151, rec_td:2, rec_tgt:12 };
+    weeklyStats[starterId] = { rec:2, rec_yd:16, rec_td:0, rec_tgt:6 };
+
+    const matchups = rosters.map((r, i) => {
+      const pts = r.starters.reduce((s, id) => s + scoreStats(weeklyStats[id], DEMO_SCORING), 0);
+      return { roster_id: r.roster_id, matchup_id: Math.floor(i / 2) + 1, points: Math.round(pts * 100) / 100,
+        players: r.players, starters: r.starters, players_points: null, starters_points: null };
+    });
+    return { matchups, weeklyStats, weeklyProjections };
+  }
+  return { bundle, week };
+}
+function hashId(id) { let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 100000; return h; }
+
+function startDemo() {
+  const d = buildDemoBundle();
+  S.user = { user_id:'demo-user', username:'sample', display_name:'You', avatar:null };
+  S.leagueId = 'demo'; S.season = '2025'; S.history = null;
+  S.bundle = d.bundle; S.demo = d; S.values = null; S.newsCache = {};
+  S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:true };
+  S.trade = { partnerId:null, give:new Set(), get:new Set() };
+  S.activeWeek = 14; S.tab = 'news';
+  renderShell(); renderTab();
+}
+
+// ---------------------------------------------------------------------
 //  UI helpers
 // ---------------------------------------------------------------------
 const POS_COLOR = { QB:'#ff6b81', RB:'#31d158', WR:'#4c8dff', TE:'#f5a623', K:'#a970ff', DEF:'#8b9bb0' };
@@ -479,7 +597,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -511,6 +629,8 @@ function renderSetup() {
         <div style="height:12px"></div>
         <button class="btn" data-act="lookup" ${su.busy?'disabled':''}>${su.busy&&!su.user?'Looking up…':'Find my leagues'}</button>
         ${su.error?`<div class="err">${esc(su.error)}</div>`:''}
+        <div style="height:8px"></div>
+        <button class="btn ghost" data-act="demo">Preview a sample league →</button>
       </div>
       ${su.busy && !su.user ? spinner('') : ''}
       ${su.user && su.leagues.length ? `
@@ -655,7 +775,7 @@ function renderTab() {
 // ---------------------------------------------------------------------
 function newsHeader() {
   return `<div class="masthead">
-    <div><div class="kick">THE GRIDIRON GAZETTE</div><div class="lg">${esc(S.bundle.league.name)}</div></div>
+    <div><div class="kick">THE GRIDIRON GAZETTE${S.demo ? ' · SAMPLE' : ''}</div><div class="lg">${esc(S.bundle.league.name)}</div></div>
     <button class="gear" data-act="settings">⚙</button></div>`;
 }
 function seasonBar() {
@@ -673,9 +793,14 @@ async function renderNews() {
   let nl = S.newsCache[wk];
   if (!nl) {
     try {
-      const [matchups, weeklyStats, weeklyProjections] = await Promise.all([
-        getMatchups(S.leagueId, wk), getWeeklyStats(S.season, wk), getWeeklyProjections(S.season, wk),
-      ]);
+      let matchups, weeklyStats, weeklyProjections;
+      if (S.demo) {
+        ({ matchups, weeklyStats, weeklyProjections } = S.demo.week(wk));
+      } else {
+        [matchups, weeklyStats, weeklyProjections] = await Promise.all([
+          getMatchups(S.leagueId, wk), getWeeklyStats(S.season, wk), getWeeklyProjections(S.season, wk),
+        ]);
+      }
       nl = buildNewsletter({ week:wk, league:S.bundle.league, matchups, rosters:S.bundle.rosters,
         usersById:S.bundle.usersById, players:S.bundle.players, weeklyStats, weeklyProjections });
       S.newsCache[wk] = nl;
@@ -683,11 +808,13 @@ async function renderNews() {
   }
   if (S.tab !== 'news' || S.activeWeek !== wk) return; // user moved on
   if (!nl || !nl.hasData) {
-    const seasonHint =
-      S.nflState && Number(S.season) >= Number(S.nflState.season)
-        ? 'This looks like an upcoming/empty season. Tap ⚙ (top right) and switch to last year’s league to read real, completed newsletters.'
-        : 'Use the week arrows to find a completed week — every played week writes itself.';
-    setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint));
+    const seasonHint = S.demo
+      ? 'Use the week arrows to see another sample week.'
+      : 'This is likely your first Sleeper season with no games played yet — Sleeper can’t import ESPN/Yahoo history. Preview the writing with a sample league below, and your real newsletters will appear here once the season kicks off.';
+    const demoBtn = !S.demo
+      ? `<button class="btn" data-act="demo" style="max-width:320px;margin:12px auto 0">Preview a sample league →</button>`
+      : '';
+    setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint) + demoBtn);
     return;
   }
   const lead = `<div class="lead"><h1>${esc(nl.lead.headline)}</h1>
@@ -902,6 +1029,7 @@ document.body.addEventListener('click', async (e) => {
   const t = e.target.closest('[data-act]'); if (!t) return;
   const act = t.dataset.act;
   if (act === 'lookup') return doLookup();
+  if (act === 'demo') return startDemo();
   if (act === 'pick-league') return pickLeague(t.dataset.id, t.dataset.season);
   if (act === 'tab') { S.tab = t.dataset.tab; renderShell(); return renderTab(); }
   if (act === 'week') {
