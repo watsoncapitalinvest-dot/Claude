@@ -186,6 +186,14 @@
               padding-left:16px; position:relative; line-height:1.25; }
   .mag-line::before { content:'▸'; position:absolute; left:0; color:#e11b22; }
   .mag-shield { display:block; width:66px; height:auto; margin:18px auto 0; }
+  /* cover with a generated hero image */
+  .mag-hero { position:relative; margin-top:14px; flex:1; min-height:44vh; border-radius:8px; overflow:hidden;
+              background-size:cover; background-position:center; display:flex; align-items:flex-end; }
+  .mag-hero-grad { position:absolute; inset:0; background:linear-gradient(to top, rgba(8,10,14,.90), rgba(8,10,14,.12) 54%, rgba(8,10,14,.34)); }
+  .mag-hero-txt { position:relative; z-index:1; padding:16px 18px 18px; width:100%; }
+  .mag-hero .mag-hook.light { color:#fff; margin-top:0; text-shadow:0 2px 16px rgba(0,0,0,.65); }
+  .mag-hero .mag-name { color:#fff; text-shadow:0 1px 10px rgba(0,0,0,.6); }
+  .mag-hero .mag-score { color:#ff5347; } .mag-hero .mag-tag { background:var(--red); }
   /* PDF / print — flip to a light document and drop the app chrome */
   @media print {
     :root { --bg:#fff; --bg2:#f3f4f6; --card:#fff; --card2:#f6f7f9; --border:#d7dbe0;
@@ -1450,7 +1458,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, espnHist:null, histIndex:null, histAliases:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -1465,6 +1473,42 @@ function saveDesk(){ try { localStorage.setItem(deskKey(), JSON.stringify(S.desk
 function powerKey(){ return 'gg.power.' + (S.leagueId || 'x'); }
 function loadPower(){ try { S.power = JSON.parse(localStorage.getItem(powerKey()) || '{}') || {}; } catch { S.power = {}; } }
 function savePower(){ try { localStorage.setItem(powerKey(), JSON.stringify(S.power || {})); } catch {} }
+
+// Custom cover images (from an external graphics AI), keyed by week.
+function coverImgKey(){ return 'gg.coverimg.' + (S.leagueId || 'x'); }
+function loadCoverImg(){ try { S.coverImg = JSON.parse(localStorage.getItem(coverImgKey()) || '{}') || {}; } catch { S.coverImg = {}; } }
+function saveCoverImg(){ try { localStorage.setItem(coverImgKey(), JSON.stringify(S.coverImg || {})); } catch (e) { toast('Image too large to save on this device'); } }
+function curCoverImg(){ return S.coverImg && S.coverImg[S.activeWeek]; }
+// Downscale an uploaded image to a sane size before storing (keeps localStorage happy).
+function downscaleImage(file, maxW) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => { const s = Math.min(1, maxW / im.naturalWidth), w = Math.round(im.naturalWidth * s), h = Math.round(im.naturalHeight * s);
+      const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(im, 0, 0, w, h);
+      res(c.toDataURL('image/jpeg', 0.85)); };
+    im.onerror = () => rej(new Error('could not read that image'));
+    const fr = new FileReader(); fr.onload = () => { im.src = fr.result; }; fr.onerror = () => rej(new Error('could not read that file')); fr.readAsDataURL(file);
+  });
+}
+// Ask the app's AI to write an image-generation brief for the week's cover.
+async function generateCoverPrompt(nl) {
+  const key = (S.apiKey || '').trim(); if (!key) throw new Error('no-key');
+  const pkg = coverPackage(nl); const s = nl.stories && nl.stories[0];
+  const ctx = `COVER HEADLINE: ${pkg.headline}\n` +
+    (pkg.subject ? `COVER SUBJECT (a manager, not a real player): ${pkg.subject.name} — ${pkg.subject.tag}\n` : '') +
+    (s ? `MARQUEE MATCHUP: ${s.winner.manager} beat ${s.loser.manager}, ${s.winner.score}–${s.loser.score}\nSTORY: ${(s.paragraphs || []).slice(0, 2).join(' ')}\n` : '') +
+    `COVER TEASERS: ${(pkg.lines || []).join(' · ')}`;
+  const system = `You are the art director for the "${S.magName || 'Skirt Chasers'} Dynasty Magazine," a fantasy-football league magazine. Given this week's cover story, write ONE vivid image-generation prompt for a graphics AI (Midjourney, DALL·E, etc.) to create the cover image.
+Rules: cinematic, dramatic sports-magazine energy that evokes the story's mood. Depict a generic football scene — anonymous players, stadium, field, weather, light — NEVER real NFL players, teams, or logos. Absolutely NO text, words, letters, numbers, scoreboards, or logos anywhere in the image. Portrait orientation. Leave clean negative space across the TOP for a masthead and some room lower for a headline. Return ONLY the prompt itself as one paragraph — no preamble, no explanation, no quotes.`;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: 'claude-opus-4-8', max_tokens: 700, system, messages: [{ role: 'user', content: ctx }] }),
+  });
+  if (!res.ok) { let d = ''; try { const j = await res.json(); d = (j && j.error && j.error.message) || ''; } catch {} throw new Error('api-' + res.status + (d ? ': ' + d : '')); }
+  const data = await res.json();
+  return (((data.content || []).find(b => b.type === 'text') || {}).text || '').trim();
+}
 
 // ---- Imported league history (e.g. past ESPN seasons) ----------------------
 function histKey(){ return 'gg.espnhist.' + (S.leagueId || 'x'); }
@@ -1787,6 +1831,35 @@ function whosWhoCard() {
     ${Object.keys(S.histAliases || {}).length ? `<div style="height:10px"></div><button class="btn ghost" data-act="alias-clear">Reset all merges</button>` : ''}
   </div>`;
 }
+// 🎨 Cover art: the app writes a brief → you make it in a graphics AI → upload it here.
+function showCoverArt() {
+  const wk = S.activeWeek;
+  const cur = S.coverImg && S.coverImg[wk];
+  const prompt = (S.coverPrompt && S.coverPrompt[wk]) || '';
+  app.innerHTML = `<div style="padding-bottom:24px">
+    <button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>
+    <div class="setup-logo" style="font-size:24px">🎨 Cover Art · Week ${wk}</div>
+    <p class="muted" style="margin-top:4px">Let the NewsRoom dream up this week's cover, make it in your image AI, then drop it back here.</p>
+    <div class="card">
+      <div class="label">1 · Get the art direction</div>
+      <div class="faint" style="font-size:12px;margin-bottom:10px">The NewsRoom writes an image prompt from this week's cover story. Paste it into Midjourney, DALL·E, or any image generator.</div>
+      <button class="btn" data-act="gen-cover-prompt">✨ ${prompt ? 'Regenerate' : 'Generate'} cover direction</button>
+      <div id="coverPromptWrap" style="margin-top:12px;${prompt ? '' : 'display:none'}">
+        <textarea id="coverPromptTxt" class="input" style="height:170px" readonly>${esc(prompt)}</textarea>
+        <div style="height:8px"></div><button class="btn ghost" data-act="copy-cover-prompt">Copy the prompt</button>
+      </div>
+      <div id="coverPromptErr" class="err"></div>
+    </div>
+    <div class="card">
+      <div class="label">2 · Upload the finished image</div>
+      <input id="coverImgFile" type="file" accept="image/*" data-act="cover-img-file" class="fileinput" />
+      <div id="coverImgStatus" class="faint" style="font-size:12px;margin-top:8px">${cur ? `✓ Cover image set for Week ${wk} — it's on the cover now.` : 'Pick the image your AI made (portrait works best).'}</div>
+      ${cur ? `<img src="${cur}" alt="cover" style="width:100%;border-radius:10px;margin-top:10px;display:block">
+        <div style="height:8px"></div><button class="btn ghost" data-act="cover-img-clear">Remove cover image</button>` : ''}
+    </div>
+    ${!(S.apiKey || '').trim() ? `<div class="faint" style="font-size:12px;text-align:center">Add your Anthropic API key in Settings to generate the direction — or write your own prompt and just upload the image.</div>` : ''}
+  </div>`;
+}
 function historyImportCard() {
   const n = (S.espnHist && S.espnHist.seasons && S.espnHist.seasons.length) || 0;
   return `<div class="card">
@@ -1871,20 +1944,52 @@ async function coverImageBlob(nl) {
   // Issue line
   g.textAlign = 'center'; g.fillStyle = RED; g.font = '900 26px ' + SANS;
   g.fillText(('WEEK ' + nl.week + ' \u00b7 ' + (S.season || '') + ' SEASON' + (S.demo ? ' \u00b7 SAMPLE' : '')).split('').join(' '), W / 2, y); y += 30;
-  // Big cover hook
-  g.textAlign = 'left'; g.fillStyle = INK; y += 40;
-  const hookFont = '900 90px ' + SERIF;
-  wrap(pkg.headline, hookFont, W - PAD * 2, 5).forEach(l => { g.font = hookFont; y += 90; g.fillText(l, PAD, y); });
-  // Subject
-  if (pkg.subject) {
-    y += 66; g.fillStyle = INK; g.font = '900 italic 58px ' + SERIF;
-    wrap(pkg.subject.name, g.font, W - PAD * 2, 2).forEach((l, i) => { if (i) y += 58; g.fillText(l, PAD, y); });
-    y += 78; g.fillStyle = RED; g.font = '900 78px ' + SANS;
-    const sc = pkg.subject.score.toFixed(1); g.fillText(sc, PAD, y);
-    const scW = g.measureText(sc).width;
-    const tag = String(pkg.subject.tag).toUpperCase(); g.font = '900 24px ' + SANS; const tw = g.measureText(tag).width;
-    g.fillStyle = INK; g.fillRect(PAD + scW + 24, y - 42, tw + 28, 54);
-    g.fillStyle = '#fff'; g.fillText(tag, PAD + scW + 38, y - 8);
+  const coverImg = curCoverImg();
+  if (!coverImg) {
+    // Big cover hook — ink on white
+    g.textAlign = 'left'; g.fillStyle = INK; y += 40;
+    const hookFont = '900 90px ' + SERIF;
+    wrap(pkg.headline, hookFont, W - PAD * 2, 5).forEach(l => { g.font = hookFont; y += 90; g.fillText(l, PAD, y); });
+    if (pkg.subject) {
+      y += 66; g.fillStyle = INK; g.font = '900 italic 58px ' + SERIF;
+      wrap(pkg.subject.name, g.font, W - PAD * 2, 2).forEach((l, i) => { if (i) y += 58; g.fillText(l, PAD, y); });
+      y += 78; g.fillStyle = RED; g.font = '900 78px ' + SANS;
+      const sc = pkg.subject.score.toFixed(1); g.fillText(sc, PAD, y);
+      const scW = g.measureText(sc).width;
+      const tag = String(pkg.subject.tag).toUpperCase(); g.font = '900 24px ' + SANS; const tw = g.measureText(tag).width;
+      g.fillStyle = INK; g.fillRect(PAD + scW + 24, y - 42, tw + 28, 54);
+      g.fillStyle = '#fff'; g.fillText(tag, PAD + scW + 38, y - 8);
+    }
+  } else {
+    // Hero image with the headline overlaid, magazine-style
+    const cl0 = (pkg.lines || []).slice(0, 4);
+    const linesStart = H - PAD - 44 - (cl0.length - 1) * 44;
+    const hx = 40, hw = W - 80, hy = y + 14, hh = Math.max(340, (linesStart - 54) - hy);
+    try {
+      const im = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = coverImg; });
+      if (im) {
+        const sf = Math.max(hw / im.naturalWidth, hh / im.naturalHeight);
+        const dw = im.naturalWidth * sf, dh = im.naturalHeight * sf;
+        g.save(); g.beginPath(); g.rect(hx, hy, hw, hh); g.clip();
+        g.drawImage(im, hx + (hw - dw) / 2, hy + (hh - dh) / 2, dw, dh);
+        const grd = g.createLinearGradient(0, hy, 0, hy + hh);
+        grd.addColorStop(0, 'rgba(8,10,14,.26)'); grd.addColorStop(.52, 'rgba(8,10,14,.06)'); grd.addColorStop(1, 'rgba(8,10,14,.92)');
+        g.fillStyle = grd; g.fillRect(hx, hy, hw, hh); g.restore();
+        g.save(); g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 14;
+        const hf = '900 72px ' + SERIF, hl = wrap(pkg.headline, hf, hw - 48, 4), lineH = 72;
+        const blockH = hl.length * lineH + (pkg.subject ? 64 : 0);
+        let ty = hy + hh - 30 - blockH + lineH;
+        g.textAlign = 'left'; g.fillStyle = '#fff'; g.font = hf;
+        hl.forEach(l => { g.fillText(l, hx + 26, ty); ty += lineH; });
+        if (pkg.subject) {
+          ty += 4; g.font = '900 46px ' + SANS; g.fillStyle = '#fff';
+          g.fillText(pkg.subject.name, hx + 26, ty);
+          const nmW = g.measureText(pkg.subject.name).width;
+          g.fillStyle = '#ff5347'; g.fillText('  ' + pkg.subject.score.toFixed(1), hx + 26 + nmW, ty);
+        }
+        g.restore();
+      }
+    } catch {}
   }
   // Cover lines near the bottom, over a red rule
   const clines = (pkg.lines || []).slice(0, 4);
@@ -2179,7 +2284,7 @@ async function enterApp() {
     const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
     const myRoster = rosters.find(r => r.owner_id === S.user.user_id) || null;
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster };
-    loadDesk(); loadPower(); loadEspnHist(); loadBundledHistory();
+    loadDesk(); loadPower(); loadEspnHist(); loadBundledHistory(); loadCoverImg();
     S.values = null; S.newsCache = {}; S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:false };
     S.trade = { partnerId:null, give:new Set(), get:new Set() };
     // Season history via Sleeper's previous_league_id chain — the reliable way
@@ -2314,15 +2419,22 @@ function coverPackage(nl) {
 }
 function coverHtml(nl) {
   const pkg = coverPackage(nl);
-  return `<div class="magcover full">
+  const img = curCoverImg();
+  const subj = pkg.subject ? `<div class="mag-subject">
+      <div class="mag-name">${esc(pkg.subject.name)}</div>
+      <div class="mag-row"><span class="mag-score">${pkg.subject.score.toFixed(1)}</span><span class="mag-tag">${esc(pkg.subject.tag)}</span></div>
+    </div>` : '';
+  const hookBlock = img
+    ? `<div class="mag-hero" style="background-image:url('${img}')">
+        <div class="mag-hero-grad"></div>
+        <div class="mag-hero-txt"><div class="mag-hook light">${esc(pkg.headline)}</div>${subj}</div>
+      </div>`
+    : `<div class="mag-hook">${esc(pkg.headline)}</div>${subj}`;
+  return `<div class="magcover full${img ? ' has-img' : ''}">
     <img class="mag-logo" src="wordmark.png" alt="Skirt Chasers — Dynasty League Magazine">
     <div class="mag-issue">Week ${nl.week} · ${esc(S.season || '')} Season${S.demo ? ' · Sample' : ''}</div>
     <div class="mag-tools">${coverToolsInner()}</div>
-    <div class="mag-hook">${esc(pkg.headline)}</div>
-    ${pkg.subject ? `<div class="mag-subject">
-      <div class="mag-name">${esc(pkg.subject.name)}</div>
-      <div class="mag-row"><span class="mag-score">${pkg.subject.score.toFixed(1)}</span><span class="mag-tag">${esc(pkg.subject.tag)}</span></div>
-    </div>` : ''}
+    ${hookBlock}
     <div class="mag-lines">${pkg.lines.map(l => `<div class="mag-line">${esc(l)}</div>`).join('')}</div>
     <img class="mag-shield" src="${LOGO}" alt="SCFL">
   </div>`;
@@ -2396,6 +2508,7 @@ function composeBar(wk, deskArts) {
     <div class="dt" style="margin:2px 0 8px">Add this week's updates, then share the finished magazine or save it as a PDF.</div>
     ${line(hasChat, 'Group chat → Water Cooler', hasChat ? 'written' : (aiOn ? 'AI ready' : 'optional'), 'desk', hasChat ? 'edit' : 'add →')}
     ${line(hasPower, 'Power rankings', hasPower ? 'uploaded' : 'optional', 'desk', hasPower ? 'replace' : 'upload →')}
+    ${line(!!curCoverImg(), 'Cover image', curCoverImg() ? 'set' : 'AI direction → upload', 'cover-art', curCoverImg() ? 'change' : 'create →')}
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn" data-act="desk" style="flex:1.4">✍️ Add updates</button>
       <button class="btn ghost" data-act="save-issue" style="flex:1" title="Save to Back Issues">📚</button>
@@ -2988,6 +3101,18 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'desk') return showDesk();
   if (act === 'archive') return showArchive();
   if (act === 'history') return showHistory();
+  if (act === 'cover-art') return showCoverArt();
+  if (act === 'gen-cover-prompt') {
+    const btn = t, err = $('#coverPromptErr'); if (err) err.textContent = '';
+    if (!(S.apiKey || '').trim()) { if (err) err.textContent = 'Add your Anthropic API key in Settings first.'; return; }
+    if (!S.currentNl) { if (err) err.textContent = 'Open a week with a scored issue first.'; return; }
+    btn.disabled = true; btn.textContent = '✨ Writing the direction…';
+    try { const p = await generateCoverPrompt(S.currentNl); S.coverPrompt = S.coverPrompt || {}; S.coverPrompt[S.activeWeek] = p; showCoverArt(); }
+    catch (e) { btn.disabled = false; btn.textContent = '✨ Generate cover direction'; if (err) err.textContent = /^api-401/.test(e.message) ? 'That API key was rejected.' : /^api-/.test(e.message) ? 'The AI is unreachable right now.' : 'Something went wrong — try again.'; }
+    return;
+  }
+  if (act === 'copy-cover-prompt') { const ta = $('#coverPromptTxt'); if (ta) { try { await navigator.clipboard.writeText(ta.value); toast('Prompt copied — paste into your image AI'); } catch { ta.select(); } } return; }
+  if (act === 'cover-img-clear') { if (S.coverImg) delete S.coverImg[S.activeWeek]; saveCoverImg(); delete S.newsCache[S.activeWeek]; return showCoverArt(); }
   if (act === 'copy-espn') { try { await navigator.clipboard.writeText(ESPN_SNIPPET); toast('Snippet copied'); } catch { showCopyModal(ESPN_SNIPPET); } return; }
   if (act === 'history-clear') { S.espnHist = null; saveEspnHist(); refreshHistIndex(); S.newsCache = {}; toast('History removed'); return showHistory(); }
   if (act === 'alias-clear') { S.histAliases = {}; saveHistAliases(); refreshHistIndex(); S.newsCache = {}; toast('Name merges reset'); return showHistory(); }
@@ -3054,6 +3179,17 @@ document.body.addEventListener('change', async (e) => {
       if (st) st.innerHTML = `✓ Imported <b>${norm.seasons.length}</b> seasons.`;
       showHistory();
     } catch (err) { if (st) st.innerHTML = `Couldn’t read that file — ${esc((err && err.message) || 'invalid JSON')}.`; }
+    return;
+  }
+  const cimg = e.target.closest('[data-act="cover-img-file"]');
+  if (cimg && cimg.files && cimg.files[0]) {
+    const st = $('#coverImgStatus'); if (st) st.textContent = 'Adding the image…';
+    try {
+      const dataUrl = await downscaleImage(cimg.files[0], 1400);
+      S.coverImg = S.coverImg || {}; S.coverImg[S.activeWeek] = dataUrl; saveCoverImg();
+      delete S.newsCache[S.activeWeek];
+      showCoverArt();
+    } catch (err) { if (st) st.textContent = `Couldn't use that image — ${esc((err && err.message) || 'unknown error')}.`; }
     return;
   }
   const pfile = e.target.closest('[data-act="power-file"]');
