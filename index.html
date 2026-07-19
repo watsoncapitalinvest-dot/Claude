@@ -1018,6 +1018,11 @@ function genStats(pos, seed) {
 
 const DEMO_SCORING = { pass_yd:0.04, pass_td:4, pass_int:-2, rush_yd:0.1, rush_td:6, rec:1, rec_yd:0.1,
   rec_td:6, fum_lost:-2, fgm:3, fga:-1, xpm:1, fgm_50p:2, sack:1, int:2, ff:1, fum_rec:2, def_td:6, pts_allow:0 };
+// Which real positions can fill each starting slot in a Sleeper roster.
+const STARTER_ELIG = { QB:['QB'], RB:['RB'], WR:['WR'], TE:['TE'], K:['K'], DEF:['DEF'],
+  FLEX:['RB','WR','TE'], WRRB_FLEX:['RB','WR'], WRRB_WRT:['RB','WR','TE'], REC_FLEX:['WR','TE'],
+  SUPER_FLEX:['QB','RB','WR','TE'], SUPERFLEX:['QB','RB','WR','TE'] };
+const SAMPLE_SLOTS = ['TNF','SUN_EARLY','SUN_EARLY','SUN_LATE','SUN_LATE','SNF','MNF','SUN_EARLY','SUN_LATE','SUN_LATE'];
 
 function buildDemoBundle() {
   const managers = ['Fourth & Goal','Gronk & Roll','The Kelce Cartel','Purple Reign',
@@ -1099,6 +1104,101 @@ function buildDemoBundle() {
 }
 function hashId(id) { let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 100000; return h; }
 
+// Build a SAMPLE issue from a real, loaded league: keep the real team names,
+// managers, avatars and (when drafted) real rostered players, but fabricate a
+// full week of stat lines + outcomes under the league's own scoring. Same shape
+// as buildDemoBundle so it drops straight into the existing render path.
+function buildSampleBundle(real) {
+  if (!real || !real.rosters || !real.rosters.length) return null;
+  const players = real.players || {};
+  const posOf = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_positions[0]) || '') : '';
+  const scoring = (real.league && real.league.scoring_settings) || DEMO_SCORING;
+  const rposAll = (real.league && real.league.roster_positions) || ['QB','RB','RB','WR','WR','TE','FLEX','K','DEF'];
+  const startSlots = rposAll.filter(p => !['BN','IR','TAXI'].includes(p));
+
+  // Pools of real, fantasy-relevant players by position, best (lowest rank) first.
+  const pool = {};
+  for (const id in players) {
+    const p = players[id], pos = posOf(p);
+    if (!['QB','RB','WR','TE','K','DEF'].includes(pos)) continue;
+    if (!p.full_name && !p.last_name && !p.first_name) continue;
+    (pool[pos] = pool[pos] || []).push(p);
+  }
+  for (const k in pool) pool[k].sort((a, b) => (a.search_rank || 99999) - (b.search_rank || 99999));
+  const poolIdx = {}, used = new Set();
+  const draw = (positions) => {
+    for (const pos of positions) {
+      const arr = pool[pos] || []; let i = poolIdx[pos] || 0;
+      while (i < arr.length && used.has(arr[i].player_id)) i++;
+      poolIdx[pos] = i + 1;
+      if (i < arr.length) { used.add(arr[i].player_id); return arr[i]; }
+    }
+    return null;
+  };
+
+  let sw = (S.nflState && (S.nflState.week || S.nflState.display_week)) || 8;
+  if (!sw || sw < 4) sw = 8;
+  const startWeek = Math.min(14, sw), played = startWeek - 1;
+
+  const sp = {};
+  const take = (pl, slot) => { if (!pl) return null; const id = pl.player_id;
+    if (!sp[id]) sp[id] = Object.assign({}, pl, { slot }); return id; };
+
+  const rosters = real.rosters.map((r, ri) => {
+    const rs = r.starters || [];
+    const starters = [];
+    startSlots.forEach((slotPos, si) => {
+      const slot = SAMPLE_SLOTS[(si + ri) % SAMPLE_SLOTS.length];
+      let pl = null;
+      const rid = rs[si];
+      if (rid && rid !== '0' && players[rid]) pl = players[rid];   // real drafted player
+      if (!pl) pl = draw(STARTER_ELIG[slotPos] || [slotPos]);       // else a plausible real name
+      const id = take(pl, slot);
+      if (id) starters.push(id);
+    });
+    const bench = [];
+    for (let b = 0; b < 2; b++) { const id = take(draw(['RB','WR','TE']), SAMPLE_SLOTS[(b + ri) % SAMPLE_SLOTS.length]); if (id) bench.push(id); }
+    // A believable win-loss record so Power Rankings read like mid-season.
+    const seed = r.roster_id * 13 + ri * 7 + 3;
+    const wins = Math.max(0, Math.min(played, Math.round(played * (0.25 + 0.5 * ds(seed)))));
+    return { roster_id: r.roster_id, owner_id: r.owner_id, players: [...starters, ...bench], starters,
+      settings: { wins, losses: played - wins, ties: 0, fpts: Math.round(wins * 105 + 60 + ds(seed + 9) * 500), fpts_decimal: 0 } };
+  });
+  const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
+  const myRoster = rosters.find(r => r.owner_id === (S.user && S.user.user_id)) || null;
+  const bundle = { league: real.league, rosters, users: real.users, usersById: real.usersById, rostersByOwner, players: sp, myRoster };
+
+  function week(wk) {
+    const weeklyStats = {}, weeklyProjections = {};
+    for (const id in sp) weeklyStats[id] = genStats(posOf(sp[id]), hashId(id) * 100 + wk * 7);
+    // Seed a couple of storylines: a headline bust and a bench-that-should've-started.
+    rosters.forEach((r, i) => {
+      if (i % 3 !== 0) return;
+      const bid = r.starters[1]; if (!bid || !sp[bid]) return;
+      const pos = posOf(sp[bid]);
+      weeklyStats[bid] = pos === 'RB' ? { rush_att:9, rush_yd:17, rush_td:0, rec:1, rec_yd:6, rec_tgt:3 } : { rec:2, rec_yd:15, rec_td:0, rec_tgt:7 };
+      weeklyProjections[bid] = pos === 'RB' ? { rush_att:17, rush_yd:96, rush_td:1, rec:4, rec_yd:31, rec_tgt:5 } : { rec:7, rec_yd:98, rec_td:1, rec_tgt:10 };
+    });
+    const benchTeam = rosters[(wk * 3) % rosters.length];
+    if (benchTeam && benchTeam.players.length > benchTeam.starters.length) {
+      const bId = benchTeam.players[benchTeam.starters.length];
+      if (bId && sp[bId]) weeklyStats[bId] = posOf(sp[bId]) === 'RB'
+        ? { rush_att:18, rush_yd:126, rush_td:2, rec:3, rec_yd:22, rec_tgt:4 }
+        : { rec:9, rec_yd:148, rec_td:2, rec_tgt:12 };
+    }
+    const matchups = [];
+    for (let i = 0; i + 1 < rosters.length; i += 2) {
+      [rosters[i], rosters[i + 1]].forEach(r => {
+        const pts = r.starters.reduce((s, id) => s + scoreStats(weeklyStats[id], scoring), 0);
+        matchups.push({ roster_id: r.roster_id, matchup_id: i / 2 + 1, players: r.players, starters: r.starters,
+          points: Math.round(pts * 100) / 100, players_points: null, starters_points: null });
+      });
+    }
+    return { matchups, weeklyStats, weeklyProjections };
+  }
+  return { bundle, week, startWeek };
+}
+
 function startDemo() {
   const d = buildDemoBundle();
   S.user = { user_id:'demo-user', username:'sample', display_name:'You', avatar:null };
@@ -1108,6 +1208,29 @@ function startDemo() {
   S.trade = { partnerId:null, give:new Set(), get:new Set() };
   loadDesk();
   S.activeWeek = 14; S.tab = 'news';
+  renderShell(); renderTab();
+}
+
+// Enter a sample issue built from the CURRENT real league (real names, fake
+// scores). Stashes the real bundle so we can pop back out.
+function startSampleFromLeague() {
+  if (!S.bundle || S.leagueId === 'demo') return startDemo();
+  const s = buildSampleBundle(S.bundle);
+  if (!s) return startDemo();
+  S._real = { bundle: S.bundle, demo: S.demo, sample: S.sample, activeWeek: S.activeWeek, newsCache: S.newsCache, draft: S.draft };
+  S.bundle = s.bundle; S.demo = { week: s.week }; S.sample = true;
+  S.values = null; S.newsCache = {}; S.activeWeek = s.startWeek; S.tab = 'news';
+  S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:true };
+  S.trade = { partnerId:null, give:new Set(), get:new Set() };
+  renderShell(); renderTab();
+  toast('Sample issue — real names, made-up scores');
+}
+function exitSample() {
+  if (!S._real) return enterApp();
+  const r = S._real;
+  S.bundle = r.bundle; S.demo = r.demo; S.sample = r.sample; S.activeWeek = r.activeWeek;
+  S.newsCache = r.newsCache || {}; S.draft = r.draft || { posFilter:'ALL', draft:null, picks:[], loaded:false };
+  S._real = null; S.values = null; S.tab = 'news';
   renderShell(); renderTab();
 }
 
@@ -1134,7 +1257,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'',
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -1419,7 +1542,8 @@ function magTitle() { return String(S.magName || 'Skirt Chasers').toUpperCase();
 function coverTools() {
   const share = `<button class="ctool" data-act="share" title="Share">⤴</button>`;
   if (S.guest) return `<div class="cover-tools">${share}</div>`;
-  return `<div class="cover-tools">${share}
+  const exit = S.sample ? `<button class="ctool" data-act="exit-sample" title="Exit sample">✕</button>` : '';
+  return `<div class="cover-tools">${share}${exit}
     <button class="ctool" data-act="desk" title="Newsroom desk">✍️</button>
     <button class="ctool" data-act="settings" title="Settings">⚙</button>
   </div>`;
@@ -1543,12 +1667,16 @@ async function renderNews() {
   }
   if (S.tab !== 'news' || S.activeWeek !== wk) return; // user moved on
   if (!nl || !nl.hasData) {
+    const canSampleLeague = !S.demo && S.bundle && S.leagueId !== 'demo';
     const seasonHint = S.demo
       ? 'Use the week arrows to see another sample week.'
-      : 'This is likely your first Sleeper season with no games played yet — Sleeper can’t import ESPN/Yahoo history. Preview the writing with a sample league below, and your real newsletters will appear here once the season kicks off.';
-    const demoBtn = !S.demo
-      ? `<button class="btn" data-act="demo" style="max-width:320px;margin:12px auto 0">Preview a sample league →</button>`
-      : '';
+      : canSampleLeague
+        ? 'No games are scored for this week yet — Sleeper can’t import ESPN/Yahoo history. Preview a full issue built from YOUR league (real teams and managers, made-up scores) below. Your real newsletters appear here once the season kicks off.'
+        : 'This is likely your first Sleeper season with no games played yet — Sleeper can’t import ESPN/Yahoo history. Preview the writing with a sample league below, and your real newsletters will appear here once the season kicks off.';
+    const demoBtn = S.demo ? ''
+      : canSampleLeague
+        ? `<button class="btn" data-act="sample-league" style="max-width:340px;margin:12px auto 0">Preview a sample issue from your league →</button>`
+        : `<button class="btn" data-act="demo" style="max-width:320px;margin:12px auto 0">Preview a sample league →</button>`;
     setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint) + demoBtn);
     return;
   }
@@ -1929,6 +2057,11 @@ async function showSettings() {
       <button class="btn" data-act="save-apikey">Save API key</button>
       ${(S.apiKey||'').trim() ? `<div style="height:8px"></div><button class="btn ghost" data-act="clear-apikey">Remove key</button>` : ''}
     </div>
+    <div class="seclabel">Preview</div>
+    <div class="card">
+      <div class="faint" style="font-size:12px;margin-bottom:10px;line-height:1.5">See a full issue built from this league — your real teams and managers, with made-up scores and outcomes. Great before the season starts.</div>
+      <button class="btn ghost" data-act="sample-league">Preview a sample issue from my league →</button>
+    </div>
     <div class="seclabel">Your leagues</div>
     ${(leagues||[]).map(lg=>`<button class="card row" style="width:100%;text-align:left;color:var(--text);${lg.league_id===S.leagueId?'border-color:var(--accent)':''}" data-act="switch-league" data-id="${esc(lg.league_id)}" data-season="${esc(lg.season)}">
       ${avatarHtml(avatarUrl(lg.avatar),40,lg.name)}
@@ -1947,6 +2080,8 @@ document.body.addEventListener('click', async (e) => {
   const act = t.dataset.act;
   if (act === 'lookup') return doLookup();
   if (act === 'demo') return startDemo();
+  if (act === 'sample-league') return startSampleFromLeague();
+  if (act === 'exit-sample') return exitSample();
   if (act === 'pick-league') return pickLeague(t.dataset.id, t.dataset.season);
   if (act === 'tab') { S.tab = t.dataset.tab; renderShell(); return renderTab(); }
   if (act === 'week') {
