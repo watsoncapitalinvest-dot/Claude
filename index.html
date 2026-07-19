@@ -143,6 +143,17 @@
   .tlnum.up { color:var(--text); font-weight:800; }
   .tlbar { flex:1; height:6px; border-radius:3px; background:var(--cardAlt,#1b2532); overflow:hidden; position:relative; }
   .tlbw { height:100%; background:var(--accent); border-radius:3px; }
+  /* cover toolbar, bylines, modal, toast */
+  .cover-tools { position:absolute; top:12px; right:12px; display:flex; gap:6px; }
+  .ctool { background:rgba(255,255,255,.06); border:1px solid var(--border); color:var(--text); font-size:16px;
+           width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
+  .byline { font-size:11px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--faint); margin-bottom:8px; }
+  .linkbtn { background:none; border:none; color:var(--blue); font-size:12px; font-weight:700; padding:0; text-decoration:underline; }
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50; }
+  .modal-box { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; width:100%; max-width:460px; }
+  .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%) translateY(20px); background:var(--text); color:var(--bg);
+           font-weight:800; font-size:13px; padding:10px 16px; border-radius:999px; opacity:0; transition:all .25s; z-index:60; pointer-events:none; box-shadow:0 8px 30px rgba(0,0,0,.5); }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
   /* generic list rows */
   .prow { display:flex; align-items:center; gap:8px; padding:9px 4px; }
@@ -439,8 +450,10 @@ function buildNewsletter(inp) {
   }
   stories.sort((a,b)=>(b.combined-b.margin*0.5)-(a.combined-a.margin*0.5));
 
+  const power = computePower(stories, rosterById);
   return { week, leagueName: league.name, lead: writeLead(stories, week, league.name),
-           stories, awards: writeAwards(stories), powerRankings: computePower(stories, rosterById),
+           stories, awards: writeAwards(stories), powerRankings: power,
+           feature: writeFeature(stories, power, week, league.name),
            scoreboard: buildScoreboard(stories), numbers: buildNumbers(stories),
            studs: buildStuds(stories), duds: buildDuds(stories), shame: buildShame(stories),
            hasData: anyPoints && stories.length > 0 };
@@ -501,6 +514,69 @@ function buildShame(stories) {
     benchPts: t.benchRegret.bench.points, started: playerName(t.benchRegret.starter.player, t.benchRegret.starter.id),
     startPts: t.benchRegret.starter.points, diff: t.benchRegret.diff }); }));
   return out.sort((a,b)=>b.diff-a.diff).slice(0,4);
+}
+
+// ---- League feature article -------------------------------------------------
+function writeFeature(stories, power, week, leagueName) {
+  if (!stories.length || !power.length) return null;
+  const teams = stories.flatMap(s => [s.winner, s.loser]);
+  const top = power[0], bottom = power[power.length - 1], second = power[1];
+  const drama = stories[0];
+  const hasRecords = /-/.test(top.tag);
+  const P = [];
+  P.push(`${top.manager} is running this league, and after Week ${week} it's getting hard to argue otherwise${hasRecords ? ` (${top.tag})` : ''}. ${top.note} Everyone else is playing for second, and they know it.`);
+  if (second) P.push(`The chase is led by ${second.manager}, ${lc(second.note)} — close enough to smell it, far enough to still choke. Behind them the middle of the ${leagueName} is a genuine knife fight: three or four teams separated by a good week and a lucky bounce, none of them safe, all of them dangerous.`);
+  P.push(`Then, down in the cellar paying rent, sits ${bottom.manager}. ${bottom.note} At this point the season's about pride, draft position, and not getting roasted in this very publication.`);
+  P.push(`If you want the week distilled to one image, it's ${drama.winner.manager} hanging ${drama.winner.score} on the board and ${drama.loser.manager} left to explain themselves. That's the league right now: a handful of teams peaking, a handful in freefall, and everybody one Sunday from a mood swing.`);
+  return { headline: `State of the League: ${top.manager} on Top, ${bottom.manager} in the Basement`, dek: `Week ${week} — where everyone stands, and who's about to panic.`, byline: 'The Gazette', paragraphs: P };
+}
+function lc(s) { return s ? s.charAt(0).toLowerCase() + s.slice(1).replace(/\.$/, '') : s; }
+
+// ---- The Water Cooler: turn a pasted group chat into an article -------------
+function parseChat(raw) {
+  const lines = String(raw || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const msgs = [];
+  const re = /^(?:\[[^\]]+\]\s*)?(?:\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4},?\s+[\d:]+(?:\s*[APMapm]{2})?\s*[-–—]\s*)?([\p{L}0-9 ._'’-]{1,28}?):\s+(.+)$/u;
+  for (const l of lines) {
+    const m = l.match(re);
+    if (m && m[2]) msgs.push({ author: m[1].trim(), text: m[2].trim() });
+    else if (msgs.length) msgs[msgs.length - 1].text += ' ' + l;
+    else msgs.push({ author: 'Someone', text: l });
+  }
+  return msgs.filter(m => m.text.length);
+}
+const CHAT_THEMES = {
+  trade: /\b(trade|deal|offer|swap|veto|package)\b/i,
+  waiver: /\b(waiver|pickup|pick up|drop|faab|free agent|add)\b/i,
+  rules: /\b(commissioner|commish|rule|collusion|cheat|unfair|settings|scoring)\b/i,
+  smack: /\b(suck|sucks|trash|garbage|destroy|beat|lucky|scrub|bum|clown|choke|washed|donkey|bad)\b/i,
+  injury: /\b(injur|hurt|questionable|IR|out for|tweaked)\b/i,
+};
+const THEME_HEAD = { trade: 'Trade Winds Blow Through the Chat', waiver: 'Waiver-Wire Warfare', rules: 'Rules Revolt in the Group Chat', smack: 'The Trash Talk Boils Over', injury: 'Injury Panic Sweeps the League' };
+const CHAT_SAY = ['fired off', 'offered up', 'declared', 'shot back', 'announced', 'insisted', 'typed out', 'ranted'];
+function generateChatArticle(raw, angle) {
+  const msgs = parseChat(raw);
+  if (!msgs.length) return null;
+  const counts = {}; msgs.forEach(m => counts[m.author] = (counts[m.author] || 0) + 1);
+  const loudest = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+  const questions = msgs.filter(m => /\?\s*$/.test(m.text));
+  const tc = {}; for (const k in CHAT_THEMES) tc[k] = msgs.filter(m => CHAT_THEMES[k].test(m.text)).length;
+  const topTheme = Object.keys(tc).sort((a, b) => tc[b] - tc[a]).find(k => tc[k] > 0) || null;
+  const punchy = msgs.filter(m => m.text.length <= 180 && (/[!?]/.test(m.text) || CHAT_THEMES.smack.test(m.text) || /\b(robbery|insulting|collusion|veto|last place|first place)\b/i.test(m.text)));
+  const q = (punchy.length >= 2 ? punchy : msgs.filter(m => m.text.length <= 200));
+  const seed = msgs.length * 7 + (loudest ? loudest.length : 0);
+  const pick = (arr, o) => seededPick(arr, seed + o);
+  const say = (i) => pick(CHAT_SAY, i);
+  const headline = (angle && angle.trim()) ? angle.trim() : (topTheme ? THEME_HEAD[topTheme] : 'Chaos in the Group Chat');
+  const P = [];
+  P.push(pick([`The group chat was a warzone again this week.`, `Another week, another meltdown in the league chat.`, `The keyboards were smoking in the group chat.`], 1) +
+    (loudest && counts[loudest] > 1 ? ` ${loudest} led the charge with ${counts[loudest]} messages, because of course they did.` : ''));
+  if (q[0]) P.push(`It got going when ${q[0].author} ${say(2)}: “${q[0].text}”`);
+  if (q[1]) P.push(`“${q[1].text}” ${say(3)} ${q[1].author}${q[2] ? `, to which ${q[2].author} ${say(4)}: “${q[2].text}”` : `.`}`);
+  if (questions[0]) P.push(`The unanswered question of the week, courtesy of ${questions[0].author}: “${questions[0].text}” Nobody had a straight answer.`);
+  else if (topTheme === 'trade') P.push(`Whether any of this produces an actual trade remains, as ever, deeply doubtful.`);
+  P.push(pick([`The Gazette will keep monitoring the situation, purely for entertainment.`, `Cooler heads did not prevail. They never do.`, `We'll check back next week when someone rage-quits again.`], 5));
+  return { id: 'desk_' + seed + '_' + msgs.length, kind: 'chat', headline, dek: `Dispatches from the group chat.`, byline: 'The Water Cooler Desk', paragraphs: P };
 }
 
 // Power rankings: blend season record (if any) with this week's output, plus a
@@ -881,6 +957,7 @@ function startDemo() {
   S.bundle = d.bundle; S.demo = d; S.values = null; S.newsCache = {};
   S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:true };
   S.trade = { partnerId:null, give:new Set(), get:new Set() };
+  loadDesk();
   S.activeWeek = 14; S.tab = 'news';
   renderShell(); renderTab();
 }
@@ -908,13 +985,63 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], currentNl:null,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
 };
 function saveSession(){ localStorage.setItem(SKEY, JSON.stringify({ user:S.user, leagueId:S.leagueId, season:S.season })); }
 function loadSession(){ try { const r=localStorage.getItem(SKEY); if(r){ const s=JSON.parse(r); S.user=s.user; S.leagueId=s.leagueId; S.season=s.season; } } catch {} }
+function deskKey(){ return 'gg.desk.' + (S.leagueId || 'x'); }
+function loadDesk(){ try { S.desk = JSON.parse(localStorage.getItem(deskKey()) || '[]'); } catch { S.desk = []; } }
+function saveDesk(){ try { localStorage.setItem(deskKey(), JSON.stringify(S.desk)); } catch {} }
+
+// ---- Export / share to WhatsApp --------------------------------------------
+function magazineToText(nl) {
+  if (!nl) return '';
+  const L = [];
+  L.push(`*THE GRIDIRON GAZETTE* — Week ${nl.week}`);
+  L.push(`_${nl.leagueName}_`);
+  L.push('');
+  L.push('📋 *SCOREBOARD*');
+  (nl.scoreboard || []).forEach(g => L.push(`${g.win.manager} ${g.win.score} — ${g.lose.score} ${g.lose.manager}`));
+  if (nl.lead) { L.push(''); L.push(`📰 *${nl.lead.headline}*`); if (nl.lead.paragraphs[0]) L.push(nl.lead.paragraphs[0]); }
+  L.push(''); L.push('🏈 *GAME STORIES*');
+  (nl.stories || []).forEach(s => { L.push(`*${s.headline}*`); if (s.paragraphs[0]) L.push(s.paragraphs[0]); L.push(''); });
+  (S.desk || []).filter(a => a.week === nl.week).forEach(a => { L.push(`💬 *${a.headline}*`); if (a.paragraphs[0]) L.push(a.paragraphs[0]); L.push(''); });
+  if (nl.powerRankings) { L.push('🔮 *POWER RANKINGS*'); nl.powerRankings.forEach(p => L.push(`${p.rank}. ${p.manager} (${p.tag})`)); }
+  const url = (typeof location !== 'undefined' && location.href) ? location.href : '';
+  L.push(''); L.push(`— Read the full illustrated edition: ${url}`);
+  return L.join('\n');
+}
+async function shareMagazine() {
+  const text = magazineToText(S.currentNl);
+  if (!text) { toast('Open a week first'); return; }
+  try {
+    if (navigator.share) { await navigator.share({ title: 'The Gridiron Gazette', text }); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(text); toast('Magazine copied — paste into WhatsApp'); return; }
+  catch {}
+  showCopyModal(text);
+}
+function showCopyModal(text) {
+  const wrap = document.createElement('div');
+  wrap.className = 'modal';
+  wrap.innerHTML = `<div class="modal-box"><div class="at" style="margin-bottom:8px">Copy the magazine</div>
+    <textarea class="input" style="height:200px" readonly></textarea>
+    <div style="height:10px"></div><button class="btn" data-close="1">Done</button></div>`;
+  wrap.querySelector('textarea').value = text;
+  wrap.addEventListener('click', e => { if (e.target === wrap || e.target.dataset.close) wrap.remove(); });
+  document.body.appendChild(wrap);
+  const ta = wrap.querySelector('textarea'); ta.focus(); ta.select();
+}
+let toastTimer = null;
+function toast(msg) {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
 
 // ---------------------------------------------------------------------
 //  Boot
@@ -1012,6 +1139,7 @@ async function enterApp() {
     const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
     const myRoster = rosters.find(r => r.owner_id === S.user.user_id) || null;
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster };
+    loadDesk();
     S.values = null; S.newsCache = {}; S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:false };
     S.trade = { partnerId:null, give:new Set(), get:new Set() };
     // Season history via Sleeper's previous_league_id chain — the reliable way
@@ -1086,7 +1214,11 @@ function renderTab() {
 // ---------------------------------------------------------------------
 function newsHeader() {
   return `<div class="cover">
-    <button class="gear" data-act="settings">⚙</button>
+    <div class="cover-tools">
+      <button class="ctool" data-act="share" title="Share">⤴</button>
+      <button class="ctool" data-act="desk" title="Newsroom desk">✍️</button>
+      <button class="ctool" data-act="settings" title="Settings">⚙</button>
+    </div>
     <div class="cover-kick">THE GRIDIRON GAZETTE${S.demo ? ' · SAMPLE EDITION' : ''}</div>
     <div class="cover-title">${esc(S.bundle.league.name)}</div>
     <div class="cover-issue">WEEK ${S.activeWeek} · ${esc(S.season || '')} SEASON · THE WEEKLY WRAP</div>
@@ -1132,9 +1264,15 @@ async function renderNews() {
     setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint) + demoBtn);
     return;
   }
+  S.currentNl = nl;
   const lead = `<div class="lead"><h1>${esc(nl.lead.headline)}</h1>
     <div class="standfirst">${esc(nl.lead.standfirst)}</div>
     ${nl.lead.paragraphs.map(p=>`<p class="body">${esc(p)}</p>`).join('')}</div>`;
+  const feature = nl.feature ? articleHtml(nl.feature, true) : '';
+  const deskArts = (S.desk || []).filter(a => a.week === wk);
+  const desk = deskArts.length
+    ? deskArts.map(a => articleHtml(a, false, a.id)).join('')
+    : `<div class="card" style="text-align:center"><div class="dt" style="margin-bottom:10px">No dispatches yet. Paste your league group chat and the desk will write one up.</div><button class="btn" data-act="desk">✍️ Write from the group chat</button></div>`;
   const awards = nl.awards.length ? `<div class="card awards" style="border-color:var(--accent-d)">
     <div class="at">Week ${wk} Superlatives</div>
     ${nl.awards.map(a=>`<div class="award"><span class="em">${a.emoji}</span><div style="flex:1">
@@ -1155,9 +1293,20 @@ async function renderNews() {
   setContent(newsChrome()
     + sec('The Scoreboard') + scoreboardHtml(nl.scoreboard)
     + sec('The Column') + lead
+    + (feature ? sec('League Feature') + feature : '')
     + sec('By the Numbers') + numbersHtml(nl.numbers)
     + power + studsDudsHtml(nl.studs, nl.duds) + shameHtml(nl.shame) + awards
+    + sec('The Water Cooler') + desk
     + sec('Game Stories') + stories + colophon);
+}
+// A generic editorial article (feature / desk piece) with byline.
+function articleHtml(a, feature, deskId) {
+  return `<div class="card story${feature ? ' feature' : ''}">
+    ${feature ? `<div class="feat-flag">FEATURE</div>` : `<div class="byline">💬 ${esc(a.byline || 'The Desk')}${deskId ? ` · <button class="linkbtn" data-act="desk-delete" data-id="${esc(deskId)}">delete</button>` : ''}</div>`}
+    <h2>${esc(a.headline)}</h2>
+    ${a.dek ? (feature ? `<div class="pullquote">“${esc(a.dek)}”</div>` : `<div class="dek">${esc(a.dek)}</div>`) : ''}
+    ${a.paragraphs.map((p,i)=>`<p class="body">${feature && i===0 ? '<span class="drop">'+esc(p.charAt(0))+'</span>'+esc(p.slice(1)) : esc(p)}</p>`).join('')}
+    ${feature && a.byline ? `<div class="byline" style="margin-top:8px">— ${esc(a.byline)}</div>` : ''}</div>`;
 }
 function scoreboardHtml(sb) {
   if (!sb || !sb.length) return '';
@@ -1383,6 +1532,41 @@ function drawDraft() {
 // ---------------------------------------------------------------------
 //  Settings
 // ---------------------------------------------------------------------
+function showDesk() {
+  const mine = (S.desk || []).filter(a => a.week === S.activeWeek);
+  app.innerHTML = `<div style="padding-bottom:24px">
+    <button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>
+    <div class="setup-logo" style="font-size:24px">✍️ Newsroom Desk</div>
+    <p class="muted" style="margin-top:4px">Paste your league group chat (WhatsApp, Sleeper, iMessage — any format) and the desk will turn it into a Water Cooler article for Week ${S.activeWeek}.</p>
+    <div class="card" style="margin-top:12px">
+      <label class="label">Optional headline / angle</label>
+      <input id="chatAngle" class="input" placeholder="e.g. Bob's trade offer sparks mutiny" />
+      <div style="height:10px"></div>
+      <label class="label">Paste the chat</label>
+      <textarea id="chatText" class="input" style="height:180px" placeholder="Alice: that trade is highway robbery&#10;Bob: name a fairer one then&#10;Alice: literally anything else"></textarea>
+      <div style="height:12px"></div>
+      <button class="btn" data-act="desk-generate">Write the article →</button>
+      <div id="deskErr" class="err"></div>
+    </div>
+    ${mine.length ? `<div class="seclabel">This week's dispatches</div>${mine.map(a=>`
+      <div class="card"><div class="row" style="justify-content:space-between">
+        <div style="font-weight:800">${esc(a.headline)}</div>
+        <button class="linkbtn" data-act="desk-delete" data-id="${esc(a.id)}">delete</button></div>
+        <div class="dt" style="margin-top:4px">${esc(a.paragraphs[0]||'')}</div></div>`).join('')}` : ''}
+  </div>`;
+}
+function deskGenerate() {
+  const text = ($('#chatText') || {}).value || '';
+  const angle = ($('#chatAngle') || {}).value || '';
+  if (text.trim().length < 8) { const e = $('#deskErr'); if (e) e.textContent = 'Paste a bit more chat first.'; return; }
+  const art = generateChatArticle(text, angle);
+  if (!art) { const e = $('#deskErr'); if (e) e.textContent = "Couldn't parse that — try including who said what."; return; }
+  art.week = S.activeWeek;
+  S.desk.unshift(art); saveDesk();
+  delete S.newsCache[S.activeWeek];
+  S.tab = 'news'; renderShell(); renderTab();
+  toast('Article added to The Water Cooler');
+}
 async function showSettings() {
   app.innerHTML = `<button class="btn ghost" data-act="back" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back</button>
     <div id="setbody">${spinner('')}</div>`;
@@ -1422,7 +1606,12 @@ document.body.addEventListener('click', async (e) => {
     return;
   }
   if (act === 'settings') return showSettings();
-  if (act === 'back') { renderShell(); return renderTab(); }
+  if (act === 'share') return shareMagazine();
+  if (act === 'desk') return showDesk();
+  if (act === 'desk-generate') return deskGenerate();
+  if (act === 'desk-delete') { S.desk = S.desk.filter(a => a.id !== t.dataset.id); saveDesk(); delete S.newsCache[S.activeWeek];
+    if ($('#setbody') || document.querySelector('.setup-logo')) return showDesk(); renderShell(); return renderTab(); }
+  if (act === 'back' || act === 'back-news') { renderShell(); return renderTab(); }
   if (act === 'signout') { localStorage.removeItem(SKEY); S.user=S.leagueId=S.season=S.bundle=S.history=null; return renderSetup(); }
   if (act === 'switch-league') { S.leagueId=t.dataset.id; S.season=t.dataset.season; saveSession(); return enterApp(); }
   if (act === 'trade-partner') { S.trade.partnerId = Number(t.dataset.id); S.trade.get = new Set(); return drawTrade(); }
