@@ -114,6 +114,24 @@
   .prfill { height:100%; background:linear-gradient(90deg,var(--accent-d),var(--accent)); border-radius:3px; }
   .sd { display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px solid rgba(255,255,255,.05); }
   .sd .val { font-size:16px; font-weight:800; font-variant-numeric:tabular-nums; min-width:44px; text-align:right; }
+  /* magazine cover + sections */
+  .cover { position:relative; margin:-16px -16px 16px; padding:26px 16px 18px; overflow:hidden;
+           background:radial-gradient(120% 140% at 0% 0%, rgba(49,209,88,.20), transparent 55%), linear-gradient(160deg,#0e141c,#0b0f14); border-bottom:3px solid var(--accent); }
+  .cover .gear { position:absolute; top:14px; right:14px; margin:0; }
+  .cover-kick { color:var(--accent); font-size:11px; font-weight:900; letter-spacing:3px; }
+  .cover-title { font-family:var(--serif); font-weight:900; font-style:italic; font-size:34px; line-height:1.02; margin:6px 0 8px; letter-spacing:-.5px; }
+  .cover-issue { color:var(--textDim,var(--dim)); font-size:11px; font-weight:800; letter-spacing:2px; color:var(--dim); }
+  .sec { font-family:var(--serif); font-weight:800; font-size:13px; letter-spacing:3px; text-transform:uppercase;
+         color:var(--text); padding:6px 0 6px 12px; margin:18px 0 12px; border-left:4px solid var(--accent);
+         border-bottom:1px solid var(--border); }
+  .card { box-shadow:0 1px 0 rgba(255,255,255,.02), 0 8px 24px -18px rgba(0,0,0,.9); }
+  .at { display:flex; align-items:center; gap:6px; letter-spacing:.3px; }
+  .story.feature { border-color:var(--accent); background:linear-gradient(180deg,rgba(49,209,88,.06),transparent 40%); }
+  .feat-flag { display:inline-block; background:var(--accent); color:#04210d; font-size:10px; font-weight:900;
+               letter-spacing:1.5px; padding:3px 8px; border-radius:6px; margin-bottom:10px; }
+  .story.feature h2 { font-size:26px; line-height:1.12; }
+  .pullquote { font-family:var(--serif); font-style:italic; font-size:19px; line-height:1.35; color:var(--text);
+               border-left:3px solid var(--accent); padding:4px 0 4px 14px; margin:10px 0 12px; }
 
   /* generic list rows */
   .prow { display:flex; align-items:center; gap:8px; padding:9px 4px; }
@@ -289,6 +307,14 @@ function statLine(pos, s) {
 function hasProduction(s){ return !!s && (n(s,'pass_yd')>0||n(s,'rush_yd')>0||n(s,'rec')>0||n(s,'fgm')>0||n(s,'sack')>0||n(s,'def_td')>0); }
 function perfVerb(pts){ return pts>=30?'detonated for':pts>=24?'erupted for':pts>=18?'went off for':pts>=12?'delivered':pts>=7?'chipped in':pts>=3?'managed just':'was held to'; }
 function bustAdj(pts){ return pts<=2?'a total no-show':pts<=5?'a crushing dud':pts<=8?'a quiet letdown':'underwhelming'; }
+// Game-slot awareness (kickoff window), so articles can reference timing when
+// it's known. Sleeper weekly totals don't carry this, so real leagues will pass
+// null and these degrade to no-timing prose; the sample bakes real slots in.
+const SLOT_LABEL = { TNF:'Thursday night', SUN_EARLY:'the early window', SUN_LATE:'the late window', SNF:'Sunday night', MNF:'Monday night' };
+const SLOT_CLAUSE = { TNF:'in the Thursday night game', SUN_EARLY:'in the early window', SUN_LATE:'in the late window', SNF:'in the Sunday night game', MNF:'in the Monday night game' };
+const SLOT_LATE = new Set(['SNF','MNF']);
+function slotClause(slot){ return SLOT_CLAUSE[slot] ? ` ${SLOT_CLAUSE[slot]}` : ''; }
+
 // Harry Doyle (Bob Uecker) flourishes for the game stories.
 function scoredTD(s){ return (n(s,'rush_td')+n(s,'rec_td')+n(s,'pass_td')+n(s,'def_td')) > 0; }
 function heroHype(pts, seed){
@@ -321,7 +347,8 @@ function buildNewsletter(inp) {
   const makeEntry = (entry, id) => {
     const pos = posOf(id), stats = weeklyStats[id];
     return { id, player: players[id], pos, points: round1(pointsFor(entry,id)),
-             projected: round1(scoreStats(weeklyProjections[id], scoring)), stats, line: statLine(pos, stats) };
+             projected: round1(scoreStats(weeklyProjections[id], scoring)), stats, line: statLine(pos, stats),
+             slot: players[id] ? players[id].slot || null : null };
   };
 
   const buildTeam = (entry) => {
@@ -488,12 +515,20 @@ function writeStory(ctx) {
       `${W} ${blowout ? pick([`beat the brakes off ${L}`,`ran ${L} off the damn field`,`treated ${L} like a crash-test dummy`], 3) : nail ? pick([`outlasted ${L}`,`survived ${L}`,`ripped ${L}'s heart out`], 3) : pick([`handled ${L}`,`ground ${L} down`,`took care of ${L}`], 3)}, ${winner.score} to ${loser.score}${nail ? `, and the ${margin}-point final doesn't come close to capturing how sweaty it got — ${L} is gonna be sick about this one for a week` : blowout ? `, a beatdown so lopsided it oughta be illegal in most states` : ''}.`);
   }
 
-  // ---- P2: the hero, real stat line + swing framing ----
+  // ---- P2: the hero, real stat line + swing framing (+ timing when known) ----
   if (hero && hero.points > 0) {
+    const late = SLOT_LATE.has(hero.slot);
+    const bigFlourish = heroDifference && nail && late && scoredTD(hero.stats);
     let p = `The engine was ${heroName}, who ${heroHype(hero.points, seed)} ${hero.points}`;
     if (hero.line && hasProduction(hero.stats)) p += ` on ${hero.line}`;
-    p += '. ';
-    if (heroDifference && nail) {
+    p += (bigFlourish ? '' : slotClause(hero.slot)) + '. ';
+    if (bigFlourish) {
+      // The money scenario: a late primetime score that swings the matchup.
+      p += pick([
+        `And it came at the death: with a ${SLOT_LABEL[hero.slot]} touchdown, ${heroName} dragged ${W} in front of ${L} for good — pure come-from-behind heroics, decided after everyone else had already gone to bed. `,
+        `The dagger landed ${slotClause(hero.slot).trim()}: ${heroName} found the end zone with ${W} still trailing, flipped the whole matchup, and left ${L} screaming at a ${SLOT_LABEL[hero.slot]} broadcast. `,
+      ], 4) + pick([`No ${heroName}, no win — ${W} steals it by ${margin}.`, `His day alone outweighed the ${margin}-point final. ${L} can go pound sand.`], 5);
+    } else if (heroDifference && nail) {
       p += (scoredTD(hero.stats)
         ? pick([`He punched it in with the whole thing hanging in the balance, and that score is the entire ballgame: `, `He found the end zone right when ${W} needed it, and there's your difference: `], 4)
         : pick([`And that output is the whole ballgame: `, `Here's the kick in the nuts for ${L}: `], 4)) +
@@ -711,7 +746,8 @@ function buildDemoBundle() {
 
   const players = {};
   let rank = 1;
-  const add = (id, name, pos) => { players[id] = { player_id:id, full_name:name, position:pos, team:'NFL', search_rank: rank++ }; return id; };
+  const SLOTS = ['MNF','SNF','TNF','SUN_EARLY','SUN_LATE','SUN_EARLY','SUN_LATE','SUN_EARLY','SUN_LATE','SUN_LATE'];
+  const add = (id, name, pos) => { players[id] = { player_id:id, full_name:name, position:pos, team:'NFL', search_rank: rank, slot: SLOTS[rank % SLOTS.length] }; rank++; return id; };
 
   const rosters = [], usersById = {};
   for (let i = 0; i < 8; i++) {
@@ -743,8 +779,12 @@ function buildDemoBundle() {
   const bundle = { league, rosters, users: Object.values(usersById), players, usersById, rostersByOwner,
     myRoster: rosters[0] };
 
-  // A week's worth of stats + the storyline overrides (one bust, one bench blunder).
+  // A week's worth of stats + storyline overrides (bust, bench blunder, and a
+  // guaranteed late Monday-night hero so the timing flavor is always on display).
   function week(wk) {
+    // Reset slots to their base each week (we mutate one below).
+    for (const id in players) players[id].slot = SLOTS[players[id].search_rank % SLOTS.length];
+
     const weeklyStats = {}, weeklyProjections = {};
     for (const id in players) weeklyStats[id] = genStats(players[id].position, hashId(id) * 100 + wk * 7);
 
@@ -760,6 +800,21 @@ function buildDemoBundle() {
       ? { rush_att:19, rush_yd:128, rush_td:2, rec:3, rec_yd:24, rec_tgt:4 }
       : { rec:9, rec_yd:151, rec_td:2, rec_tgt:12 };
     weeklyStats[starterId] = { rec:2, rec_yd:16, rec_td:0, rec_tgt:6 };
+
+    // Manufacture a Monday-night thriller in one real matchup: a stud lands a
+    // late rushing TD on MNF, and we tune the opponent so the home side wins by
+    // ~7 — a nail-biter the hero literally swings. Always on display.
+    const mIdx = wk % 4;                    // matchup 0..3
+    const heroTeam = rosters[mIdx * 2];     // home side of that matchup
+    const oppTeam = rosters[mIdx * 2 + 1];  // its opponent
+    const heroId = heroTeam.starters[1];    // an RB
+    weeklyStats[heroId] = { rush_att:21, rush_yd:118, rush_td:2, rec:5, rec_yd:44, rec_tgt:7 };
+    players[heroId].slot = 'MNF';
+    const teamTot = (r) => r.starters.reduce((s, id) => s + scoreStats(weeklyStats[id], DEMO_SCORING), 0);
+    const wrId = oppTeam.starters[3];       // opponent WR1 — dial to set the margin
+    const deltaPts = (teamTot(heroTeam) - 7) - teamTot(oppTeam);
+    const wr = weeklyStats[wrId] || { rec:5, rec_yd:60, rec_tgt:7 };
+    weeklyStats[wrId] = { ...wr, rec_yd: Math.max(0, Math.round((wr.rec_yd || 0) + deltaPts * 10)) };
 
     const matchups = rosters.map((r, i) => {
       const pts = r.starters.reduce((s, id) => s + scoreStats(weeklyStats[id], DEMO_SCORING), 0);
@@ -983,10 +1038,14 @@ function renderTab() {
 //  News Room
 // ---------------------------------------------------------------------
 function newsHeader() {
-  return `<div class="masthead">
-    <div><div class="kick">THE GRIDIRON GAZETTE${S.demo ? ' · SAMPLE' : ''}</div><div class="lg">${esc(S.bundle.league.name)}</div></div>
-    <button class="gear" data-act="settings">⚙</button></div>`;
+  return `<div class="cover">
+    <button class="gear" data-act="settings">⚙</button>
+    <div class="cover-kick">THE GRIDIRON GAZETTE${S.demo ? ' · SAMPLE EDITION' : ''}</div>
+    <div class="cover-title">${esc(S.bundle.league.name)}</div>
+    <div class="cover-issue">WEEK ${S.activeWeek} · ${esc(S.season || '')} SEASON · THE WEEKLY WRAP</div>
+  </div>`;
 }
+function sec(label) { return `<div class="sec">${esc(label)}</div>`; }
 function seasonBar() {
   if (!S.history || S.history.length < 2) return '';
   return `<div class="row" style="justify-content:space-between;margin-bottom:14px">
@@ -1044,14 +1103,18 @@ async function renderNews() {
         <div class="prbar"><div class="prfill" style="width:${Math.round((p.week/maxW)*100)}%"></div></div>
         <div class="dt">${esc(p.note)}</div>
       </div></div>`).join('')}</div>` : '';
-  const stories = `<div class="rule">GAME STORIES</div>` + nl.stories.map(storyHtml).join('');
+  const stories = nl.stories.map((s, i) => storyHtml(s, i === 0)).join('');
   const colophon = `<div class="colophon">Auto-written from real Sleeper box scores — every stat line and margin is genuine. The voice, jokes, and profanity are on the house.</div>`;
-  setContent(newsChrome() + scoreboardHtml(nl.scoreboard) + lead + numbersHtml(nl.numbers)
-    + power + studsDudsHtml(nl.studs, nl.duds) + shameHtml(nl.shame) + awards + stories + colophon);
+  setContent(newsChrome()
+    + sec('The Scoreboard') + scoreboardHtml(nl.scoreboard)
+    + sec('The Column') + lead
+    + sec('By the Numbers') + numbersHtml(nl.numbers)
+    + power + studsDudsHtml(nl.studs, nl.duds) + shameHtml(nl.shame) + awards
+    + sec('Game Stories') + stories + colophon);
 }
 function scoreboardHtml(sb) {
   if (!sb || !sb.length) return '';
-  return `<div class="rule">THE SCOREBOARD</div><div class="sbgrid">` + sb.map(g => `
+  return `<div class="sbgrid">` + sb.map(g => `
     <div class="sbcard">
       <div class="sbrow ${g.tie?'':'w'}"><span class="sbn">${esc(g.win.manager)}</span><span class="sbs">${g.win.score.toFixed(1)}</span></div>
       <div class="sbrow"><span class="sbn">${esc(g.lose.manager)}</span><span class="sbs">${g.lose.score.toFixed(1)}</span></div>
@@ -1086,12 +1149,14 @@ function teamTag(t, win, right) {
   return `<div class="tt ${right?'r':''} ${win?'win':''}">${avatarHtml(t.avatar,28,t.manager)}
     <div><div class="tn">${esc(t.manager)}</div><div class="ts">${t.score.toFixed(1)}</div></div></div>`;
 }
-function storyHtml(s) {
+function storyHtml(s, feature) {
   const wPct = (s.winner.score + s.loser.score) > 0 ? Math.round(s.winner.score / (s.winner.score + s.loser.score) * 100) : 50;
-  return `<div class="card story">
+  const pull = feature ? `<div class="pullquote">“${esc(s.dek)}”</div>` : `<div class="dek">${esc(s.dek)}</div>`;
+  return `<div class="card story${feature ? ' feature' : ''}">
+    ${feature ? `<div class="feat-flag">COVER STORY</div>` : ''}
     <div class="sl">${teamTag(s.winner,true,false)}<span class="dash">–</span>${teamTag(s.loser,false,true)}</div>
     <div class="scorebar"><div class="scorew" style="width:${wPct}%"></div></div>
-    <h2>${esc(s.headline)}</h2><div class="dek">${esc(s.dek)}</div>
+    <h2>${esc(s.headline)}</h2>${pull}
     ${s.paragraphs.map((p,i)=>`<p class="body">${i===0?'<span class="drop">'+esc(p.charAt(0))+'</span>'+esc(p.slice(1)):esc(p)}</p>`).join('')}</div>`;
 }
 
