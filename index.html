@@ -123,18 +123,20 @@
                 letter-spacing:-1px; text-transform:uppercase; margin-right:60px; text-shadow:0 2px 20px rgba(0,0,0,.5); }
   .cover-sub { color:var(--accent); font-size:11px; font-weight:900; letter-spacing:4px; margin-top:6px; }
   .cover-issue { color:var(--dim); font-size:11px; font-weight:800; letter-spacing:2px; margin-top:2px; }
-  .cover-full { min-height:82vh; display:flex; flex-direction:column; }
-  .cover-hero { margin-top:auto; padding-top:24px; }
-  .cover-star-pos { display:inline-block; color:#04210d; background:var(--accent); font-weight:900; font-size:12px;
-                    letter-spacing:1px; padding:3px 9px; border-radius:6px; }
-  .cover-star-name { font-family:var(--serif); font-weight:900; font-size:38px; line-height:1.0; margin:8px 0 2px; letter-spacing:-.5px; }
-  .cover-star-pts { font-weight:900; font-size:66px; line-height:1; color:var(--accent); letter-spacing:-2px; }
-  .cover-star-pts span { font-size:16px; letter-spacing:1px; margin-left:8px; color:var(--dim); vertical-align:super; }
-  .cover-star-sub { color:var(--dim); font-size:12px; font-weight:600; margin-top:2px; }
-  .cover-hook { font-family:var(--serif); font-weight:800; font-size:22px; line-height:1.15; margin:16px 0 12px; }
-  .cover-lines { border-top:1px solid var(--border); padding-top:10px; display:flex; flex-direction:column; gap:6px; }
-  .cover-line { font-size:12px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:var(--text);
-                padding-left:14px; position:relative; }
+  .cover-full { padding:0; min-height:90vh; }
+  .cover-bg { position:absolute; inset:0; width:100%; height:100%; z-index:0; }
+  .cover-inner { position:relative; z-index:1; min-height:90vh; padding:24px 18px 22px; display:flex; flex-direction:column; }
+  .cover-hook-big { font-family:var(--serif); font-weight:900; font-size:46px; line-height:.98; letter-spacing:-1px;
+                    margin-top:auto; text-shadow:0 2px 24px rgba(0,0,0,.6); }
+  .cover-subject { margin-top:16px; }
+  .cs-name { font-family:var(--serif); font-weight:900; font-style:italic; font-size:26px; line-height:1; }
+  .cs-row { display:flex; align-items:baseline; gap:12px; margin-top:4px; }
+  .cs-score { font-weight:900; font-size:44px; line-height:1; color:var(--accent); letter-spacing:-1px; }
+  .cs-tag { font-size:11px; font-weight:900; letter-spacing:1.5px; color:var(--text); background:rgba(255,255,255,.08);
+            border:1px solid var(--border); padding:3px 8px; border-radius:6px; }
+  .cover-lines { margin-top:18px; border-top:1px solid rgba(255,255,255,.15); padding-top:12px; display:flex; flex-direction:column; gap:7px; }
+  .cover-line { font-size:12px; font-weight:800; letter-spacing:.3px; text-transform:uppercase; color:var(--text);
+                padding-left:15px; position:relative; line-height:1.25; }
   .cover-line::before { content:'▸'; position:absolute; left:0; color:var(--accent); }
   .sec { font-family:var(--serif); font-weight:800; font-size:13px; letter-spacing:3px; text-transform:uppercase;
          color:var(--text); padding:6px 0 6px 12px; margin:18px 0 12px; border-left:4px solid var(--accent);
@@ -1000,7 +1002,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], currentNl:null,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], currentNl:null, magName:'Skirt Chasers',
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -1063,6 +1065,7 @@ function toast(msg) {
 // ---------------------------------------------------------------------
 async function init() {
   loadSession();
+  try { S.magName = localStorage.getItem('gg.magname') || 'Skirt Chasers'; } catch {}
   try { S.nflState = await getNflState(); S.activeWeek = Math.max(1, S.nflState.display_week || S.nflState.week || 1); } catch {}
   if (S.user && S.leagueId) { await enterApp(); } else { renderSetup(); }
 }
@@ -1227,7 +1230,7 @@ function renderTab() {
 // ---------------------------------------------------------------------
 //  News Room
 // ---------------------------------------------------------------------
-function magTitle() { return (S.bundle && S.bundle.league ? S.bundle.league.name : 'Fantasy').toUpperCase(); }
+function magTitle() { return String(S.magName || 'Skirt Chasers').toUpperCase(); }
 function coverTools() {
   return `<div class="cover-tools">
     <button class="ctool" data-act="share" title="Share">⤴</button>
@@ -1244,31 +1247,83 @@ function newsHeader() {
     <div class="cover-issue">WEEK ${S.activeWeek} · ${esc(S.season || '')} SEASON</div>
   </div>`;
 }
-// The full magazine cover: masthead, a cover star, and cover lines (teasers).
-function coverHtml(nl) {
-  const story = nl.stories[0];
-  const star = story && story.winner.top;
+// A fun, league-first cover: illustrated art, a matchup-driven headline (chat
+// included as a source), and a manager as the cover subject.
+function coverPackage(nl) {
   const power = nl.powerRankings || [];
-  const closest = [...nl.stories].filter(s => !s.tie).sort((a,b)=>a.margin-b.margin)[0];
+  const teams = nl.stories.flatMap(s => [s.winner, s.loser]);
+  const big = [...nl.stories].filter(s => !s.tie).sort((a,b)=>b.margin-a.margin)[0];
+  const close = [...nl.stories].filter(s => !s.tie).sort((a,b)=>a.margin-b.margin)[0];
+  const leader = power[0], cellar = power[power.length - 1];
   const deskArt = (S.desk || []).find(a => a.week === nl.week);
+  const U = s => String(s || '').toUpperCase();
+  const seed = Math.round((nl.week || 1) * 13 + (big ? big.margin : 0) + (leader ? leader.manager.length : 0));
+  const pick = (arr, o) => seededPick(arr, seed + o);
+
+  const cands = [];
+  if (deskArt) cands.push(U(deskArt.headline));              // let the group chat headline the issue
+  if (big) cands.push(pick([`${U(big.winner.manager)} BURIES ${U(big.loser.manager)}`, `${U(big.loser.manager)} GETS LEFT FOR DEAD`, `MASSACRE: ${U(big.winner.manager)} RUNS IT UP`], 2));
+  if (leader) cands.push(pick([`CAN ANYONE STOP ${U(leader.manager)}?`, `${U(leader.manager)} IS RUNNING AWAY WITH IT`], 3));
+  if (close) cands.push(`${U(close.winner.manager)} STEALS ONE FROM ${U(close.loser.manager)}`);
+  if (cellar) cands.push(`${U(cellar.manager)} HITS ROCK BOTTOM`);
+  // Bias toward the chat headline when it exists, else the juiciest matchup.
+  const headline = deskArt && pick([true, false, false], 5) ? cands[0] : pick(cands.filter(Boolean).slice(deskArt ? 1 : 0), 1) || 'ANOTHER WEEK OF CHAOS';
+
+  const subjTeam = big ? big.winner : (leader ? teams.find(t => t.manager === leader.manager) : teams[0]);
+  const subject = subjTeam ? {
+    name: subjTeam.manager, score: subjTeam.score,
+    tag: (big && subjTeam === big.winner) ? `${big.margin}-POINT DEMOLITION OF ${U(big.loser.manager)}` : leader && subjTeam.manager === leader.manager ? 'YOUR LEAGUE LEADER' : 'TOP DOG OF THE WEEK',
+  } : null;
+
   const lines = [];
-  if (power.length) lines.push(`POWER RANKINGS — ${power[0].manager} reigns, ${power[power.length-1].manager} rots`);
-  if (nl.studs && nl.studs[0]) lines.push(`${nl.studs[0].name} goes nuclear for ${nl.studs[0].points}`);
-  if (closest) lines.push(`${closest.winner.manager} survive ${closest.loser.manager} by ${closest.margin}`);
-  if (deskArt) lines.push(`WATER COOLER — ${deskArt.headline}`);
+  if (leader && cellar) lines.push(`POWER RANKINGS: ${leader.manager} on top, ${cellar.manager} in the cellar`);
+  if (close) lines.push(`${close.winner.manager} edge ${close.loser.manager} by ${close.margin}`);
+  if (deskArt) lines.push(`GROUP CHAT: ${deskArt.headline}`);
+  else if (nl.studs && nl.studs[0]) lines.push(`${nl.studs[0].manager} rode ${nl.studs[0].name}'s ${nl.studs[0].points} to glory`);
+  return { headline, subject, lines: lines.slice(0, 4) };
+}
+function starPoints(cx, cy, outer, inner, points) {
+  let p = '';
+  for (let i = 0; i < points * 2; i++) { const r = i % 2 ? inner : outer; const a = (Math.PI / points) * i - Math.PI / 2; p += `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)} `; }
+  return p.trim();
+}
+function coverArt(seed) {
+  const palette = ['#f5a623', '#4c8dff', '#ff5c5c', '#a970ff'];
+  const c2 = palette[Math.abs(seed) % palette.length];
+  let lines = '';
+  for (let i = -2; i < 10; i++) { const x = i * 60; lines += `<line x1="${x}" y1="800" x2="${x + 260}" y2="0" stroke="rgba(255,255,255,.05)" stroke-width="2"/>`; }
+  let dots = '';
+  for (let r = 0; r < 6; r++) for (let c = 0; c < 7; c++) dots += `<circle cx="${250 + c * 22}" cy="${34 + r * 22}" r="${3.4 - r * 0.35}" fill="${c2}" opacity="${0.55 - r * 0.07}"/>`;
+  const burst = starPoints(300, 470, 210, 88, 16);
+  return `<svg class="cover-bg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#111a22"/><stop offset="1" stop-color="#090d12"/></linearGradient>
+      <radialGradient id="cr" cx="0.75" cy="0.12" r="0.95"><stop offset="0" stop-color="${c2}" stop-opacity=".30"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></radialGradient>
+    </defs>
+    <rect width="400" height="800" fill="url(#cg)"/>
+    <g>${lines}</g>
+    <rect width="400" height="800" fill="url(#cr)"/>
+    <polygon points="${burst}" fill="var(--accent)" opacity=".12"/>
+    <polygon points="${starPoints(300,470,150,64,16)}" fill="none" stroke="var(--accent)" stroke-opacity=".25" stroke-width="1.5"/>
+    <g>${dots}</g>
+  </svg>`;
+}
+function coverHtml(nl) {
+  const pkg = coverPackage(nl);
+  const seed = Math.round((nl.week || 1) * 7 + (pkg.subject ? pkg.subject.name.length : 0) + (pkg.headline ? pkg.headline.length : 0));
   return `<div class="cover cover-full">
-    ${coverTools()}
-    <div class="cover-mast">${esc(magTitle())}</div>
-    <div class="cover-sub">FANTASY LEAGUE MAGAZINE${S.demo ? ' · SAMPLE EDITION' : ''}</div>
-    <div class="cover-issue">WEEK ${nl.week} · ${esc(S.season || '')} SEASON</div>
-    ${star ? `<div class="cover-hero">
-      <div class="cover-star-pos">${esc(star.pos || '')}</div>
-      <div class="cover-star-name">${esc(playerName(star.player, star.id))}</div>
-      <div class="cover-star-pts">${star.points.toFixed(1)}<span>PTS</span></div>
-      <div class="cover-star-sub">${esc(story.winner.manager)}${star.line ? ' · ' + esc(star.line) : ''}</div>
-    </div>` : ''}
-    <div class="cover-hook">${esc(story ? story.headline : '')}</div>
-    <div class="cover-lines">${lines.map(l => `<div class="cover-line">${esc(l)}</div>`).join('')}</div>
+    ${coverArt(seed)}
+    <div class="cover-inner">
+      ${coverTools()}
+      <div class="cover-mast">${esc(magTitle())}</div>
+      <div class="cover-sub">FANTASY LEAGUE MAGAZINE · WEEK ${nl.week}${S.demo ? ' · SAMPLE' : ''}</div>
+      <div class="cover-hook-big">${esc(pkg.headline)}</div>
+      ${pkg.subject ? `<div class="cover-subject">
+        <div class="cs-name">${esc(pkg.subject.name)}</div>
+        <div class="cs-row"><span class="cs-score">${pkg.subject.score.toFixed(1)}</span><span class="cs-tag">${esc(pkg.subject.tag)}</span></div>
+      </div>` : ''}
+      <div class="cover-lines">${pkg.lines.map(l => `<div class="cover-line">${esc(l)}</div>`).join('')}</div>
+    </div>
   </div>`;
 }
 function sec(label) { return `<div class="sec">${esc(label)}</div>`; }
@@ -1628,6 +1683,13 @@ async function showSettings() {
   $('#setbody').innerHTML = `
     <div class="card row">${avatarHtml(avatarUrl(u.avatar),48,u.display_name)}
       <div><div style="font-weight:800;font-size:17px">${esc(u.display_name)}</div><div class="muted">@${esc(u.username)}</div></div></div>
+    <div class="seclabel">Magazine name</div>
+    <div class="card">
+      <input id="magName" class="input" value="${esc(S.magName || 'Skirt Chasers')}" placeholder="Skirt Chasers" />
+      <div class="faint" style="font-size:11px;margin:6px 2px 0">Shown big on the cover, above “Fantasy League Magazine.”</div>
+      <div style="height:10px"></div>
+      <button class="btn" data-act="save-magname">Save magazine name</button>
+    </div>
     <div class="seclabel">Your leagues</div>
     ${(leagues||[]).map(lg=>`<button class="card row" style="width:100%;text-align:left;color:var(--text);${lg.league_id===S.leagueId?'border-color:var(--accent)':''}" data-act="switch-league" data-id="${esc(lg.league_id)}" data-season="${esc(lg.season)}">
       ${avatarHtml(avatarUrl(lg.avatar),40,lg.name)}
@@ -1656,6 +1718,8 @@ document.body.addEventListener('click', async (e) => {
   }
   if (act === 'settings') return showSettings();
   if (act === 'share') return shareMagazine();
+  if (act === 'save-magname') { const v = ($('#magName')||{}).value; S.magName = (v && v.trim()) || 'Skirt Chasers';
+    try { localStorage.setItem('gg.magname', S.magName); } catch {} toast('Magazine name saved'); return; }
   if (act === 'desk') return showDesk();
   if (act === 'desk-generate') return deskGenerate();
   if (act === 'desk-delete') { S.desk = S.desk.filter(a => a.id !== t.dataset.id); saveDesk(); delete S.newsCache[S.activeWeek];
