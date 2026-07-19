@@ -651,6 +651,83 @@ function generateChatArticle(raw, angle) {
   return { id: 'desk_' + seed + '_' + msgs.length, kind: 'chat', headline, dek: `Dispatches from the group chat.`, byline: 'The Water Cooler Desk', paragraphs: P };
 }
 
+// ---- AI writer (optional) --------------------------------------------------
+// When the manager has supplied their own Anthropic API key, hand the actual
+// chat to Claude and ask for a real Water Cooler *column*: a narrative summary
+// with commentary, quotes woven into the arc — not a stat dump. Falls back to
+// the template (generateChatArticle) if there's no key or the call fails.
+async function generateChatArticleAI(raw, angle) {
+  const key = (S.apiKey || '').trim();
+  if (!key) throw new Error('no-key');
+  const msgs = parseChat(raw);
+  if (!msgs.length) return null;
+  // Feed a generous, recent window of the real conversation (cap the payload).
+  const recent = msgs.slice(-260);
+  const transcript = recent.map(m => `${m.author}: ${m.text}`).join('\n').slice(-14000);
+  const mag = S.magName || 'Skirt Chasers';
+  const angleLine = (angle && angle.trim())
+    ? `The editor wants this angle front and center: "${angle.trim()}". Build the column around it if the chat supports it.`
+    : `Find the angle yourself — the one thread everyone kept circling back to.`;
+  const system =
+`You are the Water Cooler columnist for "${mag} Fantasy League Magazine," a fantasy-football league magazine written for the guys in the league. Your beat is the league group chat.
+
+Write ONE column that is a SUMMARY and COMMENTARY on the week's group chat — a single narrative arc, not a report. This is the hard rule the editor keeps hammering:
+- It is a story about what went down in the chat and what it says about these guys. Summarize the drama, then editorialize on it with a sharp, funny voice.
+- It is NOT a statistical analysis. Do NOT count messages, rank who talked most, tally themes, or list stats.
+- Quotes are welcome, but ONLY as part of the larger narrative arc — pull a few real lines from the transcript and weave them in to move the story, never as a bulleted "greatest hits."
+- Use the managers' real names from the transcript. Keep it about THEM.
+- Voice: R-rated, profanity welcome, genuinely funny — but land jokes off the actual content, not filler clichés. Confident sportswriter, not a hack.
+- Length: 3 to 5 tight paragraphs. Every sentence earns its place.
+
+${angleLine}
+
+Return STRICT JSON, no markdown, no preamble, exactly this shape:
+{"headline": "punchy title, no clickbait fluff", "dek": "one-line standfirst under the headline", "paragraphs": ["para 1", "para 2", "..."]}`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-8',
+      max_tokens: 1600,
+      system,
+      messages: [{ role: 'user', content: `Here is this week's group chat transcript. Write the Water Cooler column.\n\n---\n${transcript}\n---` }],
+    }),
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { const j = await res.json(); detail = (j && j.error && j.error.message) || ''; } catch {}
+    throw new Error(`api-${res.status}${detail ? ': ' + detail : ''}`);
+  }
+  const data = await res.json();
+  const text = ((data.content || []).find(b => b.type === 'text') || {}).text || '';
+  const obj = parseAiJson(text);
+  if (!obj || !obj.paragraphs || !obj.paragraphs.length) throw new Error('bad-json');
+  const seed = recent.length * 7 + mag.length;
+  return {
+    id: 'desk_ai_' + seed + '_' + recent.length,
+    kind: 'chat',
+    headline: String(obj.headline || (angle && angle.trim()) || 'Chaos in the Group Chat').trim(),
+    dek: String(obj.dek || 'Dispatches from the group chat.').trim(),
+    byline: 'The Water Cooler Desk',
+    paragraphs: obj.paragraphs.map(p => String(p).trim()).filter(Boolean),
+  };
+}
+// Tolerant JSON extraction — models occasionally wrap output in prose or fences.
+function parseAiJson(text) {
+  if (!text) return null;
+  let s = text.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+  try { return JSON.parse(s); } catch {}
+  const a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if (a >= 0 && b > a) { try { return JSON.parse(s.slice(a, b + 1)); } catch {} }
+  return null;
+}
+
 // Power rankings: blend season record (if any) with this week's output, plus a
 // one-liner per team. Falls back to weekly scoring when records aren't loaded.
 function computePower(stories, rosterById) {
@@ -1057,7 +1134,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'',
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -1135,6 +1212,7 @@ function toast(msg) {
 async function init() {
   loadSession();
   try { S.magName = localStorage.getItem('gg.magname') || 'Skirt Chasers'; } catch {}
+  try { S.apiKey = localStorage.getItem('gg.apikey') || ''; } catch {}
   const params = new URLSearchParams(location.search);
   if (params.get('league')) return enterGuest(params);
   try { S.nflState = await getNflState(); S.activeWeek = Math.max(1, S.nflState.display_week || S.nflState.week || 1); } catch {}
@@ -1768,6 +1846,11 @@ function showDesk() {
       <input id="chatAngle" class="input" placeholder="e.g. Bob's trade offer sparks mutiny" />
       <div style="height:12px"></div>
       <button class="btn" data-act="desk-generate">Write the article →</button>
+      <div class="faint" style="font-size:11px;margin-top:8px">
+        ${(S.apiKey||'').trim()
+          ? '✨ <b>Claude</b> is writing this one — a real narrative column from your chat. (Add/remove your key in Settings.)'
+          : 'Using the built-in template writer. Add your Anthropic API key in <b>Settings</b> to have Claude write a real narrative column instead.'}
+      </div>
       <div id="deskErr" class="err"></div>
     </div>
     ${mine.length ? `<div class="seclabel">This week's dispatches</div>${mine.map(a=>`
@@ -1777,14 +1860,38 @@ function showDesk() {
         <div class="dt" style="margin-top:4px">${esc(a.paragraphs[0]||'')}</div></div>`).join('')}` : ''}
   </div>`;
 }
-function deskGenerate() {
+async function deskGenerate() {
   const pasted = ($('#chatText') || {}).value || '';
   const text = (S.deskChatText && S.deskChatText.trim()) ? S.deskChatText : pasted;
   const angle = ($('#chatAngle') || {}).value || '';
   const err = $('#deskErr');
+  const btn = document.querySelector('[data-act="desk-generate"]');
+  if (err) err.textContent = '';
   if (text.trim().length < 8) { if (err) err.textContent = 'Import your chat file or paste a snippet first.'; return; }
-  const art = generateChatArticle(text, angle);
-  if (!art) { if (err) err.textContent = "Couldn't find any 'Name: message' lines in that. Make sure it's a chat export."; return; }
+  if (!parseChat(text).length) { if (err) err.textContent = "Couldn't find any 'Name: message' lines in that. Make sure it's a chat export."; return; }
+
+  let art = null;
+  const useAI = !!(S.apiKey || '').trim();
+  if (btn) { btn.disabled = true; btn.textContent = useAI ? 'Claude is writing…' : 'Writing…'; }
+  try {
+    if (useAI) {
+      try {
+        art = await generateChatArticleAI(text, angle);
+      } catch (e) {
+        // Soft-fail to the offline template so the manager still gets an article.
+        art = generateChatArticle(text, angle);
+        const why = (e && /^api-401/.test(e.message)) ? 'that API key was rejected'
+          : (e && /^api-/.test(e.message)) ? 'the Claude API returned an error'
+          : 'the AI writer is unreachable';
+        toast(`Used the offline writer — ${why}.`);
+      }
+    } else {
+      art = generateChatArticle(text, angle);
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Write the article →'; }
+  }
+  if (!art) { if (err) err.textContent = "Couldn't turn that into an article. Make sure it's a chat export."; return; }
   art.week = S.activeWeek;
   S.desk.unshift(art); saveDesk();
   S.deskChatText = null;
@@ -1810,6 +1917,17 @@ async function showSettings() {
       <div class="faint" style="font-size:11px;margin:6px 2px 0">Shown big on the cover, above “Fantasy League Magazine.”</div>
       <div style="height:10px"></div>
       <button class="btn" data-act="save-magname">Save magazine name</button>
+    </div>
+    <div class="seclabel">Water Cooler AI writer</div>
+    <div class="card">
+      <input id="apiKey" class="input" type="password" autocomplete="off" value="${esc(S.apiKey || '')}" placeholder="sk-ant-… (optional)" />
+      <div class="faint" style="font-size:11px;margin:6px 2px 0;line-height:1.5">
+        Paste your own <b>Anthropic API key</b> and the Water Cooler will use Claude to write a real narrative column from your league chat instead of the built-in template. Get one at <b>console.anthropic.com</b>. Each article costs you a few cents on your own account.<br>
+        <b>Heads up:</b> this app lives on a public web address. Your key is saved <b>only in this browser</b> (local storage) — it's never committed, uploaded, or shared in magazine links — but don't paste it on a device you don't trust.
+      </div>
+      <div style="height:10px"></div>
+      <button class="btn" data-act="save-apikey">Save API key</button>
+      ${(S.apiKey||'').trim() ? `<div style="height:8px"></div><button class="btn ghost" data-act="clear-apikey">Remove key</button>` : ''}
     </div>
     <div class="seclabel">Your leagues</div>
     ${(leagues||[]).map(lg=>`<button class="card row" style="width:100%;text-align:left;color:var(--text);${lg.league_id===S.leagueId?'border-color:var(--accent)':''}" data-act="switch-league" data-id="${esc(lg.league_id)}" data-season="${esc(lg.season)}">
@@ -1841,6 +1959,11 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'share') return shareMagazine();
   if (act === 'save-magname') { const v = ($('#magName')||{}).value; S.magName = (v && v.trim()) || 'Skirt Chasers';
     try { localStorage.setItem('gg.magname', S.magName); } catch {} toast('Magazine name saved'); return; }
+  if (act === 'save-apikey') { const v = (($('#apiKey')||{}).value || '').trim(); S.apiKey = v;
+    try { v ? localStorage.setItem('gg.apikey', v) : localStorage.removeItem('gg.apikey'); } catch {}
+    toast(v ? 'API key saved — the Water Cooler will use Claude' : 'API key cleared'); return showSettings(); }
+  if (act === 'clear-apikey') { S.apiKey = ''; try { localStorage.removeItem('gg.apikey'); } catch {}
+    toast('API key removed'); return showSettings(); }
   if (act === 'desk') return showDesk();
   if (act === 'desk-generate') return deskGenerate();
   if (act === 'desk-delete') { S.desk = S.desk.filter(a => a.id !== t.dataset.id); saveDesk(); delete S.newsCache[S.activeWeek];
