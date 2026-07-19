@@ -266,6 +266,14 @@ function statLine(pos, s) {
 function hasProduction(s){ return !!s && (n(s,'pass_yd')>0||n(s,'rush_yd')>0||n(s,'rec')>0||n(s,'fgm')>0||n(s,'sack')>0||n(s,'def_td')>0); }
 function perfVerb(pts){ return pts>=30?'detonated for':pts>=24?'erupted for':pts>=18?'went off for':pts>=12?'delivered':pts>=7?'chipped in':pts>=3?'managed just':'was held to'; }
 function bustAdj(pts){ return pts<=2?'a total no-show':pts<=5?'a crushing dud':pts<=8?'a quiet letdown':'underwhelming'; }
+// Harry Doyle (Bob Uecker) flourishes for the game stories.
+function scoredTD(s){ return (n(s,'rush_td')+n(s,'rec_td')+n(s,'pass_td')+n(s,'def_td')) > 0; }
+function heroHype(pts, seed){
+  const big = ['went thermonuclear for','put on an absolute clinic for','dropped a cool','detonated for','went bananas for'];
+  const mid = ['went to work for','delivered','posted','came to play and put up'];
+  const low = ['scraped together','mustered just','managed a whisper of'];
+  return seededPick(pts>=24 ? big : pts>=11 ? mid : low, seed);
+}
 
 // ---------------------------------------------------------------------
 //  News Room — build a full newsletter from a week's matchups + stats
@@ -338,71 +346,132 @@ function buildNewsletter(inp) {
 function writeStory(ctx) {
   const { winner, loser, tie, margin, combined } = ctx;
   const seed = Math.round(winner.score*10 + loser.score + winner.rosterId);
-  const blowout = margin >= 35, nail = margin > 0 && margin <= 6;
+  const pick = (arr, o) => seededPick(arr, seed + o);
+  const blowout = margin >= 35, nail = margin > 0 && margin <= 12;
+  const W = winner.manager, L = loser.manager;
+  const hero = winner.top, goat = loser.top;
+  const heroName = hero ? playerName(hero.player, hero.id) : 'somebody';
+  const goatName = goat ? playerName(goat.player, goat.id) : '';
+  const heroDifference = !!hero && !tie && hero.points >= margin; // literally worth the margin
   const P = [];
+
+  // ---- Marquee ----
   let headline;
-  if (tie) headline = `${winner.manager} and ${loser.manager} play to a stalemate`;
-  else if (blowout) headline = seededPick([`${winner.manager} runs riot over ${loser.manager}`,`${winner.manager} leaves no doubt against ${loser.manager}`,`${loser.manager} steamrolled by ${winner.manager}`], seed);
-  else if (nail) headline = seededPick([`${winner.manager} survives ${loser.manager} by ${margin}`,`${winner.manager} edges ${loser.manager} in a photo finish`,`${loser.manager} falls ${margin} short against ${winner.manager}`], seed);
-  else headline = seededPick([`${winner.manager} handles ${loser.manager}`,`${winner.manager} takes care of business vs. ${loser.manager}`,`${winner.manager} pulls away from ${loser.manager}`], seed);
+  if (tie) headline = pick([`${W} and ${L} Kiss Their Sister`, `Nobody Wins, Everybody Loses`], 1);
+  else if (blowout) headline = pick([`${L} Cooked — and ${heroName} Brought the Barbecue`, `${W} Takes ${L} Out Behind the Woodshed`, `Somebody Call the Coroner on ${L}`], 1);
+  else if (nail) headline = pick([`${heroName} Bails Out ${W} in a Nail-Biter`, `${W} Survives ${L} by a Whisker`, `${L} Left ${margin} Short and Plenty Bitter`], 1);
+  else headline = pick([`${W} Puts ${L} to Bed`, `${W} Handles ${L} Without Spilling the Beer`], 1);
 
-  const star = winner.top;
-  const dek = star ? `${playerName(star.player,star.id)} leads the way with ${star.points}.` : `Final: ${winner.score}–${loser.score}.`;
+  const dek = tie ? `Two teams entered. Nobody left happy.`
+    : heroDifference ? `${heroName} was the difference. Book it.`
+    : blowout ? `Hide the women and children.`
+    : `Final: ${W} ${winner.score}, ${L} ${loser.score}.`;
 
-  const scoreline = tie ? `deadlocked at ${winner.score} apiece` : `${winner.score}–${loser.score}`;
-  let p1 = tie ? `${winner.manager} and ${loser.manager} couldn't be separated, ${scoreline}. `
-    : `${winner.manager} ${blowout?'dismantled':nail?'outlasted':'beat'} ${loser.manager} ${scoreline}${nail?`, a ${margin}-point thriller`:''}. `;
-  if (star && star.points > 0) {
-    p1 += `${playerName(star.player,star.id)} ${perfVerb(star.points)} ${star.points}`;
-    if (star.line && hasProduction(star.stats)) p1 += ` on ${star.line}`;
-    p1 += star.pos === 'DEF' ? ', anchoring the win.' : ', pacing the roster.';
+  // ---- P1: the call ----
+  let p1;
+  if (tie) {
+    p1 = pick([`Well, strap in — `, `Folks, I've seen some things, but `], 2) +
+      `${W} and ${L} beat each other to a ${winner.score}-apiece draw, which in fantasy football is the sporting equivalent of kissing your sister. Nobody's happy, everybody goes home, and I'm reaching for another cold one.`;
+  } else {
+    p1 = pick([`HERE'S the matchup — and `, `Gooood evening. `, `Strap in, folks — `], 2) +
+      `${W} ${blowout ? pick([`took ${L} apart`,`dismantled ${L}`,`beat ${L} like a rented mule`], 3) : nail ? pick([`outlasted ${L}`,`survived ${L}`,`stole one from ${L}`], 3) : pick([`handled ${L}`,`took care of ${L}`], 3)}, ${winner.score} to ${loser.score}${nail ? `, and don't let the ${margin}-point final fool you — this one went right down to the wire` : ''}.`;
   }
   P.push(p1.trim());
 
-  const ls = loser.top; let p2 = '';
-  if (ls && ls.points > 0) {
-    p2 += tie ? `${playerName(ls.player,ls.id)} kept ${loser.manager} level with ${ls.points}`
-      : `${playerName(ls.player,ls.id)} did what he could for ${loser.manager}, posting ${ls.points}`;
-    if (ls.line && hasProduction(ls.stats)) p2 += ` (${ls.line})`;
-    p2 += tie ? '. ' : `, but it wasn't enough. `;
+  // ---- P2: the hero, with the real stat line woven in ----
+  if (hero && hero.points > 0) {
+    let p = `${heroName} ${heroHype(hero.points, seed)} ${hero.points}`;
+    if (hero.line && hasProduction(hero.stats)) p += ` on ${hero.line}`;
+    p += '. ';
+    if (heroDifference && nail) {
+      const lead = scoredTD(hero.stats)
+        ? pick([`With the matchup hanging in the balance, ${heroName} found the end zone. `, `Cue the come-from-behind heroics: ${heroName} got into paydirt when it counted most. `], 4)
+        : pick([`And when the dust settled, that was the whole ballgame. `, `Turns out that was your difference right there. `], 4);
+      p += lead + pick([
+        `His day was worth more than the entire ${margin}-point final margin — meaning no ${heroName}, no win. ${W} pulls off the escape, and ${L} never saw it coming!`,
+        `Strip him out of the box score and it's ${W} crying in the parking lot. Instead, ${W} steals it by ${margin} and ${L} goes home to think about it.`,
+      ], 5);
+    } else if (heroDifference) {
+      p += pick([`Bigger than the margin, bigger than the moment — he's the reason ${W} is grinning and ${L} is not.`, `Do the math: no ${heroName}, no win for ${W}. Simple as that.`], 6);
+    } else if (blowout) {
+      p += pick([`By the time he was done the fat lady had sung and was already warming up the car.`, `That'll do it. ${L} was cooked, and ${heroName} manned the grill.`], 6);
+    } else if (hero.points >= 22) {
+      p += pick([`That's not padding the stats — that's a statement.`, `He didn't need to do that. He did it anyway.`, `A monster line in a comfortable win. The best kind of Sunday.`], 6);
+    } else {
+      p += pick([`Steady, professional, and just enough.`, `Not flashy. Cashed anyway.`], 6);
+    }
+    P.push(p.trim());
   }
-  if (loser.bust) { const b=loser.bust; p2 += `The dagger was ${playerName(b.player,b.id)}, ${bustAdj(b.points)} — projected ${b.projected}, delivered just ${b.points}. `; }
-  if (p2.trim()) P.push(p2.trim());
 
+  // ---- P3: the losing side — a spirited effort and a crime scene ----
   let p3 = '';
-  if (loser.benchRegret) { const r=loser.benchRegret;
-    p3 = `${loser.manager} will replay this one all week: ${playerName(r.bench.player,r.bench.id)} dropped ${r.bench.points} from the bench while ${playerName(r.starter.player,r.starter.id)} managed ${r.starter.points} in the lineup — a ${r.diff}-point what-if in a ${margin}-point loss.`;
-  } else if (winner.benchRegret) { const r=winner.benchRegret;
-    p3 = `Even in victory, ${winner.manager} left points on the table — ${playerName(r.bench.player,r.bench.id)}'s ${r.bench.points} watched from the bench.`;
-  } else if (blowout && winner.top) {
-    p3 = `For ${loser.manager}, it's back to the drawing board. For ${winner.manager}, everything clicked.`;
+  if (goat && goat.points > 0 && !tie) {
+    const gl = goat.line && hasProduction(goat.stats) ? ` (${goat.line})` : '';
+    p3 += pick([`Now, ${L} didn't roll over — ${goatName} posted ${goat.points}${gl}`, `In fairness to ${L}, ${goatName} showed up with ${goat.points}${gl}`], 7) +
+      pick([`, but one man can't carry a corpse.`, `, but you can't win a gunfight with a slingshot.`, `, and it bought ${L} exactly nothing.`], 8) + ' ';
+  }
+  if (loser.bust) {
+    const b = loser.bust, bn = playerName(b.player, b.id);
+    p3 += pick([
+      `The real crime scene? ${bn}. Penciled in for ${b.projected}, showed up with ${b.points}. Juuuust a bit outside.`,
+      `And then there's ${bn} — projected ${b.projected}, delivered ${b.points}. I've seen better production out of a vending machine.`,
+      `${bn} was supposed to be the safe start. Projected ${b.projected}, cashed ${b.points}. Juuuust a bit outside, and ${L} paid the tab.`,
+    ], 9);
   }
   if (p3.trim()) P.push(p3.trim());
+
+  // ---- P4: the gut-punch / sign-off ----
+  let p4 = '';
+  if (loser.benchRegret) {
+    const r = loser.benchRegret, bn = playerName(r.bench.player, r.bench.id), sn = playerName(r.starter.player, r.starter.id);
+    p4 = pick([
+      `Here's the gut-punch ${L} will chew on all week: ${bn} put up ${r.bench.points} in street clothes on the bench while ${sn} mailed in ${r.starter.points} from the starting lineup. A ${r.diff}-point coaching decision in a ${margin}-point loss. Somebody oughta be fired — trouble is, he's also the GM.`,
+      `File it under Managerial Malpractice: ${r.diff} points of ${bn} rotting on ${L}'s bench while ${sn} no-showed in the lineup — in a ${margin}-point loss. Print it, frame it, weep.`,
+    ], 10);
+  } else if (winner.benchRegret) {
+    const r = winner.benchRegret;
+    p4 = `Even in the win, ${W} left ${r.bench.points} parked on the bench in ${playerName(r.bench.player, r.bench.id)}. Champagne problems.`;
+  } else {
+    p4 = pick([
+      `As for ${L} — there's always next week, though I wouldn't put the bar tab on it.`,
+      `${W} moves on. ${L} goes home and stares at the ceiling. That's the ballgame.`,
+      `And that's why they play the games, folks. Somewhere a beer is getting warm waiting for ${L} to feel better.`,
+    ], 11);
+  }
+  P.push(p4);
 
   return { id:'g'+ctx.mid, headline, dek, paragraphs:P, winner, loser, tie, margin, combined };
 }
 
 function writeLead(stories, week, leagueName) {
-  if (!stories.length) return { headline:`Week ${week} around ${leagueName}`, standfirst:'The scores are still coming in.', paragraphs:[] };
+  if (!stories.length) return { headline:`Week ${week}: Quiet in the Booth`, standfirst:'Scores still trickling in.', paragraphs:[] };
   const teams = stories.flatMap(s=>[s.winner,s.loser]);
   const high = [...teams].sort((a,b)=>b.score-a.score)[0];
   const low  = [...teams].sort((a,b)=>a.score-b.score)[0];
   const closest = [...stories].sort((a,b)=>a.margin-b.margin)[0];
   const biggest = [...stories].sort((a,b)=>b.margin-a.margin)[0];
   const top = [...teams.flatMap(t=>t.starters)].sort((a,b)=>b.points-a.points)[0];
-  const headline = seededPick([
-    `Week ${week}: ${high.manager} sets the pace`,
-    `Week ${week} around the league: chalk, chaos, and a ${closest.margin}-point thriller`,
-    `The Week ${week} wrap: ${top?playerName(top.player,top.id):'the headliner'} steals the show`,
-  ], Math.round(high.score+week));
+  const s = Math.round(high.score + week);
+  const pick = (arr, o) => seededPick(arr, s + o);
+  const topName = top ? playerName(top.player, top.id) : 'the studs';
+  const headline = pick([
+    `Week ${week}: ${high.manager} Lights the Scoreboard on Fire`,
+    `Week ${week} From the Booth: Chaos, Carnage, and a ${closest.margin}-Point Heart Attack`,
+    `Week ${week}: ${topName} Runs the Whole Show`,
+  ], 1);
   const P = [];
-  let p1 = `${high.manager} posted the week's top score at ${high.score}`;
-  if (top && top.points > 0) { p1 += `, powered by ${playerName(top.player,top.id)}'s ${top.points}`; if (top.line && hasProduction(top.stats)) p1 += ` (${top.line})`; }
-  p1 += `. At the other end, ${low.manager} managed only ${low.score}.`;
+  let p1 = pick([`Goooood evening, and welcome back to the booth. `, `Well, folks, pull up a stool. `, `He-llo again, everybody. `], 2) +
+    `${high.manager} torched the league for a week-high ${high.score}`;
+  if (top && top.points > 0) p1 += `, and you can thank ${topName}, who ${top.line && hasProduction(top.stats) ? `went off for ${top.points} on ${top.line}` : `dropped ${top.points}`}`;
+  p1 += `. Meanwhile, down in the cellar, ${low.manager} scraped together a grand total of ${low.score}. Juuuust a bit outside.`;
   P.push(p1);
-  if (closest && closest !== biggest)
-    P.push(`The nerviest finish belonged to ${closest.winner.manager}, who slipped past ${closest.loser.manager} by ${closest.margin}. The week's most lopsided result: ${biggest.winner.manager} over ${biggest.loser.manager} by ${biggest.margin}.`);
-  return { headline, standfirst:`${leagueName} · Week ${week} · your automated front-office briefing`, paragraphs:P };
+  if (closest && !closest.tie) {
+    let p2 = `The heart-attack special went to ${closest.winner.manager}, who survived ${closest.loser.manager} by ${closest.margin} — the kind of finish that ages a man.`;
+    if (biggest && biggest !== closest) p2 += ` On the other end of the dignity spectrum, ${biggest.winner.manager} took ${biggest.loser.manager} out behind the woodshed by ${biggest.margin}.`;
+    P.push(p2);
+  }
+  P.push(pick([`Grab a cold one. Let's call the games.`, `Now — to the tape.`, `Bartender, another round. Here's how it all shook out.`], 3));
+  return { headline, standfirst:`${leagueName} · Week ${week} · called by Harry, half in the bag`, paragraphs:P };
 }
 
 function writeAwards(stories) {
