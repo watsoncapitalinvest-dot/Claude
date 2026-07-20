@@ -948,6 +948,7 @@ async function generateChatArticleAI(raw, angle) {
   const hist = historyBlurb();
   const doss = dossierBlurb();
   const recs = recordsBlurb();
+  const brief = quizBrief(S.activeWeek);
   const system =
 `You are the Water Cooler columnist for "${mag} Dynasty League Magazine," a fantasy-football league magazine written for the guys in the league. Your beat is the league group chat.
 
@@ -960,7 +961,7 @@ Write ONE column that is a SUMMARY and COMMENTARY on the week's group chat — a
 - Length: 3 to 5 tight paragraphs. Every sentence earns its place.
 
 ${angleLine}
-${hist ? '\n' + hist + '\n' : ''}${recs ? '\n' + recs + '\n' : ''}${doss ? '\n' + doss + '\n' : ''}
+${brief ? '\n' + brief + '\n' : ''}${hist ? '\n' + hist + '\n' : ''}${recs ? '\n' + recs + '\n' : ''}${doss ? '\n' + doss + '\n' : ''}
 Return STRICT JSON, no markdown, no preamble, exactly this shape:
 {"headline": "punchy title, no clickbait fluff", "dek": "one-line standfirst under the headline", "paragraphs": ["para 1", "para 2", "..."]}`;
 
@@ -1597,7 +1598,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, money:{}, predraft:null, currentPredraft:null, dossier:null, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, money:{}, predraft:null, currentPredraft:null, dossier:null, records:null, investigations:null, artArchive:[], quiz:{}, featureOverride:{}, calendar:null, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null, username:'drsexy' },
@@ -1767,6 +1768,129 @@ ${top}
 Most championships: ${titles}.
 Use these for accurate callbacks to titles, dynasties and droughts; never invent records that contradict this.`;
 }
+// ---- SCFL Investigations: the recurring long-form segment ------------------
+// A library of the league's big cold cases (Microfichegate, the Trade Audit).
+// Runs a few times a year, not weekly — the editor slots one as an issue's
+// feature when it's time. Baked in as investigations.json.
+async function loadBundledInvestigations() {
+  if (S.investigations && S.investigations.length) return;
+  try {
+    const r = await fetch('investigations.json', { cache: 'force-cache' });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d && d.investigations) { S.investigations = d.investigations; S.investigationsMeta = d.segment || null;
+      if (S.tab === 'news' && !S.reading) renderNews(); }
+  } catch {}
+}
+function investigationById(id) { return (S.investigations || []).find(i => i.id === id) || null; }
+// Convert an investigation into the article shape the issue feature renders.
+function investigationToFeature(inv) {
+  if (!inv) return null;
+  return { flag: inv.flag || 'SCFL INVESTIGATIONS', kicker: inv.kicker || 'SCFL NewsRoom · Investigations',
+    headline: inv.headline, dek: inv.subhead || inv.dek || '', byline: inv.byline || 'The SCFL NewsRoom',
+    dateline: inv.dateline || '', paragraphs: inv.paragraphs || [], investigationId: inv.id };
+}
+// Per-week feature override: run an investigation as this issue's feature.
+function featOverKey(){ return 'gg.featover.' + (S.leagueId || 'x'); }
+function loadFeatureOverride(){ try { S.featureOverride = JSON.parse(localStorage.getItem(featOverKey()) || '{}') || {}; } catch { S.featureOverride = {}; } }
+function saveFeatureOverride(){ try { localStorage.setItem(featOverKey(), JSON.stringify(S.featureOverride || {})); } catch {} }
+
+// ---- Searchable Article Archive --------------------------------------------
+// Every article the magazine publishes — the AI Water Cooler columns, the
+// weekly lead, features, investigations — gets a permanent, searchable record.
+function archiveKey(){ return 'gg.artarchive.' + (S.leagueId || 'x'); }
+function loadArtArchive(){ try { S.artArchive = JSON.parse(localStorage.getItem(archiveKey()) || '[]'); } catch { S.artArchive = []; } }
+function saveArtArchive(){ try { localStorage.setItem(archiveKey(), JSON.stringify((S.artArchive || []).slice(0, 400))); } catch {} }
+// Normalize + dedupe (by kind+week+headline) and store. Safe to call often.
+function archiveArticle(a, meta) {
+  if (!a || !a.headline || !(a.paragraphs || []).length) return;
+  meta = meta || {};
+  if (S.sample) return; // don't archive sample-issue filler
+  const rec = {
+    id: a.id || ('art_' + (a.kind || 'x') + '_' + (meta.week || '') + '_' + a.headline.slice(0, 24).replace(/\W+/g, '')),
+    kind: a.kind || meta.kind || 'article',
+    section: meta.section || a.byline || 'The Magazine',
+    week: meta.week != null ? meta.week : (a.week != null ? a.week : null),
+    season: meta.season || S.season || '',
+    byline: a.byline || meta.section || '',
+    headline: a.headline, dek: a.dek || a.subhead || '',
+    paragraphs: (a.paragraphs || []).map(String),
+    savedAt: (meta.savedAt || nowMs()),
+  };
+  const sig = rec.kind + '|' + (rec.week != null ? rec.week : '') + '|' + rec.headline.toLowerCase();
+  S.artArchive = (S.artArchive || []).filter(x => (x.kind + '|' + (x.week != null ? x.week : '') + '|' + x.headline.toLowerCase()) !== sig);
+  S.artArchive.unshift(rec);
+  saveArtArchive();
+}
+function nowMs(){ try { return Date.now(); } catch { return 0; } }
+// Sweep an open issue's articles (lead, feature, water cooler) into the archive.
+function archiveIssue(nl, deskArts) {
+  if (!nl || S.sample) return;
+  const wk = nl.week, meta = { week: wk, season: S.season || '' };
+  if (nl.lead) archiveArticle({ kind: 'lead', headline: nl.lead.headline, dek: nl.lead.standfirst, byline: nl.lead.byline || 'The Column', paragraphs: nl.lead.paragraphs }, { ...meta, section: 'The Lead' });
+  if (nl.feature) archiveArticle({ kind: nl.feature.investigationId ? 'investigation' : 'feature', headline: nl.feature.headline, dek: nl.feature.dek, byline: nl.feature.byline || 'League Feature', paragraphs: nl.feature.paragraphs }, { ...meta, section: nl.feature.flag || 'League Feature' });
+  (deskArts || []).forEach(a => archiveArticle(a, { ...meta, section: 'The Water Cooler' }));
+}
+
+// ---- Tuesday Questionnaire: the editor's weekly brief ----------------------
+// Answered Tuesday morning; its answers become the brief the AI writers build
+// the Thursday issue around. One set of answers per week.
+const QUIZ_FIELDS = [
+  { k: 'storyline', q: 'The one storyline of the week', hint: 'What will everyone be talking about? The thread the whole issue hangs on.' },
+  { k: 'winner', q: 'Who’s feeling themselves', hint: 'The manager riding highest — and why they won’t shut up about it.' },
+  { k: 'loser', q: 'Who’s in crisis', hint: 'Whose season (or week) is falling apart, and how they’re coping.' },
+  { k: 'beef', q: 'Beef of the week', hint: 'Any feud, callout, or running argument in the chat worth immortalizing.' },
+  { k: 'trade', q: 'Trades / moves that mattered', hint: 'Deals, waiver steals, or moves that changed the picture.' },
+  { k: 'quote', q: 'Quote of the week', hint: 'A real line from the chat too good to leave out — with who said it.' },
+  { k: 'prediction', q: 'Bold prediction', hint: 'Something to put on record now and check later.' },
+  { k: 'wildcard', q: 'Anything else the desk should know', hint: 'Injuries, side bets, off-field news, inside jokes — anything.' },
+];
+function quizKey(){ return 'gg.quiz.' + (S.leagueId || 'x'); }
+function loadQuiz(){ try { S.quiz = JSON.parse(localStorage.getItem(quizKey()) || '{}') || {}; } catch { S.quiz = {}; } }
+function saveQuiz(){ try { localStorage.setItem(quizKey(), JSON.stringify(S.quiz || {})); } catch {} }
+function quizFor(wk){ return (S.quiz && S.quiz[wk]) || null; }
+// The filled-in questionnaire, as an editor's brief for the AI writers.
+function quizBrief(wk) {
+  const q = quizFor(wk); if (!q) return '';
+  const lines = QUIZ_FIELDS.map(f => (q[f.k] && q[f.k].trim()) ? `- ${f.q}: ${q[f.k].trim()}` : null).filter(Boolean);
+  if (!lines.length) return '';
+  return `EDITOR'S BRIEF FOR THIS ISSUE (the league manager filled this out — treat it as the assignment. Build the coverage around these, in the magazine's voice):\n${lines.join('\n')}`;
+}
+// ---- Editorial Calendar ----------------------------------------------------
+// Important dates: the weekly publish rhythm (questionnaire Tue → issue Thu),
+// investigation specials, and league events to cover and plan around. Ships
+// with sensible defaults; the manager can add their own dates.
+function calKey(){ return 'gg.calendar.' + (S.leagueId || 'x'); }
+function loadCalendar(){ try { S.calendar = JSON.parse(localStorage.getItem(calKey()) || 'null'); } catch { S.calendar = null; } if (!S.calendar) S.calendar = defaultCalendar(); }
+function saveCalendar(){ try { localStorage.setItem(calKey(), JSON.stringify(S.calendar || [])); } catch {} }
+function todayISO(){ try { return new Date().toISOString().slice(0, 10); } catch { return '2026-07-20'; } }
+// A default season calendar the manager can edit. Types: publish, questionnaire,
+// investigation, league (draft/trade deadline/playoffs), event.
+function defaultCalendar() {
+  const yr = (S.season || (S.nflState && S.nflState.season) || '2026');
+  return [
+    { id: 'draft', date: yr + '-08-28', type: 'league', title: 'SCFL Draft Day', note: 'The big one. Pre-Draft Issue publishes the morning of.' },
+    { id: 'predraft', date: yr + '-08-27', type: 'publish', title: 'Pre-Draft Issue drops', note: 'Rankings, storylines, and the feature.' },
+    { id: 'kickoff', date: yr + '-09-04', type: 'league', title: 'Week 1 Kickoff', note: 'Season opens. Weekly magazine begins.' },
+    { id: 'trade-deadline', date: yr + '-11-18', type: 'league', title: 'Trade Deadline', note: 'Last day to deal. Peak Water Cooler chaos.' },
+    { id: 'trade-audit', date: yr + '-11-19', type: 'investigation', title: 'SCFL Investigations: The Trade Audit', note: 'Mid-season special — the Machines ledger, released.' },
+    { id: 'playoffs', date: yr + '-12-11', type: 'league', title: 'Playoffs Begin', note: 'Win or go home. Cover every game.' },
+    { id: 'championship', date: yr + '-12-25', type: 'league', title: 'Championship Week', note: 'The title, the trophy, the shot out of it.' },
+  ];
+}
+function calTypeMeta(t){ return ({
+  publish: { emoji: '📰', label: 'Issue', color: 'var(--accent)' },
+  questionnaire: { emoji: '📝', label: 'Brief', color: '#facc15' },
+  investigation: { emoji: '🔍', label: 'Investigation', color: '#c084fc' },
+  league: { emoji: '🏈', label: 'League', color: '#38bdf8' },
+  event: { emoji: '📌', label: 'Event', color: 'var(--dim)' },
+})[t] || { emoji: '📌', label: 'Event', color: 'var(--dim)' }; }
+function calUpcoming(n){ const today = todayISO();
+  return [...(S.calendar || [])].filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date)).slice(0, n || 99); }
+function calPrettyDate(iso){ try { const d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }); } catch { return iso; } }
+function calDaysAway(iso){ try { const ms = new Date(iso + 'T12:00:00') - new Date(todayISO() + 'T12:00:00');
+  const d = Math.round(ms / 86400000); return d === 0 ? 'today' : d === 1 ? 'tomorrow' : d > 0 ? `in ${d} days` : `${-d}d ago`; } catch { return ''; } }
 // A compact dossier brief for the AI writers' system prompt.
 function dossierBlurb() {
   const d = S.dossier; if (!d) return '';
@@ -2241,6 +2365,170 @@ function showRecords() {
     ${supCard ? `<div class="seclabel">History</div>${supCard}` : ''}
   </div>`;
 }
+// ---- Newsroom HQ: the weekly dashboard, checklist, questionnaire + calendar -
+function showDashboard() {
+  const wk = S.activeWeek;
+  const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>`;
+  const q = quizFor(wk) || {};
+  const quizDone = QUIZ_FIELDS.filter(f => (q[f.k] || '').trim()).length;
+  const hasChat = (S.desk || []).some(a => a.week === wk);
+  const hasPower = !!(S.power && S.power[wk] && S.power[wk].length);
+  const hasMoney = !!(S.money && S.money[wk] && S.money[wk].length);
+  const hasCover = !!coverImgAt(wk);
+  const ovId = S.featureOverride && S.featureOverride[wk];
+  const feat = ovId ? investigationById(ovId) : null;
+  const item = (done, ic, label, note, act, kind) => `<div class="dash-item" data-act="${act}"${kind ? ` data-kind="${kind}"` : ''} style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer;background:${done ? 'rgba(49,209,88,.06)' : 'transparent'}">
+    <span style="font-size:20px">${done ? '✅' : '⬜'}</span>
+    <div style="flex:1"><div style="font-weight:800;font-size:14px">${ic} ${label}</div>
+      <div class="faint" style="font-size:12px;margin-top:1px">${note}</div></div>
+    <span class="faint" style="font-size:18px">›</span></div>`;
+  const checklist = `<div class="card">
+    <div class="at" style="margin:0 0 4px">This Week's Newsroom Tasks</div>
+    <div class="faint" style="font-size:12px;margin-bottom:12px">Answer the brief Tuesday, build through the week, publish by Thursday.</div>
+    ${item(quizDone > 0, '📝', "Tuesday brief / questionnaire", quizDone ? `${quizDone}/${QUIZ_FIELDS.length} answered` : 'Set the week’s storylines for the desk', 'questionnaire')}
+    ${item(hasChat, '💬', 'Upload chat → Water Cooler', hasChat ? 'Column written' : 'Drop this week’s group chat', 'desk')}
+    ${item(hasPower, '📊', 'Power Rankings', hasPower ? 'Uploaded' : 'Upload The Machines’ rankings', 'desk')}
+    ${item(hasMoney, '💰', 'Money Lines', hasMoney ? 'Uploaded' : 'Upload Pork Chop Express’ board', 'desk')}
+    ${item(hasCover, '🎨', 'Cover art', hasCover ? 'Cover set' : 'Generate the cover direction', 'cover-art', 'week')}
+    ${item(!!feat, '🔍', 'Feature / Investigation', feat ? feat.headline : 'Optional — run an SCFL Investigation', 'investigations')}
+    ${item(false, '📰', 'Publish the issue', 'Proof it, then publish the final PDF', 'publish-draft', 'week')}
+  </div>`;
+  const up = calUpcoming(5).map(e => { const m = calTypeMeta(e.type);
+    return `<div class="dash-item" data-act="calendar" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:7px;cursor:pointer">
+      <span style="font-size:18px">${m.emoji}</span>
+      <div style="flex:1"><div style="font-weight:800;font-size:13px">${esc(e.title)}</div>
+        <div class="faint" style="font-size:11px">${calPrettyDate(e.date)} · ${calDaysAway(e.date)}</div></div>
+      <span style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.4px;color:${m.color}">${m.label}</span></div>`; }).join('');
+  const cal = `<div class="card"><div class="row" style="justify-content:space-between;align-items:baseline">
+      <div class="at" style="margin:0">🗓️ Coming Up</div>
+      <button class="linkbtn" data-act="calendar">full calendar ›</button></div>
+    <div style="margin-top:10px">${up || '<div class="faint" style="font-size:13px">No upcoming dates.</div>'}</div></div>`;
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    <div class="setup-logo" style="font-size:24px">🗞️ Newsroom HQ</div>
+    <p class="muted" style="margin-top:4px">Your week at a glance — Week ${wk}. Everything the issue needs and every date to plan around.</p>
+    ${checklist}
+    <div class="seclabel">The Calendar</div>${cal}
+    <div class="seclabel">The Tuesday Brief</div>${questionnaireCard(wk)}
+  </div>`;
+}
+// The questionnaire form (used inside the dashboard).
+function questionnaireCard(wk) {
+  const q = quizFor(wk) || {};
+  return `<div class="card">
+    <div class="faint" style="font-size:12px;margin-bottom:10px">Fill this out Tuesday morning. The desk builds the issue — the Water Cooler and the coverage — around your answers.</div>
+    ${QUIZ_FIELDS.map(f => `<div style="margin-bottom:12px">
+      <label class="label">${esc(f.q)}</label>
+      <div class="faint" style="font-size:11px;margin:2px 0 5px">${esc(f.hint)}</div>
+      <textarea class="input" style="height:58px" data-quiz="${f.k}" placeholder="…">${esc(q[f.k] || '')}</textarea>
+    </div>`).join('')}
+    <button class="btn" data-act="quiz-save" data-week="${wk}">Save the brief</button>
+    ${Object.keys(q).length ? `<button class="btn ghost" data-act="quiz-clear" data-week="${wk}" style="margin-top:8px">Clear this week</button>` : ''}
+  </div>`;
+}
+function showCalendar() {
+  const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>`;
+  const today = todayISO();
+  const all = [...(S.calendar || [])].sort((a, b) => a.date.localeCompare(b.date));
+  const future = all.filter(e => e.date >= today), past = all.filter(e => e.date < today).reverse();
+  const row = e => { const m = calTypeMeta(e.type); const soon = e.date >= today;
+    return `<div class="card" style="border-left:3px solid ${m.color};${soon ? '' : 'opacity:.6'}">
+      <div class="row" style="justify-content:space-between;align-items:baseline">
+        <div style="font-weight:900;font-size:15px">${m.emoji} ${esc(e.title)}</div>
+        <span style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.4px;color:${m.color}">${m.label}</span></div>
+      <div class="dt" style="margin-top:3px">${calPrettyDate(e.date)} · <span class="faint">${calDaysAway(e.date)}</span></div>
+      ${e.note ? `<div class="faint" style="font-size:12px;margin-top:5px;line-height:1.5">${esc(e.note)}</div>` : ''}
+      ${e.custom ? `<button class="linkbtn" data-act="cal-delete" data-id="${esc(e.id)}" style="margin-top:6px">remove</button>` : ''}
+    </div>`; };
+  const addCard = `<div class="card" style="border-color:var(--accent-d)">
+    <div class="at" style="margin:0 0 8px">Add a date</div>
+    <label class="label">What</label>
+    <input id="calTitle" class="input" placeholder="e.g. Keeper deadline, draft party…" />
+    <div class="row" style="gap:8px;margin-top:8px">
+      <div style="flex:1"><label class="label">When</label><input id="calDate" type="date" class="input" value="${today}" /></div>
+      <div style="flex:1"><label class="label">Type</label>
+        <select id="calType" class="input">
+          <option value="league">🏈 League event</option>
+          <option value="publish">📰 Issue / release</option>
+          <option value="investigation">🔍 Investigation</option>
+          <option value="event">📌 Other</option>
+        </select></div>
+    </div>
+    <label class="label" style="margin-top:8px">Note (optional)</label>
+    <input id="calNote" class="input" placeholder="Details to plan around…" />
+    <button class="btn" data-act="cal-add" style="margin-top:10px">Add to calendar</button>
+  </div>`;
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    <div class="setup-logo" style="font-size:24px">🗓️ Editorial Calendar</div>
+    <p class="muted" style="margin-top:4px">Release dates, investigation specials, and league events to cover and plan around.</p>
+    <div class="seclabel">Upcoming</div>
+    ${future.length ? future.map(row).join('') : '<div class="card"><div class="dt">Nothing upcoming — add a date below.</div></div>'}
+    ${addCard}
+    ${past.length ? `<div class="seclabel">Past</div>${past.slice(0, 12).map(row).join('')}` : ''}
+  </div>`;
+}
+function showInvestigations() {
+  const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>`;
+  const list = S.investigations || [];
+  const wk = S.activeWeek;
+  const meta = S.investigationsMeta || { name: 'SCFL Investigations', cadence: 'A few times a year — the real cold cases.' };
+  if (!list.length) {
+    app.innerHTML = `<div style="padding-bottom:24px">${back}
+      <div class="setup-logo" style="font-size:24px">🔍 SCFL Investigations</div>
+      <p class="muted" style="margin-top:4px">${esc(meta.cadence)}</p>
+      <div class="card"><div class="dt">No investigations baked in yet.</div></div></div>`;
+    return;
+  }
+  const cards = list.map(inv => {
+    const running = S.featureOverride && S.featureOverride[wk] === inv.id;
+    const held = inv.status && /HELD|MID-SEASON/i.test(inv.status);
+    return `<div class="card" style="border-color:${running ? 'var(--accent)' : 'var(--line)'}">
+      <div class="feat-flag">${esc(inv.flag || 'SCFL INVESTIGATIONS')}</div>
+      <div style="font-family:var(--serif);font-weight:900;font-size:21px;line-height:1.15;margin-top:8px">${esc(inv.headline)}</div>
+      ${inv.subhead ? `<div class="dt" style="margin-top:6px;font-style:italic">${esc(inv.subhead)}</div>` : ''}
+      <div class="faint" style="font-size:11px;margin-top:8px">${esc(inv.dateline || '')} · ${esc(inv.byline || '')} · ${(inv.paragraphs || []).length} paragraphs${inv.status ? ` · <b style="color:#facc15">${esc(inv.status)}</b>` : ''}</div>
+      <div class="row" style="gap:8px;margin-top:12px">
+        <button class="btn ghost" data-act="inv-read" data-id="${esc(inv.id)}" style="flex:1">Read</button>
+        <button class="btn" data-act="${running ? 'inv-unfeature' : 'inv-feature'}" data-id="${esc(inv.id)}" style="flex:1">${running ? '✓ Running this week' : 'Run as feature'}</button>
+      </div>${held ? `<div class="faint" style="font-size:11px;margin-top:8px">⏳ Written and ready — planned for mid-season release.</div>` : ''}</div>`;
+  }).join('');
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    <div class="setup-logo" style="font-size:24px">🔍 SCFL Investigations</div>
+    <p class="muted" style="margin-top:4px">${esc(meta.cadence)} Slot one as the current issue's feature when it's time.</p>
+    ${cards}</div>`;
+}
+function showInvestigationRead(id) {
+  const inv = investigationById(id); if (!inv) { toast('Not found'); return showInvestigations(); }
+  const back = `<button class="btn ghost" data-act="investigations" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Investigations</button>`;
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    ${articleHtml(investigationToFeature(inv), true)}</div>`;
+}
+// ---- Searchable Article Archive view ---------------------------------------
+function showArticleArchive() {
+  const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>`;
+  const term = (S.archiveQuery || '').trim().toLowerCase();
+  let list = [...(S.artArchive || [])];
+  if (term) list = list.filter(a => (a.headline + ' ' + a.dek + ' ' + a.byline + ' ' + a.section + ' ' + (a.paragraphs || []).join(' ') + ' week ' + (a.week != null ? a.week : '')).toLowerCase().includes(term));
+  const kindLabel = k => ({ chat: '💬 Water Cooler', lead: '📰 The Lead', feature: '📰 Feature', investigation: '🔍 Investigation' })[k] || '📄 Article';
+  const cards = list.map(a => `<div class="card" data-act="arch-read" data-id="${esc(a.id)}" style="cursor:pointer">
+    <div class="faint" style="font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase">${kindLabel(a.kind)}${a.week != null ? ` · Week ${a.week}` : ''}${a.season ? ` · ${esc(String(a.season))}` : ''}</div>
+    <div style="font-family:var(--serif);font-weight:900;font-size:18px;line-height:1.15;margin-top:5px">${esc(a.headline)}</div>
+    ${a.dek ? `<div class="dt" style="margin-top:4px">${esc(a.dek)}</div>` : ''}
+    <div class="faint" style="font-size:11px;margin-top:6px">${esc(a.byline || a.section || '')}</div></div>`).join('');
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    <div class="setup-logo" style="font-size:24px">🗄️ Article Archive</div>
+    <p class="muted" style="margin-top:4px">Every article the magazine has published — searchable. ${(S.artArchive || []).length} on file.</p>
+    <div class="card"><input id="archSearch" class="input" placeholder="Search headlines, text, bylines, week…" value="${esc(S.archiveQuery || '')}" data-act="arch-search-input" /></div>
+    ${cards || `<div class="card"><div class="dt">${term ? 'No articles match “' + esc(term) + '.”' : 'No articles archived yet. Publish an issue and its stories land here automatically.'}</div></div>`}
+  </div>`;
+  const inp = $('#archSearch'); if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+}
+function showArchivedArticle(id) {
+  const a = (S.artArchive || []).find(x => x.id === id); if (!a) { toast('Not found'); return showArticleArchive(); }
+  const back = `<button class="btn ghost" data-act="archive-articles" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Article Archive</button>`;
+  const isFeat = a.kind === 'feature' || a.kind === 'investigation';
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    ${articleHtml({ headline: a.headline, dek: a.dek, byline: a.byline, paragraphs: a.paragraphs, flag: a.section }, isFeat)}</div>`;
+}
 function historyImportCard() {
   const n = (S.espnHist && S.espnHist.seasons && S.espnHist.seasons.length) || 0;
   return `<div class="card">
@@ -2568,7 +2856,7 @@ async function enterGuest(params) {
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster: null };
     S.values = null; S.newsCache = {}; S.history = null; S.desk = [];
     const d = params.get('desk'); if (d) { try { S.desk = JSON.parse(b64dec(d)) || []; } catch { S.desk = []; } }
-    renderGuestShell(); renderNews(); loadBundledHistory(); loadBundledDossier(); loadBundledRecords();
+    renderGuestShell(); renderNews(); loadBundledHistory(); loadBundledDossier(); loadBundledRecords(); loadBundledInvestigations();
   } catch (e) {
     app.innerHTML = empty("Couldn't open this issue", 'The league may be private, or the link is incomplete.');
   }
@@ -2667,7 +2955,7 @@ async function enterApp() {
     const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
     const myRoster = rosters.find(r => r.owner_id === S.user.user_id) || null;
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster };
-    loadDesk(); loadPower(); loadMoney(); loadPredraft(); loadDossier(); loadRecords(); loadEspnHist(); loadBundledHistory(); loadBundledDossier(); loadBundledRecords(); loadCoverImg();
+    loadDesk(); loadPower(); loadMoney(); loadPredraft(); loadDossier(); loadRecords(); loadArtArchive(); loadQuiz(); loadFeatureOverride(); loadCalendar(); loadEspnHist(); loadBundledHistory(); loadBundledDossier(); loadBundledRecords(); loadBundledInvestigations(); loadCoverImg();
     S.values = null; S.newsCache = {}; S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:false };
     S.trade = { partnerId:null, give:new Set(), get:new Set() };
     // Season history via Sleeper's previous_league_id chain — the reliable way
@@ -2767,11 +3055,14 @@ function coverToolsInner() {
   if (S.guest) return `${share}${pdf}`;
   const exit = S.sample ? `<button class="ctool" data-act="exit-sample" title="Exit sample">✕</button>` : '';
   return `${share}${pdf}${exit}
+    <button class="ctool" data-act="dashboard" title="Newsroom HQ — checklist, brief & calendar">🗞️</button>
     <button class="ctool" data-act="desk" title="Newsroom desk">✍️</button>
     <button class="ctool" data-act="cover-art" title="Cover art director">🎨</button>
     <button class="ctool" data-act="predraft" title="Pre-Draft Issue">🏈</button>
+    <button class="ctool" data-act="investigations" title="SCFL Investigations">🔍</button>
     <button class="ctool" data-act="dossier" title="League chat dossier">📓</button>
     <button class="ctool" data-act="history" title="Record book">🏆</button>
+    <button class="ctool" data-act="archive-articles" title="Article archive (searchable)">🗄️</button>
     <button class="ctool" data-act="archive" title="Back issues">📚</button>
     <button class="ctool" data-act="settings" title="Settings">⚙</button>`;
 }
@@ -3229,11 +3520,15 @@ async function renderNews() {
       : `<div class="offtools">
           <div class="seclabel" style="text-align:center;margin-bottom:8px">Newsroom tools</div>
           <div class="offtools-row">
+            <button class="offtool" data-act="dashboard"><span class="offtool-ic">🗞️</span>Newsroom HQ</button>
             <button class="offtool" data-act="predraft-view"><span class="offtool-ic">🏈</span>Pre-Draft Issue</button>
             <button class="offtool" data-act="cover-art"><span class="offtool-ic">🎨</span>Cover Art</button>
             <button class="offtool" data-act="desk"><span class="offtool-ic">✍️</span>Newsroom Desk</button>
+            <button class="offtool" data-act="calendar"><span class="offtool-ic">🗓️</span>Calendar</button>
+            <button class="offtool" data-act="investigations"><span class="offtool-ic">🔍</span>Investigations</button>
             <button class="offtool" data-act="dossier"><span class="offtool-ic">📓</span>Chat Dossier</button>
             <button class="offtool" data-act="records"><span class="offtool-ic">📖</span>Record Book</button>
+            <button class="offtool" data-act="archive-articles"><span class="offtool-ic">🗄️</span>Article Archive</button>
           </div></div>`;
     setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint) + demoBtn + offSeasonTools);
     return;
@@ -3248,7 +3543,11 @@ async function renderNews() {
   if (umoney && umoney.length) { nl.moneyLines = umoney; nl.moneySource = 'commish'; }
   else if (S.sample) { nl.moneyLines = buildAutoMoneyLines(nl); nl.moneySource = 'auto'; }
   else { nl.moneyLines = null; nl.moneySource = null; }
+  // Editor can run an SCFL Investigation as this issue's feature (a few times a year).
+  const ovId = S.featureOverride && S.featureOverride[wk];
+  if (ovId) { const inv = investigationById(ovId); if (inv) nl.feature = investigationToFeature(inv); }
   const deskArts = (S.desk || []).filter(a => a.week === wk);
+  archiveIssue(nl, deskArts);
   setContent(coverHtml(nl) + seasonBar() + weekStepper() + composeBar(wk, deskArts) + issueBodyHtml(nl, deskArts, false));
 }
 // The weekly editor prompt: what this issue still needs, then publish it.
@@ -3369,7 +3668,8 @@ function issueBodyHtml(nl, deskArts, frozen) {
 // A generic editorial article (feature / desk piece) with byline.
 function articleHtml(a, feature, deskId) {
   return `<div class="card story${feature ? ' feature' : ''}">
-    ${feature ? `<div class="feat-flag">FEATURE</div>` : `<div class="byline">💬 ${esc(a.byline || 'The Desk')}${deskId ? ` · <button class="linkbtn" data-act="desk-delete" data-id="${esc(deskId)}">delete</button>` : ''}</div>`}
+    ${feature ? `<div class="feat-flag">${esc(a.flag || 'FEATURE')}</div>` : `<div class="byline">💬 ${esc(a.byline || 'The Desk')}${deskId ? ` · <button class="linkbtn" data-act="desk-delete" data-id="${esc(deskId)}">delete</button>` : ''}</div>`}
+    ${feature && a.dateline ? `<div class="byline" style="margin-bottom:6px">${esc(a.dateline)}</div>` : ''}
     <h2>${esc(a.headline)}</h2>
     ${a.dek ? (feature ? `<div class="pullquote">“${esc(a.dek)}”</div>` : `<div class="dek">${esc(a.dek)}</div>`) : ''}
     ${a.paragraphs.map((p,i)=>`<p class="body">${feature && i===0 ? '<span class="drop">'+esc(p.charAt(0))+'</span>'+esc(p.slice(1)) : esc(p)}</p>`).join('')}
@@ -3823,6 +4123,7 @@ async function deskGenerate() {
   if (!art) { if (err) err.textContent = "Couldn't turn that into an article. Make sure it's a chat export."; return; }
   art.week = S.activeWeek;
   S.desk.unshift(art); saveDesk();
+  archiveArticle(art, { week: S.activeWeek, section: 'The Water Cooler' });
   S.deskChatText = null;
   delete S.newsCache[S.activeWeek];
   S.tab = 'news'; renderShell(); renderTab();
@@ -3912,6 +4213,29 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'history') return showHistory();
   if (act === 'dossier') return showDossier();
   if (act === 'records') return showRecords();
+  if (act === 'dashboard' || act === 'questionnaire') return showDashboard();
+  if (act === 'calendar') return showCalendar();
+  if (act === 'investigations') return showInvestigations();
+  if (act === 'inv-read') return showInvestigationRead(t.dataset.id);
+  if (act === 'inv-feature') { S.featureOverride = S.featureOverride || {}; S.featureOverride[S.activeWeek] = t.dataset.id; saveFeatureOverride(); delete S.newsCache[S.activeWeek]; toast('Running as this week’s feature'); return showInvestigations(); }
+  if (act === 'inv-unfeature') { if (S.featureOverride) delete S.featureOverride[S.activeWeek]; saveFeatureOverride(); delete S.newsCache[S.activeWeek]; toast('Removed from this week'); return showInvestigations(); }
+  if (act === 'archive-articles') return showArticleArchive();
+  if (act === 'arch-read') return showArchivedArticle(t.dataset.id);
+  if (act === 'quiz-save') {
+    const wk = t.dataset.week; const ans = {};
+    document.querySelectorAll('[data-quiz]').forEach(el => { const v = (el.value || '').trim(); if (v) ans[el.dataset.quiz] = v; });
+    S.quiz = S.quiz || {}; if (Object.keys(ans).length) S.quiz[wk] = ans; else delete S.quiz[wk];
+    saveQuiz(); delete S.newsCache[wk]; toast('Brief saved — the desk will build around it'); return showDashboard();
+  }
+  if (act === 'quiz-clear') { if (S.quiz) delete S.quiz[t.dataset.week]; saveQuiz(); delete S.newsCache[t.dataset.week]; toast('Brief cleared'); return showDashboard(); }
+  if (act === 'cal-add') {
+    const title = ($('#calTitle') || {}).value || ''; const date = ($('#calDate') || {}).value || '';
+    const type = ($('#calType') || {}).value || 'event'; const note = ($('#calNote') || {}).value || '';
+    if (!title.trim() || !date) { toast('Add a title and a date'); return; }
+    S.calendar = S.calendar || []; S.calendar.push({ id: 'c' + (S.calendar.length + 1) + '_' + date, date, type, title: title.trim(), note: note.trim(), custom: true });
+    saveCalendar(); toast('Added to the calendar'); return showCalendar();
+  }
+  if (act === 'cal-delete') { S.calendar = (S.calendar || []).filter(x => x.id !== t.dataset.id); saveCalendar(); return showCalendar(); }
   if (act === 'cover-art') return showCoverArt(t.dataset.kind || 'week');
   if (act === 'gen-cover-prompt') {
     const kind = t.dataset.kind || 'week';
@@ -4071,6 +4395,12 @@ document.body.addEventListener('change', async (e) => {
       if (st) st.innerHTML = `Couldn't read that file — ${esc((err && err.message) || 'unknown error')}.`;
     }
   }
+});
+
+// Live search in the Article Archive — filter as you type without losing focus.
+document.body.addEventListener('input', (e) => {
+  const s = e.target.closest('[data-act="arch-search-input"]');
+  if (s) { S.archiveQuery = s.value; showArticleArchive(); }
 });
 
 init();
