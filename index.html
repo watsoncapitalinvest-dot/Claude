@@ -1438,7 +1438,7 @@ function saveMoney(){ try { localStorage.setItem(moneyKey(), JSON.stringify(S.mo
 // The Pre-Draft Issue — a special edition. The app auto-builds it from returning
 // dynasty rosters + baked history; the manager tops it up with real draft order,
 // keepers, storylines and a futures board.
-function defaultPredraft(){ return { headline:'', order:'', keepers:'', storylines:'', futures:[] }; }
+function defaultPredraft(){ return { headline:'', order:'', keepers:'', storylines:'', futures:[], featureIds:[] }; }
 function predraftKey(){ return 'gg.predraft.' + (S.leagueId || 'x'); }
 function loadPredraft(){ try { const r = JSON.parse(localStorage.getItem(predraftKey()) || 'null'); S.predraft = Object.assign(defaultPredraft(), r || {}); } catch { S.predraft = defaultPredraft(); } }
 function savePredraft(){ try { localStorage.setItem(predraftKey(), JSON.stringify(S.predraft || defaultPredraft())); } catch {} }
@@ -3358,9 +3358,17 @@ function buildPredraft(){
   const lead = { headline: (pd.headline || '').trim() || 'The Draft Issue',
     standfirst: champ ? `${champ} defends the crown. The rest of the league is coming to take it.` : `A new season, a fresh board, and everything to play for.`,
     paragraphs: leadP };
+  // Double feature: up to two marquee pieces (the investigation + a second).
+  // Default to the primary investigation if the editor hasn't chosen.
+  const featIds = (pd.featureIds && pd.featureIds.length) ? pd.featureIds
+    : ((S.investigations && S.investigations[0]) ? [S.investigations[0].id] : []);
+  let features = featIds.map(id => investigationToFeature(investigationById(id))).filter(Boolean);
+  if (!features.length && S.dossier && S.dossier.feature) features = [S.dossier.feature];
+  // Offseason chat articles — Water Cooler pieces the editor wrote for the draft issue.
+  const deskArts = (S.desk || []).filter(a => a.predraft);
   return { season: S.season, headline: lead.headline, lead, teams, ranked, power, order, orderAuto, orderReal, draftMeta: (orderReal ? S.draftOrder : null), rivalries,
     superlatives: sup, predictions: preds, keepers: (pd.keepers || '').trim(), futures: (pd.futures || []),
-    feature: (S.dossier && S.dossier.feature) || null,
+    features, feature: features[0] || null, deskArts,
     subtitle: 'The Draft Issue' };
 }
 // ---- Pre-Draft rendering ----
@@ -3444,22 +3452,31 @@ function predraftBodyHtml(P){
           ${m.note ? `<div class="dt" style="flex-basis:100%;margin-top:4px">${esc(m.note)}</div>` : ''}</div>`).join('')
       : `<div class="dt" style="line-height:1.6">The championship futures board goes here — every team's odds to win it all.${S.guest ? '' : ` Upload Pork Chop Express's spreadsheet in the Draft desk (tap ✍️) to fill it in.`}</div>`}
   </div>`;
-  const f = P.feature;
-  const feature = f ? `<div class="card" style="border-color:var(--accent-d)">
+  // Double feature — up to two marquee pieces (the investigation + a second).
+  const featCard = f => `<div class="card story feature" style="border-color:var(--accent-d)">
     ${f.flag ? `<div class="feat-flag">${esc(f.flag)}</div>` : ''}
     <div class="byline" style="margin-bottom:6px">🛡️ ${esc(f.kicker || 'SCFL NewsRoom')}</div>
     <h2 style="font-family:var(--serif);font-weight:900;font-size:26px;line-height:1.08;margin:2px 0 6px">${esc(f.headline)}</h2>
-    ${f.subhead ? `<div class="dek" style="font-style:italic;margin-bottom:10px">${esc(f.subhead)}</div>` : ''}
+    ${f.subhead || f.dek ? `<div class="dek" style="font-style:italic;margin-bottom:10px">${esc(f.subhead || f.dek)}</div>` : ''}
     ${(f.paragraphs || []).map((p, i) => `<p class="body">${i === 0 && f.dateline ? `<b>${esc(f.dateline)}</b> — ` : ''}${esc(p)}</p>`).join('')}
     <div class="byline" style="margin-top:8px">— ${esc(f.byline || 'The SCFL NewsRoom')}</div>
     ${f.status ? `<div class="faint no-print" style="font-size:11px;margin-top:6px">${esc(f.status)}</div>` : ''}
-  </div>` : '';
-  const colophon = `<div class="colophon">Auto-assembled from your returning dynasty rosters and the league's real history — pedigree, all-time records and rivalries are genuine. Draft order, keepers and the futures board are yours to set.</div>`;
+  </div>`;
+  const featureList = (P.features || (P.feature ? [P.feature] : [])).filter(Boolean);
+  const features = featureList.length
+    ? sec(featureList.length > 1 ? 'The Double Feature' : 'The Feature') + featureList.map(featCard).join('')
+    : '';
+  // Offseason chat articles — Water Cooler pieces for the draft issue.
+  const desk = (P.deskArts && P.deskArts.length)
+    ? sec('The Water Cooler · Offseason') + P.deskArts.map(a => articleHtml(a, false)).join('')
+    : '';
+  const colophon = `<div class="colophon">Auto-assembled from your returning dynasty rosters and the league's real history — pedigree, all-time records and rivalries are genuine. Draft order, keepers, features and the futures board are yours to set.</div>`;
   return sec('The Column') + lead
-    + (feature ? sec('The Feature') + feature : '')
+    + features
     + sec('Dynasty Outlooks') + outlooks
     + sec('The Draft Board') + board + keepers
     + power
+    + desk
     + rivalries
     + sup
     + preds
@@ -3517,11 +3534,49 @@ function showPredraftDesk(){
         <div class="faint" style="font-size:12px;margin-top:4px">${fut.slice(0, 3).map(m => `${esc(m.subject)}${m.line ? ` ${esc(m.line)}` : ''}`).join(' · ')}${fut.length > 3 ? ' …' : ''}</div>
         <div style="height:10px"></div><button class="btn ghost" data-act="predraft-clear-futures">Remove futures</button>` : ''}
     </div>
+    ${predraftFeaturesCard(pd)}
+    ${predraftOffseasonCard()}
     <div style="display:flex;gap:8px;margin-top:14px">
       <button class="btn" data-act="predraft-build" style="flex:1.6">📰 Build &amp; preview the issue →</button>
       <button class="btn ghost" data-act="predraft-save-notes" style="flex:1">Save</button>
     </div>
   </div>`;
+}
+// The double-feature picker — choose up to two marquee pieces for the issue.
+function predraftFeaturesCard(pd) {
+  const ids = pd.featureIds || [];
+  const invs = S.investigations || [];
+  const opt = (sel) => `<option value="">— none —</option>` +
+    invs.map(inv => `<option value="${esc(inv.id)}"${sel === inv.id ? ' selected' : ''}>${esc(inv.headline)}</option>`).join('');
+  return `<div class="seclabel">📰 The Double Feature</div>
+    <p class="faint" style="font-size:12px;margin:-2px 4px 8px;line-height:1.5">Pick up to two marquee pieces (e.g. the SCFL Investigation plus one more).</p>
+    <div class="card">
+      <label class="label">Feature 1</label>
+      <select class="input" data-act="predraft-feature" data-slot="0">${opt(ids[0] || (invs[0] && invs[0].id) || '')}</select>
+      <label class="label" style="margin-top:10px">Feature 2 (optional)</label>
+      <select class="input" data-act="predraft-feature" data-slot="1">${opt(ids[1] || '')}</select>
+    </div>`;
+}
+// Offseason chat articles for the Draft Issue (Water Cooler, offseason edition).
+function predraftOffseasonCard() {
+  const arts = (S.desk || []).filter(a => a.predraft);
+  const aiOn = !!(S.apiKey || '').trim();
+  return `<div class="seclabel">💬 Offseason Articles — from the chat</div>
+    <p class="faint" style="font-size:12px;margin:-2px 4px 8px;line-height:1.5">Paste offseason group-chat and the desk writes a Water Cooler piece for the Draft Issue. Add two or more.</p>
+    <div class="card">
+      <input id="pdChatFile" type="file" accept=".txt,.zip" data-act="desk-file" class="fileinput" />
+      <div id="chatFileStatus" class="faint" style="font-size:12px;margin-top:6px"></div>
+      <label class="label" style="margin-top:10px">…or paste a snippet</label>
+      <textarea id="pdChatText" class="input" style="height:110px" placeholder="Name: message&#10;Name: message"></textarea>
+      <label class="label" style="margin-top:10px">Angle (optional)</label>
+      <input id="pdChatAngle" class="input" placeholder="e.g. the trade that broke the group chat" />
+      <div id="pdDeskErr" class="err" style="margin-top:8px"></div>
+      <button class="btn" data-act="predraft-desk-generate" style="margin-top:10px">${aiOn ? '✍️ Write the article →' : 'Write the article →'}</button>
+      ${arts.length ? `<div style="height:12px"></div><div class="dt" style="font-weight:700;color:var(--accent)">✓ ${arts.length} offseason article${arts.length === 1 ? '' : 's'} in the issue</div>
+        ${arts.map(a => `<div class="row" style="justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+          <span style="font-size:13px;font-weight:700">${esc(a.headline)}</span>
+          <button class="linkbtn" data-act="predraft-desk-delete" data-id="${esc(a.id)}">delete</button></div>`).join('')}` : ''}
+    </div>`;
 }
 function readPredraftForm(){
   const g = id => (document.getElementById(id) || {}).value || '';
@@ -4137,12 +4192,14 @@ function showDesk() {
     </div>
   </div>`;
 }
-async function deskGenerate() {
-  const pasted = ($('#chatText') || {}).value || '';
-  const text = (S.deskChatText && S.deskChatText.trim()) ? S.deskChatText : pasted;
-  const angle = ($('#chatAngle') || {}).value || '';
-  const err = $('#deskErr');
-  const btn = document.querySelector('[data-act="desk-generate"]');
+async function deskGenerate(opts) {
+  opts = opts || {};
+  const pd = !!opts.predraft;
+  const pasted = ($(pd ? '#pdChatText' : '#chatText') || {}).value || '';
+  const text = (!pd && S.deskChatText && S.deskChatText.trim()) ? S.deskChatText : pasted;
+  const angle = ($(pd ? '#pdChatAngle' : '#chatAngle') || {}).value || '';
+  const err = $(pd ? '#pdDeskErr' : '#deskErr');
+  const btn = document.querySelector(pd ? '[data-act="predraft-desk-generate"]' : '[data-act="desk-generate"]');
   if (err) err.textContent = '';
   if (text.trim().length < 8) { if (err) err.textContent = 'Import your chat file or paste a snippet first.'; return; }
   if (!parseChat(text).length) { if (err) err.textContent = "Couldn't find any 'Name: message' lines in that. Make sure it's a chat export."; return; }
@@ -4169,12 +4226,19 @@ async function deskGenerate() {
     if (btn) { btn.disabled = false; btn.textContent = 'Write the article →'; }
   }
   if (!art) { if (err) err.textContent = "Couldn't turn that into an article. Make sure it's a chat export."; return; }
+  if (pd) {
+    art.predraft = true;
+    S.desk.unshift(art); saveDesk();
+    archiveArticle(art, { section: 'The Water Cooler · Offseason' });
+    toast('Offseason article added to the Draft Issue');
+    return showPredraftDesk();
+  }
   art.week = S.activeWeek;
   S.desk.unshift(art); saveDesk();
   archiveArticle(art, { week: S.activeWeek, section: 'The Water Cooler' });
   S.deskChatText = null;
   delete S.newsCache[S.activeWeek];
-  S.tab = 'news'; renderShell(); renderTab();
+  S.tab = 'stories'; renderShell(); renderTab();
   toast('Article added to The Water Cooler');
 }
 async function showSettings() {
@@ -4333,6 +4397,8 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'predraft-share') return sharePredraft();
   if (act === 'predraft-save-issue') return savePredraftIssue();
   if (act === 'predraft-clear-futures') { S.predraft = S.predraft || defaultPredraft(); S.predraft.futures = []; savePredraft(); return showPredraftDesk(); }
+  if (act === 'predraft-desk-generate') return deskGenerate({ predraft: true });
+  if (act === 'predraft-desk-delete') { S.desk = (S.desk || []).filter(a => a.id !== t.dataset.id); saveDesk(); return showPredraftDesk(); }
   if (act === 'desk-delete') { S.desk = S.desk.filter(a => a.id !== t.dataset.id); saveDesk(); delete S.newsCache[S.activeWeek];
     if ($('#setbody') || document.querySelector('.setup-logo')) return showDesk(); renderShell(); return renderTab(); }
   if (act === 'back' || act === 'back-news') { S.reading = false; if (S.tab !== 'stories' && S.tab !== 'create') S.tab = 'menu'; renderShell(); return renderTab(); }
@@ -4347,6 +4413,12 @@ document.body.addEventListener('click', async (e) => {
 document.body.addEventListener('change', async (e) => {
   const cw = e.target.closest('[data-act="ci-week"]');
   if (cw) { S.activeWeek = Math.min(18, Math.max(1, parseInt(cw.value, 10) || 1)); return showCreateIssue(); }
+  const pf = e.target.closest('[data-act="predraft-feature"]');
+  if (pf) { S.predraft = Object.assign(defaultPredraft(), S.predraft);
+    const ids = (S.predraft.featureIds || []).slice();
+    ids[parseInt(pf.dataset.slot, 10) || 0] = pf.value || '';
+    S.predraft.featureIds = [ids[0], ids[1]].filter(Boolean);
+    savePredraft(); toast('Feature updated'); return; }
   const cf = e.target.closest('[data-act="ci-feature"]');
   if (cf) { S.featureOverride = S.featureOverride || {}; const wk = S.activeWeek;
     if (cf.value) S.featureOverride[wk] = cf.value; else delete S.featureOverride[wk];
