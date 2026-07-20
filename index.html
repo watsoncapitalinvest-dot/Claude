@@ -134,8 +134,9 @@
   .offtool:hover { border-color:var(--accent-d); }
   .offtool-ic { font-size:24px; }
   .colmast { display:flex; align-items:center; gap:12px; margin:2px 0 12px; padding-bottom:11px; border-bottom:2px solid var(--accent-d); }
-  .colmast-badge { width:48px; height:48px; flex:0 0 48px; }
+  .colmast-badge { width:48px; height:48px; flex:0 0 48px; position:relative; }
   .colmast-badge svg { width:100%; height:100%; display:block; }
+  .colmast-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:10px; display:block; background:var(--card2); }
   .colmast-kick { font-size:10px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; color:var(--faint); }
   .colmast-name { font-family:var(--serif); font-weight:900; font-size:22px; line-height:1.02; margin-top:1px; }
   .colmast-tag { font-size:12px; color:var(--dim); margin-top:2px; }
@@ -3031,21 +3032,44 @@ function renderTab() {
 function magTitle() { return String(S.magName || 'Skirt Chasers').toUpperCase(); }
 // Column identities — each by-lined section flies its own logo like a real
 // magazine columnist. Inline SVG so it travels into the PDF with no assets.
+// Metal skull — The Machines' mark (glowing green eyes to match the theme).
 const LOGO_MACHINES = `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-  <rect x="3" y="3" width="42" height="42" rx="11" fill="#0e1a12" stroke="#1f7a3a" stroke-width="2"/>
-  <line x1="24" y1="6" x2="24" y2="12" stroke="#39d353" stroke-width="2"/><circle cx="24" cy="5" r="2" fill="#39d353"/>
-  <rect x="12" y="12" width="24" height="20" rx="5" fill="#12241a" stroke="#2ea043" stroke-width="2"/>
-  <circle cx="19" cy="21" r="3" fill="#39d353"/><circle cx="29" cy="21" r="3" fill="#39d353"/>
-  <rect x="17" y="26.5" width="14" height="3" rx="1.5" fill="#2ea043"/>
-  <path d="M14 33h20v4a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4z" fill="#173a24"/></svg>`;
+  <rect x="3" y="3" width="42" height="42" rx="11" fill="#0c1410" stroke="#1f7a3a" stroke-width="2"/>
+  <path d="M24 9c-8 0-13 4.6-13 11.5 0 3.9 1.7 6.9 3.8 8.9v3.8a2.2 2.2 0 0 0 2.2 2.2h.8v-3h2.1v3h1.9v-3h2.4v3h1.9v-3h2.1v3h.8a2.2 2.2 0 0 0 2.2-2.2v-3.8c2.1-2 3.8-5 3.8-8.9C37 13.6 32 9 24 9z" fill="#cbd0d8" stroke="#7f8a99" stroke-width="1.2"/>
+  <path d="M20 12.4c-3.7 1.1-5.9 4-6.2 8" fill="none" stroke="#f3f6fa" stroke-width="1.2" stroke-linecap="round" opacity=".7"/>
+  <ellipse cx="18.4" cy="22.6" rx="3.7" ry="4.1" fill="#0a0e13"/><ellipse cx="29.6" cy="22.6" rx="3.7" ry="4.1" fill="#0a0e13"/>
+  <circle cx="18.4" cy="22.8" r="1.7" fill="#39d353"/><circle cx="29.6" cy="22.8" r="1.7" fill="#39d353"/>
+  <path d="M24 25.5l-2.1 4.2h4.2z" fill="#0a0e13"/></svg>`;
+// Pork Chop Express — the byline mark literally reads PORK CHOP EXPRESS.
 const LOGO_PCE = `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
   <rect x="3" y="3" width="42" height="42" rx="11" fill="#c01722" stroke="#7d0d15" stroke-width="2"/>
-  <rect x="6" y="17.5" width="8" height="2" rx="1" fill="#ffd9dc" opacity=".85"/><rect x="6" y="22.5" width="6" height="2" rx="1" fill="#ffd9dc" opacity=".6"/>
-  <rect x="14" y="16" width="14" height="12" rx="1.5" fill="#f6f0e6" stroke="#2a2a2a" stroke-width="1.5"/>
-  <path d="M28 20h5l4 4v4h-9z" fill="#f6f0e6" stroke="#2a2a2a" stroke-width="1.5"/><rect x="30" y="21.5" width="4" height="3.5" rx="1" fill="#8fd0ff"/>
-  <circle cx="19" cy="30" r="3.4" fill="#141414" stroke="#f6f0e6" stroke-width="1.3"/><circle cx="33" cy="30" r="3.4" fill="#141414" stroke="#f6f0e6" stroke-width="1.3"/></svg>`;
+  <rect x="7.5" y="8.5" width="33" height="31" rx="4" fill="none" stroke="#ffd9dc" stroke-width="1.1" opacity=".55"/>
+  <text x="24" y="19" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="9.2" fill="#f6f0e6" letter-spacing=".3">PORK</text>
+  <text x="24" y="28" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="9.2" fill="#f6f0e6" letter-spacing=".3">CHOP</text>
+  <text x="24" y="37" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="7.6" fill="#ffd23f" letter-spacing=".2">EXPRESS</text></svg>`;
+// Real Sleeper team logo for a named team. Sleeper stores a custom team avatar
+// in metadata.avatar (a full sleepercdn URL, or an id); fall back to the
+// account avatar. Returns null if the league isn't loaded or no match.
+function teamAvatarByName(name) {
+  if (!name || !S.bundle || !S.bundle.users) return null;
+  const key = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const want = key(name); if (!want) return null;
+  const u = S.bundle.users.find(u => {
+    const tn = key(u.metadata && u.metadata.team_name), dn = key(u.display_name);
+    return (tn && (tn === want || tn.includes(want) || want.includes(tn))) || (dn && (dn === want || dn.includes(want) || want.includes(dn)));
+  });
+  if (!u) return null;
+  const meta = u.metadata && u.metadata.avatar;
+  if (meta && /^https?:\/\//.test(meta)) return meta;
+  if (meta) return `https://sleepercdn.com/avatars/${meta}`;
+  return avatarUrl(u.avatar);
+}
 function columnMasthead(logo, name, tagline) {
-  return `<div class="colmast"><div class="colmast-badge">${logo}</div>
+  // Prefer the real Sleeper team logo when the league is loaded; if the image
+  // fails to load, it removes itself and the inline SVG mark shows through.
+  const real = teamAvatarByName(name);
+  const overlay = real ? `<img class="colmast-img" src="${esc(real)}" alt="${esc(name)}" onerror="this.remove()">` : '';
+  return `<div class="colmast"><div class="colmast-badge">${logo}${overlay}</div>
     <div class="colmast-txt"><div class="colmast-kick">SCFL Column</div>
       <div class="colmast-name">${esc(name)}</div>${tagline ? `<div class="colmast-tag">${esc(tagline)}</div>` : ''}</div></div>`;
 }
