@@ -3189,15 +3189,22 @@ function coverPackage(nl) {
     tag: (big && subjTeam === big.winner) ? `${big.margin}-POINT DEMOLITION OF ${U(big.loser.manager)}` : leader && subjTeam.manager === leader.manager ? 'YOUR LEAGUE LEADER' : 'TOP DOG OF THE WEEK',
   } : null;
 
+  // Cover teasers = real articles that are actually inside this issue, like a
+  // true magazine cover. Each line points to a section the reader will find.
   const lines = [];
-  // History nugget: title pedigree of the cover subject, when we know it.
-  const subjHist = subject ? histFor(subject.name) : null;
-  if (subjHist && subjHist.titles > 0) lines.push(`${U(subject.name)}: ${subjHist.titles}× CHAMP${subjHist.titleYears.length ? ' (' + subjHist.titleYears.slice(0, 3).join(', ') + ')' : ''}`);
-  else if (S.histIndex && S.histIndex.defending) lines.push(`${U(S.histIndex.defending)} DEFENDS THE CROWN`);
-  if (leader && cellar) lines.push(`POWER RANKINGS: ${leader.manager} on top, ${cellar.manager} in the cellar`);
-  if (close) lines.push(`${close.winner.manager} edge ${close.loser.manager} by ${close.margin}`);
-  if (deskArt) lines.push(`GROUP CHAT: ${deskArt.headline}`);
-  else if (nl.studs && nl.studs[0]) lines.push(`${nl.studs[0].manager} rode ${nl.studs[0].name}'s ${nl.studs[0].points} to glory`);
+  const norm = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const headlineKey = norm(headline);
+  const pushArt = (label, hd) => { if (!hd) return; if (norm(hd) === headlineKey) return; // don't repeat the main hook
+    lines.push(label ? `${label}: ${U(hd)}` : U(hd)); };
+  if (nl.feature) pushArt('FEATURE', nl.feature.headline);
+  // The best game stories that are written up inside.
+  (nl.stories || []).filter(s => s && s.headline && !s.tie).sort((a, b) => (b.margin || 0) - (a.margin || 0))
+    .slice(0, 2).forEach(s => pushArt('', s.headline));
+  if (deskArt) pushArt('WATER COOLER', deskArt.headline);
+  if (nl.lead && lines.length < 4) pushArt('THE LEAD', nl.lead.headline);
+  // Segment callouts (only if the segment is actually in the issue).
+  if ((nl.powerRankings || []).length && lines.length < 4) lines.push(`POWER RANKINGS BY THE MACHINES`);
+  if ((nl.moneyLines || []).length && lines.length < 4) lines.push(`MONEY LINES BY PORK CHOP EXPRESS`);
   return { headline, subject, lines: lines.slice(0, 4) };
 }
 function coverHtml(nl) {
@@ -3429,11 +3436,17 @@ function predraftBodyHtml(P){
       <div class="lab">${esc(a.title)}</div><div class="nm">${esc(a.name)}</div><div class="dt">${esc(a.detail)}</div></div></div>`).join('')}</div>` : '';
   const preds = P.predictions.length ? `<div class="card"><div class="at">🔮 Bold Predictions</div>
     ${P.predictions.map(p => `<div class="dt" style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">${esc(p)}</div>`).join('')}</div>` : '';
-  const futures = (P.futures && P.futures.length) ? `<div class="card">
-    ${columnMasthead(LOGO_PCE, 'Pork Chop Express', 'Futures · odds to win it all')}
-    ${P.futures.map(m => `<div class="ml"><div class="ml-sub">${esc(m.subject)}</div>
-      <div class="ml-odds">${m.line ? `<span class="ml-line">${esc(m.line)}</span>` : ''}${m.total ? `<span class="ml-chip">O/U ${esc(m.total)}</span>` : ''}</div>
-      ${m.note ? `<div class="dt" style="flex-basis:100%;margin-top:4px">${esc(m.note)}</div>` : ''}</div>`).join('')}</div>` : '';
+  // Pork Chop Express betting segment — always present in the Draft Issue (the
+  // pre-draft equivalent of the weekly Money Lines). Shows the uploaded futures
+  // board, or a placeholder prompting the upload so the segment is never missing.
+  const futures = `<div class="card">
+    ${columnMasthead(LOGO_PCE, 'Pork Chop Express', 'Money Lines · Futures — odds to win it all')}
+    ${(P.futures && P.futures.length)
+      ? P.futures.map(m => `<div class="ml"><div class="ml-sub">${esc(m.subject)}</div>
+          <div class="ml-odds">${m.line ? `<span class="ml-line">${esc(m.line)}</span>` : ''}${m.total ? `<span class="ml-chip">O/U ${esc(m.total)}</span>` : ''}</div>
+          ${m.note ? `<div class="dt" style="flex-basis:100%;margin-top:4px">${esc(m.note)}</div>` : ''}</div>`).join('')
+      : `<div class="dt" style="line-height:1.6">The championship futures board goes here — every team's odds to win it all.${S.guest ? '' : ` Upload Pork Chop Express's spreadsheet in the Draft desk (tap ✍️) to fill it in.`}</div>`}
+  </div>`;
   const f = P.feature;
   const feature = f ? `<div class="card" style="border-color:var(--accent-d)">
     ${f.flag ? `<div class="feat-flag">${esc(f.flag)}</div>` : ''}
