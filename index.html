@@ -1471,10 +1471,14 @@ async function generateCoverPrompt(kind) {
   if (kind === 'predraft') {
     const P = S.currentPredraft || buildPredraft(); if (!P) throw new Error('no-issue');
     const champ = S.histIndex && S.histIndex.defending;
+    const feats = (P.features && P.features.length) ? P.features : (P.feature ? [P.feature] : []);
+    const coverStory = feats[0];  // the marquee piece — usually the investigation
     ctx = `SPECIAL EDITION: THE PRE-DRAFT ISSUE (a dynasty-league season preview).\n` +
       `COVER HEADLINE: ${P.lead.headline}\nTHEME: ${P.lead.standfirst}\n` +
+      (coverStory ? `THE MARQUEE COVER STORY — BUILD THE COVER AROUND THIS: ${coverStory.flag ? coverStory.flag + ' — ' : ''}${coverStory.headline}. ${coverStory.subhead || coverStory.dek || ''}\n` : '') +
+      (feats[1] ? `ALSO FEATURED: ${feats[1].headline}\n` : '') +
       (champ ? `DEFENDING CHAMPION (a manager, not a real player): ${champ}\n` : '') +
-      `MOOD: the calm before the draft — anticipation, a fresh season, everything to play for.`;
+      `MOOD: the calm before the draft — anticipation, a fresh season, and the marquee cover story above.`;
   } else {
     const nl = S.currentNl; if (!nl) throw new Error('no-issue');
     const pkg = coverPackage(nl); const ts = topStoryline(nl);
@@ -1495,7 +1499,12 @@ async function generateCoverPrompt(kind) {
   };
   let scene;
   if (kind === 'predraft') {
-    scene = `Depict a cinematic, anticipatory scene — an empty stadium at dawn, a lone helmet on fresh turf, stadium lights warming up, a draft-room table in dramatic shadow — anything that says "the season is about to begin."`;
+    const P = S.currentPredraft || buildPredraft();
+    const feats = P ? ((P.features && P.features.length) ? P.features : (P.feature ? [P.feature] : [])) : [];
+    const coverStory = feats[0];
+    scene = coverStory
+      ? `Build the image AROUND the marquee cover story above ("${coverStory.headline}") — evoke its specific subject and mood cinematically. If it is an SCFL Investigation, lean into intrigue and noir-newsroom energy (deep shadows, documents/evidence, microfilm, a single hard light) while still hinting that a new dynasty season is about to begin. Symbolic and atmospheric — never literal, never any text.`
+      : `Depict a cinematic, anticipatory scene — an empty stadium at dawn, a lone helmet on fresh turf, stadium lights warming up, a draft-room table in dramatic shadow — anything that says "the season is about to begin."`;
   } else {
     const ts = topStoryline(S.currentNl);
     scene = `Build the image AROUND the week's top storyline above — it must clearly evoke ${kindScene[ts.kind] || kindScene.chaos}. Use anonymous players, stadium, field, weather and light to tell that specific story; make it striking and unmistakably ABOUT this week, not a generic stock shot.`;
@@ -1784,13 +1793,29 @@ function normalizeHistory(obj) {
   return seasons.length ? { source: 'espn', leagueName: (arr[0].settings && arr[0].settings.name) || '', seasons } : null;
 }
 // Roll every imported season into champions, an all-time table, and records.
+// ESPN stores champions/rosters by a stable OWNER HANDLE (e.g. "maristmidi"),
+// never the team name. Build handle → current-team-name from the history's own
+// rosters (the owner's most recent team name wins) so the magazine only ever
+// shows real team names, never a login handle.
+function buildOwnerTeamMap(h) {
+  const map = {}; const clean = s => String(s || '').replace(/\*/g, '').replace(/\s+/g, ' ').trim();
+  (h.seasons || []).slice().sort((a, b) => (Number(a.year) || 0) - (Number(b.year) || 0))
+    .forEach(se => (se.teams || []).forEach(t => { if (t.owner && t.name) map[normName(t.owner)] = clean(t.name); }));
+  return map;
+}
+// Resolve any owner handle (or team name) to the canonical current team name.
+function resolveOwner(x) {
+  const m = S.ownerTeam || {}; const k = normName(x);
+  return aliasOf(m[k] || x);
+}
 function computeHistoryStats(h) {
+  S.ownerTeam = buildOwnerTeamMap(h);
   const agg = {}, champs = [];
   let bestGame = null, blowout = null, bestSeasonPF = null;
   (h.seasons || []).forEach(se => {
-    const tmap = {}; (se.teams || []).forEach(t => tmap[t.id] = t.owner || t.name);
-    const who = id => aliasOf(tmap[id] || ('Team ' + id));
-    const champ = se.champion ? aliasOf(se.champion) : null;
+    const tmap = {}; (se.teams || []).forEach(t => tmap[t.id] = resolveOwner(t.owner || t.name));
+    const who = id => tmap[id] || ('Team ' + id);
+    const champ = se.champion ? resolveOwner(se.champion) : null;
     if (champ) champs.push({ year: se.year, who: champ });
     (se.standings || []).forEach(st => {
       const key = who(st.teamId);
@@ -2013,7 +2038,7 @@ function showHistory() {
     ${st.standings[0] ? recTile('Most titles', st.standings[0].titles + '×', st.standings[0].name) : ''}
   </div>`;
   const seasonCards = st.seasons.map(se => {
-    const tmap = {}; (se.teams || []).forEach(t => tmap[t.id] = t.owner || t.name);
+    const tmap = {}; (se.teams || []).forEach(t => tmap[t.id] = resolveOwner(t.owner || t.name));
     const stand = [...(se.standings || [])].sort((a, b) => (a.rank || 99) - (b.rank || 99)).map(s =>
       `<div class="pr"><span class="ovr" style="width:24px">${s.rank || '–'}</span>
         <div style="flex:1"><div class="nm">${esc(tmap[s.teamId] || 'Team')}</div>
@@ -2024,7 +2049,7 @@ function showHistory() {
       wks[w].map(m => `<div class="sbrow"><span class="sbn">${esc(tmap[m.home] || 'H')} ${m.homeScore.toFixed(1)}</span><span class="sbn" style="text-align:right">${m.awayScore.toFixed(1)} ${esc(tmap[m.away] || 'A')}</span></div>`).join('')).join('');
     return `<div class="card">
       <div class="row" style="justify-content:space-between"><div style="font-family:var(--serif);font-weight:900;font-size:20px">${se.year}</div>
-        ${se.champion ? `<div class="faint" style="font-size:12px">🏆 ${esc(se.champion)}</div>` : ''}</div>
+        ${se.champion ? `<div class="faint" style="font-size:12px">🏆 ${esc(resolveOwner(se.champion))}</div>` : ''}</div>
       <div class="seclabel" style="margin:10px 0 4px">Final standings</div>${stand}
       ${scores ? `<details style="margin-top:8px"><summary class="linkbtn">Weekly scores</summary><div style="margin-top:6px">${scores}</div></details>` : ''}
     </div>`;
@@ -3196,7 +3221,7 @@ function coverPackage(nl) {
   const headlineKey = norm(headline);
   const pushArt = (label, hd) => { if (!hd) return; if (norm(hd) === headlineKey) return; // don't repeat the main hook
     lines.push(label ? `${label}: ${U(hd)}` : U(hd)); };
-  if (nl.feature) pushArt('FEATURE', nl.feature.headline);
+  if (nl.feature) pushArt(nl.feature.flag && /investigat|cold case|ledger|microfiche/i.test(nl.feature.flag) ? 'INVESTIGATION' : 'FEATURE', nl.feature.headline);
   // The best game stories that are written up inside.
   (nl.stories || []).filter(s => s && s.headline && !s.tie).sort((a, b) => (b.margin || 0) - (a.margin || 0))
     .slice(0, 2).forEach(s => pushArt('', s.headline));
@@ -3382,8 +3407,10 @@ function predraftCoverTools(){
 }
 function predraftCoverHtml(P){
   const img = predraftCoverImg();
+  const feats = (P.features && P.features.length) ? P.features : (P.feature ? [P.feature] : []);
+  const isInv = f => f.flag && /investigat|cold case|ledger|microfiche/i.test(f.flag);
   const lines = `<div class="mag-lines">
-      ${P.feature ? `<div class="mag-line">📰 FEATURE: ${esc((P.feature.headline || '').toUpperCase())}${P.feature.flag ? ` · ${esc(P.feature.flag)}` : ''}</div>` : ''}
+      ${feats.map(f => `<div class="mag-line">📰 ${isInv(f) ? 'INVESTIGATION' : 'FEATURE'}: ${esc((f.headline || '').toUpperCase())}</div>`).join('')}
       ${(P.ranked || []).slice(0, 3).map((t, i) => `<div class="mag-line">PRESEASON #${i + 1}: ${esc(t.name)}${t.hist && t.hist.titles ? ` · ${t.hist.titles}× champ` : ''}</div>`).join('')}
       ${P.order[0] ? `<div class="mag-line">ON THE CLOCK: ${esc(P.order[0].team)} holds the 1.01</div>` : ''}
     </div>`;
