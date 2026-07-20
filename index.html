@@ -240,7 +240,7 @@
             --text:#14181e; --dim:#39424e; --faint:#748091; --accent:#1f9c45; --accent-d:#127a33; }
     * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     html, body { background:#fff; }
-    .no-print, .tabbar, .mag-tools, .sharerow, .week, .guestbar, .proofwrap::after, .proofbar,
+    .no-print, #topbar, .tabbar, .mag-tools, .sharerow, .week, .guestbar, .proofwrap::after, .proofbar,
     .composebar, .seasonbar, .weekstepper, [data-act="desk-delete"] { display:none !important; }
     #content, .max { padding:0 !important; }
     /* running header + footer on every page */
@@ -363,11 +363,13 @@
   .tier .tl { flex:1; height:1px; background:var(--border); }
   .ovr { color:var(--faint); font-size:13px; font-weight:800; width:26px; text-align:center; }
 
-  /* Top navigation bar (replaces the old bottom tab bar) */
-  .topbar { position:sticky; top:0; z-index:30; background:rgba(13,18,22,.92); backdrop-filter:blur(10px);
-            border-bottom:1px solid var(--border); margin:calc(-1 * var(--pad-top)) -22px 20px; padding:10px 22px;
-            display:flex; align-items:center; gap:16px; }
-  @media (max-width:720px){ .topbar{ margin:-12px -14px 16px; padding:8px 14px; gap:10px; flex-wrap:wrap; } }
+  /* Top navigation bar — a persistent, full-width sticky bar (body-level, so
+     tool pages that replace #app never wipe it). */
+  #topbar { position:sticky; top:0; z-index:30; }
+  #topbar:empty { display:none; }
+  .topbar { background:rgba(13,18,22,.94); backdrop-filter:blur(10px); border-bottom:1px solid var(--border); }
+  .topbar-inner { max-width:var(--appw); margin:0 auto; padding:10px 22px; display:flex; align-items:center; gap:16px; }
+  @media (max-width:720px){ .topbar-inner{ padding:8px 14px; gap:10px; flex-wrap:wrap; } }
   .tb-brand { display:flex; align-items:center; gap:10px; background:none; border:none; padding:0; cursor:pointer; }
   .tb-brand img.tb-shield { width:30px; height:auto; display:block; }
   .tb-brand .tb-word { font-family:var(--serif); font-weight:900; font-size:19px; letter-spacing:.3px; color:var(--text); white-space:nowrap; }
@@ -426,6 +428,7 @@
 <!-- Branded page furniture — only visible in the printed / PDF magazine, repeated on every page -->
 <div class="printhead" aria-hidden="true"><span class="ph-name">SKIRT CHASERS</span><span class="ph-sub">DYNASTY LEAGUE MAGAZINE</span></div>
 <div class="printfoot" aria-hidden="true"><span>SCFL · West Palm Beach</span><span class="pf-mark">✦</span><span>skirtchasers.mag</span></div>
+<div id="topbar"></div>
 <div id="app"><div class="loadwrap"><div class="spinner"></div>Loading Skirt Chasers…</div></div>
 
 <script>
@@ -2251,24 +2254,10 @@ function showDashboard() {
       <div class="at" style="margin:0">🗓️ Coming Up</div>
       <button class="linkbtn" data-act="calendar">full calendar ›</button></div>
     <div style="margin-top:10px">${up || '<div class="faint" style="font-size:13px">No upcoming dates.</div>'}</div></div>`;
-  const tool = (act, ic, label, kind) => `<button class="offtool" data-act="${act}"${kind ? ` data-kind="${kind}"` : ''}><span class="offtool-ic">${ic}</span>${label}</button>`;
-  const tools = `<div class="offtools-row">
-    ${tool('desk', '✍️', 'Newsroom Desk')}
-    ${tool('cover-art', '🎨', 'Cover Art', 'week')}
-    ${tool('predraft', '🏈', 'Pre-Draft Issue')}
-    ${tool('storylines', '🧵', 'Storylines')}
-    ${tool('investigations', '🔍', 'Investigations')}
-    ${tool('dossier', '📓', 'Chat Dossier')}
-    ${tool('history', '🏆', 'Record Book')}
-    ${tool('archive-articles', '🗄️', 'Article Archive')}
-    ${tool('archive', '📚', 'Back Issues')}
-    ${tool('calendar', '🗓️', 'Calendar')}
-  </div>`;
   app.innerHTML = `<div style="padding-bottom:24px">${back}
     <div class="setup-logo" style="font-size:24px">🗞️ Newsroom HQ</div>
-    <p class="muted" style="margin-top:4px">Your week at a glance — Week ${wk}. Everything the issue needs, every tool, and every date to plan around.</p>
+    <p class="muted" style="margin-top:4px">Your week at a glance — Week ${wk}. What the issue still needs, the brief, and what's coming up. (The tools live on the main menu.)</p>
     ${checklist}
-    <div class="seclabel">Newsroom Tools</div><div class="offtools">${tools}</div>
     <div class="seclabel">The Calendar</div>${cal}
     <div class="seclabel">The Tuesday Brief</div>${questionnaireCard(wk)}
   </div>`;
@@ -2773,6 +2762,7 @@ async function enterGuest(params) {
   }
 }
 function renderGuestShell() {
+  hideTopBar();
   app.innerHTML = `<div id="content"></div>
     <div class="guestbar"><span>📖 Shared issue · read-only</span>
       <a class="guestcta" href="${esc(location.origin + location.pathname)}">Make your own →</a></div>`;
@@ -2782,6 +2772,7 @@ function renderGuestShell() {
 //  Setup / onboarding
 // ---------------------------------------------------------------------
 function renderSetup() {
+  hideTopBar();
   const su = S.setup;
   app.innerHTML = `
     <div style="padding-top:24px">
@@ -2912,7 +2903,7 @@ const TABS = [
   { id:'draft', ic:'📋', label:'Draft' },
 ];
 function topBar() {
-  return `<div class="topbar no-print">
+  return `<div class="topbar no-print"><div class="topbar-inner">
     <button class="tb-brand" data-act="home" title="Newsroom menu">
       <img class="tb-shield" src="${LOGO}" alt="SCFL"><span class="tb-word">Skirt <span>Chasers</span></span>
     </button>
@@ -2923,10 +2914,13 @@ function topBar() {
       <button class="tbtn ghost" data-act="home">☰ Menu</button>
       <button class="tbtn ghost" data-act="settings">⚙</button>
     </div>
-  </div>`;
+  </div></div>`;
 }
+function showTopBar() { const tb = document.getElementById('topbar'); if (tb) tb.innerHTML = topBar(); }
+function hideTopBar() { const tb = document.getElementById('topbar'); if (tb) tb.innerHTML = ''; }
 function renderShell() {
-  app.innerHTML = `${topBar()}<div id="content"></div>`;
+  showTopBar();
+  app.innerHTML = `<div id="content"></div>`;
 }
 function setContent(html){ const c = $('#content'); if (c) c.innerHTML = html; }
 
