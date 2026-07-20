@@ -1659,15 +1659,29 @@ async function generateCoverPrompt(kind) {
       `MOOD: the calm before the draft — anticipation, a fresh season, everything to play for.`;
   } else {
     const nl = S.currentNl; if (!nl) throw new Error('no-issue');
-    const pkg = coverPackage(nl); const s = nl.stories && nl.stories[0];
-    ctx = `COVER HEADLINE: ${pkg.headline}\n` +
-      (pkg.subject ? `COVER SUBJECT (a manager, not a real player): ${pkg.subject.name} — ${pkg.subject.tag}\n` : '') +
-      (s ? `MARQUEE MATCHUP: ${s.winner.manager} beat ${s.loser.manager}, ${s.winner.score}–${s.loser.score}\nSTORY: ${(s.paragraphs || []).slice(0, 2).join(' ')}\n` : '') +
-      `COVER TEASERS: ${(pkg.lines || []).join(' · ')}`;
+    const pkg = coverPackage(nl); const ts = topStoryline(nl);
+    ctx = `THE WEEK'S TOP STORYLINE (build the cover around THIS): ${ts.label}\n` +
+      `WHAT HAPPENED: ${ts.blurb}\n` +
+      (ts.arc ? `IT FEEDS A RUNNING LEAGUE ARC: "${ts.arc.title}" — ${ts.arc.blurb}\n` : '') +
+      (ts.subject ? `THE MANAGER AT THE CENTER (a person, not a real player): ${ts.subject.manager}\n` : '') +
+      `COVER HEADLINE: ${pkg.headline}\nTEASERS: ${(pkg.lines || []).join(' · ')}`;
   }
-  const scene = kind === 'predraft'
-    ? `Depict a cinematic, anticipatory scene — an empty stadium at dawn, a lone helmet on fresh turf, stadium lights warming up, a draft-room table in dramatic shadow — anything that says "the season is about to begin."`
-    : `Depict a generic football scene — anonymous players, stadium, field, weather, light — that evokes the story's mood.`;
+  const kindScene = {
+    upset: 'an underdog-topples-a-giant moment — David-and-Goliath energy, an unlikely figure standing tall while a bigger one falls',
+    blowout: 'total domination — a colossus astride a flattened, storm-lit field, dust and aftermath',
+    nailbiter: 'a last-second, heart-in-throat instant — a packed stadium frozen on the edge, everything hanging in the balance',
+    chat: 'a firestorm of conflict — a sideline or locker room in uproar, tension you can feel',
+    trade: 'two forces colliding and power shifting — a dramatic, high-stakes exchange',
+    power: 'a lone dominant figure surveying the league from the top, a king over the field',
+    chaos: 'controlled chaos across a battlefield of a field, weather and drama everywhere',
+  };
+  let scene;
+  if (kind === 'predraft') {
+    scene = `Depict a cinematic, anticipatory scene — an empty stadium at dawn, a lone helmet on fresh turf, stadium lights warming up, a draft-room table in dramatic shadow — anything that says "the season is about to begin."`;
+  } else {
+    const ts = topStoryline(S.currentNl);
+    scene = `Build the image AROUND the week's top storyline above — it must clearly evoke ${kindScene[ts.kind] || kindScene.chaos}. Use anonymous players, stadium, field, weather and light to tell that specific story; make it striking and unmistakably ABOUT this week, not a generic stock shot.`;
+  }
   const system = `You are the art director for the "${S.magName || 'Skirt Chasers'} Dynasty Magazine," a fantasy-football league magazine. Write ONE vivid image-generation prompt for a graphics AI (Midjourney, DALL·E, etc.) to create the cover image.
 Rules: cinematic, dramatic sports-magazine energy. ${scene} NEVER real NFL players, teams, or logos. Absolutely NO text, words, letters, numbers, scoreboards, or logos anywhere in the image. Portrait orientation. Leave clean negative space across the TOP for a masthead and some room lower for a headline. Return ONLY the prompt itself as one paragraph — no preamble, no explanation, no quotes.`;
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -2053,11 +2067,20 @@ function showCoverArt(kind) {
   const prompt = (S.coverPrompt && S.coverPrompt[slot]) || '';
   const label = kind === 'predraft' ? 'The Draft Issue' : `Week ${S.activeWeek}`;
   const backAct = kind === 'predraft' ? 'predraft-view' : 'back-news';
-  const storySrc = kind === 'predraft' ? "the Draft Issue's season preview" : "this week's cover story";
+  const storySrc = kind === 'predraft' ? "the Draft Issue's season preview" : "this week's top storyline";
+  const ts = (kind !== 'predraft' && S.currentNl) ? topStoryline(S.currentNl) : null;
+  const storyCard = ts ? `<div class="card" style="border-color:var(--accent-d)">
+      <div class="label" style="color:var(--accent)">This week's cover storyline</div>
+      <div style="font-family:var(--serif);font-weight:900;font-size:18px;margin:4px 0 4px">${esc(ts.label)}</div>
+      <div class="dt">${esc(ts.blurb)}</div>
+      ${ts.arc ? `<div class="dt" style="margin-top:6px"><b style="color:var(--accent)">Arc:</b> ${esc(ts.arc.title)}</div>` : ''}
+      <div class="faint" style="font-size:11px;margin-top:8px">The cover art is built around this. Regenerate for a fresh take on the same story.</div>
+    </div>` : '';
   app.innerHTML = `<div style="padding-bottom:24px">
     <button class="btn ghost" data-act="${backAct}" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>
     <div class="setup-logo" style="font-size:24px">🎨 Cover Art · ${esc(label)}</div>
     <p class="muted" style="margin-top:4px">Let the NewsRoom dream up this cover, make it in your image AI, then drop it back here.</p>
+    ${storyCard}
     <div class="card">
       <div class="label">1 · Get the art direction</div>
       <div class="faint" style="font-size:12px;margin-bottom:10px">The NewsRoom writes an image prompt from ${storySrc}. Paste it into Midjourney, DALL·E, or any image generator.</div>
@@ -2663,6 +2686,49 @@ function newsHeader() {
 }
 // A fun, league-first cover: illustrated art, a matchup-driven headline (chat
 // included as a source), and a manager as the cover subject.
+// The single most INTERESTING thing that happened this week — the story the
+// cover should be built around. Ranks candidates by drama (an upset or a champ
+// falling beats a blowout beats a nail-biter beats a power run), ties it to a
+// running league arc when the same names are involved, and hands back a scene
+// direction so the cover art is about THAT, never a generic football stock shot.
+function topStoryline(nl) {
+  const stories = (nl.stories || []).filter(s => s && s.winner && s.loser);
+  const power = nl.powerRankings || [];
+  const rankOf = {}; power.forEach(p => rankOf[p.manager] = p.rank);
+  const deskArt = (S.desk || []).find(a => a.week === nl.week);
+  const big = [...stories].filter(s => !s.tie).sort((a, b) => b.margin - a.margin)[0];
+  const close = [...stories].filter(s => !s.tie).sort((a, b) => a.margin - b.margin)[0];
+  const upsets = stories.filter(s => !s.tie)
+    .map(s => ({ s, gap: (rankOf[s.winner.manager] || 99) - (rankOf[s.loser.manager] || 0) }))
+    .filter(x => x.gap >= 3).sort((a, b) => b.gap - a.gap);
+  const champLoss = stories.find(s => !s.tie && isDefending(s.loser.manager));
+  const trade = (nl.trades || [])[0];
+  const c = [];
+  if (champLoss) c.push({ score: 92, kind: 'upset', subject: champLoss.winner, foe: champLoss.loser,
+    label: `${champLoss.winner.manager} dethrones the champ`, blurb: `The defending champion ${champLoss.loser.manager} got taken down by ${champLoss.winner.manager}, ${champLoss.winner.score}–${champLoss.loser.score}.` });
+  if (upsets[0]) c.push({ score: 84, kind: 'upset', subject: upsets[0].s.winner, foe: upsets[0].s.loser,
+    label: `${upsets[0].s.winner.manager} shocks ${upsets[0].s.loser.manager}`, blurb: `A ${upsets[0].gap}-spot upset: ${upsets[0].s.winner.manager} stunned ${upsets[0].s.loser.manager}, ${upsets[0].s.winner.score}–${upsets[0].s.loser.score}.` });
+  if (deskArt) c.push({ score: 74, kind: 'chat', subject: null, foe: null,
+    label: deskArt.headline, blurb: `The group chat erupted: ${deskArt.headline}.` });
+  if (big && big.margin >= 28) c.push({ score: 66, kind: 'blowout', subject: big.winner, foe: big.loser,
+    label: `${big.winner.manager} buries ${big.loser.manager}`, blurb: `${big.winner.manager} laid a ${big.margin}-point beatdown on ${big.loser.manager}.` });
+  if (trade) c.push({ score: 58, kind: 'trade', subject: null, foe: null,
+    label: `A trade shakes the league`, blurb: `A deal went down that could reshape the race.` });
+  if (close && close.margin <= 5) c.push({ score: 52, kind: 'nailbiter', subject: close.winner, foe: close.loser,
+    label: `${close.winner.manager} survives ${close.loser.manager}`, blurb: `A ${close.margin}-point nail-biter: ${close.winner.manager} edged ${close.loser.manager}.` });
+  if (power[0]) c.push({ score: 38, kind: 'power', subject: null, foe: null,
+    label: `${power[0].manager} is running away with it`, blurb: `${power[0].manager} sits alone atop the power rankings.` });
+  c.sort((a, b) => b.score - a.score);
+  const top = c[0] || { kind: 'chaos', subject: null, foe: null, label: 'Another week of chaos', blurb: 'A wild, messy week across the league.' };
+  // Tie to a running arc from the dossier when the same people are involved.
+  const names = [top.subject && top.subject.manager, top.foe && top.foe.manager].filter(Boolean);
+  const nrm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const arc = (S.dossier && S.dossier.arcs || []).find(a => {
+    const hay = nrm(a.title + ' ' + a.blurb);
+    return names.some(n => hay.includes(nrm(n))) || (top.kind === 'upset' && /dynasty|coronation/i.test(a.title));
+  }) || null;
+  return { ...top, arc };
+}
 function coverPackage(nl) {
   const power = nl.powerRankings || [];
   const teams = nl.stories.flatMap(s => [s.winner, s.loser]);
