@@ -202,16 +202,23 @@
   .cover-line { font-size:12px; font-weight:800; letter-spacing:.3px; text-transform:uppercase; color:var(--text);
                 padding-left:15px; position:relative; line-height:1.25; }
   .cover-line::before { content:'▸'; position:absolute; left:0; color:var(--accent); }
-  /* real magazine cover — white with a red frame, the SCFL logotype up top */
+  /* The magazine reads in a centered column on desktop, not stretched full-width */
+  .issue-wrap { max-width:720px; margin:0 auto; }
+  /* real magazine cover — white with a red frame, a proper centered portrait page */
   .magcover { position:relative; background:#fff; color:#15181d; overflow:hidden;
-              margin:calc(-1 * var(--pad-top)) -16px 16px; border:12px solid #e11b22;
-              padding:calc(var(--pad-top) - 4px) 22px 24px; display:flex; flex-direction:column; }
-  .magcover.full { min-height:90vh; }
-  .mag-logo { display:block; width:100%; max-width:600px; height:auto; margin:2px auto 0; }
-  .mag-issue { text-align:center; color:#c20f16; font-weight:900; font-size:12px; letter-spacing:3px; margin-top:6px; text-transform:uppercase; }
-  .mag-tools { display:flex; gap:8px; justify-content:center; margin:14px 0 2px; flex-wrap:wrap; }
-  .magcover .ctool { background:#f3f3f3; border:1px solid #d9d9d9; color:#222; }
-  .mag-hook { font-family:var(--serif); font-weight:900; font-size:46px; line-height:.98; letter-spacing:-1px;
+              max-width:640px; margin:0 auto 22px; border:14px solid #e11b22;
+              padding:26px 30px 24px; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.45); }
+  .magcover.full.has-img { min-height:820px; }
+  .magcover.full:not(.has-img) { min-height:auto; }         /* no white void when there's no photo yet */
+  .magcover:not(.has-img) .mag-hook { margin-top:34px; }
+  @media (max-width:720px){ .magcover{ margin:0 -14px 16px; max-width:none; border-width:10px; padding:16px 18px; }
+    .magcover.full{ min-height:auto; } }
+  .mag-logo { display:block; width:100%; max-width:520px; height:auto; margin:2px auto 0; }
+  .mag-issue { text-align:center; color:#c20f16; font-weight:900; font-size:12px; letter-spacing:3px; margin-top:8px; text-transform:uppercase; }
+  /* editing tools live in the top-right corner, off the cover composition (never printed) */
+  .mag-tools { position:absolute; top:10px; right:12px; margin:0; display:flex; gap:6px; z-index:4; }
+  .magcover .ctool { background:rgba(255,255,255,.85); border:1px solid #d9d9d9; color:#333; width:32px; height:32px; font-size:14px; box-shadow:0 2px 6px rgba(0,0,0,.15); }
+  .mag-hook { font-family:var(--serif); font-weight:900; font-size:50px; line-height:.96; letter-spacing:-1.2px;
               color:#111; margin-top:auto; text-wrap:balance; }
   .mag-subject { margin-top:16px; }
   .mag-name { font-family:var(--serif); font-weight:900; font-style:italic; font-size:27px; line-height:1; color:#111; }
@@ -396,10 +403,12 @@
   .mp-btn .mp-ic { font-size:34px; } .mp-btn .mp-t { font-family:var(--serif); font-weight:900; font-size:22px; margin-top:10px; }
   .mp-btn .mp-d { color:var(--faint); font-size:13px; margin-top:5px; line-height:1.45; }
   .mp-btn.accent { background:linear-gradient(160deg, rgba(49,209,88,.12), transparent 60%); border-color:var(--accent-d); }
-  .menu-tools { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; max-width:900px; margin:14px auto 0; }
-  .mtool { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 12px; text-align:center; cursor:pointer; font-weight:800; font-size:13px; }
-  .mtool:hover { border-color:var(--accent-d); }
-  .mtool .mtool-ic { font-size:26px; display:block; margin-bottom:6px; }
+  .menu-tools { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:12px; max-width:920px; margin:14px auto 0; }
+  .mtool { display:flex; flex-direction:column; align-items:flex-start; gap:2px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:15px 16px; text-align:left; cursor:pointer; transition:border-color .15s, transform .12s; }
+  .mtool:hover { border-color:var(--accent); transform:translateY(-2px); }
+  .mtool .mtool-ic { font-size:24px; margin-bottom:5px; }
+  .mtool .mtool-l { font-weight:800; font-size:14px; }
+  .mtool .mtool-d { font-weight:500; font-size:11.5px; color:var(--faint); line-height:1.35; }
   /* Shield-launch open animation */
   .shield-launch { position:fixed; inset:0; z-index:200; background:radial-gradient(circle at 50% 45%, #14202a, #0a0e12 70%); display:flex; align-items:center; justify-content:center; overflow:hidden; pointer-events:none; }
   .shield-launch img { width:150px; height:auto; animation:shieldFly 1.25s cubic-bezier(.2,.7,.2,1) forwards; filter:drop-shadow(0 10px 30px rgba(0,0,0,.6)); }
@@ -1509,8 +1518,20 @@ async function generateCoverPrompt(kind) {
     const ts = topStoryline(S.currentNl);
     scene = `Build the image AROUND the week's top storyline above — it must clearly evoke ${kindScene[ts.kind] || kindScene.chaos}. Use anonymous players, stadium, field, weather and light to tell that specific story; make it striking and unmistakably ABOUT this week, not a generic stock shot.`;
   }
-  const system = `You are the art director for the "${S.magName || 'Skirt Chasers'} Dynasty Magazine," a fantasy-football league magazine. Write ONE vivid image-generation prompt for a graphics AI (Midjourney, DALL·E, etc.) to create the cover image.
-Rules: cinematic, dramatic sports-magazine energy. ${scene} NEVER real NFL players, teams, or logos. Absolutely NO text, words, letters, numbers, scoreboards, or logos anywhere in the image. Portrait orientation. Leave clean negative space across the TOP for a masthead and some room lower for a headline. Return ONLY the prompt itself as one paragraph — no preamble, no explanation, no quotes.`;
+  const system = `You are the cover art director for "${S.magName || 'Skirt Chasers'} Dynasty Magazine," a Sports-Illustrated-style fantasy-football magazine. Output ONE production-ready image prompt for a graphics AI (Midjourney / DALL·E).
+
+${scene}
+
+Write a single dense prompt (55–90 words) with these elements, in this order and specific, not vague:
+1. SUBJECT — one clear, dramatic focal subject (an anonymous athlete, an object, a symbolic scene) that embodies the story above.
+2. ACTION / EMOTION — what is happening and the feeling it carries.
+3. SETTING — where, with concrete detail (stadium, tunnel, field, newsroom, weather).
+4. LIGHTING — specific and cinematic (rim light, hard key light, stadium floods, golden hour, chiaroscuro).
+5. COLOR — a deliberate palette; the magazine's accent is deep red and black.
+6. STYLE / MEDIUM — e.g. "cinematic sports photography, shot on 85mm, shallow depth of field, hyper-detailed, dramatic editorial cover."
+7. COMPOSITION — portrait 4:5, low or hero angle, subject lower-center, CLEAN empty space across the TOP THIRD for the masthead.
+
+Hard rules: NO real NFL players, teams, or logos. NO text, words, letters, numbers, scoreboards, or watermarks anywhere. Photoreal unless the story is clearly better as illustration. Return ONLY the prompt — no preamble, no quotes, no explanation.`;
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
@@ -2935,9 +2956,7 @@ function topBar() {
     <div class="tb-nav">
       <button class="tbtn primary" data-act="create-issue">📝 Create Issue</button>
       <button class="tbtn" data-act="weekly-stories">📰 Weekly Stories</button>
-      <button class="tbtn ghost" data-act="dashboard">🗞️ HQ</button>
-      <button class="tbtn ghost" data-act="home">☰ Menu</button>
-      <button class="tbtn ghost" data-act="settings">⚙</button>
+      <button class="tbtn ghost" data-act="settings">⚙ Settings</button>
     </div>
   </div></div>`;
 }
@@ -2970,27 +2989,29 @@ function renderTab() {
 function showMenu() {
   S.reading = false;
   const shield = (!S.shieldShown) ? (S.shieldShown = true, `<div class="shield-launch" id="shieldLaunch"><img src="${LOGO}" alt="SCFL"></div>`) : '';
+  // The menu is the tools hub. Create Issue / Weekly Stories / Settings live in
+  // the top bar (always one click), so they are NOT repeated here.
   const tools = [
-    ['dashboard', '🗞️', 'Newsroom HQ'], ['predraft-view', '🏈', 'Pre-Draft Issue'], ['cover-art', '🎨', 'Cover Art'],
-    ['desk', '✍️', 'Newsroom Desk'], ['storylines', '🧵', 'Storylines'], ['investigations', '🔍', 'Investigations'],
-    ['dossier', '📓', 'Chat Dossier'], ['records', '📖', 'Record Book'], ['archive-articles', '🗄️', 'Article Archive'],
-    ['archive', '📚', 'Back Issues'], ['calendar', '🗓️', 'Calendar'], ['settings', '⚙️', 'Settings'],
-  ].map(([a, ic, l]) => `<button class="mtool" data-act="${a}"><span class="mtool-ic">${ic}</span>${l}</button>`).join('');
+    ['dashboard', '🗞️', 'Newsroom HQ', 'Weekly checklist, brief & calendar'],
+    ['predraft-view', '🏈', 'Pre-Draft Issue', 'Build the Draft Issue'],
+    ['cover-art', '🎨', 'Cover Art', 'Art direction for the cover'],
+    ['desk', '✍️', 'Newsroom Desk', 'Chat → Water Cooler, uploads'],
+    ['storylines', '🧵', 'Storylines', 'Running league arcs'],
+    ['investigations', '🔍', 'Investigations', 'The long-form specials'],
+    ['dossier', '📓', 'Chat Dossier', 'Who’s who in the league'],
+    ['records', '📖', 'Record Book', 'All-time history & records'],
+    ['archive-articles', '🗄️', 'Article Archive', 'Every article, searchable'],
+    ['archive', '📚', 'Back Issues', 'Saved editions'],
+    ['calendar', '🗓️', 'Calendar', 'Release dates & events'],
+  ].map(([a, ic, l, d]) => `<button class="mtool" data-act="${a}"><span class="mtool-ic">${ic}</span><span class="mtool-l">${l}</span><span class="mtool-d">${d}</span></button>`).join('');
   setContent(`${shield}
-    <div class="magcover" style="max-width:660px;margin:6px auto 8px;min-height:auto">
+    <div class="magcover" style="max-width:620px;margin:6px auto 18px;min-height:auto">
       <img class="mag-logo" src="wordmark.png" alt="Skirt Chasers — Dynasty League Magazine">
       <div class="mag-issue">The Newsroom · ${esc(S.season || '')} Season</div>
       <img class="mag-shield" src="${LOGO}" alt="SCFL">
     </div>
-    <div class="menu-primary">
-      <button class="mp-btn accent" data-act="create-issue">
-        <div class="mp-ic">📝</div><div class="mp-t">Create Issue</div>
-        <div class="mp-d">Set the week, drop in your uploads, pick the feature and cover — the desk assembles the full issue and pulls that week's matchup stories automatically.</div></button>
-      <button class="mp-btn" data-act="weekly-stories">
-        <div class="mp-ic">📰</div><div class="mp-t">Weekly Stories</div>
-        <div class="mp-d">Jump straight to a week and let the app write all the matchup and game stories on its own — the automatic coverage.</div></button>
-    </div>
-    <div class="seclabel" style="text-align:center;margin:22px 0 4px">Newsroom Tools</div>
+    <p class="muted" style="text-align:center;max-width:560px;margin:0 auto 18px">Start a <b>Create Issue</b> or jump to <b>Weekly Stories</b> from the top bar. Everything else lives here.</p>
+    <div class="seclabel" style="text-align:center;margin:4px 0 10px">Newsroom Tools</div>
     <div class="menu-tools">${tools}</div>`);
   if (shield) setTimeout(() => { const el = $('#shieldLaunch'); if (el) { el.classList.add('done'); setTimeout(() => el.remove(), 400); } }, 1250);
 }
@@ -3407,12 +3428,17 @@ function predraftCoverTools(){
 }
 function predraftCoverHtml(P){
   const img = predraftCoverImg();
+  const U = s => String(s || '').toUpperCase();
   const feats = (P.features && P.features.length) ? P.features : (P.feature ? [P.feature] : []);
   const isInv = f => f.flag && /investigat|cold case|ledger|microfiche/i.test(f.flag);
+  // Real cover teasers — the actual big stories inside, not a list of champions.
+  const teasers = [];
+  feats.forEach(f => teasers.push(`${isInv(f) ? 'INVESTIGATION' : 'FEATURE'}: ${U(f.headline)}`));
+  (P.deskArts || []).slice(0, 2).forEach(a => teasers.push(U(a.headline)));
+  if (P.order[0]) teasers.push(`ON THE CLOCK: ${U(P.order[0].team)} HOLDS THE 1.01`);
+  if (P.ranked && P.ranked[0]) teasers.push(`${U(P.ranked[0].name)}: THE TEAM TO BEAT`);
   const lines = `<div class="mag-lines">
-      ${feats.map(f => `<div class="mag-line">📰 ${isInv(f) ? 'INVESTIGATION' : 'FEATURE'}: ${esc((f.headline || '').toUpperCase())}</div>`).join('')}
-      ${(P.ranked || []).slice(0, 3).map((t, i) => `<div class="mag-line">PRESEASON #${i + 1}: ${esc(t.name)}${t.hist && t.hist.titles ? ` · ${t.hist.titles}× champ` : ''}</div>`).join('')}
-      ${P.order[0] ? `<div class="mag-line">ON THE CLOCK: ${esc(P.order[0].team)} holds the 1.01</div>` : ''}
+      ${teasers.slice(0, 5).map(l => `<div class="mag-line">${esc(l)}</div>`).join('')}
     </div>`;
   const hook = img
     ? `<div class="mag-hero" style="background-image:url('${img}')"><div class="mag-hero-grad"></div>
