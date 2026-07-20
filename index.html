@@ -1522,7 +1522,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, money:{}, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, money:{}, predraft:null, currentPredraft:null, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null },
@@ -1542,6 +1542,14 @@ function savePower(){ try { localStorage.setItem(powerKey(), JSON.stringify(S.po
 function moneyKey(){ return 'gg.money.' + (S.leagueId || 'x'); }
 function loadMoney(){ try { S.money = JSON.parse(localStorage.getItem(moneyKey()) || '{}') || {}; } catch { S.money = {}; } }
 function saveMoney(){ try { localStorage.setItem(moneyKey(), JSON.stringify(S.money || {})); } catch {} }
+
+// The Pre-Draft Issue — a special edition. The app auto-builds it from returning
+// dynasty rosters + baked history; the manager tops it up with real draft order,
+// keepers, storylines and a futures board.
+function defaultPredraft(){ return { headline:'', order:'', keepers:'', storylines:'', futures:[] }; }
+function predraftKey(){ return 'gg.predraft.' + (S.leagueId || 'x'); }
+function loadPredraft(){ try { const r = JSON.parse(localStorage.getItem(predraftKey()) || 'null'); S.predraft = Object.assign(defaultPredraft(), r || {}); } catch { S.predraft = defaultPredraft(); } }
+function savePredraft(){ try { localStorage.setItem(predraftKey(), JSON.stringify(S.predraft || defaultPredraft())); } catch {} }
 
 // Custom cover images (from an external graphics AI), keyed by week.
 function coverImgKey(){ return 'gg.coverimg.' + (S.leagueId || 'x'); }
@@ -1771,6 +1779,12 @@ function showArchive() {
 }
 function openSavedIssue(id) {
   const snap = loadIssues().find(s => s.id === id);
+  if (snap && snap.predraft) {
+    S.currentPredraft = snap.predraft; S.reading = true;
+    app.innerHTML = `<div id="content"></div>`;
+    const back = `<button class="btn ghost" data-act="back-archive" style="width:auto;padding:8px 14px;margin:2px 0 12px">‹ Back Issues</button>`;
+    return setContent(predraftCoverHtml(snap.predraft) + back + predraftBodyHtml(snap.predraft));
+  }
   if (!snap || !snap.nl) { toast('Issue not found'); return; }
   S.currentNl = snap.nl; S.activeWeek = snap.week; S.reading = true;
   app.innerHTML = `<div id="content"></div>`;
@@ -2355,7 +2369,7 @@ async function enterApp() {
     const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
     const myRoster = rosters.find(r => r.owner_id === S.user.user_id) || null;
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster };
-    loadDesk(); loadPower(); loadMoney(); loadEspnHist(); loadBundledHistory(); loadCoverImg();
+    loadDesk(); loadPower(); loadMoney(); loadPredraft(); loadEspnHist(); loadBundledHistory(); loadCoverImg();
     S.values = null; S.newsCache = {}; S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:false };
     S.trade = { partnerId:null, give:new Set(), get:new Set() };
     // Season history via Sleeper's previous_league_id chain — the reliable way
@@ -2436,6 +2450,7 @@ function coverToolsInner() {
   const exit = S.sample ? `<button class="ctool" data-act="exit-sample" title="Exit sample">✕</button>` : '';
   return `${share}${pdf}${exit}
     <button class="ctool" data-act="desk" title="Newsroom desk">✍️</button>
+    <button class="ctool" data-act="predraft" title="Pre-Draft Issue">🏈</button>
     <button class="ctool" data-act="history" title="Record book">🏆</button>
     <button class="ctool" data-act="archive" title="Back issues">📚</button>
     <button class="ctool" data-act="settings" title="Settings">⚙</button>`;
@@ -2520,6 +2535,272 @@ function seasonBar() {
     </select></div>`;
 }
 const newsChrome = () => newsHeader() + seasonBar() + weekStepper();
+
+// ---------------------------------------------------------------------
+//  The Pre-Draft Issue
+// ---------------------------------------------------------------------
+// Last completed season's finish, owner-keyed, for a real worst-to-first order.
+function lastSeasonFinish(){
+  const i = S.histIndex, map = {};
+  if (!i || !i.hasData || !i.stats || !i.stats.seasons || !i.stats.seasons.length) return map;
+  const se = i.stats.seasons[0];
+  const tmap = {}; (se.teams || []).forEach(t => tmap[t.id] = aliasOf(t.owner || t.name));
+  (se.standings || []).forEach(st => { const who = tmap[st.teamId]; if (who && st.rank) map[normName(who)] = st.rank; });
+  return map;
+}
+function buildPredraft(){
+  const b = S.bundle; if (!b || !b.rosters || !b.rosters.length) return null;
+  const players = b.players || {};
+  const pd = S.predraft || defaultPredraft();
+  const posOf = id => (players[id]?.position || players[id]?.fantasy_positions?.[0] || '');
+  const NEED = ['QB','RB','WR','TE'];
+  const rk = id => { const r = players[id] && players[id].search_rank; return (typeof r === 'number' && r > 0) ? r : 99999; };
+  let teams = b.rosters.map(r => {
+    const u = r.owner_id ? b.usersById[r.owner_id] : null;
+    const name = (u && (u.metadata?.team_name || u.display_name)) || ('Team ' + r.roster_id);
+    const avatar = avatarUrl(u && u.avatar);
+    const ids = (r.players || []).filter(id => id && players[id]);
+    const roster = ids.map(id => ({ id, name: playerName(players[id], id), pos: posOf(id), rank: rk(id),
+      age: players[id].age || null, team: players[id].team || 'FA', rookie: players[id].years_exp === 0 }));
+    const skill = roster.filter(p => NEED.includes(p.pos)).sort((a, b) => a.rank - b.rank);
+    const core = skill.slice(0, 5);
+    const ages = roster.map(p => p.age).filter(Boolean);
+    const avgAge = ages.length ? Math.round(ages.reduce((s, a) => s + a, 0) / ages.length * 10) / 10 : null;
+    const bestByPos = {}; NEED.forEach(P => { const best = skill.find(p => p.pos === P); bestByPos[P] = best ? best.rank : 99999; });
+    const needs = NEED.slice().sort((x, y) => bestByPos[y] - bestByPos[x]).slice(0, 2).filter(P => bestByPos[P] > 40);
+    const strength = skill.filter(p => p.rank < 260).slice(0, 10).reduce((s, p) => s + Math.max(0, 260 - p.rank), 0);
+    return { rosterId: r.roster_id, name, avatar, roster, core, skill, avgAge, needs, bestByPos, strength, hist: histFor(name) };
+  });
+  const maxStr = Math.max(1, ...teams.map(t => t.strength));
+  teams.forEach(t => { t.strScore = t.strength / maxStr;
+    const h = t.hist, pedi = h ? (h.titles * 0.14 + (h.wins / ((h.wins + h.losses) || 1)) * 0.5) : 0;
+    t.power = t.strScore * 1.0 + pedi;
+    const age = t.avgAge || 26, young = age <= 25, old = age >= 27, strong = t.strScore >= 0.66, weak = t.strScore <= 0.42;
+    t.verdict = strong && old ? 'Win-now window' : strong && young ? 'Young and dangerous'
+      : weak && young ? 'Full rebuild mode' : weak && old ? 'Stuck in the middle' : young ? 'On the rise' : 'In the mix';
+  });
+  const ranked = teams.slice().sort((a, b) => b.power - a.power);
+  ranked.forEach((t, i) => t.seed = i + 1);
+  // Preseason power rankings — "The Machines"
+  const noteFor = (t) => {
+    const bits = [];
+    if (t.hist && t.hist.titles) bits.push(`${t.hist.titles}× champ pedigree`);
+    if (t.core[0]) bits.push(`built around ${t.core[0].name}`);
+    if (t.needs.length) bits.push(`must address ${t.needs.join(' & ')}`);
+    bits.push(t.verdict.toLowerCase());
+    return bits.slice(0, 3).join(', ').replace(/^./, c => c.toUpperCase()) + '.';
+  };
+  const power = ranked.map((t, i) => ({ rank: i + 1, manager: t.name,
+    tag: t.hist && t.hist.titles ? `${t.hist.titles}× champ` : (t.avgAge ? `avg age ${t.avgAge}` : ''), note: noteFor(t) }));
+  // Draft board — user order first, else real worst-to-first, else reverse power
+  const userLines = String(pd.order || '').split(/\n/).map(s => s.trim()).filter(Boolean);
+  const findTeam = nm => { const q = normName(nm); return teams.find(t => normName(t.name) === q) ||
+    teams.find(t => q.length >= 3 && (normName(t.name).includes(q) || q.includes(normName(t.name)))); };
+  let order = [], orderAuto = true;
+  if (userLines.length) {
+    orderAuto = false;
+    order = userLines.map((ln, i) => { const t = findTeam(ln.replace(/^\d+[).\s\-–]*/, '')); return { pick: i + 1, team: t ? t.name : ln.replace(/^\d+[).\s\-–]*/, ''), need: t ? t.needs.join('/') : '' }; });
+  } else {
+    const finish = lastSeasonFinish();
+    const withFin = teams.map(t => ({ t, fin: finish[normName((t.hist && t.hist.display) || t.name)] ?? null }));
+    const known = withFin.filter(x => x.fin != null).sort((a, b) => b.fin - a.fin);
+    const unknown = withFin.filter(x => x.fin == null).sort((a, b) => a.t.power - b.t.power);
+    const seq = known.length ? [...known, ...unknown].map(x => x.t) : ranked.slice().reverse();
+    order = seq.map((t, i) => ({ pick: i + 1, team: t.name, need: t.needs.join('/') }));
+  }
+  // Rivalries revived — most-played current pairings
+  const rivs = [];
+  for (let x = 0; x < teams.length; x++) for (let y = x + 1; y < teams.length; y++) {
+    const A = teams[x].name, B = teams[y].name, hh = histH2H(A, B); if (!hh) continue;
+    const tot = hh.aWins + hh.bWins; if (tot < 4) continue; rivs.push({ a: A, b: B, aw: hh.aWins, bw: hh.bWins, tot });
+  }
+  rivs.sort((p, q) => q.tot - p.tot);
+  const rivalries = rivs.slice(0, 3).map(r => ({ a: r.a, b: r.b,
+    line: `${r.tot} career meetings — ${r.aw === r.bw ? `dead even at ${r.aw}–${r.bw}` : (r.aw > r.bw ? `${r.a} leads ${r.aw}–${r.bw}` : `${r.b} leads ${r.bw}–${r.aw}`)}.` }));
+  // Offseason superlatives
+  const sup = [];
+  const mostT = teams.filter(t => t.hist && t.hist.titles > 0).sort((a, b) => b.hist.titles - a.hist.titles)[0];
+  if (mostT) sup.push({ emoji: '🏆', title: 'Most Pedigree', name: mostT.name, detail: `${mostT.hist.titles} title${mostT.hist.titles > 1 ? 's' : ''}${mostT.hist.titleYears.length ? ' (' + mostT.hist.titleYears.slice(0, 3).join(', ') + ')' : ''}.` });
+  if (ranked[0]) sup.push({ emoji: '🧱', title: 'Deepest Roster', name: ranked[0].name, detail: 'Tops the preseason board on raw talent on hand.' });
+  const young = teams.filter(t => t.avgAge).sort((a, b) => a.avgAge - b.avgAge)[0];
+  if (young) sup.push({ emoji: '🌱', title: 'Rebuild Watch', name: young.name, detail: `Youngest roster in the league — avg age ${young.avgAge}.` });
+  const old = teams.filter(t => t.avgAge).sort((a, b) => b.avgAge - a.avgAge)[0];
+  if (old && old !== young) sup.push({ emoji: '⏳', title: 'Win-Now Window', name: old.name, detail: `Oldest roster — avg age ${old.avgAge}. The time is now.` });
+  // Bold predictions
+  const champ = S.histIndex && S.histIndex.defending;
+  const champTeam = champ ? teams.find(t => t.hist && normName(t.hist.display) === normName(champ)) : null;
+  const preds = [];
+  if (champTeam) preds.push(champTeam.seed <= 3 ? `${champ} still looks the part — don't be shocked when the crown stays put.` : `The title hangover is real: ${champ} slips out of the top three this year.`);
+  if (ranked[0]) preds.push(`On paper, ${ranked[0].name} is the team to beat before a single pick is made.`);
+  const riser = teams.filter(t => t.avgAge && t.avgAge <= 24.8).sort((a, b) => b.strScore - a.strScore)[0];
+  if (riser && riser !== ranked[0]) preds.push(`${riser.name} is the young roster nobody wants to draw — a breakout is brewing.`);
+  if (order[0]) preds.push(`With the 1.01, ${order[0].team} lands a foundation piece${order[0].need ? ` at ${order[0].need}` : ''}.`);
+  // The Column
+  const span = (S.histIndex && S.histIndex.hasData) ? S.histIndex.span : '';
+  const top3 = ranked.slice(0, 3).map(t => t.name);
+  const cellar = ranked.slice(-2).map(t => t.name);
+  const leadP = [];
+  leadP.push(champ
+    ? `${champ} sits on the throne heading into the draft${span ? `, the latest name on a trophy that goes back to ${span.split('–')[0]}` : ''}. The other ${teams.length - 1} are already sharpening the knives.`
+    : `A fresh season opens with the board wide open and every roster telling itself this is the year.`);
+  if (top3.length) leadP.push(`The machines have ${top3[0]} out front, with ${top3.slice(1).join(' and ')} in hot pursuit. If there's a favorite, it lives at the top of that list.`);
+  if (cellar.length) leadP.push(`At the other end, ${cellar.join(' and ')} are staring down a rebuild — which, conveniently, means the top of the draft board runs through them.`);
+  if (pd.storylines && pd.storylines.trim()) String(pd.storylines).split(/\n{2,}|\n/).map(s => s.trim()).filter(Boolean).forEach(s => leadP.push(s));
+  const lead = { headline: (pd.headline || '').trim() || 'The Draft Issue',
+    standfirst: champ ? `${champ} defends the crown. The rest of the league is coming to take it.` : `A new season, a fresh board, and everything to play for.`,
+    paragraphs: leadP };
+  return { season: S.season, headline: lead.headline, lead, teams, ranked, power, order, orderAuto, rivalries,
+    superlatives: sup, predictions: preds, keepers: (pd.keepers || '').trim(), futures: (pd.futures || []),
+    subtitle: 'The Draft Issue' };
+}
+// ---- Pre-Draft rendering ----
+function predraftCoverTools(){
+  return `<button class="ctool" data-act="back-news" title="Back">‹</button>
+    <button class="ctool" data-act="predraft-share" title="Share">⤴</button>
+    <button class="ctool" data-act="pdf" title="Save as PDF">⤓</button>
+    ${S.guest ? '' : `<button class="ctool" data-act="predraft" title="Edit details">✍️</button>
+    <button class="ctool" data-act="predraft-save-issue" title="Save to Back Issues">📚</button>`}`;
+}
+function predraftCoverHtml(P){
+  return `<div class="magcover full">
+    <img class="mag-logo" src="wordmark.png" alt="Skirt Chasers — Dynasty League Magazine">
+    <div class="mag-issue">${esc(P.season || '')} Season · The Draft Issue</div>
+    <div class="mag-tools">${predraftCoverTools()}</div>
+    <div class="mag-hook">${esc(P.lead.headline)}</div>
+    <div class="mag-subject"><div class="mag-name" style="font-size:clamp(20px,5.4vw,30px)">${esc(P.lead.standfirst)}</div></div>
+    <div class="mag-lines">
+      ${(P.ranked || []).slice(0, 3).map((t, i) => `<div class="mag-line">PRESEASON #${i + 1}: ${esc(t.name)}${t.hist && t.hist.titles ? ` · ${t.hist.titles}× champ` : ''}</div>`).join('')}
+      ${P.order[0] ? `<div class="mag-line">ON THE CLOCK: ${esc(P.order[0].team)} holds the 1.01</div>` : ''}
+    </div>
+    <img class="mag-shield" src="${LOGO}" alt="SCFL">
+  </div>`;
+}
+function predraftBodyHtml(P){
+  const lead = `<div class="lead"><h1>${esc(P.lead.headline)}</h1>
+    <div class="standfirst">${esc(P.lead.standfirst)}</div>
+    ${P.lead.paragraphs.map(p => `<p class="body">${esc(p)}</p>`).join('')}</div>`;
+  const outlooks = P.teams.slice().sort((a, b) => a.seed - b.seed).map(t => `<div class="card">
+    <div class="row" style="justify-content:space-between;align-items:baseline">
+      <div class="at" style="margin:0">${esc(t.name)}</div>
+      <span class="faint" style="font-size:12px;font-weight:800">#${t.seed} preseason${t.hist && t.hist.titles ? ` · ${t.hist.titles}× champ` : ''}</span>
+    </div>
+    <div class="byline" style="margin:2px 0 8px">${esc(t.verdict)}${t.avgAge ? ` · avg age ${t.avgAge}` : ''}${t.needs.length ? ` · needs ${esc(t.needs.join(', '))}` : ''}</div>
+    ${t.core.map(p => `<div class="sd" style="border:0;padding:3px 0">${posBadge(p.pos)}
+      <div style="flex:1"><div class="nm">${esc(p.name)} <span class="faint" style="font-size:11px">· ${esc(p.team)}${p.age ? `, ${p.age}` : ''}${p.rookie ? ' · R' : ''}</span></div></div></div>`).join('')}
+  </div>`).join('');
+  const board = `<div class="card">
+    <div class="at">📋 First-Round Board${P.orderAuto ? ' <span class="faint" style="font-size:11px;font-weight:700;letter-spacing:0">· projected order (last-season worst-to-first)</span>' : ''}</div>
+    ${P.order.map(o => `<div class="pr"><span class="ovr" style="width:34px">${o.pick}.</span>
+      <div style="flex:1"><div class="nm">${esc(o.team)}</div>${o.need ? `<div class="dt">need: ${esc(o.need)}</div>` : ''}</div></div>`).join('')}
+    ${P.orderAuto ? `<div class="faint" style="font-size:12px;margin-top:8px">Tap ✍️ to drop in your real draft order and keepers.</div>` : ''}</div>`;
+  const keepers = P.keepers ? `<div class="card"><div class="at">🔒 Keepers & Locks</div>
+    ${P.keepers.split(/\n/).map(s => s.trim()).filter(Boolean).map(s => `<div class="dt" style="padding:3px 0">${esc(s)}</div>`).join('')}</div>` : '';
+  const nrows = P.power.length || 1;
+  const power = `<div class="card"><div class="at">Preseason Power Rankings</div>
+    <div class="byline" style="margin:-2px 0 8px">— The Machines</div>
+    ${P.power.map(p => { const pct = Math.round(((nrows - p.rank + 1) / nrows) * 100); return `<div class="pr">
+      <span class="ovr" style="width:24px">${p.rank}</span>
+      <div style="flex:1"><div class="nm">${esc(p.manager)}${p.tag ? ` <span class="faint" style="font-weight:600;font-size:12px">${esc(p.tag)}</span>` : ''}</div>
+      <div class="prbar"><div class="prfill" style="width:${pct}%"></div></div>
+      ${p.note ? `<div class="dt">${esc(p.note)}</div>` : ''}</div></div>`; }).join('')}</div>`;
+  const rivalries = P.rivalries.length ? `<div class="card"><div class="at">🔥 Rivalries Revived</div>
+    ${P.rivalries.map(r => `<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      <div class="nm">${esc(r.a)} <span class="faint">vs</span> ${esc(r.b)}</div><div class="dt">${esc(r.line)}</div></div>`).join('')}</div>` : '';
+  const sup = P.superlatives.length ? `<div class="card awards" style="border-color:var(--accent-d)"><div class="at">Offseason Superlatives</div>
+    ${P.superlatives.map(a => `<div class="award"><span class="em">${a.emoji}</span><div style="flex:1">
+      <div class="lab">${esc(a.title)}</div><div class="nm">${esc(a.name)}</div><div class="dt">${esc(a.detail)}</div></div></div>`).join('')}</div>` : '';
+  const preds = P.predictions.length ? `<div class="card"><div class="at">🔮 Bold Predictions</div>
+    ${P.predictions.map(p => `<div class="dt" style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">${esc(p)}</div>`).join('')}</div>` : '';
+  const futures = (P.futures && P.futures.length) ? `<div class="card">
+    <div class="at">💰 Futures <span class="faint" style="font-size:11px;font-weight:700;letter-spacing:0">· odds to win it all</span></div>
+    <div class="byline" style="margin:-2px 0 8px">— Pork Chop Express</div>
+    ${P.futures.map(m => `<div class="ml"><div class="ml-sub">${esc(m.subject)}</div>
+      <div class="ml-odds">${m.line ? `<span class="ml-line">${esc(m.line)}</span>` : ''}${m.total ? `<span class="ml-chip">O/U ${esc(m.total)}</span>` : ''}</div>
+      ${m.note ? `<div class="dt" style="flex-basis:100%;margin-top:4px">${esc(m.note)}</div>` : ''}</div>`).join('')}</div>` : '';
+  const colophon = `<div class="colophon">Auto-assembled from your returning dynasty rosters and the league's real history — pedigree, all-time records and rivalries are genuine. Draft order, keepers and the futures board are yours to set.</div>`;
+  return sec('The Column') + lead
+    + sec('Dynasty Outlooks') + outlooks
+    + sec('The Draft Board') + board + keepers
+    + power
+    + rivalries
+    + sup
+    + preds
+    + futures
+    + colophon;
+}
+function showPredraft(P){
+  P = P || buildPredraft();
+  if (!P) { toast('Open your league first'); return; }
+  S.currentPredraft = P;
+  app.innerHTML = `<div id="content"></div>`;
+  setContent(predraftCoverHtml(P) + predraftBodyHtml(P));
+  window.scrollTo(0, 0);
+}
+function showPredraftDesk(){
+  loadPredraft();
+  const pd = S.predraft || defaultPredraft();
+  const fut = (pd.futures || []);
+  app.innerHTML = `<div style="padding-bottom:24px">
+    <button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>
+    <div class="setup-logo" style="font-size:24px">🏈 The Pre-Draft Issue</div>
+    <p class="muted" style="margin-top:4px">The app builds the whole edition from your returning rosters and league history. Everything below is optional — it's how you top it up with the real draft.</p>
+    <div class="card">
+      <label class="label">Cover headline</label>
+      <input id="pdHeadline" class="input" value="${esc(pd.headline || '')}" placeholder="e.g. The Champs Are Hunted" />
+    </div>
+    <div class="card">
+      <label class="label">Storylines / editor's note</label>
+      <textarea id="pdStory" class="input" style="height:110px" placeholder="Anything you want in the opening column — offseason moves, drama, expectations. One thought per line.">${esc(pd.storylines || '')}</textarea>
+    </div>
+    <div class="card">
+      <label class="label">Draft order — one team per line, pick 1 first</label>
+      <textarea id="pdOrder" class="input" style="height:130px" placeholder="Leave blank and I'll project it from last season's finish.&#10;1. Team A&#10;2. Team B">${esc(pd.order || '')}</textarea>
+    </div>
+    <div class="card">
+      <label class="label">Keepers &amp; locks</label>
+      <textarea id="pdKeepers" class="input" style="height:90px" placeholder="e.g. Team A keeps Bijan Robinson (1st)">${esc(pd.keepers || '')}</textarea>
+    </div>
+    <div class="seclabel">💰 Futures board (from Excel) — Pork Chop Express</div>
+    <p class="faint" style="font-size:12px;margin:-2px 4px 8px;line-height:1.5">Season-long odds to win it all. Columns: <b>Team</b>, <b>Odds</b> (e.g. +250), optional <b>O/U</b> wins and <b>Note</b>.</p>
+    <div class="card">
+      <input id="pdFutFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-act="predraft-futures-file" class="fileinput" />
+      <div id="pdFutStatus" class="faint" style="font-size:12px;margin-top:8px;line-height:1.4">Pick the <b>.xlsx</b> futures file.</div>
+      ${fut.length ? `<div style="height:10px"></div>
+        <div class="dt" style="font-weight:700;color:var(--accent)">✓ ${fut.length} futures loaded.</div>
+        <div class="faint" style="font-size:12px;margin-top:4px">${fut.slice(0, 3).map(m => `${esc(m.subject)}${m.line ? ` ${esc(m.line)}` : ''}`).join(' · ')}${fut.length > 3 ? ' …' : ''}</div>
+        <div style="height:10px"></div><button class="btn ghost" data-act="predraft-clear-futures">Remove futures</button>` : ''}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn" data-act="predraft-build" style="flex:1.6">📰 Build &amp; preview the issue →</button>
+      <button class="btn ghost" data-act="predraft-save-notes" style="flex:1">Save</button>
+    </div>
+  </div>`;
+}
+function readPredraftForm(){
+  const g = id => (document.getElementById(id) || {}).value || '';
+  S.predraft = Object.assign(defaultPredraft(), S.predraft, {
+    headline: g('pdHeadline'), storylines: g('pdStory'), order: g('pdOrder'), keepers: g('pdKeepers'),
+  });
+  savePredraft();
+}
+async function sharePredraft(){
+  const P = S.currentPredraft || buildPredraft(); if (!P) return;
+  const L = [`🏈 *SKIRT CHASERS — THE DRAFT ISSUE* (${P.season || ''})`, '', `*${P.lead.headline}*`, P.lead.standfirst, ''];
+  L.push('🔮 *PRESEASON POWER — The Machines*');
+  P.power.slice(0, 6).forEach(p => L.push(`${p.rank}. ${p.manager}${p.tag ? ` (${p.tag})` : ''}`));
+  if (P.order[0]) { L.push(''); L.push(`📋 On the clock: ${P.order[0].team} holds the 1.01.`); }
+  const text = L.join('\n');
+  if (navigator.share) { try { await navigator.share({ title: 'The Draft Issue', text }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+  try { await navigator.clipboard.writeText(text); toast('Copied — best shared as a PDF (⤓)'); } catch { showCopyModal(text); }
+}
+function savePredraftIssue(){
+  const P = S.currentPredraft || buildPredraft(); if (!P) { toast('Open the issue first'); return; }
+  const snap = { id: `${P.season || ''}-predraft`, week: 0, season: P.season || '', magName: S.magName || 'Skirt Chasers',
+    predraft: P, savedAt: Date.now(), cover: { headline: P.lead.headline, subject: { name: P.lead.standfirst, tag: 'The Draft Issue' } } };
+  const list = loadIssues().filter(x => x.id !== snap.id); list.unshift(snap);
+  saveIssues(list.slice(0, 24)); toast('Saved the Draft Issue to Back Issues');
+}
+
 async function renderNews() {
   setContent(newsChrome() + spinner(`Writing the Week ${S.activeWeek} edition…`));
   const wk = S.activeWeek;
@@ -2553,7 +2834,9 @@ async function renderNews() {
       : canSampleLeague
         ? `<button class="btn" data-act="sample-league" style="max-width:340px;margin:12px auto 0">Preview a sample issue from your league →</button>`
         : `<button class="btn" data-act="demo" style="max-width:320px;margin:12px auto 0">Preview a sample league →</button>`;
-    setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint) + demoBtn);
+    const predraftBtn = (S.guest || S.demo || !S.bundle) ? ''
+      : `<button class="btn" data-act="predraft-view" style="max-width:340px;margin:10px auto 0">🏈 Build the Pre-Draft Issue →</button>`;
+    setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint) + demoBtn + predraftBtn);
     return;
   }
   S.currentNl = nl;
@@ -3225,6 +3508,13 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'desk-generate') return deskGenerate();
   if (act === 'power-clear') { if (S.power) delete S.power[S.activeWeek]; savePower(); delete S.newsCache[S.activeWeek]; return showDesk(); }
   if (act === 'money-clear') { if (S.money) delete S.money[S.activeWeek]; saveMoney(); delete S.newsCache[S.activeWeek]; return showDesk(); }
+  if (act === 'predraft') return showPredraftDesk();
+  if (act === 'predraft-view') return showPredraft();
+  if (act === 'predraft-build') { readPredraftForm(); return showPredraft(); }
+  if (act === 'predraft-save-notes') { readPredraftForm(); toast('Saved'); return showPredraftDesk(); }
+  if (act === 'predraft-share') return sharePredraft();
+  if (act === 'predraft-save-issue') return savePredraftIssue();
+  if (act === 'predraft-clear-futures') { S.predraft = S.predraft || defaultPredraft(); S.predraft.futures = []; savePredraft(); return showPredraftDesk(); }
   if (act === 'desk-delete') { S.desk = S.desk.filter(a => a.id !== t.dataset.id); saveDesk(); delete S.newsCache[S.activeWeek];
     if ($('#setbody') || document.querySelector('.setup-logo')) return showDesk(); renderShell(); return renderTab(); }
   if (act === 'back' || act === 'back-news') { S.reading = false; renderShell(); return renderTab(); }
@@ -3329,6 +3619,23 @@ document.body.addEventListener('change', async (e) => {
       delete S.newsCache[S.activeWeek];
       if (st) st.innerHTML = `✓ Loaded <b>${esc(f.name)}</b> — <b>${board.length}</b> lines on the board for Week ${S.activeWeek}. Pork Chop Express is live in this week's issue.`;
       showDesk();
+    } catch (err) {
+      if (st) st.innerHTML = `Couldn't read that file — ${esc((err && err.message) || 'unknown error')}.`;
+    }
+  }
+  const ffile = e.target.closest('[data-act="predraft-futures-file"]');
+  if (ffile && ffile.files && ffile.files[0]) {
+    const f = ffile.files[0];
+    const st = $('#pdFutStatus');
+    if (st) st.textContent = 'Reading the board…';
+    try {
+      const buf = await f.arrayBuffer();
+      if (!u8sig(buf)) throw new Error('that isn’t an .xlsx — export/Save As Excel Workbook (.xlsx)');
+      const board = parseMoneyRows(await extractRowsFromXlsx(buf));
+      if (!board || !board.length) { if (st) st.innerHTML = `Read <b>${esc(f.name)}</b>, but couldn't find a team column. Give it headers like <b>Team · Odds · O/U · Note</b>.`; return; }
+      S.predraft = Object.assign(defaultPredraft(), S.predraft, { futures: board }); savePredraft();
+      if (st) st.innerHTML = `✓ Loaded <b>${esc(f.name)}</b> — <b>${board.length}</b> futures. Pork Chop Express is in the Draft Issue now.`;
+      showPredraftDesk();
     } catch (err) {
       if (st) st.innerHTML = `Couldn't read that file — ${esc((err && err.message) || 'unknown error')}.`;
     }

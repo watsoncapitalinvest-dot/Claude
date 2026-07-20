@@ -18,6 +18,7 @@ real Sleeper box scores:
 - **The Trade Block** — every completed trade reviewed and graded under your scoring
 - **The Water Cooler** — paste your league group chat and it becomes a column (optional AI writer)
 - **The Record Book** — import your league's ESPN history (champions, all-time standings, records); the writing then references real rivalries and pedigree
+- **The Pre-Draft Issue** — a special edition auto-built from your returning dynasty rosters + baked-in history: team-by-team outlooks, a projected first-round board (last-season worst-to-first), preseason power rankings, revived rivalries, offseason superlatives, bold predictions, and a futures board. Top it up with your real draft order, keepers, and storylines before you publish.
 
 **Private GM tools (owner only)** — a **Trade Analyzer** and **Draft Assistant**
 scored under your league's exact settings. These never appear on shared/guest views.
