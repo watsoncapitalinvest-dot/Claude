@@ -947,6 +947,7 @@ async function generateChatArticleAI(raw, angle) {
     : `Find the angle yourself — the one thread everyone kept circling back to.`;
   const hist = historyBlurb();
   const doss = dossierBlurb();
+  const recs = recordsBlurb();
   const system =
 `You are the Water Cooler columnist for "${mag} Dynasty League Magazine," a fantasy-football league magazine written for the guys in the league. Your beat is the league group chat.
 
@@ -959,7 +960,7 @@ Write ONE column that is a SUMMARY and COMMENTARY on the week's group chat — a
 - Length: 3 to 5 tight paragraphs. Every sentence earns its place.
 
 ${angleLine}
-${hist ? '\n' + hist + '\n' : ''}${doss ? '\n' + doss + '\n' : ''}
+${hist ? '\n' + hist + '\n' : ''}${recs ? '\n' + recs + '\n' : ''}${doss ? '\n' + doss + '\n' : ''}
 Return STRICT JSON, no markdown, no preamble, exactly this shape:
 {"headline": "punchy title, no clickbait fluff", "dek": "one-line standfirst under the headline", "paragraphs": ["para 1", "para 2", "..."]}`;
 
@@ -1732,6 +1733,40 @@ async function loadBundledDossier() {
     }
   } catch {}
 }
+// ---- Canonical Record Book: full league history & records ------------------
+// Imported from League Legacy (leaguelegacy.io/leagues/scfl-2) — 2005-2025,
+// every team's career record, per-season superlatives, and ELO history. Baked
+// in like history.json/dossier.json and used by the Record Book view and the
+// AI writers (so callbacks to real records and titles are always accurate).
+function recordsKey(){ return 'gg.records.' + (S.leagueId || 'x'); }
+function loadRecords(){ try { S.records = JSON.parse(localStorage.getItem(recordsKey()) || 'null'); } catch { S.records = null; } }
+function saveRecords(){ try { S.records ? localStorage.setItem(recordsKey(), JSON.stringify(S.records)) : localStorage.removeItem(recordsKey()); } catch { toast('Records too large to save on this device'); } }
+async function loadBundledRecords() {
+  if (S.records && S.records.standings) return;
+  try {
+    const r = await fetch('records.json', { cache: 'force-cache' });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d && d.standings) {
+      S.records = d;
+      if (S.tab === 'news' && !S.reading) renderNews();
+    }
+  } catch {}
+}
+// A compact record-book brief for the AI writers' system prompt.
+function recordsBlurb() {
+  const r = S.records; if (!r || !r.standings) return '';
+  const top = r.standings.slice(0, 8).map(m =>
+    `- ${m.name}: ${m.record} (${(m.winPct*100).toFixed(1)}%), ${m.playoffs} playoff apps, titles ${m.titles}/${m.runnerUps}/${m.thirds} (1st/2nd/3rd)`
+  ).join('\n');
+  const lb = r.leaderboards || {};
+  const titles = (lb.mostTitles||[]).filter(t=>t.titles>0).map(t=>`${t.team} (${t.titles})`).join(', ');
+  return `SCFL RECORD BOOK (canonical league history 2005-2025, imported from League Legacy — real, verified records. Never contradict these):
+Career leaders by win%:
+${top}
+Most championships: ${titles}.
+Use these for accurate callbacks to titles, dynasties and droughts; never invent records that contradict this.`;
+}
 // A compact dossier brief for the AI writers' system prompt.
 function dossierBlurb() {
   const d = S.dossier; if (!d) return '';
@@ -1976,10 +2011,18 @@ function recTile(label, big, sub) {
 }
 function showHistory() {
   const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>`;
+  // Canonical League Legacy record book banner (2005-2025, all-time). Always
+  // offer it at the top of the Record Book when it's loaded.
+  const llBanner = (S.records && S.records.standings && S.records.standings.length) ? `<div class="card" data-act="records" style="cursor:pointer;border-color:var(--accent-d);background:var(--bg2)">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div><div class="at" style="margin:0">📖 League Legacy Record Book</div>
+      <div class="faint" style="font-size:12px;margin-top:2px">All-time standings, championships & superlatives · ${esc(S.records.span || '')} · ${S.records.seasons || ''} seasons</div></div>
+      <span class="faint" style="font-size:22px">›</span></div></div>` : '';
   if (!S.espnHist || !S.espnHist.seasons || !S.espnHist.seasons.length) {
     app.innerHTML = `<div style="padding-bottom:24px">${back}
       <div class="setup-logo" style="font-size:24px">🏆 The Record Book</div>
       <p class="muted" style="margin-top:4px">Bring your old ESPN seasons in and the magazine gets a permanent history — champions, all-time standings, and the record book.</p>
+      ${llBanner}
       ${historyImportCard()}</div>`;
     return;
   }
@@ -2018,6 +2061,7 @@ function showHistory() {
   app.innerHTML = `<div style="padding-bottom:24px">${back}
     <div class="setup-logo" style="font-size:24px">🏆 The Record Book</div>
     <p class="muted" style="margin-top:4px">${esc(S.espnHist.leagueName || S.magName || '')} · ${st.seasons.length} seasons imported · ${span}</p>
+    ${llBanner}
     <div class="sec">Record Book</div>${records}
     <div class="sec">Champions</div><div class="card">${champHtml || '<div class="dt">No champions recorded.</div>'}</div>
     <div class="sec">All-Time Standings</div><div class="card">${tableHtml}</div>
@@ -2139,6 +2183,62 @@ function showDossier() {
     ${arcs ? `<div class="seclabel">Storyline Arcs</div>${arcs}` : ''}
     ${managers ? `<div class="seclabel">The Managers</div>${managers}` : ''}
     ${timeline ? `<div class="seclabel">The Timeline</div>${timeline}` : ''}
+  </div>`;
+}
+function showRecords() {
+  const r = S.records;
+  const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>`;
+  if (!r || !r.standings || !r.standings.length) {
+    app.innerHTML = `<div style="padding-bottom:24px">${back}
+      <div class="setup-logo" style="font-size:24px">🏆 SCFL Record Book</div>
+      <p class="muted" style="margin-top:4px">The canonical league history — every team's all-time record, championships and rankings.</p>
+      <div class="card"><div class="dt">No record book baked in yet. Once <b>records.json</b> is committed it loads here automatically.</div></div></div>`;
+    return;
+  }
+  const medal = (n, e) => n > 0 ? `${e}${n}` : '';
+  const active = new Set(r.standings.filter(m => /2025/.test(m.seasons)).map(m => m.name));
+  const rowsHtml = r.standings.map((m, i) => {
+    const tr = [medal(m.titles, '🏆'), medal(m.runnerUps, '🥈'), medal(m.thirds, '🥉')].filter(Boolean).join(' ');
+    const on = active.has(m.name);
+    return `<tr style="${on ? '' : 'opacity:.55'}">
+      <td style="text-align:right;color:var(--faint);padding:6px 8px 6px 0">${i + 1}</td>
+      <td style="padding:6px 8px 6px 0"><b>${esc(m.name)}</b>${on ? '' : ' <span class="faint" style="font-size:10px">· departed</span>'}<div class="faint" style="font-size:10px">${esc(m.seasons)}</div></td>
+      <td style="text-align:right;padding:6px 8px;white-space:nowrap">${esc(m.record)}<div class="faint" style="font-size:10px">${(m.winPct*100).toFixed(1)}%</div></td>
+      <td style="text-align:right;padding:6px 8px">${m.playoffs}</td>
+      <td style="text-align:right;padding:6px 0 6px 8px;white-space:nowrap">${tr || '<span class="faint">—</span>'}</td>
+    </tr>`;
+  }).join('');
+  const standingsCard = `<div class="card" style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="border-bottom:1px solid var(--line);color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.4px">
+        <th style="text-align:right;padding:0 8px 6px 0">#</th><th style="text-align:left;padding:0 8px 6px 0">Team</th>
+        <th style="text-align:right;padding:0 8px 6px">Record</th><th style="text-align:right;padding:0 8px 6px">PO</th>
+        <th style="text-align:right;padding:0 0 6px 8px">Trophies</th></tr></thead>
+      <tbody>${rowsHtml}</tbody></table>
+    <div class="faint" style="font-size:11px;margin-top:8px">Regular-season record · PO = playoff appearances · 🏆 titles / 🥈 runner-up / 🥉 third. Dimmed = no longer active.</div>
+  </div>`;
+  const lb = r.leaderboards || {};
+  const lbCard = (title, arr, fmt) => arr && arr.length ? `<div class="card">
+    <div class="at" style="margin:0 0 6px">${title}</div>
+    ${arr.map((x, i) => `<div class="dt" style="padding:3px 0;display:flex;justify-content:space-between"><span>${i+1}. ${esc(x.team)}</span><b style="color:var(--accent)">${fmt(x)}</b></div>`).join('')}
+  </div>` : '';
+  const leaders = `<div class="sbgrid">
+    ${lbCard('Most Championships', (lb.mostTitles||[]).filter(t=>t.titles>0), x => `${x.titles}× 🏆`)}
+    ${lbCard('Best Win %', lb.bestWinPct, x => `${(x.winPct*100).toFixed(1)}%`)}
+    ${lbCard('Most Playoff Runs', lb.mostPlayoffs, x => `${x.playoffs}`)}
+  </div>`;
+  const sup = (r.superlatives || []).slice(0, 10).map(s => {
+    const b = s.best || {};
+    const line = [b.draft && `Draft: ${b.draft.team}`, b.manager && `GM: ${b.manager.team}`, b.luck && `Luckiest: ${b.luck.team}`].filter(Boolean).join(' · ');
+    return `<div class="dt" style="padding:4px 0;border-bottom:1px solid var(--line2,transparent)"><b>${esc(s.year)}</b> — ${esc(line)}</div>`;
+  }).join('');
+  const supCard = sup ? `<div class="card"><div class="at" style="margin:0 0 6px">Season Superlatives</div>${sup}<div class="faint" style="font-size:11px;margin-top:6px">Best draft / GM / luckiest team, per season (League Legacy rankings).</div></div>` : '';
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    <div class="setup-logo" style="font-size:24px">🏆 SCFL Record Book</div>
+    <p class="muted" style="margin-top:4px">Canonical league history, ${esc(r.span || '')} · ${r.seasons || (r.standings.length)} seasons · imported from League Legacy. The magazine writes with these records in mind.</p>
+    <div class="seclabel">All-Time Standings</div>${standingsCard}
+    <div class="seclabel">Leaderboards</div>${leaders}
+    ${supCard ? `<div class="seclabel">History</div>${supCard}` : ''}
   </div>`;
 }
 function historyImportCard() {
@@ -2468,7 +2568,7 @@ async function enterGuest(params) {
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster: null };
     S.values = null; S.newsCache = {}; S.history = null; S.desk = [];
     const d = params.get('desk'); if (d) { try { S.desk = JSON.parse(b64dec(d)) || []; } catch { S.desk = []; } }
-    renderGuestShell(); renderNews(); loadBundledHistory(); loadBundledDossier();
+    renderGuestShell(); renderNews(); loadBundledHistory(); loadBundledDossier(); loadBundledRecords();
   } catch (e) {
     app.innerHTML = empty("Couldn't open this issue", 'The league may be private, or the link is incomplete.');
   }
@@ -2567,7 +2667,7 @@ async function enterApp() {
     const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
     const myRoster = rosters.find(r => r.owner_id === S.user.user_id) || null;
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster };
-    loadDesk(); loadPower(); loadMoney(); loadPredraft(); loadDossier(); loadEspnHist(); loadBundledHistory(); loadBundledDossier(); loadCoverImg();
+    loadDesk(); loadPower(); loadMoney(); loadPredraft(); loadDossier(); loadRecords(); loadEspnHist(); loadBundledHistory(); loadBundledDossier(); loadBundledRecords(); loadCoverImg();
     S.values = null; S.newsCache = {}; S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:false };
     S.trade = { partnerId:null, give:new Set(), get:new Set() };
     // Season history via Sleeper's previous_league_id chain — the reliable way
@@ -3133,6 +3233,7 @@ async function renderNews() {
             <button class="offtool" data-act="cover-art"><span class="offtool-ic">🎨</span>Cover Art</button>
             <button class="offtool" data-act="desk"><span class="offtool-ic">✍️</span>Newsroom Desk</button>
             <button class="offtool" data-act="dossier"><span class="offtool-ic">📓</span>Chat Dossier</button>
+            <button class="offtool" data-act="records"><span class="offtool-ic">📖</span>Record Book</button>
           </div></div>`;
     setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint) + demoBtn + offSeasonTools);
     return;
@@ -3810,6 +3911,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'archive') return showArchive();
   if (act === 'history') return showHistory();
   if (act === 'dossier') return showDossier();
+  if (act === 'records') return showRecords();
   if (act === 'cover-art') return showCoverArt(t.dataset.kind || 'week');
   if (act === 'gen-cover-prompt') {
     const kind = t.dataset.kind || 'week';
