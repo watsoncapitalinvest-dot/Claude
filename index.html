@@ -127,6 +127,12 @@
   .ml-odds { display:flex; align-items:center; gap:6px; flex-shrink:0; }
   .ml-line { font-family:var(--mono,ui-monospace,monospace); font-weight:900; font-size:16px; color:var(--accent); font-variant-numeric:tabular-nums; }
   .ml-chip { font-size:11px; font-weight:800; letter-spacing:.3px; color:var(--faint); background:var(--bg2); border:1px solid var(--border); border-radius:999px; padding:2px 8px; white-space:nowrap; }
+  .proofbar { position:sticky; top:6px; z-index:40; display:flex; flex-wrap:wrap; gap:8px 12px; justify-content:space-between; align-items:center; background:linear-gradient(90deg,#2a2205,#1c1708); border:1px solid var(--accent-d); border-radius:12px; padding:10px 14px; margin-bottom:14px; font-size:13px; font-weight:800; color:#ffd76a; }
+  .proofbar .btn { width:auto; padding:8px 12px; margin:0; }
+  .proofbtns { display:flex; gap:8px; }
+  .proofwrap { position:relative; }
+  .proofwrap .mag-tools, .proofwrap .sharerow { display:none !important; }
+  .proofwrap::after { content:'PROOF · NOT FINAL'; position:fixed; left:50%; top:52%; transform:translate(-50%,-50%) rotate(-28deg); font:900 60px/1 Arial,sans-serif; letter-spacing:6px; color:rgba(180,182,195,.09); pointer-events:none; z-index:5; white-space:nowrap; }
   .sd { display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px solid rgba(255,255,255,.05); }
   .sd .val { font-size:16px; font-weight:800; font-variant-numeric:tabular-nums; min-width:44px; text-align:right; }
   /* trade block */
@@ -206,6 +212,7 @@
     * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     body { background:#fff; }
     .no-print, .tabbar, .mag-tools, .sharerow, .week, .guestbar { display:none !important; }
+    .proofwrap::after, .proofbar { display:none !important; }
     #content, .max { padding:0 !important; }
     .magcover { min-height:auto; break-inside:avoid; page-break-inside:avoid; }
     .magcover.full { min-height:auto; }
@@ -2731,9 +2738,17 @@ function predraftBodyHtml(P){
 function showPredraft(P){
   P = P || buildPredraft();
   if (!P) { toast('Open your league first'); return; }
-  S.currentPredraft = P;
+  S.currentPredraft = P; S.reading = false;
+  const controls = S.guest ? '' : `<div class="card no-print" style="border-color:var(--accent-d);margin-top:14px">
+    <div class="at">Publish the Draft Issue</div>
+    <div class="dt" style="margin:2px 0 8px">Rehearse it first, then make the final PDF for print or the group chat.</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn ghost" data-act="predraft" style="flex:1">✍️ Edit</button>
+      <button class="btn ghost" data-act="publish-draft" data-kind="predraft" style="flex:1">📋 Publish draft</button>
+      <button class="btn" data-act="publish" data-kind="predraft" style="flex:1">✅ Publish → PDF</button>
+    </div></div>`;
   app.innerHTML = `<div id="content"></div>`;
-  setContent(predraftCoverHtml(P) + predraftBodyHtml(P));
+  setContent(predraftCoverHtml(P) + predraftBodyHtml(P) + controls);
   window.scrollTo(0, 0);
 }
 function showPredraftDesk(){
@@ -2871,9 +2886,42 @@ function composeBar(wk, deskArts) {
       <button class="btn" data-act="desk" style="flex:1.4">✍️ Add updates</button>
       <button class="btn ghost" data-act="save-issue" style="flex:1" title="Save to Back Issues">📚</button>
       <button class="btn ghost" data-act="share" style="flex:1" title="Share">⤴</button>
-      <button class="btn ghost" data-act="pdf" style="flex:1" title="Save as PDF">⤓</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn ghost" data-act="publish-draft" data-kind="week" style="flex:1" title="Dress rehearsal — review the whole issue">📋 Publish draft</button>
+      <button class="btn" data-act="publish" data-kind="week" style="flex:1" title="Make the final PDF for print / sharing">✅ Publish → PDF</button>
     </div>
   </div>`;
+}
+// ---- Publish workflow: a dress-rehearsal proof, then the final print PDF -----
+function openProof(kind) {
+  S.proofKind = kind; S.reading = true;
+  let body;
+  if (kind === 'predraft') {
+    const P = S.currentPredraft || buildPredraft(); if (!P) { toast('Open your league first'); return; }
+    S.currentPredraft = P; body = predraftCoverHtml(P) + predraftBodyHtml(P);
+  } else {
+    const nl = S.currentNl; if (!nl) { toast('Open an issue first'); return; }
+    const deskArts = (S.desk || []).filter(a => a.week === nl.week);
+    body = coverHtml(nl) + issueBodyHtml(nl, deskArts, true);
+  }
+  const bar = `<div class="proofbar no-print">
+    <span>📋 PROOF · dress rehearsal — this is exactly what readers get</span>
+    <span class="proofbtns"><button class="btn ghost" data-act="proof-edit">‹ Keep editing</button>
+    <button class="btn" data-act="publish" data-kind="${kind}">✅ Publish final PDF →</button></span></div>`;
+  app.innerHTML = `<div id="content"></div>`;
+  setContent(bar + `<div class="proofwrap">${body}</div>`);
+  window.scrollTo(0, 0);
+}
+function publishFinal(kind) {
+  if (kind === 'predraft') savePredraftIssue(); else saveCurrentIssue();
+  toast('Choose “Save to PDF” in the print dialog');
+  setTimeout(() => window.print(), 450);
+}
+function proofEdit() {
+  S.reading = false;
+  if (S.proofKind === 'predraft') return showPredraft(S.currentPredraft);
+  renderShell(); return renderTab();
 }
 // The full magazine body (everything under the cover). frozen=true drops the
 // interactive bits so a saved back-issue renders as a clean, static read.
@@ -3508,6 +3556,9 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'desk-generate') return deskGenerate();
   if (act === 'power-clear') { if (S.power) delete S.power[S.activeWeek]; savePower(); delete S.newsCache[S.activeWeek]; return showDesk(); }
   if (act === 'money-clear') { if (S.money) delete S.money[S.activeWeek]; saveMoney(); delete S.newsCache[S.activeWeek]; return showDesk(); }
+  if (act === 'publish-draft') return openProof(t.dataset.kind || 'week');
+  if (act === 'publish') return publishFinal(t.dataset.kind || 'week');
+  if (act === 'proof-edit') return proofEdit();
   if (act === 'predraft') return showPredraftDesk();
   if (act === 'predraft-view') return showPredraft();
   if (act === 'predraft-build') { readPredraftForm(); return showPredraft(); }
