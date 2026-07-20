@@ -127,6 +127,28 @@
   .ml-odds { display:flex; align-items:center; gap:6px; flex-shrink:0; }
   .ml-line { font-family:var(--mono,ui-monospace,monospace); font-weight:900; font-size:16px; color:var(--accent); font-variant-numeric:tabular-nums; }
   .ml-chip { font-size:11px; font-weight:800; letter-spacing:.3px; color:var(--faint); background:var(--bg2); border:1px solid var(--border); border-radius:999px; padding:2px 8px; white-space:nowrap; }
+  .offtools { max-width:420px; margin:16px auto 0; }
+  .offtools-row { display:flex; gap:8px; }
+  .offtool { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; padding:14px 6px; border-radius:12px;
+    background:var(--card); border:1px solid var(--border); color:var(--text); font-size:12px; font-weight:800; cursor:pointer; line-height:1.2; text-align:center; }
+  .offtool:hover { border-color:var(--accent-d); }
+  .offtool-ic { font-size:24px; }
+  .colmast { display:flex; align-items:center; gap:12px; margin:2px 0 12px; padding-bottom:11px; border-bottom:2px solid var(--accent-d); }
+  .colmast-badge { width:48px; height:48px; flex:0 0 48px; }
+  .colmast-badge svg { width:100%; height:100%; display:block; }
+  .colmast-kick { font-size:10px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; color:var(--faint); }
+  .colmast-name { font-family:var(--serif); font-weight:900; font-size:22px; line-height:1.02; margin-top:1px; }
+  .colmast-tag { font-size:12px; color:var(--dim); margin-top:2px; }
+  .mlgame { padding:9px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+  .mlgame:last-child { border-bottom:0; }
+  .mlside { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:3px 0; }
+  .mlside .mlnm { font-weight:800; font-size:14px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mlside.fav .mlnm { color:var(--text); } .mlside.dog .mlnm { color:var(--dim); }
+  .mlodds2 { display:flex; gap:6px; flex-shrink:0; }
+  .mlpill { font-family:var(--mono,ui-monospace,monospace); font-weight:800; font-size:13px; font-variant-numeric:tabular-nums; border-radius:6px; padding:2px 7px; white-space:nowrap; }
+  .mlpill.sp { background:var(--bg2); border:1px solid var(--border); color:var(--text); min-width:44px; text-align:center; }
+  .mlpill.ml { background:rgba(46,160,67,.12); border:1px solid var(--accent-d); color:var(--accent); min-width:48px; text-align:center; }
+  .mltot { text-align:center; font-size:11px; font-weight:800; letter-spacing:.4px; color:var(--faint); margin-top:5px; text-transform:uppercase; }
   .proofbar { position:sticky; top:6px; z-index:40; display:flex; flex-wrap:wrap; gap:8px 12px; justify-content:space-between; align-items:center; background:linear-gradient(90deg,#2a2205,#1c1708); border:1px solid var(--accent-d); border-radius:12px; padding:10px 14px; margin-bottom:14px; font-size:13px; font-weight:800; color:#ffd76a; }
   .proofbar .btn { width:auto; padding:8px 12px; margin:0; }
   .proofbtns { display:flex; gap:8px; }
@@ -1010,6 +1032,50 @@ function powerNote(i, n, r) {
   if (i === n - 2) return seededPick(['Circling the drain but not gone yet.', 'Two spots from a real problem.'], s);
   return seededPick(['Firmly in the mushy middle.', 'Dangerous or forgettable — jury’s out.', 'Neither contender nor cautionary tale. Yet.', 'Quietly fine, loudly average.', 'Could go either way, probably goes sideways.', 'The definition of a Tuesday-afternoon team.'], s + i * 7);
 }
+// American money line implied by a point spread (favorite negative, dog plus).
+function americanML(spread) {
+  const s = Math.abs(spread);
+  const fav = -(100 + Math.round(s * 18 + s * s * 2));
+  const dog = Math.round(90 + s * 15 + s * s * 1.6);
+  return { fav: String(fav), dog: '+' + dog };
+}
+// Pork Chop Express's opening board — believable pre-game lines from the week's
+// power ranking (favorite = better rank), for the SAMPLE issue only. The real
+// magazine's board is populated by the commissioner's uploaded spreadsheet.
+function buildAutoMoneyLines(nl) {
+  const rankOf = {}; (nl.powerRankings || []).forEach(p => rankOf[p.manager] = p.rank);
+  const n = (nl.powerRankings || []).length || 8;
+  const rows = [];
+  (nl.stories || []).forEach((st, i) => {
+    const A = st.winner, B = st.loser; if (!A || !B) return;
+    const ra = rankOf[A.manager] || Math.ceil(n / 2), rb = rankOf[B.manager] || Math.ceil(n / 2);
+    const fav = ra <= rb ? A : B, dog = ra <= rb ? B : A;
+    const gap = Math.abs(ra - rb);
+    let spread = Math.round((1.5 + gap * 1.5) * 2) / 2; if (spread > 16.5) spread = 16.5;
+    const total = 204 + seededPick([0, 3.5, 6, 8.5, 11, 13.5, 16, 19, 22.5, 26], (A.manager.length + B.manager.length) * 7 + i);
+    const ml = americanML(spread);
+    rows.push({ fav: fav.manager, dog: dog.manager, spread, favML: ml.fav, dogML: ml.dog, total });
+  });
+  return rows;
+}
+// One card renders whether the row is an auto betting line (fav/dog/spread/ML)
+// or a free-form uploaded row (subject/line/spread/total/note).
+function moneyLinesHtml(rows) {
+  return rows.map(m => {
+    if (m.fav) {
+      const dogSpread = '+' + Math.abs(m.spread);
+      return `<div class="mlgame">
+        <div class="mlside fav"><span class="mlnm">${esc(m.fav)}</span>
+          <span class="mlodds2"><span class="mlpill sp">-${Math.abs(m.spread)}</span><span class="mlpill ml">${esc(m.favML)}</span></span></div>
+        <div class="mlside dog"><span class="mlnm">${esc(m.dog)}</span>
+          <span class="mlodds2"><span class="mlpill sp">${dogSpread}</span><span class="mlpill ml">${esc(m.dogML)}</span></span></div>
+        <div class="mltot">Over / Under ${m.total}</div></div>`;
+    }
+    return `<div class="ml"><div class="ml-sub">${esc(m.subject || '')}</div>
+      <div class="ml-odds">${m.line ? `<span class="ml-line">${esc(m.line)}</span>` : ''}${m.spread ? `<span class="ml-chip">${esc(m.spread)}</span>` : ''}${m.total ? `<span class="ml-chip">O/U ${esc(m.total)}</span>` : ''}</div>
+      ${m.note ? `<div class="dt" style="flex-basis:100%;margin-top:4px">${esc(m.note)}</div>` : ''}</div>`;
+  }).join('');
+}
 
 function writeStory(ctx) {
   const { winner, loser, tie, margin, combined } = ctx;
@@ -1563,6 +1629,11 @@ function coverImgKey(){ return 'gg.coverimg.' + (S.leagueId || 'x'); }
 function loadCoverImg(){ try { S.coverImg = JSON.parse(localStorage.getItem(coverImgKey()) || '{}') || {}; } catch { S.coverImg = {}; } }
 function saveCoverImg(){ try { localStorage.setItem(coverImgKey(), JSON.stringify(S.coverImg || {})); } catch (e) { toast('Image too large to save on this device'); } }
 function curCoverImg(){ return S.coverImg && S.coverImg[S.activeWeek]; }
+// Cover images are keyed by slot: the week number for weekly issues, the string
+// 'predraft' for the Draft Issue.
+function coverSlotFor(kind){ return kind === 'predraft' ? 'predraft' : S.activeWeek; }
+function coverImgAt(slot){ return S.coverImg && S.coverImg[slot]; }
+function predraftCoverImg(){ return coverImgAt('predraft'); }
 // Downscale an uploaded image to a sane size before storing (keeps localStorage happy).
 function downscaleImage(file, maxW) {
   return new Promise((res, rej) => {
@@ -1575,15 +1646,29 @@ function downscaleImage(file, maxW) {
   });
 }
 // Ask the app's AI to write an image-generation brief for the week's cover.
-async function generateCoverPrompt(nl) {
+async function generateCoverPrompt(kind) {
   const key = (S.apiKey || '').trim(); if (!key) throw new Error('no-key');
-  const pkg = coverPackage(nl); const s = nl.stories && nl.stories[0];
-  const ctx = `COVER HEADLINE: ${pkg.headline}\n` +
-    (pkg.subject ? `COVER SUBJECT (a manager, not a real player): ${pkg.subject.name} — ${pkg.subject.tag}\n` : '') +
-    (s ? `MARQUEE MATCHUP: ${s.winner.manager} beat ${s.loser.manager}, ${s.winner.score}–${s.loser.score}\nSTORY: ${(s.paragraphs || []).slice(0, 2).join(' ')}\n` : '') +
-    `COVER TEASERS: ${(pkg.lines || []).join(' · ')}`;
-  const system = `You are the art director for the "${S.magName || 'Skirt Chasers'} Dynasty Magazine," a fantasy-football league magazine. Given this week's cover story, write ONE vivid image-generation prompt for a graphics AI (Midjourney, DALL·E, etc.) to create the cover image.
-Rules: cinematic, dramatic sports-magazine energy that evokes the story's mood. Depict a generic football scene — anonymous players, stadium, field, weather, light — NEVER real NFL players, teams, or logos. Absolutely NO text, words, letters, numbers, scoreboards, or logos anywhere in the image. Portrait orientation. Leave clean negative space across the TOP for a masthead and some room lower for a headline. Return ONLY the prompt itself as one paragraph — no preamble, no explanation, no quotes.`;
+  let ctx;
+  if (kind === 'predraft') {
+    const P = S.currentPredraft || buildPredraft(); if (!P) throw new Error('no-issue');
+    const champ = S.histIndex && S.histIndex.defending;
+    ctx = `SPECIAL EDITION: THE PRE-DRAFT ISSUE (a dynasty-league season preview).\n` +
+      `COVER HEADLINE: ${P.lead.headline}\nTHEME: ${P.lead.standfirst}\n` +
+      (champ ? `DEFENDING CHAMPION (a manager, not a real player): ${champ}\n` : '') +
+      `MOOD: the calm before the draft — anticipation, a fresh season, everything to play for.`;
+  } else {
+    const nl = S.currentNl; if (!nl) throw new Error('no-issue');
+    const pkg = coverPackage(nl); const s = nl.stories && nl.stories[0];
+    ctx = `COVER HEADLINE: ${pkg.headline}\n` +
+      (pkg.subject ? `COVER SUBJECT (a manager, not a real player): ${pkg.subject.name} — ${pkg.subject.tag}\n` : '') +
+      (s ? `MARQUEE MATCHUP: ${s.winner.manager} beat ${s.loser.manager}, ${s.winner.score}–${s.loser.score}\nSTORY: ${(s.paragraphs || []).slice(0, 2).join(' ')}\n` : '') +
+      `COVER TEASERS: ${(pkg.lines || []).join(' · ')}`;
+  }
+  const scene = kind === 'predraft'
+    ? `Depict a cinematic, anticipatory scene — an empty stadium at dawn, a lone helmet on fresh turf, stadium lights warming up, a draft-room table in dramatic shadow — anything that says "the season is about to begin."`
+    : `Depict a generic football scene — anonymous players, stadium, field, weather, light — that evokes the story's mood.`;
+  const system = `You are the art director for the "${S.magName || 'Skirt Chasers'} Dynasty Magazine," a fantasy-football league magazine. Write ONE vivid image-generation prompt for a graphics AI (Midjourney, DALL·E, etc.) to create the cover image.
+Rules: cinematic, dramatic sports-magazine energy. ${scene} NEVER real NFL players, teams, or logos. Absolutely NO text, words, letters, numbers, scoreboards, or logos anywhere in the image. Portrait orientation. Leave clean negative space across the TOP for a masthead and some room lower for a headline. Return ONLY the prompt itself as one paragraph — no preamble, no explanation, no quotes.`;
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
@@ -1922,18 +2007,22 @@ function whosWhoCard() {
   </div>`;
 }
 // 🎨 Cover art: the app writes a brief → you make it in a graphics AI → upload it here.
-function showCoverArt() {
-  const wk = S.activeWeek;
-  const cur = S.coverImg && S.coverImg[wk];
-  const prompt = (S.coverPrompt && S.coverPrompt[wk]) || '';
+function showCoverArt(kind) {
+  kind = kind || 'week';
+  const slot = coverSlotFor(kind);
+  const cur = S.coverImg && S.coverImg[slot];
+  const prompt = (S.coverPrompt && S.coverPrompt[slot]) || '';
+  const label = kind === 'predraft' ? 'The Draft Issue' : `Week ${S.activeWeek}`;
+  const backAct = kind === 'predraft' ? 'predraft-view' : 'back-news';
+  const storySrc = kind === 'predraft' ? "the Draft Issue's season preview" : "this week's cover story";
   app.innerHTML = `<div style="padding-bottom:24px">
-    <button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>
-    <div class="setup-logo" style="font-size:24px">🎨 Cover Art · Week ${wk}</div>
-    <p class="muted" style="margin-top:4px">Let the NewsRoom dream up this week's cover, make it in your image AI, then drop it back here.</p>
+    <button class="btn ghost" data-act="${backAct}" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>
+    <div class="setup-logo" style="font-size:24px">🎨 Cover Art · ${esc(label)}</div>
+    <p class="muted" style="margin-top:4px">Let the NewsRoom dream up this cover, make it in your image AI, then drop it back here.</p>
     <div class="card">
       <div class="label">1 · Get the art direction</div>
-      <div class="faint" style="font-size:12px;margin-bottom:10px">The NewsRoom writes an image prompt from this week's cover story. Paste it into Midjourney, DALL·E, or any image generator.</div>
-      <button class="btn" data-act="gen-cover-prompt">✨ ${prompt ? 'Regenerate' : 'Generate'} cover direction</button>
+      <div class="faint" style="font-size:12px;margin-bottom:10px">The NewsRoom writes an image prompt from ${storySrc}. Paste it into Midjourney, DALL·E, or any image generator.</div>
+      <button class="btn" data-act="gen-cover-prompt" data-kind="${kind}">✨ ${prompt ? 'Regenerate' : 'Generate'} cover direction</button>
       <div id="coverPromptWrap" style="margin-top:12px;${prompt ? '' : 'display:none'}">
         <textarea id="coverPromptTxt" class="input" style="height:170px" readonly>${esc(prompt)}</textarea>
         <div style="height:8px"></div><button class="btn ghost" data-act="copy-cover-prompt">Copy the prompt</button>
@@ -1942,10 +2031,10 @@ function showCoverArt() {
     </div>
     <div class="card">
       <div class="label">2 · Upload the finished image</div>
-      <input id="coverImgFile" type="file" accept="image/*" data-act="cover-img-file" class="fileinput" />
-      <div id="coverImgStatus" class="faint" style="font-size:12px;margin-top:8px">${cur ? `✓ Cover image set for Week ${wk} — it's on the cover now.` : 'Pick the image your AI made (portrait works best).'}</div>
+      <input id="coverImgFile" type="file" accept="image/*" data-act="cover-img-file" data-kind="${kind}" class="fileinput" />
+      <div id="coverImgStatus" class="faint" style="font-size:12px;margin-top:8px">${cur ? `✓ Cover image set for ${esc(label)} — it's on the cover now.` : 'Pick the image your AI made (portrait works best).'}</div>
       ${cur ? `<img src="${cur}" alt="cover" style="width:100%;border-radius:10px;margin-top:10px;display:block">
-        <div style="height:8px"></div><button class="btn ghost" data-act="cover-img-clear">Remove cover image</button>` : ''}
+        <div style="height:8px"></div><button class="btn ghost" data-act="cover-img-clear" data-kind="${kind}">Remove cover image</button>` : ''}
     </div>
     ${!(S.apiKey || '').trim() ? `<div class="faint" style="font-size:12px;text-align:center">Add your Anthropic API key in Settings to generate the direction — or write your own prompt and just upload the image.</div>` : ''}
   </div>`;
@@ -2450,6 +2539,26 @@ function renderTab() {
 //  News Room
 // ---------------------------------------------------------------------
 function magTitle() { return String(S.magName || 'Skirt Chasers').toUpperCase(); }
+// Column identities — each by-lined section flies its own logo like a real
+// magazine columnist. Inline SVG so it travels into the PDF with no assets.
+const LOGO_MACHINES = `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="3" width="42" height="42" rx="11" fill="#0e1a12" stroke="#1f7a3a" stroke-width="2"/>
+  <line x1="24" y1="6" x2="24" y2="12" stroke="#39d353" stroke-width="2"/><circle cx="24" cy="5" r="2" fill="#39d353"/>
+  <rect x="12" y="12" width="24" height="20" rx="5" fill="#12241a" stroke="#2ea043" stroke-width="2"/>
+  <circle cx="19" cy="21" r="3" fill="#39d353"/><circle cx="29" cy="21" r="3" fill="#39d353"/>
+  <rect x="17" y="26.5" width="14" height="3" rx="1.5" fill="#2ea043"/>
+  <path d="M14 33h20v4a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4z" fill="#173a24"/></svg>`;
+const LOGO_PCE = `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="3" width="42" height="42" rx="11" fill="#c01722" stroke="#7d0d15" stroke-width="2"/>
+  <rect x="6" y="17.5" width="8" height="2" rx="1" fill="#ffd9dc" opacity=".85"/><rect x="6" y="22.5" width="6" height="2" rx="1" fill="#ffd9dc" opacity=".6"/>
+  <rect x="14" y="16" width="14" height="12" rx="1.5" fill="#f6f0e6" stroke="#2a2a2a" stroke-width="1.5"/>
+  <path d="M28 20h5l4 4v4h-9z" fill="#f6f0e6" stroke="#2a2a2a" stroke-width="1.5"/><rect x="30" y="21.5" width="4" height="3.5" rx="1" fill="#8fd0ff"/>
+  <circle cx="19" cy="30" r="3.4" fill="#141414" stroke="#f6f0e6" stroke-width="1.3"/><circle cx="33" cy="30" r="3.4" fill="#141414" stroke="#f6f0e6" stroke-width="1.3"/></svg>`;
+function columnMasthead(logo, name, tagline) {
+  return `<div class="colmast"><div class="colmast-badge">${logo}</div>
+    <div class="colmast-txt"><div class="colmast-kick">SCFL Column</div>
+      <div class="colmast-name">${esc(name)}</div>${tagline ? `<div class="colmast-tag">${esc(tagline)}</div>` : ''}</div></div>`;
+}
 function coverToolsInner() {
   const share = `<button class="ctool" data-act="share" title="Share">⤴</button>`;
   const pdf = `<button class="ctool" data-act="pdf" title="Save as PDF">⤓</button>`;
@@ -2457,6 +2566,7 @@ function coverToolsInner() {
   const exit = S.sample ? `<button class="ctool" data-act="exit-sample" title="Exit sample">✕</button>` : '';
   return `${share}${pdf}${exit}
     <button class="ctool" data-act="desk" title="Newsroom desk">✍️</button>
+    <button class="ctool" data-act="cover-art" title="Cover art director">🎨</button>
     <button class="ctool" data-act="predraft" title="Pre-Draft Issue">🏈</button>
     <button class="ctool" data-act="history" title="Record book">🏆</button>
     <button class="ctool" data-act="archive" title="Back issues">📚</button>
@@ -2666,19 +2776,27 @@ function predraftCoverTools(){
     <button class="ctool" data-act="predraft-share" title="Share">⤴</button>
     <button class="ctool" data-act="pdf" title="Save as PDF">⤓</button>
     ${S.guest ? '' : `<button class="ctool" data-act="predraft" title="Edit details">✍️</button>
+    <button class="ctool" data-act="cover-art" data-kind="predraft" title="Cover art">🎨</button>
     <button class="ctool" data-act="predraft-save-issue" title="Save to Back Issues">📚</button>`}`;
 }
 function predraftCoverHtml(P){
-  return `<div class="magcover full">
+  const img = predraftCoverImg();
+  const lines = `<div class="mag-lines">
+      ${(P.ranked || []).slice(0, 3).map((t, i) => `<div class="mag-line">PRESEASON #${i + 1}: ${esc(t.name)}${t.hist && t.hist.titles ? ` · ${t.hist.titles}× champ` : ''}</div>`).join('')}
+      ${P.order[0] ? `<div class="mag-line">ON THE CLOCK: ${esc(P.order[0].team)} holds the 1.01</div>` : ''}
+    </div>`;
+  const hook = img
+    ? `<div class="mag-hero" style="background-image:url('${img}')"><div class="mag-hero-grad"></div>
+        <div class="mag-hero-txt"><div class="mag-hook light">${esc(P.lead.headline)}</div>
+        <div class="mag-subject"><div class="mag-name light" style="font-size:clamp(18px,4.8vw,26px)">${esc(P.lead.standfirst)}</div></div></div></div>`
+    : `<div class="mag-hook">${esc(P.lead.headline)}</div>
+        <div class="mag-subject"><div class="mag-name" style="font-size:clamp(20px,5.4vw,30px)">${esc(P.lead.standfirst)}</div></div>`;
+  return `<div class="magcover full${img ? ' has-img' : ''}">
     <img class="mag-logo" src="wordmark.png" alt="Skirt Chasers — Dynasty League Magazine">
     <div class="mag-issue">${esc(P.season || '')} Season · The Draft Issue</div>
     <div class="mag-tools">${predraftCoverTools()}</div>
-    <div class="mag-hook">${esc(P.lead.headline)}</div>
-    <div class="mag-subject"><div class="mag-name" style="font-size:clamp(20px,5.4vw,30px)">${esc(P.lead.standfirst)}</div></div>
-    <div class="mag-lines">
-      ${(P.ranked || []).slice(0, 3).map((t, i) => `<div class="mag-line">PRESEASON #${i + 1}: ${esc(t.name)}${t.hist && t.hist.titles ? ` · ${t.hist.titles}× champ` : ''}</div>`).join('')}
-      ${P.order[0] ? `<div class="mag-line">ON THE CLOCK: ${esc(P.order[0].team)} holds the 1.01</div>` : ''}
-    </div>
+    ${hook}
+    ${lines}
     <img class="mag-shield" src="${LOGO}" alt="SCFL">
   </div>`;
 }
@@ -2703,8 +2821,7 @@ function predraftBodyHtml(P){
   const keepers = P.keepers ? `<div class="card"><div class="at">🔒 Keepers & Locks</div>
     ${P.keepers.split(/\n/).map(s => s.trim()).filter(Boolean).map(s => `<div class="dt" style="padding:3px 0">${esc(s)}</div>`).join('')}</div>` : '';
   const nrows = P.power.length || 1;
-  const power = `<div class="card"><div class="at">Preseason Power Rankings</div>
-    <div class="byline" style="margin:-2px 0 8px">— The Machines</div>
+  const power = `<div class="card">${columnMasthead(LOGO_MACHINES, 'The Machines', 'Preseason Power Rankings')}
     ${P.power.map(p => { const pct = Math.round(((nrows - p.rank + 1) / nrows) * 100); return `<div class="pr">
       <span class="ovr" style="width:24px">${p.rank}</span>
       <div style="flex:1"><div class="nm">${esc(p.manager)}${p.tag ? ` <span class="faint" style="font-weight:600;font-size:12px">${esc(p.tag)}</span>` : ''}</div>
@@ -2719,8 +2836,7 @@ function predraftBodyHtml(P){
   const preds = P.predictions.length ? `<div class="card"><div class="at">🔮 Bold Predictions</div>
     ${P.predictions.map(p => `<div class="dt" style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">${esc(p)}</div>`).join('')}</div>` : '';
   const futures = (P.futures && P.futures.length) ? `<div class="card">
-    <div class="at">💰 Futures <span class="faint" style="font-size:11px;font-weight:700;letter-spacing:0">· odds to win it all</span></div>
-    <div class="byline" style="margin:-2px 0 8px">— Pork Chop Express</div>
+    ${columnMasthead(LOGO_PCE, 'Pork Chop Express', 'Futures · odds to win it all')}
     ${P.futures.map(m => `<div class="ml"><div class="ml-sub">${esc(m.subject)}</div>
       <div class="ml-odds">${m.line ? `<span class="ml-line">${esc(m.line)}</span>` : ''}${m.total ? `<span class="ml-chip">O/U ${esc(m.total)}</span>` : ''}</div>
       ${m.note ? `<div class="dt" style="flex-basis:100%;margin-top:4px">${esc(m.note)}</div>` : ''}</div>`).join('')}</div>` : '';
@@ -2742,10 +2858,11 @@ function showPredraft(P){
   const controls = S.guest ? '' : `<div class="card no-print" style="border-color:var(--accent-d);margin-top:14px">
     <div class="at">Publish the Draft Issue</div>
     <div class="dt" style="margin:2px 0 8px">Rehearse it first, then make the final PDF for print or the group chat.</div>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn ghost" data-act="predraft" style="flex:1">✍️ Edit</button>
-      <button class="btn ghost" data-act="publish-draft" data-kind="predraft" style="flex:1">📋 Publish draft</button>
-      <button class="btn" data-act="publish" data-kind="predraft" style="flex:1">✅ Publish → PDF</button>
+      <button class="btn ghost" data-act="cover-art" data-kind="predraft" style="flex:1">🎨 Cover</button>
+      <button class="btn ghost" data-act="publish-draft" data-kind="predraft" style="flex:1">📋 Draft</button>
+      <button class="btn" data-act="publish" data-kind="predraft" style="flex:1">✅ Publish</button>
     </div></div>`;
   app.innerHTML = `<div id="content"></div>`;
   setContent(predraftCoverHtml(P) + predraftBodyHtml(P) + controls);
@@ -2849,9 +2966,15 @@ async function renderNews() {
       : canSampleLeague
         ? `<button class="btn" data-act="sample-league" style="max-width:340px;margin:12px auto 0">Preview a sample issue from your league →</button>`
         : `<button class="btn" data-act="demo" style="max-width:320px;margin:12px auto 0">Preview a sample league →</button>`;
-    const predraftBtn = (S.guest || S.demo || !S.bundle) ? ''
-      : `<button class="btn" data-act="predraft-view" style="max-width:340px;margin:10px auto 0">🏈 Build the Pre-Draft Issue →</button>`;
-    setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint) + demoBtn + predraftBtn);
+    const offSeasonTools = (S.guest || S.demo || !S.bundle) ? ''
+      : `<div class="offtools">
+          <div class="seclabel" style="text-align:center;margin-bottom:8px">Newsroom tools</div>
+          <div class="offtools-row">
+            <button class="offtool" data-act="predraft-view"><span class="offtool-ic">🏈</span>Pre-Draft Issue</button>
+            <button class="offtool" data-act="cover-art"><span class="offtool-ic">🎨</span>Cover Art</button>
+            <button class="offtool" data-act="desk"><span class="offtool-ic">✍️</span>Newsroom Desk</button>
+          </div></div>`;
+    setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint) + demoBtn + offSeasonTools);
     return;
   }
   S.currentNl = nl;
@@ -2861,7 +2984,9 @@ async function renderNews() {
   if (upow && upow.length) { nl.powerRankings = upow; nl.powerSource = 'commish'; }
   else { nl.powerRankings = nl.autoPower; nl.powerSource = null; }
   const umoney = S.money && S.money[wk];
-  nl.moneyLines = (umoney && umoney.length) ? umoney : null;
+  if (umoney && umoney.length) { nl.moneyLines = umoney; nl.moneySource = 'commish'; }
+  else if (S.sample) { nl.moneyLines = buildAutoMoneyLines(nl); nl.moneySource = 'auto'; }
+  else { nl.moneyLines = null; nl.moneySource = null; }
   const deskArts = (S.desk || []).filter(a => a.week === wk);
   setContent(coverHtml(nl) + seasonBar() + weekStepper() + composeBar(wk, deskArts) + issueBodyHtml(nl, deskArts, false));
 }
@@ -2946,8 +3071,7 @@ function issueBodyHtml(nl, deskArts, frozen) {
   const maxW = Math.max(...prRows.map(p => p.week || 0), 1);
   const nrows = prRows.length || 1;
   const power = prRows.length ? `<div class="card">
-    <div class="at">Power Rankings${nl.powerSource === 'commish' ? ' <span class="faint" style="font-size:11px;font-weight:700;letter-spacing:0">· from the league office</span>' : ''}</div>
-    <div class="byline" style="margin:-2px 0 8px">— The Machines</div>
+    ${columnMasthead(LOGO_MACHINES, 'The Machines', `Power Rankings${nl.powerSource === 'commish' ? ' · from the league office' : ''}`)}
     ${prRows.map(p => { const pct = usePts ? Math.round((p.week / maxW) * 100) : Math.round(((nrows - p.rank + 1) / nrows) * 100);
       return `<div class="pr">
       <span class="ovr" style="width:24px">${p.rank}</span>
@@ -2958,17 +3082,8 @@ function issueBodyHtml(nl, deskArts, frozen) {
       </div></div>`; }).join('')}</div>` : '';
   const mlRows = nl.moneyLines || [];
   const money = mlRows.length ? `<div class="card">
-    <div class="at">💰 Money Lines <span class="faint" style="font-size:11px;font-weight:700;letter-spacing:0">· the week's board</span></div>
-    <div class="byline" style="margin:-2px 0 8px">— Pork Chop Express</div>
-    ${mlRows.map(m => `<div class="ml">
-      <div class="ml-sub">${esc(m.subject)}</div>
-      <div class="ml-odds">
-        ${m.line ? `<span class="ml-line">${esc(m.line)}</span>` : ''}
-        ${m.spread ? `<span class="ml-chip">${esc(m.spread)}</span>` : ''}
-        ${m.total ? `<span class="ml-chip">O/U ${esc(m.total)}</span>` : ''}
-      </div>
-      ${m.note ? `<div class="dt" style="flex-basis:100%;margin-top:4px">${esc(m.note)}</div>` : ''}
-    </div>`).join('')}</div>` : '';
+    ${columnMasthead(LOGO_PCE, 'Pork Chop Express', `The Betting Board${nl.moneySource === 'auto' ? ' · sample lines' : ''}`)}
+    ${moneyLinesHtml(mlRows)}</div>` : '';
   const coverStory = nl.stories[0] ? storyHtml(nl.stories[0], true) + shareRow('story:0') : '';
   const otherStories = nl.stories.slice(1).map((s, i) => storyHtml(s, false) + shareRow('story:' + (i + 1))).join('');
   const trades = nl.trades && nl.trades.length
@@ -3534,18 +3649,19 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'desk') return showDesk();
   if (act === 'archive') return showArchive();
   if (act === 'history') return showHistory();
-  if (act === 'cover-art') return showCoverArt();
+  if (act === 'cover-art') return showCoverArt(t.dataset.kind || 'week');
   if (act === 'gen-cover-prompt') {
+    const kind = t.dataset.kind || 'week';
     const btn = t, err = $('#coverPromptErr'); if (err) err.textContent = '';
     if (!(S.apiKey || '').trim()) { if (err) err.textContent = 'Add your Anthropic API key in Settings first.'; return; }
-    if (!S.currentNl) { if (err) err.textContent = 'Open a week with a scored issue first.'; return; }
+    if (kind === 'predraft' ? !(S.currentPredraft || buildPredraft()) : !S.currentNl) { if (err) err.textContent = kind === 'predraft' ? 'Build the Pre-Draft Issue first.' : 'Open a week with a scored issue first.'; return; }
     btn.disabled = true; btn.textContent = '✨ Writing the direction…';
-    try { const p = await generateCoverPrompt(S.currentNl); S.coverPrompt = S.coverPrompt || {}; S.coverPrompt[S.activeWeek] = p; showCoverArt(); }
+    try { const p = await generateCoverPrompt(kind); S.coverPrompt = S.coverPrompt || {}; S.coverPrompt[coverSlotFor(kind)] = p; showCoverArt(kind); }
     catch (e) { btn.disabled = false; btn.textContent = '✨ Generate cover direction'; if (err) err.textContent = /^api-401/.test(e.message) ? 'That API key was rejected.' : /^api-/.test(e.message) ? 'The AI is unreachable right now.' : 'Something went wrong — try again.'; }
     return;
   }
   if (act === 'copy-cover-prompt') { const ta = $('#coverPromptTxt'); if (ta) { try { await navigator.clipboard.writeText(ta.value); toast('Prompt copied — paste into your image AI'); } catch { ta.select(); } } return; }
-  if (act === 'cover-img-clear') { if (S.coverImg) delete S.coverImg[S.activeWeek]; saveCoverImg(); delete S.newsCache[S.activeWeek]; return showCoverArt(); }
+  if (act === 'cover-img-clear') { const kind = t.dataset.kind || 'week'; const slot = coverSlotFor(kind); if (S.coverImg) delete S.coverImg[slot]; saveCoverImg(); if (kind !== 'predraft') delete S.newsCache[S.activeWeek]; return showCoverArt(kind); }
   if (act === 'copy-espn') { try { await navigator.clipboard.writeText(ESPN_SNIPPET); toast('Snippet copied'); } catch { showCopyModal(ESPN_SNIPPET); } return; }
   if (act === 'history-clear') { S.espnHist = null; saveEspnHist(); refreshHistIndex(); S.newsCache = {}; toast('History removed'); return showHistory(); }
   if (act === 'alias-clear') { S.histAliases = {}; saveHistAliases(); refreshHistIndex(); S.newsCache = {}; toast('Name merges reset'); return showHistory(); }
@@ -3627,12 +3743,13 @@ document.body.addEventListener('change', async (e) => {
   }
   const cimg = e.target.closest('[data-act="cover-img-file"]');
   if (cimg && cimg.files && cimg.files[0]) {
+    const kind = cimg.dataset.kind || 'week'; const slot = coverSlotFor(kind);
     const st = $('#coverImgStatus'); if (st) st.textContent = 'Adding the image…';
     try {
       const dataUrl = await downscaleImage(cimg.files[0], 1400);
-      S.coverImg = S.coverImg || {}; S.coverImg[S.activeWeek] = dataUrl; saveCoverImg();
-      delete S.newsCache[S.activeWeek];
-      showCoverArt();
+      S.coverImg = S.coverImg || {}; S.coverImg[slot] = dataUrl; saveCoverImg();
+      if (kind !== 'predraft') delete S.newsCache[S.activeWeek];
+      showCoverArt(kind);
     } catch (err) { if (st) st.textContent = `Couldn't use that image — ${esc((err && err.message) || 'unknown error')}.`; }
     return;
   }
