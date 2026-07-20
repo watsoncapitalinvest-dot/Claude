@@ -946,6 +946,7 @@ async function generateChatArticleAI(raw, angle) {
     ? `The editor wants this angle front and center: "${angle.trim()}". Build the column around it if the chat supports it.`
     : `Find the angle yourself — the one thread everyone kept circling back to.`;
   const hist = historyBlurb();
+  const doss = dossierBlurb();
   const system =
 `You are the Water Cooler columnist for "${mag} Dynasty League Magazine," a fantasy-football league magazine written for the guys in the league. Your beat is the league group chat.
 
@@ -958,7 +959,7 @@ Write ONE column that is a SUMMARY and COMMENTARY on the week's group chat — a
 - Length: 3 to 5 tight paragraphs. Every sentence earns its place.
 
 ${angleLine}
-${hist ? '\n' + hist + '\n' : ''}
+${hist ? '\n' + hist + '\n' : ''}${doss ? '\n' + doss + '\n' : ''}
 Return STRICT JSON, no markdown, no preamble, exactly this shape:
 {"headline": "punchy title, no clickbait fluff", "dek": "one-line standfirst under the headline", "paragraphs": ["para 1", "para 2", "..."]}`;
 
@@ -1595,7 +1596,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, money:{}, predraft:null, currentPredraft:null, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, money:{}, predraft:null, currentPredraft:null, dossier:null, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null, username:'drsexy' },
@@ -1695,6 +1696,42 @@ async function loadBundledHistory() {
       if (S.tab === 'news' && !S.reading) renderNews();
     }
   } catch {}
+}
+// ---- League Chat Dossier: the whole group-chat history, distilled ----------
+// Built once from the full chat export (analyzed offline) and baked into the app
+// like the ESPN history. It's a CONTEXT resource: the AI writers reference it so
+// the magazine knows each manager's favorite players, preferences and opinions,
+// and can drop callbacks to past chat storylines. Weekly uploads then stay short.
+function dossierKey(){ return 'gg.dossier.' + (S.leagueId || 'x'); }
+function loadDossier(){ try { S.dossier = JSON.parse(localStorage.getItem(dossierKey()) || 'null'); } catch { S.dossier = null; } }
+function saveDossier(){ try { S.dossier ? localStorage.setItem(dossierKey(), JSON.stringify(S.dossier)) : localStorage.removeItem(dossierKey()); } catch { toast('Dossier too large to save on this device'); } }
+// Baked-in dossier: if nobody imported their own, load the committed dossier.json.
+async function loadBundledDossier() {
+  if (S.dossier && (S.dossier.managers || S.dossier.timeline)) return;
+  try {
+    const r = await fetch('dossier.json', { cache: 'force-cache' });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d && (d.managers || d.timeline || d.overview)) {
+      S.dossier = d;
+      if (S.tab === 'news' && !S.reading) renderNews();
+    }
+  } catch {}
+}
+// A compact dossier brief for the AI writers' system prompt.
+function dossierBlurb() {
+  const d = S.dossier; if (!d) return '';
+  const mgr = (d.managers || []).slice(0, 16).map(m => {
+    const bits = [];
+    if (m.favorites && m.favorites.length) bits.push('favorites: ' + m.favorites.slice(0, 6).join(', '));
+    if (m.preferences && m.preferences.length) bits.push(m.preferences.slice(0, 3).join('; '));
+    if (m.opinions && m.opinions.length) bits.push('takes: ' + m.opinions.slice(0, 4).join('; '));
+    if (m.catchphrases && m.catchphrases.length) bits.push('says: "' + m.catchphrases.slice(0, 2).join('", "') + '"');
+    return bits.length ? `- ${m.name}: ${bits.join(' · ')}` : null;
+  }).filter(Boolean).join('\n');
+  if (!mgr && !d.overview) return '';
+  return `LEAGUE CHAT DOSSIER (distilled from the full group-chat history — real, established facts about these managers. Use it for texture and callbacks; never contradict it, never invent beyond it):
+${d.overview ? d.overview + '\n' : ''}${mgr}`;
 }
 // Manager aliases: map any name (an old team name, a Sleeper name) to one person.
 function aliasKey(){ return 'gg.histalias.' + (S.leagueId || 'x'); }
@@ -2039,6 +2076,37 @@ function showCoverArt(kind) {
     ${!(S.apiKey || '').trim() ? `<div class="faint" style="font-size:12px;text-align:center">Add your Anthropic API key in Settings to generate the direction — or write your own prompt and just upload the image.</div>` : ''}
   </div>`;
 }
+function showDossier() {
+  const d = S.dossier;
+  const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>`;
+  if (!d || (!(d.managers || []).length && !(d.timeline || []).length && !d.overview)) {
+    app.innerHTML = `<div style="padding-bottom:24px">${back}
+      <div class="setup-logo" style="font-size:24px">📓 League Chat Dossier</div>
+      <p class="muted" style="margin-top:4px">The whole group-chat history, distilled into each manager's tendencies — favorite players, preferences, opinions — plus the league's running storylines, so the magazine writes with real memory.</p>
+      <div class="card"><div class="dt">No dossier baked in yet. Once your full chat export is analyzed and committed as <b>dossier.json</b>, it loads here automatically and the Water Cooler starts writing with it.</div></div></div>`;
+    return;
+  }
+  const managers = (d.managers || []).map(m => `<div class="card">
+    <div class="at" style="margin:0 0 6px">${esc(m.name)}</div>
+    ${m.favorites && m.favorites.length ? `<div class="dt" style="padding:2px 0"><b style="color:var(--accent)">Favorites:</b> ${esc(m.favorites.join(', '))}</div>` : ''}
+    ${m.preferences && m.preferences.length ? `<div class="dt" style="padding:2px 0"><b>Style:</b> ${esc(m.preferences.join('; '))}</div>` : ''}
+    ${m.opinions && m.opinions.length ? `<div class="dt" style="padding:2px 0"><b>Takes:</b> ${esc(m.opinions.join('; '))}</div>` : ''}
+    ${m.catchphrases && m.catchphrases.length ? `<div class="dt" style="padding:2px 0"><b>Catchphrases:</b> ${m.catchphrases.map(c => `“${esc(c)}”`).join(', ')}</div>` : ''}
+  </div>`).join('');
+  const timeline = (d.timeline || []).map(t => `<div class="card">
+    <div class="at" style="margin:0 0 4px">${esc(t.period)}</div>
+    ${(t.notes || []).map(n => `<div class="dt" style="padding:3px 0">• ${esc(n)}</div>`).join('')}
+  </div>`).join('');
+  const sub = [d.messageCount ? `${Number(d.messageCount).toLocaleString()} messages` : '', d.periods ? `${d.periods} periods` : '']
+    .filter(Boolean).join(' · ');
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    <div class="setup-logo" style="font-size:24px">📓 League Chat Dossier</div>
+    <p class="muted" style="margin-top:4px">Distilled from the full group-chat history${sub ? ` (${sub})` : ''}. The magazine writes with this in mind — you just upload the fresh week each time.</p>
+    ${d.overview ? `<div class="card" style="border-color:var(--accent-d)"><div class="dt" style="font-size:14px;line-height:1.6">${esc(d.overview)}</div></div>` : ''}
+    ${managers ? `<div class="seclabel">The Managers</div>${managers}` : ''}
+    ${timeline ? `<div class="seclabel">The Timeline</div>${timeline}` : ''}
+  </div>`;
+}
 function historyImportCard() {
   const n = (S.espnHist && S.espnHist.seasons && S.espnHist.seasons.length) || 0;
   return `<div class="card">
@@ -2366,7 +2434,7 @@ async function enterGuest(params) {
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster: null };
     S.values = null; S.newsCache = {}; S.history = null; S.desk = [];
     const d = params.get('desk'); if (d) { try { S.desk = JSON.parse(b64dec(d)) || []; } catch { S.desk = []; } }
-    renderGuestShell(); renderNews(); loadBundledHistory();
+    renderGuestShell(); renderNews(); loadBundledHistory(); loadBundledDossier();
   } catch (e) {
     app.innerHTML = empty("Couldn't open this issue", 'The league may be private, or the link is incomplete.');
   }
@@ -2465,7 +2533,7 @@ async function enterApp() {
     const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
     const myRoster = rosters.find(r => r.owner_id === S.user.user_id) || null;
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster };
-    loadDesk(); loadPower(); loadMoney(); loadPredraft(); loadEspnHist(); loadBundledHistory(); loadCoverImg();
+    loadDesk(); loadPower(); loadMoney(); loadPredraft(); loadDossier(); loadEspnHist(); loadBundledHistory(); loadBundledDossier(); loadCoverImg();
     S.values = null; S.newsCache = {}; S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:false };
     S.trade = { partnerId:null, give:new Set(), get:new Set() };
     // Season history via Sleeper's previous_league_id chain — the reliable way
@@ -2568,6 +2636,7 @@ function coverToolsInner() {
     <button class="ctool" data-act="desk" title="Newsroom desk">✍️</button>
     <button class="ctool" data-act="cover-art" title="Cover art director">🎨</button>
     <button class="ctool" data-act="predraft" title="Pre-Draft Issue">🏈</button>
+    <button class="ctool" data-act="dossier" title="League chat dossier">📓</button>
     <button class="ctool" data-act="history" title="Record book">🏆</button>
     <button class="ctool" data-act="archive" title="Back issues">📚</button>
     <button class="ctool" data-act="settings" title="Settings">⚙</button>`;
@@ -2973,6 +3042,7 @@ async function renderNews() {
             <button class="offtool" data-act="predraft-view"><span class="offtool-ic">🏈</span>Pre-Draft Issue</button>
             <button class="offtool" data-act="cover-art"><span class="offtool-ic">🎨</span>Cover Art</button>
             <button class="offtool" data-act="desk"><span class="offtool-ic">✍️</span>Newsroom Desk</button>
+            <button class="offtool" data-act="dossier"><span class="offtool-ic">📓</span>Chat Dossier</button>
           </div></div>`;
     setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint) + demoBtn + offSeasonTools);
     return;
@@ -3474,7 +3544,7 @@ function showDesk() {
   app.innerHTML = `<div style="padding-bottom:24px">
     <button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>
     <div class="setup-logo" style="font-size:24px">✍️ Newsroom Desk</div>
-    <p class="muted" style="margin-top:4px">Feed the desk your league group chat and it writes a Water Cooler article for Week ${S.activeWeek}. Import the whole exported chat, or paste a snippet.</p>
+    <p class="muted" style="margin-top:4px">Feed the desk your league group chat and it writes a Water Cooler article for Week ${S.activeWeek}. Just this week's messages is plenty — the desk already knows the league's history from the <button class="linkbtn" data-act="dossier">Chat Dossier</button>.</p>
     <div class="card" style="margin-top:12px">
       <label class="label">1 · Import your exported chat file (.zip or .txt)</label>
       <input id="chatFile" type="file" accept=".txt,.zip,text/plain,application/zip" data-act="desk-file" class="fileinput" />
@@ -3649,6 +3719,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'desk') return showDesk();
   if (act === 'archive') return showArchive();
   if (act === 'history') return showHistory();
+  if (act === 'dossier') return showDossier();
   if (act === 'cover-art') return showCoverArt(t.dataset.kind || 'week');
   if (act === 'gen-cover-prompt') {
     const kind = t.dataset.kind || 'week';
