@@ -1086,25 +1086,6 @@ function americanML(spread) {
   const dog = Math.round(90 + s * 15 + s * s * 1.6);
   return { fav: String(fav), dog: '+' + dog };
 }
-// Pork Chop Express's opening board — believable pre-game lines from the week's
-// power ranking (favorite = better rank), for the SAMPLE issue only. The real
-// magazine's board is populated by the commissioner's uploaded spreadsheet.
-function buildAutoMoneyLines(nl) {
-  const rankOf = {}; (nl.powerRankings || []).forEach(p => rankOf[p.manager] = p.rank);
-  const n = (nl.powerRankings || []).length || 8;
-  const rows = [];
-  (nl.stories || []).forEach((st, i) => {
-    const A = st.winner, B = st.loser; if (!A || !B) return;
-    const ra = rankOf[A.manager] || Math.ceil(n / 2), rb = rankOf[B.manager] || Math.ceil(n / 2);
-    const fav = ra <= rb ? A : B, dog = ra <= rb ? B : A;
-    const gap = Math.abs(ra - rb);
-    let spread = Math.round((1.5 + gap * 1.5) * 2) / 2; if (spread > 16.5) spread = 16.5;
-    const total = 204 + seededPick([0, 3.5, 6, 8.5, 11, 13.5, 16, 19, 22.5, 26], (A.manager.length + B.manager.length) * 7 + i);
-    const ml = americanML(spread);
-    rows.push({ fav: fav.manager, dog: dog.manager, spread, favML: ml.fav, dogML: ml.dog, total });
-  });
-  return rows;
-}
 // One card renders whether the row is an auto betting line (fav/dog/spread/ML)
 // or a free-form uploaded row (subject/line/spread/total/note).
 function moneyLinesHtml(rows) {
@@ -1359,265 +1340,6 @@ function startingNeeds(rosterPositions) {
   return needs;
 }
 
-// ---------------------------------------------------------------------
-//  Sample league — a self-contained 8-team demo so the News Room can be
-//  previewed and tuned without a real Sleeper season. Stats are generated
-//  deterministically per week (stable output), scored by the real engine.
-//  Clearly labeled as a sample; not presented as real historical results.
-// ---------------------------------------------------------------------
-function ds(seed) { const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
-function genStats(pos, seed) {
-  const r = (a, b, k) => Math.round(a + (b - a) * ds(seed + k));
-  if (pos === 'QB') { const att = r(28,42,1), cmp = Math.round(att*(0.58+0.12*ds(seed+2)));
-    return { pass_att:att, pass_cmp:cmp, pass_yd:r(190,360,3), pass_td:r(0,4,4), pass_int:r(0,2,5),
-      rush_yd: ds(seed+6)>0.7 ? r(10,45,7) : 0, rush_td: ds(seed+8)>0.9 ? 1 : 0 }; }
-  if (pos === 'RB') { const rec = r(1,6,5);
-    return { rush_att:r(7,21,1), rush_yd:r(25,135,2), rush_td: ds(seed+3)>0.6 ? r(0,2,4) : 0,
-      rec, rec_yd:r(2,55,6), rec_td: ds(seed+7)>0.88 ? 1 : 0, rec_tgt: rec + r(0,3,9) }; }
-  if (pos === 'WR') { const rec = r(2,10,1);
-    return { rec, rec_yd:r(18,155,2), rec_td: ds(seed+3)>0.7 ? r(0,2,4) : 0, rec_tgt: rec + r(1,5,5) }; }
-  if (pos === 'TE') { const rec = r(2,8,1);
-    return { rec, rec_yd:r(15,95,2), rec_td: ds(seed+3)>0.8 ? 1 : 0, rec_tgt: rec + r(1,3,5) }; }
-  if (pos === 'K') { const fgm = r(1,4,1);
-    return { fgm, fga: fgm + (ds(seed+3)>0.6?1:0), xpm:r(1,4,2), fgm_50p: ds(seed+4)>0.8?1:0 }; }
-  if (pos === 'DEF') return { sack:r(1,5,1), int:r(0,2,2), ff:r(0,2,3), fum_rec:r(0,1,4),
-      def_td: ds(seed+5)>0.85?1:0, pts_allow:r(7,31,6) };
-  return {};
-}
-
-const DEMO_SCORING = { pass_yd:0.04, pass_td:4, pass_int:-2, rush_yd:0.1, rush_td:6, rec:1, rec_yd:0.1,
-  rec_td:6, fum_lost:-2, fgm:3, fga:-1, xpm:1, fgm_50p:2, sack:1, int:2, ff:1, fum_rec:2, def_td:6, pts_allow:0 };
-// Which real positions can fill each starting slot in a Sleeper roster.
-const STARTER_ELIG = { QB:['QB'], RB:['RB'], WR:['WR'], TE:['TE'], K:['K'], DEF:['DEF'],
-  FLEX:['RB','WR','TE'], WRRB_FLEX:['RB','WR'], WRRB_WRT:['RB','WR','TE'], REC_FLEX:['WR','TE'],
-  SUPER_FLEX:['QB','RB','WR','TE'], SUPERFLEX:['QB','RB','WR','TE'] };
-const SAMPLE_SLOTS = ['TNF','SUN_EARLY','SUN_EARLY','SUN_LATE','SUN_LATE','SNF','MNF','SUN_EARLY','SUN_LATE','SUN_LATE'];
-
-function buildDemoBundle() {
-  const managers = ['Fourth & Goal','Gronk & Roll','The Kelce Cartel','Purple Reign',
-    'Bijan Mustard','CeeDee Blinders','Ja’Marr the Merrier','Saquon Bon Jovi'];
-  const QB = ['Josh Allen','Lamar Jackson','Jalen Hurts','Patrick Mahomes','Joe Burrow','Jayden Daniels','Jared Goff','Bo Nix'];
-  const RB = ['Bijan Robinson','Saquon Barkley','Jahmyr Gibbs','De’Von Achane','Jonathan Taylor','Derrick Henry','Josh Jacobs','Kyren Williams',
-              'Breece Hall','James Cook','Chase Brown','Bucky Irving','Kenneth Walker III','Chuba Hubbard','James Conner','Joe Mixon'];
-  const WR = ['Ja’Marr Chase','Justin Jefferson','CeeDee Lamb','Amon-Ra St. Brown','Puka Nacua','Malik Nabers','Nico Collins','Brian Thomas Jr.',
-              'Drake London','A.J. Brown','Tyreek Hill','Ladd McConkey','Terry McLaurin','Garrett Wilson','DK Metcalf','Mike Evans',
-              'Davante Adams','Jaylen Waddle','DeVonta Smith','Courtland Sutton','Zay Flowers','Tee Higgins','Jordan Addison','Rome Odunze'];
-  const TE = ['Brock Bowers','Trey McBride','George Kittle','Sam LaPorta','Travis Kelce','Mark Andrews','T.J. Hockenson','David Njoku'];
-  const K = ['Brandon Aubrey','Ka’imi Fairbairn','Jake Bates','Chris Boswell','Cameron Dicker','Jason Sanders','Harrison Butker','Tyler Bass'];
-  const DEF = ['Broncos D/ST','Texans D/ST','Eagles D/ST','Steelers D/ST','Vikings D/ST','Ravens D/ST','Chargers D/ST','Bills D/ST'];
-  const DEPTH = ['Rachaad White','Tyjae Spears','Jaylen Warren','Tank Bigsby','Jerome Ford','Ty Chandler','Roschon Johnson','Tyler Allgeier',
-                 'Wan’Dale Robinson','Khalil Shakir','Jakobi Meyers','Josh Downs','Demarcus Robinson','Dontayvion Wicks','Cedric Tillman','Jalen McMillan'];
-
-  const players = {};
-  let rank = 1;
-  const SLOTS = ['MNF','SNF','TNF','SUN_EARLY','SUN_LATE','SUN_EARLY','SUN_LATE','SUN_EARLY','SUN_LATE','SUN_LATE'];
-  const add = (id, name, pos) => { players[id] = { player_id:id, full_name:name, position:pos, team:'NFL', search_rank: rank, slot: SLOTS[rank % SLOTS.length] }; rank++; return id; };
-
-  const rosters = [], usersById = {};
-  for (let i = 0; i < 8; i++) {
-    const ownerId = i === 0 ? 'demo-user' : 'u' + i;
-    usersById[ownerId] = { user_id: ownerId, display_name: i === 0 ? 'You' : managers[i], avatar: null,
-      metadata: { team_name: managers[i] } };
-    const starters = [
-      add(`qb${i}`, QB[i], 'QB'),
-      add(`rb${i}a`, RB[i], 'RB'),
-      add(`rb${i}b`, RB[i + 8], 'RB'),
-      add(`wr${i}a`, WR[i], 'WR'),
-      add(`wr${i}b`, WR[i + 8], 'WR'),
-      add(`te${i}`, TE[i], 'TE'),
-      add(`fx${i}`, WR[i + 16], 'WR'),
-      add(`k${i}`, K[i], 'K'),
-      add(`df${i}`, DEF[i], 'DEF'),
-    ];
-    const bench = [
-      add(`bn${i}a`, DEPTH[i], i % 2 ? 'WR' : 'RB'),
-      add(`bn${i}b`, DEPTH[i + 8], i % 2 ? 'RB' : 'WR'),
-    ];
-    rosters.push({ roster_id: i + 1, owner_id: ownerId, players: [...starters, ...bench], starters,
-      settings: { wins: 0, losses: 0, ties: 0, fpts: 0 } });
-  }
-  const rostersByOwner = {}; rosters.forEach(r => rostersByOwner[r.owner_id] = r);
-  const league = { league_id:'demo', name:'Sample League', season:'2025', status:'complete',
-    total_rosters:8, avatar:null, scoring_settings:DEMO_SCORING,
-    roster_positions:['QB','RB','RB','WR','WR','TE','FLEX','K','DEF','BN','BN'], settings:{} };
-  const bundle = { league, rosters, users: Object.values(usersById), players, usersById, rostersByOwner,
-    myRoster: rosters[0] };
-
-  // A week's worth of stats + a couple of storyline overrides (one bust, one
-  // bench blunder). Game-window timing emerges organically from player slots.
-  function week(wk) {
-    const weeklyStats = {}, weeklyProjections = {};
-    for (const id in players) weeklyStats[id] = genStats(players[id].position, hashId(id) * 100 + wk * 7);
-
-    const bustTeam = rosters[wk % 8];
-    const bustId = bustTeam.starters[1]; // RB1
-    weeklyStats[bustId] = { rush_att:8, rush_yd:14, rush_td:0, rec:1, rec_yd:5, rec_tgt:3 };
-    weeklyProjections[bustId] = { rush_att:16, rush_yd:92, rush_td:1, rec:4, rec_yd:31, rec_tgt:5 };
-
-    const benchTeam = rosters[(wk * 3) % 8];
-    const benchId = benchTeam.players[10]; // BN2
-    const starterId = benchTeam.starters[4]; // WR2
-    weeklyStats[benchId] = players[benchId].position === 'RB'
-      ? { rush_att:19, rush_yd:128, rush_td:2, rec:3, rec_yd:24, rec_tgt:4 }
-      : { rec:9, rec_yd:151, rec_td:2, rec_tgt:12 };
-    weeklyStats[starterId] = { rec:2, rec_yd:16, rec_td:0, rec_tgt:6 };
-
-    const matchups = rosters.map((r, i) => {
-      const pts = r.starters.reduce((s, id) => s + scoreStats(weeklyStats[id], DEMO_SCORING), 0);
-      return { roster_id: r.roster_id, matchup_id: Math.floor(i / 2) + 1, points: Math.round(pts * 100) / 100,
-        players: r.players, starters: r.starters, players_points: null, starters_points: null };
-    });
-    return { matchups, weeklyStats, weeklyProjections };
-  }
-  return { bundle, week };
-}
-function hashId(id) { let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 100000; return h; }
-
-// Build a SAMPLE issue from a real, loaded league: keep the real team names,
-// managers, avatars and (when drafted) real rostered players, but fabricate a
-// full week of stat lines + outcomes under the league's own scoring. Same shape
-// as buildDemoBundle so it drops straight into the existing render path.
-function buildSampleBundle(real) {
-  if (!real || !real.rosters || !real.rosters.length) return null;
-  const players = real.players || {};
-  const posOf = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_positions[0]) || '') : '';
-  const scoring = (real.league && real.league.scoring_settings) || DEMO_SCORING;
-  const rposAll = (real.league && real.league.roster_positions) || ['QB','RB','RB','WR','WR','TE','FLEX','K','DEF'];
-  const startSlots = rposAll.filter(p => !['BN','IR','TAXI'].includes(p));
-
-  // Pools of real, fantasy-relevant players by position, best (lowest rank) first.
-  const pool = {};
-  for (const id in players) {
-    const p = players[id], pos = posOf(p);
-    if (!['QB','RB','WR','TE','K','DEF'].includes(pos)) continue;
-    if (!p.full_name && !p.last_name && !p.first_name) continue;
-    (pool[pos] = pool[pos] || []).push(p);
-  }
-  for (const k in pool) pool[k].sort((a, b) => (a.search_rank || 99999) - (b.search_rank || 99999));
-  const poolIdx = {}, used = new Set();
-  const draw = (positions) => {
-    for (const pos of positions) {
-      const arr = pool[pos] || []; let i = poolIdx[pos] || 0;
-      while (i < arr.length && used.has(arr[i].player_id)) i++;
-      poolIdx[pos] = i + 1;
-      if (i < arr.length) { used.add(arr[i].player_id); return arr[i]; }
-    }
-    return null;
-  };
-
-  let sw = (S.nflState && (S.nflState.week || S.nflState.display_week)) || 8;
-  if (!sw || sw < 4) sw = 8;
-  const startWeek = Math.min(14, sw), played = startWeek - 1;
-
-  const sp = {};
-  const take = (pl, slot) => { if (!pl) return null; const id = pl.player_id;
-    if (!sp[id]) sp[id] = Object.assign({}, pl, { slot });
-    used.add(id); return id; };  // never let the pool hand this player to another team
-
-  const rosters = real.rosters.map((r, ri) => {
-    const rawStart = r.starters || [];
-    // Every real player actually on THIS team's roster, grouped by position, so
-    // we fill the lineup from the team's own guys before touching the pool.
-    const owned = (r.players || []).filter(id => id && id !== '0' && players[id]);
-    const usedOwn = new Set();
-    const byPos = {};
-    owned.forEach(id => { const pos = posOf(players[id]); (byPos[pos] = byPos[pos] || []).push(id); });
-    const takeOwn = (positions) => {
-      for (const pos of positions) { const arr = byPos[pos] || [];
-        for (const id of arr) if (!usedOwn.has(id)) { usedOwn.add(id); return players[id]; } }
-      return null;
-    };
-    const starters = [];
-    startSlots.forEach((slotPos, si) => {
-      const slot = SAMPLE_SLOTS[(si + ri) % SAMPLE_SLOTS.length];
-      const elig = STARTER_ELIG[slotPos] || [slotPos];
-      let pl = null;
-      const rid = rawStart[si];
-      if (rid && rid !== '0' && players[rid]) { pl = players[rid]; usedOwn.add(rid); }  // their set lineup
-      if (!pl) pl = takeOwn(elig);                                                       // their own bench guy
-      if (!pl) pl = draw(elig);                                                          // last resort: pool
-      const id = take(pl, slot);
-      if (id) starters.push(id);
-    });
-    // Fill the bench from the team's remaining real players first.
-    const bench = [];
-    owned.filter(id => !usedOwn.has(id)).slice(0, 3).forEach(id => { usedOwn.add(id); const bId = take(players[id], SAMPLE_SLOTS[(bench.length + ri) % SAMPLE_SLOTS.length]); if (bId) bench.push(bId); });
-    while (bench.length < 2) { const id = take(draw(['RB','WR','TE']), SAMPLE_SLOTS[(bench.length + ri) % SAMPLE_SLOTS.length]); if (!id) break; bench.push(id); }
-    // A believable win-loss record so Power Rankings read like mid-season.
-    const seed = r.roster_id * 13 + ri * 7 + 3;
-    const wins = Math.max(0, Math.min(played, Math.round(played * (0.25 + 0.5 * ds(seed)))));
-    return { roster_id: r.roster_id, owner_id: r.owner_id, players: [...starters, ...bench], starters,
-      settings: { wins, losses: played - wins, ties: 0, fpts: Math.round(wins * 105 + 60 + ds(seed + 9) * 500), fpts_decimal: 0 } };
-  });
-  const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
-  const myRoster = rosters.find(r => r.owner_id === (S.user && S.user.user_id)) || null;
-  const bundle = { league: real.league, rosters, users: real.users, usersById: real.usersById, rostersByOwner, players: sp, myRoster };
-
-  function week(wk) {
-    const weeklyStats = {}, weeklyProjections = {};
-    for (const id in sp) weeklyStats[id] = genStats(posOf(sp[id]), hashId(id) * 100 + wk * 7);
-    // Seed a couple of storylines: a headline bust and a bench-that-should've-started.
-    rosters.forEach((r, i) => {
-      if (i % 3 !== 0) return;
-      const bid = r.starters[1]; if (!bid || !sp[bid]) return;
-      const pos = posOf(sp[bid]);
-      weeklyStats[bid] = pos === 'RB' ? { rush_att:9, rush_yd:17, rush_td:0, rec:1, rec_yd:6, rec_tgt:3 } : { rec:2, rec_yd:15, rec_td:0, rec_tgt:7 };
-      weeklyProjections[bid] = pos === 'RB' ? { rush_att:17, rush_yd:96, rush_td:1, rec:4, rec_yd:31, rec_tgt:5 } : { rec:7, rec_yd:98, rec_td:1, rec_tgt:10 };
-    });
-    const benchTeam = rosters[(wk * 3) % rosters.length];
-    if (benchTeam && benchTeam.players.length > benchTeam.starters.length) {
-      const bId = benchTeam.players[benchTeam.starters.length];
-      if (bId && sp[bId]) weeklyStats[bId] = posOf(sp[bId]) === 'RB'
-        ? { rush_att:18, rush_yd:126, rush_td:2, rec:3, rec_yd:22, rec_tgt:4 }
-        : { rec:9, rec_yd:148, rec_td:2, rec_tgt:12 };
-    }
-    const matchups = [];
-    for (let i = 0; i + 1 < rosters.length; i += 2) {
-      [rosters[i], rosters[i + 1]].forEach(r => {
-        const pts = r.starters.reduce((s, id) => s + scoreStats(weeklyStats[id], scoring), 0);
-        matchups.push({ roster_id: r.roster_id, matchup_id: i / 2 + 1, players: r.players, starters: r.starters,
-          points: Math.round(pts * 100) / 100, players_points: null, starters_points: null });
-      });
-    }
-    return { matchups, weeklyStats, weeklyProjections };
-  }
-  return { bundle, week, startWeek };
-}
-
-function startDemo() {
-  const d = buildDemoBundle();
-  S.user = { user_id:'demo-user', username:'sample', display_name:'You', avatar:null };
-  S.leagueId = 'demo'; S.season = '2025'; S.history = null;
-  S.bundle = d.bundle; S.demo = d; S.values = null; S.newsCache = {};
-  S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:true };
-  S.trade = { partnerId:null, give:new Set(), get:new Set() };
-  loadDesk(); loadPower();
-  S.activeWeek = 14; S.tab = 'news';
-  renderShell(); renderTab();
-}
-
-// Enter a sample issue built from the CURRENT real league (real names, fake
-// scores). Stashes the real bundle so we can pop back out.
-function startSampleFromLeague() {
-  if (!S.bundle || S.leagueId === 'demo') return startDemo();
-  const s = buildSampleBundle(S.bundle);
-  if (!s) return startDemo();
-  S._real = { bundle: S.bundle, demo: S.demo, sample: S.sample, activeWeek: S.activeWeek, newsCache: S.newsCache, draft: S.draft };
-  S.bundle = s.bundle; S.demo = { week: s.week }; S.sample = true;
-  S.values = null; S.newsCache = {}; S.activeWeek = s.startWeek; S.tab = 'news';
-  S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:true };
-  S.trade = { partnerId:null, give:new Set(), get:new Set() };
-  renderShell(); renderTab();
-  toast('Sample issue — real names, made-up scores');
-}
-function exitSample() {
-  if (!S._real) return enterApp();
-  const r = S._real;
-  S.bundle = r.bundle; S.demo = r.demo; S.sample = r.sample; S.activeWeek = r.activeWeek;
-  S.newsCache = r.newsCache || {}; S.draft = r.draft || { posFilter:'ALL', draft:null, picks:[], loaded:false };
-  S._real = null; S.values = null; S.tab = 'news';
-  renderShell(); renderTab();
-}
 
 // ---------------------------------------------------------------------
 //  UI helpers
@@ -1642,7 +1364,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, money:{}, predraft:null, currentPredraft:null, dossier:null, records:null, investigations:null, artArchive:[], quiz:{}, featureOverride:{}, storylines:null, calendar:null, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, desk:[], power:{}, money:{}, predraft:null, currentPredraft:null, dossier:null, records:null, investigations:null, artArchive:[], quiz:{}, featureOverride:{}, storylines:null, calendar:null, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', reading:false,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null, username:'drsexy' },
@@ -1880,7 +1602,6 @@ function saveArtArchive(){ try { localStorage.setItem(archiveKey(), JSON.stringi
 function archiveArticle(a, meta) {
   if (!a || !a.headline || !(a.paragraphs || []).length) return;
   meta = meta || {};
-  if (S.sample) return; // don't archive sample-issue filler
   const rec = {
     id: a.id || ('art_' + (a.kind || 'x') + '_' + (meta.week || '') + '_' + a.headline.slice(0, 24).replace(/\W+/g, '')),
     kind: a.kind || meta.kind || 'article',
@@ -1900,7 +1621,7 @@ function archiveArticle(a, meta) {
 function nowMs(){ try { return Date.now(); } catch { return 0; } }
 // Sweep an open issue's articles (lead, feature, water cooler) into the archive.
 function archiveIssue(nl, deskArts) {
-  if (!nl || S.sample) return;
+  if (!nl) return;
   const wk = nl.week, meta = { week: wk, season: S.season || '' };
   if (nl.lead) archiveArticle({ kind: 'lead', headline: nl.lead.headline, dek: nl.lead.standfirst, byline: nl.lead.byline || 'The Column', paragraphs: nl.lead.paragraphs }, { ...meta, section: 'The Lead' });
   if (nl.feature) archiveArticle({ kind: nl.feature.investigationId ? 'investigation' : 'feature', headline: nl.feature.headline, dek: nl.feature.dek, byline: nl.feature.byline || 'League Feature', paragraphs: nl.feature.paragraphs }, { ...meta, section: nl.feature.flag || 'League Feature' });
@@ -2127,7 +1848,7 @@ function saveCurrentIssue() {
   if (!nl) { toast('Open an issue first'); return; }
   const deskArts = (S.desk || []).filter(a => a.week === nl.week);
   const snap = { id: `${S.season || ''}-w${nl.week}`, week: nl.week, season: S.season || '',
-    magName: S.magName || 'Skirt Chasers', sample: !!S.sample, savedAt: Date.now(),
+    magName: S.magName || 'Skirt Chasers', savedAt: Date.now(),
     nl, desk: deskArts, cover: coverPackage(nl) };
   const list = loadIssues().filter(x => x.id !== snap.id);
   list.unshift(snap);
@@ -2138,7 +1859,7 @@ function issueShelfCard(s) {
   const c = s.cover || {};
   return `<div class="card" style="position:relative">
     <div data-act="open-issue" data-id="${esc(s.id)}" style="cursor:pointer">
-      <div class="cover-sub" style="color:var(--accent);letter-spacing:2px">${esc((s.magName||'SKIRT CHASERS').toUpperCase())} · WEEK ${s.week}${s.sample?' · SAMPLE':''}</div>
+      <div class="cover-sub" style="color:var(--accent);letter-spacing:2px">${esc((s.magName||'SKIRT CHASERS').toUpperCase())} · WEEK ${s.week}</div>
       <div style="font-family:var(--serif);font-weight:900;font-size:21px;line-height:1.12;margin-top:7px">${esc(c.headline||('Week '+s.week+' Edition'))}</div>
       ${c.subject?`<div class="dt" style="margin-top:5px">${esc(c.subject.name)}${c.subject.tag?` · ${esc(c.subject.tag)}`:''}</div>`:''}
     </div>
@@ -2762,7 +2483,7 @@ async function coverImageBlob(nl) {
   try { const wm = await loadWordImg(); if (wm) { const lw = W - PAD * 2, lh = lw * wm.naturalHeight / wm.naturalWidth; g.drawImage(wm, PAD, y, lw, lh); y += lh + 24; } else y += 40; } catch { y += 40; }
   // Issue line
   g.textAlign = 'center'; g.fillStyle = RED; g.font = '900 26px ' + SANS;
-  g.fillText(('WEEK ' + nl.week + ' \u00b7 ' + (S.season || '') + ' SEASON' + (S.demo ? ' \u00b7 SAMPLE' : '')).split('').join(' '), W / 2, y); y += 30;
+  g.fillText(('WEEK ' + nl.week + ' \u00b7 ' + (S.season || '') + ' SEASON').split('').join(' '), W / 2, y); y += 30;
   const coverImg = curCoverImg();
   if (!coverImg) {
     // Big cover hook — ink on white
@@ -2988,12 +2709,6 @@ async function enterGuest(params) {
   S.magName = params.get('mag') || S.magName || 'Skirt Chasers';
   app.innerHTML = spinner('Opening the issue…');
   const applyDesk = () => { const d = params.get('desk'); if (d) { try { S.desk = JSON.parse(b64dec(d)) || []; } catch { S.desk = []; } } };
-  if (S.leagueId === 'demo') {
-    S.demo = buildDemoBundle(); S.bundle = S.demo.bundle; S.season = '2025';
-    S.activeWeek = Math.max(1, parseInt(params.get('week') || '14', 10) || 14);
-    S.values = null; S.newsCache = {}; S.history = null; S.desk = []; applyDesk();
-    renderGuestShell(); renderNews(); return;
-  }
   try {
     const [league, rosters, users, players] = await Promise.all([
       getLeague(S.leagueId), getRosters(S.leagueId), getLeagueUsers(S.leagueId), getPlayers(),
@@ -3032,8 +2747,6 @@ function renderSetup() {
         <div style="height:12px"></div>
         <button class="btn" data-act="lookup" ${su.busy?'disabled':''}>${su.busy&&!su.user?'Looking up…':'Find my leagues'}</button>
         ${su.error?`<div class="err">${esc(su.error)}</div>`:''}
-        <div style="height:8px"></div>
-        <button class="btn ghost" data-act="demo">Preview a sample league →</button>
       </div>
       ${su.busy && !su.user ? spinner('') : ''}
       ${su.user && su.leagues.length ? `
@@ -3244,9 +2957,8 @@ function coverToolsInner() {
   const share = `<button class="ctool" data-act="share" title="Share">⤴</button>`;
   const pdf = `<button class="ctool" data-act="pdf" title="Save as PDF">⤓</button>`;
   if (S.guest) return `${share}${pdf}`;
-  const exit = S.sample ? `<button class="ctool" data-act="exit-sample" title="Exit sample">✕</button>` : '';
   // Lean toolbar: quick actions only. Everything else lives in Newsroom HQ.
-  return `${share}${pdf}${exit}
+  return `${share}${pdf}
     <button class="ctool" data-act="dashboard" title="Newsroom HQ — tools, checklist, brief & calendar">🗞️</button>
     <button class="ctool" data-act="desk" title="Newsroom desk">✍️</button>
     <button class="ctool" data-act="cover-art" title="Cover art director">🎨</button>
@@ -3256,7 +2968,7 @@ function coverToolsInner() {
 function newsHeader() {
   return `<div class="magcover">
     <img class="mag-logo" src="wordmark.png" alt="Skirt Chasers — Dynasty League Magazine">
-    <div class="mag-issue">Week ${S.activeWeek} · ${esc(S.season || '')} Season${S.demo ? ' · Sample' : ''}</div>
+    <div class="mag-issue">Week ${S.activeWeek} · ${esc(S.season || '')} Season</div>
     <div class="mag-tools">${coverToolsInner()}</div>
     <img class="mag-shield" src="${LOGO}" alt="SCFL">
   </div>`;
@@ -3358,7 +3070,7 @@ function coverHtml(nl) {
     : `<div class="mag-hook">${esc(pkg.headline)}</div>${subj}`;
   return `<div class="magcover full${img ? ' has-img' : ''}">
     <img class="mag-logo" src="wordmark.png" alt="Skirt Chasers — Dynasty League Magazine">
-    <div class="mag-issue">Week ${nl.week} · ${esc(S.season || '')} Season${S.demo ? ' · Sample' : ''}</div>
+    <div class="mag-issue">Week ${nl.week} · ${esc(S.season || '')} Season</div>
     <div class="mag-tools">${coverToolsInner()}</div>
     ${hookBlock}
     <div class="mag-lines">${pkg.lines.map(l => `<div class="mag-line">${esc(l)}</div>`).join('')}</div>
@@ -3687,14 +3399,9 @@ async function renderNews() {
   let nl = S.newsCache[wk];
   if (!nl) {
     try {
-      let matchups, weeklyStats, weeklyProjections;
-      if (S.demo) {
-        ({ matchups, weeklyStats, weeklyProjections } = S.demo.week(wk));
-      } else {
-        [matchups, weeklyStats, weeklyProjections] = await Promise.all([
-          getMatchups(S.leagueId, wk), getWeeklyStats(S.season, wk), getWeeklyProjections(S.season, wk),
-        ]);
-      }
+      const [matchups, weeklyStats, weeklyProjections] = await Promise.all([
+        getMatchups(S.leagueId, wk), getWeeklyStats(S.season, wk), getWeeklyProjections(S.season, wk),
+      ]);
       nl = buildNewsletter({ week:wk, league:S.bundle.league, matchups, rosters:S.bundle.rosters,
         usersById:S.bundle.usersById, players:S.bundle.players, weeklyStats, weeklyProjections });
       try { nl.trades = await buildTradeReview(wk); } catch { nl.trades = []; }
@@ -3704,17 +3411,8 @@ async function renderNews() {
   }
   if (S.tab !== 'news' || S.activeWeek !== wk) return; // user moved on
   if (!nl || !nl.hasData) {
-    const canSampleLeague = !S.demo && S.bundle && S.leagueId !== 'demo';
-    const seasonHint = S.demo
-      ? 'Use the week arrows to see another sample week.'
-      : canSampleLeague
-        ? 'No games are scored for this week yet — Sleeper can’t import ESPN/Yahoo history. Preview a full issue built from YOUR league (real teams and managers, made-up scores) below. Your real newsletters appear here once the season kicks off.'
-        : 'This is likely your first Sleeper season with no games played yet — Sleeper can’t import ESPN/Yahoo history. Preview the writing with a sample league below, and your real newsletters will appear here once the season kicks off.';
-    const demoBtn = S.demo ? ''
-      : canSampleLeague
-        ? `<button class="btn" data-act="sample-league" style="max-width:340px;margin:12px auto 0">Preview a sample issue from your league →</button>`
-        : `<button class="btn" data-act="demo" style="max-width:320px;margin:12px auto 0">Preview a sample league →</button>`;
-    const offSeasonTools = (S.guest || S.demo || !S.bundle) ? ''
+    const seasonHint = 'No games are scored for Week ' + wk + ' yet. Build the offseason and pre-draft issues with the tools below — your weekly editions appear here once the season kicks off.';
+    const offSeasonTools = (S.guest || !S.bundle) ? ''
       : `<div class="offtools">
           <div class="seclabel" style="text-align:center;margin-bottom:8px">Newsroom tools</div>
           <div class="offtools-row">
@@ -3728,7 +3426,7 @@ async function renderNews() {
             <button class="offtool" data-act="records"><span class="offtool-ic">📖</span>Record Book</button>
             <button class="offtool" data-act="calendar"><span class="offtool-ic">🗓️</span>Calendar</button>
           </div></div>`;
-    setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint) + demoBtn + offSeasonTools);
+    setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint) + offSeasonTools);
     return;
   }
   S.currentNl = nl;
@@ -3739,7 +3437,6 @@ async function renderNews() {
   else { nl.powerRankings = nl.autoPower; nl.powerSource = null; }
   const umoney = S.money && S.money[wk];
   if (umoney && umoney.length) { nl.moneyLines = umoney; nl.moneySource = 'commish'; }
-  else if (S.sample) { nl.moneyLines = buildAutoMoneyLines(nl); nl.moneySource = 'auto'; }
   else { nl.moneyLines = null; nl.moneySource = null; }
   // Editor can run an SCFL Investigation as this issue's feature (a few times a year).
   const ovId = S.featureOverride && S.featureOverride[wk];
@@ -3750,7 +3447,7 @@ async function renderNews() {
 }
 // The weekly editor prompt: what this issue still needs, then publish it.
 function composeBar(wk, deskArts) {
-  if (S.guest || S.sample) return '';
+  if (S.guest) return '';
   const hasChat = deskArts.length > 0;
   const hasPower = !!(S.power && S.power[wk] && S.power[wk].length);
   const hasMoney = !!(S.money && S.money[wk] && S.money[wk].length);
@@ -3798,8 +3495,29 @@ function openProof(kind) {
 }
 function publishFinal(kind) {
   if (kind === 'predraft') savePredraftIssue(); else saveCurrentIssue();
-  toast('Choose “Save to PDF” in the print dialog');
-  setTimeout(() => window.print(), 450);
+  showPrintTips();
+}
+// The colours/branding only print when Chrome's "Background graphics" is ON —
+// it's OFF by default. Make that impossible to miss before the print dialog.
+function showPrintTips() {
+  const wrap = document.createElement('div');
+  wrap.className = 'modal';
+  wrap.innerHTML = `<div class="modal-box" style="max-width:420px">
+    <div class="at" style="margin-bottom:10px;font-size:16px">🖨️ Before you save the PDF</div>
+    <div class="dt" style="line-height:1.7;font-size:14px">
+      In the print dialog:<br>
+      • <b>Destination:</b> Save as PDF<br>
+      • <b style="color:var(--accent)">Turn ON “Background graphics”</b> (under <i>More settings</i>) — this is what prints the colours, the masthead and all the branding. It’s off by default, which is why a plain white page comes out.<br>
+      • <b>Margins:</b> Default.
+    </div>
+    <div style="height:14px"></div>
+    <button class="btn" data-act="do-print" data-close="1">Open the print dialog →</button>
+    <div style="height:8px"></div><button class="btn ghost" data-close="1">Cancel</button></div>`;
+  wrap.addEventListener('click', e => {
+    if (e.target.dataset.act === 'do-print') { wrap.remove(); setTimeout(() => window.print(), 250); return; }
+    if (e.target === wrap || e.target.dataset.close) wrap.remove();
+  });
+  document.body.appendChild(wrap);
 }
 function proofEdit() {
   S.reading = false;
@@ -4021,7 +3739,6 @@ function ordinal(n) { const s = ['th','st','nd','rd'], v = n % 100; return n + (
 async function buildTradeReview(wk) {
   try { await ensureValues(); } catch {}
   const V = S.values || { value: () => 0, projectionBased: false };
-  if (S.demo) return fabricateTrades(wk, V);
   let txns = [];
   try { txns = await getTransactions(S.leagueId, wk); } catch { return []; }
   const trades = (txns || []).filter(t => t && t.type === 'trade' && t.status === 'complete');
@@ -4104,28 +3821,6 @@ function reviewTrade(t, V) {
     byline: 'The Trade Desk', paragraphs: P, sides };
 }
 // Sample/demo mode: fabricate a believable trade or two from the roster pool.
-function fabricateTrades(wk, V) {
-  const b = S.bundle, rosters = b.rosters || [];
-  if (rosters.length < 2) return [];
-  const out = [];
-  const mk = (iA, iB, seedbump) => {
-    const A = rosters[iA % rosters.length], B = rosters[iB % rosters.length];
-    if (!A || !B || A.roster_id === B.roster_id) return;
-    const aStart = A.starters || [], bStart = B.starters || [];
-    // First deal: a lopsided 2-for-1. Second: a fair 1-for-1, for variety.
-    const aSend = (seedbump === 0 ? [aStart[1], A.players[A.starters.length]] : [aStart[3]]).filter(id => id && b.players[id]);
-    const bSend = (seedbump === 0 ? [bStart[3]] : [bStart[4]]).filter(id => id && b.players[id]);
-    if (!aSend.length || !bSend.length) return;
-    const adds = {}; aSend.forEach(id => adds[id] = B.roster_id); bSend.forEach(id => adds[id] = A.roster_id);
-    const t = { transaction_id: `demo_${wk}_${seedbump}`, type: 'trade', status: 'complete',
-      roster_ids: [A.roster_id, B.roster_id], adds, drops: {}, waiver_budget: seedbump ? [] : [{ sender: B.roster_id, receiver: A.roster_id, amount: 12 }],
-      draft_picks: [], created: (wk * 864e5) + seedbump * 3600 };
-    const r = reviewTrade(t, V); if (r) out.push(r);
-  };
-  mk(wk, wk * 3 + 1, 0);
-  if (wk % 2 === 0) mk(wk * 5 + 2, wk * 2 + 4, 1);
-  return out.slice(0, 3);
-}
 function tradeCardHtml(tr) {
   const sideCol = (s) => {
     const extras = []; if (s.faabIn) extras.push(`$${s.faabIn} FAAB`); (s.picksIn || []).forEach(p => extras.push(p));
@@ -4357,11 +4052,6 @@ async function showSettings() {
       <button class="btn" data-act="save-apikey">Save API key</button>
       ${(S.apiKey||'').trim() ? `<div style="height:8px"></div><button class="btn ghost" data-act="clear-apikey">Remove key</button>` : ''}
     </div>
-    <div class="seclabel">Preview</div>
-    <div class="card">
-      <div class="faint" style="font-size:12px;margin-bottom:10px;line-height:1.5">See a full issue built from this league — your real teams and managers, with made-up scores and outcomes. Great before the season starts.</div>
-      <button class="btn ghost" data-act="sample-league">Preview a sample issue from my league →</button>
-    </div>
     <div class="seclabel">League history</div>
     <div class="card">
       <div class="faint" style="font-size:12px;margin-bottom:10px;line-height:1.5">Import your old ESPN seasons for a permanent Record Book — champions, all-time standings, and league records.</div>
@@ -4384,9 +4074,6 @@ document.body.addEventListener('click', async (e) => {
   const t = e.target.closest('[data-act]'); if (!t) return;
   const act = t.dataset.act;
   if (act === 'lookup') return doLookup();
-  if (act === 'demo') return startDemo();
-  if (act === 'sample-league') return startSampleFromLeague();
-  if (act === 'exit-sample') return exitSample();
   if (act === 'pick-league') return pickLeague(t.dataset.id, t.dataset.season);
   if (act === 'tab') { S.tab = t.dataset.tab; renderShell(); return renderTab(); }
   if (act === 'week') {
@@ -4397,7 +4084,7 @@ document.body.addEventListener('click', async (e) => {
   }
   if (act === 'settings') return showSettings();
   if (act === 'share') return shareMagazine();
-  if (act === 'pdf') { toast('Choose “Save to PDF” in the print dialog'); setTimeout(() => window.print(), 350); return; }
+  if (act === 'pdf') return showPrintTips();
   if (act === 'share-item') return shareArticle(t.dataset.id);
   if (act === 'save-magname') { const v = ($('#magName')||{}).value; S.magName = (v && v.trim()) || 'Skirt Chasers';
     try { localStorage.setItem('gg.magname', S.magName); } catch {} toast('Magazine name saved'); return; }
