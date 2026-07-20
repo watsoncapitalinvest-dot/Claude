@@ -1599,7 +1599,7 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 const SKEY = 'gridirongm.session.v1';
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
-  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, money:{}, predraft:null, currentPredraft:null, dossier:null, records:null, investigations:null, artArchive:[], quiz:{}, featureOverride:{}, calendar:null, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
+  tab:'news', bundle:null, values:null, newsCache:{}, history:null, demo:null, desk:[], power:{}, money:{}, predraft:null, currentPredraft:null, dossier:null, records:null, investigations:null, artArchive:[], quiz:{}, featureOverride:{}, storylines:null, calendar:null, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', sample:false, _real:null, reading:false,
   trade:{ partnerId:null, give:new Set(), get:new Set() },
   draft:{ posFilter:'ALL', draft:null, picks:[], loaded:false },
   setup:{ user:null, leagues:[], season:'', busy:false, error:null, username:'drsexy' },
@@ -1794,6 +1794,26 @@ async function loadBundledDraft() {
     if (d && d.picks && d.picks.length) { S.draftOrder = d; if (S.tab === 'news' && !S.reading) renderNews(); }
   } catch {}
 }
+// ---- Storylines: the league's running arcs, as an editable section ---------
+// Baked arcs live in the dossier (read-only baseline); the manager can change
+// any arc's status, hide it, or add their own storylines. Overlay is saved
+// per-league. The merged list also feeds the AI writers for continuity.
+const STORY_STATUSES = ['brewing', 'ongoing', 'heating up', 'unresolved', 'cover story', 'completed', 'resolved', 'dormant', 'legend', 'eternal'];
+function storyIdOf(title) { return 'arc_' + String(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+function storylineKey() { return 'gg.storylines.' + (S.leagueId || 'x'); }
+function loadStorylines() { try { S.storylines = JSON.parse(localStorage.getItem(storylineKey()) || 'null'); } catch { S.storylines = null; } if (!S.storylines) S.storylines = { custom: [], status: {}, hidden: [] }; }
+function saveStorylines() { try { localStorage.setItem(storylineKey(), JSON.stringify(S.storylines || { custom: [], status: {}, hidden: [] })); } catch {} }
+// Merge baked dossier arcs (with any status override / hide applied) + custom ones.
+function allStorylines() {
+  const ov = S.storylines || { custom: [], status: {}, hidden: [] };
+  const hidden = new Set(ov.hidden || []);
+  const baked = ((S.dossier && S.dossier.arcs) || []).map(a => {
+    const id = storyIdOf(a.title);
+    return { id, title: a.title, blurb: a.blurb, status: (ov.status && ov.status[id]) || a.status || 'ongoing', source: 'baked' };
+  }).filter(a => !hidden.has(a.id));
+  const custom = (ov.custom || []).map(a => ({ ...a, source: 'custom', status: (ov.status && ov.status[a.id]) || a.status || 'ongoing' }));
+  return [...custom, ...baked];
+}
 function investigationById(id) { return (S.investigations || []).find(i => i.id === id) || null; }
 // Convert an investigation into the article shape the issue feature renders.
 function investigationToFeature(inv) {
@@ -1914,7 +1934,8 @@ function dossierBlurb() {
     if (m.catchphrases && m.catchphrases.length) bits.push('says: "' + m.catchphrases.slice(0, 2).join('", "') + '"');
     return bits.length ? `- ${m.name}: ${bits.join(' · ')}` : null;
   }).filter(Boolean).join('\n');
-  const arcs = (d.arcs || []).map(a => `- ${a.title}${a.status ? ` (${a.status})` : ''}: ${a.blurb}`).join('\n');
+  // Merged storylines (baked arcs + the manager's own edits/additions/status changes).
+  const arcs = allStorylines().map(a => `- ${a.title}${a.status ? ` (${a.status})` : ''}: ${a.blurb}`).join('\n');
   if (!mgr && !d.overview && !arcs) return '';
   const care = `\n\nSENSITIVE — HANDLE WITH CARE: This is a real friend group that has faced real loss and real health scares. Keep ALL humor to football and league business. Never joke about death, illness, grief, or personal tragedy, and never invent any.`;
   return `LEAGUE CHAT DOSSIER (distilled from the full group-chat history — real, established facts about these managers. Use it for texture and callbacks; never contradict it, never invent beyond it):
@@ -2302,13 +2323,12 @@ function showDossier() {
     <div class="at" style="margin:0 0 4px">${esc(t.period)}</div>
     ${(t.notes || []).map(n => `<div class="dt" style="padding:3px 0">• ${esc(n)}</div>`).join('')}
   </div>`).join('');
-  const arcs = (d.arcs || []).map(a => `<div class="card">
-    <div class="row" style="justify-content:space-between;align-items:baseline">
-      <div class="at" style="margin:0">${esc(a.title)}</div>
-      ${a.status ? `<span class="faint" style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px">${esc(a.status)}</span>` : ''}
-    </div>
-    <div class="dt" style="margin-top:5px;line-height:1.5">${esc(a.blurb)}</div>
-  </div>`).join('');
+  const arcCount = allStorylines().length;
+  const arcs = `<div class="card" data-act="storylines" style="cursor:pointer;border-color:var(--accent-d)">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div><div class="at" style="margin:0">🧵 Storylines</div>
+      <div class="faint" style="font-size:12px;margin-top:2px">${arcCount} running arc${arcCount === 1 ? '' : 's'} — now its own section</div></div>
+      <span class="faint" style="font-size:22px">›</span></div></div>`;
   const sub = [d.messageCount ? `${Number(d.messageCount).toLocaleString()} messages` : '', d.periods ? `${d.periods} periods` : '']
     .filter(Boolean).join(' · ');
   app.innerHTML = `<div style="padding-bottom:24px">${back}
@@ -2316,7 +2336,7 @@ function showDossier() {
     <p class="muted" style="margin-top:4px">Distilled from the full group-chat history${sub ? ` (${sub})` : ''}. The magazine writes with this in mind — you just upload the fresh week each time.</p>
     ${d.overview ? `<div class="card" style="border-color:var(--accent-d)"><div class="dt" style="font-size:14px;line-height:1.6">${esc(d.overview)}</div></div>` : ''}
     ${d.dedication ? `<div class="card" style="border-color:var(--accent-d);background:var(--bg2)"><div class="dt" style="font-size:13px;line-height:1.6;font-style:italic">${esc(d.dedication)}</div></div>` : ''}
-    ${arcs ? `<div class="seclabel">Storyline Arcs</div>${arcs}` : ''}
+    ${arcs}
     ${managers ? `<div class="seclabel">The Managers</div>${managers}` : ''}
     ${timeline ? `<div class="seclabel">The Timeline</div>${timeline}` : ''}
   </div>`;
@@ -2415,10 +2435,24 @@ function showDashboard() {
       <div class="at" style="margin:0">🗓️ Coming Up</div>
       <button class="linkbtn" data-act="calendar">full calendar ›</button></div>
     <div style="margin-top:10px">${up || '<div class="faint" style="font-size:13px">No upcoming dates.</div>'}</div></div>`;
+  const tool = (act, ic, label, kind) => `<button class="offtool" data-act="${act}"${kind ? ` data-kind="${kind}"` : ''}><span class="offtool-ic">${ic}</span>${label}</button>`;
+  const tools = `<div class="offtools-row">
+    ${tool('desk', '✍️', 'Newsroom Desk')}
+    ${tool('cover-art', '🎨', 'Cover Art', 'week')}
+    ${tool('predraft', '🏈', 'Pre-Draft Issue')}
+    ${tool('storylines', '🧵', 'Storylines')}
+    ${tool('investigations', '🔍', 'Investigations')}
+    ${tool('dossier', '📓', 'Chat Dossier')}
+    ${tool('history', '🏆', 'Record Book')}
+    ${tool('archive-articles', '🗄️', 'Article Archive')}
+    ${tool('archive', '📚', 'Back Issues')}
+    ${tool('calendar', '🗓️', 'Calendar')}
+  </div>`;
   app.innerHTML = `<div style="padding-bottom:24px">${back}
     <div class="setup-logo" style="font-size:24px">🗞️ Newsroom HQ</div>
-    <p class="muted" style="margin-top:4px">Your week at a glance — Week ${wk}. Everything the issue needs and every date to plan around.</p>
+    <p class="muted" style="margin-top:4px">Your week at a glance — Week ${wk}. Everything the issue needs, every tool, and every date to plan around.</p>
     ${checklist}
+    <div class="seclabel">Newsroom Tools</div><div class="offtools">${tools}</div>
     <div class="seclabel">The Calendar</div>${cal}
     <div class="seclabel">The Tuesday Brief</div>${questionnaireCard(wk)}
   </div>`;
@@ -2513,6 +2547,55 @@ function showInvestigationRead(id) {
   const back = `<button class="btn ghost" data-act="investigations" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Investigations</button>`;
   app.innerHTML = `<div style="padding-bottom:24px">${back}
     ${articleHtml(investigationToFeature(inv), true)}</div>`;
+}
+// ---- Storylines section ----------------------------------------------------
+function statusColor(s) { return ({
+  'brewing': '#facc15', 'ongoing': 'var(--accent)', 'heating up': '#fb923c', 'unresolved': '#f87171',
+  'cover story': '#c084fc', 'completed': '#7c8791', 'resolved': '#7c8791', 'dormant': '#5b6672',
+  'legend': '#38bdf8', 'eternal': '#34d399',
+})[String(s || '').toLowerCase()] || 'var(--accent)'; }
+function showStorylines() {
+  const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back to the magazine</button>`;
+  const list = allStorylines();
+  const opts = cur => STORY_STATUSES.map(s => `<option value="${s}"${String(cur||'').toLowerCase() === s ? ' selected' : ''}>${s}</option>`).join('');
+  const cards = list.map(a => `<div class="card" style="border-left:3px solid ${statusColor(a.status)}">
+    <div class="row" style="justify-content:space-between;align-items:baseline;gap:8px">
+      <div class="at" style="margin:0;flex:1">${esc(a.title)}</div>
+      ${a.source === 'custom' ? '<span class="faint" style="font-size:10px;font-weight:800;text-transform:uppercase">yours</span>' : ''}
+    </div>
+    ${a.blurb ? `<div class="dt" style="margin-top:5px;line-height:1.5">${esc(a.blurb)}</div>` : ''}
+    <div class="row" style="justify-content:space-between;align-items:center;margin-top:10px;gap:8px">
+      <select class="input" style="width:auto;padding:6px 10px;font-size:12px" data-act="storyline-status" data-id="${esc(a.id)}">${opts(a.status)}</select>
+      <div style="display:flex;gap:12px">
+        ${a.source === 'custom' ? `<button class="linkbtn" data-act="storyline-edit" data-id="${esc(a.id)}">edit</button><button class="linkbtn" data-act="storyline-delete" data-id="${esc(a.id)}">delete</button>`
+          : `<button class="linkbtn" data-act="storyline-hide" data-id="${esc(a.id)}">hide</button>`}
+      </div>
+    </div>
+  </div>`).join('');
+  const hidden = (S.storylines && S.storylines.hidden || []).length;
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    <div class="setup-logo" style="font-size:24px">🧵 Storylines</div>
+    <p class="muted" style="margin-top:4px">The league's running arcs. Change any status, hide one, or write your own — the newsroom writes with these in mind.</p>
+    <button class="btn" data-act="storyline-new" style="margin-bottom:14px">＋ New storyline</button>
+    ${cards || '<div class="card"><div class="dt">No storylines yet — add one.</div></div>'}
+    ${hidden ? `<button class="btn ghost" data-act="storyline-unhide-all" style="margin-top:6px">Restore ${hidden} hidden storyline${hidden===1?'':'s'}</button>` : ''}
+  </div>`;
+}
+function showStorylineForm(id) {
+  const back = `<button class="btn ghost" data-act="storylines" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Storylines</button>`;
+  const ex = id ? ((S.storylines && S.storylines.custom || []).find(a => a.id === id) || {}) : {};
+  const opts = STORY_STATUSES.map(s => `<option value="${s}"${(ex.status||'brewing') === s ? ' selected' : ''}>${s}</option>`).join('');
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    <div class="setup-logo" style="font-size:24px">${id ? 'Edit storyline' : '🧵 New storyline'}</div>
+    <div class="card" style="margin-top:12px">
+      <label class="label">Title</label>
+      <input id="slTitle" class="input" placeholder="e.g. The Great Kicker Heist of 2026" value="${esc(ex.title || '')}" />
+      <label class="label" style="margin-top:10px">What's the arc?</label>
+      <textarea id="slBlurb" class="input" style="height:96px" placeholder="A sentence or two the newsroom can build on…">${esc(ex.blurb || '')}</textarea>
+      <label class="label" style="margin-top:10px">Status</label>
+      <select id="slStatus" class="input">${opts}</select>
+      <button class="btn" data-act="storyline-save" data-id="${esc(id || '')}" style="margin-top:12px">${id ? 'Save changes' : 'Add storyline'}</button>
+    </div></div>`;
 }
 // ---- Searchable Article Archive view ---------------------------------------
 function showArticleArchive() {
@@ -2967,7 +3050,7 @@ async function enterApp() {
     const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
     const myRoster = rosters.find(r => r.owner_id === S.user.user_id) || null;
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster };
-    loadDesk(); loadPower(); loadMoney(); loadPredraft(); loadDossier(); loadRecords(); loadArtArchive(); loadQuiz(); loadFeatureOverride(); loadCalendar(); loadEspnHist(); loadBundledHistory(); loadBundledDossier(); loadBundledRecords(); loadBundledInvestigations(); loadBundledDraft(); loadCoverImg();
+    loadDesk(); loadPower(); loadMoney(); loadPredraft(); loadDossier(); loadRecords(); loadArtArchive(); loadQuiz(); loadFeatureOverride(); loadStorylines(); loadCalendar(); loadEspnHist(); loadBundledHistory(); loadBundledDossier(); loadBundledRecords(); loadBundledInvestigations(); loadBundledDraft(); loadCoverImg();
     S.values = null; S.newsCache = {}; S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:false };
     S.trade = { partnerId:null, give:new Set(), get:new Set() };
     // Season history via Sleeper's previous_league_id chain — the reliable way
@@ -3089,16 +3172,11 @@ function coverToolsInner() {
   const pdf = `<button class="ctool" data-act="pdf" title="Save as PDF">⤓</button>`;
   if (S.guest) return `${share}${pdf}`;
   const exit = S.sample ? `<button class="ctool" data-act="exit-sample" title="Exit sample">✕</button>` : '';
+  // Lean toolbar: quick actions only. Everything else lives in Newsroom HQ.
   return `${share}${pdf}${exit}
-    <button class="ctool" data-act="dashboard" title="Newsroom HQ — checklist, brief & calendar">🗞️</button>
+    <button class="ctool" data-act="dashboard" title="Newsroom HQ — tools, checklist, brief & calendar">🗞️</button>
     <button class="ctool" data-act="desk" title="Newsroom desk">✍️</button>
     <button class="ctool" data-act="cover-art" title="Cover art director">🎨</button>
-    <button class="ctool" data-act="predraft" title="Pre-Draft Issue">🏈</button>
-    <button class="ctool" data-act="investigations" title="SCFL Investigations">🔍</button>
-    <button class="ctool" data-act="dossier" title="League chat dossier">📓</button>
-    <button class="ctool" data-act="history" title="Record book">🏆</button>
-    <button class="ctool" data-act="archive-articles" title="Article archive (searchable)">🗄️</button>
-    <button class="ctool" data-act="archive" title="Back issues">📚</button>
     <button class="ctool" data-act="settings" title="Settings">⚙</button>`;
 }
 // Lightweight masthead used while loading / empty (no issue data yet).
@@ -3571,11 +3649,11 @@ async function renderNews() {
             <button class="offtool" data-act="predraft-view"><span class="offtool-ic">🏈</span>Pre-Draft Issue</button>
             <button class="offtool" data-act="cover-art"><span class="offtool-ic">🎨</span>Cover Art</button>
             <button class="offtool" data-act="desk"><span class="offtool-ic">✍️</span>Newsroom Desk</button>
-            <button class="offtool" data-act="calendar"><span class="offtool-ic">🗓️</span>Calendar</button>
+            <button class="offtool" data-act="storylines"><span class="offtool-ic">🧵</span>Storylines</button>
             <button class="offtool" data-act="investigations"><span class="offtool-ic">🔍</span>Investigations</button>
             <button class="offtool" data-act="dossier"><span class="offtool-ic">📓</span>Chat Dossier</button>
             <button class="offtool" data-act="records"><span class="offtool-ic">📖</span>Record Book</button>
-            <button class="offtool" data-act="archive-articles"><span class="offtool-ic">🗄️</span>Article Archive</button>
+            <button class="offtool" data-act="calendar"><span class="offtool-ic">🗓️</span>Calendar</button>
           </div></div>`;
     setContent(newsChrome() + empty(`No games scored for Week ${wk} yet`, seasonHint) + demoBtn + offSeasonTools);
     return;
@@ -4266,6 +4344,21 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'inv-read') return showInvestigationRead(t.dataset.id);
   if (act === 'inv-feature') { S.featureOverride = S.featureOverride || {}; S.featureOverride[S.activeWeek] = t.dataset.id; saveFeatureOverride(); delete S.newsCache[S.activeWeek]; toast('Running as this week’s feature'); return showInvestigations(); }
   if (act === 'inv-unfeature') { if (S.featureOverride) delete S.featureOverride[S.activeWeek]; saveFeatureOverride(); delete S.newsCache[S.activeWeek]; toast('Removed from this week'); return showInvestigations(); }
+  if (act === 'storylines') return showStorylines();
+  if (act === 'storyline-new') return showStorylineForm(null);
+  if (act === 'storyline-edit') return showStorylineForm(t.dataset.id);
+  if (act === 'storyline-save') {
+    const title = ($('#slTitle') || {}).value || '', blurb = ($('#slBlurb') || {}).value || '', status = ($('#slStatus') || {}).value || 'brewing';
+    if (!title.trim()) { toast('Give it a title'); return; }
+    S.storylines = S.storylines || { custom: [], status: {}, hidden: [] };
+    const id = t.dataset.id;
+    if (id) { const a = S.storylines.custom.find(x => x.id === id); if (a) { a.title = title.trim(); a.blurb = blurb.trim(); a.status = status; } }
+    else S.storylines.custom.unshift({ id: 'user_' + storyIdOf(title) + '_' + (S.storylines.custom.length + 1), title: title.trim(), blurb: blurb.trim(), status });
+    saveStorylines(); S.newsCache = {}; toast('Storyline saved'); return showStorylines();
+  }
+  if (act === 'storyline-delete') { S.storylines.custom = (S.storylines.custom || []).filter(x => x.id !== t.dataset.id); if (S.storylines.status) delete S.storylines.status[t.dataset.id]; saveStorylines(); S.newsCache = {}; return showStorylines(); }
+  if (act === 'storyline-hide') { S.storylines = S.storylines || { custom: [], status: {}, hidden: [] }; S.storylines.hidden = [...new Set([...(S.storylines.hidden || []), t.dataset.id])]; saveStorylines(); S.newsCache = {}; return showStorylines(); }
+  if (act === 'storyline-unhide-all') { if (S.storylines) S.storylines.hidden = []; saveStorylines(); S.newsCache = {}; return showStorylines(); }
   if (act === 'archive-articles') return showArticleArchive();
   if (act === 'arch-read') return showArchivedArticle(t.dataset.id);
   if (act === 'quiz-save') {
@@ -4328,6 +4421,11 @@ document.body.addEventListener('click', async (e) => {
 
 // Change events: season switcher (<select>) and chat-file import (<input file>).
 document.body.addEventListener('change', async (e) => {
+  const ss = e.target.closest('[data-act="storyline-status"]');
+  if (ss) { S.storylines = S.storylines || { custom: [], status: {}, hidden: [] }; S.storylines.status = S.storylines.status || {};
+    S.storylines.status[ss.dataset.id] = ss.value; saveStorylines(); S.newsCache = {}; toast('Status updated');
+    // update the card's left border live without a full re-render
+    const card = ss.closest('.card'); if (card) card.style.borderLeftColor = statusColor(ss.value); return; }
   const sel = e.target.closest('[data-act="season-select"]');
   if (sel) {
     const opt = sel.options[sel.selectedIndex];
