@@ -1783,6 +1783,17 @@ async function loadBundledInvestigations() {
       if (S.tab === 'news' && !S.reading) renderNews(); }
   } catch {}
 }
+// Baked-in real draft order (from the SCFL official chat). Used as the default
+// draft board in the Pre-Draft Issue; a user-typed order still overrides it.
+async function loadBundledDraft() {
+  if (S.draftOrder && S.draftOrder.picks) return;
+  try {
+    const r = await fetch('draft.json', { cache: 'force-cache' });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d && d.picks && d.picks.length) { S.draftOrder = d; if (S.tab === 'news' && !S.reading) renderNews(); }
+  } catch {}
+}
 function investigationById(id) { return (S.investigations || []).find(i => i.id === id) || null; }
 // Convert an investigation into the article shape the issue feature renders.
 function investigationToFeature(inv) {
@@ -2857,7 +2868,7 @@ async function enterGuest(params) {
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster: null };
     S.values = null; S.newsCache = {}; S.history = null; S.desk = [];
     const d = params.get('desk'); if (d) { try { S.desk = JSON.parse(b64dec(d)) || []; } catch { S.desk = []; } }
-    renderGuestShell(); renderNews(); loadBundledHistory(); loadBundledDossier(); loadBundledRecords(); loadBundledInvestigations();
+    renderGuestShell(); renderNews(); loadBundledHistory(); loadBundledDossier(); loadBundledRecords(); loadBundledInvestigations(); loadBundledDraft();
   } catch (e) {
     app.innerHTML = empty("Couldn't open this issue", 'The league may be private, or the link is incomplete.');
   }
@@ -2956,7 +2967,7 @@ async function enterApp() {
     const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
     const myRoster = rosters.find(r => r.owner_id === S.user.user_id) || null;
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster };
-    loadDesk(); loadPower(); loadMoney(); loadPredraft(); loadDossier(); loadRecords(); loadArtArchive(); loadQuiz(); loadFeatureOverride(); loadCalendar(); loadEspnHist(); loadBundledHistory(); loadBundledDossier(); loadBundledRecords(); loadBundledInvestigations(); loadCoverImg();
+    loadDesk(); loadPower(); loadMoney(); loadPredraft(); loadDossier(); loadRecords(); loadArtArchive(); loadQuiz(); loadFeatureOverride(); loadCalendar(); loadEspnHist(); loadBundledHistory(); loadBundledDossier(); loadBundledRecords(); loadBundledInvestigations(); loadBundledDraft(); loadCoverImg();
     S.values = null; S.newsCache = {}; S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:false };
     S.trade = { partnerId:null, give:new Set(), get:new Set() };
     // Season history via Sleeper's previous_league_id chain — the reliable way
@@ -3274,10 +3285,15 @@ function buildPredraft(){
   const userLines = String(pd.order || '').split(/\n/).map(s => s.trim()).filter(Boolean);
   const findTeam = nm => { const q = normName(nm); return teams.find(t => normName(t.name) === q) ||
     teams.find(t => q.length >= 3 && (normName(t.name).includes(q) || q.includes(normName(t.name)))); };
-  let order = [], orderAuto = true;
+  let order = [], orderAuto = true, orderReal = false;
   if (userLines.length) {
     orderAuto = false;
     order = userLines.map((ln, i) => { const t = findTeam(ln.replace(/^\d+[).\s\-–]*/, '')); return { pick: i + 1, team: t ? t.name : ln.replace(/^\d+[).\s\-–]*/, ''), need: t ? t.needs.join('/') : '' }; });
+  } else if (S.draftOrder && S.draftOrder.picks && S.draftOrder.picks.length) {
+    // Real order posted in the official chat — team-named, with traded-pick provenance.
+    orderAuto = false; orderReal = true;
+    order = S.draftOrder.picks.map(p => { const t = findTeam(p.team);
+      return { pick: p.pick, round: p.round, team: t ? t.name : p.team, from: p.from || '', need: t ? t.needs.join('/') : '' }; });
   } else {
     const finish = lastSeasonFinish();
     const withFin = teams.map(t => ({ t, fin: finish[normName((t.hist && t.hist.display) || t.name)] ?? null }));
@@ -3327,7 +3343,7 @@ function buildPredraft(){
   const lead = { headline: (pd.headline || '').trim() || 'The Draft Issue',
     standfirst: champ ? `${champ} defends the crown. The rest of the league is coming to take it.` : `A new season, a fresh board, and everything to play for.`,
     paragraphs: leadP };
-  return { season: S.season, headline: lead.headline, lead, teams, ranked, power, order, orderAuto, rivalries,
+  return { season: S.season, headline: lead.headline, lead, teams, ranked, power, order, orderAuto, orderReal, draftMeta: (orderReal ? S.draftOrder : null), rivalries,
     superlatives: sup, predictions: preds, keepers: (pd.keepers || '').trim(), futures: (pd.futures || []),
     feature: (S.dossier && S.dossier.feature) || null,
     subtitle: 'The Draft Issue' };
@@ -3376,10 +3392,17 @@ function predraftBodyHtml(P){
     ${t.core.map(p => `<div class="sd" style="border:0;padding:3px 0">${posBadge(p.pos)}
       <div style="flex:1"><div class="nm">${esc(p.name)} <span class="faint" style="font-size:11px">· ${esc(p.team)}${p.age ? `, ${p.age}` : ''}${p.rookie ? ' · R' : ''}</span></div></div></div>`).join('')}
   </div>`).join('');
+  const boardTitle = P.orderReal ? `📋 The Draft Board <span class="faint" style="font-size:11px;font-weight:700;letter-spacing:0">· official ${esc((P.draftMeta && P.draftMeta.year) || '')} order</span>`
+    : `📋 First-Round Board${P.orderAuto ? ' <span class="faint" style="font-size:11px;font-weight:700;letter-spacing:0">· projected order (last-season worst-to-first)</span>' : ''}`;
+  let lastRound = null;
   const board = `<div class="card">
-    <div class="at">📋 First-Round Board${P.orderAuto ? ' <span class="faint" style="font-size:11px;font-weight:700;letter-spacing:0">· projected order (last-season worst-to-first)</span>' : ''}</div>
-    ${P.order.map(o => `<div class="pr"><span class="ovr" style="width:34px">${o.pick}.</span>
-      <div style="flex:1"><div class="nm">${esc(o.team)}</div>${o.need ? `<div class="dt">need: ${esc(o.need)}</div>` : ''}</div></div>`).join('')}
+    <div class="at">${boardTitle}</div>
+    ${P.order.map(o => {
+      const roundHdr = (P.orderReal && o.round && o.round !== lastRound) ? (lastRound = o.round, `<div class="seclabel" style="margin:${o.round === 1 ? '2px' : '12px'} 0 4px">Round ${o.round}</div>`) : '';
+      return `${roundHdr}<div class="pr"><span class="ovr" style="width:34px">${o.pick}.</span>
+      <div style="flex:1"><div class="nm">${esc(o.team)}${o.from ? ` <span class="faint" style="font-weight:600;font-size:11px">(via ${esc(o.from)})</span>` : ''}</div>${o.need ? `<div class="dt">need: ${esc(o.need)}</div>` : ''}</div></div>`;
+    }).join('')}
+    ${P.orderReal && P.draftMeta && P.draftMeta.note ? `<div class="faint" style="font-size:11px;margin-top:8px;line-height:1.5">${esc(P.draftMeta.note)}</div>` : ''}
     ${P.orderAuto ? `<div class="faint" style="font-size:12px;margin-top:8px">Tap ✍️ to drop in your real draft order and keepers.</div>` : ''}</div>`;
   const keepers = P.keepers ? `<div class="card"><div class="at">🔒 Keepers & Locks</div>
     ${P.keepers.split(/\n/).map(s => s.trim()).filter(Boolean).map(s => `<div class="dt" style="padding:3px 0">${esc(s)}</div>`).join('')}</div>` : '';
