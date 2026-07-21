@@ -4396,9 +4396,21 @@ function runMockDraft(runs) {
   // availability number answers "what could I get if I owned pick N" — the
   // correct counterfactual for both drafting and trade analysis.
   const myPicks = new Set(myPickNos());
+  // Seed each rival's EXISTING roster so need reflects real holes, not an empty
+  // board. Map roster -> owner -> the team name used in the draft order, and
+  // tally current positional depth; the sim then adds to this as they draft.
+  const rosterSeed = {};
+  ((b.rosters) || []).forEach(rr => {
+    const k = normName(managerName(rr.owner_id));
+    const c = rosterSeed[k] = rosterSeed[k] || {};
+    (rr.players || []).forEach(id => { const pos = posOfPlayer(b.players[id]); if (pos) c[pos] = (c[pos] || 0) + 1; });
+  });
+  // Superflex-aware depth targets: need above these is what pulls a pick up.
+  const NEED_TARGET = { QB: 2, RB: 4, WR: 5, TE: 2 };
   for (let r = 0; r < runs; r++) {
     const remaining = new Set(pool);
     const teamCount = {}; const usedCond = new Set();
+    for (const k in rosterSeed) teamCount[k] = Object.assign({}, rosterSeed[k]);
     for (const o of order) {
       if (myPicks.has(o.pick)) continue;
       const tk = normName(o.team);
@@ -4416,7 +4428,7 @@ function runMockDraft(runs) {
           const p = b.players[id];
           const pos = posOfPlayer(p);
           const have = (teamCount[tk] && teamCount[tk][pos]) || 0;
-          const needPull = isBPA ? 0 : Math.max(0, 3 - have) * 1.2;
+          const needPull = isBPA ? 0 : Math.max(0, (NEED_TARGET[pos] || 3) - have) * 1.2;
           const youthPull = !isBPA && (style === 'upside' || style === 'rebuild') && p && p.years_exp === 0 ? 3 : 0;
           const provenPull = !isBPA && style === 'winnow' && p && p.years_exp > 0 ? 2 : 0;
           const intelBias = (posBias[tk] && posBias[tk][pos]) || 0;
@@ -4587,7 +4599,7 @@ function warMockCard() {
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <div class="at" style="margin:0">🎲 Mock the draft — ${m ? m.runs + ' runs' : '200 runs'}</div>
       <button class="fchip ${S.draft.rookiesOnly ? 'on' : ''}" data-act="mock-rookies" style="flex:none">Rookies only</button></div>
-    <div class="faint" style="font-size:11px;margin:6px 0 10px">Simulates the full real order with each owner's actual drafting personality (from the dossier) · pool: ${draftMockPool().length} draftable skill players (${rosteredIds().size} rostered excluded) · consensus ADP <b>re-weighted for NON-PPR</b> (RBs/TD profiles rise, catch-volume falls).</div>
+    <div class="faint" style="font-size:11px;margin:6px 0 10px">Simulates the full real order with each owner's actual drafting personality (from the dossier), <b>weighted by each team's current roster holes</b> (a QB-stacked team won't reach for QB) · pool: ${draftMockPool().length} draftable skill players (${rosteredIds().size} rostered excluded) · consensus ADP <b>re-weighted for NON-PPR</b> (RBs/TD profiles rise, catch-volume falls).</div>
     <button class="btn" data-act="mock-run">🎲 ${m ? 'Re-run the mock' : 'Run 200 mock drafts'}</button>
     ${body}
   </div>`;
