@@ -4368,6 +4368,56 @@ function tcGradeChatLedger() {
   const all = Object.values(T).sort((a, b) => b.netAt - a.netAt);
   return { graded, count: src.length, biggest, current: all.filter(t => t.current), legacy: all.filter(t => !t.current) };
 }
+// Every deal a given franchise made, with both grades and each asset priced —
+// the audit trail behind its Reckoning line.
+function tcTeamTrades(team) {
+  const src = (S.chatTrades && S.chatTrades.trades) || []; const out = [];
+  const share = (r, pot, n) => Math.round(r - (pot - r) / (n - 1));
+  for (const tr of src) {
+    const raw = (tr.sides || []).map(s => ({ team: tcTeamCanon(s.team), gets: s.gets || [] })).filter(s => s.team);
+    if (raw.length < 2) continue;
+    const mineIdx = raw.findIndex(s => s.team === team); if (mineIdx < 0) continue;
+    const n = raw.length;
+    const recvAt = raw.map(s => sum(s.gets.map(a => tcChatAssetVal(a, tr.season, true))));
+    const recvLong = raw.map(s => sum(s.gets.map(a => tcChatAssetVal(a, tr.season, false))));
+    const potAt = sum(recvAt), potLong = sum(recvLong);
+    out.push({ date: tr.date, season: tr.season, raw, mineIdx,
+      netAt: share(recvAt[mineIdx], potAt, n), netLong: share(recvLong[mineIdx], potLong, n) });
+  }
+  out.sort((a, b) => Math.abs(b.netAt) - Math.abs(a.netAt));
+  return out;
+}
+function showTeamTrades(team) {
+  S.reading = false;
+  const back = `<button class="btn ghost" data-act="trade-court" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ The Trade Court</button>`;
+  const money = n => (n < 0 ? '-$' : '+$') + Math.abs(Math.round(n));
+  const list = tcTeamTrades(team);
+  const shell = inner => { app.innerHTML = `<div style="padding-bottom:32px">${back}
+    <div class="setup-logo" style="font-size:24px">⚖️ ${esc(team)} — the deal ledger</div>${inner}</div>`; };
+  if (!list.length) return shell(`<div class="card"><div class="dt">No parsed trades on record for ${esc(team)}.</div></div>`);
+  const totAt = sum(list.map(x => x.netAt)), totLong = sum(list.map(x => x.netLong));
+  const w = list.filter(x => x.netAt > TC_WIN).length, l = list.filter(x => x.netAt < -TC_WIN).length, e = list.length - w - l;
+  const v = tcVerdict(totAt);
+  const summary = `<div class="card" style="margin-bottom:10px"><div class="dt">${v.ic} <b>${esc(v.tag)}</b> — ${list.length} deals · At the time <b style="color:${totAt >= 0 ? '#3fb950' : 'var(--red)'}">${money(totAt)}</b> · Long run <b style="color:${totLong >= 0 ? '#3fb950' : 'var(--red)'}">${money(totLong)}</b> · ${w}-${l}-${e}. ${esc(v.line)}</div><div class="faint" style="font-size:11px;margin-top:4px">Biggest swings first. Each asset shows its value the day of the deal; “(→$N today)” is its long-run value if it changed.</div></div>`;
+  const assetHtml = (a, season) => { const at = tcChatAssetVal(a, season, true), lng = tcChatAssetVal(a, season, false);
+    const nm = a.player || a.pick || 'asset'; const chg = (Math.abs(lng - at) >= 3) ? ` <span class="faint" style="font-size:10px">(→$${lng} today)</span>` : '';
+    return `<div class="trrow"><span class="pos" style="${a.pick ? 'color:var(--amber);border-color:var(--amber)' : ''}">${a.pick ? '◆' : '·'}</span><span class="nm" style="flex:1">${esc(nm)}</span><span class="val">$${at}${chg}</span></div>`; };
+  const cards = list.map(x => {
+    const mine = x.raw[x.mineIdx], others = x.raw.filter((s, i) => i !== x.mineIdx);
+    const cA = x.netAt >= 0 ? '#3fb950' : 'var(--red)', cL = x.netLong >= 0 ? '#3fb950' : 'var(--red)';
+    return `<div class="card" style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+        <div class="at" style="margin:0;font-size:14px">vs ${esc(others.map(o => o.team).join(' & '))}</div>
+        <div class="faint" style="font-size:11px">${esc(x.date)}</div></div>
+      <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
+        <div class="trside" style="flex:1;min-width:130px"><div class="trmgr">${esc(team)} got</div>${mine.gets.map(a => assetHtml(a, x.season)).join('') || '<div class="dt faint">—</div>'}</div>
+        <div class="trside" style="flex:1;min-width:130px"><div class="trmgr">${esc(others.map(o => o.team).join(' / '))} got</div>${others.flatMap(o => o.gets).map(a => assetHtml(a, x.season)).join('') || '<div class="dt faint">—</div>'}</div>
+      </div>
+      <div style="margin-top:7px;font-size:12px;font-weight:800">At the time <span style="color:${cA}">${money(x.netAt)}</span> &nbsp;·&nbsp; Long run <span style="color:${cL}">${money(x.netLong)}</span></div>
+    </div>`;
+  }).join('');
+  shell(summary + cards);
+}
 function tcHeistCard(tr) {
   const sides = [...tr.sides].sort((a, b) => b.net - a.net);
   const W = sides[0], L = sides[sides.length - 1];
@@ -4468,7 +4518,7 @@ async function showTradeCourt() {
   if (CL.graded > 0) {
     const money = n => (n < 0 ? '-$' : '+$') + Math.abs(Math.round(n));
     const rrow = (l, i) => { const v = tcVerdict(l.netAt); const cA = l.netAt >= 0 ? '#3fb950' : 'var(--red)'; const cL = l.netLong >= 0 ? '#3fb950' : 'var(--red)';
-      return `<tr>
+      return `<tr data-act="tc-team" data-team="${esc(l.team)}" style="cursor:pointer">
         <td style="text-align:right;color:var(--faint);padding:7px 8px 7px 0">${i + 1}</td>
         <td style="padding:7px 8px 7px 0"><b>${esc(l.team)}</b><div class="faint" style="font-size:10px">${v.ic} ${esc(v.tag)}</div></td>
         <td style="text-align:right;padding:7px 8px;white-space:nowrap;font-weight:800;color:${cA};font-variant-numeric:tabular-nums">${money(l.netAt)}</td>
@@ -4485,7 +4535,7 @@ async function showTradeCourt() {
     reckoning = `<div class="seclabel" style="margin:20px 0 8px">⚖️ The Reckoning — all ${CL.graded} chat trades graded</div>
       ${heroes2}
       <div class="card" style="overflow-x:auto">
-        <div class="faint" style="font-size:11px;line-height:1.6;margin-bottom:8px">Every trade from the group chat, each asset priced and netted per team. <b>At the time</b> = value the day of the trade (who won the negotiation). <b>Long run</b> = the same deal on today's board (how it actually aged). Ranked by <b>At the time</b>.</div>
+        <div class="faint" style="font-size:11px;line-height:1.6;margin-bottom:8px">Every trade from the group chat, each asset priced and netted per team. <b>At the time</b> = value the day of the trade (who won the negotiation). <b>Long run</b> = the same deal on today's board (how it actually aged). Ranked by <b>At the time</b>. <b>Tap any franchise</b> to see every one of its deals, each asset priced.</div>
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr style="border-bottom:1px solid var(--line);color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.4px">
             <th style="text-align:right;padding:0 8px 6px 0">#</th><th style="text-align:left;padding:0 8px 6px 0">Franchise</th>
@@ -5603,6 +5653,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'dossier') return showDossier();
   if (act === 'records') return showRecords();
   if (act === 'trade-court') return showTradeCourt();
+  if (act === 'tc-team') return showTeamTrades(t.dataset.team);
   if (act === 'ex-files') return showExFiles();
   if (act === 'dashboard' || act === 'questionnaire') return showDashboard();
   if (act === 'calendar') return showCalendar();
