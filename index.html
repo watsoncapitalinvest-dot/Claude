@@ -2295,7 +2295,61 @@ function showRecords() {
     <div class="seclabel">All-Time Standings</div>${standingsCard}
     <div class="seclabel">Leaderboards</div>${leaders}
     ${supCard ? `<div class="seclabel">History</div>${supCard}` : ''}
+    <div class="card" style="margin-top:12px;cursor:pointer" data-act="ex-files"><div class="at" style="margin:0">👻 The Ex-Files ›</div><div class="faint" style="font-size:12px;margin-top:2px">A special segment: every departed owner, dragged back for one last review.</div></div>
   </div>`;
+}
+// ---- The Ex-Files: a special segment reviewing the league's departed owners --
+// Sourced from the Record Book (any franchise with no 2025 season), each gets a
+// stat line and a newsroom verdict — tribute or roast, earned by the record.
+function exSeed(name) { return Math.round(hashNoise(String(name)) * 1e6); }
+function exVerdict(m) {
+  const yrs = m.numSeasons || 0, wp = m.winPct || 0, t = m.titles || 0, po = m.playoffs || 0;
+  const s = exSeed(m.name), pk = a => seededPick(a, s);
+  const first = String(m.seasons || '').split('-')[0] || '?', last = String(m.seasons || '').split('-').slice(-1)[0] || '?';
+  if (t > 0 && yrs <= 6)   return { ic: '🏆', tag: 'The One That Got Away', line: pk([`Won a ring in just ${yrs} season${yrs === 1 ? '' : 's'} and walked out on top. Every league needs a legend who leaves too soon — this was ours.`, `Lifted the trophy, then vanished. The rarest exit there is: you can't lose a rematch the champ never shows up for.`]) };
+  if (t > 0)               return { ic: '👑', tag: 'Champion, Then Ghost', line: pk([`${t}× champion across ${yrs} years — and then gone. A banner in the rafters and a chair nobody's sat in since.`, `Owns ${t} title${t === 1 ? '' : 's'} and a ${m.record} record to go with it. Peaked early, coasted late, slipped out the back.`]) };
+  if (yrs >= 10 && t === 0) return { ic: '⛓️', tag: 'The Ringless Lifer', line: pk([`${yrs} seasons, ${po} playoff trips, zero rings. Stuck around long enough to become furniture, never long enough to win the thing.`, `A ${yrs}-year sentence with nothing but a ${m.record} record and a lifetime of "next year" to show for it. We miss the participation.`]) };
+  if (yrs <= 3)            return { ic: '☕', tag: 'Cup of Coffee', line: pk([`In by ${first}, out by ${last}. A ${yrs}-season cameo, a ${m.record} ledger, and a name nobody can quite place anymore.`, `Blink and you missed them: ${yrs} seasons, then the milk carton. Filed under "wait — they were in the league?"`]) };
+  if (wp < 0.4)            return { ic: '🪦', tag: 'Addition by Subtraction', line: pk([`A ${m.record} monument to futility over ${yrs} years. When they left, the league's collective win total and dignity both ticked up.`, `${(wp * 100).toFixed(0)}% is a generous frame for what this was. Some exits are a mercy — for everyone else.`]) };
+  return { ic: '🚪', tag: 'Quietly Gone', line: pk([`${yrs} seasons, a respectable-enough ${m.record}, and an exit nobody threw a party for. Here, then not.`, `Middling and mortal: ${m.record} over ${yrs} years, then the door. Not missed, not forgotten. Mostly.`]) };
+}
+function showExFiles() {
+  S.reading = false;
+  const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>`;
+  const r = S.records;
+  const shell = inner => { app.innerHTML = `<div style="padding-bottom:32px">${back}
+    <div class="setup-logo" style="font-size:26px">👻 The Ex-Files</div>
+    <p class="muted" style="margin:2px 0 16px">The league's dearly departed — every owner who packed up and left, dragged back for one last review.</p>${inner}</div>`; };
+  if (!r || !r.standings || !r.standings.length) return shell(`<div class="card"><div class="dt">No record book baked in yet. Once <b>records.json</b> is committed, the ghosts load here.</div></div>`);
+  const departed = r.standings.filter(m => !/2025/.test(String(m.seasons))).sort((a, b) => (b.numSeasons || 0) - (a.numSeasons || 0));
+  if (!departed.length) return shell(`<div class="card"><div class="dt">Nobody's left. Every owner who ever joined is still here — a loyal bunch, or a trapped one, depending who you ask.</div></div>`);
+
+  const champs = departed.filter(m => (m.titles || 0) > 0);
+  const worst = [...departed].sort((a, b) => (a.winPct || 0) - (b.winPct || 0))[0];
+  const longest = departed[0], shortest = departed[departed.length - 1];
+  const hero = (label, m, extra) => m ? `<div class="card"><div class="byline">${label}</div><div class="at" style="margin:2px 0">${esc(m.name)}</div><div class="dt">${extra}</div></div>` : '';
+  const heroes = `<div class="sbgrid" style="margin-bottom:6px">
+    ${hero('🕰️ Longest Tenure', longest, `${longest.numSeasons || 0} seasons · ${esc(longest.record)}`)}
+    ${hero('🪦 Worst All-Time', worst, `${esc(worst.record)} · ${((worst.winPct || 0) * 100).toFixed(1)}%`)}
+    ${hero('☕ Shortest Stay', shortest, `${shortest.numSeasons || 0} season${shortest.numSeasons === 1 ? '' : 's'} · ${esc(shortest.seasons)}`)}
+  </div>`;
+  const champLine = champs.length ? `<div class="card" style="border-color:var(--accent-d)"><div class="byline">🏆 They Left With Hardware</div><div class="dt">${joinList(champs.map(c => `${esc(c.name)} (${c.titles}×)`))} — the only departed owners who ever lifted the cup. Ring, then run.</div></div>` : '';
+
+  const cards = departed.map(m => {
+    const v = exVerdict(m);
+    const tr = [(m.titles || 0) > 0 ? `🏆${m.titles}` : '', (m.runnerUps || 0) > 0 ? `🥈${m.runnerUps}` : '', (m.thirds || 0) > 0 ? `🥉${m.thirds}` : ''].filter(Boolean).join(' ') || '—';
+    return `<div class="card story">
+      <div class="byline">👻 The Ex-Files · ${esc(m.seasons || '')}</div>
+      <h2>${v.ic} ${esc(m.name)}</h2>
+      <div class="dek">${esc(v.tag)}</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin:6px 0 8px;font-size:12px;color:var(--faint)">
+        <span><b style="color:var(--text)">${esc(m.record)}</b> record</span><span><b style="color:var(--text)">${((m.winPct || 0) * 100).toFixed(1)}%</b></span>
+        <span><b style="color:var(--text)">${m.numSeasons || 0}</b> seasons</span><span><b style="color:var(--text)">${m.playoffs || 0}</b> playoff runs</span><span>${tr}</span></div>
+      <p class="body">${esc(v.line)}</p>
+    </div>`;
+  }).join('');
+  const method = `<div class="card" style="margin-top:14px"><div class="faint" style="font-size:11px;line-height:1.6"><b>Case criteria:</b> a departed franchise is any team in the Record Book with no 2025 season. Records, tenure and trophies come straight from League Legacy; the verdicts are the newsroom's own — and the newsroom holds grudges.</div></div>`;
+  shell(heroes + champLine + `<div class="seclabel" style="margin:18px 0 8px">The Case Files — ${departed.length} departed</div>` + cards + method);
 }
 // ---- Newsroom HQ: the weekly dashboard, checklist, questionnaire + calendar -
 function showDashboard() {
@@ -3037,6 +3091,7 @@ function showMenu() {
     ['investigations', '🔍', 'Investigations', 'The long-form specials'],
     ['dossier', '📓', 'Chat Dossier', 'Who’s who in the league'],
     ['records', '📖', 'Record Book', 'All-time history & records'],
+    ['ex-files', '👻', 'The Ex-Files', 'The league’s departed, reviewed'],
     ['archive-articles', '🗄️', 'Article Archive', 'Every article, searchable'],
     ['archive', '📚', 'Back Issues', 'Saved editions'],
     ['calendar', '🗓️', 'Calendar', 'Release dates & events'],
@@ -5300,6 +5355,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'dossier') return showDossier();
   if (act === 'records') return showRecords();
   if (act === 'trade-court') return showTradeCourt();
+  if (act === 'ex-files') return showExFiles();
   if (act === 'dashboard' || act === 'questionnaire') return showDashboard();
   if (act === 'calendar') return showCalendar();
   if (act === 'investigations') return showInvestigations();
