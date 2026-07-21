@@ -5008,6 +5008,16 @@ function pvRowHtml(name, pos, val, est, fa) {
     <button data-act="pv-add" data-side="get" data-pos="${esc(pos || '')}" data-val="${val}" data-label="${lab}" class="btn ghost" style="width:auto;padding:3px 9px;font-size:11px;margin:0">＋ get</button>
   </div>`;
 }
+// Re-render ONLY the calculator card in place — so adding/removing an asset
+// doesn't rebuild the whole War Room, reset your search, or jump the page.
+// keepSearch=true keeps your query live and focused for adding several players.
+function refreshCalc(keepSearch) {
+  const el = document.getElementById('calcWrap');
+  if (!el) { if (typeof drawWarRoom === 'function') drawWarRoom(); return; }
+  const q = keepSearch ? ((document.getElementById('pvSearch') || {}).value || '') : '';
+  el.outerHTML = warCalcCard();
+  if (keepSearch) { const inp = document.getElementById('pvSearch'); if (inp) { inp.value = q; if (q) pvSearch(q); inp.focus(); } }
+}
 const PV_SUFFIX = new Set(['jr', 'sr', 'ii', 'iii', 'iv', 'v']);
 function pvSearch(q) {
   const box = document.getElementById('pvResults'); if (!box) return;
@@ -5095,12 +5105,12 @@ function warCalcCard() {
   if (sg && !sge) consol = `The single big piece is on YOUR side — add ~10–15% for consolidation; the deal is a touch better for them than the raw $ shows.`;
   else if (sge && !sg) consol = `The single big piece is coming BACK to you — worth ~10–15% extra; you can afford to give a bit more than even.`;
 
-  return `<div class="card" style="margin-top:18px">
+  return `<div class="card" id="calcWrap" style="margin-top:18px">
     <div class="cardhead"><span class="kicker" style="color:var(--accent)">TOOL</span><h3 style="margin:2px 0 0">Trade Calculator</h3></div>
     <div class="faint" style="font-size:12px;margin:4px 0 10px">One dollar scale — the 1.01 = $100 — calibrated to 6 years of real SCFL trades. Build both sides, read the verdict. Prices are a stable baseline, not gospel; your roster need is the tiebreaker.</div>
     <div style="position:relative;margin-bottom:8px">
       <input id="pvSearch" oninput="pvSearch(this.value)" autocomplete="off" placeholder="🔎 Search any player — start typing a name…" style="width:100%;padding:10px 12px;border-radius:8px;background:var(--bg2,#141821);color:var(--ink,#e8eef7);border:1px solid rgba(255,255,255,.14);font-size:13px">
-      <div id="pvResults" style="margin-top:6px"></div>
+      <div id="pvResults" style="margin-top:6px;max-height:280px;overflow:auto"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div>
@@ -5715,12 +5725,12 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'pv-add') {
     const C = calcState();
     C[t.dataset.side === 'get' ? 'get' : 'give'].push({ pos: t.dataset.pos || '', val: +t.dataset.val || 0, label: t.dataset.label || 'Player' });
-    saveDraftState(); return drawWarRoom();
+    saveDraftState(); return refreshCalc(true);
   }
-  if (act === 'calc-remove') { const C = calcState(); C[t.dataset.side].splice(+t.dataset.i, 1); saveDraftState(); return drawWarRoom(); }
-  if (act === 'calc-qb') { const C = calcState(); C.qb = !C.qb; saveDraftState(); return drawWarRoom(); }
-  if (act === 'calc-swap') { const C = calcState(); const g = C.give; C.give = C.get; C.get = g; saveDraftState(); return drawWarRoom(); }
-  if (act === 'calc-clear') { S.draft.calc = { give: [], get: [], qb: (S.draft.calc || {}).qb || false }; saveDraftState(); return drawWarRoom(); }
+  if (act === 'calc-remove') { const C = calcState(); C[t.dataset.side].splice(+t.dataset.i, 1); saveDraftState(); return refreshCalc(); }
+  if (act === 'calc-qb') { const C = calcState(); C.qb = !C.qb; saveDraftState(); return refreshCalc(); }
+  if (act === 'calc-swap') { const C = calcState(); const g = C.give; C.give = C.get; C.get = g; saveDraftState(); return refreshCalc(); }
+  if (act === 'calc-clear') { S.draft.calc = { give: [], get: [], qb: (S.draft.calc || {}).qb || false }; saveDraftState(); return refreshCalc(); }
   if (act === 'advisor-send') {
     const inp = $('#advisorInput'); const q = ((inp && inp.value) || '').trim();
     if (!q) return;
@@ -5742,7 +5752,7 @@ document.body.addEventListener('change', async (e) => {
   const it = e.target.closest('[data-act="intel-type"]');
   if (it) { S.draft.intelType = it.value; return drawWarRoom(); }
   const cadd = e.target.closest('[data-act="calc-add"]');
-  if (cadd) { const v = cadd.value; if (v) { const parts = v.split('~'); const pos = parts[0]; const val = +parts[1]; const label = parts.slice(2).join('~'); const C = calcState(); C[cadd.dataset.side].push({ pos, val, label }); saveDraftState(); } return drawWarRoom(); }
+  if (cadd) { const v = cadd.value; if (v) { const parts = v.split('~'); const pos = parts[0]; const val = +parts[1]; const label = parts.slice(2).join('~'); const C = calcState(); C[cadd.dataset.side].push({ pos, val, label }); saveDraftState(); } return refreshCalc(); }
   const cw = e.target.closest('[data-act="ci-week"]');
   if (cw) { S.activeWeek = Math.min(18, Math.max(1, parseInt(cw.value, 10) || 1)); return showCreateIssue(); }
   const pf = e.target.closest('[data-act="predraft-feature"]');
