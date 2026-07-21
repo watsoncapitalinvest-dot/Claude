@@ -4190,10 +4190,15 @@ function runMockDraft(runs) {
   const bpaTeams = new Set(intel.filter(x => x.type === 'bpa' && x.team).map(x => normName(x.team)));
   const takenAt = {};   // id -> [pick numbers across runs]
   const slotTaken = {}; // pick -> {id: count} — who usually goes at each slot
+  // MY picks are skipped: the sim models the OTHER 15 teams only, so every
+  // availability number answers "what could I get if I owned pick N" — the
+  // correct counterfactual for both drafting and trade analysis.
+  const myPicks = new Set(myPickNos());
   for (let r = 0; r < runs; r++) {
     const remaining = new Set(pool);
     const teamCount = {}; const usedCond = new Set();
     for (const o of order) {
+      if (myPicks.has(o.pick)) continue;
       const tk = normName(o.team);
       const style = personaFor(o.team);
       const forced = takes.find((c, ci) => !usedCond.has(ci) && normName(c.team) === tk && remaining.has(c.playerId));
@@ -4450,10 +4455,14 @@ function warTradeCard() {
   const MOTIVE_IC = { shark: '🦈', chaos: '🎲', rebuild: '🧱', upside: '🚀', winnow: '🏆', volume: '📦', value: '⚖️', out: '🚪' };
 
   // 1) TARGET SURVIVAL STRIP — where your window targets die, across slots.
+  // Targets = players from the intel tiers (the names that matter), by ADP.
   let strip = '';
   if (m) {
     const slots = [10, 12, 14, 15, 16, 18, 21, 24];
-    const targets = m.players.filter(p => p.adp >= 9 && p.adp <= 34).sort((a, b) => a.adp - b.adp).slice(0, 6);
+    const targets = m.players.filter(p => (intelTierOf(p.name) || 9) <= 4)
+      .sort((a, b) => (intelTierOf(a.name) || 9) - (intelTierOf(b.name) || 9) || a.adp - b.adp)
+      .filter(p => p.availAt(10) >= 0.05)     // drop names always gone before the strip starts
+      .slice(0, 8);
     const cell = pct => `<td style="text-align:center;padding:4px 6px;font-size:12px;font-weight:800;color:${pct>=.6?'var(--accent)':pct>=.3?'#f5b301':'#f87171'}">${Math.round(pct*100)}</td>`;
     strip = `<div class="seclabel" style="margin:12px 0 6px">Where your targets die — % still available by slot</div>
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
@@ -4474,7 +4483,10 @@ function warTradeCard() {
     // My chalk target = best tiered player reliably there at my first pick.
     const cands = m.players.map(p => ({ ...p, pct: p.availAt(from), tier: intelTierOf(p.name) || 5 }));
     target = cands.filter(p => p.pct >= 0.55).sort((a, b) => a.tier - b.tier || a.adp - b.adp)[0] || null;
-    const faller = cands.filter(p => p.tier <= 2 && p.pct < 0.55).sort((a, b) => a.tier - b.tier || a.adp - b.adp)[0] || null;
+    // A chaseable faller must actually be gettable in the move-up range —
+    // someone gone by pick 9 in every mock is not a trade-up story.
+    const faller = cands.filter(p => p.tier <= 2 && p.pct < 0.55 && p.availAt(9) >= 0.15)
+      .sort((a, b) => a.tier - b.tier || a.adp - b.adp)[0] || null;
     fallerName = faller && faller.name;
     if (target) {
       // Safe-fall line: deepest slot where the target is still likely (>=50%).
@@ -4483,9 +4495,10 @@ function warTradeCard() {
       // Death slot: first slot where he's usually gone (<30%).
       let death = null;
       for (let s2 = from + 1; s2 <= 30; s2++) { if (target.availAt(s2) < 0.3) { death = s2; break; } }
-      // Move-up-pays line: shallowest slot where the faller becomes reliable.
+      // Move-up-pays line: the DEEPEST earlier slot where the faller becomes
+      // reliable (>=55%) — i.e. the cheapest move that actually secures him.
       let payline = null;
-      if (faller) { for (let s2 = from - 1; s2 >= 8; s2--) { if (faller.availAt(s2) >= 0.55) payline = s2; } }
+      if (faller) { for (let s2 = from - 1; s2 >= 8; s2--) { if (faller.availAt(s2) >= 0.55) { payline = s2; break; } } }
       const chipStyle = c => `display:inline-block;border:1px solid ${c};color:${c};border-radius:999px;padding:5px 12px;font-size:12px;font-weight:800;margin:0 6px 6px 0`;
       boundaries = `<div class="seclabel" style="margin:12px 0 6px">The boundaries — what actually matters</div>
         <div>
@@ -4506,11 +4519,11 @@ function warTradeCard() {
       if (pT >= 0.3) return `<span style="color:#f5b301;font-weight:800">⚠️ coin flip on ${esc(target.name)} (${Math.round(pT * 100)}%)</span>`;
       return `<span style="color:#f87171;font-weight:800">🛑 ${esc(target.name)} gone (${Math.round(pT * 100)}%) — only for future capital</span>`;
     }
-    // moving up: does it buy a better tier?
+    // moving up: does it SECURE a player (equal-or-better tier) you'd otherwise lose?
     const bought = m.players.map(p => ({ ...p, pct: p.availAt(o.pick), tier: intelTierOf(p.name) || 5 }))
-      .filter(p => p.tier < (target.tier || 5) && p.pct >= 0.55 && p.availAt(from) < 0.35)
-      .sort((a, b) => a.tier - b.tier)[0];
-    return bought ? `<span style="color:var(--accent);font-weight:800">💎 buys ${esc(bought.name)} (T${bought.tier}, ${Math.round(bought.pct * 100)}%)</span>`
+      .filter(p => p.tier <= (target.tier || 5) && p.pct >= 0.55 && p.availAt(from) < 0.35)
+      .sort((a, b) => a.tier - b.tier || a.adp - b.adp)[0];
+    return bought ? `<span style="color:var(--accent);font-weight:800">💎 secures ${esc(bought.name)} (T${bought.tier}, ${Math.round(bought.pct * 100)}% vs ${Math.round(bought.availAt(from) * 100)}% at ${from})</span>`
       : `<span style="color:#f87171;font-weight:800">❌ buys nothing — same pool as ${from}</span>`;
   };
   ladder = `<div class="seclabel" style="margin:14px 0 6px">The ladder — every move, priced and judged</div>
