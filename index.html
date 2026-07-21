@@ -336,6 +336,10 @@
   .prow .nm { font-weight:600; }
   .prow .tm { color:var(--faint); font-size:11px; }
   .prow .val { font-size:17px; font-weight:800; width:44px; text-align:right; font-variant-numeric:tabular-nums; }
+  .dbtn { flex:none; width:34px; height:34px; border-radius:9px; border:1px solid var(--border); background:var(--card2);
+          color:var(--dim); font-size:15px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .dbtn:hover { border-color:var(--faint); color:var(--text); }
+  .dbtn.mine { color:#f5b301; } .dbtn.mine:hover { border-color:#f5b301; background:rgba(245,179,1,.12); }
   .divider { border-bottom:1px solid rgba(255,255,255,.05); }
 
   /* trade */
@@ -2992,6 +2996,7 @@ function showMenu() {
   // The menu is the tools hub. Create Issue / Weekly Stories / Settings live in
   // the top bar (always one click), so they are NOT repeated here.
   const tools = [
+    ['draft-room', '🎯', 'Draft Room', 'Live board, needs & best available'],
     ['dashboard', '🗞️', 'Newsroom HQ', 'Weekly checklist, brief & calendar'],
     ['predraft-view', '🏈', 'Pre-Draft Issue', 'Build the Draft Issue'],
     ['cover-art', '🎨', 'Cover Art', 'Art direction for the cover'],
@@ -4103,8 +4108,20 @@ function tradeCardHtml(tr) {
 // ---------------------------------------------------------------------
 //  Draft Assistant
 // ---------------------------------------------------------------------
+// Manual draft tracking so the room works at an offline draft (mark players
+// taken / yours as they go) — persisted so a refresh mid-draft loses nothing.
+function draftStateKey(){ return 'gg.draftstate.' + (S.leagueId || 'x'); }
+function loadDraftState(){
+  try { const s = JSON.parse(localStorage.getItem(draftStateKey()) || 'null');
+    if (s) { S.draft.taken = new Set(s.taken || []); S.draft.mine = new Set(s.mine || []); S.draft.log = s.log || []; } } catch {}
+  if (!S.draft.taken) S.draft.taken = new Set();
+  if (!S.draft.mine) S.draft.mine = new Set();
+  if (!S.draft.log) S.draft.log = [];
+}
+function saveDraftState(){ try { localStorage.setItem(draftStateKey(), JSON.stringify({ taken: [...S.draft.taken], mine: [...S.draft.mine], log: S.draft.log })); } catch {} }
 async function renderDraft() {
   setContent(spinner('Building the draft board…'));
+  loadDraftState();
   await ensureValues();
   if (!S.draft.loaded) {
     try {
@@ -4121,12 +4138,15 @@ async function renderDraft() {
 }
 function drawDraft() {
   const b = S.bundle, V = S.values, d = S.draft;
-  const draftedIds = new Set(d.picks.map(p=>p.player_id));
-  const myPicks = S.user ? d.picks.filter(p=>p.picked_by===S.user.user_id) : [];
+  const back = `<button class="btn ghost" data-act="home" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>`;
+  // Everything drafted = Sleeper live picks + anything marked taken by hand.
+  const sleeperTaken = new Set((d.picks || []).map(p => p.player_id));
+  const drafted = new Set([...sleeperTaken, ...(d.taken || [])]);
+  const mine = new Set([...(S.user ? (d.picks || []).filter(p => p.picked_by === S.user.user_id).map(p => p.player_id) : []), ...(d.mine || [])]);
 
-  // roster needs
+  // Roster needs (from my picks so far).
   const req = startingNeeds(b.league.roster_positions);
-  const have = {}; myPicks.forEach(p => { const pos=b.players[p.player_id]?.position; if(pos) have[pos]=(have[pos]||0)+1; });
+  const have = {}; [...mine].forEach(id => { const pos = b.players[id]?.position; if (pos) have[pos] = (have[pos] || 0) + 1; });
   const needs = [];
   for (const pos of ['QB','RB','WR','TE','K','DEF']) {
     const flexNeed = (pos==='RB'||pos==='WR'||pos==='TE') ? (req.FLEX||0) : 0;
@@ -4135,48 +4155,110 @@ function drawDraft() {
     if (deficit > 0) needs.push({ pos, deficit });
   }
   needs.sort((a,b)=>b.deficit-a.deficit);
+  const needSet = new Set(needs.map(n => n.pos));
 
-  // best available with tiers
-  const avail = V.ranked.filter(id => {
-    if (draftedIds.has(id)) return false;
-    if (d.posFilter === 'ALL') return true;
-    return posOfPlayer(b.players[id]) === d.posFilter;
-  }).slice(0, 60);
+  // Best available with value tiers.
+  const availAll = V.ranked.filter(id => !drafted.has(id));
+  const avail = availAll.filter(id => d.posFilter === 'ALL' || posOfPlayer(b.players[id]) === d.posFilter).slice(0, 80);
   const topVal = avail.length ? V.value(avail[0]) : 0;
   const gap = Math.max(6, topVal * 0.045);
   const board = []; let tier = 1;
   avail.forEach((id, i) => { if (i>0 && V.value(avail[i-1]) - V.value(id) > gap) tier++; board.push({ id, tier }); });
 
-  const status = d.draft && d.draft.status;
-  const st = status==='drafting' ? {t:'DRAFT LIVE',c:'var(--accent)'}
-    : status==='complete' ? {t:'DRAFT COMPLETE',c:'var(--faint)'}
-    : status==='pre_draft' ? {t:'PRE-DRAFT',c:'var(--blue)'} : {t:'CHEAT SHEET',c:'var(--blue)'};
+  // ---- The real 2026 order: who's up, when I'm next ----
+  const myTeam = S.user ? managerName(S.user.user_id) : '';
+  const order = (S.draftOrder && S.draftOrder.picks) || [];
+  const takenCount = drafted.size;
+  let orderCard = '';
+  if (order.length) {
+    const onClock = order[takenCount];
+    const isMine = t => myTeam && normName(t) === normName(myTeam);
+    const myNext = order.find(o => o.pick > takenCount && isMine(o.team));
+    const until = myNext ? (myNext.pick - takenCount - 1) : null;
+    const upNext = order.slice(takenCount, takenCount + 4);
+    orderCard = `<div class="card" style="border-color:var(--accent-d)">
+      <div class="row" style="justify-content:space-between;align-items:baseline">
+        <div class="at" style="margin:0">🎯 The Board · ${esc((S.draftOrder.year) || '')} order</div>
+        <span class="faint" style="font-size:12px">${takenCount} of ${order.length} picks in</span></div>
+      ${onClock ? `<div style="margin-top:8px;font-size:15px"><b>On the clock:</b> <span style="color:${isMine(onClock.team)?'var(--accent)':'var(--text)'};font-weight:800">${esc(onClock.team)}</span> <span class="faint">(${onClock.pick <= (S.draftOrder.teamsPerRound||16) ? '1.' : '2.'}${String(((onClock.pick-1)%(S.draftOrder.teamsPerRound||16))+1).padStart(2,'0')})</span></div>`
+        : `<div style="margin-top:8px;color:var(--accent);font-weight:700">Draft complete.</div>`}
+      ${myNext ? `<div style="margin-top:4px;font-size:14px"><b>Your next pick:</b> #${myNext.pick} — ${until === 0 ? '<span style="color:var(--accent);font-weight:800">you’re on the clock!</span>' : `in <b>${until}</b> pick${until===1?'':'s'}`}</div>`
+        : (myTeam ? `<div class="faint" style="margin-top:4px;font-size:12px">No more picks for ${esc(myTeam)} in the tracked order.</div>` : '')}
+      ${upNext.length ? `<div class="faint" style="font-size:12px;margin-top:8px">Up next: ${upNext.map(o => `${o.pick}. ${esc(o.team)}${o.from?` (via ${esc(o.from)})`:''}`).join(' · ')}</div>` : ''}
+    </div>`;
+  }
 
-  let html = `<div class="card">
-    <div class="row"><span class="pill" style="color:${st.c};border-color:${st.c}">${st.t}</span>
-      <span class="muted" style="font-size:13px">${d.picks.length?`${d.picks.length} picks made`:'No picks yet'}${d.draft?` · ${esc(d.draft.type)} draft`:''}</span></div>
-    <div class="seclabel" style="margin:12px 0 6px">Your roster needs</div>
-    ${needs.length ? `<div class="needs">${needs.map(x=>`<span class="need">${posBadge(x.pos)}<b>×${x.deficit}</b></span>`).join('')}</div>`
-      : `<div style="color:var(--accent);font-size:13px">Starting slots filled — draft best available or for depth.</div>`}
-    ${!V.projectionBased?`<div class="faint" style="font-size:11px;margin-top:8px">Season projections unavailable — ranks use an ADP-based estimate.</div>`:''}
+  // ---- Recommendation: best value that fills a need ----
+  let recCard = '';
+  if (availAll.length) {
+    const bestOverall = availAll[0];
+    const bestNeed = availAll.find(id => needSet.has(posOfPlayer(b.players[id])));
+    const rec = bestNeed || bestOverall;
+    const rp = b.players[rec];
+    const why = bestNeed && rec === bestNeed
+      ? `fills your ${posOfPlayer(rp)} need and is the top value on the board there`
+      : `the best player available — no starting needs left, so take the value`;
+    const alt = bestOverall !== rec ? b.players[bestOverall] : null;
+    recCard = `<div class="card" style="background:linear-gradient(160deg,rgba(49,209,88,.12),transparent 55%);border-color:var(--accent-d)">
+      <div class="faint" style="font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">Recommended pick</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+        ${posBadge(posOfPlayer(rp))}
+        <div style="flex:1"><div class="nm" style="font-size:17px;font-weight:800">${esc(playerName(rp, rec))}</div>
+          <div class="faint" style="font-size:12px">${esc(rp?.team||'FA')}${rp?.years_exp===0?' · Rookie':''} · value ${Math.round(V.value(rec))} · ${why}</div></div>
+        <button class="btn" data-act="draft-mine" data-id="${rec}" style="width:auto;padding:8px 14px">★ Drafted by me</button>
+      </div>
+      ${alt ? `<div class="faint" style="font-size:12px;margin-top:8px">Best pure value: <b>${esc(playerName(alt, bestOverall))}</b> (${posOfPlayer(alt)}, ${Math.round(V.value(bestOverall))}).</div>` : ''}
+    </div>`;
+  }
+
+  // ---- My roster so far ----
+  const myList = [...mine].map(id => ({ id, v: V.value(id), pos: posOfPlayer(b.players[id]) }))
+    .sort((a, b2) => b2.v - a.v);
+  const POS_ORDER = ['QB','RB','WR','TE','K','DEF'];
+  const myCard = `<div class="card">
+    <div class="at" style="margin:0 0 8px">🧢 My roster${myList.length?` · ${myList.length}`:''}</div>
+    ${myList.length ? myList.map(x => `<div class="prow" style="padding:4px 0"><span style="width:26px"></span>${posBadge(x.pos)}
+      <span style="flex:1"><span class="nm">${esc(playerName(b.players[x.id], x.id))}</span> <span class="tm">${esc(b.players[x.id]?.team||'FA')}</span></span>
+      <button class="linkbtn" data-act="draft-undo-id" data-id="${x.id}">remove</button></div>`).join('')
+      : `<div class="faint" style="font-size:13px">No picks yet. Tap ★ on a player as you draft them.</div>`}
   </div>`;
 
-  html += `<h2 style="font-family:var(--serif);font-size:22px;margin:6px 0">Best Available</h2>`;
-  html += `<div class="filters">${['ALL','QB','RB','WR','TE','K','DEF'].map(p=>
-    `<button class="fchip ${d.posFilter===p?'on':''}" data-act="draft-filter" data-pos="${p}">${p}</button>`).join('')}</div>`;
+  const status = d.draft && d.draft.status;
+  const liveTag = status === 'drafting' ? `<span class="pill" style="color:var(--accent);border-color:var(--accent)">SLEEPER LIVE</span>`
+    : `<span class="pill" style="color:var(--blue);border-color:var(--blue)">DRAFT ROOM</span>`;
 
-  html += `<div class="card" style="padding:6px 12px">`;
+  let html = `${back}
+    <div class="setup-logo" style="font-size:24px">🎯 Draft Room</div>
+    <p class="muted" style="margin:4px 0 14px">Best available, your needs, and who's on the clock. Tap <b>✓</b> as players go, <b>★</b> when you draft one — it all saves, even offline.</p>
+    <div class="row" style="gap:8px;margin-bottom:12px">${liveTag}
+      ${d.log && d.log.length ? `<button class="btn ghost" data-act="draft-undo" style="width:auto;padding:6px 12px;margin:0">↩ Undo last (${d.log.length})</button>` : ''}
+      ${(d.taken && d.taken.size) || (d.mine && d.mine.size) ? `<button class="btn ghost" data-act="draft-reset" style="width:auto;padding:6px 12px;margin:0">Reset</button>` : ''}
+    </div>
+    ${orderCard}${recCard}
+    <div class="card"><div class="at" style="margin:0 0 6px">Your roster needs</div>
+      ${needs.length ? `<div class="needs">${needs.map(x=>`<span class="need">${posBadge(x.pos)}<b>×${x.deficit}</b></span>`).join('')}</div>`
+        : `<div style="color:var(--accent);font-size:13px">Starting slots filled — draft best available or for depth.</div>`}
+      ${!V.projectionBased?`<div class="faint" style="font-size:11px;margin-top:8px">Season projections unavailable — ranks use an ADP-based estimate.</div>`:''}
+    </div>
+    ${myCard}
+    <div class="seclabel">Best Available</div>
+    <div class="filters">${['ALL','QB','RB','WR','TE','K','DEF'].map(p=>
+      `<button class="fchip ${d.posFilter===p?'on':''}" data-act="draft-filter" data-pos="${p}">${p}</button>`).join('')}</div>
+    <div class="card" style="padding:6px 12px">`;
   if (!board.length) html += empty('No players available', 'Try a different position filter.');
   board.forEach((row, i) => {
     const p = b.players[row.id];
     const newTier = i===0 || board[i-1].tier !== row.tier;
     if (newTier) html += `<div class="tier"><span class="tx">TIER ${row.tier}</span><span class="tl"></span></div>`;
+    const isNeed = needSet.has(posOfPlayer(p));
     html += `<div class="prow"><span class="ovr">${i+1}</span>${posBadge(posOfPlayer(p))}
-      <span style="flex:1"><span class="nm" style="display:block">${esc(playerName(p,row.id))}</span>
+      <span style="flex:1"><span class="nm" style="display:block">${esc(playerName(p,row.id))}${isNeed?` <span class="faint" style="font-size:10px;color:var(--accent)">NEED</span>`:''}</span>
         <span class="tm">${esc(p?.team||'FA')}${p?.years_exp===0?' · Rookie':''}</span></span>
-      <span class="val">${Math.round(V.value(row.id))}</span></div>`;
+      <span class="val" style="margin-right:8px">${Math.round(V.value(row.id))}</span>
+      <button class="dbtn" data-act="draft-take" data-id="${row.id}" title="Someone drafted them">✓</button>
+      <button class="dbtn mine" data-act="draft-mine" data-id="${row.id}" title="I drafted them">★</button></div>`;
   });
-  html += `</div><div class="colophon">Value = projected full-season fantasy points under your league's scoring. Live drafts update as picks come in — reopen the tab to refresh.</div>`;
+  html += `</div><div class="colophon">Value = projected full-season fantasy points under your league's scoring. ✓ = taken by anyone · ★ = drafted by you. Everything saves on this device.</div>`;
   setContent(html);
 }
 
@@ -4444,6 +4526,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'publish') return publishFinal(t.dataset.kind || 'week');
   if (act === 'proof-edit') return proofEdit();
   if (act === 'predraft') return showPredraftDesk();
+  if (act === 'draft-room') { S.reading = false; S.tab = 'draft'; renderShell(); return renderTab(); }
   if (act === 'predraft-view') return showPredraft();
   if (act === 'predraft-build') { readPredraftForm(); return showPredraft(); }
   if (act === 'predraft-save-notes') { readPredraftForm(); toast('Saved'); return showPredraftDesk(); }
@@ -4460,6 +4543,14 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'trade-partner') { S.trade.partnerId = Number(t.dataset.id); S.trade.get = new Set(); return drawTrade(); }
   if (act === 'trade-toggle') { const set=S.trade[t.dataset.side], id=t.dataset.id; set.has(id)?set.delete(id):set.add(id); return drawTrade(); }
   if (act === 'draft-filter') { S.draft.posFilter = t.dataset.pos; return drawDraft(); }
+  if (act === 'draft-take' || act === 'draft-mine') {
+    const id = t.dataset.id; S.draft.taken = S.draft.taken || new Set(); S.draft.mine = S.draft.mine || new Set(); S.draft.log = S.draft.log || [];
+    S.draft.taken.add(id); if (act === 'draft-mine') S.draft.mine.add(id);
+    S.draft.log.push({ id, mine: act === 'draft-mine' }); saveDraftState(); return drawDraft();
+  }
+  if (act === 'draft-undo') { const last = (S.draft.log || []).pop(); if (last) { S.draft.taken.delete(last.id); S.draft.mine.delete(last.id); } saveDraftState(); return drawDraft(); }
+  if (act === 'draft-undo-id') { const id = t.dataset.id; S.draft.taken.delete(id); S.draft.mine.delete(id); S.draft.log = (S.draft.log || []).filter(x => x.id !== id); saveDraftState(); return drawDraft(); }
+  if (act === 'draft-reset') { S.draft.taken = new Set(); S.draft.mine = new Set(); S.draft.log = []; saveDraftState(); return drawDraft(); }
 });
 
 // Change events: season switcher (<select>) and chat-file import (<input file>).
