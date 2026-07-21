@@ -4937,10 +4937,10 @@ function calcDollars() {
 // Every rostered player in the league, valued on the $ board — so ANY real
 // asset can be dropped straight into the calculator. Cached per league because
 // the positional-rank pass touches the whole player dict.
-function calcPlayerList() {
-  const b = S.bundle;
-  if (!b || !b.rosters || !b.players) return [];
-  if (S._calcPlayers && S._calcPlayers.key === (S.leagueId || '')) return S._calcPlayers.list;
+// Shared $-valuer: real comp -> rookie board -> positional-rank grid. Builds the
+// positional-rank index once so callers can value many players cheaply.
+function calcMakeValuer() {
+  const b = S.bundle; if (!b || !b.players) return null;
   const I = S.draftIntel || {}, chart = I.pickValueChart || {};
   const strip = s => normName(String(s).replace(/\s*\(.*?\)\s*/g, '').trim());
   const TIERS = { QB: [95, 72, 46, 26, 11], RB: [63, 47, 31, 16], WR: [82, 55, 36, 18], TE: [41, 24, 13, 6] };
@@ -4948,7 +4948,7 @@ function calcPlayerList() {
   const byPos = {};
   for (const id in b.players) { const p = b.players[id], pos = posOfPlayer(p); if (!pos) continue; if (typeof p.search_rank === 'number' && p.search_rank > 0) (byPos[pos] = byPos[pos] || []).push(p.search_rank); }
   for (const k in byPos) byPos[k].sort((a, z) => a - z);
-  const valFor = (nm, p, pos) => {
+  return (nm, p, pos) => {
     const q = normName(nm);
     const exact = CALC_COMPS.filter(x => strip(x[0]) === q);
     const c = exact.find(x => !/peak/i.test(x[0])) || exact[0] || CALC_COMPS.find(x => { const n = strip(x[0]); return n.length > 3 && (n.includes(q) || q.includes(n)); });
@@ -4961,6 +4961,13 @@ function calcPlayerList() {
     let ti = cuts.findIndex(x => prank <= x); if (ti < 0) ti = tiers.length - 1; ti = Math.min(ti, tiers.length - 1);
     return tiers[ti];
   };
+}
+// Rostered players only — for the compact add-asset dropdown.
+function calcPlayerList() {
+  const b = S.bundle;
+  if (!b || !b.rosters || !b.players) return [];
+  if (S._calcPlayers && S._calcPlayers.key === (S.leagueId || '')) return S._calcPlayers.list;
+  const valFor = calcMakeValuer(); if (!valFor) return [];
   const seen = new Set(), list = [];
   b.rosters.forEach(r => (r.players || []).forEach(id => {
     if (seen.has(id)) return; seen.add(id);
@@ -4972,28 +4979,53 @@ function calcPlayerList() {
   S._calcPlayers = { key: (S.leagueId || ''), list };
   return list;
 }
+// The full searchable pool — every rostered player PLUS every fantasy-relevant
+// free agent (by consensus rank), so the typeahead finds anyone, not just the
+// rostered. Cached per league.
+function calcSearchPool() {
+  const b = S.bundle;
+  if (!b || !b.players) return [];
+  if (S._calcSearch && S._calcSearch.key === (S.leagueId || '')) return S._calcSearch.list;
+  const valFor = calcMakeValuer(); if (!valFor) return [];
+  const rostered = new Set(); (b.rosters || []).forEach(r => (r.players || []).forEach(id => rostered.add(id)));
+  const seen = new Set(), list = [];
+  const add = id => { if (seen.has(id)) return; seen.add(id); const p = b.players[id]; if (!p) return; const pos = posOfPlayer(p); if (!pos || ['K', 'DEF'].includes(pos)) return; const nm = playerName(p, id); list.push({ nm, pos, val: valFor(nm, p, pos), fa: !rostered.has(id) }); };
+  rostered.forEach(add);
+  for (const id in b.players) { const p = b.players[id]; if (!p) continue; const sr = p.search_rank; if (typeof sr === 'number' && sr > 0 && sr <= 900) add(id); }
+  list.sort((a, z) => z.val - a.val || a.nm.localeCompare(z.nm));
+  S._calcSearch = { key: (S.leagueId || ''), list };
+  return list;
+}
 // Live typeahead for the calculator: filter the rostered-player list as you
 // type, then fall back to a free-text $ lookup for anyone not on a roster.
-function pvRowHtml(name, pos, val, est) {
+function pvRowHtml(name, pos, val, est, fa) {
   const lab = esc(String(name).replace(/~/g, ''));
   return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;background:rgba(255,255,255,.04);margin-bottom:4px">
     ${pos ? posBadge(pos) : '<span class="pos">?</span>'}
-    <span style="flex:1;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}${est ? ' <span class="faint" style="font-weight:500;font-size:10px">est</span>' : ''}</span>
+    <span style="flex:1;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}${fa ? ' <span class="faint" style="font-weight:500;font-size:10px">FA</span>' : ''}${est ? ' <span class="faint" style="font-weight:500;font-size:10px">est</span>' : ''}</span>
     <span style="font-weight:800;color:var(--accent)">$${val}</span>
     <button data-act="pv-add" data-side="give" data-pos="${esc(pos || '')}" data-val="${val}" data-label="${lab}" class="btn ghost" style="width:auto;padding:3px 9px;font-size:11px;margin:0">＋ give</button>
     <button data-act="pv-add" data-side="get" data-pos="${esc(pos || '')}" data-val="${val}" data-label="${lab}" class="btn ghost" style="width:auto;padding:3px 9px;font-size:11px;margin:0">＋ get</button>
   </div>`;
 }
+const PV_SUFFIX = new Set(['jr', 'sr', 'ii', 'iii', 'iv', 'v']);
 function pvSearch(q) {
   const box = document.getElementById('pvResults'); if (!box) return;
-  const nq = normName(q || '');
+  const raw = String(q || '').trim(); const nq = normName(raw);
   if (nq.length < 2) { box.innerHTML = ''; return; }
-  const list = calcPlayerList().filter(p => normName(p.nm).includes(nq)).slice(0, 8);
-  if (list.length) { box.innerHTML = list.map(p => pvRowHtml(p.nm, p.pos, p.val, false)).join(''); return; }
-  const v = (typeof playerDollarValue === 'function') ? playerDollarValue(q) : null;
+  // Token match with suffixes (Jr/Sr/III) optional, so "robinson jr" still finds
+  // "Brian Robinson" and vice-versa. Each remaining token must appear in the name.
+  const toks = raw.toLowerCase().split(/[^a-z0-9]+/).map(normName).filter(t => t && !PV_SUFFIX.has(t));
+  const first = toks[0] || nq;
+  const match = nm => { const n = normName(nm); return toks.length ? toks.every(t => n.includes(t)) : n.includes(nq); };
+  const list = calcSearchPool().filter(p => match(p.nm))
+    .sort((a, b) => (normName(b.nm).startsWith(first) ? 1 : 0) - (normName(a.nm).startsWith(first) ? 1 : 0) || b.val - a.val)
+    .slice(0, 8);
+  if (list.length) { box.innerHTML = list.map(p => pvRowHtml(p.nm, p.pos, p.val, false, p.fa)).join(''); return; }
+  const v = (typeof playerDollarValue === 'function') ? playerDollarValue(raw) : null;
   box.innerHTML = (v && v.val)
-    ? pvRowHtml(v.name || q, v.pos, v.val, !!v.est)
-    : `<div class="faint" style="font-size:12px;padding:8px 4px">No player match for “${esc(q)}”. Try a fuller name, or use the tier dropdown below.</div>`;
+    ? pvRowHtml(v.name || raw, v.pos, v.val, !!v.est, true)
+    : `<div class="faint" style="font-size:12px;padding:8px 4px">No player match for “${esc(raw)}”. Try a fuller name, or use the tier dropdown below.</div>`;
 }
 function calcAddOptions() {
   const PD = calcDollars();
