@@ -2996,7 +2996,7 @@ function showMenu() {
   // The menu is the tools hub. Create Issue / Weekly Stories / Settings live in
   // the top bar (always one click), so they are NOT repeated here.
   const tools = [
-    ['draft-room', '🎯', 'Draft Room', 'Live board, needs & best available'],
+    ['draft-room', '🔬', 'Draft Research', 'League rules, scoring & player values'],
     ['dashboard', '🗞️', 'Newsroom HQ', 'Weekly checklist, brief & calendar'],
     ['predraft-view', '🏈', 'Pre-Draft Issue', 'Build the Draft Issue'],
     ['cover-art', '🎨', 'Cover Art', 'Art direction for the cover'],
@@ -4136,8 +4136,49 @@ async function renderDraft() {
   if (S.tab !== 'draft') return;
   drawDraft();
 }
+// Read the league's real rules & scoring straight from Sleeper and present them
+// in plain English — the backbone of draft research (your values depend on these).
+function leagueRulesCard() {
+  const lg = S.bundle && S.bundle.league; if (!lg) return '';
+  const sc = lg.scoring_settings || {}; const rp = lg.roster_positions || [];
+  const teams = lg.total_rosters || (S.bundle.rosters || []).length || '?';
+  const counts = {}; rp.forEach(s => counts[s] = (counts[s] || 0) + 1);
+  const rec = +sc.rec || 0;
+  const ppr = rec >= 1 ? 'Full PPR' : rec >= 0.5 ? 'Half PPR' : rec > 0 ? `${rec} PPR` : 'Standard (no PPR)';
+  const superflex = (counts.SUPER_FLEX || 0) > 0 || (counts.QB || 0) >= 2;
+  const tePrem = (+sc.bonus_rec_te || 0) > 0 || (+sc.rec_te || 0) > rec;
+  const tags = [ppr, superflex ? 'Superflex' : '', tePrem ? 'TE Premium' : '', lg.settings && lg.settings.type === 2 ? 'Dynasty' : ''].filter(Boolean);
+  const SLOTS = [['QB','QB'],['RB','RB'],['WR','WR'],['TE','TE'],['FLEX','FLEX'],['SUPER_FLEX','SuperFLEX'],['REC_FLEX','W/R/T'],['K','K'],['DEF','DEF'],['DL','DL'],['LB','LB'],['DB','DB']];
+  const starters = SLOTS.filter(([k]) => counts[k]).map(([k, l]) => `${counts[k]}× ${l}`).join('  ·  ');
+  const bench = [counts.BN ? `${counts.BN} bench` : '', counts.IR ? `${counts.IR} IR` : '', counts.TAXI ? `${counts.TAXI} taxi` : ''].filter(Boolean).join(' · ');
+  const per = v => v ? `1 pt / ${(+v === 0 ? 0 : Math.round(1 / v))} yds` : '—';
+  const num = v => (v == null ? '—' : (v > 0 ? '+' : '') + (+v));
+  const scoreRows = [
+    ['Reception', rec ? `${rec}${rec >= 1 ? ' (PPR)' : ''}` : '0 (standard)'],
+    ['Pass yards', per(sc.pass_yd)], ['Pass TD', num(sc.pass_td)], ['Interception', num(sc.pass_int)],
+    ['Rush yards', per(sc.rush_yd)], ['Rush TD', num(sc.rush_td)],
+    ['Rec yards', per(sc.rec_yd)], ['Rec TD', num(sc.rec_td)],
+    ['Fumble lost', num(sc.fum_lost)],
+    tePrem ? ['TE bonus / rec', num(sc.bonus_rec_te || (sc.rec_te - rec))] : null,
+  ].filter(Boolean);
+  return `<div class="card">
+    <div class="row" style="justify-content:space-between;align-items:baseline">
+      <div class="at" style="margin:0">📋 League Rules & Scoring</div>
+      <span class="faint" style="font-size:12px">${esc(lg.name || '')} · ${esc(String(lg.season || ''))}</span></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0">
+      ${tags.map(t => `<span class="pill" style="color:var(--accent);border-color:var(--accent-d)">${esc(t)}</span>`).join('')}
+      <span class="pill">${teams} teams</span></div>
+    <div class="dt" style="margin:2px 0 4px"><b>Starting lineup:</b> ${esc(starters || '—')}${bench ? ` <span class="faint">· ${esc(bench)}</span>` : ''}</div>
+    <div class="seclabel" style="margin:12px 0 6px">Scoring</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px">
+      ${scoreRows.map(([k, v]) => `<div class="dt" style="display:flex;justify-content:space-between;border-bottom:1px solid var(--line2,rgba(255,255,255,.05));padding:3px 0"><span class="faint">${esc(k)}</span><b>${esc(String(v))}</b></div>`).join('')}
+    </div>
+    <div class="faint" style="font-size:11px;margin-top:8px">Pulled live from Sleeper. Player values below are computed under exactly these settings.</div>
+  </div>`;
+}
 function drawDraft() {
   const b = S.bundle, V = S.values, d = S.draft;
+  const liveMode = d.mode === 'live';
   const back = `<button class="btn ghost" data-act="home" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>`;
   // Everything drafted = Sleeper live picks + anything marked taken by hand.
   const sleeperTaken = new Set((d.picks || []).map(p => p.player_id));
@@ -4158,7 +4199,7 @@ function drawDraft() {
   const needSet = new Set(needs.map(n => n.pos));
 
   // Best available with value tiers.
-  const availAll = V.ranked.filter(id => !drafted.has(id));
+  const availAll = V.ranked.filter(id => liveMode ? !drafted.has(id) : true);
   const avail = availAll.filter(id => d.posFilter === 'ALL' || posOfPlayer(b.players[id]) === d.posFilter).slice(0, 80);
   const topVal = avail.length ? V.value(avail[0]) : 0;
   const gap = Math.max(6, topVal * 0.045);
@@ -4223,14 +4264,14 @@ function drawDraft() {
       : `<div class="faint" style="font-size:13px">No picks yet. Tap ★ on a player as you draft them.</div>`}
   </div>`;
 
-  const status = d.draft && d.draft.status;
-  const liveTag = status === 'drafting' ? `<span class="pill" style="color:var(--accent);border-color:var(--accent)">SLEEPER LIVE</span>`
-    : `<span class="pill" style="color:var(--blue);border-color:var(--blue)">DRAFT ROOM</span>`;
+  // Research is the default. Draft-day mode is an optional toggle that turns on
+  // live tracking (order, tap-to-take, my roster) for use during the draft.
+  const modeToggle = `<div class="filters" style="position:static">
+    <button class="fchip ${!liveMode?'on':''}" data-act="draft-mode" data-mode="research">📚 Research</button>
+    <button class="fchip ${liveMode?'on':''}" data-act="draft-mode" data-mode="live">🎯 Draft-day mode</button></div>`;
 
-  let html = `${back}
-    <div class="setup-logo" style="font-size:24px">🎯 Draft Room</div>
-    <p class="muted" style="margin:4px 0 14px">Best available, your needs, and who's on the clock. Tap <b>✓</b> as players go, <b>★</b> when you draft one — it all saves, even offline.</p>
-    <div class="row" style="gap:8px;margin-bottom:12px">${liveTag}
+  const liveBlock = liveMode ? `
+    <div class="row" style="gap:8px;margin-bottom:12px">
       ${d.log && d.log.length ? `<button class="btn ghost" data-act="draft-undo" style="width:auto;padding:6px 12px;margin:0">↩ Undo last (${d.log.length})</button>` : ''}
       ${(d.taken && d.taken.size) || (d.mine && d.mine.size) ? `<button class="btn ghost" data-act="draft-reset" style="width:auto;padding:6px 12px;margin:0">Reset</button>` : ''}
     </div>
@@ -4238,27 +4279,34 @@ function drawDraft() {
     <div class="card"><div class="at" style="margin:0 0 6px">Your roster needs</div>
       ${needs.length ? `<div class="needs">${needs.map(x=>`<span class="need">${posBadge(x.pos)}<b>×${x.deficit}</b></span>`).join('')}</div>`
         : `<div style="color:var(--accent);font-size:13px">Starting slots filled — draft best available or for depth.</div>`}
-      ${!V.projectionBased?`<div class="faint" style="font-size:11px;margin-top:8px">Season projections unavailable — ranks use an ADP-based estimate.</div>`:''}
     </div>
-    ${myCard}
-    <div class="seclabel">Best Available</div>
+    ${myCard}` : '';
+
+  let html = `${back}
+    <div class="setup-logo" style="font-size:24px">🔬 Draft Research</div>
+    <p class="muted" style="margin:4px 0 14px">Your league's real rules & scoring, and every player valued under them. Flip on <b>Draft-day mode</b> when you're ready to track picks live.</p>
+    ${modeToggle}
+    ${leagueRulesCard()}
+    ${liveBlock}
+    <div class="seclabel">${liveMode ? 'Best Available' : 'Player Values'}</div>
     <div class="filters">${['ALL','QB','RB','WR','TE','K','DEF'].map(p=>
       `<button class="fchip ${d.posFilter===p?'on':''}" data-act="draft-filter" data-pos="${p}">${p}</button>`).join('')}</div>
+    ${!V.projectionBased?`<div class="faint" style="font-size:11px;margin:0 4px 8px">Season projections unavailable — values use an ADP-based estimate.</div>`:''}
     <div class="card" style="padding:6px 12px">`;
-  if (!board.length) html += empty('No players available', 'Try a different position filter.');
+  if (!board.length) html += empty('No players', 'Try a different position filter.');
   board.forEach((row, i) => {
     const p = b.players[row.id];
     const newTier = i===0 || board[i-1].tier !== row.tier;
     if (newTier) html += `<div class="tier"><span class="tx">TIER ${row.tier}</span><span class="tl"></span></div>`;
-    const isNeed = needSet.has(posOfPlayer(p));
+    const isNeed = liveMode && needSet.has(posOfPlayer(p));
     html += `<div class="prow"><span class="ovr">${i+1}</span>${posBadge(posOfPlayer(p))}
       <span style="flex:1"><span class="nm" style="display:block">${esc(playerName(p,row.id))}${isNeed?` <span class="faint" style="font-size:10px;color:var(--accent)">NEED</span>`:''}</span>
         <span class="tm">${esc(p?.team||'FA')}${p?.years_exp===0?' · Rookie':''}</span></span>
-      <span class="val" style="margin-right:8px">${Math.round(V.value(row.id))}</span>
-      <button class="dbtn" data-act="draft-take" data-id="${row.id}" title="Someone drafted them">✓</button>
-      <button class="dbtn mine" data-act="draft-mine" data-id="${row.id}" title="I drafted them">★</button></div>`;
+      <span class="val"${liveMode?' style="margin-right:8px"':''}>${Math.round(V.value(row.id))}</span>
+      ${liveMode ? `<button class="dbtn" data-act="draft-take" data-id="${row.id}" title="Someone drafted them">✓</button>
+      <button class="dbtn mine" data-act="draft-mine" data-id="${row.id}" title="I drafted them">★</button>` : ''}</div>`;
   });
-  html += `</div><div class="colophon">Value = projected full-season fantasy points under your league's scoring. ✓ = taken by anyone · ★ = drafted by you. Everything saves on this device.</div>`;
+  html += `</div><div class="colophon">Value = projected full-season fantasy points under your league's exact Sleeper scoring.${liveMode ? ' ✓ = taken by anyone · ★ = drafted by you. Saves on this device.' : ''}</div>`;
   setContent(html);
 }
 
@@ -4543,6 +4591,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'trade-partner') { S.trade.partnerId = Number(t.dataset.id); S.trade.get = new Set(); return drawTrade(); }
   if (act === 'trade-toggle') { const set=S.trade[t.dataset.side], id=t.dataset.id; set.has(id)?set.delete(id):set.add(id); return drawTrade(); }
   if (act === 'draft-filter') { S.draft.posFilter = t.dataset.pos; return drawDraft(); }
+  if (act === 'draft-mode') { S.draft.mode = t.dataset.mode; return drawDraft(); }
   if (act === 'draft-take' || act === 'draft-mine') {
     const id = t.dataset.id; S.draft.taken = S.draft.taken || new Set(); S.draft.mine = S.draft.mine || new Set(); S.draft.log = S.draft.log || [];
     S.draft.taken.add(id); if (act === 'draft-mine') S.draft.mine.add(id);
