@@ -4288,6 +4288,22 @@ function tcVerdict(net) {
   if (net > -55)  return { ic: '📉', tag: 'Overpayer',    line: 'Reaches, and pays the tax every single time.' };
   return          { ic: '🎁', tag: 'The Mark',    line: 'A standing charity to the rest of the league.' };
 }
+// The chat-derived trade record: per-team deal VOLUME (2021-2026) and the
+// landmark precedents, both mined from the league group chat in a prior pass.
+// This is activity, not net value — it covers all 16 teams the Sleeper-era
+// itemized grades can't reach.
+function tcChatLedger() {
+  const I = S.draftIntel || {}, tm = I.tradeMarket || {};
+  const raw = tm.activeTraders || '';
+  const after = raw.split(':').slice(1).join(':');
+  const vol = []; const re = /([A-Za-z][A-Za-z .'’\-]+?)\s+(\d+)/g; let m;
+  while ((m = re.exec(after))) { const team = m[1].trim().replace(/[.,]+$/, ''); const n = +m[2]; if (team && n) vol.push({ team, count: n }); }
+  vol.sort((a, b) => b.count - a.count);
+  const precedents = (I.tradePrecedents || []).map(p => p.deal).filter(Boolean);
+  const span = (/(\d{4})\s*[-–]\s*(\d{4})/.exec(raw) || [])[0] || '2021–2026';
+  const total = vol.reduce((s, v) => s + v.count, 0);
+  return { vol, precedents, span, total, msgs: (S.dossier && S.dossier.messageCount) || 0 };
+}
 function tcHeistCard(tr) {
   const sides = [...tr.sides].sort((a, b) => b.net - a.net);
   const W = sides[0], L = sides[sides.length - 1];
@@ -4379,11 +4395,25 @@ async function showTradeCourt() {
   const topHeists = heists.filter(h => h.top >= 15).slice(0, 6).map(h => tcHeistCard(h.t)).join('');
   const heistSec = topHeists ? `<div class="seclabel" style="margin:22px 0 8px">Exhibit A — The Great Heists</div>${topHeists}` : '';
 
+  // The Chat Ledger — deal volume mined from the group chat, covering all teams.
+  const chat = tcChatLedger();
+  const volRows = chat.vol.map((v, i) => `<tr>
+      <td style="text-align:right;color:var(--faint);padding:6px 8px 6px 0">${i + 1}</td>
+      <td style="padding:6px 8px 6px 0"><b>${esc(v.team)}</b></td>
+      <td style="text-align:right;padding:6px 0 6px 8px;font-weight:800;font-variant-numeric:tabular-nums">${v.count}</td>
+    </tr>`).join('');
+  const chatCard = chat.vol.length ? `<div class="seclabel" style="margin:22px 0 8px">The Chat Ledger — deal volume, ${esc(chat.span)}</div>
+    <div class="card" style="overflow-x:auto">
+      <div class="faint" style="font-size:11px;line-height:1.6;margin-bottom:8px">Every completed deal <b>counted from the league group chat</b>${chat.msgs ? ` (${chat.msgs.toLocaleString()} messages analyzed)` : ''} — ${chat.total} team-sides across ${esc(chat.span)}. This is trade <b>volume</b>: who wheels and deals most. It is <b>not</b> net value — the shark-to-mark grades above need each trade's exact assets, which only Sleeper itemizes.</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>${volRows}</tbody></table>
+    </div>
+    ${chat.precedents.length ? `<div class="card"><div class="at" style="margin:0 0 6px">🧾 Landmark Deals on File</div>${chat.precedents.map(p => `<div class="dt" style="padding:3px 0">• ${esc(p)}</div>`).join('')}<div class="faint" style="font-size:11px;margin-top:6px">The reference trades that calibrate the whole value board.</div></div>` : ''}` : '';
+
   const method = `<div class="card" style="margin-top:18px"><div class="faint" style="font-size:11px;line-height:1.6">
-    <b>How the court grades:</b> every completed trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100) — the same board as the Trade Value Report and the calculator. Players are valued on <b>today's</b> market, so a deal is judged by how it actually aged; hindsight is the harshest judge. Draft picks use a calibrated round model (mid-1st ≈ $48, 2nd ≈ $18, future picks discounted). Only GMs currently in the league are ranked; departed owners appear in the heists as historical footnotes.
+    <b>How the court grades:</b> every Sleeper-itemized trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100) — the same board as the Trade Value Report and the calculator. Players are valued on <b>today's</b> market, so a deal is judged by how it actually aged; hindsight is the harshest judge. Draft picks use a calibrated round model (mid-1st ≈ $48, 2nd ≈ $18, future picks discounted). Only GMs currently in the league are ranked; departed owners appear in the heists as historical footnotes. The Chat Ledger below is deal <b>count</b> mined from the group chat — full-history coverage, but volume only, since the itemized 235-trade breakdown wasn't saved to data.
   </div></div>`;
 
-  shell(docket + coverageCard + heroes + rankCard + heistSec + method);
+  shell(docket + coverageCard + heroes + rankCard + heistSec + chatCard + method);
 }
 
 // ---------------------------------------------------------------------
