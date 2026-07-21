@@ -4251,14 +4251,16 @@ async function tcBuildLedger() {
   const nowSeason = parseInt(b.league.season) || 0;
   const history = await buildLeagueHistory(b.league);        // newest → oldest
   const currentOwners = new Set(Object.keys(b.usersById));
-  const ledger = {}, allTrades = [];
+  const ledger = {}, allTrades = [], coverage = [];
   for (const lg of history) {
     let rosters, users;
-    try { [rosters, users] = await Promise.all([getRosters(lg.league_id), getLeagueUsers(lg.league_id)]); } catch { continue; }
+    try { [rosters, users] = await Promise.all([getRosters(lg.league_id), getLeagueUsers(lg.league_id)]); } catch { coverage.push({ season: lg.season, trades: 0, error: true }); continue; }
     const ridToOwner = {}; (rosters || []).forEach(r => ridToOwner[r.roster_id] = r.owner_id);
     const uById = {}; (users || []).forEach(u => uById[u.user_id] = u);
-    const wkTxns = await Promise.all(Array.from({ length: 18 }, (_, i) => i + 1).map(w => getTransactions(lg.league_id, w).catch(() => [])));
+    // Weeks 0-18 covers offseason legs + the full season; invalid legs return [].
+    const wkTxns = await Promise.all(Array.from({ length: 19 }, (_, i) => i).map(w => getTransactions(lg.league_id, w).catch(() => [])));
     const txns = [].concat(...wkTxns).filter(t => t && t.type === 'trade' && t.status === 'complete');
+    coverage.push({ season: lg.season, trades: txns.length });
     for (const t of txns) {
       const scored = tcScoreTrade(t, ridToOwner, nowSeason);
       if (!scored) continue;
@@ -4277,7 +4279,7 @@ async function tcBuildLedger() {
       allTrades.push(scored);
     }
   }
-  return { allTrades, ledger, nowSeason, seasons: history.map(h => h.season) };
+  return { allTrades, ledger, nowSeason, seasons: history.map(h => h.season), coverage };
 }
 function tcVerdict(net) {
   if (net >= 55)  return { ic: '🦈', tag: 'The Shark',    line: 'Fleeces the league for sport. Stop answering their texts.' };
@@ -4334,8 +4336,14 @@ async function showTradeCourt() {
   const docket = `<div class="sbgrid" style="margin-bottom:6px">
     <div class="card" style="text-align:center"><div class="at" style="margin:0">${trades.length}</div><div class="faint" style="font-size:11px">trades on the docket</div></div>
     <div class="card" style="text-align:center"><div class="at" style="margin:0">${tcMoney(swapped)}</div><div class="faint" style="font-size:11px">value swapped, all-time</div></div>
-    <div class="card" style="text-align:center"><div class="at" style="margin:0">${data.seasons.length}</div><div class="faint" style="font-size:11px">season${data.seasons.length === 1 ? '' : 's'} on file</div></div>
+    <div class="card" style="text-align:center"><div class="at" style="margin:0">${data.seasons.length}</div><div class="faint" style="font-size:11px">Sleeper season${data.seasons.length === 1 ? '' : 's'} on file</div></div>
   </div>`;
+  // Coverage — show exactly which seasons were walked and their trade counts, so
+  // a low total is explained (Sleeper-era only; ESPN history has no trade API).
+  const cov = (data.coverage || []).map(c => `${esc(c.season)}: <b>${c.error ? '—' : c.trades}</b>`).join(' · ');
+  const coverageCard = `<div class="card" style="margin-bottom:6px"><div class="faint" style="font-size:11px;line-height:1.6">
+    <b>Coverage:</b> ${cov || 'none'}. The Court can only grade trades that exist in <b>Sleeper's</b> data — it walks every linked season (<code>previous_league_id</code>) and pulls each week. Your Record-Book history back to ${esc((data.coverage && data.coverage.length ? '' : '') + (S.records && S.records.span ? S.records.span.split(/[–-]/)[0] : '2005'))} lived on ESPN / League Legacy, which has <b>no trade API</b>, so those seasons can't appear here. If a Sleeper season you know had trades shows 0, tell me and I'll dig in.
+  </div></div>`;
 
   // The Rankings — current GMs, shark → mark.
   const rows = gms.map((l, i) => {
@@ -4375,7 +4383,7 @@ async function showTradeCourt() {
     <b>How the court grades:</b> every completed trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100) — the same board as the Trade Value Report and the calculator. Players are valued on <b>today's</b> market, so a deal is judged by how it actually aged; hindsight is the harshest judge. Draft picks use a calibrated round model (mid-1st ≈ $48, 2nd ≈ $18, future picks discounted). Only GMs currently in the league are ranked; departed owners appear in the heists as historical footnotes.
   </div></div>`;
 
-  shell(docket + heroes + rankCard + heistSec + method);
+  shell(docket + coverageCard + heroes + rankCard + heistSec + method);
 }
 
 // ---------------------------------------------------------------------
@@ -4802,6 +4810,44 @@ function calcDollars() {
   const chart = (S.draftIntel || {}).pickValueChart || {};
   const d = {}; Object.keys(chart).forEach(k => d[k] = Math.round(chart[k] / 10)); return d;
 }
+// Every rostered player in the league, valued on the $ board — so ANY real
+// asset can be dropped straight into the calculator. Cached per league because
+// the positional-rank pass touches the whole player dict.
+function calcPlayerList() {
+  const b = S.bundle;
+  if (!b || !b.rosters || !b.players) return [];
+  if (S._calcPlayers && S._calcPlayers.key === (S.leagueId || '')) return S._calcPlayers.list;
+  const I = S.draftIntel || {}, chart = I.pickValueChart || {};
+  const strip = s => normName(String(s).replace(/\s*\(.*?\)\s*/g, '').trim());
+  const TIERS = { QB: [95, 72, 46, 26, 11], RB: [63, 47, 31, 16], WR: [82, 55, 36, 18], TE: [41, 24, 13, 6] };
+  const CUT = { QB: [4, 12, 24, 40], RB: [5, 18, 40, 9999], WR: [6, 24, 48, 9999], TE: [3, 10, 20, 9999] };
+  const byPos = {};
+  for (const id in b.players) { const p = b.players[id], pos = posOfPlayer(p); if (!pos) continue; if (typeof p.search_rank === 'number' && p.search_rank > 0) (byPos[pos] = byPos[pos] || []).push(p.search_rank); }
+  for (const k in byPos) byPos[k].sort((a, z) => a - z);
+  const valFor = (nm, p, pos) => {
+    const q = normName(nm);
+    const exact = CALC_COMPS.filter(x => strip(x[0]) === q);
+    const c = exact.find(x => !/peak/i.test(x[0])) || exact[0] || CALC_COMPS.find(x => { const n = strip(x[0]); return n.length > 3 && (n.includes(q) || q.includes(n)); });
+    if (c) return c[2];
+    const rk = (I.classBoard || []).find(x => normName(x.name) === q);
+    if (rk) { const v = Math.round((chart[rk.rk] || 0) / 10); if (v) return v; }
+    const arr = byPos[pos] || [], r = p.search_rank;
+    const prank = (typeof r === 'number' && r > 0) ? arr.filter(x => x < r).length + 1 : (arr.length || 99);
+    const cuts = CUT[pos] || CUT.WR, tiers = TIERS[pos] || TIERS.WR;
+    let ti = cuts.findIndex(x => prank <= x); if (ti < 0) ti = tiers.length - 1; ti = Math.min(ti, tiers.length - 1);
+    return tiers[ti];
+  };
+  const seen = new Set(), list = [];
+  b.rosters.forEach(r => (r.players || []).forEach(id => {
+    if (seen.has(id)) return; seen.add(id);
+    const p = b.players[id]; if (!p) return; const pos = posOfPlayer(p); if (!pos || ['K', 'DEF'].includes(pos)) return;
+    const nm = playerName(p, id);
+    list.push({ nm, pos, val: valFor(nm, p, pos) });
+  }));
+  list.sort((a, z) => z.val - a.val || a.nm.localeCompare(z.nm));
+  S._calcPlayers = { key: (S.leagueId || ''), list };
+  return list;
+}
 function calcAddOptions() {
   const PD = calcDollars();
   const POS_C = { QB: '#5b8dd6', RB: '#e0435a', WR: '#3aa76d', TE: '#d19a3a' };
@@ -4810,13 +4856,15 @@ function calcAddOptions() {
   const fut = [['2027 1st', 40], ['2028 1st', 35], ['2029 1st', 31], ['2027 2nd', 15], ['2028 2nd', 13], ['2029 2nd', 11]].map(([l, v]) => `<option value="fut~${v}~${l}">${l} — $${v}</option>`).join('');
   const tiers = CALC_TIERS.map(([p, l, v]) => `<option value="${p}~${v}~${l}">${p} · ${l} — $${v}</option>`).join('');
   const comps = CALC_COMPS.map(([n, p, v]) => `<option value="${p}~${v}~${n}">${n} (${p}) — $${v}</option>`).join('');
-  return { picks, fut, tiers, comps };
+  const players = calcPlayerList().map(x => `<option value="${esc(x.pos)}~${x.val}~${esc(x.nm.replace(/~/g, ''))}">${esc(x.nm)} (${x.pos}) — $${x.val}</option>`).join('');
+  return { picks, fut, tiers, comps, players };
 }
 function warCalcCard() {
   const C = calcState();
   const O = calcAddOptions();
   const sel = (side) => `<select data-act="calc-add" data-side="${side}" style="width:100%;padding:8px;border-radius:8px;background:var(--bg2,#141821);color:var(--ink,#e8eef7);border:1px solid rgba(255,255,255,.14);font-size:12.5px">
       <option value="">+ add asset…</option>
+      ${O.players ? `<optgroup label="Any rostered player (by $ value)">${O.players}</optgroup>` : ''}
       <optgroup label="Draft picks (this year)">${O.picks}</optgroup>
       <optgroup label="Future picks">${O.fut}</optgroup>
       <optgroup label="Player by tier (pick the tier)">${O.tiers}</optgroup>
@@ -4872,7 +4920,7 @@ function warCalcCard() {
     <div class="cardhead"><span class="kicker" style="color:var(--accent)">TOOL</span><h3 style="margin:2px 0 0">Trade Calculator</h3></div>
     <div class="faint" style="font-size:12px;margin:4px 0 10px">One dollar scale — the 1.01 = $100 — calibrated to 6 years of real SCFL trades. Build both sides, read the verdict. Prices are a stable baseline, not gospel; your roster need is the tiebreaker.</div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-      <input id="pvLookup" placeholder="Look up a player's $ value — type a name…" onkeydown="if(event.key==='Enter'){event.preventDefault();var b=document.querySelector('[data-act=pv-lookup]');if(b)b.click();}" style="flex:1;padding:9px 11px;border-radius:8px;background:var(--bg2,#141821);color:var(--ink,#e8eef7);border:1px solid rgba(255,255,255,.14);font-size:12.5px">
+      <input id="pvLookup" placeholder="Type ANY player's name → value it, then ＋ add to a side…" onkeydown="if(event.key==='Enter'){event.preventDefault();var b=document.querySelector('[data-act=pv-lookup]');if(b)b.click();}" style="flex:1;padding:9px 11px;border-radius:8px;background:var(--bg2,#141821);color:var(--ink,#e8eef7);border:1px solid rgba(255,255,255,.14);font-size:12.5px">
       <button data-act="pv-lookup" class="btn" style="width:auto;padding:9px 16px;margin:0">$ Value</button>
     </div>
     <div id="pvResult" style="font-size:12.5px;margin:0 0 12px;min-height:1px"></div>
@@ -5478,9 +5526,18 @@ document.body.addEventListener('click', async (e) => {
     if (!r) return; if (!q) { r.innerHTML = ''; return; }
     const v = playerDollarValue(q);
     r.innerHTML = v
-      ? `<span style="color:var(--accent);font-weight:800;font-size:15px">$${v.val}</span> &nbsp;<b>${esc(v.name || q)}</b> <span class="faint">(${esc(v.pos)})</span><br><span class="faint" style="font-size:11px">${esc(v.src)}${v.est ? ' — rough estimate; confirm with the tiers below or ask the Advisor' : ''}</span>`
+      ? `<span style="color:var(--accent);font-weight:800;font-size:15px">$${v.val}</span> &nbsp;<b>${esc(v.name || q)}</b> <span class="faint">(${esc(v.pos)})</span><br><span class="faint" style="font-size:11px">${esc(v.src)}${v.est ? ' — rough estimate; confirm with the tiers below or ask the Advisor' : ''}</span>
+        <div style="margin-top:7px;display:flex;gap:6px">
+          <button data-act="pv-add" data-side="give" data-pos="${esc(v.pos || '')}" data-val="${v.val}" data-label="${esc((v.name || q).replace(/~/g, ''))}" class="btn ghost" style="width:auto;padding:4px 11px;font-size:12px;margin:0">＋ You give</button>
+          <button data-act="pv-add" data-side="get" data-pos="${esc(v.pos || '')}" data-val="${v.val}" data-label="${esc((v.name || q).replace(/~/g, ''))}" class="btn ghost" style="width:auto;padding:4px 11px;font-size:12px;margin:0">＋ You get</button>
+        </div>`
       : `<span class="faint">No match for “${esc(q)}”. Try a fuller name, or price it with the position tiers in the add-asset dropdown below.</span>`;
     return;
+  }
+  if (act === 'pv-add') {
+    const C = calcState();
+    C[t.dataset.side === 'get' ? 'get' : 'give'].push({ pos: t.dataset.pos || '', val: +t.dataset.val || 0, label: t.dataset.label || 'Player' });
+    saveDraftState(); return drawWarRoom();
   }
   if (act === 'calc-remove') { const C = calcState(); C[t.dataset.side].splice(+t.dataset.i, 1); saveDraftState(); return drawWarRoom(); }
   if (act === 'calc-qb') { const C = calcState(); C.qb = !C.qb; saveDraftState(); return drawWarRoom(); }
