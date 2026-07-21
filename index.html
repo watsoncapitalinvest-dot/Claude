@@ -4140,9 +4140,16 @@ async function renderDraft() {
 // Monte-Carlo the real 2026 order: each team takes best-value-with-need + noise,
 // run many times, and report how often each player survives to YOUR pick. This
 // is what tells you who's actually likely available at 15 & 16.
+// Every player already on a roster — NOT draftable in a dynasty annual draft.
+function rosteredIds() {
+  const s = new Set();
+  ((S.bundle && S.bundle.rosters) || []).forEach(r => (r.players || []).forEach(id => s.add(id)));
+  return s;
+}
 function draftMockPool() {
   const b = S.bundle, V = S.values;
-  let ids = (V.ranked || []).slice(0, 240);
+  const rostered = rosteredIds();
+  let ids = (V.ranked || []).filter(id => !rostered.has(id)).slice(0, 240);   // only free agents + rookies
   if (S.draft.rookiesOnly) ids = ids.filter(id => b.players[id] && b.players[id].years_exp === 0);
   return ids;
 }
@@ -4154,35 +4161,49 @@ function myFirstPickNo() {
   const p = order.find(o => normName(o.team) === normName(myTeam));
   return p ? p.pick : 15;
 }
+// A realistic draft board: people draft by CONSENSUS ADP (Sleeper's search_rank),
+// not by our projection model — so elite players go where they actually go.
+function adpRankFn(pool) {
+  const b = S.bundle; const rankIdx = new Map(pool.map((id, i) => [id, i]));
+  return id => { const r = b.players[id] && b.players[id].search_rank; return (typeof r === 'number' && r > 0) ? r : ((rankIdx.get(id) ?? 500) + 300); };
+}
 function runMockDraft(runs) {
   const b = S.bundle, V = S.values;
   const pool = draftMockPool();
-  const rankIdx = new Map(pool.map((id, i) => [id, i]));
+  const adp = adpRankFn(pool);
   const order = (S.draftOrder && S.draftOrder.picks) || [];
   const stopAt = myFirstPickNo();
+  const conds = (S.draft.conditions || []);
   const survive = {};
   for (let r = 0; r < runs; r++) {
     const remaining = new Set(pool);
-    const teamCount = {};
+    const teamCount = {}; const usedCond = new Set();
     for (const o of order) {
       if (o.pick >= stopAt) break;
-      let best = null, bestScore = -1e9, seen = 0;
       const tk = normName(o.team);
-      for (const id of pool) {
-        if (!remaining.has(id)) continue;
-        if (++seen > 45) break;
-        const pos = posOfPlayer(b.players[id]);
-        const have = (teamCount[tk] && teamCount[tk][pos]) || 0;
-        const needBonus = Math.max(0, 3 - have) * 4;
-        const noise = hashNoise(id + ':' + o.pick + ':' + r) * 22;
-        const score = -rankIdx.get(id) + posScarcity(pos) + needBonus + noise;
-        if (score > bestScore) { bestScore = score; best = id; }
+      // Hard condition: "Team X drafts Player Y" — take it the first chance they get.
+      const forced = conds.find((c, ci) => !usedCond.has(ci) && normName(c.team) === tk && remaining.has(c.playerId));
+      let best = null;
+      if (forced) { best = forced.playerId; usedCond.add(conds.indexOf(forced)); }
+      else {
+        // Draft by ADP with a little need + variance — how real drafts actually go.
+        let bestScore = 1e9, seen = 0;
+        for (const id of pool) {
+          if (!remaining.has(id)) continue;
+          if (++seen > 40) break;
+          const pos = posOfPlayer(b.players[id]);
+          const have = (teamCount[tk] && teamCount[tk][pos]) || 0;
+          const needPull = Math.max(0, 3 - have) * 1.2;              // slight lean to fill roster
+          const noise = (hashNoise(id + ':' + o.pick + ':' + r) - 0.5) * 9; // ±~4 spots of variance
+          const score = adp(id) - needPull + noise;                  // lower = drafted first
+          if (score < bestScore) { bestScore = score; best = id; }
+        }
       }
       if (best) { remaining.delete(best); const p = posOfPlayer(b.players[best]); (teamCount[tk] = teamCount[tk] || {}); teamCount[tk][p] = (teamCount[tk][p] || 0) + 1; }
     }
     for (const id of remaining) survive[id] = (survive[id] || 0) + 1;
   }
-  const res = pool.map(id => ({ id, pct: (survive[id] || 0) / runs, val: Math.round(V.value(id)),
+  const res = pool.map(id => ({ id, pct: (survive[id] || 0) / runs, val: Math.round(V.value(id)), adp: adp(id),
       pos: posOfPlayer(b.players[id]), name: playerName(b.players[id], id), team: b.players[id]?.team, rookie: b.players[id]?.years_exp === 0 }))
     .filter(x => x.pct >= 0.03).sort((a, c) => c.val - a.val);
   return { res, stopAt, runs };
@@ -4223,6 +4244,28 @@ async function generateDraftAdviceAI() {
   const data = await res.json();
   return (((data.content || []).find(bk => bk.type === 'text') || {}).text || '').trim();
 }
+// User-defined conditions: "Team X drafts Player Y" — the mock forces these.
+function draftConditionsHtml() {
+  const order = (S.draftOrder && S.draftOrder.picks) || [];
+  const teams = [...new Set(order.map(o => o.team))];
+  const conds = S.draft.conditions || [];
+  const b = S.bundle; const pool = draftMockPool();
+  const opts = pool.slice(0, 220).map(id => `<option value="${esc(playerName(b.players[id], id) + ' · ' + (b.players[id]?.team || 'FA'))}">`).join('');
+  return `<div class="card">
+    <div class="at" style="margin:0 0 4px">📌 Draft conditions</div>
+    <div class="faint" style="font-size:12px;margin-bottom:8px">Know something the mock doesn't? Lock it in — e.g. “The Machines will take Player Y.” Every mock respects it.</div>
+    ${conds.length ? conds.map((c, i) => `<div class="row" style="justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      <span style="font-size:13px">📌 <b>${esc(c.team)}</b> drafts <b>${esc(c.playerName)}</b></span>
+      <button class="linkbtn" data-act="cond-remove" data-i="${i}">remove</button></div>`).join('') : ''}
+    <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+      <select id="condTeam" class="input" style="flex:1;min-width:150px">${teams.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}</select>
+      <span class="faint" style="font-size:12px">drafts</span>
+      <input id="condPlayer" class="input" list="condPlayerList" placeholder="type a player…" style="flex:1.4;min-width:170px" />
+      <datalist id="condPlayerList">${opts}</datalist>
+      <button class="btn" data-act="cond-add" style="width:auto;padding:10px 16px;margin:0">Add</button>
+    </div>
+  </div>`;
+}
 function draftMockCard() {
   const order = (S.draftOrder && S.draftOrder.picks) || [];
   if (!order.length) return `<div class="card"><div class="dt">Load your league's draft order to run mocks.</div></div>`;
@@ -4235,8 +4278,8 @@ function draftMockCard() {
       <div class="at" style="margin:0">🎲 Mock Draft — your picks ${myPicks.length ? myPicks.slice(0, 4).join(' & ') : '15 & 16'}</div>
       <button class="fchip ${rk ? 'on' : ''}" data-act="mock-rookies" style="flex:none">Rookies only</button></div>
     <div class="dt" style="margin:6px 0 10px">Runs your real order ${m ? m.runs : 30}× with realistic team behaviour to project who's actually there when you're up.</div>
-    <button class="btn" data-act="mock-run">🎲 ${m ? 'Re-run mock draft' : 'Run mock draft'}</button>`;
-  if (!m) return head + `</div>`;
+    <button class="btn" data-act="mock-run">🎲 ${m ? 'Re-run mock draft' : 'Run mock draft'}</button></div>`;
+  if (!m) return head + draftConditionsHtml();
   const rec = mockRecommendation(m.res);
   const bar = pct => `<span style="display:inline-block;width:46px;height:7px;border-radius:4px;background:var(--card2);vertical-align:middle;overflow:hidden"><span style="display:block;height:100%;width:${Math.round(pct*100)}%;background:${pct>=.6?'var(--accent)':pct>=.35?'#f5b301':'#fb923c'}"></span></span>`;
   const recHtml = rec ? `<div class="card" style="background:linear-gradient(160deg,rgba(49,209,88,.12),transparent 55%);border-color:var(--accent-d);margin:12px 0 0">
@@ -4253,8 +4296,7 @@ function draftMockCard() {
       <span class="ovr" style="width:34px">${x.val}</span>${posBadge(x.pos)}
       <span style="flex:1"><span class="nm">${esc(x.name)}</span> <span class="tm">${esc(x.team||'FA')}${x.rookie?' · R':''}</span></span>
       ${bar(x.pct)}<span class="faint" style="font-size:12px;width:42px;text-align:right">${Math.round(x.pct*100)}%</span></div>`).join('');
-  return head + recHtml + `<div class="seclabel" style="margin-top:14px">Likely available at your pick — by value (green = safe bet)</div>
-    <div style="max-height:none">${list}</div></div>`;
+  return head + draftConditionsHtml() + recHtml + `<div class="card"><div class="seclabel" style="margin:0 0 8px">Likely available at your pick — by value (green = safe bet)</div>${list}</div>`;
 }
 // Read the league's real rules & scoring straight from Sleeper and present them
 // in plain English — the backbone of draft research (your values depend on these).
@@ -4319,7 +4361,8 @@ function drawDraft() {
   const needSet = new Set(needs.map(n => n.pos));
 
   // Best available with value tiers.
-  const availAll = V.ranked.filter(id => liveMode ? !drafted.has(id) : true);
+  const rostered = rosteredIds();
+  const availAll = V.ranked.filter(id => !rostered.has(id) && (liveMode ? !drafted.has(id) : true));
   const avail = availAll.filter(id => d.posFilter === 'ALL' || posOfPlayer(b.players[id]) === d.posFilter).slice(0, 80);
   const topVal = avail.length ? V.value(avail[0]) : 0;
   const gap = Math.max(6, topVal * 0.045);
@@ -4714,6 +4757,19 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'draft-mode') { S.draft.mode = t.dataset.mode; return drawDraft(); }
   if (act === 'mock-rookies') { S.draft.rookiesOnly = !S.draft.rookiesOnly; S.draft.mock = null; return drawDraft(); }
   if (act === 'mock-run') { S.draft.mock = runMockDraft(40); return drawDraft(); }
+  if (act === 'cond-add') {
+    const team = ($('#condTeam') || {}).value || ''; const disp = (($('#condPlayer') || {}).value || '').trim();
+    if (!team || !disp) { toast('Pick a team and a player'); return; }
+    const b = S.bundle; const pool = draftMockPool();
+    const id = pool.find(pid => (playerName(b.players[pid], pid) + ' · ' + (b.players[pid]?.team || 'FA')) === disp)
+      || pool.find(pid => normName(playerName(b.players[pid], pid)) === normName(disp.split(' · ')[0]));
+    if (!id) { toast("Couldn't find that player in the draftable pool"); return; }
+    S.draft.conditions = S.draft.conditions || [];
+    S.draft.conditions.push({ team, playerId: id, playerName: playerName(b.players[id], id) });
+    if (S.draft.mock) S.draft.mock = runMockDraft(40);
+    toast('Condition added'); return drawDraft();
+  }
+  if (act === 'cond-remove') { S.draft.conditions = (S.draft.conditions || []).filter((_, i) => i !== +t.dataset.i); if (S.draft.mock) S.draft.mock = runMockDraft(40); return drawDraft(); }
   if (act === 'mock-advise') {
     const box = $('#mockAdvice'); if (box) box.innerHTML = `<div class="faint" style="font-size:12px;margin-top:8px">🧠 Claude is analysing your board…</div>`;
     try { const txt = await generateDraftAdviceAI(); if (box) box.innerHTML = `<div class="card" style="margin-top:10px;background:var(--bg2)"><div class="body" style="white-space:pre-wrap;font-size:13.5px;line-height:1.6">${esc(txt)}</div></div>`; }
