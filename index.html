@@ -4477,8 +4477,12 @@ const CALC_COMPS = [
 function playerDollarValue(rawName) {
   const q = normName(rawName || ''); if (!q) return null;
   const strip = s => normName(String(s).replace(/\s*\(.*?\)\s*/g, '').trim());
-  // 1) real-trade comp
-  let c = CALC_COMPS.find(x => strip(x[0]) === q) || CALC_COMPS.find(x => { const n = strip(x[0]); return n.length > 3 && (n.includes(q) || q.includes(n)); });
+  // 1) real-trade comp. When a name has multiple ledger variants (e.g. Kupp
+  // "peak" vs "hurt"), a bare lookup should return the CURRENT value — the
+  // aging/"hurt" price, not the years-old peak — so prefer the non-peak entry.
+  const exact = CALC_COMPS.filter(x => strip(x[0]) === q);
+  let c = exact.find(x => !/peak/i.test(x[0])) || exact[0] ||
+    CALC_COMPS.find(x => { const n = strip(x[0]); return n.length > 3 && (n.includes(q) || q.includes(n)); });
   if (c) return { val: c[2], pos: c[1], name: c[0].replace(/\s*\(.*?\)\s*/g, '').trim(), src: 'from real SCFL trades' };
   const I = S.draftIntel || {}; const chart = I.pickValueChart || {};
   // 2) rookie on the class board -> its consensus pick's dollar value
@@ -4822,6 +4826,16 @@ async function warAdvisorAsk(question) {
     poolCtx = `\nTHE DRAFTABLE POOL:\n` + pool.map(id => { const p = S.bundle.players[id];
       return `${playerName(p, id)} (${posOfPlayer(p)}, ${p?.team || 'FA'}${p?.years_exp === 0 ? ', rookie' : ''})`; }).join('\n');
   }
+  // LIVE roster straight from Sleeper — the authoritative, always-current picture.
+  // This overrides the baked roster notes so trades are reflected automatically:
+  // if a player was dealt, they simply won't be in this list.
+  let liveRoster = '';
+  const mr = S.bundle && S.bundle.myRoster;
+  if (mr && mr.players && mr.players.length) {
+    const names = mr.players.map(id => { const p = S.bundle.players[id];
+      return p ? `${playerName(p, id)} (${posOfPlayer(p) || '?'}${p.team ? ', ' + p.team : ''})` : id; });
+    liveRoster = `\nYOUR ACTUAL CURRENT ROSTER — pulled live from Sleeper, THIS IS GROUND TRUTH. Trust it over any baked roster notes below. If a note names a player who is NOT in this list, that player is NOT on the roster (already traded or dropped) — do not reason as if the manager still holds them: ${names.join(', ')}`;
+  }
   const conds = (S.draft.intel || []).map(intelToText).join('; ');
   const doss = (typeof dossierBlurb === 'function') ? dossierBlurb() : '';
   const recs = (typeof recordsBlurb === 'function') ? recordsBlurb() : '';
@@ -4830,7 +4844,7 @@ async function warAdvisorAsk(question) {
 You have WEB SEARCH. The 2026 rookie class is NEWER than your training data — for any question about a player's profile, situation, camp news or comparison, SEARCH THE WEB FIRST (e.g. "<player> 2026 dynasty rookie profile") instead of guessing from stale knowledge. Never bluff about a player; if search fails, say what you don't know. Combine what you find with the league context below.
 TRADE IDEAS — this is a core job. When the manager asks about trades, DON'T be generic: build CONCRETE packages. Price BOTH sides in dollars off the TRADE MARKET scale below, obey the market laws (top-3 closed shop, the Superflex QB tax, fading-vet = a future 2nd, late firsts are cheap), name WHICH team/owner to target (use the personas + activeTraders list — pick the busiest, best-fit desks), and land the deal inside a fair band (within ~10% is fair). Use the Dragons' own ROSTER below for what they can move. If you truly need a roster/future-pick detail you don't have, ask one sharp question — otherwise propose. When asked about owners use the dossier personas.
 SCFL TRADE MARKET (the full price book — use this for every trade question): ${JSON.stringify(I.tradeMarket || {})}
-SMOKE DRAGONS ROSTER & ASSETS: ${JSON.stringify(I.roster || {})}
+SMOKE DRAGONS ROSTER & ASSETS (baked research notes — may be stale; the LIVE roster above wins on any conflict): ${JSON.stringify(I.roster || {})}${liveRoster}
 CLASS INTEL: ${JSON.stringify({ classRead: I.classRead, tiers: I.tiers, myTeam: I.myTeam, myPicks: I.myPicks, myRosterRead: I.myRosterRead, tradeNotes: I.tradeNotes, tradePrecedents: I.tradePrecedents, priceGuide: I.priceGuide, personas: I.personas, pickValueChart: I.pickValueChart })}
 CONSENSUS CLASS BOARD (${I.consensusSources || 'multi-site consensus'}): ${JSON.stringify(I.classBoard || [])}
 SCOUTING REPORTS (researched, current): ${JSON.stringify(I.scoutingReports || [])}
