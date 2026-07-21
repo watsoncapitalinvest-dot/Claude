@@ -4126,6 +4126,7 @@ function intelToText(x) {
   if (x.type === 'takes') return `${x.team} will draft ${x.playerName}`;
   if (x.type === 'leans') return `${x.team} is leaning ${x.pos}`;
   if (x.type === 'avoids') return `${x.team} won't draft a ${x.pos}`;
+  if (x.type === 'bpa') return `${x.team} drafts best available (strict board, ignores needs)`;
   return `${x.team && x.team !== '—' ? x.team + ': ' : ''}${x.text}`;
 }
 // Baked class + league intel (draft-intel.json) — the research, in the app.
@@ -4185,6 +4186,8 @@ function runMockDraft(runs) {
   const posBias = {};
   intel.forEach(x => { if ((x.type === 'leans' || x.type === 'avoids') && x.team && x.pos) {
     const k = normName(x.team); (posBias[k] = posBias[k] || {})[x.pos] = (x.type === 'leans' ? -7 : +30); } });
+  // Best-available drafters: strict board, ignore needs, near-zero variance.
+  const bpaTeams = new Set(intel.filter(x => x.type === 'bpa' && x.team).map(x => normName(x.team)));
   const takenAt = {};   // id -> [pick numbers across runs]
   const slotTaken = {}; // pick -> {id: count} — who usually goes at each slot
   for (let r = 0; r < runs; r++) {
@@ -4197,7 +4200,8 @@ function runMockDraft(runs) {
       let best = null;
       if (forced) { best = forced.playerId; usedCond.add(takes.indexOf(forced)); }
       else {
-        const noiseAmp = style === 'chaos' ? 22 : style === 'upside' || style === 'rebuild' ? 13 : style === 'shark' ? 4 : 8;
+        const isBPA = bpaTeams.has(tk);
+        const noiseAmp = isBPA ? 2 : style === 'chaos' ? 22 : style === 'upside' || style === 'rebuild' ? 13 : style === 'shark' ? 4 : 8;
         let bestScore = 1e9, seen = 0;
         for (const id of pool) {
           if (!remaining.has(id)) continue;
@@ -4205,9 +4209,9 @@ function runMockDraft(runs) {
           const p = b.players[id];
           const pos = posOfPlayer(p);
           const have = (teamCount[tk] && teamCount[tk][pos]) || 0;
-          const needPull = Math.max(0, 3 - have) * 1.2;
-          const youthPull = (style === 'upside' || style === 'rebuild') && p && p.years_exp === 0 ? 3 : 0;
-          const provenPull = style === 'winnow' && p && p.years_exp > 0 ? 2 : 0;
+          const needPull = isBPA ? 0 : Math.max(0, 3 - have) * 1.2;
+          const youthPull = !isBPA && (style === 'upside' || style === 'rebuild') && p && p.years_exp === 0 ? 3 : 0;
+          const provenPull = !isBPA && style === 'winnow' && p && p.years_exp > 0 ? 2 : 0;
           const intelBias = (posBias[tk] && posBias[tk][pos]) || 0;
           const noise = (hashNoise(id + ':' + o.pick + ':' + r) - 0.5) * noiseAmp;
           const score = adp(id) - needPull - youthPull - provenPull + intelBias + noise;
@@ -4277,15 +4281,16 @@ function warConditionsHtml() {
   const b = S.bundle; const pool = draftMockPool();
   const opts = pool.slice(0, 220).map(id => `<option value="${esc(playerName(b.players[id], id) + ' · ' + (b.players[id]?.team || 'FA'))}">`).join('');
   const itype = S.draft.intelType || 'takes';
-  const typeOpts = [['takes', 'will draft a player'], ['leans', 'is leaning a position'], ['avoids', "won't draft a position"], ['note', 'note (anything at all)']]
+  const typeOpts = [['takes', 'will draft a player'], ['leans', 'is leaning a position'], ['avoids', "won't draft a position"], ['bpa', 'drafts best available'], ['note', 'note (anything at all)']]
     .map(([v, l]) => `<option value="${v}"${itype === v ? ' selected' : ''}>${l}</option>`).join('');
   const posOpts = ['QB','RB','WR','TE'].map(p => `<option value="${p}">${p}</option>`).join('');
   const valueField = itype === 'takes'
     ? `<input id="intelPlayer" class="input" list="condPlayerList" placeholder="type a player…" style="flex:1.4;min-width:170px" /><datalist id="condPlayerList">${opts}</datalist>`
     : (itype === 'leans' || itype === 'avoids')
       ? `<select id="intelPos" class="input" style="flex:1;min-width:100px">${posOpts}</select>`
+      : itype === 'bpa' ? ''
       : `<input id="intelText" class="input" placeholder="e.g. Keith told me he's trading up if Boston slides…" style="flex:2;min-width:220px" />`;
-  const icon = x => x.type === 'takes' ? '🎯' : x.type === 'leans' ? '📈' : x.type === 'avoids' ? '🚫' : '🕵️';
+  const icon = x => x.type === 'takes' ? '🎯' : x.type === 'leans' ? '📈' : x.type === 'avoids' ? '🚫' : x.type === 'bpa' ? '⚖️' : '🕵️';
   const feeds = x => x.type === 'note' ? 'advisor' : 'mocks + advisor';
   return `<div class="card">
     <div class="at" style="margin:0 0 4px">🕵️ Your intel</div>
@@ -4348,10 +4353,12 @@ function warOrderCard() {
   // Teams with 3+ picks are natural partners; single-pick teams are all-in.
   const pickCount = {};
   order.forEach(o => pickCount[normName(o.team)] = (pickCount[normName(o.team)] || 0) + 1);
+  const bpaSet = new Set((S.draft.intel || []).filter(x => x.type === 'bpa' && x.team).map(x => normName(x.team)));
   const row = o => {
     const isMine = mine.has(o.pick);
     const style = personaFor(o.team);
-    const [ic, label] = MOTIVE[style] || MOTIVE.value;
+    let [ic, label] = MOTIVE[style] || MOTIVE.value;
+    if (bpaSet.has(normName(o.team))) { ic = '⚖️'; label = 'best available — strict board (your intel)'; }
     const n = pickCount[normName(o.team)] || 1;
     const flex = n >= 3 ? ' · 3+ picks' : n === 1 ? ' · all-in on this one' : '';
     const proj = m && m.projections && m.projections[o.pick];
@@ -4375,42 +4382,79 @@ function warOrderCard() {
   </div>`;
 }
 // Trade evaluator: what moving up/down actually buys you, in players and points.
+// Price a move in LEAGUE terms — calibrated on real SCFL trades from the ledger
+// (Big Blue: 16 ↔ future 1st · 28+future 2nd → 23 ×2 · Hubbard → 17 · Kupp → 22 ·
+//  Godwin → 9), cross-checked against the standard pick-value chart.
+function leaguePrice(delta) {
+  const a = Math.abs(delta);
+  if (a <= 20) return 'a swap of late sweeteners';
+  if (a <= 40) return '≈ a late 2nd or a depth vet (the Moore-for-27 tier)';
+  if (a <= 70) return '≈ a FUTURE 2nd (the twice-run “28 + future 2nd → 23” deal)';
+  if (a <= 110) return '≈ a solid vet starter (Hubbard→17 / Kupp→22 tier)';
+  if (a <= 160) return '≈ a FUTURE 1st (Big Blue’s 16 ↔ future-1st deal)';
+  return '≈ a star player or startable QB (Godwin→9 / McCarthy→1.01 tier)';
+}
 function warTradeCard() {
   const m = S.draft.mock;
   const I = S.draftIntel || {};
   const chart = I.pickValueChart || {};
   const picks = myPickNos();
   const from = picks[1] || picks[0] || 16;
-  const target = S.draft.tradeSlot || 21;
   const order = (S.draftOrder && S.draftOrder.picks) || [];
-  const opts = order.filter(o => !picks.includes(o.pick)).map(o =>
-    `<option value="${o.pick}"${o.pick === target ? ' selected' : ''}>Pick ${o.pick} — ${esc(o.team)}${o.from ? ` (via ${esc(o.from)})` : ''}</option>`).join('');
-  let analysis = '';
+  const MOTIVE_IC = { shark: '🦈', chaos: '🎲', rebuild: '🧱', upside: '🚀', winnow: '🏆', volume: '📦', value: '⚖️', out: '🚪' };
+
+  // 1) TARGET SURVIVAL STRIP — where your window targets die, across slots.
+  let strip = '';
   if (m) {
-    const here = boardAtSlot(m, from, 4);
-    const there = boardAtSlot(m, target, 4);
-    const cv = (chart[String(from)] || 0) - (chart[String(target)] || 0);
-    const dir = target < from ? 'UP' : 'DOWN';
-    const owner = (order.find(o => o.pick === target) || {}).team || '';
-    const persona = ((I.personas || []).find(p => normName(p.team) === normName(owner)) || {});
-    analysis = `<div class="seclabel" style="margin:12px 0 6px">Moving ${dir}: ${from} → ${target} (${esc(owner)})</div>
-      <div class="dt" style="line-height:1.6">Chart cost: <b>${cv > 0 ? '-' : '+'}${Math.abs(cv)} pts</b> ${dir === 'DOWN' ? '(you should be PAID this much in extra picks)' : '(what you must pay)'}.</div>
-      <div class="row" style="gap:14px;margin-top:8px;flex-wrap:wrap">
-        <div style="flex:1;min-width:200px"><div class="faint" style="font-size:11px;font-weight:800;text-transform:uppercase">Best likely at ${from} (now)</div>
-          ${here.map(p => `<div class="dt" style="padding:2px 0">${posBadge(p.pos)} ${esc(p.name)} <span class="faint">${Math.round(p.pct*100)}%</span></div>`).join('') || '<div class="dt">—</div>'}</div>
-        <div style="flex:1;min-width:200px"><div class="faint" style="font-size:11px;font-weight:800;text-transform:uppercase">Best likely at ${target}</div>
-          ${there.map(p => `<div class="dt" style="padding:2px 0">${posBadge(p.pos)} ${esc(p.name)} <span class="faint">${Math.round(p.pct*100)}%</span></div>`).join('') || '<div class="dt">—</div>'}</div>
-      </div>
-      ${persona.note ? `<div class="faint" style="font-size:12px;margin-top:8px">🧠 Partner read: ${esc(persona.note)}</div>` : ''}`;
-  } else {
-    analysis = `<div class="dt" style="margin-top:8px">Run the mock first — the evaluator uses its availability data.</div>`;
+    const slots = [10, 12, 14, 15, 16, 18, 21, 24];
+    const targets = m.players.filter(p => p.adp >= 9 && p.adp <= 34).sort((a, b) => a.adp - b.adp).slice(0, 6);
+    const cell = pct => `<td style="text-align:center;padding:4px 6px;font-size:12px;font-weight:800;color:${pct>=.6?'var(--accent)':pct>=.3?'#f5b301':'#f87171'}">${Math.round(pct*100)}</td>`;
+    strip = `<div class="seclabel" style="margin:12px 0 6px">Where your targets die — % still available by slot</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+      <thead><tr><th style="text-align:left;font-size:10px;color:var(--faint);padding:4px 6px">PLAYER</th>
+        ${slots.map(s => `<th style="font-size:10px;color:${picks.includes(s)?'var(--accent)':'var(--faint)'};padding:4px 6px">${picks.includes(s)?'★'+s:s}</th>`).join('')}</tr></thead>
+      <tbody>${targets.map(p => `<tr style="border-top:1px solid rgba(255,255,255,.05)">
+        <td style="padding:4px 6px;font-size:12px;white-space:nowrap"><b>${esc(p.name)}</b> <span class="faint">${esc(p.pos)}</span></td>
+        ${slots.map(s => cell(p.availAt(s))).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="faint" style="font-size:10.5px;margin-top:4px">Green ≥60% (safe) · yellow 30-60 (coin flip) · red &lt;30 (usually gone). ★ = your picks. Read: the slot where a row goes red is the LAST pick that can own that player.</div>`;
   }
+
+  // 2) THE LADDER — every slot near your range: owner, cost, league price, best name there.
+  let ladder = '';
+  const rungs = order.filter(o => o.pick >= 8 && o.pick <= 28 && !picks.includes(o.pick));
+  ladder = `<div class="seclabel" style="margin:14px 0 6px">The ladder — what each move costs</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+    <thead><tr>
+      <th style="text-align:left;font-size:10px;color:var(--faint);padding:4px 6px">PICK · OWNER</th>
+      <th style="text-align:right;font-size:10px;color:var(--faint);padding:4px 6px">Δ CHART</th>
+      <th style="text-align:left;font-size:10px;color:var(--faint);padding:4px 6px">LEAGUE PRICE (real precedents)</th>
+      <th style="text-align:left;font-size:10px;color:var(--faint);padding:4px 6px">USUALLY THERE</th></tr></thead>
+    <tbody>${rungs.map(o => {
+      const nearest = o.pick < from ? (picks[0] || from) : from;
+      const cv = (chart[String(nearest)] || 0) - (chart[String(o.pick)] || 0);
+      const up = o.pick < nearest;
+      const style = personaFor(o.team);
+      const ic = MOTIVE_IC[style] || '⚖️';
+      const proj = m && m.projections && m.projections[o.pick];
+      const top = m ? boardAtSlot(m, o.pick, 1)[0] : null;
+      return `<tr style="border-top:1px solid rgba(255,255,255,.05)">
+        <td style="padding:5px 6px;font-size:12.5px;white-space:nowrap"><b>${o.pick}</b> ${ic} ${esc(o.team)}${o.from ? ` <span class="faint" style="font-size:10px">(via)</span>` : ''}</td>
+        <td style="padding:5px 6px;text-align:right;font-size:12px;font-weight:800;color:${up ? '#f87171' : 'var(--accent)'}">${up ? '−' : '+'}${Math.abs(cv)}</td>
+        <td style="padding:5px 6px;font-size:11.5px;line-height:1.4">${up ? 'you pay ' : 'you receive '}${esc(leaguePrice(cv))}</td>
+        <td style="padding:5px 6px;font-size:11.5px;white-space:nowrap">${top ? `${esc(top.name)} <span class="faint">${Math.round(top.pct*100)}%</span>` : (proj ? esc(proj.name) : '<span class="faint">run mock</span>')}</td></tr>`;
+    }).join('')}</tbody></table></div>`;
+
+  // 3) Precedents + house reads.
+  const precedents = (I.tradePrecedents || []).map(p => `<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+    <div class="dt" style="font-weight:700">${esc(p.deal)}</div><div class="faint" style="font-size:11.5px;line-height:1.45">${esc(p.read)}</div></div>`).join('');
   const notes = (I.tradeNotes || []).map(n => `<div class="dt" style="padding:3px 0;line-height:1.55">• ${esc(n)}</div>`).join('');
   return `<div class="card">
-    <div class="at" style="margin:0 0 6px">🔁 Trade the picks — up or down</div>
-    <label class="label">Analyse moving pick ${from} to…</label>
-    <select class="input" data-act="trade-slot" style="margin-top:4px">${opts}</select>
-    ${analysis}
+    <div class="at" style="margin:0 0 4px">🔁 The Trade Market — up & down at a glance</div>
+    <div class="faint" style="font-size:12px;margin-bottom:4px">Prices calibrated on REAL SCFL trades from the official ledger, cross-checked with the standard chart.${m ? '' : ' Run the mock to light up availability.'}</div>
+    ${strip}
+    ${ladder}
+    ${I.priceGuide ? `<div class="dt" style="margin-top:10px;line-height:1.6;background:var(--card2);border-radius:10px;padding:10px;font-size:12.5px">💰 ${esc(I.priceGuide)}</div>` : ''}
+    ${precedents ? `<div class="seclabel" style="margin:12px 0 4px">The precedents (from your own ledger)</div>${precedents}` : ''}
     ${notes ? `<div class="seclabel" style="margin:12px 0 4px">House reads</div>${notes}` : ''}
   </div>`;
 }
@@ -4774,6 +4818,9 @@ document.body.addEventListener('click', async (e) => {
       const pos = ($('#intelPos') || {}).value || '';
       if (!team || !pos) { toast('Pick a team and a position'); return; }
       S.draft.intel.push({ type: itype, team, pos });
+    } else if (itype === 'bpa') {
+      if (!team) { toast('Pick a team'); return; }
+      S.draft.intel.push({ type: 'bpa', team });
     } else {
       const text = (($('#intelText') || {}).value || '').trim();
       if (!text) { toast('Write the note first'); return; }
@@ -4802,8 +4849,6 @@ document.body.addEventListener('click', async (e) => {
 
 // Change events: season switcher (<select>) and chat-file import (<input file>).
 document.body.addEventListener('change', async (e) => {
-  const ts = e.target.closest('[data-act="trade-slot"]');
-  if (ts) { S.draft.tradeSlot = parseInt(ts.value, 10) || 21; return drawWarRoom(); }
   const it = e.target.closest('[data-act="intel-type"]');
   if (it) { S.draft.intelType = it.value; return drawWarRoom(); }
   const cw = e.target.closest('[data-act="ci-week"]');
