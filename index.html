@@ -4315,6 +4315,13 @@ function warIntelHeader() {
 function warTiersCard() {
   const I = S.draftIntel || {}; if (!(I.tiers || []).length) return '';
   const mine = new Set(myPickNos());
+  const board = (I.classBoard || []);
+  const fullBoard = board.length ? `<details style="margin-top:10px"><summary class="linkbtn">📊 Full consensus board — all ${board.length} ranked rookies (${esc((I.consensusSources || '').split(' — ')[0])})</summary>
+    <div style="overflow-x:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse">
+      <tbody>${board.map(p => `<tr style="border-top:1px solid rgba(255,255,255,.05)">
+        <td style="padding:4px 6px;width:26px;text-align:right;font-weight:900;color:var(--faint);font-size:12px">${p.rk}</td>
+        <td style="padding:4px 6px;white-space:nowrap;font-size:12.5px">${posBadge(p.pos)} <b>${esc(p.name)}</b> <span class="faint">${esc(p.team || '')}</span></td>
+        <td style="padding:4px 6px;font-size:11.5px;line-height:1.4;color:var(--dim)">${esc(p.note || '')}</td></tr>`).join('')}</tbody></table></div></details>` : '';
   return `<div class="card">
     <div class="at" style="margin:0 0 8px">📋 The Class — tier by tier</div>
     ${I.tiers.map(t => {
@@ -4323,6 +4330,7 @@ function warTiersCard() {
       <div class="faint" style="font-size:11px;font-weight:900;letter-spacing:.6px;text-transform:uppercase;color:${isWindow ? 'var(--accent)' : 'var(--faint)'}">${esc(t.label)}</div>
       ${t.players.map(p => `<div class="dt" style="padding:4px 0;line-height:1.5">${posBadge(p.pos)} <b>${esc(p.name)}</b>${p.team && p.team !== '—' ? ` <span class="faint">(${esc(p.team)})</span>` : ''} — ${esc(p.note)}</div>`).join('')}
     </div>`; }).join('')}
+    ${fullBoard}
   </div>`;
 }
 function warConditionsHtml() {
@@ -4655,6 +4663,8 @@ async function warAdvisorAsk(question) {
 You have WEB SEARCH. The 2026 rookie class is NEWER than your training data — for any question about a player's profile, situation, camp news or comparison, SEARCH THE WEB FIRST (e.g. "<player> 2026 dynasty rookie profile") instead of guessing from stale knowledge. Never bluff about a player; if search fails, say what you don't know. Combine what you find with the league context below.
 When asked about trades use the pick-value chart, the league precedents and the mock availability. When asked about owners use the dossier personas.
 CLASS INTEL: ${JSON.stringify({ classRead: I.classRead, tiers: I.tiers, myRosterRead: I.myRosterRead, tradeNotes: I.tradeNotes, tradePrecedents: I.tradePrecedents, priceGuide: I.priceGuide, personas: I.personas, pickValueChart: I.pickValueChart })}
+CONSENSUS CLASS BOARD (${I.consensusSources || 'multi-site consensus'}): ${JSON.stringify(I.classBoard || [])}
+SCOUTING REPORTS (researched, current): ${JSON.stringify(I.scoutingReports || [])}
 ${poolCtx}
 ${conds ? '\nTHE MANAGER\'S OWN INTEL (treat as ground truth): ' + conds : ''}
 ${recs ? '\n' + recs : ''}
@@ -4664,13 +4674,18 @@ ${doss ? '\n' + doss : ''}`;
     headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
     body: JSON.stringify(Object.assign({ model: 'claude-opus-4-8', max_tokens: 2000, system, messages: [...history, { role: 'user', content: question }] },
       withSearch ? { tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 4 }] } : {})) });
+  let usedSearch = true;
   let res = await call(true);
-  if (res.status === 400) res = await call(false);   // key/org without the search tool — still answer
+  if (res.status === 400) { usedSearch = false; res = await call(false); }   // key/org without the search tool — still answer
   if (!res.ok) { let d = ''; try { const j = await res.json(); d = (j && j.error && j.error.message) || ''; } catch {} throw new Error('api-' + res.status + (d ? ': ' + d : '')); }
   const data = await res.json();
   // With server-side search the answer arrives as multiple text blocks around
   // tool results — join every text block, in order.
-  return ((data.content || []).filter(bk => bk.type === 'text').map(bk => bk.text).join(' ') || '').trim();
+  let out = ((data.content || []).filter(bk => bk.type === 'text').map(bk => bk.text).join(' ') || '').trim();
+  const searched = (data.content || []).some(bk => bk.type === 'server_tool_use' || bk.type === 'web_search_tool_result');
+  if (!usedSearch) out += '\n\n⚠️ (Live web search isn’t available on this API key — answered from the baked research: consensus board, scouting reports, mocks and league intel.)';
+  else if (searched) out += '\n\n🌐 (Included live web research.)';
+  return out;
 }
 
 
