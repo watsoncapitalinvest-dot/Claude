@@ -4966,6 +4966,29 @@ function calcPlayerList() {
   S._calcPlayers = { key: (S.leagueId || ''), list };
   return list;
 }
+// Live typeahead for the calculator: filter the rostered-player list as you
+// type, then fall back to a free-text $ lookup for anyone not on a roster.
+function pvRowHtml(name, pos, val, est) {
+  const lab = esc(String(name).replace(/~/g, ''));
+  return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;background:rgba(255,255,255,.04);margin-bottom:4px">
+    ${pos ? posBadge(pos) : '<span class="pos">?</span>'}
+    <span style="flex:1;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}${est ? ' <span class="faint" style="font-weight:500;font-size:10px">est</span>' : ''}</span>
+    <span style="font-weight:800;color:var(--accent)">$${val}</span>
+    <button data-act="pv-add" data-side="give" data-pos="${esc(pos || '')}" data-val="${val}" data-label="${lab}" class="btn ghost" style="width:auto;padding:3px 9px;font-size:11px;margin:0">＋ give</button>
+    <button data-act="pv-add" data-side="get" data-pos="${esc(pos || '')}" data-val="${val}" data-label="${lab}" class="btn ghost" style="width:auto;padding:3px 9px;font-size:11px;margin:0">＋ get</button>
+  </div>`;
+}
+function pvSearch(q) {
+  const box = document.getElementById('pvResults'); if (!box) return;
+  const nq = normName(q || '');
+  if (nq.length < 2) { box.innerHTML = ''; return; }
+  const list = calcPlayerList().filter(p => normName(p.nm).includes(nq)).slice(0, 8);
+  if (list.length) { box.innerHTML = list.map(p => pvRowHtml(p.nm, p.pos, p.val, false)).join(''); return; }
+  const v = (typeof playerDollarValue === 'function') ? playerDollarValue(q) : null;
+  box.innerHTML = (v && v.val)
+    ? pvRowHtml(v.name || q, v.pos, v.val, !!v.est)
+    : `<div class="faint" style="font-size:12px;padding:8px 4px">No player match for “${esc(q)}”. Try a fuller name, or use the tier dropdown below.</div>`;
+}
 function calcAddOptions() {
   const PD = calcDollars();
   const POS_C = { QB: '#5b8dd6', RB: '#e0435a', WR: '#3aa76d', TE: '#d19a3a' };
@@ -5037,11 +5060,10 @@ function warCalcCard() {
   return `<div class="card" style="margin-top:18px">
     <div class="cardhead"><span class="kicker" style="color:var(--accent)">TOOL</span><h3 style="margin:2px 0 0">Trade Calculator</h3></div>
     <div class="faint" style="font-size:12px;margin:4px 0 10px">One dollar scale — the 1.01 = $100 — calibrated to 6 years of real SCFL trades. Build both sides, read the verdict. Prices are a stable baseline, not gospel; your roster need is the tiebreaker.</div>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-      <input id="pvLookup" placeholder="Type ANY player's name → value it, then ＋ add to a side…" onkeydown="if(event.key==='Enter'){event.preventDefault();var b=document.querySelector('[data-act=pv-lookup]');if(b)b.click();}" style="flex:1;padding:9px 11px;border-radius:8px;background:var(--bg2,#141821);color:var(--ink,#e8eef7);border:1px solid rgba(255,255,255,.14);font-size:12.5px">
-      <button data-act="pv-lookup" class="btn" style="width:auto;padding:9px 16px;margin:0">$ Value</button>
+    <div style="position:relative;margin-bottom:8px">
+      <input id="pvSearch" oninput="pvSearch(this.value)" autocomplete="off" placeholder="🔎 Search any player — start typing a name…" style="width:100%;padding:10px 12px;border-radius:8px;background:var(--bg2,#141821);color:var(--ink,#e8eef7);border:1px solid rgba(255,255,255,.14);font-size:13px">
+      <div id="pvResults" style="margin-top:6px"></div>
     </div>
-    <div id="pvResult" style="font-size:12.5px;margin:0 0 12px;min-height:1px"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div>
         <div class="seclabel" style="margin-bottom:6px">📤 You give <span style="float:right;color:var(--accent);font-weight:800">$${give}</span></div>
