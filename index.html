@@ -4162,9 +4162,23 @@ function myPickNos() {
   const mine = order.filter(o => normName(o.team) === normName(myTeam)).map(o => o.pick);
   return mine.length ? mine : ((S.draftIntel && S.draftIntel.myPicks) || [15, 16]);
 }
+// Consensus rank, RE-WEIGHTED FOR NON-PPR. Sleeper's search_rank is a
+// PPR-leaning consensus, so a standard-scoring room drafts differently:
+// per-player adjustments from the class research where we have them, else
+// positional defaults (RBs rise, catch-volume WRs/TEs fall).
 function adpRankFn(pool) {
   const b = S.bundle; const rankIdx = new Map(pool.map((id, i) => [id, i]));
-  return id => { const r = b.players[id] && b.players[id].search_rank; return (typeof r === 'number' && r > 0) ? r : ((rankIdx.get(id) ?? 500) + 300); };
+  const I = S.draftIntel || {};
+  const byName = new Map(((I.classBoard) || []).filter(p => p.scoringAdj != null).map(p => [normName(p.name), p.scoringAdj]));
+  const POS_ADJ = { RB: -2, WR: 0.5, TE: 1, QB: 0 };
+  return id => {
+    const p = b.players[id];
+    const r = p && p.search_rank;
+    const base = (typeof r === 'number' && r > 0) ? r : ((rankIdx.get(id) ?? 500) + 300);
+    const named = byName.get(normName(playerName(p, id)));
+    const adj = named != null ? named : (POS_ADJ[posOfPlayer(p)] || 0);
+    return base + adj;
+  };
 }
 // Owner personas from the intel file: how each team actually behaves on the clock.
 function personaFor(team) {
@@ -4385,7 +4399,7 @@ function warMockCard() {
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <div class="at" style="margin:0">🎲 Mock the draft — ${m ? m.runs + ' runs' : '200 runs'}</div>
       <button class="fchip ${S.draft.rookiesOnly ? 'on' : ''}" data-act="mock-rookies" style="flex:none">Rookies only</button></div>
-    <div class="faint" style="font-size:11px;margin:6px 0 10px">Simulates the full real order with each owner's actual drafting personality (from the dossier) · pool: ${draftMockPool().length} draftable skill players (${rosteredIds().size} rostered excluded) · consensus ADP.</div>
+    <div class="faint" style="font-size:11px;margin:6px 0 10px">Simulates the full real order with each owner's actual drafting personality (from the dossier) · pool: ${draftMockPool().length} draftable skill players (${rosteredIds().size} rostered excluded) · consensus ADP <b>re-weighted for NON-PPR</b> (RBs/TD profiles rise, catch-volume falls).</div>
     <button class="btn" data-act="mock-run">🎲 ${m ? 'Re-run the mock' : 'Run 200 mock drafts'}</button>
     ${body}
   </div>`;
