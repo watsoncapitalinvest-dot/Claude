@@ -4304,6 +4304,53 @@ function tcChatLedger() {
   const total = vol.reduce((s, v) => s + v.count, 0);
   return { vol, precedents, span, total, msgs: (S.dossier && S.dossier.messageCount) || 0 };
 }
+// ---- Grading the chat ledger (all parsed trades) --------------------------
+// The 16 current franchises (from the chat deal-involvement roll).
+const TC_CURRENT = ['Pork Chop Express','New World Order','The Machines','Wookie Leaks','Lamb Chops','Powers Of Pain','Smoke Dragons','Master Jet-I','Still The Creams','Heavy Hitters','Killer Klowns','Beaver Eaters','Big Blue','Horse Collars','Guido Haters','Hairy Gumbas'];
+// Fold announced aliases into canonical names. Legacy/unmapped names stay as-is
+// (shown separately) until the commissioner confirms the lineage.
+const TC_ALIAS = { '🤺':'Master Jet-I','sandiego football team':'SanDiego FT','sdft':'SanDiego FT' };
+function tcTeamCanon(name) {
+  const raw = String(name || '').trim(); const k = raw.toLowerCase();
+  if (TC_ALIAS[raw]) return TC_ALIAS[raw]; if (TC_ALIAS[k]) return TC_ALIAS[k];
+  const hit = TC_CURRENT.find(c => c.toLowerCase() === k); return hit || raw;
+}
+// $ value of one parsed asset, on the board. Players use the live $-engine
+// (today's market — deals are judged on how they aged); picks parse by slot/round.
+function tcChatAssetVal(a, season) {
+  if (a.player) { const dv = (typeof playerDollarValue === 'function') ? playerDollarValue(a.player) : null; return (dv && dv.val) ? dv.val : 16; }
+  const s = String(a.pick || ''); const yr = (s.match(/\b(20\d\d)\b/) || [])[1];
+  const slot = (s.match(/pick\s*#?\s*(\d{1,2})/i) || [])[1];
+  let v;
+  if (slot) { const PD = (typeof calcDollars === 'function') ? calcDollars() : {}; v = PD[+slot] || (+slot <= 16 ? 34 : 12); }
+  else if (/\b(1st|first)\b/i.test(s)) v = 48;
+  else if (/\b(2nd|second)\b/i.test(s)) v = 18;
+  else if (/\b(3rd|third)\b/i.test(s)) v = 6;
+  else v = 12;
+  if (yr && season && +yr > season) v = Math.round(v * Math.pow(0.9, +yr - season)); // future pick discount
+  return v;
+}
+// Grade every chat trade; net_i = what you got minus your share of what left the
+// table, so it sums to zero per deal and generalizes to 3+-team trades.
+function tcGradeChatLedger() {
+  const src = (S.chatTrades && S.chatTrades.trades) || [];
+  const T = {}; const get = t => T[t] || (T[t] = { team: t, net: 0, recv: 0, trades: 0, wins: 0, losses: 0, even: 0, best: null, worst: null, current: TC_CURRENT.includes(t) });
+  let graded = 0, biggest = null;
+  for (const tr of src) {
+    const sides = (tr.sides || []).map(s => ({ team: tcTeamCanon(s.team), recv: sum((s.gets || []).map(a => tcChatAssetVal(a, tr.season))), gets: s.gets })).filter(s => s.team);
+    if (sides.length < 2) continue;
+    const pot = sum(sides.map(s => s.recv)); const n = sides.length;
+    sides.forEach(s => { s.net = Math.round(s.recv - (pot - s.recv) / (n - 1)); });
+    graded++;
+    const top = sides.reduce((a, b) => b.net > a.net ? b : a);
+    if (!biggest || top.net > biggest.net) biggest = { net: top.net, sides, date: tr.date, season: tr.season };
+    sides.forEach(s => { const L = get(s.team); L.trades++; L.net += s.net; L.recv += s.recv;
+      if (s.net > TC_WIN) L.wins++; else if (s.net < -TC_WIN) L.losses++; else L.even++;
+      if (!L.best || s.net > L.best.net) L.best = { net: s.net, date: tr.date }; if (!L.worst || s.net < L.worst.net) L.worst = { net: s.net, date: tr.date }; });
+  }
+  const all = Object.values(T).sort((a, b) => b.net - a.net);
+  return { graded, count: src.length, biggest, current: all.filter(t => t.current), legacy: all.filter(t => !t.current) };
+}
 function tcHeistCard(tr) {
   const sides = [...tr.sides].sort((a, b) => b.net - a.net);
   const W = sides[0], L = sides[sides.length - 1];
@@ -4335,6 +4382,7 @@ async function showTradeCourt() {
     return shell(`<div class="card"><div class="dt">Load your league first (enter your Sleeper username on the home screen), then come back — court's in session.</div></div>`);
   }
   shell(`<div class="card"><div class="dt">⏳ Subpoenaing every completed trade across all seasons and grading each one on today's board…</div></div>`);
+  try { await loadBundledTrades(); } catch {}
   let data;
   try { data = await tcBuildLedger(); }
   catch (e) { return shell(`<div class="card"><div class="dt">Couldn't pull the trade history (${esc(String(e && e.message || e))}). Give it another go in a moment.</div></div>`); }
@@ -4345,14 +4393,16 @@ async function showTradeCourt() {
     return shell(`<div class="card"><div class="dt">No completed trades on record across ${data.seasons.length} season${data.seasons.length === 1 ? '' : 's'}. A league full of cowards. Come back once somebody grows a spine.</div></div>`);
   }
 
+  // Grade the parsed chat ledger up front so the docket can headline the real total.
+  const CL = tcGradeChatLedger();
   // The Docket — league-wide numbers.
   const swapped = Math.round(sum(trades.map(t => sum(t.sides.map(s => s.recv)))));
   const heists = [...trades].map(t => ({ t, top: Math.max(...t.sides.map(s => s.net)) })).sort((a, b) => b.top - a.top);
   const bigHeist = heists[0];
   const docket = `<div class="sbgrid" style="margin-bottom:6px">
-    <div class="card" style="text-align:center"><div class="at" style="margin:0">${trades.length}</div><div class="faint" style="font-size:11px">trades on the docket</div></div>
-    <div class="card" style="text-align:center"><div class="at" style="margin:0">${tcMoney(swapped)}</div><div class="faint" style="font-size:11px">value swapped, all-time</div></div>
-    <div class="card" style="text-align:center"><div class="at" style="margin:0">${data.seasons.length}</div><div class="faint" style="font-size:11px">Sleeper season${data.seasons.length === 1 ? '' : 's'} on file</div></div>
+    <div class="card" style="text-align:center"><div class="at" style="margin:0">${CL.graded || trades.length}</div><div class="faint" style="font-size:11px">trades graded</div></div>
+    <div class="card" style="text-align:center"><div class="at" style="margin:0">${(CL.count || trades.length)}</div><div class="faint" style="font-size:11px">on the docket (chat + Sleeper)</div></div>
+    <div class="card" style="text-align:center"><div class="at" style="margin:0">2021–26</div><div class="faint" style="font-size:11px">seasons on file</div></div>
   </div>`;
   // Coverage — show exactly which seasons were walked and their trade counts, so
   // a low total is explained (Sleeper-era only; ESPN history has no trade API).
@@ -4395,6 +4445,38 @@ async function showTradeCourt() {
   const topHeists = heists.filter(h => h.top >= 15).slice(0, 6).map(h => tcHeistCard(h.t)).join('');
   const heistSec = topHeists ? `<div class="seclabel" style="margin:22px 0 8px">Exhibit A — The Great Heists</div>${topHeists}` : '';
 
+  // THE RECKONING — every parsed chat trade graded, shark to mark. This is the
+  // headline the user asked for: who came out ahead across the whole history.
+  let reckoning = '';
+  if (CL.graded > 0) {
+    const money = n => (n < 0 ? '-$' : '+$') + Math.abs(Math.round(n));
+    const rrow = (l, i) => { const v = tcVerdict(l.net); const c = l.net >= 0 ? '#3fb950' : 'var(--red)';
+      return `<tr>
+        <td style="text-align:right;color:var(--faint);padding:7px 8px 7px 0">${i + 1}</td>
+        <td style="padding:7px 8px 7px 0"><b>${esc(l.team)}</b><div class="faint" style="font-size:10px">${v.ic} ${esc(v.tag)}</div></td>
+        <td style="text-align:right;padding:7px 8px;white-space:nowrap;font-weight:800;color:${c};font-variant-numeric:tabular-nums">${money(l.net)}</td>
+        <td style="text-align:right;padding:7px 8px;font-variant-numeric:tabular-nums">${l.wins}–${l.losses}–${l.even}</td>
+        <td style="text-align:right;padding:7px 0 7px 8px">${l.trades}</td></tr>`; };
+    const curRows = CL.current.map(rrow).join('');
+    const shark = CL.current[0], mark = CL.current[CL.current.length - 1];
+    const heroes2 = (CL.current.length >= 2 && shark.net > 0) ? `<div class="sbgrid" style="margin:8px 0 2px">
+      <div class="card"><div class="byline">🦈 The League Shark</div><div class="at" style="margin:2px 0">${esc(shark.name || shark.team)}</div><div class="dt">Up <b style="color:#3fb950">${money(shark.net)}</b> across ${shark.trades} deals. ${esc(tcVerdict(shark.net).line)}</div></div>
+      <div class="card"><div class="byline">🎁 The League Mark</div><div class="at" style="margin:2px 0">${esc(mark.team)}</div><div class="dt">Down <b style="color:var(--red)">${money(mark.net)}</b> over ${mark.trades} deals. ${esc(tcVerdict(mark.net).line)}</div></div>
+    </div>` : '';
+    const legacyNote = CL.legacy.length ? `<div class="faint" style="font-size:11px;margin-top:8px">Not ranked (legacy / former names to confirm): ${CL.legacy.map(l => `${esc(l.team)} (${money(l.net)})`).join(' · ')}. Tell me which current team each was and I'll fold them in.</div>` : '';
+    reckoning = `<div class="seclabel" style="margin:20px 0 8px">⚖️ The Reckoning — all ${CL.graded} chat trades graded</div>
+      ${heroes2}
+      <div class="card" style="overflow-x:auto">
+        <div class="faint" style="font-size:11px;line-height:1.6;margin-bottom:8px">Every trade parsed from the group chat, each asset priced on the value board, netted per team (what you got minus your share of what you gave). Players are valued on <b>today's</b> market — so the grade is <b>how the deal aged</b>, hindsight and all.</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="border-bottom:1px solid var(--line);color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.4px">
+            <th style="text-align:right;padding:0 8px 6px 0">#</th><th style="text-align:left;padding:0 8px 6px 0">Franchise</th>
+            <th style="text-align:right;padding:0 8px 6px">Net</th><th style="text-align:right;padding:0 8px 6px">W–L–E</th><th style="text-align:right;padding:0 0 6px 8px">Deals</th></tr></thead>
+          <tbody>${curRows}</tbody></table>
+        ${legacyNote}
+      </div>`;
+  }
+
   // The Chat Ledger — deal volume mined from the group chat, covering all teams.
   const chat = tcChatLedger();
   const volRows = chat.vol.map((v, i) => `<tr>
@@ -4413,7 +4495,7 @@ async function showTradeCourt() {
     <b>How the court grades:</b> every Sleeper-itemized trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100) — the same board as the Trade Value Report and the calculator. Players are valued on <b>today's</b> market, so a deal is judged by how it actually aged; hindsight is the harshest judge. Draft picks use a calibrated round model (mid-1st ≈ $48, 2nd ≈ $18, future picks discounted). Only GMs currently in the league are ranked; departed owners appear in the heists as historical footnotes. The Chat Ledger below is deal <b>count</b> mined from the group chat — full-history coverage, but volume only, since the itemized 235-trade breakdown wasn't saved to data.
   </div></div>`;
 
-  shell(docket + coverageCard + heroes + rankCard + heistSec + chatCard + method);
+  shell(docket + reckoning + coverageCard + heroes + rankCard + heistSec + chatCard + method);
 }
 
 // ---------------------------------------------------------------------
@@ -4446,6 +4528,12 @@ async function loadBundledDraftIntel() {
   if (S.draftIntel && S.draftIntel.tiers) return;
   try { const r = await fetch('draft-intel.json', { cache: 'no-cache' });
     if (r.ok) { const d = await r.json(); if (d && d.tiers) S.draftIntel = d; } } catch {}
+}
+// The itemized trade ledger parsed from the league chat (2021-2026).
+async function loadBundledTrades() {
+  if (S.chatTrades) return;
+  try { const r = await fetch('trades.json', { cache: 'no-cache' });
+    if (r.ok) { const d = await r.json(); if (d && d.trades) S.chatTrades = d; } } catch {}
 }
 async function renderDraft() {
   setContent(spinner('Opening the War Room…'));
