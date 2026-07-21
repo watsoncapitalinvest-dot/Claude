@@ -4472,6 +4472,39 @@ const CALC_COMPS = [
   ['AJ Brown', 'WR', 150], ['Cooper Kupp (peak)', 'WR', 135], ['Davante Adams', 'WR', 62], ['Cooper Kupp (hurt)', 'WR', 48], ['Chris Godwin', 'WR', 39], ['Jakobi Meyers', 'WR', 40], ['Keenan Allen', 'WR', 15], ['Mike Williams', 'WR', 15],
   ['Travis Kelce', 'TE', 15], ['Cade Otton', 'TE', 7], ['Darren Waller', 'TE', 15], ['Logan Thomas', 'TE', 15],
 ];
+// Player $-value lookup: exact ledger comp -> rookie (pick-based) -> veteran
+// estimate from position + consensus positional rank against the price grid.
+function playerDollarValue(rawName) {
+  const q = normName(rawName || ''); if (!q) return null;
+  const strip = s => normName(String(s).replace(/\s*\(.*?\)\s*/g, '').trim());
+  // 1) real-trade comp
+  let c = CALC_COMPS.find(x => strip(x[0]) === q) || CALC_COMPS.find(x => { const n = strip(x[0]); return n.length > 3 && (n.includes(q) || q.includes(n)); });
+  if (c) return { val: c[2], pos: c[1], name: c[0].replace(/\s*\(.*?\)\s*/g, '').trim(), src: 'from real SCFL trades' };
+  const I = S.draftIntel || {}; const chart = I.pickValueChart || {};
+  // 2) rookie on the class board -> its consensus pick's dollar value
+  let rk = (I.classBoard || []).find(p => normName(p.name) === q) || (I.classBoard || []).find(p => q.length > 4 && normName(p.name).includes(q));
+  if (rk) { const v = Math.round((chart[rk.rk] || 0) / 10); if (v) return { val: v, pos: rk.pos, name: rk.name, src: 'rookie ≈ pick ' + rk.rk }; }
+  // 3) veteran in the player pool -> positional consensus rank -> grid tier
+  const b = S.bundle;
+  if (b && b.players) {
+    let hit = null;
+    for (const id in b.players) { if (normName(playerName(b.players[id], id)) === q) { hit = id; break; } }
+    if (!hit) for (const id in b.players) { const n = normName(playerName(b.players[id], id)); if (q.length > 4 && n.includes(q)) { hit = id; break; } }
+    if (hit) {
+      const p = b.players[hit], pos = posOfPlayer(p);
+      const TIERS = { QB: [95, 72, 46, 26, 11], RB: [63, 47, 31, 16], WR: [82, 55, 36, 18], TE: [41, 24, 13, 6] };
+      const CUT = { QB: [4, 12, 24, 40], RB: [5, 18, 40, 9999], WR: [6, 24, 48, 9999], TE: [3, 10, 20, 9999] };
+      const same = [];
+      for (const id in b.players) { const q2 = b.players[id]; if (posOfPlayer(q2) === pos && typeof q2.search_rank === 'number' && q2.search_rank > 0) same.push(q2.search_rank); }
+      same.sort((a, z) => a - z);
+      const r = p.search_rank; let prank = (typeof r === 'number' && r > 0) ? same.filter(x => x < r).length + 1 : same.length || 99;
+      const cuts = CUT[pos] || CUT.WR, tiers = TIERS[pos] || TIERS.WR;
+      let ti = cuts.findIndex(x => prank <= x); if (ti < 0) ti = tiers.length - 1; ti = Math.min(ti, tiers.length - 1);
+      return { val: tiers[ti], pos, name: playerName(p, hit), src: 'estimate · ' + pos + prank + ' on consensus', est: true };
+    }
+  }
+  return null;
+}
 function calcState() { return S.draft.calc || (S.draft.calc = { give: [], get: [], qb: false }); }
 function calcDollars() {
   const chart = (S.draftIntel || {}).pickValueChart || {};
@@ -4545,7 +4578,12 @@ function warCalcCard() {
 
   return `<div class="card" style="margin-top:18px">
     <div class="cardhead"><span class="kicker" style="color:var(--accent)">TOOL</span><h3 style="margin:2px 0 0">Trade Calculator</h3></div>
-    <div class="faint" style="font-size:12px;margin:4px 0 12px">One dollar scale — the 1.01 = $100 — calibrated to 6 years of real SCFL trades. Build both sides, read the verdict. Prices are a stable baseline, not gospel; your roster need is the tiebreaker.</div>
+    <div class="faint" style="font-size:12px;margin:4px 0 10px">One dollar scale — the 1.01 = $100 — calibrated to 6 years of real SCFL trades. Build both sides, read the verdict. Prices are a stable baseline, not gospel; your roster need is the tiebreaker.</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+      <input id="pvLookup" placeholder="Look up a player's $ value — type a name…" onkeydown="if(event.key==='Enter'){event.preventDefault();var b=document.querySelector('[data-act=pv-lookup]');if(b)b.click();}" style="flex:1;padding:9px 11px;border-radius:8px;background:var(--bg2,#141821);color:var(--ink,#e8eef7);border:1px solid rgba(255,255,255,.14);font-size:12.5px">
+      <button data-act="pv-lookup" class="btn" style="width:auto;padding:9px 16px;margin:0">$ Value</button>
+    </div>
+    <div id="pvResult" style="font-size:12.5px;margin:0 0 12px;min-height:1px"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div>
         <div class="seclabel" style="margin-bottom:6px">📤 You give <span style="float:right;color:var(--accent);font-weight:800">$${give}</span></div>
@@ -4790,8 +4828,10 @@ async function warAdvisorAsk(question) {
   const system = `You are the Smoke Dragons' draft-room advisor in the SCFL (${I.format || '16-team Superflex dynasty, non-PPR standard scoring'}). Their picks: ${picks.join(' & ')}. You research WITH the manager: sharp, direct, numerate, zero fluff.
 ⚠️ SCORING — GET THIS RIGHT EVERY TIME: this league is NON-PPR (standard scoring). It is NOT a PPR league. Almost everything you find on the web (rankings, rookie profiles, ADP) is written for PPR — you MUST re-weight it: volume slot receivers lose value here; yardage, TDs, big plays and RBs gain. Never describe the league as PPR and never hand over PPR-based advice unadjusted. If any earlier message in this conversation called the league PPR, that was an error — disregard it.
 You have WEB SEARCH. The 2026 rookie class is NEWER than your training data — for any question about a player's profile, situation, camp news or comparison, SEARCH THE WEB FIRST (e.g. "<player> 2026 dynasty rookie profile") instead of guessing from stale knowledge. Never bluff about a player; if search fails, say what you don't know. Combine what you find with the league context below.
-When asked about trades use the pick-value chart, the league precedents and the mock availability. When asked about owners use the dossier personas.
-CLASS INTEL: ${JSON.stringify({ classRead: I.classRead, tiers: I.tiers, myRosterRead: I.myRosterRead, tradeNotes: I.tradeNotes, tradePrecedents: I.tradePrecedents, priceGuide: I.priceGuide, personas: I.personas, pickValueChart: I.pickValueChart })}
+TRADE IDEAS — this is a core job. When the manager asks about trades, DON'T be generic: build CONCRETE packages. Price BOTH sides in dollars off the TRADE MARKET scale below, obey the market laws (top-3 closed shop, the Superflex QB tax, fading-vet = a future 2nd, late firsts are cheap), name WHICH team/owner to target (use the personas + activeTraders list — pick the busiest, best-fit desks), and land the deal inside a fair band (within ~10% is fair). Use the Dragons' own ROSTER below for what they can move. If you truly need a roster/future-pick detail you don't have, ask one sharp question — otherwise propose. When asked about owners use the dossier personas.
+SCFL TRADE MARKET (the full price book — use this for every trade question): ${JSON.stringify(I.tradeMarket || {})}
+SMOKE DRAGONS ROSTER & ASSETS: ${JSON.stringify(I.roster || {})}
+CLASS INTEL: ${JSON.stringify({ classRead: I.classRead, tiers: I.tiers, myTeam: I.myTeam, myPicks: I.myPicks, myRosterRead: I.myRosterRead, tradeNotes: I.tradeNotes, tradePrecedents: I.tradePrecedents, priceGuide: I.priceGuide, personas: I.personas, pickValueChart: I.pickValueChart })}
 CONSENSUS CLASS BOARD (${I.consensusSources || 'multi-site consensus'}): ${JSON.stringify(I.classBoard || [])}
 SCOUTING REPORTS (researched, current): ${JSON.stringify(I.scoutingReports || [])}
 ${poolCtx}
@@ -5129,6 +5169,15 @@ document.body.addEventListener('click', async (e) => {
     toast('Intel logged'); return drawWarRoom();
   }
   if (act === 'intel-remove') { S.draft.intel = (S.draft.intel || []).filter((_, i) => i !== +t.dataset.i); saveDraftState(); if (S.draft.mock) S.draft.mock = runMockDraft(200); return drawWarRoom(); }
+  if (act === 'pv-lookup') {
+    const inp = $('#pvLookup'), r = $('#pvResult'); const q = ((inp && inp.value) || '').trim();
+    if (!r) return; if (!q) { r.innerHTML = ''; return; }
+    const v = playerDollarValue(q);
+    r.innerHTML = v
+      ? `<span style="color:var(--accent);font-weight:800;font-size:15px">$${v.val}</span> &nbsp;<b>${esc(v.name || q)}</b> <span class="faint">(${esc(v.pos)})</span><br><span class="faint" style="font-size:11px">${esc(v.src)}${v.est ? ' — rough estimate; confirm with the tiers below or ask the Advisor' : ''}</span>`
+      : `<span class="faint">No match for “${esc(q)}”. Try a fuller name, or price it with the position tiers in the add-asset dropdown below.</span>`;
+    return;
+  }
   if (act === 'calc-remove') { const C = calcState(); C[t.dataset.side].splice(+t.dataset.i, 1); saveDraftState(); return drawWarRoom(); }
   if (act === 'calc-qb') { const C = calcState(); C.qb = !C.qb; saveDraftState(); return drawWarRoom(); }
   if (act === 'calc-swap') { const C = calcState(); const g = C.give; C.give = C.get; C.get = g; saveDraftState(); return drawWarRoom(); }
