@@ -2905,7 +2905,7 @@ async function enterApp() {
     const rostersByOwner = {}; rosters.forEach(r => { if (r.owner_id) rostersByOwner[r.owner_id] = r; });
     const myRoster = rosters.find(r => r.owner_id === S.user.user_id) || null;
     S.bundle = { league, rosters, users, players, usersById, rostersByOwner, myRoster };
-    loadDesk(); loadPower(); loadMoney(); loadPredraft(); loadDossier(); loadRecords(); loadArtArchive(); loadQuiz(); loadFeatureOverride(); loadStorylines(); loadCalendar(); loadEspnHist(); loadBundledHistory(); loadBundledDossier(); loadBundledRecords(); loadBundledInvestigations(); loadBundledDraft(); loadCoverImg();
+    loadDesk(); loadPower(); loadMoney(); loadPredraft(); loadDossier(); loadRecords(); loadArtArchive(); loadQuiz(); loadFeatureOverride(); loadStorylines(); loadCalendar(); loadEspnHist(); loadBundledHistory(); loadBundledDossier(); loadBundledRecords(); loadBundledInvestigations(); loadBundledDraft(); loadBundledDraftIntel(); loadCoverImg();
     S.values = null; S.newsCache = {}; S.draft = { posFilter:'ALL', draft:null, picks:[], loaded:false };
     S.trade = { partnerId:null, give:new Set(), get:new Set() };
     S.tab = 'menu';  // land on the Newsroom main menu, not a week's issue
@@ -2996,7 +2996,7 @@ function showMenu() {
   // The menu is the tools hub. Create Issue / Weekly Stories / Settings live in
   // the top bar (always one click), so they are NOT repeated here.
   const tools = [
-    ['draft-room', '🔬', 'Draft Research', 'League rules, scoring & player values'],
+    ['draft-room', '🎯', 'The War Room', 'Mocks, trades & the 15–16 plan'],
     ['dashboard', '🗞️', 'Newsroom HQ', 'Weekly checklist, brief & calendar'],
     ['predraft-view', '🏈', 'Pre-Draft Issue', 'Build the Draft Issue'],
     ['cover-art', '🎨', 'Cover Art', 'Art direction for the cover'],
@@ -4106,40 +4106,33 @@ function tradeCardHtml(tr) {
 }
 
 // ---------------------------------------------------------------------
-//  Draft Assistant
+//  The War Room — the Smoke Dragons' draft advisor.
+//  One job, three blades: dead-accurate mock drafts, trade up/down analysis,
+//  and research on who's really available at 15 & 16 (or any slot you'd move
+//  to). Runs on everything we've compiled: the real 2026 order, league format,
+//  the chat dossier's owner tendencies, the record book, and baked class intel.
 // ---------------------------------------------------------------------
-// Manual draft tracking so the room works at an offline draft (mark players
-// taken / yours as they go) — persisted so a refresh mid-draft loses nothing.
-function draftStateKey(){ return 'gg.draftstate.' + (S.leagueId || 'x'); }
+function draftStateKey(){ return 'gg.warroom.' + (S.leagueId || 'x'); }
 function loadDraftState(){
   try { const s = JSON.parse(localStorage.getItem(draftStateKey()) || 'null');
-    if (s) { S.draft.taken = new Set(s.taken || []); S.draft.mine = new Set(s.mine || []); S.draft.log = s.log || []; } } catch {}
-  if (!S.draft.taken) S.draft.taken = new Set();
-  if (!S.draft.mine) S.draft.mine = new Set();
-  if (!S.draft.log) S.draft.log = [];
+    if (s) { S.draft.conditions = s.conditions || []; S.draft.advisorLog = s.advisorLog || []; } } catch {}
+  if (!S.draft.conditions) S.draft.conditions = [];
+  if (!S.draft.advisorLog) S.draft.advisorLog = [];
 }
-function saveDraftState(){ try { localStorage.setItem(draftStateKey(), JSON.stringify({ taken: [...S.draft.taken], mine: [...S.draft.mine], log: S.draft.log })); } catch {} }
+function saveDraftState(){ try { localStorage.setItem(draftStateKey(), JSON.stringify({ conditions: S.draft.conditions || [], advisorLog: (S.draft.advisorLog || []).slice(-30) })); } catch {} }
+// Baked class + league intel (draft-intel.json) — the research, in the app.
+async function loadBundledDraftIntel() {
+  if (S.draftIntel && S.draftIntel.tiers) return;
+  try { const r = await fetch('draft-intel.json', { cache: 'force-cache' });
+    if (r.ok) { const d = await r.json(); if (d && d.tiers) S.draftIntel = d; } } catch {}
+}
 async function renderDraft() {
-  setContent(spinner('Building the draft board…'));
+  setContent(spinner('Opening the War Room…'));
   loadDraftState();
-  await ensureValues();
-  if (!S.draft.loaded) {
-    try {
-      const drafts = await getLeagueDrafts(S.leagueId);
-      const live = (drafts||[]).find(d=>d.status==='drafting');
-      const latest = live || [...(drafts||[])].sort((a,b)=>Number(b.season)-Number(a.season))[0] || null;
-      S.draft.draft = latest;
-      if (latest) S.draft.picks = await getDraftPicks(latest.draft_id);
-    } catch {}
-    S.draft.loaded = true;
-  }
+  await Promise.all([ensureValues(), loadBundledDraftIntel(), loadBundledDraft()]);
   if (S.tab !== 'draft') return;
-  drawDraft();
+  drawWarRoom();
 }
-// ---- Mock draft engine ------------------------------------------------------
-// Monte-Carlo the real 2026 order: each team takes best-value-with-need + noise,
-// run many times, and report how often each player survives to YOUR pick. This
-// is what tells you who's actually likely available at 15 & 16.
 // Every player already on a roster — NOT draftable in a dynasty annual draft.
 function rosteredIds() {
   const s = new Set();
@@ -4147,334 +4140,260 @@ function rosteredIds() {
   return s;
 }
 function draftMockPool() {
-  const b = S.bundle, V = S.values;
+  const b = S.bundle;
   const rostered = rosteredIds();
-  // Draftable = free agents + rookies, skill positions only (you don't draft a
-  // K or DEF at pick 15 — they'd swamp a dynasty FA pool and get recommended).
-  let ids = (V.ranked || []).filter(id => !rostered.has(id) && !['K', 'DEF'].includes(posOfPlayer(b.players[id]))).slice(0, 240);
+  let ids = ((S.values && S.values.ranked) || []).filter(id => !rostered.has(id) && !['K', 'DEF'].includes(posOfPlayer(b.players[id]))).slice(0, 240);
   if (S.draft.rookiesOnly) ids = ids.filter(id => b.players[id] && b.players[id].years_exp === 0);
   return ids;
 }
-function posScarcity(pos) { return ({ RB: 6, WR: 5, TE: 3, QB: 2, K: 0, DEF: 0 })[pos] || 0; }
 function hashNoise(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h >>> 0) % 1000) / 1000; }
-function myFirstPickNo() {
+function myPickNos() {
   const order = (S.draftOrder && S.draftOrder.picks) || [];
-  const myTeam = S.user ? managerName(S.user.user_id) : '';
-  const p = order.find(o => normName(o.team) === normName(myTeam));
-  return p ? p.pick : 15;
+  const myTeam = S.user ? managerName(S.user.user_id) : (S.draftIntel && S.draftIntel.myTeam) || '';
+  const mine = order.filter(o => normName(o.team) === normName(myTeam)).map(o => o.pick);
+  return mine.length ? mine : ((S.draftIntel && S.draftIntel.myPicks) || [15, 16]);
 }
-// A realistic draft board: people draft by CONSENSUS ADP (Sleeper's search_rank),
-// not by our projection model — so elite players go where they actually go.
 function adpRankFn(pool) {
   const b = S.bundle; const rankIdx = new Map(pool.map((id, i) => [id, i]));
   return id => { const r = b.players[id] && b.players[id].search_rank; return (typeof r === 'number' && r > 0) ? r : ((rankIdx.get(id) ?? 500) + 300); };
 }
+// Owner personas from the intel file: how each team actually behaves on the clock.
+function personaFor(team) {
+  const ps = (S.draftIntel && S.draftIntel.personas) || [];
+  const p = ps.find(x => normName(x.team) === normName(team));
+  return (p && p.style) || 'value';
+}
+// The engine. Simulates the WHOLE order (not just up to my pick) so any slot can
+// be analysed for trades. Personas shape behaviour: chaos = wild reaches,
+// shark = ruthless ADP, upside/rebuild = youth lean, winnow = proven lean.
 function runMockDraft(runs) {
-  const b = S.bundle, V = S.values;
+  const b = S.bundle;
   const pool = draftMockPool();
   const adp = adpRankFn(pool);
   const order = (S.draftOrder && S.draftOrder.picks) || [];
-  const stopAt = myFirstPickNo();
   const conds = (S.draft.conditions || []);
-  const survive = {};
+  const takenAt = {};   // id -> [pick numbers across runs]
   for (let r = 0; r < runs; r++) {
     const remaining = new Set(pool);
     const teamCount = {}; const usedCond = new Set();
     for (const o of order) {
-      if (o.pick >= stopAt) break;
       const tk = normName(o.team);
-      // Hard condition: "Team X drafts Player Y" — take it the first chance they get.
+      const style = personaFor(o.team);
       const forced = conds.find((c, ci) => !usedCond.has(ci) && normName(c.team) === tk && remaining.has(c.playerId));
       let best = null;
       if (forced) { best = forced.playerId; usedCond.add(conds.indexOf(forced)); }
       else {
-        // Draft by ADP with a little need + variance — how real drafts actually go.
+        const noiseAmp = style === 'chaos' ? 22 : style === 'upside' || style === 'rebuild' ? 13 : style === 'shark' ? 4 : 8;
         let bestScore = 1e9, seen = 0;
         for (const id of pool) {
           if (!remaining.has(id)) continue;
           if (++seen > 40) break;
-          const pos = posOfPlayer(b.players[id]);
+          const p = b.players[id];
+          const pos = posOfPlayer(p);
           const have = (teamCount[tk] && teamCount[tk][pos]) || 0;
-          const needPull = Math.max(0, 3 - have) * 1.2;              // slight lean to fill roster
-          const noise = (hashNoise(id + ':' + o.pick + ':' + r) - 0.5) * 9; // ±~4 spots of variance
-          const score = adp(id) - needPull + noise;                  // lower = drafted first
+          const needPull = Math.max(0, 3 - have) * 1.2;
+          const youthPull = (style === 'upside' || style === 'rebuild') && p && p.years_exp === 0 ? 3 : 0;
+          const provenPull = style === 'winnow' && p && p.years_exp > 0 ? 2 : 0;
+          const noise = (hashNoise(id + ':' + o.pick + ':' + r) - 0.5) * noiseAmp;
+          const score = adp(id) - needPull - youthPull - provenPull + noise;
           if (score < bestScore) { bestScore = score; best = id; }
         }
       }
-      if (best) { remaining.delete(best); const p = posOfPlayer(b.players[best]); (teamCount[tk] = teamCount[tk] || {}); teamCount[tk][p] = (teamCount[tk][p] || 0) + 1; }
+      if (best) { remaining.delete(best); (takenAt[best] = takenAt[best] || []).push(o.pick);
+        const p = posOfPlayer(b.players[best]); (teamCount[tk] = teamCount[tk] || {}); teamCount[tk][p] = (teamCount[tk][p] || 0) + 1; }
     }
-    for (const id of remaining) survive[id] = (survive[id] || 0) + 1;
   }
-  const res = pool.map(id => ({ id, pct: (survive[id] || 0) / runs, val: Math.round(V.value(id)), adp: adp(id),
-      pos: posOfPlayer(b.players[id]), name: playerName(b.players[id], id), team: b.players[id]?.team, rookie: b.players[id]?.years_exp === 0 }))
-    .filter(x => x.pct >= 0.03).sort((a, c) => c.val - a.val);
-  return { res, stopAt, runs };
+  // Survival function per player: P(still on the board when pick N is up).
+  const lastPick = order.length ? order[order.length - 1].pick : 32;
+  const players = pool.slice(0, 120).map(id => {
+    const takes = takenAt[id] || [];
+    const availAt = n => (takes.filter(t => t >= n).length + (runs - takes.length)) / runs;
+    const avgPick = takes.length ? Math.round(takes.reduce((s, t) => s + t, 0) / takes.length * 10) / 10 : null;
+    return { id, name: playerName(S.bundle.players[id], id), pos: posOfPlayer(S.bundle.players[id]),
+      team: S.bundle.players[id]?.team, rookie: S.bundle.players[id]?.years_exp === 0,
+      adp: adp(id), avgPick, availAt, val: Math.round((S.values && S.values.value(id)) || 0) };
+  });
+  return { players, runs, lastPick };
 }
-// Recommend a 15 & 16 pairing: the best-value player likely there, then the best
-// complementary one (different position where possible) still likely at 16.
-function mockRecommendation(res) {
-  const likely = res.filter(x => x.pct >= 0.35);
-  if (!likely.length) return null;
-  const p15 = likely[0];
-  const p16 = likely.find(x => x.id !== p15.id && x.pos !== p15.pos) || likely[1] || null;
-  return { p15, p16 };
+// Who's realistically there at slot N — the core research question.
+function boardAtSlot(m, slot, count) {
+  return m.players.map(p => ({ ...p, pct: p.availAt(slot) }))
+    .filter(p => p.pct >= 0.12)
+    .sort((a, b) => a.adp - b.adp)
+    .slice(0, count || 8);
 }
-// Claude's written 15 & 16 strategy — uses the mock results, the league rules,
-// my roster, and the chat dossier (opponent tendencies). Runs with the user's key.
-async function generateDraftAdviceAI() {
-  const key = (S.apiKey || '').trim(); if (!key) throw new Error('no-key');
-  const m = S.draft.mock; if (!m || !m.res.length) throw new Error('no-mock');
-  const b = S.bundle;
-  const myTeam = S.user ? managerName(S.user.user_id) : 'my team';
-  const picks = ((S.draftOrder && S.draftOrder.picks) || []).filter(o => normName(o.team) === normName(myTeam)).map(o => o.pick);
-  const lg = b.league || {}, sc = lg.scoring_settings || {};
-  const rec = +sc.rec || 0; const fmt = rec >= 1 ? 'Full PPR' : rec >= 0.5 ? 'Half PPR' : 'Standard';
-  const counts = {}; (lg.roster_positions || []).forEach(s => counts[s] = (counts[s] || 0) + 1);
-  const superflex = (counts.SUPER_FLEX || 0) > 0 || (counts.QB || 0) >= 2;
-  const myRoster = ((b.myRoster && b.myRoster.players) || []).map(id => `${playerName(b.players[id], id)} (${posOfPlayer(b.players[id])})`).slice(0, 25);
-  const likely = m.res.filter(x => x.pct >= 0.3).slice(0, 16).map(x => `${x.name} (${x.pos}, value ${x.val}, available ${Math.round(x.pct * 100)}% of mocks)`);
-  const doss = (typeof dossierBlurb === 'function') ? dossierBlurb() : '';
-  const ctx = `MY TEAM: ${myTeam}\nMY BACK-TO-BACK PICKS: ${picks.slice(0, 4).join(' and ') || '15 and 16'}\n`
-    + `LEAGUE: ${fmt}, ${superflex ? 'Superflex' : '1-QB'}, ${lg.total_rosters || 16} teams, ${lg.settings && lg.settings.type === 2 ? 'dynasty' : 'redraft'}.\n`
-    + `MY CURRENT ROSTER: ${myRoster.length ? myRoster.join(', ') : '(empty / startup)'}\n\n`
-    + `PROJECTED AVAILABLE WHEN I'M ON THE CLOCK (from ${m.runs} mock drafts of our real order):\n${likely.join('\n')}\n`;
-  const system = `You are a sharp dynasty fantasy-football draft analyst advising a manager on back-to-back picks (${picks.slice(0, 2).join(' & ') || '15 & 16'}). Use ONLY the players listed as projected-available — never invent players. Weigh value under the league's scoring, positional scarcity, roster fit, and the back-to-back nature (two picks in a row — plan the pair). Give: (1) a recommended PAIR with one-line reasons each, (2) one alternative pair if a stud falls or a run happens, (3) one line on what to avoid. Decisive and concise — under 220 words.${doss ? '\n\nLEAGUE CONTEXT (tendencies/rivalries — use, never contradict):\n' + doss : ''}`;
-  const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-opus-4-8', max_tokens: 900, system, messages: [{ role: 'user', content: ctx }] }) });
-  if (!res.ok) { let d = ''; try { const j = await res.json(); d = (j && j.error && j.error.message) || ''; } catch {} throw new Error('api-' + res.status + (d ? ': ' + d : '')); }
-  const data = await res.json();
-  return (((data.content || []).find(bk => bk.type === 'text') || {}).text || '').trim();
+// ---- The War Room UI --------------------------------------------------------
+function warIntelHeader() {
+  const I = S.draftIntel || {};
+  const picks = myPickNos();
+  return `<div class="card" style="border-color:var(--accent-d);background:linear-gradient(160deg,rgba(49,209,88,.08),transparent 60%)">
+    <div class="at" style="margin:0">🎯 The War Room · ${esc(I.myTeam || 'Smoke Dragons')}</div>
+    <div class="dt" style="margin-top:4px">${esc(I.format || '')} · your picks: <b>${picks.join(' & ')}</b></div>
+    ${I.classRead ? `<div class="dt" style="margin-top:8px;line-height:1.6">${esc(I.classRead.summary)}</div>
+    <div class="faint" style="font-size:12px;margin-top:6px;line-height:1.5">⚠️ ${esc(I.classRead.qbNote)}<br>⚠️ ${esc(I.classRead.noTaxiNote)}</div>` : ''}
+    ${I.myRosterRead ? `<div class="seclabel" style="margin:12px 0 4px">Your board strategy</div>
+    <div class="dt" style="line-height:1.6">${esc(I.myRosterRead.strategy)}</div>` : ''}
+  </div>`;
 }
-// User-defined conditions: "Team X drafts Player Y" — the mock forces these.
-function draftConditionsHtml() {
+function warTiersCard() {
+  const I = S.draftIntel || {}; if (!(I.tiers || []).length) return '';
+  const mine = new Set(myPickNos());
+  return `<div class="card">
+    <div class="at" style="margin:0 0 8px">📋 The Class — tier by tier</div>
+    ${I.tiers.map(t => {
+      const isWindow = /YOUR WINDOW/i.test(t.label);
+      return `<div style="margin-bottom:10px;${isWindow ? 'border:1px solid var(--accent-d);border-radius:12px;padding:10px;background:rgba(49,209,88,.05)' : ''}">
+      <div class="faint" style="font-size:11px;font-weight:900;letter-spacing:.6px;text-transform:uppercase;color:${isWindow ? 'var(--accent)' : 'var(--faint)'}">${esc(t.label)}</div>
+      ${t.players.map(p => `<div class="dt" style="padding:4px 0;line-height:1.5">${posBadge(p.pos)} <b>${esc(p.name)}</b>${p.team && p.team !== '—' ? ` <span class="faint">(${esc(p.team)})</span>` : ''} — ${esc(p.note)}</div>`).join('')}
+    </div>`; }).join('')}
+  </div>`;
+}
+function warConditionsHtml() {
   const order = (S.draftOrder && S.draftOrder.picks) || [];
   const teams = [...new Set(order.map(o => o.team))];
   const conds = S.draft.conditions || [];
   const b = S.bundle; const pool = draftMockPool();
   const opts = pool.slice(0, 220).map(id => `<option value="${esc(playerName(b.players[id], id) + ' · ' + (b.players[id]?.team || 'FA'))}">`).join('');
   return `<div class="card">
-    <div class="at" style="margin:0 0 4px">📌 Draft conditions</div>
-    <div class="faint" style="font-size:12px;margin-bottom:8px">Know something the mock doesn't? Lock it in — e.g. “The Machines will take Player Y.” Every mock respects it.</div>
+    <div class="at" style="margin:0 0 4px">📌 What you know</div>
+    <div class="faint" style="font-size:12px;margin-bottom:8px">Intel from the chat? Lock it in — “Team X is taking Player Y” — and every mock respects it.</div>
     ${conds.length ? conds.map((c, i) => `<div class="row" style="justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
-      <span style="font-size:13px">📌 <b>${esc(c.team)}</b> drafts <b>${esc(c.playerName)}</b></span>
+      <span style="font-size:13px">📌 <b>${esc(c.team)}</b> takes <b>${esc(c.playerName)}</b></span>
       <button class="linkbtn" data-act="cond-remove" data-i="${i}">remove</button></div>`).join('') : ''}
     <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
       <select id="condTeam" class="input" style="flex:1;min-width:150px">${teams.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}</select>
-      <span class="faint" style="font-size:12px">drafts</span>
+      <span class="faint" style="font-size:12px">takes</span>
       <input id="condPlayer" class="input" list="condPlayerList" placeholder="type a player…" style="flex:1.4;min-width:170px" />
       <datalist id="condPlayerList">${opts}</datalist>
       <button class="btn" data-act="cond-add" style="width:auto;padding:10px 16px;margin:0">Add</button>
     </div>
   </div>`;
 }
-function draftMockCard() {
-  const order = (S.draftOrder && S.draftOrder.picks) || [];
-  if (!order.length) return `<div class="card"><div class="dt">Load your league's draft order to run mocks.</div></div>`;
-  const myTeam = S.user ? managerName(S.user.user_id) : '';
-  const myPicks = order.filter(o => normName(o.team) === normName(myTeam)).map(o => o.pick);
+function warMockCard() {
   const m = S.draft.mock;
-  const rk = S.draft.rookiesOnly;
-  const head = `<div class="card" style="border-color:var(--accent-d)">
-    <div class="row" style="justify-content:space-between;align-items:baseline">
-      <div class="at" style="margin:0">🎲 Mock Draft — your picks ${myPicks.length ? myPicks.slice(0, 4).join(' & ') : '15 & 16'}</div>
-      <button class="fchip ${rk ? 'on' : ''}" data-act="mock-rookies" style="flex:none">Rookies only</button></div>
-    <div class="dt" style="margin:6px 0 6px">Runs your real order ${m ? m.runs : 30}× with realistic team behaviour to project who's actually there when you're up.</div>
-    <div class="faint" style="font-size:11px;margin-bottom:10px">Draftable pool: <b>${draftMockPool().length}</b> skill players · <b>${rosteredIds().size}</b> already rostered (excluded) · drafted by consensus ADP</div>
-    <button class="btn" data-act="mock-run">🎲 ${m ? 'Re-run mock draft' : 'Run mock draft'}</button></div>`;
-  if (!m) return head + draftConditionsHtml();
-  const rec = mockRecommendation(m.res);
+  const picks = myPickNos();
   const bar = pct => `<span style="display:inline-block;width:46px;height:7px;border-radius:4px;background:var(--card2);vertical-align:middle;overflow:hidden"><span style="display:block;height:100%;width:${Math.round(pct*100)}%;background:${pct>=.6?'var(--accent)':pct>=.35?'#f5b301':'#fb923c'}"></span></span>`;
-  const recHtml = rec ? `<div class="card" style="background:linear-gradient(160deg,rgba(49,209,88,.12),transparent 55%);border-color:var(--accent-d);margin:12px 0 0">
-      <div class="faint" style="font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">The play at ${myPicks[0]||15} & ${myPicks[1]||16}</div>
-      <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
-        <div style="flex:1;min-width:180px"><div class="faint" style="font-size:11px">Pick ${myPicks[0]||15}</div><div class="nm" style="font-size:16px;font-weight:800">${posBadge(rec.p15.pos)} ${esc(rec.p15.name)}</div><div class="faint" style="font-size:11px">${esc(rec.p15.team||'')} · value ${rec.p15.val} · there ${Math.round(rec.p15.pct*100)}% of mocks</div></div>
-        ${rec.p16 ? `<div style="flex:1;min-width:180px"><div class="faint" style="font-size:11px">Pick ${myPicks[1]||16}</div><div class="nm" style="font-size:16px;font-weight:800">${posBadge(rec.p16.pos)} ${esc(rec.p16.name)}</div><div class="faint" style="font-size:11px">${esc(rec.p16.team||'')} · value ${rec.p16.val} · there ${Math.round(rec.p16.pct*100)}% of mocks</div></div>` : ''}
-      </div>
-      <div class="faint" style="font-size:12px;margin-top:8px;line-height:1.5">Back-to-back picks: grab the top faller at ${myPicks[0]||15}, then ${rec.p16 && rec.p16.pos !== rec.p15.pos ? `pair it with a ${rec.p16.pos} at ${myPicks[1]||16} to cover two spots` : 'take the next-best value'} — anyone below drops fast after your window.</div>
-      ${(S.apiKey||'').trim() ? `<button class="btn ghost" data-act="mock-advise" style="margin-top:10px">🧠 Get Claude's full 15 & 16 strategy</button>` : `<div class="faint" style="font-size:11px;margin-top:8px">Add your API key in Settings for a full written strategy that uses the league dossier.</div>`}
-      <div id="mockAdvice"></div>
-    </div>` : `<div class="dt" style="margin-top:10px">Everyone in your window went early in these mocks — you may be able to trade back, or a stud could fall. Re-run to see the range.</div>`;
-  const list = m.res.slice(0, 24).map(x => `<div class="prow" style="padding:6px 0">
-      <span class="ovr" style="width:34px">${x.val}</span>${posBadge(x.pos)}
-      <span style="flex:1"><span class="nm">${esc(x.name)}</span> <span class="tm">${esc(x.team||'FA')}${x.rookie?' · R':''}</span></span>
-      ${bar(x.pct)}<span class="faint" style="font-size:12px;width:42px;text-align:right">${Math.round(x.pct*100)}%</span></div>`).join('');
-  return head + draftConditionsHtml() + recHtml + `<div class="card"><div class="seclabel" style="margin:0 0 8px">Likely available at your pick — by value (green = safe bet)</div>${list}</div>`;
-}
-// Read the league's real rules & scoring straight from Sleeper and present them
-// in plain English — the backbone of draft research (your values depend on these).
-function leagueRulesCard() {
-  const lg = S.bundle && S.bundle.league; if (!lg) return '';
-  const sc = lg.scoring_settings || {}; const rp = lg.roster_positions || [];
-  const teams = lg.total_rosters || (S.bundle.rosters || []).length || '?';
-  const counts = {}; rp.forEach(s => counts[s] = (counts[s] || 0) + 1);
-  const rec = +sc.rec || 0;
-  const ppr = rec >= 1 ? 'Full PPR' : rec >= 0.5 ? 'Half PPR' : rec > 0 ? `${rec} PPR` : 'Standard (no PPR)';
-  const superflex = (counts.SUPER_FLEX || 0) > 0 || (counts.QB || 0) >= 2;
-  const tePrem = (+sc.bonus_rec_te || 0) > 0 || (+sc.rec_te || 0) > rec;
-  const tags = [ppr, superflex ? 'Superflex' : '', tePrem ? 'TE Premium' : '', lg.settings && lg.settings.type === 2 ? 'Dynasty' : ''].filter(Boolean);
-  const SLOTS = [['QB','QB'],['RB','RB'],['WR','WR'],['TE','TE'],['FLEX','FLEX'],['SUPER_FLEX','SuperFLEX'],['REC_FLEX','W/R/T'],['K','K'],['DEF','DEF'],['DL','DL'],['LB','LB'],['DB','DB']];
-  const starters = SLOTS.filter(([k]) => counts[k]).map(([k, l]) => `${counts[k]}× ${l}`).join('  ·  ');
-  const bench = [counts.BN ? `${counts.BN} bench` : '', counts.IR ? `${counts.IR} IR` : '', counts.TAXI ? `${counts.TAXI} taxi` : ''].filter(Boolean).join(' · ');
-  const per = v => v ? `1 pt / ${(+v === 0 ? 0 : Math.round(1 / v))} yds` : '—';
-  const num = v => (v == null ? '—' : (v > 0 ? '+' : '') + (+v));
-  const scoreRows = [
-    ['Reception', rec ? `${rec}${rec >= 1 ? ' (PPR)' : ''}` : '0 (standard)'],
-    ['Pass yards', per(sc.pass_yd)], ['Pass TD', num(sc.pass_td)], ['Interception', num(sc.pass_int)],
-    ['Rush yards', per(sc.rush_yd)], ['Rush TD', num(sc.rush_td)],
-    ['Rec yards', per(sc.rec_yd)], ['Rec TD', num(sc.rec_td)],
-    ['Fumble lost', num(sc.fum_lost)],
-    tePrem ? ['TE bonus / rec', num(sc.bonus_rec_te || (sc.rec_te - rec))] : null,
-  ].filter(Boolean);
-  return `<div class="card">
+  let body = '';
+  if (m) {
+    const slots = picks.slice(0, 2);
+    body = slots.map(slot => {
+      const list = boardAtSlot(m, slot, 8);
+      return `<div class="seclabel" style="margin:12px 0 6px">Likely on the board at <b>pick ${slot}</b></div>
+        ${list.length ? list.map(p => `<div class="prow" style="padding:5px 0">
+          ${posBadge(p.pos)}<span style="flex:1"><span class="nm">${esc(p.name)}</span> <span class="tm">${esc(p.team || 'FA')}${p.rookie ? ' · R' : ''}${p.avgPick ? ` · usually pick ${Math.round(p.avgPick)}` : ''}</span></span>
+          ${bar(p.pct)}<span class="faint" style="font-size:12px;width:42px;text-align:right">${Math.round(p.pct * 100)}%</span></div>`).join('')
+        : `<div class="dt">Nobody in the tracked pool reliably lasts to ${slot} — check conditions or re-run.</div>`}`;
+    }).join('');
+  }
+  return `<div class="card" style="border-color:var(--accent-d)">
     <div class="row" style="justify-content:space-between;align-items:baseline">
-      <div class="at" style="margin:0">📋 League Rules & Scoring</div>
-      <span class="faint" style="font-size:12px">${esc(lg.name || '')} · ${esc(String(lg.season || ''))}</span></div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0">
-      ${tags.map(t => `<span class="pill" style="color:var(--accent);border-color:var(--accent-d)">${esc(t)}</span>`).join('')}
-      <span class="pill">${teams} teams</span></div>
-    <div class="dt" style="margin:2px 0 4px"><b>Starting lineup:</b> ${esc(starters || '—')}${bench ? ` <span class="faint">· ${esc(bench)}</span>` : ''}</div>
-    <div class="seclabel" style="margin:12px 0 6px">Scoring</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px">
-      ${scoreRows.map(([k, v]) => `<div class="dt" style="display:flex;justify-content:space-between;border-bottom:1px solid var(--line2,rgba(255,255,255,.05));padding:3px 0"><span class="faint">${esc(k)}</span><b>${esc(String(v))}</b></div>`).join('')}
-    </div>
-    <div class="faint" style="font-size:11px;margin-top:8px">Pulled live from Sleeper. Player values below are computed under exactly these settings.</div>
+      <div class="at" style="margin:0">🎲 Mock the draft — ${m ? m.runs + ' runs' : '200 runs'}</div>
+      <button class="fchip ${S.draft.rookiesOnly ? 'on' : ''}" data-act="mock-rookies" style="flex:none">Rookies only</button></div>
+    <div class="faint" style="font-size:11px;margin:6px 0 10px">Simulates the full real order with each owner's actual drafting personality (from the dossier) · pool: ${draftMockPool().length} draftable skill players (${rosteredIds().size} rostered excluded) · consensus ADP.</div>
+    <button class="btn" data-act="mock-run">🎲 ${m ? 'Re-run the mock' : 'Run 200 mock drafts'}</button>
+    ${body}
   </div>`;
 }
-function drawDraft() {
-  const b = S.bundle, V = S.values, d = S.draft;
-  const liveMode = d.mode === 'live';
-  const back = `<button class="btn ghost" data-act="home" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>`;
-  // Everything drafted = Sleeper live picks + anything marked taken by hand.
-  const sleeperTaken = new Set((d.picks || []).map(p => p.player_id));
-  const drafted = new Set([...sleeperTaken, ...(d.taken || [])]);
-  const mine = new Set([...(S.user ? (d.picks || []).filter(p => p.picked_by === S.user.user_id).map(p => p.player_id) : []), ...(d.mine || [])]);
-
-  // Roster needs (from my picks so far).
-  const req = startingNeeds(b.league.roster_positions);
-  const have = {}; [...mine].forEach(id => { const pos = b.players[id]?.position; if (pos) have[pos] = (have[pos] || 0) + 1; });
-  const needs = [];
-  for (const pos of ['QB','RB','WR','TE','K','DEF']) {
-    const flexNeed = (pos==='RB'||pos==='WR'||pos==='TE') ? (req.FLEX||0) : 0;
-    const target = (req[pos]||0) + (flexNeed?1:0);
-    const deficit = target - (have[pos]||0);
-    if (deficit > 0) needs.push({ pos, deficit });
-  }
-  needs.sort((a,b)=>b.deficit-a.deficit);
-  const needSet = new Set(needs.map(n => n.pos));
-
-  // Best available with value tiers.
-  const rostered = rosteredIds();
-  const availAll = V.ranked.filter(id => !rostered.has(id) && (liveMode ? !drafted.has(id) : true));
-  const avail = availAll.filter(id => d.posFilter === 'ALL' || posOfPlayer(b.players[id]) === d.posFilter).slice(0, 80);
-  const topVal = avail.length ? V.value(avail[0]) : 0;
-  const gap = Math.max(6, topVal * 0.045);
-  const board = []; let tier = 1;
-  avail.forEach((id, i) => { if (i>0 && V.value(avail[i-1]) - V.value(id) > gap) tier++; board.push({ id, tier }); });
-
-  // ---- The real 2026 order: who's up, when I'm next ----
-  const myTeam = S.user ? managerName(S.user.user_id) : '';
+// Trade evaluator: what moving up/down actually buys you, in players and points.
+function warTradeCard() {
+  const m = S.draft.mock;
+  const I = S.draftIntel || {};
+  const chart = I.pickValueChart || {};
+  const picks = myPickNos();
+  const from = picks[1] || picks[0] || 16;
+  const target = S.draft.tradeSlot || 21;
   const order = (S.draftOrder && S.draftOrder.picks) || [];
-  const takenCount = drafted.size;
-  let orderCard = '';
-  if (order.length) {
-    const onClock = order[takenCount];
-    const isMine = t => myTeam && normName(t) === normName(myTeam);
-    const myNext = order.find(o => o.pick > takenCount && isMine(o.team));
-    const until = myNext ? (myNext.pick - takenCount - 1) : null;
-    const upNext = order.slice(takenCount, takenCount + 4);
-    orderCard = `<div class="card" style="border-color:var(--accent-d)">
-      <div class="row" style="justify-content:space-between;align-items:baseline">
-        <div class="at" style="margin:0">🎯 The Board · ${esc((S.draftOrder.year) || '')} order</div>
-        <span class="faint" style="font-size:12px">${takenCount} of ${order.length} picks in</span></div>
-      ${onClock ? `<div style="margin-top:8px;font-size:15px"><b>On the clock:</b> <span style="color:${isMine(onClock.team)?'var(--accent)':'var(--text)'};font-weight:800">${esc(onClock.team)}</span> <span class="faint">(${onClock.pick <= (S.draftOrder.teamsPerRound||16) ? '1.' : '2.'}${String(((onClock.pick-1)%(S.draftOrder.teamsPerRound||16))+1).padStart(2,'0')})</span></div>`
-        : `<div style="margin-top:8px;color:var(--accent);font-weight:700">Draft complete.</div>`}
-      ${myNext ? `<div style="margin-top:4px;font-size:14px"><b>Your next pick:</b> #${myNext.pick} — ${until === 0 ? '<span style="color:var(--accent);font-weight:800">you’re on the clock!</span>' : `in <b>${until}</b> pick${until===1?'':'s'}`}</div>`
-        : (myTeam ? `<div class="faint" style="margin-top:4px;font-size:12px">No more picks for ${esc(myTeam)} in the tracked order.</div>` : '')}
-      ${upNext.length ? `<div class="faint" style="font-size:12px;margin-top:8px">Up next: ${upNext.map(o => `${o.pick}. ${esc(o.team)}${o.from?` (via ${esc(o.from)})`:''}`).join(' · ')}</div>` : ''}
-    </div>`;
-  }
-
-  // ---- Recommendation: best value that fills a need ----
-  let recCard = '';
-  if (availAll.length) {
-    const bestOverall = availAll[0];
-    const bestNeed = availAll.find(id => needSet.has(posOfPlayer(b.players[id])));
-    const rec = bestNeed || bestOverall;
-    const rp = b.players[rec];
-    const why = bestNeed && rec === bestNeed
-      ? `fills your ${posOfPlayer(rp)} need and is the top value on the board there`
-      : `the best player available — no starting needs left, so take the value`;
-    const alt = bestOverall !== rec ? b.players[bestOverall] : null;
-    recCard = `<div class="card" style="background:linear-gradient(160deg,rgba(49,209,88,.12),transparent 55%);border-color:var(--accent-d)">
-      <div class="faint" style="font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">Recommended pick</div>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
-        ${posBadge(posOfPlayer(rp))}
-        <div style="flex:1"><div class="nm" style="font-size:17px;font-weight:800">${esc(playerName(rp, rec))}</div>
-          <div class="faint" style="font-size:12px">${esc(rp?.team||'FA')}${rp?.years_exp===0?' · Rookie':''} · value ${Math.round(V.value(rec))} · ${why}</div></div>
-        <button class="btn" data-act="draft-mine" data-id="${rec}" style="width:auto;padding:8px 14px">★ Drafted by me</button>
+  const opts = order.filter(o => !picks.includes(o.pick)).map(o =>
+    `<option value="${o.pick}"${o.pick === target ? ' selected' : ''}>Pick ${o.pick} — ${esc(o.team)}${o.from ? ` (via ${esc(o.from)})` : ''}</option>`).join('');
+  let analysis = '';
+  if (m) {
+    const here = boardAtSlot(m, from, 4);
+    const there = boardAtSlot(m, target, 4);
+    const cv = (chart[String(from)] || 0) - (chart[String(target)] || 0);
+    const dir = target < from ? 'UP' : 'DOWN';
+    const owner = (order.find(o => o.pick === target) || {}).team || '';
+    const persona = ((I.personas || []).find(p => normName(p.team) === normName(owner)) || {});
+    analysis = `<div class="seclabel" style="margin:12px 0 6px">Moving ${dir}: ${from} → ${target} (${esc(owner)})</div>
+      <div class="dt" style="line-height:1.6">Chart cost: <b>${cv > 0 ? '-' : '+'}${Math.abs(cv)} pts</b> ${dir === 'DOWN' ? '(you should be PAID this much in extra picks)' : '(what you must pay)'}.</div>
+      <div class="row" style="gap:14px;margin-top:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px"><div class="faint" style="font-size:11px;font-weight:800;text-transform:uppercase">Best likely at ${from} (now)</div>
+          ${here.map(p => `<div class="dt" style="padding:2px 0">${posBadge(p.pos)} ${esc(p.name)} <span class="faint">${Math.round(p.pct*100)}%</span></div>`).join('') || '<div class="dt">—</div>'}</div>
+        <div style="flex:1;min-width:200px"><div class="faint" style="font-size:11px;font-weight:800;text-transform:uppercase">Best likely at ${target}</div>
+          ${there.map(p => `<div class="dt" style="padding:2px 0">${posBadge(p.pos)} ${esc(p.name)} <span class="faint">${Math.round(p.pct*100)}%</span></div>`).join('') || '<div class="dt">—</div>'}</div>
       </div>
-      ${alt ? `<div class="faint" style="font-size:12px;margin-top:8px">Best pure value: <b>${esc(playerName(alt, bestOverall))}</b> (${posOfPlayer(alt)}, ${Math.round(V.value(bestOverall))}).</div>` : ''}
-    </div>`;
+      ${persona.note ? `<div class="faint" style="font-size:12px;margin-top:8px">🧠 Partner read: ${esc(persona.note)}</div>` : ''}`;
+  } else {
+    analysis = `<div class="dt" style="margin-top:8px">Run the mock first — the evaluator uses its availability data.</div>`;
   }
-
-  // ---- My roster so far ----
-  const myList = [...mine].map(id => ({ id, v: V.value(id), pos: posOfPlayer(b.players[id]) }))
-    .sort((a, b2) => b2.v - a.v);
-  const POS_ORDER = ['QB','RB','WR','TE','K','DEF'];
-  const myCard = `<div class="card">
-    <div class="at" style="margin:0 0 8px">🧢 My roster${myList.length?` · ${myList.length}`:''}</div>
-    ${myList.length ? myList.map(x => `<div class="prow" style="padding:4px 0"><span style="width:26px"></span>${posBadge(x.pos)}
-      <span style="flex:1"><span class="nm">${esc(playerName(b.players[x.id], x.id))}</span> <span class="tm">${esc(b.players[x.id]?.team||'FA')}</span></span>
-      <button class="linkbtn" data-act="draft-undo-id" data-id="${x.id}">remove</button></div>`).join('')
-      : `<div class="faint" style="font-size:13px">No picks yet. Tap ★ on a player as you draft them.</div>`}
+  const notes = (I.tradeNotes || []).map(n => `<div class="dt" style="padding:3px 0;line-height:1.55">• ${esc(n)}</div>`).join('');
+  return `<div class="card">
+    <div class="at" style="margin:0 0 6px">🔁 Trade the picks — up or down</div>
+    <label class="label">Analyse moving pick ${from} to…</label>
+    <select class="input" data-act="trade-slot" style="margin-top:4px">${opts}</select>
+    ${analysis}
+    ${notes ? `<div class="seclabel" style="margin:12px 0 4px">House reads</div>${notes}` : ''}
   </div>`;
-
-  // Research is the default. Draft-day mode is an optional toggle that turns on
-  // live tracking (order, tap-to-take, my roster) for use during the draft.
-  const modeToggle = `<div class="filters" style="position:static">
-    <button class="fchip ${!liveMode?'on':''}" data-act="draft-mode" data-mode="research">📚 Research</button>
-    <button class="fchip ${liveMode?'on':''}" data-act="draft-mode" data-mode="live">🎯 Draft-day mode</button></div>`;
-
-  const liveBlock = liveMode ? `
-    <div class="row" style="gap:8px;margin-bottom:12px">
-      ${d.log && d.log.length ? `<button class="btn ghost" data-act="draft-undo" style="width:auto;padding:6px 12px;margin:0">↩ Undo last (${d.log.length})</button>` : ''}
-      ${(d.taken && d.taken.size) || (d.mine && d.mine.size) ? `<button class="btn ghost" data-act="draft-reset" style="width:auto;padding:6px 12px;margin:0">Reset</button>` : ''}
-    </div>
-    ${orderCard}${recCard}
-    <div class="card"><div class="at" style="margin:0 0 6px">Your roster needs</div>
-      ${needs.length ? `<div class="needs">${needs.map(x=>`<span class="need">${posBadge(x.pos)}<b>×${x.deficit}</b></span>`).join('')}</div>`
-        : `<div style="color:var(--accent);font-size:13px">Starting slots filled — draft best available or for depth.</div>`}
-    </div>
-    ${myCard}` : '';
-
-  let html = `${back}
-    <div class="setup-logo" style="font-size:24px">🔬 Draft Research</div>
-    <p class="muted" style="margin:4px 0 14px">Your league's real rules & scoring, and every player valued under them. Flip on <b>Draft-day mode</b> when you're ready to track picks live.</p>
-    ${modeToggle}
-    ${leagueRulesCard()}
-    ${liveMode ? liveBlock : draftMockCard()}
-    <div class="seclabel">${liveMode ? 'Best Available' : 'Player Values'}</div>
-    <div class="filters">${['ALL','QB','RB','WR','TE','K','DEF'].map(p=>
-      `<button class="fchip ${d.posFilter===p?'on':''}" data-act="draft-filter" data-pos="${p}">${p}</button>`).join('')}</div>
-    ${!V.projectionBased?`<div class="faint" style="font-size:11px;margin:0 4px 8px">Season projections unavailable — values use an ADP-based estimate.</div>`:''}
-    <div class="card" style="padding:6px 12px">`;
-  if (!board.length) html += empty('No players', 'Try a different position filter.');
-  board.forEach((row, i) => {
-    const p = b.players[row.id];
-    const newTier = i===0 || board[i-1].tier !== row.tier;
-    if (newTier) html += `<div class="tier"><span class="tx">TIER ${row.tier}</span><span class="tl"></span></div>`;
-    const isNeed = liveMode && needSet.has(posOfPlayer(p));
-    html += `<div class="prow"><span class="ovr">${i+1}</span>${posBadge(posOfPlayer(p))}
-      <span style="flex:1"><span class="nm" style="display:block">${esc(playerName(p,row.id))}${isNeed?` <span class="faint" style="font-size:10px;color:var(--accent)">NEED</span>`:''}</span>
-        <span class="tm">${esc(p?.team||'FA')}${p?.years_exp===0?' · Rookie':''}</span></span>
-      <span class="val"${liveMode?' style="margin-right:8px"':''}>${Math.round(V.value(row.id))}</span>
-      ${liveMode ? `<button class="dbtn" data-act="draft-take" data-id="${row.id}" title="Someone drafted them">✓</button>
-      <button class="dbtn mine" data-act="draft-mine" data-id="${row.id}" title="I drafted them">★</button>` : ''}</div>`;
-  });
-  html += `</div><div class="colophon">Value = projected full-season fantasy points under your league's exact Sleeper scoring.${liveMode ? ' ✓ = taken by anyone · ★ = drafted by you. Saves on this device.' : ''}</div>`;
-  setContent(html);
 }
+// The Advisor — research WITH me. A running conversation with full context.
+function warAdvisorCard() {
+  const log = S.draft.advisorLog || [];
+  const aiOn = !!(S.apiKey || '').trim();
+  const bubbles = log.map(x => x.role === 'user'
+    ? `<div style="text-align:right;margin:8px 0"><span style="display:inline-block;background:var(--accent-d);color:#eafff0;border-radius:14px 14px 3px 14px;padding:9px 13px;font-size:13.5px;max-width:85%;text-align:left;line-height:1.55">${esc(x.text)}</span></div>`
+    : `<div style="margin:8px 0"><span style="display:inline-block;background:var(--card2);border-radius:14px 14px 14px 3px;padding:9px 13px;font-size:13.5px;max-width:92%;line-height:1.6;white-space:pre-wrap">${esc(x.text)}</span></div>`).join('');
+  return `<div class="card" style="border-color:var(--accent-d)">
+    <div class="at" style="margin:0 0 4px">🧠 The Advisor</div>
+    <div class="faint" style="font-size:12px;margin-bottom:8px">Research with me. I'm holding the class intel, the mock results, the trade math, the record book and the chat dossier — ask anything: “compare Branch and Douglas”, “what does Keith do at 17?”, “should I move 16 to Beavers for 21+26?”.</div>
+    <div id="advisorLog">${bubbles || ''}</div>
+    ${aiOn ? `<div class="row" style="gap:8px;margin-top:8px;align-items:flex-end">
+      <textarea id="advisorInput" class="input" style="flex:1;height:64px" placeholder="Ask the room…"></textarea>
+      <button class="btn" data-act="advisor-send" style="width:auto;padding:12px 18px;margin:0">Send</button></div>
+      ${log.length ? `<button class="linkbtn" data-act="advisor-clear" style="margin-top:6px">clear conversation</button>` : ''}`
+    : `<div class="dt">Add your Anthropic API key in Settings and the Advisor comes alive right here.</div>`}
+  </div>`;
+}
+function drawWarRoom() {
+  const back = `<button class="btn ghost" data-act="home" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>`;
+  setContent(`${back}
+    ${warIntelHeader()}
+    ${warMockCard()}
+    ${warConditionsHtml()}
+    ${warTradeCard()}
+    ${warTiersCard()}
+    ${warAdvisorCard()}
+    <div class="colophon">The War Room runs on the real 2026 order, owner personas from the chat dossier, consensus ADP, your league's exact scoring, and the baked class intel. Sharpened for picks ${myPickNos().join(' & ')}.</div>`);
+}
+// Advisor call — multi-turn, with the whole arsenal in the system prompt.
+async function warAdvisorAsk(question) {
+  const key = (S.apiKey || '').trim(); if (!key) throw new Error('no-key');
+  const I = S.draftIntel || {};
+  const m = S.draft.mock;
+  const picks = myPickNos();
+  let mockCtx = '';
+  if (m) {
+    picks.slice(0, 2).forEach(slot => {
+      mockCtx += `\nLIKELY AVAILABLE AT PICK ${slot} (from ${m.runs} mocks): ` +
+        boardAtSlot(m, slot, 8).map(p => `${p.name} (${p.pos}, ${Math.round(p.pct * 100)}%)`).join(', ');
+    });
+  }
+  const conds = (S.draft.conditions || []).map(c => `${c.team} takes ${c.playerName}`).join('; ');
+  const doss = (typeof dossierBlurb === 'function') ? dossierBlurb() : '';
+  const recs = (typeof recordsBlurb === 'function') ? recordsBlurb() : '';
+  const system = `You are the Smoke Dragons' draft-room advisor in the SCFL (${I.format || '16-team Superflex dynasty, full PPR'}). Their picks: ${picks.join(' & ')}. You research WITH the manager: sharp, direct, numerate, zero fluff. Ground every answer in the intel below; never invent players or facts beyond it. When asked about trades use the pick-value chart and the mock availability. When asked about owners use the dossier personas.
+CLASS INTEL: ${JSON.stringify({ classRead: I.classRead, tiers: I.tiers, myRosterRead: I.myRosterRead, tradeNotes: I.tradeNotes, personas: I.personas, pickValueChart: I.pickValueChart })}
+${mockCtx ? '\nMOCK RESULTS:' + mockCtx : ''}
+${conds ? '\nLOCKED CONDITIONS: ' + conds : ''}
+${recs ? '\n' + recs : ''}
+${doss ? '\n' + doss : ''}`;
+  const history = (S.draft.advisorLog || []).slice(-10).map(x => ({ role: x.role === 'user' ? 'user' : 'assistant', content: x.text }));
+  const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: 'claude-opus-4-8', max_tokens: 1200, system, messages: [...history, { role: 'user', content: question }] }) });
+  if (!res.ok) { let d = ''; try { const j = await res.json(); d = (j && j.error && j.error.message) || ''; } catch {} throw new Error('api-' + res.status + (d ? ': ' + d : '')); }
+  const data = await res.json();
+  return (((data.content || []).find(bk => bk.type === 'text') || {}).text || '').trim();
+}
+
 
 // ---------------------------------------------------------------------
 //  Settings
@@ -4756,10 +4675,8 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'switch-league') { S.leagueId=t.dataset.id; S.season=t.dataset.season; saveSession(); return enterApp(); }
   if (act === 'trade-partner') { S.trade.partnerId = Number(t.dataset.id); S.trade.get = new Set(); return drawTrade(); }
   if (act === 'trade-toggle') { const set=S.trade[t.dataset.side], id=t.dataset.id; set.has(id)?set.delete(id):set.add(id); return drawTrade(); }
-  if (act === 'draft-filter') { S.draft.posFilter = t.dataset.pos; return drawDraft(); }
-  if (act === 'draft-mode') { S.draft.mode = t.dataset.mode; return drawDraft(); }
-  if (act === 'mock-rookies') { S.draft.rookiesOnly = !S.draft.rookiesOnly; S.draft.mock = null; return drawDraft(); }
-  if (act === 'mock-run') { S.draft.mock = runMockDraft(40); return drawDraft(); }
+  if (act === 'mock-rookies') { S.draft.rookiesOnly = !S.draft.rookiesOnly; S.draft.mock = null; return drawWarRoom(); }
+  if (act === 'mock-run') { toast('Running 200 mocks…'); setTimeout(() => { S.draft.mock = runMockDraft(200); drawWarRoom(); }, 30); return; }
   if (act === 'cond-add') {
     const team = ($('#condTeam') || {}).value || ''; const disp = (($('#condPlayer') || {}).value || '').trim();
     if (!team || !disp) { toast('Pick a team and a player'); return; }
@@ -4769,28 +4686,31 @@ document.body.addEventListener('click', async (e) => {
     if (!id) { toast("Couldn't find that player in the draftable pool"); return; }
     S.draft.conditions = S.draft.conditions || [];
     S.draft.conditions.push({ team, playerId: id, playerName: playerName(b.players[id], id) });
-    if (S.draft.mock) S.draft.mock = runMockDraft(40);
-    toast('Condition added'); return drawDraft();
+    saveDraftState();
+    if (S.draft.mock) S.draft.mock = runMockDraft(200);
+    toast('Locked in'); return drawWarRoom();
   }
-  if (act === 'cond-remove') { S.draft.conditions = (S.draft.conditions || []).filter((_, i) => i !== +t.dataset.i); if (S.draft.mock) S.draft.mock = runMockDraft(40); return drawDraft(); }
-  if (act === 'mock-advise') {
-    const box = $('#mockAdvice'); if (box) box.innerHTML = `<div class="faint" style="font-size:12px;margin-top:8px">🧠 Claude is analysing your board…</div>`;
-    try { const txt = await generateDraftAdviceAI(); if (box) box.innerHTML = `<div class="card" style="margin-top:10px;background:var(--bg2)"><div class="body" style="white-space:pre-wrap;font-size:13.5px;line-height:1.6">${esc(txt)}</div></div>`; }
-    catch (e) { if (box) box.innerHTML = `<div class="err" style="margin-top:8px">${/^api-401/.test(e.message)?'That API key was rejected.':/^api-/.test(e.message)?'The AI is unreachable right now.':'Run a mock first, then try again.'}</div>`; }
+  if (act === 'cond-remove') { S.draft.conditions = (S.draft.conditions || []).filter((_, i) => i !== +t.dataset.i); saveDraftState(); if (S.draft.mock) S.draft.mock = runMockDraft(200); return drawWarRoom(); }
+  if (act === 'advisor-send') {
+    const inp = $('#advisorInput'); const q = ((inp && inp.value) || '').trim();
+    if (!q) return;
+    S.draft.advisorLog = S.draft.advisorLog || [];
+    S.draft.advisorLog.push({ role: 'user', text: q }); saveDraftState();
+    drawWarRoom();
+    const logBox = $('#advisorLog'); if (logBox) { logBox.insertAdjacentHTML('beforeend', `<div class="faint" id="advThinking" style="font-size:12px;margin:6px 0">🧠 thinking…</div>`); logBox.scrollIntoView(false); }
+    try { const a = await warAdvisorAsk(q); S.draft.advisorLog.push({ role: 'assistant', text: a }); saveDraftState(); }
+    catch (e) { S.draft.advisorLog.push({ role: 'assistant', text: /^api-401/.test(e.message) ? 'That API key was rejected — check Settings.' : 'I could not reach the AI just now — try again.' }); }
+    drawWarRoom();
+    const el = $('#advisorLog'); if (el) el.scrollIntoView(false);
     return;
   }
-  if (act === 'draft-take' || act === 'draft-mine') {
-    const id = t.dataset.id; S.draft.taken = S.draft.taken || new Set(); S.draft.mine = S.draft.mine || new Set(); S.draft.log = S.draft.log || [];
-    S.draft.taken.add(id); if (act === 'draft-mine') S.draft.mine.add(id);
-    S.draft.log.push({ id, mine: act === 'draft-mine' }); saveDraftState(); return drawDraft();
-  }
-  if (act === 'draft-undo') { const last = (S.draft.log || []).pop(); if (last) { S.draft.taken.delete(last.id); S.draft.mine.delete(last.id); } saveDraftState(); return drawDraft(); }
-  if (act === 'draft-undo-id') { const id = t.dataset.id; S.draft.taken.delete(id); S.draft.mine.delete(id); S.draft.log = (S.draft.log || []).filter(x => x.id !== id); saveDraftState(); return drawDraft(); }
-  if (act === 'draft-reset') { S.draft.taken = new Set(); S.draft.mine = new Set(); S.draft.log = []; saveDraftState(); return drawDraft(); }
+  if (act === 'advisor-clear') { S.draft.advisorLog = []; saveDraftState(); return drawWarRoom(); }
 });
 
 // Change events: season switcher (<select>) and chat-file import (<input file>).
 document.body.addEventListener('change', async (e) => {
+  const ts = e.target.closest('[data-act="trade-slot"]');
+  if (ts) { S.draft.tradeSlot = parseInt(ts.value, 10) || 21; return drawWarRoom(); }
   const cw = e.target.closest('[data-act="ci-week"]');
   if (cw) { S.activeWeek = Math.min(18, Math.max(1, parseInt(cw.value, 10) || 1)); return showCreateIssue(); }
   const pf = e.target.closest('[data-act="predraft-feature"]');
