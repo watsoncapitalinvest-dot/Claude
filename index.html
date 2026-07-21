@@ -482,6 +482,7 @@ const getLeagueUsers = (id)     => fetchJson(`${CORE}/league/${id}/users`);
 const getMatchups    = (id,w)   => fetchJson(`${CORE}/league/${id}/matchups/${w}`);
 const getLeagueDrafts= (id)     => fetchJson(`${CORE}/league/${id}/drafts`);
 const getDraftPicks  = (id)     => fetchJson(`${CORE}/draft/${id}/picks`);
+const getTradedPicks = (id)     => fetchJson(`${CORE}/league/${id}/traded_picks`);
 const getTransactions= (id,w)   => fetchJson(`${CORE}/league/${id}/transactions/${w}`);
 
 const POS_QP = '&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF';
@@ -1642,6 +1643,36 @@ async function loadBundledDraft() {
     const d = await r.json();
     if (d && d.picks && d.picks.length) { S.draftOrder = d; if (S.tab === 'news' && !S.reading) renderNews(); }
   } catch {}
+}
+// Overlay Sleeper's live traded-picks feed onto the draft order so pick trades
+// reassign slots automatically. Non-destructive: a slot is keyed by its ORIGINAL
+// owner (pick.from || pick.team), and only slots Sleeper reports as traded are
+// rewritten — the curated draft.json is kept everywhere Sleeper is silent.
+async function applyTradedPicks() {
+  const b = S.bundle, ord = S.draftOrder;
+  if (!b || !b.rosters || !ord || !ord.picks || !ord.picks.length) return;
+  const year = String(ord.year || S.season || '');
+  const key = t => normName(aliasOf(t || ''));
+  const teamByRoster = {};
+  b.rosters.forEach(r => { teamByRoster[r.roster_id] = managerName(r.owner_id); });
+  // Index each slot by (round, original-owner team).
+  const slotIdx = {};
+  ord.picks.forEach(p => { slotIdx[p.round + '|' + key(p.from || p.team)] = p; });
+  let tp = [];
+  try { tp = await getTradedPicks(b.league.league_id) || []; } catch { return; }
+  const applied = [];
+  tp.forEach(rec => {
+    if (year && String(rec.season) !== year) return;
+    const origTeam = teamByRoster[rec.roster_id], curTeam = teamByRoster[rec.owner_id];
+    if (!origTeam || !curTeam) return;
+    const slot = slotIdx[rec.round + '|' + key(origTeam)];
+    if (!slot) return;
+    if (key(slot.team) === key(curTeam) && ((!slot.from && key(curTeam) === key(origTeam)) || key(slot.from) === key(origTeam))) return; // already right
+    slot.team = curTeam;
+    if (key(curTeam) === key(origTeam)) delete slot.from; else slot.from = origTeam;
+    applied.push(`${origTeam}'s R${rec.round} → ${curTeam}`);
+  });
+  if (applied.length) { ord.tradedSynced = applied; if (S.tab === 'news' && !S.reading) renderNews(); }
 }
 // ---- Storylines: the league's running arcs, as an editable section ---------
 // Baked arcs live in the dossier (read-only baseline); the manager can change
@@ -4328,6 +4359,8 @@ async function renderDraft() {
   loadDraftState();
   await Promise.all([ensureValues(), loadBundledDraftIntel(), loadBundledDraft()]);
   if (S.tab !== 'draft') return;
+  try { await applyTradedPicks(); } catch {}
+  if (S.tab !== 'draft') return;
   drawWarRoom();
 }
 // Every player already on a roster — NOT draftable in a dynasty annual draft.
@@ -4600,6 +4633,7 @@ function warMockCard() {
       <div class="at" style="margin:0">🎲 Mock the draft — ${m ? m.runs + ' runs' : '200 runs'}</div>
       <button class="fchip ${S.draft.rookiesOnly ? 'on' : ''}" data-act="mock-rookies" style="flex:none">Rookies only</button></div>
     <div class="faint" style="font-size:11px;margin:6px 0 10px">Simulates the full real order with each owner's actual drafting personality (from the dossier), <b>weighted by each team's current roster holes</b> (a QB-stacked team won't reach for QB) · pool: ${draftMockPool().length} draftable skill players (${rosteredIds().size} rostered excluded) · consensus ADP <b>re-weighted for NON-PPR</b> (RBs/TD profiles rise, catch-volume falls).</div>
+    ${(S.draftOrder && S.draftOrder.tradedSynced && S.draftOrder.tradedSynced.length) ? `<div class="faint" style="font-size:11px;margin:0 0 10px;color:var(--accent)">🔄 Pick trades synced live from Sleeper: ${esc(S.draftOrder.tradedSynced.join(' · '))}</div>` : ''}
     <button class="btn" data-act="mock-run">🎲 ${m ? 'Re-run the mock' : 'Run 200 mock drafts'}</button>
     ${body}
   </div>`;
