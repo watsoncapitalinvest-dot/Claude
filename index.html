@@ -2997,6 +2997,7 @@ function showMenu() {
   // the top bar (always one click), so they are NOT repeated here.
   const tools = [
     ['draft-room', '🎯', 'The War Room', 'Mocks, trades & the 15–16 plan'],
+    ['trade-court', '⚖️', 'The Trade Court', 'Every trade graded, every GM judged'],
     ['dashboard', '🗞️', 'Newsroom HQ', 'Weekly checklist, brief & calendar'],
     ['predraft-view', '🏈', 'Pre-Draft Issue', 'Build the Draft Issue'],
     ['cover-art', '🎨', 'Cover Art', 'Art direction for the cover'],
@@ -4106,6 +4107,192 @@ function tradeCardHtml(tr) {
 }
 
 // ---------------------------------------------------------------------
+//  The Trade Court — every completed trade in league HISTORY, graded on
+//  today's market ($ scale, 1.01 = $100, same board as the Trade Value
+//  Report / calculator), and every CURRENT GM judged from shark to mark.
+//  Player prices come from the $-value engine; picks from a calibrated
+//  round model; deals net out via adds (received) vs drops (gave up) so
+//  N-team blockbusters settle correctly.
+// ---------------------------------------------------------------------
+const TC_PICK_KNOWN  = { 1: 48, 2: 18, 3: 6, 4: 3 };   // avg in-round $, past/known draft
+const TC_PICK_FUTURE = { 1: 40, 2: 15, 3: 5, 4: 2 };   // unknown-slot future pick $
+const TC_WIN = 12;                                      // $ net that counts as a win
+function tcMoney(n) { const r = Math.round(n); return (r < 0 ? '-$' : '$') + Math.abs(r); }
+function tcPickVal(dp, nowSeason) {
+  const r = dp.round || 1;
+  const yr = parseInt(dp.season) || nowSeason;
+  const out = yr - nowSeason;                           // >0 = still a future pick today
+  if (out >= 1) { let v = TC_PICK_FUTURE[r] || 1; if (out >= 2) v = Math.round(v * Math.pow(0.88, out - 1)); return v; }
+  return TC_PICK_KNOWN[r] || 1;
+}
+function tcPickLabel(dp) {
+  const r = dp.round || 1, suf = r === 1 ? '1st' : r === 2 ? '2nd' : r === 3 ? '3rd' : r + 'th';
+  return `${dp.season} ${suf}`;
+}
+function tcPlayerVal(id) {
+  const b = S.bundle, p = b && b.players ? b.players[id] : null;
+  const dv = (typeof playerDollarValue === 'function') ? playerDollarValue(playerName(p, id)) : null;
+  if (dv && dv.val) return dv.val;
+  return ({ QB: 22, RB: 18, WR: 18, TE: 10, K: 2, DEF: 2 })[posOfPlayer(p)] || 8;  // retired/unknown floor
+}
+// Score one raw Sleeper trade on the $ board. Uses adds (who got a player) and
+// drops (who gave one up), plus draft picks and FAAB, so each side's net is exact.
+function tcScoreTrade(t, ridToOwner, nowSeason) {
+  const rids = (t.roster_ids || []).slice();
+  if (rids.length < 2) return null;
+  const adds = t.adds || {}, drops = t.drops || {}, picks = t.draft_picks || [], faab = t.waiver_budget || [];
+  const side = {};
+  rids.forEach(rid => side[rid] = { rid, owner: ridToOwner[rid] || null, recv: 0, gave: 0, got: [] });
+  const nm = id => playerName(S.bundle.players[id], id), ps = id => posOfPlayer(S.bundle.players[id]) || '';
+  for (const pid in adds)  { const rid = adds[pid];  if (side[rid]) { const v = tcPlayerVal(pid); side[rid].recv += v; side[rid].got.push({ name: nm(pid), pos: ps(pid), val: v, kind: 'p' }); } }
+  for (const pid in drops) { const rid = drops[pid]; if (side[rid]) side[rid].gave += tcPlayerVal(pid); }
+  picks.forEach(dp => {
+    if (dp.owner_id === dp.previous_owner_id) return;
+    const v = tcPickVal(dp, nowSeason);
+    if (side[dp.owner_id])          { side[dp.owner_id].recv += v; side[dp.owner_id].got.push({ name: tcPickLabel(dp) + ' pick', val: v, kind: 'k' }); }
+    if (side[dp.previous_owner_id])   side[dp.previous_owner_id].gave += v;
+  });
+  faab.forEach(w => { const v = Math.round((w.amount || 0) * 0.03);
+    if (side[w.receiver]) { side[w.receiver].recv += v; if (v) side[w.receiver].got.push({ name: `$${w.amount} FAAB`, val: v, kind: 'f' }); }
+    if (side[w.sender]) side[w.sender].gave += v; });
+  const sides = rids.map(rid => { const s = side[rid]; s.net = s.recv - s.gave; s.got.sort((a, b) => b.val - a.val); return s; });
+  return { id: t.transaction_id, created: t.created || 0, sides };
+}
+// Walk every season, pull all completed trades, grade them, tally each owner.
+async function tcBuildLedger() {
+  try { await ensureValues(); } catch {}
+  const b = S.bundle;
+  const nowSeason = parseInt(b.league.season) || 0;
+  const history = await buildLeagueHistory(b.league);        // newest → oldest
+  const currentOwners = new Set(Object.keys(b.usersById));
+  const ledger = {}, allTrades = [];
+  for (const lg of history) {
+    let rosters, users;
+    try { [rosters, users] = await Promise.all([getRosters(lg.league_id), getLeagueUsers(lg.league_id)]); } catch { continue; }
+    const ridToOwner = {}; (rosters || []).forEach(r => ridToOwner[r.roster_id] = r.owner_id);
+    const uById = {}; (users || []).forEach(u => uById[u.user_id] = u);
+    const wkTxns = await Promise.all(Array.from({ length: 18 }, (_, i) => i + 1).map(w => getTransactions(lg.league_id, w).catch(() => [])));
+    const txns = [].concat(...wkTxns).filter(t => t && t.type === 'trade' && t.status === 'complete');
+    for (const t of txns) {
+      const scored = tcScoreTrade(t, ridToOwner, nowSeason);
+      if (!scored) continue;
+      scored.leagueSeason = lg.season;
+      scored.sides.forEach(s => {
+        const u = uById[s.owner] || b.usersById[s.owner];
+        s.name = u ? (u.metadata && u.metadata.team_name || u.display_name || 'Manager') : 'Departed GM';
+        s.current = currentOwners.has(s.owner);
+        if (!s.owner) return;
+        const L = ledger[s.owner] || (ledger[s.owner] = { owner: s.owner, name: s.name, current: s.current, trades: 0, net: 0, recv: 0, gave: 0, wins: 0, losses: 0, even: 0, best: null, worst: null });
+        L.name = s.name; L.trades++; L.net += s.net; L.recv += s.recv; L.gave += s.gave;
+        if (s.net > TC_WIN) L.wins++; else if (s.net < -TC_WIN) L.losses++; else L.even++;
+        if (!L.best  || s.net > L.best.net)  L.best  = { net: s.net, trade: scored };
+        if (!L.worst || s.net < L.worst.net) L.worst = { net: s.net, trade: scored };
+      });
+      allTrades.push(scored);
+    }
+  }
+  return { allTrades, ledger, nowSeason, seasons: history.map(h => h.season) };
+}
+function tcVerdict(net) {
+  if (net >= 55)  return { ic: '🦈', tag: 'The Shark',    line: 'Fleeces the league for sport. Stop answering their texts.' };
+  if (net >= 18)  return { ic: '📈', tag: 'Operator',     line: 'Wins more than they lose and knows it.' };
+  if (net > -18)  return { ic: '⚖️', tag: 'Fair Dealer',  line: 'Trades roughly even. Boringly, suspiciously honest.' };
+  if (net > -55)  return { ic: '📉', tag: 'Overpayer',    line: 'Reaches, and pays the tax every single time.' };
+  return          { ic: '🎁', tag: 'The Mark',    line: 'A standing charity to the rest of the league.' };
+}
+function tcHeistCard(tr) {
+  const sides = [...tr.sides].sort((a, b) => b.net - a.net);
+  const W = sides[0], L = sides[sides.length - 1];
+  const seed = (tr.created || 0) / 1e6 + Math.round(W.net);
+  const pk = (arr, o) => seededPick(arr, seed + o);
+  const head = pk([`${W.name} Fleeces ${L.name}`, `${L.name} Got Robbed in Broad Daylight`, `Grand Larceny: ${W.name} Cleans Out ${L.name}`, `${W.name} Won It Before the Ink Dried`], 1);
+  const col = (s) => `<div class="trside"><div class="trmgr">${esc(s.name)}${s.current ? '' : ' <span class="faint" style="font-size:9px">·departed</span>'} gets <span class="faint" style="font-weight:600">(${tcMoney(s.recv)})</span></div>${
+    (s.got.length ? s.got : [{ name: 'future considerations', val: 0 }]).map(g => `<div class="trrow">${g.pos ? posBadge(g.pos) : `<span class="pos" style="color:var(--amber);border-color:var(--amber)">${g.kind === 'k' ? '◆' : '＋'}</span>`}<span class="nm" style="flex:1">${esc(g.name)}</span>${g.val ? `<span class="val">${g.val}</span>` : ''}</div>`).join('')}</div>`;
+  return `<div class="card story">
+    <div class="byline">⚖️ The Trade Court · ${esc(String(tr.leagueSeason || ''))}</div>
+    <h2>${esc(head)}</h2>
+    <div class="dek">${esc(W.name)} came out <b style="color:#3fb950">+${tcMoney(W.net)}</b> on today's board.</div>
+    <div class="trdeal">${sides.map(col).join('<div class="trswap">⇄</div>')}</div>
+    <p class="body">${esc(pk([
+      `By our value board this is highway robbery — ${W.name} walks away ${tcMoney(W.net)} to the good. ${L.name}, buddy, call somebody before you do that again.`,
+      `Our numbers have ${W.name} winning this by ${tcMoney(Math.abs(W.net))}, and it isn't close. Somewhere ${L.name} is still telling themselves it was "about fit."`,
+      `${W.name} saw ${L.name} coming a mile off. ${tcMoney(W.net)} of surplus, graded on how the pieces actually aged.`,
+    ], 2))}</p>
+  </div>`;
+}
+async function showTradeCourt() {
+  S.reading = false;
+  const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>`;
+  const shell = (inner) => { app.innerHTML = `<div style="padding-bottom:32px">${back}
+    <div class="setup-logo" style="font-size:26px">⚖️ The Trade Court</div>
+    <p class="muted" style="margin:2px 0 16px">Every trade in league history, dragged into the light and graded on the value board. Then we name names.</p>
+    ${inner}</div>`; };
+  if (!S.bundle || !S.bundle.league) {
+    return shell(`<div class="card"><div class="dt">Load your league first (enter your Sleeper username on the home screen), then come back — court's in session.</div></div>`);
+  }
+  shell(`<div class="card"><div class="dt">⏳ Subpoenaing every completed trade across all seasons and grading each one on today's board…</div></div>`);
+  let data;
+  try { data = await tcBuildLedger(); }
+  catch (e) { return shell(`<div class="card"><div class="dt">Couldn't pull the trade history (${esc(String(e && e.message || e))}). Give it another go in a moment.</div></div>`); }
+
+  const gms = Object.values(data.ledger).filter(l => l.current && l.trades > 0).sort((a, b) => b.net - a.net || b.trades - a.trades);
+  const trades = data.allTrades;
+  if (!trades.length) {
+    return shell(`<div class="card"><div class="dt">No completed trades on record across ${data.seasons.length} season${data.seasons.length === 1 ? '' : 's'}. A league full of cowards. Come back once somebody grows a spine.</div></div>`);
+  }
+
+  // The Docket — league-wide numbers.
+  const swapped = Math.round(sum(trades.map(t => sum(t.sides.map(s => s.recv)))));
+  const heists = [...trades].map(t => ({ t, top: Math.max(...t.sides.map(s => s.net)) })).sort((a, b) => b.top - a.top);
+  const bigHeist = heists[0];
+  const docket = `<div class="sbgrid" style="margin-bottom:6px">
+    <div class="card" style="text-align:center"><div class="at" style="margin:0">${trades.length}</div><div class="faint" style="font-size:11px">trades on the docket</div></div>
+    <div class="card" style="text-align:center"><div class="at" style="margin:0">${tcMoney(swapped)}</div><div class="faint" style="font-size:11px">value swapped, all-time</div></div>
+    <div class="card" style="text-align:center"><div class="at" style="margin:0">${data.seasons.length}</div><div class="faint" style="font-size:11px">season${data.seasons.length === 1 ? '' : 's'} on file</div></div>
+  </div>`;
+
+  // The Rankings — current GMs, shark → mark.
+  const rows = gms.map((l, i) => {
+    const v = tcVerdict(l.net);
+    const netc = l.net >= 0 ? '#3fb950' : 'var(--red)';
+    return `<tr>
+      <td style="text-align:right;color:var(--faint);padding:7px 8px 7px 0">${i + 1}</td>
+      <td style="padding:7px 8px 7px 0"><b>${esc(l.name)}</b><div class="faint" style="font-size:10px">${v.ic} ${esc(v.tag)}</div></td>
+      <td style="text-align:right;padding:7px 8px;white-space:nowrap;font-weight:800;color:${netc};font-variant-numeric:tabular-nums">${l.net >= 0 ? '+' : ''}${tcMoney(l.net)}</td>
+      <td style="text-align:right;padding:7px 8px;white-space:nowrap;font-variant-numeric:tabular-nums">${l.wins}–${l.losses}–${l.even}</td>
+      <td style="text-align:right;padding:7px 0 7px 8px">${l.trades}</td>
+    </tr>`;
+  }).join('');
+  const rankCard = `<div class="seclabel" style="margin:18px 0 8px">The Standings — shark to mark</div>
+    <div class="card" style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="border-bottom:1px solid var(--line);color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.4px">
+          <th style="text-align:right;padding:0 8px 6px 0">#</th><th style="text-align:left;padding:0 8px 6px 0">GM</th>
+          <th style="text-align:right;padding:0 8px 6px">Net</th><th style="text-align:right;padding:0 8px 6px" title="Wins–Losses–Even">W–L–E</th>
+          <th style="text-align:right;padding:0 0 6px 8px">Deals</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      <div class="faint" style="font-size:11px;margin-top:8px">Net = value received minus value given, summed across every trade, on today's board. W–L–E counts deals won / lost / played even (±$${TC_WIN}).</div>
+    </div>`;
+
+  // Superlatives — the shark and the piggy bank.
+  const shark = gms[0], mark = gms[gms.length - 1];
+  const heroes = (gms.length >= 2 && shark.net > 0 && mark.net < shark.net) ? `<div class="sbgrid" style="margin:14px 0 2px">
+    <div class="card"><div class="byline">🦈 The League Shark</div><div class="at" style="margin:2px 0">${esc(shark.name)}</div><div class="dt">${tcVerdict(shark.net).line} Up <b style="color:#3fb950">+${tcMoney(shark.net)}</b> across ${shark.trades} deal${shark.trades === 1 ? '' : 's'}.</div></div>
+    <div class="card"><div class="byline">🎁 The League Piggy Bank</div><div class="at" style="margin:2px 0">${esc(mark.name)}</div><div class="dt">${tcVerdict(mark.net).line} Down <b style="color:var(--red)">${tcMoney(mark.net)}</b> and still picking up the phone.</div></div>
+  </div>` : '';
+
+  // Exhibit A — the great heists.
+  const topHeists = heists.filter(h => h.top >= 15).slice(0, 6).map(h => tcHeistCard(h.t)).join('');
+  const heistSec = topHeists ? `<div class="seclabel" style="margin:22px 0 8px">Exhibit A — The Great Heists</div>${topHeists}` : '';
+
+  const method = `<div class="card" style="margin-top:18px"><div class="faint" style="font-size:11px;line-height:1.6">
+    <b>How the court grades:</b> every completed trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100) — the same board as the Trade Value Report and the calculator. Players are valued on <b>today's</b> market, so a deal is judged by how it actually aged; hindsight is the harshest judge. Draft picks use a calibrated round model (mid-1st ≈ $48, 2nd ≈ $18, future picks discounted). Only GMs currently in the league are ranked; departed owners appear in the heists as historical footnotes.
+  </div></div>`;
+
+  shell(docket + heroes + rankCard + heistSec + method);
+}
+
+// ---------------------------------------------------------------------
 //  The War Room — the Smoke Dragons' draft advisor.
 //  One job, three blades: dead-accurate mock drafts, trade up/down analysis,
 //  and research on who's really available at 15 & 16 (or any slot you'd move
@@ -5066,6 +5253,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'history') return showHistory();
   if (act === 'dossier') return showDossier();
   if (act === 'records') return showRecords();
+  if (act === 'trade-court') return showTradeCourt();
   if (act === 'dashboard' || act === 'questionnaire') return showDashboard();
   if (act === 'calendar') return showCalendar();
   if (act === 'investigations') return showInvestigations();
