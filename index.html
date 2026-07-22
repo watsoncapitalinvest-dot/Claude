@@ -4847,9 +4847,9 @@ function warConditionsHtml() {
       : `<input id="intelText" class="input" placeholder="e.g. Keith told me he's trading up if Boston slides…" style="flex:2;min-width:220px" />`;
   const icon = x => x.type === 'takes' ? '🎯' : x.type === 'leans' ? '📈' : x.type === 'avoids' ? '🚫' : x.type === 'bpa' ? '⚖️' : '🕵️';
   const feeds = x => x.type === 'note' ? 'advisor' : 'mocks + advisor';
-  return `<div class="card">
+  return `<div class="card" id="warIntel">
     <div class="at" style="margin:0 0 4px">🕵️ Your intel</div>
-    <div class="faint" style="font-size:12px;margin-bottom:8px">Anything you know or hear — a player call, a positional lean, or just a note. Player and position intel steers every mock; everything feeds the Advisor.</div>
+    <div class="faint" style="font-size:12px;margin-bottom:8px">Anything you know or hear — a player call, a positional lean, or just a note. Stack up as many as you like; the mock does NOT re-run until you hit <b>Re-run</b> up top. Everything also feeds the Advisor.</div>
     ${intel.length ? intel.map((x, i) => `<div class="row" style="justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
       <span style="font-size:13px">${icon(x)} ${esc(intelToText(x))} <span class="faint" style="font-size:10px">· ${feeds(x)}</span></span>
       <button class="linkbtn" data-act="intel-remove" data-i="${i}">remove</button></div>`).join('') : ''}
@@ -4877,18 +4877,23 @@ function warMockCard() {
         : `<div class="dt">Nobody in the tracked pool reliably lasts to ${slot} — check conditions or re-run.</div>`}`;
     }).join('');
   }
-  // conditions the mock actually honors (everything except plain notes)
+  // conditions the mock honors (everything except plain notes) — applied only on a manual re-run
   const applied = (S.draft.intel || []).filter(x => x.type !== 'note');
+  const stale = !!(m && S.draft.mockStale);
+  const staleBanner = stale
+    ? `<div class="dt" style="font-size:12.5px;margin:0 0 8px;padding:9px 11px;border:1px solid #f5b301;border-radius:10px;background:rgba(245,179,1,.14);line-height:1.5"><b>⚠️ Conditions changed since this last ran.</b> Hit <b>Re-run the mock</b> below to apply them.</div>`
+    : '';
   const condLine = applied.length
-    ? `<div class="dt" style="font-size:12px;margin:8px 0 4px;padding:8px 10px;border:1px solid var(--accent-d);border-radius:10px;background:rgba(49,209,88,.06);line-height:1.6">🔒 <b>This mock is honoring ${applied.length} condition${applied.length > 1 ? 's' : ''}:</b><br>${applied.map(x => '• ' + esc(intelToText(x))).join('<br>')}<div class="faint" style="font-size:11px;margin-top:4px">Edit these in <b>Your intel</b> just below — every change re-runs the mock automatically.</div></div>`
-    : `<div class="faint" style="font-size:11.5px;margin:8px 0 4px;line-height:1.5">💡 Know something? Add a condition in <b>Your intel</b> below — e.g. “Heavy Hitters will draft Singleton” — and the whole mock re-runs around it.</div>`;
+    ? `<div class="dt" style="font-size:12px;margin:8px 0 4px;padding:8px 10px;border:1px solid ${stale ? '#f5b301' : 'var(--accent-d)'};border-radius:10px;background:rgba(49,209,88,.06);line-height:1.6">${stale ? '🕒' : '🔒'} <b>${stale ? 'Pending — will apply on next run' : (m ? 'This mock is honoring' : 'Ready to apply')} (${applied.length} condition${applied.length > 1 ? 's' : ''}):</b><br>${applied.map(x => '• ' + esc(intelToText(x))).join('<br>')}<div class="faint" style="font-size:11px;margin-top:4px">Add or edit in <b>Your intel</b> below, then hit <b>Re-run</b> — the mock updates only when you run it.</div></div>`
+    : `<div class="faint" style="font-size:11.5px;margin:8px 0 4px;line-height:1.5">💡 Know something? Add conditions in <b>Your intel</b> below — e.g. “Heavy Hitters will draft Singleton” — then hit Re-run and the mock drafts around them.</div>`;
   return `<div class="card" id="warMock" style="border-color:var(--accent-d)">
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <div class="at" style="margin:0">🎲 Mock the draft — ${m ? m.runs + ' runs' : '200 runs'}</div>
       <button class="fchip ${S.draft.rookiesOnly ? 'on' : ''}" data-act="mock-rookies" style="flex:none">Rookies only</button></div>
     <div class="faint" style="font-size:11px;margin:6px 0 10px">Simulates the full real order with each owner's actual drafting personality (from the dossier), <b>weighted by each team's current roster holes</b> (a QB-stacked team won't reach for QB) · pool: ${draftMockPool().length} draftable skill players (${rosteredIds().size} rostered excluded) · consensus ADP <b>re-weighted for NON-PPR</b> (RBs/TD profiles rise, catch-volume falls).</div>
     ${(S.draftOrder && S.draftOrder.tradedSynced && S.draftOrder.tradedSynced.length) ? `<div class="faint" style="font-size:11px;margin:0 0 10px;color:var(--accent)">🔄 Pick trades synced live from Sleeper: ${esc(S.draftOrder.tradedSynced.join(' · '))}</div>` : ''}
-    <button class="btn" data-act="mock-run">🎲 ${m ? 'Re-run the mock' : 'Run 200 mock drafts'}${applied.length ? ' (with your ' + applied.length + ' condition' + (applied.length > 1 ? 's' : '') + ')' : ''}</button>
+    ${staleBanner}
+    <button class="btn" data-act="mock-run" style="${stale ? 'box-shadow:0 0 0 2px #f5b301' : ''}">🎲 ${m ? 'Re-run the mock' : 'Run 200 mock drafts'}${applied.length ? ' (with your ' + applied.length + ' condition' + (applied.length > 1 ? 's' : '') + ')' : ''}</button>
     ${condLine}
     ${body}
   </div>`;
@@ -4924,12 +4929,23 @@ function warOrderCard() {
     const n = pickCount[normName(o.team)] || 1;
     const flex = n >= 3 ? ' · 3+ picks' : n === 1 ? ' · all-in on this one' : '';
     const proj = m && m.projections && m.projections[o.pick];
+    let projLine = '';
+    if (m) {
+      if (isMine) {
+        const avail = boardAtSlot(m, o.pick, 3).map(p => `${esc(p.name)} ${Math.round(p.pct * 100)}%`).join(' · ');
+        projLine = avail ? `<div style="font-size:11px;color:var(--accent);font-weight:700;margin-top:1px">🎯 your pick — likely there: ${avail}</div>` : `<div class="faint" style="font-size:10.5px;margin-top:1px">your pick</div>`;
+      } else if (proj) {
+        projLine = `<div style="font-size:12px;font-weight:800;margin-top:1px">→ ${posBadge(proj.pos)} ${esc(proj.name)} <span class="faint" style="font-weight:600;font-size:10.5px">${proj.pct}%</span></div>`;
+      } else {
+        projLine = `<div class="faint" style="font-size:10.5px;margin-top:1px">→ wide open (no clear favorite)</div>`;
+      }
+    }
     return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:9px;margin-bottom:2px;${isMine ? 'background:rgba(49,209,88,.12);border:1px solid var(--accent-d)' : ''}">
       <span class="ovr" style="width:26px">${o.pick}</span>
       <div style="flex:1;min-width:0">
         <div style="font-weight:${isMine ? '900' : '700'};font-size:13px;${isMine ? 'color:var(--accent)' : ''}">${esc(o.team)}${o.from ? ` <span class="faint" style="font-size:10px;font-weight:600">(via ${esc(o.from)})</span>` : ''}</div>
         <div class="faint" style="font-size:10.5px">${ic} ${esc(label)}${esc(flex)}</div>
-        ${proj ? `<div class="faint" style="font-size:10.5px;color:var(--dim)">→ usually: ${esc(proj.name)} (${esc(proj.pos)}, ${proj.pct}%)</div>` : ''}
+        ${projLine}
       </div></div>`;
   };
   const r1 = order.filter(o => o.round === 1 || (!o.round && o.pick <= 16));
@@ -5434,7 +5450,8 @@ async function warAdvisorAsk(question) {
   const system = `You are the Smoke Dragons' draft-room advisor in the SCFL (${I.format || '16-team Superflex dynasty, non-PPR standard scoring'}). Their picks: ${picks.join(' & ')}. You research WITH the manager: sharp, direct, numerate, zero fluff.
 ⚠️ SCORING — GET THIS RIGHT EVERY TIME: this league is NON-PPR (standard scoring). It is NOT a PPR league. Almost everything you find on the web (rankings, rookie profiles, ADP) is written for PPR — you MUST re-weight it: volume slot receivers lose value here; yardage, TDs, big plays and RBs gain. Never describe the league as PPR and never hand over PPR-based advice unadjusted. If any earlier message in this conversation called the league PPR, that was an error — disregard it.
 You have WEB SEARCH. The 2026 rookie class is NEWER than your training data — for any question about a player's profile, situation, camp news or comparison, SEARCH THE WEB FIRST (e.g. "<player> 2026 dynasty rookie profile") instead of guessing from stale knowledge. Never bluff about a player; if search fails, say what you don't know. Combine what you find with the league context below.
-TRADE IDEAS — this is a core job. When the manager asks about trades, DON'T be generic: build CONCRETE packages. Price BOTH sides in dollars off the TRADE MARKET scale below, obey the market laws (top-3 closed shop, the Superflex QB tax, fading-vet = a future 2nd, late firsts are cheap), name WHICH team/owner to target (use the personas + activeTraders list — pick the busiest, best-fit desks), and land the deal inside a fair band (within ~10% is fair). Use the Dragons' own ROSTER below for what they can move. If you truly need a roster/future-pick detail you don't have, ask one sharp question — otherwise propose. When asked about owners use the dossier personas.
+TRADE IDEAS — this is a core job. When the manager asks about trades, DON'T be generic: build CONCRETE packages. Price BOTH sides in dollars off the TRADE MARKET scale below, obey the market laws (top-3 closed shop, the Superflex QB tax, fading-vet = a future 2nd, late firsts are cheap), name WHICH team/owner to target (use the personas + activeTraders list — pick the busiest, best-fit desks), and land the deal inside a fair band (within ~10% is fair). Use the Dragons' own ROSTER below for what they can move. If you truly need a roster/future-pick detail you don't have, ask one sharp question — otherwise propose. OWNER INSIGHT — always reason about the other 15 managers as PEOPLE, not slots. Each entry in personas has a style + note capturing that owner's FAVORITES (players/positions they covet, tendencies from the dossier) and their TRADE TEMPERAMENT. Weigh all of it: (a) FAVORITES — who covets the player/position in play; target the owner whose wants match what you're selling. (b) TRADE-UP LIKELIHOOD — sharks and win-now ('winnow') teams are the ones who trade UP for a faller or a win-now vet; if you hold a pick or player they'd chase, they pay a premium. (c) TRADE-DOWN LIKELIHOOD — rebuilders, pick-hoarders and 'volume' teams trade DOWN and stockpile picks; they're your best partners to acquire future capital or to move up through. (d) 'value'/steady owners take the board and rarely move — don't count on them for a swap. When you propose a trade, name the specific owner, say WHY they fit (their favorite + their temperament), and rate how likely they are to say yes.
+When asked about owners use the dossier personas.
 SCFL TRADE MARKET (the full price book — use this for every trade question): ${JSON.stringify(I.tradeMarket || {})}
 SMOKE DRAGONS ROSTER & ASSETS (baked research notes — may be stale; the LIVE roster above wins on any conflict): ${JSON.stringify(I.roster || {})}${liveRoster}
 CLASS INTEL: ${JSON.stringify({ classRead: I.classRead, tiers: I.tiers, myTeam: I.myTeam, myPicks: I.myPicks, myRosterRead: I.myRosterRead, tradeNotes: I.tradeNotes, tradePrecedents: I.tradePrecedents, priceGuide: I.priceGuide, personas: I.personas, pickValueChart: I.pickValueChart })}
@@ -5748,7 +5765,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'trade-partner') { S.trade.partnerId = Number(t.dataset.id); S.trade.get = new Set(); return drawTrade(); }
   if (act === 'trade-toggle') { const set=S.trade[t.dataset.side], id=t.dataset.id; set.has(id)?set.delete(id):set.add(id); return drawTrade(); }
   if (act === 'mock-rookies') { S.draft.rookiesOnly = !S.draft.rookiesOnly; S.draft.mock = null; return drawWarRoom(); }
-  if (act === 'mock-run') { toast('Running 200 mocks…'); setTimeout(() => { S.draft.mock = runMockDraft(200); drawWarRoom(); const el = document.getElementById('warMock'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 30); return; }
+  if (act === 'mock-run') { toast('Running 200 mocks…'); setTimeout(() => { S.draft.mock = runMockDraft(200); S.draft.mockStale = false; drawWarRoom(); const el = document.getElementById('warMock'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 30); return; }
   if (act === 'intel-add') {
     const team = ($('#intelTeam') || {}).value || '';
     const itype = S.draft.intelType || 'takes';
@@ -5774,14 +5791,13 @@ document.body.addEventListener('click', async (e) => {
       S.draft.intel.push({ type: 'note', team, text });
     }
     saveDraftState();
-    const reran = !!S.draft.mock;
-    if (reran) S.draft.mock = runMockDraft(200);
-    toast(reran ? 'Condition added — mock re-ran 🎲' : 'Intel logged — run the mock to apply it');
+    if (S.draft.mock) S.draft.mockStale = true;   // don't auto-run — mark stale, wait for a manual Re-run
+    toast(S.draft.mock ? 'Condition added — hit “Re-run the mock” up top to apply' : 'Intel logged');
     drawWarRoom();
-    setTimeout(() => { const el = document.getElementById('warMock'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
+    setTimeout(() => { const el = document.getElementById('warIntel'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
     return;
   }
-  if (act === 'intel-remove') { S.draft.intel = (S.draft.intel || []).filter((_, i) => i !== +t.dataset.i); saveDraftState(); if (S.draft.mock) S.draft.mock = runMockDraft(200); drawWarRoom(); setTimeout(() => { const el = document.getElementById('warMock'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50); return; }
+  if (act === 'intel-remove') { S.draft.intel = (S.draft.intel || []).filter((_, i) => i !== +t.dataset.i); saveDraftState(); if (S.draft.mock) S.draft.mockStale = true; drawWarRoom(); setTimeout(() => { const el = document.getElementById('warIntel'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50); return; }
   if (act === 'pv-lookup') {
     const inp = $('#pvLookup'), r = $('#pvResult'); const q = ((inp && inp.value) || '').trim();
     if (!r) return; if (!q) { r.innerHTML = ''; return; }
