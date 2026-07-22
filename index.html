@@ -4877,13 +4877,19 @@ function warMockCard() {
         : `<div class="dt">Nobody in the tracked pool reliably lasts to ${slot} — check conditions or re-run.</div>`}`;
     }).join('');
   }
-  return `<div class="card" style="border-color:var(--accent-d)">
+  // conditions the mock actually honors (everything except plain notes)
+  const applied = (S.draft.intel || []).filter(x => x.type !== 'note');
+  const condLine = applied.length
+    ? `<div class="dt" style="font-size:12px;margin:8px 0 4px;padding:8px 10px;border:1px solid var(--accent-d);border-radius:10px;background:rgba(49,209,88,.06);line-height:1.6">🔒 <b>This mock is honoring ${applied.length} condition${applied.length > 1 ? 's' : ''}:</b><br>${applied.map(x => '• ' + esc(intelToText(x))).join('<br>')}<div class="faint" style="font-size:11px;margin-top:4px">Edit these in <b>Your intel</b> just below — every change re-runs the mock automatically.</div></div>`
+    : `<div class="faint" style="font-size:11.5px;margin:8px 0 4px;line-height:1.5">💡 Know something? Add a condition in <b>Your intel</b> below — e.g. “Heavy Hitters will draft Singleton” — and the whole mock re-runs around it.</div>`;
+  return `<div class="card" id="warMock" style="border-color:var(--accent-d)">
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <div class="at" style="margin:0">🎲 Mock the draft — ${m ? m.runs + ' runs' : '200 runs'}</div>
       <button class="fchip ${S.draft.rookiesOnly ? 'on' : ''}" data-act="mock-rookies" style="flex:none">Rookies only</button></div>
     <div class="faint" style="font-size:11px;margin:6px 0 10px">Simulates the full real order with each owner's actual drafting personality (from the dossier), <b>weighted by each team's current roster holes</b> (a QB-stacked team won't reach for QB) · pool: ${draftMockPool().length} draftable skill players (${rosteredIds().size} rostered excluded) · consensus ADP <b>re-weighted for NON-PPR</b> (RBs/TD profiles rise, catch-volume falls).</div>
     ${(S.draftOrder && S.draftOrder.tradedSynced && S.draftOrder.tradedSynced.length) ? `<div class="faint" style="font-size:11px;margin:0 0 10px;color:var(--accent)">🔄 Pick trades synced live from Sleeper: ${esc(S.draftOrder.tradedSynced.join(' · '))}</div>` : ''}
-    <button class="btn" data-act="mock-run">🎲 ${m ? 'Re-run the mock' : 'Run 200 mock drafts'}</button>
+    <button class="btn" data-act="mock-run">🎲 ${m ? 'Re-run the mock' : 'Run 200 mock drafts'}${applied.length ? ' (with your ' + applied.length + ' condition' + (applied.length > 1 ? 's' : '') + ')' : ''}</button>
+    ${condLine}
     ${body}
   </div>`;
 }
@@ -5742,7 +5748,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'trade-partner') { S.trade.partnerId = Number(t.dataset.id); S.trade.get = new Set(); return drawTrade(); }
   if (act === 'trade-toggle') { const set=S.trade[t.dataset.side], id=t.dataset.id; set.has(id)?set.delete(id):set.add(id); return drawTrade(); }
   if (act === 'mock-rookies') { S.draft.rookiesOnly = !S.draft.rookiesOnly; S.draft.mock = null; return drawWarRoom(); }
-  if (act === 'mock-run') { toast('Running 200 mocks…'); setTimeout(() => { S.draft.mock = runMockDraft(200); drawWarRoom(); }, 30); return; }
+  if (act === 'mock-run') { toast('Running 200 mocks…'); setTimeout(() => { S.draft.mock = runMockDraft(200); drawWarRoom(); const el = document.getElementById('warMock'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 30); return; }
   if (act === 'intel-add') {
     const team = ($('#intelTeam') || {}).value || '';
     const itype = S.draft.intelType || 'takes';
@@ -5768,10 +5774,14 @@ document.body.addEventListener('click', async (e) => {
       S.draft.intel.push({ type: 'note', team, text });
     }
     saveDraftState();
-    if (S.draft.mock) S.draft.mock = runMockDraft(200);
-    toast('Intel logged'); return drawWarRoom();
+    const reran = !!S.draft.mock;
+    if (reran) S.draft.mock = runMockDraft(200);
+    toast(reran ? 'Condition added — mock re-ran 🎲' : 'Intel logged — run the mock to apply it');
+    drawWarRoom();
+    setTimeout(() => { const el = document.getElementById('warMock'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
+    return;
   }
-  if (act === 'intel-remove') { S.draft.intel = (S.draft.intel || []).filter((_, i) => i !== +t.dataset.i); saveDraftState(); if (S.draft.mock) S.draft.mock = runMockDraft(200); return drawWarRoom(); }
+  if (act === 'intel-remove') { S.draft.intel = (S.draft.intel || []).filter((_, i) => i !== +t.dataset.i); saveDraftState(); if (S.draft.mock) S.draft.mock = runMockDraft(200); drawWarRoom(); setTimeout(() => { const el = document.getElementById('warMock'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50); return; }
   if (act === 'pv-lookup') {
     const inp = $('#pvLookup'), r = $('#pvResult'); const q = ((inp && inp.value) || '').trim();
     if (!r) return; if (!q) { r.innerHTML = ''; return; }
