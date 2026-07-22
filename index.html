@@ -4498,27 +4498,31 @@ function tcAllChatDeals(){
   deals.sort((a, b) => b.top - a.top);
   return deals;
 }
-// One docket card per trade: rating, every side priced, net, verdict, notes.
+function rvWrapId(key){ return 'rvw_' + key.replace(/[^a-z0-9]/gi, '_'); }
+// One COMPACT docket line per trade: 2–3 lines — rating + net, the swap in one
+// line, a one-line verdict — with the reviewer's-notes panel tucked behind a
+// toggle so 196 deals stay skimmable.
 function tcChatDocketCard(deal){
   const money = n => (n < 0 ? '-$' : '+$') + Math.abs(Math.round(n));
   const order = deal.raw.map((s, i) => ({ s, i })).sort((a, b) => deal.netAt[b.i] - deal.netAt[a.i]);
   const W = order[0], L = order[order.length - 1];
   const r = tcTradeRating(deal.netAt[W.i]), key = 'tcc::' + courtSig(deal);
-  const assetHtml = a => { const at = tcChatAssetVal(a, deal.season, true), lng = tcChatAssetVal(a, deal.season, false);
-    const nm = a.player || a.pick || 'asset'; const chg = (Math.abs(lng - at) >= 3) ? ` <span class="faint" style="font-size:10px">(→$${lng} today)</span>` : '';
-    return `<div class="trrow"><span class="pos" style="${a.pick ? 'color:var(--amber);border-color:var(--amber)' : ''}">${a.pick ? '◆' : '·'}</span><span class="nm" style="flex:1">${esc(nm)}</span><span class="val">$${at}${chg}</span></div>`; };
-  const col = o => { const net = deal.netAt[o.i], c = net >= 0 ? '#3fb950' : 'var(--red)';
-    return `<div class="trside" style="flex:1;min-width:130px"><div class="trmgr">${esc(o.s.team)} <span class="faint" style="font-weight:600;color:${c}">(${money(net)})</span></div>${o.s.gets.map(assetHtml).join('') || '<div class="dt faint">—</div>'}</div>`; };
+  const names = o => o.s.gets.map(a => a.player || a.pick || '?').join(', ') || 'future considerations';
+  const swap = order.map(o => `<b>${esc(o.s.team)}</b> <span class="faint">${esc(names(o))}</span>`).join(' <span style="color:var(--amber)">⇄</span> ');
   const verdict = deal.netAt[W.i] < TC_WIN
-    ? `An even-money deal — nobody got fleeced.`
-    : `${esc(W.s.team)} came out <b style="color:#3fb950">${money(deal.netAt[W.i])}</b> ahead${deal.netAt[L.i] < 0 ? `, ${esc(L.s.team)} <b style="color:var(--red)">${money(deal.netAt[L.i])}</b>` : ''} on today's board.`;
-  return `<div class="card" style="margin-bottom:8px">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
-      <div class="at" style="margin:0;font-size:14px">${r.ic} ${r.tag}</div>
-      <div class="faint" style="font-size:11px">${esc(deal.date || String(deal.season || ''))} · net <b style="color:${r.c}">${money(deal.netAt[W.i])}</b></div></div>
-    <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">${order.map(col).join('<div class="trswap" style="align-self:center">⇄</div>')}</div>
-    <div class="dt" style="margin-top:6px;font-size:12px">${verdict}</div>
-    ${reviewPanel(key, 'tcc')}
+    ? `Even money — nobody got fleeced.`
+    : `${esc(W.s.team)} +${money(deal.netAt[W.i]).replace(/^\+/, '')}${deal.netAt[L.i] < 0 ? ` · ${esc(L.s.team)} ${money(deal.netAt[L.i])}` : ''} on today's board.`;
+  const n = getCourtNote(key), open = !!(n.note || n.review);
+  const tag = n.review ? 'reviewed' : n.note ? 'note' : 'add note';
+  return `<div class="card" style="margin-bottom:5px;padding:9px 12px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+      <span style="font-weight:800;font-size:12px;color:${r.c}">${r.ic} ${r.tag} · ${money(deal.netAt[W.i])}</span>
+      <span class="faint" style="font-size:11px;white-space:nowrap">${esc(deal.date || String(deal.season || ''))}</span></div>
+    <div style="font-size:12px;margin-top:2px;line-height:1.4">${swap}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:2px">
+      <span class="dt" style="font-size:11px">${verdict}</span>
+      <button class="linkbtn" data-act="rv-toggle" data-key="${esc(key)}" style="font-size:11px;white-space:nowrap">📌 ${tag} ›</button></div>
+    <div id="${rvWrapId(key)}" style="display:${open ? 'block' : 'none'}">${reviewPanel(key, 'tcc')}</div>
   </div>`;
 }
 // A full narrative writeup of a lopsided chat-ledger deal — Exhibit A material.
@@ -4579,26 +4583,6 @@ function showTeamTrades(team) {
     </div>`;
   }).join('');
   shell(summary + cards);
-}
-function tcHeistCard(tr) {
-  const sides = [...tr.sides].sort((a, b) => b.net - a.net);
-  const W = sides[0], L = sides[sides.length - 1];
-  const seed = (tr.created || 0) / 1e6 + Math.round(W.net);
-  const pk = (arr, o) => seededPick(arr, seed + o);
-  const head = pk([`${W.name} Fleeces ${L.name}`, `${L.name} Got Robbed in Broad Daylight`, `Grand Larceny: ${W.name} Cleans Out ${L.name}`, `${W.name} Won It Before the Ink Dried`], 1);
-  const col = (s) => `<div class="trside"><div class="trmgr">${esc(s.name)}${s.current ? '' : ' <span class="faint" style="font-size:9px">·departed</span>'} gets <span class="faint" style="font-weight:600">(${tcMoney(s.recv)})</span></div>${
-    (s.got.length ? s.got : [{ name: 'future considerations', val: 0 }]).map(g => `<div class="trrow">${g.pos ? posBadge(g.pos) : `<span class="pos" style="color:var(--amber);border-color:var(--amber)">${g.kind === 'k' ? '◆' : '＋'}</span>`}<span class="nm" style="flex:1">${esc(g.name)}</span>${g.val ? `<span class="val">${g.val}</span>` : ''}</div>`).join('')}</div>`;
-  return `<div class="card story">
-    <div class="byline">⚖️ The Trade Court · ${esc(String(tr.leagueSeason || ''))}</div>
-    <h2>${esc(head)}</h2>
-    <div class="dek">${esc(W.name)} came out <b style="color:#3fb950">+${tcMoney(W.net)}</b> on today's board.</div>
-    <div class="trdeal">${sides.map(col).join('<div class="trswap">⇄</div>')}</div>
-    <p class="body">${esc(pk([
-      `By our value board this is highway robbery — ${W.name} walks away ${tcMoney(W.net)} to the good. ${L.name}, buddy, call somebody before you do that again.`,
-      `Our numbers have ${W.name} winning this by ${tcMoney(Math.abs(W.net))}, and it isn't close. Somewhere ${L.name} is still telling themselves it was "about fit."`,
-      `${W.name} saw ${L.name} coming a mile off. ${tcMoney(W.net)} of surplus, graded on how the pieces actually aged.`,
-    ], 2))}</p>
-  </div>`;
 }
 async function showTradeCourt(useCache) {
   S.reading = false;
@@ -5911,6 +5895,11 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'trade-court') return showTradeCourt();
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
   if (act === 'ex-files') return showExFiles();
+  if (act === 'rv-toggle') {
+    const w = document.getElementById(rvWrapId(t.dataset.key));
+    if (w) w.style.display = w.style.display === 'none' ? 'block' : 'none';
+    return;
+  }
   if (act === 'rv-save') {
     const key = t.dataset.key, kind = t.dataset.kind, ta = document.getElementById(rvId(key));
     setCourtNote(key, { note: ta ? ta.value.trim() : '' });
