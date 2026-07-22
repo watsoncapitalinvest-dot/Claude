@@ -4394,7 +4394,6 @@ function loadCourtNotes(){ try { return JSON.parse(localStorage.getItem('gg.cour
 function saveCourtNotes(o){ try { localStorage.setItem('gg.courtnotes', JSON.stringify(o || {})); } catch { toast('Note too long to save on this device'); } }
 function getCourtNote(key){ const o = loadCourtNotes(); return Object.assign({ note: '', review: '' }, o[key]); }
 function setCourtNote(key, patch){ const o = loadCourtNotes(); o[key] = Object.assign({ note: '', review: '' }, o[key], patch); saveCourtNotes(o); }
-function rvId(key){ return 'rv_' + key.replace(/[^a-z0-9]/gi, '_'); }
 // Re-render whichever surface a note lives on (cheap for TC — uses cached data).
 function rvRerender(kind){
   if (kind === 'ex') return showExFiles();
@@ -4406,18 +4405,28 @@ function courtSig(x){
   const a = (x.raw || []).flatMap(s => (s.gets || []).map(g => String(g.player || g.pick || ''))).filter(Boolean).sort().join(',');
   return (x.date || '') + '#' + a;
 }
-// The shared notes-and-review panel injected into every trade / owner card.
+// The shared notes-and-review panel injected into every trade / owner card. No
+// element ids — the same trade shows in both Exhibit A and the docket, so the
+// handlers find the textarea relative to the clicked button (class .rvta).
 function reviewPanel(key, kind){
-  const n = getCourtNote(key), id = rvId(key);
+  const n = getCourtNote(key);
   const revLabel = kind === 'ex' ? '👻 The Ex-Files · verdict revised' : '🧑‍⚖️ The newsroom, reconsidering';
   const saved = n.review ? `<div class="card" style="margin:8px 0 2px;border-color:var(--accent-d);background:var(--bg2)"><div class="byline">${revLabel}</div><div class="body" style="font-size:13px;white-space:pre-wrap">${esc(n.review)}</div></div>` : '';
   return `<div class="rvnotes" style="margin-top:9px;border-top:1px dashed var(--line);padding-top:8px">
     <div class="faint" style="font-size:11px;margin-bottom:5px">📌 <b>Reviewer's note</b> — add context (an injury, the real backstory, what the pick became). The newsroom will weigh it.</div>
-    <textarea id="${id}" class="rvta" placeholder="Add what the box score doesn't show…" style="width:100%;min-height:52px;font-size:13px;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);resize:vertical;box-sizing:border-box">${esc(n.note || '')}</textarea>
+    <textarea class="rvta" placeholder="Add what the box score doesn't show…" style="width:100%;min-height:52px;font-size:13px;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);resize:vertical;box-sizing:border-box">${esc(n.note || '')}</textarea>
     <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
       <button class="btn ghost" data-act="rv-save" data-key="${esc(key)}" data-kind="${kind}" style="width:auto;padding:6px 12px;font-size:12px">Save note</button>
       <button class="btn" data-act="rv-ai" data-key="${esc(key)}" data-kind="${kind}" style="width:auto;padding:6px 12px;font-size:12px">⚖️ Re-review with this</button>
     </div>${saved}</div>`;
+}
+// Toggle-collapsed wrapper around reviewPanel — the "📌 add note ›" affordance
+// used on both the compact docket rows and the Exhibit A heist writeups.
+function reviewBlock(key, kind){
+  const n = getCourtNote(key), open = !!(n.note || n.review);
+  const tag = n.review ? 'reviewed' : n.note ? 'note' : 'add note';
+  return `<div style="text-align:right"><button class="linkbtn" data-act="rv-toggle" style="font-size:11px;white-space:nowrap">📌 ${tag} ›</button></div>
+    <div class="rvwrap" style="display:${open ? 'block' : 'none'}">${reviewPanel(key, kind)}</div>`;
 }
 // Plain text completion — weigh the user's note against the standing verdict.
 async function rvCallClaude(system, ctx){
@@ -4498,7 +4507,6 @@ function tcAllChatDeals(){
   deals.sort((a, b) => b.top - a.top);
   return deals;
 }
-function rvWrapId(key){ return 'rvw_' + key.replace(/[^a-z0-9]/gi, '_'); }
 // One COMPACT docket line per trade: 2–3 lines — rating + net, the swap in one
 // line, a one-line verdict — with the reviewer's-notes panel tucked behind a
 // toggle so 196 deals stay skimmable.
@@ -4512,17 +4520,14 @@ function tcChatDocketCard(deal){
   const verdict = deal.netAt[W.i] < TC_WIN
     ? `Even money — nobody got fleeced.`
     : `${esc(W.s.team)} +${money(deal.netAt[W.i]).replace(/^\+/, '')}${deal.netAt[L.i] < 0 ? ` · ${esc(L.s.team)} ${money(deal.netAt[L.i])}` : ''} on today's board.`;
-  const n = getCourtNote(key), open = !!(n.note || n.review);
-  const tag = n.review ? 'reviewed' : n.note ? 'note' : 'add note';
+  const teamTag = order.length >= 3 ? `<span class="faint" style="font-size:10px;font-weight:800">· ${order.length}-TEAM</span> ` : '';
   return `<div class="card" style="margin-bottom:5px;padding:9px 12px">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
-      <span style="font-weight:800;font-size:12px;color:${r.c}">${r.ic} ${r.tag} · ${money(deal.netAt[W.i])}</span>
+      <span style="font-weight:800;font-size:12px;color:${r.c}">${r.ic} ${r.tag} · ${money(deal.netAt[W.i])} ${teamTag}</span>
       <span class="faint" style="font-size:11px;white-space:nowrap">${esc(deal.date || String(deal.season || ''))}</span></div>
     <div style="font-size:12px;margin-top:2px;line-height:1.4">${swap}</div>
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:2px">
-      <span class="dt" style="font-size:11px">${verdict}</span>
-      <button class="linkbtn" data-act="rv-toggle" data-key="${esc(key)}" style="font-size:11px;white-space:nowrap">📌 ${tag} ›</button></div>
-    <div id="${rvWrapId(key)}" style="display:${open ? 'block' : 'none'}">${reviewPanel(key, 'tcc')}</div>
+    <div class="dt" style="font-size:11px;margin-top:2px">${verdict}</div>
+    ${reviewBlock(key, 'tcc')}
   </div>`;
 }
 // A full narrative writeup of a lopsided chat-ledger deal — Exhibit A material.
@@ -4531,26 +4536,37 @@ function tcChatHeistCard(deal){
   const order = deal.raw.map((s, i) => ({ s, i })).sort((a, b) => deal.netAt[b.i] - deal.netAt[a.i]);
   const W = order[0], L = order[order.length - 1];
   const wn = W.s.team, ln = L.s.team, wnet = deal.netAt[W.i];
+  const multi = order.length >= 3, key = 'tcc::' + courtSig(deal);
+  const others = order.slice(1).map(o => o.s.team);                 // everyone who wasn't the winner
   let seed = Math.round(wnet); for (const ch of String(deal.date || deal.season || '')) seed += ch.charCodeAt(0);
   const pk = (arr, o) => seededPick(arr, seed + o);
-  const head = pk([`${wn} Fleeces ${ln}`, `${ln} Got Robbed in Broad Daylight`, `Grand Larceny: ${wn} Cleans Out ${ln}`, `${wn} Won It Before the Ink Dried`], 1);
+  const head = multi
+    ? pk([`${wn} Wins the ${order.length}-Way`, `${order.length}-Team Scramble: ${wn} Walks Away Rich`, `${wn} Fleeces the Whole Table`, `Everybody Traded — ${wn} Won`], 1)
+    : pk([`${wn} Fleeces ${ln}`, `${ln} Got Robbed in Broad Daylight`, `Grand Larceny: ${wn} Cleans Out ${ln}`, `${wn} Won It Before the Ink Dried`], 1);
   const assetHtml = a => { const at = tcChatAssetVal(a, deal.season, true); const nm = a.player || a.pick || 'asset';
     return `<div class="trrow"><span class="pos" style="${a.pick ? 'color:var(--amber);border-color:var(--amber)' : ''}">${a.pick ? '◆' : '·'}</span><span class="nm" style="flex:1">${esc(nm)}</span><span class="val">$${at}</span></div>`; };
   // flex-basis 150px + wrap so 3+-team deals stack into readable full-width blocks
   // instead of crushing names into one-letter-per-line columns.
   const col = o => { const net = deal.netAt[o.i], c = net >= 0 ? '#3fb950' : 'var(--red)';
     return `<div class="trside" style="flex:1 1 150px;min-width:150px"><div class="trmgr">${esc(o.s.team)} gets <span class="faint" style="font-weight:600;color:${c}">(${money(net)})</span></div>${o.s.gets.map(assetHtml).join('') || '<div class="trrow"><span class="nm">future considerations</span></div>'}</div>`; };
-  const body = pk([
-    `By our value board this is highway robbery — ${wn} walks away ${money(wnet)} to the good. ${ln}, buddy, call somebody before you do that again.`,
-    `Our numbers have ${wn} winning this by ${money(Math.abs(wnet))}, and it isn't close. Somewhere ${ln} is still telling themselves it was "about fit."`,
-    `${wn} saw ${ln} coming a mile off. ${money(wnet)} of surplus, graded on how the pieces actually aged.`,
-  ], 2);
+  const body = multi
+    ? pk([
+      `A ${order.length}-team scramble, and ${wn} came out the only real winner — ${money(wnet)} of surplus once every piece is priced. ${joinList(others)} split the scraps.`,
+      `Three phones, one clear victor. Our board has ${wn} up ${money(wnet)} across the whole tangle; ${joinList(others)} can argue over who finished second.`,
+      `When the dust settled on this ${order.length}-way, ${wn} was the house — ${money(wnet)} to the good, graded on how it all aged.`,
+    ], 2)
+    : pk([
+      `By our value board this is highway robbery — ${wn} walks away ${money(wnet)} to the good. ${ln}, buddy, call somebody before you do that again.`,
+      `Our numbers have ${wn} winning this by ${money(Math.abs(wnet))}, and it isn't close. Somewhere ${ln} is still telling themselves it was "about fit."`,
+      `${wn} saw ${ln} coming a mile off. ${money(wnet)} of surplus, graded on how the pieces actually aged.`,
+    ], 2);
   return `<div class="card story">
-    <div class="byline">⚖️ The Trade Court · ${esc(deal.date || String(deal.season || ''))}</div>
+    <div class="byline">⚖️ The Trade Court · ${esc(deal.date || String(deal.season || ''))}${multi ? ` · <b>${order.length}-TEAM TRADE</b>` : ''}</div>
     <h2>${esc(head)}</h2>
-    <div class="dek">${esc(wn)} came out <b style="color:#3fb950">${money(wnet)}</b> on today's board.</div>
+    <div class="dek">${multi ? `A ${order.length}-team deal — ` : ''}${esc(wn)} came out <b style="color:#3fb950">${money(wnet)}</b> on today's board.</div>
     <div style="display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:6px 0 12px">${order.map(col).join('')}</div>
     <p class="body">${esc(body)}</p>
+    ${reviewBlock(key, 'tcc')}
   </div>`;
 }
 function showTeamTrades(team) {
@@ -5912,18 +5928,20 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
   if (act === 'ex-files') return showExFiles();
   if (act === 'rv-toggle') {
-    const w = document.getElementById(rvWrapId(t.dataset.key));
+    const w = t.closest('.card') ? t.closest('.card').querySelector('.rvwrap') : null;
     if (w) w.style.display = w.style.display === 'none' ? 'block' : 'none';
     return;
   }
   if (act === 'rv-save') {
-    const key = t.dataset.key, kind = t.dataset.kind, ta = document.getElementById(rvId(key));
+    const key = t.dataset.key, kind = t.dataset.kind;
+    const box = t.closest('.rvnotes'), ta = box ? box.querySelector('.rvta') : null;
     setCourtNote(key, { note: ta ? ta.value.trim() : '' });
     toast(ta && ta.value.trim() ? 'Note saved' : 'Note cleared');
     return rvRerender(kind);
   }
   if (act === 'rv-ai') {
-    const key = t.dataset.key, kind = t.dataset.kind, ta = document.getElementById(rvId(key));
+    const key = t.dataset.key, kind = t.dataset.kind;
+    const box = t.closest('.rvnotes'), ta = box ? box.querySelector('.rvta') : null;
     if (ta) setCourtNote(key, { note: ta.value.trim() });
     if (!(ta && ta.value.trim())) { toast('Write a note first'); return; }
     if (!(S.apiKey || '').trim()) { toast('Add your Anthropic API key in Settings first'); return showSettings(); }
