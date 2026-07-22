@@ -4332,7 +4332,7 @@ function tcTeamCanon(name) {
 //   snapshot we have. Player values come from the dated DynastyProcess history;
 //   picks stay on the draft-capital model (frozen — pick outcomes are phase 2).
 function tcChatAssetVal(a, season, atTime) {
-  const targetYear = atTime ? season : Math.min(2026, (season || 2023) + 3);
+  const targetYear = atTime ? season : Math.min(DP_LAST_YEAR, (season || DP_LAST_YEAR - 3) + 3);
   if (a.player) {
     const dv = dpValueAt(a.player, targetYear);
     if (dv != null) return dv;
@@ -4476,7 +4476,7 @@ async function rvAiReview(key, kind){
     const g = o => (o.s.gets || []).map(a => a.player || a.pick).filter(Boolean).join(', ') || 'future considerations';
     const money = n => (n < 0 ? '-$' : '+$') + Math.abs(Math.round(n));
     system = JUDGE;
-    ctx = `Trade from ${deal.date || deal.season || 'an earlier season'}. On the value board the court called this a "${tcTradeRating(deal.netAt[W.i]).tag}". ${W.s.team} received: ${g(W)}. ${L.s.team} received: ${g(L)}. Graded on values the day of the deal, ${W.s.team} came out ${money(deal.netAt[W.i])}${deal.netAt[L.i] < 0 ? `; ${L.s.team} came out ${money(deal.netAt[L.i])}` : ''} (in hindsight ~3 years later, ${W.s.team} is ${money(deal.netLong[W.i])}).\n\nThe owner's added context: "${note}"`;
+    ctx = `Trade from ${deal.date || deal.season || 'an earlier season'}. On the value board the court called this a "${tcTradeRating(deal.netAt[W.i]).tag}". ${W.s.team} received: ${g(W)}. ${L.s.team} received: ${g(L)}. Graded on values the day of the deal, ${W.s.team} came out ${money(deal.netAt[W.i])}${deal.netAt[L.i] < 0 ? `; ${L.s.team} came out ${money(deal.netAt[L.i])}` : ''} (${deal.hindYears >= 3 ? 'in hindsight ~3 years later' : `${deal.hindYears} year${deal.hindYears === 1 ? '' : 's'} on so far`}, ${W.s.team} is ${money(deal.netLong[W.i])}).\n\nThe owner's added context: "${note}"`;
   } else {
     const m = (S.records && S.records.standings || []).find(r => r.name === key.split('::')[1]);
     if (!m) { toast('Could not re-locate that owner'); return; }
@@ -4510,7 +4510,8 @@ function tcAllChatDeals(){
     const potAt = sum(recvAt), potLong = sum(recvLong);
     const netAt = recvAt.map(r => share(r, potAt, n));
     const netLong = recvLong.map(r => share(r, potLong, n));
-    deals.push({ date: tr.date, season: tr.season, raw, netAt, netLong, top: Math.max(...netAt) });
+    const hindYears = Math.min(3, DP_LAST_YEAR - (tr.season || DP_LAST_YEAR));  // capped at 3; less for recent trades
+    deals.push({ date: tr.date, season: tr.season, raw, netAt, netLong, hindYears, matured: hindYears >= 3, top: Math.max(...netAt) });
   });
   deals.sort((a, b) => b.top - a.top);
   return deals;
@@ -4525,7 +4526,8 @@ function tcChatDocketCard(deal){
   const r = tcTradeRating(deal.netAt[W.i]), key = 'tcc::' + courtSig(deal);
   const names = o => o.s.gets.map(a => a.player || a.pick || '?').join(', ') || 'future considerations';
   const swap = order.map(o => `<b>${esc(o.s.team)}</b> <span class="faint">${esc(names(o))}</span>`).join(' <span style="color:var(--amber)">⇄</span> ');
-  const aged = Math.abs(deal.netLong[W.i] - deal.netAt[W.i]) >= 5 ? ` <span class="faint">· ${money(deal.netLong[W.i])} in hindsight (~3 yrs)</span>` : '';
+  const hp = hindPhrase(deal);
+  const aged = (hp && Math.abs(deal.netLong[W.i] - deal.netAt[W.i]) >= 5) ? ` <span class="faint">· ${money(deal.netLong[W.i])} ${hp}</span>` : '';
   const verdict = deal.netAt[W.i] < TC_WIN
     ? `Even money — nobody got fleeced.`
     : `${esc(W.s.team)} ${money(deal.netAt[W.i])} the day of the deal${deal.netAt[L.i] < 0 ? ` · ${esc(L.s.team)} ${money(deal.netAt[L.i])}` : ''}.${aged}`;
@@ -4572,7 +4574,7 @@ function tcChatHeistCard(deal){
   return `<div class="card story">
     <div class="byline">⚖️ The Trade Court · ${esc(deal.date || String(deal.season || ''))}${multi ? ` · <b>${order.length}-TEAM TRADE</b>` : ''}</div>
     <h2>${esc(head)}</h2>
-    <div class="dek">${multi ? `A ${order.length}-team deal — ` : ''}${esc(wn)} came out <b style="color:#3fb950">${money(wnet)}</b> the day of the deal${Math.abs(deal.netLong[W.i] - wnet) >= 5 ? ` — <b>${money(deal.netLong[W.i])}</b> in hindsight, ~3 years later` : ''}.</div>
+    <div class="dek">${multi ? `A ${order.length}-team deal — ` : ''}${esc(wn)} came out <b style="color:#3fb950">${money(wnet)}</b> the day of the deal${(hindPhrase(deal) && Math.abs(deal.netLong[W.i] - wnet) >= 5) ? ` — <b>${money(deal.netLong[W.i])}</b> ${hindPhrase(deal)}` : ''}.</div>
     <div style="display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:6px 0 12px">${order.map(col).join('')}</div>
     <p class="body">${esc(body)}</p>
     ${reviewBlock(key, 'tcc')}
@@ -4820,6 +4822,15 @@ async function loadDpValues() {
 // "jones jr" stay distinct. Values are the real player, normalized on lookup.
 const DP_ALIAS = { 'isaiah pacheco':'isiah pacheco','pat friermuth':'pat freiermuth','jerrick mckinnon':'jerick mckinnon','dontavian wicks':'dontayvion wicks','rashaad white':'rachaad white','z charbonnet':'zach charbonnet','x leggete':'xavier legette','j metchie':'john metchie','tory horn':'tory horton','jayden blue':'jaydon blue','b irving':'bucky irving','k allen':'keenan allen',
   'red rocket':'andy dalton','the stache':'gardner minshew','ty':'ty hilton','jones':'aaron jones','jones jr':'ronald jones','cook':'dalvin cook','okonkwo':'chig okonkwo' };
+const DP_LAST_YEAR = 2026;                                  // newest value snapshot on file
+// Phrase for the hindsight horizon of a deal: full 3 years, or the actual
+// (shorter) elapsed time for trades younger than 3 years.
+function hindPhrase(deal){
+  const y = deal.hindYears;
+  if (y <= 0) return null;                                  // too recent to have aged at all
+  if (y >= 3) return 'in hindsight (~3 yrs later)';
+  return `so far (${y} yr${y === 1 ? '' : 's'} on — not yet 3)`;
+}
 function dpNorm(s){ return String(s || '').toLowerCase().replace(/[.,'’]/g, '').replace(/\s+(jr|sr|ii|iii|iv|v)\b/g, '').replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim(); }
 function buildDpIndex(d){
   const idx = {};                                            // last name -> [{key,first,max}]
