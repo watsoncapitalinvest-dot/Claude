@@ -2346,6 +2346,7 @@ function showExFiles() {
         <span><b style="color:var(--text)">${esc(m.record)}</b> record</span><span><b style="color:var(--text)">${((m.winPct || 0) * 100).toFixed(1)}%</b></span>
         <span><b style="color:var(--text)">${m.numSeasons || 0}</b> seasons</span><span><b style="color:var(--text)">${m.playoffs || 0}</b> playoff runs</span><span>${tr}</span></div>
       <p class="body">${esc(v.line)}</p>
+      ${reviewPanel('ex::' + m.name, 'ex')}
     </div>`;
   }).join('');
   const method = `<div class="card" style="margin-top:14px"><div class="faint" style="font-size:11px;line-height:1.6"><b>Case criteria:</b> a departed franchise is any team in the Record Book with no 2025 season. Records, tenure and trophies come straight from League Legacy; the verdicts are the newsroom's own — and the newsroom holds grudges.</div></div>`;
@@ -4387,8 +4388,73 @@ function tcTeamTrades(team) {
   out.sort((a, b) => Math.abs(b.netAt) - Math.abs(a.netAt));
   return out;
 }
+// ---- Reviewer's Notes: user-added context on Trade Court deals + Ex-Files
+//  owners, which the newsroom AI weighs when it reconsiders its verdict. ------
+function loadCourtNotes(){ try { return JSON.parse(localStorage.getItem('gg.courtnotes') || '{}') || {}; } catch { return {}; } }
+function saveCourtNotes(o){ try { localStorage.setItem('gg.courtnotes', JSON.stringify(o || {})); } catch { toast('Note too long to save on this device'); } }
+function getCourtNote(key){ const o = loadCourtNotes(); return Object.assign({ note: '', review: '' }, o[key]); }
+function setCourtNote(key, patch){ const o = loadCourtNotes(); o[key] = Object.assign({ note: '', review: '' }, o[key], patch); saveCourtNotes(o); }
+function rvId(key){ return 'rv_' + key.replace(/[^a-z0-9]/gi, '_'); }
+// A stable content signature for a parsed trade (survives re-sorting/re-grading).
+function courtSig(x){
+  const a = (x.raw || []).flatMap(s => (s.gets || []).map(g => String(g.player || g.pick || ''))).filter(Boolean).sort().join(',');
+  return (x.date || '') + '#' + a;
+}
+// The shared notes-and-review panel injected into every trade / owner card.
+function reviewPanel(key, kind){
+  const n = getCourtNote(key), id = rvId(key);
+  const saved = n.review ? `<div class="card" style="margin:8px 0 2px;border-color:var(--accent-d);background:var(--bg2)"><div class="byline">🧑‍⚖️ The newsroom, reconsidering</div><div class="body" style="font-size:13px;white-space:pre-wrap">${esc(n.review)}</div></div>` : '';
+  return `<div class="rvnotes" style="margin-top:9px;border-top:1px dashed var(--line);padding-top:8px">
+    <div class="faint" style="font-size:11px;margin-bottom:5px">📌 <b>Reviewer's note</b> — add context (an injury, the real backstory, what the pick became). The newsroom will weigh it.</div>
+    <textarea id="${id}" class="rvta" placeholder="Add what the box score doesn't show…" style="width:100%;min-height:52px;font-size:13px;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);resize:vertical;box-sizing:border-box">${esc(n.note || '')}</textarea>
+    <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+      <button class="btn ghost" data-act="rv-save" data-key="${esc(key)}" data-kind="${kind}" style="width:auto;padding:6px 12px;font-size:12px">Save note</button>
+      <button class="btn" data-act="rv-ai" data-key="${esc(key)}" data-kind="${kind}" style="width:auto;padding:6px 12px;font-size:12px">⚖️ Re-review with this</button>
+    </div>${saved}</div>`;
+}
+// Plain text completion — weigh the user's note against the standing verdict.
+async function rvCallClaude(system, ctx){
+  const key = (S.apiKey || '').trim();
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: 'claude-opus-4-8', max_tokens: 450, system, messages: [{ role: 'user', content: ctx }] }),
+  });
+  if (!res.ok) { let d = ''; try { const j = await res.json(); d = (j && j.error && j.error.message) || ''; } catch {} throw new Error('api-' + res.status + (d ? ': ' + d : '')); }
+  const data = await res.json();
+  return (((data.content || []).find(b => b.type === 'text') || {}).text || '').trim();
+}
+// One-line English summary of a parsed trade, from the given team's side.
+function tcDescribe(x, team){
+  const mine = x.raw[x.mineIdx], others = x.raw.filter((s, i) => i !== x.mineIdx);
+  const g = s => (s.gets || []).map(a => a.player || a.pick).filter(Boolean).join(', ') || 'nothing';
+  const rd = n => (n >= 0 ? '+' : '') + Math.round(n);
+  return `On ${x.date}, ${team} traded with ${others.map(o => o.team).join(' & ')}. ${team} received: ${g(mine)}. The other side received: ${others.map(o => `${o.team} got ${g(o)}`).join('; ')}. On the newsroom's value board this graded — for ${team}, positive = ${team} won — At-the-time ${rd(x.netAt)} and Long-run ${rd(x.netLong)}.`;
+}
+async function rvAiReview(key, kind){
+  const n = getCourtNote(key), note = (n.note || '').trim();
+  if (!note) { toast('Write a note first'); return; }
+  if (!(S.apiKey || '').trim()) { toast('Add your Anthropic API key in Settings first'); return; }
+  let system, ctx;
+  if (kind === 'tc') {
+    const team = S._tcTeam, sig = key.split('::')[2];
+    const x = tcTeamTrades(team).find(t => courtSig(t) === sig);
+    if (!x) { toast('Could not re-locate that trade'); return; }
+    system = `You are the trade judge for a 16-team Superflex dynasty fantasy-football league's newsroom — wry, sharp, and fair. You already graded a trade on a dollar value board. The team's owner has added context the box score can't see. Reconsider your verdict in light of it: explicitly CONFIRM, SOFTEN, or REVERSE, and say which. Weigh the note honestly — a real injury, a pick that busted or hit, or league context can flip a grade — but don't be a pushover for spin. 2–4 sentences, in the newsroom's voice. No preamble.`;
+    ctx = `${tcDescribe(x, team)}\n\nThe owner's added context: "${note}"`;
+  } else {
+    const m = (S.records && S.records.standings || []).find(r => r.name === key.split('::')[1]);
+    if (!m) { toast('Could not re-locate that owner'); return; }
+    const v = exVerdict(m);
+    system = `You are the newsroom columnist for a long-running dynasty fantasy-football league, writing "The Ex-Files" — obituaries for departed owners. You hold grudges but you're fair. You already filed a verdict on this owner. Someone has come forward with new context. Reconsider: explicitly CONFIRM, SOFTEN, or REVERSE the verdict, and say which. 2–4 sentences, in your dry columnist voice. No preamble.`;
+    ctx = `Departed owner: ${m.name}. Seasons: ${m.seasons}. All-time record ${m.record} (${((m.winPct || 0) * 100).toFixed(1)}%), ${m.numSeasons || 0} seasons, ${m.playoffs || 0} playoff runs, ${m.titles || 0} titles.\nThe newsroom's standing verdict: "${v.tag}" — ${v.line}\n\nNew context from the league: "${note}"`;
+  }
+  const out = await rvCallClaude(system, ctx);
+  setCourtNote(key, { review: out });
+}
 function showTeamTrades(team) {
   S.reading = false;
+  S._tcTeam = team;
   const back = `<button class="btn ghost" data-act="trade-court" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ The Trade Court</button>`;
   const money = n => (n < 0 ? '-$' : '+$') + Math.abs(Math.round(n));
   const list = tcTeamTrades(team);
@@ -4414,6 +4480,7 @@ function showTeamTrades(team) {
         <div class="trside" style="flex:1;min-width:130px"><div class="trmgr">${esc(others.map(o => o.team).join(' / '))} got</div>${others.flatMap(o => o.gets).map(a => assetHtml(a, x.season)).join('') || '<div class="dt faint">—</div>'}</div>
       </div>
       <div style="margin-top:7px;font-size:12px;font-weight:800">At the time <span style="color:${cA}">${money(x.netAt)}</span> &nbsp;·&nbsp; Long run <span style="color:${cL}">${money(x.netLong)}</span></div>
+      ${reviewPanel('tc::' + team + '::' + courtSig(x), 'tc')}
     </div>`;
   }).join('');
   shell(summary + cards);
@@ -5739,6 +5806,21 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'trade-court') return showTradeCourt();
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
   if (act === 'ex-files') return showExFiles();
+  if (act === 'rv-save') {
+    const key = t.dataset.key, ta = document.getElementById(rvId(key));
+    setCourtNote(key, { note: ta ? ta.value.trim() : '' });
+    toast(ta && ta.value.trim() ? 'Note saved' : 'Note cleared');
+    return (t.dataset.kind === 'tc' && S._tcTeam) ? showTeamTrades(S._tcTeam) : showExFiles();
+  }
+  if (act === 'rv-ai') {
+    const key = t.dataset.key, kind = t.dataset.kind, ta = document.getElementById(rvId(key));
+    if (ta) setCourtNote(key, { note: ta.value.trim() });
+    if (!(ta && ta.value.trim())) { toast('Write a note first'); return; }
+    if (!(S.apiKey || '').trim()) { toast('Add your Anthropic API key in Settings first'); return showSettings(); }
+    const btn = t, old = btn.textContent; btn.disabled = true; btn.textContent = '⚖️ Deliberating…';
+    try { await rvAiReview(key, kind); return (kind === 'tc' && S._tcTeam) ? showTeamTrades(S._tcTeam) : showExFiles(); }
+    catch (err) { btn.disabled = false; btn.textContent = old; toast(/401/.test(err.message) ? 'That API key was rejected' : 'The newsroom is unreachable — try again'); return; }
+  }
   if (act === 'dashboard' || act === 'questionnaire') return showDashboard();
   if (act === 'calendar') return showCalendar();
   if (act === 'investigations') return showInvestigations();
