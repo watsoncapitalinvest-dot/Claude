@@ -4521,6 +4521,32 @@ function tcChatDocketCard(deal){
     ${reviewPanel(key, 'tcc')}
   </div>`;
 }
+// A full narrative writeup of a lopsided chat-ledger deal — Exhibit A material.
+function tcChatHeistCard(deal){
+  const money = n => (n < 0 ? '-$' : '+$') + Math.abs(Math.round(n));
+  const order = deal.raw.map((s, i) => ({ s, i })).sort((a, b) => deal.netAt[b.i] - deal.netAt[a.i]);
+  const W = order[0], L = order[order.length - 1];
+  const wn = W.s.team, ln = L.s.team, wnet = deal.netAt[W.i];
+  let seed = Math.round(wnet); for (const ch of String(deal.date || deal.season || '')) seed += ch.charCodeAt(0);
+  const pk = (arr, o) => seededPick(arr, seed + o);
+  const head = pk([`${wn} Fleeces ${ln}`, `${ln} Got Robbed in Broad Daylight`, `Grand Larceny: ${wn} Cleans Out ${ln}`, `${wn} Won It Before the Ink Dried`], 1);
+  const assetHtml = a => { const at = tcChatAssetVal(a, deal.season, true); const nm = a.player || a.pick || 'asset';
+    return `<div class="trrow"><span class="pos" style="${a.pick ? 'color:var(--amber);border-color:var(--amber)' : ''}">${a.pick ? '◆' : '·'}</span><span class="nm" style="flex:1">${esc(nm)}</span><span class="val">$${at}</span></div>`; };
+  const col = o => { const net = deal.netAt[o.i];
+    return `<div class="trside"><div class="trmgr">${esc(o.s.team)} gets <span class="faint" style="font-weight:600">(${money(net)})</span></div>${o.s.gets.map(assetHtml).join('') || '<div class="trrow"><span class="nm">future considerations</span></div>'}</div>`; };
+  const body = pk([
+    `By our value board this is highway robbery — ${wn} walks away ${money(wnet)} to the good. ${ln}, buddy, call somebody before you do that again.`,
+    `Our numbers have ${wn} winning this by ${money(Math.abs(wnet))}, and it isn't close. Somewhere ${ln} is still telling themselves it was "about fit."`,
+    `${wn} saw ${ln} coming a mile off. ${money(wnet)} of surplus, graded on how the pieces actually aged.`,
+  ], 2);
+  return `<div class="card story">
+    <div class="byline">⚖️ The Trade Court · ${esc(deal.date || String(deal.season || ''))}</div>
+    <h2>${esc(head)}</h2>
+    <div class="dek">${esc(wn)} came out <b style="color:#3fb950">${money(wnet)}</b> on today's board.</div>
+    <div class="trdeal">${order.map(col).join('<div class="trswap">⇄</div>')}</div>
+    <p class="body">${esc(body)}</p>
+  </div>`;
+}
 function showTeamTrades(team) {
   S.reading = false;
   S._tcTeam = team;
@@ -4603,9 +4629,6 @@ async function showTradeCourt(useCache) {
   // Grade the parsed chat ledger up front so the docket can headline the real total.
   const CL = tcGradeChatLedger();
   // The Docket — league-wide numbers.
-  const swapped = Math.round(sum(trades.map(t => sum(t.sides.map(s => s.recv)))));
-  const heists = [...trades].map(t => ({ t, top: Math.max(...t.sides.map(s => s.net)) })).sort((a, b) => b.top - a.top);
-  const bigHeist = heists[0];
   const docket = `<div class="sbgrid" style="margin-bottom:6px">
     <div class="card" style="text-align:center"><div class="at" style="margin:0">${CL.graded || trades.length}</div><div class="faint" style="font-size:11px">trades graded</div></div>
     <div class="card" style="text-align:center"><div class="at" style="margin:0">${(CL.count || trades.length)}</div><div class="faint" style="font-size:11px">on the docket (chat + Sleeper)</div></div>
@@ -4648,14 +4671,16 @@ async function showTradeCourt(useCache) {
     <div class="card"><div class="byline">🎁 The League Piggy Bank</div><div class="at" style="margin:2px 0">${esc(mark.name)}</div><div class="dt">${tcVerdict(mark.net).line} Down <b style="color:var(--red)">${tcMoney(mark.net)}</b> and still picking up the phone.</div></div>
   </div>` : '';
 
-  // Exhibit A — the marquee heist, written up in full (from Sleeper's itemized
-  // grades, which is the only source with the roster detail for the narrative).
-  const topHeists = heists.filter(h => h.top >= 15).slice(0, 1).map(h => tcHeistCard(h.t)).join('');
-  const heistSec = topHeists ? `<div class="seclabel" style="margin:22px 0 8px">Exhibit A — The Great Heist</div>${topHeists}` : '';
-  // The Full Docket — EVERY trade ON FILE (the parsed chat ledger, all teams and
-  // all seasons — not just the Sleeper era), biggest swing first, each with a
-  // rating, a net value, a verdict and a reviewer's-notes box to reconsider.
+  // Grade EVERY trade on file (the parsed chat ledger — all teams, all seasons),
+  // sorted biggest swing first. Feeds both Exhibit A and the Full Docket.
   const allDeals = tcAllChatDeals();
+  // Exhibit A — the most lopsided deals on file, written up in full. We take the
+  // top few blowouts (down to a "Heist"-tier margin) so it's the worst robberies
+  // across league history, not one hand-picked Sleeper-era trade.
+  const exhibits = allDeals.filter(d => d.top >= 18).slice(0, 3).map(tcChatHeistCard).join('');
+  const heistSec = exhibits ? `<div class="seclabel" style="margin:22px 0 8px">Exhibit A — The Great Heists</div>${exhibits}` : '';
+  // The Full Docket — every trade on file, each with a rating, a net value, a
+  // verdict and a reviewer's-notes box the court will reconsider.
   const docketCards = allDeals.map(tcChatDocketCard).join('');
   const fullDocket = docketCards ? `<div class="seclabel" style="margin:22px 0 6px">The Full Docket — all ${allDeals.length} trades graded</div>
     <div class="faint" style="font-size:11px;margin-bottom:8px">Every trade on file across every team and season, biggest swing first — a rating, the net on today's board, and a verdict. Disagree with a call? Add a note to any deal and the court will reconsider.</div>${docketCards}` : '';
