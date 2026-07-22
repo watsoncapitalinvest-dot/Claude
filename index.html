@@ -3084,6 +3084,7 @@ function showMenu() {
   const tools = [
     ['draft-room', '🎯', 'The War Room', 'Mocks, trades & the 15–16 plan'],
     ['trade-court', '⚖️', 'The Trade Court', 'Every trade graded, every GM judged'],
+    ['draft-desk', '🎓', 'The Draft Board', 'Every pick graded · POP’s report card'],
     ['dashboard', '🗞️', 'Newsroom HQ', 'Weekly checklist, brief & calendar'],
     ['predraft-view', '🏈', 'Pre-Draft Issue', 'Build the Draft Issue'],
     ['cover-art', '🎨', 'Cover Art', 'Art direction for the cover'],
@@ -4699,7 +4700,7 @@ function tcDraftSection(team){
       const call = r.hindYears < 3 ? `<span class="faint">${r.hindYears}y in — still cooking</span>`
         : re == null ? '' : Math.abs(re) <= 0.4 ? '<span style="color:#3fb950">✅ fair by his curve</span>'
         : re > 0 ? '<span style="color:var(--amber)">📈 high even for him</span>' : '<span style="color:#3fb950">📉 low even for him</span>';
-      return `<div class="dt" style="font-size:12px;padding:2px 0">${r.year}: POP gave <b>${esc(r.pop)}</b> → aged like <b>${esc(r.obj)}</b> · ${call}</div>`;
+      return `<div style="padding:3px 0"><div class="dt" style="font-size:12px">${r.year}: POP gave <b>${esc(r.pop)}</b> → aged like <b>${esc(r.obj)}</b> · ${call}</div><div class="faint" style="font-size:11px">${esc(r.reason || '')}</div></div>`;
     }).join('')}</div>` : '';
   return `<div class="seclabel" style="margin:18px 0 8px">🎯 The Draft Room — ${md.length} pick${md.length === 1 ? '' : 's'} made</div>${gradeCard}
     <div class="card"><div class="dt" style="font-size:12px">Spent <b>${$(totCost)}</b> of draft capital → now worth <b style="color:${net >= 0 ? '#3fb950' : 'var(--red)'}">${$(totHind)}</b> <b style="color:${net >= 0 ? '#3fb950' : 'var(--red)'}">(${money(net)})</b>. Each pick shows its capital cost, the rookie's value that year, and his value ~3 years on.</div>
@@ -4878,7 +4879,7 @@ async function showTradeCourt(force) {
     <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Player values come from <b>DynastyProcess dated Superflex snapshots</b> — one per off-season, 2021→2026 — so each player carries his real market value <b>the day of the trade</b> and again <b>~3 years later</b>, powering the "At the time" and "In hindsight" columns. Draft picks are priced as picks the day of the trade (calibrated round model — mid-1st ≈ $48, 2nd ≈ $18, future picks discounted); <b>in hindsight each pick is re-valued as the player it actually became</b>, pulled from your Sleeper rookie-draft results. A pick that got flipped self-corrects — its value cancels across the two trades, leaving whatever the team got back. Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
   </div></div>`;
 
-  shell(freshLine + docket + reckoning + coverageCard + heroes + rankCard + heistSec + menageSec + fullDocket + tcGraderSection() + chatCard + method);
+  shell(freshLine + docket + reckoning + coverageCard + heroes + rankCard + heistSec + menageSec + fullDocket + chatCard + method);
 }
 
 // ---------------------------------------------------------------------
@@ -4949,9 +4950,17 @@ function tcGraderRows(){
     const popGpa = GP_GPA[g.grade];
     if (!picks.length) { rows.push({ year: +y, team, pop: g.grade, popGpa, noPicks: true, note: g.note }); return; }
     const hindYr = Math.min(DP_LAST_YEAR, +y + 3), hindYears = Math.min(3, DP_LAST_YEAR - +y);
-    let cap = 0, hind = 0; picks.forEach(p => { const c = tcPickCost(p.round, p.pickNo); cap += c; const h = dpValueAt(p.player, hindYr); hind += (h == null ? c : h); });
+    let cap = 0, hind = 0; const moves = [];
+    picks.forEach(p => { const c = tcPickCost(p.round, p.pickNo); cap += c; const rk = dpValueAt(p.player, +y); const h = dpValueAt(p.player, hindYr);
+      hind += (h == null ? c : h); moves.push({ player: p.player, rk: rk == null ? c : rk, h: h == null ? c : h }); });
+    // what changed since the draft-day prediction: biggest riser / faller by value
+    moves.forEach(m => m.d = m.h - m.rk);
+    const up = moves.slice().sort((a, b) => b.d - a.d)[0], dn = moves.slice().sort((a, b) => a.d - b.d)[0];
+    const dol = n => '$' + Math.round(Math.abs(n));
+    const reason = [up && up.d >= 5 ? `▲ ${up.player} ${dol(up.rk)}→${dol(up.h)}` : null, dn && dn.d <= -5 ? `▼ ${dn.player} ${dol(dn.rk)}→${dol(dn.h)}` : null]
+      .filter(Boolean).join(' · ') || 'the class held roughly to its draft-day value';
     const roi = cap ? hind / cap : 1, obj = gpObjGrade(roi);
-    rows.push({ year: +y, team, pop: g.grade, popGpa, obj: obj.letter, objGpa: obj.gpa, roi, hindYears, picks: picks.length, err: popGpa != null ? popGpa - obj.gpa : null, note: g.note });
+    rows.push({ year: +y, team, pop: g.grade, popGpa, obj: obj.letter, objGpa: obj.gpa, roi, hindYears, picks: picks.length, err: popGpa != null ? popGpa - obj.gpa : null, reason, note: g.note });
   });
   return rows.sort((a, b) => a.year - b.year || a.team.localeCompare(b.team));
 }
@@ -4974,18 +4983,43 @@ function tcGraderSection(){
   const byYear = {}; rows.forEach(r => (byYear[r.year] = byYear[r.year] || []).push(r));
   const blocks = Object.keys(byYear).sort().map(y => {
     const rs = byYear[y], dev = rs[0].hindYears < 3;
-    const trs = rs.map(r => { const v = verdict(r); return `<tr>
-        <td style="padding:5px 8px 5px 0"><b>${esc(r.team)}</b></td>
-        <td style="text-align:center;padding:5px 8px;font-weight:800">${esc(r.pop)}</td>
-        <td style="text-align:center;padding:5px 8px;color:var(--faint)">${r.noPicks ? '—' : esc(r.obj)}</td>
-        <td style="padding:5px 0 5px 8px;font-size:12px;white-space:nowrap">${v.i} <span class="faint">${v.t}</span></td></tr>`; }).join('');
-    return `<div class="card" style="overflow-x:auto;margin-bottom:8px"><div class="at" style="margin:0 0 4px;font-size:14px">${y} draft${dev ? ' <span class="faint" style="font-size:11px;font-weight:400">· still developing</span>' : ''}</div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.3px"><th style="text-align:left;padding-bottom:4px">Team</th><th style="padding-bottom:4px">POP</th><th style="padding-bottom:4px">Actual</th><th style="text-align:left;padding:0 0 4px 8px">Call</th></tr></thead><tbody>${trs}</tbody></table></div>`;
+    const trs = rs.map(r => { const v = verdict(r);
+      const reason = r.noPicks ? 'traded the class away' : (r.reason || '');
+      return `<div style="padding:7px 0;border-top:1px solid var(--line)">
+        <div style="display:flex;align-items:baseline;gap:8px;font-size:13px">
+          <b style="flex:1">${esc(r.team)}</b>
+          <span style="font-weight:800">${esc(r.pop)}</span><span class="faint" style="font-size:12px">→ ${r.noPicks ? '—' : esc(r.obj)}</span>
+          <span style="font-size:12px;white-space:nowrap">${v.i} <span class="faint">${v.t}</span></span></div>
+        <div class="faint" style="font-size:11px;margin-top:2px">${esc(reason)}</div></div>`; }).join('');
+    return `<div class="card" style="margin-bottom:8px"><div class="at" style="margin:0 0 2px;font-size:14px">${y} draft${dev ? ' <span class="faint" style="font-size:11px;font-weight:400">· still developing</span>' : ''}</div>
+      <div class="faint" style="font-size:10px;text-transform:uppercase;letter-spacing:.3px;display:flex;gap:8px"><span style="flex:1">Team</span><span>POP → Actual · call</span></div>${trs}</div>`;
   }).join('');
   return `<div class="seclabel" style="margin:22px 0 8px">🎓 Grading the Grader — Powers of Pain's Report Card</div>
     <div class="card" style="margin-bottom:8px"><div class="dt" style="font-size:12px">Across <b>${mat.length}</b> matured classes, POP grades <b>${biasTxt}</b> — about <b>${(bias >= 0 ? '+' : '') + bias.toFixed(1)}</b> of a letter ${bias >= 0 ? 'above' : 'below'} how they actually aged. Adjust for that lean and his eye is <b>${acc}</b>: he's within <b>${resid.toFixed(1)}</b> of a letter at separating the good classes from the busts. We regrade each class by hindsight value ÷ the draft capital it cost.</div></div>
     ${blocks}
-    <div class="faint" style="font-size:11px;margin-top:4px">POP grades at the draft (foresight); “Actual” is hindsight — each class's value ~3 years later ÷ what the picks cost. Recent classes aren't fully cooked, so they don't count toward his score.</div>`;
+    <div class="faint" style="font-size:11px;margin-top:4px">POP grades at the draft (foresight); “Actual” is hindsight — each class's value ~3 years later ÷ what the picks cost. The line under each grade is <b>what changed since the draft</b> — the picks that rose or fell most. Recent classes aren't fully cooked, so they don't count toward his score.</div>`;
+}
+// ---- The Draft Board — draft tracking in its own home (off the main menu):
+//  the Grading-the-Grader report card + a per-team draft ledger menu. -----------
+async function showDraftDesk(){
+  S.reading = false;
+  const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>`;
+  const shell = inner => { app.innerHTML = `<div style="padding-bottom:32px">${back}
+    <div class="setup-logo" style="font-size:26px">🎓 The Draft Board</div>
+    <p class="muted" style="margin:2px 0 16px">Every rookie pick graded on the value board — how each class aged, and how Powers of Pain's grades held up in hindsight.</p>${inner}</div>`; };
+  shell(`<div class="card"><div class="dt">⏳ Grading every draft class…</div></div>`);
+  try { await loadBundledTrades(); } catch {}
+  try { loadTcData(); } catch {}                            // Sleeper fill (2021, 2024 r2+) if the Court was opened
+  const grader = tcGraderSection();
+  const teams = [...new Set(tcAllDraftPicks().map(p => p.drafter).filter(Boolean))].sort();
+  const $ = n => '$' + Math.round(n);
+  const menu = teams.length ? `<div class="seclabel" style="margin:20px 0 8px">By team — every pick they made</div>` + teams.map(t => {
+    const md = tcDraftMade(t); const cost = sum(md.map(p => p.cost)), hind = sum(md.map(p => p.hind));
+    return `<div class="dash-item" data-act="tc-team" data-team="${esc(t)}" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;cursor:pointer">
+      <span style="font-weight:800;font-size:13px">${esc(t)}</span>
+      <span style="display:flex;gap:12px;align-items:center"><span class="faint" style="font-size:11px">${md.length} pick${md.length === 1 ? '' : 's'}</span><b style="color:${hind >= cost ? '#3fb950' : 'var(--red)'};font-size:13px;font-variant-numeric:tabular-nums">${$(hind)}</b><span class="faint">›</span></span></div>`;
+  }).join('') : '';
+  shell((grader || `<div class="card"><div class="dt">Draft grades load once the draft data is in. Open the <b>Trade Court</b> and hit ↻ Refresh to pull the Sleeper draft results, then come back.</div></div>`) + menu);
 }
 // Every selection on file — POP's posts first (authoritative), Sleeper fills any
 // pick POP didn't cover (2021, 2024 rounds 2+). Merged by season+overall pick.
@@ -6187,6 +6221,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'dossier') return showDossier();
   if (act === 'records') return showRecords();
   if (act === 'trade-court') return showTradeCourt();
+  if (act === 'draft-desk') return showDraftDesk();
   if (act === 'tc-refresh') { toast('Re-subpoenaing the league…'); return showTradeCourt(true); }
   if (act === 'tc-fulllist') { S._tcFullList = !S._tcFullList; return showTradeCourt(); }
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
