@@ -4398,7 +4398,7 @@ function rvId(key){ return 'rv_' + key.replace(/[^a-z0-9]/gi, '_'); }
 // Re-render whichever surface a note lives on (cheap for TC — uses cached data).
 function rvRerender(kind){
   if (kind === 'ex') return showExFiles();
-  if (kind === 'tch') return showTradeCourt(true);
+  if (kind === 'tcc') return showTradeCourt(true);
   return S._tcTeam ? showTeamTrades(S._tcTeam) : showTradeCourt(true);
 }
 // A stable content signature for a parsed trade (survives re-sorting/re-grading).
@@ -4450,13 +4450,16 @@ async function rvAiReview(key, kind){
     if (!x) { toast('Could not re-locate that trade'); return; }
     system = JUDGE;
     ctx = `${tcDescribe(x, team)}\n\nThe owner's added context: "${note}"`;
-  } else if (kind === 'tch') {
-    const tr = (S._tcData && S._tcData.allTrades || []).find(t => tchKey(t) === key);
-    if (!tr) { toast('Could not re-locate that trade'); return; }
-    const sides = [...tr.sides].sort((a, b) => b.net - a.net), W = sides[0], L = sides[sides.length - 1];
-    const g = s => (s.got || []).map(x => x.name).filter(Boolean).join(', ') || 'future considerations';
+  } else if (kind === 'tcc') {
+    const sig = key.slice('tcc::'.length);
+    const deal = tcAllChatDeals().find(d => courtSig(d) === sig);
+    if (!deal) { toast('Could not re-locate that trade'); return; }
+    const order = deal.raw.map((s, i) => ({ s, i })).sort((a, b) => deal.netAt[b.i] - deal.netAt[a.i]);
+    const W = order[0], L = order[order.length - 1];
+    const g = o => (o.s.gets || []).map(a => a.player || a.pick).filter(Boolean).join(', ') || 'future considerations';
+    const money = n => (n < 0 ? '-$' : '+$') + Math.abs(Math.round(n));
     system = JUDGE;
-    ctx = `From the ${tr.leagueSeason || ''} season. On the value board the court called this a "${tcTradeRating(W.net).tag}". ${W.name} received: ${g(W)}. ${L.name} received: ${g(L)}. ${W.name} came out ${tcMoney(W.net)} ahead${L.net < 0 ? `; ${L.name} came out ${tcMoney(L.net)}` : ''}, graded on today's board.\n\nThe owner's added context: "${note}"`;
+    ctx = `Trade from ${deal.date || deal.season || 'an earlier season'}. On the value board the court called this a "${tcTradeRating(deal.netAt[W.i]).tag}". ${W.s.team} received: ${g(W)}. ${L.s.team} received: ${g(L)}. ${W.s.team} came out ${money(deal.netAt[W.i])} on today's board${deal.netAt[L.i] < 0 ? `; ${L.s.team} came out ${money(deal.netAt[L.i])}` : ''}.\n\nThe owner's added context: "${note}"`;
   } else {
     const m = (S.records && S.records.standings || []).find(r => r.name === key.split('::')[1]);
     if (!m) { toast('Could not re-locate that owner'); return; }
@@ -4467,8 +4470,7 @@ async function rvAiReview(key, kind){
   const out = await rvCallClaude(system, ctx);
   setCourtNote(key, { review: out });
 }
-// A stable key + one-line rating for a Sleeper-era trade (the Full Docket).
-function tchKey(tr){ return 'tch::' + (tr.created || 0) + '::' + (tr.sides || []).map(s => Math.round(s.net)).join('_'); }
+// One-line rating for a trade's winning margin (drives the Full Docket badge).
 function tcTradeRating(top){
   if (top >= 30)     return { ic: '🚨', tag: 'Grand Larceny', c: 'var(--red)' };
   if (top >= 18)     return { ic: '🔴', tag: 'Heist',         c: 'var(--red)' };
@@ -4476,22 +4478,47 @@ function tcTradeRating(top){
   if (top >= 5)      return { ic: '➕', tag: 'Slight Edge',   c: 'var(--faint)' };
   return               { ic: '⚖️', tag: 'Fair Deal',     c: '#3fb950' };
 }
-// One docket card per trade: rating, both sides, net, verdict, reviewer's notes.
-function tcDocketCard(tr){
-  const sides = [...tr.sides].sort((a, b) => b.net - a.net), W = sides[0], L = sides[sides.length - 1];
-  const r = tcTradeRating(W.net), key = tchKey(tr);
-  const col = s => `<div class="trside" style="flex:1;min-width:130px"><div class="trmgr">${esc(s.name)}${s.current ? '' : ' <span class="faint" style="font-size:9px">·departed</span>'} got <span class="faint" style="font-weight:600">(${tcMoney(s.recv)})</span></div>${
-    (s.got.length ? s.got : [{ name: 'future considerations', val: 0 }]).map(g => `<div class="trrow">${g.pos ? posBadge(g.pos) : `<span class="pos" style="color:var(--amber);border-color:var(--amber)">${g.kind === 'k' ? '◆' : '＋'}</span>`}<span class="nm" style="flex:1">${esc(g.name)}</span>${g.val ? `<span class="val">${g.val}</span>` : ''}</div>`).join('')}</div>`;
-  const verdict = W.net < TC_WIN
+// Grade EVERY trade on file (the parsed chat ledger — all teams, all seasons),
+// whole-deal view: each side's net, sorted biggest-swing first.
+function tcAllChatDeals(){
+  const src = (S.chatTrades && S.chatTrades.trades) || [];
+  const share = (r, pot, n) => Math.round(r - (pot - r) / (n - 1));
+  const deals = [];
+  src.forEach(tr => {
+    const raw = (tr.sides || []).map(s => ({ team: tcTeamCanon(s.team), gets: s.gets || [] })).filter(s => s.team);
+    if (raw.length < 2) return;
+    const n = raw.length;
+    const recvAt = raw.map(s => sum(s.gets.map(a => tcChatAssetVal(a, tr.season, true))));
+    const recvLong = raw.map(s => sum(s.gets.map(a => tcChatAssetVal(a, tr.season, false))));
+    const potAt = sum(recvAt), potLong = sum(recvLong);
+    const netAt = recvAt.map(r => share(r, potAt, n));
+    const netLong = recvLong.map(r => share(r, potLong, n));
+    deals.push({ date: tr.date, season: tr.season, raw, netAt, netLong, top: Math.max(...netAt) });
+  });
+  deals.sort((a, b) => b.top - a.top);
+  return deals;
+}
+// One docket card per trade: rating, every side priced, net, verdict, notes.
+function tcChatDocketCard(deal){
+  const money = n => (n < 0 ? '-$' : '+$') + Math.abs(Math.round(n));
+  const order = deal.raw.map((s, i) => ({ s, i })).sort((a, b) => deal.netAt[b.i] - deal.netAt[a.i]);
+  const W = order[0], L = order[order.length - 1];
+  const r = tcTradeRating(deal.netAt[W.i]), key = 'tcc::' + courtSig(deal);
+  const assetHtml = a => { const at = tcChatAssetVal(a, deal.season, true), lng = tcChatAssetVal(a, deal.season, false);
+    const nm = a.player || a.pick || 'asset'; const chg = (Math.abs(lng - at) >= 3) ? ` <span class="faint" style="font-size:10px">(→$${lng} today)</span>` : '';
+    return `<div class="trrow"><span class="pos" style="${a.pick ? 'color:var(--amber);border-color:var(--amber)' : ''}">${a.pick ? '◆' : '·'}</span><span class="nm" style="flex:1">${esc(nm)}</span><span class="val">$${at}${chg}</span></div>`; };
+  const col = o => { const net = deal.netAt[o.i], c = net >= 0 ? '#3fb950' : 'var(--red)';
+    return `<div class="trside" style="flex:1;min-width:130px"><div class="trmgr">${esc(o.s.team)} <span class="faint" style="font-weight:600;color:${c}">(${money(net)})</span></div>${o.s.gets.map(assetHtml).join('') || '<div class="dt faint">—</div>'}</div>`; };
+  const verdict = deal.netAt[W.i] < TC_WIN
     ? `An even-money deal — nobody got fleeced.`
-    : `${esc(W.name)} came out <b style="color:#3fb950">+${tcMoney(W.net)}</b> ahead${L.net < 0 ? `, ${esc(L.name)} <b style="color:var(--red)">${tcMoney(L.net)}</b>` : ''} on today's board.`;
+    : `${esc(W.s.team)} came out <b style="color:#3fb950">${money(deal.netAt[W.i])}</b> ahead${deal.netAt[L.i] < 0 ? `, ${esc(L.s.team)} <b style="color:var(--red)">${money(deal.netAt[L.i])}</b>` : ''} on today's board.`;
   return `<div class="card" style="margin-bottom:8px">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
       <div class="at" style="margin:0;font-size:14px">${r.ic} ${r.tag}</div>
-      <div class="faint" style="font-size:11px">${esc(String(tr.leagueSeason || ''))} · net <b style="color:${r.c}">${tcMoney(W.net)}</b></div></div>
-    <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">${sides.map(col).join('<div class="trswap" style="align-self:center">⇄</div>')}</div>
+      <div class="faint" style="font-size:11px">${esc(deal.date || String(deal.season || ''))} · net <b style="color:${r.c}">${money(deal.netAt[W.i])}</b></div></div>
+    <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">${order.map(col).join('<div class="trswap" style="align-self:center">⇄</div>')}</div>
     <div class="dt" style="margin-top:6px;font-size:12px">${verdict}</div>
-    ${reviewPanel(key, 'tch')}
+    ${reviewPanel(key, 'tcc')}
   </div>`;
 }
 function showTeamTrades(team) {
@@ -4621,14 +4648,17 @@ async function showTradeCourt(useCache) {
     <div class="card"><div class="byline">🎁 The League Piggy Bank</div><div class="at" style="margin:2px 0">${esc(mark.name)}</div><div class="dt">${tcVerdict(mark.net).line} Down <b style="color:var(--red)">${tcMoney(mark.net)}</b> and still picking up the phone.</div></div>
   </div>` : '';
 
-  // Exhibit A — the marquee heist, written up in full.
+  // Exhibit A — the marquee heist, written up in full (from Sleeper's itemized
+  // grades, which is the only source with the roster detail for the narrative).
   const topHeists = heists.filter(h => h.top >= 15).slice(0, 1).map(h => tcHeistCard(h.t)).join('');
   const heistSec = topHeists ? `<div class="seclabel" style="margin:22px 0 8px">Exhibit A — The Great Heist</div>${topHeists}` : '';
-  // The Full Docket — EVERY trade, biggest swing first, each with a rating, a
-  // net value, a verdict and a reviewer's-notes box the court will reconsider.
-  const docketCards = heists.map(h => tcDocketCard(h.t)).join('');
-  const fullDocket = docketCards ? `<div class="seclabel" style="margin:22px 0 6px">The Full Docket — all ${heists.length} trades graded</div>
-    <div class="faint" style="font-size:11px;margin-bottom:8px">Every completed Sleeper-era trade, biggest swing first — a rating, the net on today's board, and a verdict. Disagree with a call? Add a note to any deal and the court will reconsider.</div>${docketCards}` : '';
+  // The Full Docket — EVERY trade ON FILE (the parsed chat ledger, all teams and
+  // all seasons — not just the Sleeper era), biggest swing first, each with a
+  // rating, a net value, a verdict and a reviewer's-notes box to reconsider.
+  const allDeals = tcAllChatDeals();
+  const docketCards = allDeals.map(tcChatDocketCard).join('');
+  const fullDocket = docketCards ? `<div class="seclabel" style="margin:22px 0 6px">The Full Docket — all ${allDeals.length} trades graded</div>
+    <div class="faint" style="font-size:11px;margin-bottom:8px">Every trade on file across every team and season, biggest swing first — a rating, the net on today's board, and a verdict. Disagree with a call? Add a note to any deal and the court will reconsider.</div>${docketCards}` : '';
 
   // THE RECKONING — every parsed chat trade graded, shark to mark. This is the
   // headline the user asked for: who came out ahead across the whole history.
