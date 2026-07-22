@@ -4689,18 +4689,58 @@ function runMockDraft(runs) {
   });
   // Superflex-aware depth targets: need above these is what pulls a pick up.
   const NEED_TARGET = { QB: 2, RB: 4, WR: 5, TE: 2 };
+  // ---- TRADE-UP MODEL ----
+  // Aggressive owners (sharks, win-now) jump the line for a sliding faller;
+  // pick-hoarders / rebuilders are the willing sellers who move down. We tally
+  // how often each jump happens so the board can show "NWO trades up to 8 ~28%".
+  const AGGR = { shark: 0.9, winnow: 0.55 };                 // who trades UP (else: never)
+  const WILLING = { rebuild: 0.9, volume: 0.85, chaos: 0.55, upside: 0.5, value: 0.32, out: 0, winnow: 0.2, shark: 0.18 }; // seller's willingness to move DOWN
+  const tradeUps = {};   // "team|toPick" -> { count, targets:{id:n}, from:{pick:n} }
+  const MAX_TU = 3;      // realistic cap per run
   for (let r = 0; r < runs; r++) {
     const remaining = new Set(pool);
     const teamCount = {}; const usedCond = new Set();
     for (const k in rosterSeed) teamCount[k] = Object.assign({}, rosterSeed[k]);
-    for (const o of order) {
-      if (myPicks.has(o.pick)) continue;
-      const tk = normName(o.team);
-      const style = personaFor(o.team);
-      const forced = takes.find((c, ci) => !usedCond.has(ci) && normName(c.team) === tk && remaining.has(c.playerId));
+    // mutable slot controllers this run — a trade-up swaps two entries' .team
+    const slots = order.map(o => ({ pick: o.pick, team: o.team }));
+    let tradeCount = 0;
+    for (let si = 0; si < slots.length; si++) {
+      const cur = slots[si];
+      if (myPicks.has(cur.pick)) continue;
+      const forced = takes.find((c, ci) => !usedCond.has(ci) && normName(c.team) === normName(cur.team) && remaining.has(c.playerId));
       let best = null;
       if (forced) { best = forced.playerId; usedCond.add(takes.indexOf(forced)); }
-      else {
+      // TRADE-UP: an aggressive team a few picks back jumps here for the best faller.
+      if (!best && tradeCount < MAX_TU) {
+        let faller = null, fs = 1e9;
+        for (const id of pool) { if (!remaining.has(id)) continue; const s = adp(id); if (s < fs) { fs = s; faller = id; } }
+        if (faller) {
+          // nearest FUTURE slot held by an aggressive team (not me, not the current holder)
+          for (let sj = si + 1; sj < slots.length; sj++) {
+            const nx = slots[sj]; if (myPicks.has(nx.pick)) continue;
+            const ast = personaFor(nx.team);
+            if (!AGGR[ast] || normName(nx.team) === normName(cur.team)) continue;
+            const gap = nx.pick - cur.pick;
+            if (gap < 2 || gap > 12) break;                 // only realistic jumps
+            const willing = WILLING[personaFor(cur.team)] ?? 0.4;
+            const urgency = Math.min(1, gap / 6);            // farther back = more likely the faller is gone
+            const p = Math.min(0.5, 0.55 * AGGR[ast] * willing * urgency);
+            if (hashNoise('tu:' + cur.pick + ':' + r) < p) {
+              const key = nx.team + '|' + cur.pick;
+              const rec = tradeUps[key] = tradeUps[key] || { count: 0, targets: {}, from: {} };
+              rec.count++; rec.targets[faller] = (rec.targets[faller] || 0) + 1; rec.from[nx.pick] = (rec.from[nx.pick] || 0) + 1;
+              slots[sj].team = cur.team;   // the seller slides down to the aggressor's slot
+              cur.team = nx.team;          // the aggressor now owns this pick
+              best = faller;               // and takes the player they jumped for
+              tradeCount++;
+            }
+            break;                          // only the nearest aggressor is considered
+          }
+        }
+      }
+      if (!best) {
+        const tk = normName(cur.team);
+        const style = personaFor(cur.team);
         const isBPA = bpaTeams.has(tk);
         const noiseAmp = isBPA ? 2 : style === 'chaos' ? 22 : style === 'upside' || style === 'rebuild' ? 13 : style === 'shark' ? 4 : 8;
         let bestScore = 1e9, seen = 0;
@@ -4714,14 +4754,14 @@ function runMockDraft(runs) {
           const youthPull = !isBPA && (style === 'upside' || style === 'rebuild') && p && p.years_exp === 0 ? 3 : 0;
           const provenPull = !isBPA && style === 'winnow' && p && p.years_exp > 0 ? 2 : 0;
           const intelBias = (posBias[tk] && posBias[tk][pos]) || 0;
-          const noise = (hashNoise(id + ':' + o.pick + ':' + r) - 0.5) * noiseAmp;
+          const noise = (hashNoise(id + ':' + cur.pick + ':' + r) - 0.5) * noiseAmp;
           const score = adp(id) - needPull - youthPull - provenPull + intelBias + noise;
           if (score < bestScore) { bestScore = score; best = id; }
         }
       }
-      if (best) { remaining.delete(best); (takenAt[best] = takenAt[best] || []).push(o.pick);
-        (slotTaken[o.pick] = slotTaken[o.pick] || {})[best] = (slotTaken[o.pick][best] || 0) + 1;
-        const p = posOfPlayer(b.players[best]); (teamCount[tk] = teamCount[tk] || {}); teamCount[tk][p] = (teamCount[tk][p] || 0) + 1; }
+      if (best) { remaining.delete(best); (takenAt[best] = takenAt[best] || []).push(cur.pick);
+        (slotTaken[cur.pick] = slotTaken[cur.pick] || {})[best] = (slotTaken[cur.pick][best] || 0) + 1;
+        const tk = normName(cur.team); const p = posOfPlayer(b.players[best]); (teamCount[tk] = teamCount[tk] || {}); teamCount[tk][p] = (teamCount[tk][p] || 0) + 1; }
     }
   }
   // Survival function per player: P(still on the board when pick N is up).
@@ -4740,7 +4780,17 @@ function runMockDraft(runs) {
     const top = Object.entries(slotTaken[pk]).sort((a, c) => c[1] - a[1])[0];
     if (top) projections[pk] = { name: playerName(b.players[top[0]], top[0]), pos: posOfPlayer(b.players[top[0]]), pct: Math.round(top[1] / runs * 100) };
   });
-  return { players, runs, lastPick, projections };
+  // Trade-up watch: how often each aggressive owner jumped the line, and for whom.
+  const tuByPick = {};
+  const tradeUpBoard = Object.entries(tradeUps).map(([key, rec]) => {
+    const bar = key.indexOf('|'); const team = key.slice(0, bar), toPick = +key.slice(bar + 1);
+    const pct = Math.round(rec.count / runs * 100);
+    const tgt = Object.entries(rec.targets).sort((a, c) => c[1] - a[1])[0];
+    const frm = Object.entries(rec.from).sort((a, c) => c[1] - a[1])[0];
+    return { team, toPick, from: frm ? +frm[0] : null, pct, player: tgt ? playerName(b.players[tgt[0]], tgt[0]) : null, pos: tgt ? posOfPlayer(b.players[tgt[0]]) : null };
+  }).filter(x => x.pct >= 8).sort((a, c) => c.pct - a.pct);
+  tradeUpBoard.forEach(t => { (tuByPick[t.toPick] = tuByPick[t.toPick] || []).push(t); });
+  return { players, runs, lastPick, projections, tradeUps: tradeUpBoard, tuByPick };
 }
 // Who's realistically there at slot N — the core research question.
 function boardAtSlot(m, slot, count) {
@@ -4877,6 +4927,14 @@ function warMockCard() {
         : `<div class="dt">Nobody in the tracked pool reliably lasts to ${slot} — check conditions or re-run.</div>`}`;
     }).join('');
   }
+  // trade-up watch — aggressive owners who jump the line for a faller
+  const tu = (m && m.tradeUps) || [];
+  const tuSection = m ? (tu.length ? `<div class="seclabel" style="margin:14px 0 6px">🔺 Trade-up watch — owners who jump the line</div>
+    ${tu.slice(0, 8).map(t => `<div class="prow" style="padding:5px 0;font-size:12.5px">
+      <span style="flex:1"><b style="color:#f5b301">${esc(t.team)}</b> trades up to <b>${t.toPick}</b>${t.from ? ` <span class="faint">(from ${t.from})</span>` : ''}${t.player ? ` for ${posBadge(t.pos)} ${esc(t.player)}` : ''}</span>
+      <span class="faint" style="width:42px;text-align:right;font-weight:800">${t.pct}%</span></div>`).join('')}
+    <div class="faint" style="font-size:10.5px;margin-top:4px">🦈 sharks & 🏆 win-now teams jump for a sliding faller; 🧱/📦 pick-hoarders are the sellers moving down. % = share of ${m.runs} mocks.</div>`
+    : `<div class="faint" style="font-size:11px;margin-top:12px">🔺 No frequent trade-ups this run — the board fell chalk (nobody worth jumping for slid far enough).</div>`) : '';
   // conditions the mock honors (everything except plain notes) — applied only on a manual re-run
   const applied = (S.draft.intel || []).filter(x => x.type !== 'note');
   const stale = !!(m && S.draft.mockStale);
@@ -4896,6 +4954,7 @@ function warMockCard() {
     <button class="btn" data-act="mock-run" style="${stale ? 'box-shadow:0 0 0 2px #f5b301' : ''}">🎲 ${m ? 'Re-run the mock' : 'Run 200 mock drafts'}${applied.length ? ' (with your ' + applied.length + ' condition' + (applied.length > 1 ? 's' : '') + ')' : ''}</button>
     ${condLine}
     ${body}
+    ${tuSection}
   </div>`;
 }
 // The full order at a glance: every pick, who holds it, how they behave, and
@@ -4939,6 +4998,8 @@ function warOrderCard() {
       } else {
         projLine = `<div class="faint" style="font-size:10.5px;margin-top:1px">→ wide open (no clear favorite)</div>`;
       }
+      const tuHere = m.tuByPick && m.tuByPick[o.pick];
+      if (tuHere && tuHere.length) projLine += `<div style="font-size:10.5px;color:#f5b301;font-weight:700;margin-top:1px">🔺 ${esc(tuHere[0].team)} trades up here ${tuHere[0].pct}%</div>`;
     }
     return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:9px;margin-bottom:2px;${isMine ? 'background:rgba(49,209,88,.12);border:1px solid var(--accent-d)' : ''}">
       <span class="ovr" style="width:26px">${o.pick}</span>
