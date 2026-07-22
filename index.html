@@ -4398,8 +4398,8 @@ function rvId(key){ return 'rv_' + key.replace(/[^a-z0-9]/gi, '_'); }
 // Re-render whichever surface a note lives on (cheap for TC — uses cached data).
 function rvRerender(kind){
   if (kind === 'ex') return showExFiles();
-  if (kind === 'tcc') return showTradeCourt(true);
-  return S._tcTeam ? showTeamTrades(S._tcTeam) : showTradeCourt(true);
+  if (kind === 'tcc') return showTradeCourt();          // cached — no re-subpoena
+  return S._tcTeam ? showTeamTrades(S._tcTeam) : showTradeCourt();
 }
 // A stable content signature for a parsed trade (survives re-sorting/re-grading).
 function courtSig(x){
@@ -4586,7 +4586,13 @@ function showTeamTrades(team) {
   }).join('');
   shell(summary + cards);
 }
-async function showTradeCourt(useCache) {
+// The Sleeper walk is expensive, so it runs ONCE and is cached (memory +
+// localStorage). Opening the court reuses the cache; pass force=true (the
+// Refresh button) to re-subpoena after a new trade.
+function tcDataKey(){ return 'gg.tcdata.' + (S.leagueId || 'x'); }
+function loadTcData(){ if (S._tcData) return S._tcData; try { const r = localStorage.getItem(tcDataKey()); if (r) S._tcData = JSON.parse(r); } catch {} return S._tcData; }
+function saveTcData(d){ d._ts = Date.now(); S._tcData = d; try { localStorage.setItem(tcDataKey(), JSON.stringify(d)); } catch {} }
+async function showTradeCourt(force) {
   S.reading = false;
   const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>`;
   const shell = (inner) => { app.innerHTML = `<div style="padding-bottom:32px">${back}
@@ -4596,14 +4602,15 @@ async function showTradeCourt(useCache) {
   if (!S.bundle || !S.bundle.league) {
     return shell(`<div class="card"><div class="dt">Load your league first (enter your Sleeper username on the home screen), then come back — court's in session.</div></div>`);
   }
-  let data;
-  if (useCache && S._tcData) { data = S._tcData; }
-  else {
-    shell(`<div class="card"><div class="dt">⏳ Subpoenaing every completed trade across all seasons and grading each one on today's board…</div></div>`);
-    try { await loadBundledTrades(); } catch {}
+  // The chat ledger (docket + exhibits) is a cheap static file — load it once.
+  if (!S.chatTrades) { try { await loadBundledTrades(); } catch {} }
+  let data = force ? null : loadTcData();
+  if (!data) {
+    shell(`<div class="card"><div class="dt">⏳ Subpoenaing every completed trade across all seasons and grading each one on today's board… <span class="faint">(one time — it's cached after this)</span></div></div>`);
+    try { if (!S.chatTrades) await loadBundledTrades(); } catch {}
     try { data = await tcBuildLedger(); }
     catch (e) { return shell(`<div class="card"><div class="dt">Couldn't pull the trade history (${esc(String(e && e.message || e))}). Give it another go in a moment.</div></div>`); }
-    S._tcData = data;
+    saveTcData(data);
   }
 
   const gms = Object.values(data.ledger).filter(l => l.current && l.trades > 0).sort((a, b) => b.net - a.net || b.trades - a.trades);
@@ -4614,6 +4621,12 @@ async function showTradeCourt(useCache) {
 
   // Grade the parsed chat ledger up front so the docket can headline the real total.
   const CL = tcGradeChatLedger();
+  // "Compiled as of" + a manual Refresh — the Sleeper walk is cached, so this is
+  // how you pull in a brand-new trade without re-subpoenaing on every open.
+  const asOf = data._ts ? new Date(data._ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + new Date(data._ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : 'now';
+  const freshLine = `<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">
+    <span class="faint" style="font-size:11px">Docket compiled ${esc(asOf)} · cached, not re-pulled each visit</span>
+    <button class="btn ghost" data-act="tc-refresh" style="width:auto;padding:5px 12px;font-size:12px">↻ Refresh</button></div>`;
   // The Docket — league-wide numbers.
   const docket = `<div class="sbgrid" style="margin-bottom:6px">
     <div class="card" style="text-align:center"><div class="at" style="margin:0">${CL.graded || trades.length}</div><div class="faint" style="font-size:11px">trades graded</div></div>
@@ -4721,7 +4734,7 @@ async function showTradeCourt(useCache) {
     <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Each player carries TWO values: what he was worth the <b>day of the trade</b> (age, production, hype then) and what he's worth <b>today</b> — powering the "At the time" and "Long run" columns in The Reckoning. Draft picks use a calibrated round model, era-adjusted (mid-1st ≈ $48, 2nd ≈ $18, future picks discounted). Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
   </div></div>`;
 
-  shell(docket + reckoning + coverageCard + heroes + rankCard + heistSec + fullDocket + chatCard + method);
+  shell(freshLine + docket + reckoning + coverageCard + heroes + rankCard + heistSec + fullDocket + chatCard + method);
 }
 
 // ---------------------------------------------------------------------
@@ -5895,6 +5908,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'dossier') return showDossier();
   if (act === 'records') return showRecords();
   if (act === 'trade-court') return showTradeCourt();
+  if (act === 'tc-refresh') { toast('Re-subpoenaing the league…'); return showTradeCourt(true); }
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
   if (act === 'ex-files') return showExFiles();
   if (act === 'rv-toggle') {
