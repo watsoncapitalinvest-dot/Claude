@@ -4469,7 +4469,7 @@ async function rvAiReview(key, kind){
     const g = o => (o.s.gets || []).map(a => a.player || a.pick).filter(Boolean).join(', ') || 'future considerations';
     const money = n => (n < 0 ? '-$' : '+$') + Math.abs(Math.round(n));
     system = JUDGE;
-    ctx = `Trade from ${deal.date || deal.season || 'an earlier season'}. On the value board the court called this a "${tcTradeRating(deal.netAt[W.i]).tag}". ${W.s.team} received: ${g(W)}. ${L.s.team} received: ${g(L)}. ${W.s.team} came out ${money(deal.netAt[W.i])} on today's board${deal.netAt[L.i] < 0 ? `; ${L.s.team} came out ${money(deal.netAt[L.i])}` : ''}.\n\nThe owner's added context: "${note}"`;
+    ctx = `Trade from ${deal.date || deal.season || 'an earlier season'}. On the value board the court called this a "${tcTradeRating(deal.netAt[W.i]).tag}". ${W.s.team} received: ${g(W)}. ${L.s.team} received: ${g(L)}. Graded on values the day of the deal, ${W.s.team} came out ${money(deal.netAt[W.i])}${deal.netAt[L.i] < 0 ? `; ${L.s.team} came out ${money(deal.netAt[L.i])}` : ''} (on today's board ${W.s.team} is ${money(deal.netLong[W.i])}).\n\nThe owner's added context: "${note}"`;
   } else {
     const m = (S.records && S.records.standings || []).find(r => r.name === key.split('::')[1]);
     if (!m) { toast('Could not re-locate that owner'); return; }
@@ -4518,9 +4518,10 @@ function tcChatDocketCard(deal){
   const r = tcTradeRating(deal.netAt[W.i]), key = 'tcc::' + courtSig(deal);
   const names = o => o.s.gets.map(a => a.player || a.pick || '?').join(', ') || 'future considerations';
   const swap = order.map(o => `<b>${esc(o.s.team)}</b> <span class="faint">${esc(names(o))}</span>`).join(' <span style="color:var(--amber)">⇄</span> ');
+  const aged = Math.abs(deal.netLong[W.i] - deal.netAt[W.i]) >= 5 ? ` <span class="faint">· ${money(deal.netLong[W.i])} on today's board</span>` : '';
   const verdict = deal.netAt[W.i] < TC_WIN
     ? `Even money — nobody got fleeced.`
-    : `${esc(W.s.team)} +${money(deal.netAt[W.i]).replace(/^\+/, '')}${deal.netAt[L.i] < 0 ? ` · ${esc(L.s.team)} ${money(deal.netAt[L.i])}` : ''} on today's board.`;
+    : `${esc(W.s.team)} ${money(deal.netAt[W.i])} the day of the deal${deal.netAt[L.i] < 0 ? ` · ${esc(L.s.team)} ${money(deal.netAt[L.i])}` : ''}.${aged}`;
   const teamTag = order.length >= 3 ? `<span class="faint" style="font-size:10px;font-weight:800">· ${order.length}-TEAM</span> ` : '';
   return `<div class="card" style="margin-bottom:5px;padding:9px 12px">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
@@ -4564,7 +4565,7 @@ function tcChatHeistCard(deal){
   return `<div class="card story">
     <div class="byline">⚖️ The Trade Court · ${esc(deal.date || String(deal.season || ''))}${multi ? ` · <b>${order.length}-TEAM TRADE</b>` : ''}</div>
     <h2>${esc(head)}</h2>
-    <div class="dek">${multi ? `A ${order.length}-team deal — ` : ''}${esc(wn)} came out <b style="color:#3fb950">${money(wnet)}</b> on today's board.</div>
+    <div class="dek">${multi ? `A ${order.length}-team deal — ` : ''}${esc(wn)} came out <b style="color:#3fb950">${money(wnet)}</b> the day of the deal${Math.abs(deal.netLong[W.i] - wnet) >= 5 ? ` — <b>${money(deal.netLong[W.i])}</b> on today's board` : ''}.</div>
     <div style="display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:6px 0 12px">${order.map(col).join('')}</div>
     <p class="body">${esc(body)}</p>
     ${reviewBlock(key, 'tcc')}
@@ -4705,7 +4706,7 @@ async function showTradeCourt(force) {
   // verdict and a reviewer's-notes box the court will reconsider.
   const docketCards = allDeals.map(tcChatDocketCard).join('');
   const fullDocket = docketCards ? `<div class="seclabel" style="margin:22px 0 6px">The Full Docket — all ${allDeals.length} trades graded</div>
-    <div class="faint" style="font-size:11px;margin-bottom:8px">Every trade on file across every team and season, biggest swing first — a rating, the net on today's board, and a verdict. Disagree with a call? Add a note to any deal and the court will reconsider.</div>${docketCards}` : '';
+    <div class="faint" style="font-size:11px;margin-bottom:8px">Every trade on file across every team and season, biggest swing first — a rating, the net <b>the day of the deal</b> (who won the negotiation), and a verdict; where a deal aged differently, its value <b>on today's board</b> is noted too. Disagree with a call? Add a note to any deal and the court will reconsider.</div>${docketCards}` : '';
 
   // THE RECKONING — every parsed chat trade graded, shark to mark. This is the
   // headline the user asked for: who came out ahead across the whole history.
