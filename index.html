@@ -4312,7 +4312,7 @@ function tcPickCost(round, overall){
 // Every selection a franchise MADE, graded like a trade: pick capital spent vs
 // the rookie's value then (the reach/steal) and ~3 years later (did it hit).
 function tcDraftMade(team){
-  const picks = (S._tcData && S._tcData.draftPicks || []).filter(p => p.drafter === team && p.player);
+  const picks = tcAllDraftPicks().filter(p => p.drafter === team && p.player);
   return picks.map(p => {
     const hindYr = Math.min(DP_LAST_YEAR, p.season + 3), hindYears = Math.min(3, DP_LAST_YEAR - p.season);
     const cost = tcPickCost(p.round, p.pickNo);
@@ -4325,11 +4325,14 @@ function tcDraftMade(team){
 //  "2022 pick 11"       → the 11th overall selection that year
 //  "2023 2nd (Jet-I)"   → Jet-I's original 2nd-round slot that year
 function tcPickToPlayer(pickStr){
-  const drafts = (S._tcData && S._tcData.drafts) || {};
   const s = String(pickStr || ''); const yr = (s.match(/\b(20\d\d)\b/) || [])[1];
-  if (!yr || !drafts[yr]) return null;
-  const D = drafts[yr];
+  if (!yr) return null;
   const slotN = (s.match(/pick\s*#?\s*(\d{1,2})/i) || [])[1];
+  // Powers of Pain's authoritative overall-pick record wins for explicit slots.
+  const pop = (S.popDrafts && S.popDrafts.years && S.popDrafts.years[yr]) || null;
+  if (slotN && pop) { const hit = pop.find(p => p.pick === +slotN); if (hit) return hit.player; }
+  const drafts = (S._tcData && S._tcData.drafts) || {};
+  const D = drafts[yr]; if (!D) return null;
   if (slotN) return D.overall[+slotN] || null;
   const round = /\b(1st|first)\b/i.test(s) ? 1 : /\b(2nd|second)\b/i.test(s) ? 2 : /\b(3rd|third)\b/i.test(s) ? 3 : /\b(4th|fourth)\b/i.test(s) ? 4 : null;
   const owner = (s.match(/\(([^)]+)\)/) || [])[1];
@@ -4895,6 +4898,24 @@ async function loadBundledTrades() {
       if (r.ok) { const d = await r.json(); if (d && d.trades) S.chatTrades = d; } } catch {}
   }
   await loadDpValues();
+  await loadPopDrafts();
+}
+// ---- Authoritative draft results, parsed from Powers of Pain's yearly posts
+//  (team = who MADE the pick). The Draft Room prefers this over Sleeper. --------
+async function loadPopDrafts() {
+  if (S.popDrafts) return;
+  try { const r = await fetch('drafts.json', { cache: 'no-cache' });
+    if (r.ok) { const d = await r.json(); if (d && d.years) S.popDrafts = d; } } catch {}
+}
+// Every selection on file — POP's posts first (authoritative), Sleeper fills any
+// pick POP didn't cover (2021, 2024 rounds 2+). Merged by season+overall pick.
+function tcAllDraftPicks(){
+  const out = [], seen = new Set();
+  const pop = (S.popDrafts && S.popDrafts.years) || {};
+  for (const y in pop) pop[y].forEach(p => { const k = y + ':' + p.pick; if (seen.has(k)) return; seen.add(k);
+    out.push({ season: +y, pickNo: p.pick, round: Math.ceil(p.pick / 16), slot: ((p.pick - 1) % 16) + 1, player: p.player, drafter: tcTeamCanon(p.team), pos: p.pos, src: 'pop' }); });
+  ((S._tcData && S._tcData.draftPicks) || []).forEach(p => { const k = p.season + ':' + p.pickNo; if (seen.has(k)) return; seen.add(k); out.push({ ...p, src: 'sleeper' }); });
+  return out;
 }
 // ---- Dated dynasty value history (DynastyProcess snapshots, one per off-season
 //  2021-2026, Superflex, scaled so the 1.01 rookie pick = $100). Powers "at the time" vs
