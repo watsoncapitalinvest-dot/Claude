@@ -4866,7 +4866,7 @@ async function showTradeCourt(force) {
     <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Player values come from <b>DynastyProcess dated Superflex snapshots</b> — one per off-season, 2021→2026 — so each player carries his real market value <b>the day of the trade</b> and again <b>~3 years later</b>, powering the "At the time" and "In hindsight" columns. Draft picks are priced as picks the day of the trade (calibrated round model — mid-1st ≈ $48, 2nd ≈ $18, future picks discounted); <b>in hindsight each pick is re-valued as the player it actually became</b>, pulled from your Sleeper rookie-draft results. A pick that got flipped self-corrects — its value cancels across the two trades, leaving whatever the team got back. Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
   </div></div>`;
 
-  shell(freshLine + docket + reckoning + coverageCard + heroes + rankCard + heistSec + menageSec + fullDocket + chatCard + method);
+  shell(freshLine + docket + reckoning + coverageCard + heroes + rankCard + heistSec + menageSec + fullDocket + tcGraderSection() + chatCard + method);
 }
 
 // ---------------------------------------------------------------------
@@ -4912,9 +4912,65 @@ async function loadBundledTrades() {
 // ---- Authoritative draft results, parsed from Powers of Pain's yearly posts
 //  (team = who MADE the pick). The Draft Room prefers this over Sleeper. --------
 async function loadPopDrafts() {
-  if (S.popDrafts) return;
-  try { const r = await fetch('drafts.json', { cache: 'no-cache' });
-    if (r.ok) { const d = await r.json(); if (d && d.years) S.popDrafts = d; } } catch {}
+  if (!S.popDrafts) {
+    try { const r = await fetch('drafts.json', { cache: 'no-cache' });
+      if (r.ok) { const d = await r.json(); if (d && d.years) S.popDrafts = d; } } catch {}
+  }
+  if (!S.popGrades) {
+    try { const r = await fetch('pop-grades.json', { cache: 'no-cache' });
+      if (r.ok) { const d = await r.json(); if (d && d.years) S.popGrades = d; } } catch {}
+  }
+}
+// ---- Grading the Grader: score Powers of Pain's draft letter grades against how
+//  each class actually aged (hindsight value / capital spent → an objective grade).
+const GP_GPA = { 'A+':4.3,'A':4.0,'A-':3.7,'B+':3.3,'B':3.0,'B-':2.7,'C+':2.3,'C':2.0,'C-':1.7,'D+':1.3,'D':1.0,'D-':0.7,'F':0.0 };
+function gpObjGrade(roi){
+  const t = [[2.2,'A+',4.3],[1.8,'A',4.0],[1.5,'A-',3.7],[1.3,'B+',3.3],[1.1,'B',3.0],[0.95,'B-',2.7],[0.8,'C+',2.3],[0.65,'C',2.0],[0.5,'C-',1.7],[0.35,'D',1.0]];
+  for (const [th, l, g] of t) if (roi >= th) return { letter: l, gpa: g };
+  return { letter: 'F', gpa: 0 };
+}
+function tcGraderRows(){
+  const G = (S.popGrades && S.popGrades.years) || {}; const all = tcAllDraftPicks(); const rows = [];
+  for (const y in G) G[y].forEach(g => {
+    const team = tcTeamCanon(g.team);
+    const picks = all.filter(p => p.drafter === team && p.season === +y && p.player);
+    const popGpa = GP_GPA[g.grade];
+    if (!picks.length) { rows.push({ year: +y, team, pop: g.grade, popGpa, noPicks: true, note: g.note }); return; }
+    const hindYr = Math.min(DP_LAST_YEAR, +y + 3), hindYears = Math.min(3, DP_LAST_YEAR - +y);
+    let cap = 0, hind = 0; picks.forEach(p => { const c = tcPickCost(p.round, p.pickNo); cap += c; const h = dpValueAt(p.player, hindYr); hind += (h == null ? c : h); });
+    const roi = cap ? hind / cap : 1, obj = gpObjGrade(roi);
+    rows.push({ year: +y, team, pop: g.grade, popGpa, obj: obj.letter, objGpa: obj.gpa, roi, hindYears, picks: picks.length, err: popGpa != null ? popGpa - obj.gpa : null, note: g.note });
+  });
+  return rows.sort((a, b) => a.year - b.year || a.team.localeCompare(b.team));
+}
+function tcGraderSection(){
+  const rows = tcGraderRows(); if (!rows.length) return '';
+  const mat = rows.filter(r => r.hindYears >= 3 && r.err != null);
+  const bias = mat.length ? mat.reduce((s, r) => s + r.err, 0) / mat.length : 0;
+  // residual error after removing his systematic lean = how well he SEPARATES good from bad
+  const resid = mat.length ? mat.reduce((s, r) => s + Math.abs(r.err - bias), 0) / mat.length : 0;
+  const acc = resid < 0.5 ? 'sharp' : resid < 0.9 ? 'solid' : 'shaky';
+  const biasTxt = Math.abs(bias) < 0.2 ? 'no real lean' : (Math.abs(bias) > 0.7 ? 'strongly ' : '') + (bias > 0 ? 'generous' : 'harsh');
+  const verdict = r => r.noPicks ? { i: '—', t: 'traded the class' }
+    : r.err == null ? { i: '?', t: '' }
+    : r.hindYears < 3 ? { i: '⏳', t: r.hindYears + 'y in' }
+    : Math.abs(r.err) <= 0.4 ? { i: '✅', t: 'nailed it' }
+    : r.err > 0 ? { i: '📈', t: 'too high' } : { i: '📉', t: 'too low' };
+  const byYear = {}; rows.forEach(r => (byYear[r.year] = byYear[r.year] || []).push(r));
+  const blocks = Object.keys(byYear).sort().map(y => {
+    const rs = byYear[y], dev = rs[0].hindYears < 3;
+    const trs = rs.map(r => { const v = verdict(r); return `<tr>
+        <td style="padding:5px 8px 5px 0"><b>${esc(r.team)}</b></td>
+        <td style="text-align:center;padding:5px 8px;font-weight:800">${esc(r.pop)}</td>
+        <td style="text-align:center;padding:5px 8px;color:var(--faint)">${r.noPicks ? '—' : esc(r.obj)}</td>
+        <td style="padding:5px 0 5px 8px;font-size:12px;white-space:nowrap">${v.i} <span class="faint">${v.t}</span></td></tr>`; }).join('');
+    return `<div class="card" style="overflow-x:auto;margin-bottom:8px"><div class="at" style="margin:0 0 4px;font-size:14px">${y} draft${dev ? ' <span class="faint" style="font-size:11px;font-weight:400">· still developing</span>' : ''}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.3px"><th style="text-align:left;padding-bottom:4px">Team</th><th style="padding-bottom:4px">POP</th><th style="padding-bottom:4px">Actual</th><th style="text-align:left;padding:0 0 4px 8px">Call</th></tr></thead><tbody>${trs}</tbody></table></div>`;
+  }).join('');
+  return `<div class="seclabel" style="margin:22px 0 8px">🎓 Grading the Grader — Powers of Pain's Report Card</div>
+    <div class="card" style="margin-bottom:8px"><div class="dt" style="font-size:12px">Across <b>${mat.length}</b> matured classes, POP grades <b>${biasTxt}</b> — about <b>${(bias >= 0 ? '+' : '') + bias.toFixed(1)}</b> of a letter ${bias >= 0 ? 'above' : 'below'} how they actually aged. Adjust for that lean and his eye is <b>${acc}</b>: he's within <b>${resid.toFixed(1)}</b> of a letter at separating the good classes from the busts. We regrade each class by hindsight value ÷ the draft capital it cost.</div></div>
+    ${blocks}
+    <div class="faint" style="font-size:11px;margin-top:4px">POP grades at the draft (foresight); “Actual” is hindsight — each class's value ~3 years later ÷ what the picks cost. Recent classes aren't fully cooked, so they don't count toward his score.</div>`;
 }
 // Every selection on file — POP's posts first (authoritative), Sleeper fills any
 // pick POP didn't cover (2021, 2024 rounds 2+). Merged by season+overall pick.
