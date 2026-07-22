@@ -4252,12 +4252,32 @@ async function tcBuildLedger() {
   const nowSeason = parseInt(b.league.season) || 0;
   const history = await buildLeagueHistory(b.league);        // newest → oldest
   const currentOwners = new Set(Object.keys(b.usersById));
-  const ledger = {}, allTrades = [], coverage = [];
+  const ledger = {}, allTrades = [], coverage = [], drafts = {};
   for (const lg of history) {
     let rosters, users;
     try { [rosters, users] = await Promise.all([getRosters(lg.league_id), getLeagueUsers(lg.league_id)]); } catch { coverage.push({ season: lg.season, trades: 0, error: true }); continue; }
     const ridToOwner = {}; (rosters || []).forEach(r => ridToOwner[r.roster_id] = r.owner_id);
     const uById = {}; (users || []).forEach(u => uById[u.user_id] = u);
+    // Rookie-draft results this season → later lets us resolve a traded pick to
+    // the actual player taken (its true hindsight value).
+    try {
+      const dl = await getLeagueDrafts(lg.league_id);
+      const dr = (dl || []).find(d => String(d.season) === String(lg.season)) || (dl || [])[0];
+      if (dr && dr.draft_id) {
+        const picks = await getDraftPicks(dr.draft_id);
+        const D = drafts[lg.season] = { overall: {}, roundSlot: {}, teamSlot: {} };
+        (picks || []).forEach(pk => {
+          const nm = (pk.metadata && `${pk.metadata.first_name || ''} ${pk.metadata.last_name || ''}`.trim())
+            || (b.players[pk.player_id] && playerName(b.players[pk.player_id], pk.player_id)) || '';
+          if (!nm) return;
+          if (pk.pick_no) D.overall[pk.pick_no] = nm;
+          if (pk.round && pk.draft_slot) (D.roundSlot[pk.round] = D.roundSlot[pk.round] || {})[pk.draft_slot] = nm;
+        });
+        const s2r = dr.slot_to_roster_id || {};
+        Object.keys(s2r).forEach(slot => { const u = uById[ridToOwner[s2r[slot]]];
+          const tn = u && (u.metadata && u.metadata.team_name || u.display_name); if (tn) D.teamSlot[tcTeamCanon(tn)] = +slot; });
+      }
+    } catch {}
     // Weeks 0-18 covers offseason legs + the full season; invalid legs return [].
     const wkTxns = await Promise.all(Array.from({ length: 19 }, (_, i) => i).map(w => getTransactions(lg.league_id, w).catch(() => [])));
     const txns = [].concat(...wkTxns).filter(t => t && t.type === 'trade' && t.status === 'complete');
@@ -4280,7 +4300,22 @@ async function tcBuildLedger() {
       allTrades.push(scored);
     }
   }
-  return { allTrades, ledger, nowSeason, seasons: history.map(h => h.season), coverage };
+  return { allTrades, ledger, nowSeason, seasons: history.map(h => h.season), coverage, drafts };
+}
+// Resolve a traded pick string to the player actually drafted with it.
+//  "2022 pick 11"       → the 11th overall selection that year
+//  "2023 2nd (Jet-I)"   → Jet-I's original 2nd-round slot that year
+function tcPickToPlayer(pickStr){
+  const drafts = (S._tcData && S._tcData.drafts) || {};
+  const s = String(pickStr || ''); const yr = (s.match(/\b(20\d\d)\b/) || [])[1];
+  if (!yr || !drafts[yr]) return null;
+  const D = drafts[yr];
+  const slotN = (s.match(/pick\s*#?\s*(\d{1,2})/i) || [])[1];
+  if (slotN) return D.overall[+slotN] || null;
+  const round = /\b(1st|first)\b/i.test(s) ? 1 : /\b(2nd|second)\b/i.test(s) ? 2 : /\b(3rd|third)\b/i.test(s) ? 3 : /\b(4th|fourth)\b/i.test(s) ? 4 : null;
+  const owner = (s.match(/\(([^)]+)\)/) || [])[1];
+  if (round && owner) { const slot = D.teamSlot[tcTeamCanon(owner.trim())]; if (slot != null) return (D.roundSlot[round] || {})[slot] || null; }
+  return null;
 }
 function tcVerdict(net) {
   if (net >= 55)  return { ic: '🦈', tag: 'The Shark',    line: 'Fleeces the league for sport. Stop answering their texts.' };
@@ -4340,6 +4375,10 @@ function tcChatAssetVal(a, season, atTime) {
     const pv = (typeof playerDollarValue === 'function') ? playerDollarValue(a.player) : null;
     return (pv && pv.val) ? pv.val : (typeof a.v === 'number' ? a.v : 16);
   }
+  // Hindsight: a pick is worth the PLAYER it became, valued at the target year.
+  // (Flipped picks self-correct: value cancels across the two trades, leaving the
+  // return.) At the time, the pick is still a pick → the draft-capital model below.
+  if (!atTime) { const drafted = tcPickToPlayer(a.pick); if (drafted) { const dv = dpValueAt(drafted, targetYear); if (dv != null) return dv; } }
   const s = String(a.pick || ''); const yr = (s.match(/\b(20\d\d)\b/) || [])[1];
   const slot = (s.match(/pick\s*#?\s*(\d{1,2})/i) || [])[1];
   let v;
@@ -4765,7 +4804,7 @@ async function showTradeCourt(force) {
     ${chat.precedents.length ? `<div class="card"><div class="at" style="margin:0 0 6px">🧾 Landmark Deals on File</div>${chat.precedents.map(p => `<div class="dt" style="padding:3px 0">• ${esc(p)}</div>`).join('')}<div class="faint" style="font-size:11px;margin-top:6px">The reference trades that calibrate the whole value board.</div></div>` : ''}` : '';
 
   const method = `<div class="card" style="margin-top:18px"><div class="faint" style="font-size:11px;line-height:1.6">
-    <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Player values come from <b>DynastyProcess dated Superflex snapshots</b> — one per off-season, 2021→2026 — so each player carries his real market value <b>the day of the trade</b> and again <b>~3 years later</b>, powering the "At the time" and "In hindsight" columns. Draft picks use a calibrated round model, era-adjusted (mid-1st ≈ $48, 2nd ≈ $18, future picks discounted) and are held at that value in both lenses (resolving picks to the player they became is coming). Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
+    <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Player values come from <b>DynastyProcess dated Superflex snapshots</b> — one per off-season, 2021→2026 — so each player carries his real market value <b>the day of the trade</b> and again <b>~3 years later</b>, powering the "At the time" and "In hindsight" columns. Draft picks are priced as picks the day of the trade (calibrated round model — mid-1st ≈ $48, 2nd ≈ $18, future picks discounted); <b>in hindsight each pick is re-valued as the player it actually became</b>, pulled from your Sleeper rookie-draft results. A pick that got flipped self-corrects — its value cancels across the two trades, leaving whatever the team got back. Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
   </div></div>`;
 
   shell(freshLine + docket + reckoning + coverageCard + heroes + rankCard + heistSec + menageSec + fullDocket + chatCard + method);
