@@ -4800,11 +4800,20 @@ async function showTradeCourt(force) {
   const menageCards = menageDeals.map(tcChatHeistCard).join('');
   const menageSec = menageCards ? `<div class="seclabel" style="margin:22px 0 8px">🍷 Ménage à Trois — the ${menageDeals.length} three-team deal${menageDeals.length === 1 ? '' : 's'}</div>
     <div class="faint" style="font-size:11px;margin-bottom:8px">When three GMs climb into bed together. Every multi-team deal on file, each side priced and graded on its own.</div>${menageCards}` : '';
-  // The Full Docket — every trade on file, each with a rating, a net value, a
-  // verdict and a reviewer's-notes box the court will reconsider.
-  const docketCards = allDeals.map(tcChatDocketCard).join('');
-  const fullDocket = docketCards ? `<div class="seclabel" style="margin:22px 0 6px">The Full Docket — all ${allDeals.length} trades graded</div>
-    <div class="faint" style="font-size:11px;margin-bottom:8px">Every trade on file across every team and season, biggest swing first — a rating, the net <b>the day of the deal</b> (who won the negotiation), and a verdict; where a deal aged differently, its value <b>~3 years later</b> is noted too. Disagree with a call? Add a note to any deal and the court will reconsider.</div>${docketCards}` : '';
+  // The Full Docket — collapsed into a by-team menu so it isn't a 196-card wall;
+  // tap a franchise for its deals, or open the full linear list.
+  const mny = n => (n < 0 ? '-$' : '+$') + Math.abs(Math.round(n));
+  const teamAgg = {};
+  allDeals.forEach(d => d.raw.forEach((s, i) => { const t = teamAgg[s.team] || (teamAgg[s.team] = { team: s.team, n: 0, net: 0 }); t.n++; t.net += d.netAt[i]; }));
+  const teamRows = Object.values(teamAgg).sort((a, b) => b.net - a.net).map(t => `<div class="dash-item" data-act="tc-team" data-team="${esc(t.team)}" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;cursor:pointer">
+      <span style="font-weight:800;font-size:13px">${esc(t.team)}</span>
+      <span style="display:flex;gap:12px;align-items:center"><span class="faint" style="font-size:11px">${t.n} deal${t.n === 1 ? '' : 's'}</span><b style="color:${t.net >= 0 ? '#3fb950' : 'var(--red)'};font-size:13px;font-variant-numeric:tabular-nums">${mny(t.net)}</b><span class="faint">›</span></span></div>`).join('');
+  const fullList = S._tcFullList;
+  const docketBody = fullList
+    ? `<button class="btn ghost" data-act="tc-fulllist" style="width:auto;padding:6px 14px;font-size:12px;margin-bottom:10px">‹ Group by team</button>${allDeals.map(tcChatDocketCard).join('')}`
+    : `${teamRows}<button class="btn ghost" data-act="tc-fulllist" style="width:100%;margin-top:4px;font-size:12px">📜 Show the full list — all ${allDeals.length} trades</button>`;
+  const fullDocket = allDeals.length ? `<div class="seclabel" style="margin:22px 0 6px">The Full Docket — ${fullList ? `all ${allDeals.length} trades` : 'by team'}</div>
+    <div class="faint" style="font-size:11px;margin-bottom:8px">${fullList ? 'Every trade on file, biggest swing first — the net the day of the deal, and where it aged differently, ~3 years later. Add a note to any deal to have the court reconsider.' : 'Tap a franchise for every one of its deals, graded at the time and in hindsight. Sorted by net. Or open the full list.'}</div>${docketBody}` : '';
 
   // THE RECKONING — every parsed chat trade graded, shark to mark. This is the
   // headline the user asked for: who came out ahead across the whole history.
@@ -6106,6 +6115,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'records') return showRecords();
   if (act === 'trade-court') return showTradeCourt();
   if (act === 'tc-refresh') { toast('Re-subpoenaing the league…'); return showTradeCourt(true); }
+  if (act === 'tc-fulllist') { S._tcFullList = !S._tcFullList; return showTradeCourt(); }
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
   if (act === 'ex-files') return showExFiles();
   if (act === 'rv-toggle') {
