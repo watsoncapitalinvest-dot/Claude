@@ -4690,11 +4690,23 @@ function tcDraftSection(team){
       <span class="nm" style="flex:1">${esc(p.player)}</span>
       <span class="faint" style="font-size:11px;white-space:nowrap">cost ${$(p.cost)} · rookie ${$(p.rookie)} → <b style="color:${nc}">${$(p.hind)}</b>${soFar}</span></div>`;
   }).join('');
-  return `<div class="seclabel" style="margin:18px 0 8px">🎯 The Draft Room — ${md.length} pick${md.length === 1 ? '' : 's'} made</div>
+  // POP's letter grades for this team's classes, on his own curve.
+  const bias = tcGraderBias();
+  const gr = tcGraderRows().filter(r => r.team === team && !r.noPicks);
+  const gradeCard = gr.length ? `<div class="card" style="margin-bottom:8px;border-color:var(--accent-d)">
+    <div class="byline">🎓 Powers of Pain graded these classes</div>${gr.map(r => {
+      const re = r.err == null ? null : r.err - bias;
+      const call = r.hindYears < 3 ? `<span class="faint">${r.hindYears}y in — still cooking</span>`
+        : re == null ? '' : Math.abs(re) <= 0.4 ? '<span style="color:#3fb950">✅ fair by his curve</span>'
+        : re > 0 ? '<span style="color:var(--amber)">📈 high even for him</span>' : '<span style="color:#3fb950">📉 low even for him</span>';
+      return `<div class="dt" style="font-size:12px;padding:2px 0">${r.year}: POP gave <b>${esc(r.pop)}</b> → aged like <b>${esc(r.obj)}</b> · ${call}</div>`;
+    }).join('')}</div>` : '';
+  return `<div class="seclabel" style="margin:18px 0 8px">🎯 The Draft Room — ${md.length} pick${md.length === 1 ? '' : 's'} made</div>${gradeCard}
     <div class="card"><div class="dt" style="font-size:12px">Spent <b>${$(totCost)}</b> of draft capital → now worth <b style="color:${net >= 0 ? '#3fb950' : 'var(--red)'}">${$(totHind)}</b> <b style="color:${net >= 0 ? '#3fb950' : 'var(--red)'}">(${money(net)})</b>. Each pick shows its capital cost, the rookie's value that year, and his value ~3 years on.</div>
       <div style="margin-top:8px">${rows}</div>
       <div class="faint" style="font-size:11px;margin-top:8px">Picks this team <b>traded</b> instead of using are graded up top in the deal ledger.</div></div>`;
 }
+function tcGraderBias(){ const mat = tcGraderRows().filter(r => r.hindYears >= 3 && r.err != null); return mat.length ? mat.reduce((s, r) => s + r.err, 0) / mat.length : 0; }
 // The Sleeper walk is expensive, so it runs ONCE and is cached (memory +
 // localStorage). Opening the court reuses the cache; pass force=true (the
 // Refresh button) to re-subpoena after a new trade.
@@ -4951,11 +4963,14 @@ function tcGraderSection(){
   const resid = mat.length ? mat.reduce((s, r) => s + Math.abs(r.err - bias), 0) / mat.length : 0;
   const acc = resid < 0.5 ? 'sharp' : resid < 0.9 ? 'solid' : 'shaky';
   const biasTxt = Math.abs(bias) < 0.2 ? 'no real lean' : (Math.abs(bias) > 0.7 ? 'strongly ' : '') + (bias > 0 ? 'generous' : 'harsh');
-  const verdict = r => r.noPicks ? { i: '—', t: 'traded the class' }
-    : r.err == null ? { i: '?', t: '' }
-    : r.hindYears < 3 ? { i: '⏳', t: r.hindYears + 'y in' }
-    : Math.abs(r.err) <= 0.4 ? { i: '✅', t: 'nailed it' }
-    : r.err > 0 ? { i: '📈', t: 'too high' } : { i: '📉', t: 'too low' };
+  // Curve-adjusted call: graded against HIS OWN baseline (err minus his lean),
+  // so a generous grader isn't dinged on every class — only where he's off for him.
+  const verdict = r => { if (r.noPicks) return { i: '—', t: 'traded the class' };
+    if (r.err == null) return { i: '?', t: '' };
+    if (r.hindYears < 3) return { i: '⏳', t: r.hindYears + 'y in' };
+    const re = r.err - bias;
+    if (Math.abs(re) <= 0.4) return { i: '✅', t: 'fair by his curve' };
+    return re > 0 ? { i: '📈', t: 'high even for him' } : { i: '📉', t: 'low even for him' }; };
   const byYear = {}; rows.forEach(r => (byYear[r.year] = byYear[r.year] || []).push(r));
   const blocks = Object.keys(byYear).sort().map(y => {
     const rs = byYear[y], dev = rs[0].hindYears < 3;
