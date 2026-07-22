@@ -4327,11 +4327,18 @@ function tcTeamCanon(name) {
 // baked value as of the trade date (who won THEN); atTime=false uses the live
 // $-engine's today value (who won in the LONG RUN). Picks parse by slot/round
 // with an era-correct future discount either way.
+// atTime=true  → value at the trade's own season (who won the negotiation).
+// atTime=false → value ~3 years later (in hindsight), capped at the latest
+//   snapshot we have. Player values come from the dated DynastyProcess history;
+//   picks stay on the draft-capital model (frozen — pick outcomes are phase 2).
 function tcChatAssetVal(a, season, atTime) {
+  const targetYear = atTime ? season : Math.min(2026, (season || 2023) + 3);
   if (a.player) {
-    if (atTime && typeof a.v === 'number') return a.v;
-    const dv = (typeof playerDollarValue === 'function') ? playerDollarValue(a.player) : null;
-    return (dv && dv.val) ? dv.val : 16;
+    const dv = dpValueAt(a.player, targetYear);
+    if (dv != null) return dv;
+    if (atTime && typeof a.v === 'number') return a.v;      // fallback: baked at-time value
+    const pv = (typeof playerDollarValue === 'function') ? playerDollarValue(a.player) : null;
+    return (pv && pv.val) ? pv.val : (typeof a.v === 'number' ? a.v : 16);
   }
   const s = String(a.pick || ''); const yr = (s.match(/\b(20\d\d)\b/) || [])[1];
   const slot = (s.match(/pick\s*#?\s*(\d{1,2})/i) || [])[1];
@@ -4469,7 +4476,7 @@ async function rvAiReview(key, kind){
     const g = o => (o.s.gets || []).map(a => a.player || a.pick).filter(Boolean).join(', ') || 'future considerations';
     const money = n => (n < 0 ? '-$' : '+$') + Math.abs(Math.round(n));
     system = JUDGE;
-    ctx = `Trade from ${deal.date || deal.season || 'an earlier season'}. On the value board the court called this a "${tcTradeRating(deal.netAt[W.i]).tag}". ${W.s.team} received: ${g(W)}. ${L.s.team} received: ${g(L)}. Graded on values the day of the deal, ${W.s.team} came out ${money(deal.netAt[W.i])}${deal.netAt[L.i] < 0 ? `; ${L.s.team} came out ${money(deal.netAt[L.i])}` : ''} (on today's board ${W.s.team} is ${money(deal.netLong[W.i])}).\n\nThe owner's added context: "${note}"`;
+    ctx = `Trade from ${deal.date || deal.season || 'an earlier season'}. On the value board the court called this a "${tcTradeRating(deal.netAt[W.i]).tag}". ${W.s.team} received: ${g(W)}. ${L.s.team} received: ${g(L)}. Graded on values the day of the deal, ${W.s.team} came out ${money(deal.netAt[W.i])}${deal.netAt[L.i] < 0 ? `; ${L.s.team} came out ${money(deal.netAt[L.i])}` : ''} (in hindsight ~3 years later, ${W.s.team} is ${money(deal.netLong[W.i])}).\n\nThe owner's added context: "${note}"`;
   } else {
     const m = (S.records && S.records.standings || []).find(r => r.name === key.split('::')[1]);
     if (!m) { toast('Could not re-locate that owner'); return; }
@@ -4518,7 +4525,7 @@ function tcChatDocketCard(deal){
   const r = tcTradeRating(deal.netAt[W.i]), key = 'tcc::' + courtSig(deal);
   const names = o => o.s.gets.map(a => a.player || a.pick || '?').join(', ') || 'future considerations';
   const swap = order.map(o => `<b>${esc(o.s.team)}</b> <span class="faint">${esc(names(o))}</span>`).join(' <span style="color:var(--amber)">⇄</span> ');
-  const aged = Math.abs(deal.netLong[W.i] - deal.netAt[W.i]) >= 5 ? ` <span class="faint">· ${money(deal.netLong[W.i])} on today's board</span>` : '';
+  const aged = Math.abs(deal.netLong[W.i] - deal.netAt[W.i]) >= 5 ? ` <span class="faint">· ${money(deal.netLong[W.i])} in hindsight (~3 yrs)</span>` : '';
   const verdict = deal.netAt[W.i] < TC_WIN
     ? `Even money — nobody got fleeced.`
     : `${esc(W.s.team)} ${money(deal.netAt[W.i])} the day of the deal${deal.netAt[L.i] < 0 ? ` · ${esc(L.s.team)} ${money(deal.netAt[L.i])}` : ''}.${aged}`;
@@ -4565,7 +4572,7 @@ function tcChatHeistCard(deal){
   return `<div class="card story">
     <div class="byline">⚖️ The Trade Court · ${esc(deal.date || String(deal.season || ''))}${multi ? ` · <b>${order.length}-TEAM TRADE</b>` : ''}</div>
     <h2>${esc(head)}</h2>
-    <div class="dek">${multi ? `A ${order.length}-team deal — ` : ''}${esc(wn)} came out <b style="color:#3fb950">${money(wnet)}</b> the day of the deal${Math.abs(deal.netLong[W.i] - wnet) >= 5 ? ` — <b>${money(deal.netLong[W.i])}</b> on today's board` : ''}.</div>
+    <div class="dek">${multi ? `A ${order.length}-team deal — ` : ''}${esc(wn)} came out <b style="color:#3fb950">${money(wnet)}</b> the day of the deal${Math.abs(deal.netLong[W.i] - wnet) >= 5 ? ` — <b>${money(deal.netLong[W.i])}</b> in hindsight, ~3 years later` : ''}.</div>
     <div style="display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:6px 0 12px">${order.map(col).join('')}</div>
     <p class="body">${esc(body)}</p>
     ${reviewBlock(key, 'tcc')}
@@ -4583,9 +4590,9 @@ function showTeamTrades(team) {
   const totAt = sum(list.map(x => x.netAt)), totLong = sum(list.map(x => x.netLong));
   const w = list.filter(x => x.netAt > TC_WIN).length, l = list.filter(x => x.netAt < -TC_WIN).length, e = list.length - w - l;
   const v = tcVerdict(totAt);
-  const summary = `<div class="card" style="margin-bottom:10px"><div class="dt">${v.ic} <b>${esc(v.tag)}</b> — ${list.length} deals · At the time <b style="color:${totAt >= 0 ? '#3fb950' : 'var(--red)'}">${money(totAt)}</b> · Long run <b style="color:${totLong >= 0 ? '#3fb950' : 'var(--red)'}">${money(totLong)}</b> · ${w}-${l}-${e}. ${esc(v.line)}</div><div class="faint" style="font-size:11px;margin-top:4px">Biggest swings first. Each asset shows its value the day of the deal; “(→$N today)” is its long-run value if it changed.</div></div>`;
+  const summary = `<div class="card" style="margin-bottom:10px"><div class="dt">${v.ic} <b>${esc(v.tag)}</b> — ${list.length} deals · At the time <b style="color:${totAt >= 0 ? '#3fb950' : 'var(--red)'}">${money(totAt)}</b> · In hindsight <b style="color:${totLong >= 0 ? '#3fb950' : 'var(--red)'}">${money(totLong)}</b> · ${w}-${l}-${e}. ${esc(v.line)}</div><div class="faint" style="font-size:11px;margin-top:4px">Biggest swings first. Each asset shows its value the day of the deal; “(→$N later)” is its value ~3 years on if it changed.</div></div>`;
   const assetHtml = (a, season) => { const at = tcChatAssetVal(a, season, true), lng = tcChatAssetVal(a, season, false);
-    const nm = a.player || a.pick || 'asset'; const chg = (Math.abs(lng - at) >= 3) ? ` <span class="faint" style="font-size:10px">(→$${lng} today)</span>` : '';
+    const nm = a.player || a.pick || 'asset'; const chg = (Math.abs(lng - at) >= 3) ? ` <span class="faint" style="font-size:10px">(→$${lng} in ~3 yrs)</span>` : '';
     return `<div class="trrow"><span class="pos" style="${a.pick ? 'color:var(--amber);border-color:var(--amber)' : ''}">${a.pick ? '◆' : '·'}</span><span class="nm" style="flex:1">${esc(nm)}</span><span class="val">$${at}${chg}</span></div>`; };
   const cards = list.map(x => {
     const mine = x.raw[x.mineIdx], others = x.raw.filter((s, i) => i !== x.mineIdx);
@@ -4598,7 +4605,7 @@ function showTeamTrades(team) {
         <div class="trside" style="flex:1;min-width:130px"><div class="trmgr">${esc(team)} got</div>${mine.gets.map(a => assetHtml(a, x.season)).join('') || '<div class="dt faint">—</div>'}</div>
         <div class="trside" style="flex:1;min-width:130px"><div class="trmgr">${esc(others.map(o => o.team).join(' / '))} got</div>${others.flatMap(o => o.gets).map(a => assetHtml(a, x.season)).join('') || '<div class="dt faint">—</div>'}</div>
       </div>
-      <div style="margin-top:7px;font-size:12px;font-weight:800">At the time <span style="color:${cA}">${money(x.netAt)}</span> &nbsp;·&nbsp; Long run <span style="color:${cL}">${money(x.netLong)}</span></div>
+      <div style="margin-top:7px;font-size:12px;font-weight:800">At the time <span style="color:${cA}">${money(x.netAt)}</span> &nbsp;·&nbsp; In hindsight <span style="color:${cL}">${money(x.netLong)}</span></div>
       ${reviewPanel('tc::' + team + '::' + courtSig(x), 'tc')}
     </div>`;
   }).join('');
@@ -4706,7 +4713,7 @@ async function showTradeCourt(force) {
   // verdict and a reviewer's-notes box the court will reconsider.
   const docketCards = allDeals.map(tcChatDocketCard).join('');
   const fullDocket = docketCards ? `<div class="seclabel" style="margin:22px 0 6px">The Full Docket — all ${allDeals.length} trades graded</div>
-    <div class="faint" style="font-size:11px;margin-bottom:8px">Every trade on file across every team and season, biggest swing first — a rating, the net <b>the day of the deal</b> (who won the negotiation), and a verdict; where a deal aged differently, its value <b>on today's board</b> is noted too. Disagree with a call? Add a note to any deal and the court will reconsider.</div>${docketCards}` : '';
+    <div class="faint" style="font-size:11px;margin-bottom:8px">Every trade on file across every team and season, biggest swing first — a rating, the net <b>the day of the deal</b> (who won the negotiation), and a verdict; where a deal aged differently, its value <b>~3 years later</b> is noted too. Disagree with a call? Add a note to any deal and the court will reconsider.</div>${docketCards}` : '';
 
   // THE RECKONING — every parsed chat trade graded, shark to mark. This is the
   // headline the user asked for: who came out ahead across the whole history.
@@ -4731,11 +4738,11 @@ async function showTradeCourt(force) {
     reckoning = `<div class="seclabel" style="margin:20px 0 8px">⚖️ The Reckoning — all ${CL.graded} chat trades graded</div>
       ${heroes2}
       <div class="card" style="overflow-x:auto">
-        <div class="faint" style="font-size:11px;line-height:1.6;margin-bottom:8px">Every trade from the group chat, each asset priced and netted per team. <b>At the time</b> = value the day of the trade (who won the negotiation). <b>Long run</b> = the same deal on today's board (how it actually aged). Ranked by <b>At the time</b>. <b>Tap any franchise</b> to see every one of its deals, each asset priced.</div>
+        <div class="faint" style="font-size:11px;line-height:1.6;margin-bottom:8px">Every trade from the group chat, each asset priced and netted per team. <b>At the time</b> = value the day of the trade (who won the negotiation). <b>In hindsight</b> = the same pieces re-priced <b>~3 years later</b> (how it actually aged). Ranked by <b>At the time</b>. <b>Tap any franchise</b> to see every one of its deals, each asset priced.</div>
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr style="border-bottom:1px solid var(--line);color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.4px">
             <th style="text-align:right;padding:0 8px 6px 0">#</th><th style="text-align:left;padding:0 8px 6px 0">Franchise</th>
-            <th style="text-align:right;padding:0 8px 6px">At the time</th><th style="text-align:right;padding:0 8px 6px">Long run</th><th style="text-align:right;padding:0 8px 6px" title="Wins–Losses–Even at the time">W–L–E</th><th style="text-align:right;padding:0 0 6px 8px">Deals</th></tr></thead>
+            <th style="text-align:right;padding:0 8px 6px">At the time</th><th style="text-align:right;padding:0 8px 6px" title="Same pieces re-priced ~3 years later">In hindsight</th><th style="text-align:right;padding:0 8px 6px" title="Wins–Losses–Even at the time">W–L–E</th><th style="text-align:right;padding:0 0 6px 8px">Deals</th></tr></thead>
           <tbody>${curRows}</tbody></table>
         ${legacyNote}
       </div>`;
@@ -4756,7 +4763,7 @@ async function showTradeCourt(force) {
     ${chat.precedents.length ? `<div class="card"><div class="at" style="margin:0 0 6px">🧾 Landmark Deals on File</div>${chat.precedents.map(p => `<div class="dt" style="padding:3px 0">• ${esc(p)}</div>`).join('')}<div class="faint" style="font-size:11px;margin-top:6px">The reference trades that calibrate the whole value board.</div></div>` : ''}` : '';
 
   const method = `<div class="card" style="margin-top:18px"><div class="faint" style="font-size:11px;line-height:1.6">
-    <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Each player carries TWO values: what he was worth the <b>day of the trade</b> (age, production, hype then) and what he's worth <b>today</b> — powering the "At the time" and "Long run" columns in The Reckoning. Draft picks use a calibrated round model, era-adjusted (mid-1st ≈ $48, 2nd ≈ $18, future picks discounted). Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
+    <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Player values come from <b>DynastyProcess dated Superflex snapshots</b> — one per off-season, 2021→2026 — so each player carries his real market value <b>the day of the trade</b> and again <b>~3 years later</b>, powering the "At the time" and "In hindsight" columns. Draft picks use a calibrated round model, era-adjusted (mid-1st ≈ $48, 2nd ≈ $18, future picks discounted) and are held at that value in both lenses (resolving picks to the player they became is coming). Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
   </div></div>`;
 
   shell(freshLine + docket + reckoning + coverageCard + heroes + rankCard + heistSec + menageSec + fullDocket + chatCard + method);
@@ -4795,9 +4802,56 @@ async function loadBundledDraftIntel() {
 }
 // The itemized trade ledger parsed from the league chat (2021-2026).
 async function loadBundledTrades() {
-  if (S.chatTrades) return;
-  try { const r = await fetch('trades.json', { cache: 'no-cache' });
-    if (r.ok) { const d = await r.json(); if (d && d.trades) S.chatTrades = d; } } catch {}
+  if (!S.chatTrades) {
+    try { const r = await fetch('trades.json', { cache: 'no-cache' });
+      if (r.ok) { const d = await r.json(); if (d && d.trades) S.chatTrades = d; } } catch {}
+  }
+  await loadDpValues();
+}
+// ---- Dated dynasty value history (DynastyProcess snapshots, one per off-season
+//  2021-2026, Superflex, scaled to the SCFL board). Powers the "at the time" vs
+//  "in hindsight (~3 yrs later)" grades — real market value as of each year. ----
+async function loadDpValues() {
+  if (S.dpValues) return;
+  try { const r = await fetch('dp-values.json', { cache: 'no-cache' });
+    if (r.ok) { const d = await r.json(); if (d && d.v) { S.dpValues = d; buildDpIndex(d); } } } catch {}
+}
+// Keyed on the RAW lower-cased chat name (NOT normalized) so "jones" and
+// "jones jr" stay distinct. Values are the real player, normalized on lookup.
+const DP_ALIAS = { 'isaiah pacheco':'isiah pacheco','pat friermuth':'pat freiermuth','jerrick mckinnon':'jerick mckinnon','dontavian wicks':'dontayvion wicks','rashaad white':'rachaad white','z charbonnet':'zach charbonnet','x leggete':'xavier legette','j metchie':'john metchie','tory horn':'tory horton','jayden blue':'jaydon blue','b irving':'bucky irving','k allen':'keenan allen',
+  'red rocket':'andy dalton','the stache':'gardner minshew','ty':'ty hilton','jones':'aaron jones','jones jr':'ronald jones','cook':'dalvin cook','okonkwo':'chig okonkwo' };
+function dpNorm(s){ return String(s || '').toLowerCase().replace(/[.,'’]/g, '').replace(/\s+(jr|sr|ii|iii|iv|v)\b/g, '').replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim(); }
+function buildDpIndex(d){
+  const idx = {};                                            // last name -> [{key,first,max}]
+  for (const key in d.v) { const parts = key.split(' '), last = parts[parts.length - 1];
+    const max = Math.max(...d.v[key].filter(x => x != null), 0);
+    (idx[last] = idx[last] || []).push({ key, first: parts[0], max }); }
+  S._dpIdx = idx;
+}
+// Resolve a chat player name to a value-table key (exact → alias → last-name +
+// first-initial → dominant-by-value), then return $ at the nearest snapshot year.
+function dpResolve(name){
+  const d = S.dpValues; if (!d) return null;
+  const raw = String(name || '').toLowerCase().trim();
+  let q = dpNorm(DP_ALIAS[raw] || name);
+  if (d.v[q]) return q;
+  const parts = q.split(' '), last = parts[parts.length - 1], fi = parts.length > 1 ? parts[0][0] : null;
+  let cands = (S._dpIdx && S._dpIdx[last]) || [];
+  if (fi) cands = cands.filter(c => c.first[0] === fi);
+  if (cands.length === 1) return cands[0].key;
+  if (cands.length > 1) { const s = cands.slice().sort((a, b) => b.max - a.max); if (s[0].max >= s[1].max * 2) return s[0].key; }
+  return null;
+}
+function dpValueAt(name, year){
+  const d = S.dpValues; if (!d) return null;
+  const key = dpResolve(name); if (!key) return null;
+  const arr = d.v[key], yrs = d.years;                       // arr aligns to d.years
+  let i = yrs.indexOf(year);
+  if (i >= 0 && arr[i] != null) return arr[i];
+  // nearest available snapshot to the target year
+  let best = null, bestDist = 1e9;
+  for (let j = 0; j < yrs.length; j++) { if (arr[j] == null) continue; const dist = Math.abs(yrs[j] - year); if (dist < bestDist) { bestDist = dist; best = arr[j]; } }
+  return best;
 }
 async function renderDraft() {
   setContent(spinner('Opening the War Room…'));
