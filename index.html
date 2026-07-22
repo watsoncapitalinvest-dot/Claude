@@ -4253,12 +4253,17 @@ async function tcBuildLedger() {
   const nowSeason = parseInt(b.league.season) || 0;
   const history = await buildLeagueHistory(b.league);        // newest → oldest
   const currentOwners = new Set(Object.keys(b.usersById));
-  const ledger = {}, allTrades = [], coverage = [], drafts = {}, draftPicks = [];
+  const ledger = {}, allTrades = [], coverage = [], drafts = {}, draftPicks = [], standings = {};
   for (const lg of history) {
     let rosters, users;
     try { [rosters, users] = await Promise.all([getRosters(lg.league_id), getLeagueUsers(lg.league_id)]); } catch { coverage.push({ season: lg.season, trades: 0, error: true }); continue; }
     const ridToOwner = {}; (rosters || []).forEach(r => ridToOwner[r.roster_id] = r.owner_id);
     const uById = {}; (users || []).forEach(u => uById[u.user_id] = u);
+    // Season standings (wins, then points) → each team's finishing rank, so a
+    // FUTURE pick can be nudged by how that franchise tends to finish.
+    const teamNameOf = rid => { const u = uById[ridToOwner[rid]]; const tn = u && (u.metadata && u.metadata.team_name || u.display_name); return tn ? tcTeamCanon(tn) : null; };
+    const sr = (rosters || []).map(r => ({ team: teamNameOf(r.roster_id), w: (r.settings && r.settings.wins) || 0, pf: ((r.settings && r.settings.fpts) || 0) + ((r.settings && r.settings.fpts_decimal) || 0) / 100 })).filter(x => x.team);
+    if (sr.length) { sr.sort((a, b) => b.w - a.w || b.pf - a.pf); standings[lg.season] = {}; sr.forEach((x, i) => standings[lg.season][x.team] = { rank: i + 1, of: sr.length }); }
     // Rookie-draft results this season → resolve traded picks to the player taken,
     // AND log every selection (who drafted whom) for the per-team Draft Report.
     try {
@@ -4303,7 +4308,7 @@ async function tcBuildLedger() {
       allTrades.push(scored);
     }
   }
-  return { allTrades, ledger, nowSeason, seasons: history.map(h => h.season), coverage, drafts, draftPicks };
+  return { allTrades, ledger, nowSeason, seasons: history.map(h => h.season), coverage, drafts, draftPicks, standings };
 }
 // What a rookie pick was worth as draft capital (current-year, no future discount).
 function tcPickCost(round, overall){
@@ -4410,8 +4415,25 @@ function tcChatAssetVal(a, season, atTime) {
   else if (/\b(2nd|second)\b/i.test(s)) v = 18;
   else if (/\b(3rd|third)\b/i.test(s)) v = 6;
   else v = 12;
-  if (yr && season && +yr > season) v = Math.round(v * Math.pow(0.9, +yr - season)); // future pick discount
+  // FUTURE pick (slot unknown): nudge the generic value by how the original
+  // franchise tends to finish — a bottom team's first lands early (worth more),
+  // a contender's lands late (worth less) — then apply the time discount.
+  if (yr && season && +yr > season) {
+    if (!slot) { const owner = (s.match(/\(([^)]+)\)/) || [])[1]; if (owner) v = Math.round(v * tcFuturePickMult(tcTeamCanon(owner.trim()))); }
+    v = Math.round(v * Math.pow(0.9, +yr - season)); // time discount
+  }
   return v;
+}
+// How a franchise tends to finish → a multiplier for its FUTURE picks.
+// 1.0 = neutral; >1 = usually bad (pick lands early, worth more); <1 = usually
+// good (pick lands late, worth less). Needs Sleeper standings (from Refresh).
+function tcFuturePickMult(team){
+  const st = (S._tcData && S._tcData.standings) || {}; const ranks = []; let of = 16;
+  for (const s in st) if (st[s][team]) { ranks.push(st[s][team].rank); of = st[s][team].of; }
+  if (!ranks.length || of < 2) return 1;
+  const avg = ranks.reduce((a, b) => a + b, 0) / ranks.length;
+  const norm = (avg - 1) / (of - 1);                       // 0 = always 1st, 1 = always last
+  return +(0.75 + norm * 0.6).toFixed(3);                  // 0.75 (contender) … 1.35 (bottom-feeder)
 }
 // Grade every chat trade; net_i = what you got minus your share of what left the
 // table, so it sums to zero per deal and generalizes to 3+-team trades.
@@ -4876,7 +4898,7 @@ async function showTradeCourt(force) {
     ${chat.precedents.length ? `<div class="card"><div class="at" style="margin:0 0 6px">🧾 Landmark Deals on File</div>${chat.precedents.map(p => `<div class="dt" style="padding:3px 0">• ${esc(p)}</div>`).join('')}<div class="faint" style="font-size:11px;margin-top:6px">The reference trades that calibrate the whole value board.</div></div>` : ''}` : '';
 
   const method = `<div class="card" style="margin-top:18px"><div class="faint" style="font-size:11px;line-height:1.6">
-    <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Player values come from <b>DynastyProcess dated Superflex snapshots</b> — one per off-season, 2021→2026 — so each player carries his real market value <b>the day of the trade</b> and again <b>~3 years later</b>, powering the "At the time" and "In hindsight" columns. Draft picks are priced as picks the day of the trade. SCFL sets the rookie order by <b>inverse standings/playoff finish</b> (with tiebreakers), so a pick's slot locks the moment the <b>prior</b> season ends. A pick therefore shows its <b>exact-slot</b> value only once that order is set (a current-year pick — e.g. "2022 pick 3" traded in the 2022 offseason). A <b>future</b> pick ("2024 1st") is valued as a <b>generic round pick</b> — an average mid-1st ≈ $48, 2nd ≈ $18, with a small future discount — because you don't yet know where that team will finish, so you don't know the slot. In hindsight <b>each pick is re-valued as the player it actually became</b>, pulled from your Sleeper rookie-draft results. A pick that got flipped self-corrects — its value cancels across the two trades, leaving whatever the team got back. Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
+    <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Player values come from <b>DynastyProcess dated Superflex snapshots</b> — one per off-season, 2021→2026 — so each player carries his real market value <b>the day of the trade</b> and again <b>~3 years later</b>, powering the "At the time" and "In hindsight" columns. Draft picks are priced as picks the day of the trade. SCFL sets the rookie order by <b>inverse standings/playoff finish</b> (with tiebreakers), so a pick's slot locks the moment the <b>prior</b> season ends. A pick therefore shows its <b>exact-slot</b> value only once that order is set (a current-year pick — e.g. "2022 pick 3" traded in the 2022 offseason). A <b>future</b> pick ("2024 1st") is valued as a <b>generic round pick</b> — a mid-1st ≈ $48, 2nd ≈ $18, with a small time discount — then <b>nudged by how the original franchise tends to finish</b>: a perennial bottom team's first lands early (worth more), a contender's lands late (worth less). You still don't know the exact slot, but you know their odds of picking high or low. In hindsight <b>each pick is re-valued as the player it actually became</b>, pulled from your Sleeper rookie-draft results. A pick that got flipped self-corrects — its value cancels across the two trades, leaving whatever the team got back. Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
   </div></div>`;
 
   shell(freshLine + docket + reckoning + coverageCard + heroes + rankCard + heistSec + menageSec + fullDocket + chatCard + method);
