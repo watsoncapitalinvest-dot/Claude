@@ -4252,30 +4252,32 @@ async function tcBuildLedger() {
   const nowSeason = parseInt(b.league.season) || 0;
   const history = await buildLeagueHistory(b.league);        // newest → oldest
   const currentOwners = new Set(Object.keys(b.usersById));
-  const ledger = {}, allTrades = [], coverage = [], drafts = {};
+  const ledger = {}, allTrades = [], coverage = [], drafts = {}, draftPicks = [];
   for (const lg of history) {
     let rosters, users;
     try { [rosters, users] = await Promise.all([getRosters(lg.league_id), getLeagueUsers(lg.league_id)]); } catch { coverage.push({ season: lg.season, trades: 0, error: true }); continue; }
     const ridToOwner = {}; (rosters || []).forEach(r => ridToOwner[r.roster_id] = r.owner_id);
     const uById = {}; (users || []).forEach(u => uById[u.user_id] = u);
-    // Rookie-draft results this season → later lets us resolve a traded pick to
-    // the actual player taken (its true hindsight value).
+    // Rookie-draft results this season → resolve traded picks to the player taken,
+    // AND log every selection (who drafted whom) for the per-team Draft Report.
     try {
       const dl = await getLeagueDrafts(lg.league_id);
       const dr = (dl || []).find(d => String(d.season) === String(lg.season)) || (dl || [])[0];
       if (dr && dr.draft_id) {
         const picks = await getDraftPicks(dr.draft_id);
         const D = drafts[lg.season] = { overall: {}, roundSlot: {}, teamSlot: {} };
+        const s2r = dr.slot_to_roster_id || {};
+        const teamOf = rid => { const u = uById[ridToOwner[rid]]; const tn = u && (u.metadata && u.metadata.team_name || u.display_name); return tn ? tcTeamCanon(tn) : null; };
+        Object.keys(s2r).forEach(slot => { const t = teamOf(s2r[slot]); if (t) D.teamSlot[t] = +slot; });
         (picks || []).forEach(pk => {
           const nm = (pk.metadata && `${pk.metadata.first_name || ''} ${pk.metadata.last_name || ''}`.trim())
             || (b.players[pk.player_id] && playerName(b.players[pk.player_id], pk.player_id)) || '';
           if (!nm) return;
           if (pk.pick_no) D.overall[pk.pick_no] = nm;
           if (pk.round && pk.draft_slot) (D.roundSlot[pk.round] = D.roundSlot[pk.round] || {})[pk.draft_slot] = nm;
+          draftPicks.push({ season: +lg.season, round: pk.round, pickNo: pk.pick_no, slot: pk.draft_slot,
+            player: nm, drafter: teamOf(pk.roster_id), original: teamOf(s2r[pk.draft_slot]) });
         });
-        const s2r = dr.slot_to_roster_id || {};
-        Object.keys(s2r).forEach(slot => { const u = uById[ridToOwner[s2r[slot]]];
-          const tn = u && (u.metadata && u.metadata.team_name || u.display_name); if (tn) D.teamSlot[tcTeamCanon(tn)] = +slot; });
       }
     } catch {}
     // Weeks 0-18 covers offseason legs + the full season; invalid legs return [].
@@ -4300,7 +4302,24 @@ async function tcBuildLedger() {
       allTrades.push(scored);
     }
   }
-  return { allTrades, ledger, nowSeason, seasons: history.map(h => h.season), coverage, drafts };
+  return { allTrades, ledger, nowSeason, seasons: history.map(h => h.season), coverage, drafts, draftPicks };
+}
+// What a rookie pick was worth as draft capital (current-year, no future discount).
+function tcPickCost(round, overall){
+  if (overall) { const PD = (typeof calcDollars === 'function') ? calcDollars() : {}; return PD[+overall] || (+overall <= 16 ? 34 : 12); }
+  return round === 1 ? 48 : round === 2 ? 18 : round === 3 ? 6 : 12;
+}
+// Every selection a franchise MADE, graded like a trade: pick capital spent vs
+// the rookie's value then (the reach/steal) and ~3 years later (did it hit).
+function tcDraftMade(team){
+  const picks = (S._tcData && S._tcData.draftPicks || []).filter(p => p.drafter === team && p.player);
+  return picks.map(p => {
+    const hindYr = Math.min(DP_LAST_YEAR, p.season + 3), hindYears = Math.min(3, DP_LAST_YEAR - p.season);
+    const cost = tcPickCost(p.round, p.pickNo);
+    const rookie = dpValueAt(p.player, p.season);
+    const hind = dpValueAt(p.player, hindYr);
+    return { ...p, cost, rookie: rookie == null ? cost : rookie, hind: hind == null ? (rookie == null ? cost : rookie) : hind, hindYears };
+  }).sort((a, b) => a.season - b.season || (a.pickNo || 0) - (b.pickNo || 0));
 }
 // Resolve a traded pick string to the player actually drafted with it.
 //  "2022 pick 11"       → the 11th overall selection that year
@@ -4627,7 +4646,7 @@ function showTeamTrades(team) {
   const list = tcTeamTrades(team);
   const shell = inner => { app.innerHTML = `<div style="padding-bottom:32px">${back}
     <div class="setup-logo" style="font-size:24px">⚖️ ${esc(team)} — the deal ledger</div>${inner}</div>`; };
-  if (!list.length) return shell(`<div class="card"><div class="dt">No parsed trades on record for ${esc(team)}.</div></div>`);
+  if (!list.length) return shell(`<div class="card"><div class="dt">No parsed trades on record for ${esc(team)}.</div></div>` + tcDraftSection(team));
   const totAt = sum(list.map(x => x.netAt)), totLong = sum(list.map(x => x.netLong));
   const w = list.filter(x => x.netAt > TC_WIN).length, l = list.filter(x => x.netAt < -TC_WIN).length, e = list.length - w - l;
   const v = tcVerdict(totAt);
@@ -4650,7 +4669,28 @@ function showTeamTrades(team) {
       ${reviewPanel('tc::' + team + '::' + courtSig(x), 'tc')}
     </div>`;
   }).join('');
-  shell(summary + cards);
+  shell(summary + cards + tcDraftSection(team));
+}
+// The Draft Room — every selection a team made, graded like a trade: capital
+// spent vs the rookie's value then and ~3 years later.
+function tcDraftSection(team){
+  const md = tcDraftMade(team);
+  if (!md.length) return '';
+  const $ = n => '$' + Math.round(n), money = n => (n < 0 ? '-$' : '+$') + Math.abs(Math.round(n));
+  const totCost = sum(md.map(p => p.cost)), totHind = sum(md.map(p => p.hind)), net = totHind - totCost;
+  const rows = md.map(p => {
+    const nc = (p.hind - p.cost) >= 0 ? '#3fb950' : 'var(--red)';
+    const label = `${p.season} ${p.round || '?'}.${String(p.slot || 0).padStart(2, '0')}`;
+    const soFar = p.hindYears >= 3 ? '' : ' <span class="faint">(so far)</span>';
+    return `<div class="trrow" style="align-items:baseline;gap:8px">
+      <span class="faint" style="font-size:11px;min-width:62px">${label}</span>
+      <span class="nm" style="flex:1">${esc(p.player)}</span>
+      <span class="faint" style="font-size:11px;white-space:nowrap">cost ${$(p.cost)} · rookie ${$(p.rookie)} → <b style="color:${nc}">${$(p.hind)}</b>${soFar}</span></div>`;
+  }).join('');
+  return `<div class="seclabel" style="margin:18px 0 8px">🎯 The Draft Room — ${md.length} pick${md.length === 1 ? '' : 's'} made</div>
+    <div class="card"><div class="dt" style="font-size:12px">Spent <b>${$(totCost)}</b> of draft capital → now worth <b style="color:${net >= 0 ? '#3fb950' : 'var(--red)'}">${$(totHind)}</b> <b style="color:${net >= 0 ? '#3fb950' : 'var(--red)'}">(${money(net)})</b>. Each pick shows its capital cost, the rookie's value that year, and his value ~3 years on.</div>
+      <div style="margin-top:8px">${rows}</div>
+      <div class="faint" style="font-size:11px;margin-top:8px">Picks this team <b>traded</b> instead of using are graded up top in the deal ledger.</div></div>`;
 }
 // The Sleeper walk is expensive, so it runs ONCE and is cached (memory +
 // localStorage). Opening the court reuses the cache; pass force=true (the
