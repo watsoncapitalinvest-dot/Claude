@@ -4395,6 +4395,12 @@ function saveCourtNotes(o){ try { localStorage.setItem('gg.courtnotes', JSON.str
 function getCourtNote(key){ const o = loadCourtNotes(); return Object.assign({ note: '', review: '' }, o[key]); }
 function setCourtNote(key, patch){ const o = loadCourtNotes(); o[key] = Object.assign({ note: '', review: '' }, o[key], patch); saveCourtNotes(o); }
 function rvId(key){ return 'rv_' + key.replace(/[^a-z0-9]/gi, '_'); }
+// Re-render whichever surface a note lives on (cheap for TC — uses cached data).
+function rvRerender(kind){
+  if (kind === 'ex') return showExFiles();
+  if (kind === 'tch') return showTradeCourt(true);
+  return S._tcTeam ? showTeamTrades(S._tcTeam) : showTradeCourt(true);
+}
 // A stable content signature for a parsed trade (survives re-sorting/re-grading).
 function courtSig(x){
   const a = (x.raw || []).flatMap(s => (s.gets || []).map(g => String(g.player || g.pick || ''))).filter(Boolean).sort().join(',');
@@ -4403,7 +4409,8 @@ function courtSig(x){
 // The shared notes-and-review panel injected into every trade / owner card.
 function reviewPanel(key, kind){
   const n = getCourtNote(key), id = rvId(key);
-  const saved = n.review ? `<div class="card" style="margin:8px 0 2px;border-color:var(--accent-d);background:var(--bg2)"><div class="byline">🧑‍⚖️ The newsroom, reconsidering</div><div class="body" style="font-size:13px;white-space:pre-wrap">${esc(n.review)}</div></div>` : '';
+  const revLabel = kind === 'ex' ? '👻 The Ex-Files · verdict revised' : '🧑‍⚖️ The newsroom, reconsidering';
+  const saved = n.review ? `<div class="card" style="margin:8px 0 2px;border-color:var(--accent-d);background:var(--bg2)"><div class="byline">${revLabel}</div><div class="body" style="font-size:13px;white-space:pre-wrap">${esc(n.review)}</div></div>` : '';
   return `<div class="rvnotes" style="margin-top:9px;border-top:1px dashed var(--line);padding-top:8px">
     <div class="faint" style="font-size:11px;margin-bottom:5px">📌 <b>Reviewer's note</b> — add context (an injury, the real backstory, what the pick became). The newsroom will weigh it.</div>
     <textarea id="${id}" class="rvta" placeholder="Add what the box score doesn't show…" style="width:100%;min-height:52px;font-size:13px;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);resize:vertical;box-sizing:border-box">${esc(n.note || '')}</textarea>
@@ -4436,21 +4443,56 @@ async function rvAiReview(key, kind){
   if (!note) { toast('Write a note first'); return; }
   if (!(S.apiKey || '').trim()) { toast('Add your Anthropic API key in Settings first'); return; }
   let system, ctx;
+  const JUDGE = `You are the trade judge for a 16-team Superflex dynasty fantasy-football league's newsroom — wry, sharp, and fair. You already graded a trade on a dollar value board. An owner has added context the box score can't see. Reconsider your verdict in light of it: explicitly CONFIRM, SOFTEN, or REVERSE, and say which. Weigh the note honestly — a real injury, a pick that busted or hit, or league context can flip a grade — but don't be a pushover for spin. 2–4 sentences, in the newsroom's voice. No preamble.`;
   if (kind === 'tc') {
     const team = S._tcTeam, sig = key.split('::')[2];
     const x = tcTeamTrades(team).find(t => courtSig(t) === sig);
     if (!x) { toast('Could not re-locate that trade'); return; }
-    system = `You are the trade judge for a 16-team Superflex dynasty fantasy-football league's newsroom — wry, sharp, and fair. You already graded a trade on a dollar value board. The team's owner has added context the box score can't see. Reconsider your verdict in light of it: explicitly CONFIRM, SOFTEN, or REVERSE, and say which. Weigh the note honestly — a real injury, a pick that busted or hit, or league context can flip a grade — but don't be a pushover for spin. 2–4 sentences, in the newsroom's voice. No preamble.`;
+    system = JUDGE;
     ctx = `${tcDescribe(x, team)}\n\nThe owner's added context: "${note}"`;
+  } else if (kind === 'tch') {
+    const tr = (S._tcData && S._tcData.allTrades || []).find(t => tchKey(t) === key);
+    if (!tr) { toast('Could not re-locate that trade'); return; }
+    const sides = [...tr.sides].sort((a, b) => b.net - a.net), W = sides[0], L = sides[sides.length - 1];
+    const g = s => (s.got || []).map(x => x.name).filter(Boolean).join(', ') || 'future considerations';
+    system = JUDGE;
+    ctx = `From the ${tr.leagueSeason || ''} season. On the value board the court called this a "${tcTradeRating(W.net).tag}". ${W.name} received: ${g(W)}. ${L.name} received: ${g(L)}. ${W.name} came out ${tcMoney(W.net)} ahead${L.net < 0 ? `; ${L.name} came out ${tcMoney(L.net)}` : ''}, graded on today's board.\n\nThe owner's added context: "${note}"`;
   } else {
     const m = (S.records && S.records.standings || []).find(r => r.name === key.split('::')[1]);
     if (!m) { toast('Could not re-locate that owner'); return; }
     const v = exVerdict(m);
-    system = `You are the newsroom columnist for a long-running dynasty fantasy-football league, writing "The Ex-Files" — obituaries for departed owners. You hold grudges but you're fair. You already filed a verdict on this owner. Someone has come forward with new context. Reconsider: explicitly CONFIRM, SOFTEN, or REVERSE the verdict, and say which. 2–4 sentences, in your dry columnist voice. No preamble.`;
-    ctx = `Departed owner: ${m.name}. Seasons: ${m.seasons}. All-time record ${m.record} (${((m.winPct || 0) * 100).toFixed(1)}%), ${m.numSeasons || 0} seasons, ${m.playoffs || 0} playoff runs, ${m.titles || 0} titles.\nThe newsroom's standing verdict: "${v.tag}" — ${v.line}\n\nNew context from the league: "${note}"`;
+    system = `You are the newsroom columnist for a long-running dynasty fantasy-football league, writing "The Ex-Files" — obituaries for departed owners. Dry, sharp, a little unforgiving. You'll be given the owner's stats, the verdict you filed earlier, and new context that's since surfaced. Rewrite the verdict as ONE fresh obituary line (2–4 sentences) that folds the new context in — write it as the new definitive take, in the same voice as the original. Do NOT narrate the change, do NOT reference your earlier verdict, do NOT say "correction" or "on reflection" or "confirms/softens/reverses." Just deliver the new line as if it's how the file always read. No preamble.`;
+    ctx = `Departed owner: ${m.name}. Seasons: ${m.seasons}. All-time record ${m.record} (${((m.winPct || 0) * 100).toFixed(1)}%), ${m.numSeasons || 0} seasons, ${m.playoffs || 0} playoff runs, ${m.titles || 0} titles.\nThe verdict on file now reads: "${v.tag}" — ${v.line}\n\nContext that's since come to light: "${note}"\n\nRewrite the verdict line.`;
   }
   const out = await rvCallClaude(system, ctx);
   setCourtNote(key, { review: out });
+}
+// A stable key + one-line rating for a Sleeper-era trade (the Full Docket).
+function tchKey(tr){ return 'tch::' + (tr.created || 0) + '::' + (tr.sides || []).map(s => Math.round(s.net)).join('_'); }
+function tcTradeRating(top){
+  if (top >= 30)     return { ic: '🚨', tag: 'Grand Larceny', c: 'var(--red)' };
+  if (top >= 18)     return { ic: '🔴', tag: 'Heist',         c: 'var(--red)' };
+  if (top >= TC_WIN) return { ic: '📈', tag: 'Clear Win',     c: '#e0a500' };
+  if (top >= 5)      return { ic: '➕', tag: 'Slight Edge',   c: 'var(--faint)' };
+  return               { ic: '⚖️', tag: 'Fair Deal',     c: '#3fb950' };
+}
+// One docket card per trade: rating, both sides, net, verdict, reviewer's notes.
+function tcDocketCard(tr){
+  const sides = [...tr.sides].sort((a, b) => b.net - a.net), W = sides[0], L = sides[sides.length - 1];
+  const r = tcTradeRating(W.net), key = tchKey(tr);
+  const col = s => `<div class="trside" style="flex:1;min-width:130px"><div class="trmgr">${esc(s.name)}${s.current ? '' : ' <span class="faint" style="font-size:9px">·departed</span>'} got <span class="faint" style="font-weight:600">(${tcMoney(s.recv)})</span></div>${
+    (s.got.length ? s.got : [{ name: 'future considerations', val: 0 }]).map(g => `<div class="trrow">${g.pos ? posBadge(g.pos) : `<span class="pos" style="color:var(--amber);border-color:var(--amber)">${g.kind === 'k' ? '◆' : '＋'}</span>`}<span class="nm" style="flex:1">${esc(g.name)}</span>${g.val ? `<span class="val">${g.val}</span>` : ''}</div>`).join('')}</div>`;
+  const verdict = W.net < TC_WIN
+    ? `An even-money deal — nobody got fleeced.`
+    : `${esc(W.name)} came out <b style="color:#3fb950">+${tcMoney(W.net)}</b> ahead${L.net < 0 ? `, ${esc(L.name)} <b style="color:var(--red)">${tcMoney(L.net)}</b>` : ''} on today's board.`;
+  return `<div class="card" style="margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+      <div class="at" style="margin:0;font-size:14px">${r.ic} ${r.tag}</div>
+      <div class="faint" style="font-size:11px">${esc(String(tr.leagueSeason || ''))} · net <b style="color:${r.c}">${tcMoney(W.net)}</b></div></div>
+    <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">${sides.map(col).join('<div class="trswap" style="align-self:center">⇄</div>')}</div>
+    <div class="dt" style="margin-top:6px;font-size:12px">${verdict}</div>
+    ${reviewPanel(key, 'tch')}
+  </div>`;
 }
 function showTeamTrades(team) {
   S.reading = false;
@@ -4505,7 +4547,7 @@ function tcHeistCard(tr) {
     ], 2))}</p>
   </div>`;
 }
-async function showTradeCourt() {
+async function showTradeCourt(useCache) {
   S.reading = false;
   const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>`;
   const shell = (inner) => { app.innerHTML = `<div style="padding-bottom:32px">${back}
@@ -4515,11 +4557,15 @@ async function showTradeCourt() {
   if (!S.bundle || !S.bundle.league) {
     return shell(`<div class="card"><div class="dt">Load your league first (enter your Sleeper username on the home screen), then come back — court's in session.</div></div>`);
   }
-  shell(`<div class="card"><div class="dt">⏳ Subpoenaing every completed trade across all seasons and grading each one on today's board…</div></div>`);
-  try { await loadBundledTrades(); } catch {}
   let data;
-  try { data = await tcBuildLedger(); }
-  catch (e) { return shell(`<div class="card"><div class="dt">Couldn't pull the trade history (${esc(String(e && e.message || e))}). Give it another go in a moment.</div></div>`); }
+  if (useCache && S._tcData) { data = S._tcData; }
+  else {
+    shell(`<div class="card"><div class="dt">⏳ Subpoenaing every completed trade across all seasons and grading each one on today's board…</div></div>`);
+    try { await loadBundledTrades(); } catch {}
+    try { data = await tcBuildLedger(); }
+    catch (e) { return shell(`<div class="card"><div class="dt">Couldn't pull the trade history (${esc(String(e && e.message || e))}). Give it another go in a moment.</div></div>`); }
+    S._tcData = data;
+  }
 
   const gms = Object.values(data.ledger).filter(l => l.current && l.trades > 0).sort((a, b) => b.net - a.net || b.trades - a.trades);
   const trades = data.allTrades;
@@ -4575,9 +4621,14 @@ async function showTradeCourt() {
     <div class="card"><div class="byline">🎁 The League Piggy Bank</div><div class="at" style="margin:2px 0">${esc(mark.name)}</div><div class="dt">${tcVerdict(mark.net).line} Down <b style="color:var(--red)">${tcMoney(mark.net)}</b> and still picking up the phone.</div></div>
   </div>` : '';
 
-  // Exhibit A — the great heists.
-  const topHeists = heists.filter(h => h.top >= 15).slice(0, 6).map(h => tcHeistCard(h.t)).join('');
-  const heistSec = topHeists ? `<div class="seclabel" style="margin:22px 0 8px">Exhibit A — The Great Heists</div>${topHeists}` : '';
+  // Exhibit A — the marquee heist, written up in full.
+  const topHeists = heists.filter(h => h.top >= 15).slice(0, 1).map(h => tcHeistCard(h.t)).join('');
+  const heistSec = topHeists ? `<div class="seclabel" style="margin:22px 0 8px">Exhibit A — The Great Heist</div>${topHeists}` : '';
+  // The Full Docket — EVERY trade, biggest swing first, each with a rating, a
+  // net value, a verdict and a reviewer's-notes box the court will reconsider.
+  const docketCards = heists.map(h => tcDocketCard(h.t)).join('');
+  const fullDocket = docketCards ? `<div class="seclabel" style="margin:22px 0 6px">The Full Docket — all ${heists.length} trades graded</div>
+    <div class="faint" style="font-size:11px;margin-bottom:8px">Every completed Sleeper-era trade, biggest swing first — a rating, the net on today's board, and a verdict. Disagree with a call? Add a note to any deal and the court will reconsider.</div>${docketCards}` : '';
 
   // THE RECKONING — every parsed chat trade graded, shark to mark. This is the
   // headline the user asked for: who came out ahead across the whole history.
@@ -4630,7 +4681,7 @@ async function showTradeCourt() {
     <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Each player carries TWO values: what he was worth the <b>day of the trade</b> (age, production, hype then) and what he's worth <b>today</b> — powering the "At the time" and "Long run" columns in The Reckoning. Draft picks use a calibrated round model, era-adjusted (mid-1st ≈ $48, 2nd ≈ $18, future picks discounted). Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
   </div></div>`;
 
-  shell(docket + reckoning + coverageCard + heroes + rankCard + heistSec + chatCard + method);
+  shell(docket + reckoning + coverageCard + heroes + rankCard + heistSec + fullDocket + chatCard + method);
 }
 
 // ---------------------------------------------------------------------
@@ -5807,10 +5858,10 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
   if (act === 'ex-files') return showExFiles();
   if (act === 'rv-save') {
-    const key = t.dataset.key, ta = document.getElementById(rvId(key));
+    const key = t.dataset.key, kind = t.dataset.kind, ta = document.getElementById(rvId(key));
     setCourtNote(key, { note: ta ? ta.value.trim() : '' });
     toast(ta && ta.value.trim() ? 'Note saved' : 'Note cleared');
-    return (t.dataset.kind === 'tc' && S._tcTeam) ? showTeamTrades(S._tcTeam) : showExFiles();
+    return rvRerender(kind);
   }
   if (act === 'rv-ai') {
     const key = t.dataset.key, kind = t.dataset.kind, ta = document.getElementById(rvId(key));
@@ -5818,7 +5869,7 @@ document.body.addEventListener('click', async (e) => {
     if (!(ta && ta.value.trim())) { toast('Write a note first'); return; }
     if (!(S.apiKey || '').trim()) { toast('Add your Anthropic API key in Settings first'); return showSettings(); }
     const btn = t, old = btn.textContent; btn.disabled = true; btn.textContent = '⚖️ Deliberating…';
-    try { await rvAiReview(key, kind); return (kind === 'tc' && S._tcTeam) ? showTeamTrades(S._tcTeam) : showExFiles(); }
+    try { await rvAiReview(key, kind); return rvRerender(kind); }
     catch (err) { btn.disabled = false; btn.textContent = old; toast(/401/.test(err.message) ? 'That API key was rejected' : 'The newsroom is unreachable — try again'); return; }
   }
   if (act === 'dashboard' || act === 'questionnaire') return showDashboard();
