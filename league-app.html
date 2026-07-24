@@ -251,13 +251,25 @@ async function buildWeek(){
     fetch(base+'state/nfl').then(r=>r.json())
   ]);
   if(!PLAYERS){ PLAYERS = trimPlayers(await fetch(base+'players/nfl').then(r=>r.json())); }
-  let week = VIEW.week || Math.max(1,(state.week||1) - (state.season_type==='regular'?0:0));
-  // if current week has no scores yet, step back to last completed
-  VIEW.week = week;
-  const [matchups,txns]=await Promise.all([
-    fetch(base+`league/${id}/matchups/${week}`).then(r=>r.json()),
-    fetch(base+`league/${id}/transactions/${week}`).then(r=>r.json()).catch(()=>[])
-  ]);
+  const curYear=+(state.season||new Date().getFullYear());
+  const seasonNum=+(cfg.season||state.season||curYear);
+  // pick a starting week, then walk back to the last week that actually has scores
+  let start;
+  if(VIEW.week) start=VIEW.week;
+  else if(seasonNum<curYear) start=17;                                   // finished past season
+  else if(state.season_type==='regular'&&state.week>=1) start=state.week; // in-season
+  else start=17;                                                          // offseason: look at last year's tail
+  let week=Math.max(1,start), matchups=[];
+  for(let tries=0; tries<18; tries++){
+    const mk=await fetch(base+`league/${id}/matchups/${week}`).then(r=>r.ok?r.json():[]).catch(()=>[]);
+    matchups=mk||[];
+    const scored=matchups.some(m=>(m.points||0)>0);
+    if(scored || VIEW.week) break;        // found scores, or user navigated here on purpose
+    if(week<=1) break;
+    week--;
+  }
+  VIEW.week=week;
+  const txns=await fetch(base+`league/${id}/transactions/${week}`).then(r=>r.ok?r.json():[]).catch(()=>[]);
   return assemble({league,users,rosters,matchups,txns,week});
 }
 
@@ -389,6 +401,7 @@ function renderMagazine(d, demo){
 
   // matchups
   app.appendChild(el(`<div class="sec">The Matchups</div>`));
+  if(!d.games.length) app.appendChild(el(`<div class="step"><div style="color:var(--dim);font-family:var(--serif);font-size:15px;line-height:1.5">No scored matchups for Week ${d.week} yet — the standings and power rankings below are current. Use the week arrows up top to jump to a played week.</div></div>`));
   d.games.forEach((g,i)=>{
     const stars=[g.win.top[0],g.lose.top[0]].filter(x=>x&&x.pts>0)
       .map(x=>`<span class="chip"><b>${(+x.pts).toFixed(1)}</b> ${esc(pname(x.pid))}${ppos(x.pid)?' · '+ppos(x.pid):''}</span>`).join('');
