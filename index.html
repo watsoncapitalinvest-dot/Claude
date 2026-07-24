@@ -3085,6 +3085,7 @@ function showMenu() {
     ['draft-room', '🎯', 'The War Room', 'Mocks, trades & the 15–16 plan'],
     ['trade-court', '⚖️', 'The Trade Court', 'Every trade graded, every GM judged'],
     ['draft-desk', '🎓', 'The Draft Board', 'Every pick graded · POP’s report card'],
+    ['roster-export', '⤓', 'Export Rosters', 'Top 3 per team → copy for Claude'],
     ['dashboard', '🗞️', 'Newsroom HQ', 'Weekly checklist, brief & calendar'],
     ['predraft-view', '🏈', 'Pre-Draft Issue', 'Build the Draft Issue'],
     ['cover-art', '🎨', 'Cover Art', 'Art direction for the cover'],
@@ -5048,6 +5049,47 @@ async function showDraftDesk(){
   }).join('') : '';
   shell((grader || `<div class="card"><div class="dt">No draft grades on file yet.</div></div>`) + menu);
 }
+// Export each team's top-3 stars (ranked by the $-value engine) as plain text the
+// owner can paste into Claude — the roster data lives only in this browser session.
+async function exportRosters(){
+  const b = S.bundle;
+  if (!b || !b.rosters || !b.rosters.length) { toast('Load your league first (enter your Sleeper username on the home screen).'); return; }
+  toast('Reading rosters…');
+  try { await ensureValues(); } catch {}
+  try { await loadBundledDraftIntel(); } catch {}
+  const teamNameOf = r => { const u = r.owner_id ? b.usersById[r.owner_id] : null; return (u && ((u.metadata && u.metadata.team_name) || u.display_name)) || ('Team ' + r.roster_id); };
+  const rows = (b.rosters || []).map(r => {
+    const ids = (r.players || []).filter(id => id && b.players[id]);
+    const rated = ids.map(id => { const nm = playerName(b.players[id], id); const dv = playerDollarValue(nm);
+      return { nm, pos: posOfPlayer(b.players[id]) || '', val: (dv && dv.val) || 0 }; });
+    rated.sort((a, z) => z.val - a.val);
+    const top = rated.slice(0, 3).map(p => `${p.nm}${p.pos ? ` (${p.pos}${p.val ? `, $${p.val}` : ''})` : ''}`).join(', ');
+    return { team: teamNameOf(r), top: top || '(no rated players)' };
+  }).sort((a, z) => a.team.localeCompare(z.team));
+  const text = `SCFL ${S.season || ''} — top 3 stars per team (ranked by the value engine)\n\n`
+    + rows.map(r => `${r.team}: ${r.top}`).join('\n');
+  let copied = false; try { await navigator.clipboard.writeText(text); copied = true; } catch {}
+  showExportOverlay(text, copied);
+}
+function showExportOverlay(text, copied){
+  const prev = document.getElementById('rosterExport'); if (prev) prev.remove();
+  const wrap = document.createElement('div'); wrap.id = 'rosterExport';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:18px';
+  wrap.innerHTML = `<div style="background:var(--card,#161e2a);border:1px solid var(--border,#243040);border-radius:14px;max-width:560px;width:100%;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.6)">
+    <div style="font-weight:800;font-size:16px;margin-bottom:3px">Rosters — top 3 per team</div>
+    <div style="font-size:12px;color:var(--dim,#9fb0c3);margin-bottom:10px">${copied ? '✅ Copied to your clipboard — paste it to Claude.' : 'Select all, copy, and paste it to Claude.'}</div>
+    <textarea readonly style="width:100%;height:44vh;font-family:ui-monospace,monospace;font-size:12px;line-height:1.55;background:var(--bg2,#121822);color:var(--text,#e8eef5);border:1px solid var(--border,#243040);border-radius:10px;padding:10px;resize:none">${esc(text)}</textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn" id="reCopy" style="flex:1">📋 Copy</button>
+      <button class="btn ghost" id="reClose" style="flex:1">Close</button>
+    </div></div>`;
+  document.body.appendChild(wrap);
+  const ta = wrap.querySelector('textarea'); ta.focus(); ta.select();
+  wrap.querySelector('#reCopy').addEventListener('click', () => { ta.select();
+    try { navigator.clipboard.writeText(ta.value); toast('Copied'); } catch { try { document.execCommand('copy'); toast('Copied'); } catch {} } });
+  wrap.querySelector('#reClose').addEventListener('click', () => wrap.remove());
+  wrap.addEventListener('click', e => { if (e.target === wrap) wrap.remove(); });
+}
 // Every selection on file — POP's posts first (authoritative), Sleeper fills any
 // pick POP didn't cover (2021, 2024 rounds 2+). Merged by season+overall pick.
 function tcAllDraftPicks(){
@@ -6249,6 +6291,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'records') return showRecords();
   if (act === 'trade-court') return showTradeCourt();
   if (act === 'draft-desk') return showDraftDesk();
+  if (act === 'roster-export') return exportRosters();
   if (act === 'tc-refresh') { toast('Re-subpoenaing the league…'); return showTradeCourt(true); }
   if (act === 'tc-fulllist') { S._tcFullList = !S._tcFullList; return showTradeCourt(); }
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
