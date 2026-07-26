@@ -17,7 +17,8 @@ It's built to be **private and effortless**:
 | Area | What it does |
 |------|--------------|
 | 🏠 **Home** | A daily overview — net worth, spending, upcoming bills, today's plans, tasks, and shopping at a glance. |
-| 💰 **Money** | All your accounts and net worth · a spending log · monthly budgets by category · bills & subscriptions with due dates. |
+| 💰 **Money** | All your accounts and net worth · **salaries & income** with a monthly cash-flow summary · a spending log · monthly budgets by category · bills & subscriptions with due dates. |
+| 💳 **Debt Payoff** | A grand total of your credit-card debt and all debt · per-card progress · **how long until each is paid off** (with interest rate & payment) · a month-by-month amortization schedule · and a combined snowball/avalanche plan showing how extra payments get you debt-free sooner. |
 | 🗓️ **Plan** | Shared to-dos (assign them to either of you) and one shared family calendar. |
 | 🧺 **Household** | Shopping lists you both can edit · a weekly meal planner · a home inventory for supplies. |
 | ✨ **Together** | Shared savings goals (vacation, a new couch, an emergency fund) and a notes space for anything. |

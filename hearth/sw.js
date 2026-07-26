@@ -1,5 +1,5 @@
 // sw.js — offline-first service worker for Hearth
-const CACHE = 'hearth-v1';
+const CACHE = 'hearth-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -14,6 +14,7 @@ const ASSETS = [
   './js/views/parts.js',
   './js/views/dashboard.js',
   './js/views/money.js',
+  './js/views/debt.js',
   './js/views/plan.js',
   './js/views/household.js',
   './js/views/goals.js',

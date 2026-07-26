@@ -54,6 +54,8 @@ function defaultState() {
     accounts: [],
     transactions: [],
     budgets: {},          // { 'catId': monthlyAmount }
+    incomes: [],          // recurring income / salaries
+    debtPlan: { extra: 0, strategy: 'avalanche' },
     bills: [],
     tasks: [],
     events: [],
@@ -176,6 +178,103 @@ export function billPaidThisCycle(bill) {
   return paid >= new Date(nextD.getFullYear(), nextD.getMonth() - (bill.cadence==='monthly'?1:0), 1) && paid <= today();
 }
 
+// ---------- income (salaries / recurring) ----------
+export function incomeMonthly(inc) {
+  const a = Number(inc.amount || 0);
+  switch (inc.cadence) {
+    case 'weekly':   return a * 52 / 12;
+    case 'biweekly': return a * 26 / 12;
+    case 'yearly':   return a / 12;
+    case 'once':     return 0;
+    default:         return a; // monthly
+  }
+}
+export function projectedMonthlyIncome() { return sum(state.incomes, incomeMonthly); }
+export function projectedMonthlyBills() {
+  return sum(state.bills, b => b.cadence === 'weekly' ? b.amount * 52 / 12 : b.cadence === 'yearly' ? b.amount / 12 : b.cadence === 'once' ? 0 : b.amount);
+}
+
+// ---------- debt ----------
+export const liabilities = () => state.accounts.filter(a => isLiability(a.type));
+export function creditCardDebt() { return sum(state.accounts.filter(a => a.type === 'credit'), accountBalance); }
+export function totalDebt() { return sum(liabilities(), accountBalance); }
+export function totalMinPayments() { return sum(liabilities(), a => Number(a.minPayment || 0)); }
+
+// Amortize a single balance. Returns months, total interest, and the schedule.
+export function amortize(balance, apr, payment) {
+  balance = Math.max(0, Number(balance) || 0);
+  const P = Number(payment) || 0;
+  const r = (Number(apr) || 0) / 100 / 12;
+  if (balance <= 0.005) return { months: 0, totalInterest: 0, payments: [], done: true };
+  if (P <= 0) return { neverPayoff: true, months: Infinity, totalInterest: Infinity, payments: [], minToCover: balance * r };
+  if (r > 0 && P <= balance * r + 0.0001) return { neverPayoff: true, months: Infinity, totalInterest: Infinity, payments: [], minToCover: balance * r };
+  let bal = balance, months = 0, totalInterest = 0;
+  const payments = [];
+  while (bal > 0.005 && months < 1200) {
+    const interest = bal * r;
+    let principal = P - interest;
+    if (principal >= bal) {
+      months++; totalInterest += interest;
+      payments.push({ month: months, payment: bal + interest, interest, principal: bal, balance: 0 });
+      bal = 0; break;
+    }
+    bal -= principal; totalInterest += interest; months++;
+    payments.push({ month: months, payment: P, interest, principal, balance: bal });
+  }
+  return { months, totalInterest, payments, neverPayoff: false };
+}
+
+// Combined payoff plan across all debts with a strategy + extra monthly payment.
+// strategy: 'avalanche' (highest APR first) | 'snowball' (smallest balance first)
+export function debtPayoffPlan({ extra = 0, strategy = 'avalanche' } = {}) {
+  let debts = liabilities().map(a => ({
+    id: a.id, name: a.name, type: a.type, color: a.color,
+    balance: Math.max(0, accountBalance(a)), apr: Number(a.apr) || 0, min: Number(a.minPayment) || 0,
+  })).filter(d => d.balance > 0.005);
+
+  const totalStart = sum(debts, d => d.balance);
+  if (!debts.length) return { months: 0, totalInterest: 0, feasible: true, perDebt: {}, totalStart: 0, monthlyOutlay: 0 };
+
+  const monthlyOutlay = sum(debts, d => d.min) + Number(extra || 0);
+  const perDebt = {};
+  debts.forEach(d => perDebt[d.id] = { name: d.name, color: d.color, apr: d.apr, startBalance: d.balance, interest: 0, paidMonth: null });
+
+  let months = 0, totalInterest = 0;
+  const targetOrder = () => debts.filter(d => d.balance > 0.005)
+    .sort((a, b) => strategy === 'snowball' ? a.balance - b.balance : (b.apr - a.apr) || (a.balance - b.balance));
+
+  while (debts.some(d => d.balance > 0.005) && months < 1200) {
+    months++;
+    // 1) accrue interest
+    for (const d of debts) {
+      if (d.balance <= 0.005) continue;
+      const i = d.balance * (d.apr / 100 / 12);
+      d.balance += i; totalInterest += i; perDebt[d.id].interest += i;
+    }
+    // 2) pay minimums, then throw everything left at the strategy target(s)
+    let budget = monthlyOutlay;
+    for (const d of debts) {
+      if (d.balance <= 0.005) continue;
+      const pay = Math.min(d.balance, d.min, budget);
+      d.balance -= pay; budget -= pay;
+    }
+    for (const d of targetOrder()) {
+      if (budget <= 0.005) break;
+      const pay = Math.min(d.balance, budget);
+      d.balance -= pay; budget -= pay;
+    }
+    for (const d of debts) if (d.balance <= 0.005 && !perDebt[d.id].paidMonth) perDebt[d.id].paidMonth = months;
+  }
+  const feasible = !debts.some(d => d.balance > 0.005);
+  return { months, totalInterest, feasible, perDebt, totalStart, monthlyOutlay };
+}
+
+export function addMonths(n) {
+  if (!isFinite(n)) return null;
+  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + n);
+  return d;
+}
+
 // ---------- CRUD helpers (thin) ----------
 export function addTx(tx) { update(s => s.transactions.unshift({ id: uid('tx'), date: todayISO(), ...tx })); }
 export function removeTx(id) { update(s => s.transactions = s.transactions.filter(t => t.id !== id)); }
@@ -216,9 +315,11 @@ export function loadSample() {
   const A = (o) => ({ id: uid('acc'), opening: 0, ...o });
   const chk = A({ name: 'Everyday Checking', type: 'checking', opening: 4820.5, institution: 'Home Bank', color:'#3f6fa8' });
   const sav = A({ name: 'Emergency Fund', type: 'savings', opening: 11200, institution: 'Home Bank', color:'#3f8a5c' });
-  const cc  = A({ name: 'Rewards Card', type: 'credit', opening: 940.25, institution: 'Card Co', color:'#c0433a' });
+  const cc  = A({ name: 'Rewards Card', type: 'credit', opening: 4260.25, institution: 'Card Co', color:'#c0433a', apr: 22.9, minPayment: 140, originalBalance: 5200 });
+  const cc2 = A({ name: 'Store Card', type: 'credit', opening: 1180, institution: 'Retail', color:'#b5622e', apr: 26.99, minPayment: 45, originalBalance: 1600 });
+  const car = A({ name: 'Car Loan', type: 'loan', opening: 9800, institution: 'Auto Finance', color:'#8a6d3b', apr: 6.4, minPayment: 320, originalBalance: 18000 });
   const inv = A({ name: 'Retirement', type: 'investment', opening: 68400, institution: 'Broker', color:'#7a5aa6' });
-  s.accounts = [chk, sav, cc, inv];
+  s.accounts = [chk, sav, cc, cc2, car, inv];
   s.profile.people = [{ id:'p1', name:'Alex', color:'#c8632b' }, { id:'p2', name:'Sam', color:'#3f6fa8' }];
   s.profile.home = 'The Riverside House';
   s.profile.onboarded = true;
@@ -233,6 +334,11 @@ export function loadSample() {
     { id: uid('tx'), accountId: chk.id, date: d(-8), amount: 41.2, type:'expense', category:'transport', note:'Gas', who:'p1' },
   ];
   s.budgets = { groceries: 600, dining: 250, utilities: 300, transport: 200, fun: 150, shopping: 200 };
+  s.incomes = [
+    { id: uid('inc'), name: "Alex's salary", amount: 2650, cadence: 'biweekly', who: 'p1' },
+    { id: uid('inc'), name: "Sam's salary", amount: 3100, cadence: 'monthly', who: 'p2' },
+  ];
+  s.debtPlan = { extra: 200, strategy: 'avalanche' };
   s.bills = [
     { id: uid('bill'), name:'Rent', amount:1850, cadence:'monthly', dueDay:1, category:'housing', autopay:true },
     { id: uid('bill'), name:'Electric', amount:120, cadence:'monthly', dueDay:12, category:'utilities', autopay:false },

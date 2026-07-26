@@ -13,7 +13,7 @@ export const SECTIONS = [
 
 // Sub-tabs per section
 export const TABS = {
-  money:     [ { r: '/money', l: 'Overview' }, { r: '/spending', l: 'Spending' }, { r: '/budgets', l: 'Budgets' }, { r: '/bills', l: 'Bills' } ],
+  money:     [ { r: '/money', l: 'Overview' }, { r: '/spending', l: 'Spending' }, { r: '/budgets', l: 'Budgets' }, { r: '/bills', l: 'Bills' }, { r: '/debt', l: 'Debt' } ],
   plan:      [ { r: '/tasks', l: 'Tasks' }, { r: '/calendar', l: 'Calendar' } ],
   household: [ { r: '/shopping', l: 'Shopping' }, { r: '/meals', l: 'Meals' }, { r: '/inventory', l: 'Inventory' } ],
   goals:     [ { r: '/goals', l: 'Goals' }, { r: '/notes', l: 'Notes' } ],
@@ -23,7 +23,7 @@ export const TABS = {
 export function sectionOf(path) {
   const p = '/' + path.split('/')[1];
   if (p === '/dashboard') return 'home';
-  if (['/money','/spending','/budgets','/bills'].includes(p)) return 'money';
+  if (['/money','/spending','/budgets','/bills','/debt'].includes(p)) return 'money';
   if (['/tasks','/calendar'].includes(p)) return 'plan';
   if (['/shopping','/meals','/inventory'].includes(p)) return 'household';
   if (['/goals','/notes'].includes(p)) return 'goals';

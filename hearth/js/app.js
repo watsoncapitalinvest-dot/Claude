@@ -8,6 +8,7 @@ import { toast } from './ui.js';
 // views
 import { renderDashboard } from './views/dashboard.js';
 import { renderOverview, renderSpending, renderBudgets, renderBills } from './views/money.js';
+import { renderDebt } from './views/debt.js';
 import { renderTasks, renderCalendar } from './views/plan.js';
 import { renderShopping, renderMeals, renderInventory } from './views/household.js';
 import { renderGoals, renderNotes } from './views/goals.js';
@@ -20,6 +21,7 @@ route('/money', renderOverview);
 route('/spending', renderSpending);
 route('/budgets', renderBudgets);
 route('/bills', renderBills);
+route('/debt', renderDebt);
 route('/tasks', renderTasks);
 route('/calendar', renderCalendar);
 route('/shopping', renderShopping);
@@ -58,6 +60,7 @@ function buildShell() {
       { r: '/spending', i: '🧾', l: 'Spending' },
       { r: '/budgets', i: '📊', l: 'Budgets' },
       { r: '/bills', i: '📅', l: 'Bills & Subscriptions' },
+      { r: '/debt', i: '💳', l: 'Debt Payoff' },
     ]},
     { label: 'Plan', items: [
       { r: '/tasks', i: '✅', l: 'Tasks' },

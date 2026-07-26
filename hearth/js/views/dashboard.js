@@ -1,6 +1,6 @@
 // views/dashboard.js — the home overview
 import { h, money, moneyShort, todayISO, relDay, daysUntil, iso, fmtDate, sum, sortBy } from '../utils.js';
-import { state, update, netWorth, monthSpend, monthIncome, billNextDue, catById, spentByCategory } from '../store.js';
+import { state, update, netWorth, monthSpend, monthIncome, billNextDue, catById, spentByCategory, totalDebt, creditCardDebt, debtPayoffPlan, addMonths } from '../store.js';
 import { navigate } from '../router.js';
 import { whoPill, progress } from './parts.js';
 
@@ -40,6 +40,7 @@ export function renderDashboard() {
 
   // LEFT: money side
   const left = h('div', { class: 'grid', style: { gap: '16px' } });
+  left.append(debtCard());
   left.append(upcomingBillsCard());
   left.append(budgetGlanceCard());
   left.append(goalsCard());
@@ -69,6 +70,27 @@ function cardShell(title, route, bodyNodes, actionLabel) {
     route ? h('button', { class: 'btn ghost sm', onClick: () => navigate(route) }, actionLabel || 'View all →') : null,
   );
   return h('div', { class: 'card' }, head, ...[].concat(bodyNodes));
+}
+
+function debtCard() {
+  const total = totalDebt();
+  if (total <= 0.5) return null;
+  const cc = creditCardDebt();
+  const plan = debtPayoffPlan(state.debtPlan || {});
+  const free = plan.feasible ? addMonths(plan.months) : null;
+  const body = [
+    h('div', { class: 'row', style: { alignItems: 'stretch' } },
+      h('div', { class: 'grow' },
+        h('div', { class: 's', style: { fontWeight: 600 } }, 'Credit card debt'),
+        h('div', { style: { fontSize: '24px', fontWeight: 750, color: 'var(--red)', letterSpacing: '-.02em' } }, money(cc, { cents: false }))),
+      h('div', { class: 'tr' },
+        h('div', { class: 's', style: { fontWeight: 600 } }, 'Total debt'),
+        h('div', { style: { fontSize: '24px', fontWeight: 750, letterSpacing: '-.02em' } }, money(total, { cents: false })))),
+  ];
+  if (free) body.push(h('div', { class: 'row', style: { background: 'var(--green-soft)' } },
+    h('div', { class: 'grow t', style: { color: 'var(--green)' } }, '🎯 Debt-free target'),
+    h('div', { class: 'amt', style: { color: 'var(--green)' } }, fmtDate(free, { withYear: true }).replace(/\s\d+,/, ','))));
+  return cardShell('💳 Debt', '/debt', body, 'Payoff plan →');
 }
 
 function upcomingBillsCard() {

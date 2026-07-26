@@ -3,6 +3,7 @@ import { h, money, moneyShort, todayISO, fmtDate, relDay, daysUntil, iso, parseI
 import {
   state, update, netWorth, accountBalance, catById, CATEGORIES, ACCOUNT_TYPES, acctType, isLiability,
   txForMonth, spentByCategory, monthSpend, monthIncome, billNextDue,
+  incomeMonthly, projectedMonthlyIncome, projectedMonthlyBills,
 } from '../store.js';
 import { subTabs, pageHeader, registerFab } from '../nav.js';
 import { formModal, field, input, select, segmented, closeModal, confirmDialog, toast, modal } from '../ui.js';
@@ -27,10 +28,15 @@ export function renderOverview() {
   wrap.append(h('div', { class: 'grid cols-3 keep', style: { marginBottom: '18px' } },
     bigStat('Net worth', money(nw.net), 'assets − debts', 'var(--green)'),
     bigStat('Assets', money(nw.assets), `${state.accounts.filter(a=>!isLiability(a.type)).length} accounts`, 'var(--blue)'),
-    bigStat('Debts', money(nw.debts), `${state.accounts.filter(a=>isLiability(a.type)).length} accounts`, 'var(--red)'),
+    bigStat('Debts', money(nw.debts), `${state.accounts.filter(a=>isLiability(a.type)).length} accounts`, nw.debts > 0 ? 'var(--red)' : 'var(--text)'),
   ));
 
-  if (!state.accounts.length) {
+  // monthly cash flow (income vs recurring outgoings)
+  wrap.append(cashFlowCard());
+  // salaries & recurring income
+  wrap.append(incomeCard());
+
+  if (!state.accounts.length && !state.incomes.length) {
     wrap.append(h('div', { class: 'card' }, h('div', { class: 'list-empty' },
       h('span', { class: 'em' }, '🏦'),
       h('div', { style: { fontWeight: 650 } }, 'Add your accounts'),
@@ -63,6 +69,13 @@ export function renderOverview() {
   };
   wrap.append(renderGroup('Assets', assets));
   wrap.append(renderGroup('Debts', debts));
+  if (!state.accounts.length) {
+    wrap.append(h('div', { class: 'card' }, h('div', { class: 'list-empty' },
+      h('span', { class: 'em' }, '🏦'),
+      h('div', { style: { fontWeight: 650 } }, 'Add your accounts'),
+      h('div', { style: { fontSize: '13px', marginTop: '4px' } }, 'Checking, savings, credit cards, loans — see everything in one place.'),
+      h('button', { class: 'btn primary', style: { marginTop: '14px' }, onClick: () => accountModal() }, '+ Add an account'))));
+  }
   return wrap;
 }
 
@@ -71,6 +84,80 @@ function bigStat(label, value, sub, color) {
     h('div', { class: 'label' }, label),
     h('div', { class: 'value', style: { color } }, value),
     h('div', { class: 'delta muted' }, sub));
+}
+
+function cashFlowCard() {
+  const inc = projectedMonthlyIncome();
+  const bills = projectedMonthlyBills();
+  if (inc <= 0 && bills <= 0) return h('div');
+  const left = inc - bills;
+  return h('div', { class: 'card pad', style: { marginBottom: '16px' } },
+    h('div', { class: 't', style: { marginBottom: '12px' } }, '📆 Typical month'),
+    h('div', { class: 'grid cols-3 keep', style: { gap: '10px' } },
+      flowStat('Income', money(inc, { cents: false }), 'var(--green)', '+'),
+      flowStat('Recurring bills', money(bills, { cents: false }), 'var(--red)', '−'),
+      flowStat('Left over', money(Math.abs(left), { cents: false }), left >= 0 ? 'var(--green)' : 'var(--red)', left >= 0 ? '' : '−')),
+    h('div', { class: 'hint', style: { marginTop: '10px', marginBottom: 0 } },
+      'Estimated from your salaries and recurring bills. Everyday spending is tracked separately under Spending.'));
+}
+function flowStat(label, value, color, prefix) {
+  return h('div', { style: { textAlign: 'center', padding: '4px' } },
+    h('div', { class: 'label', style: { fontSize: '11px', color: 'var(--text-soft)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em' } }, label),
+    h('div', { style: { fontSize: '20px', fontWeight: 750, letterSpacing: '-.02em', marginTop: '3px', color } }, (prefix || '') + value));
+}
+
+function incomeCard() {
+  const card = h('div', { class: 'card', style: { marginBottom: '16px' } });
+  card.append(h('div', { class: 'row between', style: { background: 'var(--surface-2)', borderRadius: '16px 16px 0 0' } },
+    h('div', { class: 't grow' }, '💵 Salaries & income'),
+    h('button', { class: 'btn ghost sm', onClick: () => incomeModal() }, '+ Add')));
+  if (!state.incomes.length) {
+    card.append(h('div', { class: 'list-empty', style: { padding: '20px' } }, 'Add your paychecks to see your monthly income.'));
+    return card;
+  }
+  for (const inc of state.incomes) {
+    const who = state.profile.people.find(p => p.id === inc.who);
+    card.append(h('div', { class: 'row pointer', onClick: () => incomeModal(inc) },
+      h('div', { class: 'lead', style: { background: 'var(--green-soft)', color: 'var(--green)' } }, '💰'),
+      h('div', { class: 'grow' },
+        h('div', { class: 't' }, inc.name),
+        h('div', { class: 's' }, [cadenceWord(inc.cadence), who?.name].filter(Boolean).join(' · '))),
+      h('div', { class: 'tr' },
+        h('div', { class: 'amt', style: { color: 'var(--green)' } }, money(inc.amount)),
+        inc.cadence !== 'monthly' ? h('div', { class: 's dim' }, `≈ ${money(incomeMonthly(inc), { cents: false })}/mo`) : null),
+    ));
+  }
+  return card;
+}
+function cadenceWord(c) { return { monthly: 'Monthly', biweekly: 'Every 2 weeks', weekly: 'Weekly', yearly: 'Yearly', once: 'One-time' }[c] || 'Monthly'; }
+
+function incomeModal(inc = null) {
+  const editing = !!inc;
+  formModal({
+    title: editing ? 'Edit income' : 'Add income',
+    submitLabel: editing ? 'Save' : 'Add',
+    extraFoot: editing ? h('button', { type: 'button', class: 'btn danger', onClick: () => { update(s => s.incomes = s.incomes.filter(x => x.id !== inc.id)); closeModal(); toast('Removed'); } }, 'Delete') : null,
+    build(refs) {
+      refs.name = input({ placeholder: "e.g. Alex's salary", value: inc?.name || '' });
+      refs.amount = input({ type: 'number', step: '0.01', inputmode: 'decimal', placeholder: '0.00', value: inc?.amount || '' });
+      refs.cadence = select([
+        { value: 'monthly', label: 'Monthly' }, { value: 'biweekly', label: 'Every 2 weeks' },
+        { value: 'weekly', label: 'Weekly' }, { value: 'yearly', label: 'Yearly' }, { value: 'once', label: 'One-time' },
+      ], inc?.cadence || 'monthly');
+      refs.who = select(peopleOpts(), inc?.who || '');
+      return [
+        field('Name', refs.name),
+        h('div', { class: 'row-2' }, field('Amount', refs.amount), field('How often', refs.cadence)),
+        field('Whose income', refs.who),
+      ];
+    },
+    onSubmit(refs) {
+      const name = refs.name.value.trim(); if (!name) throw new Error('Name it');
+      const data = { name, amount: parseFloat(refs.amount.value) || 0, cadence: refs.cadence.value, who: refs.who.value || '' };
+      update(s => { if (editing) Object.assign(s.incomes.find(x => x.id === inc.id), data); else s.incomes.push({ id: uid('inc'), ...data }); });
+      closeModal(); toast(editing ? 'Saved' : 'Added');
+    },
+  });
 }
 
 function accountModal(acc = null) {
@@ -87,13 +174,31 @@ function accountModal(acc = null) {
       refs.bal = input({ type: 'number', step: '0.01', inputmode: 'decimal', placeholder: '0.00', value: acc ? accountBalance(acc) : '' });
       refs.inst = input({ placeholder: 'Bank / provider (optional)', value: acc?.institution || '' });
       refs.color = input({ type: 'color', value: acc?.color || '#3f6fa8', style: { height: '44px', padding: '4px' } });
+      // debt-only fields
+      refs.apr = input({ type: 'number', step: '0.01', inputmode: 'decimal', placeholder: 'e.g. 22.9', value: acc?.apr ?? '' });
+      refs.pay = input({ type: 'number', step: '1', inputmode: 'decimal', placeholder: 'e.g. 140', value: acc?.minPayment ?? '' });
+      refs.orig = input({ type: 'number', step: '0.01', inputmode: 'decimal', placeholder: 'optional', value: acc?.originalBalance ?? '' });
       const balLabel = h('label', {}, editing ? 'Current balance' : 'Starting balance');
-      const liabNote = h('div', { class: 'hint' }, 'For credit cards & loans, enter the amount you owe.');
+      const balHint = h('div', { class: 'hint' }, isLiability(refs.type.value) ? 'Enter what you currently owe.' : 'Your current balance.');
+      refs.debtBox = h('div', {},
+        h('div', { class: 'divider' }),
+        h('div', { class: 'hint', style: { margin: '0 0 10px', fontWeight: 700, color: 'var(--accent-ink)' } }, '💳 Payoff details (for the debt tracker)'),
+        h('div', { class: 'row-2' }, field('Interest rate (APR %)', refs.apr), field('Monthly payment', refs.pay)),
+        field('Original balance', refs.orig, 'What it started at — lets us show your payoff progress.'),
+      );
+      const syncDebt = () => {
+        const lia = isLiability(refs.type.value);
+        refs.debtBox.style.display = lia ? '' : 'none';
+        balHint.textContent = lia ? 'Enter what you currently owe.' : 'Your current balance.';
+      };
+      refs.type.addEventListener('change', syncDebt);
+      setTimeout(syncDebt, 0);
       return [
         field('Account name', refs.name),
         h('div', { class: 'row-2' }, field('Type', refs.type), field('Provider', refs.inst)),
-        h('div', { class: 'field' }, balLabel, refs.bal, liabNote),
+        h('div', { class: 'field' }, balLabel, refs.bal, balHint),
         field('Color', refs.color),
+        refs.debtBox,
       ];
     },
     onSubmit(refs) {
@@ -101,14 +206,18 @@ function accountModal(acc = null) {
       if (!name) throw new Error('Give the account a name');
       const type = refs.type.value;
       const enteredBal = parseFloat(refs.bal.value || '0') || 0;
+      const lia = isLiability(type);
+      const apr = lia && refs.apr.value !== '' ? parseFloat(refs.apr.value) : undefined;
+      const minPayment = lia && refs.pay.value !== '' ? parseFloat(refs.pay.value) : undefined;
+      let originalBalance = lia && refs.orig.value !== '' ? parseFloat(refs.orig.value) : undefined;
+      if (lia && originalBalance == null) originalBalance = editing ? (acc.originalBalance ?? enteredBal) : enteredBal;
       update(s => {
         if (editing) {
           const a = s.accounts.find(x => x.id === acc.id);
-          // adjust opening so computed balance matches entered
           const others = accountBalance(a) - a.opening;
-          Object.assign(a, { name, type, institution: refs.inst.value.trim(), color: refs.color.value, opening: enteredBal - others });
+          Object.assign(a, { name, type, institution: refs.inst.value.trim(), color: refs.color.value, opening: enteredBal - others, apr, minPayment, originalBalance });
         } else {
-          s.accounts.push({ id: uid('acc'), name, type, institution: refs.inst.value.trim(), color: refs.color.value, opening: enteredBal });
+          s.accounts.push({ id: uid('acc'), name, type, institution: refs.inst.value.trim(), color: refs.color.value, opening: enteredBal, apr, minPayment, originalBalance });
         }
       });
       closeModal();
