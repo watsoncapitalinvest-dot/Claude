@@ -5160,7 +5160,26 @@ function dpValueAt(name, year){
   for (let j = 0; j < yrs.length; j++) { if (arr[j] == null) continue; const dist = Math.abs(yrs[j] - year); if (dist < bestDist) { bestDist = dist; best = arr[j]; } }
   return best;
 }
+// ---- SCFL $ board (de-compressed) ------------------------------------------
+// The old tier grid capped studs (WR $82, RB $63) *below* a rookie 1.01 ($100),
+// so no player could out-price a pick — the "prices low" bug. Fix: value players
+// on the DynastyProcess market at the current snapshot (same 1.01=$100 scale as
+// the pick chart), with an elite "boom" stretch. The 550-trade SCFL ledger shows
+// a proven star fetched ~3 first-round picks (A.J. Brown, Kupp) — about 1.5× the
+// 1.01 — so the ceiling lifts to ~$150 while mid/low values are left untouched.
+// WR>RB ordering is DynastyProcess's own (career length / injury), not shaded.
+function scflStretch(v){
+  if (!(v > 0)) return v;
+  const f = 1 + 0.20 * Math.min(1, Math.max(0, (v - 70) / 60));   // ≤$70 untouched; tops at ~×1.19
+  return v * f;
+}
+function scflDpDollar(name){
+  const v = dpValueAt(name, DP_LAST_YEAR);                        // market $ at newest snapshot
+  if (v == null || !(v > 0)) return null;
+  return Math.round(scflStretch(v));
+}
 async function renderDraft() {
+  await loadDpValues();
   setContent(spinner('Opening the War Room…'));
   loadDraftState();
   await Promise.all([ensureValues(), loadBundledDraftIntel(), loadBundledDraft()]);
@@ -5594,24 +5613,19 @@ const CALC_COMPS = [
   ['AJ Brown', 'WR', 150], ['Cooper Kupp (peak)', 'WR', 135], ['Davante Adams', 'WR', 62], ['Cooper Kupp (hurt)', 'WR', 48], ['Chris Godwin', 'WR', 39], ['Jakobi Meyers', 'WR', 40], ['Keenan Allen', 'WR', 15], ['Mike Williams', 'WR', 15],
   ['Travis Kelce', 'TE', 15], ['Cade Otton', 'TE', 7], ['Darren Waller', 'TE', 15], ['Logan Thomas', 'TE', 15],
 ];
-// Player $-value lookup: exact ledger comp -> rookie (pick-based) -> veteran
-// estimate from position + consensus positional rank against the price grid.
+// Player $-value lookup. The de-compressed market (DynastyProcess + elite stretch)
+// is the primary value; a rookie's pick-slot price and the positional grid act as
+// floors, so an aging-but-startable vet the dynasty market zeroes out still keeps
+// real value. Final $ = max(market, rookie-pick, grid). Same 1.01=$100 scale.
 function playerDollarValue(rawName) {
   const q = normName(rawName || ''); if (!q) return null;
-  const strip = s => normName(String(s).replace(/\s*\(.*?\)\s*/g, '').trim());
-  // 1) real-trade comp. When a name has multiple ledger variants (e.g. Kupp
-  // "peak" vs "hurt"), a bare lookup should return the CURRENT value — the
-  // aging/"hurt" price, not the years-old peak — so prefer the non-peak entry.
-  const exact = CALC_COMPS.filter(x => strip(x[0]) === q);
-  let c = exact.find(x => !/peak/i.test(x[0])) || exact[0] ||
-    CALC_COMPS.find(x => { const n = strip(x[0]); return n.length > 3 && (n.includes(q) || q.includes(n)); });
-  if (c) return { val: c[2], pos: c[1], name: c[0].replace(/\s*\(.*?\)\s*/g, '').trim(), src: 'from real SCFL trades' };
+  const dpv = scflDpDollar(rawName) || 0;                 // DynastyProcess market + elite boom-stretch
   const I = S.draftIntel || {}; const chart = I.pickValueChart || {};
-  // 2) rookie on the class board -> its consensus pick's dollar value
+  // rookie on the class board -> its consensus pick's dollar value (a floor)
   let rk = (I.classBoard || []).find(p => normName(p.name) === q) || (I.classBoard || []).find(p => q.length > 4 && normName(p.name).includes(q));
-  if (rk) { const v = Math.round((chart[rk.rk] || 0) / 10); if (v) return { val: v, pos: rk.pos, name: rk.name, src: 'rookie ≈ pick ' + rk.rk }; }
-  // 3) veteran in the player pool -> positional consensus rank -> grid tier
-  const b = S.bundle;
+  let rookieV = 0; if (rk) rookieV = Math.round((chart[rk.rk] || 0) / 10);
+  // veteran in the player pool -> positional consensus rank -> grid tier (a floor)
+  const b = S.bundle; let gridV = 0, gPos = null, gName = null, gPrank = null;
   if (b && b.players) {
     let hit = null;
     for (const id in b.players) { if (normName(playerName(b.players[id], id)) === q) { hit = id; break; } }
@@ -5626,10 +5640,14 @@ function playerDollarValue(rawName) {
       const r = p.search_rank; let prank = (typeof r === 'number' && r > 0) ? same.filter(x => x < r).length + 1 : same.length || 99;
       const cuts = CUT[pos] || CUT.WR, tiers = TIERS[pos] || TIERS.WR;
       let ti = cuts.findIndex(x => prank <= x); if (ti < 0) ti = tiers.length - 1; ti = Math.min(ti, tiers.length - 1);
-      return { val: tiers[ti], pos, name: playerName(p, hit), src: 'estimate · ' + pos + prank + ' on consensus', est: true };
+      gridV = tiers[ti]; gPos = pos; gName = playerName(p, hit); gPrank = prank;
     }
   }
-  return null;
+  const best = Math.max(dpv, rookieV, gridV);
+  if (!best) return null;
+  if (dpv === best) return { val: dpv, pos: gPos || (rk && rk.pos) || null, name: gName || (rk && rk.name) || rawName, src: 'market value', est: !gPos };
+  if (rookieV === best && rk) return { val: rookieV, pos: rk.pos, name: rk.name, src: 'rookie ≈ pick ' + rk.rk };
+  return { val: gridV, pos: gPos, name: gName, src: 'estimate · ' + gPos + gPrank + ' on consensus', est: true };
 }
 function calcState() { return S.draft.calc || (S.draft.calc = { give: [], get: [], qb: false }); }
 function calcDollars() {
@@ -5639,12 +5657,12 @@ function calcDollars() {
 // Every rostered player in the league, valued on the $ board — so ANY real
 // asset can be dropped straight into the calculator. Cached per league because
 // the positional-rank pass touches the whole player dict.
-// Shared $-valuer: real comp -> rookie board -> positional-rank grid. Builds the
-// positional-rank index once so callers can value many players cheaply.
+// Shared $-valuer: de-compressed market (DynastyProcess + elite stretch) as the
+// primary value, with the rookie pick-slot price and positional-rank grid as
+// floors. Final $ = max(market, rookie, grid). Positional-rank index built once.
 function calcMakeValuer() {
   const b = S.bundle; if (!b || !b.players) return null;
   const I = S.draftIntel || {}, chart = I.pickValueChart || {};
-  const strip = s => normName(String(s).replace(/\s*\(.*?\)\s*/g, '').trim());
   const TIERS = { QB: [95, 72, 46, 26, 11], RB: [63, 47, 31, 16], WR: [82, 55, 36, 18], TE: [41, 24, 13, 6] };
   const CUT = { QB: [4, 12, 24, 40], RB: [5, 18, 40, 9999], WR: [6, 24, 48, 9999], TE: [3, 10, 20, 9999] };
   const byPos = {};
@@ -5652,16 +5670,14 @@ function calcMakeValuer() {
   for (const k in byPos) byPos[k].sort((a, z) => a - z);
   return (nm, p, pos) => {
     const q = normName(nm);
-    const exact = CALC_COMPS.filter(x => strip(x[0]) === q);
-    const c = exact.find(x => !/peak/i.test(x[0])) || exact[0] || CALC_COMPS.find(x => { const n = strip(x[0]); return n.length > 3 && (n.includes(q) || q.includes(n)); });
-    if (c) return c[2];
+    const dpv = scflDpDollar(nm) || 0;                    // market + elite boom-stretch
     const rk = (I.classBoard || []).find(x => normName(x.name) === q);
-    if (rk) { const v = Math.round((chart[rk.rk] || 0) / 10); if (v) return v; }
+    const rookieV = rk ? Math.round((chart[rk.rk] || 0) / 10) : 0;
     const arr = byPos[pos] || [], r = p.search_rank;
     const prank = (typeof r === 'number' && r > 0) ? arr.filter(x => x < r).length + 1 : (arr.length || 99);
     const cuts = CUT[pos] || CUT.WR, tiers = TIERS[pos] || TIERS.WR;
     let ti = cuts.findIndex(x => prank <= x); if (ti < 0) ti = tiers.length - 1; ti = Math.min(ti, tiers.length - 1);
-    return tiers[ti];
+    return Math.max(dpv, rookieV, tiers[ti]);
   };
 }
 // Rostered players only — for the compact add-asset dropdown.
@@ -5759,7 +5775,6 @@ function warCalcCard() {
       <optgroup label="Draft picks (this year)">${O.picks}</optgroup>
       <optgroup label="Future picks">${O.fut}</optgroup>
       <optgroup label="Player by tier (pick the tier)">${O.tiers}</optgroup>
-      <optgroup label="Real comps (reference prices)">${O.comps}</optgroup>
     </select>`;
   const POS_C = { QB: '#5b8dd6', RB: '#e0435a', WR: '#3aa76d', TE: '#d19a3a', pick: '#b8862b', fut: '#8a7fb0' };
   const rowFor = (side) => {
