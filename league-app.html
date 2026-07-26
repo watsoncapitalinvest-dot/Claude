@@ -217,7 +217,16 @@ function renderSetup(){
   app.appendChild(pv);
   $('#save',pv).onclick=()=>{collect();save();openMagazine(false);};
   $('#demo',pv).onclick=()=>openMagazine(true);
-  app.appendChild(el(`<div class="foot">Self-contained · saved in this browser</div>`));
+  const bk=el(`<div class="step"><div class="step-h"><div class="step-n">⤓</div><div class="step-t">Backup (optional)</div></div>
+    <div class="step-d">Your setup lives in this browser only — export a backup so it survives a wipe or a new device.</div>
+    <div class="row"><button class="btn ghost sm" id="exp" style="width:100%">Export settings</button>
+      <button class="btn ghost sm" id="imp" style="width:100%">Import settings</button></div>
+    <input type="file" id="impfile" accept="application/json,.json" hidden></div>`);
+  app.appendChild(bk);
+  $('#exp',bk).onclick=exportCfg;
+  $('#imp',bk).onclick=()=>$('#impfile',bk).click();
+  $('#impfile',bk).onchange=importCfg;
+  app.appendChild(el(`<div class="foot">Fantasy League Newsroom · self-contained · saved in this browser</div>`));
   ['f-name','f-tag'].forEach(id=>{const nd=$('#'+id);nd&&nd.addEventListener('input',()=>{collect();renderPreview();});});
   markSw(); renderPreview();
 }
@@ -385,6 +394,32 @@ async function openMagazine(demo){
 }
 function trimPlayers(all){const m={};for(const k in all){const p=all[k];if(!p)continue;
   m[k]={n:p.full_name||((p.first_name||'')+' '+(p.last_name||'')).trim()||p.last_name||k,pos:p.position||(p.fantasy_positions&&p.fantasy_positions[0])||'',t:p.team||''};}return m;}
+/* player dictionary cached in IndexedDB for a day so it isn't re-fetched every visit */
+function idbGet(key){return new Promise(res=>{try{const q=indexedDB.open('flnewsroom',1);
+  q.onupgradeneeded=()=>q.result.createObjectStore('kv');
+  q.onsuccess=()=>{try{const g=q.result.transaction('kv','readonly').objectStore('kv').get(key);
+    g.onsuccess=()=>res(g.result||null);g.onerror=()=>res(null);}catch(e){res(null);}};
+  q.onerror=()=>res(null);}catch(e){res(null);}});}
+function idbSet(key,val){return new Promise(res=>{try{const q=indexedDB.open('flnewsroom',1);
+  q.onupgradeneeded=()=>q.result.createObjectStore('kv');
+  q.onsuccess=()=>{try{const tx=q.result.transaction('kv','readwrite');tx.objectStore('kv').put(val,key);
+    tx.oncomplete=()=>res(true);tx.onerror=()=>res(false);}catch(e){res(false);}};
+  q.onerror=()=>res(false);}catch(e){res(false);}});}
+async function loadPlayers(base){
+  if(PLAYERS)return PLAYERS;
+  const cached=await idbGet('players');
+  if(cached&&cached.ts&&Date.now()-cached.ts<864e5&&cached.data){PLAYERS=cached.data;return PLAYERS;}
+  PLAYERS=trimPlayers(await fetch(base+'players/nfl').then(r=>r.json()));
+  idbSet('players',{ts:Date.now(),data:PLAYERS}).catch(()=>{});
+  return PLAYERS;
+}
+function exportCfg(){ collect(); const blob=new Blob([JSON.stringify(cfg,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=((cfg.name||'league').replace(/[^a-z0-9]+/gi,'-'))+'-newsroom-settings.json'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500); }
+function importCfg(e){ const f=e.target.files[0]; if(!f)return; const rd=new FileReader();
+  rd.onload=()=>{ try{ const o=JSON.parse(rd.result); cfg=Object.assign(cfg,o); save(); applyAccent(cfg.accent); renderSetup(); }
+    catch(err){ alert('That file could not be read as a settings backup.'); } }; rd.readAsText(f); }
 
 async function buildWeek(){
   const id=cfg.leagueId; if(!id)throw new Error('No league connected.');
@@ -394,7 +429,7 @@ async function buildWeek(){
     fetch(base+'league/'+id+'/users').then(r=>r.json()),
     fetch(base+'league/'+id+'/rosters').then(r=>r.json()),
     fetch(base+'state/nfl').then(r=>r.json())]);
-  if(!PLAYERS){ PLAYERS=trimPlayers(await fetch(base+'players/nfl').then(r=>r.json())); }
+  await loadPlayers(base);
   const curYear=+(state.season||new Date().getFullYear()); const seasonNum=+(cfg.season||state.season||curYear);
   let start; if(VIEW.week)start=VIEW.week; else if(seasonNum<curYear)start=17; else if(state.season_type==='regular'&&state.week>=1)start=state.week; else start=17;
   let week=Math.max(1,start),matchups=[];
