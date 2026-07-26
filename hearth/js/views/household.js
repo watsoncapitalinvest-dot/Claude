@@ -3,6 +3,7 @@ import { h, iso, todayISO, fmtDate, sortBy, uid, DOW_LABELS, sum } from '../util
 import { state, update } from '../store.js';
 import { subTabs, pageHeader, registerFab } from '../nav.js';
 import { formModal, field, input, textarea, closeModal, confirmDialog, toast, modal } from '../ui.js';
+import { emptyCard } from './parts.js';
 import { navigate } from '../router.js';
 
 // ============================================================
@@ -210,10 +211,3 @@ function invModal(it = null) {
   });
 }
 
-function emptyCard(icon, title, sub, onAdd) {
-  return h('div', { class: 'card' }, h('div', { class: 'list-empty' },
-    h('span', { class: 'em' }, icon),
-    h('div', { style: { fontWeight: 650 } }, title),
-    h('div', { style: { fontSize: '13px', marginTop: '4px' } }, sub),
-    onAdd ? h('button', { class: 'btn primary', style: { marginTop: '14px' }, onClick: onAdd }, '+ Add') : null));
-}

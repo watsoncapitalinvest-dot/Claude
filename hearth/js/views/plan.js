@@ -3,10 +3,8 @@ import { h, todayISO, iso, parseISO, fmtDate, relDay, daysUntil, sortBy, groupBy
 import { state, update, catById, billNextDue } from '../store.js';
 import { subTabs, pageHeader, registerFab } from '../nav.js';
 import { formModal, field, input, select, segmented, textarea, closeModal, confirmDialog, toast, modal } from '../ui.js';
-import { whoPill, personDot } from './parts.js';
+import { whoPill, personDot, peopleOpts, emptyCard } from './parts.js';
 import { navigate } from '../router.js';
-
-const peopleOpts = () => [{ value: '', label: 'Anyone' }, ...state.profile.people.map(p => ({ value: p.id, label: p.name }))];
 
 // ============================================================
 // TASKS
@@ -265,11 +263,4 @@ function eventModal(ev = null, date = todayISO()) {
 function chip(label, on, onClick, color) {
   return h('button', { class: 'chip pointer', style: on ? { background: 'var(--accent-soft)', color: 'var(--accent-ink)' } : {}, onClick },
     color ? h('i', { style: { width: '8px', height: '8px', borderRadius: '50%', background: color, display: 'inline-block' } }) : null, label);
-}
-function emptyCard(icon, title, sub, onAdd) {
-  return h('div', { class: 'card' }, h('div', { class: 'list-empty' },
-    h('span', { class: 'em' }, icon),
-    h('div', { style: { fontWeight: 650 } }, title),
-    h('div', { style: { fontSize: '13px', marginTop: '4px' } }, sub),
-    onAdd ? h('button', { class: 'btn primary', style: { marginTop: '14px' }, onClick: onAdd }, '+ Add') : null));
 }

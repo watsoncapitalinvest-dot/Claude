@@ -40,7 +40,7 @@ export function renderDashboard() {
 
   // LEFT: money side
   const left = h('div', { class: 'grid', style: { gap: '16px' } });
-  left.append(debtCard());
+  left.append(debtSummaryCard());
   left.append(upcomingBillsCard());
   left.append(budgetGlanceCard());
   left.append(goalsCard());
@@ -72,7 +72,7 @@ function cardShell(title, route, bodyNodes, actionLabel) {
   return h('div', { class: 'card' }, head, ...[].concat(bodyNodes));
 }
 
-function debtCard() {
+function debtSummaryCard() {
   const total = totalDebt();
   if (total <= 0.5) return null;
   const cc = creditCardDebt();

@@ -7,10 +7,9 @@ import {
 } from '../store.js';
 import { subTabs, pageHeader, registerFab } from '../nav.js';
 import { formModal, field, input, select, segmented, closeModal, confirmDialog, toast, modal } from '../ui.js';
-import { whoPill, progress } from './parts.js';
+import { whoPill, progress, peopleOpts } from './parts.js';
 import { navigate } from '../router.js';
 
-const peopleOpts = () => [{ value: '', label: 'Anyone' }, ...state.profile.people.map(p => ({ value: p.id, label: p.name }))];
 const catOpts = () => CATEGORIES.map(c => ({ value: c.id, label: `${c.icon} ${c.name}` }));
 const acctOpts = () => state.accounts.map(a => ({ value: a.id, label: a.name }));
 
