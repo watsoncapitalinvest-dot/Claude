@@ -123,3 +123,34 @@ Send the PNGs back in the chat **zipped** (images pasted loose don't come
 through — zip them like the logos and covers). Name the files exactly as listed
 above. Partial delivery is fine — `run.png`, `throw.png`, and `catch.png` alone
 already upgrade most of the broadcast; the rest can follow.
+
+---
+
+# SHEET 2 — delivery update + next assets
+
+**Delivery format change:** the zip requirement is dropped. Deliver everything as
+ONE single contact-sheet PNG posted directly in chat (that's how sheet 1 arrived
+and the slicer handles it). Layout rules for a contact sheet:
+
+- Thin dark border lines between sections; section label small, top-left of each section.
+- Frames left to right with clear gaps — frames never touch each other, the borders, or the label.
+- Feet baseline aligned within a section. Checkerboard background is fine (it gets removed).
+- Every shape needs a fully CLOSED continuous dark outline — gaps in the line work
+  break background removal.
+
+## Sheet 2 asset list (5 sections)
+
+1. `tackle.png` — 4 frames: defender diving tackle (closing in / launching /
+   wrapping horizontal / landed, wrap complete). Tackler only, no second player.
+2. `backpedal.png` — 3 frames: defensive back backpedaling, knees bent, chest up,
+   still FACING RIGHT while moving backward.
+3. `spin.png` — 4 frames: ball carrier spin move (run / plant + start rotation /
+   mid-spin from behind / out of the spin in stride).
+4. `sack.png` — 3 frames: QB sacked (bracing with ball / buckling, ball tucked /
+   down on one knee, head down).
+5. `ref.png` — 3 frames: referee touchdown signal (arms at sides / rising / both
+   straight up). ONLY this section wears different kit: black-and-white striped
+   shirt, white pants, black cap. The ref is never team-tinted in the engine.
+
+Character consistency with sheet 1 is mandatory — same athlete, same scale, same
+line weight, facing RIGHT, white jersey / light-gray helmet+pants for tinting.
