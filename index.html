@@ -3105,6 +3105,7 @@ const OFFICE_TOOLS = [
   ['draft-desk', '🎓', 'The Draft Board', 'Every pick graded · POP’s report card'],
   ['roster-export', '⤓', 'Export Rosters', 'Top 3 per team → copy for Claude'],
   ['logos-export', '🛡️', 'Export Team Logos', 'Download every team logo → send to Claude'],
+  ['matchup-export', '📺', 'Export Matchup', 'Pull a real game → send to Claude for the broadcast'],
 ];
 const NEWSROOM_TOOLS = [
   ['create-issue', '📝', 'Create Issue', 'Build this week’s magazine'],
@@ -5194,6 +5195,136 @@ async function exportTeamLogos(){
   document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 1000);
   toast(`Exported ${embedded + urlOnly} logos (${embedded} embedded${urlOnly ? `, ${urlOnly} as links` : ''}${none ? `, ${none} missing` : ''}) — send scfl-team-logos.json to Claude`);
 }
+
+// ---------------------------------------------------------------------
+//  Export a real head-to-head matchup → JSON for the AI Broadcast engine.
+//  Pulls the true box score for a chosen season + week straight from
+//  Sleeper (fantasy points + raw stat lines), so the "TV game" is built
+//  on real numbers, never fabricated ones.
+// ---------------------------------------------------------------------
+async function exportMatchup(){
+  const b = S.bundle;
+  if (!b || !b.league) { toast('Load your league first (enter your Sleeper username on the home screen).'); return; }
+  const seasons = (S.history && S.history.length)
+    ? S.history.map(h => ({ season: String(h.season), league_id: h.league_id }))
+    : [{ season: String(b.league.season), league_id: b.league.league_id }];
+  // Default to the most recent COMPLETED season (skip the current, in-progress one).
+  const curSeason = String((S.nflState && S.nflState.season) || S.season || b.league.season || '');
+  let defIdx = seasons.findIndex(s => s.season !== curSeason);
+  if (defIdx < 0) defIdx = 0;
+  mxOverlay(seasons, defIdx);
+}
+function mxTeamName(ctx, rosterId){
+  const r = ctx.rosters.find(r => r.roster_id === rosterId);
+  const u = r && r.owner_id ? ctx.usersById[r.owner_id] : null;
+  return (u && ((u.metadata && u.metadata.team_name) || u.display_name)) || ('Team ' + rosterId);
+}
+function mxOverlay(seasons, defIdx){
+  const prev = document.getElementById('mxExport'); if (prev) prev.remove();
+  const wrap = document.createElement('div'); wrap.id = 'mxExport';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:18px';
+  const seasonOpts = seasons.map((s,i) => `<option value="${i}"${i===defIdx?' selected':''}>${s.season}</option>`).join('');
+  const weekOpts = Array.from({length:18},(_,i) => `<option value="${i+1}">Week ${i+1}</option>`).join('');
+  wrap.innerHTML = `<div style="background:var(--card,#fff);border:1px solid var(--border,#e2e2e2);border-radius:14px;max-width:560px;width:100%;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.4);max-height:88vh;overflow:auto">
+    <div style="font-weight:800;font-size:16px;margin-bottom:3px">📺 Export a matchup for the broadcast</div>
+    <div style="font-size:12px;color:var(--dim,#6b7684);margin-bottom:12px">Pick a completed week, load it, then choose the game. You get a JSON with both teams' real stat lines &amp; fantasy points — send it to Claude to build the broadcast.</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <select id="mxSeason" class="btn ghost" style="flex:1">${seasonOpts}</select>
+      <select id="mxWeek" class="btn ghost" style="flex:1">${weekOpts}</select>
+      <button class="btn" id="mxLoad" style="flex:1">Load games</button>
+    </div>
+    <div id="mxList" style="font-size:13px"></div>
+    <div style="margin-top:12px;text-align:right"><button class="btn ghost" id="mxClose">Close</button></div>
+  </div>`;
+  document.body.appendChild(wrap);
+  wrap.querySelector('#mxClose').addEventListener('click', () => wrap.remove());
+  wrap.addEventListener('click', e => { if (e.target === wrap) wrap.remove(); });
+  wrap.querySelector('#mxLoad').addEventListener('click', () => mxLoad(seasons));
+}
+async function mxLoad(seasons){
+  const wrap = document.getElementById('mxExport'); if (!wrap) return;
+  const si = +wrap.querySelector('#mxSeason').value;
+  const wk = +wrap.querySelector('#mxWeek').value;
+  const sel = seasons[si];
+  const listEl = wrap.querySelector('#mxList');
+  listEl.innerHTML = '<div style="padding:14px;text-align:center;color:var(--dim,#6b7684)">Pulling the box score from Sleeper…</div>';
+  try {
+    const league = (S.bundle && String(S.bundle.league.season) === sel.season && S.bundle.league.league_id === sel.league_id)
+      ? S.bundle.league : await getLeague(sel.league_id);
+    const [rosters, users, matchups, weeklyStats] = await Promise.all([
+      getRosters(sel.league_id), getLeagueUsers(sel.league_id),
+      getMatchups(sel.league_id, wk), getWeeklyStats(sel.season, wk)
+    ]);
+    const usersById = {}; users.forEach(u => usersById[u.user_id] = u);
+    const players = (S.bundle && S.bundle.players) || await getPlayers();
+    const ctx = { league, rosters, usersById, players, matchups, weeklyStats, season: sel.season, week: wk };
+    mxRenderPairs(ctx);
+  } catch (e) {
+    listEl.innerHTML = `<div style="padding:14px;text-align:center;color:#c20f16">Couldn't load that week (${(e && e.message) || 'error'}). Try another week or season.</div>`;
+  }
+}
+function mxRenderPairs(ctx){
+  const wrap = document.getElementById('mxExport'); if (!wrap) return;
+  const listEl = wrap.querySelector('#mxList');
+  const byMid = new Map();
+  ctx.matchups.forEach(m => { if (m.matchup_id == null) return; if (!byMid.has(m.matchup_id)) byMid.set(m.matchup_id, []); byMid.get(m.matchup_id).push(m); });
+  const pairs = [...byMid.values()].filter(p => p.length === 2);
+  if (!pairs.length) { listEl.innerHTML = '<div style="padding:14px;text-align:center;color:var(--dim,#6b7684)">No head-to-head games found for that week.</div>'; return; }
+  const anyPts = ctx.matchups.some(m => (m.points || 0) > 0);
+  wrap._mxCtx = ctx; wrap._mxPairs = pairs;
+  const rows = pairs.map((pair,i) => {
+    const a = pair[0], b = pair[1];
+    const an = mxTeamName(ctx, a.roster_id), bn = mxTeamName(ctx, b.roster_id);
+    const as = round1(a.points || 0), bs = round1(b.points || 0);
+    return `<button class="btn ghost mxPair" data-i="${i}" style="display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;margin-bottom:6px;padding:10px">
+      <span>${esc(an)} <b>${as}</b> &nbsp;—&nbsp; <b>${bs}</b> ${esc(bn)}</span><span style="opacity:.5">›</span></button>`;
+  }).join('');
+  const warn = !anyPts ? '<div style="padding:8px;text-align:center;color:#c20f16;font-size:12px;margin-bottom:6px">⚠ This week has no points yet — it may not have been played. Pick a completed week.</div>' : '';
+  listEl.innerHTML = warn + rows;
+  listEl.querySelectorAll('.mxPair').forEach(btnEl => btnEl.addEventListener('click', () => mxExportPair(+btnEl.dataset.i)));
+}
+function mxBuildTeam(ctx, entry){
+  const scoring = ctx.league.scoring_settings;
+  const posOf = id => ctx.players[id]?.position || ctx.players[id]?.fantasy_positions?.[0] || '';
+  const starterIds = (entry.starters || []).filter(Boolean);
+  const pointsFor = id => (entry.players_points && typeof entry.players_points[id] === 'number') ? entry.players_points[id] : scoreStats(ctx.weeklyStats[id], scoring);
+  const starters = starterIds.map(id => {
+    const pos = posOf(id), stats = ctx.weeklyStats[id] || null;
+    return { player: playerName(ctx.players[id], id), pos, points: round1(pointsFor(id)), line: statLine(pos, stats), stats };
+  });
+  const total = round1(entry.points && entry.points > 0 ? entry.points : sum(starters.map(s => s.points)));
+  return { team: mxTeamName(ctx, entry.roster_id), roster_id: entry.roster_id, points: total, starters };
+}
+function mxExportPair(i){
+  const wrap = document.getElementById('mxExport'); if (!wrap || !wrap._mxPairs) return;
+  const ctx = wrap._mxCtx, pair = wrap._mxPairs[i];
+  const A = mxBuildTeam(ctx, pair[0]), B = mxBuildTeam(ctx, pair[1]);
+  const winner = A.points >= B.points ? A.team : B.team;
+  const payload = {
+    kind: 'scfl-matchup', league: ctx.league.name, season: ctx.season, week: ctx.week,
+    format: 'superflex-dynasty-non-ppr',
+    ppr: (ctx.league.scoring_settings && ctx.league.scoring_settings.rec) || 0,
+    winner, margin: round1(Math.abs(A.points - B.points)),
+    teams: [A, B],
+    scoring_settings: ctx.league.scoring_settings
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const fname = `scfl-matchup-${ctx.season}-w${ctx.week}-${(A.team + '-vs-' + B.team).replace(/[^a-z0-9]+/gi,'_').toLowerCase()}.json`;
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname;
+  document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 1000);
+  toast(`Exported ${A.team} vs ${B.team}`);
+  mxShowJson(json, fname);
+}
+function mxShowJson(text, fname){
+  const wrap = document.getElementById('mxExport'); if (!wrap) return;
+  const listEl = wrap.querySelector('#mxList');
+  listEl.innerHTML = `<div style="font-size:12px;color:var(--dim,#6b7684);margin-bottom:8px">✅ Downloaded <b>${esc(fname)}</b>. On a phone, copy the text below and paste it to Claude instead.</div>
+    <textarea readonly style="width:100%;height:38vh;font-family:ui-monospace,monospace;font-size:11px;line-height:1.5;background:var(--bg2,#f6f6f6);color:var(--text,#111);border:1px solid var(--border,#e2e2e2);border-radius:10px;padding:10px;resize:none">${esc(text)}</textarea>
+    <div style="margin-top:8px"><button class="btn" id="mxCopy" style="width:100%">📋 Copy JSON</button></div>`;
+  const ta = listEl.querySelector('textarea');
+  listEl.querySelector('#mxCopy').addEventListener('click', () => { ta.select(); try { navigator.clipboard.writeText(ta.value); toast('Copied'); } catch { try { document.execCommand('copy'); toast('Copied'); } catch {} } });
+}
 function showExportOverlay(text, copied){
   const prev = document.getElementById('rosterExport'); if (prev) prev.remove();
   const wrap = document.createElement('div'); wrap.id = 'rosterExport';
@@ -6432,6 +6563,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'draft-desk') return showDraftDesk();
   if (act === 'roster-export') return exportRosters();
   if (act === 'logos-export') return exportTeamLogos();
+  if (act === 'matchup-export') return exportMatchup();
   if (act === 'tc-refresh') { toast('Re-subpoenaing the league…'); return showTradeCourt(true); }
   if (act === 'tc-fulllist') { S._tcFullList = !S._tcFullList; return showTradeCourt(); }
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
