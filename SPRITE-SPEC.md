@@ -157,7 +157,7 @@ line weight, facing RIGHT, white jersey / light-gray helmet+pants for tinting.
 
 ---
 
-# SHEET 3 — Marty "Two Drinks" Malone (the SportsCenter anchor)
+# SHEET 3 — Harry Doyle (the SportsCenter anchor)
 
 One contact-sheet PNG, same layout rules as sheet 2 (bordered sections, top-left
 labels, gapped frames, closed outlines, delivered as a single image in chat).

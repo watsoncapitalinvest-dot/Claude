@@ -28,7 +28,7 @@ gestures — and every gesture returns with ease-out + 5-10% overshoot.
 14. Dismissive wave — right hand flick, head turns away 5°. Trigger: Dud outros.
 15. Count-off — right forearm ticks up in 3 steps synced to stat-line items.
 
-## Signature Marty
+## Signature Harry
 16. The drink (4-phase) — reach 400ms → lift + toast (glass 10°, nod) → drink
     (head back 12°, 800ms) → set down + 2° satisfied shake. Glass layer swaps
     desk→hand. Trigger: the two pour points.
