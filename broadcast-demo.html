@@ -195,6 +195,7 @@
   .foot{margin-top:20px;text-align:center;color:var(--dim);font-size:11.5px;line-height:1.6}
   .foot b{color:var(--gold)}
 </style>
+<link rel="icon" href="data:,">
 </head>
 <body>
 <div class="wrap">
@@ -203,6 +204,7 @@
   <div class="matchsel" id="matchsel">
     <select id="selH"></select><span class="vs">vs</span><select id="selA"></select>
     <button type="button" id="setGame">Set matchup</button>
+    <span id="mxmsg" style="display:none;flex-basis:100%;text-align:center;font-size:11.5px;font-weight:800;color:var(--gold)"></span>
   </div>
 
   <!-- Scorebug -->
@@ -265,6 +267,7 @@
    QBs); every player's POINTS come solely from his own real line.
    Fictional teams; fully standalone. */
 
+window.addEventListener('unhandledrejection',function(ev){ try{ window.onerror(String((ev&&ev.reason)||'promise rejection')); }catch(_){} });
 window.onerror=function(msg,src,line,col){ try{ var e=document.getElementById('errbar');
   e.style.display='block'; e.textContent='⚠ '+msg+' @'+line+':'+col; }catch(_){} };
 
@@ -655,9 +658,13 @@ function tintSheet(c1,c2){
       d[i]=Math.min(255,t2.r*k); d[i+1]=Math.min(255,t2.g*k); d[i+2]=Math.min(255,t2.b*k); } // gray kit -> secondary
   }
   cx.putImageData(id,0,0);
+  // the referee keeps his stripes — restore his frames untinted
+  ((SPR.meta.ref&&SPR.meta.ref.frames)||[]).forEach(fr=>{
+    cx.clearRect(fr.x,fr.y,fr.w,fr.h);
+    cx.drawImage(SPR.img,fr.x,fr.y,fr.w,fr.h,fr.x,fr.y,fr.w,fr.h); });
   SPR.tints[key]=cv; return cv;
 }
-const SPR_KIND={chip:{scale:.28,w:84,h:46},def:{scale:.185,w:48,h:30},ol:{scale:.18,w:44,h:26}};
+const SPR_KIND={chip:{scale:.28,w:84,h:46},def:{scale:.185,w:48,h:30},ol:{scale:.18,w:44,h:26},ref:{scale:.24,w:52,h:46}};
 function upgradeSprites(){
   const mk=(el,kind)=>{
     const svg=el.querySelector('svg'); if(!svg) return;
@@ -671,11 +678,24 @@ function upgradeSprites(){
   nodes.ol.forEach(el=>mk(el,'ol'));
   nodes.def.forEach(el=>mk(el,'def'));
   Object.values(nodes.skill).forEach(el=>mk(el,'chip'));
+  if(SPR.meta.ref){
+    const rd=document.createElement('div'); rd.className='spr';
+    rd.style.display='none'; rd.style.zIndex='7';
+    const k=SPR_KIND.ref, cv=document.createElement('canvas');
+    cv.width=k.w*SPR.RES; cv.height=k.h*SPR.RES;
+    cv.style.width=k.w+'px'; cv.style.height=k.h+'px';
+    rd.appendChild(cv); turf.appendChild(rd);
+    SPR.refEl=rd;
+    SPR.refActor={el:rd,cv,ctx:cv.getContext('2d'),kind:'ref',anim:'',fi:0,at:0,key:''};
+    SPR.actors.push(SPR.refActor);
+  }
   setInterval(tickSprites,60);
   tickSprites();
 }
 const SPR_POSE=[['throwing','throw',75,1],['reach','catch',75,1],['dive','dive',85,1],
-                ['hit','hit',95,1],['celeb','celebrate',130,0],['kicking','kick',85,1]];
+                ['hit','hit',95,1],['celeb','celebrate',130,0],['kicking','kick',85,1],
+                ['tackling','tackle',85,1],['spinning','spin',70,1],['sacked','sack',110,1],
+                ['refsig','ref',160,1],['backpedal','backpedal',130,0]];
 function sprAnim(a){
   const cl=a.el.classList;
   for(const [c,an,ms,once] of SPR_POSE) if(cl.contains(c)) return [an,ms,once,-1];
@@ -686,6 +706,7 @@ function sprAnim(a){
 function tickSprites(){
   const now=performance.now();
   for(const a of SPR.actors){
+    if(a.el.style.display==='none') continue;
     const [an,ms,once,fixed]=sprAnim(a);
     const frames=SPR.meta[an].frames;
     if(a.anim!==an){ a.anim=an; a.fi=0; a.at=now; }
@@ -741,7 +762,7 @@ function lineUp(team,p){
   const isFG=p.kind==='fg'||p.kind==='xp', isDST=p.kind==='dst';
   const olY=[36,43,50,57,64];
   // pose cleanup from last snap
-  Object.values(nodes.skill).forEach(c=>{c.style.display='';c.classList.remove('throwing','reach','dive','hit','celeb','kicking');});
+  Object.values(nodes.skill).forEach(c=>{c.style.display='';c.classList.remove('throwing','reach','dive','hit','celeb','kicking','spinning','sacked');});
   // DST play: the OPPONENT'S offense has the ball; this team's 11 defenders
   // (in team colors) are the ones on the field making the play.
   const stageTeam=isDST?(team===H?A:H):team;
@@ -753,6 +774,7 @@ function lineUp(team,p){
     put(d,los+stageOff*1.2,olY[i]);});
   const dCol=isDST?teamColor(team):'';
   nodes.def.forEach((d,i)=>{
+    d.classList.remove('tackling','backpedal');
     d.classList.toggle('dhl',isDST); d.style.setProperty('--dhl',dCol||'#fff');
     if(isDST){ d.style.setProperty('--jc',TEAMS[team].c1); d.style.setProperty('--jt',TEAMS[team].c2); }
     else { d.style.setProperty('--jc','#31363e'); d.style.setProperty('--jt','#8a929c'); }
@@ -808,7 +830,10 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 function chase(tx,ty,dur){
   [...nodes.def].map(d=>({d,dist:Math.hypot((parseFloat(d.style.left)||50)-tx,(parseFloat(d.style.top)||50)-ty)}))
     .sort((a,b)=>a.dist-b.dist).slice(0,4)
-    .forEach((o,i)=>tween(o.d,tx+(i%2?2:-2)+i,ty+(i-1.5)*5,dur,{ease:'linear'}));
+    .forEach((o,i)=>{ o.d.classList.remove('backpedal');
+      tween(o.d,tx+(i%2?2:-2)+i,ty+(i-1.5)*5,dur,{ease:'linear'}).then(ok=>{
+        if(ok&&i===0){ o.d.classList.add('tackling');
+          setTimeout(()=>o.d.classList.remove('tackling'),780); } }); });
 }
 const LANE={WR1:11,WR2:89,WR3:24,TE:70,RB:66,QB:50};
 
@@ -942,6 +967,14 @@ const sfx={
 function flashEZ(team){ const ez=$(team===H?'ezL':'ezR'); ez.classList.remove('flash'); void ez.offsetWidth; ez.classList.add('flash'); }
 function celebrate(team){
   flashEZ(team); sfx.td();
+  if(SPR.ok&&SPR.refEl){
+    SPR.refActor.anim=''; SPR.refActor.key='';
+    SPR.refEl._flip=(team!==H);
+    put(SPR.refEl,team===H?7:93,24);
+    SPR.refEl.style.display=''; SPR.refEl.classList.add('refsig');
+    clearTimeout(celebrate._rt);
+    celebrate._rt=setTimeout(()=>{SPR.refEl.style.display='none';SPR.refEl.classList.remove('refsig');},2800);
+  }
   Object.values(nodes.skill).forEach(c=>{ if(!c.classList.contains('act')) return;
     setTimeout(()=>{ c.classList.remove('dive'); c.classList.add('celeb');
       setTimeout(()=>c.classList.remove('celeb'),2000); },700); });
@@ -989,6 +1022,7 @@ async function runPlayMotion(team,p){
       await tween(ball,house,46,sp(900),{ease:'linear'}); if(tok!==animToken) return false;
       celebrate(team);
     } else if((p.label||'')==='Sack'){
+      nodes.skill.QB.classList.add('sacked');
       await tween(ball,qbX+oppOff*2.5,52,sp(360)); if(tok!==animToken) return false;
       flashEZ(team);
     } else {                                             // INT / fumble: ball comes free to the defense
@@ -1005,6 +1039,7 @@ async function runPlayMotion(team,p){
     await tween(ball, team===H?2:98, 24, sp(p.kind==='xp'?600:860), {arc:p.kind==='xp'?18:26}); if(tok!==animToken) return false;
     sfx.kick(); flashEZ(team);
   } else if(p.kind==='int'){
+    nodes.def.slice(7).forEach(d=>d.classList.add('backpedal'));
     // dropback, throw, defender comes down with it
     const qbDrop=los+off*8;
     tween(chips.QB,qbDrop,50,sp(300));
@@ -1019,6 +1054,7 @@ async function runPlayMotion(team,p){
       await tween(ball,px-dir*6,py+(50-py)*0.3,sp(360),{ease:'linear'}); }
     if(tok!==animToken) return false;
   } else if(p.kind==='inc'){
+    nodes.def.slice(7).forEach(d=>d.classList.add('backpedal'));
     // routes develop, the throw falls incomplete at the target's feet
     ['WR1','WR2','WR3','TE'].forEach(sl=>{ const c=chips[sl]; if(c===actEl) return;
       const cp=xyOf(c); tween(c,cp.x+dir*5,cp.y+(cp.y<50?5:-5),sp(460),{ease:'linear'}); });
@@ -1031,6 +1067,7 @@ async function runPlayMotion(team,p){
     await tween(ball,cx,cy+3,sp(430),{arc:13}); if(tok!==animToken) return false;
     await tween(ball,cx+dir*1,cy+7,sp(180),{ease:'linear'}); if(tok!==animToken) return false;
   } else if(p.kind==='rec'||p.kind==='gen'){
+    nodes.def.slice(7).forEach(d=>d.classList.add('backpedal'));
     const deep=p.yd>=25, quick=p.yd<=6&&p.kind==='rec';
     ['WR1','WR2','WR3','TE'].forEach(sl=>{ const c=chips[sl]; if(c===actEl) return;
       const cp=xyOf(c); tween(c,cp.x+dir*(deep?8:5+(sl==='WR3'?3:0)),cp.y+(cp.y<50?5:-5),sp(deep?620:480),{ease:'linear'}); });
@@ -1092,8 +1129,10 @@ async function runPlayMotion(team,p){
       const wob=(p.yd%2)?8:-8;
       const ry=p.td?50:50+wob*0.5;
       cam(end);
-      if(long){ // a defender meets him at the second level — and he breaks it
+      if(long){ // a defender meets him at the second level — and he breaks it with a spin
         chase(mid2,50-wob*0.6,sp(360));
+        setTimeout(()=>{ carrier.classList.add('spinning');
+          setTimeout(()=>carrier.classList.remove('spinning'),430); },sp(430));
         const jink=mid2+dir*2;
         runPath(carrier,[[mid1,50+wob],[mid2,50-wob*0.6],[jink,50+wob*0.9],[end,ry]],sp(920),{ease:'linear'});
         await runPath(ball,[[mid1,48+wob],[mid2,48-wob*0.6],[jink,48+wob*0.9],[end,ry-2]],sp(920),{ease:'linear'}); if(tok!==animToken) return false;
@@ -1107,6 +1146,7 @@ async function runPlayMotion(team,p){
     }
     if(p.td) celebrate(team);
   }
+  nodes.def.forEach(d=>d.classList.remove('backpedal'));
   if(p.kind!=='dst'&&p.kind!=='fg'&&p.kind!=='xp'&&p.kind!=='inc'&&p.kind!=='int') ballYd=end;
   return tok===animToken;
 }
@@ -1413,8 +1453,13 @@ function genTeam(T,rng){
   }
   return st;
 }
+function mxNote(t){ const m=$('mxmsg'); if(!m) return;
+  m.textContent=t; m.style.display='block';
+  clearTimeout(mxNote._t); mxNote._t=setTimeout(()=>{m.style.display='none';},2600); }
 function applyMatchup(hk,ak){
-  if(!LEAGUE||!LEAGUE[hk]||!LEAGUE[ak]||hk===ak) return;
+  if(!LEAGUE){ mxNote('League data has not loaded — check your connection and reload.'); return; }
+  if(!LEAGUE[hk]||!LEAGUE[ak]){ mxNote('Pick both teams first.'); return; }
+  if(hk===ak){ mxNote('Pick two different teams.'); return; }
   const TH=LEAGUE[hk], TA=LEAGUE[ak];
   const rng=mulberry32(hashStr(hk+'|'+ak));
   if(hk==='smokedragons'&&ak==='porkchopexpress'){
@@ -1436,6 +1481,10 @@ function applyMatchup(hk,ak){
   bo.innerHTML=`${TEAMS.H.name} vs ${TEAMS.A.name} is set. Hit <b>Kick off</b>.`;
   $('feed').appendChild(bo);
   $('go').textContent='▶ Kick off'; $('go').disabled=false; $('skip').disabled=true;
+  mxNote(TEAMS.H.name+' vs '+TEAMS.A.name+' is set — hit Kick off.');
+  const bug=document.querySelector('.bug');
+  if(bug){ bug.style.transition='box-shadow .25s'; bug.style.boxShadow='0 0 0 2px var(--gold)';
+    setTimeout(()=>{bug.style.boxShadow='';},900); }
 }
 $('setGame').addEventListener('click',()=>applyMatchup($('selH').value,$('selA').value));
 loadLeague();
