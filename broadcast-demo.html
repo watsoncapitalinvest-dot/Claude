@@ -94,6 +94,30 @@
   .foot b{color:var(--gold)}
   .tag{display:inline-block;margin:0 auto 10px;font-size:10px;font-weight:900;letter-spacing:2px;text-transform:uppercase;
     color:#20170a;background:var(--gold);padding:3px 10px;border-radius:999px}
+
+  /* ---- 2D field ---- */
+  .field{position:relative;margin-top:12px;height:150px;border:1px solid var(--line);border-radius:16px;overflow:hidden;
+    display:flex;box-shadow:0 10px 30px rgba(0,0,0,.45);background:#0c2a14}
+  .ez{width:9%;display:flex;align-items:center;justify-content:center;position:relative}
+  .ez span{writing-mode:vertical-rl;transform:rotate(180deg);font-weight:900;font-size:12px;letter-spacing:2px;
+    color:rgba(255,255,255,.92);text-shadow:0 1px 3px rgba(0,0,0,.6)}
+  .ezL{background:linear-gradient(90deg,rgba(216,180,90,.85),rgba(216,180,90,.55))}
+  .ezR{background:linear-gradient(270deg,rgba(55,182,168,.85),rgba(55,182,168,.55))}
+  .ez.flash{animation:ezf .8s ease}
+  @keyframes ezf{0%,100%{filter:none}30%{filter:brightness(2.1)}60%{filter:brightness(1.4)}}
+  .turf{flex:1;position:relative;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,0) calc(10% - 2px), rgba(255,255,255,.30) calc(10% - 2px), rgba(255,255,255,.30) 10%),
+      repeating-linear-gradient(90deg, #12351b 0, #12351b 10%, #0f2e17 10%, #0f2e17 20%);}
+  .turf .mid{position:absolute;top:0;bottom:0;left:50%;width:2px;background:rgba(255,255,255,.55);transform:translateX(-1px)}
+  .turf .num{position:absolute;top:6px;font-size:10px;font-weight:800;color:rgba(255,255,255,.5)}
+  .turf .num.b{bottom:6px;top:auto}
+  .ball{position:absolute;top:50%;transform:translate(-50%,-50%);font-size:22px;left:50%;
+    transition:left .6s cubic-bezier(.4,0,.2,1);filter:drop-shadow(0 3px 5px rgba(0,0,0,.7));z-index:3}
+  .los{position:absolute;top:0;bottom:0;width:3px;background:var(--gold);opacity:.0;transition:left .6s,opacity .3s;
+    transform:translateX(-1px);z-index:2;box-shadow:0 0 8px rgba(216,180,90,.8)}
+  .fieldcap{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:11px;font-weight:800;
+    color:rgba(255,255,255,.9);letter-spacing:.4px;text-shadow:0 1px 3px rgba(0,0,0,.7);z-index:4;pointer-events:none}
 </style>
 </head>
 <body>
@@ -125,6 +149,20 @@
       </div>
     </div>
     <div class="barwrap"><div class="fill" id="barH"></div><div class="fill" id="barA"></div></div>
+  </div>
+
+  <!-- 2D field -->
+  <div class="field">
+    <div class="ez ezL" id="ezL"><span id="ezLt">HOME</span></div>
+    <div class="turf" id="turf">
+      <div class="mid"></div>
+      <div class="num" style="left:22%">◄</div>
+      <div class="num b" style="left:72%">►</div>
+      <div class="los" id="los"></div>
+      <div class="ball" id="ball">🏈</div>
+    </div>
+    <div class="ez ezR" id="ezR"><span id="ezRt">AWAY</span></div>
+    <div class="fieldcap" id="fieldcap">Kickoff</div>
   </div>
 
   <!-- Controls -->
@@ -179,34 +217,34 @@ function pass(team,q,o){ // o: {qb, rec, pos, yd, td}
   const pbp = o.td
     ? `<b>TOUCHDOWN.</b> ${o.qb} hits <b>${o.rec}</b> for a ${o.yd}-yard score.`
     : `${o.qb} finds <b>${o.rec}</b> for ${o.yd}.`;
-  return {team,q,kind:o.td?'ptd':'pass',pbp,color:o.color,credits:cr,td:!!o.td};
+  return {team,q,kind:o.td?'ptd':'pass',pbp,color:o.color,credits:cr,td:!!o.td,gain:o.yd};
 }
 function run(team,q,o){ // {rb, yd, td}
   const cr=[{name:o.rb,pos:'RB',pts:rushPts(o.yd,o.td||0)}];
   const pbp = o.td
     ? `<b>TOUCHDOWN.</b> ${o.rb} pounds it in from ${o.yd}.`
     : `${o.rb} rips off ${o.yd} on the ground.`;
-  return {team,q,kind:o.td?'rtd':'run',pbp,color:o.color,credits:cr,td:!!o.td};
+  return {team,q,kind:o.td?'rtd':'run',pbp,color:o.color,credits:cr,td:!!o.td,gain:o.yd};
 }
 function qbrun(team,q,o){ // {qb, yd, td}
   const cr=[{name:o.qb,pos:'QB',pts:rushPts(o.yd,o.td||0)}];
   const pbp=o.td?`<b>TOUCHDOWN.</b> ${o.qb} keeps it and walks in from ${o.yd}.`
                 :`${o.qb} scrambles for ${o.yd}.`;
-  return {team,q,kind:o.td?'rtd':'run',pbp,color:o.color,credits:cr,td:!!o.td};
+  return {team,q,kind:o.td?'rtd':'run',pbp,color:o.color,credits:cr,td:!!o.td,gain:o.yd};
 }
 function qbthrow(team,q,o){ // lump completion to non-roster target: {qb, yd, td}
   const cr=[{name:o.qb,pos:'QB',pts:passPts(o.yd,o.td||0)}];
   const pbp=o.td?`<b>TOUCHDOWN.</b> ${o.qb} throws the ${o.yd}-yard dart.`
                 :`${o.qb} moves the chains, ${o.yd} through the air.`;
-  return {team,q,kind:o.td?'ptd':'pass',pbp,color:o.color,credits:cr,td:!!o.td};
+  return {team,q,kind:o.td?'ptd':'pass',pbp,color:o.color,credits:cr,td:!!o.td,gain:o.yd};
 }
 function fg(team,q,o){ // {k, dist}
   return {team,q,kind:'fg',pbp:`<b>${o.k}</b> drills it from ${o.dist}. Good.`,color:o.color,
-          credits:[{name:o.k,pos:'K',pts:fgPts(o.dist)}]};
+          credits:[{name:o.k,pos:'K',pts:fgPts(o.dist)}],gain:0,dist:o.dist};
 }
 function dst(team,q,o){ // {name, text, pts, label}
   return {team,q,kind:'dst',pbp:o.text,color:o.color,flag:o.label||'DEFENSE',
-          credits:[{name:o.name,pos:'DST',pts:o.pts}]};
+          credits:[{name:o.name,pos:'DST',pts:o.pts}],gain:0};
 }
 
 // ---- The game script (authored for drama; math is exact) ------------
@@ -297,6 +335,26 @@ $('cH').style.borderColor=getComputedStyle(document.documentElement).getProperty
 $('cA').style.borderColor=getComputedStyle(document.documentElement).getPropertyValue('--away');
 $('sH').style.color='var(--home)'; $('sA').style.color='var(--away)';
 
+// ---- Field (flavor layer): HOME endzone left / AWAY endzone right ----
+const lastWord = s => s.trim().split(/\s+/).pop().toUpperCase();
+$('ezLt').textContent = lastWord(TEAMS.H.name);
+$('ezRt').textContent = lastWord(TEAMS.A.name);
+let curPoss=null, ballYd=50;
+function fplace(){ const left = 9 + (ballYd/100)*82; $('ball').style.left=left+'%'; $('los').style.left=left+'%'; }
+function fcap(t){ $('fieldcap').textContent=t; }
+function flashEnd(team){ const el=$(team==='H'?'ezL':'ezR'); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+function fieldReset(){ curPoss=null; ballYd=50; fplace(); $('los').style.opacity='0'; fcap('Kickoff'); }
+function moveBall(p){
+  const dir = p.team==='H' ? -1 : 1;   // home drives left toward yd 0, away right toward 100
+  if(p.team!==curPoss){ curPoss=p.team; ballYd=50; }
+  $('los').style.opacity='.9';
+  if(p.kind==='dst'){ ballYd=50; fplace(); flashEnd(p.team==='H'?'A':'H'); fcap(`${TEAMS[p.team].crest} ${p.flag||'Defense'}`); return; }
+  if(p.kind==='fg'){ flashEnd(p.team); fcap(`${TEAMS[p.team].crest} ${TEAMS[p.team].name} — field goal, ${p.dist}`); return; }
+  if(p.td){ ballYd = p.team==='H'?0:100; fplace(); flashEnd(p.team); fcap(`${TEAMS[p.team].crest} ${TEAMS[p.team].name} — TOUCHDOWN!`); return; }
+  ballYd = Math.max(4, Math.min(96, ballYd + dir*(p.gain||0)));
+  fplace(); fcap(`${TEAMS[p.team].crest} ${TEAMS[p.team].name} on the move`);
+}
+
 let idx=0, timer=null, speed=1, dispH=0, dispA=0;
 
 function setBug(runH,runA,q,clock,possTeam){
@@ -344,6 +402,7 @@ function step(){
   const p=G.plays[idx];
   setBug(p.runH,p.runA,QN[p.q]+' '+'',p.mmss,p.team);
   $('q').textContent=QN[p.q];
+  moveBall(p);
   addPlay(p);
   idx++;
   if(idx>=G.plays.length){ setTimeout(endGame,900/speed); stop(); }
@@ -362,6 +421,7 @@ function endGame(){
   const tot=Math.max(G.finalH+G.finalA,1);
   $('barH').style.width=(100*G.finalH/tot)+'%'; $('barA').style.width=(100*G.finalA/tot)+'%';
   $('q').textContent='FINAL'; $('clock').textContent='0:00'; $('poss').textContent='';
+  fcap(`FINAL — ${winner.crest} ${winner.name} by ${margin}`);
   const booth=document.createElement('div');
   booth.className='booth';
   booth.innerHTML=`<b style="color:var(--gold)">FINAL — ${winner.crest} ${winner.name} by ${margin}.</b><br>
@@ -388,7 +448,7 @@ function play(){ if(timer) return; $('go').textContent='⏸ Pause'; $('skip').di
 function stop(){ if(timer){clearInterval(timer);timer=null;} $('go').textContent = idx>=G.plays.length?'↻ Replay':'▶ Resume'; }
 function reset(){ idx=0;dispH=0;dispA=0; $('feed').innerHTML=''; $('box').classList.remove('show');
   $('sH').textContent='0.0';$('sA').textContent='0.0';$('barH').style.width='0';$('barA').style.width='0';
-  $('q').textContent='PRE';$('clock').textContent='15:00';$('poss').textContent=''; }
+  $('q').textContent='PRE';$('clock').textContent='15:00';$('poss').textContent=''; fieldReset(); }
 
 $('go').addEventListener('click',()=>{
   if(idx>=G.plays.length){ reset(); play(); return; }
@@ -396,7 +456,7 @@ $('go').addEventListener('click',()=>{
 });
 $('skip').addEventListener('click',()=>{
   if(timer){clearInterval(timer);timer=null;}
-  while(idx<G.plays.length){ const p=G.plays[idx]; addPlay(p); idx++; }
+  while(idx<G.plays.length){ const p=G.plays[idx]; moveBall(p); addPlay(p); idx++; }
   const last=G.plays[G.plays.length-1]; dispH=last.runH; dispA=last.runA;
   $('sH').textContent=last.runH.toFixed(1); $('sA').textContent=last.runA.toFixed(1);
   endGame();
