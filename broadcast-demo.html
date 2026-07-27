@@ -85,7 +85,15 @@
       repeating-linear-gradient(90deg, #12351b 0, #12351b 10%, #0f2e17 10%, #0f2e17 20%);}
   .turf .mid{position:absolute;top:0;bottom:0;left:50%;width:2px;background:rgba(255,255,255,.35);transform:translateX(-1px)}
   .losline{position:absolute;top:0;bottom:0;width:2px;background:rgba(216,180,90,.85);box-shadow:0 0 8px rgba(216,180,90,.7);transform:translateX(-1px);transition:left .6s ease;z-index:1}
-  .fstline{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,214,0,.35);transform:translateX(-1px);transition:left .6s ease}
+  .fstline{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,214,0,.55);transform:translateX(-1px);transition:left .6s ease;z-index:1}
+  .goal{position:absolute;top:34%;bottom:34%;width:3px;background:#ffd34d;border-radius:2px;opacity:.75;z-index:1}
+  .goal:before{content:'';position:absolute;left:-3px;top:50%;width:9px;height:3px;background:#ffd34d;transform:translateY(-50%);border-radius:2px}
+  .tdp{position:absolute;width:6px;height:6px;border-radius:2px;z-index:7;pointer-events:none;transform:translate(-50%,-50%);animation:tdpk .95s ease-out forwards}
+  @keyframes tdpk{from{opacity:1}to{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) rotate(220deg)}}
+  .tdword{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-family:var(--serif);font-weight:900;font-size:32px;letter-spacing:3px;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.85),0 0 22px var(--twc,#fff);z-index:8;opacity:0;animation:tdwk 1.25s ease;pointer-events:none}
+  @keyframes tdwk{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+  .hcard{padding:10px 14px;text-align:center;font-size:13px;color:var(--text);background:rgba(216,180,90,.07);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .boothline{font-size:12.5px;color:var(--gold);font-style:italic;margin-top:3px;line-height:1.4}
 
   /* players — top-down sprites (helmet + shoulder pads) */
   .spr{position:absolute;transform:translate(-50%,-50%);transition:left .55s ease,top .55s ease;z-index:2;pointer-events:none}
@@ -180,6 +188,9 @@
       <div class="turf" id="turf">
         <div class="mid"></div>
         <div class="losline" id="losline" style="left:50%"></div>
+        <div class="fstline" id="fstline" style="display:none"></div>
+        <div class="goal" style="left:0.4%"></div>
+        <div class="goal" style="right:0.4%;transform:scaleX(-1)"></div>
         <div class="fieldcap" id="fieldcap"></div>
         <div class="ball" id="ball" style="left:50%;top:50%">🏈</div>
       </div>
@@ -197,7 +208,7 @@
 
   <!-- Feed (newest on top) -->
   <div class="feedhdr"><span class="t">Play-by-play</span><span class="h">newest on top</span></div>
-  <div class="feed" id="feed"><div class="booth" id="booth">Two fictional squads, one real box score. Hit <b>Kick off</b> — the offenses take the field in formation and the engine shows how the fantasy points pile up.</div></div>
+  <div class="feed" id="feed"><div class="booth" id="booth">Real SCFL rosters, one simulated Sunday. Hit <b>Kick off</b> — the offenses take the field in formation and the broadcast shows how the fantasy points pile up.</div></div>
 
   <div class="box" id="box"></div>
 
@@ -435,8 +446,31 @@ function buildGame(){
     else if(p.kind==='dst'){ credits.push({name:p.actor,pts:p.pts}); delta+=p.pts; }
     tot[p.team]+=delta; p.delta=delta; p.credits=credits;
     p.runH=round1(tot.H); p.runA=round1(tot.A);
+    p.secs=900-(e-(q-1)*900);
   });
-  return {plays,finalH:teamTotal(H),finalA:teamTotal(A),box};
+  // ---- booth pass: game-aware commentary, computed deterministically ----
+  const qb2n={H:STATS.H.QB[1]&&STATS.H.QB[1].n,A:STATS.A.QB[1]&&STATS.A.QB[1].n};
+  const cum={}, seenSub={}; let leader=0, q4Note=false;
+  plays.forEach((p,i)=>{
+    if(p.qb&&p.qb===qb2n[p.team]&&!seenSub[p.team]&&(p.kind==='rec'||p.kind==='gen'||p.kind==='inc'||p.kind==='qbrun')){
+      seenSub[p.team]=true; p.booth='In comes '+p.qb+' — the change-of-pace series for '+TEAMS[p.team].name+'.'; }
+    if(p.kind==='run'||p.kind==='qbrun'){ const c=cum[p.actor]=cum[p.actor]||{ry:0,recy:0};
+      const b4=c.ry; c.ry+=p.yd; if(b4<100&&c.ry>=100) p.booth='That puts '+p.actor+' over 100 on the ground.'; }
+    if(p.kind==='rec'){ const c=cum[p.actor]=cum[p.actor]||{ry:0,recy:0};
+      const b4=c.recy; c.recy+=p.yd; if(b4<100&&c.recy>=100) p.booth='A 100-yard receiving day for '+p.actor+'.'; }
+    const sgn=Math.sign(Math.round((p.runH-p.runA)*10));
+    if(sgn!==0&&leader!==0&&sgn!==leader&&i>4&&!p.booth)
+      p.booth='And the lead changes hands — '+(sgn>0?TEAMS.H.name:TEAMS.A.name)+' in front.';
+    if(sgn!==0) leader=sgn;
+    if(!q4Note&&p.q===4){ q4Note=true;
+      p.booth=p.booth||('Fourth quarter. '+Math.abs(p.runH-p.runA).toFixed(1)+' between them — every touch matters now.'); }
+    p.hl=!!(p.td||p.kind==='int'||p.kind==='dst'||p.kind==='fg'||p.yd>=20);   // SportsCenter reel tags
+  });
+  const hIdx=plays.findIndex(p=>p.q>=3);
+  if(hIdx>0) plays[hIdx].halftime={h:plays[hIdx-1].runH,a:plays[hIdx-1].runA};
+  const allBox=[...box[H].map(x=>({...x,team:H})),...box[A].map(x=>({...x,team:A}))].sort((a,b)=>b.pts-a.pts).slice(0,3);
+  const pregame=TEAMS.H.name+' ('+TEAMS.H.rec+') host '+TEAMS.A.name+' ('+TEAMS.A.rec+'). SCFL Network has the call — kickoff is moments away.';
+  return {plays,finalH:teamTotal(H),finalA:teamTotal(A),box,stars:allBox,pregame};
 }
 function statLineOf(g,p){
   if(g==='QB') return `${p.cmp}/${p.att} · ${p.payd} yds · ${p.patd} TD${p.ints?` · ${p.ints} INT`:''}${p.ra?` · ${p.ra} car ${p.ry} yds`:''}${p.rutd?' · rush TD':''}`;
@@ -510,6 +544,11 @@ function lineUp(team,p){
   const los=p.losYd!=null?p.losYd:ballYd; ballYd=los;
   [...nodes.ol,...nodes.def,...Object.values(nodes.skill),$('ball')].forEach(el=>el.style.transition='');
   $('losline').style.left=los+'%';
+  const fst=$('fstline');
+  if(p.toGo!=null&&p.kind!=='fg'&&p.kind!=='xp'&&p.kind!=='dst'){
+    const fd=los+dir*p.toGo;
+    if(fd>2&&fd<98){fst.style.display='block';fst.style.left=fd+'%';} else fst.style.display='none';
+  } else fst.style.display='none';
   const per=personnel(team,p);
   const isFG=p.kind==='fg'||p.kind==='xp', isDST=p.kind==='dst';
   const olY=[36,43,50,57,64];
@@ -575,6 +614,19 @@ function chase(tx,ty,dur){
 }
 const LANE={WR1:11,WR2:89,WR3:24,TE:70,RB:66,QB:50};
 function flashEZ(team){ const ez=$(team===H?'ezL':'ezR'); ez.classList.remove('flash'); void ez.offsetWidth; ez.classList.add('flash'); }
+function celebrate(team){
+  flashEZ(team);
+  const x=team===H?5:95;
+  for(let i=0;i<16;i++){ const sp=document.createElement('span'); sp.className='tdp';
+    sp.style.background=i%3?TEAMS[team].c1:'#fff';
+    const ang=(i/16)*Math.PI*2, r=26+(i%4)*14;
+    sp.style.setProperty('--dx',(Math.cos(ang)*r)+'px'); sp.style.setProperty('--dy',(Math.sin(ang)*r)+'px');
+    sp.style.left=x+'%'; sp.style.top=(28+((i*29)%44))+'%';
+    turf.appendChild(sp); setTimeout(()=>sp.remove(),1000); }
+  const w=document.createElement('div'); w.className='tdword'; w.textContent='TOUCHDOWN';
+  w.style.setProperty('--twc',TEAMS[team].c1);
+  turf.appendChild(w); setTimeout(()=>w.remove(),1300);
+}
 
 async function runPlayMotion(team,p){
   const tok=++animToken;
@@ -591,7 +643,7 @@ async function runPlayMotion(team,p){
     chase(los,50,sp(520));
     await tween(ball,los+off*2.5,52,sp(320)); if(tok!==animToken) return false;
     await tween(ball,los,48,sp(280)); if(tok!==animToken) return false;
-    flashEZ(team);
+    if(p.label==='PICK SIX'||p.label==='Defensive TD') celebrate(team); else flashEZ(team);
   } else if(p.kind==='fg'||p.kind==='xp'){
     await tween(ball,los+off*6.5,52,sp(200),{ease:'linear'}); if(tok!==animToken) return false;
     await wait(sp(150)); if(tok!==animToken) return false;
@@ -645,7 +697,7 @@ async function runPlayMotion(team,p){
       tween(actEl,end,ry,sp(400),{ease:'linear'});
       await tween(ball,end,ry-2,sp(400),{ease:'linear'}); if(tok!==animToken) return false;
     }
-    if(p.td) flashEZ(team);
+    if(p.td) celebrate(team);
   } else { // run / qbrun — mesh, hit the hole; stuffed runs bounce back
     const carrier=actEl||chips.RB;
     const cp=xyOf(carrier);
@@ -663,7 +715,7 @@ async function runPlayMotion(team,p){
       runPath(carrier,[[mid1,50+wob],[mid2,50-wob*0.6],[end,ry]],sp(790),{ease:'linear'});
       await runPath(ball,[[mid1,48+wob],[mid2,48-wob*0.6],[end,ry-2]],sp(790),{ease:'linear'}); if(tok!==animToken) return false;
     }
-    if(p.td) flashEZ(team);
+    if(p.td) celebrate(team);
   }
   if(p.kind!=='dst'&&p.kind!=='fg'&&p.kind!=='xp'&&p.kind!=='inc'&&p.kind!=='int') ballYd=end;
   return tok===animToken;
@@ -694,7 +746,15 @@ function setBench(team){
   $('benchrow').innerHTML=rest.map(([po,nm])=>`<span class="bchip" style="border-color:${col};color:${col}"><span class="po">${po}</span><span style="color:rgba(255,255,255,.85)">${shortName(nm)}</span></span>`).join(' ')
     +(holes.length?` <span class="bchip" style="border-color:rgba(255,255,255,.25);color:var(--dim)">${holes.join(' · ')}</span>`:'');
 }
-let idx=0,timer=null,speed=1,dispH=0,dispA=0;
+let idx=0,timer=null,speed=1,dispH=0,dispA=0,clockT=null;
+function tickClock(p){
+  clearInterval(clockT);
+  const nx=G.plays[idx+1];
+  if(!nx||nx.q!==p.q||nx.secs>=p.secs) return;
+  let cur=p.secs; const target=nx.secs;
+  const per=Math.max(70,(2000/speed)/Math.max(1,cur-target));
+  clockT=setInterval(()=>{ if(cur>target){cur--; $('clock').textContent=fmt(cur);} else clearInterval(clockT); },per);
+}
 function setBug(runH,runA,q,clock,possTeam){
   $('q').textContent=q; $('clock').textContent=clock;
   $('poss').textContent=possTeam?('▲ '+TEAMS[possTeam].name):'';
@@ -742,19 +802,28 @@ function addPlay(p){
     :isScore?`<div class="flag" style="color:${col}">${TEAMS[p.team].crest} ${TEAMS[p.team].name}</div>`:'';
   const showPill=Math.abs(p.delta)>=0.05;
   const pill=showPill?`<span class="pts" style="color:${col};border-color:${col}">${p.delta>=0?'+':''}${p.delta.toFixed(1)} • ${lastWord(TEAMS[p.team].name)} ${(p.team===H?p.runH:p.runA).toFixed(1)}</span>`:'';
-  div.innerHTML=`<div class="tick"><span class="qq">${QN[p.q]}</span><br>${p.mmss}</div><div class="body">${flag}<div class="pbp">${pbpText(p)}</div>${pill}</div>`;
-  const feed=$('feed'); feed.insertBefore(div,feed.firstChild); feed.scrollTop=0;
+  const booth=p.booth?`<div class="boothline">🎙️ ${p.booth}</div>`:'';
+  div.innerHTML=`<div class="tick"><span class="qq">${QN[p.q]}</span><br>${p.mmss}</div><div class="body">${flag}<div class="pbp">${pbpText(p)}</div>${booth}${pill}</div>`;
+  const feed=$('feed');
+  if(p.halftime){ const hc=document.createElement('div'); hc.className='hcard';
+    hc.innerHTML=`<b style="color:var(--gold)">HALFTIME</b> — ${TEAMS.H.name} <b style="color:var(--home)">${p.halftime.h.toFixed(1)}</b>, ${TEAMS.A.name} <b style="color:var(--away)">${p.halftime.a.toFixed(1)}</b>`;
+    feed.insertBefore(hc,feed.firstChild); }
+  feed.insertBefore(div,feed.firstChild); feed.scrollTop=0;
 }
 
 // ---- game loop ------------------------------------------------------------
 function step(){
-  if(idx===0){ const bo=$('booth'); if(bo)bo.remove(); }
+  if(idx===0){ const bo=$('booth'); if(bo)bo.remove();
+    const pg=document.createElement('div'); pg.className='hcard';
+    pg.innerHTML=`<b style="color:var(--gold)">PREGAME</b> — 🎙️ ${G.pregame}`;
+    $('feed').insertBefore(pg,$('feed').firstChild); }
   if(idx>=G.plays.length){ endGame(); return; }
   const p=G.plays[idx];
   if(p.drive!==curDrive){ curDrive=p.drive; setBench(p.team); }
   setBug(p.runH,p.runA,QN[p.q],p.mmss,p.team);
   setBanner(p.team,p);
   lineUp(p.team,p);
+  tickClock(p);
   const capWhat=p.td?'TOUCHDOWN!':p.kind==='fg'?`field goal from ${p.dist} — good`:p.kind==='xp'?'XP good'
     :p.kind==='dst'?(p.label||'defense'):p.kind==='int'?'INTERCEPTED':p.kind==='inc'?'incomplete'
     :p.yd<=0?'stuffed':`${p.yd}-yard gain`;
@@ -765,7 +834,7 @@ function step(){
   if(idx>=G.plays.length){ setTimeout(endGame,1100/speed); stop(); }
 }
 function endGame(){
-  clearInterval(timer); timer=null; stopScoreAnim(); animToken++;
+  clearInterval(timer); timer=null; stopScoreAnim(); animToken++; clearInterval(clockT);
   const winner=G.finalH>=G.finalA?TEAMS.H:TEAMS.A, margin=round1(Math.abs(G.finalH-G.finalA));
   dispH=G.finalH; dispA=G.finalA;
   $('sH').textContent=G.finalH.toFixed(1); $('sH').style.color=cssv('--home');
@@ -776,7 +845,8 @@ function endGame(){
   $('possname').innerHTML=`FINAL — ${winner.crest} ${winner.name} by ${margin}`; $('possname').style.color=cssv('--gold');
   $('dd').textContent=''; $('fieldcap').textContent='';
   const booth=document.createElement('div'); booth.className='booth';
-  booth.innerHTML=`<b style="color:var(--gold)">FINAL — ${winner.crest} ${winner.name} by ${margin}.</b><br>${winner.name} take it, ${G.finalH.toFixed(1)}–${G.finalA.toFixed(1)}. Every point, catch, and carry above came straight off the box score.`;
+  const balls=G.stars.map(s=>`${s.name} ${s.pts.toFixed(1)}`).join(' · ');
+  booth.innerHTML=`<b style="color:var(--gold)">FINAL — ${winner.crest} ${winner.name} by ${margin}.</b><br>${winner.name} take it, ${G.finalH.toFixed(1)}–${G.finalA.toFixed(1)}. Every point, catch, and carry above came straight off the box score.<br>⭐ Game balls: ${balls}`;
   const feed=$('feed'); feed.insertBefore(booth,feed.firstChild); feed.scrollTop=0;
   $('go').textContent='↻ Replay'; $('go').disabled=false; $('skip').disabled=true;
   renderBox();
@@ -791,9 +861,9 @@ function renderBox(){
   });
 }
 function play(){ if(timer)return; $('go').textContent='⏸ Pause'; $('skip').disabled=false; timer=setInterval(step,2000/speed); step(); }
-function stop(){ if(timer){clearInterval(timer);timer=null;} $('go').textContent=idx>=G.plays.length?'↻ Replay':'▶ Resume'; }
+function stop(){ if(timer){clearInterval(timer);timer=null;} clearInterval(clockT); $('go').textContent=idx>=G.plays.length?'↻ Replay':'▶ Resume'; }
 function reset(){
-  animToken++; idx=0;dispH=0;dispA=0;curDrive=-1;ballYd=50;
+  animToken++; clearInterval(clockT); idx=0;dispH=0;dispA=0;curDrive=-1;ballYd=50;
   $('feed').innerHTML=''; $('box').classList.remove('show');
   $('sH').textContent='0.0';$('sA').textContent='0.0';$('barH').style.width='0';$('barA').style.width='0';
   $('q').textContent='PRE';$('clock').textContent='15:00';$('poss').textContent='';
