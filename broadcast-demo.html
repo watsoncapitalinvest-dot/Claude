@@ -95,8 +95,9 @@
   .goal:before{content:'';position:absolute;left:-3px;top:50%;width:9px;height:3px;background:#ffd34d;transform:translateY(-50%);border-radius:2px}
   .tdp{position:absolute;width:6px;height:6px;border-radius:2px;z-index:7;pointer-events:none;transform:translate(-50%,-50%);animation:tdpk .95s ease-out forwards}
   @keyframes tdpk{from{opacity:1}to{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) rotate(220deg)}}
-  .tdword{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-family:var(--serif);font-weight:900;font-size:32px;letter-spacing:3px;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.85),0 0 22px var(--twc,#fff);z-index:8;opacity:0;animation:tdwk 1.25s ease;pointer-events:none}
-  @keyframes tdwk{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+  .tdword{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:3px;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.85),0 0 26px var(--twc,#fff);z-index:8;opacity:0;animation:tdwk 2.6s ease;pointer-events:none;text-align:center}
+  .tdword .tds{display:block;font-family:var(--sans);font-weight:900;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--twc,#fff);text-shadow:0 1px 6px rgba(0,0,0,.9);margin-top:6px}
+  @keyframes tdwk{0%{opacity:0;transform:translate(-50%,-50%) scale(.55)}10%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}20%{transform:translate(-50%,-50%) scale(1)}82%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}
   .hcard{padding:10px 14px;text-align:center;font-size:13px;color:var(--text);background:rgba(216,180,90,.07);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .boothline{font-size:12.5px;color:var(--gold);font-style:italic;margin-top:3px;line-height:1.4}
 
@@ -699,6 +700,24 @@ function crowdSwell(amt,dur){
   bedGain.gain.linearRampToValueAtTime(amt,t+0.12);
   bedGain.gain.exponentialRampToValueAtTime(BED_REST,t+dur);
 }
+function horn(freq,dur,delay,vol){
+  if(!AC||muted) return;
+  const t=AC.currentTime+(delay||0);
+  const o1=AC.createOscillator(),o2=AC.createOscillator(),g=AC.createGain(),lp=AC.createBiquadFilter();
+  o1.type='sawtooth'; o1.frequency.value=freq;
+  o2.type='sawtooth'; o2.frequency.value=freq*1.005;
+  lp.type='lowpass'; lp.frequency.value=1500;
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.linearRampToValueAtTime(vol||0.09,t+0.04);
+  g.gain.setValueAtTime(vol||0.09,t+dur*0.7);
+  g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+  o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(master);
+  o1.start(t); o2.start(t); o1.stop(t+dur+0.05); o2.stop(t+dur+0.05);
+}
+function fanfare(){
+  horn(392,0.22,0.45,0.10); horn(523,0.22,0.70,0.10); horn(659,0.22,0.95,0.10);
+  horn(784,0.95,1.22,0.12); horn(523,0.95,1.22,0.07);
+}
 function blip(freq,dur,type,vol,delay){
   if(!AC||muted) return;
   const t=AC.currentTime+(delay||0);
@@ -739,7 +758,7 @@ function cheer(intensity,dur,lowStart){
   crowdSwell(Math.min(0.5,BED_REST+0.3*intensity),dur);
 }
 const sfx={
-  td(){ cheer(1.0,3.2); blip(85,0.55,'sine',0.4); blip(2300,0.16,'triangle',0.09,0.5); blip(2300,0.16,'triangle',0.09,0.74); },
+  td(){ cheer(1.0,3.8); fanfare(); blip(85,0.55,'sine',0.4); blip(2300,0.16,'triangle',0.09,0.5); blip(2300,0.16,'triangle',0.09,0.74); },
   turnover(){ cheer(0.8,2.4,true); blip(130,0.4,'sine',0.25); },
   big(){ cheer(0.55,2.0); },
   kick(){ cheer(0.4,1.6); blip(1800,0.12,'triangle',0.09); },
@@ -749,15 +768,20 @@ function flashEZ(team){ const ez=$(team===H?'ezL':'ezR'); ez.classList.remove('f
 function celebrate(team){
   flashEZ(team); sfx.td();
   const x=team===H?5:95;
-  for(let i=0;i<16;i++){ const sp=document.createElement('span'); sp.className='tdp';
-    sp.style.background=i%3?TEAMS[team].c1:'#fff';
-    const ang=(i/16)*Math.PI*2, r=26+(i%4)*14;
-    sp.style.setProperty('--dx',(Math.cos(ang)*r)+'px'); sp.style.setProperty('--dy',(Math.sin(ang)*r)+'px');
-    sp.style.left=x+'%'; sp.style.top=(28+((i*29)%44))+'%';
-    turf.appendChild(sp); setTimeout(()=>sp.remove(),1000); }
-  const w=document.createElement('div'); w.className='tdword'; w.textContent='TOUCHDOWN';
+  const wave=(count,delay)=>setTimeout(()=>{
+    for(let i=0;i<count;i++){ const sp=document.createElement('span'); sp.className='tdp';
+      sp.style.background=i%3?TEAMS[team].c1:'#fff';
+      const ang=(i/count)*Math.PI*2, r=26+(i%4)*16;
+      sp.style.setProperty('--dx',(Math.cos(ang)*r)+'px'); sp.style.setProperty('--dy',(Math.sin(ang)*r)+'px');
+      sp.style.left=(x+(delay?(team===H?4:-4):0))+'%'; sp.style.top=(28+((i*29)%44))+'%';
+      turf.appendChild(sp); setTimeout(()=>sp.remove(),1050); }
+  },delay);
+  wave(16,0); wave(12,450); wave(10,950);
+  setTimeout(()=>flashEZ(team),500); setTimeout(()=>flashEZ(team),1000);
+  const w=document.createElement('div'); w.className='tdword';
+  w.innerHTML='TOUCHDOWN<span class="tds">'+TEAMS[team].name+'</span>';
   w.style.setProperty('--twc',TEAMS[team].c1);
-  turf.appendChild(w); setTimeout(()=>w.remove(),1300);
+  turf.appendChild(w); setTimeout(()=>w.remove(),2650);
 }
 
 async function runPlayMotion(team,p){
@@ -994,10 +1018,20 @@ function step(){
   runPlayMotion(p.team,p).then(ok=>{ if(ok) $('fieldcap').textContent=`${TEAMS[p.team].crest} ${capWhat}`; });
   addPlay(p);
   idx++;
-  if(idx>=G.plays.length){ setTimeout(endGame,1100/speed); stop(); }
+  if(idx>=G.plays.length){ timer=setTimeout(endGame,(p.td?3800:1400)/speed); return; }
+  timer=setTimeout(step, delayFor(p)/speed);
+}
+// how long the broadcast dwells on what just happened
+function delayFor(p){
+  if(p.td) return 4800;                                  // soak in the touchdown
+  if(p.kind==='dst'&&/SIX|TD/.test(p.label||'')) return 4200;
+  if(p.kind==='int'||p.kind==='dst') return 2900;
+  if(p.kind==='fg') return 2700;
+  if(p.yd>=20) return 2500;
+  return 2000;
 }
 function endGame(){
-  clearInterval(timer); timer=null; stopScoreAnim(); animToken++; clearInterval(clockT);
+  clearTimeout(timer); timer=null; stopScoreAnim(); animToken++; clearInterval(clockT);
   const winner=G.finalH>=G.finalA?TEAMS.H:TEAMS.A, margin=round1(Math.abs(G.finalH-G.finalA));
   dispH=G.finalH; dispA=G.finalA;
   $('sH').textContent=G.finalH.toFixed(1); $('sH').style.color=cssv('--home');
@@ -1024,8 +1058,8 @@ function renderBox(){
     box.appendChild(card);
   });
 }
-function play(){ if(timer)return; audioInit(); if(AC&&AC.state==='suspended')AC.resume(); if(idx===0) sfx.kickoff(); $('go').textContent='⏸ Pause'; $('skip').disabled=false; timer=setInterval(step,2000/speed); step(); }
-function stop(){ if(timer){clearInterval(timer);timer=null;} clearInterval(clockT); $('go').textContent=idx>=G.plays.length?'↻ Replay':'▶ Resume'; }
+function play(){ if(timer)return; audioInit(); if(AC&&AC.state==='suspended')AC.resume(); if(idx===0) sfx.kickoff(); $('go').textContent='⏸ Pause'; $('skip').disabled=false; step(); }
+function stop(){ if(timer){clearTimeout(timer);timer=null;} clearInterval(clockT); $('go').textContent=idx>=G.plays.length?'↻ Replay':'▶ Resume'; }
 function reset(){
   animToken++; clearInterval(clockT); idx=0;dispH=0;dispA=0;curDrive=-1;ballYd=50;
   $('feed').innerHTML=''; $('box').classList.remove('show');
@@ -1187,7 +1221,7 @@ loadLeague();
 
 $('go').addEventListener('click',()=>{ if(idx>=G.plays.length){reset();play();return;} if(timer)stop();else play(); });
 $('skip').addEventListener('click',()=>{
-  animToken++; if(timer){clearInterval(timer);timer=null;}
+  animToken++; if(timer){clearTimeout(timer);timer=null;}
   while(idx<G.plays.length){ addPlay(G.plays[idx]); idx++; }
   endGame();
 });
@@ -1199,7 +1233,6 @@ $('mute').addEventListener('click',()=>{
 });
 document.querySelectorAll('#speed button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#speed button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); speed=+b.dataset.s;
-  if(timer){clearInterval(timer);timer=setInterval(step,2000/speed);}
 }));
 
 </script>
