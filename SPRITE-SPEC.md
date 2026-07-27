@@ -154,3 +154,29 @@ and the slicer handles it). Layout rules for a contact sheet:
 
 Character consistency with sheet 1 is mandatory — same athlete, same scale, same
 line weight, facing RIGHT, white jersey / light-gray helmet+pants for tinting.
+
+---
+
+# SHEET 3 — Marty "Two Drinks" Malone (the SportsCenter anchor)
+
+One contact-sheet PNG, same layout rules as sheet 2 (bordered sections, top-left
+labels, gapped frames, closed outlines, delivered as a single image in chat).
+
+**Character (fixed colors — he is never team-tinted):** cartoon sports anchorman
+in his 60s, medium-brown skin, short gray-flecked hair, heavyset, cheerful but
+world-weary. Charcoal suit #23262E, off-white shirt #EFECE4, loosened gold tie
+#B8912F, dark aviator sunglasses. Same vector cel-shaded style as the players.
+
+**Framing:** waist-up, facing camera, identical scale/waistline/head position in
+every frame of every section. No desk, no text, no shadows.
+
+## Sections (18 frames total)
+1. `idle.png` — 2: hands folded / tiny shift with eyebrow raise
+2. `talk.png` — 4: mouth closed / half-open / wide / pursed, hand slightly raised
+3. `gesture.png` — 3: finger raised / palms-up shrug / point at camera
+4. `drink.png` — 4: pick up lowball glass / toast to camera / drinking / set down, grin
+5. `disgust.png` — 3: hand on forehead / hands up in disbelief / head shake
+6. `laugh.png` — 2: head back mid-laugh / leaning forward
+
+Engine mapping (planned): idle at rest, talk while TTS speaks, gesture on quips,
+drink at the two pour points, disgust on Dud of the Week, laugh on blowout lines.
