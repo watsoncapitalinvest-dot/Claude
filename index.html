@@ -3093,6 +3093,7 @@ function showMenu() {
     ['trade-court', '⚖️', 'The Trade Court', 'Every trade graded, every GM judged'],
     ['draft-desk', '🎓', 'The Draft Board', 'Every pick graded · POP’s report card'],
     ['roster-export', '⤓', 'Export Rosters', 'Top 3 per team → copy for Claude'],
+    ['logos-export', '🛡️', 'Export Team Logos', 'Download every team logo → send to Claude'],
     ['dashboard', '🗞️', 'Newsroom HQ', 'Weekly checklist, brief & calendar'],
     ['predraft-view', '🏈', 'Pre-Draft Issue', 'Build the Draft Issue'],
     ['cover-art', '🎨', 'Cover Art', 'Art direction for the cover'],
@@ -5122,6 +5123,38 @@ async function exportRosters(){
   let copied = false; try { await navigator.clipboard.writeText(text); copied = true; } catch {}
   showExportOverlay(text, copied);
 }
+// Export every team's logo from the live Sleeper bundle as a single JSON the
+// owner can hand to Claude. Each logo is embedded as a base64 data URI when the
+// CDN allows it (so Claude can drop them straight into articles); otherwise the
+// URL is kept as a fallback. Runs in the browser, where Sleeper is reachable.
+async function exportTeamLogos(){
+  const b = S.bundle;
+  if (!b || !b.rosters || !b.rosters.length) { toast('Load your league first (enter your Sleeper username on the home screen).'); return; }
+  toast('Fetching team logos…');
+  const teamNameOf = r => { const u = r.owner_id ? b.usersById[r.owner_id] : null; return (u && ((u.metadata && u.metadata.team_name) || u.display_name)) || ('Team ' + r.roster_id); };
+  const logoUrlOf = u => { const md = (u && u.metadata) || {};
+    if (md.avatar) return md.avatar.indexOf('http') === 0 ? md.avatar : ('https://sleepercdn.com/uploads/' + md.avatar);
+    if (u && u.avatar) return 'https://sleepercdn.com/avatars/' + u.avatar;
+    return null; };
+  const toDataUrl = async url => { try {
+      const blob = await fetch(url).then(r => r.ok ? r.blob() : Promise.reject(0));
+      return await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
+    } catch { return null; } };
+  const logos = {}; let embedded = 0, urlOnly = 0, none = 0;
+  await Promise.all((b.rosters || []).map(async r => {
+    const u = r.owner_id ? b.usersById[r.owner_id] : null;
+    const name = teamNameOf(r), url = logoUrlOf(u);
+    if (!url) { logos[name] = { data: null, url: null }; none++; return; }
+    const data = await toDataUrl(url);
+    if (data) embedded++; else urlOnly++;
+    logos[name] = { data, url };
+  }));
+  const payload = { league: (b.league && b.league.name) || '', season: S.season || '', exportedAt: Date.now(), count: Object.keys(logos).length, logos };
+  const blob = new Blob([JSON.stringify(payload, null, 0)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'scfl-team-logos.json';
+  document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 1000);
+  toast(`Exported ${embedded + urlOnly} logos (${embedded} embedded${urlOnly ? `, ${urlOnly} as links` : ''}${none ? `, ${none} missing` : ''}) — send scfl-team-logos.json to Claude`);
+}
 function showExportOverlay(text, copied){
   const prev = document.getElementById('rosterExport'); if (prev) prev.remove();
   const wrap = document.createElement('div'); wrap.id = 'rosterExport';
@@ -6358,6 +6391,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'trade-court') return showTradeCourt();
   if (act === 'draft-desk') return showDraftDesk();
   if (act === 'roster-export') return exportRosters();
+  if (act === 'logos-export') return exportTeamLogos();
   if (act === 'tc-refresh') { toast('Re-subpoenaing the league…'); return showTradeCourt(true); }
   if (act === 'tc-fulllist') { S._tcFullList = !S._tcFullList; return showTradeCourt(); }
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
