@@ -261,24 +261,27 @@ let STATS={
  // chosen by the value board. Stat lines are PRESEASON SIM numbers — they
  // become real box scores when the season starts. Neither team rosters a
  // kicker right now, and PCE has no DST — the sim honors the holes.
- H:{ QB :[{n:'Kyler Murray', cmp:24,att:33,payd:298,patd:2,ints:1, ra:8, ry:52, rutd:1},
-          {n:'Drew Allar',   cmp:9, att:14,payd:108,patd:1,ints:0, ra:2, ry:7, sub:1}],
-     RB :[{n:'Bijan Robinson', ra:22,ry:138,rutd:2, tgt:4,rec:3,recy:27},
-          {n:'Jaylen Warren',  ra:8, ry:34, tgt:2,rec:2,recy:19}],
-     WR :[{n:'Cooper Kupp',    tgt:8,rec:6,recy:84,rectd:1},
-          {n:'Marquise Brown', tgt:7,rec:4,recy:58},
-          {n:'Kayshon Boutte', tgt:4,rec:2,recy:21}],
-     TE :[{n:'Colston Loveland', tgt:6,rec:4,recy:47}],
+ // slot = the player's real-week game window (0 Thu, 1 Sun early, 2 Sun late,
+ // 3 SNF, 4 MNF) — sim-assigned for now; real box scores bring real slots so
+ // a late-Sunday TD lands late in the game, exactly like the week played out.
+ H:{ QB :[{n:'Kyler Murray', cmp:24,att:33,payd:298,patd:2,ints:1, ra:8, ry:52, rutd:1, slot:1},
+          {n:'Drew Allar',   cmp:9, att:14,payd:108,patd:1,ints:0, ra:2, ry:7, sub:1, slot:2}],
+     RB :[{n:'Bijan Robinson', ra:22,ry:138,rutd:2, tgt:4,rec:3,recy:27, slot:1},
+          {n:'Jaylen Warren',  ra:8, ry:34, tgt:2,rec:2,recy:19, slot:2}],
+     WR :[{n:'Cooper Kupp',    tgt:8,rec:6,recy:84,rectd:1, slot:3},
+          {n:'Marquise Brown', tgt:7,rec:4,recy:58, slot:1},
+          {n:'Kayshon Boutte', tgt:4,rec:2,recy:21, slot:2}],
+     TE :[{n:'Colston Loveland', tgt:6,rec:4,recy:47, slot:1}],
      K  :[],
-     DST:[{n:'Houston Texans', sk:2, dint:1, dtd:1}] },
- A:{ QB :[{n:'Baker Mayfield',  cmp:25,att:36,payd:296,patd:3,ints:0, ra:4, ry:18},
-          {n:'Tua Tagovailoa',  cmp:11,att:15,payd:132,patd:1,ints:1, sub:1}],
-     RB :[{n:'James Cook',      ra:12,ry:58,rutd:1, tgt:2,rec:1,recy:9},
-          {n:'Saquon Barkley',  ra:22,ry:134,rutd:1, tgt:3,rec:2,recy:22}],
-     WR :[{n:'Justin Jefferson',   tgt:10,rec:7,recy:112,rectd:1},
-          {n:'Chris Olave',        tgt:6, rec:3,recy:41},
-          {n:'Jaxon Smith-Njigba', tgt:8, rec:6,recy:79,rectd:1}],
-     TE :[{n:'Brock Bowers', tgt:9,rec:7,recy:88,rectd:1}],
+     DST:[{n:'Houston Texans', sk:2, dint:1, dtd:1, slot:0}] },
+ A:{ QB :[{n:'Baker Mayfield',  cmp:25,att:36,payd:296,patd:3,ints:0, ra:4, ry:18, slot:1},
+          {n:'Tua Tagovailoa',  cmp:11,att:15,payd:132,patd:1,ints:1, sub:1, slot:3}],
+     RB :[{n:'James Cook',      ra:12,ry:58,rutd:1, tgt:2,rec:1,recy:9, slot:2},
+          {n:'Saquon Barkley',  ra:22,ry:134,rutd:1, tgt:3,rec:2,recy:22, slot:3}],
+     WR :[{n:'Justin Jefferson',   tgt:10,rec:7,recy:112,rectd:1, slot:1},
+          {n:'Chris Olave',        tgt:6, rec:3,recy:41, slot:2},
+          {n:'Jaxon Smith-Njigba', tgt:8, rec:6,recy:79,rectd:1, slot:4}],
+     TE :[{n:'Brock Bowers', tgt:9,rec:7,recy:88,rectd:1, slot:1}],
      K  :[],
      DST:[] },
 };
@@ -328,8 +331,8 @@ function buildEvents(team){
   const recvs=[...st.RB,...st.WR,...st.TE].filter(p=>p.rec);
   recvs.forEach(p=>{
     const yds=split(p.recy,p.rec,rng,0).sort((a,b)=>b-a);
-    yds.forEach((y,i)=>ev.catch.push({receiver:p.n,pos:posOfName(team,p.n),yd:y,td:i<(p.rectd||0)}));
-    for(let i=0;i<(p.tgt||p.rec)-p.rec;i++) ev.inc.push({target:p.n});
+    yds.forEach((y,i)=>ev.catch.push({receiver:p.n,pos:posOfName(team,p.n),yd:y,td:i<(p.rectd||0),slot:p.slot??1}));
+    for(let i=0;i<(p.tgt||p.rec)-p.rec;i++) ev.inc.push({target:p.n,slot:p.slot??1});
   });
   // assign throwers: QB2 takes low-yardage catches up to his budget, QB1 the rest
   const q1=st.QB[0], q2=st.QB[1]||{n:'—',cmp:0,att:0,payd:0,patd:0,ints:0};
@@ -344,8 +347,8 @@ function buildEvents(team){
     const gn=q.cmp-mine.length, gy=q.payd-mine.reduce((a,c)=>a+c.yd,0);
     const gtd=(q.patd||0)-mine.filter(c=>c.td).length;
     if(gn>0){ const yds=split(Math.max(gy,gn*2),gn,rng,1).sort((a,b)=>b-a);
-      yds.forEach((y,i)=>ev.gen.push({qb:q.n,yd:y,td:i<gtd})); }
-    for(let i=0;i<(q.ints||0);i++) ev.ints.push({qb:q.n});
+      yds.forEach((y,i)=>ev.gen.push({qb:q.n,yd:y,td:i<gtd,slot:q.slot??1})); }
+    for(let i=0;i<(q.ints||0);i++) ev.ints.push({qb:q.n,slot:q.slot??1});
   });
   // incompletion throwers: split roster-target incs + generic incs by remaining attempts
   const incTotal=(q1.att-q1.cmp)+(q2.att-q2.cmp);
@@ -353,16 +356,17 @@ function buildEvents(team){
   ev.inc.forEach((x,i)=>x.qb=(i%3===2&&q2.att-q2.cmp>0)?q2.n:q1.n);
   // carries: exact counts & sums (stuffed runs only when the math forces them)
   st.RB.forEach(p=>{ const yds=split(p.ry,p.ra,rng,-2).sort((a,b)=>b-a);
-    yds.forEach((y,i)=>ev.run.push({rb:p.n,yd:y,td:i<(p.rutd||0)})); });
+    yds.forEach((y,i)=>ev.run.push({rb:p.n,yd:y,td:i<(p.rutd||0),slot:p.slot??1})); });
   st.QB.forEach(p=>{ if(!p.ra)return; const yds=split(p.ry,p.ra,rng,-1).sort((a,b)=>b-a);
-    yds.forEach((y,i)=>ev.qbrun.push({qb:p.n,yd:y,td:i<(p.rutd||0)})); });
-  st.K.forEach(p=>p.fgs.forEach(d=>ev.fg.push({k:p.n,dist:d})));
-  st.DST.forEach(p=>{ for(let i=0;i<(p.sk||0);i++) ev.dst.push({name:p.n,pts:1,label:'Sack',text:'<b>Sacked!</b> '+p.n+' gets home.'});
+    yds.forEach((y,i)=>ev.qbrun.push({qb:p.n,yd:y,td:i<(p.rutd||0),slot:p.slot??1})); });
+  st.K.forEach(p=>p.fgs.forEach(d=>ev.fg.push({k:p.n,dist:d,slot:p.slot??1})));
+  st.DST.forEach(p=>{ const sl=p.slot??1;
+    for(let i=0;i<(p.sk||0);i++) ev.dst.push({name:p.n,pts:1,label:'Sack',text:'<b>Sacked!</b> '+p.n+' gets home.',slot:sl});
     let picks=p.dint||0, ptds=p.dtd||0;
-    while(ptds>0&&picks>0){ ev.dst.push({name:p.n,pts:8,label:'PICK SIX',text:'<b>PICK SIX!</b> '+p.n+' take it all the way back.'}); ptds--; picks--; }
-    for(let i=0;i<picks;i++) ev.dst.push({name:p.n,pts:2,label:'Interception',text:'<b>Picked off!</b> '+p.n+' steps in front of one.'});
-    for(let i=0;i<ptds;i++) ev.dst.push({name:p.n,pts:6,label:'Defensive TD',text:'<b>SCOOP AND SCORE!</b> '+p.n+' house it.'});
-    for(let i=0;i<(p.fr||0);i++) ev.dst.push({name:p.n,pts:2,label:'Fumble recovery',text:'<b>Ball out!</b> '+p.n+' falls on it.'}); });
+    while(ptds>0&&picks>0){ ev.dst.push({name:p.n,pts:8,label:'PICK SIX',text:'<b>PICK SIX!</b> '+p.n+' take it all the way back.',slot:sl}); ptds--; picks--; }
+    for(let i=0;i<picks;i++) ev.dst.push({name:p.n,pts:2,label:'Interception',text:'<b>Picked off!</b> '+p.n+' steps in front of one.',slot:sl});
+    for(let i=0;i<ptds;i++) ev.dst.push({name:p.n,pts:6,label:'Defensive TD',text:'<b>SCOOP AND SCORE!</b> '+p.n+' house it.',slot:sl});
+    for(let i=0;i<(p.fr||0);i++) ev.dst.push({name:p.n,pts:2,label:'Fumble recovery',text:'<b>Ball out!</b> '+p.n+' falls on it.',slot:sl}); });
   return ev;
 }
 function posOfName(team,n){ const r=ROSTER[team];
@@ -386,39 +390,55 @@ function buildGame(){
   const evs={H:buildEvents(H),A:buildEvents(A)};
   // per-team play pool (unordered); terminals end drives
   function poolOf(t){ const e=evs[t], out=[];
-    e.catch.forEach(c=>out.push({team:t,kind:'rec',qb:c.qb,actor:c.receiver,pos:c.pos,yd:c.yd,td:c.td}));
-    e.gen.forEach(g=>out.push({team:t,kind:'gen',qb:g.qb,actor:g.qb,yd:g.yd,td:g.td}));
-    e.inc.forEach(x=>out.push({team:t,kind:'inc',qb:x.qb,actor:x.target,yd:0}));
-    e.run.forEach(r=>out.push({team:t,kind:'run',actor:r.rb,yd:r.yd,td:r.td}));
-    e.qbrun.forEach(r=>out.push({team:t,kind:'qbrun',qb:r.qb,actor:r.qb,yd:r.yd,td:r.td}));
-    e.fg.forEach(f=>out.push({team:t,kind:'fg',actor:f.k,dist:f.dist,yd:0}));
-    e.ints.forEach(x=>out.push({team:t,kind:'int',qb:x.qb,actor:x.qb,yd:0}));
+    e.catch.forEach(c=>out.push({team:t,kind:'rec',qb:c.qb,actor:c.receiver,pos:c.pos,yd:c.yd,td:c.td,slot:c.slot??1}));
+    e.gen.forEach(g=>out.push({team:t,kind:'gen',qb:g.qb,actor:g.qb,yd:g.yd,td:g.td,slot:g.slot??1}));
+    e.inc.forEach(x=>out.push({team:t,kind:'inc',qb:x.qb,actor:x.target,yd:0,slot:x.slot??1}));
+    e.run.forEach(r=>out.push({team:t,kind:'run',actor:r.rb,yd:r.yd,td:r.td,slot:r.slot??1}));
+    e.qbrun.forEach(r=>out.push({team:t,kind:'qbrun',qb:r.qb,actor:r.qb,yd:r.yd,td:r.td,slot:r.slot??1}));
+    e.fg.forEach(f=>out.push({team:t,kind:'fg',actor:f.k,dist:f.dist,yd:0,slot:f.slot??1}));
+    e.ints.forEach(x=>out.push({team:t,kind:'int',qb:x.qb,actor:x.qb,yd:0,slot:x.slot??1}));
     return out; }
   const pools={H:poolOf(H),A:poolOf(A)};
   const dstQ={H:[...evs.H.dst],A:[...evs.A.dst]};
   const xpLeft={H:(STATS.H.K[0]&&STATS.H.K[0].xpm)||0,A:(STATS.A.K[0]&&STATS.A.K[0].xpm)||0};
-  // drive loop
+  // drive loop — game windows open in real-week order: an event can't be
+  // played until its slot's window is live, so late-Sunday scores land late.
+  const WINDOW_LINES={1:'On to the Sunday early window.',2:'The late-afternoon games are underway.',
+    3:'Under the lights — Sunday Night Football.',4:'Monday night — last chance to make up ground.'};
+  let activeSlot=Math.min(...[...pools.H,...pools.A,...dstQ.H,...dstQ.A].map(p=>p.slot??1));
+  let windowNote=null;
+  const pickable=t=>pools[t].some(p=>(p.slot??1)<=activeSlot);
+  const dstReady=t=>dstQ[t].some(d=>(d.slot??1)<=activeSlot);
   const plays=[]; let turn=(rng()<0.5)?H:A, guard=0, driveNo=-1;
   const isQB2={H:STATS.H.QB[1]&&STATS.H.QB[1].n,A:STATS.A.QB[1]&&STATS.A.QB[1].n};
-  while((pools.H.length||pools.A.length||dstQ.H.length||dstQ.A.length)&&guard++<600){
+  while((pools.H.length||pools.A.length||dstQ.H.length||dstQ.A.length)&&guard++<900){
+    // advance the week when the live window is exhausted
+    if(!pickable(H)&&!pickable(A)&&!dstReady(H)&&!dstReady(A)){
+      if(activeSlot>=4) break;
+      activeSlot++; windowNote=WINDOW_LINES[activeSlot]||null; continue;
+    }
     const t=turn; turn=(t===H)?A:H;
     const pool=pools[t];
-    if(!pool.length&&!dstQ[t].length) continue;
+    if(!pickable(t)&&!dstReady(t)) continue;
     driveNo++;
     // an occasional defensive stand leads the drive
-    if(dstQ[t].length&&(rng()<0.4||!pool.length)){ const d=dstQ[t].shift();
-      plays.push({team:t,kind:'dst',actor:d.name,pts:d.pts,label:d.label,text:d.text,yd:0,drive:driveNo}); if(!pool.length) continue; }
+    if(dstReady(t)&&(rng()<0.4||!pickable(t))){
+      const di=dstQ[t].findIndex(d=>(d.slot??1)<=activeSlot);
+      const d=dstQ[t].splice(di,1)[0];
+      const dp={team:t,kind:'dst',actor:d.name,pts:d.pts,label:d.label,text:d.text,yd:0,drive:driveNo,slot:d.slot??1};
+      if(windowNote){dp.windowNote=windowNote;windowNote=null;}
+      plays.push(dp); if(!pickable(t)) continue; }
     // sub series: QB2's throws cluster on his own drives
     const qb2=isQB2[t];
-    const hasQ2=pool.some(p=>p.qb===qb2);
+    const hasQ2=pool.some(p=>p.qb===qb2&&(p.slot??1)<=activeSlot);
     const q2Drive=hasQ2&&rng()<0.35;
     let losYd=t===H?75:25, down=1, toGo=10, n=0;
-    while(n<9&&pool.length){
+    while(n<9&&pickable(t)){
       const dist=t===H?losYd:100-losYd;
-      // choose a play that fits the moment
+      const live=pool.map((p,i)=>i).filter(i=>(pool[i].slot??1)<=activeSlot);
       let pick=-1;
       for(let tries=0;tries<14;tries++){
-        const i=Math.floor(rng()*pool.length), p=pool[i];
+        const i=live[Math.floor(rng()*live.length)], p=pool[i];
         if(q2Drive&&p.qb&&p.qb!==qb2) continue;
         if(!q2Drive&&p.qb===qb2&&rng()<0.7) continue;
         if(p.td&&p.yd<dist-10) continue;                 // don't score from too far out
@@ -426,8 +446,9 @@ function buildGame(){
         if(p.kind==='int'&&n<2) continue;                // picks come mid-drive
         pick=i; break;
       }
-      if(pick<0) pick=Math.floor(rng()*pool.length);
+      if(pick<0) pick=live[Math.floor(rng()*live.length)];
       const p=pool.splice(pick,1)[0];
+      if(windowNote){p.windowNote=windowNote;windowNote=null;}
       p.drive=driveNo; p.down=down; p.toGo=toGo; p.losYd=losYd;
       plays.push(p);
       if(p.kind==='int'){ break; }                        // turnover
@@ -466,7 +487,8 @@ function buildGame(){
   const qb2n={H:STATS.H.QB[1]&&STATS.H.QB[1].n,A:STATS.A.QB[1]&&STATS.A.QB[1].n};
   const cum={}, seenSub={}; let leader=0, q4Note=false;
   plays.forEach((p,i)=>{
-    if(p.qb&&p.qb===qb2n[p.team]&&!seenSub[p.team]&&(p.kind==='rec'||p.kind==='gen'||p.kind==='inc'||p.kind==='qbrun')){
+    if(p.windowNote) p.booth=p.windowNote;
+    if(p.qb&&p.qb===qb2n[p.team]&&!seenSub[p.team]&&(p.kind==='rec'||p.kind==='gen'||p.kind==='inc'||p.kind==='qbrun')&&!p.booth){
       seenSub[p.team]=true; p.booth='In comes '+p.qb+' — the change-of-pace series for '+TEAMS[p.team].name+'.'; }
     if(p.kind==='run'||p.kind==='qbrun'){ const c=cum[p.actor]=cum[p.actor]||{ry:0,recy:0};
       const b4=c.ry; c.ry+=p.yd; if(b4<100&&c.ry>=100) p.booth='That puts '+p.actor+' over 100 on the ground.'; }
@@ -1122,6 +1144,7 @@ function pickStarters(players){
 function genTeam(T,rng){
   const g=pickStarters(T.players);
   const jit=()=>0.75+rng()*0.5;
+  const simSlot=()=>{const r=rng();return r<0.10?0:r<0.52?1:0.52+0.20>r?2:r<0.88?3:4;};
   const st={QB:[],RB:[],WR:[],TE:[],K:[],DST:[]};
   g.QB.slice(0,2).forEach((n,i)=>{
     const v=vOf(n);
@@ -1137,7 +1160,7 @@ function genTeam(T,rng){
     payd=Math.max(100,Math.min(430,payd));
     const cmp=Math.max(8,Math.round(payd/12.6+rng()*3));
     const att=Math.round(cmp/(0.6+rng()*0.09));
-    st.QB.push({n,cmp,att,payd,patd,ints,ra:mobile?4+Math.floor(rng()*5):2+Math.floor(rng()*3),ry,rutd,...(i?{sub:1}:{})});
+    st.QB.push({n,cmp,att,payd,patd,ints,ra:mobile?4+Math.floor(rng()*5):2+Math.floor(rng()*3),ry,rutd,slot:simSlot(),...(i?{sub:1}:{})});
   });
   g.RB.slice(0,2).forEach(n=>{
     const v=vOf(n);
@@ -1151,7 +1174,7 @@ function genTeam(T,rng){
     const rec=Math.max(0,Math.round(recy/9));
     let rutd=td,rectd=0;
     if(td>0&&rec>0&&rng()<0.25){rutd=td-1;rectd=1;}
-    st.RB.push({n,ra,ry,rutd:rutd||undefined,tgt:rec?rec+Math.floor(rng()*2):0,rec,recy,rectd:rectd||undefined});
+    st.RB.push({n,ra,ry,rutd:rutd||undefined,tgt:rec?rec+Math.floor(rng()*2):0,rec,recy,rectd:rectd||undefined,slot:simSlot()});
   });
   g.WR.slice(0,3).forEach(n=>{
     const v=vOf(n);
@@ -1159,7 +1182,7 @@ function genTeam(T,rng){
     const td=Math.min(2,Math.floor(pts/11));
     const recy=Math.max(12,Math.round((pts-td*6)/0.1));
     const rec=Math.max(1,Math.round(recy/(11+rng()*4)));
-    st.WR.push({n,tgt:rec+1+Math.floor(rng()*3),rec,recy,rectd:td||undefined});
+    st.WR.push({n,tgt:rec+1+Math.floor(rng()*3),rec,recy,rectd:td||undefined,slot:simSlot()});
   });
   g.TE.slice(0,1).forEach(n=>{
     const v=vOf(n);
@@ -1167,7 +1190,7 @@ function genTeam(T,rng){
     const td=Math.min(2,Math.floor(pts/10));
     const recy=Math.max(10,Math.round((pts-td*6)/0.1));
     const rec=Math.max(1,Math.round(recy/(10+rng()*4)));
-    st.TE.push({n,tgt:rec+1+Math.floor(rng()*3),rec,recy,rectd:td||undefined});
+    st.TE.push({n,tgt:rec+1+Math.floor(rng()*3),rec,recy,rectd:td||undefined,slot:simSlot()});
   });
   // reconciliation: receivers' TD catches can't exceed the QBs' passing TDs
   const patdTot=st.QB.reduce((a,q)=>a+(q.patd||0),0);
@@ -1182,13 +1205,13 @@ function genTeam(T,rng){
     const n=g.K[0], fgN=1+Math.floor(rng()*2);
     const fgs=Array.from({length:fgN},()=>28+Math.floor(rng()*27));
     const teamTds=st.QB.reduce((a,q)=>a+(q.patd||0)+(q.rutd||0),0)+st.RB.reduce((a,p)=>a+(p.rutd||0),0);
-    st.K.push({n,fgs,xpm:teamTds});
+    st.K.push({n,fgs,xpm:teamTds,slot:simSlot()});
   }
   if(g.DST[0]){
     const n=g.DST[0];
     const dint=rng()<0.5?1:0, fr=rng()<0.3?1:0;
     const dtd=(dint||fr)&&rng()<0.15?1:0;
-    st.DST.push({n,sk:1+Math.floor(rng()*3),dint,fr,dtd});
+    st.DST.push({n,sk:1+Math.floor(rng()*3),dint,fr,dtd,slot:simSlot()});
   }
   return st;
 }
