@@ -435,6 +435,16 @@
 
   /* ---- Executive Office landing: dark "front office" theme (menu tab only) ---- */
   body.exec-dark { background:#0b0b0f; }
+  /* ---- personal desk themes (device-local, keyed to who signed in) ---- */
+  body.desk-keith { --accent:#6666aa; }
+  body.desk-keith.exec-dark { --gold:#9aa0e6; --gold-d:#6666aa; }
+  body.desk-keith.exec-dark .topbar { border-bottom-color:rgba(120,126,214,.36); }
+  body.desk-keith.exec-dark #content::before { filter:hue-rotate(200deg) saturate(.7); }
+  body.desk-chris { --accent:#3a3a44; }
+  body.desk-chris.exec-dark { --gold:#e6e6ee; --gold-d:#9a9aa8; }
+  body.desk-chris.exec-dark .topbar { border-bottom-color:rgba(230,230,238,.28); }
+  body.desk-chris.exec-dark #content::before { filter:grayscale(1) brightness(1.1); }
+  .wingline { font-size:10.5px; font-weight:900; letter-spacing:.28em; text-transform:uppercase; margin-top:6px; opacity:.85; }
   body.exec-dark #content::before {
     content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
     background:
@@ -1492,7 +1502,24 @@ const SKEY = 'gridirongm.session.v1';
 // ---- Staff desk: who is using this install (per device) ----------------------
 const STAFFKEY = 'gg.staff.v1';
 function staffName(){ try { return (JSON.parse(localStorage.getItem(STAFFKEY)||'null')||{}).name||''; } catch { return ''; } }
-function setStaff(name){ try { localStorage.setItem(STAFFKEY, JSON.stringify({ name, at: Date.now() })); } catch {} }
+function setStaff(name){ try { localStorage.setItem(STAFFKEY, JSON.stringify({ name, at: Date.now() })); } catch {} applyDeskTheme(); }
+const DESK_WINGS = { keith: ['desk-keith', 'The Machines Wing'], chris: ['desk-chris', 'New Wod Order Wing'] };
+function deskWing(){ const n = (staffName() || '').toLowerCase();
+  for (const k of Object.keys(DESK_WINGS)) if (n.includes(k)) return DESK_WINGS[k];
+  return null; }
+let TEAMLOGOS = null;
+async function ensureTeamLogos(rerender){
+  if (TEAMLOGOS) return TEAMLOGOS;
+  try { const r = await fetch('scfl-team-logos-resized.json'); TEAMLOGOS = await r.json(); }
+  catch { TEAMLOGOS = {}; }
+  if (rerender && !staffName() && document.querySelector('[data-act="staff-set"]')) showMenu();
+  return TEAMLOGOS;
+}
+function applyDeskTheme(){
+  const w = deskWing();
+  document.body.classList.toggle('desk-keith', !!w && w[0] === 'desk-keith');
+  document.body.classList.toggle('desk-chris', !!w && w[0] === 'desk-chris');
+}
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
   tab:'news', bundle:null, values:null, newsCache:{}, history:null, desk:[], power:{}, money:{}, predraft:null, currentPredraft:null, dossier:null, records:null, investigations:null, artArchive:[], quiz:{}, featureOverride:{}, storylines:null, calendar:null, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', reading:false,
@@ -3052,6 +3079,7 @@ function setFavicon() {
 async function init() {
   setFavicon();
   loadSession();
+  applyDeskTheme();
   try { S.magName = localStorage.getItem('gg.magname') || 'Skirt Chasers'; } catch {}
   try { S.apiKey = localStorage.getItem('gg.apikey') || ''; } catch {}
   const params = new URLSearchParams(location.search);
@@ -3313,11 +3341,19 @@ function showMenu() {
       <div class="office-sub">${esc(S.season || '')} Season · The Front Office</div>
       ${staffName()
         ? `<div class="office-sub" style="cursor:pointer;margin-top:4px" data-act="staff-switch">At the desk: <b style="color:var(--gold)">${esc(staffName())}</b> · tap to switch</div>`
-        : `<div class="office-sub" style="margin-top:8px">Who's at the desk?</div>
-           <div style="display:flex;gap:8px;justify-content:center;margin-top:8px;flex-wrap:wrap">
-             ${[['John','Smoke Dragons'],['Keith','The Machines'],['Chris','New Wod Order']].map(([n,tm])=>`<button class="btn ghost" data-act="staff-set" data-name="${esc(n)}" style="width:auto;padding:8px 14px">${esc(n)}<span style="display:block;font-size:9px;opacity:.7">${esc(tm)}</span></button>`).join('')}
-             <button class="btn ghost" data-act="staff-set" data-name="" style="width:auto;padding:8px 14px">Someone else…</button>
-           </div>`}
+          + (deskWing() ? `<div class="wingline" style="color:var(--gold)">★ ${esc(deskWing()[1])} ★</div>` : '')
+        : `<div class="office-sub" style="margin-top:8px">Who's at the desk? Tap your franchise.</div>
+           <div style="display:flex;gap:14px;justify-content:center;margin-top:10px;flex-wrap:wrap">
+             ${[['John','smokedragons','Smoke Dragons'],['Keith','machines','The Machines'],['Chris','newworldorder','New Wod Order']].map(([n,k,tm])=>`
+               <button data-act="staff-set" data-name="${esc(n)}" style="background:none;border:none;cursor:pointer;padding:0;text-align:center">
+                 ${TEAMLOGOS && TEAMLOGOS[k]
+                   ? `<img src="${TEAMLOGOS[k]}" alt="${esc(tm)}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--gold,#d8b45a);box-shadow:0 4px 14px rgba(0,0,0,.35);pointer-events:none">`
+                   : `<span style="display:inline-flex;width:64px;height:64px;border-radius:50%;border:2px solid var(--gold,#d8b45a);align-items:center;justify-content:center;font-weight:900;font-size:20px;pointer-events:none">${esc(n[0])}</span>`}
+                 <span style="display:block;font-size:11px;font-weight:900;margin-top:5px;pointer-events:none">${esc(n)}</span>
+                 <span style="display:block;font-size:9px;opacity:.7;pointer-events:none">${esc(tm)}</span>
+               </button>`).join('')}
+           </div>
+           ${(ensureTeamLogos(true), '')}`}
     </div>
     <button class="newsroom-card" data-act="newsroom">
       <img class="nr-logo" src="${NEWSROOM_LOGO}" alt="SCFL NewsRoom">
