@@ -116,8 +116,16 @@
   .chip svg{width:24px;height:34px;display:block;filter:drop-shadow(0 4px 4px rgba(0,0,0,.55))}
   .mov .lgA{animation:runA .34s linear infinite}
   .mov .lgB{animation:runB .34s linear infinite}
+  .mov .armA{animation:runB .34s linear infinite}
+  .mov .armB{animation:runA .34s linear infinite}
   @keyframes runA{0%,100%{transform:rotate(16deg)}50%{transform:rotate(-16deg)}}
   @keyframes runB{0%,100%{transform:rotate(-16deg)}50%{transform:rotate(16deg)}}
+  .throwing .armB{animation:none;transform:rotate(-135deg);transition:transform .12s}
+  .reach .armA{animation:none;transform:rotate(160deg);transition:transform .12s}
+  .reach .armB{animation:none;transform:rotate(-160deg);transition:transform .12s}
+  .dive svg{transition:transform .3s ease;transform:rotate(var(--divedir,70deg)) translateY(-3px)}
+  .hit svg{animation:hitshake .3s ease}
+  @keyframes hitshake{0%,100%{transform:none}30%{transform:translateX(-2px) rotate(-7deg)}60%{transform:translateX(2px) rotate(5deg)}}
   .chip .np{font-size:8.5px;font-weight:800;color:#fff;background:rgba(0,0,0,.66);border:1px solid var(--jc,#fff);
     border-radius:7px;padding:1px 6px;white-space:nowrap;max-width:74px;overflow:hidden;text-overflow:ellipsis;line-height:1.35}
   .chip .np b{font-weight:900;color:var(--jc,#fff);margin-right:3px}
@@ -562,9 +570,9 @@ function spriteSVG(num){
    // legs (animated when moving)
    +'<g class="lgA" style="transform-origin:14px 34px"><rect x="12" y="33" width="4.6" height="12" rx="2" fill="var(--jt)"/><rect x="11.4" y="43.5" width="6" height="4" rx="1.5" fill="#111"/></g>'
    +'<g class="lgB" style="transform-origin:20px 34px"><rect x="17.6" y="33" width="4.6" height="12" rx="2" fill="var(--jt)"/><rect x="17" y="43.5" width="6" height="4" rx="1.5" fill="#111"/></g>'
-   // arms
-   +'<rect x="4.5" y="16" width="5" height="13" rx="2.4" fill="var(--jc)" stroke="rgba(0,0,0,.35)" stroke-width=".8"/>'
-   +'<rect x="24.5" y="16" width="5" height="13" rx="2.4" fill="var(--jc)" stroke="rgba(0,0,0,.35)" stroke-width=".8"/>'
+   // arms (animated: swing while running, raise to throw/catch)
+   +'<g class="armA" style="transform-origin:7px 17px"><rect x="4.5" y="16" width="5" height="13" rx="2.4" fill="var(--jc)" stroke="rgba(0,0,0,.35)" stroke-width=".8"/></g>'
+   +'<g class="armB" style="transform-origin:27px 17px"><rect x="24.5" y="16" width="5" height="13" rx="2.4" fill="var(--jc)" stroke="rgba(0,0,0,.35)" stroke-width=".8"/></g>'
    // torso / jersey
    +'<path d="M8 15 Q17 11.5 26 15 L25 35 Q17 37.5 9 35 Z" fill="var(--jc)" stroke="rgba(0,0,0,.4)" stroke-width="1"/>'
    +'<rect x="8.6" y="14.2" width="16.8" height="3.4" rx="1.6" fill="var(--jt)" opacity=".85"/>'
@@ -629,29 +637,31 @@ function lineUp(team,p){
     const fd=los+dir*p.toGo;
     if(fd>2&&fd<98){fst.style.display='block';fst.style.left=fd+'%';} else fst.style.display='none';
   } else fst.style.display='none';
-  const per=personnel(team,p);
   const isFG=p.kind==='fg'||p.kind==='xp', isDST=p.kind==='dst';
   const olY=[36,43,50,57,64];
-  // DST play: the team's OFFENSE leaves the field — their 11 defenders (in
-  // team colors) face an anonymous gray offense. Everyone else: normal O-line.
+  // pose cleanup from last snap
+  Object.values(nodes.skill).forEach(c=>{c.style.display='';c.classList.remove('throwing','reach','dive','hit');});
+  // DST play: the OPPONENT'S offense has the ball; this team's 11 defenders
+  // (in team colors) are the ones on the field making the play.
+  const stageTeam=isDST?(team===H?A:H):team;
+  const stageDir=isDST?-dir:dir, stageOff=-stageDir;
+  const per=personnel(stageTeam,isDST?{}:p);
   nodes.ol.forEach((d,i)=>{d.style.opacity='1';
-    if(isDST){ d.style.setProperty('--jc','#4a4f57'); d.style.setProperty('--jt','#767c85'); faceTeam(d,team); }
-    else { d.style.setProperty('--jc',TEAMS[team].c1); d.style.setProperty('--jt',TEAMS[team].c2); faceTeam(d,team); }
-    put(d,los+off*1.2,olY[i]);});
+    d.style.setProperty('--jc',TEAMS[stageTeam].c1); d.style.setProperty('--jt',TEAMS[stageTeam].c2);
+    faceTeam(d,stageTeam);
+    put(d,los+stageOff*1.2,olY[i]);});
   const dCol=isDST?teamColor(team):'';
   nodes.def.forEach((d,i)=>{
     d.classList.toggle('dhl',isDST); d.style.setProperty('--dhl',dCol||'#fff');
     if(isDST){ d.style.setProperty('--jc',TEAMS[team].c1); d.style.setProperty('--jt',TEAMS[team].c2); }
     else { d.style.setProperty('--jc','#31363e'); d.style.setProperty('--jt','#8a929c'); }
-    faceTeam(d,team===H?A:H);
+    faceTeam(d,stageTeam===H?A:H);
     let x,y;
-    if(i<4){x=los+dir*2;y=[36,45,55,64][i];}
-    else if(i<7){x=los+dir*7;y=[28,50,72][i-4];}
-    else {x=los+dir*14;y=[10,36,64,90][i-7];}
+    if(i<4){x=los+stageDir*2;y=[36,45,55,64][i];}
+    else if(i<7){x=los+stageDir*7;y=[28,50,72][i-4];}
+    else {x=los+stageDir*14;y=[10,36,64,90][i-7];}
     put(d,x,y);
   });
-  // skill chips: hidden entirely on DST plays — the offense is not out there
-  Object.values(nodes.skill).forEach(c=>c.style.display=isDST?'none':'');
   const act=p.actor;
   if(isFG){
     setChip('QB','K',p.actor,team,true); put(nodes.skill.QB,los+off*6,50);
@@ -661,18 +671,18 @@ function lineUp(team,p){
     setChip('WR3','WR',per.wrs[2],team,false); put(nodes.skill.WR3,los+off*1.2,28);
     setChip('TE','TE',per.te,team,false); put(nodes.skill.TE,los+off*1.2,72);
   } else {
-    setChip('QB','QB',per.qb,team,act===per.qb);
-    put(nodes.skill.QB,los+off*5,50);
-    setChip('RB','RB',per.rb,team,act===per.rb);
-    put(nodes.skill.RB,los+off*9,66);
-    setChip('WR1','WR',per.wrs[0],team,act===per.wrs[0]); put(nodes.skill.WR1,los+off*2,11);
-    setChip('WR2','WR',per.wrs[1],team,act===per.wrs[1]); put(nodes.skill.WR2,los+off*2,89);
-    setChip('WR3','WR',per.wrs[2],team,act===per.wrs[2]); put(nodes.skill.WR3,los+off*4.5,24);
-    setChip('TE','TE',per.te,team,act===per.te); put(nodes.skill.TE,los+off*1.5,70);
+    setChip('QB','QB',per.qb,stageTeam,!isDST&&act===per.qb);
+    put(nodes.skill.QB,los+stageOff*5,50);
+    setChip('RB','RB',per.rb,stageTeam,!isDST&&act===per.rb);
+    put(nodes.skill.RB,los+stageOff*9,66);
+    setChip('WR1','WR',per.wrs[0],stageTeam,!isDST&&act===per.wrs[0]); put(nodes.skill.WR1,los+stageOff*2,11);
+    setChip('WR2','WR',per.wrs[1],stageTeam,!isDST&&act===per.wrs[1]); put(nodes.skill.WR2,los+stageOff*2,89);
+    setChip('WR3','WR',per.wrs[2],stageTeam,!isDST&&act===per.wrs[2]); put(nodes.skill.WR3,los+stageOff*4.5,24);
+    setChip('TE','TE',per.te,stageTeam,!isDST&&act===per.te); put(nodes.skill.TE,los+stageOff*1.5,70);
   }
   (p.credits||[]).forEach(c=>{ if(c.pts<=0)return; for(const sl of SKILL_SLOTS){ const ch=nodes.skill[sl];
     if(ch.dataset.name===c.name){ ch.querySelector('.fl').textContent='+'+round1(c.pts).toFixed(1); } }});
-  put($('ball'),los+off*(isFG?6:5),50);
+  put($('ball'),los+(isDST?stageOff:off)*(isFG?6:5),50);
 }
 
 // ---- Play-motion system ---------------------------------------------------
@@ -861,10 +871,27 @@ async function runPlayMotion(team,p){
 
   if(p.kind==='dst'){
     sfx.turnover();
-    chase(los,50,sp(520));
-    await tween(ball,los+off*2.5,52,sp(320)); if(tok!==animToken) return false;
-    await tween(ball,los,48,sp(280)); if(tok!==animToken) return false;
-    if(p.label==='PICK SIX'||p.label==='Defensive TD') celebrate(team); else flashEZ(team);
+    const oppOff=dir;                                    // staged offense stands on this side
+    const qbX=los+oppOff*5;
+    chase(qbX,50,sp(480));
+    await wait(sp(300)); if(tok!==animToken) return false;
+    if(/SIX|TD/.test(p.label||'')){                      // takeaway → to the house
+      const near=[...nodes.def].sort((a,b)=>{const A=xyOf(a),B=xyOf(b);
+        return Math.hypot(A.x-qbX,A.y-50)-Math.hypot(B.x-qbX,B.y-50);})[0];
+      await tween(ball,los+oppOff*2,44,sp(300),{arc:8}); if(tok!==animToken) return false;
+      const house=team===H?2:98;
+      cam(house);
+      if(near) tween(near,house,48,sp(900),{ease:'linear'});
+      await tween(ball,house,46,sp(900),{ease:'linear'}); if(tok!==animToken) return false;
+      celebrate(team);
+    } else if((p.label||'')==='Sack'){
+      await tween(ball,qbX+oppOff*2.5,52,sp(360)); if(tok!==animToken) return false;
+      flashEZ(team);
+    } else {                                             // INT / fumble: ball comes free to the defense
+      await tween(ball,los+oppOff*1,46,sp(320),{arc:9}); if(tok!==animToken) return false;
+      await tween(ball,los-oppOff*4,50,sp(360),{ease:'linear'}); if(tok!==animToken) return false;
+      flashEZ(team);
+    }
   } else if(p.kind==='fg'||p.kind==='xp'){
     await tween(ball,los+off*6.5,52,sp(200),{ease:'linear'}); if(tok!==animToken) return false;
     await wait(sp(150)); if(tok!==animToken) return false;
@@ -912,6 +939,8 @@ async function runPlayMotion(team,p){
       tween(chips.QB,qbDrop,50,sp(quick?180:300));
       await tween(ball,qbDrop,50,sp(quick?180:300)); if(tok!==animToken) return false;
     }
+    chips.QB.classList.add('throwing');
+    setTimeout(()=>chips.QB.classList.remove('throwing'),sp(420));
     if(p.kind==='gen'||!actEl||actSlot==='QB'){
       const sideY=(p.yd%2)?36:64;
       cam(end);
@@ -925,11 +954,14 @@ async function runPlayMotion(team,p){
       tween(actEl,cx,cy,sp(screen?280:deep?600:440),{ease:'linear'});
       await wait(sp(screen?60:deep?200:130)); if(tok!==animToken) return false;
       cam(end);
+      actEl.classList.add('reach');
       await tween(ball,cx,cy-2,sp(screen?240:deep?560:quick?260:410),{arc:screen?6:deep?20:quick?7:13}); if(tok!==animToken) return false;
+      actEl.classList.remove('reach');
       const ry=p.td?50:cy+(50-cy)*0.4;
       chase(end,ry,sp(410));
       tween(actEl,end,ry,sp(400),{ease:'linear'});
       await tween(ball,end,ry-2,sp(400),{ease:'linear'}); if(tok!==animToken) return false;
+      if(p.td){ actEl.style.setProperty('--divedir',(team===H?-70:70)+'deg'); actEl.classList.add('dive'); }
     }
     if(p.td) celebrate(team); else if(p.yd>=20) sfx.big();
   } else { // run / qbrun — mesh, hit the hole; stuffed runs bounce back
@@ -947,6 +979,7 @@ async function runPlayMotion(team,p){
       chase(los,52,sp(420));
       runPath(carrier,[[los+dir*1.5,52],[end,53]],sp(520),{ease:'linear'});
       await runPath(ball,[[los+dir*1.5,50],[end,51]],sp(520),{ease:'linear'}); if(tok!==animToken) return false;
+      carrier.classList.add('hit'); setTimeout(()=>carrier.classList.remove('hit'),400);
     } else {
       const long=p.yd>=15;
       const mid1=los+dir*Math.min(4,p.yd*0.4), mid2=los+dir*Math.min(p.yd*0.75,Math.max(p.yd-1,1));
@@ -964,6 +997,7 @@ async function runPlayMotion(team,p){
         runPath(carrier,[[mid1,50+wob],[mid2,50-wob*0.6],[end,ry]],sp(790),{ease:'linear'});
         await runPath(ball,[[mid1,48+wob],[mid2,48-wob*0.6],[end,ry-2]],sp(790),{ease:'linear'}); if(tok!==animToken) return false;
       }
+      if(p.td){ carrier.style.setProperty('--divedir',(team===H?-70:70)+'deg'); carrier.classList.add('dive'); }
     }
     if(p.td) celebrate(team);
   }
