@@ -343,6 +343,8 @@ function setChip(slot,pos,name,team,isActor){
 function lineUp(team,p){
   const dir = team===H?-1:1, off=-dir;             // offense stands on `off` side of LOS
   const los=ballYd;
+  // restore CSS transitions (tweens suspend them) so the jog-to-formation animates
+  [...nodes.ol,...nodes.def,...Object.values(nodes.skill),$('ball')].forEach(el=>el.style.transition='');
   $('losline').style.left=los+'%';
   const per=personnel(team,p);
   const isFG=p.kind==='fg', isDST=p.kind==='dst';
@@ -385,18 +387,107 @@ function lineUp(team,p){
   // ball starts with the QB (or the kicker's spot)
   put($('ball'),los+off*(isFG?6:5),50);
 }
-// After the snap: move the ball (and the actor) to where the play ends.
+// ---- Play-motion system --------------------------------------------------
+// rAF tweens with CSS transitions suspended; each play runs a small
+// choreography: snap → develop → ball travel → run-after → pursuit.
+let animToken=0;
+const xyOf=el=>({x:parseFloat(el.style.left)||50, y:parseFloat(el.style.top)||50});
+function tween(el,tx,ty,dur,o){ o=o||{};
+  return new Promise(res=>{ const tok=animToken;
+    el.style.transition='none';
+    const s=xyOf(el), t0=performance.now();
+    function f(t){ if(tok!==animToken) return res(false);
+      const k=Math.min(1,(t-t0)/dur);
+      const e=o.ease==='linear'?k:(k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2);
+      let x=s.x+(tx-s.x)*e, y=s.y+(ty-s.y)*e;
+      if(o.arc) y-=o.arc*Math.sin(Math.PI*k);
+      put(el,x,y);
+      if(k<1) requestAnimationFrame(f); else res(); }
+    requestAnimationFrame(f); });
+}
+async function runPath(el,pts,durTotal,o){ const d=durTotal/pts.length;
+  for(const pt of pts){ const tok=animToken; await tween(el,pt[0],pt[1],d,o); if(tok!==animToken) return; } }
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+// nearest defenders converge on a point (pursuit)
+function chase(tx,ty,dur){
+  [...nodes.def].map(d=>({d,dist:Math.hypot((parseFloat(d.style.left)||50)-tx,(parseFloat(d.style.top)||50)-ty)}))
+    .sort((a,b)=>a.dist-b.dist).slice(0,4)
+    .forEach((o,i)=>tween(o.d,tx+(i%2?2:-2)+i,ty+(i-1.5)*5,dur,{ease:'linear'}));
+}
+const LANE={WR1:11,WR2:89,WR3:24,TE:70,RB:58,QB:50};
+async function runPlayMotion(team,p){
+  const tok=++animToken;
+  const dir=team===H?-1:1, off=-dir, los=ballYd;
+  const sp=v=>v/speed;
+  const ball=$('ball');
+  const chips=nodes.skill;
+  const actEl=Object.values(chips).find(c=>c.dataset.name===p.actor)||null;
+  const actSlot=actEl?Object.keys(chips).find(k=>chips[k]===actEl):null;
+  let end=los+dir*p.gain; if(p.td) end=team===H?1:99; end=Math.max(2,Math.min(98,end));
+  await wait(sp(420)); if(tok!==animToken) return false;
+
+  if(p.kind==='dst'){                       // takeaway: the defense swarms the ball
+    chase(los,50,sp(520));
+    await tween(ball,los+off*2.5,52,sp(320)); if(tok!==animToken) return false;
+    await tween(ball,los,48,sp(280)); if(tok!==animToken) return false;
+    flashEZ(team);
+  } else if(p.kind==='fg'){                 // snap back, hold, kick sails
+    await tween(ball,los+off*6.5,52,sp(220),{ease:'linear'}); if(tok!==animToken) return false;
+    await wait(sp(170)); if(tok!==animToken) return false;
+    await tween(ball, team===H?2:98, 24, sp(880), {arc:26}); if(tok!==animToken) return false;
+    flashEZ(team);
+  } else if(p.kind==='pass'||p.kind==='ptd'){
+    // receivers release downfield while the QB drops
+    ['WR1','WR2','WR3','TE'].forEach(sl=>{ const c=chips[sl]; if(c===actEl) return;
+      const cp=xyOf(c); tween(c,cp.x+dir*(5+(sl==='WR3'?3:0)),cp.y+(cp.y<50?5:-5),sp(500),{ease:'linear'}); });
+    const qbDrop=los+off*8;
+    tween(chips.QB,qbDrop,50,sp(320));
+    await tween(ball,qbDrop,50,sp(320)); if(tok!==animToken) return false;
+    if(!actEl||actSlot==='QB'){
+      // completion to a downfield lump target (superflex QB line)
+      const sideY=(p.gain%2)?36:64;
+      await tween(ball,end,sideY,sp(520),{arc:16}); if(tok!==animToken) return false;
+      chase(end,sideY,sp(360));
+    } else {
+      const lane=LANE[actSlot]||50;
+      const screen=actSlot==='RB';
+      const cx=screen?los+off*2:los+dir*Math.max(3,Math.round(p.gain*0.6));
+      const cy=screen?lane:lane+(50-lane)*0.25;
+      tween(actEl,cx,cy,sp(screen?300:460),{ease:'linear'});
+      await wait(sp(screen?60:140)); if(tok!==animToken) return false;
+      await tween(ball,cx,cy-2,sp(screen?260:430),{arc:screen?6:14}); if(tok!==animToken) return false;
+      // run after the catch
+      const ry=p.td?50:cy+(50-cy)*0.4;
+      chase(end,ry,sp(430));
+      tween(actEl,end,ry,sp(420),{ease:'linear'});
+      await tween(ball,end,ry-2,sp(420),{ease:'linear'}); if(tok!==animToken) return false;
+    }
+    if(p.td) flashEZ(team);
+  } else {                                   // run / qb keeper: mesh, hit the hole, cuts
+    const carrier=actEl||chips.RB;
+    const cp=xyOf(carrier);
+    if(actSlot!=='QB'){ await tween(ball,cp.x,cp.y-2,sp(240),{ease:'linear'}); if(tok!==animToken) return; }
+    const mid1=los+dir*Math.min(4,p.gain*0.4), mid2=los+dir*Math.min(p.gain*0.75,p.gain-1||1);
+    const wob=(p.gain%2)?8:-8;
+    const ry=p.td?50:50+wob*0.5;
+    // linemen surge
+    nodes.ol.forEach(d=>{const dp=xyOf(d); tween(d,dp.x+dir*1.6,dp.y,sp(300),{ease:'linear'});});
+    chase(end,ry,sp(800));
+    runPath(carrier,[[mid1,50+wob],[mid2,50-wob*0.6],[end,ry]],sp(830),{ease:'linear'});
+    await runPath(ball,[[mid1,48+wob],[mid2,48-wob*0.6],[end,ry-2]],sp(830),{ease:'linear'}); if(tok!==animToken) return false;
+    if(p.td) flashEZ(team);
+  }
+  if(p.kind!=='dst'&&p.kind!=='fg') ballYd=end;
+  return tok===animToken;
+}
+// Instant settle (skip path): no animation, just truth.
 function resolvePlay(team,p){
   const dir=team===H?-1:1;
-  if(p.kind==='dst'){ flashEZ(team); return; }                 // takeaway: no yardage march
-  if(p.kind==='fg'){ // kick sails into the endzone
-    put($('ball'), team===H?2:98, 18); flashEZ(team);
-    return;
-  }
+  if(p.kind==='dst'){ flashEZ(team); return; }
+  if(p.kind==='fg'){ put($('ball'), team===H?2:98, 18); flashEZ(team); return; }
   let end=ballYd+dir*p.gain;
   if(p.td) end=team===H?1:99;
   end=Math.max(2,Math.min(98,end));
-  // actor runs to the spot, ball travels with him
   const actEl=Object.values(nodes.skill).find(c=>c.dataset.name===p.actor);
   const y=actEl?parseFloat(actEl.style.top):50;
   if(actEl) put(actEl,end, p.td?50:y);
@@ -473,8 +564,8 @@ function step(){
   setBanner(p.team,p);
   lineUp(p.team,p);
   const capWhat=p.td?'TOUCHDOWN!':p.kind==='fg'?`field goal from ${p.dist} — good`:p.kind==='dst'?(p.flag||'defense'):`${p.gain}-yard gain`;
-  if(snapT)clearTimeout(snapT);
-  snapT=setTimeout(()=>{ resolvePlay(p.team,p); $('fieldcap').textContent=`${TEAMS[p.team].crest} ${capWhat}`; },700/speed);
+  $('fieldcap').textContent='';
+  runPlayMotion(p.team,p).then(ok=>{ if(ok) $('fieldcap').textContent=`${TEAMS[p.team].crest} ${capWhat}`; });
   addPlay(p);
   idx++;
   if(idx>=G.plays.length){ setTimeout(endGame,1100/speed); stop(); }
@@ -512,7 +603,7 @@ function renderBox(){
 function play(){ if(timer)return; $('go').textContent='⏸ Pause'; $('skip').disabled=false; timer=setInterval(step,2100/speed); step(); }
 function stop(){ if(timer){clearInterval(timer);timer=null;} $('go').textContent=idx>=G.plays.length?'↻ Replay':'▶ Resume'; }
 function reset(){
-  idx=0;dispH=0;dispA=0;curDrive=-1;ballYd=50; if(snapT)clearTimeout(snapT);
+  animToken++; idx=0;dispH=0;dispA=0;curDrive=-1;ballYd=50; if(snapT)clearTimeout(snapT);
   $('feed').innerHTML=''; $('box').classList.remove('show');
   $('sH').textContent='0.0';$('sA').textContent='0.0';$('barH').style.width='0';$('barA').style.width='0';
   $('q').textContent='PRE';$('clock').textContent='15:00';$('poss').textContent='';
@@ -523,7 +614,7 @@ function reset(){
 
 $('go').addEventListener('click',()=>{ if(idx>=G.plays.length){reset();play();return;} if(timer)stop();else play(); });
 $('skip').addEventListener('click',()=>{
-  if(timer){clearInterval(timer);timer=null;} if(snapT)clearTimeout(snapT);
+  animToken++; if(timer){clearInterval(timer);timer=null;} if(snapT)clearTimeout(snapT);
   while(idx<G.plays.length){ const p=G.plays[idx];
     if(p.drive!==curDrive){curDrive=p.drive; ballYd=p.team===H?75:25; setBench(p.team);}
     if(p.kind!=='dst'&&p.kind!=='fg'){ let e=ballYd+(p.team===H?-1:1)*p.gain; if(p.td)e=p.team===H?1:99; ballYd=Math.max(2,Math.min(98,e)); }
