@@ -2643,9 +2643,11 @@ function showCalendarForm(id) {
       ${id ? `<button class="btn ghost" data-act="cal-delete" data-id="${esc(id)}" style="margin-top:8px">Remove this date</button>` : ''}
     </div></div>`;
 }
+function isCommish(){ return /commissioner/i.test(staffName() || ''); }
 function showInvestigations() {
   const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>`;
-  const list = S.investigations || [];
+  let list = S.investigations || [];
+  if (!isCommish()) list = list.filter(inv => (inv.staff || 'published') !== 'private');
   const wk = S.activeWeek;
   const meta = S.investigationsMeta || { name: 'SCFL Investigations', cadence: 'A few times a year — the real cold cases.' };
   if (!list.length) {
@@ -7024,7 +7026,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'dashboard' || act === 'questionnaire') return showDashboard();
   if (act === 'calendar') return showCalendar();
   if (act === 'investigations') return showInvestigations();
-  if (act === 'inv-read') return showInvestigationRead(t.dataset.id);
+  if (act === 'inv-read') { const _inv = (S.investigations || []).find(v => v.id === t.dataset.id); if (_inv && (_inv.staff || 'published') === 'private' && !isCommish()) { toast('That case is still under embargo at HQ'); return; } return showInvestigationRead(t.dataset.id); }
   if (act === 'inv-feature') { S.featureOverride = S.featureOverride || {}; S.featureOverride[S.activeWeek] = t.dataset.id; saveFeatureOverride(); delete S.newsCache[S.activeWeek]; toast('Running as this week’s feature'); return showInvestigations(); }
   if (act === 'inv-unfeature') { if (S.featureOverride) delete S.featureOverride[S.activeWeek]; saveFeatureOverride(); delete S.newsCache[S.activeWeek]; toast('Removed from this week'); return showInvestigations(); }
   if (act === 'storylines') return showStorylines();
