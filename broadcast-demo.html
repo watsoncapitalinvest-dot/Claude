@@ -668,18 +668,29 @@ function audioInit(){
     AC=new (window.AudioContext||window.webkitAudioContext)();
     master=AC.createGain(); master.gain.value=1; master.connect(AC.destination);
     bedGain=AC.createGain(); bedGain.gain.value=BED_REST; bedGain.connect(master);
-    const mk=(mkFilter,gainV)=>{
-      const len=2*AC.sampleRate, buf=AC.createBuffer(1,len,AC.sampleRate), d=buf.getChannelData(0);
-      let last=0;
-      for(let i=0;i<len;i++){ const w=Math.random()*2-1; last=(last+0.05*w)/1.05; d[i]=(last*2.5+w*0.35); }
-      const src=AC.createBufferSource(); src.buffer=buf; src.loop=true;
-      const f=mkFilter(); const g=AC.createGain(); g.gain.value=gainV;
-      src.connect(f); f.connect(g); g.connect(bedGain); src.start();
-    };
-    mk(()=>{const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=500;return f;},0.9);
-    mk(()=>{const f=AC.createBiquadFilter();f.type='bandpass';f.frequency.value=1400;f.Q.value=0.6;return f;},0.5);
+    // ---- crowd murmur bed: formant-filtered noise that slowly breathes ----
+    const noiseBuf=(secs)=>{ const len=Math.floor(secs*AC.sampleRate), buf=AC.createBuffer(1,len,AC.sampleRate), d=buf.getChannelData(0);
+      let b0=0,b1=0,b2=0;
+      for(let i=0;i<len;i++){ const w=Math.random()*2-1;      // pink-ish noise
+        b0=0.997*b0+0.029*w; b1=0.985*b1+0.032*w; b2=0.95*b2+0.048*w;
+        d[i]=(b0+b1+b2+w*0.05)*3.2; }
+      return buf; };
+    CROWD_NOISE=noiseBuf(5);
+    const src=AC.createBufferSource(); src.buffer=CROWD_NOISE; src.loop=true;
+    const mix=AC.createGain(); mix.gain.value=1; mix.connect(bedGain);
+    // vowel-ish formants so it reads as voices, not static
+    [[320,2.5,0.9],[720,3,0.7],[1150,3.5,0.45]].forEach(([f,q,g])=>{
+      const bp=AC.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=f; bp.Q.value=q;
+      const gg=AC.createGain(); gg.gain.value=g;
+      src.connect(bp); bp.connect(gg); gg.connect(mix); });
+    src.start();
+    // slow breathing + faster ripple, like sections of the crowd rising and falling
+    const lfo=(hz,depth)=>{ const o=AC.createOscillator(); o.frequency.value=hz;
+      const g=AC.createGain(); g.gain.value=depth; o.connect(g); g.connect(mix.gain); o.start(); };
+    lfo(0.11,0.35); lfo(0.47,0.18); lfo(5.3,0.06);
   }catch(e){ AC=null; }
 }
+let CROWD_NOISE=null;
 function crowdSwell(amt,dur){
   if(!AC||muted||!bedGain) return;
   const t=AC.currentTime;
@@ -696,12 +707,43 @@ function blip(freq,dur,type,vol,delay){
   g.gain.exponentialRampToValueAtTime(0.001,t+dur);
   o.connect(g); g.connect(master||AC.destination); o.start(t); o.stop(t+dur+0.05);
 }
+/* a real cheer: band-swept roar + a cluster of voiced "aaah" oscillators */
+function cheer(intensity,dur,lowStart){
+  if(!AC||muted||!CROWD_NOISE) return;
+  const t=AC.currentTime;
+  // roar layer
+  const src=AC.createBufferSource(); src.buffer=CROWD_NOISE; src.loop=true;
+  const bp=AC.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=0.9;
+  bp.frequency.setValueAtTime(lowStart?420:620,t);
+  bp.frequency.linearRampToValueAtTime(lowStart?820:1150,t+0.35);
+  const g=AC.createGain(); g.gain.setValueAtTime(0.0001,t);
+  g.gain.linearRampToValueAtTime(0.55*intensity,t+0.18);
+  g.gain.setValueAtTime(0.55*intensity,t+0.18+dur*0.25);
+  g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+  src.connect(bp); bp.connect(g); g.connect(master);
+  src.start(t); src.stop(t+dur+0.1);
+  // voiced layer — detuned cluster gives it the human "aaah"
+  const vg=AC.createGain(); vg.gain.setValueAtTime(0.0001,t);
+  vg.gain.linearRampToValueAtTime(0.10*intensity,t+0.22);
+  vg.gain.exponentialRampToValueAtTime(0.001,t+dur*0.9);
+  const vf=AC.createBiquadFilter(); vf.type='bandpass'; vf.frequency.value=760; vf.Q.value=0.8;
+  vg.connect(vf); vf.connect(master);
+  [392,415,440,466,494,523].forEach((f,i)=>{
+    const o=AC.createOscillator(); o.type='sawtooth';
+    o.frequency.setValueAtTime(f*(lowStart?0.8:1)*(1+((i%3)-1)*0.007),t);
+    o.frequency.linearRampToValueAtTime(f*(lowStart?0.9:1.06),t+0.4);
+    const og=AC.createGain(); og.gain.value=1/6;
+    o.connect(og); og.connect(vg); o.start(t); o.stop(t+dur);
+  });
+  // bed rises underneath
+  crowdSwell(Math.min(0.5,BED_REST+0.3*intensity),dur);
+}
 const sfx={
-  td(){ crowdSwell(0.85,2.6); blip(85,0.55,'sine',0.4); blip(2300,0.16,'triangle',0.09); blip(2300,0.16,'triangle',0.09,0.24); },
-  turnover(){ crowdSwell(0.65,1.8); blip(130,0.4,'sine',0.25); },
-  big(){ crowdSwell(0.5,1.5); },
-  kick(){ blip(1800,0.12,'triangle',0.09); crowdSwell(0.42,1.3); },
-  kickoff(){ crowdSwell(0.8,3.0); blip(2300,0.18,'triangle',0.1); },
+  td(){ cheer(1.0,3.2); blip(85,0.55,'sine',0.4); blip(2300,0.16,'triangle',0.09,0.5); blip(2300,0.16,'triangle',0.09,0.74); },
+  turnover(){ cheer(0.8,2.4,true); blip(130,0.4,'sine',0.25); },
+  big(){ cheer(0.55,2.0); },
+  kick(){ cheer(0.4,1.6); blip(1800,0.12,'triangle',0.09); },
+  kickoff(){ cheer(0.85,3.6); blip(2300,0.18,'triangle',0.1); },
 };
 function flashEZ(team){ const ez=$(team===H?'ezL':'ezR'); ez.classList.remove('flash'); void ez.offsetWidth; ez.classList.add('flash'); }
 function celebrate(team){
