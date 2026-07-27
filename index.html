@@ -2079,6 +2079,62 @@ const ESPN_SNIPPET = `(async () => {
   alert('Got ' + out.seasons.length + ' seasons. Upload espn-history.json into the magazine.');
 })();`;
 
+// A paste-in-the-browser snippet for a single week's PLAYER-LEVEL box score,
+// used to feed the broadcast engine a real ESPN game (2025 and earlier lived on
+// ESPN). Same trusted pattern as ESPN_SNIPPET: run it while logged into ESPN so
+// your session handles auth (credentials:'include'), no cookie-copying. It grabs
+// each starter's fantasy points + raw ESPN stat map, both team totals, and the
+// league's scoring items (so the points are verifiable, nothing assumed).
+const ESPN_BOX_SNIPPET = `(async () => {
+  const base = 'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl';
+  const LID = new URLSearchParams(location.search).get('leagueId') || prompt('ESPN league ID?');
+  if (!LID) return alert('No league ID.');
+  const YEAR = (prompt('Season? (e.g. 2025)', '2025') || '').trim();
+  const WEEK = (prompt('Week? (1-17)', '') || '').trim();
+  if (!YEAR || !WEEK) return alert('Need a season and a week.');
+  const wk = +WEEK;
+  const qs = 'scoringPeriodId=' + WEEK + '&view=mBoxscore&view=mMatchupScore&view=mRoster&view=mTeam&view=mSettings';
+  const tryUrls = [
+    base + '/seasons/' + YEAR + '/segments/0/leagues/' + LID + '?' + qs,
+    base + '/leagueHistory/' + LID + '?seasonId=' + YEAR + '&' + qs
+  ];
+  let d = null, lastStatus = 0;
+  for (const u of tryUrls) {
+    try { const r = await fetch(u, { credentials:'include' }); lastStatus = r.status;
+      if (r.ok) { let j = await r.json(); j = Array.isArray(j) ? j[0] : j; if (j && j.schedule) { d = j; break; } } } catch (e) {}
+  }
+  if (!d) return alert('ESPN returned ' + lastStatus + '. Log in and open your league page first, then re-run.');
+  const POS = {1:'QB',2:'RB',3:'WR',4:'TE',5:'K',16:'DST'};
+  const teamName = {};
+  (d.teams||[]).forEach(t => teamName[t.id] = (t.name || ((t.location||'') + ' ' + (t.nickname||'')).trim() || ('Team ' + t.id)));
+  const pointsAndStats = (pp) => {
+    const arr = (pp && pp.player && pp.player.stats) || [];
+    const s = arr.find(x => x.scoringPeriodId === wk && x.statSourceId === 0);
+    return { pts: s ? Math.round((s.appliedTotal||0) * 100) / 100 : (pp && typeof pp.appliedStatTotal === 'number' ? Math.round(pp.appliedStatTotal * 100) / 100 : 0),
+             stats: s ? (s.stats || {}) : {} };
+  };
+  const sideOf = (s) => {
+    const entries = (s.rosterForCurrentScoringPeriod && s.rosterForCurrentScoringPeriod.entries) || [];
+    const starters = entries.filter(e => e.lineupSlotId !== 20 && e.lineupSlotId !== 21);
+    const mk = e => { const pp = e.playerPoolEntry || {}; const pl = pp.player || {}; const ps = pointsAndStats(pp);
+      return { player: pl.fullName || ('Player ' + e.playerId), pos: POS[pl.defaultPositionId] || String(pl.defaultPositionId||''), points: ps.pts, stats: ps.stats }; };
+    return { team: teamName[s.teamId] || ('Team ' + s.teamId), teamId: s.teamId,
+             points: Math.round(((s.totalPoints)||0) * 100) / 100, starters: starters.map(mk) };
+  };
+  const games = (d.schedule||[]).filter(m => m.matchupPeriodId === wk && m.home && m.away && m.away.teamId).map(m => {
+    const A = sideOf(m.home), B = sideOf(m.away);
+    return { winner: A.points >= B.points ? A.team : B.team, margin: Math.round(Math.abs(A.points - B.points) * 100) / 100, teams: [A, B] };
+  });
+  if (!games.length) return alert('No games found for ' + YEAR + ' week ' + WEEK + '. Check the week number.');
+  const scoringItems = ((d.settings && d.settings.scoringSettings && d.settings.scoringSettings.scoringItems) || [])
+    .map(i => ({ statId: i.statId, points: i.points, overrides: i.pointsOverrides || null }));
+  const out = { kind:'scfl-matchup-espn', source:'espn', league:(d.settings && d.settings.name) || '', season:+YEAR, week:wk,
+                format:'superflex-dynasty-non-ppr', games, scoringItems };
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], {type:'application/json'}));
+  a.download = 'scfl-espn-' + YEAR + '-w' + WEEK + '.json'; a.click();
+  alert('Got ' + games.length + ' game(s) for ' + YEAR + ' week ' + WEEK + '. Upload scfl-espn-' + YEAR + '-w' + WEEK + '.json here.');
+})();`;
+
 function recTile(label, big, sub) {
   return `<div class="tile"><div class="tv" style="font-size:18px">${esc(big)}</div><div class="tl">${esc(label)}</div><div class="ts2">${esc(sub || '')}</div></div>`;
 }
@@ -5234,12 +5290,32 @@ function mxOverlay(seasons, defIdx){
       <button class="btn" id="mxLoad" style="flex:1">Load games</button>
     </div>
     <div id="mxList" style="font-size:13px"></div>
-    <div style="margin-top:12px;text-align:right"><button class="btn ghost" id="mxClose">Close</button></div>
+    <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <button class="btn ghost" id="mxEspn" style="font-size:12px">🏈 2025 &amp; earlier were on ESPN →</button>
+      <button class="btn ghost" id="mxClose">Close</button>
+    </div>
   </div>`;
   document.body.appendChild(wrap);
   wrap.querySelector('#mxClose').addEventListener('click', () => wrap.remove());
   wrap.addEventListener('click', e => { if (e.target === wrap) wrap.remove(); });
   wrap.querySelector('#mxLoad').addEventListener('click', () => mxLoad(seasons));
+  wrap.querySelector('#mxEspn').addEventListener('click', () => mxShowEspnSnippet());
+}
+// ESPN box-score path: 2025 and earlier lived on ESPN, which has no open API,
+// so we hand the user a snippet to run in their own logged-in browser.
+function mxShowEspnSnippet(){
+  const wrap = document.getElementById('mxExport'); if (!wrap) return;
+  const listEl = wrap.querySelector('#mxList');
+  listEl.innerHTML = `<div style="font-size:12px;color:var(--dim,#6b7684);line-height:1.6;margin-bottom:8px">
+      <b>Get an ESPN box score (2025 &amp; earlier):</b><br>
+      1. Open your ESPN fantasy league in a browser and log in.<br>
+      2. Copy the snippet below, open the browser console (F12 → Console), paste it, and hit Enter.<br>
+      3. It asks for your <b>league ID</b>, a <b>season</b> (e.g. 2025) and a <b>week</b>, then downloads a JSON.<br>
+      4. Send that JSON to Claude.</div>
+    <textarea readonly style="width:100%;height:30vh;font-family:ui-monospace,monospace;font-size:10px;line-height:1.45;background:var(--bg2,#f6f6f6);color:var(--text,#111);border:1px solid var(--border,#e2e2e2);border-radius:10px;padding:10px;resize:none">${esc(ESPN_BOX_SNIPPET)}</textarea>
+    <div style="margin-top:8px"><button class="btn" id="mxEspnCopy" style="width:100%">📋 Copy snippet</button></div>`;
+  const ta = listEl.querySelector('textarea');
+  listEl.querySelector('#mxEspnCopy').addEventListener('click', () => { ta.select(); try { navigator.clipboard.writeText(ta.value); toast('Copied'); } catch { try { document.execCommand('copy'); toast('Copied'); } catch {} } });
 }
 async function mxLoad(seasons){
   const wrap = document.getElementById('mxExport'); if (!wrap) return;
