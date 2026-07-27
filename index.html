@@ -3263,7 +3263,7 @@ const OFFICE_TOOLS = [
   ['draft-room', '🎯', 'The War Room', 'Mocks, trades & the 15–16 plan'],
   ['trade-court', '⚖️', 'The Trade Court', 'Every trade graded, every GM judged'],
   ['draft-desk', '🎓', 'The Draft Board', 'Every pick graded · POP’s report card'],
-  ['roster-export', '⤓', 'Export Rosters', 'Top 3 per team → copy for Claude'],
+  ['roster-export', '⤓', 'Export Rosters', 'Top 3 + full-roster JSON → send to Claude'],
   ['logos-export', '🛡️', 'Export Team Logos', 'Download every team logo → send to Claude'],
   ['matchup-export', '📺', 'Export Matchup', 'Pull a real game → send to Claude for the broadcast'],
 ];
@@ -5322,6 +5322,15 @@ async function exportRosters(){
   }).sort((a, z) => a.team.localeCompare(z.team));
   const text = `SCFL ${S.season || ''} — top 3 stars per team (ranked by the value engine)\n\n`
     + rows.map(r => `${r.team}: ${r.top}`).join('\n');
+  // full rosters too — every player on every team, for the broadcast engine
+  const full = { league: (b.league && b.league.name) || 'SCFL', season: S.season || '', exportedAt: Date.now(), teams: {} };
+  (b.rosters || []).forEach(r => {
+    const ids = (r.players || []).filter(id => id && b.players[id]);
+    full.teams[teamNameOf(r)] = ids.map(id => ({ name: playerName(b.players[id], id), pos: posOfPlayer(b.players[id]) || '' }));
+  });
+  const blob = new Blob([JSON.stringify(full, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'scfl-rosters.json';
+  document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 1000);
   let copied = false; try { await navigator.clipboard.writeText(text); copied = true; } catch {}
   showExportOverlay(text, copied);
 }
