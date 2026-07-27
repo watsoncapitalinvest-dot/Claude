@@ -4771,14 +4771,20 @@ async function showTradeCourt(force) {
     saveTcData(data);
   }
 
-  const gms = Object.values(data.ledger).filter(l => l.current && l.trades > 0).sort((a, b) => b.net - a.net || b.trades - a.trades);
-  const trades = data.allTrades;
-  if (!trades.length) {
-    return shell(`<div class="card"><div class="dt">No completed trades on record across ${data.seasons.length} season${data.seasons.length === 1 ? '' : 's'}. A league full of cowards. Come back once somebody grows a spine.</div></div>`);
-  }
-
-  // Grade the parsed chat ledger up front so the docket can headline the real total.
+  // Grade the parsed chat/Obvibase ledger — the SAME source that drives the
+  // heists and the docket — so the standings, the heists and the docket all agree
+  // and all run on today's de-compressed board, graded on values the day of each
+  // deal. (The Sleeper transaction walk still powers the Draft Report and pick
+  // resolution, but it valued everything in pure hindsight on a stale cache, which
+  // is what used to crown the wrong shark.)
   const CL = tcGradeChatLedger();
+  const gms = (CL.current || []).filter(l => l.trades > 0)
+    .map(l => ({ name: l.team, net: l.netAt, wins: l.wins, losses: l.losses, even: l.even, trades: l.trades }))
+    .sort((a, b) => b.net - a.net || b.trades - a.trades);
+  const trades = data.allTrades;
+  if (!gms.length) {
+    return shell(`<div class="card"><div class="dt">No completed trades on record across the ledger. A league full of cowards. Come back once somebody grows a spine.</div></div>`);
+  }
   // "Compiled as of" + a manual Refresh — the Sleeper walk is cached, so this is
   // how you pull in a brand-new trade without re-subpoenaing on every open.
   const asOf = data._ts ? new Date(data._ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' + new Date(data._ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : 'now';
@@ -4825,7 +4831,7 @@ async function showTradeCourt(force) {
           <th style="text-align:right;padding:0 8px 6px">Net</th><th style="text-align:right;padding:0 8px 6px" title="Wins–Losses–Even">W–L–E</th>
           <th style="text-align:right;padding:0 0 6px 8px">Deals</th></tr></thead>
         <tbody>${rows}</tbody></table>
-      <div class="faint" style="font-size:11px;margin-top:8px">Net = value received minus value given, summed across every trade, on today's board. W–L–E counts deals won / lost / played even (±$${TC_WIN}).</div>
+      <div class="faint" style="font-size:11px;margin-top:8px">Net = value received minus value given, summed across every trade in the ledger, graded on the day-of-deal value board. W–L–E counts deals won / lost / played even (±$${TC_WIN}).</div>
     </div>`;
 
   // Superlatives — the shark and the piggy bank.
