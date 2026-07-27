@@ -4413,14 +4413,45 @@ function tcTeamCanon(name) {
 // atTime=false → value ~3 years later (in hindsight), capped at the latest
 //   snapshot we have. Player values come from the dated DynastyProcess history;
 //   picks stay on the draft-capital model (frozen — pick outcomes are phase 2).
+// Positional-rank floor — the SAME grid the calculator uses, so a still-startable
+// player (e.g. James Conner, a 2024 RB1) never grades on dp's cratered dynasty
+// number ($7). Gated to startable range so deep throw-ins keep their low value.
+function tcFloorIndex() {
+  const b = S.bundle;
+  if (S._tcFloor && S._tcFloor.key === (S.leagueId || '')) return S._tcFloor;
+  const byPos = {}, nameToId = {};
+  if (b && b.players) {
+    for (const id in b.players) { const p = b.players[id], pos = posOfPlayer(p); if (!pos) continue;
+      if (typeof p.search_rank === 'number' && p.search_rank > 0) (byPos[pos] = byPos[pos] || []).push(p.search_rank);
+      nameToId[normName(playerName(p, id))] = id; }
+    for (const k in byPos) byPos[k].sort((a, z) => a - z);
+  }
+  return S._tcFloor = { key: (S.leagueId || ''), byPos, nameToId };
+}
+function tcPlayerFloor(name) {
+  const b = S.bundle; if (!b || !b.players) return 0;
+  const F = tcFloorIndex(), q = normName(name);
+  let id = F.nameToId[q];
+  if (!id) for (const k in F.nameToId) { if (q.length > 4 && k.includes(q)) { id = F.nameToId[k]; break; } }
+  if (!id) return 0;
+  const p = b.players[id], pos = posOfPlayer(p); if (!pos || ['K', 'DEF'].includes(pos)) return 0;
+  const TIERS = { QB: [95, 72, 46, 26], RB: [63, 47, 31], WR: [82, 55, 36], TE: [41, 24, 13] };
+  const CUT  = { QB: [4, 12, 24, 40], RB: [5, 18, 40], WR: [6, 24, 48], TE: [3, 10, 20] };  // beyond last cut → not startable → 0
+  const arr = F.byPos[pos] || [], r = p.search_rank;
+  const prank = (typeof r === 'number' && r > 0) ? arr.filter(x => x < r).length + 1 : 9999;
+  const cuts = CUT[pos] || CUT.WR, tiers = TIERS[pos] || TIERS.WR;
+  const ti = cuts.findIndex(x => prank <= x);
+  return ti < 0 ? 0 : tiers[ti];                             // depth (past the last cut) keeps dp's low value
+}
 function tcChatAssetVal(a, season, atTime) {
   const targetYear = atTime ? season : Math.min(DP_LAST_YEAR, (season || DP_LAST_YEAR - 3) + 3);
   if (a.player) {
+    const floor = tcPlayerFloor(a.player);                  // startable-player floor (same grid as the calculator)
     const dv = dpValueAt(a.player, targetYear);
-    if (dv != null) return Math.round(scflStretch(dv));     // de-compressed board (elite boom-stretch)
-    if (atTime && typeof a.v === 'number') return a.v;      // fallback: baked at-time value
+    if (dv != null) return Math.max(Math.round(scflStretch(dv)), floor);
+    if (atTime && typeof a.v === 'number') return Math.max(a.v, floor);
     const pv = (typeof playerDollarValue === 'function') ? playerDollarValue(a.player) : null;
-    return (pv && pv.val) ? pv.val : (typeof a.v === 'number' ? a.v : 16);
+    return Math.max(floor, (pv && pv.val) ? pv.val : (typeof a.v === 'number' ? a.v : 0)) || 16;
   }
   // Hindsight: a pick is worth the PLAYER it became, valued at the target year.
   // (Flipped picks self-correct: value cancels across the two trades, leaving the
