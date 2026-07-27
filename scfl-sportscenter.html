@@ -83,6 +83,24 @@
   @keyframes flap{from{transform:scaleY(.25)}to{transform:scaleY(1)}}
   .talk .headg{animation:bob 1.1s ease-in-out infinite alternate}
   @keyframes bob{from{transform:rotate(-1.4deg)}to{transform:rotate(1.6deg)}}
+  /* ---- Harry rig (layered puppet) ---- */
+  .anchor.hasrig svg{display:none}
+  .hrig{position:absolute;left:50%;bottom:0;width:460px;height:500px;margin-left:-230px;
+    transform:scale(.365);transform-origin:50% 100%;pointer-events:none}
+  .hrig .hp{position:absolute;background-image:url('harry-rig.png');background-repeat:no-repeat}
+  .hrig .breath{animation:hbreathe 3.6s ease-in-out infinite}
+  @keyframes hbreathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  #hrHeadG{transition:transform .45s ease}
+  .talk #hrHeadG{animation:hnod 1.05s ease-in-out infinite alternate}
+  @keyframes hnod{from{transform:rotate(-1deg) translateY(0)}to{transform:rotate(1.3deg) translateY(-3px)}}
+  #hrArm{opacity:0;transition:opacity .16s ease,transform .3s cubic-bezier(.2,1.2,.4,1);transform:rotate(7deg);transform-origin:85% 85%}
+  #hrArm.up{opacity:1;transform:rotate(0)}
+  #hrPose{opacity:0;transition:opacity .18s ease;z-index:9}
+  #hrPose.on{opacity:1}
+  .hrig.posing .hcore{opacity:0}
+  .hrig .hcore{transition:opacity .18s ease}
+  .hlid{position:absolute;height:0;border-radius:40%;background:#c98d5f;transition:height .07s ease;z-index:5}
+  .hrig.blink .hlid{height:14px}
   .desktop{position:absolute;left:0;right:0;bottom:0;height:36%;z-index:3;pointer-events:none}
   .desktop .plate{position:absolute;left:50%;bottom:31%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;white-space:nowrap}
   .desktop .plate img{width:24px;height:auto;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
@@ -595,6 +613,149 @@ function buildSegments(){
   $('startBtn').disabled=false;
 }
 
+/* ---- Harry rig: layered puppet driven by show state ---- */
+const RIG={ok:false,meta:null};
+(function(){
+  const img=new Image();
+  Promise.all([
+    fetch('harry-rig.json').then(r=>r.ok?r.json():null).catch(()=>null),
+    new Promise(res=>{img.onload=()=>res(true);img.onerror=()=>res(false);img.src='harry-rig.png';})
+  ]).then(([meta,ok])=>{
+    if(!meta||!ok||!meta.torso) return;
+    RIG.meta=meta; RIG.ok=true; buildRig();
+  }).catch(()=>{});
+})();
+function hpDiv(name,x,y,extra){
+  const m=RIG.meta[name];
+  const d=document.createElement('div');
+  d.className='hp '+(extra||'');
+  d.style.width=m.w+'px'; d.style.height=m.h+'px';
+  d.style.backgroundPosition=(-m.x)+'px '+(-m.y)+'px';
+  d.style.left=x+'px'; d.style.top=y+'px';
+  d.dataset.part=name;
+  return d;
+}
+function hpSet(el,name){
+  const m=RIG.meta[name]; if(!m) return;
+  el.style.width=m.w+'px'; el.style.height=m.h+'px';
+  el.style.backgroundPosition=(-m.x)+'px '+(-m.y)+'px';
+  el.dataset.part=name;
+}
+const HEADW=()=>RIG.meta.head.w;
+function buildRig(){
+  const a=$('anchor'); a.classList.add('hasrig');
+  const r=document.createElement('div'); r.className='hrig'; r.id='hrig';
+  const core=document.createElement('div'); core.className='hcore breath'; core.id='hrCore';
+  core.style.cssText='position:absolute;inset:0';
+  // torso bottom-centered
+  const tm=RIG.meta.torso;
+  const tx=(460-tm.w)/2, ty=500-tm.h;
+  core.appendChild(hpDiv('torso',tx,ty));
+  // gesture arm (right side, behind nothing - drawn over torso)
+  const arm=hpDiv('palmUp',150,150); arm.id='hrArm'; core.appendChild(arm);
+  // head group
+  const hg=document.createElement('div'); hg.id='hrHeadG';
+  const hm=RIG.meta.head;
+  const hx=(460-hm.w)/2+4, hy=ty-hm.h+96;
+  hg.style.cssText='position:absolute;left:'+hx+'px;top:'+hy+'px;width:'+hm.w+'px;height:'+hm.h+'px;transform-origin:50% 88%';
+  const head=hpDiv('head',0,0); head.id='hrHead';
+  head.style.left='0';head.style.top='0';
+  hg.appendChild(head);
+  // mouth overlay (chin pieces)
+  const mm=RIG.meta.mouth0;
+  const mo=hpDiv('mouth0',(hm.w-mm.w)/2+2,135); mo.id='hrMouth';
+  mo.style.display='none';
+  hg.appendChild(mo);
+  // eyelids
+  [[-30,0],[10,0]].forEach(([dx],i)=>{
+    const l=document.createElement('div'); l.className='hlid';
+    l.style.width='34px'; l.style.left=(hm.w/2+dx)+'px'; l.style.top='96px';
+    hg.appendChild(l);
+  });
+  core.appendChild(hg);
+  r.appendChild(core);
+  // full-pose overlay
+  const pose=hpDiv('poseToast',0,0); pose.id='hrPose';
+  r.appendChild(pose);
+  a.appendChild(r);
+  startRigLife();
+}
+let rigMouthT=0;
+function startRigLife(){
+  const a=$('anchor'), r=$('hrig'), hg=$('hrHeadG'), mo=$('hrMouth');
+  // mouth cycle + micro drift
+  setInterval(()=>{
+    if(!RIG.ok) return;
+    const talking=a.classList.contains('talk')&&!r.classList.contains('posing');
+    if(talking){
+      rigMouthT++;
+      const m=['mouth1','mouth2','mouth1','mouth0'][rigMouthT%4];
+      mo.style.display=m==='mouth0'?'none':'';
+      if(m!=='mouth0') hpSet(mo,m);
+    } else if(mo.style.display!=='none') mo.style.display='none';
+  },110);
+  // blink
+  (function blink(){
+    if(RIG.ok&&!$('hrig').classList.contains('posing')){
+      r.classList.add('blink');
+      setTimeout(()=>r.classList.remove('blink'),130);
+      if(Math.random()<0.2) setTimeout(()=>{r.classList.add('blink');
+        setTimeout(()=>r.classList.remove('blink'),120);},260);
+    }
+    setTimeout(blink,2200+Math.random()*3800);
+  })();
+  // head drift when idle
+  setInterval(()=>{
+    if(!RIG.ok||a.classList.contains('talk')||r.classList.contains('posing')) return;
+    hg.style.transform='rotate('+((Math.random()*3.4)-1.7).toFixed(2)+'deg)';
+  },4200);
+}
+let armT=null;
+function rigArm(part,ms){
+  if(!RIG.ok) return;
+  const arm=$('hrArm'); hpSet(arm,part);
+  // per-part anchor tuning
+  const pos={armPoint:[130,120],armShrug:[160,150],palmUp:[175,190],palmOut:[195,140],armGlass:[70,170],armScript:[110,235]}[part]||[150,150];
+  arm.style.left=pos[0]+'px'; arm.style.top=pos[1]+'px';
+  arm.classList.add('up');
+  clearTimeout(armT); armT=setTimeout(()=>arm.classList.remove('up'),ms||1600);
+}
+let poseT=null;
+function rigPose(part,ms){
+  if(!RIG.ok) return;
+  const p=$('hrPose'), r=$('hrig');
+  hpSet(p,part);
+  const m=RIG.meta[part];
+  p.style.left=((460-m.w)/2)+'px'; p.style.top=(500-m.h)+'px';
+  r.classList.add('posing'); p.classList.add('on');
+  clearTimeout(poseT);
+  if(ms) poseT=setTimeout(rigPoseEnd,ms);
+}
+function rigPoseEnd(){ const r=$('hrig'); if(!r) return;
+  r.classList.remove('posing'); $('hrPose').classList.remove('on'); }
+function rigHead(part,ms){
+  if(!RIG.ok) return;
+  const h=$('hrHead'), mo=$('hrMouth');
+  hpSet(h,part);
+  mo.style.display=part==='head'?'':'none';
+  if(ms) setTimeout(()=>{hpSet(h,'head');mo.style.display='';},ms);
+}
+function rigGesture(text){
+  if(!RIG.ok) return;
+  const t=text.toLowerCase();
+  if(/crime scene|goddamn|booed|crowd|laugh/.test(t)){ rigHead('headLaugh',2400); rigArm('armShrug',2200); return; }
+  if(/roll the tape|roll it|to the tape|pictures/.test(t)){ rigArm('armPoint',1900); return; }
+  if(/\?|somebody|explain|apparently|check my glass/.test(t)){ rigArm('armShrug',2000); return; }
+  if(/\d/.test(t)&&Math.random()<0.5){ rigArm('armScript',2200); return; }
+  if(Math.random()<0.3) rigArm(['palmUp','palmOut'][Math.random()<0.5?0:1],1800);
+}
+function rigDrink(){
+  if(!RIG.ok) return;
+  rigArm('armGlass',2600);
+  const hg=$('hrHeadG');
+  setTimeout(()=>{hg.style.transform='rotate(-6deg) translateY(-4px)';},900);
+  setTimeout(()=>{hg.style.transform='';},2200);
+}
 /* ---- TTS ---- */
 let voiceOn=true, showTok=0, running=false, segIdx=0, drinkN=0;
 $('voiceBtn').addEventListener('click',()=>{ voiceOn=!voiceOn;
@@ -610,6 +771,7 @@ function say(text,tok){
   return new Promise(res=>{
     if(tok!==showTok){res();return;}
     $('capline').textContent=text;
+    rigGesture(text);
     const est=Math.max(1600,text.split(/\s+/).length*340);
     if(!voiceOn||!window.speechSynthesis){ $('anchor').classList.add('talk');
       setTimeout(()=>{$('anchor').classList.remove('talk');res();},Math.min(est,7000)); return; }
@@ -682,6 +844,7 @@ function pour(){
   drinkN=Math.min(2,drinkN+1);
   const h=drinkN*14;
   $('liq').setAttribute('y',String(44-4-h)); $('liq').setAttribute('height',String(4+h));
+  rigDrink();
 }
 
 /* ---- show engine ---- */
@@ -695,6 +858,7 @@ async function runSeg(seg,tok){
     $('capwho').textContent=seg.who;
     $('capflag').textContent=seg.flag||'The Desk';
     setMonitors(seg.card);
+    if(seg.fs&&seg.fs.cls==='dud') rigPose('poseFacepalm');
     if(seg.fs){ fsShow(seg.fs); showCard(null); }
     else{
       fsHide();
@@ -702,8 +866,13 @@ async function runSeg(seg,tok){
       showCard(seg.card);
     }
     if(seg.drink){ pour(); }
-    for(const line of seg.lines){ if(tok!==showTok)return; await say(line,tok); await wait(280); }
+    for(let li=0; li<seg.lines.length; li++){
+      if(tok!==showTok) return;
+      if(seg.flag==='Sign-Off'&&li===seg.lines.length-1) rigPose('poseToast');
+      await say(seg.lines[li],tok); await wait(280);
+    }
     if(seg.fs) fsHide();
+    rigPoseEnd();
   } else {
     const src='broadcast-demo.html?tv=1&hl=1&n=8&spd=2&wk='+WEEK+'&h='+seg.g.h+'&a='+seg.g.a;
     await wipe(()=>toTape(src));
