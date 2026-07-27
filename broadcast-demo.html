@@ -204,6 +204,11 @@
   .boxcard .pl.zero .pp{color:var(--dim)}
   .foot{margin-top:20px;text-align:center;color:var(--dim);font-size:11.5px;line-height:1.6}
   .foot b{color:var(--gold)}
+  /* tape mode (embedded in SCFL SportsCenter): field + bug only */
+  body.tv .tag,body.tv .matchsel,body.tv .controls,body.tv .feedhdr,body.tv .feed,
+  body.tv #box,body.tv .foot,body.tv .bench,body.tv .netbar{display:none!important}
+  body.tv .wrap{padding:4px 6px 0;max-width:none}
+  body.tv .netbar{margin-bottom:4px}
 </style>
 <link rel="icon" href="data:,">
 </head>
@@ -1257,6 +1262,10 @@ function step(){
     const pg=document.createElement('div'); pg.className='hcard';
     pg.innerHTML=`<b style="color:var(--gold)">PREGAME</b> — 🎙️ ${G.pregame}`;
     $('feed').insertBefore(pg,$('feed').firstChild); }
+  if(HLONLY&&HLKEEP){
+    while(idx<G.plays.length&&!HLKEEP.has(idx)){
+      const q=G.plays[idx]; dispH=q.runH; dispA=q.runA; idx++; }
+  }
   if(idx>=G.plays.length){ endGame(); return; }
   const p=G.plays[idx];
   if(p.drive!==curDrive){ curDrive=p.drive; setBench(p.team); }
@@ -1296,6 +1305,7 @@ function delayFor(p){
 }
 function endGame(){
   clearTimeout(timer); timer=null; stopScoreAnim(); animToken++; clearInterval(clockT);
+  try{ if(window.parent!==window) parent.postMessage({scfl:'done'},'*'); }catch(e){}
   const winner=G.finalH>=G.finalA?TEAMS.H:TEAMS.A, margin=round1(Math.abs(G.finalH-G.finalA));
   dispH=G.finalH; dispA=G.finalA;
   $('sH').textContent=G.finalH.toFixed(1); $('sH').style.color=cssv('--home');
@@ -1497,7 +1507,49 @@ function applyMatchup(hk,ak){
     setTimeout(()=>{bug.style.boxShadow='';},900); }
 }
 $('setGame').addEventListener('click',()=>applyMatchup($('selH').value,$('selA').value));
-loadLeague();
+const QP=new URLSearchParams(location.search);
+const TV=QP.get('tv')==='1', HLONLY=QP.get('hl')==='1', SUMMARY=QP.get('summary')==='1';
+if(TV){ document.body.classList.add('tv'); muted=true; }
+let HLKEEP=null;
+function pickHighlights(n){
+  const scored=[];
+  G.plays.forEach((p,i)=>{ if(!p.hl) return;
+    const sc=(p.yd||0)+(p.td?34:0)+(p.kind==='dst'?38:0)+(p.kind==='int'?22:0)+(p.kind==='fg'?6:0);
+    scored.push({i,sc}); });
+  scored.sort((x,y)=>y.sc-x.sc);
+  HLKEEP=new Set(scored.slice(0,n).map(o=>o.i));
+}
+function pbpPlain(p){ return pbpText(p).replace(/<[^>]+>/g,''); }
+function gameSummary(){
+  const top=t=>G.box[t].slice().sort((x,y)=>y.pts-x.pts).slice(0,3)
+    .map(p=>({name:p.name,pos:p.pos,pts:round1(p.pts),line:p.line}));
+  let big=null,bs=-1;
+  G.plays.forEach(p=>{ if(!p.hl) return;
+    const sc=(p.yd||0)+(p.td?34:0)+(p.kind==='dst'?38:0)+(p.kind==='int'?22:0);
+    if(sc>bs){bs=sc;big=p;} });
+  return {
+    h:{key:QP.get('h')||'smokedragons',name:TEAMS.H.name,abbr:TEAMS.H.abbr,crest:TEAMS.H.crest,c1:TEAMS.H.c1},
+    a:{key:QP.get('a')||'porkchopexpress',name:TEAMS.A.name,abbr:TEAMS.A.abbr,crest:TEAMS.A.crest,c1:TEAMS.A.c1},
+    finalH:round1(G.finalH), finalA:round1(G.finalA),
+    topH:top(H), topA:top(A),
+    hls:G.plays.filter(p=>p.hl).length,
+    big:big?{team:big.team,q:big.q,plain:pbpPlain(big)}:null };
+}
+function initFromQuery(){
+  const h=QP.get('h'), a=QP.get('a');
+  if(h&&a&&LEAGUE&&LEAGUE[h]&&LEAGUE[a]&&h!==a) applyMatchup(h,a);
+  if(SUMMARY){
+    try{ parent.postMessage({scfl:'summary',key:(h||'')+'|'+(a||''),data:gameSummary()},'*'); }catch(e){}
+    return;
+  }
+  if(HLONLY){ pickHighlights(parseInt(QP.get('n')||'9')||9); }
+  if(HLONLY||QP.get('auto')==='1'){
+    speed=Math.max(1,Math.min(4,parseFloat(QP.get('spd')||'1')||1));
+    document.querySelectorAll('.speed button').forEach(b=>b.classList.remove('on'));
+    play();
+  }
+}
+loadLeague().then(initFromQuery);
 
 $('go').addEventListener('click',()=>{ if(idx>=G.plays.length){reset();play();return;} if(timer)stop();else play(); });
 $('skip').addEventListener('click',()=>{
