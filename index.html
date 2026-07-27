@@ -1489,6 +1489,10 @@ const posOfPlayer = (p) => p ? (p.position || (p.fantasy_positions && p.fantasy_
 //  App state
 // ---------------------------------------------------------------------
 const SKEY = 'gridirongm.session.v1';
+// ---- Staff desk: who is using this install (per device) ----------------------
+const STAFFKEY = 'gg.staff.v1';
+function staffName(){ try { return (JSON.parse(localStorage.getItem(STAFFKEY)||'null')||{}).name||''; } catch { return ''; } }
+function setStaff(name){ try { localStorage.setItem(STAFFKEY, JSON.stringify({ name, at: Date.now() })); } catch {} }
 const S = {
   user:null, leagueId:null, season:null, nflState:null, activeWeek:1,
   tab:'news', bundle:null, values:null, newsCache:{}, history:null, desk:[], power:{}, money:{}, predraft:null, currentPredraft:null, dossier:null, records:null, investigations:null, artArchive:[], quiz:{}, featureOverride:{}, storylines:null, calendar:null, espnHist:null, histIndex:null, histAliases:{}, coverImg:{}, coverPrompt:{}, currentNl:null, magName:'Skirt Chasers', deskChatText:null, guest:false, apiKey:'', reading:false,
@@ -3093,11 +3097,12 @@ function renderSetup() {
   const su = S.setup;
   app.innerHTML = `
     <div style="padding-top:24px">
-      <img class="setup-crest" src="${LOGO}" alt="SCFL">
-      <div class="setup-logo" style="text-align:center;font-size:24px">${esc(magTitle())}</div>
-      <p class="muted" style="margin-top:4px;text-align:center">Dynasty League Magazine — powered by Sleeper.</p>
+      <img class="setup-crest" src="scfl-exec-logo.png" alt="SCFL" style="width:120px;height:auto">
+      <div class="setup-logo" style="text-align:center;font-size:24px">SCFL <span style="color:var(--accent)">Executive Office</span></div>
+      <p class="muted" style="margin-top:4px;text-align:center">The front office, newsroom &amp; network of the SCFL — powered by Sleeper.</p>
       <div class="card">
         <label class="label">Sleeper username</label>
+        <p class="muted" style="margin:2px 0 8px;font-size:12px">League staff: enter <b>your own</b> Sleeper username, then pick the SCFL when it appears.</p>
         <input id="uname" class="input" autocapitalize="none" autocorrect="off" placeholder="e.g. yourhandle" value="${esc(su.username||'')}" />
         <div style="height:12px"></div>
         <button class="btn" data-act="lookup" ${su.busy?'disabled':''}>${su.busy&&!su.user?'Looking up…':'Find my leagues'}</button>
@@ -3266,6 +3271,9 @@ const OFFICE_TOOLS = [
   ['roster-export', '⤓', 'Export Rosters', 'Top 3 + full-roster JSON → send to Claude'],
   ['logos-export', '🛡️', 'Export Team Logos', 'Download every team logo → send to Claude'],
   ['matchup-export', '📺', 'Export Matchup', 'Pull a real game → send to Claude for the broadcast'],
+  ['staff-handbook', '📖', 'Staff Handbook', 'How the Office works for league staff'],
+  ['staff-send', '📤', 'Send to HQ', 'Package your additions → text them to the Commish'],
+  ['staff-import', '📥', 'Import from Staff', 'Paste a staff package into the Office'],
 ];
 const NEWSROOM_TOOLS = [
   ['create-issue', '📝', 'Create Issue', 'Build this week’s magazine'],
@@ -3299,6 +3307,13 @@ function showMenu() {
       <img class="office-logo" src="${EXEC_LOGO}" alt="SCFL Executive Office">
       <div class="office-title">SCFL <span>Executive Office</span></div>
       <div class="office-sub">${esc(S.season || '')} Season · The Front Office</div>
+      ${staffName()
+        ? `<div class="office-sub" style="cursor:pointer;margin-top:4px" data-act="staff-switch">At the desk: <b style="color:var(--gold)">${esc(staffName())}</b> · tap to switch</div>`
+        : `<div class="office-sub" style="margin-top:8px">Who's at the desk?</div>
+           <div style="display:flex;gap:8px;justify-content:center;margin-top:8px;flex-wrap:wrap">
+             ${['The Commissioner','Keith','Shleich'].map(n=>`<button class="btn ghost" data-act="staff-set" data-name="${esc(n)}" style="width:auto;padding:8px 14px">${esc(n)}</button>`).join('')}
+             <button class="btn ghost" data-act="staff-set" data-name="" style="width:auto;padding:8px 14px">Someone else…</button>
+           </div>`}
     </div>
     <button class="newsroom-card" data-act="newsroom">
       <img class="nr-logo" src="${NEWSROOM_LOGO}" alt="SCFL NewsRoom">
@@ -6656,6 +6671,7 @@ async function deskGenerate(opts) {
     if (btn) { btn.disabled = false; btn.textContent = 'Write the article →'; }
   }
   if (!art) { if (err) err.textContent = "Couldn't turn that into an article. Make sure it's a chat export."; return; }
+  if (staffName()) art.staffBy = staffName();
   if (pd) {
     art.predraft = true;
     S.desk.unshift(art); saveDesk();
@@ -6670,6 +6686,86 @@ async function deskGenerate(opts) {
   delete S.newsCache[S.activeWeek];
   S.tab = 'stories'; renderShell(); renderTab();
   toast('Article added to The Water Cooler');
+}
+// ---- Staff collaboration: package local additions / merge a package ----------
+function staffBundle(){
+  const slim = a => { const c = Object.assign({}, a);
+    for (const k of Object.keys(c)) { if (typeof c[k] === 'string' && c[k].length > 4000 && /^data:/.test(c[k])) delete c[k]; }
+    return c; };
+  const b = { scflStaff: 1, by: staffName() || 'Unknown', at: Date.now(),
+    desk: (S.desk || []).slice(0, 40).map(slim),
+    storylines: (S.storylines && S.storylines.custom) || [],
+    money: S.money || {}, power: S.power || {} };
+  return b;
+}
+async function staffSend(){
+  loadDesk(); loadPower(); loadMoney(); loadStorylines();
+  const txt = 'SCFL-STAFF-PACKAGE\n' + JSON.stringify(staffBundle());
+  if (txt.length > 900000) { toast('Package is too large — remove some Water Cooler images first.'); return; }
+  if (navigator.share) {
+    try { await navigator.share({ text: txt }); toast('Package sent — text it to the Commissioner'); return; } catch {}
+  }
+  try { await navigator.clipboard.writeText(txt); toast('Package copied — paste it to the Commissioner'); }
+  catch { prompt('Copy this package and send it to the Commissioner:', txt); }
+}
+function showStaffImport(){
+  app.innerHTML = `<button class="btn ghost" data-act="back" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back</button>
+    <div class="card"><h3>📥 Import from Staff</h3>
+    <p class="muted">Paste a package that Keith or Shleich sent from their app. Their Water Cooler posts, storylines, Money Lines and Power Ranks merge into this device. Publish the next edition to bake them in for everyone.</p>
+    <textarea id="staffPaste" rows="8" style="width:100%" placeholder="Paste the SCFL-STAFF-PACKAGE text here…"></textarea>
+    <button class="btn" data-act="staff-import-go" style="margin-top:10px">Merge into the Office →</button>
+    <div id="staffImpMsg" class="muted" style="margin-top:8px"></div></div>`;
+}
+function staffImportGo(){
+  const el = $('#staffPaste'), msg = $('#staffImpMsg');
+  let raw = (el && el.value || '').trim();
+  const i = raw.indexOf('{');
+  if (i < 0) { if (msg) msg.textContent = 'That does not look like a staff package.'; return; }
+  let b = null;
+  try { b = JSON.parse(raw.slice(i)); } catch { if (msg) msg.textContent = 'Could not read that package — make sure the whole text was pasted.'; return; }
+  if (!b || !b.scflStaff) { if (msg) msg.textContent = 'That does not look like a staff package.'; return; }
+  loadDesk(); loadPower(); loadMoney(); loadStorylines();
+  const key = a => (a.ts || 0) + '|' + (a.title || a.headline || '').slice(0, 60);
+  const have = new Set((S.desk || []).map(key));
+  let nd = 0;
+  (b.desk || []).forEach(a => { if (!have.has(key(a))) { if (b.by && !a.staffBy) a.staffBy = b.by; S.desk.push(a); nd++; } });
+  if (nd) { S.desk.sort((x, y) => (y.ts || 0) - (x.ts || 0)); saveDesk(); }
+  let ns = 0;
+  if (b.storylines && b.storylines.length) {
+    const sk = o => (o.id || '') + '|' + (o.title || o.text || '').slice(0, 60);
+    const sh = new Set(((S.storylines && S.storylines.custom) || []).map(sk));
+    b.storylines.forEach(o => { if (!sh.has(sk(o))) { S.storylines.custom.push(o); ns++; } });
+    if (ns) saveStorylines();
+  }
+  let nw = 0;
+  ['money', 'power'].forEach(kind => { const src = b[kind] || {}, dst = (kind === 'money' ? S.money : S.power) || {};
+    for (const wk of Object.keys(src)) { if (!(wk in dst)) { dst[wk] = src[wk]; nw++; } }
+    if (kind === 'money') { S.money = dst; saveMoney(); } else { S.power = dst; savePower(); } });
+  const parts = [];
+  if (nd) parts.push(nd + ' Water Cooler post' + (nd > 1 ? 's' : ''));
+  if (ns) parts.push(ns + ' storyline' + (ns > 1 ? 's' : ''));
+  if (nw) parts.push(nw + ' week' + (nw > 1 ? 's' : '') + ' of lines/ranks');
+  const summary = parts.length ? 'Merged from ' + esc(b.by || 'staff') + ': ' + parts.join(', ') + '.' : 'Nothing new in that package — already up to date.';
+  if (msg) msg.textContent = summary;
+  toast(parts.length ? 'Staff package merged' : 'Nothing new to merge');
+}
+function showStaffHandbook(){
+  app.innerHTML = `<button class="btn ghost" data-act="back" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back</button>
+    <div class="card"><h3>📖 The Staff Handbook</h3>
+    <p><b>Welcome to the SCFL Executive Office.</b> This is the league's front office, newsroom and network, and you're on staff now.</p>
+    <h4>Getting set up</h4>
+    <p>1. Open the app link in Safari or Chrome on your phone.<br>
+    2. <b>Add it to your home screen</b> (Share button → "Add to Home Screen") — it installs like a real app.<br>
+    3. On the front page, tap your name so your work gets your byline.</p>
+    <h4>How updates work</h4>
+    <p>The Commissioner publishes updates from HQ. <b>You never need to reinstall</b> — reopen the app (or pull to refresh) and the newest editions, records and shows are just there. That includes SCFL SportsCenter and the live game broadcasts in the Newsroom.</p>
+    <h4>How YOUR additions work</h4>
+    <p>Anything you create — Water Cooler articles from chat exports, storylines, Money Lines, Power Ranks — <b>saves on your phone only</b> until you send it in. When you've got something worth publishing:</p>
+    <p style="padding-left:12px"><b>Office → 📤 Send to HQ</b> → your additions get packaged → text the package to the Commissioner. HQ merges it and bakes it into the next update, and then the whole league sees it — with your byline.</p>
+    <h4>House rules</h4>
+    <p>• Don't clear your browser's website data — that's where your unsent drafts live.<br>
+    • Anything already published is safe; it lives at HQ.<br>
+    • The Water Cooler is the easiest way in: export a juicy stretch of the league chat, feed it to the desk, and send the article to HQ.</p></div>`;
 }
 async function showSettings() {
   app.innerHTML = `<button class="btn ghost" data-act="back" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back</button>
@@ -6762,6 +6858,12 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
   if (act === 'draft-grades-issue') { window.open('scfl-2026-draft-grades-flip.html', '_blank'); return; }
   if (act === 'sportscenter') { window.open('scfl-sportscenter.html', '_blank'); return; }
+  if (act === 'staff-set') { const n = t.dataset.name || (prompt('Name for this desk?') || '').trim(); if (n) { setStaff(n); toast('Welcome to the Office, ' + n); } return showMenu(); }
+  if (act === 'staff-switch') { const n = (prompt('Who is at the desk?', staffName()) || '').trim(); if (n) setStaff(n); return showMenu(); }
+  if (act === 'staff-handbook') return showStaffHandbook();
+  if (act === 'staff-send') return staffSend();
+  if (act === 'staff-import') return showStaffImport();
+  if (act === 'staff-import-go') return staffImportGo();
   if (act === 'broadcast') { window.open('broadcast-demo.html', '_blank'); return; }
   if (act === 'politics') return showPolitics();
   if (act === 'pol-read') return showPoliticsArticle(t.dataset.id);
