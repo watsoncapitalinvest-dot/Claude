@@ -204,88 +204,235 @@
 
 <div id="errbar"></div>
 <script>
-/* SCFL Network — broadcast engine demo. Deterministic state owns score/clock;
-   possessions alternate; the offense lines up NFL-style each snap.
-   Fictional teams only — fully standalone. */
+/* SCFL Network — broadcast engine v2: STAT-EXACT playback.
+   Every depicted play maps to a real stat event: exact reception and
+   carry counts, per-player yardage summing exactly to the line, TDs on
+   real TDs, incompletions only because att-cmp says so, stuffed runs
+   only when a back's carries/yards force them. The QB pairing is the
+   only fiction (roster receivers are shown catching from the roster
+   QBs); every player's POINTS come solely from his own real line.
+   Fictional teams; fully standalone. */
 
-// Surface any runtime error visibly (mobile Safari has no console) so a dead
-// button can never fail silently again.
 window.onerror=function(msg,src,line,col){ try{ var e=document.getElementById('errbar');
   e.style.display='block'; e.textContent='⚠ '+msg+' @'+line+':'+col; }catch(_){} };
 
 // ---- Non-PPR scoring ----
-const passPts=(yd,td=0,i=0)=>yd*0.04+td*4-i*2;
-const rushPts=(yd,td=0)=>yd*0.1+td*6;
-const recPts =(yd,td=0)=>yd*0.1+td*6;
-const fgPts  =d=>d>=50?5:d>=40?4:3;
-const round1 =v=>Math.round(v*10)/10;
+const round1=v=>Math.round(v*10)/10;
 const fmt=s=>{const m=Math.floor(s/60),ss=s%60;return m+':'+String(ss).padStart(2,'0');};
+const fgPts=d=>d>=50?5:d>=40?4:3;
 
-// ---- Teams & rosters ----
+// ---- Teams & real-style stat lines (the ground truth) ----
 const H='H', A='A';
 const TEAMS={ H:{key:H,name:'Waiver Wire Warriors',abbr:'WAR',rec:'7–4',crest:'⚔️'},
              A:{key:A,name:'Couch Potato Kings',  abbr:'KIN',rec:'8–3',crest:'👑'} };
-const ROSTER={
-  H:{QB:['Cutter Lane','Rowdy Fitzsimmons'],RB:['Tank Brody','Deuce Malone'],
-     WR:['Jet Okoro','Rhino Castellanos','Ziggy Park'],TE:['Boone Hicks'],K:['Gus Farley'],DST:['Warriors D']},
-  A:{QB:['Deacon Vale','Miller Hoop'],RB:['Marlo Pace','Cody Trench'],
-     WR:['Rico Sunday','Amari Books','Boomer Vasquez'],TE:['Sam Ontiveros'],K:['Nils Berg'],DST:['Potato D']},
+const STATS={
+ H:{ QB :[{n:'Cutter Lane',       cmp:22,att:31,payd:278,patd:3,ints:1, ra:3, ry:12},
+          {n:'Rowdy Fitzsimmons', cmp:7, att:10,payd:96, patd:1,ints:0, ra:5, ry:38, sub:1}],
+     RB :[{n:'Tank Brody',   ra:17,ry:94,rutd:1, tgt:4,rec:3,recy:41,rectd:1},
+          {n:'Deuce Malone', ra:9, ry:43,rutd:1, tgt:1,rec:1,recy:7}],
+     WR :[{n:'Jet Okoro',          tgt:9,rec:5,recy:92,rectd:1},
+          {n:'Rhino Castellanos',  tgt:6,rec:4,recy:51},
+          {n:'Ziggy Park',         tgt:5,rec:3,recy:38}],
+     TE :[{n:'Boone Hicks', tgt:7,rec:5,recy:63,rectd:1}],
+     K  :[{n:'Gus Farley', fgs:[38,51], xpm:6}],
+     DST:[{n:'Warriors D', sk:3, dint:1, fr:1}] },
+ A:{ QB :[{n:'Deacon Vale', cmp:24,att:35,payd:301,patd:3,ints:0, ra:3, ry:9},
+          {n:'Miller Hoop', cmp:9, att:13,payd:121,patd:1,ints:1, ra:2, ry:11, sub:1}],
+     RB :[{n:'Marlo Pace',  ra:19,ry:87,rutd:2, tgt:3,rec:2,recy:15},
+          {n:'Cody Trench', ra:8, ry:31, tgt:2,rec:2,recy:18}],
+     WR :[{n:'Rico Sunday',    tgt:11,rec:7,recy:118,rectd:1},
+          {n:'Amari Books',    tgt:7, rec:5,recy:74},
+          {n:'Boomer Vasquez', tgt:4, rec:2,recy:23}],
+     TE :[{n:'Sam Ontiveros', tgt:8,rec:6,recy:71,rectd:1}],
+     K  :[{n:'Nils Berg', fgs:[46,52], xpm:6}],
+     DST:[{n:'Potato D', sk:2, dint:1, fr:0}] },
 };
+const ROSTER={};
+[H,A].forEach(t=>{ const s=STATS[t]; ROSTER[t]={QB:s.QB.map(p=>p.n),RB:s.RB.map(p=>p.n),
+  WR:s.WR.map(p=>p.n),TE:s.TE.map(p=>p.n),K:s.K.map(p=>p.n),DST:s.DST.map(p=>p.n)}; });
 
-// ---- Play constructors ----
-function pass(team,o){ const cr=[{name:o.qb,pos:'QB',pts:passPts(o.yd,o.td||0)},{name:o.rec,pos:o.pos||'WR',pts:recPts(o.yd,o.td||0)}];
-  const pbp=o.td?`<b>TOUCHDOWN.</b> ${o.qb} hits <b>${o.rec}</b> for a ${o.yd}-yard score.`:`${o.qb} finds <b>${o.rec}</b> for ${o.yd}.`;
-  return {team,kind:o.td?'ptd':'pass',pbp,color:o.color,credits:cr,td:!!o.td,gain:o.yd,actor:o.rec,qb:o.qb}; }
-function run(team,o){ const cr=[{name:o.rb,pos:'RB',pts:rushPts(o.yd,o.td||0)}];
-  const pbp=o.td?`<b>TOUCHDOWN.</b> ${o.rb} pounds it in from ${o.yd}.`:`${o.rb} rips off ${o.yd} on the ground.`;
-  return {team,kind:o.td?'rtd':'run',pbp,color:o.color,credits:cr,td:!!o.td,gain:o.yd,actor:o.rb}; }
-function qbrun(team,o){ const cr=[{name:o.qb,pos:'QB',pts:rushPts(o.yd,o.td||0)}];
-  const pbp=o.td?`<b>TOUCHDOWN.</b> ${o.qb} keeps it and walks in from ${o.yd}.`:`${o.qb} scrambles for ${o.yd}.`;
-  return {team,kind:o.td?'rtd':'run',pbp,color:o.color,credits:cr,td:!!o.td,gain:o.yd,actor:o.qb,qb:o.qb}; }
-function qbthrow(team,o){ const cr=[{name:o.qb,pos:'QB',pts:passPts(o.yd,o.td||0)}];
-  const pbp=o.td?`<b>TOUCHDOWN.</b> ${o.qb} throws the ${o.yd}-yard dart.`:`${o.qb} moves the chains, ${o.yd} through the air.`;
-  return {team,kind:o.td?'ptd':'pass',pbp,color:o.color,credits:cr,td:!!o.td,gain:o.yd,actor:o.qb,qb:o.qb}; }
-function fg(team,o){ return {team,kind:'fg',pbp:`<b>${o.k}</b> drills it from ${o.dist}. Good.`,color:o.color,
-  credits:[{name:o.k,pos:'K',pts:fgPts(o.dist)}],gain:0,dist:o.dist,actor:o.k}; }
-function dst(team,o){ return {team,kind:'dst',pbp:o.text,color:o.color,flag:o.label||'DEFENSE',
-  credits:[{name:o.name,pos:'DST',pts:o.pts}],gain:0,actor:o.name}; }
+// real fantasy points per player, straight from his line — the only scorer
+function playerPts(p){
+  let v=0;
+  if(p.payd!=null) v+=p.payd*0.04+(p.patd||0)*4-(p.ints||0)*2;
+  v+=(p.ry||0)*0.1+(p.rutd||0)*6;
+  v+=(p.recy||0)*0.1+(p.rectd||0)*6;
+  if(p.fgs) v+=p.fgs.reduce((a,d)=>a+fgPts(d),0)+(p.xpm||0);
+  if(p.sk!=null) v+=(p.sk||0)+((p.dint||0)+(p.fr||0))*2;
+  return v;
+}
+function teamTotal(t){ const s=STATS[t]; let v=0;
+  for(const g in s) s[g].forEach(p=>v+=playerPts(p)); return round1(v); }
 
-// ---- The game as alternating possessions ----
-const DRIVES=[
-  {team:A,plays:[ pass(A,{qb:'Deacon Vale',rec:'Rico Sunday',pos:'WR',yd:34}), pass(A,{qb:'Deacon Vale',rec:'Sam Ontiveros',pos:'TE',yd:18}), run(A,{rb:'Marlo Pace',yd:4,td:1,color:'Kings strike first.'}) ]},
-  {team:H,plays:[ qbthrow(H,{qb:'Rowdy Fitzsimmons',yd:38}), pass(H,{qb:'Cutter Lane',rec:'Jet Okoro',pos:'WR',yd:55,td:1,color:'Answered immediately — 55 yards, flip of the field.'}) ]},
-  {team:A,plays:[ pass(A,{qb:'Deacon Vale',rec:'Amari Books',pos:'WR',yd:29}), qbthrow(A,{qb:'Miller Hoop',yd:52,td:1,color:'Hoop, the superflex QB, keeps the Kings humming.'}) ]},
-  {team:H,plays:[ pass(H,{qb:'Cutter Lane',rec:'Boone Hicks',pos:'TE',yd:22}), run(H,{rb:'Tank Brody',yd:27,td:1,color:'Brody is running angry.'}) ]},
-  {team:A,plays:[ pass(A,{qb:'Deacon Vale',rec:'Amari Books',pos:'WR',yd:33}), pass(A,{qb:'Deacon Vale',rec:'Sam Ontiveros',pos:'TE',yd:11,td:1,color:'Kings back in front before the half.'}) ]},
-  {team:H,plays:[ qbrun(H,{qb:'Rowdy Fitzsimmons',yd:19}), pass(H,{qb:'Cutter Lane',rec:'Rhino Castellanos',pos:'WR',yd:31}), pass(H,{qb:'Cutter Lane',rec:'Tank Brody',pos:'RB',yd:40,td:1,color:'Screen game — Brody takes it the distance.'}) ]},
-  {team:A,plays:[ run(A,{rb:'Marlo Pace',yd:24}), fg(A,{k:'Nils Berg',dist:52}) ]},
-  {team:H,plays:[ dst(H,{name:'Warriors D',text:'<b>Strip sack, Warriors!</b> Vale coughs it up and the D pounces.',pts:5,label:'Takeaway'}), qbthrow(H,{qb:'Rowdy Fitzsimmons',yd:47,td:1,color:'Two-QB juice — the Warriors are climbing back.'}) ]},
-  {team:A,plays:[ pass(A,{qb:'Deacon Vale',rec:'Rico Sunday',pos:'WR',yd:26}), qbthrow(A,{qb:'Miller Hoop',yd:41,td:1,color:'Hoop again — the Kings’ second QB is carrying them.'}) ]},
-  {team:H,plays:[ pass(H,{qb:'Cutter Lane',rec:'Jet Okoro',pos:'WR',yd:23}), run(H,{rb:'Deuce Malone',yd:21,td:1,color:'Malone caps a grind-it-out drive.'}) ]},
-  {team:A,plays:[ pass(A,{qb:'Deacon Vale',rec:'Rico Sunday',pos:'WR',yd:44,td:1,color:'HUGE — Sunday behind the defense, Kings retake the lead.'}), run(A,{rb:'Marlo Pace',yd:2,td:1,color:'Pace punches in a second. This is slipping away from the Warriors.'}) ]},
-  {team:H,plays:[ pass(H,{qb:'Cutter Lane',rec:'Ziggy Park',pos:'WR',yd:27}), fg(H,{k:'Gus Farley',dist:38}), pass(H,{qb:'Cutter Lane',rec:'Boone Hicks',pos:'TE',yd:26,td:1,color:'THE GO-AHEAD — Hicks up the seam, Warriors in front with the clock bleeding out!'}) ]},
-  {team:A,plays:[ pass(A,{qb:'Deacon Vale',rec:'Rico Sunday',pos:'WR',yd:31,color:'Sunday gets them into range… but there’s no time to finish it.'}) ]},
-];
+// ---- deterministic RNG (same game every replay) ----
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 
-// ---- Timeline: hash 3600s into equal possession windows ----
-const clockOf=e=>{const q=Math.min(4,1+Math.floor(e/900));const into=e-(q-1)*900;return {q,mmss:fmt(Math.max(0,900-into))};};
-function buildGame(){
-  const n=DRIVES.length, seg=3600/n;
-  const box={H:{},A:{}}, tot={H:0,A:0}, plays=[];
-  DRIVES.forEach((dr,di)=>{
-    const m=dr.plays.length;
-    dr.plays.forEach((p,pi)=>{
-      const {q,mmss}=clockOf(Math.round(seg*(di+(pi+0.5)/m)));
-      let delta=0;
-      p.credits.forEach(c=>{delta+=c.pts; const b=box[p.team]; if(!b[c.name])b[c.name]={name:c.name,pos:c.pos,pts:0}; b[c.name].pts+=c.pts;});
-      tot[p.team]+=delta;
-      plays.push({...p,team:dr.team,drive:di,q,mmss,delta,runH:round1(tot.H),runA:round1(tot.A)});
-    });
-  });
-  return {plays,finalH:round1(tot.H),finalA:round1(tot.A),box};
+// split `total` into n integer plays (min minV), realistic mix of chunk & short
+function split(total,n,rng,minV){
+  if(n<=0)return[]; if(n===1)return[total];
+  const ws=Array.from({length:n},()=>0.35+Math.pow(rng(),2.2)*3);
+  const sum=ws.reduce((a,b)=>a+b,0);
+  const vals=ws.map(w=>Math.round(total*w/sum));
+  let diff=total-vals.reduce((a,b)=>a+b,0);
+  let guard=0;
+  while(diff!==0&&guard++<500){ const i=Math.floor(rng()*n), step=diff>0?1:-1;
+    if(vals[i]+step>=minV){vals[i]+=step;diff-=step;} }
+  for(let i=0;i<n;i++) if(vals[i]<minV){ const need=minV-vals[i];
+    const j=vals.indexOf(Math.max(...vals)); vals[i]+=need; vals[j]-=need; }
+  return vals;
 }
 
-// ---- DOM helpers ----
+// ---- decompose a team's stat lines into true events ----
+function buildEvents(team){
+  const rng=mulberry32(team===H?77:191);
+  const st=STATS[team];
+  const ev={catch:[],inc:[],gen:[],run:[],qbrun:[],fg:[],ints:[],dst:[]};
+  // receptions: exact count, exact sum, TDs on the longest
+  const recvs=[...st.RB,...st.WR,...st.TE].filter(p=>p.rec);
+  recvs.forEach(p=>{
+    const yds=split(p.recy,p.rec,rng,0).sort((a,b)=>b-a);
+    yds.forEach((y,i)=>ev.catch.push({receiver:p.n,pos:posOfName(team,p.n),yd:y,td:i<(p.rectd||0)}));
+    for(let i=0;i<(p.tgt||p.rec)-p.rec;i++) ev.inc.push({target:p.n});
+  });
+  // assign throwers: QB2 takes low-yardage catches up to his budget, QB1 the rest
+  const q1=st.QB[0], q2=st.QB[1];
+  const tdCatches=ev.catch.filter(c=>c.td), regCatches=ev.catch.filter(c=>!c.td).sort((a,b)=>a.yd-b.yd);
+  tdCatches.forEach(c=>c.qb=q1.n);                       // roster TD catches: QB1 (his patd covers)
+  let y2=0,c2=0;
+  const yBudget2=Math.max(0,Math.round(q2.payd*0.6)), cBudget2=Math.max(0,q2.cmp-1);
+  regCatches.forEach(c=>{ if(c2<cBudget2 && y2+c.yd<=yBudget2){ c.qb=q2.n; c2++; y2+=c.yd; } else c.qb=q1.n; });
+  // generic completions absorb each QB's remaining real completions & yards
+  [q1,q2].forEach(q=>{
+    const mine=ev.catch.filter(c=>c.qb===q.n);
+    const gn=q.cmp-mine.length, gy=q.payd-mine.reduce((a,c)=>a+c.yd,0);
+    const gtd=(q.patd||0)-mine.filter(c=>c.td).length;
+    if(gn>0){ const yds=split(Math.max(gy,gn*2),gn,rng,1).sort((a,b)=>b-a);
+      yds.forEach((y,i)=>ev.gen.push({qb:q.n,yd:y,td:i<gtd})); }
+    for(let i=0;i<(q.ints||0);i++) ev.ints.push({qb:q.n});
+  });
+  // incompletion throwers: split roster-target incs + generic incs by remaining attempts
+  const incTotal=(q1.att-q1.cmp)+(q2.att-q2.cmp);
+  while(ev.inc.length<incTotal) ev.inc.push({target:null});
+  ev.inc.forEach((x,i)=>x.qb=(i%3===2&&q2.att-q2.cmp>0)?q2.n:q1.n);
+  // carries: exact counts & sums (stuffed runs only when the math forces them)
+  st.RB.forEach(p=>{ const yds=split(p.ry,p.ra,rng,-2).sort((a,b)=>b-a);
+    yds.forEach((y,i)=>ev.run.push({rb:p.n,yd:y,td:i<(p.rutd||0)})); });
+  st.QB.forEach(p=>{ if(!p.ra)return; const yds=split(p.ry,p.ra,rng,-1).sort((a,b)=>b-a);
+    yds.forEach((y,i)=>ev.qbrun.push({qb:p.n,yd:y,td:i<(p.rutd||0)})); });
+  st.K.forEach(p=>p.fgs.forEach(d=>ev.fg.push({k:p.n,dist:d})));
+  st.DST.forEach(p=>{ for(let i=0;i<(p.sk||0);i++) ev.dst.push({name:p.n,pts:1,label:'Sack',text:'<b>Sacked!</b> '+p.n+' gets home.'});
+    for(let i=0;i<(p.dint||0);i++) ev.dst.push({name:p.n,pts:2,label:'Interception',text:'<b>Picked off!</b> '+p.n+' steps in front of one.'});
+    for(let i=0;i<(p.fr||0);i++) ev.dst.push({name:p.n,pts:2,label:'Fumble recovery',text:'<b>Ball out!</b> '+p.n+' falls on it.'}); });
+  return ev;
+}
+function posOfName(team,n){ const r=ROSTER[team];
+  for(const pos of ['QB','RB','WR','TE','K','DST']) if(r[pos].includes(n)) return pos; return ''; }
+
+// ---- QB passing-point pools: distribute real pass pts over depicted throws ----
+function qbPools(team,plays){
+  STATS[team].QB.forEach(q=>{
+    const pool=q.payd*0.04+(q.patd||0)*4;               // INTs charged on the pick itself
+    const mine=plays.filter(p=>p.team===team&&p.qb===q.n&&(p.kind==='rec'||p.kind==='gen')&&p.yd>0);
+    const wsum=mine.reduce((a,p)=>a+p.yd+(p.td?25:0),0)||1;
+    let used=0;
+    mine.forEach((p,i)=>{ const share=(i===mine.length-1)?pool-used:pool*(p.yd+(p.td?25:0))/wsum;
+      used+=share; p.qbPts=share; });
+  });
+}
+
+// ---- weave events into alternating drives with honest downs ----
+function buildGame(){
+  const rng=mulberry32(2026);
+  const evs={H:buildEvents(H),A:buildEvents(A)};
+  // per-team play pool (unordered); terminals end drives
+  function poolOf(t){ const e=evs[t], out=[];
+    e.catch.forEach(c=>out.push({team:t,kind:'rec',qb:c.qb,actor:c.receiver,pos:c.pos,yd:c.yd,td:c.td}));
+    e.gen.forEach(g=>out.push({team:t,kind:'gen',qb:g.qb,actor:g.qb,yd:g.yd,td:g.td}));
+    e.inc.forEach(x=>out.push({team:t,kind:'inc',qb:x.qb,actor:x.target,yd:0}));
+    e.run.forEach(r=>out.push({team:t,kind:'run',actor:r.rb,yd:r.yd,td:r.td}));
+    e.qbrun.forEach(r=>out.push({team:t,kind:'qbrun',qb:r.qb,actor:r.qb,yd:r.yd,td:r.td}));
+    e.fg.forEach(f=>out.push({team:t,kind:'fg',actor:f.k,dist:f.dist,yd:0}));
+    e.ints.forEach(x=>out.push({team:t,kind:'int',qb:x.qb,actor:x.qb,yd:0}));
+    return out; }
+  const pools={H:poolOf(H),A:poolOf(A)};
+  const dstQ={H:[...evs.H.dst],A:[...evs.A.dst]};
+  const xpLeft={H:STATS.H.K[0].xpm,A:STATS.A.K[0].xpm};
+  // drive loop
+  const plays=[]; let turn=(rng()<0.5)?H:A, guard=0, driveNo=-1;
+  const isQB2={H:STATS.H.QB[1].n,A:STATS.A.QB[1].n};
+  while((pools.H.length||pools.A.length||dstQ.H.length||dstQ.A.length)&&guard++<600){
+    const t=turn; turn=(t===H)?A:H;
+    const pool=pools[t];
+    if(!pool.length&&!dstQ[t].length) continue;
+    driveNo++;
+    // an occasional defensive stand leads the drive
+    if(dstQ[t].length&&(rng()<0.4||!pool.length)){ const d=dstQ[t].shift();
+      plays.push({team:t,kind:'dst',actor:d.name,pts:d.pts,label:d.label,text:d.text,yd:0,drive:driveNo}); if(!pool.length) continue; }
+    // sub series: QB2's throws cluster on his own drives
+    const qb2=isQB2[t];
+    const hasQ2=pool.some(p=>p.qb===qb2);
+    const q2Drive=hasQ2&&rng()<0.35;
+    let losYd=t===H?75:25, down=1, toGo=10, n=0;
+    while(n<9&&pool.length){
+      const dist=t===H?losYd:100-losYd;
+      // choose a play that fits the moment
+      let pick=-1;
+      for(let tries=0;tries<14;tries++){
+        const i=Math.floor(rng()*pool.length), p=pool[i];
+        if(q2Drive&&p.qb&&p.qb!==qb2) continue;
+        if(!q2Drive&&p.qb===qb2&&rng()<0.7) continue;
+        if(p.td&&p.yd<dist-10) continue;                 // don't score from too far out
+        if(p.kind==='fg'&&dist>42) continue;
+        if(p.kind==='int'&&n<2) continue;                // picks come mid-drive
+        pick=i; break;
+      }
+      if(pick<0) pick=Math.floor(rng()*pool.length);
+      const p=pool.splice(pick,1)[0];
+      p.drive=driveNo; p.down=down; p.toGo=toGo; p.losYd=losYd;
+      plays.push(p);
+      if(p.kind==='int'){ break; }                        // turnover
+      if(p.td){ if(xpLeft[t]>0){ xpLeft[t]--; plays.push({team:t,kind:'xp',actor:STATS[t].K[0].n,yd:0,drive:driveNo}); } break; }
+      if(p.kind==='fg') break;
+      // move the chains honestly
+      losYd+=(t===H?-1:1)*p.yd; losYd=Math.max(2,Math.min(98,losYd));
+      if(p.yd>=toGo){ down=1; toGo=10; } else { down++; toGo-=p.yd; if(down>4) break; }
+      n++;
+    }
+  }
+  // clock hash + running score
+  const total=plays.length;
+  const box={}; [H,A].forEach(t=>{ const s=STATS[t]; box[t]=[];
+    for(const g in s) s[g].forEach(pl=>box[t].push({name:pl.n,pos:g,pts:playerPts(pl),line:statLineOf(g,pl)})); 
+    box[t].sort((a,b)=>b.pts-a.pts); });
+  qbPools(H,plays); qbPools(A,plays);
+  let tot={H:0,A:0};
+  plays.forEach((p,i)=>{
+    const e=Math.round(3600*i/Math.max(1,total-1));
+    const q=Math.min(4,1+Math.floor(e/900)); p.q=q; p.mmss=fmt(Math.max(0,900-(e-(q-1)*900)));
+    let delta=0, credits=[];
+    if(p.kind==='rec'){ const rp=p.yd*0.1+(p.td?6:0); credits.push({name:p.actor,pts:rp}); delta+=rp;
+      if(p.qbPts){ credits.push({name:p.qb,pts:p.qbPts}); delta+=p.qbPts; } }
+    else if(p.kind==='gen'){ if(p.qbPts){ credits.push({name:p.qb,pts:p.qbPts}); delta+=p.qbPts; } }
+    else if(p.kind==='run'||p.kind==='qbrun'){ const rp=p.yd*0.1+(p.td?6:0); credits.push({name:p.actor,pts:rp}); delta+=rp; }
+    else if(p.kind==='fg'){ const kp=fgPts(p.dist); credits.push({name:p.actor,pts:kp}); delta+=kp; }
+    else if(p.kind==='xp'){ credits.push({name:p.actor,pts:1}); delta+=1; }
+    else if(p.kind==='int'){ credits.push({name:p.qb,pts:-2}); delta-=2; }
+    else if(p.kind==='dst'){ credits.push({name:p.actor,pts:p.pts}); delta+=p.pts; }
+    tot[p.team]+=delta; p.delta=delta; p.credits=credits;
+    p.runH=round1(tot.H); p.runA=round1(tot.A);
+  });
+  return {plays,finalH:teamTotal(H),finalA:teamTotal(A),box};
+}
+function statLineOf(g,p){
+  if(g==='QB') return `${p.cmp}/${p.att} · ${p.payd} yds · ${p.patd} TD${p.ints?` · ${p.ints} INT`:''}${p.ra?` · ${p.ra} car ${p.ry} yds`:''}${p.rutd?' · rush TD':''}`;
+  if(g==='RB') return `${p.ra} car · ${p.ry} yds${p.rutd?` · ${p.rutd} TD`:''}${p.rec?` · ${p.rec} rec ${p.recy}`:''}${p.rectd?' · rec TD':''}`;
+  if(g==='WR'||g==='TE') return `${p.rec} rec · ${p.recy} yds${p.rectd?` · ${p.rectd} TD`:''} (${p.tgt} tgt)`;
+  if(g==='K') return `${p.fgs.map(d=>'FG '+d).join(', ')} · ${p.xpm} XP`;
+  if(g==='DST') return `${p.sk} sk${p.dint?` · ${p.dint} INT`:''}${p.fr?` · ${p.fr} FR`:''}`;
+  return '';
+}
+
+// ---- DOM & field ----------------------------------------------------------
 const $=id=>document.getElementById(id);
 const cssv=v=>getComputedStyle(document.documentElement).getPropertyValue(v);
 const lastWord=s=>s.trim().split(/\s+/).pop().toUpperCase();
@@ -298,16 +445,8 @@ $('cH').style.borderColor=cssv('--home'); $('cA').style.borderColor=cssv('--away
 $('sH').style.color='var(--home)'; $('sA').style.color='var(--away)';
 $('ezLt').textContent=lastWord(TEAMS.H.name); $('ezRt').textContent=lastWord(TEAMS.A.name);
 
-/* =====================================================================
-   FORMATION FIELD
-   Home attacks LEFT (scores into the gold endzone), Away attacks RIGHT.
-   ballYd: 0 = left goal line, 100 = right goal line (percent of turf).
-   Offense lines up in 11 personnel: 5 OL + QB + RB + TE + 3 WR — the
-   skill spots are the actual fantasy starters. Defense = 11 generic
-   bodies (fantasy doesn't roster IDP), colored on DST plays.
-   ===================================================================== */
 const turf=$('turf');
-const nodes={ol:[],def:[],skill:{}};   // skill keyed by slot: QB,RB,WR1,WR2,WR3,TE
+const nodes={ol:[],def:[],skill:{}};
 const SKILL_SLOTS=['QB','RB','WR1','WR2','WR3','TE'];
 (function buildActors(){
   for(let i=0;i<5;i++){const d=document.createElement('div');d.className='dot';turf.appendChild(d);nodes.ol.push(d);}
@@ -321,15 +460,12 @@ const teamColor=t=>t===H?cssv('--home'):cssv('--away');
 
 let ballYd=50, curDrive=-1;
 
-// Who is on the field for this play (fantasy starters at the skill spots)
 function personnel(team,p){
   const r=ROSTER[team];
-  const qb = (p.qb && r.QB.includes(p.qb)) ? p.qb : r.QB[0];
-  let rb = r.RB[0];
-  if(p.actor && r.RB.includes(p.actor)) rb=p.actor;
-  const wrs=[...r.WR];
-  const te=r.TE[0];
-  return {qb,rb,wrs,te};
+  const qb=(p.qb&&r.QB.includes(p.qb))?p.qb:r.QB[0];
+  let rb=r.RB[0];
+  if(p.actor&&r.RB.includes(p.actor)) rb=p.actor;
+  return {qb,rb,wrs:[...r.WR],te:r.TE[0]};
 }
 function setChip(slot,pos,name,team,isActor){
   const c=nodes.skill[slot];
@@ -339,19 +475,15 @@ function setChip(slot,pos,name,team,isActor){
   c.dataset.name=name;
   c.classList.remove('act'); if(isActor){void c.offsetWidth;c.classList.add('act');}
 }
-// Line everybody up at the current LOS. dir = attack direction (H:-1, A:+1)
 function lineUp(team,p){
-  const dir = team===H?-1:1, off=-dir;             // offense stands on `off` side of LOS
-  const los=ballYd;
-  // restore CSS transitions (tweens suspend them) so the jog-to-formation animates
+  const dir=team===H?-1:1, off=-dir;
+  const los=p.losYd!=null?p.losYd:ballYd; ballYd=los;
   [...nodes.ol,...nodes.def,...Object.values(nodes.skill),$('ball')].forEach(el=>el.style.transition='');
   $('losline').style.left=los+'%';
   const per=personnel(team,p);
-  const isFG=p.kind==='fg', isDST=p.kind==='dst';
-  // O-line (generic)
+  const isFG=p.kind==='fg'||p.kind==='xp', isDST=p.kind==='dst';
   const olY=[36,43,50,57,64];
   nodes.ol.forEach((d,i)=>{d.style.opacity=isDST?'.25':'1';put(d,los+off*1.2,olY[i]);});
-  // Defense (generic 4-3-4), highlighted on DST plays
   const dCol=isDST?teamColor(team):'';
   nodes.def.forEach((d,i)=>{
     d.classList.toggle('dhl',isDST); d.style.setProperty('--dhl',dCol||'#fff');
@@ -361,37 +493,32 @@ function lineUp(team,p){
     else {x=los+dir*14;y=[10,36,64,90][i-7];}
     put(d,x,y);
   });
-  // Skill spots
   const act=p.actor;
   if(isFG){
-    setChip('QB','K',p.actor,team,true);                       // kicker takes the backfield spot
-    put(nodes.skill.QB,los+off*6,50);
-    setChip('RB','QB',per.qb,team,false); put(nodes.skill.RB,los+off*3.5,57); // holder
+    setChip('QB','K',p.actor,team,true); put(nodes.skill.QB,los+off*6,50);
+    setChip('RB','QB',per.qb,team,false); put(nodes.skill.RB,los+off*3.5,57);
     setChip('WR1','WR',per.wrs[0],team,false); put(nodes.skill.WR1,los+off*1.2,20);
     setChip('WR2','WR',per.wrs[1],team,false); put(nodes.skill.WR2,los+off*1.2,80);
     setChip('WR3','WR',per.wrs[2],team,false); put(nodes.skill.WR3,los+off*1.2,28);
     setChip('TE','TE',per.te,team,false); put(nodes.skill.TE,los+off*1.2,72);
   } else {
     setChip('QB','QB',per.qb,team,act===per.qb);
-    put(nodes.skill.QB,los+off*5,50);                          // shotgun
+    put(nodes.skill.QB,los+off*5,50);
     setChip('RB','RB',per.rb,team,act===per.rb);
     put(nodes.skill.RB,los+off*8,58);
     setChip('WR1','WR',per.wrs[0],team,act===per.wrs[0]); put(nodes.skill.WR1,los+off*2,11);
     setChip('WR2','WR',per.wrs[1],team,act===per.wrs[1]); put(nodes.skill.WR2,los+off*2,89);
     setChip('WR3','WR',per.wrs[2],team,act===per.wrs[2]); put(nodes.skill.WR3,los+off*4.5,24);
-    setChip('TE','TE',per.te,team,act===per.te);   put(nodes.skill.TE,los+off*1.5,70);
+    setChip('TE','TE',per.te,team,act===per.te); put(nodes.skill.TE,los+off*1.5,70);
   }
-  // floater on the credited chips
-  p.credits.forEach(c=>{ for(const sl of SKILL_SLOTS){ const ch=nodes.skill[sl];
+  (p.credits||[]).forEach(c=>{ if(c.pts<=0)return; for(const sl of SKILL_SLOTS){ const ch=nodes.skill[sl];
     if(ch.dataset.name===c.name){ ch.querySelector('.fl').textContent='+'+round1(c.pts).toFixed(1); } }});
-  // ball starts with the QB (or the kicker's spot)
   put($('ball'),los+off*(isFG?6:5),50);
 }
-// ---- Play-motion system --------------------------------------------------
-// rAF tweens with CSS transitions suspended; each play runs a small
-// choreography: snap → develop → ball travel → run-after → pursuit.
+
+// ---- Play-motion system ---------------------------------------------------
 let animToken=0;
-const xyOf=el=>({x:parseFloat(el.style.left)||50, y:parseFloat(el.style.top)||50});
+const xyOf=el=>({x:parseFloat(el.style.left)||50,y:parseFloat(el.style.top)||50});
 function tween(el,tx,ty,dur,o){ o=o||{};
   return new Promise(res=>{ const tok=animToken;
     el.style.transition='none';
@@ -402,125 +529,137 @@ function tween(el,tx,ty,dur,o){ o=o||{};
       let x=s.x+(tx-s.x)*e, y=s.y+(ty-s.y)*e;
       if(o.arc) y-=o.arc*Math.sin(Math.PI*k);
       put(el,x,y);
-      if(k<1) requestAnimationFrame(f); else res(); }
+      if(k<1) requestAnimationFrame(f); else res(true); }
     requestAnimationFrame(f); });
 }
 async function runPath(el,pts,durTotal,o){ const d=durTotal/pts.length;
   for(const pt of pts){ const tok=animToken; await tween(el,pt[0],pt[1],d,o); if(tok!==animToken) return; } }
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
-// nearest defenders converge on a point (pursuit)
 function chase(tx,ty,dur){
   [...nodes.def].map(d=>({d,dist:Math.hypot((parseFloat(d.style.left)||50)-tx,(parseFloat(d.style.top)||50)-ty)}))
     .sort((a,b)=>a.dist-b.dist).slice(0,4)
     .forEach((o,i)=>tween(o.d,tx+(i%2?2:-2)+i,ty+(i-1.5)*5,dur,{ease:'linear'}));
 }
 const LANE={WR1:11,WR2:89,WR3:24,TE:70,RB:58,QB:50};
+function flashEZ(team){ const ez=$(team===H?'ezL':'ezR'); ez.classList.remove('flash'); void ez.offsetWidth; ez.classList.add('flash'); }
+
 async function runPlayMotion(team,p){
   const tok=++animToken;
   const dir=team===H?-1:1, off=-dir, los=ballYd;
   const sp=v=>v/speed;
   const ball=$('ball');
   const chips=nodes.skill;
-  const actEl=Object.values(chips).find(c=>c.dataset.name===p.actor)||null;
+  const actEl=p.actor?Object.values(chips).find(c=>c.dataset.name===p.actor)||null:null;
   const actSlot=actEl?Object.keys(chips).find(k=>chips[k]===actEl):null;
-  let end=los+dir*p.gain; if(p.td) end=team===H?1:99; end=Math.max(2,Math.min(98,end));
-  await wait(sp(420)); if(tok!==animToken) return false;
+  let end=los+dir*p.yd; if(p.td) end=team===H?1:99; end=Math.max(2,Math.min(98,end));
+  await wait(sp(380)); if(tok!==animToken) return false;
 
-  if(p.kind==='dst'){                       // takeaway: the defense swarms the ball
+  if(p.kind==='dst'){
     chase(los,50,sp(520));
     await tween(ball,los+off*2.5,52,sp(320)); if(tok!==animToken) return false;
     await tween(ball,los,48,sp(280)); if(tok!==animToken) return false;
     flashEZ(team);
-  } else if(p.kind==='fg'){                 // snap back, hold, kick sails
-    await tween(ball,los+off*6.5,52,sp(220),{ease:'linear'}); if(tok!==animToken) return false;
-    await wait(sp(170)); if(tok!==animToken) return false;
-    await tween(ball, team===H?2:98, 24, sp(880), {arc:26}); if(tok!==animToken) return false;
+  } else if(p.kind==='fg'||p.kind==='xp'){
+    await tween(ball,los+off*6.5,52,sp(200),{ease:'linear'}); if(tok!==animToken) return false;
+    await wait(sp(150)); if(tok!==animToken) return false;
+    await tween(ball, team===H?2:98, 24, sp(p.kind==='xp'?600:860), {arc:p.kind==='xp'?18:26}); if(tok!==animToken) return false;
     flashEZ(team);
-  } else if(p.kind==='pass'||p.kind==='ptd'){
-    // receivers release downfield while the QB drops
-    ['WR1','WR2','WR3','TE'].forEach(sl=>{ const c=chips[sl]; if(c===actEl) return;
-      const cp=xyOf(c); tween(c,cp.x+dir*(5+(sl==='WR3'?3:0)),cp.y+(cp.y<50?5:-5),sp(500),{ease:'linear'}); });
+  } else if(p.kind==='int'){
+    // dropback, throw, defender comes down with it
     const qbDrop=los+off*8;
-    tween(chips.QB,qbDrop,50,sp(320));
-    await tween(ball,qbDrop,50,sp(320)); if(tok!==animToken) return false;
-    if(!actEl||actSlot==='QB'){
-      // completion to a downfield lump target (superflex QB line)
-      const sideY=(p.gain%2)?36:64;
-      await tween(ball,end,sideY,sp(520),{arc:16}); if(tok!==animToken) return false;
-      chase(end,sideY,sp(360));
+    tween(chips.QB,qbDrop,50,sp(300));
+    await tween(ball,qbDrop,50,sp(300)); if(tok!==animToken) return false;
+    const px=los+dir*12, py=(p.q%2)?34:66;
+    await tween(ball,px,py,sp(480),{arc:14}); if(tok!==animToken) return false;
+    const near=[...nodes.def].sort((a,b)=>{const A=xyOf(a),B=xyOf(b);
+      return Math.hypot(A.x-px,A.y-py)-Math.hypot(B.x-px,B.y-py);})[0];
+    if(near){ near.classList.add('dhl'); near.style.setProperty('--dhl','#ff5b5b');
+      await tween(near,px,py,sp(200),{ease:'linear'}); if(tok!==animToken) return false;
+      await tween(ball,px-dir*6,py+(50-py)*0.3,sp(360),{ease:'linear'}); }
+    if(tok!==animToken) return false;
+  } else if(p.kind==='inc'){
+    // routes develop, the throw falls incomplete at the target's feet
+    ['WR1','WR2','WR3','TE'].forEach(sl=>{ const c=chips[sl]; if(c===actEl) return;
+      const cp=xyOf(c); tween(c,cp.x+dir*5,cp.y+(cp.y<50?5:-5),sp(460),{ease:'linear'}); });
+    const qbDrop=los+off*8;
+    tween(chips.QB,qbDrop,50,sp(300));
+    await tween(ball,qbDrop,50,sp(300)); if(tok!==animToken) return false;
+    const lane=actSlot?LANE[actSlot]:((p.q%2)?30:70);
+    const cx=los+dir*9, cy=actSlot?lane+(50-lane)*0.25:lane;
+    if(actEl) tween(actEl,cx,cy,sp(430),{ease:'linear'});
+    await tween(ball,cx,cy+3,sp(430),{arc:13}); if(tok!==animToken) return false;
+    await tween(ball,cx+dir*1,cy+7,sp(180),{ease:'linear'}); if(tok!==animToken) return false;
+  } else if(p.kind==='rec'||p.kind==='gen'){
+    ['WR1','WR2','WR3','TE'].forEach(sl=>{ const c=chips[sl]; if(c===actEl) return;
+      const cp=xyOf(c); tween(c,cp.x+dir*(5+(sl==='WR3'?3:0)),cp.y+(cp.y<50?5:-5),sp(480),{ease:'linear'}); });
+    const qbDrop=los+off*8;
+    tween(chips.QB,qbDrop,50,sp(300));
+    await tween(ball,qbDrop,50,sp(300)); if(tok!==animToken) return false;
+    if(p.kind==='gen'||!actEl||actSlot==='QB'){
+      const sideY=(p.yd%2)?36:64;
+      await tween(ball,end,sideY,sp(500),{arc:15}); if(tok!==animToken) return false;
+      chase(end,sideY,sp(340));
     } else {
       const lane=LANE[actSlot]||50;
       const screen=actSlot==='RB';
-      const cx=screen?los+off*2:los+dir*Math.max(3,Math.round(p.gain*0.6));
+      const cx=screen?los+off*2:los+dir*Math.max(3,Math.round(p.yd*0.6));
       const cy=screen?lane:lane+(50-lane)*0.25;
-      tween(actEl,cx,cy,sp(screen?300:460),{ease:'linear'});
-      await wait(sp(screen?60:140)); if(tok!==animToken) return false;
-      await tween(ball,cx,cy-2,sp(screen?260:430),{arc:screen?6:14}); if(tok!==animToken) return false;
-      // run after the catch
+      tween(actEl,cx,cy,sp(screen?280:440),{ease:'linear'});
+      await wait(sp(screen?60:130)); if(tok!==animToken) return false;
+      await tween(ball,cx,cy-2,sp(screen?240:410),{arc:screen?6:13}); if(tok!==animToken) return false;
       const ry=p.td?50:cy+(50-cy)*0.4;
-      chase(end,ry,sp(430));
-      tween(actEl,end,ry,sp(420),{ease:'linear'});
-      await tween(ball,end,ry-2,sp(420),{ease:'linear'}); if(tok!==animToken) return false;
+      chase(end,ry,sp(410));
+      tween(actEl,end,ry,sp(400),{ease:'linear'});
+      await tween(ball,end,ry-2,sp(400),{ease:'linear'}); if(tok!==animToken) return false;
     }
     if(p.td) flashEZ(team);
-  } else {                                   // run / qb keeper: mesh, hit the hole, cuts
+  } else { // run / qbrun — mesh, hit the hole; stuffed runs bounce back
     const carrier=actEl||chips.RB;
     const cp=xyOf(carrier);
-    if(actSlot!=='QB'){ await tween(ball,cp.x,cp.y-2,sp(240),{ease:'linear'}); if(tok!==animToken) return; }
-    const mid1=los+dir*Math.min(4,p.gain*0.4), mid2=los+dir*Math.min(p.gain*0.75,p.gain-1||1);
-    const wob=(p.gain%2)?8:-8;
-    const ry=p.td?50:50+wob*0.5;
-    // linemen surge
-    nodes.ol.forEach(d=>{const dp=xyOf(d); tween(d,dp.x+dir*1.6,dp.y,sp(300),{ease:'linear'});});
-    chase(end,ry,sp(800));
-    runPath(carrier,[[mid1,50+wob],[mid2,50-wob*0.6],[end,ry]],sp(830),{ease:'linear'});
-    await runPath(ball,[[mid1,48+wob],[mid2,48-wob*0.6],[end,ry-2]],sp(830),{ease:'linear'}); if(tok!==animToken) return false;
+    if(p.kind!=='qbrun'){ await tween(ball,cp.x,cp.y-2,sp(220),{ease:'linear'}); if(tok!==animToken) return false; }
+    nodes.ol.forEach(d=>{const dp=xyOf(d); tween(d,dp.x+dir*1.6,dp.y,sp(280),{ease:'linear'});});
+    if(p.yd<=0){ // stuffed: into the line, pushed back to the true spot
+      chase(los,52,sp(420));
+      runPath(carrier,[[los+dir*1.5,52],[end,53]],sp(520),{ease:'linear'});
+      await runPath(ball,[[los+dir*1.5,50],[end,51]],sp(520),{ease:'linear'}); if(tok!==animToken) return false;
+    } else {
+      const mid1=los+dir*Math.min(4,p.yd*0.4), mid2=los+dir*Math.min(p.yd*0.75,Math.max(p.yd-1,1));
+      const wob=(p.yd%2)?8:-8;
+      const ry=p.td?50:50+wob*0.5;
+      chase(end,ry,sp(760));
+      runPath(carrier,[[mid1,50+wob],[mid2,50-wob*0.6],[end,ry]],sp(790),{ease:'linear'});
+      await runPath(ball,[[mid1,48+wob],[mid2,48-wob*0.6],[end,ry-2]],sp(790),{ease:'linear'}); if(tok!==animToken) return false;
+    }
     if(p.td) flashEZ(team);
   }
-  if(p.kind!=='dst'&&p.kind!=='fg') ballYd=end;
+  if(p.kind!=='dst'&&p.kind!=='fg'&&p.kind!=='xp'&&p.kind!=='inc'&&p.kind!=='int') ballYd=end;
   return tok===animToken;
 }
-// Instant settle (skip path): no animation, just truth.
-function resolvePlay(team,p){
-  const dir=team===H?-1:1;
-  if(p.kind==='dst'){ flashEZ(team); return; }
-  if(p.kind==='fg'){ put($('ball'), team===H?2:98, 18); flashEZ(team); return; }
-  let end=ballYd+dir*p.gain;
-  if(p.td) end=team===H?1:99;
-  end=Math.max(2,Math.min(98,end));
-  const actEl=Object.values(nodes.skill).find(c=>c.dataset.name===p.actor);
-  const y=actEl?parseFloat(actEl.style.top):50;
-  if(actEl) put(actEl,end, p.td?50:y);
-  put($('ball'),end, p.td?50:y);
-  if(p.td) flashEZ(team);
-  ballYd=end;
-}
-function flashEZ(team){ const ez=$(team===H?'ezL':'ezR'); ez.classList.remove('flash'); void ez.offsetWidth; ez.classList.add('flash'); }
 
-// yard-line text, NFL style: own side then opponent's
-function ydText(team){
-  const toGoal = team===H ? ballYd : 100-ballYd;      // yards to the goal line they attack
-  const own = toGoal>50;
-  const mark = own ? 100-toGoal : toGoal;
-  const ab = own ? TEAMS[team].abbr : TEAMS[team===H?A:H].abbr;
+// ---- banner / bench / bug / feed ------------------------------------------
+function ydText(team,los){
+  const b=los!=null?los:ballYd;
+  const toGoal=team===H?b:100-b;
+  const own=toGoal>50, mark=own?100-toGoal:toGoal;
+  const ab=own?TEAMS[team].abbr:TEAMS[team===H?A:H].abbr;
   return toGoal===50?'MIDFIELD':`${ab} ${Math.round(mark)}`;
 }
+const ORD={1:'1st',2:'2nd',3:'3rd',4:'4th'};
 function setBanner(team,p){
   const col=teamColor(team);
   $('possname').innerHTML=`${TEAMS[team].crest} ${TEAMS[team].name}`;
   $('possname').style.color=col;
-  $('dd').textContent = p.kind==='fg' ? `FG unit · ${ydText(team)}`
-                    : p.kind==='dst' ? 'Defense on the field'
-                    : `1st & 10 · ${ydText(team)}`;
+  $('dd').textContent = (p.kind==='fg')?`FG unit · ${ydText(team,p.losYd)}`
+    : (p.kind==='xp')?'Extra point'
+    : (p.kind==='dst')?'Defense on the field'
+    : (p.down?`${ORD[p.down]} & ${p.toGo>=10&&p.down===1?10:p.toGo} · ${ydText(team,p.losYd)}`:`${ydText(team,p.losYd)}`);
 }
 function setBench(team){
   const r=ROSTER[team], col=teamColor(team);
   const rest=[['QB',r.QB[1]],['RB',r.RB[1]],['K',r.K[0]],['DST',r.DST[0]]];
   $('benchrow').innerHTML=rest.map(([po,nm])=>`<span class="bchip" style="border-color:${col};color:${col}"><span class="po">${po}</span><span style="color:rgba(255,255,255,.85)">${shortName(nm)}</span></span>`).join(' ');
 }
-
-// ---- Scorebug ----
-let idx=0,timer=null,speed=1,dispH=0,dispA=0,snapT=null;
+let idx=0,timer=null,speed=1,dispH=0,dispA=0;
 function setBug(runH,runA,q,clock,possTeam){
   $('q').textContent=q; $('clock').textContent=clock;
   $('poss').textContent=possTeam?('▲ '+TEAMS[possTeam].name):'';
@@ -540,30 +679,50 @@ function animateScore(el,from,to,varname){
 }
 function stopScoreAnim(){['sH','sA'].forEach(el=>{if(rafId[el]){cancelAnimationFrame(rafId[el]);rafId[el]=null;}});}
 
-// ---- Feed ----
 const QN={1:'1ST',2:'2ND',3:'3RD',4:'4TH'};
+function pbpText(p){
+  const t=TEAMS[p.team];
+  if(p.kind==='rec') return p.td?`<b>TOUCHDOWN.</b> ${p.qb} hits <b>${p.actor}</b> for a ${p.yd}-yard score.`
+    :`${p.qb} finds <b>${p.actor}</b> for ${p.yd}.`;
+  if(p.kind==='gen') return p.td?`<b>TOUCHDOWN.</b> ${p.qb} fires a ${p.yd}-yard strike.`
+    :`${p.qb} completes it downfield for ${p.yd}.`;
+  if(p.kind==='inc') return p.actor?`${p.qb}'s pass to <b>${p.actor}</b> falls incomplete.`:`${p.qb}'s throw sails incomplete.`;
+  if(p.kind==='int') return `<b>INTERCEPTED!</b> ${p.qb} is picked off. Turnover.`;
+  if(p.kind==='run') return p.td?`<b>TOUCHDOWN.</b> ${p.actor} pounds it in from ${p.yd}.`
+    :p.yd<=0?`${p.actor} is <b>stuffed at the line</b>${p.yd<0?` for a loss of ${-p.yd}`:''}.`
+    :`${p.actor} rips off ${p.yd} on the ground.`;
+  if(p.kind==='qbrun') return p.td?`<b>TOUCHDOWN.</b> ${p.actor} keeps it and walks in from ${p.yd}.`
+    :p.yd<=0?`${p.actor} is swallowed up on the keeper.`:`${p.actor} scrambles for ${p.yd}.`;
+  if(p.kind==='fg') return `<b>${p.actor}</b> drills it from ${p.dist}. Good.`;
+  if(p.kind==='xp') return `${p.actor} adds the extra point.`;
+  if(p.kind==='dst') return p.text||`${t.name} defense makes a play.`;
+  return '';
+}
 function addPlay(p){
-  const isScore=p.td||p.kind==='fg'||p.kind==='dst';
+  const isScore=p.td||p.kind==='fg'||p.kind==='dst'||p.kind==='int';
   const col=teamColor(p.team);
   const div=document.createElement('div'); div.className='play'+(isScore?' score-play':'');
-  const flag=p.flag?`<div class="flag" style="color:${col}">${p.flag}</div>`
-            :isScore?`<div class="flag" style="color:${col}">${TEAMS[p.team].crest} ${TEAMS[p.team].name}</div>`:'';
-  const color=p.color?`<div class="color">“${p.color}”</div>`:'';
-  const pill=`<span class="pts" style="color:${col};border-color:${col}">+${p.delta.toFixed(1)} • ${lastWord(TEAMS[p.team].name)} ${(p.team===H?p.runH:p.runA).toFixed(1)}</span>`;
-  div.innerHTML=`<div class="tick"><span class="qq">${QN[p.q]}</span><br>${p.mmss}</div><div class="body">${flag}<div class="pbp">${p.pbp}</div>${color}${pill}</div>`;
+  const flag=p.kind==='dst'?`<div class="flag" style="color:${col}">${p.label||'DEFENSE'}</div>`
+    :p.kind==='int'?`<div class="flag" style="color:${col}">TURNOVER</div>`
+    :isScore?`<div class="flag" style="color:${col}">${TEAMS[p.team].crest} ${TEAMS[p.team].name}</div>`:'';
+  const showPill=Math.abs(p.delta)>=0.05;
+  const pill=showPill?`<span class="pts" style="color:${col};border-color:${col}">${p.delta>=0?'+':''}${p.delta.toFixed(1)} • ${lastWord(TEAMS[p.team].name)} ${(p.team===H?p.runH:p.runA).toFixed(1)}</span>`:'';
+  div.innerHTML=`<div class="tick"><span class="qq">${QN[p.q]}</span><br>${p.mmss}</div><div class="body">${flag}<div class="pbp">${pbpText(p)}</div>${pill}</div>`;
   const feed=$('feed'); feed.insertBefore(div,feed.firstChild); feed.scrollTop=0;
 }
 
-// ---- Game loop ----
+// ---- game loop ------------------------------------------------------------
 function step(){
   if(idx===0){ const bo=$('booth'); if(bo)bo.remove(); }
   if(idx>=G.plays.length){ endGame(); return; }
   const p=G.plays[idx];
-  if(p.drive!==curDrive){ curDrive=p.drive; ballYd = p.team===H?75:25; setBench(p.team); }
+  if(p.drive!==curDrive){ curDrive=p.drive; setBench(p.team); }
   setBug(p.runH,p.runA,QN[p.q],p.mmss,p.team);
   setBanner(p.team,p);
   lineUp(p.team,p);
-  const capWhat=p.td?'TOUCHDOWN!':p.kind==='fg'?`field goal from ${p.dist} — good`:p.kind==='dst'?(p.flag||'defense'):`${p.gain}-yard gain`;
+  const capWhat=p.td?'TOUCHDOWN!':p.kind==='fg'?`field goal from ${p.dist} — good`:p.kind==='xp'?'XP good'
+    :p.kind==='dst'?(p.label||'defense'):p.kind==='int'?'INTERCEPTED':p.kind==='inc'?'incomplete'
+    :p.yd<=0?'stuffed':`${p.yd}-yard gain`;
   $('fieldcap').textContent='';
   runPlayMotion(p.team,p).then(ok=>{ if(ok) $('fieldcap').textContent=`${TEAMS[p.team].crest} ${capWhat}`; });
   addPlay(p);
@@ -571,7 +730,7 @@ function step(){
   if(idx>=G.plays.length){ setTimeout(endGame,1100/speed); stop(); }
 }
 function endGame(){
-  clearInterval(timer); timer=null; stopScoreAnim(); if(snapT)clearTimeout(snapT);
+  clearInterval(timer); timer=null; stopScoreAnim(); animToken++;
   const winner=G.finalH>=G.finalA?TEAMS.H:TEAMS.A, margin=round1(Math.abs(G.finalH-G.finalA));
   dispH=G.finalH; dispA=G.finalA;
   $('sH').textContent=G.finalH.toFixed(1); $('sH').style.color=cssv('--home');
@@ -582,7 +741,7 @@ function endGame(){
   $('possname').innerHTML=`FINAL — ${winner.crest} ${winner.name} by ${margin}`; $('possname').style.color=cssv('--gold');
   $('dd').textContent=''; $('fieldcap').textContent='';
   const booth=document.createElement('div'); booth.className='booth';
-  booth.innerHTML=`<b style="color:var(--gold)">FINAL — ${winner.crest} ${winner.name} by ${margin}.</b><br>${winner.name} survive a shootout, ${G.finalH.toFixed(1)}–${G.finalA.toFixed(1)}. Every point came straight off the box score.`;
+  booth.innerHTML=`<b style="color:var(--gold)">FINAL — ${winner.crest} ${winner.name} by ${margin}.</b><br>${winner.name} take it, ${G.finalH.toFixed(1)}–${G.finalA.toFixed(1)}. Every point, catch, and carry above came straight off the box score.`;
   const feed=$('feed'); feed.insertBefore(booth,feed.firstChild); feed.scrollTop=0;
   $('go').textContent='↻ Replay'; $('go').disabled=false; $('skip').disabled=true;
   renderBox();
@@ -590,20 +749,16 @@ function endGame(){
 function renderBox(){
   const box=$('box'); box.classList.add('show'); box.innerHTML='';
   [H,A].forEach(t=>{
-    const r=ROSTER[t];
-    const all=[...r.QB.map(n=>['QB',n]),...r.RB.map(n=>['RB',n]),...r.WR.map(n=>['WR',n]),...r.TE.map(n=>['TE',n]),...r.K.map(n=>['K',n]),...r.DST.map(n=>['DST',n])];
-    const rows=all.map(([pos,name])=>({pos,name,pts:(G.box[t][name]&&G.box[t][name].pts)||0})).sort((a,b)=>b.pts-a.pts);
     const card=document.createElement('div'); card.className='boxcard'; const col=teamColor(t);
     card.innerHTML=`<h4><span style="color:${col}">${TEAMS[t].crest} ${TEAMS[t].name}</span><span style="margin-left:auto;color:${col};font-weight:900">${(t===H?G.finalH:G.finalA).toFixed(1)}</span></h4>`+
-      rows.map(pl=>`<div class="pl${pl.pts?'':' zero'}"><span class="who"><span class="po">${pl.pos}</span>${pl.name}</span><span class="pp">${pl.pts.toFixed(1)}</span></div>`).join('');
+      G.box[t].map(pl=>`<div class="pl${pl.pts?'':' zero'}"><span class="who"><span class="po">${pl.pos}</span>${pl.name}<br><span style="color:var(--dim);font-size:10.5px">${pl.line}</span></span><span class="pp">${pl.pts.toFixed(1)}</span></div>`).join('');
     box.appendChild(card);
   });
 }
-
-function play(){ if(timer)return; $('go').textContent='⏸ Pause'; $('skip').disabled=false; timer=setInterval(step,2100/speed); step(); }
+function play(){ if(timer)return; $('go').textContent='⏸ Pause'; $('skip').disabled=false; timer=setInterval(step,2000/speed); step(); }
 function stop(){ if(timer){clearInterval(timer);timer=null;} $('go').textContent=idx>=G.plays.length?'↻ Replay':'▶ Resume'; }
 function reset(){
-  animToken++; idx=0;dispH=0;dispA=0;curDrive=-1;ballYd=50; if(snapT)clearTimeout(snapT);
+  animToken++; idx=0;dispH=0;dispA=0;curDrive=-1;ballYd=50;
   $('feed').innerHTML=''; $('box').classList.remove('show');
   $('sH').textContent='0.0';$('sA').textContent='0.0';$('barH').style.width='0';$('barA').style.width='0';
   $('q').textContent='PRE';$('clock').textContent='15:00';$('poss').textContent='';
@@ -611,20 +766,17 @@ function reset(){
   $('benchrow').innerHTML=''; $('losline').style.left='50%'; put($('ball'),50,50);
   Object.values(nodes.skill).forEach(c=>c.classList.remove('act'));
 }
-
 $('go').addEventListener('click',()=>{ if(idx>=G.plays.length){reset();play();return;} if(timer)stop();else play(); });
 $('skip').addEventListener('click',()=>{
-  animToken++; if(timer){clearInterval(timer);timer=null;} if(snapT)clearTimeout(snapT);
-  while(idx<G.plays.length){ const p=G.plays[idx];
-    if(p.drive!==curDrive){curDrive=p.drive; ballYd=p.team===H?75:25; setBench(p.team);}
-    if(p.kind!=='dst'&&p.kind!=='fg'){ let e=ballYd+(p.team===H?-1:1)*p.gain; if(p.td)e=p.team===H?1:99; ballYd=Math.max(2,Math.min(98,e)); }
-    addPlay(p); idx++; }
+  animToken++; if(timer){clearInterval(timer);timer=null;}
+  while(idx<G.plays.length){ addPlay(G.plays[idx]); idx++; }
   endGame();
 });
 document.querySelectorAll('#speed button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#speed button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); speed=+b.dataset.s;
-  if(timer){clearInterval(timer);timer=setInterval(step,2100/speed);}
+  if(timer){clearInterval(timer);timer=setInterval(step,2000/speed);}
 }));
+
 </script>
 </body>
 </html>
