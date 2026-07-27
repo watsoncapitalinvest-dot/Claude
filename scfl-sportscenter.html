@@ -68,7 +68,7 @@
   .videowall.off{display:none}
   .mon{flex:0 0 27%;position:relative;border:2px solid rgba(216,180,90,.55);border-radius:8px;overflow:hidden;
     background:linear-gradient(160deg,#141a2e,#0d1120);box-shadow:0 0 18px rgba(216,180,90,.25),0 6px 18px rgba(0,0,0,.5)}
-  .mon img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.94}
+  .mon img{position:absolute;inset:6%;width:88%;height:88%;object-fit:contain;opacity:.96;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
   .mon .wordm{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
   .mon .wordm b{font-family:var(--serif);font-size:12px;letter-spacing:.04em}
   .mon .wordm b span{color:var(--gold)}
@@ -378,7 +378,7 @@ function collect(i){
   const g=GAMES[i];
   const f=document.createElement('iframe');
   f.style.cssText='position:absolute;width:2px;height:2px;opacity:0;pointer-events:none';
-  f.src='broadcast-demo.html?summary=1&h='+g.h+'&a='+g.a;
+  f.src='broadcast-demo.html?summary=1&wk='+WEEK+'&h='+g.h+'&a='+g.a;
   document.body.appendChild(f);
   const done=setInterval(()=>{ if(g.sum){clearInterval(done);f.remove();collect(i+1);} },300);
   setTimeout(()=>{ if(!g.sum){clearInterval(done);f.remove();collect(i+1);} },14000);
@@ -407,6 +407,14 @@ renderRundown();
 
 /* ---- Marty's script (week-seeded so no two Tuesdays sound alike) ---- */
 const pick=(arr,r2)=>arr[Math.floor(r2()*arr.length)];
+/* no-repeat sampling: within one episode a line is never used twice */
+const USED=new Set();
+function pickU(arr,r2){
+  const fresh=arr.filter(x=>!USED.has(x));
+  const pool=fresh.length?fresh:arr;
+  const v=pool[Math.floor(r2()*pool.length)];
+  USED.add(v); return v;
+}
 /* stat lines are written for the screen; rewrite them for the mouth */
 function speak(line){
   return (line||'')
@@ -436,7 +444,10 @@ function gameLines(g,i){
     'Over at '+W.name+' stadium: the home crowd got what it paid for, '+score+'. ',
     'Meanwhile, '+W.name+' and '+L.name+' got together, and only one of them enjoyed it. '+score+'. ',
     'Game '+(i+1)+', and would you look at that: '+W.name+' '+ws.toFixed(1)+', '+L.name+' '+ls.toFixed(1)+'. ',
-    'This next one, folks. '+W.name+' over '+L.name+', '+score+'. '
+    'This next one, folks. '+W.name+' over '+L.name+', '+score+'. ',
+    L.name+' came in with a plan. '+W.name+' came in with '+ws.toFixed(1)+' points. ',
+    'From the land of '+W.name+': a '+ws.toFixed(1)+' to '+ls.toFixed(1)+' decision over '+L.name+'. ',
+    'Put on a pot of coffee: '+W.name+' '+ws.toFixed(1)+', '+L.name+' '+ls.toFixed(1)+'. '
   ];
   const QUIPS={
     blowout:[
@@ -464,26 +475,28 @@ function gameLines(g,i){
     mid:[
       W.name+' by '+margin+'. Not pretty. They all count the same, as my second wife used to say.',
       'A professional '+margin+'-point win. Nothing flashy. Like a good haircut.',
-      W.name+' by '+margin+'. Workmanlike. Businesslike. Several other kinds of like.'
+      W.name+' by '+margin+'. Workmanlike. Businesslike. Several other kinds of like.',
+      W.name+' by '+margin+'. The kind of win you forget by Thursday and brag about in December.',
+      'A steady '+margin+'-point cushion the whole way. Cruise control football.'
     ]};
   let quip;
-  if(ws-ls>=35) quip=pick(QUIPS.blowout,r2);
-  else if(ws-ls<=5) quip=pick(QUIPS.close,r2);
-  else if(total>=250) quip=pick(QUIPS.shootout,r2);
-  else if(total<=170) quip=pick(QUIPS.rockfight,r2);
-  else quip=pick(QUIPS.mid,r2);
+  if(ws-ls>=35) quip=pickU(QUIPS.blowout,r2);
+  else if(ws-ls<=5) quip=pickU(QUIPS.close,r2);
+  else if(total>=250) quip=pickU(QUIPS.shootout,r2);
+  else if(total<=170) quip=pickU(QUIPS.rockfight,r2);
+  else quip=pickU(QUIPS.mid,r2);
   // franchise color, some of the time
   let color='';
   if(r2()<0.45){
     const hw2=r2()<0.5, team=hw2?W:L, ep=history(team.key,r2);
     if(ep) color='And remember, '+team.name+' — '+ep+'. ';
   }
-  const studL=wtop?pick([
+  const studL=wtop?pickU([
     wtop.name+' led the way with '+wtop.pts.toFixed(1)+' — that\'s '+speak(wtop.line)+'. ',
     'The headline: '+wtop.name+', '+wtop.pts.toFixed(1)+' points. '+speak(wtop.line)+'. ',
     wtop.name+' went for '+wtop.pts.toFixed(1)+'. '+speak(wtop.line)+'. Somewhere a waiver claim from 2019 is smiling. '
   ],r2):'';
-  const pityL=ltop?pick([
+  const pityL=ltop?pickU([
     'For '+L.name+', '+ltop.name+' gave them '+ltop.pts.toFixed(1)+', and it did not matter one bit. ',
     ltop.name+' put up '+ltop.pts.toFixed(1)+' in the loss. A lovely painting in a burning house. ',
     'And spare a thought for '+ltop.name+' — '+ltop.pts.toFixed(1)+' points wasted on this. '
@@ -491,7 +504,7 @@ function gameLines(g,i){
   const big=s.big?('The play of the game? '+s.big.plain+' '):'';
   const rolls=['Roll the tape.','Roll it.','To the tape.','Let\'s go to the pictures.'];
   return {
-    intro:[openers[Math.floor(r2()*openers.length)]+quip, color+studL+pityL+big+pick(rolls,r2)],
+    intro:[pickU(openers,r2)+quip, color+studL+pityL+big+pickU(rolls,r2)],
     outro:[(hw?s.h.name:s.a.name)+' win it. '+martyTag(i,r2)]
   };
 }
@@ -500,11 +513,14 @@ function martyTag(i,r2){
     'Somewhere, a commissioner is smiling.','That one\'s going on the wall.',
     'And the wire stays frozen, but that\'s politics.','We roll on.',
     'File it under W.','The tape never lies, folks.','My producer is telling me to move on. He\'s right.',
-    'Add it to the ledger.','History will be kind to the winners. It always is.'];
-  return r2?pick(tags,r2):tags[i%tags.length];
+    'Add it to the ledger.','History will be kind to the winners. It always is.',
+    'Another one for the archives.','And the beat goes on.','Next case.',
+    'The standings feel it already.','Beautiful. Horrible. Football.'];
+  return r2?pickU(tags,r2):tags[i%tags.length];
 }
 const SEGS=[];
 function buildSegments(){
+  USED.clear();
   const played=GAMES.filter(g=>g.sum);
   SEGS.length=0;
   const r0=mulberry32(0xFACE+WEEK*7919);
@@ -670,7 +686,7 @@ async function runSeg(seg,tok){
     for(const line of seg.lines){ if(tok!==showTok)return; await say(line,tok); await wait(280); }
     if(seg.fs) fsHide();
   } else {
-    const src='broadcast-demo.html?tv=1&hl=1&n=8&spd=2&h='+seg.g.h+'&a='+seg.g.a;
+    const src='broadcast-demo.html?tv=1&hl=1&n=8&spd=2&wk='+WEEK+'&h='+seg.g.h+'&a='+seg.g.a;
     await wipe(()=>toTape(src));
     await new Promise(res=>{ tapeResolve=res;
       const cap=setTimeout(()=>{if(tapeResolve){tapeResolve=null;res();}},75000);
