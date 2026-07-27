@@ -312,6 +312,31 @@ const GAMES=[]; for(let i=0;i<16;i+=2) GAMES.push({h:order[i],a:order[i+1],sum:n
 
 let LOGOS={};
 fetch('scfl-team-logos-resized.json').then(r=>r.ok?r.json():{}).then(j=>{LOGOS=j||{};}).catch(()=>{});
+/* franchise history for Marty's color commentary */
+let RECBY={};
+const normT=n=>(n||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const TALIAS={newwodorder:'newworldorder',forty2v:'horsecollars',hairygumbas:'gumbas'};
+fetch('records.json').then(r=>r.ok?r.json():null).then(j=>{
+  ((j&&j.standings)||[]).forEach(m=>{
+    let k=normT(m.name); k=TALIAS[k]||k; k=TALIAS[k.replace(/^the/,'')]||k.replace(/^the/,'');
+    if(KEYS.includes(k)) RECBY[k]=m;
+  });
+}).catch(()=>{});
+function history(key,r2){
+  const m=RECBY[key]; if(!m) return '';
+  const pool=[];
+  if(m.titles>=3) pool.push('a '+m.titles+'-time champion, mind you');
+  else if(m.titles>0) pool.push(m.titles===1?'a former champ':'a '+m.titles+'-time champ');
+  if(m.runnerUps>=5) pool.push('forever the bridesmaid — '+m.runnerUps+' second-place finishes');
+  if(m.winPct>=0.6) pool.push('a franchise that wins '+Math.round(m.winPct*100)+' percent of the time');
+  if(m.winPct<=0.42) pool.push('a franchise that has been rebuilding since '+(m.seasons||'').split('-')[0]);
+  if(m.record&&/^(\d+)-(\d+)/.test(m.record)){
+    const mm=m.record.match(/^(\d+)-(\d+)/);
+    if(Math.abs(+mm[1]-+mm[2])<=3) pool.push(m.record+' all time. Perfectly, painfully average');
+  }
+  if(!pool.length) return '';
+  return pool[Math.floor(r2()*pool.length)];
+}
 
 /* ---- show SFX (stingers only — no voice) ---- */
 let SAC=null;
@@ -386,45 +411,120 @@ function renderRundown(){
 }
 renderRundown();
 
-/* ---- Marty's script ---- */
+/* ---- Marty's script (week-seeded so no two Tuesdays sound alike) ---- */
+const pick=(arr,r2)=>arr[Math.floor(r2()*arr.length)];
+/* stat lines are written for the screen; rewrite them for the mouth */
+function speak(line){
+  return (line||'')
+    .replace(/(\d+)\/(\d+)/g,'$1 of $2')
+    .replace(/\s*·\s*/g,', ')
+    .replace(/\byds\b/g,'yards').replace(/\byd\b/g,'yard')
+    .replace(/(\d+) TD\b/g,(m,n)=>n+(n==1?' touchdown':' touchdowns'))
+    .replace(/(\d+) INT\b/g,(m,n)=>n+(n==1?' interception':' interceptions'))
+    .replace(/(\d+) car\b/g,(m,n)=>n+(n==1?' carry':' carries'))
+    .replace(/(\d+) rec\b/g,(m,n)=>n+(n==1?' catch':' catches'))
+    .replace(/(\d+) tgt\b/g,(m,n)=>n+' targets')
+    .replace(/(\d+) FG\b/g,(m,n)=>n+(n==1?' field goal':' field goals'))
+    .replace(/(\d+) XP\b/g,(m,n)=>n+(n==1?' extra point':' extra points'))
+    .replace(/\brush TD\b/g,'and a rushing touchdown');
+}
 function gameLines(g,i){
+  const r2=mulberry32(0xBEEF+WEEK*7919+i*104729);
   const s=g.sum, hw=s.finalH>=s.finalA;
   const W=hw?s.h:s.a, L=hw?s.a:s.h;
   const ws=hw?s.finalH:s.finalA, ls=hw?s.finalA:s.finalH;
   const margin=(ws-ls).toFixed(1), total=ws+ls;
   const wtop=(hw?s.topH:s.topA)[0], ltop=(hw?s.topA:s.topH)[0];
+  const score=ws.toFixed(1)+' to '+ls.toFixed(1);
   const openers=[
     W.name+' '+ws.toFixed(1)+', '+L.name+' '+ls.toFixed(1)+'. ',
-    'Next up: '+W.name+' handled business against '+L.name+', '+ws.toFixed(1)+' to '+ls.toFixed(1)+'. ',
-    'Over at '+W.name+' stadium: '+W.name+' '+ws.toFixed(1)+', '+L.name+' '+ls.toFixed(1)+'. '
+    'Next up: '+W.name+' handled business against '+L.name+', '+score+'. ',
+    'Over at '+W.name+' stadium: the home crowd got what it paid for, '+score+'. ',
+    'Meanwhile, '+W.name+' and '+L.name+' got together, and only one of them enjoyed it. '+score+'. ',
+    'Game '+(i+1)+', and would you look at that: '+W.name+' '+ws.toFixed(1)+', '+L.name+' '+ls.toFixed(1)+'. ',
+    'This next one, folks. '+W.name+' over '+L.name+', '+score+'. '
   ];
+  const QUIPS={
+    blowout:[
+      'That was not a football game, folks, that was a crime scene. Somebody call '+L.name+' next of kin.',
+      'A '+margin+'-point margin. I have seen car accidents with more suspense.',
+      L.name+' would like this one stricken from the record. Request denied. It goes in the paper.',
+      'The good news for '+L.name+' is that it is over. That is the entire list of good news.'
+    ],
+    close:[
+      'Decided by '+margin+'. I aged three years watching this one and I was already old.',
+      'A '+margin+'-point game. Someone in the '+L.name+' front office is staring at a bench score right now, and I hope they blink eventually.',
+      'By '+margin+'. That is not a loss, that is a paper cut that needs stitches.',
+      margin+' points in it. Games like this are why I switched to the second drink.'
+    ],
+    shootout:[
+      'A combined '+total.toFixed(1)+' points. Defense is illegal in this league, apparently.',
+      total.toFixed(1)+' combined. Both teams scored like the rent was due.',
+      'Points everywhere. '+total.toFixed(1)+' of them. My scorekeeper quit at halftime.'
+    ],
+    rockfight:[
+      'A rock fight. Ugly. I loved every minute and I saw none of it.',
+      'A combined '+total.toFixed(1)+'. Fantasy football, ladies and gentlemen: sometimes the fantasy is offense.',
+      'Neither one of these teams should frame this one. '+total.toFixed(1)+' combined points. Yeesh.'
+    ],
+    mid:[
+      W.name+' by '+margin+'. Not pretty. They all count the same, as my second wife used to say.',
+      'A professional '+margin+'-point win. Nothing flashy. Like a good haircut.',
+      W.name+' by '+margin+'. Workmanlike. Businesslike. Several other kinds of like.'
+    ]};
   let quip;
-  if(ws-ls>=35) quip='That was not a football game, folks, that was a crime scene. Somebody call '+L.name+' next of kin.';
-  else if(ws-ls<=5) quip='Decided by '+margin+'. I aged three years watching this one and I was already old.';
-  else if(total>=250) quip='A combined '+total.toFixed(1)+' points. Defense is illegal in this league, apparently.';
-  else if(total<=170) quip='A rock fight. Ugly. I loved every minute and I saw none of it.';
-  else quip=W.name+' by '+margin+'. Not pretty. They all count the same, as my second wife used to say.';
-  const stud=wtop?(wtop.name+' led the way with '+wtop.pts.toFixed(1)+' — that\'s '+wtop.line+'. '):'';
-  const pity=ltop?('For '+L.name+', '+ltop.name+' gave them '+ltop.pts.toFixed(1)+', and it did not matter one bit. '):'';
+  if(ws-ls>=35) quip=pick(QUIPS.blowout,r2);
+  else if(ws-ls<=5) quip=pick(QUIPS.close,r2);
+  else if(total>=250) quip=pick(QUIPS.shootout,r2);
+  else if(total<=170) quip=pick(QUIPS.rockfight,r2);
+  else quip=pick(QUIPS.mid,r2);
+  // franchise color, some of the time
+  let color='';
+  if(r2()<0.45){
+    const hw2=r2()<0.5, team=hw2?W:L, ep=history(team.key,r2);
+    if(ep) color='And remember, '+team.name+' — '+ep+'. ';
+  }
+  const studL=wtop?pick([
+    wtop.name+' led the way with '+wtop.pts.toFixed(1)+' — that\'s '+speak(wtop.line)+'. ',
+    'The headline: '+wtop.name+', '+wtop.pts.toFixed(1)+' points. '+speak(wtop.line)+'. ',
+    wtop.name+' went for '+wtop.pts.toFixed(1)+'. '+speak(wtop.line)+'. Somewhere a waiver claim from 2019 is smiling. '
+  ],r2):'';
+  const pityL=ltop?pick([
+    'For '+L.name+', '+ltop.name+' gave them '+ltop.pts.toFixed(1)+', and it did not matter one bit. ',
+    ltop.name+' put up '+ltop.pts.toFixed(1)+' in the loss. A lovely painting in a burning house. ',
+    'And spare a thought for '+ltop.name+' — '+ltop.pts.toFixed(1)+' points wasted on this. '
+  ],r2):'';
   const big=s.big?('The play of the game? '+s.big.plain+' '):'';
+  const rolls=['Roll the tape.','Roll it.','To the tape.','Let\'s go to the pictures.'];
   return {
-    intro:[openers[i%openers.length]+quip, stud+pity+big+'Roll the tape.'],
-    outro:[hw? s.h.name+' win it. '+martyTag(i) : s.a.name+' win it. '+martyTag(i)]
+    intro:[openers[Math.floor(r2()*openers.length)]+quip, color+studL+pityL+big+pick(rolls,r2)],
+    outro:[(hw?s.h.name:s.a.name)+' win it. '+martyTag(i,r2)]
   };
 }
-function martyTag(i){
+function martyTag(i,r2){
   const tags=['On we go.','Moving right along.','What a league.','I need a minute. And a refill.',
-    'Somewhere, a commissioner is smiling.','That one\'s going on the wall.','And the wire stays frozen, but that\'s politics.','We roll on.'];
-  return tags[i%tags.length];
+    'Somewhere, a commissioner is smiling.','That one\'s going on the wall.',
+    'And the wire stays frozen, but that\'s politics.','We roll on.',
+    'File it under W.','The tape never lies, folks.','My producer is telling me to move on. He\'s right.',
+    'Add it to the ledger.','History will be kind to the winners. It always is.'];
+  return r2?pick(tags,r2):tags[i%tags.length];
 }
 const SEGS=[];
 function buildSegments(){
   const played=GAMES.filter(g=>g.sum);
   SEGS.length=0;
-  SEGS.push({type:'desk',who:'Marty "Two Drinks" Malone',flag:'The Desk',card:null,lines:[
+  const r0=mulberry32(0xFACE+WEEK*7919);
+  const hello=pick([
     'Hellooo again, everybody. Marty "Two Drinks" Malone, live from the SCFL SportsCenter desk in beautiful downtown nowhere.',
-    'It is Tuesday, which means the weekend happened, and legally, someone has to explain it. Eight games. All the tape. Let\'s get after it.'
-  ]});
+    'Good evening, friends. Marty "Two Drinks" Malone here, and yes, the tie is loosened for a reason.',
+    'Welcome in, welcome in. Marty Malone. They call me Two Drinks, and week '+WEEK+' earned both of them.'
+  ],r0);
+  const setup=pick([
+    'It is Tuesday, which means the weekend happened, and legally, someone has to explain it. Eight games. All the tape. Let\'s get after it.',
+    'Eight games. Sixteen managers. A number of decisions that cannot be defended in court. We have the tape. Let\'s get to it.',
+    'Week '+WEEK+' is in the books, and the books are a mess. Eight games, all the highlights, and the awards nobody wants. Here we go.'
+  ],r0);
+  SEGS.push({type:'desk',who:'Marty "Two Drinks" Malone',flag:'The Desk',card:null,lines:[hello,setup]});
   played.forEach((g,i)=>{
     const gl=gameLines(g,i);
     SEGS.push({type:'desk',who:'Marty "Two Drinks" Malone',flag:'Game '+(i+1)+' of '+played.length,card:g,board:true,lines:gl.intro});
@@ -442,15 +542,27 @@ function buildSegments(){
   });
   if(stud) SEGS.push({type:'desk',who:'Stud of the Week',flag:'Awards Desk',card:null,
     fs:{cls:'',flag:'Stud of the Week',name:stud.name,team:studTeam.name,pts:stud.pts.toFixed(1),line:stud.line},lines:[
-    'Your Stud of the Week: '+stud.name+' of the '+studTeam.name+'. '+stud.pts.toFixed(1)+' points. '+stud.line+'.',
-    'If you had him on your bench, do not tell anybody. Take it to the grave.']});
+    'Your Stud of the Week: '+stud.name+' of the '+studTeam.name+'. '+stud.pts.toFixed(1)+' points. '+speak(stud.line)+'.',
+    pick(['If you had him on your bench, do not tell anybody. Take it to the grave.',
+      'That is not a stat line, that is a ransom note.',
+      'Frame it. Laminate it. Show it to your grandkids.'],r0)]});
   if(dud) SEGS.push({type:'desk',who:'Dud of the Week',flag:'Awards Desk',card:null,
     fs:{cls:'dud',flag:'Dud of the Week',name:dud.name,team:'as a team. all of them.',pts:dudScore.toFixed(1),line:'I have personally scored more at a buffet.'},lines:[
     'And the Dud of the Week goes to the '+dud.name+', who scored '+dudScore.toFixed(1)+' points. Total. As a team.',
-    'I have personally scored more at a buffet. Somebody check on their manager.']});
-  SEGS.push({type:'desk',who:'Marty "Two Drinks" Malone',flag:'Sign-Off',card:null,lines:[
+    pick(['I have personally scored more at a buffet. Somebody check on their manager.',
+      'I have seen preseason games with more urgency. And I have slept through preseason games.',
+      'That is not a rebuild, friends. That is a demolition with no permit.'],r0)]});
+  const outroA=pick([
     'That\'s the weekend, folks. The wins are permanent, the losses are somebody else\'s fault, and the waiver wire is still frozen solid.',
-    'For SCFL Network, I\'m Marty "Two Drinks" Malone. The second one\'s for the road. Goodnight, everybody.']});
+    'And that\'s week '+WEEK+'. Remember: every champion was once a manager who refused to log off.',
+    'That does it for the rundown. Sixteen teams went in, sixteen excuses came out. It\'s a beautiful sport.'
+  ],r0);
+  const outroB=pick([
+    'For SCFL Network, I\'m Marty "Two Drinks" Malone. The second one\'s for the road. Goodnight, everybody.',
+    'For SCFL Network, I\'m Marty "Two Drinks" Malone. Same desk, same tie, next Tuesday. Goodnight, everybody.',
+    'I\'m Marty "Two Drinks" Malone, and my glass and my heart are both empty. See you next Tuesday, everybody.'
+  ],r0);
+  SEGS.push({type:'desk',who:'Marty "Two Drinks" Malone',flag:'Sign-Off',card:null,lines:[outroA,outroB]});
   $('startBtn').disabled=false;
 }
 
