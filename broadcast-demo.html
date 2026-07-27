@@ -12,6 +12,9 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-text-size-adjust:100%}
+  button{touch-action:manipulation;-webkit-tap-highlight-color:rgba(216,180,90,.25)}
+  #errbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:99;background:#7a1015;color:#fff;
+    font:12px/1.5 ui-monospace,monospace;padding:8px 12px;white-space:pre-wrap;word-break:break-word}
   body{min-height:100vh;
     background:
       radial-gradient(130% 70% at 50% -8%, rgba(216,180,90,.10) 0%, rgba(216,180,90,0) 46%),
@@ -21,7 +24,7 @@
 
   .netbar{display:flex;align-items:center;justify-content:center;gap:10px;padding:6px 0 12px}
   .netbar .live{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:900;letter-spacing:2px;color:#ff5b5b;text-transform:uppercase}
-  .netbar .live .dot{width:8px;height:8px;border-radius:50%;background:#ff5b5b;animation:pulse 1.4s infinite}
+  .netbar .live .ldot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff5b5b;animation:pulse 1.4s infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,91,91,.55)}70%{box-shadow:0 0 0 8px rgba(255,91,91,0)}100%{box-shadow:0 0 0 0 rgba(255,91,91,0)}}
   .netbar .brand{font-family:var(--serif);font-weight:900;font-size:15px}
   .netbar .brand span{color:var(--gold)}
@@ -45,6 +48,22 @@
   .center .poss{font-size:9px;letter-spacing:1px;color:var(--dim);margin-top:3px;text-transform:uppercase;height:11px}
   .bug .barwrap{height:5px;background:rgba(255,255,255,.05);display:flex}
   .bug .barwrap .fill{height:100%;transition:width .5s ease}
+  @media(max-width:520px){
+    .team{padding:8px 8px;gap:7px}
+    .crest{width:30px;height:30px;min-width:30px;font-size:16px;border-radius:8px}
+    .team .nm{font-size:11px;white-space:normal;line-height:1.12}
+    .team .rec{display:none}
+    .score{font-size:22px}
+    .center{min-width:70px;padding:4px 6px}
+    .center .clock{font-size:16px}
+    .center .poss{display:none}
+    .chip{width:46px;height:28px}
+    .chip .pp2{font-size:7.5px}
+    .chip .nn{font-size:7.5px;max-width:42px}
+    .pitch{height:216px}
+    .bench{height:28px}
+    .bchip{padding:2px 5px;font-size:8.5px}
+  }
 
   /* ---- The stadium ---- */
   .field{position:relative;margin-top:12px;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.45);background:#0c2a14}
@@ -136,7 +155,7 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="netbar"><span class="live"><span class="dot"></span> Live</span><span class="brand">SCFL <span>Network</span> · Game of the Week</span></div>
+  <div class="netbar"><span class="live"><span class="ldot"></span> Live</span><span class="brand">SCFL <span>Network</span> · Game of the Week</span></div>
   <div class="tag"><b>Demo · fictional teams</b></div>
 
   <!-- Scorebug -->
@@ -167,9 +186,9 @@
 
   <!-- Controls -->
   <div class="controls">
-    <button class="btn primary" id="go">▶ Kick off</button>
-    <button class="btn" id="skip" disabled>⏭ Final</button>
-    <div class="speed" id="speed"><button data-s="1" class="on">1×</button><button data-s="2">2×</button><button data-s="4">4×</button></div>
+    <button type="button" class="btn primary" id="go">▶ Kick off</button>
+    <button type="button" class="btn" id="skip" disabled>⏭ Final</button>
+    <div class="speed" id="speed"><button type="button" data-s="1" class="on">1×</button><button type="button" data-s="2">2×</button><button type="button" data-s="4">4×</button></div>
   </div>
 
   <!-- Feed (newest on top) -->
@@ -183,10 +202,16 @@
   </div>
 </div>
 
+<div id="errbar"></div>
 <script>
 /* SCFL Network — broadcast engine demo. Deterministic state owns score/clock;
    possessions alternate; the offense lines up NFL-style each snap.
    Fictional teams only — fully standalone. */
+
+// Surface any runtime error visibly (mobile Safari has no console) so a dead
+// button can never fail silently again.
+window.onerror=function(msg,src,line,col){ try{ var e=document.getElementById('errbar');
+  e.style.display='block'; e.textContent='⚠ '+msg+' @'+line+':'+col; }catch(_){} };
 
 // ---- Non-PPR scoring ----
 const passPts=(yd,td=0,i=0)=>yd*0.04+td*4-i*2;
