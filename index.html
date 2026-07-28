@@ -1499,7 +1499,7 @@ async function ensureTeamLogos(rerender){
   if (TEAMLOGOS) return TEAMLOGOS;
   try { const r = await fetch('scfl-team-logos-resized.json'); TEAMLOGOS = await r.json(); }
   catch { TEAMLOGOS = {}; }
-  if (rerender && !staffName() && document.querySelector('[data-act="staff-set"]')) showMenu();
+  if (rerender && !staffName() && document.querySelector('[data-act="staff-set"]')) renderDeskGate();
   return TEAMLOGOS;
 }
 function applyDeskTheme(){
@@ -3317,6 +3317,7 @@ const mtoolBtn = ([a, ic, l, d]) => `<button class="mtool" data-act="${a}"><span
 // into the Newsroom. Opens here (not on a week's issue).
 function showMenu() {
   S.reading = false;
+  if (!staffName()) return renderDeskGate();
   const shield = (!S.shieldShown) ? (S.shieldShown = true, `<div class="shield-launch" id="shieldLaunch"><img src="${EXEC_LOGO}" alt="SCFL Executive Office"></div>`) : '';
   const office = OFFICE_TOOLS.map(mtoolBtn).join('');
   setContent(`${shield}
@@ -3326,19 +3327,7 @@ function showMenu() {
       <div class="office-sub">${esc(S.season || '')} Season · The Front Office</div>
       ${staffName()
         ? `<div class="office-sub" style="cursor:pointer;margin-top:4px" data-act="staff-switch">At the desk: <b style="color:var(--gold)">${esc(staffName())}</b> · tap to switch</div>`
-
-        : `<div class="office-sub" style="margin-top:8px">Who's at the desk? Tap your franchise.</div>
-           <div style="display:flex;gap:14px;justify-content:center;margin-top:10px;flex-wrap:wrap">
-             ${[['John','smokedragons','Smoke Dragons'],['Keith','machines','The Machines'],['Chris','newworldorder','New Wod Order']].map(([n,k,tm])=>`
-               <button data-act="staff-set" data-name="${esc(n)}" style="background:none;border:none;cursor:pointer;padding:0;text-align:center">
-                 ${TEAMLOGOS && TEAMLOGOS[k]
-                   ? `<img src="${TEAMLOGOS[k]}" alt="${esc(tm)}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--gold,#d8b45a);box-shadow:0 4px 14px rgba(0,0,0,.35);pointer-events:none">`
-                   : `<span style="display:inline-flex;width:64px;height:64px;border-radius:50%;border:2px solid var(--gold,#d8b45a);align-items:center;justify-content:center;font-weight:900;font-size:20px;pointer-events:none">${esc(n[0])}</span>`}
-                 <span style="display:block;font-size:11px;font-weight:900;margin-top:5px;pointer-events:none">${esc(n)}</span>
-                 <span style="display:block;font-size:9px;opacity:.7;pointer-events:none">${esc(tm)}</span>
-               </button>`).join('')}
-           </div>
-           ${(ensureTeamLogos(true), '')}`}
+        : ''}
     </div>
     <button class="newsroom-card" data-act="newsroom">
       <img class="nr-logo" src="${NEWSROOM_LOGO}" alt="SCFL NewsRoom">
@@ -3348,6 +3337,28 @@ function showMenu() {
     <div class="seclabel" style="text-align:center;margin:20px 0 10px">The Front Office</div>
     <div class="menu-tools">${office}</div>`);
   if (shield) setTimeout(() => { const el = $('#shieldLaunch'); if (el) { el.classList.add('done'); setTimeout(() => el.remove(), 400); } }, 1250);
+}
+// ---- Desk gate: full-screen sign-in, then the shield, then the Office -------
+function renderDeskGate() {
+  S.reading = false; S.tab = 'menu';
+  document.body.classList.add('exec-dark');
+  hideTopBar();
+  app.innerHTML = `
+    <div style="min-height:82vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:20px">
+      <div class="office-sub" style="letter-spacing:.3em">SCFL EXECUTIVE OFFICE</div>
+      <div class="office-sub" style="margin-top:2px">Who's at the desk?</div>
+      <div style="display:flex;gap:22px;justify-content:center;margin-top:18px;flex-wrap:wrap">
+        ${[['John','smokedragons','Smoke Dragons'],['Keith','machines','The Machines'],['Chris','newworldorder','New Wod Order']].map(([n,k,tm])=>`
+          <button data-act="staff-set" data-name="${esc(n)}" style="background:none;border:none;cursor:pointer;padding:0;text-align:center">
+            ${TEAMLOGOS && TEAMLOGOS[k]
+              ? `<img src="${TEAMLOGOS[k]}" alt="${esc(tm)}" style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:2.5px solid var(--gold,#d8b45a);box-shadow:0 6px 22px rgba(0,0,0,.5);pointer-events:none">`
+              : `<span style="display:inline-flex;width:88px;height:88px;border-radius:50%;border:2.5px solid var(--gold,#d8b45a);align-items:center;justify-content:center;font-weight:900;font-size:26px;color:var(--gold,#d8b45a);pointer-events:none">${esc(n[0])}</span>`}
+            <span style="display:block;font-size:13px;font-weight:900;margin-top:8px;color:#f3efe4;pointer-events:none">${esc(n)}</span>
+            <span style="display:block;font-size:10px;opacity:.65;color:#f3efe4;pointer-events:none">${esc(tm)}</span>
+          </button>`).join('')}
+      </div>
+    </div>`;
+  ensureTeamLogos(true);
 }
 // ---- The Newsroom — the magazine hub (all editorial lives here) -------------
 function showNewsroom() {
@@ -7005,7 +7016,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
   if (act === 'draft-grades-issue') { window.open('scfl-2026-draft-grades-flip.html', '_blank'); return; }
   if (act === 'sportscenter') { window.open('scfl-sportscenter.html', '_blank'); return; }
-  if (act === 'staff-set') { const n = t.dataset.name || (prompt('Name for this desk?') || '').trim(); if (n) { setStaff(n); toast('Welcome to the Office, ' + n); } return showMenu(); }
+  if (act === 'staff-set') { const n = t.dataset.name || (prompt('Name for this desk?') || '').trim(); if (n) { setStaff(n); S.shieldShown = false; toast('Welcome to the Office, ' + n); } renderShell(); return showMenu(); }
   if (act === 'staff-switch') { const n = (prompt('Who is at the desk?', staffName()) || '').trim(); if (n) setStaff(n); return showMenu(); }
   if (act === 'staff-handbook') return showStaffHandbook();
   if (act === 'staff-send') return staffSend();
