@@ -414,6 +414,15 @@
   .mp-btn .mp-d { color:var(--faint); font-size:13px; margin-top:5px; line-height:1.45; }
   .mp-btn.accent { background:linear-gradient(160deg, rgba(194,15,22,.09), transparent 60%); border-color:var(--accent-d); }
   .menu-tools { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:12px; max-width:920px; margin:14px auto 0; }
+  .menu-sec { max-width:920px; margin:20px auto 0; }
+  .menu-sec .seclabel { text-align:center; margin:0 0 2px; }
+  @media (max-width:720px){
+    .menu-tools { grid-template-columns:1fr 1fr; gap:9px; }
+    .mtool { padding:13px 10px 11px; }
+    .mtool-d { display:none; }
+  }
+  .tb-back { border:none; background:none; font-size:22px; font-weight:900; color:var(--text); cursor:pointer; padding:2px 8px 4px 2px; line-height:1; }
+  body.exec-dark .tb-back { color:#f3efe4; }
   .mtool { display:flex; flex-direction:column; align-items:flex-start; gap:2px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:15px 16px; text-align:left; cursor:pointer; transition:border-color .15s, transform .12s; }
   .mtool:hover { border-color:var(--accent); transform:translateY(-2px); }
   .mtool .mtool-ic { font-size:24px; margin-bottom:5px; }
@@ -3241,6 +3250,7 @@ const TABS = [
 ];
 function topBar() {
   return `<div class="topbar no-print"><div class="topbar-inner">
+    <button class="tb-back" data-act="nav-back" title="Back">‹</button>
     <button class="tb-brand" data-act="home" title="Executive Office">
       <img class="tb-shield" src="${EXEC_LOGO}" alt="SCFL"><span class="tb-word">SCFL <span>Executive Office</span></span>
     </button>
@@ -3313,6 +3323,29 @@ const NEWSROOM_TOOLS = [
   ['calendar', '🗓️', 'Calendar', 'Release dates & events'],
 ];
 const mtoolBtn = ([a, ic, l, d]) => `<button class="mtool" data-act="${a}"><span class="mtool-ic">${ic}</span><span class="mtool-l">${l}</span><span class="mtool-d">${d}</span></button>`;
+const OFFICE_SECTIONS = [
+  ['The Board Room', ['draft-room', 'trade-court', 'draft-desk']],
+  ['League Data', ['roster-export', 'logos-export', 'matchup-export']],
+  ['The Staff Desk', ['assets', 'staff-handbook', 'staff-send', 'staff-import']],
+];
+const NEWSROOM_SECTIONS = [
+  ['This Week', ['create-issue', 'weekly-stories', 'dashboard', 'calendar']],
+  ['The Network', ['sportscenter', 'broadcast']],
+  ['Desks & Features', ['politics', 'desk', 'storylines', 'investigations', 'cover-art']],
+  ['Editions', ['draft-grades-issue', 'predraft-view', 'archive']],
+  ['The Record Room', ['dossier', 'records', 'ex-files', 'archive-articles']],
+];
+function toolSections(tools, sections) {
+  const by = {}; tools.forEach(t => by[t[0]] = t);
+  const used = new Set();
+  let html = sections.map(([label, ids]) => {
+    const tiles = ids.filter(id => by[id]).map(id => { used.add(id); return mtoolBtn(by[id]); }).join('');
+    return tiles ? `<div class="menu-sec"><div class="seclabel">${esc(label)}</div><div class="menu-tools">${tiles}</div></div>` : '';
+  }).join('');
+  const rest = tools.filter(t => !used.has(t[0])).map(mtoolBtn).join('');
+  if (rest) html += `<div class="menu-sec"><div class="seclabel">More</div><div class="menu-tools">${rest}</div></div>`;
+  return html;
+}
 // ---- SCFL Executive Office — the landing hub: front-office tools + the door
 // into the Newsroom. Opens here (not on a week's issue).
 function showMenu() {
@@ -3334,8 +3367,7 @@ function showMenu() {
       <span class="nr-txt"><span class="nr-l">The Newsroom</span><span class="nr-d">The magazine — issues, features, dossier &amp; the desk</span></span>
       <span class="nr-go">›</span>
     </button>
-    <div class="seclabel" style="text-align:center;margin:20px 0 10px">The Front Office</div>
-    <div class="menu-tools">${office}</div>`);
+    ${toolSections(OFFICE_TOOLS, OFFICE_SECTIONS)}`);
   if (shield) setTimeout(() => { const el = $('#shieldLaunch'); if (el) { el.classList.add('done'); setTimeout(() => el.remove(), 400); } }, 1250);
 }
 // ---- Desk gate: full-screen sign-in, then the shield, then the Office -------
@@ -3362,7 +3394,7 @@ function renderDeskGate() {
 // ---- The Newsroom — the magazine hub (all editorial lives here) -------------
 function showNewsroom() {
   S.reading = false;
-  const tools = NEWSROOM_TOOLS.map(mtoolBtn).join('');
+  const tools = toolSections(NEWSROOM_TOOLS, NEWSROOM_SECTIONS);
   setContent(`
     <button class="btn ghost" data-act="home" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Executive Office</button>
     <div class="magcover" style="max-width:620px;margin:2px auto 18px;min-height:auto">
@@ -3370,7 +3402,7 @@ function showNewsroom() {
       <div style="font-family:var(--serif);font-weight:900;font-size:30px;line-height:1.05;letter-spacing:.3px;text-align:center;color:var(--text)">SCFL <span style="color:var(--accent)">NewsRoom</span></div>
       <div class="mag-issue">The Newsroom · ${esc(S.season || '')} Season</div>
     </div>
-    <div class="menu-tools">${tools}</div>`);
+    ${tools}`);
 }
 // ---- Create Issue — a single form that assembles the whole week's issue -----
 function showCreateIssue() {
@@ -6972,9 +7004,43 @@ async function showSettings() {
 // ---------------------------------------------------------------------
 //  Event handling (delegated)
 // ---------------------------------------------------------------------
+/* ---- history-backed navigation: swipe-back and the ‹ button both work ---- */
+const NAV_ACTS = new Set(['home','newsroom','create-issue','weekly-stories','dashboard','calendar',
+  'politics','pol-read','desk','storylines','investigations','inv-read','dossier','records','ex-files',
+  'archive-articles','archive','cover-art','predraft-view','draft-room','trade-court','draft-desk',
+  'assets','staff-handbook','staff-import','tc-team','back-news','back','settings','ex-files']);
+let NAV_SILENT = false;
+function pushRoute(act, data) {
+  if (NAV_SILENT) return;
+  try {
+    const cur = history.state || {};
+    if (cur.act === act && JSON.stringify(cur.data || {}) === JSON.stringify(data || {})) return;
+    history.pushState({ act, data: data || {} }, '');
+  } catch {}
+}
+function navReplay(act, data) {
+  NAV_SILENT = true;
+  try {
+    const btn = document.createElement('button');
+    btn.style.display = 'none';
+    btn.dataset.act = act;
+    for (const k of Object.keys(data || {})) if (k !== 'act') btn.dataset[k] = data[k];
+    document.body.appendChild(btn);
+    btn.click();
+    btn.remove();
+  } finally { setTimeout(() => { NAV_SILENT = false; }, 0); }
+}
+window.addEventListener('popstate', (e) => {
+  const st = e.state;
+  if (st && st.act) navReplay(st.act, st.data);
+  else { NAV_SILENT = true; try { S.reading = false; S.tab = 'menu'; renderShell(); renderTab(); } finally { setTimeout(() => { NAV_SILENT = false; }, 0); } }
+});
+try { history.replaceState({ act: 'home', data: {} }, ''); } catch {}
 document.body.addEventListener('click', async (e) => {
   const t = e.target.closest('[data-act]'); if (!t) return;
   const act = t.dataset.act;
+  if (act === 'nav-back') { history.back(); return; }
+  if (NAV_ACTS.has(act)) pushRoute(act, { ...t.dataset });
   if (act === 'lookup') return doLookup();
   if (act === 'pick-league') return pickLeague(t.dataset.id, t.dataset.season);
   if (act === 'tab') { S.tab = t.dataset.tab; renderShell(); return renderTab(); }
