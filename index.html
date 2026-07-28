@@ -2761,12 +2761,75 @@ function showStorylineForm(id) {
     </div></div>`;
 }
 // ---- Searchable Article Archive view ---------------------------------------
+// ---- POP's Draft Grades: the annual institution ------------------------------
+async function ensurePopGrades(){
+  if (S.popGrades) return S.popGrades;
+  try { const r = await fetch('pop-grades.json', { cache: 'no-cache' }); S.popGrades = await r.json(); }
+  catch { S.popGrades = { years: {} }; }
+  return S.popGrades;
+}
+const GRADE_COLOR = g => /^A/.test(g||'') ? '#1a7f37' : /^B/.test(g||'') ? '#7a6a1f' : /^C/.test(g||'') ? '#a05a1f' : '#a01f2d';
+async function showPopGrades(){
+  const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>`;
+  app.innerHTML = `<div style="padding-bottom:24px">${back}${spinner('Opening the filing cabinet…')}</div>`;
+  const pg = await ensurePopGrades();
+  const years = Object.keys(pg.years || {}).sort((a, b) => b - a);
+  const yearCards = years.map(y => {
+    const n = (pg.years[y] || []).length;
+    return `<div class="card" data-act="pop-year" data-year="${esc(y)}" style="cursor:pointer">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div><div style="font-family:var(--serif);font-weight:900;font-size:20px">The ${esc(y)} Draft</div>
+        <div class="faint" style="font-size:12px;margin-top:2px">${n} teams graded · filed to the annual</div></div>
+        <span style="font-size:20px">›</span>
+      </div></div>`;
+  }).join('');
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    <div class="setup-logo" style="font-size:24px">🎓 POP's Draft Grades</div>
+    <p class="muted" style="margin-top:4px">The annual. Every year since 2021, The Powers of Pain grades every pick of the rookie draft — and the record never gets deleted. Reviewable forever.</p>
+    <div class="card" style="border-color:var(--accent-d)">
+      <div class="feat-flag">THE ${new Date().getFullYear()} EDITION</div>
+      <div style="font-family:var(--serif);font-weight:900;font-size:20px;margin-top:6px">The 2026 Draft — the full magazine</div>
+      <div class="dt" style="margin-top:4px">All 16 teams graded, with the Final Report Card. The flagship edition.</div>
+      <a class="btn" href="scfl-2026-draft-grades-flip.html" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;text-decoration:none">Read the 2026 edition →</a>
+    </div>
+    <div class="seclabel" style="margin:18px 0 8px">The Annual Filings</div>
+    ${yearCards || '<div class="card"><div class="dt">No prior filings on record.</div></div>'}
+  </div>`;
+}
+async function showPopYear(year){
+  const pg = await ensurePopGrades();
+  const rows = (pg.years || {})[year] || [];
+  const back = `<button class="btn ghost" data-act="pop-grades" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ POP's Draft Grades</button>`;
+  const cards = rows.map(r => `<div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div style="font-weight:900;font-size:15px">${esc(r.team)}</div>
+      <span style="font-family:var(--serif);font-weight:900;font-size:22px;color:${GRADE_COLOR(r.grade)}">${esc(r.grade || '—')}</span>
+    </div>
+    ${r.note ? `<div class="dt" style="margin-top:6px;line-height:1.5">${esc(r.note)}</div>` : ''}
+  </div>`).join('');
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    <div class="setup-logo" style="font-size:24px">🎓 The ${esc(year)} Draft, Graded</div>
+    <p class="muted" style="margin-top:4px">POP's report card, exactly as filed. ${rows.length} teams.</p>
+    ${cards || '<div class="card"><div class="dt">Nothing filed for this year.</div></div>'}
+  </div>`;
+}
+// baked annual filings appear in the Article Archive as special filings
+function popArchiveEntries(){
+  const pg = S.popGrades; if (!pg || !pg.years) { ensurePopGrades(); return []; }
+  return Object.keys(pg.years).sort((a, b) => b - a).map(y => ({
+    id: 'pop-' + y, kind: 'popgrades', season: y,
+    headline: "POP's Draft Grades: the " + y + ' class',
+    dek: (pg.years[y] || []).length + ' teams graded — the annual report card',
+    byline: 'By The Powers of Pain · Special Filing',
+    paragraphs: (pg.years[y] || []).map(r => r.team + ' — ' + (r.grade || '—') + (r.note ? ': ' + r.note : '')),
+  }));
+}
 function showArticleArchive() {
   const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>`;
   const term = (S.archiveQuery || '').trim().toLowerCase();
-  let list = [...(S.artArchive || [])];
+  let list = [...popArchiveEntries(), ...(S.artArchive || [])];
   if (term) list = list.filter(a => (a.headline + ' ' + a.dek + ' ' + a.byline + ' ' + a.section + ' ' + (a.paragraphs || []).join(' ') + ' week ' + (a.week != null ? a.week : '')).toLowerCase().includes(term));
-  const kindLabel = k => ({ chat: '💬 Water Cooler', lead: '📰 The Lead', feature: '📰 Feature', investigation: '🔍 Investigation' })[k] || '📄 Article';
+  const kindLabel = k => ({ chat: '💬 Water Cooler', lead: '📰 The Lead', feature: '📰 Feature', investigation: '🔍 Investigation', popgrades: '🎓 Special Filing' })[k] || '📄 Article';
   const cards = list.map(a => `<div class="card" data-act="arch-read" data-id="${esc(a.id)}" style="cursor:pointer">
     <div class="faint" style="font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase">${kindLabel(a.kind)}${a.week != null ? ` · Week ${a.week}` : ''}${a.season ? ` · ${esc(String(a.season))}` : ''}</div>
     <div style="font-family:var(--serif);font-weight:900;font-size:18px;line-height:1.15;margin-top:5px">${esc(a.headline)}</div>
@@ -2781,7 +2844,7 @@ function showArticleArchive() {
   const inp = $('#archSearch'); if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
 }
 function showArchivedArticle(id) {
-  const a = (S.artArchive || []).find(x => x.id === id); if (!a) { toast('Not found'); return showArticleArchive(); }
+  const a = [...popArchiveEntries(), ...(S.artArchive || [])].find(x => x.id === id); if (!a) { toast('Not found'); return showArticleArchive(); }
   const back = `<button class="btn ghost" data-act="archive-articles" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Article Archive</button>`;
   const isFeat = a.kind === 'feature' || a.kind === 'investigation';
   app.innerHTML = `<div style="padding-bottom:24px">${back}
@@ -3313,7 +3376,7 @@ const OFFICE_TOOLS = [
 const NEWSROOM_TOOLS = [
   ['create-issue', '📝', 'Create Issue', 'Build this week’s magazine'],
   ['weekly-stories', '📰', 'Weekly Stories', 'Read the current issue'],
-  ['draft-grades-issue', '🏈', 'POP’s Draft Grades', '2026 rookie draft, graded — flip issue'],
+  ['pop-grades', '🎓', 'POP’s Draft Grades', 'The annual — every class graded since 2021'],
   ['politics', '🏛️', 'SCFL Politics', 'The capitol desk — governance, votes & power'],
   ['sportscenter', '📺', 'SCFL SportsCenter', 'Tuesday Edition — Harry Doyle runs the tape'],
   ['broadcast', '🏟️', 'SCFL Network Live', 'Watch any matchup — the live game broadcast'],
@@ -3338,7 +3401,7 @@ const NEWSROOM_SECTIONS = [
   ['This Week', ['calendar', 'create-issue', 'weekly-stories', 'dashboard']],
   ['The Network', ['sportscenter', 'broadcast']],
   ['Desks & Features', ['politics', 'desk', 'storylines', 'investigations']],
-  ['Editions', ['draft-grades-issue', 'archive']],
+  ['Editions', ['pop-grades', 'archive']],
   ['The Record Room', ['dossier', 'records', 'ex-files', 'archive-articles']],
 ];
 function toolSections(tools, sections) {
@@ -7103,7 +7166,7 @@ async function showSettings() {
 const NAV_ACTS = new Set(['home','newsroom','create-issue','weekly-stories','dashboard','calendar',
   'politics','pol-read','desk','storylines','investigations','inv-read','dossier','records','ex-files',
   'archive-articles','archive','cover-art','predraft-view','draft-room','trade-court','draft-desk',
-  'assets','staff-handbook','staff-import','tc-team','back-news','back','settings','ex-files','power-ranks','money-lines']);
+  'assets','staff-handbook','staff-import','tc-team','back-news','back','settings','ex-files','power-ranks','money-lines','pop-grades','pop-year']);
 let NAV_SILENT = false;
 function pushRoute(act, data) {
   if (NAV_SILENT) return;
@@ -7246,6 +7309,8 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'storyline-hide') { S.storylines = S.storylines || { custom: [], status: {}, hidden: [] }; S.storylines.hidden = [...new Set([...(S.storylines.hidden || []), t.dataset.id])]; saveStorylines(); S.newsCache = {}; return showStorylines(); }
   if (act === 'storyline-unhide-all') { if (S.storylines) S.storylines.hidden = []; saveStorylines(); S.newsCache = {}; return showStorylines(); }
   if (act === 'archive-articles') return showArticleArchive();
+  if (act === 'pop-grades') return showPopGrades();
+  if (act === 'pop-year') return showPopYear(t.dataset.year);
   if (act === 'arch-read') return showArchivedArticle(t.dataset.id);
   if (act === 'quiz-save') {
     const wk = t.dataset.week; const ans = {};
