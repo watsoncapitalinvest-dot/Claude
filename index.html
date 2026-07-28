@@ -6866,6 +6866,70 @@ async function devNotesExport(){
   catch { prompt('Copy these notes:', txt); }
 }
 
+// ---- First-run welcome: install help + guided tour ---------------------------
+const WELCOMEKEY = 'gg.welcome.v1';
+function isStandalonePWA(){
+  return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+}
+function showWelcome(){
+  if ($('#welcomeModal')) return;
+  const android = /android/i.test(navigator.userAgent);
+  const installed = isStandalonePWA();
+  const install = installed
+    ? `<p style="font-size:13px">✅ You're already running the installed app. Good.</p>`
+    : android
+    ? `<p style="font-size:13px"><b>Save it as an app:</b> tap your browser's <b>⋮ menu</b> → <b>Add to Home screen</b> (or <b>Install app</b>). It gets its own icon and opens full-screen like a real app.</p>`
+    : `<p style="font-size:13px"><b>Save it as an app:</b> tap the <b>Share button</b> <span style="border:1px solid var(--border);border-radius:5px;padding:0 5px">⬆︎</span> at the bottom of Safari → scroll down → <b>Add to Home Screen</b>. It gets its own icon and opens full-screen like a real app.</p>`;
+  const m = document.createElement('div');
+  m.id = 'welcomeModal';
+  m.style.cssText = 'position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:20px';
+  m.innerHTML = `<div class="card" style="max-width:440px;width:100%;margin:0">
+    <h3 style="margin-top:0">🏛️ Welcome to the Office${staffName() ? ', ' + esc(staffName()) : ''}</h3>
+    <p style="font-size:13px">This is the SCFL's front office, newsroom and TV network. Everything in here runs on the real league.</p>
+    ${install}
+    <p style="font-size:13px">Want the two-minute walkthrough of where everything lives?</p>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn" data-act="start-tour" style="flex:1">🎓 Take the tour</button>
+      <button class="btn ghost" data-act="welcome-close" style="flex:1">I'll explore</button>
+    </div></div>`;
+  document.body.appendChild(m);
+}
+const TOUR_STEPS = [
+  { act:'home',      title:'The Executive Office',  text:'Home base. The Board Room holds the War Room, Trade Court and Draft Board. League Data exports rosters and matchups. The Staff Desk is your tools — the Vault, the Handbook, and Send to HQ.' },
+  { act:null,        title:'Getting around',        text:'The ‹ arrow up top goes back one page — and on iPhone you can just swipe from the left edge, like any app. Tapping the SCFL shield always brings you home.' },
+  { act:'newsroom',  title:'The Newsroom',          text:'The league\'s magazine. THIS WEEK builds and reads the weekly issue. THE NETWORK has our shows. Below that: the Politics desk, the Water Cooler, Storylines, Investigations and the archives.' },
+  { act:'weekly-stories', title:'Weekly Stories',   text:'The current issue lives here — every article, feature and column for the week. New editions just appear when HQ publishes; you never have to update anything.' },
+  { act:'newsroom',  title:'The Water Cooler',      text:'The easiest way to get published: open Newsroom Desk, paste a juicy stretch of the league chat, and it writes a Water Cooler article with your byline. Send it to HQ and it runs in the next issue.' },
+  { act:'assets',    title:'The Asset Vault',       text:'Every league graphic — logos, covers, Harry Doyle, the works. Tap to open full size, long-press to save, or Share straight to the chat.' },
+  { act:'home',      title:'Notes & sending work in', text:'The 🛠 wrench up top leaves a note for the developer from any page — bugs, ideas, complaints. And 📤 Send to HQ packages everything you\'ve made (articles, notes, picks) to text to John. That\'s the whole loop.' },
+  { act:null,        title:'That\'s the tour',      text:'The 📖 Staff Handbook in the Office has all of this written down. Now go make something. Welcome aboard.' },
+];
+function startTour(i){
+  try { localStorage.setItem(WELCOMEKEY, '1'); } catch {}
+  const old = $('#tourCard'); if (old) old.remove();
+  if (i >= TOUR_STEPS.length) return endTour();
+  const st = TOUR_STEPS[i];
+  if (st.act) navReplay(st.act, {});
+  const c = document.createElement('div');
+  c.id = 'tourCard';
+  c.style.cssText = 'position:fixed;left:12px;right:12px;bottom:14px;z-index:96';
+  c.innerHTML = `<div class="card" style="margin:0;box-shadow:0 12px 40px rgba(0,0,0,.45)">
+    <div style="font-size:10px;font-weight:900;letter-spacing:.18em;color:var(--accent);text-transform:uppercase">Tour · ${i + 1} of ${TOUR_STEPS.length}</div>
+    <div style="font-weight:900;font-size:16px;margin-top:4px">${st.title}</div>
+    <p style="font-size:13px;margin:6px 0 0">${st.text}</p>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      ${i + 1 < TOUR_STEPS.length
+        ? `<button class="btn" data-act="tour-next" data-step="${i + 1}" style="flex:1">Next →</button>`
+        : `<button class="btn" data-act="tour-end" style="flex:1">Finish</button>`}
+      <button class="btn ghost" data-act="tour-end" style="width:auto;padding:8px 14px">End tour</button>
+    </div></div>`;
+  document.body.appendChild(c);
+}
+function endTour(){
+  const c = $('#tourCard'); if (c) c.remove();
+  const m = $('#welcomeModal'); if (m) m.remove();
+  toast('Tour over. The Handbook has the rest.');
+}
 // ---- Staff collaboration: package local additions / merge a package ----------
 function staffBundle(){
   const slim = a => { const c = Object.assign({}, a);
@@ -6942,6 +7006,7 @@ function showStaffHandbook(){
   app.innerHTML = `<button class="btn ghost" data-act="back" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back</button>
     <div class="card"><h3>📖 The Staff Handbook</h3>
     <p><b>Welcome to the SCFL Executive Office.</b> This is the league's front office, newsroom and network, and you're on staff now.</p>
+    <div style="margin:6px 0 2px"><button class="btn ghost" data-act="start-tour" style="width:auto;padding:8px 16px">🎓 Replay the app tour</button></div>
     <h4>Getting set up</h4>
     <p>1. Open the app link in Safari or Chrome on your phone.<br>
     2. <b>Add it to your home screen</b> (Share button → "Add to Home Screen") — it installs like a real app.<br>
@@ -7081,7 +7146,13 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
   if (act === 'draft-grades-issue') { window.open('scfl-2026-draft-grades-flip.html', '_blank'); return; }
   if (act === 'sportscenter') { window.open('scfl-sportscenter.html', '_blank'); return; }
-  if (act === 'staff-set') { const n = t.dataset.name || (prompt('Name for this desk?') || '').trim(); if (n) { setStaff(n); S.shieldShown = false; toast('Welcome to the Office, ' + n); } renderShell(); return showMenu(); }
+  if (act === 'staff-set') { const n = t.dataset.name || (prompt('Name for this desk?') || '').trim(); if (n) { setStaff(n); S.shieldShown = false; } renderShell(); showMenu();
+    if (n && !localStorage.getItem(WELCOMEKEY)) setTimeout(showWelcome, 1600);
+    return; }
+  if (act === 'start-tour') { const m = $('#welcomeModal'); if (m) m.remove(); const h = $('#devNoteModal'); if (h) h.remove(); return startTour(0); }
+  if (act === 'tour-next') return startTour(parseInt(t.dataset.step, 10));
+  if (act === 'tour-end') return endTour();
+  if (act === 'welcome-close') { try { localStorage.setItem(WELCOMEKEY, '1'); } catch {} const m = $('#welcomeModal'); if (m) m.remove(); return; }
   if (act === 'staff-switch') { const n = (prompt('Who is at the desk?', staffName()) || '').trim(); if (n) setStaff(n); return showMenu(); }
   if (act === 'staff-handbook') return showStaffHandbook();
   if (act === 'staff-send') return staffSend();
