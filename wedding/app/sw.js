@@ -1,5 +1,5 @@
 /* John & Emma's Wedding — offline cache */
-var CACHE = "je-wedding-v5";
+var CACHE = "je-wedding-v6";
 var ASSETS = [
   "./",
   "./index.html",
