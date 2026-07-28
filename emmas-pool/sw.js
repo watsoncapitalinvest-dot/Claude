@@ -1,7 +1,7 @@
-/* SPS Pools & Spas — service worker.
-   IMPORTANT: bump CACHE on every release (sps-v1 -> sps-v2 ...) so
+/* Emma's Pool — service worker.
+   IMPORTANT: bump CACHE on every release (ep-v1 -> ep-v2 ...) so
    installed devices pick up the new files. */
-const CACHE = 'sps-v1';
+const CACHE = 'ep-v1';
 
 const CORE = [
   './',

@@ -1,5 +1,5 @@
 /* ============================================================
-   SPS Pools & Spas — Back Office
+   Emma's Pool — Back Office
    Vanilla JS, no dependencies. Data lives in localStorage.
    ============================================================ */
 'use strict';
@@ -9,7 +9,7 @@ const store = (() => {
   let ok = false;
   const mem = {};
   try {
-    const t = '__sps_test__';
+    const t = '__ep_test__';
     localStorage.setItem(t, '1');
     localStorage.removeItem(t);
     ok = true;
@@ -35,12 +35,12 @@ const store = (() => {
 })();
 
 const K = {
-  company: 'sps-company',
-  techs: 'sps-techs',
-  customers: 'sps-customers',
-  visits: 'sps-visits',
-  invoices: 'sps-invoices',
-  iosHint: 'sps-ios-hint-dismissed'
+  company: 'ep-company',
+  techs: 'ep-techs',
+  customers: 'ep-customers',
+  visits: 'ep-visits',
+  invoices: 'ep-invoices',
+  iosHint: 'ep-ios-hint-dismissed'
 };
 
 const DB = {
@@ -1195,16 +1195,16 @@ function viewSettings() {
 
     <div class="card"><h3>Danger zone</h3>
       <div class="btn-row">
-        <button class="btn ghost sm" onclick="A.loadSample()">Load sample data</button>
+        <button class="btn ghost sm" onclick="A.loadSample()">Load Emma&#39;s pool history</button>
         <button class="btn danger sm" onclick="A.resetAll()">Reset everything</button>
       </div>
     </div>
-    <p class="hint" style="margin-top:14px;text-align:center">SPS Pools &amp; Spas Back Office · works offline once installed</p>`;
+    <p class="hint" style="margin-top:14px;text-align:center">Emma&#39;s Pool Back Office · works offline once installed</p>`;
 }
 
 A.saveCompany = () => {
   DB.company = {
-    name: $('#s-name').value.trim() || 'SPS Pools & Spas',
+    name: $('#s-name').value.trim() || "Emma's Pool",
     phone: $('#s-phone').value.trim(),
     email: $('#s-email').value.trim(),
     address: $('#s-address').value.trim()
@@ -1235,7 +1235,7 @@ A.exportCustomersCSV = () => {
     (c.plan || {}).freq || '', (c.plan || {}).day || '', (c.plan || {}).price || '',
     techName(c.tech), c.status, (c.pool || {}).gallons || '', (c.pool || {}).type || '', c.createdAt
   ]);
-  download('sps-customers.csv', [head, ...rows].map(r => r.map(csvCell).join(',')).join('\n'), 'text/csv');
+  download('emmas-pool-customers.csv', [head, ...rows].map(r => r.map(csvCell).join(',')).join('\n'), 'text/csv');
   toast('Customers exported');
 };
 A.exportInvoicesCSV = () => {
@@ -1244,11 +1244,11 @@ A.exportInvoicesCSV = () => {
     const c = getCustomer(i.customerId);
     return [i.number, c ? c.name : '', i.date, i.dueDate, Number(i.total || 0).toFixed(2), i.status, i.paidDate || ''];
   });
-  download('sps-invoices.csv', [head, ...rows].map(r => r.map(csvCell).join(',')).join('\n'), 'text/csv');
+  download('emmas-pool-invoices.csv', [head, ...rows].map(r => r.map(csvCell).join(',')).join('\n'), 'text/csv');
   toast('Invoices exported');
 };
 A.exportBackup = () => {
-  download('sps-backup-' + todayISO() + '.json', JSON.stringify({
+  download('emmas-pool-backup-' + todayISO() + '.json', JSON.stringify({
     exportedAt: new Date().toISOString(),
     company: DB.company, techs: DB.techs, customers: DB.customers,
     visits: DB.visits, invoices: DB.invoices
@@ -1257,10 +1257,10 @@ A.exportBackup = () => {
 };
 
 A.loadSample = () => {
-  confirmModal('Load sample data?', 'Demo techs, customers, visits and invoices will be added on top of your current data.', () => {
+  confirmModal("Load Emma's pool history?", "Her July pool log (visits and chemical doses) will be added on top of your current data.", () => {
     seedSampleData();
     closeModal();
-    toast('Sample data loaded');
+    toast('Pool history loaded');
     render();
   });
 };
@@ -1294,70 +1294,59 @@ function confirmModal(title, message, cb) {
 }
 A.confirmYes = () => { const cb = confirmCb; confirmCb = null; if (cb) cb(); };
 
-/* ---------- sample data ---------- */
+/* ---------- seed data: Emma's real pool log (July back history) ---------- */
 function seedSampleData() {
-  const today = todayISO();
   const todayDay = DAYS[new Date().getDay()];
-  const otherDay = DAYS[(new Date().getDay() + 2) % 7];
+  const y = new Date().getFullYear();
+  const d7 = (day) => y + '-07-' + String(day).padStart(2, '0'); // log dates are all July
 
-  const t1 = { id: uid('t'), name: 'Mike Rivera', phone: '(555) 201-4488', color: TECH_PALETTE[0] };
-  const t2 = { id: uid('t'), name: 'Dana Brooks', phone: '(555) 201-9917', color: TECH_PALETTE[1] };
-  DB.techs.push(t1, t2);
+  const emma = { id: uid('t'), name: 'Emma', phone: '', color: TECH_PALETTE[0] };
+  DB.techs.push(emma);
 
-  const mk = (name, address, phone, freq, day, price, tech, gallons, type, extras) => Object.assign({
-    id: uid('c'), name, address, phone, email: name.toLowerCase().replace(/[^a-z]+/g, '.') + '@example.com',
-    plan: { freq, day, price }, tech,
-    pool: Object.assign({ gallons, type, surface: 'Plaster', equipment: 'Single-speed pump, cartridge filter' }, (extras && extras.pool) || {}),
-    access: Object.assign({ gate: '', pet: '', notes: '' }, (extras && extras.access) || {}),
-    status: 'active', createdAt: addDays(today, -84)
-  }, (extras && extras.top) || {});
+  const c = {
+    id: uid('c'), name: "Emma's Pool", address: 'Home — backyard pool', phone: '', email: '',
+    plan: { freq: 'weekly', day: todayDay, price: 0 },
+    tech: emma.id,
+    pool: { gallons: 0, type: 'Chlorine', surface: 'Vinyl liner', equipment: 'Robot cleaner; liquid chlorine 10%' },
+    access: { gate: '', pet: '', notes: '' },
+    status: 'active', createdAt: d7(16)
+  };
+  DB.customers.push(c);
 
-  const c1 = mk('Harold Jenkins', '412 Cypress Bend Dr', '(555) 314-2210', 'weekly', todayDay, 45, t1.id, 15000, 'Chlorine',
-    { access: { gate: '#4482', pet: 'Golden retriever — friendly', notes: 'Gate sticks; lift while pushing' } });
-  const c2 = mk('Maria Delgado', '88 Bluewater Ct', '(555) 887-4451', 'weekly', todayDay, 50, t1.id, 12000, 'Saltwater',
-    { pool: { equipment: 'Variable-speed pump, salt cell, DE filter' } });
-  const c3 = mk('The Whitfields', '1509 Sandpiper Ln', '(555) 662-1078', 'biweekly', todayDay, 60, t2.id, 18000, 'Chlorine',
-    { top: { createdAt: addDays(today, -28) }, access: { pet: 'Two cats (indoor)', gate: 'Keypad 7715' } });
-  const c4 = mk('Sunrise HOA — Cabana Pool', '200 Sunrise Blvd', '(555) 440-9090', 'weekly', otherDay, 120, t2.id, 32000, 'Chlorine',
-    { pool: { surface: 'Pebble', equipment: 'Dual pumps, sand filter, chlorinator' } });
-  const c5 = mk('Grace Okafor', '77 Lagoon View Ter', '(555) 219-8834', 'monthly', todayDay, 85, t1.id, 10000, 'Spa',
-    { top: { createdAt: addDays(today, -120) } });
-  const c6 = mk('Tom Baxter', '963 Coral Reef Rd', '(555) 705-1123', 'weekly', otherDay, 45, t2.id, 14000, 'Chlorine',
-    { top: { status: 'paused' } });
-  DB.customers.push(c1, c2, c3, c4, c5, c6);
-
-  DB.visits.push({
-    id: uid('v'), customerId: c1.id, date: addDays(today, -7), techId: t1.id,
-    readings: { fc: '2.5', ph: '7.5', ta: '95', cya: '40', ch: '250', salt: '' },
-    tasks: ['Skim & net', 'Brush walls', 'Empty baskets', 'Test water'],
-    chemicals: [{ name: 'Liquid chlorine', qty: 32, unit: 'fl oz' }],
-    notes: 'Water clear. Filter pressure normal.', createdAt: addDays(today, -7)
-  }, {
-    id: uid('v'), customerId: c2.id, date: addDays(today, -7), techId: t1.id,
-    readings: { fc: '4.5', ph: '7.9', ta: '110', cya: '70', ch: '300', salt: '3100' },
-    tasks: ['Skim & net', 'Test water', 'Add chemicals', 'Equipment check'],
-    chemicals: [{ name: 'Muriatic acid', qty: 16, unit: 'fl oz' }],
-    notes: 'pH trending high — added acid, recheck next visit.', createdAt: addDays(today, -7)
-  }, {
-    id: uid('v'), customerId: c4.id, date: addDays(today, -3), techId: t2.id,
-    readings: { fc: '1.5', ph: '7.4', ta: '85', cya: '35', ch: '220', salt: '' },
-    tasks: ['Skim & net', 'Vacuum', 'Empty baskets', 'Test water', 'Add chemicals'],
-    chemicals: [{ name: 'Liquid chlorine', qty: 1, unit: 'gal' }, { name: 'Baking soda', qty: 2, unit: 'lb' }],
-    notes: 'Heavy leaf load after wind. HOA notified about tree trimming.', createdAt: addDays(today, -3)
-  });
-
-  const num = (n) => 'INV-' + n;
-  DB.invoices.push({
-    id: uid('i'), customerId: c1.id, number: num(1001), date: addDays(today, -20), dueDate: addDays(today, -6),
-    items: [{ desc: 'Monthly pool service (weekly plan)', amount: 180 }], total: 180, status: 'unpaid', paidDate: null
-  }, {
-    id: uid('i'), customerId: c2.id, number: num(1002), date: addDays(today, -12), dueDate: addDays(today, 2),
-    items: [{ desc: 'Monthly pool service (weekly plan)', amount: 200 }, { desc: 'Salt cell cleaning', amount: 35 }],
-    total: 235, status: 'paid', paidDate: addDays(today, -4)
-  }, {
-    id: uid('i'), customerId: c4.id, number: num(1003), date: addDays(today, -5), dueDate: addDays(today, 9),
-    items: [{ desc: 'Commercial pool service — monthly', amount: 480 }], total: 480, status: 'unpaid', paidDate: null
-  });
+  // Transcribed from her handwritten July pool log
+  const v = (day, entry) => Object.assign({
+    id: uid('v'), customerId: c.id, date: d7(day), techId: emma.id,
+    readings: {}, tasks: [], chemicals: [], notes: '', createdAt: d7(day)
+  }, entry);
+  DB.visits.push(
+    v(16, { tasks: ['Add chemicals'],
+      chemicals: [{ name: 'Algaecide', qty: 4, unit: 'fl oz' }],
+      notes: 'Added Pool Rx.' }),
+    v(18, { tasks: ['Add chemicals'],
+      chemicals: [{ name: 'Liquid chlorine', qty: 80, unit: 'fl oz' }] }),
+    v(20, { tasks: ['Vacuum', 'Add chemicals'],
+      chemicals: [{ name: 'Liquid chlorine', qty: 32, unit: 'fl oz' }],
+      notes: 'Water clear but light debris on bottom — used robot, kicked up some debris.' }),
+    v(21, { tasks: ['Add chemicals'],
+      chemicals: [{ name: 'Liquid chlorine', qty: 16, unit: 'fl oz' }, { name: 'Clarifier', qty: 2, unit: 'fl oz' }],
+      notes: 'Water slightly cloudy.' }),
+    v(22, { tasks: ['Add chemicals'],
+      chemicals: [{ name: 'Liquid chlorine', qty: 32, unit: 'fl oz' }],
+      notes: 'Water slightly cloudy.' }),
+    v(24, { tasks: ['Test water'],
+      readings: { fc: '4', ph: '7.4' },
+      notes: 'Added nothing — chlorine between 3–5 ppm.' }),
+    v(25, { tasks: ['Test water', 'Add chemicals'],
+      readings: { ph: '7.4' },
+      chemicals: [{ name: 'Liquid chlorine', qty: 20, unit: 'fl oz' }],
+      notes: 'Water slightly cloudy but pretty clear, no green.' }),
+    v(26, { tasks: ['Add chemicals'],
+      chemicals: [{ name: 'Liquid chlorine', qty: 28, unit: 'fl oz' }],
+      notes: 'Rained heavy the past 2 days. Water really clear. A little algae growth in lip of vinyl surrounding bottom of pool. Used liquid chlorine 10%.' }),
+    v(27, { tasks: ['Vacuum', 'Test water'],
+      readings: { fc: '4.5', ph: '7.4' },
+      notes: 'Pool crystal clear. Used robot on bottom — kicked up stuff, slightly cloudy after. Chlorine 4–5 ppm.' })
+  );
 
   save('techs'); save('customers'); save('visits'); save('invoices');
 }
@@ -1368,22 +1357,22 @@ function showSetup() {
   $('#app').hidden = true;
   $('#setup').innerHTML = `
     <div class="setup-card">
-      <div class="brand"><span class="brand-badge">SPS</span></div>
+      <div class="brand"><span class="brand-badge">EP</span></div>
       <h1>Welcome to your back office</h1>
-      <p class="lead">Customers, routes, service logs, invoices and reports — all on this device, online or off.</p>
-      <div class="field"><label>Company name</label><input id="su-name" value="SPS Pools &amp; Spas"></div>
+      <p class="lead">Pool log, chemistry readings, dosage calculator and history — all on this device, online or off.</p>
+      <div class="field"><label>Name</label><input id="su-name" value="Emma&#39;s Pool"></div>
       <div class="field-grid">
         <div class="field"><label>Phone</label><input id="su-phone" type="tel" placeholder="(555) 555-0100"></div>
-        <div class="field"><label>Email</label><input id="su-email" type="email" placeholder="office@spspools.com"></div>
+        <div class="field"><label>Email</label><input id="su-email" type="email" placeholder="emma@example.com"></div>
       </div>
-      <div class="field"><label>Service area</label><input id="su-address" placeholder="Palm Harbor & surrounding"></div>
-      <button class="btn primary block" style="margin-bottom:10px" onclick="A.finishSetup(false)">Create back office</button>
-      <button class="btn ghost block" onclick="A.finishSetup(true)">Start with sample data</button>
+      <div class="field"><label>Address</label><input id="su-address" placeholder="Home"></div>
+      <button class="btn primary block" style="margin-bottom:10px" onclick="A.finishSetup(true)">Start with her pool history</button>
+      <button class="btn ghost block" onclick="A.finishSetup(false)">Start empty</button>
     </div>`;
 }
 A.finishSetup = (withSample) => {
   DB.company = {
-    name: $('#su-name').value.trim() || 'SPS Pools & Spas',
+    name: $('#su-name').value.trim() || "Emma's Pool",
     phone: $('#su-phone').value.trim(),
     email: $('#su-email').value.trim(),
     address: $('#su-address').value.trim()
@@ -1393,7 +1382,7 @@ A.finishSetup = (withSample) => {
   $('#setup').hidden = true;
   $('#app').hidden = false;
   render();
-  toast(withSample ? 'Sample data loaded — explore away!' : 'Back office ready');
+  toast(withSample ? "Emma's pool history loaded" : 'Back office ready');
 };
 
 /* ---------- iOS add-to-home-screen hint ---------- */

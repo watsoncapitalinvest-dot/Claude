@@ -1,20 +1,22 @@
-# SPS Pools & Spas — Back Office
+# Emma's Pool — Back Office
 
-A back-office web app for a pool service company. Runs on a phone in the field
-and a computer in the office. Manages customers, service routes, on-site visit
-logging (with water-chemistry readings), invoicing, crew, and reporting, plus a
-pool-chemistry dosage calculator.
+A pool-care web app for Emma's pool. Runs on a phone or a computer. It keeps
+the pool log (chemical doses, chemistry readings, water notes), a service
+schedule, invoicing if ever needed, and a pool-chemistry dosage calculator
+with an ideal-ranges reference.
 
 Built as a **static PWA** — plain HTML + CSS + vanilla JavaScript, no framework,
 no build step. It installs to the home screen and works fully offline.
 
+Her July pool log (algaecide, chlorine doses, clarifier, pH/chlorine readings,
+water-clarity notes) is built in: choose **"Start with her pool history"** on
+first run, or **Settings → Load Emma's pool history** later.
+
 ## ⚠️ Data caveat (read this)
 
 All data is stored **on the device, in the browser** (`localStorage`). It does
-**not** sync between devices or users — the phone and the office computer each
-have their own copy. That's fine for a single owner/dispatcher; shared,
-real-time crew data is a Phase 2 project (hosted database + accounts).
-Use **Settings → Full backup (.json)** regularly to keep a copy of your data.
+**not** sync between devices — a phone and a computer each have their own copy.
+Use **Settings → Full backup (.json)** regularly to keep a copy of the data.
 Clearing the browser's site data erases the app's data.
 
 ## Run locally
@@ -22,7 +24,7 @@ Clearing the browser's site data erases the app's data.
 Any static file server works:
 
 ```bash
-cd sps
+cd emmas-pool
 python3 -m http.server 8080
 # open http://localhost:8080
 ```
@@ -44,7 +46,7 @@ offline mode needs http(s).)
 ### Updating a deployed app
 
 The service worker caches the app for offline use, so after changing any file
-**bump the `CACHE` constant at the top of `sw.js`** (`sps-v1` → `sps-v2`, …)
+**bump the `CACHE` constant at the top of `sw.js`** (`ep-v1` → `ep-v2`, …)
 and push it along with your changes. Every installed device then pulls the new
 version on its next online load.
 
@@ -54,17 +56,16 @@ branch-deploy method above needs no CI at all.)
 ## Features
 
 - **Dashboard** — today's stops, revenue MTD, outstanding, overdue-invoice alert
-- **Schedule** — daily routes from each customer's weekly / bi-weekly / monthly
-  plan, grouped by tech
-- **Clients** — searchable CRM with pool specs, access notes, service history
+- **Schedule** — daily routine from each pool's weekly / bi-weekly / monthly plan
+- **Clients** — pool specs, access notes, full service history
 - **Visits** — chemistry readings with in/out-of-range coloring, task checklist,
   chemicals used, notes
 - **Invoices** — line items, paid/unpaid, overdue tracking
-- **Team** — techs with color-coded routes
-- **Reports** — 6-month revenue chart, chemical usage
+- **Team** — helpers with color-coded routes
+- **Reports** — 6-month revenue chart, chemical usage by month
 - **Tools** — ideal-range reference + dosage calculator (chlorine, pH,
   alkalinity, calcium, CYA, salt, with dilution guidance)
-- **Settings** — company info, CSV/JSON export, sample data, full reset
+- **Settings** — CSV/JSON export, load pool history, full reset
 
 Chemistry guidance is general-purpose: always follow product labels and never
 mix chemicals.
