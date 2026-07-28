@@ -173,6 +173,52 @@
   .facts li{font-size:13.5px; color:var(--muted); border-left:2px solid var(--gold-soft); padding-left:12px}
   .facts li b{color:var(--ink); font-weight:600}
 
+  /* ---------- Question pop-up ---------- */
+  .qmodal{
+    position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center;
+    padding:16px; background:rgba(24,20,14,.48); backdrop-filter:blur(3px);
+    animation:modalFade .35s ease;
+  }
+  .qmodal[hidden]{display:none}
+  @keyframes modalFade{from{opacity:0} to{opacity:1}}
+  .qpop{
+    position:relative; width:min(640px,96vw); max-height:90vh;
+    display:flex; flex-direction:column;
+    background:var(--panel); border:1px solid var(--gold); border-radius:4px;
+    box-shadow:0 30px 90px rgba(20,14,6,.45);
+    animation:popIn .5s cubic-bezier(.2,.85,.3,1);
+  }
+  @keyframes popIn{from{opacity:0; transform:scale(.9) translateY(22px)} to{opacity:1; transform:none}}
+  .qpop::before{content:""; position:absolute; inset:7px; border:1px solid var(--line); border-radius:2px; pointer-events:none; z-index:1}
+  .qpop .corner{position:absolute; color:var(--gold); font-size:15px; line-height:1; opacity:.9; z-index:2; pointer-events:none}
+  .qpop .c-tl{top:13px; left:15px}
+  .qpop .c-tr{top:13px; right:15px; transform:scaleX(-1)}
+  .qpop .c-bl{bottom:13px; left:15px; transform:scaleY(-1)}
+  .qpop .c-br{bottom:13px; right:15px; transform:scale(-1,-1)}
+  .qpop-scroll{overflow-y:auto; padding:36px 36px 28px}
+  .qpop .seal{
+    width:46px; height:46px; border:1px solid var(--gold); border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 12px; color:var(--gold); font-size:24px; background:var(--paper);
+  }
+  .qpop .qcount{
+    text-align:center; font-size:11px; letter-spacing:.32em; text-transform:uppercase;
+    color:var(--gold-deep); margin-bottom:6px;
+  }
+  .qpop .qcount .orn{color:var(--blush); letter-spacing:0; margin:0 10px}
+  .qclose{
+    position:absolute; top:14px; right:18px; z-index:3; background:var(--panel); border:none; cursor:pointer;
+    color:var(--muted); font-size:17px; line-height:1; padding:4px 6px;
+  }
+  .qclose:hover{color:var(--ink)}
+  .qpop .qcard{border:none; box-shadow:none; background:none; padding:0}
+  .qpop .qcard .section{text-align:center}
+  .qpop .qcard h2{text-align:center}
+  .qpop .qbar{margin:14px 0 20px}
+  @media (prefers-reduced-motion: reduce){
+    .qmodal, .qpop{animation:none !important}
+  }
+
   /* ---------- Questionnaire ---------- */
   .qwrap{max-width:640px; margin:0 auto}
   .qbar{display:flex; align-items:center; gap:14px; margin-bottom:26px}
@@ -261,6 +307,14 @@
     </header>
     <main id="view"></main>
     <footer>John <span class="amp">&amp;</span> Emma · Planned With Love</footer>
+  </div>
+</div>
+<div class="qmodal" id="qmodal" hidden role="dialog" aria-modal="true" aria-label="Wedding question">
+  <div class="qpop" id="qpop">
+    <span class="corner c-tl">❧</span><span class="corner c-tr">❧</span>
+    <span class="corner c-bl">❧</span><span class="corner c-br">❧</span>
+    <button class="qclose" id="qclose" aria-label="Close question">✕</button>
+    <div class="qpop-scroll" id="qpopContent"></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -413,26 +467,25 @@
     tabsEl.innerHTML = "";
     TABS.forEach(function(t){
       var b = document.createElement("button");
-      b.className = "tab" + (route.name===t.id || (t.id==="questions" && route.name==="question") ? " active":"");
+      b.className = "tab" + (route.name===t.id || (t.id==="questions" && modalOpen) ? " active":"");
       b.textContent = t.label;
       b.addEventListener("click", function(){ go(t.id); });
       tabsEl.appendChild(b);
     });
   }
   function go(name, qi){
-    route.name = name; if(typeof qi === "number") route.qi = qi;
     if(name==="questions"){
       var next = Q.findIndex(function(q){ return !isAnswered(q); });
-      route.qi = next === -1 ? 0 : next;
-      route.name = "question";
+      openQuestion(next === -1 ? 0 : next);
+      return;
     }
+    route.name = name; if(typeof qi === "number") route.qi = qi;
     render();
     window.scrollTo({top:0, behavior:"smooth"});
   }
   function render(){
     renderTabs();
     if(route.name==="home") renderHome();
-    else if(route.name==="question") renderQuestion(route.qi);
     else if(route.name==="answers") renderReview();
   }
 
@@ -475,15 +528,43 @@
       '<span class="lockline">Unlocks after the questions</span></div>';
   }
 
-  /* ---------------- Question ---------------- */
-  function renderQuestion(i){
+  /* ---------------- Question pop-up ---------------- */
+  var qmodal = document.getElementById("qmodal");
+  var qpop = document.getElementById("qpop");
+  var qpopContent = document.getElementById("qpopContent");
+  var modalOpen = false;
+
+  function openQuestion(i){
+    route.qi = i;
+    modalOpen = true;
+    qmodal.hidden = false;
+    buildQuestion(i);
+    renderTabs();
+  }
+  function closeModal(){
+    if(!modalOpen) return;
+    modalOpen = false;
+    qmodal.hidden = true;
+    render();
+  }
+  document.getElementById("qclose").addEventListener("click", closeModal);
+  qmodal.addEventListener("click", function(e){ if(e.target === qmodal) closeModal(); });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape") closeModal(); });
+  function repop(){
+    qpop.style.animation = "none";
+    void qpop.offsetWidth;
+    qpop.style.animation = "";
+  }
+
+  function buildQuestion(i){
+    route.qi = i;
     var q = Q[i];
     var a = ans(q.id);
     var pct = Math.round((i)/Q.length*100);
     var html =
-      '<div class="qwrap">' +
-        '<div class="qbar"><span class="count">Question ' + (i+1) + ' of 20</span>' +
-        '<span class="rail"><i style="width:' + pct + '%"></i></span></div>' +
+        '<div class="seal script">&amp;</div>' +
+        '<div class="qcount"><span class="orn">❦</span>Question ' + (i+1) + ' of 20<span class="orn">❦</span></div>' +
+        '<div class="qbar"><span class="rail"><i style="width:' + pct + '%"></i></span></div>' +
         '<div class="qcard">' +
           '<div class="section">' + q.section + '</div>' +
           '<h2 class="serif">' + q.title + '</h2>' +
@@ -505,14 +586,15 @@
     html +=
         '</div>' +
         '<div class="qnav">' +
-          '<button class="btn quiet" id="backBtn">' + (i===0 ? "Home" : "Back") + '</button>' +
+          '<button class="btn quiet" id="backBtn">' + (i===0 ? "Close" : "Back") + '</button>' +
           '<span class="hint">Answers save automatically</span>' +
           '<button class="btn" id="nextBtn">' + (i===Q.length-1 ? "Finish" : "Next") + '</button>' +
-        '</div>' +
-      '</div>';
-    view.innerHTML = html;
+        '</div>';
+    qpopContent.innerHTML = html;
+    qpopContent.scrollTop = 0;
+    repop();
 
-    view.querySelectorAll(".chips").forEach(function(chipsEl){
+    qpopContent.querySelectorAll(".chips").forEach(function(chipsEl){
       var gkey = chipsEl.getAttribute("data-group");
       var g = q.groups.filter(function(x){return x.key===gkey;})[0];
       chipsEl.querySelectorAll(".chip").forEach(function(chip){
@@ -533,17 +615,17 @@
         });
       });
     });
-    view.querySelectorAll("textarea").forEach(function(ta){
+    qpopContent.querySelectorAll("textarea").forEach(function(ta){
       ta.addEventListener("input", function(){
         a.notes[ta.getAttribute("data-note")] = ta.value; save();
       });
     });
     document.getElementById("backBtn").addEventListener("click", function(){
-      if(i===0) go("home"); else { route.qi = i-1; route.name="question"; render(); window.scrollTo(0,0); }
+      if(i===0) closeModal(); else buildQuestion(i-1);
     });
     document.getElementById("nextBtn").addEventListener("click", function(){
-      if(i===Q.length-1) go("answers");
-      else { route.qi = i+1; route.name="question"; render(); window.scrollTo(0,0); }
+      if(i===Q.length-1){ modalOpen = false; qmodal.hidden = true; go("answers"); }
+      else buildQuestion(i+1);
     });
   }
 
@@ -588,7 +670,7 @@
     view.innerHTML = html;
     view.querySelectorAll(".edit").forEach(function(b){
       b.addEventListener("click", function(){
-        route.qi = parseInt(b.getAttribute("data-qi"),10); route.name="question"; render(); window.scrollTo(0,0);
+        openQuestion(parseInt(b.getAttribute("data-qi"),10));
       });
     });
     document.getElementById("copyBtn").addEventListener("click", function(){
