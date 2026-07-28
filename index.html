@@ -1576,7 +1576,7 @@ function saveCoverImg(){ try { localStorage.setItem(coverImgKey(), JSON.stringif
 function curCoverImg(){ return S.coverImg && S.coverImg[S.activeWeek]; }
 // Cover images are keyed by slot: the week number for weekly issues, the string
 // 'predraft' for the Draft Issue.
-function coverSlotFor(kind){ return kind === 'predraft' ? 'predraft' : S.activeWeek; }
+function coverSlotFor(kind){ return kind === 'predraft' ? 'predraft' : kind === 'composer' ? ciSlot() : S.activeWeek; }
 function coverImgAt(slot){ return S.coverImg && S.coverImg[slot]; }
 function predraftCoverImg(){ return coverImgAt('predraft'); }
 // Downscale an uploaded image to a sane size before storing (keeps localStorage happy).
@@ -1607,11 +1607,12 @@ async function generateCoverPrompt(kind) {
       `MOOD: the calm before the draft — anticipation, a fresh season, and the marquee cover story above.`;
   } else if (kind === 'composer') {
     const wk = S.activeWeek || 1;
+    const specialEd = ciEdition() === 'special';
     const pool = issuePool(wk); const ci = ciLoad(); const inc = ciIncluded(ci, pool);
     const feat = ci.feature ? pool.find(p => p.key === ci.feature) : null;
     const lineup = pool.filter(p => inc[p.key] && (!feat || p.key !== feat.key));
-    const nl = S.newsCache[wk]; const ts = nl ? topStoryline(nl) : null;
-    ctx = `THE SCFL WEEKLY MAGAZINE — WEEK ${wk} COVER.\n` +
+    const nl = specialEd ? null : S.newsCache[wk]; const ts = nl ? topStoryline(nl) : null;
+    ctx = (specialEd ? `THE SCFL MAGAZINE — SPECIAL EDITION COVER (no week attached; a one-off collector's issue).\n` : `THE SCFL WEEKLY MAGAZINE — WEEK ${wk} COVER.\n`) +
       (feat ? `THE FEATURE — BUILD THE COVER AROUND THIS: ${feat.kind}: ${feat.title}${feat.sub ? ' — ' + feat.sub : ''}\n` : '') +
       (ts ? `THIS WEEK'S COVER STORYLINE: ${ts.label} — ${ts.blurb || ''}\n` : '') +
       (lineup.length ? `ALSO IN THE ISSUE: ${lineup.map(p => p.kind + ': ' + p.title).join(' · ')}\n` : '') +
@@ -2114,7 +2115,7 @@ function issueShelfCard(s) {
   const c = s.cover || {};
   return `<div class="card" style="position:relative">
     <div data-act="open-issue" data-id="${esc(s.id)}" style="cursor:pointer">
-      <div class="cover-sub" style="color:var(--accent);letter-spacing:2px">${esc((s.magName||'SKIRT CHASERS').toUpperCase())} · ${s.predraft ? 'THE DRAFT ISSUE' : 'WEEK ' + s.week}</div>
+      <div class="cover-sub" style="color:var(--accent);letter-spacing:2px">${esc((s.magName||'SKIRT CHASERS').toUpperCase())} · ${s.special ? 'SPECIAL EDITION' : s.predraft ? 'THE DRAFT ISSUE' : 'WEEK ' + s.week}</div>
       <div style="font-family:var(--serif);font-weight:900;font-size:21px;line-height:1.12;margin-top:7px">${esc(c.headline||('Week '+s.week+' Edition'))}</div>
       ${c.subject?`<div class="dt" style="margin-top:5px">${esc(c.subject.name)}${c.subject.tag?` · ${esc(c.subject.tag)}`:''}</div>`:''}
     </div>
@@ -2143,7 +2144,7 @@ function showArchive() {
 }
 function openSavedIssue(id) {
   const snap = loadIssues().find(s => s.id === id);
-  if (snap && snap.flip) { return openFlipOverlay(snap.pages || [], (snap.cover && snap.cover.headline) || ('Week ' + snap.week), snap.week); }
+  if (snap && snap.flip) { return openFlipOverlay(snap.pages || [], (snap.cover && snap.cover.headline) || ('Week ' + snap.week), snap.week, snap.special); }
   if (snap && snap.predraft) {
     S.currentPredraft = snap.predraft; S.reading = true;
     app.innerHTML = `<div id="content"></div>`;
@@ -3512,16 +3513,19 @@ function showNewsroom() {
     ${tools}`);
 }
 // ---- Create Issue — the composer: cover, feature, line-up, publish ----------
-function ciKey(){ return 'gg.ci.' + (S.leagueId || 'x') + '.' + (S.activeWeek || 1); }
+function ciEdition(){ try { return localStorage.getItem('gg.ci.ed') === 'special' ? 'special' : 'week'; } catch { return 'week'; } }
+function ciSlot(){ return ciEdition() === 'special' ? 'special' : (S.activeWeek || 1); }
+function ciKey(){ return 'gg.ci.' + (S.leagueId || 'x') + '.' + ciSlot(); }
 function ciLoad(){ try { return JSON.parse(localStorage.getItem(ciKey()) || 'null') || { feature:null, include:null }; } catch { return { feature:null, include:null }; } }
 function ciSave(d){ try { localStorage.setItem(ciKey(), JSON.stringify(d)); } catch {} }
 function issuePool(wk){
+  const special = ciEdition() === 'special';
   const pool = [];
-  pool.push({ key:'auto', icon:'📰', kind:'Weekly Stories', title:`Week ${wk} game stories`, sub:'Auto-written from the box scores', featurable:false });
-  pool.push({ key:'col:power', icon:'📊', kind:'Column', title:'Power Rankings', featurable:false,
+  if (!special) pool.push({ key:'auto', icon:'📰', kind:'Weekly Stories', title:`Week ${wk} game stories`, sub:'Auto-written from the box scores', featurable:false });
+  if (!special) pool.push({ key:'col:power', icon:'📊', kind:'Column', title:'Power Rankings', featurable:false,
     ready: !!(S.power && S.power[wk] && S.power[wk].length),
     sub: (S.power && S.power[wk] && S.power[wk].length) ? `Filed for Week ${wk}` : 'Not filed — sits out unless uploaded' });
-  pool.push({ key:'col:money', icon:'💰', kind:'Column', title:'Money Lines', featurable:false,
+  if (!special) pool.push({ key:'col:money', icon:'💰', kind:'Column', title:'Money Lines', featurable:false,
     ready: !!(S.money && S.money[wk] && S.money[wk].length),
     sub: (S.money && S.money[wk] && S.money[wk].length) ? `Filed for Week ${wk}` : 'Not filed — sits out unless uploaded' });
   (S.investigations || []).filter(v => !v.tool && (isCommish() || (v.staff || 'published') !== 'private'))
@@ -3531,6 +3535,10 @@ function issuePool(wk){
   (S.desk || []).slice(0, 20).forEach((a, i) => pool.push({ key:'desk:'+(a.ts || i), icon:'💬', kind:'Water Cooler',
     title:a.headline || a.title || 'Untitled desk piece',
     sub:(a.staffBy ? 'by ' + a.staffBy + ' · ' : '') + (a.week ? 'Week ' + a.week : 'unfiled draft'), featurable:true }));
+  const pg = S.popGrades;
+  if (pg && pg.years) Object.keys(pg.years).sort((a, b) => b - a).forEach(y =>
+    pool.push({ key:'pop:'+y, icon:'🎓', kind:"POP's Draft Grades", title:"POP's Draft Grades: the " + y + ' class',
+      sub:(pg.years[y] || []).length + ' teams graded — the annual report card', featurable:true }));
   return pool;
 }
 function ciIncluded(ci, pool){
@@ -3538,9 +3546,12 @@ function ciIncluded(ci, pool){
   const inc = {}; pool.forEach(p => { inc[p.key] = p.key === 'auto' || (p.key.startsWith('col:') ? !!p.ready : false); });
   return inc;
 }
-function showCreateIssue() {
+async function showCreateIssue() {
   S.reading = false;
   loadDesk(); loadPower(); loadMoney();
+  await ensurePopGrades();
+  const special = ciEdition() === 'special';
+  const slot = ciSlot();
   const wk = S.activeWeek || 1;
   const cur = S.nflState && (S.nflState.display_week || S.nflState.week);
   const weekOpts = Array.from({ length: 18 }, (_, i) => i + 1).map(w =>
@@ -3549,8 +3560,8 @@ function showCreateIssue() {
   const ci = ciLoad();
   const inc = ciIncluded(ci, pool);
   const featurables = pool.filter(p => p.featurable);
-  const coverPrompt = (S.coverPrompt && S.coverPrompt[wk]) || '';
-  const hasCover = !!(S.coverImg && S.coverImg[wk]);
+  const coverPrompt = (S.coverPrompt && S.coverPrompt[slot]) || '';
+  const hasCover = !!(S.coverImg && S.coverImg[slot]);
   const q = quizFor(wk) || {};
   const quizDone = QUIZ_FIELDS.filter(f => (q[f.k] || '').trim()).length;
   const row = (p, type) => `<label class="row" style="align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">
@@ -3564,9 +3575,17 @@ function showCreateIssue() {
     <p class="muted" style="margin:4px 0 18px">Pick the line-up, set the feature, direct the cover, publish the magazine.</p>
 
     <div class="card">
+      <label class="label">Which edition?</label>
+      <select class="input" data-act="ci-edition">
+        <option value="week"${special ? '' : ' selected'}>The Weekly Issue</option>
+        <option value="special"${special ? ' selected' : ''}>Special Edition — draft, offseason, one-offs</option>
+      </select>
+      ${special ? '<div class="faint" style="font-size:12px;margin-top:6px">No week attached — investigations, politics, desk pieces and POP’s Draft Grades. It runs under the SPECIAL EDITION masthead.</div>' : ''}
+    </div>
+    ${special ? '' : `<div class="card">
       <label class="label">Which week?</label>
       <select id="ciWeek" class="input" data-act="ci-week">${weekOpts}</select>
-    </div>
+    </div>`}
 
     <div class="seclabel">1 · The Feature</div>
     <div class="card">
@@ -3577,7 +3596,7 @@ function showCreateIssue() {
 
     <div class="seclabel">2 · The Line-up</div>
     <div class="card">
-      <div class="faint" style="font-size:12px;margin-bottom:4px">Everything checked goes in, feature first.</div>
+      <div class="faint" style="font-size:12px;margin-bottom:4px">Everything checked goes in, feature first.${special ? ' Weekly columns sit this one out.' : ''}</div>
       ${pool.map(p => row(p, 'checkbox')).join('')}
     </div>
 
@@ -3591,18 +3610,18 @@ function showCreateIssue() {
       </div>
       <div id="ciCoverErr" class="err"></div>
       <div style="height:12px"></div>
-      <input id="coverImgFile" type="file" accept="image/*" data-act="cover-img-file" data-kind="week" class="fileinput" />
+      <input id="coverImgFile" type="file" accept="image/*" data-act="cover-img-file" data-kind="composer" class="fileinput" />
       <div id="coverImgStatus" class="faint" style="font-size:12px;margin-top:8px">${hasCover ? '✓ Cover image set for this issue.' : 'Upload the finished cover (portrait works best).'}</div>
-      ${hasCover ? `<img src="${S.coverImg[wk]}" alt="cover" style="width:52%;border-radius:10px;margin-top:10px;display:block">` : ''}
+      ${hasCover ? `<img src="${S.coverImg[slot]}" alt="cover" style="width:52%;border-radius:10px;margin-top:10px;display:block">` : ''}
     </div>
 
-    <div class="seclabel">The Tuesday Brief <span class="faint" style="font-weight:600;letter-spacing:0;text-transform:none">(optional — steers the auto writers)</span></div>
+    ${special ? '' : `<div class="seclabel">The Tuesday Brief <span class="faint" style="font-weight:600;letter-spacing:0;text-transform:none">(optional — steers the auto writers)</span></div>
     <div class="card">
       <div class="dt">${quizDone ? `✅ ${quizDone}/${QUIZ_FIELDS.length} answered.` : 'Not filled in yet.'}</div>
       <button class="btn ghost" data-act="questionnaire" style="margin-top:10px">${quizDone ? 'Edit the brief' : 'Fill in the brief'} →</button>
-    </div>
+    </div>`}
 
-    <button class="btn" data-act="ci-publish" style="margin-top:18px;font-size:16px;padding:16px">📖 Publish the Week ${wk} issue →</button>
+    <button class="btn" data-act="ci-publish" style="margin-top:18px;font-size:16px;padding:16px">📖 Publish the ${special ? 'Special Edition' : 'Week ' + wk + ' issue'} →</button>
     <div class="faint" style="font-size:11.5px;text-align:center;margin-top:8px">Publishes with the flip treatment — and files itself to Back Issues automatically.</div>
   `);
 }
@@ -3657,6 +3676,12 @@ function poolItemPages(key, wk, nl){
     const p = (typeof POLITICS_DESK !== 'undefined' ? POLITICS_DESK : []).find(x => 'pol:' + x.id === key);
     return p ? [fmArticlePage('SCFL POLITICS · ' + (p.status || ''), p.hl, p.dek, p.kicker + (p.date ? ' · ' + p.date : ''), p.paragraphs || [])] : [];
   }
+  if (key.startsWith('pop:')) {
+    const y = key.slice(4); const rows = (S.popGrades && S.popGrades.years && S.popGrades.years[y]) || [];
+    if (!rows.length) return [];
+    return [fmArticlePage("POP'S DRAFT GRADES · THE ANNUAL", 'The ' + y + ' Draft, Graded', rows.length + ' teams on the report card — the record never gets deleted.', 'By The Powers of Pain',
+      rows.map(r => r.team + ' — ' + (r.grade || '—') + (r.note ? ': ' + r.note : '')))];
+  }
   if (key.startsWith('desk:')) {
     const a = (S.desk || []).find((x, i) => 'desk:' + (x.ts || i) === key);
     if (!a) return [];
@@ -3666,14 +3691,16 @@ function poolItemPages(key, wk, nl){
   return [];
 }
 async function publishFlipIssue(){
+  const special = ciEdition() === 'special';
   const wk = S.activeWeek || 1;
+  const slot = ciSlot();
   const pool = issuePool(wk);
   const ci = ciLoad();
   const inc = ciIncluded(ci, pool);
   const chosen = pool.filter(p => inc[p.key]);
   if (!chosen.length && !ci.feature) { toast('Pick at least one article for the line-up'); return; }
   toast('Assembling the issue…');
-  const needNl = inc['auto'];
+  const needNl = !special && inc['auto'];
   const nl = needNl ? await ensureNl(wk) : (S.newsCache[wk] || null);
   const ordered = [];
   if (ci.feature) { const f = pool.find(p => p.key === ci.feature); if (f) ordered.push(f); }
@@ -3681,31 +3708,31 @@ async function publishFlipIssue(){
   const pages = [];
   // cover page
   const featItem = ci.feature ? pool.find(p => p.key === ci.feature) : (ordered[0] || null);
-  const cimg = S.coverImg && S.coverImg[wk];
+  const cimg = S.coverImg && S.coverImg[slot];
   pages.push(`<div class="fmcoverpg" style="${cimg ? `background-image:url(${cimg})` : 'background:linear-gradient(160deg,#1a1a24,#0d0d13)'}">
     <div class="fmcx">
-      <div style="font-size:10px;font-weight:900;letter-spacing:.3em;color:#d8b45a">SCFL · THE MAGAZINE</div>
-      <div style="font-family:var(--serif);font-weight:900;font-size:30px;line-height:1.08;margin-top:8px">${esc(featItem ? featItem.title : ('The Week ' + wk + ' Edition'))}</div>
-      <div style="font-size:12px;color:#cfcfd6;margin-top:8px">Week ${wk} · ${esc(S.season || '')} Season${featItem ? ' · ' + esc(featItem.kind) : ''}</div>
+      <div style="font-size:10px;font-weight:900;letter-spacing:.3em;color:#d8b45a">${special ? 'SCFL · SPECIAL EDITION' : 'SCFL · THE MAGAZINE'}</div>
+      <div style="font-family:var(--serif);font-weight:900;font-size:30px;line-height:1.08;margin-top:8px">${esc(featItem ? featItem.title : (special ? 'The Special Edition' : 'The Week ' + wk + ' Edition'))}</div>
+      <div style="font-size:12px;color:#cfcfd6;margin-top:8px">${special ? 'Special Edition' : 'Week ' + wk} · ${esc(S.season || '')} Season${featItem ? ' · ' + esc(featItem.kind) : ''}</div>
     </div></div>`);
   for (const item of ordered) pages.push(...poolItemPages(item.key, wk, nl));
   pages.push(`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center">
     <div style="font-family:var(--serif);font-weight:900;font-size:24px">That's the issue.</div>
-    <div class="fm-dek" style="margin-top:8px">SCFL Newsroom · Week ${wk} · see you next Tuesday.</div></div>`);
-  openFlipOverlay(pages, (featItem ? featItem.title : 'Week ' + wk + ' Edition'), wk);
+    <div class="fm-dek" style="margin-top:8px">SCFL Newsroom · ${special ? 'Special Edition' : 'Week ' + wk} · see you next Tuesday.</div></div>`);
+  openFlipOverlay(pages, (featItem ? featItem.title : (special ? 'Special Edition' : 'Week ' + wk + ' Edition')), wk, special);
   flipSaveToShelf(true);
   toast('Published — filed to Back Issues');
 }
 // ---- the flip reader ---------------------------------------------------------
 let FM = { pages: [], i: 0 };
-function openFlipOverlay(pages, title, week){
-  FM = { pages, i: 0, title, week };
+function openFlipOverlay(pages, title, week, special){
+  FM = { pages, i: 0, title, week, special: !!special };
   const old = $('#flipMag'); if (old) old.remove();
   const m = document.createElement('div');
   m.id = 'flipMag';
   m.innerHTML = `
     <div class="fmbar">
-      <div class="t">SCFL <span>Magazine</span> · Wk ${week}</div>
+      <div class="t">SCFL <span>Magazine</span> · ${special ? 'Special Edition' : 'Wk ' + week}</div>
       <div style="display:flex;gap:8px">
         <button class="btn ghost" data-act="flip-save" style="width:auto;padding:6px 12px;font-size:12px" title="Published issues archive automatically — tap to re-file this version">📚 Archived</button>
         <button class="btn ghost" data-act="flip-close" style="width:auto;padding:6px 12px;font-size:12px">✕</button>
@@ -3741,9 +3768,10 @@ function flipTo(i){
   else { FM.i = i; fmRender(true); }
 }
 function flipSaveToShelf(silent){
-  const id = 'flip-' + (S.season || '') + '-w' + FM.week;
+  const slug = String(FM.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+  const id = FM.special ? ('flip-' + (S.season || '') + '-sp-' + (slug || 'special')) : ('flip-' + (S.season || '') + '-w' + FM.week);
   const list = loadIssues().filter(x => x.id !== id);
-  list.unshift({ id, week: FM.week, season: S.season, flip: true, pages: FM.pages, savedAt: Date.now(),
+  list.unshift({ id, week: FM.week, season: S.season, flip: true, special: !!FM.special, pages: FM.pages, savedAt: Date.now(),
     cover: { headline: FM.title || ('Week ' + FM.week + ' Edition') }, magName: 'SCFL MAGAZINE' });
   saveIssues(list.slice(0, 24));
   if (!silent) toast('Filed to Back Issues');
@@ -7598,20 +7626,21 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'ci-cover-gen') {
     const err = $('#ciCoverErr'); if (err) err.textContent = '';
     const wk = S.activeWeek || 1;
+    const slot = ciSlot(); const specialEd = ciEdition() === 'special';
     if (!(S.apiKey || '').trim()) {
       // offline direction: built from the line-up, no AI needed
       const pool = issuePool(wk); const d = ciLoad(); const inc = ciIncluded(d, pool);
       const feat = d.feature ? pool.find(p => p.key === d.feature) : null;
       const others = pool.filter(p => inc[p.key] && (!feat || p.key !== feat.key)).slice(0, 4);
       const p = `Prestige sports-magazine cover illustration, dark charcoal background with metallic gold accents and a deep red highlight, cinematic lighting, dramatic composition, portrait 3:4.\n` +
-        (feat ? `The cover subject: ${feat.title} (${feat.kind}). Make this the hero of the image.\n` : `The cover subject: the SCFL's week ${wk}.\n`) +
+        (feat ? `The cover subject: ${feat.title} (${feat.kind}). Make this the hero of the image.\n` : `The cover subject: ${specialEd ? 'an SCFL special edition' : "the SCFL's week " + wk}.\n`) +
         (others.length ? `Worked subtly into the background: ${others.map(o => o.title).join('; ')}.\n` : '') +
-        `Style: bold editorial illustration, high contrast, premium fantasy-football league magazine. Leave the upper third calmer for the masthead. No text, no letters, no logos.`;
-      S.coverPrompt = S.coverPrompt || {}; S.coverPrompt[wk] = p;
+        `Style: bold editorial illustration, high contrast, premium fantasy-football league ${specialEd ? 'special-edition magazine' : 'magazine'}. Leave the upper third calmer for the masthead. No text, no letters, no logos.`;
+      S.coverPrompt = S.coverPrompt || {}; S.coverPrompt[slot] = p;
       return showCreateIssue();
     }
     t.disabled = true; t.textContent = '✨ Writing the direction…';
-    try { const p = await generateCoverPrompt('composer'); S.coverPrompt = S.coverPrompt || {}; S.coverPrompt[wk] = p; return showCreateIssue(); }
+    try { const p = await generateCoverPrompt('composer'); S.coverPrompt = S.coverPrompt || {}; S.coverPrompt[slot] = p; return showCreateIssue(); }
     catch (e) { t.disabled = false; t.textContent = '✨ Generate cover direction';
       if (err) err.textContent = /^api-401/.test(e.message) ? 'That API key was rejected.' : 'The AI is unreachable — direction was not written.'; return; }
   }
@@ -7760,6 +7789,8 @@ document.body.addEventListener('change', async (e) => {
   if (cadd) { const v = cadd.value; if (v) { const parts = v.split('~'); const pos = parts[0]; const val = +parts[1]; const label = parts.slice(2).join('~'); const C = calcState(); C[cadd.dataset.side].push({ pos, val, label }); saveDraftState(); } return refreshCalc(); }
   const cw = e.target.closest('[data-act="ci-week"]');
   if (cw) { S.activeWeek = Math.min(18, Math.max(1, parseInt(cw.value, 10) || 1)); return showCreateIssue(); }
+  const ced = e.target.closest('[data-act="ci-edition"]');
+  if (ced) { try { localStorage.setItem('gg.ci.ed', ced.value === 'special' ? 'special' : 'week'); } catch {} return showCreateIssue(); }
   const pf = e.target.closest('[data-act="predraft-feature"]');
   if (pf) { S.predraft = Object.assign(defaultPredraft(), S.predraft);
     const ids = (S.predraft.featureIds || []).slice();
@@ -7830,6 +7861,7 @@ document.body.addEventListener('change', async (e) => {
       const dataUrl = await downscaleImage(cimg.files[0], 1400);
       S.coverImg = S.coverImg || {}; S.coverImg[slot] = dataUrl; saveCoverImg();
       if (kind !== 'predraft') delete S.newsCache[S.activeWeek];
+      if (kind === 'composer') { showCreateIssue(); return; }
       showCoverArt(kind);
     } catch (err) { if (st) st.textContent = `Couldn't use that image — ${esc((err && err.message) || 'unknown error')}.`; }
     return;
