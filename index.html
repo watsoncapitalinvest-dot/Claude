@@ -422,6 +422,30 @@
     .mtool-d { display:none; }
   }
   .tb-back { border:none; background:none; font-size:22px; font-weight:900; color:var(--text); cursor:pointer; padding:2px 8px 4px 2px; line-height:1; }
+  /* ---- the flip magazine ---- */
+  #flipMag { position:fixed; inset:0; z-index:97; background:#0d0d13; display:flex; flex-direction:column; }
+  #flipMag .fmbar { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; color:#efece4; }
+  #flipMag .fmbar .t { font-family:var(--serif); font-weight:900; font-size:15px; }
+  #flipMag .fmbar .t span { color:#d8b45a; }
+  #flipMag .fmstage { flex:1; position:relative; overflow:hidden; perspective:1400px; padding:0 10px 6px; }
+  .fmpage { position:absolute; inset:0 10px 6px; background:#faf8f2; border-radius:14px; overflow-y:auto;
+    padding:22px 18px 30px; transform-origin:left center; box-shadow:0 12px 40px rgba(0,0,0,.5); }
+  .fmpage.turnout { animation:fmout .38s ease forwards; }
+  .fmpage.turnin { animation:fmin .38s ease; }
+  @keyframes fmout { to { transform:rotateY(-78deg); opacity:0; } }
+  @keyframes fmin { from { transform:rotateY(60deg); opacity:0; } to { transform:none; opacity:1; } }
+  .fmpage .fm-flag { display:inline-block; font-size:10px; font-weight:900; letter-spacing:.18em; text-transform:uppercase;
+    color:#fff; background:var(--accent,#c20f16); border-radius:5px; padding:3px 9px; }
+  .fmpage h2.fm-hl { font-family:var(--serif); font-weight:900; font-size:25px; line-height:1.12; margin:10px 0 6px; }
+  .fmpage .fm-dek { font-style:italic; color:#555; font-size:14px; line-height:1.45; }
+  .fmpage .fm-by { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#888; margin:8px 0 2px; }
+  .fmpage .fm-p { font-size:14.5px; line-height:1.62; margin-top:12px; }
+  .fmpage .fm-p:first-of-type::first-letter { font-family:var(--serif); font-size:44px; font-weight:900; float:left; line-height:.85; padding:4px 8px 0 0; color:var(--accent,#c20f16); }
+  #flipMag .fmnav { display:flex; align-items:center; justify-content:space-between; padding:8px 14px 14px; color:#8b8b95; }
+  #flipMag .fmnav button { border:1px solid rgba(216,180,90,.35); background:rgba(255,255,255,.05); color:#efece4;
+    font-weight:800; border-radius:10px; padding:9px 16px; cursor:pointer; }
+  .fmcoverpg { display:flex; flex-direction:column; justify-content:flex-end; height:100%; border-radius:14px; background:#111 center/cover no-repeat; color:#fff; }
+  .fmcoverpg .fmcx { background:linear-gradient(0deg, rgba(0,0,0,.82), rgba(0,0,0,.45) 55%, transparent); border-radius:0 0 14px 14px; padding:20px 18px 34px; }
   body.exec-dark .tb-back { color:#f3efe4; }
   .mtool { display:flex; flex-direction:column; align-items:flex-start; gap:2px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:15px 16px; text-align:left; cursor:pointer; transition:border-color .15s, transform .12s; }
   .mtool:hover { border-color:var(--accent); transform:translateY(-2px); }
@@ -1581,6 +1605,17 @@ async function generateCoverPrompt(kind) {
       (feats[1] ? `ALSO FEATURED: ${feats[1].headline}\n` : '') +
       (champ ? `DEFENDING CHAMPION (a manager, not a real player): ${champ}\n` : '') +
       `MOOD: the calm before the draft — anticipation, a fresh season, and the marquee cover story above.`;
+  } else if (kind === 'composer') {
+    const wk = S.activeWeek || 1;
+    const pool = issuePool(wk); const ci = ciLoad(); const inc = ciIncluded(ci, pool);
+    const feat = ci.feature ? pool.find(p => p.key === ci.feature) : null;
+    const lineup = pool.filter(p => inc[p.key] && (!feat || p.key !== feat.key));
+    const nl = S.newsCache[wk]; const ts = nl ? topStoryline(nl) : null;
+    ctx = `THE SCFL WEEKLY MAGAZINE — WEEK ${wk} COVER.\n` +
+      (feat ? `THE FEATURE — BUILD THE COVER AROUND THIS: ${feat.kind}: ${feat.title}${feat.sub ? ' — ' + feat.sub : ''}\n` : '') +
+      (ts ? `THIS WEEK'S COVER STORYLINE: ${ts.label} — ${ts.blurb || ''}\n` : '') +
+      (lineup.length ? `ALSO IN THE ISSUE: ${lineup.map(p => p.kind + ': ' + p.title).join(' · ')}\n` : '') +
+      `MOOD: prestige sports magazine cover, dark charcoal and metallic gold SCFL house style, dramatic and cinematic. The art should fuse the feature with hints of the rest of the line-up.`;
   } else {
     const nl = S.currentNl; if (!nl) throw new Error('no-issue');
     const pkg = coverPackage(nl); const ts = topStoryline(nl);
@@ -2106,6 +2141,7 @@ function showArchive() {
 }
 function openSavedIssue(id) {
   const snap = loadIssues().find(s => s.id === id);
+  if (snap && snap.flip) { return openFlipOverlay(snap.pages || [], (snap.cover && snap.cover.headline) || ('Week ' + snap.week), snap.week); }
   if (snap && snap.predraft) {
     S.currentPredraft = snap.predraft; S.reading = true;
     app.innerHTML = `<div id="content"></div>`;
@@ -3473,8 +3509,243 @@ function showNewsroom() {
     </div>
     ${tools}`);
 }
-// ---- Create Issue — a single form that assembles the whole week's issue -----
+// ---- Create Issue — the composer: cover, feature, line-up, publish ----------
+function ciKey(){ return 'gg.ci.' + (S.leagueId || 'x') + '.' + (S.activeWeek || 1); }
+function ciLoad(){ try { return JSON.parse(localStorage.getItem(ciKey()) || 'null') || { feature:null, include:null }; } catch { return { feature:null, include:null }; } }
+function ciSave(d){ try { localStorage.setItem(ciKey(), JSON.stringify(d)); } catch {} }
+function issuePool(wk){
+  const pool = [];
+  pool.push({ key:'auto', icon:'📰', kind:'Weekly Stories', title:`Week ${wk} game stories`, sub:'Auto-written from the box scores', featurable:false });
+  pool.push({ key:'col:power', icon:'📊', kind:'Column', title:'Power Rankings', featurable:false,
+    ready: !!(S.power && S.power[wk] && S.power[wk].length),
+    sub: (S.power && S.power[wk] && S.power[wk].length) ? `Filed for Week ${wk}` : 'Not filed — sits out unless uploaded' });
+  pool.push({ key:'col:money', icon:'💰', kind:'Column', title:'Money Lines', featurable:false,
+    ready: !!(S.money && S.money[wk] && S.money[wk].length),
+    sub: (S.money && S.money[wk] && S.money[wk].length) ? `Filed for Week ${wk}` : 'Not filed — sits out unless uploaded' });
+  (S.investigations || []).filter(v => !v.tool && (isCommish() || (v.staff || 'published') !== 'private'))
+    .forEach(v => pool.push({ key:'inv:'+v.id, icon:'🔍', kind:'Investigation', title:v.headline, sub:v.subhead || v.status || '', featurable:true }));
+  (typeof POLITICS_DESK !== 'undefined' ? POLITICS_DESK : [])
+    .forEach(p => pool.push({ key:'pol:'+p.id, icon:'🏛️', kind:'SCFL Politics', title:p.hl, sub:p.status || '', featurable:true }));
+  (S.desk || []).slice(0, 20).forEach((a, i) => pool.push({ key:'desk:'+(a.ts || i), icon:'💬', kind:'Water Cooler',
+    title:a.headline || a.title || 'Untitled desk piece',
+    sub:(a.staffBy ? 'by ' + a.staffBy + ' · ' : '') + (a.week ? 'Week ' + a.week : 'unfiled draft'), featurable:true }));
+  return pool;
+}
+function ciIncluded(ci, pool){
+  if (ci.include) return ci.include;
+  const inc = {}; pool.forEach(p => { inc[p.key] = p.key === 'auto' || (p.key.startsWith('col:') ? !!p.ready : false); });
+  return inc;
+}
 function showCreateIssue() {
+  S.reading = false;
+  loadDesk(); loadPower(); loadMoney();
+  const wk = S.activeWeek || 1;
+  const cur = S.nflState && (S.nflState.display_week || S.nflState.week);
+  const weekOpts = Array.from({ length: 18 }, (_, i) => i + 1).map(w =>
+    `<option value="${w}"${w === wk ? ' selected' : ''}>Week ${w}${cur === w ? ' (now)' : ''}</option>`).join('');
+  const pool = issuePool(wk);
+  const ci = ciLoad();
+  const inc = ciIncluded(ci, pool);
+  const featurables = pool.filter(p => p.featurable);
+  const coverPrompt = (S.coverPrompt && S.coverPrompt[wk]) || '';
+  const hasCover = !!(S.coverImg && S.coverImg[wk]);
+  const q = quizFor(wk) || {};
+  const quizDone = QUIZ_FIELDS.filter(f => (q[f.k] || '').trim()).length;
+  const row = (p, type) => `<label class="row" style="align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">
+      <input type="${type}" name="${type === 'radio' ? 'ciFeat' : ('inc-' + p.key)}" data-act="${type === 'radio' ? 'ci-feat-pick' : 'ci-inc-toggle'}" data-key="${esc(p.key)}"
+        ${type === 'radio' ? (ci.feature === p.key ? 'checked' : '') : (inc[p.key] ? 'checked' : '')} style="margin-top:3px">
+      <span style="flex:1"><span style="font-weight:800;font-size:14px">${p.icon} ${esc(p.title)}</span>
+      <span class="faint" style="display:block;font-size:11.5px;margin-top:1px">${esc(p.kind)}${p.sub ? ' · ' + esc(p.sub) : ''}</span></span>
+    </label>`;
+  setContent(`
+    <div class="setup-logo" style="font-size:26px">📝 Create Issue</div>
+    <p class="muted" style="margin:4px 0 18px">Pick the line-up, set the feature, direct the cover, publish the magazine.</p>
+
+    <div class="card">
+      <label class="label">Which week?</label>
+      <select id="ciWeek" class="input" data-act="ci-week">${weekOpts}</select>
+    </div>
+
+    <div class="seclabel">1 · The Feature</div>
+    <div class="card">
+      <div class="faint" style="font-size:12px;margin-bottom:4px">The cover story — it leads the issue and drives the cover art.</div>
+      ${featurables.length ? featurables.map(p => row(p, 'radio')).join('') : '<div class="dt">Nothing featurable yet — write something at the Water Cooler or publish an investigation.</div>'}
+      ${ci.feature ? `<button class="linkbtn" data-act="ci-feat-clear" style="margin-top:8px">clear feature</button>` : ''}
+    </div>
+
+    <div class="seclabel">2 · The Line-up</div>
+    <div class="card">
+      <div class="faint" style="font-size:12px;margin-bottom:4px">Everything checked goes in, feature first.</div>
+      ${pool.map(p => row(p, 'checkbox')).join('')}
+    </div>
+
+    <div class="seclabel">3 · The Cover</div>
+    <div class="card">
+      <div class="faint" style="font-size:12px;margin-bottom:10px">The desk writes art direction from the whole line-up — the feature, the cover story, and every article going in. Paste it into your image AI, then drop the finished cover back here.</div>
+      <button class="btn ghost" data-act="ci-cover-gen">✨ ${coverPrompt ? 'Regenerate' : 'Generate'} cover direction</button>
+      <div id="ciCoverWrap" style="margin-top:12px;${coverPrompt ? '' : 'display:none'}">
+        <textarea id="coverPromptTxt" class="input" style="height:150px" readonly>${esc(coverPrompt)}</textarea>
+        <div style="height:8px"></div><button class="btn ghost" data-act="copy-cover-prompt">Copy the prompt</button>
+      </div>
+      <div id="ciCoverErr" class="err"></div>
+      <div style="height:12px"></div>
+      <input id="coverImgFile" type="file" accept="image/*" data-act="cover-img-file" data-kind="week" class="fileinput" />
+      <div id="coverImgStatus" class="faint" style="font-size:12px;margin-top:8px">${hasCover ? '✓ Cover image set for this issue.' : 'Upload the finished cover (portrait works best).'}</div>
+      ${hasCover ? `<img src="${S.coverImg[wk]}" alt="cover" style="width:52%;border-radius:10px;margin-top:10px;display:block">` : ''}
+    </div>
+
+    <div class="seclabel">The Tuesday Brief <span class="faint" style="font-weight:600;letter-spacing:0;text-transform:none">(optional — steers the auto writers)</span></div>
+    <div class="card">
+      <div class="dt">${quizDone ? `✅ ${quizDone}/${QUIZ_FIELDS.length} answered.` : 'Not filled in yet.'}</div>
+      <button class="btn ghost" data-act="questionnaire" style="margin-top:10px">${quizDone ? 'Edit the brief' : 'Fill in the brief'} →</button>
+    </div>
+
+    <button class="btn" data-act="ci-publish" style="margin-top:18px;font-size:16px;padding:16px">📖 Publish the Week ${wk} issue →</button>
+    <div class="faint" style="font-size:11.5px;text-align:center;margin-top:8px">Publishes with the flip treatment. Save it to Back Issues from the reader.</div>
+  `);
+}
+// ---- ensure the auto-written newsletter exists for a week --------------------
+async function ensureNl(wk){
+  let nl = S.newsCache[wk];
+  if (nl) return nl;
+  try {
+    const [matchups, weeklyStats, weeklyProjections] = await Promise.all([
+      getMatchups(S.leagueId, wk), getWeeklyStats(S.season, wk), getWeeklyProjections(S.season, wk),
+    ]);
+    nl = buildNewsletter({ week:wk, league:S.bundle.league, matchups, rosters:S.bundle.rosters,
+      usersById:S.bundle.usersById, players:S.bundle.players, weeklyStats, weeklyProjections });
+    try { nl.trades = await buildTradeReview(wk); } catch { nl.trades = []; }
+    applyHistoryContext(nl);
+    S.newsCache[wk] = nl;
+  } catch { nl = null; }
+  return nl;
+}
+// ---- pool item -> flip pages -------------------------------------------------
+function fmArticlePage(flag, hl, dek, by, paragraphs){
+  return `<div>
+    <span class="fm-flag">${esc(flag || 'SCFL NEWSROOM')}</span>
+    <h2 class="fm-hl">${esc(hl || '')}</h2>
+    ${dek ? `<div class="fm-dek">${esc(dek)}</div>` : ''}
+    ${by ? `<div class="fm-by">${esc(by)}</div>` : ''}
+    ${(paragraphs || []).map(p => `<p class="fm-p">${esc(p)}</p>`).join('')}
+  </div>`;
+}
+function poolItemPages(key, wk, nl){
+  if (key === 'auto') {
+    if (!nl || !nl.hasData) return [fmArticlePage('WEEKLY STORIES', `Week ${wk}: no games scored yet`, 'The game stories write themselves once the week has box scores.', 'The SCFL Desk', [])];
+    return (nl.stories || []).slice(0, 8).map(st => `<div>${storyHtml(st, false)}</div>`);
+  }
+  if (key === 'col:power') {
+    const rows = (S.power && S.power[wk]) || [];
+    if (!rows.length) return [];
+    return [fmArticlePage('THE MACHINES · POWER RANKINGS', `The Week ${wk} Board`, null, 'From the league office',
+      rows.map(r => `${r.rank != null ? r.rank + '. ' : ''}${r.manager || r.team || ''}${r.tag ? ' — ' + r.tag : ''}${r.note ? ': ' + r.note : ''}`))];
+  }
+  if (key === 'col:money') {
+    const rows = (S.money && S.money[wk]) || [];
+    if (!rows.length) return [];
+    return [fmArticlePage('PORK CHOP EXPRESS · MONEY LINES', `The Week ${wk} Betting Board`, null, 'Lines set by the house',
+      rows.map(m => `${m.subject || ''}${m.line ? '  ' + m.line : ''}${m.note ? ' — ' + m.note : ''}`))];
+  }
+  if (key.startsWith('inv:')) {
+    const inv = (S.investigations || []).find(v => 'inv:' + v.id === key);
+    return inv ? [fmArticlePage(inv.flag || 'SCFL INVESTIGATIONS', inv.headline, inv.subhead, inv.byline || inv.dateline, inv.paragraphs || [])] : [];
+  }
+  if (key.startsWith('pol:')) {
+    const p = (typeof POLITICS_DESK !== 'undefined' ? POLITICS_DESK : []).find(x => 'pol:' + x.id === key);
+    return p ? [fmArticlePage('SCFL POLITICS · ' + (p.status || ''), p.hl, p.dek, p.kicker + (p.date ? ' · ' + p.date : ''), p.paragraphs || [])] : [];
+  }
+  if (key.startsWith('desk:')) {
+    const a = (S.desk || []).find((x, i) => 'desk:' + (x.ts || i) === key);
+    if (!a) return [];
+    const paras = a.paragraphs || (a.body ? String(a.body).split(/\n\n+/) : []);
+    return [fmArticlePage('THE WATER COOLER', a.headline || a.title || 'From the desk', a.dek, a.staffBy ? 'By ' + a.staffBy : (a.byline || ''), paras)];
+  }
+  return [];
+}
+async function publishFlipIssue(){
+  const wk = S.activeWeek || 1;
+  const pool = issuePool(wk);
+  const ci = ciLoad();
+  const inc = ciIncluded(ci, pool);
+  const chosen = pool.filter(p => inc[p.key]);
+  if (!chosen.length && !ci.feature) { toast('Pick at least one article for the line-up'); return; }
+  toast('Assembling the issue…');
+  const needNl = inc['auto'];
+  const nl = needNl ? await ensureNl(wk) : (S.newsCache[wk] || null);
+  const ordered = [];
+  if (ci.feature) { const f = pool.find(p => p.key === ci.feature); if (f) ordered.push(f); }
+  chosen.forEach(p => { if (!ordered.find(o => o.key === p.key)) ordered.push(p); });
+  const pages = [];
+  // cover page
+  const featItem = ci.feature ? pool.find(p => p.key === ci.feature) : (ordered[0] || null);
+  const cimg = S.coverImg && S.coverImg[wk];
+  pages.push(`<div class="fmcoverpg" style="${cimg ? `background-image:url(${cimg})` : 'background:linear-gradient(160deg,#1a1a24,#0d0d13)'}">
+    <div class="fmcx">
+      <div style="font-size:10px;font-weight:900;letter-spacing:.3em;color:#d8b45a">SCFL · THE MAGAZINE</div>
+      <div style="font-family:var(--serif);font-weight:900;font-size:30px;line-height:1.08;margin-top:8px">${esc(featItem ? featItem.title : ('The Week ' + wk + ' Edition'))}</div>
+      <div style="font-size:12px;color:#cfcfd6;margin-top:8px">Week ${wk} · ${esc(S.season || '')} Season${featItem ? ' · ' + esc(featItem.kind) : ''}</div>
+    </div></div>`);
+  for (const item of ordered) pages.push(...poolItemPages(item.key, wk, nl));
+  pages.push(`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center">
+    <div style="font-family:var(--serif);font-weight:900;font-size:24px">That's the issue.</div>
+    <div class="fm-dek" style="margin-top:8px">SCFL Newsroom · Week ${wk} · see you next Tuesday.</div></div>`);
+  openFlipOverlay(pages, (featItem ? featItem.title : 'Week ' + wk + ' Edition'), wk);
+}
+// ---- the flip reader ---------------------------------------------------------
+let FM = { pages: [], i: 0 };
+function openFlipOverlay(pages, title, week){
+  FM = { pages, i: 0, title, week };
+  const old = $('#flipMag'); if (old) old.remove();
+  const m = document.createElement('div');
+  m.id = 'flipMag';
+  m.innerHTML = `
+    <div class="fmbar">
+      <div class="t">SCFL <span>Magazine</span> · Wk ${week}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost" data-act="flip-save" style="width:auto;padding:6px 12px;font-size:12px">📚 Save</button>
+        <button class="btn ghost" data-act="flip-close" style="width:auto;padding:6px 12px;font-size:12px">✕</button>
+      </div>
+    </div>
+    <div class="fmstage" id="fmStage"></div>
+    <div class="fmnav">
+      <button data-act="flip-prev">‹ Back</button>
+      <span id="fmCount"></span>
+      <button data-act="flip-next">Turn ›</button>
+    </div>`;
+  document.body.appendChild(m);
+  let sx = 0;
+  const st = $('#fmStage');
+  st.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive:true });
+  st.addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - sx;
+    if (dx < -46) flipTo(FM.i + 1); else if (dx > 46) flipTo(FM.i - 1); }, { passive:true });
+  fmRender(false);
+}
+function fmRender(turning){
+  const st = $('#fmStage'); if (!st) return;
+  const pg = document.createElement('div');
+  pg.className = 'fmpage' + (turning ? ' turnin' : '');
+  pg.innerHTML = FM.pages[FM.i] || '';
+  if (/fmcoverpg/.test(FM.pages[FM.i] || '')) { pg.style.padding = '0'; pg.style.background = '#111'; pg.classList.add('fmcoverwrap'); }
+  st.innerHTML = ''; st.appendChild(pg);
+  const c = $('#fmCount'); if (c) c.textContent = (FM.i + 1) + ' / ' + FM.pages.length;
+}
+function flipTo(i){
+  if (i < 0 || i >= FM.pages.length || i === FM.i) return;
+  const st = $('#fmStage'); const cur = st && st.firstChild;
+  if (cur && i > FM.i) { cur.classList.add('turnout'); setTimeout(() => { FM.i = i; fmRender(true); }, 220); }
+  else { FM.i = i; fmRender(true); }
+}
+function flipSaveToShelf(){
+  const list = loadIssues();
+  const id = 'flip-' + FM.week + '-' + Date.now();
+  list.unshift({ id, week: FM.week, season: S.season, flip: true, pages: FM.pages,
+    cover: { headline: FM.title || ('Week ' + FM.week + ' Edition') }, magName: 'SCFL MAGAZINE' });
+  saveIssues(list.slice(0, 24));
+  toast('Issue saved to Back Issues');
+}
+// ---- Create Issue (legacy form retired) -------------------------------------
+function showCreateIssueLegacy() {
   S.reading = false;
   const wk = S.activeWeek || 1;
   const cur = S.nflState && (S.nflState.display_week || S.nflState.week);
@@ -7310,6 +7581,35 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'storyline-unhide-all') { if (S.storylines) S.storylines.hidden = []; saveStorylines(); S.newsCache = {}; return showStorylines(); }
   if (act === 'archive-articles') return showArticleArchive();
   if (act === 'pop-grades') return showPopGrades();
+  if (act === 'ci-feat-pick') { const d = ciLoad(); d.feature = t.dataset.key; ciSave(d); return; }
+  if (act === 'ci-feat-clear') { const d = ciLoad(); d.feature = null; ciSave(d); return showCreateIssue(); }
+  if (act === 'ci-inc-toggle') { const d = ciLoad(); const pool = issuePool(S.activeWeek || 1);
+    d.include = ciIncluded(d, pool); d.include[t.dataset.key] = t.checked; ciSave(d); return; }
+  if (act === 'ci-publish') return publishFlipIssue();
+  if (act === 'flip-close') { const m = $('#flipMag'); if (m) m.remove(); return; }
+  if (act === 'flip-save') return flipSaveToShelf();
+  if (act === 'flip-next') return flipTo(FM.i + 1);
+  if (act === 'flip-prev') return flipTo(FM.i - 1);
+  if (act === 'ci-cover-gen') {
+    const err = $('#ciCoverErr'); if (err) err.textContent = '';
+    const wk = S.activeWeek || 1;
+    if (!(S.apiKey || '').trim()) {
+      // offline direction: built from the line-up, no AI needed
+      const pool = issuePool(wk); const d = ciLoad(); const inc = ciIncluded(d, pool);
+      const feat = d.feature ? pool.find(p => p.key === d.feature) : null;
+      const others = pool.filter(p => inc[p.key] && (!feat || p.key !== feat.key)).slice(0, 4);
+      const p = `Prestige sports-magazine cover illustration, dark charcoal background with metallic gold accents and a deep red highlight, cinematic lighting, dramatic composition, portrait 3:4.\n` +
+        (feat ? `The cover subject: ${feat.title} (${feat.kind}). Make this the hero of the image.\n` : `The cover subject: the SCFL's week ${wk}.\n`) +
+        (others.length ? `Worked subtly into the background: ${others.map(o => o.title).join('; ')}.\n` : '') +
+        `Style: bold editorial illustration, high contrast, premium fantasy-football league magazine. Leave the upper third calmer for the masthead. No text, no letters, no logos.`;
+      S.coverPrompt = S.coverPrompt || {}; S.coverPrompt[wk] = p;
+      return showCreateIssue();
+    }
+    t.disabled = true; t.textContent = '✨ Writing the direction…';
+    try { const p = await generateCoverPrompt('composer'); S.coverPrompt = S.coverPrompt || {}; S.coverPrompt[wk] = p; return showCreateIssue(); }
+    catch (e) { t.disabled = false; t.textContent = '✨ Generate cover direction';
+      if (err) err.textContent = /^api-401/.test(e.message) ? 'That API key was rejected.' : 'The AI is unreachable — direction was not written.'; return; }
+  }
   if (act === 'pop-year') return showPopYear(t.dataset.year);
   if (act === 'arch-read') return showArchivedArticle(t.dataset.id);
   if (act === 'quiz-save') {
