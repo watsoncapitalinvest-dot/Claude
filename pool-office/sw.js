@@ -1,11 +1,13 @@
-/* Emma's Pool Cleaning — service worker.
-   IMPORTANT: bump CACHE on every release (emma-v1 -> emma-v2 ...) so
+/* Emma's Pool — service worker.
+   IMPORTANT: bump CACHE on every release (ep-v1 -> ep-v2 ...) so
    installed devices pick up the new files. */
-const CACHE = 'emma-v1';
+const CACHE = 'ep-v1';
 
 const CORE = [
   './',
   './index.html',
+  './app.css',
+  './app.js',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
@@ -44,7 +46,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Everything else (icons, manifest, fonts): cache-first with background fill.
+  // Everything else (app files, icons, fonts): cache-first with background fill.
   e.respondWith(
     caches.match(req).then((hit) => {
       if (hit) return hit;
