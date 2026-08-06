@@ -1,7 +1,7 @@
 /* John & Emma's Wedding — offline cache
    Network-first for the page itself, so a deployed change is never hidden
    behind a stale cache; cache-first only for the icons, which never change. */
-var CACHE = "je-wedding-v11";
+var CACHE = "je-wedding-v13";
 var ASSETS = [
   "./",
   "./index.html",

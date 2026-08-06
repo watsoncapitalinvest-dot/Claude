@@ -1114,8 +1114,12 @@
             vendors:state.vendors, done:state.done, logis:state.logis,
             quotes:state.quotes, useQuote:state.useQuote,
             customOpts:state.customOpts, customItems:state.customItems,
-            funds:state.funds, site:state.site, decisions:state.decisions,
-            payments:state.payments};
+            funds:state.funds, decisions:state.decisions, payments:state.payments,
+            /* the photo is megabytes — it stays on the device that loaded it */
+            site:(function(){
+              var c = JSON.parse(JSON.stringify(state.site));
+              return c;
+            })()};
   }
   function encodeSnap(o){
     try{ return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }
@@ -1249,6 +1253,10 @@
     if(!s.picks) s.picks = JSON.parse(JSON.stringify(DEFAULT_PICKS));
     if(!s.funds) s.funds = [];
     if(!s.site) s.site = defaultSite();
+    if(s.site.showTraced === undefined) s.site.showTraced = true;
+    if(s.site.photoOpacity === undefined) s.site.photoOpacity = 0.9;
+    if(s.site.gridOn === undefined) s.site.gridOn = true;
+    if(s.sitePhoto === undefined) s.sitePhoto = null;
     if(!s.decisions) s.decisions = JSON.parse(JSON.stringify(DECISIONS_SEED));
     if(!s.payments) s.payments = [];
     if(!s.plan.targetBasis) s.plan.targetBasis = "share";
@@ -2457,13 +2465,44 @@
           (f.bad ? "▲" : f.ok ? "✓" : "•") + '</span><span>' + f.t + '</span></div>'; }).join("") +
       '</div>' +
 
+      '<h3 class="sub">The photo underneath</h3>' +
+      '<div class="card" style="margin-bottom:14px">' +
+        (state.sitePhoto
+          ? '<p style="font-size:14px; color:var(--muted); margin-bottom:12px">Your aerial is the ' +
+            'base layer, with the grid over it. Set the width below to the real distance the photo ' +
+            'spans and every square becomes 10 ft.</p>' +
+            '<div class="ctl" style="margin-bottom:12px">' +
+              '<div class="lab"><span>Photo brightness</span><span>' +
+                Math.round(state.site.photoOpacity*100) + '%</span></div>' +
+              '<input type="range" id="photoOp" min="20" max="100" step="5" value="' +
+                Math.round(state.site.photoOpacity*100) + '"></div>' +
+            '<div class="segs" style="margin-bottom:12px">' +
+              '<button class="seg' + (state.site.gridOn?' on':'') + '" id="gridTog">Grid ' +
+                (state.site.gridOn?'on':'off') + '</button>' +
+              '<button class="seg' + (state.site.showTraced?' on':'') + '" id="tracedTog">Traced shapes ' +
+                (state.site.showTraced?'on':'off') + '</button>' +
+            '</div>' +
+            '<div style="display:flex; gap:8px; flex-wrap:wrap">' +
+              '<label class="btn sm quiet" style="cursor:pointer">Use a different photo' +
+                '<input type="file" id="photoIn" accept="image/*" style="display:none"></label>' +
+              '<button class="btn sm quiet" id="photoClear">Remove photo</button></div>'
+          : '<p style="font-size:14px; color:var(--muted); margin-bottom:12px">Drop your aerial ' +
+            'photo in and place the tent on the real yard instead of a diagram. The grid stays on ' +
+            'top, so you can still read distances.</p>' +
+            '<label class="btn sm gold" style="cursor:pointer">Load a photo of the yard' +
+              '<input type="file" id="photoIn" accept="image/*" style="display:none"></label>' +
+            '<p style="font-size:12.5px; color:var(--muted); margin-top:10px">Stays on this device — ' +
+            'it is too big to travel in a sync code, so load it on each phone.</p>') +
+      '</div>' +
+
       '<h3 class="sub">The lot</h3>' +
       '<div class="card">' +
         '<div class="row two" style="margin-bottom:10px">' +
-          '<div><label class="fld">Lot width (ft)</label>' +
-            '<input type="number" id="lotW" value="' + lot.w + '"></div>' +
-          '<div><label class="fld">Lot depth (ft)</label>' +
-            '<input type="number" id="lotH" value="' + lot.h + '"></div>' +
+          '<div><label class="fld">' + (state.sitePhoto ? "Photo spans (ft across)" : "Lot width (ft)") +
+            '</label><input type="number" id="lotW" value="' + lot.w + '"></div>' +
+          '<div><label class="fld">' + (state.sitePhoto ? "Depth (locked to photo)" : "Lot depth (ft)") +
+            '</label><input type="number" id="lotH" value="' + lot.h + '"' +
+            (state.sitePhoto ? ' readonly' : '') + '></div>' +
         '</div>' +
         '<p style="font-size:13.5px; color:var(--muted)">Public record says 0.43 acres — about 18,700 sq ft. ' +
         'The 130 × 144 default matches that; your real corners will differ. The four numbers worth ' +
@@ -2477,13 +2516,27 @@
 
   function svgHtml(){
     var lot = state.site.lot;
+    var photo = state.sitePhoto;
+    /* on a photo the hairlines vanish, so draw the grid brighter and label it */
+    var gcol = photo ? "rgba(255,255,255,.55)" : "var(--line)";
+    var gw = photo ? 0.5 : 0.4;
     var g = "";
-    for(var x=10; x<lot.w; x+=10)
-      g += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="' + lot.h + '" stroke="var(--line)" stroke-width=".4"/>';
-    for(var y=10; y<lot.h; y+=10)
-      g += '<line x1="0" y1="' + y + '" x2="' + lot.w + '" y2="' + y + '" stroke="var(--line)" stroke-width=".4"/>';
+    if(state.site.gridOn){
+      for(var x=10; x<lot.w; x+=10)
+        g += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="' + lot.h + '" stroke="' + gcol +
+             '" stroke-width="' + gw + '"/>';
+      for(var y=10; y<lot.h; y+=10)
+        g += '<line x1="0" y1="' + y + '" x2="' + lot.w + '" y2="' + y + '" stroke="' + gcol +
+             '" stroke-width="' + gw + '"/>';
+    }
+    var photoLayer = photo
+      ? '<image href="' + photo + '" x="0" y="0" width="' + lot.w + '" height="' + lot.h +
+        '" preserveAspectRatio="none" opacity="' + state.site.photoOpacity + '"/>'
+      : "";
 
-    var shapes = siteItems().map(function(i){
+    var shapes = siteItems().filter(function(i){
+      return state.site.showTraced || !i.fixed;
+    }).map(function(i){
       var f = FILLS[i.fill] || FILLS.soft;
       var isSel = i.id === selId;
       var body = i.round
@@ -2505,20 +2558,26 @@
     }).join("");
 
     /* a 20 ft scale bar */
-    var sb = '<g><line x1="4" y1="' + (lot.h-5) + '" x2="24" y2="' + (lot.h-5) +
-      '" stroke="var(--muted)" stroke-width=".8"/>' +
-      '<text x="14" y="' + (lot.h-7) + '" text-anchor="middle" font-size="3.4" fill="var(--muted)">20 ft</text></g>';
+    var sb = '<g>' +
+      (photo ? '<rect x="1" y="' + (lot.h-11) + '" width="30" height="9" rx="1.5" ' +
+        'fill="rgba(0,0,0,.45)"/>' : "") +
+      '<line x1="4" y1="' + (lot.h-5) + '" x2="24" y2="' + (lot.h-5) + '" stroke="' +
+        (photo ? "#fff" : "var(--muted)") + '" stroke-width=".8"/>' +
+      '<text x="16" y="' + (lot.h-6.5) + '" text-anchor="middle" font-size="3.4" fill="' +
+        (photo ? "#fff" : "var(--muted)") + '">20 ft</text></g>';
 
-    return '<svg class="site" id="siteSvg" viewBox="0 0 ' + lot.w + ' ' + lot.h + '">' +
-      '<rect x="0" y="0" width="' + lot.w + '" height="' + lot.h +
-        '" fill="none" stroke="var(--gold)" stroke-width="1"/>' +
-      g +
-      '<rect x="' + CLEARING.x + '" y="' + CLEARING.y + '" width="' + CLEARING.w + '" height="' +
+    var clearing = state.site.showTraced
+      ? '<rect x="' + CLEARING.x + '" y="' + CLEARING.y + '" width="' + CLEARING.w + '" height="' +
         CLEARING.h + '" fill="rgba(174,138,84,.07)" stroke="var(--gold)" stroke-width=".5" ' +
         'stroke-dasharray="3 3"/>' +
-      '<text x="' + (CLEARING.x + CLEARING.w/2) + '" y="' + (CLEARING.y + 5) +
-        '" text-anchor="middle" font-size="3.6" fill="var(--gold-deep)">the clearing</text>' +
-      shapes + sb + '</svg>';
+        '<text x="' + (CLEARING.x + CLEARING.w/2) + '" y="' + (CLEARING.y + 5) +
+        '" text-anchor="middle" font-size="3.6" fill="var(--gold-deep)">the clearing</text>'
+      : "";
+    return '<svg class="site" id="siteSvg" viewBox="0 0 ' + lot.w + ' ' + lot.h + '">' +
+      photoLayer + g +
+      '<rect x="0" y="0" width="' + lot.w + '" height="' + lot.h +
+        '" fill="none" stroke="var(--gold)" stroke-width="1"/>' +
+      clearing + shapes + sb + '</svg>';
   }
 
   function selToolHtml(s){
@@ -2562,7 +2621,9 @@
         selId = id;
         var p = ptToFeet(e);
         dragging = {id:id, dx:p.x - it.x, dy:p.y - it.y, moved:false};
-        el.setPointerCapture(e.pointerId);
+        /* capture keeps the drag alive if the finger slides off the shape;
+           it can throw on some browsers, and the drag must survive that */
+        try{ el.setPointerCapture(e.pointerId); }catch(err){}
         e.preventDefault();
       });
       el.addEventListener("pointermove", function(e){
@@ -2635,11 +2696,75 @@
 
     var lw = document.getElementById("lotW"), lh = document.getElementById("lotH");
     lw.addEventListener("change", function(){
-      state.site.lot.w = Math.max(20, +lw.value||130); save(); renderSite(); });
+      var w = Math.max(20, +lw.value||130);
+      /* with a photo underneath, depth follows the image so squares stay square */
+      if(state.sitePhoto && state.site.photoAspect)
+        state.site.lot.h = Math.round(w * state.site.photoAspect);
+      state.site.lot.w = w;
+      save(); renderSite();
+    });
     lh.addEventListener("change", function(){
+      if(state.sitePhoto) return;
       state.site.lot.h = Math.max(20, +lh.value||144); save(); renderSite(); });
+
+    /* photo: downscale before storing so it fits in local storage */
+    var pin = document.getElementById("photoIn");
+    if(pin) pin.addEventListener("change", function(e){
+      var f = e.target.files && e.target.files[0];
+      if(!f) return;
+      toast("Reading the photo…");
+      var fr = new FileReader();
+      fr.onload = function(){
+        var img = new Image();
+        img.onload = function(){
+          var maxW = 1600;
+          var scale = Math.min(1, maxW / img.width);
+          var cw = Math.round(img.width * scale), ch = Math.round(img.height * scale);
+          var cv = document.createElement("canvas");
+          cv.width = cw; cv.height = ch;
+          cv.getContext("2d").drawImage(img, 0, 0, cw, ch);
+          var data;
+          try{ data = cv.toDataURL("image/jpeg", 0.82); }
+          catch(err){ toast("Could not read that image"); return; }
+          state.sitePhoto = data;
+          state.site.photoAspect = img.height / img.width;
+          state.site.lot.h = Math.round(state.site.lot.w * state.site.photoAspect);
+          state.site.showTraced = false;
+          try{ save(); }
+          catch(err){ state.sitePhoto = null; toast("That photo is too large to store"); }
+          renderSite();
+          toast("Photo loaded — now set how many feet it spans");
+        };
+        img.onerror = function(){ toast("Could not read that image"); };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(f);
+    });
+    var pclr = document.getElementById("photoClear");
+    if(pclr) pclr.addEventListener("click", function(){
+      state.sitePhoto = null; state.site.showTraced = true; save(); renderSite();
+      toast("Photo removed");
+    });
+    var pop = document.getElementById("photoOp");
+    if(pop) pop.addEventListener("change", function(){
+      state.site.photoOpacity = (+pop.value)/100; save(); renderSite(); });
+    var gt = document.getElementById("gridTog");
+    if(gt) gt.addEventListener("click", function(){
+      state.site.gridOn = !state.site.gridOn; save(); renderSite(); });
+    var tt = document.getElementById("tracedTog");
+    if(tt) tt.addEventListener("click", function(){
+      state.site.showTraced = !state.site.showTraced; save(); renderSite(); });
     document.getElementById("resetSite").addEventListener("click", function(){
-      state.site = defaultSite(); selId = null; save(); renderSite(); toast("Back to the traced layout");
+      var keepPhoto = state.sitePhoto, aspect = state.site.photoAspect;
+      state.site = defaultSite();
+      state.site.showTraced = !keepPhoto;
+      state.site.photoOpacity = 0.9; state.site.gridOn = true;
+      if(keepPhoto){
+        state.site.photoAspect = aspect;
+        state.site.lot.h = Math.round(state.site.lot.w * aspect);
+      }
+      selId = null; save(); renderSite();
+      toast("Layout reset" + (keepPhoto ? " — photo kept" : ""));
     });
   }
 
@@ -2907,7 +3032,6 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
       .then(function (reg) { reg.update(); })
       .catch(function () {});
   });
-  /* when a new version takes over, reload once so it is actually on screen */
   var reloaded = false;
   navigator.serviceWorker.addEventListener("controllerchange", function () {
     if (reloaded) return;
