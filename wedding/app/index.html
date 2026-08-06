@@ -915,6 +915,26 @@
     return {sub:sub, cont:cont, total:sub + cont, byGrp:byGrp,
             quoted:quoted, estimated:estimated};
   }
+  /* ---- cash contributions from family ---- */
+  function fundsPledged(){
+    return (state.funds||[]).reduce(function(a,f){ return a + (+f.amt||0); }, 0);
+  }
+  function fundsReceived(){
+    return (state.funds||[]).reduce(function(a,f){
+      return a + (f.status === "Received" ? (+f.amt||0) : 0); }, 0);
+  }
+  function earmarkedFor(grp){
+    return (state.funds||[]).reduce(function(a,f){
+      return a + (f.earmark === grp ? (+f.amt||0) : 0); }, 0);
+  }
+  function ourShare(total){ return total - fundsPledged(); }
+  /* what the target is measured against */
+  function targetSubject(total){
+    return state.plan.targetBasis === "total" ? total : ourShare(total);
+  }
+  function targetLabel(){
+    return state.plan.targetBasis === "total" ? "the whole plan" : "your share";
+  }
   function quotedCount(){
     return allItems().filter(function(it){ return !!acceptedQuote(it.id); }).length;
   }
@@ -967,7 +987,8 @@
             plan:state.plan, picks:state.picks, guests:state.guests,
             vendors:state.vendors, done:state.done, logis:state.logis,
             quotes:state.quotes, useQuote:state.useQuote,
-            customOpts:state.customOpts, customItems:state.customItems};
+            customOpts:state.customOpts, customItems:state.customItems,
+            funds:state.funds};
   }
   function encodeSnap(o){
     try{ return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }
@@ -987,6 +1008,10 @@
     state.picks = their.picks || {}; state.plan = their.plan || savedPlan; state.guests = their.guests || [];
     state.quotes = their.quotes || {}; state.useQuote = their.useQuote || {};
     state.customOpts = their.customOpts || {}; state.customItems = their.customItems || [];
+    var savedF = state.funds; state.funds = their.funds || [];
+    var theirFunds = fundsPledged();
+    state.funds = savedF;
+    var mineFunds = fundsPledged();
     var theirGuests = invitedHeads() || (their.plan && their.plan.planningGuests) || 80;
     var theirTotal = computeTotal(theirGuests).total;
     var itemDiffs = [];
@@ -1013,11 +1038,18 @@
     var onlyMine = Object.keys(mineKeys).filter(function(k){ return !theirKeys[k]; })
       .map(function(k){ return mineKeys[k]; });
     return {mineTotal:mineTotal, theirTotal:theirTotal, mineGuests:g1, theirGuests:theirGuests,
-            itemDiffs:itemDiffs, onlyTheirs:onlyTheirs, onlyMine:onlyMine};
+            itemDiffs:itemDiffs, onlyTheirs:onlyTheirs, onlyMine:onlyMine,
+            mineFunds:mineFunds, theirFunds:theirFunds};
   }
   /* quotes and custom lines are facts, not preferences — combine both sides */
   function mergeCatalog(their){
-    var addedQ = 0, addedI = 0, addedO = 0;
+    var addedQ = 0, addedI = 0, addedO = 0, addedF = 0;
+    (their.funds || []).forEach(function(f){
+      var dup = (state.funds||[]).some(function(x){
+        return x.amt === f.amt && (x.who||"") === (f.who||"");
+      });
+      if(!dup){ state.funds.push(f); addedF++; }
+    });
     var tq = their.quotes || {};
     Object.keys(tq).forEach(function(id){
       state.quotes[id] = state.quotes[id] || [];
@@ -1053,7 +1085,7 @@
       });
       if(!dup){ state.customItems.push(it); addedI++; }
     });
-    return {quotes:addedQ, items:addedI, opts:addedO};
+    return {quotes:addedQ, items:addedI, opts:addedO, funds:addedF};
   }
   function mergeGuests(their){
     var have = {};
@@ -1088,6 +1120,8 @@
     if(s.plan.planningGuests === undefined) s.plan.planningGuests = 100;
     if(s.plan.cont === undefined) s.plan.cont = 2;
     if(!s.picks) s.picks = JSON.parse(JSON.stringify(DEFAULT_PICKS));
+    if(!s.funds) s.funds = [];
+    if(!s.plan.targetBasis) s.plan.targetBasis = "share";
     if(!s.quotes) s.quotes = {};
     if(!s.useQuote) s.useQuote = {};
     if(!s.customOpts) s.customOpts = {};
@@ -1212,7 +1246,8 @@
 
   /* ================= HOME ================= */
   function renderHome(){
-    var g = activeGuests(), c = computeTotal(g), over = c.total - state.plan.target;
+    var g = activeGuests(), c = computeTotal(g);
+    var over = targetSubject(c.total) - state.plan.target;
     var w = warnings();
     var next = [];
     TASKS.forEach(function(t,i){ if(!state.done["t"+i] && next.length < 4) next.push({t:t,i:i}); });
@@ -1223,10 +1258,18 @@
     view.innerHTML =
       '<div class="stats">' +
         '<div class="stat hero"><div class="k">Plan total</div><div class="v num">' + money(c.total) +
-          '</div><div class="d">' + money(c.total/g) + ' per guest</div></div>' +
+          '</div><div class="d">' + (fundsPledged()
+            ? money(ourShare(c.total)) + ' is your share'
+            : money(c.total/g) + ' per guest') + '</div></div>' +
         '<div class="stat"><div class="k">' + (over > 0 ? "Over target" : "Under target") + '</div>' +
           '<div class="v num" style="color:' + (over>0?'var(--crit)':'var(--ok)') + '">' +
-          money(Math.abs(over)) + '</div><div class="d">target ' + money(state.plan.target) + '</div></div>' +
+          money(Math.abs(over)) + '</div><div class="d">' + money(state.plan.target) + ' on ' +
+          targetLabel() + '</div></div>' +
+        '<div class="stat"><div class="k">Family contributions</div><div class="v num" style="color:' +
+          (fundsPledged() ? 'var(--ok)' : 'var(--muted)') + '">' + money(fundsPledged()) + '</div>' +
+          '<div class="d">' + (fundsPledged()
+            ? money(fundsReceived()) + ' in hand · ' + (state.funds||[]).length + ' people'
+            : 'none logged yet') + '</div></div>' +
         '<div class="stat"><div class="k">Guests</div><div class="v num">' + g + '</div>' +
           '<div class="d">' + (usingPlanning() ? "planning number" : invitedHeads() + " invited · " +
             poolHeads() + " in the pool") + '</div></div>' +
@@ -1257,6 +1300,8 @@
         hc("Guests", invitedHeads() + " invited", "Move people between the pool and the invite list. Prices follow.", "guests") +
         hc("Logistics", Object.keys(state.logis).length + " of " + LOGISTICS.length + " done",
            "Permits, neighbours, insurance, septic — the calls to make.", "logistics") +
+        hc("Contributions", money(fundsPledged()), (state.funds||[]).length +
+           " logged, " + money(fundsReceived()) + " received. Earmark it or leave it unrestricted.", "budget") +
         hc("Sync", state.who || "Set who you are", "Send your version to " +
            (state.who === "John" ? "Emma" : state.who === "Emma" ? "John" : "each other") +
            ", compare, merge.", "sync") +
@@ -1284,7 +1329,8 @@
   /* ================= BUDGET (the catalog) ================= */
   var openForm = null;   /* {type:"opt"|"quote"|"item", id/grp} */
   function renderBudget(){
-    var g = activeGuests(), c = computeTotal(g), over = c.total - state.plan.target;
+    var g = activeGuests(), c = computeTotal(g);
+    var over = targetSubject(c.total) - state.plan.target;
     var w = warnings(), wmap = {};
     w.forEach(function(x){ wmap[x.id] = x.t; });
 
@@ -1307,6 +1353,12 @@
               'Invite anyone on the Guests tab and the real count takes over.</div>'
             : '<div style="font-size:12.5px; color:var(--muted)">From your guest list: ' +
               invitedHeads() + ' invited.</div>') + '</div>' +
+        '<div class="ctl"><div class="lab"><span>The target covers</span><span>' + targetLabel() +
+          '</span></div><div class="segs" id="basisSegs">' +
+          '<button class="seg' + (state.plan.targetBasis==="share"?' on':'') + '" data-basis="share">' +
+            'Our share only</button>' +
+          '<button class="seg' + (state.plan.targetBasis==="total"?' on':'') + '" data-basis="total">' +
+            'The whole plan</button></div></div>' +
         '<div class="ctl"><div class="lab"><span>Contingency</span><span>' +
           Math.round(CONTINGENCY[state.plan.cont]*100) + '%</span></div>' +
           '<div class="segs" id="contSegs">' + CONTINGENCY.map(function(v,i){
@@ -1317,11 +1369,16 @@
       '<div class="stats">' +
         '<div class="stat hero"><div class="k">Plan total</div><div class="v num">' + money(c.total) +
           '</div><div class="d">' + money(c.total/g) + ' per guest</div></div>' +
+        '<div class="stat"><div class="k">Family contributions</div><div class="v num" style="color:var(--ok)">' +
+          money(fundsPledged()) + '</div><div class="d">' + money(fundsReceived()) + ' in hand</div></div>' +
+        '<div class="stat"><div class="k">Your share</div><div class="v num">' + money(ourShare(c.total)) +
+          '</div><div class="d">what the two of you fund</div></div>' +
         '<div class="stat"><div class="k">From real quotes</div><div class="v num">' + money(c.quoted) +
-          '</div><div class="d">' + quotedCount() + ' lines quoted</div></div>' +
-        '<div class="stat"><div class="k">Still estimated</div><div class="v num">' +
-          money(c.estimated) + '</div><div class="d">swap these for quotes</div></div>' +
+          '</div><div class="d">' + quotedCount() + ' lines · ' + money(c.estimated) +
+          ' estimated</div></div>' +
       '</div>' +
+
+      fundsHtml(c) +
 
       allGroups().map(function(grp){ return groupHtml(grp, g, wmap); }).join("") +
 
@@ -1336,21 +1393,86 @@
         '</tbody></table></div>' +
 
       '<div class="totalbar">' +
-        '<span><span class="tt">Plan total</span><span class="tv">' + money(c.total) + '</span>' +
-          '<span class="td">' + money(c.total/g) + ' per guest · ' + g + ' guests</span></span>' +
+        '<span><span class="tt">' +
+            (state.plan.targetBasis === "share" && fundsPledged() ? "Your share" : "Plan total") +
+          '</span><span class="tv">' + money(targetSubject(c.total)) + '</span>' +
+          '<span class="td">' + (fundsPledged()
+            ? (state.plan.targetBasis === "share"
+                ? "of " + money(c.total) + " · " + money(fundsPledged()) + " from family"
+                : money(fundsPledged()) + " from family · " + money(ourShare(c.total)) + " yours")
+            : money(c.total/g) + " per guest · " + g + " guests") + '</span></span>' +
         '<span style="text-align:right"><span class="tt">' + (over>0?"Over":"Under") + ' target</span>' +
           '<span class="tv" style="color:' + (over>0?'var(--crit)':'var(--ok)') + '">' +
           money(Math.abs(over)) + '</span>' +
-          '<span class="td">target ' + money(state.plan.target) + '</span></span>' +
+          '<span class="td">target ' + money(state.plan.target) + ' on ' + targetLabel() + '</span></span>' +
       '</div>';
 
     wireBudget();
   }
 
+  var FUND_STATUS = ["Pledged","Received"];
+  function fundsHtml(c){
+    var fs = state.funds || [];
+    var pledged = fundsPledged(), received = fundsReceived();
+    var outstanding = pledged - received;
+    return '<div class="catgroup">' +
+      '<div class="ch"><b>Family contributions</b><span>' + money(pledged) + '</span></div>' +
+      (fs.length
+        ? fs.map(function(f,i){
+            var isRec = f.status === "Received";
+            return '<div class="grow">' +
+              '<span class="gn2">' + esc(f.who || "Someone") +
+                '<small>' + money(f.amt) +
+                (f.earmark ? ' · toward ' + esc(f.earmark) : ' · unrestricted') +
+                (f.note ? ' · ' + esc(f.note) : '') + '</small></span>' +
+              '<button class="mv' + (isRec?' in':'') + '" data-fundstat="' + i + '">' +
+                (isRec ? "Received" : "Pledged") + '</button>' +
+              '<button class="del" data-delfund="' + i + '" aria-label="Remove">✕</button></div>';
+          }).join("") +
+          (outstanding > 0
+            ? '<div class="warn-row" style="margin-top:10px"><span class="wi">▲</span><span>' +
+              money(outstanding) + ' pledged but not yet in hand. Deposits come due long before the ' +
+              'wedding — ask for the money when you book, not when you pay.</span></div>'
+            : '<div style="font-size:13.5px; color:var(--ok); margin-top:10px">All ' +
+              money(received) + ' received.</div>')
+        : '<div class="empty">Nobody added yet. Put every promise in here, even a vague one — ' +
+          'it changes what the two of you actually have to find.</div>') +
+      (openForm && openForm.type === "fund"
+        ? fundFormHtml()
+        : '<button class="mv" data-addfund="1" style="margin:12px 0 4px">+ Add a contribution</button>') +
+    '</div>';
+  }
+  function fundFormHtml(){
+    return '<div class="addbox" style="margin:12px 0 4px">' +
+      '<div class="row two" style="margin-bottom:9px">' +
+        '<div><label class="fld">Who</label>' +
+          '<input type="text" id="fWho" placeholder="e.g. Emma\'s parents"></div>' +
+        '<div><label class="fld">Amount</label><input type="number" id="fAmt" placeholder="0"></div>' +
+      '</div>' +
+      '<label class="fld">Where does it stand</label>' +
+      '<div class="segs" style="margin-bottom:9px">' +
+        '<button class="seg on" data-fs="Pledged">Pledged</button>' +
+        '<button class="seg" data-fs="Received">Already received</button>' +
+      '</div>' +
+      '<label class="fld">Earmarked for (optional)</label>' +
+      '<select id="fMark" style="margin-bottom:9px"><option value="">Anything — unrestricted</option>' +
+        allGroups().map(function(gr){
+          return '<option value="' + esc(gr) + '">' + esc(gr) + '</option>'; }).join("") +
+      '</select>' +
+      '<label class="fld">Note (optional)</label>' +
+      '<input type="text" id="fNote" placeholder="When it arrives, any conditions…" ' +
+        'style="margin-bottom:9px">' +
+      '<div style="display:flex; gap:8px"><button class="btn sm gold" id="fSave">Add contribution</button>' +
+      '<button class="btn sm quiet" id="formCancel">Cancel</button></div></div>';
+  }
+
   function groupHtml(grp, g, wmap){
     var c = computeTotal(g);
+    var mark = earmarkedFor(grp);
     return '<div class="catgroup"><div class="ch"><b>' + esc(grp) + '</b><span>' +
-      money(c.byGrp[grp]) + '</span></div>' +
+      money(c.byGrp[grp]) +
+      (mark ? ' <span style="color:var(--ok)">· ' + money(mark) + ' covered</span>' : '') +
+      '</span></div>' +
       itemsOf(grp).map(function(it){ return itemHtml(it, g, wmap); }).join("") +
       (openForm && openForm.type === "item" && openForm.grp === grp
         ? itemFormHtml(grp)
@@ -1604,6 +1726,44 @@
         delete state.customOpts[id];
         redrawBudget(); toast("Line removed");
       });
+    });
+
+    /* contributions */
+    var fundStatus = "Pledged";
+    Array.prototype.forEach.call(view.querySelectorAll("[data-fs]"), function(b){
+      b.addEventListener("click", function(){
+        fundStatus = b.getAttribute("data-fs");
+        Array.prototype.forEach.call(view.querySelectorAll("[data-fs]"), function(x){
+          x.classList.remove("on"); });
+        b.classList.add("on");
+      });
+    });
+    var addFund = view.querySelector("[data-addfund]");
+    if(addFund) addFund.addEventListener("click", function(){
+      openForm = {type:"fund"}; redrawBudget(); });
+    var fSave = document.getElementById("fSave");
+    if(fSave) fSave.addEventListener("click", function(){
+      var amt = +document.getElementById("fAmt").value || 0;
+      if(!amt){ toast("Enter the amount"); return; }
+      state.funds.push({who:document.getElementById("fWho").value.trim(), amt:amt,
+        status:fundStatus, earmark:document.getElementById("fMark").value,
+        note:document.getElementById("fNote").value.trim()});
+      openForm = null; redrawBudget(); toast("Contribution added");
+    });
+    Array.prototype.forEach.call(view.querySelectorAll("[data-fundstat]"), function(b){
+      b.addEventListener("click", function(){
+        var f = state.funds[+b.getAttribute("data-fundstat")];
+        f.status = f.status === "Received" ? "Pledged" : "Received";
+        redrawBudget();
+      });
+    });
+    Array.prototype.forEach.call(view.querySelectorAll("[data-delfund]"), function(b){
+      b.addEventListener("click", function(){
+        state.funds.splice(+b.getAttribute("data-delfund"),1); redrawBudget(); });
+    });
+    Array.prototype.forEach.call(view.querySelectorAll("[data-basis]"), function(b){
+      b.addEventListener("click", function(){
+        state.plan.targetBasis = b.getAttribute("data-basis"); redrawBudget(); });
     });
 
     /* controls */
@@ -1952,6 +2112,9 @@
         '<div class="diffrow"><span>People on the books</span><span class="mine num">' +
           state.guests.length + '</span><span class="theirs num">' +
           ((their.guests||[]).length) + '</span></div>' +
+        '<div class="diffrow"><span>Family contributions</span><span class="mine num">' +
+          money(d.mineFunds) + '</span><span class="theirs num">' + money(d.theirFunds) +
+          '</span></div>' +
       '</div>' +
 
       (d.itemDiffs.length
@@ -1997,7 +2160,7 @@
       if(their.plan){ state.plan.target = their.plan.target; state.plan.cont = their.plan.cont;
                       state.plan.date = their.plan.date; }
       save(); pendingImport = null;
-      toast("Merged — " + n + " people, " + m.quotes + " quotes, " + m.items + " of their own lines");
+      toast("Merged — " + n + " people, " + m.quotes + " quotes, " + m.funds + " contributions");
       go("budget");
     });
     document.getElementById("takeAll").addEventListener("click", function(){
@@ -2006,9 +2169,11 @@
       state.logis = their.logis || {};
       state.quotes = their.quotes || {}; state.useQuote = their.useQuote || {};
       state.customOpts = their.customOpts || {}; state.customItems = their.customItems || [];
+      state.funds = their.funds || [];
       if(their.plan){ state.plan.target = their.plan.target; state.plan.cont = their.plan.cont;
                       state.plan.date = their.plan.date;
-                      state.plan.planningGuests = their.plan.planningGuests; }
+                      state.plan.planningGuests = their.plan.planningGuests;
+                      state.plan.targetBasis = their.plan.targetBasis || "share"; }
       save(); pendingImport = null; toast("Replaced with their copy"); go("home");
     });
     document.getElementById("cancelMerge").addEventListener("click", function(){
