@@ -1,5 +1,5 @@
 # DIVINITY
-*a short story of the film*
+*A short story*
 
 ---
 
