@@ -72,7 +72,7 @@ Neither of them says much. She picks up the second shovel.
 
 > *Nobody's asked what they did. Nobody lies about what they do here. What you break, you answer for. And the gate is never locked.*
 
-**21 ·** *(p.41)* Winter. Hunger. Emma and John orbit each other and neither touches it. CALEB, 15, wants a gate that shuts.
+**21 ·** *(p.41)* Winter. Hunger. Emma and John orbit each other and neither touches it. Two kids come in out of the trees within a month of each other — ADAM, 14, who will not say a word about where he came from, and EVIE, 13, who will not say a word at all. Emma takes the girl. Adam wants a gate that shuts, and won't say why.
 
 **22 ·** *(p.43)* Ruthie drifts toward the road. Not dramatically. She's cold, she's twenty-two, and nobody in the camp is kind to her — she isn't useful and everybody's hungry.
 
@@ -98,7 +98,7 @@ He offers her everything again, in the same words that worked the first time.
 
 **30 · THE BURIAL** *(p.60)* John digs. Emma carves **RUTH** — the only time in the entire film anyone uses her whole name.
 
-**31 ·** *(p.61)* And then ADA, thirteen and silent since she arrived, opens a tin of seed and starts putting it in the ground over the grave. Nobody stops her. Then everybody helps.
+**31 ·** *(p.61)* And then EVELYN, thirteen and silent since she arrived, opens a tin of seed and starts putting it in the ground over the grave. Nobody stops her. Then everybody helps.
 
 **32 ·** *(p.62)* Somebody calls the place Eden. It's a joke when they say it. It doesn't stay one.
 
@@ -138,9 +138,13 @@ He offers her everything again, in the same words that worked the first time.
 
 **45 · THE REFUGEES** *(p.81)* Thirty-one people come out of the trees. Families. More mouths than Eden can carry through a winter, and everyone in the settlement knows it within ten seconds.
 
-**46 ·** *(p.83)* The argument. Delia has the ledger and the ledger says everyone starves by March. Caleb wants the gate shut. **Emma has the answer and cannot make herself stand up and say it.** John won't decide — he puts it back to the room, the way he always does. **Hazel is the one who moves it.** They take them in.
+**46 ·** *(p.83)* The argument runs an hour. Delia has the ledger and the ledger says everyone starves by March. Adam wants the gate shut and argues it badly — he cannot say what he knows without saying what was done to him, and the first law has taught him for five years not to. **Emma has the answer and cannot make herself stand up and say it.** John won't decide; he puts it back to the room the way he always does.
 
-**47 ·** *(p.86)* Deep winter. And the stores don't empty. Delia counts them four times. Maybe Ada's second field did better than anyone tracked. Maybe someone's been quietly eating less. Nobody sees a miracle; there's just a woman with a ledger who cannot make her own numbers work.
+**And then Evie — who does not talk — says four words.** *We'll grow more.* They take in thirty-one people.
+
+*Emma watches the girl she raised do the thing she cannot do.*
+
+**47 ·** *(p.86)* Deep winter. And the stores don't empty. Delia counts them four times. Maybe Evie's second field did better than anyone tracked. Maybe someone's been quietly eating less. Nobody sees a miracle; there's just a woman with a ledger who cannot make her own numbers work.
 
 **48 ·** *(p.88)* The argument that follows is not *do we have enough.* It's **are we allowed to count on this.** Do you plan around a thing you can't explain — is that trust, or is that stupidity? Hazel names the widow of Zarephath. Nobody believes her. Delia goes back to the ledger.
 
@@ -150,11 +154,13 @@ He offers her everything again, in the same words that worked the first time.
 
 **51 ·** *(p.93)* Greer, gently, over weeks: *how do you suppose anyone would ever find this place? Somebody would have to have told them.* The idea takes.
 
-**52 ·** *(p.94)* Caleb finds a boot print two miles out. John tells him it's nothing. It isn't nothing and they both know it.
+**52 ·** *(p.94)* Adam finds a boot print two miles out. John tells him it's nothing. It isn't nothing and they both know it.
 
 **53 · OUTSIDE** *(p.95)* Ward's map. One pin left.
 
-**54 ·** *(p.96)* Ada plants a second field and Emma helps her. It's the last quiet scene in the film.
+**54 ·** *(p.96)* Evie works the second field, outside the wall. Adam stands at the edge of it with a rifle, because he doesn't want her out there alone. Neither of them mentions it. Neither of them ever has.
+
+Emma comes out and works beside her a while. It's the last quiet scene in the film.
 
 ---
 
@@ -189,7 +195,7 @@ He offers her everything again, in the same words that worked the first time.
 
 **66 · THE LAST NIGHT — THE GATE** *(p.118)* John opens it. He has to; it's the fourth law, and if he locks it Eden was never real.
 
-The children go first — Toby and five others, and two adults to walk them out. **That is what the gate was always for.** PAUL DIETZ goes, for his kids; John doesn't say a word to him and doesn't need to. Caleb is told to go and refuses. Ada is told to go and refuses. And a few others simply go.
+The children go first — Toby and five others, and two adults to walk them out. **That is what the gate was always for.** PAUL DIETZ goes, for his kids; John doesn't say a word to him and doesn't need to. **Adam — who has wanted this gate shut for five years — is the one who holds it open while the children go through.** Then he's told to go himself, and refuses. Emma tells Evie to go, and Evie refuses her, the only time in four years she ever has. It is the last conversation they have. And a few others simply go.
 
 Nineteen people are standing there at dawn, and every one of them chose it twice with the door wide open.
 
@@ -199,7 +205,7 @@ Nineteen people are standing there at dawn, and every one of them chose it twice
 
 **68 ·** *(p.122)* Ward gives the order. **He has just lost, and he doesn't know it.**
 
-**69 ·** *(p.123)* The wall. It goes badly and it goes fast. Hazel dies in the first minutes — the one person there who would have understood what happens next, missing it by an hour. Then Ray. Then Delia. Caleb takes a round and stays up.
+**69 ·** *(p.123)* The wall. It goes badly and it goes fast. Hazel dies in the first minutes — the one person there who would have understood what happens next, missing it by an hour. Then Ray. Then Delia. Adam takes a round and stays up.
 
 **70 ·** *(p.124)* Emma and John, out of ammunition, back to back. One of them starts a sentence.
 
@@ -227,7 +233,7 @@ Nineteen people are standing there at dawn, and every one of them chose it twice
 
 *The church scene closes. John tried this time. He was always clean.*
 
-**79 ·** Emma goes down. She gets up, fading. She has a few seconds, and she spends every one of them **looking at Ada.**
+**79 ·** Emma goes down. She gets up, fading. She has a few seconds, and she spends every one of them **looking at Evie.**
 
 No dialogue. The whole inheritance in one look.
 
@@ -240,7 +246,7 @@ No dialogue. The whole inheritance in one look.
 ## EPILOGUE — THE GARDEN
 *pp. 124–125*
 
-**82 ·** Caleb and Ada, in ivy, in a garden that four dead people built for them. Neither of them earned it. **That is the point.**
+**82 ·** Adam and Evie, in ivy, in a garden that four dead people built for them. Neither of them earned it. **That is the point.**
 
 **83 ·** The camera pulls back, and keeps pulling.
 

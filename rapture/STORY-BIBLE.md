@@ -47,7 +47,7 @@ That is a grievance with God that lasts the entire film and is completely justif
 
 **HER TURN:** she answers Ward at the wall, in front of everyone, on behalf of everyone — knowing precisely how it looks coming from her.
 
-**AND AT THE END:** when she rises, for about eight seconds, nobody's opinion of her matters at all. That is what she spends them on — looking at Ada.
+**AND AT THE END:** when she rises, for about eight seconds, nobody's opinion of her matters at all. That is what she spends them on — looking at Evelyn.
 
 ### EMMA & JOHN — the relationship
 **Deeply in love. Unspoken. Never resolved.**
@@ -412,9 +412,30 @@ The unspoken thing between them is never spoken, because it no longer needs to b
 
 **RAY WHELAN, 60s — the man from the church.** Was in that room. Came out with John. Has never once mentioned it in four years, because the first law forbids it. Eden's carpenter. Two men sharing a settlement in total silence about the worst day of their lives. **In act three he is accused of being the traitor — and will not defend himself, because defending himself means saying where he was that morning.** That is what finally makes John commit to something out loud.
 
-**CALEB, 19 — the one who wants the gate locked.** Arrived at 14. Angry, capable, builds alongside John. Right about the danger and heard by nobody. He is the pressure on the fourth law for the whole second act. On the last night he begs John to lock it, and John doesn't, **and Caleb stays anyway.** *Half of the final couple.*
+**ADAM, 19 — the one who wants the gate locked.** Arrived at 14, during the first winter. Angry, capable, builds alongside John.
 
-**ADA, 17 — the gardener.** Arrived at 13, silent for her first year; Emma took her. She is the one who actually knows what grows and when. Emma lost a family and spent four years building one without noticing she was doing it. *The other half of the final couple. She inherits the garden because she is the only one who ever really tended it.*
+**His family did not die in the Rapture. They died afterward, at the hands of people, and he watched.** That is why he wants the gate shut — and he can never say so, because the first law means nobody asks what you did or what was done to you, and he was raised on not telling. So he argues badly, sounds paranoid, and gets dismissed. **He is right the entire time. The law that keeps him safe is the law that gags him.**
+
+**His arc, in one piece of staging:** on the last night John opens the gate, and the boy who spent five years wanting it shut **is the one who holds it open while the children go out.** No dialogue.
+
+**EVELYN ("EVIE"), 17 — the gardener.** Arrived at 13, silent for her first year. Emma took her in — **and Emma's brother was fifteen and a nightmare and was taken, and this girl is thirteen and silent and was left.** Eight years between them: sisters, not mother and daughter.
+
+She barely speaks in the entire film. She communicates through work. **She is the one who plants the seed over Ruthie's grave**, at thirteen, without a word, and everyone joins her.
+
+**SHE IS THE WIDOW OF ZAREPHATH.** When the refugees come and the adults have argued arithmetic for an hour, the girl who never talks says four words — *we'll grow more* — and the room takes in thirty-one people. **The one who says give it away is the reason the jar doesn't fail.** She has earned that garden long before she inherits it.
+
+**SHE IS EMMA'S MIRROR, and that is the point of her.** Emma cannot speak because she cannot bear being judged. Evie speaks because it does not occur to her to care. Emma raised her and the girl came out free of the exact thing Emma is still carrying — **which is what Emma is looking at when she rises.** That look is not only an inheritance. It is a woman seeing that she got one thing right.
+
+**On the last night Emma tells her to go, and she refuses.** The only time she ever disobeys her, and the last conversation they have.
+
+### ADAM AND EVELYN TOGETHER
+**Their romance is plain and unembarrassed** — the deliberate contrast with Emma and John, who cannot say it in four years while these two never had to.
+
+**Their entire relationship is one recurring image:** Evie working the outer field, Adam standing at the edge of it with a rifle, because he doesn't want her out there alone. Nobody ever comments on it.
+
+**The last shot of the film is the two of them in a garden with no fence and no rifle in it.**
+
+> **NAMING RULE — never underline it.** She is **Evie** for the whole film. **Nobody ever says "Eve."** The final scene has no dialogue at all. The audience assembles Adam, Evelyn, a garden, an apple tree and a snake by themselves, and the moment it is said out loud you have taken that away from them.
 
 **TOBY, 6 — the child.** Doesn't remember the world. Thinks the Rapture is a story adults tell. Follows John around while he digs. **He goes out through the open gate on the last night** — which is what the gate was always for.
 
@@ -466,7 +487,7 @@ Four girls from an upstate school, on the Thruway heading south, "Highway to Hel
 2. **They take them anyway.**
 3. **The stores don't empty.**
 
-**IT IS DENIABLE.** Nobody sees a miracle. There is a woman with a ledger who cannot make her own numbers work. Delia counts it four times. Maybe Ada's second field did better than anyone tracked. Maybe someone has been quietly eating less. **The film never says.** Same ambiguity as the garden growing out of season over Ruthie's grave.
+**IT IS DENIABLE.** Nobody sees a miracle. There is a woman with a ledger who cannot make her own numbers work. Delia counts it four times. Maybe Evelyn's second field did better than anyone tracked. Maybe someone has been quietly eating less. **The film never says.** Same ambiguity as the garden growing out of season over Ruthie's grave.
 
 **THE ARGUMENT IS NOT "do we have enough."** It is **"are we allowed to count on this?"** Do you plan around a thing you cannot explain — is that trust, or is it stupidity? Faith argued as a purely practical question, with nobody ever saying the word.
 
