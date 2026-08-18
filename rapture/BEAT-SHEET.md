@@ -248,6 +248,8 @@ No dialogue. The whole inheritance in one look.
 
 **82 ·** Adam and Evie, in ivy, in a garden that four dead people built for them. Neither of them earned it. **That is the point.**
 
+**82a ·** She's planting saplings. Fruit trees — a thing that won't bear for ten years. Nobody says anything about it. Under an apple tree, putting in more apple trees.
+
 **83 ·** The camera pulls back, and keeps pulling.
 
 **84 ·** Something moves in the grass behind her.

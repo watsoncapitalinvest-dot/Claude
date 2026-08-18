@@ -435,6 +435,10 @@ She barely speaks in the entire film. She communicates through work. **She is th
 
 **The last shot of the film is the two of them in a garden with no fence and no rifle in it.**
 
+**HOW HE TELLS HER.** Once, in the dark, to one person, and we never see what he describes. She is the only living soul who knows. **The charter never forbade telling — it only forbade asking**, so voluntarily handing over your history is the one intimacy this world has. That is their love scene, and there is no nudity in it and no dialogue we hear.
+
+**NO PREGNANCY — but the plan is implied.** No hand on a stomach, no line. **Evie is planting saplings.** Fruit trees, which won't bear for a decade. You do not plant an orchard for yourself, and an audience knows that without being told. Under an apple tree, planting more apple trees. That is the future tense, and it is the last thing the camera sees before it starts pulling back.
+
 > **NAMING RULE — never underline it.** She is **Evie** for the whole film. **Nobody ever says "Eve."** The final scene has no dialogue at all. The audience assembles Adam, Evelyn, a garden, an apple tree and a snake by themselves, and the moment it is said out loud you have taken that away from them.
 
 **TOBY, 6 — the child.** Doesn't remember the world. Thinks the Rapture is a story adults tell. Follows John around while he digs. **He goes out through the open gate on the last night** — which is what the gate was always for.
