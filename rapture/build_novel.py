@@ -106,8 +106,8 @@ for label, fn, s in mapping:
     by_sec.setdefault(s, []).append((label, fn))
 
 def uri(fn):
-    b = open(os.path.join('panels_raw', fn),'rb').read()
-    return 'data:image/png;base64,' + base64.b64encode(b).decode()
+    b = open(os.path.join('panels_web', fn),'rb').read()
+    return 'data:image/jpeg;base64,' + base64.b64encode(b).decode()
 
 def esc(t):
     t = html.escape(t)
@@ -163,8 +163,8 @@ header p{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.
 .panel{position:relative;margin:0;overflow:hidden;background:#000;border:1px solid var(--edge);
  aspect-ratio:16/9;display:flex}
 .panel.wide{grid-column:1 / -1;aspect-ratio:2.4/1}
-.panel img{width:100%;height:100%;object-fit:cover;display:block;filter:contrast(1.08) saturate(.9) brightness(.94)}
-.grain{position:absolute;inset:0;pointer-events:none;opacity:.42;mix-blend-mode:overlay;
+.panel img{width:100%;height:100%;object-fit:cover;display:block;filter:contrast(1.03) saturate(.95)}
+.grain{position:absolute;inset:0;pointer-events:none;opacity:.18;mix-blend-mode:overlay;
  background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.35) .5px, transparent .6px);
  background-size:3px 3px}
 .num{position:absolute;right:8px;bottom:6px;font-family:'IBM Plex Mono',monospace;font-size:.58rem;
@@ -227,7 +227,7 @@ out = f"""<title>Divinity: The Board</title>
 </div>
 <footer>
 <p>End</p>
-<p style="color:#5d6165">Panels are placeholder resolution — swap in full-size art and nothing else changes</p>
+
 </footer>
 """
 open('graphic-novel.html','w').write(out)
