@@ -146,13 +146,41 @@ he says they'll be safer there. She never knows she gave him anything else.
 - *Unknown until act three:* she gave away Eden's location. She is the reason
   the army comes.
 
-**She dies at the midpoint** — suddenly, unpredictably, sacrificing herself for
-people who had already written her off. Not atoning for her crime. Something
-else entirely.
+**SHE SENTENCES HERSELF.** She is packing before anyone calls a meeting. The
+charter would have kept her — that is the point, it *works*, John is already
+standing to say she answers for the seed and is not condemned for it — and she
+goes anyway, because she agrees with the worst thing anyone in that room thinks
+about her. She has spent her life accepting kindness from the wrong people and
+cannot accept it from the right ones.
+> *"The gate isn't a punishment, Ruthie."* — *"It is for me."*
 
-They bury her in the forest because they cannot carry her further. That is why
-they stop there. That is why they stay. **Eden grows out of her grave** —
-things growing out of season, too green, too fast, and nobody says it out loud.
+**HER DEATH — the one time she says no to a kind man.**
+She walks toward the checkpoint, because it is the only other place she knows
+and because Ward was nice to her. Ward needs one more thing: what she gave him
+the first time was vague — a direction, a river, how many days she walked. Not
+enough. He has been narrowing it for months. So he sits her down, warm as ever,
+and asks her to **walk them in.** She would be admitted; the gate is never
+locked. He offers her everything — a bed, a name, forgiveness, *you're a good
+girl, none of this is your fault.* The exact words that worked the first time.
+
+She says no. Then she runs. They shoot her in the back in sight of the
+treeline. Eden hears it, comes out, and finds her. That is how she comes home.
+
+**Her refusal is why Eden exists at all.** Ward has to find it the slow way and
+it takes him years. Every day of the second act is a day Ruthie bought them,
+and not one of them knows it.
+
+**Ward is the only person alive who knows the whole truth about her.** At the
+wall in act three he hands it over as a weapon — *she gave you to me, and then
+she wouldn't do it twice; it cost her* — meaning to break them. It gives them
+their friend back thirty seconds before the end.
+
+**THE CAMP BECOMES EDEN THE DAY THEY BURY HER.** Before Ruthie dies it is a
+camp: surviving, hoarding, *not planting*, because nobody believes in next
+year. She gives away the seed — the future — and dies. Then they plant what is
+left, over her, because she has just proved tomorrow was worth dying for. The
+place does not even have the name until she is in the ground. Things grow there
+out of season, too green, too fast, and nobody says it out loud.
 
 The marker reads **RUTH**. The only time her whole name is used.
 
@@ -278,16 +306,16 @@ audience hears two destinations for an hour. They're the same place.*
 
 ## EDEN
 
-### FOUNDING
-They stop at the treeline because they cannot carry Ruthie any further. John
-digs. They stay a night, then a week, then someone plants something. It is
-never decided — nobody votes to found a settlement, they simply fail to leave.
-By the time it has walls, John has been running it for a year without ever once
-agreeing to.
+### FOUNDING — two stages
+**The camp.** They stop at the treeline and fail to leave. It is never decided;
+nobody votes to found anything. They survive, they hoard, they do not plant —
+because nobody believes in next year. By the time it has walls John has been
+running it for a year without ever once agreeing to.
 
-Things grow there out of season — too green, too fast, over her grave. Nobody
-says it out loud. Nobody explains it. Blessing or wishful thinking is never
-settled.
+**Eden.** Ruthie gives away the seed and dies. They plant what is left of it
+over her grave. The place takes the name the day they bury her. Things grow
+there out of season — too green, too fast. Nobody says it out loud, nobody
+explains it, and blessing vs. wishful thinking is never settled.
 
 ### THE CHARTER
 Spoken at the gate to every newcomer. Said three times across the film, with
@@ -338,7 +366,6 @@ is judgment.** The exact thing they built the place to escape.
 
 - Timeline: how long between the Rapture and the siege?
 - Eden's population, leadership, and supporting cast.
-- What Ruthie dies doing.
 - Ending: who survives, what happens to the world, does Emma or John die?
 - Tone/lane: faith-based inspirational vs. gritty survival vs. epic fantasy
   battle.
