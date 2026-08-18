@@ -44,24 +44,89 @@ it falls because a friend betrayed them. They are saved anyway.
 
 ## CHARACTERS
 
-### EMMA — female lead, early 20s
-Sorority sister, in the back seat of the car when it happens. Survives the
-opening crash. *(Arc and act-one path still to be developed.)*
+### EMMA — female lead, 21
+Sorority sister, in the back seat when it happens. Survives the opening crash.
 
-### JOHN — male lead
-At church that morning **searching for faith** — a seeker, not a believer.
+**Her whole family was taken and she was not.** Parents and a younger brother —
+and *she was the believer in that house.* She was the one who went to church.
+Her father hadn't set foot in one since he was a kid. Her brother was fifteen
+and a nightmare. All three are gone and she is standing in the driveway of an
+empty house.
 
-When the congregation realizes the priest was not taken, John is the one who
-says out loud that the priest may have been judged and left for a reason. He
-argues **against** killing him. A parishioner then testifies that the priest
-molested him as a child, and the congregation beats the priest to death.
+That is a grievance with God that lasts the entire film and is completely
+justified. It makes "the pattern is messy" personal rather than thematic. And
+it sets the last beat: the girl who was rejected while everyone she loved was
+chosen spends three years being good for absolutely nothing — and the sky opens
+anyway.
+
+*(Act-one path still to be developed.)*
+
+### EMMA & JOHN — the relationship
+**Deeply in love. Unspoken. Never resolved.**
+
+It is the engine under everything and neither of them ever names it — not once.
+The actors play it; the script never states it. It lives entirely in behavior:
+who gets handed the last of something, whose opinion changes his mind, the fact
+that he stops digging when she talks.
+
+He is 37, she is 21. Two rules keep it honest:
+1. **Neither of them ever names it.** They orbit. The audience is never told
+   what to think, because the characters don't know either.
+2. **Somebody in Eden says it out loud** — one disapproving line, and it isn't
+   resolved. That line is what makes the film aware of the gap instead of
+   oblivious to it, and it makes Eden a community with opinions instead of a set.
+
+The closest it ever comes: a hand held on the wall when they both think it's
+over, and one of them starting a sentence and not finishing it. Then the sky
+opens and takes the moment away.
+
+
+### JOHN — male lead, 37
+A **contractor.** Twice he has built a company and twice lost it.
+
+He got close enough to taste it the first time, and bad fortune knocked him
+back to the start. He climbed out again, and the second time he was sure he'd
+made it — and sure that **God had helped him.** He'd have said so out loud to
+anyone who asked. Then it came down again and put him back at zero.
+
+By the last normal morning of his life he is not angry. He is past angry —
+anger takes hope. He is polite and hollow and falling apart.
+
+He is at church that morning **searching for faith and for proof.** Not for
+comfort — **for an accounting.** He came to ask what he did wrong.
+
+He gets an answer ninety seconds later: every faithful person in the room drops
+dead and he is still standing there breathing. *He prayed for proof and
+received absolute, irrefutable, world-ending proof — and the content of it was*
+you're not coming.
+
+> Give him one small, specific vanity to have lost on the last normal morning:
+> a loan three weeks out, a bid he didn't get, a partner who walked.
+
+**The church:** when the congregation realizes the priest was not taken, John is
+the one who says out loud that the priest may have been judged and left for a
+reason. He argues **against** killing him. Simon Ward then testifies that the
+priest molested him as a child, and the congregation beats the priest to death.
 
 John is not wrong and he does not swing. But he said the true thing, and the
 true thing got a man killed. **His damage: a man who has learned that speaking
 costs lives.** For most of the film he will not lead, will not argue, will not
 say the thing everyone needs him to say. The moment he finally does is his turn.
 
-Eden is partly his attempt to pay off the founding sin of the movie.
+**He buries people.** All through act one — strangers, in the thousands, while
+the rest of the world steps over them. He can't articulate why. It is the only
+thing he can think of to do, and it is something to do with his hands so he
+doesn't have to be a person. Digging is his sacrament.
+
+**THE ARC LOCK — Eden is his third build.** He built twice for himself and lost
+both. The third he builds for nothing: no money, no name, no return, and by
+then no belief that anyone is keeping score. When it is about to come down a
+third time, exactly the way it always does, the sky opens. The pattern of his
+entire life breaks — and it breaks on the one thing he didn't build for
+himself. He asked to build something big; the prayer is answered twice, once as
+a curse and once as the real thing, and he doesn't recognize the second until
+the end.
+
 
 ### RUTHIE — Emma's friend, the other crash survivor
 Sweet, likable, **weak and easily manipulated**. Not scheming, not selfish by
@@ -185,11 +250,32 @@ if this is hell, there are no rules in it.*
 
 ---
 
+### HOW EMMA AND JOHN MEET — before the midpoint
+Two threads cut against each other with **no geography given** — the audience
+never gets a map, so it can't place the groups relative to one another.
+
+In **Emma's** thread she keeps passing graves. Rows of them, out in nowhere.
+Dug properly, mounded, marked, some named and some not. Nobody around. She and
+Ruthie remark on it once, uneasily — *somebody's out here* — and the movie never
+explains it. In **John's** thread we watch him dig, with nothing around him that
+locates him.
+
+The audience holds both halves the whole time and never joins them. Then Emma
+comes over a rise and there is a man in a hole, and the click lands in the
+audience about a second before it lands in her.
+
+- Nobody has to explain John. She's been reading him for weeks in the only
+  language he has.
+- It sets up the midpoint: when Ruthie dies and they can't carry her, John does
+  the one thing he knows how to do — and that grave is where Eden starts.
+
+*Optional twist: give the same place two names. John's group calls it* the
+reservoir*; Emma and Ruthie are heading for somewhere they call* Beaumont*. The
+audience hears two destinations for an hour. They're the same place.*
+
+
 ## OPEN QUESTIONS
 
-- How and when do Emma and John meet? Is there a romance?
-- What does Emma do between the crash and the forest?
-- What was John before that morning?
 - Timeline: how long between the Rapture and the siege?
 - Eden's founding, population, leadership, and its **rule** (proposed: *we do
   not turn anyone away* — which is what lets the enemy in).
