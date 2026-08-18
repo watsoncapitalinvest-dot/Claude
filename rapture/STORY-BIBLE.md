@@ -502,3 +502,17 @@ A siege of forty people normally ends in starvation; that is the whole tactic. *
 
 ### THE LAMP
 One lamp in the meeting hall they cannot afford to keep burning, and it does not go out. Remarked on once, never again. **It is the last light still on when the sky opens.**
+
+
+---
+
+## CASTING RULE — NOBODY IS DEFINED BY SILENCE
+
+**Everybody in this film talks.** Nobody is mute, nobody broods, nobody communicates in meaningful glances. Each person has **one specific subject they will not discuss** and is perfectly voluble about everything else. That is the whole distinction, and it is a much sharper tool than silence.
+
+- **JOHN** talks constantly — dry, easy company, will discuss drainage for an hour. What he won't do is **commit.** He asks instead of answering and hands every decision back to the room.
+- **EMMA** is the best talker in the settlement one-on-one — she sits with the dying, she talks strangers through the gate, she can say anything to anybody at the woodpile. What she cannot do is **speak in a room.** In front of everybody, where she can be judged all at once.
+- **EVIE** will talk your ear off about frost dates, drainage, and what you're doing wrong with the beans, and she never lets anyone forget she's right. What she does not do is **argue about people.** In five years nobody has heard her take a side about a person in front of a room — which is why four words from her move it.
+- **ADAM** is the loudest person in Eden. Nineteen-year-olds don't brood, they talk — he argues, complains, jokes, needles John from dawn to dark. The only subject he won't touch is **his family.**
+- **RAY** talks all day while he works, about weather and hockey and a dog he had in 1988. Warm, funny, endless. **One morning in his life** is off the table.
+- **EVIE'S FIRST YEAR** of silence at thirteen is trauma and it is temporary. It ends the following spring, long before Part Three.

@@ -91,11 +91,13 @@ She picked up the second shovel.
 
 They stopped at a treeline in the park because they were tired, and then they were still there a week later, and then a month, and nobody had ever decided anything.
 
-There were eleven of them. Then nineteen. Ray Whelan, who had been in that church and had come out with John and had never said one word about it. Delia Vance, who had been a charge nurse and had spent nine days after the Rapture deciding who got treated and who didn't and had never stopped doing it in her head since. Hazel, who was seventy-one and whose husband had been taken and who still prayed out loud, every night, in front of everybody, without the slightest embarrassment, while people looked at their food.
+There were eleven of them. Then nineteen. Ray Whelan, who had been in that church and had come out with John, and who talked all day long while he worked, about weather and hockey and a dog he'd had in 1988, and who had never once in his life mentioned that morning. Delia Vance, who had been a charge nurse and had spent nine days after the Rapture deciding who got treated and who didn't and had never stopped doing it in her head since. Hazel, who was seventy-one and whose husband had been taken and who still prayed out loud, every night, in front of everybody, without the slightest embarrassment, while people looked at their food.
 
 They stripped a farm co-op and came back with sealed tins of seed. Nobody planted any of it. There was no next year. Delia said it plainly: *we eat it or we die with it.*
 
-Two kids came in out of the trees within a month of each other. A boy of fourteen who would not say one word about where he'd come from and wanted a gate that locked. A girl of thirteen who would not say one word at all. Emma took the girl. She was the same size Danny had been.
+Two kids came in out of the trees within a month of each other. A boy of fourteen who talked without drawing breath about everything on this earth except where he had come from, and who wanted a gate that locked. A girl of thirteen who had stopped talking somewhere out there and hadn't started again. Emma took the girl. She was the same size Danny had been.
+
+The girl started talking again the following spring. Once she did, it turned out she was hard to stop.
 
 The rules got said out loud one night during an argument about whether to let in a man who had done something in the city. Hazel said them, and after that she said them at the gate to everybody who ever came:
 
@@ -147,7 +149,7 @@ They shot her in the back within sight of the treeline. It was not quick and it 
 
 John dug. Emma carved the marker, and what she carved on it was RUTH, which was the only time in her whole life anybody used her whole name.
 
-And then the silent girl, thirteen years old, walked over with a tin of seed under her arm and got down on her knees and started putting it in the ground on top of the grave.
+And then the girl — thirteen years old, still not talking then — walked over with a tin of seed under her arm and got down on her knees and started putting it in the ground on top of the grave.
 
 Nobody stopped her.
 
@@ -189,19 +191,21 @@ Four years on, Eden was green.
 
 Forty-one people. Walls. Bees. Six children, one of whom, Toby, was six years old and had never seen a city and thought the Rapture was a story adults told.
 
-Emma was twenty-five. She delivered a baby that spring and dug a latrine that summer and sat up three nights with a man who was dying and took every shift nobody wanted. Everybody in Eden depended on her and not one person could have told you what her job was, because she didn't have one and wouldn't take one. A title is a thing people can measure you against.
+Emma was twenty-five. She delivered a baby that spring and dug a latrine that summer and sat up three nights with a man who was dying, talking to him the whole time about nothing at all, which was a thing she was better at than anyone alive. She took every shift nobody wanted. Everybody in Eden depended on her and not one person could have told you what her job was, because she didn't have one and wouldn't take one. A title is a thing people can measure you against.
 
 And there was a thing about her that nobody had said out loud in four years and everybody thought, which was that she was the one who brought Ruthie in.
 
-She and John had never said anything either. Four years of standing in doorways. Everyone knew. One evening somebody who loved them both said one sentence about it — the age of her, the age of him, what it looked like — and it wasn't cruel and it wasn't resolved and nobody ever raised it again.
+She and John had never said the one thing, either. Four years of standing in doorways. Everyone knew. One evening somebody who loved them both said one sentence about it — the age of her, the age of him, what it looked like — and it wasn't cruel and it wasn't resolved and nobody ever raised it again.
 
 It landed on Emma about ten times harder than it landed on him.
 
-The boy who'd come in at fourteen was nineteen now. Adam. He built alongside John and he was good at it and he had wanted the gate locked for five straight years, and he could never explain why, because his family hadn't died in the Rapture. They'd died four months after it, at the hands of people, and he had been there. And the first rule of the place meant nobody would ever ask him, and he had been raised on not telling. So he argued badly. He sounded paranoid. He got waved off.
+The boy who'd come in at fourteen was nineteen now. Adam. He built alongside John and he was good at it and he talked more than any other human being in the settlement — arguing, complaining, needling John from dawn until dark about work and weather and whose turn it was. He had wanted the gate locked for five straight years and he could never explain why, because his family hadn't died in the Rapture. They'd died four months after it, at the hands of people, and he had been there. And the first rule of the place meant nobody would ever ask him, and he had been raised on not telling. So he argued badly. He sounded paranoid. He got waved off.
 
 He was right the whole time.
 
-And the silent girl was seventeen and her name was Evelyn and everyone called her Evie, and she still hardly spoke, and she was the only person in Eden who genuinely understood what grew and when.
+And the girl was seventeen now and her name was Evelyn and everyone called her Evie, and she would talk your ear clean off about frost dates and drainage and what you were doing wrong with the beans. She was the only person in Eden who genuinely understood what grew and when, and she never once let anybody forget it.
+
+What she didn't do was argue about people. In five years nobody had ever heard her take a side about a person in a room full of people. It simply wasn't a thing she did.
 
 ---
 
@@ -209,9 +213,9 @@ In October, thirty-one people came out of the trees.
 
 Families. Half of them sick. Everyone in Eden did the sum inside ten seconds and everyone got the same answer.
 
-The argument went an hour. Delia had the ledger and the ledger said March. Adam wanted the gate shut and made a poor job of saying so. Emma had the answer and could not stand up. John did what John always did, which was put it back to the room.
+The argument went an hour. Delia had the ledger and the ledger said March. Adam wanted the gate shut and made a poor job of saying so. Emma had the answer. She could have said it to any one of them at the woodpile in thirty seconds. She could not stand up and say it to all of them at once. John did what John always did, which was put it back to the room.
 
-And then Evie, who did not talk, said four words.
+And then Evie, who had never in five years said one word in a meeting about anybody, said four of them.
 
 *We'll grow more.*
 

@@ -72,7 +72,7 @@ Neither of them says much. She picks up the second shovel.
 
 > *Nobody's asked what they did. Nobody lies about what they do here. What you break, you answer for. And the gate is never locked.*
 
-**21 ·** *(p.41)* Winter. Hunger. Emma and John orbit each other and neither touches it. Two kids come in out of the trees within a month of each other — ADAM, 14, who will not say a word about where he came from, and EVIE, 13, who will not say a word at all. Emma takes the girl. Adam wants a gate that shuts, and won't say why.
+**21 ·** *(p.41)* Winter. Hunger. Emma and John orbit each other and neither touches it. Two kids come in out of the trees within a month of each other — ADAM, 14, who talks without drawing breath about everything except where he came from, and EVIE, 13, who stopped talking somewhere out there and starts again the following spring. Emma takes the girl. Adam wants a gate that shuts, and won't say why.
 
 **22 ·** *(p.43)* Ruthie drifts toward the road. Not dramatically. She's cold, she's twenty-two, and nobody in the camp is kind to her — she isn't useful and everybody's hungry.
 
@@ -126,7 +126,7 @@ He offers her everything again, in the same words that worked the first time.
 
 **39 ·** *(p.70)* Eden, four years on. Green, walled, working. Forty-one people. Bees. Six children. TOBY, six, who has never seen a city and thinks the Rapture is a story adults tell.
 
-**40 ·** *(p.72)* Emma at twenty-five. She delivers a baby, digs a latrine, sits with someone dying, takes the shift nobody wants. **Everyone depends on her and nobody can name what she does**, because claiming a role means being judged for it. And there's a thing about her nobody has ever said out loud in four years: *she's the one who brought Ruthie in.*
+**40 ·** *(p.72)* Emma at twenty-five. She delivers a baby, digs a latrine, sits up with a dying man talking to him about nothing for three nights, takes the shift nobody wants. She can say anything to anyone one-on-one; she cannot say it to a room. **Everyone depends on her and nobody can name what she does**, because claiming a role means being judged for it. And there's a thing about her nobody has ever said out loud in four years: *she's the one who brought Ruthie in.*
 
 **41 ·** *(p.74)* Emma and John in a doorway, not saying it. **And somebody says it for them** — one line, disapproving, from someone who loves them both. It isn't resolved and nobody brings it up again. It lands on Emma much harder than on him.
 
@@ -138,9 +138,9 @@ He offers her everything again, in the same words that worked the first time.
 
 **45 · THE REFUGEES** *(p.81)* Thirty-one people come out of the trees. Families. More mouths than Eden can carry through a winter, and everyone in the settlement knows it within ten seconds.
 
-**46 ·** *(p.83)* The argument runs an hour. Delia has the ledger and the ledger says everyone starves by March. Adam wants the gate shut and argues it badly — he cannot say what he knows without saying what was done to him, and the first law has taught him for five years not to. **Emma has the answer and cannot make herself stand up and say it.** John won't decide; he puts it back to the room the way he always does.
+**46 ·** *(p.83)* The argument runs an hour. Delia has the ledger and the ledger says everyone starves by March. Adam wants the gate shut and argues it loudly and badly — he cannot say what he knows without saying what was done to him, and the first law has taught him for five years not to. **Emma has the answer and cannot make herself stand up and say it.** John won't decide; he puts it back to the room the way he always does.
 
-**And then Evie — who does not talk — says four words.** *We'll grow more.* They take in thirty-one people.
+**And then Evie — who in five years has never taken a side about a person in front of a room — says four words.** *We'll grow more.* They take in thirty-one people.
 
 *Emma watches the girl she raised do the thing she cannot do.*
 
