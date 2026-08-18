@@ -362,10 +362,116 @@ arrives — **the walls come down from the inside, and the thing that breaks the
 is judgment.** The exact thing they built the place to escape.
 
 
+---
+
+## STRUCTURE
+
+**Total span: 4–6 years.**
+
+### PART ONE — THE FIRST DAYS *(open to ~35 min)*
+The car. The church. Two threads on two roads, **no geography given.** Emma and
+Ruthie moving; John digging. The graves. The rise, the man in the hole. They
+reach a treeline and stop.
+
+### PART TWO — THE FIRST WINTER *(~35–60)*
+Not Eden yet — a camp. Hunger, mud, no planting, because nobody believes in
+next year. Ruthie's slide. The checkpoint fence, where **Ward is not a Deputy
+Administrator yet — he is nobody, a volunteer with a clipboard**, which makes it
+worse: the kindness is his own, not a job. The seed. Caught. Self-exile. His
+second ask. Her no. The shot in the back. The burial. They plant what is left
+over her, and the place gets its name.
+
+### THE CUT — THE MONTAGE *(~60–68)*
+Four years, scored, carried on the President's own voice. Consolidation. The
+grid coming back on. Food trucks. The first sign, small — a hand on a dying
+woman. Then a stadium. The doctrine spreading: *there was no judgment, you are
+not guilty, no one is keeping score.* Underneath it, Ward: clipboard to uniform
+to **Deputy Administrator Ward.** Pins in a map. Rivers crossed off one by one.
+
+*This is also where the ugly logistics — bodies, burning, disease — get
+disposed of in six seconds each instead of forty minutes.*
+
+### PART THREE — EDEN *(~68–95)* — INTERLEAVED
+Green, working, children who have never known anything else. The charter spoken
+at the gate. Emma and John orbiting. A soft-spoken stranger walks in and nobody
+asks him a single question.
+
+**Cut continuously to the outside** — Ward's pins, the President's broadcasts
+getting stranger and more godlike. Three strands closing on one treeline.
+
+**Play dramatic irony, not mystery:** we SEE Ward send the stranger in. The
+question is never *who is the mole* — it is *when do they find out.*
+
+### PART FOUR — THE SIEGE *(~95–end)*
+The charter collapses into judgment. The truth about Ruthie. The wall. The sky.
+
+### WHAT THE ENSEMBLE STRUCTURE COSTS
+- **Budget.** Stadiums, checkpoints, a government reorganizing a world.
+- **Cast.** Eden needs six or seven people worth grieving for; the outside needs
+  its own faces.
+- **The angels must top the President.** If we watch him heal a stadium on live
+  television, the sky opening has to be an order of magnitude beyond it.
+
+---
+
+## THE SIEGE
+
+### WHAT WARD WANTS
+**Not the land. Their despair.** He is trying to bring forty people to where he
+is. Killing them is his **failure state** — every hour he spends being
+reasonable outside that wall is an hour he is trying to win.
+
+He calls them out. He offers them, one at a time, exactly what he once offered a
+scared girl at a fence: *you were never judged, you are not guilty, no one is
+keeping score, come out and eat.* Warm, patient, no threats. He has all the time
+in the world and they have a winter's worth of food.
+
+**Eden's fourth law says the gate is never locked.** So John has to open it — he
+*has* to, or Eden was never real. On the last night he opens the gate and says
+*anyone who wants to go, go now.* **And we watch who walks out.** The people
+still standing at dawn chose Eden twice, with the door wide open.
+
+**When Ward finally orders the attack, he is conceding.** It is the tantrum of a
+man who could not do it. The assault is not the moment Eden loses — it is the
+moment Eden has already won, and nobody inside knows it. That is when the sky
+opens: Heaven does not arrive to rescue them from defeat, it arrives right after
+the only victory that mattered.
+
+### WHAT ACTUALLY HOLDS THE WALL
+Ward is trying to make forty people lose their faith **and they don't have any.**
+Emma's family was taken and she wasn't. John prayed and got the end of the
+world. Nobody in Eden believes anyone is coming.
+
+What holds is that **they will not leave each other.** He offers absolution one
+at a time; they stay for the person beside them. So the sky opens over people
+who never believed a word of it — grace, not merit, in one image.
+
+Ward's most dangerous weapon is the truth about Ruthie, and his real target is
+John — the man whose words made him.
+
+---
+
+## THE SUPERNATURAL
+
+**Demons are real, and they work by invitation.** Ward **willingly allowed** one
+to influence him. It did not take him; he opened the door. His free will is
+intact, which keeps him culpable and keeps the film's whole argument about
+choice standing.
+
+> **The unspoken rhyme:** Ward opened a door and let something in. Eden's fourth
+> law is that the gate is never locked. Both left the door open — one for
+> refugees, one for a demon. Same act, opposite lives. **Never say this in the
+> script.** Build both and let it sit there.
+
+**It also solves the finale's moral problem.** When the sky opens, angels are
+not slaughtering human beings. What is revealed is what has been riding that
+army all along, and the battle becomes what it always actually was.
+
+
 ## OPEN QUESTIONS
 
-- Timeline: how long between the Rapture and the siege?
 - Eden's population, leadership, and supporting cast.
 - Ending: who survives, what happens to the world, does Emma or John die?
+- The angels: what they look like, how the battle plays, how it tops the President.
 - Tone/lane: faith-based inspirational vs. gritty survival vs. epic fantasy
   battle.
