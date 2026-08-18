@@ -7282,6 +7282,30 @@ function weeklyBoardView(kind){
       <div class="faint" style="font-size:12.5px;line-height:1.5">These columns are done fresh each week by the board — no more sample data. File it here (or send it to HQ from your device) before the issue builds on Tuesday.</div>
     </div>`);
 }
+// ---- The Story Vault: every page the Newsroom has published ------------------
+// Anything published as a standalone page belongs here so it is findable and
+// shareable from the app. Newest first.
+const VAULT_STORIES = [
+  ['scfl-wookie-curse.html', 'The Wookie Curse: The Roll Call', 'scfl-wookie-curse-og.jpg', 'Investigations · Aug 2026'],
+  ['scfl-jcm-trade-review.html', 'The Croskey-Merritt Trade, Reviewed', 'scfl-jcm-og.jpg', 'The Trade Desk · Aug 2026'],
+  ['scfl-post-draft-issue.html', 'The 2026 Post-Draft Issue', 'scfl-postdraft-og.jpg', 'Magazine · Aug 2026'],
+  ['scfl-politics-wire-freeze-flip.html', 'The Wire Freeze', 'scfl-politics-og.png', 'SCFL Politics · Aug 2026'],
+  ['scfl-2026-draft-grades-flip.html', "POP's 2026 Draft Grades", 'scfl-2026-draft-cover.jpg', 'Draft Desk · Jul 2026'],
+  ['draft-issue.html', 'The 2026 Pre-Draft Issue', 'draft-issue-og.jpg', 'Magazine · Jul 2026'],
+  ['trade-value-report.html', 'The Price of Everything', 'newsroom-og.jpg', 'Trade Value Report'],
+  ['death-by-inaction.html', 'Death by Inaction', 'death-by-inaction-cover.jpg', 'Investigations'],
+  ['microfichegate-teaser.html', 'Microfichegate', 'newsroom-og.jpg', 'Investigations · teaser'],
+  ['scfl-sportscenter.html', 'SCFL SportsCenter', 'scfl-broadcast-og.png', 'The Show · Tuesdays'],
+  ['broadcast-demo.html', 'SCFL Network · Game of the Week', 'scfl-broadcast-og.png', 'The Show'],
+];
+function storyURL(file) { return new URL(file, location.href).href.split('#')[0]; }
+async function storyShare(file, title) {
+  const url = storyURL(file);
+  const data = { title: title || 'The SCFL NewsRoom', text: title || '', url };
+  if (navigator.share) { try { await navigator.share(data); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+  try { await navigator.clipboard.writeText(url); toast('Link copied'); return; } catch {}
+  window.open(url, '_blank');
+}
 // ---- Asset Vault: the league's shared graphics shelf --------------------------
 const VAULT_ASSETS = [
   ['Brand marks', [
@@ -7311,6 +7335,9 @@ const VAULT_ASSETS = [
     ['scfl-postdraft-og.jpg', 'Post-Draft Issue card'],
     ['scfl-correction-pce.png', 'Correction & Apology card'],
     ['scfl-hill-timeline.png', 'The Hill Standoff timeline'],
+    ['scfl-wookie-curse-og.jpg', 'The Wookie Curse card'],
+    ['scfl-jcm-og.jpg', 'Trade Desk card'],
+    ['scfl-wookie-curse-art.jpg', 'The Wookie Curse cover art'],
   ]],
   ['Player & game art', [
     ['scfl-sprites-source.png', 'Player sprite sheet 1'],
@@ -7326,7 +7353,20 @@ function showAssetVault() {
       <div style="font-size:11px;font-weight:700;margin:6px 0 4px;line-height:1.3">${esc(label)}</div>
       <button class="btn ghost" data-act="asset-share" data-file="${f}" data-label="${esc(label)}" style="width:auto;padding:5px 12px;font-size:11px">Share</button>
     </div>`).join('')}</div>`;
+  const story = ([f, title, cover, kicker]) => `<div class="card" style="padding:8px;margin:0">
+      <a href="${f}" target="_blank" rel="noopener"><img src="${cover}" loading="lazy" alt="${esc(title)}" style="width:100%;height:96px;object-fit:cover;background:rgba(0,0,0,.06);border-radius:8px"></a>
+      <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#8a8a8a);margin:7px 0 2px">${esc(kicker)}</div>
+      <div style="font-size:12.5px;font-weight:800;line-height:1.3;margin-bottom:6px">${esc(title)}</div>
+      <div style="display:flex;gap:6px">
+        <a class="btn ghost" href="${f}" target="_blank" rel="noopener" style="flex:1;padding:5px 0;font-size:11px;text-align:center;text-decoration:none">Read</a>
+        <button class="btn ghost" data-act="story-share" data-file="${f}" data-title="${esc(title)}" style="flex:1;padding:5px 0;font-size:11px">Share</button>
+      </div>
+    </div>`;
   setContent(`<button class="btn ghost" data-act="home" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ The Office</button>
+    <div class="card"><h3>📚 The Story Vault</h3>
+    <p class="muted">Every issue, feature and column the Newsroom has published, kept in one place. <b>Read</b> opens it; <b>Share</b> sends the link with its preview card.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">
+    ${VAULT_STORIES.map(story).join('')}</div></div>
     <div class="card"><h3>🗂️ The Asset Vault</h3>
     <p class="muted">Every league graphic, ready to grab. Tap an image to open it full size (then long-press → Save Image on your phone), or hit Share to send it anywhere. Team logos live in <b>Export Team Logos</b>. Got new art for the vault? Send it to John and it shows up here for everybody.</p>
     ${VAULT_ASSETS.map(sec).join('')}</div>`);
@@ -7695,6 +7735,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'staff-import-go') return staffImportGo();
   if (act === 'assets') return showAssetVault();
   if (act === 'asset-share') return assetShare(t.dataset.file, t.dataset.label);
+  if (act === 'story-share') return storyShare(t.dataset.file, t.dataset.title);
   if (act === 'dev-note') return openDevNote();
   if (act === 'dev-note-save') return devNoteSave();
   if (act === 'dev-notes-export') return devNotesExport();
