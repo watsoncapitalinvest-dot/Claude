@@ -453,8 +453,15 @@ John — the man whose words made him.
 
 ## THE SUPERNATURAL
 
+**THE SUBVERSION RULE — the film's whole aesthetic.** Nothing on the enemy's
+side ever declares itself. **No demon faces, ever.** Demons, Ward, and the
+Antichrist work only by subversion, manipulation, and influence. Every evil
+thing in this movie is warm, reasonable, and patient. Plant clues that only
+resolve at the right moment. **The only force that ever shows up in the open is
+the one that arrives at the end.**
+
 **Demons are real, and they work by invitation.** Ward **willingly allowed** one
-to influence him. It did not take him; he opened the door. His free will is
+into himself. It did not take him; he opened the door. His free will is
 intact, which keeps him culpable and keeps the film's whole argument about
 choice standing.
 
@@ -506,36 +513,76 @@ everything, that he was nine years old once. That should hurt.
 frightened and they want to live; that is not choosing evil. John should not
 hate them and neither should the film.
 
-**THE PRESIDENT — a genuinely decent man who does not know.** Not a host, not
-the Antichrist proper. He believes every word he says, he thinks he is saving
-the world, and he cannot explain the signs either. Under the rule that would
-leave him innocent — so he gets **one moment where he sees clearly and chooses
-it anyway.** One scene: quiet, small, no music, the only time in the film he is
-alone. That is the second a good man is lost. He never refers to it again.
+**THE PRESIDENT — he IS the Antichrist.** Not a host, not a good man who fell.
+The thing itself, and the decency was the long con: twenty years of public
+service, the honest one, the man people joked should be running things — all of
+it built patiently for the morning the chair came open. Nothing about him was
+ever real. The audience does not learn this until the end. He is outside the
+rule; it does not apply to him.
+
+> **THE EMPTY ROOM** — one scene, mid-film, alone. No aides, no camera. The
+> warmth switches off, and not into menace: into *nothing.* No cruelty, no
+> gloating, no face. He sits and idles like a machine. A door opens and the
+> warmth comes straight back on, mid-sentence, perfect. Reads as "tired man" the
+> first time and as something else entirely the second.
+
+**RELOCATED BEAT — the lost good man.** Give the regime a human face: an aide, a
+press officer, a general. Someone decent who works out exactly what they are
+serving and stays anyway. That is the rule's second clause dramatized in a
+person the audience likes, and it gives the outside thread someone to grieve
+for. **Ward is damned by consent; this one is damned by comfort.**
 
 ---
 
 ## THE SECRET — WHAT THE RAPTURE ACTUALLY WAS
 
-The rule creates one problem: if intent is what counts, **why was Emma left?**
-She was the believer in that house; her fifteen-year-old brother was a nightmare
-and he was taken. Under the rule, that is backwards.
+**It was a real judgment. And it was also a selection. The film never tells you
+which applies to whom, and nobody on the ground can tell either.** Keep it
+slightly ambiguous throughout.
 
-**Because the Rapture was never a verdict. It was an evacuation.**
+Among the billions left behind, some were left because they were judged — and
+some were **chosen.** Picked for an honest search for faith and for a
+fundamental commitment to good. Not victims. **Heaven's first wave.**
 
-Not a judgment, not a sorting of the good from the wicked — something else
-entirely, on terms nobody on the ground has access to. Every human being alive
-assumed it was a sentence, because what else could it be? The whole world's
-despair — the President's doctrine, Ward's demon, every warlord, every suicide,
-every good person who gave up — is built on **a misreading.** Nobody was damned
-that morning. They all decided they were.
+The people of Eden have spent four years believing they were rejected. **They
+were deployed.**
 
-**The film never confirms it.** The audience suspects it, because they have been
-handed the rule and can see it does not match. The people who chose good anyway,
-for nothing, in the dark, turn out to have been right without ever knowing why.
+### THE REVEAL — done entirely in blocking
+When the sky opens, the angels **form up on the line beside them.** Not in
+front. Not instead of. Beside. Nobody says a word about it. That single piece of
+staging is the whole revelation, and it costs nothing.
 
-**That is what the sky opening reveals. Not a rescue — a correction.**
+**The angels do not come to save them. They come to join them.**
 
+### WHAT IT FIXES
+- **John** prayed for an answer and heard *you're not coming.* The message was
+  *you're needed here.* He was not refused. He was assigned.
+- **Emma's** family was taken to safety; she was kept because she could fight.
+  The cruelest fact of her life is the highest thing anyone ever said about her.
+- **The four years of being good for nothing were never a test.** They are the
+  proof of the thing that got these people picked. The Rapture did not test
+  anyone — it *revealed* them.
+
+### WARD IS A DESERTER
+**Ward was chosen too.** In that church, honestly searching, a wounded man
+looking for God on the worst morning in history. Same wave, same criteria. **And
+he defected.** He is not a sinner; he is a deserter — the one man in the film who
+knew exactly what he was turning down. That is why the demon wanted him, and why
+the rule damns him.
+
+### THE ENEMY KNOWS WHAT EDEN IS. EDEN DOESN'T.
+This justifies the entire third act:
+- **Killing a soldier of Heaven only sends them home** — tactically pointless.
+  **Turning one is a real victory.** Ward's patient, warm, reasonable siege is
+  not a personality quirk; it is the only strategy available to him. When he
+  finally orders the killing he is admitting military defeat.
+- **The President is not building an empire. He is disarming an army before it
+  finds out it exists.** *There was no judgment, you are not guilty, no one is
+  keeping score* is not comfort — it is **stand down, soldier**, broadcast to
+  every survivor on earth.
+
+**Nobody in Eden ever suspects any of this. The audience understands it from the
+blocking alone.**
 
 ## OPEN QUESTIONS
 
