@@ -274,11 +274,70 @@ reservoir*; Emma and Ruthie are heading for somewhere they call* Beaumont*. The
 audience hears two destinations for an hour. They're the same place.*
 
 
+---
+
+## EDEN
+
+### FOUNDING
+They stop at the treeline because they cannot carry Ruthie any further. John
+digs. They stay a night, then a week, then someone plants something. It is
+never decided — nobody votes to found a settlement, they simply fail to leave.
+By the time it has walls, John has been running it for a year without ever once
+agreeing to.
+
+Things grow there out of season — too green, too fast, over her grave. Nobody
+says it out loud. Nobody explains it. Blessing or wishful thinking is never
+settled.
+
+### THE CHARTER
+Spoken at the gate to every newcomer. Said three times across the film, with
+different weight each time.
+
+1. **Nobody is asked what they did.** Your history stops at the treeline.
+2. **Nobody lies about what they do here.** Honesty in the present, total.
+3. **What you break, you answer for.** Accountability, no exceptions.
+4. **The gate is never locked.** Anyone may come, anyone may go, no questions,
+   three days of food on the way out.
+
+And the unwritten one underneath all four: **we do not judge.**
+
+**The principle in one line: nobody is asked what they were; everybody answers
+for what they are.**
+
+### WHY IT MATTERS
+Every soul inside those walls was judged once already — in an instant, on a
+record they never got to see. So they build a society whose founding principle
+is that you never do that to anyone. Eden is not just a safe place. **It is a
+rebuke.** Forty condemned people deliberately trying to be more merciful than
+God was to them.
+
+And at the end Heaven comes down and fights for it. Which means Heaven agrees.
+
+### HOW THE CHARTER TEARS ITSELF APART
+The four laws are designed to collide.
+
+**Ruthie takes the seed.** Law 1 says nobody asks what she was. Law 2 says she
+cannot lie about what she did. Law 3 says she answers for it. Law 4 says she is
+free to walk out any time. The unwritten law says nobody may write her off.
+
+Eden has to hold her accountable *without* condemning her — and it cannot.
+Half of them want her gone, and the moment anyone says **exile**, the open gate
+becomes a sentence. The law that meant freedom is turned into a punishment.
+**That is the moment Eden stops being Eden** — at the midpoint, over a sweet
+girl whose only defense is *"He was nice to me."*
+
+**Ward walks in and nobody asks him a single question.** Law 1 protects him.
+
+**In act three they have to know who gave them away.** Which means asking what
+people did. Which means judging each other. The charter dies before the army
+arrives — **the walls come down from the inside, and the thing that breaks them
+is judgment.** The exact thing they built the place to escape.
+
+
 ## OPEN QUESTIONS
 
 - Timeline: how long between the Rapture and the siege?
-- Eden's founding, population, leadership, and its **rule** (proposed: *we do
-  not turn anyone away* — which is what lets the enemy in).
+- Eden's population, leadership, and supporting cast.
 - What Ruthie dies doing.
 - Ending: who survives, what happens to the world, does Emma or John die?
 - Tone/lane: faith-based inspirational vs. gritty survival vs. epic fantasy
