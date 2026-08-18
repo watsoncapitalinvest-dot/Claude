@@ -35,7 +35,19 @@ Sorority sister, in the back seat when it happens. Survives the opening crash.
 
 That is a grievance with God that lasts the entire film and is completely justified. It makes "the pattern is messy" personal rather than thematic. And it sets the last beat: the girl who was rejected while everyone she loved was chosen spends three years being good for absolutely nothing — and the sky opens anyway.
 
-*(Act-one path still to be developed.)*
+**WHO SHE IS.** Genuinely good at heart. Low confidence. Capable of doing anything that needs doing and not afraid to try. Real empathy, not performed. **What stands between her and being a leader is other people's judgment of her** — and breaking free of it is her arc.
+
+**THE MIRROR WITH JOHN.** John won't assert because he is afraid of the consequences. Emma won't assert because she is afraid of being judged. Two people who both cannot lead, for opposite reasons, running a settlement together. It is why nobody in Eden has a title.
+
+**THE CHARTER IS HER WOUND MADE LAW.** *Nobody is asked what they did* — she helped build a place where the thing she fears most is against the rules, and she still cannot shake it. You can outlaw judgment and still feel it.
+
+**HER FUNCTION IS THAT SHE HAS NO FUNCTION.** She does whatever the day needs — delivers a baby, digs a latrine, walks a stranger in, sits with someone dying, takes the shift nobody wants. Everyone depends on her and nobody can name what she does, because **claiming a role means being judged for it.** Every job, no title, on purpose.
+
+**WHAT THEY JUDGE HER FOR.** After the seed and the fence and the shot in the back, Emma is *the girl who brought Ruthie in.* Nobody ever says it. Everyone thinks it. She has carried it for four years, it is completely unfair, and it is the exact reason she will not stand up in a meeting.
+
+**HER TURN:** she answers Ward at the wall, in front of everyone, on behalf of everyone — knowing precisely how it looks coming from her.
+
+**AND AT THE END:** when she rises, for about eight seconds, nobody's opinion of her matters at all. That is what she spends them on — looking at Ada.
 
 ### EMMA & JOHN — the relationship
 **Deeply in love. Unspoken. Never resolved.**
