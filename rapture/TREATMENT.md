@@ -1,0 +1,694 @@
+# DIVINITY
+*A feature treatment*
+
+---
+
+## ONE
+
+The song is "Highway to Hell," and all four of them are singing it.
+
+Kayla drives with one wrist over the top of the wheel. Her mother is in a hospital in Philadelphia and Kayla cannot afford the gas to get there, so the deal is Atlantic City first — everybody chips in, one night, then Philadelphia on the way back. Tess has the window down and her arm out flat against the wind. In the back, Ruthie has her knees against the seat in front of her, and Emma has her phone in her lap with her thumb hovering over her mother's name.
+
+She means to call. She doesn't.
+
+It is an ordinary Tuesday in the ordinary world and there is not one single thing wrong with it.
+
+Kayla stops singing in the middle of a line. Two seconds later, so does Tess.
+
+The car leaves the road at seventy-one miles an hour and the world turns over four times.
+
+Emma comes out of it upside down in a seatbelt with glass in her hair and Ruthie screaming beside her. They crawl out and they are fine. Kayla and Tess are not. There is nothing wrong with either of them — no blood worth mentioning, no wound, no broken neck, no cause a doctor could ever name. They simply do not wake up, and Emma cannot get past it. That is the first thing the new world takes from her: not life, but explanation.
+
+She is still looking for the reason when an airplane comes down beyond the trees. It falls without an engine.
+
+Then the sound of the world goes out. No traffic. No planes. No voices.
+
+Birds.
+
+---
+
+Ninety miles north, in a church in Schenectady, John is standing at the back and not singing.
+
+He is thirty-seven and he owns a contracting company he has spent his adult life trying to make into something. Twice it has come within reach and twice it has gone. The first time a man he trusted took it out from under him; the second time there was nobody to blame at all — a bank folded, a job died, a season went bad. The first loss had a villain and the second had nothing, and no theory covers both. He had believed, briefly and completely, that God helped him climb the second time, and he had said so out loud to people. Three weeks ago it came apart.
+
+He has not come here for comfort. He has come for an accounting.
+
+Half the congregation goes down where they stand. No warning, no blood, no wounds. People simply fall.
+
+John is still standing. So is the priest.
+
+Someone screams that it is the Rapture and the word moves through the building like fire. And then somebody notices the priest.
+
+A young man in the third row begins talking. Nobody knows his name. He is shaking so badly he can hardly get it out, and what he says is that the priest touched him when he was nine.
+
+John is the first person in the room to understand where it is going.
+
+"If this is a judgment," he says, "and he's still standing here—"
+
+He stops. He hears himself. Forty faces turn.
+
+Someone takes hold of the priest. John gets between them and it takes far too long, and that is the horror of it — nobody in that room knows how to kill a man. They shove and they fall and they scream. Someone cries. Someone prays. Someone says they should stop. Some of them do. Some of them don't.
+
+**The young man does not swing. He only watches.**
+
+When it is over, forty people are standing in a church looking at their hands, and the young man from the third row is gone.
+
+John walks out. Then he comes back.
+
+At dusk, alone, he starts digging a grave behind the church. He could not tell you why. It takes him four hours and he does not stop.
+
+He never sees the young man sitting inside the darkened building, watching him through the window. When it is finished, the young man leaves by the other door.
+
+---
+
+On the third day, John drives out to the site.
+
+Forty-one units off Route 5, and it was going to be the thing that finally made him solvent. Not rich. Real. He was three weeks from the walk-through. There is a man in the cab of the excavator who worked for him nine years, and two more in the trailer.
+
+He stands in the middle of it for an hour.
+
+What he cannot get his head round is that it has not been *lost*. Losing it he understands — he has done that twice and he knows the shape of it. Nobody is going to foreclose on this. Nobody will sue him or take it off him. There is no longer any such thing as a person who cares whether this building gets finished, which means the eleven years he spent becoming the man who could finish it were not defeated.
+
+They just stopped being counted.
+
+He goes into the shell of Unit 12, where the doors came in on Thursday and are still stacked under plastic, and he hangs one. Shims it. Plumbs it. Sets the strike plate. Swings it twice.
+
+Then he sits down on the subfloor with his back against the wall, in a building nobody will ever live in, with a door in it that works, and he stays there until dark.
+
+---
+
+On the fifth day he goes back to the church, because nobody else is going to.
+
+Forty-one of them are still in the pews. Some have slid down where they fell. Somebody put a coat over a woman in the third row and never came back for her.
+
+He starts a trench along the fence line.
+
+Ray Whelan turns up the next morning and picks up a shovel. He does not explain why he came back and John does not ask him. For five days they dig, and they talk about hockey and the weather and a bad winter in '93 and a dog Ray had in 1988 called Duke, who Ray maintains was the stupidest animal ever born in Schenectady County. Neither of them says one word about the man they both watched die twelve feet away.
+
+Six days. Forty-one graves. John writes names on fence pickets where anyone knows them, and where nobody does he writes what they were wearing, because it seems better than nothing.
+
+By the end of it there are nine people sleeping in the parish hall, because a man visibly doing something is the most magnetic object in a collapsed world.
+
+They start asking him what to do. Is the government coming. Is New York worse. North or south. Is the creek safe.
+
+He asks them what they think. Every single time. *What do you all reckon. What do you want to do. Somebody else should call it.*
+
+He is not being humble. He said what he believed in front of a crowd once and he watched what it did, and he will not do it again as long as he lives.
+
+They follow him anyway.
+
+---
+
+In the third week the water goes bad and men start coming up the county road at night, taking fuel and food and tools. Everyone in that hall knows they should move north. Every one of them is waiting for John to say so.
+
+He puts it back to the room three times.
+
+On the third night four men come through and beat a nineteen-year-old named Cody badly enough that he dies two days later on a mattress in the parish hall, holding Ray Whelan's hand.
+
+Nobody blames John. Not one person. They are kind about it, which is far worse than blame.
+
+They move north on the Friday. Somebody else says when.
+
+He tries to pray once that month, alone behind the hall. He gets four sentences in and what is coming out of him is not a prayer, it is an account — the first company and who took it, and the second one, and the number and the date and how close it was, and the fact that he told people out loud, to their faces, like a fool, that he had been helped.
+
+He stops in the middle of it. He never tries again and he never tells anybody he tried.
+
+---
+
+Emma and Ruthie walk north.
+
+At Emma's house her mother is in the kitchen, her father is in the hallway, and her brother Danny is in his bedroom with headphones still on. Fifteen years old. Emma was the only person in that house who ever went to church — the only one who thought any of it mattered.
+
+She digs three graves in the backyard over two days. Ruthie sits on the step and apologizes for not helping, and Emma does not tell her it is all right, because it isn't.
+
+They walk north again, toward a camp Ruthie's uncle had in the Adirondacks. She calls it Beaumont. It is somewhere to be going.
+
+The first two weeks are fires and dead roads and arguments. In a supermarket outside Glens Falls two men argue about whether it was God or a weapon, and one of them beats the other to death with a fire extinguisher, and neither of them is right and neither could ever be proved wrong. That is the part that breaks people. Not the dying. The absence of a reason.
+
+Then they pass a field with eleven graves in it. Mounded, squared, a few with names on scrap board. Nobody around for miles.
+
+Ruthie is frightened by it. Emma is not. She knows exactly what she is looking at, and how long it takes, and what your hands feel like afterward.
+
+Four days later she comes over a rise and there is a man standing in a hole.
+
+He straightens up. He is filthy and he has a shovel and he looks at her without any particular expectation.
+
+She picks up the second shovel.
+
+---
+
+## TWO
+
+They stop at a treeline because they are tired, and then they are still there a week later, and then a month, and nobody has decided anything at all.
+
+Eleven of them become nineteen. Ray is there. So is Delia Vance, who was an ER charge nurse and who spent nine days after the Rapture deciding who got treated and who didn't, and has never stopped doing it in her head since. So is Hazel, who is seventy-one, whose husband was taken and who wasn't, and who still prays out loud every night in front of everybody while people look at their food.
+
+A boy of fourteen comes out of the trees. Adam. He talks without drawing breath about everything on earth except where he came from, and he wants a gate that locks.
+
+A girl of thirteen arrives a month later in a dead man's overcoat three sizes too big for her, which she will not take off indoors or out. On her second morning she informs Delia that the woodpile is stacked wrong and will be rotten by February. Delia tells her to go and stack it herself, so she does.
+
+It rots by February. Nobody forgets it.
+
+They strip a farm co-op and come back with forty-odd pounds of seed — sealed tins and four damp open sacks. Delia does the sum out loud one night and it is the sum the next four years run on.
+
+"Eaten, that's a week. One week, for nineteen of us." Nobody says anything. "Planted, it's three acres. Three acres is a year of food for forty people."
+
+And then the other half of it, because Delia always says the other half. *"And there isn't going to be a spring worth planting for. So we eat it or we die with it."*
+
+Nobody argues. There is no next year. Everybody in that circle knows there is no next year, so the seed goes into a hole under the storehouse and stays there.
+
+---
+
+The rules get said out loud during an argument about a man from the city who wants in.
+
+Hazel doesn't invent anything and never claims to. She sits down with a plank and a poker out of the fire and burns the Ten Commandments into it from memory, because there is not a Bible anywhere in that camp and there won't be one for two more years.
+
+They hang it on the wall of the meeting hall and that is the law of the place.
+
+Underneath the ten she burns two more lines, and she tells everybody, then and every time after, that these two are hers and not God's.
+
+*Nobody is asked what they did before the treeline.*
+
+*Nobody is kept here who wants to go.*
+
+Not one person in that room believes there is anybody left to answer to. They take all twelve anyway, because it is the only decent framework anyone ever offered them, and because it did not stop being true simply because the one who gave it has gone.
+
+The wall goes up that spring and it is barred every night of its life. It is the reason there are children in there. Who comes in is argued out every single time — whether they can be fed, what they can do, whether there is room. You are never asked what you did. You are asked what you'll do.
+
+Two years later a family comes in off the Northway with a Bible in a bread bag, and somebody works through the board against it.
+
+One of the ten is wrong.
+
+Nobody changes it. It has been true for four years, and that is the end of the discussion.
+
+---
+
+Ruthie is twenty-two and she has become the person nobody knows what to do with. She isn't cruel and she isn't lazy and she isn't dangerous. She simply isn't useful enough, and the settlement has become a machine for keeping useful people alive. She can feel herself sliding out of it.
+
+In February she walks south. The nearest checkpoint is two days away and a scavenging party came back talking about soup and blankets and a generator running, and what she wants more than any of it is to see a light somebody else turned on.
+
+The man there is not a soldier. He wears a volunteer's armband and carries a clipboard, and he is gentle with her, and it is his own — nobody has told him to be. He gives her soup and a blanket and asks easy questions. How far did you walk. Is anybody sick up there. Are there children with you. How many of you are there, roughly.
+
+Then he gives her the thing she came for without knowing she came for it. He tells her that none of it is her fault. That nobody is keeping score. That she is a good girl.
+
+He asks her for nothing at all.
+
+What he does, somewhere in the middle of the kindest hour of her life, is mention that they are collecting seed. Viable stock, catalogued and shipped south and put in the ground where the machinery still runs, and turned into food for people who are starving right now, this winter, not in some year nobody believes in.
+
+Every word of it is true. He has no reason to lie to her about it, and he never lies to her once.
+
+She walks home and doesn't tell anyone where she has been.
+
+She thinks about it for a fortnight. Forty-odd pounds of seed sitting in a hole under the storehouse doing nothing. Delia said in front of everybody that they would eat it or die with it, and nobody argued. It is going down somebody's throat in February and that will be the end of it — and there is a place two days south that will put it in the ground.
+
+She works out that she is the only person up here who can save it.
+
+It is very nearly right. That is the awful part.
+
+She tells them she is going out scavenging and nobody objects, because nobody expects anything of her. She takes the sealed tins, because that is what one person can carry for two days, and she leaves the damp sacks behind. She walks south, hands it over, and a man writes it into a ledger and gives her a receipt — a slip of paper with a stamp on it, which is precisely what a real programme gives you.
+
+She carries it home for two days and comes in through the gate holding it out in front of her, because she is expecting to be thanked.
+
+---
+
+The board on the wall is clear about it. Eighth one down. And the Law is not merciful about theft — it wants restitution, doubled, and Ruthie has nothing on this earth and no way of getting anything. Hazel's two lines are no help either, and Hazel says so herself: nobody is asked what they did *before the treeline*, and Ruthie didn't do it before the treeline. She did it here.
+
+And then nothing happens at all.
+
+That is the part nobody planned for. They have a law that tells them exactly what to do and not one of them can bring themselves to do it, and they cannot bring themselves to set it aside either. So they do nothing, and nothing turns out to be its own kind of sentence.
+
+For eight days Ruthie hauls water and turns compost in a settlement where not one person will meet her eye. She says good morning and gets a nod. She sits down and people stand up a few minutes later for reasons they have ready.
+
+She would have taken a sentence. A sentence would have been a mercy.
+
+On the ninth day they finally call a meeting, and it tears the rules apart in one room. Delia wants her gone and it is arithmetic, not cruelty. Hazel won't have it. Emma knows exactly what ought to happen and cannot make herself stand up and say it to all of them at once.
+
+John stands.
+
+What he is about to argue is not on that board, and it is not in Hazel's two lines either. There is no clause anywhere in the twelve of them that covers a girl who owes a debt she can never in her life repay and ought to be forgiven it anyway — and John, who has no faith of any kind and has not prayed in four years and would tell you flatly that nobody is listening, stands up in that room and argues for it.
+
+He is going to win.
+
+He never gets the chance. Ruthie has already packed; she packed on the fourth day, because she can read that board as well as anybody in the room and she knows exactly what it says about her.
+
+Hazel tells her nobody is putting her out.
+
+Ruthie looks at her with real gratitude. "You don't have to."
+
+Emma walks her to the treeline and can't stop her, and Ruthie apologizes the whole way, the way she did on the step at Emma's parents' house, until Emma can't see her any more.
+
+---
+
+She goes back to the fence, because it is the only other place she knows and because he was kind to her.
+
+He is glad to see her. He gets her warm and feeds her and tells her again that none of it is her fault. And then he explains, kindly and at some length, that what she gave him was never enough to find anything with, and what he needs now is for her to walk them in. She'd be admitted; she told him so herself.
+
+She sits in the warm with a blanket round her shoulders and a bowl in her hands and she says no.
+
+And he says of course. He says he understands, and she should rest and go on home in the morning, and he means every word of it — because he has never needed her cooperation at all.
+
+He only needs her to go home. There are two men already waiting to follow her.
+
+She is twenty-two years old and everybody who ever met her thought she was soft in the head, and she sits in that tent with the soup going cold in her hands and works it out by herself.
+
+In the morning she goes east.
+
+Away from the ridge. Away from the river. Away from Eden and every part of it, into country she does not know at all, for a day and a half, with two men half a mile behind her — until they understand that she is not going home and is never going to.
+
+They kill her out there, a long way from anything.
+
+Nobody in Eden hears a sound.
+
+Emma will not stop looking. They argue with her about it for four days and then they stop arguing and go with her, and on the fifth day they find Ruthie twenty-odd miles east, in the wrong drainage entirely, pointed the wrong way.
+
+It looks like she got lost. It looks small and confused and stupid, and that is exactly what every single person in that settlement quietly believes for the next four years.
+
+They carry her home. It takes four days and Emma does not put her end down.
+
+John digs. Emma carves the marker, and what she carves is RUTH, which is the only time in her whole life anybody used her whole name.
+
+Then the girl in the overcoat drags one of the damp sacks Ruthie left behind across the clearing — the half-dead one, the one nobody would have planted — and kneels down in the fresh earth and starts pushing seed into it.
+
+Somebody asks her what she thinks she's doing.
+
+"It's late in the year for it."
+
+Nobody stops her. Then everybody helps.
+
+Something grows. Too much of it, too green, out of season. Nobody notices. Not yet.
+
+Somebody calls the place Eden that week. It is a joke when they say it. It doesn't stay one.
+
+---
+
+## THREE
+
+The President of the United States is not taken.
+
+He has been President for two years and people have liked him for twenty before that — the decent one, the competent one, the one everybody always said ought to be running things back when it was a joke.
+
+He does not seize anything. He is standing in the same room he was standing in on Monday, and by Friday two-thirds of the Congress are gone, and four of the Court, and the generals who could have said no to him, and the lawyers whose entire job was telling him what he could not do.
+
+The Rapture does not make him king. It removes every restraint on a man who already is one.
+
+The country wants to know how he is still breathing. Every pulpit and every kitchen table in America asks it that first month, and he answers it himself, on television, and it is the most dangerous sentence anyone says that year.
+
+*"If there had been a judgment — would I be standing here?"*
+
+He restores the grid. He moves food. He clears the dead and reopens hospitals, and people weep in the street at a working streetlight, and they are not fools for it, because he is genuinely and remarkably good at saving the world.
+
+And then he tells them there was no judgment. That they are not guilty. That nobody is keeping score.
+
+To a planet drowning in guilt it is mercy. It is also permission, and the word *sin* begins going out of the language.
+
+---
+
+Helen March becomes his chief of staff. She is brilliant and decent and she loves him and she has given him everything.
+
+In the middle of the second year she walks into his office without knocking.
+
+He is sitting at his desk. No aides, no cameras. And the warmth is not switched down — it is not there at all. He is not angry and he is not tired and he is not thinking. He is simply sitting, the way a machine sits.
+
+Helen stops.
+
+The door sounds behind her, and his face comes back on, perfect, mid-motion. He turns.
+
+"Come in, Helen."
+
+She does. She never mentions it. Not then, not ever.
+
+---
+
+In Cleveland a man shoots him twice through the chest on live television.
+
+The President goes down. Blood comes through the shirt. A doctor works on him and then stops working on him and steps back, and a sheet goes over the body, and for one hour and forty minutes the world is told that the President of the United States is dead.
+
+Then he sits up.
+
+He walks out under his own power with the sheet still across one arm and the blood dried down his front, and he stands in front of the cameras and forgives the man who did it by name.
+
+There is no argument on earth after that. Nobody needs a doctrine any more. They have seen it.
+
+---
+
+There is a house in Ohio where a man has been hiding for eighteen months. The door opens and there is a man on the step who is polite to him, and who says something quiet and reassuring, and the man's shoulders come down.
+
+Then somebody shoots him, and the man on the step is already walking back down the path, and he has not raised his voice once and his face has not changed at all.
+
+That man had been in the church. So had thirty-nine others, and by the fourth year most of them are crossed off a list.
+
+Not because they were wrong. Because they took it out of his hands. He stood up in front of them and told them the worst thing that had ever happened to him, and they turned it into something of their own, and there was nothing left for him to do afterward but watch.
+
+The young man from the third row is Deputy Administrator Simon Ward now. He keeps a map of the park on the wall of an office — six million acres, another river crossed off every few months — and beside the map he keeps the list.
+
+He is not hunting Eden. Eden is incidental.
+
+He is hunting the last two men from that church, and one of them is a man he once watched dig a hole in the dark.
+
+The President does not know the difference. The thing inside Ward does; it wants the settlement, and the despair, and people choosing the lie.
+
+Ward wants John.
+
+He is very patient. He thinks he has time.
+
+---
+
+## FOUR
+
+Four years on, Eden is green.
+
+Forty-one people behind a wall, with bees and goats and a school of six children. One of them is Toby, who is six years old, has never seen a city, and thinks the Rapture is a story adults tell.
+
+Emma is twenty-five. She delivers a baby that spring and digs a latrine that summer and sits up three nights with a dying man talking to him about nothing at all, which is a thing she is better at than anyone alive. She takes every shift nobody wants. Everybody in Eden depends on her and not one person could tell you what her job is, because she hasn't got one and won't take one. A title is a thing people can measure you against.
+
+There is also a thing about her that nobody has said out loud in four years and everybody thinks, which is that she is the one who brought Ruthie in.
+
+John is still John. He still asks the room. He still hasn't given an order in four years, and people still follow him, which frustrates everyone including him.
+
+He and Emma have never said the one thing. Four years of standing in doorways, and everybody knows. One evening somebody who loves them both says a single sentence about it — the age of her, the age of him, what it looks like — and it isn't cruel and it isn't resolved and nobody ever raises it again.
+
+It lands on Emma about ten times harder than it lands on him.
+
+---
+
+Adam is nineteen. He arrived at fourteen and he is the loudest person in the settlement — arguing, complaining, needling John from dawn until dark about drainage and weather and whose turn it is. He wants the gate locked. He has wanted it locked for five years.
+
+His family did not die in the Rapture. They died four months after it, at the hands of people, and he was there. The first law means nobody will ever ask him, and he was raised on not telling, so he argues badly and sounds paranoid and gets waved off.
+
+He is right the entire time.
+
+Evie is seventeen. She grows everything and she will talk your ear off about frost dates and drainage and what you are doing wrong with the beans, and she never lets anybody forget she was right about the woodpile. What she does not do is take a side about a person in a room. In five years nobody has heard her do it once.
+
+She works the outer field and Adam stands at the edge of it with a rifle because he doesn't want her out there by herself. Neither of them has ever said a word about it. It has simply been true for two years, the way weather is true.
+
+Once, in the dark, he tells her about his family. We never hear what he says. She is the only living soul who knows. The law forbade asking; it never forbade telling.
+
+---
+
+In October, thirty-one people come out of the trees. Families, children, half of them sick. Everyone inside does the arithmetic within ten seconds and everyone gets the same answer.
+
+The argument runs an hour. Delia has the ledger and her objection is not that they will starve — it is sharper than that, and she is right. Forty-one people need about fifteen thousand pounds to cross a winter up here and that is precisely what is in the store. Seventy-two need twenty-six.
+
+"At full ration we're empty on the fourteenth of February. At two-thirds we're empty the third week of March, and not one of us is strong enough to plant in April."
+
+A starved settlement loses the following year too. That is the real bind.
+
+Adam wants the gate shut and argues it loudly and badly. Emma has the answer and could say it to any one of them at the woodpile in thirty seconds, and cannot stand up and say it to all of them at once. John does what John always does and puts it back to the room.
+
+And then Evie, who has never in five years said one word in a meeting about anybody, says four of them.
+
+"We'll grow more."
+
+Emma stands at the back and watches the girl she raised do the one thing she has never in her life been able to do.
+
+They open the gate and they take in thirty-one people.
+
+---
+
+Winter comes, and the stores do not empty.
+
+Delia weighs the potato store on the first of the month, the way she has every month for four years. February should read four thousand one hundred pounds. It reads five thousand nine hundred.
+
+She goes back and re-derives the October intake and gets the same number she got in October. She stands by the pot four nights running to see whether people are eating less, and they are not. She looks, quietly and thoroughly and without telling anybody why, for a cache somebody is hiding.
+
+By the first week of April they should be at nothing at all. They are at two thousand two hundred pounds and the first greens are up.
+
+There are explanations, and every one of them is possible. The second field probably out-yielded what she wrote down. The October count was rushed and done in the rain. People forage more than they report. The refugees came in with more than she logged.
+
+She sits with all four of them for most of a night and they do not close the gap. Not together. Not by half.
+
+Nobody sees a miracle. There is no light and no voice and no sign. There is a fifty-three-year-old woman with a pencil who cannot make her own ledger balance and will not say the word.
+
+Hazel says the word. She says it is the widow of Zarephath, and the barrel of meal that did not waste, and the cruse of oil that did not fail.
+
+Delia tells her the Bible is not a spreadsheet.
+
+Hazel says no, it isn't, and goes and lights the lamp.
+
+They cannot afford to keep that lamp burning. Everyone knows it. Hazel lights it every night anyway, and somebody says something about it once, in the second year, and never bothers again.
+
+It does not go out.
+
+---
+
+Greer arrives in November — thin, mild, grateful, useful. We watch Ward send him, so there is no mystery in it. The only question is when Eden finds out.
+
+They argue about him for two days. Adam votes against him and cannot say why and loses. They take him in because he is a fair hand with a saw and there is room for one more that winter, and because seven people have come through that gate in four years and five of them were the making of the place.
+
+Hazel reads him the board at the gate, all twelve, the way she does with everybody. Ray gives him a bunk.
+
+Careful people getting it wrong is a great deal worse than carelessness.
+
+Over the following months, gently, in the way you'd worry aloud to a friend, Greer starts asking people how they think anybody would ever find a place like this. Somebody would have to have told them, wouldn't they. It's the only way. Somebody here.
+
+The idea takes root the way ideas do in the winter.
+
+In February Adam finds a boot print two miles out and brings John to it. John looks at it for a long moment and says it's probably nothing.
+
+They both know it is not nothing.
+
+Three hours south, a man crosses the last river off a map. On the list beside it, two names are not struck through.
+
+---
+
+## FIVE
+
+They come out of the trees at first light and they do not attack.
+
+They set up. Vehicles, tents, generators, a field kitchen. Four hundred men. By noon the smell of cooking meat is drifting up the slope to a wall behind which forty-one people are standing very still.
+
+Then Ward walks up alone and unarmed and stands a comfortable distance out, and he is kind.
+
+He tells them nobody is going to be hurt. He tells them there was no judgment and they are not guilty of anything and there is nobody keeping score and never was, and that everything they have suffered up here for four years has been suffered for a misunderstanding.
+
+Come out. There's food.
+
+He says he will wait as long as it takes.
+
+---
+
+On the second day he puts one round through the north wall.
+
+It takes out eleven feet of it and part of the walkway, and the noise goes round the bowl of the valley twice, and nobody in Eden has ever heard anything like it in their lives.
+
+And then nobody comes through the hole.
+
+They stand there most of an hour waiting for it. Nothing comes. By evening it is clear that nothing is going to, and by the second night they understand that they are not permitted to repair it either, because the one time Ray goes out with timber a round goes into the ground eight feet from him, and that is the whole of the message.
+
+After that there are two people on the gap every night, in the cold, watching nothing come through a hole in their own wall, with the smell of the field kitchen coming up the slope at them.
+
+John built that wall over four summers. It kept out weather and bears and, twice, men. It is the best thing he ever made and it worked every day of its life, right up until the morning something arrived that it was never going to stop.
+
+Nobody says any of that out loud either.
+
+---
+
+On the third day Delia says two things nobody else has got to yet.
+
+The first is that he cannot starve them. The store still is not emptying and she has stopped pretending to herself that it is going to.
+
+The second is that he is lying about the waiting. He has four hundred men in a forest in October, fed off a road nine miles back through a pass that shuts with the first real snow every year of her life. Five weeks. Six at the outside.
+
+So they have a plan, and the plan is to outlast him, and it is a good plan.
+
+Which means the only weapon the man has left is his mouth, and it is doing more damage than artillery would have.
+
+He speaks every day. Never once raising his voice. The people behind that wall are hearing exactly the voice Ruthie heard four years ago — warm, reasonable, patient, and offering the one thing none of them have had since the morning the world ended.
+
+Inside, it works. Not on everybody. On enough.
+
+---
+
+On the Sabbath they put their tools down.
+
+Fourth on the board, and they have kept it every seventh day for four years, and there is a genuine argument about it that morning which lasts about ten minutes and which Hazel wins by not saying anything at all.
+
+So on the sixth day of an occupation, with a hole in the north wall and four hundred men on the slope, nineteen adults and six children sit down and do nothing whatsoever from sunrise to sunset.
+
+Ward stands out in the wet grass with his hands behind his back and watches them do it.
+
+Whatever he was expecting, it is not that. It is the only time in the entire film that anybody sees that man's face change.
+
+---
+
+Then the first law dies.
+
+Somebody must have told them. Somebody here. Who came in and never said what they'd done?
+
+And Eden — forty-one people who built the only place on earth where you were never asked — starts asking.
+
+They get to Ray in two days. He was in that city. He came in with John. And he will not account for the morning of the Rapture, not even to save himself, because accounting for it means saying where he stood and what he watched and what his hands did.
+
+He takes it and says nothing, and they are an hour from putting him out the gate.
+
+And nobody inside those walls knows that they are two days from handing Ward, personally, one of the two things he came four years to collect.
+
+John stops asking the room what it thinks.
+
+He tells them what he said in that church. He tells them what happened after. He tells them what he did that evening, alone, behind the building, and how long it took. And then he says what is going to happen about Ray, and he does not put it to a vote.
+
+Half of Eden looks at him differently for the rest of his life. Delia is the one who stands up for him, which surprises everybody, most of all Delia.
+
+---
+
+The next morning Ward, mildly, from the same comfortable distance, tells them about Ruthie.
+
+He says she gave them up. He says he has known roughly where they were for four years and has simply been narrowing it down. It lands hardest on Emma, standing on the wall, because now the thing nobody ever said out loud about her is a fact standing in the open air in front of everybody she loves.
+
+And then he tells them the rest, and it is not cruelty. It has been bothering him for four years and he genuinely cannot account for it.
+
+He says he never needed the girl to tell him anything. He only needed her to go home, and he had two men ready to follow her, and any twenty-two-year-old on this earth would have walked straight up that ridge and led them to the gate without ever knowing she had done it.
+
+She never went home. She went east for a day and a half.
+
+The last thing Ruthie did on this earth was ruin his map, and it cost him four years, and he tells them so from forty feet away in a reasonable voice because he wants to know if any of them can explain it to him.
+
+Nobody can.
+
+Hazel says the name stays on the garden. Nobody argues with her.
+
+---
+
+## SIX
+
+The snow starts in the pass.
+
+He cannot turn them and he cannot go home having failed, and he makes one last offer at first light, and it is the kindest thing he has ever said to anyone.
+
+---
+
+The night before, John has the gate unbarred and swung wide.
+
+It has been barred every night for four years. Nobody in Eden is kept here who wants to go — that has been true since the first winter and it has never once cost them anything, and tonight it is going to cost them nearly everybody.
+
+The children go first: Toby and five others and two adults to walk them south. Adam holds the gate open with both hands while they go through — the boy who has wanted it shut since he was fourteen years old. Then he is told to go himself, and refuses.
+
+Paul Dietz goes, for his kids, and John doesn't say a word to him and doesn't need to. Four others go. They are frightened and they want to live, and there is nothing else to say about it.
+
+Emma tells Evie to go.
+
+Evie refuses her. It is the only time in four years the girl has ever disobeyed her about anything, and it is the last conversation they have.
+
+At dawn there are nineteen people standing behind that wall, and every one of them has chosen it twice, with the door wide open.
+
+---
+
+And Emma answers him.
+
+In front of all of them. On behalf of all of them. The girl who brought Ruthie in, who half of them quietly blamed for four years, standing up on a wall to speak for everybody.
+
+She has seen the tape. Everybody has. She won't stand up there and tell him she knows what that man on the television is, because she doesn't, and she won't pretend she has been given one single reason in four years to think anything is listening up here.
+
+She says the first one on their board is the first one for a reason, and it does not have a clause in it about who else might be doing miracles.
+
+She says they worked out a long time ago that there is no reward in this.
+
+She says they stayed anyway.
+
+"That's the whole of what we've got," she says. "You can have the rest."
+
+Ward looks up at her for a long moment.
+
+Then he walks back and gives the order.
+
+They have come within days of it. Nobody up there ever knows how close.
+
+---
+
+## SEVEN
+
+It goes badly and it goes fast.
+
+Hazel dies in the first ten minutes — the only person up there who would have understood what happens next, and she misses it by an hour. Then Ray, at the north corner, where he was put because it was the quietest and he was sixty-six. Then Delia, who is dragging a boy out of the open when it happens and who gets him behind cover first.
+
+Adam takes a round through the shoulder and stays up.
+
+John and Emma end up back to back near the meeting hall with nothing left to put in the rifles, and it is very loud and then, oddly, quieter, and Emma starts a sentence she has not started in four years.
+
+She gets three words into it.
+
+---
+
+The sky opens.
+
+There is no thunder and no trumpet and no warning. They come down the way a ceiling comes down — gold light with no source anywhere in it, anatomy that does not work, too many wings by half, faces that will not resolve no matter how long you look at them. A Renaissance ceiling tearing loose. And they are fading at the edges, all of them, like something standing half in another room.
+
+And they take the line beside the defenders.
+
+Not in front of them. Beside them.
+
+Nobody remarks on it. There is not time and there is not any need.
+
+Out on the slope the army comes apart. The men who are only men break and run, and nobody stops them and nobody chases them; they are let go, every one. What is left standing does not run, and for the only time in any of this, the things that have been riding those men stop pretending. The same materials as the light, with the paint gone wrong. Bosch. Goya.
+
+---
+
+Hazel gets up out of the mud.
+
+Her glasses are gone and her white hair is loose and she is fading at the edges like the rest of them, and she is seventy-one years old and she is laughing — helplessly, the way you laugh when somebody finally tells you the joke you have been waiting sixty years to hear.
+
+Then Ray. Then Delia, swearing.
+
+The dead stand up and pick their rifles back up. They were not promoted and they were not transformed. They are what they always were.
+
+The enemy's last weapon stops working.
+
+And Emma, turning, sees a girl in that host that she put in the ground four years ago with her own hands. Ruthie is not sorry and is not ashamed and is not apologizing to anybody, for the first time in her life. She has been there the whole while. She has been waiting.
+
+---
+
+Out on the slope, something enormous takes the man who was President, and the thing that was never a man at all comes apart in the light.
+
+And as it goes it takes Ward with it, and the last thing Simon Ward ever learns is that he was not a partner in any of it.
+
+He was equipment.
+
+And he reaches out. Not for the light and not for anybody in it.
+
+He reaches for John — who he has been coming toward for four years, across six million acres and a list of forty names, who is the last of them, and who is being taken away from him now like everything else has been.
+
+And John, who could not stop one killing in a church four years ago, goes for him.
+
+It is not enough. Ward knew, and he chose, and the rule does not bend for anybody, not even for a nine-year-old boy in the third row of a church that failed him.
+
+John stands there afterward with his hand still out.
+
+---
+
+Then Emma goes down, and gets up, and she is fading at the edges too.
+
+She has a few seconds. She spends every one of them looking at Evie.
+
+There is no dialogue. There is nothing that needs saying. The whole inheritance goes across forty feet of ruined ground in one look, and the girl takes it standing up.
+
+John is beside her. For the first time in the length of this story, he is not carrying anything.
+
+And then they go. All of them, all at once, and the field empties, and the noise stops.
+
+The lamp in the meeting hall is still burning.
+
+---
+
+## EIGHT
+
+There are two people left in the garden.
+
+By the second summer the wall is down in three places and neither of them has rebuilt it, and there is not a rifle anywhere in Eden that either of them could find in a hurry. They wear what the season allows. There is nobody to see, and nothing to be ashamed of, and it stopped occurring to either of them some time ago.
+
+Evie is planting saplings. Fruit trees — the kind that give you nothing at all for ten years. She has put nine of them in along the south edge, and Adam has dug every one of the holes without asking her what they are for.
+
+The garden has grown out over the graves and gone on growing, out of season, too green, and neither of them has ever explained it and neither of them ever will.
+
+They stand together under the branches. Nothing is said.
+
+The camera begins to pull back. The garden, the fallen wall, the fields, the forest, and two small figures in the middle of it.
+
+And down in the grass, behind the girl, something begins to move.
+
+She does not see it.
+
+Two people in a garden that four dead people built for them, and neither of them earned it, which is the point, which was always the point. Trees planted for a year neither of them will be here to see. And something alive under the leaves.
+
+The world is green. The future is open.
+
+**FADE OUT.**
