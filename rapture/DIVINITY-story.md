@@ -175,7 +175,7 @@ Two kids came in out of the trees within a month of each other. A boy of fourtee
 
 The girl started talking again the following spring. Once she did, it turned out she was hard to stop.
 
-The rules got said out loud one night during an argument about whether to let in a man who had done something in the city. It was Hazel who said them, and she didn't make them up, and she didn't pretend to. Judge not. Bear no false witness. Be reconciled to your brother. I was a stranger and you took me in.
+The rules got said out loud one night during an argument about whether to let in a man who had done something in the city. It was Hazel who said them, and she didn't make them up, and she didn't pretend to. Judge not. Bear no false witness. Be reconciled to your brother. Let no man be held against his will.
 
 Not one person in that circle believed there was anybody left to answer to. They took the rules anyway, because it was the only decent framework that had ever been offered to any of them, and because it had not stopped being true simply because the one who said it had gone.
 
@@ -249,7 +249,7 @@ John stood up. He was going to say that she answered for the seed and was not co
 
 He never got to.
 
-She had already packed. She'd packed on the fourth day. Somebody said *the gate isn't a punishment, Ruthie,* and she looked at them with real gratitude and said, *it is for me.*
+She had already packed. She'd packed on the fourth day. Somebody said *nobody's putting you out, Ruthie,* and she looked at them with real gratitude and said, *you don't have to.*
 
 Emma walked her to the treeline and couldn't stop her, and Ruthie kept apologizing, the way she had on the step at Emma's parents' house, all the way until Emma couldn't see her any more.
 
@@ -257,7 +257,7 @@ Emma walked her to the treeline and couldn't stop her, and Ruthie kept apologizi
 
 She walked two days south and east and went back to the fence, because it was the only other place she knew, and because he had been nice to her.
 
-He was glad to see her. He sat her down and got her warm and told her again that none of it was her fault. And then he explained, kindly and at some length, that what she'd given him hadn't been enough to find anything with, and that what he needed now was for her to walk them in. She'd be admitted, he said. She'd told him so herself. The gate up there is never locked.
+He was glad to see her. He sat her down and got her warm and told her again that none of it was her fault. And then he explained, kindly and at some length, that what she'd given him hadn't been enough to find anything with, and that what he needed now was for her to walk them in. She'd be admitted, he said. She'd told him so herself. They'd never bar it to her.
 
 She sat in the warm with a blanket round her shoulders and a bowl in her hands and she said no.
 
@@ -405,7 +405,13 @@ It didn't go out.
 
 They watched Ward send the man in.
 
-That is to say: we watched. Eden didn't. He came to the gate in November, hungry and grateful, a soft-spoken man named Greer, and Hazel said the four things to him at the gate, and nobody asked him a single question, because nobody ever did.
+That is to say: we watched. Eden didn't. He came to the gate in November, hungry and grateful, a soft-spoken man named Greer, and they did what they always did, which was argue about him for two days.
+
+Adam voted against him. He couldn't say why. He never could.
+
+They took him in because he was a fair hand with a saw and there was room for one more that winter, and because seven people had come through that gate in four years and five of them had been the making of the place. Hazel said the four things to him at the gate and Ray gave him a bunk.
+
+Careful people getting it wrong is a great deal worse than carelessness.
 
 Ray gave him a bunk.
 
@@ -499,7 +505,9 @@ Hazel said the name stayed on the garden. Nobody argued with her.
 
 ## TEN
 
-On the last night John opened the gate, because the fourth rule was the fourth rule, and if he locked it then none of the last four years had been real.
+On the last night John had the gate unbarred and swung wide, and it had been barred every night for four years.
+
+Nobody was kept in Eden who wanted to go. That had been true since the first winter and it had never once cost them anything, and tonight it was going to cost them nearly everybody.
 
 The children went first. Toby and five others, and two adults to walk them south. That was what the gate had always been for, though nobody had ever said so.
 

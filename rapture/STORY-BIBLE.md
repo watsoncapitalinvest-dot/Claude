@@ -16,7 +16,7 @@ Some conclude that if the score no longer counts, nothing is forbidden. Some cho
 
 **THE THESIS, PRECISELY.** What holds Eden together is **not** loyalty to each other. It is **dedication to the morality Jesus and the Bible taught, kept by people who believe there is no longer any higher power left to judge them.** They are not a family that survives. They are a community keeping a law nobody is enforcing.
 
-**THE CHARTER IS SCRIPTURE, AND IT IS HAZEL'S.** She does not invent it and never pretends to. *Judge not. Bear no false witness. Be reconciled to your brother. I was a stranger and you took me in.* Not one person in that circle believes there is anyone left to answer to. **They take the rules anyway**, because it is the only decent framework anyone ever offered them, and because it did not stop being true when the one who said it left.
+**THE CHARTER IS SCRIPTURE, AND IT IS HAZEL'S.** She does not invent it and never pretends to. *Judge not. Bear no false witness. Be reconciled to your brother. Let no man be held against his will.* Not one person in that circle believes there is anyone left to answer to. **They take the rules anyway**, because it is the only decent framework anyone ever offered them, and because it did not stop being true when the one who said it left.
 
 **EMMA'S ANSWER AT THE WALL** is this thesis, said once, by the person who cannot speak in rooms: *we were told what we're supposed to do, nobody ever came up with anything better, and it doesn't stop being true because nobody's watching. We worked out years ago there's no reward in it. We stayed anyway.*
 
@@ -260,7 +260,7 @@ Spoken at the gate to every newcomer. Said three times across the film, with dif
 1. **Nobody is asked what they did.** Your history stops at the treeline.
 2. **Nobody lies about what they do here.** Honesty in the present, total.
 3. **What you break, you answer for.** Accountability, no exceptions.
-4. **The gate is never locked.** Anyone may come, anyone may go, no questions, three days of food on the way out.
+4. **Nobody is kept here who wants to go.** Anyone may leave, any time, no questions, three days of food on the way out.
 
 And the unwritten one underneath all four: **we do not judge.**
 
@@ -629,3 +629,25 @@ He *says* he'll wait forever. **Delia does his arithmetic for him and works out 
 So Eden's actual plan is to **outlast him, and it nearly works.**
 
 **He attacks because his own clock runs out.** He cannot convert them before the snow and cannot withdraw having failed, so he kills them instead. **A tantrum with a deadline** — and it means Eden came very close to winning on arithmetic alone.
+
+
+---
+
+## THE WALL — corrected
+
+**The wall is real, it is guarded, and it is barred at night.** That is not a moral failing. **It is the reason there are children alive behind it.** Eden is not an open camp and was never meant to be one.
+
+**The fourth law is about leaving, not entering.** What Eden refuses to do is imprison its own people. *Nobody is kept here who wants to go.* That is the freedom that costs something, and it is the one the enemy uses against them.
+
+**ADMISSION IS A DECISION, NOT AN OBLIGATION.** Argued out every time, on whether they can be fed and what a person can do. It sits alongside the first law without contradiction:
+
+> **You are not asked what you did. You are asked what you'll do.**
+
+Past is off limits. Capability is not.
+
+### WHAT THIS REPAIRS
+- **Adam is not a heretic.** He argues policy, and sometimes he wins. A boy who wants the wall held is **right**, and the film treats him that way.
+- **Greer does not stroll in.** He is vetted, argued over, and admitted — and they get it wrong. **Adam voted against him.** Careful people admitting a man who passes is far worse than a loophole.
+- **The refugees are a choice.** Evie's four words move a room that could have said no. Under an open-gate rule she would only have been quoting the bylaws.
+- **The last night is stronger.** The gate has been barred for four years. John has it **unbarred and swung open so people can get out** — a deliberate act, not standing policy. Adam holding it open for the children now costs him something.
+- **Ward's siege is necessary.** He cannot come through that wall, so talking them out is his only option.

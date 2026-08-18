@@ -102,13 +102,15 @@ Neither of them says much. She picks up the second shovel.
 
 **19 ·** *(p.41)* They strip a farm co-op and come back with **sealed tins of seed and a few open sacks.** Nobody plants any of it. **Nobody believes in next year.** DELIA VANCE, 50s, ER nurse, does the sum out loud and it's the sum the whole film runs on: **eaten, it's a week of food for nineteen people. Planted, it's three acres — a year of food for forty.** And then: *we eat it or we die with it.*
 
-**20 · THE CHARTER** *(p.39)* Not written. Said. It comes out of an argument about whether to admit a man who did something in the city. **HAZEL, 70s, says it — and she doesn't invent it and never pretends to.** *Judge not. Bear no false witness. Be reconciled to your brother. I was a stranger and you took me in.*
+**20 · THE CHARTER** *(p.39)* Not written. Said. It comes out of an argument about whether to admit a man who did something in the city. **HAZEL, 70s, says it — and she doesn't invent it and never pretends to.** *Judge not. Bear no false witness. Be reconciled to your brother. Let no man be held against his will.*
 
 **Not one person in that circle believes there is anybody left to answer to. They take the rules anyway**, because it's the only decent framework anyone ever offered them, and because it didn't stop being true when the one who said it left.
 
 After that she says it at the gate to everyone who comes:
 
-> *Nobody's asked what they did. Nobody lies about what they do here. What you break, you answer for. And the gate is never locked.*
+> *Nobody's asked what they did. Nobody lies about what they do here. What you break, you answer for. And nobody's kept here who wants to go.*
+
+**The wall is real, guarded, and barred at night — and that is not a failing. It is why there are children alive behind it.** Admission is argued out every time, on whether they can be fed and what a person can do. *You're not asked what you did. You're asked what you'll do.*
 
 **21 ·** *(p.41)* Winter. Hunger. Emma and John orbit each other and neither touches it. Two kids come in out of the trees within a month of each other — ADAM, 14, who talks without drawing breath about everything except where he came from, and EVIE, 13, who stopped talking somewhere out there and starts again the following spring. Emma takes the girl. Adam wants a gate that shuts, and won't say why.
 
@@ -146,7 +148,7 @@ She walks home for two days holding it. **And she comes in through the gate with
 
 **27 ·** *(p.53)* He never gets to. She's already packed — she packed on the fourth day. Someone says *the gate isn't a punishment, Ruthie.* She says *it is for me.* Emma walks her to the treeline and can't stop her.
 
-**28 · THE SECOND ASK** *(p.55)* Two days south and east, back to the fence, because it's the only other place she knows. He's glad to see her. He warms her up. And then he explains, kindly and at length, that what she gave him wasn't enough to find anything with, and that what he needs now is for her to **walk them in.** She'd be admitted. The gate is never locked; she told him so herself.
+**28 · THE SECOND ASK** *(p.55)* Two days south and east, back to the fence, because it's the only other place she knows. He's glad to see her. He warms her up. And then he explains, kindly and at length, that what she gave him wasn't enough to find anything with, and that what he needs now is for her to **walk them in.** She'd be admitted — they'd never bar it to her; she told him so herself.
 
 **29 ·** *(p.57)* She says no.
 
@@ -210,7 +212,9 @@ Then he sits up. He walks out under his own power with the sheet across his arm 
 
 **43 · OUTSIDE** *(p.77)* Ward briefs GREER and sends him in. **We see this.** There is no mystery for the audience — only for Eden.
 
-**44 ·** *(p.79)* Greer arrives at the gate, hungry and grateful. Hazel says the four things. **Nobody asks him a single question.** Ray gives him a bunk.
+**44 ·** *(p.79)* Greer arrives at the gate, hungry and grateful. **They vet him and they argue about him** — Adam votes against, on nothing but instinct, and loses. They admit him because he's a fair carpenter and they can feed one more.
+
+**Careful people getting it wrong is worse than a loophole.** Ray gives him a bunk. Hazel says the four things to him at the gate.
 
 **45 · THE REFUGEES** *(p.81)* Thirty-one people come out of the trees. Families. More mouths than Eden can carry through a winter, and everyone in the settlement knows it within ten seconds.
 
@@ -277,7 +281,7 @@ Emma comes out and works beside her a while. It's the last quiet scene in the fi
 
 **65 ·** *(p.117)* Hazel says the name stays on the garden. Nobody argues.
 
-**66 · THE LAST NIGHT — THE GATE** *(p.118)* John opens it. He has to; it's the fourth law, and if he locks it Eden was never real.
+**66 · THE LAST NIGHT — THE GATE** *(p.118)* **It has been barred for four years.** John has it unbarred and swung wide — not because a rule compels it, but because nobody in Eden is kept here who wants to go, and tonight that means something.
 
 The children go first — Toby and five others, and two adults to walk them out. **That is what the gate was always for.** PAUL DIETZ goes, for his kids; John doesn't say a word to him and doesn't need to. **Adam — who has wanted this gate shut for five years — is the one who holds it open while the children go through.** Then he's told to go himself, and refuses. Emma tells Evie to go, and Evie refuses her, the only time in four years she ever has. It is the last conversation they have. And a few others simply go.
 
