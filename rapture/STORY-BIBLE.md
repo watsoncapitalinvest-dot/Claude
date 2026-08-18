@@ -419,3 +419,5 @@ The unspoken thing between them is never spoken, because it no longer needs to b
 **With faith-forward moments sprinkled in.** The technique: **put them in people's mouths, never in the film's voice.** Hazel prays out loud and says plain, warm, true things; the film stays cold around her and lets other characters be visibly embarrassed by it. A faith audience gets what it came for; everyone else reads it as characterization. Same lines, two audiences, no compromise.
 
 And it pays off: the one person who said all of it out loud for four years has been dead an hour when the sky opens — and the sparse film hands her the biggest image in it.
+
+**RATING: written for R, with the option to bring it down later.** Write it at full strength — cutting violence down in a later pass is easy; adding it into a script written soft never works. It matters most in two places: the church killing is **slow, clumsy and awful** rather than a stylish beat (real people are terrible at this and it takes far too long), and Ruthie's death is as ugly as it should be.
