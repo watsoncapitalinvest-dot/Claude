@@ -468,6 +468,75 @@ not slaughtering human beings. What is revealed is what has been riding that
 army all along, and the battle becomes what it always actually was.
 
 
+---
+
+## THE MORAL RULE  *(the film's governing law)*
+
+**If you are trying to be good, you are good — even if you do a bad thing
+unknowingly. If you know a thing is evil and you do it anyway, you are doomed.**
+
+Intent is everything. This is the physics of the world, it is never stated
+aloud, and no character ever learns it. **The audience works it out; the
+characters never do.** That gap is the engine: we know they are safe long before
+they do, and we have to watch them despair anyway.
+
+### HOW IT LANDS ON EACH CHARACTER
+
+**Ruthie — saved, and the clearest case in the film.** She gave Eden away
+without knowing. She was trying to be good and she was played. Clean. Her last
+act — refusing Ward when she understood exactly what it would cost — is a
+knowing choice for good. **When the sky opens, Emma sees her.** That is the
+emotional climax, and it is the community's answer about whether her name stays
+on the garden.
+
+**John — clean, and doesn't know it.** He said a true thing and a man died. He
+did not intend it. He has spent four years paying a debt that was never owed.
+The sky opening is not a reward; it is him being told the bill was never his.
+
+**The church mob splits.** Same act, same room, opposite fates. Some genuinely
+believed they were doing justice on a monster. Some knew it was murder and
+enjoyed it. **The film demonstrates its own moral physics in scene two** and the
+audience cannot see it until much later.
+
+**Ward — the pure case of the second clause.** He knew, and he opened the door
+anyway. The rule does not care that he was a victim, that he was owed
+everything, that he was nine years old once. That should hurt.
+
+**The people who walk out the gate on the last night — not damned.** They are
+frightened and they want to live; that is not choosing evil. John should not
+hate them and neither should the film.
+
+**THE PRESIDENT — a genuinely decent man who does not know.** Not a host, not
+the Antichrist proper. He believes every word he says, he thinks he is saving
+the world, and he cannot explain the signs either. Under the rule that would
+leave him innocent — so he gets **one moment where he sees clearly and chooses
+it anyway.** One scene: quiet, small, no music, the only time in the film he is
+alone. That is the second a good man is lost. He never refers to it again.
+
+---
+
+## THE SECRET — WHAT THE RAPTURE ACTUALLY WAS
+
+The rule creates one problem: if intent is what counts, **why was Emma left?**
+She was the believer in that house; her fifteen-year-old brother was a nightmare
+and he was taken. Under the rule, that is backwards.
+
+**Because the Rapture was never a verdict. It was an evacuation.**
+
+Not a judgment, not a sorting of the good from the wicked — something else
+entirely, on terms nobody on the ground has access to. Every human being alive
+assumed it was a sentence, because what else could it be? The whole world's
+despair — the President's doctrine, Ward's demon, every warlord, every suicide,
+every good person who gave up — is built on **a misreading.** Nobody was damned
+that morning. They all decided they were.
+
+**The film never confirms it.** The audience suspects it, because they have been
+handed the rule and can see it does not match. The people who chose good anyway,
+for nothing, in the dark, turn out to have been right without ever knowing why.
+
+**That is what the sky opening reveals. Not a rescue — a correction.**
+
+
 ## OPEN QUESTIONS
 
 - Eden's population, leadership, and supporting cast.
