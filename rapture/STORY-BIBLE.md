@@ -102,7 +102,23 @@ His turn is not finding a voice he never lost. It is finally making a claim in f
 ### RUTHIE — Emma's friend, the other crash survivor
 Sweet, likable, **weak and easily manipulated**. Not scheming, not selfish by design — she is a scared kid who bends toward whoever is kind to her.
 
-She is worked at a checkpoint fence by a gentle officer who feeds her, listens to her, and asks easy friendly questions: how far did you walk, is anyone sick, are there children with you, how many of you are there. He hands her the thing she wants most — **absolution.** He tells her she isn't damned, that none of it is her fault, that no one is keeping score. She gives him the seed tins because he says they'll be safer there. She never knows she gave him anything else.
+**WHY SHE TAKES THE SEED — she is not stealing it, she thinks she is rescuing it.** Two trips, not one.
+
+**FIRST TRIP — she goes empty-handed.** A two-day walk to the checkpoint in February, because a scavenging party came back talking about a generator and she wants to see a light somebody else turned on. She tells the camp she's going scavenging; nobody objects, because nobody expects anything of her. Ward feeds her, listens, and asks easy questions — how far did you walk, is anybody sick, are there children with you, how many of you are there. He gives her the thing she actually wants: **absolution.** None of it is your fault, nobody's keeping score, you're a good girl.
+
+**He asks her for nothing.** What he does is *mention* that the government is collecting viable seed stock — a real replanting programme, catalogued, shipped, put in the ground in the valleys where the machinery still runs, turned into food for people starving right now.
+
+**And it is all true. He never lies to her once.** Everything that man ever tells that girl is true.
+
+**THE FORTNIGHT.** Forty-odd pounds of seed sitting in a hole doing nothing. Delia has said in front of everyone that they'll eat it or die with it, and nobody argued, because nobody believes in next year. It is going down somebody's throat in February. And there is a place two days south that will put it in the ground.
+
+**She works out that she is the only person up there who can save it. It is very nearly right. That is the awful part.**
+
+**WHAT SHE ACTUALLY WANTS IS TO BE WORTH SOMETHING.** Nobody in that camp thinks she is useful and she has been told so with their eyes all winter. This is a way to matter more than anyone has managed in six months.
+
+**SECOND TRIP — and she comes home with a receipt.** A slip of paper with a stamp on it, which is exactly what a real programme gives you. **She walks in through the gate holding it out in front of her, because she is expecting to be thanked.**
+
+She never knows she gave him anything else.
 
 **One conversation, two consequences:**
 - *Known:* she gave away the seed stock — the sealed tins Eden has been starving around rather than eating, because they are next year. She is caught. Her only defense: *"He was nice to me."*

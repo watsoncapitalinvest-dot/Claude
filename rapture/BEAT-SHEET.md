@@ -80,15 +80,29 @@ After that she says it at the gate to everyone who comes:
 
 **22 ·** *(p.43)* Ruthie drifts toward the road. Not dramatically. She's cold, she's twenty-two, and nobody in the camp is kind to her — she isn't useful and everybody's hungry.
 
-**23 · THE FENCE** *(p.45)* The nearest checkpoint is a **two-day walk** south and east, at the edge of the park where the road comes back. Ruthie makes it in February because there's nothing left for her up here and she wants to see a light somebody else turned on. Soup, blankets, a generator running. And a volunteer with a clipboard who is kind to her — **not a soldier, not an officer, nobody at all**, which is what makes it terrible. The kindness is his own. Easy questions. How far did you walk. Is anybody sick. Are there children with you. How many of you are there.
+**23 · THE FENCE — FIRST TRIP, EMPTY-HANDED** *(p.44)* The nearest checkpoint is a **two-day walk** south and east. A scavenging party came back talking about a generator running. Ruthie goes in February because she wants to see a light somebody else turned on. She tells the camp she's going scavenging; nobody objects, **because nobody expects anything of her.**
+
+Soup, blankets, a generator. And a volunteer with a clipboard who is kind to her — **not a soldier, not an officer, nobody at all.** The kindness is his own. Easy questions: how far did you walk, is anybody sick, are there children with you, how many of you are there.
 
 Then the thing she actually wants: *none of this is your fault. Nobody's keeping score. You're a good girl.*
 
-She gives him the seed tins because he says they'll be safer here.
+**He asks her for nothing.** He only *mentions* — in the middle of the kindest hour of her life — that the government is collecting viable seed stock. A real replanting programme. Catalogued, shipped, put in the ground in the valleys where the machinery still runs, turned into food for people starving this winter.
 
-**24 ·** *(p.48)* What she gave him besides that is useless — two days' walk northwest, a river she can't name, a ridge that looks like a ridge. **In six million acres that's a rumor, not a location.** He writes it all down in a small neat hand and thanks her.
+**Every word of it is true. He never lies to her once.**
 
-**25 ·** *(p.49)* She's caught. She doesn't lie — the second law, and anyway she couldn't. Her entire defense is **"He was nice to me."**
+**23a · THE FORTNIGHT** *(p.46)* Forty-odd pounds of seed in a hole under the store hut doing nothing. Delia has said in front of everybody that they'll eat it or die with it, and nobody argued, because nobody believes in next year. It's going down somebody's throat in February.
+
+And there's a place two days south that will put it in the ground.
+
+**She works out that she's the only person up there who can save it. It is very nearly right. That is the awful part.** And what Ruthie actually wants — the whole of her — is **to be worth something**, in a camp where nobody has thought she was useful all winter.
+
+**24 · SECOND TRIP — THE RECEIPT** *(p.47)* She tells them she's going scavenging. Nobody objects. She carries it two days on her back, hands it over, and a man writes it into a ledger and gives her **a receipt** — a slip of paper with a stamp on it, which is precisely what a real programme gives you.
+
+She walks home for two days holding it. **And she comes in through the gate with that piece of paper out in front of her, because she is expecting to be thanked.**
+
+**24a ·** *(p.48)* What she gave him besides the seed is useless as a location — two days' walk northwest, a river she can't name, a ridge that looks like a ridge. **In six million acres that's a rumor.** He writes it down in a small neat hand and thanks her.
+
+**25 ·** *(p.49)* She doesn't lie about any of it and it never occurs to her to try — it takes her most of an hour to understand what she's being told she's done. Her entire defense is **"He was nice to me."**
 
 **25a · THE EIGHT DAYS** *(p.50)* And then **nothing happens at all.** No verdict — the charter doesn't permit one. Nobody is allowed to write her off, so nobody says anything, and for eight days Ruthie hauls water and turns compost in a settlement where not one person will meet her eye. She says good morning and gets a nod. She sits down and people stand up a few minutes later for reasons they have ready.
 

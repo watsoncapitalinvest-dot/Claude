@@ -115,21 +115,45 @@ Ruthie drifted.
 
 There was nothing dramatic in it. She was twenty-two and cold and she wasn't useful, and everyone was hungry, and hungry people are not kind to people who aren't useful. She started walking down toward the road.
 
-The nearest government checkpoint was a two-day walk south and east, at the edge of the park, where the road came back. She made that walk in February because there was nothing left up here for her and she wanted to see a light that somebody else had turned on.
+The nearest government checkpoint was a two-day walk south and east, at the edge of the park, where the road came back. A scavenging party had come back talking about it — soup, blankets, a generator running, which that winter was the most beautiful sound anyone could describe.
 
-Soup. Blankets. A generator running, which that winter was the most beautiful sound in the world.
+She went in February. She told them she was going out scavenging and nobody objected, because nobody expected anything of her.
 
-The man there wasn't a soldier. He wasn't anybody. He had a clipboard and a volunteer's armband and he was gentle with her, and that was his own — nobody had told him to be. He gave her soup and he asked easy questions. How far did you walk. Is anybody sick up there. Are there children with you. How many of you are there, roughly.
+The man there wasn't a soldier. He wasn't anybody. He had a clipboard and a volunteer's armband and he was gentle with her, and that was his own — nobody had told him to be. He gave her soup and a blanket and he asked easy questions. How far did you walk. Is anybody sick up there. Are there children with you. How many of you are there, roughly.
 
 And then he gave her the thing she actually wanted, which she had never told anyone she wanted.
 
 He said none of it was her fault. He said there was nobody keeping score. He said she was a good girl.
 
-She gave him the seed tins because he said they'd be safer there.
+He asked her for nothing at all.
 
-What she gave him besides that was nothing he could use. Two days' walk northwest, a river she couldn't name, a ridge that looked like a ridge. In six million acres that is not a location. It is a rumor. He wrote all of it down anyway, in a small neat hand, and thanked her.
+What he did do, somewhere in the middle of an hour that was the kindest hour of her life, was mention that they were collecting seed. There was a program. Viable stock got catalogued and shipped and put in the ground down in the valleys where the machinery still ran, and it got turned into food for people who were starving right now, this winter, not in some year nobody believed in.
 
-They caught it inside a week. She didn't lie about it. She couldn't have. Asked what she'd been thinking, she said the only true thing she had, which was: *he was nice to me.*
+Every word of that was true. He had no reason on earth to lie to her about it. Everything that man ever told that girl was true.
+
+She walked two days home and she didn't tell anybody where she'd been.
+
+---
+
+She thought about it for a fortnight.
+
+There were forty-odd pounds of seed in a hole under the store hut doing nothing whatsoever. Delia had said out loud, in front of everybody, that they'd eat it or they'd die with it, and nobody had argued, because there wasn't a person in that camp who believed in next year. It was going to go down somebody's throat in February and that would be the end of it.
+
+And there was a place two days south that would put it in the ground.
+
+She worked out that she was the only person up here who could save it. It is not a stupid piece of reasoning. It is very nearly right. That is the awful part.
+
+She told them she was going out scavenging. Nobody objected.
+
+She carried it two days on her back, and she handed it over, and a man wrote it into a ledger and gave her a receipt — a slip of paper with a stamp on it, which is precisely what a real programme gives you.
+
+She walked home for two days holding it.
+
+And she came in through the gate with that piece of paper out in front of her, because she was expecting to be thanked.
+
+She didn't lie about any of it. She couldn't have, and it never occurred to her to try, because it took her most of an hour to understand what she was being told she'd done.
+
+Asked what she'd been thinking, she said the only true thing she had, which was: *he was nice to me.*
 
 And then nothing happened at all.
 
