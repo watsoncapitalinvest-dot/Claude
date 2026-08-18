@@ -409,3 +409,13 @@ The unspoken thing between them is never spoken, because it no longer needs to b
 ### OUTSIDE
 
 **HELEN MARCH, 40s — the President's chief of staff.** Brilliant, decent, loved him, gave him everything. She works out what he is around the midpoint **and stays.** She is the rule's second clause dramatized in someone the audience likes — Ward is damned by consent, Helen by comfort. **She is the one who walks in on the empty room.** At the end she watches the sky open on a monitor and understands exactly what it means.
+
+---
+
+## TONE
+
+**Cold and sparse, building to epic.** *The Road* and *Children of Men* for two hours — very little said out loud, the camera doing the work, long quiet stretches — and then a final twenty minutes at full scale. The restraint is what buys the ending.
+
+**With faith-forward moments sprinkled in.** The technique: **put them in people's mouths, never in the film's voice.** Hazel prays out loud and says plain, warm, true things; the film stays cold around her and lets other characters be visibly embarrassed by it. A faith audience gets what it came for; everyone else reads it as characterization. Same lines, two audiences, no compromise.
+
+And it pays off: the one person who said all of it out loud for four years has been dead an hour when the sky opens — and the sparse film hands her the biggest image in it.
