@@ -45,7 +45,7 @@ A young man in the third row started talking. Nobody knew his name. He was shaki
 
 John got between them. He kept getting between them for a long time.
 
-Nobody in that room was any good at it. It was clumsy and slow and it went on and it was nothing like it is in films. When it was over, forty people stood in a church looking at their own hands, and the priest was on the floor.
+Nobody in that room was any good at it. It was clumsy and slow and it went on far too long. When it was over, forty people stood in a church looking at their own hands, and the priest was on the floor.
 
 John went out into a street where the cars had stopped where they were.
 
