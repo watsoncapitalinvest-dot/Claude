@@ -421,3 +421,20 @@ The unspoken thing between them is never spoken, because it no longer needs to b
 And it pays off: the one person who said all of it out loud for four years has been dead an hour when the sky opens — and the sparse film hands her the biggest image in it.
 
 **RATING: written for R, with the option to bring it down later.** Write it at full strength — cutting violence down in a later pass is easy; adding it into a script written soft never works. It matters most in two places: the church killing is **slow, clumsy and awful** rather than a stylish beat (real people are terrible at this and it takes far too long), and Ruthie's death is as ugly as it should be.
+
+---
+
+## SETTING
+
+**The Adirondacks.** Six million acres — larger than several states — genuinely trackless, with real −30° winters and a landscape already full of what Eden gets built from: fire towers, ranger cabins, abandoned Great Camps, logging roads that stopped existing decades ago. **It makes Ward's four-year search credible.** You could hide a town in there today, with satellites up.
+
+And it sits two hours from Albany and New York, which the interleaved structure needs — **the regime is close by for the entire film.** Checkpoints on the Northway.
+
+### THE TRIP — Atlantic City, not Vegas
+Four girls from an upstate school, on the Thruway heading south, "Highway to Hell" up loud. Same joke, and it buys a real journey in Part One: the walk **north** is where Emma passes John's graves.
+
+- Emma's family is upstate. She goes back north to bury them — the right emotional direction.
+- John's church is Albany or Schenectady, so both threads move up the same corridor without the audience ever being told.
+- Everything funnels north into the park. The treeline is somewhere nobody has looked in fifty years.
+
+**KAYLA'S REASON:** her mother is in a hospital in Philadelphia. She agreed to drive the girls to Atlantic City if they covered the gas, because it was the only way she could afford to go see her. **The first small kindness in the film, and it is dead in four minutes.**
