@@ -100,7 +100,7 @@ Neither of them says much. She picks up the second shovel.
 
 **18 ·** *(p.39)* The treeline. Eleven people, then nineteen. It is never decided. Nobody votes. They simply fail to leave, and John runs it without once agreeing to.
 
-**19 ·** *(p.37)* They strip a farm co-op and come back with sealed tins of seed. Nobody plants any of it. **Nobody believes in next year.** DELIA VANCE, 50s, ER nurse, says it flat: we eat it or we die with it.
+**19 ·** *(p.41)* They strip a farm co-op and come back with **sealed tins of seed and a few open sacks.** Nobody plants any of it. **Nobody believes in next year.** DELIA VANCE, 50s, ER nurse, does the sum out loud and it's the sum the whole film runs on: **eaten, it's a week of food for nineteen people. Planted, it's three acres — a year of food for forty.** And then: *we eat it or we die with it.*
 
 **20 · THE CHARTER** *(p.39)* Not written. Said. It comes out of an argument about whether to admit a man who did something in the city. **HAZEL, 70s, says it — and she doesn't invent it and never pretends to.** *Judge not. Bear no false witness. Be reconciled to your brother. I was a stranger and you took me in.*
 
@@ -124,13 +124,13 @@ Then the thing she actually wants: *none of this is your fault. Nobody's keeping
 
 **Every word of it is true. He never lies to her once.**
 
-**23a · THE FORTNIGHT** *(p.46)* Forty-odd pounds of seed in a hole under the store hut doing nothing. Delia has said in front of everybody that they'll eat it or die with it, and nobody argued, because nobody believes in next year. It's going down somebody's throat in February.
+**23a · THE FORTNIGHT** *(p.46)* Forty-odd pounds of good sealed seed in a hole under the store hut doing nothing. Delia has said in front of everybody that they'll eat it or die with it, and nobody argued, because nobody believes in next year. It's going down somebody's throat in February.
 
 And there's a place two days south that will put it in the ground.
 
 **She works out that she's the only person up there who can save it. It is very nearly right. That is the awful part.** And what Ruthie actually wants — the whole of her — is **to be worth something**, in a camp where nobody has thought she was useful all winter.
 
-**24 · SECOND TRIP — THE RECEIPT** *(p.47)* She tells them she's going scavenging. Nobody objects. She carries it two days on her back, hands it over, and a man writes it into a ledger and gives her **a receipt** — a slip of paper with a stamp on it, which is precisely what a real programme gives you.
+**24 · SECOND TRIP — THE RECEIPT** *(p.47)* She tells them she's going scavenging. Nobody objects. **She takes the sealed tins, because that is what one person can carry two days on her back. She leaves the open sacks** — partial, damp, half of it probably dead. She carries the good seed two days, hands it over, and a man writes it into a ledger and gives her **a receipt** — a slip of paper with a stamp on it, which is precisely what a real programme gives you.
 
 She walks home for two days holding it. **And she comes in through the gate with that piece of paper out in front of her, because she is expecting to be thanked.**
 
@@ -214,13 +214,17 @@ Then he sits up. He walks out under his own power with the sheet across his arm 
 
 **45 · THE REFUGEES** *(p.81)* Thirty-one people come out of the trees. Families. More mouths than Eden can carry through a winter, and everyone in the settlement knows it within ten seconds.
 
-**46 ·** *(p.83)* The argument runs an hour. Delia has the ledger and the ledger says everyone starves by March. Adam wants the gate shut and argues it loudly and badly — he cannot say what he knows without saying what was done to him, and the first law has taught him for five years not to. **Emma has the answer and cannot make herself stand up and say it.** John won't decide; he puts it back to the room the way he always does.
+**46 ·** *(p.83)* The argument runs an hour. Delia has the ledger and her objection isn't *we'll starve* — it's sharper and she's right: **41 people need about 15,000 lbs to cross a winter and that's exactly what's in the store. Seventy-two need 26,000.** *At full ration we're empty on the fourteenth of February. At two-thirds we're empty the third week of March and every one of us is too weak to plant in April.* **A starved community loses the following year too.** Adam wants the gate shut and argues it loudly and badly — he cannot say what he knows without saying what was done to him, and the first law has taught him for five years not to. **Emma has the answer and cannot make herself stand up and say it.** John won't decide; he puts it back to the room the way he always does.
 
 **And then Evie — who in five years has never taken a side about a person in front of a room — says four words.** *We'll grow more.* They take in thirty-one people.
 
 *Emma watches the girl she raised do the thing she cannot do.*
 
-**47 ·** *(p.86)* Deep winter. And the stores don't empty. Delia counts them four times. Maybe Evie's second field did better than anyone tracked. Maybe someone's been quietly eating less. Nobody sees a miracle; there's just a woman with a ledger who cannot make her own numbers work.
+**47 ·** *(p.86)* Deep winter. Delia weighs the potato store on the first of the month, as she always has. **February should read 4,100 lbs. It reads 5,900.**
+
+She re-derives the October intake — same answer. She watches the pot to see if people are eating less — they aren't. She looks for a hidden cache — there isn't one. **By April they should be at zero. They're at 2,200 and the first greens are in.**
+
+**Every deniable explanation is available:** the second field out-yielded what she logged, the October count was rushed, people are foraging more than they report, the refugees brought more than she recorded. Each one possible. **None provable. All of them together still don't close the gap.** Nobody sees a miracle — there's a woman with a pencil who can't make her own ledger work and won't say the word.
 
 **48 ·** *(p.88)* The argument that follows is not *do we have enough.* It's **are we allowed to count on this.** Do you plan around a thing you can't explain — is that trust, or is that stupidity? Hazel names the widow of Zarephath. Nobody believes her. Delia goes back to the ledger.
 
@@ -245,7 +249,7 @@ Emma comes out and works beside her a while. It's the last quiet scene in the fi
 
 **55 ·** *(p.97)* They come out of the trees at first light. Not a raid — an **occupation.** Hundreds of them. Vehicles, tents, generators. They do not attack. They set up.
 
-**56 ·** *(p.99)* Ward walks to the wall alone and unarmed and is warm. He offers terms, and the terms are the ones he offered a girl at a fence: *you were never judged. You're not guilty. Nobody's keeping score. Come out and eat.* He'll wait. He has time.
+**56 ·** *(p.99)* Ward walks to the wall alone and unarmed and is warm. He offers terms, and the terms are the ones he offered a girl at a fence: *you were never judged. You're not guilty. Nobody's keeping score. Come out and eat.* **He says he'll wait as long as it takes.**
 
 **57 ·** *(p.101)* Inside, it works. Not on everyone. On enough.
 
@@ -283,7 +287,9 @@ Nineteen people are standing there at dawn, and every one of them chose it twice
 
 *The girl who brought Ruthie in, speaking for all of them. That's her whole arc in ninety seconds.*
 
-**68 ·** *(p.122)* Ward gives the order. **He has just lost, and he doesn't know it.**
+**68 ·** *(p.122)* Ward gives the order. **His clock ran out.** He couldn't turn them before the snow and he cannot withdraw having failed, so he kills them instead — and **Eden came within days of winning on arithmetic alone.**
+
+**He has just lost, and he doesn't know it.**
 
 **69 ·** *(p.123)* The wall. It goes badly and it goes fast. Hazel dies in the first minutes — the one person there who would have understood what happens next, missing it by an hour. Then Ray. Then Delia. Adam takes a round and stays up.
 

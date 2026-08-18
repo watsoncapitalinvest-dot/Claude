@@ -580,3 +580,52 @@ One lamp in the meeting hall they cannot afford to keep burning, and it does not
 - **ADAM** is the loudest person in Eden. Nineteen-year-olds don't brood, they talk — he argues, complains, jokes, needles John from dawn to dark. The only subject he won't touch is **his family.**
 - **RAY** talks all day while he works, about weather and hockey and a dog he had in 1988. Warm, funny, endless. **One morning in his life** is off the table.
 - **EVIE'S FIRST YEAR** of silence at thirteen is trauma and it is temporary. It ends the following spring, long before Part Three.
+
+---
+
+## FOOD LOGIC
+
+*Arithmetic, not atmosphere. These are the numbers the film should be able to defend.*
+
+### THE SEED — why it matters
+**Eaten, ~40 lbs of seed is about a week of food for nineteen people. Nothing.**
+**Planted, it is three to four acres — a year of food for forty.**
+
+Say it out loud once, in Delia's mouth. **Ruthie did not take their supper. She took the only future they had**, and everyone understood that within a minute. That is why the reaction is so cold and why nobody actually starved over it.
+
+### WHAT SHE COULDN'T CARRY
+She took **the sealed tins** — the good, treated, viable seed — because that is what a person can carry on her back for two days. **What she left was the open sacks:** partial, damp, half of it probably dead.
+
+**That is what Evie plants over the grave. And it comes up anyway.**
+
+> **The arithmetic does not start failing in year four. It starts failing at Ruthie's funeral, with bad seed, and nobody notices for three years.**
+
+### DELIA'S LEDGER — year four
+- **41 people** crossing an Adirondack winter need roughly **15,000 lbs** of stored food (≈2 lbs/person/day × 180 days). That is what Eden has: six to eight cleared acres of potatoes and grain, beans, preserves, honey, goats, forage.
+- **+31 refugees = 72 people.** Requirement jumps to roughly **26,000 lbs.**
+
+**Her objection is not "we'll starve."** It is sharper and she is right:
+> *At full ration we're empty on the fourteenth of February. At two-thirds we're empty the third week of March and every one of us is too weak to plant in April.*
+
+**A starved community loses the following year too.** That is the real bind.
+
+### THE ANOMALY — measurable and deniable
+Delia weighs the potato store on the first of every month, as she always has.
+- **February should read 4,100 lbs. It reads 5,900.**
+- She re-derives the October intake. Same answer.
+- She watches the pot to see whether people are eating less. They are not.
+- She looks for a hidden cache. There isn't one.
+- **By April they should be at zero. They are at 2,200 and the first greens are in.**
+
+**Every deniable explanation is genuinely available:** the second field out-yielded what she logged; the October count was rushed; people are foraging more than they report; the refugees brought more than she recorded. Each is possible. **None is provable. All of them together still don't close the gap.**
+
+Nobody ever says the word. Hazel quotes Zarephath. Delia goes back to the ledger.
+
+### WARD'S CLOCK — he does NOT have all the time in the world
+He is feeding **four hundred men in a forest off a road nine miles back, in the fall.** **He has until the snow shuts that road — five weeks, maybe six.**
+
+He *says* he'll wait forever. **Delia does his arithmetic for him and works out that he's lying.**
+
+So Eden's actual plan is to **outlast him, and it nearly works.**
+
+**He attacks because his own clock runs out.** He cannot convert them before the snow and cannot withdraw having failed, so he kills them instead. **A tantrum with a deadline** — and it means Eden came very close to winning on arithmetic alone.

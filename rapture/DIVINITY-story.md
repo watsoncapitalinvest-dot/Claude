@@ -163,7 +163,13 @@ They stopped at a treeline in the park because they were tired, and then they we
 
 There were eleven of them. Then nineteen. Ray Whelan, who had been in that church and had come out with John, and who talked all day long while he worked, about weather and hockey and a dog he'd had in 1988, and who had never once in his life mentioned that morning. Delia Vance, who had been a charge nurse and had spent nine days after the Rapture deciding who got treated and who didn't and had never stopped doing it in her head since. Hazel, who was seventy-one and whose husband had been taken and who still prayed out loud, every night, in front of everybody, without the slightest embarrassment, while people looked at their food.
 
-They stripped a farm co-op and came back with sealed tins of seed. Nobody planted any of it. There was no next year. Delia said it plainly: *we eat it or we die with it.*
+They stripped a farm co-op and came back with sealed tins of seed and four open sacks of it. Nobody planted any of it.
+
+Delia did the sum out loud one night and it was the sum the next four years ran on. Eaten, she said, that's a week. One week, for nineteen of us, and then it's gone and we've had a week. Planted, it's three acres. Three acres is a year of food for forty people.
+
+And then she said the other half of it, because Delia always said the other half. *And there isn't going to be a spring worth planting for, so we eat it or we die with it.*
+
+Nobody argued. There was no next year. Everybody in that circle knew there was no next year.
 
 Two kids came in out of the trees within a month of each other. A boy of fourteen who talked without drawing breath about everything on this earth except where he had come from, and who wanted a gate that locked. A girl of thirteen who had stopped talking somewhere out there and hadn't started again. Emma took the girl. She was the same size Danny had been.
 
@@ -217,7 +223,9 @@ She worked out that she was the only person up here who could save it. It is not
 
 She told them she was going out scavenging. Nobody objected.
 
-She carried it two days on her back, and she handed it over, and a man wrote it into a ledger and gave her a receipt — a slip of paper with a stamp on it, which is precisely what a real programme gives you.
+She took the sealed tins, because that was what one person could carry for two days, and she left the open sacks behind — the damp ones, the partial ones, the half of it that was probably dead anyway.
+
+She carried the good seed two days on her back, and she handed it over, and a man wrote it into a ledger and gave her a receipt — a slip of paper with a stamp on it, which is precisely what a real programme gives you.
 
 She walked home for two days holding it.
 
@@ -275,7 +283,7 @@ They carried her home. It took four days and Emma did not put her end down.
 
 John dug. Emma carved the marker, and what she carved on it was RUTH, which was the only time in her whole life anybody used her whole name.
 
-And then the girl — thirteen years old, still not talking then — walked over with a tin of seed under her arm and got down on her knees and started putting it in the ground on top of the grave.
+And then the girl — thirteen years old, still not talking then — dragged one of the sacks Ruthie had left behind across the clearing, the damp one, the half-dead one, and got down on her knees and started putting it in the ground on top of the grave.
 
 Nobody stopped her.
 
@@ -369,9 +377,17 @@ Emma stood at the back and watched the girl she'd raised do the one thing she ha
 
 Winter came, and the stores did not empty.
 
-Delia counted them four times. She counted them in front of Emma, and then alone, and then again in the morning when she'd slept. The arithmetic did not work. It kept on not working, all the way through to February, and the number of people eating did not go down and neither did the flour.
+Delia weighed the potato store on the first of the month, the way she had every month for four years. February should have read four thousand one hundred pounds. It read five thousand nine hundred.
 
-Nobody saw a miracle. There was no light, no voice, no sign. There was a fifty-three-year-old woman with a pencil who could not make her own ledger balance and would not say the word.
+She went back and re-derived the October intake and got the same number she'd got in October. She stood by the pot for four nights running to see whether people were eating less, and they were not. She looked, quietly and thoroughly and without telling anybody why, for a cache somebody was hiding.
+
+By the first week of April they should have been at nothing at all. They were at two thousand two hundred pounds and the first greens were up.
+
+There were explanations. There were always explanations, and every one of them was possible. The second field had probably out-yielded what she'd written down. The October count had been rushed and done in the rain. People foraged more than they reported. The refugees had come in with more than she'd logged.
+
+She sat with all four of them for most of a night and they did not close the gap, not together, not by half.
+
+Nobody saw a miracle. There was no light and no voice and no sign. There was a fifty-three-year-old woman with a pencil who could not make her own ledger balance and would not say the word.
 
 What they argued about, in the end, was not whether they had enough.
 
@@ -427,11 +443,17 @@ He told them nobody was going to be hurt. He told them there had been no judgmen
 
 He said he would wait as long as it took.
 
-He meant it. He had all the time in the world and no reason on earth to hurry, and inside the wall it began to work. Not on everybody.
+Inside the wall it began to work. Not on everybody. On enough.
 
-On enough.
+On the third day Delia said two things out loud that nobody else had got to yet.
 
-On the third day Delia said out loud what she'd been carrying since February: *he can't starve us.* The stores still weren't emptying. Which meant the only weapon the man had was his mouth, and it was doing more damage than artillery would have.
+The first was: *he can't starve us.* The store still wasn't emptying and she had stopped pretending to herself that it was going to.
+
+The second was that he was lying about the waiting. He had four hundred men in a forest in October, fed off a road nine miles back through a pass that shut with the first real snow every year of her life. Five weeks, she said. Six at the outside.
+
+So they had a plan, and the plan was to outlast him, and it was a good plan.
+
+Which meant the only weapon the man had left was his mouth, and it was doing more damage than artillery would have.
 
 On the fifth day the first rule died.
 
@@ -510,6 +532,10 @@ A long time ago, by somebody who was gone now, and nobody had ever come up with 
 She said: *that's the whole of what we've got. You can have the rest.*
 
 Ward stood in the wet grass and looked up at her for a long moment. Then he walked back and gave the order.
+
+The snow had started in the pass two days before. He could not turn them and he could not go home having failed, and so he did the other thing.
+
+They had come within days of it. Nobody up there ever knew how close.
 
 He had just lost, and he did not know it.
 
