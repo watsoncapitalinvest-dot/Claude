@@ -63,7 +63,13 @@ He gets an answer ninety seconds later: every faithful person in the room drops 
 
 **The church:** when the congregation realizes the priest was not taken, John is the one who says out loud that the priest may have been judged and left for a reason. He argues **against** killing him. Simon Ward then testifies that the priest molested him as a child, and the congregation beats the priest to death.
 
-John is not wrong and he does not swing. But he said the true thing, and the true thing got a man killed. **His damage: a man who has learned that speaking costs lives.** For most of the film he will not lead, will not argue, will not say the thing everyone needs him to say. The moment he finally does is his turn.
+John is not wrong and he does not swing. But he said the true thing, and the true thing got a man killed.
+
+**HIS DAMAGE — and it is not muteness.** He talks easily. He is dry, decent company, and he will discuss drainage for an hour. What he will not do is **assert.** He asks questions instead of giving answers. He puts every decision back to the room. He will say *what do you all think* forty times before he says *here's what we're doing* once — because the last time he stated a conviction in front of a crowd, a man died on the floor.
+
+**Eden has been led for four years by a man who has never given an order.** People follow him anyway, which frustrates everyone, including him.
+
+His turn is not finding a voice he never lost. It is finally making a claim in front of everyone and standing behind it — and the claim is the truth about himself.
 
 **He buries people.** All through act one — strangers, in the thousands, while the rest of the world steps over them. He can't articulate why. It is the only thing he can think of to do, and it is something to do with his hands so he doesn't have to be a person. Digging is his sacrament.
 
@@ -386,7 +392,7 @@ The unspoken thing between them is never spoken, because it no longer needs to b
 
 **HAZEL, 70s — the one who still prays.** Widow; her husband was taken and she wasn't. Prays out loud, daily, in front of everyone, unembarrassed. Speaks the charter at the gate. Gently mocked. Once she hears about Ward, **she starts praying for him by name**, and everyone hates it. **She dies before the sky opens** — the only person who'd have understood it, missing it by an hour. Then she is the first one to stand back up, and she is **laughing.**
 
-**RAY WHELAN, 60s — the man from the church.** Was in that room. Came out with John. Has never once mentioned it in four years, because the first law forbids it. Eden's carpenter. Two men sharing a settlement in total silence about the worst day of their lives. **In act three he is accused of being the traitor — and will not defend himself, because defending himself means saying where he was that morning.** That is what finally makes John speak.
+**RAY WHELAN, 60s — the man from the church.** Was in that room. Came out with John. Has never once mentioned it in four years, because the first law forbids it. Eden's carpenter. Two men sharing a settlement in total silence about the worst day of their lives. **In act three he is accused of being the traitor — and will not defend himself, because defending himself means saying where he was that morning.** That is what finally makes John commit to something out loud.
 
 **CALEB, 19 — the one who wants the gate locked.** Arrived at 14. Angry, capable, builds alongside John. Right about the danger and heard by nobody. He is the pressure on the fourth law for the whole second act. On the last night he begs John to lock it, and John doesn't, **and Caleb stays anyway.** *Half of the final couple.*
 

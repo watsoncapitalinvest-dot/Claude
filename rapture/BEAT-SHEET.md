@@ -155,9 +155,9 @@ He offers her everything again, in the same words.
 
 **54. (p.105)** **They land on RAY.** He was in that city. He came with John. And he will not account for the morning of the Rapture, because accounting for it means saying where he was and what he watched.
 
-**55. (p.107) — THE TURN.** John speaks. For the first time in four years, in front of everyone, he says exactly what he said in that church and exactly what happened after. He breaks his own silence to save a man who wouldn't break his.
+**55. (p.107) — THE TURN.** John stops asking the room what it thinks. He tells it. In front of everyone, he says exactly what he said in that church and exactly what happened after — and then he says what he wants done about Ray, and he doesn't put it to a vote.
 
-*The man who learned that speaking kills people speaks, and it saves somebody.*
+*Four years of never giving an order, and the first one he gives is to protect a man who would rather be exiled than break the law that protects John.*
 
 **56. (p.110)** It costs him. Half of Eden looks at him differently for the rest of the film. Delia is the one who defends him, which surprises everybody including her.
 
