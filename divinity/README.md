@@ -2,7 +2,7 @@
 
 A short story, and the development material for the feature screenplay.
 
-**Read it:** [watsoncapitalinvest-dot.github.io/divinity](https://watsoncapitalinvest-dot.github.io/divinity/)
+**Read it:** [watsoncapitalinvest-dot.github.io/Claude/divinity](https://watsoncapitalinvest-dot.github.io/Claude/divinity/)
 
 ---
 
@@ -18,6 +18,7 @@ law nobody is left to enforce.
 |---|---|
 | `index.html` | The short story, as a reading page. This is what the site serves. |
 | `graphic-novel.html` | 103 storyboard frames, lettered. |
+| `poster.jpg` | Title page. |
 | `og.jpg` | Link preview card. |
 | `project/DIVINITY-story.md` | The story in plain markdown. |
 | `project/STORY-BIBLE.md` | Premise, characters, the Law, the moral rule, the world's fixed facts. |
@@ -25,8 +26,7 @@ law nobody is left to enforce.
 | `project/STORYBOARD.md` | 77 key frames written as image prompts, with style and character sheets. |
 | `project/LETTERING.md` | Captions and dialogue for the boards. |
 
-## To publish the site
+## Publishing
 
-Settings → Pages → Source: **Deploy from a branch**, branch `main`, folder `/ (root)`.
-
-Pages requires the repository to be public unless the account is on a paid plan.
+This folder is self-contained and touches nothing else in the repository. Once
+it is on the branch GitHub Pages serves, the story is live at the link above.
