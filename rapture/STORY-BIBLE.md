@@ -639,10 +639,46 @@ enough.** Ward knew, and chose, and the rule does not bend for anyone.
 
 John tried this time. He is clean either way. **That closes the church scene.**
 
+### THE ENDING — THE GARDEN
+The risen go with the host when the field is finished. **The only two left
+standing in the flesh are the two who never fell: Emma and John.**
+
+**They are left behind a second time.** And this time it is not a rejection —
+it is the assignment. The whole film is people who believed being left was a
+verdict; the last five minutes say without a word of dialogue that **being left
+is the job.** They were kept. Again. On purpose.
+
+**Final image:** two people, naked, in the garden, under an apple tree, in love.
+Camera pulls away.
+
+The unspoken thing between them is never spoken, because it no longer needs to
+be. The film ends and then they get a life.
+
+**EASTER EGG: a snake approaching the woman.**
+
+> **How to play the snake.** Played wrong it is nihilism — *it was all for
+> nothing, here we go again.* Played right it is the opposite: **the serpent's
+> return means choice is back.** Goodness only means something where refusal is
+> possible; a world with no serpent is a world where nobody chooses anything.
+> The last shot is free will handed back. Same image — the whole film decides
+> which way it reads.
+
+**PRODUCTION NOTES**
+- **The nudity is a rating conversation.** High and wide, pulling away,
+  backlit, they read as figures rather than bodies — an achievable PG-13. The
+  alternative is plain white linen with the tree and framing carrying the
+  allusion: about ten percent off the image, a much easier road with a
+  faith-market distributor. Decide deliberately, not in the edit.
+- **It will be read against the age gap** (John 37, Emma 21, ending as Adam and
+  Eve). The film has done the work — somebody says it out loud in act two and it
+  is not resolved — so it is defensible. Know it is the frame people discuss.
+- **How wide the pull-away goes** (decide later): tight on two people and it is
+  a myth; wide enough to show a green world and it is a restoration; wider still
+  and you must answer what happened to the billions who fled.
+
 
 ## OPEN QUESTIONS
 
 - Eden's population, leadership, and supporting cast.
-- Ending: who survives, what happens to the world, does Emma or John die?
 - Tone/lane: faith-based inspirational vs. gritty survival vs. epic fantasy
   battle.
