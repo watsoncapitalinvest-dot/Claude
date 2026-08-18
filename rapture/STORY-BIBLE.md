@@ -482,7 +482,7 @@ The unspoken thing between them is never spoken, because it no longer needs to b
 
 **His arc, in one piece of staging:** on the last night John opens the gate, and the boy who spent five years wanting it shut **is the one who holds it open while the children go out.** No dialogue.
 
-**EVELYN ("EVIE"), 17 — the gardener.** Arrived at 13 in a dead man's overcoat three sizes too big, which she would not take off indoors or out — **and told Delia on her second morning that the woodpile was stacked wrong and would be rotten by February.** It was, and it was. *(No muteness. She has been telling people what they're doing wrong since the week she arrived.)* Emma took her in — **and Emma's brother was fifteen and a nightmare and was taken, and this girl is thirteen and silent and was left.** Eight years between them: sisters, not mother and daughter.
+**EVELYN ("EVIE"), 17 — the gardener.** Arrived at 13 in a dead man's overcoat three sizes too big, which she would not take off indoors or out — **and told Delia on her second morning that the woodpile was stacked wrong and would be rotten by February.** It was, and it was. *(No muteness. She has been telling people what they're doing wrong since the week she arrived.)* Emma took her in — **and Emma's brother was fifteen and a nightmare and was taken, and this girl is thirteen and impossible and was left.** Eight years between them: sisters, not mother and daughter.
 
 **She is the one who plants the seed over Ruthie's grave**, at thirteen. Asked what she thinks she's doing, she says **it's late in the year for it** — and everyone joins her.
 

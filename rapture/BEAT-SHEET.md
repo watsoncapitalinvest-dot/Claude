@@ -168,7 +168,7 @@ It looks like she got lost. Small, confused, stupid. **And that is what every pe
 
 **30 · THE BURIAL** *(p.60)* John digs. Emma carves **RUTH** — the only time in the entire film anyone uses her whole name.
 
-**31 ·** *(p.61)* And then EVELYN, thirteen and silent since she arrived, opens a tin of seed and starts putting it in the ground over the grave. Asked what she thinks she's doing, she says **it's late in the year for it.** Nobody stops her. Then everybody helps.
+**31 ·** *(p.61)* And then EVELYN, thirteen, drags out **one of the open sacks Ruthie left behind** — the damp, partial, half-dead remainder — and starts putting it in the ground over the grave. Asked what she thinks she's doing, she says **it's late in the year for it.** Nobody stops her. Then everybody helps.
 
 **32 ·** *(p.62)* Somebody calls the place Eden. It's a joke when they say it. It doesn't stay one.
 
