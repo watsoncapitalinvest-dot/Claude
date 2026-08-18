@@ -51,6 +51,12 @@ John went out into a street where the cars had stopped where they were.
 
 He came back that evening, by himself, and buried the man behind the building. He could not have told you why. It took him four hours and he didn't stop.
 
+He never knew he was watched.
+
+The young man from the third row had not gone home either. He sat in the dark of the empty church with his hands between his knees for most of two hours, and then he stood at the window and watched a stranger dig a hole in the ground for a man that forty people had killed on his account, and he did not go out and he did not say anything.
+
+When it was finished he walked out the other door.
+
 That was the first grave.
 
 ---
@@ -353,7 +359,17 @@ He walked out under his own power with the sheet still across his arm and blood 
 
 There was no argument on earth after that. Nobody needed a doctrine any more. They had seen it.
 
-And underneath all of it, moving quietly, a volunteer with a clipboard became a man with a uniform became Deputy Administrator Simon Ward. He kept a map of the park on the wall of an office. Six million acres. Every few months he crossed off another river.
+There is a house door in the second year that opens on a middle-aged man who has been hiding for eighteen months, and the man on the step is polite to him. He says something quiet and reassuring and the man's shoulders come down.
+
+Then somebody shoots him, and the man on the step is already walking back down the path, and he has not raised his voice once and his face has not changed at all.
+
+He had been in that church. So had thirty-nine others, and by the fourth year most of them were crossed off a list.
+
+Not because they had been wrong. Because they had taken it out of his hands. He had stood up in front of them and told them the worst thing that had ever happened to him and they had turned it into something of their own, and there had been nothing left for him to do afterward but watch.
+
+And underneath all of it, moving quietly, a volunteer with a clipboard became a man with a uniform became Deputy Administrator Simon Ward. He kept a map of the park on the wall of an office. Six million acres, and every few months another river crossed off.
+
+Beside the map he kept the list.
 
 He was very patient. He had time.
 
@@ -641,7 +657,9 @@ Out on the slope, something enormous took the man who had been President, and th
 
 He had been equipment.
 
-He reached back. At the very end, he wanted it back.
+And he reached out. Not for the light and not for anybody in it.
+
+He reached for John, who he had been coming toward for four years, across six million acres and a list of forty names, and who was the last of them, and who was being taken away from him now like everything else had been.
 
 And John — who could not stop one killing in a church four years ago — went for him.
 

@@ -732,3 +732,48 @@ That is the entire argument of the film and no character ever states it.
 **NINTH — bear no false witness.** What the traitor-hunt destroys. Act three is Eden breaking its own ninth commandment in a panic.
 
 **TENTH — covet.** The enemy's entire offer. Come out, have what they have. **Covetousness dressed as mercy**, which is what it always is.
+
+---
+
+# WARD — REBUILT
+
+**Problem this fixes: the audience never works out that the man at the wall is the parishioner from the church.** It was asserted in this document and never dramatized. Fixed with one shot and one four-year obsession.
+
+## THE SHOT THAT MAKES THE LINK
+Church sequence, after the killing. Everyone has gone. John comes back at dusk alone and digs.
+
+**Ward is still there.** In a pew in the dark, or at the treeline. He watches John bury the man. **Nobody in the film ever sees him.** The audience does. He gets up and walks out.
+
+Five seconds, no dialogue. From that point on the audience knows exactly who the volunteer at the fence is, and everything he does afterward is read correctly.
+
+## WHAT HE HAS ACTUALLY BEEN DOING FOR FOUR YEARS
+**He wanted to kill that priest himself.** Forty people did it for him and it fixed nothing. He told a room what had been done to him when he was nine, and the room **took it out of his hands.**
+
+**So he has been hunting that congregation. One at a time. For four years.**
+
+Not because they were wrong. **Because they stole it from him.**
+
+**The map on his office wall has rivers crossed off. It also has names crossed off.**
+
+## WHICH MEANS THE SIEGE WAS NEVER ABOUT THE SETTLEMENT
+Forty-one people are incidental. **Ward came for the last two men from that church: John and Ray.**
+
+- **The four-year search stops being administrative.** He has known since the fence — Ruthie told him there was a man up there who buries people, and he had once watched a man bury somebody.
+- **When Eden turns on Ray in act three, they are two days from handing Ward, personally, exactly what he came four years to get.** Nobody inside the walls has any idea.
+- **It explains the last thing he ever does.** He has hunted John for four years, and when it ends **he reaches for him** — not for rescue. That man is the last thing he has, and he is being taken away from him.
+
+## THE TWO WANTS, HELD TOGETHER
+**The demon in him wants Eden.** Despair, conversion, a soldier turned. That is what he is useful to the President for, and it is why his obsession is tolerated: it happens to point at the right place.
+
+**The man in him wants John.** He wants him to walk out of that gate first, and then he wants to do the thing forty people did without him.
+
+**He gets neither.** John does not come out, and the sky opens before Ward can finish it.
+
+## THE BRUTALITY — shown once, in the montage
+Ward, uniformed, in a doorway. Polite. He says something gentle to a man the audience half-recognises from a church four years ago.
+
+Then somebody shoots the man, and **Ward is already walking away**, and he never raises his voice or changes his face.
+
+**Same voice for the kindness and the killing.** That is the whole design. He is not two people. The warmth is not a mask over cruelty — it is the same instrument, pointed differently, and it costs him nothing to swing it.
+
+> **Rule:** Ward never shouts, never threatens, never gloats, and never enjoys anything visibly. Not once in the film. The moment he raises his voice he becomes an ordinary villain.

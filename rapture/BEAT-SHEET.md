@@ -38,6 +38,12 @@ Half the congregation goes down where they stand.
 
 **10 ·** *(p.20)* John walks out into a street of stopped cars. He comes back alone that evening and buries the priest behind the building. **His first grave.** He couldn't tell you why.
 
+**10-BIS · HE IS STILL THERE** *(p.20)* Everyone has gone. John digs alone behind the building at dusk.
+
+**And the young man from the third row is still there** — in a pew in the dark, or at the treeline — **watching him bury the priest.** John never sees him. **The audience does.** He gets up and walks out.
+
+*Five seconds, no dialogue. This is the shot the entire character depends on. Without it the audience never connects the parishioner to the man at the wall.*
+
 **10a · THE SITE** *(p.21)* Day three. John drives out to his own build off Route 5 — forty-one units, the thing that was going to make him solvent and real and get his name on something that outlasted him. He was three weeks from the walk-through. There's a man in the excavator cab who worked for him nine years, and two more in the trailer.
 
 **What he cannot get his head round is that it wasn't** lost. **Losing it he understands — he's done it twice.** Nobody is going to foreclose on this. Nobody will sue him or take it off him. There is no longer any such thing as a person who cares whether this building gets finished. Eleven years of being the man who could finish it wasn't defeated. **It just stopped being counted.**
@@ -208,7 +214,15 @@ Then he sits up. He walks out under his own power with the sheet across his arm 
 
 *The enemy counterfeits resurrection in act two. In act three the real thing happens to nineteen farmers in the mud.*
 
-**38 ·** And underneath all of it: the man with the clipboard becomes a man with a uniform becomes **DEPUTY ADMINISTRATOR SIMON WARD.** Pins in a map of the park. Rivers crossed off, one at a time, for four years.
+**37a · THE DOORWAY** A house door opens. WARD, uniformed now, stands on the step and is polite. He says something gentle to a middle-aged man we half-recognise — **he was in that church** — and the man's shoulders come down with relief.
+
+Then somebody shoots him, and **Ward is already walking away.** He never raises his voice. His face does not change.
+
+*Same voice for the kindness and the killing. Shown once. Never explained.*
+
+**38 ·** And underneath all of it: the man with the clipboard becomes a man with a uniform becomes **DEPUTY ADMINISTRATOR SIMON WARD.** Pins in a map of the park, rivers crossed off one at a time — **and a second list beside it, of names, most of them struck through.**
+
+*He has been hunting that congregation for four years. Not because they were wrong. Because they took it out of his hands.*
 
 ---
 
@@ -253,7 +267,7 @@ She re-derives the October intake — same answer. She watches the pot to see if
 
 **52 ·** *(p.94)* Adam finds a boot print two miles out. John tells him it's nothing. It isn't nothing and they both know it.
 
-**53 · OUTSIDE** *(p.95)* Ward's map. One pin left.
+**53 · OUTSIDE** *(p.95)* Ward's map. One pin left — and on the list beside it, **two names not struck through.**
 
 **54 ·** *(p.96)* Evie works the second field, outside the wall. Adam stands at the edge of it with a rifle, because he doesn't want her out there alone. Neither of them mentions it. Neither of them ever has.
 
@@ -282,7 +296,7 @@ He leaves it open. They can't repair it — he'll do it again — so two people 
 
 **59 ·** *(p.103)* The first law dies. Somebody must have told them. Who came here and never said what they did? Eden — founded on never asking — starts asking.
 
-**60 ·** *(p.106)* **They land on RAY.** He was in that city. He came in with John. And he will not account for the morning of the Rapture, because accounting for it means saying where he stood and what he watched.
+**60 ·** *(p.106)* **They land on RAY.** *(And nobody inside those walls knows that they are two days from handing Ward, personally, one of the two things he came four years to collect.)* He was in that city. He came in with John. And he will not account for the morning of the Rapture, because accounting for it means saying where he stood and what he watched.
 
 **61 · THE TURN** *(p.108)* John stops asking the room what it thinks. He tells it. In front of everybody he says exactly what he said in that church and exactly what happened after — and then he says what's going to happen about Ray, and he does not put it to a vote.
 
@@ -344,7 +358,9 @@ They worked out a long time ago there's no reward in this. They stayed anyway.
 
 **77 ·** MICHAEL takes the President. No dialogue. The thing that was never a man comes apart, and as it goes it takes Ward with it — and the last thing Ward learns is that he was never a partner. **He was equipment.**
 
-**78 ·** Ward reaches. And John — who could not stop one killing in a church four years ago — reaches back.
+**78 ·** Ward reaches — **for John.** He has hunted this man for four years and he is being taken away from him.
+
+And John — who could not stop one killing in a church four years ago — reaches back.
 
 **It isn't enough.** Ward knew, and chose, and the rule does not bend for anybody.
 
