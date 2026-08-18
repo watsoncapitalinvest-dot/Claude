@@ -112,7 +112,7 @@ After that she says it at the gate to everyone who comes:
 
 **The wall is real, guarded, and barred at night — and that is not a failing. It is why there are children alive behind it.** Admission is argued out every time, on whether they can be fed and what a person can do. *You're not asked what you did. You're asked what you'll do.*
 
-**21 ·** *(p.41)* Winter. Hunger. Emma and John orbit each other and neither touches it. Two kids come in out of the trees within a month of each other — ADAM, 14, who talks without drawing breath about everything except where he came from, and EVIE, 13, who stopped talking somewhere out there and starts again the following spring. Emma takes the girl. Adam wants a gate that shuts, and won't say why.
+**21 ·** *(p.41)* Winter. Hunger. Emma and John orbit each other and neither touches it. Two kids come in out of the trees within a month of each other — ADAM, 14, who talks without drawing breath about everything except where he came from, and EVIE, 13, **in a dead man's overcoat three sizes too big that she won't take off indoors or out**, who informs Delia on her second morning that the woodpile is stacked wrong and will be rotten by February. It is, and it is. Emma takes the girl. Adam wants a gate that shuts, and won't say why.
 
 **22 ·** *(p.43)* Ruthie drifts toward the road. Not dramatically. She's cold, she's twenty-two, and nobody in the camp is kind to her — she isn't useful and everybody's hungry.
 
@@ -168,7 +168,7 @@ It looks like she got lost. Small, confused, stupid. **And that is what every pe
 
 **30 · THE BURIAL** *(p.60)* John digs. Emma carves **RUTH** — the only time in the entire film anyone uses her whole name.
 
-**31 ·** *(p.61)* And then EVELYN, thirteen and silent since she arrived, opens a tin of seed and starts putting it in the ground over the grave. Nobody stops her. Then everybody helps.
+**31 ·** *(p.61)* And then EVELYN, thirteen and silent since she arrived, opens a tin of seed and starts putting it in the ground over the grave. Asked what she thinks she's doing, she says **it's late in the year for it.** Nobody stops her. Then everybody helps.
 
 **32 ·** *(p.62)* Somebody calls the place Eden. It's a joke when they say it. It doesn't stay one.
 

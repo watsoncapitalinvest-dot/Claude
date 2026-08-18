@@ -171,9 +171,15 @@ And then she said the other half of it, because Delia always said the other half
 
 Nobody argued. There was no next year. Everybody in that circle knew there was no next year.
 
-Two kids came in out of the trees within a month of each other. A boy of fourteen who talked without drawing breath about everything on this earth except where he had come from, and who wanted a gate that locked. A girl of thirteen who had stopped talking somewhere out there and hadn't started again. Emma took the girl. She was the same size Danny had been.
+Two kids came in out of the trees within a month of each other.
 
-The girl started talking again the following spring. Once she did, it turned out she was hard to stop.
+A boy of fourteen who talked without drawing breath about everything on this earth except where he had come from, and who wanted a gate that locked.
+
+And a girl of thirteen in a dead man's overcoat three sizes too big for her, who would not take it off indoors or out, and who informed Delia on her second morning that the woodpile was stacked wrong and would be rotten by February.
+
+It was. And it was.
+
+Emma took the girl. She was the same size Danny had been.
 
 The rules got said out loud one night during an argument about whether to let in a man who had done something in the city. It was Hazel who said them, and she didn't make them up, and she didn't pretend to. Judge not. Bear no false witness. Be reconciled to your brother. Let no man be held against his will.
 
@@ -283,11 +289,13 @@ They carried her home. It took four days and Emma did not put her end down.
 
 John dug. Emma carved the marker, and what she carved on it was RUTH, which was the only time in her whole life anybody used her whole name.
 
-And then the girl — thirteen years old, still not talking then — dragged one of the sacks Ruthie had left behind across the clearing, the damp one, the half-dead one, and got down on her knees and started putting it in the ground on top of the grave.
+And then the girl dragged one of the sacks Ruthie had left behind across the clearing — the damp one, the half-dead one — and got down on her knees and started putting it in the ground on top of the grave.
 
-Nobody stopped her.
+Somebody asked her what she thought she was doing.
 
-Then everybody helped.
+She said it was late in the year for it.
+
+Nobody stopped her. Then everybody helped.
 
 Somebody called the place Eden that week. It was a joke when they said it.
 
@@ -353,7 +361,7 @@ The boy who'd come in at fourteen was nineteen now. Adam. He built alongside Joh
 
 He was right the whole time.
 
-And the girl was seventeen now and her name was Evelyn and everyone called her Evie, and she would talk your ear clean off about frost dates and drainage and what you were doing wrong with the beans. She was the only person in Eden who genuinely understood what grew and when, and she never once let anybody forget it.
+And the girl was seventeen now and her name was Evelyn and everyone called her Evie, and she had been telling people what they were doing wrong with their woodpiles and their beans and their drainage since the week she arrived. She was the only person in Eden who genuinely understood what grew and when, and she never once let anybody forget it.
 
 What she didn't do was argue about people. In five years nobody had ever heard her take a side about a person in a room full of people. It simply wasn't a thing she did.
 

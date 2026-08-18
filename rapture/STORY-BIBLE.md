@@ -482,9 +482,9 @@ The unspoken thing between them is never spoken, because it no longer needs to b
 
 **His arc, in one piece of staging:** on the last night John opens the gate, and the boy who spent five years wanting it shut **is the one who holds it open while the children go out.** No dialogue.
 
-**EVELYN ("EVIE"), 17 — the gardener.** Arrived at 13, silent for her first year. Emma took her in — **and Emma's brother was fifteen and a nightmare and was taken, and this girl is thirteen and silent and was left.** Eight years between them: sisters, not mother and daughter.
+**EVELYN ("EVIE"), 17 — the gardener.** Arrived at 13 in a dead man's overcoat three sizes too big, which she would not take off indoors or out — **and told Delia on her second morning that the woodpile was stacked wrong and would be rotten by February.** It was, and it was. *(No muteness. She has been telling people what they're doing wrong since the week she arrived.)* Emma took her in — **and Emma's brother was fifteen and a nightmare and was taken, and this girl is thirteen and silent and was left.** Eight years between them: sisters, not mother and daughter.
 
-She barely speaks in the entire film. She communicates through work. **She is the one who plants the seed over Ruthie's grave**, at thirteen, without a word, and everyone joins her.
+**She is the one who plants the seed over Ruthie's grave**, at thirteen. Asked what she thinks she's doing, she says **it's late in the year for it** — and everyone joins her.
 
 **SHE IS THE WIDOW OF ZAREPHATH.** When the refugees come and the adults have argued arithmetic for an hour, the girl who never talks says four words — *we'll grow more* — and the room takes in thirty-one people. **The one who says give it away is the reason the jar doesn't fail.** She has earned that garden long before she inherits it.
 
@@ -579,7 +579,7 @@ One lamp in the meeting hall they cannot afford to keep burning, and it does not
 - **EVIE** will talk your ear off about frost dates, drainage, and what you're doing wrong with the beans, and she never lets anyone forget she's right. What she does not do is **argue about people.** In five years nobody has heard her take a side about a person in front of a room — which is why four words from her move it.
 - **ADAM** is the loudest person in Eden. Nineteen-year-olds don't brood, they talk — he argues, complains, jokes, needles John from dawn to dark. The only subject he won't touch is **his family.**
 - **RAY** talks all day while he works, about weather and hockey and a dog he had in 1988. Warm, funny, endless. **One morning in his life** is off the table.
-- **EVIE'S FIRST YEAR** of silence at thirteen is trauma and it is temporary. It ends the following spring, long before Part Three.
+- **EVIE HAS NO SILENT PERIOD AT ALL.** Cut it. She arrives talking, about soil and woodpiles and what you're doing wrong. Her marker is the dead man's overcoat she won't take off, not a year of not speaking.
 
 ---
 
