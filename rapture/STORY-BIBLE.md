@@ -49,9 +49,11 @@ He is 37, she is 21. Two rules keep it honest:
 The closest it ever comes: a hand held on the wall when they both think it's over, and one of them starting a sentence and not finishing it. Then the sky opens and takes the moment away.
 
 ### JOHN — male lead, 37
-A **contractor.** Twice he has built a company and twice lost it.
+A **contractor** with **one company** — the company he has been trying to make into something big.
 
-He got close enough to taste it the first time, and bad fortune knocked him back to the start. He climbed out again, and the second time he was sure he'd made it — and sure that **God had helped him.** He'd have said so out loud to anyone who asked. Then it came down again and put him back at zero.
+Twice it has come within reach of real success, and twice a **big loss** has knocked it back to nothing. The first time he got close enough to taste it. He climbed out and got there again, and the second time he was sure he'd made it — and sure that **God had helped him.** He'd have said so out loud to anyone who asked. Then the second loss took it away.
+
+The company still exists. That's the cruelty of it. He isn't ruined; he's back at the bottom of the same hill for the third time, with nothing left to climb it with.
 
 By the last normal morning of his life he is not angry. He is past angry — anger takes hope. He is polite and hollow and falling apart.
 
@@ -59,7 +61,7 @@ He is at church that morning **searching for faith and for proof.** Not for comf
 
 He gets an answer ninety seconds later: every faithful person in the room drops dead and he is still standing there breathing. *He prayed for proof and received absolute, irrefutable, world-ending proof — and the content of it was* you're not coming.
 
-> **STILL OPEN:** what specifically killed each company. The strongest version is that it was *the same kind of blow twice* — the same species of bad luck or betrayal, which is what makes a man start believing it's aimed at him.
+> **STILL OPEN:** what the two big losses actually were. The strongest version is the *same kind of blow twice* — which is what makes a man start believing it's aimed at him.
 
 **The church:** when the congregation realizes the priest was not taken, John is the one who says out loud that the priest may have been judged and left for a reason. He argues **against** killing him. Simon Ward then testifies that the priest molested him as a child, and the congregation beats the priest to death.
 

@@ -20,7 +20,7 @@ Emma promises to call her mother when they stop.
 
 **4. (p.8)** A passenger jet comes down over the ridge. Then the sound of the world goes out — no engines, no planes, no horns. Just birds.
 
-**5. INT. CHURCH — SAME MORNING (p.9)** Mid-service. JOHN, 37, at the back, not singing. He is not here for comfort — he is here for an accounting. He has built a contracting company twice. The first time he got close enough to taste it and bad fortune put him back at zero. He climbed out and did it again, and the second time he was sure he'd made it, and sure that God had a hand in it — he said so out loud, to anyone who asked. It came apart anyway. He is three weeks into the wreckage of that, and he has come here to ask what he did.
+**5. INT. CHURCH — SAME MORNING (p.9)** Mid-service. JOHN, 37, at the back, not singing. He is not here for comfort — he is here for an accounting. He has a contracting company he has spent his adult life trying to make into something. Twice it has come within reach and twice a big loss has put him back at the bottom. The second time, he'd already decided God had helped him get there. He is three weeks into that second loss, and he has come here to ask what he did.
 
 Half the congregation goes down where they stand.
 
