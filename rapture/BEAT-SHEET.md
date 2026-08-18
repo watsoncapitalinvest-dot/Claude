@@ -13,7 +13,7 @@
 *pp. 1–34*
 
 **1 · INT. CAR — THE THRUWAY, SOUTHBOUND — MORNING** *(p.1)*
-"Highway to Hell," windows down, four girls screaming along. KAYLA driving — her mother is in a hospital in Philadelphia and this is the only way she could afford to go; the others chipped in on gas if she'd run them down to Atlantic City first. TESS riding shotgun. RUTHIE and EMMA in the back. All of it comes out in the dialogue, on top of the music, in the shorthand of people who've known each other three years. Under it, on the radio nobody's listening to, a report out of Jakarta: several thousand people collapsed at once in a stadium, cause unknown. Tess changes the station. Emma is the only one who heard it.
+"Highway to Hell," windows down, four girls screaming along. KAYLA driving — her mother is in a hospital in Philadelphia and this is the only way she could afford to go; the others chipped in on gas if she'd run them down to Atlantic City first. TESS riding shotgun. RUTHIE and EMMA in the back. All of it comes out in the dialogue, on top of the music, in the shorthand of people who've known each other three years. **No radio report, no foreshadowing, no clue** — the Rapture is simultaneous worldwide and nothing can precede it. The scene is total ordinariness and the only irony available is the song title.
 
 Emma promises to call her mother when they stop.
 
@@ -68,7 +68,11 @@ Neither of them says much. She picks up the second shovel.
 
 **19 ·** *(p.37)* They strip a farm co-op and come back with sealed tins of seed. Nobody plants any of it. **Nobody believes in next year.** DELIA VANCE, 50s, ER nurse, says it flat: we eat it or we die with it.
 
-**20 · THE CHARTER** *(p.39)* Not written. Said. It comes out of an argument about whether to admit a man who did something in the city. HAZEL, 70s, is the one who says it, and after that she says it at the gate to everyone who comes:
+**20 · THE CHARTER** *(p.39)* Not written. Said. It comes out of an argument about whether to admit a man who did something in the city. **HAZEL, 70s, says it — and she doesn't invent it and never pretends to.** *Judge not. Bear no false witness. Be reconciled to your brother. I was a stranger and you took me in.*
+
+**Not one person in that circle believes there is anybody left to answer to. They take the rules anyway**, because it's the only decent framework anyone ever offered them, and because it didn't stop being true when the one who said it left.
+
+After that she says it at the gate to everyone who comes:
 
 > *Nobody's asked what they did. Nobody lies about what they do here. What you break, you answer for. And the gate is never locked.*
 
@@ -86,9 +90,13 @@ She gives him the seed tins because he says they'll be safer here.
 
 **25 ·** *(p.49)* She's caught. She doesn't lie — the second law, and anyway she couldn't. Her entire defense is **"He was nice to me."**
 
-**26 · THE MEETING** *(p.51)* The charter tears itself apart in one room. Delia wants her out, on arithmetic, not cruelty. Hazel won't have it. Emma has something to say and cannot make herself say it to a room. John stands up to say she answers for the seed and is not condemned for it — **and he is going to win.**
+**25a · THE EIGHT DAYS** *(p.50)* And then **nothing happens at all.** No verdict — the charter doesn't permit one. Nobody is allowed to write her off, so nobody says anything, and for eight days Ruthie hauls water and turns compost in a settlement where not one person will meet her eye. She says good morning and gets a nod. She sits down and people stand up a few minutes later for reasons they have ready.
 
-**27 ·** *(p.53)* He never gets to. She's already packed. Someone says *the gate isn't a punishment, Ruthie.* She says *it is for me.* Emma walks her to the treeline and can't stop her.
+**Eight days of being condemned by a place that is forbidden from condemning her.** Everyone keeping the rule with their mouths and breaking it with their whole faces. **She would have taken a sentence. A sentence would have been a mercy.**
+
+**26 · THE MEETING** *(p.52)* On the ninth day. The charter tears itself apart in one room. Delia wants her out, on arithmetic, not cruelty. Hazel won't have it. Emma has something to say and cannot make herself say it to a room. John stands up to say she answers for the seed and is not condemned for it — **and he is going to win.**
+
+**27 ·** *(p.53)* He never gets to. She's already packed — she packed on the fourth day. Someone says *the gate isn't a punishment, Ruthie.* She says *it is for me.* Emma walks her to the treeline and can't stop her.
 
 **28 · THE SECOND ASK** *(p.55)* Two days south and east, back to the fence, because it's the only other place she knows. He's glad to see her. He warms her up. And then he explains, kindly and at length, that what she gave him wasn't enough to find anything with, and that what he needs now is for her to **walk them in.** She'd be admitted. The gate is never locked; she told him so herself.
 
@@ -119,7 +127,9 @@ It looks like she got lost. Small, confused, stupid. **And that is what every pe
 ## THE CUT — MONTAGE
 *pp. 62–70 · four years, scored, carried on the President's voice*
 
-**33 ·** THE PRESIDENT — sixth in the line of succession, the decent one, the one everyone joked should be running things — takes the oath in a room with eleven people in it.
+**33 ·** THE PRESIDENT OF THE UNITED STATES WAS NOT TAKEN. President two years, liked for twenty before that — the decent one, the one everyone always said ought to be running things back when it was a joke. **He does not rise; he doesn't have to.** Two-thirds of Congress, four of the Court, the generals who could have said no and the lawyers whose job was telling him what he couldn't do — all simply gone. **The Rapture doesn't make him king. It removes every restraint on a man who already was one.**
+
+**33a ·** The world notices he's still breathing. Every pulpit asks it: *if this was a judgment, how is he still here?* He answers it himself on television, and it's the most dangerous sentence of the year: **"If there had been a judgment — would I be standing here?"** His own non-selection becomes the proof of his doctrine.
 
 **34 ·** The grid comes back on. Food moves. The dead get cleared. People weep at a working streetlight. **He is good at this and every bit of it is real.**
 
@@ -127,7 +137,13 @@ It looks like she got lost. Small, confused, stupid. **And that is what every pe
 
 **36 ·** HELEN MARCH, 40s, chief of staff, at his shoulder in every frame. Brilliant, decent, and completely his.
 
-**37 ·** A sign. Small — his hand on a dying woman in a corridor, and she gets up. Later, a stadium.
+**37 · THE MORTAL WOUND — Revelation 13:3.** In the second year a man in a crowd in Cleveland shoots him twice through the chest on live television. Six hundred million people watch him go down, watch the blood come through the shirt, watch a doctor step back, watch the sheet go over. **For one hour and forty minutes the world is told the President is dead.**
+
+Then he sits up. He walks out under his own power with the sheet across his arm and blood dried down his front, and forgives the man who did it.
+
+**There is no argument on earth after that.** Nobody needs a doctrine any more — they've seen it.
+
+*The enemy counterfeits resurrection in act two. In act three the real thing happens to nineteen farmers in the mud.*
 
 **38 ·** And underneath all of it: the man with the clipboard becomes a man with a uniform becomes **DEPUTY ADMINISTRATOR SIMON WARD.** Pins in a map of the park. Rivers crossed off, one at a time, for four years.
 
@@ -215,7 +231,7 @@ The children go first — Toby and five others, and two adults to walk them out.
 
 Nineteen people are standing there at dawn, and every one of them chose it twice with the door wide open.
 
-**67 · EMMA ANSWERS** *(p.121)* Ward makes his last offer at first light and it is the kindest thing he's ever said. **And Emma answers it** — in front of everyone, on behalf of everyone, knowing exactly how it looks coming from her. Not with faith; she hasn't got any and neither has anyone on that wall. She answers with the only thing they have, which is that they are not leaving each other.
+**67 · EMMA ANSWERS** *(p.121)* Ward makes his last offer at first light and it is the kindest thing he's ever said. **And Emma answers it** — in front of everyone, on behalf of everyone, knowing exactly how it looks coming from her. Not with faith; she hasn't got any and neither has anyone on that wall. **She answers with the thesis of the film**, said once, out loud, by the person who cannot speak in rooms: they were told what they're supposed to do. A long time ago, by somebody who's gone now. Nobody ever came up with anything better, and it doesn't stop being true the minute it turns out nobody's watching. They worked out years ago there's no reward in it. They stayed anyway.
 
 *The girl who brought Ruthie in, speaking for all of them. That's her whole arc in ninety seconds.*
 

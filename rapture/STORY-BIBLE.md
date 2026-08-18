@@ -14,6 +14,12 @@ Some conclude that if the score no longer counts, nothing is forbidden. Some cho
 
 **Is goodness worth anything if there is no reward?**
 
+**THE THESIS, PRECISELY.** What holds Eden together is **not** loyalty to each other. It is **dedication to the morality Jesus and the Bible taught, kept by people who believe there is no longer any higher power left to judge them.** They are not a family that survives. They are a community keeping a law nobody is enforcing.
+
+**THE CHARTER IS SCRIPTURE, AND IT IS HAZEL'S.** She does not invent it and never pretends to. *Judge not. Bear no false witness. Be reconciled to your brother. I was a stranger and you took me in.* Not one person in that circle believes there is anyone left to answer to. **They take the rules anyway**, because it is the only decent framework anyone ever offered them, and because it did not stop being true when the one who said it left.
+
+**EMMA'S ANSWER AT THE WALL** is this thesis, said once, by the person who cannot speak in rooms: *we were told what we're supposed to do, nobody ever came up with anything better, and it doesn't stop being true because nobody's watching. We worked out years ago there's no reward in it. We stayed anyway.*
+
 The ending must not answer "yes, virtue pays, you just have to wait." The rescue is **grace** — unearned, arriving for people who had already made peace with getting nothing. Eden does not fall because the defenders failed a test; it falls because a friend betrayed them. They are saved anyway.
 
 ## WORLD RULES
@@ -102,7 +108,13 @@ She is worked at a checkpoint fence by a gentle officer who feeds her, listens t
 - *Known:* she gave away the seed stock — the sealed tins Eden has been starving around rather than eating, because they are next year. She is caught. Her only defense: *"He was nice to me."*
 - *Unknown until act three:* she gave away Eden's location. She is the reason the army comes.
 
-**SHE SENTENCES HERSELF.** She is packing before anyone calls a meeting. The charter would have kept her — that is the point, it *works*, John is already standing to say she answers for the seed and is not condemned for it — and she goes anyway, because she agrees with the worst thing anyone in that room thinks about her. She has spent her life accepting kindness from the wrong people and cannot accept it from the right ones.
+**THE EIGHT DAYS.** She is caught and then **nothing happens at all** — which is the part nobody planned for. There is no verdict, because the charter does not permit one. Nobody is allowed to write her off, so nobody says anything, and for eight days Ruthie hauls water and turns compost in a settlement where not one person will meet her eye. She says good morning and gets a nod. She sits down and people stand up a few minutes later for reasons they have ready.
+
+**Eight days of being condemned by a place forbidden from condemning her** — everyone keeping the rule with their mouths and breaking it with their whole faces. **She would have taken a sentence. A sentence would have been a mercy.**
+
+*This is what fixes the exit, which was forced when she left the day after she was caught.*
+
+**SHE SENTENCES HERSELF.** She packed on the fourth day. The meeting is finally called on the ninth. The charter would have kept her — that is the point, it *works*, John is already standing to say she answers for the seed and is not condemned for it — and she goes anyway, because she agrees with the worst thing anyone in that room thinks about her. She has spent her life accepting kindness from the wrong people and cannot accept it from the right ones.
 > *"The gate isn't a punishment, Ruthie."* — *"It is for me."*
 
 **HER DEATH — she works out the trap by herself.**
@@ -130,16 +142,41 @@ The marker reads **RUTH**. The only time her whole name is used.
 
 In act three the survivors must hold both facts at once: *she died for us, and she killed us.* Whether they leave her name on the garden is the same choice God makes about them twenty minutes later.
 
-### THE PRESIDENT — the Antichrist figure
-Was **low in the presidential line of succession** — a cabinet secretary (Agriculture, Housing, Education). Everyone above him died in one morning and the chair was simply there. The Rapture made him king. He can say *"I was chosen"* and may not be lying.
+### THE PRESIDENT — the Antichrist
+**He is the sitting President of the United States, and he was not taken.**
 
-**Crucially: he was already well-liked before the Rapture.** The decent one, the competent one, the man people joked should be running things. Humanity got what it asked for.
+*(Rejected: sixth in the line of succession. Five people above him being taken implies five good people, and nobody believes that.)*
 
-His early acts are **genuinely good** — he restores the grid, gets food moving. People are not fools for loving him; they are right, for a while. The turn is slow and every step is reasonable, and by the time anyone can name what he has become, he is the only thing between the world and starvation.
+President for two years, liked for twenty before that. The decent one, the competent one, the one everyone always said ought to be running things back when it was a joke. **He does not rise. He does not have to.** Everyone around him simply goes — two-thirds of Congress, four of the Court, the generals who could have said no and the lawyers whose whole job was telling him what he could not do. **The Rapture does not make him king. It removes every restraint on a man who already was one.**
 
-**His pitch is absolution.** While everyone else screams that the survivors were judged and damned, he goes on television and says: *there was no judgment, you are not guilty, no one is keeping score.* That is mercy to a planet drowning in guilt. It is also permission. He empties the word "sin" and hands people the freedom to do anything, and they love him for it, because he is the only man who told them they were innocent.
+**AND THE WORLD NOTICES HE IS STILL BREATHING.** Every pulpit and kitchen table asks it that first month: *if this was a judgment, how is he still here?* He answers it himself, on television, and it is the most dangerous sentence of the year:
 
-**He does signs.** Real ones. A hand on a dying woman, then a stadium. The enemy performs miracles on live television while God says nothing for years.
+> *"If there had been a judgment — would I be standing here?"*
+
+**His own non-selection becomes the proof of his doctrine.**
+
+**HIS EARLY ACTS ARE GENUINELY GOOD.** He restores the grid, moves food, clears the dead. People are not fools for loving him; they are right, for a while. The turn is slow and every step is reasonable, and by the time anyone can name what he has become he is the only thing between the world and starvation.
+
+**HIS PITCH IS ABSOLUTION.** *There was no judgment. You are not guilty. No one is keeping score.* Mercy to a planet drowning in guilt — and permission. He empties the word *sin* and hands it back, and they love him for it, because he is the only man who told them they were innocent.
+
+### THE SIGNS — counterfeits of specific scripture, never invented
+*Generic faith-healing is forced and reads as invention. Revelation is specific, and it is called **lying wonders** (2 Thess 2:9).*
+
+**THE MORTAL WOUND — Revelation 13:3.** *And I saw one of his heads as it were wounded to death; and his deadly wound was healed: and all the world wondered after the beast.*
+
+In the second year a man in a crowd in Cleveland shoots him twice through the chest on live television. Six hundred million people watch him go down, watch the blood come through the shirt, watch a doctor step back, watch the sheet go over. **For one hour and forty minutes the world is told the President is dead.**
+
+Then he sits up. He walks out under his own power with the sheet over his arm and blood dried down his front, and forgives the man who did it.
+
+**There is no argument on earth after that.** Nobody needs a doctrine any more. They have seen it.
+
+> **THE RHYME THIS BUYS:** the enemy counterfeits resurrection in act two — and in act three the real thing happens to nineteen farmers in the mud.
+
+*Available if needed: fire out of heaven in the sight of men (Rev 13:13).*
+
+**THE EMPTY ROOM** — one scene, mid-film, alone. No aides, no camera. The warmth switches off, and not into menace: into *nothing.* No cruelty, no gloating, no face. He sits and idles like a machine. A door opens and the warmth comes straight back on, mid-sentence, perfect. Reads as "tired man" the first time and as something else entirely the second.
+
+**RELOCATED BEAT — the lost good man.** Give the regime a human face: an aide, a press officer, a general. Someone decent who works out exactly what they are serving and stays anyway. Ward is damned by consent; this one is damned by comfort.
 
 ### SIMON WARD — the personal antagonist
 The parishioner the priest molested. **Unnamed and forgettable in the church scene** — just a shaking young man telling the room what was done to him when he was nine. His testimony is what pushes the congregation over the edge.

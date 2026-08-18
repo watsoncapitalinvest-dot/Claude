@@ -9,9 +9,7 @@ The song was "Highway to Hell" and all four of them were singing it.
 
 Kayla drove with one wrist over the top of the wheel. Her mother was in a hospital in Philadelphia and she couldn't afford the gas to get there, so the deal was Atlantic City first, everybody chipping in, one night, then Philly on the way back. Tess had the window down and her arm out flat against the wind. In the back, Ruthie had her knees against the seat in front of her and Emma had her phone in her lap, thumb hovering, meaning to call her mother and not calling her mother.
 
-On the radio, under the music, before Tess changed the station: several thousand people had collapsed in a stadium in Jakarta. No cause identified. Authorities were asking for calm.
-
-Emma was the only one who heard it.
+It was an ordinary Tuesday in the ordinary world and there was not one single thing wrong with it.
 
 Kayla stopped singing in the middle of a line. Two seconds later, so did Tess.
 
@@ -99,7 +97,11 @@ Two kids came in out of the trees within a month of each other. A boy of fourtee
 
 The girl started talking again the following spring. Once she did, it turned out she was hard to stop.
 
-The rules got said out loud one night during an argument about whether to let in a man who had done something in the city. Hazel said them, and after that she said them at the gate to everybody who ever came:
+The rules got said out loud one night during an argument about whether to let in a man who had done something in the city. It was Hazel who said them, and she didn't make them up, and she didn't pretend to. Judge not. Bear no false witness. Be reconciled to your brother. I was a stranger and you took me in.
+
+Not one person in that circle believed there was anybody left to answer to. They took the rules anyway, because it was the only decent framework that had ever been offered to any of them, and because it had not stopped being true simply because the one who said it had gone.
+
+After that Hazel said them at the gate to everybody who ever came:
 
 *Nobody's asked what they did. Nobody lies about what they do here. What you break, you answer for. And the gate is never locked.*
 
@@ -129,13 +131,21 @@ What she gave him besides that was nothing he could use. Two days' walk northwes
 
 They caught it inside a week. She didn't lie about it. She couldn't have. Asked what she'd been thinking, she said the only true thing she had, which was: *he was nice to me.*
 
-The meeting tore the rules apart in one room. Delia wanted her gone, and it wasn't cruelty, it was arithmetic; Delia could do the arithmetic in her head and it came out the same every time. Hazel wouldn't have it. Emma had the answer and could not make herself stand up in front of everyone and say it.
+And then nothing happened at all.
+
+That was the part nobody had planned for. There was no verdict, because the rules did not permit one. Nobody was allowed to write her off and so nobody said anything, and for eight days Ruthie went on hauling water and turning compost in a settlement where not one person would meet her eye. She said good morning and got a nod. She sat down and people stood up a few minutes later for reasons they had ready.
+
+Eight days of being condemned by a place that was forbidden from condemning her. Every one of them keeping the rule with their mouths and breaking it with their whole faces.
+
+She would have taken a sentence. A sentence would have been a mercy.
+
+On the ninth day they finally called the meeting, and it tore the rules apart in one room. Delia wanted her gone, and it wasn't cruelty, it was arithmetic; Delia could do the arithmetic in her head and it came out the same every time. Hazel wouldn't have it. Emma had the answer and could not make herself stand up in front of everyone and say it.
 
 John stood up. He was going to say that she answered for the seed and was not condemned for it, and he was going to win.
 
 He never got to.
 
-She had already packed. Somebody said *the gate isn't a punishment, Ruthie,* and she looked at them with real gratitude and said, *it is for me.*
+She had already packed. She'd packed on the fourth day. Somebody said *the gate isn't a punishment, Ruthie,* and she looked at them with real gratitude and said, *it is for me.*
 
 Emma walked her to the treeline and couldn't stop her, and Ruthie kept apologizing, the way she had on the step at Emma's parents' house, all the way until Emma couldn't see her any more.
 
@@ -183,9 +193,19 @@ It didn't stay one.
 
 ## SIX
 
-The man who took the oath had been sixth in the line of succession. Housing. Everybody above him had died in one morning and the chair was simply there.
+The President of the United States was not taken.
 
-The thing was, people had liked him. For twenty years. He was the decent one, the competent one, the one people had joked ought to be running the place. When he stood up and took the oath in a room with eleven people in it, the world did not feel that it had been robbed. It felt, for the first time in a month, that something had gone right.
+He had been President for two years and people had liked him for twenty before that. The decent one. The competent one. The one everybody had always said ought to be running things, back when it was a joke.
+
+He did not rise. He did not have to. Everyone around him simply went. Two-thirds of the Congress. Four of the Court. The generals who could have said no to him and the lawyers whose whole job was telling him what he could not do. He stood in the same room he had been standing in on Monday, and by Friday there was not one human being left on the continent with the standing to stop him from doing anything at all.
+
+The Rapture did not make him king. It removed every restraint on a man who already was one.
+
+And the world noticed he was still breathing. Of course it did. Every pulpit and every kitchen table in America asked the same question that first month — *if this was a judgment, how is he still here?*
+
+He went on television and answered it himself, and the answer was the most dangerous sentence anyone said that year.
+
+*If there had been a judgment,* he said, *would I be standing here?*
 
 He turned the grid back on. He got food moving. He cleared the dead. People wept in the street at a working streetlight, and they were not fools for it, because he was good at this, and every single bit of it was real.
 
@@ -195,9 +215,15 @@ And across a hundred broadcasts, in pieces, he said the thing that saved everybo
 
 To a planet drowning in guilt it was mercy. It was also permission. It emptied the word *sin* like a cup and handed it back and told people to fill it however they liked, and they loved him for it, because he was the only man alive who had told them they were innocent.
 
-Somewhere in the second year, in a corridor, he put a hand on a dying woman and she got up and walked.
+In the second year a man in a crowd in Cleveland shot him twice through the chest on live television.
 
-By the fourth year he did it in stadiums.
+Six hundred million people watched him go down. They watched the blood come through the shirt. They watched a doctor stop working on him and step back, and they watched the sheet go over, and for one hour and forty minutes the world was told that the President was dead.
+
+Then he sat up.
+
+He walked out under his own power with the sheet still across his arm and blood dried down his front, and he stood in front of the cameras and told them he forgave the man who did it.
+
+There was no argument on earth after that. Nobody needed a doctrine any more. They had seen it.
 
 And underneath all of it, moving quietly, a volunteer with a clipboard became a man with a uniform became Deputy Administrator Simon Ward. He kept a map of the park on the wall of an office. Six million acres. Every few months he crossed off another river.
 
@@ -379,11 +405,13 @@ And Emma answered it.
 
 In front of all of them. On behalf of all of them. Knowing precisely how it looked, coming from her — the girl who brought Ruthie in, the girl half of them had quietly blamed for four years, standing up on the wall to speak for everybody.
 
-She didn't answer him with faith. She hadn't got any. Neither had anyone else up there; God had not said one word to any of them in four years, while the man on television healed the dying in stadiums. She had nothing to offer against that and she knew it.
+She didn't answer him with faith. She hadn't got any. Neither had anybody else up there; God had not said one word to any of them in four years, while a man on television died on camera and got up again. She had nothing to put against that and she knew it.
 
-She told him they weren't leaving each other.
+What she told him was that they had been told what they were supposed to do.
 
-That was all. That was the whole of it.
+A long time ago, by somebody who was gone now, and nobody had ever come up with anything better, and she was not going to stand here and pretend it stopped being true the minute it turned out nobody was watching. She said they had all worked out years ago that there was no reward in it. She said they'd stayed anyway.
+
+She said: *that's the whole of what we've got. You can have the rest.*
 
 Ward stood in the wet grass and looked up at her for a long moment. Then he walked back and gave the order.
 
