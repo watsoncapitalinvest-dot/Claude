@@ -254,7 +254,9 @@ The audience holds both halves the whole time and never joins them. Then Emma co
 
 **Eden.** Ruthie gives away the seed and dies. They plant what is left of it over her grave. The place takes the name the day they bury her. Things grow there out of season — too green, too fast. Nobody says it out loud, nobody explains it, and blessing vs. wishful thinking is never settled.
 
-### THE CHARTER
+### THE CHARTER — SUPERSEDED
+> **See THE LAW at the end of this document.** Eden is governed by the Ten Commandments, written on a board by Hazel from memory, plus two house rules she added and admitted she added. The four-rule charter below is retained only for the reasoning it contains about how the rules collide.
+
 Spoken at the gate to every newcomer. Said three times across the film, with different weight each time.
 
 1. **Nobody is asked what they did.** Your history stops at the treeline.
@@ -675,3 +677,52 @@ He leaves it open. For days. They cannot repair it — he will simply do it agai
 - **It does not diminish the wall.** That wall kept out weather, animals, and four years of ordinary men with ordinary intentions. It is the best thing John ever built and it worked and it saved every life behind it — until the one thing arrived it was never going to stop. That is not a failure. That is what walls are.
 - **The clock still bites, on the right thing.** The snow is not cutting off a starvation siege. It is the deadline on his persuasion.
 - **When he finally attacks, it is over fast**, because it was always going to be.
+
+
+---
+
+# THE LAW  *(supersedes the four-rule charter)*
+
+**Eden is governed by the Ten Commandments.** Not an invented charter. The actual Law, kept by people who believe the Lawgiver has gone.
+
+## THE BOARD
+Ten lines burned into a plank on the wall of the meeting hall.
+
+**Hazel wrote them from memory in the first winter**, because there was not a Bible in that camp. Two years later one comes in with a refugee — **and one of the ten on the board is wrong.**
+
+**They leave it.** It has been true for four years.
+
+*The law they keep is imperfect, human, and slightly mis-remembered, and they keep it anyway. Do not explain this. Put it on the wall and let one character notice it.*
+
+## THE TWO HOUSE RULES
+Underneath the ten, two lines Hazel added and always admitted she added:
+
+> *Nobody is asked what they did before the treeline.*
+> *Nobody is kept here who wants to go.*
+
+**The Law is harsh. These two are Eden's own mercy, and everyone knows the difference.**
+
+## LAW AND GRACE — the film's spine
+**They keep the Law perfectly, for four years, with nobody enforcing it. It cannot save them.**
+
+**Then it is given anyway.**
+
+That is the entire argument of the film and no character ever states it.
+
+## HOW THE COMMANDMENTS DRIVE THE STORY
+
+**FIRST — no other gods.** *This is the third act.* A man on television dies on camera and gets back up, and the world worships him. Ward stands outside the wall asking nineteen people to accept a god who demonstrably performs miracles over one who has not said a word in four years. **It is not an abstraction to them. It is the thing being demanded at gunpoint.**
+
+**FOURTH — the Sabbath.** One day in seven, nothing gets done. **They keep it during the siege** — a settlement under occupation putting its tools down because a law nobody is enforcing says to. **Ward watches it happen and cannot understand what he is looking at.** Best image in the middle of the film.
+
+**FIFTH — honor thy father and mother.** With everyone's parents dead or taken, this becomes the keeping of the dead: names on pickets, graves squared and mounded, and Ruthie's name staying on the garden.
+
+**SIXTH — thou shalt not kill.** The founding sin, committed in a church before Eden existed. And what the siege forces them back into.
+
+**EIGHTH — thou shalt not steal.** **Ruthie's commandment.** And the Law is not merciful about it: restitution, doubled (Exodus 22), which she cannot make.
+
+> **This makes John's stand cost far more.** Arguing for mercy is arguing **against Eden's own law.** And Ruthie exiles herself because **she can read the board and she knows exactly what it says.**
+
+**NINTH — bear no false witness.** What the traitor-hunt destroys. Act three is Eden breaking its own ninth commandment in a panic.
+
+**TENTH — covet.** The enemy's entire offer. Come out, have what they have. **Covetousness dressed as mercy**, which is what it always is.
