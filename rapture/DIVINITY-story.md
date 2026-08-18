@@ -201,6 +201,10 @@ Two years later a family came in off the Northway with a Bible in a bread bag, a
 
 Nobody changed it. It had been true for four years.
 
+---
+
+## FIVE
+
 Ruthie drifted.
 
 There was nothing dramatic in it. She was twenty-two and cold and she wasn't useful, and everyone was hungry, and hungry people are not kind to people who aren't useful. She started walking down toward the road.
@@ -670,8 +674,6 @@ They wore what the season allowed. There was nobody to see, and nothing to be as
 Evie was planting saplings. Fruit trees — the kind that give you nothing at all for ten years. She had put in nine of them along the south edge, which is a thing a person does only if they intend to be standing there in a decade, and Adam had dug every one of the holes without asking her what they were for.
 
 The garden had grown out over the grave and gone on growing, out of season, too green, and neither of them had ever explained it and neither of them ever would.
-
-The camera pulls back. And keeps pulling.
 
 Two people in a garden that four dead people built for them, and neither of them earned it, which is the point, which was always the point.
 
