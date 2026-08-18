@@ -73,7 +73,11 @@ He is at church that morning **searching for faith and for proof.** Not for comf
 
 He gets an answer ninety seconds later: every faithful person in the room drops dead and he is still standing there breathing. *He prayed for proof and received absolute, irrefutable, world-ending proof — and the content of it was* you're not coming.
 
-> **STILL OPEN:** what the two big losses actually were. The strongest version is the *same kind of blow twice* — which is what makes a man start believing it's aimed at him.
+**THE TWO LOSSES — one of each.** The first was **betrayal**: someone he believed in took the company down. The second was **pure chance**: nothing and nobody to blame.
+
+After the betrayal he learned the lesson everyone tells you to learn — don't trust people, tighten the contracts, protect yourself. **He learned it, applied it, and got flattened anyway** by something no amount of care could have prevented. One loss had a villain and one had nothing at all, and no theory covers both.
+
+That is a man with nowhere left to send the question, which is how he ends up at the back of a church he doesn't belong in at 37, asking for an accounting. **And it explains him in Eden:** he learned that people betray you, then learned it doesn't matter whether they do. So he neither trusts nor distrusts anybody — **he just won't decide.**
 
 **The church:** when the congregation realizes the priest was not taken, John is the one who says out loud that the priest may have been judged and left for a reason. He argues **against** killing him. Simon Ward then testifies that the priest molested him as a child, and the congregation beats the priest to death.
 
