@@ -450,3 +450,26 @@ Four girls from an upstate school, on the Thruway heading south, "Highway to Hel
 - Everything funnels north into the park. The treeline is somewhere nobody has looked in fifty years.
 
 **KAYLA'S REASON:** her mother is in a hospital in Philadelphia. She agreed to drive the girls to Atlantic City if they covered the gas, because it was the only way she could afford to go see her. **The first small kindness in the film, and it is dead in four minutes.**
+
+---
+
+## PART THREE'S CONFLICT — THE WIDOW OF ZAREPHATH
+
+**1 Kings 17.** The widow is down to her last handful of meal, about to make a final meal for herself and her son and then die, and Elijah asks her to feed him first. She does. *And the barrel of meal did not waste, neither did the cruse of oil fail.*
+
+**The sequence:**
+1. **Refugees arrive** — more mouths than Eden can carry through a winter. The fourth law says take them. Delia's ledger says everyone starves by March.
+2. **They take them anyway.**
+3. **The stores don't empty.**
+
+**IT IS DENIABLE.** Nobody sees a miracle. There is a woman with a ledger who cannot make her own numbers work. Delia counts it four times. Maybe Ada's second field did better than anyone tracked. Maybe someone has been quietly eating less. **The film never says.** Same ambiguity as the garden growing out of season over Ruthie's grave.
+
+**THE ARGUMENT IS NOT "do we have enough."** It is **"are we allowed to count on this?"** Do you plan around a thing you cannot explain — is that trust, or is it stupidity? Faith argued as a purely practical question, with nobody ever saying the word.
+
+**Hazel names the reference. Nobody believes her. Delia goes back to the ledger.**
+
+### WHY IT MATTERS STRUCTURALLY — Ward cannot starve them out
+A siege of forty people normally ends in starvation; that is the whole tactic. **Eden's stores do not fail, so the only weapon Ward has left is his mouth.** What makes his patient, warm, reasonable siege *necessary* is a bookkeeping discrepancy nobody can explain.
+
+### THE LAMP
+One lamp in the meeting hall they cannot afford to keep burning, and it does not go out. Remarked on once, never again. **It is the last light still on when the sky opens.**
