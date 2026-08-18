@@ -105,13 +105,24 @@ She is worked at a checkpoint fence by a gentle officer who feeds her, listens t
 **SHE SENTENCES HERSELF.** She is packing before anyone calls a meeting. The charter would have kept her — that is the point, it *works*, John is already standing to say she answers for the seed and is not condemned for it — and she goes anyway, because she agrees with the worst thing anyone in that room thinks about her. She has spent her life accepting kindness from the wrong people and cannot accept it from the right ones.
 > *"The gate isn't a punishment, Ruthie."* — *"It is for me."*
 
-**HER DEATH — the one time she says no to a kind man.** She walks toward the checkpoint, because it is the only other place she knows and because Ward was nice to her. Ward needs one more thing: what she gave him the first time was vague — a direction, a river, how many days she walked. Not enough. He has been narrowing it for months. So he sits her down, warm as ever, and asks her to **walk them in.** She would be admitted; the gate is never locked. He offers her everything — a bed, a name, forgiveness, *you're a good girl, none of this is your fault.* The exact words that worked the first time.
+**HER DEATH — she works out the trap by herself.**
+The nearest checkpoint is a **two-day walk** south and east, at the edge of the park. What she gave Ward the first time is unusable: two days' walk northwest, a river she can't name, a ridge that looks like a ridge. **In six million acres that is a rumor, not a location.**
 
-She says no. Then she runs. They shoot her in the back in sight of the treeline. Eden hears it, comes out, and finds her. That is how she comes home.
+After exiling herself she walks two days back to the fence, because it is the only other place she knows and because he was nice to her. Ward asks her to **walk them in.** She says no.
 
-**Her refusal is why Eden exists at all.** Ward has to find it the slow way and it takes him years. Every day of the second act is a day Ruthie bought them, and not one of them knows it.
+**And he lets her go — pleasantly, no threats — because he never needed her cooperation. He needed her to go home**, with two men half a mile behind her.
 
-**Ward is the only person alive who knows the whole truth about her.** At the wall in act three he hands it over as a weapon — *she gave you to me, and then she wouldn't do it twice; it cost her* — meaning to break them. It gives them their friend back thirty seconds before the end.
+**She works it out.** The girl everyone in this story has called weak and easily led sits in that tent with the soup going cold and understands the trap by herself, with nobody to help her.
+
+**So she goes east.** Away from the ridge, away from the river, into country she does not know, for **a day and a half**, until the men following her understand she is never going home. They kill her out there, a long way from anything.
+
+**Nobody in Eden hears a thing.** Emma will not stop looking. On the fifth day they find her twenty-odd miles east, in the wrong drainage, pointed the wrong way. **It looks like she got lost** — small, confused, stupid — and that is what every person in the settlement quietly believes for the next four years: that Ruthie stole the seed and then wandered off and died of being Ruthie.
+
+**They carry her home. Four days. Emma does not put her end down.**
+
+**Her refusal is why Eden exists at all** — the last thing she did on earth was ruin Ward's map, and it cost him four years. Not one of them knows.
+
+**WARD'S ACT-THREE REVEAL.** He tells them at the wall, and it is not cruelty — it has been bothering him for four years and he cannot account for it. *I never needed her to tell me anything. I only needed her to go home. She never went home. She went east for a day and a half.* **Four years of pity, corrected in one sentence.** He hands them their friend back and never understands what he has done.
 
 **THE CAMP BECOMES EDEN THE DAY THEY BURY HER.** Before Ruthie dies it is a camp: surviving, hoarding, *not planting*, because nobody believes in next year. She gives away the seed — the future — and dies. Then they plant what is left, over her, because she has just proved tomorrow was worth dying for. The place does not even have the name until she is in the ground. Things grow there out of season, too green, too fast, and nobody says it out loud.
 

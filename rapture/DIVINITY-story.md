@@ -113,7 +113,9 @@ Ruthie drifted.
 
 There was nothing dramatic in it. She was twenty-two and cold and she wasn't useful, and everyone was hungry, and hungry people are not kind to people who aren't useful. She started walking down toward the road.
 
-There was a government checkpoint eleven miles south. Soup. Blankets. A generator running, which in that winter was the most beautiful sound in the world.
+The nearest government checkpoint was a two-day walk south and east, at the edge of the park, where the road came back. She made that walk in February because there was nothing left up here for her and she wanted to see a light that somebody else had turned on.
+
+Soup. Blankets. A generator running, which that winter was the most beautiful sound in the world.
 
 The man there wasn't a soldier. He wasn't anybody. He had a clipboard and a volunteer's armband and he was gentle with her, and that was his own — nobody had told him to be. He gave her soup and he asked easy questions. How far did you walk. Is anybody sick up there. Are there children with you. How many of you are there, roughly.
 
@@ -122,6 +124,8 @@ And then he gave her the thing she actually wanted, which she had never told any
 He said none of it was her fault. He said there was nobody keeping score. He said she was a good girl.
 
 She gave him the seed tins because he said they'd be safer there.
+
+What she gave him besides that was nothing he could use. Two days' walk northwest, a river she couldn't name, a ridge that looked like a ridge. In six million acres that is not a location. It is a rumor. He wrote all of it down anyway, in a small neat hand, and thanked her.
 
 They caught it inside a week. She didn't lie about it. She couldn't have. Asked what she'd been thinking, she said the only true thing she had, which was: *he was nice to me.*
 
@@ -133,19 +137,35 @@ He never got to.
 
 She had already packed. Somebody said *the gate isn't a punishment, Ruthie,* and she looked at them with real gratitude and said, *it is for me.*
 
-Emma followed her out to the treeline and couldn't stop her, and Ruthie kept apologizing, the way she had on the step at Emma's parents' house, all the way until Emma stopped being able to see her.
+Emma walked her to the treeline and couldn't stop her, and Ruthie kept apologizing, the way she had on the step at Emma's parents' house, all the way until Emma couldn't see her any more.
 
-She went back to the fence, because it was the only other place she knew, and because he had been nice to her.
+---
 
-He was glad to see her. He sat her down and got her warm and told her again that none of it was her fault. And then he explained that what she'd given him hadn't been enough — a direction, a river, how many days she'd walked — and that he needed her to walk them in. She'd be admitted. He knew she would. The gate up there was never locked; she'd told him that herself.
+She walked two days south and east and went back to the fence, because it was the only other place she knew, and because he had been nice to her.
 
-He offered her everything again. The same words. Word for word, because they had worked.
+He was glad to see her. He sat her down and got her warm and told her again that none of it was her fault. And then he explained, kindly and at some length, that what she'd given him hadn't been enough to find anything with, and that what he needed now was for her to walk them in. She'd be admitted, he said. She'd told him so herself. The gate up there is never locked.
 
-She sat there in the warm with a blanket around her and a bowl in her hands, and she said no.
+She sat in the warm with a blanket round her shoulders and a bowl in her hands and she said no.
 
-Then she ran.
+And he said of course. He said he understood. He said she should get some rest and go on home in the morning, and he meant every word of it, because he had never needed her cooperation at all.
 
-They shot her in the back within sight of the treeline. It was not quick and it was not clean. Eden heard it and came out at a dead run and found her, and that is how she came home.
+He only needed her to go home.
+
+She was twenty-two years old and everyone who ever met her thought she was soft in the head, and she sat in that tent with the soup going cold in her hands and she worked it out by herself.
+
+So in the morning she went east.
+
+Away from the ridge. Away from the river. Away from Eden and every part of it, out into country she did not know at all, and she kept going east for a day and a half with two men half a mile behind her, until they understood that she was not going home and was never going to.
+
+They killed her out there. A long way from anything.
+
+Nobody in Eden heard a thing.
+
+Emma would not stop looking. They argued with her about it for four days and then they stopped arguing and went with her, and on the fifth day they found her twenty-odd miles east, in the wrong drainage entirely, pointed the wrong way.
+
+It looked like she'd got lost. It looked small and confused and stupid, and that is exactly what every single person in that settlement quietly believed for the next four years — that Ruthie stole the seed out of their mouths and then wandered off and died of being Ruthie.
+
+They carried her home. It took four days and Emma did not put her end down.
 
 John dug. Emma carved the marker, and what she carved on it was RUTH, which was the only time in her whole life anybody used her whole name.
 
@@ -317,9 +337,15 @@ That she'd given them up. That he'd known roughly where they were for four years
 
 And it nearly did — and it landed hardest on Emma, standing on the wall, because now the thing that no one had ever said out loud about her was a fact standing in the open air in front of everybody she loved.
 
-And then Ward, because he could not help himself, told them the rest.
+And then Ward told them the rest, and it was not cruelty. It had been bothering him for four years and he genuinely could not account for it.
 
-That he had asked the girl a second time. That he'd asked her to walk them in, and offered her everything, and she'd sat there with a blanket round her and a bowl in her hands and said no. And run. And that it had cost her.
+He said he had never needed the girl to tell him anything. He said he had only needed her to go home, and that he had two men ready to follow her, and that any twenty-two-year-old on this earth would have walked straight up that ridge and led them to the gate without ever knowing she'd done it.
+
+He said: *she never went home.*
+
+He said she went east for a day and a half.
+
+The last thing Ruthie did on this earth was ruin his map, and it cost him four years, and he told them so from forty feet away in a reasonable voice because he wanted to know if any of them could explain it to him.
 
 He handed them their friend back and he never understood what he had done.
 

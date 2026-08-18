@@ -76,25 +76,37 @@ Neither of them says much. She picks up the second shovel.
 
 **22 ·** *(p.43)* Ruthie drifts toward the road. Not dramatically. She's cold, she's twenty-two, and nobody in the camp is kind to her — she isn't useful and everybody's hungry.
 
-**23 · THE FENCE** *(p.45)* A government checkpoint. Soup, blankets, a generator running. And a volunteer with a clipboard who is kind to her — **not a soldier, not an officer, nobody at all**, which is what makes it terrible. The kindness is his own. He asks easy questions. How far did you walk. Is anyone sick. Are there children with you. How many of you are there.
+**23 · THE FENCE** *(p.45)* The nearest checkpoint is a **two-day walk** south and east, at the edge of the park where the road comes back. Ruthie makes it in February because there's nothing left for her up here and she wants to see a light somebody else turned on. Soup, blankets, a generator running. And a volunteer with a clipboard who is kind to her — **not a soldier, not an officer, nobody at all**, which is what makes it terrible. The kindness is his own. Easy questions. How far did you walk. Is anybody sick. Are there children with you. How many of you are there.
 
-Then he gives her the thing she actually wants: *none of this is your fault. Nobody's keeping score. You're a good girl.*
+Then the thing she actually wants: *none of this is your fault. Nobody's keeping score. You're a good girl.*
 
-She gives him the seed tins, because he says they'll be safer here.
+She gives him the seed tins because he says they'll be safer here.
 
-**24 ·** *(p.49)* She's caught. She doesn't lie — the second law, and anyway she couldn't. Her entire defense is **"He was nice to me."**
+**24 ·** *(p.48)* What she gave him besides that is useless — two days' walk northwest, a river she can't name, a ridge that looks like a ridge. **In six million acres that's a rumor, not a location.** He writes it all down in a small neat hand and thanks her.
 
-**25 · THE MEETING** *(p.51)* The charter tears itself apart in one room. Delia wants her out, on arithmetic, not cruelty. Hazel won't have it. Emma has something to say and cannot make herself say it in front of everyone. John stands up to say she answers for the seed and is not condemned for it — **and he is going to win.**
+**25 ·** *(p.49)* She's caught. She doesn't lie — the second law, and anyway she couldn't. Her entire defense is **"He was nice to me."**
 
-**26 ·** *(p.53)* He never gets to. She's already packed. Someone says *the gate isn't a punishment, Ruthie.* She says *it is for me.* Emma follows her to the treeline and can't stop her.
+**26 · THE MEETING** *(p.51)* The charter tears itself apart in one room. Delia wants her out, on arithmetic, not cruelty. Hazel won't have it. Emma has something to say and cannot make herself say it to a room. John stands up to say she answers for the seed and is not condemned for it — **and he is going to win.**
 
-**27 · THE SECOND ASK** *(p.55)* Ruthie goes back to the fence, because it's the only other place she knows and because he was nice to her. And the man with the clipboard needs one more thing. What she gave him was vague — a direction, a river, how many days she walked — and he's been working it ever since. He wants her to **walk them in.** She'd be admitted. The gate is never locked.
+**27 ·** *(p.53)* He never gets to. She's already packed. Someone says *the gate isn't a punishment, Ruthie.* She says *it is for me.* Emma walks her to the treeline and can't stop her.
 
-He offers her everything again, in the same words that worked the first time.
+**28 · THE SECOND ASK** *(p.55)* Two days south and east, back to the fence, because it's the only other place she knows. He's glad to see her. He warms her up. And then he explains, kindly and at length, that what she gave him wasn't enough to find anything with, and that what he needs now is for her to **walk them in.** She'd be admitted. The gate is never locked; she told him so herself.
 
-**28 ·** *(p.58)* She says no.
+**29 ·** *(p.57)* She says no.
 
-**29 ·** *(p.59)* She runs. They shoot her in the back within sight of the treeline. It is ugly and it takes too long. Eden hears it, comes out, and finds her. That is how she comes home.
+**And he lets her go.** Pleasantly. No threats. *Of course. Get some rest, go on home in the morning.* **Because he never needed her cooperation. He needed her to go home**, with two men half a mile back.
+
+**29a ·** *(p.58)* **She works it out.** Twenty-two years old, and every person who ever met her thought she was soft in the head, and she sits in that tent with the soup going cold in her hands and sees the whole shape of it, alone.
+
+**29b ·** *(p.59)* In the morning **she goes east.** Away from the ridge, away from the river, into country she doesn't know at all, for **a day and a half**, with two men behind her — until they understand she is never going home.
+
+They kill her out there. **Nobody in Eden hears anything.**
+
+**29c ·** *(p.60)* Emma won't stop looking. They argue with her for four days and then they go with her. **On the fifth day they find her twenty-odd miles east, in the wrong drainage, pointed the wrong way.**
+
+It looks like she got lost. Small, confused, stupid. **And that is what every person in that settlement quietly believes for the next four years** — that Ruthie stole the seed out of their mouths and then wandered off and died of being Ruthie.
+
+**29d ·** *(p.61)* **They carry her home. Four days. Emma does not put her end down.**
 
 **30 · THE BURIAL** *(p.60)* John digs. Emma carves **RUTH** — the only time in the entire film anyone uses her whole name.
 
@@ -187,7 +199,11 @@ Emma comes out and works beside her a while. It's the last quiet scene in the fi
 
 **63 · WARD'S WEAPON** *(p.113)* At the wall, mildly, he tells them about Ruthie. That she gave them up. That he's known roughly where they were for four years. He means it to finish them, and it nearly does — and it lands hardest on Emma, because now the thing nobody ever said out loud is a fact standing in the open.
 
-**64 ·** *(p.115)* And then, because he can't help himself, he tells them the rest: that he asked her a second time, and she wouldn't, and it cost her.
+**64 ·** *(p.115)* And then he tells them the rest, and it isn't cruelty — it has been bothering him for four years and he cannot account for it. He never needed her to tell him anything. He needed her to **go home**, with two men behind her, and any twenty-two-year-old alive would have walked straight up that ridge and led them to the gate without knowing she'd done it.
+
+*She never went home. She went east for a day and a half.*
+
+**The last thing Ruthie did on this earth was ruin his map, and it cost him four years.** He says it from forty feet away in a reasonable voice because he wants to know if any of them can explain it to him.
 
 **He hands them their friend back and doesn't understand what he's done.**
 
