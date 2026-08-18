@@ -102,15 +102,20 @@ Neither of them says much. She picks up the second shovel.
 
 **19 ·** *(p.41)* They strip a farm co-op and come back with **sealed tins of seed and a few open sacks.** Nobody plants any of it. **Nobody believes in next year.** DELIA VANCE, 50s, ER nurse, does the sum out loud and it's the sum the whole film runs on: **eaten, it's a week of food for nineteen people. Planted, it's three acres — a year of food for forty.** And then: *we eat it or we die with it.*
 
-**20 · THE CHARTER** *(p.39)* Not written. Said. It comes out of an argument about whether to admit a man who did something in the city. **HAZEL, 70s, says it — and she doesn't invent it and never pretends to.** *Judge not. Bear no false witness. Be reconciled to your brother. Let no man be held against his will.*
+**20 · THE BOARD** *(p.39)* First winter, during an argument about a man from the city who wants in. **HAZEL, 70s, sits down with a plank and a poker out of the fire and burns the Ten Commandments into it from memory** — there isn't a Bible in that camp and there won't be one for two more years. It goes on the wall of the meeting hall and that is the law of the place.
 
-**Not one person in that circle believes there is anybody left to answer to. They take the rules anyway**, because it's the only decent framework anyone ever offered them, and because it didn't stop being true when the one who said it left.
+**Underneath the ten she burns two more lines, and she tells everyone, then and every time after, that these two are hers and not God's:**
 
-After that she says it at the gate to everyone who comes:
+> *Nobody is asked what they did before the treeline.*
+> *Nobody is kept here who wants to go.*
 
-> *Nobody's asked what they did. Nobody lies about what they do here. What you break, you answer for. And nobody's kept here who wants to go.*
+**Not one person in that room believes there's anybody left to answer to. They take all twelve anyway** — it's the only decent framework anyone ever offered them, and it didn't stop being true when the one who gave it left.
 
-**The wall is real, guarded, and barred at night — and that is not a failing. It is why there are children alive behind it.** Admission is argued out every time, on whether they can be fed and what a person can do. *You're not asked what you did. You're asked what you'll do.*
+**20a · THE WALL** *(p.40)* Up that spring, barred every night of its life, and nobody pretends otherwise. **It's the reason there are children in there.** Who comes in is argued out every time — whether they can be fed, what they can do, whether there's room. *You're never asked what you did. You're asked what you'll do.*
+
+**20b · THE WRONG ONE** *(p.41)* Two years on, a family comes in off the Northway with a Bible in a bread bag. Somebody works through the board against it. **One of the ten is wrong.**
+
+Nobody changes it. It's been true for four years.
 
 **21 ·** *(p.41)* Winter. Hunger. Emma and John orbit each other and neither touches it. Two kids come in out of the trees within a month of each other — ADAM, 14, who talks without drawing breath about everything except where he came from, and EVIE, 13, **in a dead man's overcoat three sizes too big that she won't take off indoors or out**, who informs Delia on her second morning that the woodpile is stacked wrong and will be rotten by February. It is, and it is. Emma takes the girl. Adam wants a gate that shuts, and won't say why.
 
@@ -140,13 +145,21 @@ She walks home for two days holding it. **And she comes in through the gate with
 
 **25 ·** *(p.49)* She doesn't lie about any of it and it never occurs to her to try — it takes her most of an hour to understand what she's being told she's done. Her entire defense is **"He was nice to me."**
 
-**25a · THE EIGHT DAYS** *(p.50)* And then **nothing happens at all.** No verdict — the charter doesn't permit one. Nobody is allowed to write her off, so nobody says anything, and for eight days Ruthie hauls water and turns compost in a settlement where not one person will meet her eye. She says good morning and gets a nod. She sits down and people stand up a few minutes later for reasons they have ready.
+**25a · THE EIGHTH** *(p.50)* The board is very clear. Eighth one down. **And the Law is not merciful about theft — it wants restitution, doubled, and Ruthie has nothing on earth and no way of getting anything.**
+
+Hazel's two lines are no help and Hazel says so herself. *Nobody asks what you did before the treeline.* She didn't do it before the treeline. She did it here.
+
+**25b · THE EIGHT DAYS** *(p.51)* And then **nothing happens at all.** **They have a law that tells them exactly what to do and not one of them can bring themselves to do it — and they can't bring themselves to set it aside either.** So they do nothing, and nothing is its own kind of sentence. For eight days Ruthie hauls water and turns compost in a settlement where not one person will meet her eye. She says good morning and gets a nod. She sits down and people stand up a few minutes later for reasons they have ready.
 
 **Eight days of being condemned by a place that is forbidden from condemning her.** Everyone keeping the rule with their mouths and breaking it with their whole faces. **She would have taken a sentence. A sentence would have been a mercy.**
 
-**26 · THE MEETING** *(p.52)* On the ninth day. The charter tears itself apart in one room. Delia wants her out, on arithmetic, not cruelty. Hazel won't have it. Emma has something to say and cannot make herself say it to a room. John stands up to say she answers for the seed and is not condemned for it — **and he is going to win.**
+**26 · THE MEETING** *(p.52)* On the ninth day. The charter tears itself apart in one room. Delia wants her out, on arithmetic, not cruelty. Hazel won't have it. Emma has something to say and cannot make herself say it to a room. John stands up. **What he's about to argue is not on that board and it is not in Hazel's two lines either.** There is no clause anywhere in the twelve covering a girl who owes a debt she can never repay and ought to be forgiven it anyway.
 
-**27 ·** *(p.53)* He never gets to. She's already packed — she packed on the fourth day. Someone says *the gate isn't a punishment, Ruthie.* She says *it is for me.* Emma walks her to the treeline and can't stop her.
+**And John — who has no faith of any kind, hasn't prayed in four years, and would tell you flatly that nobody is listening — stands up in that room and argues for grace.** He doesn't know that's what it is.
+
+**And he is going to win.**
+
+**27 ·** *(p.53)* He never gets to. She's already packed — she packed on the fourth day, **because she can read the board as well as anyone in that room and she knows exactly what it says about her.** Someone says *nobody's putting you out, Ruthie* — and it's Hazel's line and everybody knows it. She says *it is for me.* Emma walks her to the treeline and can't stop her.
 
 **28 · THE SECOND ASK** *(p.55)* Two days south and east, back to the fence, because it's the only other place she knows. He's glad to see her. He warms her up. And then he explains, kindly and at length, that what she gave him wasn't enough to find anything with, and that what he needs now is for her to **walk them in.** She'd be admitted — they'd never bar it to her; she told him so herself.
 
@@ -214,7 +227,7 @@ Then he sits up. He walks out under his own power with the sheet across his arm 
 
 **44 ·** *(p.79)* Greer arrives at the gate, hungry and grateful. **They vet him and they argue about him** — Adam votes against, on nothing but instinct, and loses. They admit him because he's a fair carpenter and they can feed one more.
 
-**Careful people getting it wrong is worse than a loophole.** Ray gives him a bunk. Hazel says the four things to him at the gate.
+**Careful people getting it wrong is worse than a loophole.** Ray gives him a bunk. **Hazel reads him the board at the gate, all twelve, the way she does with everyone.**
 
 **45 · THE REFUGEES** *(p.81)* Thirty-one people come out of the trees. Families. More mouths than Eden can carry through a winter, and everyone in the settlement knows it within ten seconds.
 
@@ -295,7 +308,13 @@ The children go first — Toby and five others, and two adults to walk them out.
 
 Nineteen people are standing there at dawn, and every one of them chose it twice with the door wide open.
 
-**67 · EMMA ANSWERS** *(p.121)* Ward makes his last offer at first light and it is the kindest thing he's ever said. **And Emma answers it** — in front of everyone, on behalf of everyone, knowing exactly how it looks coming from her. Not with faith; she hasn't got any and neither has anyone on that wall. **She answers with the thesis of the film**, said once, out loud, by the person who cannot speak in rooms: they were told what they're supposed to do. A long time ago, by somebody who's gone now. Nobody ever came up with anything better, and it doesn't stop being true the minute it turns out nobody's watching. They worked out years ago there's no reward in it. They stayed anyway.
+**67 · EMMA ANSWERS** *(p.121)* Ward makes his last offer at first light and it is the kindest thing he's ever said. **And Emma answers it** — in front of everyone, on behalf of everyone, knowing exactly how it looks coming from her. Not with faith; she hasn't got any and neither has anyone on that wall. **She answers with the First Commandment**, said once, out loud, by the person who cannot speak in rooms.
+
+She's seen the tape. Everyone has. She won't stand there and tell him she knows what that man on television is, because she doesn't — and she won't pretend she's been given one reason in four years to think anything is listening up here.
+
+**She says the first one on their board is first for a reason, and it hasn't got a clause in it about who else might be doing miracles.**
+
+They worked out a long time ago there's no reward in this. They stayed anyway.
 
 *The girl who brought Ruthie in, speaking for all of them. That's her whole arc in ninety seconds.*
 

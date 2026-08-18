@@ -181,19 +181,25 @@ It was. And it was.
 
 Emma took the girl. She was the same size Danny had been.
 
-The rules got said out loud one night during an argument about whether to let in a man who had done something in the city. It was Hazel who said them, and she didn't make them up, and she didn't pretend to. Judge not. Bear no false witness. Be reconciled to your brother. Let no man be held against his will.
+The rules got said out loud one night in the first winter, during an argument about a man from the city who wanted in.
 
-Not one person in that circle believed there was anybody left to answer to. They took the rules anyway, because it was the only decent framework that had ever been offered to any of them, and because it had not stopped being true simply because the one who said it had gone.
+Hazel didn't invent anything and never claimed to. She sat down with a plank and a poker out of the fire and she burned the Ten Commandments into it from memory, because there was not a Bible anywhere in that camp and there wouldn't be one for two more years.
 
-After that Hazel said them at the gate to everybody who ever came:
+They hung it on the wall of the meeting hall and that was the law of the place.
 
-*Nobody's asked what they did. Nobody lies about what they do here. What you break, you answer for. And the gate is never locked.*
+Underneath the ten she burned two more lines, and she told everybody, then and every time after, that these two were hers and not God's.
 
-Nobody wrote it down. They didn't have to.
+*Nobody is asked what they did before the treeline.*
 
----
+*Nobody is kept here who wants to go.*
 
-## FIVE
+Not one person in that room believed there was anybody left to answer to. They took all twelve anyway, because it was the only decent framework that had ever been offered to any of them, and because it had not stopped being true simply on account of the one who gave it having gone.
+
+The wall went up that spring and it was barred every night of its life, and nobody in that clearing ever pretended otherwise. It was the reason there were children in there. Who came in was argued out every single time — whether they could be fed, what they could do, whether there was room. You were never asked what you'd done. You were asked what you'd do.
+
+Two years later a family came in off the Northway with a Bible in a bread bag, and somebody sat down with it and the board and worked through the ten, and one of them was wrong.
+
+Nobody changed it. It had been true for four years.
 
 Ruthie drifted.
 
@@ -241,9 +247,15 @@ She didn't lie about any of it. She couldn't have, and it never occurred to her 
 
 Asked what she'd been thinking, she said the only true thing she had, which was: *he was nice to me.*
 
+The board on the wall was very clear about it. It was the eighth one down. And the Law is not a merciful document about theft — it wants restitution, and it wants it doubled, and Ruthie had nothing on this earth and no way of getting anything.
+
+Hazel's two lines were no help either, and Hazel said so herself. Nobody asks what you did before the treeline. She hadn't done it before the treeline. She'd done it here.
+
 And then nothing happened at all.
 
-That was the part nobody had planned for. There was no verdict, because the rules did not permit one. Nobody was allowed to write her off and so nobody said anything, and for eight days Ruthie went on hauling water and turning compost in a settlement where not one person would meet her eye. She said good morning and got a nod. She sat down and people stood up a few minutes later for reasons they had ready.
+That was the part nobody had planned for. They had a law that told them exactly what to do and not one of them could bring themselves to do it, and they could not bring themselves to set it aside either, and so they did nothing, and nothing is its own kind of sentence.
+
+For eight days Ruthie went on hauling water and turning compost in a settlement where not one person would meet her eye. She said good morning and got a nod. She sat down and people stood up a few minutes later for reasons they had ready.
 
 Eight days of being condemned by a place that was forbidden from condemning her. Every one of them keeping the rule with their mouths and breaking it with their whole faces.
 
@@ -255,7 +267,7 @@ John stood up. He was going to say that she answered for the seed and was not co
 
 He never got to.
 
-She had already packed. She'd packed on the fourth day. Somebody said *nobody's putting you out, Ruthie,* and she looked at them with real gratitude and said, *you don't have to.*
+She had already packed. She'd packed on the fourth day, because she could read the board as well as anybody in that room and she knew exactly what it said about her. Somebody said *nobody's putting you out, Ruthie* — and it was Hazel's line and everybody knew it — and she looked at them with real gratitude and said, *you don't have to.*
 
 Emma walked her to the treeline and couldn't stop her, and Ruthie kept apologizing, the way she had on the step at Emma's parents' house, all the way until Emma couldn't see her any more.
 
@@ -417,7 +429,7 @@ That is to say: we watched. Eden didn't. He came to the gate in November, hungry
 
 Adam voted against him. He couldn't say why. He never could.
 
-They took him in because he was a fair hand with a saw and there was room for one more that winter, and because seven people had come through that gate in four years and five of them had been the making of the place. Hazel said the four things to him at the gate and Ray gave him a bunk.
+They took him in because he was a fair hand with a saw and there was room for one more that winter, and because seven people had come through that gate in four years and five of them had been the making of the place. Hazel read him the board at the gate, all twelve of them, the way she did with everyone, and Ray gave him a bunk.
 
 Careful people getting it wrong is a great deal worse than carelessness.
 
@@ -482,6 +494,18 @@ The second was that he was lying about the waiting. He had four hundred men in a
 So they had a plan, and the plan was to outlast him, and it was a good plan.
 
 Which meant the only weapon the man had left was his mouth, and it was doing more damage than artillery would have.
+
+---
+
+On the Sabbath they put their tools down.
+
+Fourth on the board, and they had kept it every seventh day for four years, and there was a genuine argument about it that morning that lasted about ten minutes and that Hazel won by not saying anything at all.
+
+So on the sixth day of an occupation, with a hole in the north wall and four hundred men on the slope, nineteen adults and six children sat down and did nothing whatsoever from sunrise to sunset.
+
+Ward stood out in the wet grass with his hands behind his back and watched them do it.
+
+Whatever he had been expecting, it was not that. It is the only time in four years that anybody sees that man's face change.
 
 On the fifth day the first rule died.
 
@@ -555,11 +579,13 @@ In front of all of them. On behalf of all of them. Knowing precisely how it look
 
 She didn't answer him with faith. She hadn't got any. Neither had anybody else up there; God had not said one word to any of them in four years, while a man on television died on camera and got up again. She had nothing to put against that and she knew it.
 
-What she told him was that they had been told what they were supposed to do.
+What she told him was that she'd seen the tape. Everybody had. She said she wasn't going to stand up there and tell him she knew what that man on the television was, because she didn't, and she wasn't going to pretend she'd been given one single reason in four years to think anything was listening up here.
 
-A long time ago, by somebody who was gone now, and nobody had ever come up with anything better, and she was not going to stand here and pretend it stopped being true the minute it turned out nobody was watching. She said they had all worked out years ago that there was no reward in it. She said they'd stayed anyway.
+She said the first one on their board was the first one for a reason, and it did not have a clause in it about who else might be doing miracles.
 
-She said: *that's the whole of what we've got. You can have the rest.*
+She said they'd worked out a long time ago there was no reward in this. She said they'd stayed anyway.
+
+*That's the whole of what we've got,* she said. *You can have the rest.*
 
 Ward stood in the wet grass and looked up at her for a long moment. Then he walked back and gave the order.
 

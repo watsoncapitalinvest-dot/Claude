@@ -721,7 +721,13 @@ That is the entire argument of the film and no character ever states it.
 
 **EIGHTH — thou shalt not steal.** **Ruthie's commandment.** And the Law is not merciful about it: restitution, doubled (Exodus 22), which she cannot make.
 
-> **This makes John's stand cost far more.** Arguing for mercy is arguing **against Eden's own law.** And Ruthie exiles herself because **she can read the board and she knows exactly what it says.**
+> **THIS IS THE BEST STRUCTURAL THING IN THE FILM.** What John stands up to argue is **not on that board and not in Hazel's two lines.** There is no clause in the twelve covering a girl who owes a debt she can never repay and ought to be forgiven it anyway.
+>
+> **John — who has no faith, hasn't prayed in four years, and would tell you flatly nobody is listening — stands up in that room and argues for grace. He does not know that is what it is.**
+>
+> And it is the exact thing the sky gives all of them at the end. **The one argument he ever made in four years is the one the universe turns out to agree with.**
+>
+> And Ruthie exiles herself because **she can read the board as well as anyone and she knows what it says about her.**
 
 **NINTH — bear no false witness.** What the traitor-hunt destroys. Act three is Eden breaking its own ninth commandment in a panic.
 
