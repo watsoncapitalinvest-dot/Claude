@@ -682,3 +682,68 @@ be. The film ends and then they get a life.
 - Eden's population, leadership, and supporting cast.
 - Tone/lane: faith-based inspirational vs. gritty survival vs. epic fantasy
   battle.
+
+---
+
+## THE BENCH
+
+*Built to be used or discarded in rewrites. Each has a job in the machine, not
+just a personality.*
+
+### EDEN
+
+**DELIA VANCE, 50s — the nurse.** ER charge nurse before. Competent,
+unsentimental, Eden's de facto second. She and John disagree constantly and
+trust each other completely. She triaged for nine days after the Rapture and had
+to decide who got treated; she has been sorting people ever since and she knows
+it. **The first law is the one she personally cannot obey** — she can't stop
+assessing people. She argued hardest to exile Ruthie, on arithmetic, not cruelty.
+*Function: the case for judgment, made by someone who is usually right.*
+
+**HAZEL, 70s — the one who still prays.** Widow; her husband was taken and she
+wasn't. Prays out loud, daily, in front of everyone, unembarrassed. Speaks the
+charter at the gate. Gently mocked. Once she hears about Ward, **she starts
+praying for him by name**, and everyone hates it. **She dies before the sky
+opens** — the only person who'd have understood it, missing it by an hour. Then
+she is the first one to stand back up, and she is **laughing.**
+
+**RAY WHELAN, 60s — the man from the church.** Was in that room. Came out with
+John. Has never once mentioned it in four years, because the first law forbids
+it. Eden's carpenter. Two men sharing a settlement in total silence about the
+worst day of their lives. **In act three he is accused of being the traitor —
+and will not defend himself, because defending himself means saying where he was
+that morning.** That is what finally makes John speak.
+
+**CALEB, 19 — the one who wants the gate locked.** Arrived at 14. Angry,
+capable, builds alongside John. Right about the danger and heard by nobody. He
+is the pressure on the fourth law for the whole second act. On the last night he
+begs John to lock it, and John doesn't, **and Caleb stays anyway.**
+*Half of the final couple.*
+
+**ADA, 17 — the gardener.** Arrived at 13, silent for her first year; Emma took
+her. She is the one who actually knows what grows and when. Emma lost a family
+and spent four years building one without noticing she was doing it.
+*The other half of the final couple. She inherits the garden because she is the
+only one who ever really tended it.*
+
+**TOBY, 6 — the child.** Doesn't remember the world. Thinks the Rapture is a
+story adults tell. Follows John around while he digs. **He goes out through the
+open gate on the last night** — which is what the gate was always for.
+
+**PAUL DIETZ, 40s — the one who walks out.** Ordinary, decent, a father. He
+takes the terms for his kids' sake. **The film must not condemn him** — under the
+rule he isn't damned, he's frightened, and John lets him go without a word.
+
+**GREER — the stranger Ward sends in.** Quiet, grateful, useful. **We watch Ward
+send him**, so this is never a whodunnit. His job isn't sabotage — Ward already
+knows where Eden is. His job is to find the weak ones and to plant the idea that
+somebody inside betrayed them.
+
+### OUTSIDE
+
+**HELEN MARCH, 40s — the President's chief of staff.** Brilliant, decent, loved
+him, gave him everything. She works out what he is around the midpoint **and
+stays.** She is the rule's second clause dramatized in someone the audience
+likes — Ward is damned by consent, Helen by comfort. **She is the one who walks
+in on the empty room.** At the end she watches the sky open on a monitor and
+understands exactly what it means.
