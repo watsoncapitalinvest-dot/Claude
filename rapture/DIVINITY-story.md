@@ -55,6 +55,78 @@ That was the first grave.
 
 ---
 
+On the third day he drove out to the site.
+
+It was a forty-one unit build off Route 5 and it was the thing that was going to do it. Not make him rich. Make him solvent, make him real, get his name on something that would still be standing when he wasn't. He'd been three weeks from the walk-through.
+
+There was a man in the cab of the excavator who had worked for him for nine years. There were two more in the trailer. The rest had gone somewhere and he never found out where.
+
+He stood in the middle of it for about an hour.
+
+The thing he could not get his head round, standing there, was that it had not been *lost.* Losing it he understood; he'd done that twice and he knew the shape of it. This was different. Nobody was going to foreclose on it. Nobody was going to sue him or write it up or take it off him. There was no longer any such thing as a person who cared whether this building got finished, which meant the eleven years he had put into being the man who could finish it had not been defeated.
+
+They had just stopped counting.
+
+He got the generator running. Then he went into the shell of unit 12, where the doors had come in on the Thursday and were still stacked under plastic, and he hung one.
+
+Shimmed it, plumbed it, set the strike plate, swung it twice.
+
+Then he sat down on the subfloor with his back against the wall for a long time, in a building nobody would ever live in, with a door in it that worked.
+
+---
+
+He went back to the church on the fifth day because there was nobody else going to.
+
+There were forty-one of them still in the pews. Some of them had slid down. Somebody had put a coat over a woman in the third row and gone away and not come back.
+
+He started a trench behind the building, along the fence line, and it took him six days.
+
+Ray Whelan turned up on the second morning. He didn't say anything about why he'd come back or where he'd been, and John didn't ask him, and the two of them dug for five days without one word passing between them about the man they'd both watched die twelve feet from where they were standing.
+
+What they talked about instead was hockey, and a bad winter in '93, and a dog Ray had had in 1988 called Duke who was, by Ray's account, the stupidest animal ever born in Schenectady County.
+
+Six days. Forty-one people. John wrote the names on fence pickets where anybody knew them, and where nobody knew them he wrote what they'd been wearing, because it seemed better than nothing.
+
+By the end of it there were nine people sleeping in the parish hall, because a man visibly doing something is the most magnetic object in a collapsed world.
+
+---
+
+They started asking him what they should do.
+
+Whether the government was coming. Whether the cities were worse. Whether to go south where it was warmer or north where there were fewer people. Whether it was safe to drink out of the creek. They asked him because he had a shovel and a plan for the next hour, and people will follow the man with a plan for the next hour anywhere at all.
+
+He asked them what they thought.
+
+Every single time. *What do you all reckon.* *What do you want to do.* *Somebody else should call it.* He was not being humble and he was not being coy. There was a thing he had said out loud in that building on a Tuesday morning and he had watched what it did, and he was never going to do that again as long as he lived.
+
+It drove them out of their minds. They followed him anyway.
+
+---
+
+In the third week they had to decide whether to move.
+
+The water had gone wrong and there were men coming up the county road at night taking whatever they wanted, and everybody in that hall knew perfectly well that they should be moving north, and every one of them was waiting for John to say so.
+
+He put it back to them three times. They waited.
+
+On the third night four men came through and took the fuel and the food and most of the tools, and they beat a nineteen-year-old named Cody badly enough that he died two days after, on a mattress in the parish hall, holding Ray Whelan's hand.
+
+Nobody blamed John. Not one person. They were kind about it, which was the worst available outcome.
+
+They moved north on the Friday. Somebody else said when.
+
+---
+
+He tried to pray once, that first month, on his own, out behind the hall.
+
+He got about four sentences in and what was coming out of him was not a prayer. It was an account. It was the first company and what had been taken and by whom, and it was the second one, and the number, and the date, and how close it had been, and the fact that he had told people — out loud, to their faces, like a fool — that he had been helped.
+
+He stopped in the middle of it.
+
+He never tried again, and he never told anybody he'd tried at all.
+
+---
+
 ## THREE
 
 Emma and Ruthie walked north.

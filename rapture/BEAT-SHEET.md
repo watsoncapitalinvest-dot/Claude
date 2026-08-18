@@ -10,7 +10,7 @@
 ---
 
 ## PART ONE — THE FIRST DAYS
-*pp. 1–34*
+*pp. 1–38*
 
 **1 · INT. CAR — THE THRUWAY, SOUTHBOUND — MORNING** *(p.1)*
 "Highway to Hell," windows down, four girls screaming along. KAYLA driving — her mother is in a hospital in Philadelphia and this is the only way she could afford to go; the others chipped in on gas if she'd run them down to Atlantic City first. TESS riding shotgun. RUTHIE and EMMA in the back. All of it comes out in the dialogue, on top of the music, in the shorthand of people who've known each other three years. **No radio report, no foreshadowing, no clue** — the Rapture is simultaneous worldwide and nothing can precede it. The scene is total ordinariness and the only irony available is the song title.
@@ -38,33 +38,67 @@ Half the congregation goes down where they stand.
 
 **10 ·** *(p.20)* John walks out into a street of stopped cars. He comes back alone that evening and buries the priest behind the building. **His first grave.** He couldn't tell you why.
 
-**11 ·** *(p.22)* Emma and Ruthie make it north to Emma's parents' house. Her mother, her father, and her fifteen-year-old brother are in three different rooms. No wounds. Emma — the only one in that house who ever went to church — digs three graves in the backyard over two days while Ruthie watches from the step, unable to help.
+**10a · THE SITE** *(p.21)* Day three. John drives out to his own build off Route 5 — forty-one units, the thing that was going to make him solvent and real and get his name on something that outlasted him. He was three weeks from the walk-through. There's a man in the excavator cab who worked for him nine years, and two more in the trailer.
+
+**What he cannot get his head round is that it wasn't** lost. **Losing it he understands — he's done it twice.** Nobody is going to foreclose on this. Nobody will sue him or take it off him. There is no longer any such thing as a person who cares whether this building gets finished. Eleven years of being the man who could finish it wasn't defeated. **It just stopped being counted.**
+
+He starts the generator. Then he goes into the shell of unit 12, where the doors came in on Thursday and are still under plastic, and **he hangs one.** Shims it, plumbs it, sets the strike plate, swings it twice. Then he sits on the subfloor with his back to the wall for a long time, in a building nobody will ever live in, with a door in it that works.
+
+**10b · THE TRENCH — and Ray** *(p.24)* Day five. He goes back to the church because nobody else is going to. **Forty-one of them are still in the pews.** Somebody put a coat over a woman in the third row and never came back.
+
+He starts a trench along the fence line. It takes six days.
+
+**RAY WHELAN turns up on the second morning** and picks up a shovel. He doesn't say why he came back and John doesn't ask, and the two of them dig for five days **without one word passing between them about the man they both watched die twelve feet away.** What they talk about is hockey, a bad winter in '93, and a dog Ray had in 1988 called Duke, the stupidest animal ever born in Schenectady County.
+
+John writes names on fence pickets where anyone knows them, and where nobody does he writes **what they were wearing**, because it seems better than nothing.
+
+**10c · THE NINE** *(p.27)* By the end of it there are nine people sleeping in the parish hall, **because a man visibly doing something is the most magnetic object in a collapsed world.**
+
+They start asking him what to do. Is the government coming. Are the cities worse. South where it's warmer or north where there are fewer people. Can you drink out of the creek.
+
+**He asks them what they think. Every single time.** He is not being humble and not being coy — he said a thing out loud in that building on a Tuesday and watched what it did, and he is never doing it again as long as he lives. It drives them out of their minds. **They follow him anyway.**
+
+**10d · THE THREE DAYS** *(p.29)* Third week. The water's gone wrong and men are coming up the county road at night, and everyone in that hall knows they should move north, and every one of them is waiting for John to say so.
+
+He puts it back to them three times. They wait.
+
+**On the third night four men come through**, take the fuel and the food and most of the tools, and beat a nineteen-year-old named Cody badly enough that he dies two days later on a mattress in the parish hall, holding Ray's hand.
+
+**Nobody blames John. Not one person. They are kind about it, which is the worst available outcome.**
+
+They move north on the Friday. Somebody else says when.
+
+**10e · THE PRAYER** *(p.31)* Alone, behind the hall, that first month. He gets four sentences in and **what's coming out of him isn't a prayer, it's an account** — the first company and who took it, and the second one, and the number, and the date, and how close it was, and the fact that he told people out loud, to their faces, like a fool, that he'd been helped.
+
+He stops in the middle of it. He never tries again and never tells anyone he tried.
+
+**11 ·** *(p.32)* Emma and Ruthie make it north to Emma's parents' house. Her mother, her father, and her fifteen-year-old brother are in three different rooms. No wounds. Emma — the only one in that house who ever went to church — digs three graves in the backyard over two days while Ruthie watches from the step, unable to help.
 
 *This is the second grave-digger in the movie, and it is why she will recognize the first one.*
 
-**12 · MONTAGE — SHORT AND UGLY** *(p.26)*
+**12 · MONTAGE — SHORT AND UGLY** *(p.34)*
 The first two weeks. Fires. Roads that don't work. A supermarket. Two men arguing about whether it was God or a weapon and one of them killing the other over it — neither of them right, neither able to prove anything, because there is no cause of death to find. Anywhere. In anyone.
 
-**13 ·** *(p.28)* Emma and Ruthie start walking north. Ruthie's uncle had a camp up there. She calls the place **Beaumont.**
+**13 ·** *(p.35)* Emma and Ruthie start walking north. Ruthie's uncle had a camp up there. She calls the place **Beaumont.**
 
-**14 ·** *(p.29)* Cut to John, digging. No landmarks, no context, nothing that places him anywhere. Eleven graves behind him. He's working on the twelfth.
+**14 ·** *(p.35)* Cut to John, digging. No landmarks, no context, nothing that places him anywhere. Eleven graves behind him. He's working on the twelfth.
 
-**15 ·** *(p.30)* Emma and Ruthie pass a row of graves in an empty field. Mounded, squared, a few with names on scrap. Nobody around. Ruthie is unnerved by it. Emma isn't — she knows exactly what she's looking at, and she stands there a while.
+**15 ·** *(p.36)* Emma and Ruthie pass a row of graves in an empty field. Mounded, squared, a few with names on scrap. Nobody around. Ruthie is unnerved by it. Emma isn't — she knows exactly what she's looking at, and she stands there a while.
 
 *Two threads, no map. The audience holds both halves for twenty pages and never joins them.*
 
-**16 ·** *(p.32)* John's group — RAY WHELAN, 60s, out of that same church, and four others — are walking to water. They call it **the reservoir.**
+**16 ·** *(p.37)* John's group — RAY WHELAN, 60s, out of that same church, and four others — are walking to water. They call it **the reservoir.**
 
-**17 ·** *(p.33)* Emma comes over a rise. There's a man in a hole.
+**17 ·** *(p.37)* Emma comes over a rise. There's a man in a hole.
 
 Neither of them says much. She picks up the second shovel.
 
 ---
 
 ## PART TWO — THE FIRST WINTER
-*pp. 34–62*
+*pp. 38–62*
 
-**18 ·** *(p.35)* The treeline. Eleven people, then nineteen. It is never decided. Nobody votes. They simply fail to leave, and John runs it without once agreeing to.
+**18 ·** *(p.39)* The treeline. Eleven people, then nineteen. It is never decided. Nobody votes. They simply fail to leave, and John runs it without once agreeing to.
 
 **19 ·** *(p.37)* They strip a farm co-op and come back with sealed tins of seed. Nobody plants any of it. **Nobody believes in next year.** DELIA VANCE, 50s, ER nurse, says it flat: we eat it or we die with it.
 
