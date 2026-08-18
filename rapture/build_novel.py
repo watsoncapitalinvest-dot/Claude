@@ -134,59 +134,82 @@ for key, over, title in SECTIONS:
             inner.append('<div class="caps">' + ''.join(f'<p>{esc(c)}</p>' for c in d['caps']) + '</div>')
         if d['lines']:
             inner.append('<div class="says">' + ''.join(
-                f'<p class="bal"><b>{esc(w)}</b>{esc(t)}</p>' for w,t in d['lines']) + '</div>')
+                f'<p class="bal"><span class="tag">{esc(w)}</span> {esc(t)}<i class="tail"></i></p>' for w,t in d['lines']) + '</div>')
         inner.append(f'<span class="num">{label}</span>')
         body.append(f'<figure class="{cls}">' + ''.join(inner) + '</figure>')
     body.append('</div>')
 
 CSS = """
 *{box-sizing:border-box}
-:root{--ink:#e8e6e1;--dim:#8b8f8a;--gold:#d9ae58;--ground:#08090a;--edge:#20242a}
+:root{--ink:#e8e6e1;--dim:#8b8f8a;--gold:#d9ae58;--ground:#08090a;--edge:#20242a;
+ --paper:#f4f1e9;--paperink:#101214}
 body{margin:0;background:var(--ground);color:var(--ink);
  font-family:'Archivo Narrow',Arial Narrow,sans-serif;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1080px;margin:0 auto;padding:0 14px 120px}
-header{padding:16vh 14px 12vh;text-align:center}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 140px}
+header{padding:16vh 20px 12vh;text-align:center}
 header .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:.3em;
  text-transform:uppercase;color:var(--dim);margin:0 0 1.6rem}
 header h1{font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:clamp(3.4rem,16vw,8rem);
  line-height:.9;letter-spacing:-.02em;margin:0 0 1.4rem}
 header p{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.18em;
  text-transform:uppercase;color:var(--dim);margin:0}
-.chap{padding:9vh 0 4vh;text-align:center}
+.chap{padding:10vh 0 5vh;text-align:center}
 .chapinner{display:inline-block;border-top:1px solid var(--edge);border-bottom:1px solid var(--edge);padding:1.6rem 3rem}
 .chap .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.3em;
  text-transform:uppercase;color:var(--dim);margin:0 0 .5rem}
 .chap h2{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:clamp(1.5rem,5vw,2.4rem);margin:0;letter-spacing:.02em}
-.strip{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+
+.strip{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
 .panel{position:relative;margin:0;overflow:hidden;background:#000;border:1px solid var(--edge);
  aspect-ratio:16/9;display:flex}
-.panel.wide{grid-column:1 / -1;aspect-ratio:64/21}
-.panel img{width:100%;height:100%;object-fit:cover;display:block;filter:contrast(1.06) saturate(.92)}
-.grain{position:absolute;inset:0;pointer-events:none;opacity:.5;mix-blend-mode:overlay;
+.panel.wide{grid-column:1 / -1;aspect-ratio:2.4/1}
+.panel img{width:100%;height:100%;object-fit:cover;display:block;filter:contrast(1.08) saturate(.9) brightness(.94)}
+.grain{position:absolute;inset:0;pointer-events:none;opacity:.42;mix-blend-mode:overlay;
  background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.35) .5px, transparent .6px);
  background-size:3px 3px}
-.num{position:absolute;right:6px;bottom:4px;font-family:'IBM Plex Mono',monospace;font-size:.56rem;
- letter-spacing:.1em;color:rgba(255,255,255,.34)}
-.caps{position:absolute;left:0;top:0;max-width:66%;display:flex;flex-direction:column;gap:2px}
-.caps p{margin:0;background:#efece4;color:#0d0f10;font-family:'IBM Plex Mono',monospace;
- font-size:.66rem;line-height:1.42;padding:.42rem .6rem;letter-spacing:.005em;
- border-right:1px solid #b9b5aa;border-bottom:1px solid #b9b5aa}
-.says{position:absolute;right:8px;bottom:8px;max-width:62%;display:flex;flex-direction:column;
- align-items:flex-end;gap:5px}
-.bal{margin:0;background:#fbfaf7;color:#0b0d0e;border-radius:14px;padding:.42rem .72rem;
- font-size:.7rem;line-height:1.28;text-transform:uppercase;letter-spacing:.02em;font-weight:400;
- box-shadow:0 1px 0 rgba(0,0,0,.5)}
-.bal b{display:block;font-size:.56rem;letter-spacing:.14em;color:#6a6f73;font-weight:600;margin-bottom:.12rem}
-.bal i{font-style:italic;font-weight:700}
+.num{position:absolute;right:8px;bottom:6px;font-family:'IBM Plex Mono',monospace;font-size:.58rem;
+ letter-spacing:.1em;color:rgba(255,255,255,.3)}
+
+/* CAPTIONS — a slab that sits on the frame edge, not floating in the corner */
+.caps{position:absolute;left:0;top:0;max-width:min(62%,30rem);display:flex;flex-direction:column}
+.caps p{margin:0;background:var(--paper);color:var(--paperink);
+ font-family:'IBM Plex Mono',monospace;font-size:.86rem;line-height:1.5;
+ padding:.7rem .95rem;letter-spacing:0;
+ box-shadow:3px 3px 0 rgba(0,0,0,.55);border-bottom:1px solid rgba(0,0,0,.18)}
+.caps p:last-child{border-bottom:none}
 .caps i{font-style:italic}
-.gold .caps p{background:#1b1610;color:var(--gold);border-color:#6b551f;border-left:2px solid var(--gold);
- border-right:none}
+
+/* BALLOONS — real tails, speaker inline, set at readable size */
+.says{position:absolute;right:16px;bottom:22px;max-width:min(60%,26rem);
+ display:flex;flex-direction:column;align-items:flex-end;gap:14px}
+.bal{position:relative;margin:0;background:#fdfcf9;color:#0b0d0e;
+ border-radius:1.6em/2.2em;padding:.62rem 1rem .66rem;
+ font-size:.92rem;line-height:1.24;text-transform:uppercase;letter-spacing:.015em;
+ box-shadow:0 2px 0 rgba(0,0,0,.55)}
+.bal .tag{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.14em;
+ color:#8d9297;text-transform:uppercase}
+.bal i.tail{position:absolute;bottom:-11px;right:26px;width:0;height:0;
+ border-left:9px solid transparent;border-right:13px solid transparent;
+ border-top:14px solid #fdfcf9;filter:drop-shadow(0 2px 0 rgba(0,0,0,.4))}
+.bal b{font-weight:700}
+.bal i:not(.tail){font-style:italic;font-weight:700}
+
+/* GOLD FINALE */
+.gold .caps p{background:#17130c;color:var(--gold);border-bottom-color:rgba(217,174,88,.22);
+ border-left:3px solid var(--gold);box-shadow:3px 3px 0 rgba(0,0,0,.6)}
 .gold .panel{border-color:#3a3020}
-footer{text-align:center;padding:14vh 14px 8vh;border-top:1px solid var(--edge);margin-top:10vh}
+.gold .bal{background:#f6ecd6}
+.gold .bal i.tail{border-top-color:#f6ecd6}
+
+footer{text-align:center;padding:14vh 20px 8vh;border-top:1px solid var(--edge);margin-top:10vh}
 footer p{font-family:'IBM Plex Mono',monospace;font-size:.66rem;letter-spacing:.2em;
  text-transform:uppercase;color:var(--dim);margin:.4rem 0}
-@media(max-width:640px){.strip{grid-template-columns:1fr}.panel{aspect-ratio:16/9}
- .panel.wide{aspect-ratio:16/9}.caps p{font-size:.6rem}.bal{font-size:.64rem}}
+@media(max-width:720px){
+ .strip{grid-template-columns:1fr;gap:16px}
+ .panel,.panel.wide{aspect-ratio:16/9}
+ .caps{max-width:76%}.caps p{font-size:.74rem;padding:.55rem .75rem}
+ .says{max-width:74%;right:10px;bottom:16px}.bal{font-size:.8rem}
+}
 """
 
 out = f"""<title>Divinity: The Board</title>
