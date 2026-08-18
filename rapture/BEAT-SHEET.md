@@ -255,7 +255,15 @@ Emma comes out and works beside her a while. It's the last quiet scene in the fi
 
 **56 ·** *(p.99)* Ward walks to the wall alone and unarmed and is warm. He offers terms, and the terms are the ones he offered a girl at a fence: *you were never judged. You're not guilty. Nobody's keeping score. Come out and eat.* **He says he'll wait as long as it takes.**
 
-**57 ·** *(p.101)* Inside, it works. Not on everyone. On enough.
+**56a · THE HOLE** *(p.100)* He puts one round through a section of wall and takes it down. **And then nobody comes through it.**
+
+He leaves it open. They can't repair it — he'll do it again — so two people stand at a gap in their own wall every night, in the cold, **watching nothing come through**, while a field kitchen cooks two hundred yards away.
+
+**Your wall is nothing. I'm not coming. Come out.**
+
+*He could take this place in twenty minutes and everyone inside knows it. They are not under siege — they are alive at his discretion. What protects them is not the wall. It is what he wants.*
+
+**57 ·** *(p.102)* Inside, it works. Not on everyone. On enough.
 
 **58 ·** *(p.102)* Delia says the thing nobody has said out loud: **he can't starve us.** The stores still aren't emptying. Which means the only weapon he has is his mouth — and it is working better than a gun would.
 

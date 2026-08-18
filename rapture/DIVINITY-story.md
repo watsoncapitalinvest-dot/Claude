@@ -451,6 +451,20 @@ He said he would wait as long as it took.
 
 Inside the wall it began to work. Not on everybody. On enough.
 
+On the second day he put one round through the north wall.
+
+It took out eleven feet of it and part of the walkway, and the noise of it went round the bowl of the valley twice, and nobody in Eden had ever heard anything like it in their lives.
+
+And then nobody came through the hole.
+
+They stood there most of an hour waiting for it. Nothing came. By evening it was clear that nothing was going to, and by the second night they understood that they were not permitted to fix it either, because the one time Ray went out with timber a round went into the ground eight feet from him, and that was the whole of the message.
+
+After that there were two people on the gap every night, in the cold, watching nothing come through a hole in their own wall, with the smell of the field kitchen coming up the slope at them.
+
+John had built that wall over four summers. It had kept out weather and bears and, twice, men. It was the best thing he ever made and it had worked every day of its life, right up until the morning something arrived that it was never going to stop.
+
+Nobody said any of that out loud either.
+
 On the third day Delia said two things out loud that nobody else had got to yet.
 
 The first was: *he can't starve us.* The store still wasn't emptying and she had stopped pretending to herself that it was going to.

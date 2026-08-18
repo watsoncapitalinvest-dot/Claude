@@ -650,4 +650,28 @@ Past is off limits. Capability is not.
 - **Greer does not stroll in.** He is vetted, argued over, and admitted — and they get it wrong. **Adam voted against him.** Careful people admitting a man who passes is far worse than a loophole.
 - **The refugees are a choice.** Evie's four words move a room that could have said no. Under an open-gate rule she would only have been quoting the bylaws.
 - **The last night is stronger.** The gate has been barred for four years. John has it **unbarred and swung open so people can get out** — a deliberate act, not standing policy. Adam holding it open for the children now costs him something.
-- **Ward's siege is necessary.** He cannot come through that wall, so talking them out is his only option.
+- **The wall is not what stops him.** See below — he could take it in twenty minutes.
+
+
+---
+
+## THE WALL DOES NOT STOP HIM
+
+**Correction to anything that implies otherwise.** Ward has four hundred men, vehicles and heavy weapons. **He could take that wall in twenty minutes and every person inside knows it.**
+
+They are not under siege. **They are alive at his discretion.** The thing protecting them is not the wall — it is his purpose. He does not want the ground. He wants them to give up what they've been keeping, and a dead settlement gives him nothing at all.
+
+### THE HOLE
+He proves it once, early, and then never uses it again.
+
+**He puts one round through a section of wall and takes it down. And then nobody comes through the hole.**
+
+He leaves it open. For days. They cannot repair it — he will simply do it again — so they have to post two people at a gap in their own wall, in the cold, every night, **watching nothing come through it**, while a field kitchen cooks two hundred yards away.
+
+**That is the entire siege in one image:** *your wall is nothing. I'm not coming. Come out.*
+
+### WHAT IT CHANGES
+- **The question was never whether the wall holds. It is whether the people do.** Every hour they are still in there is an hour they chose it again, with a hole in the wall and a hot meal in smelling distance.
+- **It does not diminish the wall.** That wall kept out weather, animals, and four years of ordinary men with ordinary intentions. It is the best thing John ever built and it worked and it saved every life behind it — until the one thing arrived it was never going to stop. That is not a failure. That is what walls are.
+- **The clock still bites, on the right thing.** The snow is not cutting off a starvation siege. It is the deadline on his persuasion.
+- **When he finally attacks, it is over fast**, because it was always going to be.
