@@ -584,10 +584,65 @@ This justifies the entire third act:
 **Nobody in Eden ever suspects any of this. The audience understands it from the
 blocking alone.**
 
+---
+
+## THE FINALE
+
+### THE FALLEN GET UP
+Not "humans become angels" — **revealed, not promoted.** A defender takes a
+round, goes down in the mud, and stands. She is fading at the edges now like
+everything else on that field, and she picks her rifle back up.
+
+The defenders are outnumbered two hundred to one and **the enemy's only weapon
+stops working.** That is how forty people win. It costs nothing thematically:
+they did not earn it by dying, it is what they always were.
+
+*Rejected: everyone raptured into angels at the end. It pays virtue with a
+promotion (transaction back in), it empties the forest so nobody is left to
+plant, and humans becoming angels is a different order of being — a church
+audience will notice.*
+
+**It pays off three things already built:**
+- **Ruthie fell first.** She has been there four years, waiting. When Emma sees
+  her, Emma understands what is about to happen to her.
+- **John buried thousands.** At the end, nothing stays buried.
+- **The humans are the only fully solid things on the field** — until they start
+  to fade too.
+
+### THE LOOK
+**Angels: a Renaissance painting come to life.** Gold-leaf light with no source,
+impossible anatomy, six wings where four would do, faces that will not resolve
+no matter how long you look.
+
+**Demons: the same materials with the paint gone wrong** — Bosch and Goya.
+
+**Both fade at the edges, as if between dimensions.** Both sides are visitors.
+**Only Eden is here.**
+
+### THE SORTING
+Heaven arrives and the human soldiers break and run — **and are allowed to.**
+Nobody stops them. The ones who do not run are the ones with something in them,
+and **that is where the no-faces rule finally breaks. Once. Never again.**
+
+The army is sorted by the same law that governs everything else in the film.
+
+### THE ANTICHRIST AND WARD
+**Michael takes the beast.** Not a human — keep the scales honest. The humans
+fight the army; an archangel takes the thing that was never a man.
+
+**As he goes down he takes Ward with him.** The point: Ward learns he was never
+a partner. **He was equipment.** He invited it in and now it is carrying him out.
+
+**In the last second Ward wants it back. He reaches.** And John — who could not
+stop one killing in a church four years ago — reaches for him. **And it is not
+enough.** Ward knew, and chose, and the rule does not bend for anyone.
+
+John tried this time. He is clean either way. **That closes the church scene.**
+
+
 ## OPEN QUESTIONS
 
 - Eden's population, leadership, and supporting cast.
 - Ending: who survives, what happens to the world, does Emma or John die?
-- The angels: what they look like, how the battle plays, how it tops the President.
 - Tone/lane: faith-based inspirational vs. gritty survival vs. epic fantasy
   battle.
