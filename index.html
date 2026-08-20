@@ -7283,21 +7283,28 @@ function weeklyBoardView(kind){
     </div>`);
 }
 // ---- The Story Vault: every page the Newsroom has published ------------------
-// Anything published as a standalone page belongs here so it is findable and
-// shareable from the app. Newest first.
-const VAULT_STORIES = [
+// Built automatically from stories.json (see scripts/build_stories.py), which is
+// regenerated on every deploy. Publishing a page is all it takes to appear here;
+// a page can opt out with <meta name="scfl:vault" content="skip">.
+// The list below is only the offline fallback if the manifest can't be fetched.
+let VAULT_STORIES = [
   ['scfl-wookie-curse.html', 'The Wookie Curse: The Roll Call', 'scfl-wookie-curse-og.jpg', 'Investigations · Aug 2026'],
   ['scfl-jcm-trade-review.html', 'The Croskey-Merritt Trade, Reviewed', 'scfl-jcm-og.jpg', 'The Trade Desk · Aug 2026'],
-  ['scfl-post-draft-issue.html', 'The 2026 Post-Draft Issue', 'scfl-postdraft-og.jpg', 'Magazine · Aug 2026'],
-  ['scfl-politics-wire-freeze-flip.html', 'The Wire Freeze', 'scfl-politics-og.png', 'SCFL Politics · Aug 2026'],
-  ['scfl-2026-draft-grades-flip.html', "POP's 2026 Draft Grades", 'scfl-2026-draft-cover.jpg', 'Draft Desk · Jul 2026'],
-  ['draft-issue.html', 'The 2026 Pre-Draft Issue', 'draft-issue-og.jpg', 'Magazine · Jul 2026'],
-  ['trade-value-report.html', 'The Price of Everything', 'newsroom-og.jpg', 'Trade Value Report'],
-  ['death-by-inaction.html', 'Death by Inaction', 'death-by-inaction-cover.jpg', 'Investigations'],
-  ['microfichegate-teaser.html', 'Microfichegate', 'newsroom-og.jpg', 'Investigations · teaser'],
-  ['scfl-sportscenter.html', 'SCFL SportsCenter', 'scfl-broadcast-og.png', 'The Show · Tuesdays'],
-  ['broadcast-demo.html', 'SCFL Network · Game of the Week', 'scfl-broadcast-og.png', 'The Show'],
+  ['scfl-post-draft-issue.html', 'The 2026 Post-Draft Issue', 'scfl-postdraft-og.jpg', 'The Magazine'],
+  ['scfl-politics-wire-freeze-flip.html', 'The Wire Freeze', 'scfl-politics-og.png', 'SCFL Politics'],
+  ['scfl-2026-draft-grades-flip.html', "POP's 2026 Draft Grades", 'scfl-2026-draft-cover.jpg', 'The Draft Desk'],
+  ['draft-issue.html', 'The 2026 Pre-Draft Issue', 'draft-issue-og.jpg', 'The Magazine'],
 ];
+async function loadStories() {
+  try {
+    const r = await fetch('stories.json', { cache: 'no-cache' });
+    if (!r.ok) return false;
+    const d = await r.json();
+    if (!d || !Array.isArray(d.stories) || !d.stories.length) return false;
+    VAULT_STORIES = d.stories.map(s => [s.file, s.title, s.cover, s.kicker]);
+    return true;
+  } catch { return false; }
+}
 function storyURL(file) { return new URL(file, location.href).href.split('#')[0]; }
 async function storyShare(file, title) {
   const url = storyURL(file);
@@ -7345,7 +7352,8 @@ const VAULT_ASSETS = [
     ['harry-parts-source.png', 'Harry actor parts sheet'],
   ]],
 ];
-function showAssetVault() {
+async function showAssetVault() {
+  if (await loadStories()) { /* manifest wins over the fallback list */ }
   const sec = ([cat, items]) => `<h4 style="margin:18px 0 8px">${esc(cat)}</h4>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">
     ${items.map(([f, label]) => `<div class="card" style="padding:8px;margin:0;text-align:center">
