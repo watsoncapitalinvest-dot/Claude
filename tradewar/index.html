@@ -52,6 +52,26 @@
   .ac{font-size:13px;font-weight:700;color:#ffd86b;width:32px;text-align:right}
   .ammo.out{opacity:.32}
   .ammo.sel{background:#16202f;box-shadow:inset 3px 0 0 #ffd86b}
+  /* Landscape phones: fold the three control rows into one so the field
+     gets the height back. Stacked rows cost 146px of a 390px screen. */
+  @media (orientation:landscape) and (max-height:640px){
+    #app{gap:4px;padding:3px}
+    #ctl{flex-direction:row;align-items:center;gap:6px;max-width:none;width:100%}
+    #ctl .row{flex:1 1 0;min-width:0;gap:4px}
+    #ctl .row:last-child{flex:0 0 auto;gap:6px}
+    .lbl{width:40px;font-size:10px;letter-spacing:0}
+    .nudge{width:34px;height:36px;font-size:17px;border-radius:8px}
+    .num{width:48px;height:36px;font-size:14px;border-radius:8px}
+    input[type=range]{height:36px;min-width:34px}
+    input[type=range]::-webkit-slider-thumb{width:24px;height:24px;margin-top:-8px}
+    input[type=range]::-moz-range-thumb{width:24px;height:24px}
+    .act{height:38px;font-size:11px;padding:0 10px;border-radius:8px}
+    #bAmmo{min-width:118px}
+    #bFire{min-width:96px;font-size:14px}
+  }
+  #rotate{position:fixed;left:0;right:0;bottom:6px;text-align:center;display:none;
+    color:#6b7b96;font-size:12px;letter-spacing:1px;pointer-events:none;z-index:6}
+  @media (orientation:portrait) and (max-width:820px){ #rotate.live{display:block} }
   #boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
     color:#56637a;font-size:13px;letter-spacing:2px;z-index:30;background:#04060a}
   #boot.gone{display:none}
@@ -82,6 +102,7 @@
   </div>
 </div>
 <div id="tray"><div id="trayBox"><h3>ORDNANCE</h3><div id="trayList"></div></div></div>
+<div id="rotate">↻ turn your phone sideways for a bigger field</div>
 <div id="boot">LOADING THE LEAGUE&hellip;</div>
 <script>
 'use strict';
@@ -166,8 +187,10 @@ ctx.imageSmoothingEnabled = false;
 
 function fit(){
   const ctl = document.getElementById('ctl');
-  const ctlH = ctl.classList.contains('on') ? ctl.offsetHeight + 16 : 12;
-  const s = Math.max(0.2, Math.min((innerWidth - 12) / VW, (innerHeight - ctlH - 12) / VH));
+  const tight = matchMedia('(orientation:landscape) and (max-height:640px)').matches;
+  const pad = tight ? 8 : 16;
+  const ctlH = ctl.classList.contains('on') ? ctl.offsetHeight + (tight ? 8 : 16) : 10;
+  const s = Math.max(0.2, Math.min((innerWidth - pad) / VW, (innerHeight - ctlH - pad) / VH));
   cv.style.width  = Math.round(VW * s) + 'px';
   cv.style.height = Math.round(VH * s) + 'px';
 }
@@ -903,6 +926,8 @@ const myTurn = () => G.mode === 'aim' && !(G.vsCpu && G.turn === 1);
 function syncUI(){
   const on = G.mode === 'aim' || G.mode === 'fly' || G.mode === 'resolve';
   UI.ctl.classList.toggle('on', on);
+  const rot = document.getElementById('rotate');
+  if (rot) rot.classList.toggle('live', on);
   UI.ctl.classList.toggle('locked', !myTurn());
   if (!P.length) return;
   const p = P[G.turn];
