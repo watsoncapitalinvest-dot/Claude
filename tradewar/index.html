@@ -942,11 +942,7 @@ function tick(){
     if (--b.life <= 0) bits.splice(i, 1);
   }
 
-  if (G.mode === 'title'){
-    titleT++;
-    if (okEdge){ okEdge = false; newRound(false); }
-    return;
-  }
+  if (G.mode === 'splash' || G.mode === 'select'){ okEdge = false; return; }
   if (G.mode === 'load') return;
 
   stepFalling();
@@ -965,7 +961,7 @@ function tick(){
   } else if (G.mode === 'over'){
     if (okEdge){
       okEdge = false;
-      if (G.wins[0] >= 3 || G.wins[1] >= 3){ G.mode = 'title'; G.wins = [0,0]; syncUI(); }
+      if (G.wins[0] >= 3 || G.wins[1] >= 3){ G.mode = 'select'; G.wins = [0,0]; syncUI(); }
       else newRound(true);
     }
   }
@@ -1091,28 +1087,148 @@ function drawField(){
   }
 }
 
-function drawTitle(){
-  proceduralSky();
-  ctx.fillStyle = 'rgba(4,7,12,.62)'; ctx.fillRect(0, 0, VW, VH);
-  sh('S C F L', VW/2, 40, '#ffd86b', 22, 'center');
-  sh('TRADE WARS', VW/2, 62, '#f2f6ff', 52, 'center');
-  sh('two crests · one hill · nothing left standing', VW/2, 122, '#7f8fab', 16, 'center');
+/* Tap targets are registered as we draw, then hit-tested on pointerdown. */
+let HOT = [];
+const hot = (id, x, y, w, h) => { HOT.push({ id, x, y, w, h }); return { x, y, w, h }; };
+function hitTest(px, py){
+  for (let i = HOT.length - 1; i >= 0; i--){
+    const r = HOT[i];
+    if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return r.id;
+  }
+  return null;
+}
 
+function button(id, x, y, w, h, label, opts){
+  const o = opts || {};
+  hot(id, x, y, w, h);
+  ctx.fillStyle = o.fill || 'rgba(20,28,41,.92)';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = o.edge || '#2b3548'; ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, w, h);
+  sh(label, x + w/2, y + h/2 - (o.size || 17) * 0.6, o.col || '#dbe6f7', o.size || 17, 'center');
+}
+
+/* ---------------- SPLASH ---------------- */
+function drawSplash(){
+  titleT++;
+  proceduralSky();
+  ctx.fillStyle = 'rgba(4,7,12,.66)'; ctx.fillRect(0, 0, VW, VH);
+  HOT = [];
+
+  // two crests trading fire under the title
+  const a = LOGO[TEAMS[G.picks[0]].key], b = LOGO[TEAMS[G.picks[1]].key];
+  const gy = 400;
+  ctx.drawImage(a.img, 96, gy - 40, 80, 80);
+  ctx.drawImage(b.img, VW - 176, gy - 40, 80, 80);
+  const t = (titleT % 150) / 150;
+  const sx = 152 + (VW - 320) * t, sy = gy - 20 - Math.sin(t * Math.PI) * 190;
+  ctx.strokeStyle = 'rgba(255,138,92,.45)'; ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let k = 0; k <= 30; k++){
+    const u = t * k / 30;
+    const x = 152 + (VW - 320) * u, y = gy - 20 - Math.sin(u * Math.PI) * 190;
+    k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.stroke();
+  ctx.fillStyle = '#ff8a5c';
+  ctx.beginPath(); ctx.arc(sx, sy, 7, 0, 6.284); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.9)';
+  ctx.beginPath(); ctx.arc(sx - 1, sy - 1, 3, 0, 6.284); ctx.fill();
+
+  ctx.fillStyle = 'rgba(6,10,18,.72)'; ctx.fillRect(0, 96, VW, 168);
+  ctx.fillStyle = '#ffd86b'; ctx.fillRect(0, 96, VW, 3); ctx.fillRect(0, 261, VW, 3);
+  sh('S C F L', VW/2, 116, '#ffd86b', 26, 'center');
+  sh('TRADE WARS', VW/2, 148, '#f2f6ff', 74, 'center');
+  sh('two crests · one hill · nothing left standing', VW/2, 232, '#8ea0bd', 17, 'center');
+
+  button('start', VW/2 - 130, 462, 260, 56, 'CHOOSE YOUR CLUBS',
+         { fill:'rgba(58,26,20,.95)', edge:'#8a4030', col:'#ffd9cc', size:18 });
+  if ((titleT >> 4) % 2 === 0)
+    sh('tap to begin', VW/2, 528, '#5d6b80', 13, 'center');
+}
+
+/* ---------------- CLUB SELECT ---------------- */
+const COLS = 8, CELL = 104, GRID_Y = 240;
+const GRID_X = (VW - COLS * CELL) / 2;
+
+function drawSelect(){
+  titleT++;
+  proceduralSky();
+  ctx.fillStyle = 'rgba(4,7,12,.70)'; ctx.fillRect(0, 0, VW, VH);
+  HOT = [];
+
+  sh('CHOOSE YOUR CLUBS', VW/2, 18, '#f2f6ff', 30, 'center');
+  sh('tap a crest to fill the highlighted slot', VW/2, 46, '#7f8fab', 14, 'center');
+
+  // the two chosen slots
   [0, 1].forEach(side => {
-    const cx = side === 0 ? VW * 0.28 : VW * 0.72;
+    const cx = side === 0 ? VW * 0.27 : VW * 0.73;
     const t = TEAMS[G.picks[side]], lg = LOGO[t.key];
     const on = side === G.pickSide;
-    if (on){ ctx.strokeStyle = lg.accent; ctx.lineWidth = 2; ctx.strokeRect(cx - 61, 159, 122, 122); }
-    ctx.drawImage(lg.img, cx - 56, 164, 112, 112);
-    sh(t.name, cx, 292, on ? lg.light : '#8ea0bd', 18, 'center');
-    sh(side === 0 ? 'PLAYER 1  ·  HOME' : (G.vsCpu ? 'COMPUTER' : 'PLAYER 2'), cx, 316, '#6b7b96', 14, 'center');
+    hot('slot' + side, cx - 62, 82, 124, 124);
+    if (on){
+      ctx.fillStyle = 'rgba(255,216,107,.10)'; ctx.fillRect(cx - 62, 82, 124, 124);
+      ctx.strokeStyle = '#ffd86b'; ctx.lineWidth = 3; ctx.strokeRect(cx - 62, 82, 124, 124);
+    } else { ctx.strokeStyle = '#2b3548'; ctx.lineWidth = 2; ctx.strokeRect(cx - 62, 82, 124, 124); }
+    ctx.drawImage(lg.img, cx - 52, 92, 104, 104);
+    sh(t.name, cx, 212, on ? lg.light : '#8ea0bd', 16, 'center');
+    sh(side === 0 ? 'PLAYER 1 · HOME' : (G.vsCpu ? 'COMPUTER' : 'PLAYER 2'), cx, 64, '#6b7b96', 13, 'center');
   });
-  sh('VS', VW/2, 206, '#ff8a5c', 30, 'center');
-  sh('HOME FIELD: ' + (ARENA_NAME[TEAMS[G.picks[0]].key] || 'THE FIELD'), VW/2, 348, '#8fd0ff', 16, 'center');
-  sh('← →  pick club     ↑  switch side     ↓  ' + (G.vsCpu ? '2 player' : 'vs computer') +
-     '     TAB  ' + ['loose','decent','sharp'][G.cpuSkill], VW/2, 392, '#6b7b96', 14, 'center');
-  if ((titleT >> 4) % 2 === 0) sh('SPACE TO START', VW/2, 430, '#e8eefb', 22, 'center');
-  sh('first to 3 rounds takes it', VW/2, 480, '#4f5c73', 14, 'center');
+  sh('VS', VW/2, 128, '#ff8a5c', 32, 'center');
+
+  // all sixteen crests
+  TEAMS.forEach((tm, i) => {
+    const gx = GRID_X + (i % COLS) * CELL, gy = GRID_Y + Math.floor(i / COLS) * CELL;
+    hot('team' + i, gx, gy, CELL, CELL);
+    const taken = i === G.picks[0] || i === G.picks[1];
+    if (taken){
+      ctx.fillStyle = 'rgba(255,216,107,.09)'; ctx.fillRect(gx + 2, gy + 2, CELL - 4, CELL - 4);
+      ctx.strokeStyle = i === G.picks[0] ? '#ffd86b' : '#8fd0ff'; ctx.lineWidth = 2;
+      ctx.strokeRect(gx + 2, gy + 2, CELL - 4, CELL - 4);
+    }
+    ctx.globalAlpha = taken ? 1 : 0.72;
+    ctx.drawImage(LOGO[tm.key].img, gx + 12, gy + 6, CELL - 24, CELL - 24);
+    ctx.globalAlpha = 1;
+    const label = tm.name.length > 13 ? tm.name.slice(0, 12) + '…' : tm.name;
+    sh(label, gx + CELL/2, gy + CELL - 17, taken ? '#e8eefb' : '#6b7b96', 11, 'center');
+  });
+
+  sh('HOME FIELD  ·  ' + (ARENA_NAME[TEAMS[G.picks[0]].key] || 'THE FIELD'),
+     VW/2, GRID_Y + 2 * CELL + 6, '#8fd0ff', 15, 'center');
+
+  const by = VH - 62;
+  button('mode', 40, by, 236, 48, G.vsCpu ? 'VS COMPUTER' : 'TWO PLAYER', { size:16 });
+  if (G.vsCpu)
+    button('skill', 288, by, 200, 48, 'AIM: ' + ['LOOSE','DECENT','SHARP'][G.cpuSkill], { size:16, col:'#8fd0ff' });
+  const ready = G.picks[0] !== G.picks[1];
+  button('go', VW - 300, by, 260, 48, ready ? 'START' : 'PICK TWO CLUBS',
+         ready ? { fill:'rgba(58,26,20,.95)', edge:'#8a4030', col:'#ffd9cc', size:20 }
+               : { col:'#5d6b80', size:16 });
+  button('back', VW - 36 - 0, 8, 28, 28, '×', { size:18 });
+}
+
+function selectTap(id){
+  if (!id) return;
+  if (id === 'back'){ G.mode = 'splash'; Sound.swap(); return; }
+  if (id === 'mode'){ G.vsCpu = !G.vsCpu; Sound.swap(); return; }
+  if (id === 'skill'){ G.cpuSkill = (G.cpuSkill + 1) % 3; Sound.swap(); return; }
+  if (id === 'slot0'){ G.pickSide = 0; Sound.swap(); return; }
+  if (id === 'slot1'){ G.pickSide = 1; Sound.swap(); return; }
+  if (id === 'go'){
+    if (G.picks[0] !== G.picks[1]) newRound(false);
+    else Sound.dud();
+    return;
+  }
+  if (id.startsWith('team')){
+    const i = +id.slice(4);
+    const other = G.picks[1 - G.pickSide];
+    if (i === other){                       // tapping the other slot's club swaps them
+      G.picks[1 - G.pickSide] = G.picks[G.pickSide];
+    }
+    G.picks[G.pickSide] = i;
+    G.pickSide = 1 - G.pickSide;
+    Sound.swap();
+  }
 }
 
 function drawOver(){
@@ -1134,32 +1250,42 @@ function drawOver(){
 }
 
 function render(){
-  if (G.mode === 'title')      drawTitle();
-  else if (G.mode === 'over')  drawOver();
+  if (G.mode === 'splash')     drawSplash();
+  else if (G.mode === 'select') drawSelect();
+  else if (G.mode === 'over')   drawOver();
   else if (G.mode === 'load'){ ctx.fillStyle = '#04060a'; ctx.fillRect(0,0,VW,VH);
                                sh('LOADING…', VW/2, VH/2, '#56637a', 18, 'center'); }
   else                         drawField();
 }
 
-/* title-screen navigation */
-addEventListener('keydown', e => {
-  if (G.mode !== 'title') return;
-  if (e.code === 'ArrowLeft'){ G.picks[G.pickSide] = (G.picks[G.pickSide] + TEAMS.length - 1) % TEAMS.length; Sound.swap(); }
-  if (e.code === 'ArrowRight'){ G.picks[G.pickSide] = (G.picks[G.pickSide] + 1) % TEAMS.length; Sound.swap(); }
-  if (e.code === 'ArrowUp'){ G.pickSide = 1 - G.pickSide; Sound.swap(); }
-  if (e.code === 'ArrowDown'){ G.vsCpu = !G.vsCpu; Sound.swap(); }
-  if (e.code === 'Tab'){ e.preventDefault(); G.cpuSkill = (G.cpuSkill + 1) % 3; Sound.swap(); }
-});
-cv.addEventListener('click', e => {
-  if (G.mode !== 'title') return;
+/* ---- splash / select input ---- */
+function canvasPoint(e){
   const r = cv.getBoundingClientRect();
-  const x = (e.clientX - r.left) / r.width * VW, y = (e.clientY - r.top) / r.height * VH;
-  if (y > 150 && y < 300){
-    const side = x < VW/2 ? 0 : 1;
-    G.pickSide = side;
-    G.picks[side] = (G.picks[side] + 1) % TEAMS.length;
-    Sound.swap();
-    okEdge = false;
+  return { x:(e.clientX - r.left) / r.width * VW, y:(e.clientY - r.top) / r.height * VH };
+}
+cv.addEventListener('pointerdown', e => {
+  Sound.resume();
+  if (G.mode === 'splash'){ G.mode = 'select'; Sound.swap(); return; }
+  if (G.mode === 'select'){
+    const p = canvasPoint(e);
+    selectTap(hitTest(p.x, p.y));
+  }
+});
+addEventListener('keydown', e => {
+  if (G.mode === 'splash'){
+    if (e.code === 'Space' || e.code === 'Enter'){ e.preventDefault(); G.mode = 'select'; Sound.swap(); }
+    return;
+  }
+  if (G.mode !== 'select') return;
+  const n = TEAMS.length;
+  if (e.code === 'ArrowLeft'){  e.preventDefault(); G.picks[G.pickSide] = (G.picks[G.pickSide] + n - 1) % n; Sound.swap(); }
+  if (e.code === 'ArrowRight'){ e.preventDefault(); G.picks[G.pickSide] = (G.picks[G.pickSide] + 1) % n; Sound.swap(); }
+  if (e.code === 'ArrowUp' || e.code === 'ArrowDown'){ e.preventDefault(); G.pickSide = 1 - G.pickSide; Sound.swap(); }
+  if (e.code === 'KeyM'){ G.vsCpu = !G.vsCpu; Sound.swap(); }
+  if (e.code === 'Tab'){ e.preventDefault(); G.cpuSkill = (G.cpuSkill + 1) % 3; Sound.swap(); }
+  if (e.code === 'Space' || e.code === 'Enter'){
+    e.preventDefault();
+    if (G.picks[0] !== G.picks[1]) newRound(false); else Sound.dud();
   }
 });
 
@@ -1195,7 +1321,7 @@ function frame(now){
   })));
   fit();
   el('boot').classList.add('gone');
-  G.mode = 'title';
+  G.mode = 'splash';
   requestAnimationFrame(frame);
 })();
 </script>
