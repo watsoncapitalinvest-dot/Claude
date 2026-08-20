@@ -1,0 +1,1178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>SCFL Scramble</title>
+<meta name="description" content="An 8-bit platformer. Pick your SCFL team and run it back.">
+<meta name="theme-color" content="#0a0e14">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#05070b;overflow:hidden;
+    font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+    -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block;
+    box-shadow:0 0 0 2px #1c2432,0 12px 48px rgba(0,0,0,.8)}
+  #pad{position:fixed;inset:auto 0 0 0;height:34%;display:none;
+    justify-content:space-between;align-items:flex-end;padding:14px;pointer-events:none;z-index:5}
+  #pad.on{display:flex}
+  .cluster{display:flex;gap:12px;pointer-events:auto}
+  .btn{width:74px;height:74px;border-radius:16px;background:rgba(210,225,255,.10);
+    border:2px solid rgba(210,225,255,.22);color:#dce6f5;font:700 26px/74px ui-monospace,monospace;
+    text-align:center;backdrop-filter:blur(3px);touch-action:none}
+  .btn:active,.btn.hit{background:rgba(210,225,255,.28)}
+  #jump{width:92px;height:92px;line-height:92px;font-size:16px;letter-spacing:.5px}
+  #boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    color:#5d6b80;font-size:13px;letter-spacing:2px;z-index:9;background:#05070b}
+  #boot.gone{display:none}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<div id="pad">
+  <div class="cluster"><div class="btn" id="left">&#9664;</div><div class="btn" id="right">&#9654;</div></div>
+  <div class="cluster"><div class="btn" id="jump">JUMP</div></div>
+</div>
+<div id="boot">LOADING THE LEAGUE&hellip;</div>
+<script>
+'use strict';
+
+/* ------------------------------------------------------------------ *
+ * SCFL SCRAMBLE — an 8-bit platformer starring the league's crests.
+ * One file, no build. Logos are loaded from the repo's logo bundle.
+ * ------------------------------------------------------------------ */
+
+const VW = 320, VH = 224;          // virtual screen (20 x 14 tiles)
+const TS = 16;                     // tile size
+const STEP = 1000 / 60;            // fixed timestep
+
+// --- physics ------------------------------------------------------
+const GRAV       = 0.50;
+const GRAV_HOLD  = 0.42;   // lighter gravity while rising and holding jump
+const MAX_FALL   = 9.5;
+const RUN_ACC    = 0.62;
+const RUN_MAX    = 3.10;
+const FRIC_GND   = 0.80;
+const FRIC_AIR   = 0.93;
+const JUMP_V     = -8.05;
+const JUMP_CUT   = -3.10;  // velocity clamp when jump released early
+const COYOTE     = 6;      // frames of forgiveness after leaving a ledge
+const BUFFER     = 7;      // frames a jump press stays queued
+const STOMP_V    = -6.40;
+
+const TEAMS = [
+  { key:'machines',        name:'THE MACHINES'      },
+  { key:'wookieleaks',     name:'WOOKIE LEAKS'      },
+  { key:'bigblue',         name:'BIG BLUE'          },
+  { key:'beavereaters',    name:'BEAVER EATERS'     },
+  { key:'guidohaters',     name:'GUIDO HATERS'      },
+  { key:'powersofpain',    name:'POWERS OF PAIN'    },
+  { key:'newworldorder',   name:'NEW WORLD ORDER'   },
+  { key:'masterjeti',      name:'MASTER JET-I'      },
+  { key:'horsecollars',    name:'HORSE COLLARS'     },
+  { key:'porkchopexpress', name:'PORK CHOP EXPRESS' },
+  { key:'stillthecream',   name:'STILL THE CREAM'   },
+  { key:'gumbas',          name:'GUMBAS'            },
+  { key:'heavyhitters',    name:'HEAVY HITTERS'     },
+  { key:'lilchops',        name:"LIL' CHOPS"        },
+  { key:'smokedragons',    name:'SMOKE DRAGONS'     },
+  { key:'killerklowns',    name:'KILLER KLOWNS'     },
+];
+
+/* ------------------------------------------------------------------ *
+ * LEVELS
+ *   #  turf (solid)        B  crate (solid)      =  bleacher (one-way)
+ *   ^  spikes              o  football           E  rival (patrols)
+ *   F  rival (flies)       M  moving platform    V  lift (vertical)
+ *   P  kickoff spot        G  end zone
+ * Rows are padded to the longest row, so ragged edges are fine.
+ * ------------------------------------------------------------------ */
+const LEVELS = [
+{ name:'OPENING DRIVE', par:45, rows:[
+'                                                                                                                ',
+'                                                                                                                ',
+'                                                                                                                ',
+'                          ooo                                             ooo                                   ',
+'                         =====                                           =====                                  ',
+'                                                                                                                ',
+'                                                                                                                ',
+'                         ooo           oooo          ooo                 oooo            ooo                    ',
+'                        =====         ======        =====               ======          =====                   ',
+'                                                                                                                ',
+'       o         o               o                        o                         o          o                ',
+'   P                          E                           E                                              G      ',
+'##########   #####################################################   ############################  #############',
+'##########   #####################################################   ############################  #############',
+]},
+{ name:'TWO-MINUTE DRILL', par:55, rows:[
+'                                                                                                                    ',
+'                                                                                                                    ',
+'                                                                                                                    ',
+'                   ooo                                          ooo                                   ooo           ',
+'                  =====                                        =====                                 =====          ',
+'                                                                                                                    ',
+'                                                                                                                    ',
+'                  ooo             ooo          ooo             oooo                    ooo           ooo            ',
+'                 =====           =====        =====           ======                  =====         =====           ',
+'                                                                                               BBB                  ',
+'      o        o            o           BBB            o                        o            o BBB                  ',
+'   P                 E                  BBB     E                     E                        BBB           G      ',
+'#########    #############    #######################    ######################    #################################',
+'#########    #############    #######################    ######################    #################################',
+]},
+{ name:'THE BLITZ', par:60, rows:[
+'                                                                                                                        ',
+'                                                                                                                        ',
+'                                                                                                                        ',
+'                          ooo                         ooo                                                 ooo           ',
+'                         =====                       =====                                               =====          ',
+'                                                                                                                        ',
+'                              F                           F                             F                               ',
+'         ooo             ooo         ooo             oooo          ooo           oooo                    ooo            ',
+'        =====           =====       =====           ======        =====         ======                  =====           ',
+'                                                                                                                        ',
+'                o                         o                           o                         o                       ',
+'   P                  E         E                 E           E               E           E                      G      ',
+'###############    ######################    ########################    ######################    #####################',
+'###############    ######################    ########################    ######################    #####################',
+]},
+{ name:'TURF MONSTER', par:65, rows:[
+'                                                                                                                        ',
+'                                                                                                                        ',
+'                                                                                                                        ',
+'        ooo                                       ooo                                                ooo                ',
+'       =====                                     =====                                              =====               ',
+'                                                                                                                        ',
+'                                                                                                                        ',
+'       ooo                  ooo                  ooo                     ooo                        ooo                 ',
+'      =====                =====                =====                   =====                      =====                ',
+'                                                                                                                        ',
+'               o                     o                       o                       o                                  ',
+'   P      E             ^^^    E             ^^^                     ^^^                       ^^^      ^^  E   G       ',
+'##############    ##################    ####################    ####################    ################################',
+'##############    ##################    ####################    ####################    ################################',
+]},
+{ name:'SPECIAL TEAMS', par:70, rows:[
+'                                                                                                                        ',
+'                                                                                                                        ',
+'                                                                                                                        ',
+'                         ooo                                   ooo                                                      ',
+'                        =====                                 =====                                                     ',
+'                                                                                                                        ',
+'                                                                                                                        ',
+'       oo                                 oo                                    oo                                      ',
+'      ====               V               ====                  V               ====                                     ',
+'                                                                                                                        ',
+'               M     o            M          o       M      o           M           o      M        o                   ',
+'   P                  E                     E                                   E                               G       ',
+'############       ############       ############       ############       ############       #########################',
+'############       ############       ############       ############       ############       #########################',
+]},
+{ name:'THE CHAMPIONSHIP', par:90, rows:[
+'                                                                                                                                ',
+'                                                                                                                                ',
+'                                                                                                                                ',
+'          ooo                                      ooo                                         ooo                              ',
+'         =====                                    =====                                       =====                             ',
+'                            F                                          F                                  F                     ',
+'                                                                                                                                ',
+'         ooo                ooo                   ooo                   ooo                   ooo                ooo            ',
+'        =====              =====                 =====                 =====                 =====              =====           ',
+'                                                                                                                                ',
+'              o                     o   M                 o                      oV                      o                      ',
+'   P     E             ^^^    E             ^^^   ^^^              ^^^   ^^^              ^^^     ^^^           E       G       ',
+'#############    ##################    ##################     ##################    ####################    ####################',
+'#############    ##################    ##################     ##################    ####################    ####################',
+]},
+];
+
+/* ------------------------------------------------------------------ *
+ * CANVAS
+ * ------------------------------------------------------------------ */
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d', { alpha:false });
+cv.width = VW; cv.height = VH;
+ctx.imageSmoothingEnabled = false;
+
+function fit(){
+  const w = innerWidth, h = innerHeight;
+  const touch = matchMedia('(pointer:coarse)').matches;
+  const usable = touch ? h * 0.66 : h;          // leave room for the d-pad
+  let s = Math.min(w / VW, usable / VH);
+  if (s >= 1) s = Math.floor(s);
+  cv.style.width  = Math.round(VW * s) + 'px';
+  cv.style.height = Math.round(VH * s) + 'px';
+  if (touch) {
+    document.getElementById('pad').classList.add('on');
+    document.getElementById('wrap').style.alignItems = 'flex-start';
+    document.getElementById('wrap').style.paddingTop = Math.max(8, (usable - VH*s)/2) + 'px';
+  }
+}
+addEventListener('resize', fit);
+
+/* ------------------------------------------------------------------ *
+ * LOGOS — loaded from the league's logo bundle, with a drawn fallback
+ * so the game still runs if the bundle is missing.
+ * ------------------------------------------------------------------ */
+const LOGO = {};   // key -> { img, accent, dark, light }
+
+function dominantAccent(img){
+  const n = 24;
+  const c = document.createElement('canvas'); c.width = c.height = n;
+  const x = c.getContext('2d', { willReadFrequently:true });
+  x.drawImage(img, 0, 0, n, n);
+  const d = x.getImageData(0, 0, n, n).data;
+  const bins = new Map();
+  for (let i = 0; i < d.length; i += 4){
+    if (d[i+3] < 200) continue;
+    const r = d[i], g = d[i+1], b = d[i+2];
+    const mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+    if (mx < 45) continue;                       // near-black
+    const sat = (mx - mn) / mx;
+    if (sat < 0.18 && mx > 225) continue;        // near-white
+    const k = (r>>5)*64 + (g>>5)*8 + (b>>5);
+    const e = bins.get(k) || { w:0, r:0, g:0, b:0, n:0 };
+    e.w += 1 + sat * 2.5; e.r += r; e.g += g; e.b += b; e.n++;
+    bins.set(k, e);
+  }
+  let best = null;
+  for (const e of bins.values()) if (!best || e.w > best.w) best = e;
+  if (!best) return { accent:'#6fa8ff', dark:'#22406e', light:'#cfe1ff' };
+  let r = best.r/best.n, g = best.g/best.n, b = best.b/best.n;
+  const lift = v => Math.round(Math.min(255, v * 1.15 + 30));
+  const drop = v => Math.round(v * 0.42);
+  const glow = v => Math.round(Math.min(255, v * 0.45 + 140));
+  const hex = (r,g,b) => '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+  return {
+    accent: hex(lift(r), lift(g), lift(b)),
+    dark:   hex(drop(r), drop(g), drop(b)),
+    light:  hex(glow(r), glow(g), glow(b)),
+  };
+}
+
+// Crests arrive as square art — some are photographs. Masking them into a
+// round badge makes every club read as the same kind of object on the field.
+function badge(img, accent){
+  const S = 64, c = document.createElement('canvas'); c.width = c.height = S;
+  const x = c.getContext('2d');
+  x.save();
+  x.beginPath(); x.arc(S/2, S/2, S/2 - 3, 0, 6.284); x.clip();
+  x.fillStyle = '#0e1622'; x.fillRect(0, 0, S, S);
+  x.drawImage(img, 2, 2, S - 4, S - 4);
+  x.restore();
+  x.lineWidth = 3.5; x.strokeStyle = accent;
+  x.beginPath(); x.arc(S/2, S/2, S/2 - 2.6, 0, 6.284); x.stroke();
+  x.lineWidth = 1.5; x.strokeStyle = 'rgba(0,0,0,.72)';
+  x.beginPath(); x.arc(S/2, S/2, S/2 - 0.9, 0, 6.284); x.stroke();
+  x.strokeStyle = 'rgba(255,255,255,.30)'; x.lineWidth = 1.4;
+  x.beginPath(); x.arc(S/2, S/2, S/2 - 5, 3.6, 5.1); x.stroke();
+  return c;
+}
+
+function placeholderLogo(i){
+  // A drawn crest, used only when the logo bundle can't be fetched.
+  const hue = (i * 360 / TEAMS.length) | 0;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const x = c.getContext('2d');
+  x.fillStyle = 'hsl(' + hue + ',62%,48%)';
+  x.beginPath();
+  x.moveTo(32,4); x.lineTo(58,16); x.lineTo(58,36);
+  x.quadraticCurveTo(58,54,32,60); x.quadraticCurveTo(6,54,6,36);
+  x.lineTo(6,16); x.closePath(); x.fill();
+  x.strokeStyle = 'hsl(' + hue + ',70%,82%)'; x.lineWidth = 3; x.stroke();
+  return c;
+}
+
+async function loadLogos(){
+  let bundle = null;
+  try {
+    const res = await fetch('../scfl-team-logos-resized.json', { cache:'force-cache' });
+    if (res.ok) bundle = await res.json();
+  } catch (_) { /* offline or opened from file:// — fall through */ }
+
+  await Promise.all(TEAMS.map((t, i) => new Promise(done => {
+    const src = bundle && bundle[t.key];
+    if (!src){
+      const c = placeholderLogo(i);
+      const tn = dominantAccent(c);
+      LOGO[t.key] = Object.assign({ img: badge(c, tn.accent), raw: c }, tn);
+      return done();
+    }
+    const img = new Image();
+    img.onload = () => {
+      let tone;
+      try { tone = dominantAccent(img); }
+      catch (_) { tone = { accent:'#6fa8ff', dark:'#22406e', light:'#cfe1ff' }; }
+      LOGO[t.key] = Object.assign({ img: badge(img, tone.accent), raw: img }, tone);
+      done();
+    };
+    img.onerror = () => {
+      const c = placeholderLogo(i);
+      const tn = dominantAccent(c);
+      LOGO[t.key] = Object.assign({ img: badge(c, tn.accent), raw: c }, tn);
+      done();
+    };
+    img.src = src;
+  })));
+}
+
+/* ------------------------------------------------------------------ *
+ * SOUND — square waves and noise, the way the hardware would have.
+ * ------------------------------------------------------------------ */
+const Sound = (() => {
+  let ac = null, master = null, musicGain = null, sfxGain = null;
+  let musicOn = true, timer = null, step = 0;
+
+  function ensure(){
+    if (ac) return ac;
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+    master = ac.createGain(); master.gain.value = 0.55; master.connect(ac.destination);
+    sfxGain = ac.createGain(); sfxGain.gain.value = 0.9; sfxGain.connect(master);
+    musicGain = ac.createGain(); musicGain.gain.value = 0.30; musicGain.connect(master);
+    return ac;
+  }
+
+  function tone(freq, dur, type, vol, at, slideTo){
+    ensure();
+    const t0 = at || ac.currentTime;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type || 'square';
+    o.frequency.setValueAtTime(freq, t0);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(vol == null ? 0.30 : vol, t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
+    o.connect(g); g.connect(sfxGain);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+
+  function noise(dur, vol, at){
+    ensure();
+    const t0 = at || ac.currentTime;
+    const n = Math.floor(ac.sampleRate * dur);
+    const buf = ac.createBuffer(1, n, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random()*2 - 1) * (1 - i/n);
+    const s = ac.createBufferSource(); s.buffer = buf;
+    const g = ac.createGain(); g.gain.value = vol == null ? 0.22 : vol;
+    s.connect(g); g.connect(sfxGain); s.start(t0);
+  }
+
+  // --- an original marching riff, bass + arpeggio, eight bars -------
+  const BASS = [55,55,82.4,55, 73.4,73.4,55,73.4, 61.9,61.9,92.5,61.9, 82.4,82.4,61.9,55];
+  const ARP  = [440,554,659,554, 587,740,880,740, 494,622,740,622, 415,523,659,523];
+
+  function beat(){
+    if (!musicOn || !ac) return;
+    const t = ac.currentTime + 0.02;
+    const i = step % 16;
+    const b = ac.createOscillator(), bg = ac.createGain();
+    b.type = 'triangle'; b.frequency.setValueAtTime(BASS[i], t);
+    bg.gain.setValueAtTime(0.0001, t);
+    bg.gain.linearRampToValueAtTime(0.5, t + 0.01);
+    bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+    b.connect(bg); bg.connect(musicGain); b.start(t); b.stop(t + 0.16);
+    if (i % 2 === 0){
+      const a = ac.createOscillator(), ag = ac.createGain();
+      a.type = 'square'; a.frequency.setValueAtTime(ARP[i], t);
+      ag.gain.setValueAtTime(0.0001, t);
+      ag.gain.linearRampToValueAtTime(0.14, t + 0.01);
+      ag.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+      a.connect(ag); ag.connect(musicGain); a.start(t); a.stop(t + 0.13);
+    }
+    step++;
+  }
+
+  return {
+    resume(){ ensure(); if (ac.state === 'suspended') ac.resume(); },
+    startMusic(){ ensure(); if (!timer) timer = setInterval(beat, 132); },
+    toggleMusic(){ musicOn = !musicOn; if (musicGain) musicGain.gain.value = musicOn ? 0.30 : 0; return musicOn; },
+    get musicOn(){ return musicOn; },
+    jump(){ tone(300, 0.14, 'square', 0.24, null, 660); },
+    coin(){ const t = ensure().currentTime; tone(988,0.06,'square',0.22,t); tone(1319,0.12,'square',0.20,t+0.055); },
+    stomp(){ noise(0.10, 0.20); tone(180, 0.13, 'square', 0.20, null, 90); },
+    hurt(){ const t = ensure().currentTime; tone(392,0.10,'square',0.26,t); tone(262,0.28,'square',0.24,t+0.09,120); },
+    goal(){ const t = ensure().currentTime; [523,659,784,1047].forEach((f,i)=>tone(f,0.20,'square',0.24,t+i*0.09)); },
+    over(){ const t = ensure().currentTime; [392,330,262,196].forEach((f,i)=>tone(f,0.30,'square',0.24,t+i*0.14)); },
+    win(){ const t = ensure().currentTime; [523,659,784,1047,784,1047,1319].forEach((f,i)=>tone(f,0.26,'square',0.24,t+i*0.13)); },
+    select(){ tone(660, 0.05, 'square', 0.18); },
+  };
+})();
+
+/* ------------------------------------------------------------------ *
+ * INPUT
+ * ------------------------------------------------------------------ */
+const keys = { left:false, right:false, jump:false, jumpEdge:false, any:false };
+const KEYMAP = {
+  ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right',
+  Space:'jump', ArrowUp:'jump', KeyW:'jump', KeyZ:'jump', KeyJ:'jump',
+};
+addEventListener('keydown', e => {
+  const k = KEYMAP[e.code];
+  if (k){ e.preventDefault(); if (k === 'jump' && !keys.jump) keys.jumpEdge = true; keys[k] = true; }
+  if (e.code === 'Enter' || e.code === 'Space') keys.any = true;
+  if (e.code === 'KeyM'){ const on = Sound.toggleMusic(); toast(on ? 'MUSIC ON' : 'MUSIC OFF'); }
+  Sound.resume();
+});
+addEventListener('keyup', e => { const k = KEYMAP[e.code]; if (k) keys[k] = false; });
+
+function bindPad(id, key){
+  const el = document.getElementById(id);
+  const on = e => { e.preventDefault(); if (key === 'jump' && !keys.jump) keys.jumpEdge = true;
+                    keys[key] = true; keys.any = true; el.classList.add('hit'); Sound.resume(); };
+  const off = e => { e.preventDefault(); keys[key] = false; el.classList.remove('hit'); };
+  el.addEventListener('touchstart', on, { passive:false });
+  el.addEventListener('touchend', off, { passive:false });
+  el.addEventListener('touchcancel', off, { passive:false });
+}
+bindPad('left','left'); bindPad('right','right'); bindPad('jump','jump');
+cv.addEventListener('touchstart', e => { e.preventDefault(); keys.any = true; Sound.resume(); }, { passive:false });
+cv.addEventListener('mousedown', () => { keys.any = true; Sound.resume(); });
+
+/* ------------------------------------------------------------------ *
+ * GAME STATE
+ * ------------------------------------------------------------------ */
+const G = {
+  mode: 'load',        // load | title | play | clear | dead | over | win
+  team: 0,
+  pick: 0,
+  level: 0,
+  score: 0,
+  lives: 3,
+  ticks: 0,            // frames elapsed this run
+  flash: 0,
+  shake: 0,
+  toast: '',
+  toastT: 0,
+  best: 0,
+};
+try { G.best = parseInt(localStorage.getItem('scfl.scramble.best') || '0', 10) || 0; } catch (_) {}
+
+function toast(msg){ G.toast = msg; G.toastT = 90; }
+
+let W = null;   // the live world
+
+/* ------------------------------------------------------------------ *
+ * WORLD BUILDING
+ * ------------------------------------------------------------------ */
+const SOLID = new Set(['#','B']);
+
+function buildWorld(index){
+  const def = LEVELS[index];
+  const wide = Math.max(...def.rows.map(r => r.length));
+  const grid = def.rows.map(r => r.padEnd(wide, ' ').split(''));
+  const h = grid.length;
+
+  const world = {
+    name: def.name, par: def.par,
+    w: wide, h, grid,
+    cols: wide * TS, rows: h * TS,
+    spawn: { x:32, y:32 }, goal: { x:0, y:0 },
+    coins: [], foes: [], plats: [], bits: [],
+    coinsTotal: 0, coinsGot: 0,
+    camX: 0, time: 0,
+  };
+
+  let foeN = 0;
+  for (let y = 0; y < h; y++){
+    for (let x = 0; x < wide; x++){
+      const c = grid[y][x];
+      const px = x * TS, py = y * TS;
+      if (c === 'P'){ world.spawn = { x:px + 2, y:py }; grid[y][x] = ' '; }
+      else if (c === 'G'){ world.goal = { x:px, y:py - TS }; grid[y][x] = ' '; }
+      else if (c === 'o'){ world.coins.push({ x:px + 4, y:py + 4, w:8, h:8, got:false, t:Math.random()*6.28 }); grid[y][x] = ' '; }
+      else if (c === 'E' || c === 'F'){
+        world.foes.push({
+          kind: c, x:px + 1, y:py + 1, w:14, h:14,
+          vx: (foeN % 2 ? -0.72 : 0.72), vy:0,
+          home: py + 1, t: Math.random() * 6.28,
+          span: 3.5 * TS, left: px - 3.5*TS, right: px + 3.5*TS,
+          dead: 0, logo: null,
+        });
+        foeN++; grid[y][x] = ' ';
+      }
+      else if (c === 'M' || c === 'V'){
+        world.plats.push({
+          kind: c, x:px, y:py, w: TS*2, h: 6,
+          ox: px, oy: py, t: Math.random() * 6.28, span: c === 'M' ? TS*3 : TS*2.5, dx:0, dy:0,
+        });
+        grid[y][x] = ' ';
+      }
+    }
+  }
+  world.coinsTotal = world.coins.length;
+
+  // Rivals wear other clubs' crests — never your own.
+  const pool = TEAMS.map((_, i) => i).filter(i => i !== G.team);
+  world.foes.forEach((f, i) => { f.logo = TEAMS[pool[i % pool.length]].key; });
+
+  return world;
+}
+
+function tileAt(w, tx, ty){
+  if (tx < 0 || tx >= w.w || ty < 0 || ty >= w.h) return ' ';
+  return w.grid[ty][tx];
+}
+const isSolid  = ch => SOLID.has(ch);
+const isOneWay = ch => ch === '=';
+const isSpike  = ch => ch === '^';
+
+/* ------------------------------------------------------------------ *
+ * PLAYER
+ * ------------------------------------------------------------------ */
+function makePlayer(w){
+  return {
+    x: w.spawn.x, y: w.spawn.y, w: 13, h: 14,
+    vx: 0, vy: 0, face: 1,
+    onGround: false, coyote: 0, buffer: 0,
+    sx: 1, sy: 1,            // squash & stretch
+    spin: 0, invuln: 0, dying: 0, riding: null,
+  };
+}
+
+// Sweep one axis at a time against the tile grid — the classic, and the
+// only version that never lets you tunnel through a floor at speed.
+function moveX(w, e, dx){
+  e.x += dx;
+  if (e.x < 0){ e.x = 0; e.vx = 0; }
+  if (e.x + e.w > w.cols){ e.x = w.cols - e.w; e.vx = 0; }
+  const top = Math.floor(e.y / TS), bot = Math.floor((e.y + e.h - 1) / TS);
+  if (dx > 0){
+    const col = Math.floor((e.x + e.w - 1) / TS);
+    for (let ty = top; ty <= bot; ty++){
+      if (isSolid(tileAt(w, col, ty))){ e.x = col * TS - e.w; e.vx = 0; return true; }
+    }
+  } else if (dx < 0){
+    const col = Math.floor(e.x / TS);
+    for (let ty = top; ty <= bot; ty++){
+      if (isSolid(tileAt(w, col, ty))){ e.x = (col + 1) * TS; e.vx = 0; return true; }
+    }
+  }
+  return false;
+}
+
+function moveY(w, e, dy){
+  const wasBottom = e.y + e.h;
+  e.y += dy;
+  const lf = Math.floor(e.x / TS), rt = Math.floor((e.x + e.w - 1) / TS);
+  if (dy > 0){
+    const row = Math.floor((e.y + e.h - 1) / TS);
+    for (let tx = lf; tx <= rt; tx++){
+      const ch = tileAt(w, tx, row);
+      const hitsSolid = isSolid(ch);
+      // One-way floors only catch you on the way down, from above.
+      const hitsOneWay = isOneWay(ch) && wasBottom <= row * TS + 2;
+      if (hitsSolid || hitsOneWay){ e.y = row * TS - e.h; e.vy = 0; return 'floor'; }
+    }
+  } else if (dy < 0){
+    const row = Math.floor(e.y / TS);
+    for (let tx = lf; tx <= rt; tx++){
+      if (isSolid(tileAt(w, tx, row))){ e.y = (row + 1) * TS; e.vy = 0; return 'ceil'; }
+    }
+  }
+  return null;
+}
+
+const overlap = (a, b) =>
+  a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+function touchingSpike(w, e){
+  const pad = 3;
+  const lf = Math.floor((e.x + pad) / TS), rt = Math.floor((e.x + e.w - 1 - pad) / TS);
+  const tp = Math.floor((e.y + pad) / TS), bt = Math.floor((e.y + e.h - 1) / TS);
+  for (let ty = tp; ty <= bt; ty++)
+    for (let tx = lf; tx <= rt; tx++)
+      if (isSpike(tileAt(w, tx, ty))) return true;
+  return false;
+}
+
+function puff(w, x, y, n, color, spread){
+  for (let i = 0; i < n; i++){
+    w.bits.push({
+      x, y,
+      vx: (Math.random() - 0.5) * (spread || 2.4),
+      vy: -Math.random() * 2.2 - 0.4,
+      life: 20 + Math.random() * 16, max: 36, color,
+    });
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * UPDATE
+ * ------------------------------------------------------------------ */
+function startLevel(i){
+  G.level = i;
+  W = buildWorld(i);
+  W.player = makePlayer(W);
+  W.camX = 0;
+  G.mode = 'play';
+  toast(W.name);
+}
+
+function loseLife(){
+  const p = W.player;
+  if (p.dying || p.invuln > 0) return;
+  p.dying = 1;
+  p.vy = -6.6; p.vx = 0;
+  Sound.hurt();
+  G.shake = 10;
+  puff(W, p.x + p.w/2, p.y + p.h/2, 14, tone().light, 4);
+}
+
+const tone = () => LOGO[TEAMS[G.team].key] || { accent:'#6fa8ff', dark:'#22406e', light:'#cfe1ff' };
+
+function updatePlay(){
+  const p = W.player;
+  W.time++;
+
+  // --- moving platforms ------------------------------------------
+  for (const m of W.plats){
+    m.t += 0.018;
+    const nx = m.kind === 'M' ? m.ox + Math.sin(m.t) * m.span : m.ox;
+    const ny = m.kind === 'V' ? m.oy + Math.sin(m.t) * m.span : m.oy;
+    m.dx = nx - m.x; m.dy = ny - m.y;
+    m.x = nx; m.y = ny;
+  }
+
+  if (p.dying){
+    p.dying++;
+    p.vy = Math.min(p.vy + GRAV, MAX_FALL);
+    p.y += p.vy;
+    if (p.dying > 70){
+      G.lives--;
+      if (G.lives <= 0){ G.mode = 'over'; Sound.over(); }
+      else { const keep = G.score; startLevel(G.level); G.score = keep; }
+    }
+    return;
+  }
+
+  // --- horizontal -------------------------------------------------
+  const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+  if (dir){
+    p.vx += dir * RUN_ACC;
+    p.vx = Math.max(-RUN_MAX, Math.min(RUN_MAX, p.vx));
+    p.face = dir;
+  } else {
+    p.vx *= p.onGround ? FRIC_GND : FRIC_AIR;
+    if (Math.abs(p.vx) < 0.06) p.vx = 0;
+  }
+
+  // --- jump: coyote time in, buffered presses out ------------------
+  if (keys.jumpEdge){ p.buffer = BUFFER; keys.jumpEdge = false; }
+  if (p.buffer > 0) p.buffer--;
+  if (p.coyote > 0) p.coyote--;
+
+  if (p.buffer > 0 && p.coyote > 0){
+    p.vy = JUMP_V; p.buffer = 0; p.coyote = 0;
+    p.onGround = false; p.riding = null;
+    p.sx = 0.74; p.sy = 1.30;
+    Sound.jump();
+    puff(W, p.x + p.w/2, p.y + p.h, 5, '#d7e4f5', 1.8);
+  }
+  if (!keys.jump && p.vy < JUMP_CUT) p.vy = JUMP_CUT;
+
+  const rising = p.vy < 0 && keys.jump;
+  p.vy = Math.min(p.vy + (rising ? GRAV_HOLD : GRAV), MAX_FALL);
+
+  // --- integrate --------------------------------------------------
+  moveX(W, p, p.vx);
+  const wasBottom = p.y + p.h;
+  const land = moveY(W, p, p.vy);
+
+  // --- ride the moving platforms ----------------------------------
+  p.riding = null;
+  if (p.vy >= 0){
+    for (const m of W.plats){
+      const overX = p.x < m.x + m.w && p.x + p.w > m.x;
+      if (overX && wasBottom <= m.y + 4 && p.y + p.h >= m.y && p.y + p.h <= m.y + m.h + 6){
+        p.y = m.y - p.h; p.vy = 0; p.riding = m;
+      }
+    }
+  }
+  if (p.riding){ p.x += p.riding.dx; p.y += p.riding.dy; moveX(W, p, 0); }
+
+  const grounded = land === 'floor' || !!p.riding;
+  if (grounded && !p.onGround){ p.sx = 1.26; p.sy = 0.76; puff(W, p.x + p.w/2, p.y + p.h, 4, '#c8d6ea', 2.0); }
+  p.onGround = grounded;
+  if (grounded) p.coyote = COYOTE;
+
+  // squash & stretch eases back to square
+  p.sx += (1 - p.sx) * 0.20;
+  p.sy += (1 - p.sy) * 0.20;
+  p.spin += p.vx * 0.045;
+  if (p.invuln > 0) p.invuln--;
+
+  // --- footballs ---------------------------------------------------
+  for (const c of W.coins){
+    if (c.got) continue;
+    c.t += 0.11;
+    if (overlap(p, c)){
+      c.got = true; W.coinsGot++; G.score += 100;
+      Sound.coin();
+      puff(W, c.x + 4, c.y + 4, 6, '#ffd86b', 2.2);
+    }
+  }
+
+  // --- rivals ------------------------------------------------------
+  for (const f of W.foes){
+    if (f.dead){ f.dead++; continue; }
+    f.t += 0.05;
+    if (f.kind === 'F'){
+      f.x += f.vx;
+      if (f.x < f.left || f.x > f.right) f.vx *= -1;
+      f.y = f.home + Math.sin(f.t * 1.5) * 20;
+    } else {
+      const blocked = moveX(W, f, f.vx);
+      f.vy = Math.min(f.vy + GRAV, MAX_FALL);
+      moveY(W, f, f.vy);
+      // turn around at a wall, or rather than walk off the edge
+      const ahead = Math.floor((f.x + (f.vx > 0 ? f.w + 2 : -2)) / TS);
+      const below = Math.floor((f.y + f.h + 2) / TS);
+      const ch = tileAt(W, ahead, below);
+      const hazAhead = isSpike(tileAt(W, ahead, below - 1));
+      if (blocked || hazAhead || !(isSolid(ch) || isOneWay(ch))) f.vx *= -1;
+    }
+
+    if (p.dying || p.invuln > 0) continue;
+    if (overlap(p, f)){
+      const fromAbove = p.vy > 0.6 && (p.y + p.h) - f.y < 12;
+      if (fromAbove){
+        f.dead = 1;
+        p.vy = keys.jump ? STOMP_V * 1.16 : STOMP_V;
+        p.sx = 1.30; p.sy = 0.72;
+        G.score += 250;
+        G.shake = 5;
+        Sound.stomp();
+        puff(W, f.x + f.w/2, f.y + f.h/2, 9, '#ff9a6b', 3.0);
+      } else {
+        loseLife();
+      }
+    }
+  }
+
+  // --- hazards and the pit ------------------------------------------
+  if (touchingSpike(W, p) || p.y > W.rows + 40) loseLife();
+
+  // --- the end zone --------------------------------------------------
+  // the end zone is a goal line: crossing it at any height counts
+  const gz = { x: W.goal.x, y: 0, w: TS, h: W.rows };
+  if (overlap(p, gz)){
+    const timeBonus = Math.max(0, W.par * 60 - W.time);
+    G.score += 500 + Math.floor(timeBonus / 6) * 10;
+    if (W.coinsGot === W.coinsTotal && W.coinsTotal > 0) G.score += 1000;
+    W.bonusTime = Math.floor(timeBonus / 6) * 10;
+    W.bonusAll = (W.coinsGot === W.coinsTotal && W.coinsTotal > 0);
+    G.mode = 'clear';
+    G.flash = 14;
+    Sound.goal();
+  }
+
+  // --- particles ------------------------------------------------------
+  for (let i = W.bits.length - 1; i >= 0; i--){
+    const b = W.bits[i];
+    b.x += b.vx; b.y += b.vy; b.vy += 0.14; b.vx *= 0.98; b.life--;
+    if (b.life <= 0) W.bits.splice(i, 1);
+  }
+
+  // --- camera: a dead zone, then clamp to the level ---------------------
+  const want = p.x + p.w/2 - VW * 0.42;
+  W.camX += (want - W.camX) * 0.12;
+  W.camX = Math.max(0, Math.min(W.cols - VW, W.camX));
+}
+
+/* ------------------------------------------------------------------ *
+ * DRAWING
+ * ------------------------------------------------------------------ */
+function text(str, x, y, color, size, align){
+  ctx.fillStyle = color || '#e8eefb';
+  ctx.font = '700 ' + (size || 8) + 'px ui-monospace, Menlo, Consolas, monospace';
+  ctx.textAlign = align || 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(str, Math.round(x), Math.round(y));
+  ctx.textAlign = 'left';
+}
+function shadowText(str, x, y, color, size, align){
+  text(str, x + 1, y + 1, 'rgba(0,0,0,.75)', size, align);
+  text(str, x, y, color, size, align);
+}
+
+function drawSky(scroll){
+  const g = ctx.createLinearGradient(0, 0, 0, VH);
+  g.addColorStop(0, '#080d18'); g.addColorStop(0.55, '#101c31'); g.addColorStop(1, '#1a2b41');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+
+  // stadium lights
+  ctx.fillStyle = 'rgba(255,246,200,.05)';
+  for (let i = 0; i < 4; i++){
+    const lx = ((i * 110 - scroll * 0.10) % (VW + 160)) - 80;
+    ctx.beginPath(); ctx.moveTo(lx, 8); ctx.lineTo(lx - 46, 150); ctx.lineTo(lx + 46, 150); ctx.closePath(); ctx.fill();
+  }
+  // stands, kept dim and high so they never fight the play area
+  ctx.fillStyle = '#0b1220';
+  ctx.fillRect(0, 92, VW, 40);
+  ctx.globalAlpha = 0.55;
+  for (let i = 0; i < 84; i++){
+    const cx = ((i * 53 - scroll * 0.20) % (VW + 40)) - 20;
+    const cy = 97 + ((i * 17) % 30);
+    ctx.fillStyle = ['#1e2c42','#25354f','#1a2740'][i % 3];
+    ctx.fillRect(cx, cy, 3, 2);
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#0a111d'; ctx.fillRect(0, 130, VW, 5);
+  ctx.fillStyle = '#070d17'; ctx.fillRect(0, 135, VW, 22);
+  ctx.globalAlpha = 0.45;
+  for (let i = 0; i < 54; i++){
+    const cx = ((i * 41 - scroll * 0.36) % (VW + 40)) - 20;
+    ctx.fillStyle = ['#20304a','#27384f'][i % 2];
+    ctx.fillRect(cx, 139 + ((i * 11) % 13), 3, 2);
+  }
+  ctx.globalAlpha = 1;
+  // the wall the turf meets
+  ctx.fillStyle = '#0d1626'; ctx.fillRect(0, 157, VW, VH - 157);
+}
+
+function drawTile(ch, px, py, tx, ty, w){
+  if (ch === '#'){
+    ctx.fillStyle = '#2f6b39'; ctx.fillRect(px, py, TS, TS);
+    ctx.fillStyle = '#3d8a4a'; ctx.fillRect(px, py, TS, 4);
+    ctx.fillStyle = '#57ad63'; ctx.fillRect(px, py, TS, 2);
+    ctx.fillStyle = '#245530';
+    for (let i = 0; i < 3; i++) ctx.fillRect(px + 2 + i * 5, py + 7, 2, 2);
+    if (tx % 5 === 0 && !isSolid(tileAt(w, tx, ty - 1))){
+      ctx.fillStyle = 'rgba(226,240,255,.42)'; ctx.fillRect(px + 7, py + 4, 1, TS - 4);
+    }
+  } else if (ch === 'B'){
+    ctx.fillStyle = '#6a5236'; ctx.fillRect(px, py, TS, TS);
+    ctx.fillStyle = '#846747'; ctx.fillRect(px + 1, py + 1, TS - 2, TS - 2);
+    ctx.fillStyle = '#4f3d28';
+    ctx.fillRect(px, py + 7, TS, 1); ctx.fillRect(px + 7, py, 1, 7); ctx.fillRect(px + 3, py + 8, 1, 8);
+  } else if (ch === '='){
+    ctx.fillStyle = '#c8a24a'; ctx.fillRect(px, py, TS, 5);
+    ctx.fillStyle = '#efd58a'; ctx.fillRect(px, py, TS, 2);
+    ctx.fillStyle = '#7a5f27'; ctx.fillRect(px, py + 5, TS, 1);
+  } else if (ch === '^'){
+    ctx.fillStyle = '#8f9bb0';
+    for (let i = 0; i < 4; i++){
+      const sx = px + i * 4;
+      ctx.beginPath(); ctx.moveTo(sx, py + TS); ctx.lineTo(sx + 2, py + 5); ctx.lineTo(sx + 4, py + TS); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = '#d7dfec';
+    for (let i = 0; i < 4; i++) ctx.fillRect(px + i * 4 + 1, py + 6, 1, 4);
+    ctx.fillStyle = '#4a5567'; ctx.fillRect(px, py + TS - 2, TS, 2);
+  }
+}
+
+function drawFootball(x, y, bob){
+  const cy = y + Math.sin(bob) * 1.8;
+  ctx.fillStyle = '#7a4420';
+  ctx.beginPath(); ctx.ellipse(x + 4, cy + 4, 5.2, 3.6, 0, 0, 6.284); ctx.fill();
+  ctx.fillStyle = '#a35d2c';
+  ctx.beginPath(); ctx.ellipse(x + 4, cy + 3.4, 4.4, 2.9, 0, 0, 6.284); ctx.fill();
+  ctx.fillStyle = '#f4ead8';
+  ctx.fillRect(x + 2, cy + 3, 4, 1);
+  ctx.fillRect(x + 3, cy + 2, 1, 3); ctx.fillRect(x + 5, cy + 2, 1, 3);
+}
+
+function drawCrest(img, cx, cy, size, sx, sy, spin, alpha){
+  ctx.save();
+  ctx.globalAlpha = alpha == null ? 1 : alpha;
+  ctx.translate(cx, cy);
+  if (spin) ctx.rotate(spin);
+  ctx.scale(sx || 1, sy || 1);
+  ctx.drawImage(img, -size/2, -size/2, size, size);
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+function drawGoal(gx, gy, t){
+  // goalpost
+  ctx.fillStyle = '#f2c53d';
+  ctx.fillRect(gx + 6, gy - 6, 3, TS * 2 + 6);
+  ctx.fillRect(gx - 6, gy - 20, 21, 3);
+  ctx.fillRect(gx - 6, gy - 30, 3, 12);
+  ctx.fillRect(gx + 12, gy - 30, 3, 12);
+  // pylon, pulsing
+  const pulse = 0.55 + Math.sin(t * 0.12) * 0.45;
+  ctx.fillStyle = 'rgba(255,120,90,' + (0.30 * pulse).toFixed(3) + ')';
+  ctx.fillRect(gx - 8, gy - 34, 25, TS * 2 + 36);
+  ctx.fillStyle = '#ff6b4a'; ctx.fillRect(gx + 1, gy + TS + 6, 5, 10);
+  shadowText('TD', gx + 3, gy - 44, '#ffe9a8', 8, 'center');
+}
+
+function drawWorld(){
+  const w = W, p = w.player;
+  const cam = Math.round(w.camX);
+  drawSky(cam);
+
+  let ox = 0, oy = 0;
+  if (G.shake > 0){ ox = (Math.random()-0.5) * G.shake; oy = (Math.random()-0.5) * G.shake; G.shake *= 0.85; if (G.shake < 0.4) G.shake = 0; }
+  ctx.save();
+  ctx.translate(Math.round(-cam + ox), Math.round(oy));
+
+  // tiles in view only
+  const x0 = Math.max(0, Math.floor(cam / TS) - 1);
+  const x1 = Math.min(w.w - 1, Math.ceil((cam + VW) / TS) + 1);
+  for (let ty = 0; ty < w.h; ty++)
+    for (let tx = x0; tx <= x1; tx++){
+      const ch = w.grid[ty][tx];
+      if (ch !== ' ') drawTile(ch, tx * TS, ty * TS, tx, ty, w);
+    }
+
+  drawGoal(w.goal.x, w.goal.y, w.time);
+
+  for (const m of w.plats){
+    ctx.fillStyle = '#8c93a6'; ctx.fillRect(m.x, m.y, m.w, m.h);
+    ctx.fillStyle = '#c3cadb'; ctx.fillRect(m.x, m.y, m.w, 2);
+    ctx.fillStyle = '#565d70'; ctx.fillRect(m.x, m.y + m.h, m.w, 1);
+    ctx.fillStyle = 'rgba(200,214,238,.35)';
+    ctx.fillRect(m.x + m.w/2 - 1, m.y - 3, 2, 3);
+  }
+
+  for (const c of w.coins) if (!c.got) drawFootball(c.x, c.y, c.t);
+
+  for (const f of w.foes){
+    const lg = LOGO[f.logo];
+    if (!lg) continue;
+    if (f.dead){
+      const k = f.dead / 22;
+      if (k < 1) drawCrest(lg.img, f.x + f.w/2, f.y + f.h/2 + k * 26, 18, 1 + k, Math.max(0.05, 1 - k * 1.4), k * 3, 1 - k);
+      continue;
+    }
+    const bob = Math.sin(f.t * 2) * 1.5;
+    ctx.fillStyle = 'rgba(0,0,0,.30)';
+    ctx.beginPath(); ctx.ellipse(f.x + f.w/2, f.y + f.h + 3, 7, 2.4, 0, 0, 6.284); ctx.fill();
+    drawCrest(lg.img, f.x + f.w/2, f.y + f.h/2 + bob, 19, f.vx < 0 ? -1 : 1, 1, 0);
+    if (f.kind === 'F'){
+      ctx.fillStyle = 'rgba(214,232,255,.55)';
+      const flap = Math.sin(f.t * 9) * 3;
+      ctx.fillRect(f.x - 5, f.y + 5 + flap, 5, 2);
+      ctx.fillRect(f.x + f.w, f.y + 5 - flap, 5, 2);
+    }
+  }
+
+  for (const b of w.bits){
+    ctx.globalAlpha = Math.max(0, b.life / b.max);
+    ctx.fillStyle = b.color;
+    ctx.fillRect(Math.round(b.x), Math.round(b.y), 2, 2);
+  }
+  ctx.globalAlpha = 1;
+
+  // the player, wearing your crest
+  const me = LOGO[TEAMS[G.team].key];
+  const blink = p.invuln > 0 && (p.invuln >> 2) % 2 === 0;
+  if (!blink && me){
+    if (!p.dying){
+      ctx.fillStyle = 'rgba(0,0,0,.34)';
+      ctx.beginPath(); ctx.ellipse(p.x + p.w/2, p.y + p.h + 2, 7.5, 2.6, 0, 0, 6.284); ctx.fill();
+    }
+    drawCrest(me.img, p.x + p.w/2, p.y + p.h/2, 22, p.face * p.sx, p.sy, p.dying ? p.dying * 0.16 : p.spin * 0.10);
+  }
+
+  ctx.restore();
+}
+
+function drawHUD(){
+  const t = tone();
+  ctx.fillStyle = 'rgba(6,10,18,.78)'; ctx.fillRect(0, 0, VW, 15);
+  ctx.fillStyle = t.accent; ctx.fillRect(0, 15, VW, 1);
+
+  shadowText(TEAMS[G.team].name, 4, 4, t.light, 8);
+  shadowText(String(G.score).padStart(6, '0'), VW - 4, 4, '#ffe9a8', 8, 'right');
+
+  const mid = VW / 2;
+  shadowText('DRIVE ' + (G.level + 1) + '/' + LEVELS.length, mid - 26, 4, '#b9c7de', 8, 'right');
+  drawFootball(mid - 18, 3, W.time * 0.08);
+  shadowText(W.coinsGot + '/' + W.coinsTotal, mid - 4, 4, '#e6c98a', 8);
+
+  for (let i = 0; i < G.lives; i++){
+    const me = LOGO[TEAMS[G.team].key];
+    if (me) drawCrest(me.img, mid + 40 + i * 13, 8, 11, 1, 1, 0, 0.95);
+  }
+
+  if (G.toastT > 0){
+    G.toastT--;
+    const a = Math.min(1, G.toastT / 26);
+    ctx.globalAlpha = a;
+    shadowText(G.toast, VW/2, 26, t.light, 10, 'center');
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * SCREENS
+ * ------------------------------------------------------------------ */
+let navHeld = 0;
+function navigate(cols){
+  const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+  const up = keys.jump;
+  if (!dir && !up){ navHeld = 0; return; }
+  if (navHeld > 0){ navHeld--; return; }
+  navHeld = 10;
+  if (dir){ G.pick = (G.pick + dir + TEAMS.length) % TEAMS.length; Sound.select(); }
+}
+
+function drawTitle(){
+  drawSky(G.ticks * 0.35);
+  ctx.fillStyle = 'rgba(5,8,14,.60)'; ctx.fillRect(0, 0, VW, VH);
+
+  const t = LOGO[TEAMS[G.pick].key] || { accent:'#6fa8ff', light:'#cfe1ff' };
+  const wob = Math.sin(G.ticks * 0.05) * 2;
+
+  shadowText('S C F L', VW/2, 12 + wob * 0.4, t.accent, 12, 'center');
+  shadowText('SCRAMBLE', VW/2, 26 + wob * 0.4, '#f2f6ff', 20, 'center');
+  shadowText('PICK YOUR CLUB', VW/2, 52, '#8fa0bb', 8, 'center');
+
+  // 16 crests, 8 across, 2 rows
+  const cols = 8, cw = 34, ch = 34;
+  const gx = (VW - cols * cw) / 2 + cw/2, gy = 74;
+  TEAMS.forEach((tm, i) => {
+    const cx = gx + (i % cols) * cw, cy = gy + Math.floor(i / cols) * ch;
+    const on = i === G.pick;
+    const lg = LOGO[tm.key];
+    if (on){
+      ctx.fillStyle = 'rgba(255,255,255,.10)';
+      ctx.fillRect(cx - 15, cy - 15, 30, 30);
+      ctx.strokeStyle = t.accent; ctx.lineWidth = 1;
+      ctx.strokeRect(cx - 15.5, cy - 15.5, 31, 31);
+    }
+    if (lg) drawCrest(lg.img, cx, cy + (on ? wob * 0.5 : 0), on ? 27 : 21, 1, 1, 0, on ? 1 : 0.55);
+  });
+
+  shadowText(TEAMS[G.pick].name, VW/2, 146, t.light, 10, 'center');
+
+  const blink = (G.ticks >> 4) % 2 === 0;
+  if (blink) shadowText('PRESS  JUMP  TO  KICK OFF', VW/2, 170, '#e8eefb', 9, 'center');
+  shadowText('← →  CHOOSE     JUMP  START     M  MUSIC', VW/2, 190, '#6f7f99', 7, 'center');
+  if (G.best > 0) shadowText('BEST  ' + G.best, VW/2, 202, '#c8a24a', 8, 'center');
+  shadowText('16 clubs · 6 drives · one end zone', VW/2, 213, '#4d5a70', 7, 'center');
+}
+
+function panel(y, h){
+  ctx.fillStyle = 'rgba(6,10,18,.86)'; ctx.fillRect(16, y, VW - 32, h);
+  ctx.strokeStyle = tone().accent; ctx.lineWidth = 1;
+  ctx.strokeRect(16.5, y + 0.5, VW - 33, h - 1);
+}
+
+function drawClear(){
+  drawWorld(); drawHUD();
+  panel(52, 118);
+  const t = tone();
+  shadowText('DRIVE COMPLETE', VW/2, 62, t.light, 12, 'center');
+  shadowText(W.name, VW/2, 80, '#8fa0bb', 8, 'center');
+  shadowText('END ZONE', 34, 100, '#b9c7de', 8);  shadowText('+500', VW - 34, 100, '#ffe9a8', 8, 'right');
+  shadowText('TIME', 34, 114, '#b9c7de', 8);      shadowText('+' + (W.bonusTime||0), VW - 34, 114, '#ffe9a8', 8, 'right');
+  shadowText('FOOTBALLS ' + W.coinsGot + '/' + W.coinsTotal, 34, 128, '#b9c7de', 8);
+  shadowText(W.bonusAll ? '+1000' : '—', VW - 34, 128, W.bonusAll ? '#8ef0a0' : '#5a6880', 8, 'right');
+  shadowText('SCORE  ' + G.score, VW/2, 146, '#f2f6ff', 10, 'center');
+  if ((G.ticks >> 4) % 2 === 0) shadowText('JUMP TO CONTINUE', VW/2, 176, '#e8eefb', 8, 'center');
+}
+
+function drawOver(){
+  drawWorld(); drawHUD();
+  panel(66, 92);
+  shadowText('TURNOVER ON DOWNS', VW/2, 78, '#ff8a6b', 12, 'center');
+  shadowText('FINAL  ' + G.score, VW/2, 100, '#f2f6ff', 10, 'center');
+  shadowText('reached ' + LEVELS[G.level].name, VW/2, 118, '#8fa0bb', 8, 'center');
+  if ((G.ticks >> 4) % 2 === 0) shadowText('JUMP TO TRY AGAIN', VW/2, 138, '#e8eefb', 8, 'center');
+}
+
+function drawWin(){
+  drawSky(G.ticks * 0.5);
+  ctx.fillStyle = 'rgba(5,8,14,.55)'; ctx.fillRect(0, 0, VW, VH);
+  const t = tone(), me = LOGO[TEAMS[G.team].key];
+  for (let i = 0; i < 40; i++){
+    const x = (i * 61 + G.ticks * (1 + i % 3)) % VW;
+    const y = (i * 37 + G.ticks * (1.6 + (i % 4) * 0.4)) % VH;
+    ctx.fillStyle = ['#ffd86b','#8ef0a0','#6fa8ff','#ff8a6b'][i % 4];
+    ctx.fillRect(x, y, 3, 3);
+  }
+  shadowText('CHAMPIONS', VW/2, 26, '#ffe9a8', 20, 'center');
+  if (me) drawCrest(me.img, VW/2, 86, 62 + Math.sin(G.ticks * 0.06) * 4, 1, 1, 0);
+  shadowText(TEAMS[G.team].name, VW/2, 126, t.light, 12, 'center');
+  shadowText('FINAL SCORE  ' + G.score, VW/2, 148, '#f2f6ff', 10, 'center');
+  const mins = Math.floor(G.ticks / 3600), secs = Math.floor(G.ticks / 60) % 60;
+  shadowText('TIME  ' + mins + ':' + String(secs).padStart(2,'0'), VW/2, 164, '#8fa0bb', 8, 'center');
+  if (G.score >= G.best) shadowText('★ NEW LEAGUE BEST ★', VW/2, 180, '#8ef0a0', 8, 'center');
+  if ((G.ticks >> 4) % 2 === 0) shadowText('JUMP FOR A NEW SEASON', VW/2, 200, '#e8eefb', 8, 'center');
+}
+
+/* ------------------------------------------------------------------ *
+ * MAIN LOOP
+ * ------------------------------------------------------------------ */
+function saveBest(){
+  if (G.score > G.best){
+    G.best = G.score;
+    try { localStorage.setItem('scfl.scramble.best', String(G.best)); } catch (_) {}
+  }
+}
+
+function advance(){
+  // one edge-triggered "confirm" shared by every non-play screen
+  if (!keys.jumpEdge) return false;
+  keys.jumpEdge = false;
+  return true;
+}
+
+function tick(){
+  G.ticks++;
+  if (G.flash > 0) G.flash--;
+
+  if (G.mode === 'title'){
+    navigate();
+    if (advance()){
+      G.team = G.pick; G.score = 0; G.lives = 3; G.ticks = 0;
+      Sound.startMusic();
+      startLevel(0);
+    }
+  } else if (G.mode === 'play'){
+    updatePlay();
+  } else if (G.mode === 'clear'){
+    if (advance()){
+      if (G.level + 1 >= LEVELS.length){ saveBest(); G.mode = 'win'; Sound.win(); }
+      else startLevel(G.level + 1);
+    }
+  } else if (G.mode === 'over'){
+    if (advance()){ saveBest(); G.mode = 'title'; G.pick = G.team; }
+  } else if (G.mode === 'win'){
+    if (advance()){ G.mode = 'title'; G.pick = G.team; }
+  }
+}
+
+function render(){
+  if (G.mode === 'title')      drawTitle();
+  else if (G.mode === 'play')  { drawWorld(); drawHUD(); }
+  else if (G.mode === 'clear') drawClear();
+  else if (G.mode === 'over')  drawOver();
+  else if (G.mode === 'win')   drawWin();
+
+  if (G.flash > 0){
+    ctx.fillStyle = 'rgba(255,255,255,' + (G.flash / 30).toFixed(3) + ')';
+    ctx.fillRect(0, 0, VW, VH);
+  }
+}
+
+let acc = 0, last = 0;
+function frame(now){
+  requestAnimationFrame(frame);
+  if (!last) last = now;
+  acc += Math.min(now - last, 250);   // never spiral after a tab switch
+  last = now;
+  let guard = 0;
+  while (acc >= STEP && guard++ < 5){ tick(); acc -= STEP; }
+  render();
+}
+
+/* ------------------------------------------------------------------ *
+ * BOOT
+ * ------------------------------------------------------------------ */
+(async function boot(){
+  fit();
+  await loadLogos();
+  document.getElementById('boot').classList.add('gone');
+  G.mode = 'title';
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
