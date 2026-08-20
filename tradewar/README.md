@@ -1,73 +1,77 @@
 # 💥 SCFL Trade War
 
-Turn-based artillery between two club crests. Set your angle, set your power,
-read the wind, and bury the other guy under his own transaction history.
+Turn-based artillery between two club crests, fought on themed home fields.
 One HTML file, no build step.
 
 ## Playing
 
-| | |
-|---|---|
-| **↑ ↓** | angle |
-| **← →** | power |
-| **Tab** / **Q** | change ordnance |
-| **Space** | fire |
+Two sliders and a fire button. Drag **ANGLE** and **POWER**, or tap the −/+
+nudges for single steps, or tap either number and type an exact value. The
+barrel tracks your aim live. **AMMO** opens the inventory. Arrow keys and
+Space still work on desktop.
 
-Hold a key to move faster. On a phone the button pad appears automatically.
-Pick both clubs on the title screen — **↑** switches which side you're choosing,
-**↓** toggles two-player against computer, **Tab** sets how sharp the computer
-is. First to three rounds takes the series.
+Pick both clubs on the title screen — **←→** club, **↑** side, **↓** two-player
+or computer, **Tab** how sharp the computer is. **The first club picked is
+home**, and the match is played on their field. First to three rounds.
 
-## The ordnance
-
-Every round is something that actually happened in this league.
+## Ordnance
 
 | Round | Ammo | What it does |
 |---|---|---|
-| **Lowball Offer** | ∞ | The workhorse. A real trade where one side got a single asset and the other got three or more. |
-| **Waiver Claim** | 6 | Flat and fast, small crater. Good for a target on open ground. |
-| **Draft Pick** | 4 | Sniper. Barely dents the hill, but a direct hit takes 62. |
-| **Blockbuster** | 3 | A real seven-asset-plus trade. Huge crater, slow arc. |
-| **Collusion** | 2 | Splits into three at the top of its arc. |
-| **Shit Talk** | 5 | A real draft-grade verdict. Barely scratches, but shoves you off your hill. |
+| **Lowball Offer** | ∞ | The workhorse. Dead accurate. |
+| **Waiver Claim** | 6 | Flat and fast, and ignores wind entirely. |
+| **1st Round Pick** | 3 | Tight — lands within ~50px of where you aimed. |
+| **2nd Round Pick** | 6 | Same damage, four times the spread. A gamble. |
+| **Blockbuster** | 3 | Huge crater, but drifts twice as hard in wind. |
+| **Shit Talk** | 5 | Buries them under a heap. Barely scratches. |
+| **Veto** | ∞ | Clears ground. Four damage. It's a tool, not a weapon. |
 
-The text that flashes on fire is the actual trade, pick, or grade — pulled from
-`ammo.json`, which `scripts/build_ammo.py` distils from the league's own
-committed record: 35 lowball offers, 12 blockbusters, 57 draft-grade verdicts,
-60 first-round picks. Nothing is invented.
+Every other round digs; **Shit Talk is the only one that adds ground.** Land it
+on a crest and that crest is under a pile, and its own next shot detonates in
+its own muck. Getting out means lobbing near-vertically over the heap, or
+firing **Veto** down into it and digging free at the cost of a turn. Veto is
+unlimited precisely because burial is unlimited — otherwise a buried player
+with no shovel is entombed and the match dies by attrition.
 
-The raw group chat is **not** a source and won't become one — the corpora are
-excluded from this repo on purpose, so the bundle is built only from artifacts
-already committed here.
+**Fall damage is light** — 1 per 10px dropped, with a grace so ordinary
+settling is free, capped at 15. Enough that undermining someone's hill is a
+real tactic, not enough to win on its own.
 
-## How it works
+**Crests take damage too.** Where a blast lands, that part of the badge chips
+away — about 3% for a taunt, 25% for a first-rounder, and roughly a quarter of
+the crest gone by the time it dies. Cosmetic only: the hitbox stays a circle,
+because tying it to the eroded shape would let shots sail through the missing
+half of a living crest.
 
-The hill is a heightmap, one entry per screen column, and every explosion
-carves it permanently. Shots integrate at four slices a frame so nothing
-tunnels through a ridge at speed. Wind pushes the shell sideways the whole
-flight and drifts a little between turns.
+## Home fields
 
-The computer simulates a couple of hundred candidate shots per turn using the
-same physics you play against, scores each by the damage it would actually
-land, then misses on purpose by an amount set by the difficulty. It also
-rations its limited rounds instead of spending them all at once.
+Each club's ground sets the sky, the backdrop, the props, the turf colours
+**and the shape of the terrain itself**.
 
-Crests are the league's own logos, masked into round badges and ringed in a
-colour sampled from the artwork itself.
+- **The Machines** → the scrap wastes: rust sky, dead gantries, terraced mesas
+- **Pork Chop Express** → the night market: lit tenements, strung lanterns, flat rooftops
+- **Powers of Pain** → the squared circle: a canvas mat between turnbuckles, and both fighters spawn inside the ropes
 
-## Verified, not eyeballed
+Every other club falls back to the stadium for now. The rest of the sixteen
+are the next pass — that's also what the single-player tour needs, since you
+play each club at their own ground.
 
-Headless runs against the game's own physics check that:
+## Verified
 
-- all six rounds carve distinct craters — the draft pick punches 14 columns,
-  the blockbuster tears 70
-- a direct hit does the damage it claims
-- the computer's three settings actually differ (roughly 48% / 63% / 95% hit
-  rates) and it favours damage over noise
-- 30 computer-vs-computer matches all terminate, averaging around 12 turns
-- terrain over 200 seeds never produces a spike — amplitude scales with
-  wavelength, so no tiny peak can swallow a shot
+Headless runs against the game's own physics confirm:
 
-Two real bugs came out of it: more than half the power dial originally
-overshot the entire map, and the first terrain generator gave its shortest
-wavelength the largest amplitude, which made aiming a lottery.
+- scatter behaves as designed — the baseline lands in *exactly* the same spot
+  across 80 identical shots (0px), 1st rounders spread 51px, 2nd rounders 195px
+- Shit Talk raises ground 22px over a target and flags it buried; Veto clears
+  it back to grade and frees them
+- crest erosion scales with damage taken rather than blast size
+- the three computer settings differ properly: 24% / 54% / 84% hit rates
+- 40 computer-vs-computer matches split 20–20, none stuck, ~21 turns each
+- terrain across every arena profile is smooth enough that no one-pixel spike
+  can swallow a shot
+
+Three real faults came out of that testing: one blockbuster erased 84% of a
+crest because erosion was scaling a world-space blast radius into badge space;
+growing crests to 32px had silently widened every blast's damage reach; and
+the wrestling ring spawned its fighters out on the floor rather than inside
+the ropes.
