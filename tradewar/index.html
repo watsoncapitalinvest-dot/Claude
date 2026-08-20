@@ -505,6 +505,21 @@ async function loadArena(key){
   return (arenaCache[key] = { back, terrain, name: ARENA_NAME[key] || 'THE FIELD' });
 }
 
+/* The delivered plates carry a border frame baked in: a band of opaque
+   pixels across the top and solid columns down both edges. Left alone the
+   top band is an invisible ceiling that detonates every high shot, and
+   surfaceAt() finds it instead of the ground. Strip it on load. */
+const FRAME_TOP = 18, FRAME_SIDE = 4;
+function deframe(){
+  terCx.save();
+  terCx.globalCompositeOperation = 'destination-out';
+  terCx.fillStyle = '#000';
+  terCx.fillRect(0, 0, VW, FRAME_TOP);
+  terCx.fillRect(0, 0, FRAME_SIDE, VH);
+  terCx.fillRect(VW - FRAME_SIDE, 0, FRAME_SIDE, VH);
+  terCx.restore();
+}
+
 function proceduralGround(){
   terCx.clearRect(0, 0, VW, VH);
   const base = VH * 0.70;
@@ -590,12 +605,17 @@ function erode(p, cx, cy, r){
 }
 
 function spawnX(lo, hi){
-  for (let t = 0; t < 60; t++){
+  const SCAN = FRAME_TOP + 4;
+  let best = null;
+  for (let t = 0; t < 90; t++){
     const x = Math.round(rnd(lo, hi));
-    const y = surfaceAt(x, 0);
-    if (y < VH - 10 && y > VH * 0.25) return { x, y };
+    const y = surfaceAt(x, SCAN);
+    if (y >= VH - 10) continue;                 // nothing to stand on here
+    if (solid(x, y - CREST_R - 8)) continue;    // would spawn inside something
+    if (y > VH * 0.25) return { x, y };
+    if (!best) best = { x, y };
   }
-  return { x: Math.round((lo + hi) / 2), y: surfaceAt(Math.round((lo + hi) / 2), 0) };
+  return best || { x: Math.round((lo + hi) / 2), y: surfaceAt(Math.round((lo + hi) / 2), SCAN) };
 }
 
 function makePlayers(){
@@ -910,7 +930,7 @@ async function newRound(keepScore){
   const key = TEAMS[G.home].key;
   G.arena = await loadArena(key);
   terCx.clearRect(0, 0, VW, VH);
-  if (G.arena.terrain) terCx.drawImage(G.arena.terrain, 0, 0, VW, VH);
+  if (G.arena.terrain){ terCx.drawImage(G.arena.terrain, 0, 0, VW, VH); deframe(); }
   else proceduralGround();
   syncAll();
   makePlayers();
