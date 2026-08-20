@@ -608,22 +608,61 @@ function erode(p, cx, cy, r){
   g.restore();
 }
 
-function spawnX(lo, hi){
-  const SCAN = FRAME_TOP + 4;
-  let best = null;
-  for (let t = 0; t < 90; t++){
-    const x = Math.round(rnd(lo, hi));
-    const y = surfaceAt(x, SCAN);
-    if (y >= VH - 10) continue;                 // nothing to stand on here
-    if (solid(x, y - CREST_R - 8)) continue;    // would spawn inside something
-    if (y > VH * 0.25) return { x, y };
-    if (!best) best = { x, y };
+/* How much ground sits on the straight line between two points. Zero means
+   they can shoot flat at each other, which makes for a dull duel. */
+function lineCover(ax, ay, bx, by){
+  const n = Math.ceil(Math.hypot(bx - ax, by - ay) / 3);
+  let hits = 0;
+  for (let i = 1; i < n; i++)
+    if (solid(ax + (bx - ax) * i / n, ay + (by - ay) * i / n)) hits++;
+  return hits;
+}
+
+/* A standable spot: ground under it, headroom above it, not down a pit. */
+function standable(x){
+  const y = surfaceAt(x, FRAME_TOP + 4);
+  if (y >= VH - 10 || y < FRAME_TOP + CREST_R) return null;
+  if (solid(x, y - CREST_R - 8)) return null;
+  // needs real footing, not a mushroom cap or the lip of a terrace: a thin
+  // ledge leaves a crest standing on nothing the moment anything shifts
+  let thick = 0;
+  for (let d = 1; d <= 14; d++) if (solid(x, y + d)) thick++;
+  if (thick < 10) return null;
+  // and wide enough to sit on
+  if (!solid(x - CREST_R * 0.6, y + 6) || !solid(x + CREST_R * 0.6, y + 6)) return null;
+  return { x, y };
+}
+
+/* Pick the pair of footings that gives the best fight: ground between them
+   so the shot has to arc, and a height difference so the two ends are not
+   mirror images. Falls back to whatever is standable if the map is flat. */
+function pickSpawns(){
+  const gather = (lo, hi) => {
+    const out = [];
+    for (let t = 0; t < 400 && out.length < 26; t++){
+      const c = standable(Math.round(rnd(lo, hi)));
+      if (c) out.push(c);
+    }
+    return out;
+  };
+  const L = gather(60, VW * 0.30), R = gather(VW * 0.70, VW - 60);
+  if (!L.length || !R.length){
+    return [L[0] || { x:80, y:surfaceAt(80, FRAME_TOP + 4) },
+            R[0] || { x:VW - 80, y:surfaceAt(VW - 80, FRAME_TOP + 4) }];
   }
-  return best || { x: Math.round((lo + hi) / 2), y: surfaceAt(Math.round((lo + hi) / 2), SCAN) };
+  let best = null;
+  for (const a of L) for (const b of R){
+    const cover = lineCover(a.x, a.y - CREST_R, b.x, b.y - CREST_R);
+    const drop  = Math.abs(a.y - b.y);
+    // reward cover up to a point, then reward height difference
+    const score = Math.min(cover, 26) * 4 + drop * 0.35 + rnd(0, 8);
+    if (!best || score > best.score) best = { score, a, b, cover, drop };
+  }
+  return [best.a, best.b];
 }
 
 function makePlayers(){
-  const a = spawnX(60, VW * 0.26), b = spawnX(VW * 0.74, VW - 60);
+  const [a, b] = pickSpawns();
   P = [
     { team:G.picks[0], x:a.x, side: 1, hp:100, angle: 50, power:62, r:CREST_R, wep:0, ammo:{}, dead:false, vy:0, fall:0, hexed:false },
     { team:G.picks[1], x:b.x, side:-1, hp:100, angle:130, power:62, r:CREST_R, wep:0, ammo:{}, dead:false, vy:0, fall:0, hexed:false },
