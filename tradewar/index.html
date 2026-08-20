@@ -22,12 +22,9 @@
     background:#141c29;color:#cfdcef;font:700 20px/1 ui-monospace,monospace;
     display:flex;align-items:center;justify-content:center;touch-action:manipulation}
   .nudge:active{background:#22304a}
-  input[type=range]{flex:1;min-width:60px;height:40px;background:transparent;-webkit-appearance:none;appearance:none}
-  input[type=range]::-webkit-slider-runnable-track{height:10px;border-radius:5px;background:#1b2434;border:1px solid #2b3548}
-  input[type=range]::-moz-range-track{height:10px;border-radius:5px;background:#1b2434;border:1px solid #2b3548}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-10px;
-    border-radius:7px;background:#ffd86b;border:2px solid #7a5f27}
-  input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:7px;background:#ffd86b;border:2px solid #7a5f27}
+  .gauge{flex:1;min-width:92px;max-width:190px;height:52px;touch-action:none;
+    border-radius:9px;background:#0e1622;border:2px solid #2b3548}
+  .gauge:active{border-color:#ffd86b}
   .num{width:66px;height:40px;flex:none;text-align:center;border-radius:9px;
     border:2px solid #2b3548;background:#0e1622;color:#ffe9a8;
     font:700 17px/1 ui-monospace,monospace;-webkit-user-select:text;user-select:text}
@@ -39,6 +36,7 @@
   #bFire{flex:1.1;background:#3a1a14;border-color:#8a4030;color:#ffd9cc;font-size:18px}
   #bFire:active{background:#5c281d}
   #ctl.locked{opacity:.4;pointer-events:none}
+  #ctl.locked .gauge{border-color:#2b3548}
   #tray{position:fixed;inset:0;background:rgba(3,6,11,.88);display:none;
     align-items:center;justify-content:center;padding:16px;z-index:20}
   #tray.on{display:flex}
@@ -62,9 +60,7 @@
     .lbl{width:40px;font-size:10px;letter-spacing:0}
     .nudge{width:34px;height:36px;font-size:17px;border-radius:8px}
     .num{width:48px;height:36px;font-size:14px;border-radius:8px}
-    input[type=range]{height:36px;min-width:34px}
-    input[type=range]::-webkit-slider-thumb{width:24px;height:24px;margin-top:-8px}
-    input[type=range]::-moz-range-thumb{width:24px;height:24px}
+    .gauge{height:44px;min-width:76px}
     .act{height:38px;font-size:11px;padding:0 10px;border-radius:8px}
     #bAmmo{min-width:118px}
     #bFire{min-width:96px;font-size:14px}
@@ -84,14 +80,14 @@
     <div class="row">
       <span class="lbl">ANGLE</span>
       <button class="nudge" id="aDn">&minus;</button>
-      <input type="range" id="sAngle" min="5" max="175" step="1" value="45">
+      <canvas class="gauge" id="gAngle"></canvas>
       <button class="nudge" id="aUp">+</button>
       <input class="num" id="nAngle" inputmode="numeric" value="45">
     </div>
     <div class="row">
       <span class="lbl">POWER</span>
       <button class="nudge" id="pDn">&minus;</button>
-      <input type="range" id="sPower" min="5" max="100" step="1" value="62">
+      <canvas class="gauge" id="gPower"></canvas>
       <button class="nudge" id="pUp">+</button>
       <input class="num" id="nPower" inputmode="numeric" value="62">
     </div>
@@ -918,7 +914,7 @@ function cpuShoot(p){
  * CONTROLS
  * ------------------------------------------------------------------ */
 const el = id => document.getElementById(id);
-const UI = { ctl:el('ctl'), sA:el('sAngle'), nA:el('nAngle'), sP:el('sPower'), nP:el('nPower'),
+const UI = { ctl:el('ctl'), gA:el('gAngle'), nA:el('nAngle'), gP:el('gPower'), nP:el('nPower'),
              ammo:el('bAmmo'), fire:el('bFire'), tray:el('tray'), list:el('trayList') };
 
 const myTurn = () => G.mode === 'aim' && !(G.vsCpu && G.turn === 1);
@@ -931,7 +927,7 @@ function syncUI(){
   UI.ctl.classList.toggle('locked', !myTurn());
   if (!P.length) return;
   const p = P[G.turn];
-  UI.sA.value = Math.round(p.angle); UI.sP.value = Math.round(p.power);
+  paintGauges();
   if (document.activeElement !== UI.nA) UI.nA.value = Math.round(p.angle);
   if (document.activeElement !== UI.nP) UI.nP.value = Math.round(p.power);
   const w = WEAPONS[p.wep], n = p.ammo[w.id];
@@ -943,8 +939,65 @@ function syncUI(){
 function setAngle(v){ const p = P[G.turn]; if (!p) return; p.angle = clamp(v, 5, 175); syncUI(); }
 function setPower(v){ const p = P[G.turn]; if (!p) return; p.power = clamp(v, 5, MAX_POWER); syncUI(); }
 
-UI.sA.addEventListener('input', () => myTurn() && setAngle(+UI.sA.value));
-UI.sP.addEventListener('input', () => myTurn() && setPower(+UI.sP.value));
+/* Semicircular gauges. Twice as wide as tall, so they suit a short strip
+   far better than a slider, and an angle dial reads as an angle. */
+function drawGauge(cv2, frac, tint, ticks){
+  const dpr = Math.min(3, devicePixelRatio || 1);
+  const w = cv2.clientWidth, h = cv2.clientHeight;
+  if (!w || !h) return;
+  if (cv2.width !== w * dpr){ cv2.width = w * dpr; cv2.height = h * dpr; }
+  const g = cv2.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  const cx = w / 2, cy = h - 6, r = Math.min(w / 2 - 8, h - 12);
+  g.lineCap = 'round';
+  g.strokeStyle = 'rgba(255,255,255,.13)'; g.lineWidth = 7;
+  g.beginPath(); g.arc(cx, cy, r, Math.PI, 0); g.stroke();
+  for (let i = 0; i <= ticks; i++){
+    const a = Math.PI - (i / ticks) * Math.PI;
+    const x1 = cx + Math.cos(a) * (r - 10), y1 = cy - Math.sin(a) * (r - 10);
+    const x2 = cx + Math.cos(a) * (r - 5),  y2 = cy - Math.sin(a) * (r - 5);
+    g.strokeStyle = 'rgba(255,255,255,.20)'; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+  }
+  g.strokeStyle = tint; g.lineWidth = 7;
+  g.beginPath(); g.arc(cx, cy, r, Math.PI, Math.PI + frac * Math.PI); g.stroke();
+  const a = Math.PI - frac * Math.PI;
+  g.strokeStyle = '#f2f6ff'; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * (r - 3), cy - Math.sin(a) * (r - 3)); g.stroke();
+  g.fillStyle = tint;
+  g.beginPath(); g.arc(cx, cy, 4, 0, 6.284); g.fill();
+}
+
+function paintGauges(){
+  if (!P.length) return;
+  const p = P[G.turn];
+  drawGauge(UI.gA, (p.angle - 5) / 170, '#8fd0ff', 6);
+  drawGauge(UI.gP, (p.power - 5) / 95, '#ffd86b', 5);
+}
+
+/* Drag anywhere on a dial: the value follows the bearing from its pivot. */
+function bindGauge(el, apply){
+  let live = false;
+  const read = e => {
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.bottom - 6;
+    let deg = Math.atan2(cy - e.clientY, e.clientX - cx) * 180 / Math.PI;
+    apply(clamp(1 - deg / 180, 0, 1));
+  };
+  el.addEventListener('pointerdown', e => {
+    if (!myTurn()) return;
+    live = true; e.preventDefault(); Sound.resume();
+    read(e);                       // apply first: capture must never cost the input
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  el.addEventListener('pointermove', e => { if (live) { e.preventDefault(); read(e); } });
+  const stop = e => { live = false; try { el.releasePointerCapture(e.pointerId); } catch (_) {} };
+  el.addEventListener('pointerup', stop);
+  el.addEventListener('pointercancel', stop);
+}
+bindGauge(UI.gA, f => setAngle(5 + (1 - f) * 170));
+bindGauge(UI.gP, f => setPower(5 + (1 - f) * 95));
 const commit = (inp, fn) => {
   const v = parseInt(inp.value, 10);
   if (!isNaN(v)) fn(v); else syncUI();
