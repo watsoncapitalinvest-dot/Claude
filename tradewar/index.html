@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<title>SCFL Trade War</title>
-<meta name="description" content="Turn-based artillery between two SCFL crests, fought on themed home fields.">
+<title>SCFL Trade Wars</title>
+<meta name="description" content="Turn-based artillery between two SCFL crests on destructible home fields.">
 <meta name="theme-color" content="#070b12">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23070b12'/%3E%3Cellipse cx='16' cy='16' rx='11' ry='7' fill='%23a35d2c'/%3E%3Cpath d='M9 16h14M13 13v6M19 13v6' stroke='%23f4ead8' stroke-width='1.6'/%3E%3C/svg%3E">
 <style>
@@ -12,51 +12,45 @@
   html,body{height:100%;background:#04060a;overflow:hidden;color:#dbe6f7;
     font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
     -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-  #app{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
-    justify-content:flex-start;gap:8px;padding:6px}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px}
   canvas{image-rendering:pixelated;display:block;box-shadow:0 0 0 2px #17202e,0 10px 40px rgba(0,0,0,.8)}
-
-  /* ---- control bar ------------------------------------------------ */
-  #ctl{width:100%;max-width:660px;display:none;flex-direction:column;gap:7px}
+  #ctl{width:100%;max-width:700px;display:none;flex-direction:column;gap:7px}
   #ctl.on{display:flex}
   .row{display:flex;align-items:center;gap:7px}
-  .lbl{width:52px;font-size:12px;font-weight:700;letter-spacing:1px;color:#8ea0bd;flex:none}
-  .nudge{width:38px;height:38px;flex:none;border-radius:9px;border:2px solid #2b3548;
-    border-color:#2b3548;background:#141c29;color:#cfdcef;font:700 19px/1 ui-monospace,monospace;
+  .lbl{width:54px;font-size:12px;font-weight:700;letter-spacing:1px;color:#8ea0bd;flex:none}
+  .nudge{width:40px;height:40px;flex:none;border-radius:9px;border:2px solid #2b3548;
+    background:#141c29;color:#cfdcef;font:700 20px/1 ui-monospace,monospace;
     display:flex;align-items:center;justify-content:center;touch-action:manipulation}
   .nudge:active{background:#22304a}
-  input[type=range]{flex:1;min-width:60px;height:38px;background:transparent;-webkit-appearance:none;appearance:none}
+  input[type=range]{flex:1;min-width:60px;height:40px;background:transparent;-webkit-appearance:none;appearance:none}
   input[type=range]::-webkit-slider-runnable-track{height:10px;border-radius:5px;background:#1b2434;border:1px solid #2b3548}
   input[type=range]::-moz-range-track{height:10px;border-radius:5px;background:#1b2434;border:1px solid #2b3548}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;margin-top:-9px;
-    border-radius:7px;background:#ffd86b;border:2px solid #7a5f27;cursor:pointer}
-  input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:7px;background:#ffd86b;border:2px solid #7a5f27}
-  .num{width:62px;height:38px;flex:none;text-align:center;border-radius:9px;
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-10px;
+    border-radius:7px;background:#ffd86b;border:2px solid #7a5f27}
+  input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:7px;background:#ffd86b;border:2px solid #7a5f27}
+  .num{width:66px;height:40px;flex:none;text-align:center;border-radius:9px;
     border:2px solid #2b3548;background:#0e1622;color:#ffe9a8;
-    font:700 16px/1 ui-monospace,monospace;-webkit-user-select:text;user-select:text}
+    font:700 17px/1 ui-monospace,monospace;-webkit-user-select:text;user-select:text}
   .num:focus{outline:none;border-color:#ffd86b;background:#161f2e}
-  .act{flex:1;height:50px;border-radius:11px;border:2px solid #2b3548;background:#141c29;
+  .act{flex:1;height:52px;border-radius:11px;border:2px solid #2b3548;background:#141c29;
     color:#dbe6f7;font:700 14px/1 ui-monospace,monospace;letter-spacing:.5px;
     display:flex;align-items:center;justify-content:center;gap:8px;touch-action:manipulation}
   .act:active{background:#22304a}
-  #bFire{flex:1.1;background:#3a1a14;border-color:#8a4030;color:#ffd9cc;font-size:17px}
+  #bFire{flex:1.1;background:#3a1a14;border-color:#8a4030;color:#ffd9cc;font-size:18px}
   #bFire:active{background:#5c281d}
-  #ctl.locked{opacity:.42;pointer-events:none}
-  .cnt{color:#ffd86b}
-
-  /* ---- ammo tray -------------------------------------------------- */
-  #tray{position:fixed;inset:0;background:rgba(3,6,11,.86);display:none;
+  #ctl.locked{opacity:.4;pointer-events:none}
+  #tray{position:fixed;inset:0;background:rgba(3,6,11,.88);display:none;
     align-items:center;justify-content:center;padding:16px;z-index:20}
   #tray.on{display:flex}
-  #trayBox{width:100%;max-width:440px;background:#0b1420;border:2px solid #2b3548;border-radius:14px;overflow:hidden}
+  #trayBox{width:100%;max-width:460px;background:#0b1420;border:2px solid #2b3548;border-radius:14px;overflow:hidden}
   #trayBox h3{font-size:12px;letter-spacing:2px;color:#8ea0bd;padding:12px 14px 8px;font-weight:700}
-  .ammo{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid #1a2434}
+  .ammo{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid #1a2434}
   .ammo:active{background:#16202f}
   .dot{width:13px;height:13px;border-radius:50%;flex:none}
-  .an{flex:1;font-size:13px;font-weight:700}
-  .ad{font-size:11px;color:#7f8fab;flex:2}
-  .ac{font-size:13px;font-weight:700;color:#ffd86b;width:30px;text-align:right}
-  .ammo.out{opacity:.34}
+  .an{flex:1.1;font-size:13px;font-weight:700}
+  .ad{flex:1.4;font-size:11px;color:#7f8fab}
+  .ac{font-size:13px;font-weight:700;color:#ffd86b;width:32px;text-align:right}
+  .ammo.out{opacity:.32}
   .ammo.sel{background:#16202f;box-shadow:inset 3px 0 0 #ffd86b}
   #boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
     color:#56637a;font-size:13px;letter-spacing:2px;z-index:30;background:#04060a}
@@ -92,25 +86,26 @@
 <script>
 'use strict';
 
-/* ------------------------------------------------------------------ *
- * SCFL TRADE WAR — turn-based artillery between two club crests,
- * fought on themed home fields. One file, no build step.
- * ------------------------------------------------------------------ */
+/* ==================================================================
+ * SCFL TRADE WARS
+ * Turn-based artillery. The ground is a destructible bitmap: every
+ * pixel is either solid or air, blasts erase it, shit talk adds to it,
+ * and anything left unsupported collapses.
+ * ================================================================== */
 
-const VW = 480, VH = 270;
+const VW = 960, VH = 540;          // matches the arena plates
 const STEP = 1000 / 60;
 
-const GRAV      = 0.145;
-const WIND_ACC  = 0.011;
-const SUBSTEPS  = 4;
+const GRAV      = 0.29;
+const WIND_ACC  = 0.022;
+const SUBSTEPS  = 6;
 const MAX_POWER = 100;
-const V_PER_PWR = 0.088;    // power 100 lands just past the far edge
-const CREST_R   = 16;       // 32px across
-const BLAST_PAD = 18;       // damage falloff is independent of crest size
-const EROSION   = 0.40;     // crests chip at 40% of the rate terrain carves
-
-// fall damage: light, and free for ordinary settling
-const FALL_GRACE = 12, FALL_PER = 10, FALL_CAP = 15;
+const V_PER_PWR = 0.176;
+const CREST_R   = 32;
+const BLAST_PAD = 20;
+const EROSION   = 0.40;
+const FALL_GRACE = 24, FALL_PER = 20, FALL_CAP = 15;
+const MIN_CHUNK  = 220;            // fewer pixels than this is debris, not a chunk
 
 const TEAMS = [
   { key:'machines',        name:'THE MACHINES'      },
@@ -131,147 +126,31 @@ const TEAMS = [
   { key:'killerklowns',    name:'KILLER KLOWNS'     },
 ];
 
-/* ------------------------------------------------------------------ *
- * ORDNANCE
- *   scAng / scPwr  launch scatter — the shot leaves off where you aimed
- *   wind           multiplier on drift (0 ignores wind entirely)
- *   kind           shell | flat | sniper | heap (deposits) | dig (clears)
- * ------------------------------------------------------------------ */
 const WEAPONS = [
-  { id:'lowball', name:'LOWBALL OFFER',  kind:'shell',  ammo:-1, r:20, dmg:26, speed:1.00, wind:1, scAng:0,   scPwr:0,
-    desc:'the workhorse' },
-  { id:'waiver',  name:'WAIVER CLAIM',   kind:'flat',   ammo:6,  r:14, dmg:18, speed:1.35, wind:0, scAng:0,   scPwr:0,
-    desc:'flat, ignores wind' },
-  { id:'pick1',   name:'1ST ROUND PICK', kind:'sniper', ammo:3,  r:10, dmg:62, speed:1.15, wind:1, scAng:1.5, scPwr:2,
-    desc:'tight, hits hard' },
-  { id:'pick2',   name:'2ND ROUND PICK', kind:'sniper', ammo:6,  r:10, dmg:62, speed:1.15, wind:1, scAng:7,   scPwr:10,
-    desc:'wild, hits just as hard' },
-  { id:'block',   name:'BLOCKBUSTER',    kind:'shell',  ammo:3,  r:36, dmg:48, speed:0.92, wind:2, scAng:0,   scPwr:0,
-    desc:'massive, drifts badly' },
-  { id:'talk',    name:'SHIT TALK',      kind:'heap',   ammo:5,  r:26, dmg:7,  speed:1.05, wind:1, scAng:0,   scPwr:0,
-    desc:'buries them' },
-  { id:'veto',    name:'VETO',           kind:'dig',    ammo:-1, r:34, dmg:4,  speed:1.00, wind:1, scAng:0,   scPwr:0,
-    desc:'clears ground' },
+  { id:'lowball', name:'LOWBALL OFFER',  kind:'shell',  ammo:-1, r:40, dmg:26, speed:1.00, wind:1, scAng:0,   scPwr:0,  tint:'#ffd86b', desc:'the workhorse' },
+  { id:'waiver',  name:'WAIVER CLAIM',   kind:'shell',  ammo:6,  r:28, dmg:18, speed:1.35, wind:0, scAng:0,   scPwr:0,  tint:'#7fe3a0', desc:'flat, ignores wind' },
+  { id:'pick1',   name:'1ST ROUND PICK', kind:'sniper', ammo:3,  r:20, dmg:62, speed:1.15, wind:1, scAng:1.5, scPwr:2,  tint:'#8fd0ff', desc:'tight, hits hard' },
+  { id:'pick2',   name:'2ND ROUND PICK', kind:'sniper', ammo:6,  r:20, dmg:62, speed:1.15, wind:1, scAng:7,   scPwr:10, tint:'#c9e6ff', desc:'wild, hits just as hard' },
+  { id:'block',   name:'BLOCKBUSTER',    kind:'shell',  ammo:3,  r:72, dmg:48, speed:0.92, wind:2, scAng:0,   scPwr:0,  tint:'#ff8a5c', desc:'massive, drifts badly' },
+  { id:'talk',    name:'SHIT TALK',      kind:'heap',   ammo:5,  r:52, dmg:7,  speed:1.05, wind:1, scAng:0,   scPwr:0,  tint:'#b98a4a', desc:'buries them' },
+  { id:'curse',   name:'WOOKIE CURSE',   kind:'hex',    ammo:2,  r:24, dmg:6,  speed:1.00, wind:1, scAng:0,   scPwr:0,  tint:'#9fe8ff', desc:'their next shot blows up in their face' },
+  { id:'veto',    name:'VETO',           kind:'dig',    ammo:-1, r:68, dmg:4,  speed:1.00, wind:1, scAng:0,   scPwr:0,  tint:'#9aa6bd', desc:'clears ground' },
 ];
-const TINT = { lowball:'#ffd86b', waiver:'#7fe3a0', pick1:'#8fd0ff', pick2:'#c9e6ff',
-               block:'#ff8a5c', talk:'#b98a4a', veto:'#9aa6bd' };
 
-// Flavour is the shape of a deal, never a real one.
 const FLAVOUR = {
-  lowball: ['3-FOR-1 OFFER', 'SALARY DUMP', 'BUY LOW, INSULT HIGH', 'TAKE IT OR LEAVE IT', 'SELLING HIGH'],
-  waiver:  ['WAIVER CLAIM', 'WIRE PICKUP', 'FREE AGENT GRAB', 'BLIND BID'],
-  pick1:   ['FIRST ROUNDER', 'WIN-NOW PICK', 'TOP OF THE BOARD'],
-  pick2:   ['SECOND ROUNDER', 'DART THROW', 'LOTTERY TICKET', 'BEST AVAILABLE'],
-  block:   ['FIVE-PLAYER BLOCKBUSTER', 'THE MEGADEAL', 'EVERYTHING MUST GO', 'FIRE SALE'],
-  talk:    ['2AM DM', 'GROUP CHAT PILE-ON', 'HOT TAKE', 'ALL-CAPS RANT', 'SUBTWEET'],
-  veto:    ['LEAGUE VETO', 'COMMISSIONER RULING', 'TRADE REVERSED', 'PROTEST UPHELD'],
+  lowball:['3-FOR-1 OFFER','SALARY DUMP','BUY LOW, INSULT HIGH','TAKE IT OR LEAVE IT'],
+  waiver: ['WAIVER CLAIM','WIRE PICKUP','BLIND BID'],
+  pick1:  ['FIRST ROUNDER','WIN-NOW PICK','TOP OF THE BOARD'],
+  pick2:  ['SECOND ROUNDER','DART THROW','LOTTERY TICKET'],
+  block:  ['FIVE-PLAYER BLOCKBUSTER','THE MEGADEAL','EVERYTHING MUST GO'],
+  talk:   ['2AM DM','GROUP CHAT PILE-ON','HOT TAKE','ALL-CAPS RANT'],
+  curse:  ['THE WOOKIE CURSE'],
+  veto:   ['LEAGUE VETO','COMMISSIONER RULING','PROTEST UPHELD'],
 };
 
-/* ------------------------------------------------------------------ *
- * ARENAS — each club's home field sets the sky, the backdrop, the
- * props, the turf colours AND the shape of the ground itself.
- * Three are built; every other club falls back to the stadium.
- * ------------------------------------------------------------------ */
-const ARENAS = {
-  machines: {
-    name: 'THE SCRAP WASTES',
-    profile: 'terraced',
-    sky: ['#0b0a0e', '#241a1a', '#4a2a1c'],
-    turf: '#3c3f42', cap: '#7b8288', dark: '#24272a', stripe: 'rgba(255,180,120,.10)',
-    back(s){
-      // dead gantries and stacks against a rust sky
-      ctx.fillStyle = '#15161c';
-      for (let i = 0; i < 7; i++){
-        const x = (i * 83 + 20) % (VW + 60) - 30, h = 60 + ((i * 37) % 55), w = 13 + (i % 3) * 7;
-        ctx.fillRect(x, 150 - h, w, h);
-        ctx.fillRect(x - 5, 150 - h - 5, w + 10, 5);
-      }
-      ctx.strokeStyle = '#1b1d24'; ctx.lineWidth = 2;
-      for (let i = 0; i < 4; i++){
-        const x = i * 130 + 40;
-        ctx.beginPath(); ctx.moveTo(x, 150); ctx.lineTo(x + 26, 84); ctx.lineTo(x + 62, 92); ctx.stroke();
-      }
-      ctx.fillStyle = 'rgba(255,140,70,.05)';
-      for (let i = 0; i < 5; i++) ctx.fillRect((i * 97 - s * 0.1) % VW, 96, 40, 54);
-    },
-  },
-  porkchopexpress: {
-    name: 'THE NIGHT MARKET',
-    profile: 'street',
-    sky: ['#0a0714', '#1d0f2e', '#3b1440'],
-    turf: '#33323d', cap: '#5d5a6b', dark: '#1f1e26', stripe: 'rgba(255,120,200,.12)',
-    back(s){
-      // tenement blocks with lit windows, lanterns strung between
-      const cols = ['#141126', '#1a1430', '#100e1f'];
-      for (let i = 0; i < 9; i++){
-        const x = i * 58 - 10, h = 52 + ((i * 53) % 62), y = 152 - h;
-        ctx.fillStyle = cols[i % 3]; ctx.fillRect(x, y, 54, h);
-        for (let wy = y + 6; wy < 146; wy += 11)
-          for (let wx = x + 5; wx < x + 48; wx += 11){
-            const lit = ((wx * 7 + wy * 13 + i * 31) % 5) < 2;
-            ctx.fillStyle = lit ? ['#ffcf6b','#ff7ab5','#7fe3ff'][(wx + wy + i) % 3] : '#0b0a16';
-            ctx.fillRect(wx, wy, 5, 6);
-          }
-      }
-      ctx.strokeStyle = 'rgba(255,150,90,.35)'; ctx.lineWidth = 1;
-      ctx.beginPath();
-      for (let x = 0; x <= VW; x += 8) x === 0 ? ctx.moveTo(0, 100) : ctx.lineTo(x, 100 + Math.sin(x / 34) * 7);
-      ctx.stroke();
-      for (let i = 0; i < 16; i++){
-        const x = i * 31 + 8, y = 100 + Math.sin(x / 34) * 7;
-        ctx.fillStyle = i % 2 ? '#ff5c4a' : '#ffc24a';
-        ctx.beginPath(); ctx.ellipse(x, y + 6, 3.4, 4.4, 0, 0, 6.284); ctx.fill();
-      }
-    },
-  },
-  powersofpain: {
-    name: 'THE SQUARED CIRCLE',
-    profile: 'ring',
-    spawn: [0.24, 0.36, 0.64, 0.76],     // inside the ropes, not out on the floor
-    sky: ['#06070d', '#0e1424', '#18203a'],
-    turf: '#243f7a', cap: '#4a72c4', dark: '#182a52', stripe: 'rgba(255,255,255,.14)',
-    back(s){
-      // dark arena: banked crowd, hard spotlights, turnbuckles
-      ctx.fillStyle = 'rgba(255,250,225,.055)';
-      for (let i = 0; i < 6; i++){
-        const lx = 30 + i * 86;
-        ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx - 30, 158); ctx.lineTo(lx + 30, 158); ctx.closePath(); ctx.fill();
-      }
-      ctx.fillStyle = '#080b14'; ctx.fillRect(0, 96, VW, 62);
-      for (let i = 0; i < 190; i++){
-        const cx = (i * 43) % VW, cy = 100 + ((i * 17) % 52);
-        ctx.fillStyle = ['#1d2740','#26324f','#161e33'][i % 3];
-        ctx.fillRect(cx, cy, 2, 2);
-      }
-      ctx.fillStyle = '#c8323c';
-      [92, VW - 96].forEach(x => { ctx.fillRect(x, 128, 6, 42); ctx.fillRect(x - 3, 124, 12, 6); });
-      ctx.strokeStyle = 'rgba(228,236,255,.55)'; ctx.lineWidth = 1.6;
-      for (const y of [136, 148, 160]){
-        ctx.beginPath(); ctx.moveTo(95, y); ctx.lineTo(VW - 93, y); ctx.stroke();
-      }
-    },
-  },
-  _default: {
-    name: 'THE STADIUM',
-    profile: 'rolling',
-    sky: ['#070b14', '#132038', '#2b2438'],
-    turf: '#2c5c34', cap: '#59ad63', dark: '#1d3f24', stripe: 'rgba(226,240,255,.13)',
-    back(s){
-      ctx.fillStyle = 'rgba(255,235,190,.05)';
-      for (let i = 0; i < 5; i++){
-        const lx = 40 + i * 105;
-        ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx - 38, 130); ctx.lineTo(lx + 38, 130); ctx.closePath(); ctx.fill();
-      }
-      ctx.fillStyle = '#0a111d'; ctx.fillRect(0, 108, VW, 50);
-      for (let i = 0; i < 150; i++){
-        const cx = (i * 47) % VW, cy = 112 + ((i * 19) % 42);
-        ctx.fillStyle = ['#20304a','#27384f','#1a2740'][i % 3];
-        ctx.fillRect(cx, cy, 2, 2);
-      }
-    },
-  },
-};
-const arenaFor = key => ARENAS[key] || ARENAS._default;
+const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
+const rnd = (a,b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
 
 /* ------------------------------------------------------------------ *
  * CANVAS
@@ -284,94 +163,203 @@ ctx.imageSmoothingEnabled = false;
 function fit(){
   const ctl = document.getElementById('ctl');
   const ctlH = ctl.classList.contains('on') ? ctl.offsetHeight + 16 : 12;
-  const w = innerWidth - 12, h = innerHeight - ctlH - 12;
-  let s = Math.min(w / VW, h / VH);
-  if (s >= 1) s = Math.floor(s * 2) / 2;
-  s = Math.max(s, 0.4);
+  const s = Math.max(0.2, Math.min((innerWidth - 12) / VW, (innerHeight - ctlH - 12) / VH));
   cv.style.width  = Math.round(VW * s) + 'px';
   cv.style.height = Math.round(VH * s) + 'px';
 }
 addEventListener('resize', fit);
 
 /* ------------------------------------------------------------------ *
- * CRESTS
+ * TERRAIN — a bitmap. terCv holds the art with its alpha; SOL mirrors
+ * that alpha as one byte per pixel so collision is an array lookup.
  * ------------------------------------------------------------------ */
-const LOGO = {};
+const terCv = document.createElement('canvas');
+terCv.width = VW; terCv.height = VH;
+const terCx = terCv.getContext('2d', { willReadFrequently:true });
+let SOL = new Uint8Array(VW * VH);
 
-function dominantAccent(img){
-  const n = 24;
-  const c = document.createElement('canvas'); c.width = c.height = n;
-  const x = c.getContext('2d', { willReadFrequently:true });
-  x.drawImage(img, 0, 0, n, n);
-  const d = x.getImageData(0, 0, n, n).data;
-  const bins = new Map();
-  for (let i = 0; i < d.length; i += 4){
-    if (d[i+3] < 200) continue;
-    const r = d[i], g = d[i+1], b = d[i+2];
-    const mx = Math.max(r,g,b), mn = Math.min(r,g,b);
-    if (mx < 45) continue;
-    const sat = (mx - mn) / mx;
-    if (sat < 0.18 && mx > 225) continue;
-    const k = (r>>5)*64 + (g>>5)*8 + (b>>5);
-    const e = bins.get(k) || { w:0, r:0, g:0, b:0, n:0 };
-    e.w += 1 + sat * 2.5; e.r += r; e.g += g; e.b += b; e.n++;
-    bins.set(k, e);
+const solid = (x, y) =>
+  x >= 0 && x < VW && y >= 0 && y < VH && SOL[(y | 0) * VW + (x | 0)] === 1;
+
+function syncAlpha(x0, y0, x1, y1){
+  x0 = clamp(x0 | 0, 0, VW - 1); x1 = clamp(x1 | 0, 0, VW - 1);
+  y0 = clamp(y0 | 0, 0, VH - 1); y1 = clamp(y1 | 0, 0, VH - 1);
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  if (w <= 0 || h <= 0) return;
+  const d = terCx.getImageData(x0, y0, w, h).data;
+  for (let y = 0; y < h; y++){
+    const row = (y0 + y) * VW + x0;
+    for (let x = 0; x < w; x++) SOL[row + x] = d[(y * w + x) * 4 + 3] > 128 ? 1 : 0;
   }
-  let best = null;
-  for (const e of bins.values()) if (!best || e.w > best.w) best = e;
-  if (!best) return { accent:'#6fa8ff', dark:'#22406e', light:'#cfe1ff' };
-  const r = best.r/best.n, g = best.g/best.n, b = best.b/best.n;
-  const hex = (a,b2,c2) => '#' + [a,b2,c2].map(v => Math.round(v).toString(16).padStart(2,'0')).join('');
-  const lift = v => Math.min(255, v * 1.15 + 30);
-  const glow = v => Math.min(255, v * 0.45 + 140);
-  return { accent: hex(lift(r),lift(g),lift(b)), dark: hex(r*0.42,g*0.42,b*0.42), light: hex(glow(r),glow(g),glow(b)) };
+}
+const syncAll = () => syncAlpha(0, 0, VW - 1, VH - 1);
+
+/* Blasts remove ground. */
+function carve(cx, cy, r){
+  terCx.save();
+  terCx.globalCompositeOperation = 'destination-out';
+  // MUST be fully opaque: destination-out removes only as much alpha as it
+  // paints, and the ground pass leaves a translucent fillStyle behind.
+  terCx.fillStyle = '#000';
+  terCx.beginPath(); terCx.arc(cx, cy, r, 0, 6.284); terCx.fill();
+  for (let i = 0; i < 5; i++){          // ragged rim, so craters aren't perfect circles
+    const a = rnd(0, 6.283), d = r * rnd(0.6, 1.0);
+    terCx.beginPath(); terCx.arc(cx + Math.cos(a)*d, cy + Math.sin(a)*d, r * rnd(0.2, 0.4), 0, 6.284); terCx.fill();
+  }
+  terCx.restore();
+  syncAlpha(cx - r - 6, cy - r - 6, cx + r + 6, cy + r + 6);
 }
 
-// 96px badge for a 32px crest: sharp at any device pixel ratio, and it
-// leaves headroom for chunks to be blown out of it.
-const BADGE = 96;
-function badge(img, accent){
-  const c = document.createElement('canvas'); c.width = c.height = BADGE;
-  const x = c.getContext('2d');
-  x.save();
-  x.beginPath(); x.arc(BADGE/2, BADGE/2, BADGE/2 - 4, 0, 6.284); x.clip();
-  x.fillStyle = '#0e1622'; x.fillRect(0, 0, BADGE, BADGE);
-  x.drawImage(img, 3, 3, BADGE - 6, BADGE - 6);
-  x.restore();
-  x.lineWidth = 5; x.strokeStyle = accent;
-  x.beginPath(); x.arc(BADGE/2, BADGE/2, BADGE/2 - 3.5, 0, 6.284); x.stroke();
-  x.lineWidth = 2.2; x.strokeStyle = 'rgba(0,0,0,.72)';
-  x.beginPath(); x.arc(BADGE/2, BADGE/2, BADGE/2 - 1.2, 0, 6.284); x.stroke();
-  return c;
+/* Shit talk adds ground, right on top of whoever it hits. */
+function heapUp(cx, cy, r, height){
+  terCx.save();
+  const g = terCx.createLinearGradient(0, cy - height, 0, cy + 10);
+  g.addColorStop(0, '#8a6a37'); g.addColorStop(1, '#4a3620');
+  terCx.fillStyle = g;
+  terCx.beginPath();
+  terCx.moveTo(cx - r, cy + 8);
+  for (let dx = -r; dx <= r; dx++){
+    const k = 1 - Math.abs(dx) / r;
+    terCx.lineTo(cx + dx, cy + 8 - height * k * k * (3 - 2 * k));
+  }
+  terCx.lineTo(cx + r, cy + 8);
+  terCx.closePath(); terCx.fill();
+  terCx.fillStyle = 'rgba(30,20,10,.5)';
+  for (let i = 0; i < 26; i++)
+    terCx.fillRect(cx + rnd(-r, r), cy + 8 - rnd(0, height * 0.8), 3, 3);
+  terCx.restore();
+  syncAlpha(cx - r - 4, cy - height - 12, cx + r + 4, cy + 14);
 }
 
-function placeholderLogo(i){
-  const hue = (i * 360 / TEAMS.length) | 0;
-  const c = document.createElement('canvas'); c.width = c.height = 96;
-  const x = c.getContext('2d');
-  x.fillStyle = 'hsl(' + hue + ',62%,48%)';
-  x.beginPath(); x.arc(48, 48, 42, 0, 6.284); x.fill();
-  x.strokeStyle = 'hsl(' + hue + ',70%,82%)'; x.lineWidth = 6; x.stroke();
-  return c;
+/* ------------------------------------------------------------------ *
+ * COLLAPSE — one flood fill from the bottom marks everything still
+ * attached. Whatever it misses lifts out as a single falling layer.
+ * ------------------------------------------------------------------ */
+let falling = null;
+const SUP = new Uint8Array(VW * VH);
+const FSTACK = new Int32Array(VW * VH);
+
+function collapse(){
+  if (falling) return false;
+  SUP.fill(0);
+  let sp = 0;
+  for (let x = 0; x < VW; x++){
+    const i = (VH - 1) * VW + x;
+    if (SOL[i] && !SUP[i]){ SUP[i] = 1; FSTACK[sp++] = i; }
+  }
+  while (sp > 0){
+    const i = FSTACK[--sp], x = i % VW, y = (i / VW) | 0;
+    let j;
+    if (x > 0)      { j = i - 1;  if (SOL[j] && !SUP[j]){ SUP[j] = 1; FSTACK[sp++] = j; } }
+    if (x < VW - 1) { j = i + 1;  if (SOL[j] && !SUP[j]){ SUP[j] = 1; FSTACK[sp++] = j; } }
+    if (y > 0)      { j = i - VW; if (SOL[j] && !SUP[j]){ SUP[j] = 1; FSTACK[sp++] = j; } }
+    if (y < VH - 1) { j = i + VW; if (SOL[j] && !SUP[j]){ SUP[j] = 1; FSTACK[sp++] = j; } }
+  }
+
+  let n = 0, x0 = VW, y0 = VH, x1 = -1, y1 = -1;
+  for (let y = 0; y < VH; y++){
+    const row = y * VW;
+    for (let x = 0; x < VW; x++){
+      const i = row + x;
+      if (SOL[i] && !SUP[i]){
+        n++;
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+    }
+  }
+  if (n === 0) return false;
+
+  // too small to be a falling body — let it go as debris
+  if (n < MIN_CHUNK){
+    const img = terCx.getImageData(x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+    const d = img.data, w = x1 - x0 + 1;
+    for (let y = 0; y < img.height; y++)
+      for (let x = 0; x < w; x++)
+        if (!SUP[(y0 + y) * VW + x0 + x]) d[(y * w + x) * 4 + 3] = 0;
+    terCx.putImageData(img, x0, y0);
+    syncAlpha(x0, y0, x1, y1);
+    for (let i = 0; i < 10; i++)
+      bits.push({ x:rnd(x0,x1), y:rnd(y0,y1), vx:rnd(-1,1), vy:rnd(-1,0.5),
+                  life:rnd(20,40), max:40, c:'#7a6a58', smoke:false });
+    return true;
+  }
+
+  // lift the loose mass into its own layer
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  const src = terCx.getImageData(x0, y0, w, h);
+  const cut = terCx.createImageData(w, h);
+  for (let y = 0; y < h; y++){
+    for (let x = 0; x < w; x++){
+      const k = (y * w + x) * 4;
+      if (!SUP[(y0 + y) * VW + x0 + x] && src.data[k + 3] > 128){
+        cut.data[k] = src.data[k]; cut.data[k+1] = src.data[k+1];
+        cut.data[k+2] = src.data[k+2]; cut.data[k+3] = src.data[k+3];
+        src.data[k + 3] = 0;
+      }
+    }
+  }
+  terCx.putImageData(src, x0, y0);
+  syncAlpha(x0, y0, x1, y1);
+
+  const fc = document.createElement('canvas'); fc.width = w; fc.height = h;
+  fc.getContext('2d').putImageData(cut, 0, 0);
+
+  // lowest solid pixel per column — all the collision test needs
+  const foot = new Int32Array(w).fill(-1);
+  for (let x = 0; x < w; x++)
+    for (let y = h - 1; y >= 0; y--)
+      if (cut.data[(y * w + x) * 4 + 3] > 128){ foot[x] = y; break; }
+
+  falling = { cv:fc, x:x0, y:y0, w, h, foot, off:0, vy:0 };
+  return true;
 }
 
-async function loadAssets(){
-  let bundle = null;
-  try { const r = await fetch('../scfl-team-logos-resized.json', { cache:'force-cache' }); if (r.ok) bundle = await r.json(); }
-  catch (_) {}
-  await Promise.all(TEAMS.map((t, i) => new Promise(done => {
-    const finish = src => {
-      const tone = dominantAccent(src);
-      LOGO[t.key] = Object.assign({ img: badge(src, tone.accent) }, tone);
-      done();
-    };
-    const src = bundle && bundle[t.key];
-    if (!src) return finish(placeholderLogo(i));
-    const img = new Image();
-    img.onload  = () => { try { finish(img); } catch (_) { finish(placeholderLogo(i)); } };
-    img.onerror = () => finish(placeholderLogo(i));
-    img.src = src;
-  })));
+function stepFalling(){
+  if (!falling) return;
+  const f = falling;
+  f.vy = Math.min(f.vy + GRAV, 14);
+  const next = f.off + f.vy;
+  let hit = false;
+  for (let x = 0; x < f.w; x++){
+    if (f.foot[x] < 0) continue;
+    const gx = f.x + x, gy = f.y + f.foot[x] + next + 1;
+    if (gy >= VH - 1 || solid(gx, gy)){ hit = true; break; }
+  }
+  if (!hit){ f.off = next; return; }
+
+  // settle: back off to the last clear offset, stamp in, then re-check
+  let o = Math.floor(f.off);
+  for (let t = 0; t < 20; t++){
+    let blocked = false;
+    for (let x = 0; x < f.w; x++){
+      if (f.foot[x] < 0) continue;
+      const gy = f.y + f.foot[x] + o + 1;
+      if (gy >= VH - 1 || solid(f.x + x, gy)){ blocked = true; break; }
+    }
+    if (!blocked) o++; else break;
+  }
+  const dropped = o;
+  terCx.drawImage(f.cv, f.x, f.y + dropped);
+  syncAlpha(f.x - 2, f.y - 2, f.x + f.w + 2, f.y + f.h + dropped + 2);
+
+  // masonry landing on a crest hurts, on the same curve as a fall
+  for (const p of P){
+    if (p.dead) continue;
+    if (p.x >= f.x - 8 && p.x <= f.x + f.w + 8 &&
+        p.y >= f.y + dropped - 8 && p.y <= f.y + f.h + dropped + 24){
+      const d = Math.min(FALL_CAP, Math.round(dropped / FALL_PER) + 3);
+      p.hp = Math.max(0, p.hp - d);
+      say(TEAMS[p.team].name + ' CRUSHED  -' + d);
+      if (p.hp <= 0) p.dead = true;
+    }
+  }
+  for (let i = 0; i < 16; i++)
+    bits.push({ x:rnd(f.x, f.x + f.w), y:f.y + f.h + dropped, vx:rnd(-2,2), vy:rnd(-2,0),
+                life:rnd(24,48), max:48, c:'#9a8a78', smoke:Math.random() < 0.5 });
+  Sound.thud(); G.shake = 9;
+  falling = null;
+  if (G.cascade < 6){ G.cascade++; collapse(); }
 }
 
 /* ------------------------------------------------------------------ *
@@ -413,256 +401,295 @@ const Sound = (() => {
   return {
     resume(){ ensure(); if (ac.state === 'suspended') ac.resume(); },
     now(){ return ensure().currentTime; },
-    fire(){ tone(220, 0.16, 'square', 0.20, null, 70); noise(0.09, 0.16, null, 1800); },
-    boom(big){ noise(big ? 0.55 : 0.34, big ? 0.42 : 0.30, null, big ? 520 : 900);
-               tone(big ? 70 : 100, big ? 0.42 : 0.26, 'triangle', 0.26, null, 34); },
-    splat(){ noise(0.38, 0.34, null, 380); tone(90, 0.30, 'sine', 0.20, null, 42); },
-    dig(){ noise(0.30, 0.24, null, 1300); tone(150, 0.20, 'triangle', 0.14, null, 60); },
-    hit(){ const t = Sound.now(); tone(660,0.07,'square',0.22,t); tone(440,0.16,'square',0.20,t+0.06,180); },
-    thud(){ noise(0.16, 0.22, null, 300); },
-    swap(){ tone(520, 0.05, 'square', 0.14); },
-    dud(){ noise(0.14, 0.12, null, 700); },
-    win(){ const t = Sound.now(); [523,659,784,1047,1319].forEach((f,i)=>tone(f,0.24,'square',0.22,t+i*0.11)); },
+    fire(){ tone(220,0.16,'square',0.20,null,70); noise(0.09,0.16,null,1800); },
+    boom(big){ noise(big?0.55:0.34, big?0.42:0.30, null, big?520:900);
+               tone(big?70:100, big?0.42:0.26, 'triangle', 0.26, null, 34); },
+    splat(){ noise(0.38,0.34,null,380); tone(90,0.30,'sine',0.20,null,42); },
+    dig(){ noise(0.30,0.24,null,1300); tone(150,0.20,'triangle',0.14,null,60); },
+    hex(){ const t=Sound.now(); [880,740,622,523].forEach((f,i)=>tone(f,0.22,'sine',0.16,t+i*0.07)); noise(0.4,0.10,t,2600); },
+    hit(){ const t=Sound.now(); tone(660,0.07,'square',0.22,t); tone(440,0.16,'square',0.20,t+0.06,180); },
+    thud(){ noise(0.20,0.26,null,260); tone(60,0.22,'sine',0.18,null,30); },
+    swap(){ tone(520,0.05,'square',0.14); },
+    dud(){ noise(0.14,0.12,null,700); },
+    win(){ const t=Sound.now(); [523,659,784,1047,1319].forEach((f,i)=>tone(f,0.24,'square',0.22,t+i*0.11)); },
   };
 })();
+
+/* ------------------------------------------------------------------ *
+ * CRESTS
+ * ------------------------------------------------------------------ */
+const LOGO = {};
+const BADGE = 128;
+
+function dominantAccent(img){
+  const n = 24;
+  const c = document.createElement('canvas'); c.width = c.height = n;
+  const x = c.getContext('2d', { willReadFrequently:true });
+  x.drawImage(img, 0, 0, n, n);
+  const d = x.getImageData(0, 0, n, n).data;
+  const bins = new Map();
+  for (let i = 0; i < d.length; i += 4){
+    if (d[i+3] < 200) continue;
+    const r = d[i], g = d[i+1], b = d[i+2];
+    const mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+    if (mx < 45) continue;
+    const sat = (mx - mn) / mx;
+    if (sat < 0.18 && mx > 225) continue;
+    const k = (r>>5)*64 + (g>>5)*8 + (b>>5);
+    const e = bins.get(k) || { w:0, r:0, g:0, b:0, n:0 };
+    e.w += 1 + sat*2.5; e.r += r; e.g += g; e.b += b; e.n++;
+    bins.set(k, e);
+  }
+  let best = null;
+  for (const e of bins.values()) if (!best || e.w > best.w) best = e;
+  if (!best) return { accent:'#6fa8ff', light:'#cfe1ff' };
+  const r = best.r/best.n, g = best.g/best.n, b = best.b/best.n;
+  const hex = (a,b2,c2) => '#' + [a,b2,c2].map(v => Math.round(v).toString(16).padStart(2,'0')).join('');
+  return { accent: hex(Math.min(255,r*1.15+30), Math.min(255,g*1.15+30), Math.min(255,b*1.15+30)),
+           light:  hex(Math.min(255,r*0.45+140), Math.min(255,g*0.45+140), Math.min(255,b*0.45+140)) };
+}
+
+function badge(img, accent){
+  const c = document.createElement('canvas'); c.width = c.height = BADGE;
+  const x = c.getContext('2d');
+  x.save();
+  x.beginPath(); x.arc(BADGE/2, BADGE/2, BADGE/2 - 5, 0, 6.284); x.clip();
+  x.fillStyle = '#0e1622'; x.fillRect(0, 0, BADGE, BADGE);
+  x.drawImage(img, 4, 4, BADGE - 8, BADGE - 8);
+  x.restore();
+  x.lineWidth = 6; x.strokeStyle = accent;
+  x.beginPath(); x.arc(BADGE/2, BADGE/2, BADGE/2 - 4, 0, 6.284); x.stroke();
+  x.lineWidth = 3; x.strokeStyle = 'rgba(0,0,0,.72)';
+  x.beginPath(); x.arc(BADGE/2, BADGE/2, BADGE/2 - 1.5, 0, 6.284); x.stroke();
+  return c;
+}
+
+function placeholderLogo(i){
+  const hue = (i * 360 / TEAMS.length) | 0;
+  const c = document.createElement('canvas'); c.width = c.height = BADGE;
+  const x = c.getContext('2d');
+  x.fillStyle = 'hsl(' + hue + ',62%,48%)';
+  x.beginPath(); x.arc(64, 64, 56, 0, 6.284); x.fill();
+  x.strokeStyle = 'hsl(' + hue + ',70%,82%)'; x.lineWidth = 8; x.stroke();
+  return c;
+}
+
+/* ------------------------------------------------------------------ *
+ * ARENAS — art if it exists, procedural ground if it doesn't.
+ * ------------------------------------------------------------------ */
+const ARENA_NAME = {
+  machines:'THE SCRAP WASTES', porkchopexpress:'THE NIGHT MARKET', powersofpain:'THE SQUARED CIRCLE',
+  wookieleaks:'THE CANOPY', killerklowns:'THE BIG TOP', smokedragons:'THE ASH PEAKS',
+  heavyhitters:'THE DEMOLITION SITE', lilchops:'THE CHOP SHOP', horsecollars:'THE STOCKYARD',
+  beavereaters:'THE DAM', guidohaters:'THE BOARDWALK', masterjeti:'THE CANYON',
+  bigblue:'THE STEEL SKYLINE', stillthecream:'THE LOVE PAD', gumbas:'THE MUSHROOM FOREST',
+  newworldorder:'THE FLOODLIT BOWL',
+};
+const arenaCache = {};
+
+function loadImage(src){
+  return new Promise(res => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = () => res(null);
+    i.src = src;
+  });
+}
+
+async function loadArena(key){
+  if (arenaCache[key]) return arenaCache[key];
+  const [back, terrain] = await Promise.all([
+    loadImage('arenas/' + key + '-back.png'),
+    loadImage('arenas/' + key + '-terrain.png'),
+  ]);
+  return (arenaCache[key] = { back, terrain, name: ARENA_NAME[key] || 'THE FIELD' });
+}
+
+function proceduralGround(){
+  terCx.clearRect(0, 0, VW, VH);
+  const base = VH * 0.70;
+  const oct = [
+    { len:rnd(860,1240), amp:rnd(52,76) }, { len:rnd(420,600), amp:rnd(24,40) },
+    { len:rnd(210,310),  amp:rnd(10,18) }, { len:rnd(110,160), amp:rnd(3,7)   },
+  ].map(o => Object.assign(o, { ph:rnd(0,6.283) }));
+  const h = new Float32Array(VW);
+  for (let x = 0; x < VW; x++){
+    let y = base;
+    for (const o of oct) y += Math.sin(x / o.len * 6.283 + o.ph) * o.amp;
+    h[x] = clamp(y, VH * 0.34, VH - 40);
+  }
+  terCx.beginPath();
+  terCx.moveTo(0, VH);
+  for (let x = 0; x < VW; x++) terCx.lineTo(x, h[x]);
+  terCx.lineTo(VW, VH); terCx.closePath();
+  terCx.fillStyle = '#2c5c34'; terCx.fill();
+  terCx.strokeStyle = '#59ad63'; terCx.lineWidth = 4;
+  terCx.beginPath();
+  for (let x = 0; x < VW; x++) x ? terCx.lineTo(x, h[x]) : terCx.moveTo(x, h[x]);
+  terCx.stroke();
+  terCx.fillStyle = 'rgba(0,0,0,.18)';
+  for (let x = 0; x < VW; x += 96) terCx.fillRect(x, 0, 2, VH);
+}
+
+function proceduralSky(){
+  const g = ctx.createLinearGradient(0, 0, 0, VH);
+  g.addColorStop(0, '#070b14'); g.addColorStop(0.5, '#132038'); g.addColorStop(1, '#2b2438');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+  ctx.fillStyle = 'rgba(255,235,190,.05)';
+  for (let i = 0; i < 5; i++){
+    const lx = 80 + i * 210;
+    ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx - 76, 260); ctx.lineTo(lx + 76, 260); ctx.closePath(); ctx.fill();
+  }
+  ctx.fillStyle = '#0a111d'; ctx.fillRect(0, 216, VW, 100);
+  for (let i = 0; i < 260; i++){
+    ctx.fillStyle = ['#20304a','#27384f','#1a2740'][i % 3];
+    ctx.fillRect((i * 47) % VW, 224 + ((i * 19) % 84), 4, 4);
+  }
+}
 
 /* ------------------------------------------------------------------ *
  * STATE
  * ------------------------------------------------------------------ */
 const G = {
   mode:'load', vsCpu:true, cpuSkill:1,
-  pickSide:0, picks:[0, 12], home:0,
-  turn:0, wind:0, shake:0,
+  pickSide:0, picks:[0, 9], home:0,
+  turn:0, wind:0, shake:0, cascade:0,
   msg:'', msgT:0, banner:'', bannerT:0,
   wins:[0,0], winner:-1, arena:null, cpuThink:0, settleT:0,
 };
-let T = null, P = [], shots = [], bits = [];
+let P = [], shots = [], bits = [];
+const say = m => { G.msg = m; G.msgT = 130; };
 
-const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
-const rnd = (a,b) => a + Math.random() * (b - a);
-const pick = arr => arr[Math.floor(Math.random() * arr.length)];
-
-/* ------------------------------------------------------------------ *
- * TERRAIN — T[x] is the y of the ground in column x. Each arena has
- * its own profile; all of them get smoothed, because sharp one-pixel
- * peaks swallow shots and make aiming feel arbitrary.
- * ------------------------------------------------------------------ */
-function smooth(passes){
-  for (let p = 0; p < passes; p++){
-    const c = Float32Array.from(T);
-    for (let x = 1; x < VW - 1; x++) T[x] = (c[x-1] + c[x]*2 + c[x+1]) / 4;
-  }
+/* Surface directly beneath a point: first solid pixel scanning down. */
+function surfaceAt(x, fromY){
+  for (let y = Math.max(0, fromY | 0); y < VH; y++) if (solid(x, y)) return y;
+  return VH;
 }
 
-function profileRolling(base){
-  const oct = [
-    { len: rnd(430,620), amp: rnd(26,38) },
-    { len: rnd(210,300), amp: rnd(12,20) },
-    { len: rnd(105,155), amp: rnd(5,9)   },
-    { len: rnd(55,80),   amp: rnd(1.5,3.5) },
-  ].map(o => Object.assign(o, { ph: rnd(0,6.283) }));
-  for (let x = 0; x < VW; x++){
-    let y = base;
-    for (const o of oct) y += Math.sin(x / o.len * 6.283 + o.ph) * o.amp;
-    T[x] = y;
-  }
-  smooth(2);
-}
-
-function profileTerraced(base){
-  profileRolling(base);
-  for (let x = 0; x < VW; x++) T[x] = Math.round(T[x] / 11) * 11;   // scrap heaps, mesa steps
-  smooth(1);
-}
-
-function profileStreet(base){
-  // flat rooftops of differing heights, like a row of stalls and shopfronts
-  let x = 0;
-  while (x < VW){
-    const w = Math.round(rnd(34, 76));
-    const y = base + rnd(-26, 20);
-    for (let i = 0; i < w && x + i < VW; i++) T[x + i] = y;
-    x += w;
-  }
-  smooth(1);
-}
-
-function profileRing(base){
-  // a canvas mat between the turnbuckles, floor either side
-  const floor = base + 34, mat = base - 22;
-  const L = 95, R = VW - 93, ramp = 16;
-  for (let x = 0; x < VW; x++){
-    let y = floor;
-    if (x > L - ramp && x < L)      y = floor + (mat - floor) * ((x - (L - ramp)) / ramp);
-    else if (x >= L && x <= R)      y = mat + Math.sin(x / 90) * 1.5;
-    else if (x > R && x < R + ramp) y = mat + (floor - mat) * ((x - R) / ramp);
-    T[x] = y;
-  }
-  smooth(2);
-}
-
-function buildTerrain(profile){
-  T = new Float32Array(VW);
-  const base = VH * 0.68;
-  ({ rolling:profileRolling, terraced:profileTerraced, street:profileStreet, ring:profileRing }
-    [profile] || profileRolling)(base);
-  for (let x = 0; x < VW; x++) T[x] = clamp(T[x], VH * 0.34, VH - 20);
-}
-
-const groundAt = x => T[clamp(Math.round(x), 0, VW - 1)];
-
-/* ------------------------------------------------------------------ *
- * GROUND CHANGES
- * ------------------------------------------------------------------ */
-function carve(cx, cy, r){
-  for (let dx = -r; dx <= r; dx++){
-    const x = Math.round(cx + dx);
-    if (x < 0 || x >= VW) continue;
-    const h = Math.sqrt(Math.max(0, r*r - dx*dx));
-    const top = cy - h, bot = cy + h;
-    if (bot > T[x] && top < T[x]) T[x] = Math.min(VH - 2, bot);
-  }
-}
-
-// Shit Talk works the other way: it puts ground ON the target.
-function heap(cx, cy, r, height){
-  for (let dx = -r; dx <= r; dx++){
-    const x = Math.round(cx + dx);
-    if (x < 0 || x >= VW) continue;
-    const k = 1 - Math.abs(dx) / r;
-    T[x] = Math.max(6, T[x] - height * k * k * (3 - 2 * k));   // smoothstep dome
-  }
-}
-
-/* ------------------------------------------------------------------ *
- * COMBATANTS
- * ------------------------------------------------------------------ */
-function makeSprite(teamKey){
-  const src = LOGO[teamKey].img;
+function makeSprite(key){
   const c = document.createElement('canvas'); c.width = c.height = BADGE;
-  c.getContext('2d').drawImage(src, 0, 0);
+  c.getContext('2d').drawImage(LOGO[key].img, 0, 0);
   return c;
 }
 
-// Crests chip away where they are hit, at a fraction of the rate the
-// ground does. Purely cosmetic: the hitbox stays a circle.
-function erode(p, cx, cy, dmg){
+/* Crests chip where they are hit, at a fraction of the ground's rate.
+   Cosmetic only — the hitbox stays a circle. */
+function erode(p, cx, cy, r){
   const g = p.sprite.getContext('2d');
-  const R = BADGE / 2;
-  // The bite follows the damage taken, not the blast radius: a blast is
-  // often wider than the whole crest, so scaling it up erased the badge.
-  const lr = R * 0.34 * Math.sqrt(Math.max(dmg, 2) / 26);
-  const ang = Math.atan2(cy - p.y, cx - p.x) || 0;
-  const lx = R + Math.cos(ang) * R * 0.6;
-  const ly = R + Math.sin(ang) * R * 0.6;
+  const s = BADGE / (CREST_R * 2);
+  const lx = (cx - p.x) * s + BADGE/2, ly = (cy - p.y) * s + BADGE/2, lr = r * EROSION * s;
   g.save();
   g.globalCompositeOperation = 'destination-out';
+  g.fillStyle = '#000';
   g.beginPath(); g.arc(lx, ly, lr, 0, 6.284); g.fill();
   for (let i = 0; i < 3; i++){
-    const a = rnd(0, 6.283), d = lr * rnd(0.4, 0.9);
-    g.beginPath(); g.arc(lx + Math.cos(a)*d, ly + Math.sin(a)*d, lr * rnd(0.3, 0.55), 0, 6.284); g.fill();
+    const a = rnd(0, 6.283), d = lr * rnd(0.5, 1.0);
+    g.beginPath(); g.arc(lx + Math.cos(a)*d, ly + Math.sin(a)*d, lr * rnd(0.28, 0.5), 0, 6.284); g.fill();
   }
   g.restore();
 }
 
-function makePlayers(){
-  const sp = (G.arena && G.arena.spawn) || [30 / VW, 0.27, 0.73, 1 - 30 / VW];
-  const lx = Math.round(rnd(sp[0] * VW, sp[1] * VW));
-  const rx = Math.round(rnd(sp[2] * VW, sp[3] * VW));
-  P = [
-    { team:G.picks[0], x:lx, side: 1, hp:100, angle: 50, power:62, r:CREST_R, wep:0, ammo:{}, dead:false, vy:0, fall:0 },
-    { team:G.picks[1], x:rx, side:-1, hp:100, angle:130, power:62, r:CREST_R, wep:0, ammo:{}, dead:false, vy:0, fall:0 },
-  ];
-  for (const p of P){
-    for (const w of WEAPONS) p.ammo[w.id] = w.ammo;
-    p.sprite = makeSprite(TEAMS[p.team].key);
-    // flatten a pad so a crest never balances on a knife edge
-    const g = groundAt(p.x);
-    for (let x = p.x - 13; x <= p.x + 13; x++){
-      const i = clamp(Math.round(x), 0, VW - 1);
-      T[i] = T[i] * 0.2 + g * 0.8;
-    }
-    p.y = groundAt(p.x) - p.r;
+function spawnX(lo, hi){
+  for (let t = 0; t < 60; t++){
+    const x = Math.round(rnd(lo, hi));
+    const y = surfaceAt(x, 0);
+    if (y < VH - 10 && y > VH * 0.25) return { x, y };
   }
+  return { x: Math.round((lo + hi) / 2), y: surfaceAt(Math.round((lo + hi) / 2), 0) };
 }
 
-// Ground falling away drops a crest; ground rising over one buries it.
+function makePlayers(){
+  const a = spawnX(60, VW * 0.26), b = spawnX(VW * 0.74, VW - 60);
+  P = [
+    { team:G.picks[0], x:a.x, side: 1, hp:100, angle: 50, power:62, r:CREST_R, wep:0, ammo:{}, dead:false, vy:0, fall:0, hexed:false },
+    { team:G.picks[1], x:b.x, side:-1, hp:100, angle:130, power:62, r:CREST_R, wep:0, ammo:{}, dead:false, vy:0, fall:0, hexed:false },
+  ];
+  P.forEach((p, i) => {
+    for (const w of WEAPONS) p.ammo[w.id] = w.ammo;
+    p.sprite = makeSprite(TEAMS[p.team].key);
+    p.y = (i === 0 ? a.y : b.y) - p.r;
+  });
+}
+
 function updateBodies(){
   for (const p of P){
     if (p.dead) continue;
-    const rest = groundAt(p.x) - p.r;
+    const surf = surfaceAt(p.x, p.y - p.r + 2);
+    const rest = surf - p.r;
     if (p.y < rest - 0.5){
-      p.vy += GRAV;
-      p.y += p.vy;
-      p.fall += p.vy;
+      p.vy += GRAV; p.y += p.vy; p.fall += p.vy;
       if (p.y >= rest){
         p.y = rest;
         if (p.fall > FALL_GRACE){
           const d = Math.min(FALL_CAP, Math.round((p.fall - FALL_GRACE) / FALL_PER));
-          if (d > 0){ p.hp = Math.max(0, p.hp - d); Sound.thud();
+          if (d > 0){
+            p.hp = Math.max(0, p.hp - d); Sound.thud();
             say(TEAMS[p.team].name + ' FELL  -' + d);
-            if (p.hp <= 0) p.dead = true; }
+            if (p.hp <= 0) p.dead = true;
+          }
         }
         p.vy = 0; p.fall = 0;
       }
-    } else {
-      p.vy = 0; p.fall = 0;
-      // never lift a crest: if the ground rose over it, it stays buried
-    }
+    } else { p.vy = 0; p.fall = 0; }
   }
 }
 
-const buried = p => groundAt(p.x) < p.y - 2;
-function say(m){ G.msg = m; G.msgT = 120; }
+const buried = p => solid(p.x, p.y - p.r - 6);
 
 /* ------------------------------------------------------------------ *
  * FIRING
  * ------------------------------------------------------------------ */
 const muzzle = p => {
   const a = p.angle * Math.PI / 180;
-  return { x: p.x + Math.cos(a) * 22, y: p.y - Math.sin(a) * 22 };
+  return { x: p.x + Math.cos(a) * 44, y: p.y - Math.sin(a) * 44 };
 };
 
 function fire(p){
   const w = WEAPONS[p.wep];
   if (p.ammo[w.id] === 0){ Sound.dud(); say('OUT OF ' + w.name); return; }
   if (p.ammo[w.id] > 0) p.ammo[w.id]--;
-  // scatter is applied at launch: the shot leaves off where you aimed
-  const ang = p.angle + (w.scAng ? rnd(-w.scAng, w.scAng) : 0);
-  const pwr = clamp(p.power * (1 + (w.scPwr ? rnd(-w.scPwr, w.scPwr) / 100 : 0)), 5, MAX_POWER);
-  const m = muzzle(p), a = ang * Math.PI / 180, v = pwr * V_PER_PWR * w.speed;
-  shots.push({ x:m.x, y:m.y, vx:Math.cos(a)*v, vy:-Math.sin(a)*v, w, owner:P.indexOf(p), trail:[] });
-  G.banner = pick(FLAVOUR[w.id]); G.bannerT = 150;
+
+  const m = muzzle(p);
+  // Cursed: whatever you fire goes off in your face, however you aimed.
+  if (p.hexed){
+    p.hexed = false;
+    const a = p.angle * Math.PI / 180;
+    shots.push({ x:m.x, y:m.y, vx:Math.cos(a)*1.6, vy:-Math.sin(a)*1.6, w, owner:P.indexOf(p), trail:[], fuse:7 });
+    G.banner = 'THE CURSE TAKES IT'; G.bannerT = 170;
+    Sound.hex();
+  } else {
+    const ang = p.angle + (w.scAng ? rnd(-w.scAng, w.scAng) : 0);
+    const pwr = clamp(p.power * (1 + (w.scPwr ? rnd(-w.scPwr, w.scPwr)/100 : 0)), 5, MAX_POWER);
+    const a = ang * Math.PI / 180, v = pwr * V_PER_PWR * w.speed;
+    shots.push({ x:m.x, y:m.y, vx:Math.cos(a)*v, vy:-Math.sin(a)*v, w, owner:P.indexOf(p), trail:[], fuse:0 });
+    G.banner = pick(FLAVOUR[w.id]); G.bannerT = 160;
+  }
   Sound.fire();
   G.mode = 'fly';
   syncUI();
 }
 
-/* ------------------------------------------------------------------ *
- * IMPACT
- * ------------------------------------------------------------------ */
 function explode(s, cx, cy){
   const w = s.w;
-  const tint = TINT[w.id];
+  cx = clamp(cx, 0, VW - 1); cy = clamp(cy, 0, VH - 1);
 
   if (w.kind === 'heap'){
-    heap(cx, cy, w.r, 22);
-    Sound.splat();
-    G.shake = 5;
-    for (let i = 0; i < 26; i++){
-      const a = rnd(0, 6.283), sp = rnd(0.4, 2.2);
-      bits.push({ x:cx, y:cy, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - 1.1,
-                  life:rnd(20,44), max:44, c: i % 3 ? '#7c5a2e' : '#4f3a1d', smoke:false });
+    heapUp(cx, cy, w.r, 84);   // must clear a 64px crest to actually bury it
+    Sound.splat(); G.shake = 8;
+    for (let i = 0; i < 30; i++){
+      const a = rnd(0, 6.283), sp = rnd(0.5, 3.0);
+      bits.push({ x:cx, y:cy, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - 1.6,
+                  life:rnd(22,48), max:48, c: i % 3 ? '#7c5a2e' : '#4f3a1d', smoke:false });
     }
   } else {
     carve(cx, cy, w.r);
-    const big = w.r >= 30;
+    const big = w.r >= 60;
     w.kind === 'dig' ? Sound.dig() : Sound.boom(big);
-    G.shake = big ? 13 : 8;
-    for (let i = 0; i < (big ? 34 : 20); i++){
-      const a = rnd(0, 6.283), sp = rnd(0.6, big ? 4.4 : 3.0);
-      bits.push({ x:cx, y:cy, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - 0.7,
-                  life:rnd(22,52), max:52, c:tint, smoke:Math.random() < 0.45 });
+    G.shake = big ? 16 : 10;
+    for (let i = 0; i < (big ? 40 : 24); i++){
+      const a = rnd(0, 6.283), sp = rnd(0.8, big ? 6 : 4);
+      bits.push({ x:cx, y:cy, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - 1,
+                  life:rnd(24,56), max:56, c:w.tint, smoke:Math.random() < 0.45 });
     }
   }
 
@@ -670,17 +697,25 @@ function explode(s, cx, cy){
   P.forEach((p, i) => {
     if (p.dead) return;
     const d = Math.hypot(p.x - cx, p.y - cy);
-    if (d > reach) return;
-    let dmg = w.dmg * (1 - d / reach);
-    if (w.kind === 'sniper' && d < p.r * 0.5) dmg = w.dmg;
+    if (d > reach + p.r) return;
+    erode(p, cx, cy, w.r);
+    let dmg = w.dmg * (1 - d / (reach + p.r));
+    if (w.kind === 'sniper' && d < p.r + 8) dmg = w.dmg;
     dmg = Math.round(dmg);
+    if (w.kind === 'hex' && i !== s.owner && d < reach){
+      p.hexed = true;
+      say(TEAMS[p.team].name + ' IS CURSED');
+      Sound.hex();
+    }
     if (dmg <= 0) return;
-    erode(p, cx, cy, dmg);
     p.hp = Math.max(0, p.hp - dmg);
     Sound.hit();
     say((i === s.owner ? 'OWN GOAL — ' : '') + TEAMS[p.team].name + '  -' + dmg);
     if (p.hp <= 0) p.dead = true;
   });
+
+  G.cascade = 0;
+  collapse();
 }
 
 function stepShots(){
@@ -689,20 +724,23 @@ function stepShots(){
     let gone = false;
     for (let k = 0; k < SUBSTEPS && !gone; k++){
       const dt = 1 / SUBSTEPS;
+      if (s.fuse > 0){
+        s.fuse -= dt;
+        if (s.fuse <= 0){ explode(s, s.x, s.y); gone = true; break; }
+      }
       s.vy += GRAV * dt;
       s.vx += G.wind * WIND_ACC * s.w.wind * dt;
-      s.x  += s.vx * dt;
-      s.y  += s.vy * dt;
-      if (s.x < -80 || s.x > VW + 80 || s.y > VH + 120){ gone = true; break; }
+      s.x += s.vx * dt; s.y += s.vy * dt;
+      if (s.x < -140 || s.x > VW + 140 || s.y > VH + 200){ gone = true; break; }
       for (const p of P){
         if (p.dead) continue;
-        if (Math.hypot(p.x - s.x, p.y - s.y) < p.r + 2){ explode(s, s.x, s.y); gone = true; break; }
+        if (Math.hypot(p.x - s.x, p.y - s.y) < p.r + 3){ explode(s, s.x, s.y); gone = true; break; }
       }
       if (gone) break;
-      if (s.x >= 0 && s.x < VW && s.y >= groundAt(s.x)){ explode(s, s.x, groundAt(s.x)); gone = true; break; }
+      if (solid(s.x, s.y)){ explode(s, s.x, s.y); gone = true; break; }
     }
     if (gone) shots.splice(i, 1);
-    else { s.trail.push({ x:s.x, y:s.y }); if (s.trail.length > 26) s.trail.shift(); }
+    else { s.trail.push({ x:s.x, y:s.y }); if (s.trail.length > 40) s.trail.shift(); }
   }
 }
 
@@ -711,15 +749,11 @@ function endTurn(){
   if (alive.length < 2){
     G.winner = alive.length === 1 ? P.indexOf(alive[0]) : -1;
     if (G.winner >= 0) G.wins[G.winner]++;
-    Sound.win();
-    G.mode = 'over';
-    syncUI();
-    return;
+    Sound.win(); G.mode = 'over'; syncUI(); return;
   }
   G.turn = 1 - G.turn;
   G.wind = clamp(G.wind + rnd(-0.35, 0.35), -1, 1);
-  G.mode = 'aim';
-  G.cpuThink = 0;
+  G.mode = 'aim'; G.cpuThink = 0;
   syncUI();
 }
 
@@ -728,37 +762,44 @@ function endTurn(){
  * ------------------------------------------------------------------ */
 function simulate(from, angle, power, w){
   const a = angle * Math.PI / 180, v = power * V_PER_PWR * w.speed;
-  let x = from.x + Math.cos(a) * 22, y = from.y - Math.sin(a) * 22;
+  let x = from.x + Math.cos(a) * 44, y = from.y - Math.sin(a) * 44;
   let vx = Math.cos(a) * v, vy = -Math.sin(a) * v;
-  for (let f = 0; f < 900; f++){
+  for (let f = 0; f < 1400; f++){
     vy += GRAV; vx += G.wind * WIND_ACC * w.wind;
     x += vx; y += vy;
-    if (x < -60 || x > VW + 60 || y > VH + 90) return { x, y, off:true };
-    if (x >= 0 && x < VW && y >= groundAt(x)) return { x, y:groundAt(x), off:false };
+    if (x < -120 || x > VW + 120 || y > VH + 160) return { x, y, off:true };
+    if (solid(x, y)) return { x, y, off:false };
   }
   return { x, y, off:true };
 }
 
 function cpuShoot(p){
   const foe = P[1 - P.indexOf(p)];
-  // buried? dig out first — that is what Veto is for
-  if (buried(p)){ p.wep = WEAPONS.findIndex(w => w.id === 'veto'); p.angle = 90; p.power = 14; fire(p); return; }
+  if (p.hexed){                        // burn the cheapest round to break it
+    p.wep = WEAPONS.findIndex(w => w.id === 'lowball');
+    fire(p); return;
+  }
+  if (buried(p)){                      // dig out — that is what Veto is for
+    p.wep = WEAPONS.findIndex(w => w.id === 'veto');
+    p.angle = 90; p.power = 12; fire(p); return;
+  }
   const usable = WEAPONS.filter(w => p.ammo[w.id] !== 0 && w.id !== 'veto');
   let best = null;
-  for (let i = 0; i < 240; i++){
+  for (let i = 0; i < 260; i++){
     const w = pick(usable);
     const angle = p.side > 0 ? rnd(18, 84) : rnd(96, 162);
-    const power = rnd(34, MAX_POWER);
+    const power = rnd(30, MAX_POWER);
     const hit = simulate(p, angle, power, w);
     const d = hit.off ? 1e6 : Math.hypot(hit.x - foe.x, hit.y - foe.y);
     const reach = w.r + BLAST_PAD + foe.r;
     let score = d >= reach ? -d / 1000 : w.dmg * (1 - d / reach);
-    if (w.scAng) score *= 1 - w.scAng / 18;             // discount the wild ones
+    if (w.id === 'curse') score = d < reach ? 30 : -d / 1000;
+    if (w.scAng) score *= 1 - w.scAng / 18;
     if (w.ammo > 0) score *= 0.5 + 0.5 * (p.ammo[w.id] / w.ammo);
     if (!best || score > best.score) best = { score, angle, power, w };
   }
   if (!best) best = { angle: p.side > 0 ? 45 : 135, power: 60, w: WEAPONS[0] };
-  const slop = [15, 7.5, 2.2][G.cpuSkill];
+  const slop = [11, 5, 1.6][G.cpuSkill];
   p.angle = clamp(best.angle + rnd(-slop, slop), 5, 175);
   p.power = clamp(best.power + rnd(-slop, slop) * 1.6, 5, MAX_POWER);
   p.wep = WEAPONS.indexOf(best.w);
@@ -766,152 +807,127 @@ function cpuShoot(p){
 }
 
 /* ------------------------------------------------------------------ *
- * CONTROLS — sliders, nudges, typed entry, ammo tray, fire
+ * CONTROLS
  * ------------------------------------------------------------------ */
-const $ = id => document.getElementById(id);
-const el = {
-  ctl:$('ctl'), sA:$('sAngle'), nA:$('nAngle'), sP:$('sPower'), nP:$('nPower'),
-  aUp:$('aUp'), aDn:$('aDn'), pUp:$('pUp'), pDn:$('pDn'),
-  bAmmo:$('bAmmo'), bFire:$('bFire'), tray:$('tray'), trayList:$('trayList'),
-};
+const el = id => document.getElementById(id);
+const UI = { ctl:el('ctl'), sA:el('sAngle'), nA:el('nAngle'), sP:el('sPower'), nP:el('nPower'),
+             ammo:el('bAmmo'), fire:el('bFire'), tray:el('tray'), list:el('trayList') };
 
 const myTurn = () => G.mode === 'aim' && !(G.vsCpu && G.turn === 1);
 
 function syncUI(){
-  const live = G.mode !== 'load' && G.mode !== 'title' && P.length;
-  el.ctl.classList.toggle('on', live);
-  if (!live) { fit(); return; }
+  const on = G.mode === 'aim' || G.mode === 'fly' || G.mode === 'resolve';
+  UI.ctl.classList.toggle('on', on);
+  UI.ctl.classList.toggle('locked', !myTurn());
+  if (!P.length) return;
   const p = P[G.turn];
-  el.ctl.classList.toggle('locked', !myTurn());
-  if (document.activeElement !== el.nA){ el.sA.value = Math.round(p.angle); el.nA.value = Math.round(p.angle); }
-  if (document.activeElement !== el.nP){ el.sP.value = Math.round(p.power); el.nP.value = Math.round(p.power); }
+  UI.sA.value = Math.round(p.angle); UI.sP.value = Math.round(p.power);
+  if (document.activeElement !== UI.nA) UI.nA.value = Math.round(p.angle);
+  if (document.activeElement !== UI.nP) UI.nP.value = Math.round(p.power);
   const w = WEAPONS[p.wep], n = p.ammo[w.id];
-  el.bAmmo.innerHTML = w.name + ' <span class="cnt">' + (n < 0 ? '∞' : '×' + n) + '</span>';
+  UI.ammo.textContent = w.name + (n < 0 ? '  ∞' : '  ×' + n);
+  UI.ammo.style.color = w.tint;
   fit();
 }
 
-function setAngle(v){ if (!myTurn()) return; P[G.turn].angle = clamp(v, 5, 175); syncUI(); }
-function setPower(v){ if (!myTurn()) return; P[G.turn].power = clamp(v, 5, MAX_POWER); syncUI(); }
+function setAngle(v){ const p = P[G.turn]; if (!p) return; p.angle = clamp(v, 5, 175); syncUI(); }
+function setPower(v){ const p = P[G.turn]; if (!p) return; p.power = clamp(v, 5, MAX_POWER); syncUI(); }
 
-el.sA.addEventListener('input', () => setAngle(+el.sA.value));
-el.sP.addEventListener('input', () => setPower(+el.sP.value));
+UI.sA.addEventListener('input', () => myTurn() && setAngle(+UI.sA.value));
+UI.sP.addEventListener('input', () => myTurn() && setPower(+UI.sP.value));
+const commit = (inp, fn) => {
+  const v = parseInt(inp.value, 10);
+  if (!isNaN(v)) fn(v); else syncUI();
+  inp.blur();
+};
+UI.nA.addEventListener('change', () => commit(UI.nA, setAngle));
+UI.nP.addEventListener('change', () => commit(UI.nP, setPower));
+UI.nA.addEventListener('keydown', e => { if (e.key === 'Enter') commit(UI.nA, setAngle); });
+UI.nP.addEventListener('keydown', e => { if (e.key === 'Enter') commit(UI.nP, setPower); });
 
-// typing an exact value: commit on Enter or blur, ignore junk
-function wireNum(input, apply, get){
-  const commit = () => { const v = parseFloat(input.value); if (isFinite(v)) apply(v); else input.value = Math.round(get()); syncUI(); };
-  input.addEventListener('keydown', e => { if (e.key === 'Enter'){ input.blur(); } e.stopPropagation(); });
-  input.addEventListener('blur', commit);
-  input.addEventListener('focus', () => input.select());
-}
-wireNum(el.nA, setAngle, () => P.length ? P[G.turn].angle : 45);
-wireNum(el.nP, setPower, () => P.length ? P[G.turn].power : 62);
-
-// nudges: tap for one unit, hold to run
-function wireNudge(btn, step, apply, get){
-  let timer = null, delay = null;
-  const once = () => apply(get() + step);
-  const start = e => {
-    e.preventDefault(); Sound.resume(); once();
-    delay = setTimeout(() => { timer = setInterval(once, 55); }, 380);
+let repeat = null;
+function nudge(btn, fn, d){
+  const go = e => {
+    e.preventDefault(); Sound.resume();
+    if (!myTurn()) return;
+    fn(d);
+    let n = 0;
+    repeat = setInterval(() => { if (++n > 3) fn(d); }, 90);
   };
-  const stop = () => { clearTimeout(delay); clearInterval(timer); timer = delay = null; };
-  btn.addEventListener('touchstart', start, { passive:false });
-  btn.addEventListener('mousedown', start);
-  ['touchend','touchcancel','mouseup','mouseleave'].forEach(ev => btn.addEventListener(ev, stop));
+  const stop = () => { clearInterval(repeat); repeat = null; };
+  btn.addEventListener('pointerdown', go);
+  addEventListener('pointerup', stop);
+  addEventListener('pointercancel', stop);
 }
-wireNudge(el.aDn, -1, setAngle, () => P.length ? P[G.turn].angle : 45);
-wireNudge(el.aUp,  1, setAngle, () => P.length ? P[G.turn].angle : 45);
-wireNudge(el.pDn, -1, setPower, () => P.length ? P[G.turn].power : 62);
-wireNudge(el.pUp,  1, setPower, () => P.length ? P[G.turn].power : 62);
+nudge(el('aDn'), d => setAngle(P[G.turn].angle + d), -1);
+nudge(el('aUp'), d => setAngle(P[G.turn].angle + d),  1);
+nudge(el('pDn'), d => setPower(P[G.turn].power + d), -1);
+nudge(el('pUp'), d => setPower(P[G.turn].power + d),  1);
 
 function openTray(){
   if (!myTurn()) return;
   const p = P[G.turn];
-  el.trayList.innerHTML = '';
+  UI.list.innerHTML = '';
   WEAPONS.forEach((w, i) => {
     const n = p.ammo[w.id];
     const row = document.createElement('div');
     row.className = 'ammo' + (n === 0 ? ' out' : '') + (i === p.wep ? ' sel' : '');
-    row.innerHTML = '<span class="dot" style="background:' + TINT[w.id] + '"></span>' +
+    row.innerHTML = '<span class="dot" style="background:' + w.tint + '"></span>' +
                     '<span class="an">' + w.name + '</span>' +
                     '<span class="ad">' + w.desc + '</span>' +
                     '<span class="ac">' + (n < 0 ? '∞' : n) + '</span>';
-    if (n !== 0) row.addEventListener('click', () => { p.wep = i; Sound.swap(); closeTray(); syncUI(); });
-    el.trayList.appendChild(row);
+    row.onclick = () => { if (n !== 0){ p.wep = i; Sound.swap(); } UI.tray.classList.remove('on'); syncUI(); };
+    UI.list.appendChild(row);
   });
-  el.tray.classList.add('on');
+  UI.tray.classList.add('on');
 }
-const closeTray = () => el.tray.classList.remove('on');
-el.bAmmo.addEventListener('click', () => { Sound.resume(); openTray(); });
-el.tray.addEventListener('click', e => { if (e.target === el.tray) closeTray(); });
-el.bFire.addEventListener('click', () => { Sound.resume(); if (myTurn()) fire(P[G.turn]); });
+UI.ammo.addEventListener('click', () => { Sound.resume(); openTray(); });
+UI.tray.addEventListener('click', e => { if (e.target === UI.tray) UI.tray.classList.remove('on'); });
+UI.fire.addEventListener('click', () => { Sound.resume(); if (myTurn()) fire(P[G.turn]); });
 
-// keyboard stays available on desktop
+let okEdge = false;
 addEventListener('keydown', e => {
-  if (/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+  if (document.activeElement === UI.nA || document.activeElement === UI.nP) return;
   Sound.resume();
-  if (G.mode === 'title'){
-    if (e.code === 'ArrowLeft')  { G.picks[G.pickSide] = (G.picks[G.pickSide] + TEAMS.length - 1) % TEAMS.length; Sound.swap(); }
-    if (e.code === 'ArrowRight') { G.picks[G.pickSide] = (G.picks[G.pickSide] + 1) % TEAMS.length; Sound.swap(); }
-    if (e.code === 'ArrowUp')    { G.pickSide = 1 - G.pickSide; Sound.swap(); }
-    if (e.code === 'ArrowDown')  { G.vsCpu = !G.vsCpu; Sound.swap(); }
-    if (e.code === 'Tab')        { e.preventDefault(); G.cpuSkill = (G.cpuSkill + 1) % 3; Sound.swap(); }
-    if (e.code === 'Space' || e.code === 'Enter'){ e.preventDefault(); newRound(false); }
-    return;
-  }
-  if (G.mode === 'over'){
-    if (e.code === 'Space' || e.code === 'Enter'){
-      e.preventDefault();
-      if (G.wins[0] >= 3 || G.wins[1] >= 3){ G.wins = [0,0]; G.mode = 'title'; syncUI(); } else newRound(true);
-    }
-    return;
-  }
+  const k = e.code;
+  if (k === 'Space' || k === 'Enter'){ e.preventDefault(); okEdge = true; if (myTurn()) fire(P[G.turn]); }
   if (!myTurn()) return;
-  const p = P[G.turn];
-  if (e.code === 'ArrowUp')    { e.preventDefault(); setAngle(p.angle + 1); }
-  if (e.code === 'ArrowDown')  { e.preventDefault(); setAngle(p.angle - 1); }
-  if (e.code === 'ArrowRight') { e.preventDefault(); setPower(p.power + 1); }
-  if (e.code === 'ArrowLeft')  { e.preventDefault(); setPower(p.power - 1); }
-  if (e.code === 'Tab'){ e.preventDefault();
-    for (let i = 1; i <= WEAPONS.length; i++){
-      const n = (p.wep + i) % WEAPONS.length;
-      if (p.ammo[WEAPONS[n].id] !== 0){ p.wep = n; break; }
-    }
-    Sound.swap(); syncUI();
-  }
-  if (e.code === 'Space'){ e.preventDefault(); fire(p); }
+  const step = e.shiftKey ? 5 : 1;
+  if (k === 'ArrowUp'   || k === 'KeyW'){ e.preventDefault(); setAngle(P[G.turn].angle + step); }
+  if (k === 'ArrowDown' || k === 'KeyS'){ e.preventDefault(); setAngle(P[G.turn].angle - step); }
+  if (k === 'ArrowRight'|| k === 'KeyD'){ e.preventDefault(); setPower(P[G.turn].power + step); }
+  if (k === 'ArrowLeft' || k === 'KeyA'){ e.preventDefault(); setPower(P[G.turn].power - step); }
+  if (k === 'Tab' || k === 'KeyQ'){ e.preventDefault(); openTray(); }
 });
-cv.addEventListener('click', () => {
-  Sound.resume();
-  if (G.mode === 'title') newRound(false);
-  else if (G.mode === 'over'){
-    if (G.wins[0] >= 3 || G.wins[1] >= 3){ G.wins = [0,0]; G.mode = 'title'; syncUI(); } else newRound(true);
-  }
-});
+cv.addEventListener('pointerdown', () => { okEdge = true; Sound.resume(); });
 
 /* ------------------------------------------------------------------ *
- * ROUNDS
+ * ROUND
  * ------------------------------------------------------------------ */
-function newRound(keepScore){
-  G.home = 0;                                   // the first club picked hosts
-  G.arena = arenaFor(TEAMS[G.picks[G.home]].key);
-  buildTerrain(G.arena.profile);
+async function newRound(keepScore){
+  G.mode = 'load';
+  G.home = G.picks[0];
+  const key = TEAMS[G.home].key;
+  G.arena = await loadArena(key);
+  terCx.clearRect(0, 0, VW, VH);
+  if (G.arena.terrain) terCx.drawImage(G.arena.terrain, 0, 0, VW, VH);
+  else proceduralGround();
+  syncAll();
   makePlayers();
-  shots = []; bits = [];
+  shots = []; bits = []; falling = null;
   G.wind = rnd(-1, 1);
   G.turn = Math.random() < 0.5 ? 0 : 1;
   G.winner = -1;
   if (!keepScore) G.wins = [0, 0];
   G.mode = 'aim';
-  G.banner = ''; G.bannerT = 0;
-  say(G.arena.name + '  ·  ' + TEAMS[P[G.turn].team].name + ' TO OPEN');
-  closeTray();
+  say(G.arena.name);
   syncUI();
 }
 
 /* ------------------------------------------------------------------ *
  * UPDATE
  * ------------------------------------------------------------------ */
+let titleT = 0;
 function tick(){
   if (G.msgT > 0) G.msgT--;
   if (G.bannerT > 0) G.bannerT--;
@@ -920,25 +936,40 @@ function tick(){
   for (let i = bits.length - 1; i >= 0; i--){
     const b = bits[i];
     b.x += b.vx; b.y += b.vy;
-    b.vy += b.smoke ? -0.012 : 0.11;
+    b.vy += b.smoke ? -0.02 : 0.22;
     b.vx *= 0.985;
-    if (!b.smoke && b.y >= groundAt(b.x)){ b.y = groundAt(b.x); b.vx *= 0.4; b.vy = 0; }
+    if (!b.smoke && solid(b.x, b.y)){ b.vy = 0; b.vx *= 0.4; }
     if (--b.life <= 0) bits.splice(i, 1);
   }
 
-  if (G.mode === 'title' || G.mode === 'load') return;
+  if (G.mode === 'title'){
+    titleT++;
+    if (okEdge){ okEdge = false; newRound(false); }
+    return;
+  }
+  if (G.mode === 'load') return;
 
+  stepFalling();
   updateBodies();
 
   if (G.mode === 'aim'){
-    if (G.vsCpu && G.turn === 1 && ++G.cpuThink > 42) cpuShoot(P[G.turn]);
+    if (G.vsCpu && G.turn === 1 && !falling){
+      if (++G.cpuThink > 46) cpuShoot(P[1]);
+    }
   } else if (G.mode === 'fly'){
     stepShots();
-    if (!shots.length){ G.mode = 'resolve'; G.settleT = 34; }
+    if (!shots.length){ G.mode = 'resolve'; G.settleT = 30; }
   } else if (G.mode === 'resolve'){
-    const falling = P.some(p => !p.dead && p.y < groundAt(p.x) - p.r - 0.5);
-    if (!falling && --G.settleT <= 0) endTurn();
+    const busy = falling || P.some(p => !p.dead && p.vy !== 0);
+    if (!busy && --G.settleT <= 0) endTurn();
+  } else if (G.mode === 'over'){
+    if (okEdge){
+      okEdge = false;
+      if (G.wins[0] >= 3 || G.wins[1] >= 3){ G.mode = 'title'; G.wins = [0,0]; syncUI(); }
+      else newRound(true);
+    }
   }
+  okEdge = false;
 }
 
 /* ------------------------------------------------------------------ *
@@ -946,189 +977,191 @@ function tick(){
  * ------------------------------------------------------------------ */
 function text(str, x, y, col, size, align){
   ctx.fillStyle = col || '#e8eefb';
-  ctx.font = '700 ' + (size || 8) + 'px ui-monospace, Menlo, Consolas, monospace';
+  ctx.font = '700 ' + (size || 16) + 'px ui-monospace, Menlo, Consolas, monospace';
   ctx.textAlign = align || 'left'; ctx.textBaseline = 'top';
   ctx.fillText(str, Math.round(x), Math.round(y));
   ctx.textAlign = 'left';
 }
 function sh(str, x, y, col, size, align){
-  text(str, x + 1, y + 1, 'rgba(0,0,0,.8)', size, align);
+  text(str, x + 2, y + 2, 'rgba(0,0,0,.82)', size, align);
   text(str, x, y, col, size, align);
 }
 
-function drawArena(a){
-  const g = ctx.createLinearGradient(0, 0, 0, VH);
-  g.addColorStop(0, a.sky[0]); g.addColorStop(0.55, a.sky[1]); g.addColorStop(1, a.sky[2]);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
-  ctx.fillStyle = 'rgba(255,255,255,.26)';
-  for (let i = 0; i < 34; i++) ctx.fillRect((i * 97) % VW, (i * 41) % 96, 1, 1);
-  a.back(0);
-}
-
-function drawTerrain(a){
-  ctx.beginPath();
-  ctx.moveTo(0, VH);
-  for (let x = 0; x < VW; x++) ctx.lineTo(x, T[x]);
-  ctx.lineTo(VW, VH); ctx.closePath();
-  ctx.fillStyle = a.turf; ctx.fill();
-  ctx.strokeStyle = a.cap; ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let x = 0; x < VW; x++) x === 0 ? ctx.moveTo(x, T[x]) : ctx.lineTo(x, T[x]);
-  ctx.stroke();
-  ctx.strokeStyle = a.stripe; ctx.lineWidth = 1;
-  for (let x = 24; x < VW; x += 48){
-    ctx.beginPath(); ctx.moveTo(x + 0.5, T[x]); ctx.lineTo(x + 0.5, VH); ctx.stroke();
-  }
-}
-
-// barrel + crest, drawn BEFORE the ground so a buried crest is covered by it
-function drawCrestBody(p, dim){
+function drawCrest(p, dim){
   const lg = LOGO[TEAMS[p.team].key];
-  if (!lg) return;
   const a = p.angle * Math.PI / 180;
   ctx.strokeStyle = p.dead ? '#4b5568' : lg.accent;
-  ctx.lineWidth = 4; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + Math.cos(a) * 25, p.y - Math.sin(a) * 25); ctx.stroke();
+  ctx.lineWidth = 7; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + Math.cos(a) * 40, p.y - Math.sin(a) * 40); ctx.stroke();
   ctx.lineCap = 'butt';
-  ctx.globalAlpha = p.dead ? 0.34 : (dim ? 0.74 : 1);
-  ctx.drawImage(p.sprite, p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+  ctx.globalAlpha = p.dead ? 0.32 : (dim ? 0.75 : 1);
+  ctx.drawImage(p.sprite, p.x - p.r - 2, p.y - p.r - 2, (p.r + 2) * 2, (p.r + 2) * 2);
   ctx.globalAlpha = 1;
-}
 
-function drawBars(){
-  for (const p of P){
-    const bw = 34, bx = p.x - bw/2;
-    const by = Math.min(p.y - p.r - 10, groundAt(p.x) - p.r * 2 - 10);
-    ctx.fillStyle = 'rgba(0,0,0,.66)'; ctx.fillRect(bx - 1, by - 1, bw + 2, 6);
-    ctx.fillStyle = p.hp > 55 ? '#6fe08a' : p.hp > 25 ? '#ffd257' : '#ff6b5c';
-    ctx.fillRect(bx, by, Math.round(bw * p.hp / 100), 4);
-    if (buried(p) && !p.dead) sh('BURIED', p.x, by - 11, '#b98a4a', 8, 'center');
+  if (p.hexed && !p.dead){
+    const t = performance.now() / 260;
+    ctx.strokeStyle = '#9fe8ff'; ctx.lineWidth = 2;
+    for (let i = 0; i < 6; i++){
+      const ang = t + i * 1.047, d = p.r + 12 + Math.sin(t * 2 + i) * 3;
+      const x = p.x + Math.cos(ang) * d, y = p.y + Math.sin(ang) * d;
+      ctx.beginPath(); ctx.moveTo(x - 4, y); ctx.lineTo(x + 4, y);
+      ctx.moveTo(x, y - 4); ctx.lineTo(x, y + 4); ctx.stroke();
+    }
   }
-}
 
-function drawShots(){
-  for (const s of shots){
-    const tint = TINT[s.w.id];
-    ctx.strokeStyle = tint; ctx.lineWidth = 1; ctx.globalAlpha = 0.42;
-    ctx.beginPath();
-    s.trail.forEach((t, i) => i ? ctx.lineTo(t.x, t.y) : ctx.moveTo(t.x, t.y));
-    ctx.stroke(); ctx.globalAlpha = 1;
-    ctx.fillStyle = tint;
-    const r = s.w.kind === 'sniper' ? 1.8 : s.w.r >= 30 ? 3.6 : 2.6;
-    ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, 6.284); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.85)';
-    ctx.beginPath(); ctx.arc(s.x - 0.6, s.y - 0.6, r * 0.42, 0, 6.284); ctx.fill();
-  }
-}
-
-function drawBits(){
-  for (const b of bits){
-    const k = b.life / b.max;
-    ctx.globalAlpha = Math.max(0, b.smoke ? k * 0.5 : k);
-    ctx.fillStyle = b.smoke ? '#8d93a4' : b.c;
-    const s = b.smoke ? 3 : 2;
-    ctx.fillRect(Math.round(b.x), Math.round(b.y), s, s);
-  }
-  ctx.globalAlpha = 1;
+  const bw = 62, bx = p.x - bw/2, by = p.y - p.r - 18;
+  ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(bx - 2, by - 2, bw + 4, 9);
+  ctx.fillStyle = p.hp > 55 ? '#6fe08a' : p.hp > 25 ? '#ffd257' : '#ff6b5c';
+  ctx.fillRect(bx, by, Math.round(bw * p.hp / 100), 5);
 }
 
 function drawHUD(){
   const p = P[G.turn];
-  const lg = LOGO[TEAMS[p.team].key] || { accent:'#8fb6ff', light:'#dbe6f7' };
-  ctx.fillStyle = 'rgba(5,9,16,.82)'; ctx.fillRect(0, 0, VW, 17);
-  ctx.fillStyle = lg.accent; ctx.fillRect(0, 17, VW, 1);
-  sh(TEAMS[p.team].name + (G.turn === G.home ? '  (H)' : ''), 5, 5, lg.light, 9);
+  const lg = LOGO[TEAMS[p.team].key];
+  ctx.fillStyle = 'rgba(5,9,16,.84)'; ctx.fillRect(0, 0, VW, 34);
+  ctx.fillStyle = lg.accent; ctx.fillRect(0, 34, VW, 2);
+  sh(TEAMS[p.team].name, 10, 9, lg.light, 17);
 
   const wx = VW / 2;
-  sh('WIND', wx - 44, 5, '#8ea0bd', 8, 'right');
-  ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fillRect(wx - 40, 8, 80, 3);
-  const ww = G.wind * 40;
+  sh('WIND', wx - 96, 10, '#8ea0bd', 15, 'right');
+  ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fillRect(wx - 88, 16, 176, 6);
+  const ww = G.wind * 88;
   ctx.fillStyle = Math.abs(G.wind) > 0.6 ? '#ff9a6b' : '#8fd0ff';
-  ctx.fillRect(wx + (ww < 0 ? ww : 0), 8, Math.abs(ww), 3);
-  ctx.fillStyle = '#e8eefb'; ctx.fillRect(wx - 1, 6, 2, 7);
+  ctx.fillRect(wx + (ww < 0 ? ww : 0), 16, Math.abs(ww), 6);
+  ctx.fillStyle = '#e8eefb'; ctx.fillRect(wx - 2, 12, 4, 14);
 
-  sh(G.wins[0] + ' - ' + G.wins[1], VW - 5, 5, '#ffe9a8', 9, 'right');
+  const w = WEAPONS[p.wep], n = p.ammo[w.id];
+  sh(w.name + (n < 0 ? '' : ' ×' + n), VW - 10, 9, w.tint, 17, 'right');
 
-  if (G.bannerT > 0){
-    ctx.globalAlpha = Math.min(1, G.bannerT / 30);
-    const w = WEAPONS.find(x => FLAVOUR[x.id].includes(G.banner));
-    sh(G.banner, VW/2, 24, w ? TINT[w.id] : '#ffd86b', 11, 'center');
-    ctx.globalAlpha = 1;
-  }
-  if (G.msgT > 0){
-    ctx.globalAlpha = Math.min(1, G.msgT / 30);
-    sh(G.msg, VW/2, VH - 16, '#ffe9a8', 9, 'center');
-    ctx.globalAlpha = 1;
-  }
+  ctx.fillStyle = 'rgba(5,9,16,.76)'; ctx.fillRect(0, VH - 30, VW, 30);
+  sh('AIM ' + Math.round(p.angle) + '°', 10, VH - 23, '#dbe6f7', 16);
+  sh('PWR ' + Math.round(p.power), 150, VH - 23, '#dbe6f7', 16);
+  sh(G.arena ? G.arena.name : '', wx, VH - 23, '#7f8fab', 15, 'center');
+  sh('BEST OF 5   ' + G.wins[0] + ' – ' + G.wins[1], VW - 10, VH - 23, '#8ea0bd', 16, 'right');
 }
 
 function drawField(){
-  const a = G.arena || ARENAS._default;
   let ox = 0, oy = 0;
   if (G.shake > 0){ ox = (Math.random()-0.5) * G.shake; oy = (Math.random()-0.5) * G.shake; }
   ctx.save(); ctx.translate(Math.round(ox), Math.round(oy));
-  drawArena(a);
-  P.forEach((p, i) => drawCrestBody(p, G.mode === 'aim' && i !== G.turn));
-  drawTerrain(a);
-  drawBits(); drawShots(); drawBars();
+
+  if (G.arena && G.arena.back) ctx.drawImage(G.arena.back, 0, 0, VW, VH);
+  else proceduralSky();
+
+  ctx.drawImage(terCv, 0, 0);
+  if (falling) ctx.drawImage(falling.cv, falling.x, Math.round(falling.y + falling.off));
+
+  P.forEach((p, i) => drawCrest(p, G.mode === 'aim' && i !== G.turn));
+
+  for (const b of bits){
+    ctx.globalAlpha = Math.max(0, (b.life / b.max) * (b.smoke ? 0.5 : 1));
+    ctx.fillStyle = b.smoke ? '#8d93a4' : b.c;
+    const s = b.smoke ? 5 : 3;
+    ctx.fillRect(Math.round(b.x), Math.round(b.y), s, s);
+  }
+  ctx.globalAlpha = 1;
+
+  for (const s of shots){
+    ctx.strokeStyle = s.w.tint; ctx.lineWidth = 2; ctx.globalAlpha = 0.45;
+    ctx.beginPath();
+    s.trail.forEach((t, i) => i ? ctx.lineTo(t.x, t.y) : ctx.moveTo(t.x, t.y));
+    ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.fillStyle = s.w.tint;
+    const r = s.w.kind === 'sniper' ? 3 : s.w.r >= 60 ? 7 : 5;
+    ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, 6.284); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    ctx.beginPath(); ctx.arc(s.x - 1, s.y - 1, r * 0.42, 0, 6.284); ctx.fill();
+  }
   ctx.restore();
+
   drawHUD();
+
+  if (G.bannerT > 0 && G.banner){
+    ctx.globalAlpha = Math.min(1, G.bannerT / 45);
+    ctx.fillStyle = 'rgba(6,10,18,.90)'; ctx.fillRect(0, 44, VW, 34);
+    ctx.fillStyle = 'rgba(255,216,107,.55)';
+    ctx.fillRect(0, 44, VW, 2); ctx.fillRect(0, 76, VW, 2);
+    sh(G.banner, VW/2, 52, '#ffd86b', 18, 'center');
+    ctx.globalAlpha = 1;
+  }
+  if (G.msgT > 0){
+    ctx.globalAlpha = Math.min(1, G.msgT / 35);
+    sh(G.msg, VW/2, VH - 76, '#ffe9a8', 20, 'center');
+    ctx.globalAlpha = 1;
+  }
 }
 
-/* ------------------------------------------------------------------ *
- * SCREENS
- * ------------------------------------------------------------------ */
-let tt = 0;
 function drawTitle(){
-  tt++;
-  drawArena(arenaFor(TEAMS[G.picks[0]].key));
+  proceduralSky();
   ctx.fillStyle = 'rgba(4,7,12,.62)'; ctx.fillRect(0, 0, VW, VH);
-  sh('S C F L', VW/2, 12, '#ffd86b', 11, 'center');
-  sh('TRADE WAR', VW/2, 25, '#f2f6ff', 24, 'center');
+  sh('S C F L', VW/2, 40, '#ffd86b', 22, 'center');
+  sh('TRADE WARS', VW/2, 62, '#f2f6ff', 52, 'center');
+  sh('two crests · one hill · nothing left standing', VW/2, 122, '#7f8fab', 16, 'center');
 
   [0, 1].forEach(side => {
-    const cx = side === 0 ? VW * 0.27 : VW * 0.73;
-    const t = TEAMS[G.picks[side]], lg = LOGO[t.key], on = side === G.pickSide;
-    if (on){ ctx.strokeStyle = lg ? lg.accent : '#8fb6ff'; ctx.lineWidth = 1; ctx.strokeRect(cx - 32.5, 62.5, 65, 65); }
-    if (lg) ctx.drawImage(lg.img, cx - 29, 66, 58, 58);
-    sh(t.name, cx, 132, on ? (lg ? lg.light : '#fff') : '#8ea0bd', 9, 'center');
-    sh(side === 0 ? 'HOME' : (G.vsCpu ? 'COMPUTER' : 'AWAY'), cx, 145, side === 0 ? '#ffd86b' : '#6b7b96', 8, 'center');
+    const cx = side === 0 ? VW * 0.28 : VW * 0.72;
+    const t = TEAMS[G.picks[side]], lg = LOGO[t.key];
+    const on = side === G.pickSide;
+    if (on){ ctx.strokeStyle = lg.accent; ctx.lineWidth = 2; ctx.strokeRect(cx - 61, 159, 122, 122); }
+    ctx.drawImage(lg.img, cx - 56, 164, 112, 112);
+    sh(t.name, cx, 292, on ? lg.light : '#8ea0bd', 18, 'center');
+    sh(side === 0 ? 'PLAYER 1  ·  HOME' : (G.vsCpu ? 'COMPUTER' : 'PLAYER 2'), cx, 316, '#6b7b96', 14, 'center');
   });
-  sh('VS', VW/2, 88, '#ff8a5c', 14, 'center');
-  sh(arenaFor(TEAMS[G.picks[0]].key).name, VW/2, 164, '#8fd0ff', 10, 'center');
-  sh('home field is the first club picked', VW/2, 178, '#5d6b83', 8, 'center');
-
-  sh('← →  CLUB    ↑  SIDE    ↓  ' + (G.vsCpu ? '2 PLAYER' : 'VS COMPUTER') +
-     (G.vsCpu ? '    TAB  ' + ['LOOSE','DECENT','SHARP'][G.cpuSkill] : ''),
-     VW/2, 202, '#6b7b96', 8, 'center');
-  if ((tt >> 4) % 2 === 0) sh('SPACE OR TAP TO START', VW/2, 224, '#e8eefb', 11, 'center');
-  sh('first to 3 rounds takes it', VW/2, 246, '#4f5c73', 8, 'center');
+  sh('VS', VW/2, 206, '#ff8a5c', 30, 'center');
+  sh('HOME FIELD: ' + (ARENA_NAME[TEAMS[G.picks[0]].key] || 'THE FIELD'), VW/2, 348, '#8fd0ff', 16, 'center');
+  sh('← →  pick club     ↑  switch side     ↓  ' + (G.vsCpu ? '2 player' : 'vs computer') +
+     '     TAB  ' + ['loose','decent','sharp'][G.cpuSkill], VW/2, 392, '#6b7b96', 14, 'center');
+  if ((titleT >> 4) % 2 === 0) sh('SPACE TO START', VW/2, 430, '#e8eefb', 22, 'center');
+  sh('first to 3 rounds takes it', VW/2, 480, '#4f5c73', 14, 'center');
 }
 
 function drawOver(){
   drawField();
   const won = G.winner;
-  ctx.fillStyle = 'rgba(5,9,16,.90)'; ctx.fillRect(28, 66, VW - 56, 84);
+  ctx.fillStyle = 'rgba(5,9,16,.90)'; ctx.fillRect(80, 140, VW - 160, 180);
   const lg = won >= 0 ? LOGO[TEAMS[P[won].team].key] : null;
-  ctx.strokeStyle = lg ? lg.accent : '#8ea0bd'; ctx.lineWidth = 1;
-  ctx.strokeRect(28.5, 66.5, VW - 57, 83);
+  ctx.strokeStyle = lg ? lg.accent : '#8ea0bd'; ctx.lineWidth = 2;
+  ctx.strokeRect(80, 140, VW - 160, 180);
   if (won >= 0){
-    if (lg) ctx.drawImage(lg.img, VW/2 - 20, 72, 40, 40);
-    sh(TEAMS[P[won].team].name, VW/2, 116, lg ? lg.light : '#fff', 12, 'center');
-    sh(G.wins[won] >= 3 ? 'TAKES THE SERIES ' + G.wins[0] + '-' + G.wins[1]
-                        : 'WINS THE ROUND ' + G.wins[0] + '-' + G.wins[1],
-       VW/2, 132, '#ffe9a8', 9, 'center');
-  } else sh('BOTH CRESTS DOWN', VW/2, 100, '#ff8a5c', 12, 'center');
-  if ((tt++ >> 4) % 2 === 0)
-    sh(G.wins[0] >= 3 || G.wins[1] >= 3 ? 'SPACE OR TAP FOR A NEW WAR' : 'SPACE OR TAP FOR THE NEXT ROUND',
-       VW/2, 160, '#e8eefb', 9, 'center');
+    ctx.drawImage(P[won].sprite, VW/2 - 36, 158, 72, 72);
+    sh(TEAMS[P[won].team].name, VW/2, 240, lg.light, 26, 'center');
+    sh(G.wins[won] >= 3 ? 'TAKES THE SERIES ' + G.wins[0] + '–' + G.wins[1]
+                        : 'WINS THE ROUND ' + G.wins[0] + '–' + G.wins[1], VW/2, 274, '#ffe9a8', 17, 'center');
+  } else sh('BOTH CRESTS DOWN', VW/2, 220, '#ff8a5c', 26, 'center');
+  if ((titleT++ >> 4) % 2 === 0)
+    sh(G.wins[0] >= 3 || G.wins[1] >= 3 ? 'SPACE FOR A NEW WAR' : 'SPACE FOR THE NEXT ROUND',
+       VW/2, 340, '#e8eefb', 17, 'center');
 }
 
 function render(){
-  if (G.mode === 'title')     drawTitle();
-  else if (G.mode === 'over') drawOver();
-  else if (T)                 drawField();
+  if (G.mode === 'title')      drawTitle();
+  else if (G.mode === 'over')  drawOver();
+  else if (G.mode === 'load'){ ctx.fillStyle = '#04060a'; ctx.fillRect(0,0,VW,VH);
+                               sh('LOADING…', VW/2, VH/2, '#56637a', 18, 'center'); }
+  else                         drawField();
 }
+
+/* title-screen navigation */
+addEventListener('keydown', e => {
+  if (G.mode !== 'title') return;
+  if (e.code === 'ArrowLeft'){ G.picks[G.pickSide] = (G.picks[G.pickSide] + TEAMS.length - 1) % TEAMS.length; Sound.swap(); }
+  if (e.code === 'ArrowRight'){ G.picks[G.pickSide] = (G.picks[G.pickSide] + 1) % TEAMS.length; Sound.swap(); }
+  if (e.code === 'ArrowUp'){ G.pickSide = 1 - G.pickSide; Sound.swap(); }
+  if (e.code === 'ArrowDown'){ G.vsCpu = !G.vsCpu; Sound.swap(); }
+  if (e.code === 'Tab'){ e.preventDefault(); G.cpuSkill = (G.cpuSkill + 1) % 3; Sound.swap(); }
+});
+cv.addEventListener('click', e => {
+  if (G.mode !== 'title') return;
+  const r = cv.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width * VW, y = (e.clientY - r.top) / r.height * VH;
+  if (y > 150 && y < 300){
+    const side = x < VW/2 ? 0 : 1;
+    G.pickSide = side;
+    G.picks[side] = (G.picks[side] + 1) % TEAMS.length;
+    Sound.swap();
+    okEdge = false;
+  }
+});
 
 /* ------------------------------------------------------------------ *
  * LOOP
@@ -1137,21 +1170,32 @@ let acc = 0, last = 0;
 function frame(now){
   requestAnimationFrame(frame);
   if (!last) last = now;
-  acc += Math.min(now - last, 250);
-  last = now;
+  acc += Math.min(now - last, 250); last = now;
   let guard = 0;
   while (acc >= STEP && guard++ < 5){ tick(); acc -= STEP; }
   render();
 }
 
 (async function boot(){
+  let bundle = null;
+  try { const r = await fetch('../scfl-team-logos-resized.json', { cache:'force-cache' }); if (r.ok) bundle = await r.json(); }
+  catch (_) {}
+  await Promise.all(TEAMS.map((t, i) => new Promise(done => {
+    const finish = src => {
+      let tone; try { tone = dominantAccent(src); } catch (_) { tone = { accent:'#6fa8ff', light:'#cfe1ff' }; }
+      LOGO[t.key] = Object.assign({ img: badge(src, tone.accent) }, tone);
+      done();
+    };
+    const src = bundle && bundle[t.key];
+    if (!src) return finish(placeholderLogo(i));
+    const img = new Image();
+    img.onload = () => finish(img);
+    img.onerror = () => finish(placeholderLogo(i));
+    img.src = src;
+  })));
   fit();
-  await loadAssets();
-  $('boot').classList.add('gone');
-  G.picks[0] = Math.floor(Math.random() * TEAMS.length);
-  G.picks[1] = (G.picks[0] + 1 + Math.floor(Math.random() * (TEAMS.length - 1))) % TEAMS.length;
+  el('boot').classList.add('gone');
   G.mode = 'title';
-  syncUI();
   requestAnimationFrame(frame);
 })();
 </script>
