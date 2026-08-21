@@ -103,14 +103,16 @@ TAKE={
   "three all scored 1,466 or better. Being the best offence in the league did not settle 2025 and "
   "it will not settle this one either.",
  'Big Blue':
-  "Went {rec} on {pf} points and finished {fin}. The résumé is {titles} championships from "
-  "{finals} title games — the only perfect record in the building — and {allrec} overall. The last "
+  "Went {rec} on {pf} points and finished {fin}. The résumé is {alltitles} championships, level "
+  "with anyone who has ever played here, and inside the eighteen seasons on record {finals} title "
+  "games and {finals} wins — the only unbeaten record in the building — off {allrec} overall. The last "
   "two years read fourth and fifth, which for this franchise counts as a slump. He drew an {grade} "
   "for the draft and holds Wookie Leaks {vs:Wookie Leaks}. The reason to be careful about writing "
   "him off: he has reached {finals} finals and never lost one.",
  'Beaver Eaters':
   "Here is the cruellest line in the preview. {allrec} across {seasons} seasons — identical, "
-  "win for win and loss for loss, to Big Blue's — and {titles} championships to Big Blue's three. In "
+  "win for win and loss for loss, to Big Blue's — and {titles} championships in those seasons to "
+  "Big Blue's four. In "
   "2025 he scored {pf} points, third most in the league, went {rec}, and finished {fin}: outside the "
   "bracket entirely. Then the Powers of Pain graded the draft a {grade}, the only one on the board, "
   "and called two of the three picks baffling. Historically one of the best drafters in this league. "
@@ -163,6 +165,9 @@ DIV_INTRO={
 
 def build():
     h=json.load(open(os.path.join(ROOT,'history.json'),encoding='utf-8'))
+    # All-time championships where the league knows them; history.json holds only
+    # eighteen of the league's seasons, so counts taken from it can understate.
+    lt=json.load(open(os.path.join(ROOT,'league-titles.json'),encoding='utf-8'))['allTimeTitles']
     divs=json.load(open(os.path.join(ROOT,'divisions.json'),encoding='utf-8'))
     riv=json.load(open(os.path.join(ROOT,'rivalries.json'),encoding='utf-8'))['rows']
     pg={GRADE_ALIAS.get(t['team'],t['team']):t['grade']
@@ -202,6 +207,7 @@ def build():
              'grade':pg.get(nm,'ungraded'), 'seasons':NUM[c['seasons']],
              'allrec':f"{c['w']}-{c['l']}", 'titles':NUM[c['titles']],
              'finals':NUM[c['finals']], 'po':NUM[c['po']],
+             'alltitles':NUM[lt.get(nm, c['titles'])],
              'last5':' '.join(str(x) for x in c['fin'][-5:])}
         def sub(m):
             k=m.group(1)

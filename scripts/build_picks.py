@@ -75,14 +75,16 @@ CONFERENCE = {
 CHAMPION = ('Big Blue',
   "So: Big Blue over The Machines, and this desk is aware of how that sounds after picking the "
   "Machines to walk his conference.\n"
-  "Here is the whole argument. The Machines has been to {finals:The Machines} title games and won "
-  "{titles:The Machines} of them — {finalrec:The Machines} in the only week that hands out a "
-  "trophy. Big Blue has been to {finals:Big Blue} and won {titles:Big Blue}. "
-  "{finalrec:Big Blue}. The most decorated manager in the league loses finals, and the man picked "
-  "to beat him has never lost one.\n"
+  "Here is the whole argument, and it is not the trophy count — across the full life of this league "
+  "the Machines, Big Blue and the Powers of Pain all have four championships and nobody has a "
+  "fifth. It is what happens once they get there. In the eighteen seasons on record the Machines "
+  "have played {finals:The Machines} title games and won {titles:The Machines}: "
+  "{finalrec:The Machines} on the last Sunday. Big Blue has played {finals:Big Blue} and won "
+  "{titles:Big Blue}. {finalrec:Big Blue}.\n"
   "That is a small sample and this desk knows it. Seven losses across eighteen years is not a flaw "
-  "in a manager, it is what happens to anyone who keeps arriving. But a pick has to come down on "
-  "one side of something, and the only place these two separate is the last Sunday.")
+  "in a manager, it is what happens to anyone who keeps arriving, and it is the reason he has as "
+  "many rings as anyone. But a pick has to come down on one side of something, and the only place "
+  "these two separate is the week the season ends.")
 
 HEDGE = (
   "WHAT WOULD MAKE THIS LOOK STUPID — Four things, in order of likelihood. Still The Cream drew an "

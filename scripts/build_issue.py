@@ -106,7 +106,13 @@ EXTRA_CSS="""
   filter:drop-shadow(0 2px 8px rgba(0,0,0,.95));}
 @media(max-width:720px){.magcover{margin:0 0 20px;border-width:9px;}}
 .toc{list-style:none;padding:0;margin:6px 0 0;}
-.toc li{display:flex;gap:10px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--line);}
+.toc li{border-bottom:1px solid var(--line);}
+.toc-go{display:flex;gap:10px;align-items:baseline;width:100%;padding:12px 2px;background:none;
+  border:0;font:inherit;color:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:
+  rgba(194,15,22,.12);}
+.toc-go:hover .t,.toc-go:focus-visible .t{color:var(--red);}
+.toc-go:focus-visible{outline:2px solid var(--red);outline-offset:2px;}
+.toc-go .go{margin-left:auto;color:var(--red);font-size:19px;line-height:1;opacity:.65;}
 .toc .n{font-family:var(--sans);font-size:11px;font-weight:900;color:var(--red);min-width:22px;}
 .toc .t{flex:1;font-weight:800;font-size:14px;line-height:1.3;}
 .toc .k{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.1em;
@@ -136,7 +142,7 @@ def article_blocks(art, first, openart=None):
     # 'divider' rather than 'sect': the packer forces a page break before one, so
     # every article finishes its own page and the next one opens a fresh one.
     img=(f'<img class="d-art" src="{openart}" alt="">' if openart else '')
-    out=[('divider', '<div class="divider">'+img+'<div class="d-flag">'+esc(art.get('flag',''))+'</div>'
+    out=[('divider', f'<div class="divider" id="art-{art["id"]}">'+img+'<div class="d-flag">'+esc(art.get('flag',''))+'</div>'
           '<div class="d-h">'+esc(art['headline'])+'</div>'
           '<div class="d-s">'+esc(art.get('subhead',''))+'</div>'
           '<div class="d-rule"></div></div>')]
@@ -185,8 +191,10 @@ def build(key, remeasure=True, quiet=False):
         '</div>'
       '</div></section>')
 
-    toc=''.join(f'<li><span class="n">{i+1}</span><span class="t">{esc(a["headline"])}'
-                f'<span class="k">{esc(a.get("flag",""))}</span></span></li>'
+    toc=''.join(f'<li><button class="toc-go" type="button" data-art="art-{a["id"]}">'
+                f'<span class="n">{i+1}</span><span class="t">{esc(a["headline"])}'
+                f'<span class="k">{esc(a.get("flag",""))}</span></span>'
+                f'<span class="go">&rsaquo;</span></button></li>'
                 for i,a in enumerate(arts))
     blocks=[('head','<span class="flag">In this issue</span>'
              '<h1 class="hl">'+esc(cfg['title'])+'</h1>'
@@ -269,6 +277,13 @@ def build(key, remeasure=True, quiet=False):
 <div class="pagenum"><span id="pn">1</span> / <span id="pt">1</span></div>
 <div class="fliphint" id="hint">Tap &rsaquo; or swipe to turn &rsaquo;</div>
 <script>{engine}</script>
+<script>document.querySelectorAll('.toc-go').forEach(function(b){{
+ b.addEventListener('click',function(){{
+  var el=document.getElementById(b.dataset.art);
+  var i=window.SCFLFlip&&el?window.SCFLFlip.pageOf(el):-1;
+  if(i>=0)window.SCFLFlip.go(i);
+ }});
+}});</script>
 {sharejs}
 </body></html>'''
     open(os.path.join(ROOT,cfg['out']),'w',encoding='utf-8').write(html)
