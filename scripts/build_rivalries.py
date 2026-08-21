@@ -221,6 +221,58 @@ tot=collections.Counter()
 for (a,b),n in volley.items(): tot[a]+=n; tot[b]+=n
 
 
+
+# ---- divisions, inferred from the schedule ----------------------------------
+# The league runs two conferences of two divisions, four teams each. You play
+# your division twice, the other division in your conference once, and a handful
+# of cross-conference games to fill the card. So the size of a head-to-head
+# sample is mostly a fact about the schedule, not about the rivalry: two teams
+# who share a division for a decade will rack up thirty games without either of
+# them choosing it.
+#
+# history.json carries no division field, so divisions are recovered per season:
+# pairs that met twice form a graph, and the four-team cliques that exactly cover
+# all sixteen teams are the divisions. Sixteen of eighteen seasons resolve
+# cleanly. 2008 and 2013 used a different schedule shape (33 and 25 pairs meeting
+# twice, where four divisions produce exactly 24) and are left unresolved rather
+# than guessed at.
+def divisions_by_season(h):
+    import itertools
+    out={}
+    for s in h['seasons']:
+        cnt=collections.Counter()
+        for m in (s.get('matchups') or []):
+            if m.get('playoff'): continue
+            cnt[tuple(sorted((m['home'],m['away'])))]+=1
+        twice={p for p,n in cnt.items() if n>=2}
+        teams=sorted({t['id'] for t in s['teams']})
+        adj={t:set() for t in teams}
+        for a,b in twice: adj[a].add(b); adj[b].add(a)
+        cl=[c for c in itertools.combinations(teams,4)
+            if all(y in adj[x] for x,y in itertools.combinations(c,2))]
+        def solve(rem,ch):
+            if not rem: return ch
+            f=min(rem)
+            for c in cl:
+                if f in c and set(c)<=rem:
+                    r=solve(rem-set(c),ch+[c])
+                    if r: return r
+            return None
+        got=solve(set(teams),[])
+        if got and sorted(len(c) for c in got)==[4,4,4,4]: out[s['year']]=got
+    return out
+
+DIVSEASONS=collections.Counter()
+_divmap=divisions_by_season(h)
+for _y,_ds in _divmap.items():
+    _s=[x for x in h['seasons'] if x['year']==_y][0]
+    _tid={t['id']:own(t.get('owner')) for t in _s['teams']}
+    import itertools as _it
+    for _c in _ds:
+        for _a,_b in _it.combinations(sorted(_tid[t] for t in _c),2): DIVSEASONS[(_a,_b)]+=1
+print(f"division check: {len(_divmap)}/18 seasons resolve into four divisions of four "
+      f"(2008 and 2013 use a different schedule shape and are left unresolved)")
+
 # ---- per-pairing detail the board renders -----------------------------------
 
 def finals_map(h):
@@ -280,8 +332,11 @@ for (a,b),v in volley.items():
     wp=d['w']/d['g']; bal=1-abs(wp-.5)*2
     rows.append({'a':NAME.get(a,a),'b':NAME.get(b,b),'ka':a,'kb':b,'g':d['g'],
       'rec':f"{d['w']}-{d['l']}"+(f"-{d['t']}" if d['t'] else ''),'diff':round(d['pf']-d['pa']),
-      'po':d['po'],'yrs':len(d['seasons']),'v':v,'share':share,'heat':100*hp,'bal':bal,
-      'score':share/0.30*0.30+bal*0.26+min(d['g'],36)/36*0.14+min(d['po'],6)/6*0.14+min(hp/0.022,1)*0.16,
+      'po':d['po'],'yrs':len(d['seasons']),'div':DIVSEASONS.get(tuple(sorted((a,b))),0),'v':v,'share':share,'heat':100*hp,'bal':bal,
+      # shared history counted in divisional seasons, not raw games: games played
+      # is a fact about the schedule, not about the rivalry.
+      'score':share/0.30*0.30+bal*0.26+min(DIVSEASONS.get(tuple(sorted((a,b))),0),14)/14*0.14
+              +min(d['po'],7)/7*0.14+min(hp/0.022,1)*0.16,
       'detail':enrich(a,b)})
 
 # Heat is a ranking signal, never a quotation. The chat is read to COUNT
@@ -311,7 +366,7 @@ _payload={'note':'aggregate only; built by scripts/build_rivalries.py','rows':ro
 _n=assert_no_chat_text(_payload, ms)
 print(f'text check: {_n} strings in output, none from the chat corpus')
 json.dump(_payload,open(os.path.join(ROOT,'rivalries.json'),'w'),indent=1)
-json.dump({f'{a}|{b}':{'g':d['g'],'w':d['w'],'l':d['l'],'t':d['t'],'po':d['po'],
+json.dump({f'{a}|{b}':{'g':d['g'],'w':d['w'],'l':d['l'],'t':d['t'],'po':d['po'],'div':DIVSEASONS.get(tuple(sorted((a,b))),0),
                        'pf':d['pf'],'pa':d['pa'],'games':d['games'],'seasons':sorted(d['seasons'])}
            for (a,b),d in H.items()},open(os.path.join(ROOT,'h2h.json'),'w'))
 print('=== RIVALRY RANKING (all 16 franchises mapped) ===')

@@ -3,6 +3,34 @@
 League customs that shape the data. Written down because they explain why the
 records behave the way they do.
 
+## The schedule
+
+Sixteen teams, two conferences, two divisions of four in each. You play **your
+own division twice**, the **other division in your conference once**, and a few
+cross-conference games to fill the card — thirteen games a season through 2020,
+fourteen from 2021.
+
+Consequences for the data, both of which bit us:
+
+- **Games played is a fact about the schedule, not the rivalry.** Two teams who
+  share a division for a decade rack up thirty meetings without either choosing
+  it. `build_rivalries.py` therefore counts shared history in *divisional
+  seasons*, not raw games.
+- `history.json` has no division field. Divisions are recovered per season from
+  the schedule itself: pairs that met twice form a graph, and the four-team
+  cliques that exactly cover all sixteen teams are the divisions. Sixteen of
+  eighteen seasons resolve; 2008 and 2013 used a different shape and are left
+  unresolved rather than guessed.
+
+## The playoffs
+
+Top eight qualify. All sixteen teams keep playing the final three weeks — the
+bottom half in a consolation ladder that decides nothing — and `history.json`
+flags **every** one of those as `playoff`. Counting them turns 24 games a season
+into playoff history when only 12 are between qualifiers. A playoff meeting means
+both teams finished top eight. Format is not constant either: most seasons are a
+knockout from the top eight, but 2017 had the top eight replay each other.
+
 ## The Name Change
 
 **The team that finishes worst is renamed for the following season, and the
