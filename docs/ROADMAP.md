@@ -11,11 +11,13 @@ who owned him when, and what the chat said about him at the time. Foundation for
 the Curse Watch, the Rivalry Board and the Trade Court — they all get to cite it.
 Sources: `trades.json` (256 deals), the chat corpus, `pop-grades.json`.
 
-### 3. The Rivalry Board
-One page per pairing: all-time head-to-head, the defining game, the defining
-quote, current streak. The magazine pulls a "grudge of the week" off it.
-Head-to-head engine built 2026-08-20 from `history.json` — 18 seasons,
-2,344 games, 21 franchises resolved by owner id across renames.
+### 3. The Rivalry Board — SHIPPED 2026-08-21
+In the app under Newsroom → The Record Room. Ranked pairings, everyone's rival,
+and a detail page per pairing: series record, playoff record, title-game
+meetings, current streak, biggest win, worst loss, closest game, chat focus and
+heat. Built by `scripts/build_rivalries.py`; the build asserts the head-to-head
+reconciles against the league's stored standings before it will write output.
+Still to add: the defining *quote* per pairing.
 
 ## Agreed, not started
 

@@ -3491,6 +3491,7 @@ const NEWSROOM_TOOLS = [
   ['investigations', '🔍', 'Investigations', 'The long-form specials'],
   ['dossier', '📓', 'Chat Dossier', 'Who’s who in the league'],
   ['records', '📖', 'Record Book', 'All-time history & records'],
+  ['rivalries', '⚔️', 'The Rivalry Board', 'Head-to-head, grudges & streaks'],
   ['ex-files', '👻', 'The Ex-Files', 'The league’s departed, reviewed'],
   ['archive-articles', '🗄️', 'Article Archive', 'Every article, searchable'],
   ['archive', '📚', 'Back Issues', 'Saved editions'],
@@ -3507,7 +3508,7 @@ const NEWSROOM_SECTIONS = [
   ['The Network', ['sportscenter', 'broadcast']],
   ['Desks & Features', ['politics', 'desk', 'storylines', 'investigations']],
   ['Editions', ['pop-grades', 'archive']],
-  ['The Record Room', ['dossier', 'records', 'ex-files', 'archive-articles']],
+  ['The Record Room', ['dossier', 'records', 'rivalries', 'ex-files', 'archive-articles']],
 ];
 function toolSections(tools, sections) {
   const by = {}; tools.forEach(t => by[t[0]] = t);
@@ -7282,6 +7283,121 @@ function weeklyBoardView(kind){
       <div class="faint" style="font-size:12.5px;line-height:1.5">These columns are done fresh each week by the board — no more sample data. File it here (or send it to HQ from your device) before the issue builds on Tuesday.</div>
     </div>`);
 }
+
+// ---- The Rivalry Board ------------------------------------------------------
+// Data from rivalries.json, built by scripts/build_rivalries.py: 18 seasons of
+// matchups reconciled against the stored standings, joined to chat engagement.
+let RIVALS = null;
+async function loadRivals() {
+  if (RIVALS) return RIVALS;
+  try {
+    const r = await fetch('rivalries.json', { cache: 'no-cache' });
+    if (r.ok) { const d = await r.json(); RIVALS = d.rows || []; }
+  } catch { RIVALS = null; }
+  return RIVALS;
+}
+const rvKey = r => `${r.ka}~${r.kb}`;
+function rvRecordFor(r, side) {
+  const [w, l, t] = r.rec.split('-').map(Number);
+  return side === 'a' ? r.rec : `${l}-${w}` + (t ? `-${t}` : '');
+}
+function rvGame(g, teamName, oppName) {
+  if (!g) return '';
+  const when = `${g.y}${g.po ? ' playoffs' : ` wk${g.wk}`}`;
+  if (g.r === 'T') return `tied ${g.for} &ndash; ${g.against} &middot; ${when}`;
+  const lead = g.r === 'W' ? teamName : oppName;
+  const hi = Math.max(g.for, g.against), lo = Math.min(g.for, g.against);
+  // scores are stored to the half point, so a one-decimal win looks level here
+  if (hi === lo) return `${esc(lead)} by a decimal, ${hi} &ndash; ${lo} &middot; ${when}`;
+  return `${esc(lead)} ${hi} &ndash; ${lo} &middot; ${when}`;
+}
+async function showRivalries() {
+  const rows = await loadRivals();
+  if (!rows || !rows.length) {
+    return setContent(`<button class="btn ghost" data-act="newsroom" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom</button>
+      <div class="card"><h3>⚔️ The Rivalry Board</h3>
+      <p class="muted">The rivalry data isn't loaded. It's built by <code>scripts/build_rivalries.py</code>.</p></div>`);
+  }
+  // each manager's defining rivalry = their highest-scoring pairing
+  const mine = {};
+  rows.forEach(r => {
+    [['a', r.a, r.b], ['b', r.b, r.a]].forEach(([side, me, them]) => {
+      if (!mine[me] || r.score > mine[me].score) mine[me] = { score: r.score, them, r, side };
+    });
+  });
+  const card = (r, i) => `<div class="card" data-act="rivalry-read" data-k="${rvKey(r)}" style="cursor:pointer;padding:12px">
+      <div style="display:flex;align-items:baseline;gap:8px">
+        <div style="font-size:19px;font-weight:900;color:var(--accent);min-width:26px">${i + 1}</div>
+        <div style="flex:1">
+          <div style="font-weight:800;font-size:14.5px;line-height:1.3">${esc(r.a)} <span class="faint">vs</span> ${esc(r.b)}</div>
+          <div class="faint" style="font-size:12px;margin-top:3px">
+            ${r.rec} &middot; ${r.g} games &middot; ${r.po} playoff${r.po === 1 ? '' : 's'}
+            ${r.detail.finals.length ? ` &middot; <b style="color:var(--accent)">${r.detail.finals.length} final${r.detail.finals.length > 1 ? 's' : ''}</b>` : ''}
+          </div>
+        </div>
+        <div class="faint" style="font-size:11px;text-align:right;white-space:nowrap">${r.detail.streak.n > 1
+          ? `${esc(r.detail.streak.kind === 'W' ? r.a : r.b)}<br>won last ${r.detail.streak.n}` : ''}</div>
+      </div></div>`;
+  setContent(`<button class="btn ghost" data-act="newsroom" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom</button>
+    <div class="card"><h3>⚔️ The Rivalry Board</h3>
+      <p class="muted">Every head-to-head in league history, ranked by how much the two sides actually
+      go at each other — games played, how close the series is, playoff meetings, and how much of each
+      manager's chat energy is aimed at the other. Tap any pairing for the full file.</p></div>
+    <h4 style="margin:16px 0 8px">The top rivalries</h4>
+    ${rows.slice(0, 12).map(card).join('')}
+    <div class="card"><h4 style="margin:0 0 10px">Everyone's rival</h4>
+      <div style="display:grid;gap:6px">
+      ${Object.keys(mine).sort().map(m => {
+        const e = mine[m];
+        return `<div data-act="rivalry-read" data-k="${rvKey(e.r)}" style="cursor:pointer;display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)">
+          <span><b>${esc(m)}</b> <span class="faint">→</span> ${esc(e.them)}</span>
+          <span class="faint" style="white-space:nowrap">${rvRecordFor(e.r, e.side)}</span></div>`;
+      }).join('')}
+      </div></div>`);
+}
+async function showRivalryRead(k) {
+  const rows = await loadRivals(); if (!rows) return showRivalries();
+  const r = rows.find(x => rvKey(x) === k); if (!r) return showRivalries();
+  const d = r.detail, [w, l, t] = r.rec.split('-').map(Number);
+  const leader = w > l ? r.a : l > w ? r.b : null;
+  const stat = (lab, val, note) => `<div style="flex:1;min-width:92px;text-align:center;padding:9px 4px;background:var(--bg2);border-radius:10px">
+      <div style="font-size:19px;font-weight:900;line-height:1">${val}</div>
+      <div class="faint" style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-top:4px">${lab}</div>
+      ${note ? `<div class="faint" style="font-size:10.5px;margin-top:2px">${note}</div>` : ''}</div>`;
+  const line = (lab, body) => body ? `<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <span class="faint" style="min-width:104px;font-weight:700">${lab}</span><span style="flex:1">${body}</span></div>` : '';
+  setContent(`<button class="btn ghost" data-act="rivalries" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ The Rivalry Board</button>
+    <div class="card">
+      <h3 style="margin-bottom:2px">${esc(r.a)} <span class="faint" style="font-weight:400">vs</span> ${esc(r.b)}</h3>
+      <div class="faint" style="font-size:12.5px;margin-bottom:12px">
+        First met ${d.first} &middot; ${r.yrs} seasons together${leader ? ` &middot; ${esc(leader)} leads` : ' &middot; dead even'}</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px">
+        ${stat('Series', r.rec, esc(r.a))}
+        ${stat('Games', r.g, '')}
+        ${stat('Playoffs', `${d.playoff.w}-${d.playoff.l}`, r.po + ' meetings')}
+        ${stat('Points', (r.diff > 0 ? '+' : '') + r.diff, esc(r.a))}
+      </div>
+      ${d.streak.n ? `<div style="background:var(--bg2);border-left:3px solid var(--accent);padding:9px 12px;border-radius:0 8px 8px 0;font-size:13.5px;margin-bottom:12px">
+        <b>${esc(d.streak.kind === 'W' ? r.a : r.b)}</b> ${d.streak.kind === 'T' ? 'tied the last meeting' : `has won the last ${d.streak.n === 1 ? 'meeting' : d.streak.n + ' meetings'}`}.</div>` : ''}
+      ${d.finals.length ? `<div style="background:#fdf3f3;border:1px solid var(--accent);padding:10px 12px;border-radius:10px;font-size:13.5px;margin-bottom:12px">
+        <b style="color:var(--accent)">They have met in the title game.</b><br>
+        ${d.finals.map(f => `${f.y} &mdash; ${esc(f.result === 'W' ? r.a : r.b)} won`).join('<br>')}</div>` : ''}
+      ${line('Last meeting', rvGame(d.last, r.a, r.b))}
+      ${line('Biggest win', rvGame(d.biggestWin, r.a, r.b))}
+      ${line('Worst loss', rvGame(d.worstLoss, r.a, r.b))}
+      ${line('Closest game', rvGame(d.closest, r.a, r.b))}
+      ${line('Longest run', d.bestRun > 1 ? `${esc(r.a)} once won ${d.bestRun} straight` : '')}
+      <div style="display:flex;gap:7px;margin-top:14px">
+        ${stat('Chat focus', r.share ? (r.share * 100).toFixed(1) + '%' : '—', 'of their talk')}
+        ${stat('Heat', r.heat.toFixed(1) + '%', 'shots fired')}
+      </div>
+      <p class="faint" style="font-size:11.5px;margin-top:12px;line-height:1.5">
+        Records cover ${d.first}&ndash;2025 and reconcile exactly against the league's stored standings.
+        Chat focus is how much of each manager's back-and-forth is aimed at the other, normalised for
+        how much they talk; heat is the share of those exchanges that turn into shots.</p>
+    </div>`);
+}
+
 // ---- The Story Vault: every page the Newsroom has published ------------------
 // Built automatically from stories.json (see scripts/build_stories.py), which is
 // regenerated on every deploy. Publishing a page is all it takes to appear here;
@@ -7652,7 +7768,7 @@ async function showSettings() {
 // ---------------------------------------------------------------------
 /* ---- history-backed navigation: swipe-back and the ‹ button both work ---- */
 const NAV_ACTS = new Set(['home','newsroom','create-issue','weekly-stories','dashboard','calendar',
-  'politics','pol-read','desk','storylines','investigations','inv-read','dossier','records','ex-files',
+  'politics','pol-read','desk','storylines','investigations','inv-read','dossier','records','rivalries','rivalry-read','ex-files',
   'archive-articles','archive','cover-art','predraft-view','draft-room','trade-court','draft-desk',
   'assets','staff-handbook','staff-import','tc-team','back-news','back','settings','ex-files','power-ranks','money-lines','pop-grades','pop-year']);
 let NAV_SILENT = false;
@@ -7745,6 +7861,8 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'assets') return showAssetVault();
   if (act === 'asset-share') return assetShare(t.dataset.file, t.dataset.label);
   if (act === 'story-share') return storyShare(t.dataset.file, t.dataset.title);
+  if (act === 'rivalries') return showRivalries();
+  if (act === 'rivalry-read') return showRivalryRead(t.dataset.k);
   if (act === 'dev-note') return openDevNote();
   if (act === 'dev-note-save') return devNoteSave();
   if (act === 'dev-notes-export') return devNotesExport();
