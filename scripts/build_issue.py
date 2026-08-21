@@ -41,13 +41,19 @@ ISSUES={
 EXTRA_CSS="""
 .issue-cover{position:absolute;inset:0;background:#0a0806;display:flex;flex-direction:column;padding:0;}
 .issue-cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
-.ic-top{position:relative;text-align:center;padding:26px 22px 0;}
+/* Scrim so the masthead and the headline read over whatever the art does at the
+   top and bottom edges. object-fit:cover re-crops per viewport, so the bands
+   cannot be relied on to stay dark on their own. */
+.issue-cover.has-art::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(6,5,4,.78) 0%,rgba(6,5,4,.34) 15%,rgba(6,5,4,0) 30%,
+  rgba(6,5,4,0) 58%,rgba(6,5,4,.42) 78%,rgba(6,5,4,.88) 100%);}
+.ic-top{position:relative;z-index:2;text-align:center;padding:26px 22px 0;}
 .ic-mast{font-family:var(--serif);font-weight:900;font-size:46px;line-height:.95;color:#f7f3ec;
   text-shadow:0 2px 16px rgba(0,0,0,.9);}
 .ic-mast span{color:#e8393e;}
 .ic-tag{font-family:var(--sans);font-size:10.5px;font-weight:900;letter-spacing:.26em;
   text-transform:uppercase;color:#e0d9cd;margin-top:10px;text-shadow:0 1px 8px rgba(0,0,0,.9);}
-.ic-bot{position:absolute;left:0;right:0;bottom:74px;padding:0 24px;text-align:center;}
+.ic-bot{position:absolute;z-index:2;left:0;right:0;bottom:74px;padding:0 24px;text-align:center;}
 .ic-line{font-family:var(--serif);font-size:15px;line-height:1.5;color:#e8e2d8;
   text-shadow:0 1px 10px rgba(0,0,0,.95);}
 .ic-fallback{position:absolute;inset:0;background:#fffdfb;}
@@ -109,7 +115,7 @@ def build(key):
     have_art=os.path.exists(os.path.join(ROOT,cfg['art']))
     if not have_art:
         print(f"  note: cover art {cfg['art']} not present — using a typographic stand-in")
-    cover=('<section class="page"><div class="issue-cover">'
+    cover=('<section class="page"><div class="issue-cover'+(' has-art' if have_art else '')+'">'
       + (f'<img src="{cfg["art"]}" alt="{esc(cfg["title"])}">' if have_art else '<div class="ic-fallback"></div>')
       + '<div class="ic-top">'
         '<div class="ic-mast" style="'+('' if have_art else 'color:#17181c;text-shadow:none')+'">'
