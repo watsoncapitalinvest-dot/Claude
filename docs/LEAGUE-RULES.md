@@ -16,12 +16,24 @@ Sixteen teams, two conferences, two divisions of four in each.
 | Spartan | Killer Klowns, Master-Jeti, Lil' Chops, The Machines |
 | Spectre Syndicate | Still The Cream, Smoke Dragons, Guido Haters, Powers of Pain |
 
-**Conferences.** Derived from the schedule — the division you play four single
-games against is your conference partner. For 2025 that pairs *Spectre Syndicate
-with Black and Blue*, and *Spartan with The Four Horsemen*. The conference names
-in circulation are **Maclean** and **Cobra Kai**; a May 2023 chat listing pairs
-them the other way round, which predates the 2023 realignment, so the names are
-recorded here but not attached to a pairing.
+**Conferences.** Two: **John McClane** (often written Maclean/McClane) and
+**Cobra Kai**.
+
+| Conference | Divisions |
+|---|---|
+| John McClane | Spartan + Spectre Syndicate |
+| Cobra Kai | Black and Blue + The Four Horsemen |
+
+This comes from the **bracket**, which is seeded within conference: round one is
+four games, two per conference, and the semi-finals are the conference
+championships. It matches the chat — in December 2024 the Beaver Eaters called
+Jet-I vs Klowns the McClane conference game and Big Blue vs NWO the Cobra Kai
+one, and the bracket agrees. Stable across 2023–2025.
+
+**Do not derive conferences from the schedule.** Each division plays one other
+division in full (four games per team), and that partner is in the *opposite*
+conference — so the schedule gives exactly the wrong answer. This was got wrong
+once already.
 
 **Realignments.** Two in the recoverable history: between 2012 and 2014, and
 between 2022 and 2023. The 2023 one is when The Four Horsemen were created — the

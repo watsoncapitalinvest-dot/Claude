@@ -23,6 +23,13 @@ MERGE={'scamp1467':'danscampi','Dgclunie':'MrBlast','espn39740077':'papasuelo','
  'Wookie leaks 80':'coachnick1980redfox','ESPNfan3428058992':'coachnick1980redfox'}
 own=lambda o: MERGE.get((o or '').strip(),(o or '').strip())
 
+# Conference names, from the league chat: "JMC (John McClane Conference)" and
+# Cobra Kai. Which conference holds which pair is settled by the bracket -- in
+# December 2024 the Beaver Eaters called Jet-I vs Klowns the McClane conference
+# game and Big Blue vs NWO the Cobra Kai one, and the bracket agrees.
+CONFERENCES={'John McClane':('Spartan','Spectre Syndicate'),
+             'Cobra Kai':('Black and Blue','The Four Horsemen')}
+
 # Division names as they appear in the league app, 2026.
 CURRENT={
  'The Four Horsemen': {'papasuelo','tommyvertu123','TheKidd420','mcnutze'},
@@ -54,25 +61,38 @@ def divisions(s):
     return got if got and sorted(len(c) for c in got)==[4,4,4,4] else None
 
 def conferences(s, ds):
-    """The division you play four single games against is your conference partner."""
+    """Conferences come from the bracket, not the schedule.
+
+    The playoffs are seeded within conference -- round one is four games, two per
+    conference, and the semi-finals are the conference championships. So two
+    divisions that meet in round one are in the same conference.
+
+    The schedule is NOT a guide here: each division plays one other division in
+    full (four games a team), and that partner turns out to be in the OPPOSITE
+    conference. Deriving conferences from the schedule gets the answer exactly
+    backwards, which is how it was first got wrong.
+    """
+    rank={r['teamId']:r['rank'] for r in (s.get('standings') or [])}
     dof={t:i for i,c in enumerate(ds) for t in c}
-    cross=collections.defaultdict(collections.Counter)
-    for m in (s.get('matchups') or []):
-        if m.get('playoff'): continue
+    po=[m for m in (s.get('matchups') or []) if m.get('playoff')]
+    if not po or not rank: return None
+    wk=min(m['week'] for m in po)
+    same=collections.defaultdict(set)
+    for m in po:
+        if m['week']!=wk: continue
+        if rank.get(m['home'],99)>8 or rank.get(m['away'],99)>8: continue
         a,b=dof[m['home']],dof[m['away']]
-        if a!=b: cross[a][b]+=1; cross[b][a]+=1
-    partner={}
+        same[a].add(b); same[b].add(a)
+    seen=set(); out=[]
     for d in range(4):
-        best=max((n,o) for o,n in cross[d].items())
-        partner[d]=best[1]
-    # partner must be mutual for the split to be a real two-conference league
-    if all(partner[partner[d]]==d for d in partner):
-        seen=set(); out=[]
-        for d in range(4):
-            if d in seen: continue
-            seen|={d,partner[d]}; out.append(sorted((d,partner[d])))
-        return out if len(out)==2 else None
-    return None
+        if d in seen: continue
+        grp={d}|same.get(d,set())
+        # a conference is two divisions; a round-one game inside one division
+        # tells us nothing, so fold in anything reachable
+        for x in list(grp): grp|=same.get(x,set())
+        seen|=grp
+        out.append(sorted(grp))
+    return out if len(out)==2 and all(len(g)==2 for g in out) else None
 
 def build():
     h=json.load(open(os.path.join(ROOT,'history.json'),encoding='utf-8'))
@@ -97,8 +117,10 @@ def build():
                       if prev.get((a,b),False)!=cur.get((a,b),False))
             if moved: realign.append({'from':prevyear,'to':y,'pairsMoved':moved})
         prev=cur; prevset={o for c in seasons[y]['divisions'] for o in c}; prevyear=y
-    payload={'note':'inferred from the schedule by scripts/build_divisions.py',
+    payload={'note':'inferred by scripts/build_divisions.py: divisions from the schedule, '
+                     'conferences from the playoff bracket',
              'current':{k:sorted(v) for k,v in CURRENT.items()},
+             'conferences':{k:list(v) for k,v in CONFERENCES.items()},
              'realignments':realign,'seasons':seasons}
     json.dump(payload, open(os.path.join(ROOT,'divisions.json'),'w',encoding='utf-8'),
               ensure_ascii=False, indent=1)
@@ -116,5 +138,7 @@ if __name__=='__main__':
         if hit: label[hit[0]]=name
         print(f"  {'MATCH' if hit else 'MISS '}  {name}")
     for pair in (p['seasons'][last]['conferences'] or []):
-        print(f"  conference: {' + '.join(label.get(i,str(i)) for i in pair)}")
+        got=sorted(label.get(i,str(i)) for i in pair)
+        nm=[c for c,v in CONFERENCES.items() if sorted(v)==got]
+        print(f"  {nm[0] if nm else 'conference'}: {' + '.join(got)}")
     print("\nrealignments:", p['realignments'])
