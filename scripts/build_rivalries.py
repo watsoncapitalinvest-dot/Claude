@@ -125,7 +125,51 @@ def verify(h):
     return checked,bad
 
 h=json.load(open(os.path.join(ROOT,'history.json')))
+# ---- what actually counts as a playoff meeting ------------------------------
+# The `playoff` flag is on every post-season game, and in a 16-team league that
+# means all sixteen teams keep playing for three more weeks -- the consolation
+# ladder included. Counting those as "playoff meetings" badly overstates things:
+# it turns 24 games a season into playoff history when only the top half are
+# even competing for anything.
+#
+# The format is not constant either. Most seasons run a straight knockout from
+# the top eight seeds; 2017 instead had the top eight replay each other over
+# three weeks. So rather than assume a bracket shape, a playoff meeting is
+# defined uniformly as a post-season game between two teams that qualified --
+# both seeded in the top eight. The title game is identified separately, and is
+# checked against the champion the records already name.
+def championship_games(h):
+    for s in h['seasons']:
+        rank={r['teamId']:r['rank'] for r in (s.get('standings') or [])}
+        for m in (s.get('matchups') or []):
+            if not m.get('playoff'): continue
+            if rank.get(m['home'],99)<=8 and rank.get(m['away'],99)<=8:
+                m['bracket']=True
+
 _r=resolve_ties(h)
+championship_games(h)
+
+# Postseason games between qualifiers should be a constant 12 a season (four
+# pairings a week for three weeks), and every season's title game must name the
+# champion the records already carry.
+_per=collections.Counter(); _fin_ok=[]
+for _s in h['seasons']:
+    for _m in (_s.get('matchups') or []):
+        if _m.get('bracket'): _per[_s['year']]+=1
+    _tid={_t['id']:own(_t.get('owner')) for _t in _s['teams']}
+    _po=[_m for _m in (_s.get('matchups') or []) if _m.get('playoff')]
+    _champ=own(_s.get('champion'))
+    if _po and _champ:
+        _last=max(_m['week'] for _m in _po)
+        _f=[_m for _m in _po if _m['week']==_last and _champ in (_tid.get(_m['home']),_tid.get(_m['away']))]
+        _w=None
+        if _f:
+            _m=_f[0]; _w=_tid.get(_m['home']) if _m['homeScore']>_m['awayScore'] else _tid.get(_m['away'])
+        _fin_ok.append(_w==_champ)
+print(f"playoff check: qualifier-vs-qualifier games per season {sorted(set(_per.values()))}; "
+      f"title game names the recorded champion in {sum(_fin_ok)}/{len(_fin_ok)} seasons")
+assert set(_per.values())=={12}, f'expected 12 qualifier games a season, got {sorted(set(_per.values()))}'
+assert all(_fin_ok), 'a title game disagrees with the recorded champion'
 _checked,_bad=verify(h)
 # 2008 is the one season where the upstream import's standings disagree with its
 # own scores (four teams, two games, margins of 3+ so it is not a rounding effect).
@@ -149,7 +193,7 @@ for s in h['seasons']:
         po=bool(m.get('playoff'))
         for x,z,sx,sz in ((a,b,sa,sb),(b,a,sb,sa)):
             d=H[(x,z)]; d['g']+=1; d['pf']+=sx; d['pa']+=sz; d['seasons'].add(y)
-            if po: d['po']+=1
+            if m.get('bracket'): d['po']+=1
             rw=m.get('resolvedWinner','__none__')
             if sx>sz: d['w']+=1
             elif sx<sz: d['l']+=1
@@ -157,7 +201,7 @@ for s in h['seasons']:
             else: d['w' if rw==(m['home'] if x==tid.get(m['home']) else m['away']) else 'l']+=1
             rw=m.get('resolvedWinner','__none__')
             side=None if rw in ('__none__',None) else ('me' if rw==(m['home'] if x==tid.get(m['home']) else m['away']) else 'them')
-            d['games'].append({'y':y,'wk':m.get('week'),'po':po,'me':sx,'them':sz,'rw':side})
+            d['games'].append({'y':y,'wk':m.get('week'),'po':bool(m.get('bracket')),'me':sx,'them':sz,'rw':side})
 
 # chat engagement
 ms=load(CHATPATH) if CHATPATH else []
@@ -178,6 +222,7 @@ for (a,b),n in volley.items(): tot[a]+=n; tot[b]+=n
 
 
 # ---- per-pairing detail the board renders -----------------------------------
+
 def finals_map(h):
     """(year) -> (winner_owner, loser_owner) for each title game."""
     out={}
@@ -259,6 +304,8 @@ def assert_no_chat_text(payload, msgs):
             raise SystemExit(f'refusing to write: output contains chat text -> {st[:80]!r}')
     return len(strings)
 
+for _k,_d in H.items():
+    assert sum(1 for _g in _d['games'] if _g['po'])==_d['po'], f'playoff counts disagree for {_k}'
 rows.sort(key=lambda r:-r['score'])
 _payload={'note':'aggregate only; built by scripts/build_rivalries.py','rows':rows}
 _n=assert_no_chat_text(_payload, ms)
