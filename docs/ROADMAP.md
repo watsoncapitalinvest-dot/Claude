@@ -5,11 +5,15 @@ fun-per-effort call we made on 2026-08-20.
 
 ## In progress
 
-### 2. Player pages — "The Ledger"
-Every player who has ever been traded gets a page: every trade he appeared in,
-who owned him when, and what the chat said about him at the time. Foundation for
-the Curse Watch, the Rivalry Board and the Trade Court — they all get to cite it.
-Sources: `trades.json` (256 deals), the chat corpus, `pop-grades.json`.
+### 2. Player pages — "The Ledger" — SHIPPED 2026-08-21
+In the app under Newsroom → The Record Room. 255 players across 492 trade
+assets: searchable list, and a page each with trade count, franchises, the route
+he actually took (returns included), and every deal — who sent him, who got him,
+who moved with him, what went back. Built by `scripts/build_players.py`, which
+canonicalises hand-typed names conservatively and asserts the asset count is
+unchanged so a bad merge can't silently swallow a player.
+Still to add: what the chat said about him (needs the banter-not-shots rule), and
+a valuation column from `dp-values.json`.
 
 ### 3. The Rivalry Board — SHIPPED 2026-08-21
 In the app under Newsroom → The Record Room. Ranked pairings, everyone's rival,

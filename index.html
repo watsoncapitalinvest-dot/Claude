@@ -3492,6 +3492,7 @@ const NEWSROOM_TOOLS = [
   ['dossier', '📓', 'Chat Dossier', 'Who’s who in the league'],
   ['records', '📖', 'Record Book', 'All-time history & records'],
   ['rivalries', '⚔️', 'The Rivalry Board', 'Head-to-head, grudges & streaks'],
+  ['players', '📇', 'The Ledger', 'Every traded player, tracked'],
   ['ex-files', '👻', 'The Ex-Files', 'The league’s departed, reviewed'],
   ['archive-articles', '🗄️', 'Article Archive', 'Every article, searchable'],
   ['archive', '📚', 'Back Issues', 'Saved editions'],
@@ -3508,7 +3509,7 @@ const NEWSROOM_SECTIONS = [
   ['The Network', ['sportscenter', 'broadcast']],
   ['Desks & Features', ['politics', 'desk', 'storylines', 'investigations']],
   ['Editions', ['pop-grades', 'archive']],
-  ['The Record Room', ['dossier', 'records', 'rivalries', 'ex-files', 'archive-articles']],
+  ['The Record Room', ['dossier', 'records', 'rivalries', 'players', 'ex-files', 'archive-articles']],
 ];
 function toolSections(tools, sections) {
   const by = {}; tools.forEach(t => by[t[0]] = t);
@@ -7284,6 +7285,92 @@ function weeklyBoardView(kind){
     </div>`);
 }
 
+
+// ---- The Ledger: every player who has ever been traded ----------------------
+// players.json is built by scripts/build_players.py from trades.json (256 deals)
+// and the current roster export. Names in the raw ledger are hand-typed, so the
+// builder canonicalises variants and fixes display spellings.
+let LEDGER = null, ledgerQ = '';
+async function loadLedger() {
+  if (LEDGER) return LEDGER;
+  try {
+    const r = await fetch('players.json', { cache: 'no-cache' });
+    if (r.ok) { const d = await r.json(); LEDGER = d.players || []; }
+  } catch { LEDGER = null; }
+  return LEDGER;
+}
+const plKey = n => n.toLowerCase().replace(/[^a-z0-9]+/g, '');
+async function showPlayers(q) {
+  const all = await loadLedger();
+  if (!all) return setContent(`<button class="btn ghost" data-act="newsroom" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom</button>
+    <div class="card"><h3>📇 The Ledger</h3><p class="muted">Player data isn't loaded. Build it with <code>scripts/build_players.py</code>.</p></div>`);
+  if (q !== undefined) ledgerQ = q;
+  const needle = plKey(ledgerQ || '');
+  const hits = needle ? all.filter(p => plKey(p.n).includes(needle)
+                       || (p.team && plKey(p.team).includes(needle))) : all;
+  const row = p => `<div data-act="player-read" data-n="${esc(p.n)}" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="min-width:0">
+        <div style="font-weight:800;font-size:13.5px">${esc(p.n)}${p.pos ? ` <span class="faint" style="font-weight:600">${esc(p.pos)}</span>` : ''}</div>
+        <div class="faint" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${
+          p.team ? esc(p.team) : 'no longer in the league'}</div>
+      </div>
+      <div class="faint" style="font-size:11.5px;white-space:nowrap">${p.moves}&times;</div>
+    </div>`;
+  setContent(`<button class="btn ghost" data-act="newsroom" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom</button>
+    <div class="card"><h3>📇 The Ledger</h3>
+      <p class="muted">Every player who has ever changed hands in this league — ${all.length} of them across
+      256 trades. Tap a name for his full movement history.</p>
+      <input id="plq" placeholder="Search a player or a team…" value="${esc(ledgerQ || '')}"
+        style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;margin-top:4px">
+    </div>
+    <div class="card">
+      <div class="faint" style="font-size:11.5px;margin-bottom:4px">${hits.length} player${hits.length === 1 ? '' : 's'}${
+        needle ? '' : ' &middot; most-traded first'}</div>
+      ${hits.slice(0, 120).map(row).join('') || '<div class="faint">Nothing matches.</div>'}
+      ${hits.length > 120 ? `<div class="faint" style="font-size:11.5px;padding-top:8px">Showing the first 120. Keep typing to narrow it.</div>` : ''}
+    </div>`);
+  const box = $('#plq');
+  if (box) {
+    box.oninput = () => { ledgerQ = box.value; showPlayers(box.value).then(() => {
+      const b = $('#plq'); if (b) { b.focus(); b.setSelectionRange(b.value.length, b.value.length); } }); };
+  }
+}
+async function showPlayerRead(name) {
+  const all = await loadLedger(); if (!all) return showPlayers();
+  const p = all.find(x => x.n === name) || all.find(x => plKey(x.n) === plKey(name));
+  if (!p) return showPlayers();
+  const chain = (p.path || p.teams).map((t, i) => `${i ? '<span class="faint"> → </span>' : ''}${esc(t)}`).join('');
+  const deal = t => {
+    const from = t.from.filter(Boolean).join(', ');
+    const back = t.back.filter(Boolean);
+    return `<div style="border-left:3px solid var(--accent);padding:8px 0 8px 12px;margin-bottom:12px">
+      <div style="font-weight:800;font-size:13.5px">${t.s} &middot; to ${esc(t.to)}</div>
+      ${from ? `<div class="faint" style="font-size:12px;margin-top:2px">from ${esc(from)}</div>` : ''}
+      ${t.with.length ? `<div style="font-size:12.5px;margin-top:5px">Moved with ${t.with.map(esc).join(', ')}</div>` : ''}
+      ${back.length ? `<div style="font-size:12.5px;margin-top:4px"><span class="faint">The other way:</span> ${back.map(esc).join(', ')}</div>` : ''}
+    </div>`;
+  };
+  setContent(`<button class="btn ghost" data-act="players" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ The Ledger</button>
+    <div class="card">
+      <h3 style="margin-bottom:2px">${esc(p.n)}</h3>
+      <div class="faint" style="font-size:12.5px;margin-bottom:12px">
+        ${p.pos ? esc(p.pos) + ' &middot; ' : ''}${p.team ? 'now on <b>' + esc(p.team) + '</b>' : 'no longer rostered in the league'}</div>
+      <div style="display:flex;gap:7px;margin-bottom:14px">
+        <div style="flex:1;text-align:center;padding:9px 4px;background:var(--bg2);border-radius:10px">
+          <div style="font-size:19px;font-weight:900;line-height:1">${p.moves}</div>
+          <div class="faint" style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-top:4px">Trades</div></div>
+        <div style="flex:1;text-align:center;padding:9px 4px;background:var(--bg2);border-radius:10px">
+          <div style="font-size:19px;font-weight:900;line-height:1">${p.teams.length}</div>
+          <div class="faint" style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-top:4px">Franchises</div></div>
+      </div>
+      <div style="font-size:13px;line-height:1.7;margin-bottom:16px">${chain}</div>
+      <h4 style="margin:0 0 10px">Every deal</h4>
+      ${p.trades.map(deal).join('')}
+      <p class="faint" style="font-size:11.5px;line-height:1.5">From the league trade ledger, 2021&ndash;2026.
+      Trades are grouped by season; the ledger doesn't record dates within a season.</p>
+    </div>`);
+}
+
 // ---- The Rivalry Board ------------------------------------------------------
 // Data from rivalries.json, built by scripts/build_rivalries.py: 18 seasons of
 // matchups reconciled against the stored standings, joined to chat engagement.
@@ -7768,7 +7855,7 @@ async function showSettings() {
 // ---------------------------------------------------------------------
 /* ---- history-backed navigation: swipe-back and the ‹ button both work ---- */
 const NAV_ACTS = new Set(['home','newsroom','create-issue','weekly-stories','dashboard','calendar',
-  'politics','pol-read','desk','storylines','investigations','inv-read','dossier','records','rivalries','rivalry-read','ex-files',
+  'politics','pol-read','desk','storylines','investigations','inv-read','dossier','records','rivalries','rivalry-read','players','player-read','ex-files',
   'archive-articles','archive','cover-art','predraft-view','draft-room','trade-court','draft-desk',
   'assets','staff-handbook','staff-import','tc-team','back-news','back','settings','ex-files','power-ranks','money-lines','pop-grades','pop-year']);
 let NAV_SILENT = false;
@@ -7863,6 +7950,8 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'story-share') return storyShare(t.dataset.file, t.dataset.title);
   if (act === 'rivalries') return showRivalries();
   if (act === 'rivalry-read') return showRivalryRead(t.dataset.k);
+  if (act === 'players') return showPlayers();
+  if (act === 'player-read') return showPlayerRead(t.dataset.n);
   if (act === 'dev-note') return openDevNote();
   if (act === 'dev-note-save') return devNoteSave();
   if (act === 'dev-notes-export') return devNotesExport();
