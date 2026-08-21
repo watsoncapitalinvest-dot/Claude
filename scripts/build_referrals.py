@@ -193,6 +193,29 @@ def build():
           f'<td class="num"><b>{hiS[1]*100:.0f}%</b> <span class="sep">/</span> '
           f'{loS[1]*100:.0f}%</td></tr>')
 
+    # ---------- figure 4: who has a rival at all -------------------------------
+    best, bestwith, toppart = {}, {}, {}
+    for p in pairs:
+        for me, you, mine in ((p['a'], p['b'], p['sa']), (p['b'], p['a'], p['sb'])):
+            if p['share'] > best.get(me, 0):
+                best[me] = p['share']; bestwith[me] = you
+            if mine > toppart.get(me, (0, None))[0]:
+                toppart[me] = (mine, you)
+    EVEN = 1 / 15
+    SCALE = 0.26
+    order = sorted(NAME, key=lambda t: best.get(t, 0))
+    alone = [t for t in order if best.get(t, 0) < 0.07]
+    solo = ''
+    for t in order:
+        bs = best.get(t, 0)
+        solo += (f'<tr><th scope="row">{esc(NAME[t])}</th>'
+                 f'<td class="bar rail"><span class="{"lo" if bs < 0.07 else ""}" '
+                 f'style="width:{100*bs/SCALE:.1f}%"></span>'
+                 f'<i class="even" style="left:{100*EVEN/SCALE:.1f}%"></i></td>'
+                 f'<td class="num"><b>{bs*100:.1f}%</b></td>'
+                 f'<td class="who">{esc(NAME[bestwith[t]]) if t in bestwith else "&mdash;"}</td>'
+                 f'<td class="num pct">{toppart[t][0]*100:.0f}%</td></tr>')
+
     # ---------- the table -----------------------------------------------------
     trs = ''
     for i, p in enumerate(pairs[:28]):
@@ -214,6 +237,8 @@ def build():
         nmsg=f'{nmsg:,}', counted=f'{counted:,}', vol=f'{sum(volley.values()):,}',
         npairs=len(volley), span0=span[0].strftime('%B %Y'), span1=span[1].strftime('%B %Y'),
         window=WINDOW // 60, bars=bars, head=head, rows=rows, dumb=dumb, trs=trs,
+        solo=solo, nalone=len(alone), even=f'{100/15:.1f}',
+        alone=', '.join(esc(NAME[t]) for t in alone[:-1]) + ' and ' + esc(NAME[alone[-1]]),
         loud=esc(NAME[teams[0]]), loudn=f'{tot[teams[0]]:,}',
         quiet=esc(NAME[teams[-1]]), quietn=f'{tot[teams[-1]]:,}',
         ratio=f'{tot[teams[0]]/max(tot[teams[-1]],1):.0f}',
@@ -305,6 +330,15 @@ tbody th{{text-align:left;font-weight:700;white-space:nowrap;}}
 .bars .bar{{width:56%;}}
 .bars .bar span{{display:block;height:13px;background:var(--red);border-radius:0 3px 3px 0;
   min-width:2px;}}
+.bars.solo thead th{{font-family:var(--sans);font-size:9.5px;font-weight:800;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--faint);border-bottom:2px solid var(--ink);text-align:left;
+  white-space:nowrap;}}
+.bars.solo thead th.num{{text-align:right;}}
+.bars .rail{{position:relative;}}
+.bars .rail span.lo{{background:var(--teal);}}
+.bars .rail i.even{{position:absolute;top:-2px;bottom:-2px;width:1px;background:var(--ink);
+  opacity:.45;}}
+.who{{color:var(--muted);white-space:nowrap;}}
 
 /* --- fig 2: matrix --- */
 .mx{{border-collapse:separate;border-spacing:2px;font-size:11px;}}
@@ -456,6 +490,30 @@ footer{{margin-top:56px;border-top:1px solid var(--line);padding-top:18px;
       <figcaption>Read the gap, not the dots. A wide gap is a manager who has a rival and a
       manager who has a fixture. This is precisely what the geometric mean is built to
       demote, and why several of these pairings rank lower than their volume suggests.</figcaption>
+    </figure>
+  </div>
+
+  <div class="sec">
+    <h2>Figure 4 &middot; {nalone} of the sixteen have no rival at all</h2>
+    <p>Spread your attention evenly across the other fifteen and each of them gets
+    <b>{even}%</b>. By that yardstick everybody in this league looks the same: every
+    single manager&rsquo;s top partner takes three to four times an even share. Nobody is
+    unusually fixated.</p>
+    <p>Mutual share tells a different story, because it needs the other man to be
+    fixated back. Below is the best pairing each manager is actually in &mdash; the
+    highest mutual figure available to him anywhere in the league.</p>
+    <figure>
+      <div class="scroll"><table class="bars solo">
+        <thead><tr><th></th><th>Best mutual pairing he is in</th><th class="num">Mutual</th>
+          <th>With</th><th class="num">Top partner</th></tr></thead>
+        <tbody>{solo}</tbody>
+      </table></div>
+      <figcaption>The hairline marks an even spread, {even}%. {nalone} managers &mdash;
+      {alone} &mdash; have no pairing that clears seven per cent, against 24.6% at the top.
+      They are not quiet: their own top-partner share, in the last column, is as
+      concentrated as anybody&rsquo;s. The difference is that the men they talk at do not
+      talk back in the same proportion. Talking at the loud core is not a rivalry, and this
+      measure is built to say so.</figcaption>
     </figure>
   </div>
 
