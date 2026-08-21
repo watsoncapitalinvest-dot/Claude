@@ -46,6 +46,13 @@ production value per unit of work.
   public site (the Pages workflow publishes the whole repo root). Local-only if
   ever built.
 
+## League customs that affect the data
+
+See `docs/LEAGUE-RULES.md`. The big one: **the worst team is renamed every year
+and the league votes on the new name**, so franchise names are never stable
+identifiers — always resolve identity by owner, and expect a new alias each
+August.
+
 ## House rules this project runs on
 
 - Chat exports never enter the repo. Only distilled, reviewed artifacts.
