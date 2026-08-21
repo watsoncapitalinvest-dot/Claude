@@ -46,6 +46,15 @@ production value per unit of work.
   public site (the Pages workflow publishes the whole repo root). Local-only if
   ever built.
 
+## Written and waiting for an issue
+
+- **The Man Who Would Not Sell** (`the-hill-standoff`) — the five-year Tyreek
+  Hill file. Finished, fact-checked, and its opener art is already in the repo
+  as `scfl-art-hillstandoff.jpg`. Pulled from the 2026 Kickoff Issue to run in a
+  later one; marked `HELD FOR A LATER ISSUE` in `investigations.json`. To ship
+  it, add `'the-hill-standoff'` back to an issue's `articles` list and restore
+  the `openart` pairing in `scripts/build_issue.py`.
+
 ## League customs that affect the data
 
 See `docs/LEAGUE-RULES.md`. The big one: **the worst team is renamed every year

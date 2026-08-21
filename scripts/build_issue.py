@@ -47,8 +47,10 @@ ISSUES={
      'THE PICKS: EVERY DIVISION, AND WHO LIFTS IT',
      'THE GRUDGE REPORT: 2,344 GAMES, EVERY RIVALRY RANKED',
    ],
+   # The Hill Standoff is written and its opener art is ready
+   # (scfl-art-hillstandoff.jpg) -- held out of this issue for a later one.
    'articles':['kick-2026-champion','kick-2026-namechange','kick-2026-blackandblue',
-               'kick-2026-preview','kick-2026-picks','the-grudge-report','the-hill-standoff'],
+               'kick-2026-preview','kick-2026-picks','the-grudge-report'],
    # Opener art, one per article. Any missing file is skipped and that article
    # opens typographically, so the issue always builds. Cropped to 3:2, so the
    # supplied image can be any shape as long as the subject is centred.
@@ -59,7 +61,6 @@ ISSUES={
      'kick-2026-preview':'scfl-art-preview.jpg',
      'kick-2026-picks':'scfl-art-picks.jpg',
      'the-grudge-report':'scfl-grudge-art.jpg',
-     'the-hill-standoff':'scfl-art-hillstandoff.jpg',
    },
  },
 }
