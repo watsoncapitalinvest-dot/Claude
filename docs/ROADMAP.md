@@ -17,7 +17,7 @@ and a detail page per pairing: series record, playoff record, title-game
 meetings, current streak, biggest win, worst loss, closest game, chat focus and
 heat. Built by `scripts/build_rivalries.py`; the build asserts the head-to-head
 reconciles against the league's stored standings before it will write output.
-Still to add: the defining *quote* per pairing.
+Still to add: a defining *line* per pairing — but see the rule below.
 
 ## Agreed, not started
 
@@ -48,3 +48,8 @@ production value per unit of work.
 - Every published quotation is verified verbatim against the corpus first.
 - Private-chat commentary stays out of print; the offers themselves are usable.
 - Page builders live in `scripts/`, not in a temp directory.
+- Rivalry lines are **banter, not shots**. The chat's angriest messages are easy
+  to find and are the wrong material — personal insults between real friends read
+  very differently on a published page than they did in the moment. Pick lines
+  that are funny, self-aware, or that the speaker would happily repeat. When in
+  doubt, run it past John before it ships.
