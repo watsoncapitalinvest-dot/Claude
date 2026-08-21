@@ -1,86 +1,83 @@
 #!/usr/bin/env python3
-"""Render an issue's share card.
+"""Render an issue's preview card from its own magazine cover.
 
     python3 scripts/build_og.py kickoff-2026
 
-House format, matching scfl-postdraft-og.jpg: 1200x630, red bars top and
-bottom, the issue's hook in white serif at the bottom left, and a line of
-caps beneath it with red middots. Reads the hook straight out of
-build_issue.ISSUES so the card and the cover never drift apart.
+The card IS the cover -- red frame, wordmark panel, issue seal, hook,
+coverlines and shield -- flattened to a 1200x1800 JPG, the same as
+draft-issue-og.jpg. Screenshots the built issue page's .magcover element,
+so the card can never drift from the cover: change a coverline, rebuild,
+and the preview changes with it.
 
-Rendered in the browser rather than drawn with PIL so the type matches the
-site's own font stack.
+Run scripts/build_issue.py first.
 """
-import importlib.util, os, re, subprocess, sys, tempfile
+import importlib.util, json, os, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PORT = 8991
 BROWSER = '/opt/pw-browsers/chromium'
+W, H = 1200, 1800
 
 spec = importlib.util.spec_from_file_location('bi', os.path.join(ROOT, 'scripts', 'build_issue.py'))
 bi = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bi)
 
-# The strip of the cover art the card crops to, as a background-position Y.
-FOCUS = {'kickoff-2026': '34%'}
-
-CARD = """<style>
-*{{margin:0;padding:0;box-sizing:border-box}}
-html,body{{width:1200px;height:630px;overflow:hidden}}
-.card{{position:relative;width:1200px;height:630px;overflow:hidden;background:#0b0f14;
- border-top:10px solid #e11b22;border-bottom:10px solid #e11b22}}
-.art{{position:absolute;inset:0;background:url('{art}') center {focus}/cover no-repeat}}
-.scrim{{position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,8,10,.30) 0%,
- rgba(6,8,10,0) 22%,rgba(6,8,10,.18) 48%,rgba(6,8,10,.80) 78%,rgba(6,8,10,.96) 100%)}}
-.txt{{position:absolute;left:52px;right:52px;bottom:34px}}
-.hook{{font-family:Georgia,'Liberation Serif','Times New Roman',serif;font-weight:700;
- font-size:{size}px;line-height:.95;letter-spacing:-1.5px;color:#fff;
- text-shadow:0 3px 22px rgba(0,0,0,.95),0 1px 3px rgba(0,0,0,.9)}}
-.line{{margin-top:16px;font-family:Helvetica,'Liberation Sans',Arial,sans-serif;font-weight:700;
- font-size:21px;letter-spacing:.5px;text-transform:uppercase;color:#f3f5f8;
- text-shadow:0 2px 10px rgba(0,0,0,.98)}}
-.line i{{font-style:normal;color:#ff5442;padding:0 10px}}
-</style>
-<div class="card"><div class="art"></div><div class="scrim"></div>
-<div class="txt"><div class="hook">{hook}</div><div class="line">{line}</div></div></div>"""
-
-SHOT = """const {{chromium}}=require('playwright');
-(async()=>{{
-const b=await chromium.launch({{executablePath:'%s'}});
-const p=await b.newPage({{viewport:{{width:1200,height:630}},deviceScaleFactor:2}});
-await p.goto('http://127.0.0.1:%d/{tmp}',{{waitUntil:'networkidle'}});
-await p.waitForTimeout(600);
-await p.screenshot({{path:'{out}'}});
+# Two things here are load-bearing, both learned the hard way.
+#
+# 1. deviceScaleFactor must stay 1. At 2 the cover's background art never paints
+#    and the capture comes out as the page's bare grey ground -- silently, with no
+#    error. elementHandle.screenshot(), screenshot({clip}) and a full-viewport
+#    capture all reproduce it, and forcing an Image().decode() first does not help.
+#    Full size is reached with CSS zoom instead, which scales the whole cover --
+#    art, type and all -- so proportions match the cover exactly.
+# 2. Capture the viewport and crop in PIL rather than screenshotting the element.
+SHOT = """const {chromium}=require('playwright');
+(async()=>{
+const b=await chromium.launch({executablePath:'%s'});
+const p=await b.newPage({viewport:{width:1400,height:2000},deviceScaleFactor:1});
+await p.goto('file://%s',{waitUntil:'load'});
+await p.waitForTimeout(800);
+const el=await p.$('.magcover');
+if(!el){console.error('no .magcover on the page');process.exit(2);}
+await p.addStyleTag({content:'.cover-page{zoom:%d !important}'});
+await p.waitForTimeout(700);
+const box=await el.boundingBox();
+console.log(JSON.stringify(box));
+await p.screenshot({path:'%s'});
 await b.close();
-}})();""" % (BROWSER, PORT)
+})();"""
+ZOOM = 2
 
 
 def build(key):
     cfg = bi.ISSUES[key]
-    art = cfg['art']
-    if not os.path.exists(os.path.join(ROOT, art)):
-        sys.exit(f'cover art {art} not present — nothing to make a card from')
+    page = os.path.join(ROOT, cfg['out'])
+    if not os.path.exists(page):
+        sys.exit(f"{cfg['out']} not built yet -- run scripts/build_issue.py first")
 
-    line = '<i>&middot;</i>'.join(cfg['ogline'])
-    hook = cfg['hook']
-    size = 66 if len(hook) <= 28 else 56
-
-    tmp = '.og-tmp.html'
-    open(os.path.join(ROOT, tmp), 'w', encoding='utf-8').write(
-        CARD.format(art=art, focus=FOCUS.get(key, 'center'), hook=hook, line=line, size=size))
     raw = os.path.join(tempfile.gettempdir(), f'og-{key}.png')
     js = os.path.join(tempfile.gettempdir(), f'og-{key}.js')
-    open(js, 'w').write(SHOT.format(tmp=tmp, out=raw))
+    open(js, 'w').write(SHOT % (BROWSER, page, ZOOM, raw))
     try:
         env = dict(os.environ, NODE_PATH='/opt/node22/lib/node_modules')
-        subprocess.run(['node', js], check=True, env=env, cwd=ROOT)
+        out = subprocess.run(['node', js], check=True, env=env, cwd=ROOT,
+                             capture_output=True, text=True)
+        box = json.loads(out.stdout.strip().splitlines()[-1])
         from PIL import Image
-        im = Image.open(raw).convert('RGB').resize((1200, 630), Image.LANCZOS)
-        out = os.path.join(ROOT, cfg['og'])
-        im.save(out, 'JPEG', quality=88, optimize=True)
-        print(f"wrote {cfg['og']} 1200x630 | {hook}")
+        im = Image.open(raw).convert('RGB').crop((
+            round(box['x']), round(box['y']),
+            round(box['x'] + box['width']), round(box['y'] + box['height'])))
+        print(f"  cover captured at {im.width}x{im.height}")
+        if im.size != (W, H):
+            im = im.resize((W, H), Image.LANCZOS)
+        dst = os.path.join(ROOT, cfg['og'])
+        im.save(dst, 'JPEG', quality=88, optimize=True, progressive=True)
+        kb = os.path.getsize(dst) // 1024
+        if kb < 120:
+            sys.exit(f'  !! {cfg["og"]} came out {kb}kb -- the art almost certainly '
+                     f'did not render; not shipping a blank cover')
+        print(f"wrote {cfg['og']} {W}x{H} {kb}kb | {cfg['hook']}")
     finally:
-        for f in (os.path.join(ROOT, tmp), js, raw):
+        for f in (js, raw):
             if os.path.exists(f):
                 os.remove(f)
 

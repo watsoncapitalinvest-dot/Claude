@@ -37,7 +37,6 @@ ISSUES={
    'seal':('Kickoff','Issue'),
    'issueline':'2026&ndash;27 Season &middot; The Kickoff Issue',
    'hook':'Sixteen Enter. One Leaves.',
-   'ogline':['Skirt Chasers','The Kickoff Issue','A 7-7 Champion + The Rename'],
    'hooksub':('A 7-7 champion with a target on his back, a division that will eat two '
               'contenders alive, and one man about to lose his name.'),
    'coverlines':[
