@@ -16,14 +16,14 @@ import json, os, re, collections, difflib, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Roster exports use their own labels; map only the unambiguous ones. Forty2V has
-# no confident match in the trade ledger, so it keeps its own name rather than
-# being guessed into an existing franchise.
+# Roster exports use their own labels. Kept in step with the TALIAS map in
+# broadcast-demo.html / scfl-sportscenter.html -- if a team renames, both need it.
 ROSTER_ALIAS = {
  'New Wod Order': 'New World Order', '*THE MACHINES*': 'The Machines',
  'Beaver Eaters': 'The Beaver Eaters', 'Gumbas': 'Hairy Gumbas',
  'Lil’ Chops': 'Lil Chops', 'StillTheCream': 'Still The Creamiest',
  'Master-Jeti': 'The Jet-I', 'BIG BLUE': 'Big Blue',
+ 'Forty2V': 'Horse Collars',
 }
 # Franchises rename constantly; these are the same shop across the ledger.
 TEAM_ALIAS = {
