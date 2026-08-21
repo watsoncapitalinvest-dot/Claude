@@ -64,10 +64,16 @@ conference.** Three rounds, including a conference championship.
 
 Two things follow, and both matter for any analysis:
 
-- **`rank` in the standings is the playoff seed, not record order.** In fifteen
-  of eighteen seasons a team with an inferior record is seeded inside the top
-  eight — division winners get in regardless. In 2024 and 2025 the #1 seed was a
-  6-8 and a 7-7 team.
+- **`rank` in the standings is FINAL PLACEMENT — where a team finished after the
+  playoffs — not the playoff seed and not record order.** `rank == 1` is the
+  champion in 18 of 18 seasons, including a 6-8 team (2024) and a 7-7 team
+  (2025). The week-17 game between `rank` 1 and 2 is therefore always the title
+  game, and 3v4, 5v6, 7v8 are placement games.
+  **Playoff seeds cannot be recovered from this data.** Division winners are
+  seeded above wild cards, but the division standings and tiebreakers that decide
+  who won a division are not stored, so never describe a team as the "#1 seed" or
+  as having "won its division" from `rank` alone. What `rank` does support:
+  ranks 1-8 are the eight teams that made the bracket, 9-16 the consolation half.
 - All sixteen teams keep playing the final three weeks — the bottom half in a
   consolation ladder that decides nothing — and `history.json` flags **every**
   one of those as `playoff`. Counting them turns 24 games a season into playoff

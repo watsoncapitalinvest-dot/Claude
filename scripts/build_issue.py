@@ -69,7 +69,7 @@ EXTRA_CSS="""
 SECT=re.compile(r'^([A-Z][A-Z0-9 ’\'&,·-]{3,44}) — (.*)$', re.S)
 # House style has no inline bold — emphasis is structural (p.b, .sect, .pullquote).
 # Markdown markers in copy would render as literal asterisks, so fail loudly instead.
-MD=re.compile(r'\*\*[^*]{1,80}\*\*|(?<![\w*])\*[^*\n]{1,60}\*(?![\w*])')
+MD=re.compile(r'\*\*[^*]+\*\*|(?<![\w*])\*[^*\n]+\*(?![\w*])')
 def esc(t):
     m=MD.search(t)
     if m:
