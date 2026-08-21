@@ -59,6 +59,11 @@ August.
 - Every published quotation is verified verbatim against the corpus first.
 - Private-chat commentary stays out of print; the offers themselves are usable.
 - Page builders live in `scripts/`, not in a temp directory.
+- **Covers come from John's graphics AI, not from code.** Do not generate cover
+  art programmatically. Write the article, then hand over a cover direction to
+  paste into the image tool — the app already has this flow (Cover Art →
+  Generate cover direction → Copy the prompt). Anything drawn in PIL is a
+  placeholder and should be labelled as one.
 - **Heat is a metric, not a quote source.** Argument density is a good signal for
   ranking rivalries and it stays. What never ships is the text behind it — angry
   messages between real friends read very differently on a published page than
