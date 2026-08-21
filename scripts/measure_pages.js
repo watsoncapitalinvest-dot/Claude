@@ -31,6 +31,9 @@ const here = __dirname;
     while (start < blocks.length) {
       let end = start;
       while (end < blocks.length) {
+        // An article opener always starts a page: the one before it ends here,
+        // however much room is left on it.
+        if (end > start && kinds[end] === 'divider') break;
         inner.innerHTML = RUN + blocks.slice(start, end + 1).join('');
         if (sec.scrollHeight > sec.clientHeight) break;
         end++;

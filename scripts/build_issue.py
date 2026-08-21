@@ -12,7 +12,7 @@ Covers come from John's graphics AI, never from code. If the cover file named in
 the issue definition is missing, the build says so and uses a typographic
 stand-in so the issue is still readable.
 """
-import json, os, re, sys
+import json, os, re, subprocess, sys
 
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE=os.path.join(ROOT,'scfl-politics-wire-freeze-flip.html')
@@ -48,6 +48,17 @@ ISSUES={
    ],
    'articles':['kick-2026-champion','kick-2026-namechange','kick-2026-blackandblue',
                'kick-2026-preview','the-grudge-report','the-hill-standoff'],
+   # Opener art, one per article. Any missing file is skipped and that article
+   # opens typographically, so the issue always builds. Cropped to 3:2, so the
+   # supplied image can be any shape as long as the subject is centred.
+   'openart':{
+     'kick-2026-champion':'scfl-art-champion.jpg',
+     'kick-2026-namechange':'scfl-art-namechange.jpg',
+     'kick-2026-blackandblue':'scfl-art-blackandblue.jpg',
+     'kick-2026-preview':'scfl-art-preview.jpg',
+     'the-grudge-report':'scfl-grudge-art.jpg',
+     'the-hill-standoff':'scfl-art-hillstandoff.jpg',
+   },
  },
 }
 
@@ -99,6 +110,8 @@ EXTRA_CSS="""
 .toc .k{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.1em;
   text-transform:uppercase;color:var(--faint);display:block;margin-top:3px;}
 .divider{text-align:center;padding:26px 0 8px;}
+.divider .d-art{display:block;width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:2px;
+  margin:0 0 20px;background:#e8e2d8;}
 .divider .d-flag{font-family:var(--sans);font-size:10.5px;font-weight:900;letter-spacing:.24em;
   text-transform:uppercase;color:var(--red);}
 .divider .d-h{font-family:var(--serif);font-weight:900;font-size:27px;line-height:1.15;margin-top:10px;}
@@ -117,8 +130,11 @@ def esc(t):
         raise SystemExit('markdown emphasis in copy (house style has no inline bold): '+m.group(0))
     return (t.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace("'",'’'))
 
-def article_blocks(art, first):
-    out=[('sect', '<div class="divider"><div class="d-flag">'+esc(art.get('flag',''))+'</div>'
+def article_blocks(art, first, openart=None):
+    # 'divider' rather than 'sect': the packer forces a page break before one, so
+    # every article finishes its own page and the next one opens a fresh one.
+    img=(f'<img class="d-art" src="{openart}" alt="">' if openart else '')
+    out=[('divider', '<div class="divider">'+img+'<div class="d-flag">'+esc(art.get('flag',''))+'</div>'
           '<div class="d-h">'+esc(art['headline'])+'</div>'
           '<div class="d-s">'+esc(art.get('subhead',''))+'</div>'
           '<div class="d-rule"></div></div>')]
@@ -136,7 +152,7 @@ def article_blocks(art, first):
             out.append(('body','<p class="b">'+esc(p)+'</p>'))
     return out
 
-def build(key):
+def build(key, remeasure=True, quiet=False):
     cfg=ISSUES[key]
     src=open(TEMPLATE,encoding='utf-8').read()
     css=re.search(r'<style>(.*?)</style>',src,re.S).group(1)
@@ -173,12 +189,32 @@ def build(key):
     blocks=[('head','<span class="flag">In this issue</span>'
              '<h1 class="hl">'+esc(cfg['title'])+'</h1>'
              '<ul class="toc">'+toc+'</ul>')]
-    for i,a in enumerate(arts): blocks += article_blocks(a, i==0)
+    openart=cfg.get('openart',{})
+    missing_art=[]
+    for i,a in enumerate(arts):
+        f=openart.get(a['id'])
+        if f and not os.path.exists(os.path.join(ROOT,f)):
+            missing_art.append(f); f=None
+        blocks += article_blocks(a, i==0, f)
+    if missing_art and not quiet:
+        print('  note: opener art not present, those articles open typographically:',
+              ', '.join(missing_art))
 
     here=os.path.dirname(os.path.abspath(__file__))
     json.dump([b for _,b in blocks], open(os.path.join(here,'.pack-blocks.json'),'w',encoding='utf-8'))
     json.dump([k for k,_ in blocks], open(os.path.join(here,'.pack-kinds.json'),'w',encoding='utf-8'))
     brk=os.path.join(here,f'.pack-breaks-{key}.json')
+    if remeasure:
+        # Pass 1 lays the page out with whatever breaks are on disk so the
+        # measurer has something to render, then re-measures against the copy
+        # that is actually being published and lays it out again. Without this
+        # an edit silently keeps the previous issue's page breaks.
+        if os.path.exists(brk): os.remove(brk)
+        build(key, remeasure=False, quiet=True)
+        subprocess.run(['node', os.path.join(here,'measure_pages.js'), key, cfg['out'],
+                        'file://'+ROOT], check=True,
+                       env=dict(os.environ, NODE_PATH='/opt/node22/lib/node_modules'),
+                       cwd=ROOT, capture_output=True)
     breaks=json.load(open(brk)) if os.path.exists(brk) else []
     run='<div class="runhead">'+cfg['runhead']+'</div>'
     pages=[]; start=0
@@ -235,7 +271,8 @@ def build(key):
 </body></html>'''
     open(os.path.join(ROOT,cfg['out']),'w',encoding='utf-8').write(html)
     npages=html.count('<section class="page"')
-    print(f"wrote {cfg['out']} | {len(arts)} articles | {len(blocks)} blocks | {npages} pages")
+    if not quiet:
+        print(f"wrote {cfg['out']} | {len(arts)} articles | {len(blocks)} blocks | {npages} pages")
     return cfg
 
 if __name__=='__main__':
