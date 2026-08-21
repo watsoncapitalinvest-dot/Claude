@@ -43,6 +43,7 @@ ISSUES={
      'THE CHAMPION NOBODY FEARS: 7-7, AND HE STILL HAS THE BELT',
      'ONE OF THESE MEN LOSES HIS NAME',
      'THE GROUP OF DEATH: THREE MONSTER OFFENCES, ONE DIVISION',
+     'THE WIRE FREEZE: SETTLED 9-6, AND NOTHING MOVED',
      'ALL 16 SCOUTED: WHO&rsquo;S LOADED, WHO&rsquo;S COOKED',
      'THE PICKS: EVERY DIVISION, AND WHO LIFTS IT',
      'THE GRUDGE REPORT: 2,344 GAMES, EVERY RIVALRY RANKED',
@@ -50,7 +51,8 @@ ISSUES={
    # The Hill Standoff is written and its opener art is ready
    # (scfl-art-hillstandoff.jpg) -- held out of this issue for a later one.
    'articles':['kick-2026-champion','kick-2026-namechange','kick-2026-blackandblue',
-               'kick-2026-preview','kick-2026-picks','the-grudge-report'],
+               'kick-2026-wire-freeze','kick-2026-preview','kick-2026-picks',
+               'the-grudge-report'],
    # Opener art, one per article. Any missing file is skipped and that article
    # opens typographically, so the issue always builds. Cropped to 3:2, so the
    # supplied image can be any shape as long as the subject is centred.
@@ -58,6 +60,7 @@ ISSUES={
      'kick-2026-champion':'scfl-art-champion.jpg',
      'kick-2026-namechange':'scfl-art-namechange.jpg',
      'kick-2026-blackandblue':'scfl-art-blackandblue.jpg',
+     'kick-2026-wire-freeze':'scfl-art-wirefreeze.jpg',
      'kick-2026-preview':'scfl-art-preview.jpg',
      'kick-2026-picks':'scfl-art-picks.jpg',
      'the-grudge-report':'scfl-grudge-art.jpg',
