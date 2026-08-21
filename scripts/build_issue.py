@@ -44,10 +44,11 @@ ISSUES={
      'ONE OF THESE MEN LOSES HIS NAME',
      'THE GROUP OF DEATH: THREE MONSTER OFFENCES, ONE DIVISION',
      'ALL 16 SCOUTED: WHO&rsquo;S LOADED, WHO&rsquo;S COOKED',
+     'THE PICKS: EVERY DIVISION, AND WHO LIFTS IT',
      'THE GRUDGE REPORT: 2,344 GAMES, EVERY RIVALRY RANKED',
    ],
    'articles':['kick-2026-champion','kick-2026-namechange','kick-2026-blackandblue',
-               'kick-2026-preview','the-grudge-report','the-hill-standoff'],
+               'kick-2026-preview','kick-2026-picks','the-grudge-report','the-hill-standoff'],
    # Opener art, one per article. Any missing file is skipped and that article
    # opens typographically, so the issue always builds. Cropped to 3:2, so the
    # supplied image can be any shape as long as the subject is centred.
@@ -56,6 +57,7 @@ ISSUES={
      'kick-2026-namechange':'scfl-art-namechange.jpg',
      'kick-2026-blackandblue':'scfl-art-blackandblue.jpg',
      'kick-2026-preview':'scfl-art-preview.jpg',
+     'kick-2026-picks':'scfl-art-picks.jpg',
      'the-grudge-report':'scfl-grudge-art.jpg',
      'the-hill-standoff':'scfl-art-hillstandoff.jpg',
    },
