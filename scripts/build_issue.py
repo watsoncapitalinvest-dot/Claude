@@ -29,20 +29,22 @@ ISSUES={
    'art':'scfl-kickoff-cover.jpg',
    'og':'scfl-kickoff-og.jpg',
    'ogtitle':'Skirt Chasers — The 2026 Kickoff Issue',
-   'ogdesc':("A 7-7 champion, a name change decided by 207 points, the division that holds the three "
-             "best offences in the league, and all sixteen teams previewed."),
-   'sharetext':'The 2026-27 SCFL season starts here.',
+   'ogdesc':("Sixteen teams enter. One leaves with the ring. A 7-7 champion with a target on his "
+             "back, a rename decided by 207 points, the division that will eat two contenders "
+             "alive, and all sixteen scouted."),
+   'sharetext':'Sixteen enter. One leaves. The 2026-27 SCFL season starts here.',
    'kicker':'The Magazine · Aug 2026',
    'seal':('Kickoff','Issue'),
    'issueline':'2026&ndash;27 Season &middot; The Kickoff Issue',
-   'hook':'Sixteen Teams, One Ring',
-   'hooksub':('The champion who lost more than he won, the rename nobody wants, '
-              'and the division that eats its own.'),
+   'hook':'Sixteen Enter. One Leaves.',
+   'ogline':['Skirt Chasers','The Kickoff Issue','A 7-7 Champion + The Rename'],
+   'hooksub':('A 7-7 champion with a target on his back, a division that will eat two '
+              'contenders alive, and one man about to lose his name.'),
    'coverlines':[
-     'THE CHAMPION: 7-7, THE FEWEST POINTS IN THE FIELD',
-     'THE RENAME: 821 TO 1,028, AND THE HITTERS WEAR IT',
-     'BLACK AND BLUE: THE THREE BEST OFFENCES, ONE DIVISION',
-     'THE PREVIEW: ALL SIXTEEN TEAMS, GRADED AND RANKED',
+     'THE CHAMPION NOBODY FEARS: 7-7, AND HE STILL HAS THE RING',
+     'ONE OF THESE MEN LOSES HIS NAME',
+     'THE GROUP OF DEATH: THREE MONSTER OFFENCES, ONE DIVISION',
+     'ALL 16 SCOUTED: WHO&rsquo;S LOADED, WHO&rsquo;S COOKED',
      'THE GRUDGE REPORT: 2,344 GAMES, EVERY RIVALRY RANKED',
    ],
    'articles':['kick-2026-champion','kick-2026-namechange','kick-2026-blackandblue',
