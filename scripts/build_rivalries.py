@@ -238,8 +238,32 @@ for (a,b),v in volley.items():
       'po':d['po'],'yrs':len(d['seasons']),'v':v,'share':share,'heat':100*hp,'bal':bal,
       'score':share/0.30*0.30+bal*0.26+min(d['g'],36)/36*0.14+min(d['po'],6)/6*0.14+min(hp/0.022,1)*0.16,
       'detail':enrich(a,b)})
+
+# Heat is a ranking signal, never a quotation. The chat is read to COUNT
+# exchanges; no message text is ever carried into the output. This guard fails
+# the build if any string in the payload matches text from the corpus, so the
+# rule holds even if someone later adds a field.
+def assert_no_chat_text(payload, msgs):
+    import json as _j, re as _re
+    strings=set()
+    def walk(o):
+        if isinstance(o,str): strings.add(o)
+        elif isinstance(o,dict): [walk(v) for v in o.values()]
+        elif isinstance(o,list): [walk(v) for v in o]
+    walk(payload)
+    def norm(x): return _re.sub(r'[^a-z0-9]+','',x.lower())
+    corpus={norm(m['x']) for m in msgs if len(m['x'])>25}
+    for st in strings:
+        n=norm(st)
+        if len(n)>25 and (n in corpus or any(n in c for c in corpus)):
+            raise SystemExit(f'refusing to write: output contains chat text -> {st[:80]!r}')
+    return len(strings)
+
 rows.sort(key=lambda r:-r['score'])
-json.dump({'note':'aggregate only; built by scripts/build_rivalries.py','rows':rows},open(os.path.join(ROOT,'rivalries.json'),'w'),indent=1)
+_payload={'note':'aggregate only; built by scripts/build_rivalries.py','rows':rows}
+_n=assert_no_chat_text(_payload, ms)
+print(f'text check: {_n} strings in output, none from the chat corpus')
+json.dump(_payload,open(os.path.join(ROOT,'rivalries.json'),'w'),indent=1)
 json.dump({f'{a}|{b}':{'g':d['g'],'w':d['w'],'l':d['l'],'t':d['t'],'po':d['po'],
                        'pf':d['pf'],'pa':d['pa'],'games':d['games'],'seasons':sorted(d['seasons'])}
            for (a,b),d in H.items()},open(os.path.join(ROOT,'h2h.json'),'w'))

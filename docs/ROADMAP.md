@@ -48,8 +48,10 @@ production value per unit of work.
 - Every published quotation is verified verbatim against the corpus first.
 - Private-chat commentary stays out of print; the offers themselves are usable.
 - Page builders live in `scripts/`, not in a temp directory.
-- Rivalry lines are **banter, not shots**. The chat's angriest messages are easy
-  to find and are the wrong material — personal insults between real friends read
-  very differently on a published page than they did in the moment. Pick lines
-  that are funny, self-aware, or that the speaker would happily repeat. When in
-  doubt, run it past John before it ships.
+- **Heat is a metric, not a quote source.** Argument density is a good signal for
+  ranking rivalries and it stays. What never ships is the text behind it — angry
+  messages between real friends read very differently on a published page than
+  they did in the moment. `build_rivalries.py` enforces this: it fails the build
+  if any string in the output matches chat text.
+- Lines chosen for publication are **banter, not shots** — funny, self-aware, or
+  something the speaker would happily repeat. Run them past John before shipping.
