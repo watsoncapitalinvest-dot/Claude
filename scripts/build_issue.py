@@ -33,30 +33,64 @@ ISSUES={
              "best offences in the league, and all sixteen teams previewed."),
    'sharetext':'The 2026-27 SCFL season starts here.',
    'kicker':'The Magazine · Aug 2026',
+   'seal':('Kickoff','Issue'),
+   'issueline':'2026&ndash;27 Season &middot; The Kickoff Issue',
+   'hook':'Sixteen Teams, One Ring',
+   'hooksub':('The champion who lost more than he won, the rename nobody wants, '
+              'and the division that eats its own.'),
+   'coverlines':[
+     'THE CHAMPION: 7-7, THE FEWEST POINTS IN THE FIELD',
+     'THE RENAME: 821 TO 1,028, AND THE HITTERS WEAR IT',
+     'BLACK AND BLUE: THE THREE BEST OFFENCES, ONE DIVISION',
+     'THE PREVIEW: ALL SIXTEEN TEAMS, GRADED AND RANKED',
+     'THE GRUDGE REPORT: 2,344 GAMES, EVERY RIVALRY RANKED',
+   ],
    'articles':['kick-2026-champion','kick-2026-namechange','kick-2026-blackandblue',
                'kick-2026-preview','the-grudge-report','the-hill-standoff'],
  },
 }
 
 EXTRA_CSS="""
-.issue-cover{position:absolute;inset:0;background:#0a0806;display:flex;flex-direction:column;padding:0;}
-.issue-cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
-/* Scrim so the masthead and the headline read over whatever the art does at the
-   top and bottom edges. object-fit:cover re-crops per viewport, so the bands
-   cannot be relied on to stay dark on their own. */
-.issue-cover.has-art::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:linear-gradient(180deg,rgba(6,5,4,.78) 0%,rgba(6,5,4,.34) 15%,rgba(6,5,4,0) 30%,
-  rgba(6,5,4,0) 58%,rgba(6,5,4,.42) 78%,rgba(6,5,4,.88) 100%);}
-.ic-top{position:relative;z-index:2;text-align:center;padding:26px 22px 0;}
-.ic-mast{font-family:var(--serif);font-weight:900;font-size:46px;line-height:.95;color:#f7f3ec;
-  text-shadow:0 2px 16px rgba(0,0,0,.9);}
-.ic-mast span{color:#e8393e;}
-.ic-tag{font-family:var(--sans);font-size:10.5px;font-weight:900;letter-spacing:.26em;
-  text-transform:uppercase;color:#e0d9cd;margin-top:10px;text-shadow:0 1px 8px rgba(0,0,0,.9);}
-.ic-bot{position:absolute;z-index:2;left:0;right:0;bottom:74px;padding:0 24px;text-align:center;}
-.ic-line{font-family:var(--serif);font-size:15px;line-height:1.5;color:#e8e2d8;
-  text-shadow:0 1px 10px rgba(0,0,0,.95);}
-.ic-fallback{position:absolute;inset:0;background:#fffdfb;}
+/* ---- the house issue cover: red frame, wordmark panel, coverlines ----
+   Matches draft-issue.html and scfl-post-draft-issue.html exactly. The art is a
+   background on .magcover rather than an <img> so the 2:3 frame is fixed by
+   aspect-ratio and never re-crops to the viewport. */
+.cover-page{display:flex;align-items:center;justify-content:center;padding:0;background:#d9d6ce;}
+.cover-page .magcover{margin:0;min-height:0;width:min(94vw,63vh);height:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,.7);}
+.magcover{position:relative;overflow:hidden;max-width:600px;margin:0 auto 26px;
+  border:11px solid #e11b22;border-radius:3px;box-shadow:0 26px 70px rgba(0,0,0,.6);
+  background:var(--teaser) center/cover no-repeat #0b0f14;aspect-ratio:2/3;min-height:600px;
+  display:flex;flex-direction:column;color:#fff;}
+.magcover::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(6,8,10,.20) 0%,rgba(6,8,10,0) 9%,rgba(6,8,10,0) 55%,
+  rgba(6,8,10,.40) 70%,rgba(6,8,10,.90) 100%);}
+.cov-top{position:relative;z-index:1;margin:10px 11px 0;padding:6px 14px 5px;text-align:center;
+  background:#f4f1ea;border-radius:4px;box-shadow:0 5px 18px rgba(0,0,0,.5);
+  border-top:2px solid #e11b22;border-bottom:2px solid #e11b22;}
+.mag-logo{display:block;width:100%;max-width:280px;height:auto;margin:0 auto;}
+.mag-issue{color:#c20f16;font-weight:900;font-size:9.5px;letter-spacing:2.5px;margin-top:3px;
+  text-transform:uppercase;}
+.preseal{position:absolute;left:3px;bottom:-22px;width:60px;height:60px;border-radius:50%;
+  background:#e11b22;color:#fff;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.6);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  transform:rotate(-9deg);font-family:var(--serif);font-weight:900;font-size:10px;line-height:1;
+  text-transform:uppercase;letter-spacing:.2px;z-index:4;}
+.preseal small{font-size:6.5px;font-weight:800;letter-spacing:1px;opacity:.92;display:block;margin-top:2px;}
+.cov-bottom{position:relative;z-index:1;margin-top:auto;padding:0 20px 12px;text-align:center;}
+.mag-hook{font-family:var(--serif);font-weight:900;font-size:clamp(26px,5.8vw,38px);line-height:.95;
+  letter-spacing:-1px;color:#fff;text-wrap:balance;
+  text-shadow:0 3px 20px rgba(0,0,0,.95),0 1px 3px rgba(0,0,0,.9);}
+.mag-name{font-family:var(--serif);font-weight:800;font-style:italic;font-size:clamp(12px,3.1vw,15px);
+  line-height:1.22;color:#f3f5f8;margin:7px auto 0;text-shadow:0 2px 12px rgba(0,0,0,.95);max-width:34ch;}
+.mag-lines{margin-top:10px;border-top:2px solid #ff5442;padding-top:8px;display:flex;
+  flex-direction:column;gap:4px;text-align:left;max-width:340px;margin-left:auto;margin-right:auto;}
+.mag-line{font-size:9.5px;font-weight:800;letter-spacing:.2px;text-transform:uppercase;color:#f3f5f8;
+  padding-left:14px;position:relative;line-height:1.25;text-shadow:0 1px 5px rgba(0,0,0,.98);}
+.mag-line::before{content:'▸';position:absolute;left:0;color:#ff5442;}
+.mag-shield{display:block;margin:9px auto 0;width:44px;height:auto;
+  filter:drop-shadow(0 2px 8px rgba(0,0,0,.95));}
+@media(max-width:720px){.magcover{margin:0 0 20px;border-width:9px;}}
 .toc{list-style:none;padding:0;margin:6px 0 0;}
 .toc li{display:flex;gap:10px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--line);}
 .toc .n{font-family:var(--sans);font-size:11px;font-weight:900;color:var(--red);min-width:22px;}
@@ -115,15 +149,21 @@ def build(key):
     have_art=os.path.exists(os.path.join(ROOT,cfg['art']))
     if not have_art:
         print(f"  note: cover art {cfg['art']} not present — using a typographic stand-in")
-    cover=('<section class="page"><div class="issue-cover'+(' has-art' if have_art else '')+'">'
-      + (f'<img src="{cfg["art"]}" alt="{esc(cfg["title"])}">' if have_art else '<div class="ic-fallback"></div>')
-      + '<div class="ic-top">'
-        '<div class="ic-mast" style="'+('' if have_art else 'color:#17181c;text-shadow:none')+'">'
-        +cfg['mast'][0]+'<span>'+cfg['mast'][1]+'</span></div>'
-        '<div class="ic-tag" style="'+('' if have_art else 'color:#8a8a90;text-shadow:none')+'">'
-        +cfg['tagline']+'</div></div>'
-        '<div class="ic-bot"><div class="ic-line" style="'+('' if have_art else 'color:#3a3a40;text-shadow:none')+'">'
-        +esc(arts[0]['headline'] if arts else '')+'</div></div>'
+    art_css = f"url('{cfg['art']}')" if have_art else 'none'
+    lines=''.join('<div class="mag-line">'+l+'</div>' for l in cfg['coverlines'])
+    cover=('<section class="page cover-page">'
+      f'<div class="magcover" style="--teaser:{art_css}">'
+        '<div class="cov-top">'
+          '<img class="mag-logo" src="wordmark.png" alt="Skirt Chasers — Dynasty League Magazine">'
+          '<div class="mag-issue">'+cfg['issueline']+'</div>'
+          '<div class="preseal">'+cfg['seal'][0]+'<small>'+cfg['seal'][1]+'</small></div>'
+        '</div>'
+        '<div class="cov-bottom">'
+          '<div class="mag-hook">'+esc(cfg['hook'])+'</div>'
+          '<div class="mag-name">'+esc(cfg['hooksub'])+'</div>'
+          '<div class="mag-lines">'+lines+'</div>'
+          '<img class="mag-shield" src="scfl-shield.png" alt="SCFL">'
+        '</div>'
       '</div></section>')
 
     toc=''.join(f'<li><span class="n">{i+1}</span><span class="t">{esc(a["headline"])}'
