@@ -49,7 +49,7 @@ TAKE={
   "twelve. He beats Still The Cream {vs:Still The Cream}. He beats the Killer Klowns "
   "{vs:Killer Klowns}. Exactly one team in this league has a winning record against him, and they "
   "are sitting directly above him in this division. The "
-  "one crack: {fin} place two years running, and no ring since 2018. A {grade} draft says he is not "
+  "one crack: {fin} place two years running, and no belt since 2018. A {grade} draft says he is not "
   "planning to make that three.",
  "Lil' Chops":
   "Went {rec} on {pf} points and finished {fin}, which undersells the most interesting fact about "
@@ -72,7 +72,7 @@ TAKE={
   "and a team that has already proved it can win the whole thing does not need to be good for long.",
  'Powers of Pain':
   "The champion. {rec}, {pf} points — fewer than any other team that made the bracket — and the "
-  "ring. Read the four years before it in order: fifteenth, eleventh, tenth, tenth, and then first. "
+  "belt. Read the four years before it in order: fifteenth, eleventh, tenth, tenth, and then first. "
   "There are {titles} titles here in the seasons on record and {finals} title games, so this is a "
   "franchise that knows the walk. The thing standing in the way of a repeat is not the Machines and "
   "it is not the Express. It is the Hairy Gumbas, who hold a {vs:Hairy Gumbas over Powers of Pain} record over him "

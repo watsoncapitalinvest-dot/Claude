@@ -83,7 +83,7 @@ CHAMPION = ('Big Blue',
   "{titles:Big Blue}. {finalrec:Big Blue}.\n"
   "That is a small sample and this desk knows it. Seven losses across eighteen years is not a flaw "
   "in a manager, it is what happens to anyone who keeps arriving, and it is the reason he has as "
-  "many rings as anyone. But a pick has to come down on one side of something, and the only place "
+  "many belts as anyone. But a pick has to come down on one side of something, and the only place "
   "these two separate is the week the season ends.")
 
 HEDGE = (
@@ -159,7 +159,7 @@ def build():
      "before. Records are the worst of the three — this league just watched a 7-7 team win the "
      "whole thing — so points carry more weight here than wins do.",
 
-     "THE CARD — Four division winners, four wild cards, two conference champions, one ring. Here "
+     "THE CARD — Four division winners, four wild cards, two conference champions, one belt. Here "
      "is the desk's call on all of it, and the reasoning underneath, so it can be held against us "
      "in January.",
     ]
@@ -187,7 +187,7 @@ def build():
 
     entry = {"id": "kick-2026-picks", "slug": "kick-2026-picks",
      "flag": "THE PICKS", "kicker": "Kickoff 2026",
-     "headline": "Four Divisions, Two Conferences, One Ring",
+     "headline": "Four Divisions, Two Conferences, One Belt",
      "subhead": "The desk calls every round of it, and says what would make each call look silly.",
      "dateline": "MOS EISLEY · AUGUST 2026", "byline": "The SCFL NewsRoom · Kickoff",
      "status": "FILED", "release": "", "cover": "", "staff": "published", "paragraphs": paras}

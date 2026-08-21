@@ -29,7 +29,7 @@ ISSUES={
    'art':'scfl-kickoff-cover.jpg',
    'og':'scfl-kickoff-og.jpg',
    'ogtitle':'Skirt Chasers — The 2026 Kickoff Issue',
-   'ogdesc':("Sixteen teams enter. One leaves with the ring. A 7-7 champion with a target on his "
+   'ogdesc':("Sixteen teams enter. One leaves with the belt. A 7-7 champion with a target on his "
              "back, a rename decided by 207 points, the division that will eat two contenders "
              "alive, and all sixteen scouted."),
    'sharetext':'Sixteen enter. One leaves. The 2026-27 SCFL season starts here.',
@@ -40,7 +40,7 @@ ISSUES={
    'hooksub':('A 7-7 champion with a target on his back, a division that will eat two '
               'contenders alive, and one man about to lose his name.'),
    'coverlines':[
-     'THE CHAMPION NOBODY FEARS: 7-7, AND HE STILL HAS THE RING',
+     'THE CHAMPION NOBODY FEARS: 7-7, AND HE STILL HAS THE BELT',
      'ONE OF THESE MEN LOSES HIS NAME',
      'THE GROUP OF DEATH: THREE MONSTER OFFENCES, ONE DIVISION',
      'ALL 16 SCOUTED: WHO&rsquo;S LOADED, WHO&rsquo;S COOKED',
