@@ -3,33 +3,65 @@
 League customs that shape the data. Written down because they explain why the
 records behave the way they do.
 
+## Structure
+
+Sixteen teams, two conferences, two divisions of four in each.
+
+**Divisions (verified against the league app, 2026):**
+
+| Division | Teams |
+|---|---|
+| The Four Horsemen | Heavy Hitters, Hairy Gumbas, New World Order, Horse Collars (Forty2V) |
+| Black and Blue | Wookie Leaks, Beaver Eaters, Big Blue, Pork Chop Express |
+| Spartan | Killer Klowns, Master-Jeti, Lil' Chops, The Machines |
+| Spectre Syndicate | Still The Cream, Smoke Dragons, Guido Haters, Powers of Pain |
+
+**Conferences.** Derived from the schedule — the division you play four single
+games against is your conference partner. For 2025 that pairs *Spectre Syndicate
+with Black and Blue*, and *Spartan with The Four Horsemen*. The conference names
+in circulation are **Maclean** and **Cobra Kai**; a May 2023 chat listing pairs
+them the other way round, which predates the 2023 realignment, so the names are
+recorded here but not attached to a pairing.
+
+**Realignments.** Two in the recoverable history: between 2012 and 2014, and
+between 2022 and 2023. The 2023 one is when The Four Horsemen were created — the
+New World Order announced it in August 2023: *"A New Division is Born! ... Let me
+introduce The Four Horsemen."*
+
 ## The schedule
 
-Sixteen teams, two conferences, two divisions of four in each. You play **your
-own division twice**, the **other division in your conference once**, and a few
-cross-conference games to fill the card — thirteen games a season through 2020,
-fourteen from 2021.
+Fourteen games (thirteen through 2020), and it decomposes exactly:
+
+- **6 games** against your own division — the other three teams, twice each.
+- **4 games** against the other division in your conference — once each.
+- **4 games** scattered across the other conference. The split varies year to
+  year: 2022 ran 3+1, 2025 ran 2+2. It is fill, not a clean rotation.
 
 Consequences for the data, both of which bit us:
 
 - **Games played is a fact about the schedule, not the rivalry.** Two teams who
   share a division for a decade rack up thirty meetings without either choosing
-  it. `build_rivalries.py` therefore counts shared history in *divisional
-  seasons*, not raw games.
-- `history.json` has no division field. Divisions are recovered per season from
-  the schedule itself: pairs that met twice form a graph, and the four-team
-  cliques that exactly cover all sixteen teams are the divisions. Sixteen of
-  eighteen seasons resolve; 2008 and 2013 used a different shape and are left
-  unresolved rather than guessed.
+  it. `build_rivalries.py` counts shared history in *divisional seasons*.
+- Divisions are recovered per season by `scripts/build_divisions.py`; sixteen of
+  eighteen seasons resolve, and the 2025 result matches the app exactly.
 
 ## The playoffs
 
-Top eight qualify. All sixteen teams keep playing the final three weeks — the
-bottom half in a consolation ladder that decides nothing — and `history.json`
-flags **every** one of those as `playoff`. Counting them turns 24 games a season
-into playoff history when only 12 are between qualifiers. A playoff meeting means
-both teams finished top eight. Format is not constant either: most seasons are a
-knockout from the top eight, but 2017 had the top eight replay each other.
+**Eight qualify: the four division winners, plus two wild cards from each
+conference.** Three rounds, including a conference championship.
+
+Two things follow, and both matter for any analysis:
+
+- **`rank` in the standings is the playoff seed, not record order.** In fifteen
+  of eighteen seasons a team with an inferior record is seeded inside the top
+  eight — division winners get in regardless. In 2024 and 2025 the #1 seed was a
+  6-8 and a 7-7 team.
+- All sixteen teams keep playing the final three weeks — the bottom half in a
+  consolation ladder that decides nothing — and `history.json` flags **every**
+  one of those as `playoff`. Counting them turns 24 games a season into playoff
+  history when only 12 are between qualifiers. A playoff meeting means both
+  teams finished top eight. Format is not constant either: most seasons are a
+  knockout, but 2017 had the top eight replay each other.
 
 ## The Name Change
 
