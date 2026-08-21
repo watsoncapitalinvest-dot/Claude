@@ -64,6 +64,13 @@ August.
   paste into the image tool — the app already has this flow (Cover Art →
   Generate cover direction → Copy the prompt). Anything drawn in PIL is a
   placeholder and should be labelled as one.
+- **Anything meant for another AI goes in a plain `.txt` file.** Not an artifact,
+  not a styled page, not a chat message to copy out of. A prompt is going to be
+  pasted into another tool, so it needs to be a file that opens and selects
+  cleanly — `docs/COVER-ART-BRIEF.txt` and `docs/ARTICLE-ART-BRIEF.txt` are the
+  pattern. Prompts only: no commentary, no rationale, no install steps mixed in
+  with the copy, nothing that another model will read as part of the
+  instruction. Send the file with the reply.
 - **Heat is a metric, not a quote source.** Argument density is a good signal for
   ranking rivalries and it stays. What never ships is the text behind it — angry
   messages between real friends read very differently on a published page than
