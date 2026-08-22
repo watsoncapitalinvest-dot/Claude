@@ -520,61 +520,128 @@ CARD = """<style>
 :root{--red:#c20f16;--ink:#17181c;--muted:#65656b;--faint:#9a958c;--line:#e6e0d6;
  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;}
 *{box-sizing:border-box;margin:0;}
-html,body{width:1200px;height:630px;overflow:hidden;background:#fffdfb;
+html,body{width:1200px;height:630px;overflow:hidden;background:#efe9de;
  font-family:Georgia,'Times New Roman',serif;color:var(--ink);}
-.card{display:flex;height:630px;border-top:9px solid var(--red);border-bottom:9px solid var(--red);}
-.l{width:47%;padding:44px 30px 40px 52px;display:flex;flex-direction:column;}
-.flag{font-family:var(--sans);font-size:12px;font-weight:900;letter-spacing:.24em;
- text-transform:uppercase;color:var(--red);}
-h1{font-size:57px;line-height:1.0;letter-spacing:-.025em;font-weight:900;margin-top:16px;}
-h1 em{font-style:normal;color:var(--red);}
-.rule{width:66px;height:3px;background:var(--red);margin:22px 0 20px;}
-.dek{font-style:italic;color:var(--muted);font-size:18.5px;line-height:1.42;}
-.st{margin-top:auto;display:flex;gap:30px;}
-.st div .k{font-family:var(--sans);font-size:9.5px;font-weight:800;letter-spacing:.15em;
- text-transform:uppercase;color:var(--faint);}
-.st div .v{font-size:31px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums;}
-.r{flex:1;padding:44px 46px 40px 6px;display:flex;align-items:center;justify-content:center;}
-.mx{border-collapse:separate;border-spacing:2px;}
-.mx th{display:none;}
-.mx td{width:31px;height:31px;padding:0;border-radius:2px;}
+.card{position:relative;width:1200px;height:630px;overflow:hidden;
+ border-top:9px solid var(--red);border-bottom:9px solid var(--red);background:#efe9de;}
+
+/* the clippings, pinned to the desk */
+.pc{position:absolute;background:#fffdfb;border:1px solid #ded7ca;padding:9px 11px;
+ overflow:hidden;box-shadow:0 10px 26px rgba(0,0,0,.17),0 2px 5px rgba(0,0,0,.09);}
+.pc .cap{font-family:var(--sans);font-size:7.5px;font-weight:800;letter-spacing:.15em;
+ text-transform:uppercase;color:var(--red);margin-bottom:6px;}
+.p1{left:452px;top:132px;width:344px;transform:rotate(-1.6deg);}     /* matrix   */
+.p4{left:798px;top:60px;width:352px;transform:rotate(1.4deg);}       /* board    */
+.p5{left:806px;top:246px;width:340px;transform:rotate(-1.2deg);}     /* volleys  */
+.p3{left:794px;top:424px;width:356px;transform:rotate(1.8deg);}      /* dumbbell */
+
+table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:8.5px;}
+td,th{padding:2px 4px;}
+tbody th{text-align:left;font-weight:700;white-space:nowrap;}
+.num{text-align:right;font-variant-numeric:tabular-nums;}
+.dim{color:var(--faint);}
+tbody tr + tr th,tbody tr + tr td{border-top:1px solid #eee7db;}
+.bar span{display:block;height:7px;background:var(--red);border-radius:0 2px 2px 0;min-width:2px;}
+.bar{width:52%;}
+.dumb{width:56%;position:relative;height:15px;}
+.track{position:absolute;left:0;right:0;top:7px;height:2px;background:#e6e0d6;}
+.seg{position:absolute;top:7px;height:2px;background:var(--ink);opacity:.3;}
+.dot{position:absolute;top:3px;width:9px;height:9px;border-radius:50%;margin-left:-4.5px;
+ border:2px solid #fffdfb;}
+.dot.hi{background:var(--red);} .dot.lo{background:#0e8ab5;}
+.mx{border-collapse:separate;border-spacing:1.5px;}
+.mx td{width:19px;height:19px;padding:0;border-radius:2px;}
 .mx td.c{background:color-mix(in oklab,var(--red) calc(var(--k)*100%),#f4efe6);}
-.mx td.self{background:repeating-linear-gradient(135deg,#efe9de 0 4px,transparent 4px 8px);}
+.mx td.self{background:repeating-linear-gradient(135deg,#e9e2d6 0 3px,transparent 3px 6px);}
 .mx td.none{background:#f6f2ea;}
+
+/* the masthead panel sits over the collage */
+.l{position:absolute;left:0;top:0;bottom:0;width:430px;z-index:9;
+ padding:52px 34px 40px 52px;display:flex;flex-direction:column;
+ background:linear-gradient(90deg,#efe9de 0%,#efe9de 74%,rgba(239,233,222,.94) 88%,
+ rgba(239,233,222,0) 100%);}
+.flag{font-family:var(--sans);font-size:11.5px;font-weight:900;letter-spacing:.22em;
+ text-transform:uppercase;color:var(--red);}
+h1{font-size:54px;line-height:.99;letter-spacing:-.025em;font-weight:900;margin-top:15px;}
+h1 em{font-style:normal;color:var(--red);}
+.rule{width:64px;height:3px;background:var(--red);margin:20px 0 18px;}
+.dek{font-style:italic;color:#4b4b52;font-size:17px;line-height:1.4;max-width:23ch;}
+.st{margin-top:auto;display:flex;gap:26px;}
+.st .k{font-family:var(--sans);font-size:9px;font-weight:800;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--faint);}
+.st .v{font-size:29px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums;}
 </style>
-<div class="card"><div class="l">
-<div class="flag">Transparent Research Addendum</div>
-<h1>How The<br>Rivalries<br>Were <em>Counted</em></h1>
-<div class="rule"></div>
-<div class="dek">Every ranking rests on one number. Here it is for all sixteen, and the four
-things it cannot do.</div>
-<div class="st">
- <div><div class="k">Volleys</div><div class="v">__VOL__</div></div>
- <div><div class="k">Pairings</div><div class="v">__PAIRS__</div></div>
- <div><div class="k">Figures</div><div class="v">8</div></div>
-</div></div>
-<div class="r">__MX__</div></div>"""
+<div class="card">
+ <div class="pc p1"><div class="cap">Fig. 2 &middot; Mutual attention</div>__MX__</div>
+ <div class="pc p5"><div class="cap">Fig. 1 &middot; Volleys</div>__BARS__</div>
+ <div class="pc p3"><div class="cap">Fig. 3 &middot; One-way streets</div>__DUMB__</div>
+ <div class="pc p4"><div class="cap">The full board</div>__TBL__</div>
+ <div class="l">
+  <div class="flag">Transparent Research Addendum</div>
+  <h1>How The<br>Rivalries<br>Were <em>Counted</em></h1>
+  <div class="rule"></div>
+  <div class="dek">Every ranking rests on one number. Here it is for all sixteen.</div>
+  <div class="st">
+   <div><div class="k">Volleys</div><div class="v">__VOL__</div></div>
+   <div><div class="k">Pairings</div><div class="v">__PAIRS__</div></div>
+   <div><div class="k">Figures</div><div class="v">8</div></div>
+  </div>
+ </div>
+</div>"""
 
 
 def card(D):
-    """Preview image: the page's own mutual-attention matrix, so it restates the
-    data rather than borrowing another article's art."""
+    """Preview image: a desk collage of the page's own figures, so the card is
+    made of the evidence rather than decorated with something else."""
+    P, T, tot = D['pairs'], D['teams'], D['tot']
     cell = {}
-    for p in D['pairs']:
+    for p in P:
         cell[(p['a'], p['b'])] = cell[(p['b'], p['a'])] = p
-    hi = max(p['share'] for p in D['pairs'])
-    rows = ''
-    for r in D['teams']:
+    hi = max(p['share'] for p in P)
+
+    mx = ''
+    for r in T:
         tds = ''
-        for c in D['teams']:
+        for c in T:
             if r == c:
                 tds += '<td class="self"></td>'
             elif (r, c) in cell:
                 tds += f'<td class="c" style="--k:{cell[(r,c)]["share"]/hi:.3f}"></td>'
             else:
                 tds += '<td class="none"></td>'
-        rows += f'<tr>{tds}</tr>'
-    doc = (CARD.replace('__MX__', f'<table class="mx"><tbody>{rows}</tbody></table>')
+        mx += f'<tr>{tds}</tr>'
+    mx = f'<table class="mx"><tbody>{mx}</tbody></table>'
+
+    top = max(tot.values())
+    bars = ''.join(f'<tr><th>{ABBR[t]}</th>'
+                   f'<td class="bar"><span style="width:{100*tot[t]/top:.1f}%"></span></td>'
+                   f'<td class="num dim">{tot[t]//1000}k</td></tr>' for t in T[:7])
+    bars = f'<table><tbody>{bars}</tbody></table>'
+
+    lop = sorted((p for p in P if p['v'] >= 300), key=lambda p: -abs(p['sa'] - p['sb']))[:5]
+    dumb = ''
+    for p in lop:
+        h_, l_ = (p['a'], p['sa']), (p['b'], p['sb'])
+        if l_[1] > h_[1]:
+            h_, l_ = l_, h_
+        s_ = .32
+        dumb += (f'<tr><th>{ABBR[h_[0]]}<span class="dim"> / </span>{ABBR[l_[0]]}</th>'
+                 f'<td class="dumb"><span class="track"></span>'
+                 f'<span class="seg" style="left:{100*l_[1]/s_:.1f}%;right:{100-100*h_[1]/s_:.1f}%"></span>'
+                 f'<span class="dot lo" style="left:{100*l_[1]/s_:.1f}%"></span>'
+                 f'<span class="dot hi" style="left:{100*h_[1]/s_:.1f}%"></span></td>'
+                 f'<td class="num">{h_[1]*100:.0f}<span class="dim">/</span>{l_[1]*100:.0f}</td></tr>')
+    dumb = f'<table><tbody>{dumb}</tbody></table>'
+
+    tbl = ''.join(
+        f'<tr><th>{ABBR[p["a"]]}<span class="dim"> v </span>{ABBR[p["b"]]}</th>'
+        f'<td class="num">{p["v"]:,}</td><td class="num"><b>{p["share"]*100:.1f}%</b></td>'
+        f'<td class="num dim">{p["heat"]:.1f}%</td>'
+        f'<td class="num dim">{p["g"]}</td></tr>' for p in P[:7])
+    tbl = f'<table><tbody>{tbl}</tbody></table>'
+
+    doc = (CARD.replace('__MX__', mx).replace('__BARS__', bars).replace('__DUMB__', dumb)
+               .replace('__TBL__', tbl)
                .replace('__VOL__', f"{sum(D['volley'].values()):,}")
                .replace('__PAIRS__', str(len(D['volley']))))
     tmp = os.path.join(ROOT, '.ad-card.html')
@@ -586,7 +653,11 @@ def card(D):
         "const {chromium}=require('playwright');(async()=>{"
         f"const b=await chromium.launch({{executablePath:'{BROWSER}'}});"
         "const p=await b.newPage({viewport:{width:1200,height:630},deviceScaleFactor:1});"
-        f"await p.goto('file://{tmp}',{{waitUntil:'load'}});await p.waitForTimeout(500);"
+        f"await p.goto('file://{tmp}',{{waitUntil:'load'}});"
+        "await p.evaluate(async()=>{await document.fonts.ready;"
+        "document.body.getBoundingClientRect();"
+        "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});"
+        "await p.waitForTimeout(1200);"
         f"await p.screenshot({{path:'{raw}'}});await b.close();}})();")
     try:
         subprocess.run(['node', js], check=True, cwd=ROOT,
@@ -602,8 +673,9 @@ def card(D):
         print(f'  card {os.path.basename(OG)} {im.width}x{im.height} '
               f'{os.path.getsize(OG)//1024}kb ({blank:.0%} blank)')
     finally:
+        keep = os.environ.get('SCFL_KEEP_CARD')   # debugging the collage layout
         for f in (js, raw, tmp):
-            if os.path.exists(f):
+            if os.path.exists(f) and not keep:
                 os.remove(f)
 
 
