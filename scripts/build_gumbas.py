@@ -27,8 +27,18 @@ G = 'tommyvertu123'
 # ---------------------------------------------------------------------------
 # His answer goes here, verbatim. Leave it empty and the page reserves the
 # space instead of pretending he was not asked.
-RESPONSE = ''
-RESPONSE_BY = 'The Hairy Gumbas'
+RESPONSE = """Is  this is taking into consideration your whole what's up chat?
+
+Because the first amendment chat was unhinged and off the rails for a solid three years.
+
+You've literally used all these words towards me, hundreds of times lol.
+
+Think it's why Wookie Doc beavers and you throw so much heat my way.
+
+In the first amendment chat. That's just political nonsense and battles.
+
+I think it's using your whole what's up chat data."""
+RESPONSE_BY = 'The Hairy Gumbas, to the desk, 21 August 2026'
 # ---------------------------------------------------------------------------
 
 
@@ -38,6 +48,7 @@ def crunch(D):
     tot, hot = collections.Counter(), collections.Counter()
     tothot, own = collections.Counter(), collections.Counter()
     mine = them = both = 0
+    pmine, pthem, pboth, ptot = (collections.Counter() for _ in range(4))
     gwords_mine, gwords_them = collections.Counter(), collections.Counter()
     gy, gyh, ly, lyh = (collections.Counter() for _ in range(4))
 
@@ -67,17 +78,19 @@ def crunch(D):
         if G not in (oa, ob):
             continue
         gy[yr] += 1
+        other = ob if oa == G else oa
+        ptot[other] += 1
         if not heated:
             continue
         gyh[yr] += 1
         g = ha if oa == G else hb
         o_ = hb if oa == G else ha
         if g and o_:
-            both += 1
+            both += 1; pboth[other] += 1
         elif g:
-            mine += 1
+            mine += 1; pmine[other] += 1
         else:
-            them += 1
+            them += 1; pthem[other] += 1
         for w in g:
             gwords_mine[w] += 1
         for w in o_:
@@ -104,10 +117,16 @@ def crunch(D):
                                     pf=r['pf'], pa=r['pa']))
     return dict(tot=tot, hot=hot, rate=rate, exp=exp, own=own, tothot=tothot,
                 mine=mine, them=them, both=both, wm=gwords_mine, wt=gwords_them,
-                gy=gy, gyh=gyh, ly=ly, lyh=lyh, seasons=seasons)
+                gy=gy, gyh=gyh, ly=ly, lyh=lyh, seasons=seasons,
+                pmine=pmine, pthem=pthem, pboth=pboth, ptot=ptot,
+                rooms={c: (sum(1 for x in ms if x['c'] == c),
+                           min(x['ts'].date() for x in ms if x['c'] == c and x['ts'].year >= 2021),
+                           max(x['ts'].date() for x in ms if x['c'] == c))
+                       for c in ('mos', 'official')})
 
 
 EXTRA_CSS = """
+.ad{margin-bottom:24px;}
 .ad .hl th,.ad .hl td{background:#fdf3f0;}
 .ad .hl th{color:var(--red);}
 .ad .div{width:44%;position:relative;height:15px;}
@@ -186,8 +205,8 @@ __EXTRA__
 <span class="flag">The Record Room</span>
 <h1>The Gumbas <em>File</em></h1>
 <p class="dek">He is the hottest manager in the chat, he says the number is unfair, and he is
-owed a hearing. So here is every figure behind it, and the three best arguments against it,
-tested.</p>
+owed a hearing. So here is every figure behind it, the three best arguments against it, his own
+answer in full, and what happened when the desk checked it.</p>
 <div class="byline">The SCFL NewsRoom &middot; Mos Eisley</div>
 <div class="rule"></div>
 __BODY__
@@ -466,6 +485,70 @@ def figures(D, C):
                 'when it does. The figures above are his to attack &mdash; every one of them is '
                 'recounted from the record on each build, and the method is published in full.</p>')
     P(f'<div class="reply"><div class="k">Right Of Reply</div>{body}</div>')
+
+    if RESPONSE.strip():
+        S('What He Raised')
+        mos, off = C['rooms']['mos'], C['rooms']['official']
+        P(f'<p class="b">He makes two claims and they are both checkable, so they were both '
+          f'checked. The first is that the figures are drawn from every WhatsApp conversation he '
+          f'is in, including a political chat he says ran off the rails for three years. If that '
+          f'were true the number would be worthless, because it would be measuring an argument '
+          f'about the news and filing it under fantasy football.</p>')
+        rows = ''.join(
+            f'<tr><th scope="row">{lbl}</th><td class="num">{n:,}</td>'
+            f'<td class="num dim">{a:%-d %b %Y}</td><td class="num dim">{b:%-d %b %Y}</td></tr>'
+            for lbl, (n, a, b) in (('Mos Eisley', mos), ('OFFICIAL ONLY NO REPLY', off)))
+        rows += ('<tr class="thinrow"><th scope="row">Anything else</th>'
+                 '<td class="num">0</td><td class="num dim">&mdash;</td>'
+                 '<td class="num dim">&mdash;</td></tr>')
+        B(f'<figure><div class="scroll"><table><thead><tr><th class="lt">Chats read</th>'
+          f'<th>Messages</th><th>From</th><th>To</th></tr></thead><tbody>{rows}</tbody></table>'
+          f'</div><figcaption>Two exports, both league chats, {mos[0]+off[0]:,} messages. The '
+          f'political chat has never been opened by this desk and neither has anybody&rsquo;s '
+          f'personal WhatsApp. Which cuts against him rather than for him: every one of his '
+          f'{C["hot"][G]:,} heated volleys happened in the fantasy football '
+          f'chat.</figcaption></figure>')
+
+        P('<p class="b">The second claim is the sharper one, and he named names: that the Wookie, '
+          'the Beavers and the Dragons are the ones throwing heat at him. That is exactly the '
+          'question Test One answers, so here it is broken out partner by partner &mdash; who '
+          'typed the word, in every pairing he is in.</p>')
+        pm, pt, pb, pp = C['pmine'], C['pthem'], C['pboth'], C['ptot']
+        parts = [o for o in N if pm[o] + pt[o] + pb[o]]
+        parts.sort(key=lambda o: -(pm[o] + pt[o] + pb[o]))
+        named = ['coachnick1980redfox', 'sheq7777', 'john420blaze']
+        rows = ''
+        for o in parts:
+            h = pm[o] + pt[o] + pb[o]
+            sh = 100 * (pm[o] + pb[o]) / h
+            rows += (f'<tr class="{"hl" if o in named else ""}"><th scope="row">{E(N[o])}</th>'
+                     f'<td class="num dim">{pp[o]:,}</td><td class="num dim">{h}</td>'
+                     f'<td class="num">{pm[o]+pb[o]}</td><td class="num">{pt[o]+pb[o]}</td>'
+                     f'<td class="wcell"><div class="two"><i style="width:{sh:.1f}%"></i>'
+                     f'<b style="left:50%"></b></div></td>'
+                     f'<td class="num"><b>{sh:.0f}%</b></td></tr>')
+        nh = sum(pm[o] + pt[o] + pb[o] for o in named)
+        nm_ = sum(pm[o] + pb[o] for o in named)
+        oh = sum(pm[o] + pt[o] + pb[o] for o in parts) - nh
+        om = sum(pm[o] + pb[o] for o in parts) - nm_
+        d = C['pmine']['john420blaze'] + C['pboth']['john420blaze']
+        dj = C['pthem']['john420blaze'] + C['pboth']['john420blaze']
+        B(f'<figure><div class="scroll"><table><thead><tr><th class="lt"></th><th>Volleys</th>'
+          f'<th>Heated</th><th>His words</th><th>Theirs</th>'
+          f'<th class="lt">Share his</th><th></th></tr></thead><tbody>{rows}</tbody></table></div>'
+          f'<figcaption>The three he named are shaded. Against those three he supplies the word in '
+          f'{100*nm_/nh:.1f} per cent of their heated volleys &mdash; <em>higher</em> than the '
+          f'{100*om/oh:.1f} per cent he runs against everybody else. Against the Beavers it is '
+          f'{100*(pm["sheq7777"]+pb["sheq7777"])/(pm["sheq7777"]+pt["sheq7777"]+pb["sheq7777"]):.0f} '
+          f'per cent. And in the pairing he raised directly, his own with the Dragons, he out-types '
+          f'him {d} to {dj}. The men he named as throwing heat at him are, on the record, receiving '
+          f'more of it than they send.</figcaption></figure>')
+
+        P('<p class="b">Where he is right: the words do fly both ways, and nothing here says '
+          'otherwise &mdash; the other man carried a word in 161 of his 410 heated volleys, which '
+          'is a lot of incoming. He is also right that a group chat can hold a three-year argument '
+          'that has nothing to do with football. That argument simply is not in this data, so it '
+          'cannot be the explanation for a number built entirely out of the league chats.</p>')
     return out
 
 
