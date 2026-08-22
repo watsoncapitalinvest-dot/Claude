@@ -24,6 +24,9 @@ BROWSER = '/opt/pw-browsers/chromium'
 ARTICLE_ID = 'kick-2026-addendum'
 WINDOW = 420
 MIN_GAMES = 8
+# Heat is a ratio, so a pairing with twenty volleys can top the scale on two
+# messages. Below this many volleys the cell is drawn as unmeasured, not cold.
+MIN_HEAT_V = 150
 RED, TEAL = '#c20f16', '#0e8ab5'      # both passed scripts/validate_palette.js
 
 MERGE = {'scamp1467': 'danscampi', 'Dgclunie': 'MrBlast', 'espn39740077': 'papasuelo'}
@@ -187,6 +190,11 @@ FIG_CSS = """
 .ad .mx td.c{background:color-mix(in oklab,var(--hue) calc(var(--k)*100%),#f4efe6);}
 .ad .mx td.self{background:repeating-linear-gradient(135deg,#efe9de 0 3px,transparent 3px 6px);}
 .ad .mx td.none{background:#f6f2ea;}
+/* measured but under the floor: a texture, so it cannot be misread as "cold" */
+.ad .mx td.thin,.ad .sw.thin{background:repeating-linear-gradient(45deg,#ded7ca 0 1.5px,
+  #faf7f2 1.5px 4.5px);}
+.ad .key .sw{display:inline-block;width:13px;height:13px;border-radius:2px;
+  vertical-align:-2px;margin-right:5px;}
 .ad .key{display:flex;align-items:center;gap:7px;margin-top:11px;font-family:var(--sans);
   font-size:10.5px;color:var(--muted,#65656b);flex-wrap:wrap;}
 .ad .key .ramp{height:10px;width:120px;border-radius:2px;}
@@ -238,6 +246,8 @@ def mxfig(D, get, hue, keylo, keyhi, extra=''):
             if not got:
                 tds += '<td class="none" title="none recorded"></td>'; continue
             k, tip = got
+            if k == 'thin':      # measured, but on too little to colour honestly
+                tds += f'<td class="thin" title="{re.sub("<[^>]+>", "", tip)}"></td>'; continue
             tds += (f'<td class="c" style="--k:{k:.3f}" tabindex="0" '
                     f'data-t="{esc(NAME[r])} &rarr; {esc(NAME[c])}" data-v="{tip}"></td>')
         rows += f'<tr><th scope="row" title="{esc(NAME[r])}">{ABBR[r]}</th>{tds}</tr>'
@@ -399,15 +409,27 @@ def sections(D):
       f'proportion.</figcaption></figure>')
 
     S('Figure Five &mdash; Where The Arguments Are')
-    hh = max(p['heat'] for p in P)
-    B('<figure>' + mxfig(D,
-        lambda r, c: (cell[(r, c)]['heat'] / hh,
-                      f"{cell[(r,c)]['heat']:.1f}% of {cell[(r,c)]['v']:,} volleys carry an "
-                      f"argument word") if (r, c) in cell else None,
-        RED, 'Cooler', 'Hotter') +
-      '<figcaption>The same grid, coloured by the share of a pairing&rsquo;s volleys containing a '
-      'word from a fixed argument list. Heat is a ranking input and nothing else: the desk has '
-      'never published a line of chat on the strength of it.</figcaption></figure>')
+    solid = [p for p in P if p['v'] >= MIN_HEAT_V]
+    hh = max(p['heat'] for p in solid)
+
+    def heatcell(r, c):
+        p = cell.get((r, c))
+        if not p:
+            return None
+        if p['v'] < MIN_HEAT_V:
+            return ('thin', f"only {p['v']:,} volleys &mdash; too few to rate")
+        return (p['heat'] / hh,
+                f"{p['heat']:.1f}% of {p['v']:,} volleys carry an argument word")
+    B('<figure>' + mxfig(D, heatcell, RED, 'Cooler', 'Hotter',
+        f'<span style="margin-left:auto"><i class="sw thin"></i>Under {MIN_HEAT_V} volleys</span>') +
+      f'<figcaption>The same grid, coloured by the share of a pairing&rsquo;s volleys containing a '
+      f'word from a fixed argument list. Heat is a ratio, so a thin pairing can top it on two '
+      f'messages: under {MIN_HEAT_V} volleys, {len(P)-len(solid)} of the {len(P)} cells are '
+      f'left uncoloured rather than flattered, and the ramp is set by the '
+      f'{len(solid)} that survive &mdash; a real range of {min(p["heat"] for p in solid):.1f} to '
+      f'{hh:.1f} per cent. Uncoloured is not cold; it is unmeasured. Heat is a ranking input and '
+      f'nothing else: the desk has never published a line of chat on the strength of '
+      f'it.</figcaption></figure>')
 
     S('Figure Six &mdash; Direct Address')
     mxv = max(list(D['sent'].values()) + list(D['recd'].values()))
@@ -594,10 +616,11 @@ html,body{width:1200px;height:630px;overflow:hidden;background:#efe9de;
  overflow:hidden;box-shadow:0 10px 26px rgba(0,0,0,.17),0 2px 5px rgba(0,0,0,.09);}
 .pc .cap{font-family:var(--sans);font-size:7.5px;font-weight:800;letter-spacing:.15em;
  text-transform:uppercase;color:var(--red);margin-bottom:6px;}
-.p1{left:452px;top:132px;width:344px;transform:rotate(-1.6deg);}     /* matrix   */
-.p4{left:798px;top:60px;width:352px;transform:rotate(1.4deg);}       /* board    */
-.p5{left:806px;top:246px;width:340px;transform:rotate(-1.2deg);}     /* volleys  */
-.p3{left:794px;top:424px;width:356px;transform:rotate(1.8deg);}      /* dumbbell */
+.p1{left:446px;top:16px;width:278px;transform:rotate(-1.6deg);}      /* mutual   */
+.p6{left:454px;top:316px;width:278px;transform:rotate(1.5deg);}      /* heat     */
+.p4{left:742px;top:44px;width:372px;transform:rotate(1.3deg);}       /* board    */
+.p5{left:752px;top:238px;width:356px;transform:rotate(-1.2deg);}     /* volleys  */
+.p3{left:744px;top:428px;width:372px;transform:rotate(1.9deg);}      /* dumbbell */
 
 table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:8.5px;}
 td,th{padding:2px 4px;}
@@ -614,10 +637,11 @@ tbody tr + tr th,tbody tr + tr td{border-top:1px solid #eee7db;}
  border:2px solid #fffdfb;}
 .dot.hi{background:var(--red);} .dot.lo{background:#0e8ab5;}
 .mx{border-collapse:separate;border-spacing:1.5px;}
-.mx td{width:19px;height:19px;padding:0;border-radius:2px;}
+.mx td{width:14px;height:14px;padding:0;border-radius:2px;}
 .mx td.c{background:color-mix(in oklab,var(--red) calc(var(--k)*100%),#f4efe6);}
 .mx td.self{background:repeating-linear-gradient(135deg,#e9e2d6 0 3px,transparent 3px 6px);}
 .mx td.none{background:#f6f2ea;}
+.mx td.thin{background:repeating-linear-gradient(45deg,#ded7ca 0 1.5px,#faf7f2 1.5px 4.5px);}
 
 /* the masthead panel sits over the collage */
 .l{position:absolute;left:0;top:0;bottom:0;width:430px;z-index:9;
@@ -637,6 +661,7 @@ h1 em{font-style:normal;color:var(--red);}
 </style>
 <div class="card">
  <div class="pc p1"><div class="cap">Fig. 2 &middot; Mutual attention</div>__MX__</div>
+ <div class="pc p6"><div class="cap">Fig. 5 &middot; Where the arguments are</div>__HEAT__</div>
  <div class="pc p5"><div class="cap">Fig. 1 &middot; Volleys</div>__BARS__</div>
  <div class="pc p3"><div class="cap">Fig. 3 &middot; One-way streets</div>__DUMB__</div>
  <div class="pc p4"><div class="cap">The full board</div>__TBL__</div>
@@ -676,6 +701,25 @@ def card(D):
         mx += f'<tr>{tds}</tr>'
     mx = f'<table class="mx"><tbody>{mx}</tbody></table>'
 
+    # Figure Five's grid, on the same floor the page uses: thin pairings are
+    # textured, not coloured, so the card cannot flatter a twenty-volley cell.
+    hh = max(p['heat'] for p in P if p['v'] >= MIN_HEAT_V)
+    ht = ''
+    for r in T:
+        tds = ''
+        for c in T:
+            p = cell.get((r, c))
+            if r == c:
+                tds += '<td class="self"></td>'
+            elif not p:
+                tds += '<td class="none"></td>'
+            elif p['v'] < MIN_HEAT_V:
+                tds += '<td class="thin"></td>'
+            else:
+                tds += f'<td class="c" style="--k:{p["heat"]/hh:.3f}"></td>'
+        ht += f'<tr>{tds}</tr>'
+    ht = f'<table class="mx"><tbody>{ht}</tbody></table>'
+
     top = max(tot.values())
     bars = ''.join(f'<tr><th>{ABBR[t]}</th>'
                    f'<td class="bar"><span style="width:{100*tot[t]/top:.1f}%"></span></td>'
@@ -704,8 +748,8 @@ def card(D):
         f'<td class="num dim">{p["g"]}</td></tr>' for p in P[:7])
     tbl = f'<table><tbody>{tbl}</tbody></table>'
 
-    doc = (CARD.replace('__MX__', mx).replace('__BARS__', bars).replace('__DUMB__', dumb)
-               .replace('__TBL__', tbl)
+    doc = (CARD.replace('__MX__', mx).replace('__HEAT__', ht).replace('__BARS__', bars)
+               .replace('__DUMB__', dumb).replace('__TBL__', tbl)
                .replace('__VOL__', f"{sum(D['volley'].values()):,}")
                .replace('__PAIRS__', str(len(D['volley']))))
     tmp = os.path.join(ROOT, '.ad-card.html')
