@@ -69,7 +69,7 @@ def compute():
             m = LINE.match(raw)
             if m:
                 ms.append({'d': m.group(1), 't': m.group(2), 'who': m.group(3).strip(),
-                           'x': m.group(4)})
+                           'x': m.group(4), 'c': sub})
             elif ms:
                 ms[-1]['x'] += ' ' + raw.strip()
     if not ms:
@@ -79,6 +79,23 @@ def compute():
                                              '%m/%d/%y %I:%M:%S%p')
     ms.sort(key=lambda m: m['ts'])
     _corpus = ms
+
+    # Presence is not uniform: one manager can be in the league and out of the room.
+    # Count each manager per chat so the figures can say who is still standing in it.
+    rooms = {o: {c: [0, None] for c in ('mos', 'official')} for o in NAME}
+    for m in ms:
+        o = CHAT.get(m['who'])
+        if not o:
+            continue
+        r = rooms[o][m['c']]
+        r[0] += 1
+        if r[1] is None or m['ts'].date() > r[1]:
+            r[1] = m['ts'].date()
+    end = ms[-1]['ts'].date()
+    absent = sorted((o for o in NAME
+                     if rooms[o]['mos'][1] and (end - rooms[o]['mos'][1]).days > 540
+                     and rooms[o]['official'][0]),
+                    key=lambda o: rooms[o]['mos'][1])
 
     volley, heated = collections.Counter(), collections.Counter()
     for i in range(1, len(ms)):
@@ -132,7 +149,7 @@ def compute():
     teams = sorted(NAME, key=lambda k: -tot[k])
     return dict(ms=len(ms), span=(ms[0]['ts'].date(), ms[-1]['ts'].date()), volley=volley,
                 heated=heated, tot=tot, ment=ment, sent=sent, recd=recd, pairs=pairs,
-                teams=teams, mg=mg, riv=riv, rank=rank)
+                teams=teams, mg=mg, riv=riv, rank=rank, rooms=rooms, absent=absent, end=end)
 
 
 # ------------------------------------------------------------- shared styles --
@@ -148,6 +165,7 @@ FIG_CSS = """
 .ad .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .ad .dim{color:var(--faint,#9a958c);} .ad .sep{color:var(--faint,#9a958c);}
 .ad .vs{color:var(--faint,#9a958c);font-weight:400;font-style:italic;}
+.ad .dag{color:var(--red,#c20f16);font-weight:700;padding-left:2px;cursor:help;}
 .ad thead th{font-family:var(--sans);font-size:9px;font-weight:800;letter-spacing:.11em;
   text-transform:uppercase;color:var(--faint,#9a958c);border-bottom:2px solid var(--ink,#17181c);
   text-align:right;white-space:nowrap;}
@@ -239,6 +257,10 @@ def sections(D):
     out = []
     S = lambda t: out.append(('sect', f'<div class="sect">{t}</div>'))
     B = lambda h: out.append(('body', f'<div class="ad">{h}</div>'))
+    # a dagger follows anybody whose count is capped by absence, not by temperament
+    DAG = '<span class="dag" title="No longer in the Mos Eisley chat">&dagger;</span>'
+    AB = lambda t: ABBR[t] + (DAG if t in D['absent'] else '')
+    NM = lambda t: esc(NAME[t]) + (DAG if t in D['absent'] else '')
 
     vol = sum(D['volley'].values())
     B(f'''<div class="stats">
@@ -269,14 +291,50 @@ def sections(D):
 
     S('Figure One &mdash; Not Everybody Talks')
     top = max(tot.values())
-    bars = ''.join(f'<tr><th scope="row">{esc(NAME[t])}</th>'
+    bars = ''.join(f'<tr><th scope="row">{NM(t)}</th>'
                    f'<td class="bar"><span style="width:{100*tot[t]/top:.1f}%"></span></td>'
                    f'<td class="num">{tot[t]:,}</td>'
                    f'<td class="num dim">{200*tot[t]/sum(tot.values()):.1f}%</td></tr>' for t in T)
     B(f'<figure><div class="scroll"><table><tbody>{bars}</tbody></table></div>'
       f'<figcaption>Volleys each franchise appears in. {esc(NAME[T[0]])} sits in {tot[T[0]]:,}; '
       f'{esc(NAME[T[-1]])} in {tot[T[-1]]:,} &mdash; a factor of {tot[T[0]]/tot[T[-1]]:.0f}. Rank on '
-      f'raw volume and you would be ranking who types.</figcaption></figure>')
+      f'raw volume and you would be ranking who types. A dagger marks a manager who is still in the '
+      f'league but no longer in the chat; see the note below.</figcaption></figure>')
+
+    S('A Note On Who Is In The Room')
+    for who in D['absent']:
+        mo, of = D['rooms'][who]['mos'], D['rooms'][who]['official']
+        out.append(('body',
+            f'<p class="b">One number on this page does not mean what the other fifteen mean. '
+            f'{esc(NAME[who])} left the Mos Eisley chat on {mo[1]:%-d %B %Y} and has not posted in '
+            f'it since. He did not leave the league. He is still in it, still drafting, and still in '
+            f'the league chat, where his most recent message is dated {of[1]:%-d %B %Y}. The reasons '
+            f'he walked out of the room were not fantasy football, and they are not this '
+            f'desk&rsquo;s business.</p>'))
+        out.append(('body',
+            f'<p class="b">What is this desk&rsquo;s business is that every figure here counts the '
+            f'room he stopped standing in. His {tot[who]:,} volleys are not a measure of how much he '
+            f'talks; they are a measure of when he stopped. Read every {ABBR[who]} row as a floor, '
+            f'and read his splits with more suspicion still &mdash; a small denominator makes any '
+            f'pairing look like an obsession, which is exactly why he takes two of the top four rows '
+            f'in Figure Three.</p>'))
+        def ago(d):
+            n = (D['end'] - d).days
+            return ('current' if n < 60 else f'{n//30} months ago' if n < 730
+                    else f'{n//365} years ago')
+        rows = ''.join(
+            f'<tr><th scope="row">{lbl}</th><td class="num">{n:,}</td>'
+            f'<td class="num dim">{d:%-d %b %Y}</td>'
+            f'<td class="num dim">{ago(d)}</td></tr>'
+            for lbl, (n, d) in (('Mos Eisley &mdash; the banter chat', mo),
+                                ('The league chat', of)) if d)
+        B(f'<figure><div class="scroll"><table><thead><tr><th class="lt">'
+          f'{esc(NAME[who])}</th><th>Messages</th><th>Last posted</th><th></th></tr></thead>'
+          f'<tbody>{rows}</tbody></table></div>'
+          f'<figcaption>Both chats are in this corpus and both are counted. Almost every volley in '
+          f'the league happens in the first row&rsquo;s room &mdash; which is why a manager who is '
+          f'fully present in the second row still reads on these charts as a man who went '
+          f'quiet.</figcaption></figure>')
 
     S('Figure Two &mdash; Mutual Attention')
     hi = max(p['share'] for p in P)
@@ -297,7 +355,7 @@ def sections(D):
         if loS[1] > hiS[1]:
             hiS, loS = loS, hiS
         mx = .32
-        rows += (f'<tr><th scope="row">{ABBR[hiS[0]]} <span class="vs">and</span> {ABBR[loS[0]]}</th>'
+        rows += (f'<tr><th scope="row">{AB(hiS[0])} <span class="vs">and</span> {AB(loS[0])}</th>'
                  f'<td class="dumb"><span class="track"></span>'
                  f'<span class="seg" style="left:{100*loS[1]/mx:.1f}%;right:{100-100*hiS[1]/mx:.1f}%"></span>'
                  f'<span class="dot lo" style="left:{100*loS[1]/mx:.1f}%"></span>'
@@ -308,7 +366,9 @@ def sections(D):
       f'<div class="legend"><span><i style="background:{RED}"></i>Gives the pairing more of his '
       f'talk</span><span><i style="background:{TEAL}"></i>Gives it less</span></div>'
       '<figcaption>Read the gap, not the dots. A wide gap is one man with a rival and one man with '
-      'a fixture &mdash; precisely what the geometric mean exists to demote.</figcaption></figure>')
+      'a fixture &mdash; precisely what the geometric mean exists to demote. Daggered rows are the '
+      'other kind of wide gap: a manager out of the chat, whose few hundred remaining volleys all '
+      'land on the same one or two names.</figcaption></figure>')
 
     S('Figure Four &mdash; Who Has One At All')
     best, bestwith, toppart = {}, {}, {}
@@ -322,7 +382,7 @@ def sections(D):
     order = sorted(NAME, key=lambda t: best.get(t, 0))
     alone = [t for t in order if best.get(t, 0) < .07]
     rows = ''.join(
-        f'<tr><th scope="row">{esc(NAME[t])}</th>'
+        f'<tr><th scope="row">{NM(t)}</th>'
         f'<td class="bar"><span class="{"lo" if best.get(t,0)<.07 else ""}" '
         f'style="width:{100*best.get(t,0)/SC:.1f}%"></span>'
         f'<i class="even" style="left:{100*EVEN/SC:.1f}%"></i></td>'
@@ -410,7 +470,7 @@ def sections(D):
     for i, p in enumerate(P[:26]):
         rk = f'<b style="color:var(--red)">#{p["rank"]}</b>' if p['rank'] else '<span class="dim">&mdash;</span>'
         trs += (f'<tr><td class="num dim">{i+1}</td>'
-                f'<th scope="row">{ABBR[p["a"]]} <span class="vs">v</span> {ABBR[p["b"]]}</th>'
+                f'<th scope="row">{AB(p["a"])} <span class="vs">v</span> {AB(p["b"])}</th>'
                 f'<td class="num">{p["v"]:,}</td><td class="num"><b>{p["share"]*100:.1f}%</b></td>'
                 f'<td class="num dim">{p["sa"]*100:.0f}<span class="sep">/</span>{p["sb"]*100:.0f}</td>'
                 f'<td class="num">{p["heat"]:.1f}%</td>'
@@ -431,6 +491,10 @@ def sections(D):
         'swipe-to-reply arrives as an ordinary message with no link back to the one it answered. '
         'That thread structure would be the best evidence here and it does not survive the export, '
         'which is why a seven-minute window is doing the work instead.</p>'))
+    out.append(('body', '<p class="b">Presence is not temperament. The measure assumes the sixteen '
+        'are all standing in the same room, and one of them has not been for years. Where that is '
+        'true the page says so with a dagger, but there is no correction that fixes it: you cannot '
+        'infer the volleys a man would have thrown had he stayed.</p>'))
     out.append(('body', '<p class="b">Sourcing: the league chats, '
         f'{D["span"][0]:%B %Y} to {D["span"][1]:%B %Y}. The volley definition is the same code path '
         'as scripts/build_rivalries.py, so this documents the ranking rather than describing a '
@@ -490,7 +554,7 @@ __FIGCSS__
 <span class="flag">Transparent Research Addendum</span>
 <h1>How The Rivalries Were <em>Counted</em></h1>
 <p class="dek">Every rivalry ranking this desk has published rests on one number. Here is that
-number for all sixteen managers, the eight figures behind it, and the four things it cannot do.</p>
+number for all sixteen managers, the eight figures behind it, and everything it cannot do.</p>
 <div class="rule"></div>
 __BODY__
 <footer>Built by <b>scripts/build_addendum.py</b>. This page and the version inside the 2026 Kickoff
@@ -704,7 +768,7 @@ def build():
              'headline': 'How The Rivalries Were Counted',
              'subhead': ('Every rivalry ranking this desk has published rests on one number. Here '
                          'is that number for all sixteen managers, the eight figures behind it, and '
-                         'the four things it cannot do.'),
+                         'everything it cannot do.'),
              'dateline': 'MOS EISLEY · AUGUST 2026', 'byline': 'The SCFL NewsRoom · The Record Room',
              'status': 'FILED', 'release': '', 'cover': '', 'staff': 'published',
              'paragraphs': prose, 'blocks': blocks}
