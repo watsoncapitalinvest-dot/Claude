@@ -264,6 +264,102 @@ def mxfig(D, get, hue, keylo, keyhi, extra=''):
             f'<span>{keyhi}</span>{extra}</div>')
 
 
+def shoot(doc, out, tag, w=1200, h=630):
+    """Rasterise a share card. Shared with scripts/build_heat.py.
+
+    deviceScaleFactor stays 1: at 2 this engine silently drops painted content,
+    and a card that renders blank still writes a plausible-sized file, so the
+    guard below counts pixels rather than bytes.
+    """
+    tmp = os.path.join(ROOT, f'.{tag}.html')
+    open(tmp, 'w', encoding='utf-8').write(doc)
+    raw = os.path.join(tempfile.gettempdir(), f'{tag}.png')
+    js = os.path.join(tempfile.gettempdir(), f'{tag}.js')
+    open(js, 'w').write(
+        "const {chromium}=require('playwright');(async()=>{"
+        f"const b=await chromium.launch({{executablePath:'{BROWSER}'}});"
+        f"const p=await b.newPage({{viewport:{{width:{w},height:{h}}},deviceScaleFactor:1}});"
+        f"await p.goto('file://{tmp}',{{waitUntil:'load'}});"
+        "await p.evaluate(async()=>{await document.fonts.ready;"
+        "document.body.getBoundingClientRect();"
+        "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});"
+        "await p.waitForTimeout(1200);"
+        f"await p.screenshot({{path:'{raw}'}});await b.close();}})();")
+    try:
+        subprocess.run(['node', js], check=True, cwd=ROOT,
+                       env=dict(os.environ, NODE_PATH='/opt/node22/lib/node_modules'),
+                       capture_output=True)
+        from PIL import Image
+        im = Image.open(raw).convert('RGB')
+        g = im.convert('L').resize((80, 42))
+        blank = sum(1 for v in g.get_flattened_data() if v > 245) / (80 * 42)
+        if blank > 0.55:
+            sys.exit(f'  !! preview card is {blank:.0%} blank -- not shipping it')
+        im.save(out, 'JPEG', quality=90, optimize=True, progressive=True)
+        print(f'  card {os.path.basename(out)} {im.width}x{im.height} '
+              f'{os.path.getsize(out)//1024}kb ({blank:.0%} blank)')
+    finally:
+        keep = os.environ.get('SCFL_KEEP_CARD')   # debugging the collage layout
+        for f in (js, raw, tmp):
+            if os.path.exists(f) and not keep:
+                os.remove(f)
+
+
+def heat_figures(D):
+    """The heat matrix and the word list behind it, as two <figure> strings.
+
+    Lives out here because scripts/build_heat.py publishes the same two figures
+    as a standalone shareable, and the two must not be able to disagree.
+    """
+    P, vol = D['pairs'], sum(D['volley'].values())
+    cell = {}
+    for p in P:
+        cell[(p['a'], p['b'])] = cell[(p['b'], p['a'])] = p
+    solid = [p for p in P if p['v'] >= MIN_HEAT_V]
+    hh = max(p['heat'] for p in solid)
+
+    def heatcell(r, c):
+        p = cell.get((r, c))
+        if not p:
+            return None
+        if p['v'] < MIN_HEAT_V:
+            return ('thin', f"only {p['v']:,} volleys &mdash; too few to rate")
+        return (p['heat'] / hh,
+                f"{p['heat']:.1f}% of {p['v']:,} volleys carry an argument word")
+
+    grid = ('<figure>' + mxfig(D, heatcell, RED, 'Cooler', 'Hotter',
+        f'<span style="margin-left:auto"><i class="sw thin"></i>Under {MIN_HEAT_V} volleys</span>') +
+      f'<figcaption>Every pairing, coloured by the share of its volleys containing a '
+      f'word from a fixed argument list. Heat is a ratio, so a thin pairing can top it on two '
+      f'messages: under {MIN_HEAT_V} volleys, {len(P)-len(solid)} of the {len(P)} cells are '
+      f'left uncoloured rather than flattered, and the ramp is set by the '
+      f'{len(solid)} that survive &mdash; a real range of {min(p["heat"] for p in solid):.1f} to '
+      f'{hh:.1f} per cent. Uncoloured is not cold; it is unmeasured. Heat is a ranking input and '
+      f'nothing else: the desk has never published a line of chat on the strength of '
+      f'it.</figcaption></figure>')
+
+    W, hv = D['words'], D['hotvol']
+    wmax = max(W.values())
+    wrows = ''.join(
+        f'<tr><th scope="row">{esc(w)}</th>'
+        f'<td class="bar"><span style="width:{100*n/wmax:.1f}%"></span></td>'
+        f'<td class="num">{n:,}</td>'
+        f'<td class="num dim">{100*n/hv:.1f}%</td></tr>' for w, n in W.most_common())
+    words = (f'<figure><div class="scroll"><table><thead><tr><th class="lt">The whole list, '
+      f'{len(W)} words</th><th class="lt">Share of heated volleys</th><th>Volleys</th>'
+      f'<th>Share</th></tr></thead><tbody>{wrows}</tbody></table></div>'
+      f'<figcaption>There is no cleverness here and no sentiment model: a volley is heated if '
+      f'either of its two messages contains one of these {len(W)} strings, whole-word and '
+      f'case-insensitive. {hv:,} of {vol:,} volleys trip at least one, which is '
+      f'{100*hv/vol:.1f} per cent of the record. The shares sum to {100*sum(W.values())/hv:.1f} '
+      f'rather than a hundred because one volley can trip several words. '
+      f'The obvious objection is that the list cannot tell an insult from a '
+      f'quotation of one, and that &ldquo;joke&rdquo; and &ldquo;wrong&rdquo; carry a great deal of '
+      f'ordinary traffic &mdash; which is the honest reason heat is worth a fraction of the rivalry '
+      f'score and no headline of its own.</figcaption></figure>')
+    return [grid, words]
+
+
 def sections(D):
     """The addendum, once. Returns [(kind, html)] where kind is sect|body."""
     P, T, tot = D['pairs'], D['teams'], D['tot']
@@ -415,47 +511,8 @@ def sections(D):
       f'proportion.</figcaption></figure>')
 
     S('Figure Five &mdash; Where The Arguments Are')
-    solid = [p for p in P if p['v'] >= MIN_HEAT_V]
-    hh = max(p['heat'] for p in solid)
-
-    def heatcell(r, c):
-        p = cell.get((r, c))
-        if not p:
-            return None
-        if p['v'] < MIN_HEAT_V:
-            return ('thin', f"only {p['v']:,} volleys &mdash; too few to rate")
-        return (p['heat'] / hh,
-                f"{p['heat']:.1f}% of {p['v']:,} volleys carry an argument word")
-    B('<figure>' + mxfig(D, heatcell, RED, 'Cooler', 'Hotter',
-        f'<span style="margin-left:auto"><i class="sw thin"></i>Under {MIN_HEAT_V} volleys</span>') +
-      f'<figcaption>The same grid, coloured by the share of a pairing&rsquo;s volleys containing a '
-      f'word from a fixed argument list. Heat is a ratio, so a thin pairing can top it on two '
-      f'messages: under {MIN_HEAT_V} volleys, {len(P)-len(solid)} of the {len(P)} cells are '
-      f'left uncoloured rather than flattered, and the ramp is set by the '
-      f'{len(solid)} that survive &mdash; a real range of {min(p["heat"] for p in solid):.1f} to '
-      f'{hh:.1f} per cent. Uncoloured is not cold; it is unmeasured. Heat is a ranking input and '
-      f'nothing else: the desk has never published a line of chat on the strength of '
-      f'it.</figcaption></figure>')
-
-    W, hv = D['words'], D['hotvol']
-    wmax = max(W.values())
-    wrows = ''.join(
-        f'<tr><th scope="row">{esc(w)}</th>'
-        f'<td class="bar"><span style="width:{100*n/wmax:.1f}%"></span></td>'
-        f'<td class="num">{n:,}</td>'
-        f'<td class="num dim">{100*n/hv:.1f}%</td></tr>' for w, n in W.most_common())
-    B(f'<figure><div class="scroll"><table><thead><tr><th class="lt">The whole list, '
-      f'{len(W)} words</th><th class="lt">Share of heated volleys</th><th>Volleys</th>'
-      f'<th>Share</th></tr></thead><tbody>{wrows}</tbody></table></div>'
-      f'<figcaption>There is no cleverness here and no sentiment model: a volley is heated if '
-      f'either of its two messages contains one of these {len(W)} strings, whole-word and '
-      f'case-insensitive. {hv:,} of {vol:,} volleys trip at least one, which is '
-      f'{100*hv/vol:.1f} per cent of the record. The shares sum to {100*sum(W.values())/hv:.1f} '
-      f'rather than a hundred because one volley can trip several words. '
-      f'The obvious objection is that the list cannot tell an insult from a '
-      f'quotation of one, and that &ldquo;joke&rdquo; and &ldquo;wrong&rdquo; carry a great deal of '
-      f'ordinary traffic &mdash; which is the honest reason heat is worth a fraction of the rivalry '
-      f'score and no headline of its own.</figcaption></figure>')
+    for h in heat_figures(D):
+        B(h)
 
     S('Figure Six &mdash; Direct Address')
     mxv = max(list(D['sent'].values()) + list(D['recd'].values()))
@@ -778,39 +835,7 @@ def card(D):
                .replace('__DUMB__', dumb).replace('__TBL__', tbl)
                .replace('__VOL__', f"{sum(D['volley'].values()):,}")
                .replace('__PAIRS__', str(len(D['volley']))))
-    tmp = os.path.join(ROOT, '.ad-card.html')
-    open(tmp, 'w', encoding='utf-8').write(doc)
-    raw = os.path.join(tempfile.gettempdir(), 'ad-card.png')
-    js = os.path.join(tempfile.gettempdir(), 'ad-card.js')
-    # deviceScaleFactor stays 1: at 2 this engine drops painted content silently.
-    open(js, 'w').write(
-        "const {chromium}=require('playwright');(async()=>{"
-        f"const b=await chromium.launch({{executablePath:'{BROWSER}'}});"
-        "const p=await b.newPage({viewport:{width:1200,height:630},deviceScaleFactor:1});"
-        f"await p.goto('file://{tmp}',{{waitUntil:'load'}});"
-        "await p.evaluate(async()=>{await document.fonts.ready;"
-        "document.body.getBoundingClientRect();"
-        "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});"
-        "await p.waitForTimeout(1200);"
-        f"await p.screenshot({{path:'{raw}'}});await b.close();}})();")
-    try:
-        subprocess.run(['node', js], check=True, cwd=ROOT,
-                       env=dict(os.environ, NODE_PATH='/opt/node22/lib/node_modules'),
-                       capture_output=True)
-        from PIL import Image
-        im = Image.open(raw).convert('RGB')
-        g = im.convert('L').resize((80, 42))
-        blank = sum(1 for v in g.get_flattened_data() if v > 245) / (80 * 42)
-        if blank > 0.55:
-            sys.exit(f'  !! preview card is {blank:.0%} blank -- not shipping it')
-        im.save(OG, 'JPEG', quality=90, optimize=True, progressive=True)
-        print(f'  card {os.path.basename(OG)} {im.width}x{im.height} '
-              f'{os.path.getsize(OG)//1024}kb ({blank:.0%} blank)')
-    finally:
-        keep = os.environ.get('SCFL_KEEP_CARD')   # debugging the collage layout
-        for f in (js, raw, tmp):
-            if os.path.exists(f) and not keep:
-                os.remove(f)
+    shoot(doc, OG, 'ad-card')
 
 
 def build():
