@@ -23,6 +23,7 @@ _s.loader.exec_module(ad)
 OUT = os.path.join(ROOT, 'scfl-gumbas.html')
 OG = os.path.join(ROOT, 'scfl-gumbas-og.jpg')
 G = 'tommyvertu123'
+WOOK = 'coachnick1980redfox'
 
 # ---------------------------------------------------------------------------
 # His answer goes here, verbatim. Leave it empty and the page reserves the
@@ -37,7 +38,15 @@ Think it's why Wookie Doc beavers and you throw so much heat my way.
 
 In the first amendment chat. That's just political nonsense and battles.
 
-I think it's using your whole what's up chat data."""
+I think it's using your whole what's up chat data.
+
+lol oh I don't care, Ha. I just thought I was non combative. Me and creams are good always.
+
+Makes sense I am on daily but only comment when I feel something needs to be said so I get it lol.
+
+Just Wookie don't make sense wookie gumbas always cordial lol.
+
+Ha I don't know maybe that's it now I rethinking Goomba Wookie relationship. I am sorry @The Dry Dicks if I wronged you."""
 RESPONSE_BY = 'The Hairy Gumbas, to the desk, 21 August 2026'
 # ---------------------------------------------------------------------------
 
@@ -51,6 +60,7 @@ def crunch(D):
     pmine, pthem, pboth, ptot = (collections.Counter() for _ in range(4))
     gwords_mine, gwords_them = collections.Counter(), collections.Counter()
     gy, gyh, ly, lyh = (collections.Counter() for _ in range(4))
+    wy, wyh, wym, wyt = (collections.Counter() for _ in range(4))
 
     for i in range(1, len(ms)):
         a, b = ms[i - 1], ms[i]
@@ -80,6 +90,14 @@ def crunch(D):
         gy[yr] += 1
         other = ob if oa == G else oa
         ptot[other] += 1
+        if other == WOOK:                 # the one pairing he still disputes
+            wy[yr] += 1
+            if heated:
+                wyh[yr] += 1
+                if (ha if oa == G else hb):
+                    wym[yr] += 1
+                if (hb if oa == G else ha):
+                    wyt[yr] += 1
         if not heated:
             continue
         gyh[yr] += 1
@@ -119,6 +137,7 @@ def crunch(D):
                 mine=mine, them=them, both=both, wm=gwords_mine, wt=gwords_them,
                 gy=gy, gyh=gyh, ly=ly, lyh=lyh, seasons=seasons,
                 pmine=pmine, pthem=pthem, pboth=pboth, ptot=ptot,
+                wy=wy, wyh=wyh, wym=wym, wyt=wyt,
                 rooms={c: (sum(1 for x in ms if x['c'] == c),
                            min(x['ts'].date() for x in ms if x['c'] == c and x['ts'].year >= 2021),
                            max(x['ts'].date() for x in ms if x['c'] == c))
@@ -206,7 +225,7 @@ __EXTRA__
 <h1>The Gumbas <em>File</em></h1>
 <p class="dek">He is the hottest manager in the chat, he says the number is unfair, and he is
 owed a hearing. So here is every figure behind it, the three best arguments against it, his own
-answer in full, and what happened when the desk checked it.</p>
+answer in full &mdash; and the one place where he turned out to be right and the chart did not.</p>
 <div class="byline">The SCFL NewsRoom &middot; Mos Eisley</div>
 <div class="rule"></div>
 __BODY__
@@ -265,7 +284,7 @@ h1 em{font-style:normal;color:var(--red);}
   <div class="flag">The Record Room</div>
   <h1>The<br>Gumbas<br><em>File</em></h1>
   <div class="rule"></div>
-  <div class="dek">Four tests, one answer, and a box reserved for his.</div>
+  <div class="dek">Four tests, his answer in full, and the one place he was right.</div>
   <div class="st">
    <div><div class="k">Heat rate</div><div class="v">__HR__</div></div>
    <div><div class="k">His own words</div><div class="v">__OW__</div></div>
@@ -544,11 +563,52 @@ def figures(D, C):
           f'him {d} to {dj}. The men he named as throwing heat at him are, on the record, receiving '
           f'more of it than they send.</figcaption></figure>')
 
-        P('<p class="b">Where he is right: the words do fly both ways, and nothing here says '
-          'otherwise &mdash; the other man carried a word in 161 of his 410 heated volleys, which '
-          'is a lot of incoming. He is also right that a group chat can hold a three-year argument '
-          'that has nothing to do with football. That argument simply is not in this data, so it '
-          'cannot be the explanation for a number built entirely out of the league chats.</p>')
+        P('<p class="b">Where he is right on this: the words do fly both ways, and nothing here '
+          'says otherwise &mdash; the other man carried a word in 161 of his 410 heated volleys, '
+          'which is a lot of incoming. He is also right that a group chat can hold a three-year '
+          'argument that has nothing to do with football. That argument simply is not in this '
+          'data, so it cannot be the explanation for a number built entirely out of the league '
+          'chats.</p>')
+
+        S('The Wookie, Where He Is Right')
+        P('<p class="b">He dropped the rest of it and kept one objection, and it is the correct '
+          'one to keep: that the Wookie makes no sense, because the two of them have always been '
+          'cordial. The Machines offered him a defence from the floor at the same time &mdash; '
+          'that five or six years of record might not reflect where a relationship stands now. '
+          'Both are worth testing and they do not give the same answer.</p>')
+        wy, wyh, wym, wyt = C['wy'], C['wyh'], C['wym'], C['wyt']
+        yrs = sorted(wy)
+        hi = max(100 * wyh[y] / wy[y] for y in yrs)
+        rows = ''.join(
+            f'<tr class="{"hl" if y==2024 else ""}"><th scope="row">{y}</th>'
+            f'<td class="bar"><span style="width:{100*(100*wyh[y]/wy[y])/hi:.1f}%"></span></td>'
+            f'<td class="num"><b>{100*wyh[y]/wy[y]:.2f}%</b></td>'
+            f'<td class="num dim">{wyh[y]}</td><td class="num dim">{wy[y]}</td>'
+            f'<td class="num dim">{wym[y]}</td><td class="num dim">{wyt[y]}</td></tr>' for y in yrs)
+        tv, th = sum(wy.values()), sum(wyh.values())
+        B(f'<figure><div class="scroll"><table><thead><tr><th class="lt"></th>'
+          f'<th class="lt">Heat in the pairing</th><th>Rate</th><th>Heated</th><th>Volleys</th>'
+          f'<th>His words</th><th>The Wookie&rsquo;s</th></tr></thead><tbody>{rows}</tbody></table>'
+          f'</div><figcaption>The Machines&rsquo; theory does not survive: the heat here is not '
+          f'old. It is {100*sum(wyh[y] for y in yrs if y<=2022)/sum(wy[y] for y in yrs if y<=2022):.2f} '
+          f'per cent across 2021 and 2022 and '
+          f'{100*sum(wyh[y] for y in yrs if y>=2024)/sum(wy[y] for y in yrs if y>=2024):.2f} across '
+          f'2024 to 2026. But the Gumbas is right, and the reason is the shaded row. The whole '
+          f'pairing rests on {th} heated volleys in five years and {wyh[2024]} of them fall in '
+          f'2024, where the Wookie supplied the word {wyt[2024]} times to his {wym[2024]}. Take '
+          f'that one year out and the pairing runs {100*(th-wyh[2024])/(tv-wy[2024]):.2f} per cent '
+          f'&mdash; unremarkable.</figcaption></figure>')
+
+        P(f'<p class="b">Which is a finding about this desk&rsquo;s chart, not about him. That '
+          f'cell is the hottest on the entire grid at {100*th/tv:.2f} per cent, and it is the '
+          f'thinnest of the top six by a factor of nearly three &mdash; {tv:,} volleys against '
+          f'{sorted((p["v"] for p in D["pairs"] if p["v"] >= ad.MIN_HEAT_V and p["heat"] >= 5), reverse=True)[0]:,} '
+          f'for the largest of them. It clears the {ad.MIN_HEAT_V}-volley floor and it should not '
+          f'be setting the top of the ramp. He found that by knowing the man, which is a better '
+          f'method than the one on this page.</p>')
+        P('<p class="b">The rest of it stands, and it does not lean on any one year: strike 2024 '
+          'out of the record entirely, his best and hottest, and he is still first of sixteen. But '
+          'on the Wookie he was right and the number was not.</p>')
     return out
 
 
@@ -558,7 +618,7 @@ def build():
     blocks = figures(D, C)
     body = '\n'.join(h for _, h in blocks)
     desc = (f"{100*C['rate'][G]:.2f} per cent of his volleys run hot, the highest in the league. "
-            f"Three defences, tested. One of them lands.")
+            f"He disputed it, the desk checked, and on one pairing he was right.")
     page = (PAGE.replace('__FIGCSS__', ad.FIG_CSS).replace('__EXTRA__', EXTRA_CSS)
                 .replace('__BODY__', body).replace('__DESC__', desc))
 
