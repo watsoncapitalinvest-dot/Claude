@@ -12,7 +12,7 @@ Covers come from John's graphics AI, never from code. If the cover file named in
 the issue definition is missing, the build says so and uses a typographic
 stand-in so the issue is still readable.
 """
-import json, os, re, subprocess, sys
+import importlib.util, json, os, re, subprocess, sys
 
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE=os.path.join(ROOT,'scfl-politics-wire-freeze-flip.html')
@@ -47,12 +47,13 @@ ISSUES={
      'ALL 16 SCOUTED: WHO&rsquo;S LOADED, WHO&rsquo;S COOKED',
      'THE PICKS: EVERY DIVISION, AND WHO LIFTS IT',
      'THE GRUDGE REPORT: 2,344 GAMES, EVERY RIVALRY RANKED',
+     'ADDENDUM: HOW THE RIVALRIES WERE COUNTED, IN FULL',
    ],
    # The Hill Standoff is written and its opener art is ready
    # (scfl-art-hillstandoff.jpg) -- held out of this issue for a later one.
    'articles':['kick-2026-champion','kick-2026-namechange','kick-2026-blackandblue',
                'kick-2026-wire-freeze','kick-2026-preview','kick-2026-picks',
-               'the-grudge-report'],
+               'the-grudge-report','kick-2026-addendum'],
    # Opener art, one per article. Any missing file is skipped and that article
    # opens typographically, so the issue always builds. Cropped to 3:2, so the
    # supplied image can be any shape as long as the subject is centred.
@@ -64,6 +65,7 @@ ISSUES={
      'kick-2026-preview':'scfl-art-preview.jpg',
      'kick-2026-picks':'scfl-art-picks.jpg',
      'the-grudge-report':'scfl-grudge-art.jpg',
+     'kick-2026-addendum':'scfl-art-addendum.jpg',
    },
  },
 }
@@ -132,6 +134,13 @@ EXTRA_CSS="""
 .divider .d-rule{width:64px;height:3px;background:var(--red);margin:14px auto 0;}
 """
 
+_ad=importlib.util.spec_from_file_location('ad',os.path.join(ROOT,'scripts','build_addendum.py'))
+_adm=importlib.util.module_from_spec(_ad)
+try:
+    _ad.loader.exec_module(_adm); EXTRA_CSS+=_adm.FIG_CSS
+except Exception as _e:                      # addendum not built yet; issue still builds
+    print('  note: figure styles unavailable —', _e)
+
 SECT=re.compile(r'^([A-Z][A-Z0-9 ’\'&,·-]{3,44}) — (.*)$', re.S)
 # House style has no inline bold — emphasis is structural (p.b, .sect, .pullquote).
 # Markdown markers in copy would render as literal asterisks, so fail loudly instead.
@@ -150,6 +159,10 @@ def article_blocks(art, first, openart=None):
           '<div class="d-h">'+esc(art['headline'])+'</div>'
           '<div class="d-s">'+esc(art.get('subhead',''))+'</div>'
           '<div class="d-rule"></div></div>')]
+    if art.get('blocks'):
+        # Pre-rendered: the article owns its own markup (figures, tables). Used by
+        # the research addendum, which is generated once and delivered twice.
+        return out + [(k, h) for k, h in art['blocks']]
     paras=art['paragraphs']
     for i,p in enumerate(paras):
         if i==len(paras)-1 and p.startswith('Sourcing'):
