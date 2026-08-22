@@ -101,6 +101,7 @@ def compute():
                     key=lambda o: rooms[o]['mos'][1])
 
     volley, heated = collections.Counter(), collections.Counter()
+    words, hotvol = collections.Counter(), 0
     for i in range(1, len(ms)):
         a, b = ms[i - 1], ms[i]
         oa, ob = CHAT.get(a['who']), CHAT.get(b['who'])
@@ -110,8 +111,12 @@ def compute():
             continue
         k = tuple(sorted((oa, ob)))
         volley[k] += 1
-        if HEAT.search(b['x']) or HEAT.search(a['x']):
+        hit = {t.lower() for t in HEAT.findall(a['x']) + HEAT.findall(b['x'])}
+        if hit:
             heated[k] += 1
+            hotvol += 1
+            for t in hit:            # a volley can trip more than one word
+                words[t] += 1
     tot = collections.Counter()
     for (a, b), n in volley.items():
         tot[a] += n; tot[b] += n
@@ -152,7 +157,8 @@ def compute():
     teams = sorted(NAME, key=lambda k: -tot[k])
     return dict(ms=len(ms), span=(ms[0]['ts'].date(), ms[-1]['ts'].date()), volley=volley,
                 heated=heated, tot=tot, ment=ment, sent=sent, recd=recd, pairs=pairs,
-                teams=teams, mg=mg, riv=riv, rank=rank, rooms=rooms, absent=absent, end=end)
+                teams=teams, mg=mg, riv=riv, rank=rank, rooms=rooms, absent=absent, end=end,
+                words=words, hotvol=hotvol)
 
 
 # ------------------------------------------------------------- shared styles --
@@ -430,6 +436,26 @@ def sections(D):
       f'{hh:.1f} per cent. Uncoloured is not cold; it is unmeasured. Heat is a ranking input and '
       f'nothing else: the desk has never published a line of chat on the strength of '
       f'it.</figcaption></figure>')
+
+    W, hv = D['words'], D['hotvol']
+    wmax = max(W.values())
+    wrows = ''.join(
+        f'<tr><th scope="row">{esc(w)}</th>'
+        f'<td class="bar"><span style="width:{100*n/wmax:.1f}%"></span></td>'
+        f'<td class="num">{n:,}</td>'
+        f'<td class="num dim">{100*n/hv:.1f}%</td></tr>' for w, n in W.most_common())
+    B(f'<figure><div class="scroll"><table><thead><tr><th class="lt">The whole list, '
+      f'{len(W)} words</th><th class="lt">Share of heated volleys</th><th>Volleys</th>'
+      f'<th>Share</th></tr></thead><tbody>{wrows}</tbody></table></div>'
+      f'<figcaption>There is no cleverness here and no sentiment model: a volley is heated if '
+      f'either of its two messages contains one of these {len(W)} strings, whole-word and '
+      f'case-insensitive. {hv:,} of {vol:,} volleys trip at least one, which is '
+      f'{100*hv/vol:.1f} per cent of the record. The shares sum to {100*sum(W.values())/hv:.1f} '
+      f'rather than a hundred because one volley can trip several words. '
+      f'The obvious objection is that the list cannot tell an insult from a '
+      f'quotation of one, and that &ldquo;joke&rdquo; and &ldquo;wrong&rdquo; carry a great deal of '
+      f'ordinary traffic &mdash; which is the honest reason heat is worth a fraction of the rivalry '
+      f'score and no headline of its own.</figcaption></figure>')
 
     S('Figure Six &mdash; Direct Address')
     mxv = max(list(D['sent'].values()) + list(D['recd'].values()))
