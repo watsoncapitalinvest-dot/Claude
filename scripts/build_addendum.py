@@ -13,12 +13,14 @@ in the corpus and refuses to write if any run of thirty characters survives into
 it. The corpus itself is not in this repo and never will be -- the Pages
 workflow publishes the whole root.
 """
-import collections, datetime, html, json, math, os, re, sys
+import collections, datetime, html, json, math, os, re, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHATS = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('SCFL_CHATS',
     '/tmp/claude-0/-home-user-Claude/c302abf8-582a-5977-91c7-1dfbd915ffe3/scratchpad/chats')
 OUT = os.path.join(ROOT, 'scfl-addendum.html')
+OG = os.path.join(ROOT, 'scfl-addendum-og.jpg')
+BROWSER = '/opt/pw-browsers/chromium'
 ARTICLE_ID = 'kick-2026-addendum'
 WINDOW = 420
 MIN_GAMES = 8
@@ -449,7 +451,8 @@ STANDALONE = """<!doctype html>
 <meta property="og:site_name" content="SCFL NewsRoom">
 <meta property="og:title" content="Transparent Research Addendum — how the rivalries were counted">
 <meta property="og:description" content="__DESC__">
-<meta property="og:image" content="https://watsoncapitalinvest-dot.github.io/Claude/scfl-grudge-og.jpg">
+<meta property="og:image" content="https://watsoncapitalinvest-dot.github.io/Claude/scfl-addendum-og.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="newsroom-favicon.png">
 <style>
 :root{--cream:#fffdfb;--paper:#faf7f2;--ink:#17181c;--muted:#65656b;--faint:#9a958c;
@@ -513,6 +516,97 @@ document.addEventListener('scroll',hide,{passive:true});})();
 </script></body></html>"""
 
 
+CARD = """<style>
+:root{--red:#c20f16;--ink:#17181c;--muted:#65656b;--faint:#9a958c;--line:#e6e0d6;
+ --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;}
+*{box-sizing:border-box;margin:0;}
+html,body{width:1200px;height:630px;overflow:hidden;background:#fffdfb;
+ font-family:Georgia,'Times New Roman',serif;color:var(--ink);}
+.card{display:flex;height:630px;border-top:9px solid var(--red);border-bottom:9px solid var(--red);}
+.l{width:47%;padding:44px 30px 40px 52px;display:flex;flex-direction:column;}
+.flag{font-family:var(--sans);font-size:12px;font-weight:900;letter-spacing:.24em;
+ text-transform:uppercase;color:var(--red);}
+h1{font-size:57px;line-height:1.0;letter-spacing:-.025em;font-weight:900;margin-top:16px;}
+h1 em{font-style:normal;color:var(--red);}
+.rule{width:66px;height:3px;background:var(--red);margin:22px 0 20px;}
+.dek{font-style:italic;color:var(--muted);font-size:18.5px;line-height:1.42;}
+.st{margin-top:auto;display:flex;gap:30px;}
+.st div .k{font-family:var(--sans);font-size:9.5px;font-weight:800;letter-spacing:.15em;
+ text-transform:uppercase;color:var(--faint);}
+.st div .v{font-size:31px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums;}
+.r{flex:1;padding:44px 46px 40px 6px;display:flex;align-items:center;justify-content:center;}
+.mx{border-collapse:separate;border-spacing:2px;}
+.mx th{display:none;}
+.mx td{width:31px;height:31px;padding:0;border-radius:2px;}
+.mx td.c{background:color-mix(in oklab,var(--red) calc(var(--k)*100%),#f4efe6);}
+.mx td.self{background:repeating-linear-gradient(135deg,#efe9de 0 4px,transparent 4px 8px);}
+.mx td.none{background:#f6f2ea;}
+</style>
+<div class="card"><div class="l">
+<div class="flag">Transparent Research Addendum</div>
+<h1>How The<br>Rivalries<br>Were <em>Counted</em></h1>
+<div class="rule"></div>
+<div class="dek">Every ranking rests on one number. Here it is for all sixteen, and the four
+things it cannot do.</div>
+<div class="st">
+ <div><div class="k">Volleys</div><div class="v">__VOL__</div></div>
+ <div><div class="k">Pairings</div><div class="v">__PAIRS__</div></div>
+ <div><div class="k">Figures</div><div class="v">8</div></div>
+</div></div>
+<div class="r">__MX__</div></div>"""
+
+
+def card(D):
+    """Preview image: the page's own mutual-attention matrix, so it restates the
+    data rather than borrowing another article's art."""
+    cell = {}
+    for p in D['pairs']:
+        cell[(p['a'], p['b'])] = cell[(p['b'], p['a'])] = p
+    hi = max(p['share'] for p in D['pairs'])
+    rows = ''
+    for r in D['teams']:
+        tds = ''
+        for c in D['teams']:
+            if r == c:
+                tds += '<td class="self"></td>'
+            elif (r, c) in cell:
+                tds += f'<td class="c" style="--k:{cell[(r,c)]["share"]/hi:.3f}"></td>'
+            else:
+                tds += '<td class="none"></td>'
+        rows += f'<tr>{tds}</tr>'
+    doc = (CARD.replace('__MX__', f'<table class="mx"><tbody>{rows}</tbody></table>')
+               .replace('__VOL__', f"{sum(D['volley'].values()):,}")
+               .replace('__PAIRS__', str(len(D['volley']))))
+    tmp = os.path.join(ROOT, '.ad-card.html')
+    open(tmp, 'w', encoding='utf-8').write(doc)
+    raw = os.path.join(tempfile.gettempdir(), 'ad-card.png')
+    js = os.path.join(tempfile.gettempdir(), 'ad-card.js')
+    # deviceScaleFactor stays 1: at 2 this engine drops painted content silently.
+    open(js, 'w').write(
+        "const {chromium}=require('playwright');(async()=>{"
+        f"const b=await chromium.launch({{executablePath:'{BROWSER}'}});"
+        "const p=await b.newPage({viewport:{width:1200,height:630},deviceScaleFactor:1});"
+        f"await p.goto('file://{tmp}',{{waitUntil:'load'}});await p.waitForTimeout(500);"
+        f"await p.screenshot({{path:'{raw}'}});await b.close();}})();")
+    try:
+        subprocess.run(['node', js], check=True, cwd=ROOT,
+                       env=dict(os.environ, NODE_PATH='/opt/node22/lib/node_modules'),
+                       capture_output=True)
+        from PIL import Image
+        im = Image.open(raw).convert('RGB')
+        g = im.convert('L').resize((80, 42))
+        blank = sum(1 for v in g.get_flattened_data() if v > 245) / (80 * 42)
+        if blank > 0.55:
+            sys.exit(f'  !! preview card is {blank:.0%} blank -- not shipping it')
+        im.save(OG, 'JPEG', quality=90, optimize=True, progressive=True)
+        print(f'  card {os.path.basename(OG)} {im.width}x{im.height} '
+              f'{os.path.getsize(OG)//1024}kb ({blank:.0%} blank)')
+    finally:
+        for f in (js, raw, tmp):
+            if os.path.exists(f):
+                os.remove(f)
+
+
 def build():
     D = compute()
     blocks = sections(D)
@@ -550,6 +644,7 @@ def build():
     json.dump(d, open(tmp, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     os.replace(tmp, P)
 
+    card(D)
     print(f'wrote {os.path.basename(OUT)} ({len(page):,} chars) and {ARTICLE_ID} '
           f'({len(blocks)} blocks) from one build')
     print(f'  {D["ms"]:,} messages | {sum(D["volley"].values()):,} volleys | '
