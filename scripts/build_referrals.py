@@ -39,6 +39,11 @@ ABBR = {'Balls143':'MAC','danscampi':'PCE','john420blaze':'DRA','mcnutze':'COL',
  'MrBlast':'CRM','coachnick1980redfox':'WOO','ESPNFAN3503249627':'CHP','tommyvertu123':'GUM',
  'Maristmidi':'POP','TheKidd420':'NWO','westchesterwarrior':'BLU','Nando42':'KLW',
  'papasuelo':'HIT','cuzo77':'GUI','Michael Lagares':'JET'}
+# WhatsApp writes @mentions as the display name wrapped in directional isolates.
+# The mention form drops the space after the tilde, so both spellings are mapped.
+MENT = re.compile(r'@[\u2068]?\s*([^\u2069@\n]{2,32}?)[\u2069]|@([A-Za-z][A-Za-z .\']{2,24})')
+MENTNAME = {'~Wookie': 'coachnick1980redfox', '~Jay': 'papasuelo', '~Pete': 'cuzo77',
+            '~Mike': 'Michael Lagares', '~Dave Sheq': 'sheq7777', '~ Dave Sheq': 'sheq7777'}
 HEAT = re.compile(r"\b(wrong|dumb|stupid|idiot|clown|joke|lying|lie|clueless|garbage|trash|pathetic|"
                   r"weak|soft|fraud|delusional|hypocrite|shut up|moron|dickhead|excuses|admit|cry|"
                   r"crying)\b", re.I)
@@ -94,10 +99,24 @@ def gather():
     tot = collections.Counter()
     for (a, b), n in volley.items():
         tot[a] += n; tot[b] += n
+    # ---- direct address: @mentions -----------------------------------------
+    ment, sent, recd = collections.Counter(), collections.Counter(), collections.Counter()
+    nment = 0
+    for m in ms:
+        src = CHAT.get(m['who'])
+        if not src:
+            continue
+        for a, b in MENT.findall(m['x']):
+            t = (a or b).strip()
+            dst = CHAT.get(t) or MENTNAME.get(t)
+            if not dst or dst == src:
+                continue
+            ment[(src, dst)] += 1; sent[src] += 1; recd[dst] += 1; nment += 1
+
     span = (ms[0]['ts'].date(), ms[-1]['ts'].date())
     global _corpus
     _corpus = ms
-    return msgs, volley, heated, direc, tot, len(ms), span
+    return msgs, volley, heated, direc, tot, len(ms), span, ment, sent, recd, nment
 
 
 def esc(t):
@@ -119,7 +138,7 @@ def meetings():
 
 
 def build():
-    msgs, volley, heated, direc, tot, nmsg, span = gather()
+    msgs, volley, heated, direc, tot, nmsg, span, ment, sent, recd, nment = gather()
     mg = meetings()
     riv = {tuple(sorted((r['ka'], r['kb']))): r
            for r in json.load(open(os.path.join(ROOT, 'rivalries.json'), encoding='utf-8'))['rows']}
@@ -216,6 +235,24 @@ def build():
                  f'<td class="who">{esc(NAME[bestwith[t]]) if t in bestwith else "&mdash;"}</td>'
                  f'<td class="num pct">{toppart[t][0]*100:.0f}%</td></tr>')
 
+    # ---------- figure 5: direct address --------------------------------------
+    mx = max(list(sent.values()) + list(recd.values()))
+    never = [t for t in NAME if not sent.get(t)]
+    at = ''
+    for t in sorted(NAME, key=lambda k: -(sent.get(k, 0) + recd.get(k, 0))):
+        tp = sorted(((n, d) for (a2, d), n in ment.items() if a2 == t), reverse=True)[:2]
+        who = ', '.join(f'{ABBR[d]}&nbsp;{n}' for n, d in tp) or '<span class="dim">never uses it</span>'
+        at += (f'<tr><th scope="row">{esc(NAME[t])}</th>'
+               f'<td class="tor l"><span style="width:{100*sent.get(t,0)/mx:.1f}%"></span></td>'
+               f'<td class="num tn">{sent.get(t,0)}</td>'
+               f'<td class="num tn">{recd.get(t,0)}</td>'
+               f'<td class="tor r"><span style="width:{100*recd.get(t,0)/mx:.1f}%"></span></td>'
+               f'<td class="who">{who}</td></tr>')
+    tpair = ''.join(
+        f'<li><span class="p">{ABBR[a2]}<span class="ar">&rarr;</span>{ABBR[d]}</span>'
+        f'<span class="n">{n}</span></li>'
+        for (a2, d), n in ment.most_common(8))
+
     # ---------- the table -----------------------------------------------------
     trs = ''
     for i, p in enumerate(pairs[:28]):
@@ -238,6 +275,13 @@ def build():
         npairs=len(volley), span0=span[0].strftime('%B %Y'), span1=span[1].strftime('%B %Y'),
         window=WINDOW // 60, bars=bars, head=head, rows=rows, dumb=dumb, trs=trs,
         solo=solo, nalone=len(alone), even=f'{100/15:.1f}',
+        at=at, tpair=tpair, nment=f'{nment:,}',
+        maxsent=max(sent.values()), minsent=min(sent.get(t, 0) for t in NAME),
+        macsent=sent.get('Balls143', 0), macrecd=recd.get('Balls143', 0),
+        minrecd=min(recd.get(t, 0) for t in NAME),
+        guirecd=recd.get('cuzo77', 0),
+        twoshare=round(100 * (sent.get('john420blaze', 0) + sent.get('danscampi', 0))
+                       / max(nment, 1)),
         alone=', '.join(esc(NAME[t]) for t in alone[:-1]) + ' and ' + esc(NAME[alone[-1]]),
         loud=esc(NAME[teams[0]]), loudn=f'{tot[teams[0]]:,}',
         quiet=esc(NAME[teams[-1]]), quietn=f'{tot[teams[-1]]:,}',
@@ -339,6 +383,25 @@ tbody th{{text-align:left;font-weight:700;white-space:nowrap;}}
 .bars .rail i.even{{position:absolute;top:-2px;bottom:-2px;width:1px;background:var(--ink);
   opacity:.45;}}
 .who{{color:var(--muted);white-space:nowrap;}}
+.tor-t thead th{{font-family:var(--sans);font-size:9.5px;font-weight:800;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--faint);border-bottom:2px solid var(--ink);text-align:left;
+  white-space:nowrap;}}
+.tor-t thead th.rt{{text-align:right;}}
+.tor-t thead th.num{{text-align:right;}}
+.bars .tor{{width:21%;}}
+.bars .tor span{{display:block;height:12px;}}
+.bars .tor.l{{text-align:right;}}
+.bars .tor.l span{{margin-left:auto;background:var(--teal);border-radius:3px 0 0 3px;}}
+.bars .tor.r span{{background:var(--red);border-radius:0 3px 3px 0;}}
+.tn{{width:38px;color:var(--muted);}}
+.pairs{{list-style:none;margin:0;padding:0;display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:1px;background:var(--line);
+  border:1px solid var(--line);font-family:var(--sans);}}
+.pairs li{{background:var(--paper);padding:11px 13px;display:flex;align-items:baseline;
+  justify-content:space-between;gap:10px;}}
+.pairs .p{{font-size:12px;font-weight:800;letter-spacing:.04em;}}
+.pairs .ar{{color:var(--red);padding:0 5px;}}
+.pairs .n{{font-size:15px;font-weight:900;font-variant-numeric:tabular-nums;}}
 
 /* --- fig 2: matrix --- */
 .mx{{border-collapse:separate;border-spacing:2px;font-size:11px;}}
@@ -515,6 +578,47 @@ footer{{margin-top:56px;border-top:1px solid var(--line);padding-top:18px;
       talk back in the same proportion. Talking at the loud core is not a rivalry, and this
       measure is built to say so.</figcaption>
     </figure>
+  </div>
+
+  <div class="sec">
+    <h2>Figure 5 &middot; Direct address, and why it cannot carry the ranking</h2>
+    <p>Everything above is proximity. This is the other thing: <b>{nment} @mentions</b>,
+    where one manager typed another manager&rsquo;s name on purpose. It is the only
+    unambiguous direct address in the record, and it is worth looking at precisely because
+    it disagrees with the rest of the page.</p>
+    <figure>
+      <div class="scroll"><table class="bars tor-t">
+        <thead><tr><th></th><th class="rt">Mentions sent</th><th class="num tn">Sent</th>
+          <th class="num tn">Recd</th><th>Mentions received</th><th>He @s most</th></tr></thead>
+        <tbody>{at}</tbody>
+      </table></div>
+      <div class="legend">
+        <span><i style="background:{TEAL}"></i>Sent &mdash; names he typed</span>
+        <span><i style="background:{RED}"></i>Received &mdash; times he was named</span>
+      </div>
+      <figcaption>Sent and received are almost unrelated. The Smoke Dragons typed
+      {maxsent} names; The Machines typed {macsent} and was named {macrecd} times, more
+      than anyone. Sent runs from {maxsent} down to {minsent} &mdash; a spread of habit.
+      Received runs from {macrecd} down to {minrecd}, a much flatter thing, because being
+      named is something other people do to you.</figcaption>
+    </figure>
+    <p>Which is the whole problem. An @ is a keyboard habit before it is a relationship. The
+    Smoke Dragons and the Pork Chop Express between them sent {twoshare}% of every mention
+    in the record; the Guido Haters have never typed one in ten years and were still named
+    {guirecd} times. Rank on this and you would be ranking who reaches for the feature.</p>
+    <figure>
+      <ul class="pairs">{tpair}</ul>
+      <figcaption>The eight heaviest one-way mention flows. Read them as errands as much as
+      arguments: the commissioner gets named because somebody needs a setting changed.</figcaption>
+    </figure>
+    <div class="note" style="margin-top:22px">
+      <b>Replies are not in the file.</b> WhatsApp&rsquo;s text export carries the sender, the
+      timestamp and the text, and nothing else. When somebody swipes to reply to a specific
+      message, the export shows an ordinary message with no link back to the one it answered.
+      That thread structure would be the best evidence on this page and it does not survive
+      the export, which is the reason a seven-minute proximity window is doing the work
+      instead.
+    </div>
   </div>
 
   <div class="sec">
