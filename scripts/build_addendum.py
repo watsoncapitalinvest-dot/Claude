@@ -155,7 +155,11 @@ def compute():
                       'g': mg.get((a, b), 0)})
     pairs.sort(key=lambda p: -p['share'])
     teams = sorted(NAME, key=lambda k: -tot[k])
-    return dict(ms=len(ms), span=(ms[0]['ts'].date(), ms[-1]['ts'].date()), volley=volley,
+    # The export carries six stray group-creation messages from 2016 and then
+    # nothing until May 2021. Reporting 2016 as the start would claim ten years
+    # of evidence for five, so the span starts where the traffic does.
+    real = [x for x in ms if x['ts'].year >= 2021]
+    return dict(ms=len(ms), span=(real[0]['ts'].date(), real[-1]['ts'].date()), volley=volley,
                 heated=heated, tot=tot, ment=ment, sent=sent, recd=recd, pairs=pairs,
                 teams=teams, mg=mg, riv=riv, rank=rank, rooms=rooms, absent=absent, end=end,
                 words=words, hotvol=hotvol)
@@ -841,8 +845,9 @@ def card(D):
 def build():
     D = compute()
     blocks = sections(D)
+    yrs = (D['span'][1] - D['span'][0]).days / 365.25
     desc = (f"{sum(D['volley'].values()):,} volleys and {sum(D['ment'].values()):,} mentions across "
-            f"ten years. The chat evidence behind every rivalry ranking, shown in full.")
+            f"{yrs:.0f} years. The chat evidence behind every rivalry ranking, shown in full.")
 
     body = '\n'.join(h for _, h in blocks)
     page = (STANDALONE.replace('__FIGCSS__', FIG_CSS).replace('__BODY__', body)
