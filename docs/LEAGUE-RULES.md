@@ -134,3 +134,39 @@ The Name Change is one of the league's real institutions and the Newsroom has
 never covered it: who has been renamed, how often, who has never been, the
 consecutive-rename record, and the vote each year. Sits naturally beside
 Awards Night.
+
+## Who is in which chat
+
+There are two league chats and they are not interchangeable. **Mos Eisley** is
+the banter chat, where effectively all of the volley traffic lives. The
+**league chat** is the low-volume official one: trades, the draft link,
+scheduling.
+
+Mike Lagares (**The Jet-I**) left Mos Eisley on 5 June 2022 and has not posted
+in it since. The reasons were political and are not the Newsroom's business.
+He did **not** leave the league — he is still in it, still drafting, and still
+in the league chat, most recently 17 August 2026.
+
+This matters to every chat-derived number:
+
+- His volley total measures **when he stopped**, not how much he talks.
+- His pairing splits are inflated by a small denominator, which is the only
+  reason he takes two of the top four rows of the one-way-streets figure.
+- Never write him up as quiet, checked out, or disengaged from the league on
+  the strength of a chat count.
+
+`scripts/build_addendum.py` detects this in `compute()` rather than hardcoding
+it: any manager whose Mos Eisley presence ended more than eighteen months ago
+while their league-chat presence continues is flagged into `D['absent']` and
+carries a dagger through the figures. If somebody else goes quiet the same way,
+the addendum picks it up on the next build.
+
+### Open data gap
+
+`~ Dave Sheq` (271 messages) is a second display name for sheq7777 / **The
+Beaver Eaters** and is mapped in `MENTNAME` but *not* in the `CHAT` map, so
+those messages produce no volleys. It is under one per cent of that
+franchise's traffic. Fixing it means changing the `CHAT` map in **both**
+`build_rivalries.py` and `build_addendum.py` together — the addendum's claim is
+that it shares a code path with the ranking, so they cannot diverge — and then
+rebuilding the rivalry board, which may shift scores and ranks slightly.
