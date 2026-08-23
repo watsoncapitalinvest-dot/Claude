@@ -141,6 +141,12 @@
     background:#0c1322;border:1px solid var(--edge);color:var(--dim);font:11px/1.4 ui-monospace,monospace;
     resize:vertical}
   #csvbox.on{display:block}
+  #lgurl,#lgkey{width:100%;margin-top:8px;padding:10px;border-radius:9px;background:#0c1322;
+    border:1px solid var(--edge);color:var(--dim);font:11px/1.4 ui-monospace,monospace}
+  #lgurl:focus,#lgkey:focus{outline:none;border-color:var(--gold)}
+  .st .rk{color:var(--faint);font-weight:700;min-width:16px}
+  .lgmsg{font-size:11px;line-height:1.5;color:var(--gold);background:rgba(240,196,84,.07);
+    border:1px solid rgba(240,196,84,.28);border-radius:8px;padding:8px 10px;margin-bottom:9px}
 
   /* club picker */
   #pick{display:none}
@@ -242,7 +248,7 @@
   </div>
   <div id="scores">
     <div class="sctitle">SCOREBOARD</div>
-    <div class="sctabs"><div class="sctab on" id="tabHi">HIGH SCORES</div><div class="sctab" id="tabAll">EVERY GAME</div><div class="sctab" id="tabSt">STATS</div></div>
+    <div class="sctabs"><div class="sctab on" id="tabHi">HIGH SCORES</div><div class="sctab" id="tabAll">EVERY GAME</div><div class="sctab" id="tabSt">STATS</div><div class="sctab" id="tabLg">LEAGUE</div></div>
     <div id="sclist"></div>
     <button class="btn ghost" id="scback" style="margin-top:12px">BACK</button>
   </div>
@@ -905,6 +911,7 @@ const saveSt = v => { try { localStorage.setItem(STORE, JSON.stringify(v)); } ca
 function finish(){
   only('done');
   const st = logGame();
+  sendGame(st.log[st.log.length - 1]);
 
   const mc = document.getElementById('myclub');
   if (MY){
@@ -1121,6 +1128,105 @@ function splitCSV(line){
 }
 
 /* ------------------------------------------------------------------
+ * THE LEAGUE LOG — an optional endpoint every copy of the game posts to,
+ * so results land in one sheet instead of on sixteen phones. Everything
+ * here fails quiet: with no endpoint, or no network, the game is exactly
+ * the local-only game it was before.
+ * ------------------------------------------------------------------ */
+const LEAGUE_DEFAULT = { url: '', key: '' };   // fill url in to connect every copy at once
+
+function leagueCfg(){
+  const st = loadSt();
+  const c = st.league || {};
+  return { url: (c.url || LEAGUE_DEFAULT.url || '').trim(), key: c.key || LEAGUE_DEFAULT.key || '' };
+}
+function setLeague(url, key){
+  const st = loadSt(); st.league = { url: (url||'').trim(), key: (key||'').trim() }; saveSt(st);
+}
+const leagueOn = () => !!leagueCfg().url;
+
+/* A game that could not be sent waits here and goes up with the next one. */
+function queueGame(row){
+  const st = loadSt(); st.queue = (st.queue || []).filter(g => g.id !== row.id);
+  st.queue.push(row); if (st.queue.length > 60) st.queue = st.queue.slice(-60);
+  saveSt(st);
+}
+
+async function pushGames(rows){
+  const cfg = leagueCfg();
+  if (!cfg.url || !rows.length) return { ok: false, offline: true };
+  const r = await fetch(cfg.url, {
+    method: 'POST', redirect: 'follow',
+    // text/plain keeps it a simple request, so there is no CORS preflight
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ key: cfg.key, games: rows }),
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'refused');
+  return j;
+}
+
+function rowFor(g){
+  const o = {}; gameRow(g).forEach((v, i) => { o[CSV_COLS[i]] = v; });
+  return o;
+}
+
+/* Send this game, and anything still waiting from before. */
+async function sendGame(g){
+  if (!leagueOn()) return;
+  const st = loadSt();
+  const batch = (st.queue || []).concat([rowFor(g)]);
+  try {
+    await pushGames(batch);
+    const s2 = loadSt(); s2.queue = []; saveSt(s2);
+  } catch (_) {
+    batch.forEach(queueGame);
+  }
+}
+
+async function flushQueue(){
+  const st = loadSt();
+  if (!leagueOn() || !(st.queue || []).length) return;
+  try { await pushGames(st.queue); const s2 = loadSt(); s2.queue = []; saveSt(s2); }
+  catch (_) {}
+}
+
+let LEAGUE_GAMES = null, leagueErr = '';
+async function fetchLeague(){
+  const cfg = leagueCfg();
+  if (!cfg.url) { leagueErr = 'not connected'; return null; }
+  try {
+    const r = await fetch(cfg.url + (cfg.url.includes('?') ? '&' : '?') + 't=' + Date.now(),
+                          { redirect: 'follow' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'refused');
+    LEAGUE_GAMES = j.games.map(fromRow).filter(Boolean).sort((a, b) => a.t - b.t);
+    leagueErr = '';
+    return LEAGUE_GAMES;
+  } catch (err) { leagueErr = String(err.message || err); return null; }
+}
+
+/* A sheet row back into the same shape the local log uses. */
+function fromRow(o){
+  const id = String(o.id || ''); const cut = id.lastIndexOf('-');
+  if (cut < 1) return null;
+  const club = id.slice(0, cut), t = Number(id.slice(cut + 1));
+  if (!club || !isFinite(t)) return null;
+  const n = k => { const v = Number(o[k]); return isFinite(v) ? v : 0; };
+  const fr = o.final_result;
+  return { t, club, name: o.club || club, owner: o.owner || '',
+    secs: o.seconds === '' || o.seconds == null ? null : n('seconds'),
+    r1: n('round1'), r2: n('round2'), fb: n('final_wager'),
+    fr: fr === 'right' ? 1 : fr === 'wrong' ? 0 : null,
+    fin: fr === 'right' ? n('final_wager') : fr === 'wrong' ? -n('final_wager') : 0,
+    total: n('total'), hits: n('right'), of: n('asked'),
+    r1h: n('r1_right'), r1n: n('r1_asked'), r2h: n('r2_right'), r2n: n('r2_asked'),
+    cats: unpackCats(o.categories), league: 1 };
+}
+
+/* ------------------------------------------------------------------
  * STATS — what the log adds up to.
  * ------------------------------------------------------------------ */
 function dur(sec){
@@ -1195,6 +1301,8 @@ function paintStats(){
     }
   }
   h += '<div class="sthead">THE LOG</div>' +
+    (leagueOn() ? '<div class="stnote">This device is posting finished games to the league sheet. ' +
+                  'The LEAGUE tab shows everyone\'s.</div>' : '') +
     '<div class="stnote">One row per game. Copy it into a spreadsheet, or paste ' +
     'someone else\'s in and their games join yours — the same game pasted twice only lands once.</div>' +
     '<button class="btn ghost" id="csvout">COPY LOG AS CSV &nbsp;·&nbsp; ' + games +
@@ -1223,6 +1331,114 @@ function paintStats(){
   };
 }
 
+/* ------------------------------------------------------------------
+ * THE LEAGUE TAB — the sheet, everyone's games, one table.
+ * ------------------------------------------------------------------ */
+let connectMsg = '';
+function connectPanel(){
+  const cfg = leagueCfg();
+  return '<div class="sthead">CONNECT TO THE LEAGUE SHEET</div>' +
+    (connectMsg ? '<div class="lgmsg">' + connectMsg + '</div>' : '') +
+    '<div class="stnote">Paste the web app URL from the league sheet. Every copy of the ' +
+    'game that has it posts finished games there and reads them all back. ' +
+    'Leave it empty and the game stays on this device.</div>' +
+    '<input id="lgurl" placeholder="https://script.google.com/macros/s/…/exec" value="' +
+      (cfg.url || '').replace(/"/g,'&quot;') + '">' +
+    '<input id="lgkey" placeholder="write key (only if the sheet asks for one)" value="' +
+      (cfg.key || '').replace(/"/g,'&quot;') + '">' +
+    '<button class="btn ghost" id="lgsave" style="margin-top:9px">SAVE &amp; TEST</button>';
+}
+
+function wireConnect(){
+  const save = document.getElementById('lgsave');
+  if (!save) return;
+  save.onclick = async () => {
+    setLeague(document.getElementById('lgurl').value, document.getElementById('lgkey').value);
+    if (!leagueOn()){ connectMsg = 'Disconnected. Games stay on this device.'; return paintLeague(); }
+    save.textContent = 'CHECKING…';
+    const got = await fetchLeague();
+    if (!got){
+      connectMsg = 'Could not reach it — ' + leagueErr;
+    } else {
+      // reading proves the URL; only a real send proves the write key, so
+      // push anything queued and say plainly if the sheet turned it away
+      const before = (loadSt().queue || []).length;
+      await flushQueue();
+      const after = (loadSt().queue || []).length;
+      const n = g => g + (g === 1 ? ' game' : ' games');
+      connectMsg = 'Connected. ' + n(got.length) + ' on the sheet.' +
+        (before && after ? ' Your ' + n(after) + ' would not go up — check the write key.'
+         : before ? ' Sent ' + n(before - after) + ' that had been waiting.'
+         : '');
+    }
+    paintLeague();
+  };
+}
+
+async function paintLeague(){
+  const el = document.getElementById('sclist');
+  const q = (loadSt().queue || []).length;
+  if (!leagueOn()){
+    el.innerHTML = '<div class="scempty">Not connected to a league sheet.</div>' + connectPanel();
+    return wireConnect();
+  }
+  el.innerHTML = '<div class="scempty">Reading the league sheet…</div>';
+  const games = await fetchLeague();
+  if (!games){
+    el.innerHTML = '<div class="scempty">Could not reach the sheet.<br>' + leagueErr + '</div>' +
+      (q ? '<div class="stnote">' + q + (q === 1 ? ' game is' : ' games are') +
+           ' waiting to go up. They will send themselves next time it answers.</div>' : '') +
+      connectPanel();
+    return wireConnect();
+  }
+  if (!games.length){
+    el.innerHTML = '<div class="scempty">Connected. Nobody has played yet.</div>' + connectPanel();
+    return wireConnect();
+  }
+
+  // one line per club, best game first, then every game underneath
+  const byClub = new Map();
+  games.forEach(g => {
+    const c = byClub.get(g.club) || { name: g.name, club: g.club, n: 0, best: -1e9, tot: 0, h: 0, a: 0 };
+    c.n++; c.best = Math.max(c.best, g.total); c.tot += g.total; c.h += g.hits; c.a += g.of;
+    byClub.set(g.club, c);
+  });
+  const pc = (h, n) => n ? Math.round(100*h/n) + '%' : '—';
+  const table = [...byClub.values()].sort((a, b) => b.best - a.best);
+
+  let h = '<div class="sthead">THE LEAGUE &nbsp;·&nbsp; ' + games.length +
+          (games.length === 1 ? ' GAME' : ' GAMES') + ' FROM ' + table.length +
+          (table.length === 1 ? ' CLUB' : ' CLUBS') + '</div><div class="stbox">' +
+    table.map((c, i) =>
+      '<div class="st"><span><b class="rk">' + (i+1) + '.</b>' +
+      '<img src="' + crestOf(c.club) + '" alt="">' + c.name + '</span>' +
+      '<span>' + money(c.best) + ' &nbsp;·&nbsp; ' + c.n + (c.n === 1 ? ' game' : ' games') +
+      ' &nbsp;·&nbsp; ' + pc(c.h, c.a) + '</span></div>').join('') + '</div>';
+
+  h += '<div class="sthead">EVERY GAME ON THE SHEET</div>';
+  games.slice().reverse().slice(0, 60).forEach(g => {
+    const d = new Date(g.t);
+    h += '<div class="scrow"><div class="rk"></div>' +
+      '<img src="' + crestOf(g.club) + '" alt="">' +
+      '<div class="who">' + g.name + '<div class="when">' +
+        d.toLocaleDateString('en-US', { month:'short', day:'numeric' }) + ' &nbsp;·&nbsp; ' +
+        g.hits + '/' + g.of + ' right</div></div>' +
+      '<div class="amt2' + (g.total < 0 ? ' neg' : '') + '">' + money(g.total) + '</div></div>';
+  });
+  if (games.length > 60) h += '<div class="stnote">showing the last 60.</div>';
+  if (q) h += '<div class="stnote">' + q + (q === 1 ? ' game of yours is' : ' games of yours are') +
+              ' still waiting to go up.</div>';
+  h += '<button class="btn ghost" id="lgcsv" style="margin-top:4px">COPY THE LEAGUE AS CSV</button>' +
+       connectPanel();
+  el.innerHTML = h;
+  document.getElementById('lgcsv').onclick = async (e) => {
+    const txt = [CSV_COLS.join(',')].concat(games.map(g => gameRow(g).map(csvCell).join(','))).join('\n');
+    try { await navigator.clipboard.writeText(txt); e.target.textContent = 'COPIED'; }
+    catch (_) { e.target.textContent = 'COULD NOT COPY'; }
+  };
+  wireConnect();
+}
+
 let scTab = 'hi';
 function showScores(from){
   scBack = from || 'splash';
@@ -1235,7 +1451,9 @@ function paintScores(){
   document.getElementById('tabHi').classList.toggle('on', scTab === 'hi');
   document.getElementById('tabAll').classList.toggle('on', scTab === 'all');
   document.getElementById('tabSt').classList.toggle('on', scTab === 'stats');
+  document.getElementById('tabLg').classList.toggle('on', scTab === 'league');
   if (scTab === 'stats') return paintStats();
+  if (scTab === 'league') return paintLeague();
   const log = (loadSt().log || []).slice();
   const list = document.getElementById('sclist');
   list.innerHTML = '';
@@ -1416,8 +1634,10 @@ function newGame(){
   document.getElementById('tabHi').onclick = () => { scTab = 'hi'; paintScores(); };
   document.getElementById('tabAll').onclick = () => { scTab = 'all'; paintScores(); };
   document.getElementById('tabSt').onclick = () => { scTab = 'stats'; paintScores(); };
+  document.getElementById('tabLg').onclick = () => { scTab = 'league'; paintScores(); };
 
   showSplash();
+  flushQueue();
 })();
 </script>
 </body>
