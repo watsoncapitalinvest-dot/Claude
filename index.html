@@ -3473,6 +3473,7 @@ const OFFICE_TOOLS = [
   ['roster-export', '⤓', 'Export Rosters', 'Top 3 + full-roster JSON → send to Claude'],
   ['logos-export', '🛡️', 'Export Team Logos', 'Download every team logo → send to Claude'],
   ['matchup-export', '📺', 'Export Matchup', 'Pull a real game → send to Claude for the broadcast'],
+  ['schedule-export', '🗓️', 'Export Schedule', 'The whole regular season → send to Claude'],
   ['assets', '🗂️', 'Asset Vault', 'League graphics & resources — save or share'],
   ['staff-handbook', '📖', 'Board Handbook', 'How the Office works for the board'],
   ['staff-send', '📤', 'Send to HQ', 'Package your additions → text them to the Commish'],
@@ -3499,7 +3500,7 @@ const NEWSROOM_TOOLS = [
 const mtoolBtn = ([a, ic, l, d]) => `<button class="mtool" data-act="${a}"><span class="mtool-ic">${ic}</span><span class="mtool-l">${l}</span><span class="mtool-d">${d}</span></button>`;
 const OFFICE_SECTIONS = [
   ['The Weekly Board', ['power-ranks', 'money-lines']],
-  ['League Data', ['roster-export', 'logos-export', 'matchup-export']],
+  ['League Data', ['roster-export', 'logos-export', 'matchup-export', 'schedule-export']],
   ['The Board Desk', ['assets', 'staff-handbook', 'staff-send', 'staff-import']],
 ];
 const NEWSROOM_SECTIONS = [
@@ -5896,6 +5897,50 @@ async function showDraftDesk(){
 }
 // Export each team's top-3 stars (ranked by the $-value engine) as plain text the
 // owner can paste into Claude — the roster data lives only in this browser session.
+// Pull every regular-season week from Sleeper and hand over the whole
+// schedule: who plays who, which week, with team names already resolved.
+async function exportSchedule(){
+  const b = S.bundle;
+  if (!b || !b.league) { toast('Load your league first (enter your Sleeper username on the home screen).'); return; }
+  const id = S.leagueId;
+  const last = Math.max(1, (((b.league.settings || {}).playoff_week_start) || 15) - 1);
+  toast('Pulling ' + last + ' weeks…');
+
+  const teamNameOf = r => { const u = r.owner_id ? b.usersById[r.owner_id] : null;
+    return (u && ((u.metadata && u.metadata.team_name) || u.display_name)) || ('Team ' + r.roster_id); };
+  const team = {}; (b.rosters || []).forEach(r => { team[r.roster_id] = teamNameOf(r); });
+
+  const weeks = {};
+  for (let w = 1; w <= last; w++){
+    let ms = [];
+    try { ms = await getMatchups(id, w) || []; } catch { continue; }
+    const byId = {};
+    ms.forEach(m => { if (m.matchup_id != null) (byId[m.matchup_id] = byId[m.matchup_id] || []).push(m.roster_id); });
+    const games = Object.keys(byId).sort((a, z) => a - z)
+      .filter(k => byId[k].length === 2)
+      .map(k => ({ matchup_id: +k, home: team[byId[k][0]], away: team[byId[k][1]],
+                   home_roster: byId[k][0], away_roster: byId[k][1] }));
+    if (games.length) weeks[w] = games;
+  }
+
+  const out = { league_id: id, name: b.league.name, season: S.season || b.league.season,
+                total_rosters: b.league.total_rosters,
+                playoff_week_start: (b.league.settings || {}).playoff_week_start,
+                scoring: b.league.scoring_settings, roster_positions: b.league.roster_positions,
+                teams: team, weeks, exportedAt: Date.now() };
+
+  const blob = new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sleeper-schedule.json';
+  document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 1000);
+
+  const text = (b.league.name || 'SCFL') + ' ' + (out.season || '') + ' schedule\n\n'
+    + Object.keys(weeks).map(w => 'WEEK ' + w + '\n'
+        + weeks[w].map(g => '  ' + g.home + ' vs ' + g.away).join('\n')).join('\n\n');
+  let copied = false; try { await navigator.clipboard.writeText(text); copied = true; } catch {}
+  toast(Object.keys(weeks).length + ' weeks exported');
+  showExportOverlay(text, copied);
+}
+
 async function exportRosters(){
   const b = S.bundle;
   if (!b || !b.rosters || !b.rosters.length) { toast('Load your league first (enter your Sleeper username on the home screen).'); return; }
@@ -7288,6 +7333,7 @@ function weeklyBoardView(kind){
 // a page can opt out with <meta name="scfl:vault" content="skip">.
 // The list below is only the offline fallback if the manifest can't be fetched.
 let VAULT_STORIES = [
+  ['scfl-2026-schedule.html', 'The 2026 Schedule, Decoded', 'scfl-2026-schedule-og.jpg', 'The Schedule · Aug 2026'],
   ['scfl-wookie-curse.html', 'The Wookie Curse: The Roll Call', 'scfl-wookie-curse-og.jpg', 'Investigations · Aug 2026'],
   ['scfl-jcm-trade-review.html', 'The Croskey-Merritt Trade, Reviewed', 'scfl-jcm-og.jpg', 'The Trade Desk · Aug 2026'],
   ['scfl-post-draft-issue.html', 'The 2026 Post-Draft Issue', 'scfl-postdraft-og.jpg', 'The Magazine'],
@@ -7346,6 +7392,7 @@ const VAULT_ASSETS = [
     ['scfl-wookie-curse-og.jpg', 'The Wookie Curse card'],
     ['scfl-jcm-og.jpg', 'Trade Desk card'],
     ['scfl-wookie-curse-art.jpg', 'The Wookie Curse cover art'],
+    ['scfl-2026-schedule-og.jpg', 'The 2026 Schedule card'],
   ]],
   ['Player & game art', [
     ['scfl-sprites-source.png', 'Player sprite sheet 1'],
@@ -7725,6 +7772,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'roster-export') return exportRosters();
   if (act === 'logos-export') return exportTeamLogos();
   if (act === 'matchup-export') return exportMatchup();
+  if (act === 'schedule-export') return exportSchedule();
   if (act === 'tc-refresh') { toast('Re-subpoenaing the league…'); return showTradeCourt(true); }
   if (act === 'tc-fulllist') { S._tcFullList = !S._tcFullList; return showTradeCourt(); }
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
