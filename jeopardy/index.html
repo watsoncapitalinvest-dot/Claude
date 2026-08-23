@@ -516,21 +516,68 @@ add(11, () => {
 });
 
 // ---- WHAT'S IN A NAME: the costumes they have worn
-add(452, () => {
-  const far = f => f.aliases.filter(x => {
-    const a = norm(x), c = norm(f.club);
-    return a && !a.includes(c) && !c.includes(a);
-  });
-  const cands = Object.values(IX.fr).filter(f => (f.last || 0) >= 2008 && far(f).length >= 2);
-  if (cands.length < 4) return null;
-  const f = pick(cands);
-  const alt = shuffle(far(f)).slice(0, 3);
-  return { tag:"WHAT'S IN A NAME", tier:2,
-    q:alt.join('. ') + '. All one club, wearing a different hat.',
-    answer:f.club, options:[f.club, ...decoys(f.club, peersOf(f.club), 3)],
-    note:'Who is <b>' + f.club + '</b>? ' +
-         (f.manager && norm(f.manager) !== norm(f.club) ? f.manager + ' has' : 'They have') +
-         ' run it under ' + f.aliases.length + ' names.' };
+//
+// This used to deal three old names at once, which was three chances to
+// recognise the club instead of one — and because the alias list holds
+// near-duplicates, it would print the same name twice in a line ("Porky's.
+// The Porkys.") or hand over a name containing the answer ("The JET - I" for
+// Master Jet-I). So: one name, never one that shares a word with the club's
+// current name, and the season it was worn, taken from the record rather than
+// the alias list. Names worn for a single year are preferred, because those
+// are the ones nobody remembers.
+let NAME_YEARS_CACHE = null;
+const nameYears = () => NAME_YEARS_CACHE || (NAME_YEARS_CACHE = (() => {
+  const H = D.history; if (!H) return [];
+  const strip = x => norm(x).replace(/^the/, '');
+  const tokens = x => new Set(String(x).toLowerCase().split(/[^a-z0-9]+/)
+                       .filter(w => w.length >= 3 && w !== 'the'));
+  const out = [];
+  for (const f of Object.values(IX.fr)){
+    const mine = tokens(f.club);
+    const byName = new Map();
+    for (const s of H.seasons){
+      const t = (s.teams || []).find(t => clubKey(t.name) === f.key);
+      if (!t) continue;
+      const nm = (t.name || '').replace(/\s+/g, ' ').replace(/\*/g, '').trim();
+      if (!nm || norm(nm) === norm(f.club)) continue;
+      // a name that shares a word with the club's current name gives it away
+      if ([...tokens(nm)].some(w => mine.has(w))) continue;
+      // "2017 SCFL CHAMPIONS" is a boast, not a name
+      if (/\b(19|20)\d\d\b/.test(nm) || /champion/i.test(nm)) continue;
+      const k = strip(nm);
+      if (!byName.has(k)) byName.set(k, { name: nm, years: [] });
+      byName.get(k).years.push(s.year);
+    }
+    for (const v of byName.values())
+      out.push({ club: f.club, name: v.name, years: v.years.sort((x, y) => x - y) });
+  }
+  return out;
+})());
+
+add(24, () => {
+  const NY = nameYears();
+  if (NY.length < 4) return null;
+  // weight the short-lived names up: one season is worth four of a five-year run
+  const w = NY.map(r => 4 / (r.years.length + 3));
+  let n = RNG() * w.reduce((a, b) => a + b, 0), i = 0;
+  while (i < NY.length - 1 && (n -= w[i]) > 0) i++;
+  const r = NY[i];
+  const ys = r.years, first = ys[0], last = ys[ys.length - 1];
+  const when = ys.length === 1 ? 'In ' + first
+             : (last - first + 1 === ys.length ? 'From ' + first + ' to ' + last
+                                               : 'For ' + ys.length + ' seasons');
+  // the decoys are clubs that were ALSO wearing something else that season, so
+  // "which one of these is a renamer" cannot be used to shortcut the answer
+  const alsoDressed = [...new Set(NY.filter(x => x.club !== r.club &&
+                        x.years.some(y => ys.includes(y))).map(x => x.club))];
+  const bag = alsoDressed.length >= 3 ? alsoDressed
+                                      : alsoDressed.concat(peersOf(r.club));
+  return { tag:"WHAT'S IN A NAME", tier: ys.length === 1 ? 3 : 2,
+    q: when + ' this club played under the name "' + r.name + '".',
+    answer:r.club, options:[r.club, ...decoys(r.club, bag, 3)],
+    note:'Who is <b>' + r.club + '</b>? They wore "' + r.name + '" ' +
+         (ys.length === 1 ? 'for the ' + first + ' season only.'
+                          : 'for ' + ys.length + ' seasons, ' + first + '–' + last + '.') };
 });
 
 // ---- CHARTER MEMBERS: who turned up when
