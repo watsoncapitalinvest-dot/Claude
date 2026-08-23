@@ -1458,6 +1458,7 @@ function startRound2(){
   paintRound();
   document.getElementById('boardWrap').classList.remove('hide');
   renderBoard();
+  SFX.boardfill();
   say('big', 'Round two. Four new categories and every clue is worth double. '
            + 'You are at <b>' + money(R1) + '</b>.');
 }
@@ -1736,7 +1737,7 @@ function blip({ type='sine', from=440, to=null, t=0.18, gain=0.22, delay=0, curv
  * has not loaded yet, the synthesised version below plays instead — so the
  * game never goes quiet waiting on a download, and dropping a new file in
  * needs no code change beyond adding its name here. */
-const SFX_FILES = ['wrong'];
+const SFX_FILES = ['wrong', 'right', 'boardfill'];
 const SFX_BUF = {};
 (function preloadSfx(){
   if (!SFX_FILES.length) return;
@@ -1767,8 +1768,9 @@ const SFX = {
   // a clue comes up: two quick rising notes, like a card turning over
   reveal(){ blip({type:'triangle', from:520, to:780, t:0.11, gain:0.15});
             blip({type:'triangle', from:780, to:1040, t:0.13, gain:0.13, delay:0.08}); },
-  // right: a bright major third
-  right(){  blip({type:'sine', from:784, t:0.16, gain:0.20});
+  // right: the league's clip if it has loaded, otherwise a bright major third
+  right(){  if (playClip('right')) return;
+            blip({type:'sine', from:784, t:0.16, gain:0.20});
             blip({type:'sine', from:988, t:0.16, gain:0.18, delay:0.09});
             blip({type:'sine', from:1319, t:0.34, gain:0.16, delay:0.18}); },
   // wrong: the league's buzzer if it has loaded, otherwise a detuned pair of
@@ -1779,6 +1781,9 @@ const SFX = {
   // the wager screen
   final(){  blip({type:'sawtooth', from:294, to:588, t:0.30, gain:0.13});
             blip({type:'sine', from:588, t:0.5, gain:0.12, delay:0.26}); },
+  // the board goes up at the top of a round. Quieter than the rest: it is a
+  // bed under the reveal, not a hit.
+  boardfill(){ playClip('boardfill', 0.7); },
   // the board is cleared and the game is over
   done(){   [523, 659, 784, 1047].forEach((f, i) =>
               blip({type:'triangle', from:f, t:0.28, gain:0.15, delay:i * 0.10})); },
@@ -2701,6 +2706,7 @@ function newGame(){
   only('boardWrap', 'roundlab');
   paintRound();
   renderBoard();
+  SFX.boardfill();
   say('idle', openLine());
 }
 
