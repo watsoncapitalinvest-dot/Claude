@@ -65,6 +65,54 @@
   .bank .amt{font-size:22px;font-weight:700;color:var(--money);font-variant-numeric:tabular-nums}
   .bank .amt.neg{color:var(--red)}
 
+  /* ---- the cold open: logo detonates, then the title page ---------------- */
+  #intro{position:fixed;inset:0;z-index:900;background:#05070f;display:none;
+    align-items:center;justify-content:center;overflow:hidden;}
+  #intro.on{display:flex}
+  #intro.out{animation:introOut .55s ease forwards}
+  @keyframes introOut{to{opacity:0;visibility:hidden}}
+  #intro .wrap{position:relative;width:min(92vw,760px);text-align:center}
+  #introart{width:100%;display:block;border-radius:12px;opacity:0;
+    transform:scale(.24);filter:blur(14px) brightness(2.4);}
+  #intro.go #introart{animation:detonate 1.15s cubic-bezier(.18,1.5,.3,1) forwards}
+  @keyframes detonate{
+    0%{opacity:0;transform:scale(.24) rotate(-7deg);filter:blur(16px) brightness(3)}
+    38%{opacity:1;transform:scale(1.13) rotate(1.5deg);filter:blur(0) brightness(1.9)}
+    58%{transform:scale(.965) rotate(-.6deg);filter:brightness(1.05)}
+    76%{transform:scale(1.02)}
+    100%{opacity:1;transform:scale(1) rotate(0);filter:none}
+  }
+  #flash{position:absolute;inset:-40%;background:radial-gradient(circle,#fff 0%,rgba(255,214,102,.75) 34%,rgba(255,255,255,0) 70%);
+    opacity:0;pointer-events:none;}
+  #intro.go #flash{animation:flashout .62s ease-out forwards;animation-delay:.30s}
+  @keyframes flashout{0%{opacity:0;transform:scale(.2)}12%{opacity:1}100%{opacity:0;transform:scale(1.6)}}
+  .ring{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;
+    border:3px solid rgba(255,214,102,.9);border-radius:50%;opacity:0;pointer-events:none;}
+  #intro.go .ring{animation:shock 1.05s cubic-bezier(.1,.75,.25,1) forwards}
+  #intro.go .ring.r2{animation-delay:.14s;border-color:rgba(255,255,255,.55)}
+  @keyframes shock{0%{opacity:0;transform:scale(.2)}10%{opacity:.95}100%{opacity:0;transform:scale(26)}}
+  .shard{position:absolute;left:50%;top:50%;width:5px;height:5px;border-radius:2px;
+    background:var(--gold);opacity:0;pointer-events:none;}
+  #intro.go .shard{animation:fly .95s ease-out forwards;animation-delay:.30s}
+  @keyframes fly{0%{opacity:1;transform:translate(0,0) scale(1)}
+                 100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.2)}}
+  #intro.go .wrap{animation:shake .5s ease-out;animation-delay:.30s}
+  @keyframes shake{0%,100%{transform:translate(0,0)}
+    15%{transform:translate(-9px,5px)}30%{transform:translate(8px,-6px)}
+    45%{transform:translate(-6px,-4px)}60%{transform:translate(5px,4px)}80%{transform:translate(-3px,2px)}}
+  #tapin{position:absolute;left:0;right:0;bottom:12%;text-align:center;font-size:12px;
+    letter-spacing:3.5px;color:var(--gold);opacity:.92;animation:pulse 1.5s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+  #intro.go #tapin{display:none}
+  /* the mute control, always reachable */
+  #mute{position:fixed;top:9px;right:9px;z-index:960;border:1px solid var(--edge);
+    background:rgba(6,10,20,.72);color:var(--gold);border-radius:999px;cursor:pointer;
+    font:600 15px/1 system-ui;padding:8px 11px;backdrop-filter:blur(3px);}
+  #mute:active{transform:scale(.94)}
+  @media(prefers-reduced-motion:reduce){
+    #intro.go #introart{animation:none;opacity:1;transform:none;filter:none}
+    #intro.go .ring,#intro.go .shard,#intro.go #flash,#intro.go .wrap{animation:none}
+  }
   /* title splash */
   #splash{display:none;text-align:center;padding:0 0 6px}
   #splash.on{display:block}
@@ -271,6 +319,17 @@
     <div class="bank"><div class="lab">BANK</div>
       <div class="amtrow"><img id="myc" alt=""><div class="amt" id="bank">$0</div></div></div>
   </div>
+  <div id="intro"><div class="wrap">
+      <img id="introart" alt="SCFL Jeopardy">
+      <div id="flash"></div><div class="ring"></div><div class="ring r2"></div>
+      <div id="shards"></div>
+      <div id="tapin">TAP TO BEGIN</div>
+  </div></div>
+  <button id="mute" aria-label="Mute the theme" title="Mute">&#128266;</button>
+  <audio id="theme" loop preload="auto">
+    <source src="scfl-theme.mp3" type="audio/mpeg">
+    <source src="scfl-theme.ogg" type="audio/ogg">
+  </audio>
   <div id="splash">
     <img class="key" id="keyart" alt="SCFL Jeopardy">
     <div class="rules">TWO ROUNDS &nbsp;·&nbsp; THIRTY-TWO CLUES &nbsp;·&nbsp; ONE WAGER</div>
@@ -1553,6 +1612,94 @@ function only(...on){
   document.body.classList.toggle('ingame', !on.includes('splash'));
 }
 
+/* ------------------------------------------------------------------
+ * THE THEME AND THE COLD OPEN
+ * The logo detonates, the music starts, and the title page arrives under
+ * it. Browsers will not let a page make noise before it is touched, so the
+ * intro tries to autoplay and falls back to a tap. Mute is remembered.
+ * ------------------------------------------------------------------ */
+const theme = document.getElementById('theme');
+let muted = false;
+try { muted = loadSt().muted === true; } catch (_) {}
+
+/* Apply it everywhere it could be lost: now, on every repaint of the button,
+ * and again when the element settles on a source. Cheap, and it means no
+ * ordering question between boot, the cold open and the media pipeline. */
+function applyMute(){ if (theme) theme.muted = muted; }
+applyMute();
+if (theme) ['loadedmetadata','canplay','play'].forEach(e => theme.addEventListener(e, applyMute));
+
+function paintMute(){
+  applyMute();
+  const b = document.getElementById('mute');
+  if (!b) return;
+  b.innerHTML = muted ? '&#128263;' : '&#128266;';
+  b.setAttribute('aria-label', muted ? 'Unmute the theme' : 'Mute the theme');
+  b.title = muted ? 'Unmute' : 'Mute';
+}
+function setMuted(v){
+  muted = !!v;
+  applyMute();
+  const st = loadSt(); st.muted = muted; saveSt(st);
+  paintMute();
+  if (!muted && theme && theme.paused) theme.play().catch(() => {});
+}
+function playTheme(){
+  if (!theme) return Promise.resolve(false);
+  applyMute();
+  theme.volume = 0.62;
+  const p = theme.play();
+  return (p && p.catch) ? p.then(() => true).catch(() => false) : Promise.resolve(true);
+}
+
+/* the shrapnel, made once */
+function makeShards(n){
+  const host = document.getElementById('shards');
+  if (!host || host.childElementCount) return;
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
+    const d = 130 + Math.random() * 320;
+    const el = document.createElement('div');
+    el.className = 'shard';
+    el.style.setProperty('--dx', Math.cos(a) * d + 'px');
+    el.style.setProperty('--dy', Math.sin(a) * d + 'px');
+    el.style.animationDelay = (0.30 + Math.random() * 0.10) + 's';
+    if (i % 3 === 0) el.style.background = '#fff';
+    host.appendChild(el);
+  }
+}
+
+let introDone = false;
+function detonate(){
+  if (introDone) return;
+  introDone = true;
+  const intro = document.getElementById('intro');
+  playTheme();
+  intro.classList.add('go');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  setTimeout(() => {
+    intro.classList.add('out');
+    setTimeout(() => { intro.classList.remove('on', 'go', 'out'); }, 560);
+  }, reduced ? 700 : 1750);
+}
+
+async function coldOpen(){
+  const intro = document.getElementById('intro');
+  const art = document.getElementById('introart');
+  if (typeof SET_ART !== 'undefined' && SET_ART.keyart) art.src = SET_ART.keyart;
+  makeShards(18);
+  intro.classList.add('on');
+  showSplash();                       // the title page is built underneath
+  // if the browser allows sound unprompted, go straight in; else wait for a tap
+  const ok = await playTheme();
+  if (ok && !theme.paused) return detonate();
+  const kick = () => { detonate(); off(); };
+  const off = () => {
+    ['pointerdown','keydown','touchstart'].forEach(e => document.removeEventListener(e, kick));
+  };
+  ['pointerdown','keydown','touchstart'].forEach(e => document.addEventListener(e, kick, { once:false }));
+}
+
 function showSplash(){
   only('splash');
   const chip = document.getElementById('clubchip');
@@ -2465,6 +2612,8 @@ function newGame(){
   if (saved && TEAMS.some(t => t.key === saved)) setClub(saved, false);
 
   document.getElementById('start').onclick = () => { if (MY) newGame(); else showPicker('game'); };
+  document.getElementById('mute').onclick = () => setMuted(!muted);
+  paintMute();
   document.getElementById('seescores').onclick = () => showScores('splash');
   document.getElementById('swap2').onclick = () => showPicker('splash');
   document.getElementById('scback').onclick = () => scBack === 'done' ? only('done') : showSplash();
@@ -2474,7 +2623,7 @@ function newGame(){
   document.getElementById('tabLg').onclick = () => { scTab = 'league'; paintScores(); };
   document.getElementById('tabQs').onclick = () => { scTab = 'questions'; paintScores(); };
 
-  showSplash();
+  coldOpen();
   flushQueue();
 })();
 </script>
