@@ -326,9 +326,15 @@
       <div id="tapin">TAP TO BEGIN</div>
   </div></div>
   <button id="mute" aria-label="Mute the theme" title="Mute">&#128266;</button>
+  <!-- Opus first: it is half the size and every browser but Safari takes it.
+       Safari falls through to the mp3, which is why both are here. -->
   <audio id="theme" loop preload="auto">
-    <source src="scfl-theme.mp3" type="audio/mpeg">
-    <source src="scfl-theme.ogg" type="audio/ogg">
+    <source src="scfl-open.ogg" type="audio/ogg">
+    <source src="scfl-open.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="finaltheme" loop preload="none">
+    <source src="scfl-final.ogg" type="audio/ogg">
+    <source src="scfl-final.mp3" type="audio/mpeg">
   </audio>
   <div id="splash">
     <img class="key" id="keyart" alt="SCFL Jeopardy">
@@ -1392,6 +1398,7 @@ function openClue(ci, row){
     box.appendChild(b);
   });
   markSeen(cell.q);
+  SFX.reveal();
   say('talk', pick(LINES.pick));
 }
 
@@ -1401,6 +1408,7 @@ function resolve(choice, btn){
   if (cell.done) return;
   cell.done = true;
   const right = choice === cell.q.answer;
+  right ? SFX.right() : SFX.wrong();
   marks.push(right);
   bank += right ? cell.value : -cell.value;
   paintBank();
@@ -1511,6 +1519,8 @@ function askFinal(){
     frame.classList.add('finalframe');
   }
   frame.classList.add('on');
+  SFX.final();
+  finalCue(true);
   document.getElementById('ctag').innerHTML = 'FINAL CLUE &nbsp;·&nbsp; <span class="val">' + money(finalBet) + ' at risk</span>';
   document.getElementById('q').textContent = finalQ.q;
   markSeen(finalQ);
@@ -1524,6 +1534,8 @@ function askFinal(){
     b.innerHTML = '<span class="mk">' + String.fromCharCode(65 + i) + '</span><span>' + o + '</span>';
     b.onclick = () => {
       const right = o === finalQ.answer;
+      finalCue(false);
+      right ? SFX.right() : SFX.wrong();
       marks.push(right);
       finalRight = right; finalBet0 = finalBet;
       logClue(finalQ, 'FINAL', finalBet, 3, right);
@@ -1557,6 +1569,8 @@ const loadSt = () => { try { return JSON.parse(localStorage.getItem(STORE)) || {
 const saveSt = v => { try { localStorage.setItem(STORE, JSON.stringify(v)); } catch (_) {} };
 
 function finish(){
+  finalCue(false);
+  SFX.done();
   only('done');
   const st = logGame();
   sendGame(st.log[st.log.length - 1]);
@@ -1625,7 +1639,11 @@ try { muted = loadSt().muted === true; } catch (_) {}
 /* Apply it everywhere it could be lost: now, on every repaint of the button,
  * and again when the element settles on a source. Cheap, and it means no
  * ordering question between boot, the cold open and the media pipeline. */
-function applyMute(){ if (theme) theme.muted = muted; }
+function applyMute(){
+  if (theme) theme.muted = muted;
+  const ft = document.getElementById('finaltheme');
+  if (ft) ft.muted = muted;
+}
 applyMute();
 if (theme) ['loadedmetadata','canplay','play'].forEach(e => theme.addEventListener(e, applyMute));
 
@@ -1668,6 +1686,68 @@ function makeShards(n){
     host.appendChild(el);
   }
 }
+
+/* The final clue gets its own cue: the main theme steps aside, the think
+ * music runs under the wager, and the theme comes back when it is answered. */
+const finalTheme = document.getElementById('finaltheme');
+function finalCue(on){
+  if (!finalTheme) return;
+  finalTheme.muted = muted; finalTheme.volume = 0.62;
+  if (on){
+    if (theme && !theme.paused) theme.pause();
+    finalTheme.currentTime = 0;
+    finalTheme.play().catch(() => {});
+  } else {
+    finalTheme.pause();
+    if (theme && theme.paused && introDone) theme.play().catch(() => {});
+  }
+}
+
+/* ------------------------------------------------------------------
+ * THE EFFECTS
+ * Synthesised in the browser rather than downloaded: a few lines of Web
+ * Audio weighs nothing, needs no files, loads instantly and is ours.
+ * Every one of them is silent when the theme is muted.
+ * ------------------------------------------------------------------ */
+let AC = null;
+const audioCtx = () => {
+  if (!AC){ try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) { return null; } }
+  if (AC.state === 'suspended') AC.resume().catch(() => {});
+  return AC;
+};
+function blip({ type='sine', from=440, to=null, t=0.18, gain=0.22, delay=0, curve='exp' }){
+  const ac = audioCtx(); if (!ac || muted) return;
+  const t0 = ac.currentTime + delay;
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.setValueAtTime(from, t0);
+  if (to){
+    if (curve === 'exp') o.frequency.exponentialRampToValueAtTime(Math.max(1, to), t0 + t);
+    else o.frequency.linearRampToValueAtTime(Math.max(1, to), t0 + t);
+  }
+  g.gain.setValueAtTime(0, t0);
+  g.gain.linearRampToValueAtTime(gain, t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + t);
+  o.connect(g); g.connect(ac.destination);
+  o.start(t0); o.stop(t0 + t + 0.03);
+}
+const SFX = {
+  // a clue comes up: two quick rising notes, like a card turning over
+  reveal(){ blip({type:'triangle', from:520, to:780, t:0.11, gain:0.15});
+            blip({type:'triangle', from:780, to:1040, t:0.13, gain:0.13, delay:0.08}); },
+  // right: a bright major third
+  right(){  blip({type:'sine', from:784, t:0.16, gain:0.20});
+            blip({type:'sine', from:988, t:0.16, gain:0.18, delay:0.09});
+            blip({type:'sine', from:1319, t:0.34, gain:0.16, delay:0.18}); },
+  // wrong: the buzzer. a detuned pair of squares sliding down
+  wrong(){  blip({type:'square', from:196, to:150, t:0.42, gain:0.13, curve:'lin'});
+            blip({type:'square', from:203, to:155, t:0.42, gain:0.11, curve:'lin'}); },
+  // the wager screen
+  final(){  blip({type:'sawtooth', from:294, to:588, t:0.30, gain:0.13});
+            blip({type:'sine', from:588, t:0.5, gain:0.12, delay:0.26}); },
+  // the board is cleared and the game is over
+  done(){   [523, 659, 784, 1047].forEach((f, i) =>
+              blip({type:'triangle', from:f, t:0.28, gain:0.15, delay:i * 0.10})); },
+};
 
 let introDone = false;
 function detonate(){
