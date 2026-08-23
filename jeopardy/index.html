@@ -1730,6 +1730,39 @@ function blip({ type='sine', from=440, to=null, t=0.18, gain=0.22, delay=0, curv
   o.connect(g); g.connect(ac.destination);
   o.start(t0); o.stop(t0 + t + 0.03);
 }
+/* Recorded clips, when the league has picked one. Anything named here is
+ * looked for in sfx/<name>.ogg then sfx/<name>.mp3, decoded once and played
+ * through Web Audio for tight timing. If a file is missing, fails to decode or
+ * has not loaded yet, the synthesised version below plays instead — so the
+ * game never goes quiet waiting on a download, and dropping a new file in
+ * needs no code change beyond adding its name here. */
+const SFX_FILES = ['wrong'];
+const SFX_BUF = {};
+(function preloadSfx(){
+  if (!SFX_FILES.length) return;
+  const canOgg = (() => { const a = document.createElement('audio');
+    return !!a.canPlayType && a.canPlayType('audio/ogg; codecs=opus') !== ''; })();
+  for (const name of SFX_FILES){
+    const url = 'sfx/' + name + (canOgg ? '.ogg' : '.mp3');
+    fetch(url).then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
+      .then(buf => { const ac = audioCtx(); if (!ac) return Promise.reject('no audio');
+                     return ac.decodeAudioData(buf); })
+      .then(dec => { SFX_BUF[name] = dec; })
+      .catch(() => {});          // the synth covers it
+  }
+})();
+
+function playClip(name, gain = 0.85){
+  const buf = SFX_BUF[name];
+  if (!buf || muted) return false;
+  const ac = audioCtx(); if (!ac) return false;
+  const src = ac.createBufferSource(), g = ac.createGain();
+  src.buffer = buf; g.gain.value = gain;
+  src.connect(g); g.connect(ac.destination);
+  src.start();
+  return true;
+}
+
 const SFX = {
   // a clue comes up: two quick rising notes, like a card turning over
   reveal(){ blip({type:'triangle', from:520, to:780, t:0.11, gain:0.15});
@@ -1738,8 +1771,10 @@ const SFX = {
   right(){  blip({type:'sine', from:784, t:0.16, gain:0.20});
             blip({type:'sine', from:988, t:0.16, gain:0.18, delay:0.09});
             blip({type:'sine', from:1319, t:0.34, gain:0.16, delay:0.18}); },
-  // wrong: the buzzer. a detuned pair of squares sliding down
-  wrong(){  blip({type:'square', from:196, to:150, t:0.42, gain:0.13, curve:'lin'});
+  // wrong: the league's buzzer if it has loaded, otherwise a detuned pair of
+  // squares sliding down
+  wrong(){  if (playClip('wrong')) return;
+            blip({type:'square', from:196, to:150, t:0.42, gain:0.13, curve:'lin'});
             blip({type:'square', from:203, to:155, t:0.42, gain:0.11, curve:'lin'}); },
   // the wager screen
   final(){  blip({type:'sawtooth', from:294, to:588, t:0.30, gain:0.13});
