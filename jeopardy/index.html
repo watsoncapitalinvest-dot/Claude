@@ -120,6 +120,27 @@
     font-variant-numeric:tabular-nums;flex:none}
   .scrow .amt2.neg{color:var(--red)}
   .scempty{text-align:center;font-size:11.5px;color:var(--faint);padding:22px 0}
+  .scrow .imp{font-size:8px;letter-spacing:1px;color:var(--faint);border:1px solid var(--edge);
+    border-radius:4px;padding:1px 4px;vertical-align:1px}
+  .sctabs .sctab{padding:6px 11px}
+
+  /* stats */
+  .stbox{background:var(--panel);border:1px solid var(--edge);border-radius:10px;
+    padding:4px 12px;margin-bottom:12px}
+  .st{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    font-size:11.5px;color:var(--dim);padding:7px 0;border-top:1px solid rgba(255,255,255,.05)}
+  .st:first-child{border-top:0}
+  .st span:last-child{color:var(--ink);font-weight:700;text-align:right;white-space:nowrap;
+    font-variant-numeric:tabular-nums}
+  .st span:first-child{display:flex;align-items:center;gap:7px;min-width:0;
+    overflow:hidden;text-overflow:ellipsis}
+  .st img{width:20px;height:20px;border-radius:4px;flex:none}
+  .sthead{font-size:9px;letter-spacing:2.4px;color:var(--gold);margin:2px 0 7px;padding-left:2px}
+  .stnote{font-size:10.5px;line-height:1.55;color:var(--faint);margin-bottom:10px}
+  #csvbox{display:none;width:100%;height:96px;margin-top:9px;padding:9px;border-radius:9px;
+    background:#0c1322;border:1px solid var(--edge);color:var(--dim);font:11px/1.4 ui-monospace,monospace;
+    resize:vertical}
+  #csvbox.on{display:block}
 
   /* club picker */
   #pick{display:none}
@@ -221,7 +242,7 @@
   </div>
   <div id="scores">
     <div class="sctitle">SCOREBOARD</div>
-    <div class="sctabs"><div class="sctab on" id="tabHi">HIGH SCORES</div><div class="sctab" id="tabAll">EVERY GAME</div></div>
+    <div class="sctabs"><div class="sctab on" id="tabHi">HIGH SCORES</div><div class="sctab" id="tabAll">EVERY GAME</div><div class="sctab" id="tabSt">STATS</div></div>
     <div id="sclist"></div>
     <button class="btn ghost" id="scback" style="margin-top:12px">BACK</button>
   </div>
@@ -622,6 +643,9 @@ let BOARD = [], bank = 0, marks = [], openCell = null, finalQ = null, finalBet =
    show where the money was actually made or lost. */
 let ROUND = 1, R1 = 0, R2 = 0, FIN = 0, R1N = 0, R2N = 0;
 let seenTags = new Set(), seenQs = new Set();
+/* Per-column tally, so the log can say which categories you are good at
+   rather than just what the game totalled. Keyed round|category. */
+let catLog = new Map(), startedAt = 0, finalBet0 = 0, finalRight = null;
 
 function buildBoard(values, avoidTags, avoidQs){
   values = values || VALUES; avoidTags = avoidTags || new Set(); avoidQs = avoidQs || new Set();
@@ -729,6 +753,12 @@ function resolve(choice, btn){
   marks.push(right);
   bank += right ? cell.value : -cell.value;
   paintBank();
+
+  const key = ROUND + '|' + BOARD[ci].tag;
+  const rec = catLog.get(key) || { g: BOARD[ci].tag, r: ROUND, h: 0, n: 0, m: 0 };
+  rec.n++; if (right) rec.h++;
+  rec.m += right ? cell.value : -cell.value;
+  catLog.set(key, rec);
 
   [...document.getElementById('opts').children].forEach(b => {
     b.disabled = true;
@@ -842,6 +872,7 @@ function askFinal(){
     b.onclick = () => {
       const right = o === finalQ.answer;
       marks.push(right);
+      finalRight = right; finalBet0 = finalBet;
       FIN = right ? finalBet : -finalBet;
       bank += FIN;
       paintBank();
@@ -955,14 +986,241 @@ function bestOf(log){ return (log && log.length) ? Math.max(...log.map(g => g.to
 function logGame(){
   const st = loadSt();
   st.log = st.log || [];
-  st.log.push({ t: Date.now(), club: MY ? MY.key : null, name: MY ? MY.name : 'No club',
-                r1: R1, r2: R2, fin: FIN, total: bank,
-                hits: marks.filter(Boolean).length, of: marks.length });
+  const r1m = marks.slice(0, R1N), r2m = marks.slice(R1N, R1N + R2N);
+  st.log.push({
+    t: Date.now(),
+    secs: startedAt ? Math.round((Date.now() - startedAt) / 1000) : null,
+    club: MY ? MY.key : null,
+    name: MY ? MY.name : 'No club',
+    owner: MY ? MY.owner : '',
+    r1: R1, r2: R2, fin: FIN, total: bank,
+    hits: marks.filter(Boolean).length, of: marks.length,
+    r1h: r1m.filter(Boolean).length, r1n: r1m.length,
+    r2h: r2m.filter(Boolean).length, r2n: r2m.length,
+    fb: finalBet0, fr: finalRight === null ? null : (finalRight ? 1 : 0),
+    cats: [...catLog.values()],
+  });
   if (st.log.length > LOGCAP) st.log = st.log.slice(-LOGCAP);
   st.games = st.log.length;
   st.best = bestOf(st.log);
   saveSt(st);
   return st;
+}
+
+/* ------------------------------------------------------------------
+ * THE LOG — every finished game, in a shape you can actually do sums on.
+ * It lives on the device that played it, so there is also a CSV out and a
+ * paste-in, which is how one person ends up holding the league's whole log.
+ * ------------------------------------------------------------------ */
+const CSV_COLS = ['date','time','club','owner','round1','round2','final_wager',
+  'final_result','total','right','asked','accuracy','seconds',
+  'r1_right','r1_asked','r2_right','r2_asked','best_category','worst_category',
+  'categories','id'];
+
+/* "R1 THE CELLAR 2/4 -400 | R2 THE DRAFT 3/4 +1200" — one column, still legible
+   in a spreadsheet, and enough to rebuild the per-category tallies on merge. */
+const packCats = cs => (cs || []).map(c =>
+  'R' + c.r + ' ' + c.g + ' ' + c.h + '/' + c.n + ' ' + (c.m >= 0 ? '+' : '') + c.m).join(' | ');
+
+function unpackCats(t){
+  if (!t) return [];
+  return t.split('|').map(chunk => {
+    const m = /^\s*R(\d)\s+(.+?)\s+(\d+)\/(\d+)\s+([+-]?\d+)\s*$/.exec(chunk);
+    return m ? { r: +m[1], g: m[2], h: +m[3], n: +m[4], m: +m[5] } : null;
+  }).filter(Boolean);
+}
+
+function csvCell(v){
+  const t = v === null || v === undefined ? '' : String(v);
+  return /[",\n]/.test(t) ? '"' + t.replace(/"/g,'""') + '"' : t;
+}
+
+function catRank(g, worst){
+  const c = (g.cats || []).filter(x => x.n >= 2);
+  if (!c.length) return '';
+  const by = c.slice().sort((a,b) => (a.h/a.n) - (b.h/b.n) || a.m - b.m);
+  const p = worst ? by[0] : by[by.length-1];
+  return p.g + ' ' + p.h + '/' + p.n;
+}
+
+function gameRow(g){
+  const d = new Date(g.t);
+  const two = n => String(n).padStart(2,'0');
+  return [
+    d.getFullYear() + '-' + two(d.getMonth()+1) + '-' + two(d.getDate()),
+    two(d.getHours()) + ':' + two(d.getMinutes()),
+    g.name, g.owner || '',
+    g.r1, g.r2, g.fb == null ? '' : g.fb,
+    g.fr === null || g.fr === undefined ? 'not played' : (g.fr ? 'right' : 'wrong'),
+    g.total, g.hits, g.of,
+    g.of ? (g.hits/g.of).toFixed(3) : '',
+    g.secs == null ? '' : g.secs,
+    g.r1h, g.r1n, g.r2h, g.r2n,
+    catRank(g,false), catRank(g,true),
+    packCats(g.cats),
+    g.club + '-' + g.t,
+  ];
+}
+
+function logCSV(){
+  const log = (loadSt().log || []).slice().sort((a,b) => a.t - b.t);
+  return [CSV_COLS.join(',')].concat(log.map(g => gameRow(g).map(csvCell).join(','))).join('\n');
+}
+
+/* Paste in someone else's CSV and their games join yours. Rows carry an id
+   of club-timestamp, so the same game pasted twice only lands once. */
+function mergeCSV(text){
+  const lines = text.trim().split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) return { added: 0, seen: 0, why: 'nothing to read' };
+  const head = lines[0].split(',').map(h => h.trim());
+  const idx = n => head.indexOf(n);
+  if (idx('id') < 0 || idx('total') < 0) return { added: 0, seen: 0, why: 'that is not a game log' };
+  const st = loadSt(); st.log = st.log || [];
+  const have = new Set(st.log.map(g => g.club + '-' + g.t));
+  let added = 0, seen = 0;
+  for (const line of lines.slice(1)){
+    const f = splitCSV(line);
+    if (f.length < head.length) continue;
+    seen++;
+    const id = f[idx('id')];
+    if (!id || have.has(id)) continue;
+    const cut = id.lastIndexOf('-');
+    const club = id.slice(0, cut), t = Number(id.slice(cut+1));
+    if (!club || !isFinite(t)) continue;
+    const num = n => { const v = Number(f[idx(n)]); return isFinite(v) ? v : 0; };
+    const fr = f[idx('final_result')];
+    st.log.push({ t, club, name: f[idx('club')] || club, owner: f[idx('owner')] || '',
+      secs: f[idx('seconds')] === '' ? null : num('seconds'),
+      r1: num('round1'), r2: num('round2'),
+      fb: f[idx('final_wager')] === '' ? 0 : num('final_wager'),
+      fr: fr === 'right' ? 1 : fr === 'wrong' ? 0 : null,
+      fin: fr === 'right' ? num('final_wager') : fr === 'wrong' ? -num('final_wager') : 0,
+      total: num('total'), hits: num('right'), of: num('asked'),
+      r1h: num('r1_right'), r1n: num('r1_asked'),
+      r2h: num('r2_right'), r2n: num('r2_asked'),
+      cats: unpackCats(f[idx('categories')]), imported: 1 });
+    have.add(id); added++;
+  }
+  st.log.sort((a,b) => a.t - b.t);
+  if (st.log.length > LOGCAP) st.log = st.log.slice(-LOGCAP);
+  st.games = st.log.length; st.best = bestOf(st.log);
+  saveSt(st);
+  return { added, seen };
+}
+
+function splitCSV(line){
+  const out = []; let cur = '', q = false;
+  for (let i = 0; i < line.length; i++){
+    const c = line[i];
+    if (q){ if (c === '"' && line[i+1] === '"'){ cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { out.push(cur); cur = ''; }
+    else cur += c;
+  }
+  out.push(cur); return out;
+}
+
+/* ------------------------------------------------------------------
+ * STATS — what the log adds up to.
+ * ------------------------------------------------------------------ */
+function dur(sec){
+  if (sec < 60) return sec + 's';
+  const m = Math.floor(sec/60), r = sec % 60;
+  return r ? m + 'm ' + String(r).padStart(2,'0') + 's' : m + 'm';
+}
+
+function paintStats(){
+  const log = loadSt().log || [];
+  const el = document.getElementById('sclist');
+  if (!log.length){ el.innerHTML = '<div class="scempty">Nothing on the board yet. Go play one.</div>'; return; }
+
+  const sum = (a, f) => a.reduce((n, x) => n + (f(x) || 0), 0);
+  const games = log.length;
+  const totals = log.map(g => g.total);
+  const asked = sum(log, g => g.of), right = sum(log, g => g.hits);
+  const r1n = sum(log, g => g.r1n), r1h = sum(log, g => g.r1h);
+  const r2n = sum(log, g => g.r2n), r2h = sum(log, g => g.r2h);
+  const played = log.filter(g => g.fr === 0 || g.fr === 1);
+  const finHit = played.filter(g => g.fr === 1).length;
+  const timed = log.filter(g => g.secs);
+  const pc = (h, n) => n ? Math.round(100*h/n) + '%' : '—';
+
+  // clubs, and how each one is doing
+  const byClub = new Map();
+  log.forEach(g => {
+    const c = byClub.get(g.club) || { name: g.name, club: g.club, n: 0, tot: 0, best: -1e9, h: 0, a: 0 };
+    c.n++; c.tot += g.total; c.best = Math.max(c.best, g.total); c.h += g.hits; c.a += g.of;
+    byClub.set(g.club, c);
+  });
+  // categories, pooled across every game that recorded them
+  const byCat = new Map();
+  log.forEach(g => (g.cats || []).forEach(c => {
+    const x = byCat.get(c.g) || { g: c.g, h: 0, n: 0, m: 0 };
+    x.h += c.h; x.n += c.n; x.m += c.m; byCat.set(c.g, x);
+  }));
+  const cats = [...byCat.values()].filter(c => c.n >= 4).sort((a,b) => (b.h/b.n) - (a.h/a.n));
+
+  const stat = (k, v) => '<div class="st"><span>' + k + '</span><span>' + v + '</span></div>';
+  let h = '<div class="stbox">' +
+    stat('Games played', games) +
+    stat('Average score', money(Math.round(sum(log, g => g.total)/games))) +
+    stat('Best / worst', money(Math.max(...totals)) + ' / ' + money(Math.min(...totals))) +
+    stat('Clues right', right + ' of ' + asked + ' &nbsp; ' + pc(right, asked)) +
+    stat('Round 1 / Round 2', pc(r1h, r1n) + ' / ' + pc(r2h, r2n)) +
+    stat('Final clue', played.length ? finHit + ' of ' + played.length + ' &nbsp; ' + pc(finHit, played.length)
+                                     : 'never wagered') +
+    (timed.length ? stat('Typical game', dur(Math.round(sum(timed, g => g.secs)/timed.length))) : '') +
+    '</div>';
+
+  if (byClub.size > 1){
+    h += '<div class="sthead">BY CLUB</div><div class="stbox">' +
+      [...byClub.values()].sort((a,b) => b.best - a.best).map(c =>
+        '<div class="st"><span><img src="' + crestOf(c.club) + '" alt="">' + c.name + '</span>' +
+        '<span>' + c.n + (c.n === 1 ? ' game' : ' games') + ' &nbsp;·&nbsp; best ' + money(c.best) +
+        ' &nbsp;·&nbsp; ' + pc(c.h, c.a) + '</span></div>').join('') + '</div>';
+  }
+  if (cats.length){
+    // split the list rather than taking top-5 and bottom-5, so a category
+    // can never turn up in both halves while you are still building history
+    const half = Math.min(5, Math.floor(cats.length / 2));
+    const row = c => stat(c.g, c.h + '/' + c.n + ' &nbsp; ' + pc(c.h, c.n));
+    if (half >= 2){
+      h += '<div class="sthead">CATEGORIES YOU KNOW</div><div class="stbox">' +
+        cats.slice(0, half).map(row).join('') + '</div>' +
+        '<div class="sthead">CATEGORIES THAT GET YOU</div><div class="stbox">' +
+        cats.slice(-half).reverse().map(row).join('') + '</div>';
+    } else {
+      h += '<div class="sthead">BY CATEGORY</div><div class="stbox">' +
+        cats.map(row).join('') + '</div>';
+    }
+  }
+  h += '<div class="sthead">THE LOG</div>' +
+    '<div class="stnote">One row per game. Copy it into a spreadsheet, or paste ' +
+    'someone else\'s in and their games join yours — the same game pasted twice only lands once.</div>' +
+    '<button class="btn ghost" id="csvout">COPY LOG AS CSV &nbsp;·&nbsp; ' + games +
+      (games === 1 ? ' row' : ' rows') + '</button>' +
+    '<button class="btn ghost" id="csvin" style="margin-top:9px">PASTE SOMEONE\'S LOG</button>' +
+    '<textarea id="csvbox" placeholder="Paste their CSV here, then press Add"></textarea>' +
+    '<button class="btn ghost hide" id="csvadd" style="margin-top:9px">ADD THOSE GAMES</button>';
+  el.innerHTML = h;
+
+  document.getElementById('csvout').onclick = async (e) => {
+    const txt = logCSV();
+    try { await navigator.clipboard.writeText(txt); e.target.textContent = 'COPIED — PASTE IT IN A SHEET'; }
+    catch (_) { const b = document.getElementById('csvbox'); b.classList.add('on'); b.value = txt; b.select(); }
+  };
+  document.getElementById('csvin').onclick = () => {
+    document.getElementById('csvbox').classList.add('on');
+    document.getElementById('csvadd').classList.remove('hide');
+    document.getElementById('csvbox').focus();
+  };
+  document.getElementById('csvadd').onclick = (e) => {
+    const r = mergeCSV(document.getElementById('csvbox').value);
+    e.target.textContent = r.why ? r.why.toUpperCase()
+      : r.added ? 'ADDED ' + r.added + (r.added === 1 ? ' GAME' : ' GAMES')
+                : 'ALREADY HAD ALL ' + r.seen;
+    if (r.added) setTimeout(paintStats, 900);
+  };
 }
 
 let scTab = 'hi';
@@ -976,6 +1234,8 @@ let scBack = 'splash';
 function paintScores(){
   document.getElementById('tabHi').classList.toggle('on', scTab === 'hi');
   document.getElementById('tabAll').classList.toggle('on', scTab === 'all');
+  document.getElementById('tabSt').classList.toggle('on', scTab === 'stats');
+  if (scTab === 'stats') return paintStats();
   const log = (loadSt().log || []).slice();
   const list = document.getElementById('sclist');
   list.innerHTML = '';
@@ -995,7 +1255,7 @@ function paintScores(){
     const img = new Image(); img.src = g.club ? crestOf(g.club) : ''; img.alt = '';
     if (!g.club) img.style.visibility = 'hidden';
     const who = document.createElement('div'); who.className = 'who';
-    who.innerHTML = g.name + '<div class="when">' +
+    who.innerHTML = g.name + (g.imported ? ' <span class="imp">shared</span>' : '') + '<div class="when">' +
       d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
       ' &nbsp;·&nbsp; ' + g.hits + '/' + g.of + ' right</div>';
     const amt = document.createElement('div');
@@ -1115,6 +1375,7 @@ function newGame(){
   bank = 0; marks = []; openCell = null; finalQ = null; finalBet = 0;
   ROUND = 1; R1 = 0; R2 = 0; FIN = 0; R1N = 0; R2N = 0;
   seenTags = new Set(); seenQs = new Set();
+  catLog = new Map(); startedAt = Date.now(); finalBet0 = 0; finalRight = null;
   BOARD = buildBoard(VALUES);
   if (!BOARD.length){ only('load'); document.getElementById('load').textContent = 'THE RECORD BOOK IS MISSING'; return; }
   const cbox = document.getElementById('clue');
@@ -1154,6 +1415,7 @@ function newGame(){
   document.getElementById('scback').onclick = () => scBack === 'done' ? only('done') : showSplash();
   document.getElementById('tabHi').onclick = () => { scTab = 'hi'; paintScores(); };
   document.getElementById('tabAll').onclick = () => { scTab = 'all'; paintScores(); };
+  document.getElementById('tabSt').onclick = () => { scTab = 'stats'; paintScores(); };
 
   showSplash();
 })();
