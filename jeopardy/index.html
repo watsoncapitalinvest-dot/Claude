@@ -99,6 +99,25 @@
   .sheet .r.tot span:last-child{color:var(--money);font-size:15px}
   .sheet .r.tot.neg span:last-child{color:var(--red)}
 
+  /* where this game lands */
+  #rank{max-width:330px;margin:0 auto 14px;text-align:left}
+  .rkhead{font-size:9px;letter-spacing:2.4px;color:var(--gold);margin:0 0 4px;padding-left:2px}
+  .rkline{font-size:11.5px;color:var(--dim);margin:0 0 9px;padding-left:2px}
+  .rkline b{color:var(--ink)}
+  .rkbox{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:4px 10px}
+  .rkrow{display:flex;align-items:center;gap:8px;padding:6px 0;
+    border-top:1px solid rgba(255,255,255,.05);font-size:11.5px;color:var(--dim)}
+  .rkrow:first-child{border-top:0}
+  .rkrow .n{width:22px;flex:none;text-align:right;color:var(--faint);
+    font-variant-numeric:tabular-nums}
+  .rkrow img{width:20px;height:20px;border-radius:4px;flex:none}
+  .rkrow .w{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rkrow .v{flex:none;font-weight:700;color:var(--money);font-variant-numeric:tabular-nums}
+  .rkrow .v.neg{color:var(--red)}
+  .rkrow.me{color:var(--ink)}
+  .rkrow.me .n,.rkrow.me .w{color:var(--gold);font-weight:700}
+  .rkgap{text-align:center;color:var(--faint);font-size:11px;padding:2px 0;letter-spacing:2px}
+
   #scores{display:none}
   #scores.on{display:block}
   .sctitle{text-align:center;font-size:12px;letter-spacing:3px;color:var(--gold);
@@ -280,6 +299,7 @@
       <div class="verdict" id="verdict"></div>
     </div>
     <div class="sheet" id="sheet"></div>
+    <div id="rank"></div>
     <button class="btn" id="again">NEW BOARD</button>
     <button class="btn ghost" id="share" style="margin-top:9px">COPY RESULT</button>
     <button class="btn ghost" id="board2" style="margin-top:9px">SCOREBOARD</button>
@@ -929,13 +949,12 @@ function finish(){
     : bank < 9000 ? 'You know this league.'
     : 'Commissioner material.';
   paintSheet();
-  const rank = (st.log || []).filter(g => g.total > bank).length + 1;
   document.getElementById('foot').innerHTML =
     'best ' + money(st.best) + ' &nbsp;·&nbsp; ' + st.games +
     (st.games === 1 ? ' game' : ' games') + ' played' +
-    (st.games > 1 ? ' &nbsp;·&nbsp; this one ranks #' + rank : '') +
     '<br>drawn from 21 seasons of the record book';
   say(bank <= 0 ? 'wrong' : 'toast', pick(bank <= 0 ? LINES.bust : LINES.end));
+  showRank(st.log[st.log.length - 1]);
 
   document.getElementById('share').onclick = async () => {
     const txt = scoreText();
@@ -1332,6 +1351,97 @@ function paintStats(){
 }
 
 /* ------------------------------------------------------------------
+ * WHERE THAT LANDS YOU — the high scores, with the game you just played
+ * sitting in its place among them. Ranks against the league when the sheet
+ * is connected, against this device's own games when it is not.
+ * ------------------------------------------------------------------ */
+const gid = g => g.club + '-' + g.t;
+
+function rankIn(entry, pool){
+  const sorted = pool.slice().sort((a, b) => b.total - a.total || a.t - b.t);
+  return { sorted, at: sorted.findIndex(g => gid(g) === gid(entry)) };
+}
+
+/* Top of the table plus your own neighbourhood, so you always see both the
+   number to beat and the two games either side of you. */
+function rankWindow(sorted, at){
+  const n = sorted.length;
+  if (n <= 7) return sorted.map((g, i) => ({ g, i }));
+  const keep = new Set([0, 1, 2, at - 1, at, at + 1, n - 1]);
+  const rows = [];
+  let gap = false;
+  for (let i = 0; i < n; i++){
+    if (keep.has(i)){ rows.push({ g: sorted[i], i }); gap = false; }
+    else if (!gap){ rows.push({ gap: true }); gap = true; }
+  }
+  return rows;
+}
+
+function paintRank(entry, pool, scope){
+  const el = document.getElementById('rank');
+  if (!el) return;
+  if (!pool.length){ el.innerHTML = ''; return; }
+  const { sorted, at } = rankIn(entry, pool);
+  if (at < 0){ el.innerHTML = ''; return; }
+
+  const n = sorted.length;
+  const place = at + 1;
+  const ord = place === 1 ? 'FIRST' : place === 2 ? 'SECOND' : place === 3 ? 'THIRD' : '#' + place;
+  const clubs = new Set(pool.map(g => g.club)).size;
+  const where = scope === 'league'
+    ? '<b>' + ord + '</b> in the league &nbsp;·&nbsp; ' + n + (n === 1 ? ' game' : ' games') +
+      ' from ' + clubs + (clubs === 1 ? ' club' : ' clubs')
+    : '<b>' + ord + '</b> of your ' + n + (n === 1 ? ' game' : ' games');
+  const beat = at > 0 ? sorted[at-1].total - entry.total : 0;
+
+  el.innerHTML =
+    '<div class="rkhead">WHERE THAT LANDS YOU</div>' +
+    '<div class="rkline">' + where +
+      (at > 0 ? ' &nbsp;·&nbsp; ' + money(beat) + ' off the one above' : ' &nbsp;·&nbsp; nobody above you') +
+    '</div><div class="rkbox">' +
+    rankWindow(sorted, at).map(r => r.gap
+      ? '<div class="rkgap">···</div>'
+      : '<div class="rkrow' + (r.i === at ? ' me' : '') + '">' +
+          '<div class="n">' + (r.i + 1) + '</div>' +
+          '<img src="' + crestOf(r.g.club) + '" alt="">' +
+          '<div class="w">' + r.g.name + (r.i === at ? ' — this game' : '') + '</div>' +
+          '<div class="v' + (r.g.total < 0 ? ' neg' : '') + '">' + money(r.g.total) + '</div>' +
+        '</div>').join('') +
+    '</div>';
+  return place;
+}
+
+/* Local first so the screen is never empty, then the league table if the
+   sheet answers — the game just played may not be up there yet, so it is
+   merged in by id rather than waited for. */
+async function showRank(entry){
+  const local = loadSt().log || [];
+  const place = paintRank(entry, local, 'local');
+  rankLine(entry, place, local.length, 'local');
+  if (!leagueOn()) return;
+  const games = await fetchLeague();
+  if (!games) return;
+  const pool = games.some(g => gid(g) === gid(entry)) ? games : games.concat([entry]);
+  const p2 = paintRank(entry, pool, 'league');
+  rankLine(entry, p2, pool.length, 'league');
+}
+
+/* Harry reacts to the placing, not just the number. */
+function rankLine(entry, place, n, scope){
+  if (!place || n < 3) return;
+  const best = place === 1;
+  const top3 = place <= 3;
+  if (best && scope === 'league')
+    say('big', 'That is the best anybody has done. Enjoy it, it will not last.');
+  else if (best)
+    say('big', 'Your best yet. The bar was on the floor, but still.');
+  else if (top3 && scope === 'league')
+    say('toast', 'Good enough for ' + (place === 2 ? 'second' : 'third') + ' in the league.');
+  else if (place === n && n >= 4)
+    say('wrong', 'Last. Out of ' + n + '. Somebody has to be.');
+}
+
+/* ------------------------------------------------------------------
  * THE LEAGUE TAB — the sheet, everyone's games, one table.
  * ------------------------------------------------------------------ */
 let connectMsg = '';
@@ -1600,6 +1710,7 @@ function newGame(){
   cbox.classList.remove('on', 'finalframe');
   cbox.style.backgroundImage = '';
   document.getElementById('share').textContent = 'COPY SCORECARD';
+  document.getElementById('rank').innerHTML = '';
   only('boardWrap', 'roundlab');
   paintRound();
   renderBoard();
