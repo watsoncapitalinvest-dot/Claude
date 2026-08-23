@@ -1,4 +1,4 @@
-# THE FILM ROOM — Set Design Brief
+# SCFL JEOPARDY — Set Design Brief
 
 Self-contained. Everything needed is in this document.
 
@@ -118,11 +118,11 @@ Same idea as the clue card, but for the final wager — the dramatic one. Heavie
 gold, a deeper glow, maybe a suggestion of a spotlight falling across the top
 edge. Same transparent middle, same border thickness.
 
-### 8. `logo-filmroom.png` — 1200 × 400 — **transparent**
+### 8. `logo-scfl.png` — 1200 × 400 — **transparent**
 
 **The one asset that may contain text.** The show's title lockup, reading:
 
-> **THE FILM ROOM**
+> **SCFL JEOPARDY**
 
 with a smaller line above it reading:
 
@@ -170,7 +170,7 @@ If only some can be made, this order gives the most improvement per asset:
 
 1. `set-backdrop.png` — turns a web page into a studio
 2. `tile-face.png` + `tile-spent.png` — turns a grid into a board
-3. `logo-filmroom.png`
+3. `logo-scfl.png`
 4. `cat-plate.png`
 5. `clue-card.png`, `final-card.png`
 6. `set-desk.png`, `bug.png`
