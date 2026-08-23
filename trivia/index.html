@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SCFL Daily</title>
+<meta name="description" content="Five questions a day about twenty-one seasons of the Skirt Chasers Football League.">
+<meta name="theme-color" content="#0b0f17">
+<style>
+  :root{
+    --ink:#e9eef8; --dim:#8a99b5; --faint:#5b6a86;
+    --bg:#0b0f17; --card:#141b28; --edge:#222d3f;
+    --gold:#ffd15c; --green:#5fd48a; --red:#ff6b5c; --blue:#6fa8ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);min-height:100dvh;
+    font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+    -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+  #app{max-width:560px;margin:0 auto;padding:18px 16px 40px;display:flex;flex-direction:column;min-height:100dvh}
+
+  header{text-align:center;padding:10px 0 18px;border-bottom:1px solid var(--edge);margin-bottom:20px}
+  .brand{font-size:11px;letter-spacing:4px;color:var(--gold);font-weight:700}
+  h1{font-size:30px;letter-spacing:1px;margin:6px 0 4px;font-weight:700}
+  .sub{font-size:12px;color:var(--faint);letter-spacing:.5px}
+
+  .pips{display:flex;gap:6px;justify-content:center;margin:16px 0 22px}
+  .pip{width:34px;height:5px;border-radius:3px;background:var(--edge);transition:background .25s}
+  .pip.on{background:var(--gold)} .pip.hit{background:var(--green)} .pip.miss{background:var(--red)}
+
+  .qwrap{flex:1;display:flex;flex-direction:column}
+  .tag{font-size:10px;letter-spacing:2px;color:var(--faint);margin-bottom:10px;text-transform:uppercase}
+  .q{font-size:20px;line-height:1.42;margin-bottom:22px;text-wrap:balance;font-weight:700}
+  .opts{display:flex;flex-direction:column;gap:9px}
+  .opt{background:var(--card);border:2px solid var(--edge);border-radius:11px;
+    padding:14px 15px;font:inherit;font-size:15px;color:var(--ink);text-align:left;
+    cursor:pointer;transition:border-color .15s,background .15s;display:flex;align-items:center;gap:11px}
+  .opt:hover:not(:disabled){border-color:var(--faint)}
+  .opt:disabled{cursor:default}
+  .opt .mk{width:20px;flex:none;color:var(--faint);font-weight:700}
+  .opt.right{border-color:var(--green);background:rgba(95,212,138,.11)}
+  .opt.right .mk{color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:rgba(255,107,92,.10)}
+  .opt.wrong .mk{color:var(--red)}
+  .opt.faded{opacity:.42}
+
+  .note{margin-top:18px;padding:13px 15px;background:var(--card);border-left:3px solid var(--gold);
+    border-radius:0 9px 9px 0;font-size:13px;line-height:1.55;color:var(--dim);display:none}
+  .note.show{display:block}
+  .note b{color:var(--ink)}
+
+  .next{margin-top:auto;padding-top:20px}
+  .btn{width:100%;padding:15px;border-radius:11px;border:2px solid var(--gold);
+    background:var(--gold);color:#20180a;font:inherit;font-size:15px;font-weight:700;
+    letter-spacing:1px;cursor:pointer}
+  .btn.ghost{background:transparent;color:var(--gold)}
+  .btn:active{transform:translateY(1px)}
+
+  /* results */
+  .score{text-align:center;padding:8px 0 4px}
+  .big{font-size:64px;font-weight:700;letter-spacing:-2px;line-height:1}
+  .of{font-size:15px;color:var(--faint);margin-top:2px}
+  .verdict{font-size:17px;margin:16px 0 6px;font-weight:700}
+  .streak{font-size:13px;color:var(--dim)}
+  .grid{font-size:24px;letter-spacing:5px;margin:22px 0 6px}
+  .recap{margin:22px 0 0;display:flex;flex-direction:column;gap:10px;text-align:left}
+  .row{background:var(--card);border-radius:9px;padding:11px 13px;font-size:12.5px;line-height:1.5;color:var(--dim)}
+  .row .head{color:var(--ink);font-weight:700;margin-bottom:3px}
+  .row.ok{border-left:3px solid var(--green)} .row.no{border-left:3px solid var(--red)}
+  .foot{text-align:center;font-size:11px;color:var(--faint);margin-top:26px;line-height:1.7}
+  #load{flex:1;display:flex;align-items:center;justify-content:center;color:var(--faint);
+    font-size:12px;letter-spacing:2px}
+  .hide{display:none!important}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">S C F L</div>
+    <h1>THE DAILY</h1>
+    <div class="sub" id="date">—</div>
+  </header>
+  <div id="load">READING THE RECORD BOOK…</div>
+  <div id="game" class="hide">
+    <div class="pips" id="pips"></div>
+    <div class="qwrap">
+      <div class="tag" id="tag"></div>
+      <div class="q" id="q"></div>
+      <div class="opts" id="opts"></div>
+      <div class="note" id="note"></div>
+      <div class="next"><button class="btn hide" id="next">NEXT</button></div>
+    </div>
+  </div>
+  <div id="done" class="hide">
+    <div class="score">
+      <div class="big" id="final">0</div>
+      <div class="of">out of 5</div>
+      <div class="verdict" id="verdict"></div>
+      <div class="streak" id="streakLine"></div>
+      <div class="grid" id="grid"></div>
+    </div>
+    <div class="recap" id="recap"></div>
+    <div class="next">
+      <button class="btn" id="share">COPY RESULT</button>
+      <div class="foot" id="foot"></div>
+    </div>
+  </div>
+</div>
+<script>
+'use strict';
+
+/* ==================================================================
+ * SCFL — THE DAILY
+ * Five questions a day, drawn from the league's own record book.
+ * Everyone gets the same five: the set is seeded by the date, so the
+ * chat has a shared reference point to argue about.
+ * ================================================================== */
+
+const PER_DAY = 5;
+
+/* --- deterministic PRNG so a given day is identical for everyone --- */
+function hash(str){
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return h >>> 0;
+}
+function mulberry(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const todayKey = () => {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+};
+
+let RNG = mulberry(hash(todayKey()));
+const rint = n => Math.floor(RNG() * n);
+const pick = a => a[rint(a.length)];
+const shuffle = a => { const c = a.slice(); for (let i = c.length-1; i > 0; i--){ const j = rint(i+1); [c[i],c[j]] = [c[j],c[i]]; } return c; };
+
+/* --- data --- */
+const D = {};
+async function grab(name, key){
+  try { const r = await fetch('../' + name, { cache:'force-cache' }); if (r.ok) D[key] = await r.json(); }
+  catch (_) {}
+}
+
+/* ------------------------------------------------------------------
+ * INDEX — flatten the record book into things we can ask about.
+ * Team ids are season-scoped, so every lookup goes through that
+ * season's own roster. Champions are stored as owner handles, so they
+ * are resolved back to the team name people actually recognise.
+ * ------------------------------------------------------------------ */
+const IX = { seasons:[], allTime:[], trades:[], picks:[], grades:[] };
+
+function buildIndex(){
+  const H = D.history, R = D.records, T = D.trades, DR = D.drafts, G = D.grades;
+
+  if (H && H.seasons) for (const s of H.seasons){
+    const names = {}; const owners = {};
+    for (const t of s.teams){ names[t.id] = (t.name || '').trim(); owners[t.id] = (t.owner || '').trim(); }
+    let champTeam = null;
+    for (const t of s.teams) if (t.owner === s.champion) champTeam = (t.name || '').trim();
+    const standings = (s.standings || []).map(x => Object.assign({}, x, { team: names[x.teamId] }))
+                                         .filter(x => x.team);
+    const games = (s.matchups || []).map(m => Object.assign({}, m, {
+      homeTeam: names[m.home], awayTeam: names[m.away],
+      winner: m.homeScore === m.awayScore ? null : (m.homeScore > m.awayScore ? names[m.home] : names[m.away]),
+      top: Math.max(m.homeScore, m.awayScore),
+    })).filter(m => m.homeTeam && m.awayTeam);
+    IX.seasons.push({ year:s.year, champion:champTeam, championOwner:s.champion,
+                      teams:Object.values(names).filter(Boolean), standings, games });
+  }
+
+  if (R && R.standings) IX.allTime = R.standings.filter(x => x.numSeasons >= 3);
+
+  if (T && T.trades) for (const tr of T.trades){
+    if (!tr.sides || tr.sides.length !== 2) continue;
+    for (let i = 0; i < 2; i++){
+      const got = (tr.sides[i].gets || []).filter(a => a.player).map(a => a.player);
+      if (got.length) IX.trades.push({ year:tr.season, team:(tr.sides[i].team||'').trim(),
+                                       from:(tr.sides[1-i].team||'').trim(), players:got });
+    }
+  }
+
+  if (DR && DR.years) for (const [y, list] of Object.entries(DR.years))
+    for (const p of list) if (p.player && p.team)
+      IX.picks.push({ year:+y, pick:p.pick, round:p.round, team:p.team.trim(), player:p.player.trim() });
+
+  if (G && G.years) for (const [y, list] of Object.entries(G.years))
+    for (const g of list) if (g.grade && g.team) IX.grades.push({ year:+y, team:g.team.trim(), grade:g.grade.trim() });
+}
+
+/* --- helpers for building plausible wrong answers --- */
+function decoys(right, universe, n){
+  const pool = [...new Set(universe)].filter(x => x && x !== right);
+  const out = [];
+  while (out.length < n && pool.length) out.push(pool.splice(rint(pool.length), 1)[0]);
+  return out;
+}
+const teamUniverse = () => {
+  const all = [];
+  for (const s of IX.seasons) all.push(...s.teams);
+  return all;
+};
+const ordinal = n => {
+  const suf = ['th','st','nd','rd'], v = n % 100;
+  return n + (suf[(v - 20) % 10] || suf[v] || suf[0]);
+};
+
+/* ------------------------------------------------------------------
+ * QUESTION GENERATORS
+ * Each returns { tag, q, answer, options, note, tier }
+ * tier 1 = most people know it, 3 = only a sicko knows it
+ * ------------------------------------------------------------------ */
+const GEN = [];
+const add = (pool, fn) => GEN.push(Object.assign(fn, { pool }));
+
+// who took the title
+add(18, () => {
+  const s = pick(IX.seasons.filter(x => x.champion && x.teams.length > 3));
+  if (!s) return null;
+  return { tier: s.year >= 2021 ? 1 : 2, tag:'CHAMPIONS',
+    q:`Who won the SCFL title in ${s.year}?`,
+    answer:s.champion, options:[s.champion, ...decoys(s.champion, s.teams, 3)],
+    note:`<b>${s.champion}</b> took the ${s.year} title.` };
+});
+
+// best record in a season
+add(18, () => {
+  const s = pick(IX.seasons.filter(x => x.standings.length > 5));
+  if (!s) return null;
+  const top = s.standings.slice().sort((a,b) => a.rank - b.rank)[0];
+  if (!top) return null;
+  return { tier:2, tag:'REGULAR SEASON',
+    q:`Who finished first in the ${s.year} regular season?`,
+    answer:top.team, options:[top.team, ...decoys(top.team, s.teams, 3)],
+    note:`<b>${top.team}</b> finished ${top.wins}-${top.losses} with ${Math.round(top.pf)} points for.` };
+});
+
+// the cellar
+add(18, () => {
+  const s = pick(IX.seasons.filter(x => x.standings.length > 5));
+  if (!s) return null;
+  const last = s.standings.slice().sort((a,b) => b.rank - a.rank)[0];
+  if (!last) return null;
+  return { tier:3, tag:'THE CELLAR',
+    q:`Who finished dead last in ${s.year}?`,
+    answer:last.team, options:[last.team, ...decoys(last.team, s.teams, 3)],
+    note:`<b>${last.team}</b> came ${ordinal(last.rank)} at ${last.wins}-${last.losses}.` };
+});
+
+// highest single score of a season
+add(18, () => {
+  const s = pick(IX.seasons.filter(x => x.games.length > 10));
+  if (!s) return null;
+  const g = s.games.slice().sort((a,b) => b.top - a.top)[0];
+  const who = g.homeScore > g.awayScore ? g.homeTeam : g.awayTeam;
+  return { tier:3, tag:'BIGGEST WEEK',
+    q:`Who put up the highest single-week score of ${s.year}?`,
+    answer:who, options:[who, ...decoys(who, s.teams, 3)],
+    note:`<b>${who}</b> hung <b>${g.top}</b> in week ${g.week} of ${s.year}.` };
+});
+
+// head to head result
+add(2344, () => {
+  const s = pick(IX.seasons.filter(x => x.games.length > 10));
+  if (!s) return null;
+  const g = pick(s.games.filter(x => x.winner));
+  if (!g) return null;
+  const other = g.winner === g.homeTeam ? g.awayTeam : g.homeTeam;
+  return { tier:3, tag:'HEAD TO HEAD',
+    q:`Week ${g.week}, ${s.year}: ${g.homeTeam} vs ${g.awayTeam}. Who won?`,
+    answer:g.winner, options:shuffle([g.winner, other]),
+    note:`<b>${g.winner}</b> won it ${Math.max(g.homeScore,g.awayScore)}–${Math.min(g.homeScore,g.awayScore)}.` };
+});
+
+// all-time crowns
+add(1, () => {
+  if (IX.allTime.length < 4) return null;
+  const top = IX.allTime.slice().sort((a,b) => b.titles - a.titles)[0];
+  return { tier:1, tag:'ALL TIME',
+    q:'Which club has won the most SCFL titles?',
+    answer:top.name, options:[top.name, ...decoys(top.name, IX.allTime.map(x => x.name), 3)],
+    note:`<b>${top.name}</b> — ${top.titles} titles across ${top.numSeasons} seasons.` };
+});
+
+// perennial bridesmaid
+add(1, () => {
+  if (IX.allTime.length < 4) return null;
+  const top = IX.allTime.slice().sort((a,b) => (b.runnerUps||0) - (a.runnerUps||0))[0];
+  if (!top.runnerUps) return null;
+  return { tier:2, tag:'ALL TIME',
+    q:'Which club has finished runner-up the most times?',
+    answer:top.name, options:[top.name, ...decoys(top.name, IX.allTime.map(x => x.name), 3)],
+    note:`<b>${top.name}</b> — ${top.runnerUps} runner-up finishes, and ${top.titles} titles.` };
+});
+
+// best win rate
+add(1, () => {
+  if (IX.allTime.length < 4) return null;
+  const top = IX.allTime.slice().sort((a,b) => b.winPct - a.winPct)[0];
+  return { tier:2, tag:'ALL TIME',
+    q:'Which club has the best all-time winning percentage?',
+    answer:top.name, options:[top.name, ...decoys(top.name, IX.allTime.map(x => x.name), 3)],
+    note:`<b>${top.name}</b> — ${top.record}, a ${(top.winPct*100).toFixed(1)}% clip.` };
+});
+
+// who took this player in the draft
+add(127, () => {
+  const p = pick(IX.picks);
+  if (!p) return null;
+  return { tier:2, tag:'THE DRAFT',
+    q:`Which club drafted ${p.player} in ${p.year}?`,
+    answer:p.team, options:[p.team, ...decoys(p.team, IX.picks.map(x => x.team), 3)],
+    note:`<b>${p.team}</b> took ${p.player} at pick ${p.pick} in ${p.year}.` };
+});
+
+// what came off the board at a slot
+add(60, () => {
+  const p = pick(IX.picks.filter(x => x.round === 1));
+  if (!p) return null;
+  return { tier:3, tag:'THE DRAFT',
+    q:`Who did ${p.team} take at pick ${p.pick} of the ${p.year} draft?`,
+    answer:p.player, options:[p.player, ...decoys(p.player, IX.picks.filter(x => x.year === p.year).map(x => x.player), 3)],
+    note:`Pick ${p.pick}, ${p.year}: <b>${p.player}</b> to ${p.team}.` };
+});
+
+// who acquired this player
+add(200, () => {
+  const t = pick(IX.trades.filter(x => x.players.length === 1 && x.team && x.from));
+  if (!t) return null;
+  return { tier:3, tag:'THE TRADE DESK',
+    q:`Which club traded for ${t.players[0]} in ${t.year}?`,
+    answer:t.team, options:[t.team, ...decoys(t.team, IX.trades.map(x => x.team), 3)],
+    note:`<b>${t.team}</b> got ${t.players[0]} from ${t.from} in ${t.year}.` };
+});
+
+// the draft grade
+add(79, () => {
+  const g = pick(IX.grades);
+  if (!g) return null;
+  const all = [...new Set(IX.grades.map(x => x.grade))];
+  return { tier:3, tag:'DRAFT GRADES',
+    q:`What grade did ${g.team} get for their ${g.year} draft?`,
+    answer:g.grade, options:[g.grade, ...decoys(g.grade, all, 3)],
+    note:`${g.team}'s ${g.year} draft was graded <b>${g.grade}</b>.` };
+});
+
+
+// a specific club's haul, rather than only "who has the most"
+add(23, () => {
+  const c = pick(IX.allTime.filter(x => x.titles > 0));
+  if (!c) return null;
+  const nums = [...new Set(IX.allTime.map(x => x.titles))].map(String);
+  return { tier:2, tag:'ALL TIME',
+    q:`How many SCFL titles have ${c.name} won?`,
+    answer:String(c.titles), options:[String(c.titles), ...decoys(String(c.titles), nums, 3)],
+    note:`<b>${c.name}</b> — ${c.titles} titles, ${c.runnerUps||0} runner-ups, ${c.playoffs} playoff trips in ${c.numSeasons} seasons.` };
+});
+
+// most points in a regular season
+add(18, () => {
+  const s = pick(IX.seasons.filter(x => x.standings.length > 5));
+  if (!s) return null;
+  const top = s.standings.slice().sort((a,b) => b.pf - a.pf)[0];
+  return { tier:3, tag:'SCOREBOARD',
+    q:`Who scored the most points in the ${s.year} regular season?`,
+    answer:top.team, options:[top.team, ...decoys(top.team, s.teams, 3)],
+    note:`<b>${top.team}</b> put up ${Math.round(top.pf)} points in ${s.year}.` };
+});
+
+// playoff regulars
+add(23, () => {
+  const c = pick(IX.allTime.filter(x => x.playoffs != null));
+  if (!c) return null;
+  const nums = [...new Set(IX.allTime.map(x => x.playoffs))].map(String);
+  return { tier:3, tag:'ALL TIME',
+    q:`How many times have ${c.name} made the playoffs?`,
+    answer:String(c.playoffs), options:[String(c.playoffs), ...decoys(String(c.playoffs), nums, 3)],
+    note:`<b>${c.name}</b> — ${c.playoffs} playoff appearances in ${c.numSeasons} seasons.` };
+});
+
+/* ------------------------------------------------------------------
+ * BUILD THE DAY
+ * A spread of difficulty so the set separates the diehards from the
+ * rest without being unplayable, and no repeated question shape.
+ * ------------------------------------------------------------------ */
+/* Weight by how many distinct questions a generator can actually produce,
+   capped so the enormous matchup pool does not swamp everything else.
+   Without this the three single-fact all-time questions were a third of
+   every set - the same three, every few days. */
+const WEIGHTS = GEN.map(g => Math.min(g.pool || 30, 40));
+const WSUM = WEIGHTS.reduce((a, b) => a + b, 0);
+function weightedGen(){
+  let r = RNG() * WSUM;
+  for (let i = 0; i < WEIGHTS.length; i++){ r -= WEIGHTS[i]; if (r <= 0) return i; }
+  return WEIGHTS.length - 1;
+}
+
+function buildDay(){
+  const want = [1, 1, 2, 2, 3];          // easy, easy, medium, medium, hard
+  const out = [], usedGen = new Set(), seen = new Set();
+  for (const tier of want){
+    let got = null;
+    for (let attempt = 0; attempt < 220 && !got; attempt++){
+      const gi = weightedGen();
+      if (usedGen.has(gi) && usedGen.size < GEN.length) continue;
+      const cand = GEN[gi]();
+      if (!cand) continue;
+      if (Math.abs(cand.tier - tier) > 1) continue;
+      if (seen.has(cand.q)) continue;
+      const opts = [...new Set(cand.options)].filter(Boolean);
+      if (opts.length < 2) continue;      // a question with no wrong answer is not a question
+      cand.options = shuffle(opts);
+      usedGen.add(gi); seen.add(cand.q);
+      got = cand;
+    }
+    if (got) out.push(got);
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------------
+ * PLAY
+ * ------------------------------------------------------------------ */
+const $ = id => document.getElementById(id);
+let QS = [], at = 0, marks = [], answered = false;
+
+const STORE = 'scfl.daily';
+function load(){ try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch (_) { return {}; } }
+function save(v){ try { localStorage.setItem(STORE, JSON.stringify(v)); } catch (_) {} }
+
+function renderPips(){
+  $('pips').innerHTML = QS.map((_, i) =>
+    `<div class="pip ${marks[i] === true ? 'hit' : marks[i] === false ? 'miss' : i === at ? 'on' : ''}"></div>`
+  ).join('');
+}
+
+function renderQ(){
+  const q = QS[at];
+  answered = false;
+  renderPips();
+  $('tag').textContent = q.tag + '  ·  ' + (at + 1) + ' of ' + QS.length;
+  $('q').textContent = q.q;
+  $('note').classList.remove('show');
+  $('next').classList.add('hide');
+  $('opts').innerHTML = '';
+  q.options.forEach((o, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.innerHTML = `<span class="mk">${String.fromCharCode(65+i)}</span><span>${o}</span>`;
+    b.onclick = () => answer(o, b);
+    $('opts').appendChild(b);
+  });
+}
+
+function answer(choice, btn){
+  if (answered) return;
+  answered = true;
+  const q = QS[at];
+  const right = choice === q.answer;
+  marks[at] = right;
+  [...$('opts').children].forEach(b => {
+    b.disabled = true;
+    const label = b.querySelector('span:last-child').textContent;
+    if (label === q.answer) b.classList.add('right');
+    else if (b === btn) b.classList.add('wrong');
+    else b.classList.add('faded');
+  });
+  $('note').innerHTML = (right ? '' : '<b>Answer: ' + q.answer + '</b><br>') + q.note;
+  $('note').classList.add('show');
+  $('next').textContent = at === QS.length - 1 ? 'SEE RESULT' : 'NEXT';
+  $('next').classList.remove('hide');
+  renderPips();
+}
+
+$('next').onclick = () => {
+  if (at < QS.length - 1){ at++; renderQ(); }
+  else finish();
+};
+
+function finish(){
+  const score = marks.filter(Boolean).length;
+  const day = todayKey();
+  const st = load();
+  if (st.lastDay !== day){
+    const y = new Date(Date.now() - 864e5);
+    const yk = y.getFullYear()+'-'+String(y.getMonth()+1).padStart(2,'0')+'-'+String(y.getDate()).padStart(2,'0');
+    st.streak = (st.lastDay === yk ? (st.streak || 0) : 0) + 1;
+    st.lastDay = day;
+    st.played = (st.played || 0) + 1;
+    st.total = (st.total || 0) + score;
+    st.best = Math.max(st.best || 0, score);
+    save(st);
+  }
+  $('game').classList.add('hide');
+  $('done').classList.remove('hide');
+  $('final').textContent = score;
+  $('final').style.color = score >= 4 ? 'var(--green)' : score <= 1 ? 'var(--red)' : 'var(--gold)';
+  $('verdict').textContent = ['Did you even play this year?','Casual.','Respectable.',
+                             'You know your league.','Commissioner material.','Perfect. Insufferable.'][score];
+  $('streakLine').textContent = `streak ${st.streak || 1} · best ${st.best || score} · ${st.played || 1} played`;
+  const grid = marks.map(m => m ? '🟩' : '🟥').join('');
+  $('grid').textContent = grid;
+  $('recap').innerHTML = QS.map((q, i) =>
+    `<div class="row ${marks[i] ? 'ok' : 'no'}"><div class="head">${q.q}</div>${q.note}</div>`).join('');
+  $('foot').innerHTML = 'a new five every day<br>drawn from 21 seasons of the record book';
+
+  $('share').onclick = async () => {
+    const text = `SCFL Daily · ${day}\n${grid} ${score}/5${(st.streak||1) > 1 ? `  streak ${st.streak}` : ''}`;
+    try { await navigator.clipboard.writeText(text); $('share').textContent = 'COPIED — PASTE IT IN THE CHAT'; }
+    catch (_) { $('share').textContent = text; }
+  };
+}
+
+/* ------------------------------------------------------------------ */
+(async function boot(){
+  await Promise.all([
+    grab('history.json','history'), grab('records.json','records'),
+    grab('trades.json','trades'),   grab('drafts.json','drafts'),
+    grab('pop-grades.json','grades'),
+  ]);
+  buildIndex();
+  const d = new Date();
+  $('date').textContent = d.toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric'});
+  QS = buildDay();
+  if (!QS.length){
+    $('load').textContent = 'THE RECORD BOOK IS MISSING';
+    return;
+  }
+  marks = new Array(QS.length).fill(null);
+  $('load').classList.add('hide');
+  $('game').classList.remove('hide');
+  renderQ();
+})();
+</script>
+</body>
+</html>
