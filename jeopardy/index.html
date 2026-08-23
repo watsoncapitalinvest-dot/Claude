@@ -441,32 +441,36 @@ const worn = (c, y) => { const w = wore(c, y); return w ? ', then playing as <b>
 
 /* ------------------------------------------------------------------
  * THE CLUES
- * Written the way the show writes them: a statement carrying enough to be
- * worked out, not a lookup. Each returns { tag, q, answer, options, note,
- * tier }. tier 1 = anybody in the chat knows it, 3 = you had to be there.
+ * Written the way the show writes them, which the sports categories in
+ * forty-two seasons of Jeopardy make plain: lead with the year, point at
+ * the answer with "this club", and let a bare line of numbers do the work
+ * when the numbers are the story. The subject matter is entirely SCFL.
+ * Each returns { tag, q, answer, options, note, tier }.
  * ------------------------------------------------------------------ */
 const GEN = [];
 const add = (pool, fn) => GEN.push(Object.assign(fn, { pool }));
+const num = n => (n === null || n === undefined) ? '' : (+n).toLocaleString('en-US');
 
-// ---- DYNASTY: who took it home
+// ---- RING BEARERS: who took it home
 add(18, () => {
   const s = pick(IX.seasons);
   if (!s.champion) return null;
   const st = s.standings.find(x => x.club === s.champion);
-  return { tag:'DYNASTY', tier: s.year >= 2020 ? 1 : 2,
-    q:'They went ' + (st ? st.wins + '-' + st.losses : 'the distance') + ' and took the ' + s.year + ' title.',
+  return { tag:'RING BEARERS', tier: s.year >= 2020 ? 1 : 2,
+    q:'In ' + s.year + ' this club went ' + (st ? st.wins + '-' + st.losses : 'the distance') + ' and took the title.',
     answer:s.champion, options:[s.champion, ...decoys(s.champion, s.clubs, 3)],
     note:'Who is <b>' + s.champion + '</b>? Champions in ' + s.year + worn(s.champion, s.year) + '.' };
 });
 
-// ---- DYNASTY: the trophy count
+// ---- RING BEARERS: the trophy count
 add(12, () => {
   const rows = IX.allTime.filter(x => x.titles > 0);
   if (rows.length < 4) return null;
   const r = pick(rows);
   const t = r.titles === 1 ? 'title' : 'titles';
-  return { tag:'DYNASTY', tier:2,
-    q:r.titles + ' ' + t + ' in ' + r.numSeasons + ' seasons, on a ' + r.record + ' record.',
+  return { tag:'RING BEARERS', tier:2,
+    q:r.titles + ' ' + t + ' in ' + r.numSeasons + ' seasons, on a ' + r.record + ' record, ' +
+      (r.titles === 1 ? 'belongs' : 'belong') + ' to this club.',
     answer:r.club, options:[r.club, ...decoys(r.club, IX.allTime.map(x => x.club), 3)],
     note:'Who is <b>' + r.club + '</b>? ' + r.titles + ' ' + t + ', ' + r.runnerUps +
          ' runner-up finishes, ' + r.record + ' all time.' };
@@ -474,22 +478,44 @@ add(12, () => {
 
 // ---- WHAT'S IN A NAME: the costumes they have worn
 add(14, () => {
-  // 'Beaver Eaters' is not a disguise for 'The Beaver Eaters' — drop anything
-  // that contains, or is contained by, the club's real name
   const far = f => f.aliases.filter(x => {
     const a = norm(x), c = norm(f.club);
     return a && !a.includes(c) && !c.includes(a);
   });
-  const cands = Object.values(IX.fr).filter(f => far(f).length >= 2);
+  const cands = Object.values(IX.fr).filter(f => (f.last || 0) >= 2008 && far(f).length >= 2);
   if (cands.length < 4) return null;
   const f = pick(cands);
   const alt = shuffle(far(f)).slice(0, 3);
   return { tag:"WHAT'S IN A NAME", tier:2,
-    q:alt.join('. ') + '. Same guy, different hat.',
+    q:alt.join('. ') + '. All one club, wearing a different hat.',
     answer:f.club, options:[f.club, ...decoys(f.club, IX.list, 3)],
     note:'Who is <b>' + f.club + '</b>? ' +
          (f.manager && norm(f.manager) !== norm(f.club) ? f.manager + ' has' : 'They have') +
          ' run it under ' + f.aliases.length + ' names.' };
+});
+
+// ---- CHARTER MEMBERS: who turned up when
+add(12, () => {
+  const late = Object.values(IX.fr).filter(f => f.first && f.first > 2008 && (f.last || 0) >= 2008);
+  if (late.length < 4) return null;
+  const f = pick(late);
+  return { tag:'CHARTER MEMBERS', tier:2,
+    q:'This club turns up in the league for the first time in ' + f.first + '.',
+    answer:f.club, options:[f.club, ...decoys(f.club, IX.list, 3)],
+    note:'Who is <b>' + f.club + '</b>? First season ' + f.first +
+         (f.records ? ', ' + f.records.record + ' since.' : '.') };
+});
+
+// ---- CHARTER MEMBERS: who is not here any more
+add(8, () => {
+  const gone = Object.values(IX.fr).filter(f => f.last && f.last < 2025 && f.last >= 2008 && f.records);
+  if (gone.length < 4) return null;
+  const f = pick(gone);
+  return { tag:'CHARTER MEMBERS', tier:3,
+    q:'Last seen in ' + f.last + ', this club left on a ' + f.records.record + ' record over ' +
+      f.records.numSeasons + ' seasons.',
+    answer:f.club, options:[f.club, ...decoys(f.club, IX.list, 3)],
+    note:'Who is <b>' + f.club + '</b>? In from ' + f.first + ' to ' + f.last + '.' };
 });
 
 // ---- THE CELLAR
@@ -498,29 +524,31 @@ add(18, () => {
   const last = s.standings[s.standings.length - 1];
   if (!last) return null;
   return { tag:'THE CELLAR', tier: s.year >= 2020 ? 2 : 3,
-    q:'Dead last in ' + s.year + ' at ' + last.wins + '-' + last.losses + ', ' + last.pf + ' points scored.',
+    q:'In ' + s.year + ' this club finished dead last at ' + last.wins + '-' + last.losses +
+      ', scoring ' + num(last.pf) + '.',
     answer:last.club, options:[last.club, ...decoys(last.club, s.clubs, 3)],
     note:'Who is <b>' + last.club + '</b>? Bottom of the league in ' + s.year + worn(last.club, s.year) + '.' };
 });
 
-// ---- BRIDESMAIDS: all the wins, none of the hardware
+// ---- ALWAYS A BRIDESMAID
 add(10, () => {
   const rows = IX.allTime.filter(x => x.titles === 0 && x.numSeasons >= 10);
   if (rows.length < 4) return null;
   const r = pick(rows);
-  return { tag:'BRIDESMAIDS', tier:2,
-    q:r.numSeasons + ' seasons, ' + r.record + ', ' + r.playoffs + ' trips to the playoffs, and not one title.',
+  return { tag:'ALWAYS A BRIDESMAID', tier:2,
+    q:r.numSeasons + ' seasons, ' + r.record + ', ' + r.playoffs +
+      ' trips to the playoffs, and this club still has no title.',
     answer:r.club, options:[r.club, ...decoys(r.club, rows.map(x => x.club), 3)],
     note:'Who is <b>' + r.club + '</b>? Still waiting after ' + r.numSeasons + ' seasons.' };
 });
 
-// ---- BRIDESMAIDS: lost the big one most
+// ---- ALWAYS A BRIDESMAID: lost the big one most
 add(6, () => {
   const rows = IX.allTime.filter(x => x.runnerUps >= 1).sort((a, b) => b.runnerUps - a.runnerUps);
   if (rows.length < 4) return null;
   const r = rows[0];
-  return { tag:'BRIDESMAIDS', tier:2,
-    q:'Nobody has lost the final more often than this club. ' + r.runnerUps + ' times.',
+  return { tag:'ALWAYS A BRIDESMAID', tier:2,
+    q:'No club has lost the final more often than this one. ' + r.runnerUps + ' times.',
     answer:r.club, options:[r.club, ...decoys(r.club, rows.map(x => x.club), 3)],
     note:'Who is <b>' + r.club + '</b>? ' + r.runnerUps + ' runner-up finishes against ' +
          r.titles + (r.titles === 1 ? ' title' : ' titles') + '.' };
@@ -534,36 +562,51 @@ add(18, () => {
   if (!best) return null;
   const who = best.hs > best.as ? best.home : best.away;
   return { tag:'PUT IT ON THE BOARD', tier:3,
-    q:best.top + ' points in week ' + best.week + ' of ' + s.year + '. Nobody had a bigger week that season.',
+    q:'In week ' + best.week + ' of ' + s.year + ' this club hung ' + best.top +
+      ', and nobody had a bigger week all season.',
     answer:who, options:[who, ...decoys(who, s.clubs, 3)],
     note:'Who is <b>' + who + '</b>? ' + best.top + ' in week ' + best.week + ', ' + s.year +
          worn(who, s.year) + '.' };
 });
 
-// ---- THE BEATDOWN
+// ---- BLOWN OUT
 add(18, () => {
   const s = pick(IX.seasons);
   let worst = null;
   for (const g of s.games) if (g.winner && (!worst || g.margin > worst.margin)) worst = g;
   if (!worst) return null;
-  return { tag:'THE BEATDOWN', tier:3,
-    q:'They lost by ' + worst.margin + ' in week ' + worst.week + ' of ' + s.year + ', the worst hiding of the season.',
+  return { tag:'BLOWN OUT', tier:3,
+    q:'In week ' + worst.week + ' of ' + s.year + ' this club lost by ' + worst.margin +
+      ', the worst hiding of the season.',
     answer:worst.loser, options:[worst.loser, ...decoys(worst.loser, s.clubs, 3)],
     note:'Who is <b>' + worst.loser + '</b>? ' + worst.winner + ' beat them ' +
          Math.max(worst.hs, worst.as) + '-' + Math.min(worst.hs, worst.as) +
          ' in week ' + worst.week + ', ' + s.year + '.' };
 });
 
-// ---- HEAD TO HEAD: who owns who
+// ---- THEY OWN YOU
 add(20, () => {
   if (IX.h2h.length < 4) return null;
   const r = pick(IX.h2h);
   const up = r.aw > r.bw ? r.a : r.b, down = r.aw > r.bw ? r.b : r.a;
   const w = Math.max(r.aw, r.bw), l = Math.min(r.aw, r.bw);
-  return { tag:'HEAD TO HEAD', tier:2,
-    q:'This club owns ' + down + ': ' + w + '-' + l + ' against them since 2008.',
+  return { tag:'THEY OWN YOU', tier:2,
+    q:'Since 2008 this club is ' + w + '-' + l + ' against ' + down + '.',
     answer:up, options:[up, ...decoys(up, IX.list.filter(x => x !== down), 3)],
     note:'Who is <b>' + up + '</b>? ' + w + '-' + l + ' over ' + down + ' across ' + r.n + ' meetings.' };
+});
+
+// ---- BY THE NUMBERS: the bare stat line, the way the show does team records
+add(18, () => {
+  const s = pick(IX.seasons);
+  const row = pick(s.standings.filter(x => x.rank <= 4 || x.rank >= 13));
+  if (!row) return null;
+  return { tag:'BY THE NUMBERS', tier:3,
+    q:s.year + ': ' + row.wins + '-' + row.losses + ', ' + num(row.pf) + ' for, ' +
+      num(row.pa) + ' against, ' + ordinal(row.rank) + ' place.',
+    answer:row.club, options:[row.club, ...decoys(row.club, s.clubs, 3)],
+    note:'Who is <b>' + row.club + '</b>? ' + ordinal(row.rank) + ' in ' + s.year +
+         worn(row.club, s.year) + '.' };
 });
 
 // ---- DRAFT DAY: who made the pick
@@ -585,7 +628,7 @@ add(60, () => {
   const others = IX.picks.filter(x => x.year === p.year && x.player !== p.player).map(x => x.player);
   if (others.length < 3) return null;
   return { tag:'DRAFT DAY', tier:3,
-    q:p.club + ' spent the ' + ordinal(p.pick) + ' pick of ' + p.year + ' on this player.',
+    q:'In ' + p.year + ' ' + p.club + ' spent the ' + ordinal(p.pick) + ' pick on this player.',
     answer:p.player, options:[p.player, ...decoys(p.player, others, 3)],
     note:'What is <b>' + p.player + '</b>? Pick ' + p.pick + ', ' + p.year + ', to ' + p.club + '.' };
 });
@@ -597,12 +640,12 @@ add(120, () => {
   const t = pick(recent);
   const star = t.players[0];
   return { tag:'THE TRADE DESK', tier:3,
-    q:'In ' + t.year + ' this club sent ' + star + ' to ' + t.to + '.',
+    q:'In ' + t.year + ' this club shipped ' + star + ' off to ' + t.to + '.',
     answer:t.from, options:[t.from, ...decoys(t.from, IX.list.filter(x => x !== t.to), 3)],
     note:'Who is <b>' + t.from + '</b>? ' + star + ' went to ' + t.to + ' in ' + t.year + '.' };
 });
 
-// ---- THE PAPER SAYS: best and worst of a season
+// ---- THE PAPER SAYS
 add(60, () => {
   const S = IX.supers.filter(s => +s.year >= 2016);
   if (S.length < 4) return null;
@@ -615,20 +658,21 @@ add(60, () => {
   if (!c) return null;
   const label = { draft:'their draft', manager:'managing', coach:'setting a lineup' }[what];
   return { tag:'THE PAPER SAYS', tier:3,
-    q:'The record book graded this club ' + (side === 'best' ? 'first' : 'dead last') +
-      ' in the league for ' + label + ' in ' + s.year + '.',
+    q:'In ' + s.year + ' the record book graded this club ' + (side === 'best' ? 'first' : 'dead last') +
+      ' in the league for ' + label + '.',
     answer:c, options:[c, ...decoys(c, IX.list, 3)],
     note:'Who is <b>' + c + '</b>? ' + (side === 'best' ? 'Best' : 'Worst') + ' at ' + label +
          ' in ' + s.year + worn(c, +s.year) + '.' };
 });
 
-// ---- THE STANDINGS: top seed
+// ---- TOP OF THE TABLE
 add(18, () => {
   const s = pick(IX.seasons);
   const top = s.standings[0];
   if (!top) return null;
-  return { tag:'THE STANDINGS', tier: s.year >= 2020 ? 2 : 3,
-    q:'First in the ' + s.year + ' regular season at ' + top.wins + '-' + top.losses + ', ' + top.pf + ' points for.',
+  return { tag:'TOP OF THE TABLE', tier: s.year >= 2020 ? 2 : 3,
+    q:'In ' + s.year + ' this club topped the regular season at ' + top.wins + '-' + top.losses +
+      ' with ' + num(top.pf) + ' points for.',
     answer:top.club, options:[top.club, ...decoys(top.club, s.clubs, 3)],
     note:'Who is <b>' + top.club + '</b>? Top seed in ' + s.year + worn(top.club, s.year) +
          (s.champion === top.club ? ', and they finished the job.' : ", and they didn't finish the job.") };
