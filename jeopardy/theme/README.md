@@ -33,3 +33,38 @@ home and does not have to rewrite anything.
 
 The game does not play this. Putting it on the title screen means rebuilding it
 in Web Audio so it needs no download, which is a separate job.
+
+## The sound effects
+
+The game's five effects are synthesised in the browser — no files, no
+downloads, nothing to 404. They live in `index.html` as the `SFX` object.
+
+| effect | fires |
+|---|---|
+| `reveal` | a clue opens |
+| `right` | correct answer |
+| `wrong` | the buzzer |
+| `final` | the wager screen |
+| `done` | the final score |
+
+`scfl-sfx-demo.mp3` is a reel of all five, each played twice, normalised up so
+they can be heard on their own; in the game they sit under the music at their
+real levels (peaks 0.12–0.22).
+
+The reel is not a re-creation. `capture-sfx.mjs` points the game's own `SFX`
+functions at an `OfflineAudioContext` in the live page and renders what they
+actually produce, so the demo cannot drift from the game:
+
+    python3 -m http.server 8912          # from the repo root
+    node jeopardy/theme/capture-sfx.mjs  # writes sfx.json
+
+## The music
+
+| file | where |
+|---|---|
+| `../scfl-open.ogg` / `.mp3` | the 2:15 theme, under the cold open and looping on the title page |
+| `../scfl-final.ogg` / `.mp3` | the 30-second cue, under the final clue only |
+
+Opus is listed first in the markup and Safari falls through to the mp3, which
+is the only reason both exist. Swapping a track is a drop-in: replace the file,
+keep the name, no code changes.
