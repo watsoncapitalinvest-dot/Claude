@@ -1605,22 +1605,38 @@ function splitCSV(line){
 }
 
 /* ------------------------------------------------------------------
- * THE LEAGUE LOG — an optional endpoint every copy of the game posts to,
- * so results land in one sheet instead of on sixteen phones. Everything
+ * THE LEAGUE LOG — one shared record book every copy of the game posts to,
+ * so results land in one place instead of on sixteen phones. Everything
  * here fails quiet: with no endpoint, or no network, the game is exactly
  * the local-only game it was before.
  * ------------------------------------------------------------------ */
-const LEAGUE_DEFAULT = { url: '', key: '' };   // fill url in to connect every copy at once
+/* The league log lives in two places and the game reads both.
+ *
+ *   TOPIC  an ntfy.sh topic. Append-only, no account, works from a phone, and
+ *          every finished game is one POST. It only keeps twelve hours.
+ *   BOOK   jeopardy/league-log.json in this repo, swept out of the topic every
+ *          three hours by a scheduled job. This is the permanent record.
+ *
+ * So the board shows the book plus whatever is still on the wire, merged on id.
+ * Nothing here is required: with no network the game is the local-only game it
+ * has always been, and anything that failed to send goes up with the next game.
+ */
+const LEAGUE_TOPIC = 'scfl-jeopardy-bc308434afbdf8cc';
+const LEAGUE_BOOK  = 'league-log.json';
+const LEAGUE_DEFAULT = { topic: LEAGUE_TOPIC, book: LEAGUE_BOOK };
 
 function leagueCfg(){
+  const c = loadSt().league || {};
+  return { topic: (c.topic || LEAGUE_DEFAULT.topic || '').trim(),
+           book:  (c.book  != null ? c.book : LEAGUE_DEFAULT.book) };
+}
+function setLeague(topic, book){
   const st = loadSt();
-  const c = st.league || {};
-  return { url: (c.url || LEAGUE_DEFAULT.url || '').trim(), key: c.key || LEAGUE_DEFAULT.key || '' };
+  st.league = { topic: (topic || '').trim(), book: (book || '').trim() };
+  saveSt(st);
 }
-function setLeague(url, key){
-  const st = loadSt(); st.league = { url: (url||'').trim(), key: (key||'').trim() }; saveSt(st);
-}
-const leagueOn = () => !!leagueCfg().url;
+const leagueOn = () => !!leagueCfg().topic;
+const wireURL  = () => 'https://ntfy.sh/' + encodeURIComponent(leagueCfg().topic);
 
 /* A game that could not be sent waits here and goes up with the next one. */
 function queueGame(row){
@@ -1629,19 +1645,18 @@ function queueGame(row){
   saveSt(st);
 }
 
+/* One game, one message. text/plain keeps it a simple request, so no preflight. */
 async function pushGames(rows){
-  const cfg = leagueCfg();
-  if (!cfg.url || !rows.length) return { ok: false, offline: true };
-  const r = await fetch(cfg.url, {
-    method: 'POST', redirect: 'follow',
-    // text/plain keeps it a simple request, so there is no CORS preflight
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ key: cfg.key, games: rows }),
-  });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  const j = await r.json();
-  if (!j.ok) throw new Error(j.error || 'refused');
-  return j;
+  if (!leagueOn() || !rows.length) return { ok: false, offline: true };
+  for (const row of rows){
+    const r = await fetch(wireURL(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(row),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+  }
+  return { ok: true, sent: rows.length };
 }
 
 function rowFor(g){
@@ -1669,23 +1684,61 @@ async function flushQueue(){
   catch (_) {}
 }
 
-let LEAGUE_GAMES = null, leagueErr = '';
-async function fetchLeague(){
-  const cfg = leagueCfg();
-  if (!cfg.url) { leagueErr = 'not connected'; return null; }
-  try {
-    const r = await fetch(cfg.url + (cfg.url.includes('?') ? '&' : '?') + 't=' + Date.now(),
-                          { redirect: 'follow' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'refused');
-    LEAGUE_GAMES = j.games.map(fromRow).filter(Boolean).sort((a, b) => a.t - b.t);
-    leagueErr = '';
-    return LEAGUE_GAMES;
-  } catch (err) { leagueErr = String(err.message || err); return null; }
+/* Read the book, read the wire, merge on id. Either source may fail on its own;
+ * we only give up when both do. */
+async function readBook(){
+  const book = leagueCfg().book;
+  if (!book) return [];
+  const r = await fetch(book + '?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) throw new Error('book HTTP ' + r.status);
+  const j = await r.json();
+  return Array.isArray(j.games) ? j.games : [];
+}
+async function readWire(){
+  if (!leagueOn()) return [];
+  const r = await fetch(wireURL() + '/json?poll=1&since=all', { cache: 'no-store' });
+  if (!r.ok) throw new Error('wire HTTP ' + r.status);
+  const txt = await r.text();
+  const out = [];
+  for (const line of txt.split('\n')){
+    const s = line.trim(); if (!s) continue;
+    try {
+      const env = JSON.parse(s);
+      if (env.event !== 'message' || !env.message) continue;
+      const row = JSON.parse(env.message);
+      if (row && typeof row === 'object' && row.id) out.push(row);
+    } catch (_) {}
+  }
+  return out;
 }
 
-/* A sheet row back into the same shape the local log uses. */
+let LEAGUE_GAMES = null, leagueErr = '';
+async function fetchLeague(){
+  if (!leagueOn() && !leagueCfg().book) { leagueErr = 'not connected'; return null; }
+  const results = await Promise.allSettled([readBook(), readWire()]);
+  const rows = [], why = [];
+  results.forEach(r => r.status === 'fulfilled' ? rows.push(...r.value)
+                                                : why.push(String(r.reason && r.reason.message || r.reason)));
+  if (why.length === 2){ leagueErr = why[0]; return null; }
+  const byId = new Map();
+  for (const row of rows) if (row && row.id && !byId.has(row.id)) byId.set(row.id, row);
+  LEAGUE_GAMES = [...byId.values()].map(fromRow).filter(Boolean).sort((a, b) => a.t - b.t);
+  leagueErr = '';
+  repostMissing();
+  return LEAGUE_GAMES;
+}
+
+/* Self-healing: if one of my games is not in the league view — the harvester
+ * missed it, or the wire dropped it — put it back on the wire. */
+function repostMissing(){
+  if (!leagueOn() || !LEAGUE_GAMES) return;
+  const there = new Set(LEAGUE_GAMES.map(g => g.club + '-' + g.t));
+  const mine = (loadSt().log || []).filter(g => g.club && !there.has(g.club + '-' + g.t));
+  if (!mine.length) return;
+  pushGames(mine.slice(-20).map(rowFor)).catch(() => {});
+}
+
+/* A logged row back into the same shape the local log uses. */
 function fromRow(o){
   const id = String(o.id || ''); const cut = id.lastIndexOf('-');
   if (cut < 1) return null;
@@ -1778,7 +1831,7 @@ function paintStats(){
     }
   }
   h += '<div class="sthead">THE LOG</div>' +
-    (leagueOn() ? '<div class="stnote">This device is posting finished games to the league sheet. ' +
+    (leagueOn() ? '<div class="stnote">This device is posting finished games to the league log. ' +
                   'The LEAGUE tab shows everyone\'s.</div>' : '') +
     '<div class="stnote">One row per game. Copy it into a spreadsheet, or paste ' +
     'someone else\'s in and their games join yours — the same game pasted twice only lands once.</div>' +
@@ -1810,7 +1863,7 @@ function paintStats(){
 
 /* ------------------------------------------------------------------
  * WHERE THAT LANDS YOU — the high scores, with the game you just played
- * sitting in its place among them. Ranks against the league when the sheet
+ * sitting in its place among them. Ranks against the league when the log
  * is connected, against this device's own games when it is not.
  * ------------------------------------------------------------------ */
 const gid = g => g.club + '-' + g.t;
@@ -1870,7 +1923,7 @@ function paintRank(entry, pool, scope){
 }
 
 /* Local first so the screen is never empty, then the league table if the
-   sheet answers — the game just played may not be up there yet, so it is
+   answers — the game just played may not be up there yet, so it is
    merged in by id rather than waited for. */
 async function showRank(entry){
   const local = loadSt().log || [];
@@ -1900,7 +1953,7 @@ function rankLine(entry, place, n, scope){
 }
 
 /* ------------------------------------------------------------------
- * THE LEAGUE TAB — the sheet, everyone's games, one table.
+ * THE LEAGUE TAB — everyone's games, one table.
  * ------------------------------------------------------------------ */
 /* ------------------------------------------------------------------
  * QUESTIONS — every clue this device has served, what it was worth, and
@@ -1980,37 +2033,48 @@ function paintQuestions(){
 let connectMsg = '';
 function connectPanel(){
   const cfg = leagueCfg();
-  return '<div class="sthead">CONNECT TO THE LEAGUE SHEET</div>' +
+  const on  = leagueOn();
+  return '<div class="sthead">THE LEAGUE LOG</div>' +
     (connectMsg ? '<div class="lgmsg">' + connectMsg + '</div>' : '') +
-    '<div class="stnote">Paste the web app URL from the league sheet. Every copy of the ' +
-    'game that has it posts finished games there and reads them all back. ' +
-    'Leave it empty and the game stays on this device.</div>' +
-    '<input id="lgurl" placeholder="https://script.google.com/macros/s/…/exec" value="' +
-      (cfg.url || '').replace(/"/g,'&quot;') + '">' +
-    '<input id="lgkey" placeholder="write key (only if the sheet asks for one)" value="' +
-      (cfg.key || '').replace(/"/g,'&quot;') + '">' +
-    '<button class="btn ghost" id="lgsave" style="margin-top:9px">SAVE &amp; TEST</button>';
+    '<div class="stnote">' + (on
+      ? 'You are connected. Every game you finish goes up automatically, and the ' +
+        'board below is everybody’s. Nothing to set up and nothing to paste — ' +
+        'this is baked into the page.'
+      : 'Disconnected. Games stay on this device.') +
+    '</div>' +
+    '<div class="stnote" style="opacity:.72">The record book is kept in the SCFL ' +
+    'repository and swept from the wire every few hours, so nothing is ever lost. ' +
+    'Anyone with this page can read it — do not put anything here you would not ' +
+    'paste in the group chat.</div>' +
+    '<button class="btn ghost" id="lgsave" style="margin-top:9px">' +
+      (on ? 'REFRESH' : 'RECONNECT') + '</button>' +
+    (on ? '<button class="btn ghost" id="lgoff" style="margin-top:6px">' +
+          'GO LOCAL ONLY</button>' : '');
 }
 
 function wireConnect(){
   const save = document.getElementById('lgsave');
+  const off  = document.getElementById('lgoff');
+  if (off) off.onclick = () => {
+    setLeague('', '');
+    connectMsg = 'Disconnected. Games stay on this device.';
+    paintLeague();
+  };
   if (!save) return;
   save.onclick = async () => {
-    setLeague(document.getElementById('lgurl').value, document.getElementById('lgkey').value);
-    if (!leagueOn()){ connectMsg = 'Disconnected. Games stay on this device.'; return paintLeague(); }
+    if (!leagueOn()) setLeague(LEAGUE_DEFAULT.topic, LEAGUE_DEFAULT.book);
     save.textContent = 'CHECKING…';
     const got = await fetchLeague();
     if (!got){
-      connectMsg = 'Could not reach it — ' + leagueErr;
+      connectMsg = 'Could not reach the log — ' + leagueErr +
+                   '. Your games are safe on this device and will go up later.';
     } else {
-      // reading proves the URL; only a real send proves the write key, so
-      // push anything queued and say plainly if the sheet turned it away
       const before = (loadSt().queue || []).length;
       await flushQueue();
       const after = (loadSt().queue || []).length;
       const n = g => g + (g === 1 ? ' game' : ' games');
-      connectMsg = 'Connected. ' + n(got.length) + ' on the sheet.' +
-        (before && after ? ' Your ' + n(after) + ' would not go up — check the write key.'
+      connectMsg = 'Connected. ' + n(got.length) + ' in the league log.' +
+        (before && after ? ' Your ' + n(after) + ' would not go up — try again later.'
          : before ? ' Sent ' + n(before - after) + ' that had been waiting.'
          : '');
     }
@@ -2022,13 +2086,13 @@ async function paintLeague(){
   const el = document.getElementById('sclist');
   const q = (loadSt().queue || []).length;
   if (!leagueOn()){
-    el.innerHTML = '<div class="scempty">Not connected to a league sheet.</div>' + connectPanel();
+    el.innerHTML = '<div class="scempty">Not connected to the league log.</div>' + connectPanel();
     return wireConnect();
   }
-  el.innerHTML = '<div class="scempty">Reading the league sheet…</div>';
+  el.innerHTML = '<div class="scempty">Reading the league log…</div>';
   const games = await fetchLeague();
   if (!games){
-    el.innerHTML = '<div class="scempty">Could not reach the sheet.<br>' + leagueErr + '</div>' +
+    el.innerHTML = '<div class="scempty">Could not reach the league log.<br>' + leagueErr + '</div>' +
       (q ? '<div class="stnote">' + q + (q === 1 ? ' game is' : ' games are') +
            ' waiting to go up. They will send themselves next time it answers.</div>' : '') +
       connectPanel();
@@ -2058,7 +2122,7 @@ async function paintLeague(){
       '<span>' + money(c.best) + ' &nbsp;·&nbsp; ' + c.n + (c.n === 1 ? ' game' : ' games') +
       ' &nbsp;·&nbsp; ' + pc(c.h, c.a) + '</span></div>').join('') + '</div>';
 
-  h += '<div class="sthead">EVERY GAME ON THE SHEET</div>';
+  h += '<div class="sthead">EVERY GAME IN THE LOG</div>';
   games.slice().reverse().slice(0, 60).forEach(g => {
     const d = new Date(g.t);
     h += '<div class="scrow"><div class="rk"></div>' +
