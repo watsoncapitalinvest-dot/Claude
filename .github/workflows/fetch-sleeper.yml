@@ -1,0 +1,146 @@
+name: Fetch the Sleeper schedule
+
+# Manual only. The agent sandbox cannot reach api.sleeper.app (the egress proxy
+# blocks it), but a GitHub runner can, so the fetch happens here and the result
+# is committed back for the newsroom to use.
+#
+# Give it whatever you have: an invite code, a Sleeper username, or the league
+# id itself. It resolves in that order and stops at the first thing that works.
+
+on:
+  workflow_dispatch:
+    inputs:
+      invite:
+        description: "Sleeper invite code (the bit after /i/), optional"
+        required: false
+        default: ""
+      username:
+        description: "Sleeper username, optional"
+        required: false
+        default: ""
+      league_id:
+        description: "Sleeper league id, if you already know it"
+        required: false
+        default: ""
+      season:
+        description: "Season to pull"
+        required: false
+        default: "2026"
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull the league
+        env:
+          INVITE: ${{ inputs.invite }}
+          USERNAME: ${{ inputs.username }}
+          LEAGUE_ID: ${{ inputs.league_id }}
+          SEASON: ${{ inputs.season }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys, urllib.request, urllib.error
+
+          API = "https://api.sleeper.app/v1"
+          def get(url, quiet=False):
+              try:
+                  with urllib.request.urlopen(url, timeout=30) as r:
+                      return json.load(r)
+              except Exception as e:
+                  if not quiet: print(f"  ! {url} -> {e}")
+                  return None
+
+          invite   = os.environ.get("INVITE","").strip()
+          username = os.environ.get("USERNAME","").strip()
+          league   = os.environ.get("LEAGUE_ID","").strip()
+          season   = os.environ.get("SEASON","2026").strip()
+
+          # 1. an invite link redirects to something carrying the league id
+          if not league and invite:
+              print(f"resolving invite {invite}")
+              req = urllib.request.Request("https://sleeper.com/i/" + invite,
+                                           headers={"User-Agent":"Mozilla/5.0"})
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      final, body = r.geturl(), r.read(200000).decode("utf-8","replace")
+                  print("  landed on", final)
+                  import re
+                  for m in re.findall(r"(?:league[_/]?id\"?[:=]\"?|leagues/)(\d{15,20})", final + body):
+                      league = m; print("  found league id", league); break
+              except Exception as e:
+                  print("  ! invite did not resolve:", e)
+
+          # 2. a username gives a user id, which lists their leagues
+          if not league and username:
+              u = get(f"{API}/user/{username}")
+              if u and u.get("user_id"):
+                  ls = get(f"{API}/user/{u['user_id']}/leagues/nfl/{season}") or []
+                  print(f"  {username} is in {len(ls)} leagues in {season}:")
+                  for l in ls: print(f"    {l['league_id']}  {l['name']}  ({l.get('total_rosters')} teams)")
+                  scfl = [l for l in ls if "scfl" in (l["name"] or "").lower()
+                          or "skirt" in (l["name"] or "").lower()]
+                  if len(ls) == 1: league = ls[0]["league_id"]
+                  elif scfl: league = scfl[0]["league_id"]
+
+          if not league:
+              print("\nNo league id. Re-run with a username or the league id itself.")
+              sys.exit(1)
+
+          info = get(f"{API}/league/{league}")
+          if not info:
+              print("league id did not resolve"); sys.exit(1)
+          print(f"\nleague: {info['name']}  season {info['season']}  "
+                f"{info.get('total_rosters')} teams  status {info.get('status')}")
+
+          users   = get(f"{API}/league/{league}/users") or []
+          rosters = get(f"{API}/league/{league}/rosters") or []
+          uname   = {u["user_id"]: (u.get("metadata",{}) or {}).get("team_name") or u.get("display_name")
+                     for u in users}
+          team    = {r["roster_id"]: uname.get(r.get("owner_id"), f"roster {r['roster_id']}")
+                     for r in rosters}
+
+          settings = info.get("settings") or {}
+          last = int(settings.get("playoff_week_start") or 15) - 1
+          weeks = {}
+          for w in range(1, max(last, 1) + 1):
+              ms = get(f"{API}/league/{league}/matchups/{w}", quiet=True) or []
+              pairs, seen = [], {}
+              for m in ms:
+                  mid = m.get("matchup_id")
+                  if mid is None: continue
+                  seen.setdefault(mid, []).append(m["roster_id"])
+              for mid, ids in sorted(seen.items()):
+                  if len(ids) == 2:
+                      pairs.append({"matchup_id": mid,
+                                    "home": team.get(ids[0]), "away": team.get(ids[1]),
+                                    "home_roster": ids[0], "away_roster": ids[1]})
+              if pairs: weeks[str(w)] = pairs
+              print(f"  week {w:2d}: {len(pairs)} games")
+
+          out = {
+            "league_id": league, "name": info["name"], "season": info["season"],
+            "total_rosters": info.get("total_rosters"),
+            "playoff_week_start": settings.get("playoff_week_start"),
+            "scoring": info.get("scoring_settings"),
+            "roster_positions": info.get("roster_positions"),
+            "teams": team, "weeks": weeks,
+            "fetchedAt": __import__("time").strftime("%Y-%m-%dT%H:%M:%SZ"),
+          }
+          with open("sleeper-schedule.json","w") as f: json.dump(out, f, indent=1)
+          print(f"\nwrote sleeper-schedule.json: {len(weeks)} weeks, {len(team)} teams")
+          PY
+
+      - name: Commit it
+        run: |
+          if [ -f sleeper-schedule.json ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add sleeper-schedule.json
+            git diff --staged --quiet || git commit -m "Sleeper schedule pull ($(date -u +%F))"
+            git push
+          fi
