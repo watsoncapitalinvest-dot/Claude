@@ -90,7 +90,7 @@
   <header>
     <div class="net">S C F L &nbsp;N E T W O R K</div>
     <h1>SCFL JEOPARDY</h1>
-    <div class="tagline" id="datel">—</div>
+    <div class="tagline" id="datel">four categories &nbsp;·&nbsp; sixteen clues &nbsp;·&nbsp; one wager</div>
   </header>
   <div class="stage">
     <div class="harry"><img id="harry" alt="Harry Doyle"></div>
@@ -118,7 +118,8 @@
       <div class="verdict" id="verdict"></div>
       <div class="grid" id="grid"></div>
     </div>
-    <button class="btn" id="share">COPY RESULT</button>
+    <button class="btn" id="again">NEW BOARD</button>
+    <button class="btn ghost" id="share" style="margin-top:9px">COPY RESULT</button>
     <div class="foot" id="foot"></div>
   </div>
 </div>
@@ -139,12 +140,9 @@ function mulberry(a){
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
 }
-const todayKey = () => {
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-};
-
-let RNG = mulberry(hash(todayKey()));
+/* Every game deals a new board. Nothing is pinned to the calendar. */
+let RNG = mulberry((Math.random() * 4294967296) >>> 0);
+const reseed = () => { RNG = mulberry((Math.random() * 4294967296) >>> 0); };
 const rint = n => Math.floor(RNG() * n);
 const pick = a => a[rint(a.length)];
 const shuffle = a => { const c = a.slice(); for (let i = c.length-1; i > 0; i--){ const j = rint(i+1); [c[i],c[j]] = [c[j],c[i]]; } return c; };
@@ -628,6 +626,7 @@ function startFinal(){
                                           : ' You have nothing to play with, which simplifies things.'));
   document.getElementById('allin').onclick = () => { bet.value = String(cap); };
   document.getElementById('lock').onclick = () => {
+    if (!finalQ) return finish();     // handler outlives the game that bound it
     let v = parseInt(bet.value, 10);
     if (isNaN(v) || v < 0) v = 0;
     finalBet = Math.min(v, cap);
@@ -637,6 +636,7 @@ function startFinal(){
 }
 
 function askFinal(){
+  if (!finalQ) return finish();
   document.getElementById('clue').classList.add('on');
   document.getElementById('ctag').innerHTML = 'FINAL CLUE &nbsp;·&nbsp; <span class="val">$' + finalBet + ' at risk</span>';
   document.getElementById('q').textContent = finalQ.q;
@@ -683,14 +683,11 @@ function finish(){
   document.getElementById('clue').classList.remove('on');
   document.getElementById('boardWrap').classList.add('hide');
   document.getElementById('done').classList.remove('hide');
-  const day = todayKey();
   const st = loadSt();
-  if (st.lastDay !== day){
-    st.lastDay = day;
-    st.played = (st.played || 0) + 1;
-    st.best = Math.max(st.best || 0, bank);
-    saveSt(st);
-  }
+  st.games = (st.games || 0) + 1;
+  st.best = Math.max(st.best == null ? -1e9 : st.best, bank);
+  saveSt(st);
+
   document.getElementById('score').textContent = (bank < 0 ? '-$' : '$') + Math.abs(bank);
   document.getElementById('score').style.color = bank > 0 ? 'var(--money)' : 'var(--red)';
   const hits = marks.filter(Boolean).length;
@@ -701,16 +698,33 @@ function finish(){
     : 'Commissioner material.';
   document.getElementById('grid').textContent = marks.map(m => m ? '🟩' : '🟥').join('');
   document.getElementById('foot').innerHTML =
-    'a new board every day &nbsp;·&nbsp; best ' + ((st.best||bank) < 0 ? '-$' : '$') + Math.abs(st.best||bank) +
+    'best ' + (st.best < 0 ? '-$' : '$') + Math.abs(st.best) +
+    ' &nbsp;·&nbsp; ' + st.games + (st.games === 1 ? ' game' : ' games') + ' played' +
     '<br>drawn from 21 seasons of the record book';
   say(bank <= 0 ? 'wrong' : 'toast', pick(bank <= 0 ? LINES.bust : LINES.end));
+
   document.getElementById('share').onclick = async () => {
-    const txt = 'SCFL Jeopardy · ' + day + '\n' + marks.map(m => m ? '🟩' : '🟥').join('') +
+    const txt = 'SCFL Jeopardy\n' + marks.map(m => m ? '🟩' : '🟥').join('') +
                 '  ' + (bank < 0 ? '-$' : '$') + Math.abs(bank) + '  (' + hits + '/' + marks.length + ')';
     try { await navigator.clipboard.writeText(txt);
           document.getElementById('share').textContent = 'COPIED — PASTE IT IN THE CHAT'; }
     catch (_) { document.getElementById('share').textContent = txt; }
   };
+  document.getElementById('again').onclick = newGame;
+}
+
+/* Deal a completely new board. */
+function newGame(){
+  reseed();
+  bank = 0; marks = []; openCell = null; finalQ = null; finalBet = 0;
+  BOARD = buildBoard();
+  if (!BOARD.length){ document.getElementById('load').textContent = 'THE RECORD BOOK IS MISSING'; return; }
+  ['done','finalWrap'].forEach(id => document.getElementById(id).classList.add('hide'));
+  document.getElementById('clue').classList.remove('on');
+  document.getElementById('share').textContent = 'COPY RESULT';
+  document.getElementById('boardWrap').classList.remove('hide');
+  renderBoard();
+  say('idle', pick(LINES.open));
 }
 
 (async function boot(){
@@ -721,9 +735,6 @@ function finish(){
   ]);
   buildIndex();
   for (const [k, uri] of Object.entries(typeof HARRY_ART !== 'undefined' ? HARRY_ART : {})) HARRY[k] = uri;
-  const d = new Date();
-  document.getElementById('datel').textContent =
-    d.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
   BOARD = buildBoard();
   if (!BOARD.length){ document.getElementById('load').textContent = 'THE RECORD BOOK IS MISSING'; return; }
   document.getElementById('load').classList.add('hide');
