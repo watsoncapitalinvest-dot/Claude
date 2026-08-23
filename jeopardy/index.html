@@ -341,245 +341,299 @@ async function grab(name, key){
 }
 
 /* ------------------------------------------------------------------
- * INDEX — flatten the record book into things we can ask about.
- * Team ids are season-scoped, so every lookup goes through that
- * season's own roster. Champions are stored as owner handles, so they
- * are resolved back to the team name people actually recognise.
+ * THE RECORD BOOK, RESOLVED
+ * Owners change ESPN handles and rename the team most years, so the raw
+ * data has one man showing up as seven clubs. scfl-franchises.json maps
+ * every handle and every name anyone has ever used onto one franchise, so
+ * a clue about 2012 and a clue about 2025 mean the same guy, and a wrong
+ * answer is never the right answer wearing last year's name.
  * ------------------------------------------------------------------ */
-const IX = { seasons:[], allTime:[], trades:[], picks:[], grades:[] };
+const IX = { seasons:[], fr:{}, look:{}, list:[], allTime:[], trades:[], picks:[], h2h:[], supers:[] };
+
+const norm = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const clubKey = name => IX.look[norm(name)] || null;
+const club = name => { const k = clubKey(name); return k ? IX.fr[k].club : null; };
 
 function buildIndex(){
-  const H = D.history, R = D.records, T = D.trades, DR = D.drafts, G = D.grades;
+  const H = D.history, R = D.records, T = D.trades, DR = D.drafts, F = D.franchises;
+  if (!F || !F.franchises) return;
+
+  for (const f of F.franchises) IX.fr[f.key] = f;
+  IX.look = F.lookup || {};
+  // clubs anyone in the chat would recognise; the 2005-07 one-offs stay in
+  // the lookup so old rows resolve, but they never appear as a wrong answer
+  IX.list = F.franchises.filter(f => (f.last || 0) >= 2008).map(f => f.club);
 
   if (H && H.seasons) for (const s of H.seasons){
-    const names = {}; const owners = {};
-    for (const t of s.teams){ names[t.id] = (t.name || '').trim(); owners[t.id] = (t.owner || '').trim(); }
-    let champTeam = null;
-    for (const t of s.teams) if (t.owner === s.champion) champTeam = (t.name || '').trim();
-    const standings = (s.standings || []).map(x => Object.assign({}, x, { team: names[x.teamId] }))
-                                         .filter(x => x.team);
-    const games = (s.matchups || []).map(m => Object.assign({}, m, {
-      homeTeam: names[m.home], awayTeam: names[m.away],
-      winner: m.homeScore === m.awayScore ? null : (m.homeScore > m.awayScore ? names[m.home] : names[m.away]),
+    const byId = {};
+    for (const t of s.teams) byId[t.id] = club(t.name) || (t.name || '').trim();
+    const ct = s.teams.find(t => t.owner === s.champion);
+    const standings = (s.standings || [])
+      .map(x => Object.assign({}, x, { club: byId[x.teamId] })).filter(x => x.club)
+      .sort((a, b) => a.rank - b.rank);
+    const games = (s.matchups || []).map(m => ({
+      week:m.week, playoff:!!m.playoff,
+      home:byId[m.home], away:byId[m.away], hs:m.homeScore, as:m.awayScore,
+      winner: m.homeScore === m.awayScore ? null : (m.homeScore > m.awayScore ? byId[m.home] : byId[m.away]),
+      loser:  m.homeScore === m.awayScore ? null : (m.homeScore > m.awayScore ? byId[m.away] : byId[m.home]),
       top: Math.max(m.homeScore, m.awayScore),
-    })).filter(m => m.homeTeam && m.awayTeam);
-    IX.seasons.push({ year:s.year, champion:champTeam, championOwner:s.champion,
-                      teams:Object.values(names).filter(Boolean), standings, games });
+      margin: Math.abs(m.homeScore - m.awayScore),
+    })).filter(m => m.home && m.away);
+    IX.seasons.push({ year:s.year, champion: ct ? club(ct.name) : null,
+                      clubs:[...new Set(Object.values(byId))].filter(Boolean), standings, games });
   }
 
-  if (R && R.standings) IX.allTime = R.standings.filter(x => x.numSeasons >= 3);
+  // one all-time series clue beats 2,344 coin flips on a week nobody remembers
+  const pair = new Map();
+  for (const s of IX.seasons) for (const g of s.games){
+    if (!g.winner) continue;
+    const [a, b] = [g.home, g.away].sort();
+    const r = pair.get(a + '|' + b) || { a, b, aw:0, bw:0, n:0 };
+    r.n++; if (g.winner === a) r.aw++; else r.bw++;
+    pair.set(a + '|' + b, r);
+  }
+  // a 9-7 series is a coin flip nobody remembers; a 14-4 is a running joke
+  IX.h2h = [...pair.values()].filter(r => {
+    const w = Math.max(r.aw, r.bw);
+    return r.n >= 12 && w / r.n >= 0.66;
+  });
+
+  if (R && R.standings) IX.allTime = R.standings
+    .map(x => Object.assign({}, x, { club: club(x.name) }))
+    .filter(x => x.club && x.numSeasons >= 4);
+  if (R && R.superlatives) IX.supers = R.superlatives;
 
   if (T && T.trades) for (const tr of T.trades){
     if (!tr.sides || tr.sides.length !== 2) continue;
     for (let i = 0; i < 2; i++){
       const got = (tr.sides[i].gets || []).filter(a => a.player).map(a => a.player);
-      if (got.length) IX.trades.push({ year:tr.season, team:(tr.sides[i].team||'').trim(),
-                                       from:(tr.sides[1-i].team||'').trim(), players:got });
+      const to = club(tr.sides[i].team), from = club(tr.sides[1-i].team);
+      if (got.length && to && from && to !== from)
+        IX.trades.push({ year:+tr.season, to, from, players:got });
     }
   }
-
   if (DR && DR.years) for (const [y, list] of Object.entries(DR.years))
-    for (const p of list) if (p.player && p.team)
-      IX.picks.push({ year:+y, pick:p.pick, round:p.round, team:p.team.trim(), player:p.player.trim() });
-
-  if (G && G.years) for (const [y, list] of Object.entries(G.years))
-    for (const g of list) if (g.grade && g.team) IX.grades.push({ year:+y, team:g.team.trim(), grade:g.grade.trim() });
+    for (const p of list){
+      const c = club(p.team);
+      if (p.player && c) IX.picks.push({ year:+y, pick:p.pick, round:p.round, club:c, player:p.player.trim() });
+    }
 }
 
-/* --- helpers for building plausible wrong answers --- */
+/* --- wrong answers: other franchises, drawn from the same era --- */
 function decoys(right, universe, n){
   const pool = [...new Set(universe)].filter(x => x && x !== right);
   const out = [];
   while (out.length < n && pool.length) out.push(pool.splice(rint(pool.length), 1)[0]);
   return out;
 }
-const teamUniverse = () => {
-  const all = [];
-  for (const s of IX.seasons) all.push(...s.teams);
-  return all;
-};
-const ordinal = n => {
-  const suf = ['th','st','nd','rd'], v = n % 100;
-  return n + (suf[(v - 20) % 10] || suf[v] || suf[0]);
-};
+const ordinal = n => { const s = ['th','st','nd','rd'], v = n % 100; return n + (s[(v-20)%10] || s[v] || s[0]); };
+
+/* the name that club was actually wearing that season, when it differs */
+function wore(clubName, year){
+  const k = clubKey(clubName), H = D.history;
+  if (!k || !H) return null;
+  const s = H.seasons.find(x => x.year === year); if (!s) return null;
+  const t = s.teams.find(t => clubKey(t.name) === k); if (!t) return null;
+  const nm = (t.name || '').replace(/\s+/g, ' ').replace(/\*/g, '').trim();
+  return norm(nm) === norm(clubName) ? null : nm;
+}
+const worn = (c, y) => { const w = wore(c, y); return w ? ', then playing as <b>' + w + '</b>' : ''; };
 
 /* ------------------------------------------------------------------
- * QUESTION GENERATORS
- * Each returns { tag, q, answer, options, note, tier }
- * tier 1 = most people know it, 3 = only a sicko knows it
+ * THE CLUES
+ * Written the way the show writes them: a statement carrying enough to be
+ * worked out, not a lookup. Each returns { tag, q, answer, options, note,
+ * tier }. tier 1 = anybody in the chat knows it, 3 = you had to be there.
  * ------------------------------------------------------------------ */
 const GEN = [];
 const add = (pool, fn) => GEN.push(Object.assign(fn, { pool }));
 
-// who took the title
+// ---- DYNASTY: who took it home
 add(18, () => {
-  const s = pick(IX.seasons.filter(x => x.champion && x.teams.length > 3));
-  if (!s) return null;
-  return { tier: s.year >= 2021 ? 1 : 2, tag:'CHAMPIONS',
-    q:`Who won the SCFL title in ${s.year}?`,
-    answer:s.champion, options:[s.champion, ...decoys(s.champion, s.teams, 3)],
-    note:`<b>${s.champion}</b> took the ${s.year} title.` };
+  const s = pick(IX.seasons);
+  if (!s.champion) return null;
+  const st = s.standings.find(x => x.club === s.champion);
+  return { tag:'DYNASTY', tier: s.year >= 2020 ? 1 : 2,
+    q:'They went ' + (st ? st.wins + '-' + st.losses : 'the distance') + ' and took the ' + s.year + ' title.',
+    answer:s.champion, options:[s.champion, ...decoys(s.champion, s.clubs, 3)],
+    note:'Who is <b>' + s.champion + '</b>? Champions in ' + s.year + worn(s.champion, s.year) + '.' };
 });
 
-// best record in a season
-add(18, () => {
-  const s = pick(IX.seasons.filter(x => x.standings.length > 5));
-  if (!s) return null;
-  const top = s.standings.slice().sort((a,b) => a.rank - b.rank)[0];
-  if (!top) return null;
-  return { tier:2, tag:'REGULAR SEASON',
-    q:`Who finished first in the ${s.year} regular season?`,
-    answer:top.team, options:[top.team, ...decoys(top.team, s.teams, 3)],
-    note:`<b>${top.team}</b> finished ${top.wins}-${top.losses} with ${Math.round(top.pf)} points for.` };
+// ---- DYNASTY: the trophy count
+add(12, () => {
+  const rows = IX.allTime.filter(x => x.titles > 0);
+  if (rows.length < 4) return null;
+  const r = pick(rows);
+  const t = r.titles === 1 ? 'title' : 'titles';
+  return { tag:'DYNASTY', tier:2,
+    q:r.titles + ' ' + t + ' in ' + r.numSeasons + ' seasons, on a ' + r.record + ' record.',
+    answer:r.club, options:[r.club, ...decoys(r.club, IX.allTime.map(x => x.club), 3)],
+    note:'Who is <b>' + r.club + '</b>? ' + r.titles + ' ' + t + ', ' + r.runnerUps +
+         ' runner-up finishes, ' + r.record + ' all time.' };
 });
 
-// the cellar
+// ---- WHAT'S IN A NAME: the costumes they have worn
+add(14, () => {
+  // 'Beaver Eaters' is not a disguise for 'The Beaver Eaters' — drop anything
+  // that contains, or is contained by, the club's real name
+  const far = f => f.aliases.filter(x => {
+    const a = norm(x), c = norm(f.club);
+    return a && !a.includes(c) && !c.includes(a);
+  });
+  const cands = Object.values(IX.fr).filter(f => far(f).length >= 2);
+  if (cands.length < 4) return null;
+  const f = pick(cands);
+  const alt = shuffle(far(f)).slice(0, 3);
+  return { tag:"WHAT'S IN A NAME", tier:2,
+    q:alt.join('. ') + '. Same guy, different hat.',
+    answer:f.club, options:[f.club, ...decoys(f.club, IX.list, 3)],
+    note:'Who is <b>' + f.club + '</b>? ' +
+         (f.manager && norm(f.manager) !== norm(f.club) ? f.manager + ' has' : 'They have') +
+         ' run it under ' + f.aliases.length + ' names.' };
+});
+
+// ---- THE CELLAR
 add(18, () => {
-  const s = pick(IX.seasons.filter(x => x.standings.length > 5));
-  if (!s) return null;
-  const last = s.standings.slice().sort((a,b) => b.rank - a.rank)[0];
+  const s = pick(IX.seasons);
+  const last = s.standings[s.standings.length - 1];
   if (!last) return null;
-  return { tier:3, tag:'THE CELLAR',
-    q:`Who finished dead last in ${s.year}?`,
-    answer:last.team, options:[last.team, ...decoys(last.team, s.teams, 3)],
-    note:`<b>${last.team}</b> came ${ordinal(last.rank)} at ${last.wins}-${last.losses}.` };
+  return { tag:'THE CELLAR', tier: s.year >= 2020 ? 2 : 3,
+    q:'Dead last in ' + s.year + ' at ' + last.wins + '-' + last.losses + ', ' + last.pf + ' points scored.',
+    answer:last.club, options:[last.club, ...decoys(last.club, s.clubs, 3)],
+    note:'Who is <b>' + last.club + '</b>? Bottom of the league in ' + s.year + worn(last.club, s.year) + '.' };
 });
 
-// highest single score of a season
+// ---- BRIDESMAIDS: all the wins, none of the hardware
+add(10, () => {
+  const rows = IX.allTime.filter(x => x.titles === 0 && x.numSeasons >= 10);
+  if (rows.length < 4) return null;
+  const r = pick(rows);
+  return { tag:'BRIDESMAIDS', tier:2,
+    q:r.numSeasons + ' seasons, ' + r.record + ', ' + r.playoffs + ' trips to the playoffs, and not one title.',
+    answer:r.club, options:[r.club, ...decoys(r.club, rows.map(x => x.club), 3)],
+    note:'Who is <b>' + r.club + '</b>? Still waiting after ' + r.numSeasons + ' seasons.' };
+});
+
+// ---- BRIDESMAIDS: lost the big one most
+add(6, () => {
+  const rows = IX.allTime.filter(x => x.runnerUps >= 1).sort((a, b) => b.runnerUps - a.runnerUps);
+  if (rows.length < 4) return null;
+  const r = rows[0];
+  return { tag:'BRIDESMAIDS', tier:2,
+    q:'Nobody has lost the final more often than this club. ' + r.runnerUps + ' times.',
+    answer:r.club, options:[r.club, ...decoys(r.club, rows.map(x => x.club), 3)],
+    note:'Who is <b>' + r.club + '</b>? ' + r.runnerUps + ' runner-up finishes against ' +
+         r.titles + (r.titles === 1 ? ' title' : ' titles') + '.' };
+});
+
+// ---- PUT IT ON THE BOARD
 add(18, () => {
-  const s = pick(IX.seasons.filter(x => x.games.length > 10));
-  if (!s) return null;
-  const g = s.games.slice().sort((a,b) => b.top - a.top)[0];
-  const who = g.homeScore > g.awayScore ? g.homeTeam : g.awayTeam;
-  return { tier:3, tag:'BIGGEST WEEK',
-    q:`Who put up the highest single-week score of ${s.year}?`,
-    answer:who, options:[who, ...decoys(who, s.teams, 3)],
-    note:`<b>${who}</b> hung <b>${g.top}</b> in week ${g.week} of ${s.year}.` };
+  const s = pick(IX.seasons);
+  let best = null;
+  for (const g of s.games) if (!best || g.top > best.top) best = g;
+  if (!best) return null;
+  const who = best.hs > best.as ? best.home : best.away;
+  return { tag:'PUT IT ON THE BOARD', tier:3,
+    q:best.top + ' points in week ' + best.week + ' of ' + s.year + '. Nobody had a bigger week that season.',
+    answer:who, options:[who, ...decoys(who, s.clubs, 3)],
+    note:'Who is <b>' + who + '</b>? ' + best.top + ' in week ' + best.week + ', ' + s.year +
+         worn(who, s.year) + '.' };
 });
 
-// head to head result
-add(2344, () => {
-  const s = pick(IX.seasons.filter(x => x.games.length > 10));
-  if (!s) return null;
-  const g = pick(s.games.filter(x => x.winner));
-  if (!g) return null;
-  const other = g.winner === g.homeTeam ? g.awayTeam : g.homeTeam;
-  return { tier:3, tag:'HEAD TO HEAD',
-    q:`Week ${g.week}, ${s.year}: ${g.homeTeam} vs ${g.awayTeam}. Who won?`,
-    answer:g.winner, options:shuffle([g.winner, other]),
-    note:`<b>${g.winner}</b> won it ${Math.max(g.homeScore,g.awayScore)}–${Math.min(g.homeScore,g.awayScore)}.` };
+// ---- THE BEATDOWN
+add(18, () => {
+  const s = pick(IX.seasons);
+  let worst = null;
+  for (const g of s.games) if (g.winner && (!worst || g.margin > worst.margin)) worst = g;
+  if (!worst) return null;
+  return { tag:'THE BEATDOWN', tier:3,
+    q:'They lost by ' + worst.margin + ' in week ' + worst.week + ' of ' + s.year + ', the worst hiding of the season.',
+    answer:worst.loser, options:[worst.loser, ...decoys(worst.loser, s.clubs, 3)],
+    note:'Who is <b>' + worst.loser + '</b>? ' + worst.winner + ' beat them ' +
+         Math.max(worst.hs, worst.as) + '-' + Math.min(worst.hs, worst.as) +
+         ' in week ' + worst.week + ', ' + s.year + '.' };
 });
 
-// all-time crowns
-add(1, () => {
-  if (IX.allTime.length < 4) return null;
-  const top = IX.allTime.slice().sort((a,b) => b.titles - a.titles)[0];
-  return { tier:1, tag:'ALL TIME',
-    q:'Which club has won the most SCFL titles?',
-    answer:top.name, options:[top.name, ...decoys(top.name, IX.allTime.map(x => x.name), 3)],
-    note:`<b>${top.name}</b> — ${top.titles} titles across ${top.numSeasons} seasons.` };
+// ---- HEAD TO HEAD: who owns who
+add(20, () => {
+  if (IX.h2h.length < 4) return null;
+  const r = pick(IX.h2h);
+  const up = r.aw > r.bw ? r.a : r.b, down = r.aw > r.bw ? r.b : r.a;
+  const w = Math.max(r.aw, r.bw), l = Math.min(r.aw, r.bw);
+  return { tag:'HEAD TO HEAD', tier:2,
+    q:'This club owns ' + down + ': ' + w + '-' + l + ' against them since 2008.',
+    answer:up, options:[up, ...decoys(up, IX.list.filter(x => x !== down), 3)],
+    note:'Who is <b>' + up + '</b>? ' + w + '-' + l + ' over ' + down + ' across ' + r.n + ' meetings.' };
 });
 
-// perennial bridesmaid
-add(1, () => {
-  if (IX.allTime.length < 4) return null;
-  const top = IX.allTime.slice().sort((a,b) => (b.runnerUps||0) - (a.runnerUps||0))[0];
-  if (!top.runnerUps) return null;
-  return { tier:2, tag:'ALL TIME',
-    q:'Which club has finished runner-up the most times?',
-    answer:top.name, options:[top.name, ...decoys(top.name, IX.allTime.map(x => x.name), 3)],
-    note:`<b>${top.name}</b> — ${top.runnerUps} runner-up finishes, and ${top.titles} titles.` };
+// ---- DRAFT DAY: who made the pick
+add(80, () => {
+  const early = IX.picks.filter(p => p.pick <= 12 && p.year >= 2021);
+  if (early.length < 8) return null;
+  const p = pick(early);
+  return { tag:'DRAFT DAY', tier: p.pick <= 5 ? 2 : 3,
+    q:'With the ' + ordinal(p.pick) + ' pick of the ' + p.year + ' draft, this club took ' + p.player + '.',
+    answer:p.club, options:[p.club, ...decoys(p.club, IX.picks.filter(x => x.year === p.year).map(x => x.club), 3)],
+    note:'Who is <b>' + p.club + '</b>? ' + p.player + ', pick ' + p.pick + ' in ' + p.year + '.' };
 });
 
-// best win rate
-add(1, () => {
-  if (IX.allTime.length < 4) return null;
-  const top = IX.allTime.slice().sort((a,b) => b.winPct - a.winPct)[0];
-  return { tier:2, tag:'ALL TIME',
-    q:'Which club has the best all-time winning percentage?',
-    answer:top.name, options:[top.name, ...decoys(top.name, IX.allTime.map(x => x.name), 3)],
-    note:`<b>${top.name}</b> — ${top.record}, a ${(top.winPct*100).toFixed(1)}% clip.` };
-});
-
-// who took this player in the draft
-add(127, () => {
-  const p = pick(IX.picks);
-  if (!p) return null;
-  return { tier:2, tag:'THE DRAFT',
-    q:`Which club drafted ${p.player} in ${p.year}?`,
-    answer:p.team, options:[p.team, ...decoys(p.team, IX.picks.map(x => x.team), 3)],
-    note:`<b>${p.team}</b> took ${p.player} at pick ${p.pick} in ${p.year}.` };
-});
-
-// what came off the board at a slot
+// ---- DRAFT DAY: who came off the board
 add(60, () => {
-  const p = pick(IX.picks.filter(x => x.round === 1));
-  if (!p) return null;
-  return { tier:3, tag:'THE DRAFT',
-    q:`Who did ${p.team} take at pick ${p.pick} of the ${p.year} draft?`,
-    answer:p.player, options:[p.player, ...decoys(p.player, IX.picks.filter(x => x.year === p.year).map(x => x.player), 3)],
-    note:`Pick ${p.pick}, ${p.year}: <b>${p.player}</b> to ${p.team}.` };
+  const early = IX.picks.filter(p => p.pick <= 8 && p.year >= 2022);
+  if (early.length < 8) return null;
+  const p = pick(early);
+  const others = IX.picks.filter(x => x.year === p.year && x.player !== p.player).map(x => x.player);
+  if (others.length < 3) return null;
+  return { tag:'DRAFT DAY', tier:3,
+    q:p.club + ' spent the ' + ordinal(p.pick) + ' pick of ' + p.year + ' on this player.',
+    answer:p.player, options:[p.player, ...decoys(p.player, others, 3)],
+    note:'What is <b>' + p.player + '</b>? Pick ' + p.pick + ', ' + p.year + ', to ' + p.club + '.' };
 });
 
-// who acquired this player
-add(200, () => {
-  const t = pick(IX.trades.filter(x => x.players.length === 1 && x.team && x.from));
-  if (!t) return null;
-  return { tier:3, tag:'THE TRADE DESK',
-    q:`Which club traded for ${t.players[0]} in ${t.year}?`,
-    answer:t.team, options:[t.team, ...decoys(t.team, IX.trades.map(x => x.team), 3)],
-    note:`<b>${t.team}</b> got ${t.players[0]} from ${t.from} in ${t.year}.` };
+// ---- THE TRADE DESK
+add(120, () => {
+  const recent = IX.trades.filter(x => x.year >= 2021);
+  if (recent.length < 4) return null;
+  const t = pick(recent);
+  const star = t.players[0];
+  return { tag:'THE TRADE DESK', tier:3,
+    q:'In ' + t.year + ' this club sent ' + star + ' to ' + t.to + '.',
+    answer:t.from, options:[t.from, ...decoys(t.from, IX.list.filter(x => x !== t.to), 3)],
+    note:'Who is <b>' + t.from + '</b>? ' + star + ' went to ' + t.to + ' in ' + t.year + '.' };
 });
 
-// the draft grade
-add(79, () => {
-  const g = pick(IX.grades);
-  if (!g) return null;
-  const all = [...new Set(IX.grades.map(x => x.grade))];
-  return { tier:3, tag:'DRAFT GRADES',
-    q:`What grade did ${g.team} get for their ${g.year} draft?`,
-    answer:g.grade, options:[g.grade, ...decoys(g.grade, all, 3)],
-    note:`${g.team}'s ${g.year} draft was graded <b>${g.grade}</b>.` };
-});
-
-
-// a specific club's haul, rather than only "who has the most"
-add(23, () => {
-  const c = pick(IX.allTime.filter(x => x.titles > 0));
+// ---- THE PAPER SAYS: best and worst of a season
+add(60, () => {
+  const S = IX.supers.filter(s => +s.year >= 2016);
+  if (S.length < 4) return null;
+  const s = pick(S);
+  const side = pick(['best', 'worst']);
+  const what = pick(['draft', 'manager', 'coach']);
+  const row = s[side] && s[side][what];
+  if (!row) return null;
+  const c = club(row.team);
   if (!c) return null;
-  const nums = [...new Set(IX.allTime.map(x => x.titles))].map(String);
-  return { tier:2, tag:'ALL TIME',
-    q:`How many SCFL titles have ${c.name} won?`,
-    answer:String(c.titles), options:[String(c.titles), ...decoys(String(c.titles), nums, 3)],
-    note:`<b>${c.name}</b> — ${c.titles} titles, ${c.runnerUps||0} runner-ups, ${c.playoffs} playoff trips in ${c.numSeasons} seasons.` };
+  const label = { draft:'their draft', manager:'managing', coach:'setting a lineup' }[what];
+  return { tag:'THE PAPER SAYS', tier:3,
+    q:'The record book graded this club ' + (side === 'best' ? 'first' : 'dead last') +
+      ' in the league for ' + label + ' in ' + s.year + '.',
+    answer:c, options:[c, ...decoys(c, IX.list, 3)],
+    note:'Who is <b>' + c + '</b>? ' + (side === 'best' ? 'Best' : 'Worst') + ' at ' + label +
+         ' in ' + s.year + worn(c, +s.year) + '.' };
 });
 
-// most points in a regular season
+// ---- THE STANDINGS: top seed
 add(18, () => {
-  const s = pick(IX.seasons.filter(x => x.standings.length > 5));
-  if (!s) return null;
-  const top = s.standings.slice().sort((a,b) => b.pf - a.pf)[0];
-  return { tier:3, tag:'SCOREBOARD',
-    q:`Who scored the most points in the ${s.year} regular season?`,
-    answer:top.team, options:[top.team, ...decoys(top.team, s.teams, 3)],
-    note:`<b>${top.team}</b> put up ${Math.round(top.pf)} points in ${s.year}.` };
+  const s = pick(IX.seasons);
+  const top = s.standings[0];
+  if (!top) return null;
+  return { tag:'THE STANDINGS', tier: s.year >= 2020 ? 2 : 3,
+    q:'First in the ' + s.year + ' regular season at ' + top.wins + '-' + top.losses + ', ' + top.pf + ' points for.',
+    answer:top.club, options:[top.club, ...decoys(top.club, s.clubs, 3)],
+    note:'Who is <b>' + top.club + '</b>? Top seed in ' + s.year + worn(top.club, s.year) +
+         (s.champion === top.club ? ', and they finished the job.' : ", and they didn't finish the job.") };
 });
 
-// playoff regulars
-add(23, () => {
-  const c = pick(IX.allTime.filter(x => x.playoffs != null));
-  if (!c) return null;
-  const nums = [...new Set(IX.allTime.map(x => x.playoffs))].map(String);
-  return { tier:3, tag:'ALL TIME',
-    q:`How many times have ${c.name} made the playoffs?`,
-    answer:String(c.playoffs), options:[String(c.playoffs), ...decoys(String(c.playoffs), nums, 3)],
-    note:`<b>${c.name}</b> — ${c.playoffs} playoff appearances in ${c.numSeasons} seasons.` };
-});
-
-
-/* Weight generators by how many distinct questions they can produce, so
-   the handful of one-fact all-time questions stay rare. Capped so the
-   enormous matchup pool does not swamp the rest. */
 const WEIGHTS = GEN.map(g => Math.min(g.pool || 30, 40));
 const WSUM = WEIGHTS.reduce((a, b) => a + b, 0);
 function weightedGen(){
@@ -1721,7 +1775,7 @@ function newGame(){
   await Promise.all([
     grab('history.json','history'), grab('records.json','records'),
     grab('trades.json','trades'),   grab('drafts.json','drafts'),
-    grab('pop-grades.json','grades'),
+    grab('pop-grades.json','grades'), grab('scfl-franchises.json','franchises'),
   ]);
   buildIndex();
   for (const [k, uri] of Object.entries(typeof HARRY_ART !== 'undefined' ? HARRY_ART : {})) HARRY[k] = uri;
