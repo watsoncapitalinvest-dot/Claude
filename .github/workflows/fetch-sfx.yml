@@ -34,9 +34,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: FedericoCarboni/setup-ffmpeg@v3
-        id: ff
-        continue-on-error: true
+      - name: ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
 
       - name: Browse, filter and fetch
         env:
@@ -46,7 +45,8 @@ jobs:
           python3 - <<'PY'
           import json, os, re, urllib.parse, urllib.request, pathlib, html
 
-          UA = {"User-Agent": "Mozilla/5.0 (SCFL asset hunt; one-off)"}
+          UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                              "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"}
           OUT = pathlib.Path("jeopardy/sfx/candidates"); OUT.mkdir(parents=True, exist_ok=True)
           AUDIO = (".wav", ".mp3", ".ogg", ".flac", ".aiff", ".aif")
           maxp = int(os.environ.get("MAXP") or 12)
@@ -94,6 +94,44 @@ jobs:
                   if u.lower().split("?")[0].endswith(AUDIO):
                       links.add(urllib.parse.urljoin(page, u))
               print(f"  {len(links)} audio files linked")
+
+              zips = set()
+              for m in re.finditer(r'href="([^"]+)"', h):
+                  u = html.unescape(m.group(1))
+                  if u.lower().split("?")[0].endswith(".zip"):
+                      zips.add(urllib.parse.urljoin(page, u))
+              for z in sorted(zips)[:2]:
+                  print(f"  zip: {z.rsplit('/',1)[-1]}")
+                  try:
+                      blob = get(z, binary=True)
+                  except Exception as e:
+                      print("    ! ", e); continue
+                  import io, zipfile
+                  try:
+                      zf = zipfile.ZipFile(io.BytesIO(blob))
+                  except Exception as e:
+                      print("    ! not a zip:", e); continue
+                  # only small, plainly-named audio members, and only a few
+                  members = [m for m in zf.namelist()
+                             if m.lower().endswith(AUDIO) and not m.startswith("__MACOSX")]
+                  # prefer things that sound like what we need
+                  want = re.compile(r"(buzz|wrong|error|fail|correct|right|win|success|"
+                                    r"ding|chime|bell|coin|select|click|beep|blip|"
+                                    r"reveal|whoosh|swoosh|fanfare|jingle|applause)", re.I)
+                  ranked = sorted(members, key=lambda m: (0 if want.search(m) else 1, m))
+                  taken = 0
+                  for m in ranked:
+                      if taken >= maxp: break
+                      try: data = zf.read(m)
+                      except Exception: continue
+                      if not (2_000 < len(data) < 2_000_000): continue
+                      base = re.sub(r"[^A-Za-z0-9._-]", "_", m.rsplit("/", 1)[-1])
+                      safe = f"{who}__{base}"
+                      (OUT / safe).write_bytes(data)
+                      manifest.append({"file": safe, "bytes": len(data), "source_page": page,
+                                       "source_file": z + "#" + m, "licence": lic, "author": who})
+                      kept += 1; taken += 1
+                      print(f"    + {safe}  {len(data)/1024:.0f}KB")
 
               for u in sorted(links)[:maxp]:
                   name = urllib.parse.unquote(u.rsplit("/", 1)[-1].split("?")[0])
