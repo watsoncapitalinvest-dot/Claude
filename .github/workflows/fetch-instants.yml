@@ -1,0 +1,108 @@
+name: Fetch soundboard clips
+
+# Takes myinstants instant-page URLs, pulls the media file behind each one and
+# commits it to jeopardy/sfx/picked. The sandbox cannot reach the site (the
+# egress proxy refuses it) but a runner can. Files chosen by the league.
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: "Space-separated myinstants instant URLs"
+        required: true
+      names:
+        description: "Optional matching space-separated output names (no extension)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
+      - name: Pull the clips
+        env:
+          URLS:  ${{ inputs.urls }}
+          NAMES: ${{ inputs.names }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, html, pathlib, urllib.parse, urllib.request
+
+          UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                              "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"}
+          OUT = pathlib.Path("jeopardy/sfx/picked"); OUT.mkdir(parents=True, exist_ok=True)
+
+          def get(u, binary=False):
+              with urllib.request.urlopen(urllib.request.Request(u, headers=UA), timeout=60) as r:
+                  return r.read() if binary else r.read().decode("utf-8", "replace")
+
+          urls  = (os.environ.get("URLS")  or "").split()
+          names = (os.environ.get("NAMES") or "").split()
+          man_path = OUT / "MANIFEST.json"
+          manifest = json.loads(man_path.read_text()) if man_path.exists() else {"files": []}
+
+          for i, page in enumerate(urls):
+              print(f"\n=== {page}")
+              try:
+                  h = get(page)
+              except Exception as e:
+                  print("  ! page unreachable:", e); continue
+
+              # the player points at /media/sounds/<file>; take the first match
+              m = re.search(r'["\'](/media/sounds/[^"\']+\.(?:mp3|wav|ogg|m4a))["\']', h) \
+                  or re.search(r'["\'](https?://[^"\']*/media/sounds/[^"\']+)["\']', h)
+              if not m:
+                  print("  ! no media link found on the page"); continue
+              media = urllib.parse.urljoin(page, html.unescape(m.group(1)))
+              print("  media:", media)
+
+              title = ""
+              t = re.search(r"<title>(.*?)</title>", h, re.S | re.I)
+              if t: title = html.unescape(re.sub(r"\s+", " ", t.group(1))).strip()
+
+              try:
+                  blob = get(media, binary=True)
+              except Exception as e:
+                  print("  ! download failed:", e); continue
+              if len(blob) > 5_000_000:
+                  print(f"  ! {len(blob)/1e6:.1f}MB, too big"); continue
+
+              stem = names[i] if i < len(names) else \
+                     re.sub(r"[^A-Za-z0-9._-]", "_", media.rsplit("/", 1)[-1].rsplit(".", 1)[0])[:48]
+              ext = media.rsplit(".", 1)[-1].lower()
+              raw = OUT / f"{stem}.{ext}"
+              raw.write_bytes(blob)
+              print(f"  + {raw.name}  {len(blob)/1024:.0f}KB")
+              manifest["files"] = [f for f in manifest["files"] if f.get("file") != raw.name]
+              manifest["files"].append({"file": raw.name, "bytes": len(blob), "title": title,
+                                        "source_page": page, "source_file": media})
+
+          manifest["note"] = ("Clips chosen by the league from myinstants and pulled by a runner, "
+                              "because the agent sandbox cannot reach the site.")
+          man_path.write_text(json.dumps(manifest, indent=1))
+          PY
+
+      - name: Describe what landed
+        run: |
+          for f in jeopardy/sfx/picked/*; do
+            case "$f" in *.json) continue;; esac
+            ffprobe -v error -show_entries format=duration,bit_rate -show_entries stream=channels,sample_rate \
+              -of default=nw=1 "$f" 2>/dev/null | tr '\n' ' ' | sed "s|^|$(basename "$f")  |"; echo
+          done
+
+      - name: Commit
+        run: |
+          if [ -n "$(git status --porcelain jeopardy/sfx/picked)" ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add jeopardy/sfx/picked
+            git commit -m "Soundboard clips picked by the league"
+            git push
+          else
+            echo "nothing new"
+          fi
