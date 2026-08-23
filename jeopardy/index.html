@@ -923,6 +923,75 @@ add(18, () => {
          worn(low.club, s.year) + '.' };
 });
 
+/* ------------------------------------------------------------------
+ * THE GROUP CHAT
+ * 271,462 messages from Mos Eisley, May 2021 to August 2026, counted per
+ * franchise. These are the only clues here that come from what the men
+ * actually typed rather than what their teams did.
+ * ------------------------------------------------------------------ */
+const CH = () => D.chat || null;
+const chatKeys = () => Object.keys((CH() || {}).counts || {});
+const chatName = k => (IX.fr[k] || {}).club || null;
+
+// ---- who talks the most, and who barely shows up
+add(24, () => {
+  const c = CH(); if (!c) return null;
+  const rows = c.boards.volume.rows.filter(r => chatName(r.club));
+  if (rows.length < 4) return null;
+  const end = pick(['top', 'bottom']);
+  const r = end === 'top' ? rows[0] : rows[rows.length - 1];
+  const nm = chatName(r.club);
+  return { tag:'THE GROUP CHAT', tier: end === 'top' ? 1 : 3,
+    q: end === 'top'
+      ? 'This club’s owner has sent ' + r.shown + ' messages to the group chat, more than anybody.'
+      : 'Of the sixteen, this club’s owner has sent the fewest messages to the chat: ' + r.shown + '.',
+    answer:nm, options:[nm, ...decoys(nm, rows.map(x => chatName(x.club)), 3)],
+    note:'Who is <b>' + nm + '</b>? ' + r.shown + ' of ' + Number(c.n).toLocaleString('en-US') +
+         ' messages since May 2021.' };
+});
+
+// ---- the habits: length, hours, emoji, links, questions
+add(30, () => {
+  const c = CH(); if (!c) return null;
+  const keys = Object.keys(c.boards).filter(k => k !== 'volume');
+  const b = c.boards[pick(keys)];
+  const rows = b.rows.filter(r => chatName(r.club));
+  if (rows.length < 4) return null;
+  const r = rows[0], nm = chatName(r.club);
+  return { tag:'THE GROUP CHAT', tier:2,
+    q:'Of everyone in the chat, this club’s owner ' + b.label + ' — ' + r.shown +
+      (b.unit ? ' ' + b.unit : '') + '.',
+    answer:nm, options:[nm, ...decoys(nm, rows.map(x => chatName(x.club)), 3)],
+    note:'Who is <b>' + nm + '</b>? ' + r.shown + (b.unit ? ' ' + b.unit : '') +
+         ', the highest of the sixteen.' };
+});
+
+// ---- the tics: what one man types and nobody else does
+add(8, () => {
+  const c = CH(); if (!c) return null;
+  const list = (c.phrases || []).filter(p => chatName(p.club));
+  if (list.length < 4) return null;
+  const p = pick(list);
+  const nm = chatName(p.club);
+  return { tag:'THE GROUP CHAT', tier:3,
+    q:'This club’s owner has typed "' + p.p + '" ' + Number(p.n).toLocaleString('en-US') +
+      ' times in the chat, and ' + p.share + '% of everyone who has ever typed it is him.',
+    answer:nm, options:[nm, ...decoys(nm, chatKeys().map(chatName), 3)],
+    note:'Who is <b>' + nm + '</b>? "' + p.p + '", ' + Number(p.n).toLocaleString('en-US') + ' times.' };
+});
+
+// ---- the day the chat lost its mind
+add(2, () => {
+  const c = CH(); if (!c || !c.busiestDay) return null;
+  const d = c.busiestDay, nm = chatName(d.top);
+  if (!nm) return null;
+  return { tag:'THE GROUP CHAT', tier:3,
+    q:'On ' + d.date + ' the chat produced ' + Number(d.n).toLocaleString('en-US') +
+      ' messages, its busiest day ever. This club’s owner sent ' + d.topN + ' of them.',
+    answer:nm, options:[nm, ...decoys(nm, chatKeys().map(chatName), 3)],
+    note:'Who is <b>' + nm + '</b>? ' + d.topN + ' messages on ' + d.date + ' alone.' };
+});
+
 const WEIGHTS = GEN.map(g => Math.min(g.pool || 30, 90));
 const WSUM = WEIGHTS.reduce((a, b) => a + b, 0);
 function weightedGen(){
@@ -2195,7 +2264,7 @@ function newGame(){
   await Promise.all([
     grab('history.json','history'), grab('records.json','records'),
     grab('trades.json','trades'),   grab('drafts.json','drafts'),
-    grab('pop-grades.json','grades'), grab('scfl-franchises.json','franchises'),
+    grab('pop-grades.json','grades'), grab('scfl-franchises.json','franchises'), grab('scfl-chat.json','chat'),
   ]);
   buildIndex();
   for (const [k, uri] of Object.entries(typeof HARRY_ART !== 'undefined' ? HARRY_ART : {})) HARRY[k] = uri;
