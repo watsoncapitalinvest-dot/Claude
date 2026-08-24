@@ -3500,6 +3500,7 @@ const NEWSROOM_TOOLS = [
   ['calendar', '🗓️', 'Calendar', 'Release dates & events'],
   ['jeopardy', '🎬', 'SCFL Jeopardy', 'Two rounds, thirty-two clues, one wager — league high scores'],
   ['tradewar', '💥', 'SCFL Trade Wars', 'Turn-based artillery between two crests on sixteen home fields'],
+  ['ring-of-honor', '🏆', 'Ring of Honor', 'Athletes & people the league votes in'],
 ];
 const mtoolBtn = ([a, ic, l, d]) => `<button class="mtool" data-act="${a}"><span class="mtool-ic">${ic}</span><span class="mtool-l">${l}</span><span class="mtool-d">${d}</span></button>`;
 const OFFICE_SECTIONS = [
@@ -3512,7 +3513,7 @@ const NEWSROOM_SECTIONS = [
   ['The Network', ['sportscenter', 'broadcast']],
   ['Desks & Features', ['politics', 'desk', 'storylines', 'investigations']],
   ['Editions', ['pop-grades', 'archive']],
-  ['The Record Room', ['dossier', 'records', 'rivalries', 'players', 'ex-files', 'archive-articles']],
+  ['The Record Room', ['dossier', 'records', 'rivalries', 'players', 'ex-files', 'archive-articles', 'ring-of-honor']],
   ['The Arcade', ['jeopardy', 'tradewar']],
 ];
 function toolSections(tools, sections) {
@@ -7537,6 +7538,167 @@ async function showRivalryRead(k) {
     </div>`);
 }
 
+// ---- The Ring of Honor -------------------------------------------------------
+// Athletes and people the league mutually agrees are awesome and represent the
+// league's personalities and likes. Candidates are seeded by
+// scripts/build_ring_of_honor.py from ring-of-honor.json (dossier.json +
+// investigations.json — nothing here is raw chat text, which never enters this
+// repo; see docs/ROADMAP.md). Nobody is "inducted" by this page. It only
+// collects votes and open nominations from the league itself, the same way the
+// league already votes on the last-place rename: an ntfy.sh topic (append-only,
+// no account, works from a phone) swept every three hours into
+// ring-of-honor-votes.json by .github/workflows/ring-of-honor-log.yml. With no
+// network this is just a read-only candidate board, same as before.
+const ROH_TOPIC = 'scfl-ringofhonor-d2748099';
+const ROH_BOOK  = 'ring-of-honor-votes.json';
+const rohWireURL = () => 'https://ntfy.sh/' + encodeURIComponent(ROH_TOPIC);
+function rohVoted() {
+  try { return JSON.parse(localStorage.getItem('roh_voted') || '[]'); } catch { return []; }
+}
+function rohMarkVoted(id) {
+  try {
+    const v = rohVoted(); if (!v.includes(id)) v.push(id);
+    localStorage.setItem('roh_voted', JSON.stringify(v));
+  } catch {}
+}
+async function rohPost(row) {
+  try {
+    const r = await fetch(rohWireURL(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(row),
+    });
+    return r.ok;
+  } catch { return false; }
+}
+async function rohReadBook() {
+  try {
+    const r = await fetch(ROH_BOOK + '?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return Array.isArray(j.entries) ? j.entries : [];
+  } catch { return []; }
+}
+async function rohReadWire() {
+  try {
+    const r = await fetch(rohWireURL() + '/json?poll=1&since=all', { cache: 'no-store' });
+    if (!r.ok) return [];
+    const txt = await r.text();
+    const out = [];
+    for (const line of txt.split('\n')) {
+      const s = line.trim(); if (!s) continue;
+      try {
+        const env = JSON.parse(s);
+        if (env.event !== 'message' || !env.message) continue;
+        const row = JSON.parse(env.message);
+        if (row && typeof row === 'object' && row.id) out.push(row);
+      } catch {}
+    }
+    return out;
+  } catch { return []; }
+}
+let ROH_ENTRIES = null;
+async function rohLoadEntries() {
+  if (ROH_ENTRIES) return ROH_ENTRIES;
+  const [book, wire] = await Promise.all([rohReadBook(), rohReadWire()]);
+  const byId = new Map();
+  for (const e of [...book, ...wire]) if (e && e.id && !byId.has(e.id)) byId.set(e.id, e);
+  ROH_ENTRIES = [...byId.values()];
+  return ROH_ENTRIES;
+}
+let ROH_DATA = null;
+async function rohLoadCandidates() {
+  if (ROH_DATA) return ROH_DATA;
+  try {
+    const r = await fetch('ring-of-honor.json', { cache: 'no-cache' });
+    if (r.ok) ROH_DATA = await r.json();
+  } catch { ROH_DATA = null; }
+  return ROH_DATA;
+}
+async function rohVote(id) {
+  if (!id || rohVoted().includes(id)) return;
+  rohMarkVoted(id);
+  const row = { id: 'vote-' + id + '-' + Date.now(), kind: 'vote', candidate: id };
+  await rohPost(row);
+  ROH_ENTRIES = null;
+  showRingOfHonor();
+}
+async function rohNominate() {
+  const nameEl = document.getElementById('roh-nom-name');
+  const whyEl = document.getElementById('roh-nom-why');
+  const catEl = document.getElementById('roh-nom-cat');
+  const name = (nameEl && nameEl.value || '').trim();
+  if (!name) return;
+  const why = (whyEl && whyEl.value || '').trim();
+  const cat = (catEl && catEl.value) || 'person';
+  const row = { id: 'nom-' + slugify(name) + '-' + Date.now(), kind: 'nominate', name, why, category: cat };
+  const ok = await rohPost(row);
+  ROH_ENTRIES = null;
+  showRingOfHonor(ok ? `Nominated ${name} — thanks.` : 'Could not reach the wire — try again in a minute.');
+}
+function slugify(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
+function rohVoteCounts(entries) {
+  const counts = {};
+  entries.forEach(e => { if (e.kind === 'vote' && e.candidate) counts[e.candidate] = (counts[e.candidate] || 0) + 1; });
+  return counts;
+}
+async function showRingOfHonor(flash) {
+  const [data, entries] = await Promise.all([rohLoadCandidates(), rohLoadEntries()]);
+  if (!data) {
+    return setContent(`<button class="btn ghost" data-act="newsroom" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom</button>
+      <div class="card"><h3>🏆 Ring of Honor</h3>
+      <p class="muted">Candidate data isn't loaded. Build it with <code>scripts/build_ring_of_honor.py</code>.</p></div>`);
+  }
+  const counts = rohVoteCounts(entries);
+  const noms = entries.filter(e => e.kind === 'nominate').sort((a, b) => Number(b.id.split('-').pop()) - Number(a.id.split('-').pop()));
+  const voted = rohVoted();
+  const card = (c) => {
+    const n = counts[c.id] || 0;
+    const already = voted.includes(c.id);
+    return `<div class="card" style="padding:12px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <div>
+          <div style="font-weight:800;font-size:14.5px">${esc(c.name)}${c.team ? ` <span class="faint" style="font-weight:400">— ${esc(c.team)}</span>` : ''}</div>
+        </div>
+        <button class="btn ghost" data-act="roh-vote" data-id="${esc(c.id)}" ${already ? 'disabled' : ''}
+          style="width:auto;padding:5px 12px;font-size:12px;white-space:nowrap">${already ? '✓ voted' : '👍 vote'} ${n ? `(${n})` : ''}</button>
+      </div>
+      <p class="faint" style="font-size:12.5px;line-height:1.5;margin-top:6px">${esc(c.blurb)}</p>
+      <div class="faint" style="font-size:10.5px;margin-top:6px">Source: ${esc(c.source)}</div>
+    </div>`;
+  };
+  const people = data.people.slice().sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0));
+  const athletes = data.athletes.slice().sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0));
+  setContent(`<button class="btn ghost" data-act="newsroom" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom</button>
+    <div class="card"><h3>🏆 SCFL Ring of Honor</h3>
+      <p class="muted">Athletes and people the league mutually agrees are awesome and represent this
+      league's personalities and likes. This board only collects votes and nominations — nobody gets
+      inducted by an algorithm. The candidates below are a seed list pulled from the newsroom's own
+      fact-checked files, not the chat itself (that never enters this repo). If someone's missing,
+      nominate them below.</p></div>
+    ${flash ? `<div class="card" style="background:var(--bg2)"><b>${esc(flash)}</b></div>` : ''}
+    <h4 style="margin:16px 0 8px">🏈 Athletes</h4>
+    <div style="display:grid;gap:8px">${athletes.map(card).join('') || '<p class="faint">None yet.</p>'}</div>
+    <h4 style="margin:20px 0 8px">👤 People</h4>
+    <div style="display:grid;gap:8px">${people.map(card).join('')}</div>
+    <div class="card" style="margin-top:16px">
+      <h4 style="margin:0 0 10px">Nominate someone</h4>
+      <select id="roh-nom-cat" style="width:100%;padding:8px;margin-bottom:8px;border-radius:8px;border:1px solid var(--border)">
+        <option value="person">Person</option>
+        <option value="athlete">Athlete</option>
+      </select>
+      <input id="roh-nom-name" placeholder="Name" style="width:100%;padding:8px;margin-bottom:8px;border-radius:8px;border:1px solid var(--border)">
+      <textarea id="roh-nom-why" placeholder="Why (optional)" rows="2" style="width:100%;padding:8px;margin-bottom:8px;border-radius:8px;border:1px solid var(--border)"></textarea>
+      <button class="btn" data-act="roh-nominate" style="width:auto;padding:8px 16px">Submit nomination</button>
+      ${noms.length ? `<div style="margin-top:14px"><b style="font-size:12.5px">Open nominations (${noms.length})</b>
+        <div style="display:grid;gap:6px;margin-top:8px">
+          ${noms.slice(0, 20).map(n => `<div style="font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border)">
+            <b>${esc(n.name)}</b> <span class="faint">(${esc(n.category || 'person')})</span>
+            ${n.why ? `<br><span class="faint">${esc(n.why)}</span>` : ''}</div>`).join('')}
+        </div></div>` : ''}
+    </div>`);
+}
+
 // ---- The Story Vault: every page the Newsroom has published ------------------
 // Built automatically from stories.json (see scripts/build_stories.py), which is
 // regenerated on every deploy. Publishing a page is all it takes to appear here;
@@ -7990,6 +8152,9 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'draft-grades-issue') { window.open('scfl-2026-draft-grades-flip.html', '_blank'); return; }
   if (act === 'jeopardy')  { window.open('jeopardy/', '_blank'); return; }
   if (act === 'tradewar')  { window.open('tradewar/', '_blank'); return; }
+  if (act === 'ring-of-honor') return showRingOfHonor();
+  if (act === 'roh-vote') return rohVote(t.dataset.id);
+  if (act === 'roh-nominate') return rohNominate();
   if (act === 'sportscenter') { window.open('scfl-sportscenter.html', '_blank'); return; }
   if (act === 'staff-set') { const n = t.dataset.name || (prompt('Name for this desk?') || '').trim(); if (n) { setStaff(n); S.shieldShown = false; } renderShell(); showMenu();
     if (n && !localStorage.getItem(WELCOMEKEY)) setTimeout(showWelcome, 1600);
