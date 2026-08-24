@@ -50,11 +50,12 @@ NAMED = [
         'name': 'Derrick Lewis',
         'team': None,
         'status': '',
-        'blurb': '"The Black Beast" — UFC heavyweight, the division’s all-time knockout record, '
-                 'and the most quotable post-fight mic in the sport. A league favorite for being '
-                 'exactly as unbothered as he looks.',
-        'argument': 'Named "first ballot" by more than one manager, independently, in the same '
-                 'conversation — not a bit one guy kept alive alone.',
+        'blurb': '"The Black Beast" — UFC heavyweight, famous equally for knockouts and the deadpan '
+                 'post-fight interviews that follow them.',
+        'argument': 'The Machines has been dropping Derrick Lewis references into this chat since at '
+                 'least June 2021 — a fight recap here, a Hot Ones watch there — for four straight '
+                 'years, right up through a first-ballot vote in February 2025. A second manager '
+                 'backed the same vote independently, same conversation, no prompting.',
         'source': 'named by the commissioner, Aug 2026',
     },
     {
@@ -63,10 +64,10 @@ NAMED = [
         'name': 'Jameis Winston',
         'team': None,
         'status': '',
-        'blurb': 'The chat has been calling him a first-ballot SCFL Hall of Famer since at least '
-                 '2025 — a running, multi-manager consensus pick, not a one-person bit.',
-        'argument': 'Called a first-ballot SCFL Hall of Famer and, in the same breath, someone’s '
-                 'outright favorite person in sports. A running position, not a single fan’s bit.',
+        'blurb': 'NFL quarterback as well known in this league for personality as for arm talent.',
+        'argument': 'Called a first-ballot SCFL Hall of Famer and "my favorite person in sports" by '
+                 'Pork Chop Express in the same breath — then seconded, unprompted, by The Machines '
+                 'minutes later in the same thread. Two managers, one sitting, zero lobbying.',
         'source': 'league chat, distilled Aug 2026',
     },
     {
@@ -75,10 +76,12 @@ NAMED = [
         'name': 'Bob Uecker',
         'team': None,
         'status': '',
-        'blurb': 'The voice of the Brewers for over 50 years and the deadpan star of the Major '
-                 'League movies — nominated outright in the chat as an SCFL Ring of Honor member.',
-        'argument': 'Nominated by name, unprompted, the same day the chat learned who he was: "an '
-                 'American treasure." Fifty years on Brewers radio plus Major League — case closed.',
+        'blurb': 'Voice of the Milwaukee Brewers for over 50 years, and Harry Doyle — the fictional '
+                 'announcer — in the Major League movies.',
+        'argument': 'When he died in January 2025, three different managers reacted inside the same '
+                 'hour: one quoting Harry Doyle’s own most famous call, one posting the news story, '
+                 'one just typing "RIP." The next morning, mid-tribute over his career stats, Smoke '
+                 'Dragons made it official — "an American treasure... Ring of Honor member."',
         'source': 'league chat, distilled Aug 2026',
     },
     {
@@ -87,10 +90,10 @@ NAMED = [
         'name': 'Willie Mack',
         'team': None,
         'status': '',
-        'blurb': 'Pro wrestler, and a genuine league connection — one manager’s wife makes his '
-                 'ring gear. The chat calls him a legend, and means it literally, not as a bit.',
-        'argument': 'A real, personal tie, not a fandom-from-a-distance pick — one manager’s wife '
-                 'makes his ring gear — and the chat calls him a legend without a hint of irony.',
+        'blurb': 'Professional wrestler with a direct, real-life tie to this league.',
+        'argument': 'Not a fandom-from-a-distance pick — Keith’s wife builds Willie Mack’s ring gear '
+                 'by hand, he wears it, and sends photos back. The chat’s reaction wasn’t a joke; it '
+                 'was pride.',
         'source': 'league chat, distilled Aug 2026',
     },
     {
@@ -99,10 +102,10 @@ NAMED = [
         'name': 'Eli Manning',
         'team': None,
         'status': '',
-        'blurb': 'A years-long running argument for first-ballot honors, championed loudest by '
-                 'the league’s Giants fans but debated by more than one manager, more than once.',
-        'argument': 'A years-long, multi-manager argument for first-ballot honors — loudest from the '
-                 'league’s Giants fans, but never once contested by anyone else either.',
+        'blurb': 'Two-time Super Bowl MVP, Giants quarterback for sixteen seasons.',
+        'argument': 'A first-ballot debate that has resurfaced across years — 2022, then again in '
+                 '2025 — pulling in a different set of managers each time. Nobody in the chat has '
+                 'ever actually taken the other side.',
         'source': 'league chat, distilled Aug 2026',
     },
 ]
