@@ -67,8 +67,9 @@ for inv in investigations:
             'source': f'investigations.json ({inv.get("headline")})',
         })
 
-# Named directly by the commissioner — not tied to any roster, which is the
-# point: the Ring of Honor isn't a fantasy-relevance list.
+# Named directly by the commissioner, or found in the league's own chat —
+# distilled to a fact and a fresh blurb, never a stored quote. The chat file
+# itself stays local and out of this repo; only the finding does.
 NAMED = [
     {
         'id': 'a-derrick-lewis',
@@ -81,12 +82,53 @@ NAMED = [
                  'exactly as unbothered as he looks.',
         'source': 'named by the commissioner, Aug 2026',
     },
+    {
+        'id': 'a-jameis-winston',
+        'category': 'athlete',
+        'name': 'Jameis Winston',
+        'team': None,
+        'status': '',
+        'blurb': 'The chat has been calling him a first-ballot SCFL Hall of Famer since at least '
+                 '2025 — a running, multi-manager consensus pick, not a one-person bit.',
+        'source': 'league chat, distilled Aug 2026',
+    },
+    {
+        'id': 'a-bob-uecker',
+        'category': 'athlete',
+        'name': 'Bob Uecker',
+        'team': None,
+        'status': '',
+        'blurb': 'The voice of the Brewers for over 50 years and the deadpan star of the Major '
+                 'League movies — nominated outright in the chat as an SCFL Ring of Honor member.',
+        'source': 'league chat, distilled Aug 2026',
+    },
+    {
+        'id': 'a-willie-mack',
+        'category': 'athlete',
+        'name': 'Willie Mack',
+        'team': None,
+        'status': '',
+        'blurb': 'Pro wrestler, and a genuine league connection — one manager’s wife makes his '
+                 'ring gear. The chat calls him a legend, and means it literally, not as a bit.',
+        'source': 'league chat, distilled Aug 2026',
+    },
+    {
+        'id': 'a-eli-manning',
+        'category': 'athlete',
+        'name': 'Eli Manning',
+        'team': None,
+        'status': '',
+        'blurb': 'A years-long running argument for first-ballot honors, championed loudest by '
+                 'the league’s Giants fans but debated by more than one manager, more than once.',
+        'source': 'league chat, distilled Aug 2026',
+    },
 ]
 ATHLETES.extend(NAMED)
 
 payload = {
-    'note': ("Seed candidates only — built from dossier.json and investigations.json, "
-             "not from the chat archive directly (it never enters this repo). "
+    'note': ("Seed candidates only — from dossier.json, investigations.json, and a handful of "
+             "names distilled straight out of the league's own chat, where 'ring of honor' has "
+             "been a running idea since 2022. The raw chat itself never enters this repo. "
              "Nothing here is inducted. See docs/ROADMAP.md and the Ring of Honor "
              "page for how induction actually works."),
     'builtBy': 'scripts/build_ring_of_honor.py',
