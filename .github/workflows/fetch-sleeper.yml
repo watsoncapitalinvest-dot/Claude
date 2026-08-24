@@ -99,6 +99,16 @@ jobs:
 
           users   = get(f"{API}/league/{league}/users") or []
           rosters = get(f"{API}/league/{league}/rosters") or []
+
+          # divisions: names live in league metadata, membership on each roster
+          meta = info.get("metadata") or {}
+          import re as _re
+          div_names = {}
+          for k, v in meta.items():
+              mm = _re.match(r"division_(\d+)$", k)
+              if mm and v: div_names[int(mm.group(1))] = v
+          n_div = (info.get("settings") or {}).get("divisions")
+          print(f"divisions: {n_div}  names: {div_names}")
           uname   = {u["user_id"]: (u.get("metadata",{}) or {}).get("team_name") or u.get("display_name")
                      for u in users}
           team    = {r["roster_id"]: uname.get(r.get("owner_id"), f"roster {r['roster_id']}")
@@ -122,7 +132,15 @@ jobs:
               if pairs: weeks[str(w)] = pairs
               print(f"  week {w:2d}: {len(pairs)} games")
 
+          division_of = {}
+          for r in rosters:
+              d = (r.get("settings") or {}).get("division")
+              if d: division_of[team.get(r["roster_id"], str(r["roster_id"]))] = int(d)
+          for nm_, d in sorted(division_of.items(), key=lambda x: (x[1], x[0])):
+              print(f"  div {d} ({div_names.get(d,'?')}): {nm_}")
+
           out = {
+            "divisions": {"count": n_div, "names": div_names, "of": division_of},
             "league_id": league, "name": info["name"], "season": info["season"],
             "total_rosters": info.get("total_rosters"),
             "playoff_week_start": settings.get("playoff_week_start"),
