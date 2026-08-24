@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 """Build ring-of-honor.json — the seed candidate list for the SCFL Ring of Honor.
 
-The Ring of Honor is athletes and people the league mutually agrees are
-awesome and represent the league's personalities and likes. Induction is a
-league call, not something this script can make — chat exports never enter
-this repo (see docs/ROADMAP.md), so this seeds candidates only from material
-already distilled and reviewed elsewhere in the repo: dossier.json (manager
-personalities, pulled from the real chat archive in an earlier session) and
-investigations.json (fact-checked long-form pieces). Nothing here is quoted
-chat text; every blurb is written fresh from the sourced facts and every
-candidate is DRAFT until the league votes it in through the app.
+The Ring of Honor is fun people and athletes this league likes — full stop.
+Not "fantasy-relevant," not "was on someone's roster." A UFC heavyweight
+whose post-fight interviews the group chat loves belongs here exactly as
+much as a manager everyone's glad is in the league. Induction is a league
+call, not something this script can make — chat exports never enter this
+repo (see docs/ROADMAP.md), so this seeds candidates only from material
+already distilled and reviewed elsewhere in the repo, plus names named
+directly by the commissioner. Nothing here is quoted chat text; every blurb
+is written fresh from the sourced facts and every candidate is DRAFT until
+the league votes it in through the app.
 
 Two categories:
   people    — the sixteen managers, one candidate each, from dossier.json.
-  athletes  — real NFL players who became part of league lore, pulled from
-              named investigations. This list is necessarily incomplete —
-              this script cannot read the chat, so the app also takes open
-              nominations for anyone it missed.
+  athletes  — real athletes (any sport) the league is genuinely a fan of.
+              This list is necessarily incomplete — this script cannot read
+              the chat, and "who we like" isn't something a build script can
+              discover on its own, so most of this category has to come from
+              the league itself. The app takes open nominations for anyone
+              missing.
 """
 import json, os
 
@@ -64,16 +67,22 @@ for inv in investigations:
             'source': f'investigations.json ({inv.get("headline")})',
         })
 
-# One more from this newsroom's own recent work, not yet a filed investigation.
-ATHLETES.append({
-    'id': 'a-bijan-robinson',
-    'category': 'athlete',
-    'name': 'Bijan Robinson',
-    'team': None,
-    'status': '',
-    'blurb': 'Drafted 1.02 by the Smoke Dragons in 2023 and never touched since — the one true building block on a roster that has traded almost everything else away.',
-    'source': 'SCFL NewsRoom, roster analysis, Aug 2026',
-})
+# Named directly by the commissioner — not tied to any roster, which is the
+# point: the Ring of Honor isn't a fantasy-relevance list.
+NAMED = [
+    {
+        'id': 'a-derrick-lewis',
+        'category': 'athlete',
+        'name': 'Derrick Lewis',
+        'team': None,
+        'status': '',
+        'blurb': '"The Black Beast" — UFC heavyweight, the division’s all-time knockout record, '
+                 'and the most quotable post-fight mic in the sport. A league favorite for being '
+                 'exactly as unbothered as he looks.',
+        'source': 'named by the commissioner, Aug 2026',
+    },
+]
+ATHLETES.extend(NAMED)
 
 payload = {
     'note': ("Seed candidates only — built from dossier.json and investigations.json, "
