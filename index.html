@@ -7615,6 +7615,15 @@ async function rohLoadCandidates() {
   } catch { ROH_DATA = null; }
   return ROH_DATA;
 }
+let ROH_INDUCTED = null;
+async function rohLoadInducted() {
+  if (ROH_INDUCTED) return ROH_INDUCTED;
+  try {
+    const r = await fetch('ring-of-honor-inducted.json', { cache: 'no-cache' });
+    ROH_INDUCTED = r.ok ? (await r.json()).inducted || [] : [];
+  } catch { ROH_INDUCTED = []; }
+  return ROH_INDUCTED;
+}
 async function rohVote(id) {
   if (!id || rohVoted().includes(id)) return;
   rohMarkVoted(id);
@@ -7643,12 +7652,13 @@ function rohVoteCounts(entries) {
   return counts;
 }
 async function showRingOfHonor(flash) {
-  const [data, entries] = await Promise.all([rohLoadCandidates(), rohLoadEntries()]);
+  const [data, entries, inducted] = await Promise.all([rohLoadCandidates(), rohLoadEntries(), rohLoadInducted()]);
   if (!data) {
     return setContent(`<button class="btn ghost" data-act="newsroom" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom</button>
       <div class="card"><h3>🏆 Ring of Honor</h3>
       <p class="muted">Candidate data isn't loaded. Build it with <code>scripts/build_ring_of_honor.py</code>.</p></div>`);
   }
+  const inductedIds = new Set(inducted.map(i => i.id));
   const counts = rohVoteCounts(entries);
   const noms = entries.filter(e => e.kind === 'nominate').sort((a, b) => Number(b.id.split('-').pop()) - Number(a.id.split('-').pop()));
   const voted = rohVoted();
@@ -7667,8 +7677,12 @@ async function showRingOfHonor(flash) {
       <div class="faint" style="font-size:10.5px;margin-top:6px">Source: ${esc(c.source)}</div>
     </div>`;
   };
-  const people = data.people.slice().sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0));
-  const athletes = data.athletes.slice().sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0));
+  const people = data.people.filter(p => !inductedIds.has(p.id)).sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0));
+  const athletes = data.athletes.filter(a => !inductedIds.has(a.id)).sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0));
+  const ringCard = (i) => `<div class="card" style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--bg2)">
+      <div><b>${esc(i.name)}</b>${i.note ? ` <span class="faint">— ${esc(i.note)}</span>` : ''}</div>
+      <div class="faint" style="font-weight:700">${esc(i.year)}</div>
+    </div>`;
   setContent(`<button class="btn ghost" data-act="newsroom" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom</button>
     <div class="card"><h3>🏆 SCFL Ring of Honor</h3>
       <p class="muted">Fun people and athletes this league likes — full stop. Doesn't have to be a
@@ -7677,8 +7691,13 @@ async function showRingOfHonor(flash) {
       collects votes and nominations — nobody gets inducted by an algorithm, only by the league
       itself. The candidates below are a starting seed, not a finished ballot, so it's guaranteed to
       be missing people. If someone's missing — a fighter, a comedian, a guy from the group chat's
-      favorite team, whoever — nominate them below.</p></div>
+      favorite team, whoever — nominate them below.</p>
+      <p class="faint" style="margin-top:10px;font-size:12.5px">Want to post this for the league to
+      vote on without opening the app? Share <b>ring-of-honor/</b> — same ballot, no login, works
+      from a phone.</p></div>
     ${flash ? `<div class="card" style="background:var(--bg2)"><b>${esc(flash)}</b></div>` : ''}
+    ${inducted.length ? `<h4 style="margin:16px 0 8px">🏆 The Ring</h4>
+      <div style="display:grid;gap:8px">${inducted.slice().sort((a,b)=>b.year-a.year).map(ringCard).join('')}</div>` : ''}
     <h4 style="margin:16px 0 8px">🏈 Athletes</h4>
     <div style="display:grid;gap:8px">${athletes.map(card).join('') || '<p class="faint">None yet.</p>'}</div>
     <h4 style="margin:20px 0 8px">👤 People</h4>
