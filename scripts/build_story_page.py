@@ -19,6 +19,24 @@ SITE = 'https://watsoncapitalinvest-dot.github.io/Claude/'
 
 # Per-story presentation. Copy lives in investigations.json; this is only chrome.
 STORIES = {
+ 'the-grudge-report': {
+   'out': 'scfl-grudge-report.html',
+   'tab': 'The Grudge Report — SCFL Record Room',
+   'kicker': 'The Record Room · Aug 2026',
+   'runhead': 'SCFL NewsRoom · The Record Room · August 2026',
+   'mast': ('The Grudge ', 'Report'),
+   'art': 'scfl-grudge-art.jpg',
+   'og': 'scfl-grudge-og.jpg',
+   'ogtitle': 'The Grudge Report',
+   'ogdesc': ("2,344 games across eighteen seasons. Who actually has a rivalry in the SCFL, "
+              "and who just has a tormentor."),
+   'sharetext': 'SCFL: 2,344 games audited. Who has a rivalry, and who has a tormentor.',
+   'covernote': 'Every figure reconciled against the league record.',
+   'freeze_after': None,
+   'art_topset': True,  # the artwork leaves a quiet band at the top for the masthead
+   'dropcap_on': 'This league has always',
+   'sign': '— The Record Room',
+ },
  'the-wookie-curse': {
    'out': 'scfl-wookie-curse.html',
    'tab': 'The Wookie Curse — SCFL Investigations',
@@ -43,6 +61,17 @@ EXTRA_CSS = """
 /* photo cover — the artwork whole, never cropped */
 .photocover{position:absolute;inset:0;background:#0a0806;display:flex;flex-direction:column;
   padding:18px 0 74px;}
+.photocover.plain{background:#fffdfb;padding:0 0 62px;}
+.photocover.plain .pc-art{object-fit:contain;}
+/* artwork that leaves its own space for the masthead */
+.photocover.topset{background:#f3ece0;padding:0;display:block;}
+.photocover.topset .pc-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.pc-set{position:absolute;left:0;right:0;top:0;padding:30px 26px 0;text-align:center;}
+.pc-set .pc-kick{color:#b23a2c;padding:0 0 10px;}
+.pc-set .pc-mast{font-size:40px;color:#1c1814;text-shadow:none;}
+.pc-set .pc-mast span{color:#b23a2c;}
+.pc-set .pc-h{font-size:21px;color:#3a332a;text-shadow:none;margin:10px 0 0;}
+.pc-set .pc-rule{background:#b23a2c;margin:12px auto 0;}
 .pc-kick{flex:0 0 auto;text-align:center;font-family:var(--sans);font-size:10px;font-weight:900;
   letter-spacing:.32em;text-transform:uppercase;color:#e8393e;padding:0 18px 12px;}
 .pc-art{flex:1 1 auto;min-height:0;width:100%;object-fit:contain;display:block;}
@@ -132,7 +161,21 @@ def build(slug):
         start = b
     body = '\n'.join(pages)
 
-    cover = ('<section class="page"><div class="photocover">'
+    if cfg.get('art_topset'):
+        cover = ('<section class="page"><div class="photocover topset">'
+                 '<img class="pc-art" src="' + cfg['art'] + '" alt="' + esc(art['headline']) + '">'
+                 '<div class="pc-set">'
+                 '<div class="pc-kick">' + cfg['kicker'].split('·')[0].strip() + ' &middot; SCFL NewsRoom</div>'
+                 '<div class="pc-mast">' + cfg['mast'][0] + '<span>' + cfg['mast'][1] + '</span></div>'
+                 '<div class="pc-rule"></div>'
+                 '<div class="pc-h">' + esc(art['subhead'].split('.')[0]) + '.</div>'
+                 '</div></div></section>')
+    elif cfg.get('plain_art'):
+        cover = ('<section class="page"><div class="photocover plain">'
+                 '<img class="pc-art" src="' + cfg['art'] + '" alt="' + esc(art['headline']) + '">'
+                 '</div></section>')
+    else:
+        cover = ('<section class="page"><div class="photocover">'
              '<div class="pc-kick">' + cfg['kicker'].split('·')[0].strip() + ' &middot; SCFL NewsRoom</div>'
              '<img class="pc-art" src="' + cfg['art'] + '" alt="' + esc(art['headline']) + '">'
              '<div class="pc-bot">'
