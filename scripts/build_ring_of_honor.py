@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 """Build ring-of-honor.json — the seed candidate list for the SCFL Ring of Honor.
 
-The Ring of Honor is fun people and athletes this league likes — full stop.
-Not "fantasy-relevant," not "was on someone's roster." A UFC heavyweight
-whose post-fight interviews the group chat loves belongs here exactly as
-much as a wrestler one manager's spouse works with. Induction is a league
-call, not something this script can make — chat exports never enter this
-repo (see docs/ROADMAP.md), so this seeds candidates only from material
-already distilled and reviewed elsewhere in the repo, plus names named
-directly by the commissioner. Nothing here is quoted chat text; every blurb
-is written fresh from the sourced facts and every candidate is DRAFT until
-the league votes it in through the app.
+This isn't a new idea being bolted onto the league — it's a real one, with a
+real history in the chat. Casual "ring of honor" nominations go back to at
+least May 2022 (a golfer, praised as an unbothered legend on and off the
+course). Smoke Dragons tried to formally build one in May 2023: draw up a
+list, take nominations from the league, vote in a couple every year, tie it
+to draft day. It never got built then. The bar was never "played in this
+league" or "fantasy-relevant" — real "first ballot" votes since have gone to
+a UFC heavyweight and a Brewers broadcaster right alongside actual NFL
+names. The one real test across every real mention: does the room agree
+this person is a legend. Induction is a league call, not something this
+script can make — chat exports never enter this repo (see docs/ROADMAP.md),
+so this seeds candidates only from material already distilled and reviewed
+elsewhere in the repo, plus names named directly by the commissioner.
+Nothing here is quoted chat text; every blurb is written fresh from the
+sourced facts and every candidate is DRAFT until the league votes it in
+through the app.
 
 The sixteen managers are explicitly NOT eligible for self-nomination here —
 "we're not nominating owners" (the commissioner, Aug 2026). dossier.json is
