@@ -27,7 +27,6 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'ring-of-honor.json')
 
 dossier = json.load(open(os.path.join(ROOT, 'dossier.json')))
-investigations = json.load(open(os.path.join(ROOT, 'investigations.json')))['investigations']
 
 def slug(s):
     return ''.join(c.lower() if c.isalnum() else '-' for c in s).strip('-')
@@ -45,27 +44,15 @@ for m in dossier['managers']:
         'source': 'dossier.json',
     })
 
-# Athletes with a real, fact-checked file behind them (investigations.json).
-# Hand-mapped: this is not automatic, because the piece has to actually be
-# about the player, not just mention him.
-ATHLETE_SOURCES = {
-    'the-hill-standoff': ('Tyreek Hill', 'Five years of trade offers the Hairy Gumbas turned down, and the deal that died at midnight. The player at the center of the league’s longest-running "will he, won’t he."'),
-    'jcm-trade-review': ('Jacory Croskey-Merritt', 'The board had him as a mid-second. Washington’s starting back cost a real 2027 first anyway — the buy that turned an off-radar name into a league argument.'),
-}
+# investigations.json pieces (the-hill-standoff, jcm-trade-review, etc.) are
+# NOT a source here on their own — they document trade *value*, and this
+# board is explicitly not a fantasy-relevance list (see the module docstring
+# above). Checked the raw chat for both Tyreek Hill and Jacory Croskey-Merritt
+# directly: every mention is roster/trade/injury talk, no personality
+# affection, and Hill draws open dislike at least once ("I hate tyreek hill
+# so goddamn much"). Neither belongs here on the evidence. Athletes only make
+# this list below, sourced from a real like, not a real trade.
 ATHLETES = []
-for inv in investigations:
-    slg = inv.get('slug') or ''
-    if slg in ATHLETE_SOURCES:
-        name, blurb = ATHLETE_SOURCES[slg]
-        ATHLETES.append({
-            'id': 'a-' + slug(name),
-            'category': 'athlete',
-            'name': name,
-            'team': None,
-            'status': '',
-            'blurb': blurb,
-            'source': f'investigations.json ({inv.get("headline")})',
-        })
 
 # Named directly by the commissioner, or found in the league's own chat —
 # distilled to a fact and a fresh blurb, never a stored quote. The chat file
