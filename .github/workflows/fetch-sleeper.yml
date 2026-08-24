@@ -114,6 +114,19 @@ jobs:
           team    = {r["roster_id"]: uname.get(r.get("owner_id"), f"roster {r['roster_id']}")
                      for r in rosters}
 
+          # if a username was given, say plainly which roster is theirs
+          if username:
+              by_login = {u.get("display_name","").lower(): u["user_id"] for u in users}
+              uid = by_login.get(username.lower())
+              if not uid:
+                  u = get(f"{API}/user/{username}", quiet=True)
+                  uid = u.get("user_id") if u else None
+              mine = next((r for r in rosters if r.get("owner_id") == uid), None)
+              if mine:
+                  print(f"\n{username} owns roster {mine['roster_id']}: {team.get(mine['roster_id'])}")
+              else:
+                  print(f"\ncould not match {username} to a roster in this league")
+
           settings = info.get("settings") or {}
           last = int(settings.get("playoff_week_start") or 15) - 1
           weeks = {}
