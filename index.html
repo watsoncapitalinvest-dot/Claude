@@ -8461,14 +8461,21 @@ function staffImportGo(){
 // are fixed, so answers stay comparable across owners for the study. The
 // owner sends their answers back the exact same way the Board already sends
 // contributions (package → text/clipboard → paste into Import from the Board).
-const GENERAL_STUDY_QUESTIONS = [
-  "When your team is down, what's the actual turning point — a trade, a draft class, a mindset change?",
-  'Do you rebuild patiently or try to reload fast? Has that changed over the years?',
-  "What's the closest you've come to blowing up your own roster out of pure frustration — and did you go through with it?",
-  'Is there a season you still look back on as the one that got away?',
-  'What does a bad year actually feel like for you as a manager — panic, patience, denial, something else?',
-  "If you had to explain your team's ebb-and-flow pattern in one sentence, what would it be?",
-];
+// The original recovery-study set — kept as a one-click preset in the
+// builder below, not a forced default. The interview mechanism itself asks
+// whatever questions the commissioner types in; this is just a starting point.
+const RECOVERY_STUDY_PRESET = {
+  topic: 'a study on how teams recover — the rebuilds, the collapses, the ebbs and flows',
+  tailored: true,
+  questions: [
+    "When your team is down, what's the actual turning point — a trade, a draft class, a mindset change?",
+    'Do you rebuild patiently or try to reload fast? Has that changed over the years?',
+    "What's the closest you've come to blowing up your own roster out of pure frustration — and did you go through with it?",
+    'Is there a season you still look back on as the one that got away?',
+    'What does a bad year actually feel like for you as a manager — panic, patience, denial, something else?',
+    "If you had to explain your team's ebb-and-flow pattern in one sentence, what would it be?",
+  ],
+};
 // year -> rank for one franchise, resolved through scfl-franchises.json's
 // handle map — the same real standings the Franchise Directory and the
 // Trade Court's pick model already use.
@@ -8518,6 +8525,19 @@ function tailoredInterviewQuestions(f) {
   }
   return qs;
 }
+// The question set travels IN the link (base64 JSON: {topic, tailored, questions}),
+// so the commissioner controls what's asked with no code changes and no server —
+// build it once in Owner Interviews, and every team's link carries it.
+function decodeInterviewSpec(params) {
+  const raw = params.get('q');
+  if (!raw) return null;
+  try {
+    const d = JSON.parse(b64dec(raw));
+    if (!d || !Array.isArray(d.questions)) return null;
+    return { topic: d.topic || '', tailored: d.tailored !== false, questions: d.questions.filter(Boolean) };
+  } catch { return null; }
+}
+function encodeInterviewSpec(spec) { return b64enc(JSON.stringify(spec)); }
 async function enterInterview(params) {
   hideTopBar();
   app.innerHTML = spinner('Opening your interview…');
@@ -8526,17 +8546,22 @@ async function enterInterview(params) {
     const [fr] = await Promise.all([loadFranchiseMap(), loadBundledHistory()]);
     const f = fr && (fr.franchises || []).find(x => x.key === key && x.active);
     if (!f) { app.innerHTML = empty("Can't find that team", 'Check the link and try again.'); return; }
-    renderInterview(f);
+    const spec = decodeInterviewSpec(params);
+    renderInterview(f, spec);
   } catch (e) {
     app.innerHTML = empty("Couldn't open the interview", 'Try refreshing the link.');
   }
 }
 let INTERVIEW_ANSWERS = {}, INTERVIEW_META = null;
-function renderInterview(f) {
-  const tailored = tailoredInterviewQuestions(f);
-  const allQs = [...tailored, ...GENERAL_STUDY_QUESTIONS];
+function renderInterview(f, spec) {
+  const s = spec || { topic: '', tailored: true, questions: [] };
+  const tailored = s.tailored ? tailoredInterviewQuestions(f) : [];
+  const allQs = [...tailored, ...s.questions];
   INTERVIEW_ANSWERS = {};
   INTERVIEW_META = { franchiseKey: f.key, club: f.club, questions: allQs };
+  const intro = allQs.length
+    ? `The league's doing ${esc(s.topic || 'a round of owner interviews')}. ${tailored.length ? 'A few of these questions are pulled straight from your own record; the rest are' : 'These are'} the same for every owner. Answer as many as you want, as long or short as you want. When you're done, hit Send — it packages your answers to text back.`
+    : `This link doesn't have any questions attached to it — ask whoever sent it for a fresh one.`;
   const qHtml = allQs.map((q, i) => `<div class="card" style="margin-bottom:10px">
     <div class="dt" style="font-weight:700;margin-bottom:8px">${i + 1}. ${esc(q)}</div>
     <textarea data-interview-q="${i}" rows="4" style="width:100%" placeholder="Type your answer…"></textarea>
@@ -8544,13 +8569,13 @@ function renderInterview(f) {
   app.innerHTML = `<div style="max-width:640px;margin:0 auto;padding:24px 16px 60px">
     <div class="setup-logo" style="font-size:22px;text-align:center">🎙️ SCFL Owner Interview</div>
     <p class="muted" style="text-align:center;margin-top:4px">${esc(f.club)}${f.manager ? ' — ' + esc(f.manager) : ''}</p>
-    <div class="card" style="margin:16px 0"><div class="dt">The league's doing a study on how teams recover — the rebuilds, the collapses, the ebbs and flows. A few of these questions are pulled straight from your own record; the rest are the same for every owner. Answer as many as you want, as long or short as you want. When you're done, hit Send — it packages your answers to text back.</div></div>
-    <label class="label">Your name</label>
+    <div class="card" style="margin:16px 0"><div class="dt">${intro}</div></div>
+    ${allQs.length ? `<label class="label">Your name</label>
     <input id="ivName" class="input" placeholder="Your name" value="${esc(f.manager || '')}">
     <div style="height:14px"></div>
     ${qHtml}
     <button class="btn" data-act="interview-send" style="margin-top:6px">📤 Send my answers</button>
-    <div id="ivMsg" class="muted" style="margin-top:10px;text-align:center"></div>
+    <div id="ivMsg" class="muted" style="margin-top:10px;text-align:center"></div>` : ''}
   </div>`;
   document.querySelectorAll('[data-interview-q]').forEach(ta => {
     ta.oninput = e => { INTERVIEW_ANSWERS[e.target.dataset.interviewQ] = e.target.value; };
@@ -8584,33 +8609,57 @@ function interviewImportGo(raw, msg) {
   if (msg) msg.textContent = `Merged ${esc(b.by)}'s interview (${esc(b.club)}) — ${b.answers.length} answer${b.answers.length === 1 ? '' : 's'}.`;
   toast('Interview merged');
 }
-// The commissioner's side: one link per team, and every answer collected so far.
+// The commissioner's side: build whatever question set you want, then get a
+// link per team. The questions live in localStorage between visits and IN
+// the link itself once copied — nothing here is hardcoded to one topic.
+function interviewBuilderKey(){ return 'gg.interview.builder.v1'; }
+function loadInterviewBuilder(){ try { return JSON.parse(localStorage.getItem(interviewBuilderKey()) || 'null') || RECOVERY_STUDY_PRESET; } catch { return RECOVERY_STUDY_PRESET; } }
+function saveInterviewBuilder(b){ try { localStorage.setItem(interviewBuilderKey(), JSON.stringify(b)); } catch {} }
+function readInterviewBuilderForm() {
+  const topic = (($('#ivbTopic') || {}).value || '').trim();
+  const questions = (($('#ivbQuestions') || {}).value || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const tailored = !!(($('#ivbTailored') || {}).checked);
+  return { topic, questions, tailored };
+}
 async function showInterviews() {
   const back = `<button class="btn ghost" data-act="home" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Executive Office</button>`;
   app.innerHTML = `<div style="padding-bottom:24px">${back}
     <div class="setup-logo" style="font-size:24px">🎙️ Owner Interviews</div>
-    <p class="muted" style="margin-top:4px">For the recovery study — send an owner their link, they type answers, they send the package back, you paste it into <b>Import from the Board</b>.</p>
-    <div class="card"><div class="dt">Loading team links…</div></div></div>`;
+    <div class="card"><div class="dt">Loading…</div></div></div>`;
   const fr = await loadFranchiseMap();
   const teams = ((fr && fr.franchises) || []).filter(f => f.active).sort((a, b) => a.club.localeCompare(b.club));
-  const linkRows = teams.map(f => {
-    const url = location.origin + location.pathname + '?interview=' + encodeURIComponent(f.key);
-    return `<div class="dash-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px">
+  const b = loadInterviewBuilder();
+  const linkRows = teams.map(f => `<div class="dash-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px">
       <div><b style="font-size:13px">${esc(f.club)}</b><div class="faint" style="font-size:11px">${esc(f.manager || '')}</div></div>
-      <button class="btn ghost" data-act="interview-copylink" data-url="${esc(url)}" data-team="${esc(f.club)}" style="width:auto;padding:6px 12px;font-size:12px">🔗 Copy link</button>
-    </div>`;
-  }).join('');
+      <button class="btn ghost" data-act="interview-copylink" data-key="${esc(f.key)}" data-team="${esc(f.club)}" style="width:auto;padding:6px 12px;font-size:12px">🔗 Copy link</button>
+    </div>`).join('');
   const collected = loadInterviews().slice().sort((a, b) => b.at - a.at);
   const collectedHtml = collected.length ? collected.map(iv => `<div class="card" style="margin-bottom:8px">
       <div class="at" style="margin:0">${esc(iv.club)} <span class="faint" style="font-weight:400">— ${esc(iv.by)}</span></div>
       <div class="faint" style="font-size:11px;margin:2px 0 8px">${new Date(iv.at).toLocaleDateString()} · ${iv.answers.length} answer${iv.answers.length === 1 ? '' : 's'}</div>
       ${iv.answers.map(a => `<div style="margin-bottom:8px"><div class="dt" style="font-weight:700;font-size:12.5px">${esc(a.q)}</div><div class="dt" style="font-size:13px;margin-top:2px;white-space:pre-wrap">${esc(a.a)}</div></div>`).join('')}
     </div>`).join('')
-    : `<div class="card"><div class="dt">No answers collected yet. Copy a link above and send it to an owner.</div></div>`;
+    : `<div class="card"><div class="dt">No answers collected yet. Build your questions below, copy a link, send it to an owner.</div></div>`;
   app.innerHTML = `<div style="padding-bottom:24px">${back}
     <div class="setup-logo" style="font-size:24px">🎙️ Owner Interviews</div>
-    <p class="muted" style="margin-top:4px">For the recovery study — send an owner their link, they type answers, they send the package back, you paste it into <b>Import from the Board</b>.</p>
-    <div class="seclabel">Send a Link</div>${linkRows}
+    <p class="muted" style="margin-top:4px">Ask owners whatever you want. Build the questions once below — every team's link below carries them. They type answers and send the package back the way the Board already sends contributions; paste it into <b>Import from the Board</b>.</p>
+    <div class="card">
+      <label class="label">What's this round about? (shown to the owner, optional)</label>
+      <input id="ivbTopic" class="input" placeholder="e.g. a study on how teams recover" value="${esc(b.topic || '')}">
+      <div style="height:10px"></div>
+      <label class="label">Questions — one per line</label>
+      <textarea id="ivbQuestions" rows="8" style="width:100%" placeholder="Type each question on its own line…">${esc((b.questions || []).join('\n'))}</textarea>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="ivbTailored" ${b.tailored !== false ? 'checked' : ''}>
+        Also ask each team 2-4 questions pulled from their own real standings history (worst finish, best finish, biggest swing)
+      </label>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn ghost" data-act="interview-save-builder" style="width:auto;padding:7px 14px;font-size:12px">💾 Save these questions</button>
+        <button class="btn ghost" data-act="interview-load-preset" style="width:auto;padding:7px 14px;font-size:12px">↺ Load the recovery-study preset</button>
+      </div>
+      <div id="ivbMsg" class="faint" style="font-size:11px;margin-top:8px"></div>
+    </div>
+    <div class="seclabel">Send a Link — carries whatever's saved above</div>${linkRows}
     <div class="seclabel">Collected So Far — ${collected.length}</div>${collectedHtml}</div>`;
 }
 function showStaffHandbook(){
@@ -8792,9 +8841,23 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'staff-import-go') return staffImportGo();
   if (act === 'interviews') return showInterviews();
   if (act === 'interview-send') return interviewSend();
+  if (act === 'interview-save-builder') {
+    saveInterviewBuilder(readInterviewBuilderForm());
+    const m = $('#ivbMsg'); if (m) m.textContent = 'Saved — every link below now carries these questions.';
+    toast('Questions saved');
+    return;
+  }
+  if (act === 'interview-load-preset') {
+    saveInterviewBuilder(RECOVERY_STUDY_PRESET);
+    return showInterviews();
+  }
   if (act === 'interview-copylink') {
-    try { await navigator.clipboard.writeText(t.dataset.url); toast(`Link copied — send it to ${t.dataset.team}`); }
-    catch { prompt('Copy this link:', t.dataset.url); }
+    const spec = readInterviewBuilderForm();
+    saveInterviewBuilder(spec); // copying a link should never lose unsaved edits
+    if (!spec.questions.length && !spec.tailored) { toast('Add at least one question first (or tick the history-questions box)'); return; }
+    const url = location.origin + location.pathname + '?interview=' + encodeURIComponent(t.dataset.key) + '&q=' + encodeURIComponent(encodeInterviewSpec(spec));
+    try { await navigator.clipboard.writeText(url); toast(`Link copied — send it to ${t.dataset.team}`); }
+    catch { prompt('Copy this link:', url); }
     return;
   }
   if (act === 'assets') return showAssetVault();
