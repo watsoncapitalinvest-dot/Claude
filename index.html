@@ -491,6 +491,26 @@
   .newsroom-card .nr-txt { display:flex; flex-direction:column; gap:2px; flex:1; }
   .newsroom-card .nr-l { font-family:var(--serif); font-weight:900; font-size:19px; color:var(--text); }
   .newsroom-card .nr-d { font-size:12px; color:var(--faint); line-height:1.35; }
+  /* The desk scene: the exec-suite photo with clickable object hotspots */
+  .desk-scene { position:relative; width:100%; max-width:900px; margin:18px auto 6px; border-radius:16px;
+    overflow:hidden; box-shadow:0 14px 40px rgba(0,0,0,.28); background:#0a1024; }
+  .desk-scene img { display:block; width:100%; height:auto; }
+  .desk-toggle { position:absolute; right:10px; top:10px; z-index:3; background:rgba(8,12,28,.82);
+    color:#ffd35c; border:1px solid rgba(255,211,92,.55); border-radius:20px; padding:7px 14px;
+    font-size:12px; font-weight:700; cursor:pointer; letter-spacing:.2px; backdrop-filter:blur(2px); }
+  .desk-toggle:hover { background:rgba(8,12,28,.95); }
+  .desk-hot { position:absolute; cursor:pointer; background:none; border:none; padding:0; }
+  .desk-hot .hit { position:absolute; inset:0; border-radius:10px; border:2px solid transparent; transition:all .16s; }
+  .desk-hot .tag { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.92);
+    background:rgba(8,12,28,.9); border:1px solid rgba(255,211,92,.55); border-radius:8px; padding:6px 9px;
+    text-align:center; opacity:0; transition:opacity .16s, transform .16s; pointer-events:none; max-width:94%; }
+  .desk-hot .tag b { display:block; color:#ffd35c; font-size:11.5px; font-weight:800; letter-spacing:.2px;
+    line-height:1.25; }
+  .desk-hot .tag span { display:block; color:#e8ebf3; font-size:9.5px; margin-top:2px; line-height:1.3; }
+  .desk-hot:hover .hit, .desk-scene.legend-on .desk-hot .hit { border-color:rgba(255,211,92,.9);
+    background:rgba(255,211,92,.10); box-shadow:0 0 0 3px rgba(255,211,92,.16); }
+  .desk-hot:hover .tag, .desk-scene.legend-on .desk-hot .tag { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  @media (max-width:600px) { .desk-hot .tag span { display:none; } }
   .newsroom-card .nr-go { font-size:26px; color:var(--accent); font-weight:800; }
 
   /* ---- Executive Office landing: dark "front office" theme (menu tab only) ---- */
@@ -3529,6 +3549,30 @@ function toolSections(tools, sections) {
 }
 // ---- SCFL Executive Office — the landing hub: front-office tools + the door
 // into the Newsroom. Opens here (not on a week's issue).
+// ---- The desk scene: the exec-suite photo, six objects, six sections --------
+// Percentages are the object's box within scfl-exec-suite-desk.jpg (1536x1024),
+// read off a grid overlay by hand. 'goto' scrolls the flat list below to that
+// section's heading; 'act' routes straight to a single-tool section instead.
+const DESK_HOTSPOTS = [
+  { left:1,  top:56, w:15, h:26, label:'Ring of Honor',   blurb:'Athletes & people the league votes in', act:'ring-of-honor' },
+  { left:17, top:66, w:27, h:29, label:'The Record Room', blurb:'Dossier, records, rivalries, the ledger & ex-files', goto:'The Record Room' },
+  { left:25, top:47, w:17, h:18, label:'The Board Desk',  blurb:'League data exports, asset vault & board admin', goto:'The Board Desk' },
+  { left:40, top:58, w:9,  h:14, label:'The Arcade',      blurb:'SCFL Jeopardy & Trade Wars', goto:'The Arcade' },
+  { left:49, top:59, w:23, h:28, label:'The Weekly Board',blurb:'Power Rankings & Money Lines', goto:'The Weekly Board' },
+  { left:70, top:63, w:28, h:34, label:'The Newsroom',    blurb:'The magazine — issues, features, dossier & the desk', act:'newsroom' },
+];
+function deskSceneHTML() {
+  const hots = DESK_HOTSPOTS.map(h => `<button class="desk-hot" ${h.act ? `data-act="${h.act}"` : `data-act="desk-goto" data-label="${esc(h.goto)}"`}
+      style="left:${h.left}%;top:${h.top}%;width:${h.w}%;height:${h.h}%">
+      <span class="hit"></span>
+      <span class="tag"><b>${esc(h.label)}</b><span>${esc(h.blurb)}</span></span>
+    </button>`).join('');
+  return `<div class="desk-scene">
+    <img src="scfl-exec-suite-desk.jpg" alt="The Executive Suite desk">
+    <button class="desk-toggle" data-act="desk-legend">👁 What's on the desk?</button>
+    ${hots}
+  </div>`;
+}
 function showMenu() {
   S.reading = false;
   if (!staffName()) return renderDeskGate();
@@ -3543,6 +3587,7 @@ function showMenu() {
         ? `<div class="office-sub" style="cursor:pointer;margin-top:4px" data-act="staff-switch">At the desk: <b style="color:var(--gold)">${esc(staffName())}</b> · tap to switch</div>`
         : ''}
     </div>
+    ${deskSceneHTML()}
     <button class="newsroom-card" data-act="newsroom">
       <img class="nr-logo" src="${NEWSROOM_LOGO}" alt="SCFL NewsRoom">
       <span class="nr-txt"><span class="nr-l">The Newsroom</span><span class="nr-d">The magazine — issues, features, dossier &amp; the desk</span></span>
@@ -8139,6 +8184,17 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'tab') { S.tab = t.dataset.tab; renderShell(); return renderTab(); }
   if (act === 'home') { S.reading = false; S.tab = 'menu'; renderShell(); return renderTab(); }
   if (act === 'newsroom') { S.reading = false; S.tab = 'newsroom'; renderShell(); return renderTab(); }
+  if (act === 'desk-goto') {
+    const el = [...document.querySelectorAll('.seclabel')].find(s => s.textContent.trim() === t.dataset.label);
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+    return;
+  }
+  if (act === 'desk-legend') {
+    const scene = document.querySelector('.desk-scene');
+    if (scene) scene.classList.toggle('legend-on');
+    if (t) t.textContent = scene && scene.classList.contains('legend-on') ? '✕ Hide labels' : "👁 What's on the desk?";
+    return;
+  }
   if (act === 'create-issue') { S.reading = false; S.tab = 'create'; renderShell(); return renderTab(); }
   if (act === 'weekly-stories') { S.reading = false; S.tab = 'stories'; renderShell(); return renderNews(); }
   if (act === 'build-issue') { S.reading = false; S.tab = 'stories'; delete S.newsCache[S.activeWeek]; renderShell(); return renderNews(); }
