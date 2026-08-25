@@ -62,6 +62,18 @@ and the league votes on the new name**, so franchise names are never stable
 identifiers — always resolve identity by owner, and expect a new alias each
 August.
 
+`scfl-franchises.json` is the resolved map: ESPN handles and every historical
+per-season alias, keyed to one canonical `key`/`club`/`manager` per franchise
+(23 franchises total, 16 currently active). **Use it, don't re-derive it** —
+any code or analysis that needs to match a team name against an owner
+(trade attribution, dossier work, win-projection matching, etc.) should
+resolve through this file's `handles`/`lookup`/`aliases`, not a hand-rolled
+regex against whatever name happens to be live. New World Order alone has
+been seen as "New World Order," "New Wod Order" (typo), and "n.W.o" — a
+regex gap here has caused real bugs twice in one session. The in-app
+Franchise Directory (Executive Office → The Record Room → 🪪) renders this
+same file for humans; keep both in sync with any future rename.
+
 ## House rules this project runs on
 
 - Chat exports never enter the repo. Only distilled, reviewed artifacts.

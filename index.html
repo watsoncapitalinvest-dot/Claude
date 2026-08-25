@@ -2559,6 +2559,82 @@ function showRecords() {
     <div class="card" style="margin-top:12px;cursor:pointer" data-act="ex-files"><div class="at" style="margin:0">👻 The Ex-Files ›</div><div class="faint" style="font-size:12px;margin-top:2px">A special segment: every departed owner, dragged back for one last review.</div></div>
   </div>`;
 }
+// ---- Franchise Directory: the canonical team ↔ owner ↔ name-history map ----
+// Team display names drift constantly — the league renames its last-place team
+// every year, and per-viewer quirks compound it (New World Order alone has
+// shown up as "New Wod Order" and "n.W.o" elsewhere in this app). scfl-
+// franchises.json is the one resolved source of truth; this page is that map
+// made visible, for the league and for whoever's touching this codebase next.
+let FRANCHISE_DATA = null;
+async function loadFranchiseMap() {
+  if (FRANCHISE_DATA) return FRANCHISE_DATA;
+  try {
+    const r = await fetch('scfl-franchises.json', { cache: 'no-cache' });
+    if (r.ok) FRANCHISE_DATA = await r.json();
+  } catch { FRANCHISE_DATA = null; }
+  return FRANCHISE_DATA;
+}
+async function showFranchiseMap() {
+  const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Executive Office</button>`;
+  const [d] = await Promise.all([loadFranchiseMap(), ensureTeamLogos()]);
+  if (!d || !d.franchises || !d.franchises.length) {
+    app.innerHTML = `<div style="padding-bottom:24px">${back}
+      <div class="setup-logo" style="font-size:24px">🪪 Franchise Directory</div>
+      <p class="muted" style="margin-top:4px">The full team ↔ owner ↔ name-history map — every franchise, every rename, resolved to one identity.</p>
+      <div class="card"><div class="dt">No franchise map baked in yet. Once <b>scfl-franchises.json</b> is committed it loads here automatically.</div></div></div>`;
+    return;
+  }
+  const all = d.franchises;
+  const active = all.filter(f => f.active);
+  const gone = all.filter(f => !f.active).sort((a, b) => (b.last || 0) - (a.last || 0));
+  const crest = (key, size) => (TEAMLOGOS && TEAMLOGOS[key])
+    ? `<img src="${TEAMLOGOS[key]}" alt="" style="width:${size}px;height:${size}px;border-radius:6px;object-fit:cover;vertical-align:middle;margin-right:8px;flex:none">`
+    : `<span style="width:${size}px;height:${size}px;border-radius:6px;background:var(--bg2);display:inline-block;vertical-align:middle;margin-right:8px;flex:none"></span>`;
+  const quickRows = active.map(f => `<tr>
+    <td style="padding:6px 8px 6px 0;white-space:nowrap">${crest(f.key, 22)}<b>${esc(f.club)}</b></td>
+    <td style="padding:6px 8px">${esc(f.manager || '—')}</td>
+    <td style="padding:6px 0 6px 8px;text-align:right" class="faint">${(f.titles || []).length ? '🏆'.repeat((f.titles || []).length) : '—'}</td>
+  </tr>`).join('');
+  const quickTable = `<div class="card" style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="border-bottom:1px solid var(--line);color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.4px">
+        <th style="text-align:left;padding:0 8px 6px 0">Team</th><th style="text-align:left;padding:0 8px 6px">Owner</th><th style="text-align:right;padding:0 0 6px 8px">Titles</th>
+      </tr></thead>
+      <tbody>${quickRows}</tbody></table>
+    <div class="faint" style="font-size:11px;margin-top:8px">${active.length} active franchises, current names shown. Full rename history below.</div>
+  </div>`;
+  const nameHistory = active.map(f => {
+    const seen = new Set();
+    const uniq = (f.aliases || []).filter(a => { const k = a.trim().toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+    const pills = uniq.map(a => {
+      const isCurrent = a.trim().toLowerCase() === String(f.club).trim().toLowerCase();
+      return `<span class="pill" style="${isCurrent ? 'border-color:var(--accent);color:var(--accent);font-weight:800;' : ''}margin:2px 4px 2px 0;display:inline-block">${esc(a)}</span>`;
+    }).join('');
+    const span = f.first && f.last ? `${f.first}–${f.last}` : '';
+    return `<div class="card">
+      <div style="display:flex;align-items:center">
+        ${crest(f.key, 34)}
+        <div><div class="at" style="margin:0">${esc(f.club)}</div>
+        <div class="faint" style="font-size:11.5px">${esc(f.manager || '—')}${span ? ` · ${esc(span)}` : ''}</div></div>
+      </div>
+      ${uniq.length > 1 ? `<div style="margin-top:8px">${pills}</div>` : ''}
+      ${(f.handles || []).length ? `<div class="faint" style="font-size:10px;margin-top:6px">ESPN handle${f.handles.length > 1 ? 's' : ''}: ${esc(f.handles.join(', '))}</div>` : ''}
+    </div>`;
+  }).join('');
+  const goneCards = gone.length ? `<div class="seclabel">Departed Franchises</div>${gone.map(f => {
+    const span = f.first && f.last ? `${f.first}–${f.last}` : '';
+    return `<div class="card" style="opacity:.6"><div class="at" style="margin:0">${esc(f.club)}</div>
+      <div class="faint" style="font-size:11.5px">${esc(f.manager || 'unknown owner')}${span ? ` · ${esc(span)}` : ''}</div></div>`;
+  }).join('')}` : '';
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    <div class="setup-logo" style="font-size:24px">🪪 Franchise Directory</div>
+    <p class="muted" style="margin-top:4px">The whole league resolved to one map: every team's current name, its owner, and every alias it's carried. The worst team gets renamed every year, so a display name is never a stable ID — this page is the one source of truth for who's who.</p>
+    ${quickTable}
+    <div class="seclabel">Name History</div>
+    ${nameHistory}
+    ${goneCards}
+  </div>`;
+}
 // ---- The Ex-Files: a special segment reviewing the league's departed owners --
 // Sourced from the Record Book (any franchise missing the most recent season
 // in the data), each gets a stat line and a newsroom verdict — tribute or
@@ -3520,6 +3596,7 @@ const OFFICE_TOOLS = [
   ['staff-send', '📤', 'Send to HQ', 'Package your additions → text them to the Commish'],
   ['staff-import', '📥', 'Import from the Board', 'Paste a board package into the Office'],
   ['dossier', '📓', 'Chat Dossier', 'Who’s who in the league'],
+  ['franchise-map', '🪪', 'Franchise Directory', 'Every team, owner & name change — resolved'],
   ['records', '📖', 'Record Book', 'All-time history & records'],
   ['rivalries', '⚔️', 'The Rivalry Board', 'Head-to-head, grudges & streaks'],
   ['players', '📇', 'The Ledger', 'Every traded player, tracked'],
@@ -3547,7 +3624,7 @@ const mtoolBtn = ([a, ic, l, d]) => `<button class="mtool" data-act="${a}"><span
 const OFFICE_SECTIONS = [
   ['The Weekly Board', ['power-ranks', 'money-lines']],
   ['The Board Desk', ['roster-export', 'logos-export', 'matchup-export', 'schedule-export', 'assets', 'staff-handbook', 'staff-send', 'staff-import']],
-  ['The Record Room', ['dossier', 'records', 'rivalries', 'players', 'ex-files']],
+  ['The Record Room', ['dossier', 'franchise-map', 'records', 'rivalries', 'players', 'ex-files']],
   ['The Arcade', ['jeopardy', 'tradewar']],
   ['Ring of Honor', ['ring-of-honor']],
 ];
@@ -3576,7 +3653,7 @@ function toolSections(tools, sections) {
 // 'act' routes straight to a single-tool section instead.
 const DESK_HOTSPOTS = [
   { left:5.5,  top:66.9, w:10.4, h:16.1, label:'Ring of Honor',   blurb:'Athletes & people the league votes in', act:'ring-of-honor' },
-  { left:15,   top:68.4, w:28,   h:25.9, label:'The Record Room', blurb:'Dossier, records, rivalries, the ledger & ex-files', goto:'The Record Room' },
+  { left:15,   top:68.4, w:28,   h:25.9, label:'The Record Room', blurb:'Dossier, franchise directory, records, rivalries, the ledger & ex-files', goto:'The Record Room' },
   { left:26.7, top:52.7, w:18.2, h:15.6, label:'The Board Desk',  blurb:'League data exports, asset vault & board admin', goto:'The Board Desk' },
   { left:45.2, top:64.9, w:10.1, h:8.3,  label:'The Arcade',      blurb:'SCFL Jeopardy & Trade Wars', goto:'The Arcade' },
   { left:56,   top:69.8, w:19.9, h:22.9, label:'The Weekly Board',blurb:'Power Rankings & Money Lines', goto:'The Weekly Board' },
@@ -8366,6 +8443,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'archive') return showArchive();
   if (act === 'history') return showHistory();
   if (act === 'dossier') return showDossier();
+  if (act === 'franchise-map') return showFranchiseMap();
   if (act === 'records') return showRecords();
   if (act === 'trade-court') return showTradeCourt();
   if (act === 'draft-desk') return showDraftDesk();
