@@ -5407,7 +5407,7 @@ function tcDraftMade(team){
   return picks.map(p => {
     const hindYr = Math.min(DP_LAST_YEAR, p.season + 3), hindYears = Math.min(3, DP_LAST_YEAR - p.season);
     const cost = tcPickCost(p.round, p.pickNo);
-    const rookie = dpValueAt(p.player, p.season);
+    const rookie = dpValueAt(p.player, p.season, true);
     const hind = dpValueAt(p.player, hindYr);
     return { ...p, cost, rookie: rookie == null ? cost : rookie, hind: hind == null ? (rookie == null ? cost : rookie) : hind, hindYears };
   }).sort((a, b) => a.season - b.season || (a.pickNo || 0) - (b.pickNo || 0));
@@ -5522,7 +5522,7 @@ function tcChatAssetVal(a, season, atTime) {
   const targetYear = atTime ? season : Math.min(DP_LAST_YEAR, (season || DP_LAST_YEAR - 3) + 3);
   if (a.player) {
     const floor = tcPlayerFloor(a.player);                  // startable-player floor (same grid as the calculator)
-    const dv = dpValueAt(a.player, targetYear);
+    const dv = dpValueAt(a.player, targetYear, atTime);
     if (dv != null) return Math.max(Math.round(scflStretch(dv)), floor);
     if (atTime && typeof a.v === 'number') return Math.max(a.v, floor);
     const pv = (typeof playerDollarValue === 'function') ? playerDollarValue(a.player) : null;
@@ -5540,25 +5540,129 @@ function tcChatAssetVal(a, season, atTime) {
   else if (/\b(2nd|second)\b/i.test(s)) v = 18;
   else if (/\b(3rd|third)\b/i.test(s)) v = 6;
   else v = 12;
-  // FUTURE pick (slot unknown): nudge the generic value by how the original
-  // franchise tends to finish — a bottom team's first lands early (worth more),
-  // a contender's lands late (worth less) — then apply the time discount.
+  // FUTURE pick (slot unknown): expected value over a real slot-probability
+  // model (below), fit from actual rank persistence — not a hand-guessed
+  // nudge — then apply the time discount.
   if (yr && season && +yr > season) {
-    if (!slot) { const owner = (s.match(/\(([^)]+)\)/) || [])[1]; if (owner) v = Math.round(v * tcFuturePickMult(tcTeamCanon(owner.trim()))); }
+    if (!slot) {
+      const owner = (s.match(/\(([^)]+)\)/) || [])[1];
+      const round = /\b(1st|first)\b/i.test(s) ? 1 : /\b(2nd|second)\b/i.test(s) ? 2 : null;
+      if (owner && round) v = Math.round(expectedFuturePickValue(owner.trim(), round, +yr - season, season));
+    }
     v = Math.round(v * Math.pow(0.9, +yr - season)); // time discount
   }
   return v;
 }
-// How a franchise tends to finish → a multiplier for its FUTURE picks.
-// 1.0 = neutral; >1 = usually bad (pick lands early, worth more); <1 = usually
-// good (pick lands late, worth less). Needs Sleeper standings (from Refresh).
-function tcFuturePickMult(team){
-  const st = (S._tcData && S._tcData.standings) || {}; const ranks = []; let of = 16;
-  for (const s in st) if (st[s][team]) { ranks.push(st[s][team].rank); of = st[s][team].of; }
-  if (!ranks.length || of < 2) return 1;
-  const avg = ranks.reduce((a, b) => a + b, 0) / ranks.length;
-  const norm = (avg - 1) / (of - 1);                       // 0 = always 1st, 1 = always last
-  return +(0.75 + norm * 0.6).toFixed(3);                  // 0.75 (contender) … 1.35 (bottom-feeder)
+// ---- Future-pick expected value: fit from real data, not a guess ----------
+// A future pick's slot isn't known at trade time -- only how the owning
+// franchise has historically finished. Fantasy standings barely carry over
+// year to year (fit live below, typically r^2 ~ .03 across league history),
+// so this stays close to a flat, round-average value on purpose rather than
+// assuming recent form predicts the next finish. See docs/TRADE-VALUE-MODEL.md.
+let _rankRegression = null, _rankBySeason = null, _franchiseAliasLC = null;
+// Same abbreviations trades.json actually uses for "whose original pick is
+// this" (verified against every distinct tag in the ledger) -- broader than
+// tcTeamCanon's TC_ALIAS, which only normalizes CURRENT team-name variants.
+const TC_PICK_TAG_MAP = {
+  machines:'machines', creams:'stillthecream', dragons:'smokedragons', 'smoke dragons':'smokedragons',
+  hitters:'heavyhitters', 'heavy hitters':'heavyhitters', 'jet-i':'masterjeti', 'jeti':'masterjeti', 'jet-':'masterjeti',
+  klowns:'killerklowns', nwo:'newworldorder', wookies:'wookieleaks', 'wookie leaks':'wookieleaks',
+  pop:'powersofpain', 'power of pain':'powersofpain', 'powers of pain':'powersofpain',
+  guidos:'guidohaters', 'guido haters':'guidohaters', 'a-team':'lilchops', chops:'lilchops', porkys:'lilchops', dod:'lilchops',
+  beavers:'beavereaters', sdft:'beavereaters', collars:'horsecollars', pce:'porkchopexpress',
+  'pork chop express':'porkchopexpress', gumbas:'gumbas',
+};
+function franchiseKeyForTeam(raw) {
+  const q = String(raw || '').trim().toLowerCase().replace(/[’']/g, '');
+  if (TC_PICK_TAG_MAP[q]) return TC_PICK_TAG_MAP[q];
+  const fr = FRANCHISE_DATA;
+  if (fr) {
+    if (!_franchiseAliasLC) {
+      _franchiseAliasLC = {};
+      (fr.franchises || []).forEach(f => {
+        _franchiseAliasLC[f.club.toLowerCase()] = f.key;
+        (f.aliases || []).forEach(a => _franchiseAliasLC[a.toLowerCase()] = f.key);
+      });
+    }
+    if (_franchiseAliasLC[q]) return _franchiseAliasLC[q];
+    const canon = tcTeamCanon(raw).toLowerCase();
+    if (_franchiseAliasLC[canon]) return _franchiseAliasLC[canon];
+  }
+  return null;
+}
+// year -> {franchiseKey: rank}, from history.json resolved through
+// scfl-franchises.json's handle map -- the same real standings the
+// Franchise Directory and the Record Book already use.
+function rankBySeasonFranchise() {
+  if (_rankBySeason) return _rankBySeason;
+  const hist = S.espnHist, fr = FRANCHISE_DATA;
+  if (!hist || !fr) return {};
+  const out = {};
+  (hist.seasons || []).forEach(se => {
+    const ownerByTeamId = {}; (se.teams || []).forEach(t => ownerByTeamId[t.id] = t.owner);
+    const ranks = {};
+    (se.standings || []).forEach(row => {
+      const owner = ownerByTeamId[row.teamId];
+      const key = owner && fr.handles && fr.handles[owner];
+      if (key && row.rank) ranks[key] = row.rank;
+    });
+    out[se.year] = ranks;
+  });
+  return (_rankBySeason = out);
+}
+// Fit rank_next = a + b*rank_prior from every real consecutive-season pair
+// in league history. Live, not hardcoded, so a new season folds itself in
+// automatically (same reasoning as latestSeasonIn()).
+function fitRankRegression() {
+  if (_rankRegression) return _rankRegression;
+  const bySeason = rankBySeasonFranchise();
+  const years = Object.keys(bySeason).map(Number).sort((a, b) => a - b);
+  const pairs = [];
+  for (let i = 0; i < years.length - 1; i++) {
+    const y0 = years[i], y1 = years[i + 1];
+    if (y1 !== y0 + 1) continue;
+    const r0 = bySeason[y0], r1 = bySeason[y1];
+    for (const k in r0) if (r1[k] != null) pairs.push([r0[k], r1[k]]);
+  }
+  if (pairs.length < 20) return (_rankRegression = { a: 8.5, b: 0, sigma: 4.6, n: pairs.length }); // too little data → stay flat
+  const n = pairs.length;
+  const mx = pairs.reduce((s, p) => s + p[0], 0) / n, my = pairs.reduce((s, p) => s + p[1], 0) / n;
+  let sxx = 0, sxy = 0;
+  pairs.forEach(([x, y]) => { sxx += (x - mx) * (x - mx); sxy += (x - mx) * (y - my); });
+  const b = sxx ? sxy / sxx : 0, a = my - b * mx;
+  let sse = 0; pairs.forEach(([x, y]) => { const e = y - (a + b * x); sse += e * e; });
+  const sigma = Math.sqrt(sse / Math.max(1, n - 2));
+  return (_rankRegression = { a, b, sigma, n });
+}
+function mostRecentFranchiseRank(key, beforeSeason) {
+  const bySeason = rankBySeasonFranchise();
+  for (let y = beforeSeason - 1; y >= beforeSeason - 5; y--) {
+    if (bySeason[y] && bySeason[y][key] != null) return bySeason[y][key];
+  }
+  return null;
+}
+function rankToPickSlot(rank, round) { const base = 17 - rank; return round === 1 ? base : base + 16; } // worst finish picks first
+// Expected value of a round-only future pick: P(final rank = k) for k=1..16
+// (from the fitted regression, using ONLY the season strictly before this
+// trade — never the season the pick is actually for), times the real
+// pickValueChart value of the slot that rank would draft. 2+ years out, or
+// no prior-rank signal at all, falls back to a flat round average — the fit
+// is already close to flat at one year, so compounding it further isn't
+// worth the false precision.
+function expectedFuturePickValue(ownerTag, round, yearsOut, season) {
+  const chart = calcDollars();
+  const flatAvg = () => { let s = 0; for (let k = 1; k <= 16; k++) s += (chart[rankToPickSlot(k, round)] || 0); return s / 16; };
+  const key = franchiseKeyForTeam(ownerTag);
+  const prior = key ? mostRecentFranchiseRank(key, season) : null;
+  if (prior == null || yearsOut >= 2) return flatAvg();
+  const { a, b, sigma } = fitRankRegression();
+  const mean = a + b * prior;
+  let sum = 0, wsum = 0;
+  for (let k = 1; k <= 16; k++) {
+    const w = Math.exp(-((k - mean) * (k - mean)) / (2 * sigma * sigma));
+    sum += w * (chart[rankToPickSlot(k, round)] || 0); wsum += w;
+  }
+  return wsum ? sum / wsum : flatAvg();
 }
 // Grade every chat trade; net_i = what you got minus your share of what left the
 // table, so it sums to zero per deal and generalizes to 3+-team trades.
@@ -5873,6 +5977,8 @@ async function showTradeCourt(force) {
   }
   // The chat ledger (docket + exhibits) is a cheap static file — load it once.
   if (!S.chatTrades) { try { await loadBundledTrades(); } catch {} }
+  // Needed for expectedFuturePickValue()'s real slot-probability model.
+  try { await loadFranchiseMap(); } catch {}
   let data = force ? null : loadTcData();
   if (!data) {
     shell(`<div class="card"><div class="dt">⏳ Subpoenaing every completed trade across all seasons and grading each one on today's board… <span class="faint">(one time — it's cached after this)</span></div></div>`);
@@ -6029,7 +6135,7 @@ async function showTradeCourt(force) {
     ${chat.precedents.length ? `<div class="card"><div class="at" style="margin:0 0 6px">🧾 Landmark Deals on File</div>${chat.precedents.map(p => `<div class="dt" style="padding:3px 0">• ${esc(p)}</div>`).join('')}<div class="faint" style="font-size:11px;margin-top:6px">The reference trades that calibrate the whole value board.</div></div>` : ''}` : '';
 
   const method = `<div class="card" style="margin-top:18px"><div class="faint" style="font-size:11px;line-height:1.6">
-    <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Player values come from <b>DynastyProcess dated Superflex snapshots</b> — one per off-season, 2021→2026 — so each player carries his real market value <b>the day of the trade</b> and again <b>~3 years later</b>, powering the "At the time" and "In hindsight" columns. Draft picks are priced as picks the day of the trade. SCFL sets the rookie order by <b>inverse standings/playoff finish</b> (with tiebreakers), so a pick's slot locks the moment the <b>prior</b> season ends. A pick therefore shows its <b>exact-slot</b> value only once that order is set (a current-year pick — e.g. "2022 pick 3" traded in the 2022 offseason). A <b>future</b> pick ("2024 1st") is valued as a <b>generic round pick</b> — a mid-1st ≈ $48, 2nd ≈ $18, with a small time discount — then <b>nudged by how the original franchise tends to finish</b>: a perennial bottom team's first lands early (worth more), a contender's lands late (worth less). You still don't know the exact slot, but you know their odds of picking high or low. In hindsight <b>each pick is re-valued as the player it actually became</b>, from the league's official <b>Obvibase draft history</b> (the drafter and original owner of every pick, 2021–2025). A pick that got flipped self-corrects — its value cancels across the two trades, leaving whatever the team got back. Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
+    <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Player values come from <b>DynastyProcess dated Superflex snapshots</b> — one per off-season, 2021→2026 — so each player carries his real market value <b>the day of the trade</b> and again <b>~3 years later</b>, powering the "At the time" and "In hindsight" columns. Draft picks are priced as picks the day of the trade. SCFL sets the rookie order by <b>inverse standings/playoff finish</b> (with tiebreakers), so a pick's slot locks the moment the <b>prior</b> season ends. A pick therefore shows its <b>exact-slot</b> value only once that order is set (a current-year pick — e.g. "2022 pick 3" traded in the 2022 offseason). A <b>future</b> pick ("2024 1st") is priced as an <b>expected value</b>: real league standings (2008–present) show a team's finish barely predicts its finish the following year, so rather than guess, that persistence is <b>fit from the actual data</b> and used to spread probability across all 16 possible slots for the original franchise's <b>most recently completed</b> season (never a later one — no hindsight in the "at the time" price), each slot priced off the real board and averaged — then a small time discount for how far out the pick is. In hindsight <b>each pick is re-valued as the player it actually became</b>, from the league's official <b>Obvibase draft history</b> (the drafter and original owner of every pick, 2021–2025). A pick that got flipped self-corrects — its value cancels across the two trades, leaving whatever the team got back. Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
   </div></div>`;
 
   shell(freshLine + docket + reckoning + coverageCard + heroes + rankCard + heistSec + menageSec + fullDocket + chatCard + method);
@@ -6104,7 +6210,7 @@ function tcGraderRows(){
     if (!picks.length) { rows.push({ year: +y, team, pop: g.grade, popGpa, noPicks: true, note: g.note }); return; }
     const hindYr = Math.min(DP_LAST_YEAR, +y + 3), hindYears = Math.min(3, DP_LAST_YEAR - +y);
     let cap = 0, hind = 0; const moves = [];
-    picks.forEach(p => { const c = tcPickCost(p.round, p.pickNo); cap += c; const rk = dpValueAt(p.player, +y); const h = dpValueAt(p.player, hindYr);
+    picks.forEach(p => { const c = tcPickCost(p.round, p.pickNo); cap += c; const rk = dpValueAt(p.player, +y, true); const h = dpValueAt(p.player, hindYr);
       hind += (h == null ? c : h); moves.push({ player: p.player, rk: rk == null ? c : rk, h: h == null ? c : h }); });
     // what changed since the draft-day prediction: biggest riser / faller by value
     moves.forEach(m => m.d = m.h - m.rk);
@@ -6506,15 +6612,26 @@ function dpResolve(name){
   if (cands.length > 1) { const s = cands.slice().sort((a, b) => b.max - a.max); if (s[0].max >= s[1].max * 2) return s[0].key; }
   return null;
 }
-function dpValueAt(name, year){
+// noFuture=true restricts the fallback to snapshots at or before `year` --
+// required for any "value AS OF this trade" lookup, since the plain
+// nearest-snapshot fallback will otherwise happily reach past the trade
+// date for a player with no earlier data (a rookie traded before his first
+// snapshot), pricing the deal off information nobody had yet. Leave it
+// false for genuine hindsight lookups (year is deliberately in the future).
+function dpValueAt(name, year, noFuture){
   const d = S.dpValues; if (!d) return null;
   const key = dpResolve(name); if (!key) return null;
   const arr = d.v[key], yrs = d.years;                       // arr aligns to d.years
   let i = yrs.indexOf(year);
   if (i >= 0 && arr[i] != null) return arr[i];
-  // nearest available snapshot to the target year
+  // nearest available snapshot to the target year (or nearest EARLIER one,
+  // if noFuture)
   let best = null, bestDist = 1e9;
-  for (let j = 0; j < yrs.length; j++) { if (arr[j] == null) continue; const dist = Math.abs(yrs[j] - year); if (dist < bestDist) { bestDist = dist; best = arr[j]; } }
+  for (let j = 0; j < yrs.length; j++) {
+    if (arr[j] == null) continue;
+    if (noFuture && yrs[j] > year) continue;
+    const dist = Math.abs(yrs[j] - year); if (dist < bestDist) { bestDist = dist; best = arr[j]; }
+  }
   return best;
 }
 // ---- SCFL $ board (de-compressed) ------------------------------------------

@@ -1,4 +1,37 @@
-# SCFL Trade Value Model — design doc (not yet implemented)
+# SCFL Trade Value Model — design doc
+
+**How this actually shipped:** while wiring this in, it turned out the app
+already had a full, live trade-grading system — **The Trade Court**
+(`showTradeCourt()` in `index.html`) — built independently earlier in this
+project, with its own UI (standings, Exhibit A heists, the Full Docket) and
+its own "at the time" / "in hindsight" grading off the same `dp-values.json`.
+Shipping the model below as a second, separate system would have meant two
+disagreeing trade-value numbers in one app. Instead, everything below was
+prototyped and validated in Python (`scripts/build_trade_values.py`,
+output gitignored — it's an audit tool now, not a build step), then its two
+genuine improvements were ported straight into the Trade Court's own
+JS (cross-checked bit-for-bit against the Python fit — same a/b/sigma/n):
+
+1. **`dpValueAt()` had a hindsight leak** — its "nearest snapshot" fallback
+   could walk *forward* past the trade date when a player had no earlier
+   data (mostly unproven rookies), pricing "at the time" off information
+   nobody had yet. Fixed with a `noFuture` flag, applied at every at-the-time
+   call site; hindsight lookups (which are supposed to look forward) are
+   untouched.
+2. **`tcFuturePickMult()` was a hand-guessed multiplier** (0.75×–1.35× by
+   average finish, averaged across *all* cached standings with no season
+   cutoff — itself a second hindsight leak). Replaced with
+   `expectedFuturePickValue()`: the real slot-probability model below, fit
+   live from `history.json` (self-updates every season, never hardcoded),
+   restricted to the franchise's most recently *completed* season.
+
+Not ported: the ±15% class-quality modifier and the full name-resolution
+rewrite (Trade Court already has its own reasonable `DP_ALIAS`/`dpResolve`
+fuzzy matcher that wasn't shown to be broken) — scoped out to keep the
+change to the two proven bugs rather than a wider rewrite of working code.
+
+Everything below is the original design doc, unedited, for the full
+reasoning and the worked example.
 
 Goal: put a real, explainable number on every asset in `trades.json` (256
 trades, 2021-2026) — draft pick or player, at the time it was traded — so we
