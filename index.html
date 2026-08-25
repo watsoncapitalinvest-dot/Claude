@@ -66,6 +66,11 @@
   .pos { border:1px solid var(--faint); border-radius:8px; padding:2px 6px; min-width:36px; text-align:center;
          font-size:11px; font-weight:800; letter-spacing:.5px; flex:none; }
   .pill { border:1px solid var(--dim); border-radius:999px; padding:2px 9px; font-size:11px; font-weight:800; }
+  .vault-sec { margin:16px 0; border-top:1px solid var(--border); padding-top:10px; }
+  .vault-sec summary { cursor:pointer; font-size:15px; font-weight:800; padding:4px 0; list-style:none; user-select:none; }
+  .vault-sec summary::-webkit-details-marker { display:none; }
+  .vault-sec summary::before { content:'▸ '; color:var(--accent); display:inline-block; width:14px; }
+  .vault-sec[open] summary::before { content:'▾ '; }
   .spinner { width:26px; height:26px; border:3px solid var(--border); border-top-color:var(--accent);
              border-radius:50%; animation:spin 1s linear infinite; margin:24px auto; }
   @keyframes spin { to { transform:rotate(360deg); } }
@@ -8066,15 +8071,29 @@ const VAULT_ASSETS = [
     ['harry-parts-source.png', 'Harry actor parts sheet'],
   ]],
 ];
+// Flags teams whose art is byte-identical to another team's (a real logo
+// was never uploaded, so add_logo.py's recolored default avatar got shared)
+// — see docs/TEAM-LOGO-AUDIT.md for which teams and why.
+async function vaultLogoItems() {
+  const [logos, fr] = await Promise.all([ensureTeamLogos(), loadFranchiseMap()]);
+  if (!logos) return [];
+  const clubByKey = {};
+  ((fr && fr.franchises) || []).forEach(f => { clubByKey[f.key] = f.club; });
+  const byUri = {};
+  Object.keys(logos).forEach(slug => { (byUri[logos[slug]] = byUri[logos[slug]] || []).push(slug); });
+  const dupeSlugs = new Set(Object.values(byUri).filter(g => g.length > 1).flat());
+  return Object.keys(logos).sort().map(slug => [logos[slug], clubByKey[slug] || slug, dupeSlugs.has(slug)]);
+}
 async function showAssetVault() {
   if (await loadStories()) { /* manifest wins over the fallback list */ }
-  const sec = ([cat, items]) => `<h4 style="margin:18px 0 8px">${esc(cat)}</h4>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">
-    ${items.map(([f, label]) => `<div class="card" style="padding:8px;margin:0;text-align:center">
+  const sec = ([cat, items], startOpen) => `<details class="vault-sec"${startOpen ? ' open' : ''}>
+    <summary>${esc(cat)} <span class="faint" style="font-weight:400;font-size:11px">(${items.length})</span></summary>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:10px">
+    ${items.map(([f, label, flag]) => `<div class="card" style="padding:8px;margin:0;text-align:center">
       <a href="${f}" target="_blank" rel="noopener"><img src="${f}" loading="lazy" alt="${esc(label)}" style="width:100%;height:86px;object-fit:contain;background:rgba(0,0,0,.06);border-radius:8px"></a>
-      <div style="font-size:11px;font-weight:700;margin:6px 0 4px;line-height:1.3">${esc(label)}</div>
+      <div style="font-size:11px;font-weight:700;margin:6px 0 4px;line-height:1.3">${esc(label)}${flag ? ` <span class="faint" style="color:#d8a13a;font-weight:800" title="No custom logo yet — placeholder art">⚠ placeholder</span>` : ''}</div>
       <button class="btn ghost" data-act="asset-share" data-file="${f}" data-label="${esc(label)}" style="width:auto;padding:5px 12px;font-size:11px">Share</button>
-    </div>`).join('')}</div>`;
+    </div>`).join('')}</div></details>`;
   const story = ([f, title, cover, kicker]) => `<div class="card" style="padding:8px;margin:0">
       <a href="${f}" target="_blank" rel="noopener"><img src="${cover}" loading="lazy" alt="${esc(title)}" style="width:100%;height:96px;object-fit:cover;background:rgba(0,0,0,.06);border-radius:8px"></a>
       <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#8a8a8a);margin:7px 0 2px">${esc(kicker)}</div>
@@ -8084,14 +8103,18 @@ async function showAssetVault() {
         <button class="btn ghost" data-act="story-share" data-file="${f}" data-title="${esc(title)}" style="flex:1;padding:5px 0;font-size:11px">Share</button>
       </div>
     </div>`;
+  const logoItems = await vaultLogoItems();
+  const logoWarn = logoItems.filter(i => i[2]).length;
+  const sections = [...VAULT_ASSETS];
+  if (logoItems.length) sections.push(['Team Logos', logoItems]);
   setContent(`<button class="btn ghost" data-act="home" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ The Office</button>
     <div class="card"><h3>📚 The Story Vault</h3>
     <p class="muted">Every issue, feature and column the Newsroom has published, kept in one place. <b>Read</b> opens it; <b>Share</b> sends the link with its preview card.</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">
     ${VAULT_STORIES.map(story).join('')}</div></div>
     <div class="card"><h3>🗂️ The Asset Vault</h3>
-    <p class="muted">Every league graphic, ready to grab. Tap an image to open it full size (then long-press → Save Image on your phone), or hit Share to send it anywhere. Team logos live in <b>Export Team Logos</b>. Got new art for the vault? Send it to John and it shows up here for everybody.</p>
-    ${VAULT_ASSETS.map(sec).join('')}</div>`);
+    <p class="muted">Every league graphic, ready to grab — tap a section to open it. Tap an image to open it full size (then long-press → Save Image on your phone), or hit Share to send it anywhere. Team logos are their own section below — bulk JSON export still lives in <b>Export Team Logos</b>.${logoWarn ? ` <b style="color:#d8a13a">${logoWarn} team${logoWarn === 1 ? '' : 's'} still on placeholder art</b> — see the Team Logos section.` : ''} Got new art for the vault? Send it to John and it shows up here for everybody.</p>
+    ${sections.map(s => sec(s)).join('')}</div>`);
 }
 async function assetShare(file, label) {
   try {
