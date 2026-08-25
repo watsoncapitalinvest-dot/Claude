@@ -3375,6 +3375,7 @@ async function init() {
   try { S.magName = localStorage.getItem('gg.magname') || 'Skirt Chasers'; } catch {}
   try { S.apiKey = localStorage.getItem('gg.apikey') || ''; } catch {}
   const params = new URLSearchParams(location.search);
+  if (params.get('interview')) return enterInterview(params);
   if (params.get('league')) return enterGuest(params);
   try { S.nflState = await getNflState(); S.activeWeek = Math.max(1, S.nflState.display_week || S.nflState.week || 1); } catch {}
   if (S.user && S.leagueId) { await enterApp(); } else { renderSetup(); }
@@ -3600,6 +3601,7 @@ const OFFICE_TOOLS = [
   ['staff-handbook', '📖', 'Board Handbook', 'How the Office works for the board'],
   ['staff-send', '📤', 'Send to HQ', 'Package your additions → text them to the Commish'],
   ['staff-import', '📥', 'Import from the Board', 'Paste a board package into the Office'],
+  ['interviews', '🎙️', 'Owner Interviews', 'Send a link, collect answers — for the recovery study'],
   ['dossier', '📓', 'Chat Dossier', 'Who’s who in the league'],
   ['franchise-map', '🪪', 'Franchise Directory', 'Every team, owner & name change — resolved'],
   ['records', '📖', 'Record Book', 'All-time history & records'],
@@ -3628,7 +3630,7 @@ const NEWSROOM_TOOLS = [
 const mtoolBtn = ([a, ic, l, d]) => `<button class="mtool" data-act="${a}"><span class="mtool-ic">${ic}</span><span class="mtool-l">${l}</span><span class="mtool-d">${d}</span></button>`;
 const OFFICE_SECTIONS = [
   ['The Weekly Board', ['power-ranks', 'money-lines']],
-  ['The Board Desk', ['roster-export', 'logos-export', 'matchup-export', 'schedule-export', 'assets', 'staff-handbook', 'staff-send', 'staff-import']],
+  ['The Board Desk', ['roster-export', 'logos-export', 'matchup-export', 'schedule-export', 'assets', 'staff-handbook', 'staff-send', 'staff-import', 'interviews']],
   ['The Record Room', ['dossier', 'franchise-map', 'records', 'rivalries', 'players', 'ex-files']],
   ['The Arcade', ['jeopardy', 'tradewar']],
   ['Ring of Honor', ['ring-of-honor']],
@@ -8389,14 +8391,15 @@ async function staffSend(){
 function showStaffImport(){
   app.innerHTML = `<button class="btn ghost" data-act="back" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back</button>
     <div class="card"><h3>📥 Import from the Board</h3>
-    <p class="muted">Paste a package that a board member sent from their app. Their Water Cooler posts, storylines, Money Lines and Power Ranks merge into this device. Publish the next edition to bake them in for everyone.</p>
-    <textarea id="staffPaste" rows="8" style="width:100%" placeholder="Paste the SCFL-STAFF-PACKAGE text here…"></textarea>
+    <p class="muted">Paste a package that a board member sent from their app. Their Water Cooler posts, storylines, Money Lines and Power Ranks merge into this device. Publish the next edition to bake them in for everyone. An owner's <b>interview answers</b> paste in here too — same box, auto-detected.</p>
+    <textarea id="staffPaste" rows="8" style="width:100%" placeholder="Paste the SCFL-STAFF-PACKAGE or SCFL-INTERVIEW-PACKAGE text here…"></textarea>
     <button class="btn" data-act="staff-import-go" style="margin-top:10px">Merge into the Office →</button>
     <div id="staffImpMsg" class="muted" style="margin-top:8px"></div></div>`;
 }
 function staffImportGo(){
   const el = $('#staffPaste'), msg = $('#staffImpMsg');
   let raw = (el && el.value || '').trim();
+  if (raw.startsWith('SCFL-INTERVIEW-PACKAGE')) return interviewImportGo(raw, msg);
   const i = raw.indexOf('{');
   if (i < 0) { if (msg) msg.textContent = 'That does not look like a staff package.'; return; }
   let b = null;
@@ -8435,6 +8438,154 @@ function staffImportGo(){
   const summary = parts.length ? 'Merged from ' + esc(b.by || 'staff') + ': ' + parts.join(', ') + '.' : 'Nothing new in that package — already up to date.';
   if (msg) msg.textContent = summary;
   toast(parts.length ? 'Board package merged' : 'Nothing new to merge');
+}
+// ---- Owner Interviews: a shareable no-login link, for the recovery study --
+// A link like index.html?interview=wookieleaks opens straight to a set of
+// questions for that franchise — no Sleeper login, works for anyone. A few
+// questions are pulled from the team's own real standings history; the rest
+// are fixed, so answers stay comparable across owners for the study. The
+// owner sends their answers back the exact same way the Board already sends
+// contributions (package → text/clipboard → paste into Import from the Board).
+const GENERAL_STUDY_QUESTIONS = [
+  "When your team is down, what's the actual turning point — a trade, a draft class, a mindset change?",
+  'Do you rebuild patiently or try to reload fast? Has that changed over the years?',
+  "What's the closest you've come to blowing up your own roster out of pure frustration — and did you go through with it?",
+  'Is there a season you still look back on as the one that got away?',
+  'What does a bad year actually feel like for you as a manager — panic, patience, denial, something else?',
+  "If you had to explain your team's ebb-and-flow pattern in one sentence, what would it be?",
+];
+// year -> rank for one franchise, resolved through scfl-franchises.json's
+// handle map — the same real standings the Franchise Directory and the
+// Trade Court's pick model already use.
+function franchiseRankTrajectory(key) {
+  const hist = S.espnHist, fr = FRANCHISE_DATA;
+  if (!hist || !fr) return [];
+  const out = [];
+  (hist.seasons || []).forEach(se => {
+    const ownerByTeamId = {}; (se.teams || []).forEach(t => ownerByTeamId[t.id] = t.owner);
+    (se.standings || []).forEach(row => {
+      const owner = ownerByTeamId[row.teamId];
+      const k = owner && fr.handles && fr.handles[owner];
+      if (k === key && row.rank) out.push({ year: se.year, rank: row.rank });
+    });
+  });
+  return out.sort((a, b) => a.year - b.year);
+}
+function tailoredInterviewQuestions(f) {
+  const traj = franchiseRankTrajectory(f.key);
+  const qs = [];
+  if (traj.length >= 2) {
+    const worst = traj.reduce((a, b) => (b.rank > a.rank ? b : a));
+    const best = traj.reduce((a, b) => (b.rank < a.rank ? b : a));
+    const titleYears = new Set(f.titles || []);
+    qs.push(`In ${worst.year} you finished ${ordinal(worst.rank)} of 16 — the low point on record for this franchise. What actually happened that season?`);
+    qs.push(`Your best finish on record is ${ordinal(best.rank)}, in ${best.year}${titleYears.has(best.year) ? ' — the year you won it all' : ''}. What was different about that team?`);
+    let swing = null;
+    for (let i = 1; i < traj.length; i++) {
+      const d = traj[i - 1].rank - traj[i].rank;
+      if (!swing || Math.abs(d) > Math.abs(swing.d)) swing = { a: traj[i - 1], b: traj[i], d };
+    }
+    if (swing && Math.abs(swing.d) >= 6) {
+      const dir = swing.d > 0 ? 'climbed' : 'fell';
+      qs.push(`Between ${swing.a.year} (${ordinal(swing.a.rank)}) and ${swing.b.year} (${ordinal(swing.b.rank)}) you ${dir} ${Math.abs(swing.d)} spots in one season — the sharpest single-year turn in your history. Walk me through it.`);
+    }
+  }
+  return qs;
+}
+async function enterInterview(params) {
+  hideTopBar();
+  app.innerHTML = spinner('Opening your interview…');
+  const key = params.get('interview');
+  try {
+    const [fr] = await Promise.all([loadFranchiseMap(), loadBundledHistory()]);
+    const f = fr && (fr.franchises || []).find(x => x.key === key && x.active);
+    if (!f) { app.innerHTML = empty("Can't find that team", 'Check the link and try again.'); return; }
+    renderInterview(f);
+  } catch (e) {
+    app.innerHTML = empty("Couldn't open the interview", 'Try refreshing the link.');
+  }
+}
+let INTERVIEW_ANSWERS = {}, INTERVIEW_META = null;
+function renderInterview(f) {
+  const tailored = tailoredInterviewQuestions(f);
+  const allQs = [...tailored, ...GENERAL_STUDY_QUESTIONS];
+  INTERVIEW_ANSWERS = {};
+  INTERVIEW_META = { franchiseKey: f.key, club: f.club, questions: allQs };
+  const qHtml = allQs.map((q, i) => `<div class="card" style="margin-bottom:10px">
+    <div class="dt" style="font-weight:700;margin-bottom:8px">${i + 1}. ${esc(q)}</div>
+    <textarea data-interview-q="${i}" rows="4" style="width:100%" placeholder="Type your answer…"></textarea>
+  </div>`).join('');
+  app.innerHTML = `<div style="max-width:640px;margin:0 auto;padding:24px 16px 60px">
+    <div class="setup-logo" style="font-size:22px;text-align:center">🎙️ SCFL Owner Interview</div>
+    <p class="muted" style="text-align:center;margin-top:4px">${esc(f.club)}${f.manager ? ' — ' + esc(f.manager) : ''}</p>
+    <div class="card" style="margin:16px 0"><div class="dt">The league's doing a study on how teams recover — the rebuilds, the collapses, the ebbs and flows. A few of these questions are pulled straight from your own record; the rest are the same for every owner. Answer as many as you want, as long or short as you want. When you're done, hit Send — it packages your answers to text back.</div></div>
+    <label class="label">Your name</label>
+    <input id="ivName" class="input" placeholder="Your name" value="${esc(f.manager || '')}">
+    <div style="height:14px"></div>
+    ${qHtml}
+    <button class="btn" data-act="interview-send" style="margin-top:6px">📤 Send my answers</button>
+    <div id="ivMsg" class="muted" style="margin-top:10px;text-align:center"></div>
+  </div>`;
+  document.querySelectorAll('[data-interview-q]').forEach(ta => {
+    ta.oninput = e => { INTERVIEW_ANSWERS[e.target.dataset.interviewQ] = e.target.value; };
+  });
+}
+async function interviewSend() {
+  const msg = $('#ivMsg');
+  const by = (($('#ivName') || {}).value || '').trim();
+  const answers = (INTERVIEW_META.questions || []).map((q, i) => ({ q, a: (INTERVIEW_ANSWERS[i] || '').trim() })).filter(x => x.a);
+  if (!answers.length) { if (msg) msg.textContent = 'Answer at least one question first.'; return; }
+  const pkg = { franchiseKey: INTERVIEW_META.franchiseKey, club: INTERVIEW_META.club, by: by || 'Unknown', at: Date.now(), answers };
+  const txt = 'SCFL-INTERVIEW-PACKAGE\n' + JSON.stringify(pkg);
+  if (navigator.share) {
+    try { await navigator.share({ text: txt }); if (msg) msg.textContent = 'Sent — thanks for doing this.'; return; } catch {}
+  }
+  try { await navigator.clipboard.writeText(txt); if (msg) msg.textContent = 'Copied — paste it back to the commissioner.'; }
+  catch { prompt('Copy this and send it back to the commissioner:', txt); }
+}
+function interviewsKey(){ return 'gg.interviews.v1'; }
+function loadInterviews(){ try { return JSON.parse(localStorage.getItem(interviewsKey()) || '[]'); } catch { return []; } }
+function saveInterviews(list){ try { localStorage.setItem(interviewsKey(), JSON.stringify(list)); } catch {} }
+function interviewImportGo(raw, msg) {
+  let b = null;
+  try { b = JSON.parse(raw.slice(raw.indexOf('{'))); } catch { if (msg) msg.textContent = 'Could not read that interview package.'; return; }
+  if (!b || !b.franchiseKey || !b.answers) { if (msg) msg.textContent = 'That does not look like an interview package.'; return; }
+  const list = loadInterviews();
+  const key = x => x.franchiseKey + '|' + x.at;
+  if (list.some(x => key(x) === key(b))) { if (msg) msg.textContent = 'Already have this one — nothing new.'; return; }
+  list.push(b);
+  saveInterviews(list);
+  if (msg) msg.textContent = `Merged ${esc(b.by)}'s interview (${esc(b.club)}) — ${b.answers.length} answer${b.answers.length === 1 ? '' : 's'}.`;
+  toast('Interview merged');
+}
+// The commissioner's side: one link per team, and every answer collected so far.
+async function showInterviews() {
+  const back = `<button class="btn ghost" data-act="home" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Executive Office</button>`;
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    <div class="setup-logo" style="font-size:24px">🎙️ Owner Interviews</div>
+    <p class="muted" style="margin-top:4px">For the recovery study — send an owner their link, they type answers, they send the package back, you paste it into <b>Import from the Board</b>.</p>
+    <div class="card"><div class="dt">Loading team links…</div></div></div>`;
+  const fr = await loadFranchiseMap();
+  const teams = ((fr && fr.franchises) || []).filter(f => f.active).sort((a, b) => a.club.localeCompare(b.club));
+  const linkRows = teams.map(f => {
+    const url = location.origin + location.pathname + '?interview=' + encodeURIComponent(f.key);
+    return `<div class="dash-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px">
+      <div><b style="font-size:13px">${esc(f.club)}</b><div class="faint" style="font-size:11px">${esc(f.manager || '')}</div></div>
+      <button class="btn ghost" data-act="interview-copylink" data-url="${esc(url)}" data-team="${esc(f.club)}" style="width:auto;padding:6px 12px;font-size:12px">🔗 Copy link</button>
+    </div>`;
+  }).join('');
+  const collected = loadInterviews().slice().sort((a, b) => b.at - a.at);
+  const collectedHtml = collected.length ? collected.map(iv => `<div class="card" style="margin-bottom:8px">
+      <div class="at" style="margin:0">${esc(iv.club)} <span class="faint" style="font-weight:400">— ${esc(iv.by)}</span></div>
+      <div class="faint" style="font-size:11px;margin:2px 0 8px">${new Date(iv.at).toLocaleDateString()} · ${iv.answers.length} answer${iv.answers.length === 1 ? '' : 's'}</div>
+      ${iv.answers.map(a => `<div style="margin-bottom:8px"><div class="dt" style="font-weight:700;font-size:12.5px">${esc(a.q)}</div><div class="dt" style="font-size:13px;margin-top:2px;white-space:pre-wrap">${esc(a.a)}</div></div>`).join('')}
+    </div>`).join('')
+    : `<div class="card"><div class="dt">No answers collected yet. Copy a link above and send it to an owner.</div></div>`;
+  app.innerHTML = `<div style="padding-bottom:24px">${back}
+    <div class="setup-logo" style="font-size:24px">🎙️ Owner Interviews</div>
+    <p class="muted" style="margin-top:4px">For the recovery study — send an owner their link, they type answers, they send the package back, you paste it into <b>Import from the Board</b>.</p>
+    <div class="seclabel">Send a Link</div>${linkRows}
+    <div class="seclabel">Collected So Far — ${collected.length}</div>${collectedHtml}</div>`;
 }
 function showStaffHandbook(){
   app.innerHTML = `<button class="btn ghost" data-act="back" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Back</button>
@@ -8613,6 +8764,13 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'staff-send') return staffSend();
   if (act === 'staff-import') return showStaffImport();
   if (act === 'staff-import-go') return staffImportGo();
+  if (act === 'interviews') return showInterviews();
+  if (act === 'interview-send') return interviewSend();
+  if (act === 'interview-copylink') {
+    try { await navigator.clipboard.writeText(t.dataset.url); toast(`Link copied — send it to ${t.dataset.team}`); }
+    catch { prompt('Copy this link:', t.dataset.url); }
+    return;
+  }
   if (act === 'assets') return showAssetVault();
   if (act === 'asset-share') return assetShare(t.dataset.file, t.dataset.label);
   if (act === 'story-share') return storyShare(t.dataset.file, t.dataset.title);
