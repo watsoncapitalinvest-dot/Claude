@@ -5647,6 +5647,26 @@ function lvbRookieFallback(name) {
   }
   return null;
 }
+// Real, CURRENT news -- injury designation, roster status, whether they're
+// even on an NFL team right now -- from the SAME Sleeper player data already
+// loaded for the whole app (getPlayers()), not a second source. Only ever
+// applied to the CURRENT season in lvbValueAt below: today's status is real
+// information about today, but applying it to a past season would leak it
+// backward into a historical grade -- exactly what the hindsight-safety
+// design (see LEAGUE-VALUE-BOARD.md) exists to prevent.
+function lvbNewsMultiplier(p) {
+  if (!p) return 1;
+  if (!p.team) return 0.5; // not on an NFL roster at all right now -- free agent, cut, retired
+  const status = String(p.status || '').toLowerCase();
+  if (status.includes('suspend')) return 0.7;
+  if (status.includes('reserve') || status.includes('pup') || status.includes('non football') || status.includes('covid')) return 0.75; // IR/PUP/NFI
+  if (status.includes('inactive')) return 0.6;
+  const inj = String(p.injury_status || '').toLowerCase();
+  if (inj === 'out' || inj === 'ir') return 0.85;
+  if (inj === 'doubtful') return 0.92;
+  if (inj === 'questionable') return 0.97;
+  return 1;
+}
 // The main entry point: our own value for a player, as of a given season.
 // Blends this season with the prior one (smooths a single fluky year) then
 // applies the age-decline multiplier for a forward-looking dynasty number.
@@ -5678,7 +5698,10 @@ function lvbValueAt(name, season) {
   else return lvbRookieFallback(name); // no production on file at all yet
   const p = players[pid];
   const age = p && typeof p.age === 'number' ? p.age - (new Date().getFullYear() - season) : null; // age AS OF that season, not today
-  return Math.round(base * lvbAgeMultiplier(posOfPlayer(p), age));
+  let val = Math.round(base * lvbAgeMultiplier(posOfPlayer(p), age));
+  // Today's news only ever touches TODAY's value -- never a past season (see lvbNewsMultiplier).
+  if (season >= new Date().getFullYear()) val = Math.round(val * lvbNewsMultiplier(p));
+  return val;
 }
 function tcChatAssetVal(a, season, atTime) {
   const targetYear = atTime ? season : Math.min(DP_LAST_YEAR, (season || DP_LAST_YEAR - 3) + 3);
