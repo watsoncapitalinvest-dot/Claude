@@ -499,6 +499,7 @@
     color:#ffd35c; border:1px solid rgba(255,211,92,.55); border-radius:20px; padding:7px 14px;
     font-size:12px; font-weight:700; cursor:pointer; letter-spacing:.2px; backdrop-filter:blur(2px); }
   .desk-toggle:hover { background:rgba(8,12,28,.95); }
+  .desk-logo-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
   .desk-hot { position:absolute; cursor:pointer; background:none; border:none; padding:0; }
   .desk-hot .hit { position:absolute; inset:0; border-radius:10px; border:2px solid transparent; transition:all .16s; }
   .desk-hot .tag { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.92);
@@ -3582,15 +3583,105 @@ const NEWSROOM_HOTSPOTS = [
   { left:43, top:52, w:24, h:34, label:'Desks & Features',   blurb:'Politics, the desk, storylines & investigations', goto:'Desks & Features' },
   { left:70, top:58, w:28, h:30, label:'Editions',           blurb:"POP's Draft Grades & back issues", goto:'Editions' },
 ];
-function deskSceneHTML(img, alt, hotspots, toggleId) {
+// ---- Your team, on the desk ---------------------------------------------
+// The field and the mug are blank in the source art on purpose — this fills
+// them in per viewer with their own team's crest, matched from their live
+// Sleeper team name (never a username or a hardcoded id) against the fixed
+// sixteen logo slugs in scfl-team-logos-resized.json.
+const TEAM_LOGO_MATCH = [
+  ['machines', /machine/i],
+  ['horsecollars', /horse\s*collar/i],
+  ['porkchopexpress', /pork\s*chop/i],
+  ['smokedragons', /smoke\s*dragon/i],
+  ['stillthecream', /still.*cream|cream.*est/i],
+  ['powersofpain', /powers?\s*of\s*pain|\bpop\b/i],
+  ['newworldorder', /new\s*wo\w*\s*order|\bn\.?\s*w\.?\s*o\.?\b/i],
+  ['killerklowns', /killer\s*klown/i],
+  ['beavereaters', /beaver\s*eater/i],
+  ['wookieleaks', /wookie|dry\s*dick/i],
+  ['lilchops', /lil\s*chop|lamb\s*chop|the\s*porkys|a-team/i],
+  ['gumbas', /gumba/i],
+  ['bigblue', /big\s*blue/i],
+  ['masterjeti', /jet-?i|master-?jeti/i],
+  ['guidohaters', /guido\s*hater|last\s*place|fukine/i],
+  ['heavyhitters', /heavy\s*hitter/i],
+];
+function teamLogoSlug(name) {
+  const s = String(name || '');
+  for (const [slug, re] of TEAM_LOGO_MATCH) if (re.test(s)) return slug;
+  return null;
+}
+async function myTeamLogoURI() {
+  const mr = S.bundle && S.bundle.myRoster;
+  if (!mr) return null;
+  const slug = teamLogoSlug(managerName(mr.owner_id));
+  if (!slug) return null;
+  const logos = await ensureTeamLogos();
+  return (logos && logos[slug]) || null;
+}
+// Hand-measured quads (natural-pixel corners, TL/TR/BR/BL) for the 50-yard
+// line and the mug face in each desk photo. Missing 'mug' just skips it —
+// not every scene has one.
+const DESK_SCENE_LOGO_SPOTS = {
+  'office-desk':    { field: [[695,438],[835,438],[855,505],[675,505]], mug: [[1358,618],[1448,618],[1448,695],[1358,695]] },
+  'newsroom-desk':  { field: [[705,398],[830,398],[848,455],[688,455]] },
+};
+function drawTexturedTriangle(ctx, img, s, d) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(d[0][0], d[0][1]); ctx.lineTo(d[1][0], d[1][1]); ctx.lineTo(d[2][0], d[2][1]);
+  ctx.closePath(); ctx.clip();
+  const [x0,y0]=s[0], [x1,y1]=s[1], [x2,y2]=s[2];
+  const [X0,Y0]=d[0], [X1,Y1]=d[1], [X2,Y2]=d[2];
+  const den = x0*(y1-y2) + x1*(y2-y0) + x2*(y0-y1);
+  if (den) {
+    const a=(X0*(y1-y2)+X1*(y2-y0)+X2*(y0-y1))/den, b=(Y0*(y1-y2)+Y1*(y2-y0)+Y2*(y0-y1))/den,
+          c=(X0*(x2-x1)+X1*(x0-x2)+X2*(x1-x0))/den, dd=(Y0*(x2-x1)+Y1*(x0-x2)+Y2*(x1-x0))/den,
+          e=(X0*(x1*y2-x2*y1)+X1*(x2*y0-x0*y2)+X2*(x0*y1-x1*y0))/den,
+          f=(Y0*(x1*y2-x2*y1)+Y1*(x2*y0-x0*y2)+Y2*(x0*y1-x1*y0))/den;
+    ctx.setTransform(a, b, c, dd, e, f);
+    ctx.drawImage(img, 0, 0);
+  }
+  ctx.restore();
+}
+// Perspective-ish warp of a whole image onto a quad — split into two
+// triangles, each drawn with its own affine transform (the standard trick;
+// canvas 2D has no true projective transform).
+function drawQuadLogo(ctx, img, quadDst) {
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  const s = [[0,0],[w,0],[w,h],[0,h]];
+  drawTexturedTriangle(ctx, img, [s[0],s[1],s[2]], [quadDst[0],quadDst[1],quadDst[2]]);
+  drawTexturedTriangle(ctx, img, [s[0],s[2],s[3]], [quadDst[0],quadDst[2],quadDst[3]]);
+}
+function loadImgEl(src) {
+  return new Promise((resolve, reject) => { const im = new Image(); im.onload = () => resolve(im); im.onerror = reject; im.src = src; });
+}
+async function paintDeskLogos(sceneId) {
+  const spot = DESK_SCENE_LOGO_SPOTS[sceneId];
+  const canvas = document.getElementById('logo-canvas-' + sceneId);
+  if (!spot || !canvas) return;
+  try {
+    const uri = await myTeamLogoURI();
+    if (!uri) return;
+    const logo = await loadImgEl(uri);
+    if (document.getElementById('logo-canvas-' + sceneId) !== canvas) return; // page moved on
+    canvas.width = 1536; canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+    if (spot.field) drawQuadLogo(ctx, logo, spot.field);
+    if (spot.mug) drawQuadLogo(ctx, logo, spot.mug);
+  } catch {}
+}
+function deskSceneHTML(img, alt, hotspots, sceneId) {
   const hots = hotspots.map(h => `<button class="desk-hot" ${h.act ? `data-act="${h.act}"` : `data-act="desk-goto" data-label="${esc(h.goto)}"`}
       style="left:${h.left}%;top:${h.top}%;width:${h.w}%;height:${h.h}%">
       <span class="hit"></span>
       <span class="tag"><b>${esc(h.label)}</b><span>${esc(h.blurb)}</span></span>
     </button>`).join('');
-  return `<div class="desk-scene" id="${esc(toggleId)}">
+  setTimeout(() => paintDeskLogos(sceneId), 0);
+  return `<div class="desk-scene" id="${esc(sceneId)}">
     <img src="${esc(img)}" alt="${esc(alt)}">
-    <button class="desk-toggle" data-act="desk-legend" data-scene="${esc(toggleId)}">👁 What's on the desk?</button>
+    <canvas class="desk-logo-canvas" id="logo-canvas-${esc(sceneId)}"></canvas>
+    <button class="desk-toggle" data-act="desk-legend" data-scene="${esc(sceneId)}">👁 What's on the desk?</button>
     ${hots}
   </div>`;
 }
