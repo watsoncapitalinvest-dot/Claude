@@ -5520,10 +5520,133 @@ function tcPlayerFloor(name) {
   const ti = cuts.findIndex(x => prank <= x);
   return ti < 0 ? 0 : tiers[ti];                             // depth (past the last cut) keeps dp's low value
 }
+// ---------------------------------------------------------------------
+//  The League Value Board — OUR OWN player values, from real production.
+// ---------------------------------------------------------------------
+// Real weekly stats (Sleeper) scored through THIS league's actual
+// scoring_settings -> real season point totals -> a positional value
+// curve -- calibrated against our own real draft capital, not borrowed
+// from a third-party market consensus. dp-values.json (DynastyProcess)
+// stays on file as a labeled comparison figure, never the number that
+// decides a grade. See docs/LEAGUE-VALUE-BOARD.md for the full writeup.
+//
+// Every "value in season Y" computation here only ever reads stats from
+// season Y and earlier -- there is no hindsight risk by construction,
+// unlike the DynastyProcess snapshot lookup this replaces.
+const LVB_FIRST_SEASON = 2021; // trades.json / the pick chart start here too
+const LVB_TIERS = { QB: [95, 72, 46, 26], RB: [63, 47, 31], WR: [82, 55, 36], TE: [41, 24, 13] };
+const LVB_CUT   = { QB: [4, 12, 24, 40], RB: [5, 18, 40], WR: [6, 24, 48], TE: [3, 10, 20] }; // same grid tcPlayerFloor uses -- already calibrated to real trades
+const LVB_MIN_GAMES = 4; // fewer than this and a PPG rate isn't trustworthy
+
+// Position-specific forward-looking decline curve. Dynasty value is an
+// expectation of FUTURE production, not a report card of the past, so a
+// pure season-total ranking needs this on top. Shapes are the well-known
+// ones (RB declines earliest and hardest, TE/QB longest) -- a reasonable,
+// transparent first pass, not a precision claim. Multiplies the tier value.
+function lvbAgeMultiplier(pos, age) {
+  if (!age) return 1;
+  const curves = { // [ageWhereDeclineStarts, pctLostPerYearAfter]
+    RB: [26, 0.13], WR: [28, 0.09], TE: [30, 0.08], QB: [33, 0.06],
+  };
+  const [start, rate] = curves[pos] || curves.WR;
+  if (age <= start) return 1;
+  return Math.max(0.15, 1 - rate * (age - start));
+}
+// year -> {playerId: {points, games}}, scored with THIS league's real
+// scoring_settings from THIS league's real weekly stat lines.
+async function lvbWalkSeason(season, scoring) {
+  const weeks = await Promise.all(Array.from({ length: 18 }, (_, i) => i + 1).map(w => getWeeklyStats(season, w)));
+  const out = {};
+  weeks.forEach(statsMap => {
+    for (const pid in statsMap) {
+      const pts = scoreStats(statsMap[pid], scoring);
+      const rec = out[pid] || (out[pid] = { points: 0, games: 0 });
+      rec.points += pts; rec.games += 1; // presence of a stat line this week = played
+    }
+  });
+  return out;
+}
+function lvbKey(){ return 'gg.lvb.' + (S.leagueId || 'x'); }
+function loadLvbData(){ try { return JSON.parse(localStorage.getItem(lvbKey()) || 'null'); } catch { return null; } }
+function saveLvbData(d){ d._ts = Date.now(); try { localStorage.setItem(lvbKey(), JSON.stringify(d)); } catch {} }
+// The expensive part: walk every real season on file. Cached like the Trade
+// Court's ledger (tcBuildLedger) -- one-time cost, a Refresh button to redo it.
+async function lvbBuild() {
+  const scoring = (S.bundle && S.bundle.league && S.bundle.league.scoring_settings) || {};
+  const cur = Number(S.season) || new Date().getFullYear();
+  const seasons = {};
+  for (let y = LVB_FIRST_SEASON; y <= cur; y++) {
+    try { seasons[y] = await lvbWalkSeason(y, scoring); } catch { seasons[y] = {}; }
+  }
+  const data = { seasons, scoring };
+  saveLvbData(data);
+  return data;
+}
+// Positional PPG rank -> $ value, one season, via the same real-trade-
+// calibrated tier grid tcPlayerFloor uses -- only the RANK input changes,
+// from Sleeper's live consensus to our own real production that season.
+function lvbSeasonValue(pid, seasonTotals, playersDict) {
+  const rec = seasonTotals[pid];
+  if (!rec || rec.games < LVB_MIN_GAMES) return null;
+  const p = playersDict[pid], pos = posOfPlayer(p);
+  if (!pos || !LVB_TIERS[pos]) return null;
+  const ppg = rec.points / rec.games;
+  let better = 0;
+  for (const id2 in seasonTotals) {
+    if (id2 === pid) continue;
+    const r2 = seasonTotals[id2]; if (r2.games < LVB_MIN_GAMES) continue;
+    const p2 = playersDict[id2]; if (posOfPlayer(p2) !== pos) continue;
+    if (r2.points / r2.games > ppg) better++;
+  }
+  const prank = better + 1;
+  const cuts = LVB_CUT[pos], tiers = LVB_TIERS[pos];
+  const ti = cuts.findIndex(x => prank <= x);
+  return ti < 0 ? 0 : tiers[ti];
+}
+// Real SCFL draft slot for a player with no games on file yet (a rookie
+// traded before his first season) -- our own pick chart, not a guess.
+function lvbRookieFallback(name) {
+  const q = normName(name);
+  const years = (S.popDrafts && S.popDrafts.years) || {};
+  for (const yr in years) {
+    const hit = (years[yr] || []).find(p => normName(p.player) === q);
+    if (hit) { const chart = calcDollars(); return chart[hit.pick] || null; }
+  }
+  return null;
+}
+// The main entry point: our own value for a player, as of a given season.
+// Blends this season with the prior one (smooths a single fluky year) then
+// applies the age-decline multiplier for a forward-looking dynasty number.
+function lvbValueAt(name, season) {
+  const lvb = loadLvbData();
+  const players = (S.bundle && S.bundle.players) || {};
+  if (!lvb || !lvb.seasons) return null;
+  const q = normName(name);
+  let pid = null;
+  for (const id in players) { if (normName(playerName(players[id], id)) === q) { pid = id; break; } }
+  if (!pid) return null;
+  const thisYr = lvb.seasons[season], lastYr = lvb.seasons[season - 1];
+  const vThis = thisYr ? lvbSeasonValue(pid, thisYr, players) : null;
+  const vLast = lastYr ? lvbSeasonValue(pid, lastYr, players) : null;
+  let base;
+  if (vThis != null && vLast != null) base = vThis * 0.65 + vLast * 0.35;
+  else if (vThis != null) base = vThis;
+  else if (vLast != null) base = vLast * 0.7; // discount -- missed this season entirely (injury/inactive)
+  else return lvbRookieFallback(name); // no production on file at all yet
+  const p = players[pid];
+  const age = p && typeof p.age === 'number' ? p.age - (new Date().getFullYear() - season) : null; // age AS OF that season, not today
+  return Math.round(base * lvbAgeMultiplier(posOfPlayer(p), age));
+}
 function tcChatAssetVal(a, season, atTime) {
   const targetYear = atTime ? season : Math.min(DP_LAST_YEAR, (season || DP_LAST_YEAR - 3) + 3);
   if (a.player) {
     const floor = tcPlayerFloor(a.player);                  // startable-player floor (same grid as the calculator)
+    // OUR OWN value first — real production, this league's real scoring
+    // settings. Only falls through to DynastyProcess's market snapshot
+    // when the League Value Board hasn't been built yet, or has no read
+    // on this specific name (a gap, not a policy).
+    const ourVal = lvbValueAt(a.player, targetYear);
+    if (ourVal != null) return Math.max(ourVal, floor);
     const dv = dpValueAt(a.player, targetYear, atTime);
     if (dv != null) return Math.max(Math.round(scflStretch(dv)), floor);
     // No dp-values snapshot at or before the trade date (an unresolved name,
@@ -5996,6 +6119,14 @@ async function showTradeCourt(force) {
   // session (rankBySeasonFranchise()/fitRankRegression() no longer cache
   // that fallback, but there's no reason to race it in the first place).
   try { await Promise.all([loadFranchiseMap(), loadBundledHistory()]); } catch {}
+  // The League Value Board -- our own real-production values -- has to
+  // exist BEFORE the ledger is graded, since every asset lookup below
+  // checks it first. Expensive (a season-by-season Sleeper walk), so it's
+  // built once and cached; force also rebuilds this, not just the ledger.
+  if (force || !loadLvbData()) {
+    shell(`<div class="card"><div class="dt">⏳ Building the League Value Board — real stats, every season, scored on this league's own settings… <span class="faint">(one time — it's cached after this)</span></div></div>`);
+    try { await lvbBuild(); } catch {}
+  }
   let data = force ? null : loadTcData();
   if (!data) {
     shell(`<div class="card"><div class="dt">⏳ Subpoenaing every completed trade across all seasons and grading each one on today's board… <span class="faint">(one time — it's cached after this)</span></div></div>`);
@@ -6152,7 +6283,7 @@ async function showTradeCourt(force) {
     ${chat.precedents.length ? `<div class="card"><div class="at" style="margin:0 0 6px">🧾 Landmark Deals on File</div>${chat.precedents.map(p => `<div class="dt" style="padding:3px 0">• ${esc(p)}</div>`).join('')}<div class="faint" style="font-size:11px;margin-top:6px">The reference trades that calibrate the whole value board.</div></div>` : ''}` : '';
 
   const method = `<div class="card" style="margin-top:18px"><div class="faint" style="font-size:11px;line-height:1.6">
-    <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Player values come from <b>DynastyProcess dated Superflex snapshots</b> — one per off-season, 2021→2026 — so each player carries his real market value <b>the day of the trade</b> and again <b>~3 years later</b>, powering the "At the time" and "In hindsight" columns. Draft picks are priced as picks the day of the trade. SCFL sets the rookie order by <b>inverse standings/playoff finish</b> (with tiebreakers), so a pick's slot locks the moment the <b>prior</b> season ends. A pick therefore shows its <b>exact-slot</b> value only once that order is set (a current-year pick — e.g. "2022 pick 3" traded in the 2022 offseason). A <b>future</b> pick ("2024 1st") is priced as an <b>expected value</b>: real league standings (2008–present) show a team's finish barely predicts its finish the following year, so rather than guess, that persistence is <b>fit from the actual data</b> and used to spread probability across all 16 possible slots for the original franchise's <b>most recently completed</b> season (never a later one — no hindsight in the "at the time" price), each slot priced off the real board and averaged — then a small time discount for how far out the pick is. In hindsight <b>each pick is re-valued as the player it actually became</b>, from the league's official <b>Obvibase draft history</b> (the drafter and original owner of every pick, 2021–2025). A pick that got flipped self-corrects — its value cancels across the two trades, leaving whatever the team got back. Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
+    <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Player values come from the <b>League Value Board</b> — real weekly stats, scored on <b>this league's own scoring settings</b>, ranked positionally season by season, with a decline curve on top for forward-looking dynasty value — so each player carries what he actually did here, not a generic market's guess, powering both the "At the time" and "In hindsight" columns. A player with no real production on file yet (a rookie traded before his first season) falls back to his real SCFL draft slot instead of a guess. <b>DynastyProcess</b>'s market snapshot only steps in as a fallback when the Value Board has no read on a name at all. Draft picks are priced as picks the day of the trade. SCFL sets the rookie order by <b>inverse standings/playoff finish</b> (with tiebreakers), so a pick's slot locks the moment the <b>prior</b> season ends. A pick therefore shows its <b>exact-slot</b> value only once that order is set (a current-year pick — e.g. "2022 pick 3" traded in the 2022 offseason). A <b>future</b> pick ("2024 1st") is priced as an <b>expected value</b>: real league standings (2008–present) show a team's finish barely predicts its finish the following year, so rather than guess, that persistence is <b>fit from the actual data</b> and used to spread probability across all 16 possible slots for the original franchise's <b>most recently completed</b> season (never a later one — no hindsight in the "at the time" price), each slot priced off the real board and averaged — then a small time discount for how far out the pick is. In hindsight <b>each pick is re-valued as the player it actually became</b>, from the league's official <b>Obvibase draft history</b> (the drafter and original owner of every pick, 2021–2025). A pick that got flipped self-corrects — its value cancels across the two trades, leaving whatever the team got back. Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
   </div></div>`;
 
   shell(freshLine + docket + reckoning + coverageCard + heroes + rankCard + heistSec + menageSec + fullDocket + chatCard + method);
