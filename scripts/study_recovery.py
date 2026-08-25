@@ -93,6 +93,39 @@ def recovery_times(fr, traj):
                         break
     return out
 
+def trade_activity_vs_volatility(fr, profiles):
+    """dossier.json keys each manager entry by TEAM name, not the person --
+    resolve on club (with alias fallback for the parenthetical variants),
+    not on the 'manager' field, which only coincidentally matches for a
+    few teams where we don't have the real person's name on file."""
+    import os, re
+    dossier = json.load(open(os.path.join(ROOT, 'dossier.json'), encoding='utf-8'))
+    alias_to_key = {}
+    for f in fr['franchises']:
+        alias_to_key[f['club'].lower()] = f['key']
+        for a in f.get('aliases', []):
+            alias_to_key[a.lower()] = f['key']
+    vol_by_key = {p['key']: p['volatility'] for p in profiles}
+    rows = []
+    for m in dossier.get('managers', []):
+        tp = m.get('tradingProfile')
+        if not tp:
+            continue
+        base = re.split(r'[(/]', m['name'])[0].strip().lower()
+        key = alias_to_key.get(base) or alias_to_key.get(m['name'].lower())
+        if key and key in vol_by_key:
+            rows.append((m['name'], tp['trades'], vol_by_key[key]))
+    if len(rows) < 3:
+        return rows, None
+    xs = [r[1] for r in rows]
+    ys = [r[2] for r in rows]
+    mx, my = statistics.mean(xs), statistics.mean(ys)
+    cov = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    sx = sum((x - mx) ** 2 for x in xs) ** 0.5
+    sy = sum((y - my) ** 2 for y in ys) ** 0.5
+    r = cov / (sx * sy) if sx * sy else 0
+    return rows, r
+
 if __name__ == '__main__':
     fr, traj = rank_trajectories()
     profiles = franchise_profiles(fr, traj)
@@ -113,3 +146,10 @@ if __name__ == '__main__':
     rt = recovery_times(fr, traj)
     print(f"\nRecovery time (rank>=14 -> next rank<=3): n={len(rt)}, "
           f"mean={statistics.mean(rt):.1f}yrs, median={statistics.median(rt)}, range {min(rt)}-{max(rt)}")
+
+    rows, r = trade_activity_vs_volatility(fr, profiles)
+    print(f"\nTrade activity vs. volatility (n={len(rows)}):")
+    for name, trades, vol in sorted(rows, key=lambda x: -x[1]):
+        print(f"  {name:45} trades={trades:3}  volatility={vol}")
+    if r is not None:
+        print(f"  correlation r = {r:.3f}")

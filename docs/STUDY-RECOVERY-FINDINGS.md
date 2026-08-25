@@ -94,20 +94,32 @@ stories, not closed ones:
   next year. If POP is bottom-half in the 2026 standings, that's the Study
   writing its own next chapter in real time.
 
+## A weak but real signal: heavy traders run more stable teams
+
+Fixed the name-matching gap below (dossier.json keys managers by team name,
+not the person — matched on club instead of on "manager", 15 of 16
+resolved). Correlating each manager's trade count (from the earlier
+trading-profile work) against their franchise's volatility:
+
+**r = −0.30** (n=15) — a weak-to-moderate negative correlation: managers who
+trade more tend to run *more* stable teams, not more chaotic ones. Weak
+enough that it's a lead, not a conclusion — but it fits the one data point
+that actually jumps out: **The Machines are both the league's 2nd-most
+active trader (67 deals) and by far its most stable team.** Worth asking
+directly in an interview: is constant, incremental trading actually a
+*stability* tool for you, not a rebuilding one?
+
 ## What's NOT in here yet (needs your call, or needs data that doesn't exist yet)
 
 - **Owner voice.** Nothing above has a single owner's own explanation for
   *why* — that's exactly what Owner Interviews is for. The title-hangover
   finding especially begs the question directly to the 5 owners it
   happened to.
-- **Trade behavior cross-reference.** I wanted to check whether patient
-  vs. aggressive traders (from the tradingProfile work — Keith as the
-  league's biggest seller, Coach Nick as the biggest buyer) correlate with
-  volatility. The name-matching between `dossier.json` and
-  `scfl-franchises.json` only cleanly resolved 2 of 16 managers for this
-  specific cross-reference (different field naming) — real signal, not
-  enough of it yet. Worth fixing the matching and rerunning if this angle
-  is worth pursuing.
+- **Net buyer/seller vs. volatility** — the trade-count correlation above
+  is done; a natural follow-up is whether being a net *buyer* (Coach Nick)
+  vs. net *seller* (Keith) of players predicts volatility specifically,
+  not just raw trade count. Didn't compute that one — a real next step if
+  this angle is worth pursuing further.
 - **Format.** This is raw findings, not a draft article. Didn't want to
   commit to a voice/length/publish-as-an-Investigation-piece decision
   without you — that's a real call, not one I should make solo overnight.
