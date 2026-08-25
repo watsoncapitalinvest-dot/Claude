@@ -3656,6 +3656,35 @@ function drawQuadLogo(ctx, img, quadDst) {
 function loadImgEl(src) {
   return new Promise((resolve, reject) => { const im = new Image(); im.onload = () => resolve(im); im.onerror = reject; im.src = src; });
 }
+// Most of the 16 logo files are flat opaque squares (a badge centered on a
+// solid-colour background, not a transparent PNG) — composited as-is that
+// shows up as a visible rectangle sitting on the grass. Sample the four
+// corners as "background" and key them out, with a feathered edge so the
+// cutout doesn't look cut-out. Logos that already have real transparency
+// (corners already mostly transparent) are left untouched.
+function keyOutLogoBackground(img) {
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  const off = document.createElement('canvas');
+  off.width = w; off.height = h;
+  const octx = off.getContext('2d');
+  octx.drawImage(img, 0, 0);
+  const data = octx.getImageData(0, 0, w, h);
+  const d = data.data;
+  const corners = [[0,0],[w-1,0],[0,h-1],[w-1,h-1]];
+  let br=0, bg=0, bb=0, ba=0;
+  corners.forEach(([x,y]) => { const i=(y*w+x)*4; br+=d[i]; bg+=d[i+1]; bb+=d[i+2]; ba+=d[i+3]; });
+  br/=4; bg/=4; bb/=4; ba/=4;
+  if (ba < 200) return off; // corners already transparent — nothing to key out
+  const THRESH = 36, FEATHER = 22;
+  for (let i = 0; i < d.length; i += 4) {
+    const dr = d[i]-br, dg = d[i+1]-bg, db = d[i+2]-bb;
+    const dist = Math.sqrt(dr*dr + dg*dg + db*db);
+    if (dist < THRESH) d[i+3] = 0;
+    else if (dist < THRESH + FEATHER) d[i+3] = Math.round(d[i+3] * (dist - THRESH) / FEATHER);
+  }
+  octx.putImageData(data, 0, 0);
+  return off;
+}
 async function paintDeskLogos(sceneId) {
   const spot = DESK_SCENE_LOGO_SPOTS[sceneId];
   const canvas = document.getElementById('logo-canvas-' + sceneId);
@@ -3663,8 +3692,9 @@ async function paintDeskLogos(sceneId) {
   try {
     const uri = await myTeamLogoURI();
     if (!uri) return;
-    const logo = await loadImgEl(uri);
+    const rawLogo = await loadImgEl(uri);
     if (document.getElementById('logo-canvas-' + sceneId) !== canvas) return; // page moved on
+    const logo = keyOutLogoBackground(rawLogo);
     canvas.width = 1536; canvas.height = 1024;
     const ctx = canvas.getContext('2d');
     if (spot.field) drawQuadLogo(ctx, logo, spot.field);
