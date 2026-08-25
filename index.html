@@ -5605,18 +5605,33 @@ function lvbCurveValue(pos, rank) {
   }
   return 0;
 }
+// Shrinks a small sample's PPG toward the position's real average that
+// season -- K "phantom" games at the positional average. A 4-game hot
+// streak (the minimum to qualify at all) shouldn't rank like a 17-game
+// season just because the per-game rate looks the same; this pulls thin
+// samples back toward the pack while barely moving a full season. Standard
+// small-sample-rate-stat fix (the same idea as a batting-average regression).
+const LVB_SHRINK_GAMES = 6;
 function lvbSeasonValue(pid, seasonTotals, playersDict) {
   const rec = seasonTotals[pid];
   if (!rec || rec.games < LVB_MIN_GAMES) return null;
   const p = playersDict[pid], pos = posOfPlayer(p);
   if (!pos || !LVB_TIERS[pos]) return null;
-  const ppg = rec.points / rec.games;
+  let posPts = 0, posGames = 0;
+  for (const id2 in seasonTotals) {
+    const r2 = seasonTotals[id2]; if (r2.games < LVB_MIN_GAMES) continue;
+    if (posOfPlayer(playersDict[id2]) !== pos) continue;
+    posPts += r2.points; posGames += r2.games;
+  }
+  const posAvgPpg = posGames ? posPts / posGames : 0;
+  const shrunkPpg = (r) => (r.points + LVB_SHRINK_GAMES * posAvgPpg) / (r.games + LVB_SHRINK_GAMES);
+  const ppg = shrunkPpg(rec);
   let better = 0;
   for (const id2 in seasonTotals) {
     if (id2 === pid) continue;
     const r2 = seasonTotals[id2]; if (r2.games < LVB_MIN_GAMES) continue;
     const p2 = playersDict[id2]; if (posOfPlayer(p2) !== pos) continue;
-    if (r2.points / r2.games > ppg) better++;
+    if (shrunkPpg(r2) > ppg) better++;
   }
   const prank = better + 1;
   return Math.round(lvbCurveValue(pos, prank));
@@ -5647,7 +5662,17 @@ function lvbValueAt(name, season) {
   const vThis = thisYr ? lvbSeasonValue(pid, thisYr, players) : null;
   const vLast = lastYr ? lvbSeasonValue(pid, lastYr, players) : null;
   let base;
-  if (vThis != null && vLast != null) base = vThis * 0.65 + vLast * 0.35;
+  if (vThis != null && vLast != null) {
+    // Weight each season by how many games it's actually built on, not a flat
+    // 65/35 -- a player who played all 17 last year but only 4 this year
+    // (injury) shouldn't get pinned 65% to the thin, unreliable sample. The
+    // recency bias (13/7) recovers the original 65/35 exactly when both
+    // seasons have equal games played; it only shifts when reliability differs.
+    const gThis = (thisYr[pid] && thisYr[pid].games) || 0, gLast = (lastYr[pid] && lastYr[pid].games) || 0;
+    const RECENCY_BIAS = 0.65 / 0.35;
+    const wThis = gThis * RECENCY_BIAS, wLast = gLast;
+    base = (vThis * wThis + vLast * wLast) / (wThis + wLast);
+  }
   else if (vThis != null) base = vThis;
   else if (vLast != null) base = vLast * 0.7; // discount -- missed this season entirely (injury/inactive)
   else return lvbRookieFallback(name); // no production on file at all yet
