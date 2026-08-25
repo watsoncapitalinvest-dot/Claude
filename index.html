@@ -5584,8 +5584,27 @@ async function lvbBuild() {
   return data;
 }
 // Positional PPG rank -> $ value, one season, via the same real-trade-
-// calibrated tier grid tcPlayerFloor uses -- only the RANK input changes,
-// from Sleeper's live consensus to our own real production that season.
+// calibrated grid tcPlayerFloor uses -- only the RANK input changes, from
+// Sleeper's live consensus to our own real production that season.
+// tcPlayerFloor's tiers were built as a FLOOR (a handful of flat sanity
+// checkpoints), not a per-player curve -- used as-is here, every rank inside
+// a bucket collapsed to the same flat number (RB #6 through #18 all = $47),
+// which is both why some players repeated their exact prior-year value and
+// why we drifted further from market than we should have. Interpolating
+// between the same calibrated checkpoints keeps the calibration but gives
+// every rank its own number.
+function lvbCurveValue(pos, rank) {
+  const cuts = LVB_CUT[pos], tiers = LVB_TIERS[pos];
+  const pts = [[1, tiers[0]]];
+  for (let i = 1; i < tiers.length; i++) pts.push([cuts[i - 1] + 1, tiers[i]]);
+  pts.push([cuts[cuts.length - 1] + 1, 0]); // one past the last real tier -> replacement level
+  if (rank <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++) {
+    const [r0, v0] = pts[i - 1], [r1, v1] = pts[i];
+    if (rank <= r1) return v0 + (v1 - v0) * (rank - r0) / (r1 - r0);
+  }
+  return 0;
+}
 function lvbSeasonValue(pid, seasonTotals, playersDict) {
   const rec = seasonTotals[pid];
   if (!rec || rec.games < LVB_MIN_GAMES) return null;
@@ -5600,9 +5619,7 @@ function lvbSeasonValue(pid, seasonTotals, playersDict) {
     if (r2.points / r2.games > ppg) better++;
   }
   const prank = better + 1;
-  const cuts = LVB_CUT[pos], tiers = LVB_TIERS[pos];
-  const ti = cuts.findIndex(x => prank <= x);
-  return ti < 0 ? 0 : tiers[ti];
+  return Math.round(lvbCurveValue(pos, prank));
 }
 // Real SCFL draft slot for a player with no games on file yet (a rookie
 // traded before his first season) -- our own pick chart, not a guess.
