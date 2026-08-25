@@ -2479,6 +2479,17 @@ function showDossier() {
     ${timeline ? `<div class="seclabel">The Timeline</div>${timeline}` : ''}
   </div>`;
 }
+// The last season in a "seasons" range like "2005-2025" — derived from the
+// data itself, not hardcoded, so "still active" doesn't silently break every
+// year records.json rolls forward.
+function latestSeasonIn(standings) {
+  let max = 0;
+  (standings || []).forEach(m => {
+    const match = String(m.seasons || '').match(/(\d{4})\s*$/);
+    if (match) max = Math.max(max, +match[1]);
+  });
+  return max;
+}
 function showRecords() {
   const r = S.records;
   const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Executive Office</button>`;
@@ -2490,7 +2501,8 @@ function showRecords() {
     return;
   }
   const medal = (n, e) => n > 0 ? `${e}${n}` : '';
-  const active = new Set(r.standings.filter(m => /2025/.test(m.seasons)).map(m => m.name));
+  const lastSeason = latestSeasonIn(r.standings);
+  const active = new Set(r.standings.filter(m => new RegExp(lastSeason + '\\s*$').test(m.seasons)).map(m => m.name));
   const rowsHtml = r.standings.map((m, i) => {
     const tr = [medal(m.titles, '🏆'), medal(m.runnerUps, '🥈'), medal(m.thirds, '🥉')].filter(Boolean).join(' ');
     const on = active.has(m.name);
@@ -2542,8 +2554,9 @@ function showRecords() {
   </div>`;
 }
 // ---- The Ex-Files: a special segment reviewing the league's departed owners --
-// Sourced from the Record Book (any franchise with no 2025 season), each gets a
-// stat line and a newsroom verdict — tribute or roast, earned by the record.
+// Sourced from the Record Book (any franchise missing the most recent season
+// in the data), each gets a stat line and a newsroom verdict — tribute or
+// roast, earned by the record.
 function exSeed(name) { return Math.round(hashNoise(String(name)) * 1e6); }
 function exVerdict(m) {
   const yrs = m.numSeasons || 0, wp = m.winPct || 0, t = m.titles || 0, po = m.playoffs || 0;
@@ -2657,7 +2670,9 @@ function showExFiles() {
     <div class="setup-logo" style="font-size:26px">👻 The Ex-Files</div>
     <p class="muted" style="margin:2px 0 16px">The league's dearly departed — every owner who packed up and left, dragged back for one last review.</p>${inner}</div>`; };
   if (!r || !r.standings || !r.standings.length) return shell(`<div class="card"><div class="dt">No record book baked in yet. Once <b>records.json</b> is committed, the ghosts load here.</div></div>`);
-  const departed = r.standings.filter(m => !/2025/.test(String(m.seasons))).sort((a, b) => (b.numSeasons || 0) - (a.numSeasons || 0));
+  const lastSeason = latestSeasonIn(r.standings);
+  const stillActive = new RegExp(lastSeason + '\\s*$');
+  const departed = r.standings.filter(m => !stillActive.test(String(m.seasons))).sort((a, b) => (b.numSeasons || 0) - (a.numSeasons || 0));
   if (!departed.length) return shell(`<div class="card"><div class="dt">Nobody's left. Every owner who ever joined is still here — a loyal bunch, or a trapped one, depending who you ask.</div></div>`);
 
   const champs = departed.filter(m => (m.titles || 0) > 0);
@@ -2685,7 +2700,7 @@ function showExFiles() {
       ${reviewPanel('ex::' + m.name, 'ex')}
     </div>`;
   }).join('');
-  const method = `<div class="card" style="margin-top:14px"><div class="faint" style="font-size:11px;line-height:1.6"><b>Case criteria:</b> a departed franchise is any team in the Record Book with no 2025 season. Records, tenure and trophies come straight from League Legacy; the verdicts are the newsroom's own — and the newsroom holds grudges.</div></div>`;
+  const method = `<div class="card" style="margin-top:14px"><div class="faint" style="font-size:11px;line-height:1.6"><b>Case criteria:</b> a departed franchise is any team in the Record Book with no ${lastSeason} season. Records, tenure and trophies come straight from League Legacy; the verdicts are the newsroom's own — and the newsroom holds grudges.</div></div>`;
   shell(heroes + champLine + `<div class="seclabel" style="margin:18px 0 8px">The Case Files — ${departed.length} departed</div>` + cards + method);
 }
 // ---- Newsroom HQ: the weekly dashboard, checklist, questionnaire + calendar -
@@ -3577,7 +3592,6 @@ function showMenu() {
   S.reading = false;
   if (!staffName()) return renderDeskGate();
   const shield = (!S.shieldShown) ? (S.shieldShown = true, `<div class="shield-launch" id="shieldLaunch"><img src="${EXEC_LOGO}" alt="SCFL Executive Office"></div>`) : '';
-  const office = OFFICE_TOOLS.map(mtoolBtn).join('');
   setContent(`${shield}
     <div class="office-hero">
       <img class="office-logo" src="${EXEC_LOGO}" alt="SCFL Executive Office">
@@ -7576,7 +7590,7 @@ async function showRivalryRead(k) {
         ${stat('Heat', r.heat.toFixed(1) + '%', 'shots fired')}
       </div>
       <p class="faint" style="font-size:11.5px;margin-top:12px;line-height:1.5">
-        Records cover ${d.first}&ndash;2025 and reconcile exactly against the league's stored standings.
+        Records cover ${d.first}&ndash;${latestSeasonIn(S.records && S.records.standings) || 2025} and reconcile exactly against the league's stored standings.
         A playoff meeting means both teams finished in the top eight; consolation games are excluded.
         Chat focus is how much of each manager's back-and-forth is aimed at the other, normalised for
         how much they talk; heat is the share of those exchanges that turn into shots.</p>
