@@ -11,7 +11,7 @@ what it does, and where it lives in code.
 |---|---|---|---|
 | Base market value | dp-values.json snapshot, direct | The DynastyProcess Superflex $ for that player at the target season — no weighting applied, straight lookup | `dpValueAt()` |
 | Elite stretch | `1 + 0.20 × min(1, max(0, (v−70)/60))` | Players above $70 get boosted up to +20% at $130+; ≤$70 untouched. Calibrated to real league behavior — a proven star fetches ~1.5× a 1.01 pick in actual SCFL trades | `scflStretch()` |
-| Startable floor | Position tiers: QB [95,72,46,26], RB [63,47,31], WR [82,55,36], TE [41,24,13], cut at positional rank [4,12,24,40] / [5,18,40] / [6,24,48] / [3,10,20] | A player still startable by today's positional rank can't be graded down to dp's cratered dynasty number — final value = `max(market, floor)` | `tcPlayerFloor()` |
+| Startable floor | Position tiers: QB [95,72,46,26], RB [63,47,31], WR [82,55,36], TE [41,24,13], cut at positional rank [4,12,24,40] / [5,18,40] / [6,24,48] / [3,10,20] | A player still startable by *today's* positional rank can't be graded down to dp's cratered dynasty number — final value = `max(market, floor)`. **Open question, not yet resolved**: this floor is built from today's live roster rank and applies to "at the time" prices too — a historical 2021 valuation can get bumped up because of who that player is *now*. That's a real, live exception to the "at the time never looks forward" rule below, pre-existing (not touched by this session's fix). Worth a call: is that the intended trade-off (don't let a stale dp glitch misgrade an obviously-good player) or should "at the time" use a floor built from the player's rank *as of the trade*? | `tcPlayerFloor()` |
 
 ## Draft pick values
 
@@ -32,5 +32,5 @@ what it does, and where it lives in code.
 
 ## What's NOT weighted (deliberately)
 
-- **"At the time" player values never look forward** past the trade's own season (the hindsight-leak fix) — no factor here is a blend of past/future, it's a hard cutoff.
-- **Exact-slot picks get zero adjustment** — the pick chart's own calibration already prices the slot; no persistence, class, or time-discount factor touches them.
+- **"At the time" player values never look forward** past the trade's own season (the hindsight-leak fix) — the *market-value* number itself is a hard cutoff, no blend of past/future. Corrected after an audit found `tcChatAssetVal`'s own fallback (for an unresolved name or a genuine pre-debut rookie with no snapshot yet) was quietly substituting *today's* market price — the identical leak the fix was supposed to close. Fixed: that fallback now floors instead of ever touching today's number when `atTime` is true. The startable *floor* on top of that market value is a separate, still-open exception — see the Startable floor row above.
+- **An exact-slot pick in the trade's own season gets zero adjustment** — the pick chart's own calibration already prices the slot; no persistence or class factor touches it. It still gets the ordinary time discount if the slot is for a *future* season (a rare but real case in the ledger — a slot can apparently be locked in more than a year out) — waiting has a cost independent of whether the slot is already known.

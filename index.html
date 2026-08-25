@@ -5526,7 +5526,12 @@ function tcChatAssetVal(a, season, atTime) {
     const floor = tcPlayerFloor(a.player);                  // startable-player floor (same grid as the calculator)
     const dv = dpValueAt(a.player, targetYear, atTime);
     if (dv != null) return Math.max(Math.round(scflStretch(dv)), floor);
-    if (atTime && typeof a.v === 'number') return Math.max(a.v, floor);
+    // No dp-values snapshot at or before the trade date (an unresolved name,
+    // or a genuine pre-debut rookie — noFuture's whole point). playerDollarValue()
+    // reads TODAY's market via DP_LAST_YEAR, so it must never stand in for an
+    // "at the time" price — that's the exact leak the noFuture fix targeted.
+    // Hindsight mode has no such constraint; today's market is a fine last resort there.
+    if (atTime) return floor || 16;
     const pv = (typeof playerDollarValue === 'function') ? playerDollarValue(a.player) : null;
     return Math.max(floor, (pv && pv.val) ? pv.val : (typeof a.v === 'number' ? a.v : 0)) || 16;
   }
@@ -5598,7 +5603,7 @@ function franchiseKeyForTeam(raw) {
 function rankBySeasonFranchise() {
   if (_rankBySeason) return _rankBySeason;
   const hist = S.espnHist, fr = FRANCHISE_DATA;
-  if (!hist || !fr) return {};
+  if (!hist || !fr) return {}; // not loaded yet -- DON'T cache, so a later call (once loaded) recomputes for real
   const out = {};
   (hist.seasons || []).forEach(se => {
     const ownerByTeamId = {}; (se.teams || []).forEach(t => ownerByTeamId[t.id] = t.owner);
@@ -5626,7 +5631,12 @@ function fitRankRegression() {
     const r0 = bySeason[y0], r1 = bySeason[y1];
     for (const k in r0) if (r1[k] != null) pairs.push([r0[k], r1[k]]);
   }
-  if (pairs.length < 20) return (_rankRegression = { a: 8.5, b: 0, sigma: 4.6, n: pairs.length }); // too little data → stay flat
+  // Too little data to fit for real -- stay flat, but DON'T cache: this can
+  // happen because history.json genuinely doesn't have enough seasons yet
+  // (fine to cache) or because it just hasn't finished loading (loadBundled-
+  // History() is fired-and-forgotten at boot) -- caching the second case
+  // would freeze this session on the degenerate fallback forever.
+  if (pairs.length < 20) return { a: 8.5, b: 0, sigma: 4.6, n: pairs.length };
   const n = pairs.length;
   const mx = pairs.reduce((s, p) => s + p[0], 0) / n, my = pairs.reduce((s, p) => s + p[1], 0) / n;
   let sxx = 0, sxy = 0;
@@ -5980,7 +5990,12 @@ async function showTradeCourt(force) {
   // The chat ledger (docket + exhibits) is a cheap static file — load it once.
   if (!S.chatTrades) { try { await loadBundledTrades(); } catch {} }
   // Needed for expectedFuturePickValue()'s real slot-probability model.
-  try { await loadFranchiseMap(); } catch {}
+  // loadBundledHistory() is also fired-and-forgotten at boot elsewhere, so
+  // without this explicit await, opening the Court early enough could grade
+  // every future pick on the degenerate flat fallback for the rest of the
+  // session (rankBySeasonFranchise()/fitRankRegression() no longer cache
+  // that fallback, but there's no reason to race it in the first place).
+  try { await Promise.all([loadFranchiseMap(), loadBundledHistory()]); } catch {}
   let data = force ? null : loadTcData();
   if (!data) {
     shell(`<div class="card"><div class="dt">⏳ Subpoenaing every completed trade across all seasons and grading each one on today's board… <span class="faint">(one time — it's cached after this)</span></div></div>`);
