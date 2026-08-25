@@ -6100,6 +6100,44 @@ function tcGraderBias(){ const mat = tcGraderRows().filter(r => r.hindYears >= 3
 function tcDataKey(){ return 'gg.tcdata.' + (S.leagueId || 'x'); }
 function loadTcData(){ if (S._tcData) return S._tcData; try { const r = localStorage.getItem(tcDataKey()); if (r) S._tcData = JSON.parse(r); } catch {} return S._tcData; }
 function saveTcData(d){ d._ts = Date.now(); S._tcData = d; try { localStorage.setItem(tcDataKey(), JSON.stringify(d)); } catch {} }
+// ---- Ours vs. Market: one player, every season, both boards side by side --
+const PVL_SAMPLES = ['Najee Harris', 'Kyle Pitts', 'Jaylen Waddle']; // full 2021-on career arcs, three different shapes
+function tcOursVsMarket(name) {
+  const cur = Number(S.season) || new Date().getFullYear();
+  const years = []; for (let y = LVB_FIRST_SEASON; y <= cur; y++) years.push(y);
+  return years.map(year => {
+    const ours = lvbValueAt(name, year);
+    const mraw = dpValueAt(name, year, true); // noFuture -- same as-of-that-season cutoff as "ours"
+    const market = mraw != null ? Math.round(scflStretch(mraw)) : null;
+    return { year, ours, market, diff: (ours != null && market != null) ? ours - market : null };
+  });
+}
+function pvlResultsHtml(name) {
+  if (!name) return '<div class="faint" style="font-size:12px">Pick a name above, or type your own.</div>';
+  const rows = tcOursVsMarket(name);
+  const haveAny = rows.some(r => r.ours != null || r.market != null);
+  if (!haveAny) return `<div class="faint" style="font-size:12px">No read on "${esc(name)}" from either board — check the spelling, or he may not have played in this league's window.</div>`;
+  const noBoard = !loadLvbData();
+  const rowsHtml = rows.map(r => {
+    const d = r.diff, dc = d == null ? 'var(--faint)' : d > 0 ? '#3fb950' : d < 0 ? 'var(--red)' : 'var(--faint)';
+    return `<tr>
+      <td style="padding:5px 8px 5px 0;color:var(--faint)">${r.year}</td>
+      <td style="padding:5px 8px;text-align:right">${r.ours != null ? '$' + r.ours : '—'}</td>
+      <td style="padding:5px 8px;text-align:right">${r.market != null ? '$' + r.market : '—'}</td>
+      <td style="padding:5px 0 5px 8px;text-align:right;color:${dc};font-weight:700">${d != null ? (d >= 0 ? '+' : '') + d : '—'}</td>
+    </tr>`;
+  }).join('');
+  return `${noBoard ? `<div class="faint" style="font-size:11px;margin-bottom:8px">⚠ The League Value Board hasn't been built on this device yet — "Ours" will fill in once it has (open the Court above, or hit Refresh).</div>` : ''}
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="border-bottom:1px solid var(--line);color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.4px">
+        <th style="text-align:left;padding:0 8px 6px 0">Year</th><th style="text-align:right;padding:0 8px 6px">Ours</th>
+        <th style="text-align:right;padding:0 8px 6px">Market</th><th style="text-align:right;padding:0 0 6px 8px">Diff</th></tr></thead>
+      <tbody>${rowsHtml}</tbody></table>`;
+}
+function showPlayerLookup(name) {
+  const el = $('#pvlResults'); if (el) el.innerHTML = pvlResultsHtml(name);
+  const input = $('#pvlSearch'); if (input && name) input.value = name;
+}
 async function showTradeCourt(force) {
   S.reading = false;
   const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>`;
@@ -6286,7 +6324,21 @@ async function showTradeCourt(force) {
     <b>How the court grades:</b> every trade is priced on the SCFL value board ($ scale, the 1.01 rookie pick = $100). Player values come from the <b>League Value Board</b> — real weekly stats, scored on <b>this league's own scoring settings</b>, ranked positionally season by season, with a decline curve on top for forward-looking dynasty value — so each player carries what he actually did here, not a generic market's guess, powering both the "At the time" and "In hindsight" columns. A player with no real production on file yet (a rookie traded before his first season) falls back to his real SCFL draft slot instead of a guess. <b>DynastyProcess</b>'s market snapshot only steps in as a fallback when the Value Board has no read on a name at all. Draft picks are priced as picks the day of the trade. SCFL sets the rookie order by <b>inverse standings/playoff finish</b> (with tiebreakers), so a pick's slot locks the moment the <b>prior</b> season ends. A pick therefore shows its <b>exact-slot</b> value only once that order is set (a current-year pick — e.g. "2022 pick 3" traded in the 2022 offseason). A <b>future</b> pick ("2024 1st") is priced as an <b>expected value</b>: real league standings (2008–present) show a team's finish barely predicts its finish the following year, so rather than guess, that persistence is <b>fit from the actual data</b> and used to spread probability across all 16 possible slots for the original franchise's <b>most recently completed</b> season (never a later one — no hindsight in the "at the time" price), each slot priced off the real board and averaged — then a small time discount for how far out the pick is. In hindsight <b>each pick is re-valued as the player it actually became</b>, from the league's official <b>Obvibase draft history</b> (the drafter and original owner of every pick, 2021–2025). A pick that got flipped self-corrects — its value cancels across the two trades, leaving whatever the team got back. Net sums to zero per deal and generalizes to 3+-team trades. Only current franchises are ranked; legacy names are folded into their current identity.
   </div></div>`;
 
-  shell(freshLine + docket + reckoning + coverageCard + heroes + rankCard + heistSec + menageSec + fullDocket + chatCard + method);
+  const pvlSeeds = PVL_SAMPLES.map(n => `<button class="btn ghost" data-act="pvl-pick" data-name="${esc(n)}" style="width:auto;padding:5px 12px;font-size:11px">${esc(n)}</button>`).join('');
+  const playerLookup = `<div class="card" style="margin-top:18px">
+    <div class="at" style="margin:0 0 4px">🔍 Ours vs. Market</div>
+    <p class="faint" style="font-size:11.5px;margin:0 0 10px">One player, every season — the League Value Board's number next to DynastyProcess's, side by side. Three real career arcs to start with:</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${pvlSeeds}</div>
+    <div style="display:flex;gap:8px">
+      <input id="pvlSearch" class="input" placeholder="Any player name…" style="flex:1">
+      <button class="btn ghost" data-act="pvl-go" style="width:auto;padding:8px 16px">Go</button>
+    </div>
+    <div id="pvlResults" style="margin-top:12px">${pvlResultsHtml(PVL_SAMPLES[0])}</div>
+  </div>`;
+
+  shell(freshLine + docket + reckoning + coverageCard + heroes + rankCard + heistSec + menageSec + fullDocket + chatCard + method + playerLookup);
+  const pvlInput = $('#pvlSearch');
+  if (pvlInput) pvlInput.onkeydown = e => { if (e.key === 'Enter') showPlayerLookup(pvlInput.value.trim()); };
 }
 
 // ---------------------------------------------------------------------
@@ -8949,6 +9001,8 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'matchup-export') return exportMatchup();
   if (act === 'schedule-export') return exportSchedule();
   if (act === 'tc-refresh') { toast('Re-subpoenaing the league…'); return showTradeCourt(true); }
+  if (act === 'pvl-pick') return showPlayerLookup(t.dataset.name);
+  if (act === 'pvl-go') return showPlayerLookup((($('#pvlSearch') || {}).value || '').trim());
   if (act === 'tc-fulllist') { S._tcFullList = !S._tcFullList; return showTradeCourt(); }
   if (act === 'tc-team') return showTeamTrades(t.dataset.team);
   if (act === 'draft-grades-issue') { window.open('scfl-2026-draft-grades-flip.html', '_blank'); return; }
