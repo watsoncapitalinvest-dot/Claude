@@ -6187,8 +6187,16 @@ const WAIVER_POS = ['QB', 'RB', 'WR', 'TE'];
 // names the board has no business surfacing.
 function waiverFreeAgents() {
   const b = S.bundle; if (!b || !b.players || !b.rosters) return [];
+  // players is documented to already be the full roster (starters+bench+taxi+IR),
+  // but that's exactly the kind of assumption that just broke once for real (a
+  // Machines-rostered WR surfaced as a free agent) -- union taxi/reserve too so
+  // a roster shape that keeps them separate can't cause the same leak again.
   const rostered = new Set();
-  b.rosters.forEach(r => (r.players || []).forEach(pid => rostered.add(pid)));
+  b.rosters.forEach(r => {
+    (r.players || []).forEach(pid => rostered.add(pid));
+    (r.taxi || []).forEach(pid => rostered.add(pid));
+    (r.reserve || []).forEach(pid => rostered.add(pid));
+  });
   const out = [];
   for (const pid in b.players) {
     if (rostered.has(pid)) continue;
