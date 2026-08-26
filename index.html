@@ -3624,6 +3624,7 @@ const NEWSROOM_TOOLS = [
   ['investigations', '🔍', 'Investigations', 'The long-form specials'],
   ['interviews', '🎙️', 'Owner Interviews', 'Build your own questions, send a link, collect answers'],
   ['trade-court', '⚖️', 'The Trade Court', 'Every trade graded on the value board — ours vs. market'],
+  ['waiver-wire', '🎯', 'Waiver Wire Board', 'Free agents ranked on the value board — vs. your own roster'],
   ['archive-articles', '🗄️', 'Article Archive', 'Every article, searchable'],
   ['archive', '📚', 'Back Issues', 'Saved editions'],
   ['calendar', '🗓️', 'Calendar', 'Release dates & events'],
@@ -3639,7 +3640,7 @@ const OFFICE_SECTIONS = [
 const NEWSROOM_SECTIONS = [
   ['This Week', ['calendar', 'create-issue', 'weekly-stories', 'dashboard']],
   ['The Network', ['sportscenter', 'broadcast']],
-  ['Desks & Features', ['politics', 'desk', 'storylines', 'investigations', 'interviews', 'trade-court']],
+  ['Desks & Features', ['politics', 'desk', 'storylines', 'investigations', 'interviews', 'trade-court', 'waiver-wire']],
   ['Editions', ['pop-grades', 'archive', 'archive-articles']],
 ];
 function toolSections(tools, sections) {
@@ -6177,6 +6178,107 @@ function tcOursVsMarket(name) {
     const market = mraw != null ? Math.round(scflStretch(mraw)) : null;
     return { year, ours, market, diff: (ours != null && market != null) ? ours - market : null };
   });
+}
+// ---- Waiver Wire Board: real free agents, valued on our own board, vs your own roster ----
+const WAIVER_POS = ['QB', 'RB', 'WR', 'TE'];
+// Every player not on ANY roster in the league, restricted to real skill
+// positions with an active NFL team -- excludes retired/practice-squad-only
+// names the board has no business surfacing.
+function waiverFreeAgents() {
+  const b = S.bundle; if (!b || !b.players || !b.rosters) return [];
+  const rostered = new Set();
+  b.rosters.forEach(r => (r.players || []).forEach(pid => rostered.add(pid)));
+  const out = [];
+  for (const pid in b.players) {
+    if (rostered.has(pid)) continue;
+    const p = b.players[pid];
+    const pos = posOfPlayer(p);
+    if (!WAIVER_POS.includes(pos) || !p.team) continue;
+    out.push({ id: pid, name: playerName(p, pid), pos, player: p });
+  }
+  return out;
+}
+// The weakest player YOU already roster at a position -- the real bar a
+// waiver add has to clear to be worth a claim, not just "best available."
+function waiverMyWorst(pos, season) {
+  const mr = S.bundle && S.bundle.myRoster; if (!mr) return null;
+  let worst = null;
+  (mr.players || []).forEach(pid => {
+    const p = S.bundle.players[pid]; if (!p || posOfPlayer(p) !== pos) return;
+    const nm = playerName(p, pid);
+    const val = Math.max(lvbValueAt(nm, season) ?? 0, tcPlayerFloor(nm));
+    if (!worst || val < worst.val) worst = { name: nm, val };
+  });
+  return worst;
+}
+function waiverBoard() {
+  const season = Number(S.season) || new Date().getFullYear();
+  const byPos = {}; WAIVER_POS.forEach(pos => byPos[pos] = []);
+  waiverFreeAgents().forEach(fa => {
+    const val = Math.max(lvbValueAt(fa.name, season) ?? 0, tcPlayerFloor(fa.name));
+    if (val <= 0) return; // no real read on this player -- not worth surfacing
+    byPos[fa.pos].push({ ...fa, val: Math.round(val) });
+  });
+  WAIVER_POS.forEach(pos => byPos[pos].sort((a, b) => b.val - a.val));
+  const myWorst = {}; WAIVER_POS.forEach(pos => myWorst[pos] = waiverMyWorst(pos, season));
+  return { byPos, myWorst, season };
+}
+// Same fields lvbNewsMultiplier reads, shown as a short tag instead of folded
+// into a number -- here the READER should see the reason, not just the discount.
+function waiverStatusTag(p) {
+  const inj = String(p.injury_status || '').toLowerCase();
+  const status = String(p.status || '').toLowerCase();
+  if (status.includes('reserve') || status.includes('pup') || status.includes('non football') || status.includes('covid'))
+    return '<span style="font-size:10px;font-weight:800;color:var(--red)">IR/PUP</span>';
+  if (status.includes('suspend')) return '<span style="font-size:10px;font-weight:800;color:var(--red)">SUSP</span>';
+  if (status.includes('inactive')) return '<span style="font-size:10px;font-weight:800;color:var(--red)">INACTIVE</span>';
+  if (inj === 'out' || inj === 'ir') return '<span style="font-size:10px;font-weight:800;color:var(--red)">OUT</span>';
+  if (inj === 'doubtful') return '<span style="font-size:10px;font-weight:800;color:#fb923c">DOUB</span>';
+  if (inj === 'questionable') return '<span style="font-size:10px;font-weight:800;color:#facc15">Q</span>';
+  return '';
+}
+async function showWaiverWire(force) {
+  S.reading = false;
+  const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>`;
+  const shell = (inner) => { app.innerHTML = `<div style="padding-bottom:32px">${back}
+    <div class="setup-logo" style="font-size:26px">🎯 Waiver Wire Board</div>
+    <p class="muted" style="margin:2px 0 16px">Every free agent still on an NFL roster, valued on our own board — real production, this league's scoring, real current injury/roster status. <b>Not a live news feed</b> — if something happened in the last few minutes, this only knows what Sleeper's status field already shows.</p>
+    ${inner}</div>`; };
+  if (!S.bundle || !S.bundle.league) {
+    return shell(`<div class="card"><div class="dt">Load your league first (enter your Sleeper username on the home screen), then come back.</div></div>`);
+  }
+  if (force || !loadLvbData()) {
+    shell(`<div class="card"><div class="dt">⏳ Building the League Value Board — real stats, every season, scored on this league's own settings… <span class="faint">(one time — it's cached after this)</span></div></div>`);
+    try { await lvbBuild(); } catch {}
+  }
+  const { byPos, myWorst, season } = waiverBoard();
+  const refreshBtn = `<button class="btn ghost" data-act="waiver-refresh" style="width:auto;padding:8px 14px;margin-bottom:14px">↻ Refresh (re-pull rosters &amp; rebuild the board)</button>`;
+  const noMyRoster = !S.bundle.myRoster ? `<div class="card"><div class="dt faint">Couldn't match your Sleeper login to a roster in this league, so this is league-wide rankings only — no "upgrade over yours" comparison.</div></div>` : '';
+  const total = Object.values(byPos).reduce((s, a) => s + a.length, 0);
+  const sections = WAIVER_POS.map(pos => {
+    const list = byPos[pos].slice(0, 5);
+    if (!list.length) return `<div class="seclabel" style="margin:18px 0 8px">${esc(pos)}</div><div class="card"><div class="dt faint">No real read on any available ${esc(pos)} yet — too early in the season, or nobody worth surfacing.</div></div>`;
+    const worst = myWorst[pos];
+    const rows = list.map((fa, i) => {
+      const delta = worst ? fa.val - worst.val : null;
+      const upgrade = delta != null && delta > 0;
+      const tag = waiverStatusTag(fa.player);
+      return `<div class="row" style="justify-content:space-between;padding:8px 0;${i ? 'border-top:1px solid var(--border)' : ''}">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800">${esc(fa.name)} ${tag}</div>
+          <div class="faint" style="font-size:11px">${esc(fa.player.team || '—')} · ${esc(pos)}${worst ? ` · vs your ${esc(worst.name)} ($${worst.val})` : ''}</div>
+        </div>
+        <div style="text-align:right;flex:none;padding-left:10px">
+          <div style="font-weight:900;font-variant-numeric:tabular-nums">$${fa.val}</div>
+          ${delta != null ? `<div style="font-size:11px;font-weight:800;color:${upgrade ? '#3fb950' : 'var(--faint)'}">${upgrade ? '+' : ''}${delta}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="seclabel" style="margin:18px 0 8px">${esc(pos)}</div><div class="card">${rows}</div>`;
+  }).join('');
+  shell(`${refreshBtn}${noMyRoster}
+    <div class="faint" style="font-size:11px;margin-bottom:4px">Valued for ${season} · ${total} free agent${total === 1 ? '' : 's'} on file</div>
+    ${sections}`);
 }
 function pvlResultsHtml(name) {
   if (!name) return '<div class="faint" style="font-size:12px">Pick a name above, or type your own.</div>';
@@ -8981,7 +9083,7 @@ async function showSettings() {
 /* ---- history-backed navigation: swipe-back and the ‹ button both work ---- */
 const NAV_ACTS = new Set(['home','newsroom','create-issue','weekly-stories','dashboard','calendar',
   'politics','pol-read','desk','storylines','investigations','inv-read','dossier','records','rivalries','rivalry-read','players','player-read','ex-files',
-  'archive-articles','archive','cover-art','predraft-view','draft-room','trade-court','draft-desk',
+  'archive-articles','archive','cover-art','predraft-view','draft-room','trade-court','waiver-wire','draft-desk',
   'assets','staff-handbook','staff-import','tc-team','back-news','back','settings','ex-files','power-ranks','money-lines','pop-grades','pop-year']);
 let NAV_SILENT = false;
 function pushRoute(act, data) {
@@ -9067,6 +9169,8 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'matchup-export') return exportMatchup();
   if (act === 'schedule-export') return exportSchedule();
   if (act === 'tc-refresh') { toast('Re-subpoenaing the league…'); return showTradeCourt(true); }
+  if (act === 'waiver-wire') return showWaiverWire();
+  if (act === 'waiver-refresh') { toast('Re-pulling rosters…'); return showWaiverWire(true); }
   if (act === 'pvl-pick') return showPlayerLookup(t.dataset.name);
   if (act === 'pvl-go') return showPlayerLookup((($('#pvlSearch') || {}).value || '').trim());
   if (act === 'tc-fulllist') { S._tcFullList = !S._tcFullList; return showTradeCourt(); }
