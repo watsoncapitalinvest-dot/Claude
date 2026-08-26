@@ -6226,15 +6226,27 @@ function waiverMyWorst(pos, season) {
 }
 function waiverBoard() {
   const season = Number(S.season) || new Date().getFullYear();
-  const byPos = {}; WAIVER_POS.forEach(pos => byPos[pos] = []);
+  const byPos = {}, speculative = {}; WAIVER_POS.forEach(pos => { byPos[pos] = []; speculative[pos] = []; });
   waiverFreeAgents().forEach(fa => {
     const val = Math.max(lvbValueAt(fa.name, season) ?? 0, tcPlayerFloor(fa.name));
-    if (val <= 0) return; // no real read on this player -- not worth surfacing
-    byPos[fa.pos].push({ ...fa, val: Math.round(val) });
+    if (val > 0) { byPos[fa.pos].push({ ...fa, val: Math.round(val) }); return; }
+    // val<=0 means no trailing production on file -- that's exactly true of a
+    // real camp riser stepping into a role, not just of a washed veteran, and
+    // the old cutoff dropped both identically. Split them: a young player
+    // (years_exp<=2) who Sleeper's own depth chart has in a real, near-starting
+    // spot (order<=4) surfaces as speculative; a proven-mediocre long-tenured
+    // backup with the same $0 does not.
+    const p = fa.player;
+    if ((p.years_exp ?? 99) <= 2 && p.depth_chart_order != null && p.depth_chart_order <= 4) {
+      speculative[fa.pos].push(fa);
+    }
   });
-  WAIVER_POS.forEach(pos => byPos[pos].sort((a, b) => b.val - a.val));
+  WAIVER_POS.forEach(pos => {
+    byPos[pos].sort((a, b) => b.val - a.val);
+    speculative[pos].sort((a, b) => (a.player.depth_chart_order - b.player.depth_chart_order) || ((a.player.age ?? 99) - (b.player.age ?? 99)));
+  });
   const myWorst = {}; WAIVER_POS.forEach(pos => myWorst[pos] = waiverMyWorst(pos, season));
-  return { byPos, myWorst, season };
+  return { byPos, speculative, myWorst, season };
 }
 // Same fields lvbNewsMultiplier reads, shown as a short tag instead of folded
 // into a number -- here the READER should see the reason, not just the discount.
@@ -6264,33 +6276,41 @@ async function showWaiverWire(force) {
     shell(`<div class="card"><div class="dt">⏳ Building the League Value Board — real stats, every season, scored on this league's own settings… <span class="faint">(one time — it's cached after this)</span></div></div>`);
     try { await lvbBuild(); } catch {}
   }
-  const { byPos, myWorst, season } = waiverBoard();
+  const { byPos, speculative, myWorst, season } = waiverBoard();
   const refreshBtn = `<div class="row" style="gap:8px;margin-bottom:14px;flex-wrap:wrap">
     <button class="btn ghost" data-act="waiver-refresh" style="width:auto;padding:8px 14px">↻ Refresh (re-pull rosters &amp; rebuild the board)</button>
     <button class="btn ghost" data-act="waiver-export" style="width:auto;padding:8px 14px">⤓ Export for research → send to Claude</button>
   </div>`;
   const noMyRoster = !S.bundle.myRoster ? `<div class="card"><div class="dt faint">Couldn't match your Sleeper login to a roster in this league, so this is league-wide rankings only — no "upgrade over yours" comparison.</div></div>` : '';
   const total = Object.values(byPos).reduce((s, a) => s + a.length, 0);
+  const specRow = fa => `<div style="padding:6px 0"><span style="font-weight:800">${esc(fa.name)}</span> ${waiverStatusTag(fa.player)}
+    <span class="faint" style="font-size:11px"> · ${esc(fa.player.team || '—')} · depth chart #${esc(String(fa.player.depth_chart_order))}${fa.player.age != null ? ` · age ${fa.player.age}` : ''}</span></div>`;
   const sections = WAIVER_POS.map(pos => {
     const list = byPos[pos].slice(0, 5);
-    if (!list.length) return `<div class="seclabel" style="margin:18px 0 8px">${esc(pos)}</div><div class="card"><div class="dt faint">No real read on any available ${esc(pos)} yet — too early in the season, or nobody worth surfacing.</div></div>`;
-    const worst = myWorst[pos];
-    const rows = list.map((fa, i) => {
-      const delta = worst ? fa.val - worst.val : null;
-      const upgrade = delta != null && delta > 0;
-      const tag = waiverStatusTag(fa.player);
-      return `<div class="row" style="justify-content:space-between;padding:8px 0;${i ? 'border-top:1px solid var(--border)' : ''}">
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:800">${esc(fa.name)} ${tag}</div>
-          <div class="faint" style="font-size:11px">${esc(fa.player.team || '—')} · ${esc(pos)}${worst ? ` · vs your ${esc(worst.name)} ($${worst.val})` : ''}</div>
-        </div>
-        <div style="text-align:right;flex:none;padding-left:10px">
-          <div style="font-weight:900;font-variant-numeric:tabular-nums">$${fa.val}</div>
-          ${delta != null ? `<div style="font-size:11px;font-weight:800;color:${upgrade ? '#3fb950' : 'var(--faint)'}">${upgrade ? '+' : ''}${delta}</div>` : ''}
-        </div>
-      </div>`;
-    }).join('');
-    return `<div class="seclabel" style="margin:18px 0 8px">${esc(pos)}</div><div class="card">${rows}</div>`;
+    const spec = speculative[pos].slice(0, 5);
+    const body = list.length
+      ? list.map((fa, i) => {
+        const worst = myWorst[pos];
+        const delta = worst ? fa.val - worst.val : null;
+        const upgrade = delta != null && delta > 0;
+        const tag = waiverStatusTag(fa.player);
+        return `<div class="row" style="justify-content:space-between;padding:8px 0;${i ? 'border-top:1px solid var(--border)' : ''}">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:800">${esc(fa.name)} ${tag}</div>
+            <div class="faint" style="font-size:11px">${esc(fa.player.team || '—')} · ${esc(pos)}${worst ? ` · vs your ${esc(worst.name)} ($${worst.val})` : ''}</div>
+          </div>
+          <div style="text-align:right;flex:none;padding-left:10px">
+            <div style="font-weight:900;font-variant-numeric:tabular-nums">$${fa.val}</div>
+            ${delta != null ? `<div style="font-size:11px;font-weight:800;color:${upgrade ? '#3fb950' : 'var(--faint)'}">${upgrade ? '+' : ''}${delta}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('')
+      : `<div class="dt faint">No real read on any available ${esc(pos)} yet — too early in the season, or nobody worth surfacing.</div>`;
+    const specHtml = spec.length ? `<div class="card" style="margin-top:6px;border-style:dashed">
+      <div class="faint" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Speculative — no trailing stats yet, but a real early depth-chart role</div>
+      ${spec.map(specRow).join('')}
+    </div>` : '';
+    return `<div class="seclabel" style="margin:18px 0 8px">${esc(pos)}</div><div class="card">${body}</div>${specHtml}`;
   }).join('');
   shell(`${refreshBtn}${noMyRoster}
     <div class="faint" style="font-size:11px;margin-bottom:4px">Valued for ${season} · ${total} free agent${total === 1 ? '' : 's'} on file</div>
@@ -6722,15 +6742,18 @@ async function exportWaiverResearch(){
   if (!b || !b.rosters || !b.rosters.length) { toast('Load your league first (enter your Sleeper username on the home screen).'); return; }
   toast('Building the waiver research export…');
   if (!loadLvbData()) { try { await lvbBuild(); } catch {} }
-  const { byPos, myWorst, season } = waiverBoard();
+  const { byPos, speculative, myWorst, season } = waiverBoard();
   const rawFields = p => ({
     team: p.team || null, age: p.age ?? null, years_exp: p.years_exp ?? null,
     status: p.status || null, injury_status: p.injury_status || null, injury_body_part: p.injury_body_part || null,
     depth_chart_position: p.depth_chart_position ?? null, depth_chart_order: p.depth_chart_order ?? null,
   });
-  const freeAgents = {};
+  const freeAgents = {}, speculativeAgents = {};
   WAIVER_POS.forEach(pos => {
     freeAgents[pos] = byPos[pos].slice(0, 20).map(fa => ({ name: fa.name, val: fa.val, ...rawFields(fa.player) }));
+    // No trailing production, but a real young depth-chart role -- e.g. camp
+    // risers, rookies who just won a job -- exactly what a val-only list hides.
+    speculativeAgents[pos] = speculative[pos].slice(0, 10).map(fa => ({ name: fa.name, ...rawFields(fa.player) }));
   });
   const mr = b.myRoster;
   const myTeam = mr ? (mr.players || []).filter(id => id && b.players[id]).map(id => {
@@ -6740,16 +6763,20 @@ async function exportWaiverResearch(){
   }).sort((x, y) => (x.pos || '').localeCompare(y.pos || '') || y.val - x.val) : null;
   const out = {
     league: (b.league && b.league.name) || 'SCFL', season, exportedAt: Date.now(),
-    method: "val = our own League Value Board (real trailing production scored on this league's settings, age curve, current injury/roster status) — same engine the Trade Court and Waiver Wire Board use. Not a live news pull; status/injury fields are whatever Sleeper's own roster data carried at export time.",
+    method: "val = our own League Value Board (real trailing production scored on this league's settings, age curve, current injury/roster status) — same engine the Trade Court and Waiver Wire Board use. Not a live news pull; status/injury fields are whatever Sleeper's own roster data carried at export time. speculativeAgentsByPosition = zero trailing production but a real young (years_exp<=2) depth-chart role (order<=4) -- camp risers and new starters a value-only cutoff would otherwise hide entirely.",
     myTeam: myTeam || 'no roster match for this login',
     myWorstByPosition: myWorst,
     freeAgentsByPosition: freeAgents,
+    speculativeAgentsByPosition: speculativeAgents,
   };
   const totalFA = Object.values(freeAgents).reduce((s, a) => s + a.length, 0);
+  const totalSpec = Object.values(speculativeAgents).reduce((s, a) => s + a.length, 0);
   const text = `SCFL ${season} — waiver research export\n\n`
     + `My team: ${myTeam ? myTeam.length + ' players' : 'no roster match'}\n`
-    + `Free agents included: ${totalFA} (top 20 per position, ranked on our own value board)\n\n`
+    + `Free agents included: ${totalFA} (top 20 per position, ranked on our own value board)\n`
+    + `Speculative (no stats yet, real young depth-chart role): ${totalSpec}\n\n`
     + WAIVER_POS.map(pos => `${pos} — top available: ` + (freeAgents[pos].slice(0, 5).map(f => `${f.name} ($${f.val})`).join(', ') || 'none')).join('\n')
+    + '\n\n' + WAIVER_POS.map(pos => `${pos} — speculative: ` + (speculativeAgents[pos].map(f => f.name).join(', ') || 'none')).join('\n')
     + `\n\nFull detail (every field, every player) is in the downloaded scfl-waiver-research.json — paste that to Claude along with this summary.`;
   const blob = new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'scfl-waiver-research.json';
