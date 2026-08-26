@@ -3594,6 +3594,7 @@ const OFFICE_TOOLS = [
   ['power-ranks', '📊', 'Power Rankings', 'The Machines\u2019 weekly board — build & upload'],
   ['money-lines', '💰', 'Money Lines', 'The betting board — build & upload'],
   ['roster-export', '⤓', 'Export Rosters', 'Top 3 + full-roster JSON → send to Claude'],
+  ['waiver-export', '🎯', 'Export Waiver Research', 'Your roster + every free agent, valued & sourced → send to Claude'],
   ['logos-export', '🛡️', 'Export Team Logos', 'Download every team logo → send to Claude'],
   ['matchup-export', '📺', 'Export Matchup', 'Pull a real game → send to Claude for the broadcast'],
   ['schedule-export', '🗓️', 'Export Schedule', 'The whole regular season → send to Claude'],
@@ -3632,7 +3633,7 @@ const NEWSROOM_TOOLS = [
 const mtoolBtn = ([a, ic, l, d]) => `<button class="mtool" data-act="${a}"><span class="mtool-ic">${ic}</span><span class="mtool-l">${l}</span><span class="mtool-d">${d}</span></button>`;
 const OFFICE_SECTIONS = [
   ['The Weekly Board', ['power-ranks', 'money-lines']],
-  ['The Board Desk', ['roster-export', 'logos-export', 'matchup-export', 'schedule-export', 'assets', 'staff-handbook', 'staff-send', 'staff-import']],
+  ['The Board Desk', ['roster-export', 'waiver-export', 'logos-export', 'matchup-export', 'schedule-export', 'assets', 'staff-handbook', 'staff-send', 'staff-import']],
   ['The Record Room', ['dossier', 'franchise-map', 'records', 'rivalries', 'players', 'ex-files']],
   ['The Arcade', ['jeopardy', 'tradewar']],
   ['Ring of Honor', ['ring-of-honor']],
@@ -6252,7 +6253,10 @@ async function showWaiverWire(force) {
     try { await lvbBuild(); } catch {}
   }
   const { byPos, myWorst, season } = waiverBoard();
-  const refreshBtn = `<button class="btn ghost" data-act="waiver-refresh" style="width:auto;padding:8px 14px;margin-bottom:14px">↻ Refresh (re-pull rosters &amp; rebuild the board)</button>`;
+  const refreshBtn = `<div class="row" style="gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <button class="btn ghost" data-act="waiver-refresh" style="width:auto;padding:8px 14px">↻ Refresh (re-pull rosters &amp; rebuild the board)</button>
+    <button class="btn ghost" data-act="waiver-export" style="width:auto;padding:8px 14px">⤓ Export for research → send to Claude</button>
+  </div>`;
   const noMyRoster = !S.bundle.myRoster ? `<div class="card"><div class="dt faint">Couldn't match your Sleeper login to a roster in this league, so this is league-wide rankings only — no "upgrade over yours" comparison.</div></div>` : '';
   const total = Object.values(byPos).reduce((s, a) => s + a.length, 0);
   const sections = WAIVER_POS.map(pos => {
@@ -6695,6 +6699,52 @@ async function exportSchedule(){
   showExportOverlay(text, copied);
 }
 
+// Everything needed to research and recommend waiver claims, in one file --
+// built for handing to Claude in a chat where the live Sleeper API isn't
+// reachable. Not a live news pull (nothing here can be): real trailing
+// production, this league's own scoring, age, and whatever status/injury
+// fields Sleeper's own roster already carries, all pre-computed so the
+// research doesn't depend on a live connection at read time.
+async function exportWaiverResearch(){
+  const b = S.bundle;
+  if (!b || !b.rosters || !b.rosters.length) { toast('Load your league first (enter your Sleeper username on the home screen).'); return; }
+  toast('Building the waiver research export…');
+  if (!loadLvbData()) { try { await lvbBuild(); } catch {} }
+  const { byPos, myWorst, season } = waiverBoard();
+  const rawFields = p => ({
+    team: p.team || null, age: p.age ?? null, years_exp: p.years_exp ?? null,
+    status: p.status || null, injury_status: p.injury_status || null, injury_body_part: p.injury_body_part || null,
+    depth_chart_position: p.depth_chart_position ?? null, depth_chart_order: p.depth_chart_order ?? null,
+  });
+  const freeAgents = {};
+  WAIVER_POS.forEach(pos => {
+    freeAgents[pos] = byPos[pos].slice(0, 20).map(fa => ({ name: fa.name, val: fa.val, ...rawFields(fa.player) }));
+  });
+  const mr = b.myRoster;
+  const myTeam = mr ? (mr.players || []).filter(id => id && b.players[id]).map(id => {
+    const p = b.players[id], nm = playerName(p, id), pos = posOfPlayer(p);
+    const val = Math.max(lvbValueAt(nm, season) ?? 0, tcPlayerFloor(nm));
+    return { name: nm, pos, val: Math.round(val), ...rawFields(p) };
+  }).sort((x, y) => (x.pos || '').localeCompare(y.pos || '') || y.val - x.val) : null;
+  const out = {
+    league: (b.league && b.league.name) || 'SCFL', season, exportedAt: Date.now(),
+    method: "val = our own League Value Board (real trailing production scored on this league's settings, age curve, current injury/roster status) — same engine the Trade Court and Waiver Wire Board use. Not a live news pull; status/injury fields are whatever Sleeper's own roster data carried at export time.",
+    myTeam: myTeam || 'no roster match for this login',
+    myWorstByPosition: myWorst,
+    freeAgentsByPosition: freeAgents,
+  };
+  const totalFA = Object.values(freeAgents).reduce((s, a) => s + a.length, 0);
+  const text = `SCFL ${season} — waiver research export\n\n`
+    + `My team: ${myTeam ? myTeam.length + ' players' : 'no roster match'}\n`
+    + `Free agents included: ${totalFA} (top 20 per position, ranked on our own value board)\n\n`
+    + WAIVER_POS.map(pos => `${pos} — top available: ` + (freeAgents[pos].slice(0, 5).map(f => `${f.name} ($${f.val})`).join(', ') || 'none')).join('\n')
+    + `\n\nFull detail (every field, every player) is in the downloaded scfl-waiver-research.json — paste that to Claude along with this summary.`;
+  const blob = new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'scfl-waiver-research.json';
+  document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 1000);
+  let copied = false; try { await navigator.clipboard.writeText(text); copied = true; } catch {}
+  showExportOverlay(text, copied);
+}
 async function exportRosters(){
   const b = S.bundle;
   if (!b || !b.rosters || !b.rosters.length) { toast('Load your league first (enter your Sleeper username on the home screen).'); return; }
@@ -9171,6 +9221,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'tc-refresh') { toast('Re-subpoenaing the league…'); return showTradeCourt(true); }
   if (act === 'waiver-wire') return showWaiverWire();
   if (act === 'waiver-refresh') { toast('Re-pulling rosters…'); return showWaiverWire(true); }
+  if (act === 'waiver-export') return exportWaiverResearch();
   if (act === 'pvl-pick') return showPlayerLookup(t.dataset.name);
   if (act === 'pvl-go') return showPlayerLookup((($('#pvlSearch') || {}).value || '').trim());
   if (act === 'tc-fulllist') { S._tcFullList = !S._tcFullList; return showTradeCourt(); }
