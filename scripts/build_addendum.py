@@ -247,25 +247,22 @@ FIG_CSS = """
 
 
 # ------------------------------------------------------------- figure makers --
-N_HEAT_BANDS = 6
+# A fixed ceiling, not each page's own max: heat is right-skewed (most
+# pairings run 1-6%, a rare one clears 9%), and scaling 0..that page's max
+# means the same 4% pairing reads as mid-ramp on a calm page and pale on a
+# spicy one -- the color would mean a different number depending which grid
+# you're looking at. 10% keeps every real pairing on record (max observed:
+# 9.3%) under the ceiling without clipping, and the same ceiling is used on
+# every heat grid on the site, so a given shade of red is the same percentage
+# everywhere: proportional to the real number, not to whatever else is on
+# screen. Raise it only if a pairing's heat ever actually clears 10%.
+HEAT_COLOR_CEILING = 10.0
 
 
-def heat_buckets(pairs, min_v, n=N_HEAT_BANDS):
-    """Map each qualifying pairing to a 0..1 color step by rank, not by its raw
-    ratio to the max. Heat is heavily right-skewed -- one pairing can sit far
-    above everyone else (the Gumbas file is the standing example) -- and
-    coloring by value/max then spends nearly the whole ramp on that one cell,
-    leaving every other pairing a near-identical pale shade. Quantile steps
-    force the full ramp to get used regardless of how skewed the values are:
-    each of the n bands holds an equal *count* of pairings, so six visibly
-    different colors always appear on screen, whatever the underlying spread.
-    Returns {(a, b): k} for pairings at or above min_v volleys; below that
-    floor a pairing is 'thin' (unmeasured), never bucketed.
-    """
-    solid = sorted((p for p in pairs if p['v'] >= min_v), key=lambda p: p['heat'])
-    total = len(solid)
-    return {(p['a'], p['b']): (min(n - 1, i * n // total) / (n - 1) if total > 1 else 1.0)
-            for i, p in enumerate(solid)}
+def heat_k(value):
+    """Linear 0..1 color position for a heat percentage, against the fixed
+    ceiling above -- straight proportion, no per-page rescaling, no ranking."""
+    return max(0.0, min(1.0, value / HEAT_COLOR_CEILING))
 
 
 def mxfig(D, get, hue, keylo, keyhi, extra='', label='abbr'):
@@ -368,7 +365,6 @@ def heat_figures(D):
         cell[(p['a'], p['b'])] = cell[(p['b'], p['a'])] = p
     solid = [p for p in P if p['v'] >= MIN_HEAT_V]
     hh = max(p['heat'] for p in solid)
-    buckets = heat_buckets(P, MIN_HEAT_V)
 
     def heatcell(r, c):
         p = cell.get((r, c))
@@ -376,7 +372,7 @@ def heat_figures(D):
             return None
         if p['v'] < MIN_HEAT_V:
             return ('thin', f"only {p['v']:,} volleys &mdash; too few to rate")
-        return (buckets[(p['a'], p['b'])],
+        return (heat_k(p['heat']),
                 f"{p['heat']:.1f}% of {p['v']:,} volleys carry an argument word")
 
     grid = ('<figure>' + mxfig(D, heatcell, RED, 'Cooler', 'Hotter',
@@ -386,13 +382,13 @@ def heat_figures(D):
       f'word from a fixed argument list. Heat is a ratio, so a thin pairing can top it on two '
       f'messages: under {MIN_HEAT_V} volleys, {len(P)-len(solid)} of the {len(P)} cells are '
       f'left uncoloured rather than flattered. The {len(solid)} that survive run a real '
-      f'{min(p["heat"] for p in solid):.1f} to {hh:.1f} per cent, skewed enough that a plain '
-      f'value/max scale would leave one cell red and everything else nearly the same pale shade '
-      f'&mdash; so colour is stepped into {N_HEAT_BANDS} bands by rank instead, each holding the '
-      f'same number of pairings, and the exact percentage sits on every cell\'s hover or tap. '
-      f'Uncoloured is not cold; it is unmeasured. Heat is a ranking input and '
-      f'nothing else: the desk has never published a line of chat on the strength of '
-      f'it.</figcaption></figure>')
+      f'{min(p["heat"] for p in solid):.1f} to {hh:.1f} per cent. Colour is a straight, fixed '
+      f'proportion of that percentage &mdash; 0 to {HEAT_COLOR_CEILING:.0f}%, the same ceiling on '
+      f'every heat grid this desk publishes, so a shade means the same number wherever you see it, '
+      f'not just relative to whatever else is on this particular grid. The exact percentage still '
+      f'sits on every cell\'s hover or tap. Uncoloured is not cold; it is unmeasured. Heat is a '
+      f'ranking input and nothing else: the desk has never published a line of chat on the strength '
+      f'of it.</figcaption></figure>')
 
     W, hv = D['words'], D['hotvol']
     wmax = max(W.values())
