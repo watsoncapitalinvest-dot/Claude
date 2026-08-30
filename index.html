@@ -846,6 +846,119 @@ function buildNewsletter(inp) {
            hasData: anyPoints && stories.length > 0 };
 }
 
+// ---- Next Week Preview + Heat Index -----------------------------------------
+// Every preview gets a heat reading straight from rivalries.json -- the same
+// pairwise "% of back-and-forth chat exchanges that turned into an argument"
+// figure behind "Where The Arguments Are". Real data tops out under 10%
+// (median ~2.6%), so heat>=5 -- roughly the hottest tenth of every pairing
+// this league has ever tracked -- is the line for the full Heat Warning
+// treatment; everyone else just gets the one-line reading.
+const HEAT_WARNING_THRESHOLD = 5;
+
+function heatRowFor(ownerA, ownerB) {
+  if (!RIVALS || !ownerA || !ownerB) return null;
+  return RIVALS.find(r => (r.ka === ownerA && r.kb === ownerB) || (r.ka === ownerB && r.kb === ownerA)) || null;
+}
+// Plain-text (un-escaped) narration of one historical game, for a paragraph
+// that will itself be esc()'d at render time -- rvGame() in the Rivalry Board
+// pre-escapes its HTML entities, so it can't be reused here without double-escaping.
+function heatGameLine(g, kaIsA, aName, bName) {
+  if (!g) return '';
+  const when = g.po ? `${g.y} playoffs` : `Week ${g.wk}, ${g.y}`;
+  if (g.r === 'T') return `tied ${g.for}-${g.against} in ${when}`;
+  const kaWon = g.r === 'W';
+  const winner = kaWon ? (kaIsA ? aName : bName) : (kaIsA ? bName : aName);
+  const hi = Math.max(g.for, g.against), lo = Math.min(g.for, g.against);
+  return `${winner} won ${hi}-${lo} in ${when}`;
+}
+
+async function buildPreviews(wk) {
+  await loadRivals();
+  let matchups;
+  try { matchups = await getMatchups(S.leagueId, wk); } catch { return []; }
+  if (!matchups || !matchups.length) return [];
+  const rosterById = new Map(S.bundle.rosters.map(r => [r.roster_id, r]));
+  const scoring = S.bundle.league.scoring_settings;
+  let weeklyProjections = {};
+  try { weeklyProjections = await getWeeklyProjections(S.season, wk); } catch {}
+
+  const teamFor = (entry) => {
+    const r = rosterById.get(entry.roster_id);
+    const u = r && r.owner_id ? S.bundle.usersById[r.owner_id] : null;
+    const manager = (u && (u.metadata?.team_name || u.display_name)) || ('Team ' + entry.roster_id);
+    const owner = u ? u.display_name : null;
+    const st = r ? r.settings : {};
+    const starters = (entry.starters || []).filter(Boolean);
+    const proj = round1(sum(starters.map(id => scoreStats(weeklyProjections[id], scoring))));
+    return { rosterId: entry.roster_id, manager, owner, avatar: avatarUrl(u && u.avatar),
+      wins: st.wins || 0, losses: st.losses || 0, ties: st.ties || 0, proj };
+  };
+
+  const byMatchup = new Map();
+  for (const m of matchups) { if (m.matchup_id == null) continue;
+    if (!byMatchup.has(m.matchup_id)) byMatchup.set(m.matchup_id, []); byMatchup.get(m.matchup_id).push(m); }
+
+  const previews = [];
+  for (const [mid, pair] of byMatchup) {
+    if (pair.length < 2) continue;
+    const a = teamFor(pair[0]), b = teamFor(pair[1]);
+    previews.push(writePreview({ mid, wk, a, b, heatRow: heatRowFor(a.owner, b.owner) }));
+  }
+  previews.sort((x, y) => (y.heat || 0) - (x.heat || 0));
+  return previews;
+}
+
+function writePreview(ctx) {
+  const { a, b, heatRow, wk } = ctx;
+  const seed = Math.round((a.proj + b.proj) * 10 + a.rosterId);
+  const pick = (arr, o) => seededPick(arr, seed + o);
+  const haveProj = a.proj > 5 && b.proj > 5;
+  const favA = a.proj >= b.proj;
+  const fav = favA ? a : b, dog = favA ? b : a;
+  const heat = heatRow ? round1(heatRow.heat) : null;
+  const hot = heat != null && heat >= HEAT_WARNING_THRESHOLD;
+  const recA = `${a.wins}-${a.losses}${a.ties ? '-' + a.ties : ''}`;
+  const recB = `${b.wins}-${b.losses}${b.ties ? '-' + b.ties : ''}`;
+
+  const headline = hot
+    ? pick([`Heat Warning: ${a.manager} vs. ${b.manager}`, `${a.manager}–${b.manager} Is Going to Get Ugly`], 1)
+    : pick([`${a.manager} vs. ${b.manager}: What to Watch`, `Previewing ${a.manager}–${b.manager}`], 1);
+  const dek = hot ? `The spiciest pairing on next week's board.`
+    : haveProj ? `${fav.manager} projected to lead, ${round1(fav.proj)}–${round1(dog.proj)}.`
+    : heatRow ? `${heatRow.g} games of history between these two.`
+    : `A fresh pairing — first real look at these two.`;
+
+  const P = [];
+  P.push(`${a.manager} (${recA}) draws ${b.manager} (${recB})` +
+    (haveProj
+      ? (Math.abs(a.proj - b.proj) < 3
+        ? `, and the projections have this one basically a coin flip — ${round1(a.proj)} to ${round1(b.proj)}.`
+        : `. ${fav.manager} is the projected favorite, ${round1(fav.proj)} to ${round1(dog.proj)}, but projections are just an educated guess about people who don't read the room.`)
+      : '.'));
+
+  if (heatRow) {
+    const kaIsA = heatRow.ka === a.owner;
+    const [kaW, kaL, kaT] = heatRow.rec.split('-').map(Number);
+    const seriesForA = kaIsA ? heatRow.rec : `${kaL}-${kaW}${kaT ? '-' + kaT : ''}`;
+    const g = heatRow.detail.last;
+    P.push(`These two have played it out ${heatRow.g} times — ${a.manager} is ${seriesForA} in the series` +
+      (g ? `, and the last meeting: ${heatGameLine(g, kaIsA, a.manager, b.manager)}.` : '.'));
+  } else {
+    P.push(`These two don't have much of a paper trail yet — not enough head-to-head history for a real read on the rivalry.`);
+  }
+
+  if (hot) {
+    P.push(pick([
+      `🔥 HEAT WARNING: this pairing runs at ${heat}% on the league's own heat index — real chat receipts, not a bit — putting it in the hottest tenth of every rivalry this league has ever tracked. Somebody's getting reported to the commissioner by Sunday night.`,
+      `🔥 HEAT WARNING: ${heat}% heat, verified by the group chat itself. When these two play, the scoreboard is only half the show.`,
+    ], 5));
+  } else if (heat != null) {
+    P.push(`Heat index on this one: ${heat}% — ${heat >= 3 ? 'a little chippy, historically' : 'nothing to see here, chat-wise'}.`);
+  }
+
+  return { id: 'pv' + ctx.mid, wk, headline, dek, paragraphs: P, a, b, heat, hot };
+}
+
 // ---- Magazine sections ------------------------------------------------------
 function buildScoreboard(stories) {
   return stories.map(s => ({
@@ -3333,6 +3446,7 @@ function buildSharePayload(id) {
   if (id === 'feature' && nl.feature) return { kicker: 'League Feature', headline: nl.feature.headline, dek: nl.feature.dek, paragraphs: nl.feature.paragraphs };
   if (id.startsWith('story:')) { const i = +id.slice(6), s = nl.stories[i]; if (s) return { kicker: i === 0 ? 'Cover Story' : 'Game Story', headline: s.headline, dek: s.dek, meta: score(s), paragraphs: s.paragraphs }; }
   if (id.startsWith('trade:')) { const t = nl.trades && nl.trades[+id.slice(6)]; if (t) return { kicker: 'The Trade Desk', headline: t.headline, dek: t.dek, paragraphs: [(t.sides || []).map(s => `${s.manager} gets ${(s.received || []).map(p => p.name).join(', ') || 'picks/FAAB'}`).join('   ·   '), ...t.paragraphs] }; }
+  if (id.startsWith('preview:')) { const p = nl.previews && nl.previews[+id.slice(8)]; if (p) return { kicker: p.hot ? '🔥 Heat Warning' : 'Next Week Preview', headline: p.headline, dek: p.dek, paragraphs: p.paragraphs }; }
   if (id.startsWith('desk:')) { const a = (S.viewDesk || []).find(x => x.id === id.slice(5)); if (a) return { kicker: 'The Water Cooler', headline: a.headline, dek: a.dek, paragraphs: a.paragraphs }; }
   if (id === 'power' && (nl.powerRankings || []).length) return { kicker: 'Power Rankings · The Machines', headline: `Week ${wk} Power Rankings`, lines: nl.powerRankings.map(p => `${p.rank}. ${p.manager}${p.tag ? '  (' + p.tag + ')' : ''}${p.note ? ' — ' + p.note : ''}`) };
   if (id === 'money' && (nl.moneyLines || []).length) return { kicker: 'Money Lines · Pork Chop Express', headline: `Week ${wk} Money Lines`, lines: nl.moneyLines.map(m => `${m.subject}${m.line ? '  ' + m.line : ''}${m.spread ? '  ' + m.spread : ''}${m.total ? '  O/U ' + m.total : ''}${m.note ? ' — ' + m.note : ''}`) };
@@ -3990,6 +4104,7 @@ async function ensureNl(wk){
     nl = buildNewsletter({ week:wk, league:S.bundle.league, matchups, rosters:S.bundle.rosters,
       usersById:S.bundle.usersById, players:S.bundle.players, weeklyStats, weeklyProjections });
     try { nl.trades = await buildTradeReview(wk); } catch { nl.trades = []; }
+    try { nl.previews = await buildPreviews(wk + 1); } catch { nl.previews = []; }
     applyHistoryContext(nl);
     S.newsCache[wk] = nl;
   } catch { nl = null; }
@@ -4841,6 +4956,7 @@ async function renderNews() {
       nl = buildNewsletter({ week:wk, league:S.bundle.league, matchups, rosters:S.bundle.rosters,
         usersById:S.bundle.usersById, players:S.bundle.players, weeklyStats, weeklyProjections });
       try { nl.trades = await buildTradeReview(wk); } catch { nl.trades = []; }
+      try { nl.previews = await buildPreviews(wk + 1); } catch { nl.previews = []; }
       applyHistoryContext(nl);
       S.newsCache[wk] = nl;
     } catch { nl = null; }
@@ -5010,6 +5126,7 @@ function issueBodyHtml(nl, deskArts, frozen) {
   const trades = nl.trades && nl.trades.length
     ? nl.trades.map((t, i) => tradeCardHtml(t) + shareRow('trade:' + i)).join('')
     : `<div class="card" style="text-align:center"><div class="dt">${seededPick(['Not a single trade this week. A league full of cowards.', 'The trade market was dead. Everybody clutching their roster like it’s worth a damn.', 'No deals went down. Gutless week on the wire.'], (wk || 1) * 5)}</div></div>`;
+  const previews = (nl.previews || []).map((p, i) => previewHtml(p) + shareRow('preview:' + i)).join('');
   const colophon = `<div class="colophon">Auto-written from real Sleeper box scores — every stat line and margin is genuine. The voice, jokes, and profanity are on the house.</div>`;
   const numbers = numbersHtml(nl.numbers);
   return sec('Cover Story') + coverStory
@@ -5024,7 +5141,24 @@ function issueBodyHtml(nl, deskArts, frozen) {
     + sec('The Trade Block') + trades
     + sec('The Water Cooler') + desk
     + (otherStories ? sec('More Game Stories') + otherStories : '')
+    + (previews ? sec(`Week ${(nl.week || 0) + 1} Preview`) + previews : '')
     + colophon;
+}
+// Next-week matchup preview, with a heat-index reading pulled from the
+// league's real chat data. Hot pairings (heat >= HEAT_WARNING_THRESHOLD)
+// get the red-flagged Heat Warning treatment; everyone else gets the
+// one-line reading at the bottom of the card.
+function previewHtml(p) {
+  const aTag = teamTag({ manager: p.a.manager, avatar: p.a.avatar, score: p.a.proj }, false, false);
+  const bTag = teamTag({ manager: p.b.manager, avatar: p.b.avatar, score: p.b.proj }, false, true);
+  return `<div class="card story"${p.hot ? ` style="border-color:var(--accent-d)"` : ''}>
+    ${p.hot ? `<div class="feat-flag">🔥 HEAT WARNING</div>` : ''}
+    <div class="sl">${aTag}<span class="dash">vs</span>${bTag}</div>
+    <h2>${esc(p.headline)}</h2>
+    <div class="dek">${esc(p.dek)}</div>
+    ${p.paragraphs.map(par => `<p class="body">${esc(par)}</p>`).join('')}
+    ${p.heat != null ? `<div class="dt" style="margin-top:6px">🌡️ Heat Index: <b style="${p.hot ? 'color:var(--accent-d)' : ''}">${p.heat}%</b></div>` : ''}
+  </div>`;
 }
 // A generic editorial article (feature / desk piece) with byline.
 function articleHtml(a, feature, deskId) {
