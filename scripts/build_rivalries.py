@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """Build the head-to-head and rivalry data behind the Rivalry Board.
 
-    python3 scripts/build_rivalries.py <path-to-mos-eisley-_chat.txt>
+    python3 scripts/build_rivalries.py <path-to-chats-dir>
+
+<path-to-chats-dir> holds official/_chat.txt and mos/_chat.txt (same two-room
+layout build_addendum.py reads) -- both are merged and re-sorted into one true
+chronological timeline before the volley/heat pass, so the two scripts' heat
+numbers agree. A bare _chat.txt path still works as a single-source fallback.
 
 Two inputs. history.json supplies 18 seasons of matchups (2,344 games), and the
-WhatsApp export supplies engagement -- who actually argues with whom. The export
-is NEVER committed (see .gitignore); pass its path at build time. Output is
-aggregate only: counts, records, percentages. No message text is written.
+WhatsApp export(s) supply engagement -- who actually argues with whom. The
+export is NEVER committed (see .gitignore); pass its path at build time.
+Output is aggregate only: counts, records, percentages. No message text is written.
 
 Franchise identity is resolved by owner id, because managers rename teams
 constantly (THE DICKS -> Wade Garrets -> Wookie Leaks). Chat handles were mapped
@@ -203,9 +208,17 @@ for s in h['seasons']:
             side=None if rw in ('__none__',None) else ('me' if rw==(m['home'] if x==tid.get(m['home']) else m['away']) else 'them')
             d['games'].append({'y':y,'wk':m.get('week'),'po':bool(m.get('bracket')),'me':sx,'them':sz,'rw':side})
 
-# chat engagement
-ms=load(CHATPATH) if CHATPATH else []
+# chat engagement -- both rooms, merged into one true chronological timeline
+# (matches build_addendum.py's methodology, so the two scripts' heat numbers agree).
+ms=[]
+if CHATPATH:
+    for sub in ('official','mos'):
+        p=os.path.join(CHATPATH,sub,'_chat.txt')
+        if os.path.exists(p): ms.extend(load(p))
+    if not ms and os.path.isfile(CHATPATH):
+        ms=load(CHATPATH)  # fallback: a single _chat.txt path, old single-source style
 for m in ms: m['ts']=datetime.datetime.strptime(m['d']+' '+re.sub(r'\s','',m['t']),'%m/%d/%y %I:%M:%S%p')
+ms.sort(key=lambda m: m['ts'])
 HEAT=re.compile(r"\b(wrong|dumb|stupid|idiot|clown|joke|lying|lie|clueless|garbage|trash|pathetic|"
                 r"weak|soft|fraud|delusional|hypocrite|shut up|moron|dickhead|excuses|admit|cry|crying)\b",re.I)
 volley=collections.Counter(); heated=collections.Counter()
