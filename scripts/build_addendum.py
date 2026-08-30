@@ -247,6 +247,27 @@ FIG_CSS = """
 
 
 # ------------------------------------------------------------- figure makers --
+N_HEAT_BANDS = 6
+
+
+def heat_buckets(pairs, min_v, n=N_HEAT_BANDS):
+    """Map each qualifying pairing to a 0..1 color step by rank, not by its raw
+    ratio to the max. Heat is heavily right-skewed -- one pairing can sit far
+    above everyone else (the Gumbas file is the standing example) -- and
+    coloring by value/max then spends nearly the whole ramp on that one cell,
+    leaving every other pairing a near-identical pale shade. Quantile steps
+    force the full ramp to get used regardless of how skewed the values are:
+    each of the n bands holds an equal *count* of pairings, so six visibly
+    different colors always appear on screen, whatever the underlying spread.
+    Returns {(a, b): k} for pairings at or above min_v volleys; below that
+    floor a pairing is 'thin' (unmeasured), never bucketed.
+    """
+    solid = sorted((p for p in pairs if p['v'] >= min_v), key=lambda p: p['heat'])
+    total = len(solid)
+    return {(p['a'], p['b']): (min(n - 1, i * n // total) / (n - 1) if total > 1 else 1.0)
+            for i, p in enumerate(solid)}
+
+
 def mxfig(D, get, hue, keylo, keyhi, extra='', label='abbr'):
     """A 16x16 matrix. get(row,col) -> (k, tip) or None.
 
@@ -347,6 +368,7 @@ def heat_figures(D):
         cell[(p['a'], p['b'])] = cell[(p['b'], p['a'])] = p
     solid = [p for p in P if p['v'] >= MIN_HEAT_V]
     hh = max(p['heat'] for p in solid)
+    buckets = heat_buckets(P, MIN_HEAT_V)
 
     def heatcell(r, c):
         p = cell.get((r, c))
@@ -354,7 +376,7 @@ def heat_figures(D):
             return None
         if p['v'] < MIN_HEAT_V:
             return ('thin', f"only {p['v']:,} volleys &mdash; too few to rate")
-        return (p['heat'] / hh,
+        return (buckets[(p['a'], p['b'])],
                 f"{p['heat']:.1f}% of {p['v']:,} volleys carry an argument word")
 
     grid = ('<figure>' + mxfig(D, heatcell, RED, 'Cooler', 'Hotter',
@@ -363,9 +385,12 @@ def heat_figures(D):
       f'<figcaption>Every pairing, coloured by the share of its volleys containing a '
       f'word from a fixed argument list. Heat is a ratio, so a thin pairing can top it on two '
       f'messages: under {MIN_HEAT_V} volleys, {len(P)-len(solid)} of the {len(P)} cells are '
-      f'left uncoloured rather than flattered, and the ramp is set by the '
-      f'{len(solid)} that survive &mdash; a real range of {min(p["heat"] for p in solid):.1f} to '
-      f'{hh:.1f} per cent. Uncoloured is not cold; it is unmeasured. Heat is a ranking input and '
+      f'left uncoloured rather than flattered. The {len(solid)} that survive run a real '
+      f'{min(p["heat"] for p in solid):.1f} to {hh:.1f} per cent, skewed enough that a plain '
+      f'value/max scale would leave one cell red and everything else nearly the same pale shade '
+      f'&mdash; so colour is stepped into {N_HEAT_BANDS} bands by rank instead, each holding the '
+      f'same number of pairings, and the exact percentage sits on every cell\'s hover or tap. '
+      f'Uncoloured is not cold; it is unmeasured. Heat is a ranking input and '
       f'nothing else: the desk has never published a line of chat on the strength of '
       f'it.</figcaption></figure>')
 

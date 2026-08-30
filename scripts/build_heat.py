@@ -176,7 +176,7 @@ def card(D):
     cell = {}
     for p in P:
         cell[(p['a'], p['b'])] = cell[(p['b'], p['a'])] = p
-    hh = max(p['heat'] for p in P if p['v'] >= ad.MIN_HEAT_V)
+    buckets = ad.heat_buckets(P, ad.MIN_HEAT_V)
     ht = ''
     for r in T:
         tds = ''
@@ -189,7 +189,7 @@ def card(D):
             elif p['v'] < ad.MIN_HEAT_V:
                 tds += '<td class="thin"></td>'
             else:
-                tds += f'<td class="c" style="--k:{p["heat"]/hh:.3f}"></td>'
+                tds += f'<td class="c" style="--k:{buckets[(p["a"], p["b"])]:.3f}"></td>'
         ht += f'<tr>{tds}</tr>'
     ht = f'<table class="mx"><tbody>{ht}</tbody></table>'
 
