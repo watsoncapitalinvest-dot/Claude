@@ -203,6 +203,11 @@ FIG_CSS = """
 /* measured but under the floor: a texture, so it cannot be misread as "cold" */
 .ad .mx td.thin,.ad .sw.thin{background:repeating-linear-gradient(45deg,#ded7ca 0 1.5px,
   #faf7f2 1.5px 4.5px);}
+.ad .mx.full thead th{height:124px;vertical-align:bottom;padding:0 0 3px;}
+.ad .mx.full thead th .cn{display:inline-block;white-space:nowrap;font-size:10px;font-weight:700;
+  color:var(--ink,#17181c);transform:rotate(-40deg);transform-origin:left bottom;}
+.ad .mx.full tbody th.rn{text-align:right;white-space:nowrap;font-size:10.5px;font-weight:700;
+  color:var(--ink,#17181c);padding-right:7px;}
 .ad .key .sw{display:inline-block;width:13px;height:13px;border-radius:2px;
   vertical-align:-2px;margin-right:5px;}
 .ad .key{display:flex;align-items:center;gap:7px;margin-top:11px;font-family:var(--sans);
@@ -242,10 +247,31 @@ FIG_CSS = """
 
 
 # ------------------------------------------------------------- figure makers --
-def mxfig(D, get, hue, keylo, keyhi, extra=''):
-    """A 16x16 matrix. get(row,col) -> (k, tip) or None."""
+def mxfig(D, get, hue, keylo, keyhi, extra='', label='abbr'):
+    """A 16x16 matrix. get(row,col) -> (k, tip) or None.
+
+    label='abbr' is the three-letter code (ABBR), read on hover/focus via the
+    title attribute -- fine for a dense reference table. label='full' spells
+    out the franchise name on the axis itself: rotated diagonally across the
+    header row, right-aligned down the side. Use 'full' for anything actually
+    titled a heat map -- a code nobody can read without a mouse fails on a
+    phone, which is where this chat mostly lives.
+    """
     teams = D['teams']
-    head = ''.join(f'<th scope="col" title="{esc(NAME[c])}">{ABBR[c]}</th>' for c in teams)
+    full = label == 'full'
+    cls = ' full' if full else ''
+
+    def colhead(c):
+        nm = esc(NAME[c])
+        return (f'<th scope="col" title="{nm}"><span class="cn">{nm}</span></th>' if full
+                else f'<th scope="col" title="{nm}">{ABBR[c]}</th>')
+
+    def rowhead(r):
+        nm = esc(NAME[r])
+        return (f'<th scope="row" title="{nm}" class="rn">{nm}</th>' if full
+                else f'<th scope="row" title="{nm}">{ABBR[r]}</th>')
+
+    head = ''.join(colhead(c) for c in teams)
     rows = ''
     for r in teams:
         tds = ''
@@ -260,8 +286,8 @@ def mxfig(D, get, hue, keylo, keyhi, extra=''):
                 tds += f'<td class="thin" title="{re.sub("<[^>]+>", "", tip)}"></td>'; continue
             tds += (f'<td class="c" style="--k:{k:.3f}" tabindex="0" '
                     f'data-t="{esc(NAME[r])} &rarr; {esc(NAME[c])}" data-v="{tip}"></td>')
-        rows += f'<tr><th scope="row" title="{esc(NAME[r])}">{ABBR[r]}</th>{tds}</tr>'
-    return (f'<div class="scroll"><table class="mx" style="--hue:{hue}">'
+        rows += f'<tr>{rowhead(r)}{tds}</tr>'
+    return (f'<div class="scroll"><table class="mx{cls}" style="--hue:{hue}">'
             f'<thead><tr><td></td>{head}</tr></thead><tbody>{rows}</tbody></table></div>'
             f'<div class="key"><span>{keylo}</span>'
             f'<span class="ramp" style="background:linear-gradient(90deg,#f4efe6,{hue})"></span>'
@@ -332,7 +358,8 @@ def heat_figures(D):
                 f"{p['heat']:.1f}% of {p['v']:,} volleys carry an argument word")
 
     grid = ('<figure>' + mxfig(D, heatcell, RED, 'Cooler', 'Hotter',
-        f'<span style="margin-left:auto"><i class="sw thin"></i>Under {MIN_HEAT_V} volleys</span>') +
+        f'<span style="margin-left:auto"><i class="sw thin"></i>Under {MIN_HEAT_V} volleys</span>',
+        label='full') +
       f'<figcaption>Every pairing, coloured by the share of its volleys containing a '
       f'word from a fixed argument list. Heat is a ratio, so a thin pairing can top it on two '
       f'messages: under {MIN_HEAT_V} volleys, {len(P)-len(solid)} of the {len(P)} cells are '
