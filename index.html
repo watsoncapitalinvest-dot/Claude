@@ -3741,6 +3741,7 @@ const NEWSROOM_TOOLS = [
   ['trade-court', '⚖️', 'The Trade Court', 'Every trade graded on the value board — ours vs. market'],
   ['waiver-wire', '🎯', 'Waiver Wire Board', 'Free agents ranked on the value board — vs. your own roster'],
   ['heat-index', '🌡️', 'The Heat Index', 'Every rivalry, ranked by real chat heat — the Preview Warning threshold, browsable'],
+  ['weekly-heat', '📈', 'Weekly Heat Index', 'Who got hot this week — real chat volleys, week by week'],
   ['archive-articles', '🗄️', 'Article Archive', 'Every article, searchable'],
   ['archive', '📚', 'Back Issues', 'Saved editions'],
   ['calendar', '🗓️', 'Calendar', 'Release dates & events'],
@@ -3756,7 +3757,7 @@ const OFFICE_SECTIONS = [
 const NEWSROOM_SECTIONS = [
   ['This Week', ['calendar', 'create-issue', 'weekly-stories', 'dashboard']],
   ['The Network', ['sportscenter', 'broadcast']],
-  ['Desks & Features', ['politics', 'desk', 'storylines', 'investigations', 'interviews', 'trade-court', 'waiver-wire', 'heat-index']],
+  ['Desks & Features', ['politics', 'desk', 'storylines', 'investigations', 'interviews', 'trade-court', 'waiver-wire', 'heat-index', 'weekly-heat']],
   ['Editions', ['pop-grades', 'archive', 'archive-articles']],
 ];
 function toolSections(tools, sections) {
@@ -8564,6 +8565,82 @@ async function showHeatIndex() {
     ${byHeat.map(row).join('')}`);
 }
 
+// ---- The Weekly Heat Index — "who got hot this week?" -----------------------
+// Straight off a chat request the night the Heat Index shipped. Built by
+// scripts/build_weekly_heat.py, which buckets the same volley/heat pass by
+// calendar week: raw heated-volley counts, not a rate — a single week is too
+// small a sample for a percentage to mean anything, which is exactly why the
+// pairing-level Heat Index (above) stays a season-plus number.
+let WEEKLY_HEAT = null;
+async function loadWeeklyHeat() {
+  if (WEEKLY_HEAT) return WEEKLY_HEAT;
+  try {
+    const r = await fetch('weekly-heat.json', { cache: 'no-cache' });
+    if (r.ok) WEEKLY_HEAT = await r.json();
+  } catch { WEEKLY_HEAT = null; }
+  return WEEKLY_HEAT;
+}
+function weekRangeLabel(startISO, endISO) {
+  const opts = { month: 'short', day: 'numeric' };
+  const s = new Date(startISO + 'T00:00:00'), e = new Date(endISO + 'T00:00:00');
+  const sameMonth = s.getMonth() === e.getMonth();
+  return `${s.toLocaleDateString(undefined, opts)}–${sameMonth ? e.getDate() : e.toLocaleDateString(undefined, opts)}`;
+}
+async function showWeeklyHeat() {
+  const d = await loadWeeklyHeat();
+  if (!d || !d.recentWeeks || !d.recentWeeks.length) {
+    return setContent(`<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>
+      <div class="card"><h3>📈 Weekly Heat Index</h3>
+      <p class="muted">The weekly heat data isn't loaded. It's built by <code>scripts/build_weekly_heat.py</code>.</p></div>`);
+  }
+  const cur = d.recentWeeks[0];
+  const allTimeHot = (d.hottestWeeksAllTime || [])[0];
+  const weekCard = (w, i) => {
+    const cold = w.heated === 0;
+    return `<div class="card" style="padding:11px 12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:15px;font-weight:900;color:var(--faint);min-width:22px">${i + 1}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:13.5px">${weekRangeLabel(w.week, w.weekEnd)}</div>
+          <div class="faint" style="font-size:11.5px;margin-top:2px">
+            ${cold ? 'Nobody got hot this week' : `${esc(w.topPair.a)} <span class="faint">vs</span> ${esc(w.topPair.b)} ran hottest`}
+          </div>
+        </div>
+        <div style="text-align:right;white-space:nowrap">
+          <div style="font-size:17px;font-weight:900;${cold ? 'color:var(--faint)' : 'color:var(--accent-d)'}">${w.heated}</div>
+          <div class="faint" style="font-size:9.5px;font-weight:800;letter-spacing:.05em">HEATED</div>
+        </div>
+      </div>
+      ${w.topIndividual ? `<div class="faint" style="font-size:11.5px;margin-top:7px;padding-top:7px;border-top:1px solid var(--border)">
+        🔥 Hottest manager: <b>${esc(w.topIndividual.name)}</b> — ${w.topIndividual.heated} heated exchange${w.topIndividual.heated === 1 ? '' : 's'}</div>` : ''}
+    </div>`;
+  };
+  setContent(`<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>
+    <div class="card"><h3>📈 Weekly Heat Index</h3>
+      <p class="muted">Who got hot this week — real chat volleys, bucketed Monday to Sunday. A week is too
+      small a sample for a rate to mean anything, so this ranks weeks by raw heated exchanges instead of
+      a percentage. The <b data-act="heat-index" style="color:var(--accent-d);font-weight:700;cursor:pointer">all-time
+      Heat Index</b> is still the number that drives Preview Warnings.</p></div>
+    <div class="card" style="border-color:var(--accent-d)">
+      <div class="faint" style="font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">This Week &middot; ${weekRangeLabel(cur.week, cur.weekEnd)}</div>
+      ${cur.heated === 0
+        ? `<div style="font-size:15px;font-weight:800;margin-top:6px">Ice cold. Not one heated exchange all week.</div>`
+        : `<div style="font-size:19px;font-weight:900;margin-top:6px">${esc(cur.topPair.a)} <span class="faint" style="font-weight:400">vs</span> ${esc(cur.topPair.b)}</div>
+           <div class="faint" style="font-size:12.5px;margin-top:2px">${cur.topPair.heated} heated of ${cur.topPair.volleys} volleys between them &middot;
+           ${cur.heated} heated exchange${cur.heated === 1 ? '' : 's'} league-wide</div>
+           ${cur.topIndividual ? `<div style="font-size:12.5px;margin-top:6px">🔥 Hottest manager: <b>${esc(cur.topIndividual.name)}</b></div>` : ''}`}
+    </div>
+    ${allTimeHot ? `<div class="card">
+      <div class="faint" style="font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">Hottest Week in League History</div>
+      <div style="font-size:15px;font-weight:800;margin-top:6px">${weekRangeLabel(allTimeHot.week, allTimeHot.weekEnd)} &mdash;
+        ${esc(allTimeHot.topPair.a)} <span class="faint" style="font-weight:400">vs</span> ${esc(allTimeHot.topPair.b)}</div>
+      <div class="faint" style="font-size:12px;margin-top:2px">${allTimeHot.heated} heated exchanges league-wide, ${allTimeHot.topPair.heated} of them between those two</div>
+    </div>` : ''}
+    <h4 style="margin:16px 0 8px">Recent weeks</h4>
+    ${d.recentWeeks.map(weekCard).join('')}
+    <p class="faint" style="font-size:11px;margin-top:10px;padding:0 4px">${d.totalWeeksTracked} weeks tracked since the chat record begins.</p>`);
+}
+
 // ---- The Ring of Honor -------------------------------------------------------
 // Athletes and people the league mutually agrees are awesome and represent the
 // league's personalities and likes. Candidates are seeded by
@@ -9350,7 +9427,7 @@ async function showSettings() {
 /* ---- history-backed navigation: swipe-back and the ‹ button both work ---- */
 const NAV_ACTS = new Set(['home','newsroom','create-issue','weekly-stories','dashboard','calendar',
   'politics','pol-read','desk','storylines','investigations','inv-read','dossier','records','rivalries','rivalry-read','players','player-read','ex-files',
-  'archive-articles','archive','cover-art','predraft-view','draft-room','trade-court','waiver-wire','heat-index','draft-desk',
+  'archive-articles','archive','cover-art','predraft-view','draft-room','trade-court','waiver-wire','heat-index','weekly-heat','draft-desk',
   'assets','staff-handbook','staff-import','tc-team','back-news','back','settings','ex-files','power-ranks','money-lines','pop-grades','pop-year']);
 let NAV_SILENT = false;
 function pushRoute(act, data) {
@@ -9440,6 +9517,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'waiver-refresh') { toast('Re-pulling rosters…'); return showWaiverWire(true); }
   if (act === 'waiver-export') return exportWaiverResearch();
   if (act === 'heat-index') return showHeatIndex();
+  if (act === 'weekly-heat') return showWeeklyHeat();
   if (act === 'pvl-pick') return showPlayerLookup(t.dataset.name);
   if (act === 'pvl-go') return showPlayerLookup((($('#pvlSearch') || {}).value || '').trim());
   if (act === 'tc-fulllist') { S._tcFullList = !S._tcFullList; return showTradeCourt(); }
