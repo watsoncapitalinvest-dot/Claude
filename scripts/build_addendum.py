@@ -107,6 +107,8 @@ def compute():
         oa, ob = CHAT.get(a['who']), CHAT.get(b['who'])
         if a['who'] == b['who'] or not oa or not ob or oa == ob:
             continue
+        if a['c'] != b['c']:
+            continue  # different rooms: not the same conversation, just adjacent in time
         if not 0 <= (b['ts'] - a['ts']).total_seconds() <= WINDOW:
             continue
         k = tuple(sorted((oa, ob)))
@@ -453,11 +455,13 @@ def sections(D):
     </div>''')
 
     S('The Measure')
-    out.append(('body', '<p class="b">A volley is two managers speaking back to back: one posts, '
-        f'a different one answers within {WINDOW//60} minutes, and that is one volley on their '
-        'shared account. It is a deliberately dumb measure. It cannot read a room, it does not know '
-        'who was addressing whom in a crowd, and it counts a joke exactly as heavily as a '
-        'grievance.</p>'))
+    out.append(('body', '<p class="b">A volley is two managers speaking back to back, in the same '
+        f'room: one posts, a different one answers within {WINDOW//60} minutes, and that is one '
+        'volley on their shared account. A post in one chat and an unrelated line in the other '
+        'landing close in time does not count -- two people who never actually spoke are not a '
+        'volley just because a clock lined up. It is otherwise a deliberately dumb measure: it '
+        'cannot read a room, it does not know who was addressing whom in a crowd, and it counts a '
+        'joke exactly as heavily as a grievance.</p>'))
     out.append(('body', '<p class="b">What it is good at is the part that matters: it is '
         'symmetrical, it needs no interpretation, and nobody can lobby it. Two managers cannot '
         'volley without both of them showing up.</p>'))

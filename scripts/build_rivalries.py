@@ -208,15 +208,24 @@ for s in h['seasons']:
             side=None if rw in ('__none__',None) else ('me' if rw==(m['home'] if x==tid.get(m['home']) else m['away']) else 'them')
             d['games'].append({'y':y,'wk':m.get('week'),'po':bool(m.get('bracket')),'me':sx,'them':sz,'rw':side})
 
-# chat engagement -- both rooms, merged into one true chronological timeline
-# (matches build_addendum.py's methodology, so the two scripts' heat numbers agree).
+# chat engagement -- both rooms, merged into one true chronological timeline for
+# sorting, but a volley still requires both messages to be in the SAME room: a
+# trade post in official landing within 420s of an unrelated line in mos is two
+# people who never spoke to each other, not an exchange. (Caught from a real
+# case: The Jet-I hasn't posted in mos in years but still posts official trades,
+# which were pairing him with whoever happened to be chatting in mos at the time.)
+# Matches build_addendum.py's methodology, so the two scripts' heat numbers agree.
 ms=[]
 if CHATPATH:
     for sub in ('official','mos'):
         p=os.path.join(CHATPATH,sub,'_chat.txt')
-        if os.path.exists(p): ms.extend(load(p))
+        if os.path.exists(p):
+            rows=load(p)
+            for r in rows: r['c']=sub
+            ms.extend(rows)
     if not ms and os.path.isfile(CHATPATH):
         ms=load(CHATPATH)  # fallback: a single _chat.txt path, old single-source style
+        for r in ms: r['c']='single'
 for m in ms: m['ts']=datetime.datetime.strptime(m['d']+' '+re.sub(r'\s','',m['t']),'%m/%d/%y %I:%M:%S%p')
 ms.sort(key=lambda m: m['ts'])
 HEAT=re.compile(r"\b(wrong|dumb|stupid|idiot|clown|joke|lying|lie|clueless|garbage|trash|pathetic|"
@@ -225,6 +234,7 @@ volley=collections.Counter(); heated=collections.Counter()
 for i in range(1,len(ms)):
     a,b=ms[i-1],ms[i]
     if a['who']==b['who']: continue
+    if a['c']!=b['c']: continue  # different rooms: not the same conversation, just adjacent in time
     oa,ob=CHAT.get(a['who']),CHAT.get(b['who'])
     if not oa or not ob or oa==ob: continue
     if not 0<=(b['ts']-a['ts']).total_seconds()<=420: continue

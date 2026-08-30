@@ -214,8 +214,9 @@ def build():
     grid, words = ad.heat_figures(D)
 
     intro = (
-        f'<p class="b">A volley is two managers speaking back to back: one posts, a different one '
-        f'answers inside {ad.WINDOW//60} minutes. There are {vol:,} of them in the league record. '
+        f'<p class="b">A volley is two managers speaking back to back, in the same room: one posts, '
+        f'a different one answers inside {ad.WINDOW//60} minutes. There are {vol:,} of them in the '
+        f'league record. '
         f'A volley is <em>heated</em> if either of its two messages contains one of twenty-four '
         f'strings on a fixed list &mdash; no sentiment model, no cleverness, no judgement about '
         f'who started it.</p>',
