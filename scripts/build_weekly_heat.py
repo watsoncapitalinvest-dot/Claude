@@ -82,6 +82,8 @@ def build():
         oa, ob = ad.CHAT.get(a['who']), ad.CHAT.get(b['who'])
         if a['who'] == b['who'] or not oa or not ob or oa == ob:
             continue
+        if a['c'] != b['c']:
+            continue  # different rooms: not the same conversation, just adjacent in time
         if not 0 <= (b['ts'] - a['ts']).total_seconds() <= ad.WINDOW:
             continue
         w = week_start(b['ts'].date())
