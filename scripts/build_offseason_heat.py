@@ -237,7 +237,7 @@ h1 em{font-style:normal;color:var(--red);}
 </div>"""
 
 
-def grid_figure(D):
+def grid_figure(D, label='full'):
     P = D['pairs']
     cell = {}
     for p in P:
@@ -254,7 +254,8 @@ def grid_figure(D):
         return (p['heat'] / hh, f"{p['heat']:.1f}% of {p['v']:,} volleys carry an argument word")
 
     return ('<figure>' + ad.mxfig(D, heatcell, ad.RED, 'Cooler', 'Hotter',
-        f'<span style="margin-left:auto"><i class="sw thin"></i>Under {OFFSEASON_MIN_V} volleys</span>') +
+        f'<span style="margin-left:auto"><i class="sw thin"></i>Under {OFFSEASON_MIN_V} volleys</span>',
+        label=label) +
       f'<figcaption>Every pairing, Bosom Bowl 21 to now, coloured by the share of its volleys '
       f'carrying an argument word. Eight months is a fraction of the sample the all-time grid runs '
       f'on, so the measured floor drops from 150 volleys to {OFFSEASON_MIN_V}: {len(P)-len(solid)} of '
@@ -263,7 +264,9 @@ def grid_figure(D):
 
 
 def card(D):
-    ht = grid_figure(D)
+    # abbreviated labels here, not full names: the share-card panel is a fixed
+    # 424px and can't fit sixteen rotated franchise names at readable size.
+    ht = grid_figure(D, label='abbr')
     # card wants the raw <table>+key markup only, not the <figure> wrapper/caption
     ht = re.sub(r'^<figure>|<figcaption>.*$', '', ht, flags=re.S)
     vol = sum(D['volley'].values())
