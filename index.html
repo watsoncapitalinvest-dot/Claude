@@ -2614,6 +2614,57 @@ function latestSeasonIn(standings) {
   });
   return max;
 }
+// ---- The Full Record — every standalone page this desk has published -------
+// Built by scripts/build_site_index.py from each page's own <title> and
+// og:description, so this can't say something a page doesn't say about
+// itself. Exists because a page shared once in chat is only findable for as
+// long as that message hasn't scrolled away — this is the durable index.
+let SITE_INDEX = null;
+async function loadSiteIndex() {
+  if (SITE_INDEX) return SITE_INDEX;
+  try {
+    const r = await fetch('site-index.json', { cache: 'no-cache' });
+    if (r.ok) SITE_INDEX = await r.json();
+  } catch { SITE_INDEX = null; }
+  return SITE_INDEX;
+}
+function showSiteIndex() {
+  loadSiteIndex().then(renderSiteIndex);
+  app.innerHTML = `<div style="padding-bottom:24px">
+    <button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Executive Office</button>
+    <div class="setup-logo" style="font-size:24px">🗂️ The Full Record</div>
+    <p class="muted" style="margin-top:4px">Every standalone page this desk has published, in one place.</p>
+    <div id="siteIndexBody"><div class="card"><div class="dt">Loading…</div></div></div>
+  </div>`;
+}
+function renderSiteIndex(d) {
+  const el = $('#siteIndexBody'); if (!el) return;
+  if (!d || !d.categories || !d.categories.length) {
+    el.innerHTML = `<div class="card"><div class="dt">The catalog isn't loaded. It's built by <code>scripts/build_site_index.py</code>.</div></div>`;
+    return;
+  }
+  const term = (S.siteIndexQuery || '').trim().toLowerCase();
+  const fmtDate = iso => { if (!iso) return ''; try { return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); } catch { return iso; } };
+  const card = it => `<a class="card" href="${esc(it.url)}" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit">
+      ${it.kicker ? `<div class="faint" style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">${esc(it.kicker)}</div>` : ''}
+      <div style="font-weight:800;font-size:15px;line-height:1.25;margin-top:3px">${esc(it.title)}</div>
+      ${it.desc ? `<div class="dt" style="margin-top:4px">${esc(it.desc)}</div>` : ''}
+      ${it.date ? `<div class="faint" style="font-size:11px;margin-top:6px">${fmtDate(it.date)}</div>` : ''}
+    </a>`;
+  let total = 0;
+  const sections = d.categories.map(cat => {
+    const items = term ? cat.items.filter(i => (i.title + ' ' + i.desc).toLowerCase().includes(term)) : cat.items;
+    if (!items.length) return '';
+    total += items.length;
+    return `<h4 style="margin:18px 0 8px">${esc(cat.name)} <span class="faint" style="font-weight:400">(${items.length})</span></h4>
+      <div class="card" style="display:grid;gap:12px">${items.map(card).join('')}</div>`;
+  }).join('');
+  el.innerHTML = `<div class="card"><input id="siteIndexSearch" class="input" placeholder="Search every page…" value="${esc(S.siteIndexQuery || '')}" data-act="site-index-search-input" /></div>
+    ${sections || `<div class="card"><div class="dt">No pages match “${esc(S.siteIndexQuery || '')}.”</div></div>`}
+    ${term ? `<p class="faint" style="font-size:11px;margin-top:8px">${total} match${total === 1 ? '' : 'es'}</p>` : ''}`;
+  const inp = $('#siteIndexSearch'); if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+}
+
 function showRecords() {
   const r = S.records;
   const back = `<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Executive Office</button>`;
@@ -3720,6 +3771,7 @@ const OFFICE_TOOLS = [
   ['franchise-map', '🪪', 'Franchise Directory', 'Every team, owner & name change — resolved'],
   ['records', '📖', 'Record Book', 'All-time history & records'],
   ['rivalries', '⚔️', 'The Rivalry Board', 'Head-to-head, grudges & streaks'],
+  ['site-index', '🗂️', 'The Full Record', 'Every standalone page this desk has published, one place, searchable'],
   ['players', '📇', 'The Ledger', 'Every traded player, tracked'],
   ['ex-files', '👻', 'The Ex-Files', 'The league’s departed, reviewed'],
   ['jeopardy', '🎬', 'SCFL Jeopardy', 'Two rounds, thirty-two clues, one wager — league high scores'],
@@ -3750,7 +3802,7 @@ const mtoolBtn = ([a, ic, l, d]) => `<button class="mtool" data-act="${a}"><span
 const OFFICE_SECTIONS = [
   ['The Weekly Board', ['power-ranks', 'money-lines']],
   ['The Board Desk', ['roster-export', 'waiver-export', 'logos-export', 'matchup-export', 'schedule-export', 'assets', 'staff-handbook', 'staff-send', 'staff-import']],
-  ['The Record Room', ['dossier', 'franchise-map', 'records', 'rivalries', 'players', 'ex-files']],
+  ['The Record Room', ['dossier', 'franchise-map', 'records', 'rivalries', 'players', 'ex-files', 'site-index']],
   ['The Arcade', ['jeopardy', 'tradewar']],
   ['Ring of Honor', ['ring-of-honor']],
 ];
@@ -9426,7 +9478,7 @@ async function showSettings() {
 // ---------------------------------------------------------------------
 /* ---- history-backed navigation: swipe-back and the ‹ button both work ---- */
 const NAV_ACTS = new Set(['home','newsroom','create-issue','weekly-stories','dashboard','calendar',
-  'politics','pol-read','desk','storylines','investigations','inv-read','dossier','records','rivalries','rivalry-read','players','player-read','ex-files',
+  'politics','pol-read','desk','storylines','investigations','inv-read','dossier','records','rivalries','rivalry-read','players','player-read','ex-files','site-index',
   'archive-articles','archive','cover-art','predraft-view','draft-room','trade-court','waiver-wire','heat-index','weekly-heat','draft-desk',
   'assets','staff-handbook','staff-import','tc-team','back-news','back','settings','ex-files','power-ranks','money-lines','pop-grades','pop-year']);
 let NAV_SILENT = false;
@@ -9506,6 +9558,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'dossier') return showDossier();
   if (act === 'franchise-map') return showFranchiseMap();
   if (act === 'records') return showRecords();
+  if (act === 'site-index') return showSiteIndex();
   if (act === 'trade-court') return showTradeCourt();
   if (act === 'draft-desk') return showDraftDesk();
   if (act === 'roster-export') return exportRosters();
@@ -9938,6 +9991,8 @@ document.body.addEventListener('change', async (e) => {
 document.body.addEventListener('input', (e) => {
   const s = e.target.closest('[data-act="arch-search-input"]');
   if (s) { S.archiveQuery = s.value; showArticleArchive(); }
+  const si = e.target.closest('[data-act="site-index-search-input"]');
+  if (si) { S.siteIndexQuery = si.value; renderSiteIndex(SITE_INDEX); }
 });
 
 init();

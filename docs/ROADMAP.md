@@ -99,3 +99,11 @@ same file for humans; keep both in sync with any future rename.
   if any string in the output matches chat text.
 - Lines chosen for publication are **banter, not shots** — funny, self-aware, or
   something the speaker would happily repeat. Run them past John before shipping.
+- **Every standalone page gets indexed, same session it ships.** A page shared
+  once in chat is only findable for as long as that message hasn't scrolled
+  away. After adding or renaming any root-level `.html` page (or `jeopardy/` /
+  `tradewar/`), run `python3 scripts/build_site_index.py` and commit the
+  updated `site-index.json` alongside it — the build fails loudly if the new
+  page's category isn't in the script's `CATEGORY` map, which is the reminder.
+  The catalog lives at `scfl-index.html` ("The Full Record") and in-app under
+  Executive Office → The Record Room → 🗂️.
