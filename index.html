@@ -3740,6 +3740,7 @@ const NEWSROOM_TOOLS = [
   ['interviews', '🎙️', 'Owner Interviews', 'Build your own questions, send a link, collect answers'],
   ['trade-court', '⚖️', 'The Trade Court', 'Every trade graded on the value board — ours vs. market'],
   ['waiver-wire', '🎯', 'Waiver Wire Board', 'Free agents ranked on the value board — vs. your own roster'],
+  ['heat-index', '🌡️', 'The Heat Index', 'Every rivalry, ranked by real chat heat — the Preview Warning threshold, browsable'],
   ['archive-articles', '🗄️', 'Article Archive', 'Every article, searchable'],
   ['archive', '📚', 'Back Issues', 'Saved editions'],
   ['calendar', '🗓️', 'Calendar', 'Release dates & events'],
@@ -3755,7 +3756,7 @@ const OFFICE_SECTIONS = [
 const NEWSROOM_SECTIONS = [
   ['This Week', ['calendar', 'create-issue', 'weekly-stories', 'dashboard']],
   ['The Network', ['sportscenter', 'broadcast']],
-  ['Desks & Features', ['politics', 'desk', 'storylines', 'investigations', 'interviews', 'trade-court', 'waiver-wire']],
+  ['Desks & Features', ['politics', 'desk', 'storylines', 'investigations', 'interviews', 'trade-court', 'waiver-wire', 'heat-index']],
   ['Editions', ['pop-grades', 'archive', 'archive-articles']],
 ];
 function toolSections(tools, sections) {
@@ -8520,6 +8521,49 @@ async function showRivalryRead(k) {
     </div>`);
 }
 
+// ---- The Heat Index — every pairing, ranked by real chat heat ---------------
+// Same rivalries.json field that powers "Where The Arguments Are" and the
+// Heat Warning callouts in Next Week Previews, but browsable on its own:
+// every mapped pairing in the league, ranked purely by heat, so anyone can
+// see where their own matchups land before an issue ever calls it out.
+async function showHeatIndex() {
+  const rows = await loadRivals();
+  if (!rows || !rows.length) {
+    return setContent(`<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>
+      <div class="card"><h3>🌡️ The Heat Index</h3>
+      <p class="muted">The rivalry data isn't loaded. It's built by <code>scripts/build_rivalries.py</code>.</p></div>`);
+  }
+  const byHeat = [...rows].sort((a, b) => b.heat - a.heat);
+  const warnCount = byHeat.filter(r => r.heat >= HEAT_WARNING_THRESHOLD).length;
+  const row = (r, i) => {
+    const hot = r.heat >= HEAT_WARNING_THRESHOLD;
+    return `<div class="card" data-act="rivalry-read" data-k="${rvKey(r)}"
+        style="cursor:pointer;padding:11px 12px;${hot ? 'border-color:var(--accent-d)' : ''}">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:15px;font-weight:900;color:var(--faint);min-width:22px">${i + 1}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:14px;line-height:1.3">${esc(r.a)} <span class="faint">vs</span> ${esc(r.b)}</div>
+          <div class="faint" style="font-size:11.5px;margin-top:2px">${r.rec} &middot; ${r.g} games</div>
+        </div>
+        <div style="text-align:right;white-space:nowrap">
+          <div style="font-size:17px;font-weight:900;${hot ? 'color:var(--accent-d)' : ''}">${r.heat.toFixed(1)}%</div>
+          ${hot ? `<div style="font-size:9.5px;font-weight:800;letter-spacing:.05em;color:var(--accent-d)">🔥 WARNING TIER</div>` : ''}
+        </div>
+      </div></div>`;
+  };
+  setContent(`<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>
+    <div class="card"><h3>🌡️ The Heat Index</h3>
+      <p class="muted">Every mapped pairing in league history, ranked by how much of their back-and-forth
+      in the group chat actually turns into an argument — real chat data, not a bit. This is the exact
+      number that now drives the Heat Warning callouts in Next Week Previews: pairings at
+      <b>${HEAT_WARNING_THRESHOLD}%+</b> get flagged before they play. Tap any pairing for the full file.</p>
+      <div style="background:var(--bg2);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13px">
+        <b style="color:var(--accent-d)">${warnCount}</b> of ${byHeat.length} pairings currently run hot enough to trigger a Warning.
+      </div>
+    </div>
+    ${byHeat.map(row).join('')}`);
+}
+
 // ---- The Ring of Honor -------------------------------------------------------
 // Athletes and people the league mutually agrees are awesome and represent the
 // league's personalities and likes. Candidates are seeded by
@@ -9306,7 +9350,7 @@ async function showSettings() {
 /* ---- history-backed navigation: swipe-back and the ‹ button both work ---- */
 const NAV_ACTS = new Set(['home','newsroom','create-issue','weekly-stories','dashboard','calendar',
   'politics','pol-read','desk','storylines','investigations','inv-read','dossier','records','rivalries','rivalry-read','players','player-read','ex-files',
-  'archive-articles','archive','cover-art','predraft-view','draft-room','trade-court','waiver-wire','draft-desk',
+  'archive-articles','archive','cover-art','predraft-view','draft-room','trade-court','waiver-wire','heat-index','draft-desk',
   'assets','staff-handbook','staff-import','tc-team','back-news','back','settings','ex-files','power-ranks','money-lines','pop-grades','pop-year']);
 let NAV_SILENT = false;
 function pushRoute(act, data) {
@@ -9395,6 +9439,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'waiver-wire') return showWaiverWire();
   if (act === 'waiver-refresh') { toast('Re-pulling rosters…'); return showWaiverWire(true); }
   if (act === 'waiver-export') return exportWaiverResearch();
+  if (act === 'heat-index') return showHeatIndex();
   if (act === 'pvl-pick') return showPlayerLookup(t.dataset.name);
   if (act === 'pvl-go') return showPlayerLookup((($('#pvlSearch') || {}).value || '').trim());
   if (act === 'tc-fulllist') { S._tcFullList = !S._tcFullList; return showTradeCourt(); }
