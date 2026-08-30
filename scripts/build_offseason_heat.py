@@ -244,7 +244,6 @@ def grid_figure(D, label='full'):
         cell[(p['a'], p['b'])] = cell[(p['b'], p['a'])] = p
     solid = [p for p in P if p['v'] >= OFFSEASON_MIN_V]
     hh = max((p['heat'] for p in solid), default=1)
-    buckets = ad.heat_buckets(P, OFFSEASON_MIN_V)
 
     def heatcell(r, c):
         p = cell.get((r, c))
@@ -252,7 +251,7 @@ def grid_figure(D, label='full'):
             return None
         if p['v'] < OFFSEASON_MIN_V:
             return ('thin', f"only {p['v']:,} volleys this offseason &mdash; too few to rate")
-        return (buckets[(p['a'], p['b'])], f"{p['heat']:.1f}% of {p['v']:,} volleys carry an argument word")
+        return (ad.heat_k(p['heat']), f"{p['heat']:.1f}% of {p['v']:,} volleys carry an argument word")
 
     return ('<figure>' + ad.mxfig(D, heatcell, ad.RED, 'Cooler', 'Hotter',
         f'<span style="margin-left:auto"><i class="sw thin"></i>Under {OFFSEASON_MIN_V} volleys</span>',
@@ -261,9 +260,10 @@ def grid_figure(D, label='full'):
       f'carrying an argument word. Eight months is a fraction of the sample the all-time grid runs '
       f'on, so the measured floor drops from 150 volleys to {OFFSEASON_MIN_V}: {len(P)-len(solid)} of '
       f'the {len(P)} recorded pairings still fall under it and stay uncoloured rather than '
-      f'flattered. The rest are stepped into {ad.N_HEAT_BANDS} colour bands by rank, not by a plain '
-      f'value/max scale, so one skewed pairing can\'t wash the rest of the grid out to the same pale '
-      f'shade &mdash; the exact percentage is always on the cell\'s hover or tap.</figcaption></figure>')
+      f'flattered. Colour is a straight, fixed proportion of the percentage &mdash; 0 to '
+      f'{ad.HEAT_COLOR_CEILING:.0f}%, the same ceiling the all-time grid uses, so a shade means the '
+      f'same number on both pages &mdash; and the exact percentage is always on the cell\'s hover or '
+      f'tap.</figcaption></figure>')
 
 
 def card(D):
