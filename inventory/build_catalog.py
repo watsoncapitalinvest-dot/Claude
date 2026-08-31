@@ -51,16 +51,16 @@ WINE = [
  ("Clos Pegase Chardonnay Mitsuko19 750ml","White","750ml","burgundy","Mitsuko's Vineyard, Carneros. Clos Pegase uses artwork labels.","low",1),
  ("Terlato Pinot Grigio 750ml","White","750ml","bordeaux","Tall slim Alsace-style bottle typical of Friuli Pinot Grigio.","low",1),
  ("Dom Perignon Luminous 750ml","Sparkling","750ml","champagne","LED-backlit label with a battery tab. Dark green bottle, shield label.","high",0),
- ("Miraval Cotes De Provence Rose 375ml","Rose","375ml","half375","Half. Curved 'hourglass' Provence bottle, GOLD capsule, pale salmon.","high",0),
+ ("Miraval Cotes De Provence Rose 375ml","Rose","375ml","half375","Half. Curved 'hourglass' bottle, GOLD capsule, pale salmon. Shares its capsule with the 750 — apply the break-ring test: a seam with knurled banding means screwcap, a smooth sleeve means cork.","high",0),
  ("Attems Pino Grigio 750ml","White","750ml","bordeaux","GREY/SILVER capsule printed ATTEMS. White label with a small crest. Friuli DOC.","high",0),
  ("Daou Cabernet Sauvignon 750ml","Red","750ml","bordeaux","White label, DAOU in serif caps, Paso Robles. Standard tier.","high",0),
  ("Daou Cabernet Reserve 750ml","Red","750ml","bordeaux","Reserve tier — darker/heavier label, same DAOU wordmark. Read the tier line to tell it from the standard.","medium",0),
- ("Whispering Angel Rose 375ml","Rose","375ml","half375","Half. GOLD CHECKERBOARD capsule, white script label. Chateau d'Esclans.","high",0),
+ ("Whispering Angel Rose 375ml","Rose","375ml","half375","Half bottle. SCREWCAP — the gold checkerboard capsule has a horizontal BREAK RING with knurled banding part way down, and a flat disc top. That ring is the ONLY reliable way to tell it from the 750, which wears the identical capsule. Confirmed on this bar's stock.","high",0),
  ("LYRE'S CLASSICO 750ml","Non-Alcohol Wine","750ml","champagne","Non-alcoholic sparkling. Lyre's black label, gold lyre emblem.","medium",0),
  ("Cherry Pie Pinot Noir 750ml","Red","750ml","burgundy","Cherry-red label graphic. NOT wax-dipped — that's Belle Glos.","medium",0),
  ("Bottega Prosecco 750ml","Sparkling","750ml","champagne","GOLD METALLIC OPAQUE bottle, no visible glass. Bottega Gold. Distinct from Accademia's coloured transparent glass.","high",0),
  ("Joto Yuzu Flavored Sake 720ml","Sake","720ml","sake","720ml sake. Yuzu — pale cloudy yellow liquid.","medium",0),
- ("Whispering Angel Rose 750ml","Rose","750ml","provence","GOLD CHECKERBOARD capsule, tall tapered Provence bottle, white script label. Highest-volume rose here.","high",0),
+ ("Whispering Angel Rose 750ml","Rose","750ml","provence","CORK — the gold checkerboard capsule is one SMOOTH UNBROKEN SLEEVE, no seam, no ridging. Tall tapered Provence bottle. The 375 wears the identical capsule but has a break ring; check for the seam before assigning. Confirmed on this bar's stock.","high",0),
  ("Sonoma Cutrer Chardonnay 750ml","White","750ml","burgundy","BRIGHT YELLOW capsule — the most distinctive capsule in the room. RUSSIAN RIVER RANCHES.","high",0),
  ("Une Femme Callie Sparkling Rose 187ml","Sparkling","187ml","split187","Clear split, crown cap, amber-rose. Label UNE FEMME / THE CALLIE.","high",0),
  ("Veuve Clicquot Yellow Label 750ml","Sparkling","750ml","champagne","ORANGE label, gold foil neck banded 'Veuve Clicquot'. The default Veuve.","high",0),
@@ -420,7 +420,7 @@ def collapse_liquor(items):
     return out
 
 catalog = {
-    "version": "2026-09-01b",
+    "version": "2026-09-01c",
     "note": ("Master SKU catalog transcribed from the Craftable item list — wine, liquor and "
              "NA Bev complete. 'cues' describe only what survives a bad shelf photo: bottle "
              "colour, capsule/cap colour, label colour, glass shape. Where two SKUs differ only "

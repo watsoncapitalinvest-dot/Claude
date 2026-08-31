@@ -119,21 +119,26 @@ function catalogBlock() {
     `label, so lead with the cues: cap and capsule colour, liquid colour, glass shape.\n\n` +
     `ALL LIQUOR IS 1L. The operator counts every spirit and liqueur bottle as a\n` +
     `1L unit, so do not try to tell a 750 from a litre. Report the 1L SKU.\n\n` +
-    `SIZE STILL MATTERS FOR WINE, AND THE CAPSULE WILL NOT TELL YOU.\n` +
-    `Splits (187ml, about 7.5in), halves (375ml, about 9.5in) and full bottles\n` +
-    `(750ml, about 12in) are separate SKUs. These are stocked in more than one\n` +
-    `format, and the formats carry the SAME capsule, foil colour and label art:\n` +
-    `  Whispering Angel Rose      750ml and 375ml  identical gold checkerboard\n` +
-    `  Miraval Cotes de Provence  750ml and 375ml  identical gold capsule\n` +
-    `  Moet Imperial              750ml and 187ml  identical gold foil, red seal\n` +
-    `  Ferrari / Une Femme        smaller formats  identical closures\n` +
-    `For any of these, DO NOT group by closure. Grouping by capsule colour merges\n` +
-    `two products into one line and loses the smaller format entirely. Separate\n` +
-    `them by BOTTLE BODY: compare glass height and shoulder against neighbours.\n` +
-    `A 375ml stands about three quarters the height of a 750ml beside it and\n` +
-    `looks stubby; a 187ml is under half. Report each format as its own entry.\n` +
-    `If a block clearly contains two heights, it is TWO entries, even when every\n` +
-    `capsule in it looks the same.\n\n` +
+    `SIZE MATTERS FOR WINE, AND THE CAPSULE COLOUR WILL NOT TELL YOU.\n` +
+    `Splits (187ml), halves (375ml) and full bottles (750ml) are separate SKUs.\n` +
+    `Several products are stocked in two formats that share the SAME capsule\n` +
+    `colour, foil and label art, so grouping by colour merges two products into\n` +
+    `one line and loses the smaller format entirely.\n\n` +
+    `THE CLOSURE STRUCTURE IS THE TELL, and it reads from directly above, which\n` +
+    `is often the only view you get of a packed block:\n\n` +
+    `  SCREWCAP = the SMALL format. Look for a horizontal BREAK RING part way\n` +
+    `  down the capsule — a seam with knurled or ridged banding above and below\n` +
+    `  it, where the cap twists off. The top is a flat disc.\n\n` +
+    `  CORK = the FULL 750ml. The capsule is one SMOOTH UNBROKEN SLEEVE with no\n` +
+    `  seam and no ridging anywhere along it.\n\n` +
+    `Confirmed on this bar's stock: Whispering Angel Rose 375ml is screwcap and\n` +
+    `750ml is cork, and both wear the identical gold checkerboard capsule.\n` +
+    `Apply the same test to Miraval, Moet Imperial, Ferrari and Une Femme.\n\n` +
+    `Bottle height confirms it when the body is visible — a 375 stands about\n` +
+    `three quarters the height of a 750 beside it, a 187 under half — but the\n` +
+    `break ring is the primary test because it survives being seen end-on.\n\n` +
+    `A block containing both closures is TWO entries. Count the smooth sleeves\n` +
+    `and the break rings separately and report each as its own line.\n\n` +
     `NEVER count a SKU whose name contains "(generic)". Those are Craftable pour-\n` +
     `tracking placeholders, not bottles that exist on a shelf.\n\n` +
     (menuList.length
