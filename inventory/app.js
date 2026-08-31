@@ -106,19 +106,25 @@ function catalogBlock() {
   if (!catalog || !catalog.items || !catalog.items.length) return '';
   const lines = catalog.items.map(it => {
     const dims = catalog.shapes && catalog.shapes[it.shape];
-    const d = dims ? ` [${dims.diameter_in}in dia, ${dims.desc}]` : '';
-    return `${it.id} | ${it.name} | ${it.sub}${d} | ${it.cues}`;
+    const d = dims && dims.diameter_in ? ` [${dims.diameter_in}in]` : '';
+    return `${it.id}|${it.name}|${it.sub}${d}|${it.cues}`;
   });
-  return `\n\nTHIS BAR'S CATALOG (${catalog.items.length} products).\n` +
-    `Match what you see against this list. Report the catalog name EXACTLY as written\n` +
-    `and put its id in catalogId. Matching a known SKU is far more reliable than\n` +
-    `reading a blurry label, so use the cues — capsule colour, bottle shape, label art.\n\n` +
-    `id | name | subcategory [bottle] | how to recognise it\n` +
+  return `\n\nTHIS BAR'S CATALOG — ${catalog.items.length} products.\n` +
+    `Match what you see against this list and report the catalog name EXACTLY as\n` +
+    `written, with its id in catalogId. Matching a known SKU beats reading a blurry\n` +
+    `label, so lead with the cues: cap and capsule colour, liquid colour, glass shape.\n\n` +
+    `SIZE MATTERS. Many products appear twice at 750ml and 1L. A 1L bottle stands\n` +
+    `visibly taller — roughly 13in vs 11.5in — and is usually slightly wider. When\n` +
+    `two bottles of the same brand differ in height on the same shelf, that is the\n` +
+    `750 and the 1L. If you genuinely cannot tell, pick the 750ml SKU and set\n` +
+    `confidence "low" rather than inventing certainty.\n\n` +
+    `NEVER count a SKU whose name contains "(generic)". Those are Craftable pour-\n` +
+    `tracking placeholders, not bottles that exist on a shelf.\n\n` +
+    `id|name|subcategory[dia]|how to recognise it\n` +
     lines.join('\n') +
-    `\n\nIf something genuinely is not on this list, still report it: use your own\n` +
+    `\n\nIf something is genuinely not on this list, still report it: use your own\n` +
     `descriptive name and leave catalogId empty. Never force a bad match, and never\n` +
-    `drop stock just because it is unlisted — the catalog is incomplete (liquor, beer\n` +
-    `and NA products are not in it yet).`;
+    `drop stock just because it is unlisted.`;
 }
 
 function newSession() {
@@ -600,8 +606,11 @@ function renderSetup() {
       `</div>` +
       (need ? `<div class="hint">Needs a reference shot: ` +
         esc(catalog.items.filter(i => i.needs_photo).map(i => i.name).join(', ')) + `</div>` : '') +
-      `<div class="hint">Catalog version ${esc(catalog.version || '?')}. Wine section only — ` +
-      `liquor, beer and NA still to add.</div>`;
+      `<div class="hint">v${esc(catalog.version || '?')} · ` +
+      `${catalog.items.filter(i => i.cat === 'wine').length} wine · ` +
+      `${catalog.items.filter(i => i.cat === 'liquor').length} liquor · ` +
+      `${catalog.items.filter(i => i.cat === 'na').length} NA Bev. ` +
+      `No Beer section transcribed yet.</div>`;
   }
 
   const lb = document.getElementById('setup-locs');
