@@ -762,6 +762,10 @@ function renderSetup() {
       `</div>` +
       (need ? `<div class="hint">Needs a reference shot: ` +
         esc(catalog.items.filter(i => i.needs_photo).map(i => i.name).join(', ')) + `</div>` : '') +
+      ((catalog.not_in_craftable || []).length
+        ? `<div class="gap-warn"><strong>In stock, but no Craftable item:</strong><br>` +
+          esc(catalog.not_in_craftable.join(' · ')) +
+          `<br>Create these in Craftable or they import as nothing.</div>` : '') +
       ((catalog.menu_no_sku || []).length
         ? `<div class="gap-warn"><strong>On the menu, no SKU in Craftable:</strong><br>` +
           esc(catalog.menu_no_sku.join(' · ')) + `</div>` : '') +

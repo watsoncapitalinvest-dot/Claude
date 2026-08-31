@@ -81,6 +81,7 @@ WINE = [
  ("Miraval Cotes De Provence Rose 750ml","Rose","750ml","provence","Full size. Curved 'hourglass' bottle, GOLD capsule, pale salmon.","high",0),
  ("Tyku Cucumber Sake 330ml","Sake","330ml","sake","Small. TYKU uses frosted/coloured glass; cucumber is green-tinted.","medium",0),
  ("Heavensake Sake Baby 300ml","Sake","300ml","sake","300ml 'baby'. Minimalist white label.","medium",0),
+ ("Taittinger Brut La Francaise 750ml","Sparkling","750ml","champagne","BLACK foil with TAITTINGER repeated vertically in gold down the neck, and a small round medallion on the shoulder. Cream label. NOT IN THE CRAFTABLE ITEM LIST — this SKU was added from physical stock observed on the wire rack, where 3 bottles sat uncounted. Craftable needs the item created on its side too.","high",0),
  ("Wolffer Spring In A Bottle 750ml","Non-Alcohol Wine","750ml","bordeaux","Non-alcoholic. Round white label with a DAFFODIL, reads SPRING IN A BOTTLE. Rose liquid.","high",0),
 ]
 
@@ -419,15 +420,18 @@ def collapse_liquor(items):
         out.append(it)
     return out
 
+_ITEMS = collapse_liquor(rows("W", WINE, "wine") + rows("L", LIQUOR, "liquor") + rows("N", NA + NA2, "na"))
+
 catalog = {
-    "version": "2026-09-01c",
+    "version": "2026-09-01d",
     "note": ("Master SKU catalog transcribed from the Craftable item list — wine, liquor and "
              "NA Bev complete. 'cues' describe only what survives a bad shelf photo: bottle "
              "colour, capsule/cap colour, label colour, glass shape. Where two SKUs differ only "
              "by size, the cue says so — 1L bottles stand visibly taller than 750ml."),
     "shapes": SHAPES,
-    "items": collapse_liquor(rows("W", WINE, "wine") + rows("L", LIQUOR, "liquor") + rows("N", NA + NA2, "na")),
+    "items": _ITEMS,
     "menu_no_sku": MENU_NO_SKU,
+    "not_in_craftable": [i["name"] for i in _ITEMS if "NOT IN THE CRAFTABLE" in i["cues"]],
 }
 
 with open("catalog.json", "w") as f:
