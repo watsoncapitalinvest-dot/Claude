@@ -13,7 +13,6 @@
 const MODEL = 'claude-opus-5';
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const MAX_EDGE = 1568;               // Claude's efficient max image edge
-const MIN_SAMPLES_TRUSTED = 3;       // calibration samples before we call a factor solid
 
 /* ---------- storage (never throws; memory fallback) ---------- */
 const store = (() => {
@@ -50,7 +49,8 @@ const K = {
   locations: 'bc-locations',
   cases:     'bc-cases',
   session:   'bc-session',
-  catalog:   'bc-catalog'
+  catalog:   'bc-catalog',
+  history:   'bc-history'
 };
 
 /* ---------- default locations (edit in Setup) ---------- */
@@ -74,7 +74,8 @@ if (!locations) {
   locations = DEFAULT_LOCATIONS.map((name, i) => ({
     id: 'L' + i,
     name,
-    samples: []            // {visible, actual} pairs from operator corrections
+    samples: [],           // shelf-wide {est, actual} pairs
+    skuSamples: {}         // per-product {est, actual} pairs, keyed by catalogId
   }));
   store.set(K.locations, locations);
 }
@@ -140,23 +141,62 @@ function newSession() {
   // counts: { locationId: { locationName, at, items:[{name,size,visible,total,edited,category}] } }
 }
 
-/* ---------- calibration ---------- */
-function depthFactor(loc) {
-  if (!loc.samples || !loc.samples.length) return 1;
+/* ---------- calibration ----------
+   Two levels. A correction on Whispering Angel in Cooler 3 teaches that lane
+   first and the shelf second, because depth is a property of how a product is
+   stocked, not of the shelf as a whole. A one-deep lane of Dom Perignon on the
+   same shelf as a four-deep lane of rose should not get the same multiplier. */
+function keyOf(it) { return (it.catalogId || it.name || '').toLowerCase(); }
+
+function ratio(samples) {
+  if (!samples || !samples.length) return null;
   let sv = 0, sa = 0;
-  for (const s of loc.samples) { sv += s.visible; sa += s.actual; }
-  if (sv <= 0) return 1;
-  return sa / sv;
+  for (const s of samples) { sv += s.est; sa += s.actual; }
+  return sv > 0 ? sa / sv : null;
+}
+function skuFactor(loc, key) {
+  return ratio((loc.skuSamples || {})[key]);
+}
+function locFactor(loc) {
+  return ratio(loc.samples) || 1;
+}
+/* The model's own lane reading does the heavy lifting; the learned factor only
+   corrects its systematic bias. */
+function rawEstimate(it) {
+  const front = Math.max(0, it.frontCount | 0);
+  const partial = Math.max(0, it.partialCount | 0);
+  const deep = Math.min(6, Math.max(1, it.rowsDeep | 0 || 1));
+  return Math.max(front + partial, Math.round(front * deep));
+}
+function estimateFor(loc, it) {
+  const raw = rawEstimate(it);
+  const f = skuFactor(loc, keyOf(it));
+  const factor = (f === null) ? locFactor(loc) : f;
+  /* The floor is what was actually SEEN — front row plus partials. `raw` already
+     contains the depth guess, so flooring at raw would make the model's own
+     over-reads uncorrectable: a lane read 3 deep that is really 2 could never
+     come back down. Corrections have to be able to push both ways. */
+  const seen = Math.max(0, it.frontCount | 0) + Math.max(0, it.partialCount | 0);
+  return Math.max(seen, Math.round(raw * factor));
 }
 function factorLabel(loc) {
   const n = (loc.samples || []).length;
+  const skus = Object.keys(loc.skuSamples || {}).length;
   if (!n) return 'not calibrated';
-  const f = depthFactor(loc);
-  const trust = n >= MIN_SAMPLES_TRUSTED ? '' : ' · needs more';
-  return '×' + f.toFixed(2) + ' from ' + n + ' correction' + (n === 1 ? '' : 's') + trust;
+  return '×' + locFactor(loc).toFixed(2) + ' shelf, ' + skus + ' product' +
+         (skus === 1 ? '' : 's') + ' tuned';
 }
-function applyFactor(loc, visible) {
-  return Math.max(visible, Math.round(visible * depthFactor(loc)));
+
+/* ---------- priors ----------
+   Inventory repeats. What this shelf held last time is the strongest single
+   clue about what it holds now, and it costs the operator nothing. */
+function priorFor(locId, it) {
+  const hist = store.get(K.history, {});
+  const rec = hist[locId];
+  if (!rec || !rec.items) return null;
+  const k = keyOf(it);
+  const hit = rec.items.find(h => (h.catalogId || h.name || '').toLowerCase() === k);
+  return hit ? { total: hit.total, at: rec.at } : null;
 }
 
 /* ---------- image handling ---------- */
@@ -180,33 +220,51 @@ function fileToScaledDataURL(file) {
 }
 
 /* ---------- the prompt ---------- */
-const SYSTEM_PROMPT = `You read bar and restaurant shelf photos and report what bottles are VISIBLE.
+const SYSTEM_PROMPT = `You read bar and restaurant shelf photos and report stock.
 
-THE ONE RULE: report only what you can actually see. Never estimate, infer, or
-extrapolate bottles hidden behind other bottles. A separate calibration step
-handles occluded stock — your job is an honest visible count, nothing more.
-An inflated "helpful" guess corrupts that calibration and makes the whole
-system worse.
+You are looking at ONE photo of a shelf where bottles stand several rows deep.
+Most of the stock is behind the front row. Do not pretend otherwise, and do not
+pretend you can see it. Instead, describe the LANE.
 
-How to count:
-- Count distinct closures: capsules, foils, screwcaps, corks, crown caps, can tops.
-  These are the most reliable countable feature.
-- A bottle whose closure you cannot see does not get counted.
-- Group by product. Read labels where legible; use the exact brand and expression
-  as printed (e.g. "Bisol Jeio Prosecco DOC Brut", not "prosecco").
-- If two products share a closure colour but differ by label, keep them separate.
-- If you can read a size (750ml, 1.75L, 187ml, 12oz), report it. Otherwise leave size empty.
+For each product, report three separate things:
 
-Unidentified stock still counts. If you can see three closures but cannot read the
-label, report one entry with a descriptive name like "Unidentified — copper screwcap,
-clear glass" and confidence "low". Do not silently drop them.
+1. frontCount — closures you can fully see: capsules, foils, screwcaps, corks,
+   crown caps, can tops. Count only what you can actually resolve.
 
-For countedBy, say briefly what you actually counted — "6 gold foil capsules",
-"4 red wax tops, 2 labels facing". This is how the operator checks your work.
+2. partialCount — ADDITIONAL bottles you can see PART of but not the whole
+   closure: a sliver of neck between two front bottles, the edge of a capsule,
+   a shoulder showing through a gap, a reflection that is clearly another
+   bottle. This is real evidence and most readers throw it away. Do not.
+   If you see nothing partial, report 0.
+
+3. rowsDeep — how many rows deep this product's lane appears to run.
+   Judge it from the photo:
+     - You can see the shelf back, the wall, or empty space behind the row -> 1
+     - You can see a second tier of closures behind the front -> 2
+     - The lane recedes past what you can resolve, no back visible -> 3 or 4
+   Use the shelf itself as the ruler: a 750ml bottle is about 3 inches across,
+   so a shelf that reads about five bottle-widths deep holds up to five rows.
+   If you genuinely cannot judge depth, report 1 and set confidence "low".
+   Never inflate rowsDeep to be helpful — a wrong depth corrupts the
+   calibration that corrects your work.
+
+Identification:
+- Match against the catalog below and report the name exactly as written.
+- Group by product. Two products sharing a closure colour but differing by
+  label are separate entries.
+- If you can read a size, report it.
+
+Unidentified stock still counts. If you see closures you cannot name, report
+them with a descriptive name like "Unidentified — copper screwcap, clear glass"
+and confidence "low". Never drop stock.
+
+For countedBy, say what you actually saw — "5 gold capsules front, 2 more
+partly showing between them, lane runs about 3 deep". This is how the operator
+checks your work in one glance.
 
 Category must be exactly one of: wine, liquor, na, beer.
 Wine includes all sparkling and champagne. Liquor includes liqueurs and cordials.
-NA covers soda, water, juice, mixers and non-alcoholic aperitifs.`;
+NA covers soda, water, juice, mixers, coffee, tea and non-alcoholic aperitifs.`;
 
 const SCHEMA = {
   type: 'object',
@@ -219,12 +277,14 @@ const SCHEMA = {
           name:         { type: 'string' },
           catalogId:    { type: 'string' },
           size:         { type: 'string' },
-          visibleCount: { type: 'integer' },
+          frontCount:   { type: 'integer' },
+          partialCount: { type: 'integer' },
+          rowsDeep:     { type: 'integer' },
           countedBy:    { type: 'string' },
           confidence:   { type: 'string', enum: ['high', 'medium', 'low'] },
           category:     { type: 'string', enum: ['wine', 'liquor', 'na', 'beer'] }
         },
-        required: ['name', 'catalogId', 'size', 'visibleCount', 'countedBy', 'confidence', 'category'],
+        required: ['name', 'catalogId', 'size', 'frontCount', 'partialCount', 'rowsDeep', 'countedBy', 'confidence', 'category'],
         additionalProperties: false
       }
     },
@@ -409,17 +469,25 @@ document.getElementById('btn-analyze').onclick = async () => {
 
   try {
     const out = await readShelf(current.shots, loc.name);
-    current.items = (out.items || []).map(it => ({
-      name: it.name,
-      catalogId: it.catalogId || '',
-      size: it.size || '',
-      category: it.category || 'wine',
-      visible: it.visibleCount,
-      total: applyFactor(loc, it.visibleCount),
-      countedBy: it.countedBy || '',
-      confidence: it.confidence || 'medium',
-      edited: false
-    }));
+    current.items = (out.items || []).map(it => {
+      const row = {
+        name: it.name,
+        catalogId: it.catalogId || '',
+        size: it.size || '',
+        category: it.category || 'wine',
+        front: Math.max(0, it.frontCount | 0),
+        partial: Math.max(0, it.partialCount | 0),
+        deep: Math.min(6, Math.max(1, it.rowsDeep | 0 || 1)),
+        countedBy: it.countedBy || '',
+        confidence: it.confidence || 'medium',
+        edited: false
+      };
+      row.raw = rawEstimate({ frontCount: row.front, partialCount: row.partial, rowsDeep: row.deep });
+      row.total = estimateFor(loc, { frontCount: row.front, partialCount: row.partial,
+                                     rowsDeep: row.deep, catalogId: row.catalogId, name: row.name });
+      row.prior = priorFor(loc.id, row);
+      return row;
+    });
     status.textContent = out.shelfNotes
       ? out.shelfNotes
       : `${current.items.length} products read. Check the numbers.`;
@@ -435,22 +503,29 @@ document.getElementById('btn-analyze').onclick = async () => {
 
 function renderResults() {
   const loc = locations.find(l => l.id === current.locationId);
-  const f = depthFactor(loc);
   const box = document.getElementById('results');
   box.innerHTML = '';
 
-  current.items.forEach((it, idx) => {
+  current.items.forEach(it => {
     const el = document.createElement('div');
     el.className = 'res' + (it.edited ? ' edited' : '');
+
+    const lane = `${it.front} front` +
+      (it.partial ? ` + ${it.partial} partly showing` : '') +
+      (it.deep > 1 ? ` · lane ~${it.deep} deep` : ' · one deep');
+
+    const priorBit = it.prior
+      ? `<span class="prior">last count ${it.prior.total}</span>`
+      : '';
+
     el.innerHTML =
       `<div class="res-top"><div class="res-name">${esc(it.name)}` +
         (it.size ? ` <span class="res-size">${esc(it.size)}</span>` : '') +
         (it.catalogId ? '' : ` <span class="unlisted">not in catalog</span>`) +
       `</div></div>` +
-      (it.countedBy ? `<div class="res-evidence">Saw: ${esc(it.countedBy)}</div>` : '') +
+      `<div class="res-evidence">${esc(lane)}${priorBit ? ' · ' : ''}${priorBit}</div>` +
+      (it.countedBy ? `<div class="res-evidence dim">${esc(it.countedBy)}</div>` : '') +
       `<div class="res-nums">` +
-        `<div class="numbox"><label>visible</label><span class="v">${it.visible}</span></div>` +
-        (f !== 1 ? `<span class="arrow">→ ×${f.toFixed(2)} →</span>` : '') +
         `<div class="stepper">` +
           `<button data-a="-" aria-label="Decrease">−</button>` +
           `<input type="number" inputmode="numeric" value="${it.total}" min="0">` +
@@ -462,7 +537,10 @@ function renderResults() {
     const setVal = v => {
       const n = Math.max(0, parseInt(v, 10) || 0);
       it.total = n;
-      it.edited = (n !== applyFactor(loc, it.visible));
+      it.edited = (n !== estimateFor(loc, {
+        frontCount: it.front, partialCount: it.partial, rowsDeep: it.deep,
+        catalogId: it.catalogId, name: it.name
+      }));
       input.value = n;
       el.classList.toggle('edited', it.edited);
     };
@@ -476,31 +554,38 @@ function renderResults() {
 
 document.getElementById('btn-confirm').onclick = () => {
   const loc = locations.find(l => l.id === current.locationId);
+  if (!loc.skuSamples) loc.skuSamples = {};
 
-  /* Corrections teach the location its depth. This is the whole point. */
+  /* A correction teaches the product first and the shelf second. */
   let learned = 0;
   current.items.forEach(it => {
-    if (it.edited && it.visible > 0 && it.total > 0) {
-      loc.samples.push({ visible: it.visible, actual: it.total });
+    if (it.edited && it.raw > 0 && it.total > 0) {
+      const k = keyOf(it);
+      (loc.skuSamples[k] = loc.skuSamples[k] || []).push({ est: it.raw, actual: it.total });
+      if (loc.skuSamples[k].length > 12) loc.skuSamples[k] = loc.skuSamples[k].slice(-12);
+      loc.samples.push({ est: it.raw, actual: it.total });
       learned++;
     }
   });
-  if (loc.samples.length > 40) loc.samples = loc.samples.slice(-40);
+  if (loc.samples.length > 60) loc.samples = loc.samples.slice(-60);
   store.set(K.locations, locations);
 
-  session.counts[loc.id] = {
-    locationName: loc.name,
-    at: new Date().toISOString(),
-    items: current.items.map(i => ({
-      name: i.name, catalogId: i.catalogId || '', size: i.size, category: i.category,
-      visible: i.visible, total: i.total, edited: i.edited
-    }))
-  };
+  const items = current.items.map(i => ({
+    name: i.name, catalogId: i.catalogId, size: i.size, category: i.category,
+    front: i.front, partial: i.partial, deep: i.deep, total: i.total, edited: i.edited
+  }));
+
+  session.counts[loc.id] = { locationName: loc.name, at: new Date().toISOString(), items };
   store.set(K.session, session);
 
+  /* History is what makes the next count easier than this one. */
+  const hist = store.get(K.history, {});
+  hist[loc.id] = { at: new Date().toISOString(), items };
+  store.set(K.history, hist);
+
   toast(learned
-    ? `Saved. ${learned} correction${learned === 1 ? '' : 's'} — ${loc.name} now ${factorLabel(loc)}`
-    : 'Saved.', 3200);
+    ? `Saved. ${learned} correction${learned === 1 ? '' : 's'} learned for ${loc.name}.`
+    : 'Saved.', 3000);
   show('count');
 };
 
