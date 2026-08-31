@@ -119,10 +119,21 @@ function catalogBlock() {
     `label, so lead with the cues: cap and capsule colour, liquid colour, glass shape.\n\n` +
     `ALL LIQUOR IS 1L. The operator counts every spirit and liqueur bottle as a\n` +
     `1L unit, so do not try to tell a 750 from a litre. Report the 1L SKU.\n\n` +
-    `SIZE STILL MATTERS FOR WINE. Splits (187ml, about 7.5in tall), halves\n` +
-    `(375ml, about 9.5in) and full bottles (750ml, about 12in) are separate SKUs\n` +
-    `and look obviously different in height. Moet, Ferrari, Miraval, Whispering\n` +
-    `Angel and Une Femme each appear in more than one format.\n\n` +
+    `SIZE STILL MATTERS FOR WINE, AND THE CAPSULE WILL NOT TELL YOU.\n` +
+    `Splits (187ml, about 7.5in), halves (375ml, about 9.5in) and full bottles\n` +
+    `(750ml, about 12in) are separate SKUs. These are stocked in more than one\n` +
+    `format, and the formats carry the SAME capsule, foil colour and label art:\n` +
+    `  Whispering Angel Rose      750ml and 375ml  identical gold checkerboard\n` +
+    `  Miraval Cotes de Provence  750ml and 375ml  identical gold capsule\n` +
+    `  Moet Imperial              750ml and 187ml  identical gold foil, red seal\n` +
+    `  Ferrari / Une Femme        smaller formats  identical closures\n` +
+    `For any of these, DO NOT group by closure. Grouping by capsule colour merges\n` +
+    `two products into one line and loses the smaller format entirely. Separate\n` +
+    `them by BOTTLE BODY: compare glass height and shoulder against neighbours.\n` +
+    `A 375ml stands about three quarters the height of a 750ml beside it and\n` +
+    `looks stubby; a 187ml is under half. Report each format as its own entry.\n` +
+    `If a block clearly contains two heights, it is TWO entries, even when every\n` +
+    `capsule in it looks the same.\n\n` +
     `NEVER count a SKU whose name contains "(generic)". Those are Craftable pour-\n` +
     `tracking placeholders, not bottles that exist on a shelf.\n\n` +
     (menuList.length
@@ -584,15 +595,31 @@ document.getElementById('btn-confirm').onclick = () => {
   const loc = locations.find(l => l.id === current.locationId);
   if (!loc.skuSamples) loc.skuSamples = {};
 
-  /* A correction teaches the product first and the shelf second. */
-  let learned = 0;
+  /* A correction teaches the product first and the shelf second — but only the
+     product learns from a wild correction.
+
+     A depth misread is a modest error: a lane read 3 deep that is really 2 lands
+     inside roughly half to double. A correction far outside that band almost
+     never means "your depth was wrong". It means the read was wrong about WHAT
+     it was looking at — two SKUs merged into one line, or a product misidentified.
+     Generalising that to the shelf factor would drag every other lane down with
+     it. Observed live: reading a Whispering Angel block as one SKU instead of a
+     750 and a 375 produced a 24 that should have been 10, and feeding that ratio
+     to the shelf cut a perfectly good Scharffenberger count from 15 to 8. */
+  let learned = 0, productOnly = 0;
   current.items.forEach(it => {
     if (it.edited && it.raw > 0 && it.total > 0) {
       const k = keyOf(it);
       (loc.skuSamples[k] = loc.skuSamples[k] || []).push({ est: it.raw, actual: it.total });
       if (loc.skuSamples[k].length > 12) loc.skuSamples[k] = loc.skuSamples[k].slice(-12);
-      loc.samples.push({ est: it.raw, actual: it.total });
-      learned++;
+
+      const r = it.total / it.raw;
+      if (r >= 0.5 && r <= 2) {
+        loc.samples.push({ est: it.raw, actual: it.total });
+        learned++;
+      } else {
+        productOnly++;   // too extreme to be a depth error; keep it off the shelf
+      }
     }
   });
   if (loc.samples.length > 60) loc.samples = loc.samples.slice(-60);
@@ -611,9 +638,11 @@ document.getElementById('btn-confirm').onclick = () => {
   hist[loc.id] = { at: new Date().toISOString(), items };
   store.set(K.history, hist);
 
-  toast(learned
-    ? `Saved. ${learned} correction${learned === 1 ? '' : 's'} learned for ${loc.name}.`
-    : 'Saved.', 3000);
+  toast(
+    learned || productOnly
+      ? `Saved. ${learned + productOnly} correction${learned + productOnly === 1 ? '' : 's'}` +
+        (productOnly ? ` — ${productOnly} too large to apply shelf-wide` : '')
+      : 'Saved.', 3200);
   show('count');
 };
 
