@@ -106,6 +106,7 @@ async function loadCatalog() {
 function catalogBlock() {
   if (!catalog || !catalog.items || !catalog.items.length) return '';
   const onShelf = catalog.items.filter(it => it.shelf !== false);
+  const menuList = catalog.items.filter(it => it.menu);
   const backHouse = catalog.items.filter(it => it.shelf === false);
   const lines = onShelf.map(it => {
     const dims = catalog.shapes && catalog.shapes[it.shape];
@@ -116,13 +117,22 @@ function catalogBlock() {
     `Match what you see against this list and report the catalog name EXACTLY as\n` +
     `written, with its id in catalogId. Matching a known SKU beats reading a blurry\n` +
     `label, so lead with the cues: cap and capsule colour, liquid colour, glass shape.\n\n` +
-    `SIZE MATTERS. Many products appear twice at 750ml and 1L. A 1L bottle stands\n` +
-    `visibly taller — roughly 13in vs 11.5in — and is usually slightly wider. When\n` +
-    `two bottles of the same brand differ in height on the same shelf, that is the\n` +
-    `750 and the 1L. If you genuinely cannot tell, pick the 750ml SKU and set\n` +
-    `confidence "low" rather than inventing certainty.\n\n` +
+    `ALL LIQUOR IS 1L. The operator counts every spirit and liqueur bottle as a\n` +
+    `1L unit, so do not try to tell a 750 from a litre. Report the 1L SKU.\n\n` +
+    `SIZE STILL MATTERS FOR WINE. Splits (187ml, about 7.5in tall), halves\n` +
+    `(375ml, about 9.5in) and full bottles (750ml, about 12in) are separate SKUs\n` +
+    `and look obviously different in height. Moet, Ferrari, Miraval, Whispering\n` +
+    `Angel and Une Femme each appear in more than one format.\n\n` +
     `NEVER count a SKU whose name contains "(generic)". Those are Craftable pour-\n` +
     `tracking placeholders, not bottles that exist on a shelf.\n\n` +
+    (menuList.length
+      ? `*** ON THE MENU — ${menuList.length} products. GET THESE RIGHT. ***\n` +
+        `These are poured and sold. An error here costs the operator money; an\n` +
+        `error elsewhere is a rounding note. If a menu product might be in the\n` +
+        `photo, look again before you finalise its numbers, and prefer reporting\n` +
+        `it at low confidence over omitting it.\n` +
+        menuList.map(it => `  ${it.id} ${it.name}`).join('\n') + `\n\n`
+      : '') +
     `=== BOTTLES, CANS AND PACKS (${onShelf.length}) ===\n` +
     `id|name|subcategory[dia]|how to recognise it\n` +
     lines.join('\n') +
@@ -187,6 +197,13 @@ function factorLabel(loc) {
          (skus === 1 ? '' : 's') + ' tuned';
 }
 
+function isMenu(it) {
+  if (!catalog || !catalog.items) return false;
+  const k = keyOf(it);
+  return catalog.items.some(c => c.menu &&
+    ((c.id || '').toLowerCase() === k || (c.name || '').toLowerCase() === k));
+}
+
 /* ---------- priors ----------
    Inventory repeats. What this shelf held last time is the strongest single
    clue about what it holds now, and it costs the operator nothing. */
@@ -247,6 +264,10 @@ For each product, report three separate things:
    If you genuinely cannot judge depth, report 1 and set confidence "low".
    Never inflate rowsDeep to be helpful — a wrong depth corrupts the
    calibration that corrects your work.
+
+COUNT EVERY BOTTLE AS ONE FULL UNIT. A bottle that is open, half gone, or has a
+pour spout or a Coravin cap in it is still one unit. Never discount for fill
+level and never mention it.
 
 Identification:
 - Match against the catalog below and report the name exactly as written.
@@ -506,9 +527,10 @@ function renderResults() {
   const box = document.getElementById('results');
   box.innerHTML = '';
 
-  current.items.forEach(it => {
+  const ordered = current.items.slice().sort((a, b) => (isMenu(b) ? 1 : 0) - (isMenu(a) ? 1 : 0));
+  ordered.forEach(it => {
     const el = document.createElement('div');
-    el.className = 'res' + (it.edited ? ' edited' : '');
+    el.className = 'res' + (it.edited ? ' edited' : '') + (isMenu(it) ? ' is-menu' : '');
 
     const lane = `${it.front} front` +
       (it.partial ? ` + ${it.partial} partly showing` : '') +
@@ -522,6 +544,7 @@ function renderResults() {
       `<div class="res-top"><div class="res-name">${esc(it.name)}` +
         (it.size ? ` <span class="res-size">${esc(it.size)}</span>` : '') +
         (it.catalogId ? '' : ` <span class="unlisted">not in catalog</span>`) +
+        (isMenu(it) ? ` <span class="menu-pill">menu</span>` : '') +
       `</div></div>` +
       `<div class="res-evidence">${esc(lane)}${priorBit ? ' · ' : ''}${priorBit}</div>` +
       (it.countedBy ? `<div class="res-evidence dim">${esc(it.countedBy)}</div>` : '') +
@@ -694,11 +717,15 @@ function renderSetup() {
     cs.innerHTML =
       `<div class="cat-stat">` +
       `<div><span class="n">${n}</span><span class="l">products</span></div>` +
+      `<div><span class="n">${catalog.items.filter(i => i.menu).length}</span><span class="l">on the menu</span></div>` +
       `<div><span class="n">${solid}</span><span class="l">strong cues</span></div>` +
       `<div><span class="n">${need}</span><span class="l">need a photo</span></div>` +
       `</div>` +
       (need ? `<div class="hint">Needs a reference shot: ` +
         esc(catalog.items.filter(i => i.needs_photo).map(i => i.name).join(', ')) + `</div>` : '') +
+      ((catalog.menu_no_sku || []).length
+        ? `<div class="gap-warn"><strong>On the menu, no SKU in Craftable:</strong><br>` +
+          esc(catalog.menu_no_sku.join(' · ')) + `</div>` : '') +
       `<div class="hint">v${esc(catalog.version || '?')} · ` +
       `${catalog.items.filter(i => i.cat === 'wine').length} wine · ` +
       `${catalog.items.filter(i => i.cat === 'liquor').length} liquor · ` +

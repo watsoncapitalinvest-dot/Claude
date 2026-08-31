@@ -9,6 +9,7 @@ is minimal — the model does not need help. Where two SKUs differ only by size
 or expression, the cue names the discriminator explicitly.
 """
 import json
+import re
 
 SHAPES = {
     "bordeaux":  {"diameter_in": 3.0, "height_in": 12.0, "desc": "high square shoulders"},
@@ -331,25 +332,101 @@ NA2 = [
  ("Illy Whole Bean Tin Dark 3kg","Coffee","3kg","bulk","Illy tin, dark roast.","medium",0),
 ]
 
+
+# Items appearing on the Neiman Marcus Boca Raton menu. These must be accurate;
+# everything else is secondary. Matched by exact catalog name.
+MENU_ITEMS = {
+ # cocktails
+ "Reyka Vodka 1L", "Espolon Tequila Reposado 750ml", "Campari 1L",
+ "Belvedere Vodka 1L", "Belle de Brillet Pear Liqueur 750ml",
+ "Dos Maderas 5 + 3 Double Aged Rum 750ml", "Glenmorangie 10 Yr 750ml",
+ "Glenmorangie X 750ml", "Kahlua Coffee Liqueur 1L", "Baileys Irish Cream 1L",
+ "St. Germain Elderflower 750ml", "Fiorente Elderflower Liqueur 700ml",
+ "Monin Lavender Syrup 1L", "Monin Strawberry Rose Syrup 1L",
+ "Agave Nectar 1btl",
+ # sparkling
+ "Moet Brut Imperial 750ml", "Moet Imperial 187ml",
+ "Ferrari Rose 375ml", "Scharffenberger 750ml", "Bisol Jeio Prosecco 750ml",
+ "Veuve Clicquot Yellow Label 750ml", "Albrecht Cremant Brut Rose 750ml",
+ "Dom Perignon Luminous 750ml",
+ # whites and rose
+ "Whispering Angel Rose 375ml", "Whispering Angel Rose 750ml",
+ "Attems Pino Grigio 750ml", "Cakebread Sauvignon Blanc 750ml",
+ "Neiman Marcus Chardonnay 750ml", "Sonoma Cutrer Chardonnay 750ml",
+ "Cuvaison Chardonnay 750ml", "Roseblood Rose 750ml",
+ # reds
+ "Belle Glos Pinot Noir 750ml", "Duckhorn Cabernet Sauvignon 18 750ml",
+ # chilled / NA
+ "Tea Republic Pomegranate Green 12fl.oz",
+ "Acqua Panna Natural Spring Water 750ml", "San Pellegrino Spk Water Gls 750ml",
+ "Wolffer Spring In A Bottle 750ml",
+ "Fever Tree Club Soda 200ml 1each", "Fever Tree Ginger Beer 200ml",
+ "Fever Tree Elderflower Tonic 6.76fl.oz", "Fever Tree Ginger Ale 200ml",
+ "Fever Tree Sparkling Sicilian Lemonade 6.76fl.oz",
+ "De Soi Purple Lune NA Aperitif", "Illy Classico Beans 3kg",
+}
+
+# On the menu but with no SKU in the Craftable list. Flagged so they are not
+# silently missed at count time.
+MENU_NO_SKU = [
+ "High West Bourbon (Getaway Rider)",
+ "Giffard Banane du Bresil (Bananas & Pajamas)",
+ "Aplos Arise (Chili Margarita)",
+ "Tost Sparkling (Tost Sangria)",
+ "Lychee liqueur or puree (Lychee White Cosmo)",
+]
+
 def rows(prefix, data, cat):
     out = []
     for i, (name, sub, size, shape, cue, conf, np_) in enumerate(data, 1):
         r = {"id": f"{prefix}{i:02d}", "name": name, "cat": cat, "sub": sub,
              "size": size, "shape": shape, "cues": cue, "confidence": conf,
              "shelf": shape != "bulk"}
+        if name in MENU_ITEMS:
+            r["menu"] = True
         if np_:
             r["needs_photo"] = True
         out.append(r)
     return out
 
+
+def collapse_liquor(items):
+    """The operator counts every liquor bottle as 1L, so the 750/1L SKU pairs
+    are a distinction without a difference at count time. Keep one entry per
+    product, normalised to 1L, and record what it absorbed."""
+    out, seen = [], {}
+    for it in items:
+        if it["cat"] != "liquor":
+            out.append(it); continue
+        base = re.sub(r"\s*\b(750ml|1L|700ml|1\.75L)\b\s*$", "", it["name"]).strip()
+        key = base.lower()
+        if key in seen:
+            prev = seen[key]
+            prev.setdefault("absorbed", []).append(it["name"])
+            if it.get("menu"):
+                prev["menu"] = True
+            continue
+        it = dict(it)
+        it["name"] = base + " 1L"
+        it["size"] = "1L"
+        it["shape"] = "spirit1L" if it["shape"] in ("spirit750", "spirit1L") else it["shape"]
+        it["cues"] = re.sub(r"\s*(Taller than the 750\.|Shorter than the 1L\.|1L is taller\.|"
+                            r"Visibly taller than the 750\.|Size is the only discriminator\.|"
+                            r"Size is the discriminator\.|750 is the shorter one\.|"
+                            r"Same as the 1L but SHORTER\.)", "", it["cues"]).strip()
+        seen[key] = it
+        out.append(it)
+    return out
+
 catalog = {
-    "version": "2026-08-31c",
+    "version": "2026-08-31d",
     "note": ("Master SKU catalog transcribed from the Craftable item list — wine, liquor and "
              "NA Bev complete. 'cues' describe only what survives a bad shelf photo: bottle "
              "colour, capsule/cap colour, label colour, glass shape. Where two SKUs differ only "
              "by size, the cue says so — 1L bottles stand visibly taller than 750ml."),
     "shapes": SHAPES,
-    "items": rows("W", WINE, "wine") + rows("L", LIQUOR, "liquor") + rows("N", NA + NA2, "na"),
+    "items": collapse_liquor(rows("W", WINE, "wine") + rows("L", LIQUOR, "liquor") + rows("N", NA + NA2, "na")),
+    "menu_no_sku": MENU_NO_SKU,
 }
 
 with open("catalog.json", "w") as f:
@@ -362,4 +439,6 @@ print(f"TOTAL  {len(catalog['items'])} SKUs")
 print(f"shelf-visible: {sum(1 for i in catalog[chr(39)+chr(39)] if 0)}") if False else None
 print(f"shelf-visible: {sum(1 for i in catalog['items'] if i['shelf'])}")
 print(f"back-of-house: {sum(1 for i in catalog['items'] if not i['shelf'])}")
+print(f"MENU items: {sum(1 for i in catalog['items'] if i.get('menu'))}")
+print(f"menu items with NO sku: {len(MENU_NO_SKU)}")
 print(f"needs_photo: {sum(1 for i in catalog['items'] if i.get('needs_photo'))}")
