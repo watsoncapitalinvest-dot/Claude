@@ -1,6 +1,6 @@
 /* Bar Count — offline shell cache. API calls always go to the network. */
 const CACHE = 'barcount-v1';
-const SHELL = ['./', './index.html', './app.css', './app.js', './manifest.webmanifest'];
+const SHELL = ['./', './index.html', './app.css', './app.js', './manifest.webmanifest', './catalog.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

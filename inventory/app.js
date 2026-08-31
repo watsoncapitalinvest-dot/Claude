@@ -49,7 +49,8 @@ const K = {
   key:       'bc-apikey',
   locations: 'bc-locations',
   cases:     'bc-cases',
-  session:   'bc-session'
+  session:   'bc-session',
+  catalog:   'bc-catalog'
 };
 
 /* ---------- default locations (edit in Setup) ---------- */
@@ -80,7 +81,45 @@ if (!locations) {
 
 let caseSizes = store.get(K.cases, {});   // { "product name lowercased": unitsPerCase }
 let session   = store.get(K.session, newSession());
+let catalog   = store.get(K.catalog, null);  // master SKU list, see catalog.json
 let current   = null;                      // { locationId, shots:[dataURL], items:[] }
+
+/* Catalog ships with the app and is cached so the app works offline.
+   A newer catalog.json on the server always wins. */
+async function loadCatalog() {
+  try {
+    const res = await fetch('catalog.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error('no catalog');
+    const fresh = await res.json();
+    if (fresh && Array.isArray(fresh.items)) {
+      catalog = fresh;
+      store.set(K.catalog, fresh);
+    }
+  } catch (e) {
+    /* offline or missing — keep whatever's cached */
+  }
+  return catalog;
+}
+
+/* Compact catalog rendering for the prompt. Stable byte-for-byte so it caches. */
+function catalogBlock() {
+  if (!catalog || !catalog.items || !catalog.items.length) return '';
+  const lines = catalog.items.map(it => {
+    const dims = catalog.shapes && catalog.shapes[it.shape];
+    const d = dims ? ` [${dims.diameter_in}in dia, ${dims.desc}]` : '';
+    return `${it.id} | ${it.name} | ${it.sub}${d} | ${it.cues}`;
+  });
+  return `\n\nTHIS BAR'S CATALOG (${catalog.items.length} products).\n` +
+    `Match what you see against this list. Report the catalog name EXACTLY as written\n` +
+    `and put its id in catalogId. Matching a known SKU is far more reliable than\n` +
+    `reading a blurry label, so use the cues — capsule colour, bottle shape, label art.\n\n` +
+    `id | name | subcategory [bottle] | how to recognise it\n` +
+    lines.join('\n') +
+    `\n\nIf something genuinely is not on this list, still report it: use your own\n` +
+    `descriptive name and leave catalogId empty. Never force a bad match, and never\n` +
+    `drop stock just because it is unlisted — the catalog is incomplete (liquor, beer\n` +
+    `and NA products are not in it yet).`;
+}
 
 function newSession() {
   return { id: Date.now(), started: new Date().toISOString(), counts: {} };
@@ -164,13 +203,14 @@ const SCHEMA = {
         type: 'object',
         properties: {
           name:         { type: 'string' },
+          catalogId:    { type: 'string' },
           size:         { type: 'string' },
           visibleCount: { type: 'integer' },
           countedBy:    { type: 'string' },
           confidence:   { type: 'string', enum: ['high', 'medium', 'low'] },
           category:     { type: 'string', enum: ['wine', 'liquor', 'na', 'beer'] }
         },
-        required: ['name', 'size', 'visibleCount', 'countedBy', 'confidence', 'category'],
+        required: ['name', 'catalogId', 'size', 'visibleCount', 'countedBy', 'confidence', 'category'],
         additionalProperties: false
       }
     },
@@ -209,7 +249,12 @@ async function readShelf(shots, locName) {
       model: MODEL,
       max_tokens: 16000,
       thinking: { type: 'adaptive' },
-      system: SYSTEM_PROMPT,
+      /* Catalog is stable across every shelf, so cache it — the whole list is
+         re-sent on each read and would otherwise be paid for every time. */
+      system: [
+        { type: 'text', text: SYSTEM_PROMPT + catalogBlock(),
+          cache_control: { type: 'ephemeral' } }
+      ],
       output_config: { format: { type: 'json_schema', schema: SCHEMA } },
       messages: [{ role: 'user', content }]
     })
@@ -352,6 +397,7 @@ document.getElementById('btn-analyze').onclick = async () => {
     const out = await readShelf(current.shots, loc.name);
     current.items = (out.items || []).map(it => ({
       name: it.name,
+      catalogId: it.catalogId || '',
       size: it.size || '',
       category: it.category || 'wine',
       visible: it.visibleCount,
@@ -385,6 +431,7 @@ function renderResults() {
     el.innerHTML =
       `<div class="res-top"><div class="res-name">${esc(it.name)}` +
         (it.size ? ` <span class="res-size">${esc(it.size)}</span>` : '') +
+        (it.catalogId ? '' : ` <span class="unlisted">not in catalog</span>`) +
       `</div></div>` +
       (it.countedBy ? `<div class="res-evidence">Saw: ${esc(it.countedBy)}</div>` : '') +
       `<div class="res-nums">` +
@@ -431,7 +478,7 @@ document.getElementById('btn-confirm').onclick = () => {
     locationName: loc.name,
     at: new Date().toISOString(),
     items: current.items.map(i => ({
-      name: i.name, size: i.size, category: i.category,
+      name: i.name, catalogId: i.catalogId || '', size: i.size, category: i.category,
       visible: i.visible, total: i.total, edited: i.edited
     }))
   };
@@ -538,6 +585,25 @@ function renderSetup() {
   document.getElementById('key-status').textContent =
     store.get(K.key, '') ? 'Key saved in this browser.' : 'No key saved.';
 
+  const cs = document.getElementById('cat-summary');
+  if (!catalog || !catalog.items) {
+    cs.innerHTML = '<div class="hint">No catalog loaded.</div>';
+  } else {
+    const n = catalog.items.length;
+    const solid = catalog.items.filter(i => i.confidence === 'high').length;
+    const need = catalog.items.filter(i => i.needs_photo).length;
+    cs.innerHTML =
+      `<div class="cat-stat">` +
+      `<div><span class="n">${n}</span><span class="l">products</span></div>` +
+      `<div><span class="n">${solid}</span><span class="l">strong cues</span></div>` +
+      `<div><span class="n">${need}</span><span class="l">need a photo</span></div>` +
+      `</div>` +
+      (need ? `<div class="hint">Needs a reference shot: ` +
+        esc(catalog.items.filter(i => i.needs_photo).map(i => i.name).join(', ')) + `</div>` : '') +
+      `<div class="hint">Catalog version ${esc(catalog.version || '?')}. Wine section only — ` +
+      `liquor, beer and NA still to add.</div>`;
+  }
+
   const lb = document.getElementById('setup-locs');
   lb.innerHTML = '';
   locations.forEach(loc => {
@@ -625,3 +691,4 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 show('count');
+loadCatalog().then(() => { if (views.setup.classList.contains('is-on')) renderSetup(); });
