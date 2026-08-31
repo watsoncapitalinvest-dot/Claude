@@ -104,7 +104,9 @@ async function loadCatalog() {
 /* Compact catalog rendering for the prompt. Stable byte-for-byte so it caches. */
 function catalogBlock() {
   if (!catalog || !catalog.items || !catalog.items.length) return '';
-  const lines = catalog.items.map(it => {
+  const onShelf = catalog.items.filter(it => it.shelf !== false);
+  const backHouse = catalog.items.filter(it => it.shelf === false);
+  const lines = onShelf.map(it => {
     const dims = catalog.shapes && catalog.shapes[it.shape];
     const d = dims && dims.diameter_in ? ` [${dims.diameter_in}in]` : '';
     return `${it.id}|${it.name}|${it.sub}${d}|${it.cues}`;
@@ -120,8 +122,14 @@ function catalogBlock() {
     `confidence "low" rather than inventing certainty.\n\n` +
     `NEVER count a SKU whose name contains "(generic)". Those are Craftable pour-\n` +
     `tracking placeholders, not bottles that exist on a shelf.\n\n` +
+    `=== BOTTLES, CANS AND PACKS (${onShelf.length}) ===\n` +
     `id|name|subcategory[dia]|how to recognise it\n` +
     lines.join('\n') +
+    `\n\n=== BACK-OF-HOUSE BULK (${backHouse.length}) ===\n` +
+    `Tins, bags, cases, jugs and boxes. These live in dry storage, not on a bar\n` +
+    `shelf, and are identified by package text rather than bottle shape. Match one\n` +
+    `only if you are actually looking at that package. Names only:\n` +
+    backHouse.map(it => `${it.id}|${it.name}`).join('\n') +
     `\n\nIf something is genuinely not on this list, still report it: use your own\n` +
     `descriptive name and leave catalogId empty. Never force a bad match, and never\n` +
     `drop stock just because it is unlisted.`;

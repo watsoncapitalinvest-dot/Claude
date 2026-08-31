@@ -249,24 +249,107 @@ NA = [
  ("Illy Iper Bold Roast 30ct","Coffee","30ct","bulk","Coffee capsules.","medium",0),
 ]
 
+
+NA2 = [
+ ("Orange Juice (gal)","Juice","1gal","bulk","Foodservice jug.","medium",0),
+ ("Lime Juice (fl.oz)","Juice","fl.oz","bulk","Foodservice jug or bottle.","medium",0),
+ ("Lemon Juice (fl.oz)","Juice","fl.oz","bulk","Foodservice jug or bottle.","medium",0),
+ ("Juice, Orange 1fl.oz","Juice","1fl.oz","cansm","Small single-serve orange juice.","medium",0),
+ ("Juice - Lime 1 Gal 1gal","Juice","1gal","bulk","Gallon jug.","medium",0),
+ ("Illy Wh Bean Intenso 250G Can 8839 250g","Coffee","250g","bulk","Illy pressurised tin, 250g.","high",0),
+ ("Coffee, Folgers Instant Regular 8oz","Coffee","8oz","bulk","Instant coffee tub.","high",0),
+ ("Illy Whole Bean Tin Decaf 1.5kg","Coffee","1.5kg","bulk","Illy tin, DECAF.","high",0),
+ ("Dammann Tea Jardin Bleu Tea 96ct","Tea","96ct","bulk","Tea box.","medium",0),
+ ("Dammann Chamomile Sachet 84 Ct 1each","Tea","84ct","bulk","Tea box.","medium",0),
+ ("Bloody Mary Agalima Organic 1L","Mixer","1L","syrup1L","Agalima organic Bloody Mary mix, 1L.","medium",0),
+ ("Fever Tree Club Soda Gls 6.8fl.oz","Mixer","200ml","mixer200","Small clear glass, Fever-Tree tree logo, CLUB SODA.","high",0),
+ ("Fever Tree Club Soda 6.8fl.oz","Mixer","200ml","mixer200","Duplicate-size club soda SKU.","medium",0),
+ ("Agave Nectar 1btl","Syrup","1btl","syrup1L","Agave syrup bottle.","medium",0),
+ ("Apple Juice 1fl.oz","Juice","1fl.oz","cansm","Small apple juice.","medium",0),
+ ("Fever Tree Tonic Gls 6.8fl.oz","Mixer","200ml","mixer200","Small clear glass, YELLOW-white Fever-Tree label, PREMIUM TONIC WATER.","high",0),
+ ("Juice, Cranberry 64fl.oz","Juice","64oz","bulk","Ocean Spray foodservice bottle, red label.","high",0),
+ ("Fever Tree Lime & Yuzu 1btl","Mixer","200ml","mixer200","Fever-Tree, lime and yuzu colourway.","medium",0),
+ ("Fever Tree Club Soda 200ml 1each","Mixer","200ml","mixer200","Fever-Tree club soda, 200ml glass.","high",0),
+ ("Fever Tree Soda 1btl","Mixer","200ml","mixer200","Generic Fever-Tree soda line item.","low",1),
+ ("Fever Tree Pink Grapefruit Gls 6.8fl.oz","Mixer","200ml","mixer200","Small clear glass, PINK Fever-Tree label, GRAPEFRUIT.","high",0),
+ ("Luxardo Maraschino Cherries 400g","Garnish","400g","bulk","Squat dark jar, Luxardo label. Garnish, not a drink.","high",0),
+ ("Juice, Cranberry White 64fl.oz","Juice","64oz","bulk","White cranberry, foodservice bottle.","medium",0),
+ ("Gatorade Glacier Frost 20fl.oz","Sports","20oz","bulk","Light blue Gatorade bottle.","high",0),
+ ("Luxardo Maraschino Cherries 14fl.oz","Garnish","14oz","bulk","Smaller Luxardo jar.","high",0),
+ ("Lemonade 1gal","Juice","1gal","bulk","Gallon jug.","medium",0),
+ ("Q Mixers Ginger Beer Gls 6.7fl.oz","Mixer","200ml","mixer200","Q Mixers GLASS bottle, PURPLE crown cap, GINGER BEER.","high",0),
+ ("Q Mixers Ginger Ale Gls 6.7fl.oz","Mixer","200ml","mixer200","Q Mixers glass bottle, ginger ale colourway.","high",0),
+ ("Q Mixers Pink Grapefruit Gls 6.7fl.oz","Mixer","200ml","mixer200","Q Mixers glass bottle, pink grapefruit.","high",0),
+ ("Puree Real Strawberry 16fl.oz","Puree","16oz","bulk","Re'al squeeze bottle, red.","medium",0),
+ ("Q Mixers Club Soda Gls 6.7fl.oz","Mixer","200ml","mixer200","Q Mixers glass bottle, club soda.","high",0),
+ ("Re'Al Strawberry Puree Infused Syrup 16.9fl.oz","Puree","16.9oz","bulk","Re'al squeeze bottle.","medium",0),
+ ("Real Puree/Syrup 16fl.oz","Puree","16oz","bulk","Generic Re'al line item.","low",1),
+ ("Q Mixers Tonic Gls 6.7fl.oz","Mixer","200ml","mixer200","Q Mixers GLASS bottle, tonic. Distinct from the 7.5oz can.","high",0),
+ ("Re'Al Peach Puree Infused Syrup 16.9fl.oz","Puree","16.9oz","bulk","Re'al squeeze bottle.","medium",0),
+ ("Re'Al Black Cherry Puree Infused Syrup 16.9fl.oz","Puree","16.9oz","bulk","Re'al squeeze bottle.","medium",0),
+ ("Sparkling Sicilian Lemonade 6.7fl.oz","Mixer","200ml","mixer200","Fever-Tree Sicilian lemonade, yellow label.","high",0),
+ ("Real Syrup 16.9fl.oz","Syrup","16.9oz","bulk","Generic Re'al line item.","low",1),
+ ("Monin Hibiscus Syrup 1L","Syrup","1L","syrup1L","Monin 1L, deep pink-red.","medium",0),
+ ("Dammann Earl Grey Blk Tea Loose 1ct","Tea","1ct","bulk","Loose tea.","medium",0),
+ ("Coke Mexican Glass 355ml","Soda","355ml","water750","GLASS Coca-Cola bottle, Mexican Coke. Distinct from the cans.","high",0),
+ ("Bigelow Mint Medley 1ct","Tea","1ct","bulk","Tea box.","medium",0),
+ ("San Pellegrino Spk Water Gls 500ml","Water","500ml","water750","500ml green glass Pellegrino, red star.","high",0),
+ ("V8 46oz","Juice","46oz","bulk","Large V8 bottle.","high",0),
+ ("Q Mixers Club Soda 7.5 7.5fl.oz","Mixer","7.5oz","cansm","Q Mixers slim CAN, club soda.","high",0),
+ ("Q Drinks Ginger Ale 7.5fl.oz","Mixer","7.5oz","cansm","Q Drinks can, ginger ale.","medium",0),
+ ("Fever Tree Club Soda 16.9fl.oz","Mixer","500ml","water750","Larger 500ml Fever-Tree bottle.","medium",0),
+ ("Coke 2L","Soda","2L","bulk","2L plastic bottle, red label.","high",0),
+ ("Sprite 2L","Soda","2L","bulk","2L plastic bottle, green label.","high",0),
+ ("Red Bull Energy Drink Blue 12fl.oz","Energy","12oz","can12","Red Bull BLUE EDITION can — distinct from the 8.4oz silver/blue original.","high",0),
+ ("Evian Mineral Spring Water Gls 750ml","Water","750ml","water750","Clear glass Evian, pink/blue label.","high",0),
+ ("Instant Coffee 19oz","Coffee","19oz","bulk","Instant coffee tub.","medium",0),
+ ("Angostura Bitters 7fl.oz","Bitters","7oz","mixer200","Small bottle with an OVERSIZED yellow cap and a cream label too big for the bottle. Unmistakable.","high",0),
+ ("Illy Iper Esp Intenso 50Ct Bag8831 50ct","Coffee","50ct","bulk","Illy capsule bag.","medium",0),
+ ("Illy Classico Iper Capsules 30each","Coffee","30ct","bulk","Illy capsule pack.","medium",0),
+ ("Illy Classico Beans 3kg","Coffee","3kg","bulk","Illy bean bag.","medium",0),
+ ("Squirt Soda 12fl.oz","Soda","12oz","can12","Yellow-green Squirt can.","high",0),
+ ("Coke/Diet Coke Classic 7.5fl.oz","Soda","7.5oz","cansm","Mini Coke can.","high",0),
+ ("Blood Orange Juice 32fl.oz","Juice","32oz","bulk","Blood orange juice bottle.","medium",0),
+ ("Filthy Bloody Mary Mix Pouch 32fl.oz","Mixer","32oz","bulk","Filthy brand pouch.","medium",0),
+ ("Coffee Instant Individual Decaf 80ct","Coffee","80ct","bulk","Instant sachets.","medium",0),
+ ("Dammann Breakfast Black Tea 1kg","Tea","1kg","bulk","Loose tea.","medium",0),
+ ("Fever Tree Elderflower Tonic 6.76fl.oz","Mixer","200ml","mixer200","Fever-Tree, elderflower colourway.","high",0),
+ ("Fever Tree Ginger Beer 200ml","Mixer","200ml","mixer200","Fever-Tree ginger beer, 200ml glass.","high",0),
+ ("Agalima Bloody Mary Mix 1L","Mixer","1L","syrup1L","Agalima 1L Bloody Mary mix.","medium",0),
+ ("Club Soda Dry 10fl.oz","Mixer","10oz","cansm","Dry brand club soda.","medium",0),
+ ("Illy Decaf Frac Pack 192Gr 8894 192g","Coffee","192g","bulk","Illy fractional pack.","medium",0),
+ ("Illy Espresso Tin 1kg","Coffee","1kg","bulk","Illy tin.","medium",0),
+ ("Illy Cold Brew 7895 5L","Coffee","5L","bulk","Cold brew container.","medium",0),
+ ("Illy Ipercapsule Espresso Decaf 18ct","Coffee","18ct","bulk","Illy capsules.","medium",0),
+ ("Illy Cold Brew Pillow Pk 7161 1case","Coffee","1case","bulk","Cold brew case.","medium",0),
+ ("Illy Wh Bean Classico 250G Can8841 250g","Coffee","250g","bulk","Illy tin, CLASSICO.","medium",0),
+ ("Illy Wh Bean Decaf 250G Can 8835 250g","Coffee","250g","bulk","Illy tin, DECAF.","medium",0),
+ ("Illy Iper Esp Intenso 30Ct Bag9887 30ct","Coffee","30ct","bulk","Illy capsule bag.","medium",0),
+ ("Illy Intenso Frac Pack 192G 8892 192g","Coffee","192g","bulk","Illy fractional pack.","medium",0),
+ ("Illy Ipercapsule Esp Classico 50C Bag8830 50ct","Coffee","50ct","bulk","Illy capsule bag.","medium",0),
+ ("Illy Whole Bean Tin Med 3kg","Coffee","3kg","bulk","Illy tin, medium roast.","medium",0),
+ ("Illy Whole Bean Tin Dark 3kg","Coffee","3kg","bulk","Illy tin, dark roast.","medium",0),
+]
+
 def rows(prefix, data, cat):
     out = []
     for i, (name, sub, size, shape, cue, conf, np_) in enumerate(data, 1):
         r = {"id": f"{prefix}{i:02d}", "name": name, "cat": cat, "sub": sub,
-             "size": size, "shape": shape, "cues": cue, "confidence": conf}
+             "size": size, "shape": shape, "cues": cue, "confidence": conf,
+             "shelf": shape != "bulk"}
         if np_:
             r["needs_photo"] = True
         out.append(r)
     return out
 
 catalog = {
-    "version": "2026-08-31b",
+    "version": "2026-08-31c",
     "note": ("Master SKU catalog transcribed from the Craftable item list — wine, liquor and "
              "NA Bev complete. 'cues' describe only what survives a bad shelf photo: bottle "
              "colour, capsule/cap colour, label colour, glass shape. Where two SKUs differ only "
              "by size, the cue says so — 1L bottles stand visibly taller than 750ml."),
     "shapes": SHAPES,
-    "items": rows("W", WINE, "wine") + rows("L", LIQUOR, "liquor") + rows("N", NA, "na"),
+    "items": rows("W", WINE, "wine") + rows("L", LIQUOR, "liquor") + rows("N", NA + NA2, "na"),
 }
 
 with open("catalog.json", "w") as f:
@@ -276,4 +359,7 @@ print(f"wine   {len(WINE)}")
 print(f"liquor {len(LIQUOR)}")
 print(f"na     {len(NA)}")
 print(f"TOTAL  {len(catalog['items'])} SKUs")
+print(f"shelf-visible: {sum(1 for i in catalog[chr(39)+chr(39)] if 0)}") if False else None
+print(f"shelf-visible: {sum(1 for i in catalog['items'] if i['shelf'])}")
+print(f"back-of-house: {sum(1 for i in catalog['items'] if not i['shelf'])}")
 print(f"needs_photo: {sum(1 for i in catalog['items'] if i.get('needs_photo'))}")
