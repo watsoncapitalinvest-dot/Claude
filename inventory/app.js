@@ -266,9 +266,9 @@ For each product, report three separate things:
    calibration that corrects your work.
 
 ALL BEER IS JUST "BEER". Do not identify beer brands. Every beer bottle and
-every beer can, whatever the label, goes into ONE entry named exactly "Beer"
-with catalogId L99. Add them all together. Six-packs and cases count as their
-individual bottles or cans, not as one pack.
+every beer can, whatever the label, goes into ONE entry named exactly "Beer",
+using the catalogId the catalog gives that entry. Add them all together.
+Six-packs and cases count as their individual bottles or cans, not as one pack.
 
 COUNT EVERY BOTTLE AS ONE FULL UNIT. A bottle that is open, half gone, or has a
 pour spout or a Coravin cap in it is still one unit. Never discount for fill

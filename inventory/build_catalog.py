@@ -183,6 +183,8 @@ LIQUOR = [
  ("Herradura Reposado 750ml","Tequila","750ml","spirit750","Clear glass, cream/white label with a horseshoe. Reposado = pale gold.","high",0),
  ("High West Barrel Select 1L","Whiskey","750ml","spirit750","PALE NATURAL CORK, mushroom top. NAVY-CHARCOAL label with HIGH WEST in COPPER caps, BARREL SELECT in copper script, white line-art of stacked barrels and mountains. Embossed lettering on the clear glass shoulder. Deep reddish-amber. ON THE MENU (Getaway Rider).","high",0),
  ("Giffard Banane du Bresil 1L","Liqueur","750ml","spirit750","BLACK neck sleeve printed E. Giffard in gold, SILVER ridged screwcap. E. Giffard script EMBOSSED into the clear glass shoulder. White label with a TORN/DECKLED top edge, GIFFARD DEPUIS 1885 / Banane du Bresil. Golden-amber. ON THE MENU (Bananas & Pajamas).","high",0),
+ ("Aplos Arise 1L","Non-Alc","750ml","spirit750","Non-alcoholic spirit. NOT YET PURCHASED — expect ZERO until the first delivery. ON THE MENU (Chili Margarita).","low",1),
+ ("Tost Sparkling 1L","Non-Alc","750ml","champagne","Non-alcoholic sparkling white tea, cranberry and ginger. Champagne-shaped bottle. NOT YET PURCHASED — expect ZERO until the first delivery. ON THE MENU (Tost Sangria).","low",1),
  ("Beer","Beer","each","can12","ANY beer, bottle or can, any brand. Do not identify the brand — Paulaner, Sapporo, Heineken, Einstok and everything else all report as this one line.","high",0),
 ]
 
@@ -368,15 +370,12 @@ MENU_ITEMS = {
  "Fever Tree Sparkling Sicilian Lemonade 6.76fl.oz",
  "De Soi Purple Lune NA Aperitif", "Illy Classico Beans 3kg",
  "High West Barrel Select 1L", "Giffard Banane du Bresil 1L", "Beer",
+ "Aplos Arise 1L", "Tost Sparkling 1L",
 }
 
 # On the menu but with no SKU in the Craftable list. Flagged so they are not
 # silently missed at count time.
-MENU_NO_SKU = [
- "Aplos Arise (Chili Margarita)",
- "Tost Sparkling (Tost Sangria)",
- "Lychee liqueur or puree (Lychee White Cosmo)",
-]
+MENU_NO_SKU = []
 
 def rows(prefix, data, cat):
     out = []
@@ -421,7 +420,7 @@ def collapse_liquor(items):
     return out
 
 catalog = {
-    "version": "2026-09-01",
+    "version": "2026-09-01b",
     "note": ("Master SKU catalog transcribed from the Craftable item list — wine, liquor and "
              "NA Bev complete. 'cues' describe only what survives a bad shelf photo: bottle "
              "colour, capsule/cap colour, label colour, glass shape. Where two SKUs differ only "
