@@ -181,6 +181,9 @@ LIQUOR = [
  ("Aviation 750ml","Gin","750ml","spirit750","Squarish clear bottle, BLACK label, AVIATION AMERICAN GIN, BATCH DISTILLED.","high",0),
  ("Hendricks 1L","Gin","1L","spirit1L","DARK APOTHECARY bottle, black, diamond label HENDRICK'S GIN, embossed cap.","high",0),
  ("Herradura Reposado 750ml","Tequila","750ml","spirit750","Clear glass, cream/white label with a horseshoe. Reposado = pale gold.","high",0),
+ ("High West Barrel Select 1L","Whiskey","750ml","spirit750","PALE NATURAL CORK, mushroom top. NAVY-CHARCOAL label with HIGH WEST in COPPER caps, BARREL SELECT in copper script, white line-art of stacked barrels and mountains. Embossed lettering on the clear glass shoulder. Deep reddish-amber. ON THE MENU (Getaway Rider).","high",0),
+ ("Giffard Banane du Bresil 1L","Liqueur","750ml","spirit750","BLACK neck sleeve printed E. Giffard in gold, SILVER ridged screwcap. E. Giffard script EMBOSSED into the clear glass shoulder. White label with a TORN/DECKLED top edge, GIFFARD DEPUIS 1885 / Banane du Bresil. Golden-amber. ON THE MENU (Bananas & Pajamas).","high",0),
+ ("Beer","Beer","each","can12","ANY beer, bottle or can, any brand. Do not identify the brand — Paulaner, Sapporo, Heineken, Einstok and everything else all report as this one line.","high",0),
 ]
 
 NA = [
@@ -364,13 +367,12 @@ MENU_ITEMS = {
  "Fever Tree Elderflower Tonic 6.76fl.oz", "Fever Tree Ginger Ale 200ml",
  "Fever Tree Sparkling Sicilian Lemonade 6.76fl.oz",
  "De Soi Purple Lune NA Aperitif", "Illy Classico Beans 3kg",
+ "High West Barrel Select 1L", "Giffard Banane du Bresil 1L", "Beer",
 }
 
 # On the menu but with no SKU in the Craftable list. Flagged so they are not
 # silently missed at count time.
 MENU_NO_SKU = [
- "High West Bourbon (Getaway Rider)",
- "Giffard Banane du Bresil (Bananas & Pajamas)",
  "Aplos Arise (Chili Margarita)",
  "Tost Sparkling (Tost Sangria)",
  "Lychee liqueur or puree (Lychee White Cosmo)",
@@ -396,7 +398,7 @@ def collapse_liquor(items):
     product, normalised to 1L, and record what it absorbed."""
     out, seen = [], {}
     for it in items:
-        if it["cat"] != "liquor":
+        if it["cat"] != "liquor" or it["name"] == "Beer":
             out.append(it); continue
         base = re.sub(r"\s*\b(750ml|1L|700ml|1\.75L)\b\s*$", "", it["name"]).strip()
         key = base.lower()
@@ -419,7 +421,7 @@ def collapse_liquor(items):
     return out
 
 catalog = {
-    "version": "2026-08-31d",
+    "version": "2026-09-01",
     "note": ("Master SKU catalog transcribed from the Craftable item list — wine, liquor and "
              "NA Bev complete. 'cues' describe only what survives a bad shelf photo: bottle "
              "colour, capsule/cap colour, label colour, glass shape. Where two SKUs differ only "
