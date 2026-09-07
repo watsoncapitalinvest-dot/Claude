@@ -79,9 +79,10 @@ def find_league(user, season):
     named = [l for l in lgs if 'scfl' in l['name'].lower() or 'skirt' in l['name'].lower()]
     if len(named) == 1:
         return named[0]
-    for l in lgs:
-        print(f"   {l['league_id']}  {l['name']}")
-    sys.exit('several leagues -- pass --league-id')
+    lgs.sort(key=lambda l: -(l.get('total_rosters') or 0))
+    print(f"  several leagues; taking the largest: {lgs[0]['name']} "
+          f"({lgs[0].get('total_rosters')} teams). Pass --league-id to pin it.")
+    return lgs[0]
 
 
 def snapshot(a):
@@ -189,9 +190,9 @@ def report(log):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--user', default='drsexy')
+    ap.add_argument('--user', default=os.environ.get('SCFL_USER', 'drsexy'))
     ap.add_argument('--season', default='')
-    ap.add_argument('--league-id', default='')
+    ap.add_argument('--league-id', default=os.environ.get('SCFL_LEAGUE_ID', ''))
     ap.add_argument('--week', type=int, default=0)
     ap.add_argument('--report', action='store_true')
     a = ap.parse_args()

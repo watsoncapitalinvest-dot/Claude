@@ -68,6 +68,16 @@ figcaption{font-family:var(--sans);font-size:11.5px;line-height:1.5;color:var(--
 .btrack{flex:1;height:12px;background:#f0ece4;border-radius:3px;overflow:hidden;}
 .btrack i{display:block;height:100%;background:var(--red);}
 .btrack i.t{background:var(--teal);}
+.spark{display:block;width:100%;height:190px;overflow:visible;}
+.spark .grid{stroke:var(--line);stroke-width:1;}
+.spark .ln{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
+.spark .dot{stroke:#fff;stroke-width:1.5;}
+.spark text{font-family:var(--sans);font-size:9px;fill:var(--faint);font-weight:700;}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--sans);font-size:11.5px;
+ color:var(--muted);margin-top:10px;}
+.key i{display:inline-block;width:11px;height:3px;border-radius:2px;margin-right:6px;
+ vertical-align:3px;}
+.verdict{border-left:3px solid var(--red);padding:2px 0 2px 16px;margin:18px 0 0;max-width:64ch;}
 .err{color:var(--red);font-family:var(--sans);font-size:13px;margin-top:10px;}
 .foot{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;font-family:var(--sans);
  font-size:12.5px;color:var(--muted);max-width:72ch;}
@@ -82,6 +92,7 @@ figcaption{font-family:var(--sans);font-size:11.5px;line-height:1.5;color:var(--
 number of players a third or fourth spot would take off the wire this week.</p>
 <div class="rule"></div>
 <div id="main"></div>
+<div id="hist"></div>
 <div class="foot" id="foot"></div>
 </div>
 <script>
@@ -222,6 +233,86 @@ function render(d){
     <br>Reload any time for the current picture. Weekly history is kept by
     <b>scripts/ir_watch.py</b>, which writes one row a week and never rewrites an old one.`;
 }
+
+// ---- the record ------------------------------------------------------------
+// Written weekly by scripts/ir_watch.py through .github/workflows/ir-watch.yml
+// and committed, so it is one shared history rather than a copy per browser,
+// and every row is auditable in the repo's git log.
+function line(rows,key,colour,x,y){
+  const pts=rows.map((r,i)=>[x(i),y(r[key])]);
+  const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  return `<path class="ln" d="${d}" stroke="${colour}"/>`+
+    pts.map(p=>`<circle class="dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="${colour}"/>`).join('');
+}
+function renderHistory(rows,live){
+  if(!rows.length){
+    $('#hist').innerHTML=`<div class="sect">The record</div>
+      <p class="b dim">No weeks logged yet. A GitHub Action takes one reading every Wednesday
+      and commits it, so the history builds itself from here — this section fills in from week one.</p>`;
+    return;
+  }
+  const W=760,H=190,PL=34,PR=12,PT=14,PB=24;
+  const maxY=Math.max(4,...rows.map(r=>Math.max(r.teams_at_cap,r.cost_plus2,r.constrained)));
+  const x=i=>PL+(rows.length<2?(W-PL-PR)/2:i*(W-PL-PR)/(rows.length-1));
+  const y=v=>PT+(H-PT-PB)*(1-v/maxY);
+  const ticks=[0,Math.round(maxY/2),maxY].filter((v,i,a)=>a.indexOf(v)===i);
+  const chart=`<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
+    aria-label="IR pressure by week">
+    ${ticks.map(t=>`<line class="grid" x1="${PL}" x2="${W-PR}" y1="${y(t)}" y2="${y(t)}"/>
+       <text x="${PL-7}" y="${y(t)+3}" text-anchor="end">${t}</text>`).join('')}
+    ${rows.map((r,i)=>`<text x="${x(i)}" y="${H-7}" text-anchor="middle">${r.week}</text>`).join('')}
+    ${line(rows,'teams_at_cap','#c20f16',x,y)}
+    ${line(rows,'constrained','#0e8ab5',x,y)}
+    ${line(rows,'cost_plus2','#9a958c',x,y)}
+  </svg>
+  <div class="key">
+    <span><i style="background:#c20f16"></i>Teams with IR full</span>
+    <span><i style="background:#0e8ab5"></i>Teams actually constrained</span>
+    <span><i style="background:#9a958c"></i>Players a 4th spot would cost</span>
+  </div>`;
+  const rrows=rows.slice().reverse().map(r=>`<tr>
+    <th>Week ${r.week}</th>
+    <td>${r.ir_used_total}<span class="dim">/${r.ir_capacity_total}</span></td>
+    <td>${r.teams_at_cap}</td><td class="dim">${r.teams_empty_ir}</td>
+    <td>${r.stranded_total}</td>
+    <td><b style="color:var(--red)">${r.constrained}</b></td>
+    <td>${r.cost_plus1}</td><td>${r.cost_plus2}</td>
+    <td class="dim">${(r.free_agents||0).toLocaleString()}</td>
+    <td class="dim" style="text-align:left;font-size:11px">${esc((r.stamp||'').slice(0,10))}</td></tr>`).join('');
+  const a=rows[0],b=rows[rows.length-1];
+  const moved=(k)=>b[k]-a[k];
+  const dir=(n)=>n>0?'risen':(n<0?'fallen':'not moved');
+  const summary=rows.length<2
+    ? `<p class="b">One reading so far, week ${b.week}. A single week cannot answer the question —
+       preseason and early-season IR use is the floor, because injuries accumulate. The line above
+       becomes worth reading somewhere around week six.</p>`
+    : `<p class="b">Across ${rows.length} readings, weeks ${a.week} to ${b.week}: teams with a full
+       IR have <b>${dir(moved('teams_at_cap'))}</b> from ${a.teams_at_cap} to ${b.teams_at_cap} of
+       ${b.teams_n}, and the teams genuinely constrained — full IR <em>and</em> still holding an
+       injured player — have gone from ${a.constrained} to <b>${b.constrained}</b>.</p>
+       <p class="b">On that basis a third IR spot would today take <b>${b.cost_plus1}</b> players off
+       the wire and a fourth <b>${b.cost_plus2}</b>, against a pool of
+       ${(b.free_agents||0).toLocaleString()} — ${b.free_agents?((100*b.cost_plus2/b.free_agents).toFixed(2)+'%'):'—'}
+       of it at the outside. The pool itself has gone from ${(a.free_agents||0).toLocaleString()}
+       to ${(b.free_agents||0).toLocaleString()}.</p>
+       <div class="verdict"><p class="b" style="margin:0">Both claims in the original argument are
+       testable here. That most teams do not use the IR they have is the red line. That the pressure
+       only shows up once injuries pile in is whether it climbs. Neither is settled by one
+       week.</p></div>`;
+  $('#hist').innerHTML=`<div class="sect">The record</div>${chart}
+    <figcaption>One reading a week, committed automatically and never rewritten. Every row is in the
+    repository's history, so any figure here can be checked against the day it was taken.</figcaption>
+    <div class="sect">What it says so far</div>${summary}
+    <div class="sect">Every reading</div>
+    <div class="scroll"><table><thead><tr><th>Week</th><th>IR used</th><th>At cap</th>
+      <th>Empty IR</th><th>Stranded</th><th>Constrained</th><th>+1 costs</th><th>+2 costs</th>
+      <th>Free agents</th><th style="text-align:left">Taken</th></tr></thead>
+      <tbody>${rrows}</tbody></table></div>
+    <figcaption>Constrained is the column the vote turns on: a full IR <em>and</em> an injured player
+    still on the active roster. Those are the only managers an extra spot reaches.</figcaption>`;
+}
+fetch('ir-watch.json',{cache:'no-store'}).then(r=>r.ok?r.json():{rows:[]}).catch(()=>({rows:[]}))
+  .then(d=>renderHistory((d&&d.rows)||[]));
 
 const lid=qp.get('league');
 if(lid) run(lid); else setup('');

@@ -1,0 +1,49 @@
+name: IR Watch weekly snapshot
+
+# The argument about expanding IR needs a season of evidence, not a preseason
+# snapshot, and neither manager should have to remember to run anything. This
+# takes one reading a week and commits it, so the history builds itself and
+# both sides read the same record. Runners have open internet, so unlike a
+# local container this can actually reach Sleeper.
+on:
+  schedule:
+    - cron: '0 14 * * 3'      # Wednesdays 14:00 UTC — after waivers have cleared
+  workflow_dispatch:           # and a button, for catching up a missed week
+    inputs:
+      week:
+        description: 'Week number to label the snapshot (blank = ask Sleeper)'
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ir-watch
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Take the reading
+        env:
+          SCFL_USER: ${{ vars.SCFL_USER || 'drsexy' }}
+          SCFL_LEAGUE_ID: ${{ vars.SCFL_LEAGUE_ID }}
+        run: |
+          python3 scripts/ir_watch.py ${{ github.event.inputs.week && format('--week {0}', github.event.inputs.week) || '' }}
+      - name: Commit the row
+        run: |
+          git config user.name  'IR Watch'
+          git config user.email 'noreply@anthropic.com'
+          if git diff --quiet -- ir-watch.json; then
+            echo 'no change this run'
+            exit 0
+          fi
+          WK=$(python3 -c "import json;r=json.load(open('ir-watch.json'))['rows'];print(r[-1]['week'])")
+          git add ir-watch.json
+          git commit -m "IR Watch: week ${WK}"
+          git push
