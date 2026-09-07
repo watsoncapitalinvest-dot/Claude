@@ -102,6 +102,10 @@ const FANTASY=new Set(['QB','RB','WR','TE','K','DEF']);
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const qp=new URLSearchParams(location.search);
+const REM='irwatch.league.v1';
+const remember=id=>{try{localStorage.setItem(REM,id);}catch{}};
+const remembered=()=>{try{return localStorage.getItem(REM)||'';}catch{return '';}};
+const forget=()=>{try{localStorage.removeItem(REM);}catch{}};
 const j=u=>fetch(u,{headers:{accept:'application/json'}}).then(r=>{if(!r.ok)throw new Error('Sleeper '+r.status);return r.json();});
 
 // The 5MB player table, kept a day in IndexedDB so a weekly check is instant.
@@ -138,7 +142,7 @@ function setup(msg){
         :'<div class="err">No leagues found for that name.</div>';
       $('#lgs').querySelectorAll('.lg').forEach(b=>b.onclick=()=>{
         const url=new URL(location); url.searchParams.set('league',b.dataset.id);
-        history.replaceState({},'',url); run(b.dataset.id);});
+        history.replaceState({},'',url); remember(b.dataset.id); run(b.dataset.id);});
     }catch(err){ $('#e').textContent=String(err.message||err); }
   };
 }
@@ -151,8 +155,9 @@ async function run(leagueId){
       j(`${API}/league/${leagueId}`), j(`${API}/league/${leagueId}/rosters`), j(`${API}/league/${leagueId}/users`)]);
     $('#main').innerHTML='<p class="b dim">Reading the NFL player table (about 5MB, kept for a day)…</p>';
     const db=await cached('players',864e5,()=>j(`${API}/players/nfl`));
+    remember(leagueId);
     render(compute(lg,rosters,users,db,st));
-  }catch(err){ setup('Could not read that league: '+(err.message||err)); }
+  }catch(err){ forget(); setup('Could not read that league: '+(err.message||err)); }
 }
 
 function compute(lg,rosters,users,db,st){
@@ -231,7 +236,11 @@ function render(d){
   $('#foot').innerHTML=`${esc(d.lg.name)} · ${esc(d.season)} season${d.week?' · week '+d.week:''} ·
     IR cap ${d.cap} · read live from Sleeper's public API just now, nothing stored.
     <br>Reload any time for the current picture. Weekly history is kept by
-    <b>scripts/ir_watch.py</b>, which writes one row a week and never rewrites an old one.`;
+    <b>scripts/ir_watch.py</b>, which writes one row a week and never rewrites an old one.
+    <br><a href="#" id="switch">Use a different league</a>`;
+  const sw=$('#switch');
+  if(sw) sw.onclick=e=>{e.preventDefault();forget();
+    const u=new URL(location);u.searchParams.delete('league');location.replace(u);};
 }
 
 // ---- the record ------------------------------------------------------------
@@ -314,6 +323,6 @@ function renderHistory(rows,live){
 fetch('ir-watch.json',{cache:'no-store'}).then(r=>r.ok?r.json():{rows:[]}).catch(()=>({rows:[]}))
   .then(d=>renderHistory((d&&d.rows)||[]));
 
-const lid=qp.get('league');
+const lid=qp.get('league')||remembered();
 if(lid) run(lid); else setup('');
 </script></body></html>
