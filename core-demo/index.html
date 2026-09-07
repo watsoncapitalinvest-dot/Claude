@@ -481,7 +481,12 @@
   body.exec-dark .tb-back { color:#f3efe4; }
   .mtool { display:flex; flex-direction:column; align-items:flex-start; gap:2px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:15px 16px; text-align:left; cursor:pointer; transition:border-color .15s, transform .12s; }
   .mtool:hover { border-color:var(--accent); transform:translateY(-2px); }
-  .mtool .mtool-ic { font-size:24px; margin-bottom:5px; }
+  .tbtn { display:inline-flex; align-items:center; gap:6px; }
+  .tbtn svg { width:15px; height:15px; flex:none; }
+  .ctool svg, .desk-toggle svg { width:15px; height:15px; vertical-align:-2px; }
+  .mtool .mtool-ic { display:block; margin-bottom:7px; line-height:0; }
+  .mtool .mtool-ic svg { width:23px; height:23px; color:var(--gold); }
+  body.exec-dark .mtool .mtool-ic svg { color:var(--gold); opacity:.92; }
   .mtool .mtool-l { font-weight:800; font-size:14px; }
   .mtool .mtool-d { font-weight:500; font-size:11.5px; color:var(--faint); line-height:1.35; }
   /* Executive Office landing hero + Newsroom door */
@@ -3707,10 +3712,10 @@ function topBar() {
       <img class="tb-shield" src="${EXEC_LOGO}" alt=""><span class="tb-word"><span>Executive Office</span></span>
     </button>
     <div class="tb-nav">
-      <button class="tbtn ghost" data-act="home">🏛 Office</button>
-      <button class="tbtn" data-act="newsroom">📰 Newsroom</button>
-      <button class="tbtn ghost" data-act="dev-note" title="Leave a note for the developer">🛠</button>
-      <button class="tbtn ghost" data-act="settings">⚙</button>
+      <button class="tbtn ghost" data-act="home">${ic('bank')} Office</button>
+      <button class="tbtn" data-act="newsroom">${ic('news')} Newsroom</button>
+      <button class="tbtn ghost" data-act="dev-note" title="Leave a note for the developer">${ic('wrench')}</button>
+      <button class="tbtn ghost" data-act="settings">${ic('gear')}</button>
     </div>
   </div></div>`;
 }
@@ -3747,32 +3752,64 @@ function renderTab() {
 // index, record book, jeopardy, etc.) are removed from these lists rather
 // than deleted from the app -- a league with no chat corpus or history
 // import just doesn't see the tile. See docs/CORE-DEMO.md.
+// ---- the icon set -----------------------------------------------------------
+// Line icons, not emoji. Emoji are drawn by the operating system, so the same
+// tile is a different picture on every phone, and a colour cartoon sits badly
+// under a gold serif masthead. One stroke weight, one grid, colour inherited
+// from the tile -- the office looks set rather than typed.
+const ICONS = {
+  chart:    '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  money:    '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 12h.01M18 12h.01"/>',
+  download: '<path d="M12 3v11m0 0 4-4m-4 4-4-4M4 20h16"/>',
+  target:   '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>',
+  shield:   '<path d="M12 3 4.5 6v5.5c0 4.4 3.1 7.9 7.5 9.3 4.4-1.4 7.5-4.9 7.5-9.3V6L12 3Z"/>',
+  tv:       '<rect x="2.5" y="6.5" width="19" height="12.5" rx="2"/><path d="m8 3 4 3.5L16 3"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  book:     '<path d="M12 6.5C10.5 5 8 4.5 3.5 4.5v13C8 17.5 10.5 18 12 19.5c1.5-1.5 4-2 8.5-2v-13c-4.5 0-7 .5-8.5 2Z"/><path d="M12 6.5v13"/>',
+  send:     '<path d="M21.5 3 2.5 10.2l7.6 2.7 2.7 7.6L21.5 3Z"/><path d="m10.1 12.9 4.6-4.6"/>',
+  inbox:    '<path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5.5 4h13l2.5 9v5a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2v-5l2.5-9Z"/>',
+  pencil:   '<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4 11.5-11.5Z"/>',
+  news:     '<path d="M4 5h13v14H4z"/><path d="M17 9h3v8a2 2 0 0 1-3 0"/><path d="M7 9h7M7 12.5h7M7 16h4"/>',
+  stadium:  '<rect x="2.5" y="5.5" width="19" height="13" rx="6.5"/><rect x="7" y="9" width="10" height="6" rx="3"/><path d="M12 9v6"/>',
+  clipboard:'<rect x="4.5" y="4" width="15" height="17" rx="2"/><path d="M9 4V2.8h6V4"/><path d="M8.5 10h7M8.5 14h7M8.5 18h4"/>',
+  nib:      '<path d="M4 20 9 9l6-6 6 6-6 6-11 5Z"/><circle cx="12" cy="12" r="1.6"/>',
+  mic:      '<rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5M8.5 21.5h7"/>',
+  scales:   '<path d="M12 4.5V21M8 21h8M5 8h14"/><circle cx="12" cy="6" r="1.3"/><path d="M5 8 2.6 13.6h4.8L5 8ZM19 8l-2.4 5.6h4.8L19 8Z"/>',
+  drawer:   '<rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M10 7.5h4M10 16.5h4"/>',
+  eye:      '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.8"/>',
+  bank:     '<path d="M3 9.5 12 4l9 5.5M4.5 9.5v9M9 9.5v9M15 9.5v9M19.5 9.5v9M2.5 20.5h19"/>',
+  wrench:   '<path d="M15.6 3.6a5.5 5.5 0 0 0-7 7L3 16.2V21h4.8l5.6-5.6a5.5 5.5 0 0 0 7-7l-3 3-2.8-2.8 3-3Z"/>',
+  gear:     '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 14.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0-1.2-2.9h-.2a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.3-2.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5v-.2a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0 1 2.9h.2a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>',
+  books:    '<path d="M4 4h4v17H4zM10 4h4v17h-4z"/><path d="m16.5 4.8 3.9 1-3.6 15.4-3.9-1"/>',
+};
+const ic = (k) => '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[k] || ICONS.chart) + '</svg>';
+
 const OFFICE_TOOLS = [
-  ['power-ranks', '📊', 'Power Rankings', 'The Machines\u2019 weekly board — build & upload'],
-  ['money-lines', '💰', 'Money Lines', 'The betting board — build & upload'],
-  ['roster-export', '⤓', 'Export Rosters', 'Top 3 + full-roster JSON → send to Claude'],
-  ['waiver-export', '🎯', 'Export Waiver Research', 'Your roster + every free agent, valued & sourced → send to Claude'],
-  ['logos-export', '🛡️', 'Export Team Logos', 'Download every team logo → send to Claude'],
-  ['matchup-export', '📺', 'Export Matchup', 'Pull a real game → send to Claude for the broadcast'],
-  ['schedule-export', '🗓️', 'Export Schedule', 'The whole regular season → send to Claude'],
-  ['staff-handbook', '📖', 'Board Handbook', 'How the Office works for the board'],
-  ['staff-send', '📤', 'Send to HQ', 'Package your additions → text them to the Commish'],
-  ['staff-import', '📥', 'Import from the Board', 'Paste a board package into the Office'],
+  ['power-ranks', 'chart', 'Power Rankings', 'The Machines\u2019 weekly board — build & upload'],
+  ['money-lines', 'money', 'Money Lines', 'The betting board — build & upload'],
+  ['roster-export', 'download', 'Export Rosters', 'Top 3 + full-roster JSON → send to Claude'],
+  ['waiver-export', 'target', 'Export Waiver Research', 'Your roster + every free agent, valued & sourced → send to Claude'],
+  ['logos-export', 'shield', 'Export Team Logos', 'Download every team logo → send to Claude'],
+  ['matchup-export', 'tv', 'Export Matchup', 'Pull a real game → send to Claude for the broadcast'],
+  ['schedule-export', 'calendar', 'Export Schedule', 'The whole regular season → send to Claude'],
+  ['staff-handbook', 'book', 'Board Handbook', 'How the Office works for the board'],
+  ['staff-send', 'send', 'Send to HQ', 'Package your additions → text them to the Commish'],
+  ['staff-import', 'inbox', 'Import from the Board', 'Paste a board package into the Office'],
 ];
 const NEWSROOM_TOOLS = [
-  ['create-issue', '📝', 'Create Issue', 'Build this week\u2019s magazine'],
-  ['weekly-stories', '📰', 'Weekly Stories', 'Read the current issue'],
-  ['broadcast', '🏟️', 'Network Live', 'Watch any matchup — the live game broadcast'],
-  ['dashboard', '🗞️', 'Newsroom HQ', 'Weekly checklist, brief & calendar'],
-  ['desk', '✍️', 'Newsroom Desk', 'Chat → Water Cooler, uploads'],
-  ['interviews', '🎙️', 'Owner Interviews', 'Build your own questions, send a link, collect answers'],
-  ['trade-court', '⚖️', 'The Trade Court', 'Every trade graded on the value board — ours vs. market'],
-  ['waiver-wire', '🎯', 'Waiver Wire Board', 'Free agents ranked on the value board — vs. your own roster'],
-  ['archive-articles', '🗄️', 'Article Archive', 'Every article, searchable'],
-  ['archive', '📚', 'Back Issues', 'Saved editions'],
-  ['calendar', '🗓️', 'Calendar', 'Release dates & events'],
+  ['create-issue', 'pencil', 'Create Issue', 'Build this week\u2019s magazine'],
+  ['weekly-stories', 'news', 'Weekly Stories', 'Read the current issue'],
+  ['broadcast', 'stadium', 'Network Live', 'Watch any matchup — the live game broadcast'],
+  ['dashboard', 'clipboard', 'Newsroom HQ', 'Weekly checklist, brief & calendar'],
+  ['desk', 'nib', 'Newsroom Desk', 'Chat → Water Cooler, uploads'],
+  ['interviews', 'mic', 'Owner Interviews', 'Build your own questions, send a link, collect answers'],
+  ['trade-court', 'scales', 'The Trade Court', 'Every trade graded on the value board — ours vs. market'],
+  ['waiver-wire', 'target', 'Waiver Wire Board', 'Free agents ranked on the value board — vs. your own roster'],
+  ['archive-articles', 'drawer', 'Article Archive', 'Every article, searchable'],
+  ['archive', 'books', 'Back Issues', 'Saved editions'],
+  ['calendar', 'calendar', 'Calendar', 'Release dates & events'],
 ];
-const mtoolBtn = ([a, ic, l, d]) => `<button class="mtool" data-act="${a}"><span class="mtool-ic">${ic}</span><span class="mtool-l">${l}</span><span class="mtool-d">${d}</span></button>`;
+const mtoolBtn = ([a, k, l, d]) => `<button class="mtool" data-act="${a}"><span class="mtool-ic">${ic(k)}</span><span class="mtool-l">${l}</span><span class="mtool-d">${d}</span></button>`;
 const OFFICE_SECTIONS = [
   ['The Weekly Board', ['power-ranks', 'money-lines']],
   ['The Board Desk', ['roster-export', 'waiver-export', 'logos-export', 'matchup-export', 'schedule-export', 'staff-handbook', 'staff-send', 'staff-import']],
@@ -3942,7 +3979,7 @@ function deskSceneHTML(img, alt, hotspots, sceneId) {
   return `<div class="desk-scene" id="${esc(sceneId)}">
     <img src="${esc(img)}" alt="${esc(alt)}">
     <canvas class="desk-logo-canvas" id="logo-canvas-${esc(sceneId)}"></canvas>
-    <button class="desk-toggle" data-act="desk-legend" data-scene="${esc(sceneId)}">👁 What's on the desk?</button>
+    <button class="desk-toggle" data-act="desk-legend" data-scene="${esc(sceneId)}">${ic('eye')} What's on the desk?</button>
     ${hots}
   </div>`;
 }
@@ -4513,7 +4550,7 @@ function coverToolsInner() {
     <button class="ctool" data-act="dashboard" title="Newsroom HQ — tools, checklist, brief & calendar">🗞️</button>
     <button class="ctool" data-act="desk" title="Newsroom desk">✍️</button>
     <button class="ctool" data-act="cover-art" title="Cover art director">🎨</button>
-    <button class="ctool" data-act="settings" title="Settings">⚙</button>`;
+    <button class="ctool" data-act="settings" title="Settings">${ic('gear')}</button>`;
 }
 // Lightweight masthead used while loading / empty (no issue data yet).
 function newsHeader() {
