@@ -4180,7 +4180,9 @@ function fmChunkParas(paras, firstBudget, restBudget){
   return out;
 }
 function fmArticlePages(o){
-  const chunks = fmChunkParas(o.paragraphs, 1050, 1750);
+  // One page in, measured pages out -- fmReflow does the packing, so the only
+  // job here is a coarse guard against building one absurd page.
+  const chunks = fmChunkParas(o.paragraphs, 9000, 9000);
   return chunks.map((paras, i) => `<div>
     ${fmRun(o.run || 'SCFL Newsroom · The Magazine', i ? 'cont’d' : (o.runRight || ''))}
     ${i === 0 ? `<span class="fm-flag">${esc(o.flag || 'SCFL NEWSROOM')}</span>
@@ -4193,6 +4195,54 @@ function fmArticlePages(o){
 }
 function fmArticlePage(flag, hl, dek, by, paragraphs){
   return fmArticlePages({ flag, hl, dek, by: by ? esc(by) : '', paragraphs })[0];
+}
+// ---- measured pagination ----------------------------------------------------
+// The character budgets above are a guess, and a guess that runs long turns a
+// magazine page into a scroll box. This is the measurement: every page is
+// rendered at the real .fmpage geometry and anything that overflows is pushed
+// onto a fresh page, so a story always finishes on the page it fits. Same rule
+// scripts/measure_pages.js applies to the hand-built issues.
+function fmReflow(pages){
+  const stage = document.getElementById('fmStage');
+  if (!stage || !pages || !pages.length) return pages;
+  const probe = document.createElement('div');
+  probe.className = 'fmpage';
+  probe.style.cssText = 'visibility:hidden;pointer-events:none;overflow:hidden';
+  stage.appendChild(probe);
+  const fits = () => probe.scrollHeight <= probe.clientHeight + 1;
+  const out = [];
+  try {
+    for (const html of pages) {
+      // covers and any full-bleed page are laid out, not flowed
+      if (/fmcoverpg/.test(html)) { out.push(html); continue; }
+      probe.innerHTML = html;
+      if (fits()) { out.push(html); continue; }
+      const wrap = probe.firstElementChild;
+      const kids = wrap ? Array.from(wrap.children) : [];
+      if (!wrap || kids.length < 2) { out.push(html); continue; }   // nothing to break on
+      const runEl = kids[0] && kids[0].classList.contains('fm-run') ? kids[0] : null;
+      const runHtml = runEl ? runEl.outerHTML : '';
+      const hlEl = wrap.querySelector('.fm-hl');
+      const contHtml = runHtml
+        ? runHtml + `<div class="fm-cont">${esc((hlEl && hlEl.textContent) || '')} · continued</div>`
+        : '';
+      let i = runEl ? 1 : 0, guard = 0;
+      while (i < kids.length && guard++ < 80) {
+        const head = out.length && guard > 1 ? contHtml : runHtml;
+        let acc = '';
+        const start = i;
+        while (i < kids.length) {
+          probe.innerHTML = `<div>${head}${acc + kids[i].outerHTML}</div>`;
+          if (!fits() && i > start) break;         // one block per page minimum
+          acc += kids[i].outerHTML; i++;
+          if (!fits()) break;                       // that single block overflows: ship it alone
+        }
+        out.push(`<div>${head}${acc}</div>`);
+      }
+    }
+  } catch (e) { stage.removeChild(probe); return pages; }
+  stage.removeChild(probe);
+  return out;
 }
 // POP's grades: the report-card opener, then team cards two-ish to a page
 function popGradePages(y){
@@ -4335,6 +4385,7 @@ function openFlipOverlay(pages, title, week, special){
   st.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive:true });
   st.addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - sx;
     if (dx < -46) flipTo(FM.i + 1); else if (dx > 46) flipTo(FM.i - 1); }, { passive:true });
+  FM.pages = fmReflow(FM.pages);   // the stage exists now, so pages can be measured
   fmRender(false);
 }
 function fmRender(turning){
