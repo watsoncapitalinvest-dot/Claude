@@ -4209,36 +4209,67 @@ function fmReflow(pages){
   probe.className = 'fmpage';
   probe.style.cssText = 'visibility:hidden;pointer-events:none;overflow:hidden';
   stage.appendChild(probe);
-  const fits = () => probe.scrollHeight <= probe.clientHeight + 1;
+  const fits = (html) => { probe.innerHTML = html;
+    return probe.scrollHeight <= probe.clientHeight + 1; };
+  // An element's own opening and closing tags, so a container that has to be
+  // broken across pages keeps its class, and therefore its layout, on each one.
+  const shellOf = (el) => { const c = el.cloneNode(false);
+    const t = el.tagName.toLowerCase();
+    return [c.outerHTML.replace(new RegExp('</' + t + '>$', 'i'), ''), '</' + t + '>']; };
+  // Split one block across pages, descending into it when a single child is
+  // itself too tall -- a game-story card or a long contents list is one child of
+  // the page, so splitting only at the top level cannot break it.
+  function chop(html, head, depth){
+    if (fits('<div>' + head + html + '</div>')) return [html];
+    const holder = document.createElement('div');
+    holder.innerHTML = html;
+    const el = holder.firstElementChild;
+    const kids = el ? Array.from(el.children) : [];
+    if (!el || kids.length < 2 || depth > 3) return [html];   // atomic: ships as is
+    const [open, close] = shellOf(el);
+    const out = []; let acc = '';
+    for (const k of kids){
+      const one = k.outerHTML;
+      if (fits('<div>' + head + open + acc + one + close + '</div>')) { acc += one; continue; }
+      if (acc) { out.push(open + acc + close); acc = ''; }
+      if (fits('<div>' + head + open + one + close + '</div>')) { acc = one; }
+      else chop(one, head + open, depth + 1).forEach(part => out.push(open + part + close));
+    }
+    if (acc) out.push(open + acc + close);
+    return out.length ? out : [html];
+  }
   const out = [];
   try {
     for (const html of pages) {
-      // covers and any full-bleed page are laid out, not flowed
-      if (/fmcoverpg/.test(html)) { out.push(html); continue; }
-      probe.innerHTML = html;
-      if (fits()) { out.push(html); continue; }
-      const wrap = probe.firstElementChild;
+      if (/fmcoverpg/.test(html)) { out.push(html); continue; }   // laid out, not flowed
+      if (fits(html)) { out.push(html); continue; }
+      const holder = document.createElement('div');
+      holder.innerHTML = html;
+      const wrap = holder.firstElementChild;
       const kids = wrap ? Array.from(wrap.children) : [];
-      if (!wrap || kids.length < 2) { out.push(html); continue; }   // nothing to break on
+      if (!wrap || !kids.length) { out.push(html); continue; }
       const runEl = kids[0] && kids[0].classList.contains('fm-run') ? kids[0] : null;
       const runHtml = runEl ? runEl.outerHTML : '';
       const hlEl = wrap.querySelector('.fm-hl');
       const contHtml = runHtml
-        ? runHtml + `<div class="fm-cont">${esc((hlEl && hlEl.textContent) || '')} · continued</div>`
+        ? runHtml + '<div class="fm-cont">' + esc((hlEl && hlEl.textContent) || '') + ' · continued</div>'
         : '';
-      let i = runEl ? 1 : 0, guard = 0;
-      while (i < kids.length && guard++ < 80) {
-        const head = out.length && guard > 1 ? contHtml : runHtml;
-        let acc = '';
-        const start = i;
-        while (i < kids.length) {
-          probe.innerHTML = `<div>${head}${acc + kids[i].outerHTML}</div>`;
-          if (!fits() && i > start) break;         // one block per page minimum
-          acc += kids[i].outerHTML; i++;
-          if (!fits()) break;                       // that single block overflows: ship it alone
-        }
-        out.push(`<div>${head}${acc}</div>`);
+      const body = kids.slice(runEl ? 1 : 0);
+      const made = [];
+      let acc = '';
+      const head = () => (made.length ? contHtml : runHtml);
+      for (const k of body){
+        const one = k.outerHTML;
+        if (fits('<div>' + head() + acc + one + '</div>')) { acc += one; continue; }
+        if (acc) { made.push('<div>' + head() + acc + '</div>'); acc = ''; }
+        const parts = chop(one, head(), 1);
+        parts.forEach((pt, n) => {
+          if (n === parts.length - 1) acc = pt;                    // last part may still take more
+          else made.push('<div>' + head() + pt + '</div>');
+        });
       }
+      if (acc) made.push('<div>' + head() + acc + '</div>');
+      made.forEach(m => out.push(m));
     }
   } catch (e) { stage.removeChild(probe); return pages; }
   stage.removeChild(probe);
