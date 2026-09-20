@@ -27,9 +27,14 @@ mobile included?
   as a structural template, since that data wasn't part of the art
   delivery). All three load cleanly with zero engine errors, confirmed
   directly from the boot log.
-- The title/intro sequence (`data/scenes/moon.webm` + `intro.webm`) now
-  shows the real "Streets of Rage x SCFL" splash image instead of Super
-  Doginals branding, and is much shorter (~6s total instead of ~41s).
+- The title/intro sequence now shows the real "Streets of Rage x SCFL"
+  splash image instead of Super Doginals branding. This is a GIF
+  (`data/scenes/splash.gif`), not video — the original intro used WebM/VP9
+  video, which doesn't play at all on Safari/iOS, so a video-based
+  replacement wouldn't have worked on most phones either. Two separate
+  scenes needed replacing: `logo.txt` (the engine's hardcoded first splash,
+  originally a QR-code screen) and `intro.txt` (originally two videos with
+  Doginals branding, ~41s total) — both now point at the same splash.gif.
 - Everything else — the rest of the menus, remaining 13 characters, levels,
   music — is still the original Super Doginals demo, not re-themed for
   SCFL yet.
