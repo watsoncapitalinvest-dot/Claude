@@ -105,6 +105,31 @@
         return result;
     }
 
+    // A logical zip can be split into several smaller files on disk (to fit a
+    // hosting size limit per file). `urlOrUrls` may be one URL or an ordered
+    // array of chunk URLs — chunks are concatenated back into the original
+    // byte stream before unzipping, so the split is invisible past this point.
+    async function fetchChunkedWithProgress(urlOrUrls, label) {
+        const list = Array.isArray(urlOrUrls) ? urlOrUrls : [urlOrUrls];
+        if (list.length === 1) {
+            return fetchWithProgress(list[0], label);
+        }
+        const parts = [];
+        let totalReceived = 0;
+        for (let i = 0; i < list.length; i++) {
+            const partBytes = await fetchWithProgress(list[i], `${label} (${i + 1}/${list.length})`);
+            parts.push(partBytes);
+            totalReceived += partBytes.length;
+        }
+        const result = new Uint8Array(totalReceived);
+        let offset = 0;
+        for (const part of parts) {
+            result.set(part, offset);
+            offset += part.length;
+        }
+        return result;
+    }
+
     // fflate.unzipSync decompresses synchronously on the main thread — for a
     // ~33MB archive on a phone CPU that can block the page long enough to look
     // (and on iOS Safari, actually be) frozen, with no repaint of the loading
@@ -194,7 +219,7 @@
         try {
             for (const zipFilePath of zipFiles) {
 
-                const bytes = await fetchWithProgress(zipFilePath, 'Downloading game data');
+                const bytes = await fetchChunkedWithProgress(zipFilePath, 'Downloading game data');
                 setLoadingText('Unpacking game data…');
                 await yieldToBrowser();
 
