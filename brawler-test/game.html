@@ -36,12 +36,32 @@
         <div id="buttons-overlay"></div>
     </div>
     <script>
+        // There is no way to see the browser console on a phone, so any error
+        // that happens during load — WASM failure, a blocked Worker, a failed
+        // fetch, anything — has to be written straight onto the loading screen
+        // itself, or it's invisible and looks exactly like a generic hang.
+        window.addEventListener('error', function(e) {
+            const el = document.getElementById('loading-overlay');
+            if (el && el.style.display !== 'none') {
+                el.innerText = 'LOAD ERROR: ' + (e.message || e.error || e) +
+                    (e.filename ? ('\n' + e.filename + ':' + e.lineno) : '');
+            }
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+            const el = document.getElementById('loading-overlay');
+            if (el && el.style.display !== 'none') {
+                const reason = e.reason && e.reason.message ? e.reason.message : String(e.reason);
+                el.innerText = 'LOAD ERROR (promise): ' + reason;
+            }
+        });
+    </script>
+    <script>
         const contentPath = '/content/';
         // Bump this on every deploy. None of these filenames change between
         // deploys, so without a cache-busting query string, phones (and
         // GitHub's CDN) can keep serving an old cached copy indefinitely and
         // silently ignore every fix pushed to these paths.
-        const BUILD = '2026-09-20d';
+        const BUILD = '2026-09-20e';
         window.myGame = {
             contentPath: contentPath,
             paths: {
