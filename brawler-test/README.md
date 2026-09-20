@@ -27,9 +27,12 @@ mobile included?
   as a structural template, since that data wasn't part of the art
   delivery). All three load cleanly with zero engine errors, confirmed
   directly from the boot log.
-- Everything else — the title screen, story intro, menus, remaining 13
-  characters, levels, music — is still the original Super Doginals demo,
-  not re-themed for SCFL yet.
+- The title/intro sequence (`data/scenes/moon.webm` + `intro.webm`) now
+  shows the real "Streets of Rage x SCFL" splash image instead of Super
+  Doginals branding, and is much shorter (~6s total instead of ~41s).
+- Everything else — the rest of the menus, remaining 13 characters, levels,
+  music — is still the original Super Doginals demo, not re-themed for
+  SCFL yet.
 
 ## What was verified
 
