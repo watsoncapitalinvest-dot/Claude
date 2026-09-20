@@ -13,7 +13,7 @@
 // <script src> or fetch() 404 doesn't throw a catchable exception.
 const contentPath = 'content/';
 // Bump this on every deploy that changes any of these files.
-const BUILD = '2026-09-20f';
+const BUILD = '2026-09-20g';
 window.myGame = {
     contentPath: contentPath,
     paths: {
