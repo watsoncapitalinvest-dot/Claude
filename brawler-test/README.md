@@ -121,6 +121,45 @@ batches. Verified locally that every intermediate loading state now
 actually renders instead of jumping straight from one download percentage
 to "Starting engine…".
 
+## "Stuck on loading" — actual root cause (round 4)
+
+None of rounds 1–3 fixed it on the real device, because none of them were
+the actual bug. All local testing up to this point served `game.html` with
+`brawler-test/` itself as the web server's root directory, which made
+`content/...` paths resolve correctly by coincidence. The real deployed
+site serves the whole repo, so the live page is actually at
+`/Claude/brawler-test/game.html` — one directory level deeper.
+
+`contentPath` was set to `'/content/'`, an **absolute** path from the
+domain root, in the very first commit that created this page, and no
+subsequent fix touched it. On the real site that resolves to
+`https://<domain>/content/...`, which doesn't exist — the real files are at
+`/Claude/brawler-test/content/...`. Every asset fetch (`main.js`,
+`fflate.min.js`, the engine, the game data) has 404'd on the live site
+since the very first deploy. A `<script src>` or `fetch()` 404 doesn't
+throw a catchable JS exception and never reaches `window.onerror`, so this
+was completely silent — explaining why the error-surfacing added in round 3
+never caught anything, and why the screen never changed no matter what else
+was fixed.
+
+Confirmed by serving the repo root locally (matching the real site
+structure) instead of `brawler-test/` directly: the old code reproduced the
+exact freeze, 404s and all; the fix does not.
+
+Fixed by:
+- Changing `contentPath` to the relative `'content/'`, so it resolves
+  correctly regardless of what directory depth the page is served from.
+- Moving all of game.html's logic (previously two inline `<script>` blocks)
+  into external files (`content/errors.js`, `content/config.js`), loaded via
+  plain `<script src>` tags. This was a second, independent hardening: an
+  inline script silently failing to run (a stripped/sanitized `<script>`
+  block, a restrictive delivery path) would have looked identical to this
+  bug, and moving the entry point to a real external file removes that
+  failure mode too regardless of whether it was ever actually in play here.
+- Adding an `onerror` handler to the dynamically created `main.js` script
+  tag, so a future path or hosting mistake shows an explicit message on
+  screen instead of a silent, permanent freeze.
+
 ## Powered by OpenBOR
 
 This project uses the OpenBOR engine — see `content/` licensing from the
