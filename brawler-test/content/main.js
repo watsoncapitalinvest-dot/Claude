@@ -311,7 +311,7 @@
 							.catch(error => {
 								console.error('Failed to unzip game files:', error);
 								window.Module.removeRunDependency('unpack');
-                                myGame.LoadingOverlay.innerText = 'Unpacking error';
+                                myGame.LoadingOverlay.innerText = 'Unpacking error: ' + (error && error.message ? error.message : error);
 							});
 					};
 				}
@@ -331,6 +331,12 @@
 				if (text) {
 					console.log(text);
 				}
+			},
+			onAbort: function(reason) {
+				console.error('WASM aborted:', reason);
+				if (myGame.LoadingOverlay.style.display !== 'none') {
+					myGame.LoadingOverlay.innerText = 'Engine crashed: ' + reason;
+				}
 			}
 		};
 
@@ -342,6 +348,7 @@
         };
         script.onerror = () => {
             console.error('Failed to load OpenBOR.js script');
+            setLoadingText('Failed to load the game engine script (OpenBOR.js).');
         };
         document.body.appendChild(script);
     }
@@ -364,6 +371,7 @@
             startGame();
         }).catch((error) => {
             console.error('Failed to unzip and prepare OpenBOR:', error);
+            setLoadingText('Failed to prepare engine: ' + (error && error.message ? error.message : error));
         });
     }
 
@@ -377,6 +385,7 @@
     };
     fflateScript.onerror = () => {
         console.error('Failed to load fflate script');
+        setLoadingText('Failed to load fflate.min.js (network error or blocked request).');
     };
     document.head.appendChild(fflateScript);
 
