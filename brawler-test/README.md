@@ -73,6 +73,33 @@ join prompt in the pause menu (Enter to open it).
   template (the art delivery didn't include that data) — they'll feel
   slightly generic rather than tuned to each character.
 
+## "Stuck on loading" fix (round 2)
+
+After the splash fix above, loading got reported stuck again. Root cause
+found by reading the loader code (`content/main.js`), not by reproducing it
+locally — it never hung in local testing:
+
+- The loader does one big `fetch()` of the ~33MB game-data zip, waits for
+  the whole thing to download, decompresses it synchronously, then writes
+  every file into the in-memory filesystem — and the loading screen was a
+  static `"Loading..."` the entire time, with no progress indicator and no
+  timeout. On a slow phone connection this step can genuinely take
+  30–90+ seconds, and a slow load looks identical to a dead one when
+  nothing on screen ever changes.
+- Fixed: the loader now streams the download and updates the loading text
+  live (`Downloading game data… 42%`, then `Unpacking…`, `Installing
+  files… 300/850`, `Starting engine…`), and if no progress happens for
+  20+ seconds it appends a "still working" note instead of staying silent.
+  This doesn't guarantee the connection is fast enough, but it now tells
+  the truth about whether something is happening.
+- Also trimmed ~1.4MB of dead weight from the pak: `moon.webm`/`intro.webm`
+  (replaced by `splash.gif`, no longer referenced anywhere), the old
+  `tip.gif` QR splash, and an unreferenced `menu.ogg` track.
+- Not fully ruled out: whether a ~33MB download is simply too much for the
+  connection in question. If loading still doesn't finish after this fix,
+  that's the next thing to address (would mean cutting real content, e.g.
+  music tracks, not just dead files).
+
 ## Powered by OpenBOR
 
 This project uses the OpenBOR engine — see `content/` licensing from the

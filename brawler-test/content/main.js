@@ -43,16 +43,75 @@
         return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 	}
 
+    // Loading is a single multi-megabyte fetch + a synchronous unzip, which can
+    // take a long time on a slow mobile connection. Without visible progress a
+    // slow load and a stuck one look identical, so track progress and surface a
+    // stall warning instead of leaving a static "Loading..." on screen forever.
+    let lastProgressAt = Date.now();
+    function setLoadingText(text) {
+        lastProgressAt = Date.now();
+        if (myGame.LoadingOverlay) {
+            myGame.LoadingOverlay.innerText = text;
+        }
+    }
+    setInterval(() => {
+        const stalledFor = Date.now() - lastProgressAt;
+        if (stalledFor > 20000 && myGame.LoadingOverlay && myGame.LoadingOverlay.style.display !== 'none') {
+            const seconds = Math.floor(stalledFor / 1000);
+            const base = myGame.LoadingOverlay.innerText.split('\n')[0];
+            myGame.LoadingOverlay.innerText = `${base}\nStill working (${seconds}s) — large file, please wait on slow connections.`;
+        }
+    }, 5000);
+
+    async function fetchWithProgress(url, label) {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Failed to load ${url}: ${response.status} ${response.statusText}`);
+        }
+        const total = Number(response.headers.get('content-length')) || 0;
+        if (!response.body || !response.body.getReader) {
+            setLoadingText(`${label}…`);
+            return new Uint8Array(await response.arrayBuffer());
+        }
+        const reader = response.body.getReader();
+        const chunks = [];
+        let received = 0;
+        let lastShown = -1;
+        for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+            received += value.length;
+            if (total) {
+                const pct = Math.min(100, Math.floor((received / total) * 100));
+                if (pct !== lastShown) {
+                    lastShown = pct;
+                    setLoadingText(`${label}… ${pct}%`);
+                }
+            } else {
+                const mb = Math.floor(received / 1048576);
+                if (mb !== lastShown) {
+                    lastShown = mb;
+                    setLoadingText(`${label}… ${mb}MB`);
+                }
+            }
+        }
+        const result = new Uint8Array(received);
+        let offset = 0;
+        for (const chunk of chunks) {
+            result.set(chunk, offset);
+            offset += chunk.length;
+        }
+        return result;
+    }
+
     myGame.unzipFile = async function(zipFilePath) {
         try {
-            const response = await fetch(zipFilePath);
-            if (!response.ok) {
-                throw new Error(`Failed to load ${zipFilePath}: ${response.status} ${response.statusText}`);
-            }
-            const arrayBuffer = await response.arrayBuffer();
+            const bytes = await fetchWithProgress(zipFilePath, 'Downloading engine');
+            setLoadingText('Unpacking engine…');
             let unzipData;
             try {
-                unzipData = fflate.unzipSync(new Uint8Array(arrayBuffer));
+                unzipData = fflate.unzipSync(bytes);
             } catch (error) {
                 console.error(`Error during unzipping ${zipFilePath}:`, error);
                 throw error;
@@ -105,16 +164,12 @@
         try {
             for (const zipFilePath of zipFiles) {
 
-                const response = await fetch(zipFilePath);
-                if (!response.ok) {
-                    throw new Error(`Failed to load ${zipFilePath}: ${response.status} ${response.statusText}`);
-                }
-
-                const arrayBuffer = await response.arrayBuffer();
+                const bytes = await fetchWithProgress(zipFilePath, 'Downloading game data');
+                setLoadingText('Unpacking game data…');
 
                 let unzipData;
                 try {
-                    unzipData = fflate.unzipSync(new Uint8Array(arrayBuffer));
+                    unzipData = fflate.unzipSync(bytes);
                 } catch (error) {
                     console.error(`Error during unzipping ${zipFilePath}:`, error);
                     throw error;
@@ -144,13 +199,21 @@
                         }
                     });
 
+                    setLoadingText('Installing files…');
+                    let written = 0;
+                    const totalFiles = filesToWrite.size;
                     filesToWrite.forEach(({ fullPath, fileData }) => {
                         try {
                             FS.writeFile(fullPath, fileData);
                         } catch (error) {
                             console.error(`Error writing file ${fullPath}:`, error);
                         }
+                        written++;
+                        if (written % 100 === 0) {
+                            setLoadingText(`Installing files… ${written}/${totalFiles}`);
+                        }
                     });
+                    setLoadingText('Starting engine…');
                 } else {
                     throw new Error(`Unzipping ${zipFilePath} failed, unzipData is undefined`);
                 }
