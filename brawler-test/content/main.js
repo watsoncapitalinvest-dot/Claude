@@ -105,6 +105,36 @@
         return result;
     }
 
+    // fflate.unzipSync decompresses synchronously on the main thread — for a
+    // ~33MB archive on a phone CPU that can block the page long enough to look
+    // (and on iOS Safari, actually be) frozen, with no repaint of the loading
+    // text in the meantime. fflate.unzip runs the same decompression in a real
+    // Web Worker instead, keeping the main thread free to repaint and respond.
+    function unzipAsync(bytes) {
+        return new Promise((resolve, reject) => {
+            if (typeof fflate.unzip === 'function') {
+                fflate.unzip(bytes, (err, data) => {
+                    if (err) reject(err); else resolve(data);
+                });
+            } else {
+                try {
+                    resolve(fflate.unzipSync(bytes));
+                } catch (e) {
+                    reject(e);
+                }
+            }
+        });
+    }
+    function yieldToBrowser() {
+        return new Promise(resolve => {
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(() => resolve());
+            } else {
+                setTimeout(resolve, 0);
+            }
+        });
+    }
+
     myGame.unzipFile = async function(zipFilePath) {
         try {
             const bytes = await fetchWithProgress(zipFilePath, 'Downloading engine');
@@ -166,10 +196,11 @@
 
                 const bytes = await fetchWithProgress(zipFilePath, 'Downloading game data');
                 setLoadingText('Unpacking game data…');
+                await yieldToBrowser();
 
                 let unzipData;
                 try {
-                    unzipData = fflate.unzipSync(bytes);
+                    unzipData = await unzipAsync(bytes);
                 } catch (error) {
                     console.error(`Error during unzipping ${zipFilePath}:`, error);
                     throw error;
@@ -200,20 +231,22 @@
                     });
 
                     setLoadingText('Installing files…');
-                    let written = 0;
-                    const totalFiles = filesToWrite.size;
-                    filesToWrite.forEach(({ fullPath, fileData }) => {
+                    const filesArray = Array.from(filesToWrite);
+                    const totalFiles = filesArray.length;
+                    for (let i = 0; i < filesArray.length; i++) {
+                        const { fullPath, fileData } = filesArray[i];
                         try {
                             FS.writeFile(fullPath, fileData);
                         } catch (error) {
                             console.error(`Error writing file ${fullPath}:`, error);
                         }
-                        written++;
-                        if (written % 100 === 0) {
-                            setLoadingText(`Installing files… ${written}/${totalFiles}`);
+                        if ((i + 1) % 50 === 0) {
+                            setLoadingText(`Installing files… ${i + 1}/${totalFiles}`);
+                            await yieldToBrowser();
                         }
-                    });
+                    }
                     setLoadingText('Starting engine…');
+                    await yieldToBrowser();
                 } else {
                     throw new Error(`Unzipping ${zipFilePath} failed, unzipData is undefined`);
                 }

@@ -100,6 +100,27 @@ locally — it never hung in local testing:
   that's the next thing to address (would mean cutting real content, e.g.
   music tracks, not just dead files).
 
+## "Stuck on loading" fix (round 3) — the actual freeze
+
+Round 2 added progress text, but it stayed stuck on real devices. The bug:
+the progress text updates were real, but most of them could never actually
+paint to the screen. `fflate.unzipSync` decompresses ~33MB synchronously on
+the main thread, and the file-install loop wrote hundreds of files in one
+synchronous pass right after it — both block the browser's rendering
+pipeline for their entire duration, so nothing on screen updates until they
+finish, no matter how many times the code changes the loading text mid-loop.
+On a phone CPU that stretch can take long enough to look (and on iOS
+Safari, risk actually becoming) frozen.
+
+Fixed by switching to `fflate.unzip` (the same library's Web Worker-backed
+async decompressor, confirmed present in this build) instead of
+`unzipSync`, so the heavy decompression runs off the main thread entirely,
+and by breaking the file-install loop into batches with an explicit yield
+(`requestAnimationFrame`) every 50 files so the browser can repaint between
+batches. Verified locally that every intermediate loading state now
+actually renders instead of jumping straight from one download percentage
+to "Starting engine…".
+
 ## Powered by OpenBOR
 
 This project uses the OpenBOR engine — see `content/` licensing from the
