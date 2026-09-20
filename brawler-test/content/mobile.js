@@ -150,15 +150,27 @@
             { id: 'jump-button', className: 'button', src: 'jump.png', alt: 'Jump', keyCode: 68, style: { bottom: '5%', right: '5%', width: '20%' } },
             { id: 'star-button', className: 'button', src: 'star.png', alt: 'Star', keyCode: 70, style: { bottom: '17.5%', right: '16%', width: '20%' } },
             { id: 'pause-button', className: 'button', src: 'pause.png', alt: 'Pause', keyCode: 13, style: { top: '27.5%', right: '5%', width: '15%' } },
-            { id: 'fullscreen-button', className: 'button', src: 'full.png', alt: 'Fullscreen', action: toggleFullscreen, style: { top: '15%', right: '5%', width: '15%' } }
+            { id: 'fullscreen-button', className: 'button', src: 'full.png', alt: 'Fullscreen', action: toggleFullscreen, style: { top: '15%', right: '5%', width: '15%' } },
+            // OpenBOR's arcade menu needs "insert coin" (5) then "1P start" (1)
+            // before it will let a match begin at all. Neither key had any
+            // on-screen control, so a touch-only player had no way to ever
+            // get past the title/menu screen — this was the actual "controls
+            // don't work" bug, not a rendering issue. Plain text buttons
+            // since there's no icon asset for these.
+            { id: 'coin-button', className: 'button text-button', label: 'COIN', keyCode: 53, style: { top: '5%', left: '5%', width: '18%' } },
+            { id: 'p1start-button', className: 'button text-button', label: '1P START', keyCode: 49, style: { top: '5%', left: '25%', width: '22%' } }
         ];
 
         buttonsConfig.forEach(config => {
-            const button = document.createElement('img');
+            const button = document.createElement(config.label ? 'div' : 'img');
             button.id = config.id;
             button.className = config.className;
-            button.src = myGame.buttonImages[config.src];
-            button.alt = config.alt;
+            if (config.label) {
+                button.innerText = config.label;
+            } else {
+                button.src = myGame.buttonImages[config.src];
+                button.alt = config.alt;
+            }
 
             Object.assign(button.style, config.style);
 
@@ -174,6 +186,8 @@
 
         function triggerButtonEvent(keyCode, eventType) {
             const keyMap = {
+                49: '1',
+                53: '5',
                 65: 'a',
                 68: 'd',
                 83: 's',
@@ -181,6 +195,8 @@
                 13: 'Enter'
             };
             const codeMap = {
+                49: 'Digit1',
+                53: 'Digit5',
                 65: 'KeyA',
                 68: 'KeyD',
                 83: 'KeyS',
