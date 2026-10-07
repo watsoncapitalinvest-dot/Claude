@@ -53,6 +53,7 @@ CATEGORY = {
     'scfl-research-oldest-dynasty.html': 'Investigations & Research',
     'scfl-research-champions-playoffs.html': 'Investigations & Research',
     'scfl-timeline-oldest-dynasty.html': 'Investigations & Research',
+    'scfl-ir-report.html': 'Investigations & Research',
     # Trade Desk
     'scfl-jcm-trade-review.html': 'Trade Desk',
     'scfl-trade-court-godwin.html': 'Trade Desk',
@@ -67,6 +68,7 @@ CATEGORY = {
     'scfl-politics-wire-freeze-flip.html': 'Season Coverage & Issues',
     # Tools & Arcade
     'broadcast-demo.html': 'Tools & Arcade',
+    'ir-watch.html': 'Tools & Arcade',
     'jeopardy/index.html': 'Tools & Arcade',
     'tradewar/index.html': 'Tools & Arcade',
 }
