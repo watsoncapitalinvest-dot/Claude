@@ -95,8 +95,14 @@ def main():
         return {'id': pid, 'name': nm,
                 'pos': p.get('position') or (p.get('fantasy_positions') or [None])[0],
                 'nfl': p.get('team'),
-                # the join key into nflverse play-by-play
+                # Join keys into nflverse play-by-play, in the order the matcher
+                # should try them. Sleeper fills gsis_id for only about a quarter
+                # of players, so espn_id carries most of the load -- nflverse's
+                # own players.csv has both and bridges them.
                 'gsis_id': p.get('gsis_id'),
+                'espn_id': p.get('espn_id'),
+                'sportradar_id': p.get('sportradar_id'),
+                'yahoo_id': p.get('yahoo_id'),
                 'stats': stats.get(pid) or None}
 
     def side(m):
