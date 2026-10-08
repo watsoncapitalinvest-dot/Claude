@@ -320,7 +320,43 @@ DUD = [
 ]
 
 
-def story(g, gw, windows):
+# Which positions a lineup slot will actually accept. A bench player can only
+# be said to have been "left out" for a starter he could legally have replaced:
+# an RB does not go in a WR slot, so comparing their points implies a choice
+# that was never on the table.
+SLOT_OK = {
+    'QB': {'QB'}, 'RB': {'RB'}, 'WR': {'WR'}, 'TE': {'TE'}, 'K': {'K'},
+    'DEF': {'DEF'}, 'DST': {'DEF'},
+    'FLEX': {'RB', 'WR', 'TE'},
+    'WRRB_FLEX': {'RB', 'WR'},
+    'REC_FLEX': {'WR', 'TE'},
+    'SUPER_FLEX': {'QB', 'RB', 'WR', 'TE'},
+}
+
+
+def best_regret(team, slots):
+    """The biggest points gain available from a swap that was legal.
+
+    Returns (bench_player, starter_replaced, gain) or None. Every bench player
+    is tested against every starter whose SLOT would have taken him, rather
+    than the top bench score against the worst starter on the roster.
+    """
+    lineup = list(zip(slots, team['starters']))
+    best = None
+    for b in team['bench']:
+        bp = (b.get('pos') or '').upper()
+        if not bp or (b.get('points') or 0) <= 0:
+            continue
+        for slot, st in lineup:
+            if bp not in SLOT_OK.get(slot, {slot}):
+                continue
+            gain = (b.get('points') or 0) - (st.get('points') or 0)
+            if gain > 0 and (best is None or gain > best[2]):
+                best = (b, st, gain)
+    return best
+
+
+def story(g, gw, windows, slots=None):
     """One game report, written as a piece rather than assembled from slots."""
     tl = [e for e in g['timeline'] if not e['residual']]
     A, B = g['teams']
@@ -440,24 +476,21 @@ def story(g, gw, windows):
     # ---- 4. the cost: a dud or a bench, framed as the reason ---------------
     cost = None
     for t, side in ((gw['teams'][1 - wi], 1 - wi), (gw['teams'][wi], wi)):
-        bench = [p for p in t['bench'] if (p.get('points') or 0) > 0]
-        starters = [p for p in t['starters'] if p['pos'] not in ('K', 'DEF')]
-        if not bench or not starters:
+        r = best_regret(t, slots) if slots else None
+        if not r:
             continue
-        bb = max(bench, key=lambda p: p['points'])
-        ws = min(starters, key=lambda p: p['points'])
-        gap = bb['points'] - ws['points']
+        bb, ws, gap = r
         if gap >= 12:
             nm = TEAM(t['team'])
             if side != wi and gap > g['margin']:
                 cost = (f'{nm} will want to look away from this next bit. {bb["name"]} sat on '
-                        f'their bench and scored {bb["points"]:.1f} while {ws["name"]} started '
-                        f'and returned {ws["points"]:.1f} — {gap:.1f} points in a chair, in a '
-                        f'game they lost by {marg}. That is not a defeat, that is a self-inflicted '
-                        f'wound with a witness.')
+                        f'their bench and scored {bb["points"]:.1f} while {ws["name"]} held the '
+                        f'same slot and returned {ws["points"]:.1f} — {gap:.1f} points in a '
+                        f'chair, in a game they lost by {marg}. That is not a defeat, that is a '
+                        f'self-inflicted wound with a witness.')
             else:
-                cost = (f'{nm} left {bb["name"]} and his {bb["points"]:.1f} on the bench for '
-                        f'{ws["name"]}, who returned {ws["points"]:.1f}. '
+                cost = (f'{nm} left {bb["name"]} and his {bb["points"]:.1f} on the bench and '
+                        f'played {ws["name"]} in the spot instead, for {ws["points"]:.1f}. '
                         + seeded(NODIFF, seed, 9))
             break
     if not cost and arc in ('rout', 'comfortable', 'steady'):
@@ -551,7 +584,8 @@ def build(season, week):
     rp = json.load(open(os.path.join(WDIR, f'{season}-w{week}-replay.json'), encoding='utf-8'))
     wd = json.load(open(os.path.join(WDIR, f'{season}-w{week}.json'), encoding='utf-8'))
     windows = {w['code']: w['label'] for w in rp['windows']}
-    stories = [story(g, gw, windows) for g, gw in zip(rp['games'], wd['games'])]
+    slots = [x for x in (wd.get('roster_positions') or []) if x != 'BN']
+    stories = [story(g, gw, windows, slots) for g, gw in zip(rp['games'], wd['games'])]
 
     # The game of the week is the one you would have wanted to watch, and what
     # makes that is mostly WHEN it was settled. A game that changed hands ten
