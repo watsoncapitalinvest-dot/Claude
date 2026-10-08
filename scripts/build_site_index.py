@@ -122,6 +122,10 @@ def build():
                 print(f'  note: {rel} has no <title> and is not in KNOWN_TITLELESS -- skipped, check it')
             continue
         cat = CATEGORY.get(rel)
+        # weekly issues are generated, one per week, so they cannot be a
+        # hand-maintained list without breaking the build every Tuesday
+        if not cat and re.match(r'scfl-week-\d+\.html$', rel):
+            cat = 'Season Coverage & Issues'
         if not cat:
             missing_category.append(rel)
             continue
