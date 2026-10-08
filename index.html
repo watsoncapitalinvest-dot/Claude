@@ -2628,6 +2628,82 @@ async function loadSiteIndex() {
   } catch { SITE_INDEX = null; }
   return SITE_INDEX;
 }
+// ---- The Story Queue — pieces somebody means to write ----------------------
+// Deliberately a committed file rather than localStorage like the Newsroom
+// desk: a draft that lives in one browser dies with that browser, and a pitch
+// that only exists in a chat message is gone as soon as the message scrolls.
+// story-queue.json is the durable version, so a piece planned in October is
+// still planned in December.
+let STORY_QUEUE = null;
+async function loadStoryQueue() {
+  if (STORY_QUEUE) return STORY_QUEUE;
+  try {
+    const r = await fetch('story-queue.json', { cache: 'no-cache' });
+    if (r.ok) STORY_QUEUE = await r.json();
+  } catch { STORY_QUEUE = null; }
+  return STORY_QUEUE;
+}
+// the ones still waiting on somebody to write them
+function queuedStories(q) {
+  return ((q || STORY_QUEUE || {}).stories || [])
+    .filter(s => s.status === 'want-to-write' || s.status === 'drafting');
+}
+const QUEUE_TAG = {
+  'want-to-write': ['✍️', 'Want to write', 'var(--red,#c20f16)'],
+  'drafting': ['✏️', 'Drafting', '#0e8ab5'],
+  'filed': ['✓', 'Filed', '#6b7280'],
+  'spiked': ['✕', 'Spiked', '#9a958c'],
+};
+function showStoryQueue() {
+  loadStoryQueue().then(renderStoryQueue);
+  app.innerHTML = `<div style="padding-bottom:24px">
+    <button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom</button>
+    <div class="setup-logo" style="font-size:24px">🗒️ The Story Queue</div>
+    <p class="muted" style="margin-top:4px">What the desk means to write next — the angle, the structure and the research, waiting on the words.</p>
+    <div id="storyQueueBody"><div class="card"><div class="dt">Loading…</div></div></div>
+  </div>`;
+}
+function renderStoryQueue(q) {
+  const el = $('#storyQueueBody'); if (!el) return;
+  const list = (q && q.stories) || [];
+  if (!list.length) {
+    el.innerHTML = `<div class="card"><div class="dt">Nothing in the queue. It's kept in <code>story-queue.json</code>.</div></div>`;
+    return;
+  }
+  const order = { 'drafting': 0, 'want-to-write': 1, 'filed': 2, 'spiked': 3 };
+  const card = s => {
+    const [ic, lbl, col] = QUEUE_TAG[s.status] || ['•', s.status || '', '#9a958c'];
+    return `<div class="card" style="border-left:3px solid ${col}">
+      <div class="row" style="justify-content:space-between;align-items:baseline;gap:10px">
+        <div class="faint" style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">${esc(s.desk || '')}</div>
+        <div style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:${col};white-space:nowrap">${ic} ${esc(lbl)}</div>
+      </div>
+      <div style="font-weight:800;font-size:17px;line-height:1.2;margin-top:4px">${esc(s.headline || 'Untitled')}</div>
+      ${s.dek ? `<div class="dt" style="margin-top:5px;font-style:italic">${esc(s.dek)}</div>` : ''}
+      ${s.why ? `<div class="dt" style="margin-top:8px"><b>Why:</b> ${esc(s.why)}</div>` : ''}
+      ${s.angle ? `<div class="dt" style="margin-top:6px"><b>The angle:</b> ${esc(s.angle)}</div>` : ''}
+      ${(s.sections || []).length ? `<div style="margin-top:10px">
+        <div class="faint" style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">The shape</div>
+        ${s.sections.map((x, i) => `<div style="margin:0 0 7px;padding-left:22px;position:relative">
+          <span class="faint" style="position:absolute;left:0;top:0;font-size:11px;font-weight:800">${i + 1}.</span>
+          <div style="font-weight:700;font-size:13.5px">${esc(x.h || '')}</div>
+          ${x.note ? `<div class="dt" style="font-size:12.5px;margin-top:1px">${esc(x.note)}</div>` : ''}
+        </div>`).join('')}
+      </div>` : ''}
+      ${s.figures ? `<div class="dt" style="margin-top:8px"><b>Figures:</b> ${esc(s.figures)}</div>` : ''}
+      ${(s.blockers || []).length ? `<div class="dt" style="margin-top:8px;color:var(--red,#c20f16)"><b>Blocked on:</b> ${s.blockers.map(esc).join(' ')}</div>` : ''}
+      ${(s.sources || []).length ? `<div class="faint" style="font-size:11px;margin-top:8px">Research: ${s.sources.map(esc).join(' · ')}</div>` : ''}
+      ${s.deskVersion ? `<div style="margin-top:10px"><a href="${esc(s.deskVersion)}" target="_blank" rel="noopener" style="font-weight:700;font-size:12.5px">Read the desk version →</a>
+        ${s.deskVersionNote ? `<div class="faint" style="font-size:11px;margin-top:3px">${esc(s.deskVersionNote)}</div>` : ''}</div>` : ''}
+      ${s.added ? `<div class="faint" style="font-size:11px;margin-top:8px">Queued ${esc(s.added)}${s.byline ? ' · ' + esc(s.byline) : ''}</div>` : ''}
+    </div>`;
+  };
+  const sorted = list.slice().sort((a, b) =>
+    (order[a.status] ?? 9) - (order[b.status] ?? 9) || String(b.added || '').localeCompare(String(a.added || '')));
+  const n = queuedStories(q).length;
+  el.innerHTML = `<div class="dt" style="margin:0 0 12px">${n} waiting to be written${list.length > n ? ` · ${list.length - n} on the record` : ''}. Kept in <code>story-queue.json</code> so it survives the browser.</div>`
+    + sorted.map(card).join('');
+}
 function showSiteIndex() {
   loadSiteIndex().then(renderSiteIndex);
   app.innerHTML = `<div style="padding-bottom:24px">
@@ -3787,6 +3863,7 @@ const NEWSROOM_TOOLS = [
   ['broadcast', '🏟️', 'SCFL Network Live', 'Watch any matchup — the live game broadcast'],
   ['dashboard', '🗞️', 'Newsroom HQ', 'Weekly checklist, brief & calendar'],
   ['desk', '✍️', 'Newsroom Desk', 'Chat → Water Cooler, uploads'],
+  ['story-queue', '🗒️', 'The Story Queue', 'Pieces the desk means to write — angle, shape & research, waiting on the words'],
   ['storylines', '🧵', 'Storylines', 'Running league arcs'],
   ['investigations', '🔍', 'Investigations', 'The long-form specials'],
   ['interviews', '🎙️', 'Owner Interviews', 'Build your own questions, send a link, collect answers'],
@@ -3809,7 +3886,7 @@ const OFFICE_SECTIONS = [
 const NEWSROOM_SECTIONS = [
   ['This Week', ['calendar', 'create-issue', 'weekly-stories', 'dashboard']],
   ['The Network', ['sportscenter', 'broadcast']],
-  ['Desks & Features', ['politics', 'desk', 'storylines', 'investigations', 'interviews', 'trade-court', 'waiver-wire', 'heat-index', 'weekly-heat']],
+  ['Desks & Features', ['politics', 'desk', 'story-queue', 'storylines', 'investigations', 'interviews', 'trade-court', 'waiver-wire', 'heat-index', 'weekly-heat']],
   ['Editions', ['pop-grades', 'archive', 'archive-articles']],
 ];
 function toolSections(tools, sections) {
@@ -4071,6 +4148,7 @@ async function showCreateIssue() {
   S.reading = false;
   loadDesk(); loadPower(); loadMoney();
   await ensurePopGrades();
+  await loadStoryQueue();
   const special = ciEdition() === 'special';
   const slot = ciSlot();
   const wk = S.activeWeek || 1;
@@ -4121,6 +4199,20 @@ async function showCreateIssue() {
       <div class="faint" style="font-size:12px;margin-bottom:4px">Everything checked goes in, feature first.${special ? ' Weekly columns sit this one out.' : ''}</div>
       ${pool.map(p => row(p, 'checkbox')).join('')}
     </div>
+
+    ${(() => {
+      // Planned pieces can't go in the line-up -- they aren't written yet --
+      // but the moment to remember one is while the issue is being built,
+      // not after it ships without them.
+      const qs = queuedStories();
+      return qs.length ? `<div class="card" style="border-left:3px solid var(--red,#c20f16)">
+        <div class="faint" style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">In the queue — not written yet</div>
+        ${qs.map(s => `<div style="margin-top:7px"><span style="font-weight:800;font-size:14px">${esc(s.headline)}</span>
+          <span class="faint" style="font-size:11.5px"> · ${esc(s.desk || '')}</span>
+          ${s.dek ? `<div class="dt" style="font-size:12.5px;margin-top:1px">${esc(s.dek)}</div>` : ''}</div>`).join('')}
+        <button class="btn ghost" data-act="story-queue" style="margin-top:10px">Open the Story Queue →</button>
+      </div>` : '';
+    })()}
 
     <div class="seclabel">3 · The Cover</div>
     <div class="card">
@@ -9562,7 +9654,8 @@ async function showSettings() {
 const NAV_ACTS = new Set(['home','newsroom','create-issue','weekly-stories','dashboard','calendar',
   'politics','pol-read','desk','storylines','investigations','inv-read','dossier','records','rivalries','rivalry-read','players','player-read','ex-files','site-index',
   'archive-articles','archive','cover-art','predraft-view','draft-room','trade-court','waiver-wire','heat-index','weekly-heat','draft-desk',
-  'assets','staff-handbook','staff-import','tc-team','back-news','back','settings','ex-files','power-ranks','money-lines','pop-grades','pop-year']);
+  'assets','staff-handbook','staff-import','tc-team','back-news','back','settings','ex-files','power-ranks','money-lines','pop-grades','pop-year',
+  'story-queue']);
 let NAV_SILENT = false;
 function pushRoute(act, data) {
   if (NAV_SILENT) return;
@@ -9641,6 +9734,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'franchise-map') return showFranchiseMap();
   if (act === 'records') return showRecords();
   if (act === 'site-index') return showSiteIndex();
+  if (act === 'story-queue') return showStoryQueue();
   if (act === 'trade-court') return showTradeCourt();
   if (act === 'draft-desk') return showDraftDesk();
   if (act === 'roster-export') return exportRosters();
