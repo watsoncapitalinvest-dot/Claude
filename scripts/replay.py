@@ -155,6 +155,13 @@ def num(x, d=0.0):
         return d
 
 
+# nflverse and Sleeper disagree about three franchises' abbreviations
+TEAM_ALIAS = {'LA': 'LAR', 'LAR': 'LAR', 'LV': 'LV', 'OAK': 'LV', 'STL': 'LAR',
+              'SD': 'LAC', 'WAS': 'WAS', 'WSH': 'WAS', 'ARZ': 'ARI', 'BLT': 'BAL',
+              'CLV': 'CLE', 'HST': 'HOU', 'JAC': 'JAX'}
+tm = lambda t: TEAM_ALIAS.get((t or '').upper(), (t or '').upper())
+
+
 def play_events(season, week, sc):
     """Every play that moved a fantasy score, as attributions per gsis id.
 
@@ -163,6 +170,7 @@ def play_events(season, week, sc):
     """
     p = fetch(PBP_URL.format(s=season), os.path.join(CACHE, f'pbp_{season}.csv.gz'))
     out = {}
+    dst = {}          # team defences, keyed by abbreviation, not a player id
     games = {}
     with gzip.open(p, 'rt', encoding='utf-8', errors='replace') as f:
         for r in csv.DictReader(f):
@@ -186,6 +194,28 @@ def play_events(season, week, sc):
                 out.setdefault(pid, []).append(dict(
                     base, pts=round(pts, 3), kind=kind, text=text,
                     yards=yards, td=bool(td), residual=False))
+
+            # ---- team defence: the parts of it that ARE a single play ----
+            # Points allowed is a whole-game stat and stays in the residual,
+            # but a sack, a takeaway and a defensive score are all plays and
+            # can be told as plays.
+            dt = tm(r.get('defteam'))
+            if dt:
+                def dadd(pts, kind, text, td=False):
+                    if not pts:
+                        return
+                    dst.setdefault(dt, []).append(dict(
+                        base, pts=round(pts, 3), kind=kind, text=text,
+                        yards=None, td=bool(td), residual=False))
+                if r.get('sack') == '1':
+                    dadd(num(sc.get('sack'), 1.0), 'sack', 'a sack')
+                if r.get('interception') == '1':
+                    dadd(num(sc.get('int'), 2.0), 'dint', 'an interception')
+                if r.get('fumble_lost') == '1':
+                    dadd(num(sc.get('def_st_fum_rec'), 2.0), 'drec', 'a fumble recovery')
+                if r.get('return_touchdown') == '1' or r.get('touchdown') == '1' and \
+                        tm(r.get('td_team')) == dt:
+                    dadd(num(sc.get('def_td'), 6.0), 'dtd', 'a defensive touchdown', True)
 
             ptd = r.get('pass_touchdown') == '1'
             rtd = r.get('rush_touchdown') == '1'
@@ -240,7 +270,7 @@ def play_events(season, week, sc):
                 add(r['kicker_player_id'], num(sc.get('xpm'), 1.0), 'xp', 'an extra point')
     # when each game ended, for parking residuals
     ends = {g: (ko.timestamp() + 3600 if ko else 0, win) for g, (ko, win) in games.items()}
-    return out, ends
+    return out, ends, dst
 
 
 # ---- assembling one matchup ------------------------------------------------
@@ -254,16 +284,20 @@ def fantasy_clock(window, rank, n):
     return dict(sec=round(t), qtr=q, clock=f'{int(rem // 60):02d}:{int(rem % 60):02d}')
 
 
-def build_game(game, evmap, ends, by_espn, by_name, misses):
+def build_game(game, evmap, ends, by_espn, by_name, misses, dst=None):
     sides = []
     for t in game['teams']:
         evs, resid = [], 0.0
         for pl in t['starters']:
-            gid, how = resolve(pl, by_espn, by_name, evmap)
-            mine = list(evmap.get(gid, [])) if gid else []
+            if (pl.get('pos') or '').upper() == 'DEF':
+                gid, how = tm(pl.get('nfl') or pl.get('id')), 'team'
+                mine = list((dst or {}).get(gid, []))
+            else:
+                gid, how = resolve(pl, by_espn, by_name, evmap)
+                mine = list(evmap.get(gid, [])) if gid else []
             got = sum(e['pts'] for e in mine)
             want = float(pl.get('points') or 0)
-            if not gid:
+            if not gid or (how != 'team' and not mine and float(pl.get('points') or 0)):
                 misses.append(f"{pl['name']} ({pl.get('pos')}/{pl.get('nfl')})")
             for e in mine:
                 evs.append(dict(e, player=pl['name'], pos=pl.get('pos'), nfl=pl.get('nfl')))
@@ -348,12 +382,12 @@ def main():
     sc = wd['scoring'] or {}
 
     by_espn, by_name = crosswalk()
-    evmap, ends = play_events(a.season, a.week, sc)
+    evmap, ends, dst = play_events(a.season, a.week, sc)
     print(f'  {sum(len(v) for v in evmap.values()):,} scoring attributions across '
-          f'{len(evmap):,} players in week {a.week}')
+          f'{len(evmap):,} players and {len(dst)} defences in week {a.week}')
 
     misses = []
-    games = [build_game(g, evmap, ends, by_espn, by_name, misses) for g in wd['games']]
+    games = [build_game(g, evmap, ends, by_espn, by_name, misses, dst) for g in wd['games']]
 
     tot = sum(1 for g in wd['games'] for t in g['teams'] for p in t['starters'])
     print(f'  unmatched starters: {len(misses)}/{tot}')
