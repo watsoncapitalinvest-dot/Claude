@@ -23,6 +23,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WDIR = os.path.join(ROOT, 'week-data')
 _s = importlib.util.spec_from_file_location('bi', os.path.join(ROOT, 'scripts', 'build_issue.py'))
 bi = importlib.util.module_from_spec(_s); sys.modules['bi'] = bi; _s.loader.exec_module(bi)
+_t = importlib.util.spec_from_file_location('sd', os.path.join(ROOT, 'scripts', 'standings.py'))
+sd = importlib.util.module_from_spec(_t); sys.modules['sd'] = sd; _t.loader.exec_module(sd)
 E = bi.esc
 
 # eight games a week, so the numerals have to reach eight -- stopping at
@@ -46,6 +48,39 @@ def scoreboard_blocks(stories):
              '</figcaption></figure></div>')]
 
 
+def standings_blocks(st):
+    """The table, by division, because that is the shape the playoffs use."""
+    if not st:
+        return []
+    out = []
+    by = {}
+    for r in st['table']:
+        by.setdefault(r.get('div_name') or 'League', []).append(r)
+    for di, dv in enumerate(sorted(by)):
+        rows = ''
+        for r in by[dv]:
+            rows += (f'<tr><th scope="row">{E(r["team"])}</th>'
+                     f'<td class="num"><b>{r["record"]}</b></td>'
+                     f'<td class="num dim">{r["pf"]:.0f}</td>'
+                     f'<td class="num dim">{r["pa"]:.0f}</td>'
+                     f'<td class="num dim">{r["streak"]}</td></tr>')
+        # the table is reference, not a game report: it is allowed to run over
+        # two pages rather than be shrunk to 72 per cent to avoid it
+        out.append(('pagebreak' if di == 2 else 'body',
+                    f'<div class="ad"><figure>'
+                            f'<div class="sect" style="margin-top:14px">{E(dv)}</div>'
+                            f'<div class="scroll"><table><thead><tr><th class="lt"></th>'
+                            f'<th>W-L</th><th>PF</th><th>PA</th><th>Run</th></tr></thead>'
+                            f'<tbody>{rows}</tbody></table></div></figure></div>'))
+    lead = st['table'][0]
+    out.append(('body', f'<p class="b">{E(lead["team"])} top the league at {lead["record"]} '
+                        f'with {lead["pf"]:.0f} points. Playoffs begin in week '
+                        f'{st["playoff_week"]}, which leaves '
+                        f'{max(0, st["playoff_week"] - 1 - st["through"])} weeks of the regular '
+                        f'season still to play.</p>'))
+    return out
+
+
 def build(season, week, remeasure=True):
     p = os.path.join(WDIR, f'{season}-w{week}-stories.json')
     if not os.path.exists(p):
@@ -57,10 +92,16 @@ def build(season, week, remeasure=True):
     order = [lead] + sorted((i for i in range(len(stories)) if i != lead),
                             key=lambda i: (stories[i]['arc'] == 'rout', stories[i]['margin']))
 
+    st = sd.build(str(season), int(week))
     arts = [{'id': 'wk-scoreboard', 'flag': 'The Scoreboard',
              'headline': f'Week {week}, Settled',
              'subhead': 'Eight games, every one of them rebuilt from the tape.',
              'blocks': scoreboard_blocks(stories)}]
+    if st:
+        arts.append({'id': 'wk-standings', 'flag': 'The Table',
+                     'headline': f'Where Everyone Stands',
+                     'subhead': f'Through week {st["through"]} of the {season} season.',
+                     'blocks': standings_blocks(st)})
     for n, i in enumerate(order):
         s = stories[i]
         arts.append({
@@ -108,7 +149,7 @@ def build(season, week, remeasure=True):
     here = os.path.join(ROOT, 'scripts')
     bi.build(key, remeasure=False, quiet=True)          # emits .pack-kinds.json
     kinds = json.load(open(os.path.join(here, '.pack-kinds.json'), encoding='utf-8'))
-    breaks = [i for i, k in enumerate(kinds) if k == 'divider']
+    breaks = [i for i, k in enumerate(kinds) if k in ('divider', 'pagebreak')]
     json.dump(breaks, open(os.path.join(here, f'.pack-breaks-{key}.json'), 'w'))
     bi.build(key, remeasure=False, quiet=True)
     if remeasure:

@@ -22,6 +22,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WDIR = os.path.join(ROOT, 'week-data')
 _s = importlib.util.spec_from_file_location('ad', os.path.join(ROOT, 'scripts', 'build_addendum.py'))
 ad = importlib.util.module_from_spec(_s); sys.modules['ad'] = ad; _s.loader.exec_module(ad)
+_t = importlib.util.spec_from_file_location('sd', os.path.join(ROOT, 'scripts', 'standings.py'))
+sd = importlib.util.module_from_spec(_t); sys.modules['sd'] = sd; _t.loader.exec_module(sd)
 E = ad.esc
 
 TEAM = lambda s: (s or '').strip().strip('*').strip()
@@ -72,6 +74,11 @@ def arc_of(g, tl):
     if m <= 10: return 'tight'
     return 'steady'
 
+
+ORD2 = {1: 'first', 2: 'second', 3: 'third', 4: 'fourth', 5: 'fifth', 6: 'sixth',
+        7: 'seventh', 8: 'eighth', 9: 'ninth', 10: 'tenth', 11: 'eleventh',
+        12: 'twelfth', 13: 'thirteenth', 14: 'fourteenth', 15: 'fifteenth',
+        16: 'sixteenth'}
 
 USED = set()
 
@@ -356,7 +363,7 @@ def best_regret(team, slots):
     return best
 
 
-def story(g, gw, windows, slots=None):
+def story(g, gw, windows, slots=None, st=None):
     """One game report, written as a piece rather than assembled from slots."""
     tl = [e for e in g['timeline'] if not e['residual']]
     A, B = g['teams']
@@ -396,7 +403,7 @@ def story(g, gw, windows, slots=None):
     # ---- 1. the lede: the result AND what the game actually was ------------
     hook = seeded(LEDE[arc], seed)
     if arc == 'rout':
-        P.append(f'{hook} This was a chore. {wn} beat {ln} {W["final"]} to {L["final"]}, '
+        P.append(f'{hook} {wn} beat {ln} {W["final"]} to {L["final"]}, '
                  f'and the {marg} points between them at the end flatter nobody — '
                  + (f'{ln} did not lead at any stage of this football game.'
                     if g['lead_changes'] == 0 else
@@ -445,6 +452,26 @@ def story(g, gw, windows, slots=None):
     elif g['lead_changes'] == 0:
         P.append(f'There is no sequence to describe, because there was no sequence. {wn} scored '
                  f'first, kept scoring, and the remainder was arithmetic performed in public.')
+
+    # ---- 2b. what it did to their seasons ---------------------------------
+    # A game report that never says what the result cost anybody is a box score
+    # with adjectives. This is the paragraph that gives the ninety minutes a
+    # consequence, and it is written from the real table rather than asserted.
+    if st:
+        rw, rl = st['by_team'].get(wn), st['by_team'].get(ln)
+        if rw and rl:
+            bits = f'{wn} {sd.situation(st, wn)}'
+            bits += f'. {ln} {sd.situation(st, ln)}'
+            if rl['w'] == 0 and rl['games'] >= 3:
+                bits += ', and are still looking for a first win'
+            bits += '.'
+            if rw['seed'] <= 3:
+                bits += (f' {wn} sit {ORD2.get(rw["seed"], rw["seed"])} in the league on the '
+                         f'full table, {rw["pf"]:.0f} points scored.')
+            elif rl['seed'] >= st['teams'] - 2:
+                bits += (f' {ln} are {ORD2.get(rl["seed"], rl["seed"])} of {st["teams"]}, and '
+                         f'the {rl["pa"]:.0f} points conceded is most of the reason.')
+            P.append(bits)
 
     # ---- 3. the people, related to each other rather than listed -----------
     if wtop:
@@ -585,7 +612,11 @@ def build(season, week):
     wd = json.load(open(os.path.join(WDIR, f'{season}-w{week}.json'), encoding='utf-8'))
     windows = {w['code']: w['label'] for w in rp['windows']}
     slots = [x for x in (wd.get('roster_positions') or []) if x != 'BN']
-    stories = [story(g, gw, windows, slots) for g, gw in zip(rp['games'], wd['games'])]
+    st = sd.build(str(season), int(week))
+    if st and st['through'] != int(week):
+        print(f'  note: standings only run through week {st["through"]} '
+              f'(weeks on disk: {", ".join(map(str, st["weeks"]))})')
+    stories = [story(g, gw, windows, slots, st) for g, gw in zip(rp['games'], wd['games'])]
 
     # The game of the week is the one you would have wanted to watch, and what
     # makes that is mostly WHEN it was settled. A game that changed hands ten
