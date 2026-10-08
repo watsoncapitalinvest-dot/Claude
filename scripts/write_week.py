@@ -73,9 +73,6 @@ def arc_of(g, tl):
     return 'steady'
 
 
-# Phrases already spent in this issue. Eight games out of a phrasebank this
-# size will collide, and two stories opening with the same joke reads worse
-# than either story would alone.
 USED = set()
 
 
@@ -84,7 +81,7 @@ def seeded(seq, seed, salt=0):
 
     The same game rebuilt twice must read identically or a rebuild looks like
     an edit, so the starting point is seeded rather than random. From there it
-    walks forward to the first line this issue has not already used."""
+    walks forward to the first line this issue has not already spent."""
     if not seq:
         return ''
     start = (seed * 31 + salt * 17) % len(seq)
@@ -96,81 +93,6 @@ def seeded(seq, seed, salt=0):
     return seq[start]
 
 
-# ---------------------------------------------------------------------------
-# The voice. Inspired by the man at the SportsCenter desk, not a clone of him:
-# dry, unimpressed, willing to say the quiet part, fond of a drink and of his
-# own misfortune. The rule that keeps it honest is that the jokes live in the
-# connective tissue and never in a factual clause. Every number, name, yardage
-# and sequence below comes out of the replay. The colour is how it is said.
-# ---------------------------------------------------------------------------
-OPEN = {
-    'rout': [
-        'Some games are contests. This was a chore.',
-        'There is no polite way to write this one up, so I will not try.',
-        'I have seen car accidents with more suspense, and better outcomes for everybody involved.',
-        'This one was decided early and then kept going anyway, which is the worst kind.',
-    ],
-    'comfortable': [
-        'Never close enough to be interesting, never far enough apart to turn off.',
-        'A comfortable afternoon, if you were on the right side of it.',
-        'This had the shape of a competitive game without ever actually being one.',
-    ],
-    'seesaw': [
-        'Now this one I enjoyed, and I say that about almost nothing.',
-        'Back and forth all afternoon. My scorekeeper asked to be relieved.',
-        'If you like your football unresolved until the very end, this was your game.',
-    ],
-    'tight': [
-        'Close the whole way, which is a nice way of saying nobody could put it away.',
-        'They played a tight one. Tight is the word for it. Tight like a bad shoe.',
-        'This went down to the end, mostly because neither side had the decency to end it.',
-    ],
-    'steady': [
-        'Not a classic. Not a disaster. One of the other ones.',
-        'Workmanlike. Businesslike. Several other kinds of like.',
-        'The kind of win you forget by Thursday and bring up in December.',
-    ],
-}
-
-CLOSE = {
-    'rout': [
-        'They all count the same, as my second wife used to say, usually about something else.',
-        'The good news is that it is over. That is the entire list of good news.',
-        'File it, forget it, and let us never speak of it again.',
-    ],
-    'comfortable': [
-        'Nothing flashy. Like a good haircut.',
-        'Somewhere a waiver claim from August is feeling pretty good about itself.',
-        'History will be kind to the winners. It always is.',
-    ],
-    'seesaw': [
-        'That is why you watch. Well. That, and the fact that I am contractually obligated.',
-        'I aged a year on that one and I was already old.',
-        'A game like that is why I switched to the second drink. I regret nothing.',
-    ],
-    'tight': [
-        'Both of these teams should probably sit down for a minute.',
-        'A win is a win. It just does not always feel like one.',
-        'Somewhere a front office is staring at a bench score and hoping nobody noticed.',
-    ],
-    'steady': [
-        'On to the next one, which I am told is also a football game.',
-        'Not pretty. They all count the same.',
-        'My producer is telling me to move on, and for once he is right.',
-    ],
-}
-
-BIG = ['That, friends, is a career highlight. I would know — mine was a walk.',
-       'You do not coach that. You do not scout it either. You just sit there.',
-       'Put that one on the tape and keep it.',
-       'That is the play people will remember, which is unfortunate for everyone else.']
-
-DUD = ['A lovely painting in a burning house.',
-       'He was out there. I can confirm he was out there.',
-       'The box score says he played. The box score has been wrong before, but not this time.',
-       'Somebody is going to have to answer for that at the next meeting.']
-
-
 def an(n):
     """'a' or 'an' in front of a number as it is SPOKEN -- eight, eleven and
     eighteen all take 'an', and so does anything starting with them."""
@@ -178,18 +100,93 @@ def an(n):
     return 'an' if d.startswith('8') or d.startswith('11') or d.startswith('18') else 'a'
 
 
-def tell(e, windows, article=True):
-    """A play, told. Yardage phrases need an article before they can sit in a
-    sentence, and the window is worth naming because it is the whole trick:
-    Monday night and the late fourth are the same moment."""
+def tell(e, article=True):
     t = e['text'] or e['kind']
     if article and not t[:1].isalpha():
         t = an(t) + ' ' + t
     return t
 
 
+def names(items):
+    """A list of people as a sentence says them, not as a table prints them."""
+    xs = list(items)
+    if not xs:
+        return ''
+    if len(xs) == 1:
+        return xs[0]
+    return ', '.join(xs[:-1]) + ' and ' + xs[-1]
+
+
+# ---------------------------------------------------------------------------
+# The voice: dry, unimpressed, fond of a drink and of its own misfortune.
+# Inspired by the man at the SportsCenter desk rather than copied from him.
+#
+# The structural rule, learned the hard way: an article is not a list of true
+# statements. Each paragraph below takes two or three facts and RELATES them --
+# this happened because that did, this mattered only because of that. Facts are
+# never simply emitted one after another, and a number only appears when the
+# sentence is doing something with it.
+#
+# The honesty rule is unchanged: jokes live in the connective tissue and never
+# inside a factual clause. Every name, number, yardage and sequence comes out
+# of the replay.
+# ---------------------------------------------------------------------------
+LEDE = {
+    'rout': ['Some games are contests.', 'There is no kind way to file this one.',
+             'I have seen car accidents with more suspense.'],
+    'comfortable': ['This had the shape of a competitive game without ever being one.',
+                    'Close enough to watch, never close enough to worry about.',
+                    'A comfortable afternoon, assuming you were on the right side of it.'],
+    'seesaw': ['Now this one I enjoyed, and I enjoy almost nothing.',
+               'My scorekeeper asked to be relieved at halftime.',
+               'If you like your football unresolved, this was yours.'],
+    'tight': ['Nobody could put this away, which is the polite version.',
+              'Tight the whole way. Tight like a bad shoe.',
+              'This went to the end, largely because neither of them had the decency to end it.'],
+    'steady': ['Not a classic, not a disaster, one of the other ones.',
+               'Workmanlike. Businesslike. Several other kinds of like.',
+               'The sort of win you forget by Thursday and mention in December.'],
+}
+CLOSE = {
+    'rout': ['They all count the same, as my second wife used to say, usually about something else.',
+             'The good news is that it is over, and that is the whole of the good news.',
+             'File it, forget it, and let us never speak of it again.'],
+    'comfortable': ['Nothing flashy. Like a good haircut.',
+                    'Somewhere a waiver claim from August is feeling good about itself.',
+                    'History will be kind to the winners. It always is.'],
+    'seesaw': ['That is why you watch. That, and in my case a contract.',
+               'I aged a year on that one, and I was already old.',
+               'Games like that are why I switched to the second drink. No regrets.'],
+    'tight': ['A win is a win. It does not always feel like one.',
+              'Both of these teams should sit down for a minute.',
+              'Somewhere a front office is staring at a bench score and hoping nobody noticed.'],
+    'steady': ['On to the next one, which I am assured is also football.',
+               'Not pretty. They all count the same.',
+               'My producer says move on, and for once he is right.'],
+}
+
+
+BURN = ['{n} managed {v} for {t}, which on an afternoon like this one is a lovely painting in '
+        'a burning house.',
+        '{n} put up {v} for {t} and may as well have stayed home, which is the cruelty of the '
+        'format.',
+        '{n} had {v} of it for {t}. The other nine spots have some explaining to do.']
+HELP = ['with {r} close enough behind to matter.',
+        'and {r} kept him company.',
+        'though {r} did enough that he did not have to do it alone.']
+# Five games a week can need one of these, so the bank has to be deeper than
+# the number of games or the issue starts repeating itself.
+NODIFF = ['It made no difference to the result, which is the only comfort on offer.',
+          'It cost them nothing in the end, which is the best that can be said for it.',
+          'The result survived it. Their dignity is a separate question.',
+          'They won anyway, so it goes in the drawer marked never mind.',
+          'No harm done, unless you count the man who had to watch it.',
+          'It did not matter. It rarely does until the one week it does.',
+          'Nobody will remember it, which is the kindest outcome available.']
+
+
 def story(g, gw, windows):
-    """One game report. Factually bound to the replay, delivered by the desk."""
+    """One game report, written as a piece rather than assembled from slots."""
     tl = [e for e in g['timeline'] if not e['residual']]
     A, B = g['teams']
     wi = 0 if A['final'] >= B['final'] else 1
@@ -203,10 +200,11 @@ def story(g, gw, windows):
     big = max(tl, key=lambda e: e['pts']) if tl else None
     wtop, ltop = tally(tl, wi), tally(tl, 1 - wi)
     tds = [e for e in tl if e['td']]
+    marg = f'{g["margin"]:.1f}'
+    last = lambda n: n.split()[-1]
     P = []
 
-    # ---- headline -----------------------------------------------------------
-    last = lambda n: n.split()[-1]
+    # ---- headline & dek ----------------------------------------------------
     if go and late(go) and go['side'] == wi and arc in ('tight', 'seesaw'):
         hl = f'{last(go["player"])} Wins It Late for {wn}'
     elif arc == 'rout':
@@ -218,95 +216,95 @@ def story(g, gw, windows):
         hl = seeded([f'{wn} Edge {ln}', f'{wn} Hang On'], seed)
     else:
         hl = seeded([f'{wn} Handle {ln}', f'{wn} Hold Off {ln}'], seed)
+    dek = (f'{wn} {W["final"]}, {ln} {L["final"]}.'
+           + (f' {g["lead_changes"]} lead changes, and the last one was the only one that kept.'
+              if g['lead_changes'] >= 6 else
+              ' It was over long before it was finished.' if arc == 'rout' else
+              f' {marg} points in it.' if arc == 'tight' else ''))
 
-    # ---- dek ----------------------------------------------------------------
+    # ---- 1. the lede: the result AND what the game actually was ------------
+    hook = seeded(LEDE[arc], seed)
     if arc == 'rout':
-        dek = f'{wn} {W["final"]}, {ln} {L["final"]}. It was over long before it was finished.'
+        P.append(f'{hook} This was a chore. {wn} beat {ln} {W["final"]} to {L["final"]}, '
+                 f'and the {marg} points between them at the end flatter nobody — '
+                 + (f'{ln} did not lead at any stage of this football game.'
+                    if g['lead_changes'] == 0 else
+                    f'{ln} led early, lost it, and never argued again.'))
     elif g['lead_changes'] >= 6:
-        dek = f'{g["lead_changes"]} lead changes. {wn} had it last, {W["final"]}–{L["final"]}.'
-    elif go and late(go):
-        dek = f'Settled in the fourth. {wn} {W["final"]}, {ln} {L["final"]}.'
+        P.append(f'{hook} {wn} and {ln} swapped the lead {g["lead_changes"]} times before one of '
+                 f'them finally kept it, and {wn} were the ones holding it when the weekend ran '
+                 f'out: {W["final"]}–{L["final"]}.')
+    elif go and late(go) and go['side'] == wi:
+        P.append(f'{hook} {wn} were behind this football game until the fourth quarter and won it '
+                 f'{W["final"]} to {L["final"]}, which tells you most of what you need and none of '
+                 f'how it felt.')
     else:
-        dek = f'{wn} {W["final"]}, {ln} {L["final"]}.'
+        P.append(f'{hook} {wn} {W["final"]}, {ln} {L["final"]}, {an(marg)} {marg}-point margin that '
+                 f'never seriously came under review.')
 
-    # ---- P1: the hook, then the result -------------------------------------
-    marg = f'{g["margin"]:.1f}'
-    P.append(seeded(OPEN[arc], seed) + ' ' +
-             f'{wn} {W["final"]}, {ln} {L["final"]}' +
-             (f', {an(marg)} {marg}-point margin.' if arc != 'tight'
-              else f' — {marg} points in it.'))
-
-    # ---- P2: how it got there ----------------------------------------------
-    if g['lead_changes'] >= 6:
-        # how far across the weekend the trading actually ran. Ten lead changes
-        # that all happen before one o'clock is a different story from ten that
-        # run to Monday night, and the sentence has to know which it was.
-        flips = [e for e in tl if e.get('go_ahead')]
-        wins_ = {e['window'] for e in flips}
-        if len(wins_) <= 1:
-            span = (f'All of it inside {windows.get(flips[0]["window"], "one window")}, '
-                    f'which tells you how early this got settled and how long it took '
-                    f'anybody to notice.')
-        elif 'MON' in wins_ or 'SNF' in wins_:
-            span = 'It ran right through to the night games.'
-        else:
-            span = 'It took most of Sunday to shake out.'
-        P.append(f'They traded it {g["lead_changes"]} times. Every time one of them looked like '
-                 f'getting clear the other one answered. {span} There were {len(tds)} touchdowns '
-                 f'between them, and none of them settled a thing until the last one did.')
-    elif g['lead_changes'] == 0:
-        P.append(f'{ln} did not lead at any point in this football game. Not once. There is no '
-                 f'sequence to describe because there was no sequence — {wn} scored first and '
-                 f'then kept scoring, and the rest was arithmetic.')
-    elif arc == 'rout':
-        P.append(f'{ln} had the lead early and then watched it leave. By the time it mattered '
-                 f'there were {g["margin"]:.1f} points in it, and the only question left was '
-                 f'whether anybody was still watching.')
-
-    # ---- P3: the play that did it -------------------------------------------
+    # ---- 2. the middle: the swing, with its consequence attached -----------
     if go:
         q, w = when(go, windows)
-        who, pl = go['player'], tell(go, windows)
+        who, pl = go['player'], tell(go)
         if go['kind'] in ('int', 'fum'):
-            P.append(f'It turned on a mistake, because of course it did. {who} threw {pl} in the '
-                     f'{q} — {w} — and the lead went across the aisle at {scoreline(go, go["side"])}. '
-                     f'{"He got it back." if go["side"] == wi else f"{ln} never got it back."}')
-        else:
-            took = (f'put {wn} in front' if go['side'] == wi else 'handed the lead over')
-            P.append(f'The one that did it came in the {q}, {w}: {who}, {pl}, and that {took} at '
+            P.append(f'It turned, as these things do, on somebody else’s mistake. {who} threw '
+                     f'{pl} in the {q} — {w} — and the lead crossed the aisle at '
                      f'{scoreline(go, go["side"])}. '
-                     + ('Nobody took it back.' if go['side'] == wi else ''))
-
-    # ---- P4: the biggest swing ---------------------------------------------
-    if big and big is not go and big['pts'] >= 7:
-        q, w = when(big, windows)
-        side = TEAM(g['teams'][big['side']]['team'])
-        P.append(f'The biggest single play of the week belonged to {big["player"]} — '
-                 f'{tell(big, windows)} in the {q}, {w}, worth {big["pts"]:.1f} to {side}. '
-                 + (seeded(BIG, seed, 2) if big['pts'] >= 10 else ''))
-
-    # ---- P5: who carried it, and who did not -------------------------------
-    if wtop:
-        names = ', '.join(f'{n} ({v:.1f})' for n, v in wtop[:3])
-        line = f'{wn} got there on {names}.'
-        if ltop:
-            if arc in ('rout', 'comfortable'):
-                line += (f' {ltop[0][0]} led {ln} with {ltop[0][1]:.1f}, which on an afternoon '
-                         f'like this one is a lovely painting in a burning house.')
+                     + (f'{ln} spent the rest of the weekend chasing it and never got close enough '
+                        f'to touch it.' if go['side'] != wi else
+                        f'{wn} took it straight back and kept it.'))
+        elif go['side'] == wi:
+            early = go['fc']['qtr'] <= 2
+            if early:
+                P.append(f'They took it in the {q} — {who} with {pl}, {scoreline(go, go["side"])} '
+                         f'— and then simply never gave it back. '
+                         + (f'{len(tds)} touchdowns were scored after that and not one of them '
+                            f'put {ln} in front again.' if len(tds) >= 6 else
+                            f'{ln} never led again.'))
             else:
-                line += f' {ltop[0][0]} answered with {ltop[0][1]:.1f} and it was not quite enough.'
+                P.append(f'The play that settled it came in the {q}, {w}: {who} with {pl}. '
+                         f'That put {wn} in front at {scoreline(go, go["side"])}, and for all the '
+                         f'traffic that had come before it, nobody took it back.'
+                         + (f' There were {len(tds)} touchdowns in this game and the one that '
+                            f'mattered went {wn}\u2019s way last.' if len(tds) >= 6 else ''))
+        else:
+            P.append(f'{ln} had their moment in the {q}, {w} — {who} with {pl}, good for the lead '
+                     f'at {scoreline(go, go["side"])} — and it bought them exactly as long as it '
+                     f'took {wn} to answer.')
+    elif g['lead_changes'] == 0:
+        P.append(f'There is no sequence to describe, because there was no sequence. {wn} scored '
+                 f'first, kept scoring, and the remainder was arithmetic performed in public.')
+
+    # ---- 3. the people, related to each other rather than listed -----------
+    if wtop:
+        topn, topv = wtop[0]
+        rest = [n for n, _ in wtop[1:3]]
+        if big and big['side'] == wi and big['pts'] >= 8:
+            q, w = when(big, windows)
+            line = (f'{big["player"]} did the heaviest lifting — {tell(big)} in the {q}, {w}, '
+                    f'worth {big["pts"]:.1f} on its own')
+            if topn != big['player']:
+                line += f', though it was {topn} who finished with the biggest number at {topv:.1f}'
+            line += '.'
+            if rest:
+                line += f' {names(rest)} did the rest of the damage.'
+        else:
+            line = f'{topn} led the winners with {topv:.1f}'
+            line += ((', ' + seeded(HELP, seed, 8).format(r=names(rest))) if rest else '.')
+        if ltop:
+            ln0, lv0 = ltop[0]
+            if lv0 > topv:
+                line += (f' {ln0} actually outscored every man on the field with {lv0:.1f} and '
+                         f'still lost, which tells you plenty about the other nine spots.')
+            elif arc in ('rout', 'comfortable'):
+                line += ' ' + seeded(BURN, seed, 7).format(n=ln0, v=f'{lv0:.1f}', t=ln)
+            else:
+                line += f' {ln0} answered with {lv0:.1f} and it finished {marg} short.'
         P.append(line)
 
-    # ---- P6: the dud --------------------------------------------------------
-    duds = [p for p in gw['teams'][1 - wi]['starters']
-            if p['pos'] not in ('K', 'DEF') and (p.get('points') or 0) <= 2]
-    if duds and arc in ('rout', 'comfortable', 'steady'):
-        d = min(duds, key=lambda p: p['points'])
-        P.append(f'{ln} started {d["name"]} and got {d["points"]:.1f} points for the trouble. '
-                 + seeded(DUD, seed, 3))
-
-    # ---- P7: the bench ------------------------------------------------------
-    for t in gw['teams']:
+    # ---- 4. the cost: a dud or a bench, framed as the reason ---------------
+    cost = None
+    for t, side in ((gw['teams'][1 - wi], 1 - wi), (gw['teams'][wi], wi)):
         bench = [p for p in t['bench'] if (p.get('points') or 0) > 0]
         starters = [p for p in t['starters'] if p['pos'] not in ('K', 'DEF')]
         if not bench or not starters:
@@ -316,17 +314,28 @@ def story(g, gw, windows):
         gap = bb['points'] - ws['points']
         if gap >= 12:
             nm = TEAM(t['team'])
-            if gap > g['margin'] and nm == ln:
-                verdict = ('and yes, before you ask, that would have won them the football game. '
-                           'I would not bring it up at the next meeting.')
+            if side != wi and gap > g['margin']:
+                cost = (f'{nm} will want to look away from this next bit. {bb["name"]} sat on '
+                        f'their bench and scored {bb["points"]:.1f} while {ws["name"]} started '
+                        f'and returned {ws["points"]:.1f} — {gap:.1f} points in a chair, in a '
+                        f'game they lost by {marg}. That is not a defeat, that is a self-inflicted '
+                        f'wound with a witness.')
             else:
-                verdict = 'It would not have changed the result, which is the only consolation available.'
-            P.append(f'{nm} left {bb["name"]} and his {bb["points"]:.1f} on the bench and started '
-                     f'{ws["name"]}, who returned {ws["points"]:.1f}. That is {gap:.1f} points '
-                     f'sitting in a chair. {verdict}')
+                cost = (f'{nm} left {bb["name"]} and his {bb["points"]:.1f} on the bench for '
+                        f'{ws["name"]}, who returned {ws["points"]:.1f}. '
+                        + seeded(NODIFF, seed, 9))
             break
+    if not cost and arc in ('rout', 'comfortable', 'steady'):
+        duds = [p for p in gw['teams'][1 - wi]['starters']
+                if p['pos'] not in ('K', 'DEF') and (p.get('points') or 0) <= 2]
+        if duds:
+            d = min(duds, key=lambda p: p['points'])
+            cost = (f'{ln} started {d["name"]} and were rewarded with {d["points"]:.1f} points. '
+                    f'He was out there. I can confirm he was out there.')
+    if cost:
+        P.append(cost)
 
-    # ---- P8: the sign-off ---------------------------------------------------
+    # ---- 5. the sign-off ----------------------------------------------------
     P.append(seeded(CLOSE[arc], seed, 5))
 
     P = [re.sub(r'\s+', ' ', x).strip() for x in P if x and x.strip()]
