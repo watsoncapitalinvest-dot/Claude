@@ -124,7 +124,7 @@ def build():
         cat = CATEGORY.get(rel)
         # weekly issues are generated, one per week, so they cannot be a
         # hand-maintained list without breaking the build every Tuesday
-        if not cat and re.match(r'scfl-week-\d+\.html$', rel):
+        if not cat and re.match(r'scfl-week-\d+(?:-issue)?\.html$', rel):
             cat = 'Season Coverage & Issues'
         if not cat:
             missing_category.append(rel)

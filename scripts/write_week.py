@@ -611,6 +611,14 @@ def build(season, week):
     rp = json.load(open(os.path.join(WDIR, f'{season}-w{week}-replay.json'), encoding='utf-8'))
     wd = json.load(open(os.path.join(WDIR, f'{season}-w{week}.json'), encoding='utf-8'))
     windows = {w['code']: w['label'] for w in rp['windows']}
+    # If the week has been written, the standalone page uses that copy too.
+    # Two published pages about the same eight games must not disagree.
+    pw = os.path.join(WDIR, f'{season}-w{week}-written.json')
+    if os.path.exists(pw):
+        d = json.load(open(pw, encoding='utf-8'))
+        print('  using the written stories')
+        return render(season, week, d['stories'], d.get('lead', 0), write_stories=False)
+
     slots = [x for x in (wd.get('roster_positions') or []) if x != 'BN']
     st = sd.build(str(season), int(week))
     if st and st['through'] != int(week):
@@ -631,7 +639,13 @@ def build(season, week):
             bonus = 7 if late(go) else (3 if go['fc']['qtr'] == 4 else 0)
         return g['lead_changes'] + bonus - stories[i]['margin'] / 5
     lead_i = max(range(len(stories)), key=watchability)
+    return render(season, week, stories, lead_i)
 
+
+def render(season, week, stories, lead_i, write_stories=True):
+    """Lay the stories out as the standalone page. Shared by the generated and
+    the written copy, so the two published pages cannot describe the same eight
+    games differently."""
     board = ''
     for s in sorted(stories, key=lambda s: -(s['score'][0] + s['score'][1])):
         board += (f'<tr><td class="w">{E(s["winner"])}</td><td class="n">{s["score"][0]}</td>'
@@ -657,7 +671,8 @@ def build(season, week):
                 .replace('__BODY__', body).replace('__DESC__', desc))
     out = os.path.join(ROOT, f'scfl-week-{week}.html')
     open(out, 'w', encoding='utf-8').write(page)
-    json.dump({'season': season, 'week': week, 'lead': lead_i, 'stories': stories},
+    if write_stories:
+        json.dump({'season': season, 'week': week, 'lead': lead_i, 'stories': stories},
               open(os.path.join(WDIR, f'{season}-w{week}-stories.json'), 'w', encoding='utf-8'),
               ensure_ascii=False, indent=1)
     print(f'wrote scfl-week-{week}.html ({len(page):,} chars)')
