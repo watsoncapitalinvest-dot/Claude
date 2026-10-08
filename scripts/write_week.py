@@ -132,57 +132,192 @@ def names(items):
 # of the replay.
 # ---------------------------------------------------------------------------
 LEDE = {
-    'rout': ['Some games are contests.', 'There is no kind way to file this one.',
-             'I have seen car accidents with more suspense.'],
-    'comfortable': ['This had the shape of a competitive game without ever being one.',
-                    'Close enough to watch, never close enough to worry about.',
-                    'A comfortable afternoon, assuming you were on the right side of it.'],
-    'seesaw': ['Now this one I enjoyed, and I enjoy almost nothing.',
-               'My scorekeeper asked to be relieved at halftime.',
-               'If you like your football unresolved, this was yours.'],
-    'tight': ['Nobody could put this away, which is the polite version.',
-              'Tight the whole way. Tight like a bad shoe.',
-              'This went to the end, largely because neither of them had the decency to end it.'],
-    'steady': ['Not a classic, not a disaster, one of the other ones.',
-               'Workmanlike. Businesslike. Several other kinds of like.',
-               'The sort of win you forget by Thursday and mention in December.'],
+    'rout': [
+        'Some games are contests.',
+        'There is no kind way to file this one.',
+        'I have seen car accidents with more suspense.',
+        'The scoreboard operator went home early and nobody blamed him.',
+        'This was not a football game, it was a receipt.',
+        'I have watched a lot of these. This was one of them, technically.',
+        'Mercy rules exist in other sports for a reason.',
+        'Somebody should have called this at halftime.',
+        'I took notes for the first quarter and then stopped.',
+        'There is a version of this where it stays interesting. This was not it.',
+    ],
+    'comfortable': [
+        'This had the shape of a competitive game without ever being one.',
+        'Close enough to watch, never close enough to worry about.',
+        'A comfortable afternoon, assuming you were on the right side of it.',
+        'Never in doubt, never quite dull. A rare combination, and not a thrilling one.',
+        'The margin flattered the loser for about an hour.',
+        'It stayed respectable, which is a low bar cleared with room to spare.',
+        'One team was always going to win this. They did it politely.',
+        'A tidy afternoon of work, if you like your afternoons tidy.',
+        'This was handled rather than won.',
+    ],
+    'seesaw': [
+        'Now this one I enjoyed, and I enjoy almost nothing.',
+        'My scorekeeper asked to be relieved at halftime.',
+        'If you like your football unresolved, this was yours.',
+        'I lost track twice and I am paid to keep track.',
+        'They could not stop trading punches and I could not stop watching.',
+        'This one had everything except a moment of calm.',
+        'Somebody please check on the men who had money on this.',
+        'Every time I reached for the drink, the lead changed.',
+        'A proper back-and-forth, and I say that having seen a great many improper ones.',
+    ],
+    'tight': [
+        'Nobody could put this away, which is the polite version.',
+        'Tight the whole way. Tight like a bad shoe.',
+        'This went to the end, largely because neither of them had the decency to end it.',
+        'Two teams spent the weekend refusing to settle anything.',
+        'Close games are only fun when you are not in them.',
+        'The margin here would fit in a hat.',
+        'This one came down to the last thing that happened, which is rarer than it sounds.',
+        'Neither of them deserved to lose. One of them did it anyway.',
+        'I have seen wider gaps in a set of teeth.',
+    ],
+    'steady': [
+        'Not a classic, not a disaster, one of the other ones.',
+        'Workmanlike. Businesslike. Several other kinds of like.',
+        'The sort of win you forget by Thursday and mention in December.',
+        'A game happened here. I was present for it.',
+        'Nothing in this one will be read back to anybody in twenty years.',
+        'They got on with it, which I respect and cannot write about.',
+        'This was a job of work and it got done.',
+        'No drama, no collapse, no complaints. Faintly disappointing.',
+        'Solid, unremarkable, and over on time.',
+    ],
 }
+
 CLOSE = {
-    'rout': ['They all count the same, as my second wife used to say, usually about something else.',
-             'The good news is that it is over, and that is the whole of the good news.',
-             'File it, forget it, and let us never speak of it again.'],
-    'comfortable': ['Nothing flashy. Like a good haircut.',
-                    'Somewhere a waiver claim from August is feeling good about itself.',
-                    'History will be kind to the winners. It always is.'],
-    'seesaw': ['That is why you watch. That, and in my case a contract.',
-               'I aged a year on that one, and I was already old.',
-               'Games like that are why I switched to the second drink. No regrets.'],
-    'tight': ['A win is a win. It does not always feel like one.',
-              'Both of these teams should sit down for a minute.',
-              'Somewhere a front office is staring at a bench score and hoping nobody noticed.'],
-    'steady': ['On to the next one, which I am assured is also football.',
-               'Not pretty. They all count the same.',
-               'My producer says move on, and for once he is right.'],
+    'rout': [
+        'They all count the same, as my second wife used to say, usually about something else.',
+        'The good news is that it is over, and that is the whole of the good news.',
+        'File it, forget it, and let us never speak of it again.',
+        'Burn the tape. I will bring the matches.',
+        'Somewhere a roster is being rebuilt out of spite.',
+        'That one goes in the paper whether anybody likes it or not.',
+        'I have said all I intend to say about this.',
+        'Next week is also a football game. That is the encouraging part.',
+        'A beating, administered and received. Nothing more to add.',
+    ],
+    'comfortable': [
+        'Nothing flashy. Like a good haircut.',
+        'Somewhere a waiver claim from August is feeling good about itself.',
+        'History will be kind to the winners. It always is.',
+        'Efficient. Unsentimental. The way my accountant does things.',
+        'A win you can put in the bank and forget the account number.',
+        'No notes, and no particular enthusiasm either.',
+        'They did what they came to do and left at a reasonable hour.',
+        'The kind of result that keeps a season quietly alive.',
+        'Good teams win these without anybody noticing. That is the trick.',
+    ],
+    'seesaw': [
+        'That is why you watch. That, and in my case a contract.',
+        'I aged a year on that one, and I was already old.',
+        'Games like that are why I switched to the second drink. No regrets.',
+        'I would watch that again. I will not, but I would.',
+        'Somebody put that one on the tape and keep it somewhere safe.',
+        'My producer is still lying down.',
+        'That is the game selling itself, and it does not need my help.',
+        'I have nothing clever for that. It was simply good.',
+        'Both of them earned the night off. One of them gets to enjoy it.',
+    ],
+    'tight': [
+        'A win is a win. It does not always feel like one.',
+        'Both of these teams should sit down for a minute.',
+        'Somewhere a front office is staring at a bench score and hoping nobody noticed.',
+        'That is not a loss, that is a paper cut that needs stitches.',
+        'A few points the other way and we are writing a different piece.',
+        'Neither one of them should frame this.',
+        'Fine margins, as the men who lose them like to say.',
+        'They will both tell themselves it was close. Only one of them gets to be pleased about it.',
+        'That result will look very different in December.',
+    ],
+    'steady': [
+        'On to the next one, which I am assured is also football.',
+        'Not pretty. They all count the same.',
+        'My producer says move on, and for once he is right.',
+        'Filed without comment, mostly because I have none.',
+        'A professional afternoon. I have had worse.',
+        'Nobody will write a book about this. Somebody had to write a paragraph.',
+        'That is the week. The next one starts immediately, as they do.',
+        'Respectable, forgettable, and done.',
+        'There it is. There it goes.',
+    ],
 }
 
+# The loser's best man, on a day when it bought him nothing.
+BURN = [
+    '{n} managed {v} for {t}, which on an afternoon like this one is a lovely painting in '
+    'a burning house.',
+    '{n} put up {v} for {t} and may as well have stayed home, which is the cruelty of the '
+    'format.',
+    '{n} had {v} of it for {t}. The other nine spots have some explaining to do.',
+    '{n} gave {t} {v} and no help whatsoever arrived.',
+    '{n} was the only thing working for {t} at {v}, and one thing is not enough.',
+    '{t} got {v} from {n} and almost nothing from anybody standing near him.',
+    '{n} finished with {v}. It will look good in a season summary and it did nothing today.',
+    '{n} did his part for {t} with {v}. His part was not the problem.',
+    '{v} from {n}, and a long quiet afternoon from the rest of {t}.',
+]
 
-BURN = ['{n} managed {v} for {t}, which on an afternoon like this one is a lovely painting in '
-        'a burning house.',
-        '{n} put up {v} for {t} and may as well have stayed home, which is the cruelty of the '
-        'format.',
-        '{n} had {v} of it for {t}. The other nine spots have some explaining to do.']
-HELP = ['with {r} close enough behind to matter.',
-        'and {r} kept him company.',
-        'though {r} did enough that he did not have to do it alone.']
-# Five games a week can need one of these, so the bank has to be deeper than
-# the number of games or the issue starts repeating itself.
-NODIFF = ['It made no difference to the result, which is the only comfort on offer.',
-          'It cost them nothing in the end, which is the best that can be said for it.',
-          'The result survived it. Their dignity is a separate question.',
-          'They won anyway, so it goes in the drawer marked never mind.',
-          'No harm done, unless you count the man who had to watch it.',
-          'It did not matter. It rarely does until the one week it does.',
-          'Nobody will remember it, which is the kindest outcome available.']
+# The winner's supporting cast.
+HELP = [
+    'with {r} close enough behind to matter.',
+    'and {r} kept him company.',
+    'though {r} did enough that he did not have to do it alone.',
+    'with {r} chipping in enough to keep it honest.',
+    'and {r} covered the rest of the ground.',
+    'backed by {r}, who were not merely present.',
+    'with {r} doing the unglamorous half of it.',
+    'and {r} saw to the remainder.',
+    'with useful afternoons from {r} as well.',
+]
+
+# A bench mistake that did not end up costing anything. Five games a week can
+# need one of these, so the bank runs deeper than the number of games.
+NODIFF = [
+    'It made no difference to the result, which is the only comfort on offer.',
+    'It cost them nothing in the end, which is the best that can be said for it.',
+    'The result survived it. Their dignity is a separate question.',
+    'They won anyway, so it goes in the drawer marked never mind.',
+    'No harm done, unless you count the man who had to watch it.',
+    'It did not matter. It rarely does until the one week it does.',
+    'Nobody will remember it, which is the kindest outcome available.',
+    'The scoreboard forgave it. The group chat may not.',
+    'Harmless this time. That is not the same as sensible.',
+    'It went unpunished, which is how habits form.',
+    'A free lesson, and those are the only ones anybody takes.',
+    'The win covers it, the way a rug covers a stain.',
+]
+
+# The biggest single play of the week, when it is genuinely large.
+BIG = [
+    'That, friends, is a career highlight. I would know — mine was a walk.',
+    'You do not coach that. You do not scout it either. You just sit there.',
+    'Put that one on the tape and keep it.',
+    'That is the play people will remember, which is unfortunate for everybody else.',
+    'One play, and the rest of the afternoon had to work around it.',
+    'That is the sort of thing that gets a man drafted too high next summer.',
+    'I have seen entire games produce less than that did.',
+    'Everything else in this match was a rounding error next to it.',
+    'A single play worth more than some of these teams managed all day.',
+]
+
+# A starter who produced nothing.
+DUD = [
+    'He was out there. I can confirm he was out there.',
+    'The box score says he played. The box score has been wrong before, but not this time.',
+    'Somebody is going to have to answer for that at the next meeting.',
+    'A full afternoon of football and nothing to show anyone.',
+    'He took up a roster spot with great commitment.',
+    'That is not a performance, that is an attendance record.',
+    'I have checked twice. That is the number.',
+    'He will be dropped by Wednesday and nobody will write about it.',
+    'A quiet day at the office, if the office had been closed.',
+]
 
 
 def story(g, gw, windows):
