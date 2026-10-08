@@ -182,11 +182,16 @@ def build(key, remeasure=True, quiet=False):
     src=open(TEMPLATE,encoding='utf-8').read()
     css=re.search(r'<style>(.*?)</style>',src,re.S).group(1)
     engine=re.search(r'<script>(.*?)</script>',src,re.S).group(1)
-    inv={a['id']:a for a in json.load(open(os.path.join(ROOT,'investigations.json'),
-                                           encoding='utf-8'))['investigations']}
-    arts=[inv[i] for i in cfg['articles'] if i in inv]
-    missing=[i for i in cfg['articles'] if i not in inv]
-    if missing: print('  !! not found in investigations.json:', missing)
+    # A weekly issue's articles are generated fresh each week and never live in
+    # investigations.json, so an issue may carry its own copy instead of ids.
+    if cfg.get('arts_inline'):
+        arts=cfg['arts_inline']
+    else:
+        inv={a['id']:a for a in json.load(open(os.path.join(ROOT,'investigations.json'),
+                                               encoding='utf-8'))['investigations']}
+        arts=[inv[i] for i in cfg['articles'] if i in inv]
+        missing=[i for i in cfg['articles'] if i not in inv]
+        if missing: print('  !! not found in investigations.json:', missing)
 
     have_art=os.path.exists(os.path.join(ROOT,cfg['art']))
     if not have_art:
