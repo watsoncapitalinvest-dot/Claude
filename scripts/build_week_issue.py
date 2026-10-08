@@ -99,8 +99,49 @@ def build(season, week, remeasure=True):
         'arts_inline': arts,
         'openart': {},
     }
-    bi.build(key, remeasure=remeasure)
+    # ---- one article, one page -------------------------------------------
+    # The greedy packer fills pages to the brim, so a long game report spills
+    # onto a continuation page and the issue stops reading as a magazine. Here
+    # the page breaks are not measured at all: they are exactly the article
+    # boundaries. Anything that then does not fit is shrunk to fit, which is
+    # what a page layout does when the copy runs long.
+    here = os.path.join(ROOT, 'scripts')
+    bi.build(key, remeasure=False, quiet=True)          # emits .pack-kinds.json
+    kinds = json.load(open(os.path.join(here, '.pack-kinds.json'), encoding='utf-8'))
+    breaks = [i for i, k in enumerate(kinds) if k == 'divider']
+    json.dump(breaks, open(os.path.join(here, f'.pack-breaks-{key}.json'), 'w'))
+    bi.build(key, remeasure=False, quiet=True)
+    if remeasure:
+        fit(out)
     return out
+
+
+def fit(out):
+    """Scale down any page whose article runs past the bottom."""
+    import re as _re, subprocess
+    try:
+        r = subprocess.run(['node', os.path.join(ROOT, 'scripts', 'fit_pages.js'), out,
+                            'http://localhost:8991'],
+                           capture_output=True, text=True, cwd=ROOT, timeout=180,
+                           env=dict(os.environ, NODE_PATH='/opt/node22/lib/node_modules'))
+        zooms = json.loads(r.stdout.strip().splitlines()[-1])
+    except Exception as e:
+        print(f'  note: could not measure the fit ({e}); pages left at full size')
+        return
+    path = os.path.join(ROOT, out)
+    html = open(path, encoding='utf-8').read()
+    n = [0]
+
+    def sub(m):
+        i = n[0]; n[0] += 1
+        z = zooms[i] if i < len(zooms) else 1
+        return m.group(0) if z >= 0.999 else f'<div class="page-inner" style="zoom:{z}">'
+
+    html = _re.sub(r'<div class="page-inner">', sub, html)
+    open(path, 'w', encoding='utf-8').write(html)
+    tight = [(i, z) for i, z in enumerate(zooms) if z < 0.999]
+    print(f'  fitted {len(tight)} of {len(zooms)} pages' +
+          (f' (smallest {min(z for _, z in tight):.3f})' if tight else ''))
 
 
 def main():
