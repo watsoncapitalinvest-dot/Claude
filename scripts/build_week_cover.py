@@ -111,13 +111,100 @@ svg{position:absolute;inset:0;}
 </div>"""
 
 
+OG = """<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&display=swap');
+:root{--red:#c20f16;--ink:#0b0b0f;--cream:#f4f1ea;--gold:#d8b45a;--blue:#0e8ab5;
+ --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;}
+*{box-sizing:border-box;margin:0;}
+html,body{width:1200px;height:630px;overflow:hidden;background:#0b0b0f;
+ font-family:Georgia,'Times New Roman',serif;color:var(--cream);}
+.c{position:relative;width:1200px;height:630px;overflow:hidden;background:#0b0b0f;
+ border-top:9px solid var(--red);border-bottom:9px solid var(--red);}
+svg{position:absolute;inset:0;}
+.l{position:absolute;left:0;top:0;bottom:0;width:640px;z-index:9;
+ padding:46px 34px 40px 54px;display:flex;flex-direction:column;
+ background:linear-gradient(90deg,#0b0b0f 0%,#0b0b0f 62%,rgba(11,11,15,.92) 82%,
+ rgba(11,11,15,0) 100%);}
+.flag{font-family:var(--sans);font-size:11.5px;font-weight:900;letter-spacing:.24em;
+ text-transform:uppercase;color:var(--red);}
+h1{font-size:52px;line-height:1.0;letter-spacing:-.022em;font-weight:900;margin-top:14px;
+ max-width:16ch;}
+.dek{font-style:italic;color:#b9b6ae;font-size:18px;line-height:1.38;margin-top:14px;
+ max-width:30ch;}
+.st{margin-top:auto;display:flex;gap:30px;}
+.st .k{font-family:var(--sans);font-size:9px;font-weight:800;letter-spacing:.14em;
+ text-transform:uppercase;color:#8d8880;}
+.st .v{font-size:28px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums;}
+.st .v b{color:var(--gold);font-weight:900;}
+</style>
+<div class="c">
+<svg width="1200" height="630" viewBox="0 0 1200 630">
+ <defs>
+  <linearGradient id="up" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#c20f16" stop-opacity=".72"/>
+    <stop offset="100%" stop-color="#c20f16" stop-opacity=".04"/></linearGradient>
+  <linearGradient id="dn" x1="0" y1="1" x2="0" y2="0">
+    <stop offset="0%" stop-color="#0e8ab5" stop-opacity=".60"/>
+    <stop offset="100%" stop-color="#0e8ab5" stop-opacity=".04"/></linearGradient>
+  <radialGradient id="bl" cx="62%" cy="46%" r="52%">
+    <stop offset="0%" stop-color="#d8b45a" stop-opacity=".16"/>
+    <stop offset="100%" stop-color="#d8b45a" stop-opacity="0"/></radialGradient>
+ </defs>
+ <rect width="1200" height="630" fill="#0b0b0f"/>
+ <rect width="1200" height="630" fill="url(#bl)"/>
+ <clipPath id="a"><rect x="0" y="0" width="1200" height="__MID__"/></clipPath>
+ <clipPath id="b"><rect x="0" y="__MID__" width="1200" height="630"/></clipPath>
+ <g clip-path="url(#a)"><path d="__AREA__" fill="url(#up)"/></g>
+ <g clip-path="url(#b)"><path d="__AREA__" fill="url(#dn)"/></g>
+ <path d="M40 __MID__ L1160 __MID__" stroke="#f4f1ea" stroke-opacity=".26" stroke-width="2"/>
+ <path d="__LINE__" fill="none" stroke="#f4f1ea" stroke-width="4"
+       stroke-linejoin="round" stroke-linecap="round"/>
+ __FLIPS__
+</svg>
+<div class="l">
+  <div class="flag">The Week __WK__ Issue</div>
+  <h1>__HL__</h1>
+  <div class="dek">__DEK__</div>
+  <div class="st">
+    <div><div class="k">Final</div><div class="v">__WS__<b>&ndash;</b>__LS__</div></div>
+    <div><div class="k">Lead changes</div><div class="v">__NF__</div></div>
+  </div>
+</div>
+</div>"""
+
+
+def og_card(season, week, g, lead_story, pts, flips_t):
+    """The link preview. Unlike the cover, nothing is composited on top of this
+    one, so it carries the headline and the score itself -- a share card with no
+    words is just a smear of colour in a chat window."""
+    x0, w = 40, 1200 - 80
+    y0, h = 150, 330
+    line, area, mid = curve(pts, w, h, x0, y0)
+    flips = ''.join(
+        f'<circle cx="{x0 + w*t:.1f}" cy="{mid:.1f}" r="6" fill="#0b0b0f" '
+        f'stroke="#d8b45a" stroke-width="3"/>' for t in flips_t)
+    s = lead_story
+    doc = (OG.replace('__AREA__', area).replace('__LINE__', line)
+             .replace('__MID__', f'{mid:.1f}').replace('__FLIPS__', flips)
+             .replace('__WK__', str(week))
+             .replace('__HL__', ad.esc(s.get('headline', '')))
+             .replace('__DEK__', ad.esc(s.get('dek', '')))
+             .replace('__WS__', f"{s['score'][0]:.2f}")
+             .replace('__LS__', f"{s['score'][1]:.2f}")
+             .replace('__NF__', str(g['lead_changes'])))
+    out = os.path.join(ROOT, f'scfl-week-{week}-og.jpg')
+    ad.shoot(doc, out, f'wk{week}-og', 1200, 630)
+    print(f'  wrote {os.path.basename(out)}')
+
+
 def build(season, week):
     rp = json.load(open(os.path.join(WDIR, f'{season}-w{week}-replay.json'), encoding='utf-8'))
-    lead = 0
+    lead, stories = 0, []
     for cand in (f'{season}-w{week}-written.json', f'{season}-w{week}-stories.json'):
         p = os.path.join(WDIR, cand)
         if os.path.exists(p):
-            lead = json.load(open(p, encoding='utf-8')).get('lead', 0)
+            d = json.load(open(p, encoding='utf-8'))
+            lead, stories = d.get('lead', 0), d.get('stories', [])
             break
     g = rp['games'][lead]
 
@@ -145,6 +232,8 @@ def build(season, week):
     out = os.path.join(ROOT, f'scfl-week-{week}-cover.jpg')
     ad.shoot(doc, out, f'wk{week}-cover', W, H)
     print(f'  wrote {os.path.basename(out)} - {len(crossings(pts))} lead changes drawn')
+    if stories:
+        og_card(season, week, g, stories[lead], pts, crossings(pts))
 
 
 def main():

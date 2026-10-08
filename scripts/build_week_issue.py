@@ -136,9 +136,11 @@ def build(season, week, remeasure=True):
         'art': f'scfl-week-{week}-cover.jpg',
         'og': f'scfl-week-{week}-og.jpg',
         'ogtitle': f'Skirt Chasers — The Week {week} Issue',
-        'ogdesc': (f'{ls["headline"]}. Eight games rebuilt play by play, from Thursday night '
-                   f'to the last snap on Monday.'),
-        'sharetext': f'Week {week}, replayed from the tape.',
+        # game time here too: the share blurb is the first thing anybody reads,
+        # and naming broadcast windows gives away the trick the replay exists for
+        'ogdesc': (f'{ls["headline"]}. Eight games rebuilt play by play, from the opening '
+                   f'drive to the last snap of the fourth.'),
+        'sharetext': f'Week {week}, replayed from the tape. Sixty minutes, eight games.',
         'kicker': f'The Magazine · Week {week}',
         'seal': (f'Week', f'{week}'),
         'issueline': f'2026&ndash;27 Season &middot; Week {week}',
