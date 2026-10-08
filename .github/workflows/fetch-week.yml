@@ -1,0 +1,69 @@
+name: Fetch a week's matchups
+
+# The agent container cannot reach api.sleeper.app -- the egress policy blocks
+# it -- but a runner has open internet. So the pull happens here and the result
+# comes back through git as a committed file, which also means the issue can be
+# rebuilt later from a fixed record instead of from whatever Sleeper says then.
+#
+# Run it once a week after Monday night, or catch up an old week any time.
+
+on:
+  workflow_dispatch:
+    inputs:
+      week:
+        description: 'Week number to pull (a completed week)'
+        required: true
+      season:
+        description: 'Season (blank = whatever the league says)'
+        required: false
+        default: ''
+  schedule:
+    - cron: '0 12 * * 2'       # Tuesdays 12:00 UTC, after Monday night is final
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-week
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Work out which week to pull
+        id: wk
+        env:
+          IN_WEEK: ${{ github.event.inputs.week }}
+        run: |
+          if [ -n "$IN_WEEK" ]; then
+            echo "week=$IN_WEEK" >> "$GITHUB_OUTPUT"
+          else
+            # on the schedule, pull the week that just finished
+            W=$(python3 -c "import json,urllib.request;print(json.load(urllib.request.urlopen('https://api.sleeper.app/v1/state/nfl'))['week'])")
+            echo "week=$((W - 1))" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Pull it
+        env:
+          SCFL_LEAGUE_ID: ${{ vars.SCFL_LEAGUE_ID }}
+        run: |
+          python3 scripts/fetch_week.py --week ${{ steps.wk.outputs.week }} \
+            ${{ github.event.inputs.season && format('--season {0}', github.event.inputs.season) || '' }}
+
+      - name: Commit it
+        run: |
+          git config user.name  'SCFL Newsroom'
+          git config user.email 'noreply@anthropic.com'
+          git add week-data/
+          if git diff --staged --quiet; then
+            echo 'nothing new'
+            exit 0
+          fi
+          git commit -m "Week data: ${{ steps.wk.outputs.week }}"
+          git push
