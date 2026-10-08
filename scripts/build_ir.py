@@ -273,25 +273,46 @@ def figures(C):
       f'not moved: {first["free_agents"]:,} in week {first["week"]}, {last["free_agents"]:,} now.'
       f'</figcaption></figure>')
 
-    # describe the shape of the curve from the curve, not from an assumption
-    # about it: it sat flat before it moved, and saying otherwise is a lie the
-    # table underneath would immediately catch
-    rises = [r['week'] for i, r in enumerate(rows) if i and r['constrained'] > rows[i - 1]['constrained']]
+    # Describe the curve from the curve. The series is not guaranteed to rise:
+    # it can peak and fall back, and a sentence that assumes it only climbs
+    # becomes a lie the table directly underneath it would catch.
+    ser = [r['constrained'] for r in rows]
+    rises = [r['week'] for i, r in enumerate(rows) if i and ser[i] > ser[i - 1]]
+    peak = max(ser)
+    peak_wk = rows[ser.index(peak)]['week']
+    cur = ser[-1]
+    step = cur - ser[-2] if len(ser) > 1 else 0
     if rises:
         flat = rises[0] - first['week']
-        shape = (f'It did not move at all for the first {flat} week'
-                 f'{"s" if flat != 1 else ""} &mdash; still '
-                 f'{first["constrained"]} in week {rises[0] - 1} &mdash; and then went to '
-                 f'{len(cons)} across weeks {rises[0]} and {rises[-1]}.'
-                 if flat else
-                 f'It has risen in {len(rises)} of the {len(rows) - 1} weeks since.')
+        bits = []
+        if flat:
+            bits.append(f'It did not move at all for the first {flat} week'
+                        f'{"s" if flat != 1 else ""} &mdash; still {first["constrained"]} in '
+                        f'week {rises[0] - 1}')
+        bits.append(f'then climbed to {peak} by week {peak_wk}')
+        if peak_wk != last['week'] or step < 0:
+            bits.append(f'and has sat at {cur} since' if step == 0 else
+                        f'and came back to {cur} in week {last["week"]}')
+        shape = ', '.join(bits) + '.'
+        shape = shape[0].upper() + shape[1:]
     else:
-        shape = f'It has not moved since: still {len(cons)} in week {last["week"]}.'
+        shape = f'It has not risen once since: {cur} in week {last["week"]}.'
+    # present tense only if the most recent step actually went up
+    now = ('real and it is still building' if step > 0 else
+           'real, though it eased this week' if step < 0 else
+           'real and it has held')
     P('<p class="b">Two things in that table point in opposite directions, and both are true. The '
-      'pressure the expansion side described is real and it is building &mdash; it just did not '
+      f'pressure the expansion side described is {now} &mdash; it just did not '
       f'exist yet when the vote was being argued. In week {first["week"]} exactly '
       f'{first["constrained"]} team in the league was constrained. {shape} '
       'A vote taken in August was voting on the flat part.</p>')
+    if step < 0:
+        P(f'<p class="b">That last move matters, and it cuts against the expansion case as much '
+          f'as the earlier ones cut for it. Constrained is not a ratchet. A manager leaves the '
+          f'count the moment his injured man comes back or gets cut, so the number breathes with '
+          f'the injury report rather than accumulating. Anyone arguing from a single week &mdash; '
+          f'including the August snapshot &mdash; is arguing from noise. The honest summary after '
+          f'{len(rows)} weeks is a range: {min(ser)} to {peak}, sitting at {cur}.</p>')
 
     S('Figure Two &mdash; At Cap Is Not Constrained')
     P(f'<p class="b">Here is where the counting went wrong. {last["teams_at_cap"]} of {n} teams '
@@ -381,16 +402,31 @@ def figures(C):
       f'pool is not supported by the season: the pool has sat flat around {pool:,} for '
       f'{len(rows)} weeks while IR use climbed from {first["ir_used_total"]} slots to '
       f'{last["ir_used_total"]}.</p>')
-    P(f'<p class="b"><b>A fourth buys almost nothing.</b> It adds {p2 - p1} '
-      f'{"player" if p2 - p1 == 1 else "players"} and '
-      f'{len(set(t["team"] for t in cons if t["would_use_2"] > 1))} '
-      f'{"team" if len(set(t["team"] for t in cons if t["would_use_2"] > 1)) == 1 else "teams"} '
-      f'over the third. If three passes, four is not worth a second ballot.</p>')
+    # The verdict on a fourth slot is the gap between the two proposals, and
+    # that gap moves week to week. Assert nothing the arithmetic is not saying
+    # this week: at one extra player a fourth is a rounding error, at three it
+    # is most of a second expansion and deserves to be argued on its own.
+    gap = p2 - p1
+    doubles = sum(1 for t in cons if t['stranded'] > 1)
+    plural = lambda k, w: f'{k} {w}{"" if k == 1 else "s"}'
+    if gap <= 1:
+        P(f'<p class="b"><b>A fourth buys almost nothing.</b> It adds {plural(gap, "player")} '
+          f'over the third, because only {plural(doubles, "manager")} in the league '
+          f'{"is" if doubles == 1 else "are"} holding more than one injured man on an active '
+          f'roster. If three passes, four is not worth a second ballot.</p>')
+    else:
+        P(f'<p class="b"><b>A fourth is a different question, and it is worth separating.</b> It '
+          f'adds {plural(gap, "player")} over the third &mdash; {p2/max(p1,1):.1f} times the cost '
+          f'of the third slot, not a rounding error on top of it &mdash; because '
+          f'{plural(doubles, "manager")} {"is" if doubles == 1 else "are"} currently holding more '
+          f'than one injured man on an active roster. Three and four are not the same vote and '
+          f'should not be argued as though they were. Note too that this is the one figure that '
+          f'moves fastest: it was {rows[0]["cost_plus2"]} in week {first["week"]}.</p>')
     P(f'<p class="b"><b>And nobody has to remember any of this in December.</b> The log keeps '
       f'taking its weekly reading whether anyone opens it or not, and every figure above re-types '
-      f'itself from the log. If the constrained count keeps climbing the way it has since week '
-      f'{rises[0] if rises else first["week"]}, the case gets stronger on its own and the page '
-      f'will say so. If it flattens out again, the page will say that instead.</p>')
+      f'itself from the log. The constrained count has run between {min(ser)} and {peak} so far '
+      f'and sits at {cur}; if it breaks out of that range in either direction the page will say '
+      f'so by itself, which is the only reason to trust it in December.</p>')
     return out
 
 

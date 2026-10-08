@@ -1,8 +1,16 @@
 # IR Watch — what four weeks of real data say
 
+> **Superseded — this is a frozen week-4 snapshot, kept for the record.**
+> The living version is **`scfl-ir-report.html`** ("The Wrong Number"), which
+> `scripts/build_ir.py` re-types from the log every time it runs.
+> Week 5 has since moved two of the conclusions below: constrained came back
+> down from 5 to 4, and the cost of a *fourth* slot rose from 6 to 7 — so
+> "expanding to 4 buys almost nothing" is no longer true. A fourth now costs
+> 1.8× a third. Read the generated article, not this.
+
 *Record kept automatically by `scripts/ir_watch.py`, run every Wednesday by
 `.github/workflows/ir-watch.yml`. One row per week, never rewritten.
-Live view: `ir-watch.html`. Current through **week 4, 2026**.*
+Live view: `ir-watch.html`. Frozen at **week 4, 2026**.*
 
 ---
 
