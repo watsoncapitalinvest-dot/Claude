@@ -163,7 +163,39 @@ def build(season, week, remeasure=True):
     bi.build(key, remeasure=False, quiet=True)
     if remeasure:
         fit(out)
+    inline_assets(out)
     return out
+
+
+def inline_assets(out):
+    """Embed the cover, masthead and shield so the file works on its own.
+
+    The issue referenced them relatively, which is correct on the site and
+    useless anywhere else: opened from a download, or sent to somebody, the
+    cover came up black and the masthead did not come up at all. A magazine
+    you cannot send is not much of a magazine, so the weekly issue carries its
+    own pictures.
+    """
+    import base64, re as _re
+    path = os.path.join(ROOT, out)
+    html = open(path, encoding='utf-8').read()
+    done, total = [], 0
+    for fn in sorted(set(_re.findall(r'["\'(]([A-Za-z0-9._-]+\.(?:png|jpg|jpeg|svg))["\')]',
+                                     html))):
+        src = os.path.join(ROOT, fn)
+        if not os.path.exists(src):
+            continue
+        mime = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+                'svg': 'image/svg+xml'}[fn.rsplit('.', 1)[1].lower()]
+        b = open(src, 'rb').read()
+        uri = f'data:{mime};base64,' + base64.b64encode(b).decode('ascii')
+        before = html
+        html = html.replace(f"'{fn}'", f"'{uri}'").replace(f'"{fn}"', f'"{uri}"')
+        if html != before:
+            done.append(fn)
+            total += len(b)
+    open(path, 'w', encoding='utf-8').write(html)
+    print(f'  inlined {len(done)} assets ({total/1024:.0f}kb): ' + ', '.join(done))
 
 
 def fit(out):
