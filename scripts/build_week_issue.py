@@ -82,10 +82,19 @@ def standings_blocks(st):
 
 
 def build(season, week, remeasure=True):
+    # A written file, when there is one, beats the generated stories. The
+    # template can report a game; it cannot have a view about one, and a beat
+    # report is mostly view. Generation stays as the floor for a week nobody
+    # had time to write.
+    pw = os.path.join(WDIR, f'{season}-w{week}-written.json')
     p = os.path.join(WDIR, f'{season}-w{week}-stories.json')
-    if not os.path.exists(p):
-        sys.exit(f'no {p} -- run scripts/write_week.py --week {week} first')
-    d = json.load(open(p, encoding='utf-8'))
+    if os.path.exists(pw):
+        d = json.load(open(pw, encoding='utf-8'))
+        print(f'  using the written stories ({os.path.basename(pw)})')
+    elif os.path.exists(p):
+        d = json.load(open(p, encoding='utf-8'))
+    else:
+        sys.exit(f'no stories for week {week} -- run scripts/write_week.py --week {week}')
     stories, lead = d['stories'], d['lead']
 
     # lead story first, then the rest by how much there is to say about them

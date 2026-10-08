@@ -19,12 +19,19 @@ const origin = process.argv[3] || 'http://localhost:8991';
     const res = [];
     for (const sec of pages) {
       const inner = sec.querySelector('.page-inner');
-      if (!inner) { res.push(1); continue; }
-      const fits = () => inner.scrollHeight <= sec.clientHeight + 1;
+      // The cover has no .page-inner. Emitting a placeholder for it pushed every
+      // later value one slot along, so each page was given the previous page's
+      // zoom and the longest article got the cover's 1. Only pages with an inner
+      // are reported, which is exactly what the injector walks.
+      if (!inner) continue;
+      // getBoundingClientRect reflects zoom; scrollHeight does NOT -- it reports
+      // the unzoomed layout height, so comparing it to clientHeight says a page
+      // fits when it is still hanging off the bottom.
+      const fits = () => inner.getBoundingClientRect().height <= sec.clientHeight - 24;
       inner.style.zoom = '1';
       if (fits()) { res.push(1); continue; }
-      // never go below 0.72 -- past that it stops being a magazine page
-      let lo = 0.72, hi = 1, best = 0.72;
+      // 0.55 floor. Lower than ideal, but a clipped page is worse than a small one
+      let lo = 0.55, hi = 1, best = 0.55;
       for (let i = 0; i < 12; i++) {
         const mid = (lo + hi) / 2;
         inner.style.zoom = String(mid);
