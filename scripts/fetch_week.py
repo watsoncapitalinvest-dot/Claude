@@ -109,11 +109,19 @@ def main():
         starters = [s for s in (m.get('starters') or []) if s]
         pp = m.get('players_points') or {}
         allp = [p for p in (m.get('players') or []) if p]
-        mk = lambda pid: dict(player(pid), points=round(float(pp.get(pid) or 0), 2))
+        # Who is on injured reserve. The matchup payload does not say, so it
+        # comes off the roster record. Without it a player on IR is
+        # indistinguishable from one on the bench, which makes roster counts
+        # wrong and hides exactly the thing IR Watch is measuring.
+        res = set((rosters.get(m['roster_id']) or {}).get('reserve') or [])
+        mk = lambda pid: dict(player(pid), points=round(float(pp.get(pid) or 0), 2),
+                              reserve=pid in res)
         return {'roster_id': m['roster_id'], 'team': team_of(m['roster_id']),
                 'points': round(float(m.get('points') or 0), 2),
+                'ir_used': len(res),
                 'starters': [mk(p) for p in starters],
-                'bench': [mk(p) for p in allp if p not in starters]}
+                'bench': [mk(p) for p in allp if p not in starters and p not in res],
+                'reserve': [mk(p) for p in allp if p in res]}
 
     by = {}
     for m in ms:
