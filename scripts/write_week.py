@@ -548,6 +548,7 @@ PAGE = """<!doctype html>
 <meta property="og:site_name" content="SCFL NewsRoom">
 <meta property="og:title" content="SCFL Week __WK__">
 <meta property="og:description" content="__DESC__">
+<meta property="og:image" content="https://watsoncapitalinvest-dot.github.io/Claude/scfl-week-__WK__-og.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="newsroom-favicon.png">
 <style>

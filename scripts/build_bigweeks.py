@@ -330,14 +330,92 @@ def figures(C):
           f'can reach, across {max(r["year"] for r in mach) - min(r["year"] for r in mach)} years '
           f'and every scoring era this league has had.</p>')
 
-    lost = [r for r in raw if not r['won']]
-    if lost:
-        l = lost[0]
-        S('The Cruellest One')
-        P(f'<p class="b">{E(l["team"])} scored {l["pts"]:.1f} in {l["year"]} and lost, because '
-          f'{E(l["opp"])} scored {l["oppPts"]:.1f} on the same afternoon. It remains the only week '
-          f'in the top ten that did not win a football game.</p>')
+    # Any of the top ten that lost. As the book stands all ten won, so this does
+    # not print -- but it is written to count rather than to assert, because the
+    # draft of it said "the only week in the top ten that did not win" and that
+    # would have become false the moment a second one joined it.
+    lost10 = [r for r in raw if not r['won']]
+    if lost10:
+        S('The Cruellest One' if len(lost10) == 1 else 'The Ones In The Top Ten That Lost')
+        for l in lost10:
+            P(f'<p class="b">{E(l["team"])} scored {l["pts"]:.1f} in {l["year"]} and lost, '
+              f'because {E(l["opp"])} scored {l["oppPts"]:.1f} on the same afternoon.</p>')
+        P(f'<p class="b">{"That is" if len(lost10) == 1 else "Those are"} '
+          f'{len(lost10)} of the ten biggest weeks this league has ever seen that did not win a '
+          f'football game.</p>')
     return out
+
+
+CARD = """<style>
+:root{--red:#c20f16;--ink:#17181c;--faint:#9a958c;--gold:#d8b45a;
+ --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;}
+*{box-sizing:border-box;margin:0;}
+html,body{width:1200px;height:630px;overflow:hidden;background:#efe9de;
+ font-family:Georgia,'Times New Roman',serif;color:var(--ink);}
+.card{position:relative;width:1200px;height:630px;overflow:hidden;background:#efe9de;
+ border-top:9px solid var(--red);border-bottom:9px solid var(--red);
+ padding:52px 60px 44px;display:flex;}
+.l{width:470px;flex:0 0 470px;display:flex;flex-direction:column;}
+.flag{font-family:var(--sans);font-size:11.5px;font-weight:900;letter-spacing:.22em;
+ text-transform:uppercase;color:var(--red);}
+h1{font-size:62px;line-height:.98;letter-spacing:-.026em;font-weight:900;margin-top:16px;}
+h1 em{font-style:normal;color:var(--red);}
+.rule{width:64px;height:3px;background:var(--red);margin:22px 0 18px;}
+.dek{font-style:italic;color:#4b4b52;font-size:17px;line-height:1.4;max-width:26ch;}
+.st{margin-top:auto;display:flex;gap:30px;}
+.st .k{font-family:var(--sans);font-size:9px;font-weight:800;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--faint);}
+.st .v{font-size:32px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums;}
+.r{flex:1;padding-left:50px;display:flex;flex-direction:column;justify-content:center;}
+table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:13px;}
+td,th{padding:5px 0;vertical-align:middle;}
+th{text-align:left;font-weight:700;white-space:nowrap;padding-right:12px;}
+tr+tr td,tr+tr th{border-top:1px solid #e3dcce;}
+.bar{width:150px;}
+.bar span{display:block;height:11px;background:var(--red);border-radius:0 2px 2px 0;}
+.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:800;padding-left:10px;}
+.yr{text-align:right;color:var(--faint);padding-left:12px;font-size:11.5px;}
+.cap{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--faint);margin-bottom:12px;}
+</style>
+<div class="card">
+ <div class="l">
+  <div class="flag">The Record Book</div>
+  <h1>The Ten<br>Biggest <em>Weeks</em></h1>
+  <div class="rule"></div>
+  <div class="dek">__DEK__</div>
+  <div class="st">
+   <div><div class="k">The record</div><div class="v">__REC__</div></div>
+   <div><div class="k">Team-weeks</div><div class="v">__N__</div></div>
+   <div><div class="k">Seasons</div><div class="v">__S__</div></div>
+  </div>
+ </div>
+ <div class="r"><div class="cap">The top six</div><table><tbody>__ROWS__</tbody></table></div>
+</div>"""
+
+
+def card(C, raw):
+    """The share card. The page carried an og:image tag pointing at a file that
+    was never built, so every time it was pasted anywhere it came up blank --
+    and the sender could not see that from their end."""
+    top = raw[:6]
+    mx = top[0]['pts']
+    rows = ''.join(
+        f'<tr><th>{E(r["team"])}</th>'
+        f'<td class="bar"><span style="width:{100*r["pts"]/mx:.0f}%"></span></td>'
+        f'<td class="num">{r["pts"]:.0f}</td>'
+        f'<td class="yr">{r["year"]}</td></tr>' for r in top)
+    doc = (CARD.replace('__ROWS__', rows)
+               .replace('__REC__', f'{raw[0]["pts"]:.0f}')
+               .replace('__N__', f'{len(C["rows"]):,}')
+               .replace('__S__', str(C['seasons']))
+               # the spread across the whole top ten, which is the actual
+               # story: they are bunched, and the one at the top has held
+               .replace('__DEK__', f'{E(raw[0]["team"])}&rsquo;s {raw[0]["pts"]:.0f} has stood '
+                                   f'since {raw[0]["year"]}. All ten of these afternoons sit '
+                                   f'inside {raw[0]["pts"]-raw[-1]["pts"]:.0f} points of each '
+                                   f'other.'))
+    ad.shoot(doc, OG, 'bigweeks-card')
 
 
 def build():
@@ -355,6 +433,7 @@ def build():
     print(f'wrote {os.path.basename(OUT)} ({len(page):,} chars)')
     print(f'  record {raw["pts"]:.0f} {raw["team"]} {raw["year"]} | era-adjusted '
           f'{era["idx"]:.2f}x {era["team"]} {era["year"]}')
+    card(C, sorted(C['rows'], key=lambda r: -r['pts'])[:10])
 
 
 if __name__ == '__main__':
