@@ -25,34 +25,91 @@ OG = os.path.join(ROOT, 'scfl-big-weeks-og.jpg')
 # name, and doubled spaces -- which is not part of the franchise's name
 clean = lambda s: re.sub(r'\s+', ' ', (s or '').replace('*', '')).strip()
 
-# A live run at the record, reported from the app while the week is still being
-# played. Set to None once the week is final and the real figure is in the
-# week data -- it is a press box note, not a record, and it says so.
-LIVE = {
-    'team': 'Beaver Eaters',
-    'pts': 177.0,
-    'week': 6,
-    'season': 2026,
-    'note': 'with players still to play',
-}
-
-
-def live_2026_average():
-    """This season's average team week, from the weeks already fetched."""
-    import glob, statistics as st
-    sc = []
+def week_files():
+    """The season's week files, newest first, with whether each one is final."""
+    import glob
+    out = []
     for f in glob.glob(os.path.join(ROOT, 'week-data', '2026-w*.json')):
         if not re.search(r'-w\d+\.json$', f):
             continue
         d = json.load(open(f, encoding='utf-8'))
         pts = [t['points'] for g in d['games'] for t in g['teams']]
-        # A week only counts once it is PLAYED. Week files are fetched for their
-        # rosters while the week is still live, so the scores in them can be
-        # near zero -- and letting one in dropped the season average from 96.6
-        # to 86.1, which flipped this article's conclusion. The test is the
-        # weakest team in the week: nobody finishes a real week under 30.
-        if pts and min(pts) >= 30:
-            sc += pts
+        if not pts:
+            continue
+        # A week is PLAYED when its weakest team has a real score. Files get
+        # pulled mid-week for their rosters, and nobody finishes a week under 30.
+        st = [p for g in d['games'] for t in g['teams'] for p in t['starters']]
+        zero = sum(1 for p in st if p['points'] == 0) / max(len(st), 1)
+        # Two tells, because one is not enough. The weakest team's score catches
+        # a week nobody has played: nobody finishes under 30. The share of
+        # starters on exactly nothing catches a week half played -- the four
+        # finished weeks of this season run 1.2 to 5.6 per cent, and a Sunday
+        # evening with the night games still to come reads 10.
+        out.append({'week': d['week'], 'pts': pts, 'games': d['games'],
+                    'final': min(pts) >= 30 and zero < 0.07,
+                    'left': zero,
+                    'fetched': d.get('fetchedAt', '')})
+    return sorted(out, key=lambda w: -w['week'])
+
+
+def live_watch(record):
+    """The record watch, read off the newest week file instead of typed in.
+
+    It used to be a hand-set dict, which meant the page said 177 for as long as
+    nobody remembered to change it -- a press box note that quietly becomes a
+    stale one is worse than no note. Now the box cannot be more out of date
+    than the data behind it, and it says which it is: a week still being
+    played, or a finished week that did or did not take the record.
+    """
+    # The newest week that has actually been scored. A week file pulled before
+    # the week starts is all zeroes -- the rosters are there, the points are
+    # not -- and taking it as "the latest week" means the watch disappears
+    # every time somebody fetches a week early.
+    ws = [w for w in week_files() if max(w['pts']) > 0]
+    if not ws:
+        return None
+    w = ws[0]
+    best = max(((t['points'], t['team']) for g in w['games'] for t in g['teams']))
+    pts, team = best
+    if pts < 0.6 * record:          # nobody is near it; there is nothing to watch
+        return None
+    return {'team': clean(team), 'pts': pts, 'week': w['week'], 'final': w['final'],
+            'took_it': pts > record, 'asof': asof(w['fetched']),
+            'fetched': w['fetched']}
+
+
+def asof(ts):
+    """'2026-10-12T01:07:33Z' -> 'Sunday evening' in the league's own time.
+
+    The box is anchored on this rather than on a judgement about whether the
+    week is over, because a timestamp cannot be wrong. Eastern, because that is
+    the clock everybody in this league reads a Sunday by.
+    """
+    import datetime
+    try:
+        t = datetime.datetime.strptime(ts, '%Y-%m-%dT%H:%M:%SZ')
+    except Exception:
+        return ''
+    t -= datetime.timedelta(hours=4)                 # UTC -> US Eastern, in season
+    part = ('overnight' if t.hour < 6 else 'morning' if t.hour < 12
+            else 'afternoon' if t.hour < 17 else 'evening')
+    return f'{t.strftime("%A")} {part}'
+
+
+def live_2026_average():
+    """This season's average team week, counting only the weeks that are done.
+
+    A week counts once it is PLAYED. Week files get pulled while the week is
+    still live, and letting one in dropped this average from 96.6 to 86.1 --
+    which flipped the conclusion of this article. It happened a second time on
+    a Sunday evening, when the weakest team was already past 30 and the test
+    passed anyway, so the test now lives in week_files() and uses both tells.
+    """
+    import statistics as st
+    sc = []
+    for w in week_files():
+        if w['final']:
+            sc += w['pts']
     return st.mean(sc) if sc else None
 
 
@@ -201,21 +258,45 @@ def figures(C):
         <div class="n">of the ten, all to The Machines</div></div>
     </div>''')
 
+    LIVE = live_watch(top['pts'])
     if LIVE:
         a26 = live_2026_average()
         gap = top['pts'] - LIVE['pts']
+        stood = 2026 - top['year']
         ix = LIVE['pts'] / a26 if a26 else 0
-        tenth = era[-1]['idx']
-        need10 = tenth * a26 if a26 else 0
-        need1 = best['idx'] * a26 if a26 else 0
-        P(f'''<div class="live"><div class="lk">As we go to press</div>
-          <p><b>{E(LIVE['team'])}</b> are on <b>{LIVE['pts']:.0f}</b> in week {LIVE['week']}
-          {E(LIVE['note'])} &mdash; <b>{gap:.0f} points</b> short of the record on this page.
-          They may well take it tonight.</p>
-          <p>Seven points, with a roster still on the field, against a mark that has stood
-          four seasons. If it falls, this page needs rewriting by Tuesday.</p>
-          <p class="lf">For the pedants: {LIVE['pts']:.0f} in a {a26:.0f}-point league is
-          {ix:.2f}&times; the field, which would not reach the adjusted ten below.</p></div>''')
+        # Everything in this box is read off the week file and off the record
+        # above it. The draft was hand-written -- "seven points", "four
+        # seasons" -- and both of those were a week away from being wrong.
+        live = not LIVE['final']
+        when = f" as of {LIVE['asof']}" if LIVE['asof'] else ''
+        verb = 'are on' if live else 'finished on'
+        still = ' with players still to play' if live else ''
+        if LIVE['took_it']:
+            lede = (f"<p><b>{E(LIVE['team'])}</b> {verb} <b>{LIVE['pts']:.1f}</b> in week "
+                    f"{LIVE['week']}{still} &mdash; <b>{abs(gap):.1f} past</b> the record on "
+                    f"this page, which had stood {stood} season"
+                    f"{'' if stood == 1 else 's'}.</p>"
+                    + (f"<p>Nothing is in the book until the week is final, but it is there"
+                       f"{when}.</p>" if live else
+                       f"<p>The table below is the record as imported. It is out of date"
+                       f"{when}.</p>"))
+        else:
+            lede = (f"<p><b>{E(LIVE['team'])}</b> {verb} <b>{LIVE['pts']:.1f}</b> in week "
+                    f"{LIVE['week']}{still} &mdash; <b>{gap:.1f} points</b> short of the "
+                    f"record on this page, which has stood {stood} season"
+                    f"{'' if stood == 1 else 's'}.</p>"
+                    + (f"<p>That is the closest anybody has come this season{when}. "
+                       if LIVE['pts'] >= max((max(w['pts']) for w in week_files()), default=0)
+                       else f"<p>That is where it stands{when}. ")
+                    + "The number is read off the week file, so when the week finishes it "
+                      "changes with it.</p>")
+        ped = (f'<p class="lf">For the pedants: {LIVE["pts"]:.0f} in a {a26:.0f}-point league '
+               f'is {ix:.2f}&times; the field, which '
+               + ('would reach' if ix >= era[-1]['idx'] else 'would not reach')
+               + ' the adjusted ten below.</p>') if a26 else ''
+        P(f'<div class="live"><div class="lk">'
+          + ('The record has gone' if LIVE['took_it'] else 'As we go to press')
+          + f'</div>{lede}{ped}</div>')
 
     rec = (C['rec'].get(top['year']) or {}).get(top['team'])
     won = C['champ'].get(top['year']) == top['team']
