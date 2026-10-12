@@ -77,8 +77,23 @@ def crunch():
     for r in rows:
         r['idx'] = r['pts'] / avg[r['year']]
         r['won'] = r['pts'] > r['oppPts']
+    champ, season_rec = {}, {}
+    for s2 in h['seasons']:
+        own = {t['id']: t.get('owner') for t in s2.get('teams', [])}
+        nm2 = {t['id']: clean(t['name']) for t in s2.get('teams', [])}
+        c = s2.get('champion')
+        champ[s2['year']] = next((nm2[i] for i, o in own.items() if o == c), None)
+        w = {}
+        for m in s2.get('matchups') or []:
+            a, b = m.get('homeScore'), m.get('awayScore')
+            if a is None or b is None:
+                continue
+            for me, op, i in ((a, b, m.get('home')), (b, a, m.get('away'))):
+                r = w.setdefault(nm2.get(i), [0, 0, 0])
+                r[0 if me > op else 1 if me < op else 2] += 1
+        season_rec[s2['year']] = w
     return {'rows': rows, 'avg': avg, 'seasons': len(h['seasons']),
-            'span': (min(avg), max(avg))}
+            'span': (min(avg), max(avg)), 'champ': champ, 'rec': season_rec}
 
 
 PAGE = """<!doctype html>
@@ -147,9 +162,9 @@ __FIGCSS__
 <div class="runhead">SCFL NewsRoom &middot; The Record Book &middot; October 2026</div>
 <span class="flag">The Record Book</span>
 <h1>The Ten Biggest <em>Weeks</em></h1>
-<p class="dek">One hundred and eighty-four points is the number in the book. It is not the
-best week anybody has had &mdash; this league scored a quarter less in 2011 than it did in 2018,
-and nobody has ever adjusted for it. Here is the list, and then the list that counts.</p>
+<p class="dek">__NWEEKS__ team-weeks across __SEASONS__ seasons, and these are the ten
+afternoons nobody has got near. Five belong to the same franchise, two came in the playoffs, and
+the one at the top has stood since 2022.</p>
 <div class="byline">The SCFL NewsRoom &middot; The Record Book</div>
 <div class="rule"></div>
 __BODY__
@@ -172,18 +187,18 @@ def figures(C):
     era = sorted(rows, key=lambda r: -r['idx'])[:10]
     top, best = raw[0], era[0]
     lo_y = min(avg, key=lambda y: avg[y]); hi_y = max(avg, key=lambda y: avg[y])
+    nmach = sum(1 for r in raw if 'MACHINES' in r['team'].upper())
 
     P(f'''<div class="stats">
       <div class="stat"><div class="k">The record</div><div class="v">{top['pts']:.0f}</div>
         <div class="n">{E(top['team'])}, {top['year']} week {top['week']}</div></div>
-      <div class="stat"><div class="k">Biggest for its era</div>
-        <div class="v">{best['idx']:.2f}&times;</div>
-        <div class="n">{E(best['team'])}, {best['year']} &mdash; {best['pts']:.0f} in a {avg[best['year']]:.0f}-point league</div></div>
+      <div class="stat"><div class="k">Margin that day</div>
+        <div class="v">+{top['pts']-top['oppPts']:.0f}</div>
+        <div class="n">{E(top['opp'])} managed {top['oppPts']:.0f}</div></div>
       <div class="stat"><div class="k">Seasons on record</div><div class="v">{C['seasons']}</div>
         <div class="n">{C['span'][0]}&ndash;{C['span'][1]}</div></div>
-      <div class="stat"><div class="k">Scoring swing</div>
-        <div class="v">{avg[hi_y]/avg[lo_y]:.2f}&times;</div>
-        <div class="n">{avg[lo_y]:.1f} a week in {lo_y}, {avg[hi_y]:.1f} in {hi_y}</div></div>
+      <div class="stat"><div class="k">One franchise</div><div class="v">{nmach}</div>
+        <div class="n">of the ten, all to The Machines</div></div>
     </div>''')
 
     if LIVE:
@@ -197,23 +212,26 @@ def figures(C):
           <p><b>{E(LIVE['team'])}</b> are on <b>{LIVE['pts']:.0f}</b> in week {LIVE['week']}
           {E(LIVE['note'])} &mdash; <b>{gap:.0f} points</b> short of the record on this page.
           They may well take it tonight.</p>
-          <p>They will not take the other one. The league is averaging
-          <b>{a26:.1f}</b> a week this season, so {LIVE['pts']:.0f} is <b>{ix:.2f}&times;</b> the
-          field. Tenth place on the adjusted board is {tenth:.2f}&times;, which in this scoring
-          environment is <b>{need10:.0f} points</b>. First place is {best['idx']:.2f}&times; &mdash;
-          <b>{need1:.0f}</b>.</p>
-          <p class="lf">That is the argument of this piece, happening live: a number can be the
-          biggest ever recorded and not be among the ten best weeks anybody has had.</p></div>''')
+          <p>Seven points, with a roster still on the field, against a mark that has stood
+          four seasons. If it falls, this page needs rewriting by Tuesday.</p>
+          <p class="lf">For the pedants: {LIVE['pts']:.0f} in a {a26:.0f}-point league is
+          {ix:.2f}&times; the field, which would not reach the adjusted ten below.</p></div>''')
 
+    rec = (C['rec'].get(top['year']) or {}).get(top['team'])
+    won = C['champ'].get(top['year']) == top['team']
+    tail = ''
+    if rec:
+        w, l, t = rec
+        tail = (f' They finished that season {w}-{l}' + (f'-{t}' if t else '')
+                + (' and won the title.' if won else '.'))
     P(f'<p class="b">The biggest score anybody has ever put up in this league is '
       f'{top["pts"]:.0f}, by {E(top["team"])} in week {top["week"]} of {top["year"]}, against '
-      f'{E(top["opp"])}, who managed {top["oppPts"]:.0f}. That is the record and it is not in '
-      f'dispute.</p>')
-    P(f'<p class="b">What is in dispute is whether it was the best week anybody has had. The '
-      f'average team week in this league was {avg[lo_y]:.1f} points in {lo_y} and {avg[hi_y]:.1f} '
-      f'in {hi_y}. Those are different sports. A number put up against the first one is worth '
-      f'considerably more than the same number put up against the second, and the record book has '
-      f'never said so.</p>')
+      f'{E(top["opp"])}, who managed {top["oppPts"]:.0f}.{tail}</p>')
+    P(f'<p class="b">Below it sit nine more afternoons that got close and never arrived. '
+      f'{nmach} of the ten belong to The Machines. '
+      f'{sum(1 for r in raw if r["playoff"])} came in the playoffs. And one of them was put up '
+      f'against a team that scored {max(r["oppPts"] for r in raw):.0f} &mdash; the highest losing '
+      f'score in the book.</p>')
 
     S('The List As It Stands')
     mx = raw[0]['pts']
@@ -233,10 +251,12 @@ def figures(C):
       f'{sum(1 for r in raw if "MACHINES" in r["team"].upper())} of the ten belong to one '
       f'franchise.</figcaption></figure>')
 
-    S('The List That Counts')
-    P('<p class="b">Now the same weeks measured against the league that produced them &mdash; the '
-      'score divided by the average team week of that season. The order changes, and so does the '
-      'record.</p>')
+    S('A Note On Era')
+    P(f'<p class="b">One caveat for anyone who likes arguing about records. The league averaged '
+      f'{avg[lo_y]:.1f} points a team-week in {lo_y} and {avg[hi_y]:.1f} in {hi_y}, so the same '
+      f'score is a different achievement depending on when it happened. Measured against its own '
+      f'season, the order shuffles &mdash; {E(best["team"])} top it, and the record itself drops '
+      f'to {1 + [r is top for r in era].index(True) if any(r is top for r in era) else 3}.</p>')
     mx = era[0]['idx']
     rr = ''
     for i, r in enumerate(era, 1):
@@ -250,15 +270,13 @@ def figures(C):
     B(f'<figure><div class="scroll"><table><thead><tr><th></th><th class="lt">Team</th>'
       f'<th class="lt">Share of that season&rsquo;s average</th><th>Index</th><th>Points</th>'
       f'<th>Year</th><th>Context</th></tr></thead><tbody>{rr}</tbody></table></div>'
-      f'<figcaption>{E(best["team"])} scored {best["pts"]:.0f} in a season where the average team '
-      f'week was {avg[best["year"]]:.1f}. Nobody has beaten the league by that much before or '
-      f'since.</figcaption></figure>')
-
-    P(f'<div class="pull">{E(best["team"])} did not score the most points. They beat their '
-      f'league by more than anybody ever has.</div>')
+      f'<figcaption>Score divided by the average team week of that season. It is a footnote, not '
+      f'a rewrite &mdash; the record is still {top["pts"]:.0f}.</figcaption></figure>')
 
     mach = [r for r in raw if 'MACHINES' in r['team'].upper()]
     if mach:
+        P(f'<div class="pull">Five of the ten biggest afternoons in eighteen seasons belong to '
+          f'one team. Nobody else has two.</div>')
         # derive the count -- hardcoding it said "Four" while the table said five
         WORD = {2:'Two',3:'Three',4:'Four',5:'Five',6:'Six',7:'Seven'}
         S(f'One Franchise, {WORD.get(len(mach), len(mach))} Entries')
@@ -288,6 +306,7 @@ def build():
             f'league scored a quarter less, the biggest week belongs to {era["team"]}.')
     page = (PAGE.replace('__FIGCSS__', ad.FIG_CSS).replace('__BODY__', body)
                 .replace('__DESC__', desc).replace('__SEASONS__', str(C['seasons']))
+                .replace('__NWEEKS__', f"{len(C['rows']):,}")
                 .replace('__FROM__', str(C['span'][0])).replace('__TO__', str(C['span'][1])))
     open(OUT, 'w', encoding='utf-8').write(page)
     print(f'wrote {os.path.basename(OUT)} ({len(page):,} chars)')
