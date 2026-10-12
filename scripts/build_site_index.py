@@ -54,6 +54,7 @@ CATEGORY = {
     'scfl-research-champions-playoffs.html': 'Investigations & Research',
     'scfl-timeline-oldest-dynasty.html': 'Investigations & Research',
     'scfl-ir-report.html': 'Investigations & Research',
+    'scfl-big-weeks.html': 'Investigations & Research',
     # Trade Desk
     'scfl-jcm-trade-review.html': 'Trade Desk',
     'scfl-trade-court-godwin.html': 'Trade Desk',
