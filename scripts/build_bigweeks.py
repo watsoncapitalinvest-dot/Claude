@@ -251,6 +251,49 @@ def figures(C):
       f'{sum(1 for r in raw if "MACHINES" in r["team"].upper())} of the ten belong to one '
       f'franchise.</figcaption></figure>')
 
+    # The companion record: scoring enough to win almost any week and losing.
+    lost = sorted((r for r in rows if r['pts'] < r['oppPts']),
+                  key=lambda r: -r['pts'])[:8]
+    S('The Ones That Were Not Enough')
+    L0 = lost[0]
+    beat = sum(1 for r in rows if r['pts'] < L0['pts'] and r['pts'] > r['oppPts'])
+    # The week that beat it may or may not be on the top ten. Find it by who,
+    # when and against whom -- matching on the score alone would pick the wrong
+    # week the first time two of them tie, which in 4,688 team-weeks it will.
+    ranked = next((i for i, r in enumerate(raw, 1)
+                   if r['year'] == L0['year'] and r['week'] == L0['week']
+                   and r['team'] == L0['opp']), 0)
+    place = (f' &mdash; the week sitting at number {ranked} on the list above'
+             if ranked else '')
+    P(f'<p class="b">The other half of a record list is the afternoons that deserved better. '
+      f'{E(L0["team"])} scored {L0["pts"]:.0f} in week {L0["week"]} of {L0["year"]} and lost, '
+      f'because {E(L0["opp"])} picked the same afternoon for {L0["oppPts"]:.0f}{place}. '
+      f'That {L0["pts"]:.0f} would have won '
+      f'{100*beat/max(sum(1 for r in rows if r["pts"] != r["oppPts"]),1):.0f} per cent of every '
+      f'other game ever played in this league.</p>')
+    mx = lost[0]['pts']
+    rr = ''
+    for i, r in enumerate(lost, 1):
+        po = '<span class="po">playoff</span>' if r['playoff'] else ''
+        rr += (f'<tr><th class="rk">{i}</th><th scope="row">{E(r["team"])}{po}</th>'
+               f'<td class="bar"><span class="lo" style="width:{100*r["pts"]/mx:.1f}%"></span></td>'
+               f'<td class="num"><b>{r["pts"]:.1f}</b></td>'
+               f'<td class="num dim">{r["year"]} wk {r["week"]}</td>'
+               f'<td class="dim">lost to {E(r["opp"])} ({r["oppPts"]:.0f})</td>'
+               f'<td class="num dim">&minus;{r["oppPts"]-r["pts"]:.1f}</td></tr>')
+    B(f'<figure><div class="scroll"><table><thead><tr><th></th><th class="lt">Team</th>'
+      f'<th class="lt">Points, and still beaten</th><th></th><th>When</th>'
+      f'<th class="lt">Beaten by</th><th>Margin</th></tr></thead>'
+      f'<tbody>{rr}</tbody></table></div>'
+      f'<figcaption>Highest scores by a losing team. '
+      f'{sum(1 for r in lost if r["playoff"])} of the eight came in the playoffs, where there is '
+      f'no next week.</figcaption></figure>')
+    close = min(lost, key=lambda r: r['oppPts'] - r['pts'])
+    P(f'<p class="b">The cruellest is not the biggest. {E(close["team"])} put '
+      f'{close["pts"]:.0f} on the board in {close["year"]}'
+      + (f' &mdash; in the playoffs &mdash;' if close['playoff'] else '') +
+      f' and went out by {close["oppPts"]-close["pts"]:.1f}.</p>')
+
     S('A Note On Era')
     P(f'<p class="b">One caveat for anyone who likes arguing about records. The league averaged '
       f'{avg[lo_y]:.1f} points a team-week in {lo_y} and {avg[hi_y]:.1f} in {hi_y}, so the same '
