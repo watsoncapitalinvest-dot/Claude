@@ -25,6 +25,36 @@ OG = os.path.join(ROOT, 'scfl-big-weeks-og.jpg')
 # name, and doubled spaces -- which is not part of the franchise's name
 clean = lambda s: re.sub(r'\s+', ' ', (s or '').replace('*', '')).strip()
 
+# A live run at the record, reported from the app while the week is still being
+# played. Set to None once the week is final and the real figure is in the
+# week data -- it is a press box note, not a record, and it says so.
+LIVE = {
+    'team': 'Beaver Eaters',
+    'pts': 177.0,
+    'week': 6,
+    'season': 2026,
+    'note': 'with players still to play',
+}
+
+
+def live_2026_average():
+    """This season's average team week, from the weeks already fetched."""
+    import glob, statistics as st
+    sc = []
+    for f in glob.glob(os.path.join(ROOT, 'week-data', '2026-w*.json')):
+        if not re.search(r'-w\d+\.json$', f):
+            continue
+        d = json.load(open(f, encoding='utf-8'))
+        pts = [t['points'] for g in d['games'] for t in g['teams']]
+        # A week only counts once it is PLAYED. Week files are fetched for their
+        # rosters while the week is still live, so the scores in them can be
+        # near zero -- and letting one in dropped the season average from 96.6
+        # to 86.1, which flipped this article's conclusion. The test is the
+        # weakest team in the week: nobody finishes a real week under 30.
+        if pts and min(pts) >= 30:
+            sc += pts
+    return st.mean(sc) if sc else None
+
 
 def crunch():
     h = json.load(open(os.path.join(ROOT, 'history.json'), encoding='utf-8'))
@@ -105,6 +135,13 @@ __FIGCSS__
  text-transform:uppercase;color:#fff;background:var(--gold);padding:1px 5px;border-radius:2px;
  margin-left:6px;vertical-align:1px;}
 .ad .lost{color:var(--blue);font-weight:800;}
+.live{border:2px solid var(--red);border-radius:3px;padding:16px 18px;margin:0 0 28px;
+ background:#fdf4f2;}
+.live .lk{font-family:var(--sans);font-size:9.5px;font-weight:900;letter-spacing:.2em;
+ text-transform:uppercase;color:var(--red);margin-bottom:8px;}
+.live p{margin:0 0 10px;font-size:16px;line-height:1.55;max-width:62ch;}
+.live p:last-child{margin-bottom:0;}
+.live .lf{font-style:italic;color:var(--muted);font-size:15px;}
 </style></head>
 <body><div class="wrap">
 <div class="runhead">SCFL NewsRoom &middot; The Record Book &middot; October 2026</div>
@@ -148,6 +185,25 @@ def figures(C):
         <div class="v">{avg[hi_y]/avg[lo_y]:.2f}&times;</div>
         <div class="n">{avg[lo_y]:.1f} a week in {lo_y}, {avg[hi_y]:.1f} in {hi_y}</div></div>
     </div>''')
+
+    if LIVE:
+        a26 = live_2026_average()
+        gap = top['pts'] - LIVE['pts']
+        ix = LIVE['pts'] / a26 if a26 else 0
+        tenth = era[-1]['idx']
+        need10 = tenth * a26 if a26 else 0
+        need1 = best['idx'] * a26 if a26 else 0
+        P(f'''<div class="live"><div class="lk">As we go to press</div>
+          <p><b>{E(LIVE['team'])}</b> are on <b>{LIVE['pts']:.0f}</b> in week {LIVE['week']}
+          {E(LIVE['note'])} &mdash; <b>{gap:.0f} points</b> short of the record on this page.
+          They may well take it tonight.</p>
+          <p>They will not take the other one. The league is averaging
+          <b>{a26:.1f}</b> a week this season, so {LIVE['pts']:.0f} is <b>{ix:.2f}&times;</b> the
+          field. Tenth place on the adjusted board is {tenth:.2f}&times;, which in this scoring
+          environment is <b>{need10:.0f} points</b>. First place is {best['idx']:.2f}&times; &mdash;
+          <b>{need1:.0f}</b>.</p>
+          <p class="lf">That is the argument of this piece, happening live: a number can be the
+          biggest ever recorded and not be among the ten best weeks anybody has had.</p></div>''')
 
     P(f'<p class="b">The biggest score anybody has ever put up in this league is '
       f'{top["pts"]:.0f}, by {E(top["team"])} in week {top["week"]} of {top["year"]}, against '
