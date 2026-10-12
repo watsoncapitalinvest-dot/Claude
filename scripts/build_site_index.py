@@ -80,6 +80,7 @@ TITLE = re.compile(r'<title>([^<]*)</title>')
 DESC = re.compile(r'og:description"\s+content="([^"]*)"')
 PUB = re.compile(r'scfl:published"\s+content="([^"]*)"')
 KICKER = re.compile(r'scfl:kicker"\s+content="([^"]*)"')
+CAT = re.compile(r'scfl:category"\s+content="([^"]*)"')
 
 
 def unescape(s):
@@ -127,6 +128,13 @@ def build():
         # hand-maintained list without breaking the build every Tuesday
         if not cat and re.match(r'scfl-week-\d+(?:-issue)?\.html$', rel):
             cat = 'Season Coverage & Issues'
+        # desk notes are generated too, one per entry in desk-notes.json, and
+        # each one states its own category in a meta tag. Reading it off the
+        # page keeps the rule the blurbs already follow: the catalog cannot say
+        # something the page itself does not.
+        if not cat and rel.startswith('scfl-note-'):
+            cm = CAT.search(text)
+            cat = cm.group(1).strip() if cm else None
         if not cat:
             missing_category.append(rel)
             continue
@@ -145,10 +153,13 @@ def build():
         sys.exit('refusing to write: no CATEGORY entry for ' + ', '.join(missing_category) +
                   ' -- add it to scripts/build_site_index.py')
 
-    order = ['Season Coverage & Issues', 'Heat & Rivalries', 'Investigations & Research',
-             'Trade Desk', 'Tools & Arcade']
+    order = ['Season Coverage & Issues', 'Desk Notes', 'Heat & Rivalries',
+             'Investigations & Research', 'Trade Desk', 'Tools & Arcade']
     by_cat = {c: [] for c in order}
     for e in entries:
+        if e['category'] not in by_cat:
+            sys.exit(f'{e["url"]} declares category {e["category"]!r}, which is not in the '
+                     'catalog order -- add it to scripts/build_site_index.py')
         by_cat[e['category']].append(e)
     for c in by_cat:
         by_cat[c].sort(key=lambda e: e['date'] or '', reverse=True)

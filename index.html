@@ -2704,6 +2704,55 @@ function renderStoryQueue(q) {
   el.innerHTML = `<div class="dt" style="margin:0 0 12px">${n} waiting to be written${list.length > n ? ` · ${list.length - n} on the record` : ''}. Kept in <code>story-queue.json</code> so it survives the browser.</div>`
     + sorted.map(card).join('');
 }
+// ---- Desk Notes — the short pieces, kept instead of scrolled past ----------
+// The Story Queue above is what the desk means to write. This is what it has
+// already worked out: the ten-minute answers to "what is a mid-second really
+// worth" that used to live in a chat message and then stop existing. Each one
+// is rendered as a real page by scripts/build_notes.py, so a note is readable
+// on its own, sendable, and in the catalog — the same as any other article.
+let DESK_NOTES = null;
+async function loadDeskNotes() {
+  if (DESK_NOTES) return DESK_NOTES;
+  try {
+    const r = await fetch('desk-notes.json', { cache: 'no-cache' });
+    if (r.ok) DESK_NOTES = await r.json();
+  } catch { DESK_NOTES = null; }
+  return DESK_NOTES;
+}
+function showDeskNotes() {
+  loadDeskNotes().then(renderDeskNotes);
+  app.innerHTML = `<div style="padding-bottom:24px">
+    <button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom</button>
+    <div class="setup-logo" style="font-size:24px">📌 Desk Notes</div>
+    <p class="muted" style="margin-top:4px">The short pieces — a question asked, worked out once, and written down so it does not have to be worked out again.</p>
+    <div id="deskNotesBody"><div class="card"><div class="dt">Loading…</div></div></div>
+  </div>`;
+}
+function renderDeskNotes(d) {
+  const el = $('#deskNotesBody'); if (!el) return;
+  const list = (d && d.notes) || [];
+  if (!list.length) {
+    el.innerHTML = `<div class="card"><div class="dt">No notes yet. They're kept in <code>desk-notes.json</code>.</div></div>`;
+    return;
+  }
+  // the headline and dek carry inline <em>/<b> from the note, which is why they
+  // are not escaped here — desk-notes.json is committed copy, not user input
+  const strip = s => String(s || '').replace(/<[^>]+>/g, '');
+  const card = n => `<a class="card" href="scfl-note-${encodeURIComponent(n.slug)}.html" target="_blank" rel="noopener"
+      style="display:block;text-decoration:none;color:inherit;border-left:3px solid var(--red,#c20f16)">
+    <div class="row" style="justify-content:space-between;align-items:baseline;gap:10px">
+      <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--red,#c20f16)">${esc(strip(n.flag))}</div>
+      <div class="faint" style="font-size:11px;white-space:nowrap">${esc(n.date || '')}</div>
+    </div>
+    <div style="font-weight:800;font-size:17px;line-height:1.2;margin-top:4px">${n.headline || 'Untitled'}</div>
+    <div class="dt" style="margin-top:5px;font-style:italic">${n.dek || ''}</div>
+    ${(n.sources || []).length ? `<div class="faint" style="font-size:11px;margin-top:8px">Checked against: ${n.sources.map(esc).join(' · ')}</div>` : ''}
+    <div style="margin-top:9px;font-weight:700;font-size:12.5px;color:var(--red,#c20f16)">Read the note →</div>
+  </a>`;
+  const sorted = list.slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  el.innerHTML = `<div class="dt" style="margin:0 0 12px">${sorted.length} note${sorted.length === 1 ? '' : 's'} on file. Kept in <code>desk-notes.json</code> and published by <code>scripts/build_notes.py</code>.</div>`
+    + sorted.map(card).join('');
+}
 function showSiteIndex() {
   loadSiteIndex().then(renderSiteIndex);
   app.innerHTML = `<div style="padding-bottom:24px">
@@ -3864,6 +3913,7 @@ const NEWSROOM_TOOLS = [
   ['dashboard', '🗞️', 'Newsroom HQ', 'Weekly checklist, brief & calendar'],
   ['desk', '✍️', 'Newsroom Desk', 'Chat → Water Cooler, uploads'],
   ['story-queue', '🗒️', 'The Story Queue', 'Pieces the desk means to write — angle, shape & research, waiting on the words'],
+  ['desk-notes', '📌', 'Desk Notes', 'The short pieces already worked out — what a pick is worth, whether a waiver stash is real'],
   ['storylines', '🧵', 'Storylines', 'Running league arcs'],
   ['investigations', '🔍', 'Investigations', 'The long-form specials'],
   ['interviews', '🎙️', 'Owner Interviews', 'Build your own questions, send a link, collect answers'],
@@ -3886,7 +3936,7 @@ const OFFICE_SECTIONS = [
 const NEWSROOM_SECTIONS = [
   ['This Week', ['calendar', 'create-issue', 'weekly-stories', 'dashboard']],
   ['The Network', ['sportscenter', 'broadcast']],
-  ['Desks & Features', ['politics', 'desk', 'story-queue', 'storylines', 'investigations', 'interviews', 'trade-court', 'waiver-wire', 'heat-index', 'weekly-heat']],
+  ['Desks & Features', ['politics', 'desk', 'story-queue', 'desk-notes', 'storylines', 'investigations', 'interviews', 'trade-court', 'waiver-wire', 'heat-index', 'weekly-heat']],
   ['Editions', ['pop-grades', 'archive', 'archive-articles']],
 ];
 function toolSections(tools, sections) {
@@ -9655,7 +9705,7 @@ const NAV_ACTS = new Set(['home','newsroom','create-issue','weekly-stories','das
   'politics','pol-read','desk','storylines','investigations','inv-read','dossier','records','rivalries','rivalry-read','players','player-read','ex-files','site-index',
   'archive-articles','archive','cover-art','predraft-view','draft-room','trade-court','waiver-wire','heat-index','weekly-heat','draft-desk',
   'assets','staff-handbook','staff-import','tc-team','back-news','back','settings','ex-files','power-ranks','money-lines','pop-grades','pop-year',
-  'story-queue']);
+  'story-queue','desk-notes']);
 let NAV_SILENT = false;
 function pushRoute(act, data) {
   if (NAV_SILENT) return;
@@ -9735,6 +9785,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'records') return showRecords();
   if (act === 'site-index') return showSiteIndex();
   if (act === 'story-queue') return showStoryQueue();
+  if (act === 'desk-notes') return showDeskNotes();
   if (act === 'trade-court') return showTradeCourt();
   if (act === 'draft-desk') return showDraftDesk();
   if (act === 'roster-export') return exportRosters();
