@@ -50,9 +50,18 @@ derived, leave it out. Count-aware phrasing (`"That is" if n == 1 else
 - Player identity joins on the NFL's `gsis_id`, never on an abbreviated name.
   Sleeper stores `gsis_id` with a **leading space** — strip before use, and
   verify the id resolves against the play data before trusting it.
-- Partial week files look like real ones. A week counts only once played;
-  the test is `min(points) >= 30`. Letting a live week in dropped the season
-  average from 96.6 to 86.1 and flipped an article's conclusion.
+- Partial week files look like real ones. A week counts only once played, and
+  that needs two tells: `min(points) >= 30` catches a week nobody has played,
+  and the share of starters on exactly 0 catches a week half played (finished
+  weeks run 1–6%, a Sunday evening reads 10%). One tell alone has flipped an
+  article's conclusion twice.
+- **`posteam` on a kickoff is the RECEIVING team.** Reading a kicker's own side
+  off every play he appears on labelled Mevis as Philadelphia and Fairbairn as
+  Tennessee. Only field goals and extra points identify a kicker's team.
+- Sleeper will not report a player nobody owns, so anything about the waiver
+  pool has to be computed from play-by-play — and then checked back against
+  what Sleeper paid the owned ones. Kickers came out 63/63 exact; defences
+  60/64, each miss one 2-point event.
 - The two value scales both anchor the 1.01 at $100 and agree nowhere else.
   `dp-values.json` prices players; `draft-intel.json`'s `pickValueChart`
   prices picks and is deliberately steeper. Quoting one against the other
