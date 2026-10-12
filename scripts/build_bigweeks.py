@@ -12,7 +12,7 @@ moved a long way -- the average team week was 78.5 points in 2011 and 101.2 in
 number put up in a high-scoring one. Ranked against its own season, the record
 changes hands.
 """
-import importlib.util, json, os, re, statistics, sys
+import collections, importlib.util, json, os, re, statistics, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _s = importlib.util.spec_from_file_location('ad', os.path.join(ROOT, 'scripts', 'build_addendum.py'))
@@ -114,34 +114,40 @@ def live_2026_average():
 
 
 def franchises(h):
-    """owner -> the name that franchise goes by now, and every alias it has used.
+    """owner/alias -> the club this desk calls that franchise.
 
-    Fourteen of the sixteen owners in this league have renamed their team at
-    least once, and one of them has used seven names. Keying the record book on
-    the name printed that season splits a single franchise into several: The
-    Machines played 2011 as THE LEGION OF DOOM and 2015 as COUSIN PETE IS SOFT,
-    the Beaver Eaters have been YO MAMA and Tre'Quan Da Chef among others, and
-    Killer Klowns were the Ball Chinians. Owner is the only stable identity in
-    the file, so the book is keyed on that and the period name is carried
-    alongside for the copy to say "as THE LEGION OF DOOM".
+    scfl-franchises.json is the league's established identity file and already
+    had all of this: every ESPN handle, every per-season alias, and the club
+    name to display. This desk hand-rolled a resolver off the most recent name
+    instead of looking, which got The Machines right by luck and would have
+    left Killer Klowns stranded as the Ball Chinians, because that franchise
+    changed ESPN handles as well as names.
+
+    Handle first, alias second. Both are in the file; every team in eighteen
+    seasons resolves.
     """
-    now = {}
-    for s in h['seasons']:
-        for t in s.get('teams', []):
-            if t.get('owner'):
-                now[t['owner']] = clean(t['name'])
-    return now
+    f = json.load(open(os.path.join(ROOT, 'scfl-franchises.json'), encoding='utf-8'))
+    club = {x['key']: x['club'] for x in f['franchises']}
+    norm = lambda t: re.sub(r'[^a-z0-9]', '', (t or '').lower())
+
+    def of(team):
+        k = f['handles'].get(team.get('owner')) or f['lookup'].get(norm(team.get('name')))
+        return club.get(k) or clean(team.get('name'))
+    return of
 
 
 def crunch():
     h = json.load(open(os.path.join(ROOT, 'history.json'), encoding='utf-8'))
-    NOW = franchises(h)
+    NOW = franchises(h)        # team dict -> club name
     avg, rows = {}, []
     for s in h['seasons']:
-        nm = {t['id']: (NOW.get(t.get('owner')) or clean(t['name']))
-              for t in s.get('teams', [])}
+        nm = {t['id']: NOW(t) for t in s.get('teams', [])}
         asname = {t['id']: clean(t['name']) for t in s.get('teams', [])}
         sc = []
+        # the last playoff week of a season is the final, which this league
+        # calls the Bosom Bowl
+        pw = [m['week'] for m in (s.get('matchups') or []) if m.get('playoff')]
+        final_wk = max(pw) if pw else None
         for m in s.get('matchups') or []:
             hs, as_ = m.get('homeScore'), m.get('awayScore')
             if hs is None or as_ is None:
@@ -153,7 +159,8 @@ def crunch():
                              'team': nm.get(ai, '?'), 'opp': nm.get(bi, '?'),
                              # what they were called that season, when it differs
                              'as': asname.get(ai, ''), 'oppAs': asname.get(bi, ''),
-                             'oppPts': float(b), 'playoff': bool(m.get('playoff'))})
+                             'oppPts': float(b), 'playoff': bool(m.get('playoff')),
+                             'final': bool(m.get('playoff')) and m['week'] == final_wk})
         if sc:
             avg[s['year']] = statistics.mean(sc)
     for r in rows:
@@ -162,14 +169,15 @@ def crunch():
     champ, season_rec = {}, {}
     for s2 in h['seasons']:
         own = {t['id']: t.get('owner') for t in s2.get('teams', [])}
-        nm2 = {t['id']: (NOW.get(t.get('owner')) or clean(t['name']))
-               for t in s2.get('teams', [])}
+        nm2 = {t['id']: NOW(t) for t in s2.get('teams', [])}
         c = s2.get('champion')
         champ[s2['year']] = next((nm2[i] for i, o in own.items() if o == c), None)
         w = {}
         for m in s2.get('matchups') or []:
             a, b = m.get('homeScore'), m.get('awayScore')
-            if a is None or b is None:
+            # regular season only -- counting the playoffs turned 2011's 13-0
+            # into a 16-0 that contradicted the table two paragraphs above
+            if a is None or b is None or m.get('playoff'):
                 continue
             for me, op, i in ((a, b, m.get('home')), (b, a, m.get('away'))):
                 r = w.setdefault(nm2.get(i), [0, 0, 0])
@@ -233,6 +241,7 @@ __FIGCSS__
  text-transform:uppercase;color:#fff;background:var(--gold);padding:1px 5px;border-radius:2px;
  margin-left:6px;vertical-align:1px;}
 .ad .lost{color:var(--blue);font-weight:800;}
+.ad .po.bb{background:var(--red);}
 .was{display:block;font-family:var(--sans);font-size:10px;font-weight:600;
  letter-spacing:.04em;color:var(--faint);margin-top:1px;}
 .live{border:2px solid var(--red);border-radius:3px;padding:16px 18px;margin:0 0 28px;
@@ -248,8 +257,7 @@ __FIGCSS__
 <span class="flag">The Record Book</span>
 <h1>The Ten Biggest <em>Weeks</em></h1>
 <p class="dek">__NWEEKS__ team-weeks across __SEASONS__ seasons, and these are the ten
-afternoons nobody has got near. Five belong to the same franchise, two came in the playoffs, and
-the one at the top has stood since 2022.</p>
+afternoons nobody has got near. __DEKFACTS__</p>
 <div class="byline">The SCFL NewsRoom &middot; The Record Book</div>
 <div class="rule"></div>
 __BODY__
@@ -269,8 +277,11 @@ def alias(r, key='as', team='team'):
     a team calling itself THE LEGION OF DOOM, and a reader who was there
     remembers the name, not the owner id.
     """
-    a = r.get(key) or ''
-    return (f'<span class="was">as {E(a)}</span>' if a and a != r[team] else '')
+    a, now = r.get(key) or '', r[team]
+    # a leading "The" is not a rename, and nor is shouting it in capitals
+    k = lambda t: re.sub(r'^the', '', re.sub(r'[^a-z0-9]', '', t.lower()))
+    same = k(a) == k(now)
+    return f'<span class="was">as {E(a)}</span>' if a and not same else ''
 
 
 def figures(C):
@@ -347,17 +358,33 @@ def figures(C):
     P(f'<p class="b">The biggest score anybody has ever put up in this league is '
       f'{top["pts"]:.0f}, by {E(top["team"])} in week {top["week"]} of {top["year"]}, against '
       f'{E(top["opp"])}, who managed {top["oppPts"]:.0f}.{tail}</p>')
+    bb = [r for r in raw if r.get('final')]
     P(f'<p class="b">Below it sit nine more afternoons that got close and never arrived. '
       f'{nmach} of the ten belong to The Machines. '
-      f'{sum(1 for r in raw if r["playoff"])} came in the playoffs. And one of them was put up '
+      + (f'{sum(1 for r in raw if r["playoff"])} came in the playoffs. '
+         if sum(1 for r in raw if r['playoff']) > len([x for x in raw if x.get('final')]) else '')
+      + f'And one of them was put up '
       f'against a team that scored {max(r["oppPts"] for r in raw):.0f} &mdash; the highest losing '
       f'score in the book.</p>')
+    if bb:
+        b0 = min(bb, key=lambda r: r['year'])
+        rc = (C['rec'].get(b0['year']) or {}).get(b0['team'])
+        run = (f' to finish a {rc[0]}-{rc[1]}' + (f'-{rc[2]}' if rc and rc[2] else '')
+               + ' season') if rc else ''
+        P(f'<p class="b">'
+          + (f'Two of them were the Bosom Bowl itself. ' if len(bb) == 2
+             else f'{len(bb)} of them were the Bosom Bowl itself. ' if len(bb) > 1
+             else 'One of them was the Bosom Bowl itself. ')
+          + f'{E(b0["team"])} put {b0["pts"]:.0f} on {E(b0["opp"])} in the {b0["year"]} final'
+          + run + f', winning it by {b0["pts"]-b0["oppPts"]:.0f}. Nobody has scored more in a '
+          f'game that decided anything.</p>')
 
     S('The List As It Stands')
     mx = raw[0]['pts']
     rr = ''
     for i, r in enumerate(raw, 1):
-        po = '<span class="po">playoff</span>' if r['playoff'] else ''
+        po = ('<span class="po bb">Bosom Bowl</span>' if r.get('final')
+              else '<span class="po">playoff</span>' if r['playoff'] else '')
         res = '' if r['won'] else '<span class="lost"> &mdash; and lost</span>'
         rr += (f'<tr><th class="rk">{i}</th><th scope="row">{E(r["team"])}{po}{alias(r)}</th>'
                f'<td class="bar"><span style="width:{100*r["pts"]/mx:.1f}%"></span></td>'
@@ -395,7 +422,8 @@ def figures(C):
     mx = lost[0]['pts']
     rr = ''
     for i, r in enumerate(lost, 1):
-        po = '<span class="po">playoff</span>' if r['playoff'] else ''
+        po = ('<span class="po bb">Bosom Bowl</span>' if r.get('final')
+              else '<span class="po">playoff</span>' if r['playoff'] else '')
         rr += (f'<tr><th class="rk">{i}</th><th scope="row">{E(r["team"])}{po}{alias(r)}</th>'
                f'<td class="bar"><span class="lo" style="width:{100*r["pts"]/mx:.1f}%"></span></td>'
                f'<td class="num"><b>{r["pts"]:.1f}</b></td>'
@@ -425,7 +453,8 @@ def figures(C):
     mx = era[0]['idx']
     rr = ''
     for i, r in enumerate(era, 1):
-        po = '<span class="po">playoff</span>' if r['playoff'] else ''
+        po = ('<span class="po bb">Bosom Bowl</span>' if r.get('final')
+              else '<span class="po">playoff</span>' if r['playoff'] else '')
         rr += (f'<tr><th class="rk">{i}</th><th scope="row">{E(r["team"])}{po}{alias(r)}</th>'
                f'<td class="bar"><span style="width:{100*r["idx"]/mx:.1f}%"></span></td>'
                f'<td class="num"><b>{r["idx"]:.2f}&times;</b></td>'
@@ -551,6 +580,16 @@ def build():
                 .replace('__DESC__', desc).replace('__SEASONS__', str(C['seasons']))
                 .replace('__NWEEKS__', f"{len(C['rows']):,}")
                 .replace('__FROM__', str(C['span'][0])).replace('__TO__', str(C['span'][1])))
+    # the dek used to assert "Five belong to the same franchise"; it is counted now
+    _r = sorted(C['rows'], key=lambda r: -r['pts'])[:10]
+    _c = collections.Counter(r['team'] for r in _r)
+    _top, _n = _c.most_common(1)[0]
+    _f = sum(1 for r in _r if r.get('final'))
+    WORD = {1:'One',2:'Two',3:'Three',4:'Four',5:'Five',6:'Six',7:'Seven',8:'Eight'}
+    page = page.replace('__DEKFACTS__',
+        f"{WORD.get(_n, _n)} belong{'s' if _n == 1 else ''} to {E(_top)}, "
+        + (f"{WORD.get(_f, _f).lower()} came in the Bosom Bowl itself, " if _f else '')
+        + f"and the one at the top has stood since {raw['year']}.")
     open(OUT, 'w', encoding='utf-8').write(page)
     print(f'wrote {os.path.basename(OUT)} ({len(page):,} chars)')
     print(f'  record {raw["pts"]:.0f} {raw["team"]} {raw["year"]} | era-adjusted '
