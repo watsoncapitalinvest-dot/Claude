@@ -1,14 +1,25 @@
 # SCFL NewsRoom — house rules
 
-## If it is in article format, save it
+## John decides what is an article. Then save it.
 
 John's rule, in his words: *"save it every time I produce something in article
-format. That means I like it enough to share."*
+format. That means I like it enough to share"* — and the correction that
+followed, because this desk read it too widely: *"This can stay in the chat. I
+only want things that I give the article treatment to to be saved
+automatically."*
 
-Article format is the signal. Nothing that reaches that state is a draft, a
-one-off or a chat message — it is a thing somebody wants to send to sixteen
-other managers. So producing one is not finished until all three of these are
-true, in the same pass, without being asked:
+So the trigger is **John giving something the article treatment**, not this
+desk deciding a piece of analysis deserves one. An answer to a question is an
+answer to a question. Research, a board, a recommendation, a trade read — those
+belong in the chat, however much work went into them and however good the
+numbers are. Publishing one unasked puts a page on a live site under the
+league's masthead that nobody asked for.
+
+Ask, or wait to be told. "Want this as a note?" costs one line.
+
+Once John has given something the article treatment, producing it is not
+finished until all three of these are true, in the same pass, without being
+asked again:
 
 1. **Saved** — committed and pushed. This container gets reclaimed. Pages have
    been lost to that before, which is why one-off builders live in `scripts/`
