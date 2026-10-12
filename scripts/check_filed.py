@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Is everything this desk has made actually saved and actually sendable?
+"""Is everything this desk has PUBLISHED actually saved and actually sendable?
+
+Note what this does NOT check, because it is the more important rule: whether a
+page should exist at all. This repository is PUBLIC and GitHub Pages serves it,
+so every file here is readable by the fifteen other managers in this league.
+Strategy, trade plans and waiver targets do not go in it. See CLAUDE.md.
+
 
     python3 scripts/check_filed.py
 
@@ -92,15 +98,6 @@ def main():
         if why:
             unsendable.append((rel, '; '.join(why)))
 
-    # a note in the store that was never rendered is the other direction of the
-    # same mistake: written down, and still not a page anybody can open
-    unbuilt = []
-    store = os.path.join(ROOT, 'desk-notes.json')
-    if os.path.exists(store):
-        for n in json.load(open(store, encoding='utf-8'))['notes']:
-            if not os.path.exists(os.path.join(ROOT, f'scfl-note-{n["slug"]}.html')):
-                unbuilt.append(n['slug'])
-
     print(f'{len(pages)} pages scanned, {len(filed)} in the catalog')
     bad = 0
     def report(rows, head, fix):
@@ -115,7 +112,6 @@ def main():
 
     report(unfiled, 'NOT IN THE CATALOG:', 'python3 scripts/build_site_index.py')
     report(unsaved, 'NOT COMMITTED:', 'git add + commit, then push')
-    report(unbuilt, 'IN desk-notes.json BUT NOT BUILT:', 'python3 scripts/build_notes.py')
     report(unsendable, 'WILL NOT SHARE PROPERLY:', 'build the missing card, or fix the meta tag')
     # a missing date only costs the catalog its sort order, so it is said
     # plainly and does not fail the check

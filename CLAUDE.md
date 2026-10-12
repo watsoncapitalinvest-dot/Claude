@@ -1,5 +1,25 @@
 # SCFL NewsRoom — house rules
 
+## This repository is PUBLIC. The league can read it.
+
+`watsoncapitalinvest-dot/Claude` is a public repo with GitHub Pages serving
+from the default branch. Every file committed here is readable by the fifteen
+other managers, and anything with a `<title>` gets listed in the catalog with a
+share card attached.
+
+So **none of this goes in the repo**: which players John is selling or buying,
+what he thinks a trade partner will accept, who he is claiming off waivers,
+where his roster is weak, what another team's weakness is. That is his hand.
+
+This has already gone wrong once. Eight pages of planning — sell Kyler to
+Wookie Leaks because they have the least room to say no; claim Chase McLaughlin
+and Kimani Vidal; cut Cleveland — were published to the live site in the same
+week John sat fifth in the waiver order behind four teams who would want the
+same kicker. Nobody asked for any of it.
+
+Strategy stays in the chat. If something genuinely needs writing down, it goes
+somewhere outside this repo and John is told where.
+
 ## John decides what is an article. Then save it.
 
 John's rule, in his words: *"save it every time I produce something in article
@@ -34,10 +54,14 @@ asked again:
 Run `python3 scripts/check_filed.py` before saying a piece is done. It checks
 all three and exits non-zero with what to run.
 
-A short piece — a question worked out once, the kind that used to live in a
-chat message — goes in `desk-notes.json` and is published by
-`python3 scripts/build_notes.py`. A note costs a paragraph of JSON, not a new
-builder. A longer piece gets its own builder in `scripts/`.
+An article means something written for the league to read: a game report, a
+record piece, an investigation. It does not mean a worked-out answer to one of
+John's questions, however much research went into it — *"These aren't articles.
+They are us talking and planning."*
+
+`scripts/build_notes.py` and `desk-notes.json` exist for short pieces John
+asks for. `desk-notes.json` is **gitignored**, because what ended up in it was
+our conversation. A longer piece gets its own builder in `scripts/`.
 
 ## Prose is derived, never asserted
 
