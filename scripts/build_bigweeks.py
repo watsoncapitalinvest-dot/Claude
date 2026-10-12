@@ -113,11 +113,34 @@ def live_2026_average():
     return st.mean(sc) if sc else None
 
 
+def franchises(h):
+    """owner -> the name that franchise goes by now, and every alias it has used.
+
+    Fourteen of the sixteen owners in this league have renamed their team at
+    least once, and one of them has used seven names. Keying the record book on
+    the name printed that season splits a single franchise into several: The
+    Machines played 2011 as THE LEGION OF DOOM and 2015 as COUSIN PETE IS SOFT,
+    the Beaver Eaters have been YO MAMA and Tre'Quan Da Chef among others, and
+    Killer Klowns were the Ball Chinians. Owner is the only stable identity in
+    the file, so the book is keyed on that and the period name is carried
+    alongside for the copy to say "as THE LEGION OF DOOM".
+    """
+    now = {}
+    for s in h['seasons']:
+        for t in s.get('teams', []):
+            if t.get('owner'):
+                now[t['owner']] = clean(t['name'])
+    return now
+
+
 def crunch():
     h = json.load(open(os.path.join(ROOT, 'history.json'), encoding='utf-8'))
+    NOW = franchises(h)
     avg, rows = {}, []
     for s in h['seasons']:
-        nm = {t['id']: t['name'] for t in s.get('teams', [])}
+        nm = {t['id']: (NOW.get(t.get('owner')) or clean(t['name']))
+              for t in s.get('teams', [])}
+        asname = {t['id']: clean(t['name']) for t in s.get('teams', [])}
         sc = []
         for m in s.get('matchups') or []:
             hs, as_ = m.get('homeScore'), m.get('awayScore')
@@ -127,7 +150,9 @@ def crunch():
             for a, b, ai, bi in ((hs, as_, m.get('home'), m.get('away')),
                                  (as_, hs, m.get('away'), m.get('home'))):
                 rows.append({'pts': float(a), 'year': s['year'], 'week': m['week'],
-                             'team': clean(nm.get(ai, '?')), 'opp': clean(nm.get(bi, '?')),
+                             'team': nm.get(ai, '?'), 'opp': nm.get(bi, '?'),
+                             # what they were called that season, when it differs
+                             'as': asname.get(ai, ''), 'oppAs': asname.get(bi, ''),
                              'oppPts': float(b), 'playoff': bool(m.get('playoff'))})
         if sc:
             avg[s['year']] = statistics.mean(sc)
@@ -137,7 +162,8 @@ def crunch():
     champ, season_rec = {}, {}
     for s2 in h['seasons']:
         own = {t['id']: t.get('owner') for t in s2.get('teams', [])}
-        nm2 = {t['id']: clean(t['name']) for t in s2.get('teams', [])}
+        nm2 = {t['id']: (NOW.get(t.get('owner')) or clean(t['name']))
+               for t in s2.get('teams', [])}
         c = s2.get('champion')
         champ[s2['year']] = next((nm2[i] for i, o in own.items() if o == c), None)
         w = {}
@@ -207,6 +233,8 @@ __FIGCSS__
  text-transform:uppercase;color:#fff;background:var(--gold);padding:1px 5px;border-radius:2px;
  margin-left:6px;vertical-align:1px;}
 .ad .lost{color:var(--blue);font-weight:800;}
+.was{display:block;font-family:var(--sans);font-size:10px;font-weight:600;
+ letter-spacing:.04em;color:var(--faint);margin-top:1px;}
 .live{border:2px solid var(--red);border-radius:3px;padding:16px 18px;margin:0 0 28px;
  background:#fdf4f2;}
 .live .lk{font-family:var(--sans);font-size:9.5px;font-weight:900;letter-spacing:.2em;
@@ -232,6 +260,17 @@ the league that produced it. Franchise names are shown as the record book has th
 renames its worst team every year by rule, so the same franchise appears under more than one name.
 </div>
 </div></body></html>"""
+
+
+def alias(r, key='as', team='team'):
+    """The name that franchise was playing under at the time, when it differs.
+
+    Worth printing rather than silently normalising: the 2011 record was set by
+    a team calling itself THE LEGION OF DOOM, and a reader who was there
+    remembers the name, not the owner id.
+    """
+    a = r.get(key) or ''
+    return (f'<span class="was">as {E(a)}</span>' if a and a != r[team] else '')
 
 
 def figures(C):
@@ -320,11 +359,12 @@ def figures(C):
     for i, r in enumerate(raw, 1):
         po = '<span class="po">playoff</span>' if r['playoff'] else ''
         res = '' if r['won'] else '<span class="lost"> &mdash; and lost</span>'
-        rr += (f'<tr><th class="rk">{i}</th><th scope="row">{E(r["team"])}{po}</th>'
+        rr += (f'<tr><th class="rk">{i}</th><th scope="row">{E(r["team"])}{po}{alias(r)}</th>'
                f'<td class="bar"><span style="width:{100*r["pts"]/mx:.1f}%"></span></td>'
                f'<td class="num"><b>{r["pts"]:.1f}</b></td>'
                f'<td class="num dim">{r["year"]} wk {r["week"]}</td>'
-               f'<td class="dim">v {E(r["opp"])} ({r["oppPts"]:.0f}){res}</td></tr>')
+               f'<td class="dim">v {E(r["opp"])} ({r["oppPts"]:.0f}){res}'
+               f'{alias(r, "oppAs", "opp")}</td></tr>')
     B(f'<figure><div class="scroll"><table><thead><tr><th></th><th class="lt">Team</th>'
       f'<th class="lt">Points</th><th></th><th>When</th><th class="lt">Opponent</th></tr></thead>'
       f'<tbody>{rr}</tbody></table></div>'
@@ -356,11 +396,12 @@ def figures(C):
     rr = ''
     for i, r in enumerate(lost, 1):
         po = '<span class="po">playoff</span>' if r['playoff'] else ''
-        rr += (f'<tr><th class="rk">{i}</th><th scope="row">{E(r["team"])}{po}</th>'
+        rr += (f'<tr><th class="rk">{i}</th><th scope="row">{E(r["team"])}{po}{alias(r)}</th>'
                f'<td class="bar"><span class="lo" style="width:{100*r["pts"]/mx:.1f}%"></span></td>'
                f'<td class="num"><b>{r["pts"]:.1f}</b></td>'
                f'<td class="num dim">{r["year"]} wk {r["week"]}</td>'
-               f'<td class="dim">lost to {E(r["opp"])} ({r["oppPts"]:.0f})</td>'
+               f'<td class="dim">lost to {E(r["opp"])} ({r["oppPts"]:.0f})'
+               f'{alias(r, "oppAs", "opp")}</td>'
                f'<td class="num dim">&minus;{r["oppPts"]-r["pts"]:.1f}</td></tr>')
     B(f'<figure><div class="scroll"><table><thead><tr><th></th><th class="lt">Team</th>'
       f'<th class="lt">Points, and still beaten</th><th></th><th>When</th>'
@@ -385,7 +426,7 @@ def figures(C):
     rr = ''
     for i, r in enumerate(era, 1):
         po = '<span class="po">playoff</span>' if r['playoff'] else ''
-        rr += (f'<tr><th class="rk">{i}</th><th scope="row">{E(r["team"])}{po}</th>'
+        rr += (f'<tr><th class="rk">{i}</th><th scope="row">{E(r["team"])}{po}{alias(r)}</th>'
                f'<td class="bar"><span style="width:{100*r["idx"]/mx:.1f}%"></span></td>'
                f'<td class="num"><b>{r["idx"]:.2f}&times;</b></td>'
                f'<td class="num dim">{r["pts"]:.1f}</td>'
