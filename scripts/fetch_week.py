@@ -145,11 +145,33 @@ def main():
     tot = sum(1 for g in games for t in g['teams'] for p in t['starters'])
     print(f'  gsis_id present on {gs}/{tot} starters')
 
+    # Waiver order, which lives on the roster record and nowhere else. Without
+    # it the only way to answer "where am I in the queue this week" is to open
+    # the app, and the answer decides whether a claim is worth making at all --
+    # there is no point planning round a player the four teams above you want.
+    ls = lg.get('settings') or {}
+    waivers = {
+        'type': ls.get('waiver_type'),              # 0 rolling, 1 reverse standings, 2 FAAB
+        'budget': ls.get('waiver_budget'),
+        'clear_days': ls.get('waiver_clear_days'),
+        'day_of_week': ls.get('waiver_day_of_week'),
+        'order': sorted(
+            ({'roster_id': r['roster_id'], 'team': team_of(r['roster_id']),
+              'position': (r.get('settings') or {}).get('waiver_position'),
+              'budget_used': (r.get('settings') or {}).get('waiver_budget_used')}
+             for r in rosters.values()),
+            key=lambda r: (r['position'] is None, r['position'] or 0)),
+    }
+    pos = {r['team']: r['position'] for r in waivers['order']}
+    print('  waiver order: ' + ', '.join(f'{p}. {t}' for t, p in
+                                         sorted(pos.items(), key=lambda kv: kv[1] or 99)))
+
     os.makedirs(OUTDIR, exist_ok=True)
     out = {'league': lg['name'], 'league_id': lid, 'season': int(season), 'week': wk,
            'fetchedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
            'scoring': lg.get('scoring_settings'),
            'roster_positions': lg.get('roster_positions'),
+           'waivers': waivers,
            'games': games}
     path = os.path.join(OUTDIR, f'{season}-w{wk}.json')
     json.dump(out, open(path, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
