@@ -103,6 +103,17 @@ def main():
                 'espn_id': p.get('espn_id'),
                 'sportradar_id': p.get('sportradar_id'),
                 'yahoo_id': p.get('yahoo_id'),
+                # Why a man's usage changed. Play-by-play says what happened on
+                # the field and never why, and reading a usage drop without this
+                # is how a dislocated finger gets reported as a shrinking role --
+                # Roman Wilson held a steady 10 per cent share for four weeks,
+                # got hurt in the fifth, and this desk called him a fading WR3
+                # and told John to cut him. The injury was in every newspaper
+                # and in Sleeper's own player record; it was not in this file.
+                'injury_status': p.get('injury_status'),
+                'injury_body_part': p.get('injury_body_part'),
+                'injury_start_date': p.get('injury_start_date'),
+                'practice_participation': p.get('practice_participation'),
                 'stats': stats.get(pid) or None}
 
     def side(m):
@@ -144,6 +155,18 @@ def main():
     gs = sum(1 for g in games for t in g['teams'] for p in t['starters'] if p['gsis_id'])
     tot = sum(1 for g in games for t in g['teams'] for p in t['starters'])
     print(f'  gsis_id present on {gs}/{tot} starters')
+
+    # Say it out loud at fetch time. A list of hurt players nobody reads is the
+    # same as not having it, and this is the field whose absence turned an
+    # injury into a fictional benching.
+    hurt = sorted(((p['injury_status'], p['name'], p.get('injury_body_part') or '', t['team'])
+                   for g in games for t in g['teams']
+                   for p in t['starters'] + t['bench'] + t['reserve']
+                   if p.get('injury_status')))
+    if hurt:
+        print(f'  {len(hurt)} rostered players carrying an injury designation:')
+        for st, nm, bp, tm in hurt:
+            print(f'    {st:12s} {nm:24s} {bp:14s} {tm.strip()}')
 
     # Waiver order, which lives on the roster record and nowhere else. Without
     # it the only way to answer "where am I in the queue this week" is to open
