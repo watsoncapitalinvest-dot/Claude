@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Put a landscape photograph onto the portrait cover without cropping it away.
 
-    python3 scripts/compose_cover.py --week 5 --art scfl-art-stafford.jpg
+    python3 scripts/compose_cover.py --week 5 --art scfl-art-gumbas.jpg
 
 The cover slot is a 2:3 frame and build_issue.py paints the art into it with
 `center/cover`, which means a 3:2 photograph gets centre-cropped to 2:3 -- for

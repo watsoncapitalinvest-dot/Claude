@@ -35,7 +35,45 @@ ad = importlib.util.module_from_spec(_s); sys.modules['ad'] = ad; _s.loader.exec
 W, H = 1024, 1536
 
 
-def data_uri(art):
+# The portrait card. A figure cannot share a 1200x630 frame with a panel of type
+# down one side -- every crop that keeps his face puts it behind the headline,
+# and every crop that clears the headline loses the thing he is doing. So the
+# picture takes the whole card and the words go across the bottom, which is
+# where a cover puts them for the same reason.
+OGP = """<style>
+:root{--red:#c20f16;--ink:#0b0b0f;--cream:#f4f1ea;--gold:#d8b45a;
+ --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;}
+*{box-sizing:border-box;margin:0;}
+html,body{width:1200px;height:630px;overflow:hidden;background:#0b0b0f;
+ font-family:Georgia,'Times New Roman',serif;color:var(--cream);}
+.c{position:relative;width:1200px;height:630px;overflow:hidden;background:#0b0b0f;
+ background-size:cover;background-position:center top;__PHOTO__
+ border-top:9px solid var(--red);border-bottom:9px solid var(--red);}
+.c::after{content:'';position:absolute;inset:0;
+ background:linear-gradient(180deg,rgba(11,11,15,.55) 0%,rgba(11,11,15,0) 22%,
+ rgba(11,11,15,0) 38%,rgba(11,11,15,.80) 66%,rgba(11,11,15,.97) 100%);}
+.b{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:0 54px 40px;
+ display:flex;align-items:flex-end;justify-content:space-between;gap:36px;}
+.flag{font-family:var(--sans);font-size:11.5px;font-weight:900;letter-spacing:.24em;
+ text-transform:uppercase;color:#ff5442;text-shadow:0 1px 6px rgba(0,0,0,.9);}
+h1{font-size:50px;line-height:1.02;letter-spacing:-.022em;font-weight:900;margin-top:12px;
+ max-width:17ch;text-shadow:0 3px 22px rgba(0,0,0,.95),0 1px 3px rgba(0,0,0,.9);}
+.st{display:flex;gap:30px;flex:none;padding-bottom:6px;}
+.st .k{font-family:var(--sans);font-size:9px;font-weight:800;letter-spacing:.14em;
+ text-transform:uppercase;color:#b2aca3;}
+.st .v{font-size:26px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums;
+ text-shadow:0 2px 12px rgba(0,0,0,.95);}
+.st .v b{color:var(--gold);font-weight:900;}
+</style>
+<div class="c"><div class="b">
+  <div><div class="flag">The Week __WK__ Issue</div><h1>__HL__</h1></div>
+  <div class="st">
+    <div><div class="k">Final</div><div class="v">__WS__<b>&ndash;</b>__LS__</div></div>
+    <div><div class="k">Lead changes</div><div class="v">__NF__</div></div>
+  </div>
+</div></div>"""
+
+def data_uri(art, tall=False):
     """The share-card strip of `art`, inline, so the card has no dependencies.
 
     ad.shoot renders the HTML in a throwaway context; a relative src resolves
@@ -47,7 +85,9 @@ def data_uri(art):
     _s = _iu.spec_from_file_location('cc', os.path.join(ROOT, 'scripts', 'compose_cover.py'))
     cc = _iu.module_from_spec(_s); _s.loader.exec_module(cc)
     buf = io.BytesIO()
-    cc.band(art, 1200, 630).save(buf, 'JPEG', quality=86, optimize=True)
+    strip = (cc.band(art, 1200, 630, focus=(0.58, 0.13), place=(0.5, 0.33))
+             if tall else cc.band(art, 1200, 630))
+    strip.save(buf, 'JPEG', quality=86, optimize=True)
     return 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode()
 
 
@@ -229,8 +269,18 @@ def og_card(season, week, g, lead_story, pts, flips_t, art=''):
              .replace('__LS__', f"{s['score'][1]:.2f}")
              .replace('__NF__', str(g['lead_changes'])))
     if art:
-        doc = doc.replace('__PHOTO__', f"background-image:url('{data_uri(art)}');")
-        doc = _re.sub(r'<svg width="1200".*?</svg>', '', doc, flags=_re.S)
+        from PIL import Image as _I
+        aw, ah = _I.open(os.path.join(ROOT, art)).size
+        tall = ah / aw >= 1.1
+        if tall:
+            doc = (OGP.replace('__WK__', str(week))
+                      .replace('__HL__', ad.esc(s.get('headline', '')))
+                      .replace('__WS__', f"{s['score'][0]:.2f}")
+                      .replace('__LS__', f"{s['score'][1]:.2f}")
+                      .replace('__NF__', str(g['lead_changes'])))
+        doc = doc.replace('__PHOTO__', f"background-image:url('{data_uri(art, tall)}');")
+        if not tall:
+            doc = _re.sub(r'<svg width="1200".*?</svg>', '', doc, flags=_re.S)
     else:
         doc = doc.replace('__PHOTO__', '')
     out = os.path.join(ROOT, f'scfl-week-{week}-og.jpg')
