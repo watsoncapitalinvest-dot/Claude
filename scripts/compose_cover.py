@@ -48,36 +48,90 @@ def feather(img, top, bottom):
     return a
 
 
-def compose(art, out, top=240):
-    """art (any aspect) -> a 1024x1536 cover at `out`. Returns the photo height."""
+def compose(art, out, top=240, inset=''):
+    """art (any aspect) -> a 1024x1536 cover at `out`. Returns the photo height.
+
+    A picture already taller than 2:3 is run full bleed and cropped to the
+    frame, because that is what it was drawn for. A landscape one is laid in at
+    full width and feathered into the black instead, so none of it is thrown
+    away -- see the note at the top of this file.
+
+    `inset` is a second picture, boxed and keylined in the upper right. An inset
+    is how a magazine runs two pictures on one cover without either of them
+    winning: the big one is the week, the small one is the other thing worth
+    buying it for. It sits high, clear of the hook and the cover lines, which
+    are composited over the bottom third by build_issue.py.
+    """
     src = Image.open(os.path.join(ROOT, art)).convert('RGB')
     w, h = src.size
-    ph = round(h * W / w)                      # full width, nothing cropped sideways
-    photo = src.resize((W, ph), Image.LANCZOS)
-
     cover = Image.new('RGB', (W, H), INK)
-    cover.paste(photo, (0, top), feather(photo, 150, 260))
+
+    if h / w >= 1.1:                           # portrait enough to carry the frame
+        s = max(W / w, H / h)
+        im = src.resize((round(w * s), round(h * s)), Image.LANCZOS)
+        cover.paste(im, (-(im.size[0] - W) // 2, 0))
+        ph, top = H, 0
+    else:
+        ph = round(h * W / w)                  # full width, nothing cropped sideways
+        photo = src.resize((W, ph), Image.LANCZOS)
+        cover.paste(photo, (0, top), feather(photo, 150, 260))
+
+    if ph >= H:
+        # A full-bleed figure is a worse bed for type than the black a laid-in
+        # photograph leaves behind it, and build_issue.py composites the hook
+        # and six cover lines over the bottom third. Its own scrim is tuned for
+        # that black. This one is for a picture.
+        sc = Image.new('L', (1, H))
+        for y in range(H):
+            t = max(0.0, (y - H * 0.52) / (H * 0.48))
+            sc.putpixel((0, y), int(255 * min(0.62, t * t * 0.62)))
+        cover = Image.composite(Image.new('RGB', (W, H), INK), cover,
+                                sc.resize((W, H)))
+
+    if inset:
+        iw, ih, pad = 330, 220, 34
+        strip = band(inset, iw, ih, 0.62)
+        x, y = W - iw - pad, 268
+        # a hairline key, so the inset reads as a second picture and not as a
+        # hole punched in the first one
+        cover.paste(Image.new('RGB', (iw + 6, ih + 6), (226, 226, 222)), (x - 3, y - 3))
+        cover.paste(Image.new('RGB', (iw + 2, ih + 2), (11, 11, 15)), (x - 1, y - 1))
+        cover.paste(strip, (x, y))
+
     p = os.path.join(ROOT, out)
     cover.save(p, quality=88, optimize=True)
     print(f'  {art} {w}x{h} -> {out} {W}x{H} '
-          f'({os.path.getsize(p)//1024}kb, photo at y{top}-{top+ph})')
+          f'({os.path.getsize(p)//1024}kb, photo at y{top}-{top+ph}'
+          + (f', inset {inset}' if inset else '') + ')')
     return ph
 
 
-def band(art, w, h, at=0.62):
+def band(art, w, h, at=0.62, focus=None, place=(0.79, 0.42), zoom=1.0):
     """The same photograph cropped to a w x h strip, for the share card.
 
     `at` is where in the vertical overflow the strip sits, 0 at the top. The
-    card is wide and short where the cover is tall, so it keeps the lit half of
-    the picture -- the floodlights and the field -- and loses the empty sky the
+    card is wide and short where the cover is tall, so a landscape picture keeps
+    the lit half -- the floodlights and the field -- and loses the empty sky the
     cover has room for.
+
+    A centred crop is wrong for a portrait, though. The card's left 640 pixels
+    are a near-solid panel carrying the headline, so a figure in the middle of
+    the frame ends up behind the type. `focus` is where the subject is in the
+    source, as fractions, and `place` is where to put him in the card -- right
+    of the panel by default. `zoom` buys the room to move him there.
     """
     src = Image.open(os.path.join(ROOT, art)).convert('RGB')
     sw, sh = src.size
-    s = max(w / sw, h / sh)
+    s = max(w / sw, h / sh) * zoom
     im = src.resize((round(sw * s), round(sh * s)), Image.LANCZOS)
-    y = round((im.size[1] - h) * at)
-    return im.crop(((im.size[0] - w) // 2, y, (im.size[0] - w) // 2 + w, y + h))
+    if focus:
+        clamp = lambda v, hi: max(0, min(round(v), hi))
+        x = clamp(focus[0] * im.size[0] - place[0] * w, im.size[0] - w)
+        y = clamp(focus[1] * im.size[1] - place[1] * h, im.size[1] - h)
+    else:
+        x = (im.size[0] - w) // 2
+        y = round((im.size[1] - h) * at)
+    return im.crop((x, y, x + w, y + h))
 
 
 def main():

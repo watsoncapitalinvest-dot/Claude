@@ -238,7 +238,7 @@ def og_card(season, week, g, lead_story, pts, flips_t, art=''):
     print(f'  wrote {os.path.basename(out)}' + (f' from {art}' if art else ''))
 
 
-def build(season, week, art=''):
+def build(season, week, art='', inset='', card=''):
     rp = json.load(open(os.path.join(WDIR, f'{season}-w{week}-replay.json'), encoding='utf-8'))
     lead, stories = 0, []
     for cand in (f'{season}-w{week}-written.json', f'{season}-w{week}-stories.json'):
@@ -274,7 +274,7 @@ def build(season, week, art=''):
         import importlib.util as _iu
         _s = _iu.spec_from_file_location('cc', os.path.join(ROOT, 'scripts', 'compose_cover.py'))
         cc = _iu.module_from_spec(_s); _s.loader.exec_module(cc)
-        cc.compose(art, os.path.basename(out))
+        cc.compose(art, os.path.basename(out), inset=inset)
     else:
         doc = (COVER.replace('__QUARTERS__', quarters)
                     .replace('__AREA__', area).replace('__LINE__', line)
@@ -283,7 +283,7 @@ def build(season, week, art=''):
         ad.shoot(doc, out, f'wk{week}-cover', W, H)
         print(f'  wrote {os.path.basename(out)} - {len(crossings(pts))} lead changes drawn')
     if stories:
-        og_card(season, week, g, stories[lead], pts, crossings(pts), art)
+        og_card(season, week, g, stories[lead], pts, crossings(pts), card or art)
 
 
 def main():
@@ -292,8 +292,14 @@ def main():
     ap.add_argument('--season', default='2026')
     ap.add_argument('--art', default='',
                     help="the week's photograph; drives the cover and the card")
+    ap.add_argument('--inset', default='',
+                    help='a second picture, boxed in the top right of the cover')
+    ap.add_argument('--card', default='',
+                    help='source for the share card when --art will not crop to '
+                         '1200x630 -- a portrait figure loses his face behind the '
+                         "card's headline panel. Defaults to --art.")
     a = ap.parse_args()
-    build(a.season, a.week, a.art)
+    build(a.season, a.week, a.art, a.inset, a.card)
 
 
 if __name__ == '__main__':
