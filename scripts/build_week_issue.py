@@ -81,6 +81,98 @@ def standings_blocks(st):
     return out
 
 
+ORD_W = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh',
+         'eighth', 'ninth', 'tenth']
+NUM_W = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
+         'nine', 'ten', 'eleven', 'twelve']
+
+
+def alltime_rank(pts):
+    """Where `pts` would sit on the all-time list of single team-weeks.
+
+    history.json stops at last season, so this season's finished weeks are
+    counted in too -- otherwise a 2026 score is ranked against every season
+    except the one it was scored in.
+    """
+    rows = []
+    h = json.load(open(os.path.join(ROOT, 'history.json'), encoding='utf-8'))
+    for s in h['seasons']:
+        for m in s.get('matchups') or []:
+            for v in (m.get('homeScore'), m.get('awayScore')):
+                if v is not None:
+                    rows.append(float(v))
+    for p in sorted(os.listdir(WDIR)):
+        if not (p.endswith('.json') and '-w' in p) or '-' in p.rsplit('w', 1)[-1]:
+            continue
+        try:
+            wk = json.load(open(os.path.join(WDIR, p), encoding='utf-8'))
+            sc = [t['points'] for g in wk['games'] for t in g['teams']]
+            star = [x for g in wk['games'] for t in g['teams'] for x in t['starters']]
+        except Exception:
+            continue
+        # the same two tells the Record Book uses: a week nobody has played is
+        # all zeroes, and a half-played Sunday shows as starters stuck on 0
+        zero = sum(1 for x in star if x['points'] == 0) / max(len(star), 1)
+        if sc and min(sc) >= 30 and zero < 0.07:
+            rows += sc
+    return sum(1 for p in rows if p > pts) + 1
+
+
+def coverlines(season, week, d, stories, lead, st):
+    """What the cover promises, computed from what is actually inside it.
+
+    These used to be the five closest finals plus the biggest rout, which is a
+    rule but does not look like one from the outside: six scores in a column,
+    no reason given for any of them, and not one of them telling you what is in
+    the magazine. A cover line is a billing. Every one of these names a piece
+    that is in the issue and carries the figure that makes it worth reading,
+    and every figure is derived here rather than typed.
+    """
+    out = []
+    # the feature, in its own words -- the continuation parts are not separate
+    # billings, so only the first is taken
+    for f in (d.get('features') or [])[:1]:
+        out.append(f['headline'].upper())
+
+    # the week's biggest score, but only worth a line if it is historically big
+    hi = max(((s['score'][i], s['winner'] if i == 0 else s['loser'])
+              for s in stories for i in (0, 1)))
+    rank = alltime_rank(hi[0])
+    if rank <= 10:
+        # "on record" and not "ever": the book starts in 2008
+        out.append(f'{hi[1].upper()} {hi[0]:.2f}: {ORD_W[rank].upper()}-BIGGEST '
+                   f'WEEK ON RECORD')
+
+    # how the game of the week was actually a game
+    try:
+        rp = json.load(open(os.path.join(WDIR, f'{season}-w{week}-replay.json'),
+                            encoding='utf-8'))
+        n = rp['games'][lead]['lead_changes']
+    except Exception:
+        n = 0
+    if n:
+        out.append(f'{NUM_W[n].upper() if n < len(NUM_W) else n} LEAD CHANGE'
+                   f'{"" if n == 1 else "S"} IN THE GAME OF THE WEEK')
+
+    big = max(stories, key=lambda s: s['margin'])
+    out.append(f'THE ROUT: {big["winner"].upper()} BY {big["margin"]:.0f}')
+
+    # who is still unbeaten, which is the table's one line worth the cover
+    ub = [t for t in (st or {}).get('table', []) if t['l'] == 0 and t['t'] == 0]
+    if ub and len(ub) <= 3:
+        # one record for all of them only if they really do share one: two
+        # unbeaten teams a game apart would otherwise both be billed at the
+        # first one's record
+        same = len({t['record'] for t in ub}) == 1
+        who = (' AND '.join(t['team'].upper() for t in ub) if same else
+               ' AND '.join(f'{t["team"].upper()} {t["record"]}' for t in ub))
+        out.append(f'{who} STILL UNBEATEN' + (f' AT {ub[0]["record"]}' if same else ''))
+    elif st and st.get('table'):
+        t = st['table'][0]
+        out.append(f'{t["team"].upper()} TOP OF THE TABLE AT {t["record"]}')
+    return out
+
+
 def build(season, week, remeasure=True):
     # A written file, when there is one, beats the generated stories. The
     # template can report a game; it cannot have a view about one, and a beat
@@ -152,8 +244,7 @@ def build(season, week, remeasure=True):
     key = f'week-{week}'
     ls = stories[lead]
     big = max(stories, key=lambda s: s['margin'])
-    lines = [f'{s["winner"].upper()} {s["score"][0]}, {s["loser"].upper()} {s["score"][1]}'
-             for s in sorted(stories, key=lambda s: s['margin'])[:5]]
+    lines = coverlines(season, week, d, stories, lead, st)
     bi.ISSUES[key] = {
         'out': out,
         'title': f'The Week {week} Issue',
@@ -173,7 +264,7 @@ def build(season, week, remeasure=True):
         'issueline': f'2026&ndash;27 Season &middot; Week {week}',
         'hook': ls['headline'],
         'hooksub': ls['dek'],
-        'coverlines': lines + [f'THE ROUT: {big["winner"].upper()} BY {big["margin"]:.0f}'],
+        'coverlines': lines,
         'articles': [],
         'arts_inline': arts,
         # opener art, keyed by the article id the builder assigns. Features are
