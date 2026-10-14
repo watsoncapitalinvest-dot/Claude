@@ -111,6 +111,18 @@ def build(season, week, remeasure=True):
                      'headline': f'Where Everyone Stands',
                      'subhead': f'Through week {st["through"]} of the {season} season.',
                      'blocks': standings_blocks(st)})
+    # Features sit after the scoreboard and the table and before the game
+    # reports: a piece about the week is not a report on one game in it, and
+    # burying it at the back of eight match reports is where features go to die.
+    for n, f in enumerate(d.get('features') or []):
+        arts.append({
+            'id': f'wk{week}-f{n}',
+            'flag': f.get('flag', 'The Feature'),
+            'headline': f['headline'],
+            'subhead': f['dek'],
+            'paragraphs': f['paragraphs'],
+        })
+
     for n, i in enumerate(order):
         s = stories[i]
         arts.append({
