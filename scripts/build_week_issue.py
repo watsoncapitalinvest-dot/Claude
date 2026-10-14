@@ -132,6 +132,21 @@ def build(season, week, remeasure=True):
             'subhead': s['dek'],
             'paragraphs': s['paragraphs'],
         })
+        # A report with more in it than a page holds runs on, rather than being
+        # shrunk to fit. The fitter will take a single page down as far as it
+        # has to -- the record week went to 0.663 zoom, two thirds the type size
+        # of the reports either side of it, which is not a page anybody reads.
+        # Carrying it is what a magazine does; the jump keeps its own headline
+        # so it is still a page and not an orphan.
+        if s.get('part2'):
+            p2 = s['part2']
+            arts.append({
+                'id': f'wk{week}-g{i}b',
+                'flag': p2.get('flag', 'Continued'),
+                'headline': p2['headline'],
+                'subhead': p2['dek'],
+                'paragraphs': p2['paragraphs'],
+            })
 
     out = f'scfl-week-{week}-issue.html'
     key = f'week-{week}'
