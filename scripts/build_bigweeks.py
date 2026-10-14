@@ -96,6 +96,13 @@ def asof(ts):
     return f'{t.strftime("%A")} {part}'
 
 
+def ordinal(n):
+    """4 -> 'fourth'. Spelled out, because the copy is prose and not a table."""
+    words = ['zeroth', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth',
+             'seventh', 'eighth', 'ninth', 'tenth']
+    return words[n] if n < len(words) else f'{n}th'
+
+
 def live_2026_average():
     """This season's average team week, counting only the weeks that are done.
 
@@ -290,6 +297,16 @@ def figures(C):
     B = lambda h: out.append(f'<div class="ad">{h}</div>')
     P = lambda h: out.append(h)
     rows, avg = C['rows'], C['avg']
+
+    def all_weeks():
+        """Every team-week there is: the imported record plus this season.
+
+        history.json stops at 2025, so ranking a 2026 score against rows alone
+        ranks it against everything except the season it was scored in.
+        """
+        return ([r['pts'] for r in rows]
+                + [p for w in week_files() if w['final'] for p in w['pts']])
+
     raw = sorted(rows, key=lambda r: -r['pts'])[:10]
     era = sorted(rows, key=lambda r: -r['idx'])[:10]
     top, best = raw[0], era[0]
@@ -331,15 +348,34 @@ def figures(C):
                        f"<p>The table below is the record as imported. It is out of date"
                        f"{when}.</p>"))
         else:
+            # Where it actually lands. Short of the record is not the same as
+            # short of the list, and the draft of this box said only the first
+            # -- a score that walks straight into the top ten was reported as a
+            # near miss. Rank is counted, not eyeballed, over every team-week on
+            # record plus this season's finished ones, so a second big week does
+            # not leave the sentence behind.
+            rank = sum(1 for p in all_weeks() if p > LIVE['pts']) + 1
+            tied = sum(1 for p in all_weeks() if abs(p - LIVE['pts']) < 0.005) - 1
+            place = ''
+            if rank <= len(raw):
+                place = (f"<p>It is <b>{ordinal(rank)}</b> on the raw all-time list"
+                         + (' outright' if not tied else
+                            f", level with {tied} other" + ('' if tied == 1 else 's'))
+                         + (' &mdash; the table below has not caught up.</p>' if LIVE['final']
+                            else ', if it holds.</p>'))
             lede = (f"<p><b>{E(LIVE['team'])}</b> {verb} <b>{LIVE['pts']:.1f}</b> in week "
                     f"{LIVE['week']}{still} &mdash; <b>{gap:.1f} points</b> short of the "
                     f"record on this page, which has stood {stood} season"
                     f"{'' if stood == 1 else 's'}.</p>"
-                    + (f"<p>That is the closest anybody has come this season{when}. "
+                    + (f"<p>That is the closest anybody has come this season{when}."
                        if LIVE['pts'] >= max((max(w['pts']) for w in week_files()), default=0)
-                       else f"<p>That is where it stands{when}. ")
-                    + "The number is read off the week file, so when the week finishes it "
-                      "changes with it.</p>")
+                       else f"<p>That is where it stands{when}.")
+                    # Only true while the week is live. On a finished week the
+                    # number is settled, and promising it will still move is the
+                    # same stale press-box note this box was built to kill.
+                    + (" The number is read off the week file, so when the week "
+                       "finishes it changes with it.</p>" if live else '</p>')
+                    + place)
         ped = (f'<p class="lf">For the pedants: {LIVE["pts"]:.0f} in a {a26:.0f}-point league '
                f'is {ix:.2f}&times; the field, which '
                + ('would reach' if ix >= era[-1]['idx'] else 'would not reach')
