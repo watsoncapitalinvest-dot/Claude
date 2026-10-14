@@ -25,6 +25,7 @@ from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 W, H = 1024, 1536
+MAST = 221        # where the masthead panel ends, measured off a built cover
 INK = (11, 11, 15)
 
 
@@ -51,10 +52,18 @@ def feather(img, top, bottom):
 def compose(art, out, top=240, inset=''):
     """art (any aspect) -> a 1024x1536 cover at `out`. Returns the photo height.
 
-    A picture already taller than 2:3 is run full bleed and cropped to the
-    frame, because that is what it was drawn for. A landscape one is laid in at
-    full width and feathered into the black instead, so none of it is thrown
-    away -- see the note at the top of this file.
+    Nothing is cropped sideways, whatever shape it arrives in. The picture is
+    laid in at full width and feathered into the black -- see the note at the
+    top of this file.
+
+    What changes with a portrait is where its top edge goes. Bleeding a standing
+    figure off the top of the frame put the masthead across his raised arm and
+    cut the slice of pizza he was holding in half, which is the one thing the
+    picture is doing. So a tall picture is tucked instead: its top edge sits a
+    few pixels UNDER the masthead panel, which hides the edge and leaves the
+    whole figure below it. He stands behind the title the way a cover subject
+    should, rather than through it.
+
 
     `inset` is a second picture, boxed and keylined in the upper right. An inset
     is how a magazine runs two pictures on one cover without either of them
@@ -66,17 +75,19 @@ def compose(art, out, top=240, inset=''):
     w, h = src.size
     cover = Image.new('RGB', (W, H), INK)
 
-    if h / w >= 1.1:                           # portrait enough to carry the frame
-        s = max(W / w, H / h)
-        im = src.resize((round(w * s), round(h * s)), Image.LANCZOS)
-        cover.paste(im, (-(im.size[0] - W) // 2, 0))
-        ph, top = H, 0
+    ph = round(h * W / w)                      # full width, nothing cropped sideways
+    photo = src.resize((W, ph), Image.LANCZOS)
+    tall = h / w >= 1.1
+    if tall:
+        # MAST is where build_issue.py's masthead panel ends. Tucking the edge
+        # a little above it means the join is never visible; a hard line two
+        # pixels below it would be the only thing anybody saw.
+        top, ft, fb = MAST - 14, 18, 230
     else:
-        ph = round(h * W / w)                  # full width, nothing cropped sideways
-        photo = src.resize((W, ph), Image.LANCZOS)
-        cover.paste(photo, (0, top), feather(photo, 150, 260))
+        ft, fb = 150, 260
+    cover.paste(photo, (0, top), feather(photo, ft, fb))
 
-    if ph >= H:
+    if tall:
         # A full-bleed figure is a worse bed for type than the black a laid-in
         # photograph leaves behind it, and build_issue.py composites the hook
         # and six cover lines over the bottom third. Its own scrim is tuned for
