@@ -17,7 +17,7 @@ The cover art comes from John's graphics AI like every other issue. If it is
 not there yet the issue still builds, with a typographic stand-in, because an
 issue that will not build is worth less than one with a plain cover.
 """
-import argparse, importlib.util, json, os, sys
+import argparse, importlib.util, json, os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WDIR = os.path.join(ROOT, 'week-data')
@@ -30,6 +30,35 @@ E = bi.esc
 # eight games a week, so the numerals have to reach eight -- stopping at
 # four gave a contents page reading I, II, III, IV, 5, 6, 7
 ORD = {1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII'}
+
+
+def matchups(season, week, stories):
+    """story index -> "Team v Team", for the flag over each game report.
+
+    The flag used to read Game I, Game II, Game III, which is the order this
+    desk chose to print them in and tells a reader nothing. In the contents it
+    is worse than nothing: eight lines of Roman numerals where the one thing
+    anybody wants is to find their own team.
+
+    Ordered as the week file has them rather than winner-first, so the contents
+    does not give away eight results before the reader reaches page three.
+    """
+    out = {}
+    try:
+        wk = json.load(open(os.path.join(WDIR, f'{season}-w{week}.json'), encoding='utf-8'))
+    except Exception:
+        return out
+    key = lambda t: re.sub(r'[^a-z0-9]', '', (t or '').lower())
+    for i, st in enumerate(stories):
+        pair = {key(st['winner']), key(st['loser'])}
+        for g in wk['games']:
+            names = [t['team'].strip() for t in g['teams']]
+            if {key(n) for n in names} == pair:
+                # print the names the copy uses, in the file's own order
+                look = {key(st['winner']): st['winner'], key(st['loser']): st['loser']}
+                out[i] = ' v '.join(look[key(n)] for n in names)
+                break
+    return out
 
 
 def scoreboard_blocks(stories):
@@ -215,11 +244,14 @@ def build(season, week, remeasure=True):
             'paragraphs': f['paragraphs'],
         })
 
+    mu = matchups(season, week, stories)
     for n, i in enumerate(order):
         s = stories[i]
         arts.append({
             'id': f'wk{week}-g{i}',
-            'flag': 'The Game of the Week' if i == lead else f'Game {ORD.get(n, n)}',
+            'flag': (f'The Game of the Week \u00b7 {mu[i]}' if i == lead and i in mu
+                     else 'The Game of the Week' if i == lead
+                     else mu.get(i) or f'Game {ORD.get(n, n)}'),
             'headline': s['headline'],
             'subhead': s['dek'],
             'paragraphs': s['paragraphs'],
