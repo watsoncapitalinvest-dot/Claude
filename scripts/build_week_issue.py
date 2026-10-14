@@ -161,7 +161,11 @@ def build(season, week, remeasure=True):
         'coverlines': lines + [f'THE ROUT: {big["winner"].upper()} BY {big["margin"]:.0f}'],
         'articles': [],
         'arts_inline': arts,
-        'openart': {},
+        # opener art, keyed by the article id the builder assigns. Features are
+        # wk{week}-f{n}; a file that is not there simply opens typographically.
+        'openart': {f'wk{week}-f{n}': f
+                    for n, f in enumerate(d.get('art') or [])
+                    if f},
     }
     # ---- one article, one page -------------------------------------------
     # The greedy packer fills pages to the brim, so a long game report spills
