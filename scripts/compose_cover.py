@@ -48,6 +48,38 @@ def feather(img, top, bottom):
     return a
 
 
+def compose(art, out, top=240):
+    """art (any aspect) -> a 1024x1536 cover at `out`. Returns the photo height."""
+    src = Image.open(os.path.join(ROOT, art)).convert('RGB')
+    w, h = src.size
+    ph = round(h * W / w)                      # full width, nothing cropped sideways
+    photo = src.resize((W, ph), Image.LANCZOS)
+
+    cover = Image.new('RGB', (W, H), INK)
+    cover.paste(photo, (0, top), feather(photo, 150, 260))
+    p = os.path.join(ROOT, out)
+    cover.save(p, quality=88, optimize=True)
+    print(f'  {art} {w}x{h} -> {out} {W}x{H} '
+          f'({os.path.getsize(p)//1024}kb, photo at y{top}-{top+ph})')
+    return ph
+
+
+def band(art, w, h, at=0.62):
+    """The same photograph cropped to a w x h strip, for the share card.
+
+    `at` is where in the vertical overflow the strip sits, 0 at the top. The
+    card is wide and short where the cover is tall, so it keeps the lit half of
+    the picture -- the floodlights and the field -- and loses the empty sky the
+    cover has room for.
+    """
+    src = Image.open(os.path.join(ROOT, art)).convert('RGB')
+    sw, sh = src.size
+    s = max(w / sw, h / sh)
+    im = src.resize((round(sw * s), round(sh * s)), Image.LANCZOS)
+    y = round((im.size[1] - h) * at)
+    return im.crop(((im.size[0] - w) // 2, y, (im.size[0] - w) // 2 + w, y + h))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--week', type=int, required=True)
@@ -56,20 +88,7 @@ def main():
                     help='y of the photograph in the 1536-tall cover')
     ap.add_argument('--out', default='')
     a = ap.parse_args()
-
-    src = Image.open(os.path.join(ROOT, a.art)).convert('RGB')
-    w, h = src.size
-    ph = round(h * W / w)                      # full width, nothing cropped sideways
-    photo = src.resize((W, ph), Image.LANCZOS)
-
-    cover = Image.new('RGB', (W, H), INK)
-    cover.paste(photo, (0, a.top), feather(photo, 150, 260))
-
-    out = a.out or f'scfl-week-{a.week}-cover.jpg'
-    p = os.path.join(ROOT, out)
-    cover.save(p, quality=88, optimize=True)
-    print(f'  {a.art} {w}x{h} -> {out} {W}x{H} '
-          f'({os.path.getsize(p)//1024}kb, photo at y{a.top}-{a.top+ph})')
+    compose(a.art, a.out or f'scfl-week-{a.week}-cover.jpg', a.top)
 
 
 if __name__ == '__main__':

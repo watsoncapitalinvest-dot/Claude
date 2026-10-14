@@ -23,7 +23,9 @@ an earlier version drew the score underneath them, so the cover carried
 everything twice. A supplied photograph overwrites this file and nothing else
 changes.
 """
-import argparse, importlib.util, json, os, sys
+import argparse, base64, importlib.util, io, json, os
+import re as _re
+import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WDIR = os.path.join(ROOT, 'week-data')
@@ -31,6 +33,22 @@ _s = importlib.util.spec_from_file_location('ad', os.path.join(ROOT, 'scripts', 
 ad = importlib.util.module_from_spec(_s); sys.modules['ad'] = ad; _s.loader.exec_module(ad)
 
 W, H = 1024, 1536
+
+
+def data_uri(art):
+    """The share-card strip of `art`, inline, so the card has no dependencies.
+
+    ad.shoot renders the HTML in a throwaway context; a relative src resolves
+    against nothing and the card comes out as the empty black rectangle every
+    unbuilt card looks like. Inlining is the whole reason the issue builder
+    inlines its assets too.
+    """
+    import importlib.util as _iu
+    _s = _iu.spec_from_file_location('cc', os.path.join(ROOT, 'scripts', 'compose_cover.py'))
+    cc = _iu.module_from_spec(_s); _s.loader.exec_module(cc)
+    buf = io.BytesIO()
+    cc.band(art, 1200, 630).save(buf, 'JPEG', quality=86, optimize=True)
+    return 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode()
 
 
 def curve(points, w, h, x0, y0):
@@ -130,6 +148,7 @@ OG = """<style>
 html,body{width:1200px;height:630px;overflow:hidden;background:#0b0b0f;
  font-family:Georgia,'Times New Roman',serif;color:var(--cream);}
 .c{position:relative;width:1200px;height:630px;overflow:hidden;background:#0b0b0f;
+ background-size:cover;background-position:center;__PHOTO__
  border-top:9px solid var(--red);border-bottom:9px solid var(--red);}
 svg{position:absolute;inset:0;}
 .l{position:absolute;left:0;top:0;bottom:0;width:640px;z-index:9;
@@ -184,10 +203,16 @@ h1{font-size:52px;line-height:1.0;letter-spacing:-.022em;font-weight:900;margin-
 </div>"""
 
 
-def og_card(season, week, g, lead_story, pts, flips_t):
+def og_card(season, week, g, lead_story, pts, flips_t, art=''):
     """The link preview. Unlike the cover, nothing is composited on top of this
     one, so it carries the headline and the score itself -- a share card with no
-    words is just a smear of colour in a chat window."""
+    words is just a smear of colour in a chat window.
+
+    When the week has a photograph, the card is the photograph. The margin curve
+    behind it is the drawn cover's argument, not the issue's, and running it on
+    the card while the cover was a stadium meant the link previewed as one
+    magazine and opened as another.
+    """
     x0, w = 40, 1200 - 80
     y0, h = 150, 330
     line, area, mid = curve(pts, w, h, x0, y0)
@@ -203,12 +228,17 @@ def og_card(season, week, g, lead_story, pts, flips_t):
              .replace('__WS__', f"{s['score'][0]:.2f}")
              .replace('__LS__', f"{s['score'][1]:.2f}")
              .replace('__NF__', str(g['lead_changes'])))
+    if art:
+        doc = doc.replace('__PHOTO__', f"background-image:url('{data_uri(art)}');")
+        doc = _re.sub(r'<svg width="1200".*?</svg>', '', doc, flags=_re.S)
+    else:
+        doc = doc.replace('__PHOTO__', '')
     out = os.path.join(ROOT, f'scfl-week-{week}-og.jpg')
     ad.shoot(doc, out, f'wk{week}-og', 1200, 630)
-    print(f'  wrote {os.path.basename(out)}')
+    print(f'  wrote {os.path.basename(out)}' + (f' from {art}' if art else ''))
 
 
-def build(season, week):
+def build(season, week, art=''):
     rp = json.load(open(os.path.join(WDIR, f'{season}-w{week}-replay.json'), encoding='utf-8'))
     lead, stories = 0, []
     for cand in (f'{season}-w{week}-written.json', f'{season}-w{week}-stories.json'):
@@ -236,23 +266,34 @@ def build(season, week):
         f'<path d="M{x0 + w*k/4:.0f} {y0-26:.0f} L{x0 + w*k/4:.0f} {y0+h+26:.0f}" '
         f'stroke="#f4f1ea" stroke-opacity=".07" stroke-width="2"/>' for k in range(1, 4))
 
-    doc = (COVER.replace('__QUARTERS__', quarters)
-                .replace('__AREA__', area).replace('__LINE__', line)
-                .replace('__MID__', f'{mid:.1f}').replace('__FLIPS__', flips)
-                .replace('__WK__', str(week)))
+    # A photograph takes both slots or neither. The cover and the share card are
+    # the same promise made twice, and the week they disagreed the link
+    # previewed as a chart and opened on a stadium.
     out = os.path.join(ROOT, f'scfl-week-{week}-cover.jpg')
-    ad.shoot(doc, out, f'wk{week}-cover', W, H)
-    print(f'  wrote {os.path.basename(out)} - {len(crossings(pts))} lead changes drawn')
+    if art:
+        import importlib.util as _iu
+        _s = _iu.spec_from_file_location('cc', os.path.join(ROOT, 'scripts', 'compose_cover.py'))
+        cc = _iu.module_from_spec(_s); _s.loader.exec_module(cc)
+        cc.compose(art, os.path.basename(out))
+    else:
+        doc = (COVER.replace('__QUARTERS__', quarters)
+                    .replace('__AREA__', area).replace('__LINE__', line)
+                    .replace('__MID__', f'{mid:.1f}').replace('__FLIPS__', flips)
+                    .replace('__WK__', str(week)))
+        ad.shoot(doc, out, f'wk{week}-cover', W, H)
+        print(f'  wrote {os.path.basename(out)} - {len(crossings(pts))} lead changes drawn')
     if stories:
-        og_card(season, week, g, stories[lead], pts, crossings(pts))
+        og_card(season, week, g, stories[lead], pts, crossings(pts), art)
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--week', type=int, required=True)
     ap.add_argument('--season', default='2026')
+    ap.add_argument('--art', default='',
+                    help="the week's photograph; drives the cover and the card")
     a = ap.parse_args()
-    build(a.season, a.week)
+    build(a.season, a.week, a.art)
 
 
 if __name__ == '__main__':
