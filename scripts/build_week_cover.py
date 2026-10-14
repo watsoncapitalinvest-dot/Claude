@@ -49,11 +49,22 @@ def curve(points, w, h, x0, y0):
 
 
 def crossings(points):
-    """Where the lead actually changed hands, for the markers."""
-    out = []
+    """Where the lead actually changed hands, for the markers.
+
+    A game starts level, so the first team to score takes the lead -- it does
+    not change it. Counting that transition made this cover draw one more gold
+    ring than the replay counts lead changes, and the share card beside it
+    reads its number straight off the replay, so the two disagreed in print.
+    The lead only changes when somebody already held it.
+    """
+    out, held = [], 0
     for a, b in zip(points, points[1:]):
-        if (a[1] > 0) != (b[1] > 0) and abs(b[1]) > 0.01:
+        if abs(b[1]) <= 0.01:
+            continue
+        side = 1 if b[1] > 0 else -1
+        if held and side != held:
             out.append(b[0])
+        held = side
     return out
 
 
