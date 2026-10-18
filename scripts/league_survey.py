@@ -120,7 +120,7 @@ def survey(a):
     seen_l.add(home)
 
     for hop in range(1, a.hops + 1):
-        nxt_leagues, calls = [], 0
+        nxt, calls, hits = [], 0, 0
         for uid in frontier:
             if uid in seen_u or calls >= a.cap:
                 continue
@@ -131,17 +131,26 @@ def survey(a):
                 if not lid or lid in seen_l:
                     continue
                 seen_l.add(lid)
-                found.append(shape(lg))
-                if lg.get('total_rosters') == 16:
-                    nxt_leagues.append(lid)
+                sh = shape(lg)
+                found.append(sh)
+                if sh['teams'] == 16 and sh['type'] == 2:
+                    hits += 1
+                nxt.append((sh, lid))
             time.sleep(0.25)
-        print(f'  hop {hop}: {calls} managers asked, {len(found)} leagues so far')
+        print(f'  hop {hop}: {calls} managers asked, {len(found)} leagues seen, '
+              f'{hits} new 16-team dynasty')
         if hop >= a.hops:
             break
-        # widen only through OTHER 16-team leagues -- following a 10-team
-        # redraft outward spends the budget on leagues this study cannot use
+        # Widen through the leagues most likely to CONTAIN what we are looking
+        # for, which is not the same as the leagues that already match. The
+        # first version of this walked onward only through 16-team leagues and
+        # found none at hop 1, so the frontier emptied and the walk stopped
+        # dead. A manager in a 12-team dynasty is a perfectly good route to a
+        # 16-team one; a 10-team redraft is a poorer one. So: biggest and most
+        # dynasty first, and spend the budget there.
+        nxt.sort(key=lambda x: (-(x[0]['type'] or 0), -(x[0]['teams'] or 0)))
         frontier = []
-        for lid in nxt_leagues[:a.cap]:
+        for sh, lid in nxt[:a.cap]:
             for u in (get(f'/league/{lid}/users', soft=True) or []):
                 if u.get('user_id') not in seen_u:
                     frontier.append(u['user_id'])
