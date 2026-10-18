@@ -115,7 +115,13 @@ def fetch(a):
 
     def man(pid):
         p = db.get(str(pid)) or {}
+        # The NFL's own id, so a drop can be joined to nflverse's weekly roster
+        # and injury feeds without going through a name. Sleeper stores it with
+        # a LEADING SPACE on a good number of players; joining on the raw value
+        # silently matches nothing.
+        g = (p.get('gsis_id') or '').strip()
         return {'pid': str(pid),
+                'gsis': g,
                 'name': p.get('full_name') or p.get('last_name') or str(pid),
                 'pos': p.get('position') or '?',
                 'nfl': p.get('team') or ''}
