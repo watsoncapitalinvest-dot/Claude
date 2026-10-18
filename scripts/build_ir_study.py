@@ -215,6 +215,79 @@ def figures(C):
       f'league median of {C["league_med"]:.1f}. On this sample the change helps the bottom of '
       f'the table more than the top.</p>')
 
+    # The case AGAINST expansion, tested on its own terms. The paper as first
+    # written only examined the claims of the side that wants the rule changed,
+    # which is how a study gets dismissed by the other half of the league.
+    dep = None
+    p = os.path.join(ROOT, 'ir-waiver-depth.json')
+    if os.path.exists(p):
+        dep = json.load(open(p, encoding='utf-8'))
+    if dep and dep['rows']:
+        S('The argument against: does it thin the wire?')
+        dr = dep['rows']
+        fa = [r['free_agents'] for r in rows]
+        irn = [r['ir_used_total'] for r in rows]
+        P('<p class="b">The case against expansion is that the waiver wire is already bare '
+          'and another slot makes it barer. The mechanism is not in dispute and is worth '
+          'stating plainly, because it is arithmetic rather than opinion: a side that shelves '
+          'an injured man frees an active spot, fills it from the wire, and the pool is one '
+          'player smaller. Every extra slot used takes a player off waivers.</p>')
+        P(f'<p class="b">What is in dispute is the size of it. Across {word(len(rows))} weeks, '
+          f'the number of players on injured reserve league-wide went from <b>{irn[0]}</b> to '
+          f'<b>{irn[-1]}</b> &mdash; {irn[-1]-irn[0]} more men shelved &mdash; while the free-agent '
+          f'pool went from <b>{fa[0]}</b> to <b>{fa[-1]}</b>, a fall of {fa[0]-fa[-1]}. Not '
+          f'{irn[-1]-irn[0]}. The pass-through is partial because the rule reverses itself: a '
+          'returning player has to be activated and somebody dropped, which puts a man back on '
+          'the wire. Over a season the pool is close to conserved. What moves is the timing.</p>')
+        P('<p class="b">But a headcount is the wrong instrument, and it is the instrument both '
+          'sides have been using. It counts bodies, and the complaint is about usable players. '
+          'So this measures depth instead: a free agent is <b>startable</b> in a given week if '
+          'he outscored the worst man the league actually started at his position &mdash; that '
+          'is, if adding him would have improved somebody&rsquo;s lineup.</p>')
+        hdr2 = ''.join(f'<th class="num">wk {r["week"]}</th>' for r in dr)
+        def r2(label, vals):
+            return (f'<tr><th scope="row">{label}</th>'
+                    + ''.join(f'<td class="num">{v}</td>' for v in vals) + '</tr>')
+        extra = {r['week']: sum(1 for t in r['teams']
+                 if max(0, min(t['stranded'], cap + 1 - t['ir_used']))
+                 > max(0, min(t['stranded'], cap - t['ir_used']))) for r in rows}
+        body2 = (r2('Unrostered men who scored', [r['scored'] for r in dr])
+                 + r2('Startable, all positions', [r['startable_all'] for r in dr])
+                 + r2('<b>Startable skill players</b>', [f"<b>{r['startable_skill']}</b>" for r in dr])
+                 + r2('A third slot would absorb', [extra.get(r['week'], 0) for r in dr]))
+        P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th></th>{hdr2}</tr></thead>'
+          f'<tbody>{body2}</tbody></table></div><figcaption>Kickers and defences are shown '
+          'separately and kept out of the headline: half the league&rsquo;s are unrostered by '
+          'construction, which makes the wire look four times deeper than it plays.</figcaption>'
+          '</figure>')
+        sk_ = [r['startable_skill'] for r in dr]
+        depw = dr[-1]['week']           # depth is only measurable on a PLAYED week
+        irw = rows[-1]['week']
+        P(f'<p class="b">A typical week offers <b>{min(sk_)} to {max(sk_)} usable skill '
+          f'players</b> on the entire wire. In week {depw} &mdash; the last week with both '
+          f'figures &mdash; there were <b>{sk_[-1]}</b>, and a third slot would have been taken '
+          f'up by <b>{extra.get(depw,0)}</b> teams. Those teams do not take random players; they '
+          f'take the best available. So expansion would have absorbed about '
+          f'<b>{100*extra.get(depw,0)/sk_[-1]:.0f}%</b> of the usable wire that week, off the '
+          f'top of it.</p>')
+        if irw > depw and extra.get(irw, 0) > extra.get(depw, 0):
+            P(f'<p class="b">That share is rising. By week {irw} the number of teams who would '
+              f'use a third slot had reached <b>{extra.get(irw,0)}</b>. Week {irw} has not been '
+              'played, so there is no depth figure to set it against yet &mdash; but against '
+              f'week {depw}&rsquo;s {sk_[-1]} usable players it would be most of the wire. That '
+              'is the strongest form of the argument against expansion, and nobody in the league '
+              'had put a number on it.</p>')
+        P(f'<p class="pull">Both sides are partly right. The wire does thin, and the headcount '
+          f'hides it &mdash; {fa[-1]} free agents in week {irw}, of whom, on the last played '
+          f'week, {sk_[-1]} were worth starting. But the withdrawal is a loan rather than a '
+          'loss, and the men who would do the borrowing are mostly at the bottom of the '
+          'table.</p>')
+        P('<p class="b">Two findings cut against the case for expansion and one cuts for it. '
+          'Against: the mechanism is real and, at an injury peak, large relative to what the '
+          'wire actually holds. For: it reverses, and the beneficiaries are the weak teams, not '
+          'the strong ones &mdash; which is the opposite of the fairness objection that has been '
+          'made against it.</p>')
+
     S('Limitations')
     P('<p class="b">Read this before quoting any figure above.</p>')
     P(f'<p class="b"><b>It measures roster friction, not competitive harm.</b> Nothing here '
