@@ -37,6 +37,12 @@ word = lambda n: NUM[n] if n < len(NUM) else f'{n}'
 RENAME = {'Heavy Hitters': 'Phins Phag', '*THE MACHINES*': 'THE MACHINES'}
 club = lambda s: RENAME.get(s.strip(), s.strip())
 
+# BLOCKED, settled the strict way: injured reserve actually full, and a man
+# still stranded on the active roster. A side holding a free slot is not
+# blocked by the cap, whatever else it is. One definition, used everywhere on
+# the page, so no two figures on it are counted on different rules.
+short = lambda t: bool(t['ir_full']) and t['stranded'] > 0
+
 
 def crunch():
     rows = json.load(open(os.path.join(ROOT, 'ir-watch.json'), encoding='utf-8'))['rows']
@@ -47,25 +53,40 @@ def crunch():
     def model(c):
         """Re-run every week under cap `c`, holding the injuries as they fell.
 
+        BLOCKED means a side whose injured reserve is actually FULL and who
+        still has an injured man on the active roster. A team sitting on a free
+        slot is not blocked by the cap, whatever else it is. That was the one
+        definitional judgement left open when this paper was drafted; it has
+        been settled the strict way, and the looser reading it replaces counted
+        three more team-weeks over six.
+
         The assumption, stated so it can be argued with: each manager fills IR
-        greedily up to the cap with whoever is stranded, and nothing else about
-        his behaviour changes.
+        up to the cap with whoever is stranded, and nothing else about his
+        behaviour changes.
         """
         blocked = stranded = freed = 0
         per = {}
         for r in rows:
             for t in r['teams']:
                 moved = max(0, min(t['stranded'], c - t['ir_used']))
+                used = t['ir_used'] + moved
                 left = t['stranded'] - moved
                 freed += moved
                 stranded += left
-                if left > 0:
+                if used >= c and left > 0:          # full, and still stuck
                     blocked += 1
                 per.setdefault(club(t['team']), [0, 0])
                 per[club(t['team'])][0] += moved
         return {'blocked': blocked, 'stranded': stranded, 'freed': freed, 'per': per}
 
-    M = {c: model(c) for c in (cap, cap + 1, cap + 2)}
+    # Four slots are not on the table, so they are not modelled.
+    M = {c: model(c) for c in (cap, cap + 1)}
+    # At the CURRENT cap the state is observed rather than modelled: ir_full is
+    # what the collector recorded that week, not a greedy refill of it.
+    M[cap]['blocked'] = sum(1 for r in rows for t in r['teams']
+                            if t['ir_full'] and t['stranded'] > 0)
+    M[cap]['stranded'] = sum(t['stranded'] for r in rows for t in r['teams']
+                             if t['ir_full'] and t['stranded'] > 0)
 
     # who gains, and are they good teams or bad ones
     _t = importlib.util.spec_from_file_location('sd', os.path.join(ROOT, 'scripts', 'standings.py'))
@@ -78,8 +99,9 @@ def crunch():
             g = (max(0, min(t['stranded'], cap + 1 - t['ir_used']))
                  - max(0, min(t['stranded'], cap - t['ir_used'])))
             gain[n] = gain.get(n, 0) + g
-            if t['stranded'] > max(0, cap - t['ir_used']):
-                blockwk[n] = blockwk.get(n, 0) + 1
+            blockwk.setdefault(n, 0)           # every club, so the never-blocked are countable
+            if short(t):
+                blockwk[n] += 1
     helped = sorted((n for n, g in gain.items() if g > 0),
                     key=lambda n: (-gain[n], st.get(n, {}).get('seed', 99)))
     seeds = [st[n]['seed'] for n in helped if n in st]
@@ -102,10 +124,9 @@ def figures(C):
     last = C['last']
     n_wk = len(rows)
     tw = n_wk * C['teams_n']
-    base, plus1, plus2 = M[cap], M[cap + 1], M[cap + 2]
+    base, plus1 = M[cap], M[cap + 1]
     cut_b = 100 * (base['blocked'] - plus1['blocked']) / base['blocked']
     cut_s = 100 * (base['stranded'] - plus1['stranded']) / base['stranded']
-    cut_b2 = 100 * (base['blocked'] - plus2['blocked']) / base['blocked']
     spots = plus1['freed'] - base['freed']
     active = C['teams_n'] * (last['starters'] + 9)
 
@@ -146,12 +167,16 @@ def figures(C):
       'counted &mdash; including week-to-week knocks would inflate every number here. '
       '<b>Stranded</b> means an injured man occupying an <i>active</i> roster spot: he is the '
       'unit of harm in this study, a roster slot doing nothing.</p>')
-    P('<p class="b"><b>Blocked</b> means a team that cannot shelve everyone it would want to. '
-      'There are two defensible readings, and they disagree on exactly '
-      f'{word(abs(sum(1 for r in rows for t in r["teams"] if t["stranded"] > max(0, cap-t["ir_used"])) - sum(1 for r in rows for t in r["teams"] if t["ir_full"] and t["stranded"] > 0)))} '
-      f'team-week of {tw}: whether a side with a free slot and more injured men than slots '
-      'counts as blocked. This page counts it, on the grounds that a team a slot short is a '
-      'slot short. A reader who prefers the stricter reading should subtract it.</p>')
+    loose = sum(1 for r in rows for t in r['teams']
+                if t['stranded'] > max(0, cap - t['ir_used']))
+    P(f'<p class="b"><b>Blocked</b> means a side whose injured reserve is <b>full</b> and who '
+      f'still has an injured man on the active roster. That is the strict reading, and it is '
+      f'the one this page uses throughout: a team holding a free slot is not blocked by the '
+      f'cap, whatever else is wrong with its week. An earlier draft left the choice open. It is '
+      f'closed now, and closed the way that counts <i>fewer</i> blocked weeks &mdash; the '
+      f'looser reading, which counts a side with one slot free and {word(cap)} men hurt, would '
+      f'add {word(loose - base["blocked"])} team-weeks to every blocked figure below '
+      f'({loose} of {tw} rather than {base["blocked"]}).</p>')
 
     S('Does the cap bind?')
     hdr = ''.join(f'<th>wk {r["week"]}</th>' for r in rows)
@@ -163,8 +188,8 @@ def figures(C):
             + row('Share of capacity', [f"{100*r['ir_used_total']/r['ir_capacity_total']:.0f}%" for r in rows], True)
             + row('Teams with IR full', [r['teams_at_cap'] for r in rows], True)
             + row('Stranded players', [r['stranded_total'] for r in rows], True)
-            + row('Teams a slot short',
-                  [sum(1 for t in r['teams'] if t['stranded'] > max(0, cap - t['ir_used'])) for r in rows], True))
+            + row('Teams blocked',
+                  [sum(1 for t in r['teams'] if short(t)) for r in rows], True))
     P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th></th>{hdr}</tr></thead>'
       f'<tbody>{body}</tbody></table></div><figcaption>Utilisation has risen every week of '
       f'the season so far.</figcaption></figure>')
@@ -172,8 +197,8 @@ def figures(C):
     nblock = sum(1 for n in C['blockwk'] if C['blockwk'][n])
     P(f'<p class="b">By week {last["week"]}, <b>{last["teams_at_cap"]} of {C["teams_n"]}</b> rosters '
       f'are full and <b>{last["stranded_total"]} injured players</b> occupy active roster spots '
-      f'league-wide. Over {word(n_wk)} weeks, <b>{nblock} of {C["teams_n"]} teams</b> have been a '
-      f'slot short at least once, across <b>{base["blocked"]} of {tw} team-weeks</b> '
+      f'league-wide. Over {word(n_wk)} weeks, <b>{nblock} of {C["teams_n"]} teams</b> have been '
+      f'blocked at least once, across <b>{base["blocked"]} of {tw} team-weeks</b> '
       f'({100*base["blocked"]/tw:.0f}%).</p>')
     who = ', '.join(E(', '.join(t['stranded_names'][:2])) for t in C['strand_now'][:4])
     P(f'<p class="lf">Stranded in week {last["week"]} include {who}.</p>')
@@ -186,16 +211,16 @@ def figures(C):
     tr = ''.join(
         f'<tr><th scope="row">{"Cap " + str(c) + (" &mdash; actual" if c == cap else "")}</th>'
         f'<td class="num">{M[c]["blocked"]}</td><td class="num">{M[c]["stranded"]}</td></tr>'
-        for c in (cap, cap + 1, cap + 2))
+        for c in (cap, cap + 1))
     P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th></th>'
       f'<th class="num">Blocked team-weeks</th><th class="num">Stranded player-weeks</th>'
       f'</tr></thead><tbody>{tr}</tbody></table></div>'
       f'<figcaption>{word(n_wk).capitalize()} weeks, {tw} team-weeks.</figcaption></figure>')
     P(f'<p class="b">Going from {word(cap)} slots to {word(cap+1)} removes <b>{cut_b:.0f}%</b> of '
-      f'the blocked team-weeks and <b>{cut_s:.0f}%</b> of the stranded player-weeks. Going to '
-      f'{word(cap+2)} removes {cut_b2:.0f}% &mdash; the second extra slot buys roughly '
-      f'{"a fraction of" if (cut_b2-cut_b) < cut_b/2 else "as much as"} what the first one does. '
-      f'If a line is to be drawn, {word(cap+1)} is where the curve bends.</p>')
+      f'the blocked team-weeks and <b>{cut_s:.0f}%</b> of the stranded player-weeks. A fourth '
+      f'slot is not modelled anywhere on this page and is not on the table: the question in '
+      f'front of the league is {word(cap)} or {word(cap+1)}, and a counterfactual nobody is '
+      f'going to vote on only gives the argument somewhere else to go.</p>')
     P(f'<p class="b">The magnitude is small. <b>{spots} roster spots</b> freed across '
       f'{word(n_wk)} weeks &mdash; {spots/n_wk:.1f} a week, against {active} active roster '
       f'spots in a {C["teams_n"]}-team, {last["starters"]+9}-man league. About '
@@ -211,13 +236,81 @@ def figures(C):
                f'<td class="num">{C["blockwk"].get(n,0)}</td>'
                f'<td class="num">{C["gain"][n]}</td></tr>')
     P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th class="lt">Team</th>'
-      f'<th class="lt">Record</th><th class="num">Seed</th><th class="num">Weeks short</th>'
+      f'<th class="lt">Record</th><th class="num">Seed</th><th class="num">Weeks blocked</th>'
       f'<th class="num">Spots gained</th></tr></thead><tbody>{rr}</tbody></table></div>'
       f'<figcaption>Only these {word(len(C["helped"]))} teams gain anything at all.</figcaption></figure>')
     top = C['helped'][0]
+    # Two different questions, and the table answers both, so the difference
+    # between the columns has to be said out loud or it reads as an error.
+    nogap = [n for n in C['helped'] if not C['blockwk'].get(n)]
+    if nogap:
+        P(f'<p class="b">The two right-hand columns do not measure the same thing, and '
+          f'{word(len(nogap))} '
+          + ('row shows it: ' if len(nogap) == 1 else 'rows show it: ')
+          + ', '.join(E(n) for n in nogap)
+          + (' gains' if len(nogap) == 1 else ' gain')
+          + f' a slot without ever having been <i>blocked</i>. <b>Weeks blocked</b> is the '
+          f'strict count &mdash; injured reserve full, a man still stranded. <b>Spots gained</b> '
+          f'is simply where a third slot would have been filled, which includes a side holding '
+          f'one slot free and {word(cap)} men hurt. Uptake is wider than blockage, and the '
+          f'wire section below needs the wider figure because every slot filled takes a '
+          f'player.</p>')
     P(f'<p class="b">Median seed of the teams helped: <b>{C["med_seed"]:.1f}</b>, against a '
       f'league median of {C["league_med"]:.1f}. On this sample the change helps the bottom of '
       f'the table more than the top.</p>')
+
+    # ---- the level-playing-field test ------------------------------------
+    # The test the league itself set: roster pressure is part of the game, but
+    # it should bear on everyone the same way. That is answerable from this
+    # data, and the answer does not favour the side that wants the rule
+    # changed -- which is why it is here rather than in a footnote.
+    S('Is it a level playing field?')
+    bw = C['blockwk']
+    ever = sorted((n for n in bw if bw[n]), key=lambda n: (-bw[n], n))
+    never = sorted(n for n in bw if not bw[n])
+    tot = sum(bw.values())
+    heaviest = ever[0]
+    short3 = lambda t: t['stranded'] > max(0, cap + 1 - t['ir_used'])
+    bw3 = {}
+    for r in rows:
+        for t in r['teams']:
+            n = club(t['team'])
+            bw3[n] = bw3.get(n, 0) + (1 if short3(t) else 0)
+    cleared = [n for n in ever if not bw3.get(n)]
+    still = [n for n in ever if bw3.get(n)]
+    P(f'<p class="b">Every roster in the league carries the same {word(cap)} slots, so the rule '
+      f'is equal in form. It is not equal in effect. Of {C["teams_n"]} teams, <b>{len(ever)} '
+      f'have been blocked at least once</b> and <b>{word(len(never))} never have</b> &mdash; not '
+      f'once in {word(n_wk)} weeks. {E(heaviest)} alone carry <b>{bw[heaviest]} of the {tot} blocked '
+      f'team-weeks</b> ({100*bw[heaviest]/tot:.0f}%).</p>')
+    mxb = max(bw.values()) or 1
+    bars = ''.join(
+      f'<div class="bar"><i>{E(n)}</i>'
+      f'<span class="{"" if bw[n] else "z"}" '
+      f'style="width:{max(2, round(100*bw[n]/mxb))}%"></span><b>{bw[n]}</b></div>'
+      for n in sorted(bw, key=lambda n: (-bw[n], n)))
+    P(f'<figure class="ad"><div class="bars">{bars}</div><figcaption>Weeks blocked, '
+      f'{word(n_wk)} weeks of {rows[0]["season"]}. Out of {word(n_wk)} possible for every '
+      f'team.</figcaption></figure>')
+    P(f'<p class="b">That cuts against the case for expanding, and it should be said plainly. '
+      f'The cap is not pressure applied to {word(C["teams_n"])} teams. It is pressure applied '
+      f'to {word(len(ever))}, and {100*bw[heaviest]/tot:.0f}% of it to one. A third slot does not '
+      f'spread the burden evenly; it lifts it where it already falls and leaves the other '
+      f'{word(len(never))} rosters exactly as they were. On a strict reading of &ldquo;level '
+      f'playing field&rdquo;, a change that moves nothing for '
+      f'{100*len(never)/C["teams_n"]:.0f}% of the league is not a levelling.</p>')
+    P(f'<p class="b">What runs the other way is <i>why</i> the bite is uneven. It does not track '
+      f'anything a manager chooses. Every roster is built to the same {last["starters"]+9} men '
+      f'and the same {word(cap)} slots; what separates {E(heaviest)} from the '
+      f'{word(len(never))} untouched sides is which of their players got hurt, and in what '
+      f'order. Roster pressure that follows from a decision is skill. Roster pressure that '
+      f'follows from {E(heaviest)}&rsquo;s treatment room is not a decision anyone made.</p>')
+    P(f'<p class="b">The data settles the shape and not the principle. A third slot would have '
+      f'cleared {word(len(cleared))} of the {word(len(ever))} affected teams completely'
+      + (f' and left {word(len(still))} still blocked in at least one week'
+         if still else ' outright')
+      + f'. Whether that is levelling a field or subsidising bad luck is a judgement, and this '
+      f'page does not have the standing to make it.</p>')
 
     # The case AGAINST expansion, tested on its own terms. The paper as first
     # written only examined the claims of the side that wants the rule changed,
@@ -396,7 +489,10 @@ def figures(C):
       + f'</b>. Of the {word(len(keeps))} arguments made for keeping the cap, '
       + (f'{word(len(fell))} did not survive contact with the data and '
          if fell else 'none fell outright and ')
-      + f'{word(len(survive))} did. The ones that stood are the ones nobody can settle from '
+      + f'{word(len(survive))} did'
+      + (f', with {word(len(keeps) - len(fell) - len(survive))} the data cannot speak to'
+         if len(keeps) - len(fell) - len(survive) else '')
+      + '. The ones that stood are the ones nobody can settle from '
       'here: that the wire is thin, which was true before this debate started, and that no '
       'competitive harm has ever been demonstrated, which is true and may stay true.</p>')
     P('<p class="pull">The strongest surviving argument on either side is not about fairness or '
@@ -414,12 +510,17 @@ def figures(C):
       'man and move on. Blocked means <i>made to choose</i>, not <i>prevented</i> &mdash; and '
       'whether being made to choose is a flaw or the point of a roster limit is a judgement no '
       'amount of this data settles.</p>')
-    P(f'<p class="b"><b>The benefit is concentrated.</b> {E(top)} account for '
-      f'<b>{C["gain"][top]} of the {spots} freed spots</b> '
-      f'({100*C["gain"][top]/spots:.0f}%) and were a slot short in '
-      f'{word(C["blockwk"].get(top,0))} of {word(n_wk)} weeks. A fair reader may ask whether a '
-      'permanent rule change is warranted by one roster&rsquo;s injury luck. Take that team '
-      'out and the case weakens materially.</p>')
+    P(f'<p class="b"><b>The benefit is concentrated, and that is not by itself an objection.</b> '
+      f'{E(top)} account for <b>{C["gain"][top]} of the {spots} freed spots</b> '
+      f'({100*C["gain"][top]/spots:.0f}%) and were blocked in '
+      f'{word(C["blockwk"].get(top,0))} of {word(n_wk)} weeks. An earlier draft of this paper '
+      'put that forward as a reason for caution &mdash; whether a permanent rule change is '
+      'warranted by one roster&rsquo;s injury luck. The answer the desk now takes is that an '
+      'injury rule biting hardest on whoever got hurt most is the rule doing its job, not a '
+      'distortion in the sample. What the concentration does mean is narrower and still worth '
+      'knowing: the headline percentages above rest heavily on one roster, so take that team '
+      'out and the <i>measured size</i> of the effect falls sharply even if the case does '
+      'not.</p>')
     # How much of each week's blockage a third slot actually clears. An earlier
     # draft asserted this decays as the season goes on; week 6 landed while the
     # page was being built and broke the claim -- the share fell to a quarter in
@@ -428,7 +529,7 @@ def figures(C):
     # stated.
     share = []
     for r in rows:
-        b2 = sum(1 for t in r['teams'] if t['stranded'] > max(0, cap - t['ir_used']))
+        b2 = sum(1 for t in r['teams'] if short(t))
         b3 = sum(1 for t in r['teams'] if t['stranded'] > max(0, cap + 1 - t['ir_used']))
         share.append((r['week'], b2, b2 - b3, (b2 - b3) / b2 if b2 else None))
     vals = [s for *_, s in share if s is not None]
@@ -466,8 +567,7 @@ def figures(C):
             ('teams at cap', lambda r: r['teams_at_cap']),
             ('teams with empty IR', lambda r: r['teams_empty_ir']),
             ('stranded', lambda r: r['stranded_total']),
-            ('teams a slot short', lambda r: sum(1 for t in r['teams']
-                                                 if t['stranded'] > max(0, cap - t['ir_used']))),
+            ('teams blocked', lambda r: sum(1 for t in r['teams'] if short(t))),
             ]
     hh = ''.join(f'<th class="num">{c}</th>' for c, _ in cols)
     bb = ''.join('<tr>' + ''.join(f'<td class="num">{f(r)}</td>' for _, f in cols) + '</tr>'
@@ -516,14 +616,50 @@ def figures(C):
     S('What would settle it')
     P('<p class="b"><b>Transaction logs.</b> Drops of injured players by teams at the cap '
       'against drops by teams with a slot free. If the cap forces real losses, it shows there.'
-      ' <b>More weeks.</b> The decay above is the open question, and re-running this at week 10 '
+      ' <b>More weeks.</b> Whether the relief holds up as injuries pile in is the open '
+      'question above, and re-running this at week 10 '
       'and week 14 answers it. <b>Earlier seasons.</b> The collector only began logging this '
       'year, so 2026 is all there is.</p>')
-    P('<p class="pull">Four questions worth answering before anyone votes: is a team with a '
-      'free slot and two injured men blocked? Is the concentration disqualifying, or is '
-      '&ldquo;the rule bites hardest on whoever had bad luck&rdquo; what an injury rule is for? '
-      'Is roster pressure part of the skill of the game? And does the decay argue for four '
-      'slots, or for leaving it alone?</p>')
+    # The four open questions this paper closed with in its first draft, and
+    # the answers that came back. They are recorded here because three of them
+    # changed the page above -- the definition, the concentration limitation,
+    # and the removal of every four-slot figure -- and a reader comparing this
+    # version with the first one is owed the reason.
+    S('The questions, answered')
+    QA = [
+        ('Is a team with a free slot and more injured men than slots blocked?',
+         'No.',
+         f'Settled strict. Blocked now means a full injured reserve and a man still '
+         f'stranded, everywhere on this page. It removes {word(loose - base["blocked"])} '
+         f'team-weeks from every blocked figure.'),
+        ('Is the concentration disqualifying, or is &ldquo;the rule bites hardest on whoever '
+         'had bad luck&rdquo; what an injury rule is for?',
+         'It is what the rule is for.',
+         'The limitation stands as a note on the <i>size</i> of the measured effect, not as an '
+         'argument against the case. An injury rule that bites the injured is working.'),
+        ('Is roster pressure under a tight cap part of the skill of the game?',
+         'Part of the game &mdash; but it has to be level.',
+         f'Which is a testable claim, and tested above: the rule is equal in form and bears on '
+         f'{word(len(ever))} of {C["teams_n"]} sides in practice, {100*bw[heaviest]/tot:.0f}% of '
+         f'it on one.'),
+        ('Does the pattern argue for four slots, or for leaving it alone?',
+         'Four is not on the table.',
+         'Every four-slot figure has been removed rather than argued with. The question in '
+         f'front of the league is {word(cap)} or {word(cap+1)}, and a model of a cap nobody '
+         'will vote on is only somewhere else for the argument to go.'),
+    ]
+    qr = ''.join(f'<tr><th scope="row" class="qq">{q}</th>'
+                 f'<td class="qa">{a}</td><td class="dim ev">{w}</td></tr>'
+                 for q, a, w in QA)
+    P(f'<figure class="ad"><div class="scroll"><table><thead><tr>'
+      f'<th class="lt">Question</th><th class="lt">Answer</th>'
+      f'<th class="lt">What it changed here</th></tr></thead><tbody>{qr}</tbody></table></div>'
+      f'<figcaption>Asked at the end of the first draft of this paper; answered before this '
+      f'one was built.</figcaption></figure>')
+    P(f'<p class="pull">Which leaves one question the data cannot answer and the league will '
+      f'have to. The rule is the same {word(cap)} slots for everybody and it has bitten '
+      f'{word(len(ever))} sides in {word(n_wk)} weeks. Is a cap that {word(len(never))} '
+      f'rosters have never once noticed a level playing field, or the absence of one?</p>')
     return out
 
 
@@ -583,7 +719,7 @@ def card(C):
     bars = ''.join(
         f'<div class="b"><i>Cap {c}</i>'
         f'<span class="{"" if c == cap else "q"}" style="width:{330*M[c]["blocked"]/mx:.0f}px"></span>'
-        f'<b>{M[c]["blocked"]}</b></div>' for c in (cap, cap + 1, cap + 2))
+        f'<b>{M[c]["blocked"]}</b></div>' for c in (cap, cap + 1))
     last = C['last']
     cut = 100 * (base['blocked'] - M[cap + 1]['blocked']) / base['blocked']
     nshort = sum(1 for n in C['blockwk'] if C['blockwk'][n])
@@ -592,9 +728,10 @@ def card(C):
                .replace('__PCT__', f"{100*last['ir_used_total']/last['ir_capacity_total']:.0f}")
                .replace('__STR__', str(last['stranded_total']))
                .replace('__CUT__', f'{cut:.0f}')
-               .replace('__DEK__', f"{word(nshort).capitalize()} of {C['teams_n']} teams have been a slot "
-                                   f"short this season. What a third would fix, and what it "
-                                   f"would not."))
+               .replace('__DEK__', f"{word(nshort).capitalize()} of {C['teams_n']} teams have hit "
+                                   f"the cap with a man still stranded. "
+                                   f"{word(C['teams_n'] - nshort).capitalize()} never have. What a "
+                                   f"third slot fixes, and what it does not."))
     ad.shoot(doc, OG, 'irstudy-card')
 
 
@@ -665,8 +802,21 @@ figure.ad .v.ok{background:var(--red);}
 figure.ad .v.no{background:var(--blue);}
 figure.ad .v.mid{background:var(--gold);color:#3a3326;}
 figure.ad .ev{white-space:normal;min-width:19em;font-size:12.5px;line-height:1.45;}
+figure.ad th.qq{white-space:normal;min-width:17em;font-weight:700;line-height:1.4;}
+figure.ad td.qa{white-space:normal;min-width:9em;font-weight:900;color:var(--red);
+ line-height:1.4;}
 figure.gauge{margin:14px 0 26px;}
 figure.gauge svg{width:100%;height:auto;display:block;}
+.bars{display:flex;flex-direction:column;gap:5px;border-top:2px solid var(--ink);
+ padding-top:12px;}
+.bar{display:flex;align-items:center;gap:10px;font-family:var(--sans);font-size:12.5px;}
+.bar i{font-style:normal;font-weight:700;flex:0 0 11em;color:var(--muted);
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bar span{display:block;height:13px;background:var(--red);border-radius:0 2px 2px 0;
+ flex:0 0 auto;max-width:calc(100% - 14em);}
+.bar span.z{background:var(--line);}
+.bar b{font-weight:900;font-variant-numeric:tabular-nums;color:var(--ink);}
+@media(max-width:560px){.bar i{flex:0 0 7.5em;font-size:11.5px;}}
 .more{margin-top:46px;border-top:1px solid var(--line);padding-top:18px;font-family:var(--sans);
  font-size:12.5px;line-height:1.6;color:var(--muted);max-width:74ch;}
 .more a{color:var(--red);font-weight:700;}
@@ -694,9 +844,10 @@ def build():
     cap = C['cap']
     nshort = sum(1 for n in C['blockwk'] if C['blockwk'][n])
     cut = 100 * (C['M'][cap]['blocked'] - C['M'][cap + 1]['blocked']) / C['M'][cap]['blocked']
-    desc = (f"{word(nshort).capitalize()} of {C['teams_n']} teams have been an IR slot short "
-            f"this season. A third slot would clear {cut:.0f}% of it — and here is everything "
-            f"that measurement cannot tell you.")
+    desc = (f"{word(nshort).capitalize()} of {C['teams_n']} teams have hit the IR cap with a "
+            f"man still stranded this season; {word(C['teams_n'] - nshort)} never have. A third "
+            f"slot would clear {cut:.0f}% of it — and here is everything that measurement "
+            f"cannot tell you.")
     today = datetime.date.today()
     doc = (PAGE.replace('__BODY__', body)
                .replace('__SHORT__', word(nshort).capitalize())
@@ -707,7 +858,10 @@ def build():
     open(OUT, 'w', encoding='utf-8').write(doc)
     print(f'wrote {os.path.basename(OUT)} ({len(doc):,} chars)')
     print(f"  cap {cap}: {C['M'][cap]['blocked']} blocked team-weeks | "
-          f"cap {cap+1}: {C['M'][cap+1]['blocked']} | cap {cap+2}: {C['M'][cap+2]['blocked']}")
+          f"cap {cap+1}: {C['M'][cap+1]['blocked']}")
+    bw = C['blockwk']
+    print(f"  blocked at least once: {sum(1 for n in bw if bw[n])}/{C['teams_n']} | "
+          f"never: {sum(1 for n in bw if not bw[n])}")
     card(C)
 
 
