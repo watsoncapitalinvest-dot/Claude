@@ -77,6 +77,34 @@ def get(path, soft=False):
         time.sleep(1.2 * (i + 1))
 
 
+def tenure(lid, memo):
+    """How many consecutive seasons this league has run ON SLEEPER.
+
+    Sleeper chains a league to its own prior year with previous_league_id, so
+    following that back and counting gives on-platform tenure.
+
+    WHAT IT IS NOT is league age. Our own history came off ESPN -- the repo's
+    history.json says so in its first field -- so any league that migrated
+    reads younger here than it is, and that includes this one. The number is a
+    FLOOR for everybody, which is the only way it can be compared at all. A
+    walk that quietly reported it as age would make every migrated league look
+    like a startup.
+    """
+    n, cur = 1, lid
+    while cur:
+        if cur in memo:
+            return n - 1 + memo[cur]
+        lg = get(f'/league/{cur}', soft=True)
+        prev = (lg or {}).get('previous_league_id')
+        if not prev or prev == cur:
+            break
+        cur = prev
+        n += 1
+        time.sleep(0.2)
+    memo[lid] = n
+    return n
+
+
 def shape(lg):
     """One league, reduced to the settings the argument is about.
 
@@ -130,9 +158,11 @@ def home_only(a):
     if not lg:
         sys.exit(f'could not read the home league {lid!r}')
     doc['home'] = shape(lg)
+    doc['home']['seasons'] = tenure(lid, {})
     json.dump(doc, open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     print(f"  recorded the home league: {doc['home']['ir']} IR slots, "
-          f"{sum(1 for v in doc['home']['allow'].values() if v)} designations allowed")
+          f"{sum(1 for v in doc['home']['allow'].values() if v)} designations allowed, "
+          f"{doc['home']['seasons']} seasons on Sleeper")
     return doc
 
 
@@ -147,7 +177,7 @@ def survey(a):
     if not home:
         sys.exit('no league id: pass --league-id, or run ir_watch.py first')
 
-    seen_u, seen_l, found = set(), set(), []
+    seen_u, seen_l, found, memo = set(), set(), [], {}
     frontier = [u['user_id'] for u in (get(f'/league/{home}/users') or [])]
     print(f'  hop 0: {len(frontier)} managers in the home league')
     seen_l.add(home)
@@ -165,6 +195,10 @@ def survey(a):
                     continue
                 seen_l.add(lid)
                 sh = shape(lg)
+                # Chain-walking costs a call per prior season, so it is spent
+                # only on the leagues this study can actually compare against.
+                if a.chains and sh['teams'] == 16:
+                    sh['seasons'] = tenure(lid, memo)
                 found.append(sh)
                 if sh['teams'] == 16 and sh['type'] == 2:
                     hits += 1
@@ -238,12 +272,59 @@ def report(doc):
                       f"fewer = bottom {100*at/len(ir):.0f}%")
 
 
+def tenure_report(doc):
+    """Does on-platform tenure predict slot count?
+
+    The question put to this desk was not "are those leagues younger" but the
+    thing that follows from it -- whether a league's settings deserve less
+    weight for being new. That only matters if tenure and slots are related,
+    so the cross-tab is the test, not the age distribution on its own.
+    """
+    g = [l for l in doc['leagues']
+         if l['teams'] == 16 and l.get('seasons') and l['ir'] is not None]
+    if not g:
+        print('\nno tenure data -- re-run the walk with --chains')
+        return
+    h = doc.get('home') or {}
+    med = lambda xs: sorted(xs)[len(sorted(xs)) // 2] if xs else None
+    print(f"\nSEASONS ON SLEEPER (a floor, not league age -- see tenure() in this file)")
+    print(f"  ours: {h.get('seasons')}  (and {h.get('seasons')} is only the Sleeper era)")
+    for label, sel in (('16-team', lambda l: True),
+                       ('16-team dynasty', lambda l: l['type'] == 2)):
+        gg = [l for l in g if sel(l)]
+        if not gg:
+            continue
+        ten = sorted(l['seasons'] for l in gg)
+        print(f"\n  {label}: {len(gg)} leagues with tenure known")
+        print(f"    median {ten[len(ten)//2]} seasons, range {min(ten)}-{max(ten)}")
+        if h.get('seasons'):
+            older = sum(1 for t in ten if t >= h['seasons'])
+            print(f"    as old as ours or older: {older} of {len(ten)} "
+                  f"({100*older/len(ten):.0f}%)")
+        print(f"    {'tenure':>12} {'leagues':>8} {'median IR':>10}")
+        buckets = [(1, 1), (2, 3), (4, 5), (6, 99)]
+        for lo, hi in buckets:
+            b = [l for l in gg if lo <= l['seasons'] <= hi]
+            if b:
+                lab = f'{lo}' if lo == hi else (f'{lo}-{hi}' if hi < 99 else f'{lo}+')
+                print(f"    {lab + ' seasons':>12} {len(b):>8} "
+                      f"{med([l['ir'] for l in b]):>10}")
+        if h.get('seasons'):
+            old = [l for l in gg if l['seasons'] >= h['seasons']]
+            if old:
+                print(f"    leagues as old as ours: {len(old)}, median "
+                      f"{med([l['ir'] for l in old])} IR slots, "
+                      f"{sum(1 for l in old if l['ir'] <= 2)} of {len(old)} at 2 or fewer")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--league-id', default=os.environ.get('SCFL_LEAGUE_ID', ''))
     ap.add_argument('--season', default='')
     ap.add_argument('--hops', type=int, default=1)
     ap.add_argument('--cap', type=int, default=400, help='managers asked per hop')
+    ap.add_argument('--chains', action='store_true',
+                    help='also count seasons on Sleeper for 16-team leagues')
     ap.add_argument('--home-only', action='store_true',
                     help="record our own league's settings into an existing survey")
     ap.add_argument('--report', action='store_true')
@@ -254,7 +335,9 @@ def main():
     if a.report:
         if not os.path.exists(OUT):
             sys.exit('no league-survey.json yet')
-        report(json.load(open(OUT, encoding='utf-8')))
+        d = json.load(open(OUT, encoding='utf-8'))
+        report(d)
+        tenure_report(d)
         return
     report(survey(a))
 
