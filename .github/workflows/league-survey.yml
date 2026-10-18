@@ -1,0 +1,59 @@
+name: Survey other leagues' IR slots
+
+# The IR study carries one claim nobody could test -- "leagues our size run
+# two to four slots" -- because the study had no data on any league but this
+# one. Sleeper has no search, so the sample is walked outward from here.
+#
+# The agent container cannot reach api.sleeper.app, so the walk happens on a
+# runner and the result comes back through git. No league names, ids or user
+# names are recorded; see the header of scripts/league_survey.py.
+
+on:
+  workflow_dispatch:
+    inputs:
+      hops:
+        description: 'How far to walk out (1 = our managers only, 2 = theirs too)'
+        required: false
+        default: '1'
+      cap:
+        description: 'Managers asked per hop'
+        required: false
+        default: '400'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: league-survey
+  cancel-in-progress: false
+
+jobs:
+  survey:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Walk it
+        env:
+          SCFL_LEAGUE_ID: ${{ vars.SCFL_LEAGUE_ID }}
+        run: |
+          python3 scripts/league_survey.py \
+            --hops "${{ github.event.inputs.hops || '1' }}" \
+            --cap  "${{ github.event.inputs.cap  || '400' }}"
+
+      - name: Commit it
+        run: |
+          git config user.name  'IR Watch'
+          git config user.email 'noreply@anthropic.com'
+          # `git diff` ignores an untracked file, so stage first and ask the index
+          git add league-survey.json
+          if git diff --cached --quiet -- league-survey.json; then
+            echo 'no change this run'
+            exit 0
+          fi
+          N=$(python3 -c "import json;print(json.load(open('league-survey.json'))['leagues_seen'])")
+          git commit -m "League survey: ${N} leagues"
+          git push
