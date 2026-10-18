@@ -108,6 +108,15 @@ derived, leave it out. Count-aware phrasing (`"That is" if n == 1 else
 19 roster spots (10 starters + 9 bench) + 2 IR · 14-week regular season,
 playoffs from week 15 · 4 divisions of 4.
 
+**16 teams, 16 owners** — one man each, no co-owners and nobody holding two.
+
+The free-agent **count** is not a measure of anything. It sits near 500 all
+season because it counts third-string tight ends and quarterbacks nobody here
+would ever start. When the waiver pool matters, measure what is *worth adding*:
+players who outscore the median man actually started at that position. That
+runs **2 to 5 a week**, which is what everyone means when they say the wire is
+bare. `scripts/waiver_depth.py` computes it.
+
 Franchises get renamed mid-season (Forty2V → Horsecollars, Heavy Hitters →
 Phins Phag). **Key standings and division tables by `roster_id`, never by
 name**, or a renamed team drops out of the table entirely.

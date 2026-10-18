@@ -124,6 +124,10 @@ def figures(C):
         <div class="n">a week, of {active} in play</div></div>
     </div>''')
 
+    P(f'<p class="lf">The league: <b>{C["teams_n"]} teams, {C["teams_n"]} owners</b>, one each. '
+      f'{last["starters"]} starters and nine bench on every roster, plus {word(cap)} injured '
+      f'reserve slots &mdash; {C["teams_n"]*(last["starters"]+9)} active spots and '
+      f'{last["ir_capacity_total"]} IR spots in play across the league.</p>')
     P('<p class="b">This is a working paper, not a proposal. It measures how often the '
       f'{word(cap)}-slot injured reserve cap actually binds, and how much of that a third '
       'slot would relieve, using the league&rsquo;s own weekly roster data. It does not '
@@ -225,68 +229,61 @@ def figures(C):
     if dep and dep['rows']:
         S('The argument against: does it thin the wire?')
         dr = dep['rows']
-        fa = [r['free_agents'] for r in rows]
-        irn = [r['ir_used_total'] for r in rows]
-        P('<p class="b">The case against expansion is that the waiver wire is already bare '
-          'and another slot makes it barer. The mechanism is not in dispute and is worth '
-          'stating plainly, because it is arithmetic rather than opinion: a side that shelves '
-          'an injured man frees an active spot, fills it from the wire, and the pool is one '
-          'player smaller. Every extra slot used takes a player off waivers.</p>')
-        P(f'<p class="b">What is in dispute is the size of it. Across {word(len(rows))} weeks, '
-          f'the number of players on injured reserve league-wide went from <b>{irn[0]}</b> to '
-          f'<b>{irn[-1]}</b> &mdash; {irn[-1]-irn[0]} more men shelved &mdash; while the free-agent '
-          f'pool went from <b>{fa[0]}</b> to <b>{fa[-1]}</b>, a fall of {fa[0]-fa[-1]}. Not '
-          f'{irn[-1]-irn[0]}. The pass-through is partial because the rule reverses itself: a '
-          'returning player has to be activated and somebody dropped, which puts a man back on '
-          'the wire. Over a season the pool is close to conserved. What moves is the timing.</p>')
-        P('<p class="b">But a headcount is the wrong instrument, and it is the instrument both '
-          'sides have been using. It counts bodies, and the complaint is about usable players. '
-          'So this measures depth instead: a free agent is <b>startable</b> in a given week if '
-          'he outscored the worst man the league actually started at his position &mdash; that '
-          'is, if adding him would have improved somebody&rsquo;s lineup.</p>')
+        up = [r['upgrade_skill'] for r in dr]
+        sk_ = [r['startable_skill'] for r in dr]
+        depw = dr[-1]['week']
+        ex = {r['week']: sum(1 for t in r['teams']
+              if max(0, min(t['stranded'], cap + 1 - t['ir_used']))
+              > max(0, min(t['stranded'], cap - t['ir_used']))) for r in rows}
+        P('<p class="b">The case against expansion is that the wire is already bare and another '
+          'slot makes it barer. The mechanism is arithmetic, not opinion: a side that shelves an '
+          'injured man frees an active spot, fills it, and the pool is one player smaller. Every '
+          'extra slot used takes a player off waivers.</p>')
+        P('<p class="b"><b>A headcount cannot test that, and this study does not report one.</b> '
+          'Counting unrostered bodies gives a number around five hundred all season, which is '
+          'true and useless &mdash; it counts third-string tight ends and quarterbacks nobody in '
+          'this league would start in any week of any year. The question is how many men are '
+          'worth adding, so that is what is measured.</p>')
+        P('<p class="b">Two bars, both set by what the league itself started that week. '
+          '<b>Would upgrade a lineup</b> means he outscored the <i>median</i> man started at his '
+          'position &mdash; the players managers actually chase. <b>Beats replacement</b> means '
+          'he outscored the <i>worst</i> man started at his position, which is a much weaker '
+          'test.</p>')
         hdr2 = ''.join(f'<th class="num">wk {r["week"]}</th>' for r in dr)
         def r2(label, vals):
             return (f'<tr><th scope="row">{label}</th>'
                     + ''.join(f'<td class="num">{v}</td>' for v in vals) + '</tr>')
-        extra = {r['week']: sum(1 for t in r['teams']
-                 if max(0, min(t['stranded'], cap + 1 - t['ir_used']))
-                 > max(0, min(t['stranded'], cap - t['ir_used']))) for r in rows}
-        body2 = (r2('Unrostered men who scored', [r['scored'] for r in dr])
-                 + r2('Startable, all positions', [r['startable_all'] for r in dr])
-                 + r2('<b>Startable skill players</b>', [f"<b>{r['startable_skill']}</b>" for r in dr])
-                 + r2('A third slot would absorb', [extra.get(r['week'], 0) for r in dr]))
+        body2 = (r2('<b>Would upgrade a lineup</b>', [f'<b>{v}</b>' for v in up])
+                 + r2('Beats replacement level', sk_)
+                 + r2('A third slot would absorb', [ex.get(r['week'], 0) for r in dr]))
         P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th></th>{hdr2}</tr></thead>'
-          f'<tbody>{body2}</tbody></table></div><figcaption>Kickers and defences are shown '
-          'separately and kept out of the headline: half the league&rsquo;s are unrostered by '
-          'construction, which makes the wire look four times deeper than it plays.</figcaption>'
-          '</figure>')
-        sk_ = [r['startable_skill'] for r in dr]
-        depw = dr[-1]['week']           # depth is only measurable on a PLAYED week
+          f'<tbody>{body2}</tbody></table></div><figcaption>Skill positions only. Kickers and '
+          'defences are excluded entirely: half the league&rsquo;s are unrostered by '
+          'construction, so including them quadruples the count and tells you nothing.'
+          '</figcaption></figure>')
+        P(f'<p class="b">The entire waiver wire holds <b>{min(up)} to {max(up)} players a week</b> '
+          f'who would improve anybody&rsquo;s starting lineup. In week {depw} there were '
+          f'<b>{up[-1]}</b>'
+          + (f' &mdash; {", ".join(E(u["name"]) + " " + u["pos"] for u in dr[-1]["upgrades"])}'
+             if dr[-1]['upgrades'] else '')
+          + f'. A third slot would have been taken up by <b>{ex.get(depw,0)}</b> teams that same '
+          'week, and those teams take the best man available, not the fourth best.</p>')
+        if ex.get(depw, 0) >= up[-1]:
+            P(f'<p class="pull">In week {depw} a third slot would have been claimed by '
+              f'{word(ex.get(depw,0))} teams, and there were {word(up[-1])} players on the entire '
+              f'wire worth claiming. Expansion does not thin the usable wire. In a week like that '
+              f'one it empties it.</p>')
         irw = rows[-1]['week']
-        P(f'<p class="b">A typical week offers <b>{min(sk_)} to {max(sk_)} usable skill '
-          f'players</b> on the entire wire. In week {depw} &mdash; the last week with both '
-          f'figures &mdash; there were <b>{sk_[-1]}</b>, and a third slot would have been taken '
-          f'up by <b>{extra.get(depw,0)}</b> teams. Those teams do not take random players; they '
-          f'take the best available. So expansion would have absorbed about '
-          f'<b>{100*extra.get(depw,0)/sk_[-1]:.0f}%</b> of the usable wire that week, off the '
-          f'top of it.</p>')
-        if irw > depw and extra.get(irw, 0) > extra.get(depw, 0):
-            P(f'<p class="b">That share is rising. By week {irw} the number of teams who would '
-              f'use a third slot had reached <b>{extra.get(irw,0)}</b>. Week {irw} has not been '
-              'played, so there is no depth figure to set it against yet &mdash; but against '
-              f'week {depw}&rsquo;s {sk_[-1]} usable players it would be most of the wire. That '
-              'is the strongest form of the argument against expansion, and nobody in the league '
-              'had put a number on it.</p>')
-        P(f'<p class="pull">Both sides are partly right. The wire does thin, and the headcount '
-          f'hides it &mdash; {fa[-1]} free agents in week {irw}, of whom, on the last played '
-          f'week, {sk_[-1]} were worth starting. But the withdrawal is a loan rather than a '
-          'loss, and the men who would do the borrowing are mostly at the bottom of the '
-          'table.</p>')
-        P('<p class="b">Two findings cut against the case for expansion and one cuts for it. '
-          'Against: the mechanism is real and, at an injury peak, large relative to what the '
-          'wire actually holds. For: it reverses, and the beneficiaries are the weak teams, not '
-          'the strong ones &mdash; which is the opposite of the fairness objection that has been '
-          'made against it.</p>')
+        if irw > depw and ex.get(irw, 0) > ex.get(depw, 0):
+            P(f'<p class="b">And the demand is rising: by week {irw}, <b>{ex.get(irw,0)}</b> teams '
+              f'would have used a third slot. Week {irw} has not been played, so it has no depth '
+              f'figure yet &mdash; but no week measured so far has offered more than '
+              f'{max(up)} players worth having.</p>')
+        P('<p class="b">What runs the other way is that the withdrawal is a <b>loan</b>. A player '
+          'coming off injured reserve has to be activated, the roster is then one over, and '
+          'somebody is dropped. The men come back. What a third slot changes is not how many '
+          'players are owned across a season but <i>when</i> they are owned &mdash; and it takes '
+          'them in exactly the weeks when injuries make everyone want them.</p>')
 
     # ---- the scoreboard and the gauge -----------------------------------
     # One claim per row, attributed to the side that made it, with what six
@@ -311,15 +308,15 @@ def figures(C):
          + ('' if (C['med_seed'] or 0) - C['league_med'] >= 1.5
             else ' &mdash; too close to call either way')),
         ('The withdrawal reverses when players return', 'expand', 'supported',
-         f"IR occupancy rose {rows[0]['ir_used_total']} to {last['ir_used_total']} while the "
-         f"pool fell only {rows[0]['free_agents']} to {last['free_agents']}"),
+         'structural: activating a returning player puts the roster one over, so a man is '
+         'dropped back to the wire'),
         ('Nobody is hoarding IR spots', 'expand', 'overtaken',
          f"true when it was said in preseason; by week {last['week']} "
          f"{last['teams_at_cap']} of {C['teams_n']} teams were at the cap"),
         ('Leagues our size run two to four slots', 'expand', 'untested',
          'no data here on other leagues, their age or their keeper rules'),
         ('The wire is already bare', 'keep two', 'supported',
-         'DEPTH' ),
+         'DEPTH'),
         ('Expansion thins the wire further', 'keep two', 'supported',
          'MECH'),
         ('It changes nothing functional', 'keep two', 'contradicted',
@@ -333,15 +330,16 @@ def figures(C):
          'correct, and not testable with this data: see the limitations'),
     ]
     if dep and dep['rows']:
-        sk2 = [r['startable_skill'] for r in dep['rows']]
+        up2 = [r['upgrade_skill'] for r in dep['rows']]
         dw = dep['rows'][-1]['week']
         ex = {r['week']: sum(1 for t in r['teams']
               if max(0, min(t['stranded'], cap + 1 - t['ir_used']))
               > max(0, min(t['stranded'], cap - t['ir_used']))) for r in rows}
-        V = [(a, b, c, (f"{sk2[-1]} usable skill players on the entire wire in week {dw}"
+        V = [(a, b, c, (f"only {up2[-1]} players on the entire wire would have improved a "
+                        f"lineup in week {dw}"
                         if d == 'DEPTH' else
-                        f"a third slot takes about {100*ex.get(dw,0)/sk2[-1]:.0f}% of the "
-                        f"usable wire in week {dw}, off the top" if d == 'MECH' else d))
+                        f"{ex.get(dw,0)} teams would have used a third slot in week {dw}; there "
+                        f"were {up2[-1]} players worth taking" if d == 'MECH' else d))
              for a, b, c, d in V]
     else:
         V = [v for v in V if v[3] not in ('DEPTH', 'MECH')]
@@ -412,11 +410,10 @@ def figures(C):
       'shows a blocked team lost a game, or even lost points. Establishing that would need to '
       'know who each manager <i>would</i> have added with the freed slot and what that man '
       'then scored, which is unobservable. Every number above is a ceiling on inconvenience.</p>')
-    P(f'<p class="b"><b>A blocked team is never actually stuck.</b> There were '
-      f'{rows[0]["free_agents"]} free agents in week {rows[0]["week"]}. Any side can cut an '
-      'injured man and move on. Blocked means <i>made to choose</i>, not <i>prevented</i> '
-      '&mdash; and whether being made to choose is a flaw or the point of a roster limit is a '
-      'judgement no amount of this data settles.</p>')
+    P('<p class="b"><b>A blocked team is never actually stuck.</b> Any side can cut an injured '
+      'man and move on. Blocked means <i>made to choose</i>, not <i>prevented</i> &mdash; and '
+      'whether being made to choose is a flaw or the point of a roster limit is a judgement no '
+      'amount of this data settles.</p>')
     P(f'<p class="b"><b>The benefit is concentrated.</b> {E(top)} account for '
       f'<b>{C["gain"][top]} of the {spots} freed spots</b> '
       f'({100*C["gain"][top]/spots:.0f}%) and were a slot short in '
@@ -471,7 +468,7 @@ def figures(C):
             ('stranded', lambda r: r['stranded_total']),
             ('teams a slot short', lambda r: sum(1 for t in r['teams']
                                                  if t['stranded'] > max(0, cap - t['ir_used']))),
-            ('free agents', lambda r: r['free_agents'])]
+            ]
     hh = ''.join(f'<th class="num">{c}</th>' for c, _ in cols)
     bb = ''.join('<tr>' + ''.join(f'<td class="num">{f(r)}</td>' for _, f in cols) + '</tr>'
                  for r in rows)
@@ -481,20 +478,21 @@ def figures(C):
 
     if dep and dep["rows"]:
         hh2 = ('<th class="num">wk</th><th class="num">scored</th>'
-               '<th class="num">startable (all)</th><th class="num">startable (skill)</th>'
-               '<th class="lt">best skill available</th>')
+               '<th class="num">would upgrade</th><th class="num">beats replacement</th>'
+               '<th class="lt">the men who would upgrade</th>')
         bb2 = ''.join(
             f'<tr><td class="num">{r["week"]}</td><td class="num">{r["scored"]}</td>'
-            f'<td class="num">{r["startable_all"]}</td>'
-            f'<td class="num"><b>{r["startable_skill"]}</b></td>'
-            f'<td class="dim ev">' + ', '.join(f'{E(t["name"])} {t["pos"]} {t["pts"]}'
-                                               for t in r['top_skill'][:3]) + '</td></tr>'
+            f'<td class="num"><b>{r["upgrade_skill"]}</b></td>'
+            f'<td class="num">{r["startable_skill"]}</td>'
+            f'<td class="dim ev">' + (', '.join(f'{E(u["name"])} {u["pos"]} {u["pts"]}'
+                                                for u in r['upgrades']) or '&mdash;') + '</td></tr>'
             for r in dep['rows'])
         P(f'<figure class="ad"><div class="scroll"><table><thead><tr>{hh2}</tr></thead>'
           f'<tbody>{bb2}</tbody></table></div><figcaption>From ir-waiver-depth.json. Only '
           f'played weeks appear: depth cannot be measured on a week nobody has played. '
-          f'Startability bar, week {dep["rows"][-1]["week"]}: '
-          + ', '.join(f'{k} {v}' for k, v in dep['rows'][-1]['bar'].items())
+          f'Upgrade bar (median starter), week {dep["rows"][-1]["week"]}: '
+          + ', '.join(f'{k} {v}' for k, v in dep['rows'][-1]['median_bar'].items()
+                      if k in ('QB', 'RB', 'WR', 'TE'))
           + '.</figcaption></figure>')
 
     tt = ''.join(

@@ -222,11 +222,18 @@ def build():
                         k = find(p)
                         if k:
                             owned.add(k)
-        bar = {}
+        bar, mid = {}, {}
         for P, n in SLOTS.items():
             s = sorted((v['wk'][wk] for v in U.values() if v['p'] == P and wk in v['wk']),
                        reverse=True)
+            # two bars. REPLACEMENT is the worst man the league actually started
+            # at the position; MEDIAN is the middle one. Clearing replacement
+            # means "better than somebody's worst option", which is a low bar and
+            # counts a dozen-odd men a week. Clearing the median means "would
+            # improve a real lineup", which is the handful everybody means when
+            # they say the wire is bare.
             bar[P] = s[n - 1] if len(s) >= n else (s[-1] if s else 0)
+            mid[P] = s[n // 2 - 1] if len(s) >= n // 2 else (s[-1] if s else 0)
         free = [(v['wk'][wk], v['p'], v['n']) for k, v in U.items()
                 if k not in owned and wk in v['wk']]
         skill = [f for f in free if f[1] in ('QB', 'RB', 'WR', 'TE')]
@@ -235,20 +242,29 @@ def build():
             'scored': len(free),
             'startable_all': sum(1 for f in free if f[0] >= bar[f[1]]),
             'startable_skill': sum(1 for f in skill if f[0] >= bar[f[1]]),
+            'upgrade_skill': sum(1 for f in skill if f[0] >= mid[f[1]]),
+            'upgrades': [{'name': n, 'pos': p, 'pts': round(v, 1)}
+                         for v, p, n in sorted(skill, reverse=True) if v >= mid[p]],
             'top_skill': [{'name': n, 'pos': p, 'pts': round(v, 1)}
                           for v, p, n in sorted(skill, reverse=True)[:5]],
             'bar': {k: round(v, 2) for k, v in bar.items()},
+            'median_bar': {k: round(v, 2) for k, v in mid.items()},
         })
-    out = {'note': 'Usable waiver depth. startable_skill counts unrostered QB/RB/WR/TE who '
-                   'outscored the worst man the league started at their position that week. '
+    out = {'note': 'Usable waiver depth. upgrade_skill is the headline: unrostered QB/RB/WR/TE '
+                   'who outscored the MEDIAN man the league started at their position that '
+                   'week -- the men who would actually improve a lineup. startable_skill uses '
+                   'the weaker replacement-level bar (the worst starter) and runs about four '
+                   'times higher. A raw headcount of free agents is deliberately NOT reported: '
+                   'it reads ~500 all season and measures nothing anybody cares about. '
                    'Written by scripts/waiver_depth.py; see that file for the model and its '
                    'validation. Weeks not yet played are skipped.',
            'slots': SLOTS, 'rows': rows}
     json.dump(out, open(OUT, 'w', encoding='utf-8'), indent=1)
     print(f'wrote {os.path.basename(OUT)} ({len(rows)} played weeks)')
     for r in rows:
-        print(f"  wk{r['week']}: {r['scored']:3d} scored, {r['startable_skill']:2d} startable "
-              f"skill ({r['startable_all']:2d} incl. K/DEF)")
+        print(f"  wk{r['week']}: {r['upgrade_skill']:2d} would upgrade a lineup, "
+              f"{r['startable_skill']:2d} beat a replacement starter  "
+              f"[{', '.join(u['name'] for u in r['upgrades'][:4]) or 'nobody'}]")
 
 
 if __name__ == '__main__':
