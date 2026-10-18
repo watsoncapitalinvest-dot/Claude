@@ -45,11 +45,14 @@ jobs:
         run: |
           git config user.name  'IR Watch'
           git config user.email 'noreply@anthropic.com'
-          if git diff --quiet -- transactions.json; then
+          # `git diff` ignores an UNTRACKED file, so on the first run it reports
+          # no change and the fetch is silently thrown away. Stage first, then
+          # ask the index.
+          git add transactions.json
+          if git diff --cached --quiet -- transactions.json; then
             echo 'no change this run'
             exit 0
           fi
           N=$(python3 -c "import json;print(len(json.load(open('transactions.json'))['rows']))")
-          git add transactions.json
           git commit -m "Transactions: ${N} rows"
           git push
