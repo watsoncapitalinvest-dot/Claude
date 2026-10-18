@@ -46,6 +46,7 @@ CATEGORY = {
     'scfl-offseason-heat.html': 'Heat & Rivalries',
     'scfl-grudge-report.html': 'Heat & Rivalries',
     # Investigations & Research
+    'scfl-ir-study.html': 'Investigations & Research',
     'death-by-inaction.html': 'Investigations & Research',
     'scfl-wookie-curse.html': 'Investigations & Research',
     'scfl-shield-decoded.html': 'Investigations & Research',
