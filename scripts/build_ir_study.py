@@ -283,60 +283,39 @@ def depth():
 def drops():
     """The transaction join: did the cap ever actually cost anybody a player?
 
-    scripts/ir_drops.py owns the join, so the page cannot drift from it. The
-    extra work here is the question the join does not ask -- whether anybody
-    else wanted the man who was let go.
+    scripts/ir_drops.py owns the join and writes ir-drops.json; this only
+    reads it. That split matters: the join needs two nflverse downloads, and a
+    page builder that cannot run without a network call is a page that stops
+    building the first time a release URL moves.
+
+    The classification comes in on three axes and the copy needs all three,
+    because a single count of "forced drops" flatters whichever side quotes
+    it:
+
+      SEVERE -- carrying a multi-week injury (NFL reserve, or a Sleeper
+        designation the weekly snapshot caught) rather than a one-game Out
+        that the Wednesday reading structurally cannot see.
+      HELD -- signed more than a fortnight before he was cut, so he was an
+        asset somebody was keeping rather than a flyer that did not work out.
+      CLAIMED -- taken by another side afterwards. Until one is, the league is
+        agreeing by inaction about what the loss was worth.
     """
-    p = os.path.join(ROOT, 'transactions.json')
+    p = os.path.join(ROOT, 'ir-drops.json')
     if not os.path.exists(p):
         return None
-    ird = _mod('ird', 'scripts/ir_drops.py')
-    tx, boxes, n_drops = ird.crunch()
-    rows = tx['rows']
-
-    def claimed_since(name, after_week):
-        """Did any OTHER roster add him afterwards? If nobody did, the league
-        agreed by inaction that the man was expendable, which is the whole
-        measure of what the drop cost."""
-        return [tx['rosters'].get(str(a['roster_id']))
-                for r in rows if r['status'] == 'complete' and r['week'] >= after_week
-                for a in r['adds'] if a['name'] == name]
-
-    forced = []
-    for d in boxes['cap_cost']:
-        back = claimed_since(d['player'], d['week'])
-        # a man signed and cut inside a fortnight was never an asset anybody
-        # was holding on to, and counting him as a loss overstates the case.
-        # It has to be the LAST time this roster signed him, not the first:
-        # one of these men was taken in the preseason, dropped, and taken
-        # again in week 5, and measuring from the first add turns a one-week
-        # flyer into a man held all season.
-        held = [r['week'] for r in rows if r['status'] == 'complete'
-                and r['week'] <= d['week']
-                for a in r['adds'] if a['name'] == d['player']
-                and a['roster_id'] == d['roster_id']]
-        last_add = max(held) if held else None
-        forced.append(dict(d, claimed_since=back, held_from=last_add,
-                           weeks_held=(d['week'] - last_add) if held else None))
-
-    # in-season volume, with the two things that inflate it stripped out
-    vol = []
-    for w in sorted({r['week'] for r in rows}):
-        g = [r for r in rows if r['week'] == w]
-        m = [r for r in g if r['status'] == 'complete'
-             and r['type'] in ('free_agent', 'waiver')]
-        movers = {p['roster_id'] for r in m for p in r['adds'] + r['drops']}
-        vol.append({'week': w, 'moves': len(m), 'movers': len(movers),
-                    'failed': sum(1 for r in g if r['status'] == 'failed'),
-                    'adds': sum(len(r['adds']) for r in m),
-                    'drops': sum(len(r['drops']) for r in m)})
-    return {'forced': forced, 'counts': {k: len(v) for k, v in boxes.items()},
-            'n_drops': n_drops, 'judged': n_drops - len(boxes['unobserved']),
-            'rows_total': len(rows), 'vol': vol,
-            # Completed only. The raw row count is nearly double, because every
-            # LOSING waiver claim is a row too -- quoting it reads as activity
-            # and is nothing of the kind.
-            'rows_done': sum(1 for r in rows if r['status'] == 'complete')}
+    d = json.load(open(p, encoding='utf-8'))
+    for f in d['forced'] + d['own_choice']:
+        f['is_severe'] = bool(f.get('severe') or f.get('found_by') == 'snapshot')
+        f['is_held'] = f.get('weeks_held') is None or f['weeks_held'] >= 2
+    d['severe'] = [f for f in d['forced'] if f['is_severe']]
+    d['held'] = [f for f in d['forced'] if f['is_held']]
+    d['core'] = [f for f in d['forced'] if f['is_severe'] and f['is_held']]
+    d['claimed'] = [f for f in d['forced'] if f.get('claimed_since')]
+    d['unwanted'] = [f for f in d['forced'] if not f.get('claimed_since')]
+    d['by_nfl'] = [f for f in d['forced'] if f.get('found_by') == 'nflverse']
+    d['n_drops'] = d['drops_total']
+    d['judged'] = d['drops_judged']
+    return d
 
 
 # ------------------------------------------------------------------ the page
@@ -369,9 +348,10 @@ def figures(C):
     upt = [C['uptake'][r['week']] for r in dep['rows']] if dep else []
     # the forced drops that were real assets rather than week-old flyers
     forced = dr['forced'] if dr else []
-    real = [d for d in forced if (d['weeks_held'] is None or d['weeks_held'] >= 2)]
-    flyer = [d for d in forced if d not in real]
-    unwanted = [d for d in forced if not d['claimed_since']]
+    # the hard core: a multi-week injury AND a man actually being held
+    real = dr['core'] if dr else []
+    flyer = [d for d in forced if not d['is_held']]
+    unwanted = dr['unwanted'] if dr else []
     him = lambda n: 'him' if n == 1 else 'them'
     # The peer section only exists when the survey has been run, so every
     # section after it has to shift rather than be numbered by hand -- a
@@ -392,9 +372,11 @@ def figures(C):
         vb('Has it cost anyone a player?',
            'Once' if len(real) == 1 else word(len(real)).capitalize(), 'part',
            (f'{word(len(forced))} drop{"s" if len(forced) != 1 else ""} forced by a full IR '
-            f'in {word(n_wk)} weeks'
-            + (f', {word(len(flyer))} of them a week-old flyer' if flyer else '')
-            + (f'. Nobody has claimed {him(len(unwanted))} since' if unwanted else ''))
+            f'in {word(n_wk)} weeks; {word(len(real))} survive'
+            f'{"s" if len(real) == 1 else ""} a closer look'
+            + (f', and {word(len(dr["claimed"]))} of the {word(len(forced))} '
+               f'{"was" if len(dr["claimed"]) == 1 else "were"} claimed by a rival'
+               if dr['claimed'] else ', and none was claimed by a rival'))
            if dr else 'no transaction log yet'),
         vb('Would a third slot fix it?', f'{cut_b:.0f}%', 'part',
            f'of blocked team-weeks cleared &mdash; {base["blocked"]} would become '
@@ -459,11 +441,12 @@ verdict in <a href="#s6">the scoreboard</a> and the needle moves.</figcaption></
                 f'{"one player" if len(real) == 1 else word(len(real)) + " players"}.</b> '
                 f'{word(len(forced)).capitalize()} drop'
                 f'{"s were" if len(forced) != 1 else " was"} forced by a full injured '
-                f'reserve in {word(n_wk)} weeks'
-                + (f', and {word(len(flyer))} of those was a man signed and cut inside a '
-                   f'fortnight' if flyer else '')
-                + (f'. No other side has claimed {him(len(unwanted))} since'
-                   if unwanted else '') + '.')
+                f'reserve in {word(n_wk)} weeks; {word(len(real))} of them survive'
+                f'{"s" if len(real) == 1 else ""} both the test for a real injury and the '
+                f'test for a man actually being held'
+                + (f', and {word(len(dr["claimed"]))} of the {word(len(forced))} has since '
+                   f'been claimed by a rival' if dr['claimed'] else
+                   ', and none has been claimed by a rival since') + '.')
     P(f'''<div class="short"><div class="h">The short version</div><ol>
 <li><b>The cap binds, and harder every week.</b> {last['teams_at_cap']} of
 {C['teams_n']} rosters are full and {last['stranded_total']} injured men are sitting on
@@ -571,59 +554,97 @@ week out of {active}.</li>
     if not dr:
         F('Not answerable yet &mdash; the transaction log has not been pulled.')
     else:
-        F(('Once. ' if len(real) == 1 else f'{word(len(real)).capitalize()} times. ')
-          + f'In {dr["rows_done"]} completed transactions and {dr["n_drops"]} drops, '
-          + ('one side' if len(forced) == 1 else f'{word(len(forced))} sides')
-          + ' cut a man they were already carrying injured with no slot left to shelve him.')
+        core, clm = dr['core'], dr['claimed']
+        F(f'{word(len(forced)).capitalize()} times in {word(n_wk)} weeks a side at the cap '
+          f'cut a man it was already carrying injured. '
+          + (f'{word(len(core)).capitalize()} of those survive every test this desk can put '
+             f'to {him(len(core))}.' if core else 'None survives closer inspection.'))
         P('<p class="b">This is the test the first draft of this paper named as the strongest '
           'evidence nobody had. Everything else measured here is friction &mdash; a roster '
           'slot doing nothing &mdash; and friction is a ceiling on inconvenience, not a '
           'measure of loss. A drop is the first thing in the argument that is a real cost.</p>')
         P(f'<p class="b"><b>How it is judged.</b> Not by looking up the dropped man&rsquo;s '
-          f'injury status: Sleeper carries <i>today&rsquo;s</i>, so a man dropped hurt in '
-          f'September who has since healed reads healthy now. Instead every drop is matched '
-          f'to the IR snapshot taken <i>before it, by timestamp</i> &mdash; waivers clear '
-          f'within hours of the Wednesday reading and a week label cannot order the two. '
-          f'Of {dr["n_drops"]} drops, <b>{dr["judged"]}</b> fall after a snapshot and can be '
-          f'judged; {dr["counts"]["unobserved"]} cannot, almost all of them the preseason '
-          f'flood that predates the first reading.</p>')
+          f'injury status today: Sleeper carries only the current one, so a man dropped hurt '
+          f'in September who has since healed reads healthy now. Every drop is matched '
+          f'instead to the IR snapshot taken <i>before it, by timestamp</i> &mdash; waivers '
+          f'clear within hours of the Wednesday reading and a week label cannot order the '
+          f'two. Of {dr["n_drops"]} drops, <b>{dr["judged"]}</b> fall after a snapshot and '
+          f'can be judged; {dr["counts"]["unobserved"]} cannot, almost all of them the '
+          f'preseason flood that predates the first reading.</p>')
+        if dr['by_nfl']:
+            P(f'<p class="b"><b>And then checked against the NFL&rsquo;s own records</b>, '
+              f'because a weekly snapshot has a hole in it: a man signed on the Thursday, '
+              f'hurt on the Sunday and cut on the Tuesday was never in one. nflverse publishes '
+              f'a per-week roster status and a weekly injury report, so the drops the snapshot '
+              f'scored as ordinary churn get a second reading. That found '
+              f'<b>{word(len(dr["by_nfl"]))} more</b>. Both feeds are needed: a player placed '
+              f'on NFL injured reserve vanishes from the injury report rather than appearing '
+              f'on it as Out, so reading that alone would miss the worst-hurt men &mdash; '
+              f'exactly the ones a manager is most likely to shelve.</p>')
         fr = ''.join(
             f'<tr><th scope="row">wk {d["week"]}</th><td>{E(club(d["team"]))}</td>'
             f'<td><b>{E(d["player"])}</b> <span class="dim">{d["pos"]}</span></td>'
-            f'<td class="dim ev">held '
-            + (f'{word(d["weeks_held"])} week{"s" if d["weeks_held"] != 1 else ""}'
-               if d['weeks_held'] is not None else 'from the preseason')
-            + f', {d["ir_used"]}/{cap} on IR, {len(d["stranded_then"])} stranded; '
+            f'<td class="dim">{"multi-week" if d["is_severe"] else "one game"}</td>'
+            f'<td class="num dim">'
+            + (f'{d["weeks_held"]}' if d.get('weeks_held') is not None else '&mdash;')
+            + '</td><td class="dim ev">'
+            + (f'{d["ir_used"]}/{cap} on IR; ')
             + ('took ' + E(', '.join(d['added_back'])) + ' into the spot'
                if d['added_back'] else 'signed nobody in his place')
-            + '. ' + ('<b>Claimed since by ' + E(', '.join(dict.fromkeys(d['claimed_since']))) + '.</b>'
-                      if d['claimed_since'] else 'Unclaimed since.')
-            + '</td></tr>' for d in dr['forced'])
+            + '. ' + ('<b>Claimed since by ' + E(', '.join(d['claimed_since'])) + '.</b>'
+                      if d.get('claimed_since') else 'Unclaimed since.')
+            + '</td></tr>' for d in sorted(dr['forced'], key=lambda x: x['week']))
         P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th class="lt">When</th>'
-          f'<th class="lt">Who</th><th class="lt">Dropped</th><th class="lt">The circumstances</th>'
-          f'</tr></thead><tbody>{fr}</tbody></table></div><figcaption>Every drop in '
-          f'{word(n_wk)} weeks of a stranded man by a side whose IR was full.</figcaption></figure>')
+          f'<th class="lt">Who</th><th class="lt">Dropped</th><th class="lt">Injury</th>'
+          f'<th class="num">Weeks held</th><th class="lt">Circumstances</th></tr></thead>'
+          f'<tbody>{fr}</tbody></table></div><figcaption>Every drop in {word(n_wk)} weeks of '
+          f'an injured man by a side whose injured reserve was full.</figcaption></figure>')
         P('<p class="b"><b>And the size of it.</b> '
-          + (f'{word(len(flyer)).capitalize()} of '
-             f'{word(len(dr["forced"]))} does not survive inspection: '
-             + ', '.join(E(d['player']) for d in flyer)
-             + (' was' if len(flyer) == 1 else ' were')
-             + ' signed and cut inside a fortnight, which is a flyer rather than an asset a '
-               'manager was holding on to. ' if flyer else '')
-          + (f'That leaves <b>{word(len(real))} genuine '
-             f'{"instance" if len(real) == 1 else "instances"}</b> in {word(n_wk)} weeks: '
+          + (f'{word(len(flyer)).capitalize()} of the {word(len(forced))} '
+             f'{"was" if len(flyer) == 1 else "were"} signed and cut inside a fortnight '
+             f'&mdash; {", ".join(E(d["player"]) for d in flyer)} &mdash; which is a flyer '
+             f'that did not work out rather than an asset anybody was holding. ' if flyer else '')
+          + (f'{word(len(dr["forced"]) - len(dr["severe"])).capitalize()} more was a '
+             f'one-game Out rather than a man worth a slot: '
+             f'{", ".join(E(d["player"]) for d in dr["forced"] if not d["is_severe"])}, back '
+             f'on the active roster the following week. ' if len(dr['severe']) < len(forced) else '')
+          + (f'That leaves <b>{word(len(core))}</b>: '
              + ', '.join(f'{E(club(d["team"]))} letting {E(d["player"])} go'
-                         for d in real) + '. ' if real else '')
-          + (f'Not one of {him(len(unwanted))} has been claimed by any of the other '
+                         for d in core)
+             + '. ' if core else 'Nothing is left that survives both tests. '))
+        P('<p class="b"><b>Did anyone else want them?</b> '
+          + (f'{word(len(clm)).capitalize()} of the {word(len(forced))} '
+             f'{"has" if len(clm) == 1 else "have"} been claimed since: '
+             + ', '.join(f'{E(d["player"])} by {E(", ".join(d["claimed_since"]))}'
+                         for d in clm)
+             + f'. The other {word(len(dr["unwanted"]))} '
+               f'{"has" if len(dr["unwanted"]) == 1 else "have"} sat unclaimed, which is the '
+               f'league agreeing by inaction about what those losses were worth.'
+             if clm else
+             f'Not one of the {word(len(forced))} has been claimed by any of the other '
              f'{C["teams_n"]-1} teams since, which is the league agreeing by inaction about '
-             f'what the loss was worth.' if unwanted else '') + '</p>')
-        ratio = ('<p class="b">The comparison this paper asked for, both ways round: '
-                 f'<b>{exposure(C)[0]}</b> stranded man-weeks at a full injured reserve, of '
-                 f'which {len(dr["forced"])} ended in a drop; <b>{exposure(C)[1]}</b> with a '
-                 f'slot free, of which {dr["counts"]["own_choice"]} did. The direction is what '
-                 'the expansion case predicts. The sample is nowhere near large enough to '
-                 'carry it, and this paper does not claim otherwise.</p>')
-        P(ratio)
+             f'what the loss was worth.') + '</p>')
+        rf = 100 * len(forced) / dr['exposure_full'] if dr['exposure_full'] else 0
+        rr = 100 * dr['counts']['own_choice'] / dr['exposure_free'] if dr['exposure_free'] else 0
+        gap = rf - rr
+        P(f'<p class="b"><b>The comparison this paper asked for, and it does not say what '
+          f'either side expected.</b> There were <b>{dr["exposure_full"]}</b> stranded '
+          f'man-weeks at a full injured reserve, {len(forced)} of which ended in a drop '
+          f'&mdash; {rf:.0f}%. There were <b>{dr["exposure_free"]}</b> with a slot free, '
+          f'{dr["counts"]["own_choice"]} of which ended in a drop &mdash; {rr:.0f}%. '
+          + ('Those rates are, for practical purposes, the same. A side carrying an injured '
+             'man is about as likely to cut him whether or not it has somewhere to put him, '
+             'which is not what you would see if the cap were driving the decision.'
+             if abs(gap) < 5 else
+             f'The gap is {gap:+.0f} points in the direction the expansion case predicts, '
+             f'on a sample far too small to carry it.')
+          + '</p>')
+        if dr['own_choice']:
+            P(f'<p class="pull">And the figure that embarrasses the model in section 2: '
+              f'{word(dr["counts"]["own_choice"])} sides dropped an injured man while holding '
+              f'a free injured-reserve slot. The counterfactual assumes managers shelve '
+              f'whoever they can. {word(dr["counts"]["own_choice"]).capitalize()} times this '
+              f'season, they did not.</p>')
 
     # ---- 4 --------------------------------------------------------------
     S(4, 'Is it a level playing field?')
@@ -920,10 +941,18 @@ week out of {active}.</li>
          f'sixteen-team dynasty leagues. The gap it measures is therefore probably '
          f'overstated. It also measures tenure in Sleeper seasons only, which is a floor for '
          f'any league that migrated &mdash; this one included.') if pr else None,
+        ('The model assumes managers use a slot whenever they have one, and they do not.',
+         f'Section 2 fills injured reserve to the cap with whoever is stranded. '
+         f'{word(dr["counts"]["own_choice"]).capitalize()} sides this season dropped an '
+         f'injured man while holding a free slot, so the assumption is demonstrably too '
+         f'generous and every uptake figure above is an upper bound. It is the single '
+         f'softest joint in the counterfactual, and it now has a number against it rather '
+         f'than a caveat.' if dr and dr['counts']['own_choice'] else
+         'Section 2 fills injured reserve to the cap with whoever is stranded. A manager '
+         'might instead hold a slot open against a worse injury later, in which case every '
+         'uptake figure above is overstated.'),
         (f'One season, {word(n_wk)} weeks, {tw} team-weeks.',
-         'Injury rates vary year to year and no claim is made that this one is typical. The '
-         'greedy-filling assumption in the model is untested &mdash; a manager might hold a '
-         'slot open against a worse injury later, in which case uptake above is overstated.'),
+         'Injury rates vary year to year and no claim is made that this one is typical.'),
     ]
     P('<dl class="lim">' + ''.join(f'<dt>{a}</dt><dd>{b}</dd>' for a, b in lims if a) + '</dl>')
     P(f'<p class="b">{relief_note(C)}</p>')
@@ -1015,11 +1044,16 @@ week out of {active}.</li>
       f'<b>Stranded</b> means an injured man occupying an <i>active</i> roster spot.</p>')
     P('<p class="lf">To run it yourself: <code>ir-watch.json</code> (weekly snapshots, '
       '<code>scripts/ir_watch.py</code>), <code>transactions.json</code> '
-      '(<code>scripts/fetch_transactions.py</code>, joined by '
-      '<code>scripts/ir_drops.py</code>), <code>ir-waiver-depth.json</code> '
+      '(<code>scripts/fetch_transactions.py</code>), <code>ir-drops.json</code> '
+      '(<code>scripts/ir_drops.py</code>, which joins the drops to the snapshots and then to '
+      'nflverse&rsquo;s weekly roster and injury releases), '
+      '<code>league-survey.json</code> (<code>scripts/league_survey.py</code>), '
+      '<code>ir-waiver-depth.json</code> '
       '(<code>scripts/waiver_depth.py</code>, needs the nflverse play-by-play download), '
-      '<code>week-data/2026-w*.json</code>, <code>scripts/standings.py</code>. The page '
-      'itself is <code>scripts/build_ir_study.py</code>.</p>')
+      '<code>week-data/2026-w*.json</code> and <code>scripts/standings.py</code>. The page '
+      'itself is <code>scripts/build_ir_study.py</code>, and it reads only committed files '
+      '&mdash; every fetch happens in a workflow and arrives through git, so the page cannot '
+      'quietly change because something upstream moved.</p>')
     return out
 
 
@@ -1109,12 +1143,19 @@ def watch_items(C, cut_b, real):
          f'untouched group shrinks to a quarter of the teams, that argument is gone.',
          'expand'),
         ('Forced drops',
-         f'{word(len(real))} genuine in {word(len(rows))} weeks'
-         if real else f'none in {word(len(rows))} weeks',
-         '<b>A dropped man who is then claimed by somebody else.</b> Every forced drop so far '
-         'has been a player no other side wanted, which is why the cost reads as trivial. One '
-         'claim off the wire turns a forced drop into a real transfer of value and changes '
-         'the scoreboard line that has survived everything else.',
+         (f'{len(C["drops"]["forced"])} in {word(len(rows))} weeks, '
+          f'{word(len(real))} of them clear-cut' if C.get('drops')
+          else f'none in {word(len(rows))} weeks'),
+         ('<b>A claimed man who then scores.</b> '
+          + (f'{word(len(C["drops"]["claimed"])).capitalize()} forced drop'
+             f'{"s have" if len(C["drops"]["claimed"]) != 1 else " has"} already been picked '
+             f'up by a rival, so a cut player going to somebody else is no longer '
+             f'hypothetical. What has still never been shown is one of them winning anybody '
+             f'a game, and that is the line the whole keep-two case now rests on.'
+             if C.get('drops') and C['drops']['claimed'] else
+             'Every forced drop so far has been a player no other side wanted, which is why '
+             'the cost reads as trivial. One claim off the wire turns a forced drop into a '
+             'real transfer of value.')),
          'expand'),
         ('Relief a third slot buys',
          ', '.join(f'{100*x["pct"]:.0f}%' for x in s),
@@ -1189,10 +1230,10 @@ def scoreboard(C, cut_b, real, unwanted):
     if dr:
         V.append(('The cap forces real roster losses', 'expand',
                   'supported' if real else 'untested',
-                  (f"{word(len(real))} side{'s' if len(real) != 1 else ''} cut a man already "
-                   f"being carried injured with no slot left to shelve him, in "
-                   f"{C['drops']['n_drops']} drops"
-                   ) if real else 'no instance found in the transaction log'))
+                  (f"{word(len(dr['forced']))} sides cut a man already being carried injured "
+                   f"with no slot left to shelve him; {word(len(real))} of those survive a "
+                   f"check on both the injury and how long he had been held")
+                  if real else 'no instance found in the transaction log'))
     V += [
         ('The wire is already bare', 'keep two', 'supported', 'DEPTH'),
         ('Expansion thins the wire further', 'keep two', 'supported', 'MECH'),
@@ -1208,18 +1249,18 @@ def scoreboard(C, cut_b, real, unwanted):
     ]
     if dr:
         V.append(('The men the cap forces out are men nobody wants', 'keep two',
-                  'supported' if unwanted and len(unwanted) == len(dr['forced'])
-                  else 'contradicted' if dr['forced'] and not unwanted else 'untested',
-                  (("neither of the two men dropped has" if len(dr['forced']) == 2 else
-                    "the man dropped has not" if len(dr['forced']) == 1 else
-                    f"none of the {word(len(dr['forced']))} men dropped has")
-                   + f" been claimed by any of the other {C['teams_n']-1} teams since")
-                  if unwanted and len(unwanted) == len(dr['forced'])
-                  else 'at least one dropped man was claimed by another side'))
+                  'supported' if not dr['claimed'] else 'contradicted',
+                  (f"none of the {word(len(dr['forced']))} men dropped has been claimed by "
+                   f"any of the other {C['teams_n']-1} teams since")
+                  if not dr['claimed'] else
+                  (f"{word(len(dr['claimed']))} of {word(len(dr['forced']))} was claimed by "
+                   f"a rival: " + ', '.join(f"{d['player']} by "
+                                            f"{', '.join(d['claimed_since'])}"
+                                            for d in dr['claimed']))))
     V.append(('No competitive harm from the cap has been shown', 'keep two', 'supported',
-              ('the transaction log was pulled looking for exactly that; what it found was '
-               f'friction and {word(len(dr["forced"]))} '
-               f'{"man" if len(dr["forced"]) == 1 else "men"} nobody else wanted')
+              (f'the transaction log and the NFL injury records were both pulled looking '
+               f'for exactly that; what they found was {word(len(dr["forced"]))} forced '
+               f'drops of marginal men and no points shown lost by anybody')
               if dr else 'correct, and not testable without the transaction log'))
     if dep:
         up = [r['upgrade_skill'] for r in dep['rows']]
@@ -1468,8 +1509,7 @@ def build():
     nshort = sum(1 for n in bw if bw[n])
     never = sum(1 for n in bw if not bw[n])
     dr = C['drops']
-    real = [d for d in (dr['forced'] if dr else [])
-            if (d['weeks_held'] is None or d['weeks_held'] >= 2)]
+    real = dr['core'] if dr else []
     body = '\n'.join(figures(C))
     pr = C['peers']
     desc = (f"{word(nshort).capitalize()} of {C['teams_n']} teams have hit the IR cap with a "
@@ -1492,8 +1532,10 @@ def build():
           f"cap {cap+1}: {C['M'][cap+1]['blocked']} ({cut:.0f}% cleared)")
     print(f"  blocked at least once {nshort}/{C['teams_n']} | never {never}")
     if dr:
-        print(f"  forced drops {len(dr['forced'])} ({len(real)} genuine) "
-              f"of {dr['judged']} judged, {dr['n_drops']} total")
+        print(f"  forced drops {len(dr['forced'])}: {len(dr['severe'])} multi-week, "
+              f"{len(dr['held'])} held 2wk+, {len(real)} both, "
+              f"{len(dr['claimed'])} claimed since | {dr['judged']} judged of "
+              f"{dr['n_drops']} | own-choice {dr['counts']['own_choice']}")
     card(C, nshort, cut, real)
 
 
