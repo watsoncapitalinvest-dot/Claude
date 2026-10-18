@@ -3,25 +3,44 @@
 
     python3 scripts/build_ir_study.py
 
-Every figure is computed here from ir-watch.json, which scripts/ir_watch.py
-writes once a week from the live Sleeper roster and never rewrites. Nothing on
-the page is typed by hand, so adding a week changes the conclusions rather than
-leaving a stale number sitting under a headline that no longer fits it.
+Every figure is computed here, at build time, from files in this repo. Nothing
+on the page is typed by hand, so adding a week changes the conclusions rather
+than leaving a stale number sitting under a headline that no longer fits it.
 
-That matters more for this piece than for most. Its own weakest finding is that
-the relief a third slot buys SHRINKS as injuries accumulate -- so a page that
-froze its numbers in October would be quoting its own best case all season.
+    ir-watch.json        weekly roster snapshots, written live, never rewritten
+    transactions.json    the Sleeper transaction log
+    ir-waiver-depth.json how many unrostered men are actually worth adding
+    week-data/           weekly scoring, for the played/unplayed test
+    scripts/standings.py records and seeds
 
-Written as a working paper, not a proposal: the league is split on the rule, and
-a study that only argues one way gets dismissed in a sentence. The limitations
-section is the load-bearing part and concedes the strongest counter-arguments
-before a reader has to make them.
+WRITTEN TO BE READ, NOT WADED THROUGH
+
+The first draft was a working paper and read like one: findings buried in
+paragraphs, the verdict on page four. This version puts the state of the
+argument at the top in a board a reader can scan in ten seconds, gives every
+section a one-line finding before its evidence, and ends with what to watch
+in the coming weeks -- each watch item carrying the number as it stands, the
+threshold that would change the argument, and which side it would help.
+
+Still a working paper and not a proposal. The league is split on the rule and
+a study that only argues one way gets dismissed in a sentence, so the claims
+of BOTH sides are scored, the limitations section is load-bearing, and the
+gauge is counted from the scoreboard rather than felt.
 """
 import importlib.util, json, os, statistics, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_s = importlib.util.spec_from_file_location('ad', os.path.join(ROOT, 'scripts', 'build_addendum.py'))
-ad = importlib.util.module_from_spec(_s); sys.modules['ad'] = ad; _s.loader.exec_module(ad)
+
+
+def _mod(name, path):
+    s = importlib.util.spec_from_file_location(name, os.path.join(ROOT, path))
+    m = importlib.util.module_from_spec(s)
+    sys.modules[name] = m
+    s.loader.exec_module(m)
+    return m
+
+
+ad = _mod('ad', 'scripts/build_addendum.py')
 E = ad.esc
 OUT = os.path.join(ROOT, 'scfl-ir-study.html')
 OG = os.path.join(ROOT, 'scfl-ir-study-og.jpg')
@@ -30,6 +49,7 @@ OG = os.path.join(ROOT, 'scfl-ir-study-og.jpg')
 # Questionable is deliberately excluded -- counting week-to-week knocks would
 # inflate every number on the page.
 HURT = 'IR, Out, Doubtful, PUP, Sus, NA, COV, DNR'
+PLAYOFFS = 15        # league format: 14-week season, playoffs from week 15
 
 NUM = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
        'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen']
@@ -37,12 +57,20 @@ word = lambda n: NUM[n] if n < len(NUM) else f'{n}'
 RENAME = {'Heavy Hitters': 'Phins Phag', '*THE MACHINES*': 'THE MACHINES'}
 club = lambda s: RENAME.get(s.strip(), s.strip())
 
+
+def andlist(xs):
+    """'1 and 2', '1, 2 and 3' -- a comma list reads as a truncation."""
+    xs = [str(x) for x in xs]
+    return xs[0] if len(xs) == 1 else ' and '.join([', '.join(xs[:-1]), xs[-1]])
+
 # BLOCKED, settled the strict way: injured reserve actually full, and a man
 # still stranded on the active roster. A side holding a free slot is not
 # blocked by the cap, whatever else it is. One definition, used everywhere on
 # the page, so no two figures on it are counted on different rules.
 short = lambda t: bool(t['ir_full']) and t['stranded'] > 0
 
+
+# ---------------------------------------------------------------- the numbers
 
 def crunch():
     rows = json.load(open(os.path.join(ROOT, 'ir-watch.json'), encoding='utf-8'))['rows']
@@ -53,161 +81,317 @@ def crunch():
     def model(c):
         """Re-run every week under cap `c`, holding the injuries as they fell.
 
-        BLOCKED means a side whose injured reserve is actually FULL and who
-        still has an injured man on the active roster. A team sitting on a free
-        slot is not blocked by the cap, whatever else it is. That was the one
-        definitional judgement left open when this paper was drafted; it has
-        been settled the strict way, and the looser reading it replaces counted
-        three more team-weeks over six.
-
         The assumption, stated so it can be argued with: each manager fills IR
         up to the cap with whoever is stranded, and nothing else about his
         behaviour changes.
         """
         blocked = stranded = freed = 0
-        per = {}
         for r in rows:
             for t in r['teams']:
                 moved = max(0, min(t['stranded'], c - t['ir_used']))
-                used = t['ir_used'] + moved
-                left = t['stranded'] - moved
                 freed += moved
+                left = t['stranded'] - moved
                 stranded += left
-                if used >= c and left > 0:          # full, and still stuck
+                if t['ir_used'] + moved >= c and left > 0:
                     blocked += 1
-                per.setdefault(club(t['team']), [0, 0])
-                per[club(t['team'])][0] += moved
-        return {'blocked': blocked, 'stranded': stranded, 'freed': freed, 'per': per}
+        return {'blocked': blocked, 'stranded': stranded, 'freed': freed}
 
     # Four slots are not on the table, so they are not modelled.
     M = {c: model(c) for c in (cap, cap + 1)}
     # At the CURRENT cap the state is observed rather than modelled: ir_full is
     # what the collector recorded that week, not a greedy refill of it.
-    M[cap]['blocked'] = sum(1 for r in rows for t in r['teams']
-                            if t['ir_full'] and t['stranded'] > 0)
-    M[cap]['stranded'] = sum(t['stranded'] for r in rows for t in r['teams']
-                             if t['ir_full'] and t['stranded'] > 0)
+    M[cap]['blocked'] = sum(1 for r in rows for t in r['teams'] if short(t))
+    M[cap]['stranded'] = sum(t['stranded'] for r in rows for t in r['teams'] if short(t))
 
-    # who gains, and are they good teams or bad ones
-    _t = importlib.util.spec_from_file_location('sd', os.path.join(ROOT, 'scripts', 'standings.py'))
-    sd = importlib.util.module_from_spec(_t); _t.loader.exec_module(sd)
-    st = {t['team'].strip(): t for t in sd.build(str(rows[-1]['season']), rows[-1]['week'])['table']}
+    sd = _mod('sd', 'scripts/standings.py')
+    st = {t['team'].strip(): t for t in sd.build(str(rows[-1]['season']),
+                                                 rows[-1]['week'])['table']}
+
     gain, blockwk = {}, {}
     for r in rows:
         for t in r['teams']:
             n = club(t['team'])
-            g = (max(0, min(t['stranded'], cap + 1 - t['ir_used']))
-                 - max(0, min(t['stranded'], cap - t['ir_used'])))
-            gain[n] = gain.get(n, 0) + g
-            blockwk.setdefault(n, 0)           # every club, so the never-blocked are countable
+            gain[n] = gain.get(n, 0) + (max(0, min(t['stranded'], cap + 1 - t['ir_used']))
+                                        - max(0, min(t['stranded'], cap - t['ir_used'])))
+            blockwk.setdefault(n, 0)       # every club, so the never-blocked are countable
             if short(t):
                 blockwk[n] += 1
     helped = sorted((n for n, g in gain.items() if g > 0),
                     key=lambda n: (-gain[n], st.get(n, {}).get('seed', 99)))
     seeds = [st[n]['seed'] for n in helped if n in st]
 
-    last = rows[-1]
-    strand_now = sorted((t for t in last['teams'] if t['stranded']),
-                        key=lambda t: -t['stranded'])
-    return {'rows': rows, 'cap': cap, 'teams_n': teams_n, 'M': M, 'st': st,
-            'gain': gain, 'blockwk': blockwk, 'helped': helped,
-            'med_seed': statistics.median(seeds) if seeds else None,
-            'league_med': (teams_n + 1) / 2, 'last': last, 'strand_now': strand_now,
-            'weeks': [r['week'] for r in rows]}
+    # how much of each week's blockage a third slot clears
+    share = []
+    for r in rows:
+        b2 = sum(1 for t in r['teams'] if short(t))
+        b3 = sum(1 for t in r['teams'] if t['stranded'] > max(0, cap + 1 - t['ir_used']))
+        share.append({'week': r['week'], 'blocked': b2, 'cleared': b2 - b3,
+                      'pct': (b2 - b3) / b2 if b2 else None})
+    # how many teams would take up a third slot in each week
+    uptake = {r['week']: sum(1 for t in r['teams']
+                             if max(0, min(t['stranded'], cap + 1 - t['ir_used']))
+                             > max(0, min(t['stranded'], cap - t['ir_used'])))
+              for r in rows}
 
+    C = {'rows': rows, 'cap': cap, 'teams_n': teams_n, 'M': M, 'st': st,
+         'gain': gain, 'blockwk': blockwk, 'helped': helped, 'share': share,
+         'uptake': uptake, 'last': rows[-1],
+         'med_seed': statistics.median(seeds) if seeds else None,
+         'league_med': (teams_n + 1) / 2,
+         'strand_now': sorted((t for t in rows[-1]['teams'] if t['stranded']),
+                              key=lambda t: -t['stranded'])}
+    C['depth'] = depth()
+    C['drops'] = drops()
+    return C
+
+
+def depth():
+    p = os.path.join(ROOT, 'ir-waiver-depth.json')
+    if not os.path.exists(p):
+        return None
+    d = json.load(open(p, encoding='utf-8'))
+    return d if d.get('rows') else None
+
+
+def drops():
+    """The transaction join: did the cap ever actually cost anybody a player?
+
+    scripts/ir_drops.py owns the join, so the page cannot drift from it. The
+    extra work here is the question the join does not ask -- whether anybody
+    else wanted the man who was let go.
+    """
+    p = os.path.join(ROOT, 'transactions.json')
+    if not os.path.exists(p):
+        return None
+    ird = _mod('ird', 'scripts/ir_drops.py')
+    tx, boxes, n_drops = ird.crunch()
+    rows = tx['rows']
+
+    def claimed_since(name, after_week):
+        """Did any OTHER roster add him afterwards? If nobody did, the league
+        agreed by inaction that the man was expendable, which is the whole
+        measure of what the drop cost."""
+        return [tx['rosters'].get(str(a['roster_id']))
+                for r in rows if r['status'] == 'complete' and r['week'] >= after_week
+                for a in r['adds'] if a['name'] == name]
+
+    forced = []
+    for d in boxes['cap_cost']:
+        back = claimed_since(d['player'], d['week'])
+        # a man signed and cut inside a fortnight was never an asset anybody
+        # was holding on to, and counting him as a loss overstates the case.
+        # It has to be the LAST time this roster signed him, not the first:
+        # one of these men was taken in the preseason, dropped, and taken
+        # again in week 5, and measuring from the first add turns a one-week
+        # flyer into a man held all season.
+        held = [r['week'] for r in rows if r['status'] == 'complete'
+                and r['week'] <= d['week']
+                for a in r['adds'] if a['name'] == d['player']
+                and a['roster_id'] == d['roster_id']]
+        last_add = max(held) if held else None
+        forced.append(dict(d, claimed_since=back, held_from=last_add,
+                           weeks_held=(d['week'] - last_add) if held else None))
+
+    # in-season volume, with the two things that inflate it stripped out
+    vol = []
+    for w in sorted({r['week'] for r in rows}):
+        g = [r for r in rows if r['week'] == w]
+        m = [r for r in g if r['status'] == 'complete'
+             and r['type'] in ('free_agent', 'waiver')]
+        movers = {p['roster_id'] for r in m for p in r['adds'] + r['drops']}
+        vol.append({'week': w, 'moves': len(m), 'movers': len(movers),
+                    'failed': sum(1 for r in g if r['status'] == 'failed'),
+                    'adds': sum(len(r['adds']) for r in m),
+                    'drops': sum(len(r['drops']) for r in m)})
+    return {'forced': forced, 'counts': {k: len(v) for k, v in boxes.items()},
+            'n_drops': n_drops, 'judged': n_drops - len(boxes['unobserved']),
+            'rows_total': len(rows), 'vol': vol,
+            # Completed only. The raw row count is nearly double, because every
+            # LOSING waiver claim is a row too -- quoting it reads as activity
+            # and is nothing of the kind.
+            'rows_done': sum(1 for r in rows if r['status'] == 'complete')}
+
+
+# ------------------------------------------------------------------ the page
 
 def figures(C):
-    out, cap = [], C['cap']
-    S = lambda t: out.append(f'<div class="sect">{t}</div>')
+    out = []
+    S = lambda n, t: out.append(f'<h2 class="sect" id="s{n}">'
+                                f'<span class="sn">{n}</span>{t}</h2>')
+    F = lambda h: out.append(f'<p class="find">{h}</p>')
     P = lambda h: out.append(h)
-    rows, M = C['rows'], C['M']
-    last = C['last']
-    n_wk = len(rows)
-    tw = n_wk * C['teams_n']
+    cap, rows, M = C['cap'], C['rows'], C['M']
+    last, dep, dr = C['last'], C['depth'], C['drops']
+    n_wk, tw = len(rows), len(rows) * C['teams_n']
     base, plus1 = M[cap], M[cap + 1]
     cut_b = 100 * (base['blocked'] - plus1['blocked']) / base['blocked']
     cut_s = 100 * (base['stranded'] - plus1['stranded']) / base['stranded']
     spots = plus1['freed'] - base['freed']
     active = C['teams_n'] * (last['starters'] + 9)
+    bw = C['blockwk']
+    ever = sorted((n for n in bw if bw[n]), key=lambda n: (-bw[n], n))
+    never = sorted(n for n in bw if not bw[n])
+    tot_b = sum(bw.values())
+    heaviest = ever[0]
+    up = [r['upgrade_skill'] for r in dep['rows']] if dep else []
+    dw = dep['rows'][-1]['week'] if dep else None
+    # Demand has to be read off the SAME weeks as supply. Slot demand runs a
+    # week ahead of the depth measurement -- a week nobody has played has no
+    # depth figure -- and quoting the two ranges against each other silently
+    # compares week 6 demand with week 5 supply.
+    upt = [C['uptake'][r['week']] for r in dep['rows']] if dep else []
+    # the forced drops that were real assets rather than week-old flyers
+    forced = dr['forced'] if dr else []
+    real = [d for d in forced if (d['weeks_held'] is None or d['weeks_held'] >= 2)]
+    flyer = [d for d in forced if d not in real]
+    unwanted = [d for d in forced if not d['claimed_since']]
+    him = lambda n: 'him' if n == 1 else 'them'
 
-    P(f'''<div class="stats">
-      <div class="stat"><div class="k">IR capacity used</div>
-        <div class="v">{100*last['ir_used_total']/last['ir_capacity_total']:.0f}%</div>
-        <div class="n">{last['ir_used_total']} of {last['ir_capacity_total']} slots, week {last['week']}</div></div>
-      <div class="stat"><div class="k">Injured men on active rosters</div>
-        <div class="v">{last['stranded_total']}</div>
-        <div class="n">up from {rows[0]['stranded_total']} in week {rows[0]['week']}</div></div>
-      <div class="stat"><div class="k">A third slot would clear</div>
-        <div class="v">{cut_b:.0f}%</div>
-        <div class="n">of blocked team-weeks</div></div>
-      <div class="stat"><div class="k">Roster spots it frees</div>
-        <div class="v">{spots/n_wk:.1f}</div>
-        <div class="n">a week, of {active} in play</div></div>
-    </div>''')
+    # ---- the board ------------------------------------------------------
+    # Everything a reader needs to argue from, above the fold, in words
+    # rather than figures. The figures are underneath it.
+    def vb(q, a, tone, ev):
+        return (f'<div class="vb {tone}"><div class="q">{q}</div>'
+                f'<div class="a">{a}</div><div class="e">{ev}</div></div>')
 
-    P(f'<p class="lf">The league: <b>{C["teams_n"]} teams, {C["teams_n"]} owners</b>, one each. '
-      f'{last["starters"]} starters and nine bench on every roster, plus {word(cap)} injured '
-      f'reserve slots &mdash; {C["teams_n"]*(last["starters"]+9)} active spots and '
-      f'{last["ir_capacity_total"]} IR spots in play across the league.</p>')
-    P('<p class="b">This is a working paper, not a proposal. It measures how often the '
-      f'{word(cap)}-slot injured reserve cap actually binds, and how much of that a third '
-      'slot would relieve, using the league&rsquo;s own weekly roster data. It does not '
-      'argue that anybody lost a game because of the cap &mdash; that claim is not testable '
-      'with this data, and nothing here should be read as making it.</p>')
-    P('<p class="b">The desk has a position in the debate. The definitions, the counterfactual '
-      'and the source files are set out in full so the position can be put aside and the work '
-      'checked.</p>')
+    board = [
+        vb('Does the cap bind?', 'Yes', 'yes',
+           f'{last["teams_at_cap"]} of {C["teams_n"]} rosters full by week {last["week"]}, '
+           f'{100*last["ir_used_total"]/last["ir_capacity_total"]:.0f}% of capacity'),
+        vb('Has it cost anyone a player?',
+           'Once' if len(real) == 1 else word(len(real)).capitalize(), 'part',
+           (f'{word(len(forced))} drop{"s" if len(forced) != 1 else ""} forced by a full IR '
+            f'in {word(n_wk)} weeks'
+            + (f', {word(len(flyer))} of them a week-old flyer' if flyer else '')
+            + (f'. Nobody has claimed {him(len(unwanted))} since' if unwanted else ''))
+           if dr else 'no transaction log yet'),
+        vb('Would a third slot fix it?', f'{cut_b:.0f}%', 'part',
+           f'of blocked team-weeks cleared &mdash; {base["blocked"]} would become '
+           f'{plus1["blocked"]}'),
+        vb('Does it fall on everyone?', 'No', 'no',
+           f'{word(len(ever))} of {C["teams_n"]} sides ever blocked, {word(len(never))} '
+           f'never, {100*bw[heaviest]/tot_b:.0f}% of it on one roster'),
+    ]
+    if dep:
+        board.append(vb('Can the wire absorb it?', 'No', 'no',
+                        f'{min(up)} to {max(up)} men a week worth starting, against '
+                        f'{min(upt)} to {max(upt)} sides who would use a third slot '
+                        f'in the same weeks'))
+    P('<div class="board">' + ''.join(board) + '</div>')
 
-    S('Where the numbers come from')
-    P('<p class="b"><b>ir-watch.json</b> &mdash; one row per week, written by '
-      '<code>scripts/ir_watch.py</code> from the Sleeper API at the time of that week, and '
-      'never rewritten afterwards. Every figure below was recorded live, so none of it '
-      'benefits from hindsight about who got hurt later.</p>')
-    P(f'<p class="b"><b>Injured</b> means Sleeper carries one of {HURT}. Questionable is not '
-      'counted &mdash; including week-to-week knocks would inflate every number here. '
-      '<b>Stranded</b> means an injured man occupying an <i>active</i> roster spot: he is the '
-      'unit of harm in this study, a roster slot doing nothing.</p>')
-    loose = sum(1 for r in rows for t in r['teams']
-                if t['stranded'] > max(0, cap - t['ir_used']))
-    P(f'<p class="b"><b>Blocked</b> means a side whose injured reserve is <b>full</b> and who '
-      f'still has an injured man on the active roster. That is the strict reading, and it is '
-      f'the one this page uses throughout: a team holding a free slot is not blocked by the '
-      f'cap, whatever else is wrong with its week. An earlier draft left the choice open. It is '
-      f'closed now, and closed the way that counts <i>fewer</i> blocked weeks &mdash; the '
-      f'looser reading, which counts a side with one slot free and {word(cap)} men hurt, would '
-      f'add {word(loose - base["blocked"])} team-weeks to every blocked figure below '
-      f'({loose} of {tw} rather than {base["blocked"]}).</p>')
+    # ---- the gauge, built from the scoreboard in section 6 --------------
+    V = scoreboard(C, cut_b, real, unwanted)
+    fore = sum(1 for _, s, v, _ in V if s == 'expand' and v == 'supported')
+    agin = sum(1 for _, s, v, _ in V if s == 'keep two' and v == 'supported')
+    kf = sum(1 for _, s, v, _ in V if s == 'expand' and v in ('contradicted', 'overtaken'))
+    ka = sum(1 for _, s, v, _ in V if s == 'keep two' and v in ('contradicted', 'overtaken'))
+    net = (fore - kf) - (agin - ka)
+    span = max(fore + agin, 1)
+    x = 50 + 50 * max(-1.0, min(1.0, net / span))
+    lean = ('toward expanding, and not by much' if 0 < net <= 2 else
+            'clearly toward expanding' if net > 2 else
+            'toward keeping two, and not by much' if -2 <= net < 0 else
+            'clearly toward keeping two' if net < 0 else 'neither way')
+    P(f'''<figure class="gauge"><svg viewBox="0 0 600 128" role="img"
+ aria-label="Gauge: the evidence leans {lean}">
+<defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#0e8ab5"/>
+<stop offset="0.5" stop-color="#d8b45a"/><stop offset="1" stop-color="#c20f16"/>
+</linearGradient></defs>
+<rect x="20" y="56" width="560" height="16" rx="8" fill="url(#g)" opacity=".85"/>
+<line x1="300" y1="48" x2="300" y2="80" stroke="#17181c" stroke-width="2" opacity=".3"/>
+<text x="300" y="96" font-size="10" text-anchor="middle" font-weight="700"
+ font-family="-apple-system,sans-serif" fill="#9a958c">EVEN</text>
+<g transform="translate({20 + 5.6*x},0)">
+<polygon points="0,44 -10,26 10,26" fill="#17181c"/>
+<line x1="0" y1="44" x2="0" y2="84" stroke="#17181c" stroke-width="3"/></g>
+<text x="20" y="118" font-size="13" font-weight="800"
+ font-family="-apple-system,sans-serif" fill="#0e8ab5">KEEP TWO</text>
+<text x="580" y="118" font-size="13" text-anchor="end" font-weight="800"
+ font-family="-apple-system,sans-serif" fill="#c20f16">EXPAND TO THREE</text>
+</svg><figcaption>On the count of surviving arguments it leans <b>{lean}</b>. The needle is
+counted, not felt: {fore} claims for expanding hold up and {kf} did not, against {agin} for
+keeping two that hold up and {ka} that did not &mdash; a net of {net:+d} over {span}. Reject a
+verdict in <a href="#s6">the scoreboard</a> and the needle moves.</figcaption></figure>''')
 
-    S('Does the cap bind?')
-    hdr = ''.join(f'<th>wk {r["week"]}</th>' for r in rows)
-    def row(label, vals, bold=False):
-        cells = ''.join(f'<td class="num{" hot" if bold and i == len(vals)-1 else ""}">{v}</td>'
+    # ---- the short version ----------------------------------------------
+    if not dr:
+        cost = 'The transaction log has not been pulled, so the real cost is unmeasured.'
+    else:
+        cost = (f'<b>The measurable cost so far is '
+                f'{"one player" if len(real) == 1 else word(len(real)) + " players"}.</b> '
+                f'{word(len(forced)).capitalize()} drop'
+                f'{"s were" if len(forced) != 1 else " was"} forced by a full injured '
+                f'reserve in {word(n_wk)} weeks'
+                + (f', and {word(len(flyer))} of those was a man signed and cut inside a '
+                   f'fortnight' if flyer else '')
+                + (f'. No other side has claimed {him(len(unwanted))} since'
+                   if unwanted else '') + '.')
+    P(f'''<div class="short"><div class="h">The short version</div><ol>
+<li><b>The cap binds, and harder every week.</b> {last['teams_at_cap']} of
+{C['teams_n']} rosters are full and {last['stranded_total']} injured men are sitting on
+active roster spots. Both numbers have risen every week of the season.</li>
+<li><b>A third slot clears {cut_b:.0f}% of it</b> &mdash; {base['blocked']} blocked
+team-weeks become {plus1['blocked']} &mdash; and frees {spots/n_wk:.1f} roster spots a
+week out of {active}.</li>
+<li>{cost}</li>
+<li><b>It does not fall on everyone.</b> {word(len(ever)).capitalize()} of
+{C['teams_n']} sides have ever been blocked; {word(len(never))} never have.
+{E(heaviest)} alone carry {100*bw[heaviest]/tot_b:.0f}% of it.</li>
+{f'<li><b>The wire cannot absorb it.</b> Across the {word(len(up))} weeks measured, only {min(up)} to {max(up)} unrostered men a week would have improved anybody&rsquo;s lineup, against {min(upt)} to {max(upt)} sides who would have taken up a third slot in those same weeks.</li>' if dep else ''}
+</ol></div>''')
+
+    P('<nav class="jump"><b>On this page</b> '
+      + ' &middot; '.join(f'<a href="#s{i}">{t}</a>' for i, t in (
+          (1, 'Does it bind?'), (2, 'What three would do'), (3, 'Has it cost anyone?'),
+          (4, 'Level playing field?'), (5, 'The wire'), (6, 'The scoreboard'),
+          (7, 'What to watch'), (8, 'What this cannot tell you'), (9, 'The data')))
+      + '</nav>')
+
+    P(f'<p class="lf">The league: <b>{C["teams_n"]} teams, {C["teams_n"]} owners</b>, one '
+      f'each. {last["starters"]} starters and nine bench on every roster, plus '
+      f'{word(cap)} injured reserve slots &mdash; {active} active spots and '
+      f'{last["ir_capacity_total"]} IR spots in play. Data through week '
+      f'{last["week"]}; {tw} team-weeks.</p>')
+
+    # ---- 1 --------------------------------------------------------------
+    S(1, 'Does the cap bind?')
+    F(f'It does, and it has tightened every week of the season. By week {last["week"]} '
+      f'<b>{last["teams_at_cap"]} of {C["teams_n"]}</b> rosters were full with '
+      f'<b>{last["stranded_total"]}</b> injured men stuck on active spots.')
+    hdr = ''.join(f'<th class="num">wk {r["week"]}</th>' for r in rows)
+
+    def row(label, vals):
+        cells = ''.join(f'<td class="num{" hot" if i == len(vals)-1 else ""}">{v}</td>'
                         for i, v in enumerate(vals))
         return f'<tr><th scope="row">{label}</th>{cells}</tr>'
-    body = (row('IR slots filled', [f"{r['ir_used_total']}/{r['ir_capacity_total']}" for r in rows], True)
-            + row('Share of capacity', [f"{100*r['ir_used_total']/r['ir_capacity_total']:.0f}%" for r in rows], True)
-            + row('Teams with IR full', [r['teams_at_cap'] for r in rows], True)
-            + row('Stranded players', [r['stranded_total'] for r in rows], True)
-            + row('Teams blocked',
-                  [sum(1 for t in r['teams'] if short(t)) for r in rows], True))
+    body = (row('IR slots filled', [f"{r['ir_used_total']}/{r['ir_capacity_total']}" for r in rows])
+            + row('Share of capacity', [f"{100*r['ir_used_total']/r['ir_capacity_total']:.0f}%" for r in rows])
+            + row('Teams with IR full', [r['teams_at_cap'] for r in rows])
+            + row('Injured men on active rosters', [r['stranded_total'] for r in rows])
+            + row('<b>Teams blocked</b>', [f'<b>{s["blocked"]}</b>' for s in C['share']]))
     P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th></th>{hdr}</tr></thead>'
-      f'<tbody>{body}</tbody></table></div><figcaption>Utilisation has risen every week of '
-      f'the season so far.</figcaption></figure>')
-
-    nblock = sum(1 for n in C['blockwk'] if C['blockwk'][n])
-    P(f'<p class="b">By week {last["week"]}, <b>{last["teams_at_cap"]} of {C["teams_n"]}</b> rosters '
-      f'are full and <b>{last["stranded_total"]} injured players</b> occupy active roster spots '
-      f'league-wide. Over {word(n_wk)} weeks, <b>{nblock} of {C["teams_n"]} teams</b> have been '
-      f'blocked at least once, across <b>{base["blocked"]} of {tw} team-weeks</b> '
+      f'<tbody>{body}</tbody></table></div><figcaption>Every row has risen or held. '
+      f'None has fallen.</figcaption></figure>')
+    P(f'<p class="b">Over {word(n_wk)} weeks, <b>{len(ever)} of {C["teams_n"]} teams</b> '
+      f'have been blocked at least once, across <b>{base["blocked"]} of {tw} team-weeks</b> '
       f'({100*base["blocked"]/tw:.0f}%).</p>')
     who = ', '.join(E(', '.join(t['stranded_names'][:2])) for t in C['strand_now'][:4])
     P(f'<p class="lf">Stranded in week {last["week"]} include {who}.</p>')
+    P(f'<p class="b"><b>Blocked</b> means a side whose injured reserve is <b>full</b> and '
+      f'who still has an injured man on the active roster &mdash; the strict reading, used '
+      f'everywhere on this page. A team holding a free slot is not blocked by the cap, '
+      f'whatever else is wrong with its week. '
+      + defn_note(C) + '</p>')
 
-    S('What a third slot would have done')
+    # ---- 2 --------------------------------------------------------------
+    S(2, 'What a third slot would do')
+    F(f'Clear <b>{cut_b:.0f}%</b> of the blockage and free <b>{spots/n_wk:.1f} roster '
+      f'spots a week</b> &mdash; about {100*spots/n_wk/active:.0f}% of the '
+      f'{active} in play.')
     P('<p class="b">The counterfactual holds the injuries exactly as they fell and re-runs '
-      'each week under a different cap, assuming every manager fills IR up to the cap with '
+      'each week under a different cap, assuming every manager fills IR to the cap with '
       'whoever is stranded and changes nothing else. That assumption is the model&rsquo;s '
-      'softest joint and is flagged again below.</p>')
+      'softest joint; it is flagged again in section 8.</p>')
     tr = ''.join(
         f'<tr><th scope="row">{"Cap " + str(c) + (" &mdash; actual" if c == cap else "")}</th>'
         f'<td class="num">{M[c]["blocked"]}</td><td class="num">{M[c]["stranded"]}</td></tr>'
@@ -215,61 +399,118 @@ def figures(C):
     P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th></th>'
       f'<th class="num">Blocked team-weeks</th><th class="num">Stranded player-weeks</th>'
       f'</tr></thead><tbody>{tr}</tbody></table></div>'
-      f'<figcaption>{word(n_wk).capitalize()} weeks, {tw} team-weeks.</figcaption></figure>')
-    P(f'<p class="b">Going from {word(cap)} slots to {word(cap+1)} removes <b>{cut_b:.0f}%</b> of '
-      f'the blocked team-weeks and <b>{cut_s:.0f}%</b> of the stranded player-weeks. A fourth '
-      f'slot is not modelled anywhere on this page and is not on the table: the question in '
-      f'front of the league is {word(cap)} or {word(cap+1)}, and a counterfactual nobody is '
-      f'going to vote on only gives the argument somewhere else to go.</p>')
-    P(f'<p class="b">The magnitude is small. <b>{spots} roster spots</b> freed across '
-      f'{word(n_wk)} weeks &mdash; {spots/n_wk:.1f} a week, against {active} active roster '
-      f'spots in a {C["teams_n"]}-team, {last["starters"]+9}-man league. About '
-      f'{100*spots/n_wk/active:.0f}%.</p>')
-
-    S('Who it helps')
+      f'<figcaption>{word(n_wk).capitalize()} weeks, {tw} team-weeks. '
+      f'{cut_b:.0f}% and {cut_s:.0f}% cleared.</figcaption></figure>')
+    P(f'<p class="b">A fourth slot is not modelled anywhere on this page and is not on the '
+      f'table. The question in front of the league is {word(cap)} or {word(cap+1)}, and a '
+      f'counterfactual nobody will vote on only gives the argument somewhere else to go.</p>')
+    P(f'<p class="b"><b>Who gains.</b> Only {word(len(C["helped"]))} sides gain anything at '
+      f'all, and their median seed is {C["med_seed"]:.1f} against a league median of '
+      f'{C["league_med"]:.1f} &mdash; '
+      + ('a real tilt toward the bottom of the table.'
+         if (C['med_seed'] or 0) - C['league_med'] >= 1.5
+         else 'too close to call it a tilt either way.') + '</p>')
     rr = ''
     for n in C['helped']:
         t = C['st'].get(n)
         rr += (f'<tr><th scope="row">{E(n)}</th>'
                f'<td class="dim">{t["record"] if t else "?"}</td>'
                f'<td class="num dim">{t["seed"] if t else "?"}</td>'
-               f'<td class="num">{C["blockwk"].get(n,0)}</td>'
+               f'<td class="num">{bw.get(n,0)}</td>'
                f'<td class="num">{C["gain"][n]}</td></tr>')
     P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th class="lt">Team</th>'
       f'<th class="lt">Record</th><th class="num">Seed</th><th class="num">Weeks blocked</th>'
       f'<th class="num">Spots gained</th></tr></thead><tbody>{rr}</tbody></table></div>'
-      f'<figcaption>Only these {word(len(C["helped"]))} teams gain anything at all.</figcaption></figure>')
-    top = C['helped'][0]
-    # Two different questions, and the table answers both, so the difference
-    # between the columns has to be said out loud or it reads as an error.
-    nogap = [n for n in C['helped'] if not C['blockwk'].get(n)]
-    if nogap:
-        P(f'<p class="b">The two right-hand columns do not measure the same thing, and '
-          f'{word(len(nogap))} '
-          + ('row shows it: ' if len(nogap) == 1 else 'rows show it: ')
-          + ', '.join(E(n) for n in nogap)
-          + (' gains' if len(nogap) == 1 else ' gain')
-          + f' a slot without ever having been <i>blocked</i>. <b>Weeks blocked</b> is the '
-          f'strict count &mdash; injured reserve full, a man still stranded. <b>Spots gained</b> '
-          f'is simply where a third slot would have been filled, which includes a side holding '
-          f'one slot free and {word(cap)} men hurt. Uptake is wider than blockage, and the '
-          f'wire section below needs the wider figure because every slot filled takes a '
-          f'player.</p>')
-    P(f'<p class="b">Median seed of the teams helped: <b>{C["med_seed"]:.1f}</b>, against a '
-      f'league median of {C["league_med"]:.1f}. On this sample the change helps the bottom of '
-      f'the table more than the top.</p>')
+      f'<figcaption>Weeks blocked is the strict count. Spots gained is simply where a third '
+      f'slot would have been filled, which also catches a side holding one slot free and '
+      f'{word(cap)} men hurt &mdash; so uptake runs wider than blockage.</figcaption></figure>')
 
-    # ---- the level-playing-field test ------------------------------------
-    # The test the league itself set: roster pressure is part of the game, but
-    # it should bear on everyone the same way. That is answerable from this
-    # data, and the answer does not favour the side that wants the rule
-    # changed -- which is why it is here rather than in a footnote.
-    S('Is it a level playing field?')
-    bw = C['blockwk']
-    ever = sorted((n for n in bw if bw[n]), key=lambda n: (-bw[n], n))
-    never = sorted(n for n in bw if not bw[n])
-    tot = sum(bw.values())
-    heaviest = ever[0]
+    # ---- 3 --------------------------------------------------------------
+    S(3, 'Has the cap actually cost anyone a player?')
+    if not dr:
+        F('Not answerable yet &mdash; the transaction log has not been pulled.')
+    else:
+        F(('Once. ' if len(real) == 1 else f'{word(len(real)).capitalize()} times. ')
+          + f'In {dr["rows_done"]} completed transactions and {dr["n_drops"]} drops, '
+          + ('one side' if len(forced) == 1 else f'{word(len(forced))} sides')
+          + ' cut a man they were already carrying injured with no slot left to shelve him.')
+        P('<p class="b">This is the test the first draft of this paper named as the strongest '
+          'evidence nobody had. Everything else measured here is friction &mdash; a roster '
+          'slot doing nothing &mdash; and friction is a ceiling on inconvenience, not a '
+          'measure of loss. A drop is the first thing in the argument that is a real cost.</p>')
+        P(f'<p class="b"><b>How it is judged.</b> Not by looking up the dropped man&rsquo;s '
+          f'injury status: Sleeper carries <i>today&rsquo;s</i>, so a man dropped hurt in '
+          f'September who has since healed reads healthy now. Instead every drop is matched '
+          f'to the IR snapshot taken <i>before it, by timestamp</i> &mdash; waivers clear '
+          f'within hours of the Wednesday reading and a week label cannot order the two. '
+          f'Of {dr["n_drops"]} drops, <b>{dr["judged"]}</b> fall after a snapshot and can be '
+          f'judged; {dr["counts"]["unobserved"]} cannot, almost all of them the preseason '
+          f'flood that predates the first reading.</p>')
+        fr = ''.join(
+            f'<tr><th scope="row">wk {d["week"]}</th><td>{E(club(d["team"]))}</td>'
+            f'<td><b>{E(d["player"])}</b> <span class="dim">{d["pos"]}</span></td>'
+            f'<td class="dim ev">held '
+            + (f'{word(d["weeks_held"])} week{"s" if d["weeks_held"] != 1 else ""}'
+               if d['weeks_held'] is not None else 'from the preseason')
+            + f', {d["ir_used"]}/{cap} on IR, {len(d["stranded_then"])} stranded; '
+            + ('took ' + E(', '.join(d['added_back'])) + ' into the spot'
+               if d['added_back'] else 'signed nobody in his place')
+            + '. ' + ('<b>Claimed since by ' + E(', '.join(dict.fromkeys(d['claimed_since']))) + '.</b>'
+                      if d['claimed_since'] else 'Unclaimed since.')
+            + '</td></tr>' for d in dr['forced'])
+        P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th class="lt">When</th>'
+          f'<th class="lt">Who</th><th class="lt">Dropped</th><th class="lt">The circumstances</th>'
+          f'</tr></thead><tbody>{fr}</tbody></table></div><figcaption>Every drop in '
+          f'{word(n_wk)} weeks of a stranded man by a side whose IR was full.</figcaption></figure>')
+        P('<p class="b"><b>And the size of it.</b> '
+          + (f'{word(len(flyer)).capitalize()} of '
+             f'{word(len(dr["forced"]))} does not survive inspection: '
+             + ', '.join(E(d['player']) for d in flyer)
+             + (' was' if len(flyer) == 1 else ' were')
+             + ' signed and cut inside a fortnight, which is a flyer rather than an asset a '
+               'manager was holding on to. ' if flyer else '')
+          + (f'That leaves <b>{word(len(real))} genuine '
+             f'{"instance" if len(real) == 1 else "instances"}</b> in {word(n_wk)} weeks: '
+             + ', '.join(f'{E(club(d["team"]))} letting {E(d["player"])} go'
+                         for d in real) + '. ' if real else '')
+          + (f'Not one of {him(len(unwanted))} has been claimed by any of the other '
+             f'{C["teams_n"]-1} teams since, which is the league agreeing by inaction about '
+             f'what the loss was worth.' if unwanted else '') + '</p>')
+        ratio = ('<p class="b">The comparison this paper asked for, both ways round: '
+                 f'<b>{exposure(C)[0]}</b> stranded man-weeks at a full injured reserve, of '
+                 f'which {len(dr["forced"])} ended in a drop; <b>{exposure(C)[1]}</b> with a '
+                 f'slot free, of which {dr["counts"]["own_choice"]} did. The direction is what '
+                 'the expansion case predicts. The sample is nowhere near large enough to '
+                 'carry it, and this paper does not claim otherwise.</p>')
+        P(ratio)
+
+    # ---- 4 --------------------------------------------------------------
+    S(4, 'Is it a level playing field?')
+    F(f'Equal in form, unequal in effect. <b>{word(len(never)).capitalize()} of '
+      f'{C["teams_n"]}</b> rosters have never once been blocked, and '
+      f'<b>{100*bw[heaviest]/tot_b:.0f}%</b> of all the blockage there has been sits on '
+      f'{E(heaviest)}.')
+    mxb = max(bw.values()) or 1
+    bars = ''.join(
+        f'<div class="bar"><i>{E(n)}</i>'
+        f'<span class="{"" if bw[n] else "z"}" '
+        f'style="width:{max(2, round(100*bw[n]/mxb))}%"></span><b>{bw[n]}</b></div>'
+        for n in sorted(bw, key=lambda n: (-bw[n], n)))
+    P(f'<figure class="ad"><div class="bars">{bars}</div><figcaption>Weeks blocked, out of '
+      f'{word(n_wk)} possible for every team.</figcaption></figure>')
+    P(f'<p class="b"><b>That cuts against expanding, and it should be said plainly.</b> The '
+      f'cap is not pressure applied to {word(C["teams_n"])} teams. It is pressure applied to '
+      f'{word(len(ever))}, and {100*bw[heaviest]/tot_b:.0f}% of it to one. A third slot does '
+      f'not spread the burden evenly; it lifts it where it already falls and leaves the other '
+      f'{word(len(never))} rosters exactly as they were. A change that moves nothing for '
+      f'{100*len(never)/C["teams_n"]:.0f}% of the league is a hard thing to call a '
+      f'levelling.</p>')
+    P(f'<p class="b"><b>What runs the other way is why the bite is uneven.</b> It tracks '
+      f'nothing a manager chooses. Every roster is built to the same {last["starters"]+9} men '
+      f'and the same {word(cap)} slots; what separates {E(heaviest)} from the '
+      f'{word(len(never))} untouched sides is which of their players got hurt, and when. '
+      f'Roster pressure that follows from a decision is skill. Roster pressure that follows '
+      f'from one treatment room is not a decision anybody made.</p>')
     short3 = lambda t: t['stranded'] > max(0, cap + 1 - t['ir_used'])
     bw3 = {}
     for r in rows:
@@ -278,323 +519,196 @@ def figures(C):
             bw3[n] = bw3.get(n, 0) + (1 if short3(t) else 0)
     cleared = [n for n in ever if not bw3.get(n)]
     still = [n for n in ever if bw3.get(n)]
-    P(f'<p class="b">Every roster in the league carries the same {word(cap)} slots, so the rule '
-      f'is equal in form. It is not equal in effect. Of {C["teams_n"]} teams, <b>{len(ever)} '
-      f'have been blocked at least once</b> and <b>{word(len(never))} never have</b> &mdash; not '
-      f'once in {word(n_wk)} weeks. {E(heaviest)} alone carry <b>{bw[heaviest]} of the {tot} blocked '
-      f'team-weeks</b> ({100*bw[heaviest]/tot:.0f}%).</p>')
-    mxb = max(bw.values()) or 1
-    bars = ''.join(
-      f'<div class="bar"><i>{E(n)}</i>'
-      f'<span class="{"" if bw[n] else "z"}" '
-      f'style="width:{max(2, round(100*bw[n]/mxb))}%"></span><b>{bw[n]}</b></div>'
-      for n in sorted(bw, key=lambda n: (-bw[n], n)))
-    P(f'<figure class="ad"><div class="bars">{bars}</div><figcaption>Weeks blocked, '
-      f'{word(n_wk)} weeks of {rows[0]["season"]}. Out of {word(n_wk)} possible for every '
-      f'team.</figcaption></figure>')
-    P(f'<p class="b">That cuts against the case for expanding, and it should be said plainly. '
-      f'The cap is not pressure applied to {word(C["teams_n"])} teams. It is pressure applied '
-      f'to {word(len(ever))}, and {100*bw[heaviest]/tot:.0f}% of it to one. A third slot does not '
-      f'spread the burden evenly; it lifts it where it already falls and leaves the other '
-      f'{word(len(never))} rosters exactly as they were. On a strict reading of &ldquo;level '
-      f'playing field&rdquo;, a change that moves nothing for '
-      f'{100*len(never)/C["teams_n"]:.0f}% of the league is not a levelling.</p>')
-    P(f'<p class="b">What runs the other way is <i>why</i> the bite is uneven. It does not track '
-      f'anything a manager chooses. Every roster is built to the same {last["starters"]+9} men '
-      f'and the same {word(cap)} slots; what separates {E(heaviest)} from the '
-      f'{word(len(never))} untouched sides is which of their players got hurt, and in what '
-      f'order. Roster pressure that follows from a decision is skill. Roster pressure that '
-      f'follows from {E(heaviest)}&rsquo;s treatment room is not a decision anyone made.</p>')
-    P(f'<p class="b">The data settles the shape and not the principle. A third slot would have '
-      f'cleared {word(len(cleared))} of the {word(len(ever))} affected teams completely'
-      + (f' and left {word(len(still))} still blocked in at least one week'
-         if still else ' outright')
-      + f'. Whether that is levelling a field or subsidising bad luck is a judgement, and this '
-      f'page does not have the standing to make it.</p>')
+    P(f'<p class="b">The data settles the shape and not the principle. A third slot would '
+      f'have cleared <b>{word(len(cleared))} of the {word(len(ever))}</b> affected teams '
+      f'completely'
+      + (f' and left {word(len(still))} still blocked in at least one week' if still else '')
+      + '. Whether that is levelling a field or subsidising bad luck is a judgement, and '
+        'this page does not have the standing to make it.</p>')
 
-    # The case AGAINST expansion, tested on its own terms. The paper as first
-    # written only examined the claims of the side that wants the rule changed,
-    # which is how a study gets dismissed by the other half of the league.
-    dep = None
-    p = os.path.join(ROOT, 'ir-waiver-depth.json')
-    if os.path.exists(p):
-        dep = json.load(open(p, encoding='utf-8'))
-    if dep and dep['rows']:
-        S('The argument against: does it thin the wire?')
-        dr = dep['rows']
-        up = [r['upgrade_skill'] for r in dr]
-        sk_ = [r['startable_skill'] for r in dr]
-        depw = dr[-1]['week']
-        ex = {r['week']: sum(1 for t in r['teams']
-              if max(0, min(t['stranded'], cap + 1 - t['ir_used']))
-              > max(0, min(t['stranded'], cap - t['ir_used']))) for r in rows}
-        P('<p class="b">The case against expansion is that the wire is already bare and another '
-          'slot makes it barer. The mechanism is arithmetic, not opinion: a side that shelves an '
-          'injured man frees an active spot, fills it, and the pool is one player smaller. Every '
-          'extra slot used takes a player off waivers.</p>')
+    # ---- 5 --------------------------------------------------------------
+    if dep:
+        S(5, 'The argument against: can the wire absorb it?')
+        F(f'No. In the {word(len(up))} weeks measured the entire waiver pool held '
+          f'<b>{min(up)} to {max(up)} men a week</b> worth starting, against <b>{min(upt)} to '
+          f'{max(upt)}</b> sides who would have taken up a third slot in those same weeks.')
+        P('<p class="b">The mechanism is arithmetic, not opinion. A side that shelves an '
+          'injured man frees an active spot, fills it, and the pool is one player smaller. '
+          'Every extra slot used takes a player off waivers.</p>')
         P('<p class="b"><b>A headcount cannot test that, and this study does not report one.</b> '
-          'Counting unrostered bodies gives a number around five hundred all season, which is '
-          'true and useless &mdash; it counts third-string tight ends and quarterbacks nobody in '
-          'this league would start in any week of any year. The question is how many men are '
-          'worth adding, so that is what is measured.</p>')
-        P('<p class="b">Two bars, both set by what the league itself started that week. '
-          '<b>Would upgrade a lineup</b> means he outscored the <i>median</i> man started at his '
-          'position &mdash; the players managers actually chase. <b>Beats replacement</b> means '
-          'he outscored the <i>worst</i> man started at his position, which is a much weaker '
-          'test.</p>')
-        hdr2 = ''.join(f'<th class="num">wk {r["week"]}</th>' for r in dr)
-        def r2(label, vals):
-            return (f'<tr><th scope="row">{label}</th>'
-                    + ''.join(f'<td class="num">{v}</td>' for v in vals) + '</tr>')
-        body2 = (r2('<b>Would upgrade a lineup</b>', [f'<b>{v}</b>' for v in up])
-                 + r2('Beats replacement level', sk_)
-                 + r2('A third slot would absorb', [ex.get(r['week'], 0) for r in dr]))
-        P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th></th>{hdr2}</tr></thead>'
-          f'<tbody>{body2}</tbody></table></div><figcaption>Skill positions only. Kickers and '
-          'defences are excluded entirely: half the league&rsquo;s are unrostered by '
-          'construction, so including them quadruples the count and tells you nothing.'
-          '</figcaption></figure>')
-        P(f'<p class="b">The entire waiver wire holds <b>{min(up)} to {max(up)} players a week</b> '
-          f'who would improve anybody&rsquo;s starting lineup. In week {depw} there were '
-          f'<b>{up[-1]}</b>'
-          + (f' &mdash; {", ".join(E(u["name"]) + " " + u["pos"] for u in dr[-1]["upgrades"])}'
-             if dr[-1]['upgrades'] else '')
-          + f'. A third slot would have been taken up by <b>{ex.get(depw,0)}</b> teams that same '
-          'week, and those teams take the best man available, not the fourth best.</p>')
-        if ex.get(depw, 0) >= up[-1]:
-            P(f'<p class="pull">In week {depw} a third slot would have been claimed by '
-              f'{word(ex.get(depw,0))} teams, and there were {word(up[-1])} players on the entire '
-              f'wire worth claiming. Expansion does not thin the usable wire. In a week like that '
-              f'one it empties it.</p>')
-        irw = rows[-1]['week']
-        if irw > depw and ex.get(irw, 0) > ex.get(depw, 0):
-            P(f'<p class="b">And the demand is rising: by week {irw}, <b>{ex.get(irw,0)}</b> teams '
-              f'would have used a third slot. Week {irw} has not been played, so it has no depth '
-              f'figure yet &mdash; but no week measured so far has offered more than '
-              f'{max(up)} players worth having.</p>')
-        P('<p class="b">What runs the other way is that the withdrawal is a <b>loan</b>. A player '
-          'coming off injured reserve has to be activated, the roster is then one over, and '
-          'somebody is dropped. The men come back. What a third slot changes is not how many '
-          'players are owned across a season but <i>when</i> they are owned &mdash; and it takes '
+          'Counting unrostered bodies gives a number near five hundred all season, which is '
+          'true and useless &mdash; it counts third-string tight ends and quarterbacks nobody '
+          'in this league would start in any week of any year. The question is how many men '
+          'are worth <i>adding</i>, so that is what is measured, against a bar the league set '
+          'itself: did he outscore the <b>median</b> man actually started at his position '
+          'that week?</p>')
+        hdr2 = ''.join(f'<th class="num">wk {r["week"]}</th>' for r in dep['rows'])
+        r2 = lambda lab, vals: (f'<tr><th scope="row">{lab}</th>'
+                                + ''.join(f'<td class="num">{v}</td>' for v in vals) + '</tr>')
+        P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th></th>{hdr2}</tr>'
+          f'</thead><tbody>'
+          + r2('<b>Men worth adding</b>', [f'<b>{v}</b>' for v in up])
+          + r2('Beats replacement level', [r['startable_skill'] for r in dep['rows']])
+          + r2('Sides wanting a third slot',
+               [C['uptake'].get(r['week'], 0) for r in dep['rows']])
+          + '</tbody></table></div><figcaption>Skill positions only. Kickers and defences are '
+            'excluded: half the league&rsquo;s are unrostered by construction, so including '
+            'them quadruples the count and tells you nothing.</figcaption></figure>')
+        tight = [r['week'] for r in dep['rows']
+                 if C['uptake'].get(r['week'], 0) >= r['upgrade_skill']]
+        if tight:
+            more = [r['week'] for r in dep['rows']
+                    if C['uptake'].get(r['week'], 0) > r['upgrade_skill']]
+            P(f'<p class="pull">In week{"s" if len(tight) > 1 else ""} {andlist(tight)}, a '
+              f'third slot would have been claimed by as many sides as there were players on '
+              f'the entire wire worth claiming'
+              + (f' &mdash; and in {andlist(more)}, by more. ' if more else '. ')
+              + f'Expansion would not thin the usable wire in a week like '
+              + ('those' if len(tight) > 1 else 'that')
+              + '. It would empty it.</p>')
+        if dr:
+            v = [x for x in dr['vol'] if x['week'] > 1]
+            if v:
+                mv = sum(x['moves'] for x in v) / len(v)
+                P(f'<p class="b"><b>And the league is quiet, which is the same finding from '
+                  f'the other end.</b> Stripping out failed waiver bids, trades and '
+                  f'commissioner moves, in-season activity runs <b>{mv:.0f} completed '
+                  f'add-or-drop moves a week</b> across {C["teams_n"]} teams &mdash; '
+                  f'{mv/C["teams_n"]:.1f} per side &mdash; with only '
+                  f'{min(x["movers"] for x in v)} to {max(x["movers"] for x in v)} of '
+                  f'{C["teams_n"]} rosters touched in a given week. Managers are not passing '
+                  f'up a deep wire. There is not much on it to pass up.</p>')
+        P('<p class="b"><b>What runs the other way is that the withdrawal is a loan.</b> A '
+          'player coming off injured reserve has to be activated, the roster is then one '
+          'over, and somebody is dropped. The men come back. What a third slot changes is not '
+          'how many players are owned across a season but <i>when</i> &mdash; and it takes '
           'them in exactly the weeks when injuries make everyone want them.</p>')
 
-    # ---- the scoreboard and the gauge -----------------------------------
-    # One claim per row, attributed to the side that made it, with what six
-    # weeks of data does to it. The gauge needle is COUNTED from this table
-    # rather than felt, so a reader who rejects a verdict can recount and move
-    # it himself. That is the only honest way to put a dial on a judgement.
-    V = [
-        ('The cap binds', 'expand', 'supported',
-         f"{last['teams_at_cap']} of {C['teams_n']} rosters full by week {last['week']}, "
-         f"{100*last['ir_used_total']/last['ir_capacity_total']:.0f}% of capacity"),
-        ('Only injured men qualify, so it cannot be stacked', 'expand', 'supported',
-         'structural: an activated player must be rostered or dropped'),
-        # Derived, not asserted. In week 5 the beneficiaries' median seed was
-        # 11.0 against a league 8.5 and this read clearly "supported"; a week
-        # later it is 9.5, which is nearly even. A gap under a seed and a half
-        # is not evidence of anything, so it reads untested and the needle
-        # moves on its own.
-        ('A third slot helps weak teams more than strong ones', 'expand',
-         'supported' if (C['med_seed'] or 0) - C['league_med'] >= 1.5 else 'untested',
-         f"median seed of the {word(len(C['helped']))} beneficiaries is {C['med_seed']:.1f} "
-         f"against a league median of {C['league_med']:.1f}"
-         + ('' if (C['med_seed'] or 0) - C['league_med'] >= 1.5
-            else ' &mdash; too close to call either way')),
-        ('The withdrawal reverses when players return', 'expand', 'supported',
-         'structural: activating a returning player puts the roster one over, so a man is '
-         'dropped back to the wire'),
-        ('Nobody is hoarding IR spots', 'expand', 'overtaken',
-         f"true when it was said in preseason; by week {last['week']} "
-         f"{last['teams_at_cap']} of {C['teams_n']} teams were at the cap"),
-        ('Leagues our size run two to four slots', 'expand', 'untested',
-         'no data here on other leagues, their age or their keeper rules'),
-        ('The wire is already bare', 'keep two', 'supported',
-         'DEPTH'),
-        ('Expansion thins the wire further', 'keep two', 'supported',
-         'MECH'),
-        ('It changes nothing functional', 'keep two', 'contradicted',
-         f"it changes {M[cap]['blocked']} blocked team-weeks to {M[cap+1]['blocked']}"),
-        ('It helps the committed teams and hurts the rest', 'keep two',
-         'contradicted' if (C['med_seed'] or 0) - C['league_med'] >= 1.5 else 'untested',
-         'the beneficiaries skew to the bottom of the table, not the top'
-         if (C['med_seed'] or 0) - C['league_med'] >= 1.5
-         else 'the beneficiaries sit almost exactly at the league median'),
-        ('No competitive harm from the cap has been shown', 'keep two', 'supported',
-         'correct, and not testable with this data: see the limitations'),
-    ]
-    if dep and dep['rows']:
-        up2 = [r['upgrade_skill'] for r in dep['rows']]
-        dw = dep['rows'][-1]['week']
-        ex = {r['week']: sum(1 for t in r['teams']
-              if max(0, min(t['stranded'], cap + 1 - t['ir_used']))
-              > max(0, min(t['stranded'], cap - t['ir_used']))) for r in rows}
-        V = [(a, b, c, (f"only {up2[-1]} players on the entire wire would have improved a "
-                        f"lineup in week {dw}"
-                        if d == 'DEPTH' else
-                        f"{ex.get(dw,0)} teams would have used a third slot in week {dw}; there "
-                        f"were {up2[-1]} players worth taking" if d == 'MECH' else d))
-             for a, b, c, d in V]
-    else:
-        V = [v for v in V if v[3] not in ('DEPTH', 'MECH')]
-
-    S('The scoreboard')
-    P('<p class="b">Every claim either side made in the argument of 7 September, and what six '
-      'weeks of data does to it. <b>Supported</b> means the data backs it. <b>Contradicted</b> '
-      'means the data runs against it. <b>Overtaken</b> means it was true when it was said and '
-      'is not now. <b>Untested</b> means this study cannot speak to it.</p>')
+    # ---- 6 --------------------------------------------------------------
+    S(6, 'The scoreboard')
+    F('Every claim either side made, and what the data does to it.')
+    P('<p class="b"><b>Supported</b> means the data backs it. <b>Contradicted</b> means the '
+      'data runs against it. <b>Overtaken</b> means it was true when it was said and is not '
+      'now. <b>Untested</b> means this study cannot speak to it.</p>')
     TONE = {'supported': 'ok', 'contradicted': 'no', 'overtaken': 'mid', 'untested': 'mid'}
     vr = ''.join(
-        f'<tr><th scope="row">{c}</th>'
-        f'<td class="dim">{"expand" if s == "expand" else "keep two"}</td>'
+        f'<tr><th scope="row">{c}</th><td class="dim">{s}</td>'
         f'<td><span class="v {TONE[v]}">{v}</span></td>'
         f'<td class="dim ev">{w}</td></tr>' for c, s, v, w in V)
     P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th class="lt">Claim</th>'
       f'<th class="lt">Made by</th><th class="lt">Verdict</th><th class="lt">On what</th>'
       f'</tr></thead><tbody>{vr}</tbody></table></div></figure>')
-
-    fore = sum(1 for _, s, v, _ in V if s == 'expand' and v == 'supported')
-    agin = sum(1 for _, s, v, _ in V if s == 'keep two' and v == 'supported')
-    killed_f = sum(1 for _, s, v, _ in V if s == 'expand' and v in ('contradicted', 'overtaken'))
-    killed_a = sum(1 for _, s, v, _ in V if s == 'keep two' and v in ('contradicted', 'overtaken'))
-    net = (fore - killed_f) - (agin - killed_a)
-    span = max(fore + agin, 1)
-    x = 50 + 50 * max(-1.0, min(1.0, net / span))
-    S('Where it lands')
-    P(f'<figure class="gauge"><svg viewBox="0 0 600 124" role="img" '
-      f'aria-label="Gauge: the evidence leans {"toward expanding" if net > 0 else "toward keeping two" if net < 0 else "neither way"}">'
-      f'<defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#0e8ab5"/>'
-      f'<stop offset="0.5" stop-color="#d8b45a"/><stop offset="1" stop-color="#c20f16"/>'
-      f'</linearGradient></defs>'
-      f'<rect x="20" y="52" width="560" height="16" rx="8" fill="url(#g)" opacity=".85"/>'
-      f'<line x1="300" y1="44" x2="300" y2="76" stroke="#17181c" stroke-width="2" opacity=".3"/><text x="300" y="92" font-size="10" text-anchor="middle" font-family="-apple-system,sans-serif" font-weight="700" fill="#9a958c">EVEN</text>'
-      f'<g transform="translate({20 + 5.6*x},0)">'
-      f'<polygon points="0,40 -10,22 10,22" fill="#17181c"/>'
-      f'<line x1="0" y1="40" x2="0" y2="80" stroke="#17181c" stroke-width="3"/></g>'
-      f'<text x="20" y="114" font-size="13" font-family="-apple-system,sans-serif" '
-      f'font-weight="800" fill="#0e8ab5">KEEP TWO</text>'
-      f'<text x="580" y="114" font-size="13" text-anchor="end" '
-      f'font-family="-apple-system,sans-serif" font-weight="800" fill="#c20f16">EXPAND TO THREE</text>'
-      f'</svg><figcaption>The needle is <b>counted, not felt</b>: surviving claims for '
-      f'expansion ({fore} supported, {killed_f} knocked out) minus surviving claims against '
-      f'({agin} supported, {killed_a} knocked out), over {span}. Reject a verdict in the table '
-      f'above and the needle moves.</figcaption></figure>')
     keeps = [v for v in V if v[1] == 'keep two']
     survive = [c for c, _, v, _ in keeps if v == 'supported']
     fell = [c for c, _, v, _ in keeps if v in ('contradicted', 'overtaken')]
-    P(f'<p class="b">On the count it leans <b>'
-      + ('toward expanding, and not by much' if 0 < net <= 2 else
-         'clearly toward expanding' if net > 2 else
-         'toward keeping two, and not by much' if -2 <= net < 0 else
-         'clearly toward keeping two' if net < 0 else 'neither way &mdash; dead level')
-      + f'</b>. Of the {word(len(keeps))} arguments made for keeping the cap, '
-      + (f'{word(len(fell))} did not survive contact with the data and '
-         if fell else 'none fell outright and ')
+    rest = len(keeps) - len(survive) - len(fell)
+    P(f'<p class="b">Of the {word(len(keeps))} arguments for keeping the cap, '
+      + (f'{word(len(fell))} did not survive contact with the data and ' if fell
+         else 'none fell outright and ')
       + f'{word(len(survive))} did'
-      + (f', with {word(len(keeps) - len(fell) - len(survive))} the data cannot speak to'
-         if len(keeps) - len(fell) - len(survive) else '')
-      + '. The ones that stood are the ones nobody can settle from '
-      'here: that the wire is thin, which was true before this debate started, and that no '
-      'competitive harm has ever been demonstrated, which is true and may stay true.</p>')
-    P('<p class="pull">The strongest surviving argument on either side is not about fairness or '
-      'hoarding. It is that a third slot takes its players off the <i>top</i> of a wire that '
-      'holds barely a dozen usable men &mdash; and takes them in exactly the weeks when injuries '
-      'make everyone want them.</p>')
+      + (f', with {word(rest)} the data cannot speak to' if rest else '')
+      + '. The two that matter most are the two nobody can settle from here: that the wire '
+        'is thin, which was true before this debate started, and that no competitive harm '
+        'has been demonstrated &mdash; which survived even after the transaction log was '
+        'pulled looking for exactly that.</p>')
 
-    S('Limitations')
-    P('<p class="b">Read this before quoting any figure above.</p>')
-    P(f'<p class="b"><b>It measures roster friction, not competitive harm.</b> Nothing here '
-      'shows a blocked team lost a game, or even lost points. Establishing that would need to '
-      'know who each manager <i>would</i> have added with the freed slot and what that man '
-      'then scored, which is unobservable. Every number above is a ceiling on inconvenience.</p>')
-    P('<p class="b"><b>A blocked team is never actually stuck.</b> Any side can cut an injured '
-      'man and move on. Blocked means <i>made to choose</i>, not <i>prevented</i> &mdash; and '
-      'whether being made to choose is a flaw or the point of a roster limit is a judgement no '
-      'amount of this data settles.</p>')
-    P(f'<p class="b"><b>The benefit is concentrated, and that is not by itself an objection.</b> '
-      f'{E(top)} account for <b>{C["gain"][top]} of the {spots} freed spots</b> '
-      f'({100*C["gain"][top]/spots:.0f}%) and were blocked in '
-      f'{word(C["blockwk"].get(top,0))} of {word(n_wk)} weeks. An earlier draft of this paper '
-      'put that forward as a reason for caution &mdash; whether a permanent rule change is '
-      'warranted by one roster&rsquo;s injury luck. The answer the desk now takes is that an '
-      'injury rule biting hardest on whoever got hurt most is the rule doing its job, not a '
-      'distortion in the sample. What the concentration does mean is narrower and still worth '
-      'knowing: the headline percentages above rest heavily on one roster, so take that team '
-      'out and the <i>measured size</i> of the effect falls sharply even if the case does '
-      'not.</p>')
-    # How much of each week's blockage a third slot actually clears. An earlier
-    # draft asserted this decays as the season goes on; week 6 landed while the
-    # page was being built and broke the claim -- the share fell to a quarter in
-    # week 5 and recovered to nearly two thirds in week 6. So the trend is
-    # computed and described, including whether it is monotonic, rather than
-    # stated.
-    share = []
-    for r in rows:
-        b2 = sum(1 for t in r['teams'] if short(t))
-        b3 = sum(1 for t in r['teams'] if t['stranded'] > max(0, cap + 1 - t['ir_used']))
-        share.append((r['week'], b2, b2 - b3, (b2 - b3) / b2 if b2 else None))
-    vals = [s for *_, s in share if s is not None]
-    half = len(vals) // 2
-    early_m = 100 * sum(vals[:half]) / half if half else 0
-    late_m = 100 * sum(vals[half:]) / (len(vals) - half)
-    mono = all(a >= b for a, b in zip(vals, vals[1:]))
-    worst = min((s for s in share if s[3] is not None), key=lambda s: s[3])
-    nowb, nowc = share[-1][1], share[-1][2]
-    P(f'<p class="b"><b>The relief looks weaker later in the season, but the trend is noisy.</b> '
-      f'The share of each week&rsquo;s blockage a third slot would clear has run '
-      + ', '.join(f'{100*s:.0f}%' for *_, s in share if s is not None)
-      + f' &mdash; averaging {early_m:.0f}% over the first {word(half)} weeks and {late_m:.0f}% '
-      f'since. It is <b>not</b> a steady decline: the worst week was {worst[0]}, at '
-      f'{100*worst[3]:.0f}%, and week {share[-1][0]} recovered to {100*share[-1][3]:.0f}% '
-      f'({nowc} of {nowb} blocked teams cleared). The mechanism is real &mdash; a side with '
-      'more than one man stranded only has its line moved by a single extra slot &mdash; but '
-      f'on {word(n_wk)} weeks it cannot be called a trend'
-      + ('' if mono else ', and it is not monotonic')
-      + '. Stranded counts have run '
-      + ', '.join(str(r['stranded_total']) for r in rows)
-      + ', so the problem is certainly growing even where the relief is holding up.</p>')
-    P(f'<p class="b"><b>One season, {word(n_wk)} weeks, {tw} team-weeks.</b> Injury rates vary '
-      'year to year and no claim is made that this one is typical. The greedy-filling '
-      'assumption in the model is untested &mdash; a manager might hold a slot open against a '
-      'worse injury later, in which case uptake above is overstated. And transactions are not '
-      'observed, so we cannot see whether any blocked side actually cut a player it wanted to '
-      'keep. That would be the strongest evidence of real cost, and we do not have it.</p>')
+    # ---- 7 --------------------------------------------------------------
+    watch = watch_items(C, cut_b, real)
+    S(7, 'What to watch in the coming weeks')
+    F(f'{word(len(watch)).capitalize()} numbers that would move the argument, each with the '
+      f'reading as it stands and the threshold that would matter.')
+    P('<p class="b">Every one of these is in the weekly collection already, so they update '
+      'themselves. Nobody has to remember to run anything.</p>')
+    P('<div class="watch">' + ''.join(watch) + '</div>')
+    P(f'<p class="b"><b>And one date rather than a number.</b> {word(last["week"]).capitalize()} '
+      f'of fourteen regular-season weeks are played; the playoffs start in week {PLAYOFFS}. Injuries peak late '
+      f'and a side carrying men into a playoff run cannot churn its way out of trouble the '
+      f'way it can in October. If the cap is going to bite hardest anywhere, it is in weeks '
+      f'{PLAYOFFS-2} to {PLAYOFFS}, and that is also when this page will be at its least '
+      f'flattering to the side that wants nothing changed.</p>')
 
-    S('The data, in full')
-    P('<p class="b">Everything the conclusions rest on, so it can be checked rather than '
-      'taken. Each row is one week as it was recorded at the time.</p>')
+    # ---- 8 --------------------------------------------------------------
+    S(8, 'What this cannot tell you')
+    F('Read this before quoting any figure above.')
+    lims = [
+        ('It measures roster friction, not competitive harm.',
+         'Nothing here shows a blocked team lost a game, or even lost points. Establishing '
+         'that would need to know who each manager <i>would</i> have added with the freed '
+         'slot and what that man then scored, which is unobservable. Every number in '
+         'sections 1 and 2 is a ceiling on inconvenience.'),
+        ('A blocked team is never actually stuck.',
+         'Any side can cut an injured man and move on &mdash; which is exactly what section 3 '
+         'counts. Blocked means <i>made to choose</i>, not <i>prevented</i>, and whether '
+         'being made to choose is a flaw or the point of a roster limit is a judgement no '
+         'amount of this data settles.'),
+        ('The benefit is concentrated, and that is not by itself an objection.',
+         f'{E(heaviest)} account for <b>{C["gain"][heaviest]} of the {spots} freed spots</b> '
+         f'({100*C["gain"][heaviest]/spots:.0f}%). An injury rule biting hardest on whoever '
+         f'got hurt most is the rule doing its job, not a distortion in the sample. What it '
+         f'does mean is narrower: the headline percentages rest heavily on one roster, so '
+         f'take that team out and the measured size of the effect falls sharply.'),
+        ('The drop test can only undercount.',
+         'A snapshot is weekly. A man signed on Thursday, hurt on Sunday and dropped on '
+         'Tuesday was never in one, so he cannot be counted either way. Those drops are '
+         'reported as unobserved rather than quietly scored as healthy &mdash; but it means '
+         'section 3 is a floor, not a total.') if dr else None,
+        (f'One season, {word(n_wk)} weeks, {tw} team-weeks.',
+         'Injury rates vary year to year and no claim is made that this one is typical. The '
+         'greedy-filling assumption in the model is untested &mdash; a manager might hold a '
+         'slot open against a worse injury later, in which case uptake above is overstated.'),
+    ]
+    P('<dl class="lim">' + ''.join(f'<dt>{a}</dt><dd>{b}</dd>' for a, b in lims if a) + '</dl>')
+    P(f'<p class="b">{relief_note(C)}</p>')
+
+    # ---- 9 --------------------------------------------------------------
+    S(9, 'The data, in full')
+    F('Everything the conclusions rest on, so it can be checked rather than taken.')
     cols = [('wk', lambda r: r['week']),
             ('IR used', lambda r: f"{r['ir_used_total']}/{r['ir_capacity_total']}"),
             ('teams at cap', lambda r: r['teams_at_cap']),
             ('teams with empty IR', lambda r: r['teams_empty_ir']),
             ('stranded', lambda r: r['stranded_total']),
-            ('teams blocked', lambda r: sum(1 for t in r['teams'] if short(t))),
-            ]
-    hh = ''.join(f'<th class="num">{c}</th>' for c, _ in cols)
-    bb = ''.join('<tr>' + ''.join(f'<td class="num">{f(r)}</td>' for _, f in cols) + '</tr>'
-                 for r in rows)
-    P(f'<figure class="ad"><div class="scroll"><table><thead><tr>{hh}</tr></thead>'
-      f'<tbody>{bb}</tbody></table></div><figcaption>From ir-watch.json, one row written per '
-      f'week and never revised.</figcaption></figure>')
-
-    if dep and dep["rows"]:
-        hh2 = ('<th class="num">wk</th><th class="num">scored</th>'
-               '<th class="num">would upgrade</th><th class="num">beats replacement</th>'
-               '<th class="lt">the men who would upgrade</th>')
-        bb2 = ''.join(
-            f'<tr><td class="num">{r["week"]}</td><td class="num">{r["scored"]}</td>'
-            f'<td class="num"><b>{r["upgrade_skill"]}</b></td>'
-            f'<td class="num">{r["startable_skill"]}</td>'
-            f'<td class="dim ev">' + (', '.join(f'{E(u["name"])} {u["pos"]} {u["pts"]}'
-                                                for u in r['upgrades']) or '&mdash;') + '</td></tr>'
-            for r in dep['rows'])
-        P(f'<figure class="ad"><div class="scroll"><table><thead><tr>{hh2}</tr></thead>'
-          f'<tbody>{bb2}</tbody></table></div><figcaption>From ir-waiver-depth.json. Only '
-          f'played weeks appear: depth cannot be measured on a week nobody has played. '
-          f'Upgrade bar (median starter), week {dep["rows"][-1]["week"]}: '
+            ('teams blocked', lambda r: sum(1 for t in r['teams'] if short(t)))]
+    P(f'<figure class="ad"><div class="scroll"><table><thead><tr>'
+      + ''.join(f'<th class="num">{c}</th>' for c, _ in cols) + '</tr></thead><tbody>'
+      + ''.join('<tr>' + ''.join(f'<td class="num">{f(r)}</td>' for _, f in cols) + '</tr>'
+                for r in rows)
+      + '</tbody></table></div><figcaption>From ir-watch.json, one row written per week and '
+        'never revised.</figcaption></figure>')
+    if dep:
+        P(f'<figure class="ad"><div class="scroll"><table><thead><tr>'
+          f'<th class="num">wk</th><th class="num">scored</th>'
+          f'<th class="num">worth adding</th><th class="num">beats replacement</th>'
+          f'<th class="lt">the men worth adding</th></tr></thead><tbody>'
+          + ''.join(
+              f'<tr><td class="num">{r["week"]}</td><td class="num">{r["scored"]}</td>'
+              f'<td class="num"><b>{r["upgrade_skill"]}</b></td>'
+              f'<td class="num">{r["startable_skill"]}</td><td class="dim ev">'
+              + (', '.join(f'{E(u["name"])} {u["pos"]} {u["pts"]}' for u in r['upgrades'])
+                 or '&mdash;') + '</td></tr>' for r in dep['rows'])
+          + f'</tbody></table></div><figcaption>From ir-waiver-depth.json. Only played weeks '
+            f'appear: depth cannot be measured on a week nobody has played. Upgrade bar '
+            f'(median starter), week {dep["rows"][-1]["week"]}: '
           + ', '.join(f'{k} {v}' for k, v in dep['rows'][-1]['median_bar'].items()
                       if k in ('QB', 'RB', 'WR', 'TE'))
           + '.</figcaption></figure>')
-
+    if dr:
+        v = dr['vol']
+        P(f'<figure class="ad"><div class="scroll"><table><thead><tr>'
+          f'<th class="num">wk</th><th class="num">completed moves</th>'
+          f'<th class="num">adds</th><th class="num">drops</th>'
+          f'<th class="num">teams active</th><th class="num">failed bids</th>'
+          f'</tr></thead><tbody>'
+          + ''.join(f'<tr><td class="num">{x["week"]}</td><td class="num">{x["moves"]}</td>'
+                    f'<td class="num">{x["adds"]}</td><td class="num">{x["drops"]}</td>'
+                    f'<td class="num">{x["movers"]}</td>'
+                    f'<td class="num dim">{x["failed"]}</td></tr>' for x in v)
+          + '</tbody></table></div><figcaption>From transactions.json. Free-agent and waiver '
+            'moves that completed; trades and commissioner moves are excluded. Failed bids '
+            'are losing waiver claims &mdash; shown because they inflate any raw transaction '
+            'count, not because they are moves. <b>Sleeper files the entire preseason under '
+            'week 1</b>, so that row is July to September and not a week at all.'
+            '</figcaption></figure>')
     tt = ''.join(
         f'<tr><th scope="row">{E(club(t["team"]))}</th>'
         f'<td class="num">{t["ir_used"]}</td><td class="num">{t["ir_free"]}</td>'
@@ -605,63 +719,225 @@ def figures(C):
       f'<th class="num">on IR</th><th class="num">free</th><th class="num">stranded</th>'
       f'<th class="lt">who</th></tr></thead><tbody>{tt}</tbody></table></div>'
       f'<figcaption>Every roster as at week {last["week"]}.</figcaption></figure>')
-
-    P('<p class="lf">Files, if you want to run it yourself: <code>ir-watch.json</code> (weekly '
-      'snapshots, written by <code>scripts/ir_watch.py</code>), <code>ir-waiver-depth.json</code> '
-      '(written by <code>scripts/waiver_depth.py</code>, which needs the nflverse play-by-play '
-      'download), <code>week-data/2026-w*.json</code> (weekly rosters and scoring), '
-      '<code>scripts/standings.py</code> (records and seeds). The page itself is '
-      '<code>scripts/build_ir_study.py</code>.</p>')
-
-    S('What would settle it')
-    P('<p class="b"><b>Transaction logs.</b> Drops of injured players by teams at the cap '
-      'against drops by teams with a slot free. If the cap forces real losses, it shows there.'
-      ' <b>More weeks.</b> Whether the relief holds up as injuries pile in is the open '
-      'question above, and re-running this at week 10 '
-      'and week 14 answers it. <b>Earlier seasons.</b> The collector only began logging this '
-      'year, so 2026 is all there is.</p>')
-    # The four open questions this paper closed with in its first draft, and
-    # the answers that came back. They are recorded here because three of them
-    # changed the page above -- the definition, the concentration limitation,
-    # and the removal of every four-slot figure -- and a reader comparing this
-    # version with the first one is owed the reason.
-    S('The questions, answered')
-    QA = [
-        ('Is a team with a free slot and more injured men than slots blocked?',
-         'No.',
-         f'Settled strict. Blocked now means a full injured reserve and a man still '
-         f'stranded, everywhere on this page. It removes {word(loose - base["blocked"])} '
-         f'team-weeks from every blocked figure.'),
-        ('Is the concentration disqualifying, or is &ldquo;the rule bites hardest on whoever '
-         'had bad luck&rdquo; what an injury rule is for?',
-         'It is what the rule is for.',
-         'The limitation stands as a note on the <i>size</i> of the measured effect, not as an '
-         'argument against the case. An injury rule that bites the injured is working.'),
-        ('Is roster pressure under a tight cap part of the skill of the game?',
-         'Part of the game &mdash; but it has to be level.',
-         f'Which is a testable claim, and tested above: the rule is equal in form and bears on '
-         f'{word(len(ever))} of {C["teams_n"]} sides in practice, {100*bw[heaviest]/tot:.0f}% of '
-         f'it on one.'),
-        ('Does the pattern argue for four slots, or for leaving it alone?',
-         'Four is not on the table.',
-         'Every four-slot figure has been removed rather than argued with. The question in '
-         f'front of the league is {word(cap)} or {word(cap+1)}, and a model of a cap nobody '
-         'will vote on is only somewhere else for the argument to go.'),
-    ]
-    qr = ''.join(f'<tr><th scope="row" class="qq">{q}</th>'
-                 f'<td class="qa">{a}</td><td class="dim ev">{w}</td></tr>'
-                 for q, a, w in QA)
-    P(f'<figure class="ad"><div class="scroll"><table><thead><tr>'
-      f'<th class="lt">Question</th><th class="lt">Answer</th>'
-      f'<th class="lt">What it changed here</th></tr></thead><tbody>{qr}</tbody></table></div>'
-      f'<figcaption>Asked at the end of the first draft of this paper; answered before this '
-      f'one was built.</figcaption></figure>')
-    P(f'<p class="pull">Which leaves one question the data cannot answer and the league will '
-      f'have to. The rule is the same {word(cap)} slots for everybody and it has bitten '
-      f'{word(len(ever))} sides in {word(n_wk)} weeks. Is a cap that {word(len(never))} '
-      f'rosters have never once noticed a level playing field, or the absence of one?</p>')
+    P(f'<p class="b"><b>Injured</b> means Sleeper carries one of {HURT}. Questionable is not '
+      f'counted &mdash; including week-to-week knocks would inflate every number here. '
+      f'<b>Stranded</b> means an injured man occupying an <i>active</i> roster spot.</p>')
+    P('<p class="lf">To run it yourself: <code>ir-watch.json</code> (weekly snapshots, '
+      '<code>scripts/ir_watch.py</code>), <code>transactions.json</code> '
+      '(<code>scripts/fetch_transactions.py</code>, joined by '
+      '<code>scripts/ir_drops.py</code>), <code>ir-waiver-depth.json</code> '
+      '(<code>scripts/waiver_depth.py</code>, needs the nflverse play-by-play download), '
+      '<code>week-data/2026-w*.json</code>, <code>scripts/standings.py</code>. The page '
+      'itself is <code>scripts/build_ir_study.py</code>.</p>')
     return out
 
+
+def defn_note(C):
+    cap, rows = C['cap'], C['rows']
+    loose = sum(1 for r in rows for t in r['teams']
+                if t['stranded'] > max(0, cap - t['ir_used']))
+    d = loose - C['M'][cap]['blocked']
+    return (f'The looser reading &mdash; which also counts a side with one slot free and '
+            f'{word(cap)} men hurt &mdash; would add {word(d)} team-week'
+            f'{"s" if d != 1 else ""} to every blocked figure on this page '
+            f'({loose} of {len(rows)*C["teams_n"]} rather than {C["M"][cap]["blocked"]}). '
+            f'The strict reading was settled on, and it is the one that counts fewer.')
+
+
+def exposure(C):
+    """Stranded man-weeks at a full injured reserve, and with a slot free.
+
+    The denominator for section 3: a drop can only be forced by the cap where
+    there was a stranded man AND no room to shelve him, so the two populations
+    have to be sized before the two drops mean anything.
+    """
+    full = sum(t['stranded'] for r in C['rows'] for t in r['teams'] if t['ir_full'])
+    free = sum(t['stranded'] for r in C['rows'] for t in r['teams'] if not t['ir_full'])
+    return full, free
+
+
+def relief_note(C):
+    """Whether the relief a third slot buys is decaying. Computed, not asserted.
+
+    An earlier draft stated flatly that it decays. The next week's data broke
+    the claim -- the share fell to a quarter and then recovered. So the shape
+    is described from the series rather than from the last time anybody looked.
+    """
+    s = [x for x in C['share'] if x['pct'] is not None]
+    vals = [x['pct'] for x in s]
+    half = len(vals) // 2
+    early = 100 * sum(vals[:half]) / half if half else 0
+    late = 100 * sum(vals[half:]) / (len(vals) - half)
+    mono = all(a >= b for a, b in zip(vals, vals[1:]))
+    worst = min(s, key=lambda x: x['pct'])
+    return (f'<b>The relief looks weaker later in the season, but the trend is noisy.</b> '
+            f'The share of each week&rsquo;s blockage a third slot would clear has run '
+            + ', '.join(f'{100*x["pct"]:.0f}%' for x in s)
+            + f' &mdash; averaging {early:.0f}% over the first {word(half)} weeks and '
+              f'{late:.0f}% since. It is <b>not</b> a steady decline: the worst week was '
+              f'{worst["week"]}, at {100*worst["pct"]:.0f}%, and week {s[-1]["week"]} reads '
+              f'{100*s[-1]["pct"]:.0f}% ({s[-1]["cleared"]} of {s[-1]["blocked"]} blocked '
+              f'sides cleared). The mechanism is real &mdash; a side with more than one man '
+              f'stranded only has its line moved by a single extra slot &mdash; but on '
+              f'{word(len(C["rows"]))} weeks it cannot be called a trend'
+            + ('' if mono else ', and it is not monotonic')
+            + '. Stranded counts have run '
+            + ', '.join(str(r['stranded_total']) for r in C['rows'])
+            + ', so the problem is growing even where the relief is holding up.')
+
+
+def watch_items(C, cut_b, real):
+    """What to watch, each with the reading now, the trigger, and whose case it
+
+    helps. Derived rather than listed: the thresholds are set off the series as
+    it stands, so they move with it instead of being a judgement made in
+    October and left there."""
+    cap, rows, last, dep = C['cap'], C['rows'], C['last'], C['depth']
+    bw = C['blockwk']
+    never = [n for n in bw if not bw[n]]
+    st = [r['stranded_total'] for r in rows]
+    s = [x for x in C['share'] if x['pct'] is not None]
+    up = [r['upgrade_skill'] for r in dep['rows']] if dep else []
+    items = [
+        ('Injured men on active rosters',
+         ' &rarr; '.join(str(x) for x in st),
+         f'The first week it <b>falls</b>. It has risen or held in every week of the season, '
+         f'which is what makes the problem look structural rather than seasonal. One real '
+         f'decline and that reading weakens.',
+         'keep two'),
+        ('Rosters with IR full',
+         f'{last["teams_at_cap"]} of {C["teams_n"]}',
+         f'<b>{min(C["teams_n"], last["teams_at_cap"] + 2)} or more.</b> At that point a '
+         f'clear majority of the league is at the cap in the same week and &ldquo;it only '
+         f'affects a few teams&rdquo; stops being available to either side.',
+         'expand'),
+        ('Teams never blocked',
+         f'{word(len(never))} of {C["teams_n"]}',
+         f'<b>{word(C["teams_n"]//4).capitalize()} or fewer.</b> The strongest argument '
+         f'against expanding is that it changes nothing for most of the league. If the '
+         f'untouched group shrinks to a quarter of the teams, that argument is gone.',
+         'expand'),
+        ('Forced drops',
+         f'{word(len(real))} genuine in {word(len(rows))} weeks'
+         if real else f'none in {word(len(rows))} weeks',
+         '<b>A dropped man who is then claimed by somebody else.</b> Every forced drop so far '
+         'has been a player no other side wanted, which is why the cost reads as trivial. One '
+         'claim off the wire turns a forced drop into a real transfer of value and changes '
+         'the scoreboard line that has survived everything else.',
+         'expand'),
+        ('Relief a third slot buys',
+         ', '.join(f'{100*x["pct"]:.0f}%' for x in s),
+         f'<b>Two straight weeks under half.</b> '
+         + (f'{word(sum(1 for x in s if x["pct"] < 0.5)).capitalize()} week has dipped below '
+            f'it so far and never twice running. ' if sum(1 for x in s if x['pct'] < 0.5) == 1
+            else f'{word(sum(1 for x in s if x["pct"] < 0.5)).capitalize()} weeks have dipped '
+                 f'below it so far. ')
+         + 'A pair in a row would say the fix is losing potency as injuries stack, which is '
+           'the one finding that argues against expanding on the expansion case&rsquo;s own '
+           'terms.',
+         'keep two'),
+    ]
+    if dep:
+        # Which weeks the wire actually outran demand -- derived, because an
+        # earlier draft asserted it had never happened and the opening two
+        # weeks of the season say otherwise.
+        upt = [C['uptake'][r['week']] for r in dep['rows']]
+        loose_wk = [r['week'] for r, u in zip(dep['rows'], upt) if r['upgrade_skill'] > u]
+        items.append((
+            'Men on the wire worth adding',
+            f'{min(up)} to {max(up)} a week',
+            f'<b>More of them than there are sides wanting a third slot, two weeks running.</b> '
+            + (f'That last held in week{"s" if len(loose_wk) > 1 else ""} '
+               f'{andlist(loose_wk)}, before the injuries arrived. '
+               if loose_wk else 'It has not held in any week measured. ')
+            + 'While the wire holds fewer usable men than there are teams who would claim '
+              'one, expansion empties the top of it rather than thinning it.',
+            'keep two'))
+    side = {'expand': ('EXPAND', 'ok'), 'keep two': ('KEEP TWO', 'no')}
+    return [f'<div class="wi"><div class="wh">{t}'
+            f'<span class="wt {side[w][1]}">helps {side[w][0]}</span></div>'
+            f'<div class="wn">{now}</div><div class="ww">{trig}</div></div>'
+            for t, now, trig, w in items]
+
+
+def scoreboard(C, cut_b, real, unwanted):
+    """One claim per row, attributed to the side that made it, with what the
+
+    data does to it. The gauge needle is COUNTED from this table rather than
+    felt, so a reader who rejects a verdict can recount and move it himself.
+    That is the only honest way to put a dial on a judgement."""
+    cap, last, dep, dr = C['cap'], C['last'], C['depth'], C['drops']
+    M, bw = C['M'], C['blockwk']
+    tilt = (C['med_seed'] or 0) - C['league_med'] >= 1.5
+    V = [
+        ('The cap binds', 'expand', 'supported',
+         f"{last['teams_at_cap']} of {C['teams_n']} rosters full by week {last['week']}, "
+         f"{100*last['ir_used_total']/last['ir_capacity_total']:.0f}% of capacity"),
+        ('Only injured men qualify, so it cannot be stacked', 'expand', 'supported',
+         'structural: an activated player must be rostered or dropped'),
+        ('The withdrawal reverses when players return', 'expand', 'supported',
+         'structural: activating a returning player puts the roster one over, so a man goes '
+         'back to the wire'),
+        ('A third slot helps weak teams more than strong ones', 'expand',
+         'supported' if tilt else 'untested',
+         f"median seed of the {word(len(C['helped']))} beneficiaries is {C['med_seed']:.1f} "
+         f"against a league median of {C['league_med']:.1f}"
+         + ('' if tilt else ' &mdash; too close to call either way')),
+        ('Nobody is hoarding IR spots', 'expand', 'overtaken',
+         f"true when it was said in preseason; by week {last['week']}, "
+         f"{last['teams_at_cap']} of {C['teams_n']} teams were at the cap"),
+        ('Leagues our size run two to four slots', 'expand', 'untested',
+         'no data here on other leagues, their age or their keeper rules'),
+    ]
+    if dr:
+        V.append(('The cap forces real roster losses', 'expand',
+                  'supported' if real else 'untested',
+                  (f"{word(len(real))} side{'s' if len(real) != 1 else ''} cut a man already "
+                   f"being carried injured with no slot left to shelve him, in "
+                   f"{C['drops']['n_drops']} drops"
+                   ) if real else 'no instance found in the transaction log'))
+    V += [
+        ('The wire is already bare', 'keep two', 'supported', 'DEPTH'),
+        ('Expansion thins the wire further', 'keep two', 'supported', 'MECH'),
+        ('It changes nothing functional', 'keep two', 'contradicted',
+         f"it changes {M[cap]['blocked']} blocked team-weeks to {M[cap+1]['blocked']}"),
+        ('It helps the committed teams and hurts the rest', 'keep two',
+         'contradicted' if tilt else 'untested',
+         'the beneficiaries skew to the bottom of the table, not the top' if tilt
+         else 'the beneficiaries sit almost exactly at the league median'),
+        ('It would change nothing for most of the league', 'keep two', 'supported',
+         f"{word(sum(1 for n in bw if not bw[n]))} of {C['teams_n']} rosters have never once "
+         f"been blocked"),
+    ]
+    if dr:
+        V.append(('The men the cap forces out are men nobody wants', 'keep two',
+                  'supported' if unwanted and len(unwanted) == len(dr['forced'])
+                  else 'contradicted' if dr['forced'] and not unwanted else 'untested',
+                  (("neither of the two men dropped has" if len(dr['forced']) == 2 else
+                    "the man dropped has not" if len(dr['forced']) == 1 else
+                    f"none of the {word(len(dr['forced']))} men dropped has")
+                   + f" been claimed by any of the other {C['teams_n']-1} teams since")
+                  if unwanted and len(unwanted) == len(dr['forced'])
+                  else 'at least one dropped man was claimed by another side'))
+    V.append(('No competitive harm from the cap has been shown', 'keep two', 'supported',
+              ('the transaction log was pulled looking for exactly that; what it found was '
+               f'friction and {word(len(dr["forced"]))} '
+               f'{"man" if len(dr["forced"]) == 1 else "men"} nobody else wanted')
+              if dr else 'correct, and not testable without the transaction log'))
+    if dep:
+        up = [r['upgrade_skill'] for r in dep['rows']]
+        dw = dep['rows'][-1]['week']
+        V = [(a, b, c, (f"only {up[-1]} players on the entire wire would have improved a "
+                        f"lineup in week {dw}" if d == 'DEPTH' else
+                        f"{C['uptake'].get(dw, 0)} sides would have used a third slot in week "
+                        f"{dw}; there were {up[-1]} players worth taking" if d == 'MECH' else d))
+             for a, b, c, d in V]
+    else:
+        V = [v for v in V if v[3] not in ('DEPTH', 'MECH')]
+    return V
+
+
+# ------------------------------------------------------------- the share card
 
 CARD = """<style>
 :root{--red:#c20f16;--ink:#17181c;--faint:#9a958c;--blue:#0e8ab5;
@@ -671,27 +947,26 @@ html,body{width:1200px;height:630px;overflow:hidden;background:#efe9de;
  font-family:Georgia,'Times New Roman',serif;color:var(--ink);}
 .card{position:relative;width:1200px;height:630px;overflow:hidden;background:#efe9de;
  border-top:9px solid var(--red);border-bottom:9px solid var(--red);
- padding:52px 60px 44px;display:flex;}
-.l{width:520px;flex:0 0 520px;display:flex;flex-direction:column;}
+ padding:50px 58px 42px;display:flex;}
+.l{width:530px;flex:0 0 530px;display:flex;flex-direction:column;}
 .flag{font-family:var(--sans);font-size:11.5px;font-weight:900;letter-spacing:.22em;
  text-transform:uppercase;color:var(--red);}
-h1{font-size:58px;line-height:.98;letter-spacing:-.026em;font-weight:900;margin-top:16px;}
+h1{font-size:56px;line-height:.98;letter-spacing:-.026em;font-weight:900;margin-top:15px;}
 h1 em{font-style:normal;color:var(--red);}
-.rule{width:64px;height:3px;background:var(--red);margin:22px 0 18px;}
-.dek{font-style:italic;color:#4b4b52;font-size:17px;line-height:1.4;max-width:28ch;}
-.st{margin-top:auto;display:flex;gap:34px;}
+.rule{width:64px;height:3px;background:var(--red);margin:20px 0 16px;}
+.dek{font-style:italic;color:#4b4b52;font-size:17px;line-height:1.4;max-width:29ch;}
+.st{margin-top:auto;display:flex;gap:30px;}
 .st .k{font-family:var(--sans);font-size:9px;font-weight:800;letter-spacing:.14em;
  text-transform:uppercase;color:var(--faint);}
-.st .v{font-size:32px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums;}
-.r{flex:1;padding-left:54px;display:flex;flex-direction:column;justify-content:center;}
-.cap{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.14em;
- text-transform:uppercase;color:var(--faint);margin-bottom:16px;}
-.bars{display:flex;flex-direction:column;gap:16px;}
-.b{display:flex;align-items:center;gap:12px;font-family:var(--sans);font-size:13px;}
-.b i{font-style:normal;font-weight:800;width:54px;color:var(--faint);}
-.b span{display:block;height:26px;background:var(--red);border-radius:0 2px 2px 0;}
-.b span.q{background:var(--blue);}
-.b b{font-weight:900;font-size:17px;font-variant-numeric:tabular-nums;}
+.st .v{font-size:31px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums;}
+.r{flex:1;padding-left:46px;display:flex;flex-direction:column;justify-content:center;gap:17px;}
+.vb{border-left:4px solid var(--red);padding-left:15px;}
+.vb.no{border-color:var(--blue);}
+.vb .q{font-family:var(--sans);font-size:11px;font-weight:800;letter-spacing:.1em;
+ text-transform:uppercase;color:var(--faint);}
+.vb .a{font-size:27px;font-weight:900;line-height:1.14;margin-top:2px;}
+.vb.no .a{color:var(--blue);}
+.vb.yes .a{color:var(--red);}
 </style>
 <div class="card">
  <div class="l">
@@ -705,35 +980,31 @@ h1 em{font-style:normal;color:var(--red);}
    <div><div class="k">A third clears</div><div class="v">__CUT__%</div></div>
   </div>
  </div>
- <div class="r">
-  <div class="cap">Blocked team-weeks, by cap</div>
-  <div class="bars">__BARS__</div>
- </div>
+ <div class="r">__CARDS__</div>
 </div>"""
 
 
-def card(C):
-    cap, M = C['cap'], C['M']
-    base = M[cap]
-    mx = base['blocked'] or 1
-    bars = ''.join(
-        f'<div class="b"><i>Cap {c}</i>'
-        f'<span class="{"" if c == cap else "q"}" style="width:{330*M[c]["blocked"]/mx:.0f}px"></span>'
-        f'<b>{M[c]["blocked"]}</b></div>' for c in (cap, cap + 1))
-    last = C['last']
-    cut = 100 * (base['blocked'] - M[cap + 1]['blocked']) / base['blocked']
-    nshort = sum(1 for n in C['blockwk'] if C['blockwk'][n])
-    doc = (CARD.replace('__BARS__', bars)
-               .replace('__SHORT__', word(nshort).capitalize())
-               .replace('__PCT__', f"{100*last['ir_used_total']/last['ir_capacity_total']:.0f}")
-               .replace('__STR__', str(last['stranded_total']))
-               .replace('__CUT__', f'{cut:.0f}')
-               .replace('__DEK__', f"{word(nshort).capitalize()} of {C['teams_n']} teams have hit "
-                                   f"the cap with a man still stranded. "
-                                   f"{word(C['teams_n'] - nshort).capitalize()} never have. What a "
-                                   f"third slot fixes, and what it does not."))
+def card(C, nshort, cut, real):
+    last, bw = C['last'], C['blockwk']
+    never = sum(1 for n in bw if not bw[n])
+    cards = [('Does the cap bind?', 'Yes', 'yes'),
+             ('Has it cost anyone a player?',
+              'Once' if len(real) == 1 else word(len(real)).capitalize(), 'no'),
+             ('Does it fall on everyone?', f'No &mdash; {word(never)} untouched', 'no')]
+    doc = (CARD.replace('__CARDS__',
+                        ''.join(f'<div class="vb {t}"><div class="q">{q}</div>'
+                                f'<div class="a">{a}</div></div>' for q, a, t in cards))
+           .replace('__SHORT__', word(nshort).capitalize())
+           .replace('__PCT__', f"{100*last['ir_used_total']/last['ir_capacity_total']:.0f}")
+           .replace('__STR__', str(last['stranded_total']))
+           .replace('__CUT__', f'{cut:.0f}')
+           .replace('__DEK__', f"Six weeks of roster data on a rule the league cannot agree "
+                               f"on. What a third slot would fix, what it would cost, and "
+                               f"what to watch next."))
     ad.shoot(doc, OG, 'irstudy-card')
 
+
+# ------------------------------------------------------------------- the page
 
 PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -756,34 +1027,67 @@ PAGE = """<!doctype html>
 *{box-sizing:border-box;}
 body{margin:0;background:var(--cream);color:var(--ink);font-family:var(--serif);font-size:17px;
  line-height:1.62;-webkit-font-smoothing:antialiased;}
-.wrap{max-width:860px;margin:0 auto;padding:0 20px 80px;}
+.wrap{max-width:880px;margin:0 auto;padding:0 20px 80px;}
 .runhead{font-family:var(--sans);font-size:10.5px;font-weight:800;letter-spacing:.22em;
- text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);padding:20px 0 12px;}
+ text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+ padding:20px 0 12px;}
 .flag{font-family:var(--sans);font-size:10.5px;font-weight:900;letter-spacing:.24em;
  text-transform:uppercase;color:var(--red);margin-top:26px;display:block;}
-h1{font-weight:900;font-size:clamp(34px,7vw,54px);line-height:1.02;letter-spacing:-.022em;
+h1{font-weight:900;font-size:clamp(34px,7vw,56px);line-height:1.02;letter-spacing:-.022em;
  margin:12px 0 0;text-wrap:balance;}
 h1 em{font-style:normal;color:var(--red);}
-.dek{font-style:italic;color:var(--muted);font-size:18px;margin:14px 0 0;max-width:60ch;}
+.dek{font-style:italic;color:var(--muted);font-size:18.5px;margin:14px 0 0;max-width:58ch;}
 .byline{font-family:var(--sans);font-size:11.5px;letter-spacing:.06em;color:var(--faint);
  margin-top:16px;text-transform:uppercase;}
-.rule{height:3px;background:var(--red);width:70px;margin:22px 0 26px;}
-.sect{font-family:var(--sans);font-size:11px;font-weight:900;letter-spacing:.2em;
- text-transform:uppercase;color:var(--red);margin:44px 0 12px;padding-top:14px;
- border-top:1px solid var(--line);}
-p.b{margin:0 0 16px;max-width:62ch;}
-p.lf{margin:0 0 16px;max-width:62ch;font-family:var(--sans);font-size:13px;color:var(--muted);}
+.rule{height:3px;background:var(--red);width:70px;margin:22px 0 28px;}
+
+/* the board: the whole argument, scannable, above everything else */
+.board{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+ grid-template-columns:repeat(auto-fit,minmax(215px,1fr));margin:0 0 26px;}
+.vb{background:var(--cream);padding:16px 17px 17px;border-top:3px solid var(--gold);}
+.vb.yes{border-top-color:var(--red);}
+.vb.no{border-top-color:var(--blue);}
+.vb .q{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.12em;
+ text-transform:uppercase;color:var(--faint);line-height:1.4;}
+.vb .a{font-size:29px;font-weight:900;line-height:1.1;margin:5px 0 6px;
+ font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+.vb.yes .a{color:var(--red);}
+.vb.no .a{color:var(--blue);}
+.vb .e{font-family:var(--sans);font-size:12px;line-height:1.45;color:var(--muted);}
+
+.short{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--red);
+ padding:20px 24px 20px;margin:0 0 24px;}
+.short .h{font-family:var(--sans);font-size:11px;font-weight:900;letter-spacing:.2em;
+ text-transform:uppercase;color:var(--red);margin-bottom:10px;}
+.short ol{margin:0;padding-left:22px;}
+.short li{margin-bottom:9px;line-height:1.5;}
+.short li:last-child{margin-bottom:0;}
+
+.jump{font-family:var(--sans);font-size:12px;color:var(--muted);margin:0 0 30px;
+ padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+ line-height:1.9;}
+.jump b{color:var(--faint);text-transform:uppercase;letter-spacing:.12em;font-size:10px;
+ margin-right:6px;}
+.jump a{color:var(--ink);font-weight:700;text-decoration:none;
+ border-bottom:1px solid var(--line);}
+.jump a:hover{border-bottom-color:var(--red);color:var(--red);}
+
+h2.sect{font-family:var(--sans);font-size:13px;font-weight:900;letter-spacing:.18em;
+ text-transform:uppercase;color:var(--red);margin:50px 0 14px;padding-top:16px;
+ border-top:2px solid var(--ink);display:flex;align-items:baseline;gap:11px;scroll-margin-top:12px;}
+h2.sect .sn{font-size:11px;background:var(--red);color:#fff;width:21px;height:21px;
+ display:inline-flex;align-items:center;justify-content:center;border-radius:50%;
+ letter-spacing:0;flex:0 0 21px;}
+p.find{font-size:21px;line-height:1.38;font-weight:700;letter-spacing:-.012em;
+ margin:0 0 18px;max-width:52ch;}
+p.b{margin:0 0 16px;max-width:64ch;}
+p.lf{margin:0 0 16px;max-width:64ch;font-family:var(--sans);font-size:13px;color:var(--muted);}
 code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;
  background:var(--paper);padding:1px 5px;border-radius:3px;}
-.stats{display:flex;flex-wrap:wrap;gap:24px 38px;margin:0 0 28px;padding-bottom:22px;
- border-bottom:1px solid var(--line);}
-.stat .k{font-family:var(--sans);font-size:9.5px;font-weight:800;letter-spacing:.14em;
- text-transform:uppercase;color:var(--faint);}
-.stat .v{font-size:30px;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums;}
-.stat .n{font-family:var(--sans);font-size:11px;color:var(--muted);}
-.pull{margin:34px 0 10px;padding:0 0 0 20px;border-left:3px solid var(--red);font-size:19px;
+.pull{margin:30px 0 20px;padding:0 0 0 20px;border-left:3px solid var(--red);font-size:19px;
  line-height:1.45;font-weight:700;max-width:54ch;letter-spacing:-.01em;}
-figure.ad{margin:26px 0 30px;}
+
+figure.ad{margin:24px 0 30px;}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 figure.ad table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:13.5px;}
 figure.ad td,figure.ad th{padding:8px 10px;border-bottom:1px solid var(--line);
@@ -795,18 +1099,18 @@ figure.ad .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:80
 figure.ad .lt{text-align:left;}
 figure.ad .dim{color:var(--muted);font-weight:600;}
 figure.ad .hot{color:var(--red);}
-figcaption{font-family:var(--sans);font-size:11.5px;color:var(--faint);margin-top:10px;}
+figcaption{font-family:var(--sans);font-size:11.5px;color:var(--faint);margin-top:10px;
+ line-height:1.55;}
 figure.ad .v{font-family:var(--sans);font-size:10px;font-weight:900;letter-spacing:.1em;
  text-transform:uppercase;padding:2px 7px;border-radius:3px;color:#fff;white-space:nowrap;}
 figure.ad .v.ok{background:var(--red);}
 figure.ad .v.no{background:var(--blue);}
 figure.ad .v.mid{background:var(--gold);color:#3a3326;}
 figure.ad .ev{white-space:normal;min-width:19em;font-size:12.5px;line-height:1.45;}
-figure.ad th.qq{white-space:normal;min-width:17em;font-weight:700;line-height:1.4;}
-figure.ad td.qa{white-space:normal;min-width:9em;font-weight:900;color:var(--red);
- line-height:1.4;}
-figure.gauge{margin:14px 0 26px;}
+figure.gauge{margin:6px 0 28px;}
 figure.gauge svg{width:100%;height:auto;display:block;}
+figure.gauge a{color:var(--red);font-weight:700;}
+
 .bars{display:flex;flex-direction:column;gap:5px;border-top:2px solid var(--ink);
  padding-top:12px;}
 .bar{display:flex;align-items:center;gap:10px;font-family:var(--sans);font-size:12.5px;}
@@ -815,11 +1119,30 @@ figure.gauge svg{width:100%;height:auto;display:block;}
 .bar span{display:block;height:13px;background:var(--red);border-radius:0 2px 2px 0;
  flex:0 0 auto;max-width:calc(100% - 14em);}
 .bar span.z{background:var(--line);}
-.bar b{font-weight:900;font-variant-numeric:tabular-nums;color:var(--ink);}
-@media(max-width:560px){.bar i{flex:0 0 7.5em;font-size:11.5px;}}
+.bar b{font-weight:900;font-variant-numeric:tabular-nums;}
+
+.watch{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);margin:0 0 20px;}
+.wi{background:var(--cream);padding:15px 18px 17px;}
+.wh{font-family:var(--sans);font-size:11px;font-weight:900;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--faint);display:flex;flex-wrap:wrap;gap:9px;
+ align-items:center;}
+.wt{font-size:9.5px;letter-spacing:.1em;padding:2px 7px;border-radius:3px;color:#fff;}
+.wt.ok{background:var(--red);} .wt.no{background:var(--blue);}
+.wn{font-size:23px;font-weight:900;letter-spacing:-.015em;margin:4px 0 6px;
+ font-variant-numeric:tabular-nums;}
+.ww{font-family:var(--sans);font-size:13px;line-height:1.5;color:var(--muted);max-width:68ch;}
+
+dl.lim{margin:0 0 20px;}
+dl.lim dt{font-weight:700;margin-top:16px;}
+dl.lim dd{margin:3px 0 0;color:var(--muted);max-width:64ch;}
+
 .more{margin-top:46px;border-top:1px solid var(--line);padding-top:18px;font-family:var(--sans);
  font-size:12.5px;line-height:1.6;color:var(--muted);max-width:74ch;}
-.more a{color:var(--red);font-weight:700;}
+@media(max-width:560px){
+ .bar i{flex:0 0 7.5em;font-size:11.5px;}
+ p.find{font-size:19px;}
+ .vb .a{font-size:26px;}
+}
 </style></head><body><div class="wrap">
 <div class="runhead">SCFL NewsRoom &middot; Working Paper</div>
 <span class="flag">Rules &middot; Injured Reserve</span>
@@ -828,10 +1151,10 @@ figure.gauge svg{width:100%;height:auto;display:block;}
 <div class="byline">An early review of the evidence &middot; data through week __WK__</div>
 <div class="rule"></div>
 __BODY__
-<div class="more">Every figure on this page is computed at build time from
-<code>ir-watch.json</code>, which <code>scripts/ir_watch.py</code> writes once a week from the
-live roster and never rewrites. Nothing here was typed by hand, and adding a week changes the
-conclusions rather than leaving a stale number under a headline that no longer fits it.
+<div class="more">Every figure on this page is computed at build time from files in the
+repository &mdash; the weekly roster snapshots, the transaction log, the waiver-depth
+measurement and the scoring files. Nothing here was typed by hand, so adding a week changes
+the conclusions rather than leaving a stale number under a headline that no longer fits it.
 Built by <code>scripts/build_ir_study.py</code>.</div>
 </div></body></html>"""
 
@@ -839,15 +1162,19 @@ Built by <code>scripts/build_ir_study.py</code>.</div>
 def build():
     import datetime
     C = crunch()
-    body = '\n'.join(figures(C))
-    last = C['last']
-    cap = C['cap']
-    nshort = sum(1 for n in C['blockwk'] if C['blockwk'][n])
+    cap, last, bw = C['cap'], C['last'], C['blockwk']
     cut = 100 * (C['M'][cap]['blocked'] - C['M'][cap + 1]['blocked']) / C['M'][cap]['blocked']
+    nshort = sum(1 for n in bw if bw[n])
+    never = sum(1 for n in bw if not bw[n])
+    dr = C['drops']
+    real = [d for d in (dr['forced'] if dr else [])
+            if (d['weeks_held'] is None or d['weeks_held'] >= 2)]
+    body = '\n'.join(figures(C))
     desc = (f"{word(nshort).capitalize()} of {C['teams_n']} teams have hit the IR cap with a "
-            f"man still stranded this season; {word(C['teams_n'] - nshort)} never have. A third "
-            f"slot would clear {cut:.0f}% of it — and here is everything that measurement "
-            f"cannot tell you.")
+            f"man still stranded; {word(never)} never have. A third slot would clear "
+            f"{cut:.0f}% of it, the wire holds a handful of men worth adding, and in "
+            f"{word(len(C['rows']))} weeks the cap has cost "
+            f"{'one side one player' if len(real) == 1 else word(len(real)) + ' players'}.")
     today = datetime.date.today()
     doc = (PAGE.replace('__BODY__', body)
                .replace('__SHORT__', word(nshort).capitalize())
@@ -858,11 +1185,12 @@ def build():
     open(OUT, 'w', encoding='utf-8').write(doc)
     print(f'wrote {os.path.basename(OUT)} ({len(doc):,} chars)')
     print(f"  cap {cap}: {C['M'][cap]['blocked']} blocked team-weeks | "
-          f"cap {cap+1}: {C['M'][cap+1]['blocked']}")
-    bw = C['blockwk']
-    print(f"  blocked at least once: {sum(1 for n in bw if bw[n])}/{C['teams_n']} | "
-          f"never: {sum(1 for n in bw if not bw[n])}")
-    card(C)
+          f"cap {cap+1}: {C['M'][cap+1]['blocked']} ({cut:.0f}% cleared)")
+    print(f"  blocked at least once {nshort}/{C['teams_n']} | never {never}")
+    if dr:
+        print(f"  forced drops {len(dr['forced'])} ({len(real)} genuine) "
+              f"of {dr['judged']} judged, {dr['n_drops']} total")
+    card(C, nshort, cut, real)
 
 
 if __name__ == '__main__':
