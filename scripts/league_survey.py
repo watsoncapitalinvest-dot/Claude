@@ -103,6 +103,39 @@ def shape(lg):
     }
 
 
+def home_only(a):
+    """Record OUR league's own settings into an existing survey, nothing else.
+
+    The walk deliberately skips the home league -- it is the thing being
+    compared, not a sample point -- and the first version left it out of the
+    file entirely, which made the comparison impossible to finish. A raw slot
+    count is not comparable on its own: a league with five slots that admits
+    only true IR is stricter than one with three that admits Out, Doubtful and
+    PUP, and in this sample the permissive leagues turn out to carry MORE
+    slots rather than fewer. So the baseline needs its own eligibility flags
+    sitting next to everyone else's.
+
+    Merging into the existing file rather than re-walking keeps the 8,000-odd
+    leagues already banked; a fresh walk would draw a slightly different
+    sample and quietly change every figure.
+    """
+    if not os.path.exists(OUT):
+        sys.exit('no league-survey.json yet -- run the walk first')
+    doc = json.load(open(OUT, encoding='utf-8'))
+    lid = a.league_id
+    if not lid and os.path.exists(IRW):
+        rows = json.load(open(IRW, encoding='utf-8'))['rows']
+        lid = rows[-1]['league_id'] if rows else ''
+    lg = get(f'/league/{lid}') if lid else None
+    if not lg:
+        sys.exit(f'could not read the home league {lid!r}')
+    doc['home'] = shape(lg)
+    json.dump(doc, open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    print(f"  recorded the home league: {doc['home']['ir']} IR slots, "
+          f"{sum(1 for v in doc['home']['allow'].values() if v)} designations allowed")
+    return doc
+
+
 def survey(a):
     season = a.season
     if not season:
@@ -170,6 +203,13 @@ def survey(a):
 
 def report(doc):
     lg = doc['leagues']
+    h = doc.get('home')
+    if h:
+        print(f"\nOURS: {h['teams']} teams, {h['ir']} IR slots, {h['taxi']} taxi, "
+              f"{h['starters']}+{h['bench']}, "
+              f"{'superflex' if h['superflex'] else 'single QB'}, "
+              f"{sum(1 for v in h['allow'].values() if v)} of "
+              f"{len(h['allow'])} designations allowed")
     print(f"\n{doc['leagues_seen']} leagues from {doc['managers_asked']} managers, "
           f"{doc['season']}, {doc['hops']} hop(s)")
     for label, sel in (('ALL', lambda l: True),
@@ -188,10 +228,14 @@ def report(doc):
         for k in sorted(d, key=lambda x: (x is None, x)):
             print(f"    {str(k) + ' IR slots':>14}  {d[k]:>3}  "
                   f"{100*d[k]/len(g):>5.1f}%  {'#' * d[k]}")
-        ir = [l['ir'] for l in g if l['ir'] is not None]
+        ir = sorted(l['ir'] for l in g if l['ir'] is not None)
         if ir:
             print(f"    mean {sum(ir)/len(ir):.2f}, median "
-                  f"{sorted(ir)[len(ir)//2]}, range {min(ir)}-{max(ir)}")
+                  f"{ir[len(ir)//2]}, range {min(ir)}-{max(ir)}")
+            if h and h['ir'] is not None:
+                at = sum(1 for v in ir if v <= h['ir'])
+                print(f"    ours ({h['ir']}): {at} of {len(ir)} leagues run that many or "
+                      f"fewer = bottom {100*at/len(ir):.0f}%")
 
 
 def main():
@@ -200,8 +244,13 @@ def main():
     ap.add_argument('--season', default='')
     ap.add_argument('--hops', type=int, default=1)
     ap.add_argument('--cap', type=int, default=400, help='managers asked per hop')
+    ap.add_argument('--home-only', action='store_true',
+                    help="record our own league's settings into an existing survey")
     ap.add_argument('--report', action='store_true')
     a = ap.parse_args()
+    if a.home_only:
+        report(home_only(a))
+        return
     if a.report:
         if not os.path.exists(OUT):
             sys.exit('no league-survey.json yet')
