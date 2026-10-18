@@ -142,7 +142,134 @@ def crunch():
                               key=lambda t: -t['stranded'])}
     C['depth'] = depth()
     C['drops'] = drops()
+    C['peers'] = peers()
     return C
+
+
+def spearman(xs, ys):
+    """Rank correlation, so a handful of ten-slot leagues cannot drag the line.
+
+    Pearson on raw slot counts would be pulled around by the leagues running
+    ten, which are a different kind of league rather than an extreme version
+    of this one.
+    """
+    def rank(v):
+        order = sorted(range(len(v)), key=lambda i: v[i])
+        r, i = [0.0] * len(v), 0
+        while i < len(order):
+            j = i
+            while j + 1 < len(order) and v[order[j + 1]] == v[order[i]]:
+                j += 1
+            for k in range(i, j + 1):
+                r[order[k]] = (i + j) / 2 + 1
+            i = j + 1
+        return r
+    a, b = rank(xs), rank(ys)
+    n = len(a)
+    ma, mb = sum(a) / n, sum(b) / n
+    num = sum((x - ma) * (y - mb) for x, y in zip(a, b))
+    den = (sum((x - ma) ** 2 for x in a) * sum((y - mb) ** 2 for y in b)) ** 0.5
+    return num / den if den else 0.0
+
+
+def peers():
+    """What every other 16-team league actually runs.
+
+    The study carried one claim nobody could test -- "leagues our size run two
+    to four slots" -- because it had no data on any league but this one.
+    scripts/league_survey.py walks outward from here and gets some; this
+    reduces it to the comparisons the argument turns on.
+
+    Three things have to be held together or the headline number misleads:
+
+      1. A raw slot count is not comparable. A league with five slots that
+         admits only true IR is stricter than one with three that admits Out,
+         Doubtful and PUP. So the like-for-like figure is against leagues
+         allowing the same NUMBER of designations we do.
+      2. Injured reserve is not the only place a dynasty league stashes men.
+         A taxi squad does the same job for different reasons, and most of
+         these leagues have one where we have none.
+      3. Tenure is measurable only in Sleeper seasons, and Sleeper is younger
+         than this league. See the note on the tenure block below.
+    """
+    p = os.path.join(ROOT, 'league-survey.json')
+    if not os.path.exists(p):
+        return None
+    d = json.load(open(p, encoding='utf-8'))
+    h = d.get('home')
+    if not h or h.get('ir') is None:
+        return None
+    med = lambda xs: sorted(xs)[len(xs) // 2] if xs else None
+    allow_n = lambda l: sum(1 for v in (l.get('allow') or {}).values() if v)
+    ours_allow = allow_n(h)
+
+    def klass(sel):
+        g = [l for l in d['leagues'] if l['teams'] == 16 and l['ir'] is not None and sel(l)]
+        if not g:
+            return None
+        ir = sorted(l['ir'] for l in g)
+        dist = {}
+        for v in ir:
+            dist[v] = dist.get(v, 0) + 1
+        return {'n': len(g), 'dist': dist, 'median': med(ir),
+                'mean': sum(ir) / len(ir), 'lo': min(ir), 'hi': max(ir),
+                'at_or_under': sum(1 for v in ir if v <= h['ir']),
+                'three_plus': sum(1 for v in ir if v >= 3),
+                'exactly_ours': dist.get(h['ir'], 0),
+                'rows': g}
+
+    cls = {'all': klass(lambda l: True),
+           'dyn': klass(lambda l: l['type'] == 2),
+           'sf': klass(lambda l: l['type'] == 2 and l['superflex'])}
+    dyn = cls['dyn']['rows'] if cls['dyn'] else []
+
+    # 1 -- like for like on who may be shelved at all
+    same = [l for l in dyn if allow_n(l) == ours_allow]
+    elig = {'n': len(same), 'median': med([l['ir'] for l in same]),
+            'at_or_under': sum(1 for l in same if l['ir'] <= h['ir']),
+            'ours_allow': ours_allow, 'of': len(h.get('allow') or {})} if same else None
+
+    # 2 -- every place a roster can park a man, not just injured reserve
+    stash = sorted(l['ir'] + l['taxi'] for l in dyn)
+    ours_stash = h['ir'] + h['taxi']
+    total = sorted(l['starters'] + l['bench'] + l['ir'] + l['taxi'] for l in dyn)
+    ours_total = h['starters'] + h['bench'] + h['ir'] + h['taxi']
+    room = {'stash_med': med(stash), 'ours_stash': ours_stash,
+            'stash_under': sum(1 for v in stash if v <= ours_stash),
+            'total_med': med(total), 'ours_total': ours_total,
+            'total_under': sum(1 for v in total if v <= ours_total),
+            'bench_med': med([l['bench'] for l in dyn]), 'ours_bench': h['bench'],
+            'taxi_med': med([l['taxi'] for l in dyn]), 'ours_taxi': h['taxi'],
+            'no_taxi': sum(1 for l in dyn if not l['taxi']),
+            # what going to three would actually do to our standing
+            'stash_under_3': sum(1 for v in stash if v <= ours_stash + 1)} if dyn else None
+
+    # 3 -- tenure. Sleeper only, and it says so wherever it is quoted.
+    ten = [l for l in dyn if l.get('seasons')]
+    tn = None
+    if ten and h.get('seasons'):
+        buckets = []
+        for lo, hi in ((1, 1), (2, 3), (4, 5), (6, 99)):
+            b = [l for l in ten if lo <= l['seasons'] <= hi]
+            if b:
+                buckets.append({'lab': f'{lo}' if lo == hi
+                                else (f'{lo}&ndash;{hi}' if hi < 99 else f'{lo}+'),
+                                'n': len(b), 'median': med([l['ir'] for l in b]),
+                                'mean': sum(l['ir'] for l in b) / len(b)})
+        old = [l for l in ten if l['seasons'] >= 6]
+        tn = {'n': len(ten), 'ours': h['seasons'],
+              'max': max(l['seasons'] for l in ten),
+              'median': med([l['seasons'] for l in ten]),
+              'buckets': buckets,
+              'rho': spearman([l['seasons'] for l in ten], [l['ir'] for l in ten]),
+              'old_n': len(old),
+              'old_under': sum(1 for l in old if l['ir'] <= h['ir']),
+              'old_med': med([l['ir'] for l in old]),
+              'old_taxi': med([l['taxi'] for l in old]),
+              'old_bench': med([l['bench'] for l in old])}
+    return {'home': h, 'cls': cls, 'elig': elig, 'room': room, 'ten': tn,
+            'seen': d['leagues_seen'], 'asked': d['managers_asked'],
+            'hops': d['hops'], 'season': d['season'], 'stamp': d['stamp']}
 
 
 def depth():
@@ -221,7 +348,7 @@ def figures(C):
     F = lambda h: out.append(f'<p class="find">{h}</p>')
     P = lambda h: out.append(h)
     cap, rows, M = C['cap'], C['rows'], C['M']
-    last, dep, dr = C['last'], C['depth'], C['drops']
+    last, dep, dr, pr = C['last'], C['depth'], C['drops'], C['peers']
     n_wk, tw = len(rows), len(rows) * C['teams_n']
     base, plus1 = M[cap], M[cap + 1]
     cut_b = 100 * (base['blocked'] - plus1['blocked']) / base['blocked']
@@ -246,6 +373,10 @@ def figures(C):
     flyer = [d for d in forced if d not in real]
     unwanted = [d for d in forced if not d['claimed_since']]
     him = lambda n: 'him' if n == 1 else 'them'
+    # The peer section only exists when the survey has been run, so every
+    # section after it has to shift rather than be numbered by hand -- a
+    # hard-coded 6 would label two sections 6 the day the survey is missing.
+    N = lambda i: i + (1 if pr else 0)
 
     # ---- the board ------------------------------------------------------
     # Everything a reader needs to argue from, above the fold, in words
@@ -272,6 +403,13 @@ def figures(C):
            f'{word(len(ever))} of {C["teams_n"]} sides ever blocked, {word(len(never))} '
            f'never, {100*bw[heaviest]/tot_b:.0f}% of it on one roster'),
     ]
+    if pr:
+        dyb = pr['cls']['dyn']
+        board.append(vb('How common is two?',
+                        f'{100*dyb["exactly_ours"]/dyb["n"]:.0f}%', 'yes',
+                        f'of {dyb["n"]} sixteen-team dynasty leagues; the median is '
+                        f'{dyb["median"]} and {100*dyb["three_plus"]/dyb["n"]:.0f}% run '
+                        f'three or more'))
     if dep:
         board.append(vb('Can the wire absorb it?', 'No', 'no',
                         f'{min(up)} to {max(up)} men a week worth starting, against '
@@ -337,15 +475,18 @@ week out of {active}.</li>
 <li><b>It does not fall on everyone.</b> {word(len(ever)).capitalize()} of
 {C['teams_n']} sides have ever been blocked; {word(len(never))} never have.
 {E(heaviest)} alone carry {100*bw[heaviest]/tot_b:.0f}% of it.</li>
+{f'<li><b>Two slots is not normal for a league this shape.</b> The median sixteen-team dynasty league runs {pr["cls"]["dyn"]["median"]} and {100*pr["cls"]["dyn"]["three_plus"]/pr["cls"]["dyn"]["n"]:.0f}% run three or more, which puts this league in the bottom {100*pr["cls"]["dyn"]["at_or_under"]/pr["cls"]["dyn"]["n"]:.0f}% of {pr["cls"]["dyn"]["n"]}. Going to three would still leave it in the bottom {100*pr["room"]["stash_under_3"]/pr["cls"]["dyn"]["n"]:.0f}% on total stash room.</li>' if pr else ''}
 {f'<li><b>The wire cannot absorb it.</b> Across the {word(len(up))} weeks measured, only {min(up)} to {max(up)} unrostered men a week would have improved anybody&rsquo;s lineup, against {min(upt)} to {max(upt)} sides who would have taken up a third slot in those same weeks.</li>' if dep else ''}
 </ol></div>''')
 
+    nav = [(1, 'Does it bind?'), (2, 'What three would do'),
+           (3, 'Has it cost anyone?'), (4, 'Level playing field?')]
+    if pr:
+        nav.append((5, 'Other leagues'))
+    nav += [(N(5), 'The wire'), (N(6), 'The scoreboard'), (N(7), 'What to watch'),
+            (N(8), 'What this cannot tell you'), (N(9), 'The data')]
     P('<nav class="jump"><b>On this page</b> '
-      + ' &middot; '.join(f'<a href="#s{i}">{t}</a>' for i, t in (
-          (1, 'Does it bind?'), (2, 'What three would do'), (3, 'Has it cost anyone?'),
-          (4, 'Level playing field?'), (5, 'The wire'), (6, 'The scoreboard'),
-          (7, 'What to watch'), (8, 'What this cannot tell you'), (9, 'The data')))
-      + '</nav>')
+      + ' &middot; '.join(f'<a href="#s{i}">{t}</a>' for i, t in nav) + '</nav>')
 
     P(f'<p class="lf">The league: <b>{C["teams_n"]} teams, {C["teams_n"]} owners</b>, one '
       f'each. {last["starters"]} starters and nine bench on every roster, plus '
@@ -527,8 +668,128 @@ week out of {active}.</li>
         'this page does not have the standing to make it.</p>')
 
     # ---- 5 --------------------------------------------------------------
+    # Evidence of a different KIND from everything above it: what other
+    # leagues do is convention, not consequence. It belongs in the paper
+    # because the argument of 7 September appealed to it, and it is marked for
+    # what it is rather than promoted to a finding about harm.
+    if pr:
+        S(5, 'What every other 16-team league runs')
+        dy, sf, al = pr['cls']['dyn'], pr['cls']['sf'], pr['cls']['all']
+        h = pr['home']
+        F(f'The median 16-team dynasty league runs <b>{dy["median"]} slots</b>. '
+          f'<b>{100*dy["three_plus"]/dy["n"]:.0f}%</b> run three or more. '
+          f'{word(dy["exactly_ours"]).capitalize()} of {dy["n"]} run {word(h["ir"])}, '
+          f'as we do.')
+        P(f'<p class="b">This was the one claim in the argument nobody could test. Sleeper '
+          f'has no search &mdash; you can ask it for a league by its id, or for the leagues a '
+          f'given manager is in, and nothing else &mdash; so the sample is walked outward '
+          f'from here: every manager in this league, every other {pr["season"]} league they '
+          f'play in, and onward through theirs. <b>{pr["seen"]:,} leagues from '
+          f'{pr["asked"]} managers</b>, {word(pr["hops"])} hops. Of those, '
+          f'<b>{al["n"]}</b> have sixteen teams and <b>{dy["n"]}</b> are sixteen-team '
+          f'dynasty leagues.</p>')
+        mx = max(dy['dist'].values())
+        dr_ = ''.join(
+            f'<tr><th scope="row">{k} slot{"s" if k != 1 else ""}'
+            + (' &mdash; ours' if k == h['ir'] else '') + '</th>'
+            f'<td class="num">{dy["dist"][k]}</td>'
+            f'<td class="num dim">{100*dy["dist"][k]/dy["n"]:.0f}%</td>'
+            f'<td><span class="pip{" me" if k == h["ir"] else ""}" '
+            f'style="width:{max(2, round(100*dy["dist"][k]/mx))}%"></span></td></tr>'
+            for k in sorted(dy['dist']))
+        P(f'<figure class="ad"><div class="scroll"><table><thead><tr>'
+          f'<th class="lt">Injured reserve</th><th class="num">Leagues</th>'
+          f'<th class="num">Share</th><th class="lt"></th></tr></thead>'
+          f'<tbody>{dr_}</tbody></table></div><figcaption>The {dy["n"]} sixteen-team dynasty '
+          f'leagues in the sample. Median {dy["median"]}, mean {dy["mean"]:.1f}, range '
+          f'{dy["lo"]} to {dy["hi"]}. Ours is {h["ir"]}: {dy["at_or_under"]} of {dy["n"]} run '
+          f'that many or fewer, which puts this league in the bottom '
+          f'{100*dy["at_or_under"]/dy["n"]:.0f}%.</figcaption></figure>')
+        if sf:
+            P(f'<p class="b">Narrowing to the closest match &mdash; sixteen-team '
+              f'<i>superflex</i> dynasty, {sf["n"]} leagues &mdash; moves it very little: '
+              f'median {sf["median"]}, {100*sf["three_plus"]/sf["n"]:.0f}% at three or more, '
+              f'and this league in the bottom {100*sf["at_or_under"]/sf["n"]:.0f}%.</p>')
+        if pr['elig']:
+            el = pr['elig']
+            P(f'<p class="b"><b>Eligibility does not explain it, which was the first place to '
+              f'look.</b> A raw slot count is not comparable: a league with five slots that '
+              f'admits only true injured reserve is stricter than one with three that admits '
+              f'Out, Doubtful and PUP. This league admits <b>{word(el["ours_allow"])} of '
+              f'{word(el["of"])}</b> designations. Among the {el["n"]} sixteen-team dynasty '
+              f'leagues that are exactly as restrictive, the median is still '
+              f'<b>{el["median"]} slots</b>, and only {word(el["at_or_under"])} of '
+              f'{el["n"]} sit at {word(h["ir"])} or fewer. Across the sample the permissive '
+              f'leagues carry <i>more</i> slots rather than fewer, so eligibility compounds '
+              f'the gap instead of accounting for it.</p>')
+        if pr['room']:
+            rm = pr['room']
+            P(f'<p class="b"><b>And injured reserve is not the only place a dynasty roster '
+              f'parks a man.</b> A taxi squad does much the same job for different reasons, '
+              f'and {dy["n"] - rm["no_taxi"]} of these {dy["n"]} leagues have one where this '
+              f'league has none.</p>')
+            cmp_ = [('Bench', rm['ours_bench'], rm['bench_med']),
+                    ('Taxi squad', rm['ours_taxi'], rm['taxi_med']),
+                    ('IR + taxi', rm['ours_stash'], rm['stash_med']),
+                    ('Whole roster, stash included', rm['ours_total'], rm['total_med'])]
+            P(f'<figure class="ad"><div class="scroll"><table><thead><tr>'
+              f'<th class="lt"></th><th class="num">Ours</th>'
+              f'<th class="num">Median of the {dy["n"]}</th></tr></thead><tbody>'
+              + ''.join(f'<tr><th scope="row">{a}</th><td class="num hot">{b}</td>'
+                        f'<td class="num">{c}</td></tr>' for a, b, c in cmp_)
+              + f'</tbody></table></div><figcaption>On total stash room this league is in the '
+                f'bottom {100*rm["stash_under"]/dy["n"]:.0f}%; on roster size including stash, '
+                f'the bottom {100*rm["total_under"]/dy["n"]:.0f}%.</figcaption></figure>')
+            P(f'<p class="pull">Which cuts both ways, and the second way is the one worth '
+              f'noticing. Going to {word(cap+1)} slots would move this league&rsquo;s total '
+              f'stash from {rm["ours_stash"]} to {rm["ours_stash"]+1} against a median of '
+              f'{rm["stash_med"]} &mdash; still the bottom '
+              f'{100*rm["stash_under_3"]/dy["n"]:.0f}%. The distance between this league and '
+              f'its peers is not one injured reserve slot. It is '
+              f'{rm["total_med"] - rm["ours_total"]} roster spots.</p>')
+        if pr['ten']:
+            tn = pr['ten']
+            P(f'<p class="b"><b>Are they just younger?</b> It was the first objection raised '
+              f'to this section and it is half right. The oldest league in the whole '
+              f'sixteen-team set has run <b>{tn["max"]} seasons</b> on Sleeper, and it cannot '
+              f'show more, because Sleeper is younger than this league &mdash; whose own '
+              f'record came off ESPN before the move. So nobody here has existed as long as '
+              f'the SCFL, and this measurement is a floor for every league in it, '
+              f'<i>including ours at {word(tn["ours"])} '
+              f'season{"s" if tn["ours"] != 1 else ""} on the platform</i>.</p>')
+            P(f'<p class="b">What the measurement can do is test the <i>reasoning</i>: a '
+              f'league being new is only grounds to discount it if new leagues choose '
+              f'differently. They do, and in the opposite direction.</p>')
+            P(f'<figure class="ad"><div class="scroll"><table><thead><tr>'
+              f'<th class="lt">Seasons on Sleeper</th><th class="num">Leagues</th>'
+              f'<th class="num">Median IR</th><th class="num">Mean IR</th></tr></thead><tbody>'
+              + ''.join(f'<tr><th scope="row">{b["lab"]}</th><td class="num">{b["n"]}</td>'
+                        f'<td class="num">{b["median"]}</td>'
+                        f'<td class="num">{b["mean"]:.1f}</td></tr>'
+                        for b in tn['buckets'])
+              + f'</tbody></table></div><figcaption>Rank correlation between tenure and slot '
+                f'count: <b>{tn["rho"]:+.2f}</b>. The longer a league has run, the more slots '
+                f'it carries.</figcaption></figure>')
+            P(f'<p class="b">The longest-running cohort is the least friendly to the case for '
+              f'holding at {word(cap)}: of the <b>{tn["old_n"]}</b> sixteen-team dynasty '
+              f'leagues with six or more seasons on Sleeper, only '
+              f'<b>{word(tn["old_under"])}</b> run {word(h["ir"])} slots or fewer. Their '
+              f'median is {tn["old_med"]} slots, {tn["old_taxi"]} taxi and a bench of '
+              f'{tn["old_bench"]}.</p>')
+            P(f'<p class="b"><b>Read it as convention, not consequence.</b> Every other '
+              f'section of this paper measures what the cap <i>does</i>. This one measures '
+              f'what other people chose, which is a weaker kind of evidence and a fair thing '
+              f'to set aside on principle. It does settle one thing: {word(cap)} slots is not '
+              f'normal for a league of this shape, and it is not normal among the oldest '
+              f'leagues either. Whether normal is the same as right is not a question any '
+              f'survey answers. The correlation above is also likely confounded &mdash; '
+              f'long-tenured leagues on Sleeper are simply deeper leagues, bench '
+              f'{tn["old_bench"]} against our {pr["room"]["ours_bench"]}, so this may be '
+              f'"big-roster leagues migrated early" rather than "experience teaches you to '
+              f'add slots".</p>')
+
     if dep:
-        S(5, 'The argument against: can the wire absorb it?')
+        S(6 if pr else 5, 'The argument against: can the wire absorb it?')
         F(f'No. In the {word(len(up))} weeks measured the entire waiver pool held '
           f'<b>{min(up)} to {max(up)} men a week</b> worth starting, against <b>{min(upt)} to '
           f'{max(upt)}</b> sides who would have taken up a third slot in those same weeks.')
@@ -585,7 +846,7 @@ week out of {active}.</li>
           'them in exactly the weeks when injuries make everyone want them.</p>')
 
     # ---- 6 --------------------------------------------------------------
-    S(6, 'The scoreboard')
+    S(N(6), 'The scoreboard')
     F('Every claim either side made, and what the data does to it.')
     P('<p class="b"><b>Supported</b> means the data backs it. <b>Contradicted</b> means the '
       'data runs against it. <b>Overtaken</b> means it was true when it was said and is not '
@@ -614,7 +875,7 @@ week out of {active}.</li>
 
     # ---- 7 --------------------------------------------------------------
     watch = watch_items(C, cut_b, real)
-    S(7, 'What to watch in the coming weeks')
+    S(N(7), 'What to watch in the coming weeks')
     F(f'{word(len(watch)).capitalize()} numbers that would move the argument, each with the '
       f'reading as it stands and the threshold that would matter.')
     P('<p class="b">Every one of these is in the weekly collection already, so they update '
@@ -628,7 +889,7 @@ week out of {active}.</li>
       f'flattering to the side that wants nothing changed.</p>')
 
     # ---- 8 --------------------------------------------------------------
-    S(8, 'What this cannot tell you')
+    S(N(8), 'What this cannot tell you')
     F('Read this before quoting any figure above.')
     lims = [
         ('It measures roster friction, not competitive harm.',
@@ -652,6 +913,13 @@ week out of {active}.</li>
          'Tuesday was never in one, so he cannot be counted either way. Those drops are '
          'reported as unobserved rather than quietly scored as healthy &mdash; but it means '
          'section 3 is a floor, not a total.') if dr else None,
+        ('The peer survey is a snowball sample, not a random one.',
+         f'Sleeper has no search, so section 5 is walked outward from this league. That '
+         f'draws on people who already play in a sixteen-team superflex dynasty league, so '
+         f'it skews toward deeper and more committed leagues than the true population of '
+         f'sixteen-team dynasty leagues. The gap it measures is therefore probably '
+         f'overstated. It also measures tenure in Sleeper seasons only, which is a floor for '
+         f'any league that migrated &mdash; this one included.') if pr else None,
         (f'One season, {word(n_wk)} weeks, {tw} team-weeks.',
          'Injury rates vary year to year and no claim is made that this one is typical. The '
          'greedy-filling assumption in the model is untested &mdash; a manager might hold a '
@@ -661,7 +929,7 @@ week out of {active}.</li>
     P(f'<p class="b">{relief_note(C)}</p>')
 
     # ---- 9 --------------------------------------------------------------
-    S(9, 'The data, in full')
+    S(N(9), 'The data, in full')
     F('Everything the conclusions rest on, so it can be checked rather than taken.')
     cols = [('wk', lambda r: r['week']),
             ('IR used', lambda r: f"{r['ir_used_total']}/{r['ir_capacity_total']}"),
@@ -709,6 +977,29 @@ week out of {active}.</li>
             'count, not because they are moves. <b>Sleeper files the entire preseason under '
             'week 1</b>, so that row is July to September and not a week at all.'
             '</figcaption></figure>')
+    if pr:
+        ks = sorted({k for c in pr['cls'].values() if c for k in c['dist']})
+        P(f'<figure class="ad"><div class="scroll"><table><thead><tr>'
+          f'<th class="num">IR slots</th><th class="num">16-team</th>'
+          f'<th class="num">of those, dynasty</th>'
+          f'<th class="num">of those, superflex</th></tr></thead><tbody>'
+          + ''.join(f'<tr><td class="num">{k}</td>'
+                    + ''.join(f'<td class="num{" hot" if k == pr["home"]["ir"] else ""}">'
+                              f'{(pr["cls"][c]["dist"].get(k, 0) if pr["cls"][c] else 0)}</td>'
+                              for c in ('all', 'dyn', 'sf'))
+                    + '</tr>' for k in ks)
+          + '<tr><th scope="row">total</th>'
+          + ''.join(f'<td class="num">{pr["cls"][c]["n"] if pr["cls"][c] else 0}</td>'
+                    for c in ('all', 'dyn', 'sf'))
+          + '</tr><tr><th scope="row">median</th>'
+          + ''.join(f'<td class="num">{pr["cls"][c]["median"] if pr["cls"][c] else "&mdash;"}</td>'
+                    for c in ('all', 'dyn', 'sf'))
+          + '</tr></tbody></table></div><figcaption>From league-survey.json, written by '
+            f'<code>scripts/league_survey.py</code>: {pr["seen"]:,} leagues reached from '
+            f'{pr["asked"]} managers in {word(pr["hops"])} hops, of which these have sixteen '
+            f'teams. The row at {pr["home"]["ir"]} is ours. The file records slot counts, '
+            f'roster shapes and settings only &mdash; no league names, no ids, no user '
+            f'names.</figcaption></figure>')
     tt = ''.join(
         f'<tr><th scope="row">{E(club(t["team"]))}</th>'
         f'<td class="num">{t["ir_used"]}</td><td class="num">{t["ir_free"]}</td>'
@@ -867,7 +1158,7 @@ def scoreboard(C, cut_b, real, unwanted):
     felt, so a reader who rejects a verdict can recount and move it himself.
     That is the only honest way to put a dial on a judgement."""
     cap, last, dep, dr = C['cap'], C['last'], C['depth'], C['drops']
-    M, bw = C['M'], C['blockwk']
+    pe, M, bw = C['peers'], C['M'], C['blockwk']
     tilt = (C['med_seed'] or 0) - C['league_med'] >= 1.5
     V = [
         ('The cap binds', 'expand', 'supported',
@@ -886,8 +1177,14 @@ def scoreboard(C, cut_b, real, unwanted):
         ('Nobody is hoarding IR spots', 'expand', 'overtaken',
          f"true when it was said in preseason; by week {last['week']}, "
          f"{last['teams_at_cap']} of {C['teams_n']} teams were at the cap"),
-        ('Leagues our size run two to four slots', 'expand', 'untested',
-         'no data here on other leagues, their age or their keeper rules'),
+        ('Leagues our size run two to four slots', 'expand',
+         'supported' if pe else 'untested',
+         (f"understated, if anything: {pe['cls']['dyn']['n']} sixteen-team dynasty leagues "
+          f"run a median of {pe['cls']['dyn']['median']}, "
+          f"{100*pe['cls']['dyn']['three_plus']/pe['cls']['dyn']['n']:.0f}% at three or "
+          f"more, and only "
+          f"{100*pe['cls']['dyn']['exactly_ours']/pe['cls']['dyn']['n']:.0f}% at two")
+         if pe else 'no data here on other leagues, their age or their keeper rules'),
     ]
     if dr:
         V.append(('The cap forces real roster losses', 'expand',
@@ -998,9 +1295,9 @@ def card(C, nshort, cut, real):
            .replace('__PCT__', f"{100*last['ir_used_total']/last['ir_capacity_total']:.0f}")
            .replace('__STR__', str(last['stranded_total']))
            .replace('__CUT__', f'{cut:.0f}')
-           .replace('__DEK__', f"Six weeks of roster data on a rule the league cannot agree "
-                               f"on. What a third slot would fix, what it would cost, and "
-                               f"what to watch next."))
+           .replace('__DEK__', f"{word(len(C['rows'])).capitalize()} weeks of roster data on "
+                               f"a rule the league cannot agree on. What a third slot would "
+                               f"fix, what it would cost, and what to watch next."))
     ad.shoot(doc, OG, 'irstudy-card')
 
 
@@ -1107,6 +1404,10 @@ figure.ad .v.ok{background:var(--red);}
 figure.ad .v.no{background:var(--blue);}
 figure.ad .v.mid{background:var(--gold);color:#3a3326;}
 figure.ad .ev{white-space:normal;min-width:19em;font-size:12.5px;line-height:1.45;}
+figure.ad .pip{display:block;height:11px;background:var(--line);border-radius:0 2px 2px 0;
+ min-width:3px;}
+figure.ad .pip.me{background:var(--red);}
+figure.ad td:has(.pip){width:38%;}
 figure.gauge{margin:6px 0 28px;}
 figure.gauge svg{width:100%;height:auto;display:block;}
 figure.gauge a{color:var(--red);font-weight:700;}
@@ -1170,11 +1471,14 @@ def build():
     real = [d for d in (dr['forced'] if dr else [])
             if (d['weeks_held'] is None or d['weeks_held'] >= 2)]
     body = '\n'.join(figures(C))
+    pr = C['peers']
     desc = (f"{word(nshort).capitalize()} of {C['teams_n']} teams have hit the IR cap with a "
             f"man still stranded; {word(never)} never have. A third slot would clear "
             f"{cut:.0f}% of it, the wire holds a handful of men worth adding, and in "
             f"{word(len(C['rows']))} weeks the cap has cost "
-            f"{'one side one player' if len(real) == 1 else word(len(real)) + ' players'}.")
+            f"{'one side one player' if len(real) == 1 else word(len(real)) + ' players'}"
+            + (f" — and {100*pr['cls']['dyn']['exactly_ours']/pr['cls']['dyn']['n']:.0f}% of "
+               f"{pr['cls']['dyn']['n']} comparable leagues run two slots." if pr else "."))
     today = datetime.date.today()
     doc = (PAGE.replace('__BODY__', body)
                .replace('__SHORT__', word(nshort).capitalize())
