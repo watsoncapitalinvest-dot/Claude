@@ -232,20 +232,37 @@ def figures(C):
       f'{word(C["blockwk"].get(top,0))} of {word(n_wk)} weeks. A fair reader may ask whether a '
       'permanent rule change is warranted by one roster&rsquo;s injury luck. Take that team '
       'out and the case weakens materially.</p>')
-    early = [r for r in rows if sum(1 for t in r['teams']
-             if t['stranded'] > max(0, cap + 1 - t['ir_used'])) == 0]
-    nowb = sum(1 for t in last['teams'] if t['stranded'] > max(0, cap - t['ir_used']))
-    nowb3 = sum(1 for t in last['teams'] if t['stranded'] > max(0, cap + 1 - t['ir_used']))
-    P(f'<p class="b"><b>The relief decays as the season goes on.</b> In '
-      + (f'weeks {" and ".join(str(r["week"]) for r in early[:2])}' if len(early) > 1
-         else f'week {early[0]["week"]}' if early else 'the opening weeks')
-      + f', a third slot resolved the problem completely. By week {last["week"]} it clears only '
-      f'<b>{nowb - nowb3} of {nowb}</b> blocked teams, because the '
-      'worst-affected sides now have more than one man stranded and a single extra slot merely '
-      'moves their line. Stranded counts have run '
+    # How much of each week's blockage a third slot actually clears. An earlier
+    # draft asserted this decays as the season goes on; week 6 landed while the
+    # page was being built and broke the claim -- the share fell to a quarter in
+    # week 5 and recovered to nearly two thirds in week 6. So the trend is
+    # computed and described, including whether it is monotonic, rather than
+    # stated.
+    share = []
+    for r in rows:
+        b2 = sum(1 for t in r['teams'] if t['stranded'] > max(0, cap - t['ir_used']))
+        b3 = sum(1 for t in r['teams'] if t['stranded'] > max(0, cap + 1 - t['ir_used']))
+        share.append((r['week'], b2, b2 - b3, (b2 - b3) / b2 if b2 else None))
+    vals = [s for *_, s in share if s is not None]
+    half = len(vals) // 2
+    early_m = 100 * sum(vals[:half]) / half if half else 0
+    late_m = 100 * sum(vals[half:]) / (len(vals) - half)
+    mono = all(a >= b for a, b in zip(vals, vals[1:]))
+    worst = min((s for s in share if s[3] is not None), key=lambda s: s[3])
+    nowb, nowc = share[-1][1], share[-1][2]
+    P(f'<p class="b"><b>The relief looks weaker later in the season, but the trend is noisy.</b> '
+      f'The share of each week&rsquo;s blockage a third slot would clear has run '
+      + ', '.join(f'{100*s:.0f}%' for *_, s in share if s is not None)
+      + f' &mdash; averaging {early_m:.0f}% over the first {word(half)} weeks and {late_m:.0f}% '
+      f'since. It is <b>not</b> a steady decline: the worst week was {worst[0]}, at '
+      f'{100*worst[3]:.0f}%, and week {share[-1][0]} recovered to {100*share[-1][3]:.0f}% '
+      f'({nowc} of {nowb} blocked teams cleared). The mechanism is real &mdash; a side with '
+      'more than one man stranded only has its line moved by a single extra slot &mdash; but '
+      f'on {word(n_wk)} weeks it cannot be called a trend'
+      + ('' if mono else ', and it is not monotonic')
+      + '. Stranded counts have run '
       + ', '.join(str(r['stranded_total']) for r in rows)
-      + '. If that continues, a third slot relieves a shrinking share of a growing problem, and '
-      'this page is quoting its own best case.</p>')
+      + ', so the problem is certainly growing even where the relief is holding up.</p>')
     P(f'<p class="b"><b>One season, {word(n_wk)} weeks, {tw} team-weeks.</b> Injury rates vary '
       'year to year and no claim is made that this one is typical. The greedy-filling '
       'assumption in the model is untested &mdash; a manager might hold a slot open against a '
