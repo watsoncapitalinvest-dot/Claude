@@ -324,6 +324,60 @@ def mgmt(C):
             'mid_rank': (len(eff) + 1) / 2}
 
 
+# The box Keith types into. There is no server behind this page -- it is
+# static files on GitHub Pages -- so the honest thing is a box that formats
+# his reply and copies it to his clipboard for him to paste into the league
+# chat. It does NOT submit anywhere and the copy says so, because a box that
+# looks like it sent something and did not is worse than no box.
+FORM = r"""<div class="rform">
+ <div class="rfh">Want to reply? Type it here</div>
+ <label>Your name<input id="rn" type="text" autocomplete="name"
+  placeholder="e.g. Keith (The Machines)"></label>
+ <label>Your reply<textarea id="rb" rows="4"
+  placeholder="Say whatever you like. It gets printed on this page in full, unedited."
+  ></textarea></label>
+ <button id="rc" type="button">Copy my reply</button>
+ <p class="rfn"><b>This does not send anything.</b> Tapping the button copies your reply to
+ your clipboard &mdash; paste it into the league chat and it goes up on this page as written.</p>
+ <textarea id="ro" rows="5" readonly hidden></textarea>
+</div>
+<script>
+(function(){
+ var n=document.getElementById('rn'),b=document.getElementById('rb'),
+     c=document.getElementById('rc'),o=document.getElementById('ro');
+ // A reply typed on a phone and lost to a stray back-swipe does not get
+ // retyped, so the draft is kept locally. It never leaves the browser, and
+ // every call is wrapped because private windows throw on access.
+ try{n.value=localStorage.getItem('scfl-ir-n')||'';
+     b.value=localStorage.getItem('scfl-ir-b')||'';}catch(e){}
+ function save(){try{localStorage.setItem('scfl-ir-n',n.value);
+   localStorage.setItem('scfl-ir-b',b.value);}catch(e){}}
+ n.addEventListener('input',save); b.addEventListener('input',save);
+ function blob(){return 'SCFL IR STUDY \u2014 REPLY\nFrom: '+(n.value.trim()||'(no name given)')
+   +'\n\n'+b.value.trim()+'\n';}
+ c.addEventListener('click',function(){
+  if(!b.value.trim()){b.focus();c.textContent='Type something first';
+   setTimeout(function(){c.textContent='Copy my reply';},1600);return;}
+  var t=blob(), ok=function(){c.textContent='Copied \u2014 now paste it to John';
+   setTimeout(function(){c.textContent='Copy my reply';},2600);};
+  // Three ways, because the first two are not available everywhere: the
+  // async clipboard needs a secure context, execCommand is deprecated but
+  // still the fallback that works, and if both fail the text is shown
+  // selected so it can be copied by hand rather than silently lost.
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+   navigator.clipboard.writeText(t).then(ok,function(){legacy(t,ok);});
+  }else{legacy(t,ok);}
+ });
+ function legacy(t,ok){
+  o.hidden=false; o.value=t; o.focus(); o.select();
+  var done=false;
+  try{done=document.execCommand('copy');}catch(e){}
+  if(done){ok();}else{c.textContent='Copy the text below';}
+ }
+})();
+</script>"""
+
+
 def reply_block(C):
     """The right of reply, rendered for the very top of the page.
 
@@ -338,7 +392,8 @@ def reply_block(C):
         return ('<section class="reply empty"><div class="rhd">Right of reply</div>'
                 '<p>This page has one, and it sits here &mdash; before the headline, ahead '
                 'of anything the desk concluded. Anybody who wants to put the other side of '
-                'the argument gets printed in this space, in full and unedited.</p></section>')
+                'the argument gets printed in this space, in full and unedited.</p>'
+                + FORM + '</section>')
     blocks = ''
     for r in rep:
         sd = SIDE.get((r.get('side') or '').lower())
@@ -357,7 +412,7 @@ def reply_block(C):
     return (f'<section class="reply"><div class="rhd">Right of reply &middot; '
             f'{word(len(rep))} response{"s" if len(rep) != 1 else ""}</div>{blocks}'
             f'<div class="rft">Printed as sent, unedited. Anybody who wants to put the other '
-            f'case gets the same space.</div></section>')
+            f'case gets the same space.</div>' + FORM + '</section>')
 
 
 def replies():
@@ -1562,6 +1617,26 @@ h1 em{font-style:normal;color:var(--red);}
 .rdesk p{margin:0 0 8px;font-size:16px;color:#3c3c42;max-width:62ch;}
 .rft{font-family:var(--sans);font-size:11px;color:var(--faint);border-top:1px solid var(--line);
  padding-top:9px;}
+.rform{margin-top:14px;border-top:1px solid var(--line);padding-top:14px;}
+.rfh{font-family:var(--sans);font-size:11px;font-weight:900;letter-spacing:.16em;
+ text-transform:uppercase;color:#8a7430;margin-bottom:10px;}
+.rform label{display:block;font-family:var(--sans);font-size:11px;font-weight:800;
+ letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:10px;}
+.rform input,.rform textarea{display:block;width:100%;margin-top:5px;font:inherit;
+ font-size:16px;color:var(--ink);background:var(--cream);border:1px solid var(--line);
+ border-radius:4px;padding:10px 12px;letter-spacing:normal;text-transform:none;
+ font-weight:400;-webkit-appearance:none;}
+.rform textarea{resize:vertical;min-height:88px;line-height:1.5;}
+.rform input:focus,.rform textarea:focus{outline:2px solid var(--gold);outline-offset:-1px;
+ border-color:var(--gold);}
+.rform button{font-family:var(--sans);font-size:13.5px;font-weight:800;letter-spacing:.04em;
+ color:#fff;background:var(--red);border:0;border-radius:4px;padding:12px 20px;
+ cursor:pointer;min-height:44px;-webkit-appearance:none;}
+.rform button:hover{background:#a50d13;}
+.rfn{font-family:var(--sans);font-size:11.5px;line-height:1.5;color:var(--muted);
+ margin:10px 0 0;max-width:62ch;}
+.rform #ro{margin-top:10px;font-size:13px;}
+@media(max-width:560px){.rform button{width:100%;}}
 .short{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--red);
  padding:20px 24px 20px;margin:0 0 24px;}
 .short .h{font-family:var(--sans);font-size:11px;font-weight:900;letter-spacing:.2em;
