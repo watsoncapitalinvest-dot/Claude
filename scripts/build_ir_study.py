@@ -288,6 +288,124 @@ def figures(C):
           'the strong ones &mdash; which is the opposite of the fairness objection that has been '
           'made against it.</p>')
 
+    # ---- the scoreboard and the gauge -----------------------------------
+    # One claim per row, attributed to the side that made it, with what six
+    # weeks of data does to it. The gauge needle is COUNTED from this table
+    # rather than felt, so a reader who rejects a verdict can recount and move
+    # it himself. That is the only honest way to put a dial on a judgement.
+    V = [
+        ('The cap binds', 'expand', 'supported',
+         f"{last['teams_at_cap']} of {C['teams_n']} rosters full by week {last['week']}, "
+         f"{100*last['ir_used_total']/last['ir_capacity_total']:.0f}% of capacity"),
+        ('Only injured men qualify, so it cannot be stacked', 'expand', 'supported',
+         'structural: an activated player must be rostered or dropped'),
+        # Derived, not asserted. In week 5 the beneficiaries' median seed was
+        # 11.0 against a league 8.5 and this read clearly "supported"; a week
+        # later it is 9.5, which is nearly even. A gap under a seed and a half
+        # is not evidence of anything, so it reads untested and the needle
+        # moves on its own.
+        ('A third slot helps weak teams more than strong ones', 'expand',
+         'supported' if (C['med_seed'] or 0) - C['league_med'] >= 1.5 else 'untested',
+         f"median seed of the {word(len(C['helped']))} beneficiaries is {C['med_seed']:.1f} "
+         f"against a league median of {C['league_med']:.1f}"
+         + ('' if (C['med_seed'] or 0) - C['league_med'] >= 1.5
+            else ' &mdash; too close to call either way')),
+        ('The withdrawal reverses when players return', 'expand', 'supported',
+         f"IR occupancy rose {rows[0]['ir_used_total']} to {last['ir_used_total']} while the "
+         f"pool fell only {rows[0]['free_agents']} to {last['free_agents']}"),
+        ('Nobody is hoarding IR spots', 'expand', 'overtaken',
+         f"true when it was said in preseason; by week {last['week']} "
+         f"{last['teams_at_cap']} of {C['teams_n']} teams were at the cap"),
+        ('Leagues our size run two to four slots', 'expand', 'untested',
+         'no data here on other leagues, their age or their keeper rules'),
+        ('The wire is already bare', 'keep two', 'supported',
+         'DEPTH' ),
+        ('Expansion thins the wire further', 'keep two', 'supported',
+         'MECH'),
+        ('It changes nothing functional', 'keep two', 'contradicted',
+         f"it changes {M[cap]['blocked']} blocked team-weeks to {M[cap+1]['blocked']}"),
+        ('It helps the committed teams and hurts the rest', 'keep two',
+         'contradicted' if (C['med_seed'] or 0) - C['league_med'] >= 1.5 else 'untested',
+         'the beneficiaries skew to the bottom of the table, not the top'
+         if (C['med_seed'] or 0) - C['league_med'] >= 1.5
+         else 'the beneficiaries sit almost exactly at the league median'),
+        ('No competitive harm from the cap has been shown', 'keep two', 'supported',
+         'correct, and not testable with this data: see the limitations'),
+    ]
+    if dep and dep['rows']:
+        sk2 = [r['startable_skill'] for r in dep['rows']]
+        dw = dep['rows'][-1]['week']
+        ex = {r['week']: sum(1 for t in r['teams']
+              if max(0, min(t['stranded'], cap + 1 - t['ir_used']))
+              > max(0, min(t['stranded'], cap - t['ir_used']))) for r in rows}
+        V = [(a, b, c, (f"{sk2[-1]} usable skill players on the entire wire in week {dw}"
+                        if d == 'DEPTH' else
+                        f"a third slot takes about {100*ex.get(dw,0)/sk2[-1]:.0f}% of the "
+                        f"usable wire in week {dw}, off the top" if d == 'MECH' else d))
+             for a, b, c, d in V]
+    else:
+        V = [v for v in V if v[3] not in ('DEPTH', 'MECH')]
+
+    S('The scoreboard')
+    P('<p class="b">Every claim either side made in the argument of 7 September, and what six '
+      'weeks of data does to it. <b>Supported</b> means the data backs it. <b>Contradicted</b> '
+      'means the data runs against it. <b>Overtaken</b> means it was true when it was said and '
+      'is not now. <b>Untested</b> means this study cannot speak to it.</p>')
+    TONE = {'supported': 'ok', 'contradicted': 'no', 'overtaken': 'mid', 'untested': 'mid'}
+    vr = ''.join(
+        f'<tr><th scope="row">{c}</th>'
+        f'<td class="dim">{"expand" if s == "expand" else "keep two"}</td>'
+        f'<td><span class="v {TONE[v]}">{v}</span></td>'
+        f'<td class="dim ev">{w}</td></tr>' for c, s, v, w in V)
+    P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th class="lt">Claim</th>'
+      f'<th class="lt">Made by</th><th class="lt">Verdict</th><th class="lt">On what</th>'
+      f'</tr></thead><tbody>{vr}</tbody></table></div></figure>')
+
+    fore = sum(1 for _, s, v, _ in V if s == 'expand' and v == 'supported')
+    agin = sum(1 for _, s, v, _ in V if s == 'keep two' and v == 'supported')
+    killed_f = sum(1 for _, s, v, _ in V if s == 'expand' and v in ('contradicted', 'overtaken'))
+    killed_a = sum(1 for _, s, v, _ in V if s == 'keep two' and v in ('contradicted', 'overtaken'))
+    net = (fore - killed_f) - (agin - killed_a)
+    span = max(fore + agin, 1)
+    x = 50 + 50 * max(-1.0, min(1.0, net / span))
+    S('Where it lands')
+    P(f'<figure class="gauge"><svg viewBox="0 0 600 124" role="img" '
+      f'aria-label="Gauge: the evidence leans {"toward expanding" if net > 0 else "toward keeping two" if net < 0 else "neither way"}">'
+      f'<defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#0e8ab5"/>'
+      f'<stop offset="0.5" stop-color="#d8b45a"/><stop offset="1" stop-color="#c20f16"/>'
+      f'</linearGradient></defs>'
+      f'<rect x="20" y="52" width="560" height="16" rx="8" fill="url(#g)" opacity=".85"/>'
+      f'<line x1="300" y1="44" x2="300" y2="76" stroke="#17181c" stroke-width="2" opacity=".3"/><text x="300" y="92" font-size="10" text-anchor="middle" font-family="-apple-system,sans-serif" font-weight="700" fill="#9a958c">EVEN</text>'
+      f'<g transform="translate({20 + 5.6*x},0)">'
+      f'<polygon points="0,40 -10,22 10,22" fill="#17181c"/>'
+      f'<line x1="0" y1="40" x2="0" y2="80" stroke="#17181c" stroke-width="3"/></g>'
+      f'<text x="20" y="114" font-size="13" font-family="-apple-system,sans-serif" '
+      f'font-weight="800" fill="#0e8ab5">KEEP TWO</text>'
+      f'<text x="580" y="114" font-size="13" text-anchor="end" '
+      f'font-family="-apple-system,sans-serif" font-weight="800" fill="#c20f16">EXPAND TO THREE</text>'
+      f'</svg><figcaption>The needle is <b>counted, not felt</b>: surviving claims for '
+      f'expansion ({fore} supported, {killed_f} knocked out) minus surviving claims against '
+      f'({agin} supported, {killed_a} knocked out), over {span}. Reject a verdict in the table '
+      f'above and the needle moves.</figcaption></figure>')
+    keeps = [v for v in V if v[1] == 'keep two']
+    survive = [c for c, _, v, _ in keeps if v == 'supported']
+    fell = [c for c, _, v, _ in keeps if v in ('contradicted', 'overtaken')]
+    P(f'<p class="b">On the count it leans <b>'
+      + ('toward expanding, and not by much' if 0 < net <= 2 else
+         'clearly toward expanding' if net > 2 else
+         'toward keeping two, and not by much' if -2 <= net < 0 else
+         'clearly toward keeping two' if net < 0 else 'neither way &mdash; dead level')
+      + f'</b>. Of the {word(len(keeps))} arguments made for keeping the cap, '
+      + (f'{word(len(fell))} did not survive contact with the data and '
+         if fell else 'none fell outright and ')
+      + f'{word(len(survive))} did. The ones that stood are the ones nobody can settle from '
+      'here: that the wire is thin, which was true before this debate started, and that no '
+      'competitive harm has ever been demonstrated, which is true and may stay true.</p>')
+    P('<p class="pull">The strongest surviving argument on either side is not about fairness or '
+      'hoarding. It is that a third slot takes its players off the <i>top</i> of a wire that '
+      'holds barely a dozen usable men &mdash; and takes them in exactly the weeks when injuries '
+      'make everyone want them.</p>')
+
     S('Limitations')
     P('<p class="b">Read this before quoting any figure above.</p>')
     P(f'<p class="b"><b>It measures roster friction, not competitive harm.</b> Nothing here '
@@ -342,6 +460,60 @@ def figures(C):
       'worse injury later, in which case uptake above is overstated. And transactions are not '
       'observed, so we cannot see whether any blocked side actually cut a player it wanted to '
       'keep. That would be the strongest evidence of real cost, and we do not have it.</p>')
+
+    S('The data, in full')
+    P('<p class="b">Everything the conclusions rest on, so it can be checked rather than '
+      'taken. Each row is one week as it was recorded at the time.</p>')
+    cols = [('wk', lambda r: r['week']),
+            ('IR used', lambda r: f"{r['ir_used_total']}/{r['ir_capacity_total']}"),
+            ('teams at cap', lambda r: r['teams_at_cap']),
+            ('teams with empty IR', lambda r: r['teams_empty_ir']),
+            ('stranded', lambda r: r['stranded_total']),
+            ('teams a slot short', lambda r: sum(1 for t in r['teams']
+                                                 if t['stranded'] > max(0, cap - t['ir_used']))),
+            ('free agents', lambda r: r['free_agents'])]
+    hh = ''.join(f'<th class="num">{c}</th>' for c, _ in cols)
+    bb = ''.join('<tr>' + ''.join(f'<td class="num">{f(r)}</td>' for _, f in cols) + '</tr>'
+                 for r in rows)
+    P(f'<figure class="ad"><div class="scroll"><table><thead><tr>{hh}</tr></thead>'
+      f'<tbody>{bb}</tbody></table></div><figcaption>From ir-watch.json, one row written per '
+      f'week and never revised.</figcaption></figure>')
+
+    if dep and dep["rows"]:
+        hh2 = ('<th class="num">wk</th><th class="num">scored</th>'
+               '<th class="num">startable (all)</th><th class="num">startable (skill)</th>'
+               '<th class="lt">best skill available</th>')
+        bb2 = ''.join(
+            f'<tr><td class="num">{r["week"]}</td><td class="num">{r["scored"]}</td>'
+            f'<td class="num">{r["startable_all"]}</td>'
+            f'<td class="num"><b>{r["startable_skill"]}</b></td>'
+            f'<td class="dim ev">' + ', '.join(f'{E(t["name"])} {t["pos"]} {t["pts"]}'
+                                               for t in r['top_skill'][:3]) + '</td></tr>'
+            for r in dep['rows'])
+        P(f'<figure class="ad"><div class="scroll"><table><thead><tr>{hh2}</tr></thead>'
+          f'<tbody>{bb2}</tbody></table></div><figcaption>From ir-waiver-depth.json. Only '
+          f'played weeks appear: depth cannot be measured on a week nobody has played. '
+          f'Startability bar, week {dep["rows"][-1]["week"]}: '
+          + ', '.join(f'{k} {v}' for k, v in dep['rows'][-1]['bar'].items())
+          + '.</figcaption></figure>')
+
+    tt = ''.join(
+        f'<tr><th scope="row">{E(club(t["team"]))}</th>'
+        f'<td class="num">{t["ir_used"]}</td><td class="num">{t["ir_free"]}</td>'
+        f'<td class="num">{t["stranded"]}</td>'
+        f'<td class="dim ev">{E(", ".join(t.get("stranded_names", [])) or "—")}</td></tr>'
+        for t in sorted(last['teams'], key=lambda t: (-t['stranded'], club(t['team']))))
+    P(f'<figure class="ad"><div class="scroll"><table><thead><tr><th class="lt">Team</th>'
+      f'<th class="num">on IR</th><th class="num">free</th><th class="num">stranded</th>'
+      f'<th class="lt">who</th></tr></thead><tbody>{tt}</tbody></table></div>'
+      f'<figcaption>Every roster as at week {last["week"]}.</figcaption></figure>')
+
+    P('<p class="lf">Files, if you want to run it yourself: <code>ir-watch.json</code> (weekly '
+      'snapshots, written by <code>scripts/ir_watch.py</code>), <code>ir-waiver-depth.json</code> '
+      '(written by <code>scripts/waiver_depth.py</code>, which needs the nflverse play-by-play '
+      'download), <code>week-data/2026-w*.json</code> (weekly rosters and scoring), '
+      '<code>scripts/standings.py</code> (records and seeds). The page itself is '
+      '<code>scripts/build_ir_study.py</code>.</p>')
 
     S('What would settle it')
     P('<p class="b"><b>Transaction logs.</b> Drops of injured players by teams at the cap '
@@ -489,6 +661,14 @@ figure.ad .lt{text-align:left;}
 figure.ad .dim{color:var(--muted);font-weight:600;}
 figure.ad .hot{color:var(--red);}
 figcaption{font-family:var(--sans);font-size:11.5px;color:var(--faint);margin-top:10px;}
+figure.ad .v{font-family:var(--sans);font-size:10px;font-weight:900;letter-spacing:.1em;
+ text-transform:uppercase;padding:2px 7px;border-radius:3px;color:#fff;white-space:nowrap;}
+figure.ad .v.ok{background:var(--red);}
+figure.ad .v.no{background:var(--blue);}
+figure.ad .v.mid{background:var(--gold);color:#3a3326;}
+figure.ad .ev{white-space:normal;min-width:19em;font-size:12.5px;line-height:1.45;}
+figure.gauge{margin:14px 0 26px;}
+figure.gauge svg{width:100%;height:auto;display:block;}
 .more{margin-top:46px;border-top:1px solid var(--line);padding-top:18px;font-family:var(--sans);
  font-size:12.5px;line-height:1.6;color:var(--muted);max-width:74ch;}
 .more a{color:var(--red);font-weight:700;}
