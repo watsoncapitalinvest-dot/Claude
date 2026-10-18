@@ -150,7 +150,6 @@ def crunch():
     C['drops'] = drops()
     C['peers'] = peers()
     C['mgmt'] = mgmt(C)
-    C['replies'] = replies()
     return C
 
 
@@ -322,63 +321,6 @@ def mgmt(C):
             'spread': (100 * min(eff.values()), 100 * max(eff.values())),
             'oc_rank': mean([rank[i] for i in oc if i in rank]), 'oc_n': len(oc),
             'mid_rank': (len(eff) + 1) / 2}
-
-
-def reply_block(C):
-    """The right of reply, rendered for the very top of the page.
-
-    Above the masthead furniture, before the headline, ahead of the verdict
-    board: a reader meets the other side's answer before the desk's own
-    framing of the argument. That is further up than a reply would normally
-    sit, and it is where it was asked to go.
-    """
-    SIDE = {'expand': ('EXPAND TO THREE', 'ok'), 'keep two': ('KEEP TWO', 'no')}
-    rep = C['replies']
-    if not rep:
-        return ('<section class="reply empty"><div class="rhd">Right of reply</div>'
-                '<p>This page has one, and it sits here &mdash; before the headline, ahead '
-                'of anything the desk concluded. Anybody who wants to put the other side of '
-                'the argument gets printed in this space, in full and unedited.</p>'
-                '</section>')
-    blocks = ''
-    for r in rep:
-        sd = SIDE.get((r.get('side') or '').lower())
-        blocks += (
-            '<div class="rp"><div class="rh">'
-            f'<b>{E(r.get("author") or "A manager")}</b>'
-            + (f'<span class="rt">{E(r["team"])}</span>' if r.get('team') else '')
-            + (f'<span class="wt {sd[1]}">{sd[0]}</span>' if sd else '')
-            + (f'<span class="rd">{E(r["date"])}</span>' if r.get('date') else '')
-            + '</div>'
-            + ''.join(f'<p>{E(x)}</p>' for x in (r.get('paragraphs') or []))
-            + (('<div class="rdesk"><span>The desk</span>'
-                + ''.join(f'<p>{E(x)}</p>' for x in r['desk']) + '</div>')
-               if r.get('desk') else '')
-            + '</div>')
-    return (f'<section class="reply"><div class="rhd">Right of reply &middot; '
-            f'{word(len(rep))} response{"s" if len(rep) != 1 else ""}</div>{blocks}'
-            f'<div class="rft">Printed as sent, unedited. Anybody who wants to put the other '
-            f'case gets the same space.</div></section>')
-
-
-def replies():
-    """The right of reply, printed as given.
-
-    A paper written to be argued with needs somewhere for the argument to
-    land, and a reply buried at the bottom is not a reply. This sits above
-    the verdict board: the first thing a reader meets is the other side's
-    answer, not the desk's conclusions.
-
-    Everything in the file is PLAIN TEXT and every character is escaped on the
-    way out. That is deliberate rather than lazy: a manager's reply is the one
-    thing on this page the desk did not write, it arrives pasted from a chat
-    app full of smart quotes and the odd angle bracket, and nothing pasted
-    into a public page should be able to carry markup of its own.
-    """
-    p = os.path.join(ROOT, 'ir-study-replies.json')
-    if not os.path.exists(p):
-        return []
-    return json.load(open(p, encoding='utf-8')).get('replies') or []
 
 
 def depth():
@@ -1541,28 +1483,6 @@ h1 em{font-style:normal;color:var(--red);}
 .vb.no .a{color:var(--blue);}
 .vb .e{font-family:var(--sans);font-size:12px;line-height:1.45;color:var(--muted);}
 
-.reply{border:1px solid var(--line);border-left:4px solid var(--gold);background:var(--paper);
- padding:18px 22px 16px;margin:18px 0 0;}
-.reply.empty{border-left-color:var(--line);}
-.reply .rhd{font-family:var(--sans);font-size:11px;font-weight:900;letter-spacing:.2em;
- text-transform:uppercase;color:#8a7430;margin-bottom:10px;}
-.reply.empty .rhd{color:var(--faint);}
-.reply.empty p{margin:0;font-size:15.5px;color:var(--muted);max-width:66ch;}
-.rp{margin-bottom:16px;}
-.rp:last-of-type{margin-bottom:6px;}
-.rh{font-family:var(--sans);font-size:12px;display:flex;flex-wrap:wrap;gap:9px;
- align-items:center;margin-bottom:7px;}
-.rh b{font-size:15px;}
-.rt{color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.1em;
- font-size:10px;}
-.rd{color:var(--faint);font-size:11px;margin-left:auto;}
-.rp p{margin:0 0 10px;max-width:64ch;}
-.rdesk{border-left:2px solid var(--line);padding:2px 0 2px 14px;margin:12px 0 0;}
-.rdesk span{font-family:var(--sans);font-size:9.5px;font-weight:900;letter-spacing:.16em;
- text-transform:uppercase;color:var(--red);display:block;margin-bottom:4px;}
-.rdesk p{margin:0 0 8px;font-size:16px;color:#3c3c42;max-width:62ch;}
-.rft{font-family:var(--sans);font-size:11px;color:var(--faint);border-top:1px solid var(--line);
- padding-top:9px;}
 .short{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--red);
  padding:20px 24px 20px;margin:0 0 24px;}
 .short .h{font-family:var(--sans);font-size:11px;font-weight:900;letter-spacing:.2em;
@@ -1657,7 +1577,6 @@ dl.lim dd{margin:3px 0 0;color:var(--muted);max-width:64ch;}
 }
 </style></head><body><div class="wrap">
 <div class="runhead">SCFL NewsRoom &middot; Working Paper</div>
-__REPLY__
 <span class="flag">Rules &middot; Injured Reserve</span>
 <h1>Two Slots, <em>__SHORT__</em> Short</h1>
 <p class="dek">__DESC__</p>
@@ -1692,7 +1611,6 @@ def build():
                f"{pr['cls']['dyn']['n']} comparable leagues run two slots." if pr else "."))
     today = datetime.date.today()
     doc = (PAGE.replace('__BODY__', body)
-               .replace('__REPLY__', reply_block(C))
                .replace('__SHORT__', word(nshort).capitalize())
                .replace('__DESC__', E(desc))
                .replace('__WK__', str(last['week']))
