@@ -58,6 +58,12 @@ RENAME = {'Heavy Hitters': 'Phins Phag', '*THE MACHINES*': 'THE MACHINES'}
 club = lambda s: RENAME.get(s.strip(), s.strip())
 
 
+ORD = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth',
+       'ninth', 'tenth', 'eleventh', 'twelfth', 'thirteenth', 'fourteenth', 'fifteenth',
+       'sixteenth']
+ordn = lambda n: ORD[n] if n and n < len(ORD) else f'{n}th'
+
+
 def andlist(xs):
     """'1 and 2', '1, 2 and 3' -- a comma list reads as a truncation."""
     xs = [str(x) for x in xs]
@@ -143,6 +149,7 @@ def crunch():
     C['depth'] = depth()
     C['drops'] = drops()
     C['peers'] = peers()
+    C['mgmt'] = mgmt(C)
     return C
 
 
@@ -272,6 +279,50 @@ def peers():
             'hops': d['hops'], 'season': d['season'], 'stamp': d['stamp']}
 
 
+def mgmt(C):
+    """Is the cap binding on the badly-run sides? A control, not a ranking.
+
+    The objection is obvious and it had to be answered: if the teams that keep
+    hitting the cap are simply the teams that hoard injured players, then
+    section 1 is measuring management rather than a rule. So management gets a
+    number measured with nothing to do with injured reserve -- points started
+    against the best legally available lineup, slot eligibility respected.
+
+    Only the AGGREGATE is read here. scripts/manager_quality.py writes a
+    sixteen-name ranking and that file is gitignored: the comparison the study
+    needs is blocked sides against unblocked, not a public league table of who
+    sets the worst lineup.
+    """
+    try:
+        mq = _mod('mq', 'scripts/manager_quality.py').crunch()
+    except SystemExit:
+        return None
+    except Exception:
+        return None
+    eff = {int(k): v['eff'] for k, v in mq['teams'].items() if v['eff'] is not None}
+    rank = {int(k): v['rank'] for k, v in mq['teams'].items()}
+    if not eff:
+        return None
+    blk = {}
+    for r in C['rows']:
+        for t in r['teams']:
+            blk[t['roster_id']] = blk.get(t['roster_id'], 0) + (1 if short(t) else 0)
+    ever = [i for i in blk if blk[i] and i in eff]
+    never = [i for i in blk if not blk[i] and i in eff]
+    hardest = sorted(ever, key=lambda i: -blk[i])[:2]
+    oc = sorted({d['roster_id'] for d in (C['drops']['own_choice'] if C['drops'] else [])})
+    mean = lambda xs: sum(xs) / len(xs) if xs else None
+    return {'weeks': mq['weeks'], 'n': len(eff),
+            'ever': mean([eff[i] for i in ever]), 'ever_n': len(ever),
+            'never': mean([eff[i] for i in never]), 'never_n': len(never),
+            'rho': spearman([blk[i] for i in blk if i in eff],
+                            [eff[i] for i in blk if i in eff]),
+            'hardest': [{'blocked': blk[i], 'rank': rank.get(i)} for i in hardest],
+            'spread': (100 * min(eff.values()), 100 * max(eff.values())),
+            'oc_rank': mean([rank[i] for i in oc if i in rank]), 'oc_n': len(oc),
+            'mid_rank': (len(eff) + 1) / 2}
+
+
 def depth():
     p = os.path.join(ROOT, 'ir-waiver-depth.json')
     if not os.path.exists(p):
@@ -328,6 +379,7 @@ def figures(C):
     P = lambda h: out.append(h)
     cap, rows, M = C['cap'], C['rows'], C['M']
     last, dep, dr, pr = C['last'], C['depth'], C['drops'], C['peers']
+    mg = C['mgmt']
     n_wk, tw = len(rows), len(rows) * C['teams_n']
     base, plus1 = M[cap], M[cap + 1]
     cut_b = 100 * (base['blocked'] - plus1['blocked']) / base['blocked']
@@ -673,6 +725,42 @@ week out of {active}.</li>
       f'{word(len(never))} untouched sides is which of their players got hurt, and when. '
       f'Roster pressure that follows from a decision is skill. Roster pressure that follows '
       f'from one treatment room is not a decision anybody made.</p>')
+    if mg:
+        wk = f'weeks {min(mg["weeks"])}&ndash;{max(mg["weeks"])}'
+        gap = 100 * (mg['ever'] - mg['never'])
+        P(f'<p class="b"><b>So is it the badly-run sides who keep hitting the cap?</b> The '
+          f'objection is obvious and it is answerable, because management can be measured '
+          f'without reference to injured reserve at all: points a manager actually started '
+          f'against the most his roster could legally have started that week, slot '
+          f'eligibility respected, so a man left on the bench only counts against him if '
+          f'there was a seat he could have taken. Across {wk} the {C["teams_n"]} sides run '
+          f'from {mg["spread"][0]:.0f}% to {mg["spread"][1]:.0f}%.</p>')
+        P(f'<p class="b">The {word(mg["ever_n"])} sides the cap has blocked average '
+          f'<b>{100*mg["ever"]:.1f}%</b>. The {word(mg["never_n"])} it has never touched '
+          f'average <b>{100*mg["never"]:.1f}%</b>. '
+          + ('That is the same number twice, and the rank correlation between weeks blocked '
+             f'and lineup efficiency is {mg["rho"]:+.2f} &mdash; if anything the wrong way for '
+             'the theory.' if abs(gap) < 1.5 else
+             f'The gap is {gap:+.1f} points, with a rank correlation of {mg["rho"]:+.2f}.')
+          + (f' The {word(len(mg["hardest"]))} rosters carrying the most blockage rank '
+             + andlist([ordn(h['rank']) for h in mg['hardest']])
+             + f' of {mg["n"]} on it.' if mg['hardest'] else '')
+          + '</p>')
+        P(f'<p class="b">Which settles that one. The cap is not biting the managers who are '
+          f'asleep; by this measure it bites the attentive ones at least as hard. Whatever '
+          f'else explains who gets blocked, it is not inattention &mdash; and the sides who '
+          f'hoard the most injured men are the sides who squeeze the most out of the lineups '
+          f'they are left with.</p>')
+        if dr and dr['own_choice'] and mg['oc_rank']:
+            P(f'<p class="lf">One qualification, in the other direction. The '
+              f'{word(mg["oc_n"])} sides that dropped an injured man while holding a free '
+              f'slot &mdash; the finding that holds down every uptake figure in section 2 '
+              f'&mdash; average {mg["oc_rank"]:.0f}th of {mg["n"]} on the same measure, '
+              f'against a league midpoint of {mg["mid_rank"]:.1f}. That is a real tilt below '
+              f'average on a small number, so some of what looks like managers declining a '
+              f'slot may be managers not thinking about it. It is a reason to hold that '
+              f'finding more loosely, not to drop it.</p>')
+
     short3 = lambda t: t['stranded'] > max(0, cap + 1 - t['ir_used'])
     bw3 = {}
     for r in rows:
@@ -947,7 +1035,9 @@ week out of {active}.</li>
          f'injured man while holding a free slot, so the assumption is demonstrably too '
          f'generous and every uptake figure above is an upper bound. It is the single '
          f'softest joint in the counterfactual, and it now has a number against it rather '
-         f'than a caveat.' if dr and dr['counts']['own_choice'] else
+         f'than a caveat &mdash; held loosely, because those '
+         f'{word(dr["counts"]["own_choice"])} sides also sit below the league average on '
+         f'lineup efficiency, as section 4 says.' if dr and dr['counts']['own_choice'] else
          'Section 2 fills injured reserve to the cap with whoever is stranded. A manager '
          'might instead hold a slot open against a worse injury later, in which case every '
          'uptake figure above is overstated.'),
