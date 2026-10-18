@@ -1,0 +1,55 @@
+name: Fetch the transaction log
+
+# The IR study names one piece of evidence as the strongest nobody has:
+# whether a team at the injured-reserve cap ever actually dropped a man it
+# meant to keep. That lives in the transaction log and nowhere else.
+#
+# The agent container cannot reach api.sleeper.app -- the egress policy blocks
+# it -- but a runner has open internet. So the pull happens here and the result
+# comes back through git as a committed file.
+
+on:
+  workflow_dispatch:
+    inputs:
+      week:
+        description: 'One week only (blank = every week so far)'
+        required: false
+        default: ''
+  schedule:
+    - cron: '20 14 * * 3'      # Wednesdays, just after the IR snapshot
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-transactions
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Pull it
+        env:
+          SCFL_LEAGUE_ID: ${{ vars.SCFL_LEAGUE_ID }}
+        run: |
+          python3 scripts/fetch_transactions.py \
+            ${{ github.event.inputs.week && format('--week {0}', github.event.inputs.week) || '' }}
+
+      - name: Commit it
+        run: |
+          git config user.name  'IR Watch'
+          git config user.email 'noreply@anthropic.com'
+          if git diff --quiet -- transactions.json; then
+            echo 'no change this run'
+            exit 0
+          fi
+          N=$(python3 -c "import json;print(len(json.load(open('transactions.json'))['rows']))")
+          git add transactions.json
+          git commit -m "Transactions: ${N} rows"
+          git push
