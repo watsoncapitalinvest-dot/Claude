@@ -123,6 +123,14 @@ EXTRA_CSS="""
 .toc .t{flex:1;font-weight:800;font-size:14px;line-height:1.3;}
 .toc .k{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.1em;
   text-transform:uppercase;color:var(--faint);display:block;margin-top:3px;}
+/* The page-turn arrows are fixed to the viewport, 38px wide and 9px in from
+   each edge, at the vertical centre. Copy can live with one sitting over a
+   word. A contents row cannot: the row IS the button, so the arrow hides the
+   headline on the left and eats the tap on the right. Week 6's eighth entry
+   landed dead centre and did both. Below 722px the page fills the viewport and
+   the bands overlap the text column, so the list takes a gutter wider than an
+   arrow -- which also insets its rules, and reads as a deliberate list. */
+@media(max-width:740px){.toc{padding-left:32px;padding-right:32px;}}
 .divider{text-align:center;padding:26px 0 8px;}
 .divider .d-art{display:block;width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:2px;
   margin:0 0 20px;background:#e8e2d8;}
@@ -213,14 +221,27 @@ def build(key, remeasure=True, quiet=False):
         '</div>'
       '</div></section>')
 
-    toc=''.join(f'<li><button class="toc-go" type="button" data-art="art-{a["id"]}">'
-                f'<span class="n">{i+1}</span><span class="t">{esc(a["headline"])}'
-                f'<span class="k">{esc(a.get("flag",""))}</span></span>'
-                f'<span class="go">&rsaquo;</span></button></li>'
-                for i,a in enumerate(arts))
+    row=lambda i,a: (f'<li><button class="toc-go" type="button" data-art="art-{a["id"]}">'
+                     f'<span class="n">{i+1}</span><span class="t">{esc(a["headline"])}'
+                     f'<span class="k">{esc(a.get("flag",""))}</span></span>'
+                     f'<span class="go">&rsaquo;</span></button></li>')
+    # The contents is reference, not a game report, and it is also the first
+    # thing anybody sees: it is allowed to run over two pages rather than be
+    # shrunk to fit one, the same way the standings table is. A row is about
+    # 69px and a phone page holds 835, so a heading plus ten rows is the most
+    # that fits at full size. Week 6 reached thirteen entries once the preview
+    # article was added and fit() quietly scaled the whole page to 0.82, which
+    # is the one page in the issue where small type is most obvious.
+    n=len(arts)
+    first=n if n<=10 else min(9,-(-n//2))      # split, and keep the halves even
     blocks=[('head','<span class="flag">In this issue</span>'
              '<h1 class="hl">'+esc(cfg['title'])+'</h1>'
-             '<ul class="toc">'+toc+'</ul>')]
+             '<ul class="toc">'+''.join(row(i,a) for i,a in enumerate(arts[:first]))+'</ul>')]
+    if first<n:
+        blocks.append(('pagebreak','<span class="flag">In this issue, continued</span>'
+                       '<ul class="toc">'
+                       +''.join(row(i+first,a) for i,a in enumerate(arts[first:]))
+                       +'</ul>'))
     openart=cfg.get('openart',{})
     missing_art=[]
     for i,a in enumerate(arts):

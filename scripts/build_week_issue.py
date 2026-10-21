@@ -116,6 +116,19 @@ NUM_W = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
          'nine', 'ten', 'eleven', 'twelve']
 
 
+# The tables stop at ten and at twelve; seeds run to sixteen and a losing run
+# can pass twelve. Every lookup goes through these, because the half of them
+# that carried an inline guard and the half that did not is exactly how a week
+# 5 rebuild died on an eleventh seed. Numerals past the table are correct with
+# a plain 'th' for everything a 16-team league can produce.
+def ordw(n):
+    return ORD_W[n] if 0 <= n < len(ORD_W) else f'{n}th'
+
+
+def numw(n):
+    return NUM_W[n] if 0 <= n < len(NUM_W) else str(n)
+
+
 def alltime_rank(pts):
     """Where `pts` would sit on the all-time list of single team-weeks.
 
@@ -215,10 +228,10 @@ def preview_prose(season, week, st):
         if won and t['w'] == 1:
             return f'{E(t["team"])} won for the first time, {me:.0f}&ndash;{them:.0f} over {E(who)}'
         if t['streak_kind'] == 'W' and t['streak_n'] >= 3:
-            return (f'{E(t["team"])} have won {NUM_W[t["streak_n"]]} straight, the latest '
+            return (f'{E(t["team"])} have won {numw(t["streak_n"])} straight, the latest '
                     f'{me:.0f}&ndash;{them:.0f} over {E(who)}')
         if t['streak_kind'] == 'L' and t['streak_n'] >= 3:
-            return (f'{E(t["team"])} have lost {NUM_W[t["streak_n"]]} in a row, the latest '
+            return (f'{E(t["team"])} have lost {numw(t["streak_n"])} in a row, the latest '
                     f'{me:.0f}&ndash;{them:.0f} to {E(who)}')
         if m > 45:
             return (f'{E(t["team"])} {"beat" if won else "lost to"} {E(who)} by '
@@ -229,19 +242,19 @@ def preview_prose(season, week, st):
 
     def stake(a, b, first):
         left = max(0, int(st['playoff_week']) - 1 - int(st['through']))
-        wks = f'{NUM_W[left] if left < len(NUM_W) else left} week{"" if left == 1 else "s"}'
+        wks = f'{numw(left)} week{"" if left == 1 else "s"}'
         if a['div'] == b['div']:
             gap = a['w'] - b['w']
             dv = E(a['div_name'])
             if first:
                 return ('It is a division game as well, and the one that decides ' + dv +
                         (f': {E(a["team"])} lead by '
-                         f'{NUM_W[gap] if gap < len(NUM_W) else gap} with {wks} to play'
+                         f'{numw(gap)} with {wks} to play'
                          if gap else ', with the two of them level at the top of it'))
-            return (f'{E(a["team"])} are {NUM_W[gap] if gap < len(NUM_W) else gap} clear of '
+            return (f'{E(a["team"])} are {numw(gap)} clear of '
                     f'them in {dv}' if gap else f'They are level in {dv}')
-        return (f'{ORD_W[a["seed"]].capitalize()} plays '
-                f'{ORD_W[b["seed"]] if b["seed"] < len(ORD_W) else str(b["seed"]) + "th"}')
+        return (f'{ordw(a["seed"]).capitalize()} plays '
+                f'{ordw(b["seed"])}')
 
     out = []
     for n, (a, b) in enumerate(pairs):
@@ -294,10 +307,10 @@ def team_lines(season, week, st, stories):
         if won and t['w'] == 1:
             return f'got their first win of the season, {me:.0f}&ndash;{them:.0f} over {E(who)}'
         if t['streak_kind'] == 'W' and t['streak_n'] >= 3:
-            return (f'made it {NUM_W[t["streak_n"]]} in a row, '
+            return (f'made it {numw(t["streak_n"])} in a row, '
                     f'{me:.0f}&ndash;{them:.0f} over {E(who)}')
         if t['streak_kind'] == 'L' and t['streak_n'] >= 3:
-            return (f'lost their {ORD_W[t["streak_n"]]} in a row, '
+            return (f'lost their {ordw(t["streak_n"])} in a row, '
                     f'{me:.0f}&ndash;{them:.0f} to {E(who)}')
         if me == max(pts) and len(pts) > 2:
             return (f'posted a season-best {me:.0f} '
@@ -322,20 +335,20 @@ def team_lines(season, week, st, stories):
                     else f'and get {E(o["team"])} next, still unbeaten at {o["record"]}')
         if o['streak_kind'] == 'W' and o['streak_n'] >= 3:
             return (f'and face {E(o["team"])} next, winners of '
-                    f'{NUM_W[o["streak_n"]]} straight')
+                    f'{numw(o["streak_n"])} straight')
         if o['streak_kind'] == 'L' and o['streak_n'] >= 3:
-            return (f'and get {E(o["team"])} next, who have lost {NUM_W[o["streak_n"]]} '
+            return (f'and get {E(o["team"])} next, who have lost {numw(o["streak_n"])} '
                     f'on the spin')
         if t['div'] == o['div'] and abs(t['seed'] - o['seed']) <= 3:
             return (f'and meet {E(o["team"])} next in {a_div(t["div_name"])} that '
                     f'{"could close the gap" if t["seed"] > o["seed"] else "could open it up"}')
         if o['seed'] <= 4:
-            return f'and draw {E(o["team"])} next, {ORD_W[o["seed"]]} in the table'
+            return f'and draw {E(o["team"])} next, {ordw(o["seed"])} in the table'
         if o['seed'] >= 13:
             tag = ('but coming off a win' if o['streak_kind'] == 'W'
                    else 'and sinking')
             return (f'and get {E(o["team"])} next, '
-                    f'{ORD_W[o["seed"]] if o["seed"] < len(ORD_W) else str(o["seed"]) + "th"} '
+                    f'{ordw(o["seed"])} '
                     f'{tag}')
         return f'and play {E(o["team"])} next'
 
@@ -343,7 +356,7 @@ def team_lines(season, week, st, stories):
     for t in st['table']:
         tail = ahead(t)
         rows += (f'<tr><th scope="row" class="lt">{E(t["team"])}<br>'
-                 f'<span class="dim">{t["record"]} &middot; {ORD_W[t["seed"]] if t["seed"] < len(ORD_W) else str(t["seed"]) + "th"}</span></th>'
+                 f'<span class="dim">{t["record"]} &middot; {ordw(t["seed"])}</span></th>'
                  f'<td class="dim ev">{upper1(did(t))}'
                  + (', ' + tail if tail else '') + '.</td></tr>')
     return rows
@@ -386,7 +399,7 @@ def preview_blocks(season, week, st):
         for t, o in ((a, b), (b, a)):
             if t['streak_n'] >= 3:
                 n.append(f'{E(t["team"])} has {"won" if t["streak_kind"] == "W" else "lost"} '
-                         f'{NUM_W[t["streak_n"]] if t["streak_n"] < len(NUM_W) else t["streak_n"]}'
+                         f'{numw(t["streak_n"])}'
                          f' in a row')
         # have they already met this season, and how did it go
         for leg in a.get('trail') or []:
@@ -438,7 +451,7 @@ def preview_blocks(season, week, st):
         tail.append(f'{" and ".join(E(t["team"]) for t in ub)} '
                     f'{"are" if len(ub) > 1 else "is"} still unbeaten.')
     left = max(0, int(st['playoff_week']) - 1 - int(st['through']))
-    tail.append(f'{NUM_W[left].capitalize() if left < len(NUM_W) else left} week'
+    tail.append(f'{numw(left).capitalize()} week'
                 f'{"" if left == 1 else "s"} of the regular season remain, and the playoffs '
                 f'begin in week {st["playoff_week"]}.')
     out.append(('body', '<p class="b">' + ' '.join(tail) + '</p>'))
@@ -475,7 +488,7 @@ def coverlines(season, week, d, stories, lead, st):
     rank = alltime_rank(hi[0])
     if rank <= 10:
         # "on record" and not "ever": the book starts in 2008
-        out.append(f'{hi[1].upper()} {hi[0]:.2f}: {ORD_W[rank].upper()}-BIGGEST '
+        out.append(f'{hi[1].upper()} {hi[0]:.2f}: {ordw(rank).upper()}-BIGGEST '
                    f'WEEK ON RECORD')
 
     # how the game of the week was actually a game
@@ -486,7 +499,7 @@ def coverlines(season, week, d, stories, lead, st):
     except Exception:
         n = 0
     if n:
-        out.append(f'{NUM_W[n].upper() if n < len(NUM_W) else n} LEAD CHANGE'
+        out.append(f'{numw(n).upper()} LEAD CHANGE'
                    f'{"" if n == 1 else "S"} IN THE GAME OF THE WEEK')
 
     big = max(stories, key=lambda s: s['margin'])
