@@ -31,7 +31,7 @@ Inputs
 Status is held. This writes the article into investigations.json and nothing
 else: no page, no catalog entry, no share card. It is John's to release.
 """
-import json, os, re, collections
+import json, os, re, subprocess, sys, collections, statistics
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ARTICLE_ID = 'trade-audit'
@@ -52,6 +52,66 @@ def word(n):
     if n < 100:
         return TENS[n // 10] + ('-' + ONES[n % 10] if n % 10 else '')
     return f'{n:,}'
+
+
+# The live Trade Court's own threshold: a net of more than this counts as a
+# win, less than minus this a loss, anything between is even (index.html,
+# TC_WIN). Reused rather than reinvented so the article and the app cannot
+# grade the same deal differently.
+TC_WIN = 12
+MIN_DEALS = 15          # below this a win rate is noise, not a ranking
+
+
+def values():
+    """Every deal priced AT ITS OWN SEASON, from scripts/build_trade_values.py.
+
+    This is the part the first draft gave up on. It claimed The Machines "come
+    out ahead on the clear majority of their trades... behind on only one or
+    two" and this desk cut it, on the grounds that nothing here could price a
+    2021 trade. That was wrong: the model values players off the August
+    dp-values snapshot of the trade's own season and picks off the chart
+    calibrated to real SCFL trades, with no hindsight anywhere in it. See
+    docs/TRADE-VALUE-MODEL.md.
+
+    tradeValues.json is gitignored, so it is rebuilt here if it is not on
+    disk. If it cannot be built the piece runs without the paragraph rather
+    than guessing at it.
+    """
+    path = os.path.join(ROOT, 'tradeValues.json')
+    if not os.path.exists(path):
+        subprocess.run([sys.executable, os.path.join(ROOT, 'scripts',
+                                                     'build_trade_values.py')],
+                       cwd=ROOT, capture_output=True)
+    if not os.path.exists(path):
+        return None
+    d = json.load(open(path, encoding='utf-8'))
+    # Only two-team deals can be scored from this file: in a three-team trade
+    # the receipts do not say which side each asset came from, so a net cannot
+    # be formed without guessing. There are few of them and they are counted
+    # out loud rather than folded in.
+    per = collections.defaultdict(list)
+    skipped = 0
+    for t in d['trades']:
+        if len(t['sides']) != 2:
+            skipped += 1
+            continue
+        a, b = t['sides']
+        for me, other in ((a, b), (b, a)):
+            per[me['franchiseKey']].append(me['total'] - other['total'])
+
+    def tally(v):
+        w = sum(1 for x in v if x > TC_WIN)
+        l = sum(1 for x in v if x < -TC_WIN)
+        return {'n': len(v), 'w': w, 'l': l, 'e': len(v) - w - l,
+                'net': sum(v), 'mean': sum(v) / len(v),
+                'median': statistics.median(v),
+                'rate': w / (w + l) if w + l else 0}
+
+    tbl = {k: tally(v) for k, v in per.items() if v}
+    rank = sorted((k for k, r in tbl.items() if r['n'] >= MIN_DEALS),
+                  key=lambda k: -tbl[k]['rate'])
+    return {'tbl': tbl, 'rank': rank, 'skipped_3way': skipped,
+            'unresolved': d.get('unresolvedCount', 0)}
 
 
 def facts():
@@ -150,11 +210,15 @@ def facts():
                               key=lambda p: (max(in_[p]) - min(out_[p]), max(in_[p])),
                               reverse=True),
         'others': (j('sleeper-schedule.json').get('total_rosters') or 16) - 1,
+        'val': values(),
         'moves': moves,
         'in_': in_, 'out_': out_, 'trades': trades, 'key': key, 'mine': mine,
     }
 
 
+ORD = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh',
+       'eighth', 'ninth', 'tenth', 'eleventh', 'twelfth', 'thirteenth']
+ordinal = lambda n: ORD[n] if n < len(ORD) else f'{n}th'
 pc = lambda v: f'.{round(v * 1000):03d}'
 allplay = lambda s: '-'.join(f'{int(x):,}' for x in s.split('-'))
 
@@ -281,6 +345,34 @@ def prose(F):
     P.append(busy + rhythm + ' Whatever he is doing, he is doing it in public, on a '
              'schedule, with everyone.')
 
+    V = F['val']
+    if V:
+        m = V['tbl'][ME]
+        place = V['rank'].index(ME) + 1
+        sharp = V['rank'][0]
+        top = V['tbl'][sharp]
+        k1v = V['tbl'].get(k1)
+        P.append(
+            f'Does he win the deals? Yes, and by less than anybody in this league would '
+            f'guess. Priced at the season each trade was made in — August values of that '
+            f'year, no hindsight, the same board the Trade Court grades on — The Machines '
+            f'are {m["w"]}-{m["l"]} with {word(m["e"])} even across the '
+            f'{word(m["n"])} two-team deals in the ledger. He loses one in '
+            f'{word(round(m["n"] / m["l"]))}. His median trade is worth '
+            f'${m["median"]:.0f} to him, which is to say nothing at all. On the rate he '
+            f'wins them he is {ordinal(place)} of {word(len(V["rank"]))} franchises with '
+            f'enough deals to measure, behind {name(sharp)}, who win '
+            f'{top["rate"] * 100:.0f} per cent of theirs to his {m["rate"] * 100:.0f}.')
+        if k1v and k1v['rate'] > m['rate']:
+            P.append(
+                f'Read that again with the names in it. {name(k1)} — the franchise at the '
+                f'top of his partner list, the one the theory casts as the mark — come out '
+                f'of the same ledger at {k1v["w"]}-{k1v["l"]}, winning '
+                f'{k1v["rate"] * 100:.0f} per cent of their decided trades to his '
+                f'{m["rate"] * 100:.0f}. The man supposedly being fleeced grades out ahead '
+                f'of the man supposedly doing the fleecing. Whatever is happening at that '
+                f'table, it is not a mugging.')
+
     rt = F['round_trips']
     if rt:
         bits = []
@@ -296,9 +388,7 @@ def prose(F):
                 f'{word(back["y"] - gone["y"])} '
                 f'year{"" if back["y"] - gone["y"] == 1 else "s"} later')
         P.append(
-            'Does he win the deals? The ledger cannot tell you that, and this desk is not '
-            'going to pretend it can — there is no price on a 2021 trade that is not just '
-            'today\'s opinion in a wig. What the ledger can tell you is that he misses. '
+            'And the misses are not abstract. Some of them walked back through the door. '
             + '. '.join(b[0].upper() + b[1:] for b in bits) + '. '
             + (f'{word(len(rt)).capitalize()} players in this ledger have made that round '
                f'trip. ' if len(rt) > 1 else 'That is the only round trip in the ledger. ')
@@ -339,8 +429,16 @@ def prose(F):
         f'Sourcing: the itemised Obvibase ledger ({F["league_deals"]} deals, {y0}–{y1}), '
         f'with multi-team legs consolidated and relay assets netted out; the League '
         f'Legacy all-time table for records, playoff appearances and titles. Pre-{y0} '
-        f'trades are not in the ledger and are not claimed here. Nothing in this piece '
-        f'prices a trade, because nothing in this repo can.')
+        f'trades are not in the ledger and are not claimed here. Trade values are '
+        f'scripts/build_trade_values.py, which prices every asset at the August of the '
+        f'season the trade was made in — players off that year’s dp-values snapshot, '
+        f'picks off the chart calibrated to real SCFL trades — so nothing here is graded '
+        f'with hindsight; the method is docs/TRADE-VALUE-MODEL.md. A win is a net above '
+        f'${TC_WIN}, the Trade Court’s own threshold. '
+        f'{word(F["val"]["skipped_3way"]).capitalize() if F["val"] else "Some"} three-team '
+        f'deals are left out of the win-loss record, because their receipts do not say '
+        f'which side each asset came from, and {word(F["val"]["unresolved"]) if F["val"] else "a few"} '
+        f'assets league-wide — team defences, mostly — carry no price and count as zero.')
     return P
 
 
