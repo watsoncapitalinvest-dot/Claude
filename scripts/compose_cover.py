@@ -25,7 +25,13 @@ from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 W, H = 1024, 1536
-MAST = 221        # where the masthead panel ends, measured off a built cover
+# Where the masthead block ends, measured off a BUILT cover in the browser --
+# not the wordmark alone but the whole assembly: wordmark, issue line and the
+# red rule under it. It read 221 for a long time, which was the wordmark only,
+# and art composed to put a head at the top of the middle band had that head
+# overlapped by about 35px. Re-measured at 430px wide and mapped back to the
+# 1536-tall frame.
+MAST = 320
 INK = (11, 11, 15)
 
 
