@@ -41,6 +41,9 @@ import importlib.util as _ilu
 _tv = _ilu.spec_from_file_location('tv', os.path.join(ROOT, 'scripts',
                                                       'build_trade_values.py'))
 TV = _ilu.module_from_spec(_tv); sys.modules['tv'] = TV; _tv.loader.exec_module(TV)
+_tc = _ilu.spec_from_file_location('tc', os.path.join(ROOT, 'scripts',
+                                                      'build_trade_counts.py'))
+TC = _ilu.module_from_spec(_tc); sys.modules['tc'] = TC; _tc.loader.exec_module(TC)
 ARTICLE_ID = 'trade-audit'
 ME = 'machines'
 E = lambda t: (str(t).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'))
@@ -70,8 +73,12 @@ TC_WIN = 12
 MIN_DEALS = 15          # below this a win rate is noise, not a ranking
 
 
-def values():
+def values(skip=()):
     """Every deal priced AT ITS OWN SEASON, from scripts/build_trade_values.py.
+
+    `skip` is the part-seasons: tradeValues.json prices the whole ledger
+    including the season in progress, and a win-loss record drawn from a wider
+    set than the deal count beside it is two numbers that cannot both be right.
 
     This is the part the first draft gave up on. It claimed The Machines "come
     out ahead on the clear majority of their trades... behind on only one or
@@ -114,6 +121,8 @@ def values():
     per = collections.defaultdict(list)
     skipped = 0
     for t in d['trades']:
+        if str(t['season']) in skip:
+            continue
         if len(t['sides']) != 2:
             skipped += 1
             continue
@@ -155,7 +164,26 @@ def facts():
         if k:
             club[k] = row.get('club') or club.get(k, k)
 
-    trades = tj['trades']
+    # Eleven seasons of VOLUME, and the cross-check that saved the piece.
+    # trade-counts.json counts deals from the master Obvibase export, 2016
+    # forward; trades.json itemises them from 2021. Where they overlap they
+    # agree to within two a season, which is what makes the ledger safe to
+    # price -- see scripts/build_trade_counts.py.
+    cnt = json.load(open(os.path.join(ROOT, 'trade-counts.json'),
+                         encoding='utf-8'))
+    recon = TC.reconcile()
+    if not recon or not recon['ok']:
+        raise SystemExit('trades.json does not reconcile with trade-counts.json; '
+                         'run scripts/build_trade_counts.py and read the gaps')
+    vol = {r['key']: r for r in cnt['franchises']}
+    part = set(cnt.get('partSeasons') or [])
+
+    # The itemised window is the COMPLETE seasons only. 2026 is six weeks old:
+    # the ledger holds six deals in it and Sleeper's own log already has
+    # twenty-nine, so a season-2026 figure in here would be a quarter of the
+    # truth presented as the whole of it.
+    trades = [t for t in tj['trades'] if str(t['season']) not in part]
+    dropped = len(tj['trades']) - len(trades)
     seasons = sorted({t['season'] for t in trades})
     mine = [t for t in trades if ME in [key(s['team']) for s in t['sides']]]
 
@@ -203,10 +231,22 @@ def facts():
                          'from': other[0] if len(other) == 1 else None})
 
     per_season = collections.Counter(t['season'] for t in mine)
-    # the metronome: the run of consecutive seasons on the same count
-    full = [y for y in seasons if y != seasons[-1]] or seasons
-    counts = [per_season.get(y, 0) for y in full]
-    same = len(set(counts)) == 1
+    # His per-season rate, from the MASTER counts rather than the ledger.
+    #
+    # The first printing called this a metronome: thirteen trades in every one
+    # of five seasons. The ledger did read flat, and that is what pulled the
+    # piece -- a figure that steady in a league whose own total swung 53, 62,
+    # 54, 43, 38 looked like a fault. It was not a fault and it was not a
+    # metronome either. Counted off the master export the same five seasons
+    # run 13, 11, 13, 12, 12, and the ledger's flat line was that sequence
+    # plus four rows the two exports disagree on.
+    #
+    # So the claim is now the one the data supports: a band, not a constant.
+    # The copy prints the range and the spread, both counted.
+    full = [y for y in seasons]
+    rate = [vol[ME]['bySeason'].get(str(y), 0) for y in full]
+    rate_lo, rate_hi = min(rate), max(rate)
+    league_rate = [cnt['leagueTotals'].get(str(y), 0) for y in full]
 
     active = {r['key'] for r in fr['franchises'] if r.get('active')}
     era = max(r.get('numSeasons', 0) for r in rec.values())
@@ -214,6 +254,7 @@ def facts():
 
     # one row per deal: who was across the table, so a three-team trade counts
     # once however many partners it had
+    me_rec = rec[ME]
     across = [{key(x['team']) for x in t['sides']} - {ME} for t in mine]
     deals_with = lambda f: sum(1 for ks in across if any(f(rec.get(k) or {}) for k in ks))
     top = partner.most_common()
@@ -225,8 +266,29 @@ def facts():
         'top': top,
         'rec': rec, 'club': club, 'seen': seen,
         'got_p': got_p, 'got_k': got_k, 'gave_p': gave_p, 'gave_k': gave_k,
-        'per_season': per_season, 'full': full, 'metronome': counts[0] if same else None,
+        'per_season': per_season, 'full': full,
+        'rate': rate, 'rate_lo': rate_lo, 'rate_hi': rate_hi,
+        'league_rate': league_rate,
         'busiest': seen.most_common(1)[0],
+        # eleven seasons of volume, which is what the counts can carry even
+        # though the itemised detail cannot
+        'vol': vol, 'cnt': cnt, 'recon': recon, 'dropped': dropped,
+        'recon_me': next(abs(r['ledger'] - r['master'])
+                         for r in recon['rows'] if r['key'] == ME),
+        'part': sorted(part),
+        'vol_span': cnt['span'],
+        'vol_rank': [r['key'] for r in cnt['franchises'] if r['active']],
+        # the five-year window ordered by the master counts, so "busiest" is
+        # not a claim about the ledger's own coverage
+        'win_rank': sorted((r for r in cnt['franchises'] if r['active']),
+                           key=lambda r: -sum(r['bySeason'].get(str(y), 0)
+                                              for y in seasons)),
+        'win_deals': lambda k: sum(vol[k]['bySeason'].get(str(y), 0)
+                                   for y in seasons),
+        # the all-play, which is a weekly score against all fifteen others and
+        # has to be explained in the copy or it reads as a typo
+        'allplay_g': sum(int(x) for x in me_rec['allPlay'].split('-')),
+        'allplay_wk': me_rec['record'].split('-'),
         'with_contenders': deals_with(lambda r: r.get('playoffs', 0) >= 10),
         'with_champions': deals_with(lambda r: r.get('titles', 0) > 0),
         'top_two_deals': sum(1 for ks in across
@@ -252,7 +314,7 @@ def facts():
         'active': active,
         'po_rank': sorted(full_era, key=lambda r: -r.get('playoffs', 0)),
         'title_rank': sorted(rec.values(), key=lambda r: -(r.get('titles') or 0)),
-        'val': values(),
+        'val': values(part),
         'moves': moves,
         'in_': in_, 'out_': out_, 'trades': trades, 'key': key, 'mine': mine,
     }
@@ -291,7 +353,6 @@ def prose(F):
     runner = peers[1]
 
     busiest_k, busiest_n = F['busiest']
-    metro = F['metronome']
 
     P = []
     P.append(
@@ -303,8 +364,8 @@ def prose(F):
         'the rest of the league is left to split the scraps he does not want. It is a '
         'good story. It has a villain, it has victims, and it explains — cleanly, '
         'comfortably — why the same team keeps ending up on top. This newsroom decided '
-        'to do the one thing nobody in twenty-one years of group chat had bothered to '
-        'do. We pulled the receipts.')
+        'to do the one thing nobody arguing about it had ever bothered to do. We pulled '
+        'the receipts.')
 
     P.append(
         f'The record itself is not in dispute, and it is the reason the theory exists at '
@@ -313,34 +374,65 @@ def prose(F):
         f'{word(me["numSeasons"])} seasons, {name(key_of(runner))}, sits on '
         f'{pc(runner["winPct"])}. '
         f'{word(me["playoffs"]).capitalize()} playoff appearances in '
-        f'{word(me["numSeasons"])} seasons. {word(me["titles"]).capitalize()} '
-        f'championships, {word(me["runnerUps"])} runner-up finishes, an all-play record '
-        f'({allplay(me["allPlay"])}) that reads like a typo. You do not have to like it to respect '
+        f'{word(me["numSeasons"])} seasons — League Legacy\'s register, which is the '
+        f'league\'s own. {word(me["titles"]).capitalize()} '
+        f'championships, {word(me["runnerUps"])} runner-up finishes, and an all-play '
+        f'record that reads like a typo until you work out what it counts. Score every '
+        f'week he has played against all {word(F["others"])} other teams in the league '
+        f'that week, not just the one he was drawn against, and he is '
+        f'{allplay(me["allPlay"])}: {word(F["allplay_g"])} notional games, '
+        f'{pc(me["allPlayPct"])}. The schedule has not been doing him favours. He beats '
+        f'the room. You do not have to like it to respect '
         f'it, and most of the league has chosen the first option. When a team is that good '
         f'for that long, the human brain does not reach for "well-run." It reaches for '
         f'"rigged." That instinct is the entire case for the prosecution, and it is worth '
         f'taking seriously — so we did.')
 
     P.append(
-        f'The charge, stated plainly, is collusion: that The Machines win because a handful '
-        f'of '
-        f'soft, compliant owners feed them their best players for pennies. If that were '
-        f'true, it would leave a fingerprint. Collusion is narrow by nature — you cannot '
-        f'conspire with the whole room. So we mapped every trade in the itemised ledger, '
-        f'{word(F["league_deals"])} deals from {y0} to {y1}, which is the dynasty era and '
-        f'all of it; there was no dynasty market before that and so there is nothing '
-        f'before that to read. {word(F["deals"]).capitalize()} of those deals have The '
-        f'Machines on one side of the table.')
+        f'So let us state the charge properly, because the league rarely does. Nobody '
+        f'here seriously thinks there is a conspiracy — a conspiracy needs two guilty '
+        f'parties and the accusation is always aimed at one. The charge is predation: '
+        f'that The Machines win because he works the owners who do not know what their '
+        f'own players are worth, that he finds the naive and the checked-out and the '
+        f'rebuilding and takes the good half of the deal while they thank him for it. '
+        f'That is a sharper accusation than cheating and a harder one to answer, because '
+        f'it does not require anybody to break a rule. It only requires one man at the '
+        f'table to be paying more attention than the other. If it is true it leaves a '
+        f'fingerprint: the same soft counterparties, over and over, and a ledger that '
+        f'runs his way when it is priced.')
 
     P.append(
-        f'The first thing the ledger does is refuse to clear him. His most frequent '
-        f'partner is {name(k1)}, with {word(n1)} deals. Second is {name(k2)}, with '
-        f'{word(n2)}. Between them that is {word(pair)} of his {word(F["deals"])} deals — '
+        f'So we mapped every trade in the itemised ledger — {word(F["league_deals"])} '
+        f'deals from {y0} to {y1}, {word(F["deals"])} of them with The Machines on one '
+        f'side of the table. {y0} is not where the league became a dynasty league; it '
+        f'has always been one. {y0} is where the receipts start. The league\'s own trade '
+        f'register goes back to {F["vol_span"][0]} and has him in '
+        f'{word(F["vol"][ME]["total"])} deals across '
+        f'{word(len(F["cnt"]["seasons"]))} seasons, so both records were counted and set '
+        f'against each other: over the five years they share they are '
+        f'{word(F["recon_me"])} deals apart on him, and {word(F["recon"]["exact"])} of '
+        f'the {word(len(F["recon"]["rows"]))} franchises come out identical. But the '
+        f'register records only how many, not who or what. The '
+        f'players and the picks exist from {y0}, so {y0} is where a price can be put on '
+        f'anything — and five seasons is the window that bears on this league anyway. '
+        f'These are the deals whose players are on these rosters now. Older ones are '
+        f'history, and this is an audit.')
+
+    # The top two have been level before and will be again, and "his most
+    # frequent partner is X, second is Y" prints a hierarchy that does not
+    # exist when they are tied.
+    head = (f'His two most frequent partners are level on {word(n1)} deals each: '
+            f'{name(k1)} and {name(k2)}.' if n1 == n2 else
+            f'His most frequent partner is {name(k1)}, with {word(n1)} deals. Second is '
+            f'{name(k2)}, with {word(n2)}.')
+    P.append(
+        f'The first thing the ledger does is refuse to clear him. {head} '
+        f'Between them that is {word(pair)} of his {word(F["deals"])} deals — '
         f'about {share} per cent of everything he has done — and '
         f'both of them come from the bottom of the all-time table. {name(k2)} have the '
-        f'worst winning percentage of any side still in this league, {rec[k2]["record"]}, '
-        f'and {"have never made the playoffs" if not rec[k2].get("playoffs") else "have made the playoffs " + word(rec[k2]["playoffs"]) + " times"} '
-        f'in {word(rec[k2]["numSeasons"])} seasons. {name(k1)} are '
+        f'worst winning percentage of any side still in this league, {rec[k2]["record"]} '
+        f'in {word(rec[k2]["numSeasons"])} seasons, {pc(rec[k2]["winPct"])}. '
+        f'{name(k1)} are '
         f'{ordinal(F["weak_rank"].index(k1) + 1)}-worst of the '
         f'{word(len(F["weak_rank"]))}, at {rec[k1]["record"]}. If you wanted to draw the prosecution '
         f'case as a chart, that is the chart. We are not going to pretend otherwise, '
@@ -348,20 +440,22 @@ def prose(F):
 
     P.append(
         f'The second thing the ledger does is refuse to convict him. Those '
-        f'{word(F["deals"])} deals are spread across {word(F["partners"])} different '
-        f'franchises — effectively everyone who has held a roster in the dynasty era. '
+        f'{word(F["deals"])} deals are spread across {word(F["partners"])} of the '
+        f'league\'s {word(len(F["active"]))} franchises. '
         f'{word(F["with_contenders"]).capitalize()} of them were with sides that have made '
         f'the playoffs ten times or more. {word(F["with_champions"]).capitalize()} were '
-        f'with sides that have won the thing. His joint-second most frequent partner is '
-        f'{name(best)}, who own {word(rec[best]["titles"])} championships — more than '
-        f'The Machines do — and who have done {word(best_n)} deals with them. That is not a '
-        f'cabal of three. That is a man doing business with the entire building, including '
+        f'with sides that have won the thing. {word(best_n).capitalize()} of them were '
+        f'with {name(best)}, who own {word(rec[best]["titles"])} championships — more than '
+        f'The Machines do. A man who '
+        f'only hunts the naive does not spend his summers across the table from the '
+        f'champions. That is a man doing business with the entire building, including '
         f'the parts of it that can beat him.')
 
     P.append(
-        'Both things are true at once, and the theory cannot hold both. Collusion needs a '
-        'closed room. What the ledger shows is an open one with two doors that get used '
-        'more than the others — and in a dynasty league, those two doors have a name. The '
+        'Both things are true at once, and the theory cannot hold both. Predation needs a '
+        'small number of soft marks. What the ledger shows is the whole building with two '
+        'doors that get used more than the others — and in a dynasty league, those two '
+        'doors have a name. The '
         'rebuilders are not the contender\'s victims; they are the contender\'s trading '
         'partners by design. A team going nowhere in November has one asset a title team '
         'wants and one thing it needs, and the title team is the only reliable buyer in '
@@ -379,16 +473,32 @@ def prose(F):
         f'looks like. It is what a rebuild looks like, run every year, by a team that '
         f'keeps winning while it runs it.')
 
-    busy = ('He is not even the busiest man in the market. '
-            f'{name(busiest_k)} appear in {word(busiest_n)} deals in this ledger; '
-            f'The Machines appear in {word(F["seen"][ME])}.'
-            if busiest_k != ME else
-            f'He is the busiest man in the market: {word(busiest_n)} appearances in '
-            f'{word(F["league_deals"])} deals.')
-    rhythm = (f' And the rate never moves. {word(metro).capitalize()} trades in '
-              + ', '.join(str(y) for y in F['full'][:-1]) + f' and {F["full"][-1]}: '
-              f'{word(len(F["full"]))} straight seasons on the same number, with a '
-              f'different set of partners every time.' if metro else '')
+    # Who is busiest is settled on the master counts, not on the ledger's own
+    # coverage: the ledger is a reconstruction and being over-represented in it
+    # is not the same as trading more.
+    w1, w2 = F['win_rank'][0], F['win_rank'][1]
+    wn = F['win_deals']
+    busy = (f'He is not even the busiest man in the market. Over the same five seasons '
+            f'{name(w1["key"])} were a party to {word(wn(w1["key"]))} deals and The '
+            f'Machines to {word(wn(ME))}.'
+            if w1['key'] != ME else
+            f'He is the busiest man in the market: a party to {word(wn(ME))} deals in '
+            f'five seasons, against {word(wn(w2["key"]))} for {name(w2["key"])}, who are '
+            f'next.')
+    # The rate, off the league register rather than the ledger. The first
+    # printing of this piece called it a metronome on the strength of five
+    # identical ledger rows; the register says 13, 11, 13, 12, 12, so the claim
+    # is a band and the band is printed rather than described.
+    lo, hi = F['rate_lo'], F['rate_hi']
+    seq = ', '.join(str(n) for n in F['rate'][:-1]) + f' and {F["rate"][-1]}'
+    rhythm = (f' And the rate barely moves. The league\'s trade register has him at '
+              f'{seq} deals across those five seasons — never fewer than {word(lo)}, '
+              f'never more than {word(hi)} — while the league\'s own total over the same '
+              f'five years went {", ".join(str(n) for n in F["league_rate"][:-1])} and '
+              f'{F["league_rate"][-1]} — {word(max(F["league_rate"]) - min(F["league_rate"]))} '
+              f'deals between its busiest summer and its quietest. The market around him '
+              f'fills up and empties out. He does his {word(lo)} to {word(hi)} and goes '
+              f'back to work.')
     P.append(busy + rhythm + ' Whatever he is doing, he is doing it in public, on a '
              'schedule, with everyone.')
 
@@ -452,13 +562,17 @@ def prose(F):
 
     listed = (' and '.join([', '.join(ahead[:-1]), ahead[-1]]) if len(ahead) > 1
               else (ahead[0] if ahead else ''))
-    worked = (f'{name(busiest_k)} appear in more of its deals than he does'
-              if busiest_k != ME else 'nobody appears in more of its deals than he does')
+    w1 = F['win_rank'][0]
+    worked = (f'{name(w1["key"])} were a party to more of its deals over the same five '
+              f'seasons than he was'
+              if w1['key'] != ME else 'he is a party to more of its deals than anybody')
     read = ('and he does not clear it either, because most of what he does in it '
             'comes out level')
     P.append(
-        'This newsroom has now read every deal in the dynasty ledger, priced every asset '
-        'at the season it moved in, and counted every partner. There is no cabal. There '
+        'This newsroom has now read every deal in the five-year ledger, priced every '
+        'asset at the season it moved in, counted every partner, and checked the counts '
+        'against the league\'s own register going back eleven years. There is no ring of '
+        'soft touches. There '
         'is a concentration, and an explanation for the concentration that the '
         f'concentration itself supports. There is a market, open every summer, and he '
         f'does not own it: {worked}, {read}. And there is a room that has decided, '
@@ -467,17 +581,22 @@ def prose(F):
 
     P.append(
         f'So the verdict of the ledger is not close, and it is not the one the league '
-        f'wants either. On the charge of cheating: not guilty. On the charge of '
-        f'collusion: not guilty. On the charge of running a market that pays him and '
-        f'nobody else: not guilty — {word(F["val"]["tbl"][ME]["e"])} of his '
-        f'{word(F["val"]["tbl"][ME]["n"])} priced deals come out level, and he is a net '
-        f'seller of players in the ones that do not. He does not have the most '
+        f'wants either. On the charge of cheating: not guilty — there is nothing in the '
+        f'file to prosecute. On the charge of preying on the ignorant and the naive: not '
+        f'guilty, and it is the ledger that acquits him, not this desk. '
+        f'{word(F["with_champions"]).capitalize()} of his deals were done with sides who '
+        f'have won this league; {word(F["val"]["tbl"][ME]["e"])} of his '
+        f'{word(F["val"]["tbl"][ME]["n"])} priced deals come out level; he is a net '
+        f'seller of players in the ones that do not. A predator does not come out level '
+        f'in {round(100 * F["val"]["tbl"][ME]["e"] / F["val"]["tbl"][ME]["n"])} '
+        f'deals out of every hundred. He does not have the most '
         f'championships either; {tl["name"]} have {word(tl["titles"])} to his '
-        f'{word(me2["titles"])}. What he is guilty of is narrower than the theory and '
+        f'{word(me2["titles"])}. What he is guilty of is narrower than the charge and '
         f'worse for everybody else: the best record anybody has put together here, '
         f'{pc(me2["winPct"])} against {pc(pct2["winPct"])} for the next side to go the '
         f'distance, and {word(me2["playoffs"])} playoff appearances in '
-        f'{word(me2["numSeasons"])} seasons, {word(po1["playoffs"] - po2["playoffs"])} '
+        f'{word(me2["numSeasons"])} seasons on the league\'s own register, '
+        f'{word(po1["playoffs"] - po2["playoffs"])} '
         f'more than anyone else has managed. He is beaten in his own trade ledger '
         f'{word(F["val"]["tbl"][ME]["l"])} times out of {word(F["val"]["tbl"][ME]["n"])} '
         f'and he finishes above you anyway. Some empires are built in the dark. This one was '
@@ -486,9 +605,14 @@ def prose(F):
 
     P.append(
         f'Sourcing: the itemised Obvibase ledger ({F["league_deals"]} deals, {y0}–{y1}), '
-        f'with multi-team legs consolidated and relay assets netted out; the League '
-        f'Legacy all-time table for records, playoff appearances and titles. Pre-{y0} '
-        f'trades are not in the ledger and are not claimed here. Trade values are '
+        f'with multi-team legs consolidated and relay assets netted out; the league trade '
+        f'register ({sum(F["cnt"]["leagueTotals"].values())} deals, '
+        f'{F["vol_span"][0]}–{F["vol_span"][1]}), which carries counts only and is what '
+        f'the ledger is checked against; the League '
+        f'Legacy all-time table for records, playoff appearances and titles. Itemised '
+        f'trades before {y0} are not in the ledger and are not claimed here; the '
+        f'{F["part"][0]} season is in progress and is left out of every table. Trade '
+        f'values are '
         f'scripts/build_trade_values.py, which prices every asset at the August of the '
         f'season the trade was made in — players off that year’s dp-values snapshot, '
         f'picks off the chart calibrated to real SCFL trades — so nothing here is graded '
@@ -516,15 +640,31 @@ def audit(F, P):
         (me['record'], 'all-time record'),
         (pc(me['winPct']), 'win percentage'),
         (f'{word(F["deals"])} deals', 'his deal count'),
-        (f'{word(F["partners"])} different franchises', 'partner count'),
+        (f'across {word(F["partners"])} of the', 'partner count'),
         (f'{m["w"]}-{m["l"]}', 'trade win-loss') if V else None,
-        (f'{word(F["metronome"])} trades', 'the per-season rate') if F['metronome'] else None,
+        (f'{word(F["rate_lo"])}', 'the low end of the per-season rate'),
+        (f'{word(F["rate_hi"])}', 'the high end of the per-season rate'),
     ]
     bad = [why for pair in want if pair
            for val, why in [pair] if str(val).lower() not in txt]
     # and the claims that are comparisons rather than counts
-    if F['busiest'][0] != ME and 'does not own it' not in txt:
+    if F['win_rank'][0]['key'] != ME and 'does not own it' not in txt:
         bad.append('the market-share claim')
+    # A zero in records.json's `playoffs` is League Legacy's and could not be
+    # reproduced from the game log -- Wookie Leaks read 0 in eleven seasons
+    # having finished 4th of 16 in 2015. The first printing turned that zero
+    # into "have never made the playoffs". It cannot be derived, so it cannot
+    # be printed. See the playoffsNote in records.json.
+    if 'never made the playoffs' in txt:
+        bad.append('a never-made-the-playoffs claim, which records.json cannot support')
+    # The per-season rate is now the league register's, not the ledger's, and
+    # the ledger's flat five rows are what pulled the first printing.
+    if 'straight seasons on the same number' in txt or 'the rate never moves' in txt:
+        bad.append('the metronome, which the register does not show')
+    # The window is whole seasons. A part-season figure in a table of complete
+    # ones is the mistake this rebuild exists to avoid.
+    if any(str(s) in {str(t['season']) for t in F['mine']} for s in F['part']):
+        bad.append('a part-season inside the priced window')
     if V and V['rank'].index(ME) == 0 and 'grade out ahead of him' in txt:
         bad.append('says sides grade ahead of him when none do')
     if bad:
@@ -544,11 +684,17 @@ def build():
         raise SystemExit(f'{ARTICLE_ID} not in investigations.json')
     old['headline'] = 'Trial of the Evil Empire'
     old['subhead'] = (f'For twenty-one years the league has whispered that The Machines '
-                      f'rig it. We pulled every trade in the dynasty ledger — '
-                      f'{F["span"][0]} to {F["span"][1]}, the whole of it — and priced '
+                      f'rig it. We pulled every itemised trade from {F["span"][0]} to '
+                      f'{F["span"][1]}, checked the counts against the league register '
+                      f'back to {F["vol_span"][0]}, and priced '
                       f'every asset at the season it moved in. Here is what it says.')
     old['paragraphs'] = P
     old['blocks'] = blocks(F, P)
+    # Back from the pull. The first printing came down because the Machines'
+    # per-season count could not be checked against anything; it now is, by
+    # trade-counts.json, and facts() will not build at all if the two sources
+    # disagree by more than two deals in a season.
+    old['status'], old['staff'] = 'FILED', 'published'
     tmp = path + '.tmp'
     json.dump(d, open(tmp, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     os.replace(tmp, path)
@@ -594,10 +740,61 @@ def fig_partners(F):
             '<thead><tr><th class="lt">Partner</th><th>Deals</th><th></th>'
             '<th>All-time</th><th>Playoffs</th><th>Titles</th></tr></thead>'
             f'<tbody>{rows}</tbody></table></div>'
-            '<figcaption>Every franchise The Machines have traded with in the dynasty '
+            '<figcaption>Every franchise The Machines have traded with in the itemised '
             f'ledger, {F["span"][0]}&ndash;{F["span"][1]}. Record, playoff appearances and '
-            'titles are all-time, from League Legacy. Two of the sixteen do not appear at '
-            'all.</figcaption></figure>')
+            f'titles are all-time, from League Legacy. '
+            + (f'{word(len(F["active"]) - F["partners"]).capitalize()} of the '
+               f'{word(len(F["active"]))} '
+               + ('does' if len(F['active']) - F['partners'] == 1 else 'do')
+               + ' not appear at all.' if len(F['active']) > F['partners'] else
+               'Every franchise in the league appears.')
+            + '</figcaption></figure>')
+
+
+def fig_volume(F):
+    """Eleven seasons of volume, which is the one thing the register can carry.
+
+    This is the table that got the piece re-reported. The claim it replaces --
+    thirteen deals in five straight seasons -- came out of the itemised ledger
+    alone, and the register says 13, 11, 13, 12, 12. Printing both sources'
+    span lets a reader see the steadiness without having to take the adjective
+    on trust, and lets them see who is actually busiest, which is not him.
+
+    Only the sixteen franchises still holding a roster are in it. A defunct
+    side's row stops when the side does and reads as a quiet decade.
+    """
+    cnt, me = F['cnt'], ME
+    seasons = cnt['seasons']
+    part = set(F['part'])
+    rows_in = [r for r in cnt['franchises'] if r['active']]
+    hi = max(r['total'] for r in rows_in)
+    rows = ''
+    for r in rows_in:
+        em = ' class="on"' if r['key'] == me else ''
+        rows += (f'<tr{em}><th scope="row">{E(r["club"])}</th>'
+                 + ''.join(f'<td class="num{" dim" if s in part else ""}">'
+                           f'{r["bySeason"].get(s, 0) or "&mdash;"}</td>'
+                           for s in seasons)
+                 + f'<td class="num">{r["total"]}</td></tr>')
+    rows += ('<tr><th scope="row" class="dim">The league</th>'
+             + ''.join(f'<td class="num dim">{cnt["leagueTotals"][s]}</td>'
+                       for s in seasons)
+             + f'<td class="num dim">{sum(cnt["leagueTotals"].values())}</td></tr>')
+    pl = ', '.join(part)
+    # No bar column: eleven season columns already draw the shape, and a bar
+    # on top of them pushes the table past a phone's width even inside .scroll.
+    return ('<figure><div class="scroll"><table>'
+            '<thead><tr><th class="lt">Franchise</th>'
+            + ''.join(f'<th>{s[2:]}</th>' for s in seasons)
+            + '<th>All</th></tr></thead>'
+            f'<tbody>{rows}</tbody></table></div>'
+            f'<figcaption>Deals a franchise was a party to, from the league&rsquo;s own '
+            f'trade register, {cnt["span"][0]}&ndash;{cnt["span"][1]}. Counts only &mdash; '
+            f'the register does not say what was in them. A three-team deal counts once '
+            f'for each of the three; there are {word(cnt["multiTeamDeals"])} of them in '
+            f'{word(len(seasons))} seasons. The '
+            f'{pl} column is a season in progress and is not in any priced table in this '
+            f'piece.</figcaption></figure>')
 
 
 def fig_spread(F):
@@ -658,30 +855,44 @@ def method(F):
     return [
         ('sect', '<div class="sect">How This Was Counted</div>'),
         ('body', f'<div class="psa note"><div class="t">The window: {sp[0]} to {sp[1]}</div>'
-                 f'<p>This audit covers the dynasty era and only the dynasty era. Every '
-                 f'deal from {sp[0]} to {sp[1]} is in it; nothing before {sp[0]} is, '
-                 f'because nothing before {sp[0]} exists to read. The itemised ledger '
-                 f'starts there, and the league WhatsApp — created in 2016 — holds three '
-                 f'setup notices and then nothing until {sp[0]} as well. Two records, the '
-                 f'same floor.</p>'
-                 f'<p>That floor is also a judgement: a trade from ten or fifteen years '
-                 f'ago, in a league that was not a dynasty league yet, does not tell you '
-                 f'much about how this one is run now. But the floor is a sourcing limit '
-                 f'before it is an opinion. <b>If anybody still has the official chat from '
-                 f'before {sp[0]}, send it and this desk will go back further.</b></p>'
+                 f'<p>The SCFL has always been a dynasty league. {sp[0]} is not where the '
+                 f'market opened — it is where the paperwork starts. Two records were '
+                 f'used here and they reach back different distances. The league&rsquo;s '
+                 f'trade register counts deals from {F["vol_span"][0]}, '
+                 f'{word(len(F["cnt"]["seasons"]))} seasons, and says how many each '
+                 f'franchise did and when. The itemised ledger says <i>what was in them</i> '
+                 f'— which players, which picks, which way — and it starts in {sp[0]}. '
+                 f'Only the second one can be priced, so the priced window is '
+                 f'{sp[0]}&ndash;{sp[1]}.</p>'
+                 f'<p>Five seasons is also the window that bears on anything. These are '
+                 f'the deals whose players are on these rosters, in this league, this '
+                 f'Sunday. <b>If anybody still has itemised trades from before {sp[0]} — '
+                 f'the official chat, a spreadsheet, screenshots — send it and this desk '
+                 f'will price them too.</b></p>'
+                 f'<p>The current season is left out entirely. It is '
+                 f'{word(F["cnt"]["leagueTotals"][F["part"][0]])} deals old and counting, '
+                 f'and a part-season in a table of whole ones is a misleading number '
+                 f'dressed as a complete one.</p>'
                  f'</div>'),
-        ('body', '<p class="b">Every figure in this piece is computed from three files in '
-                 'the newsroom repository, and the piece is regenerated from them rather '
-                 'than typed. The first version of it was typed, and almost every count in '
-                 'the paragraph carrying the defence was wrong.</p>'),
+        ('body', '<p class="b">Every figure in this piece is computed from files in the '
+                 'newsroom repository and the piece is regenerated from them rather than '
+                 'typed, so the sentence and the number beside it cannot disagree.</p>'),
         ('body', f'<p class="b"><b>The ledger.</b> The itemised Obvibase export: '
                  f'{F["league_deals"]} deals from {sp[0]} to {sp[1]}, with multi-team legs '
                  f'consolidated and pass-through assets netted out, so a middleman is '
-                 f'credited only with what he kept. There is nothing before {sp[0]}; there '
-                 f'was no dynasty market, and the league WhatsApp — created in 2016 — holds '
-                 f'nothing but three setup notices until {sp[0]} either. Both records start '
-                 f'in the same place, which is why this is the dynasty-era ledger and not '
-                 f'the twenty-one-year one.</p>'),
+                 f'credited only with what he kept.</p>'),
+        ('body', f'<p class="b"><b>Two sources, cross-checked.</b> A reconstruction cannot '
+                 f'check itself, so the itemised ledger was counted against the '
+                 f'league&rsquo;s own register, franchise by franchise and season by '
+                 f'season. Over {F["recon"]["span"][0]}&ndash;{F["recon"]["span"][-1]} the '
+                 f'two sources put {F["recon"]["ledger"]} deals and '
+                 f'{F["recon"]["master"]} on the table; '
+                 f'{word(F["recon"]["exact"])} of the {word(len(F["recon"]["rows"]))} '
+                 f'franchises agree exactly, and the largest gap anywhere is '
+                 f'{word(F["recon"]["worst"])} deals in one season. The Machines&rsquo; own '
+                 f'rows differ by {word(F["recon_me"])} deals across the five years. '
+                 f'Any figure in this piece that the register will not '
+                 f'back is not in this piece.</p>'),
         ('body', '<p class="b"><b>Players</b> are priced from the DynastyProcess superflex '
                  'board, taken from the August snapshot of the season the trade was made '
                  'in. Not today&rsquo;s. A player who became a star in 2024 is priced in a '
@@ -693,17 +904,17 @@ def method(F):
                  'priced at the average of its round and discounted for every year of '
                  'waiting.</p>'),
         ('body', '<div class="ad">' + fig_picks(F) + '</div>'),
-        ('body', '<p class="b"><b>The two boards had to be reconciled, and that is where '
-                 'this audit nearly went wrong.</b> The pick curve puts the 1.01 at 1,000. '
-                 'The player board puts the 1.01 at 100 and the best player in the league '
-                 'at 127. They are the same scale ten units apart, and the first run of '
-                 'this audit added them together raw &mdash; which valued a pick three '
-                 'drafts away at nine times a top-five tight end and inflated every pick in '
-                 'the ledger about tenfold. Dividing the curve by ten puts the 1.01 on $100 '
-                 'and the average first-round pick on $45.60, which the league&rsquo;s Trade '
-                 'Court, calibrated separately, independently puts at $48. Two boards built '
-                 'apart agreeing inside five per cent is the check that this is a '
-                 'reconciliation and not a convenience.</p>'),
+        ('body', '<p class="b"><b>The two boards are on one scale.</b> Players and picks '
+                 'are priced by different curves, built separately and years apart, and '
+                 'they do not arrive in the same units: the pick curve puts the 1.01 at '
+                 '1,000 where the player board puts it at 100. Nothing can be added until '
+                 'that is settled, so the curve is divided by ten and both boards now read '
+                 'in the same dollars &mdash; the 1.01 at $100, the best player in the '
+                 'league at $127. The check that it is right is independent: on this scale '
+                 'the average first-round pick comes out at $45.60, and the league&rsquo;s '
+                 'Trade Court, calibrated on its own against real SCFL deals, puts it at '
+                 '$48. Two boards built apart agreeing inside five per cent is what makes '
+                 'a dollar in this article mean one thing.</p>'),
         ('body', f'<p class="b"><b>A win</b> is a net above ${TC_WIN} on that board, which '
                  f'is the Trade Court&rsquo;s own threshold, and anything inside it is '
                  f'called level. <b>What is left out:</b> {word(V["skipped_3way"])} '
@@ -728,7 +939,9 @@ def blocks(F, P):
         out.append(('body', '<p class="b">' + p + '</p>'))
         if i == 4:
             out.append(('body', '<div class="ad">' + fig_partners(F) + '</div>'))
-        if i == 8 and F['val']:
+        if i == 8:
+            out.append(('body', '<div class="ad">' + fig_volume(F) + '</div>'))
+        if i == 9 and F['val']:
             out.append(('body', '<div class="ad">' + fig_spread(F) + '</div>'))
     out += method(F)
     out.append(('body', '<div class="devnote">' + P[-1] + '</div>'))

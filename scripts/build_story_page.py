@@ -92,6 +92,10 @@ except Exception as _e:
 
 EXTRA_CSS = """
 .freeze{text-align:center;font-size:54px;line-height:1;margin:10px 0 14px;}
+/* The row the table is about. A wide table of counts needs one row marked or
+   the reader has to find the subject by name on every scroll; gold is the
+   house colour for "this is the one that matters". */
+.ad tbody tr.on th,.ad tbody tr.on td{background:rgba(216,180,90,.18);font-weight:700;}
 /* photo cover — the artwork whole, never cropped */
 .photocover{position:absolute;inset:0;background:#0a0806;display:flex;flex-direction:column;
   padding:18px 0 74px;}
