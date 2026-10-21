@@ -116,12 +116,17 @@ EXTRA_CSS = """
   max-width:30em;margin:0 auto 12px;}
 .pc-by{font-family:var(--sans);font-size:10.5px;font-weight:800;letter-spacing:.2em;
   text-transform:uppercase;color:#a89f93;}
-/* victim support notice */
+/* a bordered notice. Centred was right for the one-line victim-support gag it
+   was built for; a scope note runs to a paragraph and a half, and centred
+   prose at that length is a ragged diamond nobody reads. The title stays
+   centred, the body does not. */
 .psa{border:2px solid var(--red);border-radius:14px;padding:16px 18px;margin:16px 0 6px;
   background:#fdf3f3;text-align:center;}
 .psa .t{font-family:var(--sans);font-size:12px;font-weight:900;letter-spacing:.13em;
   text-transform:uppercase;color:var(--red);line-height:1.35;margin-bottom:9px;}
 .psa p{font-size:15.5px;line-height:1.5;margin:0;color:var(--ink);}
+.psa p + p{margin-top:10px;}
+.psa.note{text-align:left;} .psa.note .t{text-align:center;}
 .psa .wa{display:inline-block;margin-top:11px;font-family:var(--sans);font-size:12.5px;
   font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#1a7f37;}
 """

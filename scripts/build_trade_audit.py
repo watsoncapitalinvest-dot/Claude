@@ -297,7 +297,8 @@ def prose(F):
     P.append(
         'There is a theory of the Skirt Chasers Fantasy League that has survived longer '
         'than most of the franchises in it. The theory is simple and it is repeated, in '
-        'some form, every single autumn: Keith cheats. The Machines are the Evil Empire. '
+        'some form, every single autumn: The Machines cheat. The Machines are the Evil '
+        'Empire. '
         'He preys on the weak owners, he collects the rebuilders like toll booths, and '
         'the rest of the league is left to split the scraps he does not want. It is a '
         'good story. It has a villain, it has victims, and it explains — cleanly, '
@@ -321,8 +322,9 @@ def prose(F):
         f'taking seriously — so we did.')
 
     P.append(
-        f'The charge, stated plainly, is collusion: that Keith wins because a handful of '
-        f'soft, compliant owners feed him their best players for pennies. If that were '
+        f'The charge, stated plainly, is collusion: that The Machines win because a handful '
+        f'of '
+        f'soft, compliant owners feed them their best players for pennies. If that were '
         f'true, it would leave a fingerprint. Collusion is narrow by nature — you cannot '
         f'conspire with the whole room. So we mapped every trade in the itemised ledger, '
         f'{word(F["league_deals"])} deals from {y0} to {y1}, which is the dynasty era and '
@@ -352,7 +354,7 @@ def prose(F):
         f'the playoffs ten times or more. {word(F["with_champions"]).capitalize()} were '
         f'with sides that have won the thing. His joint-second most frequent partner is '
         f'{name(best)}, who own {word(rec[best]["titles"])} championships — more than '
-        f'Keith does — and who have done {word(best_n)} deals with him. That is not a '
+        f'The Machines do — and who have done {word(best_n)} deals with them. That is not a '
         f'cabal of three. That is a man doing business with the entire building, including '
         f'the parts of it that can beat him.')
 
@@ -363,7 +365,8 @@ def prose(F):
         'rebuilders are not the contender\'s victims; they are the contender\'s trading '
         'partners by design. A team going nowhere in November has one asset a title team '
         'wants and one thing it needs, and the title team is the only reliable buyer in '
-        'the building. The sides who trade with Keith most are the sides with the most '
+        'the building. The sides who trade with The Machines most are the sides with the '
+        'most '
         'reason to.')
 
     P.append(
@@ -430,9 +433,10 @@ def prose(F):
 
     P.append(
         f'So why does the accusation never die? Because it does useful work for the '
-        f'{word(F["others"])} other guys. "Keith cheats" is a more bearable '
-        f'explanation than "Keith is better than me at the one thing we all show up to '
-        f'do." The persecution complex Keith wears — everyone\'s teaming up on me, they '
+        f'{word(F["others"])} other teams. "The Machines cheat" is a more bearable '
+        f'explanation than "The Machines are better than me at the one thing we all show '
+        f'up to do." The persecution complex that comes back off that side of the chat '
+        f'— everyone\'s teaming up on me, they '
         f'gang up because I\'m the best — is not entirely paranoia; the chat does organize '
         f'against him, does root against him, does treat a deal that helps The Machines as '
         f'a threat to the republic. But that is a tax the league levies on excellence, not '
@@ -538,6 +542,10 @@ def build():
     old = next((x for x in inv if x.get('id') == ARTICLE_ID), None)
     if old is None:
         raise SystemExit(f'{ARTICLE_ID} not in investigations.json')
+    old['subhead'] = (f'For twenty-one years the league has whispered that The Machines '
+                      f'rig it. We pulled every trade in the dynasty ledger — '
+                      f'{F["span"][0]} to {F["span"][1]}, the whole of it — and priced '
+                      f'every asset at the season it moved in. Here is what it says.')
     old['paragraphs'] = P
     old['blocks'] = blocks(F, P)
     tmp = path + '.tmp'
@@ -648,6 +656,19 @@ def method(F):
     V, sp = F['val'], F['span']
     return [
         ('sect', '<div class="sect">How This Was Counted</div>'),
+        ('body', f'<div class="psa note"><div class="t">The window: {sp[0]} to {sp[1]}</div>'
+                 f'<p>This audit covers the dynasty era and only the dynasty era. Every '
+                 f'deal from {sp[0]} to {sp[1]} is in it; nothing before {sp[0]} is, '
+                 f'because nothing before {sp[0]} exists to read. The itemised ledger '
+                 f'starts there, and the league WhatsApp — created in 2016 — holds three '
+                 f'setup notices and then nothing until {sp[0]} as well. Two records, the '
+                 f'same floor.</p>'
+                 f'<p>That floor is also a judgement: a trade from ten or fifteen years '
+                 f'ago, in a league that was not a dynasty league yet, does not tell you '
+                 f'much about how this one is run now. But the floor is a sourcing limit '
+                 f'before it is an opinion. <b>If anybody still has the official chat from '
+                 f'before {sp[0]}, send it and this desk will go back further.</b></p>'
+                 f'</div>'),
         ('body', '<p class="b">Every figure in this piece is computed from three files in '
                  'the newsroom repository, and the piece is regenerated from them rather '
                  'than typed. The first version of it was typed, and almost every count in '
