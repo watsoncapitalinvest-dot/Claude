@@ -72,7 +72,7 @@ h1{font-size:50px;line-height:1.02;letter-spacing:-.022em;font-weight:900;margin
   </div>
 </div></div>"""
 
-def data_uri(art, tall=False):
+def data_uri(art, tall=False, focus=None):
     """The share-card strip of `art`, inline, so the card has no dependencies.
 
     ad.shoot renders the HTML in a throwaway context; a relative src resolves
@@ -84,8 +84,14 @@ def data_uri(art, tall=False):
     _s = _iu.spec_from_file_location('cc', os.path.join(ROOT, 'scripts', 'compose_cover.py'))
     cc = _iu.module_from_spec(_s); _s.loader.exec_module(cc)
     buf = io.BytesIO()
-    strip = (cc.band(art, 1200, 630, focus=(0.58, 0.13), place=(0.5, 0.33))
-             if tall else cc.band(art, 1200, 630))
+    # The default is aimed at a standing figure's head, which is right for a
+    # portrait photograph and wrong for art whose subject is everything AROUND
+    # the standing figure. The issue can aim it: "cardFocus": [x, y].
+    if focus:
+        strip = cc.band(art, 1200, 630, focus=tuple(focus), place=(0.5, 0.5))
+    else:
+        strip = (cc.band(art, 1200, 630, focus=(0.58, 0.13), place=(0.5, 0.33))
+                 if tall else cc.band(art, 1200, 630))
     strip.save(buf, 'JPEG', quality=86, optimize=True)
     return 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode()
 
@@ -261,7 +267,7 @@ def week_means(season, upto):
     return out
 
 
-def feature_card(season, week, feat, art=''):
+def feature_card(season, week, feat, art='', focus=None):
     """The share card when the cover leads on a feature rather than a game.
 
     The margin trace belongs to one game. Running it behind a headline about
@@ -278,19 +284,41 @@ def feature_card(season, week, feat, art=''):
     y0, h = 150, 330
     line, area, mid = curve(pts, w, h, x0, y0)
     hurt = injured_count(season, week)
-    doc = (OG.replace('__AREA__', area).replace('__LINE__', line)
-             .replace('__MID__', f'{mid:.1f}').replace('__FLIPS__', '')
-             .replace('__WK__', str(week))
-             .replace('__HL__', ad.esc(feat.get('headline', '')))
-             .replace('__DEK__', ad.esc(feat.get('dek', '')))
-             .replace('__STATS__', FEAT_STATS.format(
-                 k1='Points a team', v1=f'{means[-1][1]:.1f}',
-                 k2='Injured men', v2=str(hurt)))
-             .replace('__PHOTO__', ''))
+    stats = FEAT_STATS.format(k1='Points a team', v1=f'{means[-1][1]:.1f}',
+                              k2='Injured men', v2=str(hurt))
+    # A picture takes both slots or neither. The week the cover and the card
+    # disagreed, the link previewed as a chart and opened on a stadium.
+    if art:
+        from PIL import Image as _I
+        aw, ah = _I.open(os.path.join(ROOT, art)).size
+        tall = ah / aw >= 1.1
+        if tall:
+            doc = (OGP.replace('__WK__', str(week))
+                      .replace('__HL__', ad.esc(feat.get('headline', '')))
+                      .replace('__STATS__', stats))
+        else:
+            doc = (OG.replace('__AREA__', '').replace('__LINE__', '')
+                     .replace('__MID__', f'{mid:.1f}').replace('__FLIPS__', '')
+                     .replace('__WK__', str(week))
+                     .replace('__HL__', ad.esc(feat.get('headline', '')))
+                     .replace('__DEK__', ad.esc(feat.get('dek', '')))
+                     .replace('__STATS__', stats))
+            doc = _re.sub(r'<svg width="1200".*?</svg>', '', doc, flags=_re.S)
+        doc = doc.replace('__PHOTO__',
+                          f"background-image:url('{data_uri(art, tall, focus)}');")
+    else:
+        doc = (OG.replace('__AREA__', area).replace('__LINE__', line)
+                 .replace('__MID__', f'{mid:.1f}').replace('__FLIPS__', '')
+                 .replace('__WK__', str(week))
+                 .replace('__HL__', ad.esc(feat.get('headline', '')))
+                 .replace('__DEK__', ad.esc(feat.get('dek', '')))
+                 .replace('__STATS__', stats)
+                 .replace('__PHOTO__', ''))
     out = os.path.join(ROOT, f'scfl-week-{week}-og.jpg')
     ad.shoot(doc, out, f'wk{week}-og', 1200, 630)
     print(f'  wrote {os.path.basename(out)} (feature card: '
-          f'{means[-1][1]:.1f} a team, {hurt} injured)')
+          f'{means[-1][1]:.1f} a team, {hurt} injured'
+          + (f', from {art}' if art else '') + ')')
 
 
 def injured_count(season, week):
@@ -401,7 +429,8 @@ def build(season, week, art='', inset='', card=''):
     # The card follows whatever the cover leads on, or the link previews as one
     # magazine and opens as another.
     if cover.get('from') == 'feature' and feats:
-        feature_card(season, week, feats[cover.get('index', 0)], card or art)
+        feature_card(season, week, feats[cover.get('index', 0)], card or art,
+                     cover.get('cardFocus'))
     elif stories:
         og_card(season, week, g, stories[lead], pts, crossings(pts), card or art)
 

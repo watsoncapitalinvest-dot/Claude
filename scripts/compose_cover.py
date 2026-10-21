@@ -49,6 +49,21 @@ def feather(img, top, bottom):
     return a
 
 
+def scrim(cover):
+    """Darken the lower half so the hook and cover lines sit on something.
+
+    build_issue.py composites six cover lines and a hook over the bottom third
+    and its own scrim is tuned for the near-black a laid-in photograph leaves
+    behind it. A picture filling the frame is a far worse bed for type, so it
+    gets this one instead.
+    """
+    sc = Image.new('L', (1, H))
+    for y in range(H):
+        t = max(0.0, (y - H * 0.52) / (H * 0.48))
+        sc.putpixel((0, y), int(255 * min(0.62, t * t * 0.62)))
+    return Image.composite(Image.new('RGB', (W, H), INK), cover, sc.resize((W, H)))
+
+
 def compose(art, out, top=240, inset=''):
     """art (any aspect) -> a 1024x1536 cover at `out`. Returns the photo height.
 
@@ -75,6 +90,22 @@ def compose(art, out, top=240, inset=''):
     w, h = src.size
     cover = Image.new('RGB', (W, H), INK)
 
+    # Art already composed to the cover's own 2:3 frame is a different job from
+    # a photograph that has to be laid into it. Tucking it under the masthead
+    # the way a portrait photo is tucked would push 207 pixels of it off the
+    # bottom and leave a black band across the top of a picture that was drawn
+    # to fill the page. So when it arrives at the frame's aspect it is used
+    # full bleed, and only the scrim for the type is laid over it.
+    bleed = abs(h / w - H / W) < 0.02
+    if bleed:
+        cover = src.resize((W, H), Image.LANCZOS)
+        cover = scrim(cover)
+        p = os.path.join(ROOT, out)
+        cover.save(p, quality=90, optimize=True)
+        print(f'  {art} {w}x{h} -> {out} {W}x{H} '
+              f'({os.path.getsize(p)//1024}kb, full bleed)')
+        return H
+
     ph = round(h * W / w)                      # full width, nothing cropped sideways
     photo = src.resize((W, ph), Image.LANCZOS)
     tall = h / w >= 1.1
@@ -92,12 +123,7 @@ def compose(art, out, top=240, inset=''):
         # photograph leaves behind it, and build_issue.py composites the hook
         # and six cover lines over the bottom third. Its own scrim is tuned for
         # that black. This one is for a picture.
-        sc = Image.new('L', (1, H))
-        for y in range(H):
-            t = max(0.0, (y - H * 0.52) / (H * 0.48))
-            sc.putpixel((0, y), int(255 * min(0.62, t * t * 0.62)))
-        cover = Image.composite(Image.new('RGB', (W, H), INK), cover,
-                                sc.resize((W, H)))
+        cover = scrim(cover)
 
     if inset:
         iw, ih, pad = 330, 220, 34
