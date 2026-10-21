@@ -188,6 +188,11 @@ ink `#17181c`. Georgia serif for copy, system sans for furniture.
   3:2 where the live `wordmark.png` is 3.5:1, so adopting it means a taller
   masthead: set `MAST` in `compose_cover.py` and re-drop every cover, and ask
   the next cover brief to keep the top **35 per cent** clear rather than 20.
+  It wants no panel behind it — it sits straight on the art, and
+  `compose_cover.py` fills the strip the drop opens with the picture's own sky
+  mirrored rather than with black, so a taller masthead costs no band. Only
+  the rows above the subject may be mirrored (`--clear`); reflecting the whole
+  strip put the quarterback's helmet back in upside down.
   Not adopted — the live masthead is still `wordmark.png`.
 - Heat rankings may be used; **do not reproduce the angry quotes**. Lines
   chosen for publication are banter, not shots, and run past John first.

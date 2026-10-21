@@ -70,7 +70,22 @@ def scrim(cover):
     return Image.composite(Image.new('RGB', (W, H), INK), cover, sc.resize((W, H)))
 
 
-def compose(art, out, top=240, inset='', drop=0):
+def topfade(cover, depth, at=0.58):
+    """Darken the top `depth` px, heaviest at the very top.
+
+    Two jobs in one gradient. It gives the masthead something to sit on -- a
+    wordmark with no panel behind it needs the picture under it to be quiet or
+    it is unreadable -- and it takes the symmetry out of the mirrored strip
+    above the join, which is the only thing that would give the mirror away.
+    """
+    g = Image.new('L', (1, H))
+    for y in range(H):
+        t = max(0.0, (depth - y) / depth) if y < depth else 0.0
+        g.putpixel((0, y), int(255 * min(at, t * t * at)))
+    return Image.composite(Image.new('RGB', (W, H), INK), cover, g.resize((W, H)))
+
+
+def compose(art, out, top=240, inset='', drop=0, clear=200):
     """art (any aspect) -> a 1024x1536 cover at `out`. Returns the photo height.
 
     Nothing is cropped sideways, whatever shape it arrives in. The picture is
@@ -115,9 +130,32 @@ def compose(art, out, top=240, inset='', drop=0):
             # What it does cost is the same number of pixels off the bottom,
             # which is the darkened type bed and the cheapest place to lose
             # them.
+            #
+            # Filling that strip with flat ink put a black band across the top
+            # of a picture that was drawn to fill the page, which is the thing
+            # the full-bleed path exists to avoid -- and the taller the
+            # masthead, the worse it got: the wordmark sat in a letterbox
+            # rather than on the cover. So the strip is filled with the
+            # picture's own top band, mirrored. The seam is a row against its
+            # own reflection, so there is no join to see, and smoke and
+            # floodlight glare mirror without reading as a duplicate of
+            # anything. It only works because the briefs ask for the top of
+            # the frame to be smoke and nothing else; mirror a crowd and the
+            # crowd is obviously mirrored.
+            #
+            # Only the rows ABOVE the subject may be mirrored. Reflecting the
+            # whole opened strip put Shough's helmet back into the frame
+            # upside down above the K of SKIRT, because the crown sits at 222
+            # and the strip was 319 deep. So the band that gets reflected is
+            # the part of the picture the brief asked to be smoke and nothing
+            # else, and it is stretched to fill -- smoke stretches invisibly,
+            # a helmet does not.
+            band = min(drop, clear)
+            fill = cover.crop((0, 0, W, band)).transpose(Image.FLIP_TOP_BOTTOM)
             slid = Image.new('RGB', (W, H), INK)
+            slid.paste(fill.resize((W, drop), Image.LANCZOS) if band != drop else fill, (0, 0))
             slid.paste(cover, (0, drop))
-            cover = slid
+            cover = topfade(slid, drop + 140)
         cover = scrim(cover)
         p = os.path.join(ROOT, out)
         cover.save(p, quality=90, optimize=True)
@@ -199,9 +237,13 @@ def main():
                     help='y of the photograph in the 1536-tall cover')
     ap.add_argument('--drop', type=int, default=0,
                     help='slide full-bleed art down this many px, to clear the masthead')
+    ap.add_argument('--clear', type=int, default=200,
+                    help='rows at the top of the art that are sky and smoke only; '
+                         'the strip --drop opens is filled with these, mirrored')
     ap.add_argument('--out', default='')
     a = ap.parse_args()
-    compose(a.art, a.out or f'scfl-week-{a.week}-cover.jpg', a.top, drop=a.drop)
+    compose(a.art, a.out or f'scfl-week-{a.week}-cover.jpg', a.top, drop=a.drop,
+            clear=a.clear)
 
 
 if __name__ == '__main__':
