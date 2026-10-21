@@ -59,6 +59,19 @@ record piece, an investigation. It does not mean a worked-out answer to one of
 John's questions, however much research went into it — *"These aren't articles.
 They are us talking and planning."*
 
+Every issue ends on what is next. A weekly issue closes with a **Next Week**
+page: the eight fixtures, the seeds they are played at, and what each one is
+actually worth — ordered so the biggest game is billed first and not buried
+fourth in a list of eight. A magazine that stops on the last result is a
+record; one that says what Sunday is worth is a magazine.
+
+That page is **derived, not written**: `preview_blocks()` in
+`scripts/build_week_issue.py` reads the fixtures out of `sleeper-schedule.json`
+and the records, streaks, divisions and prior meetings out of the table, and
+prints only the true things it finds. A game with nothing to say about it gets
+the bare records. Eight lines of "should be a good one" is worse than no
+preview at all.
+
 `scripts/build_notes.py` and `desk-notes.json` exist for short pieces John
 asks for. `desk-notes.json` is **gitignored**, because what ended up in it was
 our conversation. A longer piece gets its own builder in `scripts/`.

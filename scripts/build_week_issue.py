@@ -162,6 +162,102 @@ def cover_source(d, stories, lead):
     return stories[lead], False
 
 
+def preview_blocks(season, week, st):
+    """Next week's card, and what is actually at stake in each game.
+
+    Every issue ends here. The notes are derived rather than written: the
+    fixtures come out of sleeper-schedule.json, the records and streaks out of
+    the table, and each line is the strongest TRUE thing available about that
+    pairing. A preview that says "should be a good one" eight times is worse
+    than no preview, so a game with nothing to say about it gets the bare
+    records and no invented tension.
+
+    Teams are matched on roster_id. Franchises get renamed mid-season here and
+    the schedule file still carries the name a side had in August.
+    """
+    nxt = week + 1
+    try:
+        sc = json.load(open(os.path.join(ROOT, 'sleeper-schedule.json'), encoding='utf-8'))
+        games = sc['weeks'][str(nxt)]
+    except Exception:
+        return []
+    if not games or nxt >= int(st.get('playoff_week') or 99):
+        return []
+    by = {r['roster_id']: r for r in st['table']}
+
+    def note(a, b):
+        """The strongest true thing about this pairing, or nothing."""
+        n = []
+        if a['l'] == 0 and b['l'] == 0:
+            n.append('both unbeaten')
+        if a['div'] == b['div']:
+            lead_, chase = (a, b) if a['seed'] < b['seed'] else (b, a)
+            gap = (lead_['w'] - chase['w'])
+            n.append(f'{E(lead_["div_name"])}: {E(lead_["team"])} '
+                     + (f'{gap} clear of {E(chase["team"])}' if gap
+                        else f'and {E(chase["team"])} level'))
+        for t, o in ((a, b), (b, a)):
+            if t['streak_n'] >= 3:
+                n.append(f'{E(t["team"])} has {"won" if t["streak_kind"] == "W" else "lost"} '
+                         f'{NUM_W[t["streak_n"]] if t["streak_n"] < len(NUM_W) else t["streak_n"]}'
+                         f' in a row')
+        # have they already met this season, and how did it go
+        for leg in a.get('trail') or []:
+            if leg[4].strip() == b['team'].strip():
+                n.append(f'{E(b["team"])} won the first meeting {leg[3]:.0f}&ndash;{leg[2]:.0f}'
+                         if leg[1] == 'L' else
+                         f'{E(a["team"])} won the first meeting {leg[2]:.0f}&ndash;{leg[3]:.0f}')
+                break
+        return n[:2]
+
+    pairs = []
+    for g in games:
+        a, b = by.get(g.get('home_roster')), by.get(g.get('away_roster'))
+        if a and b:
+            pairs.append((a, b) if a['seed'] <= b['seed'] else (b, a))
+    # The fixture worth billing: the two best-placed sides meeting. Without it
+    # the one game anybody is waiting for sits fourth in a list of eight,
+    # indistinguishable from a game between the twelfth and the fifteenth.
+    pick = min(pairs, key=lambda x: x[0]['seed'] + x[1]['seed']) if pairs else None
+    pairs.sort(key=lambda x: x[0]['seed'] + x[1]['seed'])
+
+    rows = ''
+    for hi, lo in pairs:
+        ns = note(hi, lo)
+        top = pick is not None and (hi, lo) == pick
+        rows += (f'<tr{" class=hot" if top else ""}>'
+                 f'<th scope="row" class="lt">{"&#9654; " if top else ""}{E(hi["team"])} '
+                 f'<span class="dim">{hi["record"]}</span><br>'
+                 f'{E(lo["team"])} <span class="dim">{lo["record"]}</span></th>'
+                 f'<td class="num dim">{hi["seed"]}<br>{lo["seed"]}</td>'
+                 f'<td class="dim ev">'
+                 + (('<b>The one to watch.</b> ' if top else '')
+                    + ('. '.join(ns) + '.' if ns else ('' if top else '&mdash;')))
+                 + '</td></tr>')
+    bill = (f'<p class="b">The one to watch is <b>{E(pick[0]["team"])} against '
+            f'{E(pick[1]["team"])}</b>, the best-placed pair on the card'
+            + (f' and a {E(pick[0]["div_name"])} game with it'
+               if pick[0]['div'] == pick[1]['div'] else '')
+            + f'. The rest, in order of what the table says they are worth, follow it. Seeds '
+              f'are as they stand after week {week}.</p>') if pick else ''
+    out = [('body', bill),
+           ('body', f'<div class="ad"><figure><div class="scroll"><table><thead><tr>'
+                    f'<th class="lt">Week {nxt}</th><th class="num">Seed</th>'
+                    f'<th class="lt">What is at stake</th></tr></thead>'
+                    f'<tbody>{rows}</tbody></table></div></figure></div>')]
+    ub = [t for t in st['table'] if t['l'] == 0 and t['t'] == 0]
+    tail = []
+    if ub:
+        tail.append(f'{" and ".join(E(t["team"]) for t in ub)} '
+                    f'{"are" if len(ub) > 1 else "is"} still unbeaten.')
+    left = max(0, int(st['playoff_week']) - 1 - int(st['through']))
+    tail.append(f'{NUM_W[left].capitalize() if left < len(NUM_W) else left} week'
+                f'{"" if left == 1 else "s"} of the regular season remain, and the playoffs '
+                f'begin in week {st["playoff_week"]}.')
+    out.append(('body', '<p class="b">' + ' '.join(tail) + '</p>'))
+    return out
+
+
 def coverlines(season, week, d, stories, lead, st):
     """What the cover promises, computed from what is actually inside it.
 
@@ -294,6 +390,15 @@ def build(season, week, remeasure=True):
                 'subhead': p2['dek'],
                 'paragraphs': p2['paragraphs'],
             })
+
+    # Every issue closes on what is next. A magazine that stops on the last
+    # result is a record; one that says what Sunday is worth is a magazine.
+    pv = preview_blocks(season, week, st)
+    if pv:
+        arts.append({'id': f'wk{week}-next', 'flag': f'Next Week \u00b7 Week {week + 1}',
+                     'headline': 'What To Watch', 'subhead':
+                     f'Where week {week + 1} leaves the table, game by game.',
+                     'blocks': pv})
 
     out = f'scfl-week-{week}-issue.html'
     key = f'week-{week}'
