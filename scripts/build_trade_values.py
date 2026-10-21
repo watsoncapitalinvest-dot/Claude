@@ -230,16 +230,20 @@ def rank_to_slot(rank, rnd):
 # you have by then. The flat slot distribution alone does NOT express that: at
 # two years out and at five it returned the identical number, the round
 # average, so a 2028 first traded in 2025 priced the same as a 2026 first
-# traded in 2025. The live Trade Court already discounts 12 per cent a year
-# beyond the first (tcPickVal); the same rate is used here so the two boards
-# cannot disagree about the same pick.
+# traded in 2025.
+#
+# The discount runs from the FIRST year out, not the second. It used to start
+# in year two, inherited from the live Trade Court, which meant next year's
+# first was priced identically to this year's -- a free year of waiting. If
+# distance costs anything it costs something immediately, just less. The live
+# app is changed to match, so the two boards cannot disagree about one pick.
 PICK_DECAY = 0.88
 
 
 def expected_pick_value(prior_rank, rnd, years_out):
     probs = slot_probabilities(prior_rank, years_out)
     base = sum(p * PICK_CHART[rank_to_slot(k, rnd)] for k, p in probs.items())
-    return base * (PICK_DECAY ** max(0, years_out - 1))
+    return base * (PICK_DECAY ** max(0, years_out))
 
 # ---------------------------------------------------------------------------
 # Class-quality modifier: each draft class's rookies, first-available
