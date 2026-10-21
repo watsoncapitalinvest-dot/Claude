@@ -21,18 +21,21 @@ SITE = 'https://watsoncapitalinvest-dot.github.io/Claude/'
 STORIES = {
  'trade-audit': {
    'out': 'scfl-trade-audit.html',
-   'tab': 'The Trade Audit — SCFL Investigations',
-   'kicker': 'SCFL NewsRoom · Investigations',
+   'tab': 'Trial of the Evil Empire — SCFL Investigations',
+   'kicker': 'Investigations · The Trade Audit',
    'runhead': 'SCFL NewsRoom · Investigations · The Trade Audit',
-   'mast': ('The Trade ', 'Audit'),
+   'mast': ('Trial of the ', 'Evil Empire'),   # fallback if the wordmark is missing
+   'wordmark': 'wordmark-alt-words.png',
+   'strapline': 'Fantasy League Magazine',
    'flag': 'The Ledger · A Trade Audit',
    'dek': True,
    'art': '',
    'og': 'scfl-trade-audit-og.jpg',
-   'ogtitle': 'The Trade Audit — Not Guilty of Cheating. Guilty of Being Good.',
+   'ogtitle': 'Trial of the Evil Empire',
    'ogdesc': ('Twenty-one years of whispers that The Machines rig it. Every deal in the '
-              'dynasty ledger, priced at the season it was made. Here is what it says.'),
-   'sharetext': 'SCFL: every Machines trade pulled, priced and counted. The verdict.',
+              'dynasty ledger, 2021 to 2026, priced at the season it was made. The '
+              'verdict, and the numbers behind it.'),
+   'sharetext': 'Trial of the Evil Empire: every Machines trade pulled, priced and counted.',
    'covernote': 'Every asset priced at the season it moved in.',
    'freeze_after': None,
    'art_topset': False,
@@ -107,6 +110,18 @@ EXTRA_CSS = """
 .pc-art{flex:1 1 auto;min-height:0;width:100%;object-fit:contain;display:block;}
 .pc-bot{flex:0 0 auto;position:relative;text-align:center;padding:14px 22px 0;
   background:linear-gradient(180deg,rgba(10,8,6,0) 0%,#0a0806 22%);margin-top:-26px;}
+/* The magazine wordmark, when a story runs under the masthead rather than
+   under a title set in type. It arrives with its paper already cut away
+   (scripts/cut_wordmark.py), so it sits on the art with nothing behind it. */
+.pc-wm{display:block;width:84%;max-width:330px;height:auto;margin:0 auto;
+  filter:drop-shadow(0 3px 16px rgba(0,0,0,.95));}
+.pc-wmtag{display:flex;align-items:center;gap:9px;max-width:330px;margin:7px auto 0;}
+.pc-wmtag::before,.pc-wmtag::after{content:'';flex:1;height:1px;}
+.pc-wmtag::before{background:linear-gradient(90deg,transparent,#d8b45a);}
+.pc-wmtag::after{background:linear-gradient(90deg,#d8b45a,transparent);}
+.pc-wmtag span{font-family:var(--serif);font-weight:700;font-size:9.5px;letter-spacing:.26em;
+  text-transform:uppercase;color:#efe7d2;white-space:nowrap;
+  text-shadow:0 2px 10px rgba(0,0,0,.95);}
 .pc-mast{font-family:var(--serif);font-weight:900;font-size:44px;line-height:.98;color:#f7f3ec;
   text-shadow:0 2px 14px rgba(0,0,0,.9);}
 .pc-mast span{color:#e8393e;}
@@ -212,25 +227,42 @@ def build(slug):
         start = b
     body = '\n'.join(pages)
 
+    def masthead():
+        if cfg.get('wordmark'):
+            return ('<img class="pc-wm" src="' + cfg['wordmark'] + '" alt="Skirt Chasers">'
+                    + ('<div class="pc-wmtag"><span>' + esc(cfg['strapline']) + '</span></div>'
+                       if cfg.get('strapline') else ''))
+        return ('<div class="pc-mast">' + cfg['mast'][0] + '<span>' + cfg['mast'][1]
+                + '</span></div>')
+
+    # An art file that is named but not on disk renders as a broken-image icon
+    # over the headline. Until the artwork arrives the cover runs typographic,
+    # which is the house fallback everywhere else too.
+    have_art = bool(cfg.get('art')) and os.path.exists(os.path.join(ROOT, cfg['art']))
+    if cfg.get('art') and not have_art:
+        print('  note: cover art', cfg['art'], 'not present — cover runs without it')
+    art_img = ('<img class="pc-art" src="' + cfg['art'] + '" alt="' + esc(art['headline'])
+               + '">') if have_art else ''
+
     if cfg.get('art_topset'):
         cover = ('<section class="page"><div class="photocover topset">'
-                 '<img class="pc-art" src="' + cfg['art'] + '" alt="' + esc(art['headline']) + '">'
+                 + art_img +
                  '<div class="pc-set">'
-                 '<div class="pc-kick">' + cfg['kicker'].split('·')[0].strip() + ' &middot; SCFL NewsRoom</div>'
-                 '<div class="pc-mast">' + cfg['mast'][0] + '<span>' + cfg['mast'][1] + '</span></div>'
+                 '<div class="pc-kick">' + cfg['kicker'] + '</div>'
+                 + masthead() +
                  '<div class="pc-rule"></div>'
                  '<div class="pc-h">' + esc(art['subhead'].split('.')[0]) + '.</div>'
                  '</div></div></section>')
     elif cfg.get('plain_art'):
         cover = ('<section class="page"><div class="photocover plain">'
-                 '<img class="pc-art" src="' + cfg['art'] + '" alt="' + esc(art['headline']) + '">'
+                 + art_img +
                  '</div></section>')
     else:
         cover = ('<section class="page"><div class="photocover">'
-             '<div class="pc-kick">' + cfg['kicker'].split('·')[0].strip() + ' &middot; SCFL NewsRoom</div>'
-             '<img class="pc-art" src="' + cfg['art'] + '" alt="' + esc(art['headline']) + '">'
+             '<div class="pc-kick">' + cfg['kicker'] + '</div>'
+             + art_img +
              '<div class="pc-bot">'
-             '<div class="pc-mast">' + cfg['mast'][0] + '<span>' + cfg['mast'][1] + '</span></div>'
+             + masthead() +
              '<div class="pc-rule"></div>'
              '<div class="pc-h">' + esc(art['headline']) + '</div>'
              '<div class="pc-dek">' + esc(art['subhead']) + '</div>'

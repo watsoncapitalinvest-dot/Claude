@@ -542,6 +542,7 @@ def build():
     old = next((x for x in inv if x.get('id') == ARTICLE_ID), None)
     if old is None:
         raise SystemExit(f'{ARTICLE_ID} not in investigations.json')
+    old['headline'] = 'Trial of the Evil Empire'
     old['subhead'] = (f'For twenty-one years the league has whispered that The Machines '
                       f'rig it. We pulled every trade in the dynasty ledger — '
                       f'{F["span"][0]} to {F["span"][1]}, the whole of it — and priced '
