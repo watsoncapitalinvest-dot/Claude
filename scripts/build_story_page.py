@@ -29,7 +29,8 @@ STORIES = {
    'strapline': 'Fantasy League Magazine',
    'flag': 'The Ledger · A Trade Audit',
    'dek': True,
-   'art': '',
+   'art': 'scfl-trade-audit-art.jpg',
+   'bleed': True,
    'og': 'scfl-trade-audit-og.jpg',
    'ogtitle': 'Trial of the Evil Empire',
    'ogdesc': ('Twenty-one years of whispers that The Machines rig it. Every deal in the '
@@ -96,6 +97,27 @@ EXTRA_CSS = """
   padding:18px 0 74px;}
 .photocover.plain{background:#fffdfb;padding:0 0 62px;}
 .photocover.plain .pc-art{object-fit:contain;}
+/* A magazine cover: art edge to edge, masthead over the top of it, headline
+   over the bottom. Both bands get their own scrim, because art drawn to be
+   looked at is a bad bed for type everywhere except where you darken it. The
+   older .photocover letterboxes the art between two solid bars instead, which
+   is right for a picture that has to be seen whole and wrong for a cover. */
+.photocover.bleed{padding:0;display:block;background:#0a0806;}
+.photocover.bleed .pc-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.photocover.bleed .pc-top{position:absolute;left:0;right:0;top:0;padding:12px 20px 22px;
+  text-align:center;background:linear-gradient(180deg,rgba(6,5,4,.94) 0%,
+  rgba(6,5,4,.74) 52%,rgba(6,5,4,0) 100%);}
+.photocover.bleed .pc-bot{position:absolute;left:0;right:0;bottom:0;margin:0;
+  padding:30px 22px 76px;background:linear-gradient(180deg,rgba(10,8,6,0) 0%,
+  rgba(10,8,6,.88) 30%,#0a0806 68%);}
+.photocover.bleed .pc-kick{padding:0 0 8px;}
+/* The masthead is sized to the ART, not to the page. At 84 per cent it sat
+   squarely on the one thing this cover is of. A cover subject in the upper
+   third is the usual case, not the exception, so the wordmark takes the
+   smaller of the two widths here and the scrim follows it up. */
+.photocover.bleed .pc-wm{width:66%;max-width:252px;}
+.photocover.bleed .pc-wmtag{max-width:252px;}
+.photocover.bleed .pc-wmtag span{font-size:8.5px;letter-spacing:.22em;}
 /* artwork that leaves its own space for the masthead */
 .photocover.topset{background:#f3ece0;padding:0;display:block;}
 .photocover.topset .pc-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
@@ -244,7 +266,20 @@ def build(slug):
     art_img = ('<img class="pc-art" src="' + cfg['art'] + '" alt="' + esc(art['headline'])
                + '">') if have_art else ''
 
-    if cfg.get('art_topset'):
+    if cfg.get('bleed') and have_art:
+        cover = ('<section class="page"><div class="photocover bleed">'
+                 + art_img +
+                 '<div class="pc-top">'
+                 '<div class="pc-kick">' + cfg['kicker'] + '</div>'
+                 + masthead() +
+                 '</div>'
+                 '<div class="pc-bot">'
+                 '<div class="pc-rule"></div>'
+                 '<div class="pc-h">' + esc(art['headline']) + '</div>'
+                 '<div class="pc-dek">' + esc(art['subhead']) + '</div>'
+                 '<div class="pc-by">The SCFL NewsRoom</div>'
+                 '</div></div></section>')
+    elif cfg.get('art_topset'):
         cover = ('<section class="page"><div class="photocover topset">'
                  + art_img +
                  '<div class="pc-set">'
