@@ -757,7 +757,10 @@ def prose(F):
         f'in the league once the deals are graded on what actually happened. He does '
         f'not have the most '
         f'championships either; {tl["name"]} have {word(tl["titles"])} to his '
-        f'{word(me2["titles"])}. What he is guilty of is narrower than the charge and '
+        f'{word(me2["titles"])}.')
+
+    P.append(
+        f'What he is guilty of is narrower than the charge and '
         f'worse for everybody else: the best record anybody has put together here, '
         f'{pc(me2["winPct"])} against {pc(pct2["winPct"])} for the next side to go the '
         f'distance, and {word(me2["playoffs"])} playoff appearances in '
@@ -967,6 +970,79 @@ def fig_volume(F):
             f'piece.</figcaption></figure>')
 
 
+def fig_oneyear(F):
+    """The twelve-month chart, drawn into the article rather than linked away.
+
+    The two chart pages were built as their own articles and that left them
+    orphaned: a reader finishing this piece had no idea they existed. The
+    visual belongs where the argument is, so it is drawn here, inline, from
+    the same trade-oneyear.json the standalone pages are built from.
+
+    It is a DIFFERENT reading from the hindsight table above it, and the
+    caption says so. That one grades a deal on today's board, which gets less
+    fair the older the trade is. This one gives every deal the same twelve
+    months, which is fairer and reaches fewer seasons -- the consensus series
+    ends before the recent trades have had their year.
+    """
+    p = os.path.join(ROOT, 'trade-oneyear.json')
+    if not os.path.exists(p):
+        return ''
+    d = json.load(open(p, encoding='utf-8'))
+    rows = [{'club': v['club'], 'n': v['n'], 'day': v['day'], 'year': v['year']}
+            for v in d['byFranchise'].values() if v['n'] >= 15]
+    if not rows:
+        return ''
+    rows.sort(key=lambda r: -(r['year'] - r['day']))
+    W, RH, L, R, T = 360, 21, 132, 316, 16
+    H = T + len(rows) * RH + 8
+    vals = [v for r in rows for v in (r['day'], r['year'])]
+    lo, hi = min(vals), max(vals)
+    pad = (hi - lo) * .08
+    x0, x1 = lo - pad, hi + pad
+    X = lambda v: L + (v - x0) / (x1 - x0) * (R - L)
+    out = [f'<svg viewBox="0 0 {W} {H}" width="100%" role="img" '
+           f'aria-label="Each franchise\'s trades, valued on the day and a year later">']
+    out.append(f'<line x1="{X(0):.1f}" y1="{T - 8}" x2="{X(0):.1f}" y2="{H - 6}" '
+               f'stroke="#e6e0d6" stroke-width="1"/>')
+    out.append(f'<text x="{X(0):.1f}" y="{T - 11}" fill="#9a958c" font-size="7" '
+               f'text-anchor="middle" font-family="system-ui,sans-serif" '
+               f'letter-spacing=".1em">EVEN</text>')
+    for i, r in enumerate(rows):
+        y = T + i * RH + RH / 2
+        up = r['year'] >= r['day']
+        c = '#c20f16' if up else '#0e8ab5'
+        dirn = 1 if up else -1
+        ax = X(r['year'])
+        out.append(f'<line x1="{X(r["day"]):.1f}" y1="{y:.1f}" x2="{ax:.1f}" y2="{y:.1f}" '
+                   f'stroke="{c}" stroke-width="2" stroke-linecap="round"/>')
+        out.append(f'<path d="M{ax + dirn * 5.6:.1f} {y:.1f}'
+                   f'L{ax - dirn * .8:.1f} {y - 3.6:.1f}'
+                   f'L{ax - dirn * .8:.1f} {y + 3.6:.1f}Z" fill="{c}"/>')
+        out.append(f'<circle cx="{X(r["day"]):.1f}" cy="{y:.1f}" r="3" fill="#fffdfb" '
+                   f'stroke="#9a958c" stroke-width="1.4"/>')
+        out.append(f'<text x="{L - 8}" y="{y + 2.6:.1f}" fill="#17181c" font-size="8.5" '
+                   f'text-anchor="end" font-family="Georgia,serif" '
+                   f'font-weight="700">{E(r["club"])}</text>')
+        dv = r['year'] - r['day']
+        lab = ('+$' if dv >= 0 else '&minus;$') + f'{abs(round(dv)):,}'
+        out.append(f'<text x="{R + 7}" y="{y + 2.6:.1f}" fill="{c}" font-size="8.5" '
+                   f'font-family="system-ui,sans-serif" font-weight="800">{lab}</text>')
+    out.append('</svg>')
+    return ('<figure>' + ''.join(out) +
+            f'<figcaption>The same deals on a fixed clock: what each '
+            f'franchise\'s trades were worth <b>the day it made them</b> (the hollow '
+            f'mark) against <b>twelve months later to the day</b> (the arrow). This is '
+            f'not the table above it &mdash; that one grades every deal on today\'s '
+            f'board, which gives a 2021 trade five years to be re-judged and a 2024 '
+            f'trade one. A fixed year is fairer and reaches fewer seasons: '
+            f'{d["count"]} deals, {d["seasons"][0]}&ndash;'
+            f'{d["seasons"][-1]}, of which the verdict held on {d["verdictHeld"]}. '
+            f'Franchises with fewer than fifteen priced deals are left off. '
+            f'<a href="scfl-twelve-months-on.html">The chart in full</a>, and '
+            f'<a href="scfl-trade-ledger.html">every trade behind it</a>, are pages of '
+            f'their own.</figcaption></figure>')
+
+
 def fig_verdict(F):
     """The findings as findings: charge on one line, verdict on the next.
 
@@ -1145,6 +1221,8 @@ def method(F):
                  f'priced is August {sp[0]}. A 2017 deal can be listed, counted and read. '
                  f'It cannot be graded, because there is no honest number to grade it '
                  f'against, and a dishonest one would still look like a number.</p>'
+                 f'</div>'),
+        ('body', f'<div class="psa note">'
                  f'<p>Five seasons is also the window that bears on anything. These are '
                  f'the deals whose players are on these rosters, in this league, this '
                  f'Sunday.</p>'
@@ -1233,6 +1311,13 @@ def method(F):
                  'returned nothing, and the ledger should say so. Four deals carry a pick '
                  'that will not resolve and are left out of the aged record entirely.</p>'),
         ('body', '<div class="ad">' + fig_hindsight(F) + '</div>' if F.get('hind') else ''),
+        ('body', '<p class="b"><b>Everything behind this piece is published.</b> '
+                 'The twelve-month chart has a page of its own at '
+                 '<a href="scfl-twelve-months-on.html">Twelve Months On</a>, and every '
+                 'trade in it &mdash; both sides, asset by asset, with the value on the '
+                 'day and the value a year later against each one &mdash; is at '
+                 '<a href="scfl-trade-ledger.html">The Twelve-Month Ledger</a>. If a '
+                 'figure in here looks wrong, that is where to go and check it.</p>'),
         ('body', '<p class="b"><b>What is deliberately not here.</b> No league ranking for '
                  'who trades best. The order moves by several places depending on nothing '
                  'more than what an unknown future second is assumed to be worth, and a '
@@ -1254,6 +1339,8 @@ def blocks(F, P):
             out.append(('body', '<div class="ad">' + fig_partners(F) + '</div>'))
         if i == 8:
             out.append(('body', '<div class="ad">' + fig_volume(F) + '</div>'))
+        if i == 12 and F.get('hind'):
+            out.append(('body', '<div class="ad">' + fig_oneyear(F) + '</div>'))
         if i == 9 and F['val']:
             out.append(('body', '<div class="ad">' + fig_spread(F) + '</div>'))
         # 'divider' always opens a page, so the verdict is never halfway down
