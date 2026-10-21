@@ -37,14 +37,38 @@ h1{font-size:clamp(30px,6.5vw,52px);line-height:1.02;margin:9px 0 0;font-weight:
 .sw.pale{opacity:.42}
 .hintnote{font-size:12px;color:var(--faint);font-style:italic}
 .cap{font-family:var(--sans);font-size:12.5px;line-height:1.55;color:var(--muted);margin:10px 0 0;max-width:72ch}
-.unfair{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);border:1px solid var(--rule)}
+/* The verdict board: four rates, not four counts, so sixty-six deals are not
+   flattered against fifteen. */
+.unfair{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule)}
 .unfair>div{background:var(--stock);padding:16px 18px;display:flex;flex-direction:column;gap:5px}
-.unfair .k{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
-.unfair .who{font-family:var(--serif);font-size:23px;font-weight:700;line-height:1.1}
-.unfair .fig{font-family:var(--sans);font-size:13px;font-weight:700}
-.unfair .why{font-family:var(--sans);font-size:12.5px;line-height:1.5;color:var(--muted)}
+.unfair .k{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint)}
+.unfair .who{font-family:var(--serif);font-size:22px;font-weight:700;line-height:1.1}
+.unfair .fig{font-family:var(--sans);font-size:19px;font-weight:800;line-height:1;
+  font-variant-numeric:tabular-nums}
+.unfair .sub{font-family:var(--sans);font-size:11.5px;font-weight:700;color:var(--muted)}
+.unfair .why{font-family:var(--sans);font-size:12.5px;line-height:1.5;color:var(--muted);margin:2px 0 0}
 .unfair .wide{grid-column:1/-1;background:var(--paper)}
+.unfair .wide .fig{font-size:13px;font-weight:700}
 @media(max-width:560px){.unfair{grid-template-columns:1fr}}
+/* The shape of a total, pulled out: a column of forty small leaks and one
+   blown blockbuster add to the same number and are not the same problem. */
+.shape{border-top:2px solid var(--ink);border-bottom:1px solid var(--rule);
+  background:var(--stock);padding:20px 22px 22px;display:flex;flex-direction:column;gap:14px}
+.shape h2{color:var(--ink)}
+.shape p{font-family:var(--serif);font-size:clamp(16.5px,2.1vw,19.5px);line-height:1.52;
+  margin:0;max-width:66ch}
+.shape b{font-weight:700}
+.shape .nb{white-space:nowrap}
+.shape .kick{font-family:var(--sans);font-size:14.5px;font-weight:700;line-height:1.5;
+  color:var(--ink);max-width:60ch;border-left:3px solid var(--loss);padding-left:13px}
+.shape .nums{display:flex;flex-wrap:wrap;gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.shape .nums>div{background:var(--paper);padding:11px 15px;flex:1 1 120px}
+.shape .nums .n{font-family:var(--sans);font-size:20px;font-weight:800;line-height:1;
+  font-variant-numeric:tabular-nums}
+.shape .nums .l{font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--faint);margin-top:6px}
 .plot{width:100%}
 svg{display:block;width:100%;height:auto}
 h2{font-family:var(--sans);font-size:11.5px;font-weight:800;letter-spacing:.16em;
@@ -81,7 +105,10 @@ h2{font-family:var(--sans);font-size:11.5px;font-weight:800;letter-spacing:.16em
   <h2 id="thinHead">Too few deals to rank</h2>
   <div class="plot thin"><svg id="few" role="img" aria-label="Franchises with fewer than ten priced trades"></svg></div>
  </div>
- <div class="unfair" id="unfair"></div>
+ <div>
+  <h2>The verdicts</h2>
+  <div class="unfair thin" id="unfair"></div>
+ </div>
  <div>
   <h2>Where the money moves</h2>
   <div class="legend thin">
@@ -92,6 +119,7 @@ h2{font-family:var(--sans);font-size:11.5px;font-weight:800;letter-spacing:.16em
   <div class="plot"><svg id="split" role="img" aria-label="Each franchise's net on players and on picks"></svg></div>
   <p class="cap" id="splitcap"></p>
  </div>
+ <section class="shape" id="shape"></section>
  <div class="foot" id="foot"></div>
  <p class="note" id="note"></p>
 </div>
@@ -191,16 +219,29 @@ $('#tiles').innerHTML=[
 
 // `top` is window.top in a page script; naming a const that shadows it
 // throws before anything renders.
-// Who is the most unfair? Two readings, two different franchises, both
-// printed -- a side can make the fewest level trades in the league, or it
-// can make mostly level trades and win nearly every one that is not.
-const LL=D.leastLevel, SH=D.sharpest, BG=D.biggest;
-const first=ranked[0], last=ranked[ranked.length-1];
+const UF=D.mostUnfair, BR=D.bestRec, WR=D.worstRec, FA=D.fairest, BG=D.biggest;
+// A fraction gets a word only when it lands on one. 75 is three-quarters; 72
+// is seventy-two per cent, and saying it in words would be a rounding dressed
+// up as a finding.
+const frac=p=>{const v=Math.abs(p);
+  for(const [t,w] of [[25,'a quarter'],[33,'a third'],[50,'half'],[67,'two-thirds'],
+                      [75,'three-quarters'],[80,'four-fifths']])
+    if(Math.abs(v-t)<=2) return w;
+  return Math.round(v)+' per cent';};
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+// Wookie Leaks’ deficit, not Wookie Leaks’s -- half the clubs in this league
+// end in an s.
+const poss=s=>/s$/i.test(s)?'’':'’s';
+const exact=v=>(v<0?'−$':'$')+Math.abs(v).toFixed(2);
+// a minus sign left at the end of a line, with its figure on the next one,
+// reads as a dash
+const nb=s=>'<span class="nb">'+s+'</span>';
+const byNet=[...ranked].sort((a,b)=>b.net-a.net);
+const hiNet=byNet[0], loNet=byNet[byNet.length-1];
 $('#foot').innerHTML=
-  '<span>Best record <b>'+first.club+'</b> '+first.w+'–'+first.l+'</span>'+
-  '<span>Worst <b>'+last.club+'</b> '+last.w+'–'+last.l+'</span>'+
-  '<span>Fairest <b>'+D.fairest.club+'</b> '+Math.round(100*D.fairest.e/D.fairest.n)+'% level</span>'+
-  '<span>Most lopsided <b>'+LL.club+'</b> '+LL.level+'% level</span>'+
+  '<span>Biggest net <b>'+hiNet.club+'</b> '+money(hiNet.net)+'</span>'+
+  '<span>Biggest deficit <b>'+loNet.club+'</b> '+money(loNet.net)+'</span>'+
+  '<span>Level overall <b>'+Math.round(100*T.e/T.n)+'%</b></span>'+
   '<span>Threshold <b>$'+D.tc+'</b> either way</span>';
 $('#thinHead').textContent='Fewer than '+MIN+' priced deals — shown, not ranked';
 const soft=D.rows.filter(r=>!r.firm);
@@ -292,24 +333,83 @@ function split(){
     'loser on picks ('+money(byK.picks)+'). A franchise can finish level overall and still '+
     'be doing one of these badly.';
 }
+// The four verdicts, every one of them a rate: the level deals are the draws,
+// so a record read as a percentage is wins over the deals that were decided,
+// and fair and unfair are the share that came out level at all.
+const tile=(k,who,fig,c,sub,why)=>
+ '<div><div class="k">'+k+'</div><div class="who">'+who+'</div>'+
+ '<div class="fig" style="color:'+c+'">'+fig+'</div>'+
+ '<div class="sub">'+sub+'</div><p class="why">'+why+'</p></div>';
 $('#unfair').innerHTML =
- '<div><div class="k">Most lopsided</div>'+
-  '<div class="who">'+LL.club+'</div>'+
-  '<div class="fig" style="color:var(--loss)">'+LL.level+'% of its deals come out level</div>'+
-  '<p class="why">The fewest level trades of anybody. Its deals land one way or the '+
-  'other &mdash; '+LL.w+' won, '+LL.l+' lost, only '+LL.e+' even across '+LL.n+'.</p></div>'+
- (SH? '<div><div class="k">Sharpest when it is not level</div>'+
-  '<div class="who">'+SH.club+'</div>'+
-  '<div class="fig" style="color:var(--win)">'+SH.sharp+'% of its decided deals go its way</div>'+
-  '<p class="why">'+SH.w+' of the '+SH.decided+' that were not level. It is also the '+
-  'fairest side in the league at '+SH.level+'% even, which is the whole trick: most of '+
-  'what it does is a push, and the rest is mostly its.</p></div>':'')+
+ (BR? tile('Best record', BR.club, BR.sharp+'%', 'var(--win)',
+   BR.w+'–'+BR.l+' when it was not level',
+   'Of the '+BR.decided+' deals that came out one way or the other, '+BR.w+' went its '+
+   'way. The level ones are the draws and are not counted here.'):'')+
+ (WR? tile('Worst record', WR.club, WR.sharp+'%', 'var(--loss)',
+   WR.w+'–'+WR.l+' when it was not level',
+   'The far end of the same measure. '+WR.l+' of its '+WR.decided+' decided deals went '+
+   'to the other side; '+(WR.w===1?'one did':WR.w+' did')+' not.'):'')+
+ tile('Most fair', FA.club, Math.round(100*FA.e/FA.n)+'%', 'var(--fair)',
+   FA.e+' of '+FA.n+' came out level',
+   'More pushes than anybody. Most of what it agrees to is worth the same to both '+
+   'sides on the day it is agreed.')+
+ tile('Most unfair', UF.club, UF.level+'%', 'var(--ink)',
+   'only '+UF.e+' of '+UF.n+' came out level',
+   'The fewest level trades in the league &mdash; '+UF.w+' won, '+UF.l+' lost. Its deals '+
+   'land one way or the other. That is lopsided, not crooked: the measure has no '+
+   'direction in it.')+
+ // Two of the four landing on one franchise is a finding rather than a tie, so
+ // it is said out loud, and only when it happens.
+ (BR && BR.k===FA.k? '<div class="wide"><div class="k">Two of the four</div>'+
+  '<div class="who">'+BR.club+'</div>'+
+  '<p class="why">The fairest side in the league also has the best record, and the two '+
+  'are not in tension: '+BR.level+'% of its '+BR.n+' deals came out level, and '+BR.w+
+  ' of the '+BR.decided+' that did not went its way. Most of what it does is a push, '+
+  'and the rest is mostly its.</p></div>':'')+
  (BG? '<div class="wide"><div class="k">The most lopsided single deal, '+BG.season+'</div>'+
   '<div class="who">'+BG.winner+' by $'+BG.margin+'</div>'+
   '<p class="why"><b>'+BG.winner+'</b> got '+BG.winnerGot.join(', ')+'. <b>'+BG.loser+
   '</b> got '+BG.loserGot.join(', ')+'.</p></div>':'');
 
-function draw(){ bars($('#main'),ranked,true); bars($('#few'),thin,false); split(); }
+// Where a net comes from, and what it is made of. Both halves print only over
+// the condition they describe: the gain has to be on the player side to be
+// called a gain on players, and the deficit has to be on the pick side.
+function shape(){
+  const out=[];
+  if(UF && UF.net>0 && UF.players>0 && UF.players>UF.picks)
+    out.push('<p><b>'+UF.club+'</b> win on players. '+money(UF.players)+' of their '+
+      money(UF.net)+' &mdash; '+frac(100*UF.players/UF.net)+' of it &mdash; comes off the '+
+      'player side of the ledger rather than the pick side. They end up with the '+
+      'better man.</p>');
+  if(WR && WR.net<0 && WR.picks<0 && Math.abs(WR.picks)>Math.abs(WR.players)){
+    const share=Math.round(100*Math.abs(WR.worst)/Math.abs(WR.net));
+    out.push('<p>'+cap(frac(100*WR.picks/WR.net))+' of <b>'+WR.club+'</b>'+poss(WR.club)+
+      ' '+money(Math.abs(WR.net))+' deficit is picks. They sell draft capital '+
+      'cheaply.</p>');
+    out.push('<p>And the shape of the losing is worth knowing. The worst single deal '+
+      WR.club+' made is '+nb(money(WR.worst))+' against a '+nb(money(WR.net))+' total '+
+      '&mdash; no one trade is more than '+share+' per cent of the hole &mdash; and the '+
+      'median across '+WR.n+' trades is '+nb(exact(WR.med))+'. That is not being fleeced '+
+      'on a blockbuster.</p>');
+    // every one of these four is a figure for being behind, so every one of
+    // them is blue -- the house colour for it
+    out.push('<div class="nums">'+[
+      [money(WR.worst),'Worst single deal'],
+      [money(WR.net),'Across '+WR.n+' trades'],
+      [exact(WR.med),'Median deal'],
+      [WR.down+' of '+WR.n,'Came out behind'],
+    ].map(([n,l])=>'<div><div class="n" style="color:var(--loss)">'+n+'</div>'+
+      '<div class="l">'+l+'</div></div>').join('')+'</div>');
+    if(WR.down>WR.n/2)
+      out.push('<p class="kick">It is losing a few dollars most times it picks up the '+
+        'phone. A different problem, and a harder one to notice from inside it.</p>');
+  }
+  $('#shape').innerHTML = out.length
+    ? '<h2>The shape of a total</h2>'+out.join('')
+    : '';
+}
+
+function draw(){ bars($('#main'),ranked,true); bars($('#few'),thin,false); split(); shape(); }
 draw();
 addEventListener('resize',draw);
 </script>

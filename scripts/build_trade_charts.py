@@ -196,7 +196,13 @@ def fairness():
                      'e': len(v) - w - l, 'net': round(sum(v)),
                      'players': round(sp.get('player', 0)),
                      'picks': round(sp.get('pick', 0)),
-                     'med': round(statistics.median(v), 1)})
+                     'med': round(statistics.median(v), 1),
+                     # the single worst and best deal a side made, and how many
+                     # of its deals went down at all. A total can be built out
+                     # of one disaster or out of forty small leaks, and the two
+                     # are different problems -- these three say which.
+                     'worst': round(min(v), 1), 'best': round(max(v), 1),
+                     'down': sum(1 for x in v if x < 0)})
     # the same table under each assumption, to see what survives
     alt = {}
     for mode in ('flat', 'up', 'down'):
@@ -218,18 +224,17 @@ def fairness():
     rows.sort(key=lambda r: (-(r['w'] - r['l']), -r['n']))
     MIN = 10
     rank = [r for r in rows if r['n'] >= MIN]
-    # "Most unfair" has two honest answers and they are different franchises,
-    # so both are printed rather than one of them chosen.
+    # The four verdicts the board prints, all of them rates rather than counts
+    # so a side with sixty-six deals is not flattered against one with fifteen:
     #
-    #   least level   the fewest deals that come out even -- this franchise's
-    #                 trades are lopsided more often than anybody's, in either
-    #                 direction
-    #   sharpest      of the deals that are NOT level, the share that go its
-    #                 way. A side can be the fairest in the league and still
-    #                 win almost every deal that is not a push, which is
-    #                 exactly what the table shows.
+    #   best / worst record   of the deals that did NOT come out level, the
+    #                         share that went that side's way. Level deals are
+    #                         the draws; this is the win percentage.
+    #   most fair             the most deals that came out level
+    #   most unfair           the fewest. Its trades land one way or the other
+    #                         more often than anybody's, in either direction.
     #
-    # The sharpest needs a floor of its own: three-and-one is not a rate.
+    # The record needs a floor of its own: three-and-one is not a rate.
     DECIDED_MIN = 8
     sharp_pool = [r for r in rank if r['decided'] >= DECIDED_MIN]
 
@@ -249,8 +254,10 @@ def fairness():
 
     return {'rows': rows, 'tc': tc, 'minDeals': MIN, 'skipped': skipped,
             'decidedMin': DECIDED_MIN,
-            'leastLevel': min(rank, key=lambda r: r['level']),
-            'sharpest': (max(sharp_pool, key=lambda r: r['sharp'])
+            'mostUnfair': min(rank, key=lambda r: r['level']),
+            'bestRec': (max(sharp_pool, key=lambda r: r['sharp'])
+                        if sharp_pool else None),
+            'worstRec': (min(sharp_pool, key=lambda r: r['sharp'])
                          if sharp_pool else None),
             'biggest': big,
             'seasons': seasons,
