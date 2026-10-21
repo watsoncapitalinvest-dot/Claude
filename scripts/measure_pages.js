@@ -13,7 +13,9 @@ const here = __dirname;
 
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  const p = await b.newPage({ viewport: { width: 430, height: 860 } });
+  // 390x844 is the phone the magazine is read on; measuring at 430x860 packed
+  // pages that then overflowed on a real handset (see scripts/fit_pages.js).
+  const p = await b.newPage({ viewport: { width: 390, height: 844 } });
   await p.goto(`${origin}/${file}`, { waitUntil: 'networkidle' });
   const blocks = JSON.parse(fs.readFileSync(path.join(here, '.pack-blocks.json'), 'utf8'));
   const kinds = JSON.parse(fs.readFileSync(path.join(here, '.pack-kinds.json'), 'utf8'));

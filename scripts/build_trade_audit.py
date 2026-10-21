@@ -28,14 +28,22 @@ Inputs
     records.json         League Legacy's all-time table, for partner quality.
     scfl-franchises.json names to franchises, because everybody renames.
 
-Status is held. This writes the article into investigations.json and nothing
-else: no page, no catalog entry, no share card. It is John's to release.
+Released. This writes the article into investigations.json; the page itself is
+scripts/build_story_page.py trade-audit, its pagination is measure_pages.js,
+and its share card is build_fallback_card.py. Rebuild in that order after any
+change to the copy or the data.
 """
 import json, os, re, subprocess, sys, collections, statistics
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, 'scripts'))
+import importlib.util as _ilu
+_tv = _ilu.spec_from_file_location('tv', os.path.join(ROOT, 'scripts',
+                                                      'build_trade_values.py'))
+TV = _ilu.module_from_spec(_tv); sys.modules['tv'] = TV; _tv.loader.exec_module(TV)
 ARTICLE_ID = 'trade-audit'
 ME = 'machines'
+E = lambda t: (str(t).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'))
 
 ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
         'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen',
@@ -122,9 +130,10 @@ def values():
                 'rate': w / (w + l) if w + l else 0}
 
     tbl = {k: tally(v) for k, v in per.items() if v}
+    nets = dict(per)
     rank = sorted((k for k, r in tbl.items() if r['n'] >= MIN_DEALS),
                   key=lambda k: -tbl[k]['rate'])
-    return {'tbl': tbl, 'rank': rank, 'skipped_3way': skipped,
+    return {'tbl': tbl, 'rank': rank, 'nets': nets, 'skipped_3way': skipped,
             'unresolved': d.get('unresolvedCount', 0)}
 
 
@@ -530,6 +539,7 @@ def build():
     if old is None:
         raise SystemExit(f'{ARTICLE_ID} not in investigations.json')
     old['paragraphs'] = P
+    old['blocks'] = blocks(F, P)
     tmp = path + '.tmp'
     json.dump(d, open(tmp, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     os.replace(tmp, path)
@@ -539,8 +549,168 @@ def build():
     print(f'  top two: ' + ', '.join(f'{F["club"].get(k,k)} {n}' for k, n in F['top'][:2]))
     print(f'  players {F["got_p"]} in / {F["gave_p"]} out, picks {F["got_k"]} in / '
           f'{F["gave_k"]} out')
-    print(f'  status {old.get("status")} · staff {old.get("staff")} — not filed, not published')
+    print(f'  status {old.get("status")} · staff {old.get("staff")}')
 
+
+
+# ---------------------------------------------------------------------------
+# Figures. Same rule as the prose: every cell is read out of the data, and
+# the table and the sentence beside it cannot disagree because they come from
+# one facts() call.
+# ---------------------------------------------------------------------------
+def bar(v, hi, lo=False, level=False):
+    # a zero count gets no bar at all. The minimum width exists so a small
+    # count is still visible; applied to nothing it drew a stub that read as
+    # "one or two" on four rows that were empty.
+    if not v:
+        return '<td class="bar"></td>'
+    pct = min(100, max(2, round(100 * abs(v) / hi))) if hi else 2
+    tint = ';background:#d8b45a' if level else ''
+    return (f'<td class="bar"><span class="{"lo" if lo and not level else ""}" '
+            f'style="width:{pct}%{tint}"></span></td>')
+
+
+def fig_partners(F):
+    rec, top = F['rec'], F['top']
+    hi = top[0][1]
+    rows = ''
+    for k, n in top:
+        r = rec.get(k) or {}
+        rows += (f'<tr><th scope="row">{E(F["club"].get(k, k))}</th>'
+                 f'<td class="num">{n}</td>{bar(n, hi)}'
+                 f'<td class="num">{r.get("record", "&mdash;")}</td>'
+                 f'<td class="num">{r.get("playoffs", "&mdash;")}</td>'
+                 f'<td class="num">{r.get("titles") or "&mdash;"}</td></tr>')
+    return ('<figure><div class="scroll"><table>'
+            '<thead><tr><th class="lt">Partner</th><th>Deals</th><th></th>'
+            '<th>All-time</th><th>Playoffs</th><th>Titles</th></tr></thead>'
+            f'<tbody>{rows}</tbody></table></div>'
+            '<figcaption>Every franchise The Machines have traded with in the dynasty '
+            f'ledger, {F["span"][0]}&ndash;{F["span"][1]}. Record, playoff appearances and '
+            'titles are all-time, from League Legacy. Two of the sixteen do not appear at '
+            'all.</figcaption></figure>')
+
+
+def fig_spread(F):
+    """Where the sixty-six deals land once they are priced."""
+    V = F['val']
+    nets = V['nets'][ME]
+    edges = [(-10**9, -100, 'worse than &minus;$100'), (-100, -50, '&minus;$100 to &minus;$50'),
+             (-50, -TC_WIN, f'&minus;$50 to &minus;${TC_WIN}'),
+             (-TC_WIN, TC_WIN, f'level (within ${TC_WIN})'),
+             (TC_WIN, 50, f'${TC_WIN} to $50'), (50, 100, '$50 to $100'),
+             (100, 10**9, 'better than $100')]
+    counts = [(lab, sum(1 for x in nets if lo < x <= hi), lo >= TC_WIN, lo == -TC_WIN)
+              for lo, hi, lab in edges]
+    hi = max(c for _, c, _, _ in counts)
+    rows = ''
+    for lab, c, good, level in counts:
+        rows += (f'<tr><th scope="row">{lab}</th><td class="num">{c}</td>'
+                 f'{bar(c, hi, lo=not good, level=level)}</tr>')
+    return ('<figure><div class="scroll"><table>'
+            '<thead><tr><th class="lt">Differential to The Machines</th><th>Deals</th>'
+            '<th></th></tr></thead>'
+            f'<tbody>{rows}</tbody></table></div>'
+            f'<figcaption>All {V["tbl"][ME]["n"]} two-team deals, priced at the season each '
+            f'was made in. {V["tbl"][ME]["e"]} of them finish inside twelve dollars either '
+            'way &mdash; the threshold the Trade Court uses to call a deal a win. Red is '
+            'the Machines ahead, blue behind.</figcaption></figure>')
+
+
+def fig_picks(F):
+    now = int(F['span'][1])
+    years = [now + i for i in range(4)]
+    dec = lambda y: TV.PICK_DECAY ** max(0, y - now)
+    rows = ''
+    for slot in range(1, 17):
+        b = TV.PICK_CHART[slot]
+        rows += (f'<tr><th scope="row">{slot}</th>'
+                 + ''.join(f'<td class="num">{b * dec(y):.1f}</td>' for y in years) + '</tr>')
+    r1 = sum(TV.PICK_CHART[s] for s in range(1, 17)) / 16
+    r2 = sum(TV.PICK_CHART[s] for s in range(17, 33)) / 16
+    for lab, base in (('a 1st, slot unknown', r1), ('a 2nd, slot unknown', r2)):
+        rows += (f'<tr><th scope="row" class="dim">{lab}</th>'
+                 + ''.join(f'<td class="num dim">{base * dec(y):.1f}</td>' for y in years)
+                 + '</tr>')
+    return ('<figure><div class="scroll"><table>'
+            '<thead><tr><th class="lt">Pick</th>'
+            + ''.join(f'<th>{y}</th>' for y in years) + '</tr></thead>'
+            f'<tbody>{rows}</tbody></table></div>'
+            '<figcaption>The pick board, in the same dollars as the players: the 1.01 is '
+            '$100 and so is a player valued at 100. A pick loses '
+            f'{round((1 - TV.PICK_DECAY) * 100)} per cent a year for every year you have to '
+            'wait for it. A traded future pick has no known slot, so it is priced at the '
+            'average of its round.</figcaption></figure>')
+
+
+def method(F):
+    """How the numbers were made. Published with the piece, not behind it."""
+    V, sp = F['val'], F['span']
+    return [
+        ('sect', '<div class="sect">How This Was Counted</div>'),
+        ('body', '<p class="b">Every figure in this piece is computed from three files in '
+                 'the newsroom repository, and the piece is regenerated from them rather '
+                 'than typed. The first version of it was typed, and almost every count in '
+                 'the paragraph carrying the defence was wrong.</p>'),
+        ('body', f'<p class="b"><b>The ledger.</b> The itemised Obvibase export: '
+                 f'{F["league_deals"]} deals from {sp[0]} to {sp[1]}, with multi-team legs '
+                 f'consolidated and pass-through assets netted out, so a middleman is '
+                 f'credited only with what he kept. There is nothing before {sp[0]}; there '
+                 f'was no dynasty market, and the league WhatsApp — created in 2016 — holds '
+                 f'nothing but three setup notices until {sp[0]} either. Both records start '
+                 f'in the same place, which is why this is the dynasty-era ledger and not '
+                 f'the twenty-one-year one.</p>'),
+        ('body', '<p class="b"><b>Players</b> are priced from the DynastyProcess superflex '
+                 'board, taken from the August snapshot of the season the trade was made '
+                 'in. Not today&rsquo;s. A player who became a star in 2024 is priced in a '
+                 '2021 trade at what he was worth in 2021, because the question is whether '
+                 'the deal was fair when it was made, not whether it aged well.</p>'),
+        ('body', '<p class="b"><b>Picks</b> are priced from the league&rsquo;s own pick '
+                 'curve, calibrated against 235 real SCFL trades. A pick with a known slot '
+                 'is worth what the curve says. A future pick has no slot yet, so it is '
+                 'priced at the average of its round and discounted for every year of '
+                 'waiting.</p>'),
+        ('body', '<div class="ad">' + fig_picks(F) + '</div>'),
+        ('body', '<p class="b"><b>The two boards had to be reconciled, and that is where '
+                 'this audit nearly went wrong.</b> The pick curve puts the 1.01 at 1,000. '
+                 'The player board puts the 1.01 at 100 and the best player in the league '
+                 'at 127. They are the same scale ten units apart, and the first run of '
+                 'this audit added them together raw &mdash; which valued a pick three '
+                 'drafts away at nine times a top-five tight end and inflated every pick in '
+                 'the ledger about tenfold. Dividing the curve by ten puts the 1.01 on $100 '
+                 'and the average first-round pick on $45.60, which the league&rsquo;s Trade '
+                 'Court, calibrated separately, independently puts at $48. Two boards built '
+                 'apart agreeing inside five per cent is the check that this is a '
+                 'reconciliation and not a convenience.</p>'),
+        ('body', f'<p class="b"><b>A win</b> is a net above ${TC_WIN} on that board, which '
+                 f'is the Trade Court&rsquo;s own threshold, and anything inside it is '
+                 f'called level. <b>What is left out:</b> {word(V["skipped_3way"])} '
+                 f'three-team deals, whose receipts do not say which side each asset came '
+                 f'from, and {word(V["unresolved"])} assets league-wide &mdash; team '
+                 f'defences, mostly &mdash; that carry no price and count as zero.</p>'),
+        ('body', '<p class="b"><b>What is deliberately not here.</b> No league ranking for '
+                 'who trades best. The order moves by several places depending on nothing '
+                 'more than what an unknown future second is assumed to be worth, and a '
+                 'table an assumption can reshuffle is not a finding. No claim about how a '
+                 'trade aged, either: this board does not know, and neither did anybody at '
+                 'the table.</p>'),
+    ]
+
+
+def blocks(F, P):
+    """The article as page blocks: prose, with the figures where they argue."""
+    out = []
+    for i, p in enumerate(P):
+        if i == len(P) - 1:
+            break                       # the sourcing line is placed last, after the method
+        out.append(('body', '<p class="b">' + p + '</p>'))
+        if i == 4:
+            out.append(('body', '<div class="ad">' + fig_partners(F) + '</div>'))
+        if i == 8 and F['val']:
+            out.append(('body', '<div class="ad">' + fig_spread(F) + '</div>'))
+    out += method(F)
+    out.append(('body', '<div class="devnote">' + P[-1] + '</div>'))
+    return out
 
 if __name__ == '__main__':
     build()

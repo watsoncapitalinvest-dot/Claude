@@ -44,6 +44,7 @@ CATEGORY = {
     'scfl-addendum.html': 'Heat & Rivalries',
     'scfl-gumbas.html': 'Heat & Rivalries',
     'scfl-offseason-heat.html': 'Heat & Rivalries',
+    'scfl-trade-audit.html': 'Investigations & Research',
     'scfl-grudge-report.html': 'Heat & Rivalries',
     # Investigations & Research
     'scfl-ir-study.html': 'Investigations & Research',

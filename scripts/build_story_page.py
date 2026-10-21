@@ -19,6 +19,26 @@ SITE = 'https://watsoncapitalinvest-dot.github.io/Claude/'
 
 # Per-story presentation. Copy lives in investigations.json; this is only chrome.
 STORIES = {
+ 'trade-audit': {
+   'out': 'scfl-trade-audit.html',
+   'tab': 'The Trade Audit — SCFL Investigations',
+   'kicker': 'SCFL NewsRoom · Investigations',
+   'runhead': 'SCFL NewsRoom · Investigations · The Trade Audit',
+   'mast': ('The Trade ', 'Audit'),
+   'flag': 'The Ledger · A Trade Audit',
+   'dek': True,
+   'art': '',
+   'og': 'scfl-trade-audit-og.jpg',
+   'ogtitle': 'The Trade Audit — Not Guilty of Cheating. Guilty of Being Good.',
+   'ogdesc': ('Twenty-one years of whispers that The Machines rig it. Every deal in the '
+              'dynasty ledger, priced at the season it was made. Here is what it says.'),
+   'sharetext': 'SCFL: every Machines trade pulled, priced and counted. The verdict.',
+   'covernote': 'Every asset priced at the season it moved in.',
+   'freeze_after': None,
+   'art_topset': False,
+   'dropcap_on': 'There is a theory',
+   'sign': '— SCFL Investigations',
+ },
  'the-grudge-report': {
    'out': 'scfl-grudge-report.html',
    'tab': 'The Grudge Report — SCFL Record Room',
@@ -55,6 +75,16 @@ STORIES = {
    'sign': '— SCFL Investigations',
  },
 }
+
+try:
+    import importlib.util as _ilu
+    _ad = _ilu.spec_from_file_location('ad', os.path.join(ROOT, 'scripts',
+                                                          'build_addendum.py'))
+    _adm = _ilu.module_from_spec(_ad); _ad.loader.exec_module(_adm)
+    FIG_CSS = _adm.FIG_CSS
+except Exception as _e:
+    FIG_CSS = ''
+    print('  note: figure styles unavailable —', _e)
 
 EXTRA_CSS = """
 .freeze{text-align:center;font-size:54px;line-height:1;margin:10px 0 14px;}
@@ -103,9 +133,21 @@ def esc(t):
              .replace("'", '’'))
 
 def blocks_for(art, cfg):
-    out = [('head', '<span class="flag">Special Feature</span>'
+    out = [('head', '<span class="flag">' + esc(cfg.get('flag', 'Special Feature')) + '</span>'
                     '<div class="dateline">' + esc(art['dateline']) + '</div>'
-                    '<h1 class="hl">' + esc(art['headline']) + '</h1>')]
+                    '<h1 class="hl">' + esc(art['headline']) + '</h1>'
+                    + ('<p class="dek">' + esc(art['subhead']) + '</p>'
+                       if cfg.get('dek') and art.get('subhead') else ''))]
+    # An article that carries its own rendered markup -- tables, charts, a
+    # methodology section -- owns its body. The paragraph walker below only
+    # knows how to wrap plain text, and would escape a <figure> into
+    # characters on the page.
+    if art.get('blocks'):
+        out += [tuple(b) for b in art['blocks']]
+        if cfg.get('sign'):
+            out.append(('body', '<div class="sign">&mdash; '
+                        + esc(cfg['sign'].lstrip('— ')) + '</div>'))
+        return dropcap(out, cfg)
     paras = art['paragraphs']
     for i, p in enumerate(paras):
         last = (i == len(paras) - 1)
@@ -128,6 +170,10 @@ def blocks_for(art, cfg):
             out.append(('body', '<p class="b">' + esc(p) + '</p>'))
         if cfg.get('freeze_after') and p.startswith(cfg['freeze_after']):
             out.insert(len(out) - 1, ('body', '<div class="freeze">\U0001f976</div>'))
+    return dropcap(out, cfg)
+
+
+def dropcap(out, cfg):
     for i, (k, b) in enumerate(out):
         if k == 'body' and b.startswith('<p class="b">' + cfg['dropcap_on'][0]) and cfg['dropcap_on'] in b:
             c = cfg['dropcap_on'][0]
@@ -216,7 +262,7 @@ def build(slug):
 <meta name="twitter:description" content="{cfg['sharetext']}">
 <meta name="twitter:image" content="{SITE}{cfg['og']}">
 <link rel="icon" href="newsroom-favicon.png">
-<style>{css}{EXTRA_CSS}</style>
+<style>{css}{EXTRA_CSS}{FIG_CSS}</style>
 </head>
 <body>
 <div class="book"><div class="pages">
