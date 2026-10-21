@@ -256,6 +256,76 @@ def reconcile(tol=2):
             'unexplained': sum(resid.values())}
 
 
+def surplus(key):
+    """Deals the itemised ledger holds that the register no longer does.
+
+    reconcile() says a franchise's two counts differ. This says WHICH deals
+    the difference is in, which is what anything priced off the ledger needs
+    to know: a win-loss record computed over a trade the league has deleted
+    is a record over a trade that did not happen, or happened once and was
+    entered twice.
+
+    Pairings, not trades. The register stores how many assets moved each way
+    but not which, so two deals between the same pair in the same season
+    cannot reliably be told apart. Where a pairing has one surviving register
+    row and two ledger deals, one of the two is deleted and there is no
+    honest way to say which. Where it has NONE, the ledger's deal is named
+    outright.
+
+    Returns a row a pairing: the season, the other franchise, both counts,
+    and `certain` when the register holds nothing for that pairing at all.
+    """
+    cp = os.path.join(ROOT, OUT)
+    if not os.path.exists(cp):
+        return None
+    cnt = json.load(open(cp, encoding='utf-8'))
+    look, club, _ = resolver()
+    part = set(cnt.get('partSeasons') or [])
+    win = [s for s in cnt['seasons'] if s not in part]
+
+    # The register is counted the same way the totals were: legs folded in.
+    pair_reg, pair_led = collections.Counter(), collections.Counter()
+    for (s, ks), n in _reg_pairs().items():
+        if s in win:
+            pair_reg[(s, ks)] += n
+
+    tj = json.load(open(os.path.join(ROOT, 'trades.json'), encoding='utf-8'))
+    rows = collections.defaultdict(list)
+    for t in tj['trades']:
+        s = str(t['season'])
+        if s not in win:
+            continue
+        ks = frozenset(look.get(norm(x['team'])) for x in t['sides'])
+        pair_led[(s, ks)] += 1
+        rows[(s, ks)].append(t)
+
+    out = []
+    for k in sorted(set(pair_led), key=lambda k: (k[0], sorted(k[1]))):
+        over = pair_led[k] - pair_reg[k]
+        if over > 0 and (key is None or key in k[1]):
+            s, ks = k
+            out.append({'season': s, 'with': sorted(ks - {key}),
+                        'ledger': pair_led[k], 'register': pair_reg[k],
+                        'over': over, 'certain': pair_reg[k] == 0,
+                        'trades': rows[k],
+                        'clubs': [club.get(x, x) for x in sorted(ks - {key})]})
+    return out
+
+
+def _reg_pairs():
+    """Register deals per (season, franchise pair), cached beside the counts.
+
+    Written by main() because only it has the export open; surplus() reads it
+    back, so the pair counts and the totals can never be computed two
+    different ways.
+    """
+    p = os.path.join(ROOT, '.trade-pairs.json')
+    if not os.path.exists(p):
+        return {}
+    raw = json.load(open(p, encoding='utf-8'))
+    return {(r[0], frozenset(r[1])): r[2] for r in raw}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--src', required=True, help='the Obvibase TSV export')
@@ -304,6 +374,12 @@ def main():
     }
     p = os.path.join(ROOT, OUT)
     json.dump(out, open(p, 'w', encoding='utf-8'), indent=1)
+    # The register's deals per (season, franchise pair), for surplus(). Kept
+    # beside the counts rather than inside them: it is a working file, not a
+    # figure anybody publishes, and it is gitignored for the same reason.
+    pairs = collections.Counter((s, tuple(sorted(ks))) for (s, _), ks in deals.items())
+    json.dump([[s, list(ks), n] for (s, ks), n in sorted(pairs.items())],
+              open(os.path.join(ROOT, '.trade-pairs.json'), 'w', encoding='utf-8'))
 
     print(f'  {OUT}: {sum(tot.values())} deals, {seasons[0]}-{seasons[-1]}, '
           f'{len(per)} franchises, {multi} with three teams in them')

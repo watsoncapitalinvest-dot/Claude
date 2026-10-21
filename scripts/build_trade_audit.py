@@ -33,7 +33,7 @@ scripts/build_story_page.py trade-audit, its pagination is measure_pages.js,
 and its share card is build_fallback_card.py. Rebuild in that order after any
 change to the copy or the data.
 """
-import json, os, re, subprocess, sys, collections, statistics
+import itertools, json, os, re, subprocess, sys, collections, statistics
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
@@ -119,6 +119,7 @@ def values(skip=()):
     # be formed without guessing. There are few of them and they are counted
     # out loud rather than folded in.
     per = collections.defaultdict(list)
+    priced = []                  # the Machines' own deals, kept for doubt()
     skipped = 0
     for t in d['trades']:
         if str(t['season']) in skip:
@@ -129,6 +130,14 @@ def values(skip=()):
         a, b = t['sides']
         for me, other in ((a, b), (b, a)):
             per[me['franchiseKey']].append(me['total'] - other['total'])
+            if me['franchiseKey'] == ME:
+                priced.append({'season': t['season'],
+                               'other': other['franchiseKey'],
+                               'net': me['total'] - other['total'],
+                               'gets': [x.get('name') or x.get('raw')
+                                        for x in me['assets']],
+                               'gives': [x.get('name') or x.get('raw')
+                                         for x in other['assets']]})
 
     def tally(v):
         w = sum(1 for x in v if x > TC_WIN)
@@ -143,7 +152,63 @@ def values(skip=()):
     rank = sorted((k for k, r in tbl.items() if r['n'] >= MIN_DEALS),
                   key=lambda k: -tbl[k]['rate'])
     return {'tbl': tbl, 'rank': rank, 'nets': nets, 'skipped_3way': skipped,
-            'unresolved': d.get('unresolvedCount', 0)}
+            'priced': priced, 'unresolved': d.get('unresolvedCount', 0)}
+
+
+def doubt(sur, V):
+    """How much of the win-loss record rests on deals the register has dropped.
+
+    The model does not change here. Every asset is priced exactly as before
+    and no trade is revalued. What changes is the POPULATION: five of the
+    sixty-four two-team deals in the Machines' priced set sit on register
+    records since deleted, so the record is computed over five trades the
+    league no longer holds.
+
+    That is worth stating rather than quietly correcting, because this desk
+    cannot tell WHY a record was deleted. A void and a duplicate look the
+    same from here and they want opposite treatment -- drop a void, merge a
+    duplicate -- and guessing between them would be exactly the kind of thing
+    the first printing was pulled for.
+
+    So the record is published as the ledger has it, with the size of the
+    doubt printed beside it: the two deals that can be named outright, and
+    the range the record moves through once all of them come out. The two
+    namable ones are both wins for him, so the doubt runs against him, which
+    is the direction a reader will not assume.
+    """
+    if not sur or not V:
+        return None
+    idx = collections.defaultdict(list)
+    for t in V['priced']:
+        idx[(str(t['season']), t['other'])].append(t)
+    certain, groups = [], []
+    for r in sur:
+        if len(r['with']) != 1:
+            continue                      # three-team deals are not priced
+        pool = idx.get((r['season'], r['with'][0])) or []
+        if not pool:
+            continue
+        (certain.extend(pool) if r['certain'] and len(pool) == r['over']
+         else groups.append(pool))
+    nets = [t['net'] for t in V['priced']]
+
+    def rec(v):
+        w = sum(1 for x in v if x > TC_WIN)
+        l = sum(1 for x in v if x < -TC_WIN)
+        return w, l, len(v) - w - l
+
+    keep0 = [t for t in V['priced'] if t not in certain]
+    span = []
+    for combo in itertools.product(*groups) if groups else [()]:
+        span.append(rec([t['net'] for t in keep0 if t not in combo]))
+    n = len(keep0) - len(groups)
+    lo = min(span, key=lambda r: r[0] - r[1])
+    hi = max(span, key=lambda r: r[0] - r[1])
+    return {'n_sur': sum(r['over'] for r in sur), 'certain': certain,
+            'groups': [len(g) for g in groups], 'full': rec(nets),
+            'n_full': len(nets), 'lo': lo, 'hi': hi, 'n': n,
+            'same': lo == hi,
+            'rows': sur}
 
 
 def facts():
@@ -276,6 +341,7 @@ def facts():
         'recon_me': next(abs(r['ledger'] - r['master'])
                          for r in recon['rows'] if r['key'] == ME),
         'exp': cnt.get('export') or {},
+        'doubt': doubt(TC.surplus(ME), values(part)),
         'part': sorted(part),
         'vol_span': cnt['span'],
         'vol_rank': [r['key'] for r in cnt['franchises'] if r['active']],
@@ -933,6 +999,29 @@ def method(F):
                  'Trade Court, calibrated on its own against real SCFL deals, puts it at '
                  '$48. Two boards built apart agreeing inside five per cent is what makes '
                  'a dollar in this article mean one thing.</p>'),
+        ('body', (lambda D: f'<p class="b"><b>What the deleted records do to the record.</b> '
+                  f'Nothing is revalued by any of this &mdash; every asset is priced '
+                  f'exactly as it was. What moves is which deals are in the set. '
+                  f'{word(D["n_sur"]).capitalize()} of the {word(D["n_full"])} two-team '
+                  f'deals priced here sit on register records since deleted, and this '
+                  f'desk cannot tell a voided trade from one entered twice: they look '
+                  f'identical from the outside and they want opposite treatment. So the '
+                  f'record is published as the ledger has it, '
+                  f'{D["full"][0]}&ndash;{D["full"][1]}, with the size of the doubt '
+                  f'printed beside it. '
+                  f'{word(len(D["certain"])).capitalize()} of them can be named outright, '
+                  f'because the register holds no deal at all between those two sides '
+                  f'that year: '
+                  + '; '.join(f'{t["season"]}, {E(F["club"].get(t["other"], t["other"]))}'
+                              f' &mdash; {E(", ".join(t["gives"]))} out, '
+                              f'{E(", ".join(t["gets"]))} in, worth '
+                              f'${t["net"]:+.0f} to him' for t in D['certain'])
+                  + f'. The rest sit inside pairings with more than one deal in them and '
+                  f'cannot be told apart. Take all {word(D["n_sur"])} out and he lands '
+                  f'between {D["lo"][0]}&ndash;{D["lo"][1]} and {D["hi"][0]}&ndash;'
+                  f'{D["hi"][1]} across {word(D["n"])} deals. Both of the named ones are '
+                  f'wins for him, so the doubt runs against him, not for him.</p>'
+                  )(F['doubt']) if F.get('doubt') else ''),
         ('body', f'<p class="b"><b>A win</b> is a net above ${TC_WIN} on that board, which '
                  f'is the Trade Court&rsquo;s own threshold, and anything inside it is '
                  f'called level. <b>What is left out:</b> {word(V["skipped_3way"])} '
