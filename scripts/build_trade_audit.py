@@ -155,6 +155,67 @@ def values(skip=()):
             'priced': priced, 'unresolved': d.get('unresolvedCount', 0)}
 
 
+def hindsight():
+    """The second lens: every deal valued again at today's board.
+
+    scripts/build_trade_hindsight.py does the work -- picks that have since
+    been used resolve to the player taken with them, picks that have not are
+    priced for the wait that is left, and a player nobody rosters now is worth
+    nothing. This reads the result and asks the one question the at-the-time
+    board is not allowed to answer: who ended up holding the better end.
+
+    The two readings are kept apart everywhere they appear. The at-the-time
+    record is the one that can acquit anybody, because it grades a manager on
+    what was knowable at the table. This one grades him on a rookie's
+    hamstring. Both are true and they are not the same thing, and a piece that
+    quietly merged them would be worse than one that printed neither.
+
+    Returns None rather than guessing if the file cannot be built, so the
+    article runs without the section instead of around it.
+    """
+    path = os.path.join(ROOT, 'tradeHindsight.json')
+    if not os.path.exists(path):
+        subprocess.run([sys.executable, os.path.join(ROOT, 'scripts',
+                                                     'build_trade_hindsight.py')],
+                       cwd=ROOT, capture_output=True)
+    if not os.path.exists(path):
+        return None
+    d = json.load(open(path, encoding='utf-8'))
+    grade = lambda n: 'W' if n > TC_WIN else 'L' if n < -TC_WIN else 'E'
+    per = collections.defaultdict(list)
+    for t in d['trades']:
+        if t['unresolved']:
+            continue
+        for i, s in enumerate(t['sides']):
+            sign = 1 if i == 0 else -1
+            per[s['franchiseKey'] if 'franchiseKey' in s else s['key']].append(
+                {'season': t['season'], 'then': sign * t['thenNet'],
+                 'now': sign * t['nowNet'], 'me': s, 'them': t['sides'][1 - i]})
+    return {'d': d, 'per': per, 'grade': grade}
+
+
+def hind_window(H, seasons, keys):
+    """Per-franchise then-and-now over one window. Counts, nets and the swing."""
+    g, out = H['grade'], []
+    for k, rows in H['per'].items():
+        v = [r for r in rows if r['season'] in seasons]
+        if len(v) < MIN_DEALS:
+            continue
+        t_w = sum(1 for r in v if g(r['then']) == 'W')
+        t_l = sum(1 for r in v if g(r['then']) == 'L')
+        n_w = sum(1 for r in v if g(r['now']) == 'W')
+        n_l = sum(1 for r in v if g(r['now']) == 'L')
+        then = sum(r['then'] for r in v)
+        now = sum(r['now'] for r in v)
+        out.append({'key': k, 'n': len(v), 'tw': t_w, 'tl': t_l,
+                    'nw': n_w, 'nl': n_l, 'then': then, 'now': now,
+                    'swing': now - then,
+                    'changed': sum(1 for r in v if g(r['then']) != g(r['now'])),
+                    'rows': v})
+    out.sort(key=lambda r: -r['swing'])
+    return out
+
+
 def facts():
     j = lambda f: json.load(open(os.path.join(ROOT, f), encoding='utf-8'))
     tj = j('trades.json')
@@ -285,6 +346,10 @@ def facts():
         'recon_me': next(abs(r['ledger'] - r['master'])
                          for r in recon['rows'] if r['key'] == ME),
         'reg': cnt.get('register') or {},
+        'hind': (lambda H: None if not H else
+                 {'d': H['d'], 'tbl': hind_window(H, set(seasons), None),
+                  'me': next((r for r in hind_window(H, set(seasons), None)
+                              if r['key'] == ME), None)})(hindsight()),
         'gaps': [r for r in (TC.surplus(ME) or []) if len(r['with']) == 1],
         'part': sorted(part),
         'vol_span': cnt['span'],
@@ -548,14 +613,68 @@ def prose(F):
         P.append(
             f'Does he win the deals? More than he loses, and by less than the theory '
             f'needs. Priced at the season each trade was made in — August values of that '
-            f'year, picks on the same dollar board the Trade Court grades on, no '
-            f'hindsight anywhere — The Machines are {m["w"]}-{m["l"]} across the '
+            f'year, picks on the same dollar board the Trade Court grades on, nothing '
+            f'the table did not know — The Machines are {m["w"]}-{m["l"]} across the '
             f'{word(m["n"])} two-team deals in the ledger. But the number that says more '
             f'is the third one: {word(m["e"])} of those {word(m["n"])} finish inside '
             f'twelve dollars either way. {even_share} per cent of everything he has done '
             f'is, by the board, a fair trade. His median deal is worth '
             f'${m["median"]:.0f} to him. That is the shape of a man making a great many '
             f'ordinary trades, not a man running a protection racket.')
+
+    # How they turned out, which is a different question and the one the chat
+    # has actually been having since 2021. Kept apart from the at-the-time
+    # record everywhere it appears: that one grades a manager on what was
+    # knowable at the table, this one grades him on somebody's hamstring.
+    H = F['hind']
+    # "$+174" is not how anybody writes money. A net is a direction and a
+    # size, so it is set as one.
+    money = lambda v: ('minus $' if v < 0 else '$') + f'{abs(v):,.0f}'
+    if H and H['me']:
+        me_h, tbl = H['me'], H['tbl']
+        rank = [r['key'] for r in tbl]
+        up, down = tbl[0], tbl[-1]
+        k1, k2 = F['top'][0][0], F['top'][1][0]
+        both_top = {k1, k2} == {up['key'], tbl[1]['key']}
+        P.append(
+            f'That is the deal as it looked at the table. The league has never once '
+            f'argued about a deal as it looked at the table. It argues about how they '
+            f'turned out, so we did that too, and it is a different ledger. Resolve '
+            f'every pick that has since been used to the player taken with it, price '
+            f'the lot on today\'s board — where a man nobody rosters is worth nothing, '
+            f'however he looked in August — and The Machines go from '
+            f'{me_h["tw"]}-{me_h["tl"]} to {me_h["nw"]}-{me_h["nl"]}. His net falls from '
+            f'{money(me_h["then"])} to {money(me_h["now"])}. The verdict changes on '
+            f'{word(me_h["changed"])} of his {word(me_h["n"])} deals. Hindsight does not '
+            f'flatter him. It costs him '
+            f'${abs(me_h["swing"]):,.0f} and {word(me_h["tw"] - me_h["nw"])} of his '
+            f'{word(me_h["tw"])} wins.')
+        P.append(
+            f'And it is who it flatters instead that finishes the argument. '
+            f'{name(up["key"])} come out of those five years '
+            f'${abs(up["swing"]):,.0f} better than they looked at the time, the biggest '
+            f'move in the league. {name(tbl[1]["key"])} are second, '
+            f'${abs(tbl[1]["swing"]):,.0f} better — they were '
+            f'{tbl[1]["tw"]}-{tbl[1]["tl"]} on the day and they are '
+            f'{tbl[1]["nw"]}-{tbl[1]["nl"]} now. '
+            + (f'Those are the two franchises at the top of his partner list, the two '
+               f'this piece spent a page admitting look bad for him. Graded on what '
+               f'actually happened, they are the two who did best out of him. '
+               if both_top else
+               f'He finishes {ordinal(rank.index(ME) + 1)} of '
+               f'{word(len(tbl))} on the same measure. ')
+            + f'{name(down["key"])} are at the other end, '
+            f'${abs(down["swing"]):,.0f} worse than they looked. The Machines are '
+            f'{ordinal(rank.index(ME) + 1)} of {word(len(tbl))}.')
+        P.append(
+            'One caution, because it is the difference between a figure and a fact. '
+            'This is a board of dynasty value held today, not of points delivered '
+            'since. A quarterback bought for a hundred dollars and now worth thirty-'
+            'eight did not necessarily give nothing; he gave four years and is worth '
+            'less going forward. The at-the-time ledger is the one that says whether a '
+            'man dealt fairly. This one says who is holding the better roster because '
+            'of it. They are both in the file, they disagree, and anybody who quotes '
+            'one of them as the other is picking the number that suits them.')
 
     rt = F['round_trips']
     if rt:
@@ -628,7 +747,11 @@ def prose(F):
         f'{word(F["val"]["tbl"][ME]["n"])} priced deals come out level; he is a net '
         f'seller of players in the ones that do not. A predator does not come out level '
         f'in {round(100 * F["val"]["tbl"][ME]["e"] / F["val"]["tbl"][ME]["n"])} '
-        f'deals out of every hundred. He does not have the most '
+        f'deals out of every hundred, and he does not watch his two favourite '
+        f'counterparties finish '
+        f'{"first and second" if F.get("hind") and F["hind"]["tbl"] and {F["top"][0][0], F["top"][1][0]} == {F["hind"]["tbl"][0]["key"], F["hind"]["tbl"][1]["key"]} else "ahead of him"} '
+        f'in the league once the deals are graded on what actually happened. He does '
+        f'not have the most '
         f'championships either; {tl["name"]} have {word(tl["titles"])} to his '
         f'{word(me2["titles"])}. What he is guilty of is narrower than the charge and '
         f'worse for everybody else: the best record anybody has put together here, '
@@ -840,6 +963,35 @@ def fig_volume(F):
             f'piece.</figcaption></figure>')
 
 
+def fig_hindsight(F):
+    """Every franchise's ledger read twice: at the table, and at today's board."""
+    H = F['hind']
+    rows = ''
+    for r in H['tbl']:
+        em = ' class="on"' if r['key'] == ME else ''
+        sw = r['swing']
+        rows += (f'<tr{em}><th scope="row">{E(F["club"].get(r["key"], r["key"]))}</th>'
+                 f'<td class="num dim">{r["n"]}</td>'
+                 f'<td class="num">{r["tw"]}&ndash;{r["tl"]}</td>'
+                 f'<td class="num">{r["nw"]}&ndash;{r["nl"]}</td>'
+                 f'<td class="num">${r["then"]:+,.0f}</td>'
+                 f'<td class="num">${r["now"]:+,.0f}</td>'
+                 f'<td class="num"><b>{"&minus;" if sw < 0 else "+"}'
+                 f'${abs(sw):,.0f}</b></td></tr>')
+    return ('<figure><div class="scroll"><table>'
+            '<thead><tr><th class="lt">Franchise</th><th>Deals</th>'
+            '<th>At the time</th><th>Today</th><th>Net then</th><th>Net now</th>'
+            '<th>Swing</th></tr></thead>'
+            f'<tbody>{rows}</tbody></table></div>'
+            f'<figcaption>The same {F["span"][0]}&ndash;{F["span"][1]} deals graded '
+            f'twice. &ldquo;At the time&rdquo; prices every asset at the August it '
+            f'moved. &ldquo;Today&rdquo; resolves every pick since used to the player '
+            f'taken with it and prices the lot on the current board, where a man nobody '
+            f'rosters is worth nothing. Sorted by swing. Franchises with fewer than '
+            f'{word(MIN_DEALS)} priced deals are left out, and so are the '
+            f'{word(H["d"]["skipped3way"])} three-team trades.</figcaption></figure>')
+
+
 def fig_spread(F):
     """Where the sixty-six deals land once they are priced."""
     V = F['val']
@@ -994,12 +1146,23 @@ def method(F):
                  f'three-team deals, whose receipts do not say which side each asset came '
                  f'from, and {word(V["unresolved"])} assets league-wide &mdash; team '
                  f'defences, mostly &mdash; that carry no price and count as zero.</p>'),
+        ('body', '<p class="b"><b>How a trade aged</b> is the second reading, and it is '
+                 'built differently. Every pick that has since been used is resolved to '
+                 'the player taken with it, from the league&rsquo;s own draft results; '
+                 'every pick that has not is priced for the wait that is left rather than '
+                 'the wait there was; and every player is valued on the current board, '
+                 'where one nobody rosters is worth nothing. That last rule is the '
+                 'answer rather than a gap: a trade for a man who is out of the league '
+                 'returned nothing, and the ledger should say so. Four deals carry a pick '
+                 'that will not resolve and are left out of the aged record entirely.</p>'),
+        ('body', '<div class="ad">' + fig_hindsight(F) + '</div>' if F.get('hind') else ''),
         ('body', '<p class="b"><b>What is deliberately not here.</b> No league ranking for '
                  'who trades best. The order moves by several places depending on nothing '
                  'more than what an unknown future second is assumed to be worth, and a '
-                 'table an assumption can reshuffle is not a finding. No claim about how a '
-                 'trade aged, either: this board does not know, and neither did anybody at '
-                 'the table.</p>'),
+                 'table an assumption can reshuffle is not a finding. And no merging of '
+                 'the two readings into one score. They answer different questions, they '
+                 'disagree on a third of the deals in here, and an average of them would '
+                 'answer neither.</p>'),
     ]
 
 
