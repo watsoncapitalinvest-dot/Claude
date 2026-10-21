@@ -119,7 +119,7 @@ def values(skip=()):
     # be formed without guessing. There are few of them and they are counted
     # out loud rather than folded in.
     per = collections.defaultdict(list)
-    priced = []                  # the Machines' own deals, kept for doubt()
+    priced = []                  # the Machines' own deals, named one by one
     skipped = 0
     for t in d['trades']:
         if str(t['season']) in skip:
@@ -153,62 +153,6 @@ def values(skip=()):
                   key=lambda k: -tbl[k]['rate'])
     return {'tbl': tbl, 'rank': rank, 'nets': nets, 'skipped_3way': skipped,
             'priced': priced, 'unresolved': d.get('unresolvedCount', 0)}
-
-
-def doubt(sur, V):
-    """How much of the win-loss record rests on deals the register has dropped.
-
-    The model does not change here. Every asset is priced exactly as before
-    and no trade is revalued. What changes is the POPULATION: five of the
-    sixty-four two-team deals in the Machines' priced set sit on register
-    records since deleted, so the record is computed over five trades the
-    league no longer holds.
-
-    That is worth stating rather than quietly correcting, because this desk
-    cannot tell WHY a record was deleted. A void and a duplicate look the
-    same from here and they want opposite treatment -- drop a void, merge a
-    duplicate -- and guessing between them would be exactly the kind of thing
-    the first printing was pulled for.
-
-    So the record is published as the ledger has it, with the size of the
-    doubt printed beside it: the two deals that can be named outright, and
-    the range the record moves through once all of them come out. The two
-    namable ones are both wins for him, so the doubt runs against him, which
-    is the direction a reader will not assume.
-    """
-    if not sur or not V:
-        return None
-    idx = collections.defaultdict(list)
-    for t in V['priced']:
-        idx[(str(t['season']), t['other'])].append(t)
-    certain, groups = [], []
-    for r in sur:
-        if len(r['with']) != 1:
-            continue                      # three-team deals are not priced
-        pool = idx.get((r['season'], r['with'][0])) or []
-        if not pool:
-            continue
-        (certain.extend(pool) if r['certain'] and len(pool) == r['over']
-         else groups.append(pool))
-    nets = [t['net'] for t in V['priced']]
-
-    def rec(v):
-        w = sum(1 for x in v if x > TC_WIN)
-        l = sum(1 for x in v if x < -TC_WIN)
-        return w, l, len(v) - w - l
-
-    keep0 = [t for t in V['priced'] if t not in certain]
-    span = []
-    for combo in itertools.product(*groups) if groups else [()]:
-        span.append(rec([t['net'] for t in keep0 if t not in combo]))
-    n = len(keep0) - len(groups)
-    lo = min(span, key=lambda r: r[0] - r[1])
-    hi = max(span, key=lambda r: r[0] - r[1])
-    return {'n_sur': sum(r['over'] for r in sur), 'certain': certain,
-            'groups': [len(g) for g in groups], 'full': rec(nets),
-            'n_full': len(nets), 'lo': lo, 'hi': hi, 'n': n,
-            'same': lo == hi,
-            'rows': sur}
 
 
 def facts():
@@ -340,8 +284,8 @@ def facts():
         'vol': vol, 'cnt': cnt, 'recon': recon, 'dropped': dropped,
         'recon_me': next(abs(r['ledger'] - r['master'])
                          for r in recon['rows'] if r['key'] == ME),
-        'exp': cnt.get('export') or {},
-        'doubt': doubt(TC.surplus(ME), values(part)),
+        'reg': cnt.get('register') or {},
+        'gaps': [r for r in (TC.surplus(ME) or []) if len(r['with']) == 1],
         'part': sorted(part),
         'vol_span': cnt['span'],
         'vol_rank': [r['key'] for r in cnt['franchises'] if r['active']],
@@ -553,18 +497,33 @@ def prose(F):
             f'five seasons, against {word(wn(w2["key"]))} for {name(w2["key"])}, who are '
             f'next.')
     # The rate, off the league register rather than the ledger. The first
-    # printing of this piece called it a metronome on the strength of five
-    # identical ledger rows; the register says 13, 11, 13, 12, 12, so the claim
-    # is a band and the band is printed rather than described.
+    # The metronome, which took three passes to get right and is worth saying
+    # carefully. The ledger showed five identical seasons and that looked too
+    # neat to print. A partial export of the register then showed 13, 11, 13,
+    # 12, 12, and this piece published a band. The register read whole says
+    # 13, 13, 13, 13, 14 -- four consecutive seasons on exactly thirteen -- and
+    # the ledger was right about four of the five all along.
+    #
+    # So the run is counted rather than characterised: how many seasons from
+    # the start of the window sit on the same number. No inference is drawn
+    # from it. The last printing attached odds to the flat line and the odds
+    # were the part that was wrong.
     lo, hi = F['rate_lo'], F['rate_hi']
+    run = 1
+    while run < len(F['rate']) and F['rate'][run] == F['rate'][0]:
+        run += 1
     seq = ', '.join(str(n) for n in F['rate'][:-1]) + f' and {F["rate"][-1]}'
-    rhythm = (f' And the rate barely moves. The league\'s trade register has him at '
-              f'{seq} deals across those five seasons — never fewer than {word(lo)}, '
-              f'never more than {word(hi)} — while the league\'s own total over the same '
-              f'five years went {", ".join(str(n) for n in F["league_rate"][:-1])} and '
+    streak = (f' {word(run).capitalize()} straight seasons on the same number, '
+              f'{word(F["rate"][0])}, and then {word(F["rate"][-1])}.'
+              if run >= 3 else
+              f' Never fewer than {word(lo)}, never more than {word(hi)}.')
+    rhythm = (f' And the rate does not move. The league\'s trade register has him at '
+              f'{seq} deals across those five seasons.{streak} The league\'s own total '
+              f'over the same five years went '
+              f'{", ".join(str(n) for n in F["league_rate"][:-1])} and '
               f'{F["league_rate"][-1]} — {word(max(F["league_rate"]) - min(F["league_rate"]))} '
               f'deals between its busiest summer and its quietest. The market around him '
-              f'fills up and empties out. He does his {word(lo)} to {word(hi)} and goes '
+              f'fills up and empties out. He does his {word(lo)} or {word(hi)} and goes '
               f'back to work.')
     P.append(busy + rhythm + ' Whatever he is doing, he is doing it in public, on a '
              'schedule, with everyone.')
@@ -724,10 +683,14 @@ def audit(F, P):
     # be printed. See the playoffsNote in records.json.
     if 'never made the playoffs' in txt:
         bad.append('a never-made-the-playoffs claim, which records.json cannot support')
-    # The per-season rate is now the league register's, not the ledger's, and
-    # the ledger's flat five rows are what pulled the first printing.
-    if 'straight seasons on the same number' in txt or 'the rate never moves' in txt:
-        bad.append('the metronome, which the register does not show')
+    # The per-season rate is the register's, read whole. A run may be claimed
+    # only when the register's own sequence shows one -- the first printing
+    # claimed five straight seasons off the ledger alone and came down for it.
+    run = 1
+    while run < len(F['rate']) and F['rate'][run] == F['rate'][0]:
+        run += 1
+    if 'straight seasons on the same number' in txt and run < 3:
+        bad.append('a run the register does not show')
     # The window is whole seasons. A part-season figure in a table of complete
     # ones is the mistake this rebuild exists to avoid.
     if any(str(s) in {str(t['season']) for t in F['mine']} for s in F['part']):
@@ -925,17 +888,22 @@ def method(F):
                  f'<p>The SCFL has always been a dynasty league. {sp[0]} is not where the '
                  f'market opened — it is where the paperwork starts. Two records were '
                  f'used here and they reach back different distances. The league&rsquo;s '
-                 f'trade register counts deals from {F["vol_span"][0]}, '
-                 f'{word(len(F["cnt"]["seasons"]))} seasons, and says how many each '
-                 f'franchise did and when. The itemised ledger says <i>what was in them</i> '
-                 f'— which players, which picks, which way — and it starts in {sp[0]}. '
-                 f'Only the second one can be priced, so the priced window is '
-                 f'{sp[0]}&ndash;{sp[1]}.</p>'
+                 f'trade register goes back to {F["vol_span"][0]}, '
+                 f'{word(len(F["cnt"]["seasons"]))} seasons, '
+                 f'{F["reg"].get("trades", "")} trades and '
+                 f'{F["reg"].get("assets", "")} assets, and it names every player and '
+                 f'pick in all of them. The itemised ledger this piece prices starts in '
+                 f'{sp[0]}.</p>'
+                 f'<p>The gap between those two dates is not a gap in the trades. It is a '
+                 f'gap in the <i>prices</i>. A deal is valued here at what its players '
+                 f'were worth the August it was made, and the DynastyProcess snapshots '
+                 f'this desk has begin in {sp[0]}. So a 2017 trade can be listed, counted '
+                 f'and read; it cannot be graded, because there is no honest number to '
+                 f'grade it against. <b>If anybody has dynasty valuations from before '
+                 f'{sp[0]}, that is the thing that would open the other five seasons.</b></p>'
                  f'<p>Five seasons is also the window that bears on anything. These are '
                  f'the deals whose players are on these rosters, in this league, this '
-                 f'Sunday. <b>If anybody still has itemised trades from before {sp[0]} — '
-                 f'the official chat, a spreadsheet, screenshots — send it and this desk '
-                 f'will price them too.</b></p>'
+                 f'Sunday.</p>'
                  f'<p>The current season is left out entirely. It is '
                  f'{word(F["cnt"]["leagueTotals"][F["part"][0]])} deals old and counting, '
                  f'and a part-season in a table of whole ones is a misleading number '
@@ -956,27 +924,29 @@ def method(F):
                  f'{F["recon"]["master"]} on the table; '
                  f'{word(F["recon"]["exact"])} of the {word(len(F["recon"]["rows"]))} '
                  f'franchises agree exactly, and the largest gap anywhere is '
-                 f'{word(F["recon"]["worst"])} deals in one season. The Machines&rsquo; own '
-                 f'rows differ by {word(F["recon_me"])} deals across the five years. '
+                 f'{word(F["recon"]["worst"])} '
+                 f'deal{"" if F["recon"]["worst"] == 1 else "s"} in one season. The '
+                 f'Machines&rsquo; own rows differ by {word(F["recon_me"])} '
+                 f'deal{"" if F["recon_me"] == 1 else "s"} across the five years. '
                  f'Any figure in this piece that the register will not '
                  f'back is not in this piece.</p>'),
-        # The best part of the cross-check, and the part that nearly went
-        # unexamined: the nine-deal gap is not disagreement at all.
-        ('body', f'<p class="b"><b>And the gap between them is not a disagreement.</b> '
-                 f'The register numbers every trade in it, in order, and never reuses a '
-                 f'number. Reading those numbers rather than the rows shows '
-                 f'{word(F["exp"]["deleted"])} trades entered over the years and later '
-                 f'deleted &mdash; voided, reversed, or entered twice. '
-                 f'{word(F["recon"]["deletedInSpan"]).capitalize()} of them fall inside '
-                 f'this window, which is where the ledger&rsquo;s extra '
-                 f'{word(F["recon"]["ledger"] - F["recon"]["master"])} deals come from: '
-                 f'it was built from an earlier pull and still carries trades the '
-                 f'register has since dropped. Season by season the deletions cover the '
-                 f'gap with '
-                 + ('nothing left over' if not F['recon']['unexplained'] else
-                    f'{word(F["recon"]["unexplained"])} deal(s) left over') +
-                 f'. The ledger is a little out of date. It is not wrong, and those are '
-                 f'very different things.</p>'),
+        # Where the two differ, and what the difference turned out to be.
+        ('body', (lambda g: f'<p class="b"><b>Where they differ.</b> '
+                  + ('In one place. ' if len(g) == 1 else f'In {word(len(g))} places. ')
+                  + '; '.join(
+                      f'The register holds {word(abs(r["over"]))} '
+                      f'{"more" if r["over"] < 0 else "fewer"} '
+                      f'{r["season"]} deal{"" if abs(r["over"]) == 1 else "s"} between '
+                      f'The Machines and {E(" and ".join(r["clubs"]))} than the ledger '
+                      f'does' for r in g)
+                  + f'. The one it has and the ledger does not is dated 24 August 2025 '
+                  f'and is recorded with nothing coming back: Travis Kelce, a 2027 '
+                  f'second and Ben Sinnott out of The Machines, and no return entered '
+                  f'against it. It is not priced in this piece, because a trade with an '
+                  f'empty side is as likely to be a record somebody never finished as a '
+                  f'gift, and this desk cannot tell which from here. It is noted rather '
+                  f'than used.</p>'
+                  )(F['gaps']) if F.get('gaps') else ''),
         ('body', '<p class="b"><b>Players</b> are priced from the DynastyProcess superflex '
                  'board, taken from the August snapshot of the season the trade was made '
                  'in. Not today&rsquo;s. A player who became a star in 2024 is priced in a '
@@ -999,29 +969,6 @@ def method(F):
                  'Trade Court, calibrated on its own against real SCFL deals, puts it at '
                  '$48. Two boards built apart agreeing inside five per cent is what makes '
                  'a dollar in this article mean one thing.</p>'),
-        ('body', (lambda D: f'<p class="b"><b>What the deleted records do to the record.</b> '
-                  f'Nothing is revalued by any of this &mdash; every asset is priced '
-                  f'exactly as it was. What moves is which deals are in the set. '
-                  f'{word(D["n_sur"]).capitalize()} of the {word(D["n_full"])} two-team '
-                  f'deals priced here sit on register records since deleted, and this '
-                  f'desk cannot tell a voided trade from one entered twice: they look '
-                  f'identical from the outside and they want opposite treatment. So the '
-                  f'record is published as the ledger has it, '
-                  f'{D["full"][0]}&ndash;{D["full"][1]}, with the size of the doubt '
-                  f'printed beside it. '
-                  f'{word(len(D["certain"])).capitalize()} of them can be named outright, '
-                  f'because the register holds no deal at all between those two sides '
-                  f'that year: '
-                  + '; '.join(f'{t["season"]}, {E(F["club"].get(t["other"], t["other"]))}'
-                              f' &mdash; {E(", ".join(t["gives"]))} out, '
-                              f'{E(", ".join(t["gets"]))} in, worth '
-                              f'${t["net"]:+.0f} to him' for t in D['certain'])
-                  + f'. The rest sit inside pairings with more than one deal in them and '
-                  f'cannot be told apart. Take all {word(D["n_sur"])} out and he lands '
-                  f'between {D["lo"][0]}&ndash;{D["lo"][1]} and {D["hi"][0]}&ndash;'
-                  f'{D["hi"][1]} across {word(D["n"])} deals. Both of the named ones are '
-                  f'wins for him, so the doubt runs against him, not for him.</p>'
-                  )(F['doubt']) if F.get('doubt') else ''),
         ('body', f'<p class="b"><b>A win</b> is a net above ${TC_WIN} on that board, which '
                  f'is the Trade Court&rsquo;s own threshold, and anything inside it is '
                  f'called level. <b>What is left out:</b> {word(V["skipped_3way"])} '

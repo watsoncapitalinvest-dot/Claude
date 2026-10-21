@@ -1,80 +1,93 @@
 #!/usr/bin/env python3
-"""Eleven seasons of trade VOLUME, from the league's own Obvibase ledger.
+"""Eleven seasons of trades, from the league's own Obvibase register.
 
-    python3 scripts/build_trade_counts.py --src ~/obvibase-trades.tsv
+    python3 scripts/build_trade_counts.py --a Team_A_Players.csv \
+                                          --b Team_B_Players.csv
 
-Writes trade-counts.json: one row a franchise a season, 2016 to 2026, and
-nothing else. No players, no picks, no assets -- just how many deals each
-franchise was a party to. That is the one figure the magazine kept getting
-wrong, and it is now checkable.
+Writes trade-counts.json: one row a franchise a season, 2016 to 2026, plus
+what the register says about itself. The source files stay outside this
+repository the way every other raw source does; the derived counts go in,
+because they are the figure the magazine kept getting wrong.
 
 WHY THIS EXISTS
 ---------------
-trades.json is the itemised ledger: 256 deals with the players and picks in
-them, 2021 forward, reconstructed from a different Obvibase export. It is what
-the Trade Audit prices. But a reconstruction cannot check itself, and the
-Machines' row in it reads 13-13-13-13-13 across five seasons -- a flat line in
-a league whose own total swung 53, 62, 54, 43, 38. That looked like a data
-fault serious enough to pull a published article over, and it was: the article
-came down.
+trades.json is the itemised ledger -- 256 deals with the players and picks in
+them, 2021 forward, reconstructed from an earlier Obvibase export. It is what
+the Trade Audit prices, and a reconstruction cannot check itself. The
+Machines' row in it reads 13-13-13-13-13 across five seasons, which looked
+like a fault serious enough to pull a published article over.
 
-The master export settles it. Counted the same way, the Machines go 13, 11,
-13, 12, 12. Every other franchise agrees between the two sources to within two
-a season, and six of the sixteen agree exactly. So the flat line was not a
-corruption. It was a genuinely metronomic trading habit plus four rows the two
-exports disagree on, and the mistake was in the inference, not the ledger.
+It was not a fault. Counted against the register the Machines go 13, 11, 13,
+12, 12 -- and across the five seasons the two sources share, FOURTEEN OF THE
+SIXTEEN FRANCHISES AGREE EXACTLY, with the other two one deal apart. The flat
+line was a genuinely metronomic trading habit, and the mistake was in the
+inference rather than in anybody's data.
 
-The claim that came out of the flat line -- the metronome -- is gone, because
-it is not true. Everything else in the audit stood up, which is only knowable
-because there are now two sources.
+THE TWO EXPORTS, AND A WRONG TURN WORTH LEAVING WRITTEN DOWN
+------------------------------------------------------------
+The first version of this script read a flat TSV of the trade table alone. It
+delivered 536 rows where the register's own counter said 550, and the row ids
+ran 1-558 with 22 absent. The ids are issued in order and never reused, so
+that looked conclusive: 22 deleted records, and the ledger's apparent excess
+of nine deals over 2021-2025 was those deletions. It was published as such.
 
-The export is where the itemised window comes from too, and it is worth
-saying out loud: trade COUNTS go back to 2016, eleven seasons. The player and
-pick detail starts in 2021. So a five-year window is a limit of the itemised
-data, not of the league's trading, and the copy has to say that rather than
-implying the market began in 2021.
+It was wrong. The player sub-table, exported separately, carries 550 trades
+and only EIGHT absent ids. The flat export was fourteen trades short -- it was
+not a complete snapshot and the ids could not tell the difference between a
+deleted record and a row the export dropped. Once the full set is read the
+ledger's excess disappears: 2021 through 2024 match deal for deal and 2025 is
+one apart.
 
-THE SOURCE FILE IS NOT IN THIS REPO
+So the register is read from the two sub-table exports, which carry the trade
+columns repeated on every asset row and therefore supersede the flat one
+entirely. If someone hands you a trade-table-only export again, it is a
+subset; do not reconcile against it.
+
+WHAT THE REGISTER CAN AND CANNOT DO
 -----------------------------------
-`--src` is a tab-separated export of John's Obvibase ledger, kept outside this
-repository the way every other raw source is. This script turns it into the
-derived counts, which are facts about trades the whole league announced, and
-those go in. Re-run it when the ledger is re-exported.
+It now carries the assets, one row each, back to 2016 -- which is further than
+the itemised ledger reaches. What it cannot do is price them: dp-values.json
+holds August snapshots for 2021-2026 only, so a 2017 trade can be listed but
+not valued, and the Trade Audit's priced window stays where it is for that
+reason and no other.
 
-The 2026 column does not come from the export. The export was pulled on
-2025-12-03 and holds four post-deadline deals; Sleeper's own transaction log
+The 2026 column does not come from the register. These exports were pulled on
+2025-12-03 and hold four post-deadline deals; Sleeper's own transaction log
 (transactions.json) has twenty-nine by week six. So 2026 is counted from
-Sleeper and labelled part-season, and the Trade Audit's window stops at 2025.
+Sleeper and labelled part-season.
 
-READING THE EXPORT
-------------------
-Two tables pasted side by side -- the league row, then the trades -- so every
-line repeats the league's eight columns before the thirteen that matter. Teams
-are era names: twenty-four of them for sixteen chairs, with Yo Mama, The OX
-45s, Porky's, Disciples of Darnold and a 'Darnod' typo all needing to resolve
-through scfl-franchises.json or a franchise loses its past.
+READING THE EXPORTS
+-------------------
+Three tables pasted side by side -- the league row, the trade, then the asset
+-- so every line repeats the league's eight columns and the trade's thirteen
+before the asset. Rows are joined on the trade's own ID.
+
+Team names are era names: twenty-four of them for sixteen chairs, with Yo
+Mama, The OX 45s, Porky's, Disciples of Darnold and a 'Darnod' typo all
+needing to resolve through scfl-franchises.json or a franchise loses its past.
+One that will not resolve is NAMED in the output and the build fails.
 
 Multi-leg blockbusters carry fractional trade numbers (20.1, 20.2) and one
 2019 block is numbered 1901-1905. Legs of one deal are folded into one deal,
 so a three-team trade counts once for each of the three and not twice for the
-middleman. There are nine of them in eleven seasons.
-
-A franchise that will not resolve is NAMED in the output and the build fails,
-rather than quietly dropping a side.
+middleman.
 """
-import argparse, collections, json, os, re, sys
+import argparse, collections, csv, json, os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = 'trade-counts.json'
+PAIRS = '.trade-pairs.json'       # working file for surplus(); gitignored
 
-# The export's own column names, in the second of the two pasted tables.
-# `ID` is Obvibase's own row id, issued in order and never reused, which is the
-# only thing in the file that can tell a deleted record from a short export.
-COLS = ('ID', 'Season', 'Season Trade #', 'Team A', 'Team B')
+# Column positions in the exports. The three tables share four column names,
+# so these are fixed offsets into the trade block rather than header lookups;
+# the asset name is the second-to-last column and is found by length, because
+# the two files head it differently ("Player Name / Draft Pick" against
+# "Player / Draft Pick").
+TID, SEASON, NUM, TEAM_A, TEAM_B = 9, 11, 12, 13, 14
 
 # Renames the stored alias table has not caught up with. The first is the
-# export's own typo; the rest are the 2026 Sleeper names, and they are the same
-# four scripts/history.py has to carry for the same reason.
+# register's own typo; the rest are the 2026 Sleeper names, and they are the
+# same four scripts/history.py has to carry for the same reason.
 ALIAS = {'disciplesofdarnod': 'lilchops', 'nwo': 'newworldorder',
          'gumbas': 'gumbas', 'phinsphag': 'heavyhitters',
          'forty2v': 'horsecollars'}
@@ -96,81 +109,66 @@ def resolver():
     return look, club, {f['key'] for f in fr['franchises'] if f.get('active')}
 
 
-def read_export(path, look):
-    """-> deals, and what the row ids say about what is NOT in the file.
+def read_register(path_a, path_b, look):
+    """The two asset exports -> one trade a row, with both sides' assets.
 
-    deals is {(season, deal no): {franchise keys}} with legs folded in.
-
-    THE ROW IDS ARE THE CHECK ON THE EXPORT ITSELF. The league table at the
-    left of the file carries a stored `Trades` counter, and it does not agree
-    with the number of rows delivered -- 550 against 536 when this was
-    written. That gap could be two different things and they matter very
-    differently: rows the export dropped, which would make every count here
-    too low, or records Obvibase has deleted, which would mean the file is
-    complete and the counter is stale.
-
-    The ids settle it. Obvibase issues them in order and never reuses one, so
-    a complete export is a contiguous run. This one runs 1 to 558 with 22
-    absent, and every absent id sits between two rows that bracket it in date
-    -- they are deleted records, and the file is whole. The stored counter
-    sits between the two and is not a check on anything.
-
-    It matters downstream. trades.json was reconstructed from an EARLIER
-    itemised pull and runs nine deals heavier than this file over 2021-2025.
-    That looked like two sources disagreeing. It is not: twelve ids are
-    deleted in that window, and season by season the deletions account for
-    the gap almost exactly. The ledger is slightly stale, not wrong, which is
-    a different and much better thing to be. reconcile() prints both columns.
-
-    A deleted id is assigned to the season of the rows either side of it. One
-    sits across a season boundary and is reported rather than guessed at.
+    `Team A Players` are the assets team A GIVES UP and `Team B Players` the
+    ones team B gives up, so each file is one side of every trade. A trade
+    with an empty side appears in only one of them and is kept: a one-way
+    transfer is a real entry in this league and dropping it would silently
+    lower somebody's count.
     """
-    rows = [l.rstrip('\n').split('\t') for l in open(path, encoding='utf-8')]
-    hdr = rows[0]
-    # The league table's columns come first and share five names with the
-    # trade table, so the index is taken from the LAST occurrence of each.
-    at = {c: max(i for i, h in enumerate(hdr) if h == c) for c in COLS}
-    need = max(at.values())
-    deals, unresolved, by_id = collections.defaultdict(set), collections.Counter(), {}
+    trades, unresolved = {}, collections.Counter()
     stored = None
-    for r in rows[1:]:
-        if len(r) <= need:            # the paste's own trailing line
-            continue
-        if stored is None and len(hdr) > 4 and hdr[4] == 'Trades':
-            stored = r[4]
-        side = set()
-        for c in ('Team A', 'Team B'):
-            k = look.get(norm(r[at[c]]))
-            if k:
-                side.add(k)
-            else:
-                unresolved[r[at[c]]] += 1
-        # 20.1 and 20.2 are legs of deal 20; the 2019 block numbered 1901-1905
-        # is five separate deals and int() leaves it alone.
-        deals[(r[at['Season']], int(float(r[at['Season Trade #']])))] |= side
-        by_id[int(r[at['ID']])] = r[at['Season']]
+    for path, side in ((path_a, 'a'), (path_b, 'b')):
+        rows = list(csv.reader(open(os.path.expanduser(path),
+                                    encoding='utf-8-sig')))
+        asset = len(rows[0]) - 2
+        for r in rows[1:]:
+            if len(r) <= asset or not r[TID]:
+                continue
+            stored = stored or r[4]
+            t = trades.setdefault(int(r[TID]), {
+                'season': r[SEASON], 'num': r[NUM],
+                'teams': [r[TEAM_A], r[TEAM_B]], 'a': [], 'b': []})
+            t[side].append(r[asset])
+    for t in trades.values():
+        t['keys'] = []
+        for n in t['teams']:
+            k = look.get(norm(n))
+            t['keys'].append(k)
+            if not k:
+                unresolved[n] += 1
     if unresolved:
         print('  UNRESOLVED FRANCHISES — the count would be wrong:')
         for n, c in unresolved.most_common():
             print(f'    {c:4}  {n}')
         sys.exit(1)
 
-    have = set(by_id)
-    gaps = [i for i in range(min(have), max(have) + 1) if i not in have]
-    gone, across = collections.Counter(), []
-    for g in gaps:
-        a = by_id[max(i for i in have if i < g)]
-        b = by_id[min(i for i in have if i > g)]
-        (gone.update([a]) if a == b else across.append([g, a, b]))
-    audit = {'rows': len(by_id), 'idLow': min(have), 'idHigh': max(have),
-             'storedCounter': stored, 'deleted': len(gaps),
-             'deletedBySeason': dict(sorted(gone.items())),
-             'deletedAcrossSeasons': across}
-    return deals, audit
+    ids = sorted(trades)
+    gaps = [i for i in range(ids[0], ids[-1] + 1) if i not in trades]
+    audit = {'trades': len(trades), 'idLow': ids[0], 'idHigh': ids[-1],
+             'storedCounter': stored, 'absentIds': gaps,
+             'assets': sum(len(t['a']) + len(t['b']) for t in trades.values()),
+             'oneSided': sum(1 for t in trades.values()
+                             if not t['a'] or not t['b'])}
+    return trades, audit
+
+
+def fold(trades):
+    """Legs into deals: {(season, deal no): {franchise keys}}.
+
+    20.1 and 20.2 are legs of deal 20. The 2019 block numbered 1901-1905 is
+    five separate deals and int() leaves it alone.
+    """
+    deals = collections.defaultdict(set)
+    for t in trades.values():
+        deals[(t['season'], int(float(t['num'])))] |= set(t['keys'])
+    return deals
 
 
 def sleeper_2026(look):
-    """2026 from Sleeper, because the Obvibase export predates the season."""
+    """2026 from Sleeper, because the register's exports predate the season."""
     p = os.path.join(ROOT, 'transactions.json')
     if not os.path.exists(p):
         return None, None, None
@@ -180,8 +178,7 @@ def sleeper_2026(look):
     if bad:
         print('  UNRESOLVED 2026 ROSTERS:', bad)
         sys.exit(1)
-    per = collections.Counter()
-    n = 0
+    per, n = collections.Counter(), 0
     for t in d['rows']:
         if t.get('type') != 'trade' or t.get('status') != 'complete':
             continue
@@ -191,21 +188,20 @@ def sleeper_2026(look):
     return str(d['season']), n, per
 
 
-def reconcile(tol=2):
-    """The itemised ledger against the master counts, season by season.
+def reconcile():
+    """The itemised ledger against the register, season by season.
 
-    trades.json is a reconstruction and cannot check itself. This is the
-    check: for every franchise and every season the two sources both cover,
-    how far apart are they. Returns a row a franchise and the worst gap found,
-    so the Trade Audit can refuse to publish a count the master export does
-    not back -- which is the whole reason the first printing came down.
+    Returns a row a franchise and the worst gap found, so the Trade Audit can
+    refuse to publish a count the register will not back -- which is the whole
+    reason the first printing came down.
 
-    `tol` is how far apart the two may be in one season before the ledger is
-    called unsafe. Two is not a guess: it is the largest gap the sixteen
-    current franchises actually show, and six of them show none at all.
+    `tol` is how far apart the two may be in one season. One is not a guess:
+    across 2021-2025 fourteen of the sixteen franchises match the register
+    exactly and the other two are a single deal out, so anything larger means
+    something has changed and wants looking at rather than publishing.
 
-    The part-seasons are left out. 2026 is six weeks of Sleeper against four
-    post-deadline rows in an export pulled in December, so a gap there says
+    Part-seasons are left out. 2026 is six weeks of Sleeper against four
+    post-deadline rows in exports pulled in December, so a gap there says
     nothing about the ledger.
     """
     cp = os.path.join(ROOT, OUT)
@@ -217,8 +213,7 @@ def reconcile(tol=2):
     part = set(cnt.get('partSeasons') or [])
 
     tj = json.load(open(os.path.join(ROOT, 'trades.json'), encoding='utf-8'))
-    led = collections.defaultdict(collections.Counter)
-    seen = collections.Counter()
+    led, seen = collections.defaultdict(collections.Counter), collections.Counter()
     for t in tj['trades']:
         s = str(t['season'])
         seen[s] += 1
@@ -227,15 +222,6 @@ def reconcile(tol=2):
                 led[k][s] += 1
     span = sorted(s for s in seen if s not in part
                   and any(s in m for m in master.values()))
-
-    # Season by season, how much of the ledger's excess is accounted for by
-    # records Obvibase has deleted since the itemised pull was taken. Where a
-    # season carries multi-leg deals a deleted LEG does not remove a deal, so
-    # the deletions are an upper bound on the gap rather than an equality.
-    exp = cnt.get('export') or {}
-    gone = exp.get('deletedBySeason') or {}
-    lg = {s: seen[s] - cnt['leagueTotals'].get(s, 0) for s in span}
-    resid = {s: max(0, lg[s] - gone.get(s, 0)) for s in span}
 
     rows, worst, exact = [], 0, 0
     for k in sorted(led, key=lambda k: -sum(led[k].values())):
@@ -248,101 +234,78 @@ def reconcile(tol=2):
                      'ledger': sum(led[k].get(s, 0) for s in span),
                      'master': sum(master.get(k, {}).get(s, 0) for s in span)})
     return {'span': span, 'rows': rows, 'worst': worst, 'exact': exact,
-            'tol': tol, 'ok': worst <= tol,
+            'tol': 1, 'ok': worst <= 1,
             'ledger': sum(seen[s] for s in span),
-            'master': sum(cnt['leagueTotals'][s] for s in span),
-            'leagueGap': lg, 'deleted': gone,
-            'deletedInSpan': sum(gone.get(s, 0) for s in span),
-            'unexplained': sum(resid.values())}
+            'master': sum(cnt['leagueTotals'][s] for s in span)}
 
 
 def surplus(key):
-    """Deals the itemised ledger holds that the register no longer does.
+    """Pairings where the two sources disagree, for the franchise named.
 
-    reconcile() says a franchise's two counts differ. This says WHICH deals
-    the difference is in, which is what anything priced off the ledger needs
-    to know: a win-loss record computed over a trade the league has deleted
-    is a record over a trade that did not happen, or happened once and was
-    entered twice.
+    reconcile() says a franchise's counts differ. This says which pairing the
+    difference is in, which is what anything priced off the ledger needs to
+    know. Pairings rather than trades: the register's asset lists would allow
+    a trade-level match, but a near-miss on a player's spelling would read as
+    a missing deal, and a pairing count cannot misfire that way.
 
-    Pairings, not trades. The register stores how many assets moved each way
-    but not which, so two deals between the same pair in the same season
-    cannot reliably be told apart. Where a pairing has one surviving register
-    row and two ledger deals, one of the two is deleted and there is no
-    honest way to say which. Where it has NONE, the ledger's deal is named
-    outright.
-
-    Returns a row a pairing: the season, the other franchise, both counts,
-    and `certain` when the register holds nothing for that pairing at all.
+    `certain` marks a pairing where one source holds nothing at all, so the
+    deal on the other side can be named outright.
     """
-    cp = os.path.join(ROOT, OUT)
+    cp = os.path.join(ROOT, PAIRS)
     if not os.path.exists(cp):
         return None
-    cnt = json.load(open(cp, encoding='utf-8'))
     look, club, _ = resolver()
+    cnt = json.load(open(os.path.join(ROOT, OUT), encoding='utf-8'))
     part = set(cnt.get('partSeasons') or [])
-    win = [s for s in cnt['seasons'] if s not in part]
-
-    # The register is counted the same way the totals were: legs folded in.
-    pair_reg, pair_led = collections.Counter(), collections.Counter()
-    for (s, ks), n in _reg_pairs().items():
-        if s in win:
-            pair_reg[(s, ks)] += n
-
     tj = json.load(open(os.path.join(ROOT, 'trades.json'), encoding='utf-8'))
-    rows = collections.defaultdict(list)
+    # Only the seasons BOTH sources cover. The register reaches back to 2016
+    # and the itemised ledger starts in 2021, so comparing the full span
+    # reports every pre-2021 trade in the league as a disagreement.
+    win = sorted({str(t['season']) for t in tj['trades']} - part
+                 & set(cnt['seasons']))
+    reg = {(r[0], frozenset(r[1])): r[2]
+           for r in json.load(open(cp, encoding='utf-8')) if r[0] in win}
+
+    led, rows = collections.Counter(), collections.defaultdict(list)
     for t in tj['trades']:
         s = str(t['season'])
         if s not in win:
             continue
         ks = frozenset(look.get(norm(x['team'])) for x in t['sides'])
-        pair_led[(s, ks)] += 1
+        led[(s, ks)] += 1
         rows[(s, ks)].append(t)
 
     out = []
-    for k in sorted(set(pair_led), key=lambda k: (k[0], sorted(k[1]))):
-        over = pair_led[k] - pair_reg[k]
-        if over > 0 and (key is None or key in k[1]):
-            s, ks = k
+    for k in sorted(set(led) | set(reg), key=lambda k: (k[0], sorted(k[1]))):
+        s, ks = k
+        if key is not None and key not in ks:
+            continue
+        d = led[k] - reg.get(k, 0)
+        if d:
             out.append({'season': s, 'with': sorted(ks - {key}),
-                        'ledger': pair_led[k], 'register': pair_reg[k],
-                        'over': over, 'certain': pair_reg[k] == 0,
-                        'trades': rows[k],
-                        'clubs': [club.get(x, x) for x in sorted(ks - {key})]})
+                        'clubs': [club.get(x, x) for x in sorted(ks - {key})],
+                        'ledger': led[k], 'register': reg.get(k, 0), 'over': d,
+                        'certain': led[k] == 0 or reg.get(k, 0) == 0,
+                        'trades': rows[k]})
     return out
-
-
-def _reg_pairs():
-    """Register deals per (season, franchise pair), cached beside the counts.
-
-    Written by main() because only it has the export open; surplus() reads it
-    back, so the pair counts and the totals can never be computed two
-    different ways.
-    """
-    p = os.path.join(ROOT, '.trade-pairs.json')
-    if not os.path.exists(p):
-        return {}
-    raw = json.load(open(p, encoding='utf-8'))
-    return {(r[0], frozenset(r[1])): r[2] for r in raw}
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--src', required=True, help='the Obvibase TSV export')
+    ap.add_argument('--a', required=True, help='Team_A_Players.csv')
+    ap.add_argument('--b', required=True, help='Team_B_Players.csv')
     a = ap.parse_args()
     look, club, active = resolver()
-    deals, audit = read_export(os.path.expanduser(a.src), look)
+    trades, audit = read_register(a.a, a.b, look)
+    deals = fold(trades)
 
-    per = collections.defaultdict(collections.Counter)
-    tot = collections.Counter()
+    per, tot = collections.defaultdict(collections.Counter), collections.Counter()
     for (s, _), ks in deals.items():
         tot[s] += 1
         for k in ks:
             per[k][s] += 1
-    legs = collections.Counter()
     multi = sum(1 for ks in deals.values() if len(ks) > 2)
 
-    # 2026 is Sleeper's, and it replaces the export's four post-deadline rows.
     sy, sn, sper = sleeper_2026(look)
     part = []
     if sy:
@@ -353,19 +316,20 @@ def main():
 
     seasons = sorted(tot)
     out = {
-        'note': ('Trade volume only -- how many deals each franchise was a '
-                 'party to, a season. No assets: the itemised ledger is '
-                 'trades.json and starts in 2021. Built by '
-                 'scripts/build_trade_counts.py from an Obvibase export kept '
-                 'outside this repo; the part-season column comes from '
-                 'Sleeper.'),
+        'note': ('How many deals each franchise was a party to, a season, from '
+                 'the league Obvibase register. Built by '
+                 'scripts/build_trade_counts.py from the two player exports, '
+                 'kept outside this repo. The register carries the assets back '
+                 'to 2016 but they cannot be priced before 2021, because '
+                 'dp-values.json starts there; the itemised ledger the Trade '
+                 'Audit prices is trades.json. The part-season column comes '
+                 'from Sleeper.'),
         'span': [seasons[0], seasons[-1]],
         'seasons': seasons,
         'partSeasons': part,
         'leagueTotals': {s: tot[s] for s in seasons},
         'multiTeamDeals': multi,
-        # what the row ids say about the export -- see read_export()
-        'export': audit,
+        'register': audit,
         'franchises': [
             {'key': k, 'club': club.get(k, k), 'active': k in active,
              'bySeason': {s: per[k].get(s, 0) for s in seasons},
@@ -374,12 +338,9 @@ def main():
     }
     p = os.path.join(ROOT, OUT)
     json.dump(out, open(p, 'w', encoding='utf-8'), indent=1)
-    # The register's deals per (season, franchise pair), for surplus(). Kept
-    # beside the counts rather than inside them: it is a working file, not a
-    # figure anybody publishes, and it is gitignored for the same reason.
     pairs = collections.Counter((s, tuple(sorted(ks))) for (s, _), ks in deals.items())
     json.dump([[s, list(ks), n] for (s, ks), n in sorted(pairs.items())],
-              open(os.path.join(ROOT, '.trade-pairs.json'), 'w', encoding='utf-8'))
+              open(os.path.join(ROOT, PAIRS), 'w', encoding='utf-8'))
 
     print(f'  {OUT}: {sum(tot.values())} deals, {seasons[0]}-{seasons[-1]}, '
           f'{len(per)} franchises, {multi} with three teams in them')
@@ -393,29 +354,20 @@ def main():
           + ''.join(str(tot[s]).rjust(5) for s in seasons)
           + str(sum(tot.values())).rjust(7)
           + ('   (' + ', '.join(part) + ' part-season)' if part else ''))
-
     print()
-    print(f'  the export itself: {audit["rows"]} rows, ids {audit["idLow"]}-'
-          f'{audit["idHigh"]}, {audit["deleted"]} deleted'
-          + (f', stored counter says {audit["storedCounter"]}'
+    print(f'  the register: {audit["trades"]} trades, {audit["assets"]} assets, '
+          f'ids {audit["idLow"]}-{audit["idHigh"]}, {len(audit["absentIds"])} '
+          f'absent {audit["absentIds"]}'
+          + (f', stored counter {audit["storedCounter"]}'
              if audit['storedCounter'] else ''))
-    print('    deleted by season: '
-          + ', '.join(f'{s} {n}' for s, n in audit['deletedBySeason'].items()))
-    for g, a, b in audit['deletedAcrossSeasons']:
-        print(f'    id {g} sits between {a} and {b} and is not assigned')
+    if audit['oneSided']:
+        print(f'    {audit["oneSided"]} trade(s) with an empty side — a one-way '
+              f'transfer, kept')
 
     r = reconcile()
     if r:
         print()
-        print('  season  ledger  export   gap   deleted')
-        for s in r['span']:
-            print(f'   {s}  {r["leagueGap"][s] + tot[s]:6} {tot[s]:7} '
-                  f'{r["leagueGap"][s]:+5} {r["deleted"].get(s, 0):8}')
-        print(f'  the ledger runs {r["ledger"] - r["master"]:+d} on the export over '
-              f'{r["span"][0]}-{r["span"][-1]}, against {r["deletedInSpan"]} deleted '
-              f'records; {r["unexplained"]} deal(s) unexplained')
-        print()
-        print(f'  trades.json against these counts, {r["span"][0]}-'
+        print(f'  trades.json against the register, {r["span"][0]}-'
               f'{r["span"][-1]}: {r["ledger"]} deals against {r["master"]}, '
               f'{r["exact"]} of {len(r["rows"])} franchises exact, worst '
               f'single-season gap {r["worst"]}'
