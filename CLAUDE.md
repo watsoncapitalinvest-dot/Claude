@@ -167,6 +167,15 @@ ink `#17181c`. Georgia serif for copy, system sans for furniture.
   text, instructions only** — "you have things in there that will only confuse
   the AI."
 - Anything for another AI goes in a simple text file.
+- **The masthead may change.** `wordmark-art.png` is the candidate John sent —
+  plaid SKIRT over green CHASERS. `scripts/cut_wordmark.py` lifts it off its
+  cream paper into `wordmark-alt.png` (with its own tagline) and
+  `wordmark-alt-words.png` (the two words and the swash alone), both with
+  alpha, so it can sit straight on cover art with no panel behind it. It is
+  3:2 where the live `wordmark.png` is 3.5:1, so adopting it means a taller
+  masthead: set `MAST` in `compose_cover.py` and re-drop every cover, and ask
+  the next cover brief to keep the top **35 per cent** clear rather than 20.
+  Not adopted — the live masthead is still `wordmark.png`.
 - Heat rankings may be used; **do not reproduce the angry quotes**. Lines
   chosen for publication are banter, not shots, and run past John first.
 - api.sleeper.app is blocked from this container. The fetch runs in
