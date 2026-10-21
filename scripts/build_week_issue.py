@@ -196,23 +196,23 @@ def a_div(name):
 def preview_prose(season, week, st):
     """Next week previewed as an article: a paragraph a game, sixteen teams.
 
-    The card underneath says who plays whom. This says what it is worth, in
-    the voice the magazine is written in -- Harry Doyle at the microphone, dry
-    and flat and faintly amazed at what he is being asked to describe. The
-    joke is never on a figure; it is on the situation the figure describes.
+    A preview is about what happens next. The first two versions of this were
+    about what had already happened -- two sentences of last week's scores a
+    paragraph, and a line of forward-looking copy if there was room -- which
+    is a results service with a date on it. So the weight is the other way
+    round now: what the result does to the records, the division and the table
+    comes first and always, last week appears only where it carries a hook,
+    and the closing line is about Sunday rather than about last Sunday.
 
-    Every clause is still derived. Last week comes out of each side's trail,
-    the stake out of the division and the seeds, and every hook -- an unbeaten
-    side, a run of three, a first win, the pair who have both lost four -- is
-    printed only when it is true. The quips hang off those same conditions, so
-    a line about a rout only appears over a rout. A fixture with nothing to
-    say about it gets the billing and stops.
+    The voice is Harry Doyle -- dry, flat, short sentences, funniest when it
+    is most matter-of-fact.
 
-    The first version of this read "A beat B 96-73; C lost to D 76-83" eight
-    times in a row, which is a results service, not a preview. The shape of
-    each paragraph now comes from what is in it: two sides on losing runs open
-    on the losing runs, a rematch opens on the first meeting, and the rest open
-    on the fixture.
+    Everything is still derived, and the forward half is derived too: a record
+    after a win is arithmetic, a division gap after a win is arithmetic, and a
+    second meeting is in the schedule file. Nothing here projects a score or a
+    winner, because nothing in this repo can. Where a claim would depend on
+    points for -- any claim about where a side would SIT in a table tiebroken
+    on points -- it is not made.
     """
     nxt = week + 1
     try:
@@ -232,15 +232,31 @@ def preview_prose(season, week, st):
             pairs.append((a, b) if a['seed'] <= b['seed'] else (b, a))
     pairs.sort(key=lambda x: x[0]['seed'] + x[1]['seed'])
 
-    # is the top fixture clearly the top fixture, or just first on a tie
     clear_best = (len(pairs) > 1
                   and pairs[0][0]['seed'] + pairs[0][1]['seed']
                   < pairs[1][0]['seed'] + pairs[1][1]['seed'])
     left = max(0, int(st['playoff_week']) - 1 - int(st['through']))
-    wks = f'{numw(left)} week{"" if left == 1 else "s"}'
-    by_pf = sorted(tbl, key=lambda r: -r['pf'])
-    most_pf, fewest_pf = by_pf[0]['roster_id'], by_pf[-1]['roster_id']
+    after_left = max(0, left - 1)
+    rest = f'{numw(after_left)} week{"" if after_left == 1 else "s"}'
     last_seed = max(r['seed'] for r in tbl)
+
+    def meet_again(a, b):
+        """The next week after this one that the schedule has them meeting."""
+        for w in sorted(int(k) for k in sc['weeks']):
+            if w <= nxt or w >= int(st.get('playoff_week') or 99):
+                continue
+            for g in sc['weeks'][str(w)]:
+                ids = {g.get('home_roster'), g.get('away_roster')}
+                if ids == {a['roster_id'], b['roster_id']}:
+                    return w
+        return None
+
+    def rec(t, won):
+        w = t['w'] + (1 if won else 0)
+        return f'{w}-{t["l"] + (0 if won else 1)}' + (f'-{t["t"]}' if t['t'] else '')
+
+    def div_top(t):
+        return max(r['w'] for r in tbl if r['div'] == t['div'])
 
     def leg(t):
         return (t.get('trail') or [None])[-1]
@@ -249,165 +265,146 @@ def preview_prose(season, week, st):
         return f'{me:.0f}&ndash;{them:.0f}'
 
     def winless_until(name, wk):
-        """Was that week the first game this side had won all season?"""
         o = by_name.get((name or '').strip())
         if not o:
             return False
         won = [x for x in o['trail'] if x[1] == 'W' and x[0] <= wk]
         return len(won) == 1 and won[0][0] == wk
 
-    def tightest(t):
-        """The narrowest margin they have won by, or None if they have not."""
-        m = [abs(x[2] - x[3]) for x in (t.get('trail') or []) if x[1] == 'W']
-        return min(m) if m else None
+    def prospect(a, b, n, first):
+        """What the afternoon does. Always present, always first.
 
-    def did(t, k):
-        """Last week, in a sentence. `k` rotates the asides so they do not drum."""
+        Only claims that the fixture itself settles. A projected DIVISION
+        POSITION is not one of them: the other two sides in a division are
+        playing on the same Sunday and can gain a win too, so "level at the
+        top of Spectre Syndicate" was a guess dressed as arithmetic. What the
+        game does settle exactly is each side's record and the gap between
+        these two -- so that is what this says, and anything about the rest of
+        the division is said in the present tense about the table as it is.
+        """
+        dv = E(a['div_name'])
+        if a['div'] == b['div']:
+            gap = a['w'] - b['w']
+            if gap == 0:
+                out = [f'The winner leaves at {rec(a, True)} and a game clear of the loser '
+                       f'in {dv}.',
+                       f'One of them leaves at {rec(a, True)} and the other at '
+                       f'{rec(a, False)}, and that is the whole of {dv} for a week.',
+                       f'{rec(a, True)} for the winner, {rec(a, False)} for the loser, and a '
+                       f'game between them in {dv}.'][n % 3]
+            else:
+                lead = f'{numw(gap + 1)} clear of them'
+                chase = ('level with them' if gap == 1 else f'{numw(gap - 1)} behind them')
+                out = (f'{E(a["team"])} win and they are {rec(a, True)}, {lead} in {dv}. '
+                       f'{E(b["team"])} win and they are {rec(b, True)}, {chase}.')
+            if a['div_rank'] == 1 and b['div_rank'] == 2:
+                out = f'These are the top two in {dv}. ' + out.replace(f' in {dv}', '', 1)
+            return out
+        out = (f'{E(a["team"])} win and they are {rec(a, True)}; {E(b["team"])} win and they '
+               f'are {rec(b, True)}.')
+        # one present-tense line about whichever of them has further to go
+        t = max((a, b), key=lambda r: div_top(r) - r['w'])
+        back = div_top(t) - t['w']
+        if back >= 2:
+            out += ' ' + [f'{E(t["team"])} are {numw(back)} off the top of '
+                          f'{E(t["div_name"])} as the table stands.',
+                          f'{E(t["team"])} have {numw(back)} games to find on '
+                          f'{E(t["div_name"])} from where they are.',
+                          f'That still leaves {E(t["team"])} {numw(back)} short of the top '
+                          f'of {E(t["div_name"])}.'][n % 3]
+        return out
+
+    def form(t, k, covered=False):
+        """Last week, but only when last week is worth a sentence.
+
+        Returns '' for an ordinary result. Eight paragraphs that each recite
+        two scorelines is the thing this article was rewritten to stop doing.
+        """
         lg = leg(t)
-        who = E(t['team'])
         if not lg:
-            return f'{who} did not play'
+            return ''
         wk, res, me, them, opp = lg
         won, m = res == 'W', abs(me - them)
+        who = E(t['team'])
         if won and t['w'] == 1:
-            return f'{who} won for the first time this season, {sc_(me, them)} over {E(opp)}'
+            return f'{who} won for the first time this season last week, {sc_(me, them)}.'
+        if t['streak_n'] >= 3:
+            if covered:
+                return ''
+            run = numw(t['streak_n'])
+            return (f'{who} have won {run} in a row and a fourth makes it {rec(t, True)}.'
+                    if t['streak_kind'] == 'W' and t['streak_n'] == 3 else
+                    f'{who} have won {run} in a row.' if t['streak_kind'] == 'W' else
+                    f'{who} have lost {run} in a row.')
         if won and m > 45:
-            return [f'{who} put {me:.0f} on {E(opp)}, which is less a result than a '
-                    'weather report',
-                    f'{who} beat {E(opp)} by {m:.0f}, which is not a margin but a verdict',
-                    f'{who} beat {E(opp)} {sc_(me, them)}, and the second number is not a '
-                    'misprint'][k % 3]
+            return [f'{who} put {me:.0f} on {E(opp)} last week, which is less a result than '
+                    'a weather report.',
+                    f'{who} won by {m:.0f} last week, which is not a margin but a verdict.',
+                    f'{who} won {sc_(me, them)} last week, and the second number is not a '
+                    'misprint.'][k % 3]
         if not won and m > 45:
-            return [f'{who} were beaten by {m:.0f}, which takes a certain commitment',
-                    f'{who} lost to {E(opp)} by {m:.0f}',
-                    f'{who} were beaten {sc_(me, them)}, which is a scoreline you check '
-                    'twice'][k % 3]
-        if won and m < 6:
-            return [f'{who} got past {E(opp)} by {m:.1f}, which counts the same as fifty',
-                    f'{who} beat {E(opp)} by {m:.1f}, and the table does not ask how',
-                    f'{who} won by {m:.1f}, which is a win'][k % 3]
-        if not won and m < 6:
-            return [f'{who} lost to {E(opp)} by {m:.1f}',
-                    f'{who} lost by {m:.1f}, which is the worst way to do it',
-                    f'{who} came up {m:.1f} short of {E(opp)}'][k % 3]
+            return [f'{who} were beaten by {m:.0f} last week, which takes a certain '
+                    'commitment.',
+                    f'{who} lost by {m:.0f} last week.',
+                    f'{who} were beaten {sc_(me, them)} last week, which is a scoreline you '
+                    'check twice.'][k % 3]
+        if m < 6:
+            return ([f'{who} got past {E(opp)} by {m:.1f} last week, which counts the same '
+                     'as fifty.',
+                     f'{who} won by {m:.1f} last week, and the table does not ask how.',
+                     f'{who} won by {m:.1f} last week, which is a win.'][k % 3] if won else
+                    [f'{who} lost by {m:.1f} last week.',
+                     f'{who} came up {m:.1f} short last week, which is the worst way to do it.',
+                     f'{who} lost by {m:.1f}, and have had a week to think about it.'][k % 3])
         if not won and winless_until(opp, wk):
-            return f'{who} lost {sc_(me, them)} to a side that had not won a game'
-        return f'{who} {"beat" if won else "lost to"} {E(opp)} {sc_(me, them)}'
+            return f'{who} lost to a side that had not won a game.'
+        return ''
 
-    def pair_form(a, b, n, k=''):
-        """Both sides' last week. The framing comes from how the two results sit.
-
-        Eight paragraphs that each run "A did this. B did that." is the results
-        service again, so when the pair went the same way the sentence says so
-        first and the two clauses hang off it.
-        """
-        la, lb = leg(a), leg(b)
-        both = la and lb and la[1] == lb[1] and not k.startswith('Both')
-        body = did(a, n) + '. ' + did(b, n + 1) + '.'
-        if not both:
-            return body
-        if la[1] == 'L':
-            return [f'Neither of them won last week. {body}',
-                    f'{body} Two defeats, arriving at the same fixture.'][n % 2]
-        if la[1] == 'W':
-            return [f'Both come in from wins. {body}',
-                    f'{body} They cannot both do that again.'][n % 2]
-        return body
-
-    def stake(a, b, n, first):
-        if a['div'] == b['div']:
-            gap, dv = a['w'] - b['w'], E(a['div_name'])
-            if first and gap:
-                return (f'It settles {dv} as well: {E(a["team"])} are {numw(gap)} clear with '
-                        f'{wks} to play, which is a lead right up until it is not.')
-            if gap == 1:
-                return [f'{E(a["team"])} are one clear in {dv}, and this is the game that '
-                        'closes it or does not.',
-                        f'One game between them in {dv}, and here it is.'][n % 2]
-            if gap:
-                return [f'{E(a["team"])} are {numw(gap)} clear of them in {dv}, which is not '
-                        'a gap one Sunday does much about.',
-                        f'{upper1(numw(gap))} games between them in {dv}.'][n % 2]
-            even = [f'They are level in {dv}, so one of them leaves Sunday in front of '
-                    'the other.',
-                    f'Level in {dv}. One of them is about to not be.',
-                    f'Nothing between them in {dv}, and this is where that changes.']
-            if a['record'] == b['record']:
-                even[2] = (f'Level in {dv} at {a["record"]} apiece'
-                           + (', which is the most interesting thing two .500 sides can be.'
-                              if a['w'] == a['l'] else '.'))
-            return even[n % 3]
-        pair = f'{upper1(ordw(a["seed"]))} against {ordw(b["seed"])}'
-        if first:
-            return (f'{pair}, and nothing else on the card is close.' if clear_best
-                    else f'{pair}, which is the best the card had.')
-        if abs(a['seed'] - b['seed']) >= 8 and a['w'] - b['w'] >= 2:
-            return [f'{pair}, which the fixture list presumably thought was a treat '
-                    'for somebody.',
-                    f'{pair}. The table does not expect much argument.',
-                    f'{pair}, and the gap is the whole story until it is not.'][n % 3]
-        return pair + '.'
+    used = set()
 
     def kicker(a, b, n):
-        """One extra true thing, the strongest available, or nothing."""
+        """One closing line, and it points at Sunday rather than away from it."""
         if (a['streak_kind'] == 'L' and b['streak_kind'] == 'L'
                 and min(a['streak_n'], b['streak_n']) >= 3):
-            return (f'{E(a["team"])} have lost {numw(a["streak_n"])} in a row and '
-                    f'{E(b["team"])} have lost {numw(b["streak_n"])}. One of these runs ends '
-                    'on Sunday. The other one gets longer.')
+            return ('One of these runs ends on Sunday. The other one gets longer.')
         if (a['streak_kind'] == 'W' and b['streak_kind'] == 'W'
                 and min(a['streak_n'], b['streak_n']) >= 3):
-            return ('Both of them arrive on a run of three or more, which is a thing that '
-                    'cannot survive the afternoon.')
-        for t in (a, b):
+            return ('Both of them arrive on a run of three or more. One of them does not '
+                    'leave with it.')
+        for t, o in ((a, b), (b, a)):
             if t['l'] == 0 and t['t'] == 0 and t['games'] >= 3:
-                tt = tightest(t)
-                return (f'{E(t["team"])} have not lost a game. '
-                        + (f'Nor have they been within {tt:.0f} of losing one.'
-                           if tt is not None and tt >= 20 else
-                           f'{upper1(numw(t["w"]))} weeks, {numw(t["w"])} wins.'))
+                return (f'{E(t["team"])} have not lost a game, and {E(o["team"])} are the '
+                        f'{ordw(t["games"] + 1)} side asked to do something about it.')
+        w = meet_again(a, b)
+        if w and 'again' not in used:
+            used.add('again')
+            return f'They do this again in week {w}, so nobody settles anything on Sunday.'
         for lg in a.get('trail') or []:
             if (lg[4] or '').strip() == b['team'].strip():
-                w = a if lg[1] == 'W' else b
+                win = a if lg[1] == 'W' else b
                 hi, lo = (lg[2], lg[3]) if lg[1] == 'W' else (lg[3], lg[2])
-                return (f'They did this in week {lg[0]} and {E(w["team"])} won it '
-                        f'{sc_(hi, lo)}.')
+                return (f'{E(win["team"])} won the first meeting in week {lg[0]}, '
+                        f'{sc_(hi, lo)}, and that is the only evidence anybody has.')
         for t in (a, b):
-            if t['streak_n'] >= 3:
-                return (f'{E(t["team"])} have won {numw(t["streak_n"])} in a row, which in '
-                        'this league is either a side arriving or a schedule being kind.'
-                        if t['streak_kind'] == 'W' else
-                        f'{E(t["team"])} have lost {numw(t["streak_n"])} in a row and are '
-                        f'{ordw(t["seed"])} of {numw(last_seed)}.')
-        for t, o in ((a, b), (b, a)):
-            if t['seed'] == last_seed and t['roster_id'] == fewest_pf:
-                return (f'{E(t["team"])} are {ordw(t["seed"])} of {numw(last_seed)} and have '
-                        'scored fewer points than anybody. Not fewer than most. Fewer than '
-                        'anybody.')
-            if t['roster_id'] == most_pf:
-                return (f'{E(t["team"])} have scored more than anyone in the league, which so '
-                        f'far has been worth {t["record"]}.')
-        for t in (a, b):
-            lg = leg(t)
-            if lg and lg[1] == 'W' and t['w'] == 1:
-                return (f'{E(t["team"])} find out on Sunday whether last week was a turn or '
-                        'a Tuesday.')
+            if t['seed'] == last_seed:
+                return (f'{E(t["team"])} are {ordw(t["seed"])} of {numw(last_seed)}. A loss '
+                        f'is {rec(t, False)} with {rest} to play.')
         return ''
 
     unb = [r for r in tbl if r['l'] == 0 and r['t'] == 0]
     runs_w = [r for r in tbl if r['streak_kind'] == 'W' and r['streak_n'] >= 3]
     runs_l = [r for r in tbl if r['streak_kind'] == 'L' and r['streak_n'] >= 3]
-    lead = [f'{upper1(numw(len(pairs)))} games.']
+    lead = [f'{upper1(numw(len(pairs)))} games, and {rest} after them before the playoffs.']
     if unb:
         lead.append(f'{upper1(numw(len(unb)))} '
-                    + ('side still unbeaten' if len(unb) == 1 else 'sides still unbeaten')
-                    + ', ' + f'{numw(len(runs_w))} on a winning run of three or more and '
+                    + ('side can still finish the week unbeaten' if len(unb) == 1
+                       else 'sides can still finish the week unbeaten')
+                    + f', {numw(len(runs_w))} arrive on a winning run of three or more and '
                     + f'{numw(len(runs_l))} on a losing one.')
     else:
-        lead.append(f'Nobody unbeaten any more, {numw(len(runs_w))} on a winning run of three '
-                    f'or more and {numw(len(runs_l))} on a losing one.')
-    lead.append(f'{upper1(wks)} between here and the playoffs, and this is what Sunday is '
-                'worth.')
+        lead.append(f'Nobody is unbeaten any more, {numw(len(runs_w))} arrive on a winning '
+                    f'run of three or more and {numw(len(runs_l))} on a losing one.')
+    lead.append('This is what Sunday is worth.')
     out = [('body', '<p class="b">' + ' '.join(lead) + '</p>')]
 
     for n, (a, b) in enumerate(pairs):
@@ -415,16 +412,28 @@ def preview_prose(season, week, st):
         verb = 'play' if first else ['play', 'meet', 'get'][n % 3]
         bill = (f'<b>{E(a["team"])} ({a["record"]}) {verb} '
                 f'{E(b["team"])} ({b["record"]})</b>')
-        k = kicker(a, b, n)
         s = [bill + (', and it is the one worth sitting down for.' if first else '.')]
-        s.append(stake(a, b, n, first))
-        s.append(pair_form(a, b, n, k))
+        if (not first and a['div'] != b['div']
+                and abs(a['seed'] - b['seed']) >= 8 and a['w'] - b['w'] >= 2):
+            s.append([f'{upper1(ordw(a["seed"]))} against {ordw(b["seed"])}.',
+                      f'{upper1(ordw(a["seed"]))} against {ordw(b["seed"])}, which the '
+                      'fixture list presumably thought was a treat for somebody.',
+                      f'{upper1(ordw(a["seed"]))} against {ordw(b["seed"])}.'][n % 3])
+        elif first and a['div'] != b['div']:
+            s.append(f'{upper1(ordw(a["seed"]))} against {ordw(b["seed"])}'
+                     + (', and nothing else on the card is close.' if clear_best
+                        else ', which is the best the card had.'))
+        s.append(prospect(a, b, n, first))
+        k = kicker(a, b, n)
+        covered = any(w in k for w in ('in a row', 'run of three', 'not lost a game'))
+        back = ' '.join(x for x in (form(a, n, covered), form(b, n + 1, covered)) if x)
+        if back:
+            s.append(back)
         if k:
             s.append(k)
-        # Eight paragraphs and an opener do not fit a page, and fit() answered
-        # that by scaling the whole article to 0.67 -- the smallest type in the
-        # issue, on the page that closes it. Four games a page, broken here
-        # rather than shrunk, the way the standings table and the contents are.
+        # Four games a page, broken here rather than shrunk: fit() had taken
+        # the whole article to 0.67, the smallest type in the issue, on the
+        # page that closes it.
         out.append(('pagebreak' if n and n % PER_PAGE == 0 else 'body',
                     '<p class="b">' + ' '.join(s) + '</p>'))
     return out
