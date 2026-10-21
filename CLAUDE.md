@@ -69,6 +69,19 @@ what both sides did last week. Ordered so the biggest game leads and is not
 buried fourth in a list of eight. The card underneath says who plays whom; the
 prose says why anyone should care.
 
+The voice is **Harry Doyle** — dry, flat, faintly amazed at what it is being
+asked to describe, and funniest when it is most matter-of-fact. Short
+sentences. The joke is never on a figure, it is on the situation the figure
+describes: *"Smoke Dragons have lost three in a row and Guido Haters have lost
+four. One of these runs ends on Sunday. The other one gets longer."* What it is
+not is a results service — *"A beat B 96-73; C lost to D 76-83"* eight times in
+a row is the thing that got this rewritten.
+
+Every aside still hangs off a derived condition, so a line about a rout only
+prints over a rout, and the quips characterise the **number**, never the shape
+of an afternoon only the replay knows. "It was over early" is not derivable
+from a margin. Neither is calling two 2-4 sides ".500".
+
 That page is **derived, not written**: `preview_prose()` and
 `preview_blocks()` in `scripts/build_week_issue.py` read the fixtures out of
 `sleeper-schedule.json` and the records, streaks, divisions and prior meetings
