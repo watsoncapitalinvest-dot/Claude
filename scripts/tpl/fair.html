@@ -60,7 +60,7 @@ h1{font-size:clamp(30px,6.5vw,52px);line-height:1.02;margin:9px 0 0;font-weight:
 .shape p{font-family:var(--serif);font-size:clamp(16.5px,2.1vw,19.5px);line-height:1.52;
   margin:0;max-width:66ch}
 .shape b{font-weight:700}
-.shape .nb{white-space:nowrap}
+.nb{white-space:nowrap}
 .shape .kick{font-family:var(--sans);font-size:14.5px;font-weight:700;line-height:1.5;
   color:var(--ink);max-width:60ch;border-left:3px solid var(--loss);padding-left:13px}
 .shape .nums{display:flex;flex-wrap:wrap;gap:1px;background:var(--rule);border:1px solid var(--rule)}
@@ -92,7 +92,9 @@ h2{font-family:var(--sans);font-size:11.5px;font-weight:800;letter-spacing:.16em
   <h1>Who Wins The Trades</h1>
   <p class="stand">Every priced deal in the dynasty ledger, split three ways for each
    franchise: the ones it won, the ones that came out level, and the ones it lost.
-   Priced at the season each trade was made, with nothing the table did not know.</p>
+   Priced at the season each trade was made, with nothing the table did not know
+   &mdash; and then asked a second time, a year later, to see who was still
+   winning it.</p>
  </header>
  <section class="tiles" id="tiles"></section>
  <div class="legend">
@@ -108,6 +110,19 @@ h2{font-family:var(--sans);font-size:11.5px;font-weight:800;letter-spacing:.16em
  <div>
   <h2>The verdicts</h2>
   <div class="unfair thin" id="unfair"></div>
+ </div>
+ <div id="laterwrap" hidden>
+  <h2>Twelve months on &mdash; the same verdict, asked a year later</h2>
+  <div class="legend thin">
+   <span style="color:var(--win)"><i class="sw" style="background:currentColor"></i>Won</span>
+   <span style="color:var(--fair)"><i class="sw" style="background:currentColor"></i>Level</span>
+   <span style="color:var(--loss)"><i class="sw" style="background:currentColor"></i>Lost</span>
+   <span style="color:var(--ink)"><i class="sw pale" style="background:currentColor"></i>Upper bar: on the day</span>
+   <span style="color:var(--ink)"><i class="sw" style="background:currentColor"></i>Lower bar: a year later</span>
+  </div>
+  <div class="plot"><svg id="later" role="img" aria-label="Each franchise's trades judged on the day and again a year later"></svg></div>
+  <p class="cap" id="latercap"></p>
+  <div class="unfair thin" id="laterv"></div>
  </div>
  <div>
   <h2>Where the money moves</h2>
@@ -144,6 +159,19 @@ const hide=()=>tip.classList.remove('on');
 
 const ranked=D.rows.filter(r=>r.n>=MIN), thin=D.rows.filter(r=>r.n<MIN);
 
+// A franchise name set flush right against the bars, squeezed rather than
+// clipped when it will not fit. On a phone the gutter is 96px and three of
+// the sixteen are wider than that -- Pork Chop Express was arriving as
+// "k Chop Express", which is not a franchise.
+function label(svg,x,y,txt,size){
+  const t=mk('text',{x:x,y:y,fill:css('--ink'),'font-size':size,'text-anchor':'end',
+    'font-family':'var(--serif)','font-weight':700});
+  t.textContent=txt; svg.appendChild(t);
+  const w=t.getComputedTextLength?t.getComputedTextLength():0;
+  if(w>x-2){t.setAttribute('textLength',x-2);t.setAttribute('lengthAdjust','spacingAndGlyphs');}
+  return t;
+}
+
 function bars(svg, rows, showAxis){
   svg.textContent='';
   const W=Math.max(320,Math.min(980,svg.parentNode.clientWidth||900));
@@ -178,9 +206,7 @@ function bars(svg, rows, showAxis){
       }
       x+=w;
     });
-    const nm=mk('text',{x:padL-14,y:y+(tiny?-1:2),fill:ink,'font-size':tiny?12:(narrow?13:15),
-      'text-anchor':'end','font-family':'var(--serif)','font-weight':700});
-    nm.textContent=r.club; svg.appendChild(nm);
+    label(svg,padL-14,y+(tiny?-1:2),r.club,tiny?12:(narrow?13:15));
     if(!tiny){
       const sub=mk('text',{x:padL-14,y:y+15,fill:faint,'font-size':10.5,'text-anchor':'end',
         'font-family':'var(--sans)'}); sub.textContent=r.n+' deals'; svg.appendChild(sub);
@@ -260,8 +286,9 @@ $('#note').innerHTML='<b>How firm is this?</b> The pick board is the softest par
  'because their receipts do not say which side each asset came from. The bars are '+
  'proportions; the record and the net beside them are counts and dollars. '+
  '<a href="scfl-trade-audit.html">Trial of the Evil Empire</a> is the investigation this '+
- 'came out of, and <a href="scfl-trade-ledger.html">The Twelve-Month Ledger</a> has every '+
- 'deal asset by asset.';
+ 'came out of, <a href="scfl-trade-ledger.html">The Twelve-Month Ledger</a> has every '+
+ 'deal asset by asset, and <a href="scfl-twelve-months-on.html">Twelve Months On</a> is '+
+ 'the year-later reading drawn as money rather than as verdicts.';
 
 function split(){
   // Built to read like the chart above it: same row rhythm, same bar weight,
@@ -305,9 +332,7 @@ function split(){
         'text-anchor':inside?(v>=0?'start':'end'):(v>=0?'start':'end')});
       t.textContent=txt; svg.appendChild(t);
     });
-    const nm=mk('text',{x:padL-14,y:y+(tiny?-1:2),fill:ink,'font-size':tiny?12:(narrow?13:15),
-      'text-anchor':'end','font-family':'var(--serif)','font-weight':700});
-    nm.textContent=r.club; svg.appendChild(nm);
+    label(svg,padL-14,y+(tiny?-1:2),r.club,tiny?12:(narrow?13:15));
     if(!tiny){
       const sub=mk('text',{x:padL-14,y:y+15,fill:faint,'font-size':10.5,'text-anchor':'end',
         'font-family':'var(--sans)'}); sub.textContent=r.n+' deals'; svg.appendChild(sub);
@@ -371,6 +396,135 @@ $('#unfair').innerHTML =
   '<p class="why"><b>'+BG.winner+'</b> got '+BG.winnerGot.join(', ')+'. <b>'+BG.loser+
   '</b> got '+BG.loserGot.join(', ')+'.</p></div>':'');
 
+// The same verdict asked twice. A different, smaller set of deals from the
+// chart above -- a reading a year on needs a consensus board at both ends --
+// so the day-of columns here will not match it, and the caption says so
+// rather than leaving a reader to find the mismatch and distrust both.
+function laterChart(){
+  const L=D.later; if(!L) return;
+  $('#laterwrap').hidden=false;
+  const rows=L.rows.filter(r=>r.n>=L.minDeals);
+  const svg=$('#later'); svg.textContent='';
+  const W=Math.max(320,Math.min(980,svg.parentNode.clientWidth||900));
+  const narrow=W<620, tiny=W<430;
+  const padL=tiny?96:(narrow?118:176), padR=narrow?66:134, padT=30, padB=8;
+  const rowH=narrow?44:50, BH=narrow?13:15, GAP=3;
+  const H=padT+rows.length*rowH+padB;
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  const win=css('--win'),fair=css('--fair'),loss=css('--loss'),ink=css('--ink'),
+        faint=css('--faint'),paper=css('--paper'),stock=css('--stock'),hair=css('--hair');
+  const BW=W-padL-padR;
+  for(let q=0;q<=4;q++){
+    const x=padL+BW*q/4;
+    svg.appendChild(mk('line',{x1:x,x2:x,y1:padT-6,y2:H-padB,stroke:hair,'stroke-width':1}));
+    const t=mk('text',{x:x,y:padT-11,fill:faint,'font-size':10,'font-family':'var(--sans)',
+      'text-anchor':q===0?'start':(q===4?'end':'middle')});
+    t.textContent=(q*25)+'%'; svg.appendChild(t);
+  }
+  rows.forEach((r,i)=>{
+    const y=padT+i*rowH+rowH/2;
+    if(i%2===0) svg.appendChild(mk('rect',{x:0,y:y-rowH/2,width:W,height:rowH,fill:stock,opacity:.6}));
+    [[r.dw,r.de,r.dl,y-BH-GAP/2,r.dw+'–'+r.dl],
+     [r.yw,r.ye,r.yl,y+GAP/2,r.yw+'–'+r.yl]].forEach(([w,e,l,yy,rec],band)=>{
+      let x=padL;
+      [[w,win],[e,fair],[l,loss]].forEach(([v,c],j)=>{
+        if(!v) return;
+        const bw=BW*v/r.n;
+        svg.appendChild(mk('rect',{x:x,y:yy,width:Math.max(bw-(j<2?2:0),1),height:BH,
+          fill:c,rx:2,opacity:band?1:.5}));
+        if(bw>24){
+          const t=mk('text',{x:x+bw/2-1,y:yy+BH-3.5,fill:paper,'font-size':10.5,
+            'text-anchor':'middle','font-family':'var(--sans)','font-weight':800});
+          t.textContent=v; svg.appendChild(t);
+        }
+        x+=bw;
+      });
+      // the record beside each bar, so the two can be read against each other
+      // without counting coloured segments
+      const t=mk('text',{x:W-padR+9,y:yy+BH-3,fill:band?ink:faint,'font-size':narrow?11:12.5,
+        'font-family':'var(--sans)','font-weight':band?700:600,
+        'font-variant-numeric':'tabular-nums'});
+      t.textContent=rec; svg.appendChild(t);
+    });
+    label(svg,padL-14,y+(tiny?-1:2),r.club,tiny?12:(narrow?13:15));
+    if(!tiny){
+      const sub=mk('text',{x:padL-14,y:y+15,fill:faint,'font-size':10.5,'text-anchor':'end',
+        'font-family':'var(--sans)'});
+      sub.textContent=r.n+' deals'+(r.ch?'  ·  '+r.ch+' changed':'');
+      svg.appendChild(sub);
+    }
+    const hit=mk('rect',{x:0,y:y-rowH/2,width:W,height:rowH,fill:'transparent'});
+    hit.addEventListener('mousemove',e=>show(e,'<b>'+r.club+'</b><br>'+
+      '<span class="r">'+r.n+' deals priced twice</span><br>'+
+      'On the day &nbsp;<b>'+r.dw+'–'+r.dl+'</b> &nbsp;<span class="r">'+r.de+' level</span><br>'+
+      'A year later &nbsp;<b>'+r.yw+'–'+r.yl+'</b> &nbsp;<span class="r">'+r.ye+' level</span><br>'+
+      '<span class="r">'+(r.ch===1?'One verdict changed':r.ch+' verdicts changed')+
+      ' &middot; '+money(r.day)+' → '+money(r.year)+'</span>'));
+    hit.addEventListener('mouseleave',hide); svg.appendChild(hit);
+  });
+  const t=L.totals, held=t.n-t.ch, pushLost=t.de-t.ye;
+  $('#latercap').innerHTML=
+    'The same deals, asked twice. '+L.count+' trades in the ledger can be priced on the '+
+    'day they were made and again a year later to the day &mdash; that needs a consensus '+
+    'board at both ends, and the board opens in '+ecrMonth(L.ecr[0])+', so this is a '+
+    'smaller set than the chart above and its day-of columns will not match it. '+
+    L.seasons[0]+'–'+L.seasons[L.seasons.length-1]+', '+t.n+' verdicts, '+
+    (L.thin?L.thin+' franchises left out for having fewer than '+L.minDeals+' of them. ':'')+
+    '<b>'+held+' held and '+t.ch+' changed.</b>'+
+    (pushLost>0 ? ' The league-wide split barely moves: '+pushLost+' deals that looked '+
+      'level on the day did not stay level, which is '+(t.yw-t.dw)+' more wins and the '+
+      'same '+(t.yl-t.dl)+' more losses. The wait does not make the league fairer. It '+
+      'moves who is holding the win.' : '');
+  const V=L, tiles=[];
+  if(V.best) tiles.push(tile('Best a year later', V.best.club,
+    Math.round(100*V.best.yw/(V.best.yw+V.best.yl))+'%', 'var(--win)',
+    V.best.yw+'–'+V.best.yl+' when it was not level',
+    'Judged twelve months on rather than on the day. It was '+V.best.dw+'–'+V.best.dl+
+    ' at the time of the trades.'));
+  if(V.worst) tiles.push(tile('Worst a year later', V.worst.club,
+    Math.round(100*V.worst.yw/(V.worst.yw+V.worst.yl))+'%', 'var(--loss)',
+    V.worst.yw+'–'+V.worst.yl+' when it was not level',
+    'It was '+V.worst.dw+'–'+V.worst.dl+' on the day. The year did not help.'));
+  if(V.up && V.up.swing>0) tiles.push(tile('The year was kindest to', V.up.club,
+    swing(V.up.swing), 'var(--win)', 'on the record, '+V.up.dw+'–'+V.up.dl+' to '+
+    V.up.yw+'–'+V.up.yl,
+    'The biggest gain anybody makes by being judged later rather than sooner. '+
+    moved(V.up)+' Its money moves '+money(V.up.day)+' to '+money(V.up.year)+'.'));
+  if(V.down && V.down.swing<0) tiles.push(tile('And least kind to', V.down.club,
+    swing(V.down.swing), 'var(--loss)', 'on the record, '+V.down.dw+'–'+V.down.dl+' to '+
+    V.down.yw+'–'+V.down.yl,
+    'The biggest loss from the same wait. '+moved(V.down)+
+    ' Its money moves '+nb(money(V.down.day))+' to '+nb(money(V.down.year))+'.'));
+  $('#laterv').innerHTML=tiles.join('');
+}
+// "October 2020" from "2020-10-16" -- the month is the honest precision for a
+// sentence about when a board opens
+const ecrMonth=s=>{const d=new Date(s+'T00:00:00Z');
+  return d.toLocaleString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'});};
+const swing=n=>(n>0?'+':'−')+Math.abs(n);
+// Which way a franchise's changed verdicts actually went. Counted off the
+// transitions rather than inferred from the record, because a record that
+// moves by one can hide four deals moving two ways.
+const WORD=['no','one','two','three','four','five','six','seven','eight','nine','ten'];
+const num=n=>n<WORD.length?WORD[n]:String(n);
+// How a franchise's swing is actually made. Every changed verdict moves one
+// way or the other -- a loss to level and a level to a win both count once, a
+// loss straight to a win counts twice -- and these two numbers add to exactly
+// the swing beside them. The commonest SINGLE change is not worth printing:
+// every side of a trade has an opposite number, so league-wide the transitions
+// are symmetric by construction and say nothing.
+const GAIN={LW:2,LE:1,EW:1}, LOSS={WL:2,WE:1,EL:1};
+function moved(r){
+  const tr=r.tr||{}, tot=k=>Object.keys(k).reduce((s,x)=>s+(tr[x]||0),0);
+  const up=tot(GAIN), dn=tot(LOSS);
+  if(!up && !dn) return 'Not one of its verdicts changed.';
+  if(up+dn===1) return 'One verdict changed, and it went '+(up?'its way.':'against it.');
+  if(!dn) return cap(num(up))+' of its verdicts changed, and every one went its way.';
+  if(!up) return cap(num(dn))+' of its verdicts changed, and every one went against it.';
+  return cap(num(up+dn))+' of its verdicts changed, '+num(up)+' its way and '+
+    num(dn)+' against it.';
+}
+
 // Where a net comes from, and what it is made of. Both halves print only over
 // the condition they describe: the gain has to be on the player side to be
 // called a gain on players, and the deficit has to be on the pick side.
@@ -409,7 +563,8 @@ function shape(){
     : '';
 }
 
-function draw(){ bars($('#main'),ranked,true); bars($('#few'),thin,false); split(); shape(); }
+function draw(){ bars($('#main'),ranked,true); bars($('#few'),thin,false);
+  laterChart(); split(); shape(); }
 draw();
 addEventListener('resize',draw);
 </script>

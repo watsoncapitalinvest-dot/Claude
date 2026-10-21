@@ -56,8 +56,8 @@ PAGES = {
         'kicker': 'The Trade Desk · Who Wins The Trades',
         'og': 'scfl-who-wins-trades-og.jpg',
         'desc': ("Every priced deal in the dynasty ledger, split three ways for each "
-                 "franchise: won, fair, lost. Priced at the season each trade was made, "
-                 "with nothing the table did not know."),
+                 "franchise: won, fair, lost. Then the same verdict asked again a year "
+                 "later, to see who was still winning it."),
     },
     'scfl-trade-ledger.html': {
         'tpl': 'ledger',
@@ -266,6 +266,65 @@ def fairness():
             'fairest': max(rank, key=lambda r: r['e'] / r['n'])}
 
 
+def later(d):
+    """The same verdict asked twice: on the day, and a year later to the day.
+
+    A different window from the page's main chart, on purpose, and the page
+    says so. A verdict twelve months on needs a consensus board at both ends
+    and the board opens in October 2020, so this is 2020-2024 and the deals
+    that can be priced twice, not the whole ledger. The two sets are never
+    netted against each other.
+
+    A trade appears twice here as well, once from each side.
+    """
+    tc = d.get('winThreshold', TC_DEFAULT)
+    V = lambda n: 'W' if n > tc else 'L' if n < -tc else 'E'
+    fr = {f['key']: f['club'] for f in
+          json.load(open(os.path.join(ROOT, 'scfl-franchises.json'),
+                         encoding='utf-8'))['franchises']}
+    per = {}
+    for t in d['trades']:
+        for s in t['sides']:
+            per.setdefault(s['franchiseKey'], []).append((s['netDay'], s['netYear']))
+    rows = []
+    for k, v in per.items():
+        dv = [V(a) for a, _ in v]
+        yv = [V(b) for _, b in v]
+        r = {'k': k, 'club': fr.get(k, k), 'n': len(v),
+             'dw': dv.count('W'), 'de': dv.count('E'), 'dl': dv.count('L'),
+             'yw': yv.count('W'), 'ye': yv.count('E'), 'yl': yv.count('L'),
+             'ch': sum(1 for a, b in zip(dv, yv) if a != b),
+             'day': round(sum(a for a, _ in v)),
+             'year': round(sum(b for _, b in v)),
+             # which way the changed verdicts went, so a sentence about them
+             # is counted rather than guessed from the totals
+             'tr': {a + b: sum(1 for x, y in zip(dv, yv) if x == a and y == b)
+                    for a in 'WEL' for b in 'WEL' if a != b}}
+        # what the re-check did to the record, and to the money
+        r['swing'] = (r['yw'] - r['yl']) - (r['dw'] - r['dl'])
+        r['move'] = r['year'] - r['day']
+        rows.append(r)
+    rows.sort(key=lambda r: (-(r['yw'] - r['yl']), -r['n']))
+    MIN = 10
+    rank = [r for r in rows if r['n'] >= MIN]
+    pool = [r for r in rank if r['yw'] + r['yl'] >= 6]
+    rate = lambda r: r['yw'] / (r['yw'] + r['yl'])
+    return {'rows': rows, 'tc': tc, 'minDeals': MIN, 'decidedMin': 6,
+            'count': d['count'], 'held': d['verdictHeld'],
+            'seasons': d['seasons'], 'ecr': d['ecrSpan'],
+            'thin': sum(1 for r in rows if r['n'] < MIN),
+            'best': max(pool, key=rate) if pool else None,
+            'worst': min(pool, key=rate) if pool else None,
+            'up': max(rank, key=lambda r: r['swing']) if rank else None,
+            'down': min(rank, key=lambda r: r['swing']) if rank else None,
+            'totals': {'n': sum(r['n'] for r in rows),
+                       'dw': sum(r['dw'] for r in rows), 'de': sum(r['de'] for r in rows),
+                       'dl': sum(r['dl'] for r in rows),
+                       'yw': sum(r['yw'] for r in rows), 'ye': sum(r['ye'] for r in rows),
+                       'yl': sum(r['yl'] for r in rows),
+                       'ch': sum(r['ch'] for r in rows)}}
+
+
 def rows_from(d):
     """One row a franchise: counts, both nets, both records, verdicts changed."""
     tc = d.get('winThreshold', TC_DEFAULT)
@@ -416,6 +475,10 @@ def build():
     }, separators=(',', ':'))
 
     fair = fairness()
+    if fair:
+        # the same page's second question: not who won the deal, but who was
+        # still winning it a year later
+        fair['later'] = later(d)
     fair_data = json.dumps(fair, separators=(',', ':')) if fair else '{}'
     here = os.path.dirname(os.path.abspath(__file__))
     for name, cfg in PAGES.items():
