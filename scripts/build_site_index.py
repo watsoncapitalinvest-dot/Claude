@@ -49,6 +49,7 @@ CATEGORY = {
     'scfl-twelve-months-on.html': 'Trade Desk',
     'scfl-who-wins-trades.html': 'Trade Desk',
     'scfl-trade-ledger.html': 'Trade Desk',
+    'scfl-trade-takeaways.html': 'Trade Desk',
     'scfl-grudge-report.html': 'Heat & Rivalries',
     # Investigations & Research
     'scfl-ir-study.html': 'Investigations & Research',

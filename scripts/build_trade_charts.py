@@ -248,8 +248,17 @@ def fairness():
         if big is None or abs(n) > big['margin']:
             wn, ls = (a, b) if n > 0 else (b, a)
             nm = lambda side: [x.get('name') or x.get('raw') for x in side['assets']]
+            # The name on the receipt is the name that franchise was playing
+            # under at the time, and this league renames teams mid-season. The
+            # 2022 deal below was signed by THE A-TEAM, who are Lil Chops now,
+            # so a page that prints only the receipt name describes a side the
+            # table never mentions again -- and, worse, describes the same
+            # franchise twice under two names without saying so.
             big = {'season': t['season'], 'margin': round(abs(n)),
                    'winner': wn['team'], 'loser': ls['team'],
+                   'winnerKey': wn['franchiseKey'], 'loserKey': ls['franchiseKey'],
+                   'winnerNow': fr.get(wn['franchiseKey'], wn['team']),
+                   'loserNow': fr.get(ls['franchiseKey'], ls['team']),
                    'winnerGot': nm(wn), 'loserGot': nm(ls)}
 
     return {'rows': rows, 'tc': tc, 'minDeals': MIN, 'skipped': skipped,
