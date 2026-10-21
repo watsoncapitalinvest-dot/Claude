@@ -613,8 +613,8 @@ def fig_spread(F):
             f'<tbody>{rows}</tbody></table></div>'
             f'<figcaption>All {V["tbl"][ME]["n"]} two-team deals, priced at the season each '
             f'was made in. {V["tbl"][ME]["e"]} of them finish inside twelve dollars either '
-            'way &mdash; the threshold the Trade Court uses to call a deal a win. Red is '
-            'the Machines ahead, blue behind.</figcaption></figure>')
+            'way &mdash; the threshold the Trade Court uses to call a deal a win. Gold '
+            'is level, red is the Machines ahead, blue behind.</figcaption></figure>')
 
 
 def fig_picks(F):
