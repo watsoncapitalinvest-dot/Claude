@@ -418,7 +418,8 @@ def build(season, week, art='', inset='', card=''):
         import importlib.util as _iu
         _s = _iu.spec_from_file_location('cc', os.path.join(ROOT, 'scripts', 'compose_cover.py'))
         cc = _iu.module_from_spec(_s); _s.loader.exec_module(cc)
-        cc.compose(art, os.path.basename(out), inset=inset)
+        cc.compose(art, os.path.basename(out), inset=inset,
+                   drop=int(cover.get('artDrop', 0)))
     else:
         doc = (COVER.replace('__QUARTERS__', quarters)
                     .replace('__AREA__', area).replace('__LINE__', line)

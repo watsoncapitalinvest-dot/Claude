@@ -64,7 +64,7 @@ def scrim(cover):
     return Image.composite(Image.new('RGB', (W, H), INK), cover, sc.resize((W, H)))
 
 
-def compose(art, out, top=240, inset=''):
+def compose(art, out, top=240, inset='', drop=0):
     """art (any aspect) -> a 1024x1536 cover at `out`. Returns the photo height.
 
     Nothing is cropped sideways, whatever shape it arrives in. The picture is
@@ -99,11 +99,25 @@ def compose(art, out, top=240, inset=''):
     bleed = abs(h / w - H / W) < 0.02
     if bleed:
         cover = src.resize((W, H), Image.LANCZOS)
+        if drop:
+            # The masthead panel is opaque and ends at MAST, so art drawn to
+            # the frame can put its subject's head right against that edge --
+            # which is what happened here: the helmet crown landed at 222 and
+            # the panel ends at 221, so the two touched and the head read as
+            # cut off. Sliding the picture down buys clearance, and the strip
+            # it opens at the top costs nothing because the masthead covers it.
+            # What it does cost is the same number of pixels off the bottom,
+            # which is the darkened type bed and the cheapest place to lose
+            # them.
+            slid = Image.new('RGB', (W, H), INK)
+            slid.paste(cover, (0, drop))
+            cover = slid
         cover = scrim(cover)
         p = os.path.join(ROOT, out)
         cover.save(p, quality=90, optimize=True)
         print(f'  {art} {w}x{h} -> {out} {W}x{H} '
-              f'({os.path.getsize(p)//1024}kb, full bleed)')
+              f'({os.path.getsize(p)//1024}kb, full bleed'
+              + (f', dropped {drop}px clear of the masthead' if drop else '') + ')')
         return H
 
     ph = round(h * W / w)                      # full width, nothing cropped sideways
@@ -177,9 +191,11 @@ def main():
     ap.add_argument('--art', required=True, help='the photograph, any aspect')
     ap.add_argument('--top', type=int, default=240,
                     help='y of the photograph in the 1536-tall cover')
+    ap.add_argument('--drop', type=int, default=0,
+                    help='slide full-bleed art down this many px, to clear the masthead')
     ap.add_argument('--out', default='')
     a = ap.parse_args()
-    compose(a.art, a.out or f'scfl-week-{a.week}-cover.jpg', a.top)
+    compose(a.art, a.out or f'scfl-week-{a.week}-cover.jpg', a.top, drop=a.drop)
 
 
 if __name__ == '__main__':
