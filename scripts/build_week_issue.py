@@ -25,6 +25,9 @@ _s = importlib.util.spec_from_file_location('bi', os.path.join(ROOT, 'scripts', 
 bi = importlib.util.module_from_spec(_s); sys.modules['bi'] = bi; _s.loader.exec_module(bi)
 _t = importlib.util.spec_from_file_location('sd', os.path.join(ROOT, 'scripts', 'standings.py'))
 sd = importlib.util.module_from_spec(_t); sys.modules['sd'] = sd; _t.loader.exec_module(sd)
+_h = importlib.util.spec_from_file_location('hist', os.path.join(ROOT, 'scripts', 'history.py'))
+history = importlib.util.module_from_spec(_h); sys.modules['hist'] = history
+_h.loader.exec_module(history)
 E = bi.esc
 
 # eight games a week, so the numerals have to reach eight -- stopping at
@@ -360,7 +363,95 @@ def preview_prose(season, week, st):
             return f'{who} lost to a side that had not won a game.'
         return ''
 
-    used = set()
+    hist = history.load().bind(tbl)
+    if hist.unresolved:
+        print('  note: no history for', ', '.join(hist.unresolved))
+    most_titles = max((hist.alltime(r['roster_id']) or {}).get('titles', 0) for r in tbl)
+    used = []
+
+    def thread(a, b, n):
+        """One line of history. Eighteen seasons is a lot of threads to pull.
+
+        Everything here is the stored series or the stored all-time table with
+        this season added -- rivalries.json stops at 2025, so quoting it raw
+        would publish a head-to-head that is a year stale and looks exactly
+        like a current one.
+        """
+        s_ = hist.series(a, b, st)
+        A, B = E(a['team']), E(b['team'])
+        if s_ and s_['g'] >= 10:
+            hi, lo = ((a, b) if s_['w'] >= s_['l'] else (b, a))
+            hw, hl = (s_['w'], s_['l']) if s_['w'] >= s_['l'] else (s_['l'], s_['w'])
+            # the stored row stops at 2025, so naming WHICH game the one
+            # defeat was is only safe when the one defeat cannot be a 2026 one
+            if hw / s_['g'] >= 0.78 and hl == 1 and s_['worst'] and not s_['this_season']:
+                g_ = s_['worst'] if s_['w'] >= s_['l'] else s_['biggest']
+                when = (f"a {g_['y']} playoff game" if g_ and g_.get('po')
+                        else f"week {g_['wk']} of {g_['y']}" if g_ else 'once')
+                t = (f'{E(lo["team"])} have beaten {E(hi["team"])} once in '
+                     f'{numw(s_["g"])} meetings, and it was {when}.')
+                if t and (r := _cap('lopsided', t)):
+                    return r
+            elif hw / s_['g'] >= 0.75:
+                t = (f'{E(hi["team"])} have won {numw(hw)} of the {numw(s_["g"])} they have '
+                     f'played, going back to {s_["first"]}.')
+                if r := _cap('lopsided', t):
+                    return r
+        if s_ and s_['w'] == s_['l'] and s_['g'] >= 8:
+            if r := _cap('level', f'They have played {numw(s_["g"])} times and won '
+                                  f'{numw(s_["w"])} each.'):
+                return r
+        if s_ and (s_['porec'] or {}).get('w', 0) + (s_['porec'] or {}).get('l', 0) >= 2:
+            pw, pl = s_['porec']['w'], s_['porec']['l']
+            tot, best = pw + pl, max(pw, pl)
+            lead = A if pw >= pl else B
+            how = ('and they have split them.' if pw == pl else
+                   f'and {lead} won both.' if best == tot == 2 else
+                   f'and {lead} won them all.' if best == tot else
+                   f'and {lead} won {numw(best)} of them.')
+            t = f'{upper1(numw(tot))} of their meetings have been playoff games {how}'
+            if r := _cap('playoffs', t):
+                return r
+        if s_ and s_['closest'] and abs(s_['closest']['for'] - s_['closest']['against']) <= 1:
+            c = s_['closest']
+            m = abs(c['for'] - c['against'])
+            t = (f'One of these finished {c["for"]:.0f}&ndash;{c["against"]:.0f} in {c["y"]}.'
+                 if m else f'One of these finished level, {c["for"]:.0f} each, in {c["y"]}.')
+            if r := _cap('closest', t):
+                return r
+        if s_ and s_['streak'] and s_['streak']['n'] >= 3:
+            wn = A if s_['streak']['kind'] == 'W' else B
+            if r := _cap('streak', f'{wn} have won the last {numw(s_["streak"]["n"])}.'):
+                return r
+        la, lb = hist.alltime(a['roster_id'], tbl), hist.alltime(b['roster_id'], tbl)
+        if la and lb and la['titles'] != lb['titles'] and max(la['titles'], lb['titles']):
+            t_, o_ = (a, la) if la['titles'] > lb['titles'] else (b, lb)
+            t = (f'{E(t_["team"])} have {numw(o_["titles"])} '
+                 + ('title' if o_['titles'] == 1 else 'titles')
+                 + (', which is more than anybody.' if o_['titles'] == most_titles
+                    else ' to their name.'))
+            if r := _cap('titles', t):
+                return r
+        if la and lb:
+            t = (f'{A} are {la["record"]} all time; {B} are {lb["record"]}.')
+            if r := _cap('lifetime', t):
+                return r
+        if s_ and s_['g'] >= 16:
+            lead = A if s_['w'] >= s_['l'] else B
+            t = (f'This is the {ordw(s_["g"] + 1)} meeting since {s_["first"]}, and '
+                 f'{lead} leads it {max(s_["w"], s_["l"])}&ndash;{min(s_["w"], s_["l"])}.')
+            if r := _cap('long', t):
+                return r
+        if s_ and s_['first']:
+            if r := _cap('first', f'They have been doing this since {s_["first"]}.'):
+                return r
+        return ''
+
+    def _cap(tag, text, cap=2):
+        if sum(1 for x in used if x == tag) >= cap:
+            return ''
+        used.append(tag)
+        return text
 
     def kicker(a, b, n):
         """One closing line, and it points at Sunday rather than away from it."""
@@ -377,7 +468,7 @@ def preview_prose(season, week, st):
                         f'{ordw(t["games"] + 1)} side asked to do something about it.')
         w = meet_again(a, b)
         if w and 'again' not in used:
-            used.add('again')
+            used.append('again')
             return f'They do this again in week {w}, so nobody settles anything on Sunday.'
         for lg in a.get('trail') or []:
             if (lg[4] or '').strip() == b['team'].strip():
@@ -425,6 +516,9 @@ def preview_prose(season, week, st):
                         else ', which is the best the card had.'))
         s.append(prospect(a, b, n, first))
         k = kicker(a, b, n)
+        th = thread(a, b, n)
+        if th:
+            s.append(th)
         covered = any(w in k for w in ('in a row', 'run of three', 'not lost a game'))
         back = ' '.join(x for x in (form(a, n, covered), form(b, n + 1, covered)) if x)
         if back:

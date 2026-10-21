@@ -11,7 +11,13 @@ const origin = process.argv[3] || 'http://localhost:8991';
 
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  const p = await b.newPage({ viewport: { width: 430, height: 860 } });
+  // 390x844 is the phone the magazine is actually read on. Fitting at 430x860
+  // measured a wider, taller page than anybody has: text wrapped into fewer
+  // lines and there were 16 more pixels to put them in, so pages that measured
+  // as fitting ran under the share button and the page counter on a real
+  // handset. Pages scroll, so the overflow was never lost -- it just meant the
+  // fitter was solving the wrong page.
+  const p = await b.newPage({ viewport: { width: 390, height: 844 } });
   await p.goto(`${origin}/${file}`, { waitUntil: 'networkidle' });
   await p.waitForTimeout(400);
   const out = await p.evaluate(async () => {

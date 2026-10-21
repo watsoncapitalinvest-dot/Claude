@@ -82,6 +82,29 @@ prints over a rout, and the quips characterise the **number**, never the shape
 of an afternoon only the replay knows. "It was over early" is not derivable
 from a margin. Neither is calling two 2-4 sides ".500".
 
+A preview is about **what happens next**. Each paragraph leads on what the
+result does — the record each side leaves at, the gap between these two, what
+the division looks like after — and last week appears only where it carries a
+hook. But a projected **division position** is not arithmetic: the other two
+sides in a division play on the same Sunday and can win too, so the fixture
+settles each side's record and the gap between the pair, and nothing else is
+stated forward. Anything about the rest of the table is present tense.
+
+The preview also pulls on **eighteen seasons**. `scripts/history.py` joins the
+sixteen current `roster_id`s to `records.json` (lifetime records and titles,
+2005–2025) and `rivalries.json` (107 pairwise series since 2008 — record,
+playoff meetings, biggest win, worst loss, closest game, first year). *"Killer
+Klowns have beaten THE MACHINES once in 27 meetings, and it was a 2024 playoff
+game."*
+
+**Both stored files stop at 2025**, so anything quoted as all-time is the
+stored row plus this season out of the week files — a year-stale head-to-head
+reads exactly like a correct one. `history.series()` normalises orientation
+once, so `biggest` is always a's biggest win over b; leaving that flip to the
+caller nearly printed the wrong game as the one defeat in a 26-1 series. A
+thread runs at most twice an issue, and a side that will not resolve to a
+franchise is **named in the build output** rather than quietly losing its past.
+
 That page is **derived, not written**: `preview_prose()` and
 `preview_blocks()` in `scripts/build_week_issue.py` read the fixtures out of
 `sleeper-schedule.json` and the records, streaks, divisions and prior meetings
