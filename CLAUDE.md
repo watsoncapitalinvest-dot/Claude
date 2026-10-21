@@ -59,11 +59,15 @@ record piece, an investigation. It does not mean a worked-out answer to one of
 John's questions, however much research went into it — *"These aren't articles.
 They are us talking and planning."*
 
-Every issue ends on what is next. A weekly issue closes with a **Next Week**
-page: the eight fixtures, the seeds they are played at, and what each one is
-actually worth — ordered so the biggest game is billed first and not buried
-fourth in a list of eight. A magazine that stops on the last result is a
-record; one that says what Sunday is worth is a magazine.
+Every issue ends on the season. A weekly issue closes with **Where Everybody
+Stands**: a line on each of the sixteen, then the next week's card with the
+biggest game billed first rather than buried fourth in a list of eight.
+
+The per-team line is **short and conversational, not an essay** — what they
+just did, then what is waiting for them. *"Got their first win of the season,
+89–67 over BIG BLUE, and draw Horsecollars next, fourth in the table."* Two
+clauses. A side with nothing remarkable on either end gets the plain version;
+nobody gets an invented angle to fill the row.
 
 That page is **derived, not written**: `preview_blocks()` in
 `scripts/build_week_issue.py` reads the fixtures out of `sleeper-schedule.json`

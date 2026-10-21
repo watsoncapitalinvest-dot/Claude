@@ -162,6 +162,112 @@ def cover_source(d, stories, lead):
     return stories[lead], False
 
 
+def upper1(x):
+    """Capitalise the first letter and leave the rest alone.
+
+    str.capitalize() lowercases everything after it, which turned every
+    opponent in these lines into "over horsecollars" and "to the machines".
+    """
+    return x[:1].upper() + x[1:] if x else x
+
+
+def a_div(name):
+    """'a Spartan game', but 'a Four Horsemen game' -- not 'a The Four Horsemen'."""
+    n = name[4:] if name.lower().startswith('the ') else name
+    return f'a {E(n)} game'
+
+
+def team_lines(season, week, st, stories):
+    """One short line per team: what they just did, and what is next.
+
+    Not an essay each. The shape John asked for is conversational and two
+    clauses long -- "got their first win, and will struggle to add to it next
+    week against a side that has not lost" -- so each line is the strongest
+    true thing about their week followed by the strongest true thing about
+    their next opponent. Both halves are picked from what the data actually
+    supports, and a team with nothing remarkable either side gets the plain
+    version rather than an invented angle.
+    """
+    nxt = week + 1
+    try:
+        sc = json.load(open(os.path.join(ROOT, 'sleeper-schedule.json'), encoding='utf-8'))
+        fixtures = sc['weeks'].get(str(nxt)) or []
+    except Exception:
+        fixtures = []
+    by = {r['roster_id']: r for r in st['table']}
+    opp = {}
+    for g in fixtures:
+        h, a = g.get('home_roster'), g.get('away_roster')
+        if h in by and a in by:
+            opp[h], opp[a] = by[a], by[h]
+
+    def did(t):
+        """What they just did."""
+        leg = (t.get('trail') or [])[-1] if t.get('trail') else None
+        if not leg:
+            return 'sat out'
+        _, res, me, them, who = leg
+        m = abs(me - them)
+        won = res == 'W'
+        pts = [x[2] for x in t['trail']]
+        if won and t['w'] == 1:
+            return f'got their first win of the season, {me:.0f}&ndash;{them:.0f} over {E(who)}'
+        if t['streak_kind'] == 'W' and t['streak_n'] >= 3:
+            return (f'made it {NUM_W[t["streak_n"]]} in a row, '
+                    f'{me:.0f}&ndash;{them:.0f} over {E(who)}')
+        if t['streak_kind'] == 'L' and t['streak_n'] >= 3:
+            return (f'lost their {ORD_W[t["streak_n"]]} in a row, '
+                    f'{me:.0f}&ndash;{them:.0f} to {E(who)}')
+        if me == max(pts) and len(pts) > 2:
+            return (f'posted a season-best {me:.0f} '
+                    + ('and won' if won else 'and lost anyway'))
+        if me == min(pts) and len(pts) > 2:
+            return (f'scraped a season-low {me:.0f} '
+                    + ('and won anyway' if won else 'in defeat'))
+        if m < 6:
+            return (f'{"edged" if won else "lost to"} {E(who)} by {m:.1f}')
+        if m > 45:
+            return (f'{"ran over" if won else "were run over by"} {E(who)} by {m:.0f}')
+        return f'{"beat" if won else "lost to"} {E(who)} {me:.0f}&ndash;{them:.0f}'
+
+    def ahead(t):
+        """What is next, and why it is hard or not."""
+        o = opp.get(t['roster_id'])
+        if not o:
+            return ''
+        if o['l'] == 0 and o['t'] == 0:
+            return (f'and will struggle to add to it against {E(o["team"])}, who have not lost'
+                    if t['w'] == 1 and t['streak_kind'] == 'W'
+                    else f'and get {E(o["team"])} next, still unbeaten at {o["record"]}')
+        if o['streak_kind'] == 'W' and o['streak_n'] >= 3:
+            return (f'and face {E(o["team"])} next, winners of '
+                    f'{NUM_W[o["streak_n"]]} straight')
+        if o['streak_kind'] == 'L' and o['streak_n'] >= 3:
+            return (f'and get {E(o["team"])} next, who have lost {NUM_W[o["streak_n"]]} '
+                    f'on the spin')
+        if t['div'] == o['div'] and abs(t['seed'] - o['seed']) <= 3:
+            return (f'and meet {E(o["team"])} next in {a_div(t["div_name"])} that '
+                    f'{"could close the gap" if t["seed"] > o["seed"] else "could open it up"}')
+        if o['seed'] <= 4:
+            return f'and draw {E(o["team"])} next, {ORD_W[o["seed"]]} in the table'
+        if o['seed'] >= 13:
+            tag = ('but coming off a win' if o['streak_kind'] == 'W'
+                   else 'and sinking')
+            return (f'and get {E(o["team"])} next, '
+                    f'{ORD_W[o["seed"]] if o["seed"] < len(ORD_W) else str(o["seed"]) + "th"} '
+                    f'{tag}')
+        return f'and play {E(o["team"])} next'
+
+    rows = ''
+    for t in st['table']:
+        tail = ahead(t)
+        rows += (f'<tr><th scope="row" class="lt">{E(t["team"])}<br>'
+                 f'<span class="dim">{t["record"]} &middot; {ORD_W[t["seed"]] if t["seed"] < len(ORD_W) else str(t["seed"]) + "th"}</span></th>'
+                 f'<td class="dim ev">{upper1(did(t))}'
+                 + (', ' + tail if tail else '') + '.</td></tr>')
+    return rows
+
+
 def preview_blocks(season, week, st):
     """Next week's card, and what is actually at stake in each game.
 
@@ -240,7 +346,13 @@ def preview_blocks(season, week, st):
                if pick[0]['div'] == pick[1]['div'] else '')
             + f'. The rest, in order of what the table says they are worth, follow it. Seeds '
               f'are as they stand after week {week}.</p>') if pick else ''
-    out = [('body', bill),
+    out = [('body', f'<p class="b">Sixteen teams, where each of them stands after week '
+                    f'{week} and what is waiting for them on Sunday.</p>'),
+           ('body', f'<div class="ad"><figure><div class="scroll"><table><thead><tr>'
+                    f'<th class="lt">Team</th><th class="lt">Where they are</th></tr></thead>'
+                    f'<tbody>{team_lines(season, week, st, None)}</tbody></table></div>'
+                    f'</figure></div>'),
+           ('pagebreak', bill),
            ('body', f'<div class="ad"><figure><div class="scroll"><table><thead><tr>'
                     f'<th class="lt">Week {nxt}</th><th class="num">Seed</th>'
                     f'<th class="lt">What is at stake</th></tr></thead>'
@@ -395,9 +507,9 @@ def build(season, week, remeasure=True):
     # result is a record; one that says what Sunday is worth is a magazine.
     pv = preview_blocks(season, week, st)
     if pv:
-        arts.append({'id': f'wk{week}-next', 'flag': f'Next Week \u00b7 Week {week + 1}',
-                     'headline': 'What To Watch', 'subhead':
-                     f'Where week {week + 1} leaves the table, game by game.',
+        arts.append({'id': f'wk{week}-next', 'flag': f'The Season \u00b7 After Week {week}',
+                     'headline': 'Where Everybody Stands',
+                     'subhead': f'All sixteen, and what week {week + 1} asks of them.',
                      'blocks': pv})
 
     out = f'scfl-week-{week}-issue.html'
