@@ -177,6 +177,87 @@ def a_div(name):
     return f'a {E(n)} game'
 
 
+def preview_prose(season, week, st):
+    """Next week previewed as an article: a paragraph a game, sixteen teams.
+
+    The table underneath says who plays whom. This says what it is worth, in
+    sentences, because a page of bullet points is a listing and not a read.
+
+    Every clause is derived. What a side did last week comes out of its trail,
+    the stake comes out of the division and the seeds, and the hooks -- an
+    unbeaten opponent, a run of three or more, a first win -- are only printed
+    when they are true. A fixture with nothing to say about it gets the
+    billing and stops, which is shorter than the invented alternative.
+    """
+    nxt = week + 1
+    try:
+        sc = json.load(open(os.path.join(ROOT, 'sleeper-schedule.json'), encoding='utf-8'))
+        fixtures = sc['weeks'].get(str(nxt)) or []
+    except Exception:
+        return []
+    if not fixtures or nxt >= int(st.get('playoff_week') or 99):
+        return []
+    by = {r['roster_id']: r for r in st['table']}
+    pairs = []
+    for g in fixtures:
+        a, b = by.get(g.get('home_roster')), by.get(g.get('away_roster'))
+        if a and b:
+            pairs.append((a, b) if a['seed'] <= b['seed'] else (b, a))
+    pairs.sort(key=lambda x: x[0]['seed'] + x[1]['seed'])
+
+    def form(t, brief=False):
+        """Last week, in a clause."""
+        leg = (t.get('trail') or [])[-1] if t.get('trail') else None
+        if not leg:
+            return f'{E(t["team"])} did not play'
+        _, res, me, them, who = leg
+        won, m = res == 'W', abs(me - them)
+        if won and t['w'] == 1:
+            return f'{E(t["team"])} won for the first time, {me:.0f}&ndash;{them:.0f} over {E(who)}'
+        if t['streak_kind'] == 'W' and t['streak_n'] >= 3:
+            return (f'{E(t["team"])} have won {NUM_W[t["streak_n"]]} straight, the latest '
+                    f'{me:.0f}&ndash;{them:.0f} over {E(who)}')
+        if t['streak_kind'] == 'L' and t['streak_n'] >= 3:
+            return (f'{E(t["team"])} have lost {NUM_W[t["streak_n"]]} in a row, the latest '
+                    f'{me:.0f}&ndash;{them:.0f} to {E(who)}')
+        if m > 45:
+            return (f'{E(t["team"])} {"beat" if won else "lost to"} {E(who)} by '
+                    f'{m:.0f}')
+        if m < 6:
+            return (f'{E(t["team"])} {"survived" if won else "fell to"} {E(who)} by {m:.1f}')
+        return f'{E(t["team"])} {"beat" if won else "lost to"} {E(who)} {me:.0f}&ndash;{them:.0f}'
+
+    def stake(a, b, first):
+        left = max(0, int(st['playoff_week']) - 1 - int(st['through']))
+        wks = f'{NUM_W[left] if left < len(NUM_W) else left} week{"" if left == 1 else "s"}'
+        if a['div'] == b['div']:
+            gap = a['w'] - b['w']
+            dv = E(a['div_name'])
+            if first:
+                return ('It is a division game as well, and the one that decides ' + dv +
+                        (f': {E(a["team"])} lead by '
+                         f'{NUM_W[gap] if gap < len(NUM_W) else gap} with {wks} to play'
+                         if gap else ', with the two of them level at the top of it'))
+            return (f'{E(a["team"])} are {NUM_W[gap] if gap < len(NUM_W) else gap} clear of '
+                    f'them in {dv}' if gap else f'They are level in {dv}')
+        return (f'{ORD_W[a["seed"]].capitalize()} plays '
+                f'{ORD_W[b["seed"]] if b["seed"] < len(ORD_W) else str(b["seed"]) + "th"}')
+
+    out = []
+    for n, (a, b) in enumerate(pairs):
+        first = n == 0
+        head = (f'<b>{E(a["team"])} ({a["record"]}) play {E(b["team"])} ({b["record"]})</b>'
+                + (' in the game of the week' if first else ''))
+        bits = [f'{head}. {stake(a, b, first)}.']
+        bits.append(form(a) + '; ' + form(b) + '.')
+        if b['l'] == 0 and b['t'] == 0:
+            bits.append(f'{E(b["team"])} have not lost yet.')
+        elif a['l'] == 0 and a['t'] == 0 and not first:
+            bits.append(f'{E(a["team"])} have not lost yet.')
+        out.append(('body', '<p class="b">' + ' '.join(bits) + '</p>'))
+    return out
+
+
 def team_lines(season, week, st, stories):
     """One short line per team: what they just did, and what is next.
 
@@ -346,13 +427,7 @@ def preview_blocks(season, week, st):
                if pick[0]['div'] == pick[1]['div'] else '')
             + f'. The rest, in order of what the table says they are worth, follow it. Seeds '
               f'are as they stand after week {week}.</p>') if pick else ''
-    out = [('body', f'<p class="b">Sixteen teams, where each of them stands after week '
-                    f'{week} and what is waiting for them on Sunday.</p>'),
-           ('body', f'<div class="ad"><figure><div class="scroll"><table><thead><tr>'
-                    f'<th class="lt">Team</th><th class="lt">Where they are</th></tr></thead>'
-                    f'<tbody>{team_lines(season, week, st, None)}</tbody></table></div>'
-                    f'</figure></div>'),
-           ('pagebreak', bill),
+    out = preview_prose(season, week, st) + [('pagebreak', bill),
            ('body', f'<div class="ad"><figure><div class="scroll"><table><thead><tr>'
                     f'<th class="lt">Week {nxt}</th><th class="num">Seed</th>'
                     f'<th class="lt">What is at stake</th></tr></thead>'
@@ -507,9 +582,11 @@ def build(season, week, remeasure=True):
     # result is a record; one that says what Sunday is worth is a magazine.
     pv = preview_blocks(season, week, st)
     if pv:
-        arts.append({'id': f'wk{week}-next', 'flag': f'The Season \u00b7 After Week {week}',
-                     'headline': 'Where Everybody Stands',
-                     'subhead': f'All sixteen, and what week {week + 1} asks of them.',
+        arts.append({'id': f'wk{week}-next',
+                     'flag': f'The Preview \u00b7 Week {week + 1}',
+                     'headline': 'What Sunday Is Worth',
+                     'subhead': f'Eight games, sixteen teams, and what week '
+                                f'{week + 1} does to the table.',
                      'blocks': pv})
 
     out = f'scfl-week-{week}-issue.html'

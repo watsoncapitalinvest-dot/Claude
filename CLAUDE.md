@@ -59,22 +59,22 @@ record piece, an investigation. It does not mean a worked-out answer to one of
 John's questions, however much research went into it — *"These aren't articles.
 They are us talking and planning."*
 
-Every issue ends on the season. A weekly issue closes with **Where Everybody
-Stands**: a line on each of the sixteen, then the next week's card with the
-biggest game billed first rather than buried fourth in a list of eight.
+Every issue ends on next week. A weekly issue closes with **What Sunday Is
+Worth**: a written preview, then the fixture card.
 
-The per-team line is **short and conversational, not an essay** — what they
-just did, then what is waiting for them. *"Got their first win of the season,
-89–67 over BIG BLUE, and draw Horsecollars next, fourth in the table."* Two
-clauses. A side with nothing remarkable on either end gets the plain version;
-nobody gets an invented angle to fill the row.
+The preview is **an article, not a list** — a paragraph a game, eight of them,
+so all sixteen teams get covered and every one of them gets said something
+about. Each paragraph bills the fixture, says what it is worth, and carries
+what both sides did last week. Ordered so the biggest game leads and is not
+buried fourth in a list of eight. The card underneath says who plays whom; the
+prose says why anyone should care.
 
-That page is **derived, not written**: `preview_blocks()` in
-`scripts/build_week_issue.py` reads the fixtures out of `sleeper-schedule.json`
-and the records, streaks, divisions and prior meetings out of the table, and
-prints only the true things it finds. A game with nothing to say about it gets
-the bare records. Eight lines of "should be a good one" is worse than no
-preview at all.
+That page is **derived, not written**: `preview_prose()` and
+`preview_blocks()` in `scripts/build_week_issue.py` read the fixtures out of
+`sleeper-schedule.json` and the records, streaks, divisions and prior meetings
+out of the table, and print only the true things they find. A fixture with
+nothing to say about it gets the billing and stops. Eight paragraphs of
+"should be a good one" is worse than no preview at all.
 
 `scripts/build_notes.py` and `desk-notes.json` exist for short pieces John
 asks for. `desk-notes.json` is **gitignored**, because what ended up in it was
