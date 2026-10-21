@@ -46,6 +46,7 @@ CATEGORY = {
     'scfl-offseason-heat.html': 'Heat & Rivalries',
     'scfl-trade-audit.html': 'Investigations & Research',
     'scfl-twelve-months-on.html': 'Trade Desk',
+    'scfl-who-wins-trades.html': 'Trade Desk',
     'scfl-trade-ledger.html': 'Trade Desk',
     'scfl-grudge-report.html': 'Heat & Rivalries',
     # Investigations & Research

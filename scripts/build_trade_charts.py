@@ -32,7 +32,7 @@ The card is drawn here rather than screenshotted, so rebuilding the pages
 cannot leave a stale picture behind. Same red-ahead, blue-behind, same rows,
 same order.
 """
-import json, os, re
+import json, os, re, statistics, subprocess, sys
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -49,6 +49,15 @@ PAGES = {
         'desc': ("What every franchise's trades were worth the day it made them, and "
                  "what the same deals were worth a year later to the day. One fixed "
                  "clock for all of them."),
+    },
+    'scfl-who-wins-trades.html': {
+        'tpl': 'fair',
+        'title': 'Who Wins The Trades',
+        'kicker': 'The Trade Desk · Who Wins The Trades',
+        'og': 'scfl-who-wins-trades-og.jpg',
+        'desc': ("Every priced deal in the dynasty ledger, split three ways for each "
+                 "franchise: won, fair, lost. Priced at the season each trade was made, "
+                 "with nothing the table did not know."),
     },
     'scfl-trade-ledger.html': {
         'tpl': 'ledger',
@@ -89,6 +98,65 @@ def head(name, cfg, stamp):
             f'<meta property="og:image" content="{SITE}/{cfg["og"]}">\n'
             f'<meta property="og:image:alt" content="{t}">\n'
             f'<meta name="twitter:card" content="summary_large_image">\n')
+
+
+def fairness():
+    """Every franchise's priced deals split into won, fair and lost.
+
+    The same board the Trade Audit grades on, read for all sixteen rather
+    than for one: each deal is priced at the August of the season it was made
+    in, a win is a net above the Trade Court's own threshold, a loss below
+    minus it, and everything between is fair. A trade appears twice, once from
+    each side, because it has two verdicts.
+
+    Three-team deals are left out and counted out loud: their receipts do not
+    say which side each asset came from, so no net can be formed without
+    guessing.
+
+    tradeValues.json is gitignored and rebuilt on demand, the same way
+    build_trade_audit.py does it.
+    """
+    path = os.path.join(ROOT, 'tradeValues.json')
+    if not os.path.exists(path):
+        subprocess.run([sys.executable, os.path.join(ROOT, 'scripts',
+                                                     'build_trade_values.py')],
+                       cwd=ROOT, capture_output=True)
+    if not os.path.exists(path):
+        return None
+    d = json.load(open(path, encoding='utf-8'))
+    fr = {f['key']: f['club'] for f in
+          json.load(open(os.path.join(ROOT, 'scfl-franchises.json'),
+                         encoding='utf-8'))['franchises']}
+    # whole seasons only -- the one in progress is a quarter of a season
+    cnt = json.load(open(os.path.join(ROOT, 'trade-counts.json'), encoding='utf-8'))
+    part = {int(s) for s in (cnt.get('partSeasons') or [])}
+    seasons = sorted({t['season'] for t in d['trades']} - part)
+
+    tc, per, skipped = 12, {}, 0
+    for t in d['trades']:
+        if t['season'] in part:
+            continue
+        if len(t['sides']) != 2:
+            skipped += 1
+            continue
+        a, b = t['sides']
+        for me, other in ((a, b), (b, a)):
+            per.setdefault(me['franchiseKey'], []).append(me['total'] - other['total'])
+    rows = []
+    for k, v in per.items():
+        w = sum(1 for x in v if x > tc)
+        l = sum(1 for x in v if x < -tc)
+        rows.append({'k': k, 'club': fr.get(k, k), 'n': len(v), 'w': w, 'l': l,
+                     'e': len(v) - w - l, 'net': round(sum(v)),
+                     'med': round(statistics.median(v), 1)})
+    rows.sort(key=lambda r: (-(r['w'] - r['l']), -r['n']))
+    MIN = 10
+    rank = [r for r in rows if r['n'] >= MIN]
+    return {'rows': rows, 'tc': tc, 'minDeals': MIN, 'skipped': skipped,
+            'seasons': seasons,
+            'totals': {'n': sum(r['n'] for r in rows), 'w': sum(r['w'] for r in rows),
+                       'e': sum(r['e'] for r in rows), 'l': sum(r['l'] for r in rows)},
+            'fairest': max(rank, key=lambda r: r['e'] / r['n'])}
 
 
 def rows_from(d):
@@ -169,6 +237,55 @@ def card(rows, cfg, path):
     return path
 
 
+def card_fair(f, cfg, path):
+    """A 1200x630 card: the same stacked bars, drawn rather than screenshotted."""
+    W, H = 1200, 630
+    im = Image.new('RGB', (W, H), PAPER)
+    dr = ImageDraw.Draw(im)
+
+    def font(sz, bold=False):
+        for p in ('/usr/share/fonts/truetype/dejavu/DejaVuSerif%s.ttf',
+                  '/usr/share/fonts/truetype/liberation/LiberationSerif-%s.ttf'):
+            try:
+                return ImageFont.truetype(p % ('-Bold' if bold else ''), sz)
+            except OSError:
+                pass
+        try:
+            return ImageFont.truetype(
+                '/usr/share/fonts/truetype/dejavu/DejaVuSans%s.ttf'
+                % ('-Bold' if bold else ''), sz)
+        except OSError:
+            return ImageFont.load_default()
+
+    FAIRC = (184, 138, 31)
+    dr.text((56, 40), 'SKIRT CHASERS  ·  THE TRADE DESK', font=font(17, True), fill=UP)
+    dr.text((54, 70), cfg['title'], font=font(50, True), fill=INK)
+    dr.line([(56, 144), (W - 56, 144)], fill=INK, width=3)
+
+    rows = [r for r in f['rows'] if r['n'] >= f['minDeals']]
+    L, R, T = 290, W - 210, 176
+    rowh = (H - T - 46) / len(rows)
+    bh = min(20, rowh * 0.46)
+    for i, r in enumerate(rows):
+        y = T + rowh * i + rowh / 2
+        if i % 2 == 0:
+            dr.rectangle([0, y - rowh / 2, W, y + rowh / 2], fill=STOCK)
+        x = L
+        for v, c in ((r['w'], UP), (r['e'], FAIRC), (r['l'], DOWN)):
+            if not v:
+                continue
+            w = (R - L) * v / r['n']
+            dr.rectangle([x, y - bh / 2, x + max(w - 2, 1), y + bh / 2], fill=c)
+            x += w
+        f1 = font(20, True)
+        nm = r['club']
+        dr.text((L - 22 - dr.textlength(nm, font=f1), y - 12), nm, font=f1, fill=INK)
+        rec = f"{r['w']}\u2013{r['l']}"
+        dr.text((R + 20, y - 12), rec, font=font(20, True), fill=INK)
+    im.save(os.path.join(ROOT, path), quality=92, optimize=True)
+    return path
+
+
 def build():
     d = json.load(open(os.path.join(ROOT, SRC), encoding='utf-8'))
     rows, tc = rows_from(d)
@@ -191,15 +308,23 @@ def build():
                       for x in t['sides']]} for t in d['trades']],
     }, separators=(',', ':'))
 
+    fair = fairness()
+    fair_data = json.dumps(fair, separators=(',', ':')) if fair else '{}'
     here = os.path.dirname(os.path.abspath(__file__))
     for name, cfg in PAGES.items():
+        if cfg['tpl'] == 'fair' and not fair:
+            print(f'  {name}: skipped, tradeValues.json could not be built')
+            continue
         tpl = open(os.path.join(here, 'tpl', f'{cfg["tpl"]}.html'),
                    encoding='utf-8').read()
-        body = tpl.replace('__DATA__', lines_data if cfg['tpl'] == 'lines' else full_data)
+        body = tpl.replace('__DATA__',
+                           fair_data if cfg['tpl'] == 'fair' else
+                           lines_data if cfg['tpl'] == 'lines' else full_data)
         html = '<!doctype html>\n<html lang="en">\n<head>\n' + head(name, cfg, stamp) \
                + '</head>\n<body>\n' + body + '\n</body>\n</html>\n'
         open(os.path.join(ROOT, name), 'w', encoding='utf-8').write(html)
-        c = card(rows, cfg, cfg['og'])
+        c = (card_fair(fair, cfg, cfg['og']) if cfg['tpl'] == 'fair'
+             else card(rows, cfg, cfg['og']))
         print(f'  {name}  ({len(html) // 1024}kb)  card {c}')
 
 
