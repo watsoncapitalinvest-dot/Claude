@@ -351,6 +351,10 @@ def facts():
                   'me': next((r for r in hind_window(H, set(seasons), None)
                               if r['key'] == ME), None)})(hindsight()),
         'gaps': [r for r in (TC.surplus(ME) or []) if len(r['with']) == 1],
+        'dropped': (lambda p: [c for c in json.load(open(p, encoding='utf-8'))['corrections']
+                               if c.get('drop')]
+                    if os.path.exists(p) else [])(
+            os.path.join(ROOT, 'register-corrections.json')),
         'part': sorted(part),
         'vol_span': cnt['span'],
         'vol_rank': [r['key'] for r in cnt['franchises'] if r['active']],
@@ -1045,6 +1049,13 @@ def fig_picks(F):
 
 
 def method(F):
+    # The register writes a date as 2025-08-24 and a pick as "2027 2nd Rd Pick
+    # (nWo)". Neither belongs in a sentence.
+    MON = ('January February March April May June July August September '
+           'October November December').split()
+    def longdate(d):
+        y, m, day = (int(x) for x in d.split('-'))
+        return f'{day} {MON[m - 1]} {y}'
     money = lambda v: ('minus $' if v < 0 else '$') + f'{abs(v):,.0f}'
     """How the numbers were made. Published with the piece, not behind it."""
     V, sp = F['val'], F['span']
@@ -1103,29 +1114,24 @@ def method(F):
                  + '<b>Any figure in this piece that the register will not '
                    'back is not in this piece.</b></p>'),
         # The one entry that is not counted, and why.
-        # The row the desk got wrong, and how. Left in because a reader is
-        # owed the correction more than the desk is owed a clean story.
-        ('body', (lambda g: f'<p class="b"><b>And where they differ, the register is '
-                  f'right.</b> '
-                  + '; '.join(
-                      f'It holds {word(abs(r["over"]))} more {r["season"]} '
-                      f'deal{"" if abs(r["over"]) == 1 else "s"} between The Machines '
-                      f'and {E(" and ".join(r["clubs"]))} than the ledger does'
-                      for r in g)
-                  + f'. That deal is one this desk originally threw out. The register '
-                  f'had it on the league&rsquo;s draft day with The Machines sending '
-                  f'Travis Kelce, Ben Sinnott and a 2027 second, and nothing at all '
-                  f'recorded coming back &mdash; so it was excluded, on the rule that a '
-                  f'deal needs two sides. Excluding it made the two sources agree '
-                  f'perfectly, which is the kind of tidy that should have been a '
-                  f'warning. It was a real trade, badly entered: the other side was Big '
-                  f'Blue, not the franchise named, and what came back was TJ Hockenson. '
-                  f'Priced at the day it was made it is a push, {money(7.8)} to The '
-                  f'Machines. The correction is logged in '
-                  f'register-corrections.json with who gave it and what it rests on; '
-                  f'the itemised ledger has never carried the deal at all, which is the '
-                  f'gap above.</p>'
-                  )(F['gaps']) if F.get('gaps') else ''),
+        # The row that is not in any of this, and why. It is named rather
+        # than quietly dropped: a reader cannot check a figure whose
+        # exclusions are invisible.
+        ('body', (lambda c: f'<p class="b"><b>One row is left out of everything.</b> '
+                  f'The register carries an entry from {longdate(c["date"])} &mdash; '
+                  f'the league&rsquo;s draft day, nine entries deep &mdash; with only '
+                  f'one side filled in: The Machines sending Travis Kelce, Ben Sinnott '
+                  f'and a 2027 second, and nothing entered coming back. A deal '
+                  f'needs two sides. The commissioner offered a reading of what the '
+                  f'other half had been and then could not confirm it, and an '
+                  f'unconfirmed trade is not one this desk will count, price or '
+                  f'publish. So it is in no table here. Without it the register and the '
+                  f'itemised ledger agree on every franchise in every season, which is '
+                  f'tidy and is not the reason: the row is out because nobody can say '
+                  f'what it was. It is written down in full in '
+                  f'register-corrections.json, and it goes back in the day somebody '
+                  f'can.</p>'
+                  )(F['dropped'][0]) if F.get('dropped') else ''),
         ('body', '<p class="b"><b>Players</b> are priced from the DynastyProcess superflex '
                  'board, taken from the August snapshot of the season the trade was made '
                  'in. Not today&rsquo;s. A player who became a star in 2024 is priced in a '

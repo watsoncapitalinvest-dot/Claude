@@ -149,14 +149,21 @@ def read_register(path_a, path_b, look):
     # register-corrections.json for why they live in a file rather than in a
     # hand-edit of the export or of the output.
     cp = os.path.join(ROOT, 'register-corrections.json')
-    applied, missing = [], []
+    applied, missing, dropped_ids = [], [], []
     if os.path.exists(cp):
         for c in json.load(open(cp, encoding='utf-8'))['corrections']:
             t = trades.get(c['id'])
             if not t:
                 missing.append(c['id'])
                 continue
-            for k, v in c['set'].items():
+            # A row nobody can vouch for is removed from everything rather
+            # than counted on a best guess. The row's contents stay in
+            # register-corrections.json so it can be put back.
+            if c.get('drop'):
+                del trades[c['id']]
+                dropped_ids.append(c['id'])
+                continue
+            for k, v in (c.get('set') or {}).items():
                 t[k] = list(v) if isinstance(v, list) else v
             if 'teams' in c['set']:
                 t['keys'] = [look.get(norm(n)) for n in t['teams']]
@@ -173,7 +180,8 @@ def read_register(path_a, path_b, look):
              'assets': sum(len(t['a']) + len(t['b']) for t in trades.values()),
              'oneSided': sum(1 for t in trades.values()
                              if not t['a'] or not t['b']),
-             'corrected': applied, 'correctionsNotFound': missing}
+             'corrected': applied, 'correctionsNotFound': missing,
+             'droppedUnconfirmed': dropped_ids}
     return trades, audit
 
 
@@ -418,6 +426,9 @@ def main():
           f'absent {audit["absentIds"]}'
           + (f', stored counter {audit["storedCounter"]}'
              if audit['storedCounter'] else ''))
+    if audit.get('droppedUnconfirmed'):
+        print(f'    dropped as unconfirmed: register rows '
+              f'{audit["droppedUnconfirmed"]} (register-corrections.json)')
     if audit.get('corrected'):
         print(f'    corrections applied to register rows '
               f'{audit["corrected"]} (register-corrections.json)')
