@@ -183,3 +183,44 @@ works off data we have.
    in place. I'd lean toward a separate file so `trades.json` stays the
    clean itemized source-of-record and this stays a derived/rebuildable
    layer — open to pushback.
+
+## Why the priced window starts in 2021, and cannot be moved
+
+Asked in October 2026 whether the audit could reach back past 2021, so this
+was hunted properly and the answer is no. Writing it down so nobody spends
+the afternoon on it again.
+
+The limit is NOT the trades. John's Obvibase register names every player and
+pick in 550 trades back to 2016 — `scripts/build_trade_counts.py` reads it.
+The limit is that there is nothing contemporaneous to price those trades
+against.
+
+`dp-values.json` is built from DynastyProcess, which derives its values from
+FantasyPros expert consensus rankings. The full ECR history ships in that
+project's own repo (github.com/dynastyprocess/data, `files/db_fpecr.csv.gz`,
+1.5M rows, 69 months). Every ranking type in it, with its first scrape:
+
+    do   dynasty overall        2019-12-27
+    dp   dynasty (1QB)          2019-12-27
+    rp   redraft                2019-12-27
+    dsf  DYNASTY SUPERFLEX      2020-10-16
+    rsf  redraft superflex      2021-01-01
+    drk  dynasty rookie         2020-10-17
+
+**The series this league needs — dynasty superflex — begins 16 October
+2020.** The SCFL trades from July, so the first August that can be priced is
+August 2021, which is exactly where `dp-values.json` already starts. There is
+no earlier snapshot being left on the table.
+
+The 1QB dynasty series does reach back to December 2019, and it is tempting.
+Do not use it. This is a superflex league, where the gap between formats is
+almost entirely quarterbacks, and quarterbacks are the currency here — pricing
+a superflex trade off a 1QB board would systematically undervalue every
+passer in the ledger. That is worse than not pricing it, because it would
+look like a number.
+
+What would actually open 2016-2020: a contemporaneous superflex dynasty value
+board from those years, from any source. Not rankings of players we can look
+up now — a snapshot of what the market thought *then*. If one turns up,
+`dp-values.json` takes more columns and the window moves; nothing else in the
+model has to change.

@@ -512,19 +512,32 @@ def prose(F):
     run = 1
     while run < len(F['rate']) and F['rate'][run] == F['rate'][0]:
         run += 1
-    seq = ', '.join(str(n) for n in F['rate'][:-1]) + f' and {F["rate"][-1]}'
-    streak = (f' {word(run).capitalize()} straight seasons on the same number, '
-              f'{word(F["rate"][0])}, and then {word(F["rate"][-1])}.'
-              if run >= 3 else
-              f' Never fewer than {word(lo)}, never more than {word(hi)}.')
+    n = len(F['rate'])
+    seq = ', '.join(str(x) for x in F['rate'][:-1]) + f' and {F["rate"][-1]}'
+    # Three shapes, because the run can be the whole window, part of it, or
+    # nothing, and a sentence written for one of those is wrong for the other
+    # two: "five straight seasons on the same number, thirteen, and then
+    # thirteen" is what the middle version printed when the run went all the
+    # way, and "he does his thirteen or thirteen" is what the tail did.
+    if run == n:
+        streak = (f' {word(n).capitalize()} seasons, {word(lo)} deals, '
+                  f'{word(lo)} deals, {word(lo)} deals, {word(lo)} deals, '
+                  f'{word(lo)} deals.')
+        close = f'He does his {word(lo)} and goes back to work.'
+    elif run >= 3:
+        streak = (f' {word(run).capitalize()} straight seasons on the same number, '
+                  f'{word(F["rate"][0])}, and then {word(F["rate"][-1])}.')
+        close = f'He does his {word(lo)} or {word(hi)} and goes back to work.'
+    else:
+        streak = f' Never fewer than {word(lo)}, never more than {word(hi)}.'
+        close = f'He does his {word(lo)} to {word(hi)} and goes back to work.'
     rhythm = (f' And the rate does not move. The league\'s trade register has him at '
               f'{seq} deals across those five seasons.{streak} The league\'s own total '
               f'over the same five years went '
-              f'{", ".join(str(n) for n in F["league_rate"][:-1])} and '
+              f'{", ".join(str(x) for x in F["league_rate"][:-1])} and '
               f'{F["league_rate"][-1]} — {word(max(F["league_rate"]) - min(F["league_rate"]))} '
               f'deals between its busiest summer and its quietest. The market around him '
-              f'fills up and empties out. He does his {word(lo)} or {word(hi)} and goes '
-              f'back to work.')
+              f'fills up and empties out. {close}')
     P.append(busy + rhythm + ' Whatever he is doing, he is doing it in public, on a '
              'schedule, with everyone.')
 
@@ -896,11 +909,14 @@ def method(F):
                  f'{sp[0]}.</p>'
                  f'<p>The gap between those two dates is not a gap in the trades. It is a '
                  f'gap in the <i>prices</i>. A deal is valued here at what its players '
-                 f'were worth the August it was made, and the DynastyProcess snapshots '
-                 f'this desk has begin in {sp[0]}. So a 2017 trade can be listed, counted '
-                 f'and read; it cannot be graded, because there is no honest number to '
-                 f'grade it against. <b>If anybody has dynasty valuations from before '
-                 f'{sp[0]}, that is the thing that would open the other five seasons.</b></p>'
+                 f'were worth the August it was made, and that board does not exist for '
+                 f'the earlier years. The dynasty <i>superflex</i> consensus this league '
+                 f'runs on &mdash; the one where a quarterback is worth what a '
+                 f'quarterback is worth here &mdash; was first published on 16 October '
+                 f'2020. The SCFL trades from July, so the first August that can be '
+                 f'priced is August {sp[0]}. A 2017 deal can be listed, counted and read. '
+                 f'It cannot be graded, because there is no honest number to grade it '
+                 f'against, and a dishonest one would still look like a number.</p>'
                  f'<p>Five seasons is also the window that bears on anything. These are '
                  f'the deals whose players are on these rosters, in this league, this '
                  f'Sunday.</p>'
@@ -924,29 +940,32 @@ def method(F):
                  f'{F["recon"]["master"]} on the table; '
                  f'{word(F["recon"]["exact"])} of the {word(len(F["recon"]["rows"]))} '
                  f'franchises agree exactly, and the largest gap anywhere is '
-                 f'{word(F["recon"]["worst"])} '
-                 f'deal{"" if F["recon"]["worst"] == 1 else "s"} in one season. The '
-                 f'Machines&rsquo; own rows differ by {word(F["recon_me"])} '
-                 f'deal{"" if F["recon_me"] == 1 else "s"} across the five years. '
-                 f'Any figure in this piece that the register will not '
-                 f'back is not in this piece.</p>'),
-        # Where the two differ, and what the difference turned out to be.
-        ('body', (lambda g: f'<p class="b"><b>Where they differ.</b> '
-                  + ('In one place. ' if len(g) == 1 else f'In {word(len(g))} places. ')
-                  + '; '.join(
-                      f'The register holds {word(abs(r["over"]))} '
-                      f'{"more" if r["over"] < 0 else "fewer"} '
-                      f'{r["season"]} deal{"" if abs(r["over"]) == 1 else "s"} between '
-                      f'The Machines and {E(" and ".join(r["clubs"]))} than the ledger '
-                      f'does' for r in g)
-                  + f'. The one it has and the ledger does not is dated 24 August 2025 '
-                  f'and is recorded with nothing coming back: Travis Kelce, a 2027 '
-                  f'second and Ben Sinnott out of The Machines, and no return entered '
-                  f'against it. It is not priced in this piece, because a trade with an '
-                  f'empty side is as likely to be a record somebody never finished as a '
-                  f'gift, and this desk cannot tell which from here. It is noted rather '
-                  f'than used.</p>'
-                  )(F['gaps']) if F.get('gaps') else ''),
+                 + ('nothing at all &mdash; the two agree on every franchise in every '
+                    'season, deal for deal. '
+                    if not F['recon']['worst'] else
+                    f'{word(F["recon"]["worst"])} '
+                    f'deal{"" if F["recon"]["worst"] == 1 else "s"} in one season. The '
+                    f'Machines&rsquo; own rows differ by {word(F["recon_me"])} '
+                    f'deal{"" if F["recon_me"] == 1 else "s"} across the five years. ')
+                 + '<b>Any figure in this piece that the register will not '
+                   'back is not in this piece.</b></p>'),
+        # The one entry that is not counted, and why.
+        ('body', (lambda d: f'<p class="b"><b>One entry is left out, and it is named '
+                  f'here rather than quietly dropped.</b> A deal needs two sides. '
+                  f'{word(F["reg"]["oneSided"]).capitalize()} entries in the register '
+                  f'have nothing recorded against one of theirs; '
+                  f'{word(F["reg"]["oneSided"] - len(d))} are legs of multi-team trades, '
+                  f'where that is not only normal but right &mdash; a relay leg is one '
+                  f'half of a team receiving from one partner and sending to another. '
+                  f'The last is not a leg. It carries a trade number of its own, dated '
+                  f'24 August {d[0]["season"]}, the league&rsquo;s draft day and the '
+                  f'busiest page in the register: '
+                  f'{E(d[0]["teams"][d[0]["side"]])} give '
+                  f'{E(", ".join(d[0]["gave"]))}, and nothing is entered coming back. '
+                  f'A record like that is evidence of a record, not of a trade, so it is '
+                  f'not counted and not priced. Fill in what came the other way and it '
+                  f'goes in.</p>'
+                  )(F['cnt']['notCounted']) if F['cnt'].get('notCounted') else ''),
         ('body', '<p class="b"><b>Players</b> are priced from the DynastyProcess superflex '
                  'board, taken from the August snapshot of the season the trade was made '
                  'in. Not today&rsquo;s. A player who became a star in 2024 is priced in a '

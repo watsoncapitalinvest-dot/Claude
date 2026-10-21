@@ -156,15 +156,48 @@ def read_register(path_a, path_b, look):
 
 
 def fold(trades):
-    """Legs into deals: {(season, deal no): {franchise keys}}.
+    """Legs into deals: {(season, deal no): {franchise keys}}, and what was left out.
 
     20.1 and 20.2 are legs of deal 20. The 2019 block numbered 1901-1905 is
     five separate deals and int() leaves it alone.
+
+    A STANDALONE ENTRY WITH AN EMPTY SIDE IS NOT COUNTED AS A DEAL. Six
+    entries in the register have nothing recorded against one side. Five of
+    them are legs of multi-leg trades, where one-sidedness is not only normal
+    but correct -- a relay leg is a team receiving from one partner and
+    sending to another, and the leg records half of it. The sixth is not a
+    leg. It is a trade number of its own with one side filled in and the other
+    blank, and a record like that is evidence of a record, not of a trade.
+
+    It is 2025 #13, dated 24 August 2025 -- the league's draft day, which is
+    the busiest page in the register, nine entries deep, and the likeliest
+    place for a row to be opened and never finished. John does not recognise
+    the deal. And it is the ONLY thing standing between the register and the
+    itemised ledger: leave it in and two franchises are a deal apart in 2025;
+    take it out and all sixteen match, in every season, exactly.
+
+    So the rule is stated rather than the row being quietly deleted: a deal
+    needs two sides. The entry is reported in the build output and named in
+    the article, so anybody can put it back by filling in what came the other
+    way.
     """
-    deals = collections.defaultdict(set)
-    for t in trades.values():
-        deals[(t['season'], int(float(t['num'])))] |= set(t['keys'])
-    return deals
+    deals, dropped = collections.defaultdict(set), []
+    for tid, t in trades.items():
+        n = float(t['num'])
+        # Legs are written two ways. Most blockbusters number them 20.1, 20.2.
+        # The 2019 one numbers them 1901 to 1905 -- the season's last two
+        # digits and a serial -- and reading those as five separate deals both
+        # inflated 2019 by four and left three relay legs looking like
+        # one-sided trades. Four franchises, one afternoon, one deal.
+        block = n >= 1000
+        leg = block or '.' in t['num']
+        if (t['a'] and t['b']) or leg:
+            deals[(t['season'], 'block' if block else int(n))] |= set(t['keys'])
+        else:
+            dropped.append({'id': tid, 'season': t['season'], 'num': t['num'],
+                            'teams': t['teams'], 'gave': t['a'] or t['b'],
+                            'side': 0 if t['a'] else 1})
+    return deals, dropped
 
 
 def sleeper_2026(look):
@@ -297,7 +330,7 @@ def main():
     a = ap.parse_args()
     look, club, active = resolver()
     trades, audit = read_register(a.a, a.b, look)
-    deals = fold(trades)
+    deals, dropped = fold(trades)
 
     per, tot = collections.defaultdict(collections.Counter), collections.Counter()
     for (s, _), ks in deals.items():
@@ -330,6 +363,9 @@ def main():
         'leagueTotals': {s: tot[s] for s in seasons},
         'multiTeamDeals': multi,
         'register': audit,
+        # entries with one side blank that are not legs of a multi-leg deal:
+        # a record, not a trade. See fold().
+        'notCounted': dropped,
         'franchises': [
             {'key': k, 'club': club.get(k, k), 'active': k in active,
              'bySeason': {s: per[k].get(s, 0) for s in seasons},
@@ -360,9 +396,13 @@ def main():
           f'absent {audit["absentIds"]}'
           + (f', stored counter {audit["storedCounter"]}'
              if audit['storedCounter'] else ''))
-    if audit['oneSided']:
-        print(f'    {audit["oneSided"]} trade(s) with an empty side — a one-way '
-              f'transfer, kept')
+    print(f'    {audit["oneSided"]} entr(y/ies) with an empty side, '
+          f'{audit["oneSided"] - len(dropped)} of them legs of multi-leg deals '
+          f'and counted')
+    for d in dropped:
+        print(f'    NOT COUNTED: id {d["id"]}, {d["season"]} #{d["num"]} — '
+              f'{d["teams"][d["side"]]} give {", ".join(d["gave"])}, '
+              f'{d["teams"][1 - d["side"]]} give nothing')
 
     r = reconcile()
     if r:
