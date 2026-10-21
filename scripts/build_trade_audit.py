@@ -1045,6 +1045,7 @@ def fig_picks(F):
 
 
 def method(F):
+    money = lambda v: ('minus $' if v < 0 else '$') + f'{abs(v):,.0f}'
     """How the numbers were made. Published with the piece, not behind it."""
     V, sp = F['val'], F['span']
     return [
@@ -1102,22 +1103,29 @@ def method(F):
                  + '<b>Any figure in this piece that the register will not '
                    'back is not in this piece.</b></p>'),
         # The one entry that is not counted, and why.
-        ('body', (lambda d: f'<p class="b"><b>One entry is left out, and it is named '
-                  f'here rather than quietly dropped.</b> A deal needs two sides. '
-                  f'{word(F["reg"]["oneSided"]).capitalize()} entries in the register '
-                  f'have nothing recorded against one of theirs; '
-                  f'{word(F["reg"]["oneSided"] - len(d))} are legs of multi-team trades, '
-                  f'where that is not only normal but right &mdash; a relay leg is one '
-                  f'half of a team receiving from one partner and sending to another. '
-                  f'The last is not a leg. It carries a trade number of its own, dated '
-                  f'24 August {d[0]["season"]}, the league&rsquo;s draft day and the '
-                  f'busiest page in the register: '
-                  f'{E(d[0]["teams"][d[0]["side"]])} give '
-                  f'{E(", ".join(d[0]["gave"]))}, and nothing is entered coming back. '
-                  f'A record like that is evidence of a record, not of a trade, so it is '
-                  f'not counted and not priced. Fill in what came the other way and it '
-                  f'goes in.</p>'
-                  )(F['cnt']['notCounted']) if F['cnt'].get('notCounted') else ''),
+        # The row the desk got wrong, and how. Left in because a reader is
+        # owed the correction more than the desk is owed a clean story.
+        ('body', (lambda g: f'<p class="b"><b>And where they differ, the register is '
+                  f'right.</b> '
+                  + '; '.join(
+                      f'It holds {word(abs(r["over"]))} more {r["season"]} '
+                      f'deal{"" if abs(r["over"]) == 1 else "s"} between The Machines '
+                      f'and {E(" and ".join(r["clubs"]))} than the ledger does'
+                      for r in g)
+                  + f'. That deal is one this desk originally threw out. The register '
+                  f'had it on the league&rsquo;s draft day with The Machines sending '
+                  f'Travis Kelce, Ben Sinnott and a 2027 second, and nothing at all '
+                  f'recorded coming back &mdash; so it was excluded, on the rule that a '
+                  f'deal needs two sides. Excluding it made the two sources agree '
+                  f'perfectly, which is the kind of tidy that should have been a '
+                  f'warning. It was a real trade, badly entered: the other side was Big '
+                  f'Blue, not the franchise named, and what came back was TJ Hockenson. '
+                  f'Priced at the day it was made it is a push, {money(7.8)} to The '
+                  f'Machines. The correction is logged in '
+                  f'register-corrections.json with who gave it and what it rests on; '
+                  f'the itemised ledger has never carried the deal at all, which is the '
+                  f'gap above.</p>'
+                  )(F['gaps']) if F.get('gaps') else ''),
         ('body', '<p class="b"><b>Players</b> are priced from the DynastyProcess superflex '
                  'board, taken from the August snapshot of the season the trade was made '
                  'in. Not today&rsquo;s. A player who became a star in 2024 is priced in a '
