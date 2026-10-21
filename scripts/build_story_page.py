@@ -33,9 +33,13 @@ STORIES = {
    'bleed': True,
    'og': 'scfl-trade-audit-og.jpg',
    'ogtitle': 'Trial of the Evil Empire',
+   # The window is the five COMPLETE seasons. This read "2021 to 2026" while
+   # the piece inside priced 2021 to 2025, which is the sort of thing a share
+   # card carries into every chat it is pasted into.
    'ogdesc': ('Twenty-one years of whispers that The Machines rig it. Every deal in the '
-              'dynasty ledger, 2021 to 2026, priced at the season it was made. The '
-              'verdict, and the numbers behind it.'),
+              'ledger from 2021 to 2025, priced at the season it was made and counted '
+              'against the league register back to 2016. The verdict, and the numbers '
+              'behind it.'),
    'sharetext': 'Trial of the Evil Empire: every Machines trade pulled, priced and counted.',
    'covernote': 'Every asset priced at the season it moved in.',
    'freeze_after': None,
