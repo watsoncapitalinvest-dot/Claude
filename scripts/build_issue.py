@@ -91,6 +91,18 @@ EXTRA_CSS="""
 .mag-logo{display:block;width:100%;max-width:280px;height:auto;margin:0 auto;}
 .mag-issue{color:#c20f16;font-weight:900;font-size:9.5px;letter-spacing:2.5px;margin-top:3px;
   text-transform:uppercase;}
+/* The strapline under the wordmark. Both wordmarks carry one in the artwork
+   -- the live one in script, the candidate in letterspaced caps -- and in
+   both it is baked into a bitmap, so changing the words means re-rendering
+   the logo. Set as live type it is one string in the issue definition, it
+   stays crisp at any size, and the art can be cropped to the two words. */
+.mag-tag{display:flex;align-items:center;gap:9px;margin:5px auto 0;max-width:310px;}
+.mag-tag::before,.mag-tag::after{content:'';flex:1;height:1px;}
+.mag-tag::before{background:linear-gradient(90deg,transparent,var(--gold,#d8b45a));}
+.mag-tag::after{background:linear-gradient(90deg,var(--gold,#d8b45a),transparent);}
+.mag-tag span{font-family:var(--serif);font-weight:700;font-size:9.5px;letter-spacing:.26em;
+  text-transform:uppercase;color:var(--tagink,#efe7d2);white-space:nowrap;
+  text-shadow:0 2px 10px rgba(0,0,0,.95);}
 .preseal{position:absolute;left:3px;bottom:-22px;width:60px;height:60px;border-radius:50%;
   background:#e11b22;color:#fff;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.6);
   display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
@@ -210,6 +222,8 @@ def build(key, remeasure=True, quiet=False):
       f'<div class="magcover" style="--teaser:{art_css}">'
         '<div class="cov-top">'
           '<img class="mag-logo" src="wordmark.png" alt="Skirt Chasers — Dynasty League Magazine">'
+          + ('<div class="mag-tag"><span>'+esc(cfg['strapline'])+'</span></div>'
+             if cfg.get('strapline') else '') +
           '<div class="mag-issue">'+cfg['issueline']+'</div>'
           '<div class="preseal">'+cfg['seal'][0]+'<small>'+cfg['seal'][1]+'</small></div>'
         '</div>'
