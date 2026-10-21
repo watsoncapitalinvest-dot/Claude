@@ -139,16 +139,21 @@ function bars(svg, rows, showAxis){
       'font-family':'var(--sans)','font-weight':700,'font-variant-numeric':'tabular-nums'});
     rec.textContent=r.w+'–'+r.l+(narrow?'':'  ·  '+r.e+' fair'); svg.appendChild(rec);
     if(!tiny && !narrow){
-      const nt=mk('text',{x:W-padR+10,y:y+15,fill:r.net>=0?win:loss,'font-size':10.5,
-        'font-family':'var(--sans)','font-weight':700});
-      nt.textContent=money(r.net)+' net'; svg.appendChild(nt);
+      // A net whose SIGN does not survive every pricing assumption is not a
+      // finding, so it is marked rather than printed as if it were.
+      const nt=mk('text',{x:W-padR+10,y:y+15,fill:r.firm?(r.net>=0?win:loss):faint,
+        'font-size':10.5,'font-family':'var(--sans)','font-weight':700});
+      nt.textContent=money(r.net)+' net'+(r.firm?'':' \u2020'); svg.appendChild(nt);
     }
     const hit=mk('rect',{x:0,y:y-rowH/2,width:W,height:rowH,fill:'transparent'});
     hit.addEventListener('mousemove',e=>show(e,'<b>'+r.club+'</b><br>'+
       '<span class="r">'+r.n+' priced deals</span><br>'+
       'Won <b>'+r.w+'</b> &nbsp; Fair <b>'+r.e+'</b> &nbsp; Lost <b>'+r.l+'</b><br>'+
       Math.round(100*r.e/r.n)+'% came out level<br>'+
-      '<span class="r">Net '+money(r.net)+' &middot; median '+money(r.med)+' a deal</span>'));
+      '<span class="r">Net '+money(r.net)+' &middot; median '+money(r.med)+' a deal<br>'+
+      (r.firm ? 'Holds its sign under every pricing assumption'
+              : '\u2020 Not firm: ranges '+money(r.range[0])+' to '+money(r.range[1])+
+                ' depending on how picks are priced')+'</span>'));
     hit.addEventListener('mouseleave',hide);
     svg.appendChild(hit);
   });
@@ -171,7 +176,16 @@ $('#foot').innerHTML=
   '<span>Fairest <b>'+D.fairest.club+'</b> '+Math.round(100*D.fairest.e/D.fairest.n)+'% level</span>'+
   '<span>Threshold <b>$'+D.tc+'</b> either way</span>';
 $('#thinHead').textContent='Fewer than '+MIN+' priced deals — shown, not ranked';
-$('#note').innerHTML='A deal is won above $'+D.tc+' to that side, lost below −$'+D.tc+
+const soft=D.rows.filter(r=>!r.firm);
+$('#note').innerHTML='<b>How firm is this?</b> The pick board is the softest part of the '+
+ 'model, so every net here was recomputed four ways: as built, with the owner-weighting on '+
+ 'future picks removed entirely, and with every pick worth thirty per cent more and thirty '+
+ 'per cent less. '+(D.rows.length-soft.length)+' of the '+D.rows.length+' franchises keep '+
+ 'the sign of their net under all four'+(soft.length? ' \u2014 the exception'+
+ (soft.length>1?'s are ':' is ')+soft.map(r=>r.club).join(', ')+', marked \u2020':'')+
+ '. Wookie Leaks are last and Pork Chop Express first in every one of the four. The order '+
+ 'between neighbours in the middle is not that solid and is not claimed. '+
+ 'A deal is won above $'+D.tc+' to that side, lost below −$'+D.tc+
  ', and fair in between — the Trade Court’s own threshold. Every asset is priced at '+
  'the August of the season the trade was made in, so nothing here is graded with hindsight. '+
  'Each trade appears twice, once from each side. '+D.skipped+' three-team deals are left out, '+

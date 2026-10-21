@@ -132,6 +132,37 @@ def fairness():
     part = {int(s) for s in (cnt.get('partSeasons') or [])}
     seasons = sorted({t['season'] for t in d['trades']} - part)
 
+    # The pick board is the softest part of the model, so every figure on
+    # this page is recomputed under four different assumptions about it and
+    # only the ones that survive all four are called firm:
+    #
+    #   as built      an unslotted future pick is weighted by the owner's last
+    #                 finish, so a bad team's first is worth more
+    #   flat          that weighting removed entirely -- every unslotted pick
+    #                 priced at the flat average of its round
+    #   picks +30%    every pick worth thirty per cent more
+    #   picks -30%    every pick worth thirty per cent less
+    #
+    # A franchise whose net keeps its sign under all four is firm. The ends of
+    # the table are: Wookie Leaks are last and Pork Chop Express first in every
+    # one of them. The middle is not, which is why this page ranks but does not
+    # claim the order between neighbours.
+    import importlib.util as _u
+    _s = _u.spec_from_file_location('tv', os.path.join(ROOT, 'scripts',
+                                                       'build_trade_values.py'))
+    TV = _u.module_from_spec(_s); sys.modules['tv'] = TV; _s.loader.exec_module(TV)
+    R1 = sum(TV.PICK_CHART[x] for x in range(1, 17)) / 16
+    R2 = sum(TV.PICK_CHART[x] for x in range(17, 33)) / 16
+
+    def priced(a, season, mode):
+        v = a.get('value') or 0
+        if a['kind'] != 'pick':
+            return v
+        if mode == 'flat' and a.get('resolved') == 'expected-value':
+            base = R1 if (a.get('round') or 1) == 1 else R2
+            return base * (TV.PICK_DECAY ** max(0, (a.get('year') or season) - season))
+        return v * (1.3 if mode == 'up' else 0.7 if mode == 'down' else 1)
+
     tc, per, skipped = 12, {}, 0
     for t in d['trades']:
         if t['season'] in part:
@@ -149,6 +180,24 @@ def fairness():
         rows.append({'k': k, 'club': fr.get(k, k), 'n': len(v), 'w': w, 'l': l,
                      'e': len(v) - w - l, 'net': round(sum(v)),
                      'med': round(statistics.median(v), 1)})
+    # the same table under each assumption, to see what survives
+    alt = {}
+    for mode in ('flat', 'up', 'down'):
+        acc = {}
+        for t in d['trades']:
+            if t['season'] in part or len(t['sides']) != 2:
+                continue
+            x, y = t['sides']
+            tx = sum(priced(z, t['season'], mode) for z in x['assets'])
+            ty = sum(priced(z, t['season'], mode) for z in y['assets'])
+            acc.setdefault(x['franchiseKey'], []).append(tx - ty)
+            acc.setdefault(y['franchiseKey'], []).append(ty - tx)
+        alt[mode] = {k: round(sum(v)) for k, v in acc.items()}
+    for r in rows:
+        nets = [r['net']] + [alt[m].get(r['k'], 0) for m in ('flat', 'up', 'down')]
+        r['firm'] = all(n > 0 for n in nets) or all(n < 0 for n in nets)
+        r['range'] = [min(nets), max(nets)]
+
     rows.sort(key=lambda r: (-(r['w'] - r['l']), -r['n']))
     MIN = 10
     rank = [r for r in rows if r['n'] >= MIN]
