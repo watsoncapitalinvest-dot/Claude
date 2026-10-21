@@ -224,3 +224,63 @@ board from those years, from any source. Not rankings of players we can look
 up now — a snapshot of what the market thought *then*. If one turns up,
 `dp-values.json` takes more columns and the window moves; nothing else in the
 model has to change.
+
+## Pricing at the day it moved, not the August of the season
+
+John, October 2026: *"We should not be pricing on the August of the season it
+moved. We should price it the day it moved."* Right, and now possible — the
+register export carries a date on all 533 deals, which trades.json never had.
+
+**The case, in one table.** Of the 250 priced-window deals:
+
+    median days from the trade to 1 August of its season    28
+    mean                                                    48
+    worst                                                  122
+
+115 of them sit more than a month from the snapshot that priced them, and 84
+are two months or more into a season, which is when a value moves most.
+Dated instead, the same deals sit a **median of three days** from a real
+market reading and 215 are inside a week.
+
+**Where a dated price comes from.** DynastyProcess publishes the FantasyPros
+consensus underneath its values, and the history ships in its own repo as
+`files/db_fpecr.csv.gz`. The `dsf` series — dynasty superflex, the format this
+league plays — runs weekly from 16 October 2020: 265 scrapes, ~479 players
+each, a median of seven days apart.
+
+Rank to dollars is **calibrated, not invented**. At each of the five Augusts
+the audit already prices at, every player's rank that week is paired with the
+dollar `dp-values.json` gives him: 2,240 pairs. The curve reproduces that
+board to the dollar — median difference $0.0 in all five years, elite players
+inside $1 — so a dated dollar means exactly what every other dollar in the
+audit means.
+
+**The result: it does not change the verdict.**
+
+    Machines, at August (published)   15-6-43 over 64   net +$174
+    Machines, at the trade date       15-5-39 over 59   net +$271
+
+**Two traps, both hit, both worth remembering.**
+
+1. *The pick model is not optional.* The first pass priced an unslotted pick
+   at the flat average of its round. The real model weights slot probability
+   by the owner's last finish, so a first from a bad team is worth more. The
+   Machines buy picks from the bottom of the table, so the flat version
+   undercharged everything he received — 15-6 became 4-12, a swing that was
+   entirely method. The pick model is now *imported* from
+   `build_trade_values.py`, never reimplemented, so the only thing the dated
+   script changes is the day a player is valued on.
+
+2. *`gives` is not `gets`.* `trade-ledger.json` records a trade by what each
+   side **sends**; `tradeValues.json` records it by what each side
+   **receives**. Netting one as if it were the other inverts every verdict in
+   the file — it turned 15-6 into 5-12, a near mirror image, which is what a
+   sign error looks like when it is pretending to be a finding. The dated
+   file now writes `gave`, `got` and `net` so nothing downstream has to
+   remember which is which.
+
+**Not yet switched over.** The dated run covers 59 of the Machines' 64 priced
+deals; five carry a player the consensus never ranked on that date. The
+published article still runs on the August board, and the honest reason to
+leave it there for now is that the dated board agrees with it. Switching means
+closing those five.

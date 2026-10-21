@@ -83,7 +83,7 @@ PAIRS = '.trade-pairs.json'       # working file for surplus(); gitignored
 # the asset name is the second-to-last column and is found by length, because
 # the two files head it differently ("Player Name / Draft Pick" against
 # "Player / Draft Pick").
-TID, SEASON, NUM, TEAM_A, TEAM_B = 9, 11, 12, 13, 14
+TID, DATE, SEASON, NUM, TEAM_A, TEAM_B = 9, 10, 11, 12, 13, 14
 
 # Renames the stored alias table has not caught up with. The first is the
 # register's own typo; the rest are the 2026 Sleeper names, and they are the
@@ -129,7 +129,7 @@ def read_register(path_a, path_b, look):
                 continue
             stored = stored or r[4]
             t = trades.setdefault(int(r[TID]), {
-                'season': r[SEASON], 'num': r[NUM],
+                'season': r[SEASON], 'num': r[NUM], 'date': r[DATE],
                 'teams': [r[TEAM_A], r[TEAM_B]], 'a': [], 'b': []})
             t[side].append(r[asset])
     for t in trades.values():
