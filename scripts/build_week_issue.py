@@ -625,14 +625,22 @@ def team_lines(season, week, st, stories):
 
 
 def preview_blocks(season, week, st):
-    """Next week's card, and what is actually at stake in each game.
+    """Next week's fixture card. Who plays whom, and nothing else.
 
-    Every issue ends here. The notes are derived rather than written: the
-    fixtures come out of sleeper-schedule.json, the records and streaks out of
-    the table, and each line is the strongest TRUE thing available about that
-    pairing. A preview that says "should be a good one" eight times is worse
-    than no preview, so a game with nothing to say about it gets the bare
-    records and no invented tension.
+    Every issue ends here, and the house rule is explicit about the division
+    of labour: the prose says why anyone should care, the card says who plays
+    whom. This used to carry a third column headed "What is at stake", which
+    broke both halves of that. It said the same things preview_prose() had
+    just said at length and in better English -- "Black and Blue: Beaver
+    Eaters 1 clear of Pork Chop Express" under a paragraph that had already
+    worked out what each result does -- and it said them in a column squeezed
+    to 150px on a phone, so every row wrapped to three or four lines and the
+    card came out taller than the preview it was summarising. It also printed
+    "Beaver Eaters has won six in a row", because a derived clause cannot
+    guess that a franchise name is plural.
+
+    So the card is a card: the two sides, their records, their seeds. Eight
+    rows, one line each, and the reader can see the whole of Sunday at once.
 
     Teams are matched on roster_id. Franchises get renamed mid-season here and
     the schedule file still carries the name a side had in August.
@@ -647,31 +655,6 @@ def preview_blocks(season, week, st):
         return []
     by = {r['roster_id']: r for r in st['table']}
 
-    def note(a, b):
-        """The strongest true thing about this pairing, or nothing."""
-        n = []
-        if a['l'] == 0 and b['l'] == 0:
-            n.append('both unbeaten')
-        if a['div'] == b['div']:
-            lead_, chase = (a, b) if a['seed'] < b['seed'] else (b, a)
-            gap = (lead_['w'] - chase['w'])
-            n.append(f'{E(lead_["div_name"])}: {E(lead_["team"])} '
-                     + (f'{gap} clear of {E(chase["team"])}' if gap
-                        else f'and {E(chase["team"])} level'))
-        for t, o in ((a, b), (b, a)):
-            if t['streak_n'] >= 3:
-                n.append(f'{E(t["team"])} has {"won" if t["streak_kind"] == "W" else "lost"} '
-                         f'{numw(t["streak_n"])}'
-                         f' in a row')
-        # have they already met this season, and how did it go
-        for leg in a.get('trail') or []:
-            if leg[4].strip() == b['team'].strip():
-                n.append(f'{E(b["team"])} won the first meeting {leg[3]:.0f}&ndash;{leg[2]:.0f}'
-                         if leg[1] == 'L' else
-                         f'{E(a["team"])} won the first meeting {leg[2]:.0f}&ndash;{leg[3]:.0f}')
-                break
-        return n[:2]
-
     pairs = []
     for g in games:
         a, b = by.get(g.get('home_roster')), by.get(g.get('away_roster'))
@@ -683,19 +666,24 @@ def preview_blocks(season, week, st):
     pick = min(pairs, key=lambda x: x[0]['seed'] + x[1]['seed']) if pairs else None
     pairs.sort(key=lambda x: x[0]['seed'] + x[1]['seed'])
 
+    # Both sides on one line, meeting at a centred "v". Stacking them put the
+    # fixture in one cell and the two seeds in another, which reads as a list
+    # of teams rather than as eight games.
+    # The seed is tagged rather than just set small: "Pork Chop Express 5-1 3"
+    # reads as a three-figure line, and the one thing nobody needs beside a
+    # record is another bare number.
+    # Record and seed are one unbreakable unit. Left to wrap on their own they
+    # split mid-figure at the end of a line -- "Killer Klowns 3-" then "3 #8" --
+    # which is the worst place in the row to put a line break.
+    side = lambda t: (f'{E(t["team"])} <span class="fig"><span class="dim">'
+                      f'{t["record"]}</span><span class="sd">#{t["seed"]}</span></span>')
     rows = ''
     for hi, lo in pairs:
-        ns = note(hi, lo)
         top = pick is not None and (hi, lo) == pick
         rows += (f'<tr{" class=hot" if top else ""}>'
-                 f'<th scope="row" class="lt">{"&#9654; " if top else ""}{E(hi["team"])} '
-                 f'<span class="dim">{hi["record"]}</span><br>'
-                 f'{E(lo["team"])} <span class="dim">{lo["record"]}</span></th>'
-                 f'<td class="num dim">{hi["seed"]}<br>{lo["seed"]}</td>'
-                 f'<td class="dim ev">'
-                 + (('<b>The one to watch.</b> ' if top else '')
-                    + ('. '.join(ns) + '.' if ns else ('' if top else '&mdash;')))
-                 + '</td></tr>')
+                 f'<th scope="row" class="rt">{"&#9654; " if top else ""}{side(hi)}</th>'
+                 f'<td class="vs">v</td>'
+                 f'<td class="lt">{side(lo)}</td></tr>')
     bill = (f'<p class="b">The one to watch is <b>{E(pick[0]["team"])} against '
             f'{E(pick[1]["team"])}</b>, the best-placed pair on the card'
             + (f' and a {E(pick[0]["div_name"])} game with it'
@@ -703,10 +691,12 @@ def preview_blocks(season, week, st):
             + f'. The rest, in order of what the table says they are worth, follow it. Seeds '
               f'are as they stand after week {week}.</p>') if pick else ''
     out = preview_prose(season, week, st) + [('pagebreak', bill),
-           ('body', f'<div class="ad"><figure><div class="scroll"><table><thead><tr>'
-                    f'<th class="lt">Week {nxt}</th><th class="num">Seed</th>'
-                    f'<th class="lt">What is at stake</th></tr></thead>'
-                    f'<tbody>{rows}</tbody></table></div></figure></div>')]
+           ('body', f'<div class="ad card"><figure><table><thead><tr>'
+                    f'<th class="rt">Week {nxt}</th><th></th><th class="lt"></th>'
+                    f'</tr></thead>'
+                    f'<tbody>{rows}</tbody></table>'
+                    f'<figcaption>Seeds as they stand after week {week}. The arrow is the '
+                    f'best-placed pair on the card.</figcaption></figure></div>')]
     ub = [t for t in st['table'] if t['l'] == 0 and t['t'] == 0]
     tail = []
     if ub:

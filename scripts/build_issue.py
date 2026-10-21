@@ -142,7 +142,36 @@ EXTRA_CSS="""
    landed dead centre and did both. Below 722px the page fills the viewport and
    the bands overlap the text column, so the list takes a gutter wider than an
    arrow -- which also insets its rules, and reads as a deliberate list. */
-@media(max-width:740px){.toc{padding-left:32px;padding-right:32px;}}
+@media(max-width:740px){.toc{padding-left:32px;padding-right:32px;}
+  /* Same arrows, same problem, on anything laid out edge to edge. A table of
+     figures has its outermost column against the page edge, so the left arrow
+     sits on a team name and the right one on a number: week 6's standings had
+     SPARTAN hidden under one and a division leader's run under the other.
+     Prose can absorb an arrow over a word; a table cannot, because the thing
+     it hides is the thing the row is for. The gutter goes on the figure, not
+     the table, so a section heading and a caption inset with it. */
+  .ad figure{padding-left:30px;padding-right:30px;}}
+/* The fixture card. Two sides meeting at a centred v, one line a game, so
+   eight games fit on a page and read as a card rather than as a list. It
+   carries no prose column: preview_prose() has already said what each game is
+   worth, at length, and saying it again in 150px of table cell is how the
+   first version came out four lines deep a row. */
+.ad.card figure{margin:18px 0 6px;}
+.ad.card table{width:100%;border-collapse:collapse;}
+.ad.card th.rt{text-align:right;}
+.ad.card td.lt,.ad.card th.lt{text-align:left;}
+.ad.card tbody th,.ad.card tbody td{font-family:var(--sans);font-size:12.5px;font-weight:700;
+  padding:7px 2px;vertical-align:middle;line-height:1.3;}
+.ad.card tbody tr + tr th,.ad.card tbody tr + tr td{border-top:1px solid var(--line,#e6e0d6);}
+.ad.card td.vs{font-family:var(--serif);font-style:italic;font-weight:400;font-size:11px;
+  color:var(--faint,#9a958c);text-align:center;padding:0 6px;width:1px;}
+.ad.card .fig{white-space:nowrap;}
+.ad.card .dim{font-weight:400;color:var(--muted,#65656b);padding-left:4px;}
+/* The seed, set small and in the gutter beside the record, so the column it
+   used to have is not spending 40px of a phone on eight single digits. */
+.ad.card .sd{font-size:9.5px;font-weight:800;color:var(--faint,#9a958c);padding:0 3px;
+  font-variant-numeric:tabular-nums;}
+.ad.card tr.hot th,.ad.card tr.hot td{background:rgba(216,180,90,.16);}
 .divider{text-align:center;padding:26px 0 8px;}
 .divider .d-art{display:block;width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:2px;
   margin:0 0 20px;background:#e8e2d8;}
