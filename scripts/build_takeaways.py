@@ -414,15 +414,47 @@ def a_clean_sheet(C, **_):
 
 
 def a_all_down(C, **_):
-    """Every priced deal went down. Nobody else can say that either."""
+    """Every priced deal came out on the wrong side of even.
+
+    Stated and left there. The desk prints what it counts, and a side with a
+    bad row does not also need telling about it -- the line below used to end
+    "which is the only good news in the row", which is a joke on a man rather
+    than on a situation, and this desk is not in that business.
+    """
     out = {}
     for r in C['rows']:
         if r['n'] >= 3 and r['down'] == r['n']:
-            out[r['k']] = (94, (
-                f'{Num(r["n"])} priced deals, and <b>all {num(r["n"])} of them went '
-                f'down</b> &mdash; {money(r["net"])} together, a median of '
-                f'{money(r["med"], cents=True)}. Too few to rank, which is the only '
-                f'good news in the row.'))
+            out[r['k']] = (50, (
+                f'{Num(r["n"])} priced deals, {money(r["net"])} together, and '
+                f'<b>every one of them finished on the wrong side of even</b> &mdash; '
+                f'though only {num(r["l"])} cleared the ${C["tc"]} line that makes a '
+                f'loss a loss. A book this small is one bad winter, not a pattern.'))
+    return out
+
+
+def a_one_side_only(C, **_):
+    """A deficit that sits entirely on one half of the ledger.
+
+    Worth its own angle because it is the most useful thing you can say about
+    a position: a side whose players are intact and whose picks are gone has a
+    different problem, and a more fixable one, than a side that is losing on
+    both. It bids high for that reason, and only fires when the untouched half
+    really is untouched -- flat or better, and under a fifth of the damage.
+    """
+    out = {}
+    for r in C['rows']:
+        if r['net'] >= 0:
+            continue
+        sides = [(r['players'], 'players', 'roster'), (r['picks'], 'picks', 'draft')]
+        (bad, bad_s, _), (good, good_s, good_half) = min(sides), max(sides)
+        if good < 0 or bad >= 0 or abs(good) > 0.2 * abs(bad) or abs(bad) < abs(r['net']):
+            continue
+        out[r['k']] = (92, (
+            f'<b>Not one dollar of this is a {good_s[:-1]}.</b> Their {good_s[:-1]} '
+            f'trading is {money(good)} across {num(r["n"])} deals &mdash; the '
+            f'{good_half} half of the ledger is untouched. The whole {money(r["net"])} '
+            f'sits in {bad_s}, and no single deal in it cost more than '
+            f'{money(abs(r["worst"]))}.'))
     return out
 
 
@@ -684,7 +716,7 @@ def a_plain(C, **_):
     return out
 
 
-ANGLES = [a_clean_sheet, a_all_down, a_one_currency, a_one_deal, a_win_rate,
+ANGLES = [a_clean_sheet, a_one_side_only, a_all_down, a_one_currency, a_one_deal, a_win_rate,
           a_side_extreme, a_side_best, a_cancel, a_median, a_per_deal, a_not_firm,
           a_small_worst, a_down_rate, a_fewest, a_ahead_but_median_down, a_year,
           a_split_rescue]
