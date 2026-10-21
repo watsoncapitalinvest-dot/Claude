@@ -200,7 +200,24 @@ def slot_probabilities(prior_rank, years_out):
 # Pick values: draft-intel.json's SCFL-calibrated 32-slot curve.
 # ---------------------------------------------------------------------------
 DI = load('draft-intel.json')
-PICK_CHART = {int(k): v for k, v in DI['pickValueChart'].items()}
+# ---------------------------------------------------------------------------
+# SCALE. draft-intel's pickValueChart puts the 1.01 at 1000. dp-values puts
+# the 1.01 at 100 -- it says so in its own "scale" field, and the best player
+# in the league (Josh Allen) is 126 on it. The two are the same scale in
+# different units, a factor of ten apart, and this script spent its whole life
+# adding them together raw: a 2028 first came out at $455.60 against a top-five
+# dynasty tight end at $50, which is to say a pick three drafts away was worth
+# nine Trey McBrides. Every pick in the audit was inflated about tenfold
+# against every player, which is the exact failure CLAUDE.md warns about --
+# "quoting one against the other reads fine and overvalues picks every time".
+#
+# Dividing by ten lands the 1.01 on $100, and the average round-one pick on
+# $45.60 -- which the live Trade Court, calibrated separately, independently
+# puts at $48. Two sources that were built apart agreeing to within 5 per cent
+# is the check that this is the right reconciliation and not just a tidier
+# number.
+PICK_SCALE = 10
+PICK_CHART = {int(k): v / PICK_SCALE for k, v in DI['pickValueChart'].items()}
 
 def rank_to_slot(rank, rnd):
     """Worst record picks first (verified against draft.json / 2025
@@ -208,9 +225,21 @@ def rank_to_slot(rank, rnd):
     base = 17 - rank
     return base if rnd == 1 else base + 16
 
+# A pick further out is worth less than the same pick sooner -- you wait for
+# it, you cannot use it, and the roster it is meant to help may not be the one
+# you have by then. The flat slot distribution alone does NOT express that: at
+# two years out and at five it returned the identical number, the round
+# average, so a 2028 first traded in 2025 priced the same as a 2026 first
+# traded in 2025. The live Trade Court already discounts 12 per cent a year
+# beyond the first (tcPickVal); the same rate is used here so the two boards
+# cannot disagree about the same pick.
+PICK_DECAY = 0.88
+
+
 def expected_pick_value(prior_rank, rnd, years_out):
     probs = slot_probabilities(prior_rank, years_out)
-    return sum(p * PICK_CHART[rank_to_slot(k, rnd)] for k, p in probs.items())
+    base = sum(p * PICK_CHART[rank_to_slot(k, rnd)] for k, p in probs.items())
+    return base * (PICK_DECAY ** max(0, years_out - 1))
 
 # ---------------------------------------------------------------------------
 # Class-quality modifier: each draft class's rookies, first-available

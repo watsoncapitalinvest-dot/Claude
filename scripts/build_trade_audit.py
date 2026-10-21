@@ -383,30 +383,18 @@ def prose(F):
     V = F['val']
     if V:
         m = V['tbl'][ME]
-        place = V['rank'].index(ME) + 1
-        sharp = V['rank'][0]
-        top = V['tbl'][sharp]
-        k1v = V['tbl'].get(k1)
+        even_share = round(100 * m['e'] / m['n'])
         P.append(
-            f'Does he win the deals? Yes, and by less than anybody in this league would '
-            f'guess. Priced at the season each trade was made in — August values of that '
-            f'year, no hindsight, the same board the Trade Court grades on — The Machines '
-            f'are {m["w"]}-{m["l"]} with {word(m["e"])} even across the '
-            f'{word(m["n"])} two-team deals in the ledger. He loses one in '
-            f'{word(round(m["n"] / m["l"]))}. His median trade is worth '
-            f'${m["median"]:.0f} to him, which is to say nothing at all. On the rate he '
-            f'wins them he is {ordinal(place)} of {word(len(V["rank"]))} franchises with '
-            f'enough deals to measure, behind {name(sharp)}, who win '
-            f'{top["rate"] * 100:.0f} per cent of theirs to his {m["rate"] * 100:.0f}.')
-        if k1v and k1v['rate'] > m['rate']:
-            P.append(
-                f'Read that again with the names in it. {name(k1)} — the franchise at the '
-                f'top of his partner list, the one the theory casts as the mark — come out '
-                f'of the same ledger at {k1v["w"]}-{k1v["l"]}, winning '
-                f'{k1v["rate"] * 100:.0f} per cent of their decided trades to his '
-                f'{m["rate"] * 100:.0f}. The man supposedly being fleeced grades out ahead '
-                f'of the man supposedly doing the fleecing. Whatever is happening at that '
-                f'table, it is not a mugging.')
+            f'Does he win the deals? More than he loses, and by less than the theory '
+            f'needs. Priced at the season each trade was made in — August values of that '
+            f'year, picks on the same dollar board the Trade Court grades on, no '
+            f'hindsight anywhere — The Machines are {m["w"]}-{m["l"]} across the '
+            f'{word(m["n"])} two-team deals in the ledger. But the number that says more '
+            f'is the third one: {word(m["e"])} of those {word(m["n"])} finish inside '
+            f'twelve dollars either way. {even_share} per cent of everything he has done '
+            f'is, by the board, a fair trade. His median deal is worth '
+            f'${m["median"]:.0f} to him. That is the shape of a man making a great many '
+            f'ordinary trades, not a man running a protection racket.')
 
     rt = F['round_trips']
     if rt:
@@ -453,35 +441,33 @@ def prose(F):
               else (ahead[0] if ahead else ''))
     worked = (f'{name(busiest_k)} appear in more of its deals than he does'
               if busiest_k != ME else 'nobody appears in more of its deals than he does')
-    read = (f'{word(len(ahead))} franchise{"" if len(ahead) == 1 else "s"} grade out '
-            f'ahead of him on it — {listed}' if ahead else
-            'nobody grades out ahead of him on it')
+    read = ('and he does not clear it either, because most of what he does in it '
+            'comes out level')
     P.append(
         'This newsroom has now read every deal in the dynasty ledger, priced every asset '
         'at the season it moved in, and counted every partner. There is no cabal. There '
         'is a concentration, and an explanation for the concentration that the '
         f'concentration itself supports. There is a market, open every summer, and he '
-        f'does not own it: {worked}, and {read}. And there is a room that has decided, '
+        f'does not own it: {worked}, {read}. And there is a room that has decided, '
         f'for twenty-one years, that whatever he is doing instead must be against the '
         f'rules.')
 
     P.append(
         f'So the verdict of the ledger is not close, and it is not the one the league '
         f'wants either. On the charge of cheating: not guilty. On the charge of '
-        f'collusion: not guilty. On the charge of being the best trader this league has '
-        f'produced: not guilty, and that one is not close — he is '
-        f'{ordinal(F["val"]["rank"].index(ME) + 1)} of '
-        f'{word(len(F["val"]["rank"]))} on the board, behind {name(k1)}, the franchise at '
-        f'the top of his own partner list. He does not have the most championships '
-        f'either; {tl["name"]} have {word(tl["titles"])} to his '
+        f'collusion: not guilty. On the charge of running a market that pays him and '
+        f'nobody else: not guilty — {word(F["val"]["tbl"][ME]["e"])} of his '
+        f'{word(F["val"]["tbl"][ME]["n"])} priced deals come out level, and he is a net '
+        f'seller of players in the ones that do not. He does not have the most '
+        f'championships either; {tl["name"]} have {word(tl["titles"])} to his '
         f'{word(me2["titles"])}. What he is guilty of is narrower than the theory and '
         f'worse for everybody else: the best record anybody has put together here, '
         f'{pc(me2["winPct"])} against {pc(pct2["winPct"])} for the next side to go the '
         f'distance, and {word(me2["playoffs"])} playoff appearances in '
         f'{word(me2["numSeasons"])} seasons, {word(po1["playoffs"] - po2["playoffs"])} '
-        f'more than anyone else has managed. He is beaten in his own trade ledger one '
-        f'deal in {word(round(F["val"]["tbl"][ME]["n"] / F["val"]["tbl"][ME]["l"]))} and '
-        f'he finishes above you anyway. Some empires are built in the dark. This one was '
+        f'more than anyone else has managed. He is beaten in his own trade ledger '
+        f'{word(F["val"]["tbl"][ME]["l"])} times out of {word(F["val"]["tbl"][ME]["n"])} '
+        f'and he finishes above you anyway. Some empires are built in the dark. This one was '
         f'built in the group chat, in broad daylight, one ordinary deal at a time, while '
         f'everybody watched and nobody could stop it.')
 
