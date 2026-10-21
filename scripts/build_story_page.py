@@ -96,6 +96,31 @@ except Exception as _e:
 
 EXTRA_CSS = """
 .freeze{text-align:center;font-size:54px;line-height:1;margin:10px 0 14px;}
+/* The verdict, as a page of its own. An investigation should be findable at
+   the point where it answers the question it asked -- in prose it reads like
+   every other paragraph and a reader flipping past never sees it. */
+.verdict{display:flex;flex-direction:column;gap:2px;padding-top:0;}
+.verdict .v-flag{font-family:var(--sans);font-size:11px;font-weight:900;
+  letter-spacing:.26em;text-transform:uppercase;color:var(--red);}
+.verdict .v-sub{font-family:var(--serif);font-style:italic;font-size:14.5px;
+  color:var(--muted,#65656b);margin:3px 0 10px;padding-bottom:8px;
+  border-bottom:2px solid var(--ink);}
+.verdict .v-list{list-style:none;margin:0;padding:0;display:flex;
+  flex-direction:column;gap:8px;}
+.verdict .v-list li{padding:0 0 8px;border-bottom:1px solid var(--line,#e6e0d6);}
+.verdict .v-list li:last-child{border-bottom:0;padding-bottom:0;}
+.verdict .v-ch{display:flex;align-items:baseline;gap:10px;}
+.verdict .v-n{font-family:var(--sans);font-size:10px;font-weight:900;
+  letter-spacing:.1em;color:var(--faint,#9a958c);min-width:20px;}
+.verdict .v-t{font-family:var(--serif);font-size:17.5px;line-height:1.18;
+  font-weight:700;}
+.verdict .v-vd{font-family:var(--sans);font-size:21px;font-weight:900;
+  letter-spacing:-.01em;margin:3px 0 0 30px;line-height:1;}
+.verdict li.clear .v-vd{color:var(--blue,#0e8ab5);}
+.verdict li.guilty .v-vd{color:var(--red,#c20f16);}
+.verdict li.guilty .v-t{color:var(--red,#c20f16);}
+.verdict .v-ev{font-family:var(--serif);font-size:13.5px;line-height:1.4;
+  color:var(--muted,#65656b);margin:4px 0 0 30px;}
 /* The row the table is about. A wide table of counts needs one row marked or
    the reader has to find the subject by name on every scroll; gold is the
    house colour for "this is the one that matters". */

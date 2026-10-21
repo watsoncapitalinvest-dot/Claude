@@ -967,6 +967,70 @@ def fig_volume(F):
             f'piece.</figcaption></figure>')
 
 
+def fig_verdict(F):
+    """The findings as findings: charge on one line, verdict on the next.
+
+    The closing paragraph makes all of this already, and makes it well, but it
+    makes it as prose -- a reader flipping the issue goes past the verdict
+    without seeing it, because it looks like every other paragraph. An
+    investigation should be findable at the point where it answers the
+    question it asked.
+
+    So the charges get a page of their own. Every line under a verdict is a
+    figure this piece has already derived; nothing is asserted here that is
+    not counted somewhere else in it, and the panel is built from the same
+    facts() call as the prose so the two cannot drift apart.
+    """
+    V, rec, me = F['val'], F['rec'], F['rec'][ME]
+    m = V['tbl'][ME]
+    name = lambda k: F['club'].get(k, k)
+    w1 = F['win_rank'][0]
+    H = F['hind']
+    pct1, pct2 = F['pct_rank'][0], F['pct_rank'][1]
+    po1, po2 = F['po_rank'][0], F['po_rank'][1]
+
+    charges = [
+        ('Cheating', False,
+         'Not a line of it in the file. Every deal is one the whole league '
+         'watched happen, and the league&rsquo;s own register and the itemised '
+         'ledger agree on every franchise in every season.'),
+        ('Preying on the ignorant and the naive', False,
+         f'{word(m["e"]).capitalize()} of his {word(m["n"])} priced deals come '
+         f'out level &mdash; {round(100 * m["e"] / m["n"])} in every hundred. '
+         f'{word(F["with_champions"]).capitalize()} of them were done with '
+         f'sides who have won this league. He is a net seller of players in '
+         f'the ones that are not level.'),
+        ('Running a market that pays him and nobody else', False,
+         (f'{name(w1["key"])} were a party to more of its deals over the same '
+          f'five seasons than he was. '
+          if w1['key'] != ME else 'He is in more of its deals than anybody. ')
+         + (f'And graded on what actually happened, his two most frequent '
+            f'partners come out of those five years better than any other '
+            f'franchise in the league.'
+            if H and H['tbl'] and {F['top'][0][0], F['top'][1][0]}
+            == {H['tbl'][0]['key'], H['tbl'][1]['key']} else
+            'The deals are spread across fourteen of the sixteen franchises.')),
+        ('Being better at this than anyone else has managed', True,
+         f'{pc(me["winPct"])} against {pc(pct2["winPct"])} for the next side '
+         f'to go the distance. {word(me["playoffs"]).capitalize()} playoff '
+         f'appearances in {word(me["numSeasons"])} seasons on the '
+         f'league&rsquo;s own register, {word(po1["playoffs"] - po2["playoffs"])} '
+         f'more than anyone else &mdash; and he is still beaten in his own '
+         f'trade ledger {word(m["l"])} times out of {word(m["n"])}.'),
+    ]
+    ROM = ['', 'I', 'II', 'III', 'IV', 'V', 'VI']
+    rows = ''
+    for i, (ch, guilty, ev) in enumerate(charges, 1):
+        rows += (f'<li class="{"guilty" if guilty else "clear"}">'
+                 f'<div class="v-ch"><span class="v-n">{ROM[i]}</span>'
+                 f'<span class="v-t">{ch}</span></div>'
+                 f'<div class="v-vd">{"Guilty" if guilty else "Not guilty"}</div>'
+                 f'<p class="v-ev">{ev}</p></li>')
+    return ('<div class="verdict"><div class="v-flag">The Verdict</div>'
+            '<p class="v-sub">On each charge, as the ledger finds it</p>'
+            f'<ol class="v-list">{rows}</ol></div>')
+
+
 def fig_hindsight(F):
     """Every franchise's ledger read twice: at the table, and at today's board."""
     H = F['hind']
@@ -1192,6 +1256,10 @@ def blocks(F, P):
             out.append(('body', '<div class="ad">' + fig_volume(F) + '</div>'))
         if i == 9 and F['val']:
             out.append(('body', '<div class="ad">' + fig_spread(F) + '</div>'))
+        # 'divider' always opens a page, so the verdict is never halfway down
+        # one -- a reader flipping the issue lands on it.
+        if i == len(P) - 3 and F['val']:
+            out.append(('divider', fig_verdict(F)))
     out += method(F)
     out.append(('body', '<div class="devnote">' + P[-1] + '</div>'))
     return out
