@@ -23,6 +23,7 @@ Writes site-index.json (categories -> entries). The standalone page
 scfl-index.html and the in-app "The Full Record" view (index.html,
 showSiteIndex()) both render this same file, so they can't disagree either.
 """
+import html
 import datetime, importlib.util, json, os, re, subprocess, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -89,10 +90,15 @@ CAT = re.compile(r'scfl:category"\s+content="([^"]*)"')
 
 
 def unescape(s):
-    return (s.replace('&mdash;', '—').replace('&ndash;', '–')
-             .replace('&rsquo;', '’').replace('&lsquo;', '‘')
-             .replace('&ldquo;', '“').replace('&rdquo;', '”')
-             .replace('&amp;', '&').replace('&#39;', '’'))
+    """The meta tag's text as text.
+
+    This was a hand-written list of eight entities, so anything outside it
+    came through raw and the app, which escapes on render, printed it: a
+    kicker reading "The Weekly Issue &MIDDOT; Week 5" on the card. The
+    standard library knows every entity, and gets the ordering right as well
+    -- unescaping &amp; last turned "&amp;mdash;" into an em dash.
+    """
+    return html.unescape(s)
 
 
 def git_add_date(relpath):

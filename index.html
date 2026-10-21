@@ -2312,7 +2312,9 @@ function showArchive() {
       <a class="btn ghost" href="draft-issue.html" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;text-decoration:none">Read the Draft Issue →</a>
     </div>
     ${list.length ? list.map(issueShelfCard).join('') : empty('No issues on the shelf yet', 'Publish one from Create Issue — it archives itself.')}
+    ${publishedSlot('Season Coverage & Issues', 'On the site')}
   </div>`;
+  fillPublished();
 }
 function openSavedIssue(id) {
   const snap = loadIssues().find(s => s.id === id);
@@ -2704,6 +2706,36 @@ function renderStoryQueue(q) {
   el.innerHTML = `<div class="dt" style="margin:0 0 12px">${n} waiting to be written${list.length > n ? ` · ${list.length - n} on the record` : ''}. Kept in <code>story-queue.json</code> so it survives the browser.</div>`
     + sorted.map(card).join('');
 }
+const fmtSiteDate = iso => { if (!iso) return ''; try { return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); } catch { return iso; } };
+const siteIndexCard = it => `<a class="card" href="${esc(it.url)}" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit">
+      ${it.kicker ? `<div class="faint" style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">${esc(it.kicker)}</div>` : ''}
+      <div style="font-weight:800;font-size:15px;line-height:1.25;margin-top:3px">${esc(it.title)}</div>
+      ${it.desc ? `<div class="dt" style="margin-top:4px">${esc(it.desc)}</div>` : ''}
+      ${it.date ? `<div class="faint" style="font-size:11px;margin-top:6px">${fmtSiteDate(it.date)}</div>` : ''}
+    </a>`;
+// Every page the desk publishes is already filed in site-index.json under a
+// category. This drops that category's pages into the screen where the
+// subject actually lives, so somebody in the Trade Court finds Who Wins The
+// Trades without having to know The Full Record exists. Driven by the
+// catalog, so a page filed tomorrow lands in the right screen with no change
+// here — which is the point: hand-written links are what left twenty-nine
+// pages reachable from one flat list and nowhere else.
+function publishedSlot(cat, label) {
+  return `<div class="pub-slot" data-pub-cat="${esc(cat)}" data-pub-label="${esc(label || 'Published on the site')}"></div>`;
+}
+function fillPublished() {
+  if (!document.querySelector('.pub-slot')) return;
+  loadSiteIndex().then(d => {
+    document.querySelectorAll('.pub-slot').forEach(el => {
+      const cat = ((d && d.categories) || []).find(c => c.name === el.dataset.pubCat);
+      const items = (cat && cat.items) || [];
+      if (!items.length) { el.innerHTML = ''; return; }
+      el.innerHTML = `<h4 style="margin:24px 0 8px">${esc(el.dataset.pubLabel)} <span class="faint" style="font-weight:400">(${items.length})</span></h4>
+        <div class="card" style="display:grid;gap:12px">${items.map(siteIndexCard).join('')}</div>
+        <p class="faint" style="font-size:11px;margin:8px 0 0">Filed under ${esc(cat.name)} — every page is also in <button class="linkbtn" data-act="site-index">The Full Record</button>.</p>`;
+    });
+  });
+}
 function showSiteIndex() {
   loadSiteIndex().then(renderSiteIndex);
   app.innerHTML = `<div style="padding-bottom:24px">
@@ -2720,13 +2752,7 @@ function renderSiteIndex(d) {
     return;
   }
   const term = (S.siteIndexQuery || '').trim().toLowerCase();
-  const fmtDate = iso => { if (!iso) return ''; try { return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); } catch { return iso; } };
-  const card = it => `<a class="card" href="${esc(it.url)}" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit">
-      ${it.kicker ? `<div class="faint" style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">${esc(it.kicker)}</div>` : ''}
-      <div style="font-weight:800;font-size:15px;line-height:1.25;margin-top:3px">${esc(it.title)}</div>
-      ${it.desc ? `<div class="dt" style="margin-top:4px">${esc(it.desc)}</div>` : ''}
-      ${it.date ? `<div class="faint" style="font-size:11px;margin-top:6px">${fmtDate(it.date)}</div>` : ''}
-    </a>`;
+  const card = siteIndexCard;
   let total = 0;
   const sections = d.categories.map(cat => {
     const items = term ? cat.items.filter(i => (i.title + ' ' + i.desc).toLowerCase().includes(term)) : cat.items;
@@ -3148,7 +3174,9 @@ function showInvestigations() {
     app.innerHTML = `<div style="padding-bottom:24px">${back}
       <div class="setup-logo" style="font-size:24px">🔍 SCFL Investigations</div>
       <p class="muted" style="margin-top:4px">${esc(meta.cadence)}</p>
-      <div class="card"><div class="dt">No investigations baked in yet.</div></div></div>`;
+      <div class="card"><div class="dt">No investigations baked in yet.</div></div>
+      ${publishedSlot('Investigations & Research', 'The long-form, published')}</div>`;
+    fillPublished();
     return;
   }
   const cards = list.map(inv => {
@@ -3170,7 +3198,9 @@ function showInvestigations() {
   app.innerHTML = `<div style="padding-bottom:24px">${back}
     <div class="setup-logo" style="font-size:24px">🔍 SCFL Investigations</div>
     <p class="muted" style="margin-top:4px">${esc(meta.cadence)} Slot one as the current issue's feature when it's time.</p>
-    ${cards}</div>`;
+    ${cards}
+    ${publishedSlot('Investigations & Research', 'The long-form, published')}</div>`;
+  fillPublished();
 }
 function showInvestigationRead(id) {
   const inv = investigationById(id); if (!inv) { toast('Not found'); return showInvestigations(); }
@@ -3839,6 +3869,7 @@ const OFFICE_TOOLS = [
   ['logos-export', '🛡️', 'Export Team Logos', 'Download every team logo → send to Claude'],
   ['matchup-export', '📺', 'Export Matchup', 'Pull a real game → send to Claude for the broadcast'],
   ['schedule-export', '🗓️', 'Export Schedule', 'The whole regular season → send to Claude'],
+  ['ir-watch', '🩹', 'IR Watch', 'What a third IR spot would actually have cost this league'],
   ['assets', '🗂️', 'Asset Vault', 'League graphics & resources — save or share'],
   ['staff-handbook', '📖', 'Board Handbook', 'How the Office works for the board'],
   ['staff-send', '📤', 'Send to HQ', 'Package your additions → text them to the Commish'],
@@ -3878,7 +3909,7 @@ const NEWSROOM_TOOLS = [
 const mtoolBtn = ([a, ic, l, d]) => `<button class="mtool" data-act="${a}"><span class="mtool-ic">${ic}</span><span class="mtool-l">${l}</span><span class="mtool-d">${d}</span></button>`;
 const OFFICE_SECTIONS = [
   ['The Weekly Board', ['power-ranks', 'money-lines']],
-  ['The Board Desk', ['roster-export', 'waiver-export', 'logos-export', 'matchup-export', 'schedule-export', 'assets', 'staff-handbook', 'staff-send', 'staff-import']],
+  ['The Board Desk', ['roster-export', 'waiver-export', 'logos-export', 'matchup-export', 'schedule-export', 'ir-watch', 'assets', 'staff-handbook', 'staff-send', 'staff-import']],
   ['The Record Room', ['dossier', 'franchise-map', 'records', 'rivalries', 'players', 'ex-files', 'site-index']],
   ['The Arcade', ['jeopardy', 'tradewar']],
   ['Ring of Honor', ['ring-of-honor']],
@@ -6712,7 +6743,8 @@ async function showTradeCourt(force) {
   const shell = (inner) => { app.innerHTML = `<div style="padding-bottom:32px">${back}
     <div class="setup-logo" style="font-size:26px">⚖️ The Trade Court</div>
     <p class="muted" style="margin:2px 0 16px">Every trade in league history, dragged into the light and graded on the value board. Then we name names.</p>
-    ${inner}</div>`; };
+    ${inner}
+    ${publishedSlot('Trade Desk', 'The Trade Desk, published')}</div>`; fillPublished(); };
   if (!S.bundle || !S.bundle.league) {
     return shell(`<div class="card"><div class="dt">Load your league first (enter your Sleeper username on the home screen), then come back — court's in session.</div></div>`);
   }
@@ -8758,9 +8790,12 @@ async function showRivalryRead(k) {
 async function showHeatIndex() {
   const rows = await loadRivals();
   if (!rows || !rows.length) {
-    return setContent(`<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>
+    setContent(`<button class="btn ghost" data-act="back-news" style="width:auto;padding:8px 14px;margin-bottom:14px">‹ Newsroom menu</button>
       <div class="card"><h3>🌡️ The Heat Index</h3>
-      <p class="muted">The rivalry data isn't loaded. It's built by <code>scripts/build_rivalries.py</code>.</p></div>`);
+      <p class="muted">The rivalry data isn't loaded. It's built by <code>scripts/build_rivalries.py</code>.</p></div>
+      ${publishedSlot('Heat & Rivalries', 'Heat &amp; rivalries, published')}`);
+    fillPublished();
+    return;
   }
   const byHeat = [...rows].sort((a, b) => b.heat - a.heat);
   const warnCount = byHeat.filter(r => r.heat >= HEAT_WARNING_THRESHOLD).length;
@@ -8790,7 +8825,9 @@ async function showHeatIndex() {
         <b style="color:var(--accent-d)">${warnCount}</b> of ${byHeat.length} pairings currently run hot enough to trigger a Warning.
       </div>
     </div>
-    ${byHeat.map(row).join('')}`);
+    ${byHeat.map(row).join('')}
+    ${publishedSlot('Heat & Rivalries', 'Heat &amp; rivalries, published')}`);
+  fillPublished();
 }
 
 // ---- The Weekly Heat Index — "who got hot this week?" -----------------------
@@ -9655,7 +9692,7 @@ async function showSettings() {
 /* ---- history-backed navigation: swipe-back and the ‹ button both work ---- */
 const NAV_ACTS = new Set(['home','newsroom','create-issue','weekly-stories','dashboard','calendar',
   'politics','pol-read','desk','storylines','investigations','inv-read','dossier','records','rivalries','rivalry-read','players','player-read','ex-files','site-index',
-  'archive-articles','archive','cover-art','predraft-view','draft-room','trade-court','waiver-wire','heat-index','weekly-heat','draft-desk',
+  'archive-articles','archive','ir-watch','cover-art','predraft-view','draft-room','trade-court','waiver-wire','heat-index','weekly-heat','draft-desk',
   'assets','staff-handbook','staff-import','tc-team','back-news','back','settings','ex-files','power-ranks','money-lines','pop-grades','pop-year',
   'story-queue']);
 let NAV_SILENT = false;
@@ -9756,6 +9793,7 @@ document.body.addEventListener('click', async (e) => {
   if (act === 'draft-grades-issue') { window.open('scfl-2026-draft-grades-flip.html', '_blank'); return; }
   if (act === 'jeopardy')  { window.open('jeopardy/', '_blank'); return; }
   if (act === 'tradewar')  { window.open('tradewar/', '_blank'); return; }
+  if (act === 'ir-watch')  { window.open('ir-watch.html', '_blank'); return; }
   if (act === 'ring-of-honor') return showRingOfHonor();
   if (act === 'roh-vote') return rohVote(t.dataset.id);
   if (act === 'roh-nominate') return rohNominate();

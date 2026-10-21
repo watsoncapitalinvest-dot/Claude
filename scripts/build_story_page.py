@@ -385,8 +385,44 @@ def build(slug):
     open(os.path.join(ROOT, cfg['out']), 'w', encoding='utf-8').write(html)
     print('wrote', cfg['out'], len(html), 'chars |', len(blocks), 'blocks |',
           html.count('<section class="page"'), 'pages')
+    sync_pages()
     return cfg
+
+
+def sync_pages():
+    """Point each investigation at its own flip page, in investigations.json.
+
+    The app reads `page` off the entry and offers 'Open the page-turning
+    feature' when it is there. Nothing set it, so three stories had a built
+    page on the site that the app had no way to reach -- a reader in
+    Investigations could read the plain text and never learn the magazine
+    version existed. Derived from STORIES rather than typed in each entry, so
+    a story that gets a page tomorrow is linked the moment it is built.
+
+    Entries outside STORIES keep whatever page they already carry.
+    """
+    path = os.path.join(ROOT, 'investigations.json')
+    d = json.load(open(path, encoding='utf-8'))
+    by = {x.get('id'): x for x in d['investigations']}
+    fixed = []
+    for slug, cfg in STORIES.items():
+        art = by.get(slug)
+        if art is None or not os.path.exists(os.path.join(ROOT, cfg['out'])):
+            continue
+        if art.get('page') != cfg['out']:
+            art['page'] = cfg['out']
+            fixed.append(slug)
+    if fixed:
+        tmp = path + '.tmp'
+        json.dump(d, open(tmp, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+        os.replace(tmp, path)
+        print('  linked in the app:', ', '.join(fixed))
+    return fixed
+
 
 if __name__ == '__main__':
     slug = sys.argv[1] if len(sys.argv) > 1 else 'the-wookie-curse'
-    build(slug)
+    if slug == '--sync':
+        sync_pages()
+    else:
+        build(slug)
