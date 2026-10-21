@@ -147,6 +147,21 @@ def alltime_rank(pts):
     return sum(1 for p in rows if p > pts) + 1
 
 
+def cover_source(d, stories, lead):
+    """What the cover leads on: the lead game, or a feature if the issue says so.
+
+    Some weeks the biggest thing that happened is not a game. The written file
+    can point the cover at a feature with {"cover": {"from": "feature"}}, and
+    everything that reads as the cover's billing -- the hook, the subhead and
+    the share blurb -- follows it. Everything else about the issue is unchanged:
+    the game of the week is still the game of the week inside.
+    """
+    cv = d.get('cover') or {}
+    if cv.get('from') == 'feature' and (d.get('features') or []):
+        return d['features'][cv.get('index', 0)], True
+    return stories[lead], False
+
+
 def coverlines(season, week, d, stories, lead, st):
     """What the cover promises, computed from what is actually inside it.
 
@@ -159,9 +174,17 @@ def coverlines(season, week, d, stories, lead, st):
     """
     out = []
     # the feature, in its own words -- the continuation parts are not separate
-    # billings, so only the first is taken
-    for f in (d.get('features') or [])[:1]:
-        out.append(f['headline'].upper())
+    # billings, so only the first is taken. Skipped when the feature IS the
+    # hook: billing it twice on the same cover reads as a mistake.
+    _, from_feature = cover_source(d, stories, lead)
+    if from_feature:
+        # the game of the week has lost the hook to the feature, so it takes a
+        # billing instead -- otherwise the biggest game in the issue is the one
+        # thing the cover does not mention
+        out.append(stories[lead]['headline'].upper())
+    else:
+        for f in (d.get('features') or [])[:1]:
+            out.append(f['headline'].upper())
 
     # the week's biggest score, but only worth a line if it is historically big
     hi = max(((s['score'][i], s['winner'] if i == 0 else s['loser'])
@@ -275,6 +298,7 @@ def build(season, week, remeasure=True):
     out = f'scfl-week-{week}-issue.html'
     key = f'week-{week}'
     ls = stories[lead]
+    cs, _cf = cover_source(d, stories, lead)
     big = max(stories, key=lambda s: s['margin'])
     lines = coverlines(season, week, d, stories, lead, st)
     bi.ISSUES[key] = {
@@ -288,14 +312,14 @@ def build(season, week, remeasure=True):
         'ogtitle': f'Skirt Chasers — The Week {week} Issue',
         # game time here too: the share blurb is the first thing anybody reads,
         # and naming broadcast windows gives away the trick the replay exists for
-        'ogdesc': (f'{ls["headline"]}. Eight games rebuilt play by play, from the opening '
+        'ogdesc': (f'{cs["headline"]}. Eight games rebuilt play by play, from the opening '
                    f'drive to the last snap of the fourth.'),
         'sharetext': f'Week {week}, replayed from the tape. Sixty minutes, eight games.',
         'kicker': f'The Magazine · Week {week}',
         'seal': (f'Week', f'{week}'),
         'issueline': f'2026&ndash;27 Season &middot; Week {week}',
-        'hook': ls['headline'],
-        'hooksub': ls['dek'],
+        'hook': cs['headline'],
+        'hooksub': cs['dek'],
         'coverlines': lines,
         'articles': [],
         'arts_inline': arts,

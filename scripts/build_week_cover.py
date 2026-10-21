@@ -68,8 +68,7 @@ h1{font-size:50px;line-height:1.02;letter-spacing:-.022em;font-weight:900;margin
 <div class="c"><div class="b">
   <div><div class="flag">The Week __WK__ Issue</div><h1>__HL__</h1></div>
   <div class="st">
-    <div><div class="k">Final</div><div class="v">__WS__<b>&ndash;</b>__LS__</div></div>
-    <div><div class="k">Lead changes</div><div class="v">__NF__</div></div>
+    __STATS__
   </div>
 </div></div>"""
 
@@ -236,11 +235,76 @@ h1{font-size:52px;line-height:1.0;letter-spacing:-.022em;font-weight:900;margin-
   <h1>__HL__</h1>
   <div class="dek">__DEK__</div>
   <div class="st">
-    <div><div class="k">Final</div><div class="v">__WS__<b>&ndash;</b>__LS__</div></div>
-    <div><div class="k">Lead changes</div><div class="v">__NF__</div></div>
+    __STATS__
   </div>
 </div>
 </div>"""
+
+
+GAME_STATS = ('<div><div class="k">Final</div><div class="v">{ws}<b>&ndash;</b>{ls}</div></div>'
+              '<div><div class="k">Lead changes</div><div class="v">{nf}</div></div>')
+FEAT_STATS = ('<div><div class="k">{k1}</div><div class="v">{v1}</div></div>'
+              '<div><div class="k">{k2}</div><div class="v">{v2}</div></div>')
+
+
+def week_means(season, upto):
+    """League scoring average per week. The injury story's own evidence."""
+    import glob as _g
+    out = []
+    for q in sorted(_g.glob(os.path.join(WDIR, f'{season}-w?.json'))):
+        wk = int(_re.search(r'w(\d)\.json', os.path.basename(q)).group(1))
+        if wk > upto:
+            continue
+        d = json.load(open(q, encoding='utf-8'))
+        pts = [t['points'] for gm in d['games'] for t in gm['teams']]
+        out.append((wk, sum(pts) / len(pts)))
+    return out
+
+
+def feature_card(season, week, feat, art=''):
+    """The share card when the cover leads on a feature rather than a game.
+
+    The margin trace belongs to one game. Running it behind a headline about
+    the whole week would be a picture of the wrong thing -- so the series is
+    swapped for the one the feature actually argues from: the league's scoring
+    average, week by week, against its own season mean. Five weeks hovering and
+    then a drop is the story, and it draws itself.
+    """
+    means = week_means(season, week)
+    base = sum(v for _, v in means) / len(means)
+    n = max(len(means) - 1, 1)
+    pts = [(i / n, v - base) for i, (_, v) in enumerate(means)]
+    x0, w = 40, 1200 - 80
+    y0, h = 150, 330
+    line, area, mid = curve(pts, w, h, x0, y0)
+    hurt = injured_count(season, week)
+    doc = (OG.replace('__AREA__', area).replace('__LINE__', line)
+             .replace('__MID__', f'{mid:.1f}').replace('__FLIPS__', '')
+             .replace('__WK__', str(week))
+             .replace('__HL__', ad.esc(feat.get('headline', '')))
+             .replace('__DEK__', ad.esc(feat.get('dek', '')))
+             .replace('__STATS__', FEAT_STATS.format(
+                 k1='Points a team', v1=f'{means[-1][1]:.1f}',
+                 k2='Injured men', v2=str(hurt)))
+             .replace('__PHOTO__', ''))
+    out = os.path.join(ROOT, f'scfl-week-{week}-og.jpg')
+    ad.shoot(doc, out, f'wk{week}-og', 1200, 630)
+    print(f'  wrote {os.path.basename(out)} (feature card: '
+          f'{means[-1][1]:.1f} a team, {hurt} injured)')
+
+
+def injured_count(season, week):
+    """Men carrying a designation a manager would shelve. Questionable is not
+    one, exactly as everywhere else this desk counts injuries."""
+    d = json.load(open(os.path.join(WDIR, f'{season}-w{week}.json'), encoding='utf-8'))
+    seen = set()
+    for gm in d['games']:
+        for t in gm['teams']:
+            for key in ('starters', 'bench', 'reserve'):
+                for pl in t.get(key) or []:
+                    if pl.get('injury_status') and pl['injury_status'] != 'Questionable':
+                        seen.add(pl['name'])
+    return len(seen)
 
 
 def og_card(season, week, g, lead_story, pts, flips_t, art=''):
@@ -265,9 +329,9 @@ def og_card(season, week, g, lead_story, pts, flips_t, art=''):
              .replace('__WK__', str(week))
              .replace('__HL__', ad.esc(s.get('headline', '')))
              .replace('__DEK__', ad.esc(s.get('dek', '')))
-             .replace('__WS__', f"{s['score'][0]:.2f}")
-             .replace('__LS__', f"{s['score'][1]:.2f}")
-             .replace('__NF__', str(g['lead_changes'])))
+             .replace('__STATS__', GAME_STATS.format(
+                 ws=f"{s['score'][0]:.2f}", ls=f"{s['score'][1]:.2f}",
+                 nf=g['lead_changes'])))
     if art:
         from PIL import Image as _I
         aw, ah = _I.open(os.path.join(ROOT, art)).size
@@ -275,9 +339,9 @@ def og_card(season, week, g, lead_story, pts, flips_t, art=''):
         if tall:
             doc = (OGP.replace('__WK__', str(week))
                       .replace('__HL__', ad.esc(s.get('headline', '')))
-                      .replace('__WS__', f"{s['score'][0]:.2f}")
-                      .replace('__LS__', f"{s['score'][1]:.2f}")
-                      .replace('__NF__', str(g['lead_changes'])))
+                      .replace('__STATS__', GAME_STATS.format(
+                          ws=f"{s['score'][0]:.2f}", ls=f"{s['score'][1]:.2f}",
+                          nf=g['lead_changes'])))
         doc = doc.replace('__PHOTO__', f"background-image:url('{data_uri(art, tall)}');")
         if not tall:
             doc = _re.sub(r'<svg width="1200".*?</svg>', '', doc, flags=_re.S)
@@ -290,12 +354,14 @@ def og_card(season, week, g, lead_story, pts, flips_t, art=''):
 
 def build(season, week, art='', inset='', card=''):
     rp = json.load(open(os.path.join(WDIR, f'{season}-w{week}-replay.json'), encoding='utf-8'))
-    lead, stories = 0, []
+    lead, stories, cover, feats = 0, [], {}, []
     for cand in (f'{season}-w{week}-written.json', f'{season}-w{week}-stories.json'):
         p = os.path.join(WDIR, cand)
         if os.path.exists(p):
             d = json.load(open(p, encoding='utf-8'))
             lead, stories = d.get('lead', 0), d.get('stories', [])
+            cover = d.get('cover') or {}
+            feats = d.get('features') or []
             break
     g = rp['games'][lead]
 
@@ -332,7 +398,11 @@ def build(season, week, art='', inset='', card=''):
                     .replace('__WK__', str(week)))
         ad.shoot(doc, out, f'wk{week}-cover', W, H)
         print(f'  wrote {os.path.basename(out)} - {len(crossings(pts))} lead changes drawn')
-    if stories:
+    # The card follows whatever the cover leads on, or the link previews as one
+    # magazine and opens as another.
+    if cover.get('from') == 'feature' and feats:
+        feature_card(season, week, feats[cover.get('index', 0)], card or art)
+    elif stories:
         og_card(season, week, g, stories[lead], pts, crossings(pts), card or art)
 
 
