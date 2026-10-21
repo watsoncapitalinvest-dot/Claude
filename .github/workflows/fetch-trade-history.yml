@@ -1,0 +1,61 @@
+name: Fetch the full trade history
+
+# The Trade Audit was built on an Obvibase reconstruction that does not hold.
+# Checked against Sleeper for 2026 -- the one season all three sources cover --
+# the export has 6 trades where Sleeper has 29, and across 2021-2025 it gives
+# The Machines exactly thirteen deals every season, the only franchise of the
+# sixteen whose count never moves.
+#
+# Sleeper is the league's own record and chains backwards through
+# previous_league_id, so one walk reaches every season the league has been on
+# the platform. api.sleeper.app is blocked from the agent container, so the
+# pull happens here and comes back through git.
+#
+# Run it by hand. It is a backfill, not a weekly job: trades do not change
+# once made, and the current season's are already in transactions.json.
+
+on:
+  workflow_dispatch:
+    inputs:
+      league_id:
+        description: 'League id to start the walk at (blank = this season)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-trade-history
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Walk the seasons
+        env:
+          SCFL_LEAGUE_ID: ${{ vars.SCFL_LEAGUE_ID }}
+        run: |
+          python3 scripts/fetch_trade_history.py \
+            ${{ github.event.inputs.league_id && format('--from {0}', github.event.inputs.league_id) || '' }}
+
+      - name: Commit it
+        run: |
+          git config user.name  'The Record Room'
+          git config user.email 'noreply@anthropic.com'
+          # stage before asking: git diff ignores an untracked file, which is
+          # how the first transactions run threw its own fetch away
+          git add trade-history.json
+          if git diff --cached --quiet -- trade-history.json; then
+            echo 'no change this run'
+            exit 0
+          fi
+          N=$(python3 -c "import json;d=json.load(open('trade-history.json'));print(d['count'],len(d['seasons']))")
+          git commit -m "Trade history: ${N} trades across seasons, from Sleeper"
+          git push
