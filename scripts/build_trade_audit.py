@@ -185,6 +185,10 @@ def facts():
     counts = [per_season.get(y, 0) for y in full]
     same = len(set(counts)) == 1
 
+    active = {r['key'] for r in fr['franchises'] if r.get('active')}
+    era = max(r.get('numSeasons', 0) for r in rec.values())
+    full_era = [r for r in rec.values() if r.get('numSeasons', 0) >= era - 1]
+
     # one row per deal: who was across the table, so a three-team trade counts
     # once however many partners it had
     across = [{key(x['team']) for x in t['sides']} - {ME} for t in mine]
@@ -210,6 +214,21 @@ def facts():
                               key=lambda p: (max(in_[p]) - min(out_[p]), max(in_[p])),
                               reverse=True),
         'others': (j('sleeper-schedule.json').get('total_rosters') or 16) - 1,
+        # who actually leads what. The first draft's closing called him the
+        # best trader and the best manager; he leads the table on record and
+        # on playoff appearances, he does NOT lead it on titles, and the
+        # value board has him fourth. A closing is a claim like any other.
+        'pct_rank': sorted(full_era, key=lambda r: -r['winPct']),
+        # "the two weakest franchises in the league" was typed, not counted,
+        # and it is not true: Killer Klowns sit between them on the table and
+        # two defunct sides sit below both. The copy now says where each one
+        # actually ranks, among the franchises still playing.
+        'weak_rank': [key(r['name']) for r in
+                      sorted((rec[k] for k in active if k in rec),
+                             key=lambda r: r['winPct'])],
+        'active': active,
+        'po_rank': sorted(full_era, key=lambda r: -r.get('playoffs', 0)),
+        'title_rank': sorted(rec.values(), key=lambda r: -(r.get('titles') or 0)),
         'val': values(),
         'moves': moves,
         'in_': in_, 'out_': out_, 'trades': trades, 'key': key, 'mine': mine,
@@ -293,10 +312,12 @@ def prose(F):
         f'partner is {name(k1)}, with {word(n1)} deals. Second is {name(k2)}, with '
         f'{word(n2)}. Between them that is {word(pair)} of his {word(F["deals"])} deals — '
         f'about {share} per cent of everything he has done — and '
-        f'they are, by the all-time table, the two weakest franchises in the league: '
-        f'{name(k1)} {rec[k1]["record"]}, {name(k2)} {rec[k2]["record"]} with '
-        f'{"no playoff appearance at all" if not rec[k2].get("playoffs") else "barely a playoff appearance"} '
-        f'in {word(rec[k2]["numSeasons"])} seasons. If you wanted to draw the prosecution '
+        f'both of them come from the bottom of the all-time table. {name(k2)} have the '
+        f'worst winning percentage of any side still in this league, {rec[k2]["record"]}, '
+        f'and {"have never made the playoffs" if not rec[k2].get("playoffs") else "have made the playoffs " + word(rec[k2]["playoffs"]) + " times"} '
+        f'in {word(rec[k2]["numSeasons"])} seasons. {name(k1)} are '
+        f'{ordinal(F["weak_rank"].index(k1) + 1)}-worst of the '
+        f'{word(len(F["weak_rank"]))}, at {rec[k1]["record"]}. If you wanted to draw the prosecution '
         f'case as a chart, that is the chart. We are not going to pretend otherwise, '
         f'because it is the first thing in the file.')
 
@@ -407,23 +428,48 @@ def prose(F):
         f'evidence of a crime. They gang up on him because he keeps winning. He keeps '
         f'winning because he is good.')
 
+    ahead = [name(k) for k in (F['val']['rank'][:F['val']['rank'].index(ME)]
+                               if F['val'] else [])]
+    pct1, pct2 = F['pct_rank'][0], F['pct_rank'][1]
+    po1, po2 = F['po_rank'][0], F['po_rank'][1]
+    tl = F['title_rank'][0]
+    me2 = rec[ME]
+
+    listed = (' and '.join([', '.join(ahead[:-1]), ahead[-1]]) if len(ahead) > 1
+              else (ahead[0] if ahead else ''))
+    worked = (f'{name(busiest_k)} appear in more of its deals than he does'
+              if busiest_k != ME else 'nobody appears in more of its deals than he does')
+    read = (f'{word(len(ahead))} franchise{"" if len(ahead) == 1 else "s"} grade out '
+            f'ahead of him on it — {listed}' if ahead else
+            'nobody grades out ahead of him on it')
     P.append(
-        'This newsroom has now read every deal in the dynasty ledger, counted every '
-        'partner, and weighed the one asset the prosecution never brings to the table: a '
-        'motive that holds up. There is no cabal. There is a concentration, and there is '
-        'an explanation for the concentration that the concentration itself supports. '
-        'There is a market, open every summer, and one man who works it harder and reads '
-        'it better than the rest of the room — and a room that has decided, for '
-        'twenty-one years, that this must be against the rules.')
+        'This newsroom has now read every deal in the dynasty ledger, priced every asset '
+        'at the season it moved in, and counted every partner. There is no cabal. There '
+        'is a concentration, and an explanation for the concentration that the '
+        f'concentration itself supports. There is a market, open every summer, and he '
+        f'does not own it: {worked}, and {read}. And there is a room that has decided, '
+        f'for twenty-one years, that whatever he is doing instead must be against the '
+        f'rules.')
 
     P.append(
-        'The verdict of the ledger is not close. On the charge of cheating: not guilty. '
-        'On the charge of collusion: not guilty. On the charge of being, by a wide and '
-        'infuriating margin, the best trader and the best manager this league has '
-        'produced — guilty, and it is not up for appeal. File it under the only heading '
-        'that fits. Some empires are built in the dark. This one was built in the group '
-        'chat, in broad daylight, one fair deal at a time, while everybody watched and '
-        'nobody could stop it.')
+        f'So the verdict of the ledger is not close, and it is not the one the league '
+        f'wants either. On the charge of cheating: not guilty. On the charge of '
+        f'collusion: not guilty. On the charge of being the best trader this league has '
+        f'produced: not guilty, and that one is not close — he is '
+        f'{ordinal(F["val"]["rank"].index(ME) + 1)} of '
+        f'{word(len(F["val"]["rank"]))} on the board, behind {name(k1)}, the franchise at '
+        f'the top of his own partner list. He does not have the most championships '
+        f'either; {tl["name"]} have {word(tl["titles"])} to his '
+        f'{word(me2["titles"])}. What he is guilty of is narrower than the theory and '
+        f'worse for everybody else: the best record anybody has put together here, '
+        f'{pc(me2["winPct"])} against {pc(pct2["winPct"])} for the next side to go the '
+        f'distance, and {word(me2["playoffs"])} playoff appearances in '
+        f'{word(me2["numSeasons"])} seasons, {word(po1["playoffs"] - po2["playoffs"])} '
+        f'more than anyone else has managed. He is beaten in his own trade ledger one '
+        f'deal in {word(round(F["val"]["tbl"][ME]["n"] / F["val"]["tbl"][ME]["l"]))} and '
+        f'he finishes above you anyway. Some empires are built in the dark. This one was '
+        f'built in the group chat, in broad daylight, one ordinary deal at a time, while '
+        f'everybody watched and nobody could stop it.')
 
     P.append(
         f'Sourcing: the itemised Obvibase ledger ({F["league_deals"]} deals, {y0}–{y1}), '
@@ -442,9 +488,41 @@ def prose(F):
     return P
 
 
+def audit(F, P):
+    """Re-check the published figures against the data that produced them.
+
+    Belt and braces: every number is interpolated from facts(), so these can
+    only fail if a source file changes shape. They are here because the
+    paragraph that sank the first draft was a set of counts that LOOKED
+    right, and nothing in the build would have caught it.
+    """
+    txt = ' '.join(P).lower()          # the copy capitalises sentence starts
+    V, rec, me = F['val'], F['rec'], F['rec'][ME]
+    m = V['tbl'][ME] if V else {}
+    want = [
+        (me['record'], 'all-time record'),
+        (pc(me['winPct']), 'win percentage'),
+        (f'{word(F["deals"])} deals', 'his deal count'),
+        (f'{word(F["partners"])} different franchises', 'partner count'),
+        (f'{m["w"]}-{m["l"]}', 'trade win-loss') if V else None,
+        (f'{word(F["metronome"])} trades', 'the per-season rate') if F['metronome'] else None,
+    ]
+    bad = [why for pair in want if pair
+           for val, why in [pair] if str(val).lower() not in txt]
+    # and the claims that are comparisons rather than counts
+    if F['busiest'][0] != ME and 'does not own it' not in txt:
+        bad.append('the market-share claim')
+    if V and V['rank'].index(ME) == 0 and 'grade out ahead of him' in txt:
+        bad.append('says sides grade ahead of him when none do')
+    if bad:
+        raise SystemExit('audit failed: ' + '; '.join(bad))
+    return len(want)
+
+
 def build():
     F = facts()
     P = prose(F)
+    audit(F, P)
     path = os.path.join(ROOT, 'investigations.json')
     d = json.load(open(path, encoding='utf-8'))
     inv = d['investigations']
