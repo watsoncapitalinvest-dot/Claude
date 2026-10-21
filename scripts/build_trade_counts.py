@@ -68,7 +68,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = 'trade-counts.json'
 
 # The export's own column names, in the second of the two pasted tables.
-COLS = ('Season', 'Season Trade #', 'Team A', 'Team B')
+# `ID` is Obvibase's own row id, issued in order and never reused, which is the
+# only thing in the file that can tell a deleted record from a short export.
+COLS = ('ID', 'Season', 'Season Trade #', 'Team A', 'Team B')
 
 # Renames the stored alias table has not caught up with. The first is the
 # export's own typo; the rest are the 2026 Sleeper names, and they are the same
@@ -95,17 +97,47 @@ def resolver():
 
 
 def read_export(path, look):
-    """-> {(season, deal no): {franchise keys}}, with legs folded into deals."""
+    """-> deals, and what the row ids say about what is NOT in the file.
+
+    deals is {(season, deal no): {franchise keys}} with legs folded in.
+
+    THE ROW IDS ARE THE CHECK ON THE EXPORT ITSELF. The league table at the
+    left of the file carries a stored `Trades` counter, and it does not agree
+    with the number of rows delivered -- 550 against 536 when this was
+    written. That gap could be two different things and they matter very
+    differently: rows the export dropped, which would make every count here
+    too low, or records Obvibase has deleted, which would mean the file is
+    complete and the counter is stale.
+
+    The ids settle it. Obvibase issues them in order and never reuses one, so
+    a complete export is a contiguous run. This one runs 1 to 558 with 22
+    absent, and every absent id sits between two rows that bracket it in date
+    -- they are deleted records, and the file is whole. The stored counter
+    sits between the two and is not a check on anything.
+
+    It matters downstream. trades.json was reconstructed from an EARLIER
+    itemised pull and runs nine deals heavier than this file over 2021-2025.
+    That looked like two sources disagreeing. It is not: twelve ids are
+    deleted in that window, and season by season the deletions account for
+    the gap almost exactly. The ledger is slightly stale, not wrong, which is
+    a different and much better thing to be. reconcile() prints both columns.
+
+    A deleted id is assigned to the season of the rows either side of it. One
+    sits across a season boundary and is reported rather than guessed at.
+    """
     rows = [l.rstrip('\n').split('\t') for l in open(path, encoding='utf-8')]
     hdr = rows[0]
-    # The league table's columns come first and share four names with the
+    # The league table's columns come first and share five names with the
     # trade table, so the index is taken from the LAST occurrence of each.
     at = {c: max(i for i, h in enumerate(hdr) if h == c) for c in COLS}
     need = max(at.values())
-    deals, unresolved = collections.defaultdict(set), collections.Counter()
+    deals, unresolved, by_id = collections.defaultdict(set), collections.Counter(), {}
+    stored = None
     for r in rows[1:]:
         if len(r) <= need:            # the paste's own trailing line
             continue
+        if stored is None and len(hdr) > 4 and hdr[4] == 'Trades':
+            stored = r[4]
         side = set()
         for c in ('Team A', 'Team B'):
             k = look.get(norm(r[at[c]]))
@@ -116,12 +148,25 @@ def read_export(path, look):
         # 20.1 and 20.2 are legs of deal 20; the 2019 block numbered 1901-1905
         # is five separate deals and int() leaves it alone.
         deals[(r[at['Season']], int(float(r[at['Season Trade #']])))] |= side
+        by_id[int(r[at['ID']])] = r[at['Season']]
     if unresolved:
         print('  UNRESOLVED FRANCHISES — the count would be wrong:')
         for n, c in unresolved.most_common():
             print(f'    {c:4}  {n}')
         sys.exit(1)
-    return deals
+
+    have = set(by_id)
+    gaps = [i for i in range(min(have), max(have) + 1) if i not in have]
+    gone, across = collections.Counter(), []
+    for g in gaps:
+        a = by_id[max(i for i in have if i < g)]
+        b = by_id[min(i for i in have if i > g)]
+        (gone.update([a]) if a == b else across.append([g, a, b]))
+    audit = {'rows': len(by_id), 'idLow': min(have), 'idHigh': max(have),
+             'storedCounter': stored, 'deleted': len(gaps),
+             'deletedBySeason': dict(sorted(gone.items())),
+             'deletedAcrossSeasons': across}
+    return deals, audit
 
 
 def sleeper_2026(look):
@@ -183,6 +228,15 @@ def reconcile(tol=2):
     span = sorted(s for s in seen if s not in part
                   and any(s in m for m in master.values()))
 
+    # Season by season, how much of the ledger's excess is accounted for by
+    # records Obvibase has deleted since the itemised pull was taken. Where a
+    # season carries multi-leg deals a deleted LEG does not remove a deal, so
+    # the deletions are an upper bound on the gap rather than an equality.
+    exp = cnt.get('export') or {}
+    gone = exp.get('deletedBySeason') or {}
+    lg = {s: seen[s] - cnt['leagueTotals'].get(s, 0) for s in span}
+    resid = {s: max(0, lg[s] - gone.get(s, 0)) for s in span}
+
     rows, worst, exact = [], 0, 0
     for k in sorted(led, key=lambda k: -sum(led[k].values())):
         gaps = {s: led[k].get(s, 0) - master.get(k, {}).get(s, 0) for s in span}
@@ -196,7 +250,10 @@ def reconcile(tol=2):
     return {'span': span, 'rows': rows, 'worst': worst, 'exact': exact,
             'tol': tol, 'ok': worst <= tol,
             'ledger': sum(seen[s] for s in span),
-            'master': sum(cnt['leagueTotals'][s] for s in span)}
+            'master': sum(cnt['leagueTotals'][s] for s in span),
+            'leagueGap': lg, 'deleted': gone,
+            'deletedInSpan': sum(gone.get(s, 0) for s in span),
+            'unexplained': sum(resid.values())}
 
 
 def main():
@@ -204,7 +261,7 @@ def main():
     ap.add_argument('--src', required=True, help='the Obvibase TSV export')
     a = ap.parse_args()
     look, club, active = resolver()
-    deals = read_export(os.path.expanduser(a.src), look)
+    deals, audit = read_export(os.path.expanduser(a.src), look)
 
     per = collections.defaultdict(collections.Counter)
     tot = collections.Counter()
@@ -237,6 +294,8 @@ def main():
         'partSeasons': part,
         'leagueTotals': {s: tot[s] for s in seasons},
         'multiTeamDeals': multi,
+        # what the row ids say about the export -- see read_export()
+        'export': audit,
         'franchises': [
             {'key': k, 'club': club.get(k, k), 'active': k in active,
              'bySeason': {s: per[k].get(s, 0) for s in seasons},
@@ -259,8 +318,26 @@ def main():
           + str(sum(tot.values())).rjust(7)
           + ('   (' + ', '.join(part) + ' part-season)' if part else ''))
 
+    print()
+    print(f'  the export itself: {audit["rows"]} rows, ids {audit["idLow"]}-'
+          f'{audit["idHigh"]}, {audit["deleted"]} deleted'
+          + (f', stored counter says {audit["storedCounter"]}'
+             if audit['storedCounter'] else ''))
+    print('    deleted by season: '
+          + ', '.join(f'{s} {n}' for s, n in audit['deletedBySeason'].items()))
+    for g, a, b in audit['deletedAcrossSeasons']:
+        print(f'    id {g} sits between {a} and {b} and is not assigned')
+
     r = reconcile()
     if r:
+        print()
+        print('  season  ledger  export   gap   deleted')
+        for s in r['span']:
+            print(f'   {s}  {r["leagueGap"][s] + tot[s]:6} {tot[s]:7} '
+                  f'{r["leagueGap"][s]:+5} {r["deleted"].get(s, 0):8}')
+        print(f'  the ledger runs {r["ledger"] - r["master"]:+d} on the export over '
+              f'{r["span"][0]}-{r["span"][-1]}, against {r["deletedInSpan"]} deleted '
+              f'records; {r["unexplained"]} deal(s) unexplained')
         print()
         print(f'  trades.json against these counts, {r["span"][0]}-'
               f'{r["span"][-1]}: {r["ledger"]} deals against {r["master"]}, '

@@ -275,6 +275,7 @@ def facts():
         'vol': vol, 'cnt': cnt, 'recon': recon, 'dropped': dropped,
         'recon_me': next(abs(r['ledger'] - r['master'])
                          for r in recon['rows'] if r['key'] == ME),
+        'exp': cnt.get('export') or {},
         'part': sorted(part),
         'vol_span': cnt['span'],
         'vol_rank': [r['key'] for r in cnt['franchises'] if r['active']],
@@ -893,6 +894,23 @@ def method(F):
                  f'rows differ by {word(F["recon_me"])} deals across the five years. '
                  f'Any figure in this piece that the register will not '
                  f'back is not in this piece.</p>'),
+        # The best part of the cross-check, and the part that nearly went
+        # unexamined: the nine-deal gap is not disagreement at all.
+        ('body', f'<p class="b"><b>And the gap between them is not a disagreement.</b> '
+                 f'The register numbers every trade in it, in order, and never reuses a '
+                 f'number. Reading those numbers rather than the rows shows '
+                 f'{word(F["exp"]["deleted"])} trades entered over the years and later '
+                 f'deleted &mdash; voided, reversed, or entered twice. '
+                 f'{word(F["recon"]["deletedInSpan"]).capitalize()} of them fall inside '
+                 f'this window, which is where the ledger&rsquo;s extra '
+                 f'{word(F["recon"]["ledger"] - F["recon"]["master"])} deals come from: '
+                 f'it was built from an earlier pull and still carries trades the '
+                 f'register has since dropped. Season by season the deletions cover the '
+                 f'gap with '
+                 + ('nothing left over' if not F['recon']['unexplained'] else
+                    f'{word(F["recon"]["unexplained"])} deal(s) left over') +
+                 f'. The ledger is a little out of date. It is not wrong, and those are '
+                 f'very different things.</p>'),
         ('body', '<p class="b"><b>Players</b> are priced from the DynastyProcess superflex '
                  'board, taken from the August snapshot of the season the trade was made '
                  'in. Not today&rsquo;s. A player who became a star in 2024 is priced in a '
