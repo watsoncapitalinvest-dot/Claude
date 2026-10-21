@@ -76,6 +76,20 @@ def values():
     tradeValues.json is gitignored, so it is rebuilt here if it is not on
     disk. If it cannot be built the piece runs without the paragraph rather
     than guessing at it.
+
+    One limitation, checked rather than assumed. A pick traded three years out
+    is priced at the league average, because the rank regression has decayed
+    to nothing by then on purpose (r^2 ~ 0.03 -- finishing position does not
+    persist). That is right for a league, and wrong for this franchise: The
+    Machines went into the ledger's six seasons ranked 2nd, 4th, 4th, 2nd,
+    7th and 7th, so their own future first lands around slot 13-16 and is
+    worth $190-270 on the chart, not the $455.60 the model gives it. The model
+    therefore OVERVALUES what the Machines give away, which biases the ledger
+    against him -- the opposite of the direction a reader would suspect.
+
+    Repricing every Machines-owned future pick at their median finish moves
+    the record from 28-21 to 28-20: one deal, a 2023 trade with Wookie Leaks,
+    goes from a $91 loss to an $8 push. The published record stands.
     """
     path = os.path.join(ROOT, 'tradeValues.json')
     if not os.path.exists(path):
