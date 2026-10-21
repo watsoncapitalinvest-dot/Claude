@@ -37,6 +37,14 @@ h1{font-size:clamp(30px,6.5vw,52px);line-height:1.02;margin:9px 0 0;font-weight:
 .sw.pale{opacity:.42}
 .hintnote{font-size:12px;color:var(--faint);font-style:italic}
 .cap{font-family:var(--sans);font-size:12.5px;line-height:1.55;color:var(--muted);margin:10px 0 0;max-width:72ch}
+.unfair{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.unfair>div{background:var(--stock);padding:16px 18px;display:flex;flex-direction:column;gap:5px}
+.unfair .k{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.unfair .who{font-family:var(--serif);font-size:23px;font-weight:700;line-height:1.1}
+.unfair .fig{font-family:var(--sans);font-size:13px;font-weight:700}
+.unfair .why{font-family:var(--sans);font-size:12.5px;line-height:1.5;color:var(--muted)}
+.unfair .wide{grid-column:1/-1;background:var(--paper)}
+@media(max-width:560px){.unfair{grid-template-columns:1fr}}
 .plot{width:100%}
 svg{display:block;width:100%;height:auto}
 h2{font-family:var(--sans);font-size:11.5px;font-weight:800;letter-spacing:.16em;
@@ -73,6 +81,7 @@ h2{font-family:var(--sans);font-size:11.5px;font-weight:800;letter-spacing:.16em
   <h2 id="thinHead">Too few deals to rank</h2>
   <div class="plot thin"><svg id="few" role="img" aria-label="Franchises with fewer than ten priced trades"></svg></div>
  </div>
+ <div class="unfair" id="unfair"></div>
  <div>
   <h2>Where the money moves</h2>
   <div class="legend thin">
@@ -182,11 +191,16 @@ $('#tiles').innerHTML=[
 
 // `top` is window.top in a page script; naming a const that shadows it
 // throws before anything renders.
+// Who is the most unfair? Two readings, two different franchises, both
+// printed -- a side can make the fewest level trades in the league, or it
+// can make mostly level trades and win nearly every one that is not.
+const LL=D.leastLevel, SH=D.sharpest, BG=D.biggest;
 const first=ranked[0], last=ranked[ranked.length-1];
 $('#foot').innerHTML=
   '<span>Best record <b>'+first.club+'</b> '+first.w+'–'+first.l+'</span>'+
   '<span>Worst <b>'+last.club+'</b> '+last.w+'–'+last.l+'</span>'+
   '<span>Fairest <b>'+D.fairest.club+'</b> '+Math.round(100*D.fairest.e/D.fairest.n)+'% level</span>'+
+  '<span>Most lopsided <b>'+LL.club+'</b> '+LL.level+'% level</span>'+
   '<span>Threshold <b>$'+D.tc+'</b> either way</span>';
 $('#thinHead').textContent='Fewer than '+MIN+' priced deals — shown, not ranked';
 const soft=D.rows.filter(r=>!r.firm);
@@ -278,6 +292,23 @@ function split(){
     'loser on picks ('+money(byK.picks)+'). A franchise can finish level overall and still '+
     'be doing one of these badly.';
 }
+$('#unfair').innerHTML =
+ '<div><div class="k">Most lopsided</div>'+
+  '<div class="who">'+LL.club+'</div>'+
+  '<div class="fig" style="color:var(--loss)">'+LL.level+'% of its deals come out level</div>'+
+  '<p class="why">The fewest level trades of anybody. Its deals land one way or the '+
+  'other &mdash; '+LL.w+' won, '+LL.l+' lost, only '+LL.e+' even across '+LL.n+'.</p></div>'+
+ (SH? '<div><div class="k">Sharpest when it is not level</div>'+
+  '<div class="who">'+SH.club+'</div>'+
+  '<div class="fig" style="color:var(--win)">'+SH.sharp+'% of its decided deals go its way</div>'+
+  '<p class="why">'+SH.w+' of the '+SH.decided+' that were not level. It is also the '+
+  'fairest side in the league at '+SH.level+'% even, which is the whole trick: most of '+
+  'what it does is a push, and the rest is mostly its.</p></div>':'')+
+ (BG? '<div class="wide"><div class="k">The most lopsided single deal, '+BG.season+'</div>'+
+  '<div class="who">'+BG.winner+' by $'+BG.margin+'</div>'+
+  '<p class="why"><b>'+BG.winner+'</b> got '+BG.winnerGot.join(', ')+'. <b>'+BG.loser+
+  '</b> got '+BG.loserGot.join(', ')+'.</p></div>':'');
+
 function draw(){ bars($('#main'),ranked,true); bars($('#few'),thin,false); split(); }
 draw();
 addEventListener('resize',draw);

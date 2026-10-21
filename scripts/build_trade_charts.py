@@ -188,7 +188,11 @@ def fairness():
         w = sum(1 for x in v if x > tc)
         l = sum(1 for x in v if x < -tc)
         sp = split.get(k, {})
+        decided = w + l
         rows.append({'k': k, 'club': fr.get(k, k), 'n': len(v), 'w': w, 'l': l,
+                     'level': round(100 * (len(v) - w - l) / len(v)),
+                     'sharp': round(100 * w / decided) if decided else None,
+                     'decided': decided,
                      'e': len(v) - w - l, 'net': round(sum(v)),
                      'players': round(sp.get('player', 0)),
                      'picks': round(sp.get('pick', 0)),
@@ -214,7 +218,41 @@ def fairness():
     rows.sort(key=lambda r: (-(r['w'] - r['l']), -r['n']))
     MIN = 10
     rank = [r for r in rows if r['n'] >= MIN]
+    # "Most unfair" has two honest answers and they are different franchises,
+    # so both are printed rather than one of them chosen.
+    #
+    #   least level   the fewest deals that come out even -- this franchise's
+    #                 trades are lopsided more often than anybody's, in either
+    #                 direction
+    #   sharpest      of the deals that are NOT level, the share that go its
+    #                 way. A side can be the fairest in the league and still
+    #                 win almost every deal that is not a push, which is
+    #                 exactly what the table shows.
+    #
+    # The sharpest needs a floor of its own: three-and-one is not a rate.
+    DECIDED_MIN = 8
+    sharp_pool = [r for r in rank if r['decided'] >= DECIDED_MIN]
+
+    # the single most lopsided deal in the window, named
+    big = None
+    for t in d['trades']:
+        if t['season'] in part or len(t['sides']) != 2:
+            continue
+        a, b = t['sides']
+        n = a['total'] - b['total']
+        if big is None or abs(n) > big['margin']:
+            wn, ls = (a, b) if n > 0 else (b, a)
+            nm = lambda side: [x.get('name') or x.get('raw') for x in side['assets']]
+            big = {'season': t['season'], 'margin': round(abs(n)),
+                   'winner': wn['team'], 'loser': ls['team'],
+                   'winnerGot': nm(wn), 'loserGot': nm(ls)}
+
     return {'rows': rows, 'tc': tc, 'minDeals': MIN, 'skipped': skipped,
+            'decidedMin': DECIDED_MIN,
+            'leastLevel': min(rank, key=lambda r: r['level']),
+            'sharpest': (max(sharp_pool, key=lambda r: r['sharp'])
+                         if sharp_pool else None),
+            'biggest': big,
             'seasons': seasons,
             'totals': {'n': sum(r['n'] for r in rows), 'w': sum(r['w'] for r in rows),
                        'e': sum(r['e'] for r in rows), 'l': sum(r['l'] for r in rows)},
