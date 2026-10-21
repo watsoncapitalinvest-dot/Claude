@@ -164,6 +164,11 @@ def fairness():
         return v * (1.3 if mode == 'up' else 0.7 if mode == 'down' else 1)
 
     tc, per, skipped = 12, {}, 0
+    # Where the money actually moves. `assets` on a side is what that side
+    # GOT, not what it gave -- trade-ledger.json points the other way and the
+    # two have caught this desk twice -- so a franchise's net on players is
+    # the players it received less the players the other side received.
+    split = {}
     for t in d['trades']:
         if t['season'] in part:
             continue
@@ -173,12 +178,20 @@ def fairness():
         a, b = t['sides']
         for me, other in ((a, b), (b, a)):
             per.setdefault(me['franchiseKey'], []).append(me['total'] - other['total'])
+            sp = split.setdefault(me['franchiseKey'], {'player': 0.0, 'pick': 0.0})
+            for x in me['assets']:
+                sp[x['kind']] = sp.get(x['kind'], 0) + (x.get('value') or 0)
+            for x in other['assets']:
+                sp[x['kind']] = sp.get(x['kind'], 0) - (x.get('value') or 0)
     rows = []
     for k, v in per.items():
         w = sum(1 for x in v if x > tc)
         l = sum(1 for x in v if x < -tc)
+        sp = split.get(k, {})
         rows.append({'k': k, 'club': fr.get(k, k), 'n': len(v), 'w': w, 'l': l,
                      'e': len(v) - w - l, 'net': round(sum(v)),
+                     'players': round(sp.get('player', 0)),
+                     'picks': round(sp.get('pick', 0)),
                      'med': round(statistics.median(v), 1)})
     # the same table under each assumption, to see what survives
     alt = {}
