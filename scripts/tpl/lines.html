@@ -1,0 +1,169 @@
+<style>
+/* One chart, as large as the page allows: thirteen franchises, each a line
+   from what its trades were worth on the day to what they were worth a year
+   later. Cream stock, red ahead, blue behind. Single theme on purpose. */
+:root{
+  --paper:#fffdfb; --stock:#f7f3ea; --ink:#17181c; --muted:#56585f; --faint:#8b8d95;
+  --rule:#e2dccf; --hair:#efeae0;
+  --up:#c20f16; --down:#0e8ab5;
+  --serif:Georgia,"Iowan Old Style","Times New Roman",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+img{max-width:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--serif);margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:28px 48px;}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.eyebrow{font-family:var(--sans);font-size:10.5px;font-weight:800;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--up);margin:0}
+h1{font-size:clamp(30px,6.5vw,52px);line-height:1.02;margin:9px 0 0;font-weight:700;
+  letter-spacing:-.014em;text-wrap:balance}
+.stand{font-size:17.5px;line-height:1.5;color:var(--muted);margin:13px 0 0;max-width:60ch;
+  font-style:italic}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-family:var(--sans);font-size:12.5px;
+  color:var(--muted);padding-top:4px;border-top:2px solid var(--ink)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.sw{width:12px;height:12px;border-radius:50%;flex:none}
+.sw.ring{background:var(--paper);border:2px solid var(--faint)}
+.sw.tip-mark{border-radius:0;width:13px;height:12px;
+  clip-path:polygon(0 12%,100% 50%,0 88%,22% 50%)}
+.plot{width:100%}
+svg{display:block;width:100%;height:auto}
+.foot{display:flex;flex-wrap:wrap;gap:10px 28px;font-family:var(--sans);font-size:12.5px;
+  color:var(--muted);padding-top:14px;border-top:1px solid var(--rule)}
+.foot b{color:var(--ink);font-variant-numeric:tabular-nums}
+.note{font-family:var(--sans);font-size:12.5px;line-height:1.6;color:var(--faint);
+  max-width:74ch;margin:0}
+.tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--paper);
+  font-family:var(--sans);font-size:12.5px;line-height:1.5;padding:9px 11px;border-radius:3px;
+  max-width:240px;opacity:0;transition:opacity .12s}
+.tip.on{opacity:1}
+.tip b{font-weight:700} .tip .r{color:#cfc9bf}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div class="wrap">
+ <header>
+  <p class="eyebrow">SCFL NewsRoom &middot; The Trade Desk</p>
+  <h1>Twelve Months On</h1>
+  <p class="stand">What every franchise's trades were worth the day it made them, and what
+   the same deals were worth a year later to the day.</p>
+ </header>
+ <div class="legend">
+  <span><i class="sw ring"></i>On the day</span>
+  <span style="color:var(--ink)"><i class="sw tip-mark" style="background:currentColor"></i>Where it ended a year later</span>
+  <span style="color:var(--up)"><i class="sw" style="background:currentColor"></i>The year added value</span>
+  <span style="color:var(--down)"><i class="sw" style="background:currentColor"></i>The year took it away</span>
+ </div>
+ <div class="plot"><svg id="c" role="img" aria-label="Net trade value for each franchise on the day of its trades and twelve months later"></svg></div>
+ <div class="foot" id="foot"></div>
+ <p class="note" id="note"></p>
+</div>
+<div class="tip" id="tip" role="status"></div>
+<script>
+const D = __DATA__;
+const $ = s => document.querySelector(s);
+const NS='http://www.w3.org/2000/svg';
+const mk=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const money=v=>(v<0?'−$':'$')+Math.abs(Math.round(v)).toLocaleString();
+const signed=v=>(v>=0?'+$':'−$')+Math.abs(Math.round(v)).toLocaleString();
+
+const tip=$('#tip');
+function show(e,h){tip.innerHTML=h;tip.classList.add('on');
+  const r=16,w=tip.offsetWidth,hh=tip.offsetHeight;
+  let x=e.clientX+r,y=e.clientY+r;
+  if(x+w>innerWidth-8)x=e.clientX-w-r;
+  if(y+hh>innerHeight-8)y=e.clientY-hh-r;
+  tip.style.left=Math.max(8,x)+'px';tip.style.top=Math.max(8,y)+'px';}
+const hide=()=>tip.classList.remove('on');
+
+function draw(){
+  const svg=$('#c'); svg.textContent='';
+  const W=Math.max(320,Math.min(980,svg.parentNode.clientWidth||900));
+  const narrow=W<620, tiny=W<430;
+  const padL=tiny?96:(narrow?120:184), padR=narrow?60:84, padT=46, padB=20;
+  const rowH=narrow?40:50;
+  const H=padT+D.rows.length*rowH+padB;
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  const vals=D.rows.flatMap(r=>[r.day,r.year]);
+  const lo=Math.min(...vals), hi=Math.max(...vals), pad=(hi-lo)*0.07;
+  const x0=lo-pad, x1=hi+pad;
+  const X=v=>padL+(v-x0)/(x1-x0)*(W-padL-padR);
+  const ink=css('--ink'),faint=css('--faint'),rule=css('--rule'),hair=css('--hair'),
+        paper=css('--paper'),up=css('--up'),down=css('--down'),stock=css('--stock'),
+        muted=css('--muted');
+
+  // axis along the top, so a position on the line can be read as a number
+  const step = narrow?150:100;
+  for(let v=Math.ceil(x0/step)*step; v<=x1; v+=step){
+    const zero = v===0;
+    svg.appendChild(mk('line',{x1:X(v),x2:X(v),y1:padT-14,y2:H-padB,
+      stroke:zero?rule:hair,'stroke-width':zero?1.5:1}));
+    const t=mk('text',{x:X(v),y:padT-22,fill:zero?muted:faint,'font-size':11,
+      'text-anchor':'middle','font-family':'var(--sans)',
+      'font-weight':zero?700:400,'letter-spacing':zero?'.1em':'0'});
+    t.textContent = zero ? 'EVEN' : money(v); svg.appendChild(t);
+  }
+
+  D.rows.forEach((r,i)=>{
+    const y=padT+i*rowH+rowH/2;
+    const gained=r.year>=r.day, c=gained?up:down;
+    if(i%2===0) svg.appendChild(mk('rect',{x:0,y:y-rowH/2,width:W,height:rowH,fill:stock,opacity:.55}));
+    // the line, with a round cap each end
+    svg.appendChild(mk('line',{x1:X(r.day),x2:X(r.year),y1:y,y2:y,stroke:c,
+      'stroke-width':narrow?2.5:3,'stroke-linecap':'round'}));
+    // arrowhead at the later end, so direction reads without colour
+    const dir=gained?1:-1, ax=X(r.year), s=narrow?5:6;
+    svg.appendChild(mk('path',{d:'M'+(ax+dir*s*1.5)+' '+y+'L'+(ax-dir*s*0.2)+' '+(y-s)+
+      'L'+(ax-dir*s*0.2)+' '+(y+s)+'Z',fill:c,stroke:paper,'stroke-width':1.5,
+      'stroke-linejoin':'round'}));
+    svg.appendChild(mk('circle',{cx:X(r.day),cy:y,r:narrow?5:6,fill:paper,stroke:faint,'stroke-width':2}));
+    // franchise name, and the trade count beneath it
+    const nm=mk('text',{x:padL-14,y:y+(tiny?-1:2),fill:ink,'font-size':tiny?12:(narrow?13:15),
+      'text-anchor':'end','font-family':'var(--serif)','font-weight':700});
+    nm.textContent=r.club; svg.appendChild(nm);
+    if(!tiny){
+      const sub=mk('text',{x:padL-14,y:y+16,fill:faint,'font-size':10.5,'text-anchor':'end',
+        'font-family':'var(--sans)'}); sub.textContent=r.n+' trades'; svg.appendChild(sub);
+    }
+    const dv=r.year-r.day;
+    const ch=mk('text',{x:W-padR+10,y:y+(tiny?-1:2),fill:c,'font-size':narrow?12.5:14.5,
+      'font-family':'var(--sans)','font-weight':800,'font-variant-numeric':'tabular-nums'});
+    ch.textContent=signed(dv); svg.appendChild(ch);
+    if(!tiny){
+      const rec=mk('text',{x:W-padR+10,y:y+16,fill:faint,'font-size':10.5,'font-family':'var(--sans)'});
+      rec.textContent=r.tw+'–'+r.tl+' → '+r.nw+'–'+r.nl; svg.appendChild(rec);
+    }
+    const hit=mk('rect',{x:0,y:y-rowH/2,width:W,height:rowH,fill:'transparent'});
+    hit.addEventListener('mousemove',e=>show(e,'<b>'+r.club+'</b><br>'+
+      '<span class="r">'+r.n+' trades</span><br>'+
+      'On the day <b>'+money(r.day)+'</b><br>'+
+      'A year later <b>'+money(r.year)+'</b><br>'+
+      '<span class="r">Record '+r.tw+'–'+r.tl+' then, '+r.nw+'–'+r.nl+' now<br>'+
+      r.ch+' verdict'+(r.ch===1?'':'s')+' changed</span>'));
+    hit.addEventListener('mouseleave',hide);
+    svg.appendChild(hit);
+  });
+}
+
+const best=D.rows[0], worst=D.rows[D.rows.length-1];
+$('#foot').innerHTML=
+  '<span>Biggest riser <b>'+best.club+'</b> '+signed(best.year-best.day)+'</span>'+
+  '<span>Biggest faller <b>'+worst.club+'</b> '+signed(worst.year-worst.day)+'</span>'+
+  '<span>Trades priced twice <b>'+D.count+'</b></span>'+
+  '<span>Verdicts that held <b>'+D.held+' of '+D.count+'</b></span>';
+$('#note').textContent='Net dollars across every trade a franchise made. Players are priced '+
+ 'from the dynasty superflex consensus on the nearest reading at or before each date; a pick '+
+ 'whose draft has happened by the later date is resolved to the player taken with it. '+
+ D.count+' two-team trades, '+D.seasons[0]+' to '+D.seasons[D.seasons.length-1]+'. Both ends '+
+ 'of a deal must fall inside the consensus series ('+D.ecr[0]+' to '+D.ecr[1]+'), so trades '+
+ 'made after August 2024 have no twelve-month reading yet. Franchises with fewer than ten '+
+ 'priced trades are left out.';
+
+draw();
+addEventListener('resize',draw);
+</script>
