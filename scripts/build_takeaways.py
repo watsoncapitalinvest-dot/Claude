@@ -796,14 +796,15 @@ RANKED = [
                             f'draft capital {w}.'),
     dict(k='winrate', get=lambda r: r['w'] / r['n'], pool='rank', depth=1,
          hi=lambda r, s, w: f'<b>{r["w"]} of their {r["n"]} deals cleared the win '
-                            f'line</b> &mdash; one in {num(round(r["n"] / r["w"]))}, '
-                            f'the {s.replace("best", "highest")} rate {w}.',
+                            f'line</b> &mdash; {round(100 * r["w"] / r["n"])}'
+                            f'&thinsp;%, the {s.replace("best", "highest")} rate {w}. '
+                            f'{Num(r["l"])} went the other way.',
          lo=lambda r, s, w: (
              f'<b>Not one of their {num(r["n"])} deals has cleared the win line.</b> '
              f'{Num(r["l"])} went the other way and {num(r["e"])} came out level.'
              if not r['w'] else
-             f'<b>{Num(r["w"])} of their {r["n"]} deals cleared the win line.</b> One '
-             f'in {num(round(r["n"] / r["w"]))}, the '
+             f'<b>{Num(r["w"])} of their {r["n"]} deals cleared the win line.</b> '
+             f'{round(100 * r["w"] / r["n"])}&thinsp;%, the '
              f'{s.replace("worst", "lowest")} rate {w}. {Num(r["l"])} went the other '
              f'way.')),
 ]
@@ -827,8 +828,8 @@ RANKED_YEAR = [
                             f'makes from waiting.',
          lo=lambda r, s, w: f'<b>Their record a year on is {sign(r["swing"], 0)} on what '
                             f'it was on the day</b>, {r["dw"]}&ndash;{r["dl"]} to '
-                            f'{r["yw"]}&ndash;{r["yl"]} &mdash; the {s} anybody suffers '
-                            f'for the wait.'),
+                            f'{r["yw"]}&ndash;{r["yl"]} &mdash; the {s} drop anybody '
+                            f'suffers for the wait.'),
 ]
 
 
@@ -904,6 +905,27 @@ ANGLES = [a_clean_sheet, a_never_won, a_best_is_a_loss, a_dead_heat,
 CAP = 1
 
 
+_BOLD = __import__('re').compile(r'<b>(.*?)</b>', __import__('re').S)
+_NUM = __import__('re').compile(r'\d+(?:\.\d+)?')
+
+
+def claim_figures(text):
+    """The numbers inside a line's first bold clause -- what it actually claims.
+
+    Powers of Pain won 17 of their 45 deals and drew 17 of their 45, so the
+    best bid of each sign led on the same two numbers with opposite meanings:
+
+        won  17 of their 45 deals cleared the win line
+        lost Only 17 of their 45 deals came out level
+
+    Both true, and together they read as a copy-and-paste fault. A card that
+    looks like a mistake is worth no more than one that is, so the second line
+    is refused and the next-best bid of that sign is taken instead.
+    """
+    m = _BOLD.search(text or '')
+    return tuple(_NUM.findall(m.group(1))) if m else ()
+
+
 def each_team(C):
     """Give every franchise its best unclaimed thing to be pleased about, and
     its best unclaimed thing not to be.
@@ -925,7 +947,7 @@ def each_team(C):
         for k, v in src.items():
             bids.setdefault(k, []).extend(v)
 
-    picked, spent, about = {}, {}, {}
+    picked, spent, about, lead = {}, {}, {}, {}
     for pol in (UP, DOWN):
         pool = sorted(((s, t, x, k, b) for k, v in bids.items()
                        for s, p, t, x, b in v if p == pol), key=lambda z: -z[0])
@@ -934,7 +956,11 @@ def each_team(C):
                 continue
             if base in about.get(k, ()):     # already said on the other line
                 continue
+            figs = claim_figures(text)
+            if figs and figs in lead.get(k, ()):   # same numbers, other sign
+                continue
             picked[(k, pol)] = (tag, text)
+            lead.setdefault(k, set()).add(figs)
             spent[tag] = spent.get(tag, 0) + 1
             about.setdefault(k, set()).add(base)
 
