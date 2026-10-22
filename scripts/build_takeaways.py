@@ -506,12 +506,20 @@ def a_one_side_only(C, **_):
         (bad, bad_s, _), (good, good_s, good_half) = min(sides), max(sides)
         if good < 0 or bad >= 0 or abs(good) > 0.2 * abs(bad) or abs(bad) < abs(r['net']):
             continue
+        # Led on the half that is intact rather than on the half that is not.
+        # Both sentences are the same two numbers; which one goes first is the
+        # difference between a diagnosis and a verdict, and this is the line
+        # the franchise gets to be pleased about.
+        by_soft = sorted(C['rows'], key=lambda x: -x['worst'])
+        soft = by_soft.index(r) + 1
+        floor = by_soft[-1]['worst']
         out[r['k']] = B(92, UP, (
-            f'<b>Not one dollar of this is a {good_s[:-1]}.</b> Their {good_s[:-1]} '
-            f'trading is {money(good)} across {num(r["n"])} deals &mdash; the '
-            f'{good_half} half of the ledger is untouched. The whole {money(r["net"])} '
-            f'sits in {bad_s}, and no single deal in it cost more than '
-            f'{money(abs(r["worst"]))}.'))
+            f'<b>The {good_half} half of their ledger has cost them nothing at all</b> '
+            f'&mdash; {money(good)} on {good_s} across {num(r["n"])} deals. Every '
+            f'dollar of the shortfall is {bad_s}, and no single deal in it cost more '
+            f'than {money(abs(r["worst"]))}: the {ordinal(soft)} softest worst case of '
+            f'the sixteen, in a league whose heaviest single loss is '
+            f'{money(floor)}. There is no disaster anywhere in this row.'))
     return out
 
 
