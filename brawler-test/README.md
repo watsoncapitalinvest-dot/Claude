@@ -160,6 +160,66 @@ Fixed by:
   tag, so a future path or hosting mistake shows an explicit message on
   screen instead of a silent, permanent freeze.
 
+## "The team art blocks the screen" — the characters were never drawn
+
+Reported from a phone, and true on every device: the three SCFL characters
+rendered as solid rectangles of chroma colour, magenta for Smoke Dragons and
+Pork Chop Express, green for The Machines, up to 196x192 of it on a 320x240
+screen and anchored so it sat down and to the right of where the man actually
+was.
+
+Two bugs, both in the 156 frames built from the delivered art and neither in
+anything the sample game shipped. Fixed by `scripts/fix_brawler_art.py`,
+which repacks `content/game-test.zip` from the frames and the model files.
+
+**OpenBOR reads palette index 0 as transparent. It does not read the GIF
+transparency chunk.** Every sprite in the sample puts its key at index 0 --
+kabo is 106 frames for 106. The SCFL frames were keyed with the key left
+wherever the quantiser happened to put it (224 for Pork Chop Express, 1 for
+The Machines, 226 for Smoke Dragons) and a transparency chunk written
+instead, so the engine drew the key. This is why "loads cleanly with zero
+engine errors" was never evidence of anything: the engine has no opinion
+about which palette slot you keyed to, and a boot log cannot see a magenta
+box. The one check that would have caught it was looking at the screen.
+
+**The offsets were kabo's, and kabo is half the size.** An offset is the
+pixel in the sprite that stands on the ground. Kabo's convention, measured
+off its own file, is 0.48 across the frame and 0.95 down it. Kabo's (27, 95)
+on a 153x192 Pork Chop Express frame is 0.14 across and 0.49 down. Borrowing
+the timing and the boxes was a reasonable call; carrying the offsets across a
+1.9x change of frame size was not.
+
+What the script does, in order: folds every key-coloured palette slot into
+index 0; peels ruled edges off the frame; deletes components that are not the
+character; scales each character so its idle height matches kabo's 101px;
+re-anchors every frame off its own body; re-expresses kabo's bounding and
+attack boxes against the new frame; drops the 106 unreferenced kabo frames
+sitting in the Smoke Dragons folder. 33.0MB to 31.8MB.
+
+Verified: all 156 frames key to index 0, every frame has its own offset,
+heights run 93-112 against kabo's 101, the engine boots and all three
+characters cache and load with no file errors.
+
+### Still rough
+
+- A few Machines and Smoke Dragons frames keep a 1px guide line from the art
+  sheet. They are physically connected to the sprite -- `jump_04` is one
+  connected blob of man and rule -- so no automatic rule separates them
+  without eating his outline. Needs the source sheets to re-cut.
+- The crop windows were wider than the cells, so several frames contained a
+  slice of the next pose along. Those are removed, but the frames they came
+  from are still cropped loosely.
+- Hit boxes and attack timing are still kabo's, mapped onto the new frames.
+  They land on the body now instead of pointing at coordinates that no longer
+  exist, but they are not tuned to these characters.
+
+### A note for whoever repacks this next
+
+The archive has 63 directory entries and the loader uses them to make folders
+before it writes files into them. A repack that keeps only the files produces
+several hundred "Error writing file" lines and a game that never starts. The
+first version of the fix script did exactly that.
+
 ## Powered by OpenBOR
 
 This project uses the OpenBOR engine — see `content/` licensing from the
