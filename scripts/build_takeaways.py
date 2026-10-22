@@ -377,69 +377,121 @@ FINDINGS = [f_fair, f_grind, f_split, f_mirror, f_volume,
             f_concentration, f_onecurrency, f_twoways, f_hold, f_time]
 
 
-# --- one line a franchise --------------------------------------------------
-# Sixteen lines, and not one of them written here. Each ANGLE below looks at
-# the whole board and bids for the franchises it has something true to say
-# about, with a score for how striking the thing is. Every franchise then
-# takes the best bid still available, and an angle can only be spent once, so
-# the sixteen lines are sixteen different observations rather than the same
-# sentence with the names swapped.
+# --- two lines a franchise, one up and one down ----------------------------
+# Thirty-two lines, and not one of them written here. Every ANGLE below looks
+# at the whole board and bids for the franchises it has something true to say
+# about: a score for how striking the thing is, and a sign for whether it is
+# something to be pleased about or not. Each franchise then takes the best
+# unclaimed bid of each sign, and a bid shape can only be spent so many times,
+# so the result is thirty-two different observations rather than one sentence
+# with the names swapped.
 #
-# The point of doing it this way rather than typing sixteen sentences: a line
-# cannot survive the number that made it true. If Killer Klowns take a $90
-# loss tomorrow, nobody has to remember to delete the line about their worst
-# deal being $17 -- the bid simply is not made.
+# The point of doing it this way rather than typing thirty-two sentences: a
+# line cannot survive the number that made it true. If Killer Klowns take a
+# $90 loss tomorrow, nobody has to remember to delete the line about their
+# worst deal being $17 -- the bid is simply not made.
+#
+# Every side has both. The richest ledger in the league still gives nothing
+# back on picks; the poorest still has a half of its book nobody has touched.
+# Finding the second one is the harder half of the job and the reason this is
+# a search rather than a list: a side that is bad at everything is bad at some
+# things less, and the arithmetic knows which.
 #
 # An angle may name only what it has counted, and only inside the pool it
-# counted it in: `rank` is the thirteen with enough deals to be ranked, `all`
-# is the sixteen. Saying "lowest in the league" off a pool of thirteen while
-# one of the other three is lower is the exact mistake this desk keeps making.
+# counted it in. RANKED facts carry their pool in the sentence -- "in the
+# league" over all sixteen, "of the ranked sides" over the thirteen with
+# enough deals -- because saying "lowest in the league" off a pool of thirteen
+# while one of the other three is lower is the exact mistake this desk keeps
+# making.
 
-def _rank(pool, r, key, high=True):
-    """Where a franchise sits on a measure, 1 being the end being claimed."""
-    s = sorted(pool, key=lambda x: -key(x) if high else key(x))
-    return s.index(r) + 1
+UP, DOWN = '+', '-'
+
+
+def B(score, pol, text, tag=None, base=None):
+    """One bid: how striking, which way it cuts, what it says, and which
+    measure it is about.
+
+    The measure matters because a franchise gets one line of each sign, and
+    the two must not be the same number read twice. Killer Klowns' worst deal
+    is $17; that is the softest worst case in the league and it is also,
+    read sourly, their worst deal. Printing both would be the sheet arguing
+    with itself.
+    """
+    return (score, pol, text, tag, base)
 
 
 def a_clean_sheet(C, **_):
     """Every priced deal came out level. Nobody else can say that."""
-    out = {}
-    for r in C['rows']:
-        if r['n'] >= 3 and r['e'] == r['n']:
-            out[r['k']] = (95, (
-                f'{Num(r["n"])} priced deals and <b>every one of them came out '
-                f'level</b> &mdash; not a win, not a loss, not a dollar either way past '
-                f'the ${C["tc"]} line. Nobody else has a clean sheet.'))
-    return out
+    return {r['k']: B(95, UP, (
+        f'{Num(r["n"])} priced deals and <b>every one of them came out level</b> '
+        f'&mdash; not a win, not a loss, not a dollar either way past the ${C["tc"]} '
+        f'line. Nobody else in the league has a clean sheet.'))
+        for r in C['rows'] if r['n'] >= 3 and r['e'] == r['n']}
+
+
+def a_never_won(C, **_):
+    """The other half of a clean sheet: nothing cleared the line either way."""
+    return {r['k']: B(87, DOWN, (
+        f'<b>Not one of their {num(r["n"])} deals has cleared the ${C["tc"]} line in '
+        f'either direction.</b> The biggest move they have made in five seasons is '
+        f'{money(r["best"])}, and the ledger has barely noticed they are in it.'))
+        for r in C['rows'] if r['n'] >= 3 and r['w'] == 0 and r['l'] == 0}
+
+
+def a_best_is_a_loss(C, **_):
+    """Their best day still lost money."""
+    return {r['k']: B(89, DOWN, (
+        f'<b>Their best single deal is {money(r["best"])}.</b> Across {num(r["n"])} '
+        f'priced trades in {num(len(C["seasons"]))} seasons, not one of them came out '
+        f'ahead &mdash; the best of them merely came out least behind.'), base='best')
+        for r in C['rows'] if r['n'] >= 3 and r['best'] < 0}
+
+
+def a_dead_heat(C, rank, **_):
+    """The side the whole exercise cannot separate from even."""
+    r = min(rank, key=lambda x: abs(x['net']))
+    if abs(r['net']) > 30 or not r['firm']:
+        return {}
+    return {r['k']: B(83, UP, (
+        f'<b>The closest thing the league has to a dead heat.</b> {Num(r["n"])} priced '
+        f'deals over {num(len(C["seasons"]))} seasons and {money(r["net"])} to show for '
+        f'it &mdash; nearer to even than any other ranked side. {Num(r["w"])} won, '
+        f'{num(r["l"])} lost, and five seasons of trading that very nearly did not '
+        f'happen.'), base='net')}
+
+
+def a_median_zero(C, rank, **_):
+    """A middle deal worth precisely nothing."""
+    return {r['k']: B(81, DOWN, (
+        f'<b>The median deal they make is worth exactly nothing.</b> '
+        f'{money(r["med"], cents=True)} across {r["n"]} trades: half their book is '
+        f'better than even money and half of it is worse, and the two halves have '
+        f'cancelled to the cent.'), base='med')
+        for r in rank if r['med'] == 0}
 
 
 def a_all_down(C, **_):
     """Every priced deal came out on the wrong side of even.
 
     Stated and left there. The desk prints what it counts, and a side with a
-    bad row does not also need telling about it -- the line below used to end
-    "which is the only good news in the row", which is a joke on a man rather
-    than on a situation, and this desk is not in that business.
+    bad row does not also need telling about it.
     """
-    out = {}
-    for r in C['rows']:
-        if r['n'] >= 3 and r['down'] == r['n']:
-            out[r['k']] = (50, (
-                f'{Num(r["n"])} priced deals, {money(r["net"])} together, and '
-                f'<b>every one of them finished on the wrong side of even</b> &mdash; '
-                f'though only {num(r["l"])} cleared the ${C["tc"]} line that makes a '
-                f'loss a loss. A book this small is one bad winter, not a pattern.'))
-    return out
+    return {r['k']: B(64, DOWN, (
+        f'{Num(r["n"])} priced deals, {money(r["net"])} together, and <b>every one of '
+        f'them finished on the wrong side of even</b> &mdash; though only '
+        f'{num(r["l"])} cleared the ${C["tc"]} line that makes a loss a loss. A book '
+        f'this small is one bad winter, not a pattern.'))
+        for r in C['rows'] if r['n'] >= 3 and r['down'] == r['n']}
 
 
 def a_one_side_only(C, **_):
     """A deficit that sits entirely on one half of the ledger.
 
-    Worth its own angle because it is the most useful thing you can say about
-    a position: a side whose players are intact and whose picks are gone has a
-    different problem, and a more fixable one, than a side that is losing on
-    both. It bids high for that reason, and only fires when the untouched half
-    really is untouched -- flat or better, and under a fifth of the damage.
+    The most useful thing you can say about such a position: a side whose
+    players are intact and whose picks are gone has a different problem, and a
+    more fixable one, than a side losing on both. Only fires when the
+    untouched half really is untouched -- flat or better, under a fifth of the
+    damage.
     """
     out = {}
     for r in C['rows']:
@@ -449,7 +501,7 @@ def a_one_side_only(C, **_):
         (bad, bad_s, _), (good, good_s, good_half) = min(sides), max(sides)
         if good < 0 or bad >= 0 or abs(good) > 0.2 * abs(bad) or abs(bad) < abs(r['net']):
             continue
-        out[r['k']] = (92, (
+        out[r['k']] = B(92, UP, (
             f'<b>Not one dollar of this is a {good_s[:-1]}.</b> Their {good_s[:-1]} '
             f'trading is {money(good)} across {num(r["n"])} deals &mdash; the '
             f'{good_half} half of the ledger is untouched. The whole {money(r["net"])} '
@@ -462,195 +514,52 @@ def a_one_currency(C, rank, **_):
     """A total that is really one side of the ledger wearing a hat."""
     out = {}
     for r in rank:
-        if r['net'] == 0:
+        if r['net'] <= 0:
             continue
         sides = [(r['players'], 'players'), (r['picks'], 'picks')]
-        big = max(sides, key=lambda t: abs(t[0]))
-        small = min(sides, key=lambda t: abs(t[0]))
-        if big[0] * r['net'] <= 0 or abs(big[0]) < 0.88 * abs(r['net']):
+        big, small = (max(sides, key=lambda t: abs(t[0])),
+                      min(sides, key=lambda t: abs(t[0])))
+        if big[0] < 0.88 * r['net'] or abs(small[0]) > 0.14 * r['net']:
             continue
-        if abs(small[0]) > 0.14 * abs(r['net']):
-            continue
-        out[r['k']] = (90, (
-            f'The richest ledger in the league is really one ledger: '
-            f'<b>{money(big[0])} of their {money(r["net"])} is {big[1]}</b>. '
-            f'{Num(r["n"])} deals in {num(len(C["seasons"]))} seasons and the {small[1]} '
-            f'column contributes {money(small[0])}.')
-            if _rank(rank, r, lambda x: x['net']) == 1 else (85, (
-                f'<b>{money(big[0])} of their {money(r["net"])} is {big[1]}</b>. The '
-                f'{small[1]} column contributes {money(small[0])} across '
-                f'{r["n"]} deals.')))
+        out[r['k']] = B(90, UP, (
+            f'<b>{money(big[0])} of their {money(r["net"])} is {big[1]}.</b> '
+            f'{Num(r["n"])} deals in {num(len(C["seasons"]))} seasons, and they are '
+            f'the best in the league at exactly one thing &mdash; which has been '
+            f'enough.'))
+        out.setdefault(r['k'] + '~', None)
+    out.pop(next((k for k in out if k.endswith('~')), '~'), None)
     return out
 
 
-def a_side_extreme(C, rank, **_):
-    """The biggest single-sided gain or loss on the board."""
+def a_dead_column(C, rank, **_):
+    """The other half of a one-currency ledger: a column that does nothing."""
     out = {}
-    for side, other in (('players', 'picks'), ('picks', 'players')):
-        lo = min(rank, key=lambda x: x[side])
-        if lo[side] < 0:
-            out.setdefault(lo['k'], (80, f'side_{side}', (
-                f'<b>{money(lo[side])} on {side}</b>, the heaviest loss on that half of '
-                f'the ledger anybody carries. Their {other} are {money(lo[other])}, and '
-                f'it is not nearly enough: {money(lo["net"])} across {lo["n"]} deals.')))
-    return out
-
-
-def a_per_deal(C, rank, **_):
-    """Not the biggest hole, the deepest one -- bleed measured per trade."""
-    out = {}
-    for side in ('players', 'picks'):
-        rate = lambda x: x[side] / x['n']
-        lo = min(rank, key=rate)
-        if rate(lo) > -4 or lo['n'] >= 25:
-            continue        # a shallow hole, or a big enough book to say it twice
-        out.setdefault(lo['k'], (78, f'perdeal_{side}', (
-            f'{money(lo[side])} on {side} across only {lo["n"]} deals &mdash; '
-            f'<b>{money(rate(lo), cents=True)} a trade</b>, the steepest rate on that '
-            f'side of the ledger in the league. Their {"picks" if side == "players" else "players"} '
-            f'are {money(lo["picks"] if side == "players" else lo["players"])}.')))
+    for r in rank:
+        sides = [(r['players'], 'players'), (r['picks'], 'picks')]
+        big, small = (max(sides, key=lambda t: abs(t[0])),
+                      min(sides, key=lambda t: abs(t[0])))
+        if abs(r['net']) < 60 or abs(small[0]) > 0.06 * abs(big[0]):
+            continue
+        out[r['k']] = B(86, DOWN, (
+            f'<b>The {small[1]} column does nothing at all</b>: {money(small[0])} '
+            f'across {r["n"]} deals in {num(len(C["seasons"]))} seasons. Everything '
+            f'they have is {big[1]}, which is a position that only works for as long '
+            f'as it keeps working.'))
     return out
 
 
 def a_one_deal(C, rank, **_):
-    """A total that one afternoon paid for."""
+    """A losing total that one afternoon paid for."""
     out = {}
     for r in rank:
         if r['net'] >= 0 or abs(r['worst']) <= abs(r['net']) * 2:
             continue
-        out[r['k']] = (76 + min(14, abs(r['worst']) / abs(r['net'])), (
-            f'Their worst single deal is {money(r["worst"])}. Their whole ledger across '
-            f'{r["n"]} trades is {money(r["net"])}. <b>Take that one afternoon out and '
-            f'the rest of the book is {money(r["net"] - r["worst"])}</b>. One afternoon '
-            f'is the difference between a winning ledger and a losing one.'))
+        out[r['k']] = B(76 + min(14, abs(r['worst']) / abs(r['net'])), UP, (
+            f'Their worst single deal is {money(r["worst"])} and their whole ledger '
+            f'across {r["n"]} trades is {money(r["net"])}. <b>Take that one afternoon '
+            f'out and the rest of the book is {money(r["net"] - r["worst"])}</b> '
+            f'&mdash; one afternoon between a winning ledger and a losing one.'))
     return out
-
-
-def a_small_worst(C, rank, **_):
-    """Never been hurt. Which is not the same as having won anything."""
-    r = max(rank, key=lambda x: x['worst'])
-    if r['worst'] > -25 and r['n'] >= 10:
-        return {r['k']: (76, (
-            f'<b>No deal they have made has cost them more than '
-            f'{money(abs(r["worst"]))}</b> &mdash; the softest worst case in the league, '
-            f'by a distance. They also take home only {r["sharp"]}&thinsp;% of the deals '
-            f'that come out decided.'))}
-    return {}
-
-
-def a_down_rate(C, rank, **_):
-    """How often a side's deals go down at all, win line or no win line."""
-    rate = lambda x: x['down'] / x['n']
-    out = {}
-    lo, hi = min(rank, key=rate), max(rank, key=rate)
-    out[lo['k']] = (74, 'down_low', (
-        f'<b>{lo["down"]} of their {lo["n"]} deals go down</b>, '
-        f'{round(100 * rate(lo))}&thinsp;%, the lowest share of losing trades of any '
-        f'ranked side. {Num(lo["n"] - lo["down"])} of the {num(lo["n"])} come out '
-        f'level or better.'))
-    out[hi['k']] = (75, 'down_high', (
-        f'<b>{hi["down"]} of their {hi["n"]} deals go down</b> &mdash; '
-        f'{round(100 * rate(hi))}&thinsp;%, the highest rate among the ranked. The '
-        f'median one loses {money(abs(hi["med"]), cents=True)}.'))
-    return out
-
-
-def a_median(C, rank, **_):
-    """The middle deal, which this sheet has already shown decides everything."""
-    hi = max(rank, key=lambda x: x['med'])
-    return {hi['k']: (79, (
-        f'<b>The best middle deal in the league at {money(hi["med"], cents=True)}</b>. '
-        f'Across {hi["n"]} trades that is where {money(hi["net"])} comes from &mdash; '
-        f'not from the big one, of which they have none.'))} if hi['med'] > 0 else {}
-
-
-def a_win_rate(C, rank, **_):
-    """How often anything clears the win line at all."""
-    rate = lambda x: x['w'] / x['n']
-    lo = min(rank, key=rate)
-    if rate(lo) > 0.12:
-        return {}
-    one_in = round(lo['n'] / lo['w']) if lo['w'] else 0
-    return {lo['k']: (81, (
-        f'<b>{Num(lo["w"])} of their {lo["n"]} deals cleared the win line.</b> One in '
-        f'{num(one_in)}, the lowest rate in the league. {Num(lo["l"])} went the other '
-        f'way, and {num(lo["e"])} came out level.'))}
-
-
-def a_ahead_but_median_down(C, rank, **_):
-    """Ahead on the ledger and behind in the middle of it."""
-    out = {}
-    for r in rank:
-        if r['net'] <= 0 or r['med'] >= 0:
-            continue
-        out[r['k']] = (72, (
-            f'Ahead overall and behind in the middle: {money(r["net"])} across '
-            f'{r["n"]} deals, but a <b>median of {money(r["med"], cents=True)}</b>. '
-            f'{Num(r["down"])} of the {num(r["n"])} went down; the rest more than '
-            f'covered it.'))
-    return out
-
-
-def a_split_rescue(C, rank, **_):
-    """One half of the ledger sinking a franchise the other half is carrying."""
-    out = {}
-    for r in rank:
-        if r['net'] >= 0:
-            continue
-        sides = [(r['players'], 'players'), (r['picks'], 'picks')]
-        (bad, bad_s), (good, good_s) = min(sides), max(sides)
-        if good <= 0 or abs(bad) <= abs(r['net']):
-            continue
-        out[r['k']] = (70, (
-            f'Their {good_s[:-1]} trading is {money(good)} to the good. '
-            f'<b>{money(bad)} on {bad_s} buries it</b>, and the two together make '
-            f'{money(r["net"])} across {r["n"]} deals.'))
-    return out
-
-
-def a_side_best(C, rank, **_):
-    """The biggest gain on one half of the ledger, and what the other half did
-    to it. A gain that is handed straight back is a different story from one
-    that is kept, so the sentence checks which it is before choosing."""
-    out = {}
-    for side, other in (('players', 'picks'), ('picks', 'players')):
-        hi = max(rank, key=lambda x: x[side])
-        if hi[side] <= 0:
-            continue
-        kept = hi[other] >= 0
-        out.setdefault(hi['k'], (79, f'sidehi_{side}', (
-            f'<b>{money(hi[side])} on {side}</b>, the biggest gain on either half of '
-            f'the ledger anybody has'
-            + (f', and they keep it: {money(hi["net"])} across {hi["n"]} deals.'
-               if kept else
-               f'. They hand {money(abs(hi[other]))} of it back on {other}, and '
-               f'{money(hi["net"])} survives across {hi["n"]} deals.'))))
-    return out
-
-
-def a_cancel(C, rank, **_):
-    """The widest cancellation: a lot of money moving, almost none of it staying."""
-    moved = lambda x: abs(x['players']) + abs(x['picks'])
-    pool = [r for r in rank if r['net'] and moved(r) > 3 * abs(r['net'])]
-    if not pool:
-        return {}
-    r = max(pool, key=lambda x: moved(x) / abs(x['net']))
-    return {r['k']: (80, (
-        f'<b>{money(moved(r))} moves across the two halves of their ledger and '
-        f'{money(abs(r["net"]))} of it survives</b> &mdash; {money(r["players"])} on '
-        f'players against {money(r["picks"])} on picks. The widest cancellation in the '
-        f'league: a great deal of trading that very nearly adds to nothing.'))}
-
-
-def a_fewest(C, **_):
-    """The smallest book in the league."""
-    r = min(C['rows'], key=lambda x: x['n'])
-    if r['n'] >= C['minDeals']:
-        return {}
-    return {r['k']: (73, (
-        f'<b>{Num(r["n"])} priced deals in {num(len(C["seasons"]))} seasons</b>, fewest '
-        f'of the sixteen, and {money(r["net"])} up on them. Too small a book to rank, '
-        f'and the smallest book is still a position.'))}
 
 
 def a_not_firm(C, **_):
@@ -659,101 +568,354 @@ def a_not_firm(C, **_):
     if len(soft) != 1:
         return {}
     r = soft[0]
-    return {r['k']: (83, (
+    return {r['k']: B(84, DOWN, (
         f'<b>The only side in the league whose direction is not settled.</b> '
         f'{money(r["net"])} as the board is built, but anywhere from '
         f'{money(r["range"][0])} to {money(r["range"][1])} depending on how picks are '
-        f'priced. Read them as even.'))}
+        f'priced. Nobody can tell them whether they are winning.'))}
 
 
-def a_year(C, **_):
-    """What twelve months does to a position, in both directions."""
+def a_cancel(C, rank, **_):
+    """A lot of money moving and almost none of it staying."""
+    moved = lambda x: abs(x['players']) + abs(x['picks'])
+    pool = [r for r in rank if r['net'] and moved(r) > 3.5 * abs(r['net'])]
+    if not pool:
+        return {}
+    r = max(pool, key=lambda x: moved(x) / abs(x['net']))
+    return {r['k']: B(80, DOWN, (
+        f'<b>{money(moved(r))} moves across the two halves of their ledger and '
+        f'{money(abs(r["net"]))} of it survives</b> &mdash; {money(r["players"])} on '
+        f'players against {money(r["picks"])} on picks. The widest cancellation in the '
+        f'league: a great deal of trading that very nearly adds to nothing.'))}
+
+
+def a_small_but_ahead(C, **_):
+    """The smallest book in the league, and up on it."""
+    r = min(C['rows'], key=lambda x: x['n'])
+    if r['n'] >= C['minDeals'] or r['net'] <= 0:
+        return {}
+    return {r['k']: B(82, UP, (
+        f'<b>The fewest priced deals of the sixteen &mdash; {num(r["n"])} in '
+        f'{num(len(C["seasons"]))} seasons &mdash; and {money(r["net"])} up on them.</b> '
+        f'Too small a book to rank, and the smallest book is still a position.'))}
+
+
+def a_fewest(C, **_):
+    """The same book, read the other way."""
+    r = min(C['rows'], key=lambda x: x['n'])
+    if r['n'] >= C['minDeals']:
+        return {}
+    return {r['k']: B(58, DOWN, (
+        f'<b>{Num(r["n"])} priced deals in {num(len(C["seasons"]))} seasons</b>, too '
+        f'few to appear in a single ranking on this sheet. Whatever they are good at, '
+        f'there is not enough of it on the record to prove.'))}
+
+
+def a_ahead_but_median_down(C, rank, **_):
+    """Ahead on the ledger and behind in the middle of it."""
+    return {r['k']: B(72, DOWN, (
+        f'<b>Ahead overall and behind in the middle.</b> {money(r["net"])} across '
+        f'{r["n"]} deals, but a median of {money(r["med"], cents=True)}: '
+        f'{num(r["down"])} of the {num(r["n"])} went down, and the few that did not '
+        f'are carrying all of it.'))
+        for r in rank if r['net'] > 0 and r['med'] < 0}
+
+
+def a_behind_but_median_up(C, rank, **_):
+    """Behind on the ledger and ahead in the middle of it."""
+    return {r['k']: B(74, UP, (
+        f'<b>Behind overall and ahead in the middle.</b> The typical deal they make '
+        f'gains {money(r["med"], cents=True)}; it is the few big ones that put them '
+        f'{money(r["net"])} across {r["n"]} trades. The habit is sound. The headline '
+        f'is not.'))
+        for r in rank if r['net'] < 0 and r['med'] > 0}
+
+
+def a_year_clean(C, **_):
+    """Every verdict that moved on a side moved the same way."""
     L = C['later']
     if not L:
         return {}
-    lr = [r for r in L['rows'] if r['n'] >= L['minDeals']]
-    if len(lr) < 2:
-        return {}
     out = {}
-    up = max(lr, key=lambda r: r['year'] - r['day'])
-    dn = min(lr, key=lambda r: r['year'] - r['day'])
-    if up['year'] - up['day'] > 0:
-        clean = up['ch'] and all(up['tr'].get(x, 0) == 0 for x in ('WL', 'WE', 'EL'))
-        out[up['k']] = (71, 'year_up', (
-            f'The year is kinder to them than to anybody: {money(up["day"])} on the days '
-            f'they traded, <b>{money(up["year"])} twelve months on</b>. '
-            + (f'Of the {num(up["ch"])} verdicts that changed, every one went their way.'
-               if clean else
-               f'{Num(up["ch"])} of their verdicts changed across {up["n"]} deals '
-               f'priced twice.')))
-    if dn['year'] - dn['day'] < 0:
-        out[dn['k']] = (69, 'year_down', (
-            f'The one side the wait makes worse than anybody: {money(dn["day"])} on the '
-            f'days they traded, <b>{money(dn["year"])} a year later</b>. {Num(dn["ch"])} '
-            f'of their verdicts changed across {dn["n"]} deals priced twice.'))
+    for r in L['rows']:
+        if r['n'] < L['minDeals'] or r['ch'] < 3:
+            continue
+        good = all(r['tr'].get(x, 0) == 0 for x in ('WL', 'WE', 'EL'))
+        bad = all(r['tr'].get(x, 0) == 0 for x in ('LW', 'LE', 'EW'))
+        if good:
+            out[r['k']] = B(88, UP, (
+                f'<b>Every one of the {num(r["ch"])} verdicts that moved on them moved '
+                f'their way.</b> {money(r["day"])} on the days they traded, '
+                f'{money(r["year"])} twelve months on. Whatever they were being told at '
+                f'the time, the year disagreed with it.'))
+        elif bad:
+            out[r['k']] = B(88, DOWN, (
+                f'<b>Every one of the {num(r["ch"])} verdicts that moved on them moved '
+                f'against them.</b> {money(r["day"])} on the days they traded, '
+                f'{money(r["year"])} twelve months on.'))
     return out
 
 
-def a_plain(C, **_):
-    """The fallback, so every one of the sixteen gets a line.
+def a_year_cross(C, **_):
+    """A side the year moves from one side of even to the other."""
+    L = C['later']
+    if not L:
+        return {}
+    out = {}
+    for r in L['rows']:
+        if r['n'] < L['minDeals'] or r['day'] * r['year'] >= 0:
+            continue
+        up = r['year'] > 0
+        out[r['k']] = B(
+            85, UP if up else DOWN,
+            (f'<b>A year turns them from {money(r["day"])} into {money(r["year"])}.</b> '
+             f'The same {r["n"]} deals, priced on the day and priced again twelve '
+             f'months later: they were '
+             + ('losing them at the time and winning them now.'
+                if up else 'winning them at the time and losing them now.')))
+    return out
 
-    Not a filler sentence with no number in it: a side with nothing singular
-    about it still has a record, a net and a middle deal, and those are the
-    three things the rest of the sheet is built on.
+
+# --- ranked facts ----------------------------------------------------------
+# Everything above is a shape. This is the plain machinery underneath: for
+# every measure on the board, the sides at each end of it get a bid, with the
+# sentence stating the rank it actually holds rather than rounding it up to a
+# superlative. A side that is third best at something is told it is third.
+
+def _pool(C, which):
+    return C['rank'] if which == 'rank' else C['rows']
+
+
+def _where(C, which):
+    return ('in the league' if which == 'all'
+            else f'of the {num(len(C["rank"]))} ranked sides')
+
+
+SUP_HI = ['best', 'second-best', 'third-best']
+SUP_LO = ['worst', 'second-worst', 'third-worst']
+SUP_BIG = ['biggest', 'second-biggest', 'third-biggest']
+
+RANKED = [
+    dict(k='net', get=lambda r: r['net'], pool='rank', depth=2,
+         hi=lambda r, s, w: f'<b>The {s} ledger {w} at {money(r["net"])}</b> across '
+                            f'{r["n"]} priced deals.',
+         lo=lambda r, s, w: f'<b>The {s} ledger {w} at {money(r["net"])}</b> across '
+                            f'{r["n"]} priced deals.'),
+    dict(k='level', get=lambda r: r['level'], pool='rank', depth=2,
+         hi=lambda r, s, w: f'<b>{r["e"]} of their {r["n"]} deals came out level</b>, '
+                            f'{r["level"]}&thinsp;%, the {s} share {w}. Most of what '
+                            f'they agree to is worth the same to both sides on the day.',
+         lo=lambda r, s, w: f'<b>Only {r["e"]} of their {r["n"]} deals came out '
+                            f'level</b> &mdash; {r["level"]}&thinsp;%, the {s} share '
+                            f'{w}. Their trades land one way or the other.'),
+    dict(k='sharp', get=lambda r: r['sharp'] if r['sharp'] is not None else -1,
+         pool='rank', depth=2,
+         hi=lambda r, s, w: f'<b>{r["w"]}&ndash;{r["l"]} when a deal is not level</b>, '
+                            f'{r["sharp"]}&thinsp;% &mdash; the {s} record {w}.',
+         lo=lambda r, s, w: f'<b>{r["w"]}&ndash;{r["l"]} when a deal is not level</b>, '
+                            f'{r["sharp"]}&thinsp;% &mdash; the {s} record {w}.'),
+    dict(k='med', get=lambda r: r['med'], pool='rank', depth=2,
+         hi=lambda r, s, w: f'<b>A median deal of {money(r["med"], cents=True)}</b>, '
+                            f'the {s} {w}. The middle of their book is where their '
+                            f'money comes from, not the top of it.',
+         lo=lambda r, s, w: f'<b>A median deal of {money(r["med"], cents=True)}</b>, '
+                            f'the {s} {w}. The typical trade they make loses money.'),
+    dict(k='players', get=lambda r: r['players'], pool='rank', depth=2,
+         hi=lambda r, s, w: f'<b>{money(r["players"])} on players</b>, the {s} gain on '
+                            f'that half of the ledger {w}. Their picks are '
+                            f'{money(r["picks"])}.',
+         lo=lambda r, s, w: f'<b>{money(r["players"])} on players</b>, the {s} loss on '
+                            f'that half of the ledger {w}. Their picks are '
+                            f'{money(r["picks"])}, and it does not cover it.'),
+    dict(k='picks', get=lambda r: r['picks'], pool='rank', depth=2,
+         hi=lambda r, s, w: f'<b>{money(r["picks"])} on picks</b>, the {s} gain on draft '
+                            f'capital {w}. Their players are {money(r["players"])}.',
+         lo=lambda r, s, w: f'<b>{money(r["picks"])} on picks</b>, the {s} loss on draft '
+                            f'capital {w}. They sell the draft cheaply.'),
+    dict(k='worst', get=lambda r: r['worst'], pool='all', depth=2,
+         hi=lambda r, s, w: f'<b>No deal they have made has cost them more than '
+                            f'{money(abs(r["worst"]))}</b> &mdash; the {s} worst case '
+                            f'{w}. Nothing in their book can be called a disaster.',
+         lo=lambda r, s, w: f'<b>Their worst single deal is {money(r["worst"])}</b>, '
+                            f'the {s} {w}, against a total of {money(r["net"])}.'),
+    dict(k='best', get=lambda r: r['best'] if r['best'] > 0 else None,
+         pool='all', depth=3,
+         hi=lambda r, s, w: f'<b>Their best single deal is {money(r["best"])}</b>, the '
+                            f'{s} anybody has {w}.',
+         lo=lambda r, s, w: f'<b>Their best single deal is only {money(r["best"])}</b> '
+                            f'&mdash; the {s} best {w}. Nothing they have done has '
+                            f'paid off big.'),
+    dict(k='downrate', get=lambda r: -r['down'] / r['n'], pool='rank', depth=2,
+         hi=lambda r, s, w: f'<b>{r["down"]} of their {r["n"]} deals go down</b>, '
+                            f'{round(100 * r["down"] / r["n"])}&thinsp;% &mdash; the '
+                            f'{s.replace("best", "lowest")} share of losing trades {w}.',
+         lo=lambda r, s, w: f'<b>{r["down"]} of their {r["n"]} deals go down</b>, '
+                            f'{round(100 * r["down"] / r["n"])}&thinsp;% &mdash; the '
+                            f'{s.replace("worst", "highest")} rate {w}.'),
+    dict(k='perplayer', get=lambda r: r['players'] / r['n'], pool='rank', depth=1,
+         hi=lambda r, s, w: f'<b>{money(r["players"] / r["n"], cents=True)} a trade on '
+                            f'players</b> across {r["n"]} deals, the {s} rate on that '
+                            f'side {w}.',
+         lo=lambda r, s, w: f'<b>{money(r["players"] / r["n"], cents=True)} a trade on '
+                            f'players</b> across only {r["n"]} deals &mdash; the {s} '
+                            f'rate on that side {w}.'),
+    dict(k='perpick', get=lambda r: r['picks'] / r['n'], pool='rank', depth=1,
+         hi=lambda r, s, w: f'<b>{money(r["picks"] / r["n"], cents=True)} a trade on '
+                            f'picks</b> across {r["n"]} deals, the {s} rate on draft '
+                            f'capital {w}.',
+         lo=lambda r, s, w: f'<b>{money(r["picks"] / r["n"], cents=True)} a trade on '
+                            f'picks</b> across {r["n"]} deals &mdash; the {s} rate on '
+                            f'draft capital {w}.'),
+    dict(k='winrate', get=lambda r: r['w'] / r['n'], pool='rank', depth=1,
+         hi=lambda r, s, w: f'<b>{r["w"]} of their {r["n"]} deals cleared the win '
+                            f'line</b>, one in '
+                            f'{num(round(r["n"] / r["w"])) if r["w"] else "none"} '
+                            f'&mdash; the {s} rate {w}.',
+         lo=lambda r, s, w: f'<b>{Num(r["w"])} of their {r["n"]} deals cleared the win '
+                            f'line.</b> One in '
+                            f'{num(round(r["n"] / r["w"])) if r["w"] else "none"}, the '
+                            f'{s.replace("worst", "lowest")} rate {w}. '
+                            f'{Num(r["l"])} went the other way.'),
+]
+
+RANKED_YEAR = [
+    dict(k='move', get=lambda r: r['year'] - r['day'], depth=3,
+         sup_hi=SUP_BIG, sup_lo=SUP_BIG,
+         hi=lambda r, s, w: f'<b>The {s} gain anybody makes from being judged a year '
+                            f'late</b>: {money(r["day"])} on the days they traded, '
+                            f'{money(r["year"])} twelve months on, across {r["n"]} '
+                            f'deals priced twice.',
+         lo=lambda r, s, w: f'<b>The {s} price anybody pays for being judged a year '
+                            f'late</b>: {money(r["day"])} on the days they traded, '
+                            f'{money(r["year"])} twelve months on, across {r["n"]} '
+                            f'deals priced twice.'),
+    dict(k='swing', get=lambda r: r['swing'], depth=1,
+         sup_hi=SUP_BIG, sup_lo=SUP_BIG,
+         hi=lambda r, s, w: f'<b>Their record a year on is {sign(r["swing"], 0)} on what '
+                            f'it was on the day</b>, {r["dw"]}&ndash;{r["dl"]} to '
+                            f'{r["yw"]}&ndash;{r["yl"]} &mdash; the {s} gain anybody '
+                            f'makes from waiting.',
+         lo=lambda r, s, w: f'<b>Their record a year on is {sign(r["swing"], 0)} on what '
+                            f'it was on the day</b>, {r["dw"]}&ndash;{r["dl"]} to '
+                            f'{r["yw"]}&ndash;{r["yl"]} &mdash; the {s} anybody suffers '
+                            f'for the wait.'),
+]
+
+
+def ranked_bids(C):
+    """Every end of every measure, with the rank stated rather than rounded."""
+    out = {}
+    jobs = [(m, _pool(C, m['pool']), _where(C, m['pool'])) for m in RANKED]
+    L = C['later']
+    if L:
+        lr = [r for r in L['rows'] if r['n'] >= L['minDeals']]
+        jobs += [(m, lr, 'of the sides with enough deals priced twice')
+                 for m in RANKED_YEAR]
+    for m, pool, where in jobs:
+        pool = [r for r in pool if m['get'](r) is not None]
+        if len(pool) < 4:
+            continue
+        hi = sorted(pool, key=lambda r: -m['get'](r))
+        lo = sorted(pool, key=lambda r: m['get'](r))
+        for i in range(min(m['depth'], len(hi))):
+            r = hi[i]
+            out.setdefault(r['k'], []).append(
+                (86 - 7 * i, UP, f'{m["k"]}_hi_{i}',
+                 m['hi'](r, m.get('sup_hi', SUP_HI)[i], where),
+                 m['k']))
+        for i in range(min(m['depth'], len(lo))):
+            r = lo[i]
+            out.setdefault(r['k'], []).append(
+                (86 - 7 * i, DOWN, f'{m["k"]}_lo_{i}',
+                 m['lo'](r, m.get('sup_lo', SUP_LO)[i], where),
+                 m['k']))
+    return out
+
+
+def plain_bids(C):
+    """The floor, so no franchise can end up with a blank on either side.
+
+    Not a filler sentence with no number in it: whatever else is true, a side
+    has a best deal and a worst one, and those are facts about it alone rather
+    than a place in somebody else's table.
     """
     out = {}
     for r in C['rows']:
-        thin = r['n'] < C['minDeals']
-        out[r['k']] = (10, (
-            f'{r["w"]}&ndash;{r["l"]} with {num(r["e"])} level across {r["n"]} priced '
-            f'deals, {money(r["net"])} together and {money(r["med"], cents=True)} in the '
-            f'middle. {round(100 * abs(r["players"]) / (abs(r["players"]) + abs(r["picks"]))) if (r["players"] or r["picks"]) else 0}'
-            f'&thinsp;% of the movement is on the player side.'
-            if not thin else
-            f'{Num(r["n"])} priced deals, too few to rank: {r["w"]}&ndash;{r["l"]} with '
-            f'{num(r["e"])} level, {money(r["net"])} together. They are on the chart, '
-            f'not in the table.'))
+        b = []
+        if r['best'] > 0:
+            b.append((20, UP, 'plain_best', (
+                f'Their best single deal is {money(r["best"])}, out of {r["n"]} priced '
+                f'and {num(r["e"])} that came out level.'), 'best'))
+        if r['e']:
+            b.append((18, UP, 'plain_level', (
+                f'{Num(r["e"])} of their {r["n"]} deals came out level, '
+                f'{r["level"]}&thinsp;% &mdash; most of what they do is a push.'),
+                'level'))
+        b.append((20, DOWN, 'plain_worst', (
+            f'Their worst single deal is {money(r["worst"])}, against a total of '
+            f'{money(r["net"])} across {r["n"]} trades.'), 'worst'))
+        b.append((18, DOWN, 'plain_down', (
+            f'{Num(r["down"])} of their {r["n"]} deals finished below even.'),
+            'downrate'))
+        out[r['k']] = b
     return out
 
 
-ANGLES = [a_clean_sheet, a_one_side_only, a_all_down, a_one_currency, a_one_deal, a_win_rate,
-          a_side_extreme, a_side_best, a_cancel, a_median, a_per_deal, a_not_firm,
-          a_small_worst, a_down_rate, a_fewest, a_ahead_but_median_down, a_year,
-          a_split_rescue]
+ANGLES = [a_clean_sheet, a_never_won, a_best_is_a_loss, a_dead_heat,
+          a_median_zero, a_all_down, a_one_side_only, a_one_currency,
+          a_dead_column, a_one_deal, a_not_firm, a_cancel, a_small_but_ahead,
+          a_fewest, a_ahead_but_median_down, a_behind_but_median_up,
+          a_year_clean, a_year_cross]
+
+# How many franchises one bid shape may serve. A shape is a sentence pattern,
+# so letting two sides share one is fine and letting six share it is the thing
+# that made the first draft of this read like a form letter. Ranked bids carry
+# their rank in the tag, so each rank is its own shape already.
+CAP = 1
 
 
 def each_team(C):
-    """Assign every franchise the most striking thing still unclaimed.
+    """Give every franchise its best unclaimed thing to be pleased about, and
+    its best unclaimed thing not to be.
 
-    Greedy on score, one angle to a customer. Greedy rather than optimal on
-    purpose: the best line about a franchise should go to that franchise, and
-    an exact assignment would happily hand somebody a duller line to improve
-    a total nobody is reading.
+    Greedy on score within each sign, rather than an optimal assignment: the
+    best line about a franchise should go to that franchise, and an exact
+    match would happily hand somebody a duller line to improve a total nobody
+    is reading.
     """
-    rank = C['rank']
     bids = {}
     for fn in ANGLES:
-        for k, bid in (fn(C, rank=rank) or {}).items():
-            # (score, text), or (score, tag, text) where one angle makes two
-            # genuinely different observations -- the highest and the lowest
-            # on a measure are not the same line twice
-            score, tag, text = (bid if len(bid) == 3
-                                else (bid[0], fn.__name__, bid[1]))
-            bids.setdefault(k, []).append((score, tag, text))
-    picked, used = {}, set()
-    pool = sorted(((s, f, t, k) for k, v in bids.items() for s, f, t in v),
-                  key=lambda x: -x[0])
-    for score, fn, text, k in pool:
-        if k in picked or fn in used:
-            continue
-        picked[k] = (fn, text)
-        used.add(fn)
-    for k, (score, text) in a_plain(C).items():
-        picked.setdefault(k, ('a_plain', text))
-    return [{'k': r['k'], 'club': r['club'], 'n': r['n'], 'net': r['net'],
-             'thin': r['n'] < C['minDeals'],
-             'angle': picked[r['k']][0], 'line': picked[r['k']][1]}
-            for r in sorted(C['rows'], key=lambda r: -r['net'])]
+        for k, b in (fn(C, rank=C['rank']) or {}).items():
+            if not b:
+                continue
+            score, pol, text, tag, base = b
+            bids.setdefault(k, []).append(
+                (score, pol, tag or fn.__name__, text, base or fn.__name__))
+    for src in (ranked_bids(C), plain_bids(C)):
+        for k, v in src.items():
+            bids.setdefault(k, []).extend(v)
+
+    picked, spent, about = {}, {}, {}
+    for pol in (UP, DOWN):
+        pool = sorted(((s, t, x, k, b) for k, v in bids.items()
+                       for s, p, t, x, b in v if p == pol), key=lambda z: -z[0])
+        for score, tag, text, k, base in pool:
+            if (k, pol) in picked or spent.get(tag, 0) >= CAP:
+                continue
+            if base in about.get(k, ()):     # already said on the other line
+                continue
+            picked[(k, pol)] = (tag, text)
+            spent[tag] = spent.get(tag, 0) + 1
+            about.setdefault(k, set()).add(base)
+
+    out = []
+    for r in sorted(C['rows'], key=lambda r: -r['net']):
+        up, dn = picked.get((r['k'], UP)), picked.get((r['k'], DOWN))
+        out.append({'k': r['k'], 'club': r['club'], 'n': r['n'], 'net': r['net'],
+                    'thin': r['n'] < C['minDeals'],
+                    'up': up[1] if up else '', 'upTag': up[0] if up else '',
+                    'down': dn[1] if dn else '', 'downTag': dn[0] if dn else ''})
+    return out
 
 
 # --- the sheet -------------------------------------------------------------
@@ -839,9 +1001,11 @@ ol.ten p b{color:var(--ink);font-weight:800}
 .teams .thin{font-family:var(--sans);font-size:9px;font-weight:800;letter-spacing:.1em;
  text-transform:uppercase;color:var(--faint);border:1px solid var(--line);
  border-radius:2px;padding:1px 4px}
-.teams p{font-family:var(--sans);font-size:12.5px;line-height:1.52;color:var(--muted);
- margin:6px 0 0}
+.teams p{font-family:var(--sans);font-size:12.5px;line-height:1.5;color:var(--muted);
+ margin:7px 0 0;padding-left:17px;position:relative}
 .teams p b{color:var(--ink);font-weight:800}
+.teams .pm{position:absolute;left:0;top:0;font-size:9px;line-height:1.75}
+.teams .good .pm{color:var(--red)} .teams .bad .pm{color:var(--blue)}
 .also{margin-top:26px;border-top:2px solid var(--ink);padding-top:14px;
  display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px 28px}
 .also h3{font-family:var(--sans);font-size:9.5px;font-weight:900;letter-spacing:.16em;
@@ -993,12 +1157,13 @@ def build():
     c_fair = corr([r['level'] for r in rk], [r['net'] for r in rk])
     c_med = corr([r['med'] for r in rk], [r['net'] for r in rk])
     dek = (f'{T["n"] // 2:,} two-team trades, priced at the season each one was made and '
-           f'read {num(len(items))} ways, then once more for each of the '
-           f'{num(len(teams))} franchises. Fairness turns out to have nothing to do with '
+           f'read {num(len(items))} ways, then twice more for each of the '
+           f'{num(len(teams))} franchises &mdash; once for what is going right and '
+           f'once for what is not. Fairness turns out to have nothing to do with '
            f'winning, the median deal turns out to decide everything, and most of this '
            f'league is good at exactly half of the job.')
-    desc = (f'{T["n"] // 2:,} priced trades, {num(len(items))} findings and one line on '
-            f'every franchise. Trading fairly correlates {c_fair:+.2f} with coming out '
+    desc = (f'{T["n"] // 2:,} priced trades, {num(len(items))} findings, and one thing '
+            f'each way on all {num(len(teams))} franchises. Trading fairly correlates {c_fair:+.2f} with coming out '
             f'ahead; the median deal correlates {c_med:.2f}. One sheet from the Trade '
             f'Desk.')
 
@@ -1026,9 +1191,12 @@ def build():
         f'<div><div class="tm"><span class="nm">{E(t["club"])}</span>'
         + ('<span class="thin">unranked</span>' if t['thin'] else '')
         + f'<span class="nt {"up" if t["net"] >= 0 else "dn"}">{money(t["net"])}</span>'
-          f'</div><p>{t["line"]}</p></div>' for t in teams)
-    sech = (f'{Num(len(teams))} franchises, one line each &mdash; ordered by what the '
-            f'ledger says they are worth')
+          f'</div>'
+          f'<p class="good"><span class="pm">&#9650;</span>{t["up"]}</p>'
+          f'<p class="bad"><span class="pm">&#9660;</span>{t["down"]}</p></div>'
+        for t in teams)
+    sech = (f'{Num(len(teams))} franchises, one thing each way &mdash; ordered by what '
+            f'the ledger says they are worth')
 
     stamp = __import__('datetime').date.today().isoformat()
     page = (PAGE.replace('__TITLE__', title).replace('__H1__', h1)
@@ -1046,10 +1214,10 @@ def build():
     bare = lambda t: _re.sub('<[^>]+>', '', t).replace('&minus;', '-')
     for i, x in enumerate(items, 1):
         print(f'  {i:2}. {bare(x["fig"]):>8}  {x["claim"]}')
-    fell = [t['club'] for t in teams if t['angle'] == 'a_plain']
-    print(f'  {len(teams)} franchise lines, '
-          f'{len({t["angle"] for t in teams})} different angles'
-          + (f' -- fell back to the plain line: {", ".join(fell)}' if fell else ''))
+    gap = [t['club'] for t in teams if not t['up'] or not t['down']]
+    tags = {t['upTag'] for t in teams} | {t['downTag'] for t in teams}
+    print(f'  {len(teams)} franchises x 2 lines, {len(tags)} different angles'
+          + (f' -- NO PAIR for: {", ".join(gap)}' if gap else ''))
 
     g = ''.join(f'<div><div class="v">{v}</div><div class="l">{k}</div></div>'
                 for v, k in [(f'{T["n"] // 2:,}', 'Deals priced'),
