@@ -534,13 +534,19 @@ def a_one_currency(C, rank, **_):
                       min(sides, key=lambda t: abs(t[0])))
         if big[0] < 0.88 * r['net'] or abs(small[0]) > 0.14 * r['net']:
             continue
+        # The clause here used to read "the best in the league at exactly one
+        # thing -- which has been enough", which was written rather than
+        # counted and was wrong: this franchise leads the league on four
+        # measures, not one. What is true is narrower and better, so it is
+        # computed: which half of the ledger carries them, and how little the
+        # other half does.
+        busiest = max(C['rows'], key=lambda x: x['n'])
         out[r['k']] = B(90, UP, (
             f'<b>{money(big[0])} of their {money(r["net"])} is {big[1]}.</b> '
-            f'{Num(r["n"])} deals in {num(len(C["seasons"]))} seasons, and they are '
-            f'the best in the league at exactly one thing &mdash; which has been '
-            f'enough.'))
-        out.setdefault(r['k'] + '~', None)
-    out.pop(next((k for k in out if k.endswith('~')), '~'), None)
+            f'{Num(r["n"])} deals in {num(len(C["seasons"]))} seasons'
+            + (', more than anybody else has made' if busiest is r else '')
+            + f', and the {small[1]} column contributes {money(small[0])} of the '
+              f'total. One half of the ledger has carried the whole thing.'))
     return out
 
 
