@@ -308,9 +308,9 @@ h1{font-size:34px;line-height:1.08;margin:0 0 8px;font-weight:900;letter-spacing
              the camera is following. -->
         <div class="track" id="track">
           <i class="endz" id="endz"></i>
+          <div class="actor" id="actor"><canvas id="acv"></canvas></div>
+          <i class="pill" id="pill"></i>
         </div>
-        <div class="actor" id="actor"><canvas id="acv"></canvas></div>
-        <i class="pill" id="pill"></i>
       </div>
       <div class="pop" id="pop"></div>
       <div class="tdw" id="tdw">TOUCHDOWN</div>
@@ -446,7 +446,7 @@ function buildTrack(){
   // NB: this rewrites the track's markers only. The cast and the end zone are
   // children of the track too, so they are detached and put back rather than
   // destroyed.
-  var keep=['endz'].map(function(id){return $(id);})
+  var keep=['endz','actor','pill'].map(function(id){return $(id);})
             .filter(function(el){return el;});
   // both ways from the snap, because the two sides attack opposite ends
   var html='', yds=170;
@@ -502,7 +502,7 @@ function buildCast(){
   var tr=$('track'); if(!tr) return;
   CAST.forEach(function(el){ if(el.parentNode) el.parentNode.removeChild(el); });
   CAST=[];
-  for(var i=0;i<FORMATION.length+2;i++){   // +2: the man on the floor, and the official
+  for(var i=0;i<24;i++){   // the formation, the play's own men, and the official
     var d=document.createElement('div');
     d.className='actor extra';
     d.appendChild(document.createElement('canvas'));
@@ -585,7 +585,7 @@ var START={rush:[-3.0,0.48], conv:[-3.0,0.48], pass:[-3.6,0.50],
            int:[-3.6,0.50], fg:[-5.0,0.50], xp:[-5.0,0.50]};
 
 function stage(e){
-  if(!GAME) return;
+  if(!GAME) return 0;
   var fl=e[FLG], p=GAME.p[e[PID]], side=GAME.t[e[SIDE]], foe=GAME.t[1-e[SIDE]];
   $('fkit').style.background=side.c1;
   $('fteam').textContent=side.abbr||side.name;
@@ -599,117 +599,179 @@ function stage(e){
     return 1100/PACE;
   }
 
+  var kind=e[KIND], pose=POSE[kind]||['idle',''];
+  var yards=(pose[1] && typeof e[YDS]==='number') ? e[YDS] : 0;
+  $('fplay').textContent = e[TXT]||'';
+  clearField('');
+
   // Which way this side attacks. Consecutive plays in these feeds flip from
   // one fantasy team to the other constantly -- their players are in different
   // real games, so both sides score all afternoon. Drawn all one way that
   // alternation reads as noise; drawn as two teams attacking opposite ends it
   // reads as the ball changing hands, which is what it is.
-  var way = (e[SIDE]===0) ? 1 : -1, leftward = (way<0);
-  var kind=e[KIND], pose=POSE[kind]||['idle',''];
-  var yards=(pose[1] && typeof e[YDS]==='number') ? e[YDS] : 0;
-  // the play's own words, which already carry the distance -- a "48-yard
-  // touchdown pass" does not need "48 yd" printed beside it
-  $('fplay').textContent = e[TXT]||'';
-  clearField('');
-
-  var tok=++stageTok, cam=$('camera'), act=$('actor');
-  act.style.display=''; $('fname').textContent=p[0];
-  var mover_kind=pose[1], byBall=(mover_kind==='ball');
-  var st=START[kind]||[0,0.5], x0=LANE+st[0]*PXYD*way, depth=st[1];
-  act.style.bottom=across(depth)+'px';
-  act.style.zIndex=String(24+Math.round((1-depth)*20));
-
-  // ---- the two teams ----
-  // The whole point of the width: eleven shapes spread across a field read as
-  // a game, and four on one line read as a pile. Defence is drawn in the kit
-  // of whichever side is not the one that scored.
-  var kits=[[side.c1,side.c2],[foe.c1,foe.c2]];
-  // a sack is scored BY the defence, so the man the tape names is the tackler
-  // and the shirts on the line are the other way round
-  if(kind==='sack'||kind==='dint'||kind==='drec'||kind==='dtd') kits.reverse();
-  var n=0;
-  if(SCRIM[kind]){
-    for(var i=0;i<FORMATION.length;i++){
-      var f=FORMATION[i], k=kits[f[2]];
-      place(CAST[n++], LANE+f[0]*PXYD*way, f[1], f[3], i%3, k[0], k[1],
-            (f[2]===SIDE_THEM) !== leftward, false);
-    }
-  }
-
-  var travel=Math.abs(yards)*PXYD, dirn=way*(yards<0?-1:1);
-
-  // A PASSING PLAY IS ONE PLAY, drawn from the line of scrimmage.
-  //
-  // It used to be two unrelated vignettes. The quarterback's event threw a ball
-  // that landed on grass; the receiver's event dropped a man into the middle of
-  // the defence, already six yards downfield, who struck a catch pose at
-  // nothing and ran straight. Neither showed a route, a throw or a man covering
-  // anybody -- John: "the WR just appears in the middle of the defense and runs
-  // straight. I see no pass or route running or defense."
-  //
-  // Both kinds now stage the same play and differ only in which man the tape
-  // names. The gain is measured from the LINE, not from wherever the passer was
-  // standing, which also fixes a pass landing three yards short of its own
-  // yardage. Where inside the gain the ball was caught is NOT known -- the
-  // replay has no air yards -- so the catch is drawn at a fixed point in it and
-  // no split is ever stated. The only number anywhere is the total, and that is
-  // the real one.
+  // Which side has the ball, which is not always the side that scored: a sack
+  // and a defensive score are made by the men without it, so the play still
+  // runs the OTHER way. Drawn off the scorer, a sack mirrored the whole
+  // formation and put the quarterback in front of his own line.
+  var defScore=(kind==='sack'||kind==='dint'||kind==='drec'||kind==='dtd');
+  var offSide=defScore ? (1-e[SIDE]) : e[SIDE];
+  var way=(offSide===0)?1:-1, leftward=(way<0);
+  var dirn=way*(yards<0?-1:1);
+  var travel=Math.abs(yards)*PXYD;
   var isPass=(kind==='pass'||kind==='rec'), AIR=0.58;
-  var losX=LANE, END, catchX, rdep;
-  if(isPass){
-    END=losX+dirn*travel;
-    catchX=losX+dirn*travel*AIR;
-    rdep=(e[PID]%2) ? 0.24 : 0.76;        // which side he is split to
-    x0 = (kind==='pass') ? losX-dirn*6.4*PXYD : losX;
-    depth = (kind==='pass') ? 0.50 : rdep;
-    act.style.bottom=across(depth)+'px';
-  } else {
-    END=x0+dirn*travel;
-  }
+  var losX=LANE, END=losX+dirn*travel;
+  var catchX=losX+dirn*travel*AIR;
+  var rdep=(e[PID]%2) ? 0.22 : 0.78;         // which side he is split to
+  var kits=[[side.c1,side.c2],[foe.c1,foe.c2]];
+  // a sack and a defensive score are made BY the defence, so the man the tape
+  // names wears the shirt the other eleven are playing against
+  if(defScore) kits.reverse();
+  var OFF=kits[0], DEF=kits[1];
 
+  var cam=$('camera'), act=$('actor');
   // where the ball ends up, and how much of that the camera has to pan for
-  var want=END;
-  var limit=ORIGIN+cam.clientWidth*(dirn>0?0.68:0.32);
-  var reach=dirn>0 ? Math.min(want,limit) : Math.max(want,limit);
-  var scroll=want-reach;
-  var dur=Math.min(2300, 520+Math.abs(yards)*24)/PACE;
-  var lead=(isPass||byBall)?0:0;
-  var span=lead+dur, t0=performance.now();
-  var pill=$('pill');
-  pill.style.display=(isPass||kind==='fg'||kind==='xp') ? 'block' : 'none';
-  act.style.left=x0+'px';
-  $('track').style.transform='translateX(0)';
+  var limit=ORIGIN+cam.clientWidth*(dirn>0?0.66:0.34);
+  var reach=dirn>0?Math.min(END,limit):Math.max(END,limit);
+  var scroll=END-reach;
+  var dur=Math.min(2400, 620+Math.abs(yards)*24)/PACE;
+  var span=dur, t0=performance.now(), tok=++stageTok;
+  act.style.display='';
+  $('fname').textContent=p[0];
 
-  // ---- the men who move ----
-  var movers=[];                 // {el, x0,d0, x1,d1, early, late, flip, kit}
-  function mover(mx0,md0,mx1,md1,early,late,kitIdx,flip){
-    var el=CAST[n++]; if(!el) return null;
-    var m={el:el, x0:mx0, d0:md0, x1:mx1, d1:md1, early:early, late:late,
-           kit:kits[kitIdx], flip:(flip!==false) !== leftward};
-    movers.push(m); return m;
+  // ---- EVERYBODY HAS A JOB ----
+  // Before this, eleven of the thirteen men on the field were placed once and
+  // never moved again, so a play was two figures running past a crowd of
+  // statues. Every man now has a path and a pose script: linemen fire out and
+  // drive, receivers run routes whether or not the ball is going to them,
+  // corners run with them, and the back and the linebacker pursue.
+  //
+  // Facing is DERIVED from which way a man is actually travelling rather than
+  // set by hand, which is what had a cornerback sprinting downfield while
+  // drawn pointing backwards and defenders diving away from the play.
+  var roles=[], slot=0;
+  function role(kit,fn,face){
+    var el=CAST[slot++]; if(!el) return null;
+    var r={el:el,kit:kit,fn:fn,flip:(face==='L')!==leftward,lx:null};
+    roles.push(r); return r;
+  }
+  var yd=function(n){ return losX+dirn*n*PXYD; };   // n yards past the line
+  function cyc(h,a){ return Math.floor(h*dur/55)%(nframes(a)||1); }
+  function seg(h,a,b){ return Math.max(0,Math.min(1,(h-a)/(b-a))); }
+  // a straight run between two points, with a pose that may change late
+  function runTo(x0,d0,x1,d1,early,late,at){
+    return function(h){
+      var k=1-Math.pow(1-Math.min(1,h),2), on=(at!=null&&h>=at);
+      return {x:x0+(x1-x0)*k, d:d0+(d1-d0)*k,
+              a:on?late:early,
+              f:on?Math.floor(seg(h,at,1)*0.9*nframes(late)):cyc(h,early)};
+    };
   }
 
-  // The two men a passing play needs besides the one the tape names: whoever
-  // threw it and whoever caught it. Anonymous, like every other extra -- the
-  // quarterback who threw to a receiver on this roster is usually on somebody
-  // else's, and the replay does not record him at all.
-  var otherEl=null, coverEl=null;
+  // the line: five driving forward, four driving back, meeting in between
+  for(var i=0;i<5;i++) (function(i){
+    var d=0.33+0.09*i;
+    role(OFF, function(h){ return {x:yd(-1.0+2.0*Math.min(1,h*3)), d:d,
+      a:'lineman', f:h>0.05?2:0}; }, 'R');
+  })(i);
+  for(var j=0;j<4;j++) (function(j){
+    var d=0.37+0.10*j;
+    role(DEF, function(h){ return {x:yd(3.4-1.9*Math.min(1,h*3)), d:d,
+      a:'lineman', f:h>0.05?2:0}; }, 'L');
+  })(j);
+
+  // the two men split wide run their routes on every play, and the two on
+  // them run with them -- a receiver who stands still on a running play is the
+  // tell that nothing on this field has a job
+  var wr=[], cb=[];
+  for(var w=0;w<2;w++) (function(w){
+    var d0=w?0.96:0.04, d1=w?0.86:0.14;
+    wr.push(role(OFF, runTo(yd(-0.2),d0, yd(Math.max(8,Math.abs(yards)*0.7)),d1,
+                            'run','run',null), 'R'));
+    cb.push(role(DEF, runTo(yd(2.0),d0, yd(Math.max(8,Math.abs(yards)*0.7)+2),d1,
+                            'run','run',null), 'R'));
+  })(w);
+
+  // the back, and the man in the middle of the defence who goes to the ball
+  var backR=role(OFF, runTo(yd(-4.6),0.64, yd(1.0),0.60,'run','lineman',0.5),'R');
+  var mikeR=role(DEF, runTo(yd(9.0),0.50, END-dirn*1.2*PXYD,0.46,
+                            'run','tackle',0.84),'L');
+
+  // ---- and the men the play is actually about ----
+  var meFn, tackler=null;
   if(isPass){
-    otherEl = CAST[n++];
-    coverEl = CAST[n++];
+    // One play, not two vignettes: he releases, runs the route, turns for the
+    // ball, takes it and carries it on, with a man on him the whole way.
+    var pass0={x:yd(-6.4),d:0.50};
+    function throwerAt(h){
+      return {x:pass0.x, d:pass0.d, a:h<0.22?'throw':'idle',
+              f:h<0.22?Math.floor(h*dur/70):0};
+    }
+    function receiverAt(h){
+      if(h<AIR*0.9){ var k=h/(AIR*0.9);
+        return {x:losX+(catchX-losX)*k, d:rdep, a:'run', f:cyc(h,'run')}; }
+      if(h<AIR+0.07)
+        return {x:catchX, d:rdep, a:'catch', f:Math.floor(seg(h,AIR*0.9,AIR+0.07)*nframes('catch'))};
+      var k2=seg(h,AIR+0.07,1);
+      var dv=(fl&TD)&&Math.abs(yards)>=20&&k2>0.8, st=!(fl&TD)&&k2>0.82;
+      return {x:catchX+(END-catchX)*k2, d:rdep,
+              a:dv?'dive':st?'hit':'run',
+              f:dv?Math.floor(seg(k2,0.8,1)*nframes('dive'))
+               :st?Math.floor(seg(k2,0.82,1)*0.8*nframes('hit'))
+               :cyc(h,'run')};
+    }
+    var other=role(OFF,(kind==='rec')?throwerAt:receiverAt,'R');
+    meFn=(kind==='rec')?receiverAt:throwerAt;
+    // the man covering him, who arrives with him and makes the stop
+    tackler=role(DEF, function(h){
+      var r=receiverAt(h), back=(h<AIR)?2.0:0.6;
+      var on=!(fl&TD)&&h>0.84;
+      return {x:r.x-dirn*back*PXYD, d:rdep+(rdep<0.5?0.07:-0.07),
+              a:on?'tackle':'run',
+              f:on?Math.floor(seg(h,0.84,1)*0.9*nframes('tackle')):cyc(h,'run')};
+    }, 'R');
   } else if(kind==='sack'){
-    place(CAST[n++], x0-dirn*1.6*PXYD, depth, 'sack', 1,
-                 kits[1][0], kits[1][1], !leftward, false);
-  } else if(mover_is_man(mover_kind)){
-    if(Math.abs(yards)>=10)
-      mover(x0+dirn*travel*0.55, depth+0.10, x0+dirn*travel*0.40, depth+0.02,
-            'run', 'dive', 1, true);
-    if(!(fl&TD))
-      mover(END+dirn*5*PXYD, depth-0.13, END+dirn*0.6*PXYD, depth-0.02,
-            'run', 'tackle', 1, true);
-    mover(x0+dirn*2*PXYD, depth+0.16, END-dirn*1.4*PXYD, depth+0.08,
-          'run', 'run', 1, false);
+    // the tape names the tackler; the man on the floor plays for the other side
+    meFn=function(h){ var k=1-Math.pow(1-h,2);
+      return {x:yd(3.0-4.4*k), d:0.50, a:h>0.6?'tackle':'run',
+              f:h>0.6?Math.floor(seg(h,0.6,1)*0.9*nframes('tackle')):cyc(h,'run')}; };
+    role(OFF, function(h){ return {x:yd(-1.6), d:0.50, a:h>0.62?'sack':'idle',
+      f:h>0.62?Math.floor(seg(h,0.62,1)*0.9*nframes('sack')):0}; }, 'R');
+  } else if(mover_is_man(pose[1])){
+    meFn=function(h){
+      var k=1-Math.pow(1-h,2);
+      var dv=(fl&TD)&&Math.abs(yards)>=20&&h>0.84, st=!(fl&TD)&&h>0.86;
+      return {x:losX+(END-losX)*k, d:0.48,
+              a:dv?'dive':st?'hit':'run',
+              f:dv?Math.floor(seg(h,0.84,1)*nframes('dive'))
+               :st?Math.floor(seg(h,0.86,1)*0.8*nframes('hit'))
+               :cyc(h,'run')};
+    };
+    // One man beaten on the way, who dives AT him as he goes past rather than
+    // diving at the ground thirty yards behind the play, and one who makes the
+    // stop where the gain ends -- because that is where the gain ended.
+    if(Math.abs(yards)>=9){
+      var mx=losX+(END-losX)*0.45;
+      role(DEF, function(h){
+        var k=1-Math.pow(1-h,2), at=(h>0.42);
+        return {x:mx+(at?dirn*1.6*PXYD*seg(h,0.42,0.62):0), d:0.62-(at?0.10:0),
+                a:at?'dive':'run',
+                f:at?Math.floor(seg(h,0.42,0.68)*nframes('dive')):cyc(h,'run')};
+      }, 'L');
+    }
+    if(!(fl&TD)) tackler=role(DEF, function(h){
+      var k=1-Math.pow(1-h,2), on=h>0.84;
+      return {x:yd(Math.abs(yards)+6)-dirn*6*PXYD*k, d:0.40+0.06*k,
+              a:on?'tackle':'run',
+              f:on?Math.floor(seg(h,0.84,1)*0.9*nframes('tackle')):cyc(h,'run')};
+    }, 'L');
+  } else {
+    meFn=function(h){ return {x:losX+(END-losX)*(1-Math.pow(1-h,2)), d:0.50,
+      a:pose[0], f:Math.floor(h*dur/95)}; };
   }
+
+  // the ball, where the ball is a thing that travels on its own
+  var pill=$('pill');
+  pill.style.display=(isPass||kind==='fg'||kind==='xp')?'block':'none';
 
   // The end zone is drawn only where the tape says the play ended in one.
   if(fl&TD){
@@ -718,102 +780,53 @@ function stage(e){
     ez.style.left=END+'px';
     ez.className='endz on';
   }
-  var refSlot=n;
+  var refSlot=slot;
 
-  // The receiver's part of it: off the line, up the field, turn for the ball,
-  // catch it, carry it on. Returns where he is and what he is doing.
-  function routeAt(h){
-    if(h<AIR*0.92){                        // running the route
-      var k=h/(AIR*0.92);
-      return {x:losX+(catchX-losX)*k, d:rdep, a:'run',
-              f:Math.floor(h*dur/55)%(nframes('run')||1)};
+  function put(r,st){
+    // facing follows travel, so nobody ever runs one way drawn the other
+    if(r.lx!=null){
+      if(st.x < r.lx-0.4) r.flip=true;
+      else if(st.x > r.lx+0.4) r.flip=false;
     }
-    if(h<AIR+0.08){                        // turning for it, and taking it
-      return {x:catchX, d:rdep, a:'catch',
-              f:Math.floor((h-AIR*0.92)*26*nframes('catch'))};
-    }
-    var k2=(h-(AIR+0.08))/(1-(AIR+0.08));  // and away
-    var dv=(fl&TD)&&Math.abs(yards)>=20&&k2>0.82, st=!(fl&TD)&&k2>0.9;
-    return {x:catchX+(END-catchX)*k2, d:rdep,
-            a:dv?'dive':st?'hit':'run',
-            f: dv?Math.floor((k2-0.82)*6*nframes('dive'))
-             : st?Math.floor((k2-0.9)*12*nframes('hit'))
-             : Math.floor(h*dur/55)%(nframes('run')||1)};
+    r.lx=st.x;
+    place(r.el, st.x, st.d, st.a, st.f, r.kit[0], r.kit[1], r.flip, false);
   }
 
+  var meFlip=leftward, meLast=null;
   (function frame(now){
     if(tok!==stageTok) return;
-    var t=now-t0;
-    var hold=Math.max(0,Math.min(1,(t-lead)/dur));
-    var ease=1-Math.pow(1-hold,2);
-    var anim=pose[0], fi;
+    var h=Math.max(0,Math.min(1,(now-t0)/dur));
+    $('track').style.transform='translateX('+(-scroll*(1-Math.pow(1-h,2)))+'px)';
 
-    if(isPass){
-      var r=routeAt(hold);
-      // the man who threw it stands where he threw it from
-      // six yards back, not three: at this scale three put him inside his own
-      // line and he was never visible as the man who threw it
-      var th={x:losX-dirn*6.4*PXYD, d:0.50,
-              a:hold<0.20?'throw':'idle',
-              f:hold<0.20?Math.floor(hold*dur/70):0};
-      var me = (kind==='rec') ? r : th, him = (kind==='rec') ? th : r;
-      act.style.left=me.x+'px'; act.style.bottom=across(me.d)+'px';
-      act.style.zIndex=String(24+Math.round((1-me.d)*20));
-      draw(act, me.a, me.f, side.c1, side.c2, leftward, false);
-      place(otherEl, him.x, him.d, him.a, him.f, kits[0][0], kits[0][1],
-            leftward, false);
-      // and the man on the receiver, who runs with him and makes the stop
-      var cd=rdep+(rdep<0.5?0.075:-0.075);
-      var cx=r.x-dirn*(hold<AIR?2.2*PXYD:1.0*PXYD);
-      var ca=(hold>0.9&&!(fl&TD))?'tackle':'run';
-      place(coverEl, cx, cd, ca, Math.floor(hold*dur/55)%(nframes(ca)||1),
-            kits[1][0], kits[1][1], !leftward, false);
-      $('track').style.transform='translateX('+(-scroll*ease)+'px)';
-      if(pill){
-        // out of his hand and into the receiver's, and nowhere after that
-        var bk=Math.max(0,Math.min(1,(hold-0.06)/(AIR*0.92-0.06)));
-        pill.style.display = hold<AIR ? 'block':'none';
-        pill.style.left=(th.x+(catchX-th.x)*bk)+'px';
+    for(var ri=0;ri<roles.length;ri++) if(roles[ri]) put(roles[ri], roles[ri].fn(h));
+
+    var me=meFn(h);
+    if(meLast!=null){
+      if(me.x < meLast-0.4) meFlip=true; else if(me.x > meLast+0.4) meFlip=false;
+    }
+    meLast=me.x;
+    act.style.left=me.x+'px';
+    act.style.bottom=across(me.d)+'px';
+    act.style.zIndex=String(24+Math.round((1-me.d)*20));
+    draw(act, me.a, me.f, side.c1, side.c2, meFlip, false);
+
+    if(pill.style.display==='block'){
+      if(isPass){
+        var bk=seg(h,0.08,AIR*0.9);
+        pill.style.display = h<AIR ? 'block':'none';
+        pill.style.left=(yd(-6.4)+(catchX-yd(-6.4))*bk)+'px';
         pill.style.bottom=(across(0.50+(rdep-0.50)*bk)+Math.sin(bk*Math.PI)*50)+'px';
-      }
-    } else {
-      if(mover_is_man(mover_kind) && travel){
-        var diving=(fl&TD)&&Math.abs(yards)>=20&&hold>0.84;
-        var stopped=!(fl&TD)&&hold>0.93;
-        anim=diving?'dive':stopped?'hit':'run';
-        fi = diving ? Math.floor((hold-0.84)*5*nframes('dive'))
-           : stopped ? Math.floor((hold-0.93)*14*nframes('hit'))
-           : Math.floor(t/55)%(nframes('run')||1);
-        act.style.left=(x0+(reach-x0)*ease)+'px';
-      } else { fi=Math.floor(t/95); }
-      if(travel) $('track').style.transform='translateX('+(-scroll*ease)+'px)';
-      draw(act,anim,fi,side.c1,side.c2,leftward,false);
-      if(pill.style.display==='block'){
-        var k=Math.min(1,t/span);
-        pill.style.left=(x0+(reach-x0)*k)+'px';
-        pill.style.bottom=(across(depth)+Math.sin(k*Math.PI)*54)+'px';
-      }
-      for(var mi=0;mi<movers.length;mi++){
-        var m=movers[mi], late=hold>0.80;
-        var ma=late?m.late:m.early;
-        var mf=late?Math.floor((hold-0.80)*7*nframes(ma))
-                   :Math.floor(t/55)%(nframes(m.early)||1);
-        place(m.el, m.x0+(m.x1-m.x0)*ease, m.d0+(m.d1-m.d0)*ease,
-              ma, mf, m.kit[0], m.kit[1], m.flip, false);
+      } else {
+        pill.style.left=(losX+(END-losX)*h)+'px';
+        pill.style.bottom=(across(0.50)+Math.sin(h*Math.PI)*54)+'px';
       }
     }
 
-    // the line fires out of its stance once the ball is gone
-    if(SCRIM[kind]) for(var li=0;li<9;li++){
-      var lf=FORMATION[li], lk=kits[lf[2]];
-      draw(CAST[li], 'lineman', hold>0.06?2:0, lk[0], lk[1],
-           (lf[2]===SIDE_THEM) !== leftward, false);
-    }
-
-    if(t < span+((fl&TD)?900:300)) requestAnimationFrame(frame);
+    if(h<1) requestAnimationFrame(frame);
     else if(tok===stageTok){
-      draw(act,(fl&TD)?'celebrate':'idle',0,side.c1,side.c2,leftward,false);
-      if(fl&TD) place(CAST[refSlot], END-dirn*30, depth+0.26, 'ref', 2, '', '', false, true);
+      draw(act,(fl&TD)?'celebrate':me.a,me.f,side.c1,side.c2,meFlip,false);
+      if(fl&TD && CAST[refSlot])
+        place(CAST[refSlot], END-dirn*30, 0.74, 'ref', 2, '', '', false, true);
     }
   })(t0);
 
@@ -824,10 +837,10 @@ function stage(e){
   if(fl&TD){
     var w=$('tdw'); w.style.setProperty('--twc',side.c1);
     w.className='tdw'; void w.offsetWidth;
-    setTimeout(function(){ if(tok===stageTok) w.className='tdw go'; }, lead+dur-180);
+    setTimeout(function(){ if(tok===stageTok) w.className='tdw go'; }, dur-180);
   }
-  // what the transport waits on before the next play
-  return span + ((fl&TD) ? 900 : 300);
+  // the tail holds the tackle, or the celebration, on screen long enough to see
+  return span + ((fl&TD)?900:520)/PACE;
 }
 
 
