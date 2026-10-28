@@ -754,9 +754,14 @@ def coverlines(season, week, d, stories, lead, st):
         n = rp['games'][lead]['lead_changes']
     except Exception:
         n = 0
-    if n:
-        out.append(f'{numw(n).upper()} LEAD CHANGE'
-                   f'{"" if n == 1 else "S"} IN THE GAME OF THE WEEK')
+    # ...unless a billing already said so. When the feature takes the hook the
+    # game of the week is billed by its own headline, and a headline about a
+    # seesaw tends to lead on the count: week 7 came out with TEN LEAD CHANGES,
+    # AND THE LAST UNBEATEN SURVIVES sitting directly above TEN LEAD CHANGES IN
+    # THE GAME OF THE WEEK, which reads as a mistake because it is one.
+    said = f'{numw(n).upper()} LEAD CHANGE'
+    if n and not any(said in l for l in out):
+        out.append(said + f'{"" if n == 1 else "S"} IN THE GAME OF THE WEEK')
 
     big = max(stories, key=lambda s: s['margin'])
     out.append(f'THE ROUT: {big["winner"].upper()} BY {big["margin"]:.0f}')

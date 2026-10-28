@@ -58,8 +58,20 @@ WINDOWS = [
 WIN_ORDER = {w[0]: i for i, w in enumerate(WINDOWS)}
 
 
-def fetch(url, path):
-    if os.path.exists(path) and os.path.getsize(path) > 10000:
+def fetch(url, path, force=False):
+    """Cache a nflverse file, and refresh it when asked.
+
+    The cache never expired, which is a silent trap rather than a slow one:
+    a play-by-play file downloaded while week 6 was being built contains no
+    week 7, so the week 7 replay found nothing to attribute, carried all 1,473
+    points as unexplained residual, and still wrote a file and exited zero.
+    Nothing in the output said "you are replaying a week this file has never
+    heard of" -- it just read as a week in which nobody did anything.
+
+    So play_events now checks that the week it was asked for is actually in
+    there, and calls this again with force=True if it is not.
+    """
+    if os.path.exists(path) and os.path.getsize(path) > 10000 and not force:
         return path
     os.makedirs(os.path.dirname(path), exist_ok=True)
     print(f'  downloading {os.path.basename(path)}...')
@@ -162,13 +174,31 @@ TEAM_ALIAS = {'LA': 'LAR', 'LAR': 'LAR', 'LV': 'LV', 'OAK': 'LV', 'STL': 'LAR',
 tm = lambda t: TEAM_ALIAS.get((t or '').upper(), (t or '').upper())
 
 
+def has_week(path, week):
+    """Is the week we are about to replay actually in this file?"""
+    with gzip.open(path, 'rt', encoding='utf-8', errors='replace') as f:
+        for r in csv.DictReader(f):
+            if r.get('week') == str(week):
+                return True
+    return False
+
+
 def play_events(season, week, sc):
     """Every play that moved a fantasy score, as attributions per gsis id.
 
     Returns {gsis: [event, ...]} where an event carries the points it was worth,
     when it happened, and a plain description of what it actually was.
     """
-    p = fetch(PBP_URL.format(s=season), os.path.join(CACHE, f'pbp_{season}.csv.gz'))
+    url, path = PBP_URL.format(s=season), os.path.join(CACHE, f'pbp_{season}.csv.gz')
+    p = fetch(url, path)
+    if not has_week(p, week):
+        print(f'  week {week} is not in the cached play-by-play -- refreshing')
+        p = fetch(url, path, force=True)
+        if not has_week(p, week):
+            raise SystemExit(
+                f'  week {week} is still not in nflverse play-by-play. Either the '
+                f'week has not been posted yet, or the season is wrong. Refusing '
+                f'to write a replay in which nothing happened.')
     out = {}
     dst = {}          # team defences, keyed by abbreviation, not a player id
     games = {}
