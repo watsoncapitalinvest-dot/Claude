@@ -113,7 +113,7 @@ def standings_blocks(st):
     return out
 
 
-PER_PAGE = 4          # preview paragraphs to a page; see preview_prose()
+PER_PAGE = 2          # preview paragraphs to a page; they doubled in length
 ORD_W = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh',
          'eighth', 'ninth', 'tenth', 'eleventh', 'twelfth', 'thirteenth',
          'fourteenth', 'fifteenth', 'sixteenth']
@@ -128,7 +128,14 @@ NUM_W = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
 # 5 rebuild died on an eleventh seed. Numerals past the table are correct with
 # a plain 'th' for everything a 16-team league can produce.
 def ordw(n):
-    return ORD_W[n] if 0 <= n < len(ORD_W) else f'{n}th'
+    # Past the table, build the suffix properly. The old fallback was a plain
+    # 'th', on the reasoning that a 16-team league produces nothing bigger than
+    # a sixteenth seed -- true of seeds, false of everything else, and the
+    # preview duly printed "the 43th meeting since 2008".
+    if 0 <= n < len(ORD_W):
+        return ORD_W[n]
+    suf = 'th' if 11 <= n % 100 <= 13 else {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+    return f'{n}{suf}'
 
 
 def numw(n):
@@ -242,6 +249,166 @@ def preview_prose(season, week, st):
     after_left = max(0, left - 1)
     rest = f'{numw(after_left)} week{"" if after_left == 1 else "s"}'
     last_seed = max(r['seed'] for r in tbl)
+
+    # Who is actually scoring. The preview ran seven weeks without naming a
+    # single player, which is a strange thing for a football magazine to do.
+    # Totals are starters only, because a man on the bench scored nobody
+    # anything.
+    tops = {}
+    for _w in range(1, int(st['through']) + 1):
+        try:
+            _wk = json.load(open(os.path.join(WDIR, f'{season}-w{_w}.json'),
+                                 encoding='utf-8'))
+        except Exception:
+            continue
+        for _g in _wk['games']:
+            for _t in _g['teams']:
+                d_ = tops.setdefault(_t['roster_id'], {})
+                for _p in _t.get('starters') or []:
+                    d_[_p['name']] = d_.get(_p['name'], 0.0) + (
+                        (_p.get('stats') or {}).get('pts_std') or 0.0)
+
+    def top_man(t):
+        d_ = tops.get(t['roster_id']) or {}
+        if not d_:
+            return None
+        nm, pts = max(d_.items(), key=lambda kv: kv[1])
+        return nm, pts
+
+    def men(a, b, n):
+        """The leading scorer on each side, named. Always worth a line."""
+        ta, tb = top_man(a), top_man(b)
+        if not ta or not tb:
+            return ''
+        if ta[1] >= tb[1]:
+            hi, lo, ht, lt = ta, tb, a, b
+        else:
+            hi, lo, ht, lt = tb, ta, b, a
+        gap = hi[1] - lo[1]
+        if gap >= 40:
+            if r := _cap('men_gap',
+                         f'{E(hi[0])} has scored {hi[1]:.2f} for {E(ht["team"])} this '
+                         f'season and {E(lo[0])} {lo[1]:.2f} for {E(lt["team"])}, which '
+                         f'is the difference between the two rosters in two names.', 3):
+                return r
+        if r := _cap('men',
+                     f'Nobody has scored more for {E(a["team"])} than {E(ta[0])}, on '
+                     f'{ta[1]:.2f}, or for {E(b["team"])} than {E(tb[0])}, on '
+                     f'{tb[1]:.2f}.', 3):
+            return r
+        return (f'{E(ta[0])} leads {E(a["team"])} on {ta[1]:.2f}. {E(tb[0])} leads '
+                f'{E(b["team"])} on {tb[1]:.2f}.')
+
+    def last_man(a, b, n):
+        """Who actually scored last week, as against who has scored all season."""
+        got = []
+        try:
+            wk = json.load(open(os.path.join(WDIR, f'{season}-w{st["through"]}.json'),
+                                encoding='utf-8'))
+        except Exception:
+            return ''
+        for t in (a, b):
+            best = None
+            for g in wk['games']:
+                for side in g['teams']:
+                    if side['roster_id'] != t['roster_id']:
+                        continue
+                    for pl in side.get('starters') or []:
+                        v = (pl.get('stats') or {}).get('pts_std') or 0.0
+                        if best is None or v > best[1]:
+                            best = (pl['name'], v)
+            if best:
+                got.append((t, best))
+        if len(got) != 2:
+            return ''
+        (ta, ma), (tb, mb) = got
+        if r := _cap('last_man',
+                     f'{E(ma[0])} was the best of them for {E(ta["team"])} last week on '
+                     f'{ma[1]:.2f}, {E(mb[0])} for {E(tb["team"])} on {mb[1]:.2f}.', 3):
+            return r
+        return (f'Last week it was {E(ma[0])} on {ma[1]:.2f} and {E(mb[0])} on '
+                f'{mb[1]:.2f}.')
+
+    def series_colour(a, b, n):
+        """The shape of the whole series: its biggest, its closest.
+
+        history.series() normalises orientation once, so `biggest` is always
+        a's biggest win over b. Leaving that flip to the caller nearly printed
+        the wrong game as the one defeat in a 26-1 series.
+        """
+        s_ = hist.series(a, b, st)
+        if not s_:
+            return ''
+        A, B = E(a['team']), E(b['team'])
+        big = s_.get('biggest')
+        if big and abs(big['for'] - big['against']) >= 40:
+            if r := _cap('big_win',
+                         f'The heaviest {A} have beaten them was {big["for"]:.0f} to '
+                         f'{big["against"]:.0f}, in {big["y"]}.', 3):
+                return r
+        worst = s_.get('worst')
+        if worst and abs(worst['against'] - worst['for']) >= 40:
+            if r := _cap('worst_loss',
+                         f'The heaviest {B} have beaten them was '
+                         f'{worst["against"]:.0f} to {worst["for"]:.0f}, in '
+                         f'{worst["y"]}.', 3):
+                return r
+        cl = s_.get('closest')
+        if cl:
+            m = abs(cl['for'] - cl['against'])
+            if m < 5:
+                if r := _cap('tight',
+                             f'The closest of them went {cl["for"]:.0f} to '
+                             f'{cl["against"]:.0f} in {cl["y"]}, {m:.2f} in it.', 3):
+                    return r
+        return ''
+
+    def against(a, b, n):
+        """What they give up, which no other line in here looks at."""
+        if r := _cap('conceded',
+                     f'{E(a["team"])} have conceded {a["pa"]:.0f} this season, '
+                     f'{E(b["team"])} {b["pa"]:.0f}.', 3):
+            return r
+        for t, o in ((a, b), (b, a)):
+            if t['pa'] > o['pa'] + 120:
+                if r := _cap('conceded_gap',
+                             f'{E(t["team"])} have been scored on '
+                             f'{t["pa"] - o["pa"]:.0f} more than {E(o["team"])} have.', 3):
+                    return r
+        return ''
+
+    def where(a, b, n):
+        """Where they stand right now. Present tense only -- a projected
+        position is not arithmetic, because the other two sides in a division
+        play on the same Sunday and can win too."""
+        if r := _cap('seeds', f'{E(a["team"])} are {ordw(a["seed"])} in the league as it '
+                              f'stands and {E(b["team"])} {ordw(b["seed"])}.', 3):
+            return r
+        for t in (a, b):
+            if t['div_rank'] == 1 and t['div_size'] > 1:
+                if r := _cap('div_top', f'{E(t["team"])} lead {E(t["div_name"])}.', 3):
+                    return r
+        return ''
+
+    def shape(a, b, n):
+        """One line of season numbers that the closing line has not used."""
+        ga, gb = max(1, a['games']), max(1, b['games'])
+        if r := _cap('avg', f'{E(a["team"])} have averaged {a["pf"]/ga:.2f} a week, '
+                            f'{E(b["team"])} {b["pf"]/gb:.2f}.', 3):
+            return r
+        for t in (a, b):
+            wk = [(x[2], x[0]) for x in (t.get('trail') or [])]
+            if not wk:
+                continue
+            hi = max(wk)
+            if r := _cap('best_week', f'{E(t["team"])} have not beaten the {hi[0]:.2f} '
+                                      f'they scored in week {hi[1]}.', 3):
+                return r
+            lo = min(wk)
+            if r := _cap('worst_week', f'{E(t["team"])} have been as low as {lo[0]:.2f}, '
+                                       f'in week {lo[1]}.', 3):
+                return r
+        return ''
 
     def meet_again(a, b):
         """The next week after this one that the schedule has them meeting."""
@@ -461,7 +628,11 @@ def preview_prose(season, week, st):
         """
         if sum(1 for x, _ in used if x == tag) >= cap:
             return ''
-        if any(x == tag and k == cur[0] - 1 for x, k in used):
+        # Same paragraph OR the one before it. Same-paragraph matters now that a
+        # fixture draws two history threads: without it, calling thread() twice
+        # printed one sentence twice in a row, which is worse than printing it
+        # once.
+        if any(x == tag and k in (cur[0], cur[0] - 1) for x, k in used):
             return ''
         used.append((tag, cur[0]))
         return text
@@ -703,19 +874,42 @@ def preview_prose(season, week, st):
                         else ', which is the best the card had.'))
         s.append(prospect(a, b, n, first))
         k = kicker(a, b, n)
-        th = thread(a, b, n)
-        if th:
-            s.append(th)
+        # two threads, not one. thread() returns a different line each time it
+        # is called because every phrasing inside it is capped, and eight
+        # fixtures were drawing eight lines out of a bank of ten.
+        for th in (thread(a, b, n), thread(a, b, n), thread(a, b, n)):
+            # "...going back to 2017" followed by "They have been doing this
+            # since 2017" is two threads that are each capped correctly and
+            # still say the same thing twice. A year already in the paragraph
+            # is the tell.
+            if th and not any(y in ' '.join(s) for y in re.findall(r'\b(?:19|20)\d\d\b', th)):
+                s.append(th)
         covered = any(w in k for w in ('in a row', 'run of three', 'not lost a game'))
         back = ' '.join(x for x in (form(a, n, covered), form(b, n + 1, covered)) if x)
         if back:
             s.append(back)
+        if m := men(a, b, n):
+            s.append(m)
+        if lm := last_man(a, b, n):
+            s.append(lm)
+        if wh := where(a, b, n):
+            s.append(wh)
+        if col := series_colour(a, b, n):
+            s.append(col)
+        if sh := shape(a, b, n):
+            s.append(sh)
+        if ag := against(a, b, n):
+            s.append(ag)
         if k:
             s.append(k)
         # Four games a page, broken here rather than shrunk: fit() had taken
         # the whole article to 0.67, the smallest type in the issue, on the
         # page that closes it.
-        out.append(('pagebreak' if n and n % PER_PAGE == 0 else 'body',
+        # The break is offset by one so the opening page carries the heading,
+        # the lead and ONE fixture. The game of the week is always the longest
+        # paragraph on the card, and pairing it with the second-longest put the
+        # tightest page in the issue at the front of the preview.
+        out.append(('pagebreak' if n and (n - 1) % PER_PAGE == 0 else 'body',
                     '<p class="b">' + ' '.join(s) + '</p>'))
     return out
 
