@@ -175,15 +175,20 @@ h1{font-size:34px;line-height:1.08;margin:0 0 8px;font-weight:900;letter-spacing
     repeating-linear-gradient(90deg,#17431f 0,#17431f 40px,#113619 40px,#113619 80px)}
 .track{position:absolute;inset:0;will-change:transform;transform-style:preserve-3d}
 .marks{position:absolute;inset:0}
-/* The home crest painted on the turf, the way a pro field carries one. It
-   lives in the track, so it scrolls with the ground like paint rather than
-   sliding with the camera, and it sits under everybody because it is under
-   everybody. */
+.ticks{position:absolute;width:5200px;transform-origin:left center;
+  pointer-events:none}
+/* The home crest, one of them, at the middle of the field. It hangs off the
+   GROUND rather than off the scrolling track: in the track it scrolled away
+   with the turf and a second one came round every fifty yards, which is not
+   what a field looks like -- a field has one and it is always at the middle
+   of it. In the plane, so it lies down with the ground; under everybody,
+   because it is under everybody. */
 /* Cropped to a circle and ringed, the way a midfield mark is painted. The
    crests are photographs with opaque backgrounds, so drawn square they put a
    grey box on the grass rather than a logo on it. */
-.midlogo{position:absolute;top:50%;width:132px;height:132px;object-fit:cover;
-  border-radius:50%;transform:translate(-50%,-50%);opacity:.52;
+.midlogo{position:absolute;top:50%;left:50%;width:150px;height:150px;
+  object-fit:cover;border-radius:50%;transform:translate(-50%,-50%);opacity:.5;
+  z-index:0;
   pointer-events:none;box-shadow:0 0 0 3px rgba(255,255,255,.26);
   filter:saturate(1.05) contrast(1.02)}
 .hash{position:absolute;top:4%;bottom:10%;width:2px;background:rgba(255,255,255,.15)}
@@ -576,7 +581,7 @@ function across(f){ return 14 + f*(DEEP-70); }
 // The yard markers, rebuilt around wherever this drive has got to. They are
 // drive yards, not a yard line: a side that has gained fifty-eight since it
 // last scored snaps from the 58.
-var MARKS=null, HOMECREST='';
+var MARKS=null;
 function marks(way, spot){
   var tr=$('track'); if(!tr) return;
   if(!MARKS){ MARKS=document.createElement('div'); MARKS.className='marks'; }
@@ -586,10 +591,25 @@ function marks(way, spot){
     var big=(y%10===0), x=LANE+way*y*PXYD;
     html+='<i class="hash'+(big?' b':'')+'" style="left:'+x+'px"></i>';
     if(big) html+='<span class="ydn" style="left:'+x+'px">'+y+'</span>';
-    // the home crest at every fifty, so one is always somewhere in shot
-    if(HOMECREST && y%50===0)
-      html+='<img class="midlogo" src="'+HOMECREST+'" alt="" style="left:'+x+'px">';
   }
+  // Hash marks: the short ticks at every single yard, two rows inbounds and
+  // one along each sideline, the way they are actually painted. Drawn as a
+  // repeating gradient rather than as one element a yard -- a hundred and
+  // sixty yards of ticks across four rows is six hundred nodes rebuilt every
+  // play, and a gradient is none.
+  var tick='repeating-linear-gradient(90deg,rgba(255,255,255,0) 0,'+
+           'rgba(255,255,255,0) '+(PXYD-2).toFixed(2)+'px,'+
+           'rgba(255,255,255,.34) '+(PXYD-2).toFixed(2)+'px,'+
+           'rgba(255,255,255,.34) '+PXYD.toFixed(2)+'px)';
+  // started at the line, the ticks left bare turf behind the offence. Forty
+  // yards back, which is a whole number of yards so the phase still lands on
+  // the yard marks.
+  var tx=LANE-way*40*PXYD;
+  [[0.055,5],[0.345,7],[0.655,7],[0.945,5]].forEach(function(r){
+    html+='<i class="ticks" style="bottom:'+(r[0]*100)+'%;height:'+r[1]+'px;'+
+          'left:'+tx+'px;background:'+tick+
+          (way<0?';transform:scaleX(-1)':'')+'"></i>';
+  });
   // "DRIVE 101" and not "101", because a bare number on a football field is
   // read as a yard line and this is not one -- there are no yard lines here.
   html+='<i class="snap" style="left:'+(LANE+way*spot*PXYD)+'px">'+
@@ -1030,7 +1050,11 @@ function openGame(i){
   });
   // Sleeper matchups carry no home side, so the one the matchup names first --
   // the one the scoreboard puts on top -- wears the field.
-  HOMECREST = crest(GAME.t[0].logo);
+  var mid=$('midlogo');
+  if(!mid){ mid=document.createElement('img'); mid.id='midlogo';
+            mid.className='midlogo'; mid.alt='';
+            $('ground').insertBefore(mid, $('track')); }
+  mid.src = crest(GAME.t[0].logo);
   $('vnote').textContent = 'Tap any play to see the real one behind it. ' +
     'Gold marks the lead changing hands. The field shows the play and the ' +
     'ground it covered — not where on the pitch it happened, which the ' +
