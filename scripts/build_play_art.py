@@ -125,11 +125,15 @@ def kit_line(k, who):
     if not k.get('primary'):
         return (f'<<KIT for {k["team"]}: jersey, trousers and helmet, trim. '
                 f'Fill from team-kits.json before running.>>')
-    bits = (f'{who} wears {k["primary"]}. {k["secondary"].capitalize()} helmet and '
-            f'{k["secondary"]} trousers, {k["primary"]} jersey, {k["trim"]} at the collar, '
-            f'the facemask and down the sleeve and leg.')
-    if k.get('notes'):
-        bits += f' {k["notes"].capitalize()}.'
+    bits = (f'{who} wears {k["primary"]}: {k["primary"]} jersey, {k["secondary"]} '
+            f'helmet and {k["secondary"]} trousers, {k["trim"]} at the collar, on the '
+            f'facemask and down the sleeve and the leg.')
+    # 'wear' is prompt-facing. 'notes' is this desk talking to itself -- which
+    # team a colour clashes with, why a trim is only a trim -- and it never
+    # reaches the graphics AI, because anything in a brief that is not an
+    # instruction is something for it to get wrong.
+    if k.get('wear'):
+        bits += ' ' + k['wear']
     return bits
 
 
