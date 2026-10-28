@@ -452,6 +452,18 @@ var LANE = 0;               // ground-space x of the snap
 var DEEP = 0;               // the plane's own height: the field's width
 var stageTok = 0;
 var SPOT = [0,0];   // yards each side has gained since its own last score
+var CAM  = [NaN,NaN];  // where the camera sits on each side's drive
+var LASTCAM = 0;       // where it actually is now, so a pan starts from there
+
+// WHY THE LINE OF SCRIMMAGE NEVER APPEARED TO MOVE
+//
+// The camera was re-centred on the snap at the start of every play, so the
+// line sat at the same place on screen all afternoon and only the numbers
+// underneath it changed -- John: "it doesn't play like a team moving down the
+// field." The camera now HOLDS between plays. A drive starts near the left
+// edge, each snap is further across the shot than the last, and the camera
+// only pans when the next play would run off the end of it. Each side keeps
+// its own camera, because they are driving opposite ways from the same mark.
 
 // WHY THE MARKERS USED TO READ THE SAME EVERY PLAY
 //
@@ -719,11 +731,24 @@ function stage(e){
 
   var cam=$('camera'), act=$('actor');
   // where the ball ends up, and how much of that the camera has to pan for
-  // the camera sits on the snap wherever down the drive it is, then pans only
-  // for what will not fit in front of it
-  var limit=base+ORIGIN+cam.clientWidth*(dirn>0?0.82:0.18);
+  // The camera holds where the last play of this drive left it, so the line of
+  // scrimmage marches across the shot. It is brought back only when the snap
+  // has got too far over to leave room in front of it.
+  // How far across the shot the snap sits, as a fraction of its width. It
+  // starts a fifth in and is allowed to march to two thirds before the camera
+  // is brought along -- at 0.16 to 0.46 the band was thirteen yards wide, so
+  // one ordinary gain crossed it and the line landed on the same pixel every
+  // single play, which is the whole of what looked wrong.
+  var W=cam.clientWidth, camX=CAM[offSide];
+  var HOME=dirn>0?0.22:0.78, EDGE=dirn>0?0.66:0.34;
+  var sf = isNaN(camX) ? null : (losX-camX-ORIGIN)/W;
+  var over = (sf===null) || (dirn>0 ? sf>EDGE : sf<EDGE);
+  if(over) camX = losX-(ORIGIN+W*HOME);
+  // and it pans during the play only for what will not fit in front of it
+  var limit=camX+ORIGIN+W*(dirn>0?0.84:0.16);
   var reach=dirn>0?Math.min(END,limit):Math.max(END,limit);
   var scroll=END-reach;
+  CAM[offSide]=camX+scroll;
   var dur=Math.min(2400, 620+Math.abs(yards)*24)/PACE;
   // Both teams stand set for a beat before anything moves. Without it a play
   // ended and the next one was already mid-stride, which is a cut rather than
@@ -920,7 +945,12 @@ function stage(e){
     if(tok!==stageTok) return;
     var el=now-t0;
     var h=el<SET ? 0 : Math.max(0,Math.min(1,(el-SET)/dur));
-    $('track').style.transform='translateX('+(-base-scroll*(1-Math.pow(1-h,2)))+'px)';
+    // during the set the camera swings from wherever it was to where this play
+    // needs it; after the snap it pans only for what will not fit
+    var tx = el<SET ? LASTCAM+(camX-LASTCAM)*(1-Math.pow(1-el/SET,2))
+                    : camX+scroll*(1-Math.pow(1-h,2));
+    LASTCAM = tx;
+    $('track').style.transform='translateX('+(-tx)+'px)';
 
     for(var ri=0;ri<roles.length;ri++) if(roles[ri]) put(roles[ri], roles[ri].fn(h));
 
@@ -1042,7 +1072,7 @@ function openGame(i){
     'ground it covered — not where on the pitch it happened, which the ' +
     'replay does not know and will not guess.';
   buildTrack();
-  SPOT=[0,0];
+  SPOT=[0,0]; CAM=[NaN,NaN]; LASTCAM=0;
   seek(0); mark();
   window.scrollTo(0,0);
 }
