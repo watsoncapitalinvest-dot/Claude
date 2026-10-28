@@ -33,6 +33,12 @@ _s = importlib.util.spec_from_file_location('ad', os.path.join(ROOT, 'scripts', 
 ad = importlib.util.module_from_spec(_s); sys.modules['ad'] = ad; _s.loader.exec_module(ad)
 
 W, H = 1024, 1536
+# Where the masthead ends, so the chart band tracks it instead of being
+# written down twice and drifting apart the next time the masthead changes.
+_cc = importlib.util.spec_from_file_location(
+    'cc', os.path.join(ROOT, 'scripts', 'compose_cover.py'))
+_ccm = importlib.util.module_from_spec(_cc); _cc.loader.exec_module(_ccm)
+MAST = _ccm.MAST
 
 
 # The portrait card. A figure cannot share a 1200x630 frame with a panel of type
@@ -400,8 +406,16 @@ def build(season, week, art='', inset='', card=''):
         t = min(1.0, max(0.0, e['fc']['sec'] / 3600))
         pts.append((t, e['lead'] if wi == 0 else -e['lead']))
 
+    # The chart lives in the band between the masthead and the cover lines, so
+    # it is measured off MAST rather than written down. It was a fixed 0.235 to
+    # 0.565 of the frame, which was right while the masthead took a fifth; the
+    # plaid masthead takes 38 per cent, and the old band put the first twenty
+    # minutes of the game -- including the opening red, where the winner went
+    # ahead -- behind the K of SKIRT. The floor is where build_issue.py's hook
+    # starts on the longest of these covers, measured in the browser at 823.
     x0, w = 64, W - 128
-    y0, h = H * 0.235, H * 0.33
+    y0 = MAST + 26
+    h = H * 0.535 - y0
     line, area, mid = curve(pts, w, h, x0, y0)
     flips = ''.join(
         f'<circle cx="{x0 + w*t:.1f}" cy="{mid:.1f}" r="7" fill="#0b0b0f" '
@@ -418,8 +432,13 @@ def build(season, week, art='', inset='', card=''):
         import importlib.util as _iu
         _s = _iu.spec_from_file_location('cc', os.path.join(ROOT, 'scripts', 'compose_cover.py'))
         cc = _iu.module_from_spec(_s); _s.loader.exec_module(cc)
+        # artClear is how deep the picture's own sky runs -- the band that may
+        # be mirrored to fill the strip the drop opens. Only the rows ABOVE the
+        # subject qualify: reflect further and the subject comes back into the
+        # frame upside down above the masthead.
         cc.compose(art, os.path.basename(out), inset=inset,
-                   drop=int(cover.get('artDrop', 0)))
+                   drop=int(cover.get('artDrop', 0)),
+                   clear=int(cover.get('artClear', 200)))
     else:
         doc = (COVER.replace('__QUARTERS__', quarters)
                     .replace('__AREA__', area).replace('__LINE__', line)

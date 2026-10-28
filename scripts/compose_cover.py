@@ -26,12 +26,18 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 W, H = 1024, 1536
 # Where the masthead block ends, measured off a BUILT cover in the browser --
-# not the wordmark alone but the whole assembly: wordmark, issue line and the
-# red rule under it. It read 221 for a long time, which was the wordmark only,
-# and art composed to put a head at the top of the middle band had that head
-# overlapped by about 35px. Re-measured at 430px wide and mapped back to the
-# 1536-tall frame.
-MAST = 320
+# not the wordmark alone but the whole assembly: wordmark, strapline and issue
+# line. It read 221 for a long time, which was the wordmark only, and art
+# composed to put a head at the top of the middle band had that head overlapped
+# by about 35px. Then 320, for the old 3.5:1 wordmark on its cream panel.
+#
+# 584 is the plaid SKIRT / green CHASERS masthead, which is 1.9:1 where the old
+# one was 3.5:1 and so takes 38 per cent of the frame rather than 21. A cover
+# brief must now ask for the top THIRTY-FIVE per cent to be left clear, and art
+# drawn to the old brief needs an artDrop to make the room -- without one the
+# strapline and the issue line land on whatever the picture is doing up there
+# and cannot be read at all.
+MAST = 584
 INK = (11, 11, 15)
 
 
@@ -55,18 +61,27 @@ def feather(img, top, bottom):
     return a
 
 
-def scrim(cover):
+def scrim(cover, drop=0):
     """Darken the lower half so the hook and cover lines sit on something.
 
     build_issue.py composites six cover lines and a hook over the bottom third
     and its own scrim is tuned for the near-black a laid-in photograph leaves
     behind it. A picture filling the frame is a far worse bed for type, so it
     gets this one instead.
+
+    A dropped picture is a worse bed again. The type does not move -- its place
+    on the page is fixed -- so every pixel the art slides down to clear the
+    masthead puts busier picture underneath the hook. Week 7's drop of 270 put
+    sixteen mascots and a rope exactly where "Thirty-Seven Lead Changes" goes.
+    So the scrim comes on earlier and harder in proportion to the drop; with no
+    drop these are the numbers the house cover has always used.
     """
+    f = min(1.0, drop / 320.0)
+    start, peak = 0.52 - 0.13 * f, 0.62 + 0.12 * f
     sc = Image.new('L', (1, H))
     for y in range(H):
-        t = max(0.0, (y - H * 0.52) / (H * 0.48))
-        sc.putpixel((0, y), int(255 * min(0.62, t * t * 0.62)))
+        t = max(0.0, (y - H * start) / (H * (1 - start)))
+        sc.putpixel((0, y), int(255 * min(peak, t * t * peak)))
     return Image.composite(Image.new('RGB', (W, H), INK), cover, sc.resize((W, H)))
 
 
@@ -156,7 +171,7 @@ def compose(art, out, top=240, inset='', drop=0, clear=200):
             slid.paste(fill.resize((W, drop), Image.LANCZOS) if band != drop else fill, (0, 0))
             slid.paste(cover, (0, drop))
             cover = topfade(slid, drop + 140)
-        cover = scrim(cover)
+        cover = scrim(cover, drop)
         p = os.path.join(ROOT, out)
         cover.save(p, quality=90, optimize=True)
         print(f'  {art} {w}x{h} -> {out} {W}x{H} '

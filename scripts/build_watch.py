@@ -52,6 +52,33 @@ OG = 'scfl-replay-og.jpg'
 # called before it was renamed mid-season.
 LOGO_BY_RID = {1: 'newworldorder', 13: 'heavyhitters'}
 
+# Kit colours and the three-letter tag, as broadcast-demo.html has carried them
+# since the sprite sheet arrived: primary, then secondary. The sheet is painted
+# in neutral white and grey so it can be tinted to these at runtime -- white kit
+# becomes the primary, grey kit the secondary -- which is how sixteen franchises
+# get sixteen kits out of one set of drawings.
+#
+# Keyed by crest slug here only because that is the key the table was written
+# with; it is resolved to roster_id below and never looked up by name again.
+BRAND = {
+    'wookieleaks': ('#1090f0', '#90d0f0', 'WKL'),
+    'bigblue': ('#1090f0', '#90d0f0', 'BLU'),
+    'beavereaters': ('#f07090', '#f0b0d0', 'BVR'),
+    'guidohaters': ('#ff2020', '#d09050', 'GUI'),
+    'powersofpain': ('#3939ff', '#f03030', 'POP'),
+    'newworldorder': ('#f0f0f0', '#101010', 'NWO'),
+    'masterjeti': ('#777727', '#705030', 'JET'),
+    'horsecollars': ('#d0b090', '#107090', 'HC'),
+    'porkchopexpress': ('#f07030', '#f09090', 'PCE'),
+    'machines': ('#6666aa', '#705070', 'MCH'),
+    'stillthecream': ('#985b5b', '#d0b090', 'CRM'),
+    'gumbas': ('#f05010', '#f0d0b0', 'GUM'),
+    'heavyhitters': ('#10b0f0', '#b0f0f0', 'PHN'),
+    'lilchops': ('#985b5b', '#907050', 'CHP'),
+    'smokedragons': ('#fa3232', '#b01030', 'SMK'),
+    'killerklowns': ('#297dd1', '#705050', 'KLW'),
+}
+
 FLAG_TD, FLAG_GO, FLAG_RES = 1, 2, 4
 
 
@@ -74,15 +101,26 @@ def identity(weeks):
         for g in wk['games']:
             for t in g['teams']:
                 out[t['roster_id']] = {'name': t['team'].strip().strip('*').strip()}
+    nokit = []
     for rid, t in sorted(out.items()):
         k = LOGO_BY_RID.get(rid) or slug(t['name'])
         if k not in logos:
             missing.append(f'{rid} {t["name"]!r} -> {k!r}')
             k = ''
         t['logo'] = k
+        # A franchise with no kit would play in the neutral white the sheet is
+        # drawn in, against another side in the same white. Better to say so.
+        if k in BRAND:
+            t['c1'], t['c2'], t['abbr'] = BRAND[k]
+        else:
+            nokit.append(f'{rid} {t["name"]!r}')
+            t['c1'], t['c2'], t['abbr'] = '#d8d8d8', '#9aa0a8', ''
     if missing:
         print('  NO CREST for:', '; '.join(missing))
         print('  -> add the roster id to LOGO_BY_RID in scripts/build_watch.py')
+    if nokit:
+        print('  NO KIT COLOURS for:', '; '.join(nokit))
+        print('  -> add the crest slug to BRAND in scripts/build_watch.py')
     return out
 
 
@@ -127,15 +165,22 @@ def feed(week, ident):
                   (FLAG_GO if e.get('go_ahead') else 0) |
                   (FLAG_RES if e.get('residual') else 0))
             fc = e['fc']
+            # kind and yards are last because the field needs them and the feed
+            # rows do not: a reader gets the sentence, the field gets the pose
+            # to strike and the distance to cover. yards is null wherever the
+            # replay has no distance (a sack, a fumble, an extra point), and the
+            # field stages those standing still rather than inventing a gain.
             ev.append([fc['sec'], fc['qtr'], fc['clock'], e['side'], pidx[key],
                        round(e['pts'], 2), e['text'] or '', fl,
                        round(e['score'][0], 2), round(e['score'][1], 2),
-                       sidx[gid], e.get('nfl_qtr') or '', e.get('nfl_clock') or ''])
+                       sidx[gid], e.get('nfl_qtr') or '', e.get('nfl_clock') or '',
+                       e['kind'], e.get('yards')])
 
         games.append({
             'm': g['matchup_id'],
-            't': [{'rid': r, 'name': ident[r]['name'], 'logo': ident[r]['logo']}
-                  for r in rids],
+            't': [{'rid': r, 'name': ident[r]['name'], 'logo': ident[r]['logo'],
+                   'c1': ident[r]['c1'], 'c2': ident[r]['c2'],
+                   'abbr': ident[r]['abbr']} for r in rids],
             'f': [round(t['final'], 2) for t in g['teams']],
             'lc': g['lead_changes'], 'td': g['touchdowns'],
             'p': players, 'src': src, 'ev': ev,

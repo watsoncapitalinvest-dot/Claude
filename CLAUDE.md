@@ -179,6 +179,23 @@ Bench comparisons must respect slot eligibility. Saying a manager started a WR
 
 ## The replay model
 
+The rebuilt games are watchable: `scfl-replay.html`, built by
+`scripts/build_watch.py`. Pick a week, pick a matchup, watch the sixty minutes
+run. It plays on the **Tecmo-style field** — `scfl-sprites.png` is drawn in
+neutral white and grey and `tintSheet()` paints the white to a franchise's
+primary and the grey to its secondary, so one set of drawings dresses all
+sixteen. The field stages the actual play: the pose off the play's `kind`, and
+the ground covered against real yard markers, so a 48-yard pass puts the ball
+48 yards downfield and a 4-yard catch moves four.
+
+What the field **does not** show is down, distance or field position, because
+the replay does not know them. The snap mark is a snap mark and not a yard
+line. A residual stages nothing at all and says why.
+
+Each game report ends on **Watch this one back**, routed by `matchup_id` and
+never by team name, because the feed carries a franchise's current name and a
+story carries the one it had that week.
+
 Real NFL plays laid onto a 60-minute fantasy clock. Nothing is invented: the
 plays, the yardage and the order are real; only the clock is synthesised. A
 Monday-night 30-yard touchdown catch becomes a late-fourth-quarter 30-yard
@@ -223,20 +240,29 @@ ink `#17181c`. Georgia serif for copy, system sans for furniture.
   text, instructions only** — "you have things in there that will only confuse
   the AI."
 - Anything for another AI goes in a simple text file.
-- **The masthead may change.** `wordmark-art.png` is the candidate John sent —
-  plaid SKIRT over green CHASERS. `scripts/cut_wordmark.py` lifts it off its
-  cream paper into `wordmark-alt.png` (with its own tagline) and
-  `wordmark-alt-words.png` (the two words and the swash alone), both with
-  alpha, so it can sit straight on cover art with no panel behind it. It is
-  3:2 where the live `wordmark.png` is 3.5:1, so adopting it means a taller
-  masthead: set `MAST` in `compose_cover.py` and re-drop every cover, and ask
-  the next cover brief to keep the top **35 per cent** clear rather than 20.
-  It wants no panel behind it — it sits straight on the art, and
-  `compose_cover.py` fills the strip the drop opens with the picture's own sky
-  mirrored rather than with black, so a taller masthead costs no band. Only
-  the rows above the subject may be mirrored (`--clear`); reflecting the whole
-  strip put the quarterback's helmet back in upside down.
-  Not adopted — the live masthead is still `wordmark.png`.
+- **The masthead is the plaid one.** Adopted from week 7. The covers run
+  `wordmark-alt-words.png` — the two words and the swash, cut off their cream
+  paper by `scripts/cut_wordmark.py` — with **no panel behind it**: it carries
+  its own gold keyline and sits straight on the art. The strapline under it is
+  live type, not bitmap, so it is one string in the issue definition and stays
+  crisp at any size.
+
+  It is 1.9:1 where the old `wordmark.png` was 3.5:1, so it takes **38 per cent
+  of the cover** rather than 21. `MAST` in `compose_cover.py` is 584 and every
+  new **cover brief must ask for the top 35 per cent to be left clear**. Art
+  drawn to the old brief needs a `cover.artDrop` in the week's written file or
+  the strapline and the issue line land on the picture and cannot be read —
+  week 7 needed 270. `compose_cover.py` fills the strip the drop opens with the
+  picture's own sky mirrored rather than with black, so the taller masthead
+  costs no band; only the rows above the subject may be mirrored (`artClear`),
+  because reflecting the whole strip put a quarterback's helmet back in upside
+  down. The drop also pushes the subject into the type bed, so `scrim()` comes
+  on earlier and harder in proportion to it.
+
+  **Back issues were deliberately not re-dropped.** Weeks 4 to 6 keep the old
+  masthead and the layout they were published with. Rebuilding them to change a
+  logo would reflow three live issues through every convention that has landed
+  since.
 - Heat rankings may be used; **do not reproduce the angry quotes**. Lines
   chosen for publication are banter, not shots, and run past John first.
 - api.sleeper.app is blocked from this container. The fetch runs in

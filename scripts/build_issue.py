@@ -85,17 +85,24 @@ EXTRA_CSS="""
 .magcover::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
   background:linear-gradient(180deg,rgba(6,8,10,.20) 0%,rgba(6,8,10,0) 9%,rgba(6,8,10,0) 55%,
   rgba(6,8,10,.40) 70%,rgba(6,8,10,.90) 100%);}
-.cov-top{position:relative;z-index:1;margin:10px 11px 0;padding:6px 14px 5px;text-align:center;
-  background:#f4f1ea;border-radius:4px;box-shadow:0 5px 18px rgba(0,0,0,.5);
-  border-top:2px solid #e11b22;border-bottom:2px solid #e11b22;}
-.mag-logo{display:block;width:100%;max-width:280px;height:auto;margin:0 auto;}
-.mag-issue{color:#c20f16;font-weight:900;font-size:9.5px;letter-spacing:2.5px;margin-top:3px;
-  text-transform:uppercase;}
-/* The strapline under the wordmark. Both wordmarks carry one in the artwork
-   -- the live one in script, the candidate in letterspaced caps -- and in
-   both it is baked into a bitmap, so changing the words means re-rendering
-   the logo. Set as live type it is one string in the issue definition, it
-   stays crisp at any size, and the art can be cropped to the two words. */
+/* No panel. The masthead sits straight on the art, which is what the artwork
+   was drawn for -- it carries its own gold keyline and its own shadow, and a
+   cream box behind it put the magazine's name in a letterbox. compose_cover.py
+   opens the room for it by sliding the picture down and filling the strip with
+   the picture's own sky mirrored, so a taller masthead costs no band. */
+.cov-top{position:relative;z-index:1;margin:16px 14px 0;padding:0;text-align:center;
+  background:none;border:0;box-shadow:none;border-radius:0;}
+.mag-logo{display:block;width:100%;max-width:330px;height:auto;margin:0 auto;
+  filter:drop-shadow(0 5px 20px rgba(0,0,0,.8)) drop-shadow(0 1px 2px rgba(0,0,0,.6));}
+/* On cream this was red; on a photograph it has to be the light side of the
+   contrast or it disappears into whatever the picture happens to be doing. */
+.mag-issue{color:#f6f3ec;font-weight:900;font-size:9.5px;letter-spacing:2.5px;margin-top:7px;
+  text-transform:uppercase;text-shadow:0 2px 12px rgba(0,0,0,.95),0 1px 3px rgba(0,0,0,.9);}
+/* The strapline under the wordmark. Both wordmark files carry one baked into
+   the bitmap, so changing the words there would mean re-rendering the logo.
+   Set as live type it is one string, it stays crisp at any size, and the art
+   can be the two words alone -- which is why wordmark-alt-words.png exists
+   and is the file the covers use. */
 .mag-tag{display:flex;align-items:center;gap:9px;margin:5px auto 0;max-width:310px;}
 .mag-tag::before,.mag-tag::after{content:'';flex:1;height:1px;}
 .mag-tag::before{background:linear-gradient(90deg,transparent,var(--gold,#d8b45a));}
@@ -286,9 +293,14 @@ def build(key, remeasure=True, quiet=False):
     cover=('<section class="page cover-page">'
       f'<div class="magcover" style="--teaser:{art_css}">'
         '<div class="cov-top">'
-          '<img class="mag-logo" src="wordmark.png" alt="Skirt Chasers — Dynasty League Magazine">'
-          + ('<div class="mag-tag"><span>'+esc(cfg['strapline'])+'</span></div>'
-             if cfg.get('strapline') else '') +
+          '<img class="mag-logo" src="wordmark-alt-words.png"'
+          ' alt="Skirt Chasers — Dynasty League Magazine">'
+          # Every magazine wears the strapline, because the two-word artwork no
+          # longer carries one. An issue may still override the words; passing
+          # an empty string drops the line entirely.
+          + ('<div class="mag-tag"><span>'
+             + esc(cfg.get('strapline', 'Dynasty League Magazine')) + '</span></div>'
+             if cfg.get('strapline', 'Dynasty League Magazine') else '') +
           '<div class="mag-issue">'+cfg['issueline']+'</div>'
           '<div class="preseal">'+cfg['seal'][0]+'<small>'+cfg['seal'][1]+'</small></div>'
         '</div>'
