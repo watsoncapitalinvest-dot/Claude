@@ -368,6 +368,7 @@ def preview_prose(season, week, st):
         print('  note: no history for', ', '.join(hist.unresolved))
     most_titles = max((hist.alltime(r['roster_id']) or {}).get('titles', 0) for r in tbl)
     used = []
+    cur = [0]          # which preview paragraph _cap() is being called from
 
     def thread(a, b, n):
         """One line of history. Eighteen seasons is a lot of threads to pull.
@@ -377,6 +378,7 @@ def preview_prose(season, week, st):
         would publish a head-to-head that is a year stale and looks exactly
         like a current one.
         """
+        cur[0] = n
         s_ = hist.series(a, b, st)
         A, B = E(a['team']), E(b['team'])
         if s_ and s_['g'] >= 10:
@@ -448,38 +450,223 @@ def preview_prose(season, week, st):
         return ''
 
     def _cap(tag, text, cap=2):
-        if sum(1 for x in used if x == tag) >= cap:
+        """Print `text` unless this thread has already had its turn.
+
+        Two gates, because one was not enough. The first is the count: no
+        phrasing twice over in an issue. The second is adjacency -- a cap of
+        two still allows both of them to land in consecutive paragraphs, and
+        week 8 came out with two fixtures in a row closing on "have outscored
+        them by N points over the same seven games". Spacing a repeat is most
+        of what stops it reading as a template.
+        """
+        if sum(1 for x, _ in used if x == tag) >= cap:
             return ''
-        used.append(tag)
+        if any(x == tag and k == cur[0] - 1 for x, k in used):
+            return ''
+        used.append((tag, cur[0]))
         return text
 
+    # League-wide facts the closing lines lean on, computed once off the table.
+    pf_top = max(r['pf'] for r in tbl)
+    pf_bot = min(r['pf'] for r in tbl)
+    pa_bot = min(r['pa'] for r in tbl)
+    over500 = sum(1 for r in tbl if r['w'] > r['l'])
+
+    def weeks_won(t):
+        return [x[0] for x in (t.get('trail') or []) if x[1] == 'W']
+
+    def best_week(t):
+        return max((x[2] for x in (t.get('trail') or [])), default=0.0)
+
+    def worst_week(t):
+        return min((x[2] for x in (t.get('trail') or [])), default=0.0)
+
     def kicker(a, b, n):
-        """One closing line, and it points at Sunday rather than away from it."""
-        if (a['streak_kind'] == 'L' and b['streak_kind'] == 'L'
-                and min(a['streak_n'], b['streak_n']) >= 3):
-            return ('One of these runs ends on Sunday. The other one gets longer.')
-        if (a['streak_kind'] == 'W' and b['streak_kind'] == 'W'
-                and min(a['streak_n'], b['streak_n']) >= 3):
-            return ('Both of them arrive on a run of three or more. One of them does not '
-                    'leave with it.')
+        """One closing line, and it points at Sunday rather than away from it.
+
+        The bank is deliberately large. Eight paragraphs a week across a
+        fourteen-week season is more than a hundred closing lines, and the
+        first version of this had five -- so "that is the only evidence anybody
+        has" closed seven of the eight week 8 previews, because a 16-team
+        14-week schedule makes the back half of the season a rerun of the front
+        half and every branch found the same fact.
+
+        Every line below hangs off a condition derived from the table or the
+        week files, and every one goes through _cap(), which will not print the
+        same phrasing more than twice in an issue. Ordered most specific first,
+        so a fixture with a real story gets it and the generic lines only turn
+        up where there was nothing better.
+
+        The voice is Harry Doyle: flat, short, and funniest when it is only
+        reading out a number. The joke is never on a manager. It is on the
+        situation the number describes.
+        """
+        cur[0] = n
+        # --- the table's own headline ---------------------------------------
         for t, o in ((a, b), (b, a)):
             if t['l'] == 0 and t['t'] == 0 and t['games'] >= 3:
-                return (f'{E(t["team"])} have not lost a game, and {E(o["team"])} are the '
-                        f'{ordw(t["games"] + 1)} side asked to do something about it.')
+                if r := _cap('unbeaten',
+                             f'{E(t["team"])} have not lost a game, and {E(o["team"])} are '
+                             f'the {ordw(t["games"] + 1)} side asked to do something about '
+                             f'it.'):
+                    return r
+        if {a['seed'], b['seed']} == {1, last_seed}:
+            if r := _cap('top_bottom',
+                         f'{upper1(ordw(1))} against {ordw(last_seed)}. Somebody has to '
+                         f'play it.'):
+                return r
+        # --- runs -------------------------------------------------------------
+        if (a['streak_kind'] == 'L' and b['streak_kind'] == 'L'
+                and min(a['streak_n'], b['streak_n']) >= 3):
+            if r := _cap('both_l',
+                         'One of these runs ends on Sunday. The other one gets longer.'):
+                return r
+        if (a['streak_kind'] == 'W' and b['streak_kind'] == 'W'
+                and min(a['streak_n'], b['streak_n']) >= 3):
+            if r := _cap('both_w',
+                         'Both of them arrive on a run of three or more. One of them does '
+                         'not leave with it.'):
+                return r
+        for t, o in ((a, b), (b, a)):
+            if (t['streak_kind'] == 'W' and t['streak_n'] >= 3
+                    and o['streak_kind'] == 'L' and o['streak_n'] >= 3):
+                if r := _cap('split_run',
+                             f'{E(t["team"])} have won {numw(t["streak_n"])} in a row and '
+                             f'{E(o["team"])} have lost {numw(o["streak_n"])}. The two runs '
+                             f'cannot both survive the afternoon.'):
+                    return r
+        for t in (a, b):
+            ww = weeks_won(t)
+            if t['streak_kind'] == 'L' and t['streak_n'] >= 5 and ww:
+                if r := _cap('cold',
+                             f'{E(t["team"])} have lost {numw(t["streak_n"])} in a row. The '
+                             f'last win was week {ww[-1]}.'):
+                    return r
+            if len(ww) == 1:
+                if r := _cap('one_win',
+                             f'{E(t["team"])} have won one game this season. It was week '
+                             f'{ww[0]}.'):
+                    return r
+            if not ww and t['games'] >= 3:
+                if r := _cap('no_win',
+                             f'{E(t["team"])} have not won a game yet. This is attempt '
+                             f'{numw(t["games"] + 1)}.'):
+                    return r
         w = meet_again(a, b)
-        if w and 'again' not in used:
-            used.append('again')
-            return f'They do this again in week {w}, so nobody settles anything on Sunday.'
-        for lg in a.get('trail') or []:
-            if (lg[4] or '').strip() == b['team'].strip():
-                win = a if lg[1] == 'W' else b
-                hi, lo = (lg[2], lg[3]) if lg[1] == 'W' else (lg[3], lg[2])
-                return (f'{E(win["team"])} won the first meeting in week {lg[0]}, '
-                        f'{sc_(hi, lo)}, and that is the only evidence anybody has.')
+        if w:
+            if r := _cap('again',
+                         f'They do this again in week {w}, so nobody settles anything on '
+                         f'Sunday.'):
+                return r
+        # The rematch line. A 14-week season over 16 teams means the back half
+        # is the front half again, so EVERY fixture on the week 8 card was also
+        # a week 2 fixture -- and this printed one sentence, verbatim, in seven
+        # of the eight paragraphs. thread() caps a repeated thread at two; this
+        # branch simply never went through _cap(). Four phrasings now, each
+        # capped, each keyed to something the first meeting actually did, so a
+        # card of rematches reads as eight paragraphs instead of one.
+        # ...and the family is capped as well as each phrasing in it. Six
+        # different sentences about week 2 is still six paragraphs ending on
+        # week 2, which a reader notices even when no wording repeats.
+        family = sum(1 for x, _ in used if x.startswith('again_'))
+        for lg in (a.get('trail') or []) if family < 3 else []:
+            if (lg[4] or '').strip() != b['team'].strip():
+                continue
+            win, lost = (a, b) if lg[1] == 'W' else (b, a)
+            hi, lo = (lg[2], lg[3]) if lg[1] == 'W' else (lg[3], lg[2])
+            m = hi - lo
+            # the side that won it has since been passed by the side that lost
+            if lost['w'] > win['w']:
+                if r := _cap('again_flip',
+                             f'{E(win["team"])} won the first meeting in week {lg[0]}, '
+                             f'{sc_(hi, lo)}, and have been overtaken by them since.'):
+                    return r
+            if m >= 25:
+                if r := _cap('again_rout',
+                             f'{E(win["team"])} won the first meeting in week {lg[0]} by '
+                             f'{m:.0f}, which is the only evidence anybody has.'):
+                    return r
+            if m < 10:
+                if r := _cap('again_close',
+                             f'The first meeting went to {E(win["team"])} by {m:.1f} in '
+                             f'week {lg[0]}, which is not much to go on.'):
+                    return r
+            if win['w'] == lost['w'] and win['l'] == lost['l']:
+                if r := _cap('again_level',
+                             f'{E(win["team"])} won the first meeting in week {lg[0]}. They '
+                             f'arrive at the same record as each other, so it bought '
+                             f'nothing.'):
+                    return r
+            if lost['pf'] > win['pf']:
+                if r := _cap('again_pf',
+                             f'{E(win["team"])} won it in week {lg[0]}. {E(lost["team"])} '
+                             f'have scored more points across the season and won fewer '
+                             f'games.'):
+                    return r
+            if r := _cap('again_plain',
+                         f'They met in week {lg[0]} and {E(win["team"])} won it '
+                         f'{sc_(hi, lo)}.'):
+                return r
+            break
+        # --- what the two of them have actually scored -----------------------
+        for t in (a, b):
+            if t['pf'] == pf_top and t['seed'] != 1:
+                if r := _cap('pf_top',
+                             f'{E(t["team"])} have scored more points than anybody in the '
+                             f'league and are {ordw(t["seed"])}. Only one of those is in '
+                             f'the standings.'):
+                    return r
+            if t['pf'] == pf_bot:
+                if r := _cap('pf_bot',
+                             f'{E(t["team"])} have scored fewer points than any side in the '
+                             f'league. {t["pf"]:.0f} in {numw(t["games"])} weeks.'):
+                    return r
+            if t['pa'] == pa_bot:
+                if r := _cap('pa_bot',
+                             f'Nobody in the league has been scored on less than '
+                             f'{E(t["team"])}. {t["pa"]:.0f} against in {numw(t["games"])} '
+                             f'weeks.'):
+                    return r
+            if t['games'] >= 4 and best_week(t) < 100:
+                if r := _cap('never_100',
+                             f'{E(t["team"])} have not scored a hundred in a week all '
+                             f'season. Their best is {best_week(t):.1f}.'):
+                    return r
+            if t['games'] >= 4 and worst_week(t) >= 100:
+                if r := _cap('always_100',
+                             f'{E(t["team"])} have not been under a hundred in any week '
+                             f'this season. The floor is {worst_week(t):.2f}.'):
+                    return r
+        if a['games'] == b['games'] and abs(a['pf'] - b['pf']) >= 150:
+            hi_, lo_ = (a, b) if a['pf'] > b['pf'] else (b, a)
+            if r := _cap('outscored',
+                         f'{E(hi_["team"])} have outscored {E(lo_["team"])} by '
+                         f'{abs(a["pf"] - b["pf"]):.0f} points over the same '
+                         f'{numw(a["games"])} games.'):
+                return r
+        # --- the shape of the fixture, when nothing sharper turned up ---------
+        if (a['w'], a['l'], a['t']) == (b['w'], b['l'], b['t']):
+            if r := _cap('level',
+                         f'They arrive level at {a["record"]}, separated by '
+                         f'{numw(abs(a["seed"] - b["seed"]))} places in the table and '
+                         f'nothing else.'):
+                return r
+        if a['w'] <= a['l'] and b['w'] <= b['l']:
+            if r := _cap('both_under',
+                         'Neither of these has a winning record. One of them leaves with a '
+                         'better excuse than the other.'):
+                return r
+        if a['w'] > a['l'] and b['w'] > b['l']:
+            if r := _cap('both_over',
+                         f'Both of these are above .500, which {numw(over500)} of the '
+                         f'sixteen are.'):
+                return r
         for t in (a, b):
             if t['seed'] == last_seed:
-                return (f'{E(t["team"])} are {ordw(t["seed"])} of {numw(last_seed)}. A loss '
-                        f'is {rec(t, False)} with {rest} to play.')
+                if r := _cap('last_seed',
+                             f'{E(t["team"])} are {ordw(t["seed"])} of {numw(last_seed)}. A '
+                             f'loss is {rec(t, False)} with {rest} to play.'):
+                    return r
         return ''
 
     unb = [r for r in tbl if r['l'] == 0 and r['t'] == 0]
