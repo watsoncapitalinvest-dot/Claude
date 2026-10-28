@@ -24,6 +24,21 @@ the Sunday afternoon slate runs through the second and third, Sunday night
 starts the fourth and Monday night closes it. So "late fourth quarter" and
 "Monday night" mean the same thing, which is the point.
 
+WHAT THE FANTASY CLOCK IS NOT
+
+It is not a time of day. The mapping above is deliberate and one-way: a
+Monday-night play becomes a late-fourth-quarter play so the narrative has a
+shape, and that is the whole of its meaning. Reading back out of it -- that a
+fantasy fourth quarter was an evening, or that a fantasy first quarter had a
+low sun in it -- is invention wearing arithmetic's clothes. Week 7's play art
+was lit that way and came out with rain in a week nobody played in rain, and
+with open floodlit bowls around two games played under a closed roof.
+
+Everything real about where and when a play happened is on the tape: `roof`,
+`weather`, `temp`, `wind`, `surface`, `stadium`, and `time_of_day`, which is a
+true timestamp on every row. Anything depicting the world the play happened in
+reads those. See conditions() in scripts/build_play_art.py.
+
 WHAT IT REFUSES TO DO
 
 A player's points computed from plays will not always equal the points Sleeper

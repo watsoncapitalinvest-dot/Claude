@@ -189,6 +189,26 @@ Points no play explains (mostly team defence `pts_allow`) are carried as
 flagged residuals so running totals land on the true final. They are never
 narratable.
 
+**The fantasy clock says nothing about the real world.** It is synthesised, so
+a fantasy fourth quarter is not an evening and a fantasy first quarter is not
+an afternoon. Deriving weather, light or a time of day from it is invention
+dressed as arithmetic — week 7's play art was lit off the fantasy quarter and
+came out with rain in a week nobody played in rain, and with open floodlit
+bowls around two games played under a closed roof.
+
+What is real about a play is on the tape and should be read off it. The
+play-by-play carries `roof`, `weather`, `temp`, `wind`, `surface`, `stadium`
+and `time_of_day` — a true timestamp on every play. `conditions()` in
+`scripts/build_play_art.py` reads that row, and `TEAM_TZ` turns the home club
+in the `game_id` into the stadium's own zone so the local clock is the local
+clock. LA and LAR are both in that map, because Sleeper writes one and
+nflverse the other.
+
+So: the narrative runs on the fantasy clock, and anything depicting the world
+the play happened in — light, sky, ground, indoors or out — runs on the real
+one. Mud is the example worth remembering. It was hardcoded into every play
+brief, dome floors included, until somebody asked whether it had been raining.
+
 ## Colour means something
 
 Red `#c20f16` = won, or ahead. Blue `#0e8ab5` = lost, or behind. Gold
