@@ -396,7 +396,7 @@ function load(week){
    from the SCFL Network broadcast, which invents its drives -- here every
    figure is doing something that really happened, for the yardage on the tape.
 */
-var SPR={ok:false,img:null,meta:null,tints:{},RES:2,K:{w:40,h:28,scale:.158}};
+var SPR={ok:false,img:null,meta:null,tints:{},RES:2,K:{w:32,h:23,scale:.124}};
 (function(){
   var img=new Image();
   Promise.all([
@@ -455,11 +455,11 @@ var stageTok = 0;
 
 function buildTrack(){
   var cam=$('camera'), gr=$('ground'), tr=$('track');
-  PXYD = Math.max(9, cam.clientWidth/30);
+  PXYD = Math.max(6, cam.clientWidth/44);
   // The ground runs wider than the camera, so ground-space x=0 is off the left
   // edge of the shot. Everything positioned on the plane has to add that back.
   ORIGIN = (gr.clientWidth - cam.clientWidth)/2;
-  LANE = ORIGIN + 92;
+  LANE = ORIGIN + 68;
   DEEP = gr.clientHeight;
   // NB: this rewrites the track's markers only. The cast and the end zone are
   // children of the track too, so they are detached and put back rather than
@@ -648,7 +648,7 @@ function stage(e){
 
   var cam=$('camera'), act=$('actor');
   // where the ball ends up, and how much of that the camera has to pan for
-  var limit=ORIGIN+cam.clientWidth*(dirn>0?0.66:0.34);
+  var limit=ORIGIN+cam.clientWidth*(dirn>0?0.82:0.18);
   var reach=dirn>0?Math.min(END,limit):Math.max(END,limit);
   var scroll=END-reach;
   var dur=Math.min(2400, 620+Math.abs(yards)*24)/PACE;
@@ -685,33 +685,56 @@ function stage(e){
     };
   }
 
-  // the line: five driving forward, four driving back, meeting in between
+  // THE LINE BLOCKS, AND KEEPS BLOCKING.
+  //
+  // Measured on a 29-yard run, the nine linemen moved eighteen pixels each --
+  // about a yard and a half, finished inside the first third of the play, and
+  // then held one frame to the whistle. Half the men on the field were
+  // effectively still, which is what "only one defender and one player move"
+  // was describing. They now pair off, drive through each other, churn for the
+  // whole play, and cycle their frames the whole way rather than snapping to
+  // one and holding it.
+  function churn(i,amp){ return function(h){ return Math.sin(h*17+i*1.7)*amp; }; }
   for(var i=0;i<5;i++) (function(i){
-    var d=0.33+0.09*i;
-    role(OFF, function(h){ return {x:yd(-1.0+2.0*Math.min(1,h*3)), d:d,
-      a:'lineman', f:h>0.05?2:0}; }, 'R');
+    var d=0.33+0.09*i, j=churn(i,3.2);
+    var x0=yd(-1.0), x1=yd(0.9+0.45*((i%3)-1));
+    role(OFF, function(h){
+      var k=1-Math.pow(1-h,1.6);
+      return {x:x0+(x1-x0)*k+j(h), d:d+Math.sin(h*11+i)*0.012,
+              a:'lineman', f:Math.floor(h*dur/150+i)%(nframes('lineman')||1)};
+    }, 'R');
   })(i);
-  for(var j=0;j<4;j++) (function(j){
-    var d=0.37+0.10*j;
-    role(DEF, function(h){ return {x:yd(3.4-1.9*Math.min(1,h*3)), d:d,
-      a:'lineman', f:h>0.05?2:0}; }, 'L');
-  })(j);
+  for(var j2=0;j2<4;j2++) (function(j2){
+    var d=0.37+0.10*j2, w=churn(j2+9,3.2);
+    var x0=yd(3.4), x1=yd(1.4-0.4*(j2%2));
+    role(DEF, function(h){
+      var k=1-Math.pow(1-h,1.6);
+      return {x:x0+(x1-x0)*k+w(h), d:d+Math.sin(h*11+j2)*0.012,
+              a:'lineman', f:Math.floor(h*dur/150+j2)%(nframes('lineman')||1)};
+    }, 'L');
+  })(j2);
 
   // the two men split wide run their routes on every play, and the two on
   // them run with them -- a receiver who stands still on a running play is the
   // tell that nothing on this field has a job
-  var wr=[], cb=[];
-  for(var w=0;w<2;w++) (function(w){
-    var d0=w?0.96:0.04, d1=w?0.86:0.14;
-    wr.push(role(OFF, runTo(yd(-0.2),d0, yd(Math.max(8,Math.abs(yards)*0.7)),d1,
-                            'run','run',null), 'R'));
-    cb.push(role(DEF, runTo(yd(2.0),d0, yd(Math.max(8,Math.abs(yards)*0.7)+2),d1,
-                            'run','run',null), 'R'));
-  })(w);
+  var deepest=Math.max(12,Math.abs(yards)*0.8);
+  for(var w2=0;w2<2;w2++) (function(w2){
+    var d0=w2?0.96:0.04, d1=w2?0.84:0.16;
+    role(OFF, runTo(yd(-0.2),d0, yd(deepest),d1, 'run','run',null), 'R');
+    role(DEF, runTo(yd(2.0),d0, yd(deepest+2),d1, 'run','run',null), 'R');
+  })(w2);
 
-  // the back, and the man in the middle of the defence who goes to the ball
-  var backR=role(OFF, runTo(yd(-4.6),0.64, yd(1.0),0.60,'run','lineman',0.5),'R');
-  var mikeR=role(DEF, runTo(yd(9.0),0.50, END-dirn*1.2*PXYD,0.46,
+  // the back leads the play rather than jogging two yards and stopping: out in
+  // front of the carrier, then blocking where the gain ends
+  var backR=role(OFF, function(h){
+    var k=1-Math.pow(1-h,2), lead=losX+(END-losX)*0.78;
+    var on=h>0.55;
+    return {x:yd(-4.6)+(lead-yd(-4.6))*k, d:0.62,
+            a:on?'lineman':'run',
+            f:on?Math.floor(h*dur/150)%(nframes('lineman')||1):cyc(h,'run')};
+  },'R');
+  // and the man in the middle of the defence, who goes to the ball
+  var mikeR=role(DEF, runTo(yd(11.0),0.50, END-dirn*1.2*PXYD,0.46,
                             'run','tackle',0.84),'L');
 
   // ---- and the men the play is actually about ----
@@ -770,15 +793,19 @@ function stage(e){
     if(Math.abs(yards)>=9){
       var mx=losX+(END-losX)*0.45;
       role(DEF, function(h){
-        var k=1-Math.pow(1-h,2), at=(h>0.42);
-        return {x:mx+(at?dirn*1.6*PXYD*seg(h,0.42,0.62):0), d:0.62-(at?0.10:0),
+        var at=(h>0.40);
+        // he closes from five yards off his spot, then dives at the carrier as
+        // he goes past -- parked on it and diving late, he dived at grass
+        return {x:(mx+dirn*5*PXYD)+(mx-(mx+dirn*5*PXYD))*Math.min(1,h/0.40)
+                  +(at?dirn*2.2*PXYD*seg(h,0.40,0.62):0),
+                d:0.62-(at?0.11:0),
                 a:at?'dive':'run',
-                f:at?Math.floor(seg(h,0.42,0.68)*nframes('dive')):cyc(h,'run')};
+                f:at?Math.floor(seg(h,0.40,0.66)*nframes('dive')):cyc(h,'run')};
       }, 'L');
     }
     if(!(fl&TD)) tackler=role(DEF, function(h){
       var k=1-Math.pow(1-h,2), on=h>0.84;
-      return {x:yd(Math.abs(yards)+6)-dirn*6*PXYD*k, d:0.40+0.06*k,
+      return {x:yd(Math.abs(yards)+14)-dirn*14*PXYD*k, d:0.38+0.09*k,
               a:on?'tackle':'run',
               f:on?Math.floor(seg(h,0.84,1)*0.9*nframes('tackle')):cyc(h,'run')};
     }, 'L');
