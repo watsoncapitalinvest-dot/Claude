@@ -72,84 +72,85 @@ def counts():
 
 
 STEPS = [
-    ('The week arrives', [
-        ('api.sleeper.app is blocked from the machine this desk runs on, so the '
-         'scores are fetched by a GitHub Action and come back through git. Only one '
-         'run is kept per group, which is how week 2 was lost once — two dispatches '
-         'in quick succession cancelled each other.'),
-        ('A half-finished week looks exactly like a finished one, so a week counts '
-         'as played only on two tells: nobody below 30 points, and the share of '
-         'starters on exactly zero. A finished week runs 1 to 6 per cent. A Sunday '
-         'evening reads 10. One tell alone has flipped an article’s conclusion '
+    ('The week comes in', [
+        ('Sixteen teams, eight games, and every point each man scored. The catch is '
+         'that a half-finished Sunday looks exactly like a finished one — the scores '
+         'are simply smaller. So a week is only treated as played once two separate '
+         'signs agree that it is. Trusting one of them has flipped a conclusion '
          'twice.'),
     ]),
-    ('The games are rebuilt from the tape', [
-        ('Every fantasy point is matched back to the real NFL play that produced it, '
-         'joining on the league’s own player id and never on a name. Sleeper '
-         'stores that id with a leading space. Two running backs called Wilson will '
-         'ruin an afternoon.'),
-        ('{events_c} plays across eight games are then laid onto a single '
-         '60-minute clock, so a Monday-night touchdown becomes a late-fourth-quarter '
-         'touchdown and the week reads as one afternoon. Nothing is invented: the '
-         'plays, the yardage and the order are real. Only the clock is made up.'),
-        ('Points no play explains — mostly team defence — are carried as flagged '
-         'residuals so the running score lands on the true final. There were '
-         '{residual} of them. They are never written about.'),
+    ('Every point is traced back to the play that made it', [
+        ('A fantasy score is an abstraction: a number that appeared beside a name. '
+         'So each one is matched back to the actual thing that happened on a field — '
+         'the catch, the run, the sack. {events_c} of them this week. Players are '
+         'matched by the league’s own identity number rather than by name, '
+         'because two different men called Wilson will quietly ruin an afternoon.'),
+        ('Those plays are then laid out on a single sixty-minute clock, so the whole '
+         'week reads as one afternoon: a touchdown caught on Monday night becomes a '
+         'late-fourth-quarter touchdown. Nothing is invented. The plays, the yards '
+         'and the order they happened in are all real. The clock is the only thing '
+         'that is made up.'),
     ]),
-    ('The reports get written', [
-        ('Eight game reports, one a game, from the rebuilt tape. {flips} lead '
-         'changes, {starters} starting players and every score either side of every '
-         'one of them are available to the writing, and the figure in a sentence has '
-         'to be the figure in the file.'),
-        ('That rule is the whole job. Eight separate figures were caught wrong in '
-         'this issue alone — a score rounded to 85.40 that was 85.36, a touchdown '
-         'placed at twelve seconds left that happened at 8:14, a play called the '
-         'last lead change when four more followed it.'),
+    ('The games get written up', [
+        ('Eight reports, one a game, written off that rebuilt afternoon — who scored, '
+         'when, what it did to the lead. {flips} lead changes and {starters} starting '
+         'players are on the table to write from.'),
+        ('The rule that makes it work is dull and absolute: every number in a '
+         'sentence has to be the number in the record. Not roughly it, not what it '
+         'was rounded to. Eight separate figures were caught wrong in this issue '
+         'alone — a score written as 85.40 that was 85.36, a touchdown placed with '
+         'twelve seconds left that happened with eight minutes left, a play described '
+         'as the last time the lead changed when four more changes came after it.'),
     ]),
     ('A picture of the play that mattered', [
-        ('Each report opens on the play that decided it — the last lead change in a '
-         'close game, the biggest single play in a blowout — drawn as though it '
-         'happened for the fantasy side that owned the man rather than for his NFL '
-         'club. Eight of them this week, one a game.'),
-        ('The brief is generated, not written. It carries the two clubs’ own '
-         'colours from a file of {kits}, the player’s real jersey number and '
-         'real height and weight, and the real conditions off the tape: the stadium, '
-         'the sky, the local time of day, whether the roof was shut. It rained in '
-         'none of week 7’s games, and the first version of this drew rain.'),
+        ('Each report opens on the moment that decided the game — the last time the '
+         'lead changed in a close one, the biggest single play in a one-sided one — '
+         'drawn as though it had happened for the fantasy team that owned the player, '
+         'in that team’s own colours rather than his real club’s. Eight '
+         'pictures, one a game.'),
+        ('The man in the picture is really him: his jersey number, his actual height '
+         'and weight, the kind of build he has. And the world around him is the real '
+         'one — the right stadium, the right sky, the right time of day, and whether '
+         'the roof was open or shut. Not one of week 7’s games was played in '
+         'rain, and the first attempt at this drew rain.'),
     ]),
     ('The cover', [
-        ('Drawn by a separate graphics AI from a plain-text brief. The brief fixes '
-         'the composition in pixel rows, because a masthead sits across the top of '
-         'the frame and a headline sits across the bottom, and both are added after '
-         'the picture exists.'),
-        ('The cover and the link preview are built from the same file by the same '
-         'command. The week they were allowed to disagree, the link previewed as a '
-         'chart and opened on a stadium.'),
+        ('Drawn to a written brief, and the brief has to think about the finished '
+         'page rather than the picture: a masthead sits across the top and a headline '
+         'across the bottom, so both of those areas have to be left deliberately '
+         'empty before anything is drawn.'),
+        ('The cover and the little preview picture that appears when the link is '
+         'shared come out of the same artwork. The one week they were allowed to '
+         'differ, the link previewed as a chart and then opened on a stadium.'),
     ]),
-    ('The issue is laid out, and measured', [
-        ('Pagination is measured rather than guessed. The issue is built once, a '
-         'headless browser renders every page at phone size and records where each '
-         'one actually fills up, and it is built again against those breaks. A '
-         'magazine page that scrolls is a bug.'),
-        ('{pages} pages this week. Anything still long is scaled down, and anything '
-         'scaled too far runs on to a second page instead — with a continuation '
-         'line, not a second headline.'),
+    ('It is laid out like a magazine', [
+        ('Not a web page that happens to contain football. Pages, in order, that turn. '
+         '{pages} of them this week.'),
+        ('Where the text falls is measured rather than guessed: the issue is built, '
+         'every page is checked at phone size to see where it actually runs out of '
+         'room, and then it is built again against those real breaks. A page that '
+         'scrolls is a mistake. Anything still too long carries on to a second page '
+         'instead — as a continuation, not as a new article.'),
     ]),
-    ('Next Sunday, argued rather than listed', [
-        ('Every issue closes on the week ahead: a paragraph a game, so all sixteen '
-         'clubs get said something about. It is generated from the table, the week '
-         'files and {seasons} seasons of history — {span} for lifetime records, '
-         '{series} head-to-head series going back to 2008.'),
-        ('Every line hangs off a condition, so a joke about a rout prints only over '
-         'a rout. Repeated phrasings are capped, including against the paragraph '
-         'directly above, because the same sentence twice reads worse than silence.'),
+    ('It ends on next Sunday', [
+        ('Every issue closes on the week ahead: a paragraph for each game, so all '
+         'sixteen clubs get said something about rather than the same three being '
+         'written about every week.'),
+        ('It is assembled from the table, the season so far and {seasons} years of '
+         'history — {span} of results, and {series} separate head-to-head records '
+         'going back to 2008. So a preview can tell you that one of these two has '
+         'beaten the other once in twenty-seven attempts, and that it was a playoff '
+         'game.'),
+        ('Each line only prints when the thing it describes is actually true, which '
+         'is why there is no “should be a good one” anywhere in it.'),
     ]),
     ('Then it has to survive', [
-        ('Saved, filed and sendable, checked by a script before anything is called '
-         'finished. Saved because this machine gets wiped. Filed into a catalog of '
-         '{catalog} pages so it is reachable later. Sendable means a share card that '
-         'exists — a page without one arrives as a grey rectangle, and the person '
-         'who sent it cannot see that from their end.'),
+        ('Three things have to be true before an issue counts as finished. It has to '
+         'be stored somewhere permanent, because the machine it was built on gets '
+         'wiped. It has to be listed, so it can be found again in a month rather than '
+         'only through a link that scrolls out of a chat. And it has to look right '
+         'when it is shared — a page without a preview picture arrives as a grey '
+         'rectangle, and the person who sent it has no way of knowing.'),
     ]),
 ]
 
@@ -241,14 +242,16 @@ def main():
 
     figs = ''.join(
         f'<div class="fig"><b>{v}</b><span>{k}</span></div>' for k, v in [
+            # nine, so the grid fills. Eight left a dead cell at the end of it.
             ('plays rebuilt', f'{c["events"]:,}'),
             ('lead changes', c['flips']),
             ('starters a week', c['starters']),
+            ('reports written', c['games']),
+            ('pictures drawn', c['art'] + 1),
+            ('pages this issue', c['pages']),
             ('seasons on file', c['seasons']),
             ('head-to-heads', c['series']),
-            ('pages this issue', c['pages']),
-            ('builders', c['builders']),
-            ('lines of them', f'{c["lines"]:,}'),
+            ('clubs, in colour', c['kits']),
         ])
 
     body = ''
@@ -256,17 +259,16 @@ def main():
         ps = ''.join(f'<p>{p.format(**c)}</p>' for p in paras)
         body += f'<section><h2><i>{i:02d}</i>{title}</h2>{ps}</section>'
 
-    close = ('The short version: <b>nothing in it is typed from memory.</b> If a '
-             'sentence counts, ranks, compares or characterises something, it is '
-             'computed from a file in the repository, and if it cannot be computed '
-             'it does not get printed. That is a rule the desk learned the hard way, '
-             'and it is why the mistakes that do get through tend to be caught '
-             'before anybody else sees them.')
+    close = ('The short version: <b>nothing in it is written from memory.</b> If a '
+             'sentence counts something, ranks something, compares two things or says '
+             'one was the biggest, that claim is worked out from the record every '
+             'time the page is built — and if it cannot be worked out, it does not go '
+             'in. It is a dull rule and it is the whole thing. It is why the errors '
+             'that do happen get found before anybody else reads them.')
 
-    foot = (f'Built from {c["data"]} data files and {c["weekfiles"]} week files across '
-            f'{c["commits"]:,} commits. {c["catalog"]} pages in the catalog, in '
-            f'{c["cats"]} sections. Figures counted at build time; nothing on this '
-            f'page is typed in.')
+    foot = (f'One of {c["catalog"]} pages in the Skirt Chasers archive. Every figure '
+            f'on this page was counted at the moment it was built, including that '
+            f'one.')
 
     html = PAGE.format(blurb=blurb, figs=figs, body=body, close=close, foot=foot,
                        out=OUT, og=OG)
