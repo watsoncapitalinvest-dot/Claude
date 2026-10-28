@@ -215,6 +215,18 @@ down, and together they took the week from 54 per cent generated to 35:
   reach; the distance goes into the kickoff return or the punt, which are one
   play either way, instead of into six more. The spot a turnover leaves the
   ball on is the exception — that one is real and is not ours to move.
+
+  **But the start has to be earned on screen.** Unclamped, 58 of week 7's 126
+  kickoffs "returned" past midfield and one came out to the opponent's 16, with
+  nothing shown to explain it — John: *"Need to visualize the kick return or
+  give us some reason you're starting all the way down the field."* So the
+  return is **played out** — the ball comes down deep, a man in the receiving
+  side's kit carries it out, and the ticker says what yard line he reached —
+  and the spot is capped to a return a man could make: most to about the 35, a
+  good one to the 48, a long one past midfield about once in fourteen. That
+  costs filler (574 → 891 a week, 35 → 44 per cent generated) and it is the
+  right trade: a drive that starts on the opponent's 40 for no stated reason
+  reads as a bug.
 - A drive with **three plays of its own gets no cushion at all**. Only a drive
   too short to read as one is given a play or two.
 - **A beat that moves the ball gets a play; one that does not gets a line on

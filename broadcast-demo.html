@@ -1234,16 +1234,35 @@ async function runPlayMotion(team,p){
       flashEZ(team);
     }
   } else if(p.kind==='ko'){
-    // Nobody is named and no yardage is claimed: a kickoff is a certainty of
-    // football rather than a thing the tape records, so it is staged as
-    // scenery and carries no figure.
+    // Nobody is named -- a kickoff is a certainty of football rather than a
+    // thing the tape records -- but the RETURN is shown, because it is the
+    // only answer to why the next drive starts where it does. The ball comes
+    // down deep and a man in the receiving side's kit carries it out to the
+    // spot the drive begins on.
     chips.QB.classList.add('kicking');
     setTimeout(()=>chips.QB.classList.remove('kicking'),sp(820));
     await wait(sp(420)); if(tok!==animToken) return false;
-    cam(50,1.05);
-    await tween(ball, team===H?26:74, 18, sp(1250), {arc:36}); if(tok!==animToken) return false;
+    const recv=(team===H)?A:H, rdir=(recv===H)?-1:1;
+    const ret=(p.ret!=null)?p.ret:(team===H?34:66);
+    // he catches it deep of where he ends up, and runs it forward from there
+    const land=Math.max(4,Math.min(96, ret-rdir*17));
+    cam((land+ret)/2,1.0);
+    await tween(ball, land, 18, sp(1250), {arc:36}); if(tok!==animToken) return false;
     sfx.kick();
-    await tween(ball, team===H?34:66, 50, sp(520), {ease:'linear'}); if(tok!==animToken) return false;
+    const man=nodes.def[9]||nodes.def[0];
+    if(man) put(man, land-rdir*4, 50);
+    await tween(ball, land, 48, sp(400), {ease:'linear'}); if(tok!==animToken) return false;
+    if(man) await tween(man, land, 50, sp(260), {ease:'linear'});
+    if(tok!==animToken) return false;
+    const wob=(Math.round(ret)%2)?9:-9;
+    const mid=land+rdir*Math.abs(ret-land)*0.45;
+    cam(ret);
+    chase(ret,50,sp(860));
+    if(man) runPath(man,[[mid,50+wob],[ret,50]],sp(900),{ease:'linear'});
+    await runPath(ball,[[mid,48+wob],[ret,48]],sp(900),{ease:'linear'});
+    if(tok!==animToken) return false;
+    if(Math.abs(ret-land)>=34) sfx.big();
+    ballYd=ret; return tok===animToken;
   } else if(p.kind==='punt'){
     // Connective, like the kickoff: nobody is named, nothing is claimed. The
     // ball is hung up and comes down where the next drive starts.
@@ -2066,6 +2085,11 @@ function replayGame(g, week){
     else if(fgPlay) target=Math.max(2,Math.min(55,(fgPlay.yd||37)-17));
     else if(xpPlay) target=15;                   // the conversion spot
 
+    // a drive that follows a score follows a kickoff, and the spot it starts
+    // on has to be somewhere a returner could have carried it. Unclamped,
+    // 58 of week 7's 126 kickoffs 'returned' past midfield and one came out
+    // to the opponent's 16.
+    const offKick=(forced==null&&pendPunt==null);
     let start;
     if(forced!=null){ start=pin(s,forced); }
     else {
@@ -2074,7 +2098,16 @@ function replayGame(g, week){
       const want=Math.max(0,3-reals.length);
       const cush=want?(want*4+Math.floor(rng()*5)):0;
       let D=(target!=null)?(before+target+cush):(before+cush+26);
-      D=Math.max(16,Math.min(96,D));
+      if(offKick){
+        // most returns come out around the 25, a good one to the 40, and a
+        // long one is the only way a drive starts past midfield off a kick
+        // a flat floor put three starts in four on exactly the same yard line
+        const r=rng(), floorD=(r<0.07)?(36+rng()*8)    // the long one
+                              :(r<0.25)?(48+rng()*8)   // a good one
+                                       :(60+rng()*12); // most of them
+        // whole yards: the jittered floor was printing a return to the 34.57
+        D=Math.round(Math.max(floorD,Math.min(85,D)));
+      } else D=Math.max(16,Math.min(96,D));
       start=pin(s,own(s,100-D));
       // a punt has to be a punt: if the spot the next drive wants is not a
       // punt away, the punt wins and the drive takes the filler
@@ -2144,19 +2177,26 @@ function replayGame(g, week){
   // conversions come out of his own NFL game and have nothing to do with his
   // fantasy side's touchdowns -- seven of week 7's eight touchdowns had no
   // extra point behind them at all.
-  function ko(team,q){
+  function ko(team,q,ret){
+    const recv=other(team);
+    const line=(ret==null)?null:(recv==='H'?100-ret:ret);
+    const what=(line==null)?''
+      :(line>50)?' Returned out to the '+lastWord(TEAMS[team].name)+' '+(100-line)+'.'
+      :' Returned to the '+line+'.';
     return {team:team, kind:'ko', actor:'', qb:null, pos:'', yd:0, td:false, q:q,
             delta:0, credits:[], drive:-1, hl:false, real:true, fab:true,
-            losYd:(team==='H')?65:35, label:'KICKOFF',
-            text:'<b>Kickoff.</b> '+TEAMS[team].name+' put it in the air.'};
+            losYd:(team==='H')?65:35, label:'KICKOFF', ret:ret,
+            text:'<b>Kickoff.</b> '+TEAMS[team].name+' put it in the air.'+what};
   }
   const withKo=[]; let halfDone=false;
   out.forEach((p,i)=>{
-    if(i===0) withKo.push(ko(other(p.team),p.q||1));
-    if(!halfDone && p.q>=3){ halfDone=true; withKo.push(ko(other(p.team),3)); }
+    if(i===0) withKo.push(ko(other(p.team),p.q||1,p.losYd));
+    if(!halfDone && p.q>=3){ halfDone=true;
+      withKo.push(ko(other(p.team),3,p.losYd)); }
     withKo.push(p);
     const nxt=out[i+1]; if(!nxt) return;
-    if(p.td||p.kind==='fg') withKo.push(ko(p.team,nxt.q||p.q));
+    // the return ends where the drive it hands over to begins
+    if(p.td||p.kind==='fg') withKo.push(ko(p.team,nxt.q||p.q,nxt.losYd));
   });
 
   // ---- the clock ---------------------------------------------------------
