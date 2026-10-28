@@ -75,6 +75,66 @@ def pick_play(game):
     return max(named, key=lambda e: e['pts']), 'the biggest single play of the game'
 
 
+# --- variety, and where it comes from -----------------------------------------
+# The first three of these came back looking like the same picture three times:
+# one man crossing a goal line left to right, low sideline camera, night, mud,
+# a pylon. That is what a fixed template produces, and a magazine running eight
+# of them a week cannot have eight of the same photograph.
+#
+# So the camera and the light vary -- but off the play rather than at random,
+# because an arbitrary variation is a decision nobody can check. The camera
+# comes from what kind of play it was and how far it went; the light comes from
+# the quarter it happened in, which gives four looks across eight games and is
+# a real fact about the afternoon.
+
+CAMERA = {
+    'long_run': ('Shot from the sideline, low and wide, tracking with him. He is in full '
+                 'profile crossing the frame, both feet off the ground, the beaten man '
+                 'already well behind him and small.'),
+    'short_run': ('Shot from behind and below the beaten man, looking up and along the '
+                  'ground at the runner going away. The beaten man is large and dark in '
+                  'the foreground and out of focus; the runner is small, sharp and lit.'),
+    'td_catch': ('Shot from inside the end zone, low, looking back up the field. The '
+                 'receiver is coming almost straight at the camera with the ball above '
+                 'his head and his eyes on it, the defender arriving from the side.'),
+    'catch': ('Shot tight from the sideline on a long lens, the background compressed to '
+              'a wall of out-of-focus colour. Chest-height, level with him, the moment '
+              'the ball hits his hands.'),
+    'pass': ('Shot from the side at chest height. The pass rusher is enormous in the '
+             'foreground and out of focus, a dark shape across the bottom corner; the '
+             'quarterback is beyond him, sharp and small, ball just gone.'),
+    'kick': ('Shot from low and behind, in line with the kick, the ball already away and '
+             'climbing out of frame. The kicker and the holder are dark against the '
+             'lights.'),
+}
+
+LIGHT = {
+    1: ('Late afternoon, the sun low and raking in from one side, long hard shadows '
+        'thrown right across the turf, the floodlights only just coming on and still '
+        'pale against the sky. Warm gold and long brown shadow.'),
+    2: ('Dusk. The sky overhead still a deep blue, the floodlights now the stronger '
+        'light and burning white. Cold blue sky against warm white light, the two '
+        'meeting on the players.'),
+    3: ('Full night. A black sky, no horizon, the floodlights hard and smoky, every '
+        'figure rim-lit and the ground lit in pools. Near-black and gold.'),
+    4: ('Night, and raining. The rain visible in the floodlight beams as drifting '
+        'silver, standing water on the turf throwing the lights back, everything wet '
+        'and running. Near-black, silver and cold white with amber underneath.'),
+}
+
+
+def camera(play):
+    txt = play.get('text') or ''
+    yd = play.get('yards') or 0
+    if play['pos'] == 'K':
+        return CAMERA['kick']
+    if 'pass' in txt and play['pos'] == 'QB':
+        return CAMERA['pass']
+    if 'catch' in txt:
+        return CAMERA['td_catch'] if play.get('td') else CAMERA['catch']
+    return CAMERA['long_run'] if yd >= 35 else CAMERA['short_run']
+
+
 def action(play):
     """What is happening, in one paragraph, from the play's own kind."""
     yd = play.get('yards')
@@ -145,6 +205,10 @@ CANVAS
 
 Landscape, 1200 x 800 pixels, 3:2. The man with the ball is centred, because this image is cropped and printed small inside a magazine page. It must read at the size of a postage stamp: one figure, one clear silhouette, one direction of travel.
 
+THE CAMERA
+
+{camera}
+
 THE ACTION
 
 {action}
@@ -169,11 +233,15 @@ The beaten man is nobody. His face is not visible, he is turned away or in shado
 
 LIGHT
 
-Night. Stadium floodlights high behind and to one side, burning through drifting smoke as hard white flares. The man with the ball carries a hard gold rim light along his back and shoulders, the brightest and warmest thing in the picture. Everything else falls into warm amber and deep near-black. The beaten man is in shadow with only a cold blue-white edge. A full crowd behind, out of focus, in the colours of the side he is scoring against. Churned wet turf and mud underfoot.
+{light}
+
+The man with the ball carries a hard gold rim light along his back and shoulders, the brightest and warmest thing in the picture. The beaten man is darker, with only a cold edge. A full crowd behind, out of focus, in the colours of the side he is scoring against. Churned turf and mud underfoot.
+
+He is moving {direction} across the frame.
 
 PALETTE
 
-Near-black, warm amber, gold, and the two kits' own colours. Gold appears only on the man with the ball.
+The light described above, and the two kits' own colours. Gold appears only on the man with the ball.
 
 STYLE
 
@@ -245,7 +313,10 @@ def main():
         subject = (f'{play["player"]} of the {scorer["team"].strip()}, '
                    f'{play["text"]}, at night under stadium floodlights.')
         body = TEMPLATE.format(
-            subject=subject, action=action(play),
+            subject=subject, action=action(play), camera=camera(play),
+            light=LIGHT[int(play['fc']['qtr'])],
+            # adjacent pages should not mirror each other
+            direction='left to right' if gi % 2 == 0 else 'right to left',
             kit_scorer=kit_line(ks, 'THE MAN WITH THE BALL'),
             kit_other=kit_line(ko, 'THE BEATEN MAN'),
             number=num, height=ht, weight=wt,
