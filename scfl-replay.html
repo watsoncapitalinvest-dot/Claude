@@ -652,7 +652,12 @@ function stage(e){
   var reach=dirn>0?Math.min(END,limit):Math.max(END,limit);
   var scroll=END-reach;
   var dur=Math.min(2400, 620+Math.abs(yards)*24)/PACE;
-  var span=dur, t0=performance.now(), tok=++stageTok;
+  // Both teams stand set for a beat before anything moves. Without it a play
+  // ended and the next one was already mid-stride, which is a cut rather than
+  // a snap -- there was nothing in it that read as the teams lining up again.
+  var SET=420/PACE;
+  var span=SET+dur, t0=performance.now(), tok=++stageTok;
+  STAGE_SETTLE=span;
   act.style.display='';
   $('fname').textContent=p[0];
 
@@ -700,8 +705,8 @@ function stage(e){
     var x0=yd(-1.0), x1=yd(0.9+0.45*((i%3)-1));
     role(OFF, function(h){
       var k=1-Math.pow(1-h,1.6);
-      return {x:x0+(x1-x0)*k+j(h), d:d+Math.sin(h*11+i)*0.012,
-              a:'lineman', f:Math.floor(h*dur/150+i)%(nframes('lineman')||1)};
+      return {x:x0+(x1-x0)*k+j(h), d:d+Math.sin(h*11+i)*0.012, a:'lineman',
+              f:h<=0?0:Math.floor(h*dur/150+i)%(nframes('lineman')||1)};
     }, 'R');
   })(i);
   for(var j2=0;j2<4;j2++) (function(j2){
@@ -709,8 +714,8 @@ function stage(e){
     var x0=yd(3.4), x1=yd(1.4-0.4*(j2%2));
     role(DEF, function(h){
       var k=1-Math.pow(1-h,1.6);
-      return {x:x0+(x1-x0)*k+w(h), d:d+Math.sin(h*11+j2)*0.012,
-              a:'lineman', f:Math.floor(h*dur/150+j2)%(nframes('lineman')||1)};
+      return {x:x0+(x1-x0)*k+w(h), d:d+Math.sin(h*11+j2)*0.012, a:'lineman',
+              f:h<=0?0:Math.floor(h*dur/150+j2)%(nframes('lineman')||1)};
     }, 'L');
   })(j2);
 
@@ -840,7 +845,8 @@ function stage(e){
   var meFlip=leftward, meLast=null;
   (function frame(now){
     if(tok!==stageTok) return;
-    var h=Math.max(0,Math.min(1,(now-t0)/dur));
+    var el=now-t0;
+    var h=el<SET ? 0 : Math.max(0,Math.min(1,(el-SET)/dur));
     $('track').style.transform='translateX('+(-scroll*(1-Math.pow(1-h,2)))+'px)';
 
     for(var ri=0;ri<roles.length;ri++) if(roles[ri]) put(roles[ri], roles[ri].fn(h));
@@ -867,7 +873,7 @@ function stage(e){
       }
     }
 
-    if(h<1) requestAnimationFrame(frame);
+    if(el<span) requestAnimationFrame(frame);
     else if(tok===stageTok){
       draw(act,(fl&TD)?'celebrate':me.a,me.f,side.c1,side.c2,meFlip,false);
       if(fl&TD && CAST[refSlot])
@@ -885,7 +891,7 @@ function stage(e){
     setTimeout(function(){ if(tok===stageTok) w.className='tdw go'; }, dur-180);
   }
   // the tail holds the tackle, or the celebration, on screen long enough to see
-  return span + ((fl&TD)?900:520)/PACE;
+  return span + ((fl&TD)?900:560)/PACE;
 }
 
 
@@ -1063,10 +1069,11 @@ function seek(to){
 // set to the moment that play actually happened, and the next one follows when
 // this one is done. Nothing is skipped and nothing overlaps. A game runs about
 // three minutes at 1x, which is what it takes to watch two hundred plays.
-var PACE = 1, timer = 0;
+var PACE = 1, timer = 0, settle = 0, pending = null, STAGE_SETTLE = 0;
 
 function goTo(n){
   if(!GAME) return;
+  if(settle) clearTimeout(settle); settle=0; pending=null;
   shown = Math.max(0, Math.min(GAME.ev.length, n));
   t = shown ? GAME.ev[shown-1][SEC] : 0;
   if(shown >= GAME.ev.length) t = FULL;
@@ -1079,19 +1086,35 @@ function stepOne(){
   if(!playing || !GAME) return;
   if(shown >= GAME.ev.length){ t=FULL; render(); stop(); return; }
   var e = GAME.ev[shown++];
-  t = e[SEC];
-  render();
-  if(e[FLG]&GO){ var b=$('board'); b.classList.remove('flip');
-                 void b.offsetWidth; b.classList.add('flip'); }
   var span = stage(e);
-  timer = setTimeout(stepOne, span + 240/PACE);
+  // The scoreboard and the feed used to update before the play ran, so the
+  // points landed and THEN you watched what scored them. They settle when the
+  // play does instead.
+  flush();
+  pending = function(mid){
+    pending = null;
+    t = e[SEC];
+    render();
+    if(!mid && (e[FLG]&GO)){ var b=$('board'); b.classList.remove('flip');
+                             void b.offsetWidth; b.classList.add('flip'); }
+  };
+  settle = setTimeout(pending, STAGE_SETTLE);
+  timer = setTimeout(stepOne, span + 300/PACE);
 }
 
 function start(){ if(playing||!GAME) return;
   if(shown>=GAME.ev.length) goTo(0);
   playing=true; $('play').textContent='Pause';
   stepOne(); }
-function stop(){ playing=false; if(timer) clearTimeout(timer); timer=0;
+// A play whose result has not landed yet still counts as shown, so pausing
+// mid-play has to settle it or the feed sits a row behind the score.
+function flush(mid){
+  if(settle) clearTimeout(settle); settle=0;
+  if(pending) pending(mid);
+}
+function stop(){ playing=false;
+  if(timer) clearTimeout(timer); timer=0;
+  flush(true);
   var p=$('play'); if(p) p.textContent='Play'; }
 
 // by index, not by clock: several plays can share a second, and seeking to
