@@ -183,6 +183,25 @@ def kit_clash(teams):
     return f'{teams[1]["name"]} has no change strip clear of {teams[0]["name"]}'
 
 
+def lineups_for(week):
+    """matchup_id -> {roster_id: [[name, pos], ...]}, that week's own starters.
+
+    The broadcast needs eleven names a side to put on the field, and it used
+    to top them up out of scfl-rosters.json -- a Sleeper export from July, so
+    it could name a man who had been traded away months earlier. The week file
+    knows exactly who each side started that week, which is the only list
+    entitled to appear on a field for that week.
+    """
+    wk = json.load(open(os.path.join(WDIR, f'{SEASON}-w{week}.json'), encoding='utf-8'))
+    out = {}
+    for g in wk['games']:
+        out[g['matchup_id']] = {
+            t['roster_id']: [[pl['name'], pl['pos']]
+                             for pl in (t.get('starters') or []) if pl.get('name')]
+            for t in g['teams']}
+    return out
+
+
 def rosters_for(week):
     """matchup_id -> {team name: roster_id} out of the week file.
 
@@ -200,6 +219,7 @@ def feed(week, ident):
     rp = json.load(open(os.path.join(WDIR, f'{SEASON}-w{week}-replay.json'),
                         encoding='utf-8'))
     rid_of = rosters_for(week)
+    line_of = lineups_for(week)
     games, orphans, swaps = [], [], []
 
     for g in rp['games']:
@@ -246,6 +266,9 @@ def feed(week, ident):
                    'c1': t['c1'], 'c2': t['c2'], 'abbr': t['abbr']}
                   for t in teams],
             'f': [round(t['final'], 2) for t in g['teams']],
+            # who each side actually started that week, so nothing on the
+            # field is a player who is not on one of these two teams
+            'r': [line_of.get(g['matchup_id'], {}).get(r, []) for r in rids],
             'lc': g['lead_changes'], 'td': g['touchdowns'],
             'p': players, 'src': src, 'ev': ev,
         })

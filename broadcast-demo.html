@@ -1642,29 +1642,31 @@ const RP={SEC:0,QTR:1,CK:2,SIDE:3,PID:4,PTS:5,TXT:6,FLG:7,S0:8,S1:9,SRC:10,
           RQ:11,RC:12,KIND:13,YDS:14};
 const RTD=1, RGO=2, RRES=4;
 
-// The men who scored, first, and then the rest of the franchise's real roster
-// behind them. Built from the scorers alone a side could field no tight end at
-// all -- personnel() handed setChip an undefined name and shortName took the
+// ONLY MEN WHO PLAYED FOR THESE TWO TEAMS THIS WEEK.
+//
+// The scorers first, then the rest of that side's starters for the week out of
+// the feed. It used to top up from scfl-rosters.json -- a Sleeper export from
+// July -- so the field could carry a man who had been traded away months
+// earlier. The week file is the only list entitled to appear on a field for
+// that week, and built from the scorers alone a side could field no tight end
+// at all: personnel() handed setChip an undefined name and shortName took the
 // page down on n.split.
-function replayStats(g, rosters){
+function replayStats(g){
   const out={H:{QB:[],RB:[],WR:[],TE:[],K:[],DST:[]},A:{QB:[],RB:[],WR:[],TE:[],K:[],DST:[]}};
   const seen={H:{},A:{}};
+  const slot=po=>(po==='DEF')?'DST':po;
   g.ev.forEach(e=>{
     const k=e[RP.KIND];
-    if(k==='sack'||k==='dint'||k==='drec'||k==='dtd') return;  // other side's men
-    const t=e[RP.SIDE]===0?'H':'A', pl=g.p[e[RP.PID]];
-    const pos=(pl[1]==='DEF')?'DST':pl[1];
-    if(!out[t][pos]||seen[t][pl[0]]) return;
-    seen[t][pl[0]]=1; out[t][pos].push({n:pl[0]});
+    if(k==='sack'||k==='dint'||k==='drec'||k==='dtd') return;  // the other side's men
+    const t=e[RP.SIDE]===0?'H':'A', pl=g.p[e[RP.PID]], po=slot(pl[1]);
+    if(!out[t][po]||seen[t][pl[0]]) return;
+    seen[t][pl[0]]=1; out[t][po].push({n:pl[0]});
   });
-  // top up from the roster so every slot on the field has a real name on it
-  ['H','A'].forEach(function(t,i){
-    const list=(rosters&&rosters[g.t[i].name])||
-               (rosters&&rosters[Object.keys(rosters).find(k=>normT(k)===normT(g.t[i].name))])||[];
-    list.forEach(function(pr){
-      const pos=(pr.pos==='DEF')?'DST':pr.pos;
-      if(!out[t][pos]||seen[t][pr.name]) return;
-      seen[t][pr.name]=1; out[t][pos].push({n:pr.name});
+  ['H','A'].forEach((t,i)=>{
+    ((g.r&&g.r[i])||[]).forEach(pr=>{
+      const po=slot(pr[1]);
+      if(!out[t][po]||seen[t][pr[0]]) return;
+      seen[t][pr[0]]=1; out[t][po].push({n:pr[0]});
     });
   });
   return out;
@@ -1789,12 +1791,11 @@ function replayGame(g, week){
 }
 
 function startReplay(feed, gi, week){
-  feed.rosters=feed.rosters||null;
   const g=feed.games[gi]; if(!g) return false;
   const kit=s=>({key:s.rid,name:s.name,abbr:s.abbr||s.name.slice(0,3).toUpperCase(),
                  rec:'',crest:'',logo:'crests/'+s.logo+'.webp',c1:s.c1,c2:s.c2});
   TEAMS={H:kit(g.t[0]),A:kit(g.t[1])};
-  STATS=replayStats(g, feed.rosters); rebuildRoster(); applyTheme();
+  STATS=replayStats(g); rebuildRoster(); applyTheme();
   const sel=$('matchsel'); if(sel) sel.style.display='none';
   // the page describes itself honestly in each mode
   var sub=document.querySelector('.tag b'); if(sub)
@@ -1833,10 +1834,7 @@ function bootReplay(){
     .then(r=>r.json())
     .then(ix=>fetch('week-data/'+ix.season+'-w'+w+'-watch.json',{cache:'no-cache'})
                 .then(r=>r.json()))
-    .then(feed=>fetch('scfl-rosters.json',{cache:'no-cache'})
-             .then(r=>r.ok?r.json():null).catch(()=>null)
-             .then(ros=>{ feed.rosters=(ros&&ros.teams)||null;
-                          if(startReplay(feed,gi,w) && QP.get('auto')!=='0') play(); }))
+    .then(feed=>{ if(startReplay(feed,gi,w) && QP.get('auto')!=='0') play(); })
     .catch(e=>{ if(window.console) console.error(e); });
   return true;
 }

@@ -202,6 +202,12 @@ advances by the yards it really gained, the same device as the sixty-minute
 clock, and the page says so. **Down and distance are not shown at all**, because
 the replay does not know them and this desk does not invent them.
 
+**Only men who played for these two sides that week are ever named on the
+field.** The eleven come from the week file's own starters, carried in the feed
+as each game's `r`. Topping them up from `scfl-rosters.json` put a July export
+on a week-7 field, which can name somebody traded away months earlier. A
+kickoff names nobody at all.
+
 Kits come from `team-identity.json`, built off `team-kits.json` — the colours
 John set per franchise for the magazine's play art — and the broadcast's own
 guessed table is overwritten by them at load, so the field and the pictures in
