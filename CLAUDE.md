@@ -222,6 +222,25 @@ field.** The eleven come from the week file's own starters, carried in the feed
 as each game's `r`. Topping them up from `scfl-rosters.json` put a July export
 on a week-7 field, which can name somebody traded away months earlier.
 
+**The plays come out of a playbook.** `ROUTES`, `PASS_CONCEPTS` and
+`RUN_CONCEPTS` in `broadcast-demo.html` hold the route tree and twenty real
+concepts, and the five eligible men run the combination rather than drifting
+downfield together — on a screen the two outside receivers barely move, because
+they are blocking. A route is read as cumulative offsets from where the man
+lines up, lateral **positive toward his own sideline**, so one table serves
+both sides of the formation.
+
+Every concept carries the band of gains it can honestly account for: a
+five-yard concept is never the caption on a 48-yard touchdown, and a run
+concept never appears on a pass. A connective play picks its concept when the
+sentence naming it is written and carries it on the play, so the field and the
+ticker cannot disagree about what was called. That fit is checked over all
+1,325 concepts a week.
+
+You score in **the other team's end zone**. H attacks toward 0, which is `ezL`,
+so `ezL` is painted and lettered for the AWAY side. The other way round, the
+MACHINES scored in the MACHINES end.
+
 A `gen` play is a quarterback's **passing yardage**, and the man who caught it
 is almost always on another fantasy roster — so the quarterback is named and
 **the catch is made by a figure with no name over his head**. It used to be

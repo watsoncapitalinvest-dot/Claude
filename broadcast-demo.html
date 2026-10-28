@@ -620,9 +620,12 @@ function applyTheme(){
   $('nA').textContent=TEAMS.A.name; $('rA').textContent=TEAMS.A.rec; $('cA').innerHTML='<img src="'+TEAMS.A.logo+'" alt="">';
   $('cH').style.borderColor=TEAMS.H.c1; $('cA').style.borderColor=TEAMS.A.c1;
   $('sH').style.color='var(--home)'; $('sA').style.color='var(--away)';
-  $('ezLt').textContent=lastWord(TEAMS.H.name); $('ezRt').textContent=lastWord(TEAMS.A.name);
-  $('ezL').style.background=`linear-gradient(90deg,${hexRGBA(TEAMS.H.c1,.85)},${hexRGBA(TEAMS.H.c1,.5)})`;
-  $('ezR').style.background=`linear-gradient(270deg,${hexRGBA(TEAMS.A.c1,.85)},${hexRGBA(TEAMS.A.c1,.5)})`;
+  // The end a side attacks is the end it scores in, and that is the other
+  // team's. H runs toward 0, which is ezL, so ezL is the AWAY end zone.
+  // Painted the other way round the MACHINES scored in the MACHINES end.
+  $('ezLt').textContent=lastWord(TEAMS.A.name); $('ezRt').textContent=lastWord(TEAMS.H.name);
+  $('ezL').style.background=`linear-gradient(90deg,${hexRGBA(TEAMS.A.c1,.85)},${hexRGBA(TEAMS.A.c1,.5)})`;
+  $('ezR').style.background=`linear-gradient(270deg,${hexRGBA(TEAMS.H.c1,.85)},${hexRGBA(TEAMS.H.c1,.5)})`;
   $('midlogo').src=TEAMS.H.logo;
 }
 applyTheme();
@@ -935,6 +938,97 @@ function chase(tx,ty,dur){
 }
 const LANE={WR1:11,WR2:89,WR3:24,TE:70,RB:66,QB:50};
 
+// ---- the playbook ---------------------------------------------------------
+// Five eligible men drifting downfield together is not a play. These are real
+// concepts, so the picture is a route combination rather than a crowd, and the
+// connective plays are named by the concept they ran instead of by a sentence
+// picked out of a hat.
+//
+// A route is read as offsets from where the man lines up: [downfield yards,
+// lateral], CUMULATIVE, not step by step -- a curl goes to 12 and comes back
+// to 9. Lateral is positive toward HIS OWN sideline and negative toward the
+// middle, so one table serves both sides of the formation and a dig run from
+// the left hash goes the same way as one run from the right.
+const ROUTES={
+  go:      [[16,0],[30,0]],      seam:    [[16,-4],[30,-5]],
+  post:    [[13,0],[27,-15]],    corner:  [[13,0],[25,15]],
+  dig:     [[12,0],[13,-24]],    in:      [[8,0],[9,-18]],
+  out:     [[10,0],[11,17]],     curl:    [[12,0],[9,-4]],
+  comeback:[[14,0],[11,5]],      slant:   [[2,0],[10,-17]],
+  drag:    [[3,0],[5,-28]],      flat:    [[1,0],[3,20]],
+  hitch:   [[6,0],[5,0]],        wheel:   [[1,12],[16,6]],
+  swing:   [[-1,10],[2,16]],     screen:  [[-2,7]],
+  block:   [[1,0]]
+};
+// lo/hi are the gains the concept can honestly account for: a five-yard
+// concept must not be the caption on a 48-yard touchdown. prime is the man it
+// is designed to get the ball to, so the concept fits whoever actually caught
+// it where it can.
+const PASS_CONCEPTS=[
+ {n:'Screen',        lo:-6, hi:12, prime:['RB'],
+  r:{WR1:'block',WR2:'block',WR3:'hitch',TE:'block',RB:'screen'}},
+ {n:'Slant–flat',lo:1, hi:12, prime:['WR1','WR3','RB'],
+  r:{WR1:'slant',WR2:'flat',WR3:'slant',TE:'hitch',RB:'flat'}},
+ {n:'Stick',         lo:2,  hi:11, prime:['TE','WR3'],
+  r:{WR1:'go',WR2:'out',WR3:'flat',TE:'hitch',RB:'swing'}},
+ {n:'Shallow cross', lo:2,  hi:14, prime:['WR3','TE'],
+  r:{WR1:'dig',WR2:'go',WR3:'drag',TE:'curl',RB:'flat'}},
+ {n:'Mesh',          lo:3,  hi:17, prime:['WR3','TE','RB'],
+  r:{WR1:'corner',WR2:'curl',WR3:'drag',TE:'drag',RB:'swing'}},
+ {n:'Flood',         lo:4,  hi:19, prime:['TE','WR2'],
+  r:{WR1:'go',WR2:'comeback',WR3:'drag',TE:'out',RB:'flat'}},
+ {n:'Levels',        lo:6,  hi:19, prime:['WR1','WR3'],
+  r:{WR1:'dig',WR2:'go',WR3:'drag',TE:'hitch',RB:'swing'}},
+ {n:'Smash',         lo:7,  hi:24, prime:['WR2','WR1'],
+  r:{WR1:'hitch',WR2:'corner',WR3:'out',TE:'seam',RB:'flat'}},
+ {n:'Y-cross',       lo:8,  hi:26, prime:['TE','WR1'],
+  r:{WR1:'go',WR2:'comeback',WR3:'flat',TE:'drag',RB:'swing'}},
+ {n:'Dagger',        lo:10, hi:28, prime:['WR1','WR3'],
+  r:{WR1:'dig',WR2:'comeback',WR3:'go',TE:'drag',RB:'swing'}},
+ {n:'Double post',   lo:15, hi:99, prime:['WR1','WR2'],
+  r:{WR1:'post',WR2:'post',WR3:'seam',TE:'curl',RB:'swing'}},
+ {n:'Four verts',    lo:17, hi:99, prime:['WR1','WR2','WR3','TE'],
+  r:{WR1:'go',WR2:'go',WR3:'seam',TE:'seam',RB:'swing'}}
+];
+// wide: how far the carrier bellies toward the sideline before he turns up.
+// belly: how far he goes BACKWARD first -- a counter steps away from the hole,
+// a draw waits for the drop.
+const RUN_CONCEPTS=[
+ {n:'QB sneak',     lo:-4, hi:2,  wide:0,   belly:0},
+ {n:'Trap',         lo:-3, hi:7,  wide:-5,  belly:0},
+ {n:'Power',        lo:-2, hi:9,  wide:7,   belly:0},
+ {n:'Inside zone',  lo:-4, hi:12, wide:0,   belly:0},
+ {n:'Counter',      lo:0,  hi:15, wide:-11, belly:2},
+ {n:'Draw',         lo:1,  hi:19, wide:0,   belly:4},
+ {n:'Outside zone', lo:0,  hi:24, wide:17,  belly:0},
+ {n:'Toss sweep',   lo:1,  hi:99, wide:25,  belly:3}
+];
+const CONCEPT=n=>PASS_CONCEPTS.concat(RUN_CONCEPTS).find(c=>c.n===n);
+// Deterministic: the same play always runs the same concept, so pausing and
+// replaying does not redraw it as something else.
+function pickConcept(p,slot,rnd,depth){
+  const pass=!(p.kind==='run'||p.kind==='qbrun');
+  const list=pass?PASS_CONCEPTS:RUN_CONCEPTS;
+  // a throw that falls incomplete gained nothing, and nothing is inside
+  // only the screen's band -- so it was called as how far it was thrown
+  const yd=(depth!=null?depth:p.yd)|0;
+  let pool=list.filter(c=>yd>=c.lo&&yd<=c.hi);
+  if(!pool.length) pool=list;
+  if(slot){ const fit=pool.filter(c=>!c.prime||c.prime.indexOf(slot)>=0);
+            if(fit.length) pool=fit; }
+  const k=(rnd!=null?Math.floor(rnd*pool.length)
+          :(Math.abs(yd)*7+(p.q||1)*13+(p.secs||0))%pool.length);
+  return pool[Math.max(0,Math.min(pool.length-1,k))];
+}
+// A route, from where he is standing, toward the end he is attacking.
+function runRoute(el,name,dir,dur){
+  const steps=ROUTES[name]||ROUTES.hitch, p0=xyOf(el);
+  const outward=p0.y<50?-1:1;
+  return runPath(el,steps.map(st=>[Math.max(2,Math.min(98,p0.x+dir*st[0])),
+                                   Math.max(4,Math.min(96,p0.y+outward*st[1]))]),
+                 dur,{ease:'linear'});
+}
+
 /* ---- TV camera: pan & zoom following the ball ---- */
 let camScale=1;
 function cam(focus,scale){
@@ -1181,8 +1275,10 @@ async function runPlayMotion(team,p){
   } else if(p.kind==='inc'){
     nodes.def.slice(7).forEach(d=>d.classList.add('backpedal'));
     // routes develop, the throw falls incomplete at the target's feet
-    ['WR1','WR2','WR3','TE'].forEach(sl=>{ const c=chips[sl]; if(c===actEl) return;
-      const cp=xyOf(c); tween(c,cp.x+dir*5,cp.y+(cp.y<50?5:-5),sp(460),{ease:'linear'}); });
+    const icon=(p.concept&&CONCEPT(p.concept))||pickConcept(p,actSlot);
+    ['WR1','WR2','WR3','TE','RB'].forEach(sl=>{ const c=chips[sl];
+      if(!c||c===actEl) return;
+      runRoute(c,(icon.r&&icon.r[sl])||'hitch',dir,sp(620)); });
     const qbDrop=los+off*8;
     tween(chips.QB,qbDrop,50,sp(300));
     await tween(ball,qbDrop,50,sp(300)); if(tok!==animToken) return false;
@@ -1198,8 +1294,13 @@ async function runPlayMotion(team,p){
     // cleared for it, so the two agree on who came down with the ball
     const tgtSlot=(p.kind==='gen')?genTarget(p):actSlot;
     const tgtEl=(p.kind==='gen')?chips[tgtSlot]:actEl;
-    ['WR1','WR2','WR3','TE'].forEach(sl=>{ const c=chips[sl]; if(c===tgtEl) return;
-      const cp=xyOf(c); tween(c,cp.x+dir*(deep?8:5+(sl==='WR3'?3:0)),cp.y+(cp.y<50?5:-5),sp(deep?620:480),{ease:'linear'}); });
+    // the concept the play ran. A connective play carries its own, chosen
+    // when the sentence naming it was written, so the picture and the
+    // ticker cannot disagree about what was called.
+    const con=(p.concept&&CONCEPT(p.concept))||pickConcept(p,tgtSlot);
+    ['WR1','WR2','WR3','TE','RB'].forEach(sl=>{ const c=chips[sl];
+      if(!c||c===tgtEl) return;
+      runRoute(c,(con.r&&con.r[sl])||'hitch',dir,sp(deep?780:620)); });
     const qbDrop=los+off*(deep?9:quick?3.5:8);
     // play-action look on some intermediate throws (deterministic)
     const pa=p.kind==='rec'&&p.yd>=12&&!deep&&((p.secs+p.yd)%3===0);
@@ -1238,6 +1339,18 @@ async function runPlayMotion(team,p){
     if(p.td) celebrate(team); else if(p.yd>=20) sfx.big();
   } else { // run / qbrun — mesh, hit the hole; stuffed runs bounce back
     const carrier=actEl||chips.RB;
+    const rcon=(p.concept&&CONCEPT(p.concept))||pickConcept(p,actSlot);
+    const side=(p.yd%2)?1:-1;      // which way the concept goes, derived
+    // a counter steps away from the hole and a draw waits for the drop;
+    // outside zone and a toss belly to the sideline before turning up
+    const belly=(rcon.belly||0), wide=(rcon.wide||0)*side;
+    if(/Power|Counter/.test(rcon.n)){ const g=nodes.ol[1]||nodes.ol[0];
+      if(g){ const gp=xyOf(g);
+        runPath(g,[[gp.x-dir*0.5,50],[gp.x+dir*4,50+side*15]],sp(640),{ease:'linear'}); } }
+    if(belly||wide){
+      tween(carrier,los-dir*belly,50+wide*0.55,sp(300));
+      await tween(ball,los-dir*belly,48+wide*0.55,sp(300),{ease:'linear'});
+      if(tok!==animToken) return false; }
     if(p.kind==='qbrun'){ // scramble: drop back first, then take off
       await tween(ball,los+off*7,50,sp(200),{ease:'linear'}); if(tok!==animToken) return false;
       tween(carrier,los+off*7,50,sp(200));
@@ -1404,7 +1517,9 @@ function step(){
   cam(p.losYd!=null?p.losYd:ballYd,1.02);   // back off: 1.35 cropped the width away
   tickClock(p);
   const who=(p.actor||p.qb||'').toUpperCase();
-  const capWhat=p.fab&&p.kind!=='ko'?(p.label||(p.yd>0?`${p.yd}-YD GAIN`:p.yd<0?`LOSS OF ${-p.yd}`:'INCOMPLETE'))
+  const capWhat=p.fab&&p.kind!=='ko'?(p.label||
+      ((p.concept?p.concept.toUpperCase()+' \u00b7 ':'')+
+       (p.yd>0?`${p.yd}-YD GAIN`:p.yd<0?`LOSS OF ${-p.yd}`:'INCOMPLETE')))
     :p.td?`TOUCHDOWN · ${who} · ${p.yd>0?p.yd+'-YD ':''}${p.kind==='run'||p.kind==='qbrun'?'RUN':'PASS'}`
     :p.kind==='ko'?`KICKOFF · ${TEAMS[p.team].name.toUpperCase()}`
     :p.kind==='adj'?`SCORING ADJUSTMENT · ${who}`
@@ -1840,10 +1955,6 @@ function replayGame(g, week){
   }
 
   // ---- the connective plays ----------------------------------------------
-  const CARRY=['run up the middle','carry off left tackle','carry off right tackle',
-               'run behind the guard','draw up the gut','sweep to the outside'];
-  const THROW=['checkdown underneath','quick out','crossing route','throw over the middle',
-               'comeback on the sideline','strike down the seam'];
   function chunks(total){
     const out=[];
     if(total<0){ let l=-total;                       // a sack or a stuff soaks it
@@ -1864,10 +1975,13 @@ function replayGame(g, week){
     const p={team:s, kind:gain===0?'inc':pass?'gen':'run', actor:'', qb:null, pos:'',
              yd:gain, td:false, q:q, delta:0, credits:[], hl:false, real:true,
              fab:true, losYd:y};
-    p.text = gain===0 ? 'The throw falls incomplete.'
-      : gain<0 ? 'Stuffed at the line for a loss of '+(-gain)+'.'
-      : pass ? 'A '+THROW[Math.floor(rng()*THROW.length)]+' for '+gain+'.'
-             : 'A '+CARRY[Math.floor(rng()*CARRY.length)]+' for '+gain+'.';
+    // the concept is chosen here, with the sentence that names it, and the
+    // field reads it back off the play rather than picking its own
+    p.concept=pickConcept(p,null,rng(),gain===0?3+Math.floor(rng()*18):null).n;
+    p.text='<b>'+p.concept+'.</b> '+(
+      gain===0 ? 'The throw falls incomplete.'
+      : gain<0 ? 'Stuffed for a loss of '+(-gain)+'.'
+      : gain+(gain===1?' yard.':' yards.'));
     return p;
   }
   function mkPunt(s,y,land,touchback,q){
