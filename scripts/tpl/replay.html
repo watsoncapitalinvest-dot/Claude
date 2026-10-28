@@ -637,56 +637,76 @@ function stage(e){
   }
 
   var travel=Math.abs(yards)*PXYD, dirn=way*(yards<0?-1:1);
+
+  // A PASSING PLAY IS ONE PLAY, drawn from the line of scrimmage.
+  //
+  // It used to be two unrelated vignettes. The quarterback's event threw a ball
+  // that landed on grass; the receiver's event dropped a man into the middle of
+  // the defence, already six yards downfield, who struck a catch pose at
+  // nothing and ran straight. Neither showed a route, a throw or a man covering
+  // anybody -- John: "the WR just appears in the middle of the defense and runs
+  // straight. I see no pass or route running or defense."
+  //
+  // Both kinds now stage the same play and differ only in which man the tape
+  // names. The gain is measured from the LINE, not from wherever the passer was
+  // standing, which also fixes a pass landing three yards short of its own
+  // yardage. Where inside the gain the ball was caught is NOT known -- the
+  // replay has no air yards -- so the catch is drawn at a fixed point in it and
+  // no split is ever stated. The only number anywhere is the total, and that is
+  // the real one.
+  var isPass=(kind==='pass'||kind==='rec'), AIR=0.58;
+  var losX=LANE, END, catchX, rdep;
+  if(isPass){
+    END=losX+dirn*travel;
+    catchX=losX+dirn*travel*AIR;
+    rdep=(e[PID]%2) ? 0.24 : 0.76;        // which side he is split to
+    x0 = (kind==='pass') ? losX-dirn*6.4*PXYD : losX;
+    depth = (kind==='pass') ? 0.50 : rdep;
+    act.style.bottom=across(depth)+'px';
+  } else {
+    END=x0+dirn*travel;
+  }
+
   // where the ball ends up, and how much of that the camera has to pan for
-  var want=x0+dirn*travel;
+  var want=END;
   var limit=ORIGIN+cam.clientWidth*(dirn>0?0.68:0.32);
   var reach=dirn>0 ? Math.min(want,limit) : Math.max(want,limit);
   var scroll=want-reach;
-  var dur=Math.min(2200, 420+Math.abs(yards)*24)/PACE;
-  var lead=((kind==='rec')?240:(byBall?260:0))/PACE;   // the catch, the release
+  var dur=Math.min(2300, 520+Math.abs(yards)*24)/PACE;
+  var lead=(isPass||byBall)?0:0;
   var span=lead+dur, t0=performance.now();
   var pill=$('pill');
-  pill.style.display = (byBall||kind==='xp') ? 'block' : 'none';
+  pill.style.display=(isPass||kind==='fg'||kind==='xp') ? 'block' : 'none';
   act.style.left=x0+'px';
   $('track').style.transform='translateX(0)';
 
   // ---- the men who move ----
-  // Everything below is the answer to "there is no defensive play on the ball
-  // or the player". Nothing was contested: a pass landed on empty grass and a
-  // run simply stopped. None of it says WHO did the defending, because the
-  // replay has no idea -- but a completed pass had somebody catch it, and a
-  // run that gained four yards and was not a touchdown was stopped by
-  // somebody. Those are the shapes being drawn.
   var movers=[];                 // {el, x0,d0, x1,d1, early, late, flip, kit}
-  function mover(x0,d0,x1,d1,early,late,kitIdx,flip){
+  function mover(mx0,md0,mx1,md1,early,late,kitIdx,flip){
     var el=CAST[n++]; if(!el) return null;
-    var m={el:el, x0:x0, d0:d0, x1:x1, d1:d1, early:early, late:late,
+    var m={el:el, x0:mx0, d0:md0, x1:mx1, d1:md1, early:early, late:late,
            kit:kits[kitIdx], flip:(flip!==false) !== leftward};
     movers.push(m); return m;
   }
-  var END=x0+dirn*travel;
 
-  if(kind==='sack'){
-    // the man being sacked, going down where the tackler arrives
+  // The two men a passing play needs besides the one the tape names: whoever
+  // threw it and whoever caught it. Anonymous, like every other extra -- the
+  // quarterback who threw to a receiver on this roster is usually on somebody
+  // else's, and the replay does not record him at all.
+  var otherEl=null, coverEl=null;
+  if(isPass){
+    otherEl = CAST[n++];
+    coverEl = CAST[n++];
+  } else if(kind==='sack'){
     place(CAST[n++], x0-dirn*1.6*PXYD, depth, 'sack', 1,
                  kits[1][0], kits[1][1], !leftward, false);
-  } else if(byBall && travel){
-    // A completed pass has a catcher. He is already downfield, turns for the
-    // ball, and has a man on him -- which is the whole of what was missing.
-    var rdep = (depth<0.5) ? 0.74 : 0.26;
-    mover(END-dirn*6*PXYD, rdep, END, rdep, 'run', 'catch', 0, false);
-    mover(END-dirn*3*PXYD, rdep+0.09, END+dirn*1.4*PXYD, rdep+0.05,
-          'backpedal', 'dive', 1, true);
   } else if(mover_is_man(mover_kind)){
-    // One man beaten on the way, and one who makes the stop. The stop lands
-    // exactly where the gain ends, because that is where the gain ended.
     if(Math.abs(yards)>=10)
       mover(x0+dirn*travel*0.55, depth+0.10, x0+dirn*travel*0.40, depth+0.02,
             'run', 'dive', 1, true);
     if(!(fl&TD))
       mover(END+dirn*5*PXYD, depth-0.13, END+dirn*0.6*PXYD, depth-0.02,
             'run', 'tackle', 1, true);
-    // and somebody chasing from behind, so it is not a man alone on a field
     mover(x0+dirn*2*PXYD, depth+0.16, END-dirn*1.4*PXYD, depth+0.08,
           'run', 'run', 1, false);
   }
@@ -700,47 +720,89 @@ function stage(e){
   }
   var refSlot=n;
 
+  // The receiver's part of it: off the line, up the field, turn for the ball,
+  // catch it, carry it on. Returns where he is and what he is doing.
+  function routeAt(h){
+    if(h<AIR*0.92){                        // running the route
+      var k=h/(AIR*0.92);
+      return {x:losX+(catchX-losX)*k, d:rdep, a:'run',
+              f:Math.floor(h*dur/55)%(nframes('run')||1)};
+    }
+    if(h<AIR+0.08){                        // turning for it, and taking it
+      return {x:catchX, d:rdep, a:'catch',
+              f:Math.floor((h-AIR*0.92)*26*nframes('catch'))};
+    }
+    var k2=(h-(AIR+0.08))/(1-(AIR+0.08));  // and away
+    var dv=(fl&TD)&&Math.abs(yards)>=20&&k2>0.82, st=!(fl&TD)&&k2>0.9;
+    return {x:catchX+(END-catchX)*k2, d:rdep,
+            a:dv?'dive':st?'hit':'run',
+            f: dv?Math.floor((k2-0.82)*6*nframes('dive'))
+             : st?Math.floor((k2-0.9)*12*nframes('hit'))
+             : Math.floor(h*dur/55)%(nframes('run')||1)};
+  }
+
   (function frame(now){
     if(tok!==stageTok) return;
     var t=now-t0;
     var hold=Math.max(0,Math.min(1,(t-lead)/dur));
     var ease=1-Math.pow(1-hold,2);
     var anim=pose[0], fi;
-    if(t<lead){ fi=Math.floor(t/90); }
-    else if(mover_is_man(mover_kind) && travel){
-      // a long one ends on the dive, which is what the last stride of a
-      // sixty-yard touchdown run looks like and what the sheet has frames for
-      var diving = (fl&TD) && Math.abs(yards)>=20 && hold>0.84;
-      // and one that is stopped ends being stopped
-      var stopped = !(fl&TD) && hold>0.93;
-      anim = diving ? 'dive' : stopped ? 'hit' : 'run';
-      fi = diving ? Math.floor((hold-0.84)*5*nframes('dive'))
-         : stopped ? Math.floor((hold-0.93)*14*nframes('hit'))
-         : Math.floor((t-lead)/55)%(nframes('run')||1);
-      act.style.left=(x0+dirn*(reach-x0)*ease)+'px';
-    }
-    else { fi=Math.floor(t/95); }
-    if(travel) $('track').style.transform='translateX('+(-scroll*ease)+'px)';
-    // A thrower does not move, but the camera does. He is anchored to the snap
-    // in FIELD space, so he falls to the back of the shot as the turf goes by
-    // -- left in screen space he would moonwalk downfield instead. Clamped at
-    // the edge rather than allowed to leave: a 48-yard pass panned him clean
-    // out of frame and the panel became an empty field with a ball in it.
-    if(byBall) act.style.left=(leftward
-        ? Math.min(ORIGIN+cam.clientWidth-40, x0-scroll*ease)
-        : Math.max(ORIGIN+40, x0-scroll*ease))+'px';
-    draw(act,anim,fi,side.c1,side.c2,leftward,false);
 
-    // everyone else converging. They run until the last fifth, then do the
-    // thing they are there to do -- catch it, miss it, or make the tackle.
-    for(var mi=0;mi<movers.length;mi++){
-      var m=movers[mi], late=hold>0.80;
-      var ma = late ? m.late : m.early;
-      var mf = late ? Math.floor((hold-0.80)*7*nframes(ma))
-                    : Math.floor((t-lead)/55)%(nframes(m.early)||1);
-      place(m.el, m.x0+(m.x1-m.x0)*ease, m.d0+(m.d1-m.d0)*ease,
-            ma, mf, m.kit[0], m.kit[1], m.flip, false);
+    if(isPass){
+      var r=routeAt(hold);
+      // the man who threw it stands where he threw it from
+      // six yards back, not three: at this scale three put him inside his own
+      // line and he was never visible as the man who threw it
+      var th={x:losX-dirn*6.4*PXYD, d:0.50,
+              a:hold<0.20?'throw':'idle',
+              f:hold<0.20?Math.floor(hold*dur/70):0};
+      var me = (kind==='rec') ? r : th, him = (kind==='rec') ? th : r;
+      act.style.left=me.x+'px'; act.style.bottom=across(me.d)+'px';
+      act.style.zIndex=String(24+Math.round((1-me.d)*20));
+      draw(act, me.a, me.f, side.c1, side.c2, leftward, false);
+      place(otherEl, him.x, him.d, him.a, him.f, kits[0][0], kits[0][1],
+            leftward, false);
+      // and the man on the receiver, who runs with him and makes the stop
+      var cd=rdep+(rdep<0.5?0.075:-0.075);
+      var cx=r.x-dirn*(hold<AIR?2.2*PXYD:1.0*PXYD);
+      var ca=(hold>0.9&&!(fl&TD))?'tackle':'run';
+      place(coverEl, cx, cd, ca, Math.floor(hold*dur/55)%(nframes(ca)||1),
+            kits[1][0], kits[1][1], !leftward, false);
+      $('track').style.transform='translateX('+(-scroll*ease)+'px)';
+      if(pill){
+        // out of his hand and into the receiver's, and nowhere after that
+        var bk=Math.max(0,Math.min(1,(hold-0.06)/(AIR*0.92-0.06)));
+        pill.style.display = hold<AIR ? 'block':'none';
+        pill.style.left=(th.x+(catchX-th.x)*bk)+'px';
+        pill.style.bottom=(across(0.50+(rdep-0.50)*bk)+Math.sin(bk*Math.PI)*50)+'px';
+      }
+    } else {
+      if(mover_is_man(mover_kind) && travel){
+        var diving=(fl&TD)&&Math.abs(yards)>=20&&hold>0.84;
+        var stopped=!(fl&TD)&&hold>0.93;
+        anim=diving?'dive':stopped?'hit':'run';
+        fi = diving ? Math.floor((hold-0.84)*5*nframes('dive'))
+           : stopped ? Math.floor((hold-0.93)*14*nframes('hit'))
+           : Math.floor(t/55)%(nframes('run')||1);
+        act.style.left=(x0+(reach-x0)*ease)+'px';
+      } else { fi=Math.floor(t/95); }
+      if(travel) $('track').style.transform='translateX('+(-scroll*ease)+'px)';
+      draw(act,anim,fi,side.c1,side.c2,leftward,false);
+      if(pill.style.display==='block'){
+        var k=Math.min(1,t/span);
+        pill.style.left=(x0+(reach-x0)*k)+'px';
+        pill.style.bottom=(across(depth)+Math.sin(k*Math.PI)*54)+'px';
+      }
+      for(var mi=0;mi<movers.length;mi++){
+        var m=movers[mi], late=hold>0.80;
+        var ma=late?m.late:m.early;
+        var mf=late?Math.floor((hold-0.80)*7*nframes(ma))
+                   :Math.floor(t/55)%(nframes(m.early)||1);
+        place(m.el, m.x0+(m.x1-m.x0)*ease, m.d0+(m.d1-m.d0)*ease,
+              ma, mf, m.kit[0], m.kit[1], m.flip, false);
+      }
     }
+
     // the line fires out of its stance once the ball is gone
     if(SCRIM[kind]) for(var li=0;li<9;li++){
       var lf=FORMATION[li], lk=kits[lf[2]];
@@ -748,16 +810,9 @@ function stage(e){
            (lf[2]===SIDE_THEM) !== leftward, false);
     }
 
-    if(pill.style.display==='block'){
-      var k=Math.min(1,t/span);
-      var bd = byBall && travel ? ((depth<0.5)?0.74:0.26) : depth;
-      pill.style.left=(x0+(reach-x0)*k)+'px';
-      pill.style.bottom=(across(depth+(bd-depth)*k)+Math.sin(k*Math.PI)*54)+'px';
-    }
     if(t < span+((fl&TD)?900:300)) requestAnimationFrame(frame);
     else if(tok===stageTok){
       draw(act,(fl&TD)?'celebrate':'idle',0,side.c1,side.c2,leftward,false);
-      // the official, who is nobody's player and keeps his stripes
       if(fl&TD) place(CAST[refSlot], END-dirn*30, depth+0.26, 'ref', 2, '', '', false, true);
     }
   })(t0);
