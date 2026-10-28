@@ -157,6 +157,17 @@ h1{font-size:34px;line-height:1.08;margin:0 0 8px;font-weight:900;letter-spacing
     repeating-linear-gradient(90deg,#17431f 0,#17431f 40px,#113619 40px,#113619 80px)}
 .track{position:absolute;inset:0;will-change:transform;transform-style:preserve-3d}
 .marks{position:absolute;inset:0}
+/* The home crest painted on the turf, the way a pro field carries one. It
+   lives in the track, so it scrolls with the ground like paint rather than
+   sliding with the camera, and it sits under everybody because it is under
+   everybody. */
+/* Cropped to a circle and ringed, the way a midfield mark is painted. The
+   crests are photographs with opaque backgrounds, so drawn square they put a
+   grey box on the grass rather than a logo on it. */
+.midlogo{position:absolute;top:50%;width:132px;height:132px;object-fit:cover;
+  border-radius:50%;transform:translate(-50%,-50%);opacity:.52;
+  pointer-events:none;box-shadow:0 0 0 3px rgba(255,255,255,.26);
+  filter:saturate(1.05) contrast(1.02)}
 .hash{position:absolute;top:4%;bottom:10%;width:2px;background:rgba(255,255,255,.15)}
 .hash.b{top:0;bottom:2%;background:rgba(255,255,255,.34)}
 
@@ -490,7 +501,7 @@ function buildTrack(){
   keep.forEach(function(el){ tr.appendChild(el); });
   tr.style.transform='translateX(0)';
   buildCast();
-  marks(1,0,0);
+  marks(1,0);
 }
 
 // Where a football team stands. Each slot is [yards from the snap, how far
@@ -547,8 +558,8 @@ function across(f){ return 14 + f*(DEEP-70); }
 // The yard markers, rebuilt around wherever this drive has got to. They are
 // drive yards, not a yard line: a side that has gained fifty-eight since it
 // last scored snaps from the 58.
-var MARKS=null;
-function marks(way, spot, loX){
+var MARKS=null, HOMECREST='';
+function marks(way, spot){
   var tr=$('track'); if(!tr) return;
   if(!MARKS){ MARKS=document.createElement('div'); MARKS.className='marks'; }
   var from=Math.max(0, Math.floor((spot-40)/5)*5), to=spot+120;
@@ -557,6 +568,9 @@ function marks(way, spot, loX){
     var big=(y%10===0), x=LANE+way*y*PXYD;
     html+='<i class="hash'+(big?' b':'')+'" style="left:'+x+'px"></i>';
     if(big) html+='<span class="ydn" style="left:'+x+'px">'+y+'</span>';
+    // the home crest at every fifty, so one is always somewhere in shot
+    if(HOMECREST && y%50===0)
+      html+='<img class="midlogo" src="'+HOMECREST+'" alt="" style="left:'+x+'px">';
   }
   // "DRIVE 101" and not "101", because a bare number on a football field is
   // read as a yard line and this is not one -- there are no yard lines here.
@@ -996,6 +1010,9 @@ function openGame(i){
     r.querySelector('img').src = crest(s.logo);
     r.querySelector('.nm').textContent = s.name;
   });
+  // Sleeper matchups carry no home side, so the one the matchup names first --
+  // the one the scoreboard puts on top -- wears the field.
+  HOMECREST = crest(GAME.t[0].logo);
   $('vnote').textContent = 'Tap any play to see the real one behind it. ' +
     'Gold marks the lead changing hands. The field shows the play and the ' +
     'ground it covered — not where on the pitch it happened, which the ' +
