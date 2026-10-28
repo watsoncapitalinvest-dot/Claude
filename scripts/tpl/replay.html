@@ -489,6 +489,7 @@ var FORMATION=[
   [-4.6,0.64,SIDE_US,'idle'],      [11.0,0.50,SIDE_THEM,'backpedal']
 ];
 var CAST=[];
+function mover_is_man(k){ return k==='man'; }
 
 // Straight into the track, not into a wrapper inside it. A plain div between
 // them and the track flattened the 3D context and the whole cast painted
@@ -605,7 +606,7 @@ function stage(e){
 
   var tok=++stageTok, cam=$('camera'), act=$('actor');
   act.style.display=''; $('fname').textContent=p[0];
-  var mover=pose[1], byBall=(mover==='ball');
+  var mover_kind=pose[1], byBall=(mover_kind==='ball');
   var st=START[kind]||[0,0.5], x0=LANE+st[0]*PXYD, depth=st[1];
   act.style.bottom=across(depth)+'px';
   act.style.zIndex=String(24+Math.round((1-depth)*20));
@@ -638,18 +639,50 @@ function stage(e){
   act.style.left=x0+'px';
   $('track').style.transform='translateX(0)';
 
-  // The man on the floor: the one being sacked, or a defender beaten on a run.
-  if(kind==='sack'){
-    place(CAST[n++], x0-1.6*PXYD, depth, 'sack', 1, kits[1][0], kits[1][1], true, false);
-  } else if(mover==='man' && Math.abs(yards)>=12){
-    place(CAST[n++], x0+dirn*travel*0.36, depth-0.06, 'dive', 2,
-          kits[1][0], kits[1][1], true, false);
+  // ---- the men who move ----
+  // Everything below is the answer to "there is no defensive play on the ball
+  // or the player". Nothing was contested: a pass landed on empty grass and a
+  // run simply stopped. None of it says WHO did the defending, because the
+  // replay has no idea -- but a completed pass had somebody catch it, and a
+  // run that gained four yards and was not a touchdown was stopped by
+  // somebody. Those are the shapes being drawn.
+  var movers=[];                 // {el, x0,d0, x1,d1, early, late, flip, kit}
+  function mover(x0,d0,x1,d1,early,late,kitIdx,flip){
+    var el=CAST[n++]; if(!el) return null;
+    var m={el:el, x0:x0, d0:d0, x1:x1, d1:d1, early:early, late:late,
+           kit:kits[kitIdx], flip:flip!==false};
+    movers.push(m); return m;
   }
+  var END=x0+dirn*travel;
+
+  if(kind==='sack'){
+    // the man being sacked, going down where the tackler arrives
+    place(CAST[n++], x0-1.6*PXYD, depth, 'sack', 1, kits[1][0], kits[1][1], true, false);
+  } else if(byBall && travel){
+    // A completed pass has a catcher. He is already downfield, turns for the
+    // ball, and has a man on him -- which is the whole of what was missing.
+    var rdep = (depth<0.5) ? 0.74 : 0.26;
+    mover(END-6*PXYD, rdep, END, rdep, 'run', 'catch', 0, false);
+    mover(END-3*PXYD, rdep+0.09, END+1.4*PXYD, rdep+0.05, 'backpedal', 'dive', 1, true);
+  } else if(mover_is_man(mover_kind)){
+    // One man beaten on the way, and one who makes the stop. The stop lands
+    // exactly where the gain ends, because that is where the gain ended.
+    if(Math.abs(yards)>=10)
+      mover(x0+dirn*travel*0.55, depth+0.10, x0+dirn*travel*0.40, depth+0.02,
+            'run', 'dive', 1, true);
+    if(!(fl&TD))
+      mover(END+5*PXYD, depth-0.13, END+0.6*PXYD, depth-0.02,
+            'run', 'tackle', 1, true);
+    // and somebody chasing from behind, so it is not a man alone on a field
+    mover(x0+dirn*2*PXYD, depth+0.16, END-1.4*PXYD, depth+0.08,
+          'run', 'run', 1, false);
+  }
+
   // The end zone is drawn only where the tape says the play ended in one.
   if(fl&TD){
     var ez=$('endz');
     ez.style.setProperty('--ezc', side.c1);
-    ez.style.left=(x0+dirn*travel)+'px';
+    ez.style.left=END+'px';
     ez.className='endz on';
   }
   var refSlot=n;
@@ -661,13 +694,16 @@ function stage(e){
     var ease=1-Math.pow(1-hold,2);
     var anim=pose[0], fi;
     if(t<lead){ fi=Math.floor(t/90); }
-    else if(mover==='man' && travel){
+    else if(mover_is_man(mover_kind) && travel){
       // a long one ends on the dive, which is what the last stride of a
       // sixty-yard touchdown run looks like and what the sheet has frames for
       var diving = (fl&TD) && Math.abs(yards)>=20 && hold>0.84;
-      anim = diving ? 'dive' : 'run';
+      // and one that is stopped ends being stopped
+      var stopped = !(fl&TD) && hold>0.93;
+      anim = diving ? 'dive' : stopped ? 'hit' : 'run';
       fi = diving ? Math.floor((hold-0.84)*5*nframes('dive'))
-                  : Math.floor((t-lead)/55)%(nframes('run')||1);
+         : stopped ? Math.floor((hold-0.93)*14*nframes('hit'))
+         : Math.floor((t-lead)/55)%(nframes('run')||1);
       act.style.left=(x0+dirn*(reach-x0)*ease)+'px';
     }
     else { fi=Math.floor(t/95); }
@@ -680,17 +716,34 @@ function stage(e){
     if(byBall) act.style.left=Math.max(ORIGIN+40, x0-dirn*scroll*ease)+'px';
     drawActor(anim,fi,side.c1,side.c2);
 
+    // everyone else converging. They run until the last fifth, then do the
+    // thing they are there to do -- catch it, miss it, or make the tackle.
+    for(var mi=0;mi<movers.length;mi++){
+      var m=movers[mi], late=hold>0.80;
+      var ma = late ? m.late : m.early;
+      var mf = late ? Math.floor((hold-0.80)*7*nframes(ma))
+                    : Math.floor((t-lead)/55)%(nframes(m.early)||1);
+      place(m.el, m.x0+(m.x1-m.x0)*ease, m.d0+(m.d1-m.d0)*ease,
+            ma, mf, m.kit[0], m.kit[1], m.flip, false);
+    }
+    // the line fires out of its stance once the ball is gone
+    if(SCRIM[kind]) for(var li=0;li<9;li++){
+      var lf=FORMATION[li], lk=kits[lf[2]];
+      draw(CAST[li], 'lineman', hold>0.06?2:0, lk[0], lk[1],
+           lf[2]===SIDE_THEM, false);
+    }
+
     if(pill.style.display==='block'){
       var k=Math.min(1,t/span);
+      var bd = byBall && travel ? ((depth<0.5)?0.74:0.26) : depth;
       pill.style.left=(x0+(reach-x0)*k)+'px';
-      pill.style.bottom=(across(depth)+Math.sin(k*Math.PI)*54)+'px';
+      pill.style.bottom=(across(depth+(bd-depth)*k)+Math.sin(k*Math.PI)*54)+'px';
     }
-    if(t < span+((fl&TD)?900:140)) requestAnimationFrame(frame);
+    if(t < span+((fl&TD)?900:300)) requestAnimationFrame(frame);
     else if(tok===stageTok){
       drawActor((fl&TD)?'celebrate':'idle',0,side.c1,side.c2);
       // the official, who is nobody's player and keeps his stripes
-      if(fl&TD) place(CAST[refSlot], x0+dirn*travel-30, depth+0.26,
-                      'ref', 2, '', '', false, true);
+      if(fl&TD) place(CAST[refSlot], END-30, depth+0.26, 'ref', 2, '', '', false, true);
     }
   })(t0);
 
