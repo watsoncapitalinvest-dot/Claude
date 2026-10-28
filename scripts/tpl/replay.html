@@ -120,8 +120,8 @@ h1{font-size:34px;line-height:1.08;margin:0 0 8px;font-weight:900;letter-spacing
   font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46%}
 .fbar .sp{flex:1}
 .fbar .yd{color:var(--gold)}
-.camera{position:relative;height:196px;overflow:hidden;
-  perspective:560px;perspective-origin:50% 6%;
+.camera{position:relative;height:250px;overflow:hidden;
+  perspective:640px;perspective-origin:50% 2%;
   /* A tilted plane is foreshortened, so its top edge projects well below the
      top of the element and leaves a band. Filling that band with distant turf
      rather than black reads as the field carrying on to the far side; black
@@ -142,16 +142,24 @@ h1{font-size:34px;line-height:1.08;margin:0 0 8px;font-weight:900;letter-spacing
    It runs wider than the camera because the far edge of a tilted plane is
    narrower than the near one, and without the overhang the top corners show
    through to the background. */
-.ground{position:absolute;left:-16%;right:-16%;top:34px;bottom:0;
-  transform-style:preserve-3d;transform:rotateX(38deg);transform-origin:50% 100%}
+/* 56 degrees, not 38. A football field is looked DOWN at -- the eleven men on
+   each side spread across its width, and that width is what tells you it is a
+   formation and not a queue. At 38 the plane was nearly side-on, there was no
+   width to stand anybody in, and everyone ended up on one line at the snap. */
+.ground{position:absolute;left:-26%;right:-26%;top:-150px;bottom:0;
+  /* Tall in its OWN space because it is laid back: 400px of plane at 56
+     degrees projects to about 220, which is what it takes to fill the camera
+     under the crowd. At 300 it covered the bottom third and left a band. */
+  transform-style:preserve-3d;transform:rotateX(56deg);transform-origin:50% 100%}
 .turf{position:absolute;inset:0;
   background:
     linear-gradient(180deg,rgba(0,0,0,.34) 0%,rgba(0,0,0,0) 30%,rgba(255,255,255,.05) 100%),
     repeating-linear-gradient(90deg,#17431f 0,#17431f 40px,#113619 40px,#113619 80px)}
 .track{position:absolute;inset:0;will-change:transform;transform-style:preserve-3d}
-.hash{position:absolute;top:6%;bottom:14%;width:2px;background:rgba(255,255,255,.17)}
-.hash.b{top:0;bottom:6%;background:rgba(255,255,255,.36)}
-.ydn{position:absolute;bottom:4px;transform:translateX(-50%);font-family:var(--sans);
+.hash{position:absolute;top:4%;bottom:10%;width:2px;background:rgba(255,255,255,.15)}
+.hash.b{top:0;bottom:2%;background:rgba(255,255,255,.34)}
+
+.ydn{position:absolute;bottom:2px;transform:translateX(-50%);font-family:var(--sans);
   font-size:13px;font-weight:900;color:rgba(255,255,255,.45);letter-spacing:.06em}
 .snap{position:absolute;top:0;bottom:0;width:2px;background:rgba(216,180,90,.9);
   box-shadow:0 0 9px rgba(216,180,90,.75)}
@@ -166,7 +174,7 @@ h1{font-size:34px;line-height:1.08;margin:0 0 8px;font-weight:900;letter-spacing
   border-left:3px solid rgba(255,255,255,.9);opacity:.92}
 .endz.on{display:block}
 .actor{position:absolute;bottom:14px;z-index:3;pointer-events:none;
-  transform:translateX(-50%) rotateX(-38deg);transform-origin:50% 100%}
+  transform:translateX(-50%) rotateX(-56deg);transform-origin:50% 100%}
 .actor canvas{display:block;filter:drop-shadow(0 3px 4px rgba(0,0,0,.65))}
 /* Everybody on the field who is not the man the tape names. They are scenery:
    no tag, no number, no face turned to the camera, because the replay does not
@@ -177,7 +185,7 @@ h1{font-size:34px;line-height:1.08;margin:0 0 8px;font-weight:900;letter-spacing
 .pill{position:absolute;bottom:26px;width:11px;height:7px;border-radius:50%/50%;
   background:#7a4a24;box-shadow:inset 0 0 0 1px rgba(255,255,255,.75);z-index:4;
   pointer-events:none;display:none;
-  transform:translateX(-50%) rotateX(-38deg);transform-origin:50% 100%}
+  transform:translateX(-50%) rotateX(-56deg);transform-origin:50% 100%}
 /* out of the action, not across it: centred, the chip printed behind whoever
    was carrying the ball at the time */
 .pop{position:absolute;right:12px;top:10px;font-family:var(--sans);
@@ -300,9 +308,6 @@ h1{font-size:34px;line-height:1.08;margin:0 0 8px;font-weight:900;letter-spacing
              the camera is following. -->
         <div class="track" id="track">
           <i class="endz" id="endz"></i>
-          <div class="actor extra" id="lineA"><canvas></canvas></div>
-          <div class="actor extra" id="lineB"><canvas></canvas></div>
-          <div class="actor extra" id="foe"><canvas></canvas></div>
         </div>
         <div class="actor" id="actor"><canvas id="acv"></canvas></div>
         <i class="pill" id="pill"></i>
@@ -373,7 +378,7 @@ function load(week){
    from the SCFL Network broadcast, which invents its drives -- here every
    figure is doing something that really happened, for the yardage on the tape.
 */
-var SPR={ok:false,img:null,meta:null,tints:{},RES:2,K:{w:96,h:60,scale:.40}};
+var SPR={ok:false,img:null,meta:null,tints:{},RES:2,K:{w:40,h:28,scale:.158}};
 (function(){
   var img=new Image();
   Promise.all([
@@ -427,6 +432,7 @@ var POSE={rush:['run','man'], conv:['run','man'], dtd:['run','man'],
 var PXYD = 12;              // pixels a yard; reset to the camera's own width
 var ORIGIN = 0;             // ground-space x of the camera's left edge
 var LANE = 0;               // ground-space x of the snap
+var DEEP = 0;               // the plane's own height: the field's width
 var stageTok = 0;
 
 function buildTrack(){
@@ -436,9 +442,11 @@ function buildTrack(){
   // edge of the shot. Everything positioned on the plane has to add that back.
   ORIGIN = (gr.clientWidth - cam.clientWidth)/2;
   LANE = ORIGIN + 92;
-  // NB: this rewrites the track's markers only. The three extras are children
-  // of the track too, so they are detached and put back rather than destroyed.
-  var keep=['endz','lineA','lineB','foe'].map(function(id){return $(id);})
+  DEEP = gr.clientHeight;
+  // NB: this rewrites the track's markers only. The cast and the end zone are
+  // children of the track too, so they are detached and put back rather than
+  // destroyed.
+  var keep=['endz'].map(function(id){return $(id);})
             .filter(function(el){return el;});
   var html='', yds=170;
   for(var y=0;y<=yds;y+=5){
@@ -450,8 +458,58 @@ function buildTrack(){
   tr.innerHTML=html;
   keep.forEach(function(el){ tr.appendChild(el); });
   tr.style.transform='translateX(0)';
+  buildCast();
 }
 
+// Where a football team stands. Each slot is [yards from the snap, how far
+// across the field from the near sideline, whose kit, which pose].
+//
+// This is the SHAPE of a play, not a claim about this one. The replay knows
+// who scored, with what, for how many yards and when -- it knows nothing about
+// personnel, formation or who lined up where, and the men below are drawn
+// accordingly: no names, no numbers, no faces to the camera. What they are for
+// is the thing John put his finger on -- without a field's WIDTH with people
+// standing in it, every play read as a pile of sprites on one line rather than
+// as a game of football.
+var SIDE_US=0, SIDE_THEM=1;
+var FORMATION=[
+  // the line of scrimmage: five against four, with the ball between them
+  // a clear gap between them is the one cue that says "line of scrimmage"
+  // rather than "heap": at three yards the two lines read as one mass of
+  // alternating colour, so they stand four and a half apart.
+  [-1.0,0.33,SIDE_US,'lineman'], [-1.0,0.42,SIDE_US,'lineman'],
+  [-1.0,0.51,SIDE_US,'lineman'], [-1.0,0.60,SIDE_US,'lineman'],
+  [-1.0,0.69,SIDE_US,'lineman'],
+  [ 3.4,0.37,SIDE_THEM,'lineman'], [ 3.4,0.47,SIDE_THEM,'lineman'],
+  [ 3.4,0.57,SIDE_THEM,'lineman'], [ 3.4,0.67,SIDE_THEM,'lineman'],
+  // split wide, and the men on them
+  [-0.2,0.04,SIDE_US,'idle'],      [-0.2,0.96,SIDE_US,'idle'],
+  [ 5.5,0.05,SIDE_THEM,'backpedal'], [ 5.5,0.95,SIDE_THEM,'backpedal'],
+  // a back, and somebody minding the middle
+  [-4.6,0.64,SIDE_US,'idle'],      [11.0,0.50,SIDE_THEM,'backpedal']
+];
+var CAST=[];
+
+// Straight into the track, not into a wrapper inside it. A plain div between
+// them and the track flattened the 3D context and the whole cast painted
+// behind the turf: fifteen men, every canvas full of pixels, none of them on
+// screen. The ball carrier was fine throughout, because he hangs off the
+// ground itself.
+function buildCast(){
+  var tr=$('track'); if(!tr) return;
+  CAST.forEach(function(el){ if(el.parentNode) el.parentNode.removeChild(el); });
+  CAST=[];
+  for(var i=0;i<FORMATION.length+2;i++){   // +2: the man on the floor, and the official
+    var d=document.createElement('div');
+    d.className='actor extra';
+    d.appendChild(document.createElement('canvas'));
+    tr.appendChild(d);
+    CAST.push(d);
+  }
+}
+
+// depth across the field -> how far up the plane, in the plane's own pixels
+function across(f){ return 14 + f*(DEEP-70); }
 function nframes(anim){
   var f=SPR.ok && SPR.meta[anim] && SPR.meta[anim].frames;
   return f ? f.length : 0;
@@ -485,18 +543,21 @@ function draw(el,anim,fi,c1,c2,flip,plain){
 }
 function drawActor(anim,fi,c1,c2){ draw($('actor'),anim,fi,c1,c2,false,false); }
 
-// An extra is anybody the tape does not name: a lineman, a beaten defender,
-// the man being sacked. They are placed and posed, never tagged, and never
-// identified -- the replay knows the scorer and nothing else about who was on
-// the field, so the picture says nothing else either.
-function extra(id,x,anim,fi,c1,c2,flip,plain){
-  var el=$(id);
+// An extra is anybody the tape does not name: a lineman, a man split wide, a
+// beaten defender, the one being sacked. They are placed and posed, never
+// tagged and never identified -- the replay knows the scorer and nothing else
+// about who was on the field, so the picture says nothing else either.
+function place(el,x,depth,anim,fi,c1,c2,flip,plain){
+  if(!el) return;
   el.className='actor extra on';
   el.style.left=x+'px';
+  el.style.bottom=across(depth)+'px';
+  // further up the plane is further away, so he stands behind the men in front
+  el.style.zIndex=String(2+Math.round((1-depth)*20));
   draw(el,anim,fi,c1,c2,flip,plain);
 }
 function hideExtras(){
-  ['lineA','lineB','foe'].forEach(function(id){ $(id).className='actor extra'; });
+  CAST.forEach(function(el){ el.className='actor extra'; });
 }
 
 function clearField(msg){
@@ -509,9 +570,16 @@ function clearField(msg){
   $('fnote').textContent = msg||'';
 }
 
-// Which plays happen at a line of scrimmage, and so get a pair of linemen dug
-// in at the snap. A kick does not, and neither does a defensive return.
+// Which plays happen at a line of scrimmage, and so get a team lined up on
+// either side of it. A kick does not, and neither does a defensive return.
 var SCRIM={rush:1,rec:1,pass:1,sack:1,conv:1,fum:1,int:1};
+// Where the man the tape names starts: yards from the snap, and how far across
+// the field. A carrier takes the handoff behind the line, a receiver is already
+// downfield, a man making a sack comes off the defensive line.
+var START={rush:[-3.0,0.48], conv:[-3.0,0.48], pass:[-3.6,0.50],
+           rec:[6.0,0.18], sack:[2.2,0.50], dtd:[3.0,0.36],
+           dint:[4.0,0.36], drec:[3.0,0.58], fum:[0.6,0.50],
+           int:[-3.6,0.50], fg:[-5.0,0.50], xp:[-5.0,0.50]};
 
 function stage(e){
   if(!GAME) return;
@@ -538,43 +606,53 @@ function stage(e){
   var tok=++stageTok, cam=$('camera'), act=$('actor');
   act.style.display=''; $('fname').textContent=p[0];
   var mover=pose[1], byBall=(mover==='ball');
-  // The ground is covered against the real markers. Whatever will not fit on
-  // screen is made up by scrolling the turf, so sixty yards takes twice as
-  // long to cross as thirty and looks it.
+  var st=START[kind]||[0,0.5], x0=LANE+st[0]*PXYD, depth=st[1];
+  act.style.bottom=across(depth)+'px';
+  act.style.zIndex=String(24+Math.round((1-depth)*20));
+
+  // ---- the two teams ----
+  // The whole point of the width: eleven shapes spread across a field read as
+  // a game, and four on one line read as a pile. Defence is drawn in the kit
+  // of whichever side is not the one that scored.
+  var kits=[[side.c1,side.c2],[foe.c1,foe.c2]];
+  // a sack is scored BY the defence, so the man the tape names is the tackler
+  // and the shirts on the line are the other way round
+  if(kind==='sack'||kind==='dint'||kind==='drec'||kind==='dtd') kits.reverse();
+  var n=0;
+  if(SCRIM[kind]){
+    for(var i=0;i<FORMATION.length;i++){
+      var f=FORMATION[i], k=kits[f[2]];
+      place(CAST[n++], LANE+f[0]*PXYD, f[1], f[3], i%3, k[0], k[1],
+            f[2]===SIDE_THEM, false);
+    }
+  }
+
   var travel=Math.abs(yards)*PXYD, dirn=(yards<0?-1:1);
-  var reach=Math.min(ORIGIN+cam.clientWidth*0.72, LANE+travel);
-  var scroll=Math.max(0, LANE+travel-reach);
+  var reach=Math.min(ORIGIN+cam.clientWidth*0.66, x0+travel);
+  var scroll=Math.max(0, x0+travel-reach);
   var dur=Math.min(2200, 420+Math.abs(yards)*24);
   var lead=(kind==='rec')?240:(byBall?260:0);   // the catch, and the release
   var span=lead+dur, t0=performance.now();
   var pill=$('pill');
   pill.style.display = (byBall||kind==='xp') ? 'block' : 'none';
-  act.style.left=LANE+'px';
+  act.style.left=x0+'px';
   $('track').style.transform='translateX(0)';
 
-  // ---- everybody else on the field ----
-  if(SCRIM[kind]){
-    extra('lineA', LANE+13, 'lineman', 0, side.c1, side.c2, false, false);
-    extra('lineB', LANE+30, 'lineman', 1, foe.c1, foe.c2, true, false);
-  }
-  // A sack is scored by the DEFENCE, so the man the tape names is the tackler
-  // and the man on the floor plays for the other side. Posing the scorer as
-  // the one being sacked had the Patriots' defence sacking itself.
-  var beaten = 0;
+  // The man on the floor: the one being sacked, or a defender beaten on a run.
   if(kind==='sack'){
-    extra('foe', LANE+46, 'sack', 1, foe.c1, foe.c2, true, false);
+    place(CAST[n++], x0-1.6*PXYD, depth, 'sack', 1, kits[1][0], kits[1][1], true, false);
   } else if(mover==='man' && Math.abs(yards)>=12){
-    // one beaten defender, left behind a third of the way through the run
-    beaten = LANE + dirn*travel*0.34;
-    extra('foe', beaten, 'dive', 2, foe.c1, foe.c2, true, false);
+    place(CAST[n++], x0+dirn*travel*0.36, depth-0.06, 'dive', 2,
+          kits[1][0], kits[1][1], true, false);
   }
   // The end zone is drawn only where the tape says the play ended in one.
   if(fl&TD){
     var ez=$('endz');
     ez.style.setProperty('--ezc', side.c1);
-    ez.style.left=(LANE+dirn*travel)+'px';
+    ez.style.left=(x0+dirn*travel)+'px';
     ez.className='endz on';
   }
+  var refSlot=n;
 
   (function frame(now){
     if(tok!==stageTok) return;
@@ -590,7 +668,7 @@ function stage(e){
       anim = diving ? 'dive' : 'run';
       fi = diving ? Math.floor((hold-0.84)*5*nframes('dive'))
                   : Math.floor((t-lead)/55)%(nframes('run')||1);
-      act.style.left=(LANE+dirn*(reach-LANE)*ease)+'px';
+      act.style.left=(x0+dirn*(reach-x0)*ease)+'px';
     }
     else { fi=Math.floor(t/95); }
     if(travel) $('track').style.transform='translateX('+(-dirn*scroll*ease)+'px)';
@@ -599,19 +677,20 @@ function stage(e){
     // -- left in screen space he would moonwalk downfield instead. Clamped at
     // the edge rather than allowed to leave: a 48-yard pass panned him clean
     // out of frame and the panel became an empty field with a ball in it.
-    if(byBall) act.style.left=Math.max(ORIGIN+40, LANE-dirn*scroll*ease)+'px';
+    if(byBall) act.style.left=Math.max(ORIGIN+40, x0-dirn*scroll*ease)+'px';
     drawActor(anim,fi,side.c1,side.c2);
 
     if(pill.style.display==='block'){
       var k=Math.min(1,t/span);
-      pill.style.left=(LANE+(reach-LANE)*k)+'px';
-      pill.style.bottom=(26+Math.sin(k*Math.PI)*62)+'px';
+      pill.style.left=(x0+(reach-x0)*k)+'px';
+      pill.style.bottom=(across(depth)+Math.sin(k*Math.PI)*54)+'px';
     }
     if(t < span+((fl&TD)?900:140)) requestAnimationFrame(frame);
     else if(tok===stageTok){
       drawActor((fl&TD)?'celebrate':'idle',0,side.c1,side.c2);
       // the official, who is nobody's player and keeps his stripes
-      if(fl&TD) extra('foe', LANE+dirn*travel-72, 'ref', 2, '', '', false, true);
+      if(fl&TD) place(CAST[refSlot], x0+dirn*travel-30, depth+0.26,
+                      'ref', 2, '', '', false, true);
     }
   })(t0);
 
