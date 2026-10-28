@@ -248,11 +248,19 @@ thrown to empty grass with a defender jogging after it, which reads as
 incomplete while the ticker says it was completed for 48. 1,085 plays a week
 looked that way.
 
-And — John's rule — **every play by a named player is real**. A kickoff, a
-punt and every connective play are carried by eleven men in kit wearing their
-position and nothing else, because a run has to be run by a figure but no
-figure is a named man unless the play he is making is on the tape. That is
-checked across all eight games, every play, not eyeballed.
+And — John's rule — **every play by a named player is real**, which cuts
+exactly one way: *"All starters should be on the field if possible unless
+unnamed players need to be involved to make a play or fill non player roles
+like linemen."*
+
+So the starters are out there and named on every play, and the men without a
+name are only the ones who have to be nameless — **whoever the ball passes
+through on a play the tape does not have**. On a connective run that is the
+quarterback and the back; on a connective pass the quarterback and the catcher;
+on a kickoff or a punt the kicker. Everybody else is the starter he is,
+blocking or running his route. That averages **4.8 of the 6 skill men named**,
+and it is checked slot by slot across all eight games, every play — named where
+he must be, blank where he must be, not eyeballed.
 
 Two men can also shorten to the same label: A.J. Brown and Amon-Ra St. Brown
 both came out as `A·Brown`, side by side in the same huddle. `shortName` keeps

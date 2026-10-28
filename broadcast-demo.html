@@ -840,8 +840,21 @@ function lineUp(team,p){
     if(fd>2&&fd<98){fst.style.display='block';fst.style.left=fd+'%';} else fst.style.display='none';
   } else fst.style.display='none';
   const isFG=p.kind==='fg'||p.kind==='xp'||p.kind==='ko'||p.kind==='punt', isDST=p.kind==='dst';
-  // every man on a connective play is anonymous -- see setChip
-  const nm=v=>p.fab?'':v;
+  // Starters on the field. The only men without a name are the ones who
+  // have to be nameless: whoever the ball passes through on a play that is
+  // not on the tape, and the receiver on a passing-yards play, because the
+  // man who really caught that one is on somebody else's roster. Everybody
+  // else is the starter he is, blocking or running his route. John: "All
+  // starters should be on the field if possible unless unnamed players need
+  // to be involved to make a play or fill non player roles like linemen."
+  const anon={};
+  if(p.kind==='gen') anon[genTarget(p)]=1;            // never his catch
+  if(p.fab&&!isDST){
+    anon.QB=1;                                        // the ball comes from him
+    if(p.kind!=='ko'&&p.kind!=='punt')
+      anon[(p.kind==='run')?'RB':genTarget(p)]=1;     // and goes to him
+  }
+  const nm=(sl,v)=>anon[sl]?'':v;
   const olY=[22,36,50,64,78];   // wider: five men in fourteen points of width was a knot
   // pose cleanup from last snap
   Object.values(nodes.skill).forEach(c=>{c.style.display='';c.classList.remove('throwing','reach','dive','hit','celeb','kicking','spinning','sacked');});
@@ -874,26 +887,22 @@ function lineUp(team,p){
   });
   const act=p.actor;
   if(isFG){
-    setChip('QB','K',nm(p.actor),team,true); put(nodes.skill.QB,los+off*6,50);
-    setChip('RB','QB',nm(per.qb),team,false); put(nodes.skill.RB,los+off*3.5,57);
-    setChip('WR1','WR',nm(per.wrs[0]),team,false); put(nodes.skill.WR1,los+off*1.2,12);
-    setChip('WR2','WR',nm(per.wrs[1]),team,false); put(nodes.skill.WR2,los+off*1.2,88);
-    setChip('WR3','WR',nm(per.wrs[2]),team,false); put(nodes.skill.WR3,los+off*1.2,30);
-    setChip('TE','TE',nm(per.te),team,false); put(nodes.skill.TE,los+off*1.2,70);
+    setChip('QB','K',nm('QB',p.actor),team,true); put(nodes.skill.QB,los+off*6,50);
+    setChip('RB','QB',nm('RB',per.qb),team,false); put(nodes.skill.RB,los+off*3.5,57);
+    setChip('WR1','WR',nm('WR1',per.wrs[0]),team,false); put(nodes.skill.WR1,los+off*1.2,12);
+    setChip('WR2','WR',nm('WR2',per.wrs[1]),team,false); put(nodes.skill.WR2,los+off*1.2,88);
+    setChip('WR3','WR',nm('WR3',per.wrs[2]),team,false); put(nodes.skill.WR3,los+off*1.2,30);
+    setChip('TE','TE',nm('TE',per.te),team,false); put(nodes.skill.TE,los+off*1.2,70);
   } else {
-    setChip('QB','QB',nm(per.qb),stageTeam,!isDST&&act===per.qb);
+    setChip('QB','QB',nm('QB',per.qb),stageTeam,!isDST&&act===per.qb);
     put(nodes.skill.QB,los+stageOff*5,50);
-    setChip('RB','RB',nm(per.rb),stageTeam,!isDST&&act===per.rb);
+    setChip('RB','RB',nm('RB',per.rb),stageTeam,!isDST&&act===per.rb);
     put(nodes.skill.RB,los+stageOff*11,70);
-    setChip('WR1','WR',nm(per.wrs[0]),stageTeam,!isDST&&act===per.wrs[0]); put(nodes.skill.WR1,los+stageOff*2,5);
-    setChip('WR2','WR',nm(per.wrs[1]),stageTeam,!isDST&&act===per.wrs[1]); put(nodes.skill.WR2,los+stageOff*2,95);
-    setChip('WR3','WR',nm(per.wrs[2]),stageTeam,!isDST&&act===per.wrs[2]); put(nodes.skill.WR3,los+stageOff*5,18);
-    setChip('TE','TE',nm(per.te),stageTeam,!isDST&&act===per.te); put(nodes.skill.TE,los+stageOff*1.5,78);
+    setChip('WR1','WR',nm('WR1',per.wrs[0]),stageTeam,!isDST&&act===per.wrs[0]); put(nodes.skill.WR1,los+stageOff*2,5);
+    setChip('WR2','WR',nm('WR2',per.wrs[1]),stageTeam,!isDST&&act===per.wrs[1]); put(nodes.skill.WR2,los+stageOff*2,95);
+    setChip('WR3','WR',nm('WR3',per.wrs[2]),stageTeam,!isDST&&act===per.wrs[2]); put(nodes.skill.WR3,los+stageOff*5,18);
+    setChip('TE','TE',nm('TE',per.te),stageTeam,!isDST&&act===per.te); put(nodes.skill.TE,los+stageOff*1.5,78);
   }
-  if(p.kind==='gen'&&!isDST){ const c=nodes.skill[genTarget(p)];
-    const np=c.querySelector('.np'), bb=np.querySelector('b');
-    np.innerHTML='<b>'+(bb?bb.textContent:'')+'</b>'; c.dataset.name='';
-    const jn=c.querySelector('.jno'); if(jn) jn.textContent=jerseyNo(genTarget(p)+team); }
   // backstop: if two of the eleven still read the same, both get more of
   // their first name rather than one of them being somebody else's label
   (function(){ const by={};
@@ -2189,7 +2198,9 @@ function startReplay(feed, gi, week){
       'gathered into drives and the drive is given what a drive needs and a box '+
       'score never records: the runs and throws in between, and the punt or the '+
       'stop at the end of one that did not score. Those are marked '+
-      '<b>CONNECTIVE PLAY</b>, they name nobody and they score nothing. The '+
+      '<b>CONNECTIVE PLAY</b> and they score nothing. The starters are still '+
+      'the starters out there \u2014 but on a play the tape does not have, the '+
+      'ball passes only through men with no name on them. The '+
       'sixty-minute clock is synthesised too \u2014 a play keeps the quarter the '+
       'tape gives it and the minutes inside the quarter are shared out. Down '+
       'and distance are not shown, because the replay does not know them.';
