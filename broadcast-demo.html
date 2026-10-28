@@ -1645,10 +1645,21 @@ function replayGame(g, week){
                         ' between them.'); }
     p.hl=!!(td||dsc||k==='fg'||yd>=20);
 
-    // the spot: own 25, advancing by what was really gained
+    // A touchdown ends ON the goal line, so the carrier runs into the end zone
+    // rather than stopping wherever the drive happened to be.
+    // 1 and 99, not 3 and 97: clamped at 3 a one-yard touchdown finished on
+    // the 2 instead of on the line
+    if(td){ p.losYd=(off==='H')?Math.max(1,Math.min(99,yd)):Math.max(1,Math.min(99,100-yd)); }
+
+    // The spot: own 25, advancing by what was really gained. A drive that
+    // outruns the field starts again from the 25 -- clamped at the goal line it
+    // stuck there and every play after it staged on the same yard, which is
+    // what "gets to the endzone and keeps driving but not moving" was.
+    // 13 per cent of week 7's drives run past 100 yards; one gained 437.
     if(!res&&!dsc){
-      los[off]+=(off==='H'?-1:1)*yd;
-      los[off]=Math.max(3,Math.min(97,los[off]));
+      var nx=los[off]+(off==='H'?-1:1)*yd;
+      if(off==='H'?(nx<=2):(nx>=98)) nx=START[off];
+      los[off]=Math.max(3,Math.min(97,nx));
     }
     if(td||k==='fg'){ los[off]=START[off]; lastOff=null; }
 
