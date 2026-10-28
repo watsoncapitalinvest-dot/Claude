@@ -547,6 +547,37 @@ function buildGame(){
       p.booth=p.booth||('Fourth quarter. '+Math.abs(p.runH-p.runA).toFixed(1)+' between them — every touch matters now.'); }
     p.hl=!!(p.td||p.kind==='int'||p.kind==='dst'||p.kind==='fg'||p.yd>=20);   // SportsCenter reel tags
   });
+  // ---- KICKOFFS ----
+  // One to open the game, one to open the second half, and one after every
+  // score. They are not on the tape -- a kickoff is a certainty of football
+  // rather than something the replay records -- so they name nobody, claim no
+  // yardage and carry no points. Scenery, like the linemen.
+  function ko(team, at, clk){
+    return {team:team, kind:'ko', actor:'', qb:null, yd:0, td:false,
+            q:clk.q, mmss:clk.mmss, runH:at.runH, runA:at.runA,
+            delta:0, credits:[], drive:-1, hl:false, real:true,
+            losYd:(team==='H')?65:35, label:'KICKOFF',
+            text:'<b>Kickoff.</b> '+TEAMS[team].name+' put it in the air.'};
+  }
+  // A kickoff follows a touchdown or a field goal. NOT an extra point: in
+  // fantasy the kicker's conversions come out of his own NFL game and have
+  // nothing to do with his fantasy team's touchdowns. Measured on this
+  // matchup, seven of eight touchdowns had no extra point after them at all,
+  // so treating a conversion as its own score put four kickoffs in the game
+  // that no score had earned.
+  const withKo=[]; let halfDone=false;
+  plays.forEach((pl,i)=>{
+    // 0-0 at the opening kickoff: borrowing the first play's score put two
+    // points on the board before a down had been staged
+    if(i===0) withKo.push(ko(pl.team==='H'?'A':'H', {runH:0,runA:0}, pl));
+    if(!halfDone && pl.q>=3){ halfDone=true;
+      withKo.push(ko(pl.team==='H'?'A':'H', plays[i-1]||pl, pl)); } // and the half
+    withKo.push(pl);
+    const nxt=plays[i+1]; if(!nxt) return;
+    if(pl.td || pl.kind==='fg') withKo.push(ko(pl.team, pl, nxt));
+  });
+  plays.length=0; withKo.forEach(x=>plays.push(x));
+
   const hIdx=plays.findIndex(p=>p.q>=3);
   if(hIdx>0) plays[hIdx].halftime={h:plays[hIdx-1].runH,a:plays[hIdx-1].runA};
   const allBox=[...box[H].map(x=>({...x,team:H})),...box[A].map(x=>({...x,team:A}))].sort((a,b)=>b.pts-a.pts).slice(0,3);
@@ -565,8 +596,9 @@ function statLineOf(g,p){
 // ---- DOM & field ----------------------------------------------------------
 const $=id=>document.getElementById(id);
 const cssv=v=>getComputedStyle(document.documentElement).getPropertyValue(v);
-const lastWord=s=>s.trim().split(/\s+/).pop().toUpperCase();
-const shortName=n=>{const p=n.split(' ');return p.length>1?p[0][0]+'·'+p[p.length-1]:n;};
+const lastWord=s=>String(s||'').trim().split(/\s+/).pop().toUpperCase();
+const shortName=n=>{const p=String(n||'').split(' ');
+  return p.length>1?p[0][0]+'\u00b7'+p[p.length-1]:(p[0]||'');};
 let G=buildGame();
 
 function hexRGBA(hex,a){ const h=hex.replace('#',''); const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
@@ -775,7 +807,7 @@ function lineUp(team,p){
     const fd=los+dir*p.toGo;
     if(fd>2&&fd<98){fst.style.display='block';fst.style.left=fd+'%';} else fst.style.display='none';
   } else fst.style.display='none';
-  const isFG=p.kind==='fg'||p.kind==='xp', isDST=p.kind==='dst';
+  const isFG=p.kind==='fg'||p.kind==='xp'||p.kind==='ko', isDST=p.kind==='dst';
   const olY=[36,43,50,57,64];
   // pose cleanup from last snap
   Object.values(nodes.skill).forEach(c=>{c.style.display='';c.classList.remove('throwing','reach','dive','hit','celeb','kicking','spinning','sacked');});
@@ -1014,7 +1046,7 @@ function celebrate(team){
 async function runPlayMotion(team,p){
   const tok=++animToken;
   const dir=team===H?-1:1, off=-dir, los=ballYd;
-  const sp=v=>v/speed;
+  const sp=v=>v*SLOW/speed;
   const ball=$('ball');
   const chips=nodes.skill;
   const actEl=p.actor?Object.values(chips).find(c=>c.dataset.name===p.actor)||null:null;
@@ -1046,6 +1078,17 @@ async function runPlayMotion(team,p){
       await tween(ball,los-oppOff*4,50,sp(360),{ease:'linear'}); if(tok!==animToken) return false;
       flashEZ(team);
     }
+  } else if(p.kind==='ko'){
+    // Nobody is named and no yardage is claimed: a kickoff is a certainty of
+    // football rather than a thing the tape records, so it is staged as
+    // scenery and carries no figure.
+    chips.QB.classList.add('kicking');
+    setTimeout(()=>chips.QB.classList.remove('kicking'),sp(820));
+    await wait(sp(420)); if(tok!==animToken) return false;
+    cam(50,1.05);
+    await tween(ball, team===H?26:74, 18, sp(1250), {arc:36}); if(tok!==animToken) return false;
+    sfx.kick();
+    await tween(ball, team===H?34:66, 50, sp(520), {ease:'linear'}); if(tok!==animToken) return false;
   } else if(p.kind==='fg'||p.kind==='xp'){
     await tween(ball,los+off*6.5,52,sp(200),{ease:'linear'}); if(tok!==animToken) return false;
     await wait(sp(150)); if(tok!==animToken) return false;
@@ -1180,7 +1223,8 @@ function setBanner(team,p){
   const col=teamColor(team);
   $('possname').innerHTML=`${TEAMS[team].crest} ${TEAMS[team].name}`;
   $('possname').style.color=col;
-  $('dd').textContent = (p.kind==='fg')?`FG unit · ${ydText(team,p.losYd)}`
+  $('dd').textContent = (p.kind==='ko')?'Kickoff'
+    : (p.kind==='fg')?`FG unit · ${ydText(team,p.losYd)}`
     : (p.kind==='xp')?'Extra point'
     : (p.kind==='dst')?'Defense on the field'
     : (p.down?`${ORD[p.down]} & ${p.toGo>=10&&p.down===1?10:p.toGo} · ${ydText(team,p.losYd)}`:`${ydText(team,p.losYd)}`);
@@ -1193,6 +1237,11 @@ function setBench(team){
     +(holes.length?` <span class="bchip" style="border-color:rgba(255,255,255,.25);color:var(--dim)">${holes.join(' · ')}</span>`:'');
 }
 let idx=0,timer=null,speed=1,dispH=0,dispA=0,clockT=null;
+// How long everything takes, on top of the 1x/2x/4x control. A rebuilt week
+// runs slower than the demo did, because the whole point of it is watching the
+// play rather than being told the result -- John: "it needs to slow down so we
+// can see the play."
+let SLOW=1;
 function tickClock(p){
   clearInterval(clockT);
   const nx=G.plays[idx+1];
@@ -1282,6 +1331,7 @@ function step(){
   tickClock(p);
   const who=(p.actor||p.qb||'').toUpperCase();
   const capWhat=p.td?`TOUCHDOWN · ${who} · ${p.yd>0?p.yd+'-YD ':''}${p.kind==='run'||p.kind==='qbrun'?'RUN':'PASS'}`
+    :p.kind==='ko'?`KICKOFF · ${TEAMS[p.team].name.toUpperCase()}`
     :p.kind==='fg'?`FIELD GOAL · ${who} · ${p.dist} YDS`
     :p.kind==='xp'?`XP GOOD · ${who}`
     :p.kind==='dst'?`${(p.label||'DEFENSE').toUpperCase()} · ${who}`
@@ -1297,15 +1347,16 @@ function step(){
   }});
   addPlay(p);
   idx++;
-  if(idx>=G.plays.length){ timer=setTimeout(endGame,(p.td?3800:1400)/speed); return; }
-  timer=setTimeout(step, delayFor(p)/speed);
+  if(idx>=G.plays.length){ timer=setTimeout(endGame,(p.td?3800:1400)*SLOW/speed); return; }
+  timer=setTimeout(step, delayFor(p)*SLOW/speed);
 }
 // how long the broadcast dwells on what just happened
 function delayFor(p){
   if(p.td) return 4800;                                  // soak in the touchdown
   if(p.kind==='dst'&&/SIX|TD/.test(p.label||'')) return 4200;
   if(p.kind==='int'||p.kind==='dst') return 2900;
-  if(p.kind==='fg') return 2700;
+  if(p.kind==='ko') return 2600;
+  if(p.kind==='fg') return 2900;
   if(p.yd>=20) return 2500;
   return 2000;
 }
@@ -1591,7 +1642,11 @@ const RP={SEC:0,QTR:1,CK:2,SIDE:3,PID:4,PTS:5,TXT:6,FLG:7,S0:8,S1:9,SRC:10,
           RQ:11,RC:12,KIND:13,YDS:14};
 const RTD=1, RGO=2, RRES=4;
 
-function replayStats(g){
+// The men who scored, first, and then the rest of the franchise's real roster
+// behind them. Built from the scorers alone a side could field no tight end at
+// all -- personnel() handed setChip an undefined name and shortName took the
+// page down on n.split.
+function replayStats(g, rosters){
   const out={H:{QB:[],RB:[],WR:[],TE:[],K:[],DST:[]},A:{QB:[],RB:[],WR:[],TE:[],K:[],DST:[]}};
   const seen={H:{},A:{}};
   g.ev.forEach(e=>{
@@ -1601,6 +1656,16 @@ function replayStats(g){
     const pos=(pl[1]==='DEF')?'DST':pl[1];
     if(!out[t][pos]||seen[t][pl[0]]) return;
     seen[t][pl[0]]=1; out[t][pos].push({n:pl[0]});
+  });
+  // top up from the roster so every slot on the field has a real name on it
+  ['H','A'].forEach(function(t,i){
+    const list=(rosters&&rosters[g.t[i].name])||
+               (rosters&&rosters[Object.keys(rosters).find(k=>normT(k)===normT(g.t[i].name))])||[];
+    list.forEach(function(pr){
+      const pos=(pr.pos==='DEF')?'DST':pr.pos;
+      if(!out[t][pos]||seen[t][pr.name]) return;
+      seen[t][pr.name]=1; out[t][pos].push({n:pr.name});
+    });
   });
   return out;
 }
@@ -1625,7 +1690,10 @@ function replayGame(g, week){
              q:e[RP.QTR], mmss:e[RP.CK], runH:e[RP.S0], runA:e[RP.S1],
              delta:e[RP.PTS], credits:[{name:nm,pts:e[RP.PTS]}],
              drive:drive, losYd:los[off]};
-    if(k==='fg'||k==='xp') p.dist=yd||20;
+    if(k==='fg') p.dist=yd||20;
+    // an extra point comes off the fifteen, not from wherever the drive that
+    // scored the touchdown happened to be standing
+    if(k==='xp'){ p.dist=20; p.losYd=(off==='H')?85:15; }
     p.real=true;
     var what=e[RP.TXT]||'';
     p.text=(td?'<b>TOUCHDOWN.</b> ':'')+'<b>'+nm+'</b>'+(what?' \u2014 '+what:'')+'.';
@@ -1663,15 +1731,55 @@ function replayGame(g, week){
     }
     if(td||k==='fg'){ los[off]=START[off]; lastOff=null; }
 
-    const c=tally[cred][nm]=tally[cred][nm]||{n:nm,pos:pl[1],pts:0};
+    // the box score wants {name,pos,pts,line} -- mine said {n,...}, so every
+    // player in it rendered as "undefined" and the game-balls line threw
+    const c=tally[cred][nm]=tally[cred][nm]||{name:nm,pos:pl[1],pts:0,touches:0,yds:0};
     c.pts+=e[RP.PTS];
+    if(!res){ c.touches++; c.yds+=yd; }
     plays.push(p);
   });
 
+  // ---- KICKOFFS ----
+  // One to open the game, one to open the second half, and one after every
+  // score. They are not on the tape -- a kickoff is a certainty of football
+  // rather than something the replay records -- so they name nobody, claim no
+  // yardage and carry no points. Scenery, like the linemen.
+  function ko(team, at, clk){
+    return {team:team, kind:'ko', actor:'', qb:null, yd:0, td:false,
+            q:clk.q, mmss:clk.mmss, runH:at.runH, runA:at.runA,
+            delta:0, credits:[], drive:-1, hl:false, real:true,
+            losYd:(team==='H')?65:35, label:'KICKOFF',
+            text:'<b>Kickoff.</b> '+TEAMS[team].name+' put it in the air.'};
+  }
+  // A kickoff follows a touchdown or a field goal. NOT an extra point: in
+  // fantasy the kicker's conversions come out of his own NFL game and have
+  // nothing to do with his fantasy team's touchdowns. Measured on this
+  // matchup, seven of eight touchdowns had no extra point after them at all,
+  // so treating a conversion as its own score put four kickoffs in the game
+  // that no score had earned.
+  const withKo=[]; let halfDone=false;
+  plays.forEach((pl,i)=>{
+    // 0-0 at the opening kickoff: borrowing the first play's score put two
+    // points on the board before a down had been staged
+    if(i===0) withKo.push(ko(pl.team==='H'?'A':'H', {runH:0,runA:0}, pl));
+    if(!halfDone && pl.q>=3){ halfDone=true;
+      withKo.push(ko(pl.team==='H'?'A':'H', plays[i-1]||pl, pl)); } // and the half
+    withKo.push(pl);
+    const nxt=plays[i+1]; if(!nxt) return;
+    if(pl.td || pl.kind==='fg') withKo.push(ko(pl.team, pl, nxt));
+  });
+  plays.length=0; withKo.forEach(x=>plays.push(x));
+
   const hIdx=plays.findIndex(p=>p.q>=3);
   if(hIdx>0) plays[hIdx].halftime={h:plays[hIdx-1].runH,a:plays[hIdx-1].runA};
-  const box={H:Object.values(tally.H).sort((a,b)=>b.pts-a.pts),
-             A:Object.values(tally.A).sort((a,b)=>b.pts-a.pts)};
+  // a line each, counted rather than written: how many scoring plays the man
+  // was on and what they covered
+  function lines(o){ return Object.values(o).map(function(c){
+    c.pts=Math.round(c.pts*100)/100;
+    c.line=c.touches+(c.touches===1?' play':' plays')+
+           (c.yds?' \u00b7 '+c.yds+' yds':'');
+    return c; }).sort(function(a,b){return b.pts-a.pts;}); }
+  const box={H:lines(tally.H), A:lines(tally.A)};
   const stars=[...box.H.map(x=>({...x,team:'H'})),...box.A.map(x=>({...x,team:'A'}))]
               .sort((a,b)=>b.pts-a.pts).slice(0,3);
   const flips=g.lc===1?'one lead change':g.lc+' lead changes';
@@ -1681,11 +1789,12 @@ function replayGame(g, week){
 }
 
 function startReplay(feed, gi, week){
+  feed.rosters=feed.rosters||null;
   const g=feed.games[gi]; if(!g) return false;
   const kit=s=>({key:s.rid,name:s.name,abbr:s.abbr||s.name.slice(0,3).toUpperCase(),
                  rec:'',crest:'',logo:'crests/'+s.logo+'.webp',c1:s.c1,c2:s.c2});
   TEAMS={H:kit(g.t[0]),A:kit(g.t[1])};
-  STATS=replayStats(g); rebuildRoster(); applyTheme();
+  STATS=replayStats(g, feed.rosters); rebuildRoster(); applyTheme();
   const sel=$('matchsel'); if(sel) sel.style.display='none';
   // the page describes itself honestly in each mode
   var sub=document.querySelector('.tag b'); if(sub)
@@ -1710,6 +1819,7 @@ function startReplay(feed, gi, week){
       'own 25 and the spot advances by the yards it really gained \u2014 the '+
       'same device as the sixty-minute clock. Down and distance are not shown, '+
       'because the replay does not know them.';
+  SLOW=1.8;                      // the play is the point, not the result
   G=replayGame(g,week);
   reset();
   document.title='SCFL · '+TEAMS.H.name+' v '+TEAMS.A.name+' · Week '+week;
@@ -1723,7 +1833,10 @@ function bootReplay(){
     .then(r=>r.json())
     .then(ix=>fetch('week-data/'+ix.season+'-w'+w+'-watch.json',{cache:'no-cache'})
                 .then(r=>r.json()))
-    .then(feed=>{ if(startReplay(feed,gi,w) && QP.get('auto')!=='0') play(); })
+    .then(feed=>fetch('scfl-rosters.json',{cache:'no-cache'})
+             .then(r=>r.ok?r.json():null).catch(()=>null)
+             .then(ros=>{ feed.rosters=(ros&&ros.teams)||null;
+                          if(startReplay(feed,gi,w) && QP.get('auto')!=='0') play(); }))
     .catch(e=>{ if(window.console) console.error(e); });
   return true;
 }
