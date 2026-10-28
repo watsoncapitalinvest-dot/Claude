@@ -270,15 +270,23 @@ formation shot at the snap — *"zoom further out so we can see more"* — and
 own span: a three-yard run does not need the far end zone in shot and a 48-yard
 throw does. 149 plays in 160 move.
 
-The ceiling is geometry, not taste. The pitch is 330px of tilted plane in a
-272px frame, so the sidelines are cropped at scale 1 by design and zooming
-pushes the near one further out — measured, a man on the near numbers is 29px
-below the frame at 1.60 and 85px below at 2.00. **1.45 is where he still
-shows**, on desktop and on a phone, and nothing falls out of frame at the
-zooms actually used. Going closer, or tracking the ball live, needs the
-vertical compensation solved against `perspective-origin` and the 0.9s CSS
-transition replaced by a damped per-frame loop. That is the expensive version
-and it is not done.
+**The camera has a sideways axis too**, and for a long time it did not. With
+no vertical term the visible band sits on y60 and runs y20..y98 at 1.05 and
+y30..y92 at 1.45 — so WR1, who lines up on **y5, was off the top of the frame
+at every zoom there has ever been**, and a route to the far numbers left the
+picture entirely. `cam(focus, scale, focusY)` takes the band to where the play
+is, and the push-in aims at the catch point or the end of the run.
+
+The numbers are calibrated on the real page, not derived: every 1 per cent of
+`translateY` moves the band **0.75 of a field width**, and the band is about 86
+wide at 1.05 narrowing to 62 at 1.45. It is clamped so it never runs off either
+touchline. Aimed at y50 it shows y6..y92; aimed at a catch on y12 it shows
+y2..y64. Measured over 60 real plays on desktop and phone: the ball is in frame
+at the end of every one.
+
+1.45 is still the zoom ceiling — past it the near sideline leaves whatever the
+band does. Tracking the ball *live* would need the 0.9s CSS transition replaced
+by a damped per-frame loop; that is the expensive version and it is not done.
 
 Camera bugs are invisible to the usual checks: they measure `style.left` on the
 figures, and the camera is a transform on an ancestor, so it does not move
@@ -318,10 +326,13 @@ That averages **5.1 of the 6 skill men named**, and it is checked slot by slot
 across all eight games, every play — named where he must be, blank where he
 must be, not eyeballed.
 
-Two men can also shorten to the same label: A.J. Brown and Amon-Ra St. Brown
-both came out as `A·Brown`, side by side in the same huddle. `shortName` keeps
-the particle (`St. Brown`, `Van Ginkel`), and `lineUp` lengthens both labels if
-any two of the eleven still read alike.
+Names on the field are the last token of a name, and that is wrong twice over.
+A **particle** belongs to the surname — `shortName` keeps `St. Brown`,
+`Van Ginkel` — or A.J. Brown and Amon-Ra St. Brown both come out `A·Brown`,
+side by side in the same huddle. And a **suffix is not a surname**: Ollie
+Gordon II read as `O·II`, Marvin Harrison Jr. and Michael Penix Jr. both as
+`M·Jr.`. Eleven men in the week files were wearing their own suffix. `lineUp`
+then lengthens both labels if any two of the eleven still read alike.
 
 Kits come from `team-identity.json`, built off `team-kits.json` — the colours
 John set per franchise for the magazine's play art — and the broadcast's own

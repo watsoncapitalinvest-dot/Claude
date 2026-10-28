@@ -602,10 +602,15 @@ const lastWord=s=>String(s||'').trim().split(/\s+/).pop().toUpperCase();
 // A.J. Brown and Amon-Ra St. Brown both came out as A\u00b7Brown, and they were
 // side by side in the same huddle. The particle is part of the surname.
 const PARTICLE=/^(st\.?|van|von|de|del|den|la|le|da|di|du|mac|mc|o'|jean)$/i;
+// and the suffix is not the surname either: Ollie Gordon II came out as O\u00b7II,
+// Marvin Harrison Jr. and Michael Penix Jr. both as M\u00b7Jr. Eleven men in the
+// week files were wearing their own suffix.
+const SUFFIX=/^(jr|sr|ii|iii|iv|v|vi)\.?$/i;
 const surname=n=>{const p=String(n||'').trim().split(/\s+/);
   if(p.length<2) return p[0]||'';
-  let i=p.length-1; if(p.length>2&&PARTICLE.test(p[i-1])) i--;
-  return p.slice(i).join(' ');};
+  let j=p.length-1; while(j>0&&SUFFIX.test(p[j])) j--;   // drop Jr / II / III
+  let i=j;          if(i>0&&PARTICLE.test(p[i-1]))  i--; // keep St. / Van
+  return p.slice(i,j+1).join(' ');};
 const shortName=(n,long)=>{const p=String(n||'').trim().split(/\s+/);
   if(p.length<2) return p[0]||'';
   return (long?p[0]:p[0][0])+'\u00b7'+surname(n);};
@@ -1041,7 +1046,7 @@ function runRoute(el,name,dir,dur){
 }
 
 /* ---- TV camera: pan & zoom following the ball ---- */
-let camScale=1;
+let camScale=1, camY=50;
 // The camera establishes wide at the snap and pushes in on the play. CAM_WIDE
 // is the formation shot John asked for -- "zoom further out so we can see
 // more" -- and zoomFor() is how close it may get once the ball is moving,
@@ -1065,12 +1070,29 @@ function zoomFor(p){
   else span=Math.abs(p.yd||0)+8;                 // the throw travels past the gain
   return Math.max(CAM_MIN,Math.min(CAM_MAX,100/(span+30)));
 }
-function cam(focus,scale){
+// The camera also has a SIDEWAYS axis, and it did not before. Measured: with
+// no vertical term the visible band sits on y60 and runs y20..y98 at 1.05 and
+// y30..y92 at 1.45 -- so WR1, who lines up on y5, was off the top of the frame
+// at every zoom there has ever been, and a route to the far numbers left the
+// picture entirely. John: "the zoom only covers the center of the field so no
+// passes to the sidelines gets tracked."
+//
+// Calibrated on the real page: every 1 per cent of translateY moves the band
+// 0.75 of a field width toward the far side, and the band is about 86 wide at
+// 1.05 narrowing to 62 at 1.45. So the band is put where the play is, clamped
+// so it never runs off either touchline.
+const CAM_PER=0.75, CAM_REST=60;
+function cam(focus,scale,focusY){
   if(scale!=null) camScale=scale;
+  if(focusY!=null) camY=focusY;
   const sPitch=document.querySelector('.pitch'); if(!sPitch) return;
   const sc=camScale, half=50/sc;
   const f=Math.max(half,Math.min(100-half,focus==null?50:focus));
-  sPitch.style.transform=`rotateX(33deg) translateX(${((50-f)*sc).toFixed(2)}%) scale(${sc})`;
+  const band=Math.max(50,86-(sc-1.05)*60), hb=band/2;
+  const want=Math.max(hb,Math.min(100-hb,camY==null?50:camY));
+  const ty=(CAM_REST-want)/CAM_PER;
+  sPitch.style.transform=`rotateX(33deg) translateX(${((50-f)*sc).toFixed(2)}%) `+
+                         `translateY(${ty.toFixed(2)}%) scale(${sc})`;
 }
 
 /* ---- crowd audio: synthesized, no assets, starts on Kick off ----
@@ -1370,7 +1392,7 @@ async function runPlayMotion(team,p){
     setTimeout(()=>chips.QB.classList.remove('throwing'),sp(420));
     if(!tgtEl||tgtSlot==='QB'){           // nobody to throw to: the old path
       const sideY=(p.yd%2)?36:64;
-      cam(end,zoomFor(p));
+      cam(end,zoomFor(p),sideY);
       await tween(ball,end,sideY,sp(deep?640:500),{arc:deep?21:15}); if(tok!==animToken) return false;
       chase(end,sideY,sp(340));
     } else {
@@ -1380,7 +1402,7 @@ async function runPlayMotion(team,p){
       const cy=screen?lane:deep?lane:lane+(50-lane)*0.25;
       tween(tgtEl,cx,cy,sp(screen?280:deep?600:440),{ease:'linear'});
       await wait(sp(screen?60:deep?200:130)); if(tok!==animToken) return false;
-      cam(end,zoomFor(p));
+      cam(end,zoomFor(p),cy);
       tgtEl.classList.add('reach');
       await tween(ball,cx,cy-2,sp(screen?240:deep?560:quick?260:410),{arc:screen?6:deep?20:quick?7:13}); if(tok!==animToken) return false;
       tgtEl.classList.remove('reach');
@@ -1424,7 +1446,7 @@ async function runPlayMotion(team,p){
       const mid1=los+dir*Math.min(4,p.yd*0.4), mid2=los+dir*Math.min(p.yd*0.75,Math.max(p.yd-1,1));
       const wob=(p.yd%2)?8:-8;
       const ry=p.td?50:50+wob*0.5;
-      cam(end,zoomFor(p));
+      cam(end,zoomFor(p),ry);
       if(long){ // a defender meets him at the second level — and he breaks it with a spin
         chase(mid2,50-wob*0.6,sp(360));
         setTimeout(()=>{ carrier.classList.add('spinning');
@@ -1570,7 +1592,7 @@ function step(){
   setBug(p.runH,p.runA,QN[p.q],p.mmss,p.team);
   setBanner(p.team,p);
   lineUp(p.team,p);
-  cam(p.losYd!=null?p.losYd:ballYd,CAM_WIDE);   // establish, then push in
+  cam(p.losYd!=null?p.losYd:ballYd,CAM_WIDE,50); // establish, then push in
   tickClock(p);
   const who=(p.actor||p.qb||'').toUpperCase();
   const capWhat=p.fab&&p.kind!=='ko'?(p.label||
@@ -1646,7 +1668,7 @@ function reset(){
   $('sH').textContent='0.0';$('sA').textContent='0.0';$('barH').style.width='0';$('barA').style.width='0';
   $('q').textContent='PRE';$('clock').textContent='15:00';$('poss').textContent='';
   $('possname').innerHTML='Kickoff';$('possname').style.color='#fff';$('dd').textContent='';$('fieldcap').classList.remove('on');
-  $('benchrow').innerHTML=''; $('losline').style.left='50%'; put($('ball'),50,50); cam(50,1);
+  $('benchrow').innerHTML=''; $('losline').style.left='50%'; put($('ball'),50,50); cam(50,1,50);
   Object.values(nodes.skill).forEach(c=>c.classList.remove('act'));
 }
 
