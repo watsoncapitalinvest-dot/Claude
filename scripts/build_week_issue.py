@@ -1031,12 +1031,18 @@ def build(season, week, remeasure=True):
         # so it is still a page and not an orphan.
         if s.get('part2'):
             p2 = s['part2']
+            # A jump with no headline of its own is the rest of the same report
+            # and prints as a continuation line. One with a headline is a
+            # sidebar -- a different piece about the same game -- and keeps it.
+            cont = not p2.get('headline')
             arts.append({
                 'id': f'wk{week}-g{i}b',
-                'flag': p2.get('flag', 'Continued'),
-                'headline': p2['headline'],
-                'subhead': p2['dek'],
+                'flag': (f'{mu[i]} \u00b7 Continued' if cont and i in mu
+                         else p2.get('flag', 'Continued')),
+                'headline': p2.get('headline', ''),
+                'subhead': p2.get('dek', ''),
                 'paragraphs': p2['paragraphs'],
+                'continued': cont,
             })
 
     # Every issue closes on what is next. A magazine that stops on the last

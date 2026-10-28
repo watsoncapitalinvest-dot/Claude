@@ -181,6 +181,8 @@ EXTRA_CSS="""
    opener keeps exactly the spacing it had. */
 .divider .d-cap{font-family:var(--sans);font-size:11px;line-height:1.55;
   color:var(--muted,#65656b);text-align:left;margin:-16px 0 20px;}
+.divider.cont{padding:18px 0 4px;}
+.divider.cont .d-rule{margin-top:12px;}
 .divider .d-flag{font-family:var(--sans);font-size:10.5px;font-weight:900;letter-spacing:.24em;
   text-transform:uppercase;color:var(--red);}
 .divider .d-h{font-family:var(--serif);font-weight:900;font-size:27px;line-height:1.15;margin-top:10px;}
@@ -216,10 +218,25 @@ def article_blocks(art, first, openart=None):
     img = (f'<img class="d-art" src="{src}" alt="">' if src else '')
     if src and cap:
         img += f'<div class="d-cap">{esc(cap)}</div>'
-    out=[('divider', f'<div class="divider" id="art-{art["id"]}">'+img+'<div class="d-flag">'+esc(art.get('flag',''))+'</div>'
-          '<div class="d-h">'+esc(art['headline'])+'</div>'
-          '<div class="d-s">'+esc(art.get('subhead',''))+'</div>'
-          '<div class="d-rule"></div></div>')]
+    # A jump that is only the rest of the same report takes a continuation line,
+    # not a second headline. Giving every one its own title put sixteen
+    # headlines in front of eight games and made the contents read as a
+    # sixteen-game week. A headline on a jump is for a jump that is genuinely a
+    # different piece -- a sidebar -- and those still get one.
+    if art.get('continued'):
+        # NB: this sets the divider and falls through to the paragraph loop
+        # below. Returning here instead printed the continuation line on an
+        # otherwise completely blank page.
+        out = [('divider', f'<div class="divider cont" id="art-{art["id"]}">' + img +
+                '<div class="d-flag">' + esc(art.get('flag', '')) + '</div>'
+                '<div class="d-rule"></div></div>')]
+    else:
+        out = None
+    if out is None:
+        out=[('divider', f'<div class="divider" id="art-{art["id"]}">'+img+'<div class="d-flag">'+esc(art.get('flag',''))+'</div>'
+              '<div class="d-h">'+esc(art['headline'])+'</div>'
+              '<div class="d-s">'+esc(art.get('subhead',''))+'</div>'
+              '<div class="d-rule"></div></div>')]
     if art.get('blocks'):
         # Pre-rendered: the article owns its own markup (figures, tables). Used by
         # the research addendum, which is generated once and delivered twice.
@@ -287,15 +304,16 @@ def build(key, remeasure=True, quiet=False):
     # that fits at full size. Week 6 reached thirteen entries once the preview
     # article was added and fit() quietly scaled the whole page to 0.82, which
     # is the one page in the issue where small type is most obvious.
-    n=len(arts)
+    toc_arts=[a for a in arts if not a.get('continued')]
+    n=len(toc_arts)
     first=n if n<=10 else min(9,-(-n//2))      # split, and keep the halves even
     blocks=[('head','<span class="flag">In this issue</span>'
              '<h1 class="hl">'+esc(cfg['title'])+'</h1>'
-             '<ul class="toc">'+''.join(row(i,a) for i,a in enumerate(arts[:first]))+'</ul>')]
+             '<ul class="toc">'+''.join(row(i,a) for i,a in enumerate(toc_arts[:first]))+'</ul>')]
     if first<n:
         blocks.append(('pagebreak','<span class="flag">In this issue, continued</span>'
                        '<ul class="toc">'
-                       +''.join(row(i+first,a) for i,a in enumerate(arts[first:]))
+                       +''.join(row(i+first,a) for i,a in enumerate(toc_arts[first:]))
                        +'</ul>'))
     openart=cfg.get('openart',{})
     missing_art=[]
