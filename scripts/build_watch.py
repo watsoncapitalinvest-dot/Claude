@@ -52,32 +52,49 @@ OG = 'scfl-replay-og.jpg'
 # called before it was renamed mid-season.
 LOGO_BY_RID = {1: 'newworldorder', 13: 'heavyhitters'}
 
-# Kit colours and the three-letter tag, as broadcast-demo.html has carried them
-# since the sprite sheet arrived: primary, then secondary. The sheet is painted
-# in neutral white and grey so it can be tinted to these at runtime -- white kit
-# becomes the primary, grey kit the secondary -- which is how sixteen franchises
-# get sixteen kits out of one set of drawings.
-#
-# Keyed by crest slug here only because that is the key the table was written
-# with; it is resolved to roster_id below and never looked up by name again.
-BRAND = {
-    'wookieleaks': ('#1090f0', '#90d0f0', 'WKL'),
-    'bigblue': ('#1090f0', '#90d0f0', 'BLU'),
-    'beavereaters': ('#f07090', '#f0b0d0', 'BVR'),
-    'guidohaters': ('#ff2020', '#d09050', 'GUI'),
-    'powersofpain': ('#3939ff', '#f03030', 'POP'),
-    'newworldorder': ('#f0f0f0', '#101010', 'NWO'),
-    'masterjeti': ('#777727', '#705030', 'JET'),
-    'horsecollars': ('#d0b090', '#107090', 'HC'),
-    'porkchopexpress': ('#f07030', '#f09090', 'PCE'),
-    'machines': ('#6666aa', '#705070', 'MCH'),
-    'stillthecream': ('#985b5b', '#d0b090', 'CRM'),
-    'gumbas': ('#f05010', '#f0d0b0', 'GUM'),
-    'heavyhitters': ('#10b0f0', '#b0f0f0', 'PHN'),
-    'lilchops': ('#985b5b', '#907050', 'CHP'),
-    'smokedragons': ('#fa3232', '#b01030', 'SMK'),
-    'killerklowns': ('#297dd1', '#705050', 'KLW'),
+# The three-letter tag, as the broadcast has carried it since the sprite sheet
+# arrived. The COLOURS used to live here too, as a guessed pair per crest slug,
+# and two of them were identical: Wookie Leaks and BIG BLUE both came out
+# #1090f0, so when they met each other every figure on the field was the same
+# shade of blue. The kits now come from team-kits.json, which is John's own
+# answer for each franchise and is what the play art is already drawn to -- so
+# the field and the pictures in the issue dress the same sixteen clubs alike.
+ABBR = {
+    'wookieleaks': 'WKL', 'bigblue': 'BLU', 'beavereaters': 'BVR',
+    'guidohaters': 'GUI', 'powersofpain': 'POP', 'newworldorder': 'NWO',
+    'masterjeti': 'JET', 'horsecollars': 'HC', 'porkchopexpress': 'PCE',
+    'machines': 'MCH', 'stillthecream': 'CRM', 'gumbas': 'GUM',
+    'heavyhitters': 'PHN', 'lilchops': 'CHP', 'smokedragons': 'SMK',
+    'killerklowns': 'KLW',
 }
+
+# team-kits.json names colours in words, because it is written for a graphics
+# AI. The sprite sheet needs numbers: it is painted neutral white and grey, and
+# tintSheet() turns the white into the primary and the grey into the secondary.
+INK = {
+    'black': '#1b1b1f', 'white': '#f2f2ee', 'brown': '#6b4420',
+    'khaki': '#c3b183', 'silver': '#c8ccd2', 'deep purple': '#4a2173',
+    'smoke grey': '#8a8f99', 'green': '#1f7a3a', 'light green': '#67c27a',
+    'red': '#c0272d', 'blue': '#1f5fd0', 'teal': '#16a3a3',
+    'orange': '#e2731f', 'yellow': '#efc62c', 'very dark red': '#4a0d12',
+    'purple': '#7a3fa8', 'laser green': '#63f06a', 'gold': '#d8b45a',
+}
+
+
+def ink(word):
+    """A kit colour in words -> a hex the tinter can use.
+
+    Guido Haters' trim is a whole sentence about an Italian tricolour stripe
+    and a gold collar, which is a description of a kit rather than a colour.
+    The first colour word in it that resolves is the one used.
+    """
+    w = (word or '').strip().lower()
+    if w in INK:
+        return INK[w]
+    for k in sorted(INK, key=len, reverse=True):      # longest first: "deep purple" before "purple"
+        if k in w:
+            return INK[k]
+    return ''
 
 FLAG_TD, FLAG_GO, FLAG_RES = 1, 2, 4
 
@@ -100,7 +117,10 @@ def identity(weeks):
         wk = json.load(open(os.path.join(WDIR, f'{SEASON}-w{w}.json'), encoding='utf-8'))
         for g in wk['games']:
             for t in g['teams']:
-                out[t['roster_id']] = {'name': t['team'].strip().strip('*').strip()}
+                out[t['roster_id']] = {'rid': t['roster_id'],
+                                       'name': t['team'].strip().strip('*').strip()}
+    kits = json.load(open(os.path.join(ROOT, 'team-kits.json'),
+                          encoding='utf-8'))['teams']
     nokit = []
     for rid, t in sorted(out.items()):
         k = LOGO_BY_RID.get(rid) or slug(t['name'])
@@ -108,20 +128,59 @@ def identity(weeks):
             missing.append(f'{rid} {t["name"]!r} -> {k!r}')
             k = ''
         t['logo'] = k
-        # A franchise with no kit would play in the neutral white the sheet is
-        # drawn in, against another side in the same white. Better to say so.
-        if k in BRAND:
-            t['c1'], t['c2'], t['abbr'] = BRAND[k]
-        else:
-            nokit.append(f'{rid} {t["name"]!r}')
-            t['c1'], t['c2'], t['abbr'] = '#d8d8d8', '#9aa0a8', ''
+        # The kit, out of John's own answer for this franchise. Where primary
+        # and secondary are the same word -- n.W.o is black on black, Wookie
+        # Leaks brown on brown -- the trim is the second colour instead, or
+        # the figure comes out a silhouette with nothing to read.
+        t['abbr'] = ABBR.get(k, '')
+        kit = kits.get(str(rid)) or {}
+        c1 = ink(kit.get('primary'))
+        c2 = ink(kit.get('secondary'))
+        if not c2 or c2 == c1:
+            c2 = ink(kit.get('trim')) or c2
+        if not c1 or not c2 or c1 == c2:
+            nokit.append(f'{rid} {t["name"]!r} -> {kit.get("primary")!r}/'
+                         f'{kit.get("secondary")!r}/{kit.get("trim")!r}')
+            c1, c2 = c1 or '#d8d8d8', c2 or '#9aa0a8'
+        t['c1'], t['c2'] = c1, c2
+        # the change strip, for the weeks this franchise meets somebody in the
+        # same colour. Its trim first, then its own secondary.
+        t['alt'] = ink(kit.get('trim')) or c2
     if missing:
         print('  NO CREST for:', '; '.join(missing))
         print('  -> add the roster id to LOGO_BY_RID in scripts/build_watch.py')
     if nokit:
-        print('  NO KIT COLOURS for:', '; '.join(nokit))
-        print('  -> add the crest slug to BRAND in scripts/build_watch.py')
+        print('  UNREADABLE KIT for:', '; '.join(nokit))
+        print('  -> fix the words in team-kits.json, or add them to INK')
     return out
+
+
+def rgb(h):
+    h = h.lstrip('#')
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def near(a, b, tol=70):
+    """Would these two kits read as the same colour on a 170px-tall field?"""
+    return sum(abs(x - y) for x, y in zip(rgb(a), rgb(b))) < tol
+
+
+def kit_clash(teams):
+    """Put one side in its change strip when both are in the same colour.
+
+    Three franchises wear red -- the Powers of Pain, Pork Chop Express and the
+    Killer Klowns -- and two wear brown. The weeks any pair of them met, every
+    figure on the field was the same shade and the picture said nothing. The
+    SECOND side named in the matchup changes, so the first keeps the colours
+    the issue's play art already put it in.
+    """
+    if not near(teams[0]['c1'], teams[1]['c1']):
+        return None
+    for cand in (teams[1]['alt'], teams[1]['c2']):
+        if cand and not near(teams[0]['c1'], cand):
+            was, teams[1]['c1'] = teams[1]['c1'], cand
+            return f'{teams[1]["name"]} {was} -> {cand} (vs {teams[0]["name"]})'
+    return f'{teams[1]["name"]} has no change strip clear of {teams[0]["name"]}'
 
 
 def rosters_for(week):
@@ -141,7 +200,7 @@ def feed(week, ident):
     rp = json.load(open(os.path.join(WDIR, f'{SEASON}-w{week}-replay.json'),
                         encoding='utf-8'))
     rid_of = rosters_for(week)
-    games, orphans = [], []
+    games, orphans, swaps = [], [], []
 
     for g in rp['games']:
         names = [t['team'].strip().strip('*').strip() for t in g['teams']]
@@ -151,6 +210,11 @@ def feed(week, ident):
             orphans.append(f'w{week} m{g["matchup_id"]}: ' +
                            ' / '.join(n for n, r in zip(names, rids) if r is None))
             continue
+
+        teams = [dict(ident[r]) for r in rids]    # copies: the swap is per game
+        swap = kit_clash(teams)
+        if swap:
+            swaps.append(f'w{week} m{g["matchup_id"]}: {swap}')
 
         players, src, ev = [], [], []
         pidx, sidx = {}, {}
@@ -178,14 +242,16 @@ def feed(week, ident):
 
         games.append({
             'm': g['matchup_id'],
-            't': [{'rid': r, 'name': ident[r]['name'], 'logo': ident[r]['logo'],
-                   'c1': ident[r]['c1'], 'c2': ident[r]['c2'],
-                   'abbr': ident[r]['abbr']} for r in rids],
+            't': [{'rid': t['rid'], 'name': t['name'], 'logo': t['logo'],
+                   'c1': t['c1'], 'c2': t['c2'], 'abbr': t['abbr']}
+                  for t in teams],
             'f': [round(t['final'], 2) for t in g['teams']],
             'lc': g['lead_changes'], 'td': g['touchdowns'],
             'p': players, 'src': src, 'ev': ev,
         })
 
+    for sw in swaps:
+        print('  kit clash,', sw)
     if orphans:
         print('  UNRESOLVED SIDE (left out of the feed):')
         for o in orphans:
