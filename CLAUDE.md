@@ -285,9 +285,17 @@ name are only the ones who have to be nameless — **whoever the ball passes
 through on a play the tape does not have**. On a connective run that is the
 quarterback and the back; on a connective pass the quarterback and the catcher;
 on a kickoff or a punt the kicker. Everybody else is the starter he is,
-blocking or running his route. That averages **4.8 of the 6 skill men named**,
-and it is checked slot by slot across all eight games, every play — named where
-he must be, blank where he must be, not eyeballed.
+blocking or running his route.
+
+**An incompletion is the exception, and all six are named on it** — John:
+*"Every incomplete pass can be thrown by a named qb."* It is the one unreal
+play the ball passes through nobody: no yards, no points, nothing caught, so
+nobody on it has anything to be anonymous about. The throw goes at the man the
+concept was built to reach, so the eleven and the ball agree who it was for.
+
+That averages **5.1 of the 6 skill men named**, and it is checked slot by slot
+across all eight games, every play — named where he must be, blank where he
+must be, not eyeballed.
 
 Two men can also shorten to the same label: A.J. Brown and Amon-Ra St. Brown
 both came out as `A·Brown`, side by side in the same huddle. `shortName` keeps
