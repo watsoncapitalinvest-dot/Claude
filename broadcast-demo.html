@@ -599,8 +599,16 @@ function statLineOf(g,p){
 const $=id=>document.getElementById(id);
 const cssv=v=>getComputedStyle(document.documentElement).getPropertyValue(v);
 const lastWord=s=>String(s||'').trim().split(/\s+/).pop().toUpperCase();
-const shortName=n=>{const p=String(n||'').split(' ');
-  return p.length>1?p[0][0]+'\u00b7'+p[p.length-1]:(p[0]||'');};
+// A.J. Brown and Amon-Ra St. Brown both came out as A\u00b7Brown, and they were
+// side by side in the same huddle. The particle is part of the surname.
+const PARTICLE=/^(st\.?|van|von|de|del|den|la|le|da|di|du|mac|mc|o'|jean)$/i;
+const surname=n=>{const p=String(n||'').trim().split(/\s+/);
+  if(p.length<2) return p[0]||'';
+  let i=p.length-1; if(p.length>2&&PARTICLE.test(p[i-1])) i--;
+  return p.slice(i).join(' ');};
+const shortName=(n,long)=>{const p=String(n||'').trim().split(/\s+/);
+  if(p.length<2) return p[0]||'';
+  return (long?p[0]:p[0][0])+'\u00b7'+surname(n);};
 let G=buildGame();
 
 function hexRGBA(hex,a){ const h=hex.replace('#',''); const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
@@ -794,9 +802,12 @@ function setChip(slot,pos,name,team,isActor){
   const c=nodes.skill[slot], T=TEAMS[team];
   c.style.setProperty('--jc',T.c1); c.style.setProperty('--jt',T.c2);
   faceTeam(c,team);
-  c.querySelector('.np').innerHTML='<b>'+pos+'</b>'+shortName(name);
-  const jn=c.querySelector('.jno'); if(jn) jn.textContent=jerseyNo(name);
-  c.dataset.name=name;
+  // no name means no name: the position, and a number that belongs to the
+  // shirt rather than to anybody. jerseyNo('') is 1, so all eleven of them
+  // came out wearing it.
+  c.querySelector('.np').innerHTML='<b>'+pos+'</b>'+(name?shortName(name):'');
+  const jn=c.querySelector('.jno'); if(jn) jn.textContent=jerseyNo(name||(slot+team));
+  c.dataset.name=name||'';
   c.classList.remove('act'); if(isActor){void c.offsetWidth;c.classList.add('act');}
 }
 function lineUp(team,p){
@@ -809,7 +820,9 @@ function lineUp(team,p){
     const fd=los+dir*p.toGo;
     if(fd>2&&fd<98){fst.style.display='block';fst.style.left=fd+'%';} else fst.style.display='none';
   } else fst.style.display='none';
-  const isFG=p.kind==='fg'||p.kind==='xp'||p.kind==='ko', isDST=p.kind==='dst';
+  const isFG=p.kind==='fg'||p.kind==='xp'||p.kind==='ko'||p.kind==='punt', isDST=p.kind==='dst';
+  // every man on a connective play is anonymous -- see setChip
+  const nm=v=>p.fab?'':v;
   const olY=[22,36,50,64,78];   // wider: five men in fourteen points of width was a knot
   // pose cleanup from last snap
   Object.values(nodes.skill).forEach(c=>{c.style.display='';c.classList.remove('throwing','reach','dive','hit','celeb','kicking','spinning','sacked');});
@@ -842,22 +855,32 @@ function lineUp(team,p){
   });
   const act=p.actor;
   if(isFG){
-    setChip('QB','K',p.actor,team,true); put(nodes.skill.QB,los+off*6,50);
-    setChip('RB','QB',per.qb,team,false); put(nodes.skill.RB,los+off*3.5,57);
-    setChip('WR1','WR',per.wrs[0],team,false); put(nodes.skill.WR1,los+off*1.2,12);
-    setChip('WR2','WR',per.wrs[1],team,false); put(nodes.skill.WR2,los+off*1.2,88);
-    setChip('WR3','WR',per.wrs[2],team,false); put(nodes.skill.WR3,los+off*1.2,30);
-    setChip('TE','TE',per.te,team,false); put(nodes.skill.TE,los+off*1.2,70);
+    setChip('QB','K',nm(p.actor),team,true); put(nodes.skill.QB,los+off*6,50);
+    setChip('RB','QB',nm(per.qb),team,false); put(nodes.skill.RB,los+off*3.5,57);
+    setChip('WR1','WR',nm(per.wrs[0]),team,false); put(nodes.skill.WR1,los+off*1.2,12);
+    setChip('WR2','WR',nm(per.wrs[1]),team,false); put(nodes.skill.WR2,los+off*1.2,88);
+    setChip('WR3','WR',nm(per.wrs[2]),team,false); put(nodes.skill.WR3,los+off*1.2,30);
+    setChip('TE','TE',nm(per.te),team,false); put(nodes.skill.TE,los+off*1.2,70);
   } else {
-    setChip('QB','QB',per.qb,stageTeam,!isDST&&act===per.qb);
+    setChip('QB','QB',nm(per.qb),stageTeam,!isDST&&act===per.qb);
     put(nodes.skill.QB,los+stageOff*5,50);
-    setChip('RB','RB',per.rb,stageTeam,!isDST&&act===per.rb);
+    setChip('RB','RB',nm(per.rb),stageTeam,!isDST&&act===per.rb);
     put(nodes.skill.RB,los+stageOff*11,70);
-    setChip('WR1','WR',per.wrs[0],stageTeam,!isDST&&act===per.wrs[0]); put(nodes.skill.WR1,los+stageOff*2,5);
-    setChip('WR2','WR',per.wrs[1],stageTeam,!isDST&&act===per.wrs[1]); put(nodes.skill.WR2,los+stageOff*2,95);
-    setChip('WR3','WR',per.wrs[2],stageTeam,!isDST&&act===per.wrs[2]); put(nodes.skill.WR3,los+stageOff*5,18);
-    setChip('TE','TE',per.te,stageTeam,!isDST&&act===per.te); put(nodes.skill.TE,los+stageOff*1.5,78);
+    setChip('WR1','WR',nm(per.wrs[0]),stageTeam,!isDST&&act===per.wrs[0]); put(nodes.skill.WR1,los+stageOff*2,5);
+    setChip('WR2','WR',nm(per.wrs[1]),stageTeam,!isDST&&act===per.wrs[1]); put(nodes.skill.WR2,los+stageOff*2,95);
+    setChip('WR3','WR',nm(per.wrs[2]),stageTeam,!isDST&&act===per.wrs[2]); put(nodes.skill.WR3,los+stageOff*5,18);
+    setChip('TE','TE',nm(per.te),stageTeam,!isDST&&act===per.te); put(nodes.skill.TE,los+stageOff*1.5,78);
   }
+  // backstop: if two of the eleven still read the same, both get more of
+  // their first name rather than one of them being somebody else's label
+  (function(){ const by={};
+    SKILL_SLOTS.forEach(sl=>{ const n=nodes.skill[sl].dataset.name; if(!n) return;
+      const k=shortName(n); (by[k]=by[k]||[]).push(sl); });
+    Object.keys(by).forEach(k=>{ if(by[k].length<2) return;
+      by[k].forEach(sl=>{ const np=nodes.skill[sl].querySelector('.np');
+        const b=np.querySelector('b');
+        np.innerHTML='<b>'+(b?b.textContent:'')+'</b>'+
+                     shortName(nodes.skill[sl].dataset.name,true); }); }); })();
   (p.credits||[]).forEach(c=>{ if(c.pts<=0)return; for(const sl of SKILL_SLOTS){ const ch=nodes.skill[sl];
     if(ch.dataset.name===c.name){ ch.querySelector('.fl').textContent='+'+round1(c.pts).toFixed(1); } }});
   put($('ball'),los+(isDST?stageOff:off)*(isFG?6:5),50);

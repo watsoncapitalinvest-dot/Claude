@@ -220,8 +220,18 @@ not invent them.
 **Only men who played for these two sides that week are ever named on the
 field.** The eleven come from the week file's own starters, carried in the feed
 as each game's `r`. Topping them up from `scfl-rosters.json` put a July export
-on a week-7 field, which can name somebody traded away months earlier. A
-kickoff names nobody at all.
+on a week-7 field, which can name somebody traded away months earlier.
+
+And — John's rule — **every play by a named player is real**. A kickoff, a
+punt and every connective play are carried by eleven men in kit wearing their
+position and nothing else, because a run has to be run by a figure but no
+figure is a named man unless the play he is making is on the tape. That is
+checked across all eight games, every play, not eyeballed.
+
+Two men can also shorten to the same label: A.J. Brown and Amon-Ra St. Brown
+both came out as `A·Brown`, side by side in the same huddle. `shortName` keeps
+the particle (`St. Brown`, `Van Ginkel`), and `lineUp` lengthens both labels if
+any two of the eleven still read alike.
 
 Kits come from `team-identity.json`, built off `team-kits.json` — the colours
 John set per franchise for the magazine's play art — and the broadcast's own
