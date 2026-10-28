@@ -50,6 +50,7 @@ CATEGORY = {
     'scfl-who-wins-trades.html': 'Trade Desk',
     'scfl-trade-ledger.html': 'Trade Desk',
     'scfl-trade-takeaways.html': 'Trade Desk',
+    'scfl-how-an-issue-is-made.html': 'Investigations & Research',
     'scfl-grudge-report.html': 'Heat & Rivalries',
     # Investigations & Research
     'scfl-ir-study.html': 'Investigations & Research',
