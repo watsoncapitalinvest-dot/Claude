@@ -264,6 +264,27 @@ sentence naming it is written and carries it on the play, so the field and the
 ticker cannot disagree about what was called. That fit is checked over all
 1,325 concepts a week.
 
+**The camera establishes wide and pushes in.** `CAM_WIDE` (1.05) is the
+formation shot at the snap — *"zoom further out so we can see more"* — and
+`zoomFor()` is how close it may get once the ball is moving, set by the play's
+own span: a three-yard run does not need the far end zone in shot and a 48-yard
+throw does. 149 plays in 160 move.
+
+The ceiling is geometry, not taste. The pitch is 330px of tilted plane in a
+272px frame, so the sidelines are cropped at scale 1 by design and zooming
+pushes the near one further out — measured, a man on the near numbers is 29px
+below the frame at 1.60 and 85px below at 2.00. **1.45 is where he still
+shows**, on desktop and on a phone, and nothing falls out of frame at the
+zooms actually used. Going closer, or tracking the ball live, needs the
+vertical compensation solved against `perspective-origin` and the 0.9s CSS
+transition replaced by a damped per-frame loop. That is the expensive version
+and it is not done.
+
+Camera bugs are invisible to the usual checks: they measure `style.left` on the
+figures, and the camera is a transform on an ancestor, so it does not move
+them. A camera change has to be measured off `getBoundingClientRect` against
+the frame.
+
 You score in **the other team's end zone**. H attacks toward 0, which is `ezL`,
 so `ezL` is painted and lettered for the AWAY side. The other way round, the
 MACHINES scored in the MACHINES end.

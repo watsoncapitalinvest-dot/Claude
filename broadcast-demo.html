@@ -1042,6 +1042,29 @@ function runRoute(el,name,dir,dur){
 
 /* ---- TV camera: pan & zoom following the ball ---- */
 let camScale=1;
+// The camera establishes wide at the snap and pushes in on the play. CAM_WIDE
+// is the formation shot John asked for -- "zoom further out so we can see
+// more" -- and zoomFor() is how close it may get once the ball is moving,
+// which the play's own span sets: a three-yard run does not need the far end
+// zone in shot and a 48-yard throw does.
+//
+// The ceiling is geometry, not taste. The pitch is 330px of tilted plane in a
+// 272px frame, so the sidelines are cropped at scale 1 by design, and zooming
+// pushes the near one further out: measured, a man on the near numbers is 29px
+// below the frame at 1.60 and 85px below at 2.00. 1.45 is where he still shows.
+// Going closer than that needs the vertical compensation solved against
+// perspective-origin, which is the expensive version of this.
+const CAM_MIN=1.0, CAM_MAX=1.45, CAM_WIDE=1.05;
+function zoomFor(p){
+  if(!p) return 1.02;
+  if(p.kind==='ko') return CAM_MIN;              // the kick and the return both
+  if(p.kind==='punt') return 1.05;
+  let span;
+  if(p.td) span=Math.abs((p.losYd==null?50:p.losYd)-((p.team===H)?1:99));
+  else if(p.kind==='fg'||p.kind==='xp') span=Math.abs((p.losYd==null?50:p.losYd)-((p.team===H)?2:98));
+  else span=Math.abs(p.yd||0)+8;                 // the throw travels past the gain
+  return Math.max(CAM_MIN,Math.min(CAM_MAX,100/(span+30)));
+}
 function cam(focus,scale){
   if(scale!=null) camScale=scale;
   const sPitch=document.querySelector('.pitch'); if(!sPitch) return;
@@ -1220,7 +1243,7 @@ async function runPlayMotion(team,p){
         return Math.hypot(A.x-qbX,A.y-50)-Math.hypot(B.x-qbX,B.y-50);})[0];
       await tween(ball,los+oppOff*2,44,sp(300),{arc:8}); if(tok!==animToken) return false;
       const house=team===H?2:98;
-      cam(house);
+      cam(house,1.25);
       if(near) tween(near,house,48,sp(900),{ease:'linear'});
       await tween(ball,house,46,sp(900),{ease:'linear'}); if(tok!==animToken) return false;
       celebrate(team);
@@ -1256,7 +1279,7 @@ async function runPlayMotion(team,p){
     if(tok!==animToken) return false;
     const wob=(Math.round(ret)%2)?9:-9;
     const mid=land+rdir*Math.abs(ret-land)*0.45;
-    cam(ret);
+    cam(ret,1.22);
     chase(ret,50,sp(860));
     if(man) runPath(man,[[mid,50+wob],[ret,50]],sp(900),{ease:'linear'});
     await runPath(ball,[[mid,48+wob],[ret,48]],sp(900),{ease:'linear'});
@@ -1284,7 +1307,7 @@ async function runPlayMotion(team,p){
     await wait(sp(150)); if(tok!==animToken) return false;
     chips.QB.classList.add('kicking');
     setTimeout(()=>chips.QB.classList.remove('kicking'),sp(760));
-    cam(team===H?12:88);
+    cam(team===H?12:88,1.30);
     await tween(ball, team===H?2:98, 24, sp(p.kind==='xp'?600:860), {arc:p.kind==='xp'?18:26}); if(tok!==animToken) return false;
     sfx.kick(); flashEZ(team);
   } else if(p.kind==='int'){
@@ -1347,7 +1370,7 @@ async function runPlayMotion(team,p){
     setTimeout(()=>chips.QB.classList.remove('throwing'),sp(420));
     if(!tgtEl||tgtSlot==='QB'){           // nobody to throw to: the old path
       const sideY=(p.yd%2)?36:64;
-      cam(end);
+      cam(end,zoomFor(p));
       await tween(ball,end,sideY,sp(deep?640:500),{arc:deep?21:15}); if(tok!==animToken) return false;
       chase(end,sideY,sp(340));
     } else {
@@ -1357,7 +1380,7 @@ async function runPlayMotion(team,p){
       const cy=screen?lane:deep?lane:lane+(50-lane)*0.25;
       tween(tgtEl,cx,cy,sp(screen?280:deep?600:440),{ease:'linear'});
       await wait(sp(screen?60:deep?200:130)); if(tok!==animToken) return false;
-      cam(end);
+      cam(end,zoomFor(p));
       tgtEl.classList.add('reach');
       await tween(ball,cx,cy-2,sp(screen?240:deep?560:quick?260:410),{arc:screen?6:deep?20:quick?7:13}); if(tok!==animToken) return false;
       tgtEl.classList.remove('reach');
@@ -1401,7 +1424,7 @@ async function runPlayMotion(team,p){
       const mid1=los+dir*Math.min(4,p.yd*0.4), mid2=los+dir*Math.min(p.yd*0.75,Math.max(p.yd-1,1));
       const wob=(p.yd%2)?8:-8;
       const ry=p.td?50:50+wob*0.5;
-      cam(end);
+      cam(end,zoomFor(p));
       if(long){ // a defender meets him at the second level — and he breaks it with a spin
         chase(mid2,50-wob*0.6,sp(360));
         setTimeout(()=>{ carrier.classList.add('spinning');
@@ -1547,7 +1570,7 @@ function step(){
   setBug(p.runH,p.runA,QN[p.q],p.mmss,p.team);
   setBanner(p.team,p);
   lineUp(p.team,p);
-  cam(p.losYd!=null?p.losYd:ballYd,1.02);   // back off: 1.35 cropped the width away
+  cam(p.losYd!=null?p.losYd:ballYd,CAM_WIDE);   // establish, then push in
   tickClock(p);
   const who=(p.actor||p.qb||'').toUpperCase();
   const capWhat=p.fab&&p.kind!=='ko'?(p.label||
