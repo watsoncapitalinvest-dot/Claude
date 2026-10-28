@@ -104,6 +104,23 @@ def action(play):
             f'players in the frame.')
 
 
+def look_line(play, looks):
+    """What the man with the ball looks like, or a marked blank.
+
+    Never inferred. There is no source for a likeness in this container, and a
+    guess from memory is how this desk once published Marvin Harrison at 54.
+    """
+    v = looks.get(f'{play["player"]}|{play["pos"]}')
+    if not v:
+        return (f'<<APPEARANCE of {play["player"]}: skin tone, hair, facial hair, '
+                f'tattoos. One line. No headshot is reachable from this container, '
+                f'so John fills this. Leave it out rather than guess.>>')
+    return (f'He is {v}. Do not attempt a portrait likeness of any real person: the '
+            f'face is shadowed under the helmet with the facemask across it, and he '
+            f'is identified by the kit, the number and the build rather than by his '
+            f'features.')
+
+
 def kit_line(k, who):
     if not k.get('primary'):
         return (f'<<KIT for {k["team"]}: jersey, trousers and helmet, trim. '
@@ -179,6 +196,8 @@ def main():
     rp = json.load(open(os.path.join(WDIR, f'{a.season}-w{a.week}-replay.json'),
                         encoding='utf-8'))
     kits = json.load(open(os.path.join(ROOT, 'team-kits.json'), encoding='utf-8'))['teams']
+    looks = json.load(open(os.path.join(ROOT, 'player-looks.json'),
+                           encoding='utf-8'))['players']
     # The replay carries team names and no roster_id, and team-kits.json is keyed
     # by roster_id on purpose, because a renamed franchise drops out of a
     # name-keyed file. So resolve through the week file, which has both, on a
@@ -216,6 +235,8 @@ def main():
         for k, side in ((ks, 'scorer'), (ko, 'opponent')):
             if not k.get('primary'):
                 gaps.append(f'game {gi}: no kit for {k["team"]} (the {side})')
+        if f'{play["player"]}|{play["pos"]}' not in looks:
+            gaps.append(f'game {gi}: no appearance on file for {play["player"]}')
 
         subject = (f'{play["player"]} of the {scorer["team"].strip()}, '
                    f'{play["text"]}, at night under stadium floodlights.')
@@ -224,9 +245,7 @@ def main():
             kit_scorer=kit_line(ks, 'THE MAN WITH THE BALL'),
             kit_other=kit_line(ko, 'THE BEATEN MAN'),
             number=num, height=ht, weight=wt,
-            appearance=(f'<<APPEARANCE of {play["player"]}: skin tone, hair, facial hair, '
-                        f'tattoos. One line. No headshot is reachable from this container, '
-                        f'so John fills this. Leave it out rather than guess.>>'))
+            appearance=look_line(play, looks))
         slug = re.sub(r'[^a-z0-9]+', '-',
                       f'{scorer["team"]}-{other["team"]}'.lower()).strip('-')
         path = os.path.join(OUT, f'week-{a.week}-g{gi}-{slug}.txt')
