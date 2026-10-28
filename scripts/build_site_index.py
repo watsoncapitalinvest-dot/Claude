@@ -76,6 +76,7 @@ CATEGORY = {
     'scfl-sportscenter.html': 'Season Coverage & Issues',
     'scfl-politics-wire-freeze-flip.html': 'Season Coverage & Issues',
     # Tools & Arcade
+    'scfl-replay.html': 'Tools & Arcade',
     'broadcast-demo.html': 'Tools & Arcade',
     'ir-watch.html': 'Tools & Arcade',
     'jeopardy/index.html': 'Tools & Arcade',
