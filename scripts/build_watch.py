@@ -81,6 +81,14 @@ INK = {
 }
 
 
+# Guido Haters' trim is a sentence -- "Italian green, white and red stripe,
+# gold collar and facemask" -- and four colours are named in it. Taking the
+# first match gave white, which is n.W.o's secondary over the same black: the
+# two kits came out identical. Gold is the one that tells them apart and is
+# what John wrote the kit around.
+TRIM_PICK = {16: 'gold'}
+
+
 def ink(word):
     """A kit colour in words -> a hex the tinter can use.
 
@@ -137,7 +145,7 @@ def identity(weeks):
         c1 = ink(kit.get('primary'))
         c2 = ink(kit.get('secondary'))
         if not c2 or c2 == c1:
-            c2 = ink(kit.get('trim')) or c2
+            c2 = ink(TRIM_PICK.get(rid) or kit.get('trim')) or c2
         if not c1 or not c2 or c1 == c2:
             nokit.append(f'{rid} {t["name"]!r} -> {kit.get("primary")!r}/'
                          f'{kit.get("secondary")!r}/{kit.get("trim")!r}')
@@ -145,7 +153,7 @@ def identity(weeks):
         t['c1'], t['c2'] = c1, c2
         # the change strip, for the weeks this franchise meets somebody in the
         # same colour. Its trim first, then its own secondary.
-        t['alt'] = ink(kit.get('trim')) or c2
+        t['alt'] = ink(TRIM_PICK.get(rid) or kit.get('trim')) or c2
     if missing:
         print('  NO CREST for:', '; '.join(missing))
         print('  -> add the roster id to LOGO_BY_RID in scripts/build_watch.py')
