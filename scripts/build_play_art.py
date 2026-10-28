@@ -87,25 +87,46 @@ def pick_play(game):
 # the quarter it happened in, which gives four looks across eight games and is
 # a real fact about the afternoon.
 
+# The camera is chosen from the same band as the pose, and from the same
+# variant. They used to be picked independently, which produced a brief saying
+# "coming almost straight at the camera with the ball above his head" four
+# lines above "he has gone low for a ball at his ankles". A shot list that
+# contradicts the thing it is shooting is worse than no shot list.
 CAMERA = {
-    'long_run': ('Shot from the sideline, low and wide, tracking with him. He is in full '
-                 'profile crossing the frame, both feet off the ground, the beaten man '
-                 'already well behind him and small.'),
-    'short_run': ('Shot from behind and below the beaten man, looking up and along the '
-                  'ground at the runner going away. The beaten man is large and dark in '
-                  'the foreground and out of focus; the runner is small, sharp and lit.'),
-    'td_catch': ('Shot from inside the end zone, low, looking back up the field. The '
-                 'receiver is coming almost straight at the camera with the ball above '
-                 'his head and his eyes on it, the defender arriving from the side.'),
-    'catch': ('Shot tight from the sideline on a long lens, the background compressed to '
-              'a wall of out-of-focus colour. Chest-height, level with him, the moment '
-              'the ball hits his hands.'),
-    'pass': ('Shot from the side at chest height. The pass rusher is enormous in the '
-             'foreground and out of focus, a dark shape across the bottom corner; the '
-             'quarterback is beyond him, sharp and small, ball just gone.'),
     'kick': ('Shot from low and behind, in line with the kick, the ball already away and '
              'climbing out of frame. The kicker and the holder are dark against the '
-             'lights.'),
+             'lights.',),
+    'pass-short': ('Shot from the side at chest height and close in. The rusher coming '
+                   'off the edge is enormous in the foreground and out of focus; the '
+                   'quarterback is beyond him, sharp, hemmed in by his own linemen.',),
+    'pass-deep': ('Shot from low and behind his throwing shoulder, looking down the line '
+                  'of the throw. He is large in frame, the field opening away past him, '
+                  'the ball small and already gone.',),
+    'catch-crowd': ('Shot from inside the end zone, low, looking up. All of them are '
+                    'above the camera and against the sky, arms up, and you are looking '
+                    'into the underside of the leap.',),
+    'catch-stretch': (
+        'Shot from the side, the lens almost on the ground, so his whole body is laid '
+        'out flat across the frame at the height of the grass and nothing is under him.',
+        'Shot low and close from the front, tight on him, the ball and his hands nearest '
+        'the camera and his face right behind them.'),
+    'catch-deep': (
+        'Shot from behind and above him, travelling with him, so you see what he sees: '
+        'the ball dropping in, the empty grass beyond, the defender below the frame.',
+        'Shot from the side and low, both men silhouetted together against the lights at '
+        'the top of the leap, the ball the only clearly lit thing.'),
+    'run-pile': ('Shot from the goal line itself, at the height of a man\'s knees, '
+                 'looking straight into the pile as it comes at the camera.',),
+    'run-break': ('Shot tight from the side on a long lens, level with him, the tangle of '
+                  'linemen compressed into a wall of out-of-focus colour behind.',),
+    'run-open': (
+        'Shot from the sideline, low and wide, tracking with him. He is in full profile '
+        'crossing the frame, both feet off the ground.',
+        'Shot from the front and low, slightly below him, so the stiff-arm comes out of '
+        'the picture toward the camera.'),
+    'run-alone': ('Shot from a long way behind on a long lens, him small and sharp in the '
+                  'middle of an empty field, everything else soft. The scale of the gap '
+                  'is the subject.',),
 }
 
 LIGHT = {
@@ -142,16 +163,9 @@ def band(play):
     return 'run-open' if yd < 40 else 'run-alone'
 
 
-def camera(play):
-    txt = play.get('text') or ''
-    yd = play.get('yards') or 0
-    if play['pos'] == 'K':
-        return CAMERA['kick']
-    if 'pass' in txt and play['pos'] == 'QB':
-        return CAMERA['pass']
-    if 'catch' in txt:
-        return CAMERA['td_catch'] if play.get('td') else CAMERA['catch']
-    return CAMERA['long_run'] if yd >= 35 else CAMERA['short_run']
+def camera(play, nth=0):
+    opts = CAMERA[band(play)]
+    return opts[nth % len(opts)]
 
 
 def action(play, nth=0):
@@ -417,7 +431,7 @@ def main():
         subject = (f'{play["player"]} of {club}, '
                    f'{play["text"]}, {when[int(play["fc"]["qtr"])]}.')
         body = TEMPLATE.format(
-            subject=subject, action=action(play, nth), camera=camera(play),
+            subject=subject, action=action(play, nth), camera=camera(play, nth),
             light=LIGHT[int(play['fc']['qtr'])],
             # adjacent pages should not mirror each other
             direction='left to right' if gi % 2 == 0 else 'right to left',
