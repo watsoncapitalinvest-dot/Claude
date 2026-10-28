@@ -317,7 +317,11 @@ def main():
                 2: 'at dusk under the floodlights',
                 3: 'at night under stadium floodlights',
                 4: 'at night, in the rain, under stadium floodlights'}
-        subject = (f'{play["player"]} of the {scorer["team"].strip()}, '
+        # "of the StillTheCream" -- some club names carry their own article
+        club = scorer['team'].strip()
+        club = club if club.lower().startswith('the ') else f'the {club}'
+        club = club if ' ' in club[4:] or not club[4:].lower().startswith('still') else club[4:]
+        subject = (f'{play["player"]} of {club}, '
                    f'{play["text"]}, {when[int(play["fc"]["qtr"])]}.')
         body = TEMPLATE.format(
             subject=subject, action=action(play), camera=camera(play),
