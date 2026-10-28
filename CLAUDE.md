@@ -188,9 +188,25 @@ sixteen. The field stages the actual play: the pose off the play's `kind`, and
 the ground covered against real yard markers, so a 48-yard pass puts the ball
 48 yards downfield and a 4-yard catch moves four.
 
+**The plays drive the clock, not the other way round.** Each one is staged in
+full and the clock is set to the moment it happened; the next follows when this
+one is done. The clock used to drive it, dropping any play that arrived while
+the field was busy, which at a minute a game meant showing about one play in
+four — John, correctly: *"a disjointed video and not a rebuild of a game."*
+A game now runs about three minutes at 1×.
+
+The two sides **attack opposite ends**. Consecutive plays flip from one fantasy
+team to the other constantly, because their players are in different real
+games; drawn all one way that reads as noise, and drawn as two teams attacking
+opposite ends it reads as the ball changing hands.
+
 What the field **does not** show is down, distance or field position, because
 the replay does not know them. The snap mark is a snap mark and not a yard
-line. A residual stages nothing at all and says why.
+line. A residual stages nothing at all and says why. The formation, the
+catcher, the tackler and the pursuit are the **shape** of a play and never a
+claim about one: a completed pass had somebody catch it and a run that was not
+a touchdown was stopped by somebody, but who they were is not known and is
+never stated. Only the scorer is named.
 
 Each game report ends on **Watch this one back**, routed by `matchup_id` and
 never by team name, because the feed carries a franchise's current name and a

@@ -347,7 +347,7 @@ h1{font-size:34px;line-height:1.08;margin:0 0 8px;font-weight:900;letter-spacing
   <div class="keys">
     <button class="go" id="play">Play</button>
     <button id="rew" title="Back to kick-off">&#8676;</button>
-    <button id="rate" title="How long the whole game takes">1 min</button>
+    <button id="rate" title="How fast the plays come">1&times;</button>
     <span class="jumps">
       <button id="step">Next play</button>
       <button id="nextTd">Next TD</button>
@@ -367,7 +367,7 @@ var FULL=3600, QLEN=900;
 
 var $=function(id){return document.getElementById(id);};
 var IDX=null, FEED=null, GAME=null, WEEK=null;
-var t=0, playing=false, rate=60, raf=0, last=0, shown=0, spoil=false;
+var t=0, playing=false, shown=0, spoil=false;
 
 try{ spoil = localStorage.getItem('scfl-replay-spoil')==='1'; }catch(e){}
 
@@ -466,11 +466,13 @@ function buildTrack(){
   // destroyed.
   var keep=['endz'].map(function(id){return $(id);})
             .filter(function(el){return el;});
+  // both ways from the snap, because the two sides attack opposite ends
   var html='', yds=170;
-  for(var y=0;y<=yds;y+=5){
+  for(var y=-yds;y<=yds;y+=5){
     var big=(y%10===0);
     html+='<i class="hash'+(big?' b':'')+'" style="left:'+(LANE+y*PXYD)+'px"></i>';
-    if(big&&y) html+='<span class="ydn" style="left:'+(LANE+y*PXYD)+'px">'+y+'</span>';
+    if(big&&y) html+='<span class="ydn" style="left:'+(LANE+y*PXYD)+'px">'+
+                     Math.abs(y)+'</span>';
   }
   html+='<i class="snap" style="left:'+LANE+'px"><span>SNAP</span></i>';
   tr.innerHTML=html;
@@ -612,9 +614,15 @@ function stage(e){
     $('fplay').textContent='Scoring adjustment';
     clearField('Points the box score credits that no single play explains. '+
                'Nothing to show, because nothing happened on a field.');
-    return;
+    return 1100/PACE;
   }
 
+  // Which way this side attacks. Consecutive plays in these feeds flip from
+  // one fantasy team to the other constantly -- their players are in different
+  // real games, so both sides score all afternoon. Drawn all one way that
+  // alternation reads as noise; drawn as two teams attacking opposite ends it
+  // reads as the ball changing hands, which is what it is.
+  var way = (e[SIDE]===0) ? 1 : -1, leftward = (way<0);
   var kind=e[KIND], pose=POSE[kind]||['idle',''];
   var yards=(pose[1] && typeof e[YDS]==='number') ? e[YDS] : 0;
   // the play's own words, which already carry the distance -- a "48-yard
@@ -625,7 +633,7 @@ function stage(e){
   var tok=++stageTok, cam=$('camera'), act=$('actor');
   act.style.display=''; $('fname').textContent=p[0];
   var mover_kind=pose[1], byBall=(mover_kind==='ball');
-  var st=START[kind]||[0,0.5], x0=LANE+st[0]*PXYD, depth=st[1];
+  var st=START[kind]||[0,0.5], x0=LANE+st[0]*PXYD*way, depth=st[1];
   act.style.bottom=across(depth)+'px';
   act.style.zIndex=String(24+Math.round((1-depth)*20));
 
@@ -641,16 +649,19 @@ function stage(e){
   if(SCRIM[kind]){
     for(var i=0;i<FORMATION.length;i++){
       var f=FORMATION[i], k=kits[f[2]];
-      place(CAST[n++], LANE+f[0]*PXYD, f[1], f[3], i%3, k[0], k[1],
-            f[2]===SIDE_THEM, false);
+      place(CAST[n++], LANE+f[0]*PXYD*way, f[1], f[3], i%3, k[0], k[1],
+            (f[2]===SIDE_THEM) !== leftward, false);
     }
   }
 
-  var travel=Math.abs(yards)*PXYD, dirn=(yards<0?-1:1);
-  var reach=Math.min(ORIGIN+cam.clientWidth*0.66, x0+travel);
-  var scroll=Math.max(0, x0+travel-reach);
-  var dur=Math.min(2200, 420+Math.abs(yards)*24);
-  var lead=(kind==='rec')?240:(byBall?260:0);   // the catch, and the release
+  var travel=Math.abs(yards)*PXYD, dirn=way*(yards<0?-1:1);
+  // where the ball ends up, and how much of that the camera has to pan for
+  var want=x0+dirn*travel;
+  var limit=ORIGIN+cam.clientWidth*(dirn>0?0.68:0.32);
+  var reach=dirn>0 ? Math.min(want,limit) : Math.max(want,limit);
+  var scroll=want-reach;
+  var dur=Math.min(2200, 420+Math.abs(yards)*24)/PACE;
+  var lead=((kind==='rec')?240:(byBall?260:0))/PACE;   // the catch, the release
   var span=lead+dur, t0=performance.now();
   var pill=$('pill');
   pill.style.display = (byBall||kind==='xp') ? 'block' : 'none';
@@ -668,20 +679,22 @@ function stage(e){
   function mover(x0,d0,x1,d1,early,late,kitIdx,flip){
     var el=CAST[n++]; if(!el) return null;
     var m={el:el, x0:x0, d0:d0, x1:x1, d1:d1, early:early, late:late,
-           kit:kits[kitIdx], flip:flip!==false};
+           kit:kits[kitIdx], flip:(flip!==false) !== leftward};
     movers.push(m); return m;
   }
   var END=x0+dirn*travel;
 
   if(kind==='sack'){
     // the man being sacked, going down where the tackler arrives
-    place(CAST[n++], x0-1.6*PXYD, depth, 'sack', 1, kits[1][0], kits[1][1], true, false);
+    place(CAST[n++], x0-dirn*1.6*PXYD, depth, 'sack', 1,
+                 kits[1][0], kits[1][1], !leftward, false);
   } else if(byBall && travel){
     // A completed pass has a catcher. He is already downfield, turns for the
     // ball, and has a man on him -- which is the whole of what was missing.
     var rdep = (depth<0.5) ? 0.74 : 0.26;
-    mover(END-6*PXYD, rdep, END, rdep, 'run', 'catch', 0, false);
-    mover(END-3*PXYD, rdep+0.09, END+1.4*PXYD, rdep+0.05, 'backpedal', 'dive', 1, true);
+    mover(END-dirn*6*PXYD, rdep, END, rdep, 'run', 'catch', 0, false);
+    mover(END-dirn*3*PXYD, rdep+0.09, END+dirn*1.4*PXYD, rdep+0.05,
+          'backpedal', 'dive', 1, true);
   } else if(mover_is_man(mover_kind)){
     // One man beaten on the way, and one who makes the stop. The stop lands
     // exactly where the gain ends, because that is where the gain ended.
@@ -689,10 +702,10 @@ function stage(e){
       mover(x0+dirn*travel*0.55, depth+0.10, x0+dirn*travel*0.40, depth+0.02,
             'run', 'dive', 1, true);
     if(!(fl&TD))
-      mover(END+5*PXYD, depth-0.13, END+0.6*PXYD, depth-0.02,
+      mover(END+dirn*5*PXYD, depth-0.13, END+dirn*0.6*PXYD, depth-0.02,
             'run', 'tackle', 1, true);
     // and somebody chasing from behind, so it is not a man alone on a field
-    mover(x0+dirn*2*PXYD, depth+0.16, END-1.4*PXYD, depth+0.08,
+    mover(x0+dirn*2*PXYD, depth+0.16, END-dirn*1.4*PXYD, depth+0.08,
           'run', 'run', 1, false);
   }
 
@@ -725,14 +738,16 @@ function stage(e){
       act.style.left=(x0+dirn*(reach-x0)*ease)+'px';
     }
     else { fi=Math.floor(t/95); }
-    if(travel) $('track').style.transform='translateX('+(-dirn*scroll*ease)+'px)';
+    if(travel) $('track').style.transform='translateX('+(-scroll*ease)+'px)';
     // A thrower does not move, but the camera does. He is anchored to the snap
     // in FIELD space, so he falls to the back of the shot as the turf goes by
     // -- left in screen space he would moonwalk downfield instead. Clamped at
     // the edge rather than allowed to leave: a 48-yard pass panned him clean
     // out of frame and the panel became an empty field with a ball in it.
-    if(byBall) act.style.left=Math.max(ORIGIN+40, x0-dirn*scroll*ease)+'px';
-    drawActor(anim,fi,side.c1,side.c2);
+    if(byBall) act.style.left=(leftward
+        ? Math.min(ORIGIN+cam.clientWidth-40, x0-scroll*ease)
+        : Math.max(ORIGIN+40, x0-scroll*ease))+'px';
+    draw(act,anim,fi,side.c1,side.c2,leftward,false);
 
     // everyone else converging. They run until the last fifth, then do the
     // thing they are there to do -- catch it, miss it, or make the tackle.
@@ -748,7 +763,7 @@ function stage(e){
     if(SCRIM[kind]) for(var li=0;li<9;li++){
       var lf=FORMATION[li], lk=kits[lf[2]];
       draw(CAST[li], 'lineman', hold>0.06?2:0, lk[0], lk[1],
-           lf[2]===SIDE_THEM, false);
+           (lf[2]===SIDE_THEM) !== leftward, false);
     }
 
     if(pill.style.display==='block'){
@@ -759,9 +774,9 @@ function stage(e){
     }
     if(t < span+((fl&TD)?900:300)) requestAnimationFrame(frame);
     else if(tok===stageTok){
-      drawActor((fl&TD)?'celebrate':'idle',0,side.c1,side.c2);
+      draw(act,(fl&TD)?'celebrate':'idle',0,side.c1,side.c2,leftward,false);
       // the official, who is nobody's player and keeps his stripes
-      if(fl&TD) place(CAST[refSlot], END-30, depth+0.26, 'ref', 2, '', '', false, true);
+      if(fl&TD) place(CAST[refSlot], END-dirn*30, depth+0.26, 'ref', 2, '', '', false, true);
     }
   })(t0);
 
@@ -774,6 +789,8 @@ function stage(e){
     w.className='tdw'; void w.offsetWidth;
     setTimeout(function(){ if(tok===stageTok) w.className='tdw go'; }, lead+dur-180);
   }
+  // what the transport waits on before the next play
+  return span + ((fl&TD) ? 900 : 300);
 }
 
 
@@ -937,50 +954,57 @@ function seek(to){
 // and staging each would be a strobe. So a play only takes the field if the
 // field is free -- except a touchdown or a lead change, which always does,
 // because those are the two things anybody is watching for.
-var busyUntil = 0;
-function offer(e, now){
-  var big = (e[FLG]&TD) || (e[FLG]&GO);
-  if(!big && now < busyUntil) return;
-  busyUntil = now + ((e[FLG]&TD) ? 1500 : 700);
-  stage(e);
+// WHY THE CLOCK NO LONGER DRIVES THIS
+//
+// It used to: the clock ran at so many game-seconds a second and whatever fell
+// behind it got staged, unless the field was still busy with the last one, in
+// which case the play was dropped. At a minute a game the plays arrive about
+// three a second and each animation lasts about one, so the field was showing
+// roughly one play in four -- picked by whether it happened to be free. That is
+// exactly what "a disjointed video" looks like, and it was not a rendering
+// problem, it was the transport.
+//
+// So the plays drive the clock now. Each one is staged in full, the clock is
+// set to the moment that play actually happened, and the next one follows when
+// this one is done. Nothing is skipped and nothing overlaps. A game runs about
+// three minutes at 1x, which is what it takes to watch two hundred plays.
+var PACE = 1, timer = 0;
+
+function goTo(n){
+  if(!GAME) return;
+  shown = Math.max(0, Math.min(GAME.ev.length, n));
+  t = shown ? GAME.ev[shown-1][SEC] : 0;
+  if(shown >= GAME.ev.length) t = FULL;
+  render();
+  if(shown) stage(GAME.ev[shown-1]);
+  else clearField('Kick-off. Press play.');
 }
 
-function advance(dt){
-  var ev=GAME.ev, was=shown, flip=false, now=performance.now();
-  t = Math.min(FULL, t + dt);
-  while(shown<ev.length && ev[shown][SEC]<=t){
-    if(ev[shown][FLG]&GO) flip=true;
-    offer(ev[shown], now);
-    shown++;
-  }
-  if(shown!==was){
-    render();
-    if(flip){ var b=$('board'); b.classList.remove('flip'); void b.offsetWidth;
-              b.classList.add('flip'); }
-  } else { board(); }
-  if(t>=FULL){ render(); stop(); }
-}
-
-function tick(ts){
-  if(!playing) return;
-  if(!last) last = ts;
-  var dt = Math.min(0.25, (ts-last)/1000);   // a backgrounded tab must not skip
-  last = ts;
-  advance(dt * rate);
-  raf = requestAnimationFrame(tick);
+function stepOne(){
+  if(!playing || !GAME) return;
+  if(shown >= GAME.ev.length){ t=FULL; render(); stop(); return; }
+  var e = GAME.ev[shown++];
+  t = e[SEC];
+  render();
+  if(e[FLG]&GO){ var b=$('board'); b.classList.remove('flip');
+                 void b.offsetWidth; b.classList.add('flip'); }
+  var span = stage(e);
+  timer = setTimeout(stepOne, span + 240/PACE);
 }
 
 function start(){ if(playing||!GAME) return;
-  if(t>=FULL) seek(0);
-  playing=true; last=0; $('play').textContent='Pause';
-  raf=requestAnimationFrame(tick); }
-function stop(){ playing=false; last=0; if(raf) cancelAnimationFrame(raf);
-  raf=0; var p=$('play'); if(p) p.textContent='Play'; }
+  if(shown>=GAME.ev.length) goTo(0);
+  playing=true; $('play').textContent='Pause';
+  stepOne(); }
+function stop(){ playing=false; if(timer) clearTimeout(timer); timer=0;
+  var p=$('play'); if(p) p.textContent='Play'; }
 
+// by index, not by clock: several plays can share a second, and seeking to
+// that second landed on whichever of them came last
 function jump(test){
   var ev=GAME.ev;
-  for(var i=shown;i<ev.length;i++) if(test(ev[i])) { seek(ev[i][SEC]); return; }
-  seek(FULL);
+  for(var i=shown;i<ev.length;i++) if(test(ev[i])) { goTo(i+1); return; }
+  goTo(ev.length);
 }
 
 /* ---------- plumbing ---------- */
@@ -1019,10 +1043,10 @@ $('nextGo').addEventListener('click', function(){ stop();
   jump(function(e){return e[FLG]&GO;}); });
 $('scrub').addEventListener('input', function(){ stop(); seek(+this.value); });
 
-var RATES=[[60,'1 min'],[180,'20 sec'],[20,'3 min']];
+var RATES=[[1,'1\u00d7'],[2,'2\u00d7'],[3,'3\u00d7'],[0.5,'\u00bd\u00d7']];
 $('rate').addEventListener('click', function(){
-  var i=0; RATES.forEach(function(r,n){ if(r[0]===rate) i=n; });
-  var nx=RATES[(i+1)%RATES.length]; rate=nx[0]; this.textContent=nx[1];
+  var i=0; RATES.forEach(function(r,n){ if(r[0]===PACE) i=n; });
+  var nx=RATES[(i+1)%RATES.length]; PACE=nx[0]; this.textContent=nx[1];
 });
 
 document.addEventListener('keydown', function(e){
