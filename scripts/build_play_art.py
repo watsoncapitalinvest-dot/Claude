@@ -123,6 +123,25 @@ LIGHT = {
 }
 
 
+def band(play):
+    """Which moment-template a play falls into. Used to spot collisions."""
+    txt = play.get('text') or ''
+    yd = play.get('yards') or 0
+    if play['pos'] == 'K':
+        return 'kick'
+    if play['pos'] == 'QB' and 'pass' in txt:
+        return 'pass-short' if yd <= 10 else 'pass-deep'
+    if 'catch' in txt:
+        if yd <= 10 and play.get('td'):
+            return 'catch-crowd'
+        return 'catch-deep' if yd >= 35 else 'catch-stretch'
+    if yd <= 5:
+        return 'run-pile'
+    if yd <= 20:
+        return 'run-break'
+    return 'run-open' if yd < 40 else 'run-alone'
+
+
 def camera(play):
     txt = play.get('text') or ''
     yd = play.get('yards') or 0
@@ -135,33 +154,103 @@ def camera(play):
     return CAMERA['long_run'] if yd >= 35 else CAMERA['short_run']
 
 
-def action(play):
-    """What is happening, in one paragraph, from the play's own kind."""
-    yd = play.get('yards')
-    td = play.get('td')
+def action(play, nth=0):
+    """The moment inside the play, chosen by how far it went.
+
+    Bands that can collide inside one week carry two variants, and the choice is
+    made on how many games have already used that band -- not on the game index,
+    which looked right and was not: week 7's two forty-eight-yard touchdown
+    catches are games 5 and 7, both odd, so a parity test handed them the same
+    variant and they came back as the same photograph with different shirts.
+
+    The first version of this put everybody at a goal line with a defender
+    diving behind them and a pylon in shot, which is one photograph taken eight
+    times -- and worse, it told the reader nothing. A sixty-two-yard run and a
+    three-yard touchdown are not the same event and must not be the same
+    picture. So the moment comes off the distance: a short touchdown is a pile,
+    a medium run is the break through the line, a long one is open field, a very
+    long one is a man entirely on his own. Only the short plays get the goal
+    line, because only on a short play is the goal line what you would see.
+    """
+    txt = play.get('text') or ''
+    yd = play.get('yards') or 0
+    td = bool(play.get('td'))
     pos = play['pos']
-    if pos == 'QB' and 'pass' in (play.get('text') or ''):
-        return ('The quarterback is at the top of his throwing motion, front foot planted, '
-                'ball just leaving his hand, eyes downfield and away from the camera. One '
-                'pass rusher is on him, an arm across his chest, too late. The receiver is '
-                'not in the frame.')
+
     if pos == 'K':
-        return ('The kicker is through the ball with his plant foot off the ground and his '
-                'kicking leg at full extension, head still down. The holder is on one knee '
-                'in front of him. Nobody else is in the frame.')
-    if 'catch' in (play.get('text') or ''):
-        return (f'The receiver has just taken the ball in at full stretch, both hands on it, '
-                f'body turned back toward where it came from and feet about to come down on '
-                f'{"the goal line" if td else "the turf"}. One defender is behind him and '
-                f'below him, beaten, one arm still up at empty air. No other players in the '
-                f'frame.')
-    return (f'The runner is at full stride, left to right, '
-            f'{"about to cross a white goal line painted across the turf in front of him" if td else "breaking into open ground"}. '
-            f'The ball is in his outside arm, carried high and tight. His head is up and '
-            f'turned slightly back toward the man he has beaten. Mud is flying from his '
-            f'cleats. One defender is behind him and to his left, down on one knee with one '
-            f'arm still outstretched at empty air, having missed the tackle. No other '
-            f'players in the frame.')
+        return ('The kicker is through the ball, plant foot off the ground, kicking leg '
+                'at full extension, head still down. The holder is on one knee in front '
+                'of him and the line is braced across the frame behind. Nobody is '
+                'celebrating yet.')
+
+    if pos == 'QB' and 'pass' in txt:
+        if yd <= 10:
+            return ('A goal-line throw, and it is crowded. The quarterback has stepped up '
+                    'into a pocket that is collapsing around him, ball just gone from his '
+                    'hand, two linemen locked up either side of him and a rusher coming '
+                    'off the edge with an arm outstretched. Bodies everywhere, no open '
+                    'space anywhere in the frame.')
+        return ('The quarterback has set his feet and let it go deep, ball just leaving '
+                'his hand and already climbing out of the top of the frame, his arm still '
+                'following through and his eyes a long way downfield. One rusher is '
+                'arriving late and low at his legs. He has not been hit yet.')
+
+    if 'catch' in txt:
+        if yd <= 10 and td:
+            return ('A touchdown caught in a crowd. He has gone up between two defenders '
+                    'in the back of the end zone and taken it at the high point with both '
+                    'hands, arms fully extended above three sets of other hands, body '
+                    'twisted, feet off the ground and about to come down. It is a '
+                    'scramble, not a clean catch.')
+        if yd >= 35:
+            return (
+                ('Deep, and over the shoulder. He is at full sprint with his head turned '
+                 'back and up, both hands reaching away from his body for a ball that is '
+                 'still a foot from his fingers and falling into frame. The defender is a '
+                 'stride behind and already beaten, reaching at his back. Open grass in '
+                 'front of him and nobody in it.'),
+                ('High, and contested. Both men have left the ground at the same instant '
+                 'and are turned to face each other in the air, bodies twisted together, '
+                 'four hands on or near the ball at the very top of the leap. He has it '
+                 'and the defender has his forearm. Neither of them has landed.'),
+            )[nth % 2]
+        return (
+            ('Full stretch and horizontal. He has left his feet entirely and is stretched '
+             'flat out parallel to the ground, both hands on the ball, completely '
+             'committed, with nothing underneath him yet. The defender has turned the '
+             'wrong way and is behind his shoulder.'),
+            ('Caught sitting down. He has gone low for a ball at his ankles, both hands '
+             'under it, knees buckling and his backside about to hit the turf, head bent '
+             'right over it to watch it in. The defender has come through him a fraction '
+             'late and high, over the top of his shoulder.'),
+        )[nth % 2]
+
+    # runs
+    if yd <= 5:
+        return ('A short one, and it is a pile. He is driving low into a wall of bodies '
+                'at the goal line, shoulders down, legs still churning, the ball wrapped '
+                'in both arms, two defenders already on him and a third coming over the '
+                'top. Mud and bodies, no daylight anywhere.')
+    if yd <= 20:
+        return ('The break. He is coming through the line at the moment it opens, one '
+                'hand down on the turf for balance, a defender\'s arm sliding off his '
+                'hip and another grabbing at empty air behind him. Linemen on both sides, '
+                'still tangled. He is about to be clear and is not clear yet.')
+    if yd < 40:
+        return (
+            ('Open field. He is at full stride with nobody within touching distance, one '
+             'pursuer running an angle at him from deep on the far side and still a long '
+             'way off. No line of scrimmage, no end zone, no pylon -- just turf and the '
+             'two of them.'),
+            ('The stiff-arm. He has planted a straight arm into the facemask of the one '
+             'man who got to him and is pushing off it, his whole weight going through '
+             'it, the defender\'s head snapped back and his feet leaving the ground. The '
+             'ball is in the other arm. Nobody else is close.'),
+        )[nth % 2]
+    return ('Completely alone. He is at full sprint, upright now, head turned back over '
+            'his shoulder to see where everybody went, the ball loose in one hand at his '
+            'side. The nearest man is thirty yards behind him and out of focus. Nothing '
+            'else is in the frame but grass.')
 
 
 def look_line(play, looks):
@@ -280,6 +369,7 @@ def main():
     idx = players_index()
     os.makedirs(OUT, exist_ok=True)
     gaps = []
+    seen = {}          # band -> how many games have used it already this week
 
     for gi, g in enumerate(rp['games']):
         play, why = pick_play(g)
@@ -321,10 +411,13 @@ def main():
         club = scorer['team'].strip()
         club = club if club.lower().startswith('the ') else f'the {club}'
         club = club if ' ' in club[4:] or not club[4:].lower().startswith('still') else club[4:]
+        b = band(play)
+        nth = seen.get(b, 0)
+        seen[b] = nth + 1
         subject = (f'{play["player"]} of {club}, '
                    f'{play["text"]}, {when[int(play["fc"]["qtr"])]}.')
         body = TEMPLATE.format(
-            subject=subject, action=action(play), camera=camera(play),
+            subject=subject, action=action(play, nth), camera=camera(play),
             light=LIGHT[int(play['fc']['qtr'])],
             # adjacent pages should not mirror each other
             direction='left to right' if gi % 2 == 0 else 'right to left',
