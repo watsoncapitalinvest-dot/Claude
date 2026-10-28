@@ -129,19 +129,109 @@ CAMERA = {
                   'is the subject.',),
 }
 
-LIGHT = {
-    1: ('Late afternoon, the sun low and raking in from one side, long hard shadows '
-        'thrown right across the turf, the floodlights only just coming on and still '
-        'pale against the sky. Warm gold and long brown shadow.'),
-    2: ('Dusk. The sky overhead still a deep blue, the floodlights now the stronger '
-        'light and burning white. Cold blue sky against warm white light, the two '
-        'meeting on the players.'),
-    3: ('Full night. A black sky, no horizon, the floodlights hard and smoky, every '
-        'figure rim-lit and the ground lit in pools. Near-black and gold.'),
-    4: ('Night, and raining. The rain visible in the floodlight beams as drifting '
-        'silver, standing water on the turf throwing the lights back, everything wet '
-        'and running. Near-black, silver and cold white with amber underneath.'),
-}
+# --- the real conditions ------------------------------------------------------
+# The first version of this derived the light from the FANTASY quarter -- late
+# sun in the first, dusk in the second, night in the third, night and rain in
+# the fourth -- which is invention twice over. The fantasy clock is synthesised,
+# so it says nothing about the time of day, and nothing anywhere said it rained.
+# It did not rain in any of week 7's eight games. Two of the briefs put an open
+# floodlit bowl around a game played under a closed roof.
+#
+# The play-by-play has carried roof, weather, temp, wind, stadium and a real
+# timestamp on every play the whole time. So the conditions now come off the
+# tape: the real venue, the real sky and the real local clock of the real play.
+# The fantasy clock stays where it belongs, in the caption.
+
+# Stadium local time needs the home club's zone. The home club is the second
+# half of the game_id. LA and LAR are both here on purpose: Sleeper writes LAR
+# and nflverse writes LA, and that mismatch has already cost this desk a day.
+TEAM_TZ = {
+    'ARI': 'America/Phoenix', 'DEN': 'America/Denver',
+    'LA': 'America/Los_Angeles', 'LAR': 'America/Los_Angeles',
+    'LAC': 'America/Los_Angeles', 'LV': 'America/Los_Angeles',
+    'SEA': 'America/Los_Angeles', 'SF': 'America/Los_Angeles',
+    'CHI': 'America/Chicago', 'DAL': 'America/Chicago', 'GB': 'America/Chicago',
+    'HOU': 'America/Chicago', 'KC': 'America/Chicago', 'MIN': 'America/Chicago',
+    'NO': 'America/Chicago', 'TEN': 'America/Chicago',
+}   # everything else is Eastern
+
+
+def pbp_row(game_id, qtr, clock):
+    """The one play-by-play row the replay event came from."""
+    import gzip
+    path = os.path.join(ROOT, '.nflverse', f'pbp_{game_id[:4]}.csv.gz')
+    with gzip.open(path, 'rt', errors='replace') as f:
+        first = None
+        for r in csv.DictReader(f):
+            if r['game_id'] != game_id:
+                continue
+            if first is None and r.get('time_of_day'):
+                first = r
+            if r['qtr'] == str(qtr) and r['time'] in (clock, clock.lstrip('0')):
+                return r, first
+        return None, first
+
+
+def conditions(play):
+    """Where and when the real play happened, as a paragraph. Never guessed."""
+    gid = play.get('game_id')
+    if not gid:
+        return None, 'no game_id on the play'
+    row, first = pbp_row(gid, play.get('nfl_qtr'), play.get('nfl_clock') or '')
+    if not row:
+        return None, f'no play-by-play row for {gid} Q{play.get("nfl_qtr")} '\
+                     f'{play.get("nfl_clock")}'
+    home = gid.split('_')[-1]
+    tz = TEAM_TZ.get(home, 'America/New_York')
+    local = ''
+    tod = row.get('time_of_day') or ''
+    if tod:
+        from datetime import datetime, timezone
+        from zoneinfo import ZoneInfo
+        t = datetime.fromisoformat(tod.replace('Z', '+00:00')).astimezone(ZoneInfo(tz))
+        h = t.hour % 12 or 12
+        local = f'{h}.{t.minute:02d} {"in the afternoon" if 12 <= t.hour < 18 else "in the evening" if t.hour >= 18 else "in the morning"}'
+
+    roof = (row.get('roof') or '').lower()
+    wx = (row.get('weather') or '').strip()
+    sky = re.split(r'\s*temp', wx, flags=re.I)[0].strip(' ,') if wx else ''
+    temp = re.search(r'Temp:\s*(-?\d+)', wx)
+    wind = re.search(r'Wind:\s*([A-Z]{0,3}\s*\d+)\s*mph', wx)
+
+    surf = (row.get('surface') or '').lower()
+    wet = bool(re.search(r'rain|shower|snow|sleet|storm', wx, re.I))
+    if roof in ('dome', 'closed'):
+        ground = ('The playing surface is dry and clean. No mud anywhere -- this is an '
+                  'indoor field and it has not been rained on.')
+        short = 'indoors, under the roof'
+    elif wet:
+        ground = ('The turf is wet through and churned, standing water in the hollows '
+                  'throwing the light back, mud on everything.')
+        short = f'in the {sky.lower()}' if sky else 'in the wet'
+    else:
+        ground = ('The turf is dry. Scuffed and torn up where it has been played on, with '
+                  'loose grass and dust kicking up rather than mud. No standing water.')
+        short = (f'at about {local}' if local else 'outdoors')
+    if roof in ('dome', 'closed'):
+        line = ('INDOORS. This game was played under a roof. There is no sky anywhere in '
+                'the frame, no sun, no floodlight towers, no weather of any kind. The '
+                'light is even and artificial and comes from a bank of lamps in the roof, '
+                'so shadows are short and fall in several directions at once. The far '
+                'side of the bowl is lit as brightly as the field.')
+        if roof == 'closed':
+            line += ' The roof is a retractable one and it was shut.'
+    else:
+        line = f'OUTDOORS, in an open bowl. The local time was about {local}. ' if local \
+               else 'OUTDOORS, in an open bowl. '
+        if sky:
+            line += f'The sky was {sky.lower()}. '
+        if temp:
+            line += f'It was {temp.group(1)} degrees. '
+        if wind:
+            line += f'The wind was {wind.group(1).strip()} miles an hour. '
+        line += ('Light the scene for that time of day and that sky and nothing else. No '
+                 'rain and no snow unless the sky above says so.')
+    return {'light': line, 'ground': ground, 'short': short}, None
 
 
 def band(play):
@@ -338,7 +428,7 @@ LIGHT
 
 {light}
 
-The man with the ball carries a hard gold rim light along his back and shoulders, the brightest and warmest thing in the picture. The beaten man is darker, with only a cold edge. A full crowd behind, out of focus, in the colours of the side he is scoring against. Churned turf and mud underfoot.
+The man with the ball carries a hard gold rim light along his back and shoulders, the brightest and warmest thing in the picture. The beaten man is darker, with only a cold edge. A full crowd behind, out of focus, in the colours of the side he is scoring against. {ground}
 
 He is moving {direction} across the frame.
 
@@ -414,25 +504,25 @@ def main():
         if f'{play["player"]}|{play["pos"]}' not in looks:
             gaps.append(f'game {gi}: no appearance on file for {play["player"]}')
 
-        # the subject line used to end "at night under stadium floodlights" on
-        # every brief, which flatly contradicted the LIGHT section as soon as
-        # that started varying by quarter. Both come off the same fact now.
-        when = {1: 'in the low late-afternoon sun',
-                2: 'at dusk under the floodlights',
-                3: 'at night under stadium floodlights',
-                4: 'at night, in the rain, under stadium floodlights'}
         # "of the StillTheCream" -- some club names carry their own article
         club = scorer['team'].strip()
         club = club if club.lower().startswith('the ') else f'the {club}'
         club = club if ' ' in club[4:] or not club[4:].lower().startswith('still') else club[4:]
+        cond, no_cond = conditions(play)
+        if not cond:
+            gaps.append(f'game {gi}: real conditions unavailable -- {no_cond}')
+            cond = {'light': '<<CONDITIONS: roof, sky, local time of day. Not derivable '
+                             'here; do not invent them.>>',
+                    'ground': '<<GROUND: wet or dry. Not derivable here.>>',
+                    'short': ''}
         b = band(play)
         nth = seen.get(b, 0)
         seen[b] = nth + 1
         subject = (f'{play["player"]} of {club}, '
-                   f'{play["text"]}, {when[int(play["fc"]["qtr"])]}.')
+                   f'{play["text"]}, {cond["short"]}.')
         body = TEMPLATE.format(
             subject=subject, action=action(play, nth), camera=camera(play, nth),
-            light=LIGHT[int(play['fc']['qtr'])],
+            light=cond['light'], ground=cond['ground'],
             # adjacent pages should not mirror each other
             direction='left to right' if gi % 2 == 0 else 'right to left',
             kit_scorer=kit_line(ks, 'THE MAN WITH THE BALL'),
