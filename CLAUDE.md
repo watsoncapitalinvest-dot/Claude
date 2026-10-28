@@ -200,9 +200,17 @@ team to the other constantly, because their players are in different real
 games; drawn all one way that reads as noise, and drawn as two teams attacking
 opposite ends it reads as the ball changing hands.
 
+**The markers count the drive**, not a field position: yards this side has
+gained since it last scored, back to nought when it scores. That is derived and
+invents no events, so each play starts where the last one finished and the
+teams visibly move down the field. A hundred-yard field would have needed
+invented turnovers — 13 per cent of week 7's drives run past 100 yards and one
+reached 437. The marker label reads `DRIVE 101`, never a bare number, because a
+bare number on a football field is read as a yard line.
+
 What the field **does not** show is down, distance or field position, because
-the replay does not know them. The snap mark is a snap mark and not a yard
-line. A residual stages nothing at all and says why. The formation, the
+the replay does not know them: these plays come out of eight different real
+games at once, so there is no such thing as where the ball was. A residual stages nothing at all and says why. The formation, the
 catcher, the tackler and the pursuit are the **shape** of a play and never a
 claim about one: a completed pass had somebody catch it and a run that was not
 a touchdown was stopped by somebody, but who they were is not known and is

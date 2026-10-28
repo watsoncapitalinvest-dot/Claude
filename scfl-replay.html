@@ -174,6 +174,7 @@ h1{font-size:34px;line-height:1.08;margin:0 0 8px;font-weight:900;letter-spacing
     linear-gradient(180deg,rgba(0,0,0,.34) 0%,rgba(0,0,0,0) 30%,rgba(255,255,255,.05) 100%),
     repeating-linear-gradient(90deg,#17431f 0,#17431f 40px,#113619 40px,#113619 80px)}
 .track{position:absolute;inset:0;will-change:transform;transform-style:preserve-3d}
+.marks{position:absolute;inset:0}
 .hash{position:absolute;top:4%;bottom:10%;width:2px;background:rgba(255,255,255,.15)}
 .hash.b{top:0;bottom:2%;background:rgba(255,255,255,.34)}
 
@@ -452,6 +453,43 @@ var ORIGIN = 0;             // ground-space x of the camera's left edge
 var LANE = 0;               // ground-space x of the snap
 var DEEP = 0;               // the plane's own height: the field's width
 var stageTok = 0;
+var SPOT = [0,0];   // yards each side has gained since its own last score
+
+// WHY THE MARKERS USED TO READ THE SAME EVERY PLAY
+//
+// Every play was staged at the same mark with the markers counting 0, 10, 20
+// away from it, so nothing ever advanced and both teams spent the afternoon on
+// the same patch of grass -- John: "the yardage doesn't change, they're staying
+// in one spot."
+//
+// The replay has no field position: these plays come out of eight different
+// real games at once, so there is no such thing as where the ball was. What it
+// does have is real yardage, so what the markers count is THE DRIVE -- yards
+// this side has gained since the last time it scored. That is a derived
+// quantity, not a guess at a yard line, and it invents no events: a side's
+// ball advances by the yards it actually gained, and goes back to nought when
+// it scores. A hundred-yard field would have needed invented turnovers -- 13
+// per cent of these drives run past 100 yards and one reached 437.
+function offSideOf(e){
+  var k=e[KIND];
+  var defScore=(k==='sack'||k==='dint'||k==='drec'||k==='dtd');
+  return defScore ? (1-e[SIDE]) : e[SIDE];
+}
+function gainOf(e){
+  if(e[FLG]&RES) return 0;
+  var k=e[KIND];
+  return (k==='rush'||k==='rec'||k==='conv'||k==='dtd') ? (e[YDS]||0) : 0;
+}
+function scores(e){ return (e[FLG]&TD) || e[KIND]==='fg' || e[KIND]==='xp'; }
+function applySpot(e){
+  var o=offSideOf(e);
+  if(scores(e)) SPOT[o]=0; else SPOT[o]+=gainOf(e);
+}
+function spotsThrough(n){
+  SPOT=[0,0];
+  if(!GAME) return;
+  for(var i=0;i<n && i<GAME.ev.length;i++) applySpot(GAME.ev[i]);
+}
 
 function buildTrack(){
   var cam=$('camera'), gr=$('ground'), tr=$('track');
@@ -466,19 +504,11 @@ function buildTrack(){
   // destroyed.
   var keep=['endz','actor','pill'].map(function(id){return $(id);})
             .filter(function(el){return el;});
-  // both ways from the snap, because the two sides attack opposite ends
-  var html='', yds=170;
-  for(var y=-yds;y<=yds;y+=5){
-    var big=(y%10===0);
-    html+='<i class="hash'+(big?' b':'')+'" style="left:'+(LANE+y*PXYD)+'px"></i>';
-    if(big&&y) html+='<span class="ydn" style="left:'+(LANE+y*PXYD)+'px">'+
-                     Math.abs(y)+'</span>';
-  }
-  html+='<i class="snap" style="left:'+LANE+'px"><span>SNAP</span></i>';
-  tr.innerHTML=html;
+  tr.innerHTML='';
   keep.forEach(function(el){ tr.appendChild(el); });
   tr.style.transform='translateX(0)';
   buildCast();
+  marks(1,0,0);
 }
 
 // Where a football team stands. Each slot is [yards from the snap, how far
@@ -531,6 +561,28 @@ function buildCast(){
 
 // depth across the field -> how far up the plane, in the plane's own pixels
 function across(f){ return 14 + f*(DEEP-70); }
+
+// The yard markers, rebuilt around wherever this drive has got to. They are
+// drive yards, not a yard line: a side that has gained fifty-eight since it
+// last scored snaps from the 58.
+var MARKS=null;
+function marks(way, spot, loX){
+  var tr=$('track'); if(!tr) return;
+  if(!MARKS){ MARKS=document.createElement('div'); MARKS.className='marks'; }
+  var from=Math.max(0, Math.floor((spot-40)/5)*5), to=spot+120;
+  var html='';
+  for(var y=from;y<=to;y+=5){
+    var big=(y%10===0), x=LANE+way*y*PXYD;
+    html+='<i class="hash'+(big?' b':'')+'" style="left:'+x+'px"></i>';
+    if(big) html+='<span class="ydn" style="left:'+x+'px">'+y+'</span>';
+  }
+  // "DRIVE 101" and not "101", because a bare number on a football field is
+  // read as a yard line and this is not one -- there are no yard lines here.
+  html+='<i class="snap" style="left:'+(LANE+way*spot*PXYD)+'px">'+
+        '<span>'+(spot?'DRIVE '+spot:'SNAP')+'</span></i>';
+  MARKS.innerHTML=html;
+  if(MARKS.parentNode!==tr) tr.insertBefore(MARKS, tr.firstChild);
+}
 function nframes(anim){
   var f=SPR.ok && SPR.meta[anim] && SPR.meta[anim].frames;
   return f ? f.length : 0;
@@ -637,7 +689,10 @@ function stage(e){
   var dirn=way*(yards<0?-1:1);
   var travel=Math.abs(yards)*PXYD;
   var isPass=(kind==='pass'||kind==='rec'), AIR=0.58;
-  var losX=LANE, END=losX+dirn*travel;
+  // the drive, which is where this side has got to since it last scored
+  var spot=SPOT[offSide], base=way*spot*PXYD;
+  marks(way, spot);
+  var losX=LANE+base, END=losX+dirn*travel;
   var catchX=losX+dirn*travel*AIR;
   var rdep=(e[PID]%2) ? 0.22 : 0.78;         // which side he is split to
   var kits=[[side.c1,side.c2],[foe.c1,foe.c2]];
@@ -648,7 +703,9 @@ function stage(e){
 
   var cam=$('camera'), act=$('actor');
   // where the ball ends up, and how much of that the camera has to pan for
-  var limit=ORIGIN+cam.clientWidth*(dirn>0?0.82:0.18);
+  // the camera sits on the snap wherever down the drive it is, then pans only
+  // for what will not fit in front of it
+  var limit=base+ORIGIN+cam.clientWidth*(dirn>0?0.82:0.18);
   var reach=dirn>0?Math.min(END,limit):Math.max(END,limit);
   var scroll=END-reach;
   var dur=Math.min(2400, 620+Math.abs(yards)*24)/PACE;
@@ -847,7 +904,7 @@ function stage(e){
     if(tok!==stageTok) return;
     var el=now-t0;
     var h=el<SET ? 0 : Math.max(0,Math.min(1,(el-SET)/dur));
-    $('track').style.transform='translateX('+(-scroll*(1-Math.pow(1-h,2)))+'px)';
+    $('track').style.transform='translateX('+(-base-scroll*(1-Math.pow(1-h,2)))+'px)';
 
     for(var ri=0;ri<roles.length;ri++) if(roles[ri]) put(roles[ri], roles[ri].fn(h));
 
@@ -962,6 +1019,7 @@ function openGame(i){
     'ground it covered — not where on the pitch it happened, which the ' +
     'replay does not know and will not guess.';
   buildTrack();
+  SPOT=[0,0];
   seek(0); mark();
   window.scrollTo(0,0);
 }
@@ -1040,13 +1098,17 @@ function keys(){
   $('step').disabled = shown>=ev.length;
 }
 
+// the scrub: by clock rather than by index, and the drive has to be replayed
+// from the start of the game to know where it stands at that point
 function seek(to){
+  if(settle) clearTimeout(settle); settle=0; pending=null;
   t = Math.max(0, Math.min(FULL, to));
   var n=0, ev=GAME.ev;
   while(n<ev.length && ev[n][SEC]<=t) n++;
   shown = n;
+  spotsThrough(Math.max(0, shown-1));
   render();
-  if(shown) stage(ev[shown-1]);
+  if(shown){ stage(ev[shown-1]); applySpot(ev[shown-1]); }
   else clearField('Kick-off. Press play.');
 }
 
@@ -1075,10 +1137,11 @@ function goTo(n){
   if(!GAME) return;
   if(settle) clearTimeout(settle); settle=0; pending=null;
   shown = Math.max(0, Math.min(GAME.ev.length, n));
+  spotsThrough(Math.max(0, shown-1));   // the drive as it stood before this play
   t = shown ? GAME.ev[shown-1][SEC] : 0;
   if(shown >= GAME.ev.length) t = FULL;
   render();
-  if(shown) stage(GAME.ev[shown-1]);
+  if(shown){ stage(GAME.ev[shown-1]); applySpot(GAME.ev[shown-1]); }
   else clearField('Kick-off. Press play.');
 }
 
@@ -1087,6 +1150,7 @@ function stepOne(){
   if(shown >= GAME.ev.length){ t=FULL; render(); stop(); return; }
   var e = GAME.ev[shown++];
   var span = stage(e);
+  applySpot(e);                 // where the drive stands for the next play
   // The scoreboard and the feed used to update before the play ran, so the
   // points landed and THEN you watched what scored them. They settle when the
   // play does instead.
