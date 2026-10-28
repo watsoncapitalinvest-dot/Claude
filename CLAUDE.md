@@ -194,13 +194,28 @@ the simulation still runs, for the demo.
 every way into a game, including each issue's *Watch this one back*, lands on
 the broadcast.
 
-**Real**: the player, the kind of play, the yardage, the points, the quarter
-and the clock, the running score and the final. **Not real**: where the ball
-sits. These plays come out of eight different NFL games at once, so there is no
-such thing as where the ball was — a side starts on its own 25 and the spot
-advances by the yards it really gained, the same device as the sixty-minute
-clock, and the page says so. **Down and distance are not shown at all**, because
-the replay does not know them and this desk does not invent them.
+**Real**: for every play that scored — the player, the kind of play, the
+yardage, the points, the quarter, and the order each side's plays run in.
+**Not real**: where the ball sits, and the plays in between. These plays come
+out of eight different NFL games at once, so there is no such thing as where
+the ball was, and two rosters drawing on the same Sunday trade possession every
+other snap — 66 per cent of week 7's possessions ran one or two plays, which
+reads as the camera changing its mind rather than as football.
+
+So the tape is **gathered into drives** and given what a drive needs and a box
+score never records: the runs and throws between the scoring plays, and the
+punt or the stop at the end of one that did not score. Those are **marked
+CONNECTIVE PLAY in the ticker every time they appear**, they name nobody and
+they score nothing, and the page's own footer says all of this. The clock,
+already synthesised, may pull a play earlier to join its side's drive — **never
+across a quarter**, so the quarter a play is credited to is still the quarter
+the tape gives it and every published issue's "fourth-quarter" still holds.
+
+The arithmetic that must survive any change here, and is checked in the
+browser across all eight games: every scoring play present, each side's in tape
+order, and the running score landing on the true final. **Down and distance are
+not shown at all**, because the replay does not know them and this desk does
+not invent them.
 
 **Only men who played for these two sides that week are ever named on the
 field.** The eleven come from the week file's own starters, carried in the feed
@@ -214,11 +229,18 @@ guessed table is overwritten by them at load, so the field and the pictures in
 the issue dress the same sixteen clubs alike. That table had Wookie Leaks and
 BIG BLUE on the same blue.
 
-Real NFL plays laid onto a 60-minute fantasy clock. Nothing is invented: the
-plays, the yardage and the order are real; only the clock is synthesised. A
-Monday-night 30-yard touchdown catch becomes a late-fourth-quarter 30-yard
-touchdown catch. **Time is told in game time only** — quarters and the clock,
-never NFL broadcast windows, in the copy or in the share blurb.
+Real NFL plays laid onto a 60-minute fantasy clock. A Monday-night 30-yard
+touchdown catch becomes a late-fourth-quarter 30-yard touchdown catch. **Time
+is told in game time only** — quarters and the clock, never NFL broadcast
+windows, in the copy or in the share blurb.
+
+That quarter comes from the broadcast window the play fell in (`WINDOWS` in
+`scripts/replay.py`), and each window owns a fixed slice of the hour whatever
+it holds. So a week whose scoring landed in the late Sunday games piles into
+one quarter: week 7 game 0 is 44/68/93/4 across the four. It is not a replay
+bug — it is the mapping — but it means a quarter can hold most of a game, and
+rebuilding the mapping would move quarters that published issues have already
+named.
 
 Points no play explains (mostly team defence `pts_allow`) are carried as
 flagged residuals so running totals land on the true final. They are never

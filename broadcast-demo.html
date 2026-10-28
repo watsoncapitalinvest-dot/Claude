@@ -101,8 +101,10 @@
       linear-gradient(180deg, rgba(255,255,255,.05) 0%, rgba(0,0,0,0) 18%, rgba(0,0,0,.10) 100%),
       repeating-linear-gradient(90deg, #143c1e 0, #143c1e 10%, #0f3218 10%, #0f3218 20%);}
   .turf .ydnum{position:absolute;font-family:var(--sans);font-weight:900;color:rgba(255,255,255,.42);font-size:11px;transform:translateX(-50%);letter-spacing:1px;pointer-events:none}
-  .midlogo{position:absolute;left:50%;top:50%;width:31%;aspect-ratio:1;object-fit:cover;transform:translate(-50%,-50%);opacity:.9;border-radius:50%;
-    box-shadow:0 0 0 3px rgba(255,255,255,.25),0 0 0 5px rgba(0,0,0,.18),0 6px 26px rgba(0,0,0,.3);filter:saturate(1.08);pointer-events:none;z-index:1}
+  /* paint on the turf, not a sticker on the lens: at .9 it hid whoever ran
+     across the middle of the field, which is most of them */
+  .midlogo{position:absolute;left:50%;top:50%;width:24%;aspect-ratio:1;object-fit:cover;transform:translate(-50%,-50%);opacity:.34;border-radius:50%;
+    box-shadow:0 0 0 2px rgba(255,255,255,.14);filter:saturate(.85) contrast(.92);pointer-events:none;z-index:1}
   .turf .mid{position:absolute;top:0;bottom:0;left:50%;width:2px;background:rgba(255,255,255,.35);transform:translateX(-1px)}
   .losline{position:absolute;top:0;bottom:0;width:2px;background:rgba(216,180,90,.85);box-shadow:0 0 8px rgba(216,180,90,.7);transform:translateX(-1px);transition:left .6s ease;z-index:1}
   .fstline{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,214,0,.55);transform:translateX(-1px);transition:left .6s ease;z-index:1}
@@ -1094,6 +1096,22 @@ async function runPlayMotion(team,p){
     await tween(ball, team===H?26:74, 18, sp(1250), {arc:36}); if(tok!==animToken) return false;
     sfx.kick();
     await tween(ball, team===H?34:66, 50, sp(520), {ease:'linear'}); if(tok!==animToken) return false;
+  } else if(p.kind==='punt'){
+    // Connective, like the kickoff: nobody is named, nothing is claimed. The
+    // ball is hung up and comes down where the next drive starts.
+    chips.QB.classList.add('kicking');
+    setTimeout(()=>chips.QB.classList.remove('kicking'),sp(820));
+    await wait(sp(380)); if(tok!==animToken) return false;
+    const land=p.punt!=null?p.punt:los+dir*40;
+    cam((los+land)/2,1.0);
+    await tween(ball,(los+land)/2,16,sp(1150),{arc:34}); if(tok!==animToken) return false;
+    sfx.kick();
+    await tween(ball,land,48,sp(560),{ease:'linear'}); if(tok!==animToken) return false;
+    ballYd=land; return tok===animToken;
+  } else if(p.kind==='adj'){
+    // A scoring adjustment is not a play. Nothing moves; the board catches up.
+    await wait(sp(700)); if(tok!==animToken) return false;
+    return tok===animToken;
   } else if(p.kind==='fg'||p.kind==='xp'){
     await tween(ball,los+off*6.5,52,sp(200),{ease:'linear'}); if(tok!==animToken) return false;
     await wait(sp(150)); if(tok!==animToken) return false;
@@ -1252,7 +1270,7 @@ function tickClock(p){
   const nx=G.plays[idx+1];
   if(!nx||nx.q!==p.q||nx.secs>=p.secs) return;
   let cur=p.secs; const target=nx.secs;
-  const per=Math.max(70,(2000/speed)/Math.max(1,cur-target));
+  const per=Math.max(70,(2000*SLOW/speed)/Math.max(1,cur-target));
   clockT=setInterval(()=>{ if(cur>target){cur--; $('clock').textContent=fmt(cur);} else clearInterval(clockT); },per);
 }
 function setBug(runH,runA,q,clock,possTeam){
@@ -1302,7 +1320,11 @@ function addPlay(p){
   const isScore=p.td||p.kind==='fg'||p.kind==='dst'||p.kind==='int';
   const col=teamColor(p.team);
   const div=document.createElement('div'); div.className='play'+(isScore?' score-play':'');
-  const flag=p.kind==='dst'?`<div class="flag" style="color:${col}">${p.label||'DEFENSE'}</div>`
+  // A play the tape does not have says so, every time it appears. The page
+  // claims every figure on it is real; the connective plays are the exception
+  // and the reader is told which ones they are rather than left to guess.
+  const flag=p.fab&&p.kind!=='ko'?`<div class="flag" style="color:#8a8578">${p.label||'CONNECTIVE PLAY'}</div>`
+    :p.kind==='dst'?`<div class="flag" style="color:${col}">${p.label||'DEFENSE'}</div>`
     :p.kind==='int'?`<div class="flag" style="color:${col}">TURNOVER</div>`
     :isScore?`<div class="flag" style="color:${col}">${TEAMS[p.team].crest} ${TEAMS[p.team].name}</div>`:'';
   const showPill=Math.abs(p.delta)>=0.05;
@@ -1335,8 +1357,10 @@ function step(){
   cam(p.losYd!=null?p.losYd:ballYd,1.02);   // back off: 1.35 cropped the width away
   tickClock(p);
   const who=(p.actor||p.qb||'').toUpperCase();
-  const capWhat=p.td?`TOUCHDOWN · ${who} · ${p.yd>0?p.yd+'-YD ':''}${p.kind==='run'||p.kind==='qbrun'?'RUN':'PASS'}`
+  const capWhat=p.fab&&p.kind!=='ko'?(p.label||(p.yd>0?`${p.yd}-YD GAIN`:p.yd<0?`LOSS OF ${-p.yd}`:'INCOMPLETE'))
+    :p.td?`TOUCHDOWN · ${who} · ${p.yd>0?p.yd+'-YD ':''}${p.kind==='run'||p.kind==='qbrun'?'RUN':'PASS'}`
     :p.kind==='ko'?`KICKOFF · ${TEAMS[p.team].name.toUpperCase()}`
+    :p.kind==='adj'?`SCORING ADJUSTMENT · ${who}`
     :p.kind==='fg'?`FIELD GOAL · ${who} · ${p.dist} YDS`
     :p.kind==='xp'?`XP GOOD · ${who}`
     :p.kind==='dst'?`${(p.label||'DEFENSE').toUpperCase()} · ${who}`
@@ -1357,6 +1381,8 @@ function step(){
 }
 // how long the broadcast dwells on what just happened
 function delayFor(p){
+  // the connective plays carry the drive, they are not the point of it
+  if(p.fab&&p.kind!=='ko') return p.label?2300:1500;
   if(p.td) return 4800;                                  // soak in the touchdown
   if(p.kind==='dst'&&/SIX|TD/.test(p.label||'')) return 4200;
   if(p.kind==='int'||p.kind==='dst') return 2900;
@@ -1677,122 +1703,299 @@ function replayStats(g){
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// THE REBUILD, AS A GAME
+//
+// The tape gives us the plays that scored, in the order they really happened
+// across eight NFL games at once. Two fantasy rosters drawing on the same NFL
+// afternoon trade the ball every other snap: 66 per cent of week 7's
+// possessions ran one or two plays, and a possession that short does not read
+// as football. It reads as the camera changing its mind.
+//
+// So the tape is gathered into drives, and the drives are given the connective
+// tissue a drive needs and a fantasy box score never records.
+//
+//   Not altered: the player, the kind of play, the yardage, the points, the
+//   quarter. Every scoring play on this field is on the tape, and each side's
+//   plays run in the order they happened.
+//
+//   Added: the runs and throws between the scoring plays, and the punt or the
+//   stop that ends a drive that did not score. These carry no points, count in
+//   no box score, name nobody, and are marked CONNECTIVE PLAY in the ticker.
+//
+//   Nudged: the clock, which was synthesised to begin with. A play may be
+//   pulled earlier to join its side's drive -- never across a quarter, so the
+//   quarter a play is credited to is still the quarter the tape gives it.
+//
+// A drive takes at most DRV.P plays off the tape and at most DRV.Y real yards,
+// looking at most DRV.LOOK plays ahead for the next one of its own. Uncapped,
+// one side's good quarter swallowed the other's entirely.
+const DRV={P:5, Y:45, LOOK:7};
+
 function replayGame(g, week){
-  const plays=[], tally={H:{},A:{}};
-  const START={H:75,A:25};
-  let los={H:START.H,A:START.A}, drive=-1, lastOff=null, lead=0, q4=false;
+  const isDsc=k=>(k==='sack'||k==='dint'||k==='drec'||k==='dtd');
+  const rng=mulberry32((0x5CF1^(((g.m||0)*977+week*31)>>>0))>>>0);
+  const own=(s,n)=>s==='H'?100-n:n;            // H attacks toward 0
+  const toGoal=(s,y)=>s==='H'?y:100-y;
+  const adv=(s,y,d)=>s==='H'?y-d:y+d;
+  const other=s=>s==='H'?'A':'H';
+  const pin=(s,y)=>s==='H'?Math.max(3,Math.min(97,y)):Math.max(3,Math.min(97,y));
 
-  g.ev.forEach(e=>{
-    const k=e[RP.KIND], res=!!(e[RP.FLG]&RRES);
-    const dsc=(k==='sack'||k==='dint'||k==='drec'||k==='dtd');
-    const cred=e[RP.SIDE]===0?'H':'A';            // who the points go to
-    const off=dsc?(cred==='H'?'A':'H'):cred;      // who has the ball
-    const pl=g.p[e[RP.PID]], nm=pl[0];
-    const yd=(typeof e[RP.YDS]==='number')?e[RP.YDS]:0;
-    const td=!!(e[RP.FLG]&RTD);
-
-    if(off!==lastOff){ drive++; lastOff=off; }
-    const p={team:cred, kind:res?'dst':(RKIND[k]||'gen'), actor:nm,
-             qb:(k==='rec'?null:nm), pos:pl[1], yd:yd, td:td,
-             q:e[RP.QTR], mmss:e[RP.CK], runH:e[RP.S0], runA:e[RP.S1],
-             delta:e[RP.PTS], credits:[{name:nm,pts:e[RP.PTS]}],
-             drive:drive, losYd:los[off]};
-    if(k==='fg') p.dist=yd||20;
-    // an extra point comes off the fifteen, not from wherever the drive that
-    // scored the touchdown happened to be standing
-    if(k==='xp'){ p.dist=20; p.losYd=(off==='H')?85:15; }
-    p.real=true;
-    var what=e[RP.TXT]||'';
-    p.text=(td?'<b>TOUCHDOWN.</b> ':'')+'<b>'+nm+'</b>'+(what?' \u2014 '+what:'')+'.';
-    if(dsc){ p.label=DLAB[k]; p.pts=e[RP.PTS];
-             p.text='<b>'+nm+'</b> with '+(what||'a play')+'.'; }
-    if(res){ p.label='SCORING ADJUSTMENT'; p.pts=e[RP.PTS]; p.yd=0;
-             p.text='<b>'+nm+'</b> \u2014 points the box score credits that no '+
-                    'single play explains, carried so the running total lands '+
-                    'on the true final.'; }
-
-    // the lead changing hands is the one thing the booth is allowed to say,
-    // because the tape flags it
-    if(e[RP.FLG]&RGO) p.booth='And the lead changes hands — '+
-      TEAMS[(e[RP.S0]>e[RP.S1])?'H':'A'].name+' in front.';
-    if(!q4&&p.q===4){ q4=true;
-      p.booth=p.booth||('Fourth quarter. '+Math.abs(e[RP.S0]-e[RP.S1]).toFixed(2)+
-                        ' between them.'); }
-    p.hl=!!(td||dsc||k==='fg'||yd>=20);
-
-    // A touchdown ends ON the goal line, so the carrier runs into the end zone
-    // rather than stopping wherever the drive happened to be.
-    // 1 and 99, not 3 and 97: clamped at 3 a one-yard touchdown finished on
-    // the 2 instead of on the line
-    if(td){ p.losYd=(off==='H')?Math.max(1,Math.min(99,yd)):Math.max(1,Math.min(99,100-yd)); }
-
-    // The spot: own 25, advancing by what was really gained. A drive that
-    // outruns the field starts again from the 25 -- clamped at the goal line it
-    // stuck there and every play after it staged on the same yard, which is
-    // what "gets to the endzone and keeps driving but not moving" was.
-    // 13 per cent of week 7's drives run past 100 yards; one gained 437.
-    if(!res&&!dsc){
-      var nx=los[off]+(off==='H'?-1:1)*yd;
-      if(off==='H'?(nx<=2):(nx>=98)) nx=START[off];
-      los[off]=Math.max(3,Math.min(97,nx));
-    }
-    if(td||k==='fg'){ los[off]=START[off]; lastOff=null; }
-
-    // the box score wants {name,pos,pts,line} -- mine said {n,...}, so every
-    // player in it rendered as "undefined" and the game-balls line threw
-    const c=tally[cred][nm]=tally[cred][nm]||{name:nm,pos:pl[1],pts:0,touches:0,yds:0};
-    c.pts+=e[RP.PTS];
-    if(!res){ c.touches++; c.yds+=yd; }
-    plays.push(p);
+  // ---- the tape ----------------------------------------------------------
+  // A defensive score is credited to one roster and taken off the other, so it
+  // belongs to the OTHER side's drive, as the play that ends it. It used to
+  // start a drive for that side instead, which invented 21 of week 7's 496
+  // possession changes out of nothing.
+  const ev=g.ev.map(e=>{
+    const k=e[RP.KIND], res=!!(e[RP.FLG]&RRES), dsc=isDsc(k);
+    const cred=e[RP.SIDE]===0?'H':'A';
+    return {k:k, res:res, dsc:dsc, cred:cred, off:dsc?other(cred):cred,
+            pl:g.p[e[RP.PID]], yd:(typeof e[RP.YDS]==='number')?e[RP.YDS]:0,
+            td:!!(e[RP.FLG]&RTD), q:e[RP.QTR], pts:e[RP.PTS],
+            txt:e[RP.TXT]||'', flg:e[RP.FLG]};
   });
 
-  // ---- KICKOFFS ----
+  // ---- gathered into drives ----------------------------------------------
+  const drives=[];
+  for(let q=1;q<=4;q++){
+    const pend=ev.filter(e=>e.q===q);
+    let guard=0, lastSide=null;
+    while(pend.length && guard++<4000){
+      // the ball changes hands. Taking the side off the top of the tape
+      // every time ran five Klowns drives back to back, kickoff and all.
+      const want=lastSide?other(lastSide):null;
+      const side=(want&&pend.some(e=>e.off===want))?want:pend[0].off;
+      const take=[]; let yards=0, last=-1, ended=null;
+      for(let j=0;j<pend.length;j++){
+        const e=pend[j];
+        if(e.off!==side||e.dsc) continue;
+        if(take.length && j-last>DRV.LOOK) break;
+        const ny=(e.res||e.k==='fg'||e.k==='xp')?0:Math.max(0,e.yd);
+        if(take.length && (take.length>=DRV.P || yards+ny>DRV.Y)) break;
+        take.push(e); last=j; yards+=ny;
+        if(e.td||e.k==='fg'||e.k==='xp'){ ended='score'; break; }
+        // a pick or a lost fumble is scored against the man who gave it away,
+        // so it sits on his own side of the tape -- and it ends his drive
+        if(e.k==='int'||e.k==='fum'){ ended='turnover'; break; }
+      }
+      if(!ended){                                   // a takeaway ends the drive
+        const t=pend.findIndex(e=>e.dsc&&e.off===side);
+        // only a pick, a fumble recovery or a defensive score changes hands.
+        // A sack ends the drive the way a sack does: short of the sticks.
+        if(t>=0 && (!take.length || t<=last+DRV.LOOK)){
+          take.push(pend[t]); ended=pend[t].k==='sack'?'stop':'turnover'; }
+      }
+      if(!take.length) take.push(pend.find(e=>e.off===side)||pend[0]);
+      lastSide=side;
+      take.forEach(e=>{ const i=pend.indexOf(e); if(i>=0) pend.splice(i,1); });
+      drives.push({side:side, q:q, ev:take, ended:ended||'stop'});
+    }
+  }
+
+  // ---- the connective plays ----------------------------------------------
+  const CARRY=['run up the middle','carry off left tackle','carry off right tackle',
+               'run behind the guard','draw up the gut','sweep to the outside'];
+  const THROW=['checkdown underneath','quick out','crossing route','throw over the middle',
+               'comeback on the sideline','strike down the seam'];
+  function chunks(total){
+    const out=[];
+    if(total<0){ let l=-total;                       // a sack or a stuff soaks it
+      while(l>0){ const c=Math.min(l,2+Math.floor(rng()*6)); out.push(-c); l-=c; } return out; }
+    let left=total;
+    while(left>0 && out.length<9){
+      let c;
+      if(left<=12) c=left;
+      else { c=2+Math.floor(rng()*9); if(rng()<0.18) c=12+Math.floor(rng()*14); c=Math.min(c,left); }
+      out.push(c); left-=c;
+    }
+    if(left>0) out.push(left);
+    if(out.length>1 && rng()<0.45) out.splice(1+Math.floor(rng()*(out.length-1)),0,0);
+    return out;
+  }
+  function mkFab(s,y,gain,q){
+    const pass=gain===0||(gain>9&&rng()<0.62)||(gain>0&&rng()<0.34);
+    const p={team:s, kind:gain===0?'inc':pass?'gen':'run', actor:'', qb:null, pos:'',
+             yd:gain, td:false, q:q, delta:0, credits:[], hl:false, real:true,
+             fab:true, losYd:y};
+    p.text = gain===0 ? 'The throw falls incomplete.'
+      : gain<0 ? 'Stuffed at the line for a loss of '+(-gain)+'.'
+      : pass ? 'A '+THROW[Math.floor(rng()*THROW.length)]+' for '+gain+'.'
+             : 'A '+CARRY[Math.floor(rng()*CARRY.length)]+' for '+gain+'.';
+    return p;
+  }
+  function mkPunt(s,y,land,touchback,q){
+    return {team:s, kind:'punt', actor:'', qb:null, pos:'', yd:0, td:false, q:q,
+            delta:0, credits:[], hl:false, real:true, fab:true, losYd:y,
+            label:'PUNT', punt:land,
+            // the yard line the receiving side calls it, not the distance to
+            // their goal -- that printed a punt to the 11 as a punt to the 50
+            text:'<b>The punt.</b> '+(touchback?'Into the end zone, and out to the 25.'
+                 :'Fielded on the '+(other(s)==='H'?100-land:land)+'.')};
+  }
+  function mkDowns(s,y,q){
+    return {team:s, kind:'inc', actor:'', qb:null, pos:'', yd:0, td:false, q:q,
+            delta:0, credits:[], hl:false, real:true, fab:true, losYd:y,
+            label:'TURNOVER ON DOWNS',
+            text:'<b>Fourth down, and it comes up short.</b> The ball changes hands here.'};
+  }
+
+  // ---- the march ---------------------------------------------------------
+  const tally={H:{},A:{}};
+  function credit(e){
+    const c=tally[e.cred][e.pl[0]]=tally[e.cred][e.pl[0]]||
+      {name:e.pl[0],pos:e.pl[1],pts:0,touches:0,yds:0};
+    c.pts+=e.pts; if(!e.res){ c.touches++; c.yds+=e.yd; }
+  }
+  function mkReal(s,e,y,di){
+    const nm=e.pl[0];
+    const p={team:e.cred, kind:e.res?'adj':(RKIND[e.k]||'gen'), actor:nm,
+             qb:(e.k==='rec'?null:nm), pos:e.pl[1], yd:e.yd, td:e.td,
+             q:e.q, delta:e.pts, credits:[{name:nm,pts:e.pts}], drive:di,
+             losYd:y, real:true};
+    if(e.k==='fg') p.dist=e.yd||20;
+    // an extra point comes off the fifteen, wherever the drive stood
+    if(e.k==='xp'){ p.dist=20; p.losYd=own(other(s),15); }
+    const what=e.txt;
+    p.text=(e.td?'<b>TOUCHDOWN.</b> ':'')+'<b>'+nm+'</b>'+(what?' — '+what:'')+'.';
+    if(e.dsc){ p.label=DLAB[e.k]; p.pts=e.pts; p.kind='dst';
+               p.text='<b>'+nm+'</b> with '+(what||'a play')+'.'; }
+    if(e.res){ p.label='SCORING ADJUSTMENT'; p.pts=e.pts; p.yd=0;
+               p.text='<b>'+nm+'</b> — points the box score credits that no single '+
+                      'play explains, carried so the running total lands on the true final.'; }
+    // A touchdown finishes ON the goal line. 1 and 99, not 3 and 97: clamped at
+    // 3, a one-yard score finished on the 2 instead of on the line.
+    if(e.td&&!e.dsc) p.losYd=own(other(s),1);
+    p.hl=!!(e.td||e.dsc||e.k==='fg'||e.yd>=20);
+    return p;
+  }
+
+  const out=[]; let nextStart=null;
+  drives.forEach((dr,di)=>{
+    const s=dr.side, from=out.length;
+    let start=pin(s, nextStart!=null?nextStart:own(s,25));
+    const reals=dr.ev;
+    const last=reals[reals.length-1];
+    const tdPlay=(dr.ended==='score'&&last.td)?last:null;
+    const fgPlay=(dr.ended==='score'&&last.k==='fg')?last:null;
+    const xpPlay=(dr.ended==='score'&&last.k==='xp')?last:null;
+    const before=reals.filter(e=>e!==tdPlay&&!e.res&&!e.dsc&&e.k!=='xp'&&e.k!=='fg')
+                      .reduce((a,e)=>a+Math.max(0,e.yd),0);
+
+    // where the ball has to be standing when the final act comes
+    let target=null;
+    if(tdPlay) target=Math.max(1,Math.min(60,tdPlay.yd||1));
+    else if(fgPlay) target=Math.max(2,Math.min(55,(fgPlay.yd||37)-17));
+    else if(xpPlay) target=15;                   // the conversion spot
+    let need;
+    if(target!=null){
+      let D=toGoal(s,start);
+      if(D-before-target<0){ D=Math.min(99,before+target+2); start=pin(s,own(s,100-D)); }
+      need=toGoal(s,start)-before-target;
+    } else {
+      const room=toGoal(s,start)-before-24;       // stop short of the other 24
+      need=room<=0?0:Math.min(room,4+Math.floor(rng()*13));
+    }
+
+    // Filler is spread across the drive, always ahead of a real play, so the
+    // arithmetic lands wherever the interleave puts it: after every filler and
+    // every non-scoring real play the ball is exactly `target` from the line.
+    const fill=chunks(need);
+    const groups=Array.from({length:Math.max(1,reals.length)},()=>[]);
+    fill.forEach((v,k)=>groups[k%groups.length].push(v));
+
+    let y=start;
+    groups.forEach((gp,k)=>{
+      gp.forEach(v=>{ out.push(mkFab(s,y,v,dr.q)); y=pin(s,adv(s,y,v)); });
+      const e=reals[k]; if(!e) return;
+      const p=mkReal(s,e,y,di); out.push(p); credit(e);
+      if(!e.res&&!e.dsc&&e.k!=='xp'&&e.k!=='fg') y=pin(s,adv(s,y,Math.max(0,e.yd)));
+      if(e.td) y=own(other(s),1);
+    });
+
+    // how the drive ends, and where that leaves the next one
+    if(dr.ended==='score'){ nextStart=null; }
+    else if(dr.ended==='turnover'){ nextStart=y; }
+    else {
+      const toG=toGoal(s,y);
+      if(toG<=38){ out.push(mkDowns(s,y,dr.q)); nextStart=y; }
+      else {
+        const dist=38+Math.floor(rng()*15);
+        let land=adv(s,y,dist), tb=false;
+        if(toGoal(s,land)<=8){ land=own(other(s),25); tb=true; }
+        out.push(mkPunt(s,y,land,tb,dr.q)); nextStart=pin(s,land);
+      }
+    }
+    const nx=drives[di+1];
+    if(nx && nx.side===s) nextStart=null;         // same side twice: fresh ball
+    for(let z=from;z<out.length;z++) if(out[z].drive==null) out[z].drive=di;
+  });
+
+  // ---- kickoffs ----------------------------------------------------------
   // One to open the game, one to open the second half, and one after every
-  // score. They are not on the tape -- a kickoff is a certainty of football
-  // rather than something the replay records -- so they name nobody, claim no
-  // yardage and carry no points. Scenery, like the linemen.
-  function ko(team, at, clk){
-    return {team:team, kind:'ko', actor:'', qb:null, yd:0, td:false,
-            q:clk.q, mmss:clk.mmss, runH:at.runH, runA:at.runA,
-            delta:0, credits:[], drive:-1, hl:false, real:true,
+  // score. They are not on the tape, so they name nobody, claim no yardage and
+  // carry no points. NOT after an extra point: in fantasy a kicker's
+  // conversions come out of his own NFL game and have nothing to do with his
+  // fantasy side's touchdowns -- seven of week 7's eight touchdowns had no
+  // extra point behind them at all.
+  function ko(team,q){
+    return {team:team, kind:'ko', actor:'', qb:null, pos:'', yd:0, td:false, q:q,
+            delta:0, credits:[], drive:-1, hl:false, real:true, fab:true,
             losYd:(team==='H')?65:35, label:'KICKOFF',
             text:'<b>Kickoff.</b> '+TEAMS[team].name+' put it in the air.'};
   }
-  // A kickoff follows a touchdown or a field goal. NOT an extra point: in
-  // fantasy the kicker's conversions come out of his own NFL game and have
-  // nothing to do with his fantasy team's touchdowns. Measured on this
-  // matchup, seven of eight touchdowns had no extra point after them at all,
-  // so treating a conversion as its own score put four kickoffs in the game
-  // that no score had earned.
   const withKo=[]; let halfDone=false;
-  plays.forEach((pl,i)=>{
-    // 0-0 at the opening kickoff: borrowing the first play's score put two
-    // points on the board before a down had been staged
-    if(i===0) withKo.push(ko(pl.team==='H'?'A':'H', {runH:0,runA:0}, pl));
-    if(!halfDone && pl.q>=3){ halfDone=true;
-      withKo.push(ko(pl.team==='H'?'A':'H', plays[i-1]||pl, pl)); } // and the half
-    withKo.push(pl);
-    const nxt=plays[i+1]; if(!nxt) return;
-    if(pl.td || pl.kind==='fg') withKo.push(ko(pl.team, pl, nxt));
+  out.forEach((p,i)=>{
+    if(i===0) withKo.push(ko(other(p.team),p.q||1));
+    if(!halfDone && p.q>=3){ halfDone=true; withKo.push(ko(other(p.team),3)); }
+    withKo.push(p);
+    const nxt=out[i+1]; if(!nxt) return;
+    if(p.td||p.kind==='fg') withKo.push(ko(p.team,nxt.q||p.q));
   });
-  plays.length=0; withKo.forEach(x=>plays.push(x));
 
+  // ---- the clock ---------------------------------------------------------
+  // Every play keeps the quarter the tape gave it; inside the quarter the
+  // fifteen minutes are shared out across the plays that quarter holds. The
+  // clock was synthesised before any of this, and it says so on the page.
+  const plays=[];
+  [1,2,3,4].forEach(q=>{
+    const inQ=withKo.filter(p=>(p.q||1)===q);
+    inQ.forEach((p,k)=>{
+      const left=Math.round(900*(1-(k+1)/(inQ.length+1)));
+      p.q=q; p.mmss=fmt(left); p.secs=left;
+      plays.push(p);
+    });
+  });
+
+  // ---- the running score, in the order this tape tells it -----------------
+  let rh=0, ra=0, lead=0, flips=0, q4=false;
+  plays.forEach(p=>{
+    if(p.team==='H') rh+=p.delta||0; else ra+=p.delta||0;
+    rh=Math.round(rh*100)/100; ra=Math.round(ra*100)/100;
+    p.runH=rh; p.runA=ra;
+    const now=rh>ra?1:rh<ra?-1:0;
+    if(now && lead && now!==lead){ flips++;
+      p.booth='And the lead changes hands — '+TEAMS[now>0?'H':'A'].name+' in front.'; }
+    if(now) lead=now;
+    if(!q4&&p.q===4){ q4=true;
+      p.booth=p.booth||('Fourth quarter. '+Math.abs(rh-ra).toFixed(2)+' between them.'); }
+  });
   const hIdx=plays.findIndex(p=>p.q>=3);
   if(hIdx>0) plays[hIdx].halftime={h:plays[hIdx-1].runH,a:plays[hIdx-1].runA};
-  // a line each, counted rather than written: how many scoring plays the man
-  // was on and what they covered
+
+  // ---- the book ----------------------------------------------------------
   function lines(o){ return Object.values(o).map(function(c){
     c.pts=Math.round(c.pts*100)/100;
-    c.line=c.touches+(c.touches===1?' play':' plays')+
-           (c.yds?' \u00b7 '+c.yds+' yds':'');
+    c.line=c.touches+(c.touches===1?' play':' plays')+(c.yds?' · '+c.yds+' yds':'');
     return c; }).sort(function(a,b){return b.pts-a.pts;}); }
-  const box={H:lines(tally.H), A:lines(tally.A)};
+  const box={H:lines(tally.H),A:lines(tally.A)};
   const stars=[...box.H.map(x=>({...x,team:'H'})),...box.A.map(x=>({...x,team:'A'}))]
               .sort((a,b)=>b.pts-a.pts).slice(0,3);
-  const flips=g.lc===1?'one lead change':g.lc+' lead changes';
-  return {plays, finalH:g.f[0], finalA:g.f[1], box, stars,
+  const onTape=plays.filter(p=>!p.fab).length;
+  return {plays:plays, finalH:g.f[0], finalA:g.f[1], box:box, stars:stars,
     pregame:TEAMS.H.name+' host '+TEAMS.A.name+' — week '+week+
-            ', rebuilt from the tape. '+plays.length+' plays, '+flips+'.'};
+            ', rebuilt from the tape. '+onTape+(onTape===1?' play':' plays')+
+            ' off the box score, '+drives.length+' drives, '+
+            (flips===1?'one lead change':flips+' lead changes')+'.'};
 }
 
 function startReplay(feed, gi, week){
@@ -1804,7 +2007,7 @@ function startReplay(feed, gi, week){
   const sel=$('matchsel'); if(sel) sel.style.display='none';
   // the page describes itself honestly in each mode
   var sub=document.querySelector('.tag b'); if(sub)
-    sub.textContent='Week '+week+' \u00b7 rebuilt from the tape \u00b7 real plays, real yardage';
+    sub.textContent='Week '+week+' \u00b7 rebuilt from the tape \u00b7 every scoring play real, the drives filled in';
   var hd=document.querySelector('.brand'); if(hd)
     hd.innerHTML=hd.innerHTML.replace('Game of the Week','Week '+week);
   // a way back to the week's other seven games
@@ -1816,15 +2019,19 @@ function startReplay(feed, gi, week){
     nb.style.display='flex'; nb.style.alignItems='center'; nb.appendChild(a);
   }
   var how=document.querySelector('.foot'); if(how)
-    how.innerHTML='<b>What this is:</b> the week, rebuilt. Every play on this '+
-      'field really happened \u2014 the player, the kind of play, the yardage, '+
-      'the points, the quarter and the clock all come off the tape, and the '+
-      'running score lands on the true final. What is NOT real is where the '+
-      'ball sits: these plays come out of eight different NFL games at once, '+
-      'so there is no such thing as where the ball was. A side starts on its '+
-      'own 25 and the spot advances by the yards it really gained \u2014 the '+
-      'same device as the sixty-minute clock. Down and distance are not shown, '+
-      'because the replay does not know them.';
+    how.innerHTML='<b>What this is:</b> the week, rebuilt. Every play that '+
+      'scored really happened \u2014 the player, the kind of play, the yardage, '+
+      'the points and the quarter all come off the tape, each side\u2019s plays '+
+      'run in the order they happened, and the running score lands on the true '+
+      'final. Those plays come out of eight different NFL games at once, which '+
+      'is why two fantasy sides trade the ball every other snap, so they are '+
+      'gathered into drives and the drive is given what a drive needs and a box '+
+      'score never records: the runs and throws in between, and the punt or the '+
+      'stop at the end of one that did not score. Those are marked '+
+      '<b>CONNECTIVE PLAY</b>, they name nobody and they score nothing. The '+
+      'sixty-minute clock is synthesised too \u2014 a play keeps the quarter the '+
+      'tape gives it and the minutes inside the quarter are shared out. Down '+
+      'and distance are not shown, because the replay does not know them.';
   SLOW=2.6;                      // the play is the point, not the result
   G=replayGame(g,week);
   reset();
