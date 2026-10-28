@@ -222,6 +222,13 @@ field.** The eleven come from the week file's own starters, carried in the feed
 as each game's `r`. Topping them up from `scfl-rosters.json` put a July export
 on a week-7 field, which can name somebody traded away months earlier.
 
+A `gen` play is a quarterback's **passing yardage**, and the man who caught it
+is almost always on another fantasy roster — so the quarterback is named and
+**the catch is made by a figure with no name over his head**. It used to be
+thrown to empty grass with a defender jogging after it, which reads as
+incomplete while the ticker says it was completed for 48. 1,085 plays a week
+looked that way.
+
 And — John's rule — **every play by a named player is real**. A kickoff, a
 punt and every connective play are carried by eleven men in kit wearing their
 position and nothing else, because a run has to be run by a figure but no
