@@ -310,8 +310,15 @@ def main():
         if f'{play["player"]}|{play["pos"]}' not in looks:
             gaps.append(f'game {gi}: no appearance on file for {play["player"]}')
 
+        # the subject line used to end "at night under stadium floodlights" on
+        # every brief, which flatly contradicted the LIGHT section as soon as
+        # that started varying by quarter. Both come off the same fact now.
+        when = {1: 'in the low late-afternoon sun',
+                2: 'at dusk under the floodlights',
+                3: 'at night under stadium floodlights',
+                4: 'at night, in the rain, under stadium floodlights'}
         subject = (f'{play["player"]} of the {scorer["team"].strip()}, '
-                   f'{play["text"]}, at night under stadium floodlights.')
+                   f'{play["text"]}, {when[int(play["fc"]["qtr"])]}.')
         body = TEMPLATE.format(
             subject=subject, action=action(play), camera=camera(play),
             light=LIGHT[int(play['fc']['qtr'])],
