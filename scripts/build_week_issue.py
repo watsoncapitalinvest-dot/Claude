@@ -1080,9 +1080,17 @@ def build(season, week, remeasure=True):
         'arts_inline': arts,
         # opener art, keyed by the article id the builder assigns. Features are
         # wk{week}-f{n}; a file that is not there simply opens typographically.
-        'openart': {f'wk{week}-f{n}': f
-                    for n, f in enumerate(d.get('art') or [])
-                    if f},
+        # Game reports are wk{week}-g{i}, keyed by the story's index in the
+        # written file rather than by its printed order, and they take their
+        # picture and its caption off the story itself. A picture of a play
+        # without a caption saying which play is decoration, so the caption
+        # travels with the file.
+        'openart': dict(
+            {f'wk{week}-f{n}': f
+             for n, f in enumerate(d.get('art') or []) if f},
+            **{f'wk{week}-g{i}': ({'src': st['art'], 'caption': st['caption']}
+                                  if st.get('caption') else st['art'])
+               for i, st in enumerate(stories) if st.get('art')}),
     }
     # ---- one article, one page -------------------------------------------
     # The greedy packer fills pages to the brim, so a long game report spills

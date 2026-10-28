@@ -175,6 +175,12 @@ EXTRA_CSS="""
 .divider{text-align:center;padding:26px 0 8px;}
 .divider .d-art{display:block;width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:2px;
   margin:0 0 20px;background:#e8e2d8;}
+/* A picture of a play needs a caption saying what the play was, or it is
+   decoration. Left-aligned under a centred divider on purpose: it is reporting,
+   not a title. Pulled up into the image's own bottom margin so an uncaptioned
+   opener keeps exactly the spacing it had. */
+.divider .d-cap{font-family:var(--sans);font-size:11px;line-height:1.55;
+  color:var(--muted,#65656b);text-align:left;margin:-16px 0 20px;}
 .divider .d-flag{font-family:var(--sans);font-size:10.5px;font-weight:900;letter-spacing:.24em;
   text-transform:uppercase;color:var(--red);}
 .divider .d-h{font-family:var(--serif);font-weight:900;font-size:27px;line-height:1.15;margin-top:10px;}
@@ -203,7 +209,13 @@ def esc(t):
 def article_blocks(art, first, openart=None):
     # 'divider' rather than 'sect': the packer forces a page break before one, so
     # every article finishes its own page and the next one opens a fresh one.
-    img=(f'<img class="d-art" src="{openart}" alt="">' if openart else '')
+    # openart is a filename, or {'src':..., 'caption':...} when the picture is
+    # of something specific and the reader needs telling what.
+    src = openart.get('src') if isinstance(openart, dict) else openart
+    cap = openart.get('caption') if isinstance(openart, dict) else ''
+    img = (f'<img class="d-art" src="{src}" alt="">' if src else '')
+    if src and cap:
+        img += f'<div class="d-cap">{esc(cap)}</div>'
     out=[('divider', f'<div class="divider" id="art-{art["id"]}">'+img+'<div class="d-flag">'+esc(art.get('flag',''))+'</div>'
           '<div class="d-h">'+esc(art['headline'])+'</div>'
           '<div class="d-s">'+esc(art.get('subhead',''))+'</div>'
@@ -289,8 +301,12 @@ def build(key, remeasure=True, quiet=False):
     missing_art=[]
     for i,a in enumerate(arts):
         f=openart.get(a['id'])
-        if f and not os.path.exists(os.path.join(ROOT,f)):
-            missing_art.append(f); f=None
+        # an entry is a filename, or {'src':..., 'caption':...}; the existence
+        # check has to reach the filename either way or a captioned opener
+        # vanishes without the note that says it did
+        fn=f.get('src') if isinstance(f,dict) else f
+        if fn and not os.path.exists(os.path.join(ROOT,fn)):
+            missing_art.append(fn); f=None
         blocks += article_blocks(a, i==0, f)
     if missing_art and not quiet:
         print('  note: opener art not present, those articles open typographically:',
