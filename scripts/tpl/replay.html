@@ -157,8 +157,7 @@ h1{font-size:34px;line-height:1.08;margin:0 0 8px;font-weight:900;letter-spacing
     repeating-linear-gradient(90deg,#17431f 0,#17431f 40px,#113619 40px,#113619 80px)}
 .track{position:absolute;inset:0;will-change:transform;transform-style:preserve-3d}
 .marks{position:absolute;inset:0}
-.ticks{position:absolute;width:5200px;transform-origin:left center;
-  pointer-events:none}
+.ticks{position:absolute;pointer-events:none}
 /* The home crest, one of them, at the middle of the field. It hangs off the
    GROUND rather than off the scrolling track: in the track it scrolled away
    with the turf and a second one came round every fifty yards, which is not
@@ -170,7 +169,6 @@ h1{font-size:34px;line-height:1.08;margin:0 0 8px;font-weight:900;letter-spacing
    grey box on the grass rather than a logo on it. */
 .midlogo{position:absolute;top:50%;left:50%;width:150px;height:150px;
   object-fit:cover;border-radius:50%;transform:translate(-50%,-50%);opacity:.5;
-  z-index:0;
   pointer-events:none;box-shadow:0 0 0 3px rgba(255,255,255,.26);
   filter:saturate(1.05) contrast(1.02)}
 .hash{position:absolute;top:4%;bottom:10%;width:2px;background:rgba(255,255,255,.15)}
@@ -182,14 +180,12 @@ h1{font-size:34px;line-height:1.08;margin:0 0 8px;font-weight:900;letter-spacing
   box-shadow:0 0 9px rgba(216,180,90,.75)}
 .snap span{position:absolute;top:2px;left:5px;font-family:var(--sans);font-size:10px;
   font-weight:900;letter-spacing:.16em;color:var(--gold);white-space:nowrap}
-/* Only ever drawn at the end of a play the tape says ended in one. The replay
-   has no field position, so an end zone standing there all game would be a
-   claim about where the ball was, which it is not entitled to make. */
-.endz{position:absolute;top:0;bottom:0;width:62px;display:none;
-  background:repeating-linear-gradient(135deg,var(--ezc,#c20f16) 0 10px,
-             rgba(0,0,0,.35) 10px 20px);
-  border-left:3px solid rgba(255,255,255,.9);opacity:.92}
-.endz.on{display:block}
+/* The two end zones, painted on the field like everything else on it. */
+.endzone{position:absolute;top:0;bottom:0;
+  background:repeating-linear-gradient(135deg,var(--ezc,#c20f16) 0 11px,
+             rgba(0,0,0,.4) 11px 22px);opacity:.88}
+.goal{position:absolute;top:0;bottom:0;width:3px;
+  background:rgba(255,255,255,.92);box-shadow:0 0 7px rgba(255,255,255,.4)}
 .actor{position:absolute;bottom:14px;z-index:3;pointer-events:none;
   transform:translateX(-50%) rotateX(-56deg);transform-origin:50% 100%}
 .actor canvas{display:block;filter:drop-shadow(0 3px 4px rgba(0,0,0,.65))}
@@ -324,7 +320,6 @@ h1{font-size:34px;line-height:1.08;margin:0 0 8px;font-weight:900;letter-spacing
              positioned against the camera each frame, because he is the one
              the camera is following. -->
         <div class="track" id="track">
-          <i class="endz" id="endz"></i>
           <div class="actor" id="actor"><canvas id="acv"></canvas></div>
           <i class="pill" id="pill"></i>
         </div>
@@ -452,6 +447,7 @@ var LANE = 0;               // ground-space x of the snap
 var DEEP = 0;               // the plane's own height: the field's width
 var stageTok = 0;
 var SPOT = [0,0];   // yards each side has gained since its own last score
+var HOMECREST='', EZC=['',''];
 var CAM  = [NaN,NaN];  // where the camera sits on each side's drive
 var LASTCAM = 0;       // where it actually is now, so a pan starts from there
 
@@ -512,13 +508,13 @@ function buildTrack(){
   // NB: this rewrites the track's markers only. The cast and the end zone are
   // children of the track too, so they are detached and put back rather than
   // destroyed.
-  var keep=['endz','actor','pill'].map(function(id){return $(id);})
+  var keep=['actor','pill'].map(function(id){return $(id);})
             .filter(function(el){return el;});
   tr.innerHTML='';
   keep.forEach(function(el){ tr.appendChild(el); });
   tr.style.transform='translateX(0)';
   buildCast();
-  marks(1,0);
+  buildField();
 }
 
 // Where a football team stands. Each slot is [yards from the snap, how far
@@ -575,42 +571,79 @@ function across(f){ return 14 + f*(DEEP-70); }
 // The yard markers, rebuilt around wherever this drive has got to. They are
 // drive yards, not a yard line: a side that has gained fifty-eight since it
 // last scored snaps from the 58.
+// ---- THE FIELD ----
+//
+// A hundred yards with an end zone at each end, built once and never rebuilt,
+// because paint does not move. Everything painted on it -- lines, numbers,
+// hash marks, the home crest at the fifty, the two end zones -- lives in the
+// same scrolling track, so they all move together and the camera moves over
+// them. The crest used to hang off the ground instead, pinned to the camera so
+// it would stay in shot, which made it slide against the lines it is painted
+// beside. John: "why do the lines move independent of the logo."
+//
+// WHERE THE BALL IS, is synthesised the same way the clock is, and for the same
+// reason: these plays come out of eight different real games at once, so there
+// is no such thing as where the ball really was. A side's ball starts on its
+// own 20 and advances by the yards it actually gained; a score puts it back on
+// the 20. A drive that runs past the goal line without scoring starts again
+// from the 20 -- 13 per cent of week 7's drives do, and one gained 437 yards.
+// The snap label carries the TRUE cumulative drive yardage whatever the paint
+// says, so no figure on the page is ever wrong; only the grass is a device.
+var FIELD=100, EZ=10, DRIVE_WRAP=80, START_YD=20;
 var MARKS=null;
-function marks(way, spot){
+
+function fieldYd(side, drive){
+  var on = START_YD + (drive % DRIVE_WRAP);          // yards from the left goal
+  return side===0 ? on : FIELD-on;                   // the two attack opposite ends
+}
+function fx(y){ return LANE + y*PXYD; }              // a yard line's x in the track
+
+function buildField(){
   var tr=$('track'); if(!tr) return;
   if(!MARKS){ MARKS=document.createElement('div'); MARKS.className='marks'; }
-  var from=Math.max(0, Math.floor((spot-40)/5)*5), to=spot+120;
   var html='';
-  for(var y=from;y<=to;y+=5){
-    var big=(y%10===0), x=LANE+way*y*PXYD;
-    html+='<i class="hash'+(big?' b':'')+'" style="left:'+x+'px"></i>';
-    if(big) html+='<span class="ydn" style="left:'+x+'px">'+y+'</span>';
+  // the two end zones, each in the colours of the side that defends it
+  html+='<i class="endzone" style="left:'+fx(-EZ)+'px;width:'+(EZ*PXYD)+'px;'+
+        '--ezc:'+(EZC[0]||'#c20f16')+'"></i>';
+  html+='<i class="endzone" style="left:'+fx(FIELD)+'px;width:'+(EZ*PXYD)+'px;'+
+        '--ezc:'+(EZC[1]||'#0e8ab5')+'"></i>';
+  // goal lines, then a line every five and a number every ten
+  [0,FIELD].forEach(function(y){
+    html+='<i class="goal" style="left:'+fx(y)+'px"></i>'; });
+  for(var y=5;y<FIELD;y+=5){
+    var big=(y%10===0);
+    html+='<i class="hash'+(big?' b':'')+'" style="left:'+fx(y)+'px"></i>';
+    if(big) html+='<span class="ydn" style="left:'+fx(y)+'px">'+
+                  (y>50?FIELD-y:y)+'</span>';
   }
-  // Hash marks: the short ticks at every single yard, two rows inbounds and
-  // one along each sideline, the way they are actually painted. Drawn as a
-  // repeating gradient rather than as one element a yard -- a hundred and
-  // sixty yards of ticks across four rows is six hundred nodes rebuilt every
-  // play, and a gradient is none.
+  // Hash marks at every single yard, two rows inbounds and one along each
+  // sideline. A repeating gradient rather than one element a yard: a hundred
+  // yards across four rows is four hundred nodes, and a gradient is none.
   var tick='repeating-linear-gradient(90deg,rgba(255,255,255,0) 0,'+
            'rgba(255,255,255,0) '+(PXYD-2).toFixed(2)+'px,'+
            'rgba(255,255,255,.34) '+(PXYD-2).toFixed(2)+'px,'+
            'rgba(255,255,255,.34) '+PXYD.toFixed(2)+'px)';
-  // started at the line, the ticks left bare turf behind the offence. Forty
-  // yards back, which is a whole number of yards so the phase still lands on
-  // the yard marks.
-  var tx=LANE-way*40*PXYD;
   [[0.055,5],[0.345,7],[0.655,7],[0.945,5]].forEach(function(r){
     html+='<i class="ticks" style="bottom:'+(r[0]*100)+'%;height:'+r[1]+'px;'+
-          'left:'+tx+'px;background:'+tick+
-          (way<0?';transform:scaleX(-1)':'')+'"></i>';
+          'left:'+fx(0)+'px;width:'+(FIELD*PXYD)+'px;background:'+tick+'"></i>';
   });
-  // "DRIVE 101" and not "101", because a bare number on a football field is
-  // read as a yard line and this is not one -- there are no yard lines here.
-  html+='<i class="snap" style="left:'+(LANE+way*spot*PXYD)+'px">'+
-        '<span>'+(spot?'DRIVE '+spot:'SNAP')+'</span></i>';
+  // the home crest, at the fifty, painted on the same grass as the lines
+  if(HOMECREST)
+    html+='<img class="midlogo" src="'+HOMECREST+'" alt="" style="left:'+
+          fx(FIELD/2)+'px">';
+  html+='<i class="snap" id="snapmark"><span></span></i>';
   MARKS.innerHTML=html;
   if(MARKS.parentNode!==tr) tr.insertBefore(MARKS, tr.firstChild);
 }
+
+// the line of scrimmage is the only thing on the field that moves
+function setSnap(x, drive){
+  var el=$('snapmark'); if(!el) return;
+  el.style.left=x+'px';
+  // the TRUE drive yardage, whatever the paint under it says
+  el.firstChild.textContent = drive ? 'DRIVE '+drive : 'SNAP';
+}
+
 function nframes(anim){
   var f=SPR.ok && SPR.meta[anim] && SPR.meta[anim].frames;
   return f ? f.length : 0;
@@ -666,7 +699,6 @@ function clearField(msg){
   $('actor').style.display='none'; $('pill').style.display='none';
   $('fname').textContent='';
   hideExtras();
-  var ez=$('endz'); if(ez) ez.className='endz';
   $('fnote').className = msg? 'fnote on' : 'fnote';
   $('fnote').textContent = msg||'';
 }
@@ -717,10 +749,15 @@ function stage(e){
   var dirn=way*(yards<0?-1:1);
   var travel=Math.abs(yards)*PXYD;
   var isPass=(kind==='pass'||kind==='rec'), AIR=0.58;
-  // the drive, which is where this side has got to since it last scored
-  var spot=SPOT[offSide], base=way*spot*PXYD;
-  marks(way, spot);
-  var losX=LANE+base, END=losX+dirn*travel;
+  // Where the ball is put: the side's own 20 plus what it has gained since it
+  // last scored, wrapped back to the 20 if the drive outruns the field. The
+  // label still carries the true cumulative drive yardage.
+  var spot=SPOT[offSide];
+  var onYd=fieldYd(offSide, spot);
+  var losX=fx(onYd), END=losX+dirn*travel;
+  // a touchdown ends in the end zone, because that is where a touchdown ends
+  if(fl&TD){ END=fx(offSide===0?FIELD:0); losX=END-dirn*travel; }
+  setSnap(losX, spot);
   var catchX=losX+dirn*travel*AIR;
   var rdep=(e[PID]%2) ? 0.22 : 0.78;         // which side he is split to
   var kits=[[side.c1,side.c2],[foe.c1,foe.c2]];
@@ -921,13 +958,6 @@ function stage(e){
   var pill=$('pill');
   pill.style.display=(isPass||kind==='fg'||kind==='xp')?'block':'none';
 
-  // The end zone is drawn only where the tape says the play ended in one.
-  if(fl&TD){
-    var ez=$('endz');
-    ez.style.setProperty('--ezc', side.c1);
-    ez.style.left=END+'px';
-    ez.className='endz on';
-  }
   var refSlot=slot;
 
   function put(r,st){
@@ -1062,11 +1092,11 @@ function openGame(i){
   });
   // Sleeper matchups carry no home side, so the one the matchup names first --
   // the one the scoreboard puts on top -- wears the field.
-  var mid=$('midlogo');
-  if(!mid){ mid=document.createElement('img'); mid.id='midlogo';
-            mid.className='midlogo'; mid.alt='';
-            $('ground').insertBefore(mid, $('track')); }
-  mid.src = crest(GAME.t[0].logo);
+  HOMECREST = crest(GAME.t[0].logo);
+  // Each end zone in the colours of the side that DEFENDS it. Side 0 attacks
+  // right, so it defends the left one. Reversed, a team ran into its own
+  // colours every time it scored.
+  EZC = [GAME.t[0].c1, GAME.t[1].c1];
   $('vnote').textContent = 'Tap any play to see the real one behind it. ' +
     'Gold marks the lead changing hands. The field shows the play and the ' +
     'ground it covered — not where on the pitch it happened, which the ' +

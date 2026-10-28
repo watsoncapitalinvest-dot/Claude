@@ -200,17 +200,28 @@ team to the other constantly, because their players are in different real
 games; drawn all one way that reads as noise, and drawn as two teams attacking
 opposite ends it reads as the ball changing hands.
 
-**The markers count the drive**, not a field position: yards this side has
-gained since it last scored, back to nought when it scores. That is derived and
-invents no events, so each play starts where the last one finished and the
-teams visibly move down the field. A hundred-yard field would have needed
-invented turnovers — 13 per cent of week 7's drives run past 100 yards and one
-reached 437. The marker label reads `DRIVE 101`, never a bare number, because a
-bare number on a football field is read as a yard line.
+**It is a real field** — a hundred yards, an end zone at each end in the
+colours of the side that defends it, the home crest at the fifty. Everything
+painted on it lives in the same scrolling track, so the lines, the numbers, the
+hash marks and the crest all move together and the camera moves over them. The
+crest was once pinned to the camera so it would stay in shot, and it slid
+against the lines it is painted beside.
 
-What the field **does not** show is down, distance or field position, because
-the replay does not know them: these plays come out of eight different real
-games at once, so there is no such thing as where the ball was. A residual stages nothing at all and says why. The formation, the
+**Where the ball is put is synthesised, exactly like the clock, and for the
+same reason**: these plays come out of eight different real games at once, so
+there is no such thing as where the ball really was. A side's ball starts on
+its own 20 and advances by the yards it actually gained; a score puts it back
+there. A drive that outruns the field starts again from the 20 — 13 per cent of
+week 7's drives run past 100 yards and one gained 437. The snap label carries
+the **true cumulative drive yardage** whatever the paint underneath says, so no
+figure is ever wrong; only the grass is a device. A touchdown ends in the end
+zone, because that is where a touchdown ends.
+
+The camera **holds between plays**, so the line of scrimmage marches across the
+shot instead of being re-centred every snap. It comes along only when the snap
+passes two thirds of the width, as a sweep during the pre-snap beat. Each side
+keeps its own camera. Down and distance are not shown at all, because the
+replay does not know them. A residual stages nothing at all and says why. The formation, the
 catcher, the tackler and the pursuit are the **shape** of a play and never a
 claim about one: a completed pass had somebody catch it and a run that was not
 a touchdown was stopped by somebody, but who they were is not known and is
