@@ -204,7 +204,22 @@ reads as the camera changing its mind rather than as football.
 
 So the tape is **gathered into drives** and given what a drive needs and a box
 score never records: the runs and throws between the scoring plays, and the
-punt or the stop at the end of one that did not score. Those are **marked
+punt at the end of one that did not score.
+
+**As few of those as the drive can be made to need** — John: *"I'd like as
+minimal generated unnamed plays as possible."* Three things keep the count
+down, and together they took the week from 54 per cent generated to 35:
+
+- A drive is **started where its own real yardage can carry it**, not on the
+  25. A field goal from the 11 used to need 64 yards of invented football to
+  reach; the distance goes into the kickoff return or the punt, which are one
+  play either way, instead of into six more. The spot a turnover leaves the
+  ball on is the exception — that one is real and is not ours to move.
+- A drive with **three plays of its own gets no cushion at all**. Only a drive
+  too short to read as one is given a play or two.
+- **A beat that moves the ball gets a play; one that does not gets a line on
+  the play before it.** The fourth-down stop is a note, not a snap: 251 of them
+  a week, all reading the same, became none. Those are **marked
 CONNECTIVE PLAY in the ticker every time they appear**, they name nobody and
 they score nothing, and the page's own footer says all of this. The clock,
 already synthesised, may pull a play earlier to join its side's drive — **never

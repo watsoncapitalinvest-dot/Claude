@@ -1499,7 +1499,9 @@ function addPlay(p){
   const showPill=Math.abs(p.delta)>=0.05;
   const pill=showPill?`<span class="pts" style="color:${col};border-color:${col}">${p.delta>=0?'+':''}${p.delta.toFixed(1)} • ${lastWord(TEAMS[p.team].name)} ${(p.team===H?p.runH:p.runA).toFixed(1)}</span>`:'';
   const booth=p.booth?`<div class="boothline">🎙️ ${p.booth}</div>`:'';
-  div.innerHTML=`<div class="tick"><span class="qq">${QN[p.q]}</span><br>${p.mmss}</div><div class="body">${flag}<div class="pbp">${pbpText(p)}</div>${booth}${pill}</div>`;
+  // what happened after the play, where it did not need a play of its own
+  const after=p.after?`<div class="boothline" style="color:#8a8578;font-style:normal">${p.after}</div>`:'';
+  div.innerHTML=`<div class="tick"><span class="qq">${QN[p.q]}</span><br>${p.mmss}</div><div class="body">${flag}<div class="pbp">${pbpText(p)}</div>${booth}${pill}${after}</div>`;
   const feed=$('feed');
   if(p.halftime){ const hc=document.createElement('div'); hc.className='hcard';
     hc.innerHTML=`<b style="color:var(--gold)">HALFTIME</b> — ${TEAMS.H.name} <b style="color:var(--home)">${p.halftime.h.toFixed(1)}</b>, ${TEAMS.A.name} <b style="color:var(--away)">${p.halftime.a.toFixed(1)}</b>`;
@@ -2002,12 +2004,6 @@ function replayGame(g, week){
             text:'<b>The punt.</b> '+(touchback?'Into the end zone, and out to the 25.'
                  :'Fielded on the '+(other(s)==='H'?100-land:land)+'.')};
   }
-  function mkDowns(s,y,q){
-    return {team:s, kind:'inc', actor:'', qb:null, pos:'', yd:0, td:false, q:q,
-            delta:0, credits:[], hl:false, real:true, fab:true, losYd:y,
-            label:'TURNOVER ON DOWNS',
-            text:'<b>Fourth down, and it comes up short.</b> The ball changes hands here.'};
-  }
 
   // ---- the march ---------------------------------------------------------
   const tally={H:{},A:{}};
@@ -2039,10 +2035,21 @@ function replayGame(g, week){
     return p;
   }
 
-  const out=[]; let nextStart=null;
+  // A drive starting on its own 25 every time has to be walked all the way
+  // down by plays nobody made: a field goal from the 11 needed 64 yards of
+  // invented football to get there. John: "I'd like as minimal generated
+  // unnamed plays as possible." So a drive is started where its own real
+  // yardage can carry it, plus a cushion of at most CUSHION yards -- a play or
+  // two, not a march. The distance goes into the kickoff return or the punt,
+  // which are one play either way, instead of into six more.
+  //
+  // A spot the ball is actually sitting on is not ours to move: after a
+  // turnover or a turnover on downs the next drive starts where the ball was
+  // and takes whatever filler that needs.
+  const CUSHION=13;
+  const out=[]; let forced=null, pendPunt=null;
   drives.forEach((dr,di)=>{
     const s=dr.side, from=out.length;
-    let start=pin(s, nextStart!=null?nextStart:own(s,25));
     const reals=dr.ev;
     const last=reals[reals.length-1];
     const tdPlay=(dr.ended==='score'&&last.td)?last:null;
@@ -2056,14 +2063,39 @@ function replayGame(g, week){
     if(tdPlay) target=Math.max(1,Math.min(60,tdPlay.yd||1));
     else if(fgPlay) target=Math.max(2,Math.min(55,(fgPlay.yd||37)-17));
     else if(xpPlay) target=15;                   // the conversion spot
+
+    let start;
+    if(forced!=null){ start=pin(s,forced); }
+    else {
+      // only a drive too short to read as a drive gets any cushion at all:
+      // three plays of its own is a drive, and it is given nothing
+      const want=Math.max(0,3-reals.length);
+      const cush=want?(want*4+Math.floor(rng()*5)):0;
+      let D=(target!=null)?(before+target+cush):(before+cush+26);
+      D=Math.max(16,Math.min(96,D));
+      start=pin(s,own(s,100-D));
+      // a punt has to be a punt: if the spot the next drive wants is not a
+      // punt away, the punt wins and the drive takes the filler
+      if(pendPunt){
+        const f=pendPunt.losYd, pt=pendPunt.team;
+        let dist=(pt==='H')?(f-start):(start-f);
+        if(dist<28||dist>66){ dist=Math.max(28,Math.min(66,dist));
+          start=pin(s,(pt==='H')?f-dist:f+dist); }
+        pendPunt.punt=start;
+        pendPunt.text='<b>The punt.</b> Fielded on the '+(s==='H'?100-start:start)+'.';
+      }
+    }
+    pendPunt=null; forced=null;
+
     let need;
     if(target!=null){
-      let D=toGoal(s,start);
-      if(D-before-target<0){ D=Math.min(99,before+target+2); start=pin(s,own(s,100-D)); }
+      if(toGoal(s,start)-before-target<0){        // too much real ground: back up
+        const D=Math.min(99,before+target+2); start=pin(s,own(s,100-D)); }
       need=toGoal(s,start)-before-target;
     } else {
       const room=toGoal(s,start)-before-24;       // stop short of the other 24
-      need=room<=0?0:Math.min(room,4+Math.floor(rng()*13));
+      const want2=Math.max(0,3-reals.length);
+      need=room<=0?0:Math.min(room,want2?want2*4+Math.floor(rng()*5):0);
     }
 
     // Filler is spread across the drive, always ahead of a real play, so the
@@ -2083,22 +2115,25 @@ function replayGame(g, week){
     });
 
     // how the drive ends, and where that leaves the next one
-    if(dr.ended==='score'){ nextStart=null; }
-    else if(dr.ended==='turnover'){ nextStart=y; }
+    const nx=drives[di+1];
+    if(dr.ended==='score'){ /* kickoff: the next drive picks its own spot */ }
+    else if(dr.ended==='turnover'){ forced=y; }
     else {
       const toG=toGoal(s,y);
-      if(toG<=38){ out.push(mkDowns(s,y,dr.q)); nextStart=y; }
-      else {
-        const dist=38+Math.floor(rng()*15);
-        let land=adv(s,y,dist), tb=false;
-        if(toGoal(s,land)<=8){ land=own(other(s),25); tb=true; }
-        out.push(mkPunt(s,y,land,tb,dr.q)); nextStart=pin(s,land);
-      }
+      // A beat that moves the ball gets a play of its own; one that does not
+      // gets a line on the play before it. 251 fabricated fourth downs a
+      // week, all reading the same, became none.
+      if(toG<=38){ const lp=out[out.length-1];
+        if(lp) lp.after='Fourth down, and it comes up short \u2014 the ball '+
+                        'changes hands here.';
+        forced=y; }
+      else { const pu=mkPunt(s,y,adv(s,y,42),false,dr.q); out.push(pu); pendPunt=pu; }
     }
-    const nx=drives[di+1];
-    if(nx && nx.side===s) nextStart=null;         // same side twice: fresh ball
+    if(nx && nx.side===s){ forced=null; pendPunt=null; }   // same side twice
     for(let z=from;z<out.length;z++) if(out[z].drive==null) out[z].drive=di;
   });
+  // a punt with nobody to receive it still has to land somewhere
+  if(pendPunt&&pendPunt.punt==null) pendPunt.punt=adv(pendPunt.team,pendPunt.losYd,42);
 
   // ---- kickoffs ----------------------------------------------------------
   // One to open the game, one to open the second half, and one after every
