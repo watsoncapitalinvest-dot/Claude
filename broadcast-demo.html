@@ -1223,6 +1223,11 @@ function stopScoreAnim(){['sH','sA'].forEach(el=>{if(rafId[el]){cancelAnimationF
 const QN={1:'1ST',2:'2ND',3:'3RD',4:'4TH'};
 function pbpText(p){
   const t=TEAMS[p.team];
+  // A rebuilt play carries its own sentence. The simulated phrasing says
+  // "<qb> finds <receiver>", and the replay does not know who threw it -- the
+  // quarterback is usually on somebody else's fantasy roster -- so it printed
+  // "null finds A.J. Brown for 18."
+  if(p.real) return p.text;
   if(p.kind==='rec') return p.td?`<b>TOUCHDOWN.</b> ${p.qb} hits <b>${p.actor}</b> for a ${p.yd}-yard score.`
     :`${p.qb} finds <b>${p.actor}</b> for ${p.yd}.`;
   if(p.kind==='gen') return p.td?`<b>TOUCHDOWN.</b> ${p.qb} fires a ${p.yd}-yard strike.`
@@ -1350,11 +1355,11 @@ function reset(){
    starters picked by the value board; sim stat lines generated
    deterministically per matchup. Falls back silently to the default
    Dragons–PCE game when offline. ---- */
-const BRAND={"wookieleaks": ["#1090f0", "#90d0f0"], "bigblue": ["#1090f0", "#90d0f0"], "beavereaters": ["#f07090", "#f0b0d0"], "guidohaters": ["#ff2020", "#d09050"], "powersofpain": ["#3939ff", "#f03030"], "newworldorder": ["#f0f0f0", "#101010"], "masterjeti": ["#777727", "#705030"], "horsecollars": ["#d0b090", "#107090"], "porkchopexpress": ["#f07030", "#f09090"], "machines": ["#6666aa", "#705070"], "stillthecream": ["#985b5b", "#d0b090"], "gumbas": ["#f05010", "#f0d0b0"], "heavyhitters": ["#10b0f0", "#b0f0f0"], "lilchops": ["#985b5b", "#907050"], "smokedragons": ["#fa3232", "#b01030"], "killerklowns": ["#297dd1", "#705050"]};
+let BRAND={"wookieleaks": ["#1090f0", "#90d0f0"], "bigblue": ["#1090f0", "#90d0f0"], "beavereaters": ["#f07090", "#f0b0d0"], "guidohaters": ["#ff2020", "#d09050"], "powersofpain": ["#3939ff", "#f03030"], "newworldorder": ["#f0f0f0", "#101010"], "masterjeti": ["#777727", "#705030"], "horsecollars": ["#d0b090", "#107090"], "porkchopexpress": ["#f07030", "#f09090"], "machines": ["#6666aa", "#705070"], "stillthecream": ["#985b5b", "#d0b090"], "gumbas": ["#f05010", "#f0d0b0"], "heavyhitters": ["#10b0f0", "#b0f0f0"], "lilchops": ["#985b5b", "#907050"], "smokedragons": ["#fa3232", "#b01030"], "killerklowns": ["#297dd1", "#705050"]};
 const EMOJI={wookieleaks:'🐻',bigblue:'🔵',beavereaters:'🦫',guidohaters:'🤌',powersofpain:'🏆',
   newworldorder:'🌎',masterjeti:'🤺',horsecollars:'🐴',porkchopexpress:'🐷',machines:'🤖',
   stillthecream:'🥛',gumbas:'🍄',heavyhitters:'🥊',lilchops:'🥩',smokedragons:'🐉',killerklowns:'🤡'};
-const ABBR={wookieleaks:'WKL',bigblue:'BLU',beavereaters:'BVR',guidohaters:'GUI',powersofpain:'POP',
+let ABBR={wookieleaks:'WKL',bigblue:'BLU',beavereaters:'BVR',guidohaters:'GUI',powersofpain:'POP',
   newworldorder:'NWO',masterjeti:'JET',horsecollars:'HC',porkchopexpress:'PCE',machines:'MCH',
   stillthecream:'CRM',gumbas:'GUM',heavyhitters:'HH',lilchops:'CHP',smokedragons:'SMK',killerklowns:'KLW'};
 const TALIAS={newwodorder:'newworldorder',forty2v:'horsecollars',hairygumbas:'gumbas',lambchops:'lilchops',disciplesofdarnold:'lilchops'};
@@ -1377,6 +1382,18 @@ async function loadLeague(){
   try{
     const j=async u=>{const r=await fetch(u,{cache:'no-cache'}); if(!r.ok)throw 0; return r.json();};
     const [ros,logos,recs,dp]=await Promise.all([j('scfl-rosters.json'),j('scfl-team-logos-resized.json'),j('records.json'),j('dp-values.json')]);
+    // The kits come from team-identity.json, which is built off team-kits.json
+    // -- the colours John set for each franchise for the magazine's play art.
+    // The table that used to live in this file was a guess, and two of its
+    // sixteen were the same shade of blue: Wookie Leaks against BIG BLUE put
+    // every figure on the field in one colour.
+    try{
+      const ident=await j('team-identity.json');
+      Object.values(ident.teams||{}).forEach(t=>{
+        if(t.logo) BRAND[t.logo]=[t.c1,t.c2];
+        if(t.logo&&t.abbr) ABBR[t.logo]=t.abbr;
+      });
+    }catch(e){ /* the built-in table stands if it is not there */ }
     DPV=dp.v;
     const recBy={}; (recs.standings||[]).forEach(m=>recBy[normT(m.name)]=m);
     LEAGUE={};
@@ -1551,7 +1568,157 @@ function initFromQuery(){
     play();
   }
 }
-loadLeague().then(initFromQuery);
+
+/* ---- REAL GAMES ----------------------------------------------------------
+   ?w=7&g=0 drives this broadcast off a rebuilt week instead of the simulation.
+   Everything below it -- the field, the camera, the sprites, the scoreboard,
+   the play-by-play -- is untouched: buildGame() hands step() a plays[] array
+   and so does this, in exactly the same shape. The simulation stays for the
+   demo with no week on the query string.
+
+   WHAT IS REAL: the player, the kind of play, the yardage, the points, the
+   quarter and the clock, the running score and the final. All of it off the
+   tape. WHAT IS NOT: where the ball sits. These plays come out of eight
+   different real games at once, so there is no such thing as where the ball
+   was -- a side starts on its own 25 and the spot advances by the yards it
+   really gained, the same device as the sixty-minute clock. Down and distance
+   are not shown at all, because the replay does not know them and this desk
+   does not invent them.  -------------------------------------------------- */
+const RKIND={rush:'run',conv:'run',rec:'rec',pass:'gen',fg:'fg',xp:'xp',
+             int:'int',fum:'int',sack:'dst',dint:'dst',drec:'dst',dtd:'dst'};
+const DLAB={sack:'SACK',dint:'INTERCEPTION',drec:'FUMBLE RECOVERY',dtd:'DEFENSIVE TD'};
+const RP={SEC:0,QTR:1,CK:2,SIDE:3,PID:4,PTS:5,TXT:6,FLG:7,S0:8,S1:9,SRC:10,
+          RQ:11,RC:12,KIND:13,YDS:14};
+const RTD=1, RGO=2, RRES=4;
+
+function replayStats(g){
+  const out={H:{QB:[],RB:[],WR:[],TE:[],K:[],DST:[]},A:{QB:[],RB:[],WR:[],TE:[],K:[],DST:[]}};
+  const seen={H:{},A:{}};
+  g.ev.forEach(e=>{
+    const k=e[RP.KIND];
+    if(k==='sack'||k==='dint'||k==='drec'||k==='dtd') return;  // other side's men
+    const t=e[RP.SIDE]===0?'H':'A', pl=g.p[e[RP.PID]];
+    const pos=(pl[1]==='DEF')?'DST':pl[1];
+    if(!out[t][pos]||seen[t][pl[0]]) return;
+    seen[t][pl[0]]=1; out[t][pos].push({n:pl[0]});
+  });
+  return out;
+}
+
+function replayGame(g, week){
+  const plays=[], tally={H:{},A:{}};
+  const START={H:75,A:25};
+  let los={H:START.H,A:START.A}, drive=-1, lastOff=null, lead=0, q4=false;
+
+  g.ev.forEach(e=>{
+    const k=e[RP.KIND], res=!!(e[RP.FLG]&RRES);
+    const dsc=(k==='sack'||k==='dint'||k==='drec'||k==='dtd');
+    const cred=e[RP.SIDE]===0?'H':'A';            // who the points go to
+    const off=dsc?(cred==='H'?'A':'H'):cred;      // who has the ball
+    const pl=g.p[e[RP.PID]], nm=pl[0];
+    const yd=(typeof e[RP.YDS]==='number')?e[RP.YDS]:0;
+    const td=!!(e[RP.FLG]&RTD);
+
+    if(off!==lastOff){ drive++; lastOff=off; }
+    const p={team:cred, kind:res?'dst':(RKIND[k]||'gen'), actor:nm,
+             qb:(k==='rec'?null:nm), pos:pl[1], yd:yd, td:td,
+             q:e[RP.QTR], mmss:e[RP.CK], runH:e[RP.S0], runA:e[RP.S1],
+             delta:e[RP.PTS], credits:[{name:nm,pts:e[RP.PTS]}],
+             drive:drive, losYd:los[off]};
+    if(k==='fg'||k==='xp') p.dist=yd||20;
+    p.real=true;
+    var what=e[RP.TXT]||'';
+    p.text=(td?'<b>TOUCHDOWN.</b> ':'')+'<b>'+nm+'</b>'+(what?' \u2014 '+what:'')+'.';
+    if(dsc){ p.label=DLAB[k]; p.pts=e[RP.PTS];
+             p.text='<b>'+nm+'</b> with '+(what||'a play')+'.'; }
+    if(res){ p.label='SCORING ADJUSTMENT'; p.pts=e[RP.PTS]; p.yd=0;
+             p.text='<b>'+nm+'</b> \u2014 points the box score credits that no '+
+                    'single play explains, carried so the running total lands '+
+                    'on the true final.'; }
+
+    // the lead changing hands is the one thing the booth is allowed to say,
+    // because the tape flags it
+    if(e[RP.FLG]&RGO) p.booth='And the lead changes hands — '+
+      TEAMS[(e[RP.S0]>e[RP.S1])?'H':'A'].name+' in front.';
+    if(!q4&&p.q===4){ q4=true;
+      p.booth=p.booth||('Fourth quarter. '+Math.abs(e[RP.S0]-e[RP.S1]).toFixed(2)+
+                        ' between them.'); }
+    p.hl=!!(td||dsc||k==='fg'||yd>=20);
+
+    // the spot: own 25, advancing by what was really gained
+    if(!res&&!dsc){
+      los[off]+=(off==='H'?-1:1)*yd;
+      los[off]=Math.max(3,Math.min(97,los[off]));
+    }
+    if(td||k==='fg'){ los[off]=START[off]; lastOff=null; }
+
+    const c=tally[cred][nm]=tally[cred][nm]||{n:nm,pos:pl[1],pts:0};
+    c.pts+=e[RP.PTS];
+    plays.push(p);
+  });
+
+  const hIdx=plays.findIndex(p=>p.q>=3);
+  if(hIdx>0) plays[hIdx].halftime={h:plays[hIdx-1].runH,a:plays[hIdx-1].runA};
+  const box={H:Object.values(tally.H).sort((a,b)=>b.pts-a.pts),
+             A:Object.values(tally.A).sort((a,b)=>b.pts-a.pts)};
+  const stars=[...box.H.map(x=>({...x,team:'H'})),...box.A.map(x=>({...x,team:'A'}))]
+              .sort((a,b)=>b.pts-a.pts).slice(0,3);
+  const flips=g.lc===1?'one lead change':g.lc+' lead changes';
+  return {plays, finalH:g.f[0], finalA:g.f[1], box, stars,
+    pregame:TEAMS.H.name+' host '+TEAMS.A.name+' — week '+week+
+            ', rebuilt from the tape. '+plays.length+' plays, '+flips+'.'};
+}
+
+function startReplay(feed, gi, week){
+  const g=feed.games[gi]; if(!g) return false;
+  const kit=s=>({key:s.rid,name:s.name,abbr:s.abbr||s.name.slice(0,3).toUpperCase(),
+                 rec:'',crest:'',logo:'crests/'+s.logo+'.webp',c1:s.c1,c2:s.c2});
+  TEAMS={H:kit(g.t[0]),A:kit(g.t[1])};
+  STATS=replayStats(g); rebuildRoster(); applyTheme();
+  const sel=$('matchsel'); if(sel) sel.style.display='none';
+  // the page describes itself honestly in each mode
+  var sub=document.querySelector('.tag b'); if(sub)
+    sub.textContent='Week '+week+' \u00b7 rebuilt from the tape \u00b7 real plays, real yardage';
+  var hd=document.querySelector('.brand'); if(hd)
+    hd.innerHTML=hd.innerHTML.replace('Game of the Week','Week '+week);
+  // a way back to the week's other seven games
+  var nb=document.querySelector('.netbar'); if(nb && !document.getElementById('allg')){
+    var a=document.createElement('a'); a.id='allg'; a.href='scfl-replay.html?w='+week;
+    a.textContent='All games';
+    a.style.cssText='margin-left:auto;font:800 11px/1 -apple-system,sans-serif;'+
+      'letter-spacing:.12em;text-transform:uppercase;color:#a9a396;text-decoration:none';
+    nb.style.display='flex'; nb.style.alignItems='center'; nb.appendChild(a);
+  }
+  var how=document.querySelector('.foot'); if(how)
+    how.innerHTML='<b>What this is:</b> the week, rebuilt. Every play on this '+
+      'field really happened \u2014 the player, the kind of play, the yardage, '+
+      'the points, the quarter and the clock all come off the tape, and the '+
+      'running score lands on the true final. What is NOT real is where the '+
+      'ball sits: these plays come out of eight different NFL games at once, '+
+      'so there is no such thing as where the ball was. A side starts on its '+
+      'own 25 and the spot advances by the yards it really gained \u2014 the '+
+      'same device as the sixty-minute clock. Down and distance are not shown, '+
+      'because the replay does not know them.';
+  G=replayGame(g,week);
+  reset();
+  document.title='SCFL · '+TEAMS.H.name+' v '+TEAMS.A.name+' · Week '+week;
+  return true;
+}
+
+function bootReplay(){
+  const w=parseInt(QP.get('w')||'',10), gi=parseInt(QP.get('g')||'',10);
+  if(isNaN(w)||isNaN(gi)) return false;
+  fetch('week-data/watch-index.json',{cache:'no-cache'})
+    .then(r=>r.json())
+    .then(ix=>fetch('week-data/'+ix.season+'-w'+w+'-watch.json',{cache:'no-cache'})
+                .then(r=>r.json()))
+    .then(feed=>{ if(startReplay(feed,gi,w) && QP.get('auto')!=='0') play(); })
+    .catch(e=>{ if(window.console) console.error(e); });
+  return true;
+}
+
+// a real week if one is asked for, the simulation otherwise
+if(!bootReplay()) loadLeague().then(initFromQuery);
 
 $('go').addEventListener('click',()=>{ if(idx>=G.plays.length){reset();play();return;} if(timer)stop();else play(); });
 $('skip').addEventListener('click',()=>{

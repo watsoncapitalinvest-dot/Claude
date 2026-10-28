@@ -179,57 +179,34 @@ Bench comparisons must respect slot eligibility. Saying a manager started a WR
 
 ## The replay model
 
-The rebuilt games are watchable: `scfl-replay.html`, built by
-`scripts/build_watch.py`. Pick a week, pick a matchup, watch the sixty minutes
-run. It plays on the **Tecmo-style field** — `scfl-sprites.png` is drawn in
-neutral white and grey and `tintSheet()` paints the white to a franchise's
-primary and the grey to its secondary, so one set of drawings dresses all
-sixteen. The field stages the actual play: the pose off the play's `kind`, and
-the ground covered against real yard markers, so a 48-yard pass puts the ball
-48 yards downfield and a 4-yard catch moves four.
+The rebuilt games are watchable, and they are watched on the **broadcast**:
+`broadcast-demo.html?w=7&g=0`. That page already had a field, a camera, sprites
+and a scoreboard that worked, and the lesson of a long afternoon is that it
+should have been pointed at real data rather than rebuilt from scratch — John:
+*"we have built this whole thing before and it worked. Now we're worse than
+when we first did it."*
 
-**The plays drive the clock, not the other way round.** Each one is staged in
-full and the clock is set to the moment it happened; the next follows when this
-one is done. The clock used to drive it, dropping any play that arrived while
-the field was busy, which at a minute a game meant showing about one play in
-four — John, correctly: *"a disjointed video and not a rebuild of a game."*
-A game now runs about three minutes at 1×.
+`buildGame()` hands `step()` a `plays[]` array; `replayGame()` hands it the same
+array built from a rebuilt week, and nothing downstream changes. With no `?w=`
+the simulation still runs, for the demo.
 
-The two sides **attack opposite ends**. Consecutive plays flip from one fantasy
-team to the other constantly, because their players are in different real
-games; drawn all one way that reads as noise, and drawn as two teams attacking
-opposite ends it reads as the ball changing hands.
+`scfl-replay.html` is the **picker** — week tabs and eight matchup cards — and
+every way into a game, including each issue's *Watch this one back*, lands on
+the broadcast.
 
-**It is a real field** — a hundred yards, an end zone at each end in the
-colours of the side that defends it, the home crest at the fifty. Everything
-painted on it lives in the same scrolling track, so the lines, the numbers, the
-hash marks and the crest all move together and the camera moves over them. The
-crest was once pinned to the camera so it would stay in shot, and it slid
-against the lines it is painted beside.
+**Real**: the player, the kind of play, the yardage, the points, the quarter
+and the clock, the running score and the final. **Not real**: where the ball
+sits. These plays come out of eight different NFL games at once, so there is no
+such thing as where the ball was — a side starts on its own 25 and the spot
+advances by the yards it really gained, the same device as the sixty-minute
+clock, and the page says so. **Down and distance are not shown at all**, because
+the replay does not know them and this desk does not invent them.
 
-**Where the ball is put is synthesised, exactly like the clock, and for the
-same reason**: these plays come out of eight different real games at once, so
-there is no such thing as where the ball really was. A side's ball starts on
-its own 20 and advances by the yards it actually gained; a score puts it back
-there. A drive that outruns the field starts again from the 20 — 13 per cent of
-week 7's drives run past 100 yards and one gained 437. The snap label carries
-the **true cumulative drive yardage** whatever the paint underneath says, so no
-figure is ever wrong; only the grass is a device. A touchdown ends in the end
-zone, because that is where a touchdown ends.
-
-The camera **holds between plays**, so the line of scrimmage marches across the
-shot instead of being re-centred every snap. It comes along only when the snap
-passes two thirds of the width, as a sweep during the pre-snap beat. Each side
-keeps its own camera. Down and distance are not shown at all, because the
-replay does not know them. A residual stages nothing at all and says why. The formation, the
-catcher, the tackler and the pursuit are the **shape** of a play and never a
-claim about one: a completed pass had somebody catch it and a run that was not
-a touchdown was stopped by somebody, but who they were is not known and is
-never stated. Only the scorer is named.
-
-Each game report ends on **Watch this one back**, routed by `matchup_id` and
-never by team name, because the feed carries a franchise's current name and a
-story carries the one it had that week.
+Kits come from `team-identity.json`, built off `team-kits.json` — the colours
+John set per franchise for the magazine's play art — and the broadcast's own
+guessed table is overwritten by them at load, so the field and the pictures in
+the issue dress the same sixteen clubs alike. That table had Wookie Leaks and
+BIG BLUE on the same blue.
 
 Real NFL plays laid onto a 60-minute fantasy clock. Nothing is invented: the
 plays, the yardage and the order are real; only the clock is synthesised. A

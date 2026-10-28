@@ -89,7 +89,7 @@ def watch_links(season, week, stories):
         mid = next((g['matchup_id'] for g in wk['games']
                     if {key(t['team'].strip()) for t in g['teams']} == pair), None)
         if mid in by_mid:
-            out[i] = f'scfl-replay.html?w={week}&g={by_mid[mid]}'
+            out[i] = f'broadcast-demo.html?w={week}&g={by_mid[mid]}'
         else:
             miss.append(f'{st["winner"]} v {st["loser"]}')
     if miss:
