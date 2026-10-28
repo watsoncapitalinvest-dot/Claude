@@ -193,11 +193,12 @@ STEPS = [
          'that runs from a kickoff to a final whistle. A touchdown caught on Monday '
          'night becomes a late-fourth-quarter touchdown. Two men who never shared a '
          'field are now on the same drive.'),
-        ('And then you can watch it back. Not a summary of it — the game itself, '
-         'play by play, with the clock running and the score moving and the lead '
-         'changing hands in front of you. Pick any of the eight and sit through it. '
-         'A fantasy matchup that nobody watched, because there was never anything '
-         'to watch, turns into sixty minutes you can follow.'),
+        ('And then you can watch it back, which you can do from this page. Not a '
+         'summary of it — the game itself, play by play, with the clock running and '
+         'the score moving and the lead changing hands in front of you. Pick any of '
+         'the eight and sit through it. A fantasy matchup that nobody watched, '
+         'because there was never anything to watch, turns into sixty minutes you '
+         'can follow.'),
         ('Nothing in it is invented. The plays are real, the yardage is real, the '
          'order is real. The clock is the only thing that is made up, and it is made '
          'up the same way every week.'),
@@ -318,6 +319,9 @@ section p{{margin:0 0 11px;font-size:16.5px;}}
 .t-row.flip em{{color:var(--gold);}}
 .t-foot{{font-size:11px;color:var(--muted);padding:9px 12px;line-height:1.55;
  border-top:1px solid var(--rule);}}
+.t-foot a{{display:inline-block;font-family:var(--sans);font-size:10.5px;
+ font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--red);
+ text-decoration:none;border-bottom:2px solid var(--gold);margin-top:6px;}}
 .close{{border-top:1px solid var(--rule);margin-top:40px;padding-top:22px;
  font-size:16.5px;}}
 .close b{{color:var(--red);}}
@@ -386,7 +390,8 @@ def tape(week):
         f'<div class="t-foot">Gold marks the lead changing hands. It {lead} '
         f'{"once" if n == 1 else f"{n} times"} in these {len(rows)} plays, and '
         f'{g["lead_changes"]} times in the finished game &mdash; every one of '
-        f'which the report is written off.</div>')
+        f'which the report is written off. '
+        f'<a href="scfl-replay.html?w={week}">Watch a game back &rarr;</a></div>')
     return '<div class="tape">' + ''.join(out) + '</div>'
 
 

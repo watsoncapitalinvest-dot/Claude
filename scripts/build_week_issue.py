@@ -64,6 +64,39 @@ def matchups(season, week, stories):
     return out
 
 
+def watch_links(season, week, stories):
+    """story index -> the Replay Room link for that game.
+
+    Routed through the week file's matchup_id rather than through team names.
+    The feed carries each franchise's CURRENT name and a story carries the name
+    it had the week it was played, so a franchise renamed since would match
+    nothing and quietly lose its link -- which is the same trap that drops a
+    renamed side out of a standings table.
+    """
+    path = os.path.join(WDIR, f'{season}-w{week}-watch.json')
+    if not os.path.exists(path):
+        print(f'  no watch feed for week {week}: run scripts/build_watch.py'
+              f' -- reports go out without a "watch it back" link')
+        return {}
+    feed = json.load(open(path, encoding='utf-8'))
+    by_mid = {g['m']: gi for gi, g in enumerate(feed['games'])}
+    wk = json.load(open(os.path.join(WDIR, f'{season}-w{week}.json'), encoding='utf-8'))
+    key = lambda t: re.sub(r'[^a-z0-9]', '', (t or '').lower())
+
+    out, miss = {}, []
+    for i, st in enumerate(stories):
+        pair = {key(st['winner']), key(st['loser'])}
+        mid = next((g['matchup_id'] for g in wk['games']
+                    if {key(t['team'].strip()) for t in g['teams']} == pair), None)
+        if mid in by_mid:
+            out[i] = f'scfl-replay.html?w={week}&g={by_mid[mid]}'
+        else:
+            miss.append(f'{st["winner"]} v {st["loser"]}')
+    if miss:
+        print('  NO REPLAY LINK for:', '; '.join(miss))
+    return out
+
+
 def scoreboard_blocks(stories):
     """The scoreboard as a pre-rendered article, so the packer treats it as one."""
     rows = ''
@@ -1206,6 +1239,7 @@ def build(season, week, remeasure=True):
         })
 
     mu = matchups(season, week, stories)
+    wl = watch_links(season, week, stories)
     for n, i in enumerate(order):
         s = stories[i]
         arts.append({
@@ -1217,6 +1251,13 @@ def build(season, week, remeasure=True):
             'subhead': s['dek'],
             'paragraphs': s['paragraphs'],
         })
+        # The report is written off the rebuilt game; this is the door to the
+        # game itself, opened on the right one rather than on a lobby. It goes
+        # at the FOOT of the report, so on a report that runs on it belongs to
+        # the continuation page and not to the middle of its own first half.
+        watch = {'href': wl[i], 'label': 'Watch this one back'} if i in wl else None
+        if watch and not (s.get('part2') and not s['part2'].get('headline')):
+            arts[-1]['watch'] = watch
         # A report with more in it than a page holds runs on, rather than being
         # shrunk to fit. The fitter will take a single page down as far as it
         # has to -- the record week went to 0.663 zoom, two thirds the type size
@@ -1237,6 +1278,7 @@ def build(season, week, remeasure=True):
                 'subhead': p2.get('dek', ''),
                 'paragraphs': p2['paragraphs'],
                 'continued': cont,
+                **({'watch': watch} if watch and cont else {}),
             })
 
     # Every issue closes on what is next. A magazine that stops on the last

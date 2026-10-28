@@ -253,6 +253,13 @@ def article_blocks(art, first, openart=None):
             out.append(('body','<div class="pullquote">'+esc(p)+'</div>'))
         else:
             out.append(('body','<p class="b">'+esc(p)+'</p>'))
+    # The door into the rebuilt game the report was written off. It is its own
+    # block kind rather than a paragraph because paragraphs are escaped -- an
+    # anchor smuggled through one would print as its own markup.
+    w = art.get('watch')
+    if w:
+        out.append(('body', '<a class="watch" href="' + esc(w['href']) + '">'
+                    + esc(w['label']) + '</a>'))
     return out
 
 def build(key, remeasure=True, quiet=False):
