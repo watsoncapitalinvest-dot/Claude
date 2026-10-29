@@ -190,6 +190,10 @@ when we first did it."*
 array built from a rebuilt week, and nothing downstream changes. With no `?w=`
 the simulation still runs, for the demo.
 
+**Next play** walks the game a snap at a time, and the right arrow key does the
+same — `stepOnce` is the only way to run one play, because `step()` schedules
+its own successor. Pressing it while the game is running pauses it there.
+
 `scfl-replay.html` is the **picker** — week tabs and eight matchup cards — and
 every way into a game, including each issue's *Watch this one back*, lands on
 the broadcast.

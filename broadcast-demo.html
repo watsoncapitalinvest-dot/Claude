@@ -258,6 +258,7 @@
   <!-- Controls -->
   <div class="controls">
     <button type="button" class="btn primary" id="go">▶ Kick off</button>
+    <button type="button" class="btn" id="nextp" title="one play at a time — or press →">▸❙ Next play</button>
     <button type="button" class="btn" id="skip" disabled>⏭ Final</button>
     <div class="speed" id="speed"><button type="button" data-s="1" class="on">1×</button><button type="button" data-s="2">2×</button><button type="button" data-s="4">4×</button></div>
     <button type="button" class="btn" id="mute" title="crowd audio">🔊</button>
@@ -1496,6 +1497,9 @@ function setBench(team){
     +(holes.length?` <span class="bchip" style="border-color:rgba(255,255,255,.25);color:var(--dim)">${holes.join(' · ')}</span>`:'');
 }
 let idx=0,timer=null,speed=1,dispH=0,dispA=0,clockT=null;
+// one play at a time. step() schedules the next itself, so the only way to
+// run exactly one is to tell it not to.
+let stepOnce=false;
 // How long everything takes, on top of the 1x/2x/4x control. A rebuilt week
 // runs slower than the demo did, because the whole point of it is watching the
 // play rather than being told the result -- John: "it needs to slow down so we
@@ -1578,6 +1582,7 @@ function addPlay(p){
 
 // ---- game loop ------------------------------------------------------------
 function step(){
+  const once=stepOnce; stepOnce=false;
   if(idx===0){ const bo=$('booth'); if(bo)bo.remove();
     const pg=document.createElement('div'); pg.className='hcard';
     pg.innerHTML=`<b style="color:var(--gold)">PREGAME</b> — 🎙️ ${G.pregame}`;
@@ -1616,6 +1621,14 @@ function step(){
   }});
   addPlay(p);
   idx++;
+  if(once){                                   // stop here and wait to be asked
+    timer=null;
+    const done=idx>=G.plays.length;
+    $('go').textContent=done?'\u21bb Replay':'\u25b6 Resume';
+    $('nextp').disabled=done;
+    if(done) setTimeout(endGame,(p.td?3000:1200)*SLOW/speed);
+    return;
+  }
   if(idx>=G.plays.length){ timer=setTimeout(endGame,(p.td?3800:1400)*SLOW/speed); return; }
   timer=setTimeout(step, delayFor(p)*SLOW/speed);
 }
@@ -1661,6 +1674,15 @@ function renderBox(){
   });
 }
 function play(){ if(timer)return; audioInit(); if(AC&&AC.state==='suspended')AC.resume(); if(idx===0) sfx.kickoff(); $('go').textContent='⏸ Pause'; $('skip').disabled=false; step(); }
+function nextPlay(){
+  if(idx>=G.plays.length) return;
+  audioInit(); if(AC&&AC.state==='suspended')AC.resume();
+  if(idx===0) sfx.kickoff();
+  if(timer){ clearTimeout(timer); timer=null; }   // a running game pauses here
+  clearInterval(clockT);
+  $('skip').disabled=false;
+  stepOnce=true; step();
+}
 function stop(){ if(timer){clearTimeout(timer);timer=null;} clearInterval(clockT); $('go').textContent=idx>=G.plays.length?'↻ Replay':'▶ Resume'; }
 function reset(){
   animToken++; clearInterval(clockT); idx=0;dispH=0;dispA=0;curDrive=-1;ballYd=50;
@@ -1670,6 +1692,7 @@ function reset(){
   $('possname').innerHTML='Kickoff';$('possname').style.color='#fff';$('dd').textContent='';$('fieldcap').classList.remove('on');
   $('benchrow').innerHTML=''; $('losline').style.left='50%'; put($('ball'),50,50); cam(50,1,50);
   Object.values(nodes.skill).forEach(c=>c.classList.remove('act'));
+  stepOnce=false; $('nextp').disabled=false;
 }
 
 /* ---- Game of the Week: any two real franchises -------------------------
@@ -2326,7 +2349,9 @@ function startReplay(feed, gi, week){
       'ball passes only through men with no name on them. The '+
       'sixty-minute clock is synthesised too \u2014 a play keeps the quarter the '+
       'tape gives it and the minutes inside the quarter are shared out. Down '+
-      'and distance are not shown, because the replay does not know them.';
+      'and distance are not shown, because the replay does not know them. '+
+      '<b>Next play</b> walks it a snap at a time \u2014 or press the right '+
+      'arrow key.';
   SLOW=2.6;                      // the play is the point, not the result
   G=replayGame(g,week);
   reset();
@@ -2350,9 +2375,16 @@ function bootReplay(){
 if(!bootReplay()) loadLeague().then(initFromQuery);
 
 $('go').addEventListener('click',()=>{ if(idx>=G.plays.length){reset();play();return;} if(timer)stop();else play(); });
+$('nextp').addEventListener('click',nextPlay);
+document.addEventListener('keydown',e=>{
+  if(e.target&&/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if(e.key==='ArrowRight'||e.key==='n'){ e.preventDefault(); nextPlay(); }
+  else if(e.key===' '){ e.preventDefault(); $('go').click(); }
+});
 $('skip').addEventListener('click',()=>{
   animToken++; if(timer){clearTimeout(timer);timer=null;}
   while(idx<G.plays.length){ addPlay(G.plays[idx]); idx++; }
+  stepOnce=false; $('nextp').disabled=true;
   endGame();
 });
 $('mute').addEventListener('click',()=>{
