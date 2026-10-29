@@ -344,6 +344,24 @@ guessed table is overwritten by them at load, so the field and the pictures in
 the issue dress the same sixteen clubs alike. That table had Wookie Leaks and
 BIG BLUE on the same blue.
 
+**Two sides have to be separable at sprite size, and plain RGB distance does
+not know that.** It called the Smoke Dragons' purple and the Guido Haters'
+near-black 96 apart and let them on the same field — 157 on the redmean
+weighting with **21 points of brightness between them**, the muddiest picture
+of the eight. `sep()` in `build_watch.py` uses the redmean weighting and hands
+back the luminance gap separately, because two DARK kits are hard whatever
+their hues: a pair passes on 200, or on 150 with 60 of brightness between them.
+
+The old test compared **body against body and nothing else**, so it never saw
+that the Dragons' trim was the exact colour of a Hater. `kit_ok()` also rejects
+one side's body matching the other's trim — but only while the bodies are
+merely adequate. Once they are miles apart (300) nobody reads the trim to tell
+them apart, and insisting on it left the Guido Haters with no legal strip at
+all against StillTheCream. The second side named changes, into body and trim
+drawn from **its own two colours and its alt in any order**, first clear
+pairing wins. That is 19 changed strips across weeks 4 to 7, and **no matchup
+in any of them still reads alike**.
+
 Real NFL plays laid onto a 60-minute fantasy clock. A Monday-night 30-yard
 touchdown catch becomes a late-fourth-quarter 30-yard touchdown catch. **Time
 is told in game time only** — quarters and the clock, never NFL broadcast

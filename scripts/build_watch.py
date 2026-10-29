@@ -38,7 +38,7 @@ looked up by name silently vanishes the week somebody renames. LOGO_BY_RID is
 keyed by roster id and any roster that will not resolve is named in the build
 output rather than quietly losing its crest.
 """
-import argparse, glob, importlib.util, json, os, re, sys
+import argparse, glob, importlib.util, json, math, os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WDIR = os.path.join(ROOT, 'week-data')
@@ -173,22 +173,79 @@ def near(a, b, tol=70):
     return sum(abs(x - y) for x, y in zip(rgb(a), rgb(b))) < tol
 
 
+def _lum(h):
+    r, g, b = rgb(h)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def sep(a, b):
+    """How far apart two kits read at sprite size.
+
+    Plain RGB distance calls dark purple and near-black 96 apart and lets them
+    on the same field. They are not separable: on a 170px field the eye has hue
+    and brightness to work with and those two share the brightness. This is the
+    redmean weighting, which tracks the eye far better, and the luminance gap
+    comes back separately because two DARK kits are hard whatever their hues.
+    """
+    (r1, g1, b1), (r2, g2, b2) = rgb(a), rgb(b)
+    rb = (r1 + r2) / 2
+    dr, dg, db = r1 - r2, g1 - g2, b1 - b2
+    d = math.sqrt((2 + rb / 256) * dr * dr + 4 * dg * dg
+                  + (2 + (255 - rb) / 256) * db * db)
+    return d, abs(_lum(a) - _lum(b))
+
+
+def tells_apart(a, b):
+    d, dl = sep(a, b)
+    return d >= 200 or (d >= 150 and dl >= 60)
+
+
+def kit_ok(h1, h2, c1, c2):
+    """Can a man in c1/c2 be told from a man in h1/h2, and from the pitch?
+
+    The sprite is painted body=c1, trim=c2, so the bodies carry the read and
+    have to be clearly apart. But a trim collision muddies it too: the Smoke
+    Dragons wear purple with a near-black trim and the Guido Haters wear
+    near-black, so a Dragon's trim was the exact colour of a Hater, with only
+    21 points of brightness between the two bodies. That was the muddiest
+    picture of the eight and nothing caught it, because the old test compared
+    body against body and nothing else.
+    """
+    if not tells_apart(h1, c1) or near(c1, c2):
+        return False                    # bodies too close, or one colour
+    # A trim collision only muddies the picture when the bodies are merely
+    # adequate. Once they are miles apart -- a gold man beside a black one --
+    # nobody is reading the trim to tell them apart, and insisting on it left
+    # the Guido Haters with no legal strip at all against StillTheCream.
+    if sep(h1, c1)[0] >= 300:
+        return True
+    return not near(c1, h2) and not near(h1, c2)
+
+
 def kit_clash(teams):
-    """Put one side in its change strip when both are in the same colour.
+    """Put one side in its change strip when the two cannot be told apart.
 
     Three franchises wear red -- the Powers of Pain, Pork Chop Express and the
     Killer Klowns -- and two wear brown. The weeks any pair of them met, every
     figure on the field was the same shade and the picture said nothing. The
     SECOND side named in the matchup changes, so the first keeps the colours
-    the issue's play art already put it in.
+    the issue's play art already put it in, and it changes into a strip it
+    actually owns: body and trim are drawn from its own two colours and its
+    alt, in any order, and the first pairing that clears wins.
     """
-    if not near(teams[0]['c1'], teams[1]['c1']):
+    h, a = teams
+    if kit_ok(h['c1'], h['c2'], a['c1'], a['c2']):
         return None
-    for cand in (teams[1]['alt'], teams[1]['c2']):
-        if cand and not near(teams[0]['c1'], cand):
-            was, teams[1]['c1'] = teams[1]['c1'], cand
-            return f'{teams[1]["name"]} {was} -> {cand} (vs {teams[0]["name"]})'
-    return f'{teams[1]["name"]} has no change strip clear of {teams[0]["name"]}'
+    pool = [c for c in (a['c1'], a['c2'], a.get('alt')) if c]
+    for c1 in pool:
+        for c2 in pool:
+            if c1.lower() == c2.lower():
+                continue
+            if kit_ok(h['c1'], h['c2'], c1, c2):
+                was = f'{a["c1"]}/{a["c2"]}'
+                a['c1'], a['c2'] = c1, c2
+                return f'{a["name"]} {was} -> {c1}/{c2} (vs {h["name"]})'
+    return f'{a["name"]} has no change strip clear of {h["name"]}'
 
 
 def lineups_for(week):
