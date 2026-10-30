@@ -70,9 +70,13 @@ synthetic 10-team 1-QB full-PPR league.
 
 ## Light enough to read
 
-- Images as files, not base64 — an issue goes from 7.8MB to a few hundred KB.
-  Week 7 carries 12 images at 424–744KB each, inlined, with the same cover
-  also sitting unused on disk beside it
+- ~~Images as files, not base64~~ **DONE for new issues.** `INLINE_MAX` in
+  `build_week_issue.py`: furniture under 250kb inlines, photographs are
+  referenced. Week 7 rebuilds at **494kb instead of 7,894** — 16x — with every
+  picture resolving and the page identical on screen. `--inline-all` restores
+  the old behaviour for a copy meant to be emailed
+- **Back issues are NOT converted.** Weeks 4-7 are still the heavy version;
+  rebuilding them is John's call, not this desk's
 - A working share card on every issue. That is how it spreads
 
 ## Optional uploads — each makes it better, none required

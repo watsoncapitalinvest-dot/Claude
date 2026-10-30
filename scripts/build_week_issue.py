@@ -1200,7 +1200,7 @@ def coverlines(season, week, d, stories, lead, st):
     return out
 
 
-def build(season, week, remeasure=True):
+def build(season, week, remeasure=True, inline_all=False):
     # A written file, when there is one, beats the generated stories. The
     # template can report a game; it cannot have a view about one, and a beat
     # report is mostly view. Generation stays as the floor for a week nobody
@@ -1352,31 +1352,46 @@ def build(season, week, remeasure=True):
     bi.build(key, remeasure=False, quiet=True)
     if remeasure:
         fit(out)
-    inline_assets(out)
+    inline_assets(out, inline_all)
     return out
 
 
-def inline_assets(out):
-    """Embed the cover, masthead and shield so the file works on its own.
+# Furniture inlines, photographs do not.
+#
+# Everything used to inline, and the reason was good: the issue referenced its
+# pictures relatively, which is right on the site and useless anywhere else --
+# opened from a download the cover came up black and the masthead not at all.
+# A magazine you cannot send is not much of a magazine.
+#
+# But week 7 came out at 7.8MB, of which 7.64 was base64, and the same files
+# were sitting on disk beside it. Eight play photographs at 570-744kb each are
+# 5.1MB of that, re-downloaded by every reader, cached between issues never.
+#
+# So the line is size. The logo, the wordmark and the shield are small and are
+# what makes a loose copy LOOK like the magazine, so they stay inline. The
+# photographs are referenced, which is what the browser can cache. --inline-all
+# restores the old behaviour for a copy meant to be emailed.
+INLINE_MAX = 250 * 1024
 
-    The issue referenced them relatively, which is correct on the site and
-    useless anywhere else: opened from a download, or sent to somebody, the
-    cover came up black and the masthead did not come up at all. A magazine
-    you cannot send is not much of a magazine, so the weekly issue carries its
-    own pictures.
-    """
+
+def inline_assets(out, inline_all=False):
+    """Embed the small furniture; leave the photographs as files."""
     import base64, re as _re
     path = os.path.join(ROOT, out)
     html = open(path, encoding='utf-8').read()
-    done, total = [], 0
+    done, left, total, saved = [], [], 0, 0
     for fn in sorted(set(_re.findall(r'["\'(]([A-Za-z0-9._-]+\.(?:png|jpg|jpeg|svg))["\')]',
                                      html))):
         src = os.path.join(ROOT, fn)
         if not os.path.exists(src):
             continue
+        b = open(src, 'rb').read()
+        if not inline_all and len(b) > INLINE_MAX:
+            left.append(fn)
+            saved += len(b)
+            continue
         mime = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
                 'svg': 'image/svg+xml'}[fn.rsplit('.', 1)[1].lower()]
-        b = open(src, 'rb').read()
         uri = f'data:{mime};base64,' + base64.b64encode(b).decode('ascii')
         before = html
         html = html.replace(f"'{fn}'", f"'{uri}'").replace(f'"{fn}"', f'"{uri}"')
@@ -1385,6 +1400,9 @@ def inline_assets(out):
             total += len(b)
     open(path, 'w', encoding='utf-8').write(html)
     print(f'  inlined {len(done)} assets ({total/1024:.0f}kb): ' + ', '.join(done))
+    if left:
+        print(f'  referenced {len(left)} ({saved/1024:.0f}kb) as files, cacheable: '
+              + ', '.join(left))
 
 
 def fit(out):
@@ -1419,9 +1437,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--week', type=int, required=True)
     ap.add_argument('--season', default='2026')
+    ap.add_argument('--inline-all', action='store_true',
+                    help='embed every picture, for a copy meant to be emailed '
+                         'rather than opened on the site')
     ap.add_argument('--no-measure', action='store_true')
     a = ap.parse_args()
-    out = build(a.season, a.week, remeasure=not a.no_measure)
+    out = build(a.season, a.week, remeasure=not a.no_measure, inline_all=a.inline_all)
     print(f'  -> {out}')
 
 
