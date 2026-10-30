@@ -37,10 +37,48 @@ PLAYERS = os.path.join(CACHE, 'players.csv')
 PBP_URL = 'https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.csv.gz'
 PL_URL = 'https://github.com/nflverse/nflverse-data/releases/download/players/players.csv'
 
-# what the league actually starts each week: 16 teams x the slot list.
-# SUPER_FLEX is counted as a QB slot -- every team in this league starts a
-# second quarterback in it, so 32 is the real bar at the position.
+# Fallback only, for a week file with no settings in it. The real figures come
+# from slots_for() below.
 SLOTS = {'QB': 32, 'RB': 32, 'WR': 48, 'TE': 16, 'K': 16, 'DEF': 16}
+
+
+def slots_for(wd):
+    """What THIS league starts each week, read off its own week file.
+
+    This used to be frozen at SCFL's shape -- 16 teams times its slot list --
+    and a 10-team 1-QB league ran straight through it and reported 27 men who
+    would upgrade a lineup, where the figure runs 2 to 5 in any league. It did
+    not crash and it did not warn, which is the worst way for a number to be
+    wrong: the bar was set from a pool 160 deep for a league that starts 100.
+
+    SUPER_FLEX counts as a quarterback, because that is what is started in it.
+    """
+    teams = len(wd.get('games') or []) * 2
+    rp = [str(x).upper() for x in (wd.get('roster_positions') or [])]
+    if not teams or not rp:
+        return dict(SLOTS)
+    base = {'QB': 0, 'RB': 0, 'WR': 0, 'TE': 0, 'K': 0, 'DEF': 0}
+    flex = 0
+    for x in rp:
+        if x in ('BN', 'IR', 'TAXI'):
+            continue
+        if x == 'SUPER_FLEX':
+            base['QB'] += 1
+        elif x in ('DEF', 'DST', 'D/ST'):
+            base['DEF'] += 1
+        elif x in base:
+            base[x] += 1
+        elif 'FLEX' in x:
+            flex += 1
+    # A flex is started by somebody, and that somebody is a back, a receiver or
+    # a tight end. Ignoring it sets the bar from too shallow a pool and
+    # understates the wire; split it the way the dedicated slots already lean.
+    elig = {q: base[q] for q in ('RB', 'WR', 'TE')}
+    tot = sum(elig.values())
+    if flex and tot:
+        for q, n in elig.items():
+            base[q] += flex * n / tot
+    return {q: max(1, round(v * teams)) for q, v in base.items() if v}
 S = {'py': 0.02, 'ptd': 6, 'pint': -2, 'ry': 0.1, 'rtd': 6, 'recy': 0.1,
      'rectd': 6, 'fl': -2, 'tp': 2}
 TEAM_AB = {'Arizona Cardinals': 'ARI', 'Atlanta Falcons': 'ATL', 'Baltimore Ravens': 'BAL',
@@ -204,6 +242,7 @@ def build():
             continue
         d = json.load(open(path, encoding='utf-8'))
         wk = d['week']
+        slots = slots_for(d)          # this league's shape, not this desk's
         sc = [t['points'] for g in d['games'] for t in g['teams']]
         st = [p for g in d['games'] for t in g['teams'] for p in t['starters']]
         zero = sum(1 for p in st if p['points'] == 0) / max(len(st), 1)
@@ -223,7 +262,7 @@ def build():
                         if k:
                             owned.add(k)
         bar, mid = {}, {}
-        for P, n in SLOTS.items():
+        for P, n in slots.items():
             s = sorted((v['wk'][wk] for v in U.values() if v['p'] == P and wk in v['wk']),
                        reverse=True)
             # two bars. REPLACEMENT is the worst man the league actually started
@@ -247,6 +286,7 @@ def build():
                          for v, p, n in sorted(skill, reverse=True) if v >= mid[p]],
             'top_skill': [{'name': n, 'pos': p, 'pts': round(v, 1)}
                           for v, p, n in sorted(skill, reverse=True)[:5]],
+            'slots': slots,
             'bar': {k: round(v, 2) for k, v in bar.items()},
             'median_bar': {k: round(v, 2) for k, v in mid.items()},
         })
@@ -258,7 +298,7 @@ def build():
                    'it reads ~500 all season and measures nothing anybody cares about. '
                    'Written by scripts/waiver_depth.py; see that file for the model and its '
                    'validation. Weeks not yet played are skipped.',
-           'slots': SLOTS, 'rows': rows}
+           'slots': (rows[-1]['slots'] if rows else dict(SLOTS)), 'rows': rows}
     json.dump(out, open(OUT, 'w', encoding='utf-8'), indent=1)
     print(f'wrote {os.path.basename(OUT)} ({len(rows)} played weeks)')
     for r in rows:
