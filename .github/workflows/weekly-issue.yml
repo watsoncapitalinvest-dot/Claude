@@ -1,0 +1,182 @@
+name: Build the week's issue
+
+# Closing the loop. Until now the Tuesday fetch landed the data and then
+# NOTHING happened: six scripts ran on Actions and not one of them built an
+# issue, so every magazine needed a hand on a keyboard to exist.
+#
+# This runs the rest of the chain -- rebuild, write, feed, cover, page -- and
+# then puts it in front of the sanity gate. If the gate holds the issue, the
+# workflow fails loudly and commits nothing. A free product running itself for
+# leagues nobody here has met has no human reading each issue, and the
+# dangerous failure is not the crash. It is the confident wrong number.
+#
+# WHAT IT DOES NOT DO: generate art. The play prompts are already written by
+# build_play_art.py; turning them into pictures stays John's step, and the
+# cover falls back to the default plate with the week number set on it. No
+# model, no key, no bill in this pipeline at all.
+
+on:
+  workflow_dispatch:
+    inputs:
+      week:
+        description: 'Week to build (blank = the newest week file on disk)'
+        required: false
+        default: ''
+      season:
+        required: false
+        default: '2026'
+      publish:
+        description: 'Commit and push the issue (false = build and gate only)'
+        required: false
+        default: 'true'
+      rebuild_published:
+        description: 'Allow rebuilding a week that is already published (dangerous)'
+        required: false
+        default: 'false'
+  workflow_run:
+    workflows: ["Fetch a week's matchups"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+# Per league, not one global group. fetch-week shares a single `fetch-week`
+# group and rapid dispatches cancel each other -- that is how week 2 was lost.
+# The name carries the repo so this still holds when a second league arrives.
+concurrency:
+  group: weekly-issue-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # on workflow_run, only when the fetch actually succeeded
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install what the builders need
+        run: python3 -m pip install --quiet pillow
+
+      # nflverse play-by-play is a 7MB download a week and never changes once a
+      # week is final, so it is cached rather than pulled every run.
+      - name: Cache nflverse
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: nflverse-${{ inputs.season || '2026' }}-${{ github.run_id }}
+          restore-keys: nflverse-${{ inputs.season || '2026' }}-
+
+      - name: Work out which week
+        id: wk
+        env:
+          IN_WEEK: ${{ inputs.week }}
+          SEASON: ${{ inputs.season || '2026' }}
+        run: |
+          if [ -n "$IN_WEEK" ]; then
+            echo "week=$IN_WEEK" >> "$GITHUB_OUTPUT"
+          else
+            # the newest plain week file on disk -- the one the fetch just landed
+            W=$(ls week-data/${SEASON}-w*.json 2>/dev/null \
+                | grep -oE 'w[0-9]+\.json$' | grep -oE '[0-9]+' \
+                | sort -n | tail -1)
+            echo "week=${W}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Weeks 4 to 6 keep the masthead and the layout they went out with, on
+      # purpose: rebuilding a live issue reflows it through every convention
+      # that has landed since. Rebuilding week 7 by hand during this work took
+      # the tug-of-war off the cover and dropped it from 434kb to 67kb, which
+      # is the damage this guard exists to stop.
+      - name: Refuse to reflow a published back issue
+        env:
+          WEEK: ${{ steps.wk.outputs.week }}
+          FORCE: ${{ inputs.rebuild_published }}
+        run: |
+          ISSUE="scfl-week-${WEEK}-issue.html"
+          if [ -f "$ISSUE" ] && [ -n "$(git log --oneline -1 -- "$ISSUE")" ] \
+             && [ "$FORCE" != "true" ]; then
+            echo "Week ${WEEK} is already published."
+            echo "Rebuilding it would reflow a live issue. Re-run with"
+            echo "rebuild_published=true if that is genuinely what you want."
+            exit 1
+          fi
+
+      - name: Rebuild the games from the tape
+        run: python3 scripts/replay.py --week ${{ steps.wk.outputs.week }}
+                                       --season ${{ inputs.season || '2026' }}
+
+      - name: Write the week
+        run: python3 scripts/write_week.py --week ${{ steps.wk.outputs.week }}
+                                           --season ${{ inputs.season || '2026' }}
+
+      - name: Build the watch feed
+        run: python3 scripts/build_watch.py --week ${{ steps.wk.outputs.week }}
+
+      - name: Cover
+        run: |
+          python3 scripts/build_week_cover.py --week ${{ steps.wk.outputs.week }} \
+            --season ${{ inputs.season || '2026' }}
+
+      # Only on a cover the app DREW. A week with its own art is John's
+      # picture and carries no number unless he asks for one.
+      - name: Set the issue number on a drawn cover
+        continue-on-error: true      # a cover without its number still publishes
+        env:
+          SEASON: ${{ inputs.season || '2026' }}
+          WEEK: ${{ steps.wk.outputs.week }}
+          LEAGUE: ${{ vars.LEAGUE_NAME || 'SCFL' }}
+        run: |
+          COV="scfl-week-${WEEK}-cover.jpg"
+          ART=$(python3 -c "
+          import json,os,sys
+          p='week-data/%s-w%s-written.json'%(os.environ['SEASON'],os.environ['WEEK'])
+          print((json.load(open(p)).get('cover') or {}).get('art','') if os.path.exists(p) else '')
+          ")
+          if [ -n "$ART" ]; then
+            echo "week ${WEEK} has its own art ($ART) -- no number set"
+          elif [ -f "$COV" ]; then
+            python3 scripts/cover_number.py --cover "$COV" --week "$WEEK" \
+              --league "$LEAGUE" --season "$SEASON"
+          else
+            echo "no cover to number"
+          fi
+
+      - name: Build the page
+        run: python3 scripts/build_week_issue.py --week ${{ steps.wk.outputs.week }}
+                                                 --season ${{ inputs.season || '2026' }}
+
+      # ---- the gate. Nothing below this runs if the numbers are wrong. ----
+      - name: Sanity gate
+        run: |
+          python3 scripts/sanity_gate.py --week ${{ steps.wk.outputs.week }} \
+            --season ${{ inputs.season || '2026' }}
+
+      - name: Filed and sendable
+        run: python3 scripts/check_filed.py || true
+
+      - name: Publish
+        if: ${{ inputs.publish != 'false' }}
+        run: |
+          git config user.name  'SCFL Newsroom'
+          git config user.email 'noreply@anthropic.com'
+          git add -A
+          if git diff --staged --quiet; then
+            echo 'nothing changed'
+            exit 0
+          fi
+          git commit -m "Week ${{ steps.wk.outputs.week }}: the issue, built and gated"
+          git push
+
+      - name: What held it
+        if: failure()
+        run: |
+          echo "The issue did not publish. Run the gate locally to see why:"
+          echo "  python3 scripts/sanity_gate.py --week ${{ steps.wk.outputs.week }}"

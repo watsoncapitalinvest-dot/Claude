@@ -42,9 +42,16 @@ synthetic 10-team 1-QB full-PPR league.
 
 ## Run itself
 
-- One workflow: fetch → replay → write → cover → issue → publish, weekly cron
-- A concurrency group **per league**, not one global — that is how week 2 was
-  lost
+- ~~One workflow: fetch → replay → write → cover → issue → publish~~ **DONE.**
+  `.github/workflows/weekly-issue.yml`, chained off the fetch, with the sanity
+  gate as the step before publish — nothing commits if the numbers are wrong
+- ~~A concurrency group per league~~ **DONE**, keyed on the repository
+- The cover's art is **recorded in the week file** now. `--art` was a flag and
+  nothing else, so the choice lived in a shell history: rebuilding week 7
+  without repeating it took the tug-of-war off the live issue and dropped the
+  cover from 434kb to 67kb. A bare rebuild now reproduces it byte for byte
+- The workflow **refuses to rebuild a published week** unless explicitly forced,
+  because weeks 4-6 keep the layout they went out with
 - ~~The app sets the week number on a plate~~ **DONE.**
   `scripts/cover_number.py`, corner or band, run on the finished 1024x1536
   frame so compose_cover's drop cannot crop it. Takes any plate: the default,

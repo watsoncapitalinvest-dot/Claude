@@ -386,6 +386,27 @@ def og_card(season, week, g, lead_story, pts, flips_t, art=''):
     print(f'  wrote {os.path.basename(out)}' + (f' from {art}' if art else ''))
 
 
+def remember_art(season, week, art):
+    """Write the chosen picture into the week's own file.
+
+    `--art` was a flag and nothing else: the choice lived in a shell history,
+    so a rebuild that did not repeat it drew the generated cover instead and
+    silently replaced a published one. Rebuilding week 7 without it took the
+    tug-of-war off the live issue and dropped the cover from 434kb to 67kb.
+    Recorded here, a rebuild reproduces the cover byte for byte.
+    """
+    p = os.path.join(WDIR, f'{season}-w{week}-written.json')
+    if not art or not os.path.exists(p):
+        return
+    d = json.load(open(p, encoding='utf-8'))
+    cov = d.setdefault('cover', {})
+    if cov.get('art') == art:
+        return
+    cov['art'] = art
+    json.dump(d, open(p, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+    print(f'  recorded cover art in {season}-w{week}-written.json: {art}')
+
+
 def build(season, week, art='', inset='', card=''):
     rp = json.load(open(os.path.join(WDIR, f'{season}-w{week}-replay.json'), encoding='utf-8'))
     lead, stories, cover, feats = 0, [], {}, []
@@ -397,6 +418,15 @@ def build(season, week, art='', inset='', card=''):
             cover = d.get('cover') or {}
             feats = d.get('features') or []
             break
+    # the week's own record of its picture wins when the caller did not name one
+    if not art and cover.get('art'):
+        art = cover['art']
+        if not os.path.exists(os.path.join(ROOT, art)):
+            print(f'  cover art recorded but missing: {art} -- drawing instead')
+            art = ''
+        else:
+            print(f'  cover art from the week file: {art}')
+    remember_art(season, week, art)
     g = rp['games'][lead]
 
     # margin from the winner's point of view, so the red on the cover is theirs
