@@ -100,7 +100,39 @@ def band(img, week, league, season):
     return img
 
 
-PLACE = {'corner': corner, 'band': band}
+def plate(img, week, league, season):
+    """For a plate that carries its own masthead and a light content area.
+
+    The default that ships with the product is one of these: the wordmark is
+    printed into the art and the middle is a blown-out cream field, so there is
+    no masthead drop to leave room for and cream type would vanish. This sets
+    INK on the cream instead, filling the space the art was drawn around.
+    """
+    w, h = img.size
+    d = ImageDraw.Draw(img, 'RGBA')
+    top, bot = h * 0.30, h * 0.74          # measured on the default plate
+    cy = (top + bot) / 2
+    d.text((w / 2, top + h * 0.035), 'WEEK', font=font('Sans-Bold', int(h * 0.052)),
+           fill=(28, 26, 24), anchor='mm')
+    # the plate's own lettering is a heavy poster face, and a serif numeral
+    # beside it reads as a different magazine
+    d.text((w / 2, cy + h * 0.015), str(week), font=font('Sans-Bold', int(h * 0.27)),
+           fill=(28, 26, 24), anchor='mm')
+    d.line([(w * 0.26, bot - h * 0.075), (w * 0.74, bot - h * 0.075)],
+           fill=(176, 36, 38), width=max(3, int(h * 0.004)))
+    d.text((w / 2, bot - h * 0.040), league.upper(), font=font('Sans-Bold', int(h * 0.040)),
+           fill=(28, 26, 24), anchor='mm')
+    if season:
+        d.text((w / 2, bot - h * 0.005), str(season), font=font('Sans-Bold', int(h * 0.028)),
+               fill=(96, 90, 84), anchor='mm')
+    return img
+
+
+PLACE = {'corner': corner, 'band': band, 'plate': plate}
+
+# The plate that ships with the product. A league with no art of its own gets
+# this with its week number set on it, which is a cover on day one.
+DEFAULT_PLATE = os.path.join('art', 'cover-plate-default.jpg')
 
 
 def number(cover, week, league='', season='', place='corner', out=None):

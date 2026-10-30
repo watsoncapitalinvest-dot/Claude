@@ -56,7 +56,10 @@ synthetic 10-team 1-QB full-PPR league.
   `scripts/cover_number.py`, corner or band, run on the finished 1024x1536
   frame so compose_cover's drop cannot crop it. Takes any plate: the default,
   John's art, or a league's upload
-- Ship the default plate itself (John is making it)
+- ~~Ship the default plate itself~~ **DONE.** `art/cover-plate-default.jpg`,
+  John's. It carries its own masthead and a cream centre, so it needs no
+  masthead drop and the number goes on in INK, not cream -- that is the
+  `plate` placement, a third one beside `corner` and `band`
 
 ## Don't publish nonsense
 
