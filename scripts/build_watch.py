@@ -112,14 +112,47 @@ def slug(name):
     return k[3:] if k.startswith('the') else k
 
 
+# A league that has never filled in team-kits.json still has to be watchable,
+# and sixteen teams in the same fallback grey is the exact failure the kit work
+# exists to prevent. These are picked to be far apart on sep(), and assigned by
+# roster_id so a franchise keeps its colour week to week. Brown-on-khaki was in
+# this list and had to go: it is muddy against gold and against purple, and on
+# four of the 240 orderings kit_clash could find the away side no legal change
+# strip at all. Every ordering resolves now.
+FALLBACK_KITS = [
+    ('#c0272d', '#f2f2ee'), ('#1f5fd0', '#f2f2ee'), ('#1f7a3a', '#f2f2ee'),
+    ('#e2731f', '#1b1b1f'), ('#4a2173', '#d8b45a'), ('#16a3a3', '#1b1b1f'),
+    ('#d8b45a', '#1b1b1f'), ('#c8ccd2', '#1b1b1f'), ('#0e8ab5', '#f2f2ee'),
+    ('#1b1b1f', '#f2f2ee'), ('#efc62c', '#1b1b1f'), ('#67c27a', '#1b1b1f'),
+    ('#7a3fa8', '#f2f2ee'), ('#f2f2ee', '#1f5fd0'), ('#8a8f99', '#1b1b1f'),
+    ('#4a0d12', '#d8b45a'),
+]
+
+
+def optional(path, default):
+    """A file a new league has not got yet is not an error.
+
+    The five hand-made files -- crests, kits, franchises, records, rivalries --
+    took the weekly build down with FileNotFoundError when they were absent,
+    which is every league but this one on its first Tuesday.
+    """
+    p = os.path.join(ROOT, path)
+    if not os.path.exists(p):
+        return default
+    try:
+        return json.load(open(p, encoding='utf-8'))
+    except (ValueError, OSError):
+        return default
+
+
 def identity(weeks):
     """roster_id -> {name, logo}, from the newest week file that names them.
 
     Newest wins so a renamed franchise shows the name it goes by now, and the
     logo comes off LOGO_BY_RID or the slug, never off the name alone.
     """
-    logos = set(json.load(open(os.path.join(ROOT, 'scfl-team-logos-resized.json'),
-                               encoding='utf-8')).keys())
+    logo_file = optional('scfl-team-logos-resized.json', None)
+    logos = set((logo_file or {}).keys())
     out, missing = {}, []
     for w in weeks:                       # ascending, so later weeks overwrite
         wk = json.load(open(os.path.join(WDIR, f'{SEASON}-w{w}.json'), encoding='utf-8'))
@@ -127,8 +160,7 @@ def identity(weeks):
             for t in g['teams']:
                 out[t['roster_id']] = {'rid': t['roster_id'],
                                        'name': t['team'].strip().strip('*').strip()}
-    kits = json.load(open(os.path.join(ROOT, 'team-kits.json'),
-                          encoding='utf-8'))['teams']
+    kits = (optional('team-kits.json', None) or {}).get('teams') or {}
     nokit = []
     for rid, t in sorted(out.items()):
         k = LOGO_BY_RID.get(rid) or slug(t['name'])
@@ -147,16 +179,22 @@ def identity(weeks):
         if not c2 or c2 == c1:
             c2 = ink(TRIM_PICK.get(rid) or kit.get('trim')) or c2
         if not c1 or not c2 or c1 == c2:
-            nokit.append(f'{rid} {t["name"]!r} -> {kit.get("primary")!r}/'
-                         f'{kit.get("secondary")!r}/{kit.get("trim")!r}')
-            c1, c2 = c1 or '#d8d8d8', c2 or '#9aa0a8'
+            if kits:            # a kit was written for this league and failed
+                nokit.append(f'{rid} {t["name"]!r} -> {kit.get("primary")!r}/'
+                             f'{kit.get("secondary")!r}/{kit.get("trim")!r}')
+            f1, f2 = FALLBACK_KITS[(rid - 1) % len(FALLBACK_KITS)]
+            c1, c2 = c1 or f1, (c2 if c2 and c2 != c1 else f2)
         t['c1'], t['c2'] = c1, c2
         # the change strip, for the weeks this franchise meets somebody in the
         # same colour. Its trim first, then its own secondary.
         t['alt'] = ink(TRIM_PICK.get(rid) or kit.get('trim')) or c2
-    if missing:
+    if logo_file is None:
+        print(f'  no crest file: {len(out)} franchises run crestless')
+    elif missing:
         print('  NO CREST for:', '; '.join(missing))
         print('  -> add the roster id to LOGO_BY_RID in scripts/build_watch.py')
+    if not kits:
+        print(f'  no team-kits.json: {len(out)} franchises on the fallback palette')
     if nokit:
         print('  UNREADABLE KIT for:', '; '.join(nokit))
         print('  -> fix the words in team-kits.json, or add them to INK')
@@ -356,8 +394,10 @@ def crests(ident):
     """
     import base64, io
     from PIL import Image
-    src = json.load(open(os.path.join(ROOT, 'scfl-team-logos-resized.json'),
-                         encoding='utf-8'))
+    src = optional('scfl-team-logos-resized.json', None)
+    if not src:
+        print('  no crest source: the lobby runs on initials')
+        return
     out = os.path.join(ROOT, 'crests')
     os.makedirs(out, exist_ok=True)
     n = tot = 0

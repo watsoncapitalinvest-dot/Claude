@@ -59,10 +59,18 @@ class History:
         self.fr, self.rec, self.riv = fr, rec, riv
         self.key_of = {}          # roster_id -> franchise key
         self.unresolved = []
+        # A league in its first season has no past, and that is not an error.
+        # Every accessor already returns None when it cannot resolve a side, so
+        # an empty History simply prints no history lines -- which is the true
+        # thing to print. load() used to raise FileNotFoundError instead and
+        # took the whole issue down with it.
+        self.empty = not (self.rec.get('standings') or self.riv.get('rows'))
 
     def bind(self, table):
         """Tie this season's roster_ids to franchise keys. Call once per build."""
-        look = self.fr['lookup']
+        look = self.fr.get('lookup') or {}
+        if self.empty and not look:
+            return self                      # nothing to bind to; say nothing
         for r in table:
             k = look.get(norm(r['team'])) or ALIAS.get(norm(r['team']))
             if k:
@@ -76,8 +84,8 @@ class History:
         k = self.key_of.get(rid)
         if not k:
             return None
-        look = self.fr['lookup']
-        row = next((x for x in self.rec['standings']
+        look = self.fr.get('lookup') or {}
+        row = next((x for x in (self.rec.get('standings') or [])
                     if (look.get(norm(x['name'])) or ALIAS.get(norm(x['name']))) == k), None)
         if not row:
             return None
@@ -104,9 +112,9 @@ class History:
         ka, kb = self.key_of.get(a['roster_id']), self.key_of.get(b['roster_id'])
         if not ka or not kb or ka == kb:
             return None
-        hand = self.fr['handles']
+        hand = self.fr.get('handles') or {}
         row = None
-        for x in self.riv['rows']:
+        for x in (self.riv.get('rows') or []):
             if {hand.get(x['ka']), hand.get(x['kb'])} == {ka, kb}:
                 row = x
                 break
@@ -170,5 +178,21 @@ class History:
 
 
 def load():
-    j = lambda f: json.load(open(os.path.join(ROOT, f), encoding='utf-8'))
+    """The past, where there is one.
+
+    All three files are optional. A league playing its first season has no
+    records, no rivalries and no alias table, and the honest output for it is
+    no history lines at all -- not a stack trace. `h.empty` says which case
+    this is, so a caller can skip the whole thread rather than ask eighteen
+    questions that all answer None.
+    """
+    def j(f):
+        p = os.path.join(ROOT, f)
+        if not os.path.exists(p):
+            return {}
+        try:
+            d = json.load(open(p, encoding='utf-8'))
+            return d if isinstance(d, dict) else {}
+        except (ValueError, OSError):
+            return {}                       # a half-written file is no past
     return History(j('scfl-franchises.json'), j('records.json'), j('rivalries.json'))

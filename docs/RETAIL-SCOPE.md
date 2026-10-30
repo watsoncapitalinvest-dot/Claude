@@ -31,10 +31,13 @@ synthetic 10-team 1-QB full-PPR league.
 
 ## Stop assuming SCFL
 
-- The five hand-made files degrade gracefully instead of hard-crashing:
-  `scfl-team-logos-resized.json`, `team-kits.json`, `scfl-franchises.json`,
-  `records.json`, `rivalries.json`, plus `crests/`
-- Team count and slots read from `roster_positions`, not frozen constants
+- ~~The five hand-made files degrade gracefully instead of hard-crashing~~
+  **DONE.** `optional()` in `build_watch.py` and a tolerant `history.load()`.
+  A league with no crests, kits, franchises, records or rivalries now builds a
+  154KB issue of 6,145 words instead of a stack trace, and says so: *"no stored
+  history: the issue runs on this season alone"*
+- ~~Team count and slots read from `roster_positions`~~ **DONE.**
+  `slots_for()` in `waiver_depth.py`; SCFL's output is byte-identical
 - Sweep the remaining league-shape literals the same way
 
 ## Run itself
@@ -42,14 +45,18 @@ synthetic 10-team 1-QB full-PPR league.
 - One workflow: fetch → replay → write → cover → issue → publish, weekly cron
 - A concurrency group **per league**, not one global — that is how week 2 was
   lost
-- Ship a default cover plate; the app sets the week number on it. No model in
-  the loop
+- ~~The app sets the week number on a plate~~ **DONE.**
+  `scripts/cover_number.py`, corner or band, run on the finished 1024x1536
+  frame so compose_cover's drop cannot crop it. Takes any plate: the default,
+  John's art, or a league's upload
+- Ship the default plate itself (John is making it)
 
 ## Don't publish nonsense
 
-- A sanity gate before publish: figures in plausible ranges, scores reconcile,
-  every team present
-- If the gate trips, hold the issue. Never ship it quietly
+- ~~A sanity gate before publish~~ **DONE.** `scripts/sanity_gate.py`, 20
+  checks, exit 1 to hold. Verified it catches the 27-waiver bug, a half-played
+  week, a replay final that drifted, and `undefined` reaching the page
+- Wire it into the weekly workflow as the step before publish
 
 ## Light enough to read
 

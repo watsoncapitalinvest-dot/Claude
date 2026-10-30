@@ -564,7 +564,11 @@ def preview_prose(season, week, st):
         return ''
 
     hist = history.load().bind(tbl)
-    if hist.unresolved:
+    if hist.empty:
+        # a league in its first season. Every history accessor returns None, so
+        # the threads simply do not print -- which is the true thing to print.
+        print('  no stored history: the issue runs on this season alone')
+    elif hist.unresolved:
         print('  note: no history for', ', '.join(hist.unresolved))
     most_titles = max((hist.alltime(r['roster_id']) or {}).get('titles', 0) for r in tbl)
     used = []
