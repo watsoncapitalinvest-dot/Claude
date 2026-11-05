@@ -28,6 +28,9 @@ sd = importlib.util.module_from_spec(_t); sys.modules['sd'] = sd; _t.loader.exec
 _h = importlib.util.spec_from_file_location('hist', os.path.join(ROOT, 'scripts', 'history.py'))
 history = importlib.util.module_from_spec(_h); sys.modules['hist'] = history
 _h.loader.exec_module(history)
+_w = importlib.util.spec_from_file_location(
+    'week_state', os.path.join(ROOT, 'scripts', 'week_state.py'))
+week_state = importlib.util.module_from_spec(_w); _w.loader.exec_module(week_state)
 E = bi.esc
 
 # eight games a week, so the numerals have to reach eight -- stopping at
@@ -195,14 +198,17 @@ def alltime_rank(pts):
         try:
             wk = json.load(open(os.path.join(WDIR, p), encoding='utf-8'))
             sc = [t['points'] for g in wk['games'] for t in g['teams']]
-            star = [x for g in wk['games'] for t in g['teams'] for x in t['starters']]
         except Exception:
             continue
-        # the same two tells the Record Book uses: a week nobody has played is
-        # all zeroes, and a half-played Sunday shows as starters stuck on 0
-        zero = sum(1 for x in star if x['points'] == 0) / max(len(star), 1)
-        if sc and min(sc) >= 30 and zero < 0.07:
+        # The two tells, from week_state.py. This copy held at 7 per cent and
+        # so left week 8 out -- which does not hide a rank, it inflates one: a
+        # week-8 score ranked against every season AND every 2026 week except
+        # its own comes out higher than it is, in a published page.
+        ok, why = week_state.played(wk)
+        if ok:
             rows += sc
+        else:
+            print(f'  all-time rank leaves out {p}: {why}')
     return sum(1 for p in rows if p > pts) + 1
 
 
@@ -1406,17 +1412,44 @@ def inline_assets(out, inline_all=False):
 
 
 def fit(out):
-    """Scale down any page whose article runs past the bottom."""
-    import re as _re, subprocess
+    """Scale down any page whose article runs past the bottom.
+
+    The measurement happens in a real browser over HTTP, so it needs a server.
+    It used to assume one was already running on 8991 and printed a one-line
+    note when there wasn't -- which meant week 8 built with every page at full
+    size, and every run on a GitHub runner would have done the same, quietly,
+    because nothing in the workflow serves the repo. So it starts its own and
+    shuts it down after.
+    """
+    import re as _re, subprocess, socket, contextlib, http.server, threading, functools
+    served = None
+    with contextlib.closing(socket.socket()) as s:
+        s.settimeout(0.4)
+        if s.connect_ex(('127.0.0.1', 8991)) != 0:
+            class Quiet(http.server.SimpleHTTPRequestHandler):
+                def log_message(self, *a):     # one line per asset is noise
+                    pass
+            h = functools.partial(Quiet, directory=ROOT)
+            served = http.server.ThreadingHTTPServer(('127.0.0.1', 8991), h)
+            threading.Thread(target=served.serve_forever, daemon=True).start()
+    r = None
     try:
         r = subprocess.run(['node', os.path.join(ROOT, 'scripts', 'fit_pages.js'), out,
                             'http://localhost:8991'],
                            capture_output=True, text=True, cwd=ROOT, timeout=180,
-                           env=dict(os.environ, NODE_PATH='/opt/node22/lib/node_modules'))
+                           env=dict(os.environ, NODE_PATH=os.pathsep.join((
+                               '/opt/node22/lib/node_modules',
+                               os.path.join(ROOT, 'node_modules')))))
         zooms = json.loads(r.stdout.strip().splitlines()[-1])
     except Exception as e:
-        print(f'  note: could not measure the fit ({e}); pages left at full size')
+        # the exception from a failed json.loads says nothing; what node said
+        # on stderr says everything, so that is what gets printed
+        why = r.stderr.strip().splitlines()[-1][:160] if r and r.stderr else e
+        print(f'  note: could not measure the fit ({why}); pages left at full size')
         return
+    finally:
+        if served:
+            served.shutdown()
     path = os.path.join(ROOT, out)
     html = open(path, encoding='utf-8').read()
     n = [0]

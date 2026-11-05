@@ -17,6 +17,9 @@ import collections, importlib.util, json, os, re, statistics, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _s = importlib.util.spec_from_file_location('ad', os.path.join(ROOT, 'scripts', 'build_addendum.py'))
 ad = importlib.util.module_from_spec(_s); sys.modules['ad'] = ad; _s.loader.exec_module(ad)
+_w = importlib.util.spec_from_file_location(
+    'week_state', os.path.join(ROOT, 'scripts', 'week_state.py'))
+week_state = importlib.util.module_from_spec(_w); _w.loader.exec_module(week_state)
 E = ad.esc
 OUT = os.path.join(ROOT, 'scfl-big-weeks.html')
 OG = os.path.join(ROOT, 'scfl-big-weeks-og.jpg')
@@ -36,18 +39,16 @@ def week_files():
         pts = [t['points'] for g in d['games'] for t in g['teams']]
         if not pts:
             continue
-        # A week is PLAYED when its weakest team has a real score. Files get
-        # pulled mid-week for their rosters, and nobody finishes a week under 30.
-        st = [p for g in d['games'] for t in g['teams'] for p in t['starters']]
-        zero = sum(1 for p in st if p['points'] == 0) / max(len(st), 1)
-        # Two tells, because one is not enough. The weakest team's score catches
-        # a week nobody has played: nobody finishes under 30. The share of
-        # starters on exactly nothing catches a week half played -- the four
-        # finished weeks of this season run 1.2 to 5.6 per cent, and a Sunday
-        # evening with the night games still to come reads 10.
+        # Whether a week is PLAYED is derived in week_state.py and nowhere
+        # else. The copy that used to sit here read "the four finished weeks of
+        # this season run 1.2 to 5.6 per cent" -- four weeks stale, and wrong
+        # about week 8 at 7.5.
+        final, why = week_state.played(d)
+        if not final:
+            print(f'  w{d["week"]} not final: {why}')
         out.append({'week': d['week'], 'pts': pts, 'games': d['games'],
-                    'final': min(pts) >= 30 and zero < 0.07,
-                    'left': zero,
+                    'final': final,
+                    'left': week_state.tells(d)['zero'],
                     'fetched': d.get('fetchedAt', '')})
     return sorted(out, key=lambda w: -w['week'])
 

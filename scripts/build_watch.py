@@ -270,20 +270,46 @@ def kit_clash(teams):
     the issue's play art already put it in, and it changes into a strip it
     actually owns: body and trim are drawn from its own two colours and its
     alt, in any order, and the first pairing that clears wins.
+
+    AND IF IT HAS NOTHING. Week 8 put the Smoke Dragons (purple, near-black,
+    grey) against StillTheCream (near-black, wine, purple) and all three of
+    Cream's colours were compromised at once: one IS the Dragons' trim, one is
+    the Dragons' own hue, and the third is dark against dark. There was no
+    legal Cream strip, so the pair went out reading alike -- which is the one
+    thing this function exists to prevent.
+
+    So when the second side has nothing, the FIRST side changes instead. Its
+    art colours are a preference; a matchup where both elevens are the same
+    shade is a broken picture. The Dragons in grey over purple clear Cream
+    comfortably, and those are the Dragons' own colours. Only when neither
+    side has a legal strip in its own three is there nothing to be done, and
+    then it is still named in the build output rather than passed over.
     """
     h, a = teams
     if kit_ok(h['c1'], h['c2'], a['c1'], a['c2']):
         return None
-    pool = [c for c in (a['c1'], a['c2'], a.get('alt')) if c]
-    for c1 in pool:
-        for c2 in pool:
-            if c1.lower() == c2.lower():
-                continue
-            if kit_ok(h['c1'], h['c2'], c1, c2):
-                was = f'{a["c1"]}/{a["c2"]}'
-                a['c1'], a['c2'] = c1, c2
-                return f'{a["name"]} {was} -> {c1}/{c2} (vs {h["name"]})'
-    return f'{a["name"]} has no change strip clear of {h["name"]}'
+
+    def change(side, other):
+        """First pairing of `side`'s own three that clears `other`'s strip."""
+        pool = [c for c in (side['c1'], side['c2'], side.get('alt')) if c]
+        for c1 in pool:
+            for c2 in pool:
+                if c1.lower() != c2.lower() and kit_ok(other['c1'], other['c2'], c1, c2):
+                    return c1, c2
+        return None
+
+    got = change(a, h)
+    if got:
+        was = f'{a["c1"]}/{a["c2"]}'
+        a['c1'], a['c2'] = got
+        return f'{a["name"]} {was} -> {got[0]}/{got[1]} (vs {h["name"]})'
+    got = change(h, a)
+    if got:
+        was = f'{h["c1"]}/{h["c2"]}'
+        h['c1'], h['c2'] = got
+        return (f'{a["name"]} has no strip clear of {h["name"]}, so the FIRST side '
+                f'changes: {h["name"]} {was} -> {got[0]}/{got[1]}')
+    return f'neither {h["name"]} nor {a["name"]} has a strip clear of the other'
 
 
 def lineups_for(week):

@@ -27,9 +27,12 @@ Input that is NOT in this repo: nflverse play-by-play, ~5MB, downloaded to the
 cache on first run. That is why this writes a committed JSON rather than being
 computed inside build_ir_study.py -- the page must build without a network.
 """
-import collections, csv, gzip, json, os, subprocess, sys, urllib.request
+import collections, csv, gzip, importlib.util, json, os, subprocess, sys, urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_w = importlib.util.spec_from_file_location(
+    'week_state', os.path.join(ROOT, 'scripts', 'week_state.py'))
+week_state = importlib.util.module_from_spec(_w); _w.loader.exec_module(week_state)
 OUT = os.path.join(ROOT, 'ir-waiver-depth.json')
 CACHE = os.path.join(ROOT, '.cache')
 PBP = os.path.join(CACHE, 'pbp_2026.csv.gz')
@@ -95,8 +98,18 @@ TEAM_AB = {'Arizona Cardinals': 'ARI', 'Atlanta Falcons': 'ATL', 'Baltimore Rave
 ALIAS = {'LAR': ['LA', 'LAR'], 'LA': ['LA', 'LAR']}
 
 
-def fetch(url, path):
-    if os.path.exists(path):
+def fetch(url, path, force=False):
+    """Cache an nflverse file, and refresh it when the caller says it is stale.
+
+    `force` exists because this cache went a week out of date and the answer
+    came back confident and wrong rather than empty. Play-by-play without week
+    8 in it yields no week-8 scorers, so every unowned player scores nothing,
+    so NOBODY would upgrade a lineup -- 0 where every other week runs 2 to 6,
+    and inside the gate's own 0-to-12 band. `replay.py` has refreshed on a
+    missing week since it was written; this file read a second cache directory
+    and never did.
+    """
+    if os.path.exists(path) and not force:
         return path
     os.makedirs(CACHE, exist_ok=True)
     print(f'  downloading {os.path.basename(path)} ...')
@@ -118,10 +131,13 @@ def forms(full):
     return out + [full]
 
 
-def score():
-    """Every scoring entity, by week, keyed name|team. See the module docstring
-    for the validation this model passed."""
-    fetch(PBP_URL, PBP)
+def _parse():
+    """Every scoring entity, by week, keyed name|team, out of the cached tape.
+
+    See the module docstring for the validation this model passed. Callers go
+    through score(), which makes sure the tape actually holds the weeks asked
+    for before trusting what comes back.
+    """
     pts = collections.defaultdict(lambda: collections.defaultdict(float))
     kick = collections.defaultdict(lambda: collections.defaultdict(float))
     ev = collections.defaultdict(lambda: collections.defaultdict(float))
@@ -178,6 +194,34 @@ def score():
     return pts, kick, ev, allow, sorted(weeks)
 
 
+def score(need=()):
+    """_parse(), but only after the tape is known to carry `need`.
+
+    The whole measurement is "who scored that nobody owns", so a tape without
+    a week in it does not fail -- it answers nothing for that week, and nothing
+    reads as a bare wire. Week 8 came back as 0 would upgrade a lineup and 0
+    beat a replacement starter, against 2-6 and 11-21 every other week, purely
+    because this cache had stopped at week 7. So the weeks are checked against
+    the tape, the tape is refreshed once if one is missing, and a week still
+    missing after that stops the build instead of being reported as empty.
+    """
+    fetch(PBP_URL, PBP)
+    out = _parse()
+    missing = [w for w in need if w not in out[4]]
+    if missing:
+        print(f'  week(s) {", ".join(map(str, missing))} not in the cached '
+              'play-by-play -- refreshing')
+        fetch(PBP_URL, PBP, force=True)
+        out = _parse()
+        missing = [w for w in need if w not in out[4]]
+        if missing:
+            sys.exit(f'  week(s) {", ".join(map(str, missing))} are still not in '
+                     'nflverse play-by-play. Either the games have not been '
+                     'posted yet or the week number is wrong -- but an empty '
+                     'waiver pool here would be reported as a bare wire.')
+    return out
+
+
 def positions():
     """name|team -> position, with a name-only fallback.
 
@@ -206,7 +250,10 @@ def positions():
 
 
 def build():
-    pts, kick, ev, allow, _ = score()
+    # The finished weeks on disk are what the tape has to cover, so they are
+    # worked out before the tape is read rather than after.
+    need = [w for w, wd in week_state.weeks(2026) if week_state.played(wd)[0]]
+    pts, kick, ev, allow, _ = score(need)
     pos, loose = positions()
     tier = lambda p: (10 if p == 0 else 7 if p <= 6 else 4 if p <= 13 else 2 if p <= 20
                       else 1 if p <= 27 else -1 if p <= 34 else -4)
@@ -243,10 +290,12 @@ def build():
         d = json.load(open(path, encoding='utf-8'))
         wk = d['week']
         slots = slots_for(d)          # this league's shape, not this desk's
-        sc = [t['points'] for g in d['games'] for t in g['teams']]
-        st = [p for g in d['games'] for t in g['teams'] for p in t['starters']]
-        zero = sum(1 for p in st if p['points'] == 0) / max(len(st), 1)
-        if not (sc and min(sc) >= 30 and zero < 0.07):      # the two tells
+        # The two tells live in week_state.py, measured once. This file used to
+        # carry its own copy at 7 per cent and dropped week 8 -- a finished
+        # week -- out of the table without printing a word about it.
+        ok, why = week_state.played(d)
+        if not ok:
+            print(f'  w{wk} left out: {why}')
             continue
         owned = set()
         for g in d['games']:

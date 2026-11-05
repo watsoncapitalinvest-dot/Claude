@@ -22,10 +22,13 @@ afternoon -- a gate that cries wolf gets switched off.
 
 Exit 0 to publish, 1 to hold.
 """
-import argparse, json, os, sys
+import argparse, importlib.util, json, os, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WDIR = os.path.join(ROOT, 'week-data')
+_w = importlib.util.spec_from_file_location(
+    'week_state', os.path.join(ROOT, 'scripts', 'week_state.py'))
+week_state = importlib.util.module_from_spec(_w); _w.loader.exec_module(week_state)
 
 
 def load(path):
@@ -62,15 +65,19 @@ def run(season, week, strict=False):
     teams = [t for gm in games for t in gm['teams']]
 
     # ---- the week was actually played -------------------------------------
-    # Both tells, because one alone has flipped a conclusion twice: a week
-    # nobody has played scores near zero, and a week half played shows a pile
-    # of starters on exactly 0. A finished week runs 1-6 per cent.
-    pts = [t['points'] for t in teams]
-    starters = [p for t in teams for p in t.get('starters', [])]
-    zero = sum(1 for p in starters if p.get('points') == 0) / max(len(starters), 1)
-    g.check(bool(pts) and min(pts) >= 30, f'every side scored 30+ (low {min(pts):.1f})'
-            if pts else 'no scores at all')
-    g.check(zero < 0.07, f'starters on exactly zero: {zero*100:.1f}% (a played week runs 1-6)')
+    # Both tells, because one alone has flipped a conclusion twice. They are
+    # derived in week_state.py and nowhere else: this file held its own copy at
+    # 7 per cent, four other scripts held theirs, and week 8 -- a finished week
+    # at 7.5 -- was held here and silently dropped by the rest.
+    #
+    # The gate is not alone on this. The replay check below reconciles every
+    # rebuilt final against the week file out of play-by-play that carries only
+    # finished games: genuinely independent, and the stronger tell. These two
+    # are the cheap first pass, and a gate that cries wolf gets switched off.
+    ok, why = week_state.played(wd)
+    g.check(ok, f'the week has been played -- {why}')
+    g.check(not week_state.unusual(wd),
+            f'the zero-starter share is inside the ordinary band -- {why}', hard=False)
 
     # ---- the table is whole ------------------------------------------------
     g.check(len(games) >= 1, f'{len(games)} games')
@@ -93,17 +100,37 @@ def run(season, week, strict=False):
                 + (f' -- off: {"; ".join(drift[:3])}' if drift else ''))
 
     # ---- waiver depth is in the range any league produces -------------------
-    # 2 to 5 a week is what everybody means when they say the wire is bare.
-    # A double-digit figure means the replacement bar was computed from the
-    # wrong pool, which is exactly the bug this gate was written for.
+    # 2 to 5 a week is what everybody means when they say the wire is bare, and
+    # 2026's eight weeks ran 2,3,4,5,5,5,5,6. The band is wrong at BOTH ends:
+    #
+    #   too high -- a double-digit figure means the replacement bar was computed
+    #   from the wrong pool, which is the 27-upgrade bug this gate exists for.
+    #   too low  -- zero is not a bare wire, it is an unmeasured one. Week 8
+    #   reported 0 upgrades and 0 players beating a replacement starter, against
+    #   11-21 every other week, because waiver_depth was reading a cache that
+    #   had stopped at week 7. The old floor of 0 waved it straight through.
     wv = load('ir-waiver-depth.json')
     if wv:
         row = next((r for r in wv.get('rows', []) if r.get('week') == week), None)
+        # The 27-waiver bug is the reason this whole file exists, and for week 8
+        # the check did not run at all: nothing in the weekly chain computed the
+        # row, so the gate skipped its own headline check and said nothing. A
+        # check that is quietly absent is worse than one that fails.
+        g.check(row is not None,
+                f'waiver depth has a row for week {week} to check', hard=False)
         if row:
             n = row.get('upgrade_skill')
-            g.check(isinstance(n, int) and 0 <= n <= 12,
-                    f'waiver upgrades = {n} (a real week runs 2-5; over 12 means '
-                    'the bar came from the wrong pool)')
+            g.check(isinstance(n, int) and 1 <= n <= 12,
+                    f'waiver upgrades = {n} (2026 ran 2-6; zero means the pool '
+                    'was never measured, over 12 means the bar came from the '
+                    'wrong pool)')
+            # The same tell, further up the funnel and harder to fake: the men
+            # who merely beat a replacement starter ran 11-21 all season. A
+            # tape missing the week reports both as nothing.
+            b = row.get('startable_skill')
+            g.check(isinstance(b, int) and b >= 1,
+                    f'{b} unowned players beat a replacement starter '
+                    '(2026 ran 11-21; zero means the tape has no such week)')
             slots = row.get('slots') or {}
             if slots:
                 g.check(abs(sum(slots.values()) - len(teams) * 10) <= len(teams) * 6,

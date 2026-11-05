@@ -43,9 +43,12 @@ It is also one measure of management, not the whole of it. Drafting, trading
 and waiver work are all invisible to it. A manager can set a perfect lineup
 every week from a badly built roster and score 97% here.
 """
-import argparse, glob, json, os, re, sys
+import argparse, glob, importlib.util, json, os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_w = importlib.util.spec_from_file_location(
+    'week_state', os.path.join(ROOT, 'scripts', 'week_state.py'))
+week_state = importlib.util.module_from_spec(_w); _w.loader.exec_module(week_state)
 # Gitignored on purpose -- see the entry in .gitignore. The aggregate goes in
 # the study; the sixteen-name ranking does not go in a public repo.
 OUT = os.path.join(ROOT, 'manager-quality.json')
@@ -69,15 +72,14 @@ def week_files():
         if not m:
             continue
         d = json.load(open(p, encoding='utf-8'))
-        sides = [s for g in d['games'] for s in g['teams']]
-        pts = [s['points'] for s in sides]
-        st = [p2 for s in sides for p2 in s['starters']]
-        zeros = sum(1 for p2 in st if p2['points'] == 0) / max(len(st), 1)
-        if pts and min(pts) >= 30 and zeros < 0.07:
+        # The two tells, from week_state.py so every script agrees where the
+        # line is. This was the only one of the five copies that said what it
+        # had dropped, which is the half of it worth keeping.
+        ok, why = week_state.played(d)
+        if ok:
             out.append(d)
         else:
-            print(f"  skipping {os.path.basename(p)}: min {min(pts) if pts else 0:.1f}, "
-                  f"{100*zeros:.0f}% of starters on zero")
+            print(f'  skipping {os.path.basename(p)}: {why}')
     return out
 
 

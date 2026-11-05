@@ -313,7 +313,8 @@ BIG = [
     'A single play worth more than some of these teams managed all day.',
 ]
 
-# A starter who produced nothing.
+# A starter who played and produced almost nothing. Every line here assumes he
+# was ON THE FIELD, which is only safe above zero: see BLANK.
 DUD = [
     'He was out there. I can confirm he was out there.',
     'The box score says he played. The box score has been wrong before, but not this time.',
@@ -324,6 +325,28 @@ DUD = [
     'I have checked twice. That is the number.',
     'He will be dropped by Wednesday and nobody will write about it.',
     'A quiet day at the office, if the office had been closed.',
+]
+
+# A starter on EXACTLY nothing, which is a different story and needs different
+# jokes. A man who scores 0.0 in this league did not play: he was inactive,
+# hurt, benched by his NFL club, or on a bye and started anyway. Week 8 had
+# twelve of them, one on eleven of the sixteen sides.
+#
+# The old code sent that case to DUD and printed "He was out there. I can
+# confirm he was out there." under Tez Johnson, who was not out there. Half of
+# DUD says the same thing another way -- "the box score says he played", "that
+# is an attendance record" -- and all of it is an assertion about an afternoon
+# the week file knows nothing about. The number is the joke; the empty slot is
+# the joke. Not the man's attendance.
+BLANK = [
+    'That is a lineup slot that did nothing at all on Sunday.',
+    'Nine men and a vacancy.',
+    'The slot was filled. That is as far as it went.',
+    'A starting spot, used, and nothing came back out of it.',
+    'Zero. Not nearly zero. Zero.',
+    'Somebody had the whole week to look at that and left it where it was.',
+    'One of ten starting places, spent on nothing whatsoever.',
+    'That is the kind of nothing you have to commit to in advance.',
 ]
 
 
@@ -401,14 +424,30 @@ def story(g, gw, windows, slots=None, st=None):
               f' {marg} points in it.' if arc == 'tight' else ''))
 
     # ---- 1. the lede: the result AND what the game actually was ------------
-    hook = seeded(LEDE[arc], seed)
+    # The hook has to match the paragraph it opens. `arc_of` only calls a game
+    # a seesaw under 25 points, so a 31-point win with 7 lead changes took a
+    # `comfortable` hook onto the seesaw body: week 8's lead story opened "the
+    # margin flattered the loser for about an hour" over a game whose next
+    # sentence counts 7 lead changes. The hook now follows the same branch the
+    # body takes, which is the only thing it is describing.
+    # A rout takes the seesaw hooks too when it was a seesaw first: the rout
+    # openers all say there was no contest, and "somebody should have called
+    # this at halftime" sat above a clause counting eight lead changes.
+    swapped = g['lead_changes'] >= 6
+    hook = seeded(LEDE['seesaw' if swapped else arc], seed)
     if arc == 'rout':
         P.append(f'{hook} {wn} beat {ln} {W["final"]} to {L["final"]}, '
                  f'and the {marg} points between them at the end flatter nobody — '
                  + (f'{ln} did not lead at any stage of this football game.'
                     if g['lead_changes'] == 0 else
+                    # A rout CAN be a seesaw first: week 8's Klowns-Chops
+                    # finished 40.5 apart after eight lead changes, and "led
+                    # early, lost it, and never argued again" was false eight
+                    # times over.
+                    f'they traded the lead {g["lead_changes"]} times and then '
+                    f'{ln} stopped trading.' if swapped else
                     f'{ln} led early, lost it, and never argued again.'))
-    elif g['lead_changes'] >= 6:
+    elif swapped:
         P.append(f'{hook} {wn} and {ln} swapped the lead {g["lead_changes"]} times before one of '
                  f'them finally kept it, and {wn} were the ones holding it when the weekend ran '
                  f'out: {W["final"]}–{L["final"]}.')
@@ -417,8 +456,14 @@ def story(g, gw, windows, slots=None, st=None):
                  f'{W["final"]} to {L["final"]}, which tells you most of what you need and none of '
                  f'how it felt.')
     else:
-        P.append(f'{hook} {wn} {W["final"]}, {ln} {L["final"]}, {an(marg)} {marg}-point margin that '
-                 f'never seriously came under review.')
+        # "Never seriously came under review" is a claim about the afternoon,
+        # and the only thing supporting it is the size of the margin -- so it
+        # is only printed when the margin is big enough to support it. It ran
+        # on Horsecollars 83.24, n.W.o 80.0 in week 8: a 3.2-point margin
+        # described as never in doubt, in the same paragraph as a lead taken at
+        # 2.8-1.5. A tight game gets the arithmetic and nothing else.
+        P.append(f'{hook} {wn} {W["final"]}, {ln} {L["final"]}, {an(marg)} {marg}-point margin'
+                 + ('.' if arc == 'tight' else ' that never seriously came under review.'))
 
     # ---- 2. the middle: the swing, with its consequence attached -----------
     if go:
@@ -469,8 +514,28 @@ def story(g, gw, windows, slots=None, st=None):
                 bits += (f' {wn} sit {ORD2.get(rw["seed"], rw["seed"])} in the league on the '
                          f'full table, {rw["pf"]:.0f} points scored.')
             elif rl['seed'] >= st['teams'] - 2:
-                bits += (f' {ln} are {ORD2.get(rl["seed"], rl["seed"])} of {st["teams"]}, and '
-                         f'the {rl["pa"]:.0f} points conceded is most of the reason.')
+                # WHICH side of the ledger is derived, not assumed. This used
+                # to blame the points conceded every time, and for the Gumbas
+                # in week 8 that was backwards: they conceded 703, the second
+                # FEWEST in the league and below the 767 median, while scoring
+                # 557, the fewest by 36. What put them fourteenth was the
+                # scoring. The same sentence ran in week 7 about Wookie Leaks
+                # and Phins Phag. A cause has to be derived like any other
+                # claim, so the bigger of the two gaps gets named -- and if
+                # neither is an outlier, nothing is named at all.
+                allt = list(st['by_team'].values())
+                mid = lambda k: sorted(x[k] for x in allt)[len(allt) // 2]
+                short, leaky = mid('pf') - rl['pf'], rl['pa'] - mid('pa')
+                where = f' {ln} are {ORD2.get(rl["seed"], rl["seed"])} of {st["teams"]}'
+                if leaky > short and leaky > 0:
+                    bits += (f'{where}, and the {rl["pa"]:.0f} points conceded '
+                             'is most of the reason.')
+                elif short > 0:
+                    bits += (f'{where}, and the {rl["pf"]:.0f} points scored '
+                             f'is most of the reason — {short:.0f} short of the '
+                             'middle of the league.')
+                else:
+                    bits += f'{where}, on a points record that says nothing much.'
             P.append(bits)
 
     # ---- 3. the people, related to each other rather than listed -----------
@@ -525,8 +590,13 @@ def story(g, gw, windows, slots=None, st=None):
                 if p['pos'] not in ('K', 'DEF') and (p.get('points') or 0) <= 2]
         if duds:
             d = min(duds, key=lambda p: p['points'])
+            # Exactly nothing means he did not play, and the aside has to know
+            # the difference. The list was also being bypassed entirely here --
+            # one line hardcoded, so every issue's version of this paragraph
+            # read the same whatever the number was.
+            blank = (d.get('points') or 0) == 0
             cost = (f'{ln} started {d["name"]} and were rewarded with {d["points"]:.1f} points. '
-                    f'He was out there. I can confirm he was out there.')
+                    + seeded(BLANK if blank else DUD, seed, 11))
     if cost:
         P.append(cost)
 

@@ -334,14 +334,25 @@ def shoot(doc, out, tag, w=1200, h=630):
     deviceScaleFactor stays 1: at 2 this engine silently drops painted content,
     and a card that renders blank still writes a plausible-sized file, so the
     guard below counts pixels rather than bytes.
+
+    Returns True if a card was written. It raised instead until week 8, which
+    is how one missing browser took down a whole issue: `build_watch.py` had
+    already written the picker and all eight rebuilt games, and then died on
+    the card at the end, and `--week 8` never reached the cover, the page or
+    the gate. A machine that cannot rasterise is not a week with bad numbers.
+    So a missing toolchain warns and hands back False, and the caller decides.
     """
     tmp = os.path.join(ROOT, f'.{tag}.html')
     open(tmp, 'w', encoding='utf-8').write(doc)
     raw = os.path.join(tempfile.gettempdir(), f'{tag}.png')
     js = os.path.join(tempfile.gettempdir(), f'{tag}.js')
+    # The pinned browser is this container's. A runner installs its own and
+    # Playwright knows where it put it, so the path is only passed when it is
+    # really there -- otherwise chromium.launch() finds its own.
+    exe = f"executablePath:'{BROWSER}'" if os.path.exists(BROWSER) else ''
     open(js, 'w').write(
         "const {chromium}=require('playwright');(async()=>{"
-        f"const b=await chromium.launch({{executablePath:'{BROWSER}'}});"
+        f"const b=await chromium.launch({{{exe}}});"
         f"const p=await b.newPage({{viewport:{{width:{w},height:{h}}},deviceScaleFactor:1}});"
         f"await p.goto('file://{tmp}',{{waitUntil:'load'}});"
         "await p.evaluate(async()=>{await document.fonts.ready;"
@@ -350,18 +361,38 @@ def shoot(doc, out, tag, w=1200, h=630):
         "await p.waitForTimeout(1200);"
         f"await p.screenshot({{path:'{raw}'}});await b.close();}})();")
     try:
-        subprocess.run(['node', js], check=True, cwd=ROOT,
-                       env=dict(os.environ, NODE_PATH='/opt/node22/lib/node_modules'),
-                       capture_output=True)
+        try:
+            # The script itself is written to a temp dir, and node resolves
+            # require() against the SCRIPT's directory, not the cwd -- so the
+            # module has to be named outright. Two places: this container's
+            # global install, and a plain `npm install` beside the repo, which
+            # is how a GitHub runner gets one.
+            subprocess.run(['node', js], check=True, cwd=ROOT,
+                           env=dict(os.environ, NODE_PATH=os.pathsep.join((
+                               '/opt/node22/lib/node_modules',
+                               os.path.join(ROOT, 'node_modules')))),
+                           capture_output=True)
+        except (OSError, subprocess.CalledProcessError) as e:
+            why = getattr(e, 'stderr', b'') or b''
+            why = why.decode('utf-8', 'replace').strip().split('\n')[0][:160]
+            print(f'  !! no card for {os.path.basename(out)}: cannot rasterise '
+                  f'({why or e})')
+            return False
         from PIL import Image
         im = Image.open(raw).convert('RGB')
         g = im.convert('L').resize((80, 42))
-        blank = sum(1 for v in g.get_flattened_data() if v > 245) / (80 * 42)
+        px = g.get_flattened_data() if hasattr(g, 'get_flattened_data') else g.getdata()
+        blank = sum(1 for v in px if v > 245) / (80 * 42)
         if blank > 0.55:
-            sys.exit(f'  !! preview card is {blank:.0%} blank -- not shipping it')
+            # A blank card is a bug in the card, not in the week. Never ship
+            # one -- a grey rectangle in every app it is pasted into is worse
+            # than no picture at all -- but do not take the issue down with it.
+            print(f'  !! preview card is {blank:.0%} blank -- not shipping it')
+            return False
         im.save(out, 'JPEG', quality=90, optimize=True, progressive=True)
         print(f'  card {os.path.basename(out)} {im.width}x{im.height} '
               f'{os.path.getsize(out)//1024}kb ({blank:.0%} blank)')
+        return True
     finally:
         keep = os.environ.get('SCFL_KEEP_CARD')   # debugging the collage layout
         for f in (js, raw, tmp):

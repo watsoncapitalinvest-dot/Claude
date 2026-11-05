@@ -65,6 +65,24 @@ jobs:
       - name: Install what the builders need
         run: python3 -m pip install --quiet pillow
 
+      # The cover and every share card are RASTERISED, not drawn: build_week_cover
+      # and build_addendum.shoot() lay the page out in a browser and screenshot
+      # it. This container has one at /opt/pw-browsers/chromium and the first
+      # version of this workflow quietly assumed a runner did too, so week 8
+      # got as far as all eight rebuilt games and then died on the card at the
+      # end of build_watch -- no cover, no page, no gate. A runner has node but
+      # no browser, so it installs its own and Playwright finds it.
+      - name: Cache the browser
+        id: pw
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-v1
+      - name: Install the browser the cover is shot in
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+
       # nflverse play-by-play is a 7MB download a week and never changes once a
       # week is final, so it is cached rather than pulled every run.
       - name: Cache nflverse
@@ -120,14 +138,35 @@ jobs:
       - name: Build the watch feed
         run: python3 scripts/build_watch.py --week ${{ steps.wk.outputs.week }}
 
+      # The gate's headline check is the waiver figure -- 27 upgrades on a
+      # 10-team league is why the gate exists -- and for week 8 it did not run
+      # at all, because nothing in this chain computed the row and the gate
+      # skipped it in silence. It is also the check that needs its own look at
+      # the tape, so it goes before the gate and not after.
+      - name: Measure the waiver pool
+        run: python3 scripts/waiver_depth.py --week ${{ steps.wk.outputs.week }}
+
       - name: Cover
         run: |
           python3 scripts/build_week_cover.py --week ${{ steps.wk.outputs.week }} \
             --season ${{ inputs.season || '2026' }}
 
-      # Only on a cover the app DREW. A week with its own art is John's
-      # picture and carries no number unless he asks for one.
-      - name: Set the issue number on a drawn cover
+      # ONLY on the shipped default plate.
+      #
+      # The first version of this step ran whenever the week had no art of its
+      # own -- which is exactly the cover build_week_cover DRAWS, and that one
+      # already prints "WEEK n" in its own roundel. Week 8 came out of the
+      # chain with the number on it twice: the roundel top left and a second
+      # numeral bottom right.
+      #
+      # The three cases, and only one of them wants this script:
+      #   art in the week file  -> John's picture. No number unless he asks.
+      #   no art                -> the app's own cover, which sets its own.
+      #   the shipped plate     -> a bare picture with no furniture at all.
+      #                            That is what cover_number.py is for, and it
+      #                            is the retail path: a league with no art of
+      #                            its own still gets a cover on day one.
+      - name: Set the issue number on the default plate
         continue-on-error: true      # a cover without its number still publishes
         env:
           SEASON: ${{ inputs.season || '2026' }}
@@ -136,18 +175,17 @@ jobs:
         run: |
           COV="scfl-week-${WEEK}-cover.jpg"
           ART=$(python3 -c "
-          import json,os,sys
+          import json,os
           p='week-data/%s-w%s-written.json'%(os.environ['SEASON'],os.environ['WEEK'])
           print((json.load(open(p)).get('cover') or {}).get('art','') if os.path.exists(p) else '')
           ")
-          if [ -n "$ART" ]; then
-            echo "week ${WEEK} has its own art ($ART) -- no number set"
-          elif [ -f "$COV" ]; then
-            python3 scripts/cover_number.py --cover "$COV" --week "$WEEK" \
-              --league "$LEAGUE" --season "$SEASON"
-          else
-            echo "no cover to number"
-          fi
+          case "$ART" in
+            */cover-plate-default.jpg|cover-plate-default.jpg)
+              python3 scripts/cover_number.py --cover "$COV" --week "$WEEK" \
+                --league "$LEAGUE" --season "$SEASON" --place plate ;;
+            "")  echo "week ${WEEK} uses the app's own cover, which sets its own number" ;;
+            *)   echo "week ${WEEK} has its own art ($ART) -- no number set" ;;
+          esac
 
       - name: Build the page
         run: python3 scripts/build_week_issue.py --week ${{ steps.wk.outputs.week }}

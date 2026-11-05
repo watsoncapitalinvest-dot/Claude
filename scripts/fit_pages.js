@@ -10,7 +10,13 @@ const file = process.argv[2];
 const origin = process.argv[3] || 'http://localhost:8991';
 
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  // The pinned browser is this container's. A GitHub runner installs its own
+  // and Playwright knows where it put it, so the path is only passed when it
+  // is really there -- otherwise launch() finds its own. Without this the
+  // fitter threw on every runner and every page shipped unscaled, silently.
+  const pinned = '/opt/pw-browsers/chromium';
+  const b = await chromium.launch(
+    require('fs').existsSync(pinned) ? { executablePath: pinned } : {});
   // 390x844 is the phone the magazine is actually read on. Fitting at 430x860
   // measured a wider, taller page than anybody has: text wrapped into fewer
   // lines and there were 16 more pixels to put them in, so pages that measured
