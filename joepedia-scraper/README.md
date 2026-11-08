@@ -3,7 +3,8 @@
 Scrapes [Joepedia](https://gijoe.fandom.com) (the G.I. Joe wiki) through its
 MediaWiki API and writes a spreadsheet of every character page that carries a
 faction infobox: code name, role/specialty, real name, rank, branch, factions,
-sub-teams, first appearances and a link back to the page.
+sub-teams, first appearances and a link back to the page — with the page's
+infobox picture embedded in the first column of the sheet.
 
 ```
 pip install requests mwparserfromhell openpyxl
@@ -19,3 +20,10 @@ Each run also writes a `.csv` next to the `.xlsx`.
   blank (common on IDW and movie pages), **Role (other version)** borrows the
   specialty from another version of the same code name, preferring RAH, and
   says which one it came from.
+
+**Pictures.** Each figure's infobox image is downloaded (250px wide) to
+`<output>_images/` and embedded in the **Picture** column. The folder is not
+committed — the pictures already live inside the `.xlsx`. 313 of 359 Joes have
+one; the rest have no picture on their page. Downloads come from
+`static.wikia.nocookie.net`, so that host must be reachable as well as
+`gijoe.fandom.com`.
