@@ -627,7 +627,7 @@ index 0fdf2ca..716f5c7 100644
  	/// Sets the palette.
  	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
 diff --git a/src/Battlescape/UnitSprite.cpp b/src/Battlescape/UnitSprite.cpp
-index 8fa87f8..d48f278 100644
+index 8fa87f8..38f8d79 100644
 --- a/src/Battlescape/UnitSprite.cpp
 +++ b/src/Battlescape/UnitSprite.cpp
 @@ -149,7 +149,7 @@ void UnitSprite::blitItem(Part& item)
@@ -648,6 +648,24 @@ index 8fa87f8..d48f278 100644
  
  	_dest->unlock();
  }
+@@ -447,7 +447,16 @@ void UnitSprite::drawRoutine0()
+ 	if (_itemR)
+ 	{
+ 		// draw handob item
+-		if (_unit->getStatus() == STATUS_AIMING && _itemR->getRules()->isTwoHanded())
++		// 4x: a mod may ship real aiming sprites (HANDOB_AIM.PCK, same indices as HANDOB.PCK) drawn in place
++		SurfaceSet *aimSet = (SurfaceSet::battleScale() > 1) ? const_cast<Mod*>(_mod)->getSurfaceSet("HANDOB_AIM.PCK", false) : nullptr;
++		Surface *aimFrame = aimSet ? aimSet->getFrame(_itemR->getRules()->getHandSprite() + unitDir) : nullptr;
++		if (_unit->getStatus() == STATUS_AIMING && _itemR->getRules()->isTwoHanded() && aimFrame)
++		{
++			itemR.src = aimFrame;
++			itemR.offX = 0;
++			itemR.offY = 0;
++		}
++		else if (_unit->getStatus() == STATUS_AIMING && _itemR->getRules()->isTwoHanded())
+ 		{
+ 			int dir = (unitDir + 2)%8;
+ 			selectItem(itemR, _itemR, dir);
 diff --git a/src/Engine/Screen.cpp b/src/Engine/Screen.cpp
 index ae9083d..7d4088f 100644
 --- a/src/Engine/Screen.cpp
