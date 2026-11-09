@@ -18,34 +18,50 @@ permissions:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
+      - name: Probe hosts
+        run: |
+          for u in $(python3 -c "import json;m=json.load(open('tools/gijoe-images/manifest.json'));print(m[0]['url']);print([x for x in m if 'wikia' in x['url']][0]['url'])"); do
+            curl -sS -o /dev/null -m 30 -w "%{http_code} %{time_total}s %{size_download}B $u\n" -A "Mozilla/5.0" "$u" || echo "FAIL $u"
+          done
       - name: Download
         run: |
           python3 - <<'PY'
-          import json, pathlib, time, urllib.request
-          UA = {"User-Agent": "Mozilla/5.0 (personal reference catalog; one request at a time)"}
+          import json, pathlib, time, urllib.request, threading
+          from concurrent.futures import ThreadPoolExecutor
+          UA = {"User-Agent": "Mozilla/5.0 (personal reference catalog)"}
           items = json.load(open("tools/gijoe-images/manifest.json"))
-          out = pathlib.Path("gijoe_reference_fullsize"); results = []
-          for i, it in enumerate(items):
+          out = pathlib.Path("gijoe_reference_fullsize"); out.mkdir(exist_ok=True)
+          results = []; lock = threading.Lock()
+          def get(it):
               dest = out / it["out"]; dest.parent.mkdir(parents=True, exist_ok=True)
-              rec = {"out": it["out"], "url": it["url"]}
-              for attempt in range(3):
+              rec = {"out": it["out"], "url": it["url"], "ok": False}
+              for attempt in range(2):
                   try:
-                      with urllib.request.urlopen(urllib.request.Request(it["url"], headers=UA), timeout=60) as r:
+                      t = time.time()
+                      with urllib.request.urlopen(urllib.request.Request(it["url"], headers=UA), timeout=20) as r:
                           data = r.read(); rec["type"] = r.headers.get("Content-Type")
-                      dest.write_bytes(data); rec["bytes"] = len(data); rec["ok"] = True; break
+                      dest.write_bytes(data); rec.update(ok=True, bytes=len(data), secs=round(time.time()-t, 1)); break
                   except Exception as e:
-                      rec["ok"] = False; rec["error"] = str(e)[:200]; time.sleep(3)
-              results.append(rec)
-              if i % 50 == 0: print(i, len(items), flush=True)
-              time.sleep(0.8)
+                      rec["error"] = str(e)[:200]; time.sleep(2)
+              time.sleep(0.5)
+              with lock:
+                  results.append(rec)
+                  if len(results) % 50 == 0:
+                      json.dump(results, open(out / "results.json", "w"), indent=1)
+                      print(len(results), "done,", sum(r["ok"] for r in results), "ok", flush=True)
+              if not rec["ok"]: print("FAIL", it["out"], rec.get("error"), flush=True)
+          wiki = [i for i in items if "wikia" in i["url"]]; other = [i for i in items if "wikia" not in i["url"]]
+          with ThreadPoolExecutor(2) as a, ThreadPoolExecutor(2) as b:
+              list(a.map(get, wiki)); list(b.map(get, other))
           json.dump(results, open(out / "results.json", "w"), indent=1)
           ok = sum(r["ok"] for r in results)
           print("done", ok, "of", len(results), "total MB", round(sum(r.get("bytes", 0) for r in results) / 1e6, 1))
           PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: gijoe_reference_fullsize
           path: gijoe_reference_fullsize
