@@ -1376,15 +1376,16 @@ index e2a62e9..4e62a05 100644
  
  /**
 diff --git a/src/Engine/SurfaceSet.cpp b/src/Engine/SurfaceSet.cpp
-index c7cd049..72e1066 100644
+index c7cd049..3bbde6b 100644
 --- a/src/Engine/SurfaceSet.cpp
 +++ b/src/Engine/SurfaceSet.cpp
-@@ -1,3 +1,4 @@
+@@ -1,3 +1,5 @@
 +#include <cstdlib>
++#include <vector>
  /*
   * Copyright 2010-2016 OpenXcom Developers.
   *
-@@ -51,6 +52,35 @@ SurfaceSet::~SurfaceSet()
+@@ -51,6 +53,72 @@ SurfaceSet::~SurfaceSet()
   * @param tab Filename of the TAB offsets.
   * @sa http://www.ufopaedia.org/index.php?title=Image_Formats#PCK
   */
@@ -1400,16 +1401,53 @@ index c7cd049..72e1066 100644
 +	return s;
 +}
 +
++// Scale2x (EPX): doubles an indexed image, rounding off diagonal steps without inventing colours.
++static std::vector<Uint8> scale2x(const std::vector<Uint8> &in, int w, int h)
++{
++	std::vector<Uint8> out((size_t)w * h * 4);
++	auto at = [&](int x, int y) { x = x < 0 ? 0 : (x >= w ? w - 1 : x); y = y < 0 ? 0 : (y >= h ? h - 1 : y); return in[(size_t)y * w + x]; };
++	const int W2 = w * 2;
++	for (int y = 0; y < h; ++y)
++		for (int x = 0; x < w; ++x)
++		{
++			const Uint8 P = at(x, y), A = at(x, y - 1), B = at(x + 1, y), C = at(x - 1, y), D = at(x, y + 1);
++			Uint8 e0 = P, e1 = P, e2 = P, e3 = P;
++			if (C == A && C != D && A != B) e0 = A;
++			if (A == B && A != C && B != D) e1 = B;
++			if (D == C && D != B && C != A) e2 = C;
++			if (B == D && B != A && D != C) e3 = D;
++			out[(size_t)(2 * y) * W2 + 2 * x] = e0; out[(size_t)(2 * y) * W2 + 2 * x + 1] = e1;
++			out[(size_t)(2 * y + 1) * W2 + 2 * x] = e2; out[(size_t)(2 * y + 1) * W2 + 2 * x + 1] = e3;
++		}
++	return out;
++}
++
 +void SurfaceSet::upscale(int s)
 +{
 +	if (s <= 1) return;
++	const bool smooth = (s == 2 || s == 4);
 +	for (auto &f : _frames)
 +	{
 +		Surface big(_width * s, _height * s);
 +		f.lock(); big.lock();
-+		for (int y = 0; y < _height * s; ++y)
-+			for (int x = 0; x < _width * s; ++x)
-+				big.setPixel(x, y, f.getPixel(x / s, y / s));
++		if (smooth)
++		{
++			std::vector<Uint8> px((size_t)_width * _height);
++			for (int y = 0; y < _height; ++y)
++				for (int x = 0; x < _width; ++x)
++					px[(size_t)y * _width + x] = f.getPixel(x, y);
++			int w = _width, h = _height;
++			for (int k = s; k > 1; k /= 2) { px = scale2x(px, w, h); w *= 2; h *= 2; }
++			for (int y = 0; y < h; ++y)
++				for (int x = 0; x < w; ++x)
++					big.setPixel(x, y, px[(size_t)y * w + x]);
++		}
++		else
++		{
++			for (int y = 0; y < _height * s; ++y)
++				for (int x = 0; x < _width * s; ++x)
++					big.setPixel(x, y, f.getPixel(x / s, y / s));
++		}
 +		big.unlock(); f.unlock();
 +		big.setPalette(f.getPalette());
 +		f = std::move(big);
