@@ -1,3 +1,15 @@
+diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
+index 1951ba7..e7752de 100644
+--- a/src/Battlescape/BattlescapeGenerator.cpp
++++ b/src/Battlescape/BattlescapeGenerator.cpp
+@@ -767,6 +767,7 @@ void BattlescapeGenerator::nextStage()
+  */
+ void BattlescapeGenerator::run()
+ {
++	Tile::destroyedLog.clear(); // G.I. Joe: nothing carries over from the last battle
+ 	bool isPreview = _save->isPreview();
+ 
+ 	_save->setAlienCustom(_alienCustomDeploy ? _alienCustomDeploy->getType() : "", _alienCustomMission ? _alienCustomMission->getType() : "");
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
 index 7cd4941..41e4eb8 100644
 --- a/src/Battlescape/BattlescapeState.cpp
@@ -626,6 +638,196 @@ index 0fdf2ca..716f5c7 100644
  	void refreshAIProgress(int progress);
  	/// Sets the palette.
  	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
+diff --git a/src/Battlescape/TileEngine.cpp b/src/Battlescape/TileEngine.cpp
+index 6e68469..a557635 100644
+--- a/src/Battlescape/TileEngine.cpp
++++ b/src/Battlescape/TileEngine.cpp
+@@ -3266,6 +3266,7 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
+ 			{
+ 				_save->addDestroyedObjective();
+ 			}
++			structuralCollapse(); // G.I. Joe
+ 		}
+ 	}
+ 	else if (part == V_UNIT)
+@@ -3524,6 +3525,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+ 				applyGravity(j);
+ 		}
+ 	}
++	structuralCollapse(); // G.I. Joe: what the blast knocked out from under a floor brings the floor down
+ 	calculateLighting(LL_AMBIENT, centetTile, maxRadius + 1, true); // roofs could have been destroyed and fires could have been started
+ 	calculateFOV(centetTile, maxRadius + 1, true, true);
+ 	if (attack.attacker && Position::distance2d(centetTile, attack.attacker->getPosition()) > maxRadius + 1)
+@@ -5156,6 +5158,156 @@ Tile *TileEngine::applyGravity(Tile *t)
+ 	return rt;
+ }
+ 
++
++/**
++ * G.I. Joe: structural collapse.
++ * A floor, roof or object above ground level is held up by a wall, or a full-height object, on the level below
++ * (on its own tile or one of its four edges), and can bridge up to SPAN tiles of open floor from such a support.
++ * Anything left unsupported after something was destroyed comes down: its parts are removed, whoever stood on it
++ * falls, whoever stood under it is hit by the debris, and the dust fills the room below. Indestructible parts
++ * (armour 255: craft hulls, Cobra ships) never collapse. Collapses chain upward.
++ */
++void TileEngine::structuralCollapse()
++{
++	const int SPAN = 6, WIN = SPAN + 3;
++	auto wallBelow = [&](int x, int y, int z) -> bool
++	{
++		// only something standing to near full height holds a floor up: rubble and low fences do not
++		auto tall = [](MapData *m) { return m && (m->getLoftID(10) != 0 || m->getLoftID(11) != 0 || m->getBigWall() != 0); };
++		Tile *b = _save->getTile(Position(x, y, z - 1));
++		if (!b) return false;
++		if (tall(b->getMapData(O_WESTWALL)) || tall(b->getMapData(O_NORTHWALL)) || tall(b->getMapData(O_OBJECT))) return true;
++		Tile *e = _save->getTile(Position(x + 1, y, z - 1));
++		if (e && tall(e->getMapData(O_WESTWALL))) return true;
++		Tile *s = _save->getTile(Position(x, y + 1, z - 1));
++		if (s && tall(s->getMapData(O_NORTHWALL))) return true;
++		return false;
++	};
++	auto solid = [&](Tile *t) -> bool { return t && (t->getMapData(O_FLOOR) || t->getMapData(O_OBJECT)); };
++	auto indestructible = [&](Tile *t) -> bool
++	{
++		return (t->getMapData(O_FLOOR) && t->getMapData(O_FLOOR)->getArmor() == 255) || (t->getMapData(O_OBJECT) && t->getMapData(O_OBJECT)->getArmor() == 255);
++	};
++	std::vector<Position> changed;
++	auto collapse = [&](Tile *t)
++	{
++		Position p = t->getPosition();
++		for (TilePart part : { O_OBJECT, O_WESTWALL, O_NORTHWALL, O_FLOOR })
++		{
++			MapData *m = t->getMapData(part);
++			if (m && m->getArmor() != 255 && !m->isGravLift()) t->setMapData(nullptr, -1, -1, part);
++		}
++		Tile::destroyedLog.push_back(p);
++		changed.push_back(p);
++		Tile *below = _save->getTile(p - Position(0, 0, 1));
++		if (below)
++		{
++			below->setSmoke(std::max(below->getSmoke(), 8));
++			if (below->getUnit() && below->getUnit()->getHealth() > 0)
++			{
++				BattleActionAttack none; none.type = BA_NONE;
++				hitUnit(none, below->getUnit(), Position(0, 0, 0), RNG::generate(15, 40), _save->getMod()->getDamageType(DT_HE), false);
++			}
++		}
++		applyGravity(t);
++	};
++	int guard = 0;
++	while (!Tile::destroyedLog.empty() && guard++ < 48)
++	{
++		std::vector<Position> events;
++		events.swap(Tile::destroyedLog);
++		std::set<int> done;
++		for (const Position &e : events)
++		{
++			for (int z = std::max(1, (int)e.z); z <= e.z + 1 && z < _save->getMapSizeZ(); ++z)
++			{
++				int key = (e.x / 4) * 100000 + (e.y / 4) * 100 + z;   // events close together share one pass
++				if (!done.insert(key).second) continue;
++				const int x0 = e.x - WIN, y0 = e.y - WIN, n = WIN * 2 + 1;
++				// budget = how many more tiles of floor this cell can still carry outward.
++				// A support that is part of a run of supports (a wall line) carries SPAN; a lone stub carries 1.
++				std::vector<int> dist(n * n, -1);
++				std::vector<char> sup(n * n, 0);
++				for (int j = 0; j < n; ++j)
++					for (int i = 0; i < n; ++i)
++					{
++						Tile *t = _save->getTile(Position(x0 + i, y0 + j, z));
++						if (!solid(t)) continue;
++						bool border = (i == 0 || j == 0 || i == n - 1 || j == n - 1);
++						sup[j * n + i] = (border || indestructible(t)) ? 2 : (wallBelow(x0 + i, y0 + j, z) ? 1 : 0);
++					}
++				std::vector<int> queue;
++				const int dd[4][2] = { {1,0},{-1,0},{0,1},{0,-1} };
++				for (int j = 0; j < n; ++j)
++					for (int i = 0; i < n; ++i)
++					{
++						int c = j * n + i;
++						if (!sup[c]) continue;
++						bool run = sup[c] == 2;
++						for (auto &d : dd)
++						{
++							int ni = i + d[0], nj = j + d[1];
++							if (ni >= 0 && nj >= 0 && ni < n && nj < n && sup[nj * n + ni]) run = true;
++						}
++						dist[c] = run ? SPAN : 1;
++						queue.push_back(c);
++					}
++				for (size_t q = 0; q < queue.size(); ++q)
++				{
++					int c = queue[q], ci = c % n, cj = c / n;
++					if (dist[c] <= 0) continue;
++					for (auto &d : dd)
++					{
++						int ni = ci + d[0], nj = cj + d[1];
++						if (ni < 0 || nj < 0 || ni >= n || nj >= n) continue;
++						int k = nj * n + ni;
++						if (dist[k] >= dist[c] - 1) continue;
++						if (!solid(_save->getTile(Position(x0 + ni, y0 + nj, z)))) continue;
++						dist[k] = dist[c] - 1; queue.push_back(k);
++					}
++				}
++				for (int j = 0; j < n; ++j)
++					for (int i = 0; i < n; ++i)
++					{
++						Tile *t = _save->getTile(Position(x0 + i, y0 + j, z));
++						if (!t) continue;
++						if (solid(t))
++						{
++							if (dist[j * n + i] == -1) collapse(t);
++						}
++						else
++						{
++							// a wall with no floor under it stands only on the wall below it
++							Tile *b = _save->getTile(Position(x0 + i, y0 + j, z - 1));
++							for (TilePart part : { O_WESTWALL, O_NORTHWALL })
++							{
++								MapData *m = t->getMapData(part);
++								MapData *under = b ? b->getMapData(part) : nullptr;
++								bool held = under && (under->getLoftID(10) != 0 || under->getLoftID(11) != 0);
++								if (m && m->getArmor() != 255 && !held)
++								{
++									t->setMapData(nullptr, -1, -1, part);
++									Tile::destroyedLog.push_back(t->getPosition());
++									changed.push_back(t->getPosition());
++								}
++							}
++						}
++					}
++			}
++		}
++	}
++	Tile::destroyedLog.clear();
++	if (!changed.empty())
++	{
++		int minx = changed[0].x, maxx = minx, miny = changed[0].y, maxy = miny;
++		for (auto &p : changed) { minx = std::min(minx, (int)p.x); maxx = std::max(maxx, (int)p.x); miny = std::min(miny, (int)p.y); maxy = std::max(maxy, (int)p.y); }
++		Position c((minx + maxx) / 2, (miny + maxy) / 2, changed[0].z);
++		int r = std::max(maxx - minx, maxy - miny) / 2 + 2;
++		calculateLighting(LL_AMBIENT, c, r, true);
++		calculateFOV(c, r, true, true);
++	}
++}
++
+ /**
+  * Drop item on ground.
+  */
+diff --git a/src/Battlescape/TileEngine.h b/src/Battlescape/TileEngine.h
+index 8497877..a8aa3f8 100644
+--- a/src/Battlescape/TileEngine.h
++++ b/src/Battlescape/TileEngine.h
+@@ -241,6 +241,8 @@ public:
+ 	bool tryConcealUnit(BattleUnit* unit);
+ 	/// Applies gravity to anything that occupy this tile.
+ 	Tile *applyGravity(Tile *t);
++	/// G.I. Joe: drops upper floors, roofs and walls that lost what held them up.
++	void structuralCollapse();
+ 
+ 	/// Drop item on ground.
+ 	void itemDrop(Tile *t, BattleItem *item, bool updateLight);
 diff --git a/src/Battlescape/UnitSprite.cpp b/src/Battlescape/UnitSprite.cpp
 index 8fa87f8..628a943 100644
 --- a/src/Battlescape/UnitSprite.cpp
@@ -912,3 +1114,112 @@ index 1885346..94d0c00 100644
  	}
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
+diff --git a/src/Savegame/SavedBattleGame.cpp b/src/Savegame/SavedBattleGame.cpp
+index 240b22a..c998115 100644
+--- a/src/Savegame/SavedBattleGame.cpp
++++ b/src/Savegame/SavedBattleGame.cpp
+@@ -2415,13 +2415,30 @@ void SavedBattleGame::prepareNewTurn()
+ 					Position pos;
+ 					Pathfinding::directionToVector(dir, &pos);
+ 					Tile *t = getTile(tileOnFire->getPosition() + pos);
+-					// if there's no wall blocking the path of the flames...
+-					if (t && getTileEngine()->horizontalBlockage(tileOnFire, t, DT_IN) == 0)
++					if (!t) continue;
++					// G.I. Joe: flames pass any wall that can itself burn
++					bool open = getTileEngine()->horizontalBlockage(tileOnFire, t, DT_IN) == 0;
++					if (!open)
++					{
++						MapData *w = nullptr;
++						if (pos.x == 1) w = t->getMapData(O_WESTWALL);
++						else if (pos.x == -1) w = tileOnFire->getMapData(O_WESTWALL);
++						else if (pos.y == 1) w = t->getMapData(O_NORTHWALL);
++						else if (pos.y == -1) w = tileOnFire->getMapData(O_NORTHWALL);
++						open = w && w->getFlammable() != 255;
++					}
++					if (open)
+ 					{
+ 						// attempt to set this tile on fire
+ 						t->ignite(tileOnFire->getSmoke());
+ 					}
+ 				}
++				// G.I. Joe: and climb into the storey above through a floor that burns
++				Tile *up = getTile(tileOnFire->getPosition() + Position(0, 0, 1));
++				if (up && up->getMapData(O_FLOOR) && up->getMapData(O_FLOOR)->getFlammable() != 255)
++				{
++					up->ignite(tileOnFire->getSmoke());
++				}
+ 			}
+ 			// fire has burnt out
+ 			else
+@@ -2452,10 +2469,37 @@ void SavedBattleGame::prepareNewTurn()
+ 						}
+ 					}
+ 				}
++				// G.I. Joe: an upper floor that burnt through can give way under whatever stands on it
++				if (tileOnFire->getPosition().z > 0 && tileOnFire->getMapData(O_FLOOR) && tileOnFire->getMapData(O_FLOOR)->getArmor() != 255 && RNG::percent(50))
++				{
++					Tile *under = getTile(tileOnFire->getPosition() - Position(0, 0, 1));
++					bool held = under && under->getMapData(O_OBJECT) && under->getMapData(O_OBJECT)->getTerrainLevel() < -16;   // not over a staircase top
++					if (!held)
++					{
++						tileOnFire->setMapData(nullptr, -1, -1, O_FLOOR);
++						Tile::destroyedLog.push_back(tileOnFire->getPosition());
++					}
++				}
++				// G.I. Joe: the walls round a burnt-out tile burn down with it, if they can burn
++				{
++					Position bp = tileOnFire->getPosition();
++					auto burnWall = [&](Tile *wt, TilePart part)
++					{
++						if (wt && wt->getMapData(part) && wt->getMapData(part)->getFlammable() != 255 && wt->getMapData(part)->getArmor() != 255)
++						{
++							if (wt->destroy(part, getObjectiveType())) addDestroyedObjective();
++						}
++					};
++					burnWall(tileOnFire, O_WESTWALL);
++					burnWall(tileOnFire, O_NORTHWALL);
++					burnWall(getTile(bp + Position(1, 0, 0)), O_WESTWALL);
++					burnWall(getTile(bp + Position(0, 1, 0)), O_NORTHWALL);
++				}
+ 				getTileEngine()->applyGravity(tileOnFire);
+ 			}
+ 		}
+ 	}
++	getTileEngine()->structuralCollapse(); // G.I. Joe: burnt-out floors and walls bring down what they held
+ 
+ 	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
+ 	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
+diff --git a/src/Savegame/Tile.cpp b/src/Savegame/Tile.cpp
+index af18529..d30bc19 100644
+--- a/src/Savegame/Tile.cpp
++++ b/src/Savegame/Tile.cpp
+@@ -532,6 +532,8 @@ int Tile::getShade() const
+  * @param type the objective type for this mission we are checking against.
+  * @return bool Return true objective was destroyed.
+  */
++std::vector<Position> Tile::destroyedLog;
++
+ bool Tile::destroy(TilePart part, SpecialTileType type)
+ {
+ 	bool _objective = false;
+@@ -541,6 +543,7 @@ bool Tile::destroy(TilePart part, SpecialTileType type)
+ 			return false;
+ 		_objective = _objects[part]->getSpecialType() == type;
+ 		MapData *originalPart = _objects[part];
++		destroyedLog.push_back(_pos);
+ 		int originalMapDataSetID = _mapData->SetID[part];
+ 		setMapData(0, -1, -1, part);
+ 		if (originalPart->getDieMCD())
+diff --git a/src/Savegame/Tile.h b/src/Savegame/Tile.h
+index 8cf11bd..549328d 100644
+--- a/src/Savegame/Tile.h
++++ b/src/Savegame/Tile.h
+@@ -57,6 +57,8 @@ public:
+ 
+ 	/// Name of class used in script.
+ 	static constexpr const char *ScriptName = "Tile";
++	/// G.I. Joe: positions where a tile part was destroyed since the last structural check.
++	static std::vector<Position> destroyedLog;
+ 	/// Register all useful function used by script.
+ 	static void ScriptRegister(ScriptParserBase* parser);
+ 
