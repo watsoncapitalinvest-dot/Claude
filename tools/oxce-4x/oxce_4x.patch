@@ -157,10 +157,18 @@ index cea8e65..a5409dd 100644
  		if (frame)
  		{
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..2ffc308 100644
+index 3665cd1..8826436 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
-@@ -156,9 +156,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "Map.h"
++#include "../Engine/HiColor.h"
+ #include "Camera.h"
+ #include "UnitSprite.h"
+ #include "ItemSprite.h"
+@@ -156,9 +157,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
  
  	_spriteWidth = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getWidth();
  	_spriteHeight = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getHeight();
@@ -173,7 +181,7 @@ index 3665cd1..2ffc308 100644
  	_message->setTextColor(_messageColor);
  	_camera = new Camera(_spriteWidth, _spriteHeight, _save->getMapSizeX(), _save->getMapSizeY(), _save->getMapSizeZ(), this, visibleMapHeight);
  	_scrollMouseTimer = new Timer(SCROLL_INTERVAL);
-@@ -272,12 +273,13 @@ void Map::init()
+@@ -272,12 +274,13 @@ void Map::init()
  					   0, 0, 0, b, f, b, 0, 0, 0,
  					   0, 0, 0, 0, b, 0, 0, 0, 0 };
  
@@ -191,7 +199,7 @@ index 3665cd1..2ffc308 100644
  	_arrow->unlock();
  
  	_projectile = 0;
-@@ -305,6 +307,20 @@ void Map::think()
+@@ -305,6 +308,20 @@ void Map::think()
  /**
   * Draws the whole map, part by part.
   */
@@ -212,7 +220,15 @@ index 3665cd1..2ffc308 100644
  void Map::draw()
  {
  	if (!_redraw)
-@@ -362,6 +378,25 @@ void Map::draw()
+@@ -325,6 +342,7 @@ void Map::draw()
+ 		ShaderSurface(this),
+ 		ShaderScalar<Uint8>(Palette::blockOffset(0) + _bgColor)
+ 	);
++	if (Screen::hiRes() > 1) HiColor::beginLayer(getBuffer(), getWidth(), getHeight(), getPitch());
+ 
+ 	Tile *t;
+ 
+@@ -362,6 +380,25 @@ void Map::draw()
  	}
  	else
  	{
@@ -238,7 +254,7 @@ index 3665cd1..2ffc308 100644
  		_message->blit(this->getSurface());
  	}
  }
-@@ -466,6 +501,29 @@ int getArrowBobForFrame(int frame)
+@@ -466,6 +503,29 @@ int getArrowBobForFrame(int frame)
  	return ArrowBobOffsets[frame % 8];
  }
  
@@ -268,7 +284,7 @@ index 3665cd1..2ffc308 100644
  int getShadePulseForFrame(int shade, int frame)
  {
  	if (shade > 7) shade = 7;
-@@ -488,9 +546,9 @@ int getShadePulseForFrame(int shade, int frame)
+@@ -488,9 +548,9 @@ int getShadePulseForFrame(int shade, int frame)
   */
  void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position currTileScreenPosition, bool topLayer, BattleUnit* movingUnit)
  {
@@ -281,7 +297,7 @@ index 3665cd1..2ffc308 100644
  
  	if (!unitTile)
  	{
-@@ -940,9 +998,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -940,9 +1000,9 @@ void Map::drawTerrain(Surface *surface)
  					if (tmpSurface)
  					{
  						if (tile->getObstacle(O_FLOOR))
@@ -293,7 +309,7 @@ index 3665cd1..2ffc308 100644
  					}
  
  					auto* unit = tile->getUnit();
-@@ -1001,9 +1059,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1001,9 +1061,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_WESTWALL, tile);
  							if (tile->getObstacle(O_WESTWALL))
@@ -305,7 +321,7 @@ index 3665cd1..2ffc308 100644
  						}
  						// Draw north wall
  						tmpSurface = tile->getSprite(O_NORTHWALL);
-@@ -1011,9 +1069,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1011,9 +1071,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_NORTHWALL, tile);
  							if (tile->getObstacle(O_NORTHWALL))
@@ -317,7 +333,7 @@ index 3665cd1..2ffc308 100644
  						}
  						// Draw object
  						tmpSurface = tile->getSprite(O_OBJECT);
-@@ -1022,9 +1080,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1022,9 +1082,9 @@ void Map::drawTerrain(Surface *surface)
  							if (tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -329,7 +345,7 @@ index 3665cd1..2ffc308 100644
  							}
  						}
  						// draw an item on top of the floor (if any)
-@@ -1033,7 +1091,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1033,7 +1093,7 @@ void Map::drawTerrain(Surface *surface)
  						{
  							itemSprite.draw(item,
  								screenPosition.x,
@@ -338,7 +354,7 @@ index 3665cd1..2ffc308 100644
  								tileShade
  							);
  							if (_anyIndicator)
-@@ -1043,30 +1101,30 @@ void Map::drawTerrain(Surface *surface)
+@@ -1043,30 +1103,30 @@ void Map::drawTerrain(Surface *surface)
  								{
  									if (_burnIndicator && itemUnit->getFire() > 0)
  									{
@@ -377,7 +393,7 @@ index 3665cd1..2ffc308 100644
  											tileShade);
  									}
  								}
-@@ -1292,13 +1350,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1292,13 +1352,13 @@ void Map::drawTerrain(Surface *surface)
  							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(11);
  							if (tmpSurface)
  							{
@@ -393,7 +409,7 @@ index 3665cd1..2ffc308 100644
  						}
  					}
  
-@@ -1310,9 +1368,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1310,9 +1370,9 @@ void Map::drawTerrain(Surface *surface)
  							if (!tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -405,7 +421,7 @@ index 3665cd1..2ffc308 100644
  							}
  						}
  					}
-@@ -1528,7 +1586,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1528,7 +1588,7 @@ void Map::drawTerrain(Surface *surface)
  
  								_txtAccuracy->setText(ss.str());
  								_txtAccuracy->draw();
@@ -414,7 +430,7 @@ index 3665cd1..2ffc308 100644
  							}
  						}
  						else if (_camera->getViewLevel() > itZ)
-@@ -1551,7 +1609,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1551,7 +1611,7 @@ void Map::drawTerrain(Surface *surface)
  									_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::red - 1) - 1);
  									_txtAccuracy->setText("0%");
  									_txtAccuracy->draw();
@@ -423,7 +439,7 @@ index 3665cd1..2ffc308 100644
  								}
  							}
  							if (!ignore)
-@@ -1582,7 +1640,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1582,7 +1642,7 @@ void Map::drawTerrain(Surface *surface)
  								_numWaypid->setValue(waypid);
  								_numWaypid->setBordered(true); // OXCE, not configurable
  								_numWaypid->draw();
@@ -432,7 +448,7 @@ index 3665cd1..2ffc308 100644
  
  								waypXOff += waypid > 9 ? 10 : 6; // OXCE
  								if (waypXOff >= 26)
-@@ -1621,7 +1679,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1621,7 +1681,7 @@ void Map::drawTerrain(Surface *surface)
  						tile = _save->getTile(mapPosition);
  						if (!tile || !tile->isDiscovered(O_FLOOR) || tile->getPreview() == -1)
  							continue;
@@ -441,7 +457,7 @@ index 3665cd1..2ffc308 100644
  						if (_previewSettingArrows)
  						{
  							if (itZ > 0 && tile->hasNoFloor(_save))
-@@ -1629,14 +1687,14 @@ void Map::drawTerrain(Surface *surface)
+@@ -1629,14 +1689,14 @@ void Map::drawTerrain(Surface *surface)
  								tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(23);
  								if (tmpSurface)
  								{
@@ -458,7 +474,7 @@ index 3665cd1..2ffc308 100644
  							}
  						}
  
-@@ -1645,16 +1703,17 @@ void Map::drawTerrain(Surface *surface)
+@@ -1645,16 +1705,17 @@ void Map::drawTerrain(Surface *surface)
  							int off = tile->getTUMarker() > 9 ? 5 : 3;
  							int offE = tile->getEnergyMarker() > 9 ? 5 : 3;
  							int mcolor = _previewSettingArrows ? 0 : tile->getMarkerColor();
@@ -479,7 +495,7 @@ index 3665cd1..2ffc308 100644
  								}
  							}
  							if (_previewSettingTu)
-@@ -1664,16 +1723,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1664,16 +1725,16 @@ void Map::drawTerrain(Surface *surface)
  								if (_previewSettingEnergy)
  								{
  									// TU
@@ -499,7 +515,7 @@ index 3665cd1..2ffc308 100644
  								}
  							}
  							else if (_previewSettingEnergy)
-@@ -1681,7 +1740,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1681,7 +1742,7 @@ void Map::drawTerrain(Surface *surface)
  								// only Energy
  								_numWaypid->setValue(tile->getEnergyMarker());
  								_numWaypid->draw();
@@ -508,7 +524,7 @@ index 3665cd1..2ffc308 100644
  							}
  						}
  					}
-@@ -1702,16 +1761,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1702,16 +1763,16 @@ void Map::drawTerrain(Surface *surface)
  		Position offset = calculateWalkingOffset(selectedUnit).ScreenOffset;
  		if (selectedUnit->isBigUnit())
  		{
@@ -529,7 +545,7 @@ index 3665cd1..2ffc308 100644
  		}
  	}
  
-@@ -1732,26 +1791,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -1732,26 +1793,26 @@ void Map::drawTerrain(Surface *surface)
  				//calculateWalkingOffset(myUnit, &offset);
  				if (myUnit->isBigUnit())
  				{
@@ -561,7 +577,7 @@ index 3665cd1..2ffc308 100644
  						0);
  				}
  				else if (customMarker)
-@@ -1760,7 +1819,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1760,7 +1821,7 @@ void Map::drawTerrain(Surface *surface)
  						surface,
  						_arrow,
  						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
@@ -570,7 +586,7 @@ index 3665cd1..2ffc308 100644
  						0,
  						false,
  						_isTFTD ? ArrowColorsTFTD[myUnit->getCustomMarker() % 4] : ArrowColorsUFO[myUnit->getCustomMarker() % 4]);
-@@ -1779,11 +1838,11 @@ void Map::drawTerrain(Surface *surface)
+@@ -1779,11 +1840,11 @@ void Map::drawTerrain(Surface *surface)
  			{
  				_camera->convertMapToScreen(pos, &screenPosition);
  				screenPosition += _camera->getMapOffset();
@@ -584,7 +600,7 @@ index 3665cd1..2ffc308 100644
  					0);
  			}
  		}
-@@ -2023,7 +2082,7 @@ void Map::setSelectorPosition(int mx, int my)
+@@ -2023,7 +2084,7 @@ void Map::setSelectorPosition(int mx, int my)
  {
  	int oldX = _selectorX, oldY = _selectorY;
  
@@ -593,7 +609,7 @@ index 3665cd1..2ffc308 100644
  
  	if (oldX != _selectorX || oldY != _selectorY)
  	{
-@@ -2267,6 +2326,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2267,6 +2328,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
  	}
  	result.ScreenOffset.y += result.TerrainLevelOffset;
@@ -602,7 +618,7 @@ index 3665cd1..2ffc308 100644
  	return result;
  }
  
-@@ -2506,9 +2567,10 @@ void Map::refreshSelectorPosition()
+@@ -2506,9 +2569,10 @@ void Map::refreshSelectorPosition()
  void Map::setHeight(int height)
  {
  	Surface::setHeight(height);
@@ -616,7 +632,7 @@ index 3665cd1..2ffc308 100644
  }
  
  /**
-@@ -2519,7 +2581,7 @@ void Map::setWidth(int width)
+@@ -2519,7 +2583,7 @@ void Map::setWidth(int width)
  {
  	int dX = width - getWidth();
  	Surface::setWidth(width);
@@ -932,8 +948,195 @@ index 8fa87f8..628a943 100644
  	// blit order depends on unit direction, and whether we are holding a 2 handed weapon.
  	switch (unitDir)
  	{
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 839f803..8ebe556 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -172,6 +172,7 @@ set ( engine_src
+   Engine/Sound.cpp
+   Engine/SoundSet.cpp
+   Engine/State.cpp
++  Engine/HiColor.cpp
+   Engine/Surface.cpp
+   Engine/SurfaceSet.cpp
+   Engine/Timer.cpp
+diff --git a/src/Engine/HiColor.cpp b/src/Engine/HiColor.cpp
+new file mode 100644
+index 0000000..5bd10df
+--- /dev/null
++++ b/src/Engine/HiColor.cpp
+@@ -0,0 +1,130 @@
++#include "HiColor.h"
++#include "Surface.h"
++#include "Screen.h"
++#include <unordered_map>
++#include <cstdlib>
++#include <algorithm>
++
++namespace OpenXcom
++{
++namespace HiColor
++{
++
++namespace
++{
++	std::unordered_map<const Uint8*, const Uint32*> sprites;
++	Uint8 *layerBase = nullptr;
++	int layerW = 0, layerH = 0, layerPitch = 0;
++	std::vector<Uint32> rgb;
++	std::vector<Uint8> tag;
++	// X-COM shades a ramp over 16 steps towards black; light level 0 is full brightness.
++	inline Uint32 shadeOf(Uint32 c, int shade)
++	{
++		if (shade <= 0) return c;
++		if (shade > 15) shade = 15;
++		const int f = 16 - shade; // 16 .. 1
++		const Uint32 r = (((c >> 16) & 0xFF) * f) >> 4;
++		const Uint32 g = (((c >> 8) & 0xFF) * f) >> 4;
++		const Uint32 b = ((c & 0xFF) * f) >> 4;
++		return (r << 16) | (g << 8) | b;
++	}
++}
++
++bool enabled()
++{
++	static int on = -1;
++	if (on < 0)
++	{
++		const char *e = getenv("OXCE_HICOLOR");
++		on = e ? (atoi(e) != 0) : (Screen::hiRes() > 1);
++	}
++	return on != 0;
++}
++
++void registerSprite(const Uint8 *pixels8, const Uint32 *argb)
++{
++	if (pixels8 && argb) sprites[pixels8] = argb;
++}
++
++void unregisterSprite(const Uint8 *pixels8)
++{
++	sprites.erase(pixels8);
++}
++
++void beginLayer(Uint8 *base, int w, int h, int pitch)
++{
++	if (!enabled()) { layerBase = nullptr; return; }
++	layerBase = base; layerW = w; layerH = h; layerPitch = pitch;
++	const size_t n = (size_t)w * h;
++	if (rgb.size() != n) { rgb.assign(n, 0); tag.assign(n, 0); }
++	else
++	{
++		std::fill(rgb.begin(), rgb.end(), 0);
++		std::fill(tag.begin(), tag.end(), 0);
++	}
++}
++
++void afterBlit(const SurfaceRaw<Uint8> &dst, const SurfaceRaw<const Uint8> &src, int x, int y, int shade, bool half, int newBaseColor)
++{
++	if (!layerBase || dst.getBuffer() != layerBase || newBaseColor) return;
++	auto it = sprites.find(src.getBuffer());
++	if (it == sprites.end()) return;
++	const Uint32 *argb = it->second;
++	const int sw = src.getWidth(), sh = src.getHeight(), sp = src.getPitch();
++	const int x0 = half ? sw / 2 : 0;
++	for (int sy = 0; sy < sh; ++sy)
++	{
++		const int dy = y + sy;
++		if (dy < 0 || dy >= layerH) continue;
++		const Uint8 *srow = src.getBuffer() + sy * sp;
++		const Uint32 *crow = argb + sy * sw;
++		const Uint8 *drow = layerBase + dy * layerPitch;
++		Uint32 *rrow = rgb.data() + (size_t)dy * layerW;
++		Uint8 *trow = tag.data() + (size_t)dy * layerW;
++		for (int sx = x0; sx < sw; ++sx)
++		{
++			if (!srow[sx]) continue;
++			const int dx = x + sx;
++			if (dx < 0 || dx >= layerW) continue;
++			trow[dx] = drow[dx];
++			rrow[dx] = shadeOf(crow[sx], shade);
++		}
++	}
++}
++
++bool composite(SDL_Surface *map8, SDL_Surface *screen32, int dx, int dy)
++{
++	if (!layerBase || (Uint8*)map8->pixels != layerBase || screen32->format->BitsPerPixel != 32) return false;
++	const SDL_Color *pal = map8->format->palette->colors;
++	const SDL_PixelFormat *f = screen32->format;
++	Uint32 lut[256];
++	for (int i = 0; i < 256; ++i) lut[i] = SDL_MapRGB(screen32->format, pal[i].r, pal[i].g, pal[i].b);
++	const bool argbOrder = f->Rshift == 16 && f->Gshift == 8 && f->Bshift == 0;
++	if (SDL_MUSTLOCK(screen32)) SDL_LockSurface(screen32);
++	const int w = std::min(layerW, screen32->w - dx), h = std::min(layerH, screen32->h - dy);
++	for (int y = 0; y < h; ++y)
++	{
++		const Uint8 *m = layerBase + y * layerPitch;
++		const Uint32 *r = rgb.data() + (size_t)y * layerW;
++		const Uint8 *t = tag.data() + (size_t)y * layerW;
++		Uint32 *o = (Uint32*)((Uint8*)screen32->pixels + (y + dy) * screen32->pitch) + dx;
++		for (int x = 0; x < w; ++x)
++		{
++			const Uint8 c = m[x];
++			if (c == t[x] && c)
++			{
++				const Uint32 v = r[x];
++				o[x] = argbOrder ? v : SDL_MapRGB(f, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF);
++			}
++			else
++			{
++				o[x] = lut[c];
++			}
++		}
++	}
++	if (SDL_MUSTLOCK(screen32)) SDL_UnlockSurface(screen32);
++	return true;
++}
++
++}
++}
+diff --git a/src/Engine/HiColor.h b/src/Engine/HiColor.h
+new file mode 100644
+index 0000000..97d269f
+--- /dev/null
++++ b/src/Engine/HiColor.h
+@@ -0,0 +1,33 @@
++#pragma once
++/*
++ * G.I. Joe 4x: full-colour battlescape.
++ *
++ * The engine still draws everything in 8 bits. A sprite that also has a 32-bit
++ * twin (registered here by the address of its 8-bit pixels) additionally writes
++ * its true colour into a 32-bit copy of the map layer, together with a tag: the
++ * 8-bit index it left in that pixel. At display time a map pixel is shown in
++ * true colour while its 8-bit value still equals the tag - i.e. nothing without
++ * a twin (a unit, smoke, a cursor) has been drawn over it since.
++ */
++#include <SDL.h>
++#include <vector>
++
++namespace OpenXcom
++{
++template<typename Pixel> class SurfaceRaw;
++
++namespace HiColor
++{
++	/// Is the full-colour path switched on (env OXCE_HICOLOR, default on when OXCE_MAP_HIRES > 1).
++	bool enabled();
++	/// Associates an 8-bit sprite's pixel buffer with its 32-bit twin (0xAARRGGBB, same width/height, pitch = width).
++	void registerSprite(const Uint8 *pixels8, const Uint32 *argb);
++	void unregisterSprite(const Uint8 *pixels8);
++	/// Starts a new frame of the map layer: the 8-bit map surface's buffer and size.
++	void beginLayer(Uint8 *base, int w, int h, int pitch);
++	/// Called by Surface::blitRaw after its 8-bit draw.
++	void afterBlit(const SurfaceRaw<Uint8> &dst, const SurfaceRaw<const Uint8> &src, int x, int y, int shade, bool half, int newBaseColor);
++	/// Writes the map layer to a 32-bit display surface at (dx, dy). Returns false if there is no layer for this surface.
++	bool composite(SDL_Surface *map8, SDL_Surface *screen32, int dx, int dy);
++}
++}
 diff --git a/src/Engine/Screen.cpp b/src/Engine/Screen.cpp
-index ae9083d..7d4088f 100644
+index ae9083d..cc59f1a 100644
 --- a/src/Engine/Screen.cpp
 +++ b/src/Engine/Screen.cpp
 @@ -1,3 +1,4 @@
@@ -941,7 +1144,15 @@ index ae9083d..7d4088f 100644
  /*
   * Copyright 2010-2016 OpenXcom Developers.
   *
-@@ -188,6 +189,19 @@ void Screen::handle(Action *action)
+@@ -17,6 +18,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "Screen.h"
++#include "HiColor.h"
+ #include "../resource.h"
+ #include <algorithm>
+ #include <sstream>
+@@ -188,6 +190,19 @@ void Screen::handle(Action *action)
   * of the buffer are resized by that factor (eg. 2 = doubled)
   * before being put on screen.
   */
@@ -961,7 +1172,7 @@ index ae9083d..7d4088f 100644
  void Screen::flip()
  {
  	// perform any requested palette update
-@@ -203,6 +217,27 @@ void Screen::flip()
+@@ -203,6 +218,43 @@ void Screen::flip()
  
  	if (getWidth() != _baseWidth || getHeight() != _baseHeight || useOpenGL())
  	{
@@ -971,7 +1182,8 @@ index ae9083d..7d4088f 100644
 +			SDL_Surface *ov = mapOverlay->getSurface();
 +			SDL_Rect dst = { (Sint16)_leftBlackBand, (Sint16)_topBlackBand, 0, 0 };
 +			SDL_SetColorKey(ov, 0, 0);
-+			SDL_BlitSurface(ov, 0, _screen, &dst);
++			if (!HiColor::composite(ov, _screen, _leftBlackBand, _topBlackBand))
++				SDL_BlitSurface(ov, 0, _screen, &dst);
 +			static SDL_Surface *tmp = nullptr;
 +			if (!tmp || tmp->w != _screen->w || tmp->h != _screen->h)
 +			{
@@ -985,10 +1197,53 @@ index ae9083d..7d4088f 100644
 +			SDL_BlitSurface(tmp, 0, _screen, 0);
 +			mapOverlay = nullptr;
 +		}
++		else if (_surface->format->BitsPerPixel == 8 && _screen->format->BitsPerPixel == 32 && !useOpenGL())
++		{
++			// 8-bit game, 32-bit display: zoom in 8 bits, let SDL convert
++			static SDL_Surface *tmp8 = nullptr;
++			if (!tmp8 || tmp8->w != _screen->w || tmp8->h != _screen->h)
++			{
++				if (tmp8) SDL_FreeSurface(tmp8);
++				tmp8 = SDL_CreateRGBSurface(SDL_SWSURFACE, _screen->w, _screen->h, 8, 0, 0, 0, 0);
++			}
++			SDL_SetPalette(tmp8, SDL_LOGPAL, _surface->format->palette->colors, 0, 256);
++			SDL_FillRect(tmp8, 0, 0);
++			Zoom::flipWithZoom(_surface.get(), tmp8, _topBlackBand, _bottomBlackBand, _leftBlackBand, _rightBlackBand, nullptr);
++			SDL_SetColorKey(tmp8, 0, 0);
++			SDL_BlitSurface(tmp8, 0, _screen, 0);
++		}
 +		else
  		Zoom::flipWithZoom(_surface.get(), _screen, _topBlackBand, _bottomBlackBand, _leftBlackBand, _rightBlackBand, &glOutput);
  	}
  	else
+@@ -350,9 +402,10 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
+ 	}
+ 	SDL_SetColorKey(_surface.get(), 0, 0); // turn off color key!
+ 
+-	if (resetVideo || _screen->format->BitsPerPixel != _bpp)
++	const int screenBpp = (_bpp == 8 && HiColor::enabled() && !useOpenGL()) ? 32 : _bpp;
++	if (resetVideo || _screen->format->BitsPerPixel != screenBpp)
+ 	{
+-		Log(LOG_INFO) << "Attempting to set display to " << width << "x" << height << "x" << _bpp << "...";
++		Log(LOG_INFO) << "Attempting to set display to " << width << "x" << height << "x" << screenBpp << "...";
+ 
+ #if defined __linux__ || defined _WIN32 || defined  __CYGWIN__
+ 		// Workaround for segfault when switching to opengl
+@@ -374,12 +427,12 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
+ 			SDL_SetCursor(SDL_CreateCursor(&cursor, &cursor, 1,1,0,0));
+ 		}
+ #endif
+-		_screen = SDL_SetVideoMode(width, height, _bpp, _flags);
++		_screen = SDL_SetVideoMode(width, height, screenBpp, _flags);
+ 		if (_screen == 0)
+ 		{
+ 			Log(LOG_ERROR) << SDL_GetError();
+ 			Log(LOG_INFO) << "Attempting to set display to default resolution...";
+-			_screen = SDL_SetVideoMode(640, 400, _bpp, _flags);
++			_screen = SDL_SetVideoMode(640, 400, screenBpp, _flags);
+ 			if (_screen == 0)
+ 			{
+ 				if (_flags & SDL_OPENGL)
 diff --git a/src/Engine/Screen.h b/src/Engine/Screen.h
 index a9beefe..ef57f2e 100644
 --- a/src/Engine/Screen.h
@@ -1003,6 +1258,26 @@ index a9beefe..ef57f2e 100644
  	/// Clears the screen.
  	void clear();
  	/// Sets the screen's 8bpp palette.
+diff --git a/src/Engine/Surface.cpp b/src/Engine/Surface.cpp
+index e2a62e9..4e62a05 100644
+--- a/src/Engine/Surface.cpp
++++ b/src/Engine/Surface.cpp
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "Surface.h"
++#include "HiColor.h"
+ #include "ShaderDraw.h"
+ #include "ShaderMove.h"
+ #include <vector>
+@@ -959,6 +960,7 @@ void Surface::blitRaw(SurfaceRaw<Uint8> destSurf, SurfaceRaw<const Uint8> srcSur
+ 	{
+ 		ShaderDraw<helper::StandardShade>(ShaderSurface(destSurf), src, ShaderScalar(shade));
+ 	}
++	HiColor::afterBlit(destSurf, srcSurf, x, y, shade, half, newBaseColor);
+ }
+ 
+ /**
 diff --git a/src/Engine/SurfaceSet.cpp b/src/Engine/SurfaceSet.cpp
 index c7cd049..72e1066 100644
 --- a/src/Engine/SurfaceSet.cpp
@@ -1064,10 +1339,26 @@ index 86bd62e..46cac60 100644
  	void loadDat(const std::string &filename);
  	/// Gets a particular frame from the set.
 diff --git a/src/Mod/MapDataSet.cpp b/src/Mod/MapDataSet.cpp
-index d02fd01..1acda83 100644
+index d02fd01..c34c459 100644
 --- a/src/Mod/MapDataSet.cpp
 +++ b/src/Mod/MapDataSet.cpp
-@@ -243,8 +243,20 @@ void MapDataSet::loadData(MCDPatch *patch, bool validate)
+@@ -19,11 +19,15 @@
+ #include "MapDataSet.h"
+ #include "MapData.h"
+ #include <sstream>
++#include <cstring>
+ #include <SDL_endian.h>
+ #include "../Engine/Exception.h"
+ #include "../Engine/SurfaceSet.h"
+ #include "../Engine/FileMap.h"
+ #include "../Engine/Logger.h"
++#include "../Engine/HiColor.h"
++#include "../Engine/Surface.h"
++#include <SDL_image.h>
+ 
+ namespace OpenXcom
+ {
+@@ -243,8 +247,59 @@ void MapDataSet::loadData(MCDPatch *patch, bool validate)
  	}
  
  	// Load terrain sprites/surfaces/PCK files into a surfaceset
@@ -1080,6 +1371,45 @@ index d02fd01..1acda83 100644
 +	{
 +		_surfaceSet = new SurfaceSet(32 * S, 40 * S);
 +		_surfaceSet->loadPck(hdPck, hdTab);
++		const std::string hdPng = "TERRAIN/" + _name + "_4X.png";
++		if (HiColor::enabled() && FileMap::fileExists(hdPng))
++		{
++			SDL_Surface *img = IMG_Load_RW(FileMap::getRWops(hdPng), SDL_TRUE);
++			SDL_Surface *conv = nullptr;
++			if (img)
++			{
++				SDL_PixelFormat fmt = {};
++				fmt.BitsPerPixel = 32; fmt.BytesPerPixel = 4;
++				fmt.Rmask = 0x00FF0000; fmt.Gmask = 0x0000FF00; fmt.Bmask = 0x000000FF; fmt.Amask = 0xFF000000;
++				fmt.Rshift = 16; fmt.Gshift = 8; fmt.Bshift = 0; fmt.Ashift = 24;
++				conv = SDL_ConvertSurface(img, &fmt, SDL_SWSURFACE);
++				SDL_FreeSurface(img);
++			}
++			const int fw = 32 * S, fh = 40 * S;
++			const int n = (int)_surfaceSet->getTotalFrames();
++			const int cols = conv ? conv->w / fw : 0;
++			if (conv && cols > 0 && ((n + cols - 1) / cols) * fh <= conv->h)
++			{
++				_argb.assign((size_t)n * fw * fh, 0);
++				SDL_LockSurface(conv);
++				for (int i = 0; i < n; ++i)
++				{
++					const int ox = (i % cols) * fw, oy = (i / cols) * fh;
++					Uint32 *out = _argb.data() + (size_t)i * fw * fh;
++					for (int y = 0; y < fh; ++y)
++						memcpy(out + y * fw, (Uint8*)conv->pixels + (oy + y) * conv->pitch + ox * 4, fw * 4);
++					Surface *fr = _surfaceSet->getFrame(i);
++					if (fr) HiColor::registerSprite(fr->getBuffer(), out);
++				}
++				SDL_UnlockSurface(conv);
++				Log(LOG_INFO) << "Full-colour terrain: " << hdPng << " (" << n << " frames)";
++			}
++			else
++			{
++				Log(LOG_WARNING) << "Full-colour terrain " << hdPng << " skipped: size does not match " << n << " frames of " << fw << "x" << fh;
++			}
++			if (conv) SDL_FreeSurface(conv);
++		}
 +	}
 +	else
 +	{
@@ -1090,6 +1420,31 @@ index d02fd01..1acda83 100644
  }
  
  /**
+@@ -259,6 +314,12 @@ void MapDataSet::unloadData()
+ 			delete mapdata;
+ 		}
+ 		_objects.clear();
++		if (_surfaceSet && !_argb.empty())
++		{
++			for (int i = 0; i < (int)_surfaceSet->getTotalFrames(); ++i)
++				if (Surface *fr = _surfaceSet->getFrame(i)) HiColor::unregisterSprite(fr->getBuffer());
++		}
++		_argb.clear();
+ 		delete _surfaceSet;
+ 		_loaded = false;
+ 	}
+diff --git a/src/Mod/MapDataSet.h b/src/Mod/MapDataSet.h
+index 636fba9..0734000 100644
+--- a/src/Mod/MapDataSet.h
++++ b/src/Mod/MapDataSet.h
+@@ -40,6 +40,7 @@ private:
+ 	std::string _name;
+ 	std::vector<MapData*> _objects;
+ 	SurfaceSet *_surfaceSet;
++	std::vector<Uint32> _argb; // G.I. Joe 4x: full-colour twin of every frame (<name>_4X.png)
+ 	bool _loaded;
+ 	static MapData *_blankTile;
+ 	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
 index 1885346..94d0c00 100644
 --- a/src/Mod/Mod.cpp
@@ -1195,6 +1550,26 @@ index 7cfa906..e02f6f4 100644
  	/// Threshold of smoke creation
  	int SmokeThreshold;
  
+diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
+index 99f24ce..6f3f16c 100644
+--- a/src/OpenXcom.2010.vcxproj
++++ b/src/OpenXcom.2010.vcxproj
+@@ -511,6 +511,7 @@
+     <ClCompile Include="Engine\Sound.cpp" />
+     <ClCompile Include="Engine\SoundSet.cpp" />
+     <ClCompile Include="Engine\State.cpp" />
++    <ClCompile Include="Engine\HiColor.cpp" />
+     <ClCompile Include="Engine\Surface.cpp" />
+     <ClCompile Include="Engine\SurfaceSet.cpp" />
+     <ClCompile Include="Engine\Timer.cpp" />
+@@ -970,6 +971,7 @@
+     <ClInclude Include="Engine\GMCat.h" />
+     <ClInclude Include="Engine\GraphSubset.h" />
+     <ClInclude Include="Engine\HelperMeta.h" />
++    <ClInclude Include="Engine\HiColor.h" />
+     <ClInclude Include="Engine\InteractiveSurface.h" />
+     <ClInclude Include="Engine\Language.h" />
+     <ClInclude Include="Engine\LanguagePlurality.h" />
 diff --git a/src/Savegame/SavedBattleGame.cpp b/src/Savegame/SavedBattleGame.cpp
 index 240b22a..c998115 100644
 --- a/src/Savegame/SavedBattleGame.cpp
