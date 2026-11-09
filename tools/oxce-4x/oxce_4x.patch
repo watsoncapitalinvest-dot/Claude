@@ -639,7 +639,7 @@ index 0fdf2ca..716f5c7 100644
  	/// Sets the palette.
  	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
 diff --git a/src/Battlescape/TileEngine.cpp b/src/Battlescape/TileEngine.cpp
-index 6e68469..a557635 100644
+index 6e68469..4352eef 100644
 --- a/src/Battlescape/TileEngine.cpp
 +++ b/src/Battlescape/TileEngine.cpp
 @@ -3266,6 +3266,7 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
@@ -650,15 +650,54 @@ index 6e68469..a557635 100644
  		}
  	}
  	else if (part == V_UNIT)
-@@ -3524,6 +3525,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3341,6 +3342,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+ 	{
+ 		power /= 2;
+ 	}
++	// G.I. Joe: one roll per explosion decides whether it starts fires; if not, it only throws smoke and dust
++	const bool ignites = RNG::percent(type->FireChance);
++	RuleDamageType rolled = *type;
++	if (ignites) rolled.SmokeThreshold = 100000; else rolled.FireThreshold = 100000;
+ 
+ 	int exHeight = Clamp(Options::battleExplosionHeight, 0, 3);
+ 	int vertdec = 1000; //default flat explosion
+@@ -3451,7 +3456,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+ 							_save->removeItem(bi);
+ 						}
+ 
+-						hitTile(dest, damage, type);
++						hitTile(dest, damage, &rolled);
+ 					}
+ 				}
+ 
+@@ -3512,6 +3517,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+ 	// now detonate the tiles affected by explosion
+ 	if (type->ToTile > 0.0f)
+ 	{
++		_explosionMayIgnite = ignites;
+ 		for (auto& pair : tilesAffected)
+ 		{
+ 			if (detonate(pair.first, pair.second))
+@@ -3523,7 +3529,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+ 			if (j)
  				applyGravity(j);
  		}
++		_explosionMayIgnite = true;
  	}
 +	structuralCollapse(); // G.I. Joe: what the blast knocked out from under a floor brings the floor down
  	calculateLighting(LL_AMBIENT, centetTile, maxRadius + 1, true); // roofs could have been destroyed and fires could have been started
  	calculateFOV(centetTile, maxRadius + 1, true, true);
  	if (attack.attacker && Position::distance2d(centetTile, attack.attacker->getPosition()) > maxRadius + 1)
-@@ -5156,6 +5158,156 @@ Tile *TileEngine::applyGravity(Tile *t)
+@@ -3622,7 +3630,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
+ 			}
+ 		}
+ 		// set tile on fire
+-		if (fireProof < remainingPower)
++		if (fireProof < remainingPower && _explosionMayIgnite)
+ 		{
+ 			if (tiles[i]->getMapData(O_FLOOR) || tiles[i]->getMapData(O_OBJECT))
+ 			{
+@@ -5156,6 +5164,156 @@ Tile *TileEngine::applyGravity(Tile *t)
  	return rt;
  }
  
@@ -816,10 +855,18 @@ index 6e68469..a557635 100644
   * Drop item on ground.
   */
 diff --git a/src/Battlescape/TileEngine.h b/src/Battlescape/TileEngine.h
-index 8497877..a8aa3f8 100644
+index 8497877..37ab54e 100644
 --- a/src/Battlescape/TileEngine.h
 +++ b/src/Battlescape/TileEngine.h
-@@ -241,6 +241,8 @@ public:
+@@ -50,6 +50,7 @@ enum LightLayers : Uint8;
+  */
+ class TileEngine
+ {
++	bool _explosionMayIgnite = true; // G.I. Joe: false while an explosion that rolled no fire detonates terrain
+ public:
+ 	/// Value representing non-existing position.
+ 	static constexpr Position invalid = { -1, -1, -1 };
+@@ -241,6 +242,8 @@ public:
  	bool tryConcealUnit(BattleUnit* unit);
  	/// Applies gravity to anything that occupy this tile.
  	Tile *applyGravity(Tile *t);
@@ -1114,6 +1161,40 @@ index 1885346..94d0c00 100644
  	}
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
+diff --git a/src/Mod/RuleDamageType.cpp b/src/Mod/RuleDamageType.cpp
+index 79c669f..f54414c 100644
+--- a/src/Mod/RuleDamageType.cpp
++++ b/src/Mod/RuleDamageType.cpp
+@@ -31,7 +31,7 @@ RuleDamageType::RuleDamageType() :
+ 	FixRadius(0), RandomType(DRT_STANDARD), ResistType(DT_NONE), FireBlastCalc(false),
+ 	IgnoreDirection(false), IgnoreSelfDestruct(false), IgnorePainImmunity(false), IgnoreNormalMoraleLose(false), IgnoreOverKill(false),
+ 	ArmorEffectiveness(1.0f), RadiusEffectiveness(0.0f), RadiusReduction(10.0f),
+-	FireThreshold(1000), SmokeThreshold(1000),
++	FireThreshold(1000), FireChance(100), SmokeThreshold(1000),
+ 	ToHealth(1.0f), ToMana(0.0f), ToArmor(0.1f), ToArmorPre(0.0f), ToWound(1.0f), ToItem(0.0f), ToTile(0.5f), ToStun(0.25f), ToEnergy(0.0f), ToTime(0.0f), ToMorale(0.0f),
+ 	RandomHealth(false), RandomMana(false), RandomArmor(false), RandomArmorPre(false), RandomWound(true), RandomItem(false), RandomTile(false), RandomStun(true), RandomEnergy(false), RandomTime(false), RandomMorale(false),
+ 	TileDamageMethod(1), TileDamageLimit(-1)
+@@ -171,6 +171,7 @@ void RuleDamageType::load(const YAML::YamlNodeReader& node)
+ 	reader.tryRead("RadiusReduction", RadiusReduction);
+ 
+ 	reader.tryRead("FireThreshold", FireThreshold);
++	reader.tryRead("FireChance", FireChance);
+ 	reader.tryRead("SmokeThreshold", SmokeThreshold);
+ 
+ 	reader.tryRead("ToHealth", ToHealth);
+diff --git a/src/Mod/RuleDamageType.h b/src/Mod/RuleDamageType.h
+index 7cfa906..e02f6f4 100644
+--- a/src/Mod/RuleDamageType.h
++++ b/src/Mod/RuleDamageType.h
+@@ -71,6 +71,8 @@ struct RuleDamageType
+ 	float RadiusReduction;
+ 	/// Threshold of fire creation
+ 	int FireThreshold;
++	/// G.I. Joe: percent chance that one explosion of this type sets fires at all (rolled once per explosion).
++	int FireChance;
+ 	/// Threshold of smoke creation
+ 	int SmokeThreshold;
+ 
 diff --git a/src/Savegame/SavedBattleGame.cpp b/src/Savegame/SavedBattleGame.cpp
 index 240b22a..c998115 100644
 --- a/src/Savegame/SavedBattleGame.cpp
