@@ -1,5 +1,5 @@
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..43b58df 100644
+index 7cd4941..41e4eb8 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -137,7 +137,7 @@ BattlescapeState::BattlescapeState() :
@@ -11,6 +11,15 @@ index 7cd4941..43b58df 100644
  
  	_numLayers = new NumberText(3, 5, x + 232, y + 6);
  	_rank = new Surface(26, 23, x + 107, y + 33);
+@@ -2172,7 +2172,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+ 		if (customBg == 0)
+ 		{
+ 			// show rank (vanilla behaviour)
+-			SurfaceSet *texture = _game->getMod()->getSurfaceSet("SMOKE.PCK");
++			SurfaceSet *texture = _game->getMod()->getSurfaceSet(SurfaceSet::battleScale() > 1 ? "SMOKE_UI.PCK" : "SMOKE.PCK");
+ 			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
+ 			if (frame)
+ 			{
 @@ -4052,8 +4052,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
@@ -122,8 +131,21 @@ index 5a59f27..3d4e17f 100644
  }
  
  void Camera::stopKeyScrolling()
+diff --git a/src/Battlescape/InventoryState.cpp b/src/Battlescape/InventoryState.cpp
+index cea8e65..a5409dd 100644
+--- a/src/Battlescape/InventoryState.cpp
++++ b/src/Battlescape/InventoryState.cpp
+@@ -510,7 +510,7 @@ void InventoryState::init()
+ 			_reloadUnit = false;
+ 		}
+ 
+-		SurfaceSet *texture = _game->getMod()->getSurfaceSet("SMOKE.PCK");
++		SurfaceSet *texture = _game->getMod()->getSurfaceSet(SurfaceSet::battleScale() > 1 ? "SMOKE_UI.PCK" : "SMOKE.PCK");
+ 		auto* frame = texture->getFrame(s->getRankSpriteBattlescape());
+ 		if (frame)
+ 		{
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..bb3677d 100644
+index 3665cd1..2ffc308 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
 @@ -156,9 +156,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
@@ -139,7 +161,25 @@ index 3665cd1..bb3677d 100644
  	_message->setTextColor(_messageColor);
  	_camera = new Camera(_spriteWidth, _spriteHeight, _save->getMapSizeX(), _save->getMapSizeY(), _save->getMapSizeZ(), this, visibleMapHeight);
  	_scrollMouseTimer = new Timer(SCROLL_INTERVAL);
-@@ -305,6 +306,20 @@ void Map::think()
+@@ -272,12 +273,13 @@ void Map::init()
+ 					   0, 0, 0, b, f, b, 0, 0, 0,
+ 					   0, 0, 0, 0, b, 0, 0, 0, 0 };
+ 
+-	_arrow = new Surface(9, 9);
++	const int AS = SurfaceSet::battleScale();
++	_arrow = new Surface(9 * AS, 9 * AS);
+ 	_arrow->setPalette(this->getPalette());
+ 	_arrow->lock();
+-	for (int y = 0; y < 9;++y)
+-		for (int x = 0; x < 9; ++x)
+-			_arrow->setPixel(x, y, pixels[x+(y*9)]);
++	for (int y = 0; y < 9 * AS;++y)
++		for (int x = 0; x < 9 * AS; ++x)
++			_arrow->setPixel(x, y, pixels[x/AS+((y/AS)*9)]);
+ 	_arrow->unlock();
+ 
+ 	_projectile = 0;
+@@ -305,6 +307,20 @@ void Map::think()
  /**
   * Draws the whole map, part by part.
   */
@@ -160,7 +200,7 @@ index 3665cd1..bb3677d 100644
  void Map::draw()
  {
  	if (!_redraw)
-@@ -362,6 +377,25 @@ void Map::draw()
+@@ -362,6 +378,25 @@ void Map::draw()
  	}
  	else
  	{
@@ -186,7 +226,37 @@ index 3665cd1..bb3677d 100644
  		_message->blit(this->getSurface());
  	}
  }
-@@ -488,9 +522,9 @@ int getShadePulseForFrame(int shade, int frame)
+@@ -466,6 +501,29 @@ int getArrowBobForFrame(int frame)
+ 	return ArrowBobOffsets[frame % 8];
+ }
+ 
++/// 4x battlescape: blit a classic-size overlay (text, markers) enlarged by the battle scale.
++static void upBlit(SurfaceRaw<const Uint8> src, SurfaceRaw<Uint8> dst, int x, int y, int shade = 0, int newBaseColor = 0)
++{
++	if (!src) return;
++	const int S = SurfaceSet::battleScale();
++	if (S <= 1 || src.getWidth() > 64) { Surface::blitRaw(dst, src, x, y, shade, false, newBaseColor); return; }
++	const int w = src.getWidth() * S, h = src.getHeight() * S;
++	std::vector<Uint8> buf(w * h, 0);
++	for (int sy = 0; sy < src.getHeight(); ++sy)
++	{
++		const Uint8 *row = (const Uint8*)((const char*)src.getBuffer() + sy * src.getPitch());
++		for (int sx = 0; sx < src.getWidth(); ++sx)
++		{
++			Uint8 c = row[sx];
++			if (!c) continue;
++			for (int dy = 0; dy < S; ++dy)
++				for (int dx = 0; dx < S; ++dx)
++					buf[(sy * S + dy) * w + sx * S + dx] = c;
++		}
++	}
++	Surface::blitRaw(dst, SurfaceRaw<const Uint8>{ (const Uint8*)buf.data(), w, h, (Uint16)w }, x, y, shade, false, newBaseColor);
++}
++
+ int getShadePulseForFrame(int shade, int frame)
+ {
+ 	if (shade > 7) shade = 7;
+@@ -488,9 +546,9 @@ int getShadePulseForFrame(int shade, int frame)
   */
  void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position currTileScreenPosition, bool topLayer, BattleUnit* movingUnit)
  {
@@ -199,7 +269,7 @@ index 3665cd1..bb3677d 100644
  
  	if (!unitTile)
  	{
-@@ -940,9 +974,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -940,9 +998,9 @@ void Map::drawTerrain(Surface *surface)
  					if (tmpSurface)
  					{
  						if (tile->getObstacle(O_FLOOR))
@@ -211,7 +281,7 @@ index 3665cd1..bb3677d 100644
  					}
  
  					auto* unit = tile->getUnit();
-@@ -1001,9 +1035,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1001,9 +1059,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_WESTWALL, tile);
  							if (tile->getObstacle(O_WESTWALL))
@@ -223,7 +293,7 @@ index 3665cd1..bb3677d 100644
  						}
  						// Draw north wall
  						tmpSurface = tile->getSprite(O_NORTHWALL);
-@@ -1011,9 +1045,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1011,9 +1069,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_NORTHWALL, tile);
  							if (tile->getObstacle(O_NORTHWALL))
@@ -235,7 +305,7 @@ index 3665cd1..bb3677d 100644
  						}
  						// Draw object
  						tmpSurface = tile->getSprite(O_OBJECT);
-@@ -1022,9 +1056,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1022,9 +1080,9 @@ void Map::drawTerrain(Surface *surface)
  							if (tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -247,7 +317,7 @@ index 3665cd1..bb3677d 100644
  							}
  						}
  						// draw an item on top of the floor (if any)
-@@ -1033,7 +1067,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1033,7 +1091,7 @@ void Map::drawTerrain(Surface *surface)
  						{
  							itemSprite.draw(item,
  								screenPosition.x,
@@ -256,9 +326,12 @@ index 3665cd1..bb3677d 100644
  								tileShade
  							);
  							if (_anyIndicator)
-@@ -1045,28 +1079,28 @@ void Map::drawTerrain(Surface *surface)
+@@ -1043,30 +1101,30 @@ void Map::drawTerrain(Surface *surface)
+ 								{
+ 									if (_burnIndicator && itemUnit->getFire() > 0)
  									{
- 										_burnIndicator->blitNShade(surface,
+-										_burnIndicator->blitNShade(surface,
++										upBlit(_burnIndicator, surface,
  											screenPosition.x,
 -											screenPosition.y + tile->getTerrainLevel(),
 +											screenPosition.y + tile->getTerrainLevel() * (_spriteWidth / 32),
@@ -266,7 +339,8 @@ index 3665cd1..bb3677d 100644
  									}
  									else if (_woundIndicator && itemUnit->getFatalWounds() > 0)
  									{
- 										_woundIndicator->blitNShade(surface,
+-										_woundIndicator->blitNShade(surface,
++										upBlit(_woundIndicator, surface,
  											screenPosition.x,
 -											screenPosition.y + tile->getTerrainLevel(),
 +											screenPosition.y + tile->getTerrainLevel() * (_spriteWidth / 32),
@@ -274,7 +348,8 @@ index 3665cd1..bb3677d 100644
  									}
  									else if (_shockIndicator && itemUnit->hasNegativeHealthRegen())
  									{
- 										_shockIndicator->blitNShade(surface,
+-										_shockIndicator->blitNShade(surface,
++										upBlit(_shockIndicator, surface,
  											screenPosition.x,
 -											screenPosition.y + tile->getTerrainLevel(),
 +											screenPosition.y + tile->getTerrainLevel() * (_spriteWidth / 32),
@@ -282,23 +357,31 @@ index 3665cd1..bb3677d 100644
  									}
  									else if (_stunIndicator)
  									{
- 										_stunIndicator->blitNShade(surface,
+-										_stunIndicator->blitNShade(surface,
++										upBlit(_stunIndicator, surface,
  											screenPosition.x,
 -											screenPosition.y + tile->getTerrainLevel(),
 +											screenPosition.y + tile->getTerrainLevel() * (_spriteWidth / 32),
  											tileShade);
  									}
  								}
-@@ -1298,7 +1332,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1292,13 +1350,13 @@ void Map::drawTerrain(Surface *surface)
+ 							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(11);
+ 							if (tmpSurface)
+ 							{
+-								Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y+2, 0, false, tile->getMarkerColor());
++								upBlit(tmpSurface, surface, screenPosition.x, screenPosition.y + 2 * SurfaceSet::battleScale(), 0, tile->getMarkerColor());
+ 							}
+ 						}
  						tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(tile->getPreview());
  						if (tmpSurface)
  						{
 -							Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y + tile->getTerrainLevel(), 0, false, tileColor);
-+							Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y + tile->getTerrainLevel() * (_spriteWidth / 32), 0, false, tileColor);
++							upBlit(tmpSurface, surface, screenPosition.x, screenPosition.y + tile->getTerrainLevel() * (_spriteWidth / 32), 0, tileColor);
  						}
  					}
  
-@@ -1310,9 +1344,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1310,9 +1368,9 @@ void Map::drawTerrain(Surface *surface)
  							if (!tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -310,7 +393,34 @@ index 3665cd1..bb3677d 100644
  							}
  						}
  					}
-@@ -1621,7 +1655,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1528,7 +1586,7 @@ void Map::drawTerrain(Surface *surface)
+ 
+ 								_txtAccuracy->setText(ss.str());
+ 								_txtAccuracy->draw();
+-								_txtAccuracy->blitNShade(surface, screenPosition.x, screenPosition.y, 0);
++								upBlit(_txtAccuracy, surface, screenPosition.x, screenPosition.y);
+ 							}
+ 						}
+ 						else if (_camera->getViewLevel() > itZ)
+@@ -1551,7 +1609,7 @@ void Map::drawTerrain(Surface *surface)
+ 									_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::red - 1) - 1);
+ 									_txtAccuracy->setText("0%");
+ 									_txtAccuracy->draw();
+-									_txtAccuracy->blitNShade(surface, screenPosition.x, screenPosition.y, 0);
++									upBlit(_txtAccuracy, surface, screenPosition.x, screenPosition.y);
+ 								}
+ 							}
+ 							if (!ignore)
+@@ -1582,7 +1640,7 @@ void Map::drawTerrain(Surface *surface)
+ 								_numWaypid->setValue(waypid);
+ 								_numWaypid->setBordered(true); // OXCE, not configurable
+ 								_numWaypid->draw();
+-								_numWaypid->blitNShade(surface, screenPosition.x + waypXOff, screenPosition.y + waypYOff, 0);
++								upBlit(_numWaypid, surface, screenPosition.x + waypXOff * SurfaceSet::battleScale(), screenPosition.y + waypYOff * SurfaceSet::battleScale());
+ 
+ 								waypXOff += waypid > 9 ? 10 : 6; // OXCE
+ 								if (waypXOff >= 26)
+@@ -1621,7 +1679,7 @@ void Map::drawTerrain(Surface *surface)
  						tile = _save->getTile(mapPosition);
  						if (!tile || !tile->isDiscovered(O_FLOOR) || tile->getPreview() == -1)
  							continue;
@@ -319,7 +429,150 @@ index 3665cd1..bb3677d 100644
  						if (_previewSettingArrows)
  						{
  							if (itZ > 0 && tile->hasNoFloor(_save))
-@@ -2023,7 +2057,7 @@ void Map::setSelectorPosition(int mx, int my)
+@@ -1629,14 +1687,14 @@ void Map::drawTerrain(Surface *surface)
+ 								tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(23);
+ 								if (tmpSurface)
+ 								{
+-									Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y+2, 0, false, tile->getMarkerColor());
++									upBlit(tmpSurface, surface, screenPosition.x, screenPosition.y + 2 * SurfaceSet::battleScale(), 0, tile->getMarkerColor());
+ 								}
+ 							}
+ 							int overlay = tile->getPreview() + 12;
+ 							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(overlay);
+ 							if (tmpSurface)
+ 							{
+-								Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - adjustment, 0, false, tile->getMarkerColor());
++								upBlit(tmpSurface, surface, screenPosition.x, screenPosition.y - adjustment, 0, tile->getMarkerColor());
+ 							}
+ 						}
+ 
+@@ -1645,16 +1703,17 @@ void Map::drawTerrain(Surface *surface)
+ 							int off = tile->getTUMarker() > 9 ? 5 : 3;
+ 							int offE = tile->getEnergyMarker() > 9 ? 5 : 3;
+ 							int mcolor = _previewSettingArrows ? 0 : tile->getMarkerColor();
++							const int PS = SurfaceSet::battleScale();
+ 							if (_previewSettingArrows)
+ 							{
+-								adjustment += 7;
++								adjustment += 7 * PS;
+ 							}
+ 							if (_save->getSelectedUnit() && _save->getSelectedUnit()->isBigUnit())
+ 							{
+-								adjustment += 1;
++								adjustment += 1 * PS;
+ 								if (!_previewSettingArrows)
+ 								{
+-									adjustment += 7;
++									adjustment += 7 * PS;
+ 								}
+ 							}
+ 							if (_previewSettingTu)
+@@ -1664,16 +1723,16 @@ void Map::drawTerrain(Surface *surface)
+ 								if (_previewSettingEnergy)
+ 								{
+ 									// TU
+-									_numWaypid->blitNShade(surface, screenPosition.x + 16 - off, screenPosition.y + (22 - adjustment), 0, false, mcolor);
++									upBlit(_numWaypid, surface, screenPosition.x + (16 - off) * PS, screenPosition.y + 22 * PS - adjustment, 0, mcolor);
+ 									// and Energy
+ 									_numWaypid->setValue(tile->getEnergyMarker());
+ 									_numWaypid->draw();
+-									_numWaypid->blitNShade(surface, screenPosition.x + 16 - offE, screenPosition.y + (29 - adjustment), 0, false, mcolor);
++									upBlit(_numWaypid, surface, screenPosition.x + (16 - offE) * PS, screenPosition.y + 29 * PS - adjustment, 0, mcolor);
+ 								}
+ 								else
+ 								{
+ 									// only TU
+-									_numWaypid->blitNShade(surface, screenPosition.x + 16 - off, screenPosition.y + (29 - adjustment), 0, false, mcolor);
++									upBlit(_numWaypid, surface, screenPosition.x + (16 - off) * PS, screenPosition.y + 29 * PS - adjustment, 0, mcolor);
+ 								}
+ 							}
+ 							else if (_previewSettingEnergy)
+@@ -1681,7 +1740,7 @@ void Map::drawTerrain(Surface *surface)
+ 								// only Energy
+ 								_numWaypid->setValue(tile->getEnergyMarker());
+ 								_numWaypid->draw();
+-								_numWaypid->blitNShade(surface, screenPosition.x + 16 - offE, screenPosition.y + (29 - adjustment), 0, false, mcolor);
++								upBlit(_numWaypid, surface, screenPosition.x + (16 - offE) * PS, screenPosition.y + 29 * PS - adjustment, 0, mcolor);
+ 							}
+ 						}
+ 					}
+@@ -1702,16 +1761,16 @@ void Map::drawTerrain(Surface *surface)
+ 		Position offset = calculateWalkingOffset(selectedUnit).ScreenOffset;
+ 		if (selectedUnit->isBigUnit())
+ 		{
+-			offset.y += 4;
++			offset.y += 4 * SurfaceSet::battleScale();
+ 		}
+-		offset.y += Position::TileZ - (selectedUnit->getHeight() + selectedUnit->getFloatHeight());
++		offset.y += (Position::TileZ - (selectedUnit->getHeight() + selectedUnit->getFloatHeight())) * SurfaceSet::battleScale();
+ 		if (selectedUnit->isKneeled())
+ 		{
+-			offset.y -= 2;
++			offset.y -= 2 * SurfaceSet::battleScale();
+ 		}
+ 		if (this->getCursorType() != CT_NONE)
+ 		{
+-			_arrow->blitNShade(surface, screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2), screenPosition.y + offset.y - _arrow->getHeight() + getArrowBobForFrame(_animFrame), 0);
++			_arrow->blitNShade(surface, screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2), screenPosition.y + offset.y - _arrow->getHeight() + getArrowBobForFrame(_animFrame) * SurfaceSet::battleScale(), 0);
+ 		}
+ 	}
+ 
+@@ -1732,26 +1791,26 @@ void Map::drawTerrain(Surface *surface)
+ 				//calculateWalkingOffset(myUnit, &offset);
+ 				if (myUnit->isBigUnit())
+ 				{
+-					offset.y += 4;
++					offset.y += 4 * SurfaceSet::battleScale();
+ 				}
+ 				if (motionScan)
+ 				{
+-					offset.y += Position::TileZ - /*myUnit->getHeight()*/ 21; // no spoilers
++					offset.y += (Position::TileZ - 21) * SurfaceSet::battleScale(); // no spoilers
+ 				}
+ 				else if (customMarker)
+ 				{
+-					offset.y += Position::TileZ - (myUnit->getHeight() + myUnit->getFloatHeight());
++					offset.y += (Position::TileZ - (myUnit->getHeight() + myUnit->getFloatHeight())) * SurfaceSet::battleScale();
+ 				}
+ 				if (myUnit->isKneeled())
+ 				{
+-					offset.y -= 2;
++					offset.y -= 2 * SurfaceSet::battleScale();
+ 				}
+ 				if (motionScan)
+ 				{
+ 					_arrow->blitNShade(
+ 						surface,
+ 						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
+-						screenPosition.y + offset.y - _arrow->getHeight() + getArrowBobForFrame(_animFrame),
++						screenPosition.y + offset.y - _arrow->getHeight() + getArrowBobForFrame(_animFrame) * SurfaceSet::battleScale(),
+ 						0);
+ 				}
+ 				else if (customMarker)
+@@ -1760,7 +1819,7 @@ void Map::drawTerrain(Surface *surface)
+ 						surface,
+ 						_arrow,
+ 						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
+-						screenPosition.y + offset.y - _arrow->getHeight() + getArrowBobForFrame(_animFrame),
++						screenPosition.y + offset.y - _arrow->getHeight() + getArrowBobForFrame(_animFrame) * SurfaceSet::battleScale(),
+ 						0,
+ 						false,
+ 						_isTFTD ? ArrowColorsTFTD[myUnit->getCustomMarker() % 4] : ArrowColorsUFO[myUnit->getCustomMarker() % 4]);
+@@ -1779,11 +1838,11 @@ void Map::drawTerrain(Surface *surface)
+ 			{
+ 				_camera->convertMapToScreen(pos, &screenPosition);
+ 				screenPosition += _camera->getMapOffset();
+-				screenPosition.y += 2; // based on vanilla soldier standHeight
++				screenPosition.y += 2 * SurfaceSet::battleScale(); // based on vanilla soldier standHeight
+ 				_arrow->blitNShade(
+ 					surface,
+ 					screenPosition.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
+-					screenPosition.y - _arrow->getHeight() + getArrowBobForFrame(_animFrame),
++					screenPosition.y - _arrow->getHeight() + getArrowBobForFrame(_animFrame) * SurfaceSet::battleScale(),
+ 					0);
+ 			}
+ 		}
+@@ -2023,7 +2082,7 @@ void Map::setSelectorPosition(int mx, int my)
  {
  	int oldX = _selectorX, oldY = _selectorY;
  
@@ -328,7 +581,7 @@ index 3665cd1..bb3677d 100644
  
  	if (oldX != _selectorX || oldY != _selectorY)
  	{
-@@ -2267,6 +2301,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2267,6 +2326,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
  	}
  	result.ScreenOffset.y += result.TerrainLevelOffset;
@@ -337,7 +590,7 @@ index 3665cd1..bb3677d 100644
  	return result;
  }
  
-@@ -2506,9 +2542,10 @@ void Map::refreshSelectorPosition()
+@@ -2506,9 +2567,10 @@ void Map::refreshSelectorPosition()
  void Map::setHeight(int height)
  {
  	Surface::setHeight(height);
@@ -351,7 +604,7 @@ index 3665cd1..bb3677d 100644
  }
  
  /**
-@@ -2519,7 +2556,7 @@ void Map::setWidth(int width)
+@@ -2519,7 +2581,7 @@ void Map::setWidth(int width)
  {
  	int dX = width - getWidth();
  	Surface::setWidth(width);
@@ -539,16 +792,19 @@ index d02fd01..1320478 100644
  
  /**
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..597da4d 100644
+index 1885346..94d0c00 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
-@@ -5769,12 +5769,16 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +5769,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
 +	_sets["CURSOR.PCK"]->upscale(SurfaceSet::battleScale());
  	_sets["SMOKE.PCK"] = new SurfaceSet(32, 40);
  	_sets["SMOKE.PCK"]->loadPck("UFOGRAPH/SMOKE.PCK", "UFOGRAPH/SMOKE.TAB");
++	// 4x battlescape: the UI still shows rank badges from SMOKE.PCK at classic size, so keep an unscaled copy.
++	_sets["SMOKE_UI.PCK"] = new SurfaceSet(32, 40);
++	_sets["SMOKE_UI.PCK"]->loadPck("UFOGRAPH/SMOKE.PCK", "UFOGRAPH/SMOKE.TAB");
 +	_sets["SMOKE.PCK"]->upscale(SurfaceSet::battleScale());
  	_sets["HIT.PCK"] = new SurfaceSet(32, 40);
  	_sets["HIT.PCK"]->loadPck("UFOGRAPH/HIT.PCK", "UFOGRAPH/HIT.TAB");
@@ -559,7 +815,7 @@ index 1885346..597da4d 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +5789,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +5792,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -567,7 +823,7 @@ index 1885346..597da4d 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +5803,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +5806,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
