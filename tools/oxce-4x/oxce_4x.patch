@@ -962,14 +962,20 @@ index 839f803..8ebe556 100644
    Engine/Timer.cpp
 diff --git a/src/Engine/HiColor.cpp b/src/Engine/HiColor.cpp
 new file mode 100644
-index 0000000..4c6bc29
+index 0000000..91e9e71
 --- /dev/null
 +++ b/src/Engine/HiColor.cpp
-@@ -0,0 +1,142 @@
+@@ -0,0 +1,200 @@
 +#include "HiColor.h"
 +#include "Surface.h"
 +#include "Screen.h"
 +#include <unordered_map>
++#include <deque>
++#include <cstring>
++#include "SurfaceSet.h"
++#include "FileMap.h"
++#include "Logger.h"
++#include <SDL_image.h>
 +#include <cstdlib>
 +#include <algorithm>
 +
@@ -1032,7 +1038,8 @@ index 0000000..4c6bc29
 +	}
 +}
 +
-+void afterBlit(const SurfaceRaw<Uint8> &dst, const SurfaceRaw<const Uint8> &src, int x, int y, int shade, bool half, int newBaseColor)
++void afterBlit(const SurfaceRaw<Uint8> &dst, const SurfaceRaw<const Uint8> &src, int x, int y, int shade, bool half, int newBaseColor,
++	int clipX0, int clipY0, int clipX1, int clipY1)
 +{
 +	if (!layerBase || dst.getBuffer() != layerBase || newBaseColor) return;
 +	auto it = sprites.find(src.getBuffer());
@@ -1043,7 +1050,7 @@ index 0000000..4c6bc29
 +	for (int sy = 0; sy < sh; ++sy)
 +	{
 +		const int dy = y + sy;
-+		if (dy < 0 || dy >= layerH) continue;
++		if (dy < 0 || dy >= layerH || dy < clipY0 || dy >= clipY1) continue;
 +		const Uint8 *srow = src.getBuffer() + sy * sp;
 +		const Uint32 *crow = argb + sy * sw;
 +		const Uint8 *drow = layerBase + dy * layerPitch;
@@ -1052,7 +1059,7 @@ index 0000000..4c6bc29
 +		for (int sx = x0; sx < sw; ++sx)
 +		{
 +			const int dx = x + sx;
-+			if (dx < 0 || dx >= layerW) continue;
++			if (dx < 0 || dx >= layerW || dx < clipX0 || dx >= clipX1) continue;
 +			if (srow[sx])
 +			{
 +				trow[dx] = drow[dx];
@@ -1070,6 +1077,57 @@ index 0000000..4c6bc29
 +			rrow[dx] = (r << 16) | (g << 8) | bl;
 +		}
 +	}
++}
++
++const Uint32 *keep(std::vector<Uint32> &&argb)
++{
++	static std::deque<std::vector<Uint32>> store;
++	store.push_back(std::move(argb));
++	return store.back().data();
++}
++
++void registerSheet(const std::string &pngPath, SurfaceSet *set, int firstFrame, int sheetW, int sheetH, int subX, int subY)
++{
++	if (!enabled() || !set || subX <= 0 || subY <= 0) return;
++	const auto dot = pngPath.find_last_of('.');
++	if (dot == std::string::npos) return;
++	const std::string twin = pngPath.substr(0, dot) + "_rgb.png";
++	if (!FileMap::fileExists(twin)) return;
++	SDL_Surface *img = IMG_Load_RW(FileMap::getRWops(twin), SDL_TRUE);
++	if (!img) { Log(LOG_WARNING) << "Full-colour sheet unreadable: " << twin; return; }
++	SDL_PixelFormat fmt = {};
++	fmt.BitsPerPixel = 32; fmt.BytesPerPixel = 4;
++	fmt.Rmask = 0x00FF0000; fmt.Gmask = 0x0000FF00; fmt.Bmask = 0x000000FF; fmt.Amask = 0xFF000000;
++	fmt.Rshift = 16; fmt.Gshift = 8; fmt.Bshift = 0; fmt.Ashift = 24;
++	SDL_Surface *conv = SDL_ConvertSurface(img, &fmt, SDL_SWSURFACE);
++	SDL_FreeSurface(img);
++	if (!conv) return;
++	if (conv->w != sheetW || conv->h != sheetH)
++	{
++		Log(LOG_WARNING) << "Full-colour sheet " << twin << " is " << conv->w << "x" << conv->h << ", expected " << sheetW << "x" << sheetH;
++		SDL_FreeSurface(conv); return;
++	}
++	SDL_LockSurface(conv);
++	int frame = firstFrame, used = 0;
++	for (int cy = 0; cy + subY <= sheetH; cy += subY)
++		for (int cx = 0; cx + subX <= sheetW; cx += subX, ++frame)
++		{
++			Surface *f = set->getFrame(frame);
++			if (!f || f->getWidth() != subX || f->getHeight() != subY) continue;
++			std::vector<Uint32> px((size_t)subX * subY);
++			bool any = false;
++			for (int y = 0; y < subY; ++y)
++			{
++				memcpy(&px[(size_t)y * subX], (Uint8*)conv->pixels + (cy + y) * conv->pitch + cx * 4, subX * 4);
++				if (!any) for (int x = 0; x < subX; ++x) if (px[(size_t)y * subX + x] >> 24) { any = true; break; }
++			}
++			if (!any) continue;
++			registerSprite(f->getBuffer(), keep(std::move(px)));
++			++used;
++		}
++	SDL_UnlockSurface(conv);
++	SDL_FreeSurface(conv);
++	Log(LOG_INFO) << "Full-colour sheet: " << twin << " (" << used << " frames)";
 +}
 +
 +bool composite(SDL_Surface *map8, SDL_Surface *screen32, int dx, int dy)
@@ -1110,10 +1168,10 @@ index 0000000..4c6bc29
 +}
 diff --git a/src/Engine/HiColor.h b/src/Engine/HiColor.h
 new file mode 100644
-index 0000000..97d269f
+index 0000000..cf159bb
 --- /dev/null
 +++ b/src/Engine/HiColor.h
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,40 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: full-colour battlescape.
@@ -1127,10 +1185,12 @@ index 0000000..97d269f
 + */
 +#include <SDL.h>
 +#include <vector>
++#include <string>
 +
 +namespace OpenXcom
 +{
 +template<typename Pixel> class SurfaceRaw;
++class SurfaceSet;
 +
 +namespace HiColor
 +{
@@ -1142,7 +1202,12 @@ index 0000000..97d269f
 +	/// Starts a new frame of the map layer: the 8-bit map surface's buffer and size.
 +	void beginLayer(Uint8 *base, int w, int h, int pitch);
 +	/// Called by Surface::blitRaw after its 8-bit draw.
-+	void afterBlit(const SurfaceRaw<Uint8> &dst, const SurfaceRaw<const Uint8> &src, int x, int y, int shade, bool half, int newBaseColor);
++	void afterBlit(const SurfaceRaw<Uint8> &dst, const SurfaceRaw<const Uint8> &src, int x, int y, int shade, bool half, int newBaseColor,
++		int clipX0 = 0, int clipY0 = 0, int clipX1 = 1 << 30, int clipY1 = 1 << 30);
++	/// Keeps a full-colour frame alive for the rest of the run and returns its pixels.
++	const Uint32 *keep(std::vector<Uint32> &&argb);
++	/// For a sprite sheet <file>.png, loads <file>_rgb.png (same size) and registers each subX x subY cell against the matching frame.
++	void registerSheet(const std::string &pngPath, SurfaceSet *set, int firstFrame, int sheetW, int sheetH, int subX, int subY);
 +	/// Writes the map layer to a 32-bit display surface at (dx, dy). Returns false if there is no layer for this surface.
 +	bool composite(SDL_Surface *map8, SDL_Surface *screen32, int dx, int dy);
 +}
@@ -1270,6 +1335,26 @@ index a9beefe..ef57f2e 100644
  	/// Clears the screen.
  	void clear();
  	/// Sets the screen's 8bpp palette.
+diff --git a/src/Engine/Script.cpp b/src/Engine/Script.cpp
+index c6a1d25..730ad95 100644
+--- a/src/Engine/Script.cpp
++++ b/src/Engine/Script.cpp
+@@ -21,6 +21,7 @@
+ #include <tuple>
+ #include <algorithm>
+ #include "../fmath.h"
++#include "HiColor.h"
+ #include <bitset>
+ #include <array>
+ #include <numeric>
+@@ -602,6 +603,7 @@ void ScriptWorkerBlit::executeBlit(const Surface* src, Surface* dest, int x, int
+ 	{
+ 		ShaderDraw<helper::StandardShade>(destShader, srcShader, ShaderScalar(shade));
+ 	}
++	HiColor::afterBlit(SurfaceRaw<Uint8>(dest), SurfaceRaw<const Uint8>(src), x, y, shade, false, 0, mask.beg_x, mask.beg_y, mask.end_x, mask.end_y);
+ }
+ 
+ /**
 diff --git a/src/Engine/Surface.cpp b/src/Engine/Surface.cpp
 index e2a62e9..4e62a05 100644
 --- a/src/Engine/Surface.cpp
@@ -1350,6 +1435,26 @@ index 86bd62e..46cac60 100644
  	/// Loads an X-Com DAT image file.
  	void loadDat(const std::string &filename);
  	/// Gets a particular frame from the set.
+diff --git a/src/Mod/ExtraSprites.cpp b/src/Mod/ExtraSprites.cpp
+index c71ac0d..60ff887 100644
+--- a/src/Mod/ExtraSprites.cpp
++++ b/src/Mod/ExtraSprites.cpp
+@@ -19,6 +19,7 @@
+ 
+ #include <algorithm>
+ #include "ExtraSprites.h"
++#include "../Engine/HiColor.h"
+ #include "../Engine/Surface.h"
+ #include "../Engine/SurfaceSet.h"
+ #include "../Engine/FileMap.h"
+@@ -276,6 +277,7 @@ SurfaceSet *ExtraSprites::loadSurfaceSet(SurfaceSet *set)
+ 						++offset;
+ 					}
+ 				}
++				HiColor::registerSheet(fileName, set, startFrame >= set->getMaxSharedFrames() ? startFrame + _current->offset : startFrame, _width, _height, _subX, _subY);
+ 			}
+ 		}
+ 	}
 diff --git a/src/Mod/MapDataSet.cpp b/src/Mod/MapDataSet.cpp
 index d02fd01..c34c459 100644
 --- a/src/Mod/MapDataSet.cpp
