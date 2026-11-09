@@ -780,14 +780,29 @@ index 86bd62e..46cac60 100644
  	void loadDat(const std::string &filename);
  	/// Gets a particular frame from the set.
 diff --git a/src/Mod/MapDataSet.cpp b/src/Mod/MapDataSet.cpp
-index d02fd01..1320478 100644
+index d02fd01..1acda83 100644
 --- a/src/Mod/MapDataSet.cpp
 +++ b/src/Mod/MapDataSet.cpp
-@@ -245,6 +245,7 @@ void MapDataSet::loadData(MCDPatch *patch, bool validate)
+@@ -243,8 +243,20 @@ void MapDataSet::loadData(MCDPatch *patch, bool validate)
+ 	}
+ 
  	// Load terrain sprites/surfaces/PCK files into a surfaceset
- 	_surfaceSet = new SurfaceSet(32, 40);
- 	_surfaceSet->loadPck("TERRAIN/" + _name + ".PCK", "TERRAIN/" + _name + ".TAB");
-+	_surfaceSet->upscale(SurfaceSet::battleScale());
+-	_surfaceSet = new SurfaceSet(32, 40);
+-	_surfaceSet->loadPck("TERRAIN/" + _name + ".PCK", "TERRAIN/" + _name + ".TAB");
++	// 4x battlescape: a terrain may ship its own full-resolution art as <name>_4X.PCK/.TAB (128x160 frames)
++	const int S = SurfaceSet::battleScale();
++	const std::string hdPck = "TERRAIN/" + _name + "_4X.PCK", hdTab = "TERRAIN/" + _name + "_4X.TAB";
++	if (S == 4 && FileMap::fileExists(hdPck) && FileMap::fileExists(hdTab))
++	{
++		_surfaceSet = new SurfaceSet(32 * S, 40 * S);
++		_surfaceSet->loadPck(hdPck, hdTab);
++	}
++	else
++	{
++		_surfaceSet = new SurfaceSet(32, 40);
++		_surfaceSet->loadPck("TERRAIN/" + _name + ".PCK", "TERRAIN/" + _name + ".TAB");
++		_surfaceSet->upscale(S);
++	}
  }
  
  /**
