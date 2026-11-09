@@ -1,0 +1,47 @@
+name: Build OpenXcom Extended (G.I. Joe 4x battlescape test)
+
+# Builds a Windows OpenXcom Extended with John's 4x battlescape patch applied.
+# OXCE is GPLv3; the patch in tools/oxce-4x is published under the same terms.
+# The result comes back as a short-lived workflow artifact.
+
+on:
+  push:
+    branches: [claude/oxce-gijoe-4x]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: mine }
+      - name: Get OXCE source (pinned)
+        shell: bash
+        run: |
+          git clone -q https://github.com/MeridianOXC/OpenXcom.git oxce
+          cd oxce && git checkout -q f0134ef8065799c7723953d64b565f7832bfd782
+          git apply --whitespace=nowarn ../mine/tools/oxce-4x/oxce_4x.patch
+          git diff --stat | tail -1
+      - uses: microsoft/setup-msbuild@v2
+      - name: Compile (Win32 Release)
+        run: |
+          cd oxce/src
+          msbuild OpenXcom.2010.sln /v:minimal /m /p:Configuration=Release /p:Platform=Win32 /p:PreferredToolArchitecture=x64
+      - name: Package
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory out | Out-Null
+          Copy-Item oxce\bin\Win32\Release\OpenXcom.exe out\
+          Copy-Item oxce\bin\Win32\*.dll out\
+          Copy-Item -Recurse oxce\bin\common, oxce\bin\standard out\
+          New-Item -ItemType Directory out\UFO | Out-Null
+          Copy-Item oxce\LICENSE.txt, mine\tools\oxce-4x\Play_4x.bat, mine\tools\oxce-4x\oxce_4x.patch out\
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GIJoe_OXCE_4x_win32
+          path: out
+          retention-days: 7

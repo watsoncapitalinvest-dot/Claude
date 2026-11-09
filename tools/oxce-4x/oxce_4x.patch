@@ -1,0 +1,608 @@
+diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
+index 7cd4941..43b58df 100644
+--- a/src/Battlescape/BattlescapeState.cpp
++++ b/src/Battlescape/BattlescapeState.cpp
+@@ -137,7 +137,7 @@ BattlescapeState::BattlescapeState() :
+ 
+ 	// Create the battlemap view
+ 	// the actual map height is the total height minus the height of the buttonbar
+-	_map = new Map(_game, screenWidth, screenHeight, 0, 0, visibleMapHeight);
++	_map = new Map(_game, screenWidth * Screen::hiRes(), screenHeight * Screen::hiRes(), 0, 0, visibleMapHeight * Screen::hiRes());
+ 
+ 	_numLayers = new NumberText(3, 5, x + 232, y + 6);
+ 	_rank = new Surface(26, 23, x + 107, y + 33);
+@@ -4052,8 +4052,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+ 
+ 	dX = Options::baseXResolution - dX;
+ 	dY = Options::baseYResolution - dY;
+-	_map->setWidth(Options::baseXResolution);
+-	_map->setHeight(Options::baseYResolution);
++	_map->setWidth(Options::baseXResolution * Screen::hiRes());
++	_map->setHeight(Options::baseYResolution * Screen::hiRes());
+ 	_map->getCamera()->resize();
+ 	_map->getCamera()->jumpXY(dX/2, dY/2);
+ 
+diff --git a/src/Battlescape/Camera.cpp b/src/Battlescape/Camera.cpp
+index 5a59f27..3d4e17f 100644
+--- a/src/Battlescape/Camera.cpp
++++ b/src/Battlescape/Camera.cpp
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "Camera.h"
++#include "../Engine/Screen.h"
+ #include "Map.h"
+ #include "../Engine/Action.h"
+ #include "../Engine/Options.h"
+@@ -108,9 +109,9 @@ void Camera::mouseRelease(Action *action, State *)
+ 		int posX = action->getXMouse();
+ 		int posY = action->getYMouse();
+ 		if ((posX < (SCROLL_BORDER * action->getXScale()) && posX > 0)
+-			|| (posX > (_screenWidth - SCROLL_BORDER) * action->getXScale())
++			|| (posX > (_screenWidth / Screen::hiRes() - SCROLL_BORDER) * action->getXScale())
+ 			|| (posY < (SCROLL_BORDER * action->getYScale()) && posY > 0)
+-			|| (posY > (_screenHeight - SCROLL_BORDER) * action->getYScale()))
++			|| (posY > (_screenHeight / Screen::hiRes() - SCROLL_BORDER) * action->getYScale()))
+ 			// A cheap hack to avoid handling this event as a click
+ 			// on the map when the mouse is on the scroll-border
+ 			action->getDetails()->button.button = 0;
+@@ -146,14 +147,14 @@ void Camera::mouseOver(Action *action, State *)
+ 				_scrollMouseY = scrollSpeed/2;
+ 			}
+ 			//upleft
+-			else if (posY > (_screenHeight - SCROLL_DIAGONAL_EDGE) * action->getYScale())
++			else if (posY > (_screenHeight / Screen::hiRes() - SCROLL_DIAGONAL_EDGE) * action->getYScale())
+ 			{
+ 				_scrollMouseY = -scrollSpeed/2;
+ 			}
+ 			else _scrollMouseY = 0;
+ 		}
+ 		//right scroll
+-		else if (posX > (_screenWidth - SCROLL_BORDER) * action->getXScale())
++		else if (posX > (_screenWidth / Screen::hiRes() - SCROLL_BORDER) * action->getXScale())
+ 		{
+ 			_scrollMouseX = -scrollSpeed;
+ 			// if close to top or bottom, also scroll diagonally
+@@ -163,7 +164,7 @@ void Camera::mouseOver(Action *action, State *)
+ 				_scrollMouseY = scrollSpeed/2;
+ 			}
+ 			//upright
+-			else if (posY > (_screenHeight - SCROLL_DIAGONAL_EDGE) * action->getYScale())
++			else if (posY > (_screenHeight / Screen::hiRes() - SCROLL_DIAGONAL_EDGE) * action->getYScale())
+ 			{
+ 				_scrollMouseY = -scrollSpeed/2;
+ 			}
+@@ -186,7 +187,7 @@ void Camera::mouseOver(Action *action, State *)
+ 				_scrollMouseY /=2;
+ 			}
+ 			//up right
+-			else if (posX > (_screenWidth - SCROLL_DIAGONAL_EDGE) * action->getXScale())
++			else if (posX > (_screenWidth / Screen::hiRes() - SCROLL_DIAGONAL_EDGE) * action->getXScale())
+ 			{
+ 				_scrollMouseX = -scrollSpeed;
+ 				_scrollMouseY /=2;
+@@ -204,7 +205,7 @@ void Camera::mouseOver(Action *action, State *)
+ 				_scrollMouseY /=2;
+ 			}
+ 			//down right
+-			else if (posX > (_screenWidth - SCROLL_DIAGONAL_EDGE) * action->getXScale())
++			else if (posX > (_screenWidth / Screen::hiRes() - SCROLL_DIAGONAL_EDGE) * action->getXScale())
+ 			{
+ 				_scrollMouseX = -scrollSpeed;
+ 				_scrollMouseY /=2;
+@@ -491,8 +492,9 @@ void Camera::convertVoxelToScreen(Position voxelPos, Position *screenPos) const
+ 	double dx = voxelPos.x - (mapPosition.x * 16);
+ 	double dy = voxelPos.y - (mapPosition.y * 16);
+ 	double dz = voxelPos.z - (mapPosition.z * 24);
+-	screenPos->x += (int)(dx - dy) + (_spriteWidth/2);
+-	screenPos->y += (int)(((_spriteHeight / 2.0)) + (dx / 2.0) + (dy / 2.0) - dz);
++	const double vs = _spriteWidth / 32.0; // voxel -> pixel scale (1 at classic size)
++	screenPos->x += (int)((dx - dy) * vs) + (_spriteWidth/2);
++	screenPos->y += (int)(((_spriteHeight / 2.0)) + ((dx / 2.0) + (dy / 2.0) - dz) * vs);
+ 	screenPos->x += _mapOffset.x;
+ 	screenPos->y += _mapOffset.y;
+ }
+@@ -604,8 +606,8 @@ __________
+ 			|| screenPos.x >= _screenWidth + sizex
+ 			|| screenPos.y < 0 - sizey
+ 			|| screenPos.y >= _screenHeight + sizey ) return false; //totally outside
+-		int side = ( _screenWidth - _map->getIconWidth() ) / 2;
+-		if ( (screenPos.y < (_screenHeight - _map->getIconHeight()) + sizey) ) return true; //above icons
++		int side = ( _screenWidth - _map->getIconWidth() * Screen::hiRes() ) / 2;
++		if ( (screenPos.y < (_screenHeight - _map->getIconHeight() * Screen::hiRes()) + sizey) ) return true; //above icons
+ 		if ( (side > 1) && ( (screenPos.x < side + sizex) || (screenPos.x >= (_screenWidth - side - sizex)) ) ) return true; //at sides (if there are any)
+ 		return false;
+ 	}
+@@ -625,7 +627,7 @@ void Camera::resize()
+ {
+ 	_screenWidth = _map->getWidth();
+ 	_screenHeight = _map->getHeight();
+-	_visibleMapHeight = _map->getHeight() - _map->getIconHeight();
++	_visibleMapHeight = _map->getHeight() - _map->getIconHeight() * Screen::hiRes();
+ }
+ 
+ void Camera::stopKeyScrolling()
+diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
+index 3665cd1..bb3677d 100644
+--- a/src/Battlescape/Map.cpp
++++ b/src/Battlescape/Map.cpp
+@@ -156,9 +156,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
+ 
+ 	_spriteWidth = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getWidth();
+ 	_spriteHeight = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getHeight();
+-	_message = new BattlescapeMessage(320, (visibleMapHeight < 200)? visibleMapHeight : 200, 0, 0);
++	const int baseVisible = visibleMapHeight / Screen::hiRes();
++	_message = new BattlescapeMessage(320, (baseVisible < 200)? baseVisible : 200, 0, 0);
+ 	_message->setX(_game->getScreen()->getDX());
+-	_message->setY((visibleMapHeight - _message->getHeight()) / 2);
++	_message->setY((baseVisible - _message->getHeight()) / 2);
+ 	_message->setTextColor(_messageColor);
+ 	_camera = new Camera(_spriteWidth, _spriteHeight, _save->getMapSizeX(), _save->getMapSizeY(), _save->getMapSizeZ(), this, visibleMapHeight);
+ 	_scrollMouseTimer = new Timer(SCROLL_INTERVAL);
+@@ -305,6 +306,20 @@ void Map::think()
+ /**
+  * Draws the whole map, part by part.
+  */
++void Map::blit(SDL_Surface *surface)
++{
++	if (Screen::hiRes() <= 1)
++	{
++		InteractiveSurface::blit(surface);
++		return;
++	}
++	if (!_visible || _hidden) return;
++	if (_redraw) draw();
++	SDL_Rect r = { 0, 0, (Uint16)(getWidth() / Screen::hiRes()), (Uint16)(getHeight() / Screen::hiRes()) };
++	SDL_FillRect(surface, &r, 0);
++	Screen::mapOverlay = this;
++}
++
+ void Map::draw()
+ {
+ 	if (!_redraw)
+@@ -362,6 +377,25 @@ void Map::draw()
+ 	}
+ 	else
+ 	{
++		if (Screen::hiRes() > 1)
++		{
++			// draw the hidden-movement panel at base size, then scale it into the hi-res map
++			const int H = Screen::hiRes();
++			Surface tmp(_message->getWidth(), _message->getHeight());
++			tmp.setPalette(getPalette());
++			int mx = _message->getX(), my = _message->getY();
++			_message->setX(0); _message->setY(0);
++			_message->blit(tmp.getSurface());
++			_message->setX(mx); _message->setY(my);
++			const int ox = (getWidth() - tmp.getWidth() * H) / 2;
++			const int oy = std::max(0, (_visibleMapHeight - tmp.getHeight() * H) / 2);
++			lock(); tmp.lock();
++			for (int y = 0; y < tmp.getHeight() * H; ++y)
++				for (int x = 0; x < tmp.getWidth() * H; ++x)
++					setPixel(ox + x, oy + y, tmp.getPixel(x / H, y / H));
++			tmp.unlock(); unlock();
++		}
++		else
+ 		_message->blit(this->getSurface());
+ 	}
+ }
+@@ -488,9 +522,9 @@ int getShadePulseForFrame(int shade, int frame)
+  */
+ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position currTileScreenPosition, bool topLayer, BattleUnit* movingUnit)
+ {
+-	const int tileFoorWidth = 32;
+-	const int tileFoorHeight = 16;
+-	const int tileHeight = 40;
++	const int tileFoorWidth = _spriteWidth;
++	const int tileFoorHeight = _spriteWidth / 2;
++	const int tileHeight = _spriteHeight;
+ 
+ 	if (!unitTile)
+ 	{
+@@ -940,9 +974,9 @@ void Map::drawTerrain(Surface *surface)
+ 					if (tmpSurface)
+ 					{
+ 						if (tile->getObstacle(O_FLOOR))
+-							Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - tile->getYOffset(O_FLOOR), obstacleShade, false, _nvColor);
++							Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - (tile->getYOffset(O_FLOOR) * (_spriteWidth / 32)), obstacleShade, false, _nvColor);
+ 						else
+-							Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - tile->getYOffset(O_FLOOR), tileShade, false, _nvColor);
++							Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - (tile->getYOffset(O_FLOOR) * (_spriteWidth / 32)), tileShade, false, _nvColor);
+ 					}
+ 
+ 					auto* unit = tile->getUnit();
+@@ -1001,9 +1035,9 @@ void Map::drawTerrain(Surface *surface)
+ 						{
+ 							int wallShade = getWallShade(O_WESTWALL, tile);
+ 							if (tile->getObstacle(O_WESTWALL))
+-								Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - tile->getYOffset(O_WESTWALL), obstacleShade, false, _nvColor);
++								Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - (tile->getYOffset(O_WESTWALL) * (_spriteWidth / 32)), obstacleShade, false, _nvColor);
+ 							else
+-								Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - tile->getYOffset(O_WESTWALL), wallShade, false, _nvColor);
++								Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - (tile->getYOffset(O_WESTWALL) * (_spriteWidth / 32)), wallShade, false, _nvColor);
+ 						}
+ 						// Draw north wall
+ 						tmpSurface = tile->getSprite(O_NORTHWALL);
+@@ -1011,9 +1045,9 @@ void Map::drawTerrain(Surface *surface)
+ 						{
+ 							int wallShade = getWallShade(O_NORTHWALL, tile);
+ 							if (tile->getObstacle(O_NORTHWALL))
+-								Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - tile->getYOffset(O_NORTHWALL), obstacleShade, bool(tile->getSprite(O_WESTWALL)), _nvColor);
++								Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - (tile->getYOffset(O_NORTHWALL) * (_spriteWidth / 32)), obstacleShade, bool(tile->getSprite(O_WESTWALL)), _nvColor);
+ 							else
+-								Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - tile->getYOffset(O_NORTHWALL), wallShade, bool(tile->getSprite(O_WESTWALL)), _nvColor);
++								Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - (tile->getYOffset(O_NORTHWALL) * (_spriteWidth / 32)), wallShade, bool(tile->getSprite(O_WESTWALL)), _nvColor);
+ 						}
+ 						// Draw object
+ 						tmpSurface = tile->getSprite(O_OBJECT);
+@@ -1022,9 +1056,9 @@ void Map::drawTerrain(Surface *surface)
+ 							if (tile->isBackTileObject(O_OBJECT))
+ 							{
+ 								if (tile->getObstacle(O_OBJECT))
+-									Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - tile->getYOffset(O_OBJECT), obstacleShade, false, _nvColor);
++									Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - (tile->getYOffset(O_OBJECT) * (_spriteWidth / 32)), obstacleShade, false, _nvColor);
+ 								else
+-									Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - tile->getYOffset(O_OBJECT), tileShade, false, _nvColor);
++									Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - (tile->getYOffset(O_OBJECT) * (_spriteWidth / 32)), tileShade, false, _nvColor);
+ 							}
+ 						}
+ 						// draw an item on top of the floor (if any)
+@@ -1033,7 +1067,7 @@ void Map::drawTerrain(Surface *surface)
+ 						{
+ 							itemSprite.draw(item,
+ 								screenPosition.x,
+-								screenPosition.y + tile->getTerrainLevel(),
++								screenPosition.y + tile->getTerrainLevel() * (_spriteWidth / 32),
+ 								tileShade
+ 							);
+ 							if (_anyIndicator)
+@@ -1045,28 +1079,28 @@ void Map::drawTerrain(Surface *surface)
+ 									{
+ 										_burnIndicator->blitNShade(surface,
+ 											screenPosition.x,
+-											screenPosition.y + tile->getTerrainLevel(),
++											screenPosition.y + tile->getTerrainLevel() * (_spriteWidth / 32),
+ 											tileShade);
+ 									}
+ 									else if (_woundIndicator && itemUnit->getFatalWounds() > 0)
+ 									{
+ 										_woundIndicator->blitNShade(surface,
+ 											screenPosition.x,
+-											screenPosition.y + tile->getTerrainLevel(),
++											screenPosition.y + tile->getTerrainLevel() * (_spriteWidth / 32),
+ 											tileShade);
+ 									}
+ 									else if (_shockIndicator && itemUnit->hasNegativeHealthRegen())
+ 									{
+ 										_shockIndicator->blitNShade(surface,
+ 											screenPosition.x,
+-											screenPosition.y + tile->getTerrainLevel(),
++											screenPosition.y + tile->getTerrainLevel() * (_spriteWidth / 32),
+ 											tileShade);
+ 									}
+ 									else if (_stunIndicator)
+ 									{
+ 										_stunIndicator->blitNShade(surface,
+ 											screenPosition.x,
+-											screenPosition.y + tile->getTerrainLevel(),
++											screenPosition.y + tile->getTerrainLevel() * (_spriteWidth / 32),
+ 											tileShade);
+ 									}
+ 								}
+@@ -1298,7 +1332,7 @@ void Map::drawTerrain(Surface *surface)
+ 						tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(tile->getPreview());
+ 						if (tmpSurface)
+ 						{
+-							Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y + tile->getTerrainLevel(), 0, false, tileColor);
++							Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y + tile->getTerrainLevel() * (_spriteWidth / 32), 0, false, tileColor);
+ 						}
+ 					}
+ 
+@@ -1310,9 +1344,9 @@ void Map::drawTerrain(Surface *surface)
+ 							if (!tile->isBackTileObject(O_OBJECT))
+ 							{
+ 								if (tile->getObstacle(O_OBJECT))
+-									Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - tile->getYOffset(O_OBJECT), obstacleShade, false, _nvColor);
++									Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - (tile->getYOffset(O_OBJECT) * (_spriteWidth / 32)), obstacleShade, false, _nvColor);
+ 								else
+-									Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - tile->getYOffset(O_OBJECT), tileShade, false, _nvColor);
++									Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - (tile->getYOffset(O_OBJECT) * (_spriteWidth / 32)), tileShade, false, _nvColor);
+ 							}
+ 						}
+ 					}
+@@ -1621,7 +1655,7 @@ void Map::drawTerrain(Surface *surface)
+ 						tile = _save->getTile(mapPosition);
+ 						if (!tile || !tile->isDiscovered(O_FLOOR) || tile->getPreview() == -1)
+ 							continue;
+-						int adjustment = -tile->getTerrainLevel();
++						int adjustment = -tile->getTerrainLevel() * (_spriteWidth / 32);
+ 						if (_previewSettingArrows)
+ 						{
+ 							if (itZ > 0 && tile->hasNoFloor(_save))
+@@ -2023,7 +2057,7 @@ void Map::setSelectorPosition(int mx, int my)
+ {
+ 	int oldX = _selectorX, oldY = _selectorY;
+ 
+-	_camera->convertScreenToMap(mx, my + _spriteHeight/4, &_selectorX, &_selectorY);
++	_camera->convertScreenToMap(mx * Screen::hiRes(), my * Screen::hiRes() + _spriteHeight/4, &_selectorX, &_selectorY);
+ 
+ 	if (oldX != _selectorX || oldY != _selectorY)
+ 	{
+@@ -2267,6 +2301,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+ 		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
+ 	}
+ 	result.ScreenOffset.y += result.TerrainLevelOffset;
++	result.ScreenOffset.x *= _spriteWidth / 32; // G.I. Joe HD test: pixel offsets scale with tile size
++	result.ScreenOffset.y *= _spriteWidth / 32;
+ 	return result;
+ }
+ 
+@@ -2506,9 +2542,10 @@ void Map::refreshSelectorPosition()
+ void Map::setHeight(int height)
+ {
+ 	Surface::setHeight(height);
+-	_visibleMapHeight = height - _iconHeight;
+-	_message->setHeight((_visibleMapHeight < 200)? _visibleMapHeight : 200);
+-	_message->setY((_visibleMapHeight - _message->getHeight()) / 2);
++	_visibleMapHeight = height - _iconHeight * Screen::hiRes();
++	const int baseVisible = _visibleMapHeight / Screen::hiRes();
++	_message->setHeight((baseVisible < 200)? baseVisible : 200);
++	_message->setY((baseVisible - _message->getHeight()) / 2);
+ }
+ 
+ /**
+@@ -2519,7 +2556,7 @@ void Map::setWidth(int width)
+ {
+ 	int dX = width - getWidth();
+ 	Surface::setWidth(width);
+-	_message->setX(_message->getX() + dX / 2);
++	_message->setX(_message->getX() + dX / 2 / Screen::hiRes());
+ }
+ 
+ /**
+diff --git a/src/Battlescape/Map.h b/src/Battlescape/Map.h
+index 0fdf2ca..716f5c7 100644
+--- a/src/Battlescape/Map.h
++++ b/src/Battlescape/Map.h
+@@ -124,6 +124,8 @@ public:
+ 	void think() override;
+ 	/// Draws the surface.
+ 	void draw() override;
++	/// G.I. Joe HD test: hand the hi-res map to the screen instead of blitting it at base size.
++	void blit(SDL_Surface *surface) override;
+ 	void refreshAIProgress(int progress);
+ 	/// Sets the palette.
+ 	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
+diff --git a/src/Battlescape/UnitSprite.cpp b/src/Battlescape/UnitSprite.cpp
+index 8fa87f8..d48f278 100644
+--- a/src/Battlescape/UnitSprite.cpp
++++ b/src/Battlescape/UnitSprite.cpp
+@@ -149,7 +149,7 @@ void UnitSprite::blitItem(Part& item)
+ 
+ 	_dest->lock();
+ 
+-	work.executeBlit(item.src, _dest,  _x + item.offX, _y + item.offY, _shade, _mask);
++	work.executeBlit(item.src, _dest,  _x + item.offX * SurfaceSet::battleScale(), _y + item.offY * SurfaceSet::battleScale(), _shade, _mask);
+ 
+ 	_dest->unlock();
+ }
+@@ -169,7 +169,7 @@ void UnitSprite::blitBody(Part& body)
+ 
+ 	_dest->lock();
+ 
+-	work.executeBlit(body.src, _dest,  _x + body.offX, _y + body.offY, _shade, _mask);
++	work.executeBlit(body.src, _dest,  _x + body.offX * SurfaceSet::battleScale(), _y + body.offY * SurfaceSet::battleScale(), _shade, _mask);
+ 
+ 	_dest->unlock();
+ }
+diff --git a/src/Engine/Screen.cpp b/src/Engine/Screen.cpp
+index ae9083d..7d4088f 100644
+--- a/src/Engine/Screen.cpp
++++ b/src/Engine/Screen.cpp
+@@ -1,3 +1,4 @@
++#include <cstdlib>
+ /*
+  * Copyright 2010-2016 OpenXcom Developers.
+  *
+@@ -188,6 +189,19 @@ void Screen::handle(Action *action)
+  * of the buffer are resized by that factor (eg. 2 = doubled)
+  * before being put on screen.
+  */
++int Screen::hiRes()
++{
++	static int h = -1;
++	if (h < 0)
++	{
++		const char *e = getenv("OXCE_MAP_HIRES");
++		h = e ? atoi(e) : 1;
++		if (h < 1 || h > 8) h = 1;
++	}
++	return h;
++}
++Surface *Screen::mapOverlay = nullptr;
++
+ void Screen::flip()
+ {
+ 	// perform any requested palette update
+@@ -203,6 +217,27 @@ void Screen::flip()
+ 
+ 	if (getWidth() != _baseWidth || getHeight() != _baseHeight || useOpenGL())
+ 	{
++		if (mapOverlay && !useOpenGL())
++		{
++			// hi-res map first, then the zoomed UI on top with colour 0 as transparent
++			SDL_Surface *ov = mapOverlay->getSurface();
++			SDL_Rect dst = { (Sint16)_leftBlackBand, (Sint16)_topBlackBand, 0, 0 };
++			SDL_SetColorKey(ov, 0, 0);
++			SDL_BlitSurface(ov, 0, _screen, &dst);
++			static SDL_Surface *tmp = nullptr;
++			if (!tmp || tmp->w != _screen->w || tmp->h != _screen->h)
++			{
++				if (tmp) SDL_FreeSurface(tmp);
++				tmp = SDL_CreateRGBSurface(SDL_SWSURFACE, _screen->w, _screen->h, 8, 0, 0, 0, 0);
++			}
++			SDL_SetPalette(tmp, SDL_LOGPAL, _surface->format->palette->colors, 0, 256);
++			SDL_FillRect(tmp, 0, 0);
++			Zoom::flipWithZoom(_surface.get(), tmp, _topBlackBand, _bottomBlackBand, _leftBlackBand, _rightBlackBand, nullptr);
++			SDL_SetColorKey(tmp, SDL_SRCCOLORKEY, 0);
++			SDL_BlitSurface(tmp, 0, _screen, 0);
++			mapOverlay = nullptr;
++		}
++		else
+ 		Zoom::flipWithZoom(_surface.get(), _screen, _topBlackBand, _bottomBlackBand, _leftBlackBand, _rightBlackBand, &glOutput);
+ 	}
+ 	else
+diff --git a/src/Engine/Screen.h b/src/Engine/Screen.h
+index a9beefe..ef57f2e 100644
+--- a/src/Engine/Screen.h
++++ b/src/Engine/Screen.h
+@@ -72,6 +72,9 @@ public:
+ 	void handle(Action *action);
+ 	/// Renders the screen onto the game window.
+ 	void flip();
++	/// G.I. Joe HD test: map drawn at hiRes() x base resolution and composited under the UI.
++	static int hiRes();
++	static Surface *mapOverlay;
+ 	/// Clears the screen.
+ 	void clear();
+ 	/// Sets the screen's 8bpp palette.
+diff --git a/src/Engine/SurfaceSet.cpp b/src/Engine/SurfaceSet.cpp
+index c7cd049..72e1066 100644
+--- a/src/Engine/SurfaceSet.cpp
++++ b/src/Engine/SurfaceSet.cpp
+@@ -1,3 +1,4 @@
++#include <cstdlib>
+ /*
+  * Copyright 2010-2016 OpenXcom Developers.
+  *
+@@ -51,6 +52,35 @@ SurfaceSet::~SurfaceSet()
+  * @param tab Filename of the TAB offsets.
+  * @sa http://www.ufopaedia.org/index.php?title=Image_Formats#PCK
+  */
++int SurfaceSet::battleScale()
++{
++	static int s = -1;
++	if (s < 0)
++	{
++		const char *e = getenv("OXCE_BATTLE_SCALE");
++		s = e ? atoi(e) : 1;
++		if (s < 1 || s > 8) s = 1;
++	}
++	return s;
++}
++
++void SurfaceSet::upscale(int s)
++{
++	if (s <= 1) return;
++	for (auto &f : _frames)
++	{
++		Surface big(_width * s, _height * s);
++		f.lock(); big.lock();
++		for (int y = 0; y < _height * s; ++y)
++			for (int x = 0; x < _width * s; ++x)
++				big.setPixel(x, y, f.getPixel(x / s, y / s));
++		big.unlock(); f.unlock();
++		big.setPalette(f.getPalette());
++		f = std::move(big);
++	}
++	_width *= s; _height *= s;
++}
++
+ void SurfaceSet::loadPck(const std::string &pck, const std::string &tab)
+ {
+ 	_frames.clear();
+diff --git a/src/Engine/SurfaceSet.h b/src/Engine/SurfaceSet.h
+index 86bd62e..46cac60 100644
+--- a/src/Engine/SurfaceSet.h
++++ b/src/Engine/SurfaceSet.h
+@@ -56,6 +56,10 @@ public:
+ 
+ 	/// Loads an X-Com set of PCK/TAB image files.
+ 	void loadPck(const std::string &pck, const std::string &tab = "");
++	/// G.I. Joe HD test: integer scale for battlescape sprites (env OXCE_BATTLE_SCALE, default 1).
++	static int battleScale();
++	/// Replaces every frame with a nearest-neighbour copy scaled by s.
++	void upscale(int s);
+ 	/// Loads an X-Com DAT image file.
+ 	void loadDat(const std::string &filename);
+ 	/// Gets a particular frame from the set.
+diff --git a/src/Mod/MapDataSet.cpp b/src/Mod/MapDataSet.cpp
+index d02fd01..1320478 100644
+--- a/src/Mod/MapDataSet.cpp
++++ b/src/Mod/MapDataSet.cpp
+@@ -245,6 +245,7 @@ void MapDataSet::loadData(MCDPatch *patch, bool validate)
+ 	// Load terrain sprites/surfaces/PCK files into a surfaceset
+ 	_surfaceSet = new SurfaceSet(32, 40);
+ 	_surfaceSet->loadPck("TERRAIN/" + _name + ".PCK", "TERRAIN/" + _name + ".TAB");
++	_surfaceSet->upscale(SurfaceSet::battleScale());
+ }
+ 
+ /**
+diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
+index 1885346..597da4d 100644
+--- a/src/Mod/Mod.cpp
++++ b/src/Mod/Mod.cpp
+@@ -5769,12 +5769,16 @@ void Mod::loadBattlescapeResources()
+ 	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
+ 	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
+ 	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
++	_sets["CURSOR.PCK"]->upscale(SurfaceSet::battleScale());
+ 	_sets["SMOKE.PCK"] = new SurfaceSet(32, 40);
+ 	_sets["SMOKE.PCK"]->loadPck("UFOGRAPH/SMOKE.PCK", "UFOGRAPH/SMOKE.TAB");
++	_sets["SMOKE.PCK"]->upscale(SurfaceSet::battleScale());
+ 	_sets["HIT.PCK"] = new SurfaceSet(32, 40);
+ 	_sets["HIT.PCK"]->loadPck("UFOGRAPH/HIT.PCK", "UFOGRAPH/HIT.TAB");
++	_sets["HIT.PCK"]->upscale(SurfaceSet::battleScale());
+ 	_sets["X1.PCK"] = new SurfaceSet(128, 64);
+ 	_sets["X1.PCK"]->loadPck("UFOGRAPH/X1.PCK", "UFOGRAPH/X1.TAB");
++	_sets["X1.PCK"]->upscale(SurfaceSet::battleScale());
+ 	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
+ 	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
+ 	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
+@@ -5785,6 +5789,7 @@ void Mod::loadBattlescapeResources()
+ 	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
+ 	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
+ 	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
++	_sets["BLANKS.PCK"]->upscale(SurfaceSet::battleScale());
+ 
+ 	// Load Battlescape units
+ 	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
+@@ -5798,6 +5803,38 @@ void Mod::loadBattlescapeResources()
+ 		else
+ 			_sets[fname] = new SurfaceSet(32, 48);
+ 		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
++		if (fname != "BIGOBS.PCK")
++			_sets[fname]->upscale(SurfaceSet::battleScale());
++		// G.I. Joe HD test: swap the coverall soldier for a pre-rendered full-body sprite
++		// (env OXCE_HD_UNIT = folder with <name>_<dir>.raw, 8-bit, frame-sized)
++		const char *hd = getenv("OXCE_HD_UNIT");
++		if (hd && fname == "XCOM_0.PCK" && SurfaceSet::battleScale() == 4)
++		{
++			SurfaceSet *set = _sets[fname];
++			int w = set->getWidth(), h = set->getHeight();
++			auto clearFrame = [&](int i) { Surface *f = set->getFrame(i); if (f) { f->lock(); for (int y = 0; y < h; ++y) for (int x = 0; x < w; ++x) f->setPixel(x, y, 0); f->unlock(); } };
++			for (int i = 0; i < 32; ++i) clearFrame(i);       // arms + legs standing/kneeling
++			for (int i = 40; i < 232; ++i) clearFrame(i);     // walking arms/legs
++			for (int i = 232; i < 256; ++i) clearFrame(i);    // weapon arms
++			for (int dir = 0; dir < 8; ++dir)
++			{
++				std::string path = std::string(hd) + "/cc_" + std::to_string(dir) + ".raw";
++				FILE *fp = fopen(path.c_str(), "rb");
++				if (!fp) { Log(LOG_ERROR) << "HD unit frame missing: " << path; continue; }
++				std::vector<Uint8> buf(w * h);
++				size_t n = fread(buf.data(), 1, buf.size(), fp); fclose(fp);
++				if (n != buf.size()) { Log(LOG_ERROR) << "HD unit frame wrong size: " << path; continue; }
++				for (int torso : {32, 267})
++				{
++					Surface *f = set->getFrame(torso + dir);
++					if (!f) continue;
++					f->lock();
++					for (int y = 0; y < h; ++y) for (int x = 0; x < w; ++x) f->setPixel(x, y, buf[y * w + x]);
++					f->unlock();
++				}
++			}
++			Log(LOG_INFO) << "HD unit sprite loaded into XCOM_0.PCK from " << hd;
++		}
+ 	}
+ 	// incomplete chryssalid set: 1.0 data: stop loading.
+ 	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
