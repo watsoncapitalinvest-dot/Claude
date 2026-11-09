@@ -962,10 +962,10 @@ index 839f803..8ebe556 100644
    Engine/Timer.cpp
 diff --git a/src/Engine/HiColor.cpp b/src/Engine/HiColor.cpp
 new file mode 100644
-index 0000000..5bd10df
+index 0000000..4c6bc29
 --- /dev/null
 +++ b/src/Engine/HiColor.cpp
-@@ -0,0 +1,130 @@
+@@ -0,0 +1,142 @@
 +#include "HiColor.h"
 +#include "Surface.h"
 +#include "Screen.h"
@@ -1051,11 +1051,23 @@ index 0000000..5bd10df
 +		Uint8 *trow = tag.data() + (size_t)dy * layerW;
 +		for (int sx = x0; sx < sw; ++sx)
 +		{
-+			if (!srow[sx]) continue;
 +			const int dx = x + sx;
 +			if (dx < 0 || dx >= layerW) continue;
-+			trow[dx] = drow[dx];
-+			rrow[dx] = shadeOf(crow[sx], shade);
++			if (srow[sx])
++			{
++				trow[dx] = drow[dx];
++				rrow[dx] = shadeOf(crow[sx], shade);
++				continue;
++			}
++			// pixels the 8-bit sprite leaves empty may still carry a soft edge or a ground shadow:
++			// blend them over whatever full-colour pixel is underneath, if it is still showing
++			const Uint32 a = crow[sx] >> 24;
++			if (!a || trow[dx] != drow[dx] || !drow[dx]) continue;
++			const Uint32 c = shadeOf(crow[sx], shade), u = rrow[dx];
++			const Uint32 r = (((c >> 16) & 0xFF) * a + ((u >> 16) & 0xFF) * (255 - a)) / 255;
++			const Uint32 g = (((c >> 8) & 0xFF) * a + ((u >> 8) & 0xFF) * (255 - a)) / 255;
++			const Uint32 bl = ((c & 0xFF) * a + (u & 0xFF) * (255 - a)) / 255;
++			rrow[dx] = (r << 16) | (g << 8) | bl;
 +		}
 +	}
 +}
