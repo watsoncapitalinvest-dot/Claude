@@ -1,0 +1,52 @@
+name: Fetch G.I. Joe reference images (full size)
+
+# The agent sandbox cannot reach yojoe.com or the Joepedia image host, but a
+# runner can. This downloads the full-size version of every picture listed in
+# John's two reference catalogs (yojoe_vehicles.xlsx, joepedia_all_factions.xlsx),
+# politely (one request at a time, with a pause), and hands them back as a
+# short-lived workflow artifact. Nothing is committed to the repo: it is public.
+
+on:
+  push:
+    branches: [claude/gijoe-reference-images]
+    paths: [tools/gijoe-images/manifest.json, .github/workflows/fetch-gijoe-images.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, time, urllib.request
+          UA = {"User-Agent": "Mozilla/5.0 (personal reference catalog; one request at a time)"}
+          items = json.load(open("tools/gijoe-images/manifest.json"))
+          out = pathlib.Path("gijoe_reference_fullsize"); results = []
+          for i, it in enumerate(items):
+              dest = out / it["out"]; dest.parent.mkdir(parents=True, exist_ok=True)
+              rec = {"out": it["out"], "url": it["url"]}
+              for attempt in range(3):
+                  try:
+                      with urllib.request.urlopen(urllib.request.Request(it["url"], headers=UA), timeout=60) as r:
+                          data = r.read(); rec["type"] = r.headers.get("Content-Type")
+                      dest.write_bytes(data); rec["bytes"] = len(data); rec["ok"] = True; break
+                  except Exception as e:
+                      rec["ok"] = False; rec["error"] = str(e)[:200]; time.sleep(3)
+              results.append(rec)
+              if i % 50 == 0: print(i, len(items), flush=True)
+              time.sleep(0.8)
+          json.dump(results, open(out / "results.json", "w"), indent=1)
+          ok = sum(r["ok"] for r in results)
+          print("done", ok, "of", len(results), "total MB", round(sum(r.get("bytes", 0) for r in results) / 1e6, 1))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gijoe_reference_fullsize
+          path: gijoe_reference_fullsize
+          retention-days: 3
