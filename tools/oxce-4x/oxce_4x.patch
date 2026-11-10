@@ -143,6 +143,77 @@ index 5a59f27..3d4e17f 100644
  }
  
  void Camera::stopKeyScrolling()
+diff --git a/src/Battlescape/Inventory.cpp b/src/Battlescape/Inventory.cpp
+index 406077c..4b5a934 100644
+--- a/src/Battlescape/Inventory.cpp
++++ b/src/Battlescape/Inventory.cpp
+@@ -17,6 +17,8 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "Inventory.h"
++#include "../Engine/HiUI.h"
++#include "../Engine/Logger.h"
+ #include <algorithm>
+ #include <cmath>
+ #include "../Mod/Mod.h"
+@@ -314,6 +316,7 @@ void Inventory::drawItems()
+ 
+ 	ScriptWorkerBlit work;
+ 	_items->clear();
++	_hiItems.clear();
+ 	Uint8 color = _game->getMod()->getInterface("inventory")->getElement("numStack")->color;
+ 	Uint8 color2 = _game->getMod()->getInterface("inventory")->getElement("numStack")->color2;
+ 	if (_selUnit != 0)
+@@ -344,6 +347,7 @@ void Inventory::drawItems()
+ 			}
+ 			BattleItem::ScriptFill(&work, invItem, save, BODYPART_ITEM_INVENTORY, _animFrame, 0);
+ 			work.executeBlit(frame, _items, x, y, 0);
++			_hiItems.emplace_back(frame, x, y, frame->getWidth(), frame->getHeight());
+ 
+ 			// two-handed indicator
+ 			if (invItem->getSlot()->getType() == INV_HAND)
+@@ -401,6 +405,7 @@ void Inventory::drawItems()
+ 			y = (groundItem->getSlot()->getY() + groundItem->getSlotY() * RuleInventory::SLOT_H);
+ 			BattleItem::ScriptFill(&work, groundItem, save, BODYPART_ITEM_INVENTORY, _animFrame, 0);
+ 			work.executeBlit(frame, _items, x, y, 0);
++			_hiItems.emplace_back(frame, x, y, frame->getWidth(), frame->getHeight());
+ 
+ 			// grenade primer indicators
+ 			if (groundItem->getFuseTimer() >= 0 && groundItem->getRules()->getInventoryWidth() > 0)
+@@ -647,6 +652,11 @@ void Inventory::blit(SDL_Surface *surface)
+ 	_selection->blitNShade(this, _selection->getX(), _selection->getY());
+ 	_warning->blit(this->getSurface());
+ 	Surface::blit(surface);
++	// The sharp layer takes a base pixel over only once that pixel holds its final value, so the
++	// item icons' full-resolution twins go down here, after the 8-bit inventory has been blitted.
++	if (HiUI::enabled())
++		for (const auto &hi : _hiItems)
++			HiUI::sprite(std::get<0>(hi), getX() + std::get<1>(hi), getY() + std::get<2>(hi), std::get<3>(hi), std::get<4>(hi));
+ }
+ 
+ /**
+diff --git a/src/Battlescape/Inventory.h b/src/Battlescape/Inventory.h
+index 642c538..1d3ece7 100644
+--- a/src/Battlescape/Inventory.h
++++ b/src/Battlescape/Inventory.h
+@@ -19,6 +19,8 @@
+  */
+ #include "../Engine/InteractiveSurface.h"
+ #include <locale>
++#include <vector>
++#include <tuple>
+ #include <map>
+ #include <string>
+ 
+@@ -92,6 +94,8 @@ public:
+ 	void drawGridLabels(bool showTuCost = false);
+ 	/// Draws the inventory items.
+ 	void drawItems();
++	/// Where each item icon was drawn this pass, so the sharp twins can follow it.
++	std::vector<std::tuple<const Surface*, int, int, int, int> > _hiItems;
+ 	/// Draws the selected item.
+ 	void drawSelectedItem();
+ 	/// Gets the currently selected item.
 diff --git a/src/Battlescape/InventoryState.cpp b/src/Battlescape/InventoryState.cpp
 index cea8e65..a5409dd 100644
 --- a/src/Battlescape/InventoryState.cpp
@@ -1257,13 +1328,14 @@ index 0000000..cf159bb
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..ab2f44c
+index 0000000..5e3fddf
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,574 @@
+@@ -0,0 +1,666 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
++#include "SurfaceSet.h"
 +#include "FileMap.h"
 +#include "Logger.h"
 +#include "Font.h"
@@ -1306,7 +1378,9 @@ index 0000000..ab2f44c
 +	std::vector<BgCache> bgCache;
 +
 +	struct Img { int w = 0, h = 0; std::vector<Uint32> px; bool ok = false; };   // 0xAARRGGBB
-+	std::unordered_map<const Surface*, Img> bgImages;                            // sharp twin of a screen background
++	std::unordered_map<const Surface*, Img> bgImages;                            // sharp twin of a screen background or sprite frame
++	struct Pending { SurfaceSet *set; int frame; std::string file; };
++	std::vector<Pending> pending;                                                // resolved on first draw, not at mod load
 +	std::unordered_map<std::string, Img> pieces;                                 // Resources/UI/<name>.png
 +
 +	Img loadPng(const std::string &path)
@@ -1572,8 +1646,97 @@ index 0000000..ab2f44c
 +	if (dot == std::string::npos) return;
 +	Img im = loadPng(file.substr(0, dot) + "_hi.png");
 +	if (!im.ok) return;
-+	Log(LOG_INFO) << "Sharp screen background: " << file << " (" << im.w << "x" << im.h << ")";
++	Log(LOG_INFO) << "Sharp twin: " << file << " (" << im.w << "x" << im.h << ")";
 +	bgImages[img] = std::move(im);
++}
++
++void registerSetFrame(SurfaceSet *set, int frame, const std::string &file)
++{
++	if (!enabled() || !set) return;
++	const auto dot = file.find_last_of('.');
++	if (dot == std::string::npos || !FileMap::fileExists(file.substr(0, dot) + "_hi.png")) return;
++	pending.push_back({set, frame, file});
++}
++
++void resolvePending()
++{
++	if (pending.empty()) return;
++	std::vector<Pending> todo;
++	todo.swap(pending);
++	for (const auto &p : todo)
++	{
++		const Surface *f = p.set->getFrame(p.frame);
++		if (!f) continue;
++		const auto dot = p.file.find_last_of('.');
++		Img im = loadPng(p.file.substr(0, dot) + "_hi.png");
++		if (!im.ok) continue;
++		Log(LOG_INFO) << "Sharp sprite: " << p.file << " (" << im.w << "x" << im.h << ")";
++		bgImages[f] = std::move(im);
++	}
++}
++
++void sprite(const Surface *frame, int x, int y, int w, int h)
++{
++	resolvePending();
++	if (!base || !frame || w <= 0 || h <= 0) return;
++	auto it = bgImages.find(frame);
++	if (it == bgImages.end() || !it->second.ok) return;
++	const Img &im = it->second;
++	R r{x, y, x + w, y + h};
++	if (!clipBase(r)) return;
++	const SDL_Color *pal = base->format->palette ? base->format->palette->colors : nullptr;
++	bool took = false;
++	for (int by = r.y0; by < r.y1; ++by)
++	{
++		const Uint8 *p = row8(by);
++		for (int bx = r.x0; bx < r.x1; ++bx)
++		{
++			// this base pixel's block on screen, and the slice of the sharp twin that belongs to it
++			const int X0 = xs[bx], X1 = xs[bx + 1], Y0 = ys[by], Y1 = ys[by + 1];
++			const int u0 = (bx - x) * im.w / w, u1 = std::max(u0 + 1, (bx - x + 1) * im.w / w);
++			const int v0 = (by - y) * im.h / h, v1 = std::max(v0 + 1, (by - y + 1) * im.h / h);
++			// The 8-bit icon's outline is one base pixel wide and steps badly. Where the sharp twin
++			// has something to say just outside it, take that pixel too, so the edge is the twin's.
++			if (!p[bx])
++			{
++				bool edge = false;
++				for (int v = v0; v < v1 && !edge; ++v)
++					for (int u = u0; u < u1; ++u)
++						if ((im.px[(size_t)v * im.w + u] >> 24) > 24) { edge = true; break; }
++				if (!edge) continue;
++			}
++			if (!valid[by * bw + bx] && pal)            // nothing sharp underneath yet: start from the flat colour
++			{
++				const SDL_Color &c = pal[p[bx]];
++				const Uint32 flat = rgb(c.r, c.g, c.b);
++				for (int Y = std::max(0, Y0); Y < std::min(sh, Y1); ++Y)
++				{
++					Uint32 *o = over.data() + (size_t)Y * sw;
++					for (int X = std::max(0, X0); X < std::min(sw, X1); ++X) o[X] = flat;
++				}
++			}
++			for (int Y = std::max(0, Y0); Y < std::min(sh, Y1); ++Y)
++			{
++				const int v = std::min(v1 - 1, v0 + (Y1 > Y0 ? (Y - Y0) * (v1 - v0) / (Y1 - Y0) : 0));
++				Uint32 *o = over.data() + (size_t)Y * sw;
++				for (int X = std::max(0, X0); X < std::min(sw, X1); ++X)
++				{
++					const int u = std::min(u1 - 1, u0 + (X1 > X0 ? (X - X0) * (u1 - u0) / (X1 - X0) : 0));
++					const Uint32 s = im.px[(size_t)v * im.w + u];
++					const Uint32 a = s >> 24;
++					if (!a) continue;                   // transparent in the sharp art: keep what is there
++					if (a == 255) { o[X] = s & 0x00FFFFFFu; continue; }
++					const Uint32 d = o[X];
++					const Uint32 nr = (((s >> 16) & 0xFF) * a + ((d >> 16) & 0xFF) * (255 - a)) / 255;
++					const Uint32 ng = (((s >> 8) & 0xFF) * a + ((d >> 8) & 0xFF) * (255 - a)) / 255;
++					const Uint32 nb = ((s & 0xFF) * a + (d & 0xFF) * (255 - a)) / 255;
++					o[X] = rgb((int)nr, (int)ng, (int)nb);
++				}
++			}
++			tag[by * bw + bx] = p[bx]; valid[by * bw + bx] = 1; took = true;
++		}
++	}
++	if (took) any = true;
 +}
 +
 +void beginFrame(SDL_Surface *base8, int screenW, int screenH, int left, int top, int right, int bottom)
@@ -1837,10 +2000,10 @@ index 0000000..ab2f44c
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..f41a726
+index 0000000..da9df91
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,34 @@
+@@ -0,0 +1,41 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -1856,6 +2019,7 @@ index 0000000..f41a726
 +namespace OpenXcom
 +{
 +class Surface;
++class SurfaceSet;
 +
 +namespace HiUI
 +{
@@ -1869,8 +2033,14 @@ index 0000000..f41a726
 +	void cursor(int x, int y, bool visible);
 +	/// A font sheet's sharp twin: <file>_hi.png, each cell K times the size of the 8-bit one.
 +	void registerFontImage(const Surface *sheet8, const std::string &file);
-+	/// A screen background's sharp twin: <file>_hi.png, any size.
++	/// A screen background's or a sprite frame's sharp twin: <file>_hi.png, any size.
 +	void registerImage(const Surface *img, const std::string &file);
++	/// A sprite frame's sharp twin. The set's frames are not in their final places yet when the mod
++	/// loads, so the file is remembered here and the frame looked up the first time one is drawn.
++	void registerSetFrame(SurfaceSet *set, int frame, const std::string &file);
++	/// Draw a registered sprite's sharp twin over the base rect it has just been blitted into.
++	/// Only base pixels the sprite actually wrote are taken over, so its shape stays its own.
++	void sprite(const Surface *frame, int x, int y, int w, int h);
 +	/// After the 8-bit buffer has been zoomed onto the 32-bit display.
 +	void composite(SDL_Surface *base8, SDL_Surface *screen32);
 +}
@@ -2315,7 +2485,7 @@ index d5e599e..8b44e52 100644
  	void setHighContrast(bool contrast) override;
  	/// Handles the timers.
 diff --git a/src/Mod/ExtraSprites.cpp b/src/Mod/ExtraSprites.cpp
-index c71ac0d..4d470e0 100644
+index c71ac0d..994ba54 100644
 --- a/src/Mod/ExtraSprites.cpp
 +++ b/src/Mod/ExtraSprites.cpp
 @@ -19,6 +19,8 @@
@@ -2335,7 +2505,17 @@ index c71ac0d..4d470e0 100644
  	return surface;
  }
  
-@@ -276,6 +279,7 @@ SurfaceSet *ExtraSprites::loadSurfaceSet(SurfaceSet *set)
+@@ -255,6 +258,9 @@ SurfaceSet *ExtraSprites::loadSurfaceSet(SurfaceSet *set)
+ 			if (!subdivision)
+ 			{
+ 				getFrame(set, startFrame)->loadImage(fileName);
++				// <file>_hi.png: item icons drawn at display resolution. The frame is looked up later,
++				// because the set's frames are still being rebuilt at this point.
++				HiUI::registerSetFrame(set, startFrame >= set->getMaxSharedFrames() ? startFrame + _current->offset : startFrame, fileName);
+ 			}
+ 			else
+ 			{
+@@ -276,6 +282,7 @@ SurfaceSet *ExtraSprites::loadSurfaceSet(SurfaceSet *set)
  						++offset;
  					}
  				}
