@@ -152,6 +152,20 @@ constructor, a run, and eight lines in `openxcom.log` naming the eight types. Th
 straight back out. Anything added to the mod's ruleset later deserves the same treatment once,
 because the failure mode is indistinguishable from success.
 
+## The month is summed before it is applied
+
+Stockpiles are floored at zero, so applying each site's income and upkeep as it is read is not
+the same as applying the month's net — and the difference is not small. A region whose consumers
+happen to be read before its earners clamps to zero on the way down and then keeps the income
+that follows; the identical set of sites built in a different order ends up broke. Read order is
+construction order, which has nothing to do with what a region is worth.
+
+It was found by a probe and fixed by summing per region first. Worth knowing that the obvious
+test does not catch it: all eight sites net negative whichever way they are applied, so both the
+right and the wrong code print zero. The case that discriminates is a set whose net is positive
+but which holds one large consumer — a hidden HQ and two front companies gives 140 summed and
+220 applied in order. A test that passes under both hypotheses is not a test.
+
 ## Not decided yet
 
 - The numbers. Every rate, cost and threshold is John's to tune, and they belong in the single

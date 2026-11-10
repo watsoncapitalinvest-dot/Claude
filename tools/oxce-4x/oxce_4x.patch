@@ -3668,7 +3668,7 @@ index 240b22a..c998115 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..21d236e 100644
+index 9ca9637..7d16021 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -55,6 +55,8 @@
@@ -3714,7 +3714,7 @@ index 9ca9637..21d236e 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2587,52 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2587,69 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -3727,7 +3727,15 @@ index 9ca9637..21d236e 100644
 +	// condition a ruleset author writes against COBRA_SITES_<TYPE>_<REGION>, with nothing in
 +	// here that knows what a Terror Drome is. A site type added later gets the same treatment
 +	// without touching this function.
-+	std::map<std::string, int> siteCounts;
++	// The month is summed per region and applied once, rather than site by site.
++	//
++	// Applying each site as it is read looked equivalent and is not, because stockpiles are
++	// floored at zero: a region whose consumers happen to be read before its earners clamps to
++	// zero on the way down and then keeps the income, while the same set of sites in a
++	// different order ends up broke. The order sites are read in is the order they were built,
++	// which is nothing to do with what a region is worth. Summing first makes the month's
++	// result depend only on what Cobra owns.
++	std::map<std::string, int> siteCounts, netFunds, netMateriel;
 +	for (auto *base : _alienBases)
 +	{
 +		const std::string &siteType = base->getSiteType();
@@ -3746,8 +3754,8 @@ index 9ca9637..21d236e 100644
 +			continue;                      // locateRegion already logged it
 +		}
 +		const std::string &regionType = region->getRules()->getType();
-+		_cobraEconomy->addFunds(regionType, rule->getFundsPerMonth() - rule->getUpkeepFunds());
-+		_cobraEconomy->addMateriel(regionType, rule->getMaterielPerMonth() - rule->getUpkeepMateriel());
++		netFunds[regionType] += rule->getFundsPerMonth() - rule->getUpkeepFunds();
++		netMateriel[regionType] += rule->getMaterielPerMonth() - rule->getUpkeepMateriel();
 +		siteCounts["COBRA_SITES_" + siteType + "_" + regionType]++;
 +	}
 +
@@ -3755,6 +3763,15 @@ index 9ca9637..21d236e 100644
 +	// instead of leaving its last value behind forever. Clearing by prefix rather than by a
 +	// remembered list is deliberate: the list would not survive a save, and the counters do, so
 +	// a reloaded game would keep crediting Cobra with sites the player had already destroyed.
++	for (const auto &pair : netFunds)
++	{
++		_cobraEconomy->addFunds(pair.first, pair.second);
++	}
++	for (const auto &pair : netMateriel)
++	{
++		_cobraEconomy->addMateriel(pair.first, pair.second);
++	}
++
 +	_alienStrategy->clearMissionRunsWithPrefix("COBRA_SITES_");
 +	for (const auto &pair : siteCounts)
 +	{
