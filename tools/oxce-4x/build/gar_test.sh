@@ -11,6 +11,20 @@ B=$S/oxc/oxce/build/bin
 L=/root/.local/share/openxcom/openxcom.log
 export DISPLAY=:99
 
+# Two of these running at once destroy each other: every run deletes the shared log at its
+# start, so the other one greps an empty file and reports a battle that generated fine as
+# "0 units, the battle did not generate". That happened, and the six FAILs it produced were
+# about the harness and not the engine. Second time today two runs have fought over shared
+# state, so it gets a lock rather than care.
+exec 9>/tmp/gar_test.lock
+if ! flock -n 9; then
+  echo "another gar_test.sh is already running - that would clobber the shared log."
+  echo "wait for it, or: pkill -9 -f gar_test.sh; pkill -9 -x openxcom"
+  exit 1
+fi
+# and never leave a game behind for the next run to trip over
+trap 'pkill -9 -x openxcom 2>/dev/null' EXIT
+
 run() {   # run <label> <extra env assignments...>
   pgrep Xvfb >/dev/null || (nohup Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 &)
   sleep 2
@@ -23,7 +37,9 @@ run() {   # run <label> <extra env assignments...>
   xdotool mousemove 232 736 click 1 2>/dev/null; sleep 8    # OK -> generates the map
   pkill -9 -x openxcom 2>/dev/null; sleep 1
   local total ranks kits guns
-  total=$(grep -c '\[gar\] spawned' "$L" 2>/dev/null || echo 0)
+  # grep -c already prints 0 and exits 1 on no match, so "|| echo 0" printed "0\n0" and
+  # printf then rejected it as an invalid number. The noise was hiding the real result.
+  total=$(grep -c '\[gar\] spawned' "$L" 2>/dev/null) || total=0
   ranks=$(grep '\[gar\] spawned' "$L" 2>/dev/null | grep -oE 'rank=[0-9]+' | sort | uniq -c \
           | awk '{printf "%s:%s ", $2, $1}')
   # The kit histogram is the whole point of the starvation run: "kit=0" on every man is the

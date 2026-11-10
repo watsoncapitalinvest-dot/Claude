@@ -464,9 +464,25 @@ Two numbers in `gijoe_tuning.rul` decide when:
 - `appliesToAllMissions: false` — raids on Cobra's own sites, not crash sites and terror sites.
   `0` switches the whole rule off.
 
-It is clamped in `deployAliens` only, **not** in the identical line in the reinforcement path,
-which has no region lookup in scope. Reinforcements arriving better armed than the garrison they
-are reinforcing is a question rather than an oversight, and it is John's.
+**Reinforcements obey both rules too.** John: *"I don't know why it wouldn't be set for the same
+region. If a region doesn't have enough guns to field a primary team they def can't field a
+secondary team."* He is right, and the earlier note here calling that a design question was this
+desk describing work it had not done. Two corrections went with it: the "identical line in the
+reinforcement path" was `deployCivilians`, read wrong at a function boundary, and reinforcements
+are not generated in `BattlescapeGenerator` at all — they land turns later, in `NextTurnState`.
+
+So the state is worked out in `deployAliens`, where the region is in scope, and stashed on the
+`SavedBattleGame` for the wave to read. It is **persisted**, or a mid-battle save and reload
+would hand the player a full-kit wave right after he had fought a thin and badly armed garrison,
+with nothing on screen to explain it.
+
+One trap, because the obvious fix looks like a one-liner: the engine already stashes
+`reinforcementsItemLevel`, so clamping *that* seems like the whole job. It is an index into
+`alienItemLevels`, and row 0 is `[0,0,0,0,0,0,0,1,1,2]` — it still issues rifles to one man in
+five. Clamping the row would have looked like a fix and leaked the better kit anyway, so the
+starvation *state* travels and the tier is clamped at the far end.
+
+The only path still exempt is `deployCivilians`, which is civilians.
 
 ### Guns and bodies are two different shortages
 

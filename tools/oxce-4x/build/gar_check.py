@@ -45,26 +45,28 @@ for line in open(LOG, encoding='utf-8', errors='ignore'):
 
 fails = []
 
-# The headcount half. The probe only logs the qty line when a penalty is in force, so with no
-# penalty expected there is nothing to check here and an absent line is correct, not a miss.
-if PENALTY > 0:
-    if not before:
-        fails.append('penalty %d expected but the engine never reached the subtraction - '
-                     'the lookup did not set headcountPenalty' % PENALTY)
-    for r, q in sorted(before.items()):
-        want = max(1, q - PENALTY)
-        got = spawned.get(r, 0)
-        if seen_penalty[r] != PENALTY:
-            fails.append('rank %d: engine applied minus%d, expected minus%d'
-                         % (r, seen_penalty[r], PENALTY))
-        if got != want:
-            fails.append('rank %d: %d before, penalty %d, so expected %d on the map, got %d'
-                         % (r, q, PENALTY, want, got))
-        else:
-            print('  ok   rank %d: %d - %d -> %d men, floor respected' % (r, q, PENALTY, want))
-elif before:
-    fails.append('no penalty expected, but the engine logged one for ranks %s'
-                 % sorted(before))
+# The probe logs the qty line on EVERY run, penalty or not - it sits above the subtraction, not
+# inside it. So a penalty of 0 is not "nothing to check": it is the control, and the check is
+# that the engine reports minus0 and puts every man it computed on the map. Treating the line's
+# presence as the failure was this checker's own first bug, and it would have failed the
+# baseline while the feature was working.
+if not before:
+    fails.append('the engine never logged the headcount arithmetic - probe not applied, or '
+                 'deployAliens was never reached')
+for r, q in sorted(before.items()):
+    want = max(1, q - PENALTY) if PENALTY > 0 else q
+    got = spawned.get(r, 0)
+    if seen_penalty[r] != PENALTY:
+        fails.append('rank %d: engine applied minus%d, expected minus%d'
+                     % (r, seen_penalty[r], PENALTY))
+    elif got != want:
+        fails.append('rank %d: %d before, penalty %d, so expected %d on the map, got %d'
+                     % (r, q, PENALTY, want, got))
+    elif PENALTY > 0:
+        floor = ' (floor held)' if q - PENALTY < 1 else ''
+        print('  ok   rank %d: %d - %d -> %d men%s' % (r, q, PENALTY, want, floor))
+    else:
+        print('  ok   rank %d: %d men, unpenalised' % (r, q))
 
 # The kit half.
 total = sum(kits.values())

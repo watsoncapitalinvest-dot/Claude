@@ -42,6 +42,33 @@ pixel is underneath, which is what makes soft edges and ground shadows work.
 
 ## Things that cost time to find, recorded so they are not re-learned
 
+**`locateRegion` logs `LOG_ERROR` when it finds nothing, and a New Battle parks its craft at
+[0, 0].** Adding a thirteenth caller to it put `Failed to find a region at location [0, 0]` into
+the log on **every New Battle** — the one path the mod is actually tested from. The craft was a
+fallback for the garrison lookup's position, described as "close enough, since it is parked on
+the target"; in a New Battle it is parked on nothing. A craft-only battle is a New Battle or a
+craft fight and neither is a raid on a Cobra site, so the fallback bought nothing and cost a
+false error. Removed. Before adding a `locateRegion` call, ask what it does on a position that
+is in no region.
+
+**`reinforcementsItemLevel` is a table row, not a tier.** Reinforcements are generated in
+`NextTurnState::deployReinforcements`, not in `BattlescapeGenerator`, and they read a stashed
+`int month` that indexes `alienItemLevels`. Clamping that row to 0 looks like the way to
+down-kit a wave and is not: row 0 is `[0,0,0,0,0,0,0,1,1,2]` and still issues the middle tier to
+one man in five. The tier has to be clamped where it is drawn.
+
+**Two copies of a UI-driving test destroy each other silently.** Every `gar_test.sh` run deletes
+the shared `openxcom.log` at its start, so two runs at once leave one of them grepping an empty
+file — it reported six clean failures, *"0 units, the battle did not generate"*, about battles
+that had generated perfectly. Second occurrence of this today (the first was an xdotool loop from
+a stopped task still firing into a new window). The runner now takes an `flock` and refuses, and
+traps EXIT to kill its own game. A harness that can produce fiction is worse than no harness.
+
+**`grep -c` already prints `0` and exits 1.** `total=$(grep -c ... || echo 0)` therefore printed
+`0\n0`, and `printf '%3d'` rejected it as an invalid number — noise that sat directly on top of
+the real result and helped hide it. Use `total=$(grep -c ...) || total=0`.
+
+
 **The game reads its mod from `~/.local/share/openxcom/mods/GIJoe4x`, not from the scratchpad.**
 `cobraEconomy:` was written into the scratchpad's `gijoe_tuning.rul`, built, tested, shipped and
 documented — and the directory the game loads never got the block. `tryRead` left the threshold
