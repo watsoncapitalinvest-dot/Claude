@@ -27,7 +27,13 @@ refusing a dataset for being absent from the first place looked is a false negat
 whole terrain its materials. That happened: NAWILD was refused as missing while the game was
 loading it, and the only reason anyone found out was that the probe printed a line for it.
 
-usage: apply_materials.py <materials.json> <terrain dir>[:<more>...] <ruleset dir> <out.rul>
+The ruleset argument is a list for the same reason. The hole report is only as wide as the
+rulesets it reads, and the first version read the mod's own and nothing else - so it said 627
+tiles were tagged and five sets were not, while a Terror Drome assault was quietly loading
+X-COM's alien-base tilesets through a terrain declared in the master ruleset. A report that
+cannot see a hole will tell you there isn't one.
+
+usage: apply_materials.py <materials.json> <terrain dir>[:<more>...] <ruleset dir>[:<more>...] <out.rul>
 """
 import sys, os, json, glob, re
 
@@ -61,7 +67,11 @@ def declared_datasets():
     Parsed rather than hardcoded, so a terrain added later shows up in the hole report without
     anyone remembering to update a list."""
     found = set()
-    for path in glob.glob(os.path.join(RULESET, '*.rul')):
+    paths = []
+    for root in RULESET.split(':'):
+        if root:
+            paths += glob.glob(os.path.join(root, '*.rul'))
+    for path in paths:
         with open(path, encoding='utf-8', errors='replace') as fh:
             inside = False
             indent = None
@@ -139,7 +149,20 @@ for r in refused:
 
 untagged = declared_datasets() - set(tags) - BUILTIN
 if untagged:
-    print('\n   LOADED BY A TERRAIN AND NEVER TAGGED - every tile reads as unknown:')
+    known, unknown_count = [], []
     for name in sorted(untagged):
         have = mcd_records(name)
-        print('      %-10s %s' % (name, ('%d tiles' % have) if have else 'count unknown here'))
+        (known if have else unknown_count).append((name, have))
+    hole = sum(h for _, h in known)
+    print('\n   LOADED BY A TERRAIN AND NEVER TAGGED - every tile reads as unknown,')
+    print('   which the matrix prices like masonry:')
+    for name, have in known:
+        print('      %-10s %4d tiles' % (name, have))
+    for name, _ in unknown_count:
+        print('      %-10s    ? tiles - no MCD here, so not counted in the total' % name)
+    print('      %s' % ('-' * 22))
+    print('      %-10s %4d tiles untagged, against %d tagged' % ('TOTAL', hole, total))
+    print('\n   These cannot be derived. The MCD record carries Armor, Flammable, Fuel and')
+    print('   Footstep, and none of them separates the materials: measured against the 66')
+    print('   vanilla tiles tagged by hand, Footstep is flat at 2 and Armor runs 4-50 for')
+    print('   light against 5-35 for wood. Reading them is eyeballing render_tileset.py.')

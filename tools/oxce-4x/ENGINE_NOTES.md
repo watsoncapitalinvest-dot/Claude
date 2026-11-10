@@ -160,6 +160,24 @@ Shipping the tuning file with the defaults in it makes the obvious test useless 
 prints the same numbers whether the file was read or ignored — so `build/pen_test.sh` changes
 each thing to a value no default can produce.
 
+**Coverage is 627 tagged against at least 324 untagged, and the first count of that was wrong.**
+The hole report reads the rulesets it is given, and it was given the mod's own and nothing else,
+so it reported five small gaps while a Terror Drome assault was quietly loading X-COM's
+alien-base tilesets through `UBASE`, a terrain declared in the master ruleset. Widened to scan
+both. What is still untagged is the UFO and alien-base interiors — `U_BASE` 67, `U_WALL02` 47,
+`PLANE` 65, `MARS` 36, `U_EXT02` 34, `UFO1` 20, `U_DISEC2` 17, `U_OPER2` 15, `U_PODS` 11,
+`U_BITS` 8, `BRAIN` 4 — plus thirteen outdoor sets (DESERT, FOREST, JUNGLE, MOUNT, POLAR, URBAN,
+ROADS and friends) whose MCDs are not in this container at all, so they cannot be counted here
+let alone tagged.
+
+**Materials cannot be derived from the MCD record, and this was measured rather than assumed.**
+The record carries `Armor`, `Flammable`, `Fuel` and `Footstep`, which all sound like they should
+separate wood from concrete. Cross-tabulated against the 66 genuinely vanilla tiles tagged by
+hand, `Footstep` is flat at 2 for everything, `Armor` runs 4–50 for light against 5–35 for wood
+and 5–35 for masonry, and `Flammable` is noisier still. Any rule built on them would be guessing
+dressed as arithmetic. Reading the art with `build/render_tileset.py` is the method; there is no
+shortcut.
+
 Written and compiling; not yet watched in a real firefight.
 
 ## Not done
