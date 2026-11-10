@@ -949,17 +949,60 @@ index 8fa87f8..628a943 100644
  	switch (unitDir)
  	{
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..8ebe556 100644
+index 839f803..1d8cc78 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -172,6 +172,7 @@ set ( engine_src
+@@ -172,6 +172,8 @@ set ( engine_src
    Engine/Sound.cpp
    Engine/SoundSet.cpp
    Engine/State.cpp
 +  Engine/HiColor.cpp
++  Engine/HiUI.cpp
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
+diff --git a/src/Engine/Font.cpp b/src/Engine/Font.cpp
+index 1804fb9..7c50bf9 100644
+--- a/src/Engine/Font.cpp
++++ b/src/Engine/Font.cpp
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "Font.h"
++#include "HiUI.h"
+ #include "DosFont.h"
+ #include "Surface.h"
+ #include "FileMap.h"
+@@ -65,6 +66,7 @@ void Font::load(const YAML::YamlNodeReader& reader)
+ 		UString chars = Unicode::convUtf8ToUtf32(imageReader["chars"].readVal<std::string>());
+ 		image.surface = new Surface(image.width, image.height);
+ 		image.surface->loadImage(file);
++		HiUI::registerFontImage(image.surface, file);
+ 		_images.push_back(image);
+ 		init(_images.size() - 1, chars);
+ 	}
+diff --git a/src/Engine/Game.cpp b/src/Engine/Game.cpp
+index f353397..12ee74a 100644
+--- a/src/Engine/Game.cpp
++++ b/src/Engine/Game.cpp
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "Game.h"
++#include "HiUI.h"
+ #include "../resource.h"
+ #include <algorithm>
+ #include <cmath>
+@@ -363,7 +364,8 @@ void Game::run()
+ 					(*i)->blit();
+ 				}
+ 				_fpsCounter->blit(_screen->getSurface());
+-				_cursor->blit(_screen->getSurface());
++				if (_screen->hiUiActive()) HiUI::cursor(_cursor->getX(), _cursor->getY(), _cursor->getVisible());
++				else _cursor->blit(_screen->getSurface());
+ 				_screen->flip();
+ 			}
+ 		}
 diff --git a/src/Engine/HiColor.cpp b/src/Engine/HiColor.cpp
 new file mode 100644
 index 0000000..91e9e71
@@ -1212,8 +1255,434 @@ index 0000000..cf159bb
 +	bool composite(SDL_Surface *map8, SDL_Surface *screen32, int dx, int dy);
 +}
 +}
+diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
+new file mode 100644
+index 0000000..a865228
+--- /dev/null
++++ b/src/Engine/HiUI.cpp
+@@ -0,0 +1,382 @@
++#include "HiUI.h"
++#include "HiColor.h"
++#include "Surface.h"
++#include "FileMap.h"
++#include "Logger.h"
++#include "Font.h"
++#include "../Interface/Window.h"
++#include "../Interface/TextButton.h"
++#include "../Interface/Text.h"
++#include <SDL_image.h>
++#include <vector>
++#include <unordered_map>
++#include <algorithm>
++#include <cstdlib>
++#include <cstring>
++#include <cmath>
++
++namespace OpenXcom
++{
++namespace HiUI
++{
++
++namespace
++{
++	struct Atlas { std::vector<Uint8> cov; int w = 0, h = 0, k = 1; };
++	std::unordered_map<const Surface*, Atlas> atlases;
++
++	SDL_Surface *base = nullptr;
++	int bw = 0, bh = 0, sw = 0, sh = 0;
++	std::vector<int> xs, ys;          // base pixel edge -> screen pixel
++	std::vector<Uint32> over;         // screen-sized, 0x00RRGGBB
++	std::vector<Uint8> tag, valid;    // base-sized
++	std::vector<Uint8> scratch;       // per-widget "was valid before its blit"
++	bool any = false;
++	int curX = 0, curY = 0; bool curOn = false;
++
++	struct BgCache { const Surface *bg; Uint32 palHash; int w, h; std::vector<Uint32> px; };
++	std::vector<BgCache> bgCache;
++
++	inline Uint32 rgb(int r, int g, int b) { return ((Uint32)r << 16) | ((Uint32)g << 8) | (Uint32)b; }
++	inline Uint32 mix(Uint32 a, Uint32 b, int t) // t 0..255 of b
++	{
++		const int r = (((a >> 16) & 255) * (255 - t) + ((b >> 16) & 255) * t) / 255;
++		const int g = (((a >> 8) & 255) * (255 - t) + ((b >> 8) & 255) * t) / 255;
++		const int bl = ((a & 255) * (255 - t) + (b & 255) * t) / 255;
++		return rgb(r, g, bl);
++	}
++	inline const Uint8 *row8(int y) { return (const Uint8*)base->pixels + y * base->pitch; }
++
++	struct R { int x0, y0, x1, y1; };
++	bool clipBase(R &r)
++	{
++		r.x0 = std::max(r.x0, 0); r.y0 = std::max(r.y0, 0); r.x1 = std::min(r.x1, bw); r.y1 = std::min(r.y1, bh);
++		return r.x0 < r.x1 && r.y0 < r.y1;
++	}
++	void claim(const R &r) // these base pixels now show the overlay
++	{
++		for (int y = r.y0; y < r.y1; ++y)
++		{
++			const Uint8 *p = row8(y);
++			for (int x = r.x0; x < r.x1; ++x) { tag[y * bw + x] = p[x]; valid[y * bw + x] = 1; }
++		}
++		any = true;
++	}
++
++	Uint32 palHash(const SDL_Color *c)
++	{
++		Uint32 h = 2166136261u;
++		for (int i = 0; i < 256; ++i) { h = (h ^ c[i].r) * 16777619u; h = (h ^ c[i].g) * 16777619u; h = (h ^ c[i].b) * 16777619u; }
++		return h;
++	}
++
++	/// The window's 8-bit backdrop, smoothly enlarged and dimmed so text reads on it.
++	const BgCache &backdrop(const Surface *bg)
++	{
++		const SDL_Color *pal = base->format->palette->colors;
++		const Uint32 h = palHash(pal);
++		const int W = xs[std::min(bw, bg->getWidth())] - xs[0], H = ys[std::min(bh, bg->getHeight())] - ys[0];
++		for (auto &c : bgCache) if (c.bg == bg && c.palHash == h && c.w == W && c.h == H) return c;
++		if (bgCache.size() > 5) bgCache.erase(bgCache.begin());
++		bgCache.push_back(BgCache{ bg, h, W, H, std::vector<Uint32>((size_t)W * H) });
++		BgCache &c = bgCache.back();
++		const int gw = bg->getWidth(), gh = bg->getHeight(), pitch = bg->getPitch();
++		const Uint8 *src = bg->getBuffer();
++		for (int y = 0; y < H; ++y)
++		{
++			const double fy = (y + 0.5) * gh / H - 0.5; const int y0 = std::max(0, (int)std::floor(fy)), y1 = std::min(gh - 1, y0 + 1); const int ty = (int)((fy - y0) * 256); const int wy = std::min(256, std::max(0, ty));
++			for (int x = 0; x < W; ++x)
++			{
++				const double fx = (x + 0.5) * gw / W - 0.5; const int x0 = std::max(0, (int)std::floor(fx)), x1 = std::min(gw - 1, x0 + 1); const int wx = std::min(256, std::max(0, (int)((fx - x0) * 256)));
++				const SDL_Color &a = pal[src[y0 * pitch + x0]], &b = pal[src[y0 * pitch + x1]], &d = pal[src[y1 * pitch + x0]], &e = pal[src[y1 * pitch + x1]];
++				int r = ((a.r * (256 - wx) + b.r * wx) * (256 - wy) + (d.r * (256 - wx) + e.r * wx) * wy) >> 16;
++				int g = ((a.g * (256 - wx) + b.g * wx) * (256 - wy) + (d.g * (256 - wx) + e.g * wx) * wy) >> 16;
++				int bl = ((a.b * (256 - wx) + b.b * wx) * (256 - wy) + (d.b * (256 - wx) + e.b * wx) * wy) >> 16;
++				const int l = (r * 3 + g * 6 + bl) / 10;          // pull towards grey and darken: a watermark, not a picture
++				r = (r + l) / 2; g = (g + l) / 2; bl = (bl + l) / 2;
++				c.px[(size_t)y * W + x] = rgb(14 + r * 34 / 100, 17 + g * 36 / 100, 16 + bl * 34 / 100);
++			}
++		}
++		return c;
++	}
++
++	void fillRect(int x0, int y0, int x1, int y1, Uint32 c, int alpha = 255)
++	{
++		x0 = std::max(x0, 0); y0 = std::max(y0, 0); x1 = std::min(x1, sw); y1 = std::min(y1, sh);
++		for (int y = y0; y < y1; ++y)
++		{
++			Uint32 *o = over.data() + (size_t)y * sw;
++			if (alpha >= 255) for (int x = x0; x < x1; ++x) o[x] = c;
++			else for (int x = x0; x < x1; ++x) o[x] = mix(o[x], c, alpha);
++		}
++	}
++
++	/// Rounded panel with a 1-2 px rim.
++	void panel(int x0, int y0, int x1, int y1, int rad, Uint32 top, Uint32 bottom, Uint32 rim, int rimW)
++	{
++		const int cx0 = std::max(x0, 0), cy0 = std::max(y0, 0), cx1 = std::min(x1, sw), cy1 = std::min(y1, sh);
++		const int h = std::max(1, y1 - y0);
++		for (int y = cy0; y < cy1; ++y)
++		{
++			Uint32 *o = over.data() + (size_t)y * sw;
++			const Uint32 fill = mix(top, bottom, (y - y0) * 255 / h);
++			for (int x = cx0; x < cx1; ++x)
++			{
++				// distance to the rounded outline
++				const int dx = std::max(std::max(x0 + rad - x, x - (x1 - 1 - rad)), 0), dy = std::max(std::max(y0 + rad - y, y - (y1 - 1 - rad)), 0);
++				double d;
++				if (dx > 0 && dy > 0) d = rad - std::sqrt((double)dx * dx + (double)dy * dy);
++				else d = std::min(std::min(x - x0, x1 - 1 - x), std::min(y - y0, y1 - 1 - y)) + 0.5;
++				if (d <= -0.5) continue;                           // outside the corner: leave what is there
++				Uint32 c = d < rimW ? rim : fill;
++				if (d < 0.5) c = mix(o[x], c, (int)((d + 0.5) * 255));
++				o[x] = c;
++			}
++		}
++	}
++
++	void glyphs(const Text *t, int ox, int oy, const R &clip, Uint32 ink, bool useMask, const R &maskRect)
++	{
++		const SDL_Color *pal = base->format->palette->colors;
++		for (const auto &g : t->getHiGlyphs())
++		{
++			if (!g.sheet) continue;
++			auto it = atlases.find(g.sheet);
++			if (it == atlases.end()) continue;
++			const Atlas &a = it->second;
++			const int bx0 = ox + g.x, by0 = oy + g.y, bx1 = bx0 + g.w, by1 = by0 + g.h;
++			if (bx1 <= clip.x0 || by1 <= clip.y0 || bx0 >= clip.x1 || by0 >= clip.y1 || bx0 < 0 || by0 < 0 || bx1 > bw || by1 > bh) continue;
++			Uint32 col = ink;
++			if (!col)
++			{
++				const SDL_Color &c = pal[g.color];
++				col = mix(rgb(c.r, c.g, c.b), rgb(232, 228, 210), 150);   // keep the hue's meaning, read as off-white
++			}
++			const int X0 = xs[bx0], X1 = xs[bx1], Y0 = ys[by0], Y1 = ys[by1];
++			const double kx = (double)(g.w * a.k) / (X1 - X0), ky = (double)(g.h * a.k) / (Y1 - Y0);
++			for (int Y = Y0; Y < Y1; ++Y)
++			{
++				const int by = by0 + (Y - Y0) * g.h / (Y1 - Y0);
++				if (by < clip.y0 || by >= clip.y1) continue;
++				const double fy = g.sy * a.k + (Y - Y0 + 0.5) * ky - 0.5; const int sy0 = std::max(0, (int)fy), sy1 = std::min(a.h - 1, sy0 + 1); const int wy = (int)((fy - sy0) * 256);
++				Uint32 *o = over.data() + (size_t)Y * sw;
++				for (int X = X0; X < X1; ++X)
++				{
++					const int bx = bx0 + (X - X0) * g.w / (X1 - X0);
++					if (bx < clip.x0 || bx >= clip.x1) continue;
++					if (useMask && !scratch[(by - maskRect.y0) * (maskRect.x1 - maskRect.x0) + (bx - maskRect.x0)]) continue;
++					const double fx = g.sx * a.k + (X - X0 + 0.5) * kx - 0.5; const int sx0 = std::max(0, (int)fx), sx1 = std::min(a.w - 1, sx0 + 1); const int wx = (int)((fx - sx0) * 256);
++					const int c00 = a.cov[(size_t)sy0 * a.w + sx0], c01 = a.cov[(size_t)sy0 * a.w + sx1], c10 = a.cov[(size_t)sy1 * a.w + sx0], c11 = a.cov[(size_t)sy1 * a.w + sx1];
++					const int cov = ((c00 * (256 - wx) + c01 * wx) * (256 - wy) + (c10 * (256 - wx) + c11 * wx) * wy) >> 16;
++					if (cov > 0) o[X] = mix(o[X], col, std::min(255, cov));
++				}
++			}
++		}
++	}
++
++	bool shown(const Surface *s) { return s->getVisible() && !s->isHidden(); }
++	R rectOf(const Surface *s) { return R{ s->getX(), s->getY(), s->getX() + s->getWidth(), s->getY() + s->getHeight() }; }
++}
++
++bool enabled()
++{
++	static int on = -1;
++	if (on < 0)
++	{
++		const char *e = getenv("OXCE_HIUI");
++		on = e ? (atoi(e) != 0) : HiColor::enabled();
++	}
++	return on != 0;
++}
++
++void registerFontImage(const Surface *sheet8, const std::string &file)
++{
++	if (!enabled() || !sheet8) return;
++	const auto dot = file.find_last_of('.');
++	if (dot == std::string::npos) return;
++	const std::string twin = file.substr(0, dot) + "_hi.png";
++	if (!FileMap::fileExists(twin)) return;
++	SDL_Surface *img = IMG_Load_RW(FileMap::getRWops(twin), SDL_TRUE);
++	if (!img) return;
++	SDL_PixelFormat fmt = {};
++	fmt.BitsPerPixel = 32; fmt.BytesPerPixel = 4;
++	fmt.Rmask = 0x00FF0000; fmt.Gmask = 0x0000FF00; fmt.Bmask = 0x000000FF; fmt.Amask = 0xFF000000;
++	fmt.Rshift = 16; fmt.Gshift = 8; fmt.Bshift = 0; fmt.Ashift = 24;
++	SDL_Surface *conv = SDL_ConvertSurface(img, &fmt, SDL_SWSURFACE);
++	SDL_FreeSurface(img);
++	if (!conv) return;
++	const int k = conv->w / sheet8->getWidth();
++	if (k < 1 || conv->w != sheet8->getWidth() * k || conv->h != sheet8->getHeight() * k)
++	{
++		Log(LOG_WARNING) << "Sharp font sheet " << twin << " does not match its 8-bit sheet";
++		SDL_FreeSurface(conv); return;
++	}
++	Atlas a; a.w = conv->w; a.h = conv->h; a.k = k; a.cov.resize((size_t)a.w * a.h);
++	SDL_LockSurface(conv);
++	for (int y = 0; y < a.h; ++y)
++	{
++		const Uint32 *p = (const Uint32*)((const Uint8*)conv->pixels + y * conv->pitch);
++		for (int x = 0; x < a.w; ++x) a.cov[(size_t)y * a.w + x] = (Uint8)(p[x] >> 24);
++	}
++	SDL_UnlockSurface(conv); SDL_FreeSurface(conv);
++	atlases[sheet8] = std::move(a);
++	Log(LOG_INFO) << "Sharp font sheet: " << twin << " (x" << k << ")";
++}
++
++void beginFrame(SDL_Surface *base8, int screenW, int screenH, int left, int top, int right, int bottom)
++{
++	base = nullptr; any = false; curOn = false;
++	if (!enabled() || !base8 || base8->format->BitsPerPixel != 8) return;
++	base = base8;
++	if (bw != base8->w || bh != base8->h || sw != screenW || sh != screenH || xs.empty() || xs[0] != left || ys[0] != top)
++	{
++		bw = base8->w; bh = base8->h; sw = screenW; sh = screenH;
++		xs.resize(bw + 1); ys.resize(bh + 1);
++		for (int i = 0; i <= bw; ++i) xs[i] = left + (int)((double)i * (sw - left - right) / bw + 0.5);
++		for (int i = 0; i <= bh; ++i) ys[i] = top + (int)((double)i * (sh - top - bottom) / bh + 0.5);
++		over.assign((size_t)sw * sh, 0); tag.assign((size_t)bw * bh, 0); valid.assign((size_t)bw * bh, 0);
++		bgCache.clear();
++	}
++	else std::fill(valid.begin(), valid.end(), 0);
++}
++
++void before(Surface *w)
++{
++	if (!base || !any) return;
++	Text *t = dynamic_cast<Text*>(w);
++	if (!t || !shown(t)) return;
++	R r = rectOf(t);
++	if (!clipBase(r)) { scratch.clear(); return; }
++	scratch.assign((size_t)(r.x1 - r.x0) * (r.y1 - r.y0), 0);
++	for (int y = r.y0; y < r.y1; ++y)
++	{
++		const Uint8 *p = row8(y);
++		for (int x = r.x0; x < r.x1; ++x)
++			scratch[(size_t)(y - r.y0) * (r.x1 - r.x0) + (x - r.x0)] = valid[y * bw + x] && tag[y * bw + x] == p[x];
++	}
++}
++
++void after(Surface *w)
++{
++	if (!base || !shown(w)) return;
++	if (Window *win = dynamic_cast<Window*>(w))
++	{
++		if (!win->isPoppedUp()) return;
++		R r = rectOf(win);
++		if (!clipBase(r)) return;
++		const int X0 = xs[r.x0], Y0 = ys[r.y0], X1 = xs[r.x1], Y1 = ys[r.y1];
++		const Surface *bg = win->getBackground();
++		if (bg && bg->getBuffer())
++		{
++			const BgCache &c = backdrop(bg);
++			// backdrop space starts at the window's own origin, shifted by its dx/dy
++			const int ox = xs[std::max(0, std::min(bw, r.x0 - win->getX() + win->getDX() + 0))] - xs[0];
++			const int oy = ys[std::max(0, std::min(bh, r.y0 - win->getY() + win->getDY() + 0))] - ys[0];
++			for (int Y = Y0; Y < Y1; ++Y)
++			{
++				const int sy = std::min(c.h - 1, std::max(0, Y - Y0 - (ys[std::max(0, std::min(bh, win->getDY()))] - ys[0]) + 0 * oy));
++				Uint32 *o = over.data() + (size_t)Y * sw;
++				const Uint32 *s = c.px.data() + (size_t)sy * c.w;
++				const int shift = xs[std::max(0, std::min(bw, win->getDX()))] - xs[0];
++				for (int X = X0; X < X1; ++X) o[X] = s[std::min(c.w - 1, std::max(0, X - X0 - shift + 0 * ox))];
++			}
++		}
++		else fillRect(X0, Y0, X1, Y1, rgb(22, 26, 24));
++		// thin frame, heavier accent along the top
++		const Uint32 line = rgb(150, 156, 140);
++		fillRect(X0, Y0, X1, Y0 + 3, rgb(150, 36, 30));
++		fillRect(X0, Y1 - 1, X1, Y1, line, 110); fillRect(X0, Y0 + 3, X0 + 1, Y1, line, 110); fillRect(X1 - 1, Y0 + 3, X1, Y1, line, 110);
++		claim(r);
++		return;
++	}
++	if (TextButton *b = dynamic_cast<TextButton*>(w))
++	{
++		R r = rectOf(b);
++		if (!clipBase(r) || r.x1 - r.x0 != b->getWidth() || r.y1 - r.y0 != b->getHeight()) return;
++		const int X0 = xs[r.x0], Y0 = ys[r.y0], X1 = xs[r.x1], Y1 = ys[r.y1];
++		const bool down = b->isPressedLook();
++		const int m = std::max(1, (ys[1] - ys[0]) / 3);     // a little air between stacked buttons
++		if (down) panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(120, 30, 26), rgb(96, 24, 21), rgb(214, 96, 84), 1);
++		else panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(62, 72, 62), rgb(46, 54, 47), rgb(112, 122, 106), 1);
++		// the rim of the 8-bit button outside the rounded panel would show through: cover it with what is behind
++		claim(r);
++		if (const Text *t = b->getTextWidget()) glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r);
++		return;
++	}
++	if (Text *t = dynamic_cast<Text*>(w))
++	{
++		if (!any || scratch.empty()) return;
++		R r = rectOf(t);
++		if (!clipBase(r) || scratch.size() != (size_t)(r.x1 - r.x0) * (r.y1 - r.y0)) return;
++		glyphs(t, t->getX(), t->getY(), r, 0, true, r);
++		for (int y = r.y0; y < r.y1; ++y)
++		{
++			const Uint8 *p = row8(y);
++			for (int x = r.x0; x < r.x1; ++x)
++				if (scratch[(size_t)(y - r.y0) * (r.x1 - r.x0) + (x - r.x0)]) tag[y * bw + x] = p[x];
++		}
++		scratch.clear();
++	}
++}
++
++void cursor(int x, int y, bool visible)
++{
++	curX = x; curY = y; curOn = visible;
++}
++
++void composite(SDL_Surface *base8, SDL_Surface *screen32)
++{
++	if (!base || base8 != base || screen32->format->BitsPerPixel != 32 || screen32->w != sw || screen32->h != sh) return;
++	const SDL_PixelFormat *f = screen32->format;
++	const bool direct = f->Rshift == 16 && f->Gshift == 8 && f->Bshift == 0;
++	if (SDL_MUSTLOCK(screen32)) SDL_LockSurface(screen32);
++	auto put = [&](int X, int Y, Uint32 c)
++	{
++		((Uint32*)((Uint8*)screen32->pixels + Y * screen32->pitch))[X] = direct ? c : SDL_MapRGB(f, (c >> 16) & 255, (c >> 8) & 255, c & 255);
++	};
++	if (any)
++	{
++		for (int by = 0; by < bh; ++by)
++		{
++			const Uint8 *p = row8(by);
++			for (int bx = 0; bx < bw; ++bx)
++			{
++				if (!valid[by * bw + bx] || tag[by * bw + bx] != p[bx]) continue;
++				for (int Y = ys[by]; Y < ys[by + 1]; ++Y)
++				{
++					const Uint32 *o = over.data() + (size_t)Y * sw;
++					Uint32 *d = (Uint32*)((Uint8*)screen32->pixels + Y * screen32->pitch);
++					if (direct) memcpy(d + xs[bx], o + xs[bx], (xs[bx + 1] - xs[bx]) * 4);
++					else for (int X = xs[bx]; X < xs[bx + 1]; ++X) put(X, Y, o[X]);
++				}
++			}
++		}
++	}
++	if (curOn && curX >= 0 && curY >= 0 && curX < bw && curY < bh)
++	{
++		// a plain arrow: tip at the hot spot
++		const double s = std::max(1.0, (ys[1] - ys[0]) / 5.0);
++		const double P[7][2] = { {0,0},{0,17},{4,13},{7,20},{10,19},{7,12},{12,12} };
++		const int ox = xs[curX], oy = ys[curY];
++		auto inside = [&](double x, double y)
++		{
++			bool in = false;
++			for (int i = 0, j = 6; i < 7; j = i++)
++				if (((P[i][1] > y) != (P[j][1] > y)) && (x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0])) in = !in;
++			return in;
++		};
++		for (int Y = (int)(-2 * s); Y < (int)(22 * s); ++Y)
++			for (int X = (int)(-2 * s); X < (int)(14 * s); ++X)
++			{
++				const int SX = ox + X, SY = oy + Y;
++				if (SX < 0 || SY < 0 || SX >= sw || SY >= sh) continue;
++				const double x = X / s, y = Y / s;
++				if (inside(x, y)) put(SX, SY, rgb(236, 232, 214));
++				else if (inside(x - 1.1, y) || inside(x + 1.1, y) || inside(x, y - 1.1) || inside(x, y + 1.1)) put(SX, SY, rgb(18, 20, 19));
++			}
++	}
++	if (SDL_MUSTLOCK(screen32)) SDL_UnlockSurface(screen32);
++}
++
++}
++}
+diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
+new file mode 100644
+index 0000000..0455d2b
+--- /dev/null
++++ b/src/Engine/HiUI.h
+@@ -0,0 +1,32 @@
++#pragma once
++/*
++ * G.I. Joe 4x: menus at screen resolution, in full colour.
++ *
++ * The game still lays out and draws every screen in 8 bits at its base size. Widgets this module
++ * knows (windows, text buttons, text) are drawn a second time, at the display's own resolution,
++ * into an overlay. A base pixel shows the overlay while its 8-bit value is still what it was when
++ * the last such widget finished drawing there; anything else drawn on top shows through as before.
++ */
++#include <SDL.h>
++#include <string>
++
++namespace OpenXcom
++{
++class Surface;
++
++namespace HiUI
++{
++	bool enabled();
++	/// Start of a frame: the game's 8-bit buffer and the display it will be zoomed onto.
++	void beginFrame(SDL_Surface *base8, int screenW, int screenH, int left, int top, int right, int bottom);
++	/// Around every widget blit in State::blit.
++	void before(Surface *widget);
++	void after(Surface *widget);
++	/// Mouse pointer for this frame, in base coordinates; replaces the 8-bit cursor.
++	void cursor(int x, int y, bool visible);
++	/// A font sheet's sharp twin: <file>_hi.png, each cell K times the size of the 8-bit one.
++	void registerFontImage(const Surface *sheet8, const std::string &file);
++	/// After the 8-bit buffer has been zoomed onto the 32-bit display.
++	void composite(SDL_Surface *base8, SDL_Surface *screen32);
++}
++}
 diff --git a/src/Engine/Screen.cpp b/src/Engine/Screen.cpp
-index ae9083d..cc59f1a 100644
+index ae9083d..965c582 100644
 --- a/src/Engine/Screen.cpp
 +++ b/src/Engine/Screen.cpp
 @@ -1,3 +1,4 @@
@@ -1221,15 +1690,16 @@ index ae9083d..cc59f1a 100644
  /*
   * Copyright 2010-2016 OpenXcom Developers.
   *
-@@ -17,6 +18,7 @@
+@@ -17,6 +18,8 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "Screen.h"
++#include "HiUI.h"
 +#include "HiColor.h"
  #include "../resource.h"
  #include <algorithm>
  #include <sstream>
-@@ -188,6 +190,19 @@ void Screen::handle(Action *action)
+@@ -188,6 +191,19 @@ void Screen::handle(Action *action)
   * of the buffer are resized by that factor (eg. 2 = doubled)
   * before being put on screen.
   */
@@ -1249,7 +1719,7 @@ index ae9083d..cc59f1a 100644
  void Screen::flip()
  {
  	// perform any requested palette update
-@@ -203,6 +218,43 @@ void Screen::flip()
+@@ -203,6 +219,45 @@ void Screen::flip()
  
  	if (getWidth() != _baseWidth || getHeight() != _baseHeight || useOpenGL())
  	{
@@ -1273,6 +1743,7 @@ index ae9083d..cc59f1a 100644
 +			SDL_SetColorKey(tmp, SDL_SRCCOLORKEY, 0);
 +			SDL_BlitSurface(tmp, 0, _screen, 0);
 +			mapOverlay = nullptr;
++			HiUI::composite(_surface.get(), _screen);
 +		}
 +		else if (_surface->format->BitsPerPixel == 8 && _screen->format->BitsPerPixel == 32 && !useOpenGL())
 +		{
@@ -1288,12 +1759,28 @@ index ae9083d..cc59f1a 100644
 +			Zoom::flipWithZoom(_surface.get(), tmp8, _topBlackBand, _bottomBlackBand, _leftBlackBand, _rightBlackBand, nullptr);
 +			SDL_SetColorKey(tmp8, 0, 0);
 +			SDL_BlitSurface(tmp8, 0, _screen, 0);
++			HiUI::composite(_surface.get(), _screen);
 +		}
 +		else
  		Zoom::flipWithZoom(_surface.get(), _screen, _topBlackBand, _bottomBlackBand, _leftBlackBand, _rightBlackBand, &glOutput);
  	}
  	else
-@@ -350,9 +402,10 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
+@@ -236,6 +291,14 @@ void Screen::clear()
+ {
+ 	Surface::CleanSdlSurface(_surface.get());
+ 	Surface::CleanSdlSurface(_screen);
++	if (hiUiActive()) HiUI::beginFrame(_surface.get(), _screen->w, _screen->h, _leftBlackBand, _topBlackBand, _rightBlackBand, _bottomBlackBand);
++	else HiUI::beginFrame(nullptr, 0, 0, 0, 0, 0, 0);
++}
++
++bool Screen::hiUiActive() const
++{
++	return HiUI::enabled() && !useOpenGL() && _screen && _screen->format->BitsPerPixel == 32 && _surface->format->BitsPerPixel == 8
++		&& (getWidth() != _baseWidth || getHeight() != _baseHeight);
+ }
+ 
+ /**
+@@ -350,9 +413,10 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
  	}
  	SDL_SetColorKey(_surface.get(), 0, 0); // turn off color key!
  
@@ -1306,7 +1793,7 @@ index ae9083d..cc59f1a 100644
  
  #if defined __linux__ || defined _WIN32 || defined  __CYGWIN__
  		// Workaround for segfault when switching to opengl
-@@ -374,12 +427,12 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
+@@ -374,12 +438,12 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
  			SDL_SetCursor(SDL_CreateCursor(&cursor, &cursor, 1,1,0,0));
  		}
  #endif
@@ -1322,15 +1809,17 @@ index ae9083d..cc59f1a 100644
  			{
  				if (_flags & SDL_OPENGL)
 diff --git a/src/Engine/Screen.h b/src/Engine/Screen.h
-index a9beefe..ef57f2e 100644
+index a9beefe..18d9dd5 100644
 --- a/src/Engine/Screen.h
 +++ b/src/Engine/Screen.h
-@@ -72,6 +72,9 @@ public:
+@@ -72,6 +72,11 @@ public:
  	void handle(Action *action);
  	/// Renders the screen onto the game window.
  	void flip();
 +	/// G.I. Joe HD test: map drawn at hiRes() x base resolution and composited under the UI.
 +	static int hiRes();
++	/// G.I. Joe 4x: are menus being redrawn at display resolution this frame.
++	bool hiUiActive() const;
 +	static Surface *mapOverlay;
  	/// Clears the screen.
  	void clear();
@@ -1355,6 +1844,28 @@ index c6a1d25..730ad95 100644
  }
  
  /**
+diff --git a/src/Engine/State.cpp b/src/Engine/State.cpp
+index fb85c53..7c515b8 100644
+--- a/src/Engine/State.cpp
++++ b/src/Engine/State.cpp
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "State.h"
++#include "HiUI.h"
+ #include <algorithm>
+ #include <climits>
+ #include "InteractiveSurface.h"
+@@ -370,7 +371,9 @@ void State::blit()
+ {
+ 	for (auto* surface : _surfaces)
+ 	{
++		HiUI::before(surface);
+ 		surface->blit(_game->getScreen()->getSurface());
++		HiUI::after(surface);
+ 	}
+ }
+ 
 diff --git a/src/Engine/Surface.cpp b/src/Engine/Surface.cpp
 index e2a62e9..4e62a05 100644
 --- a/src/Engine/Surface.cpp
@@ -1375,6 +1886,19 @@ index e2a62e9..4e62a05 100644
  }
  
  /**
+diff --git a/src/Engine/Surface.h b/src/Engine/Surface.h
+index c2ec3df..6e1778e 100644
+--- a/src/Engine/Surface.h
++++ b/src/Engine/Surface.h
+@@ -308,6 +308,8 @@ public:
+ 	}
+ 	/// Sets the surface's special hidden flag.
+ 	void setHidden(bool hidden);
++	/// Is the special hidden flag set.
++	bool isHidden() const { return _hidden; }
+ 	/// Locks the surface.
+ 	void lock();
+ 	/// Unlocks the surface.
 diff --git a/src/Engine/SurfaceSet.cpp b/src/Engine/SurfaceSet.cpp
 index c7cd049..3bbde6b 100644
 --- a/src/Engine/SurfaceSet.cpp
@@ -1473,6 +1997,74 @@ index 86bd62e..46cac60 100644
  	/// Loads an X-Com DAT image file.
  	void loadDat(const std::string &filename);
  	/// Gets a particular frame from the set.
+diff --git a/src/Interface/Text.cpp b/src/Interface/Text.cpp
+index d4dc79b..ae4555c 100644
+--- a/src/Interface/Text.cpp
++++ b/src/Interface/Text.cpp
+@@ -500,6 +500,7 @@ int Text::getLineX(int line) const
+ void Text::draw()
+ {
+ 	Surface::draw();
++	_hiGlyphs.clear();
+ 	if (_text.empty() || _font == 0)
+ 	{
+ 		return;
+@@ -636,6 +637,10 @@ void Text::draw()
+ 			chr.setX(x);
+ 			chr.setY(y);
+ 			ShaderDraw<PaletteShift>(ShaderSurface(this, 0, 0), ShaderCrop(chr), ShaderScalar(color), ShaderScalar(mul), ShaderScalar(mid));
++			{
++				const SDL_Rect *cr = chr.getCrop();
++				_hiGlyphs.push_back(HiGlyph{ x, y, cr->w, cr->h, cr->x, cr->y, chr.getSurface(), (Uint8)color });
++			}
+ 			if (dir > 0)
+ 				x += dir * font->getCharSize(*c).w;
+ 		}
+diff --git a/src/Interface/Text.h b/src/Interface/Text.h
+index ec1055a..643bfc9 100644
+--- a/src/Interface/Text.h
++++ b/src/Interface/Text.h
+@@ -90,6 +90,10 @@ public:
+ 	void setColor(Uint8 color) override;
+ 	/// Gets the text's color.
+ 	Uint8 getColor() const;
++	/// G.I. Joe 4x menu layer: where each glyph of the last draw() went.
++	struct HiGlyph { int x, y, w, h, sx, sy; const Surface *sheet; Uint8 color; };
++	const std::vector<HiGlyph> &getHiGlyphs() const { return _hiGlyphs; }
++	std::vector<HiGlyph> _hiGlyphs;
+ 	/// Sets the text's secondary color.
+ 	void setSecondaryColor(Uint8 color) override;
+ 	/// Gets the text's secondary color.
+diff --git a/src/Interface/TextButton.h b/src/Interface/TextButton.h
+index 947b1e0..8fd8cf3 100644
+--- a/src/Interface/TextButton.h
++++ b/src/Interface/TextButton.h
+@@ -79,6 +79,9 @@ public:
+ 	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
+ 	/// Draws the text button.
+ 	void draw() override;
++	/// G.I. Joe 4x menu layer.
++	const Text *getTextWidget() const { return _text; }
++	bool isPressedLook() const { return _group == 0 ? isButtonPressed() : (*_group == this); }
+ 	/// Special handling for mouse presses.
+ 	void mousePress(Action *action, State *state) override;
+ 	/// Special handling for mouse releases.
+diff --git a/src/Interface/Window.h b/src/Interface/Window.h
+index d5e599e..8b44e52 100644
+--- a/src/Interface/Window.h
++++ b/src/Interface/Window.h
+@@ -63,6 +63,11 @@ public:
+ 	void setColor(Uint8 color) override;
+ 	/// Gets the border color.
+ 	Uint8 getColor() const;
++	/// G.I. Joe 4x menu layer.
++	const Surface *getBackground() const { return _bg; }
++	int getDX() const { return _dx; }
++	int getDY() const { return _dy; }
++	bool isPoppedUp() const { return _popupStep >= 1.0; }
+ 	/// Sets the high contrast color setting.
+ 	void setHighContrast(bool contrast) override;
+ 	/// Handles the timers.
 diff --git a/src/Mod/ExtraSprites.cpp b/src/Mod/ExtraSprites.cpp
 index c71ac0d..60ff887 100644
 --- a/src/Mod/ExtraSprites.cpp
@@ -1706,22 +2298,24 @@ index 7cfa906..e02f6f4 100644
  	int SmokeThreshold;
  
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..6f3f16c 100644
+index 99f24ce..640a3d8 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
-@@ -511,6 +511,7 @@
+@@ -511,6 +511,8 @@
      <ClCompile Include="Engine\Sound.cpp" />
      <ClCompile Include="Engine\SoundSet.cpp" />
      <ClCompile Include="Engine\State.cpp" />
 +    <ClCompile Include="Engine\HiColor.cpp" />
++    <ClCompile Include="Engine\HiUI.cpp" />
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -970,6 +971,7 @@
+@@ -970,6 +972,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
 +    <ClInclude Include="Engine\HiColor.h" />
++    <ClInclude Include="Engine\HiUI.h" />
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
