@@ -1086,7 +1086,7 @@ index 8fa87f8..628a943 100644
  	switch (unitDir)
  	{
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..64d6efd 100644
+index 839f803..2af7e84 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -172,6 +172,8 @@ set ( engine_src
@@ -1098,7 +1098,15 @@ index 839f803..64d6efd 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -356,6 +358,7 @@ set ( savegame_src
+@@ -331,6 +333,7 @@ set ( mod_src
+   Mod/RuleMissionScript.cpp
+   Mod/RuleMusic.cpp
+   Mod/RuleRegion.cpp
++  Mod/RuleCobraSite.cpp
+   Mod/RuleResearch.cpp
+   Mod/RuleSkill.cpp
+   Mod/RuleSoldier.cpp
+@@ -356,6 +359,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -2504,6 +2512,18 @@ index 86bd62e..46cac60 100644
  	/// Loads an X-Com DAT image file.
  	void loadDat(const std::string &filename);
  	/// Gets a particular frame from the set.
+diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
+index 6b4e79d..448a40e 100644
+--- a/src/Geoscape/GeoscapeState.cpp
++++ b/src/Geoscape/GeoscapeState.cpp
+@@ -2886,6 +2886,7 @@ void GeoscapeState::time1Month()
+ 
+ 	// Handle funding
+ 	timerReset();
++	_game->getSavedGame()->cobraMonthly(_game->getMod());
+ 	_game->getSavedGame()->monthlyFunding();
+ 	popup(new MonthlyReportState(_globe));
+ 
 diff --git a/src/Interface/ArrowButton.h b/src/Interface/ArrowButton.h
 index 4b88688..f5c9b71 100644
 --- a/src/Interface/ArrowButton.h
@@ -2627,6 +2647,41 @@ index d5e599e..8b44e52 100644
  	/// Sets the high contrast color setting.
  	void setHighContrast(bool contrast) override;
  	/// Handles the timers.
+diff --git a/src/Mod/AlienDeployment.cpp b/src/Mod/AlienDeployment.cpp
+index 018d604..d5cb0e5 100644
+--- a/src/Mod/AlienDeployment.cpp
++++ b/src/Mod/AlienDeployment.cpp
+@@ -121,6 +121,7 @@ void AlienDeployment::load(const YAML::YamlNodeReader& node, Mod *mod)
+ 	reader.tryRead("briefing", _briefingData);
+ 	reader.tryRead("alienBaseDiscoveredMessage", _alienBaseDiscoveredMessage);
+ 	reader.tryRead("markerName", _markerName);
++	reader.tryRead("cobraSiteType", _cobraSiteType);
+ 	if (reader["markerIcon"])
+ 	{
+ 		_markerIcon = mod->getOffset(reader["markerIcon"].readVal<int>(), 8);
+diff --git a/src/Mod/AlienDeployment.h b/src/Mod/AlienDeployment.h
+index 5c8559f..eb93e08 100644
+--- a/src/Mod/AlienDeployment.h
++++ b/src/Mod/AlienDeployment.h
+@@ -120,6 +120,9 @@ private:
+ 	BriefingData _briefingData;
+ 	std::string _alienBaseDiscoveredMessage;
+ 	std::string _markerName, _objectivePopup, _objectiveCompleteText, _objectiveFailedText;
++	/// Which kind of Cobra site a base made from this deployment is. Empty for every vanilla
++	/// deployment, so an unmodified game has no economy and nothing to load differently.
++	std::string _cobraSiteType;
+ 	std::string _missionCompleteText, _missionFailedText;
+ 	WeightedOptions _genMission, _successEvents, _failureEvents, _despawnEvents;
+ 	int _markerIcon, _durationMin, _durationMax, _minDepth, _maxDepth, _genMissionFrequency, _genMissionLimit;
+@@ -244,6 +247,8 @@ public:
+ 	const std::string& getAlienBaseDiscoveredMessage() const { return _alienBaseDiscoveredMessage; }
+ 	/// Gets the marker name for this mission.
+ 	std::string getMarkerName() const;
++	/// Gets the kind of Cobra site this deployment makes, empty if it is not one.
++	const std::string &getCobraSiteType() const { return _cobraSiteType; }
+ 	/// Gets the marker icon for this mission.
+ 	int getMarkerIcon() const;
+ 	/// Gets the minimum duration for this mission.
 diff --git a/src/Mod/ExtraSprites.cpp b/src/Mod/ExtraSprites.cpp
 index c71ac0d..16093ab 100644
 --- a/src/Mod/ExtraSprites.cpp
@@ -2776,10 +2831,29 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..2c40b96 100644
+index 1885346..70b57f5 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
-@@ -2309,6 +2309,37 @@ void Mod::loadAll()
+@@ -56,6 +56,7 @@
+ #include "../Battlescape/Pathfinding.h"
+ #include "RuleCountry.h"
+ #include "RuleRegion.h"
++#include "RuleCobraSite.h"
+ #include "RuleBaseFacility.h"
+ #include "RuleCraft.h"
+ #include "RuleCraftWeapon.h"
+@@ -650,6 +651,10 @@ Mod::~Mod()
+ 	{
+ 		delete pair.second;
+ 	}
++	for (auto& pair : _cobraSites)
++	{
++		delete pair.second;
++	}
+ 	for (auto& pair : _facilities)
+ 	{
+ 		delete pair.second;
+@@ -2309,6 +2314,37 @@ void Mod::loadAll()
  
  	loadExtraResources();
  
@@ -2817,7 +2891,37 @@ index 1885346..2c40b96 100644
  
  	Log(LOG_INFO) << "After load.";
  	// cross link rule objects
-@@ -5769,12 +5800,19 @@ void Mod::loadBattlescapeResources()
+@@ -2839,6 +2875,14 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+ 			rule->load(ruleReader, parsers, this);
+ 		}
+ 	}
++	for (const auto& ruleReader : iterateRules("cobraSites", "type"))
++	{
++		RuleCobraSite *rule = loadRule(ruleReader, &_cobraSites, &_cobraSitesIndex);
++		if (rule != 0)
++		{
++			rule->load(ruleReader, this);
++		}
++	}
+ 	for (const auto& ruleReader : iterateRules("regions", "type"))
+ 	{
+ 		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
+@@ -4069,6 +4113,14 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+ 	return getRule(id, "Region", _regions, error);
+ }
+ 
++RuleCobraSite *Mod::getCobraSite(const std::string &id) const
++{
++	// Deliberately not getRule(): an AlienBase may carry a site type that no rule prices yet,
++	// and that should leave it inert rather than stop the game.
++	auto it = _cobraSites.find(id);
++	return it == _cobraSites.end() ? 0 : it->second;
++}
++
+ /**
+  * Returns the list of all regions
+  * provided by the mod.
+@@ -5769,12 +5821,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -2837,7 +2941,7 @@ index 1885346..2c40b96 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +5823,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +5844,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -2845,7 +2949,7 @@ index 1885346..2c40b96 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +5837,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +5858,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -2884,6 +2988,199 @@ index 1885346..2c40b96 100644
  	}
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
+diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
+index 2242d13..8d358d6 100644
+--- a/src/Mod/Mod.h
++++ b/src/Mod/Mod.h
+@@ -53,6 +53,7 @@ class SavedGame;
+ class Soldier;
+ class RuleCountry;
+ class RuleRegion;
++class RuleCobraSite;
+ class RuleBaseFacility;
+ class RuleCraft;
+ class RuleCraftWeapon;
+@@ -170,6 +171,7 @@ private:
+ 
+ 	std::map<std::string, RuleCountry*> _countries, _extraGlobeLabels;
+ 	std::map<std::string, RuleRegion*> _regions;
++	std::map<std::string, RuleCobraSite*> _cobraSites;
+ 	std::map<std::string, RuleBaseFacility*> _facilities;
+ 	std::map<std::string, RuleCraft*> _crafts;
+ 	std::map<std::string, RuleCraftWeapon*> _craftWeapons;
+@@ -327,6 +329,7 @@ private:
+ 	std::vector<int> _aliensFacingCraftOdds;
+ 
+ 	std::map<std::string, int> _ufopaediaSections;
++	std::vector<std::string> _cobraSitesIndex;
+ 	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
+ 	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
+ 	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
+@@ -692,6 +695,10 @@ public:
+ 	const std::vector<std::string> &getExtraGlobeLabelsList() const;
+ 	/// Gets the ruleset for a region type.
+ 	RuleRegion *getRegion(const std::string &id, bool error = false) const;
++	/// Gets a Cobra site type. Missing is not an error: a site may exist before it is priced.
++	RuleCobraSite *getCobraSite(const std::string &id) const;
++	/// Gets the list of all Cobra site types.
++	const std::vector<std::string> &getCobraSitesList() const { return _cobraSitesIndex; }
+ 	/// Gets the available regions.
+ 	const std::vector<std::string> &getRegionsList() const;
+ 	/// Gets the ruleset for a facility type.
+diff --git a/src/Mod/RuleCobraSite.cpp b/src/Mod/RuleCobraSite.cpp
+new file mode 100644
+index 0000000..cf0a591
+--- /dev/null
++++ b/src/Mod/RuleCobraSite.cpp
+@@ -0,0 +1,59 @@
++/*
++ * Copyright 2010-2016 OpenXcom Developers.
++ *
++ * This file is part of OpenXcom.
++ *
++ * OpenXcom is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * OpenXcom is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
++ */
++#include "RuleCobraSite.h"
++
++namespace OpenXcom
++{
++
++RuleCobraSite::RuleCobraSite(const std::string& type) :
++	_type(type),
++	_fundsPerMonth(0), _materielPerMonth(0),
++	_upkeepFunds(0), _upkeepMateriel(0),
++	_buildCostFunds(0),
++	_lootFunds(0), _lootMateriel(0),
++	_lootsRegionalStockpile(false),
++	_projectProgressPerMonth(0),
++	_goodwillErosionPerMonth(0),
++	_garrisonRefillPerMonth(0),
++	_stockpileCap(0),
++	_revealOnRaid(0)
++{
++	// Everything defaults to zero, so a site type declared with only a deployment is inert
++	// rather than quietly worth something. Every number here is John's to tune and belongs in
++	// the single tuning file the design asks for, which does not exist yet.
++}
++
++void RuleCobraSite::load(const YAML::YamlNodeReader& reader, Mod*)
++{
++	reader.tryRead("fundsPerMonth", _fundsPerMonth);
++	reader.tryRead("materielPerMonth", _materielPerMonth);
++	reader.tryRead("upkeepFunds", _upkeepFunds);
++	reader.tryRead("upkeepMateriel", _upkeepMateriel);
++	reader.tryRead("buildCostFunds", _buildCostFunds);
++	reader.tryRead("lootFunds", _lootFunds);
++	reader.tryRead("lootMateriel", _lootMateriel);
++	reader.tryRead("lootsRegionalStockpile", _lootsRegionalStockpile);
++	reader.tryRead("projectProgressPerMonth", _projectProgressPerMonth);
++	reader.tryRead("goodwillErosionPerMonth", _goodwillErosionPerMonth);
++	reader.tryRead("garrisonRefillPerMonth", _garrisonRefillPerMonth);
++	reader.tryRead("stockpileCap", _stockpileCap);
++	reader.tryRead("revealOnRaid", _revealOnRaid);
++}
++
++}
+diff --git a/src/Mod/RuleCobraSite.h b/src/Mod/RuleCobraSite.h
+new file mode 100644
+index 0000000..4cd4641
+--- /dev/null
++++ b/src/Mod/RuleCobraSite.h
+@@ -0,0 +1,83 @@
++#pragma once
++/*
++ * Copyright 2010-2016 OpenXcom Developers.
++ *
++ * This file is part of OpenXcom.
++ *
++ * OpenXcom is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * OpenXcom is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
++ */
++#include <string>
++#include "../Engine/Yaml.h"
++
++namespace OpenXcom
++{
++
++class Mod;
++
++/**
++ * What one kind of Cobra site is worth, as data.
++ *
++ * Eight site types were chosen by what raiding each one changes rather than by flavour, and a
++ * site earns its place by that column alone. This rule carries only numbers and names; what
++ * happens with them is the monthly tick's job.
++ *
++ * Four of the eight act on the world rather than produce - a Terror Drome raises the mission
++ * rate, a broadcast station erodes goodwill, a lab advances a project, a camp refills garrisons.
++ * Only two of those need a field here. The Terror Drome needs none at all, because the economy
++ * publishes a per-region count of every site type into the counter map that the mission scripts
++ * already gate on, so "more dromes means more missions" is a ruleset condition rather than code
++ * that knows what a Terror Drome is. Any site type added later gets the same for free.
++ *
++ * There is deliberately no deployment field here. A site learns what it is from the
++ * AlienDeployment that spawned it (cobraSiteType), so naming the deployment again on this
++ * side would be a second copy of the same link, free to disagree with the first.
++ */
++class RuleCobraSite
++{
++private:
++	std::string _type;
++	int _fundsPerMonth, _materielPerMonth;
++	int _upkeepFunds, _upkeepMateriel;
++	int _buildCostFunds;
++	int _lootFunds, _lootMateriel;
++	bool _lootsRegionalStockpile;      ///< the depot: raiding it takes what the region was holding
++	int _projectProgressPerMonth;      ///< the research lab
++	int _goodwillErosionPerMonth;      ///< the broadcast station
++	int _garrisonRefillPerMonth;       ///< the training camp
++	int _stockpileCap;                 ///< what this site lets the region hold; 0 means no limit of its own
++	int _revealOnRaid;                 ///< how many unknown projects raiding this reveals
++
++public:
++	RuleCobraSite(const std::string& type);
++	~RuleCobraSite() = default;
++
++	void load(const YAML::YamlNodeReader& reader, Mod* mod);
++
++	const std::string& getType() const { return _type; }
++	int getFundsPerMonth() const { return _fundsPerMonth; }
++	int getMaterielPerMonth() const { return _materielPerMonth; }
++	int getUpkeepFunds() const { return _upkeepFunds; }
++	int getUpkeepMateriel() const { return _upkeepMateriel; }
++	int getBuildCostFunds() const { return _buildCostFunds; }
++	int getLootFunds() const { return _lootFunds; }
++	int getLootMateriel() const { return _lootMateriel; }
++	bool getLootsRegionalStockpile() const { return _lootsRegionalStockpile; }
++	int getProjectProgressPerMonth() const { return _projectProgressPerMonth; }
++	int getGoodwillErosionPerMonth() const { return _goodwillErosionPerMonth; }
++	int getGarrisonRefillPerMonth() const { return _garrisonRefillPerMonth; }
++	int getStockpileCap() const { return _stockpileCap; }
++	int getRevealOnRaid() const { return _revealOnRaid; }
++};
++
++}
 diff --git a/src/Mod/RuleDamageType.cpp b/src/Mod/RuleDamageType.cpp
 index 79c669f..f54414c 100644
 --- a/src/Mod/RuleDamageType.cpp
@@ -2919,7 +3216,7 @@ index 7cfa906..e02f6f4 100644
  	int SmokeThreshold;
  
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..d6dcf35 100644
+index 99f24ce..7f5407b 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
 @@ -511,6 +511,8 @@
@@ -2931,7 +3228,15 @@ index 99f24ce..d6dcf35 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -682,6 +684,7 @@
+@@ -673,6 +675,7 @@
+     <ClCompile Include="Mod\RuleItem.cpp" />
+     <ClCompile Include="Mod\RuleManufacture.cpp" />
+     <ClCompile Include="Mod\RuleRegion.cpp" />
++    <ClCompile Include="Mod\RuleCobraSite.cpp" />
+     <ClCompile Include="Mod\RuleResearch.cpp" />
+     <ClCompile Include="Mod\Mod.cpp" />
+     <ClCompile Include="Mod\RuleSoldier.cpp" />
+@@ -682,6 +685,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -2939,7 +3244,7 @@ index 99f24ce..d6dcf35 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -970,6 +973,8 @@
+@@ -970,6 +974,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -2948,7 +3253,15 @@ index 99f24ce..d6dcf35 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1179,6 +1184,7 @@
+@@ -1170,6 +1176,7 @@
+     <ClInclude Include="Mod\RuleItem.h" />
+     <ClInclude Include="Mod\RuleManufacture.h" />
+     <ClInclude Include="Mod\RuleRegion.h" />
++    <ClInclude Include="Mod\RuleCobraSite.h" />
+     <ClInclude Include="Mod\RuleResearch.h" />
+     <ClInclude Include="Mod\Mod.h" />
+     <ClInclude Include="Mod\RuleSoldier.h" />
+@@ -1179,6 +1186,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
@@ -2956,11 +3269,70 @@ index 99f24ce..d6dcf35 100644
      <ClInclude Include="Savegame\AlienMission.h" />
      <ClInclude Include="Savegame\Base.h" />
      <ClInclude Include="Savegame\BaseFacility.h" />
+diff --git a/src/Savegame/AlienBase.cpp b/src/Savegame/AlienBase.cpp
+index 09525a3..50834a2 100644
+--- a/src/Savegame/AlienBase.cpp
++++ b/src/Savegame/AlienBase.cpp
+@@ -46,6 +46,7 @@ void AlienBase::load(const YAML::YamlNodeReader& reader)
+ {
+ 	Target::load(reader);
+ 	reader.tryRead("pactCountry", _pactCountry);
++	reader.tryRead("siteType", _siteType);
+ 	reader.tryRead("race", _race);
+ 	reader.tryRead("inBattlescape", _inBattlescape);
+ 	reader.tryRead("discovered", _discovered);
+@@ -64,6 +65,8 @@ void AlienBase::save(YAML::YamlNodeWriter writer) const
+ 	Target::save(writer);
+ 
+ 	writer.write("pactCountry", _pactCountry);
++	if (!_siteType.empty())
++		writer.write("siteType", _siteType);
+ 	writer.write("race", _race);
+ 	if (_inBattlescape)
+ 		writer.write("inBattlescape", _inBattlescape);
+diff --git a/src/Savegame/AlienBase.h b/src/Savegame/AlienBase.h
+index be923c1..53db861 100644
+--- a/src/Savegame/AlienBase.h
++++ b/src/Savegame/AlienBase.h
+@@ -32,6 +32,9 @@ class AlienBase : public Target
+ {
+ private:
+ 	std::string _pactCountry;
++	/// Which kind of Cobra site this is, if any. Empty means an ordinary alien base, so an
++	/// existing save loads unchanged and the economy simply does not see it.
++	std::string _siteType;
+ 	std::string _race;
+ 	bool _inBattlescape, _discovered;
+ 	AlienDeployment *_deployment;
+@@ -52,6 +55,9 @@ public:
+ 	/// Gets the alien base's marker sprite.
+ 	int getMarker() const override;
+ 	/// Gets the alien base's pact country.
++	const std::string &getSiteType() const { return _siteType; }
++	void setSiteType(const std::string &siteType) { _siteType = siteType; }
++
+ 	const std::string &getPactCountry() const;
+ 	/// Sets the alien base's pact country.
+ 	void setPactCountry(const std::string &pactCountry);
+diff --git a/src/Savegame/AlienMission.cpp b/src/Savegame/AlienMission.cpp
+index 5576c42..0665800 100644
+--- a/src/Savegame/AlienMission.cpp
++++ b/src/Savegame/AlienMission.cpp
+@@ -1164,6 +1164,9 @@ AlienBase *AlienMission::spawnAlienBase(Country *pactCountry, Game &engine, std:
+ 		ab->setPactCountry(pactCountry->getRules()->getType());
+ 	}
+ 	ab->setAlienRace(_race);
++	// What kind of Cobra site this is comes from the deployment that made it, so the economy
++	// needs no table of its own and a vanilla deployment simply leaves it empty.
++	ab->setSiteType(deployment->getCobraSiteType());
+ 	ab->setId(game.getId(deployment->getMarkerName()));
+ 	ab->setLongitude(pos.first);
+ 	ab->setLatitude(pos.second);
 diff --git a/src/Savegame/AlienStrategy.cpp b/src/Savegame/AlienStrategy.cpp
-index c3a3286..31a51ad 100644
+index c3a3286..c9b14a5 100644
 --- a/src/Savegame/AlienStrategy.cpp
 +++ b/src/Savegame/AlienStrategy.cpp
-@@ -196,6 +196,11 @@ int AlienStrategy::getMissionsRun(const std::string &varName)
+@@ -196,6 +196,22 @@ int AlienStrategy::getMissionsRun(const std::string &varName)
   * @param varName the variable name that we want to use to keep track of this.
   * @param increment the value to increment by.
   */
@@ -2969,20 +3341,33 @@ index c3a3286..31a51ad 100644
 +	_missionRuns[varName] = value;
 +}
 +
++void AlienStrategy::clearMissionRunsWithPrefix(const std::string &prefix)
++{
++	for (auto it = _missionRuns.begin(); it != _missionRuns.end(); )
++	{
++		if (it->first.compare(0, prefix.size(), prefix) == 0)
++			it = _missionRuns.erase(it);
++		else
++			++it;
++	}
++}
++
  void AlienStrategy::addMissionRun(const std::string &varName, int increment)
  {
  	if (varName.empty())
 diff --git a/src/Savegame/AlienStrategy.h b/src/Savegame/AlienStrategy.h
-index 97ef4f5..0226eab 100644
+index 97ef4f5..0dbe163 100644
 --- a/src/Savegame/AlienStrategy.h
 +++ b/src/Savegame/AlienStrategy.h
-@@ -51,6 +51,9 @@ public:
+@@ -51,6 +51,11 @@ public:
  	int getMissionsRun(const std::string &varName);
  	/// Increments the number of missions run labelled as "varName".
  	void addMissionRun(const std::string &varName, int increment = 1);
 +	/// Sets a counter outright. The economy publishes a level, not an increment; see
 +	/// CobraEconomy::mirrorToCounters for why it shares this map and what keeps the two apart.
 +	void setMissionRun(const std::string &varName, int value);
++	/// Drops every counter whose name starts with this prefix.
++	void clearMissionRunsWithPrefix(const std::string &prefix);
  	/// Adds a mission location to our storage array.
  	void addMissionLocation(const std::string &varName, const std::string &regionName, int zoneNumber, int maximum);
  	/// Checks that a given mission location (city or whatever) isn't stored in our list of previously attacked locations.
@@ -3283,18 +3668,19 @@ index 240b22a..c998115 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..8b4728d 100644
+index 9ca9637..21d236e 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
-@@ -55,6 +55,7 @@
+@@ -55,6 +55,8 @@
  #include "MissionSite.h"
  #include "AlienBase.h"
  #include "AlienStrategy.h"
 +#include "CobraEconomy.h"
++#include "../Mod/RuleCobraSite.h"
  #include "AlienMission.h"
  #include "GeoscapeEvent.h"
  #include "../Mod/RuleCountry.h"
-@@ -110,6 +111,7 @@ SavedGame::SavedGame() :
+@@ -110,6 +112,7 @@ SavedGame::SavedGame() :
  {
  	_time = new GameTime(6, 1, 1, 1999, 12, 0, 0);
  	_alienStrategy = new AlienStrategy();
@@ -3302,7 +3688,7 @@ index 9ca9637..8b4728d 100644
  	_funds.push_back(0);
  	_maintenance.push_back(0);
  	_researchScores.push_back(0);
-@@ -159,6 +161,7 @@ SavedGame::~SavedGame()
+@@ -159,6 +162,7 @@ SavedGame::~SavedGame()
  		delete ab;
  	}
  	delete _alienStrategy;
@@ -3310,7 +3696,7 @@ index 9ca9637..8b4728d 100644
  	for (auto* am : _activeMissions)
  	{
  		delete am;
-@@ -649,6 +652,9 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -649,6 +653,9 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  		}
  	}
  	_alienStrategy->load(reader["alienStrategy"], mod);
@@ -3320,7 +3706,7 @@ index 9ca9637..8b4728d 100644
  
  	for (const auto& weHardlyKnewYe : reader["deadSoldiers"].children())
  	{
-@@ -849,6 +855,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -849,6 +856,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("hiddenPurchaseItems", _hiddenPurchaseItemsMap);
  	writer.write("customRuleCraftDeployments", _customRuleCraftDeployments);
  	_alienStrategy->save(writer["alienStrategy"]);
@@ -3328,8 +3714,61 @@ index 9ca9637..8b4728d 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
+@@ -2579,6 +2587,52 @@ void SavedGame::setWarned(bool warned)
+  * @param lat The latitude.
+  * @return Pointer to the region, or 0.
+  */
++void SavedGame::cobraMonthly(const Mod *mod)
++{
++	// Count what Cobra holds where, and let each site earn or cost its keep.
++	//
++	// The per-type counts are published alongside the two resources because that is what makes
++	// the acting sites free: "more Terror Dromes in this region means more missions" becomes a
++	// condition a ruleset author writes against COBRA_SITES_<TYPE>_<REGION>, with nothing in
++	// here that knows what a Terror Drome is. A site type added later gets the same treatment
++	// without touching this function.
++	std::map<std::string, int> siteCounts;
++	for (auto *base : _alienBases)
++	{
++		const std::string &siteType = base->getSiteType();
++		if (siteType.empty())
++		{
++			continue;                      // an ordinary alien base; not part of the economy
++		}
++		RuleCobraSite *rule = mod->getCobraSite(siteType);
++		if (rule == 0)
++		{
++			continue;                      // declared but never priced, so it is inert
++		}
++		Region *region = locateRegion(*base);
++		if (region == 0)
++		{
++			continue;                      // locateRegion already logged it
++		}
++		const std::string &regionType = region->getRules()->getType();
++		_cobraEconomy->addFunds(regionType, rule->getFundsPerMonth() - rule->getUpkeepFunds());
++		_cobraEconomy->addMateriel(regionType, rule->getMaterielPerMonth() - rule->getUpkeepMateriel());
++		siteCounts["COBRA_SITES_" + siteType + "_" + regionType]++;
++	}
++
++	// Republished from scratch every month, so a site that was raided away stops being counted
++	// instead of leaving its last value behind forever. Clearing by prefix rather than by a
++	// remembered list is deliberate: the list would not survive a save, and the counters do, so
++	// a reloaded game would keep crediting Cobra with sites the player had already destroyed.
++	_alienStrategy->clearMissionRunsWithPrefix("COBRA_SITES_");
++	for (const auto &pair : siteCounts)
++	{
++		_alienStrategy->setMissionRun(pair.first, pair.second);
++	}
++
++	_cobraEconomy->mirrorToCounters(*_alienStrategy);
++}
++
+ Region *SavedGame::locateRegion(double lon, double lat) const
+ {
+ 	Region* found = nullptr;
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..08b85e5 100644
+index d985908..41a1ac0 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -55,6 +55,7 @@ class ArticleDefinition;
@@ -3348,12 +3787,14 @@ index d985908..08b85e5 100644
  	SavedBattleGame *_battleGame;
  	std::vector<const RuleResearch*> _discovered;
  	std::vector<ResearchDiaryEntry*> _researchDiary;
-@@ -395,6 +397,10 @@ public:
+@@ -395,6 +397,12 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
 +	/// Gets the Cobra economy.
 +	CobraEconomy &getCobraEconomy() { return *_cobraEconomy; }
++	/// Runs Cobra's month: production, upkeep, and publishing the result to the mission scripts.
++	void cobraMonthly(const Mod *mod);
 +	/// Gets the Cobra economy, read-only.
 +	const CobraEconomy &getCobraEconomy() const { return *_cobraEconomy; }
  	/// Read-only access to the alien strategy data.

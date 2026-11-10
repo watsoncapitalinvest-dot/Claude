@@ -140,6 +140,18 @@ reaches it.
 
 This is a content decision, not an engine one. Nothing in the state model changes either way.
 
+## A ruleset that loads is not a ruleset that loaded
+
+OXCE **silently ignores an unknown top-level ruleset key**. A file full of `cobraSites:` in a
+build that has never heard of them starts the game, logs nothing, and leaves no trace — and so
+does a typo in the key.
+
+So "it ran without errors" proves nothing about whether a new rule type is wired in. It was
+checked here the only way that means anything: a temporary log line in `RuleCobraSite`'s
+constructor, a run, and eight lines in `openxcom.log` naming the eight types. The probe came
+straight back out. Anything added to the mod's ruleset later deserves the same treatment once,
+because the failure mode is indistinguishable from success.
+
 ## Not decided yet
 
 - The numbers. Every rate, cost and threshold is John's to tune, and they belong in the single
