@@ -54,10 +54,22 @@ the mods, so the upscale pass misses it. On a 4x battlefield a bullet stayed thr
 against a 128-pixel tile, and a laser — drawn as 35 sprites strung along the flight path — was
 a thread of dots. Now scaled in `Mod::loadAll` once the frames are in.
 
-**`BULLET_SPRITES` is 35.** The trail already exists; it is 35 copies of one sprite. Per-weapon
-projectile art is an authoring job, not an engine one — but the set is created at 3x3, so frames
-are clipped to 3x3 before any scaling. Authoring real projectile art needs that size to become
-declarable. Not done.
+**`BULLET_SPRITES` is 35, and they are 35 *different* frames, not 35 copies.** This note
+previously said copies and that was wrong. `loadSpriteOffset(..., "Projectiles", 35)` makes 35 a
+multiplier, so `bulletSprite: 1` means frames 35..69. Vanilla's sheet is 105x33 at subX/subY 3,
+which is 35 columns by 11 rows: one row per weapon, frame 0 the head and frames 1..34 a thinning
+tail of single pixels.
+
+**A projectile sprite is never rotated.** `Map.cpp` blits it centred, axis-aligned, whatever
+direction the shot travels, so the art has to be direction-agnostic — a round head or a glow,
+never a streak, which would point the wrong way in seven directions out of eight.
+
+**Visual length is the trail, not the sprite.** The engine draws the particles along the flight
+path, so how long a bolt looks is how many of a weapon's 35 frames are non-empty and how dense
+they are. That is authored in the sheet and is tunable without new art.
+
+The set is still created at 3x3, so frames are clipped to 3x3 before any scaling, and painted
+projectile art needs that size to become declarable. Not done.
 
 **The build fires on any push to this branch, with no path filter.** A commit of art or
 build scripts starts an 11-minute Windows build that nobody wanted, and one has already had to
