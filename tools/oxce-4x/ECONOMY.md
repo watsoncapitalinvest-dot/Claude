@@ -685,6 +685,36 @@ must not reach Cobra's pool except by purchase. That is the convoy, which means 
 of the build order are one feature** — the convoy's "somewhere" *is* M.A.R.S. Cobra's funds leave,
 materiel returns, and both legs are interceptable.
 
+### Cobra always has a standing order
+
+John: *"cobra should always be buying some weapons from mars. Even if it's the minimal amount of
+purchases and deliveries."*
+
+This is a **floor on purchases, independent of need**, and it is the rule that stops the convoy
+being dormant precisely when the player would most want it. Without it, Cobra buys only to cover
+a shortfall, and the consequence runs backwards:
+
+| Cobra's own factories | would it trade? | convoys to intercept |
+| --- | --- | --- |
+| producing fine | no — it needs nothing | **none** |
+| bombed flat | yes, heavily | plenty |
+
+So a convoy would only ever appear once the player was already winning, and a player who had not
+yet touched Cobra's industry would never see one at all. The whole feature would sit idle in the
+most common state of the game. That is the same failure that cost this project three features in
+one day — built, running, and almost never reached — arrived at by design rather than by
+accident, which makes it worse rather than better.
+
+A standing order fixes it from the other end. There is always money in the air and always a
+shipment coming back, so **interception is a tactic from month one** rather than a reward for
+already having won. It also means a M.A.R.S. site's stash always grows, so the fat target always
+develops whether or not the player has gone near Cobra's factories.
+
+**Open:** whether the floor is a flat amount or a share of what Cobra consumes. Flat is simpler
+and guarantees traffic early when Cobra is small; proportional keeps the trade meaningful late
+when a flat minimum would be rounding error. Leaning proportional with a flat minimum under it,
+but it is a number and it is John's.
+
 ### The money dies, and it piles up where it died
 
 John: *"Money that flows from cobra to mars effectively dies in the economy loop. But stays in
