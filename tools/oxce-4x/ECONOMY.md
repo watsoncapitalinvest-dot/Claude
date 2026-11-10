@@ -221,6 +221,38 @@ front company and nothing else; earning with 2,000 banked wants the factory and 
 not another front company; solvent on paper but under water on upkeep goes back to wanting an
 earner; solvent with materiel negative wants the factory. All four matched exactly.
 
+## What eleven months found that eleven test cases could not
+
+The planner passed four scenarios and the scenarios were states I wrote, which makes them states
+I already believed in. So the economy was run forward eleven months with nobody playing, and the
+first run found the thing none of the unit work could have.
+
+`STR_COBRA_FRONT` in `gijoe_frontops.rul` is already a Cobra front company — its own warehouse
+terrain, its own briefing about the Crimson Twins moving money under a legitimate name — and it
+predates the economy by months. The economy then added a second front company that has never
+heard of the first. Over those eleven months Cobra put **eight** of the old fronts on the globe
+and earned nothing from any of them, while the economy's own front company sat alone and could
+not afford a second site. The intel screen reported three sites while the globe carried
+twenty-three.
+
+One line closes it: `cobraSiteType: STR_COBRA_FRONT_COMPANY` on that deployment. Same eleven
+months, 3 sites becomes 16 — ten front companies and one of every other type but the Terror
+Drome, which it was saving for. It ships as `zz_gijoe_frontops_economy.rul`, a file that merges
+into the existing deployment and can be deleted, because a swing that size is a balance question
+and not a bug fix.
+
+Twelve of those twenty-three were `STR_ALIEN_BASE_ASSAULT`. The vanilla base campaign is still
+running at full tilt next to Cobra's, and none of it is in the economy either. That is the
+Terror Drome naming question, which turns out to be much larger than a name.
+
+**The lesson about the harness is worth as much as the finding.** Driving the geoscape with
+xdotool does not work, and every failure looked exactly like a quiet campaign. A detection popup
+stops the clock and Return will not clear it, because its default button is INTERCEPT. Escape
+opens the options menu and a second one lands in the mod list — where a ten-minute run finished,
+stopped three months in, with a log that read precisely like Cobra having nothing to build. Only
+a screenshot told the difference. `ff_probe.py` advances the clock inside the engine through the
+same switch `timeAdvance()` uses and drops the popups, so there is no UI to get wrong.
+
 ## Where the sites can actually go
 
 The mod keeps X-COM's fifteen regions and defines none of its own, but only North America has

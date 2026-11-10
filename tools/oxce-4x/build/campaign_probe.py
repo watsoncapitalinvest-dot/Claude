@@ -37,10 +37,23 @@ PROBE = ANCHOR + """	if (getenv("OXCE_CAMP_PROBE"))                             
 			if (_alienStrategy->getMissionsRun("COBRA_BUILD_" + id) > 0)       // CAMPROBE
 				want << shortId << " ";                                        // CAMPROBE
 		}                                                                      // CAMPROBE
+		std::map<std::string, int> untagged;                                   // CAMPROBE
+		for (auto* ab : _alienBases)                                           // CAMPROBE
+		{                                                                      // CAMPROBE
+			if (ab->getSiteType().empty())                                     // CAMPROBE
+			{                                                                  // CAMPROBE
+				const AlienDeployment* d = ab->getDeployment();                // CAMPROBE
+				untagged[d ? d->getType() : "(no deployment)"]++;              // CAMPROBE
+			}                                                                  // CAMPROBE
+		}                                                                      // CAMPROBE
+		std::ostringstream other;                                              // CAMPROBE
+		for (const auto& u : untagged)                                         // CAMPROBE
+			other << u.first << "x" << u.second << " ";                        // CAMPROBE
 		Log(LOG_INFO) << "[camp] " << _time->getYear() << "-"                  // CAMPROBE
 			<< _time->getMonth() << "  funds=" << _cobraEconomy->getTotalFunds()// CAMPROBE
 			<< "  sites=" << _alienBases.size()                                // CAMPROBE
-			<< "  have[ " << have.str() << "]  wants[ " << want.str() << "]";  // CAMPROBE
+			<< "  have[ " << have.str() << "]  wants[ " << want.str()          // CAMPROBE
+			<< "]  untagged[ " << other.str() << "]";                          // CAMPROBE
 	}                                                                          // CAMPROBE
 """
 
