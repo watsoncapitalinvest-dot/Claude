@@ -179,6 +179,48 @@ One rough edge in what is built: `cobraRaided` returns funds plus materiel as a 
 for the debriefing line, so "Cobra supplies denied: 640" adds dollars to crates. It is fine as a
 score magnitude and wrong as a sentence; reporting the two separately is a small change.
 
+## The planner, which is the part that makes it an economy
+
+Up to here Cobra had a budget and no judgement. The mission scripts rolled their odds every
+month and built whatever the dice said, and the economy only ever *refused* — a gate read
+`COBRA_FUNDS_TOTAL` and said no. That is a wallet, not a strategy, and the tell was that Cobra
+would happily field four headquarters while unable to pay for one.
+
+`SavedGame::cobraPlan` is the decision layer. Once a month, before the scripts run, it works out
+what Cobra *wants* and publishes one counter per site type, `COBRA_BUILD_<TYPE>`, set to 1 or 0.
+The scripts gate on that and nothing else changed: the odds still decide *whether* it manages a
+build this month, the planner decides *what* is on the shopping list.
+
+Three rules, in priority order, each of which is a thing the dice version got wrong:
+
+- **Pay your way first.** While net funds are at or below zero, the only thing wanted is an
+  earner. A Cobra that cannot cover its upkeep does not break ground on a research lab.
+- **Feed the troops.** While materiel is going backwards, a producer is wanted too.
+- **Otherwise, diversify.** A type it owns none of is wanted; a type it already has is not. That
+  is also how it rebuilds: raid the factory and `have` drops to zero, so the factory goes back
+  on the list and stays there until one stands again.
+
+Affordability is then checked per type against the pooled funds, which is what keeps the list
+honest rather than aspirational.
+
+**The bootstrap deadlock is the trap here, and it was walked into twice.** Cobra starts with no
+money, so an unconditional affordability test means nothing is ever buildable, so it never earns,
+so nothing is ever buildable. The first version dodged it with a hardcoded bootstrap type and a
+cap. The planner reintroduced it the moment the test became uniform. The fix is a `freeEarner` —
+the *cheapest earning type*, exempt from the funds test while Cobra owns none of it — so the
+first front company is always affordable and nothing after it is. Derived from the ruleset, so
+repricing the sites moves it on its own.
+
+**Ordering is load-bearing and silently so.** `cobraMonthly` originally ran after
+`determineAlienMissions()`, which means the scripts each month acted on *last* month's plan and
+on no plan at all in month one. Nothing errors; it just behaves one month late forever. It now
+runs before.
+
+Verified headlessly against four scenarios written before the run: empty and broke wants the
+front company and nothing else; earning with 2,000 banked wants the factory and the depot and
+not another front company; solvent on paper but under water on upkeep goes back to wanting an
+earner; solvent with materiel negative wants the factory. All four matched exactly.
+
 ## Where the sites can actually go
 
 The mod keeps X-COM's fifteen regions and defines none of its own, but only North America has

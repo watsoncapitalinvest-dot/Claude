@@ -105,16 +105,17 @@ for site_type, short, weight in SITES:
     }
     if REGION_LOCK:
         script['regionWeights'] = {0: {REGION_LOCK: 100}}
+    # Every script asks the planner, not the bank. cobraPlan publishes COBRA_BUILD_<TYPE> as 1
+    # only when Cobra both wants this and can pay for it, so affordability and intent arrive as
+    # one signal and all the deciding lives in one function that can be swapped whole.
+    script['missionVarName'] = 'COBRA_BUILD_' + site_type
+    script['counterMin'] = 1
     if site_type == BOOTSTRAP:
-        # The earner is not gated on funds, or nothing is ever built: Cobra starts with
-        # nothing, so nothing is affordable, so it never earns. Capped by maxRuns instead,
-        # which is a ruleset number rather than a seed value hidden in the engine. Cobra's
-        # front companies are its bootstrap; everything else it has to pay for.
+        # The earner still needs a cap, or a broke Cobra - which always wants earners - would
+        # build them without end. maxRuns is a ruleset number rather than a rule buried in the
+        # planner.
         script['varName'] = 'cobraFrontCompanies'
         script['maxRuns'] = BOOTSTRAP_MAX
-    else:
-        script['missionVarName'] = 'COBRA_FUNDS_TOTAL'
-        script['counterMin'] = cost
     scripts.append(script)
 
 out = collections.OrderedDict()

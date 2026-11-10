@@ -819,18 +819,131 @@ index 0fdf2ca..716f5c7 100644
  	/// Sets the palette.
  	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
 diff --git a/src/Battlescape/TileEngine.cpp b/src/Battlescape/TileEngine.cpp
-index 6e68469..4352eef 100644
+index 6e68469..9f40fd9 100644
 --- a/src/Battlescape/TileEngine.cpp
 +++ b/src/Battlescape/TileEngine.cpp
-@@ -3266,6 +3266,7 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
+@@ -3217,6 +3217,91 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
+  * @param unit The unit that caused the explosion.
+  * @param clipOrWeapon clip or weapon causing the damage.
+  */
++/**
++ * How much of a shot survives passing through one piece of terrain.
++ *
++ * Each material absorbs a flat amount and then passes a fraction of what is left, rather than
++ * weapons being sorted into classes. The flat part is what makes a pistol stop at a wall that a
++ * rifle goes through, with no class table to keep in step with the weapon list; the fraction is
++ * what stops a heavy weapon turning every building into open ground.
++ *
++ * Energy weapons pay less of the flat cost against mineral materials - burning through masonry
++ * is what they are for - and no less against metal, which is what they are worst at.
++ *
++ * EVERY NUMBER HERE IS A PLACEHOLDER AND JOHN'S TO TUNE. They belong in the tuning file the
++ * design asks for, which does not exist yet.
++ */
++int TileEngine::penetrate(int power, int material, const RuleDamageType *type) const
++{
++	// absorbed, then the share of the remainder that carries on
++	static const int   COST[MAT_COUNT] = { 30,  2, 10, 30, 55, 45 };
++	static const float PASS[MAT_COUNT] = { .35f, .85f, .65f, .35f, .20f, .25f };
++
++	if (material < 0 || material >= MAT_COUNT)
++	{
++		material = MAT_UNKNOWN;
++	}
++	int cost = COST[material];
++	if (type && (type->ResistType == DT_LASER || type->ResistType == DT_PLASMA)
++		&& (material == MAT_MASONRY || material == MAT_CONCRETE))
++	{
++		cost = cost * 2 / 3;
++	}
++	int left = power - cost;
++	if (left <= 0)
++	{
++		return 0;
++	}
++	return (int)(left * PASS[material]);
++}
++
++/**
++ * Carries a shot on past terrain that failed to stop it.
++ *
++ * The shot is traced again from just beyond the obstruction, along the line it was already
++ * travelling, and whatever it meets next is hit at the reduced power. This runs in the shared
++ * firing path, so Cobra's shots come through cover exactly as the player's do from the day it
++ * ships. What no AI does yet is *choose* to shoot through a wall, which is a question of intent
++ * and not of physics.
++ */
++void TileEngine::penetrateOnward(BattleActionAttack attack, Position center, int power, const RuleDamageType *type)
++{
++	// Four walls is already further than any honest shot goes, and the limit is what stops a
++	// shot that somehow re-hits its own tile from recursing until the stack runs out.
++	if (!attack.attacker || power <= 0 || _penetrationDepth >= 4)
++	{
++		return;
++	}
++
++	Position from = attack.attacker->getPosition().toVoxel() + Position(8, 8, 12);
++	Position delta = center - from;
++	if (delta.x == 0 && delta.y == 0 && delta.z == 0)
++	{
++		return;
++	}
++
++	// Carry on along the same line, far enough to leave the obstruction and reach whatever is
++	// behind it. Stepping off by a whole tile first is what keeps the trace from finding the
++	// very wall it has just come through.
++	int span = std::max(std::max(std::abs(delta.x), std::abs(delta.y)), std::abs(delta.z));
++	if (span <= 0)
++	{
++		return;
++	}
++	Position step(delta.x * 16 / span, delta.y * 16 / span, delta.z * 16 / span);
++	Position start = center + step;
++	Position far = center + Position(delta.x * 8 / span, delta.y * 8 / span, delta.z * 8 / span) * 16;
++
++	std::vector<Position> trajectory;
++	++_penetrationDepth;
++	VoxelType next = calculateLineVoxel(start, far, false, &trajectory, attack.attacker);
++	if (next != V_EMPTY && !trajectory.empty())
++	{
++		hit(attack, trajectory.back(), power, type);
++	}
++	--_penetrationDepth;
++}
++
+ void TileEngine::hit(BattleActionAttack attack, Position center, int power, const RuleDamageType *type, bool rangeAtack, int terrainMeleeTilePart)
+ {
+ 	bool terrainChanged = false; //did the hit destroy a tile thereby changing line of sight?
+@@ -3262,10 +3347,28 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
+ 					_save->getModuleMap()[(center.x/16)/10][(center.y/16)/10].second--;
+ 				}
+ 			}
++			const MapData *hitData = tile->getMapData(tp);
++			const int hitMaterial = hitData ? hitData->getMaterial() : MAT_UNKNOWN;
++			const bool stoodUp = hitData && tileFinalDamage < hitData->getArmor();
++
+ 			if (tile->damage(tp, tileFinalDamage, _save->getObjectiveType()))
  			{
  				_save->addDestroyedObjective();
  			}
 +			structuralCollapse(); // G.I. Joe
++
++			// G.I. Joe: a shot the terrain failed to destroy may still come through it. Only
++			// when the tile stood up - if it was blown apart the shot has an opening, not a
++			// penetration, and the next one through is a normal shot. Ranged fire only, since
++			// a rifle butt does not pass through a wall.
++			if (stoodUp && rangeAtack && terrainMeleeTilePart == 0)
++			{
++				int through = penetrate(power, hitMaterial, type);
++				if (through > 0)
++				{
++					penetrateOnward(attack, center, through, type);
++				}
++			}
  		}
  	}
  	else if (part == V_UNIT)
-@@ -3341,6 +3342,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3341,6 +3444,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  	{
  		power /= 2;
  	}
@@ -841,7 +954,7 @@ index 6e68469..4352eef 100644
  
  	int exHeight = Clamp(Options::battleExplosionHeight, 0, 3);
  	int vertdec = 1000; //default flat explosion
-@@ -3451,7 +3456,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3451,7 +3558,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  							_save->removeItem(bi);
  						}
  
@@ -850,7 +963,7 @@ index 6e68469..4352eef 100644
  					}
  				}
  
-@@ -3512,6 +3517,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3512,6 +3619,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  	// now detonate the tiles affected by explosion
  	if (type->ToTile > 0.0f)
  	{
@@ -858,7 +971,7 @@ index 6e68469..4352eef 100644
  		for (auto& pair : tilesAffected)
  		{
  			if (detonate(pair.first, pair.second))
-@@ -3523,7 +3529,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3523,7 +3631,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  			if (j)
  				applyGravity(j);
  		}
@@ -868,7 +981,7 @@ index 6e68469..4352eef 100644
  	calculateLighting(LL_AMBIENT, centetTile, maxRadius + 1, true); // roofs could have been destroyed and fires could have been started
  	calculateFOV(centetTile, maxRadius + 1, true, true);
  	if (attack.attacker && Position::distance2d(centetTile, attack.attacker->getPosition()) > maxRadius + 1)
-@@ -3622,7 +3630,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
+@@ -3622,7 +3732,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
  			}
  		}
  		// set tile on fire
@@ -877,7 +990,7 @@ index 6e68469..4352eef 100644
  		{
  			if (tiles[i]->getMapData(O_FLOOR) || tiles[i]->getMapData(O_OBJECT))
  			{
-@@ -5156,6 +5164,156 @@ Tile *TileEngine::applyGravity(Tile *t)
+@@ -5156,6 +5266,156 @@ Tile *TileEngine::applyGravity(Tile *t)
  	return rt;
  }
  
@@ -1035,7 +1148,7 @@ index 6e68469..4352eef 100644
   * Drop item on ground.
   */
 diff --git a/src/Battlescape/TileEngine.h b/src/Battlescape/TileEngine.h
-index 8497877..37ab54e 100644
+index 8497877..27d0670 100644
 --- a/src/Battlescape/TileEngine.h
 +++ b/src/Battlescape/TileEngine.h
 @@ -50,6 +50,7 @@ enum LightLayers : Uint8;
@@ -1046,7 +1159,28 @@ index 8497877..37ab54e 100644
  public:
  	/// Value representing non-existing position.
  	static constexpr Position invalid = { -1, -1, -1 };
-@@ -241,6 +242,8 @@ public:
+@@ -77,6 +78,8 @@ public:
+ 	}
+ 
+ private:
++	/// How many walls the shot in hand has already come through, so it cannot recurse forever.
++	int _penetrationDepth = 0;
+ 	/**
+ 	 * Helper class storing cached visibility blockage data.
+ 	 */
+@@ -206,6 +209,11 @@ public:
+ 	/// Calculates a line trajectory in tile space.
+ 	int calculateLineTile(Position origin, Position target, std::vector<Position> &trajectory);
+ 	/// Calculates a line trajectory in voxel space.
++	/// How much of a shot's power survives passing through this material. 0 means stopped.
++	int penetrate(int power, int material, const RuleDamageType *type) const;
++	/// Carries a shot on past terrain it failed to stop at, at whatever power survived.
++	void penetrateOnward(BattleActionAttack attack, Position center, int power, const RuleDamageType *type);
++
+ 	VoxelType calculateLineVoxel(Position origin, Position target, bool storeTrajectory, std::vector<Position> *trajectory, BattleUnit *excludeUnit, BattleUnit *excludeAllBut = 0, bool onlyVisible = false);
+ 	/// Calculates a parabola trajectory.
+ 	int calculateParabolaVoxel(Position origin, Position target, bool storeTrajectory, std::vector<Position> *trajectory, BattleUnit *excludeUnit, double curvature, const Position delta);
+@@ -241,6 +249,8 @@ public:
  	bool tryConcealUnit(BattleUnit* unit);
  	/// Applies gravity to anything that occupy this tile.
  	Tile *applyGravity(Tile *t);
@@ -2825,17 +2959,20 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..448a40e 100644
+index 6b4e79d..9d4d090 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
-@@ -2886,6 +2886,7 @@ void GeoscapeState::time1Month()
+@@ -2862,6 +2862,10 @@ void GeoscapeState::time1Month()
+ 	_game->getSavedGame()->addMonth();
  
- 	// Handle funding
- 	timerReset();
+ 	// Determine alien mission for this month.
++	// Cobra's month runs BEFORE the mission scripts, not after. The scripts gate on what
++	// cobraPlan publishes, so planning afterwards had them acting on last month's decisions -
++	// and in the first month on no decision at all, which stopped the economy dead.
 +	_game->getSavedGame()->cobraMonthly(_game->getMod());
- 	_game->getSavedGame()->monthlyFunding();
- 	popup(new MonthlyReportState(_globe));
+ 	determineAlienMissions();
  
+ 	// Handle Psi-Training and initiate a new retaliation mission, if applicable
 diff --git a/src/Interface/ArrowButton.h b/src/Interface/ArrowButton.h
 index 4b88688..f5c9b71 100644
 --- a/src/Interface/ArrowButton.h
@@ -3035,6 +3172,116 @@ index c71ac0d..16093ab 100644
  			}
  		}
  	}
+diff --git a/src/Mod/MCDPatch.cpp b/src/Mod/MCDPatch.cpp
+index 43e22f1..7b9832a 100644
+--- a/src/Mod/MCDPatch.cpp
++++ b/src/Mod/MCDPatch.cpp
+@@ -48,6 +48,14 @@ void MCDPatch::load(const YAML::YamlNodeReader& reader)
+ 	{
+ 		const auto& mcd = d.useIndex();
+ 		size_t MCDIndex = mcd["MCDIndex"].readVal<size_t>();
++		if (mcd["material"])
++		{
++			// Rides the existing patch mechanism rather than inventing a lookup: a patch is
++			// already keyed by dataset and MCD index, which is exactly how the materials were
++			// worked out. See CobraMaterial for what the numbers mean.
++			int material = mcd["material"].readVal<int>();
++			_materials.push_back(std::make_pair(MCDIndex, material));
++		}
+ 		if (mcd["bigWall"])
+ 		{
+ 			int bigWall = mcd["bigWall"].readVal<int>();
+@@ -142,6 +150,10 @@ void MCDPatch::load(const YAML::YamlNodeReader& reader)
+  */
+ void MCDPatch::modifyData(MapDataSet *dataSet) const
+ {
++	for (const auto& pair : _materials)
++	{
++		dataSet->getObject(pair.first)->setMaterial(pair.second);
++	}
+ 	for (const auto& pair : _bigWalls)
+ 	{
+ 		dataSet->getObject(pair.first)->setBigWall(pair.second);
+diff --git a/src/Mod/MCDPatch.h b/src/Mod/MCDPatch.h
+index a3aa96a..8c4fb42 100644
+--- a/src/Mod/MCDPatch.h
++++ b/src/Mod/MCDPatch.h
+@@ -29,7 +29,7 @@ class MapDataSet;
+ class MCDPatch
+ {
+ private:
+-	std::vector<std::pair<size_t, int> > _bigWalls, _TUWalks, _TUFlys, _TUSlides, _deathTiles, _terrainHeight, _specialTypes, _armors, _explosives, _flammabilities, _fuels, _HEBlocks, _footstepSounds, _objectTypes;
++	std::vector<std::pair<size_t, int> > _bigWalls, _TUWalks, _TUFlys, _TUSlides, _deathTiles, _terrainHeight, _specialTypes, _armors, _explosives, _flammabilities, _fuels, _HEBlocks, _footstepSounds, _objectTypes, _materials;
+ 	std::vector<std::pair<size_t, bool> > _noFloors, _stopLOSses;
+ 	std::vector<std::pair<size_t, std::vector<int> > > _LOFTS;
+ public:
+diff --git a/src/Mod/MapData.cpp b/src/Mod/MapData.cpp
+index 9084bc6..aad1723 100644
+--- a/src/Mod/MapData.cpp
++++ b/src/Mod/MapData.cpp
+@@ -28,7 +28,7 @@ namespace OpenXcom
+ MapData::MapData(MapDataSet *dataset) : _dataset(dataset), _specialType(TILE), 
+ 				_isUfoDoor(false), _stopLOS(false), _isNoFloor(false), _isGravLift(false), _isDoor(false), _blockFire(false), _blockSmoke(false), _baseModule(false),
+ 				_yOffset(0), _TUWalk(0), _TUFly(0), _TUSlide(0), _terrainLevel(0), _footstepSound(0), _dieMCD(0), _altMCD(0), _objectType(O_FLOOR), _lightSource(0),
+-				_armor(0), _flammable(0), _fuel(0), _explosive(0), _explosiveType(0), _bigWall(0), _miniMapIndex(0)
++				_armor(0), _flammable(0), _fuel(0), _explosive(0), _explosiveType(0), _bigWall(0), _material(0), _miniMapIndex(0)
+ {
+ 	std::fill_n(_sprite, 8, 0);
+ 	std::fill_n(_block, 6, 0);
+diff --git a/src/Mod/MapData.h b/src/Mod/MapData.h
+index cc5ca0c..918a71e 100644
+--- a/src/Mod/MapData.h
++++ b/src/Mod/MapData.h
+@@ -22,6 +22,27 @@
+ namespace OpenXcom
+ {
+ 
++/**
++ * What a tile is made of, for deciding what a shot gets through.
++ *
++ * Five, chosen so each behaves differently under fire rather than to be exhaustive. The order
++ * is deliberate: it runs from what stops almost nothing to what stops almost everything, so a
++ * penetration matrix indexed by it reads down the scale.
++ *
++ * UNKNOWN is first and is treated as MASONRY by the matrix - the middle of the range - so a
++ * tile nobody has classified behaves plausibly instead of becoming a free pass or a bunker.
++ */
++enum CobraMaterial
++{
++	MAT_UNKNOWN = 0,
++	MAT_LIGHT,      ///< glass, hedge, fences, cloth, netting
++	MAT_WOOD,       ///< clapboard, planking, doors, furniture
++	MAT_MASONRY,    ///< brick, adobe, stucco, stone, rubble
++	MAT_CONCRETE,   ///< military concrete, slabs, roadway
++	MAT_METAL,      ///< steel plate, blast doors, vehicles, grate
++	MAT_COUNT
++};
++
+ class MapDataSet;
+ 
+ enum SpecialTileType : int {TILE=0,
+@@ -59,6 +80,10 @@ private:
+ 	TilePart _objectType;
+ 	int _lightSource;
+ 	int _armor, _flammable, _fuel, _explosive, _explosiveType, _bigWall;
++	/// What this tile is made of, for shooting through it. 0 means unclassified, which the
++	/// penetration matrix treats as masonry - the middle of the range, so an untagged tile
++	/// behaves plausibly rather than becoming either a free pass or an invincible wall.
++	int _material;
+ 	int _sprite[8];
+ 	int _block[6];
+ 	int _loftID[12];
+@@ -131,6 +156,10 @@ public:
+ 	void setLightSource(int value);
+ 	/// Gets the amount of armor.
+ 	int getArmor() const;
++	/// Gets what this tile is made of. See CobraMaterial.
++	int getMaterial() const { return _material; }
++	/// Sets what this tile is made of.
++	void setMaterial(int value) { _material = value; }
+ 	/// Sets the amount of armor.
+ 	void setArmor(int value);
+ 	/// Gets the amount of flammable.
 diff --git a/src/Mod/MapDataSet.cpp b/src/Mod/MapDataSet.cpp
 index d02fd01..c34c459 100644
 --- a/src/Mod/MapDataSet.cpp
@@ -4053,7 +4300,7 @@ index 240b22a..c998115 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..d86e99a 100644
+index 9ca9637..54a0bdb 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -55,6 +55,8 @@
@@ -4107,10 +4354,112 @@ index 9ca9637..d86e99a 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2588,158 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2588,263 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
++void SavedGame::cobraPlan(const Mod *mod)
++{
++	// THE DECISION LAYER. Everything else in the economy is state and rules; this is the only
++	// place that chooses anything, and it is deliberately the dullest code in it.
++	//
++	// It does not pick a region - the mission scripts still do that. It publishes what Cobra
++	// WANTS, as COBRA_BUILD_<TYPE>, and a script runs only when its own type is wanted. So
++	// replacing this with something cleverer, or with a person for a Cobra playthrough, changes
++	// no scheduling code and no ruleset. That is what the whole arrangement was for.
++	//
++	// What it does that the dice roll it replaces did not:
++	//   - rebuild what it has lost, because a type it owns none of is wanted
++	//   - pay its way first, because while it cannot cover upkeep only earners are wanted
++	//   - stop buying what it already has, so it does not field four headquarters
++	std::map<std::string, int> owned;
++	for (auto *base : _alienBases)
++	{
++		if (!base->getSiteType().empty())
++		{
++			owned[base->getSiteType()]++;
++		}
++	}
++
++	// What the network earns and spends in a month, read from the sites themselves rather than
++	// from the balance, so a raid is felt at once instead of a month later.
++	int netFunds = 0, netMateriel = 0;
++	for (const auto &pair : owned)
++	{
++		RuleCobraSite *rule = mod->getCobraSite(pair.first);
++		if (rule == 0)
++		{
++			continue;
++		}
++		netFunds += (rule->getFundsPerMonth() - rule->getUpkeepFunds()) * pair.second;
++		netMateriel += (rule->getMaterielPerMonth() - rule->getUpkeepMateriel()) * pair.second;
++	}
++
++	const int funds = _cobraEconomy->getTotalFunds();
++	const bool broke = netFunds <= 0;
++	const bool starved = netMateriel < 0;
++
++	// Cobra can always establish its first income. Without this it starts with nothing, so
++	// nothing is affordable, so it never earns and the economy never begins - the same deadlock
++	// the ruleset used to dodge by leaving the earner ungated, now stated once where the
++	// deciding happens. Only the cheapest earner, and only while it has none at all.
++	std::string freeEarner;
++	int cheapest = 0;
++	bool hasEarner = false;
++	for (const auto &siteType : mod->getCobraSitesList())
++	{
++		RuleCobraSite *r = mod->getCobraSite(siteType);
++		if (r == 0 || r->getFundsPerMonth() <= r->getUpkeepFunds())
++		{
++			continue;
++		}
++		if (owned.count(siteType) && owned[siteType] > 0)
++		{
++			hasEarner = true;
++		}
++		if (freeEarner.empty() || r->getBuildCostFunds() < cheapest)
++		{
++			freeEarner = siteType;
++			cheapest = r->getBuildCostFunds();
++		}
++	}
++	if (hasEarner)
++	{
++		freeEarner.clear();
++	}
++
++	for (const auto &siteType : mod->getCobraSitesList())
++	{
++		RuleCobraSite *rule = mod->getCobraSite(siteType);
++		if (rule == 0)
++		{
++			continue;
++		}
++		const int have = owned.count(siteType) ? owned[siteType] : 0;
++		const bool earner = rule->getFundsPerMonth() > rule->getUpkeepFunds();
++		const bool maker = rule->getMaterielPerMonth() > rule->getUpkeepMateriel();
++
++		bool wanted;
++		if (broke)
++		{
++			// Cannot cover its own upkeep: earners only until that is fixed. This is what
++			// stops Cobra building a headquarters it has no way to run.
++			wanted = earner;
++		}
++		else if (starved && maker)
++		{
++			wanted = true;              // losing materiel faster than it makes it
++		}
++		else
++		{
++			wanted = (have == 0);       // one of everything first; breadth before depth
++		}
++
++		const bool afford = funds >= rule->getBuildCostFunds() || siteType == freeEarner;
++		_alienStrategy->setMissionRun("COBRA_BUILD_" + siteType, (wanted && afford) ? 1 : 0);
++	}
++}
++
 +void SavedGame::cobraBuilt(const AlienBase *base, const Mod *mod)
 +{
 +	if (base->getSiteType().empty())
@@ -4261,13 +4610,16 @@ index 9ca9637..d86e99a 100644
 +	}
 +
 +	_cobraEconomy->mirrorToCounters(*_alienStrategy);
++
++	// Decide last, against this month's holdings rather than last month's.
++	cobraPlan(mod);
 +}
 +
  Region *SavedGame::locateRegion(double lon, double lat) const
  {
  	Region* found = nullptr;
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..3eb9a61 100644
+index d985908..043d053 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -55,6 +55,7 @@ class ArticleDefinition;
@@ -4286,7 +4638,7 @@ index d985908..3eb9a61 100644
  	SavedBattleGame *_battleGame;
  	std::vector<const RuleResearch*> _discovered;
  	std::vector<ResearchDiaryEntry*> _researchDiary;
-@@ -395,6 +397,16 @@ public:
+@@ -395,6 +397,18 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -4298,6 +4650,8 @@ index d985908..3eb9a61 100644
 +	int cobraRaided(const AlienBase *base, const Mod *mod);
 +	/// Charges a region for a site Cobra has just built.
 +	void cobraBuilt(const AlienBase *base, const Mod *mod);
++	/// Decides what Cobra should build next and publishes it for the mission scripts.
++	void cobraPlan(const Mod *mod);
 +	/// Gets the Cobra economy, read-only.
 +	const CobraEconomy &getCobraEconomy() const { return *_cobraEconomy; }
  	/// Read-only access to the alien strategy data.

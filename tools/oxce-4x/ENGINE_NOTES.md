@@ -1,6 +1,9 @@
 # G.I. Joe 4x — what the fork changes, and why
 
-Save point: 10 Nov 2026. Patch head `24690c4`. 44 files, ~1,775 lines added.
+Save point: 10 Nov 2026, the Cobra planner and wall penetration. `oxce_4x.patch` touches 68 files
+and adds ~2,900 lines. The head is whatever `claude/oxce-gijoe-4x` points at — a hash recorded
+here goes stale the moment the next commit lands, and `git log -- tools/oxce-4x/oxce_4x.patch`
+answers the question properly.
 
 The fork is a patch against OXCE commit `f0134ef`, not a copy of the engine, so it tracks
 upstream instead of drifting. `.github/workflows/build-oxce-4x.yml` applies it and builds
@@ -105,14 +108,36 @@ the time (measured 12.5%); incendiaries always.
 **Camera.** `cam(focus, scale, focusY)` gained a vertical axis. Without it the visible band sat
 on y60 and WR1 on y5 was off the top of frame at every zoom.
 
+**Wall penetration.** A shot that fails to stop on terrain carries on through it. `penetrate()`
+charges the material its absorption cost and passes on a share of what is left — plasterboard
+costs 2 and passes 85%, concrete costs 55 and passes 20% — and `penetrateOnward()` re-traces the
+same line from a tile beyond the obstruction and hits whatever is behind it at the reduced power.
+Laser and plasma pay two thirds against masonry and concrete only, which is the one place energy
+earns its reputation.
+
+The material comes from `MapData::_material`, five materials plus unknown, tagged onto 282 tiles
+by `build/tag_materials.py` and overridable per tile from a ruleset through `MCDPatch`'s
+`material` key. Untagged terrain reads as `MAT_UNKNOWN`, which is deliberately priced like
+masonry rather than like air: a tile nobody has classified should behave like a wall, not like a
+hole.
+
+Three things keep it from misbehaving. It only runs on a standing ranged attack — not melee, not
+explosions, which have their own propagation. The trace restarts a whole tile past the hit, or it
+finds the very wall it just came through. And `_penetrationDepth` caps the chain at four, which
+is further than any honest shot travels and is what stops a shot that re-hits its own tile from
+recursing until the stack runs out.
+
+Written and compiling; not yet watched in a real firefight.
+
 ## Not done
 
 - Menu conversion stages 1–3: list rows and their text (122 screens), numbers, text entry, bars,
   scrollbars, the battle control panel's 30 icons, the geoscape side panel. The globe is separate.
 - Item icons are sharp only on the soldier inventory screen. Craft equipment, buy/sell and the
   UFOpaedia still draw them at 1x.
-- Wall penetration. Collapse is done; the matrix is not started.
 - Projectile set size is still fixed at 3x3, so painted projectiles are blocked.
+- Neither side's AI *chooses* to shoot through cover yet. Both sides get the physics; only
+  deliberate use is missing, which is the split the principle below describes.
 
 ## The principle for anything with an AI half
 
