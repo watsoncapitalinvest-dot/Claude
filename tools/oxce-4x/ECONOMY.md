@@ -575,6 +575,76 @@ A side finding from the same runs: John's `STR_COBRA_FRONT` has no language entr
 logs `STR_COBRA_FRONT_ not found in en-US`. Cosmetic, pre-existing, and in his file rather than
 a generated one, so it is left for him to name.
 
+## The factory spends to build, which joins the two resources
+
+Item 2 of the build order, and the piece that turns two dials into one system.
+
+Until this, `materielPerMonth` was a **fountain**: materiel appeared from nothing. A region could
+only run dry by Cobra never having built a factory, so the kit rule shipped the same morning had
+exactly one cause. Now the factory spends `materielCostFunds: 48` on top of its `upkeepFunds: 40`
+to turn out its 80 — so a Cobra that cannot pay **cannot arm itself**, and the kit rule turns its
+garrisons out on sidearms a month or two later.
+
+Priced so one front company (netting 110) roughly sustains one factory (88 all in), which also
+keeps the M.A.R.S. trade a real alternative later rather than an obvious choice.
+
+### Two things about how it is computed
+
+**A second pass, not the first.** What a factory can afford depends on the region's money
+*including this month's income*, which is not known until every site has been read. So production
+is collected in the main loop and settled afterwards.
+
+**Pro-rata from region totals, never per site.** The month is already summed per region for a
+documented reason — applying site by site makes the result depend on *build order*, because
+stockpiles floor at zero. A fraction computed from totals cannot drift that way. And pro-rata
+rather than all-or-nothing because a factory stopping dead over being a pound short reads as a
+bug, where a half-funded month making half the guns is legible. Integer division floors it, which
+is the right direction.
+
+### Verified, and the first test was the one that mattered
+
+The input cost being *charged* is the claim that could silently fail, so it was checked first —
+against the same campaign with production free, from earlier the same day:
+
+| month | funds, production free | funds, priced | difference |
+| --- | --- | --- | --- |
+| 7 | 470 | **422** | 48 — one month |
+| 8 | 650 | **554** | 96 — two months |
+
+Materiel 80 and 160 in both, so Cobra gets the same guns and now pays for them.
+
+The pro-rata path fired **zero** times at the shipped price, which is correct rather than a null
+result: income runs about 510 a month against a 48 bill. A rich Cobra makes guns; a poor one
+cannot. So poverty was forced the way John would force it — by editing
+`materielCostFunds` to 2000 in the ruleset, no probe code and no rebuild:
+
+```
+could not pay for its own production: 470 of 2000 funds, so it made 18 of 80 materiel
+could not pay for its own production: 580 of 2000 funds, so it made 23 of 80 materiel
+could not pay for its own production: 690 of 2000 funds, so it made 27 of 80 materiel
+```
+
+470 x 80 / 2000 = 18, 580 x 80 / 2000 = 23, 690 x 80 / 2000 = 27. Exact.
+
+**And that run showed the whole cascade for the first time**, caused by nothing but Cobra's own
+books:
+
+| | |
+| --- | --- |
+| cannot afford inputs | made 18 of 80 |
+| spent everything trying | `funds=0` |
+| materiel never reaches 50 | `CANNOT ARM` |
+| cannot make payroll either | `CANNOT PAY` |
+
+Compounds both thin and on sidearms, with nothing forced but a price.
+
+### An interaction nobody designed
+
+At the shipped price, `CANNOT PAY` went from **once in 400 days to four consecutive months**. The
+48-a-month drain holds Cobra's balance nearer its upkeep bar, so pricing production fixed the
+"fires too rarely" worry about `wellPaidUpkeepMonths` better than raising that number would have.
+Two features that were tuned independently turned out to tune each other.
+
 ## M.A.R.S., as John has scoped it
 
 Not a second faction. *"Mars doesn't have to be a seperate faction. It can be the same one just

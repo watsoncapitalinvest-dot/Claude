@@ -3977,10 +3977,10 @@ index 2242d13..1d474b9 100644
  	/// Gets the ruleset for a facility type.
 diff --git a/src/Mod/RuleCobraSite.cpp b/src/Mod/RuleCobraSite.cpp
 new file mode 100644
-index 0000000..d9b6ce5
+index 0000000..c9f7c8b
 --- /dev/null
 +++ b/src/Mod/RuleCobraSite.cpp
-@@ -0,0 +1,64 @@
+@@ -0,0 +1,69 @@
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
 + *
@@ -4014,7 +4014,7 @@ index 0000000..d9b6ce5
 +	_projectProgressPerMonth(0),
 +	_goodwillErosionPerMonth(0),
 +	_garrisonBonus(0), _garrisonRankUnlock(-1), _garrisonAllMissions(false),
-+	_runsThePlanning(false), _incomeNeedsShipment(false),
++	_runsThePlanning(false), _incomeNeedsShipment(false), _materielCostFunds(0),
 +	_stockpileCap(0),
 +	_revealOnRaid(0)
 +{
@@ -4040,6 +4040,11 @@ index 0000000..d9b6ce5
 +	reader.tryRead("garrisonAllMissions", _garrisonAllMissions);
 +	reader.tryRead("runsThePlanning", _runsThePlanning);
 +	reader.tryRead("incomeNeedsShipment", _incomeNeedsShipment);
++	// Guns are made, not conjured. A factory spends funds to turn out its
++	// materielPerMonth, so a Cobra that cannot pay cannot arm itself - which is what
++	// connects the two resources instead of leaving them as separate dials.
++	// Defaults to 0, so every site priced before this existed still produces free.
++	reader.tryRead("materielCostFunds", _materielCostFunds);
 +	reader.tryRead("stockpileCap", _stockpileCap);
 +	reader.tryRead("revealOnRaid", _revealOnRaid);
 +}
@@ -4047,10 +4052,10 @@ index 0000000..d9b6ce5
 +}
 diff --git a/src/Mod/RuleCobraSite.h b/src/Mod/RuleCobraSite.h
 new file mode 100644
-index 0000000..8952bf4
+index 0000000..d850262
 --- /dev/null
 +++ b/src/Mod/RuleCobraSite.h
-@@ -0,0 +1,104 @@
+@@ -0,0 +1,107 @@
 +#pragma once
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
@@ -4125,6 +4130,7 @@ index 0000000..8952bf4
 +	/// which is the whole point: the money stops being a number on a screen and starts
 +	/// being something crossing the globe that you can go and meet.
 +	bool _incomeNeedsShipment;
++	int _materielCostFunds;            ///< funds spent to make its materielPerMonth; 0 = free
 +	int _stockpileCap;                 ///< what this site lets the region hold; 0 means no limit of its own
 +	int _revealOnRaid;                 ///< how many unknown projects raiding this reveals
 +
@@ -4138,6 +4144,8 @@ index 0000000..8952bf4
 +	int getFundsPerMonth() const { return _fundsPerMonth; }
 +	int getMaterielPerMonth() const { return _materielPerMonth; }
 +	int getUpkeepFunds() const { return _upkeepFunds; }
++	/// Funds this site spends to produce its materiel. 0 means production is free.
++	int getMaterielCostFunds() const { return _materielCostFunds; }
 +	int getUpkeepMateriel() const { return _upkeepMateriel; }
 +	int getBuildCostFunds() const { return _buildCostFunds; }
 +	int getLootFunds() const { return _lootFunds; }
@@ -4818,7 +4826,7 @@ index 6c121c7..886050d 100644
  	std::map<std::string, int> &getReinforcementsMemory() { return _reinforcementsMemory; }
  	/// Gets the map blocks used for reinforcements.
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..66f65c3 100644
+index 9ca9637..1cca2e2 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -55,7 +55,10 @@
@@ -4874,7 +4882,7 @@ index 9ca9637..66f65c3 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2589,472 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2589,521 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -5211,6 +5219,12 @@ index 9ca9637..66f65c3 100644
 +	// which is nothing to do with what a region is worth. Summing first makes the month's
 +	// result depend only on what Cobra owns.
 +	std::map<std::string, int> siteCounts, netFunds, netMateriel;
++	// Production is collected rather than applied, and settled in a second pass below, because
++	// what a factory can afford depends on the region's money INCLUDING this month's income -
++	// which is not known until every site has been read. Kept as region totals, not per site,
++	// for the same reason the rest of the month is summed: a pro-rata cut computed from totals
++	// cannot depend on the order sites were built in.
++	std::map<std::string, int> wantMateriel, costMateriel;
 +	for (auto *base : _alienBases)
 +	{
 +		const std::string &siteType = base->getSiteType();
@@ -5245,7 +5259,14 @@ index 9ca9637..66f65c3 100644
 +		}
 +		netFunds[regionType] += (shipmentDenied ? 0 : rule->getFundsPerMonth()) - rule->getUpkeepFunds();
 +		base->setShipmentsLost(0);
-+		netMateriel[regionType] += (shipmentDenied ? 0 : rule->getMaterielPerMonth()) - rule->getUpkeepMateriel();
++		// Consumption happens whatever the money says; production has to be paid for, so it
++		// goes into the second pass instead of straight onto the pile.
++		netMateriel[regionType] -= rule->getUpkeepMateriel();
++		if (!shipmentDenied && rule->getMaterielPerMonth() > 0)
++		{
++			wantMateriel[regionType] += rule->getMaterielPerMonth();
++			costMateriel[regionType] += rule->getMaterielCostFunds();
++		}
 +		siteCounts["COBRA_SITES_" + siteType + "_" + regionType]++;
 +
 +		// A broadcast station erodes goodwill through the engine's own pathway rather than by
@@ -5262,6 +5283,42 @@ index 9ca9637..66f65c3 100644
 +			{
 +				country->addActivityAlien(erosion);
 +			}
++		}
++	}
++
++	// Second pass: Cobra buys what it makes. A region that can cover the whole bill makes
++	// everything; one that cannot makes the share it can pay for and spends every penny it had
++	// trying. That is the cascade the two resources were missing - go broke and the guns stop,
++	// and today's kit rule then turns out the garrison on sidearms a month or two later.
++	//
++	// Pro-rata rather than all-or-nothing: a factory that stops dead the moment Cobra is a
++	// pound short reads as a bug, and a half-funded month producing half the guns is both
++	// legible and smooth. Floored by integer division, which is the right direction.
++	for (const auto &pair : wantMateriel)
++	{
++		const std::string &regionType = pair.first;
++		const int want = pair.second;
++		const int cost = costMateriel[regionType];
++		if (cost <= 0)
++		{
++			netMateriel[regionType] += want;        // priced free, as everything was before
++			continue;
++		}
++		const int avail = std::max(0, _cobraEconomy->getFunds(regionType) + netFunds[regionType]);
++		if (avail >= cost)
++		{
++			netMateriel[regionType] += want;
++			netFunds[regionType] -= cost;
++			continue;
++		}
++		const int made = (int)((long long)want * avail / cost);
++		netMateriel[regionType] += made;
++		netFunds[regionType] -= avail;
++		if (getenv("OXCE_ECON_LOG"))
++		{
++			Log(LOG_INFO) << "[econ] " << regionType << " could not pay for its own production: "
++				<< avail << " of " << cost << " funds, so it made " << made << " of " << want
++				<< " materiel";
 +		}
 +	}
 +
