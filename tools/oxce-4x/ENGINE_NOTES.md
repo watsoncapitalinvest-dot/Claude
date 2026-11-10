@@ -68,8 +68,18 @@ never a streak, which would point the wrong way in seven directions out of eight
 path, so how long a bolt looks is how many of a weapon's 35 frames are non-empty and how dense
 they are. That is authored in the sheet and is tunable without new art.
 
-The set is still created at 3x3, so frames are clipped to 3x3 before any scaling, and painted
-projectile art needs that size to become declarable. Not done.
+**Enlarging the set is smaller than it looks.** `ExtraSprites::getSurfaceSet` already resizes a
+set to whatever `subX`/`subY` declares — but only `if (set->getTotalFrames() == 0)`. The
+`new SurfaceSet(3, 3)` in `Mod.cpp` is just a placeholder; vanilla's 105x33 sheet is what pins
+it at 3x3, because by the time a later mod declares a bigger sheet the set is no longer empty.
+
+So the engine change needed is narrow: let the projectile size be declared before extra sprites
+load, and stop the auto-resize overriding it. Not done, and not worth doing until the painted
+heads exist.
+
+`build/build_projectiles.py` is the other half and is done: it takes one head per weapon and
+generates the 35-frame trail, since length is frames and not sprite shape. It refuses art with
+a long axis, because that art only looks wrong in seven directions out of eight.
 
 **The build fires on any push to this branch, with no path filter.** A commit of art or
 build scripts starts an 11-minute Windows build that nobody wanted, and one has already had to
