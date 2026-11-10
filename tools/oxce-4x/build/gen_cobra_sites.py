@@ -13,16 +13,22 @@ alienBase only affects New Battle and the statistics screens; it does not touch 
 which comes from the terrain's own script. So the map these raid is the map the Cobra raid
 already produces, and that is what makes generating them from it safe.
 
-usage: gen_cobra_sites.py <vanilla alienDeployments.rul> <vanilla alienMissions.rul> <out.rul>
+usage: gen_cobra_sites.py <vanilla alienDeployments.rul> <vanilla alienMissions.rul>
+           <gijoe_cobra_economy.rul> <out.rul>
 """
 import sys, yaml, collections
 
-VANILLA_DEP, VANILLA_MIS, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
+VANILLA_DEP, VANILLA_MIS, ECONOMY, OUT = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 
 # site type -> (short name for the deployment, how often Cobra tries to place one)
 # The weights are John's to tune like every other number here. They are ordered so the two
 # earners are the most common thing Cobra builds, because a network that cannot pay for itself
 # never gets off the ground.
+# the third column is executionOdds, the fourth the build cost in funds; the cost must match
+# gijoe_cobra_economy.rul, so it is read from there rather than repeated here
+BOOTSTRAP = 'STR_COBRA_FRONT_COMPANY'   # the one site Cobra can always build
+BOOTSTRAP_MAX = 3                        # how many, before it must pay its way
+
 SITES = [
     ('STR_COBRA_FRONT_COMPANY',     'FRONT_COMPANY',     30),
     ('STR_COBRA_FACTORY',           'FACTORY',           20),
@@ -46,7 +52,12 @@ terror = load_entry(VANILLA_DEP, 'alienDeployments', 'STR_TERROR_MISSION')
 base_mission = load_entry(VANILLA_MIS, 'alienMissions', 'STR_ALIEN_BASE')
 
 deployments, missions, scripts = [], [], []
+costs = {}
+for e in yaml.safe_load(open(ECONOMY))['cobraSites']:
+    costs[e['type']] = e.get('buildCostFunds', 0)
+
 for site_type, short, weight in SITES:
+    cost = costs.get(site_type, 0)
     dep_name = 'STR_COBRA_%s_SITE' % short
     dep = dict(terror)                       # the working garrison, map size and briefing
     dep['type'] = dep_name
@@ -72,14 +83,33 @@ for site_type, short, weight in SITES:
     mis['waves'] = [{'ufo': 'STR_SMALL_SCOUT', 'count': 1, 'trajectory': 'P5', 'timer': 1000}]
     missions.append(mis)
 
-    scripts.append({
+    script = {
         'type': 'cobraBuild%s' % short.title().replace('_', ''),
         'missionWeights': {0: {mis_name: 100}},
+        # North America only, because that is the only region with G.I. Joe terrain - a raid
+        # anywhere else lands on an X-COM map. The state model is keyed by region and costs
+        # nothing to leave general, so this is the one line to change when terrain spreads.
+        'regionWeights': {0: {'STR_NORTH_AMERICA': 100}},
+        # Cobra builds only what it can pay for, which is the decision John made: sites are
+        # gone when raided and rebuilt when affordable. The counter is the economy's own
+        # regional funds, mirrored into the map the scripts already gate on, so this needs
+        # no scheduling code - which was the whole point of mirroring them there.
         'firstMonth': 0,
         'executionOdds': weight,
         'useTable': False,
         'startDelay': 60,
-    })
+    }
+    if site_type == BOOTSTRAP:
+        # The earner is not gated on funds, or nothing is ever built: Cobra starts with
+        # nothing, so nothing is affordable, so it never earns. Capped by maxRuns instead,
+        # which is a ruleset number rather than a seed value hidden in the engine. Cobra's
+        # front companies are its bootstrap; everything else it has to pay for.
+        script['varName'] = 'cobraFrontCompanies'
+        script['maxRuns'] = BOOTSTRAP_MAX
+    else:
+        script['missionVarName'] = 'COBRA_FUNDS_STR_NORTH_AMERICA'
+        script['counterMin'] = cost
+    scripts.append(script)
 
 out = collections.OrderedDict()
 out['alienDeployments'] = deployments

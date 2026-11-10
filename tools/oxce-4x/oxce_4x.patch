@@ -3643,10 +3643,10 @@ index be923c1..53db861 100644
  	/// Sets the alien base's pact country.
  	void setPactCountry(const std::string &pactCountry);
 diff --git a/src/Savegame/AlienMission.cpp b/src/Savegame/AlienMission.cpp
-index 5576c42..0665800 100644
+index 5576c42..dc63963 100644
 --- a/src/Savegame/AlienMission.cpp
 +++ b/src/Savegame/AlienMission.cpp
-@@ -1164,6 +1164,9 @@ AlienBase *AlienMission::spawnAlienBase(Country *pactCountry, Game &engine, std:
+@@ -1164,9 +1164,15 @@ AlienBase *AlienMission::spawnAlienBase(Country *pactCountry, Game &engine, std:
  		ab->setPactCountry(pactCountry->getRules()->getType());
  	}
  	ab->setAlienRace(_race);
@@ -3656,6 +3656,12 @@ index 5576c42..0665800 100644
  	ab->setId(game.getId(deployment->getMarkerName()));
  	ab->setLongitude(pos.first);
  	ab->setLatitude(pos.second);
++	// Charged only once the coordinates are set: the cost comes out of the region the site
++	// stands in, and before this point it stands nowhere.
++	game.cobraBuilt(ab, engine.getMod());
+ 	game.getAlienBases()->push_back(ab);
+ 	addScore(ab->getLongitude(), ab->getLatitude(), game);
+ 
 diff --git a/src/Savegame/AlienStrategy.cpp b/src/Savegame/AlienStrategy.cpp
 index c3a3286..c9b14a5 100644
 --- a/src/Savegame/AlienStrategy.cpp
@@ -3996,7 +4002,7 @@ index 240b22a..c998115 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..48f2a1b 100644
+index 9ca9637..4fe17f1 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -55,6 +55,8 @@
@@ -4050,10 +4056,29 @@ index 9ca9637..48f2a1b 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2588,138 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2588,157 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
++void SavedGame::cobraBuilt(const AlienBase *base, const Mod *mod)
++{
++	if (base->getSiteType().empty())
++	{
++		return;
++	}
++	RuleCobraSite *rule = mod->getCobraSite(base->getSiteType());
++	Region *region = locateRegion(*base);
++	if (rule == 0 || region == 0 || rule->getBuildCostFunds() <= 0)
++	{
++		return;
++	}
++	// The mission scripts already refuse to run unless the region holds the build cost, so
++	// this does not need to decide whether Cobra can afford it - only to take the money, so
++	// that affording one site is not the same as affording every site.
++	_cobraEconomy->addFunds(region->getRules()->getType(), -rule->getBuildCostFunds());
++	_cobraEconomy->mirrorToCounters(*_alienStrategy);
++}
++
 +int SavedGame::cobraRaided(const AlienBase *base, const Mod *mod)
 +{
 +	if (base->getSiteType().empty())
@@ -4190,7 +4215,7 @@ index 9ca9637..48f2a1b 100644
  {
  	Region* found = nullptr;
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..cb228e6 100644
+index d985908..3eb9a61 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -55,6 +55,7 @@ class ArticleDefinition;
@@ -4209,7 +4234,7 @@ index d985908..cb228e6 100644
  	SavedBattleGame *_battleGame;
  	std::vector<const RuleResearch*> _discovered;
  	std::vector<ResearchDiaryEntry*> _researchDiary;
-@@ -395,6 +397,14 @@ public:
+@@ -395,6 +397,16 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -4219,6 +4244,8 @@ index d985908..cb228e6 100644
 +	void cobraMonthly(const Mod *mod);
 +	/// Takes what a raid denies Cobra. Returns funds + materiel lost, for the debriefing line.
 +	int cobraRaided(const AlienBase *base, const Mod *mod);
++	/// Charges a region for a site Cobra has just built.
++	void cobraBuilt(const AlienBase *base, const Mod *mod);
 +	/// Gets the Cobra economy, read-only.
 +	const CobraEconomy &getCobraEconomy() const { return *_cobraEconomy; }
  	/// Read-only access to the alien strategy data.

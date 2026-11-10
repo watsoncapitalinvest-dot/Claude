@@ -88,6 +88,20 @@ earns its place by what raiding it changes.
 Cobra rebuilds when it can afford to, so the map becomes the readout: where Cobra expands says
 how it is doing, and a region that goes quiet is a region that has been starved.
 
+That is built. Each build script requires the region to hold the site's cost before it will run,
+reading `COBRA_FUNDS_<REGION>` out of the counter map — no scheduling code, which is what the
+mirror was for. The cost is read from this file by the generator, so the gate and the price
+cannot drift apart. Cobra is charged on completion, or affording one site would mean affording
+every site forever.
+
+**The earner cannot be gated on funds, or nothing is ever built.** Cobra starts with nothing, so
+nothing is affordable, so it never earns, and the economy sits dead at zero. The front company
+is therefore ungated and capped by `maxRuns` instead — a ruleset number rather than a seed value
+hidden in the engine. Cobra's front companies are its bootstrap; everything else it pays for.
+
+The build scripts are also locked to North America, which the design called for and nothing
+enforced: before this a site could spawn in Siberia and the raid would land on an X-COM map.
+
 ## The director, and the Cobra playthrough
 
 `AlienStrategy`'s two questions are the interface. Three implementations answer them over time:
