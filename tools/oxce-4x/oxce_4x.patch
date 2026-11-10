@@ -2767,10 +2767,34 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..94d0c00 100644
+index 1885346..8e04954 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
-@@ -5769,12 +5769,19 @@ void Mod::loadBattlescapeResources()
+@@ -2309,6 +2309,23 @@ void Mod::loadAll()
+ 
+ 	loadExtraResources();
+ 
++	// Projectiles are the one battlescape set nobody scales. HIT.PCK and X1.PCK are upscaled with
++	// everything else when loadVanillaResources runs, but this set is created empty there and only
++	// filled by the mods, which happens later - so on a 4x battlefield a bullet stayed three pixels
++	// against a 128-pixel tile, and a laser was a thread of them. Scale it here, once the mods have
++	// put their frames in.
++	if (SurfaceSet::battleScale() > 1)
++	{
++		for (const char *name : { "Projectiles", "UnderwaterProjectiles" })
++		{
++			auto it = _sets.find(name);
++			if (it != _sets.end() && it->second)
++			{
++				it->second->upscale(SurfaceSet::battleScale());
++				Log(LOG_INFO) << "Scaled " << name << " to the battlefield (x" << SurfaceSet::battleScale() << ")";
++			}
++		}
++	}
+ 
+ 	Log(LOG_INFO) << "After load.";
+ 	// cross link rule objects
+@@ -5769,12 +5786,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -2790,7 +2814,7 @@ index 1885346..94d0c00 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +5792,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +5809,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -2798,7 +2822,7 @@ index 1885346..94d0c00 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +5806,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +5823,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
