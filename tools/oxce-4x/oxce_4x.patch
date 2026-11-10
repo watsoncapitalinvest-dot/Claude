@@ -3996,7 +3996,7 @@ index 240b22a..c998115 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..132b049 100644
+index 9ca9637..48f2a1b 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -55,6 +55,8 @@
@@ -4050,7 +4050,7 @@ index 9ca9637..132b049 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2588,122 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2588,138 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -4146,6 +4146,22 @@ index 9ca9637..132b049 100644
 +		netFunds[regionType] += rule->getFundsPerMonth() - rule->getUpkeepFunds();
 +		netMateriel[regionType] += rule->getMaterielPerMonth() - rule->getUpkeepMateriel();
 +		siteCounts["COBRA_SITES_" + siteType + "_" + regionType]++;
++
++		// A broadcast station erodes goodwill through the engine's own pathway rather than by
++		// touching funding: a country's monthly satisfaction is alien activity weighed against
++		// X-COM's, so adding alien activity is what "eroding goodwill" already means here.
++		// Funding falls, a pact becomes likelier and the graphs screen shows it, all without
++		// anything new. This runs before monthlyFunding, so it counts in the month it happens.
++		int erosion = rule->getGoodwillErosionPerMonth();
++		if (erosion > 0)
++		{
++			region->addActivityAlien(erosion);
++			Country *country = locateCountry(*base);
++			if (country != 0)
++			{
++				country->addActivityAlien(erosion);
++			}
++		}
 +	}
 +
 +	// Republished from scratch every month, so a site that was raided away stops being counted

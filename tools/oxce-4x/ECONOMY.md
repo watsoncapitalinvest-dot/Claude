@@ -135,9 +135,20 @@ take more than is there, and a lab or headquarters reveals that many unknown pro
 production stop needed no code at all — the site is deleted, so the next monthly tick simply
 stops counting it, which is the summing design paying for itself.
 
-Still unread, though declared and stored: `garrisonRefillPerMonth`, `goodwillErosionPerMonth`
-and `projectProgressPerMonth`. Projects in particular need a design answer first — nothing yet
-says what a Cobra project *does* when it lands.
+The **broadcast station** is built too, and it needed nothing new. A country's monthly
+satisfaction is alien activity weighed against X-COM's, so "eroding goodwill" is already
+something the engine does — the station adds alien activity to its region and to the country it
+stands in, and funding falls, a pact grows likelier and the graphs screen shows it for free. It
+runs before the funding pass so it counts in the month it happens.
+
+Still unread, and both now blocked on a decision rather than on work:
+
+- `projectProgressPerMonth` — nothing yet says what a Cobra project *does* when it lands.
+- `garrisonRefillPerMonth` — there is nothing to refill. X-COM stores no garrison on a site; the
+  defenders are generated from the deployment each time it is raided, so there is no number to
+  deplete and none to top up. A training camp needs a mechanism invented, not a value chosen.
+  Raising the garrison size of every site in its region is the cheapest and reads best: starve
+  the camp, thin the defenders.
 
 One rough edge in what is built: `cobraRaided` returns funds plus materiel as a single number
 for the debriefing line, so "Cobra supplies denied: 640" adds dollars to crates. It is fine as a
