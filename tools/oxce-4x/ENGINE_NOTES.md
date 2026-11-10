@@ -59,6 +59,12 @@ projectile art is an authoring job, not an engine one — but the set is created
 are clipped to 3x3 before any scaling. Authoring real projectile art needs that size to become
 declarable. Not done.
 
+**The build fires on any push to this branch, with no path filter.** A commit of art or
+build scripts starts an 11-minute Windows build that nobody wanted, and one has already had to
+be cancelled by hand. `[skip ci]` in the commit message stops it, and the workflow can still be
+started on demand from `workflow_dispatch`. Use it for anything that does not touch engine
+source.
+
 **`State::blit` is the only reliable per-frame hook.** Anything that must land after a surface
 reaches the base buffer — item icons, the equipment-screen figure — is done by overriding that
 surface's `blit`, not by hooking where it was drawn.
