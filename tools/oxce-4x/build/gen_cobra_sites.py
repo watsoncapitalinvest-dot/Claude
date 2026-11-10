@@ -27,7 +27,15 @@ VANILLA_DEP, VANILLA_MIS, ECONOMY, OUT = sys.argv[1], sys.argv[2], sys.argv[3], 
 # the third column is executionOdds, the fourth the build cost in funds; the cost must match
 # gijoe_cobra_economy.rul, so it is read from there rather than repeated here
 BOOTSTRAP = 'STR_COBRA_FRONT_COMPANY'   # the one site Cobra can always build
-BOOTSTRAP_MAX = 3                        # how many, before it must pay its way
+# Where Cobra may build. Set to None for worldwide; the engine's own region table then
+# chooses and spawnAlienBase finds land on its own. Locked to North America for now because
+# that is the only region with G.I. Joe terrain - a raid anywhere else lands on an X-COM map.
+# Nothing else depends on this: funds are already pooled across regions and the state model is
+# keyed by region, so widening it later is this one line.
+REGION_LOCK = 'STR_NORTH_AMERICA'
+
+BOOTSTRAP_MAX = 6                        # how many, before it must pay its way
+ODDS_SCALE = 2.2                         # how hard Cobra pushes; see the note below
 
 SITES = [
     ('STR_COBRA_FRONT_COMPANY',     'FRONT_COMPANY',     30),
@@ -86,19 +94,17 @@ for site_type, short, weight in SITES:
     script = {
         'type': 'cobraBuild%s' % short.title().replace('_', ''),
         'missionWeights': {0: {mis_name: 100}},
-        # North America only, because that is the only region with G.I. Joe terrain - a raid
-        # anywhere else lands on an X-COM map. The state model is keyed by region and costs
-        # nothing to leave general, so this is the one line to change when terrain spreads.
-        'regionWeights': {0: {'STR_NORTH_AMERICA': 100}},
         # Cobra builds only what it can pay for, which is the decision John made: sites are
         # gone when raided and rebuilt when affordable. The counter is the economy's own
         # regional funds, mirrored into the map the scripts already gate on, so this needs
         # no scheduling code - which was the whole point of mirroring them there.
         'firstMonth': 0,
-        'executionOdds': weight,
+        'executionOdds': min(100, int(round(weight * ODDS_SCALE))),
         'useTable': False,
         'startDelay': 60,
     }
+    if REGION_LOCK:
+        script['regionWeights'] = {0: {REGION_LOCK: 100}}
     if site_type == BOOTSTRAP:
         # The earner is not gated on funds, or nothing is ever built: Cobra starts with
         # nothing, so nothing is affordable, so it never earns. Capped by maxRuns instead,
@@ -107,7 +113,7 @@ for site_type, short, weight in SITES:
         script['varName'] = 'cobraFrontCompanies'
         script['maxRuns'] = BOOTSTRAP_MAX
     else:
-        script['missionVarName'] = 'COBRA_FUNDS_STR_NORTH_AMERICA'
+        script['missionVarName'] = 'COBRA_FUNDS_TOTAL'
         script['counterMin'] = cost
     scripts.append(script)
 

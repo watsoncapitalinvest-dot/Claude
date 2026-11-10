@@ -62,8 +62,9 @@ engine-side work is small enough to be worth starting.
 
 ## Two resources, held per region
 
-**Funds** are liquid and move between regions. **Materiel** is physical, stockpiled where it is
-made, and equips the troops in that region.
+**Funds** are liquid and move between regions — held per region but spent from the pool, which
+is what "liquid" has to mean once Cobra operates everywhere. **Materiel** is physical, stockpiled
+where it is made, and equips the troops in that region.
 
 Per-region is the whole point. A single global pool makes every site interchangeable, and a
 target list of interchangeable targets is just a longer list. Raiding the factory in South
@@ -99,8 +100,18 @@ nothing is affordable, so it never earns, and the economy sits dead at zero. The
 is therefore ungated and capped by `maxRuns` instead — a ruleset number rather than a seed value
 hidden in the engine. Cobra's front companies are its bootstrap; everything else it pays for.
 
-The build scripts are also locked to North America, which the design called for and nothing
-enforced: before this a site could spawn in Siberia and the raid would land on an X-COM map.
+**Where Cobra may build is one switch.** `REGION_LOCK` in the generator: a region name locks it
+there, `None` goes worldwide, the engine's own region table then chooses and `spawnAlienBase`
+finds land by itself. It is set to North America for now because that is the only region with
+G.I. Joe terrain, and a raid anywhere else lands on an X-COM map. John's call, and the right
+one: widen it when the world has terrain rather than before.
+
+Nothing else depends on that switch, which was the point of doing the worldwide work first.
+A build script that may pick any region cannot gate on one region's bank, so that forced the funds model to match what this document already claimed. A build script
+that may pick any region cannot gate on one region's bank, so **funds gate and spend as a single
+pool** (`COBRA_FUNDS_TOTAL`), with the region a site stands in paying what it can and the rest of
+the network covering the remainder. Materiel stays regional, and that is what keeps raiding a
+particular factory meaningful.
 
 ## The director, and the Cobra playthrough
 

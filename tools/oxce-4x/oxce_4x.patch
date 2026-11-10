@@ -3707,10 +3707,10 @@ index 97ef4f5..0dbe163 100644
  	/// Checks that a given mission location (city or whatever) isn't stored in our list of previously attacked locations.
 diff --git a/src/Savegame/CobraEconomy.cpp b/src/Savegame/CobraEconomy.cpp
 new file mode 100644
-index 0000000..33b3417
+index 0000000..b9c380b
 --- /dev/null
 +++ b/src/Savegame/CobraEconomy.cpp
-@@ -0,0 +1,115 @@
+@@ -0,0 +1,159 @@
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
 + *
@@ -3731,6 +3731,7 @@ index 0000000..33b3417
 + */
 +#include "CobraEconomy.h"
 +#include "AlienStrategy.h"
++#include <algorithm>
 +
 +namespace OpenXcom
 +{
@@ -3813,8 +3814,51 @@ index 0000000..33b3417
 +	_materiel[region] = v < 0 ? 0 : v;
 +}
 +
++int CobraEconomy::getTotalFunds() const
++{
++	int total = 0;
++	for (const auto& pair : _funds)
++	{
++		total += pair.second;
++	}
++	return total;
++}
++
++int CobraEconomy::spendFunds(const std::string& preferredRegion, int amount)
++{
++	// The region the site stands in pays first, because that is where the money most likely
++	// came from and it keeps the geography meaningful. What it cannot cover comes from the
++	// rest of the network, which is what "funds are liquid" means.
++	int taken = 0;
++	int here = std::min(amount, getFunds(preferredRegion));
++	if (here > 0)
++	{
++		addFunds(preferredRegion, -here);
++		taken += here;
++	}
++	for (auto& pair : _funds)
++	{
++		if (taken >= amount)
++		{
++			break;
++		}
++		if (pair.first == preferredRegion || pair.second <= 0)
++		{
++			continue;
++		}
++		int bite = std::min(amount - taken, pair.second);
++		pair.second -= bite;
++		taken += bite;
++	}
++	return taken;
++}
++
 +void CobraEconomy::mirrorToCounters(AlienStrategy& strategy) const
 +{
++	// What Cobra can spend anywhere. A build script may pick any region, so it cannot gate on
++	// one region's bank; this is the counter it reads.
++	strategy.setMissionRun("COBRA_FUNDS_TOTAL", getTotalFunds());
++
 +	for (const auto& pair : _funds)
 +	{
 +		strategy.setMissionRun("COBRA_FUNDS_" + pair.first, pair.second);
@@ -3828,10 +3872,10 @@ index 0000000..33b3417
 +}
 diff --git a/src/Savegame/CobraEconomy.h b/src/Savegame/CobraEconomy.h
 new file mode 100644
-index 0000000..e019908
+index 0000000..bec32cc
 --- /dev/null
 +++ b/src/Savegame/CobraEconomy.h
-@@ -0,0 +1,94 @@
+@@ -0,0 +1,101 @@
 +#pragma once
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
@@ -3919,6 +3963,13 @@ index 0000000..e019908
 +	 */
 +	void mirrorToCounters(AlienStrategy& strategy) const;
 +
++	/// Every region's funds added up. Funds are liquid by design, so this is what Cobra can
++	/// actually spend, and what a build gate that may pick any region has to read.
++	int getTotalFunds() const;
++	/// Spends from the pool, taking from the named region first and then wherever there is
++	/// money. Returns what it managed to take, which is all of it unless Cobra is short.
++	int spendFunds(const std::string& preferredRegion, int amount);
++
 +private:
 +	std::map<std::string, int> _funds;
 +	std::map<std::string, int> _materiel;
@@ -4002,7 +4053,7 @@ index 240b22a..c998115 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..4fe17f1 100644
+index 9ca9637..d86e99a 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -55,6 +55,8 @@
@@ -4056,7 +4107,7 @@ index 9ca9637..4fe17f1 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2588,157 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2588,158 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -4072,10 +4123,11 @@ index 9ca9637..4fe17f1 100644
 +	{
 +		return;
 +	}
-+	// The mission scripts already refuse to run unless the region holds the build cost, so
-+	// this does not need to decide whether Cobra can afford it - only to take the money, so
-+	// that affording one site is not the same as affording every site.
-+	_cobraEconomy->addFunds(region->getRules()->getType(), -rule->getBuildCostFunds());
++	// The scripts gate on Cobra's TOTAL funds, because a script may pick any region and so
++	// cannot read one region's bank. Spending matches: the region the site stands in pays what
++	// it can and the rest of the network covers the remainder, which is what the design means
++	// by funds being liquid while materiel stays where it is made.
++	_cobraEconomy->spendFunds(region->getRules()->getType(), rule->getBuildCostFunds());
 +	_cobraEconomy->mirrorToCounters(*_alienStrategy);
 +}
 +
