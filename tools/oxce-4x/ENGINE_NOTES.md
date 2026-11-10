@@ -42,6 +42,44 @@ pixel is underneath, which is what makes soft edges and ground shadows work.
 
 ## Things that cost time to find, recorded so they are not re-learned
 
+**The game reads its mod from `~/.local/share/openxcom/mods/GIJoe4x`, not from the scratchpad.**
+`cobraEconomy:` was written into the scratchpad's `gijoe_tuning.rul`, built, tested, shipped and
+documented — and the directory the game loads never got the block. `tryRead` left the threshold
+at its default of 0, the guard `if (wellSupplied > 0)` skipped the whole lookup, and every region
+on earth reported itself well supplied. The feature compiled, ran and did nothing.
+
+The two trees are deliberately **not** mirrors, so a blanket sync is the wrong fix: the installed
+copy holds John's own files (`gijoe_frontops`, `gijoe_chuckles`, `gijoe_intro`,
+`zz_gijoe_destruction`) that the scratchpad has never had, and it is sometimes *ahead* on shared
+ones — `gijoe_terrain_na.rul` had NACOBRA maps there and not here, and copying the scratchpad
+over it would have deleted them. Check direction per file.
+
+`scripts/check_loaded.py` (shipped as `build/check_loaded.py`) asks one question per key: is this
+key set by a file in the tree the game loads? A key the engine reads that nothing loaded sets is
+reported as a failure, and it exits non-zero. It ignores commented lines, because the doc block
+above `cobraEconomy:` mentions the name repeatedly and a raw substring count would have passed on
+the very file that was missing the setting. Run it before believing any ruleset-tuned feature.
+
+**A ruleset default of 0 plus a `> 0` guard is an off switch nobody chose.** It is the right
+shape — it is how `wellSuppliedMateriel: 0` turns the rule off on purpose — but it means a key
+that fails to load is indistinguishable, from inside the game, from a key deliberately set to
+zero. That is why the check above exists rather than a log line.
+
+**`campaign_ff.sh` needs two probes and looked busy with one.** `campaign_probe` writes the
+monthly line (`Savegame/SavedGame.cpp`); `ff_probe` drives the clock
+(`Geoscape/GeoscapeState.cpp`). With only the first applied the game loads the save, sits on a
+paused geoscape and burns 77 per cent of a core, which for two minutes is indistinguishable from
+a slow fast-forward. The runner now greps both files and refuses with the commands to run.
+
+**Totals cannot measure a per-entry change in a New Battle.** Four runs of the same map with
+nothing forced gave 10, 15, 7 and 7 units, because `dQty` and `extraQty` are rolled per rank
+entry. A headcount penalty of one man per entry is invisible against that spread, so the probe
+logs each entry's quantity before the subtraction and `gar_check.py` checks
+`spawned == max(1, before - penalty)` exactly. The same checker **fails a baseline with no kit
+spread**, because a baseline already all on tier 0 would show the clamp "working" while proving
+nothing.
+
+
 **A set's frames are rebuilt after the mod loads.** Registering a sharp twin against a
 `Surface*` captured during `ExtraSprites` silently fails: by the time anything is drawn the
 pointer is stale. Both `HiUI::registerSetFrame` and `HiColor::registerSetFrame` therefore

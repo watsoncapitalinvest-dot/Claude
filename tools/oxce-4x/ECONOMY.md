@@ -438,6 +438,103 @@ right and the wrong code print zero. The case that discriminates is a set whose 
 but which holds one large consumer — a hidden HQ and two front companies gives 140 summed and
 220 applied in order. A test that passes under both hypotheses is not a test.
 
+## Running dry hurts
+
+John, asked what happens when Cobra cannot pay for guns: *"It needs to make or buy more but if
+it can't equip personnel it doesn't."*
+
+So materiel stops being a number that goes up and down while nobody is worse off for it. A
+region Cobra cannot supply fields the **poorest kit its deployment defines**, however late in
+the campaign it is.
+
+The mechanism was already there and unused. Every rank entry in a deployment carries three
+`itemSets` — in the Joe mod a pistol tier, a rifle tier and a heavy tier — and the engine picks
+between them with `getAlienItemLevels().at(_save->getAlienItemLevel())`, a table indexed by how
+far the campaign has run. One line clamps that index to zero:
+
+```cpp
+if (!garrison.wellSupplied) { itemLevel = 0; }
+```
+
+Two numbers in `gijoe_tuning.rul` decide when:
+
+- `wellSuppliedMateriel: 50` — what a region needs banked. A factory makes 80 a month and a camp
+  eats 20, so one factory keeps roughly one region armed and losing it disarms that region
+  within a month or two.
+- `appliesToAllMissions: false` — raids on Cobra's own sites, not crash sites and terror sites.
+  `0` switches the whole rule off.
+
+It is clamped in `deployAliens` only, **not** in the identical line in the reinforcement path,
+which has no region lookup in scope. Reinforcements arriving better armed than the garrison they
+are reinforcing is a question rather than an oversight, and it is John's.
+
+### Guns and bodies are two different shortages
+
+John, on the back of the above: *"if the troops portion of that fails then cobra should have
+less troops available. Even if they have the best guns."*
+
+So the two resources now fail in two distinguishable ways, which is the argument for having two
+of them rather than one number called "strength":
+
+| what Cobra is short of | what the player meets |
+| --- | --- |
+| materiel | a **full** garrison carrying **sidearms** |
+| funds | a **thin** garrison carrying **whatever the month gives it** |
+| both | a thin garrison carrying sidearms |
+
+Materiel arms the men who are there. Funds are what put them there — payroll, food, training —
+so `wellPaidFunds: 40` and `starvedHeadcount: 1` take a man off every rank entry in a region
+whose banked funds fall below the threshold. Seven rank entries, so one is about seven fewer men.
+
+**No rank entry is ever emptied.** One that had men keeps one, for the same reason the rank cap
+refuses to empty a deployment: an empty compound is a bug, not a consequence.
+
+Either number at `0` switches the headcount half off and leaves the kit half running, and the
+reverse. A front company nets 110 a month against a threshold of 40, so a region only goes thin
+after it has lost whatever was earning there.
+
+### The clamp and the lookup are two different things, and needed two tests
+
+The New Battle test forces `wellSupplied` false by hand, because a New Battle has no Cobra
+economy to be short of anything — so left alone it reports the region supplied and the battle
+cannot show the effect. That proves the **clamp** and nothing else. Same map, same deployment,
+nothing else forced:
+
+| run | units | kit tiers | weapons drawn |
+| --- | --- | --- | --- |
+| as the game plays it | 10 | 0:7 **1:1 2:2** | 7 pistol, **3 rifle** |
+| region out of guns | 7 | **0:7** | **7 pistol, 0 rifle** |
+
+Three of ten men above the pistol tier becomes none of seven. The baseline mattering is the
+point: alien tech row 0 is 70/20/10 across the three tiers, so the unstarved run has a spread to
+lose. A baseline that happened to be all zeroes would have shown the same "pass" while proving
+nothing, which is the shape of two tests that already had to be thrown away here. The checker
+now **fails a baseline with no spread** rather than passing it.
+
+The headcount half could not be tested the same way at all. New Battle rolls `dQty` and
+`extraQty` per rank entry, so four runs of the *same map with nothing forced* came out at 10,
+15, 7 and 7 units. A penalty of one man per entry is invisible against that, and "the starved
+run had fewer units" would have been luck reported as a result. So the probe logs each entry's
+quantity **before** the subtraction and `gar_check.py` checks the arithmetic exactly — given no
+UFO damage the engine spawns exactly `quantity` men, so the pass is
+
+    spawned(rank) == max(1, quantity_before - penalty)
+
+per rank entry, which the dice cannot flatter.
+
+It also landed on **John's own `STR_COBRA_FRONT` deployment** rather than a generated one, which
+is the better result — the clamp works on any Cobra deployment with more than one item set, not
+just the eight this desk wrote.
+
+The **lookup** — the region's real materiel against the real threshold — is campaign-side, so the
+campaign probe prints it per month per region next to the number it was compared with
+(`+0/cap-1/DRY(m12)`), so a rule that never fires and a rule that always fires look different
+from each other in the log.
+
+A side finding from the same runs: John's `STR_COBRA_FRONT` has no language entry, so the game
+logs `STR_COBRA_FRONT_ not found in en-US`. Cosmetic, pre-existing, and in his file rather than
+a generated one, so it is left for him to name.
+
 ## Open, and John's to settle
 
 **The mod already calls vanilla alien bases "Terror Drome."** `STR_ALIEN_BASE` is renamed that

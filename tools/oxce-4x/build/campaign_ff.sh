@@ -16,6 +16,20 @@ L=/root/.local/share/openxcom/openxcom.log
 DAYS=${1:-240}
 export DISPLAY=:99
 
+# This run needs BOTH probes and silently does nothing useful with only one: campaign_probe
+# writes the monthly line (SavedGame.cpp) and ff_probe drives the clock (GeoscapeState.cpp).
+# With ff_probe missing the game loads the save, sits on a paused geoscape and burns CPU, which
+# for two minutes looks exactly like a slow fast-forward. Refuse instead of looking busy.
+SRC=$S/oxc/oxce/src
+miss=""
+grep -q CAMPROBE "$SRC/Savegame/SavedGame.cpp"     || miss="$miss campaign_probe.py"
+grep -q FFPROBE  "$SRC/Geoscape/GeoscapeState.cpp" || miss="$miss ff_probe.py"
+if [ -n "$miss" ]; then
+  echo "not instrumented - apply these first and rebuild:$miss"
+  for m in $miss; do echo "  python3 -I $S/rb/build/$m apply $SRC"; done
+  exit 1
+fi
+
 pgrep Xvfb >/dev/null || (nohup Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 &)
 sleep 2
 pkill -9 -x openxcom 2>/dev/null; sleep 1; rm -f "$L"

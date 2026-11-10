@@ -101,7 +101,13 @@ PROBE = ANCHOR + """	if (getenv("OXCE_CAMP_PROBE"))                             
 				CobraGarrison g = cobraGarrison(mod, ab->getLongitude(),       // CAMPROBE
 					ab->getLatitude(), true);                                  // CAMPROBE
 				std::ostringstream one;                                        // CAMPROBE
-				one << "+" << g.bonus << "/cap" << g.rankUnlock;               // CAMPROBE
+				// The New Battle test forces wellSupplied false and so proves the CLAMP only.    // CAMPROBE
+				// This proves the LOOKUP: the region's real materiel against the real threshold,  // CAMPROBE
+				// printed next to the number it was compared with, so a rule that never fires     // CAMPROBE
+				// and a rule that always fires look different from each other in the log.         // CAMPROBE
+				one << "+" << g.bonus << "/cap" << g.rankUnlock                // CAMPROBE
+					<< (g.wellSupplied ? "/sup" : "/DRY")                      // CAMPROBE
+					<< "(m" << _cobraEconomy->getMateriel(rg->getRules()->getType()) << ")"; // CAMPROBE
 				seen[rn.substr(rn.rfind('_') + 1)] = one.str();                // CAMPROBE
 			}                                                                  // CAMPROBE
 			for (const auto& kv : seen) gar << kv.first << kv.second << " ";   // CAMPROBE
