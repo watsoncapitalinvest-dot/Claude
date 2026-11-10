@@ -215,10 +215,60 @@ index 642c538..1d3ece7 100644
  	void drawSelectedItem();
  	/// Gets the currently selected item.
 diff --git a/src/Battlescape/InventoryState.cpp b/src/Battlescape/InventoryState.cpp
-index cea8e65..a5409dd 100644
+index cea8e65..03e55f5 100644
 --- a/src/Battlescape/InventoryState.cpp
 +++ b/src/Battlescape/InventoryState.cpp
-@@ -510,7 +510,7 @@ void InventoryState::init()
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "InventoryState.h"
++#include "../Engine/HiUI.h"
+ #include "InventoryLoadState.h"
+ #include "InventorySaveState.h"
+ #include "InventoryPersonalState.h"
+@@ -65,6 +66,24 @@
+ namespace OpenXcom
+ {
+ 
++namespace
++{
++/// The equipment-screen figure. The 8-bit copy is quantised into the battlescape palette, which
++/// has no skin tones to spare; the sharp twin is laid over it once the 8-bit one has landed.
++class PaperDoll : public Surface
++{
++public:
++	const Surface *art = nullptr;
++	PaperDoll(int w, int h, int x, int y) : Surface(w, h, x, y) {}
++	void blit(SDL_Surface *s) override
++	{
++		Surface::blit(s);
++		if (art && HiUI::enabled()) HiUI::sprite(art, getX(), getY(), getWidth(), getHeight());
++	}
++};
++}
++
++
+ static const int _templateBtnX = 288;
+ static const int _createTemplateBtnY = 90;
+ static const int _applyTemplateBtnY  = 113;
+@@ -108,7 +127,7 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
+ 
+ 	// Create objects
+ 	_bg = new Surface(320, 200, 0, 0);
+-	_soldier = new Surface(320, 200, 0, 0);
++	_soldier = new PaperDoll(320, 200, 0, 0);
+ 	_txtPosition = new Text(70, 9, 65, 95);
+ 	_txtNameStatic = new Text(210, 17, 28, 6);
+ 	_txtName = new TextEdit(this, 210, 17, 28, 6);
+@@ -432,6 +451,7 @@ void InventoryState::init()
+ 	}
+ 
+ 	_soldier->clear();
++	if (auto *doll = dynamic_cast<PaperDoll*>(_soldier)) doll->art = nullptr;
+ 	_btnRank->clear();
+ 
+ 	if (Options::oxceInventoryShowUnitSlot)
+@@ -510,7 +530,7 @@ void InventoryState::init()
  			_reloadUnit = false;
  		}
  
@@ -227,6 +277,22 @@ index cea8e65..a5409dd 100644
  		auto* frame = texture->getFrame(s->getRankSpriteBattlescape());
  		if (frame)
  		{
+@@ -556,6 +576,7 @@ void InventoryState::init()
+ 				surf = _game->getMod()->getSurface(look, true);
+ 			}
+ 			surf->blitNShade(_soldier, 0, 0);
++			if (auto *doll = dynamic_cast<PaperDoll*>(_soldier)) doll->art = surf;
+ 		}
+ 	}
+ 	else
+@@ -572,6 +593,7 @@ void InventoryState::init()
+ 		if (armorSurface)
+ 		{
+ 			armorSurface->blitNShade(_soldier, 0, 0);
++			if (auto *doll = dynamic_cast<PaperDoll*>(_soldier)) doll->art = armorSurface;
+ 		}
+ 	}
+ 
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
 index 3665cd1..8826436 100644
 --- a/src/Battlescape/Map.cpp
