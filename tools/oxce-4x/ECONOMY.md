@@ -142,15 +142,21 @@ This is a content decision, not an engine one. Nothing in the state model change
 
 ## A ruleset that loads is not a ruleset that loaded
 
-OXCE **silently ignores an unknown top-level ruleset key**. A file full of `cobraSites:` in a
-build that has never heard of them starts the game, logs nothing, and leaves no trace — and so
-does a typo in the key.
+There are **two** places where a broken ruleset and a correct one both start the game in
+silence, and both were confirmed here by deliberately breaking them:
 
-So "it ran without errors" proves nothing about whether a new rule type is wired in. It was
-checked here the only way that means anything: a temporary log line in `RuleCobraSite`'s
-constructor, a run, and eight lines in `openxcom.log` naming the eight types. The probe came
-straight back out. Anything added to the mod's ruleset later deserves the same treatment once,
-because the failure mode is indistinguishable from success.
+- OXCE **silently ignores an unknown top-level key**. A file full of `cobraSites:` in a build
+  that has never heard of them logs nothing — and neither does a typo in the key.
+- A mission's `siteType` is **not resolved at load**. Pointing one at
+  `STR_DOES_NOT_EXIST_AT_ALL` starts just as cleanly; the reference is only looked up when a
+  base actually spawns, which may be months into a campaign.
+
+So "it ran without errors" says nothing about whether new content is wired in. Check by
+existence instead: a temporary probe that asks the mod for each thing by name and logs what it
+got back. That is how the eight site types, their deployments, their garrisons and their
+missions were confirmed, and the probe came straight back out afterwards. Anything added to the
+ruleset later deserves the same treatment once, because the failure mode is indistinguishable
+from success.
 
 ## The month is summed before it is applied
 
@@ -165,6 +171,14 @@ test does not catch it: all eight sites net negative whichever way they are appl
 right and the wrong code print zero. The case that discriminates is a set whose net is positive
 but which holds one large consumer — a hidden HQ and two front companies gives 140 summed and
 220 applied in order. A test that passes under both hypotheses is not a test.
+
+## Open, and John's to settle
+
+**The mod already calls vanilla alien bases "Terror Drome."** `STR_ALIEN_BASE` is renamed that
+in the language file, and one of the eight site types is a Terror Drome of its own. Both can
+exist and nothing breaks, but two different things on the globe would carry nearly the same
+name. Either the vanilla base goes away once Cobra sites replace it, or one of the two is
+renamed. Not decided unilaterally because it is a naming call, not a technical one.
 
 ## Not decided yet
 
