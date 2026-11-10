@@ -65,6 +65,22 @@ PROBE = ANCHOR + """	if (getenv("OXCE_CAMP_PROBE"))                             
 		// What a raid on each Cobra site would meet. Calls the real lookup against real        // CAMPROBE
 		// campaign state - regions, bases, the lot - so the month a camp appears, the sites    // CAMPROBE
 		// in its region must change and nothing else may.                                      // CAMPROBE
+		// Cumulative, off the base itself. Sampling _missionSites once a month would miss a    // CAMPROBE
+		// terror site that lives a few days, and would read as "the Drome launched nothing"     // CAMPROBE
+		// when it had launched five. The engine already counts them; use its number.           // CAMPROBE
+		// The first version of this counted every generated mission and was useless: John's     // CAMPROBE
+		// front ops run supply missions at 6% a DAY, so the total read 63 before the Drome      // CAMPROBE
+		// even existed and the Drome's own contribution vanished into it. A number that moves   // CAMPROBE
+		// whether or not the thing under test is present measures nothing.                      // CAMPROBE
+		//                                                                                       // CAMPROBE
+		// Nothing but the Drome generates terror missions, so counting those by TYPE is the     // CAMPROBE
+		// question actually being asked.                                                        // CAMPROBE
+		int launched = 0, terror = 0;                                          // CAMPROBE
+		for (auto* ab : _alienBases) launched += ab->getGenMissionCount();     // CAMPROBE
+		for (auto* am : _activeMissions)                                       // CAMPROBE
+		{                                                                      // CAMPROBE
+			if (am->getRules().getType() == "STR_ALIEN_TERROR") ++terror;      // CAMPROBE
+		}                                                                      // CAMPROBE
 		std::ostringstream gar;                                                // CAMPROBE
 		{                                                                      // CAMPROBE
 			std::map<std::string, std::string> seen;                           // CAMPROBE
@@ -86,7 +102,10 @@ PROBE = ANCHOR + """	if (getenv("OXCE_CAMP_PROBE"))                             
 			<< _time->getMonth() << "  funds=" << _cobraEconomy->getTotalFunds()// CAMPROBE
 			<< "  sites=" << _alienBases.size()                                // CAMPROBE
 			<< "  have[ " << have.str() << "]  wants[ " << want.str()          // CAMPROBE
-			<< "]  where[ " << where.str() << "]  garrison[ " << gar.str() << "]";// CAMPROBE
+			<< "]  where[ " << where.str() << "]  garrison[ " << gar.str()     // CAMPROBE
+			<< "]  terrorLive=" << terror << " launched=" << launched          // CAMPROBE
+			<< " liveMissions=" << _activeMissions.size()                      // CAMPROBE
+			<< " missionSites=" << _missionSites.size();                       // CAMPROBE
 		if (!other.str().empty())                                              // CAMPROBE
 			Log(LOG_INFO) << "[camp]        untagged[ " << other.str() << "]"; // CAMPROBE
 		// A raid, on demand, through exactly the path the debriefing uses, so the planner's   // CAMPROBE
@@ -97,14 +116,36 @@ PROBE = ANCHOR + """	if (getenv("OXCE_CAMP_PROBE"))                             
 		// the named month, so the garrison line either flips the month after or the lookup is   // CAMPROBE
 		// wrong. The negative case needs no help - the campaign supplies it all by itself.      // CAMPROBE
 		const char* plantEnv = getenv("OXCE_CAMP_PLANT");                      // CAMPROBE
-		if (plantEnv && _time->getMonth() == atoi(plantEnv))                   // CAMPROBE
+		// OXCE_CAMP_PLANT=<month>:<SHORT>, e.g. 7:TERROR_DROME. Turns one front company into   // CAMPROBE
+		// that type, so the thing under test exists on a known month instead of when the dice   // CAMPROBE
+		// get round to it - the Drome rolls 13% a month and waiting on it is waiting on luck.   // CAMPROBE
+		if (plantEnv)                                                          // CAMPROBE
 		{                                                                      // CAMPROBE
-			for (auto* ab : _alienBases)                                       // CAMPROBE
+			std::string pe(plantEnv);                                          // CAMPROBE
+			size_t colon = pe.find(':');                                       // CAMPROBE
+			int when = atoi(pe.substr(0, colon).c_str());                      // CAMPROBE
+			std::string what = colon == std::string::npos                      // CAMPROBE
+				? std::string("STR_COBRA_TRAINING_CAMP")                       // CAMPROBE
+				: "STR_COBRA_" + pe.substr(colon + 1);                         // CAMPROBE
+			if (_time->getMonth() == when)                                     // CAMPROBE
 			{                                                                  // CAMPROBE
-				if (ab->getSiteType() != "STR_COBRA_FRONT_COMPANY") continue;  // CAMPROBE
-				ab->setSiteType("STR_COBRA_TRAINING_CAMP");                    // CAMPROBE
-				Log(LOG_INFO) << "[camp] PLANTED a training camp";             // CAMPROBE
-				break;                                                         // CAMPROBE
+				for (auto* ab : _alienBases)                                   // CAMPROBE
+				{                                                              // CAMPROBE
+					if (ab->getSiteType() != "STR_COBRA_FRONT_COMPANY") continue;// CAMPROBE
+					// BOTH halves, or this plants a chimera. setSiteType is what the economy   // CAMPROBE
+					// and the planner read; genMission lives on the DEPLOYMENT, which is a     // CAMPROBE
+					// different pointer entirely. Setting only the first made a base that was  // CAMPROBE
+					// a Terror Drome to cobraPlan and a front company to everything else, and  // CAMPROBE
+					// four months of "the Drome launches nothing" was this line, not the mod.  // CAMPROBE
+					ab->setSiteType(what);                                     // CAMPROBE
+					std::string depName = "STR_COBRA_" +                       // CAMPROBE
+						what.substr(std::string("STR_COBRA_").size()) + "_SITE";// CAMPROBE
+					AlienDeployment* dep = mod->getDeployment(depName);        // CAMPROBE
+					if (dep) ab->setDeployment(dep);                           // CAMPROBE
+					Log(LOG_INFO) << "[camp] PLANTED " << what                 // CAMPROBE
+						<< " deployment=" << (dep ? depName : "NOT FOUND");    // CAMPROBE
+					break;                                                     // CAMPROBE
+				}                                                              // CAMPROBE
 			}                                                                  // CAMPROBE
 		}                                                                      // CAMPROBE
 		const char* raidEnv = getenv("OXCE_CAMP_RAID");                        // CAMPROBE

@@ -310,6 +310,52 @@ show direction and magnitude rather than a reproducible sum.
 All three numbers are guesses. The rank gate in particular changes the baseline everywhere the
 moment it is on: set `garrisonRankUnlock: -1` to keep the bonus and drop that half.
 
+## The Drome is the HQ
+
+John: *"The drome is the hq. It's where the planning happens."* That maps onto `cobraPlan()`
+directly, so the Hidden HQ's job went to the Terror Drome and the buff is not a number but
+whether Cobra is competent at all.
+
+`runsThePlanning` on a site rule. While Cobra holds one, the planner decides: pay upkeep first,
+one of everything before two of anything, replace what was destroyed. With none standing it
+reverts to buying whatever it can afford in no order — which is what it did before the planner
+existed. It keeps the affordability test while leaderless, because without it a decapitated
+Cobra could never rebuild the thing that does the thinking, and killing the Drome once would end
+the game.
+
+The contrast over one campaign, Drome planted at month 8:
+
+| | before | after |
+| --- | --- | --- |
+| what it held by month 12 | 4 front companies, 2 depots, nothing else | front companies, factory, camp, depot, drome |
+| what it asked for | types it already owned, repeatedly | only types it lacked |
+
+So killing the Drome does not slow Cobra down, it makes it *stupid*: still building, all of it
+the same two cheap things.
+
+The Drome also fights back — `genMission: STR_ALIEN_TERROR` at `genMissionFreq: 4`. **None of the
+eight sites generated anything before this**, because `genMissionFrequency` defaults to 0 and a
+deployment that names no frequency is silently inert forever. The roll is *daily*, in `time1Day`,
+so 4 is about one a month and the front op's 6 is one a fortnight — an easy thing to be thirty
+times wrong about.
+
+**Two measurement failures on the way, both of which read as "the feature does not work".** The
+first counter totalled every generated mission, and John's front ops run supply missions at 6% a
+day, so it read 63 before the Drome existed; a number that moves whether or not the thing under
+test is present measures nothing. The second was worse: the test planted a Drome with
+`setSiteType` alone, which is what the economy reads, while `genMission` hangs off the
+*deployment*, a different pointer. That made a base which was a Terror Drome to the planner and a
+front company to everything else, and four months of "the Drome launches nothing" was the test,
+not the mod. Setting both halves: zero terror missions in seven months without, 1–2 in flight in
+every month after.
+
+Terror sites themselves still read zero, because a site is the end of a terror mission and
+short-lived, and the probe samples monthly. Not claimed as working; not claimed as broken.
+
+The Hidden HQ is now redundant and still in the list doing nothing. Retiring a site type breaks
+saves that hold one, so it is a deliberate separate tidy rather than something done on the
+evening of a test.
+
 ## Where the sites can actually go
 
 The mod keeps X-COM's fifteen regions and defines none of its own, but only North America has

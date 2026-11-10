@@ -49,6 +49,20 @@ SITES = [
 ]
 
 
+# Per-type behaviour, spliced onto the cloned terror deployment above.
+#
+# The Terror Drome is Cobra's seat of power - John: "The drome is the hq. It's where the
+# planning happens." So it fights back, and it is also the site that runs the planner: see
+# runsThePlanning in gijoe_cobra_economy.rul, which is where that half lives because it is an
+# economy property rather than a deployment one.
+EXTRAS = {
+    'STR_COBRA_TERROR_DROME': {
+        'genMission': {'STR_ALIEN_TERROR': 100},
+        'genMissionFreq': 4,
+    },
+}
+
+
 def load_entry(path, key, name):
     for e in yaml.safe_load(open(path))[key]:
         if e.get('type') == name:
@@ -79,6 +93,14 @@ for site_type, short, weight in SITES:
     # a site sits there until it is raided, unlike a terror mission that packs up and leaves
     dep.pop('duration', None)
     dep.pop('despawnPenalty', None)
+    # What the site DOES while it stands, as opposed to what it is worth when raided. None of
+    # the eight did anything here: genMissionFrequency defaults to 0, so a site that names no
+    # frequency generates nothing, forever, with no warning. That is why Cobra's compounds sat
+    # on the globe being scenery.
+    #
+    # The roll is DAILY, not monthly - it happens in time1Day - so 4 is about one a month and
+    # the front op's 6 is one a fortnight. Easy number to be thirty times wrong about.
+    dep.update(EXTRAS.get(site_type, {}))
     deployments.append(dep)
 
     mis_name = 'STR_COBRA_BUILD_%s' % short

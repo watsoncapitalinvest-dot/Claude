@@ -3801,10 +3801,10 @@ index 2242d13..e11ecac 100644
  	/// Gets the ruleset for a facility type.
 diff --git a/src/Mod/RuleCobraSite.cpp b/src/Mod/RuleCobraSite.cpp
 new file mode 100644
-index 0000000..7d1c533
+index 0000000..3a78d32
 --- /dev/null
 +++ b/src/Mod/RuleCobraSite.cpp
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,63 @@
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
 + *
@@ -3838,6 +3838,7 @@ index 0000000..7d1c533
 +	_projectProgressPerMonth(0),
 +	_goodwillErosionPerMonth(0),
 +	_garrisonBonus(0), _garrisonRankUnlock(-1), _garrisonAllMissions(false),
++	_runsThePlanning(false),
 +	_stockpileCap(0),
 +	_revealOnRaid(0)
 +{
@@ -3861,6 +3862,7 @@ index 0000000..7d1c533
 +	reader.tryRead("garrisonBonus", _garrisonBonus);
 +	reader.tryRead("garrisonRankUnlock", _garrisonRankUnlock);
 +	reader.tryRead("garrisonAllMissions", _garrisonAllMissions);
++	reader.tryRead("runsThePlanning", _runsThePlanning);
 +	reader.tryRead("stockpileCap", _stockpileCap);
 +	reader.tryRead("revealOnRaid", _revealOnRaid);
 +}
@@ -3868,10 +3870,10 @@ index 0000000..7d1c533
 +}
 diff --git a/src/Mod/RuleCobraSite.h b/src/Mod/RuleCobraSite.h
 new file mode 100644
-index 0000000..375567f
+index 0000000..7463939
 --- /dev/null
 +++ b/src/Mod/RuleCobraSite.h
-@@ -0,0 +1,92 @@
+@@ -0,0 +1,98 @@
 +#pragma once
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
@@ -3936,6 +3938,11 @@ index 0000000..375567f
 +	int _garrisonRankUnlock;           ///< ranks BELOW this (the elites) appear only where a
 +	                                   ///< camp stands; -1 leaves ranks alone
 +	bool _garrisonAllMissions;         ///< false: Cobra sites only. true: every Cobra battle there
++	/// Where the planning happens. While Cobra owns one of these, cobraPlan() decides what it
++	/// builds - pay upkeep first, diversify, replace what was destroyed. With none standing,
++	/// Cobra falls back to buying whatever it can afford, which is what it did before there
++	/// was a planner at all.
++	bool _runsThePlanning;
 +	int _stockpileCap;                 ///< what this site lets the region hold; 0 means no limit of its own
 +	int _revealOnRaid;                 ///< how many unknown projects raiding this reveals
 +
@@ -3959,6 +3966,7 @@ index 0000000..375567f
 +	int getGarrisonBonus() const { return _garrisonBonus; }
 +	int getGarrisonRankUnlock() const { return _garrisonRankUnlock; }
 +	bool getGarrisonAllMissions() const { return _garrisonAllMissions; }
++	bool getRunsThePlanning() const { return _runsThePlanning; }
 +	int getStockpileCap() const { return _stockpileCap; }
 +	int getRevealOnRaid() const { return _revealOnRaid; }
 +};
@@ -4524,19 +4532,21 @@ index 240b22a..c998115 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..1fcd373 100644
+index 9ca9637..acfa6f7 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
-@@ -55,6 +55,8 @@
+@@ -55,7 +55,10 @@
  #include "MissionSite.h"
  #include "AlienBase.h"
  #include "AlienStrategy.h"
 +#include "CobraEconomy.h"
 +#include "../Mod/RuleCobraSite.h"
  #include "AlienMission.h"
++#include "../Mod/RuleAlienMission.h"
  #include "GeoscapeEvent.h"
  #include "../Mod/RuleCountry.h"
-@@ -110,6 +112,7 @@ SavedGame::SavedGame() :
+ #include "../Mod/RuleRegion.h"
+@@ -110,6 +113,7 @@ SavedGame::SavedGame() :
  {
  	_time = new GameTime(6, 1, 1, 1999, 12, 0, 0);
  	_alienStrategy = new AlienStrategy();
@@ -4544,7 +4554,7 @@ index 9ca9637..1fcd373 100644
  	_funds.push_back(0);
  	_maintenance.push_back(0);
  	_researchScores.push_back(0);
-@@ -159,6 +162,7 @@ SavedGame::~SavedGame()
+@@ -159,6 +163,7 @@ SavedGame::~SavedGame()
  		delete ab;
  	}
  	delete _alienStrategy;
@@ -4552,7 +4562,7 @@ index 9ca9637..1fcd373 100644
  	for (auto* am : _activeMissions)
  	{
  		delete am;
-@@ -649,6 +653,9 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -649,6 +654,9 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  		}
  	}
  	_alienStrategy->load(reader["alienStrategy"], mod);
@@ -4562,7 +4572,7 @@ index 9ca9637..1fcd373 100644
  
  	for (const auto& weHardlyKnewYe : reader["deadSoldiers"].children())
  	{
-@@ -690,6 +697,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -690,6 +698,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	}
  
  	_scriptValues.load(reader, mod->getScriptGlobal());
@@ -4570,7 +4580,7 @@ index 9ca9637..1fcd373 100644
  }
  
  void SavedGame::loadTemplates(const YAML::YamlNodeReader& reader, const Mod* mod)
-@@ -849,6 +857,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -849,6 +858,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("hiddenPurchaseItems", _hiddenPurchaseItemsMap);
  	writer.write("customRuleCraftDeployments", _customRuleCraftDeployments);
  	_alienStrategy->save(writer["alienStrategy"]);
@@ -4578,7 +4588,7 @@ index 9ca9637..1fcd373 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2588,330 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2589,357 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -4686,6 +4696,21 @@ index 9ca9637..1fcd373 100644
 +		netMateriel += (rule->getMaterielPerMonth() - rule->getUpkeepMateriel()) * pair.second;
 +	}
 +
++	// Where the planning happens. While Cobra holds a site that runs the show, everything below
++	// applies. With none standing it reverts to dice, and the one thing it must still be able to
++	// do is replace the site that does the thinking - otherwise killing it once ends the game.
++	// The affordability test below is what keeps that reachable rather than instant.
++	bool planning = false;
++	for (const auto &pair : owned)
++	{
++		RuleCobraSite *r = mod->getCobraSite(pair.first);
++		if (r && r->getRunsThePlanning() && pair.second > 0)
++		{
++			planning = true;
++			break;
++		}
++	}
++
 +	const int funds = _cobraEconomy->getTotalFunds();
 +	const bool broke = netFunds <= 0;
 +	const bool starved = netMateriel < 0;
@@ -4731,7 +4756,19 @@ index 9ca9637..1fcd373 100644
 +		const bool maker = rule->getMaterielPerMonth() > rule->getUpkeepMateriel();
 +
 +		bool wanted;
-+		if (broke)
++		if (!planning)
++		{
++			// Nobody is running the show. Cobra buys whatever it can afford, in no order and
++			// with no thought for whether it can run the thing afterwards - which is exactly
++			// what it did before there was a planner, and measurably worse: three sites in
++			// eleven months against twelve.
++			//
++			// It still checks the price. Stripping that out as well would let a leaderless
++			// Cobra build a Terror Drome it has no money for, and the point is that it is
++			// stupid, not that it is rich.
++			wanted = true;
++		}
++		else if (broke)
 +		{
 +			// Cannot cover its own upkeep: earners only until that is fixed. This is what
 +			// stops Cobra building a headquarters it has no way to run.
