@@ -199,7 +199,25 @@ commonest mission in the game. Polishing how a bullet passes through a map that 
 there is the wrong order, and `build_craftmap.py` already turns a 3D model into a craft tileset —
 that is where JOEHELO, JOEPHANT and JOEDEFI came from.
 
-Written and compiling; not yet watched in a real firefight.
+**Watched at last, and as designed it almost never happens.** Everything had been verified except
+the thing it does. Across six battles with the shipped rule: 28 ranged hits on terrain, **one**
+reached `penetrate()`, and that one was a rifle round against concrete that stopped. The cause is
+the gate rather than the numbers — a shot may only cross a wall that *survives* it, because a
+wall that breaks gives an opening rather than a penetration, which was deliberate and is in the
+comment. At the armour values X-COM gives tiles a wall nearly always just breaks, so the rule
+quietly means "almost never".
+
+`penetration.throughBroken` (default false) lets a shot that destroyed the wall carry on through
+it too, paying the same cost. Same build, same maps, one line:
+
+| `throughBroken` | terrain hits | reached `penetrate()` | carried power through | hit something behind |
+| --- | --- | --- | --- | --- |
+| false | 28 | 1 | 0 | 0 |
+| true | 56 | 56 | 29 | 15 |
+
+It ships off: off is the rule the design asked for, and which of the two is the better game is
+not a call to make on a measurement alone. The energy discount was confirmed in the same runs —
+concrete charged 37 instead of 55, masonry 20 instead of 30.
 
 ## Not done
 
