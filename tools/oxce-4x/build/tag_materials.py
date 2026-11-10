@@ -17,15 +17,30 @@ usage: tag_materials.py  [--write <out.json>]
 """
 import json, re, sys
 
-SETS = {'natiles': 'NAMER', 'cobratiles': 'COBRA', 'wildtiles': 'NAWILD', 'mtntiles': 'NAMTN'}
+SETS = {'natiles': 'NAMER', 'cobratiles': 'COBRA', 'wildtiles': 'NAWILD', 'mtntiles': 'NAMTN',
+        'tiles': 'GIJOE'}
 
 # first rule that matches wins, so order matters
 RULES = [
     # --- openings and flimsy things, before the walls they sit in
     ('light',    r'^(glass|glassdoor|hedge|picket|chain|rail|razor|camonet|cell|banner|drift|flowers|sage|corn|bush)'),
     ('light',    r'^(win[WBYK]|adobewin|cabinwin|slit)'),          # a window is its glass
+    # --- the Joe and Cobra base set, which is steel before it is anything else.
+    # Read off the art rather than off the names: both sides' walls are ribbed panel, Cobra's
+    # doors are roller shutters and the Joes' are timber, and both roof decks are plate. This
+    # block sits above the generic ^roof_ rule deliberately - roof_joe and roof_cobra were
+    # matching it and coming out as shingle over rafters, which is a flat steel deck tagged as
+    # a barn roof. Nothing errors when that happens; a rifle round just goes through a military
+    # roof like it was a farmhouse.
+    ('wood',     r'^joe_door'),
+    ('metal',    r'^(joe_|cobra_|metalfloor$|barrels$)'),
+    # Sandbags stop rifle rounds, which is the whole reason anyone stacks them. They were
+    # landing on masonry by accident - the ground rule's 'sand' prefix matched 'sandbag_' - so
+    # this says it on purpose, and says concrete, which is the slot that absorbs.
+    ('concrete', r'^sandbag_'),
     # --- timber
     ('wood',     r'^(wall[WBY]|door[WBY]|dooropen[WBY]|barn|barndoor|shop|shopR)'),
+    ('wood',     r'^(tree|crate)$'),               # the bare ones; crate_cobra is steel, below
     ('wood',     r'^(cabin|cabinarch|minewall|mineframe|wood_floor|pallet|crate_wood|weaponrack)'),
     ('wood',     r'^(sofa|table|bed|counter|shelf|desk|bench|stopsign|mailbox|filing|maptable|deskpc)'),
     ('wood',     r'^(oak|maple|pine|mpine|mpine_snow|aspen|deadtree|joshua|cactus|prickly|haybale)'),

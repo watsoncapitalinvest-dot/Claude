@@ -16,7 +16,7 @@ already produces, and that is what makes generating them from it safe.
 usage: gen_cobra_sites.py <vanilla alienDeployments.rul> <vanilla alienMissions.rul>
            <gijoe_cobra_economy.rul> <out.rul>
 """
-import sys, yaml, collections
+import sys, os, yaml, collections
 
 VANILLA_DEP, VANILLA_MIS, ECONOMY, OUT = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 
@@ -143,3 +143,45 @@ with open(OUT, 'w') as f:
 
 print('wrote %s: %d deployments, %d missions, %d scripts'
       % (OUT, len(deployments), len(missions), len(scripts)))
+
+
+# The deployment name is what the globe marker and the mission briefing show, and it is
+# STR_COBRA_<SHORT>_SITE, which is NOT the STR_COBRA_<SHORT> that names the site type. Nothing
+# errors when that string is missing: OXCE logs a warning nobody reads and prints the raw key on
+# screen, so eight Cobra sites were about to arrive on the globe labelled STR_COBRA_FACTORY_SITE.
+# Generated here rather than hand-written in the language file so the two can never drift: the
+# same SITES table produces the deployment and its name in one pass.
+BEGIN = '  # --- BEGIN generated Cobra site names (gen_cobra_sites.py owns this block)'
+END = '  # --- END generated Cobra site names'
+
+
+def title(site_type):
+    """STR_COBRA_RESEARCH_LAB -> Cobra Research Lab, with the acronyms left alone."""
+    keep = {'HQ': 'HQ'}
+    words = site_type[len('STR_'):].split('_')
+    return ' '.join(keep.get(w, w.capitalize()) for w in words)
+
+
+block = [BEGIN]
+for site_type, short, _weight in SITES:
+    block.append('  STR_COBRA_%s_SITE: %s' % (short, title(site_type)))
+block.append(END)
+block = '\n'.join(block)
+
+lang_dir = os.path.join(os.path.dirname(os.path.dirname(OUT)), 'Language')
+written = []
+for name in sorted(os.listdir(lang_dir)):
+    if not name.endswith('.yml'):
+        continue
+    path = os.path.join(lang_dir, name)
+    text = open(path, encoding='utf-8').read().rstrip('\n')
+    if BEGIN in text:
+        head, rest = text.split(BEGIN, 1)
+        tail = rest.split(END, 1)[1] if END in rest else ''
+        text = head.rstrip('\n') + '\n' + block + tail
+    else:
+        text = text + '\n' + block
+    open(path, 'w', encoding='utf-8').write(text + '\n')
+    written.append(name)
+
+print('   site names written into %s' % ', '.join(written))
