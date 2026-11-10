@@ -81,6 +81,14 @@ PROBE = ANCHOR + """	if (getenv("OXCE_CAMP_PROBE"))                             
 		{                                                                      // CAMPROBE
 			if (am->getRules().getType() == "STR_ALIEN_TERROR") ++terror;      // CAMPROBE
 		}                                                                      // CAMPROBE
+		int lost = 0, shippers = 0;                                            // CAMPROBE
+		for (auto* ab : _alienBases)                                           // CAMPROBE
+		{                                                                      // CAMPROBE
+			if (ab->getSiteType().empty()) continue;                           // CAMPROBE
+			const RuleCobraSite* r = mod->getCobraSite(ab->getSiteType());     // CAMPROBE
+			if (r && r->getIncomeNeedsShipment()) ++shippers;                  // CAMPROBE
+			lost += ab->getShipmentsLost();                                    // CAMPROBE
+		}                                                                      // CAMPROBE
 		std::ostringstream gar;                                                // CAMPROBE
 		{                                                                      // CAMPROBE
 			std::map<std::string, std::string> seen;                           // CAMPROBE
@@ -103,7 +111,8 @@ PROBE = ANCHOR + """	if (getenv("OXCE_CAMP_PROBE"))                             
 			<< "  sites=" << _alienBases.size()                                // CAMPROBE
 			<< "  have[ " << have.str() << "]  wants[ " << want.str()          // CAMPROBE
 			<< "]  where[ " << where.str() << "]  garrison[ " << gar.str()     // CAMPROBE
-			<< "]  terrorLive=" << terror << " launched=" << launched          // CAMPROBE
+			<< "]  shippers=" << shippers << " lostNow=" << lost               // CAMPROBE
+			<< " terrorLive=" << terror << " launched=" << launched            // CAMPROBE
 			<< " liveMissions=" << _activeMissions.size()                      // CAMPROBE
 			<< " missionSites=" << _missionSites.size();                       // CAMPROBE
 		if (!other.str().empty())                                              // CAMPROBE
@@ -119,7 +128,7 @@ PROBE = ANCHOR + """	if (getenv("OXCE_CAMP_PROBE"))                             
 		// OXCE_CAMP_PLANT=<month>:<SHORT>, e.g. 7:TERROR_DROME. Turns one front company into   // CAMPROBE
 		// that type, so the thing under test exists on a known month instead of when the dice   // CAMPROBE
 		// get round to it - the Drome rolls 13% a month and waiting on it is waiting on luck.   // CAMPROBE
-		if (plantEnv)                                                          // CAMPROBE
+		if (plantEnv && *plantEnv)                                                          // CAMPROBE
 		{                                                                      // CAMPROBE
 			std::string pe(plantEnv);                                          // CAMPROBE
 			size_t colon = pe.find(':');                                       // CAMPROBE
@@ -148,8 +157,45 @@ PROBE = ANCHOR + """	if (getenv("OXCE_CAMP_PROBE"))                             
 				}                                                              // CAMPROBE
 			}                                                                  // CAMPROBE
 		}                                                                      // CAMPROBE
+		// Shoot down one Cobra cargo flight, through the engine's own path: set the UFO to      // CAMPROBE
+		// DESTROYED and let the real cleanup run, which is where the hook lives. Setting the     // CAMPROBE
+		// site's counter by hand instead would test the consequence and skip the thing most      // CAMPROBE
+		// likely to be wrong, which is whether a dead UFO can be traced back to the site that    // CAMPROBE
+		// sent it.                                                                               // CAMPROBE
+		// An EMPTY env var is still a valid pointer, and campaign_ff.sh passes "${SHOOT:-}" which
+		// sets it to "" rather than leaving it unset. So getenv came back truthy with nothing
+		// behind it, atoi("") gave 0, and the control run was shooting cargo down as eagerly as
+		// the test run. Both halves of the comparison reported the same thing and it looked
+		// like the feature firing when it should not.
+		const char* shootEnv = getenv("OXCE_CAMP_SHOOTDOWN");                  // CAMPROBE
+		if (shootEnv && *shootEnv && _time->getMonth() >= atoi(shootEnv))                   // CAMPROBE
+		{                                                                      // CAMPROBE
+			int downed = 0;                                                    // CAMPROBE
+			for (auto* u : _ufos)                                              // CAMPROBE
+			{                                                                  // CAMPROBE
+				if (u->getStatus() == Ufo::DESTROYED) continue;                // CAMPROBE
+				AlienMission* am = u->getMission();                            // CAMPROBE
+				if (!am || !am->getAlienBase()) continue;                      // CAMPROBE
+				const AlienBase* src = am->getAlienBase();                     // CAMPROBE
+				if (src->getSiteType().empty()) continue;                      // CAMPROBE
+				const RuleCobraSite* r = mod->getCobraSite(src->getSiteType());// CAMPROBE
+				if (!r || !r->getIncomeNeedsShipment()) continue;              // CAMPROBE
+				// Mark it the way the dogfight does, or the hook correctly ignores it - which   // CAMPROBE
+				// is the whole point of the predicate being tested.                             // CAMPROBE
+				u->setShotDownByCraftId(CraftId("STR_INTERCEPTOR", 1));        // CAMPROBE
+				u->setStatus(Ufo::DESTROYED);                                  // CAMPROBE
+				Log(LOG_INFO) << "[camp] SHOTDOWN a shipment from "            // CAMPROBE
+					<< src->getSiteType();                                     // CAMPROBE
+				++downed;                                                      // CAMPROBE
+				break;                                                         // CAMPROBE
+			}                                                                  // CAMPROBE
+			if (!downed) Log(LOG_INFO) << "[camp] SHOTDOWN found no cargo in the air";// CAMPROBE
+			// Try again every month until one is caught. A supply run is only airborne part of  // CAMPROBE
+			// the time, so a single attempt on one month boundary mostly finds empty sky - the  // CAMPROBE
+			// first run of this reported "no cargo in the air" and proved nothing.              // CAMPROBE
+		}                                                                      // CAMPROBE
 		const char* raidEnv = getenv("OXCE_CAMP_RAID");                        // CAMPROBE
-		if (raidEnv && _time->getMonth() == atoi(raidEnv))                     // CAMPROBE
+		if (raidEnv && *raidEnv && _time->getMonth() == atoi(raidEnv))                     // CAMPROBE
 		{                                                                      // CAMPROBE
 			// Take a type Cobra has exactly one of. Raiding one front company out of seven  // CAMPROBE
 			// proves nothing: the planner still owns six, so of course it does not rebuild.  // CAMPROBE

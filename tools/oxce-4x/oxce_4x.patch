@@ -3074,10 +3074,54 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..9d4d090 100644
+index 6b4e79d..99fb77b 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
-@@ -2862,6 +2862,10 @@ void GeoscapeState::time1Month()
+@@ -103,6 +103,7 @@
+ #include "../Savegame/ItemContainer.h"
+ #include "../Savegame/MissionSite.h"
+ #include "../Savegame/AlienBase.h"
++#include "../Mod/RuleCobraSite.h"
+ #include "../Mod/RuleRegion.h"
+ #include "MissionDetectedState.h"
+ #include "AlienBaseState.h"
+@@ -1454,6 +1455,35 @@ void GeoscapeState::time5Seconds()
+ 		{
+ 			if (ufo->getStatus() == Ufo::DESTROYED)
+ 			{
++				// G.I. Joe: a Cobra site whose income rides on a cargo flight loses the month
++				// when that flight is SHOT DOWN. Hooked here because this is the one place every
++				// removed UFO passes through exactly once, and the mission remembers which site
++				// launched it, so the loss lands on that site rather than on Cobra in general.
++				//
++				// Ufo::DESTROYED does NOT mean shot down. It means "remove this UFO", and one of
++				// its uses is a UFO that finished its route normally - AlienMission.cpp, where
++				// nextWaypoint runs off the end of the trajectory. Without the check below this
++				// fired on every SUCCESSFUL delivery, and Cobra earned nothing ever again. It
++				// read exactly like a balance problem: the first campaign run after writing it
++				// had a front company standing in month three and an income of zero.
++				//
++				// shotDownByCraftId is set only in the dogfight, on the three paths where an
++				// interceptor actually kills it, and it survives the crash-then-decay route, so
++				// a cargo run that was shot down and crashed still counts as denied.
++				const bool shotDown = !ufo->getShotDownByCraftId().first.empty();
++				if (AlienMission *am = shotDown ? ufo->getMission() : 0)
++				{
++					if (const AlienBase *src = am->getAlienBase())
++					{
++						AlienBase *site = const_cast<AlienBase*>(src);
++						const RuleCobraSite *rule = site->getSiteType().empty() ? 0
++							: _game->getMod()->getCobraSite(site->getSiteType());
++						if (rule && rule->getIncomeNeedsShipment())
++						{
++							site->setShipmentsLost(site->getShipmentsLost() + 1);
++						}
++					}
++				}
+ 				Collections::deleteIf(_dogfights, _dogfights.size(),
+ 					[&](DogfightState* dogfight)
+ 					{
+@@ -2862,6 +2892,10 @@ void GeoscapeState::time1Month()
  	_game->getSavedGame()->addMonth();
  
  	// Determine alien mission for this month.
@@ -3801,10 +3845,10 @@ index 2242d13..e11ecac 100644
  	/// Gets the ruleset for a facility type.
 diff --git a/src/Mod/RuleCobraSite.cpp b/src/Mod/RuleCobraSite.cpp
 new file mode 100644
-index 0000000..3a78d32
+index 0000000..d9b6ce5
 --- /dev/null
 +++ b/src/Mod/RuleCobraSite.cpp
-@@ -0,0 +1,63 @@
+@@ -0,0 +1,64 @@
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
 + *
@@ -3838,7 +3882,7 @@ index 0000000..3a78d32
 +	_projectProgressPerMonth(0),
 +	_goodwillErosionPerMonth(0),
 +	_garrisonBonus(0), _garrisonRankUnlock(-1), _garrisonAllMissions(false),
-+	_runsThePlanning(false),
++	_runsThePlanning(false), _incomeNeedsShipment(false),
 +	_stockpileCap(0),
 +	_revealOnRaid(0)
 +{
@@ -3863,6 +3907,7 @@ index 0000000..3a78d32
 +	reader.tryRead("garrisonRankUnlock", _garrisonRankUnlock);
 +	reader.tryRead("garrisonAllMissions", _garrisonAllMissions);
 +	reader.tryRead("runsThePlanning", _runsThePlanning);
++	reader.tryRead("incomeNeedsShipment", _incomeNeedsShipment);
 +	reader.tryRead("stockpileCap", _stockpileCap);
 +	reader.tryRead("revealOnRaid", _revealOnRaid);
 +}
@@ -3870,10 +3915,10 @@ index 0000000..3a78d32
 +}
 diff --git a/src/Mod/RuleCobraSite.h b/src/Mod/RuleCobraSite.h
 new file mode 100644
-index 0000000..7463939
+index 0000000..8952bf4
 --- /dev/null
 +++ b/src/Mod/RuleCobraSite.h
-@@ -0,0 +1,98 @@
+@@ -0,0 +1,104 @@
 +#pragma once
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
@@ -3943,6 +3988,11 @@ index 0000000..7463939
 +	/// Cobra falls back to buying whatever it can afford, which is what it did before there
 +	/// was a planner at all.
 +	bool _runsThePlanning;
++	/// Whether this site's income rides on a cargo flight. With it on, the site sends a
++	/// shipment and earns nothing in any month where one of its shipments was shot down -
++	/// which is the whole point: the money stops being a number on a screen and starts
++	/// being something crossing the globe that you can go and meet.
++	bool _incomeNeedsShipment;
 +	int _stockpileCap;                 ///< what this site lets the region hold; 0 means no limit of its own
 +	int _revealOnRaid;                 ///< how many unknown projects raiding this reveals
 +
@@ -3967,6 +4017,7 @@ index 0000000..7463939
 +	int getGarrisonRankUnlock() const { return _garrisonRankUnlock; }
 +	bool getGarrisonAllMissions() const { return _garrisonAllMissions; }
 +	bool getRunsThePlanning() const { return _runsThePlanning; }
++	bool getIncomeNeedsShipment() const { return _incomeNeedsShipment; }
 +	int getStockpileCap() const { return _stockpileCap; }
 +	int getRevealOnRaid() const { return _revealOnRaid; }
 +};
@@ -4077,10 +4128,19 @@ index 99f24ce..3dc459a 100644
      <ClInclude Include="Savegame\Base.h" />
      <ClInclude Include="Savegame\BaseFacility.h" />
 diff --git a/src/Savegame/AlienBase.cpp b/src/Savegame/AlienBase.cpp
-index 09525a3..50834a2 100644
+index 09525a3..f1134f5 100644
 --- a/src/Savegame/AlienBase.cpp
 +++ b/src/Savegame/AlienBase.cpp
-@@ -46,6 +46,7 @@ void AlienBase::load(const YAML::YamlNodeReader& reader)
+@@ -25,7 +25,7 @@ namespace OpenXcom
+ /**
+  * Initializes an alien base
+  */
+-AlienBase::AlienBase(AlienDeployment *deployment, int startMonth) : Target(), _inBattlescape(false), _discovered(false), _deployment(deployment), _startMonth(startMonth), _genMissionCount(0)
++AlienBase::AlienBase(AlienDeployment *deployment, int startMonth) : Target(), _inBattlescape(false), _discovered(false), _deployment(deployment), _startMonth(startMonth), _genMissionCount(0), _shipmentsLost(0)
+ {
+ 	// allow spawning hunt missions immediately after the base is created, i.e. no initial delay
+ 	_minutesSinceLastHuntMissionGeneration = _deployment->getHuntMissionMaxFrequency();
+@@ -46,12 +46,14 @@ void AlienBase::load(const YAML::YamlNodeReader& reader)
  {
  	Target::load(reader);
  	reader.tryRead("pactCountry", _pactCountry);
@@ -4088,7 +4148,14 @@ index 09525a3..50834a2 100644
  	reader.tryRead("race", _race);
  	reader.tryRead("inBattlescape", _inBattlescape);
  	reader.tryRead("discovered", _discovered);
-@@ -64,6 +65,8 @@ void AlienBase::save(YAML::YamlNodeWriter writer) const
+ 	reader.tryRead("startMonth", _startMonth);
+ 	reader.tryRead("minutesSinceLastHuntMissionGeneration", _minutesSinceLastHuntMissionGeneration);
+ 	reader.tryRead("genMissionCount", _genMissionCount);
++	reader.tryRead("shipmentsLost", _shipmentsLost);
+ }
+ 
+ /**
+@@ -64,6 +66,8 @@ void AlienBase::save(YAML::YamlNodeWriter writer) const
  	Target::save(writer);
  
  	writer.write("pactCountry", _pactCountry);
@@ -4097,11 +4164,19 @@ index 09525a3..50834a2 100644
  	writer.write("race", _race);
  	if (_inBattlescape)
  		writer.write("inBattlescape", _inBattlescape);
+@@ -73,6 +77,7 @@ void AlienBase::save(YAML::YamlNodeWriter writer) const
+ 	writer.write("startMonth", _startMonth);
+ 	writer.write("minutesSinceLastHuntMissionGeneration", _minutesSinceLastHuntMissionGeneration);
+ 	writer.write("genMissionCount", _genMissionCount);
++	if (_shipmentsLost) writer.write("shipmentsLost", _shipmentsLost);
+ }
+ 
+ /**
 diff --git a/src/Savegame/AlienBase.h b/src/Savegame/AlienBase.h
-index be923c1..53db861 100644
+index be923c1..fa01d7b 100644
 --- a/src/Savegame/AlienBase.h
 +++ b/src/Savegame/AlienBase.h
-@@ -32,6 +32,9 @@ class AlienBase : public Target
+@@ -32,12 +32,19 @@ class AlienBase : public Target
  {
  private:
  	std::string _pactCountry;
@@ -4111,7 +4186,17 @@ index be923c1..53db861 100644
  	std::string _race;
  	bool _inBattlescape, _discovered;
  	AlienDeployment *_deployment;
-@@ -52,6 +55,9 @@ public:
+ 	int _startMonth;
+ 	int _minutesSinceLastHuntMissionGeneration;
+ 	int _genMissionCount;
++	/// Shipments of this site's earnings that were shot down this month. A site whose rule
++	/// says its income rides on a shipment earns nothing in a month where one was lost,
++	/// which is what makes a cargo flight worth intercepting. Reset by the monthly tick.
++	int _shipmentsLost;
+ public:
+ 	/// Creates an alien base.
+ 	AlienBase(AlienDeployment *deployment, int startMonth);
+@@ -52,6 +59,9 @@ public:
  	/// Gets the alien base's marker sprite.
  	int getMarker() const override;
  	/// Gets the alien base's pact country.
@@ -4121,6 +4206,16 @@ index be923c1..53db861 100644
  	const std::string &getPactCountry() const;
  	/// Sets the alien base's pact country.
  	void setPactCountry(const std::string &pactCountry);
+@@ -70,6 +80,9 @@ public:
+ 
+ 	AlienDeployment *getDeployment() const;
+ 	void setDeployment(AlienDeployment *deployment);
++	/// Shipments of this site's income shot down since the last monthly tick.
++	int getShipmentsLost() const { return _shipmentsLost; }
++	void setShipmentsLost(int value) { _shipmentsLost = value; }
+ 
+ 	/// Gets the month on which the base spawned.
+ 	int getStartMonth() const { return _startMonth; }
 diff --git a/src/Savegame/AlienMission.cpp b/src/Savegame/AlienMission.cpp
 index 5576c42..dc63963 100644
 --- a/src/Savegame/AlienMission.cpp
@@ -4532,7 +4627,7 @@ index 240b22a..c998115 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..acfa6f7 100644
+index 9ca9637..fcbf87b 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -55,7 +55,10 @@
@@ -4588,7 +4683,7 @@ index 9ca9637..acfa6f7 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2589,357 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2589,377 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -4897,8 +4992,23 @@ index 9ca9637..acfa6f7 100644
 +			continue;                      // locateRegion already logged it
 +		}
 +		const std::string &regionType = region->getRules()->getType();
-+		netFunds[regionType] += rule->getFundsPerMonth() - rule->getUpkeepFunds();
-+		netMateriel[regionType] += rule->getMaterielPerMonth() - rule->getUpkeepMateriel();
++		// A site whose income rides on a cargo flight earns nothing in a month where one of its
++		// flights was shot down. Upkeep is still paid either way - the staff do not go home
++		// because the shipment did not arrive, and a site that costs money while earning none
++		// is exactly the pressure an intercepted run should create.
++		const bool shipmentDenied = rule->getIncomeNeedsShipment() && base->getShipmentsLost() > 0;
++		if (shipmentDenied && getenv("OXCE_ECON_LOG"))
++		{
++			// Shipped rather than kept as a probe, for the same reason OXCE_PEN_LOG is: the
++			// numbers are John's to tune and he should be able to see the mechanism fire without
++			// waiting on a build. The balance alone is not evidence - it moves whenever Cobra
++			// builds something - so this says so at the moment it happens.
++			Log(LOG_INFO) << "[econ] " << siteType << " earns nothing this month ("
++				<< base->getShipmentsLost() << " shipment(s) shot down), upkeep still paid";
++		}
++		netFunds[regionType] += (shipmentDenied ? 0 : rule->getFundsPerMonth()) - rule->getUpkeepFunds();
++		base->setShipmentsLost(0);
++		netMateriel[regionType] += (shipmentDenied ? 0 : rule->getMaterielPerMonth()) - rule->getUpkeepMateriel();
 +		siteCounts["COBRA_SITES_" + siteType + "_" + regionType]++;
 +
 +		// A broadcast station erodes goodwill through the engine's own pathway rather than by
@@ -4941,6 +5051,11 @@ index 9ca9637..acfa6f7 100644
 +
 +	// Decide last, against this month's holdings rather than last month's.
 +	cobraPlan(mod);
++		// An EMPTY env var is still a valid pointer, and campaign_ff.sh passes "${SHOOT:-}" which
++		// sets it to "" rather than leaving it unset. So getenv came back truthy with nothing
++		// behind it, atoi("") gave 0, and the control run was shooting cargo down as eagerly as
++		// the test run. Both halves of the comparison reported the same thing and it looked
++		// like the feature firing when it should not.
 +}
 +
  Region *SavedGame::locateRegion(double lon, double lat) const

@@ -356,6 +356,42 @@ The Hidden HQ is now redundant and still in the list doing nothing. Retiring a s
 saves that hold one, so it is a deliberate separate tidy rather than something done on the
 evening of a test.
 
+## The money leaves by air
+
+John, on whether the economy sends cargo ships to earn its money: it did not. Income was
+arithmetic at the monthly tick, and the economy was touched in exactly four places — a site
+spawning, the month ticking, the planner deciding, a site being raided. Nothing on the globe
+earned anything.
+
+Meanwhile his front ops had been flying supply missions at 6% a day the whole time — 63 of them
+by month eight in a test campaign — carrying nothing, because the income landed regardless. Two
+systems that looked like one system and never touched.
+
+Now an earner's income rides on a flight. `incomeNeedsShipment` on the site rule, `genMission:
+STR_ALIEN_SUPPLY` on its deployment. Shoot one down and that site earns nothing that month and
+still pays its upkeep, because the staff do not go home because the shipment did not arrive. The
+loss lands on the **site that sent it**, not on Cobra in general, because `AlienMission` records
+the base that launched it.
+
+**`Ufo::DESTROYED` does not mean shot down.** It means "remove this UFO", and one of its uses is
+a UFO that finished its route normally — `AlienMission.cpp`, where `nextWaypoint` runs off the
+end of the trajectory. Hooked on that, the denial fired on every *successful* delivery and Cobra
+earned nothing ever again. The first campaign after writing it had a front company standing in
+month three and an income of zero, and it read exactly like a balance problem. Only three paths,
+all in `DogfightState`, set `shotDownByCraftId`, and that is the predicate; it survives the
+shot-down-then-crashed-then-decays route, so a cargo run downed over land still counts.
+
+**Two test failures worth keeping.** A single interception attempt on one month boundary reported
+"no cargo in the air" — a supply run is airborne only part of the time, so one look proves
+nothing either way; retry every month. And the control run showed denials too, because
+`campaign_ff.sh` passes `"${SHOOT:-}"`, which *sets* the variable to an empty string rather than
+leaving it unset: `getenv` came back truthy with nothing behind it and `atoi("")` gave 0. Both
+halves of the comparison did the same thing and it looked like the feature misfiring. All three
+knobs now check `*env` as well as `env`.
+
+Verified: control run, zero denials. Test run, a denial in each month following an interception,
+naming the site.
+
 ## Where the sites can actually go
 
 The mod keeps X-COM's fifteen regions and defines none of its own, but only North America has

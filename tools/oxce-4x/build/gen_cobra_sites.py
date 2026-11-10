@@ -60,6 +60,21 @@ EXTRAS = {
         'genMission': {'STR_ALIEN_TERROR': 100},
         'genMissionFreq': 4,
     },
+    # The earners fly their takings out. Nothing about the mission type matters to the economy -
+    # the hook asks whether the site that launched it needs a shipment, not what the mission was
+    # called - so this is vanilla's supply run, which already exists and already flies something
+    # a radar can see and an interceptor can reach.
+    #
+    # 5 is a DAILY percentage, so about one and a half runs a month: often enough that a player
+    # watching a region gets real chances, rare enough that the money is not a milk round.
+    'STR_COBRA_FRONT_COMPANY': {
+        'genMission': {'STR_ALIEN_SUPPLY': 100},
+        'genMissionFreq': 5,
+    },
+    'STR_COBRA_FACTORY': {
+        'genMission': {'STR_ALIEN_SUPPLY': 100},
+        'genMissionFreq': 5,
+    },
 }
 
 
