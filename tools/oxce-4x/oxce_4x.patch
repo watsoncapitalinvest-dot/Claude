@@ -819,21 +819,23 @@ index 0fdf2ca..716f5c7 100644
  	/// Sets the palette.
  	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
 diff --git a/src/Battlescape/TileEngine.cpp b/src/Battlescape/TileEngine.cpp
-index 6e68469..b10c74f 100644
+index 6e68469..a8c9d39 100644
 --- a/src/Battlescape/TileEngine.cpp
 +++ b/src/Battlescape/TileEngine.cpp
-@@ -898,7 +898,9 @@ TileEngine::TileEngine(SavedBattleGame *save, Mod *mod) :
+@@ -898,7 +898,11 @@ TileEngine::TileEngine(SavedBattleGame *save, Mod *mod) :
  	_maxViewDistance(mod->getMaxViewDistance()), _maxViewDistanceSq(_maxViewDistance * _maxViewDistance),
  	_maxVoxelViewDistance(_maxViewDistance * 16), _maxDarknessToSeeUnits(mod->getMaxDarknessToSeeUnits()),
  	_maxStaticLightDistance(mod->getMaxStaticLightDistance()), _maxDynamicLightDistance(mod->getMaxDynamicLightDistance()),
 -	_enhancedLighting(mod->getEnhancedLighting())
 +	_enhancedLighting(mod->getEnhancedLighting()),
 +	_penCost(mod->getPenetrationCost()), _penEnergyCost(mod->getPenetrationEnergyCost()),
-+	_penPass(mod->getPenetrationPass()), _penMaxWalls(mod->getPenetrationMaxWalls())
++	_penPass(mod->getPenetrationPass()), _penMaxWalls(mod->getPenetrationMaxWalls()),
++	_penThroughBroken(mod->getPenetrationThroughBroken()),
++	_penLog(getenv("OXCE_PEN_LOG") != 0)
  {
  	_blockVisibility.resize(save->getMapSizeXYZ());
  	_lightPropagationTerrainBlocking.resize(save->getMapSizeXYZ());
-@@ -3217,6 +3219,86 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
+@@ -3217,6 +3221,97 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
   * @param unit The unit that caused the explosion.
   * @param clipOrWeapon clip or weapon causing the damage.
   */
@@ -862,6 +864,12 @@ index 6e68469..b10c74f 100644
 +	bool energy = type && (type->ResistType == DT_LASER || type->ResistType == DT_PLASMA);
 +	int cost = energy ? _penEnergyCost[material] : _penCost[material];
 +	int left = power - cost;
++	if (_penLog)
++	{
++		Log(LOG_INFO) << "[pen] PEN mat=" << material << " power=" << power
++			<< " cost=" << cost << " -> "
++			<< (left <= 0 ? 0 : (int)(left * _penPass[material]));
++	}
 +	if (left <= 0)
 +	{
 +		return 0;
@@ -910,6 +918,11 @@ index 6e68469..b10c74f 100644
 +	std::vector<Position> trajectory;
 +	++_penetrationDepth;
 +	VoxelType next = calculateLineVoxel(start, far, false, &trajectory, attack.attacker);
++	if (_penLog)
++	{
++		Log(LOG_INFO) << "[pen] ONWARD depth=" << _penetrationDepth << " power=" << power
++			<< " found=" << (int)next << " traj=" << trajectory.size();
++	}
 +	if (next != V_EMPTY && !trajectory.empty())
 +	{
 +		hit(attack, trajectory.back(), power, type);
@@ -920,7 +933,7 @@ index 6e68469..b10c74f 100644
  void TileEngine::hit(BattleActionAttack attack, Position center, int power, const RuleDamageType *type, bool rangeAtack, int terrainMeleeTilePart)
  {
  	bool terrainChanged = false; //did the hit destroy a tile thereby changing line of sight?
-@@ -3262,10 +3344,28 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
+@@ -3262,10 +3357,41 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
  					_save->getModuleMap()[(center.x/16)/10][(center.y/16)/10].second--;
  				}
  			}
@@ -938,7 +951,20 @@ index 6e68469..b10c74f 100644
 +			// when the tile stood up - if it was blown apart the shot has an opening, not a
 +			// penetration, and the next one through is a normal shot. Ranged fire only, since
 +			// a rifle butt does not pass through a wall.
-+			if (stoodUp && rangeAtack && terrainMeleeTilePart == 0)
++			// A wall that BREAKS normally ends the shot: it gave an opening rather than a
++			// penetration, and the opening helps the next round instead. Measured over two
++			// battles that makes the whole feature inert - nineteen terrain hits, one of
++			// which reached penetrate(), because breaking the wall is the usual outcome at
++			// these armour values. With throughBroken on, all thirteen hits of a three-battle
++			// run reached it and six carried power through to something behind. Which of
++			// those is the right game is John's, so it is a ruleset line and not a constant.
++			if (_penLog)
++			{
++				Log(LOG_INFO) << "[pen] TERRAIN mat=" << hitMaterial << " power=" << power
++					<< " stoodUp=" << stoodUp << " ranged=" << rangeAtack
++					<< " melee=" << terrainMeleeTilePart;
++			}
++			if ((stoodUp || _penThroughBroken) && rangeAtack && terrainMeleeTilePart == 0)
 +			{
 +				int through = penetrate(power, hitMaterial, type);
 +				if (through > 0)
@@ -949,7 +975,7 @@ index 6e68469..b10c74f 100644
  		}
  	}
  	else if (part == V_UNIT)
-@@ -3341,6 +3441,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3341,6 +3467,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  	{
  		power /= 2;
  	}
@@ -960,7 +986,7 @@ index 6e68469..b10c74f 100644
  
  	int exHeight = Clamp(Options::battleExplosionHeight, 0, 3);
  	int vertdec = 1000; //default flat explosion
-@@ -3451,7 +3555,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3451,7 +3581,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  							_save->removeItem(bi);
  						}
  
@@ -969,7 +995,7 @@ index 6e68469..b10c74f 100644
  					}
  				}
  
-@@ -3512,6 +3616,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3512,6 +3642,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  	// now detonate the tiles affected by explosion
  	if (type->ToTile > 0.0f)
  	{
@@ -977,7 +1003,7 @@ index 6e68469..b10c74f 100644
  		for (auto& pair : tilesAffected)
  		{
  			if (detonate(pair.first, pair.second))
-@@ -3523,7 +3628,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3523,7 +3654,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  			if (j)
  				applyGravity(j);
  		}
@@ -987,7 +1013,7 @@ index 6e68469..b10c74f 100644
  	calculateLighting(LL_AMBIENT, centetTile, maxRadius + 1, true); // roofs could have been destroyed and fires could have been started
  	calculateFOV(centetTile, maxRadius + 1, true, true);
  	if (attack.attacker && Position::distance2d(centetTile, attack.attacker->getPosition()) > maxRadius + 1)
-@@ -3622,7 +3729,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
+@@ -3622,7 +3755,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
  			}
  		}
  		// set tile on fire
@@ -996,7 +1022,7 @@ index 6e68469..b10c74f 100644
  		{
  			if (tiles[i]->getMapData(O_FLOOR) || tiles[i]->getMapData(O_OBJECT))
  			{
-@@ -5156,6 +5263,156 @@ Tile *TileEngine::applyGravity(Tile *t)
+@@ -5156,6 +5289,156 @@ Tile *TileEngine::applyGravity(Tile *t)
  	return rt;
  }
  
@@ -1154,7 +1180,7 @@ index 6e68469..b10c74f 100644
   * Drop item on ground.
   */
 diff --git a/src/Battlescape/TileEngine.h b/src/Battlescape/TileEngine.h
-index 8497877..7392c37 100644
+index 8497877..78e0448 100644
 --- a/src/Battlescape/TileEngine.h
 +++ b/src/Battlescape/TileEngine.h
 @@ -17,6 +17,7 @@
@@ -1173,7 +1199,7 @@ index 8497877..7392c37 100644
  public:
  	/// Value representing non-existing position.
  	static constexpr Position invalid = { -1, -1, -1 };
-@@ -77,6 +79,14 @@ public:
+@@ -77,6 +79,19 @@ public:
  	}
  
  private:
@@ -1185,10 +1211,15 @@ index 8497877..7392c37 100644
 +	std::array<int, 6> _penEnergyCost;
 +	std::array<double, 6> _penPass;
 +	int _penMaxWalls = 4;
++	bool _penThroughBroken = false;
++	/// OXCE_PEN_LOG. Read once here rather than per hit, and shipped rather than kept as a
++	/// probe: the penetration numbers are tunable from a ruleset, so whoever is tuning them
++	/// needs to be able to see what they are doing without waiting on a build.
++	bool _penLog = false;
  	/**
  	 * Helper class storing cached visibility blockage data.
  	 */
-@@ -206,6 +216,11 @@ public:
+@@ -206,6 +221,11 @@ public:
  	/// Calculates a line trajectory in tile space.
  	int calculateLineTile(Position origin, Position target, std::vector<Position> &trajectory);
  	/// Calculates a line trajectory in voxel space.
@@ -1200,7 +1231,7 @@ index 8497877..7392c37 100644
  	VoxelType calculateLineVoxel(Position origin, Position target, bool storeTrajectory, std::vector<Position> *trajectory, BattleUnit *excludeUnit, BattleUnit *excludeAllBut = 0, bool onlyVisible = false);
  	/// Calculates a parabola trajectory.
  	int calculateParabolaVoxel(Position origin, Position target, bool storeTrajectory, std::vector<Position> *trajectory, BattleUnit *excludeUnit, double curvature, const Position delta);
-@@ -241,6 +256,8 @@ public:
+@@ -241,6 +261,8 @@ public:
  	bool tryConcealUnit(BattleUnit* unit);
  	/// Applies gravity to anything that occupy this tile.
  	Tile *applyGravity(Tile *t);
@@ -3410,7 +3441,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..bd4b7d6 100644
+index 1885346..dad998b 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,7 @@
@@ -3435,7 +3466,7 @@ index 1885346..bd4b7d6 100644
 +	_penCost{ 30, 2, 10, 30, 55, 45 },
 +	_penEnergyCost{ 30, 2, 10, 20, 37, 45 },
 +	_penPass{ 0.35, 0.85, 0.65, 0.35, 0.20, 0.25 },
-+	_penMaxWalls(4),
++	_penMaxWalls(4), _penThroughBroken(false),
  	_inventoryOverlapsPaperdoll(false),
  	_maxViewDistance(20), _maxDarknessToSeeUnits(9), _maxStaticLightDistance(16), _maxDynamicLightDistance(24), _enhancedLighting(0),
  	_costHireEngineer(0), _costHireScientist(0),
@@ -3503,7 +3534,7 @@ index 1885346..bd4b7d6 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3272,57 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3272,58 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -3523,6 +3554,7 @@ index 1885346..bd4b7d6 100644
 +	if (const auto& pen = reader["penetration"])
 +	{
 +		pen.tryRead("maxWalls", _penMaxWalls);
++		pen.tryRead("throughBroken", _penThroughBroken);
 +		if (const auto& mats = pen["materials"])
 +		{
 +			static const char* NAMES[6] =
@@ -3561,7 +3593,7 @@ index 1885346..bd4b7d6 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -4069,6 +4175,14 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4176,14 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -3576,7 +3608,7 @@ index 1885346..bd4b7d6 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +5883,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +5884,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -3596,7 +3628,7 @@ index 1885346..bd4b7d6 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +5906,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +5907,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -3604,7 +3636,7 @@ index 1885346..bd4b7d6 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +5920,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +5921,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -3644,7 +3676,7 @@ index 1885346..bd4b7d6 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..61fc4c8 100644
+index 2242d13..e11ecac 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,7 @@ class SavedGame;
@@ -3663,7 +3695,7 @@ index 2242d13..61fc4c8 100644
  	std::map<std::string, RuleBaseFacility*> _facilities;
  	std::map<std::string, RuleCraft*> _crafts;
  	std::map<std::string, RuleCraftWeapon*> _craftWeapons;
-@@ -327,6 +329,14 @@ private:
+@@ -327,6 +329,15 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -3674,11 +3706,12 @@ index 2242d13..61fc4c8 100644
 +	std::array<int, 6> _penEnergyCost;
 +	std::array<double, 6> _penPass;
 +	int _penMaxWalls;
++	bool _penThroughBroken;
 +	std::vector<std::string> _cobraSitesIndex;
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +702,18 @@ public:
+@@ -692,6 +703,23 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -3694,6 +3727,11 @@ index 2242d13..61fc4c8 100644
 +	const std::array<double, 6> &getPenetrationPass() const { return _penPass; }
 +	/// How many obstructions one shot may cross before it stops regardless.
 +	int getPenetrationMaxWalls() const { return _penMaxWalls; }
++	/// Whether a shot that DESTROYED a wall carries on through it as well as one that failed to.
++	/// Off by default, which is how it shipped; measured over two battles, off means penetration
++	/// reaches its own code once in nineteen terrain hits, because a wall that breaks is the
++	/// usual outcome and a broken wall ends the shot.
++	bool getPenetrationThroughBroken() const { return _penThroughBroken; }
  	/// Gets the available regions.
  	const std::vector<std::string> &getRegionsList() const;
  	/// Gets the ruleset for a facility type.

@@ -20,6 +20,12 @@ Tag pushes are rejected by this remote (HTTP 403). Roll back by commit hash.
 | `OXCE_HICOLOR` | follows the above | 0 falls back to the 256-colour palette |
 | `OXCE_HIUI` | follows HiColor | 0 leaves the menus 8-bit |
 | `OXCE_BULLET_SCALE` | battle scale | total upscale for projectiles (local only, not pushed) |
+| `OXCE_PEN_LOG` | off | logs every terrain hit, every `penetrate()` and every re-trace |
+
+`OXCE_PEN_LOG` is read once at `TileEngine` construction, not per hit, and it ships on purpose:
+the penetration numbers are John's to tune and he should be able to see what they are doing
+without waiting on a build. `build/pen_live_report.py` turns the log into the destroyed-versus-
+survived table that found the `throughBroken` problem.
 
 ## The two new files
 
