@@ -74,7 +74,57 @@ def material(name, terrain=None):
             return m
     return None
 
+# The three Joe craft have no tile names to match on, and they do not need any. build_craftmap.py
+# and build_heli.py generate them by voxelising the aircraft's own mesh: index 0 is the landing
+# pad the craft sits on, and every index after it is a cell of chassis. There is no tile in these
+# sets that is not part of an aeroplane, so "metal" is read off how the file is built rather than
+# chosen. Cells that hold only a rotor blade are written with no collision at all, so a shot never
+# meets one and what they are tagged cannot matter.
+#
+# The one thing the pipeline cannot tell apart is a canopy from a fuselage panel - it samples the
+# chassis mesh without reading its materials - so cockpit glass is steel here. Visible as a
+# cockpit that stops bullets, overridable in one line now the tags are a ruleset.
+CRAFT = {'JOEDEFI': 160, 'JOEHELO': 45, 'JOEPHANT': 45}
+
+# BARN and CULTIVAT came with X-COM, so there is no name list to match on. These were read off
+# the art, one tile at a time, from a contact sheet with the index drawn on each tile - the
+# rendering is in build/render_tileset.py and takes seconds to redo if any of this looks wrong
+# on the field. Indexed by MCD index; anything not listed falls to DEFAULT.
+#
+# The one genuine uncertainty is BARN 10-14. They are pale tan with a repeating chevron, which
+# is either stacked straw bales or adobe brick, and the two want opposite materials. Called
+# straw because tiles 3 and 4 are unmistakably hay bales in exactly that palette and texture,
+# and 12 and 13 are the same wall with a gap in it rather than a built window. If a hay wall
+# turns out to stop nothing when it should, this is the line.
+VANILLA = {
+    'BARN': dict(
+        [(i, 'wood') for i in (0, 1, 2, 5, 6, 7, 8, 9, 15, 16, 17, 18, 20, 21, 22, 24)] +
+        [(i, 'light') for i in (3, 4, 10, 11, 12, 13, 14, 23)] +
+        [(i, 'masonry') for i in (19, 25, 26, 27, 28)]),
+    'CULTIVAT': dict(
+        [(i, 'masonry') for i in (0, 1, 2, 3, 6, 7, 10, 14, 15, 20, 31, 32, 35)] +
+        [(i, 'light') for i in (4, 5, 8, 11, 16, 17, 18, 19, 21, 22, 23, 24, 27, 28, 33, 34, 36)] +
+        [(i, 'wood') for i in (9, 12, 13, 25, 26, 29, 30)]),
+}
+VANILLA_LEN = {'BARN': 29, 'CULTIVAT': 37}
+
 out, missing, counts = {}, [], {}
+for terrain, n in CRAFT.items():
+    mats = ['concrete'] + ['metal'] * (n - 1)
+    for m in mats:
+        counts[m] = counts.get(m, 0) + 1
+    out[terrain] = mats
+
+for terrain, n in VANILLA_LEN.items():
+    table = VANILLA[terrain]
+    gaps = [i for i in range(n) if i not in table]
+    if gaps:
+        missing.extend('%s[%d] not read off the art' % (terrain, i) for i in gaps)
+    mats = [table.get(i, 'masonry') for i in range(n)]
+    for m in mats:
+        counts[m] = counts.get(m, 0) + 1
+    out[terrain] = mats
+
 for folder, terrain in SETS.items():
     names = json.load(open(f'{folder}/names.json'))
     mats = []
@@ -88,7 +138,7 @@ for folder, terrain in SETS.items():
     out[terrain] = mats
 
 total = sum(counts.values())
-print('tagged %d tiles across %d terrains' % (total, len(SETS)))
+print('tagged %d tiles across %d terrains' % (total, len(out)))
 for m in ('light', 'wood', 'masonry', 'concrete', 'metal'):
     print('   %-9s %3d' % (m, counts.get(m, 0)))
 if missing:

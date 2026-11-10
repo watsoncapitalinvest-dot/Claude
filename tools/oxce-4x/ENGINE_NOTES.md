@@ -100,6 +100,14 @@ The reverse is the expensive one. A data-only commit pushed *without* the marker
 and because the runs share a concurrency group it **cancels whichever build is already running**
 — the way week 2's fetch was lost. So the marker goes on before the push, not after.
 
+**A ruleset naming a file the mod does not have is FATAL, not a warning.** `FileRecord::at` logs
+FATAL and the game never reaches the main menu, so one missing PNG costs the whole session. It
+happened with `gijoe_items_new.rul`, which had sat in the repo for a day naming 22 painted items
+that had never been copied anywhere, and went out inside a zip labelled as a mod update. Both
+halves had been verified; what had not was that they were in the same place. `build/check_shipment.py`
+runs over the shipment as assembled — not the working tree, because a file present in the
+scratchpad and absent from the zip is the exact failure being looked for.
+
 **`State::blit` is the only reliable per-frame hook.** Anything that must land after a surface
 reaches the base buffer — item icons, the equipment-screen figure — is done by overriding that
 surface's `blit`, not by hooking where it was drawn.
@@ -136,6 +144,21 @@ explosions, which have their own propagation. The trace restarts a whole tile pa
 finds the very wall it just came through. And `_penetrationDepth` caps the chain at four, which
 is further than any honest shot travels and is what stops a shot that re-hits its own tile from
 recursing until the stack runs out.
+
+The matrix itself is a ruleset key, not a constant, because the one thing certain about these
+numbers is that they are wrong and the person who has to fix them should not need a Windows
+build to try a value. `penetration:` in `Mod::loadFile` fills `_penCost`, `_penEnergyCost`,
+`_penPass` and `_penMaxWalls`; `TileEngine` copies them at construction the way it copies every
+other tuned number, so a shot does not chase a `Mod*` per tile. A material left out keeps its
+default. An unknown material name is logged rather than ignored, since a typo reads exactly like
+a value that did not help. `energyCost` carries its ratio when `cost` changes and `energyCost`
+does not: leaving it alone would quietly make lasers better against a material that got tougher,
+and setting it equal to cost would quietly throw away the masonry and concrete discount, which
+is the one place energy weapons are meant to differ.
+
+Shipping the tuning file with the defaults in it makes the obvious test useless — the probe
+prints the same numbers whether the file was read or ignored — so `build/pen_test.sh` changes
+each thing to a value no default can produce.
 
 Written and compiling; not yet watched in a real firefight.
 
