@@ -1086,7 +1086,7 @@ index 8fa87f8..628a943 100644
  	switch (unitDir)
  	{
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..2af7e84 100644
+index 839f803..ff1bf48 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -172,6 +172,8 @@ set ( engine_src
@@ -1098,7 +1098,15 @@ index 839f803..2af7e84 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -331,6 +333,7 @@ set ( mod_src
+@@ -201,6 +203,7 @@ set ( geoscape_src
+   Geoscape/DogfightState.cpp
+   Geoscape/ExtendedGeoscapeLinksState.cpp
+   Geoscape/FundingState.cpp
++  Geoscape/CobraIntelState.cpp
+   Geoscape/GeoscapeCraftState.cpp
+   Geoscape/GeoscapeEventState.cpp
+   Geoscape/GeoscapeState.cpp
+@@ -331,6 +334,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -1106,7 +1114,7 @@ index 839f803..2af7e84 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +359,7 @@ set ( savegame_src
+@@ -356,6 +360,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -2512,6 +2520,283 @@ index 86bd62e..46cac60 100644
  	/// Loads an X-Com DAT image file.
  	void loadDat(const std::string &filename);
  	/// Gets a particular frame from the set.
+diff --git a/src/Geoscape/CobraIntelState.cpp b/src/Geoscape/CobraIntelState.cpp
+new file mode 100644
+index 0000000..b7aaee2
+--- /dev/null
++++ b/src/Geoscape/CobraIntelState.cpp
+@@ -0,0 +1,136 @@
++/*
++ * Copyright 2010-2016 OpenXcom Developers.
++ *
++ * This file is part of OpenXcom.
++ *
++ * OpenXcom is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * OpenXcom is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
++ */
++#include "CobraIntelState.h"
++#include <map>
++#include <vector>
++#include <sstream>
++#include "../Engine/Game.h"
++#include "../Engine/Action.h"
++#include "../Engine/LocalizedText.h"
++#include "../Engine/Options.h"
++#include "../Interface/TextButton.h"
++#include "../Interface/Window.h"
++#include "../Interface/Text.h"
++#include "../Interface/TextList.h"
++#include "../Mod/Mod.h"
++#include "../Mod/RuleCobraSite.h"
++#include "../Mod/RuleRegion.h"
++#include "../Savegame/SavedGame.h"
++#include "../Savegame/AlienBase.h"
++#include "../Savegame/Region.h"
++
++namespace OpenXcom
++{
++
++CobraIntelState::CobraIntelState()
++{
++	_screen = false;
++
++	_window = new Window(this, 320, 200, 0, 0, POPUP_BOTH);
++	_btnOk = new TextButton(50, 12, 135, 180);
++	_txtTitle = new Text(320, 17, 0, 8);
++	_txtRegion = new Text(110, 9, 16, 30);
++	_txtSites = new Text(40, 9, 128, 30);
++	_txtFunds = new Text(60, 9, 174, 30);
++	_txtMateriel = new Text(60, 9, 240, 30);
++	_lstRegions = new TextList(290, 120, 16, 40);
++	_txtNote = new Text(290, 17, 16, 162);
++
++	// Reuses the funding screen's interface rather than declaring one of its own, so it is
++	// already themed by whatever the mod does to that screen and needs no interfaces: entry.
++	setInterface("fundingWindow");
++
++	add(_window, "window", "fundingWindow");
++	add(_btnOk, "button", "fundingWindow");
++	add(_txtTitle, "text1", "fundingWindow");
++	add(_txtRegion, "text2", "fundingWindow");
++	add(_txtSites, "text2", "fundingWindow");
++	add(_txtFunds, "text2", "fundingWindow");
++	add(_txtMateriel, "text2", "fundingWindow");
++	add(_lstRegions, "list", "fundingWindow");
++	add(_txtNote, "text2", "fundingWindow");
++
++	centerAllSurfaces();
++
++	_btnOk->setText(tr("STR_OK"));
++	_btnOk->onMouseClick((ActionHandler)&CobraIntelState::btnOkClick);
++	_btnOk->onKeyboardPress((ActionHandler)&CobraIntelState::btnOkClick, Options::keyCancel);
++
++	_txtTitle->setBig();
++	_txtTitle->setAlign(ALIGN_CENTER);
++	_txtTitle->setText(tr("STR_COBRA_INTELLIGENCE"));
++
++	_txtRegion->setText(tr("STR_REGION"));
++	_txtSites->setText(tr("STR_COBRA_SITES_FOUND"));
++	_txtFunds->setText(tr("STR_COBRA_FUNDS"));
++	_txtMateriel->setText(tr("STR_COBRA_MATERIEL"));
++
++	_lstRegions->setColumns(4, 112, 46, 66, 60);
++	_lstRegions->setDot(true);
++
++	// Only discovered sites count, and the figures are what those known sites earn per month -
++	// not what the region holds, which the player has no way of knowing.
++	static const std::vector<AlienBase*> _noBases;
++	std::map<std::string, int> found, funds, materiel;
++	SavedGame *save = _game->getSavedGame();
++	const Mod *mod = _game->getMod();
++	// Reachable only from the funding screen, so there is always a game in practice - but the
++	// cost of being wrong is a segfault rather than a blank table. getAlienBases() on a null
++	// SavedGame hands back the offset of the member, 0x1e0, which then dereferences.
++	for (const auto *base : save ? *save->getAlienBases() : _noBases)
++	{
++		if (base->getSiteType().empty() || !base->isDiscovered())
++		{
++			continue;
++		}
++		RuleCobraSite *rule = mod->getCobraSite(base->getSiteType());
++		Region *region = save->locateRegion(*base);
++		if (rule == 0 || region == 0)
++		{
++			continue;
++		}
++		const std::string &name = region->getRules()->getType();
++		found[name]++;
++		funds[name] += rule->getFundsPerMonth() - rule->getUpkeepFunds();
++		materiel[name] += rule->getMaterielPerMonth() - rule->getUpkeepMateriel();
++	}
++
++	int totalSites = 0;
++	for (const auto &pair : found)
++	{
++		std::ostringstream sites, f, m;
++		sites << pair.second;
++		f << funds[pair.first];
++		m << materiel[pair.first];
++		_lstRegions->addRow(4, tr(pair.first).c_str(), sites.str().c_str(),
++			f.str().c_str(), m.str().c_str());
++		totalSites += pair.second;
++	}
++
++	// An empty list and an undiscovered network look identical, so the screen says which.
++	_txtNote->setWordWrap(true);
++	_txtNote->setText(totalSites == 0 ? tr("STR_NO_COBRA_SITES_FOUND") : tr("STR_COBRA_INTEL_NOTE"));
++}
++
++void CobraIntelState::btnOkClick(Action *)
++{
++	_game->popState();
++}
++
++}
+diff --git a/src/Geoscape/CobraIntelState.h b/src/Geoscape/CobraIntelState.h
+new file mode 100644
+index 0000000..e57d835
+--- /dev/null
++++ b/src/Geoscape/CobraIntelState.h
+@@ -0,0 +1,55 @@
++#pragma once
++/*
++ * Copyright 2010-2016 OpenXcom Developers.
++ *
++ * This file is part of OpenXcom.
++ *
++ * OpenXcom is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * OpenXcom is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
++ */
++#include "../Engine/State.h"
++
++namespace OpenXcom
++{
++
++class TextButton;
++class Window;
++class Text;
++class TextList;
++
++/**
++ * What the player has worked out about Cobra's network, region by region.
++ *
++ * It reports only what has been found. A site counts once its base is discovered, and the two
++ * figures are what those known sites are worth per month - not what the region is actually
++ * holding, which the player has no way of knowing. So the screen sharpens as the player finds
++ * more, which is what gives a research lab or a hidden HQ a job beyond its own production.
++ *
++ * The mirror of the funding screen, and reached from it: that one says what the world pays
++ * X-COM, this one says what Cobra is earning.
++ */
++class CobraIntelState : public State
++{
++private:
++	TextButton *_btnOk;
++	Window *_window;
++	Text *_txtTitle, *_txtRegion, *_txtSites, *_txtFunds, *_txtMateriel, *_txtNote;
++	TextList *_lstRegions;
++
++public:
++	CobraIntelState();
++	~CobraIntelState() = default;
++	void btnOkClick(Action *action);
++};
++
++}
+diff --git a/src/Geoscape/FundingState.cpp b/src/Geoscape/FundingState.cpp
+index a523073..1017270 100644
+--- a/src/Geoscape/FundingState.cpp
++++ b/src/Geoscape/FundingState.cpp
+@@ -31,6 +31,7 @@
+ #include "../Mod/RuleCountry.h"
+ #include "../Savegame/SavedGame.h"
+ #include "../Engine/Options.h"
++#include "CobraIntelState.h"
+ 
+ namespace OpenXcom
+ {
+@@ -69,7 +70,9 @@ FundingState::FundingState()
+ 
+ 	// Create objects
+ 	_window = new Window(this, 320, 200, 0, 0, POPUP_BOTH);
+-	_btnOk = new TextButton(50, 12, 135, 180);
++	// moved left to make room for the Cobra intel button beside it
++	_btnOk = new TextButton(50, 12, 90, 180);
++	_btnCobra = new TextButton(100, 12, 150, 180);
+ 	_txtTitle = new Text(320, 17, 0, 8);
+ 	_txtCountry = new Text(100, 9, 32, 30);
+ 	_txtFunding = new Text(100, 9, 140, 30);
+@@ -84,6 +87,7 @@ FundingState::FundingState()
+ 
+ 	add(_window, "window", "fundingWindow");
+ 	add(_btnOk, "button", "fundingWindow");
++	add(_btnCobra, "button", "fundingWindow");
+ 	add(_txtTitle, "text1", "fundingWindow");
+ 	add(_txtCountry, "text2", "fundingWindow");
+ 	add(_txtFunding, "text2", "fundingWindow");
+@@ -99,6 +103,8 @@ FundingState::FundingState()
+ 	setWindowBackground(_window, "fundingWindow");
+ 
+ 	_btnOk->setText(tr("STR_OK"));
++	_btnCobra->setText(tr("STR_COBRA_INTEL"));
++	_btnCobra->onMouseClick((ActionHandler)&FundingState::btnCobraClick);
+ 	_btnOk->onMouseClick((ActionHandler)&FundingState::btnOkClick);
+ 	_btnOk->onKeyboardPress((ActionHandler)&FundingState::btnOkClick, Options::keyOk);
+ 	_btnOk->onKeyboardPress((ActionHandler)&FundingState::btnOkClick, Options::keyCancel);
+@@ -155,6 +161,11 @@ void FundingState::btnOkClick(Action *)
+ 	_game->popState();
+ }
+ 
++void FundingState::btnCobraClick(Action *)
++{
++	_game->pushState(new CobraIntelState);
++}
++
+ /**
+  * Refreshes the funding countries list.
+  */
+diff --git a/src/Geoscape/FundingState.h b/src/Geoscape/FundingState.h
+index 9527579..ea222bc 100644
+--- a/src/Geoscape/FundingState.h
++++ b/src/Geoscape/FundingState.h
+@@ -58,7 +58,7 @@ struct FundingCountry
+ class FundingState : public State
+ {
+ private:
+-	TextButton *_btnOk;
++	TextButton *_btnOk, *_btnCobra;
+ 	Window *_window;
+ 	Text *_txtTitle, *_txtCountry, *_txtFunding, *_txtChange;
+ 	TextList *_lstCountries;
+@@ -74,6 +74,8 @@ public:
+ 	~FundingState();
+ 	/// Handler for clicking the OK button.
+ 	void btnOkClick(Action *action);
++	/// Opens the mirror of this screen: what Cobra is earning.
++	void btnCobraClick(Action *action);
+ 	/// Sets up the funding countries list.
+ 	void init() override;
+ 	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
 index 6b4e79d..448a40e 100644
 --- a/src/Geoscape/GeoscapeState.cpp
@@ -3216,7 +3501,7 @@ index 7cfa906..e02f6f4 100644
  	int SmokeThreshold;
  
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..7f5407b 100644
+index 99f24ce..3dc459a 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
 @@ -511,6 +511,8 @@
@@ -3228,7 +3513,15 @@ index 99f24ce..7f5407b 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -673,6 +675,7 @@
+@@ -546,6 +548,7 @@
+     <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
+     <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
+     <ClCompile Include="Geoscape\FundingState.cpp" />
++    <ClCompile Include="Geoscape\CobraIntelState.cpp" />
+     <ClCompile Include="Geoscape\GeoscapeCraftState.cpp" />
+     <ClCompile Include="Geoscape\NewPossibleResearchState.cpp" />
+     <ClCompile Include="Geoscape\ProductionCompleteState.cpp" />
+@@ -673,6 +676,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -3236,7 +3529,7 @@ index 99f24ce..7f5407b 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +685,7 @@
+@@ -682,6 +686,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -3244,7 +3537,7 @@ index 99f24ce..7f5407b 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -970,6 +974,8 @@
+@@ -970,6 +975,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -3253,7 +3546,15 @@ index 99f24ce..7f5407b 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1170,6 +1176,7 @@
+@@ -1033,6 +1040,7 @@
+     <ClInclude Include="Geoscape\CraftPatrolState.h" />
+     <ClInclude Include="Geoscape\DogfightState.h" />
+     <ClInclude Include="Geoscape\FundingState.h" />
++    <ClInclude Include="Geoscape\CobraIntelState.h" />
+     <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
+     <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
+     <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
+@@ -1170,6 +1178,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -3261,7 +3562,7 @@ index 99f24ce..7f5407b 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1186,7 @@
+@@ -1179,6 +1188,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
@@ -3668,7 +3969,7 @@ index 240b22a..c998115 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..7d16021 100644
+index 9ca9637..b530bde 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -55,6 +55,8 @@
@@ -3706,7 +4007,15 @@ index 9ca9637..7d16021 100644
  
  	for (const auto& weHardlyKnewYe : reader["deadSoldiers"].children())
  	{
-@@ -849,6 +856,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -690,6 +697,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+ 	}
+ 
+ 	_scriptValues.load(reader, mod->getScriptGlobal());
++
+ }
+ 
+ void SavedGame::loadTemplates(const YAML::YamlNodeReader& reader, const Mod* mod)
+@@ -849,6 +857,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("hiddenPurchaseItems", _hiddenPurchaseItemsMap);
  	writer.write("customRuleCraftDeployments", _customRuleCraftDeployments);
  	_alienStrategy->save(writer["alienStrategy"]);
@@ -3714,7 +4023,7 @@ index 9ca9637..7d16021 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2587,69 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2588,69 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */

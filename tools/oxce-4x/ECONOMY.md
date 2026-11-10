@@ -105,11 +105,14 @@ a stricter bar than a planner needs, and it is the reason to meet it now.
 
 The intel screen.
 
-It needs a background, and the handoff's claim that a painted one is sitting unassigned does
-not survive checking: all eleven painted backgrounds are mapped onto vanilla `BACK` slots and
-every one of them is referenced. What is actually free is `BACK06` to `BACK11` — six slots still
-carrying X-COM's own art. The screen can take one of those and look like X-COM until a brief
-goes to the graphics AI, which is the right order: build it working, paint it after.
+It needs no background of its own, and the question of which free slot to use was one I
+invented. The `fundingWindow` interface already declares `backgroundImage: BACK13.SCR`, which
+this mod paints, so a state that reuses that interface and sets no background is themed for
+free — which is exactly what `FundingState` does.
+
+Setting one explicitly overrode that with `BACK06`, X-COM's graph paper, and the screen rendered
+with chart axes and gridlines behind the data. It compiled perfectly. The only reason it was
+caught is that the screen was rendered headless to a PNG and looked at.
 
 It shows only what the player has **learned** — sites found, estimated regional income, known
 projects and their timers. Raiding a research lab or a hidden HQ reveals more. That makes intel
