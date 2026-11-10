@@ -673,11 +673,42 @@ Stock now accumulates where cash used to, so strictly the unbounded growth has m
 gone — but stock has a natural drain and cash never did, and a large stockpile is a meaningful
 prize where a large number was just a silly number. No cap until it looks wrong in play.
 
-**One ambiguity left for John:** whether a well-stocked M.A.R.S. site fields *better-armed*
-defenders. "Stable force" reads as constant kit regardless, and that is the assumption on record —
-its stock is loot and trade goods, not its own armoury. Worth a word if the intent was otherwise,
-since a dealer sitting on a mountain of guns fighting with sidearms is the sort of thing that
-reads oddly.
+### Its stock is its armoury, which inverts the risk
+
+This desk assumed "stable force" meant constant kit and recorded that assumption. Wrong. John:
+*"Yes. Mars should always be fielding the best weapons they have in stock."*
+
+So "stable" means **independent of Cobra's economy**, not constant — and the split is clean:
+
+| | driven by |
+| --- | --- |
+| garrison **size** | nothing. A stable force fields the same number of men |
+| garrison **kit** | **its own stock**, never Cobra's region |
+
+Which means the stability flag is not "exempt from the kit rule". It is "the kit rule reads your
+own stock instead of Cobra's regional pool" — one rule, two sources, rather than a special case.
+
+**And it inverts the risk against the reward, which nobody designed:**
+
+| the dealer has | defenders | prize |
+| --- | --- | --- |
+| sold heavily, not yet restocked | **badly armed** | **fat** — cash at its peak |
+| just restocked | **well armed** | leaner — cash halved, stock high |
+
+So a soft target is a rich one and a hard target is a poorer one, and *when* the player hits a
+dealer matters more than *whether* he does. Letting Cobra trade freely does not simply grow a
+target — it grows the money while stripping the guns that defend it. That is a genuine decision
+with an observable cause, and it falls straight out of John's two rules rather than out of a
+mechanic written to produce it.
+
+It also hands the intel screen something worth showing, since the state a player would want to
+read is exactly the state the trade is already tracking.
+
+**One consequence for the code today.** The clamp built this session is binary — `wellSupplied`
+is a bool and the clamp drops the tier to 0. "The best they have in stock" is graded: three
+`itemSets` tiers, so a stock level maps to a tier cap. Today's clamp is the degenerate two-state
+case of that, so the M.A.R.S. work generalises it rather than duplicating it, and Cobra could
+later use the graded form too if a half-supplied region should field a mix.
 
 **Not built yet, deliberately.** With no M.A.R.S. sites in the ruleset the flag would be dead
 code, and dead code that reads as a finished feature is the single most expensive thing on this
