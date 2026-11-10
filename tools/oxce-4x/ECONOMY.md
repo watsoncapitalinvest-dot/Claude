@@ -169,11 +169,7 @@ runs before the funding pass so it counts in the month it happens.
 Still unread, and both now blocked on a decision rather than on work:
 
 - `projectProgressPerMonth` — nothing yet says what a Cobra project *does* when it lands.
-- `garrisonRefillPerMonth` — there is nothing to refill. X-COM stores no garrison on a site; the
-  defenders are generated from the deployment each time it is raided, so there is no number to
-  deplete and none to top up. A training camp needs a mechanism invented, not a value chosen.
-  Raising the garrison size of every site in its region is the cheapest and reads best: starve
-  the camp, thin the defenders.
+- ~~`garrisonRefillPerMonth`~~ — **built.** See below.
 
 One rough edge in what is built: `cobraRaided` returns funds plus materiel as a single number
 for the debriefing line, so "Cobra supplies denied: 640" adds dollars to crates. It is fine as a
@@ -276,6 +272,43 @@ opens the options menu and a second one lands in the mod list — where a ten-mi
 stopped three months in, with a log that read precisely like Cobra having nothing to build. Only
 a screenshot told the difference. `ff_probe.py` advances the clock inside the engine through the
 same switch `timeAdvance()` uses and drops the popups, so there is no UI to get wrong.
+
+## The training camp, which could not refill anything
+
+X-COM keeps no garrison on a site: the defenders are built from the deployment every time it is
+raided, so nothing depletes and `garrisonRefillPerMonth` was a field pointing at a number that
+does not exist. A camp therefore changes what the deployment *produces* in its own region, and
+it does it two ways, both read off the camp's own rule:
+
+- `garrisonBonus` — added to every rank entry's quantity. A Cobra site deployment has seven rank
+  entries, so 1 is about seven more men on the map per camp.
+- `garrisonRankUnlock` — with no camp in the region, ranks *below* this stay home.
+- `garrisonAllMissions` — false, so it touches raids on Cobra's own sites and not crash sites.
+
+**Low rank number is elite here**: 0 Cobra Commander, 1 Destro, 2 Viper Engineer, 3 Viper Medic,
+4 Storm Shadow, 5 trooper, 6–7 B.A.T.s. The comparison was written the natural way round first —
+"ranks above the threshold need a camp" — which would have kept the troopers home and sent Cobra
+Commander to every raid. Checking the deployment data is what caught it; reading the code would
+not have.
+
+A cap that would skip *every* entry is a battle with no enemies, so one that empties a deployment
+is ignored with a warning instead. Cobra's own sites keep ranks 4–7 at the shipped threshold so
+it cannot happen today, but the cap is a ruleset number meeting a ruleset file.
+
+Verified in four parts rather than by reading it:
+
+| what | how |
+| --- | --- |
+| the lookup, against real campaign state | a camp planted at month 7 flips the region from `+0/cap4` to `+1/cap-1`, and nothing else moves |
+| the bonus puts men on the map | same New Battle map, bonus forced to 2: 9 units become 14, every rank entry up |
+| the cap removes the right men | cap forced to 5: ranks 2 and 3 gone, rank 5 untouched |
+| the guard | cap forced to 9: warning fires, battle still has 7 men in it |
+
+Exact per-entry arithmetic is not claimed — New Battle randomises its own counts, so the runs
+show direction and magnitude rather than a reproducible sum.
+
+All three numbers are guesses. The rank gate in particular changes the baseline everywhere the
+moment it is on: set `garrisonRankUnlock: -1` to keep the bonus and drop that half.
 
 ## Where the sites can actually go
 

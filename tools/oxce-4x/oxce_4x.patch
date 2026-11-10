@@ -1,5 +1,5 @@
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..e7752de 100644
+index 1951ba7..61b7517 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -767,6 +767,7 @@ void BattlescapeGenerator::nextStage()
@@ -10,6 +10,70 @@ index 1951ba7..e7752de 100644
  	bool isPreview = _save->isPreview();
  
  	_save->setAlienCustom(_alienCustomDeploy ? _alienCustomDeploy->getType() : "", _alienCustomMission ? _alienCustomMission->getType() : "");
+@@ -1696,8 +1697,55 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+ 	// and reset memory at each stage
+ 	_save->getReinforcementsMemory().clear();
+ 
++	// G.I. Joe: a Cobra training camp hardens the region it stands in. It cannot refill a
++	// garrison, because none is stored - these units are built from the deployment every time -
++	// so it adds to what the deployment produces and opens ranks that otherwise stay home.
++	// The position comes from whatever this battle is being fought over; the craft is a last
++	// resort and is close enough, since it is parked on the target.
++	SavedGame::CobraGarrison garrison;
++	{
++		const Target *where = 0;
++		bool cobraSite = false;
++		if (_alienBase) { where = _alienBase; cobraSite = !_alienBase->getSiteType().empty(); }
++		else if (_mission) { where = _mission; }
++		else if (_ufo) { where = _ufo; }
++		else if (_craft) { where = _craft; }
++		if (where)
++		{
++			garrison = _game->getSavedGame()->cobraGarrison(
++				_game->getMod(), where->getLongitude(), where->getLatitude(), cobraSite);
++		}
++	}
++
++	// A cap that would skip EVERY rank entry is a battle with no enemies in it. Cobra's own
++	// site deployments all share one data block and keep ranks 4 to 7, so it cannot happen
++	// today - but the cap is a ruleset number and the deployment it meets is a ruleset file,
++	// and an empty map is a much worse failure than a cap that quietly did nothing.
++	if (garrison.rankUnlock >= 0)
++	{
++		bool anyLeft = false;
++		for (const auto& dd : *deployment->getDeploymentData())
++		{
++			if (dd.alienRank >= garrison.rankUnlock) { anyLeft = true; break; }
++		}
++		if (!anyLeft)
++		{
++			Log(LOG_WARNING) << "garrisonRankUnlock " << garrison.rankUnlock << " would empty "
++				<< deployment->getType() << " - ignoring it for this battle";
++			garrison.rankUnlock = -1;
++		}
++	}
++
+ 	for (auto& dd : *deployment->getDeploymentData())
+ 	{
++		// LOW rank number is ELITE here: 0 is Cobra Commander, 5 is a trooper, 7 is a B.A.T.
++		// So the men a camp turns out are the ones BELOW the threshold, and without a camp in
++		// the region they stay home. Written the other way round first, which would have left
++		// the troopers at home and sent the Commander to every raid.
++		if (garrison.rankUnlock >= 0 && dd.alienRank < garrison.rankUnlock)
++		{
++			continue;
++		}
+ 		int quantity;
+ 
+ 		switch (_game->getSavedGame()->getDifficulty())
+@@ -1721,6 +1769,7 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+ 
+ 		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
+ 		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
++		quantity += garrison.bonus;
+ 
+ 		for (int i = 0; i < quantity; ++i)
+ 		{
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
 index 7cd4941..41e4eb8 100644
 --- a/src/Battlescape/BattlescapeState.cpp
@@ -3737,10 +3801,10 @@ index 2242d13..e11ecac 100644
  	/// Gets the ruleset for a facility type.
 diff --git a/src/Mod/RuleCobraSite.cpp b/src/Mod/RuleCobraSite.cpp
 new file mode 100644
-index 0000000..cf0a591
+index 0000000..7d1c533
 --- /dev/null
 +++ b/src/Mod/RuleCobraSite.cpp
-@@ -0,0 +1,59 @@
+@@ -0,0 +1,61 @@
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
 + *
@@ -3773,7 +3837,7 @@ index 0000000..cf0a591
 +	_lootsRegionalStockpile(false),
 +	_projectProgressPerMonth(0),
 +	_goodwillErosionPerMonth(0),
-+	_garrisonRefillPerMonth(0),
++	_garrisonBonus(0), _garrisonRankUnlock(-1), _garrisonAllMissions(false),
 +	_stockpileCap(0),
 +	_revealOnRaid(0)
 +{
@@ -3794,7 +3858,9 @@ index 0000000..cf0a591
 +	reader.tryRead("lootsRegionalStockpile", _lootsRegionalStockpile);
 +	reader.tryRead("projectProgressPerMonth", _projectProgressPerMonth);
 +	reader.tryRead("goodwillErosionPerMonth", _goodwillErosionPerMonth);
-+	reader.tryRead("garrisonRefillPerMonth", _garrisonRefillPerMonth);
++	reader.tryRead("garrisonBonus", _garrisonBonus);
++	reader.tryRead("garrisonRankUnlock", _garrisonRankUnlock);
++	reader.tryRead("garrisonAllMissions", _garrisonAllMissions);
 +	reader.tryRead("stockpileCap", _stockpileCap);
 +	reader.tryRead("revealOnRaid", _revealOnRaid);
 +}
@@ -3802,10 +3868,10 @@ index 0000000..cf0a591
 +}
 diff --git a/src/Mod/RuleCobraSite.h b/src/Mod/RuleCobraSite.h
 new file mode 100644
-index 0000000..4cd4641
+index 0000000..375567f
 --- /dev/null
 +++ b/src/Mod/RuleCobraSite.h
-@@ -0,0 +1,83 @@
+@@ -0,0 +1,92 @@
 +#pragma once
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
@@ -3841,7 +3907,7 @@ index 0000000..4cd4641
 + * happens with them is the monthly tick's job.
 + *
 + * Four of the eight act on the world rather than produce - a Terror Drome raises the mission
-+ * rate, a broadcast station erodes goodwill, a lab advances a project, a camp refills garrisons.
++ * rate, a broadcast station erodes goodwill, a lab advances a project, a camp hardens its region.
 + * Only two of those need a field here. The Terror Drome needs none at all, because the economy
 + * publishes a per-region count of every site type into the counter map that the mission scripts
 + * already gate on, so "more dromes means more missions" is a ruleset condition rather than code
@@ -3862,7 +3928,14 @@ index 0000000..4cd4641
 +	bool _lootsRegionalStockpile;      ///< the depot: raiding it takes what the region was holding
 +	int _projectProgressPerMonth;      ///< the research lab
 +	int _goodwillErosionPerMonth;      ///< the broadcast station
-+	int _garrisonRefillPerMonth;       ///< the training camp
++	/// The training camp. X-COM stores no garrison on a site - the defenders are generated
++	/// fresh from the deployment every time it is raided - so there is nothing to refill and
++	/// the field that used to be here pointed at nothing. A camp instead changes what the
++	/// deployment produces in its own region: more of them, and better ones.
++	int _garrisonBonus;                ///< extra defenders per rank entry, per camp in region
++	int _garrisonRankUnlock;           ///< ranks BELOW this (the elites) appear only where a
++	                                   ///< camp stands; -1 leaves ranks alone
++	bool _garrisonAllMissions;         ///< false: Cobra sites only. true: every Cobra battle there
 +	int _stockpileCap;                 ///< what this site lets the region hold; 0 means no limit of its own
 +	int _revealOnRaid;                 ///< how many unknown projects raiding this reveals
 +
@@ -3883,7 +3956,9 @@ index 0000000..4cd4641
 +	bool getLootsRegionalStockpile() const { return _lootsRegionalStockpile; }
 +	int getProjectProgressPerMonth() const { return _projectProgressPerMonth; }
 +	int getGoodwillErosionPerMonth() const { return _goodwillErosionPerMonth; }
-+	int getGarrisonRefillPerMonth() const { return _garrisonRefillPerMonth; }
++	int getGarrisonBonus() const { return _garrisonBonus; }
++	int getGarrisonRankUnlock() const { return _garrisonRankUnlock; }
++	bool getGarrisonAllMissions() const { return _garrisonAllMissions; }
 +	int getStockpileCap() const { return _stockpileCap; }
 +	int getRevealOnRaid() const { return _revealOnRaid; }
 +};
@@ -4449,7 +4524,7 @@ index 240b22a..c998115 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..54a0bdb 100644
+index 9ca9637..1fcd373 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -55,6 +55,8 @@
@@ -4503,10 +4578,77 @@ index 9ca9637..54a0bdb 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2588,263 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2588,330 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
++/**
++ * What Cobra's training camps do to a battle fought at this spot.
++ *
++ * A camp cannot refill a garrison, because X-COM keeps no garrison to refill: a site's defenders
++ * are generated from its deployment every time it is raided, so nothing depletes and nothing
++ * needs topping up. What a camp can do is change what that deployment produces in its own
++ * region - more defenders, and ranks that otherwise never turn out.
++ *
++ * Both are read off the camp's own rule rather than hardcoded, so a second kind of camp, or a
++ * camp that only hardens its own compounds, is a ruleset edit.
++ */
++SavedGame::CobraGarrison SavedGame::cobraGarrison(const Mod *mod, double lon, double lat, bool cobraSite) const
++{
++	CobraGarrison out;
++	bool campHere = false;
++	const Region *here = locateRegion(lon, lat);
++	if (!here)
++	{
++		return out;
++	}
++	const std::string &region = here->getRules()->getType();
++
++	for (const auto *base : _alienBases)
++	{
++		if (base->getSiteType().empty())
++		{
++			continue;
++		}
++		const RuleCobraSite *rule = mod->getCobraSite(base->getSiteType());
++		if (!rule || (rule->getGarrisonBonus() == 0 && rule->getGarrisonRankUnlock() < 0))
++		{
++			continue;
++		}
++		// A camp that only hardens Cobra's own compounds does nothing to a crash site.
++		if (!cobraSite && !rule->getGarrisonAllMissions())
++		{
++			continue;
++		}
++		const Region *there = locateRegion(*base);
++		if (!there || there->getRules()->getType() != region)
++		{
++			continue;
++		}
++		out.bonus += rule->getGarrisonBonus();
++		campHere = true;
++	}
++
++	// A camp lifts the cap entirely, so out.rankUnlock stays -1. With no camp standing, the cap
++	// a camp WOULD have lifted is the one that applies. Tracked with its own flag rather than
++	// inferred from the bonus, because a camp priced at garrisonBonus 0 is still a camp and
++	// would otherwise have left its own region capped.
++	if (!campHere)
++	{
++		for (const auto &siteType : mod->getCobraSitesList())
++		{
++			const RuleCobraSite *rule = mod->getCobraSite(siteType);
++			if (rule && rule->getGarrisonRankUnlock() >= 0
++				&& (cobraSite || rule->getGarrisonAllMissions()))
++			{
++				out.rankUnlock = rule->getGarrisonRankUnlock();
++				break;
++			}
++		}
++	}
++	return out;
++}
++
 +void SavedGame::cobraPlan(const Mod *mod)
 +{
 +	// THE DECISION LAYER. Everything else in the economy is state and rules; this is the only
@@ -4768,7 +4910,7 @@ index 9ca9637..54a0bdb 100644
  {
  	Region* found = nullptr;
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..043d053 100644
+index d985908..e9a8009 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -55,6 +55,7 @@ class ArticleDefinition;
@@ -4787,7 +4929,7 @@ index d985908..043d053 100644
  	SavedBattleGame *_battleGame;
  	std::vector<const RuleResearch*> _discovered;
  	std::vector<ResearchDiaryEntry*> _researchDiary;
-@@ -395,6 +397,18 @@ public:
+@@ -395,6 +397,24 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -4801,6 +4943,12 @@ index d985908..043d053 100644
 +	void cobraBuilt(const AlienBase *base, const Mod *mod);
 +	/// Decides what Cobra should build next and publishes it for the mission scripts.
 +	void cobraPlan(const Mod *mod);
++	/// What Cobra training camps do to a battle fought at this position.
++	/// bonus is extra defenders per rank entry. rankUnlock is a floor on the rank NUMBER when
++	/// no camp stands in the region - low numbers are the elites here, so ranks below it stay
++	/// home - or -1 to leave ranks alone.
++	struct CobraGarrison { int bonus = 0; int rankUnlock = -1; };
++	CobraGarrison cobraGarrison(const Mod *mod, double lon, double lat, bool cobraSite) const;
 +	/// Gets the Cobra economy, read-only.
 +	const CobraEconomy &getCobraEconomy() const { return *_cobraEconomy; }
  	/// Read-only access to the alien strategy data.

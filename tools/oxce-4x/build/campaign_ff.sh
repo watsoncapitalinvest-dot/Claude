@@ -20,7 +20,7 @@ pgrep Xvfb >/dev/null || (nohup Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 &
 sleep 2
 pkill -9 -x openxcom 2>/dev/null; sleep 1; rm -f "$L"
 
-( cd "$B" && OXCE_CAMP_PROBE=1 OXCE_CAMP_FF="$DAYS" OXCE_CAMP_RAID="${RAID:-}" OXCE_MAP_HIRES=0 SDL_AUDIODRIVER=dummy \
+( cd "$B" && OXCE_CAMP_PROBE=1 OXCE_CAMP_FF="$DAYS" OXCE_CAMP_RAID="${RAID:-}" OXCE_CAMP_PLANT="${PLANT:-}" OXCE_MAP_HIRES=0 SDL_AUDIODRIVER=dummy \
     nohup ./openxcom -data "$B" -continue > /tmp/oxc_ff.log 2>&1 & )
 
 # Wait for the fast-forward to report it is done, rather than guessing how long it takes.

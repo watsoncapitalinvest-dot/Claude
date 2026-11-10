@@ -62,16 +62,51 @@ PROBE = ANCHOR + """	if (getenv("OXCE_CAMP_PROBE"))                             
 		std::ostringstream other;                                              // CAMPROBE
 		for (const auto& u : untagged)                                         // CAMPROBE
 			other << u.first << "x" << u.second << " ";                        // CAMPROBE
+		// What a raid on each Cobra site would meet. Calls the real lookup against real        // CAMPROBE
+		// campaign state - regions, bases, the lot - so the month a camp appears, the sites    // CAMPROBE
+		// in its region must change and nothing else may.                                      // CAMPROBE
+		std::ostringstream gar;                                                // CAMPROBE
+		{                                                                      // CAMPROBE
+			std::map<std::string, std::string> seen;                           // CAMPROBE
+			for (auto* ab : _alienBases)                                       // CAMPROBE
+			{                                                                  // CAMPROBE
+				if (ab->getSiteType().empty()) continue;                       // CAMPROBE
+				Region* rg = locateRegion(*ab);                                // CAMPROBE
+				if (!rg) continue;                                             // CAMPROBE
+				std::string rn = rg->getRules()->getType();                    // CAMPROBE
+				CobraGarrison g = cobraGarrison(mod, ab->getLongitude(),       // CAMPROBE
+					ab->getLatitude(), true);                                  // CAMPROBE
+				std::ostringstream one;                                        // CAMPROBE
+				one << "+" << g.bonus << "/cap" << g.rankUnlock;               // CAMPROBE
+				seen[rn.substr(rn.rfind('_') + 1)] = one.str();                // CAMPROBE
+			}                                                                  // CAMPROBE
+			for (const auto& kv : seen) gar << kv.first << kv.second << " ";   // CAMPROBE
+		}                                                                      // CAMPROBE
 		Log(LOG_INFO) << "[camp] " << _time->getYear() << "-"                  // CAMPROBE
 			<< _time->getMonth() << "  funds=" << _cobraEconomy->getTotalFunds()// CAMPROBE
 			<< "  sites=" << _alienBases.size()                                // CAMPROBE
 			<< "  have[ " << have.str() << "]  wants[ " << want.str()          // CAMPROBE
-			<< "]  where[ " << where.str() << "]";                             // CAMPROBE
+			<< "]  where[ " << where.str() << "]  garrison[ " << gar.str() << "]";// CAMPROBE
 		if (!other.str().empty())                                              // CAMPROBE
 			Log(LOG_INFO) << "[camp]        untagged[ " << other.str() << "]"; // CAMPROBE
 		// A raid, on demand, through exactly the path the debriefing uses, so the planner's   // CAMPROBE
 		// response to losing something is observed rather than asserted. OXCE_CAMP_RAID is a  // CAMPROBE
 		// month number; at that month Cobra's best earner is taken off the board.             // CAMPROBE
+		// Cobra wants a training camp and rolls 26% a month for it, so waiting on the dice to  // CAMPROBE
+		// test the camp is waiting on luck. This turns one site it already owns into a camp at  // CAMPROBE
+		// the named month, so the garrison line either flips the month after or the lookup is   // CAMPROBE
+		// wrong. The negative case needs no help - the campaign supplies it all by itself.      // CAMPROBE
+		const char* plantEnv = getenv("OXCE_CAMP_PLANT");                      // CAMPROBE
+		if (plantEnv && _time->getMonth() == atoi(plantEnv))                   // CAMPROBE
+		{                                                                      // CAMPROBE
+			for (auto* ab : _alienBases)                                       // CAMPROBE
+			{                                                                  // CAMPROBE
+				if (ab->getSiteType() != "STR_COBRA_FRONT_COMPANY") continue;  // CAMPROBE
+				ab->setSiteType("STR_COBRA_TRAINING_CAMP");                    // CAMPROBE
+				Log(LOG_INFO) << "[camp] PLANTED a training camp";             // CAMPROBE
+				break;                                                         // CAMPROBE
+			}                                                                  // CAMPROBE
+		}                                                                      // CAMPROBE
 		const char* raidEnv = getenv("OXCE_CAMP_RAID");                        // CAMPROBE
 		if (raidEnv && _time->getMonth() == atoi(raidEnv))                     // CAMPROBE
 		{                                                                      // CAMPROBE
