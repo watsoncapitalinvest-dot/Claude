@@ -143,6 +143,33 @@ index 5a59f27..3d4e17f 100644
  }
  
  void Camera::stopKeyScrolling()
+diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
+index 0631f32..79c3997 100644
+--- a/src/Battlescape/DebriefingState.cpp
++++ b/src/Battlescape/DebriefingState.cpp
+@@ -1043,6 +1043,8 @@ void DebriefingState::prepareDebriefing()
+ 	_stats.push_back(new DebriefingStat("STR_LIVE_ALIENS_RECOVERED", false));
+ 	_stats.push_back(new DebriefingStat("STR_LIVE_ALIENS_SURRENDERED", false));
+ 	_stats.push_back(new DebriefingStat("STR_ALIEN_ARTIFACTS_RECOVERED", false));
++	// what raiding a Cobra site denied it; stays at zero and unlisted for any other mission
++	_stats.push_back(new DebriefingStat("STR_COBRA_SUPPLIES_DENIED", false));
+ 
+ 	std::string missionCompleteText, missionFailedText;
+ 	std::string objectiveCompleteText, objectiveFailedText;
+@@ -1417,6 +1419,13 @@ void DebriefingState::prepareDebriefing()
+ 				{
+ 					addStat(objectiveCompleteText, 1, objectiveCompleteScore);
+ 				}
++				// taken before the site is deleted, because it needs the site's own rule and
++				// the region it stood in
++				int denied = save->cobraRaided(ab, _game->getMod());
++				if (denied > 0)
++				{
++					addStat("STR_COBRA_SUPPLIES_DENIED", denied, denied);
++				}
+ 				save->clearLinksForAlienBase(ab, _game->getMod());
+ 				delete ab;
+ 				save->getAlienBases()->erase(abIt);
 diff --git a/src/Battlescape/Inventory.cpp b/src/Battlescape/Inventory.cpp
 index 406077c..4b5a934 100644
 --- a/src/Battlescape/Inventory.cpp
@@ -3969,7 +3996,7 @@ index 240b22a..c998115 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..b530bde 100644
+index 9ca9637..132b049 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -55,6 +55,8 @@
@@ -4023,10 +4050,63 @@ index 9ca9637..b530bde 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2588,69 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2588,122 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
++int SavedGame::cobraRaided(const AlienBase *base, const Mod *mod)
++{
++	if (base->getSiteType().empty())
++	{
++		return 0;                           // an ordinary alien base; nothing to take
++	}
++	RuleCobraSite *rule = mod->getCobraSite(base->getSiteType());
++	Region *region = locateRegion(*base);
++	if (rule == 0 || region == 0)
++	{
++		return 0;
++	}
++	const std::string &regionType = region->getRules()->getType();
++
++	// A depot's loot is whatever the region had been holding, which is the whole point of
++	// raiding one: everything the other sites in that region had banked goes with it.
++	int funds = rule->getLootFunds();
++	int materiel = rule->getLootMateriel();
++	if (rule->getLootsRegionalStockpile())
++	{
++		funds = _cobraEconomy->getFunds(regionType);
++		materiel = _cobraEconomy->getMateriel(regionType);
++	}
++	else
++	{
++		// cannot take more than is there
++		funds = std::min(funds, _cobraEconomy->getFunds(regionType));
++		materiel = std::min(materiel, _cobraEconomy->getMateriel(regionType));
++	}
++	_cobraEconomy->addFunds(regionType, -funds);
++	_cobraEconomy->addMateriel(regionType, -materiel);
++
++	// Raiding a lab or a headquarters is how the player learns what Cobra is building.
++	int reveal = rule->getRevealOnRaid();
++	for (auto &project : _cobraEconomy->getProjects())
++	{
++		if (reveal <= 0)
++		{
++			break;
++		}
++		if (!project.known)
++		{
++			project.known = true;
++			--reveal;
++		}
++	}
++
++	// The site itself is about to be deleted, so its production stops by simply no longer
++	// being counted next month. Nothing here needs to undo it.
++	_cobraEconomy->mirrorToCounters(*_alienStrategy);
++	return funds + materiel;
++}
++
 +void SavedGame::cobraMonthly(const Mod *mod)
 +{
 +	// Count what Cobra holds where, and let each site earn or cost its keep.
@@ -4094,7 +4174,7 @@ index 9ca9637..b530bde 100644
  {
  	Region* found = nullptr;
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..41a1ac0 100644
+index d985908..cb228e6 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -55,6 +55,7 @@ class ArticleDefinition;
@@ -4113,7 +4193,7 @@ index d985908..41a1ac0 100644
  	SavedBattleGame *_battleGame;
  	std::vector<const RuleResearch*> _discovered;
  	std::vector<ResearchDiaryEntry*> _researchDiary;
-@@ -395,6 +397,12 @@ public:
+@@ -395,6 +397,14 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -4121,6 +4201,8 @@ index d985908..41a1ac0 100644
 +	CobraEconomy &getCobraEconomy() { return *_cobraEconomy; }
 +	/// Runs Cobra's month: production, upkeep, and publishing the result to the mission scripts.
 +	void cobraMonthly(const Mod *mod);
++	/// Takes what a raid denies Cobra. Returns funds + materiel lost, for the debriefing line.
++	int cobraRaided(const AlienBase *base, const Mod *mod);
 +	/// Gets the Cobra economy, read-only.
 +	const CobraEconomy &getCobraEconomy() const { return *_cobraEconomy; }
  	/// Read-only access to the alien strategy data.

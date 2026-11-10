@@ -129,6 +129,20 @@ Visibility third rather than last, per the decision above.
 3. The intel screen.
 4. The consequences: garrison size, equipment quality, projects landing.
 
+Steps 1 to 3 are done. Of step 4, only the **raid outcome** is built: a site's loot comes out of
+its region when it is destroyed, a depot's loot is the whole regional stockpile, a raid cannot
+take more than is there, and a lab or headquarters reveals that many unknown projects. The
+production stop needed no code at all — the site is deleted, so the next monthly tick simply
+stops counting it, which is the summing design paying for itself.
+
+Still unread, though declared and stored: `garrisonRefillPerMonth`, `goodwillErosionPerMonth`
+and `projectProgressPerMonth`. Projects in particular need a design answer first — nothing yet
+says what a Cobra project *does* when it lands.
+
+One rough edge in what is built: `cobraRaided` returns funds plus materiel as a single number
+for the debriefing line, so "Cobra supplies denied: 640" adds dollars to crates. It is fine as a
+score magnitude and wrong as a sentence; reporting the two separately is a small change.
+
 ## Where the sites can actually go
 
 The mod keeps X-COM's fifteen regions and defines none of its own, but only North America has
