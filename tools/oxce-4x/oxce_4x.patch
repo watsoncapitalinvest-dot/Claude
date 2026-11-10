@@ -1142,15 +1142,16 @@ index f353397..12ee74a 100644
  		}
 diff --git a/src/Engine/HiColor.cpp b/src/Engine/HiColor.cpp
 new file mode 100644
-index 0000000..91e9e71
+index 0000000..7557483
 --- /dev/null
 +++ b/src/Engine/HiColor.cpp
-@@ -0,0 +1,200 @@
+@@ -0,0 +1,265 @@
 +#include "HiColor.h"
 +#include "Surface.h"
 +#include "Screen.h"
 +#include <unordered_map>
 +#include <deque>
++#include <vector>
 +#include <cstring>
 +#include "SurfaceSet.h"
 +#include "FileMap.h"
@@ -1205,9 +1206,12 @@ index 0000000..91e9e71
 +	sprites.erase(pixels8);
 +}
 +
++static void resolveFrames();   // defined below, beside the registration it resolves
++
 +void beginLayer(Uint8 *base, int w, int h, int pitch)
 +{
 +	if (!enabled()) { layerBase = nullptr; return; }
++	resolveFrames();
 +	layerBase = base; layerW = w; layerH = h; layerPitch = pitch;
 +	const size_t n = (size_t)w * h;
 +	if (rgb.size() != n) { rgb.assign(n, 0); tag.assign(n, 0); }
@@ -1264,6 +1268,67 @@ index 0000000..91e9e71
 +	static std::deque<std::vector<Uint32>> store;
 +	store.push_back(std::move(argb));
 +	return store.back().data();
++}
++
++namespace
++{
++	struct PendingFrame { SurfaceSet *set; int frame; std::string file; };
++	std::vector<PendingFrame> pendingFrames;
++}
++
++void registerSetFrame(SurfaceSet *set, int frame, const std::string &file)
++{
++	if (!enabled() || !set) return;
++	const auto dot = file.find_last_of('.');
++	if (dot == std::string::npos || !FileMap::fileExists(file.substr(0, dot) + "_rgb.png")) return;
++	pendingFrames.push_back({set, frame, file});
++}
++
++/// Resolve what registerSetFrame remembered. Deferred because a set's frames are replaced after
++/// the mod loads, so a Surface* captured then points at nothing by the time anything is drawn.
++static void resolveFrames()
++{
++	if (pendingFrames.empty()) return;
++	std::vector<PendingFrame> todo;
++	todo.swap(pendingFrames);
++	int done = 0;
++	for (const auto &p : todo)
++	{
++		Surface *f = p.set->getFrame(p.frame);
++		if (!f || !f->getBuffer()) continue;
++		const auto dot = p.file.find_last_of('.');
++		const std::string twin = p.file.substr(0, dot) + "_rgb.png";
++		SDL_Surface *img = IMG_Load_RW(FileMap::getRWops(twin), SDL_TRUE);
++		if (!img) { Log(LOG_WARNING) << "Full-colour sprite unreadable: " << twin; continue; }
++		SDL_PixelFormat fmt = {};
++		fmt.BitsPerPixel = 32; fmt.BytesPerPixel = 4;
++		fmt.Rmask = 0x00FF0000; fmt.Gmask = 0x0000FF00; fmt.Bmask = 0x000000FF; fmt.Amask = 0xFF000000;
++		fmt.Rshift = 16; fmt.Gshift = 8; fmt.Bshift = 0; fmt.Ashift = 24;
++		SDL_Surface *conv = SDL_ConvertSurface(img, &fmt, SDL_SWSURFACE);
++		SDL_FreeSurface(img);
++		if (!conv) continue;
++		if (conv->w != f->getWidth() || conv->h != f->getHeight())
++		{
++			Log(LOG_WARNING) << "Full-colour sprite " << twin << " is " << conv->w << "x" << conv->h
++				<< ", expected " << f->getWidth() << "x" << f->getHeight();
++			SDL_FreeSurface(conv); continue;
++		}
++		const int w = conv->w, h = conv->h;
++		std::vector<Uint32> px((size_t)w * h);
++		bool any = false;
++		SDL_LockSurface(conv);
++		for (int y = 0; y < h; ++y)
++		{
++			memcpy(&px[(size_t)y * w], (Uint8*)conv->pixels + y * conv->pitch, (size_t)w * 4);
++			if (!any) for (int x = 0; x < w; ++x) if (px[(size_t)y * w + x] >> 24) { any = true; break; }
++		}
++		SDL_UnlockSurface(conv);
++		SDL_FreeSurface(conv);
++		if (!any) continue;
++		registerSprite(f->getBuffer(), keep(std::move(px)));
++		++done;
++	}
++	if (done) Log(LOG_INFO) << "Full-colour sprites: " << done;
 +}
 +
 +void registerSheet(const std::string &pngPath, SurfaceSet *set, int firstFrame, int sheetW, int sheetH, int subX, int subY)
@@ -1348,10 +1413,10 @@ index 0000000..91e9e71
 +}
 diff --git a/src/Engine/HiColor.h b/src/Engine/HiColor.h
 new file mode 100644
-index 0000000..cf159bb
+index 0000000..4abbbb1
 --- /dev/null
 +++ b/src/Engine/HiColor.h
-@@ -0,0 +1,40 @@
+@@ -0,0 +1,43 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: full-colour battlescape.
@@ -1388,6 +1453,9 @@ index 0000000..cf159bb
 +	const Uint32 *keep(std::vector<Uint32> &&argb);
 +	/// For a sprite sheet <file>.png, loads <file>_rgb.png (same size) and registers each subX x subY cell against the matching frame.
 +	void registerSheet(const std::string &pngPath, SurfaceSet *set, int firstFrame, int sheetW, int sheetH, int subX, int subY);
++	/// One sprite that came from its own file: <file>_rgb.png. The set's frames are still being
++	/// rebuilt when the mod loads, so this is remembered and resolved at the first frame drawn.
++	void registerSetFrame(SurfaceSet *set, int frame, const std::string &file);
 +	/// Writes the map layer to a 32-bit display surface at (dx, dy). Returns false if there is no layer for this surface.
 +	bool composite(SDL_Surface *map8, SDL_Surface *screen32, int dx, int dy);
 +}
@@ -2551,7 +2619,7 @@ index d5e599e..8b44e52 100644
  	void setHighContrast(bool contrast) override;
  	/// Handles the timers.
 diff --git a/src/Mod/ExtraSprites.cpp b/src/Mod/ExtraSprites.cpp
-index c71ac0d..994ba54 100644
+index c71ac0d..16093ab 100644
 --- a/src/Mod/ExtraSprites.cpp
 +++ b/src/Mod/ExtraSprites.cpp
 @@ -19,6 +19,8 @@
@@ -2571,17 +2639,19 @@ index c71ac0d..994ba54 100644
  	return surface;
  }
  
-@@ -255,6 +258,9 @@ SurfaceSet *ExtraSprites::loadSurfaceSet(SurfaceSet *set)
+@@ -255,6 +258,11 @@ SurfaceSet *ExtraSprites::loadSurfaceSet(SurfaceSet *set)
  			if (!subdivision)
  			{
  				getFrame(set, startFrame)->loadImage(fileName);
 +				// <file>_hi.png: item icons drawn at display resolution. The frame is looked up later,
 +				// because the set's frames are still being rebuilt at this point.
-+				HiUI::registerSetFrame(set, startFrame >= set->getMaxSharedFrames() ? startFrame + _current->offset : startFrame, fileName);
++				const int fi = startFrame >= set->getMaxSharedFrames() ? startFrame + _current->offset : startFrame;
++				HiUI::registerSetFrame(set, fi, fileName);      // <file>_hi.png: item icons in the menus
++				HiColor::registerSetFrame(set, fi, fileName);   // <file>_rgb.png: the same item lying on the ground
  			}
  			else
  			{
-@@ -276,6 +282,7 @@ SurfaceSet *ExtraSprites::loadSurfaceSet(SurfaceSet *set)
+@@ -276,6 +284,7 @@ SurfaceSet *ExtraSprites::loadSurfaceSet(SurfaceSet *set)
  						++offset;
  					}
  				}
