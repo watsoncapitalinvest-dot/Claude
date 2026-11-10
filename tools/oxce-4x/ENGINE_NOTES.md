@@ -90,6 +90,16 @@ be cancelled by hand. `[skip ci]` in the commit message stops it, and the workfl
 started on demand from `workflow_dispatch`. Use it for anything that does not touch engine
 source.
 
+**GitHub matches `[skip ci]` anywhere in the message, including inside a sentence saying not to
+skip.** An engine commit ended with "No `[skip ci]` on this one — the engine changed and the exe
+is the point", and no build ran. The phrase is a marker, not a word, so it is never written in
+prose: say "skip marker" and keep the literal string for when it is meant. The recovery is
+`gh workflow run build-oxce-4x.yml --ref <branch>`, which builds the branch head regardless.
+
+The reverse is the expensive one. A data-only commit pushed *without* the marker starts a build,
+and because the runs share a concurrency group it **cancels whichever build is already running**
+— the way week 2's fetch was lost. So the marker goes on before the push, not after.
+
 **`State::blit` is the only reliable per-frame hook.** Anything that must land after a surface
 reaches the base buffer — item icons, the equipment-screen figure — is done by overriding that
 surface's `blit`, not by hooking where it was drawn.
