@@ -47,6 +47,16 @@ pixel is underneath, which is what makes soft edges and ground shadows work.
 
 ## Things that cost time to find, recorded so they are not re-learned
 
+**A threshold against an accumulating balance is a dead rule, not a tunable one.** `wellPaidFunds:
+40` compared a region's banked Cobra funds against a fixed number and fired **zero times in 400
+days** — the lowest regional balance all run was 110. The instinct is to raise the number; that
+is wrong. Regional funds accumulate, so Cobra passes under *any* fixed threshold in month one and
+never returns, and a bigger number just moves the death out past wherever the test was looking.
+The bar has to be derived from something that grows with the thing it is gating — here, the
+upkeep the region's own sites owe. Before tuning a threshold that never fires, check whether the
+quantity it tests is monotonic.
+
+
 **`locateRegion` logs `LOG_ERROR` when it finds nothing, and a New Battle parks its craft at
 [0, 0].** Adding a thirteenth caller to it put `Failed to find a region at location [0, 0]` into
 the log on **every New Battle** — the one path the mod is actually tested from. The craft was a

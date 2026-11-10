@@ -499,8 +499,21 @@ of them rather than one number called "strength":
 | both | a thin garrison carrying sidearms |
 
 Materiel arms the men who are there. Funds are what put them there — payroll, food, training —
-so `wellPaidFunds: 40` and `starvedHeadcount: 1` take a man off every rank entry in a region
-whose banked funds fall below the threshold. Seven rank entries, so one is about seven fewer men.
+so `starvedHeadcount: 1` takes a man off every rank entry in a region that cannot pay. Seven rank
+entries, so one is about seven fewer men.
+
+**A flat funds threshold cannot work, and a campaign proved it rather than an argument.** The
+first version shipped `wellPaidFunds: 40` and fired **zero times in 400 days**; the lowest
+regional balance all run was 110. Raising the number does not fix it. Regional funds are a bank
+balance that *accumulates* — Cobra drops under any fixed threshold in month one and never returns
+to it, so 200 would have died by month four instead, out past where the test was looking.
+
+So the bar is what the region **owes**: `wellPaidUpkeepMonths: 3` is how many months of its own
+sites' upkeep Cobra must have banked there. A region holding eight sites at 20 each owes 160 a
+month and needs 480. That bar rises as Cobra grows there, which a fixed number cannot do, and it
+states something legible: a region that cannot cover its garrison's keep cannot field it at full
+strength. `wellPaidFunds` survives as a flat floor for anyone who wants one — either test failing
+is enough.
 
 **No rank entry is ever emptied.** One that had men keeps one, for the same reason the rank cap
 refuses to empty a deployment: an empty compound is a bug, not a consequence.
@@ -542,10 +555,21 @@ It also landed on **John's own `STR_COBRA_FRONT` deployment** rather than a gene
 is the better result — the clamp works on any Cobra deployment with more than one item set, not
 just the eight this desk wrote.
 
-The **lookup** — the region's real materiel against the real threshold — is campaign-side, so the
+The **lookup** — the region's real stock against the real threshold — is campaign-side, so the
 campaign probe prints it per month per region next to the number it was compared with
-(`+0/cap-1/DRY(m12)`), so a rule that never fires and a rule that always fires look different
-from each other in the log.
+(`+0/cap4/DRY(m0)/paid(f110)`), and the shipped `OXCE_ECON_LOG` prints the same thing without a
+probe build. A rule that never fires and a rule that always fires have to look different from
+each other in the log, or the next dead number survives as long as this one did.
+
+Verified over 400 days, against state Cobra produced itself rather than state this desk forced:
+
+| months | what the log said | why |
+| --- | --- | --- |
+| 1–6 | `DRY(m0)` · `materiel=0/50 CANNOT ARM` | Cobra had no factory yet |
+| 7 on | `sup(m80)` · `materiel=80/50` | the month its first factory came online |
+
+The transition is caused by Cobra's own build decision, which is what makes it evidence. Region
+lookup errors across the whole run: **0**.
 
 A side finding from the same runs: John's `STR_COBRA_FRONT` has no language entry, so the game
 logs `STR_COBRA_FRONT_ not found in en-US`. Cosmetic, pre-existing, and in his file rather than
