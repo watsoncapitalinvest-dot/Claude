@@ -642,11 +642,42 @@ Cobra's money on the way out and Cobra loses the funds *and* gets no guns, and t
 grow. Both legs are losses, and they are different losses, which is what the two-leg convoy was
 for.
 
-**One second-order effect worth a decision at some point:** nothing drains a stash except a raid,
-so a site left alone for a long campaign accumulates without bound. That is probably the intent —
-an untouched dealer should become a fat target — but a five-year game could leave a silly number
-sitting there. Default assumption is no cap until it looks wrong in play; John's call if he wants
-one.
+### Restocking, which closes the loop
+
+Asked about unbounded cash, John: *"Maybe give them a number that when they hit it they spend half
+in ammo and weapons. So if left completely unchecked it would have up to a maximum amount of cash
+and a stockpile of weapons and ammo."*
+
+So a M.A.R.S. site holds **two** stashes, cash and stock, and on crossing a threshold it converts
+half its cash into stock. Cash then oscillates between the threshold and half of it rather than
+climbing forever — bounded without a hard cap, and bounded by behaviour rather than by a clamp.
+
+The part that matters more is what this does when combined with *"Mars sells weapons"*, because
+the two rules together make the thing **self-regulating** rather than merely accumulating:
+
+| event | cash | stock |
+| --- | --- | --- |
+| Cobra buys | up | **down** |
+| threshold crossed | halved | up |
+
+Selling is the drain the cash stash never had. A dealer that has done a lot of business is
+sitting on a lot of money and **less** stock until it restocks, which is how an arms dealer
+actually behaves.
+
+And it produces a behaviour nobody has to code: if Cobra buys faster than M.A.R.S. restocks,
+M.A.R.S. runs dry and **cannot sell** — so Cobra's supply fails without the player touching
+anything. Combined with today's rules that means Cobra's men turn out on sidearms because its
+dealer is out of stock, which is a sentence a player could actually work out from what he sees.
+
+Stock now accumulates where cash used to, so strictly the unbounded growth has moved rather than
+gone — but stock has a natural drain and cash never did, and a large stockpile is a meaningful
+prize where a large number was just a silly number. No cap until it looks wrong in play.
+
+**One ambiguity left for John:** whether a well-stocked M.A.R.S. site fields *better-armed*
+defenders. "Stable force" reads as constant kit regardless, and that is the assumption on record —
+its stock is loot and trade goods, not its own armoury. Worth a word if the intent was otherwise,
+since a dealer sitting on a mountain of guns fighting with sidearms is the sort of thing that
+reads oddly.
 
 **Not built yet, deliberately.** With no M.A.R.S. sites in the ruleset the flag would be dead
 code, and dead code that reads as a finished feature is the single most expensive thing on this
