@@ -6,6 +6,9 @@
 # interference - raids, interceptions - which is the other half of the test and needs a person.
 #
 # usage: campaign_ff.sh [days, default 240]
+# RAID=<month> campaign_ff.sh 330   also takes one Cobra site off the board that month,
+#                                    through the same path the debriefing uses, so the
+#                                    planner replacing what it lost is watched and not assumed.
 set -u
 S=/tmp/claude-0/-home-claude/cba64b7d-e243-5c8b-b8c1-3aaffafa2926/scratchpad
 B=$S/oxc/oxce/build/bin
@@ -17,7 +20,7 @@ pgrep Xvfb >/dev/null || (nohup Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 &
 sleep 2
 pkill -9 -x openxcom 2>/dev/null; sleep 1; rm -f "$L"
 
-( cd "$B" && OXCE_CAMP_PROBE=1 OXCE_CAMP_FF="$DAYS" OXCE_MAP_HIRES=0 SDL_AUDIODRIVER=dummy \
+( cd "$B" && OXCE_CAMP_PROBE=1 OXCE_CAMP_FF="$DAYS" OXCE_CAMP_RAID="${RAID:-}" OXCE_MAP_HIRES=0 SDL_AUDIODRIVER=dummy \
     nohup ./openxcom -data "$B" -continue > /tmp/oxc_ff.log 2>&1 & )
 
 # Wait for the fast-forward to report it is done, rather than guessing how long it takes.

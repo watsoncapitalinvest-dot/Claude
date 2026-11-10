@@ -245,6 +245,30 @@ Twelve of those twenty-three were `STR_ALIEN_BASE_ASSAULT`. The vanilla base cam
 running at full tilt next to Cobra's, and none of it is in the economy either. That is the
 Terror Drome naming question, which turns out to be much larger than a name.
 
+**The fix for that had a consequence of its own, and the same harness caught it.** The toggle
+went out on its own first. John's front-op scripts name no region, so they place fronts anywhere
+on the globe — harmless while those fronts were scenery, not harmless the moment they are
+earners, because only North America has G.I. Joe terrain. Printing the region of every Cobra
+site each month showed fourteen sites with **nine outside North America**, every one of which
+would raid onto an X-COM-looking map. `zz_gijoe_frontops_region.rul` holds them the way the
+generated scripts are held. The three states, over the same eleven months:
+
+| | sites | where |
+| --- | --- | --- |
+| neither file | 3 | all North America |
+| economy only | 14 | nine outside North America |
+| both | 12 | all North America, five of eight types, still wanting more |
+
+Without the region column in the probe output this would have shipped looking like a success.
+The run that found it was the run that had been *asked for* a different reason.
+
+**Two claims that had been written down for John were then checked rather than asserted.** Every
+Cobra site lands in North America across eleven months — true, with both files. And a site that
+is destroyed goes back on the list: raiding Cobra's only depot took 400, which is the whole
+regional stockpile and the depot's own loot rule working, the depot was wanted again the next
+month, and it stood again two months later. Raiding one front company out of seven proves
+nothing, so the probe takes a type Cobra has exactly one of.
+
 **The lesson about the harness is worth as much as the finding.** Driving the geoscape with
 xdotool does not work, and every failure looked exactly like a quiet campaign. A detection popup
 stops the clock and Return will not clear it, because its default button is INTERCEPT. Escape

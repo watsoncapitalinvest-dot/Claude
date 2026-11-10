@@ -37,6 +37,19 @@ PROBE = ANCHOR + """	if (getenv("OXCE_CAMP_PROBE"))                             
 			if (_alienStrategy->getMissionsRun("COBRA_BUILD_" + id) > 0)       // CAMPROBE
 				want << shortId << " ";                                        // CAMPROBE
 		}                                                                      // CAMPROBE
+		// Where Cobra actually built, which is the claim the region lock makes and the one  // CAMPROBE
+		// thing nobody has watched over a campaign. A site outside North America is not a     // CAMPROBE
+		// balance question - it is a raid that lands on an X-COM map.                         // CAMPROBE
+		std::map<std::string, int> regions;                                    // CAMPROBE
+		for (auto* ab : _alienBases)                                           // CAMPROBE
+		{                                                                      // CAMPROBE
+			if (ab->getSiteType().empty()) continue;                           // CAMPROBE
+			Region* rg = locateRegion(*ab);                                    // CAMPROBE
+			std::string rn = rg ? rg->getRules()->getType() : "(nowhere)";     // CAMPROBE
+			regions[rn.substr(rn.rfind('_') + 1)]++;                           // CAMPROBE
+		}                                                                      // CAMPROBE
+		std::ostringstream where;                                              // CAMPROBE
+		for (const auto& r : regions) where << r.first << "x" << r.second << " ";// CAMPROBE
 		std::map<std::string, int> untagged;                                   // CAMPROBE
 		for (auto* ab : _alienBases)                                           // CAMPROBE
 		{                                                                      // CAMPROBE
@@ -53,7 +66,35 @@ PROBE = ANCHOR + """	if (getenv("OXCE_CAMP_PROBE"))                             
 			<< _time->getMonth() << "  funds=" << _cobraEconomy->getTotalFunds()// CAMPROBE
 			<< "  sites=" << _alienBases.size()                                // CAMPROBE
 			<< "  have[ " << have.str() << "]  wants[ " << want.str()          // CAMPROBE
-			<< "]  untagged[ " << other.str() << "]";                          // CAMPROBE
+			<< "]  where[ " << where.str() << "]";                             // CAMPROBE
+		if (!other.str().empty())                                              // CAMPROBE
+			Log(LOG_INFO) << "[camp]        untagged[ " << other.str() << "]"; // CAMPROBE
+		// A raid, on demand, through exactly the path the debriefing uses, so the planner's   // CAMPROBE
+		// response to losing something is observed rather than asserted. OXCE_CAMP_RAID is a  // CAMPROBE
+		// month number; at that month Cobra's best earner is taken off the board.             // CAMPROBE
+		const char* raidEnv = getenv("OXCE_CAMP_RAID");                        // CAMPROBE
+		if (raidEnv && _time->getMonth() == atoi(raidEnv))                     // CAMPROBE
+		{                                                                      // CAMPROBE
+			// Take a type Cobra has exactly one of. Raiding one front company out of seven  // CAMPROBE
+			// proves nothing: the planner still owns six, so of course it does not rebuild.  // CAMPROBE
+			// The claim being tested is that losing its ONLY one puts that type back on the  // CAMPROBE
+			// list, and only a unique site can test it.                                      // CAMPROBE
+			std::map<std::string, int> count;                                  // CAMPROBE
+			for (auto* ab : _alienBases)                                       // CAMPROBE
+				if (!ab->getSiteType().empty()) count[ab->getSiteType()]++;    // CAMPROBE
+			for (auto it = _alienBases.begin(); it != _alienBases.end(); ++it) // CAMPROBE
+			{                                                                  // CAMPROBE
+				if ((*it)->getSiteType().empty()) continue;                    // CAMPROBE
+				if (count[(*it)->getSiteType()] != 1) continue;                // CAMPROBE
+				int denied = cobraRaided(*it, mod);                            // CAMPROBE
+				Log(LOG_INFO) << "[camp] RAIDED " << (*it)->getSiteType()      // CAMPROBE
+					<< " denied=" << denied;                                   // CAMPROBE
+				clearLinksForAlienBase(*it, mod);                              // CAMPROBE
+				delete *it;                                                    // CAMPROBE
+				_alienBases.erase(it);                                         // CAMPROBE
+				break;                                                         // CAMPROBE
+			}                                                                  // CAMPROBE
+		}                                                                      // CAMPROBE
 	}                                                                          // CAMPROBE
 """
 
