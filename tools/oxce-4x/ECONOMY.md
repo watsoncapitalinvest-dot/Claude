@@ -575,6 +575,87 @@ A side finding from the same runs: John's `STR_COBRA_FRONT` has no language entr
 logs `STR_COBRA_FRONT_ not found in en-US`. Cosmetic, pre-existing, and in his file rather than
 a generated one, so it is left for him to name.
 
+## M.A.R.S., as John has scoped it
+
+Not a second faction. *"Mars doesn't have to be a seperate faction. It can be the same one just
+operating parallel. And smaller with less requirements. It doesn't need to order weapons or be
+offensive. Mars sells weapons and defends their property."* And: *"their garrison and materiel are
+not determined by cobra economy. They are a stable force."*
+
+That removes the structural risk entirely. M.A.R.S. sites are more rows in the same `cobraSites`
+list, so there is no faction code to write. Three of the four properties cost nothing:
+
+- **Not offensive** — a deployment naming no `genMissionFrequency` launches nothing, because the
+  default is 0. That default was the bug that left eight Cobra deployments silently inert; for a
+  purely defensive M.A.R.S. it is exactly right.
+- **Defends its property** — garrisons, loot and raid outcomes already key off site type.
+- **Smaller, fewer requirements** — numbers in the ruleset.
+
+### A stable force needs one flag, in five places
+
+"Not determined by Cobra economy" is one concept, not five exemptions, and it wants a single flag
+on `RuleCobraSite` — every Cobra-economy function then skips the site:
+
+| function | what it would wrongly do to a M.A.R.S. site |
+| --- | --- |
+| `cobraGarrison` | thin its garrison and drop its kit when **Cobra** is short |
+| `cobraGarrison` | count its upkeep into the bar **Cobra** is judged against |
+| `cobraMonthly` | pour its materiel into Cobra's regional pool for free |
+| `cobraPlan` | offer M.A.R.S. sites on Cobra's shopping list |
+| `cobraRaided` | loot **Cobra's** regional stockpile when M.A.R.S. is raided |
+| `cobraBuilt` | charge Cobra for a site it did not build |
+
+The second row is the one worth remembering, because it is invisible until it happens and it
+reads as a bug rather than a leak: the pay bar sums the upkeep of **every** site in a region, so
+M.A.R.S. opening a plant in North America would raise the bar Cobra has to clear and **thin
+Cobra's garrisons** — a rival arriving would weaken Cobra by arithmetic nobody designed.
+
+The third row is the trade: M.A.R.S. **sells**, so its `materielPerMonth` is its own stock and
+must not reach Cobra's pool except by purchase. That is the convoy, which means **items 3 and 4
+of the build order are one feature** — the convoy's "somewhere" *is* M.A.R.S. Cobra's funds leave,
+materiel returns, and both legs are interceptable.
+
+### The money dies, and it piles up where it died
+
+John: *"Money that flows from cobra to mars effectively dies in the economy loop. But stays in
+the site so if it's been doing a lot of business it will have a lot of money stashed at that
+site."*
+
+So the payment is a **sink, not a transfer**. It leaves Cobra's regional funds and enters no pool
+that circulates — M.A.R.S. does not order weapons, build, or launch anything, so there is nothing
+for it to spend on. Two consequences, both good:
+
+- **Buying guns genuinely costs Cobra.** A transfer that came back would make the arms trade a
+  wash and the decision meaningless. A sink makes Cobra's total wealth bounded by what it
+  produces, so every purchase is a real trade-off against building.
+- **A M.A.R.S. site's loot is its trading history.** The stash is what it has taken off Cobra, so
+  a player who lets the trade run unmolested is growing his own target. That is a feedback loop
+  with texture rather than a number on a rule.
+
+Mechanically this is **per-site state, not per-region**, and the pattern already exists:
+`AlienBase::_shipmentsLost` was added today with its own save and load, so a `_stashedFunds`
+alongside it is the same shape. `lootFunds` in the ruleset becomes a floor and the stash rides on
+top, rather than loot being a fixed number that ignores what the place has actually done.
+
+It also makes the payment leg of the convoy worth intercepting on its own account: shoot down
+Cobra's money on the way out and Cobra loses the funds *and* gets no guns, and the stash does not
+grow. Both legs are losses, and they are different losses, which is what the two-leg convoy was
+for.
+
+**One second-order effect worth a decision at some point:** nothing drains a stash except a raid,
+so a site left alone for a long campaign accumulates without bound. That is probably the intent —
+an untouched dealer should become a fat target — but a five-year game could leave a silly number
+sitting there. Default assumption is no cap until it looks wrong in play; John's call if he wants
+one.
+
+**Not built yet, deliberately.** With no M.A.R.S. sites in the ruleset the flag would be dead
+code, and dead code that reads as a finished feature is the single most expensive thing on this
+project. It goes in with the sites.
+
+**Still unverified:** "kidnap Destro". Flattening every M.A.R.S. site is easy; detecting that one
+*named unit was recovered alive* needs a debriefing hook nobody has looked for. It probably
+exists, and it is not promised until somebody has looked.
+
 ## Open, and John's to settle
 
 **The mod already calls vanilla alien bases "Terror Drome."** `STR_ALIEN_BASE` is renamed that
