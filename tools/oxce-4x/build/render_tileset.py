@@ -24,6 +24,20 @@ frames = load_pck(os.path.join(TERRAIN, SET + '.PCK'),
                   os.path.join(TERRAIN, SET + '.TAB'), 32, 40)
 pal = np.array(palette() if callable(palette) else palette, np.uint8).reshape(-1, 3)
 
+# A PCK holds frames; an MCD holds tiles; the two are NOT the same list and for the alien base
+# sets they are not even the same length - U_BASE has 71 frames against 67 tiles, U_WALL02 66
+# against 47. Rendering the PCK in order and calling position N "tile N" would therefore label
+# most of the sheet wrongly, and the mistake is invisible: the picture still looks like a
+# tileset. Every tile is drawn through its MCD record's first frame instead, so the number on
+# the tile is the MCDIndex a material tag will use.
+MCD_RECORD, FRAME0 = 62, 0
+mcd = open(os.path.join(TERRAIN, SET + '.MCD'), 'rb').read()
+tiles = [mcd[i:i + MCD_RECORD] for i in range(0, len(mcd), MCD_RECORD)]
+order = [t[FRAME0] for t in tiles]
+if len(order) != len(frames):
+    print('   note: %d tiles drawn from %d frames' % (len(order), len(frames)))
+frames = [frames[f] if f < len(frames) else frames[0] for f in order]
+
 rows = (len(frames) + COLS - 1) // COLS
 sheet = Image.new('RGB', (COLS * (CELL + PAD), rows * (CELL + PAD)), (18, 18, 22))
 draw = ImageDraw.Draw(sheet)

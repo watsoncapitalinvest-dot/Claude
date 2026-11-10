@@ -178,6 +178,21 @@ and 5–35 for masonry, and `Flammable` is noisier still. Any rule built on them
 dressed as arithmetic. Reading the art with `build/render_tileset.py` is the method; there is no
 shortcut.
 
+**A PCK holds frames, an MCD holds tiles, and they are not the same list.** `U_BASE` has 71
+frames against 67 tiles and `U_WALL02` has 66 against 47, so rendering a PCK in order and calling
+position N "tile N" mislabels most of a sheet — and the sheet still looks like a tileset, so
+nothing gives it away. `build/render_tileset.py` draws every tile through its MCD record's first
+frame, which makes the number on the tile the `MCDIndex` a tag will use. BARN and CULTIVAT happen
+to be 1:1, which is why the hand tags made from the earlier version survive; that was luck.
+
+**Tagging the saucer tilesets was started and deliberately stopped.** The mod renames the UFOs to
+FANG, Firebat, Rattler, Mamba, Night Raven and Condor, but never overrides `ufos:`, so the
+battlescape is untouched: a FANG crash site is `UFO1A` and a Condor is `UFO_160` with `U_EXT02`,
+`U_WALL02`, `U_PODS`, `U_BITS`. Named right on the globe, flying saucer on the ground, on the
+commonest mission in the game. Polishing how a bullet passes through a map that should not be
+there is the wrong order, and `build_craftmap.py` already turns a 3D model into a craft tileset —
+that is where JOEHELO, JOEPHANT and JOEDEFI came from.
+
 Written and compiling; not yet watched in a real firefight.
 
 ## Not done
