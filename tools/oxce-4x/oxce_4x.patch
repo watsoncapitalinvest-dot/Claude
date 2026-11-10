@@ -1086,7 +1086,7 @@ index 8fa87f8..628a943 100644
  	switch (unitDir)
  	{
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..1d8cc78 100644
+index 839f803..64d6efd 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -172,6 +172,8 @@ set ( engine_src
@@ -1098,6 +1098,14 @@ index 839f803..1d8cc78 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
+@@ -356,6 +358,7 @@ set ( savegame_src
+   Savegame/AlienBase.cpp
+   Savegame/AlienMission.cpp
+   Savegame/AlienStrategy.cpp
++  Savegame/CobraEconomy.cpp
+   Savegame/Base.cpp
+   Savegame/BaseFacility.cpp
+   Savegame/BattleItem.cpp
 diff --git a/src/Engine/Font.cpp b/src/Engine/Font.cpp
 index 1804fb9..7c50bf9 100644
 --- a/src/Engine/Font.cpp
@@ -1142,10 +1150,10 @@ index f353397..12ee74a 100644
  		}
 diff --git a/src/Engine/HiColor.cpp b/src/Engine/HiColor.cpp
 new file mode 100644
-index 0000000..7557483
+index 0000000..d749080
 --- /dev/null
 +++ b/src/Engine/HiColor.cpp
-@@ -0,0 +1,265 @@
+@@ -0,0 +1,266 @@
 +#include "HiColor.h"
 +#include "Surface.h"
 +#include "Screen.h"
@@ -1164,6 +1172,7 @@ index 0000000..7557483
 +{
 +namespace HiColor
 +{
++
 +
 +namespace
 +{
@@ -2767,10 +2776,10 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..8e04954 100644
+index 1885346..2c40b96 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
-@@ -2309,6 +2309,23 @@ void Mod::loadAll()
+@@ -2309,6 +2309,37 @@ void Mod::loadAll()
  
  	loadExtraResources();
  
@@ -2779,22 +2788,36 @@ index 1885346..8e04954 100644
 +	// filled by the mods, which happens later - so on a 4x battlefield a bullet stayed three pixels
 +	// against a 128-pixel tile, and a laser was a thread of them. Scale it here, once the mods have
 +	// put their frames in.
-+	if (SurfaceSet::battleScale() > 1)
++	// The Projectiles set is the one battlescape set nobody scales: it is created empty when the
++	// vanilla resources load and only filled later by the mods, so the upscale pass misses it and a
++	// bullet stays three pixels against a 128-pixel tile. Scale it here, once the frames are in.
++	// Scaling it by the battlefield's own factor restores the 1994 proportion exactly - three
++	// pixels in thirty-two - which is a ball about a third the height of a man, right for an energy
++	// bolt and much too fat for a rifle round. Until there is separate art per weapon, the factor
++	// is a knob: OXCE_BULLET_SCALE is the total upscale, default the battlefield's own.
 +	{
-+		for (const char *name : { "Projectiles", "UnderwaterProjectiles" })
++		const char *e = getenv("OXCE_BULLET_SCALE");
++		int total = e ? atoi(e) : SurfaceSet::battleScale();
++		if (total < 1) total = 1;
++		if (total > 16) total = 16;
++		if (total > 1)
 +		{
-+			auto it = _sets.find(name);
-+			if (it != _sets.end() && it->second)
++			for (const char *name : { "Projectiles", "UnderwaterProjectiles" })
 +			{
-+				it->second->upscale(SurfaceSet::battleScale());
-+				Log(LOG_INFO) << "Scaled " << name << " to the battlefield (x" << SurfaceSet::battleScale() << ")";
++				auto it = _sets.find(name);
++				if (it != _sets.end() && it->second)
++				{
++					it->second->upscale(total);
++					Log(LOG_INFO) << "Scaled " << name << " x" << total << " (a bullet is "
++						<< (3 * total) << " pixels; the battlefield is x" << SurfaceSet::battleScale() << ")";
++				}
 +			}
 +		}
 +	}
  
  	Log(LOG_INFO) << "After load.";
  	// cross link rule objects
-@@ -5769,12 +5786,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +5800,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -2814,7 +2837,7 @@ index 1885346..8e04954 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +5809,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +5823,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -2822,7 +2845,7 @@ index 1885346..8e04954 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +5823,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +5837,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -2896,7 +2919,7 @@ index 7cfa906..e02f6f4 100644
  	int SmokeThreshold;
  
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..640a3d8 100644
+index 99f24ce..d6dcf35 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
 @@ -511,6 +511,8 @@
@@ -2908,7 +2931,15 @@ index 99f24ce..640a3d8 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -970,6 +972,8 @@
+@@ -682,6 +684,7 @@
+     <ClCompile Include="Mod\UfoTrajectory.cpp" />
+     <ClCompile Include="Savegame\AlienBase.cpp" />
+     <ClCompile Include="Savegame\AlienStrategy.cpp" />
++    <ClCompile Include="Savegame\CobraEconomy.cpp" />
+     <ClCompile Include="Savegame\AlienMission.cpp" />
+     <ClCompile Include="Savegame\Base.cpp" />
+     <ClCompile Include="Savegame\BaseFacility.cpp" />
+@@ -970,6 +973,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -2917,6 +2948,265 @@ index 99f24ce..640a3d8 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
+@@ -1179,6 +1184,7 @@
+     <ClInclude Include="Mod\UfoTrajectory.h" />
+     <ClInclude Include="Savegame\AlienBase.h" />
+     <ClInclude Include="Savegame\AlienStrategy.h" />
++    <ClInclude Include="Savegame\CobraEconomy.h" />
+     <ClInclude Include="Savegame\AlienMission.h" />
+     <ClInclude Include="Savegame\Base.h" />
+     <ClInclude Include="Savegame\BaseFacility.h" />
+diff --git a/src/Savegame/AlienStrategy.cpp b/src/Savegame/AlienStrategy.cpp
+index c3a3286..31a51ad 100644
+--- a/src/Savegame/AlienStrategy.cpp
++++ b/src/Savegame/AlienStrategy.cpp
+@@ -196,6 +196,11 @@ int AlienStrategy::getMissionsRun(const std::string &varName)
+  * @param varName the variable name that we want to use to keep track of this.
+  * @param increment the value to increment by.
+  */
++void AlienStrategy::setMissionRun(const std::string &varName, int value)
++{
++	_missionRuns[varName] = value;
++}
++
+ void AlienStrategy::addMissionRun(const std::string &varName, int increment)
+ {
+ 	if (varName.empty())
+diff --git a/src/Savegame/AlienStrategy.h b/src/Savegame/AlienStrategy.h
+index 97ef4f5..0226eab 100644
+--- a/src/Savegame/AlienStrategy.h
++++ b/src/Savegame/AlienStrategy.h
+@@ -51,6 +51,9 @@ public:
+ 	int getMissionsRun(const std::string &varName);
+ 	/// Increments the number of missions run labelled as "varName".
+ 	void addMissionRun(const std::string &varName, int increment = 1);
++	/// Sets a counter outright. The economy publishes a level, not an increment; see
++	/// CobraEconomy::mirrorToCounters for why it shares this map and what keeps the two apart.
++	void setMissionRun(const std::string &varName, int value);
+ 	/// Adds a mission location to our storage array.
+ 	void addMissionLocation(const std::string &varName, const std::string &regionName, int zoneNumber, int maximum);
+ 	/// Checks that a given mission location (city or whatever) isn't stored in our list of previously attacked locations.
+diff --git a/src/Savegame/CobraEconomy.cpp b/src/Savegame/CobraEconomy.cpp
+new file mode 100644
+index 0000000..33b3417
+--- /dev/null
++++ b/src/Savegame/CobraEconomy.cpp
+@@ -0,0 +1,115 @@
++/*
++ * Copyright 2010-2016 OpenXcom Developers.
++ *
++ * This file is part of OpenXcom.
++ *
++ * OpenXcom is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * OpenXcom is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
++ */
++#include "CobraEconomy.h"
++#include "AlienStrategy.h"
++
++namespace OpenXcom
++{
++
++void CobraProject::load(const YAML::YamlNodeReader& reader)
++{
++	reader.tryRead("type", type);
++	reader.tryRead("region", region);
++	reader.tryRead("progress", progress);
++	reader.tryRead("cost", cost);
++	reader.tryRead("known", known);
++}
++
++void CobraProject::save(YAML::YamlNodeWriter writer) const
++{
++	writer.setAsMap();
++	writer.write("type", type);
++	writer.write("region", region);
++	writer.write("progress", progress);
++	writer.write("cost", cost);
++	writer.write("known", known);
++}
++
++void CobraEconomy::load(const YAML::YamlNodeReader& reader)
++{
++	_funds.clear();
++	_materiel.clear();
++	_projects.clear();
++	reader.tryRead("funds", _funds);
++	reader.tryRead("materiel", _materiel);
++	for (const auto& projectReader : reader["projects"].children())
++	{
++		CobraProject p;
++		p.load(projectReader);
++		_projects.push_back(p);
++	}
++}
++
++void CobraEconomy::save(YAML::YamlNodeWriter writer) const
++{
++	writer.setAsMap();
++	writer.write("funds", _funds);
++	writer.write("materiel", _materiel);
++	if (!_projects.empty())
++	{
++		auto projectsWriter = writer["projects"];
++		projectsWriter.setAsSeq();
++		for (const auto& p : _projects)
++		{
++			p.save(projectsWriter.write());
++		}
++	}
++}
++
++int CobraEconomy::getFunds(const std::string& region) const
++{
++	// find rather than operator[], so asking about a region does not quietly create it
++	auto it = _funds.find(region);
++	return it == _funds.end() ? 0 : it->second;
++}
++
++int CobraEconomy::getMateriel(const std::string& region) const
++{
++	auto it = _materiel.find(region);
++	return it == _materiel.end() ? 0 : it->second;
++}
++
++void CobraEconomy::addFunds(const std::string& region, int delta)
++{
++	// A region can be emptied but not driven into debt: what Cobra does when it cannot pay is
++	// a design question that is not answered yet, and a negative stockpile would make every
++	// counter gate downstream read as a wealth it does not have.
++	int v = getFunds(region) + delta;
++	_funds[region] = v < 0 ? 0 : v;
++}
++
++void CobraEconomy::addMateriel(const std::string& region, int delta)
++{
++	int v = getMateriel(region) + delta;
++	_materiel[region] = v < 0 ? 0 : v;
++}
++
++void CobraEconomy::mirrorToCounters(AlienStrategy& strategy) const
++{
++	for (const auto& pair : _funds)
++	{
++		strategy.setMissionRun("COBRA_FUNDS_" + pair.first, pair.second);
++	}
++	for (const auto& pair : _materiel)
++	{
++		strategy.setMissionRun("COBRA_MATERIEL_" + pair.first, pair.second);
++	}
++}
++
++}
+diff --git a/src/Savegame/CobraEconomy.h b/src/Savegame/CobraEconomy.h
+new file mode 100644
+index 0000000..e019908
+--- /dev/null
++++ b/src/Savegame/CobraEconomy.h
+@@ -0,0 +1,94 @@
++#pragma once
++/*
++ * Copyright 2010-2016 OpenXcom Developers.
++ *
++ * This file is part of OpenXcom.
++ *
++ * OpenXcom is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * OpenXcom is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
++ */
++#include <map>
++#include <string>
++#include <vector>
++#include "../Engine/Yaml.h"
++
++namespace OpenXcom
++{
++
++class AlienStrategy;
++
++/**
++ * What Cobra is running on, held per region.
++ *
++ * Two resources and not one, because a single global pool makes every site interchangeable and
++ * a target list of interchangeable targets is just a longer list. Funds are liquid and move
++ * between regions; materiel is physical, stockpiled where it is made, and equips the troops in
++ * that region. Raiding the factory in South America has to starve South American garrisons
++ * specifically or geography means nothing.
++ *
++ * Quantities are named and in units, with no opaque scores anywhere. That is a stricter bar
++ * than a planner needs and it is deliberate: a Cobra playthrough would put a person behind the
++ * same state, and legibility is cheap to keep now and expensive to retrofit.
++ */
++struct CobraProject
++{
++	std::string type;
++	std::string region;
++	int progress = 0;        ///< in the same units as cost, so a bar can be drawn without a lookup
++	int cost = 0;
++	bool known = false;      ///< the player has learned this exists, by raiding a lab or an HQ
++	void load(const YAML::YamlNodeReader& reader);
++	void save(YAML::YamlNodeWriter writer) const;
++};
++
++class CobraEconomy
++{
++public:
++	CobraEconomy() = default;
++	~CobraEconomy() = default;
++
++	void load(const YAML::YamlNodeReader& reader);
++	void save(YAML::YamlNodeWriter writer) const;
++
++	/// What a region holds. Missing regions read as zero rather than being created on access.
++	int getFunds(const std::string& region) const;
++	int getMateriel(const std::string& region) const;
++	void addFunds(const std::string& region, int delta);
++	void addMateriel(const std::string& region, int delta);
++
++	const std::map<std::string, int>& getAllFunds() const { return _funds; }
++	const std::map<std::string, int>& getAllMateriel() const { return _materiel; }
++
++	std::vector<CobraProject>& getProjects() { return _projects; }
++	const std::vector<CobraProject>& getProjects() const { return _projects; }
++
++	/**
++	 * Publish the per-region holdings where the mission scripts can already see them.
++	 *
++	 * The scripts gate on AlienStrategy's persisted counter map, so mirroring the economy into
++	 * it under COBRA_FUNDS_<REGION> and COBRA_MATERIEL_<REGION> lets every existing gate react
++	 * to Cobra's wealth with no new scheduling code - a richer region runs more missions because
++	 * a ruleset author wrote a condition, not because the scheduler changed.
++	 *
++	 * The map is named missionsRun and holds mission counts, so this deliberately overloads it.
++	 * The COBRA_ prefix is what keeps the two apart, and nothing may write a mission under it.
++	 */
++	void mirrorToCounters(AlienStrategy& strategy) const;
++
++private:
++	std::map<std::string, int> _funds;
++	std::map<std::string, int> _materiel;
++	std::vector<CobraProject> _projects;
++};
++
++}
 diff --git a/src/Savegame/SavedBattleGame.cpp b/src/Savegame/SavedBattleGame.cpp
 index 240b22a..c998115 100644
 --- a/src/Savegame/SavedBattleGame.cpp
@@ -2992,6 +3282,83 @@ index 240b22a..c998115 100644
  
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
+diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
+index 9ca9637..8b4728d 100644
+--- a/src/Savegame/SavedGame.cpp
++++ b/src/Savegame/SavedGame.cpp
+@@ -55,6 +55,7 @@
+ #include "MissionSite.h"
+ #include "AlienBase.h"
+ #include "AlienStrategy.h"
++#include "CobraEconomy.h"
+ #include "AlienMission.h"
+ #include "GeoscapeEvent.h"
+ #include "../Mod/RuleCountry.h"
+@@ -110,6 +111,7 @@ SavedGame::SavedGame() :
+ {
+ 	_time = new GameTime(6, 1, 1, 1999, 12, 0, 0);
+ 	_alienStrategy = new AlienStrategy();
++	_cobraEconomy = new CobraEconomy();
+ 	_funds.push_back(0);
+ 	_maintenance.push_back(0);
+ 	_researchScores.push_back(0);
+@@ -159,6 +161,7 @@ SavedGame::~SavedGame()
+ 		delete ab;
+ 	}
+ 	delete _alienStrategy;
++	delete _cobraEconomy;
+ 	for (auto* am : _activeMissions)
+ 	{
+ 		delete am;
+@@ -649,6 +652,9 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+ 		}
+ 	}
+ 	_alienStrategy->load(reader["alienStrategy"], mod);
++	// after the strategy, so the mirrored counters below are not overwritten by the load
++	_cobraEconomy->load(reader["cobraEconomy"]);
++	_cobraEconomy->mirrorToCounters(*_alienStrategy);
+ 
+ 	for (const auto& weHardlyKnewYe : reader["deadSoldiers"].children())
+ 	{
+@@ -849,6 +855,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+ 	writer.write("hiddenPurchaseItems", _hiddenPurchaseItemsMap);
+ 	writer.write("customRuleCraftDeployments", _customRuleCraftDeployments);
+ 	_alienStrategy->save(writer["alienStrategy"]);
++	_cobraEconomy->save(writer["cobraEconomy"]);
+ 
+ 	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
+ 	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
+diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
+index d985908..08b85e5 100644
+--- a/src/Savegame/SavedGame.h
++++ b/src/Savegame/SavedGame.h
+@@ -55,6 +55,7 @@ class ArticleDefinition;
+ class MissionSite;
+ class AlienBase;
+ class AlienStrategy;
++class CobraEconomy;
+ class AlienMission;
+ class GeoscapeEvent;
+ class Target;
+@@ -140,6 +141,7 @@ private:
+ 	std::vector<MissionSite*> _missionSites;
+ 	std::vector<AlienBase*> _alienBases;
+ 	AlienStrategy *_alienStrategy;
++	CobraEconomy *_cobraEconomy;
+ 	SavedBattleGame *_battleGame;
+ 	std::vector<const RuleResearch*> _discovered;
+ 	std::vector<ResearchDiaryEntry*> _researchDiary;
+@@ -395,6 +397,10 @@ public:
+ 
+ 	/// Full access to the alien strategy data.
+ 	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
++	/// Gets the Cobra economy.
++	CobraEconomy &getCobraEconomy() { return *_cobraEconomy; }
++	/// Gets the Cobra economy, read-only.
++	const CobraEconomy &getCobraEconomy() const { return *_cobraEconomy; }
+ 	/// Read-only access to the alien strategy data.
+ 	const AlienStrategy &getAlienStrategy() const { return *_alienStrategy; }
+ 	/// Full access to the current alien missions.
 diff --git a/src/Savegame/Tile.cpp b/src/Savegame/Tile.cpp
 index af18529..d30bc19 100644
 --- a/src/Savegame/Tile.cpp
