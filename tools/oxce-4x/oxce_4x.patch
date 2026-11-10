@@ -1257,10 +1257,10 @@ index 0000000..cf159bb
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..a865228
+index 0000000..ab2f44c
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,382 @@
+@@ -0,0 +1,574 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -1270,6 +1270,11 @@ index 0000000..a865228
 +#include "../Interface/Window.h"
 +#include "../Interface/TextButton.h"
 +#include "../Interface/Text.h"
++#include "../Interface/ComboBox.h"
++#include "../Interface/Slider.h"
++#include "../Interface/Frame.h"
++#include "../Interface/ArrowButton.h"
++#include "../Interface/Bar.h"
 +#include <SDL_image.h>
 +#include <vector>
 +#include <unordered_map>
@@ -1299,6 +1304,42 @@ index 0000000..a865228
 +
 +	struct BgCache { const Surface *bg; Uint32 palHash; int w, h; std::vector<Uint32> px; };
 +	std::vector<BgCache> bgCache;
++
++	struct Img { int w = 0, h = 0; std::vector<Uint32> px; bool ok = false; };   // 0xAARRGGBB
++	std::unordered_map<const Surface*, Img> bgImages;                            // sharp twin of a screen background
++	std::unordered_map<std::string, Img> pieces;                                 // Resources/UI/<name>.png
++
++	Img loadPng(const std::string &path)
++	{
++		Img im;
++		if (!FileMap::fileExists(path)) return im;
++		SDL_Surface *raw = IMG_Load_RW(FileMap::getRWops(path), SDL_TRUE);
++		if (!raw) return im;
++		SDL_PixelFormat fmt = {};
++		fmt.BitsPerPixel = 32; fmt.BytesPerPixel = 4;
++		fmt.Rmask = 0x00FF0000; fmt.Gmask = 0x0000FF00; fmt.Bmask = 0x000000FF; fmt.Amask = 0xFF000000;
++		fmt.Rshift = 16; fmt.Gshift = 8; fmt.Bshift = 0; fmt.Ashift = 24;
++		SDL_Surface *c = SDL_ConvertSurface(raw, &fmt, SDL_SWSURFACE);
++		SDL_FreeSurface(raw);
++		if (!c) return im;
++		im.w = c->w; im.h = c->h; im.px.resize((size_t)im.w * im.h);
++		SDL_LockSurface(c);
++		for (int y = 0; y < im.h; ++y) memcpy(&im.px[(size_t)y * im.w], (Uint8*)c->pixels + y * c->pitch, (size_t)im.w * 4);
++		SDL_UnlockSurface(c); SDL_FreeSurface(c);
++		im.ok = true;
++		return im;
++	}
++	const Img *piece(const std::string &name)
++	{
++		auto it = pieces.find(name);
++		if (it == pieces.end())
++		{
++			Img im = loadPng("Resources/UI/" + name + ".png");
++			if (im.ok) Log(LOG_INFO) << "Interface art: " << name << " (" << im.w << "x" << im.h << ")";
++			it = pieces.emplace(name, std::move(im)).first;
++		}
++		return it->second.ok ? &it->second : nullptr;
++	}
 +
 +	inline Uint32 rgb(int r, int g, int b) { return ((Uint32)r << 16) | ((Uint32)g << 8) | (Uint32)b; }
 +	inline Uint32 mix(Uint32 a, Uint32 b, int t) // t 0..255 of b
@@ -1374,6 +1415,44 @@ index 0000000..a865228
 +		}
 +	}
 +
++	/// Stretch a region of an image into a screen rectangle, blending on its alpha.
++	void stretch(const Img &im, int sx0, int sy0, int sx1, int sy1, int dx0, int dy0, int dx1, int dy1)
++	{
++		if (dx1 <= dx0 || dy1 <= dy0 || sx1 <= sx0 || sy1 <= sy0) return;
++		const int cx0 = std::max(dx0, 0), cy0 = std::max(dy0, 0), cx1 = std::min(dx1, sw), cy1 = std::min(dy1, sh);
++		for (int Y = cy0; Y < cy1; ++Y)
++		{
++			const double fy = sy0 + (Y - dy0 + 0.5) * (sy1 - sy0) / (double)(dy1 - dy0) - 0.5;
++			const int y0 = std::min(sy1 - 1, std::max(sy0, (int)std::floor(fy))), y1 = std::min(sy1 - 1, y0 + 1);
++			const int wy = std::min(256, std::max(0, (int)((fy - y0) * 256)));
++			Uint32 *o = over.data() + (size_t)Y * sw;
++			for (int X = cx0; X < cx1; ++X)
++			{
++				const double fx = sx0 + (X - dx0 + 0.5) * (sx1 - sx0) / (double)(dx1 - dx0) - 0.5;
++				const int x0 = std::min(sx1 - 1, std::max(sx0, (int)std::floor(fx))), x1 = std::min(sx1 - 1, x0 + 1);
++				const int wx = std::min(256, std::max(0, (int)((fx - x0) * 256)));
++				const Uint32 p00 = im.px[(size_t)y0 * im.w + x0], p01 = im.px[(size_t)y0 * im.w + x1];
++				const Uint32 p10 = im.px[(size_t)y1 * im.w + x0], p11 = im.px[(size_t)y1 * im.w + x1];
++				auto ch = [&](int sh2) { return (int)((((p00 >> sh2 & 255) * (256 - wx) + (p01 >> sh2 & 255) * wx) * (256 - wy) + ((p10 >> sh2 & 255) * (256 - wx) + (p11 >> sh2 & 255) * wx) * wy) >> 16); };
++				const int al = ch(24);
++				if (al <= 0) continue;
++				const Uint32 c = rgb(ch(16), ch(8), ch(0));
++				o[X] = al >= 255 ? c : mix(o[X], c, al);
++			}
++		}
++	}
++	/// Nine-slice: corners kept, edges and middle stretched.
++	void nine(const Img &im, int x0, int y0, int x1, int y1, int b)
++	{
++		b = std::min(b, std::min(im.w, im.h) / 3);
++		const int bx = std::min(b, (x1 - x0) / 3), by = std::min(b, (y1 - y0) / 3);
++		const int sx[4] = { 0, b, im.w - b, im.w }, sy[4] = { 0, b, im.h - b, im.h };
++		const int dx[4] = { x0, x0 + bx, x1 - bx, x1 }, dy[4] = { y0, y0 + by, y1 - by, y1 };
++		for (int r = 0; r < 3; ++r)
++			for (int c = 0; c < 3; ++c)
++				stretch(im, sx[c], sy[r], sx[c + 1], sy[r + 1], dx[c], dy[r], dx[c + 1], dy[r + 1]);
++	}
++
 +	/// Rounded panel with a 1-2 px rim.
 +	void panel(int x0, int y0, int x1, int y1, int rad, Uint32 top, Uint32 bottom, Uint32 rim, int rimW)
 +	{
@@ -1413,7 +1492,7 @@ index 0000000..a865228
 +			if (!col)
 +			{
 +				const SDL_Color &c = pal[g.color];
-+				col = mix(rgb(c.r, c.g, c.b), rgb(232, 228, 210), 150);   // keep the hue's meaning, read as off-white
++				col = mix(rgb(c.r, c.g, c.b), rgb(234, 230, 214), 205);   // keep a hint of the hue's meaning, read as off-white
 +			}
 +			const int X0 = xs[bx0], X1 = xs[bx1], Y0 = ys[by0], Y1 = ys[by1];
 +			const double kx = (double)(g.w * a.k) / (X1 - X0), ky = (double)(g.h * a.k) / (Y1 - Y0);
@@ -1486,6 +1565,17 @@ index 0000000..a865228
 +	Log(LOG_INFO) << "Sharp font sheet: " << twin << " (x" << k << ")";
 +}
 +
++void registerImage(const Surface *img, const std::string &file)
++{
++	if (!enabled() || !img) return;
++	const auto dot = file.find_last_of('.');
++	if (dot == std::string::npos) return;
++	Img im = loadPng(file.substr(0, dot) + "_hi.png");
++	if (!im.ok) return;
++	Log(LOG_INFO) << "Sharp screen background: " << file << " (" << im.w << "x" << im.h << ")";
++	bgImages[img] = std::move(im);
++}
++
 +void beginFrame(SDL_Surface *base8, int screenW, int screenH, int left, int top, int right, int bottom)
 +{
 +	base = nullptr; any = false; curOn = false;
@@ -1529,26 +1619,34 @@ index 0000000..a865228
 +		if (!clipBase(r)) return;
 +		const int X0 = xs[r.x0], Y0 = ys[r.y0], X1 = xs[r.x1], Y1 = ys[r.y1];
 +		const Surface *bg = win->getBackground();
-+		if (bg && bg->getBuffer())
++		auto bit = bg ? bgImages.find(bg) : bgImages.end();
++		if (bit != bgImages.end() && bit->second.ok)
++		{
++			// the painted backdrop, sampled at the piece of the screen this window covers
++			const Img &im = bit->second;
++			const double kx = (double)im.w / bw, ky = (double)im.h / bh;
++			stretch(im, (int)(r.x0 * kx), (int)(r.y0 * ky), (int)(r.x1 * kx), (int)(r.y1 * ky), X0, Y0, X1, Y1);
++		}
++		else if (bg && bg->getBuffer())
 +		{
 +			const BgCache &c = backdrop(bg);
-+			// backdrop space starts at the window's own origin, shifted by its dx/dy
-+			const int ox = xs[std::max(0, std::min(bw, r.x0 - win->getX() + win->getDX() + 0))] - xs[0];
-+			const int oy = ys[std::max(0, std::min(bh, r.y0 - win->getY() + win->getDY() + 0))] - ys[0];
 +			for (int Y = Y0; Y < Y1; ++Y)
 +			{
-+				const int sy = std::min(c.h - 1, std::max(0, Y - Y0 - (ys[std::max(0, std::min(bh, win->getDY()))] - ys[0]) + 0 * oy));
++				const int sy = std::min(c.h - 1, std::max(0, Y - Y0));
 +				Uint32 *o = over.data() + (size_t)Y * sw;
-+				const Uint32 *s = c.px.data() + (size_t)sy * c.w;
-+				const int shift = xs[std::max(0, std::min(bw, win->getDX()))] - xs[0];
-+				for (int X = X0; X < X1; ++X) o[X] = s[std::min(c.w - 1, std::max(0, X - X0 - shift + 0 * ox))];
++				const Uint32 *src = c.px.data() + (size_t)sy * c.w;
++				for (int X = X0; X < X1; ++X) o[X] = src[std::min(c.w - 1, std::max(0, X - X0))];
 +			}
 +		}
 +		else fillRect(X0, Y0, X1, Y1, rgb(22, 26, 24));
-+		// thin frame, heavier accent along the top
-+		const Uint32 line = rgb(150, 156, 140);
-+		fillRect(X0, Y0, X1, Y0 + 3, rgb(150, 36, 30));
-+		fillRect(X0, Y1 - 1, X1, Y1, line, 110); fillRect(X0, Y0 + 3, X0 + 1, Y1, line, 110); fillRect(X1 - 1, Y0 + 3, X1, Y1, line, 110);
++		const Img *fr = piece(win->getWidth() >= 260 || win->getHeight() >= 150 ? "window_frame" : "window_frame_small");
++		if (fr) nine(*fr, X0, Y0, X1, Y1, std::max(6, (int)(fr->h * 0.06)));
++		else
++		{
++			const Uint32 line = rgb(150, 156, 140);
++			fillRect(X0, Y0, X1, Y0 + 3, rgb(150, 36, 30));
++			fillRect(X0, Y1 - 1, X1, Y1, line, 110); fillRect(X0, Y0 + 3, X0 + 1, Y1, line, 110); fillRect(X1 - 1, Y0 + 3, X1, Y1, line, 110);
++		}
 +		claim(r);
 +		return;
 +	}
@@ -1559,11 +1657,84 @@ index 0000000..a865228
 +		const int X0 = xs[r.x0], Y0 = ys[r.y0], X1 = xs[r.x1], Y1 = ys[r.y1];
 +		const bool down = b->isPressedLook();
 +		const int m = std::max(1, (ys[1] - ys[0]) / 3);     // a little air between stacked buttons
-+		if (down) panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(120, 30, 26), rgb(96, 24, 21), rgb(214, 96, 84), 1);
++		const bool square = b->getWidth() <= b->getHeight() * 5 / 4;
++		const Img *art = piece(square ? (down ? "button_square_pressed" : "button_square") : (down ? "button_wide_pressed" : "button_wide"));
++		if (art) nine(*art, X0 + m, Y0 + m, X1 - m, Y1 - m, std::max(5, (int)(art->h * 0.22)));
++        else if (down) panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(120, 30, 26), rgb(96, 24, 21), rgb(214, 96, 84), 1);
 +		else panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(62, 72, 62), rgb(46, 54, 47), rgb(112, 122, 106), 1);
-+		// the rim of the 8-bit button outside the rounded panel would show through: cover it with what is behind
 +		claim(r);
 +		if (const Text *t = b->getTextWidget()) glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r);
++		return;
++	}
++	if (Frame *fm = dynamic_cast<Frame*>(w))
++	{
++		R r = rectOf(fm);
++		if (!clipBase(r)) return;
++		const int X0 = xs[r.x0], Y0 = ys[r.y0], X1 = xs[r.x1], Y1 = ys[r.y1];
++		const int t = std::max(1, (ys[2] - ys[0]) / 2);
++		const Uint32 line = rgb(126, 136, 120);
++		fillRect(X0, Y0, X1, Y0 + t, line, 200); fillRect(X0, Y1 - t, X1, Y1, line, 200);
++		fillRect(X0, Y0, X0 + t, Y1, line, 200); fillRect(X1 - t, Y0, X1, Y1, line, 200);
++		// claim the rim only: anything the frame surrounds keeps drawing as before
++		const int bt = std::max(1, fm->getThickness());
++		R top{ r.x0, r.y0, r.x1, std::min(r.y1, r.y0 + bt) }, bot{ r.x0, std::max(r.y0, r.y1 - bt), r.x1, r.y1 };
++		R lef{ r.x0, r.y0, std::min(r.x1, r.x0 + bt), r.y1 }, rig{ std::max(r.x0, r.x1 - bt), r.y0, r.x1, r.y1 };
++		claim(top); claim(bot); claim(lef); claim(rig);
++		return;
++	}
++	if (ComboBox *cb = dynamic_cast<ComboBox*>(w))
++	{
++		R r = rectOf(cb);
++		if (!clipBase(r)) return;
++		const int X0 = xs[r.x0], Y0 = ys[r.y0], X1 = xs[r.x1], Y1 = ys[r.y1];
++		const int m = std::max(1, (ys[1] - ys[0]) / 3);
++		if (const Img *art = piece("button_wide")) nine(*art, X0 + m, Y0 + m, X1 - m, Y1 - m, std::max(5, (int)(art->h * 0.22)));
++		else panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(62, 72, 62), rgb(46, 54, 47), rgb(112, 122, 106), 1);
++		const int aw = xs[std::min(bw, r.x0 + ComboBox::buttonWidth())] - X0;
++		if (const Img *ar = piece("dropdown_arrow"))
++		{
++			const int s2 = std::min(aw * 3 / 5, (Y1 - Y0) * 3 / 5), cx = X1 - aw / 2, cy = (Y0 + Y1) / 2;
++			stretch(*ar, 0, 0, ar->w, ar->h, cx - s2 / 2, cy - s2 / 2, cx + s2 / 2, cy + s2 / 2);
++		}
++		claim(r);
++		if (const TextButton *b = cb->getButtonWidget())
++			if (const Text *t = b->getTextWidget()) glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r);
++		return;
++	}
++	if (Slider *sl = dynamic_cast<Slider*>(w))
++	{
++		R r = rectOf(sl);
++		if (!clipBase(r)) return;
++		claim(r);
++		if (const Frame *fr = sl->getTrackWidget())
++		{
++			const int tx0 = xs[std::max(0, std::min(bw, fr->getX()))], tx1 = xs[std::max(0, std::min(bw, fr->getX() + fr->getWidth()))];
++			const int cy = (ys[r.y0] + ys[r.y1]) / 2, th = std::max(2, (ys[3] - ys[0]) / 2);
++			if (const Img *tr = piece("slider_track")) stretch(*tr, 0, 0, tr->w, tr->h, tx0, cy - th, tx1, cy + th);
++			else fillRect(tx0, cy - th, tx1, cy + th, rgb(40, 46, 42));
++		}
++		if (const TextButton *kb = sl->getKnobWidget())
++		{
++			const int kx0 = xs[std::max(0, std::min(bw, kb->getX()))], kx1 = xs[std::max(0, std::min(bw, kb->getX() + kb->getWidth()))];
++			const int ky0 = ys[std::max(0, std::min(bh, kb->getY()))], ky1 = ys[std::max(0, std::min(bh, kb->getY() + kb->getHeight()))];
++			if (const Img *kn = piece("slider_knob")) stretch(*kn, 0, 0, kn->w, kn->h, kx0, ky0, kx1, ky1);
++			else panel(kx0, ky0, kx1, ky1, 3, rgb(150, 156, 140), rgb(110, 118, 104), rgb(40, 46, 42), 1);
++		}
++		return;
++	}
++	if (ArrowButton *ab = dynamic_cast<ArrowButton*>(w))
++	{
++		const ArrowShape sp = ab->getShape();
++		if (sp == ARROW_NONE) return;
++		R r = rectOf(ab);
++		if (!clipBase(r)) return;
++		const char *nm = (sp == ARROW_BIG_UP || sp == ARROW_SMALL_UP) ? "arrow_up" : (sp == ARROW_BIG_DOWN || sp == ARROW_SMALL_DOWN) ? "arrow_down" : (sp == ARROW_SMALL_LEFT) ? "arrow_left" : "arrow_right";
++		if (const Img *ar = piece(nm))
++		{
++			const int X0 = xs[r.x0], Y0 = ys[r.y0], X1 = xs[r.x1], Y1 = ys[r.y1];
++			stretch(*ar, 0, 0, ar->w, ar->h, X0, Y0, X1, Y1);
++			claim(r);
++		}
 +		return;
 +	}
 +	if (Text *t = dynamic_cast<Text*>(w))
@@ -1617,10 +1788,30 @@ index 0000000..a865228
 +	}
 +	if (curOn && curX >= 0 && curY >= 0 && curX < bw && curY < bh)
 +	{
-+		// a plain arrow: tip at the hot spot
-+		const double s = std::max(1.0, (ys[1] - ys[0]) / 5.0);
++		const Img *cur = piece("cursor");
++		const int oy = ys[curY], ox = xs[curX];
++		if (cur)
++		{
++			const int H = (ys[std::min(bh, curY + 17)] - oy), W = std::max(1, cur->w * H / cur->h);
++			for (int Y = 0; Y < H; ++Y)
++			{
++				const int SY = oy + Y; if (SY < 0 || SY >= sh) continue;
++				Uint32 *d = (Uint32*)((Uint8*)screen32->pixels + SY * screen32->pitch);
++				const int sy2 = std::min(cur->h - 1, Y * cur->h / H);
++				for (int X = 0; X < W; ++X)
++				{
++					const int SX = ox + X; if (SX < 0 || SX >= sw) continue;
++					const Uint32 p = cur->px[(size_t)sy2 * cur->w + std::min(cur->w - 1, X * cur->w / W)];
++					const int al = p >> 24; if (al < 40) continue;
++					const Uint32 c = al >= 230 ? (p & 0xFFFFFF) : mix(direct ? d[SX] : rgb((d[SX] >> f->Rshift & 255), (d[SX] >> f->Gshift & 255), (d[SX] >> f->Bshift & 255)), p & 0xFFFFFF, al);
++					put(SX, SY, c);
++				}
++			}
++		}
++		else
++		{
++		const double s2 = std::max(1.0, (ys[1] - ys[0]) / 5.0);
 +		const double P[7][2] = { {0,0},{0,17},{4,13},{7,20},{10,19},{7,12},{12,12} };
-+		const int ox = xs[curX], oy = ys[curY];
 +		auto inside = [&](double x, double y)
 +		{
 +			bool in = false;
@@ -1628,15 +1819,16 @@ index 0000000..a865228
 +				if (((P[i][1] > y) != (P[j][1] > y)) && (x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0])) in = !in;
 +			return in;
 +		};
-+		for (int Y = (int)(-2 * s); Y < (int)(22 * s); ++Y)
-+			for (int X = (int)(-2 * s); X < (int)(14 * s); ++X)
++		for (int Y = (int)(-2 * s2); Y < (int)(22 * s2); ++Y)
++			for (int X = (int)(-2 * s2); X < (int)(14 * s2); ++X)
 +			{
 +				const int SX = ox + X, SY = oy + Y;
 +				if (SX < 0 || SY < 0 || SX >= sw || SY >= sh) continue;
-+				const double x = X / s, y = Y / s;
++				const double x = X / s2, y = Y / s2;
 +				if (inside(x, y)) put(SX, SY, rgb(236, 232, 214));
 +				else if (inside(x - 1.1, y) || inside(x + 1.1, y) || inside(x, y - 1.1) || inside(x, y + 1.1)) put(SX, SY, rgb(18, 20, 19));
 +			}
++		}
 +	}
 +	if (SDL_MUSTLOCK(screen32)) SDL_UnlockSurface(screen32);
 +}
@@ -1645,10 +1837,10 @@ index 0000000..a865228
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..0455d2b
+index 0000000..f41a726
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,34 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -1677,6 +1869,8 @@ index 0000000..0455d2b
 +	void cursor(int x, int y, bool visible);
 +	/// A font sheet's sharp twin: <file>_hi.png, each cell K times the size of the 8-bit one.
 +	void registerFontImage(const Surface *sheet8, const std::string &file);
++	/// A screen background's sharp twin: <file>_hi.png, any size.
++	void registerImage(const Surface *img, const std::string &file);
 +	/// After the 8-bit buffer has been zoomed onto the 32-bit display.
 +	void composite(SDL_Surface *base8, SDL_Surface *screen32);
 +}
@@ -1997,6 +2191,61 @@ index 86bd62e..46cac60 100644
  	/// Loads an X-Com DAT image file.
  	void loadDat(const std::string &filename);
  	/// Gets a particular frame from the set.
+diff --git a/src/Interface/ArrowButton.h b/src/Interface/ArrowButton.h
+index 4b88688..f5c9b71 100644
+--- a/src/Interface/ArrowButton.h
++++ b/src/Interface/ArrowButton.h
+@@ -44,6 +44,8 @@ public:
+ 	/// Creates a new arrow button with the specified size and position.
+ 	ArrowButton(ArrowShape shape, int width, int height, int x = 0, int y = 0);
+ 	/// Cleans up the arrow button.
++	/// G.I. Joe 4x menu layer.
++	ArrowShape getShape() const { return _shape; }
+ 	~ArrowButton();
+ 	/// Sets the arrow button's color.
+ 	void setColor(Uint8 color) override;
+diff --git a/src/Interface/ComboBox.h b/src/Interface/ComboBox.h
+index dc01de7..bc4de01 100644
+--- a/src/Interface/ComboBox.h
++++ b/src/Interface/ComboBox.h
+@@ -61,6 +61,9 @@ public:
+ 	/// Creates a combo box with the specified size and position.
+ 	ComboBox(State *state, int width, int height, int x = 0, int y = 0, bool popupAboveButton = false);
+ 	/// Cleans up the combo box.
++	/// G.I. Joe 4x menu layer.
++	const TextButton *getButtonWidget() const { return _button; }
++	static int buttonWidth() { return BUTTON_WIDTH; }
+ 	~ComboBox();
+ 	/// Sets the X position of the surface.
+ 	void setX(int x) override;
+diff --git a/src/Interface/Frame.h b/src/Interface/Frame.h
+index ed6845f..52af3a5 100644
+--- a/src/Interface/Frame.h
++++ b/src/Interface/Frame.h
+@@ -34,6 +34,9 @@ private:
+ public:
+ 	/// Creates a new frame with the specified size and position.
+ 	Frame(int width, int height, int x = 0, int y = 0);
++
++	/// G.I. Joe 4x menu layer.
++	int getThickness() const { return _thickness; }
+ 	/// Cleans up the frame.
+ 	~Frame();
+ 	/// Sets the border color.
+diff --git a/src/Interface/Slider.h b/src/Interface/Slider.h
+index fc79ef8..875b38b 100644
+--- a/src/Interface/Slider.h
++++ b/src/Interface/Slider.h
+@@ -49,6 +49,9 @@ public:
+ 	/// Creates a new slider with the specified size and position.
+ 	Slider(int width, int height, int x = 0, int y = 0);
+ 	/// Cleans up the slider.
++	/// G.I. Joe 4x menu layer.
++	const TextButton *getKnobWidget() const { return _button; }
++	const Frame *getTrackWidget() const { return _frame; }
+ 	~Slider();
+ 	/// Sets the X position of the surface.
+ 	void setX(int x) override;
 diff --git a/src/Interface/Text.cpp b/src/Interface/Text.cpp
 index d4dc79b..ae4555c 100644
 --- a/src/Interface/Text.cpp
@@ -2066,18 +2315,27 @@ index d5e599e..8b44e52 100644
  	void setHighContrast(bool contrast) override;
  	/// Handles the timers.
 diff --git a/src/Mod/ExtraSprites.cpp b/src/Mod/ExtraSprites.cpp
-index c71ac0d..60ff887 100644
+index c71ac0d..4d470e0 100644
 --- a/src/Mod/ExtraSprites.cpp
 +++ b/src/Mod/ExtraSprites.cpp
-@@ -19,6 +19,7 @@
+@@ -19,6 +19,8 @@
  
  #include <algorithm>
  #include "ExtraSprites.h"
 +#include "../Engine/HiColor.h"
++#include "../Engine/HiUI.h"
  #include "../Engine/Surface.h"
  #include "../Engine/SurfaceSet.h"
  #include "../Engine/FileMap.h"
-@@ -276,6 +277,7 @@ SurfaceSet *ExtraSprites::loadSurfaceSet(SurfaceSet *set)
+@@ -190,6 +192,7 @@ Surface *ExtraSprites::loadSurface(Surface *surface)
+ 	}
+ 	surface = new Surface(_width, _height);
+ 	surface->loadImage(_sprites.begin()->second);
++	HiUI::registerImage(surface, _sprites.begin()->second);
+ 	return surface;
+ }
+ 
+@@ -276,6 +279,7 @@ SurfaceSet *ExtraSprites::loadSurfaceSet(SurfaceSet *set)
  						++offset;
  					}
  				}
