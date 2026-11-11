@@ -52,21 +52,33 @@ PROBE = """	// Forced preconditions. Deliberately BEFORE the three passes, so th
 			for (BattleUnit *h : *_save->getUnits())                               // CAPPROBE
 			{                                                                      // CAPPROBE
 				if (h->getFaction() != FACTION_HOSTILE || h->isOut()) continue;    // CAPPROBE
-				Position next = victim->getPosition() + Position(1, 0, 0);         // CAPPROBE
-				if (_save->getTile(next))                                          // CAPPROBE
-				{                                                                  // CAPPROBE
-					// setUnitPosition RETURNS WHETHER IT WORKED. Ignoring that is how    // CAPPROBE
-					// the first version reported a clean move onto an occupied tile.      // CAPPROBE
-					bool moved = _save->setUnitPosition(h, next, false);            // CAPPROBE
-					if (moved) h->setPosition(next);                                // CAPPROBE
-					Log(LOG_INFO) << "[cap] hostile " << h->getId()                 // CAPPROBE
-						<< " move=" << (moved ? "ok" : "REFUSED")                   // CAPPROBE
-						<< " hpos=" << h->getPosition()                             // CAPPROBE
-						<< " vpos=" << victim->getPosition()                        // CAPPROBE
-						<< " vTile=" << (victim->getTile() ? 1 : 0)                 // CAPPROBE
-						<< " tileUnit=" << (victim->getTile() && victim->getTile()->getUnit()   // CAPPROBE
-							? victim->getTile()->getUnit()->getId() : -1);           // CAPPROBE
-				}                                                                  // CAPPROBE
+				// TRY EVERY NEIGHBOUR, AT THE VICTIM'S OWN Z. The first version tried    // CAPPROBE
+				// one tile and ignored the refusal, so the trooper stayed thirty tiles   // CAPPROBE
+				// away on another floor while the log said he was beside the body - and // CAPPROBE
+				// captureStep got the blame for finding nothing.                        // CAPPROBE
+				bool moved = false;                                                    // CAPPROBE
+				Position vp = victim->getPosition();                                   // CAPPROBE
+				for (int dx = -1; dx <= 1 && !moved; ++dx)                             // CAPPROBE
+				{                                                                      // CAPPROBE
+					for (int dy = -1; dy <= 1 && !moved; ++dy)                          // CAPPROBE
+					{                                                                   // CAPPROBE
+						if (!dx && !dy) continue;                                       // CAPPROBE
+						Position next = vp + Position(dx, dy, 0);                       // CAPPROBE
+						if (!_save->getTile(next)) continue;                            // CAPPROBE
+						if (_save->setUnitPosition(h, next, false))                     // CAPPROBE
+						{                                                               // CAPPROBE
+							h->setPosition(next);                                        // CAPPROBE
+							moved = true;                                                // CAPPROBE
+						}                                                               // CAPPROBE
+					}                                                                   // CAPPROBE
+				}                                                                      // CAPPROBE
+				Log(LOG_INFO) << "[cap] hostile " << h->getId()                        // CAPPROBE
+					<< " move=" << (moved ? "ok" : "REFUSED ALL 8")                     // CAPPROBE
+					<< " hpos=" << h->getPosition()                                     // CAPPROBE
+					<< " vpos=" << vp                                                   // CAPPROBE
+					<< " vTile=" << (victim->getTile() ? 1 : 0)                         // CAPPROBE
+					<< " tileUnit=" << (victim->getTile() && victim->getTile()->getUnit()  // CAPPROBE
+						? victim->getTile()->getUnit()->getId() : -1);                   // CAPPROBE
 				break;                                                             // CAPPROBE
 			}                                                                      // CAPPROBE
 		}                                                                          // CAPPROBE

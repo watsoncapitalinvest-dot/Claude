@@ -43,8 +43,14 @@ run() {   # run <label> <turns> <extra env...>
     if [ $waited -gt 150 ]; then echo "  $label: never reached the main menu"; return; fi
   done
   sleep 2
-  xdotool mousemove 838 400 click 1 2>/dev/null; sleep 3   # New Battle
-  xdotool mousemove 232 736 click 1 2>/dev/null; sleep 8   # OK -> generate
+  # The full click path into a battle, which start_test.sh in the scratchpad already knew and
+  # this script did not: New Battle, OK, then the BRIEFING's OK, then the pre-battle INVENTORY's
+  # OK, then the turn splash. Stopping at any one of them looks exactly like a dead feature.
+  xdotool mousemove 838 400 click 1 2>/dev/null; sleep 3    # New Battle
+  xdotool mousemove 232 736 click 1 2>/dev/null; sleep 10   # OK -> generate the map
+  xdotool mousemove 640 690 click 1 2>/dev/null; sleep 5    # briefing OK
+  xdotool mousemove 1016 48 click 1 2>/dev/null; sleep 5    # pre-battle inventory OK
+  xdotool mousemove 640 400 click 1 2>/dev/null; sleep 3    # "press button to continue"
   # End the player's turn <turns> times so the hostile side moves and captureStep runs.
   #
   # END TURN IS BACKSPACE (Options::keyBattleEndTurn defaults to SDLK_BACKSPACE), not Return.
@@ -54,9 +60,9 @@ run() {   # run <label> <turns> <extra env...>
   # perfectly: GMTACTIC is in the log both times.
   local i
   for ((i=0; i<turns; i++)); do
-    xdotool key BackSpace 2>/dev/null; sleep 2
-    xdotool key Return 2>/dev/null    # clear a confirm-end-turn prompt if one appears
-    sleep 10                          # let the hostile side actually take its turn
+    xdotool key BackSpace 2>/dev/null; sleep 3
+    xdotool mousemove 640 400 click 1 2>/dev/null   # dismiss the turn splash
+    sleep 12                                        # let the hostile side take its turn
   done
   pkill -9 -x openxcom 2>/dev/null; sleep 1
   printf '  %-28s %s\n' "$label" "$(grep -oE '\[cap(ture)?\] .*' "$L" 2>/dev/null | sort -u | tr '\n' ' | ')"
