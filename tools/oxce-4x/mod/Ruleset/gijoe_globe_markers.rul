@@ -1,0 +1,94 @@
+# Geoscape markers.
+#
+# Eight Cobra site types used to share markerIcon 7 — a front company, a
+# factory, a research lab and a Terror Drome were the same dot. These are the
+# replacements, plus the Joe side and the player's own annotation layer.
+#
+# WHY THESE ARE 72px IN A 3x3 SET
+#
+# Mod.cpp creates GlobeMarkers as `new SurfaceSet(3, 3)`, but a frame does not
+# have to be the set's size: Surface::loadImage nulls the surface and rebuilds
+# it at the PNG's own dimensions, and Globe::drawTarget centres on the marker's
+# own width and height:
+#
+#     ShaderMove<const Uint8> surf{ marker, x - marker->getWidth() / 2,
+#                                           y - marker->getHeight() / 2 };
+#
+# So an oversized frame works and lands centred. The 3x3 is the vanilla art,
+# not a ceiling.
+#
+# WHY THE INDICES START AT 9
+#
+# GlobeMarkers has maxSharedFrames = 9, so vanilla owns 0-8. Both sides of the
+# lookup shift anything above that by the mod's own offset, and they agree:
+#
+#   ExtraSprites::getFrame   index >= maxSharedFrames (9)  ->  index + offset
+#   AlienDeployment::load    mod->getOffset(markerIcon, 8) ->  index + offset
+#
+# which is why `markerIcon: 9` below resolves to the frame written as 9 here.
+# Do not pre-add an offset by hand in either place.
+#
+# WHY ONLY FIVE COLOURS
+#
+# The globe draws in the 8-bit geoscape palette, so these are indexed PNGs on
+# PALETTES.DAT palette 0 and every pixel is one of five entries that exist in
+# it exactly — nothing is quantised at load:
+#
+#   13  (252,0,0)      Cobra
+#  144  (176,148,68)   gold accent; the only true warm gold in this palette
+#  245  (128,188,228)  G.I. Joe
+#    5  (252,252,252)  white
+#  161  (144,168,168)  dim, for a lead the player has not confirmed
+#
+# Each one is also chosen for its NEIGHBOUR, because drawTarget blinks a marker
+# by drawing `srcStuff + 1`. Index 14 was the obvious red and index 15 is pure
+# black, so a marker on 14 half-vanishes on every blink. 13 blinks to 14, a
+# darker red. 144->145 and 245->246 barely move; 5->6 is the grey vanilla
+# already blinks to.
+#
+# Antialiasing was snapped to those five rather than quantised. Scattered blend
+# pixels land on whatever world-map green or brown is nearest and then blink to
+# index+1 of that, which is how a clean icon turns into a fringed one.
+#
+# Regenerate with build/build_globe_markers.py.
+
+extraSprites:
+  - type: GlobeMarkers
+    width: 72
+    height: 72
+    files:
+      # --- Cobra, standing sites. These are the eight that shared icon 7.
+      9: Resources/Globe/marker_09_cobra_front_company.png
+      10: Resources/Globe/marker_10_cobra_factory.png
+      11: Resources/Globe/marker_11_cobra_camp.png
+      12: Resources/Globe/marker_12_cobra_depot.png
+      13: Resources/Globe/marker_13_cobra_lab.png
+      14: Resources/Globe/marker_14_cobra_drome.png
+      15: Resources/Globe/marker_15_cobra_broadcast.png
+      16: Resources/Globe/marker_16_cobra_hq.png
+      # --- Cobra, things that move or happen
+      17: Resources/Globe/marker_17_cobra_flight.png
+      18: Resources/Globe/marker_18_cobra_craft.png
+      19: Resources/Globe/marker_19_cobra_crash.png
+      20: Resources/Globe/marker_20_cobra_landed.png
+      21: Resources/Globe/marker_21_cobra_terror.png
+      22: Resources/Globe/marker_22_cobra_convoy.png
+      # --- G.I. Joe. 25 is a fallback only; craft art replaces it.
+      23: Resources/Globe/marker_23_joe_pit.png
+      24: Resources/Globe/marker_24_joe_base.png
+      25: Resources/Globe/marker_25_joe_craft.png
+      26: Resources/Globe/marker_26_joe_lz.png
+      27: Resources/Globe/marker_27_joe_extract.png
+      # --- The player's own board. Nothing consumes these yet: globe pins are
+      #     designed and not built (BACK_BURNER.md), and they want building
+      #     with the intel layer so a pin he places and a lead the game gives
+      #     him share a drawing path and a confidence weight. The art is here
+      #     so that work is not also an art job.
+      28: Resources/Globe/marker_28_pin_confirmed.png
+      29: Resources/Globe/marker_29_pin_likely.png
+      30: Resources/Globe/marker_30_pin_rumour.png
+      31: Resources/Globe/marker_31_pin_note.png
+      32: Resources/Globe/marker_32_pin_unknown.png
+      33: Resources/Globe/marker_33_route_start.png
+      34: Resources/Globe/marker_34_route_waypoint.png
+      35: Resources/Globe/marker_35_area_interest.png

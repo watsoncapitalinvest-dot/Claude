@@ -1866,10 +1866,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..5e3fddf
+index 0000000..3a89171
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,666 @@
+@@ -0,0 +1,710 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -2089,9 +2089,14 @@ index 0000000..5e3fddf
 +		}
 +	}
 +
-+	void glyphs(const Text *t, int ox, int oy, const R &clip, Uint32 ink, bool useMask, const R &maskRect)
++	// Returns how many glyphs it actually put down. The callers need that: a
++	// claimed rect suppresses the 8-bit original, so a label that renders zero
++	// glyphs leaves a button with nothing written on it and no way back.
++	// With dry = true nothing is drawn and only the count is computed.
++	int glyphs(const Text *t, int ox, int oy, const R &clip, Uint32 ink, bool useMask, const R &maskRect, bool dry = false)
 +	{
 +		const SDL_Color *pal = base->format->palette->colors;
++		int drawn = 0;
 +		for (const auto &g : t->getHiGlyphs())
 +		{
 +			if (!g.sheet) continue;
@@ -2099,33 +2104,45 @@ index 0000000..5e3fddf
 +			if (it == atlases.end()) continue;
 +			const Atlas &a = it->second;
 +			const int bx0 = ox + g.x, by0 = oy + g.y, bx1 = bx0 + g.w, by1 = by0 + g.h;
-+			if (bx1 <= clip.x0 || by1 <= clip.y0 || bx0 >= clip.x1 || by0 >= clip.y1 || bx0 < 0 || by0 < 0 || bx1 > bw || by1 > bh) continue;
++			if (bx1 <= clip.x0 || by1 <= clip.y0 || bx0 >= clip.x1 || by0 >= clip.y1) continue;
++			// A glyph whose box crosses the base surface used to be dropped WHOLE,
++			// which is why a label hard against an edge - the geoscape's right-hand
++			// buttons - came out blank, and why LAUNCH INTERCEPTION truncated. Only
++			// the xs/ys lookups need the box in range, so clamp those and let the
++			// inner loops clip per pixel as they already do.
++			if (bx1 <= 0 || by1 <= 0 || bx0 >= bw || by0 >= bh) continue;
++			const int cx0 = std::max(0, std::min(bw, bx0)), cx1 = std::max(0, std::min(bw, bx1));
++			const int cy0 = std::max(0, std::min(bh, by0)), cy1 = std::max(0, std::min(bh, by1));
++			if (cx1 <= cx0 || cy1 <= cy0) continue;
++			++drawn;
++			if (dry) continue;
 +			Uint32 col = ink;
 +			if (!col)
 +			{
 +				const SDL_Color &c = pal[g.color];
 +				col = mix(rgb(c.r, c.g, c.b), rgb(234, 230, 214), 205);   // keep a hint of the hue's meaning, read as off-white
 +			}
-+			const int X0 = xs[bx0], X1 = xs[bx1], Y0 = ys[by0], Y1 = ys[by1];
-+			const double kx = (double)(g.w * a.k) / (X1 - X0), ky = (double)(g.h * a.k) / (Y1 - Y0);
++			const int X0 = xs[cx0], X1 = xs[cx1], Y0 = ys[cy0], Y1 = ys[cy1];
++			const double kx = (double)((cx1 - cx0) * a.k) / (X1 - X0), ky = (double)((cy1 - cy0) * a.k) / (Y1 - Y0);
 +			for (int Y = Y0; Y < Y1; ++Y)
 +			{
-+				const int by = by0 + (Y - Y0) * g.h / (Y1 - Y0);
++				const int by = cy0 + (Y - Y0) * (cy1 - cy0) / (Y1 - Y0);
 +				if (by < clip.y0 || by >= clip.y1) continue;
-+				const double fy = g.sy * a.k + (Y - Y0 + 0.5) * ky - 0.5; const int sy0 = std::max(0, (int)fy), sy1 = std::min(a.h - 1, sy0 + 1); const int wy = (int)((fy - sy0) * 256);
++				const double fy = (g.sy + (cy0 - by0)) * a.k + (Y - Y0 + 0.5) * ky - 0.5; const int sy0 = std::max(0, (int)fy), sy1 = std::min(a.h - 1, sy0 + 1); const int wy = (int)((fy - sy0) * 256);
 +				Uint32 *o = over.data() + (size_t)Y * sw;
 +				for (int X = X0; X < X1; ++X)
 +				{
-+					const int bx = bx0 + (X - X0) * g.w / (X1 - X0);
++					const int bx = cx0 + (X - X0) * (cx1 - cx0) / (X1 - X0);
 +					if (bx < clip.x0 || bx >= clip.x1) continue;
 +					if (useMask && !scratch[(by - maskRect.y0) * (maskRect.x1 - maskRect.x0) + (bx - maskRect.x0)]) continue;
-+					const double fx = g.sx * a.k + (X - X0 + 0.5) * kx - 0.5; const int sx0 = std::max(0, (int)fx), sx1 = std::min(a.w - 1, sx0 + 1); const int wx = (int)((fx - sx0) * 256);
++					const double fx = (g.sx + (cx0 - bx0)) * a.k + (X - X0 + 0.5) * kx - 0.5; const int sx0 = std::max(0, (int)fx), sx1 = std::min(a.w - 1, sx0 + 1); const int wx = (int)((fx - sx0) * 256);
 +					const int c00 = a.cov[(size_t)sy0 * a.w + sx0], c01 = a.cov[(size_t)sy0 * a.w + sx1], c10 = a.cov[(size_t)sy1 * a.w + sx0], c11 = a.cov[(size_t)sy1 * a.w + sx1];
 +					const int cov = ((c00 * (256 - wx) + c01 * wx) * (256 - wy) + (c10 * (256 - wx) + c11 * wx) * wy) >> 16;
 +					if (cov > 0) o[X] = mix(o[X], col, std::min(255, cov));
 +				}
 +			}
 +		}
++		return drawn;
 +	}
 +
 +	bool shown(const Surface *s) { return s->getVisible() && !s->isHidden(); }
@@ -2359,12 +2376,29 @@ index 0000000..5e3fddf
 +		const bool down = b->isPressedLook();
 +		const int m = std::max(1, (ys[1] - ys[0]) / 3);     // a little air between stacked buttons
 +		const bool square = b->getWidth() <= b->getHeight() * 5 / 4;
++		// Ask BEFORE drawing anything whether the label will render. claim() below
++		// suppresses the 8-bit button underneath, so a label that puts down no
++		// glyphs leaves a blank slab the player cannot read and cannot recover.
++		// If it would come out empty, stand down and let the plain button show.
++		const Text *t = b->getTextWidget();
++		const int wanted = t ? (int)t->getHiGlyphs().size() : 0;
++		if (wanted)
++		{
++			const int fits = glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r, true);
++			if (!fits)
++			{
++				Log(LOG_VERBOSE) << "HiUI: button label would draw 0 of " << wanted
++					<< " glyphs at base " << r.x0 << "," << r.y0 << " " << (r.x1 - r.x0) << "x" << (r.y1 - r.y0)
++					<< " (surface " << bw << "x" << bh << ") - leaving this one to the flat renderer";
++				return;
++			}
++		}
 +		const Img *art = piece(square ? (down ? "button_square_pressed" : "button_square") : (down ? "button_wide_pressed" : "button_wide"));
 +		if (art) nine(*art, X0 + m, Y0 + m, X1 - m, Y1 - m, std::max(5, (int)(art->h * 0.22)));
 +        else if (down) panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(120, 30, 26), rgb(96, 24, 21), rgb(214, 96, 84), 1);
 +		else panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(62, 72, 62), rgb(46, 54, 47), rgb(112, 122, 106), 1);
 +		claim(r);
-+		if (const Text *t = b->getTextWidget()) glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r);
++		if (t) glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r);
 +		return;
 +	}
 +	if (Frame *fm = dynamic_cast<Frame*>(w))
@@ -2443,7 +2477,17 @@ index 0000000..5e3fddf
 +		if (!any || scratch.empty()) return;
 +		R r = rectOf(t);
 +		if (!clipBase(r) || scratch.size() != (size_t)(r.x1 - r.x0) * (r.y1 - r.y0)) return;
-+		glyphs(t, t->getX(), t->getY(), r, 0, true, r);
++		if (!glyphs(t, t->getX(), t->getY(), r, 0, true, r))
++		{
++			if (!t->getHiGlyphs().empty())
++			{
++				Log(LOG_VERBOSE) << "HiUI: text drew 0 of " << t->getHiGlyphs().size()
++					<< " glyphs at base " << r.x0 << "," << r.y0 << " " << (r.x1 - r.x0) << "x" << (r.y1 - r.y0)
++					<< " (surface " << bw << "x" << bh << ") - leaving this one to the flat renderer";
++			}
++			scratch.clear();
++			return;
++		}
 +		for (int y = r.y0; y < r.y1; ++y)
 +		{
 +			const Uint8 *p = row8(y);

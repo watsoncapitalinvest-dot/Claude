@@ -33,8 +33,24 @@ third-party model of unknown licence and the repo is public:
 C:\GI-Joe-Silent-Storm\GIJoe_XCOM_4x\art_briefs\earth_vegetation_equirect.png
 ```
 
-Two defects in it, both easy: longitude is rotated about 70° off Greenwich
-(the model's axes are not geographic), and Antarctica is missing.
+Two defects in it, and the first was written down wrong here on 10 Nov.
+
+**The texture is MIRRORED in longitude**, not merely rotated. This page said
+"rotated about 70° off Greenwich", which was eyeballed off a render, and a
+mirrored Earth still reads as Earth at a glance — Africa keeps its shape, so
+nothing looks obviously wrong until a marker lands in the wrong ocean. Measured
+against 44 land/sea truth points it scores 43/44 mirrored at an offset of 87°
+and 31/44 unmirrored at −75°. The sampling is:
+
+```python
+L = -lon                                   # the unwrap came out left-handed
+u = ((L + 87.0 + 180.0) % 360.0) / 360.0
+v = (90.0 - lat) / 180.0
+```
+
+Antarctica is still missing. The lesson is the usual one: the offset was read
+off a picture instead of measured, and a picture of a mirrored world is not
+obviously a picture of a mirrored world.
 
 **What using it would take.** Render the globe in the HD layer instead of the
 palette one: for each screen pixel inside the globe disc, invert the
@@ -105,28 +121,45 @@ the fakes is what buys the ordering.
 
 ## Owed
 
-### The geoscape font fix is unanswered, and I would not guess at it
+### ~~The geoscape font fix~~ — cause found and shipped 11 Nov, still unseen here
 
 Blank button labels on the geoscape, oversized text clipping in windows
-(10 Nov, John's screenshots). Two real defects found in `HiUI.cpp`:
+(10 Nov, John's screenshots). On 10 Nov this page said neither defect found by
+reading explained the blank buttons. **Reading further, together they do.**
 
-- `glyphs()` drops a glyph **whole** when its box crosses the surface bounds
-  rather than clipping it — that is the truncated `LAUNCH INTERCEPTIO…`.
-- The `TextButton` branch abandons a button entirely, art and label both, if
-  its rect gets clipped at all.
+The `TextButton` branch drew its art, called `claim(r)` — which suppresses the
+flat 8-bit button underneath — and only *then* called `glyphs()`. And
+`glyphs()` dropped a glyph **whole** when its box crossed the base surface:
 
-**Neither explains the blank geoscape buttons**, because the art draws, which
-means `glyphs()` ran and produced nothing. Either the glyph list was empty or
-every glyph was rejected individually, and reading cannot tell which.
+```cpp
+if (... || bx0 < 0 || by0 < 0 || bx1 > bw || by1 > bh) continue;
+```
 
-**And it cannot be reproduced here.** HiUI only switches on when `_hi.png`
-twins exist; this container has none of John's art, so every campaign run
-tonight used the plain renderer. Guessing a fix would be shipping something
-plausible that does not work.
+The geoscape's side-panel buttons sit hard against the right edge of a 320-wide
+base surface, so their labels tripped `bx1 > bw`, every glyph was dropped, and
+the claim had already thrown away the readable original. A blank slab with no
+way back. The same guard is the truncated `LAUNCH INTERCEPTIO…`.
 
-The way to settle it is one log line per button — glyphs offered versus glyphs
-drawn, plus the rect and the surface bounds. One run of John's and the answer
-is unambiguous. Offered 10 Nov, not yet answered.
+Three changes, 11 Nov:
+
+- `glyphs()` **clips** a glyph that crosses the base edge rather than dropping
+  it. Only the `xs`/`ys` lookups needed the box in range; those are clamped and
+  the inner loops already clip per pixel. The source rect and the inverse map
+  follow the clamped box, or a clipped glyph samples the wrong column.
+- `glyphs()` **returns how many it drew**, and a `TextButton` asks on a dry run
+  BEFORE drawing anything. If the label would come out empty, HiUI stands down
+  for that button and the flat one shows. A bare `Text` does the same, leaving
+  its rect untagged.
+- Both log the rect, the glyph count and the surface bounds at `LOG_VERBOSE`,
+  which is the instrumentation offered on 10 Nov — now self-healing rather than
+  diagnostic.
+
+**It is still not reproduced here**, and that has not changed: HiUI only
+switches on when `_hi.png` twins exist, and the install John uploaded is a
+skeleton — one file per folder, no font sheets. So the first clause is reasoned
+from the code, not seen. What *is* certain is the failure mode: the fallback
+means the worst case is the plain renderer, which is legible. It cannot blank a
+button any more, whatever the cause turns out to be.
 
 ### Three villains whose only special is environment-locked
 
@@ -245,25 +278,40 @@ the precedent and the save plumbing exist.
 Wants doing WITH the intel layer, not before it: a pin the player places and a
 lead the game gives him should share a drawing path and a confidence weight.
 
-### Eight Cobra site types, one globe marker (found 10 Nov)
+### ~~Eight Cobra site types, one globe marker~~ — done 11 Nov
 
-Every Cobra deployment sets `markerIcon: 7`. A front company, a factory, a
-research lab and a Terror Drome are the same dot — an eight-building economy
-the player cannot read at a glance.
+27 markers at 72px, in `mod/Resources/Globe`, wired by
+`mod/Ruleset/gijoe_globe_markers.rul` and regenerated by
+`build/build_globe_markers.py`. The eight Cobra deployments that shared
+`markerIcon: 7` now carry 9–16; frames 17–35 are Cobra activity, the Joe side,
+and the player's own pins and routes, which have art but nothing consuming them
+yet (see below).
 
-Not a 3x3 limit, as it first appears. Vanilla ships `GlobeMarkers` as a 27x3
-sheet cut into nine 3x3 icons, but `Globe::drawTarget` centres a marker on its
-OWN dimensions:
+Four engine facts it rests on, each read out of the source rather than assumed,
+and all four recorded in the ruleset's own header:
 
-```cpp
-ShaderMove<const Uint8> surf{ marker, x - marker->getWidth()/2, y - marker->getHeight()/2 };
-```
+- **An oversized frame is legal.** `GlobeMarkers` is created as
+  `new SurfaceSet(3, 3)`, but `Surface::loadImage` nulls the surface and
+  rebuilds it at the PNG's size, and `Globe::drawTarget` centres on the
+  marker's own width and height. The 3x3 is vanilla's art, not a ceiling.
+- **The indices agree on both sides.** `maxSharedFrames` is 9, and both
+  `ExtraSprites::getFrame` and `AlienDeployment::load`'s
+  `mod->getOffset(markerIcon, 8)` shift anything above that by the same mod
+  offset. Writing a literal 9 in both places is correct; pre-adding an offset
+  by hand is not. Verified in a verbose run: frame 9 resolved to index 1009.
+- **Five colours, all exact palette entries**, so nothing is quantised at load.
+  Antialiasing is snapped to those five rather than quantised, because stray
+  blend pixels land on whatever world-map green is nearest.
+- **Every colour was chosen for its NEIGHBOUR.** `drawTarget` blinks a marker
+  by drawing `srcStuff + 1`. Index 14 is the obvious Cobra red and index 15 is
+  pure black, so a marker on 14 half-vanishes on every blink. 13 blinks to 14,
+  a darker red. That one is invisible to every check except reading the draw.
 
-So a larger sprite simply works. Eight vector line icons were drawn 10 Nov at
-56px (office block, sawtooth factory, tent, braced crate, flask, ringed
-crosshair for the Drome, mast with arcs, hex bunker) and sent to John; they
-still need palettising into an `extraSprites` sheet and wiring to
-`markerIcon` per deployment.
+Lazy loading is why a plain boot proves nothing here: `GlobeMarkers` is not
+touched until the geoscape opens, so a main-menu run leaves no trace of it in
+the log at all. The first control run compared sprite counts with and without
+the ruleset, got the same number twice, and meant nothing — `s:` is not a
+sprite count.
 
 
 
