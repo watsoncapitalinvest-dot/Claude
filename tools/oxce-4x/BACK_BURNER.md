@@ -44,14 +44,27 @@ damage, which OXCE supports natively: it pins a Joe where he stands without
 wounding him — a pirate wants them robbed, not dead). Both are pure ruleset.
 His world-map half, raids on civilian shipping earning Cobra double, is kept.
 
-### Subterfuge's strategic half
+### Subterfuge's strategic half, and fake intel (parked 10 Nov, John)
 
 Moles at The Pit, impersonation off-screen, false flag operations, fake Joe
-signals, sleeper cells, Synthoids.
+signals, sleeper cells, Synthoids — and **Cobra planting fake intel** through
+its Infiltration department (an empty site, or an ambush; rare early, more
+common later).
 
-All geoscape, all leaning on detection the player can act on. **Ordering
-matters here:** intel has to exist before fakes have anything to corrupt. Park
-until the Joe Intelligence department is real, then take it as its own pass.
+All geoscape, all leaning on detection the player can act on.
+
+**The ordering is the reason, and it is worth stating plainly.** Fake intel
+needs the Infiltration department to exist, Infiltration is part of subterfuge,
+and subterfuge needs intel — a forgery is worthless until there is something
+genuine to forge. Built in the wrong order, the fakes have nothing to corrupt
+and the player has no way to tell a planted lead from a real one, which is the
+entire point of the mechanic.
+
+**What is NOT parked by this:** the Joe Intelligence department itself. Leads,
+intel quality (rumor / likely / confirmed), staleness, the Cobra Research
+intel screen and per-region counter-intelligence strength all stay live —
+several are cheap extensions of data the economy work already stores. Parking
+the fakes is what buys the ordering.
 
 ---
 
