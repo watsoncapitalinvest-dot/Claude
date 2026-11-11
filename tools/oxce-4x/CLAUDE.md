@@ -95,15 +95,51 @@ mission calls for them.
 Now `earliest: 22` with `missionOnly: true`, so a scripted mission may still
 name one and a garrison may not. Month 0 above fields troopers only.
 
-### Months 1–3 are handguns and knives — STILL BROKEN
+### Months 1–3 are handguns and knives — STILL BROKEN, but not where this said
 
-The kit rule shipped on 10 Nov issues the deployment's tier 1 and 2 itemSets
-as soon as a region holds 50 materiel. Nothing checks the month. If Cobra is
-seeded with a working network and capital, Cobra fields rifles in month 1.
+The old diagnosis was that nothing checked the month. **That part is fixed and
+was already fixed when this note still said otherwise.** `maxKitTierByMonth`
+in `gijoe_tuning.rul` (0 → tier 0, month 3 → tier 1, month 8 → tier 2) reaches
+`Mod::getCobraKitTierCap`, `SavedGame` puts it on the garrison as `maxKitTier`,
+and `BattlescapeGenerator` clamps `itemLevel` to it. `check_loaded.py` confirms
+the key is set by a file the game loads, and `gar_test.sh` shows `kitCap=0` on
+a month-0 battle with every man landing on tier 0.
 
-This is the **kit tier**, not the unit calendar, so the availability window
-does not touch it. It wants the same treatment at the other end: cap the tier
-at what the calendar allows for the current month. Rule 3 below.
+**The symptom is real anyway, because tier 0 is the wrong weapon.** Every
+generated Cobra site shares one `data: &id001` anchor in
+`gijoe_cobra_sites.rul`, and its three itemSets are vanilla X-COM's alien
+ladder, never replaced:
+
+| tier | item | what the strings call it | calendar band |
+| --- | --- | --- | --- |
+| 0 | `STR_PLASMA_PISTOL` | Pulse Pistol | months 15–22 |
+| 1 | `STR_PLASMA_RIFLE` | Pulse Rifle | months 23–30 |
+| 2 | `STR_HEAVY_PLASMA` | Heavy Pulse | months 31–60 |
+
+So a month-1 raid is correctly clamped to tier 0 and correctly hands out the
+**month-15 weapon**. Clamping a ladder that starts three bands too high cannot
+produce handguns, and `7xSTR_PLASMA_PISTOL` is what the test prints.
+
+**The mapping needed is already in the item names and is John's own**, so this
+is transcription rather than design:
+
+| calendar | item |
+| --- | --- |
+| 1–3 handguns and knives | `STR_PISTOL` — Uzi |
+| 4–8 rifles and grenades | `STR_RIFLE` — M4 Carbine, + `STR_ALIEN_GRENADE` — Cobra Grenade |
+| 9–14 first lasers, M.A.R.S. heavy | `STR_LASER_RIFLE` — Sniper Rifle |
+| 15–22 lasers standard, first pulse pistols | `STR_PLASMA_PISTOL` — Pulse Pistol |
+| 23–30 pulse rifles standard | `STR_PLASMA_RIFLE` — Pulse Rifle |
+| 31–60 heavy pulse | `STR_HEAVY_PLASMA` — Heavy Pulse |
+
+Two things follow and neither is one line:
+
+- the shared anchor wants **six** itemSets in calendar order, not three, and
+  every rank entry in it carries its own copy;
+- `maxKitTierByMonth` wants six entries to match, not three.
+
+Rule 3 below still stands. It was only ever half the job: the cap was built,
+and the ladder it caps was left as X-COM's.
 
 ### ~~Storm Shadow available from month 1~~ — fixed 11 Nov
 
