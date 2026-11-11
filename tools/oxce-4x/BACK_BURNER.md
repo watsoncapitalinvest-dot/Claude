@@ -11,6 +11,41 @@ roughly, and the cost is written down.
 
 ## Parked by decision
 
+### A textured globe from the vegetation map (parked 10 Nov, John)
+
+John downloaded `earths-vegetation-index-low-poly` and asked for the
+vegetation one on the geoscape.
+
+**The `.obj` is unusable** — a 3840-face unit sphere, and OpenXcom has no 3D
+pipeline at all: the geoscape is `WORLD.DAT` polygons rasterised in software
+into an 8-bit palette. There is nowhere to put a mesh.
+
+**The texture was recoverable.** `earth_vegetation_index.png` ships 2048×2048
+square — a UV atlas baked for that mesh, not a world map. But the mesh is a
+perfect unit sphere (radius 1.000 at every vertex) with 2078 UV coords, so it
+unwraps: vertex position gives lat/lon, UV gives the texture pixel, rasterise
+the 3840 triangles back out. **94.5% of pixels recovered.**
+
+The result is saved on John's machine, NOT in this repo — it is derived from a
+third-party model of unknown licence and the repo is public:
+
+```
+C:\GI-Joe-Silent-Storm\GIJoe_XCOM_4x\art_briefs\earth_vegetation_equirect.png
+```
+
+Two defects in it, both easy: longitude is rotated about 70° off Greenwich
+(the model's axes are not geographic), and Antarctica is missing.
+
+**What using it would take.** Render the globe in the HD layer instead of the
+palette one: for each screen pixel inside the globe disc, invert the
+orthographic projection to lat/lon — `Globe.cpp` already does this for mouse
+picking, so the maths exists — sample the map, composite in 32-bit through
+HiUI, which already does that kind of overlay for backgrounds. A few hours.
+
+Worth noting for whoever picks it up: this is the **largest cheap visual win
+available**. A photographic Earth instead of flat green polygons is a bigger
+jump than anything else on this page, and it is plumbing rather than art.
+
 ### Disguise in battle (parked 10 Nov, John)
 
 Zartan's *Disguise*, Zarana's *Disguise*, and Act 4 infiltrators in captured
@@ -69,6 +104,29 @@ the fakes is what buys the ordering.
 ---
 
 ## Owed
+
+### The geoscape font fix is unanswered, and I would not guess at it
+
+Blank button labels on the geoscape, oversized text clipping in windows
+(10 Nov, John's screenshots). Two real defects found in `HiUI.cpp`:
+
+- `glyphs()` drops a glyph **whole** when its box crosses the surface bounds
+  rather than clipping it — that is the truncated `LAUNCH INTERCEPTIO…`.
+- The `TextButton` branch abandons a button entirely, art and label both, if
+  its rect gets clipped at all.
+
+**Neither explains the blank geoscape buttons**, because the art draws, which
+means `glyphs()` ran and produced nothing. Either the glyph list was empty or
+every glyph was rejected individually, and reading cannot tell which.
+
+**And it cannot be reproduced here.** HiUI only switches on when `_hi.png`
+twins exist; this container has none of John's art, so every campaign run
+tonight used the plain renderer. Guessing a fix would be shipping something
+plausible that does not work.
+
+The way to settle it is one log line per button — glyphs offered versus glyphs
+drawn, plus the rect and the surface bounds. One run of John's and the answer
+is unambiguous. Offered 10 Nov, not yet answered.
 
 ### Three villains whose only special is environment-locked
 
