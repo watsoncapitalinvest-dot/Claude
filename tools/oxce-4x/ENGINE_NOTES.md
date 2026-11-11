@@ -379,3 +379,74 @@ export OXCE_HICOLOR=1 OXCE_HIUI=1
 The lesson is the one this desk keeps relearning: check the feature under test
 is switched on before concluding anything about it. A green screenshot of a
 disabled code path is not evidence.
+
+## The geoscape draws two globes, and the overlay is the one that is wrong
+
+Found 11 Nov, from John playing it: "you can see both globes on that image".
+
+Measured off a real 1920x1080 screenshot, centred on the globe:
+
+    textured earth disc     radius 511 px
+    country-border lines    radius 683 px      ratio 1.337
+
+Not a zoom animation. The same two radii come back after letting the geoscape
+sit for twenty seconds.
+
+Both draws are instrumented and **they agree about the geometry**:
+
+    [globeprobe] drawDetail       radius=90 cen=128,100 globe=256x200 countries=256x200
+    [globeprobe] drawEarthTexture radius=90 cen=128,100 globe=256x200 tex=2048x1024
+
+Same radius, same centre, same surface size. So nothing is wrong at the point of
+drawing, and `drawEarthTexture` - which was the suspect, being ours - is innocent.
+The mismatch is introduced **after** drawing, when the two surfaces reach the
+screen:
+
+    511 / 90 = 5.68     the globe's own scale
+    683 / 90 = 7.59
+    1920 / 256 = 7.50   full WINDOW width over globe SURFACE width
+    90 * 7.5  = 675     predicted, against 683 measured - 1.2%, inside the
+                        2px sampling step and the line width
+
+So `_countries` is being scaled to the full window while the globe is scaled to
+the globe's own rect. Two different factors, two concentric globes, the borders
+floating out in the starfield beyond the earth.
+
+The lesson is the one about checking the reference: the first guess was that our
+own `drawEarthTexture` had the wrong radius, because it is the new code and the
+vanilla path is old. It uses `_radius` and `_cenX/_cenY` like everything else,
+and the probe proved it. The bug is in compositing, which nobody had suspected.
+
+## Every geoscape panel widget falls back to the flat renderer
+
+Same session, same run. John: "i still cant read the menu on the geo scape."
+
+The engine says so itself, 4,764 times in one short run:
+
+    HiUI: button "5 Mins" would draw 0 of 5 glyphs at base 257,126 31x13
+          (surface 320x200) - leaving this one to the flat renderer
+
+Every button on the geoscape side panel, with **zero** HiUI successes anywhere on
+that screen:
+
+    INTERCEPT (0 of 9)   BASES (0 of 5)     GRAPHS (0 of 6)
+    INTEL FILES (0 of 10) OPTIONS (0 of 7)  FUNDING (0 of 7)
+    5 Secs, 1 Min, 5 Mins, 30 Mins, 1 Hour, 1 Day - all 0 of N
+
+"0 of N" is the tell: HiUI resolves not one glyph of those labels, so this is not
+a layout or clipping problem, it is that the font those widgets draw with has no
+HD glyphs registered. The main menu and the difficulty screen render perfectly
+through HiUI in the same run, so the HD layer itself is healthy.
+
+`mod/Resources/Backgrounds/GEOBORD.png` is also still 320x200, so even with the
+labels fixed the panel art behind them is upscaled 6x.
+
+Checked and NOT the cause, so nobody repeats them:
+
+- `OXCE_HICOLOR` / `OXCE_HIUI` are not missing from Play_4x.bat's environment.
+  Both default to ON when `OXCE_MAP_HIRES > 1`, which the launcher sets:
+  `HiColor::enabled()` falls back to `Screen::hiRes() > 1` and `HiUI::enabled()`
+  falls back to `HiColor::enabled()`. The log confirms `Display set to 1920x1080x32`.
+- `geoscapeScale`. Setting it to 4 made the whole UI render at native size in the
+  middle of a black screen - worse, not better. It also WRITES ITSELF BACK to
+  options.cfg, which silently broke the next two test runs until that was noticed.
