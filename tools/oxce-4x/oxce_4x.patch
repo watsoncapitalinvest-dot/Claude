@@ -3637,7 +3637,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..a43b1af 100644
+index 1885346..7e611d3 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,7 @@
@@ -3664,7 +3664,7 @@ index 1885346..a43b1af 100644
 +	_penPass{ 0.35, 0.85, 0.65, 0.35, 0.20, 0.25 },
 +	_penMaxWalls(4), _penThroughBroken(false),
 +	_cobraWellSupplied(0), _cobraSupplyAllMissions(false),
-+	_cobraWellPaid(0), _cobraWellPaidUpkeep(0), _cobraStarvedHeadcount(0),
++	_cobraWellPaid(0), _cobraWellPaidUpkeep(0), _cobraProductionMinimum(0), _cobraStarvedHeadcount(0),
  	_inventoryOverlapsPaperdoll(false),
  	_maxViewDistance(20), _maxDarknessToSeeUnits(9), _maxStaticLightDistance(16), _maxDynamicLightDistance(24), _enhancedLighting(0),
  	_costHireEngineer(0), _costHireScientist(0),
@@ -3732,7 +3732,7 @@ index 1885346..a43b1af 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3274,83 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3274,89 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -3810,13 +3810,19 @@ index 1885346..a43b1af 100644
 +		// and CANNOT PAY fired exactly zero times. So the bar is what the region OWES - the
 +		// upkeep of the sites standing in it - which rises as Cobra grows there and never dies.
 +		econ.tryRead("wellPaidUpkeepMonths", _cobraWellPaidUpkeep);
++		// One number, three behaviours, with the extremes at the ends: 0 is pure pro-rata, where
++		// any money at all buys a proportional share; 100 is all-or-nothing, where a pound short
++		// stops the line dead; 50 means half the bill must be met and anything above that scales.
++		// Defaults to 0, which is the behaviour that shipped, so nothing changes silently.
++		// Neither of us knows which plays better, which is exactly why it is a number.
++		econ.tryRead("productionMinimumPercent", _cobraProductionMinimum);
 +		econ.tryRead("starvedHeadcount", _cobraStarvedHeadcount);
 +	}
 +
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -4069,6 +4203,14 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4209,14 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -3831,7 +3837,7 @@ index 1885346..a43b1af 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +5911,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +5917,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -3851,7 +3857,7 @@ index 1885346..a43b1af 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +5934,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +5940,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -3859,7 +3865,7 @@ index 1885346..a43b1af 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +5948,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +5954,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -3899,7 +3905,7 @@ index 1885346..a43b1af 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..1d474b9 100644
+index 2242d13..86eafa7 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,7 @@ class SavedGame;
@@ -3918,7 +3924,7 @@ index 2242d13..1d474b9 100644
  	std::map<std::string, RuleBaseFacility*> _facilities;
  	std::map<std::string, RuleCraft*> _crafts;
  	std::map<std::string, RuleCraftWeapon*> _craftWeapons;
-@@ -327,6 +329,23 @@ private:
+@@ -327,6 +329,24 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -3937,12 +3943,13 @@ index 2242d13..1d474b9 100644
 +	bool _cobraSupplyAllMissions;
 +	int _cobraWellPaid;
 +	int _cobraWellPaidUpkeep;
++	int _cobraProductionMinimum;
 +	int _cobraStarvedHeadcount;
 +	std::vector<std::string> _cobraSitesIndex;
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +711,32 @@ public:
+@@ -692,6 +712,34 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -3970,6 +3977,8 @@ index 2242d13..1d474b9 100644
 +	int getCobraWellPaid() const { return _cobraWellPaid; }
 +	/// How many months of a region's own site upkeep Cobra must have banked there.
 +	int getCobraWellPaidUpkeep() const { return _cobraWellPaidUpkeep; }
++	/// Percent of a production bill Cobra must afford before it makes anything at all.
++	int getCobraProductionMinimum() const { return _cobraProductionMinimum; }
 +	/// Men dropped from every rank entry in a region Cobra cannot pay for.
 +	int getCobraStarvedHeadcount() const { return _cobraStarvedHeadcount; }
  	/// Gets the available regions.
@@ -4826,7 +4835,7 @@ index 6c121c7..886050d 100644
  	std::map<std::string, int> &getReinforcementsMemory() { return _reinforcementsMemory; }
  	/// Gets the map blocks used for reinforcements.
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..1cca2e2 100644
+index 9ca9637..29fa48c 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -55,7 +55,10 @@
@@ -4882,7 +4891,7 @@ index 9ca9637..1cca2e2 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2589,521 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2589,538 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -5309,6 +5318,23 @@ index 9ca9637..1cca2e2 100644
 +		{
 +			netMateriel[regionType] += want;
 +			netFunds[regionType] -= cost;
++			continue;
++		}
++		// How a shortfall behaves is a ruleset number, because neither this desk nor John knows
++		// which plays better and guessing in the abstract is how a wrong default survives.
++		// 0 pro-rata, 100 all-or-nothing, anything between is a floor the bill must clear.
++		const int minPercent = mod->getCobraProductionMinimum();
++		if (minPercent > 0 && (long long)avail * 100 < (long long)cost * minPercent)
++		{
++			// Short of the floor, so the line stops and the money stays in the bank. Not spent:
++			// paying for nothing would be a third behaviour nobody asked for, and it would make
++			// a stalled factory quietly bankrupt the region that owns it.
++			if (getenv("OXCE_ECON_LOG"))
++			{
++				Log(LOG_INFO) << "[econ] " << regionType << " could not reach the minimum "
++					<< minPercent << "% of its production bill (" << avail << " of " << cost
++					<< " funds), so it made nothing and kept the money";
++			}
 +			continue;
 +		}
 +		const int made = (int)((long long)want * avail / cost);
