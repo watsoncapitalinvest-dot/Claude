@@ -1,5 +1,5 @@
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..35bc896 100644
+index 1951ba7..2fd37c8 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -767,6 +767,7 @@ void BattlescapeGenerator::nextStage()
@@ -10,7 +10,7 @@ index 1951ba7..35bc896 100644
  	bool isPreview = _save->isPreview();
  
  	_save->setAlienCustom(_alienCustomDeploy ? _alienCustomDeploy->getType() : "", _alienCustomMission ? _alienCustomMission->getType() : "");
-@@ -1696,8 +1697,67 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +1697,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -45,6 +45,7 @@ index 1951ba7..35bc896 100644
 +	// leaked the better kit anyway, so the tier is clamped at the far end instead.
 +	_save->setReinforcementsStarved(!garrison.wellSupplied);
 +	_save->setReinforcementsThin(garrison.headcountPenalty);
++	_save->setReinforcementsKitCap(garrison.maxKitTier);
 +
 +	// A cap that would skip EVERY rank entry is a battle with no enemies in it. Cobra's own
 +	// site deployments all share one data block and keep ranks 4 to 7, so it cannot happen
@@ -78,7 +79,7 @@ index 1951ba7..35bc896 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +1781,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +1782,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -95,7 +96,7 @@ index 1951ba7..35bc896 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1743,6 +1813,22 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1743,6 +1814,30 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			Unit *rule = _game->getMod()->getUnit(alienName, true);
  			BattleUnit *unit = addAlien(rule, dd.alienRank, outside);
  			size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(_save->getAlienItemLevel()).at(RNG::generate(0,9)));
@@ -114,6 +115,14 @@ index 1951ba7..35bc896 100644
 +			if (!garrison.wellSupplied)
 +			{
 +				itemLevel = 0;
++			}
++			// And the calendar's ceiling. Both of these only ever reduce the tier, so the order
++			// between them does not matter - whichever is harsher wins, which is the intent:
++			// a starved region in month 30 still fields sidearms, and a rich one in month 2
++			// still fields the handguns the story says Cobra has.
++			if (garrison.maxKitTier >= 0 && itemLevel > (size_t)garrison.maxKitTier)
++			{
++				itemLevel = (size_t)garrison.maxKitTier;
 +			}
  			if (unit)
  			{
@@ -927,7 +936,7 @@ index 0fdf2ca..716f5c7 100644
  	/// Sets the palette.
  	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
 diff --git a/src/Battlescape/NextTurnState.cpp b/src/Battlescape/NextTurnState.cpp
-index d12de83..3f09a05 100644
+index d12de83..be8c2a8 100644
 --- a/src/Battlescape/NextTurnState.cpp
 +++ b/src/Battlescape/NextTurnState.cpp
 @@ -17,6 +17,7 @@
@@ -957,7 +966,7 @@ index d12de83..3f09a05 100644
  		for (int i = 0; i < quantity; ++i)
  		{
  			std::string alienName = dd.customUnitType.empty() ? race->getMember(dd.alienRank) : dd.customUnitType;
-@@ -915,6 +928,12 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
+@@ -915,6 +928,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
  			bool civilian = dd.percentageOutsideUfo != 0; // small misuse of an unused attribute ;) pls don't kill me
  			BattleUnit* unit = addReinforcement(wave, rule, dd.alienRank, civilian);
  			size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(month).at(RNG::generate(0, 9)));
@@ -966,6 +975,12 @@ index d12de83..3f09a05 100644
 +			if (_battleGame->getReinforcementsStarved())
 +			{
 +				itemLevel = 0;
++			}
++			// The calendar binds a wave as much as the garrison it is joining.
++			const int kitCap = _battleGame->getReinforcementsKitCap();
++			if (kitCap >= 0 && itemLevel > (size_t)kitCap)
++			{
++				itemLevel = (size_t)kitCap;
 +			}
  			if (unit)
  			{
@@ -3637,7 +3652,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..7e611d3 100644
+index 1885346..af68856 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,7 @@
@@ -3732,7 +3747,7 @@ index 1885346..7e611d3 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3274,89 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3274,99 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -3816,13 +3831,49 @@ index 1885346..7e611d3 100644
 +		// Defaults to 0, which is the behaviour that shipped, so nothing changes silently.
 +		// Neither of us knows which plays better, which is exactly why it is a number.
 +		econ.tryRead("productionMinimumPercent", _cobraProductionMinimum);
++		// The story's escalation calendar as a CEILING, not a schedule. John: "I'd like to aim
++		// for the dates given by massaging it organically" - so materiel still decides which tier
++		// Cobra issues and this only stops it running ahead of the story. Keyed by monthsPassed
++		// like raceWeights: the highest key at or below the current month wins. Empty = no
++		// ceiling at all, which is what shipped before this existed.
++		for (const auto& entry : econ["maxKitTierByMonth"].children())
++		{
++			_cobraKitTierByMonth.push_back(std::make_pair(entry.readKey<size_t>(0), entry.readVal<int>(0)));
++		}
++		std::sort(_cobraKitTierByMonth.begin(), _cobraKitTierByMonth.end());
 +		econ.tryRead("starvedHeadcount", _cobraStarvedHeadcount);
 +	}
 +
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -4069,6 +4209,14 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -3831,6 +3981,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+  * Generates a brand new saved game with starting data.
+  * @return A new saved game.
+  */
++/**
++ * The best itemSet tier Cobra may issue this far into the campaign.
++ * @param monthsPassed Campaign months elapsed.
++ * @return The tier ceiling, or -1 when the ruleset sets none.
++ */
++int Mod::getCobraKitTierCap(size_t monthsPassed) const
++{
++	int cap = -1;
++	for (const auto& entry : _cobraKitTierByMonth)
++	{
++		if (entry.first > monthsPassed)
++		{
++			break;              // sorted, so nothing further applies yet
++		}
++		cap = entry.second;
++	}
++	return cap;
++}
++
+ SavedGame *Mod::newSave(GameDifficulty diff) const
+ {
+ 	SavedGame *save = new SavedGame();
+@@ -4069,6 +4238,14 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -3837,7 +3888,7 @@ index 1885346..7e611d3 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +5917,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +5946,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -3857,7 +3908,7 @@ index 1885346..7e611d3 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +5940,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +5969,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -3865,7 +3916,7 @@ index 1885346..7e611d3 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +5954,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +5983,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -3905,7 +3956,7 @@ index 1885346..7e611d3 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..86eafa7 100644
+index 2242d13..5d64e99 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,7 @@ class SavedGame;
@@ -3924,7 +3975,7 @@ index 2242d13..86eafa7 100644
  	std::map<std::string, RuleBaseFacility*> _facilities;
  	std::map<std::string, RuleCraft*> _crafts;
  	std::map<std::string, RuleCraftWeapon*> _craftWeapons;
-@@ -327,6 +329,24 @@ private:
+@@ -327,6 +329,26 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -3944,12 +3995,14 @@ index 2242d13..86eafa7 100644
 +	int _cobraWellPaid;
 +	int _cobraWellPaidUpkeep;
 +	int _cobraProductionMinimum;
++	/// month (monthsPassed) -> the best itemSet tier Cobra may issue from then on; sorted ascending
++	std::vector<std::pair<size_t, int> > _cobraKitTierByMonth;
 +	int _cobraStarvedHeadcount;
 +	std::vector<std::string> _cobraSitesIndex;
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +712,34 @@ public:
+@@ -692,6 +714,36 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -3979,6 +4032,8 @@ index 2242d13..86eafa7 100644
 +	int getCobraWellPaidUpkeep() const { return _cobraWellPaidUpkeep; }
 +	/// Percent of a production bill Cobra must afford before it makes anything at all.
 +	int getCobraProductionMinimum() const { return _cobraProductionMinimum; }
++	/// The best itemSet tier Cobra may issue at this many months passed; -1 = no ceiling.
++	int getCobraKitTierCap(size_t monthsPassed) const;
 +	/// Men dropped from every rank entry in a region Cobra cannot pay for.
 +	int getCobraStarvedHeadcount() const { return _cobraStarvedHeadcount; }
  	/// Gets the available regions.
@@ -4701,7 +4756,7 @@ index 0000000..bec32cc
 +
 +}
 diff --git a/src/Savegame/SavedBattleGame.cpp b/src/Savegame/SavedBattleGame.cpp
-index 240b22a..535a57e 100644
+index 240b22a..92d82e8 100644
 --- a/src/Savegame/SavedBattleGame.cpp
 +++ b/src/Savegame/SavedBattleGame.cpp
 @@ -65,7 +65,7 @@ SavedBattleGame::SavedBattleGame(Mod *rule, Language *lang, bool isPreview) :
@@ -4709,11 +4764,11 @@ index 240b22a..535a57e 100644
  	_battleState(0), _rule(rule), _mapsize_x(0), _mapsize_y(0), _mapsize_z(0), _selectedUnit(0), _undoUnit(nullptr),
  	_lastSelectedUnit(0), _pathfinding(0), _tileEngine(0),
 -	_reinforcementsItemLevel(0), _startingCondition(nullptr), _enviroEffects(nullptr), _ecEnabledFriendly(false), _ecEnabledHostile(false), _ecEnabledNeutral(false),
-+	_reinforcementsItemLevel(0), _reinforcementsStarved(false), _reinforcementsThin(0), _startingCondition(nullptr), _enviroEffects(nullptr), _ecEnabledFriendly(false), _ecEnabledHostile(false), _ecEnabledNeutral(false),
++	_reinforcementsItemLevel(0), _reinforcementsStarved(false), _reinforcementsThin(0), _reinforcementsKitCap(-1), _startingCondition(nullptr), _enviroEffects(nullptr), _ecEnabledFriendly(false), _ecEnabledHostile(false), _ecEnabledNeutral(false),
  	_globalShade(0), _side(FACTION_PLAYER), _turn(0), _bughuntMinTurn(20), _animFrame(0), _nameDisplay(false),
  	_debugMode(false), _bughuntMode(false), _aborted(false), _itemId(0),
  	_vipEscapeType(ESCAPE_NONE), _vipSurvivalPercentage(0), _vipsSaved(0), _vipsLost(0), _vipsWaitingOutside(0), _vipsSavedScore(0), _vipsLostScore(0), _vipsWaitingOutsideScore(0),
-@@ -164,6 +164,11 @@ void SavedBattleGame::load(const YAML::YamlNodeReader& node, Mod *mod, SavedGame
+@@ -164,6 +164,12 @@ void SavedBattleGame::load(const YAML::YamlNodeReader& node, Mod *mod, SavedGame
  	reader.tryRead("reinforcementsDeployment", _reinforcementsDeployment);
  	reader.tryRead("reinforcementsRace", _reinforcementsRace);
  	reader.tryRead("reinforcementsItemLevel", _reinforcementsItemLevel);
@@ -4722,19 +4777,21 @@ index 240b22a..535a57e 100644
 +	// and the next wave would turn up in full kit, with nothing on screen to explain it.
 +	reader.tryRead("reinforcementsStarved", _reinforcementsStarved);
 +	reader.tryRead("reinforcementsThin", _reinforcementsThin);
++	reader.tryRead("reinforcementsKitCap", _reinforcementsKitCap);
  	reader.tryRead("reinforcementsMemory", _reinforcementsMemory);
  	reader.tryRead("reinforcementsBlocks", _reinforcementsBlocks);
  	reader.tryRead("flattenedMapTerrainNames", _flattenedMapTerrainNames);
-@@ -527,6 +532,8 @@ void SavedBattleGame::save(YAML::YamlNodeWriter writer) const
+@@ -527,6 +533,9 @@ void SavedBattleGame::save(YAML::YamlNodeWriter writer) const
  	writer.write("reinforcementsDeployment", _reinforcementsDeployment);
  	writer.write("reinforcementsRace", _reinforcementsRace);
  	writer.write("reinforcementsItemLevel", _reinforcementsItemLevel);
 +	if (_reinforcementsStarved) writer.write("reinforcementsStarved", _reinforcementsStarved);
 +	if (_reinforcementsThin) writer.write("reinforcementsThin", _reinforcementsThin);
++	if (_reinforcementsKitCap >= 0) writer.write("reinforcementsKitCap", _reinforcementsKitCap);
  	writer.write("reinforcementsMemory", _reinforcementsMemory);
  	writer.write("reinforcementsBlocks", _reinforcementsBlocks);
  	writer.write("flattenedMapTerrainNames", _flattenedMapTerrainNames);
-@@ -2415,13 +2422,30 @@ void SavedBattleGame::prepareNewTurn()
+@@ -2415,13 +2424,30 @@ void SavedBattleGame::prepareNewTurn()
  					Position pos;
  					Pathfinding::directionToVector(dir, &pos);
  					Tile *t = getTile(tileOnFire->getPosition() + pos);
@@ -4767,7 +4824,7 @@ index 240b22a..535a57e 100644
  			}
  			// fire has burnt out
  			else
-@@ -2452,10 +2476,37 @@ void SavedBattleGame::prepareNewTurn()
+@@ -2452,10 +2478,37 @@ void SavedBattleGame::prepareNewTurn()
  						}
  					}
  				}
@@ -4806,20 +4863,21 @@ index 240b22a..535a57e 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedBattleGame.h b/src/Savegame/SavedBattleGame.h
-index 6c121c7..886050d 100644
+index 6c121c7..a5b4ba0 100644
 --- a/src/Savegame/SavedBattleGame.h
 +++ b/src/Savegame/SavedBattleGame.h
-@@ -87,6 +87,9 @@ private:
+@@ -87,6 +87,10 @@ private:
  	int _alienItemLevel = 0;
  	std::string _reinforcementsDeployment, _reinforcementsRace;
  	int _reinforcementsItemLevel;
 +	/// G.I. Joe: the region's supply state, carried from deployAliens so reinforcements obey it.
 +	bool _reinforcementsStarved;
 +	int _reinforcementsThin;
++	int _reinforcementsKitCap;
  	std::map<std::string, int> _reinforcementsMemory;
  	std::vector< std::vector<int> > _reinforcementsBlocks;
  	std::vector< std::vector<std::string> > _flattenedMapTerrainNames;
-@@ -203,6 +206,14 @@ public:
+@@ -203,6 +207,18 @@ public:
  	void setReinforcementsItemLevel(int reinforcementsItemLevel) { _reinforcementsItemLevel = reinforcementsItemLevel; }
  	/// Gets the alien item level to use for reinforcements.
  	int getReinforcementsItemLevel() const { return _reinforcementsItemLevel; }
@@ -4831,11 +4889,15 @@ index 6c121c7..886050d 100644
 +	void setReinforcementsThin(int thin) { _reinforcementsThin = thin; }
 +	/// Gets how many men come off each reinforcement wave entry for want of funds.
 +	int getReinforcementsThin() const { return _reinforcementsThin; }
++	/// Sets the calendar's ceiling on what kit reinforcements may carry; -1 = none.
++	void setReinforcementsKitCap(int cap) { _reinforcementsKitCap = cap; }
++	/// Gets the calendar's ceiling on what kit reinforcements may carry; -1 = none.
++	int getReinforcementsKitCap() const { return _reinforcementsKitCap; }
  	/// Gets the memory used for reinforcements.
  	std::map<std::string, int> &getReinforcementsMemory() { return _reinforcementsMemory; }
  	/// Gets the map blocks used for reinforcements.
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..2592191 100644
+index 9ca9637..5495142 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -55,7 +55,10 @@
@@ -4891,7 +4953,7 @@ index 9ca9637..2592191 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2589,555 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2589,560 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -4910,6 +4972,11 @@ index 9ca9637..2592191 100644
 +{
 +	CobraGarrison out;
 +	bool campHere = false;
++	// Set before the region lookup and before any early return: the escalation calendar is a
++	// STORY rule, not an economy one, so it binds every Cobra battle - crash site, terror site,
++	// New Battle - whether or not this fight has a place on the globe. The economy may make
++	// Cobra poorer than the calendar allows; it must never make Cobra better armed than it does.
++	out.maxKitTier = mod->getCobraKitTierCap((size_t)getMonthsPassed());
 +	// Quiet on purpose. A New Battle has no globe position - its mission sits at [0, 0], which is
 +	// inside no region - and this returning "no garrison" is the right answer there, not an
 +	// error. Removing the _craft fallback closed one route to that false log line and left
@@ -5448,7 +5515,7 @@ index 9ca9637..2592191 100644
  {
  	Region* found = nullptr;
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..a6e7943 100644
+index d985908..4eb30ab 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -55,6 +55,7 @@ class ArticleDefinition;
@@ -5487,7 +5554,7 @@ index d985908..a6e7943 100644
 +	/// home - or -1 to leave ranks alone.
 +	/// wellSupplied is false when the region has not got enough materiel to arm the men who
 +	/// stand there, which drops them to the poorest kit their deployment defines.
-+	struct CobraGarrison { int bonus = 0; int rankUnlock = -1; bool wellSupplied = true; int headcountPenalty = 0; };
++	struct CobraGarrison { int bonus = 0; int rankUnlock = -1; bool wellSupplied = true; int headcountPenalty = 0; int maxKitTier = -1; };
 +	CobraGarrison cobraGarrison(const Mod *mod, double lon, double lat, bool cobraSite) const;
 +	/// Gets the Cobra economy, read-only.
 +	const CobraEconomy &getCobraEconomy() const { return *_cobraEconomy; }

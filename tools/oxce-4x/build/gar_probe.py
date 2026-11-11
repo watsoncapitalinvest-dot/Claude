@@ -42,12 +42,22 @@ PROBE = """	if (getenv("OXCE_GAR_FORCE"))                                       
 	{                                                                          // GARPROBE
 		garrison.headcountPenalty = atoi(getenv("OXCE_GAR_BROKE"));            // GARPROBE
 	}                                                                          // GARPROBE
+	// A New Battle sits at month 0, so the calendar ceiling there is always tier 0 and the      // GARPROBE
+	// battle cannot show the ceiling MOVING - which is the whole claim. This asks the real      // GARPROBE
+	// lookup what it would answer at a given month, so 0, 3 and 8 can be compared against      // GARPROBE
+	// the ruleset table. The table is read, not bypassed: a wrong table still fails.           // GARPROBE
+	if (getenv("OXCE_GAR_MONTH") && *getenv("OXCE_GAR_MONTH"))                 // GARPROBE
+	{                                                                          // GARPROBE
+		garrison.maxKitTier = _game->getMod()->getCobraKitTierCap(             // GARPROBE
+			(size_t)atoi(getenv("OXCE_GAR_MONTH")));                           // GARPROBE
+	}                                                                          // GARPROBE
 	if (getenv("OXCE_GAR_LOG"))                                                // GARPROBE
 	{                                                                          // GARPROBE
 		Log(LOG_INFO) << "[gar] deployment=" << deployment->getType()          // GARPROBE
 			<< " bonus=" << garrison.bonus << " cap=" << garrison.rankUnlock   // GARPROBE
 			<< " thin=" << garrison.headcountPenalty                           // GARPROBE
-			<< " supplied=" << (garrison.wellSupplied ? 1 : 0);                // GARPROBE
+			<< " supplied=" << (garrison.wellSupplied ? 1 : 0)                 // GARPROBE
+			<< " kitCap=" << garrison.maxKitTier;                              // GARPROBE
 	}                                                                          // GARPROBE
 """ + ANCHOR
 

@@ -54,7 +54,7 @@ run() {   # run <label> <extra env assignments...>
   printf '  %-22s %s\n' "" "${guns:-}"
   # Totals cannot show a one-man-per-entry penalty against New Battle's own dice, so the
   # arithmetic is checked exactly instead. PEN/STV are what this run should produce.
-  python3 -I "$S/rb/build/gar_check.py" "$L" "${PEN:-0}" "${STV:-0}" 2>&1 | sed 's/^/    /'  
+  python3 -I "$S/rb/build/gar_check.py" "$L" "${PEN:-0}" "${STV:-0}" "${CAP:--1}" 2>&1 | sed 's/^/    /'  
   grep -m1 '\[gar\] deployment=' "$L" 2>/dev/null | sed 's/.*INFO\]\t/      /'
 }
 
@@ -62,6 +62,10 @@ echo "same map, same deployment, only the forced numbers change:"
 run "as the game plays it"
 run "bonus forced to 2"  OXCE_GAR_FORCE=2
 run "cap forced to 5"    OXCE_GAR_CAP=5
+CAP=0 run "calendar month 0"     OXCE_GAR_MONTH=0
+CAP=1 run "calendar month 3"     OXCE_GAR_MONTH=3
+CAP=2 run "calendar month 8"     OXCE_GAR_MONTH=8
+STV=1 CAP=2 run "month 8 but starved"  OXCE_GAR_MONTH=8 OXCE_GAR_STARVED=1
 STV=1 run "region out of guns"  OXCE_GAR_STARVED=1
 PEN=1 run "region out of money"  OXCE_GAR_BROKE=1
 PEN=1 STV=1 run "out of both"    OXCE_GAR_STARVED=1 OXCE_GAR_BROKE=1

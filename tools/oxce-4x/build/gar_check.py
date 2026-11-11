@@ -22,6 +22,10 @@ if len(sys.argv) < 4:
     sys.exit(2)
 
 LOG, PENALTY, STARVED = sys.argv[1], int(sys.argv[2]), sys.argv[3] == '1'
+# The calendar ceiling flattens the kit spread legitimately, so a run with CAP=0 expects every
+# man on tier 0 and a flat result is the PASS. Without this the no-spread rule below - which
+# exists to catch a vacuous test - fires on a correct result, which it did twice.
+CAP = int(sys.argv[4]) if len(sys.argv) > 4 else -1
 
 before = {}          # rank -> quantity as computed before the penalty
 seen_penalty = {}    # rank -> the penalty the engine actually applied
@@ -72,11 +76,21 @@ for r, q in sorted(before.items()):
 total = sum(kits.values())
 if total == 0:
     fails.append('no men spawned at all - the battle did not generate')
-elif STARVED:
+elif STARVED or CAP == 0:
+    why = 'starved' if STARVED else 'calendar ceiling at tier 0'
     if kits.get(0, 0) != total:
-        fails.append('starved run: expected every man on kit 0, got %s' % dict(kits))
+        fails.append('%s: expected every man on kit 0, got %s' % (why, dict(kits)))
     else:
-        print('  ok   kit: all %d men on tier 0' % total)
+        print('  ok   kit: all %d men on tier 0 (%s)' % (total, why))
+elif CAP >= 0:
+    # A ceiling above zero is checked by what it FORBIDS: nothing may exceed it. A flat spread
+    # is then not evidence either way, so it is not a failure here - the run below the ceiling
+    # is what shows the clamp moving.
+    over = {k: v for k, v in kits.items() if k > CAP}
+    if over:
+        fails.append('ceiling is tier %d but %s men exceeded it' % (CAP, over))
+    else:
+        print('  ok   kit: nothing above tier %d, saw %s' % (CAP, dict(kits)))
 else:
     # A baseline with no spread proves nothing about the clamp, so say so rather than pass.
     if len(kits) == 1 and 0 in kits:
