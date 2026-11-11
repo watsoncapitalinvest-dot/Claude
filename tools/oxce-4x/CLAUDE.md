@@ -69,12 +69,24 @@ side, and the department head signing off in person.
 
 ## What is wrong in this directory right now
 
-Found 10 Nov 2026 by reading the calendar against the shipped rulesets. None
-of it is fixed. Three of these four are **content** — which units sit in which
+Found 10 Nov 2026 by reading the calendar against the shipped rulesets.
+**Three of these four are fixed as of 11 Nov** by the availability window in
+`mod/Ruleset/gijoe_availability.rul` and `BattlescapeGenerator::availableUnit`.
+The weapon-tier one is not: it is the kit rule, and a separate job.
+
+Verified by fighting the same map at three forced months. The deployment asks
+for ranks 5,4,3,2,1,6,7 every time, so it asks for B.A.T.s, Destro and Storm
+Shadow every time:
+
+| month | spawned | roster |
+| --- | --- | --- |
+| 0 | 15, 10 refused | troopers only |
+| 10 | 14, 6 refused | troopers, Viper Medic, Viper Engineer, Storm Shadow |
+| 25 | 13, 1 refused | troopers, B.A.T.s, Vipers, Storm Shadow, Destro | Three of these four are **content** — which units sit in which
 deployment, and what a gate value is — and one is the missing mechanism above.
 **Do not treat the current deployments as correct.**
 
-**The Cobra race puts B.A.T.s in ranks 6 and 7**, and every generated Cobra
+~~**The Cobra race puts B.A.T.s in ranks 6 and 7**~~ FIXED 11 Nov., and every generated Cobra
 site deployment uses ranks 5,4,3,2,1,6,7. So a raid on a front company in
 month 2 fields Battle Android Troopers — a unit the calendar does not allow as
 a general force until **month 23**, and before that only where a specific
@@ -85,15 +97,21 @@ the deployment's tier 1 and 2 itemSets as soon as a region holds 50 materiel.
 Nothing checks the month. If Cobra is seeded with a working network and capital
 (which John asked for the same evening), Cobra fields rifles in month 1.
 
-**Storm Shadow is rank 4 and arrives months 9–14.** `garrisonRankUnlock: 4`
+~~**Storm Shadow is rank 4 and arrives months 9–14.**~~ FIXED 11 Nov. `garrisonRankUnlock: 4`
 holds ranks *below* 4 at home without a training camp and always permits 4 and
 above, so Storm Shadow is available from month 1.
 
-**Destro is rank 1 and arrives months 15–22.** A training camp in the region
+~~**Destro is rank 1 and arrives months 15–22.**~~ FIXED 11 Nov. A training camp in the region
 lifts the rank gate entirely, so a camp built in month 3 puts Destro on the
 field twelve months early.
 
-**The rank gate is answering the wrong question.** It gates on *is there a
+**The rank gate is answering the wrong question.** Partly addressed: there are
+now TWO mechanisms rather than one overloaded gate. `garrisonRankUnlock` still
+answers *is there a camp*, and the availability window answers *what month is
+it*, with `missionOnly` for *does a scripted mission name this unit*. The
+original complaint below stands as the reason they were separated.
+
+ It gates on *is there a
 camp*. The calendar gates on *what month is it*, and specific missions override
 both. One `garrisonRankUnlock` threshold cannot express "this rank needs a
 camp, that one needs a date, that one needs a scripted mission". The gate and
@@ -102,8 +120,12 @@ the calendar are different mechanisms and only one of them exists.
 ## The rules that follow
 
 1. **A unit has an availability window.** Nothing may field a unit before its
-   month, however the deployment is written. This mechanism does not exist yet
-   and is the fix for everything above.
+   month, however the deployment is written. **Built 11 Nov.** `earliest` is a
+   hard floor, `full` is where it reaches full strength with the chance ramping
+   between the two (a well-supplied region gets there sooner), `latest` is a
+   ceiling, and `missionOnly` lets a deployment that NAMES the unit ignore all
+   of it. `substitute` says what to field instead, because a refusal with no
+   substitute quietly thins the garrison.
 2. **A generic garrison is not a scripted mission.** B.A.T.s in months 4–22
    belong to named missions only. "Only where a specific mission calls for
    them" is a hard rule, not a preference.

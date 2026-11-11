@@ -1,5 +1,5 @@
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..2fd37c8 100644
+index 1951ba7..500c853 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -767,6 +767,7 @@ void BattlescapeGenerator::nextStage()
@@ -10,7 +10,97 @@ index 1951ba7..2fd37c8 100644
  	bool isPreview = _save->isPreview();
  
  	_save->setAlienCustom(_alienCustomDeploy ? _alienCustomDeploy->getType() : "", _alienCustomMission ? _alienCustomMission->getType() : "");
-@@ -1696,8 +1697,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1669,6 +1670,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+  * @param race Pointer to the alien race.
+  * @param deployment Pointer to the deployment rules.
+  */
++/**
++ * Applies the escalation calendar to a single unit.
++ *
++ * The calendar is a property of the UNIT, not of the deployment that happens to
++ * field it, because the same deployment data is shared by every generated Cobra
++ * site. Writing the dates into the deployments would mean maintaining the same
++ * calendar in eight places and still getting it wrong for a scripted mission.
++ *
++ * Three parts, as the design has it:
++ *
++ *   earliest  a hard floor. Never before this, whatever Cobra's books say.
++ *   full      by this month it turns out at full strength; between the two it
++ *             ramps, and a well-supplied region gets there faster. That is the
++ *             "organic" half - Cobra's own state decides when inside the window.
++ *   latest    a ceiling, so a unit can be withdrawn as the war moves on.
++ *
++ * missionOnly is the separate rule that B.A.T.s needed. CLAUDE.md: B.A.T.s in
++ * months 4-22 "belong to named missions only". So a unit flagged this way may
++ * be fielded OUTSIDE its window, but only by a deployment that names it
++ * outright - a scripted mission - never by a generic garrison. Set alongside
++ * earliest 22 that reads exactly as the calendar does.
++ *
++ * Returns the unit to field, which may be a substitute, or null to field nobody.
++ */
++const Unit *BattlescapeGenerator::availableUnit(const Unit *rule, bool namedByMission, bool wellSupplied) const
++{
++	const int month = _game->getSavedGame()->getMonthsPassed();
++	if (month < 0)
++	{
++		return rule;    // a New Battle has no campaign clock; the calendar does not apply
++	}
++
++	// A substitute may itself be too early, so this walks the chain. The guard is
++	// not paranoia: substitute lists are ruleset data and a cycle in one would
++	// otherwise hang the generator with the map half built.
++	for (int hops = 0; rule && hops < 8; ++hops)
++	{
++		// A mission that asks for this unit by name outranks the calendar.
++		if (namedByMission && rule->isAvailOverridable())
++		{
++			return rule;
++		}
++		bool ok = true;
++		if (month < rule->getAvailEarliest())
++		{
++			ok = false;
++		}
++		else if (rule->getAvailLatest() > 0 && month > rule->getAvailLatest())
++		{
++			ok = false;
++		}
++		else
++		{
++			const int full = rule->getAvailFull();
++			const int from = rule->getAvailEarliest();
++			if (full > from && month < full)
++			{
++				// inside the window: the chance it turns out climbs across it
++				int chance = 100 * (month - from + 1) / (full - from + 1);
++				if (wellSupplied)
++				{
++					chance += (100 - chance) / 2;   // a region Cobra can pay for gets there sooner
++				}
++				ok = RNG::percent(chance);
++			}
++		}
++		if (ok)
++		{
++			return rule;
++		}
++		const std::string &sub = rule->getAvailSubstitute();
++		Log(LOG_INFO) << "[econ] month " << month << ": " << rule->getType()
++			<< " is not available yet, fielding "
++			<< (sub.empty() ? std::string("nobody") : sub);
++		if (sub.empty())
++		{
++			return 0;
++		}
++		rule = _game->getMod()->getUnit(sub, false);
++	}
++	return rule;
++}
++
+ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+ {
+ 	// race defined by deployment if there is one.
+@@ -1696,8 +1780,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -79,7 +169,7 @@ index 1951ba7..2fd37c8 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +1782,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +1865,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -96,9 +186,21 @@ index 1951ba7..2fd37c8 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1743,6 +1814,30 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
- 			Unit *rule = _game->getMod()->getUnit(alienName, true);
- 			BattleUnit *unit = addAlien(rule, dd.alienRank, outside);
+@@ -1740,9 +1894,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+ 			{
+ 				outside = false;
+ 			}
+-			Unit *rule = _game->getMod()->getUnit(alienName, true);
+-			BattleUnit *unit = addAlien(rule, dd.alienRank, outside);
++			const Unit *rule = _game->getMod()->getUnit(alienName, true);
++			// The escalation calendar. A deployment that asks for a B.A.T. in month 2
++			// gets a trooper; the deployment is not rewritten, the unit is refused.
++			rule = availableUnit(rule, !dd.customUnitType.empty(), garrison.wellSupplied);
++			if (!rule)
++			{
++				continue;
++			}
++			BattleUnit *unit = addAlien(const_cast<Unit*>(rule), dd.alienRank, outside);
  			size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(_save->getAlienItemLevel()).at(RNG::generate(0,9)));
 +			// G.I. Joe: Cobra arms its men out of the region's stock. A region it cannot supply
 +			// fields the poorest kit the deployment defines - the pistol tier rather than the
@@ -127,6 +229,19 @@ index 1951ba7..2fd37c8 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
+diff --git a/src/Battlescape/BattlescapeGenerator.h b/src/Battlescape/BattlescapeGenerator.h
+index a0bc8b3..933c149 100644
+--- a/src/Battlescape/BattlescapeGenerator.h
++++ b/src/Battlescape/BattlescapeGenerator.h
+@@ -127,6 +127,8 @@ private:
+ 	bool canPlaceXCOMUnit(Tile *tile);
+ 	/// Deploys the aliens, according to the alien deployment rules.
+ 	void deployAliens(const AlienDeployment *deployment);
++	/// Applies the escalation calendar to one unit, substituting or refusing it.
++	const Unit *availableUnit(const Unit *rule, bool namedByMission, bool wellSupplied) const;
+ 	/// Spawns civilians on a terror mission.
+ 	void deployCivilians(bool markAsVIP, int nodeRank, int max, bool roundUp = false, const std::string &civilianType = "");
+ 	/// Finds a spot near a friend to spawn at.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
 index 7cd4941..41e4eb8 100644
 --- a/src/Battlescape/BattlescapeState.cpp
@@ -4619,6 +4734,61 @@ index 7cfa906..e02f6f4 100644
  	/// Threshold of smoke creation
  	int SmokeThreshold;
  
+diff --git a/src/Mod/Unit.cpp b/src/Mod/Unit.cpp
+index 836d85e..1449897 100644
+--- a/src/Mod/Unit.cpp
++++ b/src/Mod/Unit.cpp
+@@ -78,6 +78,14 @@ void Unit::load(const YAML::YamlNodeReader& node, Mod *mod)
+ 	reader.tryRead("showFullNameInAlienInventory", _showFullNameInAlienInventory);
+ 
+ 	reader.tryRead("rank", _rank);
++	if (const auto& av = reader["availability"])
++	{
++		av.tryRead("earliest", _availEarliest);
++		av.tryRead("full", _availFull);
++		av.tryRead("latest", _availLatest);
++		av.tryRead("missionOnly", _availOverridable);
++		av.tryRead("substitute", _availSubstitute);
++	}
+ 	_stats.merge(reader["stats"].readVal(_stats));
+ 	mod->loadName(_type, _armorName, reader["armor"]);
+ 	reader.tryRead("standHeight", _standHeight);
+diff --git a/src/Mod/Unit.h b/src/Mod/Unit.h
+index 6bef22e..8cc3b62 100644
+--- a/src/Mod/Unit.h
++++ b/src/Mod/Unit.h
+@@ -468,6 +468,14 @@ private:
+ 	const Unit *_spawnUnit = nullptr;
+ 	std::string _spawnUnitName;
+ 	bool _livingWeapon;
++	// G.I. Joe: the escalation calendar, as a property of the unit rather than
++	// of the deployment that happens to field it. CLAUDE.md: "Nothing may field
++	// a unit before its month, however the deployment is written."
++	int _availEarliest = 0;        ///< hard floor. 0 = from the start
++	int _availFull = 0;            ///< by this month it appears at full strength. 0 = immediately
++	int _availLatest = 0;          ///< ceiling: stops appearing after this. 0 = never withdrawn
++	bool _availOverridable = false;///< a deployment that NAMES it may ignore the window
++	std::string _availSubstitute;  ///< what to field instead when it is too early
+ 	std::string _meleeWeapon, _psiWeapon;
+ 	std::vector<std::vector<std::string> > _builtInWeaponsNames;
+ 	std::vector<std::vector<const RuleItem*> > _builtInWeapons;
+@@ -496,6 +504,16 @@ public:
+ 
+ 	/// Gets the unit's type.
+ 	const std::string& getType() const;
++	/// Earliest campaign month this unit may be fielded at all.
++	int getAvailEarliest() const { return _availEarliest; }
++	/// Month by which it appears at full strength; between earliest and this it ramps.
++	int getAvailFull() const { return _availFull; }
++	/// Month after which it is withdrawn. 0 means never.
++	int getAvailLatest() const { return _availLatest; }
++	/// True if a deployment that names this unit outright may ignore its window.
++	bool isAvailOverridable() const { return _availOverridable; }
++	/// What to field in its place when it is not available yet. Empty = field nobody.
++	const std::string& getAvailSubstitute() const { return _availSubstitute; }
+ 
+ 	/// Gets if unit can be recovered as civilian.
+ 	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
 index 99f24ce..3dc459a 100644
 --- a/src/OpenXcom.2010.vcxproj
