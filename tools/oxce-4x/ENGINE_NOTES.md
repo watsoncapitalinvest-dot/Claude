@@ -339,3 +339,43 @@ both lines next to each other made the collision visible. A log line that
 names the **building** rather than a bare number would have shown it the first
 time instead of the second, which is why the message now reads `a bench at
 STR_COBRA_RESEARCH_LAB#1`.
+
+## HiUI only runs on a 32-bit screen, and that invalidated three debugging sessions
+
+Found 11 Nov, after three failed attempts at the blank geoscape buttons.
+
+`Screen::hiUiActive()` requires `_screen->format->BitsPerPixel == 32`, and the
+screen only goes 32-bit here:
+
+```cpp
+const int screenBpp = (_bpp == 8 && HiColor::enabled() && !useOpenGL()) ? 32 : _bpp;
+```
+
+So the whole HD layer hangs off **`HiColor::enabled()`**, which is a DIFFERENT
+switch from `HiUI::enabled()`:
+
+    OXCE_HICOLOR=1    takes the screen to 32-bit, which is what HiUI needs
+    OXCE_HIUI=1       turns the HD widget pass on
+
+Setting only `OXCE_HIUI` does nothing useful. The log says which you got:
+
+    Display set to 1920x1080x8     <- HiUI cannot run, whatever OXCE_HIUI says
+    Display set to 1920x1080x32    <- HiUI is live
+
+**Why this matters more than it looks.** Every headless run in this container
+defaulted to 8-bit, so every test of a HiUI change tested nothing. Three fixes
+for the blank geoscape buttons were reasoned out, built and shipped against a
+renderer that was never running. The screenshots looked fine because the flat
+renderer was fine.
+
+To reproduce anything HiUI-related here:
+
+```sh
+export OXCE_HICOLOR=1 OXCE_HIUI=1
+# and options.cfg needs displayWidth/Height different from the 320x200 base,
+# because hiUiActive() also requires getWidth() != _baseWidth
+```
+
+The lesson is the one this desk keeps relearning: check the feature under test
+is switched on before concluding anything about it. A green screenshot of a
+disabled code path is not evidence.
