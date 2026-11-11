@@ -35,7 +35,14 @@ KEYS = [
 
 # Per-rule fields, checked the same way: the engine parses them, so at least one loaded file had
 # better set them or the number they default to is the number the game runs on.
+# A key added to the engine and not added here passes the audit by being invisible, which is the
+# guard failing in exactly the way it exists to prevent. cobraPayoutFunds was added and the audit
+# still said "every key the engine reads is set" - because it only ever read this list.
 FIELDS = [
+    ('cobraPayoutFunds', 'Mod/AlienDeployment.cpp'),
+    ('maxKitTierByMonth', 'Mod/Mod.cpp'),
+    ('productionMinimumPercent', 'Mod/Mod.cpp'),
+    ('materielCostFunds', 'Mod/RuleCobraSite.cpp'),
     ('garrisonBonus', 'Mod/RuleCobraSite.cpp'),
     ('garrisonRankUnlock', 'Mod/RuleCobraSite.cpp'),
     ('runsThePlanning', 'Mod/RuleCobraSite.cpp'),
