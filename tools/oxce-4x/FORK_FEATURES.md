@@ -16,10 +16,15 @@ department, and `cobraMonthly` is the tick. `CobraEconomy` holds funds and
 materiel per region and spends them. Site tiers, garrison strength, garrison
 kit tier and the calendar cap on that tier are all wired and tested.
 
-**The gap is stockpiles.** `stockpileCap` and `garrisonRefillPerMonth` are both
-parsed by the engine and consumed by nothing (`BACK_BURNER.md`). The first is
-expected — it is the M.A.R.S. dealer threshold and M.A.R.S. is not built. The
-second is not expected and is the real remainder here.
+**The gap is stockpiles**, and only that. `stockpileCap` is parsed and consumed
+by nothing, which is expected: it is the M.A.R.S. dealer threshold and M.A.R.S.
+is not built.
+
+The first draft of this file also named `garrisonRefillPerMonth` as an
+unexpected gap, on `BACK_BURNER.md`'s word. That was wrong and the checking
+took one grep: the key is not in the engine at all. `ECONOMY.md` had already
+established why it never could be — X-COM keeps no garrison on a site, so
+nothing depletes.
 
 ## 2. Civil War: two Cobra factions and three-way battles
 **Not started.** The battlescape knows one hostile side. Act 5 content, so the
@@ -102,8 +107,8 @@ By what is unblocked, self-contained and already designed:
 2. **The intel wire** — not on the brief's list. `GlobeMark::fromIntel` and
    `CobraProject::known` both exist and nothing connects them, so the
    situation board has no intel half. Small.
-3. **#1's last mile** — make `garrisonRefillPerMonth` do something, or delete
-   the key.
+3. ~~**#1's last mile**~~ — resolved 11 Nov, by reading rather than building:
+   there was no key.
 4. **Cutting the 109 facility rooms into MCD parts** — unblocked, independent
    of #5's Z axis, and it is the art that is already paid for.
 5. **#11 prison breakouts**, once a Detention Block exists.

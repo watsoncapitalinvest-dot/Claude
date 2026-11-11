@@ -245,11 +245,20 @@ looked, not whose job it was to put the file there. Check which side of the
 line a file comes from — shipped by OXCE, shipped by the mod, or supplied by
 the player — before calling it a bug.
 
-### Two parsed ruleset keys nothing consumes
+### ~~Two parsed ruleset keys nothing consumes~~ — one real, one never existed
 
-`garrisonRefillPerMonth` and `stockpileCap`. The second is the M.A.R.S. dealer
-threshold and M.A.R.S. is not built, so that one is expected. The first is
-not.
+`stockpileCap` is the M.A.R.S. dealer threshold and M.A.R.S. is not built, so
+that one is expected and stands.
+
+**`garrisonRefillPerMonth` was never a key.** Checked 11 Nov: it is not parsed
+by the engine, not read by it, and not set in any shipped ruleset. It survives
+only in a stale comment in `gijoe_cobra_economy.rul` claiming it is "read and
+used", and in this file. `ECONOMY.md` had already worked out why it cannot
+exist: X-COM keeps NO garrison on a site - the defenders are built from the
+deployment every time it is raided - so nothing depletes and there is nothing
+for a monthly refill to refill. A camp changes what the deployment PRODUCES
+instead, through `garrisonBonus` and `garrisonRankUnlock`, both of which are
+built and verified.
 
 ---
 
