@@ -878,8 +878,23 @@ the first: provocation should **feed the planner**, not just a trigger. A Cobra 
 builds differently — more Dromes, more defence — which makes the gauge a strategic dial rather
 than a timer.
 
-Decays or not is open. Leaning yes, slowly, so a player who backs off is actually safer rather
-than permanently marked.
+**It decays** — John's call. So backing off genuinely makes a player safer rather than leaving him
+permanently marked, and the gauge measures recent behaviour rather than a lifetime total.
+
+Two things fall out of that, and the first is the one that decides how the whole thing plays:
+
+**The decay rate against the threshold is what the gauge IS.** Decay slow relative to how fast a
+player can provoke, and it is a *budget* — provocation is spent and must be allowed to recover,
+so a campaign of raids has a lasting cost. Decay fast, and it is a *rate limiter* — anything is
+permitted as long as it is spaced out. Both are defensible and they play nothing alike, so this
+is one number that deserves watching in play rather than reasoning about.
+
+**Flat per month, not proportional.** Proportional decay (halving, say) sheds the most in
+absolute terms when the number is highest, which forgives the worst sprees fastest and is
+backwards. A flat subtraction makes the time to cool down proportional to what was done: provoke
+a hundred against ten a month and it is ten months; provoke twenty and it is two.
+
+
 
 ### The first mission, and why it should not be Cobra
 
@@ -904,8 +919,31 @@ enemies who are not Cobra, and every unit in the mod today is Cobra. A cartel ne
 | Duke hands over a mission | needs the event/briefing plumbing | announces Cobra, with a voice |
 | **cartel, evidence leads on** | **needs non-Cobra units** | **Cobra is found, not announced** |
 
-Recommendation: the cartel opening is the one to build, and the scout flyby is a one-line
-stopgap if something is wanted in the meantime. Nothing here is built.
+**Decided: the cartel opening.** John: *"Cartel mission start."*
+
+Nothing of it is built. What it needs, split by who it lands on:
+
+| piece | whose |
+| --- | --- |
+| cartel men — sprites, armour, a race | **John's.** Every unit in the mod today is Cobra |
+| the deployment, ranks and kit | desk |
+| the map — existing North America terrain should serve a warehouse | desk |
+| their weapons — the pistols and rifles already in the mod | desk, nothing new |
+| the evidence item, and recovering it | desk |
+| the research it unlocks, and what that reveals | desk |
+| the script that fires it once, at the start | desk |
+
+**The two halves should not block each other.** The whole chain can be stood up with a
+placeholder unit — an existing sprite set, renamed — so the mechanism is proven end to end before
+any cartel art exists, and the art then drops into a slot known to work. The alternative is art
+waiting on plumbing or plumbing waiting on art, and neither needs to happen.
+
+**What the evidence should reveal is a design question with a good answer:** the *region*, not the
+sites. Unlocking a research project that names where Cobra is operating gives the player a
+direction and still leaves the finding to him, which is what hiding the network was for. Naming
+the sites outright would hand over the discovery the opening exists to create.
+
+
 
 ## Open, and John's to settle
 
