@@ -32,7 +32,45 @@ campaign reaches it last, and it is a deep change to targeting, AI and
 deployment. Nothing depends on it yet.
 
 ## 3. Full capture: Cobra carries downed Joes off the map
-**Not started, and the cheapest story-critical one.**
+**Built and verified in-engine, 11 Nov.** Pickup and extraction both observed
+twice, in two independent hostile turns, with no crash:
+
+```
+[capture] 1000000 picked up 1   ->  [capture] 1 carried off the map by 1000000
+[capture] 1000001 picked up 9   ->  [capture] 9 carried off the map by 1000001
+```
+
+`captureStep()` runs three passes at the top of `BattlescapeGame::endTurn()`,
+in the order **DROP, PICK UP, EXTRACT**. That order matters and was wrong for
+three builds: with EXTRACT first, a trooper who grabs a Joe while already
+standing on an exit tile had to survive the squad's entire next turn before he
+could leave, and the pickup could never be observed in the turn it happened.
+
+Two things cost most of the afternoon and are worth keeping:
+
+- **`BattleUnit::setTile(Tile*, SavedBattleGame*)` declares its second argument
+  `= 0` and then dereferences it unconditionally.** The one-argument call
+  segfaulted on every single pickup — *after* the carry link was set and
+  *before* the log line that would have reported it. For three rounds the
+  symptom read as "the pass never fires", which is the opposite of the truth.
+  It also clears the tile's unit pointer itself, across all four tiles of a 2x2
+  unit, so the hand-rolled clear that used to sit beside it was redundant and
+  wrong for big units.
+- **A diagnostic that reproduces the predicate it is testing can be wrong in
+  its own right.** The first attempt filtered candidates on
+  `Position::distance2d(...) > 1`; that returns a float, so a diagonal
+  neighbour is 1.41 and the only board the probe ever builds was excluded from
+  its own diagnostic, which then printed nothing at all. Logging moved inside
+  the real pass, where there is nothing to reproduce.
+
+Verified by `build/cap_probe.py` + `build/cap_test.sh`, which force the three
+preconditions and let the real `captureStep` decide what follows — the probe
+never sets a carry link itself. **The DROP pass is implied but not isolated**:
+one run had two different troopers pick up the same Joe on consecutive turns,
+which can only happen if DROP fired in between, but that line was filtered out
+of the log before it was read. Worth an isolated run before this is called
+finished. The debriefing path — `captureSoldier`, roster removal, no
+`SoldierDeath` — is likewise built and not yet exercised end to end.
 
 Vanilla gets part way on its own: a downed Joe is already `STATUS_UNCONSCIOUS`,
 a body on the floor. What does not exist is a Cobra trooper picking that body
@@ -103,7 +141,8 @@ would put Act 5's Civil War ahead of Act 1's capture mechanic.
 
 By what is unblocked, self-contained and already designed:
 
-1. **#3 full capture** — design written, engine empty, nothing in its way.
+1. ~~**#3 full capture**~~ — built and verified in-engine 11 Nov. What is left
+   is an isolated DROP run and the debriefing path end to end.
 2. **The intel wire** — not on the brief's list. `GlobeMark::fromIntel` and
    `CobraProject::known` both exist and nothing connects them, so the
    situation board has no intel half. Small.

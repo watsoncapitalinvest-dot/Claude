@@ -1,8 +1,8 @@
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..07915a1 100644
+index b7e1111..b1ac735 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
-@@ -508,8 +508,150 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
+@@ -508,8 +508,184 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
  /**
   * Ends the turn.
   */
@@ -51,29 +51,27 @@ index b7e1111..07915a1 100644
 +		return;
 +	}
 +
-+	// 1. EXTRACT
-+	for (BattleUnit *bu : *_save->getUnits())
-+	{
-+		if (!bu->isCarrying() || bu->isOut())
-+		{
-+			continue;
-+		}
-+		if (!bu->isInExitArea(START_POINT) && !bu->isInExitArea(END_POINT))
-+		{
-+			continue;
-+		}
-+		BattleUnit *carried = unitById(_save, bu->getCarryingId());
-+		if (!carried)
-+		{
-+			bu->setCarryingId(-1);
-+			continue;
-+		}
-+		carried->markAsCarriedOffMap();
-+		bu->setCarryingId(-1);
-+		Log(LOG_INFO) << "[capture] " << carried->getId() << " carried off the map by " << bu->getId();
-+	}
-+
-+	// 2. DROP
++	// Forced preconditions. Deliberately BEFORE the three passes, so the passes below are the
++	// real ones and the probe only arranges the board they read.
++	// Forced preconditions. Deliberately BEFORE the three passes, so the passes below are the
++	// real ones and the probe only arranges the board they read.
++	// Forced preconditions. Deliberately BEFORE the three passes, so the passes below are the
++	// real ones and the probe only arranges the board they read.
++	// Forced preconditions. Deliberately BEFORE the three passes, so the passes below are the
++	// real ones and the probe only arranges the board they read.
++	// Forced preconditions. Deliberately BEFORE the three passes, so the passes below are the
++	// real ones and the probe only arranges the board they read.
++	// Forced preconditions. Deliberately BEFORE the three passes, so the passes below are the
++	// real ones and the probe only arranges the board they read.
++	// Forced preconditions. Deliberately BEFORE the three passes, so the passes below are the
++	// real ones and the probe only arranges the board they read.
++	// Forced preconditions. Deliberately BEFORE the three passes, so the passes below are the
++	// real ones and the probe only arranges the board they read.
++	// Forced preconditions. Deliberately BEFORE the three passes, so the passes below are the
++	// real ones and the probe only arranges the board they read.
++	// Forced preconditions. Deliberately BEFORE the three passes, so the passes below are the
++	// real ones and the probe only arranges the board they read.
++	// 1. DROP
 +	for (BattleUnit *bu : *_save->getUnits())
 +	{
 +		if (!bu->isBeingCarried())
@@ -96,7 +94,7 @@ index b7e1111..07915a1 100644
 +		Log(LOG_INFO) << "[capture] " << bu->getId() << " dropped";
 +	}
 +
-+	// 3. PICK UP
++	// 2. PICK UP
 +	for (BattleUnit *bu : *_save->getUnits())
 +	{
 +		if (bu->getFaction() != FACTION_HOSTILE || bu->isOut() || bu->isCarrying() || bu->isBeingCarried())
@@ -137,14 +135,50 @@ index b7e1111..07915a1 100644
 +		}
 +		bu->setCarryingId(found->getId());
 +		found->setCarriedById(bu->getId());
-+		// off the tile: a man over a shoulder is not a target and not loot
-+		if (Tile *t = found->getTile())
-+		{
-+			t->setUnit(nullptr);
-+		}
-+		found->setTile(nullptr);
++		// Off the tile: a man over a shoulder is not a target and not loot.
++		//
++		// setTile's SECOND ARGUMENT IS NOT OPTIONAL IN PRACTICE. It is declared
++		// `SavedBattleGame *saveBattleGame = 0`, but the body dereferences it
++		// unconditionally while the unit still has a tile, so the one-argument
++		// call that was here segfaulted every single pickup - and it crashed
++		// AFTER `found` was set and BEFORE the log line below, which is exactly
++		// the shape of a feature that looks like it never fires.
++		//
++		// It also clears the tile's unit pointer itself, across all four tiles
++		// of a 2x2 unit, so the hand-rolled clear that used to sit here was both
++		// redundant and wrong for big units.
++		found->setTile(nullptr, _save);
 +		Log(LOG_INFO) << "[capture] " << bu->getId() << " picked up " << found->getId();
 +	}
++	// 3. EXTRACT - LAST, not first.
++	//
++	// It ran first for three builds and could never fire in the same turn as the
++	// pickup below it, which is also the turn a carrier standing in the exit area
++	// should leave. Running it last means a trooper who grabs a Joe while already
++	// on an exit tile walks off with him immediately, instead of having to survive
++	// the squad's entire next turn first - better behaviour, and the only ordering
++	// that can be observed in a single hostile turn.
++	for (BattleUnit *bu : *_save->getUnits())
++	{
++		if (!bu->isCarrying() || bu->isOut())
++		{
++			continue;
++		}
++		if (!bu->isInExitArea(START_POINT) && !bu->isInExitArea(END_POINT))
++		{
++			continue;
++		}
++		BattleUnit *carried = unitById(_save, bu->getCarryingId());
++		if (!carried)
++		{
++			bu->setCarryingId(-1);
++			continue;
++		}
++		carried->markAsCarriedOffMap();
++		bu->setCarryingId(-1);
++		Log(LOG_INFO) << "[capture] " << carried->getId() << " carried off the map by " << bu->getId();
++	}
++
 +}
 +
  void BattlescapeGame::endTurn()

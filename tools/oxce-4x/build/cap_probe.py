@@ -28,7 +28,7 @@ MODE, SRC = sys.argv[1], sys.argv[2]
 MARK = '// CAPPROBE'
 TARGET = os.path.join(SRC, 'Battlescape', 'BattlescapeGame.cpp')
 
-ANCHOR = """	// 1. EXTRACT
+ANCHOR = """	// 1. DROP
 """
 
 PROBE = """	// Forced preconditions. Deliberately BEFORE the three passes, so the passes below are the
@@ -89,26 +89,35 @@ PROBE = """	// Forced preconditions. Deliberately BEFORE the three passes, so th
 	}                                                                              // CAPPROBE
 	if (getenv("OXCE_CAP_EXIT"))                                                   // CAPPROBE
 	{                                                                              // CAPPROBE
+		// SAY WHICH FAILURE IT IS. Silence here read identically for "nobody is   // CAPPROBE
+		// carrying anyone yet" (the exit block ran on turn 1, before pass 3 had   // CAPPROBE
+		// ever fired) and "this map has no START_POINT tile". They need different // CAPPROBE
+		// fixes and the probe could not tell them apart.                          // CAPPROBE
+		int carriers = 0, exits = 0;                                               // CAPPROBE
+		for (BattleUnit *c : *_save->getUnits()) if (c->isCarrying()) ++carriers;  // CAPPROBE
+		for (int i = 0; i < _save->getMapSizeXYZ(); ++i)                           // CAPPROBE
+		{                                                                          // CAPPROBE
+			Tile *t = _save->getTile(i);                                           // CAPPROBE
+			if (t && t->getMapData(O_FLOOR)                                        // CAPPROBE
+				&& t->getMapData(O_FLOOR)->getSpecialType() == START_POINT) ++exits; // CAPPROBE
+		}                                                                          // CAPPROBE
+		Log(LOG_INFO) << "[cap] exit block: carriers=" << carriers                 // CAPPROBE
+			<< " startPointTiles=" << exits;                                       // CAPPROBE
 		for (BattleUnit *u : *_save->getUnits())                                   // CAPPROBE
 		{                                                                          // CAPPROBE
-			if (!u->isCarrying() || u->isOut()) continue;                          // CAPPROBE
-			// find a real exit tile rather than assuming the map edge is one      // CAPPROBE
-			for (int i = 0; i < _save->getMapSizeXYZ(); ++i)                       // CAPPROBE
-			{                                                                      // CAPPROBE
-				Tile *t = _save->getTile(i);                                       // CAPPROBE
-				if (!t || !(t->getMapData(O_FLOOR)                                 // CAPPROBE
-					&& t->getMapData(O_FLOOR)->getSpecialType() == START_POINT))   // CAPPROBE
-					continue;                                                      // CAPPROBE
-				_save->setUnitPosition(u, t->getPosition(), false);                 // CAPPROBE
-				u->setPosition(t->getPosition());                                  // CAPPROBE
-				Log(LOG_INFO) << "[cap] carrier " << u->getId()                    // CAPPROBE
-					<< " placed in the exit area";                                 // CAPPROBE
-				break;                                                             // CAPPROBE
-			}                                                                      // CAPPROBE
-			break;                                                                 // CAPPROBE
+			if (!u->isCarrying()) continue;                                        // CAPPROBE
+			Log(LOG_INFO) << "[cap] carrier " << u->getId()                        // CAPPROBE
+				<< " out=" << (u->isOut() ? 1 : 0);                                  // CAPPROBE
 		}                                                                          // CAPPROBE
 	}                                                                              // CAPPROBE
 """ + ANCHOR
+
+A1 = '\t\tconst Position &p = bu->getPosition();\n'
+A2 = '\t\t\t\tBattleUnit *cand = t->getUnit();\n'
+I1 = '\t\tconst Position &p = bu->getPosition();\n\t\tLog(LOG_INFO) << "[cap] pass3 hostile " << bu->getId() << " at " << p;   // CAPPROBE\n'
+A3 = '\t// 3. EXTRACT - LAST, not first.\n'
+I3 = '\t// 4. PROBE: walk the carrier to the exit the moment he has someone, in the same  // CAPPROBE\n\t// captureStep, immediately before the extract pass reads the board. Placing him    // CAPPROBE\n\t// on a later turn meant racing the squad, who shot every carrier dead first.       // CAPPROBE\n\tif (getenv("OXCE_CAP_EXIT"))                                                       // CAPPROBE\n\t{                                                                                  // CAPPROBE\n\t\tfor (BattleUnit *u : *_save->getUnits())                                       // CAPPROBE\n\t\t{                                                                              // CAPPROBE\n\t\t\tif (!u->isCarrying() || u->isOut()) continue;                              // CAPPROBE\n\t\t\tfor (int i = 0; i < _save->getMapSizeXYZ(); ++i)                           // CAPPROBE\n\t\t\t{                                                                          // CAPPROBE\n\t\t\t\tTile *t = _save->getTile(i);                                           // CAPPROBE\n\t\t\t\tif (!t || !(t->getMapData(O_FLOOR)                                     // CAPPROBE\n\t\t\t\t\t&& t->getMapData(O_FLOOR)->getSpecialType() == START_POINT)) continue; // CAPPROBE\n\t\t\t\tif (!_save->setUnitPosition(u, t->getPosition(), false)) continue;     // CAPPROBE\n\t\t\t\tu->setPosition(t->getPosition());                                      // CAPPROBE\n\t\t\t\tLog(LOG_INFO) << "[cap] carrier " << u->getId()                        // CAPPROBE\n\t\t\t\t\t<< " placed in the exit area at " << t->getPosition();              // CAPPROBE\n\t\t\t\tbreak;                                                                 // CAPPROBE\n\t\t\t}                                                                          // CAPPROBE\n\t\t\tbreak;                                                                     // CAPPROBE\n\t\t}                                                                              // CAPPROBE\n\t}                                                                                  // CAPPROBE\n\t// 3. EXTRACT - LAST, not first.\n'
+I2 = '\t\t\t\tBattleUnit *cand = t->getUnit();\n\t\t\t\tif (cand) Log(LOG_INFO) << "[cap] pass3 saw " << cand->getId()        // CAPPROBE\n\t\t\t\t\t<< " st=" << (int)cand->getStatus()                                 // CAPPROBE\n\t\t\t\t\t<< " of=" << (int)cand->getOriginalFaction()                        // CAPPROBE\n\t\t\t\t\t<< " carried=" << (cand->isBeingCarried() ? 1 : 0);                 // CAPPROBE\n'
 
 src = open(TARGET, encoding='utf-8').read()
 
@@ -120,6 +129,18 @@ if MODE == 'apply':
         print('ANCHOR appears %d times - do not guess' % src.count(ANCHOR))
         sys.exit(1)
     src = src.replace(ANCHOR, PROBE, 1)
+    # Two more, INSIDE the real pass 3. The outside reproduction of its predicate was wrong
+    # (distance2d is a float, so a diagonal neighbour is 1.41 and the only case the probe ever
+    # creates got filtered out of its own diagnostic). Nothing to reproduce if we log in place.
+    for anchor, ins in ((A1, I1), (A2, I2)):
+        if src.count(anchor) != 1:
+            print('pass-3 anchor appears %d times - refusing to guess' % src.count(anchor))
+            sys.exit(1)
+        src = src.replace(anchor, ins, 1)
+    if src.count(A3) != 1:
+        print('end-of-captureStep anchor appears %d times - refusing to guess' % src.count(A3))
+        sys.exit(1)
+    src = src.replace(A3, I3, 1)
     open(TARGET, 'w', encoding='utf-8').write(src)
     print('applied')
 else:

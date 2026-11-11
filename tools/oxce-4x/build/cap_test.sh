@@ -62,7 +62,7 @@ run() {   # run <label> <turns> <extra env...>
   for ((i=0; i<turns; i++)); do
     xdotool key BackSpace 2>/dev/null; sleep 3
     xdotool mousemove 640 400 click 1 2>/dev/null   # dismiss the turn splash
-    sleep 12                                        # let the hostile side take its turn
+    sleep 18                                        # let the hostile side take its turn
   done
   pkill -9 -x openxcom 2>/dev/null; sleep 1
   printf '  %-28s %s\n' "$label" "$(grep -oE '\[cap(ture)?\] .*' "$L" 2>/dev/null | sort -u | tr '\n' ' | ')"
@@ -70,7 +70,7 @@ run() {   # run <label> <turns> <extra env...>
 
 echo "the probe arranges the board; captureStep decides what happens on it:"
 run "pickup"  2 OXCE_CAP_STUN=1
-run "extract" 3 OXCE_CAP_STUN=1 OXCE_CAP_EXIT=1
+run "extract" 4 OXCE_CAP_STUN=1 OXCE_CAP_EXIT=1
 echo
 echo "expected: pickup prints 'picked up'; extract prints 'picked up' AND 'carried off the map'."
 echo "A run that prints 'stunned' and nothing else means the passes did not fire - which is"
