@@ -116,13 +116,48 @@ removed and the numbering never closed up, or a step was lost. Worth asking
 rather than inventing — it sits between "Cobra Island or Bust" and the
 B.A.T. factory, which are not obviously adjacent.
 
-## The cheap fix that does not wait on any of this
+## The cheap fix is cheaper than it looks: the articles are already written
 
-Seven units exist, seven topics exist, and all seven open the same vanilla
-article. Giving each its own Ufopaedia entry is text and a `lookup`, needs no
-new unit, no new facility and no engine work, and it is the difference between
-an Intel File and a reprint. The doc calls these out as the game's main way of
+The first draft of this file said giving each topic its own Ufopaedia entry
+would cost text and a `lookup`. The text half is wrong. **This project has
+already written distinct Cobra articles** — they are in `en-US.yml`, bound to
+the vanilla race slots:
+
+| string | who it describes |
+| --- | --- |
+| `STR_SECTOID_UFOPEDIA` | Viper |
+| `STR_SNAKEMAN_UFOPEDIA` | Arashikage |
+| `STR_ETHEREAL_UFOPEDIA` | Cobra Command |
+| `STR_MUTON_UFOPEDIA` | Iron Grenadier |
+| `STR_FLOATER_UFOPEDIA` | Air Viper |
+| six more | the B.A.T. variants |
+
+So the reason every interrogation reads the same is not that only one article
+exists. It is that **all seven topics are pointed at the Viper one.** Three of
+those are flatly wrong against articles that are sitting right there:
+
+| topic | who he is | reads today | should read |
+| --- | --- | --- | --- |
+| `STR_STORM_SHADOW_UNIT` | Arashikage | Viper | `STR_SNAKEMAN` |
+| `STR_COBRA_COMMANDER_UNIT` | Cobra Command | Viper | `STR_ETHEREAL` |
+| `STR_BAT_TERRORIST` | a Battle Android | Viper | one of the six B.A.T. articles |
+
+Three are right by accident, because a trooper, a Medi-Viper and a Viper
+Engineer are all Vipers — though each would read better with its own entry.
+
+**`STR_DESTRO_UNIT` is the one that needs John.** He is masked leadership, so
+the Cobra Command article fits, but that makes him and Cobra Commander read
+identically — which is the bug this fixes, one level up. The alternatives are
+to share it or to write him one, and that is a story call.
+
+Fixing the three unambiguous ones is a `lookup` change on three lines, needs
+no new unit, no facility and no engine work, and it is the difference between
+an Intel File and a reprint. The doc names these as the game's main way of
 telling its story: *"Intel Files from interrogations and captured intel"*.
 
-That is the recommended first move, and it is independent of every decision
-above.
+**It has not been done yet, for a reason that is not about this chain.**
+`gijoe_campaign.rul`, where those seven topics live, is one of nineteen
+rulesets that exist only in the container and on John's PC and are **not in
+this repository**. Editing an untracked file in an ephemeral container is the
+failure this repo's own rules warn about, so the rulesets want committing
+first.
