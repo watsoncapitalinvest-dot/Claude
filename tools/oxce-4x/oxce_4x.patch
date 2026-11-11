@@ -3349,6 +3349,103 @@ index 6b4e79d..19a3640 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
+diff --git a/src/Geoscape/Globe.cpp b/src/Geoscape/Globe.cpp
+index 5b17165..a06bad9 100644
+--- a/src/Geoscape/Globe.cpp
++++ b/src/Geoscape/Globe.cpp
+@@ -967,6 +967,7 @@ void Globe::draw()
+ 	Surface::draw();
+ 	drawOcean();
+ 	drawLand();
++	drawEarthTexture();
+ 	drawRadars();
+ 	drawFlights();
+ 	drawShadow();
+@@ -1161,6 +1162,71 @@ void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double
+ /**
+  * Draws the radar ranges of player bases, player craft, alien bases and UFO hunter-killers on the globe.
+  */
++
++/**
++ * Paints the land from an equirectangular earth texture, over the flat polygons.
++ *
++ * This runs AFTER drawLand and BEFORE drawShadow on purpose, so the day/night
++ * terminator, the radars, the flight paths and the markers all still work on
++ * top of it exactly as they did.
++ *
++ * Two rules the texture has to obey, both of them forced by drawShadow:
++ *
++ *  - index 0 means "leave this pixel alone". The sea stays whatever drawOcean
++ *    painted, because isOcean() recognises the sea by its index being inside
++ *    the 32-entry block at OCEAN_COLOR, and sea painted from a photograph
++ *    would not be in that block and would stop shading like sea.
++ *  - land may use any other index EXCEPT that block, because getLandShadow
++ *    darkens a pixel within its OWN 16-entry group. That is what makes this
++ *    cheap: the terminator needs no special case for textured land.
++ *
++ * No texture in the mod means no change at all - the flat globe is drawn and
++ * this returns immediately.
++ */
++void Globe::drawEarthTexture()
++{
++	const Surface *tex = _game->getMod()->getSurface("GLOBE_EARTH", false);
++	if (!tex)
++	{
++		return;
++	}
++	const int tw = tex->getWidth(), th = tex->getHeight();
++	if (tw < 2 || th < 2)
++	{
++		return;
++	}
++	const int r = (int)_radius;
++	const int x0 = std::max(0, _cenX - r), x1 = std::min(getWidth() - 1, _cenX + r);
++	const int y0 = std::max(0, _cenY - r), y1 = std::min(getHeight() - 1, _cenY + r);
++	const double r2 = _radius * _radius;
++
++	lock();
++	for (int y = y0; y <= y1; ++y)
++	{
++		const double dy = y - _cenY;
++		for (int x = x0; x <= x1; ++x)
++		{
++			const double dx = x - _cenX;
++			if (dx * dx + dy * dy > r2)
++			{
++				continue;
++			}
++			double lon, lat;
++			cartToPolar((Sint16)x, (Sint16)y, &lon, &lat);
++			int u = (int)(lon / (2 * M_PI) * tw);
++			int v = (int)((M_PI / 2 - lat) / M_PI * th);
++			u = Clamp(u, 0, tw - 1);
++			v = Clamp(v, 0, th - 1);
++			const Uint8 col = tex->getPixel(u, v);
++			if (col)
++			{
++				setPixel(x, y, col);
++			}
++		}
++	}
++	unlock();
++}
++
+ void Globe::drawRadars()
+ {
+ 	_radars->clear();
+diff --git a/src/Geoscape/Globe.h b/src/Geoscape/Globe.h
+index a0a8813..53eb803 100644
+--- a/src/Geoscape/Globe.h
++++ b/src/Geoscape/Globe.h
+@@ -177,6 +177,8 @@ public:
+ 	void drawOcean();
+ 	/// Draws the land of the globe.
+ 	void drawLand();
++	/// Paints the land from an equirectangular earth texture, if the mod supplies one.
++	void drawEarthTexture();
+ 	/// Draws the shadow.
+ 	void drawShadow();
+ 	/// Draws the radar ranges of the globe.
 diff --git a/src/Interface/ArrowButton.h b/src/Interface/ArrowButton.h
 index 4b88688..f5c9b71 100644
 --- a/src/Interface/ArrowButton.h
