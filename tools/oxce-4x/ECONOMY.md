@@ -1110,10 +1110,19 @@ missions touch the economy not at all. A terror attack costs nothing and earns n
 thefts do not exist as a mission type. "A mission that pays Cobra when it succeeds" is the
 plumbing the pre-Drome phase needs; without it the whole early game is flavour.
 
-**Open:** when the Drome arrives, does it **replace** the earlier launchers or **add** to them?
-Replace gives a clean before/after and makes killing the Drome revert Cobra to loud, desperate
-crime — worth killing twice. Add escalates harder but blurs the arc. This desk leans replace;
-John has not ruled.
+**Settled: replace.** John: *"Replace."* So the Drome supersedes the crime launchers rather than
+stacking on them, which makes it worth killing twice — once for the operations it runs, and again
+because its loss drops Cobra back to loud, desperate theft that the Joes can follow.
+
+And it gives the mechanism a shape consistent with the rest of the economy: **regional**. A region
+holding a Drome runs its operations from the Drome; a region without one falls back to crime. Kill
+the last Drome in a region and that region alone reverts — which is a legible consequence a player
+can both cause and observe, rather than a global switch.
+
+What it needs is a suppression rule on a site's `genMission`: *this site stops launching when a
+Drome stands in its region*. That is one field and one lookup, and the lookup already exists —
+`cobraGarrison` counts a region's sites by type for the camp bonus, so counting Dromes is the same
+walk. Not built.
 
 ## Cobra cells: something to find, connected to nothing
 
