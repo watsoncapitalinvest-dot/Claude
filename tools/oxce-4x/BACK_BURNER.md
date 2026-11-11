@@ -30,14 +30,19 @@ else in the Cobra soldier pass depends on it.** The other 37 villains and all
 If it comes off the burner, it wants scoping on its own rather than being
 folded into a villain content pass.
 
-### Zanzibar's stolen signature weapon
+### ~~Zanzibar's stolen signature weapon~~ — resolved 10 Nov
 
-He takes a downed Joe's signature weapon; it comes back through a recovery
-mission on his hideout, or a black-market sale found through intel.
+Cut, and he was given a new special instead (John). The old one had him
+stealing a Joe's signature weapon, recoverable through a mission on his
+hideout or a black-market sale: one villain crossing the battlescape, the
+geoscape and mission generation.
 
-One villain crossing the battlescape, the geoscape and mission generation.
-**The cheap version:** the weapon returns when Zanzibar is next beaten, with
-no recovery mission. That keeps the sting and costs almost nothing.
+Replaced with **Skiff-Borne** (he flies — native `MT_FLY`, and the only Cobra
+on the board who does, so his Air Skiff does something instead of being
+flavour) and **Weighted Net** (a one-shot built-in weapon doing `ToTime`
+damage, which OXCE supports natively: it pins a Joe where he stands without
+wounding him — a pirate wants them robbed, not dead). Both are pure ruleset.
+His world-map half, raids on civilian shipping earning Cobra double, is kept.
 
 ### Subterfuge's strategic half
 
@@ -51,6 +56,17 @@ until the Joe Intelligence department is real, then take it as its own pass.
 ---
 
 ## Owed
+
+### Three villains whose only special is environment-locked
+
+Found while replacing Zanzibar's. His one move was *Boarding Raid (water
+battles)*, so in a land mission — most missions — he had no signature move at
+all. **Wild Weasel** has the same shape (*Strafing Run*, air battles) and
+**Copperhead**'s *Water Moccasin Rush* is boat-bound.
+
+Each wants a land move, with the environment one kept as a bonus. Zanzibar is
+done; the other two are not.
+
 
 ### The calendar ceiling is not scoped to the AI
 
