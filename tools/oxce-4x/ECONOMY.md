@@ -601,6 +601,31 @@ rather than all-or-nothing because a factory stopping dead over being a pound sh
 bug, where a half-funded month making half the guns is legible. Integer division floors it, which
 is the right direction.
 
+### What a shortfall does is a number, not a decision somebody made
+
+Pro-rata shipped as the behaviour, and John asked about it. The honest position is that neither
+of us knows which of the three plausible behaviours plays better, and picking one in the abstract
+is how a wrong default survives for months. So it is `productionMinimumPercent`, one number with
+the extremes at its ends:
+
+| value | behaviour |
+| --- | --- |
+| **0** | **pro rata.** 24 funds of a 48 bill makes 40 of the 80. Smooth, no cliff. What shipped |
+| **100** | **all or nothing.** A pound short and the line stops dead. Sharper, and a cleaner story |
+| **50** | **a floor.** Must meet half the bill or make nothing; above half it scales |
+
+Two decisions inside it:
+
+**Mod-level, not per-site.** Per-site would have to be aggregated across a region's factories,
+and max, min and average are all defensible with none obviously right. A knob nobody can reason
+about is worse than no knob.
+
+**Below the floor the money stays in the bank.** A stalled factory that still paid for its inputs
+would be a third behaviour nobody asked for, and it would quietly bankrupt the region that owns
+it. The line stops and the funds survive.
+
+Default 0, so nothing changed silently.
+
 ### Verified, and the first test was the one that mattered
 
 The input cost being *charged* is the claim that could silently fail, so it was checked first —
