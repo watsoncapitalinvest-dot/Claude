@@ -1,0 +1,88 @@
+BASE VIEW FACILITIES - WHAT THE ENGINE ALLOWS
+
+Read before drawing another one. All of it is read out of BaseView.cpp and
+RuleBaseFacility, not assumed.
+
+
+THE GRID
+
+BaseView::GRID_SIZE is 32. Every grid square is 32x32 pixels and a facility
+of size N by M is drawn as N*M SEPARATE 32x32 frames, blitted one per square.
+There is no such thing as one big picture for a 2x2.
+
+Frame order is the order BaseView walks them: left to right, then top to
+bottom. For a 2x2 that is NW, NE, SW, SE.
+
+
+TWO LAYERS, NOT ONE
+
+A facility carries two sprite numbers and the engine draws both:
+
+  spriteShape     the floor plate and outline, drawn FIRST
+  spriteFacility  the facility's own graphic, drawn ON TOP
+
+Vanilla shares the shapes between facilities - 1 is the plain square, 2 the
+small one, 3 the cross used by the defences - and gives every facility its own
+spriteFacility. So a new facility usually needs ONE new graphic, not two, and
+should reuse a shape.
+
+Under construction, the engine draws spriteShape + num + outline instead,
+where outline is 3 for a 1x1 and sizeX*sizeY for anything bigger. So a 1x1
+reserves 4 frames and a 2x2 reserves 8, whether or not you draw them all.
+
+
+OUTER WALLS ONLY
+
+Each frame of a multi-tile facility must draw its wall only on the sides that
+face OUT of the building. Draw all four on every frame and the player sees a
+wall running through the middle of his own hangar. The first attempt here did
+exactly that and it is obvious the moment the frames are assembled.
+
+
+THE PALETTE
+
+The base view runs on PAL_BASESCAPE, which is palette 1 in GEODATA/PALETTES.DAT
+- offset 774, since palOffset(n) is n * 774 and the order in Mod.cpp is
+GEOSCAPE, BASESCAPE, GRAPHS, UFOPAEDIA, BATTLEPEDIA.
+
+These four tiles use 13 entries and every one is an exact entry, so nothing is
+quantised at load:
+
+  81 84 87 90   concrete_mil, board-formed, lit from the top left
+  66 70 75      steel_plate
+  160 163 167   Joe olive - bedding, crates, racked kit
+  17            hazard amber
+  34            signal red, stencils only
+  93            open shaft and shadow
+  0             transparent, so the shape plate shows through
+
+Index 0 must stay transparent or the facility covers its own floor plate.
+
+
+MATERIALS
+
+Each tile is built only from materials that already exist in BUILDINGS_BRIEF:
+concrete_mil, steel_plate, corrugated, plaster_white, door_rollup, door_steel,
+sandbag, window_slit. That is deliberate. A base defence renders the base as a
+battlescape map, so a facility drawn from materials we do not have is a
+facility that cannot be walked through later.
+
+
+THE FOUR DRAWN
+
+  facility_access_lift.png   1x1  concrete shaft, steel platform, hazard bands
+  facility_barracks.png      1x1  plaster interior, six bunks, olive bedding
+  facility_armoury.png       1x1  racking on three walls, crates, roll-up door
+  facility_hangar_0..3.png   2x2  corrugated roof, concrete apron, roll-up door
+
+The hangar's middle is kept plain on purpose. The engine draws the craft
+sprite over the centre of the facility and anything busy underneath fights it.
+
+
+NOT DONE
+
+No HD twin. HiUI will take a <name>_hi.png at 4x for the sharp layer, but that
+is a separate drawing job at 128x128, not an upscale of these.
+
+Not wired. These are art only - no ruleset entry yet, because a new facility
+needs build cost, time, upkeep and what it provides, and those are John's.
