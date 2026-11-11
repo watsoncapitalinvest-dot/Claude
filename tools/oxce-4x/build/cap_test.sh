@@ -51,6 +51,22 @@ run() {   # run <label> <turns> <extra env...>
   xdotool mousemove 640 690 click 1 2>/dev/null; sleep 5    # briefing OK
   xdotool mousemove 1016 48 click 1 2>/dev/null; sleep 5    # pre-battle inventory OK
   xdotool mousemove 640 400 click 1 2>/dev/null; sleep 3    # "press button to continue"
+  # DID WE ACTUALLY REACH A BATTLE? About one run in three silently did not - a click
+  # landed early, no battle generated, and the row printed empty. An empty row is
+  # indistinguishable from a feature that does nothing, which is the one thing this
+  # harness exists to tell apart. GMTACTIC is the battlescape's own music starting.
+  if ! grep -q "playMusic('GMTACTIC')" "$L" 2>/dev/null; then
+    echo "  ($label: no battle on the first try, re-running the click path)"
+    xdotool mousemove 838 400 click 1 2>/dev/null; sleep 3
+    xdotool mousemove 232 736 click 1 2>/dev/null; sleep 10
+    xdotool mousemove 640 690 click 1 2>/dev/null; sleep 5
+    xdotool mousemove 1016 48 click 1 2>/dev/null; sleep 5
+    xdotool mousemove 640 400 click 1 2>/dev/null; sleep 3
+  fi
+  if ! grep -q "playMusic('GMTACTIC')" "$L" 2>/dev/null; then
+    echo "  $label: NEVER REACHED A BATTLE - this says nothing about the feature"
+    pkill -9 -x openxcom 2>/dev/null; return
+  fi
   # End the player's turn <turns> times so the hostile side moves and captureStep runs.
   #
   # END TURN IS BACKSPACE (Options::keyBattleEndTurn defaults to SDLK_BACKSPACE), not Return.
@@ -60,9 +76,15 @@ run() {   # run <label> <turns> <extra env...>
   # perfectly: GMTACTIC is in the log both times.
   local i
   for ((i=0; i<turns; i++)); do
-    xdotool key BackSpace 2>/dev/null; sleep 3
-    xdotool mousemove 640 400 click 1 2>/dev/null   # dismiss the turn splash
-    sleep 18                                        # let the hostile side take its turn
+    # ORDER MATTERS, AND IT WAS BACKWARDS. This used to press BackSpace first, then click
+    # to dismiss a splash, then sleep through the hostile turn - so the NEXT iteration's
+    # BackSpace landed while the new player-turn splash was still up and was swallowed.
+    # Exactly one hostile turn ever completed, which made the drop pass (which cannot fire
+    # until the turn AFTER the pickup) untestable while looking like a pass that does not work.
+    xdotool mousemove 640 400 click 1 2>/dev/null   # dismiss whatever splash is up
+    sleep 2
+    xdotool key BackSpace 2>/dev/null                # now end the player's turn
+    sleep 20                                         # hostile turn, plus its end-of-turn splash
   done
   pkill -9 -x openxcom 2>/dev/null; sleep 1
   printf '  %-28s %s\n' "$label" "$(grep -oE '\[cap(ture)?\] .*' "$L" 2>/dev/null | sort -u | tr '\n' ' | ')"
@@ -71,6 +93,7 @@ run() {   # run <label> <turns> <extra env...>
 echo "the probe arranges the board; captureStep decides what happens on it:"
 run "pickup"  2 OXCE_CAP_STUN=1
 run "extract" 4 OXCE_CAP_STUN=1 OXCE_CAP_EXIT=1
+run "drop"    4 OXCE_CAP_STUN=1 OXCE_CAP_KILL=1
 echo
 echo "expected: pickup prints 'picked up'; extract prints 'picked up' AND 'carried off the map'."
 echo "A run that prints 'stunned' and nothing else means the passes did not fire - which is"

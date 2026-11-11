@@ -65,12 +65,30 @@ Two things cost most of the afternoon and are worth keeping:
 
 Verified by `build/cap_probe.py` + `build/cap_test.sh`, which force the three
 preconditions and let the real `captureStep` decide what follows — the probe
-never sets a carry link itself. **The DROP pass is implied but not isolated**:
-one run had two different troopers pick up the same Joe on consecutive turns,
-which can only happen if DROP fired in between, but that line was filtered out
-of the log before it was read. Worth an isolated run before this is called
-finished. The debriefing path — `captureSoldier`, roster removal, no
-`SoldierDeath` — is likewise built and not yet exercised end to end.
+never sets a carry link itself.
+
+**The DROP pass is still not verified**, and the reason is now exact rather
+than a shrug. Drop fires when the carrier is out or has stopped carrying, so
+it cannot be seen in the turn the pickup happens — it needs turn N+1. Two
+things were in the way and one still is:
+
+- The harness delivered exactly **one** hostile turn per run, because the turn
+  loop pressed end-turn *first* and only then clicked to dismiss a splash, so
+  every later end-turn landed on a splash and was swallowed. Fixed: dismiss,
+  then end the turn. Two turns now arrive, though not every run.
+- With two turns, drop still did not fire, and the log says why: the probe
+  **knocked the carrier out**, and an unconscious man **recovers during the
+  player's turn**, so by the next turn's drop pass `carrier->isOut()` was false
+  again and the condition correctly declined. The probe downed the same trooper
+  twice. `instaKill` instead of `knockOut` is the fix; the one run made with it
+  drew a single hostile turn, so it has not yet had its chance.
+
+Nothing here is evidence against the drop pass. It is evidence that the
+scenario has never once been built, which is exactly the failure this harness
+exists to catch — and it caught it rather than printing a pass.
+
+The debriefing path — `captureSoldier`, roster removal, no `SoldierDeath` — is
+likewise built and not yet exercised end to end.
 
 Vanilla gets part way on its own: a downed Joe is already `STATUS_UNCONSCIOUS`,
 a body on the floor. What does not exist is a Cobra trooper picking that body
