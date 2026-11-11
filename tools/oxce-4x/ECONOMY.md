@@ -850,6 +850,63 @@ project. It goes in with the sites.
 *named unit was recovered alive* needs a debriefing hook nobody has looked for. It probably
 exists, and it is not promised until somebody has looked.
 
+## Provocation, and how the campaign opens
+
+Two of John's, recorded before either is built.
+
+### A gauge, not a dice roll
+
+*"Shooting down a scout shouldn't lead to an immediate attack on the base. There needs to be a
+gauge and threshold for base attacks. I'd say in our full game, a scout being shot down wouldn't
+cause much response but it would move the needle for the cobra planner."*
+
+Vanilla retaliation is abrupt and random: down a UFO, roll, and a hunter mission may appear over
+your base. A gauge is better on both counts — provocation **accumulates**, so a player can feel
+it building and choose when to stop poking, and the response is **earned** rather than drawn.
+
+It also costs almost nothing, because it is the shape of what already exists. A per-region number
+that the planner reads is precisely the machinery behind funds and materiel. So:
+
+| what moves the needle | by how much |
+| --- | --- |
+| a scout shot down | a little |
+| a cargo flight intercepted | more |
+| a site raided | most |
+
+And at a threshold Cobra comes for the base. The second half of John's note matters as much as
+the first: provocation should **feed the planner**, not just a trigger. A Cobra that has been hurt
+builds differently — more Dromes, more defence — which makes the gauge a strategic dial rather
+than a timer.
+
+Decays or not is open. Leaning yes, slowly, so a player who backs off is actually safer rather
+than permanently marked.
+
+### The first mission, and why it should not be Cobra
+
+John: *"I'm open to other suggestions for the first mission. Maybe it's a cobra city terror
+mission. Or duke gives us a mission. Maybe it's not even against cobra. It's scripted against a
+drug cartel or something and we find evidence to start the first search for cobra."*
+
+The last one is the strongest, and for a reason the others cannot match: **it is the only option
+that makes hiding the network pay off.** If the first mission is against Cobra, the player knows
+who to hunt from minute one and a hidden network is just a delay. If the first mission is a
+cartel warehouse and the evidence on the floor points somewhere bigger, then finding Cobra is a
+**discovery**, which is what hiding it was for. It is also the G.I. Joe premise: a counter-terror
+unit that pulls a thread and finds an army on the other end.
+
+The cost is honest and it lands on John's side of the line rather than this desk's: it needs
+enemies who are not Cobra, and every unit in the mod today is Cobra. A cartel needs its own men.
+
+| option | cost | what it does to the opening |
+| --- | --- | --- |
+| Cobra scout flyby | free — ruleset only | announces Cobra on day one |
+| Cobra city terror | ruleset, but hard for a starting squad | announces Cobra, dramatically |
+| Duke hands over a mission | needs the event/briefing plumbing | announces Cobra, with a voice |
+| **cartel, evidence leads on** | **needs non-Cobra units** | **Cobra is found, not announced** |
+
+Recommendation: the cartel opening is the one to build, and the scout flyby is a one-line
+stopgap if something is wanted in the meantime. Nothing here is built.
+
 ## Open, and John's to settle
 
 **The mod already calls vanilla alien bases "Terror Drome."** `STR_ALIEN_BASE` is renamed that

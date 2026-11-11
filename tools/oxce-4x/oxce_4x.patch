@@ -4835,7 +4835,7 @@ index 6c121c7..886050d 100644
  	std::map<std::string, int> &getReinforcementsMemory() { return _reinforcementsMemory; }
  	/// Gets the map blocks used for reinforcements.
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..29fa48c 100644
+index 9ca9637..2592191 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -55,7 +55,10 @@
@@ -4891,7 +4891,7 @@ index 9ca9637..29fa48c 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2589,538 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2589,555 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -4910,7 +4910,12 @@ index 9ca9637..29fa48c 100644
 +{
 +	CobraGarrison out;
 +	bool campHere = false;
-+	const Region *here = locateRegion(lon, lat);
++	// Quiet on purpose. A New Battle has no globe position - its mission sits at [0, 0], which is
++	// inside no region - and this returning "no garrison" is the right answer there, not an
++	// error. Removing the _craft fallback closed one route to that false log line and left
++	// _mission and _ufo open, which a campaign run could not reveal because every campaign
++	// target has a real position. It took running the battlescape harness to see it at all.
++	const Region *here = locateRegionQuiet(lon, lat);
 +	if (!here)
 +	{
 +		return out;
@@ -5427,11 +5432,23 @@ index 9ca9637..29fa48c 100644
 +		// like the feature firing when it should not.
 +}
 +
++Region *SavedGame::locateRegionQuiet(double lon, double lat) const
++{
++	for (auto* region : _regions)
++	{
++		if (region->getRules()->insideRegion(lon, lat))
++		{
++			return region;
++		}
++	}
++	return 0;
++}
++
  Region *SavedGame::locateRegion(double lon, double lat) const
  {
  	Region* found = nullptr;
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..3f2eda5 100644
+index d985908..a6e7943 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -55,6 +55,7 @@ class ArticleDefinition;
@@ -5477,6 +5494,17 @@ index d985908..3f2eda5 100644
  	/// Read-only access to the alien strategy data.
  	const AlienStrategy &getAlienStrategy() const { return *_alienStrategy; }
  	/// Full access to the current alien missions.
+@@ -409,6 +431,10 @@ public:
+ 	const std::vector<GeoscapeEvent*> &getGeoscapeEvents() const { return _geoscapeEvents; }
+ 	/// Locate a region containing a position.
+ 	Region *locateRegion(double lon, double lat) const;
++	/// As locateRegion, but silent when there is no region at that point.
++	/// For callers where "nowhere" is a legitimate answer rather than a fault - a New Battle has
++	/// no globe position, so the garrison lookup must be able to ask without logging an error.
++	Region *locateRegionQuiet(double lon, double lat) const;
+ 	/// Locate a region containing a Target.
+ 	Region *locateRegion(const Target &target) const;
+ 	/// Locate a country containing a position.
 diff --git a/src/Savegame/Tile.cpp b/src/Savegame/Tile.cpp
 index af18529..d30bc19 100644
 --- a/src/Savegame/Tile.cpp
