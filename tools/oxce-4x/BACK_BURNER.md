@@ -222,6 +222,51 @@ not.
 
 ## Designed, agreed, not yet built
 
+### Player pins, notes and routes on the globe (10 Nov, John)
+
+John: *"in game i'd like to be able to make notes on the globe. pins with
+notes"* and *"i can put legend markers of suspected places and routes"*.
+
+**This is the situation board from the design doc, approached from the other
+side.** The doc describes it as Cobra-facing — *"one screen with every known
+Cobra site and route, each villain's last known location, and each act
+project's clock as an estimate with a confidence bar that sharpens with
+intel"*. John is describing the player marking what he SUSPECTS before he
+knows. They are one system: confirmed intel and the player's own guesses on
+the same globe, drawn at different weights. Built separately they become two
+map overlays that contradict each other.
+
+**There is already a foothold.** `SavedGame` carries
+`std::vector<std::string> _userNotes` with save/load wired, and it appears in
+John's save as `userNotes: []`. Text only, no coordinates, so globe pins need
+a real structure — lat, lon, label, icon, and a point list for a route — but
+the precedent and the save plumbing exist.
+
+Wants doing WITH the intel layer, not before it: a pin the player places and a
+lead the game gives him should share a drawing path and a confidence weight.
+
+### Eight Cobra site types, one globe marker (found 10 Nov)
+
+Every Cobra deployment sets `markerIcon: 7`. A front company, a factory, a
+research lab and a Terror Drome are the same dot — an eight-building economy
+the player cannot read at a glance.
+
+Not a 3x3 limit, as it first appears. Vanilla ships `GlobeMarkers` as a 27x3
+sheet cut into nine 3x3 icons, but `Globe::drawTarget` centres a marker on its
+OWN dimensions:
+
+```cpp
+ShaderMove<const Uint8> surf{ marker, x - marker->getWidth()/2, y - marker->getHeight()/2 };
+```
+
+So a larger sprite simply works. Eight vector line icons were drawn 10 Nov at
+56px (office block, sawtooth factory, tent, braced crate, flask, ringed
+crosshair for the Drome, mast with arcs, hex bunker) and sent to John; they
+still need palettising into an `extraSprites` sheet and wiring to
+`markerIcon` per deployment.
+
+
+
 Held from earlier sessions. These are not parked — they are queued.
 
 - **The hidden starting network.** Cobra opens with one working network in one
