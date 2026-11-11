@@ -121,15 +121,38 @@ feel like anything until the tree is populated.** Content, not engine.
 
 ## Broken
 
-### A campaign crashes around month 15
+### A campaign crashes around month 15 — in THIS CONTAINER, not necessarily on a real install
 
 ```
 [FATAL] FileRecord::at(TERRAIN/XBASE1.MCD): requested file not found.
 ```
 
-A base-defence map the mod cannot load. Caps unattended campaign runs at about
-fourteen months, which is why the planner never reaches some later buildings
-in testing. Found 10 Nov in a 900-day run.
+The base-defence tileset. Found 10 Nov in a 900-day run, and first written
+down here as a mod bug the player would hit. **That was wrong, and the
+correction is the useful part.**
+
+`XBASE1.MCD` is an original X-COM file. OXCE ships `XBASE2.MCD` in
+`standard/xcom1/TERRAIN` but **not** XBASE1 — that one is expected to come
+from the player's own game data. This container's `UFO/TERRAIN` holds 24
+files (BARN, BLANKS, CULTIVAT, PLANE, UFO1, U_BITS, U_EXT02, U_WALL02 —
+exactly what the mod's own test maps need) where real X-COM has around a
+hundred. So the file is missing *here* because the vanilla data is a stub.
+
+**What it means in practice:**
+
+- On a complete X-COM install, base defence should load and there is nothing
+  to fix.
+- Unattended campaign runs in this container still die at about month 15 once
+  a retaliation fires, so **a fast-forward campaign cannot be run past roughly
+  fourteen months here.** That is a real limit on testing and it is why the
+  planner never reaches the later buildings in a 400-day run.
+- If a player's own data folder is incomplete, they *will* crash on base
+  defence. One check settles it: look for `TERRAIN/XBASE1.MCD` beside the exe.
+
+**The lesson worth keeping:** a missing-file crash says where the engine
+looked, not whose job it was to put the file there. Check which side of the
+line a file comes from — shipped by OXCE, shipped by the mod, or supplied by
+the player — before calling it a bug.
 
 ### Two parsed ruleset keys nothing consumes
 
