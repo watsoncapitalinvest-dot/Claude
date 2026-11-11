@@ -624,7 +624,9 @@ about is worse than no knob.
 would be a third behaviour nobody asked for, and it would quietly bankrupt the region that owns
 it. The line stops and the funds survive.
 
-Default 0, so nothing changed silently.
+Default 0, so nothing changed silently — and John has since chosen **pro rata**, so 0 is both the
+default and the decision. The other two stay reachable from the ruleset if the choice is ever
+worth revisiting in play.
 
 ### Verified, and the first test was the one that mattered
 
@@ -735,10 +737,15 @@ shipment coming back, so **interception is a tactic from month one** rather than
 already having won. It also means a M.A.R.S. site's stash always grows, so the fat target always
 develops whether or not the player has gone near Cobra's factories.
 
-**Open:** whether the floor is a flat amount or a share of what Cobra consumes. Flat is simpler
-and guarantees traffic early when Cobra is small; proportional keeps the trade meaningful late
-when a flat minimum would be rounding error. Leaning proportional with a flat minimum under it,
-but it is a number and it is John's.
+**Settled.** John: *"Proportional with a flat floor."* So the standing order is
+
+    order = max(flatMinimum, share of what Cobra consumes)
+
+Two numbers, and each covers the case the other fails. The proportional term keeps the trade
+meaningful late, when a flat minimum would be rounding error against a Cobra running twenty
+sites. The flat floor keeps traffic in the air early, when a share of a small appetite would
+round to nothing and the player would see no convoy in the opening months — which is the dormancy
+this rule exists to prevent, and it would have crept back in through the proportional term alone.
 
 ### The money dies, and it piles up where it died
 
