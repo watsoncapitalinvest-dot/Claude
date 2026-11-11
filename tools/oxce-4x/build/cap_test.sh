@@ -45,11 +45,18 @@ run() {   # run <label> <turns> <extra env...>
   sleep 2
   xdotool mousemove 838 400 click 1 2>/dev/null; sleep 3   # New Battle
   xdotool mousemove 232 736 click 1 2>/dev/null; sleep 8   # OK -> generate
-  # end the player's turn <turns> times so the hostile side moves and captureStep runs
+  # End the player's turn <turns> times so the hostile side moves and captureStep runs.
+  #
+  # END TURN IS BACKSPACE (Options::keyBattleEndTurn defaults to SDLK_BACKSPACE), not Return.
+  # The first version pressed Return, which does nothing here, so the turn never ended,
+  # endTurn() never ran and captureStep() was never called - and the run reported silence,
+  # which is indistinguishable from three passes that do not work. The battle had generated
+  # perfectly: GMTACTIC is in the log both times.
   local i
   for ((i=0; i<turns; i++)); do
-    xdotool key Return 2>/dev/null; sleep 1
-    xdotool key Return 2>/dev/null; sleep 6
+    xdotool key BackSpace 2>/dev/null; sleep 2
+    xdotool key Return 2>/dev/null    # clear a confirm-end-turn prompt if one appears
+    sleep 10                          # let the hostile side actually take its turn
   done
   pkill -9 -x openxcom 2>/dev/null; sleep 1
   printf '  %-28s %s\n' "$label" "$(grep -oE '\[cap(ture)?\] .*' "$L" 2>/dev/null | sort -u | tr '\n' ' | ')"

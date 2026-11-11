@@ -55,10 +55,17 @@ PROBE = """	// Forced preconditions. Deliberately BEFORE the three passes, so th
 				Position next = victim->getPosition() + Position(1, 0, 0);         // CAPPROBE
 				if (_save->getTile(next))                                          // CAPPROBE
 				{                                                                  // CAPPROBE
-					_save->setUnitPosition(h, next, false);                         // CAPPROBE
-					h->setPosition(next);                                          // CAPPROBE
-					Log(LOG_INFO) << "[cap] moved hostile " << h->getId()          // CAPPROBE
-						<< " beside " << victim->getId();                          // CAPPROBE
+					// setUnitPosition RETURNS WHETHER IT WORKED. Ignoring that is how    // CAPPROBE
+					// the first version reported a clean move onto an occupied tile.      // CAPPROBE
+					bool moved = _save->setUnitPosition(h, next, false);            // CAPPROBE
+					if (moved) h->setPosition(next);                                // CAPPROBE
+					Log(LOG_INFO) << "[cap] hostile " << h->getId()                 // CAPPROBE
+						<< " move=" << (moved ? "ok" : "REFUSED")                   // CAPPROBE
+						<< " hpos=" << h->getPosition()                             // CAPPROBE
+						<< " vpos=" << victim->getPosition()                        // CAPPROBE
+						<< " vTile=" << (victim->getTile() ? 1 : 0)                 // CAPPROBE
+						<< " tileUnit=" << (victim->getTile() && victim->getTile()->getUnit()   // CAPPROBE
+							? victim->getTile()->getUnit()->getId() : -1);           // CAPPROBE
 				}                                                                  // CAPPROBE
 				break;                                                             // CAPPROBE
 			}                                                                      // CAPPROBE
