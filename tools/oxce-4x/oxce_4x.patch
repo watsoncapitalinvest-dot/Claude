@@ -3177,7 +3177,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..2e4396d 100644
+index 6b4e79d..19a3640 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -103,6 +103,7 @@
@@ -3235,7 +3235,7 @@ index 6b4e79d..2e4396d 100644
 +	if (removeSite)
 +	{
 +		const int paid = _game->getSavedGame()->cobraMissionPaid(site->getDeployment(), region);
-+		if (paid > 0 && getenv("OXCE_ECON_LOG"))
++		if (paid > 0 && getenv("OXCE_ECON_QUIET") == 0)
 +		{
 +			Log(LOG_INFO) << "[econ] " << site->getDeployment()->getType() << " went unanswered in "
 +				<< region->getRules()->getType() << ", so Cobra banked " << paid;
@@ -5016,7 +5016,7 @@ index 6c121c7..a5b4ba0 100644
  	std::map<std::string, int> &getReinforcementsMemory() { return _reinforcementsMemory; }
  	/// Gets the map blocks used for reinforcements.
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..a35a373 100644
+index 9ca9637..3d3b842 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,6 +21,7 @@
@@ -5080,7 +5080,7 @@ index 9ca9637..a35a373 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2590,840 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2590,857 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -5366,6 +5366,23 @@ index 9ca9637..a35a373 100644
 +}
 +
 +/**
++ * Cobra's economy lines are ON by default, and that is deliberate.
++ *
++ * They used to be behind OXCE_ECON_LOG, which meant a player who hit a crash sent back a log
++ * with no trace of what Cobra had been doing - nobody sets an environment variable before
++ * playing. The whole subsystem was invisible in exactly the situation it most needed to be
++ * visible. Volume is about twenty to thirty lines a month (a line per region, plus bench and
++ * raid events), which is nothing against a crash report that cannot be explained.
++ *
++ * OXCE_ECON_QUIET turns them off for anyone who wants a clean log.
++ */
++static bool cobraLogOn()
++{
++	static const bool on = (getenv("OXCE_ECON_QUIET") == 0);
++	return on;
++}
++
++/**
 + * Names a Cobra site uniquely. AlienBase ids come from SavedGame::getId keyed by the
 + * deployment's MARKER NAME, so every site type starts its own count at 1 - the first depot and
 + * the first research lab are both id 1. A bench keyed on the bare id therefore pointed at two
@@ -5419,7 +5436,7 @@ index 9ca9637..a35a373 100644
 +	{
 +		if (project.labKey == cobraSiteKey(base) && project.progress < project.cost)
 +		{
-+			if (getenv("OXCE_ECON_LOG"))
++			if (cobraLogOn())
 +			{
 +				Log(LOG_INFO) << "[econ] the raid cost Cobra " << project.progress << "/"
 +					<< project.cost << " on " << project.type;
@@ -5568,7 +5585,7 @@ index 9ca9637..a35a373 100644
 +			if (slot.second <= 0) continue;
 +			p.labKey = slot.first;
 +			--slot.second;
-+			if (getenv("OXCE_ECON_LOG"))
++			if (cobraLogOn())
 +			{
 +				Log(LOG_INFO) << "[econ] a bench at " << p.labKey << " took up " << p.type;
 +			}
@@ -5593,7 +5610,7 @@ index 9ca9637..a35a373 100644
 +		{
 +			p.progress = p.cost;
 +			p.labKey.clear();
-+			if (getenv("OXCE_ECON_LOG"))
++			if (cobraLogOn())
 +			{
 +				Log(LOG_INFO) << "[econ] " << p.type << " arrived for free: month " << months
 +					<< " passed its latestMonth " << r->latestMonth;
@@ -5626,7 +5643,7 @@ index 9ca9637..a35a373 100644
 +			_cobraEconomy->addMateriel(regionType, -(push * r->materielPerProgress));
 +		}
 +		p.progress = std::min(p.cost, p.progress + push);
-+		if (getenv("OXCE_ECON_LOG"))
++		if (cobraLogOn())
 +		{
 +			Log(LOG_INFO) << "[econ] " << regionType << " researched " << p.type << " "
 +				<< p.progress << "/" << p.cost
@@ -5717,7 +5734,7 @@ index 9ca9637..a35a373 100644
 +		// because the shipment did not arrive, and a site that costs money while earning none
 +		// is exactly the pressure an intercepted run should create.
 +		const bool shipmentDenied = rule->getIncomeNeedsShipment() && base->getShipmentsLost() > 0;
-+		if (shipmentDenied && getenv("OXCE_ECON_LOG"))
++		if (shipmentDenied && cobraLogOn())
 +		{
 +			// Shipped rather than kept as a probe, for the same reason OXCE_PEN_LOG is: the
 +			// numbers are John's to tune and he should be able to see the mechanism fire without
@@ -5789,7 +5806,7 @@ index 9ca9637..a35a373 100644
 +			// Short of the floor, so the line stops and the money stays in the bank. Not spent:
 +			// paying for nothing would be a third behaviour nobody asked for, and it would make
 +			// a stalled factory quietly bankrupt the region that owns it.
-+			if (getenv("OXCE_ECON_LOG"))
++			if (cobraLogOn())
 +			{
 +				Log(LOG_INFO) << "[econ] " << regionType << " could not reach the minimum "
 +					<< minPercent << "% of its production bill (" << avail << " of " << cost
@@ -5800,7 +5817,7 @@ index 9ca9637..a35a373 100644
 +		const int made = (int)((long long)want * avail / cost);
 +		netMateriel[regionType] += made;
 +		netFunds[regionType] -= avail;
-+		if (getenv("OXCE_ECON_LOG"))
++		if (cobraLogOn())
 +		{
 +			Log(LOG_INFO) << "[econ] " << regionType << " could not pay for its own production: "
 +				<< avail << " of " << cost << " funds, so it made " << made << " of " << want
@@ -5826,7 +5843,7 @@ index 9ca9637..a35a373 100644
 +	// closes the hole that let the kit rule ship switched off - the thresholds are printed next
 +	// to the stock they are compared with, so a rule reading against a threshold of zero looks
 +	// different from a rule that is working. Once a month, after the month has been applied.
-+	if (getenv("OXCE_ECON_LOG"))
++	if (cobraLogOn())
 +	{
 +		const int needGuns = mod->getCobraWellSupplied();
 +		for (const auto *region : _regions)

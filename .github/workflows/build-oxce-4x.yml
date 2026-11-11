@@ -36,10 +36,24 @@ jobs:
         run: |
           New-Item -ItemType Directory out | Out-Null
           Copy-Item oxce\bin\Win32\Release\OpenXcom.exe out\
+          # Ship the .pdb BESIDE the exe. OXCE already writes a .dmp and walks the stack with
+          # dbghelp on a crash, but without the matching symbol file every frame prints as a
+          # raw address (OpenXcom.exe+0x39e817) and says nothing about which of our code broke.
+          # The Release config builds one (DebugInformationFormat: ProgramDatabase); it was
+          # simply being discarded here. dbghelp looks next to the exe, so that is where it goes.
+          $pdb = Get-ChildItem oxce\bin\Win32\Release\OpenXcom.pdb -ErrorAction SilentlyContinue
+          if (-not $pdb) { $pdb = Get-ChildItem oxce\ -Recurse -Filter OpenXcom.pdb -ErrorAction SilentlyContinue | Select-Object -First 1 }
+          if ($pdb) {
+            Copy-Item $pdb.FullName out\
+            "symbols: {0} ({1:N1} MB)" -f $pdb.Name, ($pdb.Length/1MB)
+          } else {
+            "WARNING: no OpenXcom.pdb found - crash traces will be raw addresses"
+          }
           Copy-Item oxce\bin\Win32\*.dll out\
           Copy-Item -Recurse oxce\bin\common, oxce\bin\standard out\
           New-Item -ItemType Directory out\UFO | Out-Null
           Copy-Item oxce\LICENSE.txt, mine\tools\oxce-4x\Play_4x.bat, mine\tools\oxce-4x\oxce_4x.patch out\
+          Copy-Item mine\tools\oxce-4x\IF_IT_CRASHES.txt out\
       - uses: actions/upload-artifact@v4
         with:
           name: GIJoe_OXCE_4x_win32
@@ -48,8 +62,16 @@ jobs:
       - name: Publish the exe to a binary branch (so it can be fetched with git)
         shell: bash
         run: |
-          mkdir bin && cp out/OpenXcom.exe bin/ && cd bin
+          mkdir bin && cp out/OpenXcom.exe bin/
+          # The symbols travel with the exe or they are useless: dbghelp matches a .pdb to the
+          # exact build that wrote it, so a pdb from any other run resolves nothing. The branch
+          # is re-created from scratch and force-pushed every build, so this adds size to one
+          # fetch, never to repository history.
+          cp out/OpenXcom.pdb bin/ 2>/dev/null || echo "no pdb to publish"
+          cp mine/tools/oxce-4x/IF_IT_CRASHES.txt bin/ 2>/dev/null || true
+          cd bin
+          ls -la
           git init -q && git checkout -q -b claude/oxce-gijoe-4x-bin
-          git -c user.name=build -c user.email=build@users.noreply.github.com add OpenXcom.exe
+          git -c user.name=build -c user.email=build@users.noreply.github.com add -A
           git -c user.name=build -c user.email=build@users.noreply.github.com commit -qm "OpenXcom.exe built from ${GITHUB_SHA}"
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" claude/oxce-gijoe-4x-bin
