@@ -51,7 +51,16 @@ def fin(im): return im.resize((N, N), Image.LANCZOS)
 C = 36*U                            # centre at supersample
 
 # ---- helpers -------------------------------------------------------------
-def dash_ellipse(d, box, colour, width=W, dash=14, gap=12, phase=0.0):
+# DASH AND GAP ARE IN DESIGN UNITS, like every other coordinate here.
+#
+# They used to be in raw supersample pixels, which made every dashed icon a
+# lie: W is 3*U = 18 raw pixels, so `dash=5` asked for a dash a third as long
+# as the line was thick, and the LANCZOS reduce (432 -> 28, so 15.4 raw pixels
+# to one) blurred the whole ring below the snap threshold. pin_rumour came out
+# of that as SIX pixels. One output pixel is 2.57 units, so a dash wants to be
+# 6-10 units to read at all.
+def dash_ellipse(d, box, colour, width=W, dash=8, gap=7, phase=0.0):
+    dash, gap = dash*U, gap*U
     x0,y0,x1,y1 = box; rx,ry = (x1-x0)/2,(y1-y0)/2; cx,cy = x0+rx, y0+ry
     per = math.pi*(3*(rx+ry) - math.sqrt((3*rx+ry)*(rx+3*ry)))
     steps = max(64, int(per/4)); acc, on, prev = phase, True, None
@@ -64,7 +73,8 @@ def dash_ellipse(d, box, colour, width=W, dash=14, gap=12, phase=0.0):
             if acc >= (dash if on else gap): on, acc = not on, 0.0
         prev = p
 
-def dash_path(d, pts, colour, width=W, dash=14, gap=12):
+def dash_path(d, pts, colour, width=W, dash=8, gap=7):
+    dash, gap = dash*U, gap*U
     acc, on, prev = 0.0, True, None
     for p in pts:
         if prev:
@@ -77,23 +87,38 @@ def dash_path(d, pts, colour, width=W, dash=14, gap=12):
                 if acc >= (dash if on else gap): on, acc = not on, 0.0
         prev = p; last = p; lastdraw = p
 
-def pin_body(d, colour, width=W, fill=None):
-    """the teardrop every player pin shares"""
-    hx, hy, hr = C, 26*U, 14*U
-    d.ellipse([hx-hr,hy-hr,hx+hr,hy+hr], outline=colour, width=width, fill=fill)
-    d.line([(hx-9*U, hy+11*U), (hx, 60*U), (hx+9*U, hy+11*U)], fill=colour,
+PIN_HEAD = [C-14*U, 12*U, C+14*U, 40*U]      # the head every player pin shares
+
+def pin_stem(d, colour, width=W):
+    """the spike under the head, solid on all three confidence tiers"""
+    d.line([(C-9*U, 37*U), (C, 60*U), (C+9*U, 37*U)], fill=colour,
            width=width, joint='curve')
 
+def pin_body(d, colour, width=W, fill=None):
+    """the teardrop every player pin shares"""
+    d.ellipse(PIN_HEAD, outline=colour, width=width, fill=fill)
+    pin_stem(d, colour, width)
+
 ICONS = {}
-def icon(key, group, label, note):
+def icon(key, group, label, note, uses=None):
+    """`uses` is the palette entries this icon is allowed to quantise to.
+
+    Without it the snap searches all five, and a LANCZOS reduce of a hard gold
+    line against transparent RINGS: edge pixels overshoot past the source
+    colour and land nearer WHITE than GOLD. That is where the twelve white
+    specks on an all-gold pin came from, and why pin_unknown had five JOE-blue
+    pixels in a grey ring. Naming the colours an icon actually drew with means
+    an edge can only become its own colour or nothing.
+    """
     def deco(fn):
         im = pad(); fn(ImageDraw.Draw(im))
-        ICONS[key] = dict(img=fin(im), group=group, label=label, note=note)
+        ICONS[key] = dict(img=fin(im), group=group, label=label, note=note,
+                          uses=uses)
         return fn
     return deco
 
 # ======================================================= COBRA — STANDING SITES
-@icon('cobra_front_company','Cobra sites','FRONT COMPANY','Extensive Enterprises and the like')
+@icon('cobra_front_company','Cobra sites','FRONT COMPANY','Extensive Enterprises and the like', uses=['COBRA', 'GOLD'])
 def _(d):
     d.rectangle([16*U,16*U,56*U,60*U], outline=COBRA, width=W)
     for r in range(3):
@@ -102,7 +127,7 @@ def _(d):
                         outline=COBRA, width=2*U)
     d.line([(30*U,60*U),(30*U,52*U),(42*U,52*U),(42*U,60*U)], fill=GOLD, width=W)
 
-@icon('cobra_factory','Cobra sites','WEAPONS FACTORY','M.A.R.S. plant, kit tier source')
+@icon('cobra_factory','Cobra sites','WEAPONS FACTORY','M.A.R.S. plant, kit tier source', uses=['COBRA', 'GOLD'])
 def _(d):
     d.line([(10*U,58*U),(10*U,40*U),(22*U,28*U),(22*U,40*U),(34*U,28*U),(34*U,40*U),
             (46*U,28*U),(46*U,58*U)], fill=COBRA, width=W, joint='curve')
@@ -112,7 +137,7 @@ def _(d):
     d.line([(28*U,50*U),(34*U,50*U)], fill=GOLD, width=2*U)
     d.line([(40*U,50*U),(46*U,50*U)], fill=GOLD, width=2*U)
 
-@icon('cobra_camp','Cobra sites','TRAINING CAMP','lifts the garrison rank gate')
+@icon('cobra_camp','Cobra sites','TRAINING CAMP','lifts the garrison rank gate', uses=['COBRA', 'GOLD'])
 def _(d):
     for ox in (-17*U, 13*U):
         d.line([(C+ox, 22*U), (C+ox-15*U, 54*U), (C+ox+15*U, 54*U), (C+ox, 22*U)],
@@ -120,21 +145,21 @@ def _(d):
         d.line([(C+ox, 26*U), (C+ox, 54*U)], fill=GOLD, width=2*U)
     d.line([(8*U,58*U),(64*U,58*U)], fill=COBRA, width=W)
 
-@icon('cobra_depot','Cobra sites','SUPPLY DEPOT','materiel store, raid target')
+@icon('cobra_depot','Cobra sites','SUPPLY DEPOT','materiel store, raid target', uses=['COBRA', 'GOLD'])
 def _(d):
     d.rectangle([14*U,20*U,58*U,56*U], outline=COBRA, width=W)
     d.line([(14*U,20*U),(58*U,56*U)], fill=COBRA, width=2*U)
     d.line([(58*U,20*U),(14*U,56*U)], fill=COBRA, width=2*U)
     d.line([(14*U,28*U),(58*U,28*U)], fill=GOLD, width=2*U)
 
-@icon('cobra_lab','Cobra sites','RESEARCH LAB','one bench, one department')
+@icon('cobra_lab','Cobra sites','RESEARCH LAB','one bench, one department', uses=['COBRA', 'GOLD'])
 def _(d):
     d.line([(24*U,12*U),(48*U,12*U)], fill=COBRA, width=W)
     d.line([(29*U,12*U),(29*U,30*U),(13*U,56*U),(59*U,56*U),(43*U,30*U),(43*U,12*U)],
            fill=COBRA, width=W, joint='curve')
     d.line([(21*U,45*U),(51*U,45*U)], fill=GOLD, width=W)
 
-@icon('cobra_drome','Cobra sites','TERROR DROME','four benches, regional suppression')
+@icon('cobra_drome','Cobra sites','TERROR DROME','four benches, regional suppression', uses=['COBRA', 'GOLD'])
 def _(d):
     for rr in (30*U, 19*U): d.ellipse([C-rr,C-rr,C+rr,C+rr], outline=COBRA, width=W)
     for a in (0,90,180,270):
@@ -143,14 +168,14 @@ def _(d):
                 (C+35*U*math.cos(r), C+35*U*math.sin(r))], fill=COBRA, width=W)
     d.ellipse([C-6*U,C-6*U,C+6*U,C+6*U], fill=GOLD)
 
-@icon('cobra_broadcast','Cobra sites','BROADCAST STATION','erodes regional goodwill')
+@icon('cobra_broadcast','Cobra sites','BROADCAST STATION','erodes regional goodwill', uses=['COBRA', 'GOLD'])
 def _(d):
     d.line([(26*U,58*U),(C,12*U),(46*U,58*U)], fill=COBRA, width=W, joint='curve')
     d.line([(29*U,44*U),(43*U,44*U)], fill=COBRA, width=2*U)
     for rr in (13*U, 21*U):
         d.arc([C-rr, 16*U-rr, C+rr, 16*U+rr], 200, 340, fill=GOLD, width=W)
 
-@icon('cobra_hq','Cobra sites','HIDDEN HQ','two benches, garrison bonus')
+@icon('cobra_hq','Cobra sites','HIDDEN HQ','two benches, garrison bonus', uses=['COBRA', 'GOLD'])
 def _(d):
     p = [(C+28*U*math.cos(math.radians(a)), C+28*U*math.sin(math.radians(a)))
          for a in range(0,360,60)]
@@ -161,7 +186,7 @@ def _(d):
     d.line([(C-15*U,C),(C+15*U,C)], fill=COBRA, width=2*U)
 
 # ============================================================ COBRA — ACTIVITY
-@icon('cobra_flight','Cobra activity','CARGO FLIGHT','materiel in transit between regions')
+@icon('cobra_flight','Cobra activity','CARGO FLIGHT','materiel in transit between regions', uses=['COBRA', 'GOLD'])
 def _(d):
     d.line([(C,8*U),(C+7*U,22*U),(C+7*U,50*U),(C,60*U),(C-7*U,50*U),(C-7*U,22*U),(C,8*U)],
            fill=COBRA, width=W, joint='curve')
@@ -172,13 +197,13 @@ def _(d):
                fill=COBRA, width=W, joint='curve')
     d.rectangle([C-5*U,30*U,C+5*U,42*U], outline=GOLD, width=2*U)
 
-@icon('cobra_craft','Cobra activity','COBRA CRAFT','FANG, Rattler, interceptable')
+@icon('cobra_craft','Cobra activity','COBRA CRAFT','FANG, Rattler, interceptable', uses=['COBRA', 'GOLD'])
 def _(d):
     d.line([(C,6*U),(C+30*U,56*U),(C,44*U),(C-30*U,56*U),(C,6*U)],
            fill=COBRA, width=W, joint='curve')
     d.line([(C,14*U),(C,40*U)], fill=GOLD, width=W)
 
-@icon('cobra_crash','Cobra activity','CRASH SITE','downed craft, recoverable')
+@icon('cobra_crash','Cobra activity','CRASH SITE','downed craft, recoverable', uses=['COBRA', 'GOLD'])
 def _(d):
     for a in range(0, 360, 45):
         r = math.radians(a); ln = 32*U if a % 90 == 0 else 24*U
@@ -186,7 +211,7 @@ def _(d):
                 (C+ln*math.cos(r), C+ln*math.sin(r))], fill=COBRA, width=W)
     d.ellipse([C-10*U,C-10*U,C+10*U,C+10*U], outline=GOLD, width=W)
 
-@icon('cobra_landed','Cobra activity','LANDED CRAFT','on the ground, assaultable')
+@icon('cobra_landed','Cobra activity','LANDED CRAFT','on the ground, assaultable', uses=['COBRA', 'GOLD'])
 def _(d):
     d.line([(C,20*U),(C+20*U,44*U),(C-20*U,44*U),(C,20*U)], fill=COBRA, width=W, joint='curve')
     for sx in (-1,1):
@@ -195,7 +220,7 @@ def _(d):
         d.line([(C+sx*30*U, 54*U),(C+sx*20*U, 54*U)], fill=GOLD, width=W)
     d.line([(C-22*U,52*U),(C+22*U,52*U)], fill=COBRA, width=2*U)
 
-@icon('cobra_terror','Cobra activity','TERROR ATTACK','civilians on the clock')
+@icon('cobra_terror','Cobra activity','TERROR ATTACK','civilians on the clock', uses=['COBRA', 'GOLD'])
 def _(d):
     for x0,x1,h in ((11,25,24),(28,42,36),(45,61,28)):
         d.rectangle([x0*U, (58-h)*U, x1*U, 58*U], outline=COBRA, width=W)
@@ -205,7 +230,7 @@ def _(d):
         d.line([(35*U+7*U*math.cos(r), 18*U+7*U*math.sin(r)),
                 (35*U+17*U*math.cos(r), 18*U+17*U*math.sin(r))], fill=GOLD, width=W)
 
-@icon('cobra_convoy','Cobra activity','M.A.R.S. CONVOY','stock on the move, not Cobra-funded')
+@icon('cobra_convoy','Cobra activity','M.A.R.S. CONVOY','stock on the move, not Cobra-funded', uses=['COBRA', 'GOLD'])
 def _(d):
     d.rectangle([8*U,22*U,33*U,44*U], outline=COBRA, width=W)
     d.line([(36*U,44*U),(36*U,30*U),(48*U,30*U),(56*U,38*U),(56*U,44*U),(36*U,44*U)],
@@ -216,7 +241,7 @@ def _(d):
     d.line([(14*U,30*U),(27*U,30*U)], fill=GOLD, width=2*U)
 
 # ========================================================================= JOE
-@icon('joe_pit','G.I. Joe','THE PIT','main base')
+@icon('joe_pit','G.I. Joe','THE PIT','main base', uses=['GOLD', 'JOE', 'WHITE'])
 def _(d):
     d.ellipse([C-30*U,C-30*U,C+30*U,C+30*U], outline=JOE, width=W)
     d.ellipse([C-21*U,C-21*U,C+21*U,C+21*U], outline=WHITE, width=2*U)
@@ -226,19 +251,19 @@ def _(d):
         p.append((C+17*U*math.cos(a), C+17*U*math.sin(a)))
     d.polygon(p, outline=GOLD, width=W)
 
-@icon('joe_base','G.I. Joe','FORWARD BASE','secondary installation')
+@icon('joe_base','G.I. Joe','FORWARD BASE','secondary installation', uses=['GOLD', 'JOE', 'WHITE'])
 def _(d):
     d.ellipse([C-28*U,C-28*U,C+28*U,C+28*U], outline=JOE, width=W)
     d.line([(C-15*U,C+8*U),(C,C-14*U),(C+15*U,C+8*U)], fill=WHITE, width=W, joint='curve')
     d.line([(C-15*U,C+16*U),(C+15*U,C+16*U)], fill=GOLD, width=W)
 
-@icon('joe_craft','G.I. Joe','CRAFT IN FLIGHT','fallback marker; art replaces this')
+@icon('joe_craft','G.I. Joe','CRAFT IN FLIGHT','fallback marker; art replaces this', uses=['JOE', 'WHITE'])
 def _(d):
     d.line([(C,10*U),(C+21*U,50*U),(C,40*U),(C-21*U,50*U),(C,10*U)],
            fill=JOE, width=W, joint='curve')
     d.line([(C,16*U),(C,36*U)], fill=WHITE, width=2*U)
 
-@icon('joe_lz','G.I. Joe','LANDING ZONE','where a craft can set down')
+@icon('joe_lz','G.I. Joe','LANDING ZONE','where a craft can set down', uses=['GOLD', 'JOE'])
 def _(d):
     for sx in (-1,1):
         for sy in (-1,1):
@@ -247,7 +272,7 @@ def _(d):
     d.line([(C-14*U,C),(C+14*U,C)], fill=GOLD, width=W)
     d.line([(C,C-14*U),(C,C+14*U)], fill=GOLD, width=W)
 
-@icon('joe_extract','G.I. Joe','EXTRACTION POINT','get them out')
+@icon('joe_extract','G.I. Joe','EXTRACTION POINT','get them out', uses=['GOLD', 'JOE', 'WHITE'])
 def _(d):
     d.ellipse([C-29*U,C-29*U,C+29*U,C+29*U], outline=JOE, width=W)
     for k,oy in enumerate((10*U, -2*U)):
@@ -256,54 +281,64 @@ def _(d):
                fill=col, width=W, joint='curve')
 
 # ====================================================== PLAYER PINS AND ROUTES
-@icon('pin_confirmed',"Player's own board",'PIN — CONFIRMED','he has been there, or intel is hard')
+# THE THREE TIERS ARE ONE OBJECT THREE WAYS, AND THE HEAD IS WHAT CHANGES.
+#
+# Solid head, hollow head, broken head - same gold, same stem, so they read as
+# the same pin at three levels of certainty rather than as three icons. The
+# original plan was to carry confidence in COLOUR, with rumour drawn in DIM
+# (161), and that cannot work here: a pale grey-cyan blended against
+# transparent and reduced 15.4:1 lands nearer WHITE or JOE blue than DIM on
+# almost every pixel, so the tier would have been decided by rounding. Ring
+# continuity survives the reduce; a pale grey does not.
+@icon('pin_confirmed',"Player's own board",'PIN — CONFIRMED','he has been there, or intel is hard', uses=['GOLD'])
 def _(d):
-    pin_body(d, GOLD, W, fill=(216,180,90,70))
+    pin_stem(d, GOLD)
+    d.ellipse(PIN_HEAD, fill=GOLD)
+
+@icon('pin_likely',"Player's own board",'PIN — LIKELY','good intel, unverified', uses=['GOLD'])
+def _(d):
+    pin_stem(d, GOLD)
+    d.ellipse(PIN_HEAD, outline=GOLD, width=W)
     d.ellipse([C-5*U,21*U,C+5*U,31*U], fill=GOLD)
 
-@icon('pin_likely',"Player's own board",'PIN — LIKELY','good intel, unverified')
+@icon('pin_rumour',"Player's own board",'PIN — RUMOUR','a lead, nothing more', uses=['GOLD'])
 def _(d):
-    dash_ellipse(d, [C-14*U,12*U,C+14*U,40*U], GOLD, W, 15, 11)
-    d.line([(C-9*U,37*U),(C,60*U),(C+9*U,37*U)], fill=GOLD, width=W, joint='curve')
-    d.ellipse([C-4*U,22*U,C+4*U,30*U], fill=GOLD)
+    pin_stem(d, GOLD)
+    dash_ellipse(d, PIN_HEAD, GOLD, W, 8, 7)
 
-@icon('pin_rumour',"Player's own board",'PIN — RUMOUR','a lead, nothing more')
-def _(d):
-    dash_ellipse(d, [C-14*U,12*U,C+14*U,40*U], DIM, W, 5, 10)
-    dash_path(d, [(C-9*U,37*U),(C,60*U)], DIM, W, 6, 7)
-    dash_path(d, [(C,60*U),(C+9*U,37*U)], DIM, W, 6, 7)
-
-@icon('pin_note',"Player's own board",'NOTE','a pin with something written on it')
+@icon('pin_note',"Player's own board",'NOTE','a pin with something written on it', uses=['GOLD', 'WHITE'])
 def _(d):
     pin_body(d, GOLD, W)
     d.rectangle([C-7*U,19*U,C+7*U,33*U], outline=GOLD, width=2*U)
     for yy in (23,27,31): d.line([(C-4*U,yy*U),(C+4*U,yy*U)], fill=CREAM, width=2*U)
 
-@icon('pin_unknown',"Player's own board",'UNKNOWN','something is here, he does not know what')
+@icon('pin_unknown',"Player's own board",'UNKNOWN','something is here, he does not know what', uses=['GOLD', 'WHITE'])
 def _(d):
-    dash_ellipse(d, [C-26*U,C-26*U,C+26*U,C+26*U], DIM, W, 13, 11)
+    dash_ellipse(d, [C-26*U,C-26*U,C+26*U,C+26*U], WHITE, W, 9, 8)
     try: f = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 34*U)
     except Exception: f = None
     if f: d.text((C, C-2*U), '?', font=f, fill=GOLD, anchor='mm')
 
-@icon('route_start',"Player's own board",'ROUTE START','where a suspected run begins')
+@icon('route_start',"Player's own board",'ROUTE START','where a suspected run begins', uses=['GOLD'])
 def _(d):
     d.line([(20*U,60*U),(20*U,12*U)], fill=GOLD, width=W)
     d.line([(20*U,14*U),(54*U,22*U),(20*U,32*U)], fill=GOLD, width=W, joint='curve')
     d.ellipse([14*U,54*U,26*U,66*U], fill=GOLD)
 
-@icon('route_waypoint',"Player's own board",'WAYPOINT','a bend in a drawn route')
+@icon('route_waypoint',"Player's own board",'WAYPOINT','a bend in a drawn route', uses=['GOLD'])
 def _(d):
     d.polygon([(C,C-18*U),(C+18*U,C),(C,C+18*U),(C-18*U,C)], outline=GOLD, width=W)
     d.ellipse([C-5*U,C-5*U,C+5*U,C+5*U], fill=GOLD)
-    dash_path(d, [(10*U,C),(C-18*U,C)], DIM, 2*U, 6, 6)
-    dash_path(d, [(C+18*U,C),(62*U,C)], DIM, 2*U, 6, 6)
+    # the lead-in and lead-out, saying this is a bend in something longer
+    dash_path(d, [(8*U,C),(C-18*U,C)], GOLD, W, 6, 5)
+    dash_path(d, [(C+18*U,C),(64*U,C)], GOLD, W, 6, 5)
 
-@icon('area_interest',"Player's own board",'AREA OF INTEREST','a region he wants watched')
+@icon('area_interest',"Player's own board",'AREA OF INTEREST','a region he wants watched', uses=['GOLD'])
 def _(d):
-    dash_ellipse(d, [C-30*U,C-22*U,C+30*U,C+22*U], GOLD, W, 16, 12)
-    dash_ellipse(d, [C-16*U,C-11*U,C+16*U,C+11*U], DIM, 2*U, 8, 9)
-    d.ellipse([C-4*U,C-4*U,C+4*U,C+4*U], fill=GOLD)
+    # one ring, not two. The inner one was 2*U wide, which is a seventh of an
+    # output pixel after the reduce, and it only ever arrived as speckle.
+    dash_ellipse(d, [C-30*U,C-22*U,C+30*U,C+22*U], GOLD, W, 10, 8)
+    d.ellipse([C-6*U,C-6*U,C+6*U,C+6*U], fill=GOLD)
 
 
 # ---------------------------------------------------------------- the output
@@ -343,9 +378,10 @@ def main():
 
     assert set(ORDER) == set(ICONS), set(ORDER) ^ set(ICONS)
 
-    def snap(c):
-        best, bd = 13, 1e18
-        for i, p in BASE.items():
+    def snap(c, allowed):
+        best, bd = allowed[0], 1e18
+        for i in allowed:
+            p = BASE[i]
             rm = (p[0]+c[0])/2
             d = ((2+rm/256)*(p[0]-c[0])**2 + 4*(p[1]-c[1])**2
                  + (2+(255-rm)/256)*(p[2]-c[2])**2)
@@ -358,9 +394,11 @@ def main():
     # one is just so the file previews correctly outside the game.
     flat = [0]*768
     for i, c in BASE.items(): flat[i*3:i*3+3] = list(c)
-    cache = {}
+    ALL = sorted(BASE)
     for n, k in enumerate(ORDER):
         im = ICONS[k]['img']; w, h = im.size; sp = im.load()
+        allowed = [PAL_INDEX[u] for u in ICONS[k]['uses']] if ICONS[k]['uses'] else ALL
+        cache = {}
         out = Image.new('P', (w, h), 0); op = out.load()
         for y in range(h):
             for x in range(w):
@@ -368,8 +406,21 @@ def main():
                 if al < 128: continue                  # index 0 is the colour key
                 # un-premultiply against black, or every edge pixel reads as dark
                 c = (min(255, r*255//al), min(255, g*255//al), min(255, b*255//al))
-                if c not in cache: cache[c] = snap(c)
+                if c not in cache: cache[c] = snap(c, allowed)
                 op[x, y] = cache[c]
+        # A declared colour that drew nothing is a lie in the declaration, and
+        # a colour that survived in single figures is speckle rather than art.
+        got = {}
+        for y in range(h):
+            for x in range(w):
+                if op[x, y]: got[op[x, y]] = got.get(op[x, y], 0) + 1
+        stray = {i: c for i, c in got.items() if c < 3}
+        if stray:
+            print('  ! %-22s thin colours %s - %d px of ink total'
+                  % (k, stray, sum(got.values())))
+        if sum(got.values()) < 24:
+            print('  ! %-22s only %d px of ink; it will not read at %dpx'
+                  % (k, sum(got.values()), N))
         out.putpalette(flat)
         out.save(os.path.join(a.out, 'marker_%02d_%s.png' % (FIRST+n, k)),
                  transparency=0, optimize=False)

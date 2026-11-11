@@ -49,6 +49,29 @@ if dirty:
     sys.exit(1)
 print('  ok   no probe markers in src')
 
+# 1b. A new source file that git has never been told about.
+#
+# `git diff` does not see untracked files, so a brand new .cpp is silently
+# absent from the patch while the CMakeLists and vcxproj hunks that REFERENCE
+# it are present - a patch that applies cleanly and then fails to compile, on
+# the Windows runner, eight minutes later. GlobeMarkState.cpp did exactly this
+# on 11 Nov and the only tell was a zero where a filename should have been.
+# `git add -N` is the fix; this refuses until it has been done.
+r = git('status', '--porcelain', '--', 'src')
+if r.returncode != 0:
+    print('REFUSING: git status failed\n' + r.stderr)
+    sys.exit(1)
+untracked = [l[3:] for l in r.stdout.splitlines() if l.startswith('??')]
+if untracked:
+    print('REFUSING: these source files are untracked, so git diff will leave')
+    print('them out of the patch while the build files that name them go in:')
+    for f in untracked:
+        print('  %s' % f)
+    print('')
+    print('  git -C %s add -N %s' % (REPO, ' '.join(untracked)))
+    sys.exit(1)
+print('  ok   no untracked files in src')
+
 # 2. Generate.
 r = git('diff', BASE, '--', 'src')
 if r.returncode != 0:

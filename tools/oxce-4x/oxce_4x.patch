@@ -1580,7 +1580,7 @@ index 8fa87f8..628a943 100644
  	switch (unitDir)
  	{
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..ff1bf48 100644
+index 839f803..560f94f 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -172,6 +172,8 @@ set ( engine_src
@@ -1592,7 +1592,7 @@ index 839f803..ff1bf48 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -201,6 +203,7 @@ set ( geoscape_src
+@@ -201,9 +203,11 @@ set ( geoscape_src
    Geoscape/DogfightState.cpp
    Geoscape/ExtendedGeoscapeLinksState.cpp
    Geoscape/FundingState.cpp
@@ -1600,7 +1600,11 @@ index 839f803..ff1bf48 100644
    Geoscape/GeoscapeCraftState.cpp
    Geoscape/GeoscapeEventState.cpp
    Geoscape/GeoscapeState.cpp
-@@ -331,6 +334,7 @@ set ( mod_src
++  Geoscape/GlobeMarkState.cpp
+   Geoscape/Globe.cpp
+   Geoscape/GraphsState.cpp
+   Geoscape/InterceptState.cpp
+@@ -331,6 +335,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -1608,7 +1612,7 @@ index 839f803..ff1bf48 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +360,7 @@ set ( savegame_src
+@@ -356,6 +361,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -2785,6 +2789,31 @@ index 0000000..da9df91
 +	void composite(SDL_Surface *base8, SDL_Surface *screen32);
 +}
 +}
+diff --git a/src/Engine/Options.cpp b/src/Engine/Options.cpp
+index 480f227..19f1a1b 100644
+--- a/src/Engine/Options.cpp
++++ b/src/Engine/Options.cpp
+@@ -307,6 +307,7 @@ void createControlsOXC()
+ 	_info.push_back(OptionInfo(OPTION_OXC, "keyGeoFunding", &keyGeoFunding, SDLK_f, "STR_FUNDING_UC", "STR_GEOSCAPE"));
+ 	_info.push_back(OptionInfo(OPTION_OXC, "keyGeoToggleDetail", &keyGeoToggleDetail, SDLK_TAB, "STR_TOGGLE_COUNTRY_DETAIL", "STR_GEOSCAPE"));
+ 	_info.push_back(OptionInfo(OPTION_OXC, "keyGeoToggleRadar", &keyGeoToggleRadar, SDLK_r, "STR_TOGGLE_RADAR_RANGES", "STR_GEOSCAPE"));
++	_info.push_back(OptionInfo(OPTION_OXCE, "keyGeoToggleMarks", &keyGeoToggleMarks, SDLK_m, "STR_TOGGLE_MAP_MARKS", "STR_GEOSCAPE"));
+ 	_info.push_back(OptionInfo(OPTION_OXC, "keyBaseSelect1", &keyBaseSelect1, SDLK_1, "STR_SELECT_BASE_1", "STR_GEOSCAPE"));
+ 	_info.push_back(OptionInfo(OPTION_OXC, "keyBaseSelect2", &keyBaseSelect2, SDLK_2, "STR_SELECT_BASE_2", "STR_GEOSCAPE"));
+ 	_info.push_back(OptionInfo(OPTION_OXC, "keyBaseSelect3", &keyBaseSelect3, SDLK_3, "STR_SELECT_BASE_3", "STR_GEOSCAPE"));
+diff --git a/src/Engine/Options.inc.h b/src/Engine/Options.inc.h
+index a08796c..1a67209 100644
+--- a/src/Engine/Options.inc.h
++++ b/src/Engine/Options.inc.h
+@@ -26,7 +26,7 @@ OPT bool includePrimeStateInSavedLayout, anytimePsiTraining, weaponSelfDestructi
+ 	storageLimitsEnforced, canSellLiveAliens, canTransferCraftsWhileAirborne, customInitialBase, aggressiveRetaliation, geoDragScrollInvert,
+ 	allowBuildingQueue, showFundsOnGeoscape, psiStrengthEval, allowPsiStrengthImprovement, fieldPromotions, meetingPoint;
+ OPT SDLKey keyGeoLeft, keyGeoRight, keyGeoUp, keyGeoDown, keyGeoZoomIn, keyGeoZoomOut, keyGeoSpeed1, keyGeoSpeed2, keyGeoSpeed3, keyGeoSpeed4, keyGeoSpeed5, keyGeoSpeed6,
+-	keyGeoIntercept, keyGeoBases, keyGeoGraphs, keyGeoUfopedia, keyGeoOptions, keyGeoFunding, keyGeoToggleDetail, keyGeoToggleRadar,
++	keyGeoIntercept, keyGeoBases, keyGeoGraphs, keyGeoUfopedia, keyGeoOptions, keyGeoFunding, keyGeoToggleDetail, keyGeoToggleRadar, keyGeoToggleMarks,
+ 	keyBaseSelect1, keyBaseSelect2, keyBaseSelect3, keyBaseSelect4, keyBaseSelect5, keyBaseSelect6, keyBaseSelect7, keyBaseSelect8;
+ 
+ // Battlescape options
 diff --git a/src/Engine/Screen.cpp b/src/Engine/Screen.cpp
 index ae9083d..965c582 100644
 --- a/src/Engine/Screen.cpp
@@ -3379,10 +3408,18 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..19a3640 100644
+index 6b4e79d..7c5e7aa 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
-@@ -103,6 +103,7 @@
+@@ -35,6 +35,7 @@
+ #include "../Engine/Collections.h"
+ #include "../Engine/Unicode.h"
+ #include "Globe.h"
++#include "GlobeMarkState.h"
+ #include "../Interface/ComboBox.h"
+ #include "../Interface/Text.h"
+ #include "../Interface/TextButton.h"
+@@ -103,6 +104,7 @@
  #include "../Savegame/ItemContainer.h"
  #include "../Savegame/MissionSite.h"
  #include "../Savegame/AlienBase.h"
@@ -3390,7 +3427,27 @@ index 6b4e79d..19a3640 100644
  #include "../Mod/RuleRegion.h"
  #include "MissionDetectedState.h"
  #include "AlienBaseState.h"
-@@ -1454,6 +1455,35 @@ void GeoscapeState::time5Seconds()
+@@ -387,6 +389,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+ 	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
+ 	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
+ 	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
++	// The board is notes, so it has to be possible to put the notes away.
++	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnToggleMarksClick, Options::keyGeoToggleMarks);
+ 
+ 	_txtFunds->setAlign(ALIGN_CENTER);
+ 	_txtFunds->setVisible(Options::showFundsOnGeoscape);
+@@ -712,6 +716,10 @@ void GeoscapeState::init()
+ 	updateSlackingIndicator();
+ 
+ 	_globe->onMouseClick((ActionHandler)&GeoscapeState::globeClick);
++	// onMouseClick defaults to the LEFT button only, so globeClick never saw a
++	// right-click at all - which is why the mark menu did nothing until this
++	// line existed. The handler itself already branched on the button.
++	_globe->onMouseClick((ActionHandler)&GeoscapeState::globeClick, SDL_BUTTON_RIGHT);
+ 	_globe->onMouseOver(0);
+ 	_globe->rotateStop();
+ 	_globe->setFocus(true);
+@@ -1454,6 +1462,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -3426,7 +3483,7 @@ index 6b4e79d..19a3640 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1858,6 +1888,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +1895,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -3446,7 +3503,7 @@ index 6b4e79d..19a3640 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -2862,6 +2905,10 @@ void GeoscapeState::time1Month()
+@@ -2862,6 +2912,10 @@ void GeoscapeState::time1Month()
  	_game->getSavedGame()->addMonth();
  
  	// Determine alien mission for this month.
@@ -3457,11 +3514,104 @@ index 6b4e79d..19a3640 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
+@@ -2960,6 +3014,30 @@ void GeoscapeState::globeClick(Action *action)
+ 		}
+ 	}
+ 
++	// CTRL + right-click on open ground drops a mark.
++	//
++	// Plain right-click was the first attempt and it was wrong: globeClick had
++	// only ever looked at the LEFT button, so the right one read as free, but
++	// Globe::mouseClick centres the globe on it regardless of what is
++	// registered here. The first run with marks enabled threw the view across
++	// the Pacific seven times in a row. Right-click stays navigation; the
++	// chord is the deliberate gesture, and Globe::mouseClick knows not to
++	// centre while CTRL is down.
++	if (action->getDetails()->button.button == SDL_BUTTON_RIGHT
++		&& (SDL_GetModState() & KMOD_CTRL))
++	{
++		// Off the globe entirely: cartToPolar answers for the black sky too,
++		// returning a point on the limb, so the disc is tested first. Without
++		// this a right-click on empty space silently pinned a spot in the ocean.
++		if (_globe->isOnGlobe(mouseX, mouseY))
++		{
++			double lon, lat;
++			_globe->cartToPolar(mouseX, mouseY, &lon, &lat);
++			_game->pushState(new GlobeMarkState(_globe, lon, lat));
++			return;
++		}
++	}
++
+ 	if (_game->getSavedGame()->getDebugMode())
+ 	{
+ 		double lon, lat;
+@@ -3265,6 +3343,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+  * Zooms out of the globe.
+  * @param action Pointer to an action.
+  */
++/**
++ * Shows or hides the player's own map marks.
++ * @param action Pointer to an action.
++ */
++void GeoscapeState::btnToggleMarksClick(Action *)
++{
++	_globe->toggleMarks();
++}
++
+ void GeoscapeState::btnZoomOutLeftClick(Action *)
+ {
+ 	_globe->zoomOut();
+diff --git a/src/Geoscape/GeoscapeState.h b/src/Geoscape/GeoscapeState.h
+index 5eaf857..7344dba 100644
+--- a/src/Geoscape/GeoscapeState.h
++++ b/src/Geoscape/GeoscapeState.h
+@@ -163,6 +163,8 @@ public:
+ 	void btnZoomInRightClick(Action *action);
+ 	/// Handler for left-clicking the Zoom Out icon.
+ 	void btnZoomOutLeftClick(Action *action);
++	/// Shows or hides the player's own map marks.
++	void btnToggleMarksClick(Action *action);
+ 	/// Handler for right-clicking the Zoom Out icon.
+ 	void btnZoomOutRightClick(Action *action);
+ 	/// Blit method - renders the state and dogfights.
 diff --git a/src/Geoscape/Globe.cpp b/src/Geoscape/Globe.cpp
-index 5b17165..a06bad9 100644
+index 5b17165..72df4a8 100644
 --- a/src/Geoscape/Globe.cpp
 +++ b/src/Geoscape/Globe.cpp
-@@ -967,6 +967,7 @@ void Globe::draw()
+@@ -61,6 +61,11 @@ const double Globe::ROTATE_LONGITUDE = 0.10;
+ const double Globe::ROTATE_LATITUDE = 0.06;
+ 
+ Uint8 Globe::OCEAN_COLOR;
++std::vector<int> Globe::MARK_ICONS;
++int Globe::MARK_STALE_MONTHS = 4;
++// 144 is the gold the marker art is drawn in, so a route and its waypoints
++// are visibly the same pen. Set from the ruleset with `markRouteColor`.
++Uint8 Globe::ROUTE_COLOR = 144;
+ bool Globe::OCEAN_SHADING;
+ Uint8 Globe::COUNTRY_LABEL_COLOR;
+ Uint8 Globe::LINE_COLOR;
+@@ -411,6 +416,20 @@ void Globe::polarToCart(double lon, double lat, double *x, double *y) const
+  * @param lon Pointer to the output longitude.
+  * @param lat Pointer to the output latitude.
+  */
++/**
++ * Is a screen point on the globe's disc?
++ *
++ * cartToPolar answers for any point, including the black sky outside the disc,
++ * where it returns a lon/lat on the limb. So anything that turns a click into a
++ * place has to ask this first or a right-click on empty space pins a point in
++ * the ocean.
++ */
++bool Globe::isOnGlobe(int x, int y) const
++{
++	const double dx = x - _cenX, dy = y - _cenY;
++	return dx * dx + dy * dy <= _radius * _radius;
++}
++
+ void Globe::cartToPolar(Sint16 x, Sint16 y, double *lon, double *lat) const
+ {
+ 	// Orthographic projection
+@@ -967,10 +986,12 @@ void Globe::draw()
  	Surface::draw();
  	drawOcean();
  	drawLand();
@@ -3469,7 +3619,12 @@ index 5b17165..a06bad9 100644
  	drawRadars();
  	drawFlights();
  	drawShadow();
-@@ -1161,6 +1162,71 @@ void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double
+ 	drawMarkers();
++	drawMarks();
+ 	drawDetail();
+ }
+ 
+@@ -1161,6 +1182,71 @@ void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double
  /**
   * Draws the radar ranges of player bases, player craft, alien bases and UFO hunter-killers on the globe.
   */
@@ -3541,19 +3696,649 @@ index 5b17165..a06bad9 100644
  void Globe::drawRadars()
  {
  	_radars->clear();
+@@ -1358,6 +1444,136 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
+  * Draws the details of the countries on the globe,
+  * based on the current zoom level.
+  */
++/**
++ * Draws the situation board: the player's own pins and routes, and the leads
++ * intel has given him, on the same pass and in the same vocabulary.
++ *
++ * Intel ages. A lead older than MARK_STALE_MONTHS is DRAWN one tier less
++ * certain than it was filed - a confirmed sighting becomes a likely one,
++ * a likely one becomes a rumour - without the stored mark being rewritten.
++ * Drawing it down rather than editing it means the player can still be told
++ * what he was originally told, and a fresh confirmation restores it by
++ * changing placedMonth rather than by repairing damage.
++ *
++ * A pin the player placed himself never goes stale. He is not guessing about
++ * his own guess.
++ */
++/**
++ * Shows or hides the player's own situation board.
++ *
++ * The board is his working notes, so it has to be possible to get it out of
++ * the way: a region he has pinned six times is a region he cannot see any
++ * more. The marks stay in the save either way - this only stops them drawing.
++ */
++void Globe::toggleMarks()
++{
++	_showMarks = !_showMarks;
++	draw();
++}
++
++void Globe::drawMarks()
++{
++	if (!_showMarks || MARK_ICONS.empty())
++	{
++		return;
++	}
++	const auto& marks = _game->getSavedGame()->getGlobeMarks();
++	if (marks.empty())
++	{
++		return;
++	}
++	const int month = _game->getSavedGame()->getMonthsPassed();
++
++	// routes first, so a pin always sits on top of its own line
++	_radars->lock();
++	for (const auto& m : marks)
++	{
++		if (m.kind != GlobeMark::MARK_ROUTE || m.route.size() < 4)
++		{
++			continue;
++		}
++		double phase = 0.0;
++		for (size_t i = 0; i + 3 < m.route.size(); i += 2)
++		{
++			drawMarkPath(m.route[i], m.route[i+1], m.route[i+2], m.route[i+3],
++			             ROUTE_COLOR, &phase);
++		}
++	}
++	_radars->unlock();
++
++	for (const auto& m : marks)
++	{
++		int trust = m.trust;
++		if (m.fromIntel && month >= 0 && month - m.placedMonth >= MARK_STALE_MONTHS)
++		{
++			trust = std::max((int)GlobeMark::TRUST_RUMOUR, trust - 1);
++		}
++
++		size_t slot;
++		switch (m.kind)
++		{
++		case GlobeMark::MARK_NOTE:    slot = 3; break;
++		case GlobeMark::MARK_UNKNOWN: slot = 4; break;
++		case GlobeMark::MARK_ROUTE:   slot = 5; break;
++		case GlobeMark::MARK_AREA:    slot = 7; break;
++		default:
++			// confirmed, likely, rumour are icons 0,1,2 - highest trust first
++			slot = (size_t)(2 - Clamp(trust, 0, 2));
++			break;
++		}
++		if (slot >= MARK_ICONS.size())
++		{
++			continue;
++		}
++
++		// a route draws its start, then a waypoint at every bend
++		if (m.kind == GlobeMark::MARK_ROUTE && m.route.size() >= 2)
++		{
++			for (size_t i = 0; i + 1 < m.route.size(); i += 2)
++			{
++				const size_t icon = (i == 0) ? 5 : 6;
++				if (icon >= MARK_ICONS.size()) break;
++				drawMarkAt(m.route[i], m.route[i+1], MARK_ICONS[icon]);
++			}
++			continue;
++		}
++		drawMarkAt(m.lon, m.lat, MARK_ICONS[slot]);
++	}
++}
++
++/**
++ * Puts one marker frame on the globe at a lon/lat, if it is on the near face.
++ * Centred on the frame's own size, exactly as drawTarget does, so an oversized
++ * icon lands where it should.
++ */
++void Globe::drawMarkAt(double lon, double lat, int frame)
++{
++	if (pointBack(lon, lat))
++	{
++		return;
++	}
++	Surface *marker = _markerSet->getFrame(frame);
++	if (!marker)
++	{
++		return;
++	}
++	Sint16 x, y;
++	polarToCart(lon, lat, &x, &y);
++	ShaderMove<const Uint8> surf{ marker, x - marker->getWidth() / 2, y - marker->getHeight() / 2 };
++	ShaderMove<Uint8> dest{ this };
++	ShaderDrawFunc(
++		[](Uint8& destStuff, Uint8 srcStuff)
++		{
++			if (srcStuff)
++			{
++				destStuff = srcStuff;
++			}
++		},
++		dest,
++		surf
++	);
++}
++
+ void Globe::drawDetail()
+ {
+ 	_countries->clear();
+@@ -1500,6 +1716,31 @@ void Globe::drawDetail()
+ 			label->blit(_countries->getSurface());
+ 		}
+ 
++		// The player's own marks, labelled here rather than in drawMarks for
++		// one reason: a label belongs to _countries, which is what the whole
++		// zoom >= 3 detail layer writes to and what gets cleared with it. Put
++		// in _markers it would survive a detail toggle the player had just
++		// used to clear the view.
++		//
++		// John asked for "pins with NOTES". A pin whose note only exists
++		// inside the dialog that made it is a pin with no note, so the label
++		// is on the globe, under the icon, in the same gold.
++		if (_showMarks)
++		{
++			label->setColor(ROUTE_COLOR);
++			for (const auto& m : _game->getSavedGame()->getGlobeMarks())
++			{
++				if (m.label.empty() || pointBack(m.lon, m.lat))
++					continue;
++				polarToCart(m.lon, m.lat, &x, &y);
++				label->setX(x - 50);
++				// clear of the icon, which is 28px tall and centred
++				label->setY(y + 15);
++				label->setText(m.label);
++				label->blit(_countries->getSurface());
++			}
++		}
++
+ 		delete label;
+ 	}
+ 
+@@ -1641,6 +1882,71 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
+ 	}
+ }
+ 
++/**
++ * Draws one leg of a player-drawn route as a dashed line in a fixed colour.
++ *
++ * NOT drawPath/XuLine, which is what a craft's flight path uses. XuLine reads
++ * the pixel under it and writes a SHADED version of that same pixel, so the
++ * trail is a darkening of the globe rather than a line drawn on it. That is
++ * right for radar and wrong here: the first build routed three marks through
++ * it and the line was invisible over ocean, which left a route reading as
++ * three loose icons. A mark the player drew himself is ink on the map, so it
++ * gets a colour of its own, and a dash so it cannot be mistaken for a radar
++ * range or a flight path.
++ *
++ * `phase` carries the dash across the legs of a route, so a bend does not
++ * restart the pattern and the whole run reads as one line.
++ */
++void Globe::drawMarkPath(double lon1, double lat1, double lon2, double lat2,
++                         Uint8 colour, double *phase)
++{
++	Cord a(CordPolar(lon1, lat1));
++	Cord b(CordPolar(lon2, lat2));
++	if (-b == a)
++	{
++		return;
++	}
++	b -= a;
++	double length = b.norm();
++	length *= length*15;
++	Sint16 count = length + 1;
++	b /= count;
++	CordPolar p1 = CordPolar(a), p2;
++	double x1, y1, x2, y2;
++	polarToCart(p1.lon, p1.lat, &x1, &y1);
++	for (int i = 0; i < count; ++i)
++	{
++		a += b;
++		p2 = CordPolar(a);
++		polarToCart(p2.lon, p2.lat, &x2, &y2);
++		if (!pointBack(p1.lon, p1.lat) && !pointBack(p2.lon, p2.lat))
++		{
++			double cx1 = x1, cy1 = y1, cx2 = x2, cy2 = y2;
++			if (_clipper->LineClip(&cx1, &cy1, &cx2, &cy2) == 1)
++			{
++				const double dx = cx2 - cx1, dy = cy2 - cy1;
++				const int steps = (int)std::max(std::abs(dx), std::abs(dy));
++				for (int k = 0; k <= steps; ++k)
++				{
++					const double t = steps ? (double)k / steps : 0.0;
++					const int px = (int)(cx1 + dx*t), py = (int)(cy1 + dy*t);
++					// Only where the globe itself has a pixel, exactly as
++					// XuLine tests: that is what keeps the line off the sky
++					// and off the far face.
++					if (getPixel(px, py) && std::fmod(*phase, 7.0) < 4.0)
++					{
++						_radars->setPixel(px, py, colour);
++					}
++					*phase += 1.0;
++				}
++			}
++		}
++		p1 = p2;
++		x1 = x2;
++		y1 = y2;
++	}
++}
++
+ /**
+  * Draws the flight paths of player craft (and hunting UFOs) flying on the globe.
+  */
+@@ -2009,7 +2315,13 @@ void Globe::mouseClick(Action *action, State *state)
+ 	if (lat == lat && lon == lon)
+ 	{
+ 		InteractiveSurface::mouseClick(action, state);
+-		if (action->getDetails()->button.button == SDL_BUTTON_RIGHT)
++		// Right-click centres the globe, and has since 1994 - it is how the
++		// geoscape is navigated, so the situation board does not get to take
++		// it. Placing a mark is CTRL + right-click, and the centring is
++		// suppressed for exactly that chord: otherwise dropping a pin also
++		// threw the view at it, which is the opposite of what a board is for.
++		if (action->getDetails()->button.button == SDL_BUTTON_RIGHT
++			&& !(SDL_GetModState() & KMOD_CTRL))
+ 		{
+ 			center(lon, lat);
+ 		}
 diff --git a/src/Geoscape/Globe.h b/src/Geoscape/Globe.h
-index a0a8813..53eb803 100644
+index a0a8813..2f4dbb2 100644
 --- a/src/Geoscape/Globe.h
 +++ b/src/Geoscape/Globe.h
-@@ -177,6 +177,8 @@ public:
+@@ -62,6 +62,8 @@ private:
+ 	Game *_game;
+ 	Surface *_markers, *_countries, *_radars;
+ 	bool _hover, _craft;
++	/// the player's own board, on by default and toggled with keyGeoToggleMarks
++	bool _showMarks = true;
+ 	int _blink;
+ 	Timer *_blinkTimer, *_rotTimer;
+ 	std::list<Polygon*> _cacheLand;
+@@ -99,12 +101,21 @@ private:
+ 	void drawVHLine(Surface *surface, double lon1, double lat1, double lon2, double lat2, Uint8 color);
+ 	/// Draw flight path.
+ 	void drawPath(Surface *surface, double lon1, double lat1, double lon2, double lat2);
++	/// Draws one leg of a player-drawn route, dashed, in a colour of its own.
++	void drawMarkPath(double lon1, double lat1, double lon2, double lat2, Uint8 colour, double *phase);
+ 	/// Draw target marker.
+ 	void drawTarget(Target *target, Surface *surface);
+ 	/// Set up the radius of earth and stuff.
+ 	void setupRadii(int width, int height);
+ public:
+ 	static Uint8 OCEAN_COLOR;
++	/// GlobeMarkers frames for the situation board, in the order
++	/// confirmed, likely, rumour, note, unknown, route start, waypoint, area.
++	static std::vector<int> MARK_ICONS;
++	/// Months before a lead the game gave the player is treated as one tier less certain.
++	static int MARK_STALE_MONTHS;
++	/// The colour a player-drawn route line is inked in.
++	static Uint8 ROUTE_COLOR;
+ 	static bool OCEAN_SHADING;
+ 	static Uint8 COUNTRY_LABEL_COLOR;
+ 	static Uint8 LINE_COLOR;
+@@ -121,6 +132,12 @@ public:
+ 	void polarToCart(double lon, double lat, double *x, double *y) const;
+ 	/// Converts cartesian coordinates to polar coordinates.
+ 	void cartToPolar(Sint16 x, Sint16 y, double *lon, double *lat) const;
++	/// Is this screen point actually on the globe's disc, rather than on the sky?
++	bool isOnGlobe(int x, int y) const;
++	/// Show or hide the player's own situation board.
++	void toggleMarks();
++	/// Is the situation board being drawn?
++	bool getShowMarks() const { return _showMarks; }
+ 	/// Starts rotating the globe left.
+ 	void rotateLeft();
+ 	/// Starts rotating the globe right.
+@@ -177,6 +194,12 @@ public:
  	void drawOcean();
  	/// Draws the land of the globe.
  	void drawLand();
 +	/// Paints the land from an equirectangular earth texture, if the mod supplies one.
 +	void drawEarthTexture();
++	/// Draws the player's pins, his routes, and the leads intel has given him.
++	void drawMarks();
++	/// Puts one marker frame on the globe at a lon/lat.
++	void drawMarkAt(double lon, double lat, int frame);
  	/// Draws the shadow.
  	void drawShadow();
  	/// Draws the radar ranges of the globe.
+diff --git a/src/Geoscape/GlobeMarkState.cpp b/src/Geoscape/GlobeMarkState.cpp
+new file mode 100644
+index 0000000..4cb9bcb
+--- /dev/null
++++ b/src/Geoscape/GlobeMarkState.cpp
+@@ -0,0 +1,248 @@
++/*
++ * Copyright 2010-2016 OpenXcom Developers.
++ *
++ * This file is part of OpenXcom.
++ *
++ * OpenXcom is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * OpenXcom is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
++ */
++#include "GlobeMarkState.h"
++#include <cmath>
++#include "../Engine/Game.h"
++#include "../Engine/Action.h"
++#include "../Engine/LocalizedText.h"
++#include "../Engine/Options.h"
++#include "../Interface/TextButton.h"
++#include "../Interface/Window.h"
++#include "../Interface/Text.h"
++#include "../Interface/TextEdit.h"
++#include "../Mod/Mod.h"
++#include "../Mod/RuleRegion.h"
++#include "../Mod/RuleCountry.h"
++#include "../Savegame/SavedGame.h"
++#include "../Savegame/Region.h"
++#include "../Savegame/Country.h"
++#include "Globe.h"
++
++namespace OpenXcom
++{
++
++/**
++ * Builds the mark menu for one point on the globe.
++ * @param globe the globe, so it can be redrawn the moment a mark changes.
++ * @param lon longitude of the point the player right-clicked.
++ * @param lat latitude of the same.
++ */
++GlobeMarkState::GlobeMarkState(Globe *globe, double lon, double lat)
++	: _globe(globe), _lon(lon), _lat(lat), _existing(0)
++{
++	_screen = false;
++
++	_window = new Window(this, 216, 164, 52, 18, POPUP_BOTH);
++	_txtTitle = new Text(196, 16, 62, 26);
++	_txtWhere = new Text(196, 9, 62, 42);
++	_txtLabel = new Text(60, 9, 62, 56);
++	_edtLabel = new TextEdit(this, 130, 9, 122, 56);
++	_btnConfirmed = new TextButton(196, 14, 62, 70);
++	_btnLikely    = new TextButton(196, 14, 62, 86);
++	_btnRumour    = new TextButton(196, 14, 62, 102);
++	_btnArea      = new TextButton(96, 14, 62, 118);
++	_btnRoute     = new TextButton(96, 14, 162, 118);
++	_btnRemove    = new TextButton(96, 14, 62, 136);
++	_btnCancel    = new TextButton(96, 14, 162, 136);
++
++	setInterface("geoscape");
++
++	add(_window, "genericWindow", "geoscape");
++	add(_txtTitle, "genericText", "geoscape");
++	add(_txtWhere, "genericText", "geoscape");
++	add(_txtLabel, "genericText", "geoscape");
++	add(_edtLabel, "genericText", "geoscape");
++	add(_btnConfirmed, "genericButton2", "geoscape");
++	add(_btnLikely, "genericButton2", "geoscape");
++	add(_btnRumour, "genericButton2", "geoscape");
++	add(_btnArea, "genericButton2", "geoscape");
++	add(_btnRoute, "genericButton2", "geoscape");
++	add(_btnRemove, "genericButton1", "geoscape");
++	add(_btnCancel, "genericButton1", "geoscape");
++
++	centerAllSurfaces();
++
++	setWindowBackground(_window, "geoscape");
++
++	_txtTitle->setAlign(ALIGN_CENTER);
++	_txtTitle->setBig();
++	_txtTitle->setText(tr("STR_MARK_THE_MAP"));
++
++	// Where the player is pointing, in his own terms. A pin at "14.2, -3.9" is
++	// a pin he cannot read back later; the region is what he will remember.
++	std::string where;
++	for (const auto* country : *_game->getSavedGame()->getCountries())
++	{
++		if (country->getRules()->insideCountry(_lon, _lat))
++		{
++			where = tr(country->getRules()->getType());
++			break;
++		}
++	}
++	if (where.empty())
++	{
++		for (const auto* region : *_game->getSavedGame()->getRegions())
++		{
++			if (region->getRules()->insideRegion(_lon, _lat))
++			{
++				where = tr(region->getRules()->getType());
++				break;
++			}
++		}
++	}
++	_txtWhere->setAlign(ALIGN_CENTER);
++	_txtWhere->setText(where);
++
++	_txtLabel->setText(tr("STR_MARK_NOTE"));
++
++	// An existing mark close to the click is what Remove acts on, and its label
++	// is loaded for editing. "Close" is in radians on the globe rather than in
++	// screen pixels, so it does not change meaning when the player zooms.
++	double best = 0.08;
++	for (const auto& m : _game->getSavedGame()->getGlobeMarks())
++	{
++		const double d = std::sqrt((m.lon - _lon) * (m.lon - _lon) + (m.lat - _lat) * (m.lat - _lat));
++		if (d < best)
++		{
++			best = d;
++			_existing = m.id;
++			_edtLabel->setText(m.label);
++		}
++	}
++
++	_btnConfirmed->setText(tr("STR_MARK_CONFIRMED"));
++	_btnConfirmed->onMouseClick((ActionHandler)&GlobeMarkState::btnConfirmedClick);
++	_btnLikely->setText(tr("STR_MARK_LIKELY"));
++	_btnLikely->onMouseClick((ActionHandler)&GlobeMarkState::btnLikelyClick);
++	_btnRumour->setText(tr("STR_MARK_RUMOUR"));
++	_btnRumour->onMouseClick((ActionHandler)&GlobeMarkState::btnRumourClick);
++	_btnArea->setText(tr("STR_MARK_AREA"));
++	_btnArea->onMouseClick((ActionHandler)&GlobeMarkState::btnAreaClick);
++	_btnRoute->setText(tr("STR_MARK_ROUTE"));
++	_btnRoute->onMouseClick((ActionHandler)&GlobeMarkState::btnRouteClick);
++
++	_btnRemove->setText(tr("STR_MARK_REMOVE"));
++	_btnRemove->onMouseClick((ActionHandler)&GlobeMarkState::btnRemoveClick);
++	_btnRemove->setVisible(_existing != 0);
++
++	_btnCancel->setText(tr("STR_CANCEL"));
++	_btnCancel->onMouseClick((ActionHandler)&GlobeMarkState::btnCancelClick);
++	_btnCancel->onKeyboardPress((ActionHandler)&GlobeMarkState::btnCancelClick, Options::keyCancel);
++}
++
++GlobeMarkState::~GlobeMarkState()
++{
++}
++
++/**
++ * Writes the mark and closes.
++ *
++ * Editing an existing mark rather than stacking a second one on top of it is
++ * deliberate: two pins a pixel apart are indistinguishable on the globe and
++ * the player would have no way to get rid of the one underneath.
++ */
++void GlobeMarkState::place(int kind, int trust)
++{
++	GlobeMark *m = 0;
++	if (_existing)
++	{
++		for (auto& e : _game->getSavedGame()->getGlobeMarks())
++		{
++			if (e.id == _existing) { m = &e; break; }
++		}
++	}
++	if (!m)
++	{
++		m = &_game->getSavedGame()->addGlobeMark();
++		m->lon = _lon;
++		m->lat = _lat;
++	}
++	m->kind = kind;
++	m->trust = trust;
++	m->label = _edtLabel->getText();
++	// The player's own pin is never intel, so it never goes stale. He is not
++	// guessing about his own guess.
++	m->fromIntel = false;
++	_globe->invalidate();
++	_game->popState();
++}
++
++void GlobeMarkState::btnConfirmedClick(Action *) { place(GlobeMark::MARK_PIN, GlobeMark::TRUST_CONFIRMED); }
++void GlobeMarkState::btnLikelyClick(Action *)    { place(GlobeMark::MARK_PIN, GlobeMark::TRUST_LIKELY); }
++void GlobeMarkState::btnRumourClick(Action *)    { place(GlobeMark::MARK_PIN, GlobeMark::TRUST_RUMOUR); }
++void GlobeMarkState::btnAreaClick(Action *)      { place(GlobeMark::MARK_AREA, GlobeMark::TRUST_LIKELY); }
++
++/**
++ * Starts a route here, or adds this point to the route already being drawn.
++ *
++ * The route being drawn is simply the most recent MARK_ROUTE the player owns.
++ * No "currently drawing" flag is kept, because a flag would have to survive a
++ * save, a reload and the player wandering off to fight a battle - and a stale
++ * one would silently append to a route he finished weeks ago.
++ */
++void GlobeMarkState::btnRouteClick(Action *)
++{
++	GlobeMark *open = 0;
++	for (auto& e : _game->getSavedGame()->getGlobeMarks())
++	{
++		if (e.kind == GlobeMark::MARK_ROUTE && !e.fromIntel)
++		{
++			open = &e;
++		}
++	}
++	if (open && open->route.size() < 32)
++	{
++		open->route.push_back(_lon);
++		open->route.push_back(_lat);
++		if (!_edtLabel->getText().empty())
++		{
++			open->label = _edtLabel->getText();
++		}
++	}
++	else
++	{
++		GlobeMark &m = _game->getSavedGame()->addGlobeMark();
++		m.lon = _lon;
++		m.lat = _lat;
++		m.kind = GlobeMark::MARK_ROUTE;
++		m.trust = GlobeMark::TRUST_RUMOUR;
++		m.label = _edtLabel->getText();
++		m.route.push_back(_lon);
++		m.route.push_back(_lat);
++	}
++	_globe->invalidate();
++	_game->popState();
++}
++
++void GlobeMarkState::btnRemoveClick(Action *)
++{
++	if (_existing)
++	{
++		_game->getSavedGame()->removeGlobeMark(_existing);
++		_globe->invalidate();
++	}
++	_game->popState();
++}
++
++void GlobeMarkState::btnCancelClick(Action *)
++{
++	_game->popState();
++}
++
++}
+diff --git a/src/Geoscape/GlobeMarkState.h b/src/Geoscape/GlobeMarkState.h
+new file mode 100644
+index 0000000..3543fff
+--- /dev/null
++++ b/src/Geoscape/GlobeMarkState.h
+@@ -0,0 +1,66 @@
++#pragma once
++/*
++ * Copyright 2010-2016 OpenXcom Developers.
++ *
++ * This file is part of OpenXcom.
++ *
++ * OpenXcom is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * OpenXcom is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
++ */
++#include "../Engine/State.h"
++
++namespace OpenXcom
++{
++
++class Window;
++class Text;
++class TextEdit;
++class TextButton;
++class Globe;
++
++/**
++ * Drops a mark on the globe where the player right-clicked, or clears the one
++ * already there.
++ *
++ * The player's pins and the leads intel gives him are one structure, so this
++ * writes the same GlobeMark the game writes - only with fromIntel false. What
++ * the player types goes in the label, which is the "pins with notes" half.
++ */
++class GlobeMarkState : public State
++{
++private:
++	Globe *_globe;
++	double _lon, _lat;
++	int _existing;              ///< id of a mark already under the cursor, or 0
++	Window *_window;
++	Text *_txtTitle, *_txtWhere, *_txtLabel;
++	TextEdit *_edtLabel;
++	TextButton *_btnConfirmed, *_btnLikely, *_btnRumour, *_btnArea;
++	TextButton *_btnRoute, *_btnRemove, *_btnCancel;
++	/// Writes a mark of this kind and trust, then closes.
++	void place(int kind, int trust);
++public:
++	/// Creates the state for a point on the globe.
++	GlobeMarkState(Globe *globe, double lon, double lat);
++	/// Cleans up.
++	~GlobeMarkState();
++	void btnConfirmedClick(Action *action);
++	void btnLikelyClick(Action *action);
++	void btnRumourClick(Action *action);
++	void btnAreaClick(Action *action);
++	void btnRouteClick(Action *action);
++	void btnRemoveClick(Action *action);
++	void btnCancelClick(Action *action);
++};
++
++}
 diff --git a/src/Interface/ArrowButton.h b/src/Interface/ArrowButton.h
 index 4b88688..f5c9b71 100644
 --- a/src/Interface/ArrowButton.h
@@ -4734,6 +5519,30 @@ index 7cfa906..e02f6f4 100644
  	/// Threshold of smoke creation
  	int SmokeThreshold;
  
+diff --git a/src/Mod/RuleGlobe.cpp b/src/Mod/RuleGlobe.cpp
+index ebaccaf..6b4c7ba 100644
+--- a/src/Mod/RuleGlobe.cpp
++++ b/src/Mod/RuleGlobe.cpp
+@@ -26,6 +26,7 @@
+ #include "../Geoscape/Globe.h"
+ #include "../Engine/FileMap.h"
+ #include "../fmath.h"
++#include "Mod.h"
+ 
+ namespace OpenXcom
+ {
+@@ -137,6 +138,11 @@ void RuleGlobe::load(const YAML::YamlNodeReader& reader, Mod* mod)
+ 		Globe::OCEAN_COLOR = Palette::blockOffset(reader["oceanPalette"].readVal(Globe::OCEAN_COLOR));
+ 	}
+ 	reader.tryRead("oceanShading", Globe::OCEAN_SHADING);
++	// Through loadSpriteOffset so these get the mod's own sprite offset, exactly
++	// as markerIcon does. A literal frame number here would point at vanilla art.
++	mod->loadSpriteOffset("globe", Globe::MARK_ICONS, reader["markIcons"], "GlobeMarkers");
++	reader.tryRead("markStaleMonths", Globe::MARK_STALE_MONTHS);
++	reader.tryRead("markRouteColor", Globe::ROUTE_COLOR);
+ }
+ 
+ /**
 diff --git a/src/Mod/Unit.cpp b/src/Mod/Unit.cpp
 index 836d85e..1449897 100644
 --- a/src/Mod/Unit.cpp
@@ -4790,7 +5599,7 @@ index 6bef22e..8cc3b62 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..3dc459a 100644
+index 99f24ce..fd93f4b 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
 @@ -511,6 +511,8 @@
@@ -4802,7 +5611,7 @@ index 99f24ce..3dc459a 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,6 +548,7 @@
+@@ -546,10 +548,12 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
@@ -4810,7 +5619,12 @@ index 99f24ce..3dc459a 100644
      <ClCompile Include="Geoscape\GeoscapeCraftState.cpp" />
      <ClCompile Include="Geoscape\NewPossibleResearchState.cpp" />
      <ClCompile Include="Geoscape\ProductionCompleteState.cpp" />
-@@ -673,6 +676,7 @@
+     <ClCompile Include="Geoscape\GeoscapeState.cpp" />
++    <ClCompile Include="Geoscape\GlobeMarkState.cpp" />
+     <ClCompile Include="Geoscape\Globe.cpp" />
+     <ClCompile Include="Geoscape\GraphsState.cpp" />
+     <ClCompile Include="Geoscape\InterceptState.cpp" />
+@@ -673,6 +677,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -4818,7 +5632,7 @@ index 99f24ce..3dc459a 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +686,7 @@
+@@ -682,6 +687,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -4826,7 +5640,7 @@ index 99f24ce..3dc459a 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -970,6 +975,8 @@
+@@ -970,6 +976,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -4835,7 +5649,7 @@ index 99f24ce..3dc459a 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1040,7 @@
+@@ -1033,6 +1041,7 @@
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
@@ -4843,7 +5657,15 @@ index 99f24ce..3dc459a 100644
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1170,6 +1178,7 @@
+@@ -1042,6 +1051,7 @@
+     <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
+     <ClInclude Include="Geoscape\ProductionCompleteState.h" />
+     <ClInclude Include="Geoscape\GeoscapeState.h" />
++    <ClInclude Include="Geoscape\GlobeMarkState.h" />
+     <ClInclude Include="Geoscape\Globe.h" />
+     <ClInclude Include="Geoscape\GraphsState.h" />
+     <ClInclude Include="Geoscape\InterceptState.h" />
+@@ -1170,6 +1180,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -4851,7 +5673,7 @@ index 99f24ce..3dc459a 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1188,7 @@
+@@ -1179,6 +1190,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
@@ -5432,7 +6254,7 @@ index 6c121c7..a5b4ba0 100644
  	std::map<std::string, int> &getReinforcementsMemory() { return _reinforcementsMemory; }
  	/// Gets the map blocks used for reinforcements.
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..e995cb7 100644
+index 9ca9637..975e837 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,6 +21,7 @@
@@ -5470,7 +6292,83 @@ index 9ca9637..e995cb7 100644
  	for (auto* am : _activeMissions)
  	{
  		delete am;
-@@ -649,6 +655,9 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -371,6 +377,61 @@ SaveInfo SavedGame::getSaveInfo(const std::string &file, Language *lang)
+  * @param mod Mod for the saved game.
+  * @param lang Loaded language.
+  */
++void GlobeMark::load(const YAML::YamlNodeReader& reader)
++{
++	reader.tryRead("id", id);
++	reader.tryRead("lon", lon);
++	reader.tryRead("lat", lat);
++	reader.tryRead("label", label);
++	reader.tryRead("note", note);
++	reader.tryRead("kind", kind);
++	reader.tryRead("trust", trust);
++	reader.tryRead("fromIntel", fromIntel);
++	reader.tryRead("month", placedMonth);
++	reader.tryRead("route", route);
++}
++
++void GlobeMark::save(YAML::YamlNodeWriter writer) const
++{
++	writer.setAsMap();
++	writer.write("id", id);
++	writer.write("lon", lon);
++	writer.write("lat", lat);
++	if (!label.empty()) writer.write("label", label);
++	if (!note.empty()) writer.write("note", note);
++	writer.write("kind", kind);
++	writer.write("trust", trust);
++	if (fromIntel) writer.write("fromIntel", fromIntel);
++	writer.write("month", placedMonth);
++	if (!route.empty()) writer.write("route", route);
++}
++
++/**
++ * Adds a mark with an id already allocated.
++ * The counter is saved, so ids stay unique across a reload - reusing one would
++ * let a deleted pin's id collide with a live lead's.
++ */
++GlobeMark &SavedGame::addGlobeMark()
++{
++	_globeMarks.push_back(GlobeMark());
++	_globeMarks.back().id = ++_globeMarkId;
++	_globeMarks.back().placedMonth = _monthsPassed < 0 ? 0 : _monthsPassed;
++	return _globeMarks.back();
++}
++
++bool SavedGame::removeGlobeMark(int id)
++{
++	for (auto it = _globeMarks.begin(); it != _globeMarks.end(); ++it)
++	{
++		if (it->id == id)
++		{
++			_globeMarks.erase(it);
++			return true;
++		}
++	}
++	return false;
++}
++
+ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+ {
+ 	std::string filepath = Options::getMasterUserFolder() + filename;
+@@ -399,6 +460,13 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+ 	reader.tryRead("funds", _funds);
+ 	reader.tryRead("maintenance", _maintenance);
+ 	reader.tryRead("userNotes", _userNotes);
++	reader.tryRead("globeMarkId", _globeMarkId);
++	for (const auto& mk : reader["globeMarks"].children())
++	{
++		GlobeMark m;
++		m.load(mk);
++		_globeMarks.push_back(m);
++	}
+ 	reader.tryRead("geoscapeDebugLog", _geoscapeDebugLog);
+ 	reader.tryRead("researchScores", _researchScores);
+ 	reader.tryRead("incomes", _incomes);
+@@ -649,6 +717,9 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  		}
  	}
  	_alienStrategy->load(reader["alienStrategy"], mod);
@@ -5480,7 +6378,7 @@ index 9ca9637..e995cb7 100644
  
  	for (const auto& weHardlyKnewYe : reader["deadSoldiers"].children())
  	{
-@@ -690,6 +699,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -690,6 +761,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	}
  
  	_scriptValues.load(reader, mod->getScriptGlobal());
@@ -5488,7 +6386,24 @@ index 9ca9637..e995cb7 100644
  }
  
  void SavedGame::loadTemplates(const YAML::YamlNodeReader& reader, const Mod* mod)
-@@ -849,6 +859,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -790,6 +862,16 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+ 	writer.write("funds", _funds);
+ 	writer.write("maintenance", _maintenance);
+ 	writer.write("userNotes", _userNotes);
++	if (!_globeMarks.empty())
++	{
++		writer.write("globeMarkId", _globeMarkId);
++		auto marksWriter = writer["globeMarks"];
++		marksWriter.setAsSeq();
++		for (const auto& m : _globeMarks)
++		{
++			m.save(marksWriter.write());
++		}
++	}
+ 	if (Options::oxceGeoscapeDebugLogMaxEntries > 0 && _geoscapeDebugLog.size() > 0)
+ 	{
+ 		auto geoDebugLog = writer["geoscapeDebugLog"];
+@@ -849,6 +931,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("hiddenPurchaseItems", _hiddenPurchaseItemsMap);
  	writer.write("customRuleCraftDeployments", _customRuleCraftDeployments);
  	_alienStrategy->save(writer["alienStrategy"]);
@@ -5496,7 +6411,7 @@ index 9ca9637..e995cb7 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2590,898 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2662,898 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -6396,7 +7311,7 @@ index 9ca9637..e995cb7 100644
  {
  	Region* found = nullptr;
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..04459bb 100644
+index d985908..81391c4 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -37,6 +37,7 @@ namespace OpenXcom
@@ -6415,7 +7330,53 @@ index d985908..04459bb 100644
  class AlienMission;
  class GeoscapeEvent;
  class Target;
-@@ -140,6 +142,7 @@ private:
+@@ -101,6 +103,36 @@ struct SaveInfo
+  * A saved game holds all the variable info in a game like funds,
+  * game time, current bases and contents, world activities, score, etc.
+  */
++/**
++ * One mark on the globe.
++ *
++ * A pin the player drops and a lead the game hands him are the SAME structure,
++ * drawn at different weights. Built as two things they become two overlays that
++ * disagree about the same piece of ground - which is exactly what BACK_BURNER
++ * warned about when the situation board and the player's pins were described
++ * separately. `fromIntel` is the only thing that distinguishes them, and it
++ * changes how the mark is drawn and whether it goes stale, not what it is.
++ */
++struct GlobeMark
++{
++	enum Kind  { MARK_PIN = 0, MARK_NOTE = 1, MARK_AREA = 2, MARK_ROUTE = 3, MARK_UNKNOWN = 4 };
++	enum Trust { TRUST_RUMOUR = 0, TRUST_LIKELY = 1, TRUST_CONFIRMED = 2 };
++
++	int id = 0;
++	double lon = 0.0, lat = 0.0;
++	std::string label;
++	std::string note;
++	int kind = MARK_PIN;
++	int trust = TRUST_LIKELY;
++	bool fromIntel = false;    ///< the game put it there, the player did not
++	int placedMonth = 0;       ///< the month it was placed, so intel can go stale
++	/// A route's points, flattened as lon,lat,lon,lat. The mark's own lon/lat is its first point.
++	std::vector<double> route;
++
++	void load(const YAML::YamlNodeReader& reader);
++	void save(YAML::YamlNodeWriter writer) const;
++};
++
+ class SavedGame
+ {
+ public:
+@@ -126,6 +158,8 @@ private:
+ 	bool _ironman;
+ 	GameTime *_time;
+ 	std::vector<std::string> _userNotes;
++	std::vector<GlobeMark> _globeMarks;
++	int _globeMarkId = 0;
+ 	std::vector<std::string> _geoscapeDebugLog;
+ 	std::vector<int> _researchScores;
+ 	std::vector<int64_t> _funds, _maintenance, _incomes, _expenditures;
+@@ -140,6 +174,7 @@ private:
  	std::vector<MissionSite*> _missionSites;
  	std::vector<AlienBase*> _alienBases;
  	AlienStrategy *_alienStrategy;
@@ -6423,7 +7384,7 @@ index d985908..04459bb 100644
  	SavedBattleGame *_battleGame;
  	std::vector<const RuleResearch*> _discovered;
  	std::vector<ResearchDiaryEntry*> _researchDiary;
-@@ -395,6 +398,32 @@ public:
+@@ -395,6 +430,32 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -6456,7 +7417,7 @@ index d985908..04459bb 100644
  	/// Read-only access to the alien strategy data.
  	const AlienStrategy &getAlienStrategy() const { return *_alienStrategy; }
  	/// Full access to the current alien missions.
-@@ -409,6 +438,10 @@ public:
+@@ -409,6 +470,10 @@ public:
  	const std::vector<GeoscapeEvent*> &getGeoscapeEvents() const { return _geoscapeEvents; }
  	/// Locate a region containing a position.
  	Region *locateRegion(double lon, double lat) const;
@@ -6467,6 +7428,20 @@ index d985908..04459bb 100644
  	/// Locate a region containing a Target.
  	Region *locateRegion(const Target &target) const;
  	/// Locate a country containing a position.
+@@ -529,6 +594,13 @@ public:
+ 	void handlePrimaryResearchSideEffects(const std::vector<const RuleResearch*> &topicsToCheck, const Mod* mod, Base* base);
+ 	/// Gets the list of user notes.
+ 	std::vector<std::string>& getUserNotes() { return _userNotes; }
++	/// Gets every mark on the globe - the player's pins and the game's leads alike.
++	std::vector<GlobeMark>& getGlobeMarks() { return _globeMarks; }
++	const std::vector<GlobeMark>& getGlobeMarks() const { return _globeMarks; }
++	/// Adds a mark and returns it, with an id already allocated.
++	GlobeMark& addGlobeMark();
++	/// Removes the mark with this id. Returns true if there was one.
++	bool removeGlobeMark(int id);
+ 	/// Gets the list of geoscape debug log entries.
+ 	std::vector<std::string>& getGeoscapeDebugLog() { return _geoscapeDebugLog; }
+ };
 diff --git a/src/Savegame/Tile.cpp b/src/Savegame/Tile.cpp
 index af18529..d30bc19 100644
 --- a/src/Savegame/Tile.cpp

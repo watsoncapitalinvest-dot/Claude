@@ -28,17 +28,16 @@
 # which is why `markerIcon: 9` below resolves to the frame written as 9 here.
 # Do not pre-add an offset by hand in either place.
 #
-# WHY ONLY FIVE COLOURS
+# WHY ONLY FOUR COLOURS
 #
 # The globe draws in the 8-bit geoscape palette, so these are indexed PNGs on
-# PALETTES.DAT palette 0 and every pixel is one of five entries that exist in
+# PALETTES.DAT palette 0 and every pixel is one of four entries that exist in
 # it exactly — nothing is quantised at load:
 #
 #   13  (252,0,0)      Cobra
 #  144  (176,148,68)   gold accent; the only true warm gold in this palette
 #  245  (128,188,228)  G.I. Joe
 #    5  (252,252,252)  white
-#  161  (144,168,168)  dim, for a lead the player has not confirmed
 #
 # Each one is also chosen for its NEIGHBOUR, because drawTarget blinks a marker
 # by drawing `srcStuff + 1`. Index 14 was the obvious red and index 15 is pure
@@ -46,11 +45,23 @@
 # darker red. 144->145 and 245->246 barely move; 5->6 is the grey vanilla
 # already blinks to.
 #
-# Antialiasing was snapped to those five rather than quantised. Scattered blend
-# pixels land on whatever world-map green or brown is nearest and then blink to
-# index+1 of that, which is how a clean icon turns into a fringed one.
+# 161 (144,168,168) WAS a fifth, meant to carry "the player has not confirmed
+# this". It is gone, and nothing should put it back at this size. A pale
+# grey-cyan blended against transparent and reduced 15.4:1 lands nearer WHITE
+# or nearer JOE blue than it lands on itself, so a tier drawn in it was
+# decided by rounding: pin_rumour came out of the generator as six white
+# pixels, and pin_unknown's grey ring arrived with five blue ones in it.
+# Confidence is carried by the SHAPE instead — solid head, hollow head, broken
+# head — which survives the reduce and the blink both.
 #
-# Regenerate with build/build_globe_markers.py.
+# Antialiasing is snapped, not quantised, and each icon may only snap to the
+# colours it actually drew with (`uses=` in the generator). Searching all of
+# them let a gold line's reduce overshoot onto WHITE, which is how an all-gold
+# pin picked up twelve white specks.
+#
+# Regenerate with build/build_globe_markers.py. It prints a warning for any
+# icon that comes out with a colour in single figures or under 24 pixels of
+# ink, because both mean the art did not survive the reduce.
 
 extraSprites:
   - type: GlobeMarkers
@@ -79,11 +90,15 @@ extraSprites:
       25: Resources/Globe/marker_25_joe_craft.png
       26: Resources/Globe/marker_26_joe_lz.png
       27: Resources/Globe/marker_27_joe_extract.png
-      # --- The player's own board. Nothing consumes these yet: globe pins are
-      #     designed and not built (BACK_BURNER.md), and they want building
-      #     with the intel layer so a pin he places and a lead the game gives
-      #     him share a drawing path and a confidence weight. The art is here
-      #     so that work is not also an art job.
+      # --- The player's own board, drawn by Globe::drawMarks and placed with
+      #     CTRL + right-click. The three pins are ONE OBJECT three ways —
+      #     solid head, hollow head, broken head — so they read as the same
+      #     pin at three levels of certainty. gijoe_globe_marks.rul lists
+      #     these frames in that order under `globe: markIcons:`, and
+      #     Globe::MARK_ICONS indexes it, so the ORDER HERE IS LOAD-BEARING:
+      #     confirmed, likely, rumour, note, unknown, route start, waypoint,
+      #     area. A lead the game gave the player that has gone stale is drawn
+      #     one tier down this list without the stored mark being rewritten.
       28: Resources/Globe/marker_28_pin_confirmed.png
       29: Resources/Globe/marker_29_pin_likely.png
       30: Resources/Globe/marker_30_pin_rumour.png

@@ -255,7 +255,7 @@ not.
 
 ## Designed, agreed, not yet built
 
-### Player pins, notes and routes on the globe (10 Nov, John)
+### ~~Player pins, notes and routes on the globe~~ — built 11 Nov
 
 John: *"in game i'd like to be able to make notes on the globe. pins with
 notes"* and *"i can put legend markers of suspected places and routes"*.
@@ -267,16 +267,39 @@ project's clock as an estimate with a confidence bar that sharpens with
 intel"*. John is describing the player marking what he SUSPECTS before he
 knows. They are one system: confirmed intel and the player's own guesses on
 the same globe, drawn at different weights. Built separately they become two
-map overlays that contradict each other.
+map overlays that contradict each other — so they share one struct, one
+drawing path and one confidence ladder.
 
-**There is already a foothold.** `SavedGame` carries
-`std::vector<std::string> _userNotes` with save/load wired, and it appears in
-John's save as `userNotes: []`. Text only, no coordinates, so globe pins need
-a real structure — lat, lon, label, icon, and a point list for a route — but
-the precedent and the save plumbing exist.
+`SavedGame::_userNotes` was the foothold: save/load wired, but text only, no
+coordinates. The replacement is `GlobeMark` — id, lon, lat, label, note, kind,
+trust, `fromIntel`, `placedMonth`, and a flattened lon/lat list for a route —
+in `SavedGame.h`, saved and loaded alongside it.
 
-Wants doing WITH the intel layer, not before it: a pin the player places and a
-lead the game gives him should share a drawing path and a confidence weight.
+Drawn by `Globe::drawMarks()`, placed from `GlobeMarkState`, iconned from
+`gijoe_globe_marks.rul`'s `markIcons` in a fixed order the engine indexes by.
+A mark with `fromIntel` set and older than `markStaleMonths` is DRAWN one tier
+less certain without the stored mark being rewritten; a pin the player placed
+himself never decays, because he is not guessing about his own guess.
+
+**The gesture is CTRL + right-click, and that cost two attempts.** Plain
+right-click looked free — `globeClick` had only ever registered for the left
+button, so a right-click never reached it at all, which is why the first build
+did nothing. Registering for the right button made the menu appear and
+revealed the real problem: `Globe::mouseClick` centres the globe on every
+right-click regardless of what is registered, so the first run with marks
+enabled threw the view across the Pacific seven times in seven placements.
+Right-click is how the geoscape has been navigated since 1994 and the board
+does not get to take it. `Globe::mouseClick` now skips the centring for
+exactly the CTRL chord.
+
+`keyGeoToggleMarks` (default `m`, an OXCE option so it shows in the controls
+list) hides and shows the layer. A region pinned six times is a region that
+cannot be read, so the notes have to be put away.
+
+Still open, and both wanted before this earns the name "intel layer": nothing
+yet SETS `fromIntel`, because nothing in the game hands the player a lead as a
+mark; and the route is append-only — a route point joins the most recent
+player-owned route, with no way to start a second one deliberately.
 
 ### ~~Eight Cobra site types, one globe marker~~ — done 11 Nov
 
