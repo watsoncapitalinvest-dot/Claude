@@ -55,6 +55,18 @@ allows for the current month. Organic inside the window, impossible outside it.
 No per-unit month gate exists anywhere in the engine. That is the one piece of
 plumbing the calendar actually needs.
 
+## Where the open work is written down
+
+`BACK_BURNER.md` in this directory, and it keeps three things apart on
+purpose: **parked** (reviewed and set down by decision), **owed** (work this
+desk said it would do, or something shipped that is now wrong), and **broken**
+(a bug with evidence). Read it before picking up anything, and put new
+deferrals there rather than in a commit message nobody will find again.
+
+Parked as of 10 Nov: disguise in battle, Zanzibar's stolen weapon, and the
+strategic half of subterfuge. Owed: scoping the calendar ceiling to the AI
+side, and the department head signing off in person.
+
 ## What is wrong in this directory right now
 
 Found 10 Nov 2026 by reading the calendar against the shipped rulesets. None
