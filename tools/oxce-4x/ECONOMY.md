@@ -1030,6 +1030,112 @@ do something about — recruit, re-equip, move a craft — or it is flavour text
 
 
 
+## The Terror Drome is the hub, and crime is how Cobra exposes itself
+
+John, in sequence: *"Should be one source. The terror drone. Terror attacks should be cheap and
+maybe they gain cobra money and influence 1 a month sounds good. 3 a month left alone."* Then:
+*"Terror drome needs to be the most important thing so everything launches from there."* Then,
+asked how Cobra operates before it has one: *"Until it gets a terror drome it should only be
+launching missions for money gain and influence. Maybe that's how they expose themselves early is
+they need to do terror missions and bank thefts and other notable events."*
+
+### Two sources were pulling against each other
+
+Before this, terror attacks had **two** unconnected origins:
+
+| source | behaviour |
+| --- | --- |
+| vanilla's `recurringTerror` | a mission script on its own clock, `startDelay: 150`, so an attack lands about month 5 whether or not Cobra owns a single Drome |
+| the Terror Drome | `genMission` at a daily percentage, per Drome |
+
+The mod never deleted vanilla's, so both ran. That makes the Drome's contribution invisible
+noise on top of a fixed schedule: flatten every Cobra site and the attacks keep coming, which
+reads as the economy not mattering. Vanilla's is now deleted in
+`zz_gijoe_terror_source.rul`. Loads clean, zero errors.
+
+### One source means the Drome has to be affordable
+
+**Cobra never built a Drome in a 400-day run.** It wanted one from month 11 and never bought it —
+at 900 funds it was the second most expensive site and the planner kept choosing cheaper things,
+so Cobra reached month 14 with none. With vanilla's script deleted that would have been **zero
+terror attacks in the whole first year**, against a calendar that wants the first ones at months
+4–8. Deleting a source without checking the remaining one can fire is how a feature becomes
+absent rather than focused.
+
+Dropped to 450, level with the broadcast station and below the factory. Aimed at the calendar,
+not yet measured against it.
+
+### The rate needs no new mechanism
+
+`genMissionFreq` is a **daily** percentage, so monthly count ≈ freq × 30 / 100 per Drome:
+
+| freq | attacks a month, per Drome |
+| --- | --- |
+| 3 | 0.9 — John's "1 a month" |
+| 4 | 1.2 — what shipped |
+
+Set to 3. And *"3 a month left alone"* is **three Dromes** — leaving Cobra unmolested is exactly
+how it accumulates them, and per-site `genMission` already scales with how many it owns. Nothing
+to build.
+
+### Before the Drome: crime, and crime is loud
+
+The best part of the design, and it came from John closing a hole this desk had opened. If every
+operation needs a Drome then a Cobra without one does nothing: no attacks, no flights, so front
+companies earn nothing (their income rides on a shipment), so it can never afford the Drome that
+would let it start. Permanently inert.
+
+His answer inverts it. Before a Drome, Cobra runs only what raises **money and influence** —
+terror attacks, bank thefts, notable events — and *that is how it exposes itself*. So the early
+game's visibility is a **consequence of Cobra being broke**, not a scripted tutorial, and the arc
+writes itself: Cobra starts loud because it has no money and goes quiet once established. Then
+the Drome arrives, operations consolidate, and it becomes more dangerous and less visible.
+
+It is also already the story: beat 5 is Major Bludd's bank raid or kidnapping, beat 6 is the first
+terror attack at about month 4 with goodwill going live, and beat 2 is tracing Cobra Commander's
+broadcast.
+
+**Supply flights stay with the site that produces them** — agreed with John. They are logistics,
+not operations; a factory that cannot move what it makes for want of a Drome is silly. The Drome
+is the hub for everything *offensive*.
+
+### What is actually missing
+
+Two things are already built for this: the broadcast station erodes a country's goodwill, and the
+engine's own alien-activity tracking means noisy missions show on the graphs, so **exposure is
+modelled already**.
+
+**Money is not.** Nothing makes a *mission* pay Cobra — site income is monthly and site-based, and
+missions touch the economy not at all. A terror attack costs nothing and earns nothing, and bank
+thefts do not exist as a mission type. "A mission that pays Cobra when it succeeds" is the
+plumbing the pre-Drome phase needs; without it the whole early game is flavour.
+
+**Open:** when the Drome arrives, does it **replace** the earlier launchers or **add** to them?
+Replace gives a clean before/after and makes killing the Drome revert Cobra to loud, desperate
+crime — worth killing twice. Add escalates harder but blurs the arc. This desk leans replace;
+John has not ruled.
+
+## Cobra cells: something to find, connected to nothing
+
+John: *"maybe cobra has cobra cells all over that aren't connected to the main economy and act as
+something for joes to find."*
+
+This is **Act 1 beat 3** — *"First raid: a cell. A Cobra Soldier taken alive opens the
+interrogation chain"* — so cells are not an addition, they are the story's entry point to the
+29-topic interrogation spine, and nothing in the mod implements them.
+
+A cell is a site type that produces nothing, is not on the planner's shopping list, carries a
+small garrison, and yields **interrogation subjects and intel rather than loot**. Destroying one
+costs Cobra nothing economically, which is honest: a cell is a lead, not an asset.
+
+**And it is the third use of one flag.** "Not part of Cobra's economy" was designed for M.A.R.S.
+being a stable force, needed again for cartel reinforcements at a Cobra site, and is exactly what
+a cell is. Three unrelated needs met by one concept is a good sign it is the right shape rather
+than a special case.
+
+**Scope note:** "all over" is the eventual globe. Cobra is contained to North America for terrain
+reasons today, and John has said he will keep speaking of the globe as the ultimate plan.
+
 ## Open, and John's to settle
 
 **The mod already calls vanilla alien bases "Terror Drome."** `STR_ALIEN_BASE` is renamed that
