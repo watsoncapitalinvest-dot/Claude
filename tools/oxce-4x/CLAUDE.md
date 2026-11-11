@@ -70,52 +70,68 @@ side, and the department head signing off in person.
 ## What is wrong in this directory right now
 
 Found 10 Nov 2026 by reading the calendar against the shipped rulesets.
-**Three of these four are fixed as of 11 Nov** by the availability window in
+**Three of the four are fixed as of 11 Nov**, by the availability window in
 `mod/Ruleset/gijoe_availability.rul` and `BattlescapeGenerator::availableUnit`.
-The weapon-tier one is not: it is the kit rule, and a separate job.
+The fourth is not, and is called out below.
 
-Verified by fighting the same map at three forced months. The deployment asks
-for ranks 5,4,3,2,1,6,7 every time, so it asks for B.A.T.s, Destro and Storm
-Shadow every time:
+Verified by fighting the SAME map at three forced months rather than by
+reading the code. That deployment uses ranks 5,4,3,2,1,6,7, so it asks for
+B.A.T.s, Destro and Storm Shadow every single time:
 
 | month | spawned | roster |
 | --- | --- | --- |
 | 0 | 15, 10 refused | troopers only |
-| 10 | 14, 6 refused | troopers, Viper Medic, Viper Engineer, Storm Shadow |
-| 25 | 13, 1 refused | troopers, B.A.T.s, Vipers, Storm Shadow, Destro | Three of these four are **content** — which units sit in which
-deployment, and what a gate value is — and one is the missing mechanism above.
-**Do not treat the current deployments as correct.**
+| 10 | 14, 6 refused | + Viper Medic, Viper Engineer, Storm Shadow |
+| 25 | 13, 1 refused | + B.A.T.s, Destro |
 
-~~**The Cobra race puts B.A.T.s in ranks 6 and 7**~~ FIXED 11 Nov., and every generated Cobra
-site deployment uses ranks 5,4,3,2,1,6,7. So a raid on a front company in
-month 2 fields Battle Android Troopers — a unit the calendar does not allow as
-a general force until **month 23**, and before that only where a specific
-mission calls for them. Never in a generic garrison.
+### ~~B.A.T.s in every generic garrison~~ — fixed 11 Nov
 
-**Months 1–3 are handguns and knives.** The kit rule shipped on 10 Nov issues
-the deployment's tier 1 and 2 itemSets as soon as a region holds 50 materiel.
-Nothing checks the month. If Cobra is seeded with a working network and capital
-(which John asked for the same evening), Cobra fields rifles in month 1.
+The Cobra race puts B.A.T.s in ranks 6 and 7, and every generated Cobra site
+deployment uses ranks 5,4,3,2,1,6,7. So a raid on a front company in month 2
+fielded Battle Android Troopers — a unit the calendar does not allow as a
+general force until **month 23**, and before that only where a specific
+mission calls for them.
 
-~~**Storm Shadow is rank 4 and arrives months 9–14.**~~ FIXED 11 Nov. `garrisonRankUnlock: 4`
-holds ranks *below* 4 at home without a training camp and always permits 4 and
-above, so Storm Shadow is available from month 1.
+Now `earliest: 22` with `missionOnly: true`, so a scripted mission may still
+name one and a garrison may not. Month 0 above fields troopers only.
 
-~~**Destro is rank 1 and arrives months 15–22.**~~ FIXED 11 Nov. A training camp in the region
-lifts the rank gate entirely, so a camp built in month 3 puts Destro on the
-field twelve months early.
+### Months 1–3 are handguns and knives — STILL BROKEN
 
-**The rank gate is answering the wrong question.** Partly addressed: there are
-now TWO mechanisms rather than one overloaded gate. `garrisonRankUnlock` still
-answers *is there a camp*, and the availability window answers *what month is
-it*, with `missionOnly` for *does a scripted mission name this unit*. The
-original complaint below stands as the reason they were separated.
+The kit rule shipped on 10 Nov issues the deployment's tier 1 and 2 itemSets
+as soon as a region holds 50 materiel. Nothing checks the month. If Cobra is
+seeded with a working network and capital, Cobra fields rifles in month 1.
 
- It gates on *is there a
-camp*. The calendar gates on *what month is it*, and specific missions override
-both. One `garrisonRankUnlock` threshold cannot express "this rank needs a
-camp, that one needs a date, that one needs a scripted mission". The gate and
-the calendar are different mechanisms and only one of them exists.
+This is the **kit tier**, not the unit calendar, so the availability window
+does not touch it. It wants the same treatment at the other end: cap the tier
+at what the calendar allows for the current month. Rule 3 below.
+
+### ~~Storm Shadow available from month 1~~ — fixed 11 Nov
+
+`garrisonRankUnlock: 4` holds ranks *below* 4 at home without a training camp
+and always permits 4 and above, so Storm Shadow was available from month 1.
+Now `earliest: 8`, `full: 13`, which is his 9–14 window.
+
+### ~~Destro twelve months early~~ — fixed 11 Nov
+
+A training camp in the region lifts the rank gate entirely, so a camp built in
+month 3 put Destro on the field twelve months early. Now `earliest: 14`,
+`full: 21`.
+
+### The rank gate was answering the wrong question — now there are two gates
+
+The original complaint stands as the reason they were separated. One
+`garrisonRankUnlock` threshold cannot express "this rank needs a camp, that one
+needs a date, that one needs a scripted mission". It gates on *is there a camp*;
+the calendar gates on *what month is it*; and specific missions override both.
+
+So there are now three questions and three answers, and none of them is
+overloaded onto another:
+
+| question | answered by |
+| --- | --- |
+| is there a training camp in this region | `garrisonRankUnlock` |
+| what month is it | the unit's `availability` window |
+| does a scripted mission name this unit | `missionOnly` on that window |
 
 ## The rules that follow
 
