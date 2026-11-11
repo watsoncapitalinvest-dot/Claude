@@ -1,3 +1,171 @@
+diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
+index b7e1111..07915a1 100644
+--- a/src/Battlescape/BattlescapeGame.cpp
++++ b/src/Battlescape/BattlescapeGame.cpp
+@@ -508,8 +508,150 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
+ /**
+  * Ends the turn.
+  */
++namespace
++{
++/// SavedBattleGame has no lookup by id, and the unit list is short enough that
++/// a scan is cheaper than keeping a map in sync with spawns and removals.
++OpenXcom::BattleUnit *unitById(OpenXcom::SavedBattleGame *save, int id)
++{
++	if (id < 0) return nullptr;
++	for (OpenXcom::BattleUnit *u : *save->getUnits())
++	{
++		if (u->getId() == id) return u;
++	}
++	return nullptr;
++}
++}
++
++/**
++ * Full capture: Cobra drags a downed Joe off the map.
++ *
++ * FORK FEATURE 3. The project's most repeated rule is that named characters
++ * never die - they go down, are captured, or escape - and until this existed
++ * that rule was text. A downed Joe was already STATUS_UNCONSCIOUS, a body on
++ * the floor; nothing ever came for him.
++ *
++ * Run at the end of the hostile side's turn, in this order, because each step
++ * must see the result of the one before it:
++ *
++ *  1. EXTRACT. A carrier standing in an exit area walks off with him. The Joe
++ *     leaves the battle marked captured rather than dead.
++ *  2. DROP. A carrier who has gone down lets go, and the Joe lands on the
++ *     carrier's own tile, still unconscious. Shoot the man carrying him and
++ *     you get him back.
++ *  3. PICK UP. A conscious hostile standing on or beside an unconscious Joe,
++ *     and not already carrying one, shoulders him.
++ *
++ * A carried unit is taken off its tile, so it cannot be shot, looted or
++ * targeted while slung over a shoulder - the way to free him is to stop the
++ * man carrying him.
++ */
++void BattlescapeGame::captureStep()
++{
++	if (_save->getSide() != FACTION_HOSTILE)
++	{
++		return;
++	}
++
++	// 1. EXTRACT
++	for (BattleUnit *bu : *_save->getUnits())
++	{
++		if (!bu->isCarrying() || bu->isOut())
++		{
++			continue;
++		}
++		if (!bu->isInExitArea(START_POINT) && !bu->isInExitArea(END_POINT))
++		{
++			continue;
++		}
++		BattleUnit *carried = unitById(_save, bu->getCarryingId());
++		if (!carried)
++		{
++			bu->setCarryingId(-1);
++			continue;
++		}
++		carried->markAsCarriedOffMap();
++		bu->setCarryingId(-1);
++		Log(LOG_INFO) << "[capture] " << carried->getId() << " carried off the map by " << bu->getId();
++	}
++
++	// 2. DROP
++	for (BattleUnit *bu : *_save->getUnits())
++	{
++		if (!bu->isBeingCarried())
++		{
++			continue;
++		}
++		BattleUnit *carrier = unitById(_save, bu->getCarriedById());
++		if (carrier && !carrier->isOut() && carrier->getCarryingId() == bu->getId())
++		{
++			continue;
++		}
++		bu->setCarriedById(-1);
++		if (carrier)
++		{
++			carrier->setCarryingId(-1);
++			// back on the floor where the carrier fell, not where he was picked up
++			bu->setPosition(carrier->getPosition());
++			_save->setUnitPosition(bu, carrier->getPosition());
++		}
++		Log(LOG_INFO) << "[capture] " << bu->getId() << " dropped";
++	}
++
++	// 3. PICK UP
++	for (BattleUnit *bu : *_save->getUnits())
++	{
++		if (bu->getFaction() != FACTION_HOSTILE || bu->isOut() || bu->isCarrying() || bu->isBeingCarried())
++		{
++			continue;
++		}
++		const Position &p = bu->getPosition();
++		BattleUnit *found = nullptr;
++		for (int dx = -1; dx <= 1 && !found; ++dx)
++		{
++			for (int dy = -1; dy <= 1 && !found; ++dy)
++			{
++				Tile *t = _save->getTile(p + Position(dx, dy, 0));
++				if (!t)
++				{
++					continue;
++				}
++				// the body lies on the tile as a unit, not as a corpse item
++				BattleUnit *cand = t->getUnit();
++				if (!cand || cand == bu)
++				{
++					continue;
++				}
++				if (cand->getOriginalFaction() != FACTION_PLAYER)
++				{
++					continue;
++				}
++				if (cand->getStatus() != STATUS_UNCONSCIOUS || cand->isBeingCarried())
++				{
++					continue;
++				}
++				found = cand;
++			}
++		}
++		if (!found)
++		{
++			continue;
++		}
++		bu->setCarryingId(found->getId());
++		found->setCarriedById(bu->getId());
++		// off the tile: a man over a shoulder is not a target and not loot
++		if (Tile *t = found->getTile())
++		{
++			t->setUnit(nullptr);
++		}
++		found->setTile(nullptr);
++		Log(LOG_INFO) << "[capture] " << bu->getId() << " picked up " << found->getId();
++	}
++}
++
+ void BattlescapeGame::endTurn()
+ {
++	captureStep();
+ 	_debugPlay = _save->getDebugMode() && _parentState->getGame()->isCtrlPressed() && (_save->getSide() != FACTION_NEUTRAL);
+ 	_currentAction.type = BA_NONE;
+ 	_currentAction.skillRules = nullptr;
+diff --git a/src/Battlescape/BattlescapeGame.h b/src/Battlescape/BattlescapeGame.h
+index 7af613c..f6f1f81 100644
+--- a/src/Battlescape/BattlescapeGame.h
++++ b/src/Battlescape/BattlescapeGame.h
+@@ -149,6 +149,8 @@ private:
+ 
+ 	/// Ends the turn.
+ 	void endTurn();
++	/// Full capture: Cobra picks up, carries and extracts downed Joes.
++	void captureStep();
+ 	/// Picks the first soldier that is panicking.
+ 	bool handlePanickingPlayer();
+ 	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
 index 1951ba7..500c853 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
@@ -376,7 +544,7 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..79c3997 100644
+index 0631f32..5e821a7 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
 @@ -1043,6 +1043,8 @@ void DebriefingState::prepareDebriefing()
@@ -402,6 +570,30 @@ index 0631f32..79c3997 100644
  				save->clearLinksForAlienBase(ab, _game->getMod());
  				delete ab;
  				save->getAlienBases()->erase(abIt);
+@@ -1483,6 +1492,23 @@ void DebriefingState::prepareDebriefing()
+ 		UnitFaction oldFaction = bunit->getOriginalFaction();
+ 		Soldier *soldier = save->getSoldier(bunit->getId());
+ 
++		// FULL CAPTURE. Cobra carried him off the map, so he is neither dead
++		// nor recovered and none of the branches below apply to him. Handled
++		// first and skipped past: left to fall through, STATUS_IGNORE_ME would
++		// have quietly counted as "not dead" and brought him home.
++		if (bunit->isCapturedByEnemy() && oldFaction == FACTION_PLAYER)
++		{
++			addStat("STR_XCOM_OPERATIVES_CAPTURED", 1, -bunit->getValueKilled());
++			playersSurvived--;
++			if (soldier != 0)
++			{
++				bunit->updateGeoscapeStats(soldier);
++				soldier->setTransformedArmor(0);
++				save->captureSoldier(soldier);
++			}
++			continue;
++		}
++
+ 		if (!bunit->getTile())
+ 		{
+ 			Position pos = bunit->getPosition();
 diff --git a/src/Battlescape/Inventory.cpp b/src/Battlescape/Inventory.cpp
 index 406077c..4b5a934 100644
 --- a/src/Battlescape/Inventory.cpp
@@ -5543,6 +5735,41 @@ index ebaccaf..6b4c7ba 100644
  }
  
  /**
+diff --git a/src/Mod/RuleResearch.cpp b/src/Mod/RuleResearch.cpp
+index 4514ba8..366eedf 100644
+--- a/src/Mod/RuleResearch.cpp
++++ b/src/Mod/RuleResearch.cpp
+@@ -46,6 +46,7 @@ void RuleResearch::load(const YAML::YamlNodeReader& node, Mod* mod, const ModScr
+ 	}
+ 
+ 	reader.tryRead("lookup", _lookupName);
++	reader.tryRead("cobraSiteIntel", _cobraSiteIntel);
+ 	reader.tryRead("cutscene", _cutscene);
+ 	reader.tryRead("spawnedItem", _spawnedItem);
+ 	reader.tryRead("spawnedItemCount", _spawnedItemCount);
+diff --git a/src/Mod/RuleResearch.h b/src/Mod/RuleResearch.h
+index 7226e6b..d998812 100644
+--- a/src/Mod/RuleResearch.h
++++ b/src/Mod/RuleResearch.h
+@@ -45,6 +45,7 @@ class RuleResearch
+ {
+  private:
+ 	std::string _name, _lookupName, _cutscene, _spawnedItem, _spawnedEvent;
++	std::string _cobraSiteIntel;
+ 	WeightedOptions _events;
+ 	int _spawnedItemCount;
+ 	std::vector<std::string> _spawnedItemList;
+@@ -119,6 +120,10 @@ public:
+ 	const std::vector<std::pair<const RuleResearch*, std::vector<const RuleResearch*> > > &getGetOneFreeProtected() const;
+ 	/// Gets what to look up in the ufopedia.
+ 	const RuleResearch* getLookup() const { return _lookup; }
++	/// A Cobra site TYPE this topic gives the player a LEAD on rather than
++	/// pinpointing. Spine row 19 is "reveals hidden Terror Dromes on the globe":
++	/// the player learns one is out there and roughly where, not its doorstep.
++	const std::string &getCobraSiteIntel() const { return _cobraSiteIntel; }
+ 	/// Gets the requirements for this ResearchProject.
+ 	const std::vector<const RuleResearch*> &getRequirements() const;
+ 	/// Gets the base requirements for this ResearchProject.
 diff --git a/src/Mod/Unit.cpp b/src/Mod/Unit.cpp
 index 836d85e..1449897 100644
 --- a/src/Mod/Unit.cpp
@@ -5833,6 +6060,71 @@ index 97ef4f5..0dbe163 100644
  	/// Adds a mission location to our storage array.
  	void addMissionLocation(const std::string &varName, const std::string &regionName, int zoneNumber, int maximum);
  	/// Checks that a given mission location (city or whatever) isn't stored in our list of previously attacked locations.
+diff --git a/src/Savegame/BattleUnit.cpp b/src/Savegame/BattleUnit.cpp
+index 46fbf1f..051e997 100644
+--- a/src/Savegame/BattleUnit.cpp
++++ b/src/Savegame/BattleUnit.cpp
+@@ -708,6 +708,9 @@ void BattleUnit::load(const YAML::YamlNodeReader& node, const Mod *mod, const Sc
+ 	reader.tryReadAs<int>("turnsLeftSpottedForSnipersByCivilian", _turnsLeftSpottedForSnipers[FACTION_NEUTRAL]);
+ 	reader.tryReadAs<int>("turnsSinceStunned", _turnsSinceStunned);
+ 
++	reader.tryRead("carryingId", _carryingId);
++	reader.tryRead("capturedByEnemy", _capturedByEnemy);
++	reader.tryRead("carriedById", _carriedById);
+ 	reader.tryRead("rankInt", _rankInt);
+ 	reader.tryRead("rankIntUnified", _rankIntUnified);
+ 	reader.tryRead("moraleRestored", _moraleRestored);
+@@ -826,6 +829,9 @@ void BattleUnit::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared) c
+ 	writer.tryWriteAs<int>("turnsLeftSpottedForSnipersByCivilian", _turnsLeftSpottedForSnipers[FACTION_NEUTRAL], 0);
+ 	writer.writeAs<int>("turnsSinceStunned", _turnsSinceStunned);
+ 
++	if (_carryingId >= 0) writer.write("carryingId", _carryingId);
++	if (_capturedByEnemy) writer.write("capturedByEnemy", _capturedByEnemy);
++	if (_carriedById >= 0) writer.write("carriedById", _carriedById);
+ 	writer.write("rankInt", _rankInt);
+ 	writer.write("rankIntUnified", _rankIntUnified);
+ 	writer.write("moraleRestored", _moraleRestored);
+diff --git a/src/Savegame/BattleUnit.h b/src/Savegame/BattleUnit.h
+index ecc040f..4049cad 100644
+--- a/src/Savegame/BattleUnit.h
++++ b/src/Savegame/BattleUnit.h
+@@ -130,6 +130,11 @@ private:
+ 	BattleUnit *_charging;
+ 
+ 	Uint8 _turnsSinceSpotted[FACTION_MAX] = { 255, 255, 255 };
++	/// Full capture: who is carrying this unit off the map, and whom this unit carries.
++	/// Both are battle unit ids, -1 for nobody. A carried unit has no tile of its own.
++	int _carryingId = -1;
++	int _carriedById = -1;
++	bool _capturedByEnemy = false;
+ 	Uint8 _turnsLeftSpottedForSnipers[FACTION_MAX] = { 0, 0, 0 };
+ 	Uint8 _turnsSinceStunned = 255;
+ 
+@@ -704,6 +709,24 @@ public:
+ 	/// Set how many turns this unit will be exposed for. For specific faction.
+ 	void setTurnsSinceSpottedByFaction(UnitFaction faction, int turns);
+ 	/// Set how many turns this unit will be exposed for.
++	/// Full capture (fork feature 3). Cobra drags a downed Joe off the map rather
++	/// than leaving him: the project's rule is that named characters never die,
++	/// they go down or are taken, and this is what makes that true.
++	int getCarryingId() const { return _carryingId; }
++	int getCarriedById() const { return _carriedById; }
++	bool isCarrying() const { return _carryingId >= 0; }
++	bool isBeingCarried() const { return _carriedById >= 0; }
++	void setCarryingId(int id) { _carryingId = id; }
++	void setCarriedById(int id) { _carriedById = id; }
++	/// Carried clear off the map by the enemy: not dead, not recovered, taken.
++	bool isCapturedByEnemy() const { return _capturedByEnemy; }
++	void setCapturedByEnemy(bool b) { _capturedByEnemy = b; }
++	/// Off the map in enemy hands. STATUS_IGNORE_ME and not STATUS_DEAD on
++	/// purpose: he is gone from the battle but he is not killed, and the
++	/// debriefing has to be able to tell those apart. Mirrors
++	/// markAsResummonedFakeCivilian, which is the engine's own way of taking a
++	/// unit out of play without killing it.
++	void markAsCarriedOffMap() { _capturedByEnemy = true; _carriedById = -1; _status = STATUS_IGNORE_ME; }
+ 	int getTurnsSinceSpotted() const;
+ 	/// Set how many turns this unit will be exposed for. For specific faction.
+ 	int getTurnsSinceSpottedByFaction(UnitFaction faction) const;
 diff --git a/src/Savegame/CobraEconomy.cpp b/src/Savegame/CobraEconomy.cpp
 new file mode 100644
 index 0000000..d746c4c
@@ -6254,7 +6546,7 @@ index 6c121c7..a5b4ba0 100644
  	std::map<std::string, int> &getReinforcementsMemory() { return _reinforcementsMemory; }
  	/// Gets the map blocks used for reinforcements.
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..975e837 100644
+index 9ca9637..78bb053 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,6 +21,7 @@
@@ -6368,17 +6660,29 @@ index 9ca9637..975e837 100644
  	reader.tryRead("geoscapeDebugLog", _geoscapeDebugLog);
  	reader.tryRead("researchScores", _researchScores);
  	reader.tryRead("incomes", _incomes);
-@@ -649,6 +717,9 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -649,6 +717,21 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  		}
  	}
  	_alienStrategy->load(reader["alienStrategy"], mod);
 +	// after the strategy, so the mirrored counters below are not overwritten by the load
 +	_cobraEconomy->load(reader["cobraEconomy"]);
 +	_cobraEconomy->mirrorToCounters(*_alienStrategy);
++
++	// Cobra's prisoners. Loaded the same way as the dead, kept apart from them.
++	for (const auto& taken : reader["capturedSoldiers"].children())
++	{
++		std::string type = taken["type"].readVal(mod->getSoldiersList().front());
++		if (mod->getSoldier(type))
++		{
++			Soldier *soldier = new Soldier(mod->getSoldier(type), nullptr, 0 /*nationality*/);
++			soldier->load(taken, mod, this, mod->getScriptGlobal());
++			_capturedSoldiers.push_back(soldier);
++		}
++	}
  
  	for (const auto& weHardlyKnewYe : reader["deadSoldiers"].children())
  	{
-@@ -690,6 +761,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -690,6 +773,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	}
  
  	_scriptValues.load(reader, mod->getScriptGlobal());
@@ -6386,7 +6690,7 @@ index 9ca9637..975e837 100644
  }
  
  void SavedGame::loadTemplates(const YAML::YamlNodeReader& reader, const Mod* mod)
-@@ -790,6 +862,16 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -790,6 +874,16 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("funds", _funds);
  	writer.write("maintenance", _maintenance);
  	writer.write("userNotes", _userNotes);
@@ -6403,15 +6707,92 @@ index 9ca9637..975e837 100644
  	if (Options::oxceGeoscapeDebugLogMaxEntries > 0 && _geoscapeDebugLog.size() > 0)
  	{
  		auto geoDebugLog = writer["geoscapeDebugLog"];
-@@ -849,6 +931,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -849,8 +943,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("hiddenPurchaseItems", _hiddenPurchaseItemsMap);
  	writer.write("customRuleCraftDeployments", _customRuleCraftDeployments);
  	_alienStrategy->save(writer["alienStrategy"]);
 +	_cobraEconomy->save(writer["cobraEconomy"]);
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
++	saveVector(writer, _capturedSoldiers, "capturedSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2662,898 @@ void SavedGame::setWarned(bool warned)
+ 	{
+ 		if (!_globalEquipmentLayout[j].empty())
+@@ -1530,8 +1626,73 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
+  * @param base the base, in which the project was finished
+  * @param score should the score be awarded or not?
+  */
++/**
++ * Turns a finished research topic into LEADS on the globe.
++ *
++ * Spine row 19 is "reveals hidden Terror Dromes on the globe", and the design
++ * is careful that intel is not the same thing as knowing: the player learns a
++ * Drome is out there and roughly where, not its doorstep. So this does NOT
++ * call AlienBase::setDiscovered - the site stays hidden and its own marker
++ * stays off - and instead drops a GlobeMark with fromIntel set.
++ *
++ * That flag is the whole point. Globe::drawMarks already ages an intel mark
++ * down a confidence tier once it is MARK_STALE_MONTHS old, while a pin the
++ * player placed himself never decays, because he is not guessing about his own
++ * guess. Until this existed nothing in the game ever set fromIntel, so the
++ * situation board had a confidence ladder with only the player's own rungs on
++ * it.
++ *
++ * @param siteType the Cobra site type the topic gives a lead on.
++ * @return how many leads were dropped.
++ */
++int SavedGame::addCobraSiteIntel(const std::string &siteType)
++{
++	int dropped = 0;
++	for (auto* ab : _alienBases)
++	{
++		if (ab->getSiteType() != siteType || ab->isDiscovered())
++		{
++			continue;
++		}
++		// one lead per site, however many topics point at it
++		bool already = false;
++		for (const auto& m : _globeMarks)
++		{
++			if (m.fromIntel && std::abs(m.lon - ab->getLongitude()) < 0.0001
++				&& std::abs(m.lat - ab->getLatitude()) < 0.0001)
++			{
++				already = true;
++				break;
++			}
++		}
++		if (already)
++		{
++			continue;
++		}
++		GlobeMark mark;
++		mark.id = ++_globeMarkId;
++		mark.lon = ab->getLongitude();
++		mark.lat = ab->getLatitude();
++		mark.kind = GlobeMark::MARK_PIN;
++		mark.trust = GlobeMark::TRUST_LIKELY;
++		mark.fromIntel = true;
++		mark.placedMonth = _monthsPassed;
++		// the site type is the label a lead can honestly carry: the player has
++		// heard there is a Drome here, not what Cobra calls it
++		mark.label = ab->getSiteType();
++		_globeMarks.push_back(mark);
++		++dropped;
++	}
++	return dropped;
++}
++
+ void SavedGame::addFinishedResearch(const RuleResearch * research, const Mod * mod, Base * base, bool score)
+ {
++	if (!research->getCobraSiteIntel().empty())
++	{
++		addCobraSiteIntel(research->getCobraSiteIntel());
++	}
++
+ 	if (isResearchRuleStatusDisabled(research->getName()))
+ 	{
+ 		return;
+@@ -2579,6 +2740,898 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -7310,8 +7691,44 @@ index 9ca9637..975e837 100644
  Region *SavedGame::locateRegion(double lon, double lat) const
  {
  	Region* found = nullptr;
+@@ -2995,6 +4048,35 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
+  * @param soldier Pointer to dead soldier.
+  * @param cause Pointer to cause of death, NULL if missing in action.
+  */
++/**
++ * Takes a soldier off the roster into Cobra's hands.
++ *
++ * Deliberately NOT killSoldier. The project's rule is that named characters
++ * never die, and a man carried off a map is the clearest case there is: he is
++ * gone from the base, he is not in the memorial, and he is waiting for someone
++ * to come and get him. Same removal as a death - he cannot be assigned to a
++ * craft while Cobra has him - and no SoldierDeath.
++ *
++ * @param soldier the soldier Cobra carried off.
++ * @return iterator to the next soldier at that base.
++ */
++std::vector<Soldier*>::iterator SavedGame::captureSoldier(Soldier *soldier)
++{
++	std::vector<Soldier*>::iterator it;
++	for (auto* xbase : _bases)
++	{
++		for (it = xbase->getSoldiers()->begin(); it != xbase->getSoldiers()->end(); ++it)
++		{
++			if ((*it) == soldier)
++			{
++				_capturedSoldiers.push_back(soldier);
++				return xbase->getSoldiers()->erase(it);
++			}
++		}
++	}
++	return it;
++}
++
+ std::vector<Soldier*>::iterator SavedGame::killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause)
+ {
+ 	if (resetArmor)
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..81391c4 100644
+index d985908..2aba6cc 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -37,6 +37,7 @@ namespace OpenXcom
@@ -7384,7 +7801,24 @@ index d985908..81391c4 100644
  	SavedBattleGame *_battleGame;
  	std::vector<const RuleResearch*> _discovered;
  	std::vector<ResearchDiaryEntry*> _researchDiary;
-@@ -395,6 +430,32 @@ public:
+@@ -164,6 +199,7 @@ private:
+ 	std::string _graphFinanceToggles;
+ 	std::vector<const RuleResearch*> _poppedResearch;
+ 	std::vector<Soldier*> _deadSoldiers;
++	std::vector<Soldier*> _capturedSoldiers;
+ 	size_t _selectedBase;
+ 	std::string _lastselectedArmor; //contains the last selected armor
+ 	std::string _globalEquipmentLayoutName[MAX_EQUIPMENT_LAYOUT_TEMPLATES];
+@@ -293,6 +329,8 @@ public:
+ 	void makeAllResearchDiscovered(const Mod* mod);
+ 	/// Add a finished ResearchProject
+ 	void addFinishedResearch(const RuleResearch *research, const Mod *mod, Base *base, bool score = true);
++	/// Drops intel LEADS on every hidden Cobra site of a type. Returns how many.
++	int addCobraSiteIntel(const std::string &siteType);
+ 	/// Add a new record to the research diary
+ 	void addResearchDiaryEntry(ResearchDiaryEntry* entry);
+ 	/// Gets the research diary.
+@@ -395,6 +433,32 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -7417,7 +7851,7 @@ index d985908..81391c4 100644
  	/// Read-only access to the alien strategy data.
  	const AlienStrategy &getAlienStrategy() const { return *_alienStrategy; }
  	/// Full access to the current alien missions.
-@@ -409,6 +470,10 @@ public:
+@@ -409,6 +473,10 @@ public:
  	const std::vector<GeoscapeEvent*> &getGeoscapeEvents() const { return _geoscapeEvents; }
  	/// Locate a region containing a position.
  	Region *locateRegion(double lon, double lat) const;
@@ -7428,7 +7862,19 @@ index d985908..81391c4 100644
  	/// Locate a region containing a Target.
  	Region *locateRegion(const Target &target) const;
  	/// Locate a country containing a position.
-@@ -529,6 +594,13 @@ public:
+@@ -493,6 +561,11 @@ public:
+ 	bool isUfoOnIgnoreList(int ufoId);
+ 	/// Handles a soldier's death.
+ 	std::vector<Soldier*>::iterator killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause = 0);
++	/// Full capture: Cobra carried him off the map. He leaves the base roster
++	/// like a dead man but he is NOT dead - named Joes never are - so he waits
++	/// here for a rescue instead of going to the memorial.
++	std::vector<Soldier*>::iterator captureSoldier(Soldier *soldier);
++	std::vector<Soldier*> *getCapturedSoldiers() { return &_capturedSoldiers; }
+ 	/// enables/disables autosell for an item type
+ 	void setAutosell(const RuleItem *itype, const bool enabled);
+ 	/// get autosell state for an item type
+@@ -529,6 +602,13 @@ public:
  	void handlePrimaryResearchSideEffects(const std::vector<const RuleResearch*> &topicsToCheck, const Mod* mod, Base* base);
  	/// Gets the list of user notes.
  	std::vector<std::string>& getUserNotes() { return _userNotes; }
