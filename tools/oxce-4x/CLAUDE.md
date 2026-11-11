@@ -24,10 +24,43 @@ Months are campaign months from the start. Six acts over four to five years.
 | 23–30 | + Dr. Mindbender, **B.A.T. legions**, Toxo-Zombies | pulse rifles standard, brainwave attacks | spore attacks, assaults on The Pit |
 | 31–60 | + Serpentor's guard, Cobra Commander's guard, Iron Grenadiers (Act 5) | heavy pulse | the Cobra Island assault |
 
+## The dates are a target, not a gate
+
+John, on the calendar: *"This was a story timeline. Our plumbing is more
+important"* and *"I'd like to aim for the dates given by massaging it
+organically."*
+
+So the calendar is **what the tuning aims at**, not a switch that fires.
+"Lasers at months 9–14" means a typical campaign should see lasers around
+then — earlier if Cobra has had a free run, later if the player has been
+burning its factories. Three parts:
+
+| | |
+| --- | --- |
+| **earliest** | a hard floor. Never before this, whatever Cobra's books say |
+| **organic** | Cobra's own state decides when inside the window — research done, factories built, materiel flowing |
+| **latest** | a ceiling, so the story does not stall against a player who is winning |
+
+`raceWeights` in a missionScript already escalates by month (keyed by month,
+resolved on `monthsPassed`), so hard date gating needs **no engine work**. It
+is the wrong shape though: a switch, not a slope. Month 8 one race, month 9
+another.
+
+**The kit rule shipped 10 Nov already does the organic half for weapons** —
+regional materiel decides which itemSet tier Cobra issues. That is the real
+mechanism and it is verified. What it lacks is the floor. The smallest honest
+fix is therefore one clamp, not a rebuild: cap the tier at what the calendar
+allows for the current month. Organic inside the window, impossible outside it.
+
+No per-unit month gate exists anywhere in the engine. That is the one piece of
+plumbing the calendar actually needs.
+
 ## What is wrong in this directory right now
 
 Found 10 Nov 2026 by reading the calendar against the shipped rulesets. None
-of it is fixed. **Do not treat the current deployments as correct.**
+of it is fixed. Three of these four are **content** — which units sit in which
+deployment, and what a gate value is — and one is the missing mechanism above.
+**Do not treat the current deployments as correct.**
 
 **The Cobra race puts B.A.T.s in ranks 6 and 7**, and every generated Cobra
 site deployment uses ranks 5,4,3,2,1,6,7. So a raid on a front company in
