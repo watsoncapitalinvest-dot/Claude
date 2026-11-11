@@ -62,7 +62,7 @@ if grep -q '^battleGame:' "$SAVEDIR/$SAVE"; then
 fi
 touch "$SAVEDIR/$SAVE"
 
-( cd "$B" && OXCE_ECON_LOG=1 OXCE_CAMP_PROBE=1 OXCE_CAMP_FF="$DAYS" OXCE_CAMP_RAID="${RAID:-}" OXCE_CAMP_PLANT="${PLANT:-}" OXCE_CAMP_SHOOTDOWN="${SHOOT:-}" OXCE_MAP_HIRES=0 SDL_AUDIODRIVER=dummy \
+( cd "$B" && OXCE_ECON_LOG=1 OXCE_CAMP_PROBE=1 OXCE_CAMP_FF="$DAYS" OXCE_CAMP_RAID="${RAID:-}" OXCE_CAMP_RAID_TYPE="${RAIDTYPE:-}" OXCE_CAMP_RAID_BENCH="${RAIDBENCH:-}" OXCE_CAMP_PLANT="${PLANT:-}" OXCE_CAMP_SHOOTDOWN="${SHOOT:-}" OXCE_MAP_HIRES=0 SDL_AUDIODRIVER=dummy \
     nohup ./openxcom -data "$B" -continue > /tmp/oxc_ff.log 2>&1 & )
 
 # -continue does NOT load a save on its own. It pushes the save list, and ListLoadState::init

@@ -316,3 +316,26 @@ Build the mechanic in the shared layer — the voxel trace, the damage applicati
 code all run for both sides — and expose it as one query. The AI learns to ask that query later;
 the mechanic is never rebuilt. Wall penetration is the worked example: shipping it with no AI
 work still gives both sides the physics, and leaves only *deliberate* use unimplemented.
+
+## An AlienBase id is not unique across Cobra sites
+
+`AlienMission::spawnAlienBase` does `ab->setId(game.getId(deployment->getMarkerName()))`,
+and `SavedGame::getId` keeps **one counter per name**. The name here is the
+deployment's *marker*, so every Cobra site type counts from 1 on its own: the
+first depot and the first research lab are both `getId() == 1`.
+
+Anything that remembers "which site" must therefore key on the **type and the
+id together**, never the id alone. Keyed on the id, a department's research
+bench pointed at two buildings at once — raiding a depot wiped a lab's current
+node, and the two site types shared a single pool of benches. It compiled, it
+ran, and the raid even logged a plausible-looking line about the right
+department.
+
+`cobraSiteKey()` in `SavedGame.cpp` is the key to use: `<siteType>#<id>`.
+
+Worth noting how it was caught. The log said `a lab at site 1 took up
+STR_COBRA_RIFLES` and the raid said `RAIDED STR_COBRA_DEPOT`, and only having
+both lines next to each other made the collision visible. A log line that
+names the **building** rather than a bare number would have shown it the first
+time instead of the second, which is why the message now reads `a bench at
+STR_COBRA_RESEARCH_LAB#1`.

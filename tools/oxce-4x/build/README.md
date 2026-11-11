@@ -94,3 +94,34 @@ actually loads — and it is the guard that caught `cobraEconomy:` shipping
 inert. Add every new engine key to its lists, or the key passes the audit by
 being invisible, which is the guard failing in the exact way it exists to
 prevent.
+
+## "The feature did not fire" is usually the planner, and the probe answers it
+
+Three times on 10 Nov a working feature looked dead because Cobra never built
+the site it needed. Cobra's research never ran for an entire evening, and the
+conclusions drawn from that - that the lab was decoration, that the research
+engine was inert, that the planner had no sense research compounds - were all
+wrong. The planner *wanted* a lab from month 4 and every month after.
+
+`campaign_probe.py` prints one `[camp]` line a month: what Cobra owns, what it
+wants, where, and what it can afford. It is optional and `campaign_ff.sh` only
+warns when it is missing, so an economy test runs happily without it - and then
+cannot tell "the feature is broken" from "the building was never built". One
+run with it applied settled a question that four runs without it had not:
+
+    [camp] 1999-4  sites=4  have[ COMPANYx2 ]  wants[ LAB ]  ...
+
+Every `cobraBuild*` script is identical apart from `executionOdds`, and the
+built counts simply track them: front company 66 -> 12 built, factory 44 -> 2,
+depot 26 -> 3, broadcast station 18 -> 2, research lab 18 -> **0**. Nine wanted
+months at 18% a month is a 17% chance of nothing, and that is what had
+happened. Not a bug. The dice.
+
+So: **before concluding a Cobra feature does not work, check Cobra ever built
+the thing it runs on.** And when a site becomes load-bearing for a system,
+revisit its odds - a building that gates all research cannot sit on a roll
+that fails outright in one campaign in six.
+
+One more trap in the same family: the test save carries a fixed `rng` seed, so
+reruns are not independent samples. Repeating a campaign and getting the same
+answer is not corroboration.

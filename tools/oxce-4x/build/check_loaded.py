@@ -45,6 +45,7 @@ FIELDS = [
     ('productionMinimumPercent', 'Mod/Mod.cpp'),
     ('materielCostFunds', 'Mod/RuleCobraSite.cpp'),
     ('projectProgressPerMonth', 'Mod/RuleCobraSite.cpp'),
+    ('labSlots', 'Mod/RuleCobraSite.cpp'),
     ('garrisonBonus', 'Mod/RuleCobraSite.cpp'),
     ('garrisonRankUnlock', 'Mod/RuleCobraSite.cpp'),
     ('runsThePlanning', 'Mod/RuleCobraSite.cpp'),

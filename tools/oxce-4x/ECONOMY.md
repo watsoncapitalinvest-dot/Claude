@@ -1260,3 +1260,97 @@ Item prices are fine; the cost question is entirely inside Cobra's ledger.
 
 `garrisonRefillPerMonth` and `stockpileCap`. The second is the M.A.R.S. dealer
 threshold John designed and M.A.R.S. is not built, so that one is expected.
+
+---
+
+## Research is departments and benches (10 Nov, late — supersedes the pool model)
+
+**The master design doc disagrees with this section and John's decision wins.**
+The doc (*Cobra's research*, *Departments*) describes a researcher **pool**:
+*"Cobra runs one project at a time per department, with any number of
+departments active at once, all drawing researchers from a pool at each
+headquarters."* Under that model breadth is free and hubs buy speed.
+
+John replaced it in chat on 10 Nov with a **bench** model, and it is better
+for what he is actually after — getting department heads within reach:
+
+- A **lab** is a bench that holds **one department**.
+- Labs exist in **two places**: out on the globe, and inside a Terror Drome.
+- **A department may only be studied in one lab anywhere in the world.** Labs
+  never double up on a branch to go faster.
+- So **labs in existence = branches running in parallel**, and the number of
+  departments is finite: one Drome with enough benches claims everything and
+  every other site is locked out of research entirely.
+- **Rate is identical wherever a bench stands.** Exposure is bought with
+  money, never with speed.
+- On completion the bench **frees** and that site picks up the next unclaimed
+  department.
+
+### Why two kinds of lab
+
+John: *"i want to do this to make the department head more accessible to
+capture."* The head sits where his department's lab is.
+
+| | Lab on the globe | Bench inside a Drome |
+| --- | --- | --- |
+| Build | 200 | needs a 450 Drome first, then benches are free |
+| Benches | 1 | 4 (the Hidden HQ holds 2) |
+| Garrison | its own, small | the Drome's full garrison |
+| The head | **catchable in an ordinary raid** | behind the hardest target in the game |
+| Rate | 10/month | 10/month |
+
+The pricing is the whole mechanism. Poor Cobra cannot afford Dromes, so its
+research sits out in the open and its heads are catchable — Acts 1 and 2,
+exactly when the interrogation spine needs to start producing. Rich Cobra
+consolidates into Dromes and the heads go behind the wire. **The escalation
+falls out of the economy rather than out of a date**, and concentration is
+efficient and fragile: every department in one Drome means one raid ends the
+whole programme.
+
+### What a raid takes
+
+John: *"cobra retains all completed knowledge but loses progress on current
+node."* So in `cobraRaided`, every **unfinished** project whose bench stood at
+that site drops to zero and goes back on the shelf; **finished ones are
+untouched**. Cobra can be delayed, never pushed backwards — which is also what
+the storyline brief requires, since no beat may assume something the player
+could have prevented.
+
+What a raid is worth is therefore exactly how far that bench had got. Taking a
+lab a month off lasers hurts; taking one that started last week does not.
+
+### The implementation, and why it is small
+
+`CobraProject` gained one field: `labBase`, the Target id of the site hosting
+its bench (0 = nobody is working on it). That single field makes the
+exclusivity rule true **by construction** rather than something to police —
+there is only one place to record who is working on a department, so only one
+site can be. `RuleCobraSite` gained `labSlots`.
+
+Projects are now seeded **once, globally, one per department**, not per region.
+The per-region list that shipped earlier the same evening asked the player to
+spread hubs across regions instead of choosing which branches to run, which is
+a different and worse game.
+
+### Still to build
+
+- **The head signs off in person.** John: *"give the department heads a reason
+  to visit each lab they have for a short period or something to complete a
+  node."* A node accumulates while he is away but **parks at full progress
+  until its head turns up at that lab**, for a few days (John's choice of
+  window — tight, so catching one is a genuine intercept). Three consequences:
+  a head running several departments is a **bottleneck**, since Destro covers
+  Armory *and* Motor pool and can only be in one place; a parked node is the
+  **tell** that someone important is about to arrive; and late Cobra still has
+  to *travel* to its Dromes, so the window narrows rather than closing.
+  Needs a villain→department mapping in the ruleset, which does not exist yet,
+  plus a per-villain travel state.
+- **Making the visit visible.** Intel gathering is John's to design (10 Nov) —
+  the mechanics here should hang off whatever he lands on rather than inventing
+  a detection system.
+- **Scoping the calendar to the AI.** The doc is explicit that calendar windows
+  *"apply only to the side the computer plays… a pacing rail for the AI, not a
+  rule of the world."* `maxKitTierByMonth` is currently unconditional, which is
+  right while the player is Joe and wrong the moment Cobra is playable.
+- The player's own tree is **8 topics** against roughly 195 planned, and 7 of
+  the 8 are interrogations still pointing at a vanilla `lookup`.

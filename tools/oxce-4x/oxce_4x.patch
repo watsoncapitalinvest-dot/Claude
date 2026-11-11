@@ -4148,10 +4148,10 @@ index 2242d13..347d26a 100644
  	/// Gets the ruleset for a facility type.
 diff --git a/src/Mod/RuleCobraSite.cpp b/src/Mod/RuleCobraSite.cpp
 new file mode 100644
-index 0000000..c9f7c8b
+index 0000000..abe357a
 --- /dev/null
 +++ b/src/Mod/RuleCobraSite.cpp
-@@ -0,0 +1,69 @@
+@@ -0,0 +1,70 @@
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
 + *
@@ -4182,7 +4182,7 @@ index 0000000..c9f7c8b
 +	_buildCostFunds(0),
 +	_lootFunds(0), _lootMateriel(0),
 +	_lootsRegionalStockpile(false),
-+	_projectProgressPerMonth(0),
++	_projectProgressPerMonth(0), _labSlots(0),
 +	_goodwillErosionPerMonth(0),
 +	_garrisonBonus(0), _garrisonRankUnlock(-1), _garrisonAllMissions(false),
 +	_runsThePlanning(false), _incomeNeedsShipment(false), _materielCostFunds(0),
@@ -4205,6 +4205,7 @@ index 0000000..c9f7c8b
 +	reader.tryRead("lootMateriel", _lootMateriel);
 +	reader.tryRead("lootsRegionalStockpile", _lootsRegionalStockpile);
 +	reader.tryRead("projectProgressPerMonth", _projectProgressPerMonth);
++	reader.tryRead("labSlots", _labSlots);
 +	reader.tryRead("goodwillErosionPerMonth", _goodwillErosionPerMonth);
 +	reader.tryRead("garrisonBonus", _garrisonBonus);
 +	reader.tryRead("garrisonRankUnlock", _garrisonRankUnlock);
@@ -4223,10 +4224,10 @@ index 0000000..c9f7c8b
 +}
 diff --git a/src/Mod/RuleCobraSite.h b/src/Mod/RuleCobraSite.h
 new file mode 100644
-index 0000000..d850262
+index 0000000..7d92aea
 --- /dev/null
 +++ b/src/Mod/RuleCobraSite.h
-@@ -0,0 +1,107 @@
+@@ -0,0 +1,111 @@
 +#pragma once
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
@@ -4281,7 +4282,8 @@ index 0000000..d850262
 +	int _buildCostFunds;
 +	int _lootFunds, _lootMateriel;
 +	bool _lootsRegionalStockpile;      ///< the depot: raiding it takes what the region was holding
-+	int _projectProgressPerMonth;      ///< the research lab
++	int _projectProgressPerMonth;      ///< progress per lab per month at this site
++	int _labSlots;                     ///< how many departments may be worked on here at once
 +	int _goodwillErosionPerMonth;      ///< the broadcast station
 +	/// The training camp. X-COM stores no garrison on a site - the defenders are generated
 +	/// fresh from the deployment every time it is raided - so there is nothing to refill and
@@ -4323,6 +4325,9 @@ index 0000000..d850262
 +	int getLootMateriel() const { return _lootMateriel; }
 +	bool getLootsRegionalStockpile() const { return _lootsRegionalStockpile; }
 +	int getProjectProgressPerMonth() const { return _projectProgressPerMonth; }
++	/// How many departments may be worked on here at once. A globe lab hosts one; a Terror
++	/// Drome hosts several. 0 means this site cannot host research at all.
++	int getLabSlots() const { return _labSlots; }
 +	int getGoodwillErosionPerMonth() const { return _goodwillErosionPerMonth; }
 +	int getGarrisonBonus() const { return _garrisonBonus; }
 +	int getGarrisonRankUnlock() const { return _garrisonRankUnlock; }
@@ -4592,10 +4597,10 @@ index 97ef4f5..0dbe163 100644
  	/// Checks that a given mission location (city or whatever) isn't stored in our list of previously attacked locations.
 diff --git a/src/Savegame/CobraEconomy.cpp b/src/Savegame/CobraEconomy.cpp
 new file mode 100644
-index 0000000..b9c380b
+index 0000000..d746c4c
 --- /dev/null
 +++ b/src/Savegame/CobraEconomy.cpp
-@@ -0,0 +1,159 @@
+@@ -0,0 +1,161 @@
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
 + *
@@ -4625,6 +4630,7 @@ index 0000000..b9c380b
 +{
 +	reader.tryRead("type", type);
 +	reader.tryRead("region", region);
++	reader.tryRead("labKey", labKey);
 +	reader.tryRead("progress", progress);
 +	reader.tryRead("cost", cost);
 +	reader.tryRead("known", known);
@@ -4635,6 +4641,7 @@ index 0000000..b9c380b
 +	writer.setAsMap();
 +	writer.write("type", type);
 +	writer.write("region", region);
++	writer.write("labKey", labKey);
 +	writer.write("progress", progress);
 +	writer.write("cost", cost);
 +	writer.write("known", known);
@@ -4757,10 +4764,10 @@ index 0000000..b9c380b
 +}
 diff --git a/src/Savegame/CobraEconomy.h b/src/Savegame/CobraEconomy.h
 new file mode 100644
-index 0000000..bec32cc
+index 0000000..983b16d
 --- /dev/null
 +++ b/src/Savegame/CobraEconomy.h
-@@ -0,0 +1,101 @@
+@@ -0,0 +1,106 @@
 +#pragma once
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
@@ -4805,8 +4812,13 @@ index 0000000..bec32cc
 + */
 +struct CobraProject
 +{
-+	std::string type;
-+	std::string region;
++	std::string type;        ///< the DEPARTMENT. One project per department, worldwide.
++	std::string region;      ///< where its lab stands; written when a lab claims it
++	/// Which site hosts its bench, as "<siteType>#<id>"; empty = nobody is working on it.
++	/// NOT the bare Target id: AlienBase ids are handed out per deployment marker, so the
++	/// first depot and the first lab are BOTH id 1. Keyed on the id alone, raiding a depot
++	/// cleared a lab's research and two site types shared one pool of benches.
++	std::string labKey;
 +	int progress = 0;        ///< in the same units as cost, so a bar can be drawn without a lookup
 +	int cost = 0;
 +	bool known = false;      ///< the player has learned this exists, by raiding a lab or an HQ
@@ -5004,10 +5016,18 @@ index 6c121c7..a5b4ba0 100644
  	std::map<std::string, int> &getReinforcementsMemory() { return _reinforcementsMemory; }
  	/// Gets the map blocks used for reinforcements.
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..c1940db 100644
+index 9ca9637..a35a373 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
-@@ -55,7 +55,10 @@
+@@ -21,6 +21,7 @@
+ #include <set>
+ #include <iomanip>
+ #include <algorithm>
++#include <map>
+ #include <functional>
+ #include <ctime>
+ #include "../Engine/Yaml.h"
+@@ -55,7 +56,10 @@
  #include "MissionSite.h"
  #include "AlienBase.h"
  #include "AlienStrategy.h"
@@ -5018,7 +5038,7 @@ index 9ca9637..c1940db 100644
  #include "GeoscapeEvent.h"
  #include "../Mod/RuleCountry.h"
  #include "../Mod/RuleRegion.h"
-@@ -110,6 +113,7 @@ SavedGame::SavedGame() :
+@@ -110,6 +114,7 @@ SavedGame::SavedGame() :
  {
  	_time = new GameTime(6, 1, 1, 1999, 12, 0, 0);
  	_alienStrategy = new AlienStrategy();
@@ -5026,7 +5046,7 @@ index 9ca9637..c1940db 100644
  	_funds.push_back(0);
  	_maintenance.push_back(0);
  	_researchScores.push_back(0);
-@@ -159,6 +163,7 @@ SavedGame::~SavedGame()
+@@ -159,6 +164,7 @@ SavedGame::~SavedGame()
  		delete ab;
  	}
  	delete _alienStrategy;
@@ -5034,7 +5054,7 @@ index 9ca9637..c1940db 100644
  	for (auto* am : _activeMissions)
  	{
  		delete am;
-@@ -649,6 +654,9 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -649,6 +655,9 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  		}
  	}
  	_alienStrategy->load(reader["alienStrategy"], mod);
@@ -5044,7 +5064,7 @@ index 9ca9637..c1940db 100644
  
  	for (const auto& weHardlyKnewYe : reader["deadSoldiers"].children())
  	{
-@@ -690,6 +698,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -690,6 +699,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	}
  
  	_scriptValues.load(reader, mod->getScriptGlobal());
@@ -5052,7 +5072,7 @@ index 9ca9637..c1940db 100644
  }
  
  void SavedGame::loadTemplates(const YAML::YamlNodeReader& reader, const Mod* mod)
-@@ -849,6 +858,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -849,6 +859,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("hiddenPurchaseItems", _hiddenPurchaseItemsMap);
  	writer.write("customRuleCraftDeployments", _customRuleCraftDeployments);
  	_alienStrategy->save(writer["alienStrategy"]);
@@ -5060,7 +5080,7 @@ index 9ca9637..c1940db 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2589,761 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2590,840 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -5345,6 +5365,18 @@ index 9ca9637..c1940db 100644
 +	_cobraEconomy->mirrorToCounters(*_alienStrategy);
 +}
 +
++/**
++ * Names a Cobra site uniquely. AlienBase ids come from SavedGame::getId keyed by the
++ * deployment's MARKER NAME, so every site type starts its own count at 1 - the first depot and
++ * the first research lab are both id 1. A bench keyed on the bare id therefore pointed at two
++ * buildings at once: raiding a depot wiped a lab's current node, and the two shared a pool of
++ * benches. The type has to be part of the key.
++ */
++static std::string cobraSiteKey(const AlienBase *base)
++{
++	return base->getSiteType() + "#" + std::to_string(base->getId());
++}
++
 +int SavedGame::cobraRaided(const AlienBase *base, const Mod *mod)
 +{
 +	if (base->getSiteType().empty())
@@ -5376,6 +5408,26 @@ index 9ca9637..c1940db 100644
 +	}
 +	_cobraEconomy->addFunds(regionType, -funds);
 +	_cobraEconomy->addMateriel(regionType, -materiel);
++
++	// A raid takes the current node, not the knowledge. John's rule: "cobra retains all
++	// completed knowledge but loses progress on current node." So a finished department is
++	// untouched - Cobra can be delayed but never pushed backwards - and an unfinished one
++	// hosted here drops to zero and goes back on the shelf for some other lab to pick up.
++	// What a raid is worth is therefore exactly how far along that bench had got: taking a
++	// lab that is one month off lasers hurts, taking one that started last week does not.
++	for (auto &project : _cobraEconomy->getProjects())
++	{
++		if (project.labKey == cobraSiteKey(base) && project.progress < project.cost)
++		{
++			if (getenv("OXCE_ECON_LOG"))
++			{
++				Log(LOG_INFO) << "[econ] the raid cost Cobra " << project.progress << "/"
++					<< project.cost << " on " << project.type;
++			}
++			project.progress = 0;
++			project.labKey.clear();
++		}
++	}
 +
 +	// Raiding a lab or a headquarters is how the player learns what Cobra is building.
 +	int reveal = rule->getRevealOnRaid();
@@ -5454,97 +5506,129 @@ index 9ca9637..c1940db 100644
 +	{
 +		return;                 // no tech tree authored; nothing to advance
 +	}
++	auto ruleFor = [&rules](const std::string &type) -> const RuleCobraProject*
++	{
++		for (const auto &cand : rules) { if (cand.type == type) return &cand; }
++		return 0;
++	};
 +
-+	// Seed the save's list from the ruleset the first time. Projects are per region, because
-+	// everything else in this economy is: a region Cobra has been driven out of should not keep
-+	// researching, and a Cobra player would expect to site his labs somewhere.
++	// ONE project per DEPARTMENT, worldwide. A department is a part of Cobra's organisation,
++	// not of the map: where it is being worked on is whichever lab has claimed it, and the
++	// claim is the project's own labKey. That single field is what makes John's rule - a
++	// department may only be studied in one lab anywhere - true by construction rather than
++	// something to police. (This replaces a per-region list, which asked the player to spread
++	// hubs across regions instead of choosing which branches to run.)
 +	if (_cobraEconomy->getProjects().empty())
 +	{
-+		for (const auto *region : _regions)
++		for (const auto &r : rules)
 +		{
-+			for (const auto &r : rules)
-+			{
-+				CobraProject p;
-+				p.type = r.type;
-+				p.region = region->getRules()->getType();
-+				p.cost = r.cost;
-+				_cobraEconomy->getProjects().push_back(p);
-+			}
++			CobraProject p;
++			p.type = r.type;
++			p.cost = r.cost;
++			_cobraEconomy->getProjects().push_back(p);
 +		}
 +	}
 +
-+	// What each region can push this month, from the labs standing in it.
-+	std::map<std::string, int> labs;
++	const size_t months = (size_t)getMonthsPassed();
++
++	// Every site that can host benches, and how many of each one's are free.
++	std::map<std::string, int> freeSlots;
++	std::map<std::string, const AlienBase*> siteByKey;
 +	for (const auto *base : _alienBases)
 +	{
 +		if (base->getSiteType().empty()) continue;
 +		const RuleCobraSite *rule = mod->getCobraSite(base->getSiteType());
-+		if (!rule || rule->getProjectProgressPerMonth() <= 0) continue;
-+		const Region *there = locateRegion(*base);
-+		if (!there) continue;
-+		labs[there->getRules()->getType()] += rule->getProjectProgressPerMonth();
++		if (!rule || rule->getLabSlots() <= 0 || rule->getProjectProgressPerMonth() <= 0) continue;
++		const std::string key = cobraSiteKey(base);
++		freeSlots[key] = rule->getLabSlots();
++		siteByKey[key] = base;
 +	}
 +
-+	const size_t months = (size_t)getMonthsPassed();
-+	// A region's labs push ONE project a month, in ruleset order, so a region works down its own
-+	// tree rather than everything at once. The list is flat across every region, so this has to
-+	// be tracked per region: a bare `break` here stopped the whole world after the first region
-+	// advanced, which read in the log exactly like a tech tree that was simply slow.
-+	std::set<std::string> advanced;
++	// Standing claims. A site the player has taken off the board is simply not in the map any
++	// more, so its labs release here and their departments go back on the shelf. A finished
++	// project frees its bench too, which is how a site moves on to the next department.
 +	for (auto &p : _cobraEconomy->getProjects())
 +	{
-+		if (advanced.count(p.region))
++		if (p.labKey.empty()) continue;
++		if (!freeSlots.count(p.labKey) || p.progress >= p.cost)
++		{
++			p.labKey.clear();
++			continue;
++		}
++		--freeSlots[p.labKey];
++	}
++
++	// Hand free benches to unclaimed departments, in ruleset order - that order IS the tree.
++	for (auto &p : _cobraEconomy->getProjects())
++	{
++		if (!p.labKey.empty() || p.progress >= p.cost) continue;
++		if (!ruleFor(p.type)) continue;
++		for (auto &slot : freeSlots)
++		{
++			if (slot.second <= 0) continue;
++			p.labKey = slot.first;
++			--slot.second;
++			if (getenv("OXCE_ECON_LOG"))
++			{
++				Log(LOG_INFO) << "[econ] a bench at " << p.labKey << " took up " << p.type;
++			}
++			break;
++		}
++	}
++
++	// Advance every department that has a lab. One lab, one department, one rate - labs never
++	// double up on the same branch, so breadth is bought with benches and not with speed.
++	for (auto &p : _cobraEconomy->getProjects())
++	{
++		const RuleCobraProject *r = ruleFor(p.type);
++		if (!r || p.progress >= p.cost)
 +		{
 +			continue;
 +		}
-+		const RuleCobraProject *r = 0;
-+		for (const auto &cand : rules)
-+		{
-+			if (cand.type == p.type) { r = &cand; break; }
-+		}
-+		if (!r || p.progress >= p.cost)
-+		{
-+			continue;           // unknown to the ruleset, or already finished
-+		}
-+		// The calendar's far edge: it lands here however slowly Cobra worked, so the story
-+		// cannot stall against a player who has been winning.
++		// The calendar's far edge lands here however slowly Cobra worked - and whether or not
++		// anyone was ever assigned to it - so the story cannot stall against a player who has
++		// been winning. It used to do this SILENTLY, which made a project that arrived this
++		// way look like one that never existed.
 +		if (r->latestMonth > 0 && months >= r->latestMonth)
 +		{
-+			// The calendar's far edge lands here however slowly Cobra worked. It used to do so
-+			// SILENTLY, which made a project that arrived this way look like one that never
-+			// existed: a 400-day run showed lasers being researched and no sign of rifles at
-+			// all, because rifles had force-completed at month 8 without a word.
 +			p.progress = p.cost;
-+			advanced.insert(p.region);
++			p.labKey.clear();
 +			if (getenv("OXCE_ECON_LOG"))
 +			{
-+				Log(LOG_INFO) << "[econ] " << p.region << " got " << p.type
-+					<< " for free: month " << months << " passed its latestMonth "
-+					<< r->latestMonth;
++				Log(LOG_INFO) << "[econ] " << p.type << " arrived for free: month " << months
++					<< " passed its latestMonth " << r->latestMonth;
 +			}
 +			continue;
 +		}
-+		int push = labs.count(p.region) ? labs[p.region] : 0;
-+		if (push <= 0)
++		if (p.labKey.empty())
 +		{
-+			continue;           // no lab there
++			continue;           // nobody is working on it
 +		}
++		const AlienBase *base = siteByKey[p.labKey];
++		const RuleCobraSite *site = mod->getCobraSite(base->getSiteType());
++		Region *there = locateRegion(*base);
++		if (!site || !there)
++		{
++			continue;
++		}
++		const std::string &regionType = there->getRules()->getType();
++		p.region = regionType;  // so a reader of the save can see where the work is being done
++		int push = site->getProjectProgressPerMonth();
 +		if (r->materielPerProgress > 0)
 +		{
-+			const int have = _cobraEconomy->getMateriel(p.region);
++			const int have = _cobraEconomy->getMateriel(regionType);
 +			const int afford = have / r->materielPerProgress;
 +			push = std::min(push, afford);
 +			if (push <= 0)
 +			{
-+				continue;       // the region cannot pay for a single point
++				continue;       // the lab's own region cannot pay for a single point
 +			}
-+			_cobraEconomy->addMateriel(p.region, -(push * r->materielPerProgress));
++			_cobraEconomy->addMateriel(regionType, -(push * r->materielPerProgress));
 +		}
 +		p.progress = std::min(p.cost, p.progress + push);
-+		advanced.insert(p.region);
 +		if (getenv("OXCE_ECON_LOG"))
 +		{
-+			Log(LOG_INFO) << "[econ] " << p.region << " researched " << p.type << " "
++			Log(LOG_INFO) << "[econ] " << regionType << " researched " << p.type << " "
 +				<< p.progress << "/" << p.cost
 +				<< (p.progress >= p.cost && months < r->earliestMonth
 +					? " (done, waiting for its earliest month)" : "");
@@ -5795,6 +5879,21 @@ index 9ca9637..c1940db 100644
 +
 +	// Decide last, against this month's holdings rather than last month's.
 +	cobraPlan(mod);
++		// An EMPTY env var is still a valid pointer, and campaign_ff.sh passes "${SHOOT:-}" which
++		// sets it to "" rather than leaving it unset. So getenv came back truthy with nothing
++		// behind it, atoi("") gave 0, and the control run was shooting cargo down as eagerly as
++		// the test run. Both halves of the comparison reported the same thing and it looked
++		// like the feature firing when it should not.
++		// An EMPTY env var is still a valid pointer, and campaign_ff.sh passes "${SHOOT:-}" which
++		// sets it to "" rather than leaving it unset. So getenv came back truthy with nothing
++		// behind it, atoi("") gave 0, and the control run was shooting cargo down as eagerly as
++		// the test run. Both halves of the comparison reported the same thing and it looked
++		// like the feature firing when it should not.
++		// An EMPTY env var is still a valid pointer, and campaign_ff.sh passes "${SHOOT:-}" which
++		// sets it to "" rather than leaving it unset. So getenv came back truthy with nothing
++		// behind it, atoi("") gave 0, and the control run was shooting cargo down as eagerly as
++		// the test run. Both halves of the comparison reported the same thing and it looked
++		// like the feature firing when it should not.
 +		// An EMPTY env var is still a valid pointer, and campaign_ff.sh passes "${SHOOT:-}" which
 +		// sets it to "" rather than leaving it unset. So getenv came back truthy with nothing
 +		// behind it, atoi("") gave 0, and the control run was shooting cargo down as eagerly as

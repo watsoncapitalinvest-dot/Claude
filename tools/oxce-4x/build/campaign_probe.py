@@ -213,7 +213,30 @@ PROBE = ANCHOR + """	if (getenv("OXCE_CAMP_PROBE"))                             
 			for (auto it = _alienBases.begin(); it != _alienBases.end(); ++it) // CAMPROBE
 			{                                                                  // CAMPROBE
 				if ((*it)->getSiteType().empty()) continue;                    // CAMPROBE
-				if (count[(*it)->getSiteType()] != 1) continue;                // CAMPROBE
+				// OXCE_CAMP_RAID_TYPE names the site type to take, for testing a path that    // CAMPROBE
+				// depends on WHICH building was lost. Without it the probe takes a type Cobra  // CAMPROBE
+				// has exactly one of, which is the right default but cannot aim.               // CAMPROBE
+				const char* raidType = getenv("OXCE_CAMP_RAID_TYPE");          // CAMPROBE
+				const char* raidBench = getenv("OXCE_CAMP_RAID_BENCH");        // CAMPROBE
+				if (raidBench && *raidBench)                                   // CAMPROBE
+				{                                                              // CAMPROBE
+					// Take a site that is actually WORKING on something. Aiming by type alone // CAMPROBE
+					// took an idle lab - three stood, only two departments existed and one of // CAMPROBE
+					// those had already finished and freed its bench - so nothing was lost     // CAMPROBE
+					// and the test proved nothing while looking like it had run.               // CAMPROBE
+					bool busy = false;                                         // CAMPROBE
+					for (const auto& pr : _cobraEconomy->getProjects())        // CAMPROBE
+					{                                                          // CAMPROBE
+						if (pr.labKey == cobraSiteKey(*it) && pr.progress > 0  // CAMPROBE
+							&& pr.progress < pr.cost) { busy = true; break; }  // CAMPROBE
+					}                                                          // CAMPROBE
+					if (!busy) continue;                                       // CAMPROBE
+				}                                                              // CAMPROBE
+				else if (raidType && *raidType)                                // CAMPROBE
+				{                                                              // CAMPROBE
+					if ((*it)->getSiteType() != raidType) continue;            // CAMPROBE
+				}                                                              // CAMPROBE
+				else if (count[(*it)->getSiteType()] != 1) continue;           // CAMPROBE
 				int denied = cobraRaided(*it, mod);                            // CAMPROBE
 				Log(LOG_INFO) << "[camp] RAIDED " << (*it)->getSiteType()      // CAMPROBE
 					<< " denied=" << denied;                                   // CAMPROBE
