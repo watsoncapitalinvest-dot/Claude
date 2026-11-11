@@ -63,12 +63,23 @@ jobs:
         shell: bash
         run: |
           mkdir bin && cp out/OpenXcom.exe bin/
-          # The symbols travel with the exe or they are useless: dbghelp matches a .pdb to the
-          # exact build that wrote it, so a pdb from any other run resolves nothing. The branch
-          # is re-created from scratch and force-pushed every build, so this adds size to one
-          # fetch, never to repository history.
-          cp out/OpenXcom.pdb bin/ 2>/dev/null || echo "no pdb to publish"
           cp mine/tools/oxce-4x/IF_IT_CRASHES.txt bin/ 2>/dev/null || true
+          # Symbols travel with the exe or they are useless - dbghelp matches a .pdb to the
+          # exact build that wrote it. But GitHub refuses any file over 100MB and the raw pdb
+          # is about 122MB, which rejected the push and failed this whole step: the exe did
+          # not reach the branch because of a debugging convenience. So it is zipped, it is
+          # size-checked, and it is dropped rather than risked. THE EXE MUST GET THROUGH.
+          if [ -f out/OpenXcom.pdb ]; then
+            7z a -mx=9 bin/OpenXcom.pdb.zip out/OpenXcom.pdb >/dev/null 2>&1 || true
+            sz=$(stat -c%s bin/OpenXcom.pdb.zip 2>/dev/null || echo 0)
+            echo "symbols: raw $(stat -c%s out/OpenXcom.pdb) bytes, zipped $sz"
+            if [ "$sz" -eq 0 ] || [ "$sz" -gt 95000000 ]; then
+              echo "too large for a git branch - symbols stay in the workflow artifact only"
+              rm -f bin/OpenXcom.pdb.zip
+            fi
+          else
+            echo "no pdb was built"
+          fi
           cd bin
           ls -la
           git init -q && git checkout -q -b claude/oxce-gijoe-4x-bin
