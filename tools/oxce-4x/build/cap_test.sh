@@ -33,7 +33,16 @@ run() {   # run <label> <turns> <extra env...>
   local label="$1"; local turns="$2"; shift 2
   ( cd "$B" && env OXCE_MAP_HIRES=0 SDL_AUDIODRIVER=dummy "$@" \
       nohup ./openxcom -data "$B" > /tmp/oxc_cap.log 2>&1 < /dev/null & )
-  sleep 10
+  # WAIT FOR THE MENU, never sleep a guess at it. The first version of this slept 10 seconds,
+  # which was the number gar_test.sh uses; startup here takes about SIXTY, so every click landed
+  # on a loading screen and both runs reported nothing at all - which reads exactly like a
+  # feature that does not work. The log line below is the main menu's own music starting.
+  local waited=0
+  until grep -q "playMusic('GMSTORY')" "$L" 2>/dev/null; do
+    sleep 2; waited=$((waited+2))
+    if [ $waited -gt 150 ]; then echo "  $label: never reached the main menu"; return; fi
+  done
+  sleep 2
   xdotool mousemove 838 400 click 1 2>/dev/null; sleep 3   # New Battle
   xdotool mousemove 232 736 click 1 2>/dev/null; sleep 8   # OK -> generate
   # end the player's turn <turns> times so the hostile side moves and captureStep runs
