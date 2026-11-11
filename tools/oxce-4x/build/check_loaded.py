@@ -31,6 +31,7 @@ MOD_DIRS = sys.argv[2:]
 KEYS = [
     ('cobraEconomy', 'Mod/Mod.cpp'),
     ('penetration', 'Mod/Mod.cpp'),
+    ('cobraProjects', 'Mod/Mod.cpp'),
 ]
 
 # Per-rule fields, checked the same way: the engine parses them, so at least one loaded file had
@@ -43,6 +44,7 @@ FIELDS = [
     ('maxKitTierByMonth', 'Mod/Mod.cpp'),
     ('productionMinimumPercent', 'Mod/Mod.cpp'),
     ('materielCostFunds', 'Mod/RuleCobraSite.cpp'),
+    ('projectProgressPerMonth', 'Mod/RuleCobraSite.cpp'),
     ('garrisonBonus', 'Mod/RuleCobraSite.cpp'),
     ('garrisonRankUnlock', 'Mod/RuleCobraSite.cpp'),
     ('runsThePlanning', 'Mod/RuleCobraSite.cpp'),

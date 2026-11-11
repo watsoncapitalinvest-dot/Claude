@@ -1160,3 +1160,103 @@ renamed. Not decided unilaterally because it is a naming call, not a technical o
 - Whether a region can go bankrupt, and what Cobra does when it does.
 - Whether the player can see a region's stockpile exactly, or only an estimate that sharpens
   with intel.
+
+---
+
+## Cobra researches (10 Nov, late)
+
+John: *"Let's make the lab do something. Remember we are going to make cobra
+player after we're done so cobra is going to have to research as well to
+advance weapons."*
+
+The research lab cost Cobra 800 to build and 60 a month to run, declared
+`projectProgressPerMonth: 10`, and nothing in the engine consumed it. It was
+the most expensive decoration in the game.
+
+`cobraProjects:` in `gijoe_cobra_economy.rul` is the tech tree it now pays for,
+and it is deliberately short — two entries, because two is what the weapon
+bands need:
+
+| project | cost | materiel | unlocks | earliest | latest |
+| --- | --- | --- | --- | --- | --- |
+| `STR_COBRA_RIFLES` | 40 | 2/point (80 all told) | itemSet tier 1 | month 3 | month 8 |
+| `STR_COBRA_LASERS` | 90 | 3/point (270 all told) | itemSet tier 2 | month 8 | month 14 |
+
+Tier 0 — handguns and knives — needs no project. The moment *any* project
+names a tier, an unresearched Cobra is clamped to 0, so Cobra opens the game
+on pistols everywhere and has to work its way up. That is months 1–3 of the
+escalation calendar arriving for free.
+
+**This is the organic half of the calendar.** `maxKitTierByMonth` is the floor
+— never earlier than the story allows. Research decides when *inside* the
+window, out of Cobra's own books. Whichever is lower wins, so research can
+only ever make Cobra worse armed than the calendar, never better.
+`latestMonth` is the ceiling, so a player who has burned every lab still meets
+the story on time.
+
+One lab pushes 10 a month, so rifles land about month 5 and lasers about month
+14 — both inside their bands. Two labs halves the second. A region with no lab
+at all gets nothing until `latestMonth` force-completes it.
+
+**Materiel spent on research is materiel not arming troopers**, and that is
+deliberate rather than an oversight: a region that pours everything into
+lasers fields men who cannot reach the 50 the kit rule wants, and they turn up
+carrying pistols. Researching better guns can make Cobra worse armed this
+month. That tension is the point.
+
+A region's labs push **one** project a month, in the order written in the
+ruleset, so that order *is* the tree.
+
+**The unlock is global; the bill is regional.** Progress is tracked per region
+and the materiel comes out of that region's stock, but `cobraResearchedKitTier`
+takes the best completed project anywhere in the world — `cobraGarrison` asks
+it without a region and there is no region filter inside. That is deliberate
+rather than an oversight: Cobra is one organisation, so once it has designed a
+laser every cell has the design. What stays regional is the ability to *build*
+them, which is the 50-materiel kit threshold, and the cost of the research
+itself. So one well-funded region can buy the whole network its next weapon
+tier, and every region still has to find the materiel to arm men with it.
+
+If that ever needs to be regional instead, the change is one argument: pass the
+region into `cobraResearchedKitTier` and filter `p.region` — the call site in
+`cobraGarrison` already knows it.
+
+### Two buildings that were not paying their way
+
+Asked to check that costs are appropriate, two of the eight came out wrong,
+and not in the way I first reported:
+
+- **Broadcast station** (450, 30/mo) already eroded goodwill by 5 a month — I
+  first wrote that it did nothing, which was wrong. The real problem was the
+  number: the station earns Cobra no money at all, so influence is the entire
+  return on 450 and 30 a month, and 5 was too little to make the building
+  rational for Cobra to build. Raised to 15 — about a third of a terror
+  attack's score arriving every month, forever, from a transmitter nobody has
+  found. It is also the Act 1 trace target, so the story already points at it.
+- **Hidden HQ** (1200, 80/mo, 20 materiel/mo) is the most expensive building
+  in the game and, since the Terror Drome took `runsThePlanning`, had no
+  *ongoing* effect at all. Its only mechanics were raid outcomes — 200 funds,
+  100 materiel, `revealOnRaid: 3` — a real intel prize, so not fully dead
+  either. It is **not deleted**: deleting a site type breaks any save holding
+  one. Instead `garrisonBonus: 4` makes it what its price implies — the
+  hardest target in the region. No new engine code.
+
+### What the ledger looks like
+
+One of everything: **+120/month in, −358/month out**. The front company is the
+only earner (+110 net, 400 to build, 3.6 months to pay off). So a starter cell
+is a front company plus a factory (+22/month and 80 materiel), and a lab on
+top needs a second front company. Research costs real commercial depth, which
+is the right shape.
+
+**The two ledgers never meet.** Cobra's funds live in `_cobraEconomy` and the
+player's in `SavedGame`, and nothing moves between them. Comparing a 450
+Terror Drome to a 1,000 corpse is comparing currencies — which I did, and
+reported corpse prices as a problem on the strength of it. On the player's
+vanilla-scale books 1,000 a corpse is normal and 8,000 a raid is small change.
+Item prices are fine; the cost question is entirely inside Cobra's ledger.
+
+### Still parsed and still consumed by nothing
+
+`garrisonRefillPerMonth` and `stockpileCap`. The second is the M.A.R.S. dealer
+threshold John designed and M.A.R.S. is not built, so that one is expected.

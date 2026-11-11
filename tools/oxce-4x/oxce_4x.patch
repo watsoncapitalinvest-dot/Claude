@@ -3177,7 +3177,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..99fb77b 100644
+index 6b4e79d..2e4396d 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -103,6 +103,7 @@
@@ -3224,7 +3224,27 @@ index 6b4e79d..99fb77b 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -2862,6 +2892,10 @@ void GeoscapeState::time1Month()
+@@ -1858,6 +1888,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+ 	{
+ 		region->addActivityAlien(score);
+ 	}
++	// G.I. Joe: and Cobra gets paid for the ones it gets away with. Only on removeSite - the
++	// player watched it on the globe and did not go - so this is money he declined to prevent.
++	// The influence half is the addActivityAlien above, which was already working; this is the
++	// first money in the economy that comes from Cobra DOING something rather than owning it.
++	if (removeSite)
++	{
++		const int paid = _game->getSavedGame()->cobraMissionPaid(site->getDeployment(), region);
++		if (paid > 0 && getenv("OXCE_ECON_LOG"))
++		{
++			Log(LOG_INFO) << "[econ] " << site->getDeployment()->getType() << " went unanswered in "
++				<< region->getRules()->getType() << ", so Cobra banked " << paid;
++		}
++	}
+ 	for (auto* country : *_game->getSavedGame()->getCountries())
+ 	{
+ 		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
+@@ -2862,6 +2905,10 @@ void GeoscapeState::time1Month()
  	_game->getSavedGame()->addMonth();
  
  	// Determine alien mission for this month.
@@ -3359,9 +3379,18 @@ index d5e599e..8b44e52 100644
  	void setHighContrast(bool contrast) override;
  	/// Handles the timers.
 diff --git a/src/Mod/AlienDeployment.cpp b/src/Mod/AlienDeployment.cpp
-index 018d604..d5cb0e5 100644
+index 018d604..b18330e 100644
 --- a/src/Mod/AlienDeployment.cpp
 +++ b/src/Mod/AlienDeployment.cpp
+@@ -38,7 +38,7 @@ AlienDeployment::AlienDeployment(const std::string &type) :
+ 	_alienBaseDiscoveredMessage(),
+ 	_markerName("STR_TERROR_SITE"), _markerIcon(-1), _durationMin(0), _durationMax(0), _minDepth(0), _maxDepth(0),
+ 	_genMissionFrequency(0), _genMissionLimit(1000), _genMissionRaceFromAlienBase(true),
+-	_objectiveType(-1), _objectivesRequired(0), _objectiveCompleteScore(0), _objectiveFailedScore(0), _despawnPenalty(0), _abortPenalty(0), _points(0),
++	_objectiveType(-1), _objectivesRequired(0), _objectiveCompleteScore(0), _objectiveFailedScore(0), _despawnPenalty(0), _abortPenalty(0), _points(0), _cobraPayoutFunds(0),
+ 	_turnLimit(0), _cheatTurn(20), _chronoTrigger(FORCE_LOSE), _keepCraftAfterFailedMission(false), _allowObjectiveRecovery(false), _escapeType(ESCAPE_NONE), _vipSurvivalPercentage(0),
+ 	_baseDetectionRange(0), _baseDetectionChance(100), _huntMissionMaxFrequency(60), _huntMissionRaceFromAlienBase(true),
+ 	_resetAlienBaseAgeAfterUpgrade(false), _resetAlienBaseAge(false), _noWeaponPile(false)
 @@ -121,6 +121,7 @@ void AlienDeployment::load(const YAML::YamlNodeReader& node, Mod *mod)
  	reader.tryRead("briefing", _briefingData);
  	reader.tryRead("alienBaseDiscoveredMessage", _alienBaseDiscoveredMessage);
@@ -3370,11 +3399,24 @@ index 018d604..d5cb0e5 100644
  	if (reader["markerIcon"])
  	{
  		_markerIcon = mod->getOffset(reader["markerIcon"].readVal<int>(), 8);
+@@ -165,6 +166,12 @@ void AlienDeployment::load(const YAML::YamlNodeReader& node, Mod *mod)
+ 		_failureEvents.load(reader["failureEvents"]);
+ 	}
+ 	reader.tryRead("despawnPenalty", _despawnPenalty);
++	// G.I. Joe: what Cobra banks for getting away with this. Paid only when the site
++	// DESPAWNS - the player saw it on the globe and let it run - so the money is
++	// something he chose not to prevent rather than something that happens to him.
++	// Raid it and Cobra gets nothing. 0 means the mission pays nothing, which is
++	// every mission until a ruleset says otherwise.
++	reader.tryRead("cobraPayoutFunds", _cobraPayoutFunds);
+ 	reader.tryRead("abortPenalty", _abortPenalty);
+ 	reader.tryRead("points", _points);
+ 	reader.tryRead("cheatTurn", _cheatTurn);
 diff --git a/src/Mod/AlienDeployment.h b/src/Mod/AlienDeployment.h
-index 5c8559f..eb93e08 100644
+index 5c8559f..18e2a50 100644
 --- a/src/Mod/AlienDeployment.h
 +++ b/src/Mod/AlienDeployment.h
-@@ -120,6 +120,9 @@ private:
+@@ -120,11 +120,15 @@ private:
  	BriefingData _briefingData;
  	std::string _alienBaseDiscoveredMessage;
  	std::string _markerName, _objectivePopup, _objectiveCompleteText, _objectiveFailedText;
@@ -3384,7 +3426,13 @@ index 5c8559f..eb93e08 100644
  	std::string _missionCompleteText, _missionFailedText;
  	WeightedOptions _genMission, _successEvents, _failureEvents, _despawnEvents;
  	int _markerIcon, _durationMin, _durationMax, _minDepth, _maxDepth, _genMissionFrequency, _genMissionLimit;
-@@ -244,6 +247,8 @@ public:
+ 	bool _genMissionRaceFromAlienBase;
+ 	int _objectiveType, _objectivesRequired, _objectiveCompleteScore, _objectiveFailedScore, _despawnPenalty, _abortPenalty, _points, _turnLimit, _cheatTurn;
++	int _cobraPayoutFunds;            ///< funds Cobra banks here if this site despawns unraided
+ 	ChronoTrigger _chronoTrigger;
+ 	bool _keepCraftAfterFailedMission, _allowObjectiveRecovery;
+ 	EscapeType _escapeType;
+@@ -244,6 +248,8 @@ public:
  	const std::string& getAlienBaseDiscoveredMessage() const { return _alienBaseDiscoveredMessage; }
  	/// Gets the marker name for this mission.
  	std::string getMarkerName() const;
@@ -3393,6 +3441,15 @@ index 5c8559f..eb93e08 100644
  	/// Gets the marker icon for this mission.
  	int getMarkerIcon() const;
  	/// Gets the minimum duration for this mission.
+@@ -268,6 +274,8 @@ public:
+ 	bool getObjectiveFailedInfo(std::string &text, int &score, std::string &missionText) const;
+ 	/// Gets the score penalty XCom receives for ignoring this site.
+ 	int getDespawnPenalty() const;
++	/// Funds Cobra banks when this mission despawns unraided; 0 = it pays nothing.
++	int getCobraPayoutFunds() const { return _cobraPayoutFunds; }
+ 	/// Gets the score penalty XCom receives for aborting this mission.
+ 	int getAbortPenalty() const { return _abortPenalty; }
+ 	/// Gets the (half hourly) score penalty XCom receives for this site existing.
 diff --git a/src/Mod/ExtraSprites.cpp b/src/Mod/ExtraSprites.cpp
 index c71ac0d..16093ab 100644
 --- a/src/Mod/ExtraSprites.cpp
@@ -3652,7 +3709,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..af68856 100644
+index 1885346..aa0d3e8 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,7 @@
@@ -3747,7 +3804,7 @@ index 1885346..af68856 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3274,99 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3274,117 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -3843,11 +3900,29 @@ index 1885346..af68856 100644
 +		std::sort(_cobraKitTierByMonth.begin(), _cobraKitTierByMonth.end());
 +		econ.tryRead("starvedHeadcount", _cobraStarvedHeadcount);
 +	}
++	// Cobra's own research, authored in the ruleset. Declared outside cobraEconomy because it is
++	// a tech tree rather than a tuning number, and because John will be writing it.
++	for (const auto& node : reader["cobraProjects"].children())
++	{
++		RuleCobraProject proj;
++		node.tryRead("type", proj.type);
++		node.tryRead("cost", proj.cost);
++		node.tryRead("materielPerProgress", proj.materielPerProgress);
++		node.tryRead("unlocksKitTier", proj.unlocksKitTier);
++		node.tryRead("earliestMonth", proj.earliestMonth);
++		node.tryRead("latestMonth", proj.latestMonth);
++		if (proj.type.empty())
++		{
++			Log(LOG_ERROR) << "a cobraProjects entry has no type and was ignored";
++			continue;
++		}
++		_cobraProjects.push_back(proj);
++	}
 +
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3831,6 +3981,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +3999,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -3873,7 +3948,7 @@ index 1885346..af68856 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4238,14 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4256,14 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -3888,7 +3963,7 @@ index 1885346..af68856 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +5946,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +5964,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -3908,7 +3983,7 @@ index 1885346..af68856 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +5969,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +5987,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -3916,7 +3991,7 @@ index 1885346..af68856 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +5983,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6001,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -3956,7 +4031,7 @@ index 1885346..af68856 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..5d64e99 100644
+index 2242d13..347d26a 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,7 @@ class SavedGame;
@@ -3967,7 +4042,36 @@ index 2242d13..5d64e99 100644
  class RuleBaseFacility;
  class RuleCraft;
  class RuleCraftWeapon;
-@@ -170,6 +171,7 @@ private:
+@@ -146,6 +147,28 @@ struct LoadRuleException : Exception
+  * Contains all the game-specific static data that never changes
+  * throughout the game, like rulesets and resources.
+  */
++/**
++ * One thing Cobra is trying to learn, as the ruleset declares it.
++ *
++ * Authored rather than hardcoded on purpose: John intends Cobra to be playable once the Joe side
++ * is done, and a person behind this needs a real list of projects with real prices to choose
++ * between - not a hidden progress bar. It is also his tech tree to write, not this desk's.
++ *
++ * The calendar is a WINDOW on the project rather than a second clamp on the result. A project
++ * cannot finish before earliestMonth however fast Cobra researches, and finishes at latestMonth
++ * however slowly, so the story cannot run away or stall - and in between, Cobra's own labs and
++ * materiel decide when. That is the "aim for the dates by massaging it organically" shape.
++ */
++struct RuleCobraProject
++{
++	std::string type;
++	int cost = 0;                  ///< progress points needed
++	int materielPerProgress = 0;   ///< materiel burned per point; 0 = research is free
++	int unlocksKitTier = -1;       ///< the itemSet tier Cobra may field once this lands; -1 = none
++	size_t earliestMonth = 0;      ///< cannot complete before this, whatever its progress
++	size_t latestMonth = 0;        ///< completes here regardless; 0 = never forced
++};
++
+ class Mod
+ {
+ public:
+@@ -170,6 +193,7 @@ private:
  
  	std::map<std::string, RuleCountry*> _countries, _extraGlobeLabels;
  	std::map<std::string, RuleRegion*> _regions;
@@ -3975,7 +4079,7 @@ index 2242d13..5d64e99 100644
  	std::map<std::string, RuleBaseFacility*> _facilities;
  	std::map<std::string, RuleCraft*> _crafts;
  	std::map<std::string, RuleCraftWeapon*> _craftWeapons;
-@@ -327,6 +329,26 @@ private:
+@@ -327,6 +351,27 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -3997,12 +4101,13 @@ index 2242d13..5d64e99 100644
 +	int _cobraProductionMinimum;
 +	/// month (monthsPassed) -> the best itemSet tier Cobra may issue from then on; sorted ascending
 +	std::vector<std::pair<size_t, int> > _cobraKitTierByMonth;
++	std::vector<RuleCobraProject> _cobraProjects;
 +	int _cobraStarvedHeadcount;
 +	std::vector<std::string> _cobraSitesIndex;
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +714,36 @@ public:
+@@ -692,6 +737,38 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -4034,6 +4139,8 @@ index 2242d13..5d64e99 100644
 +	int getCobraProductionMinimum() const { return _cobraProductionMinimum; }
 +	/// The best itemSet tier Cobra may issue at this many months passed; -1 = no ceiling.
 +	int getCobraKitTierCap(size_t monthsPassed) const;
++	/// Cobra's research projects, in the order the ruleset declares them.
++	const std::vector<RuleCobraProject> &getCobraProjects() const { return _cobraProjects; }
 +	/// Men dropped from every rank entry in a region Cobra cannot pay for.
 +	int getCobraStarvedHeadcount() const { return _cobraStarvedHeadcount; }
  	/// Gets the available regions.
@@ -4897,7 +5004,7 @@ index 6c121c7..a5b4ba0 100644
  	std::map<std::string, int> &getReinforcementsMemory() { return _reinforcementsMemory; }
  	/// Gets the map blocks used for reinforcements.
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..5495142 100644
+index 9ca9637..c1940db 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -55,7 +55,10 @@
@@ -4953,7 +5060,7 @@ index 9ca9637..5495142 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
-@@ -2579,6 +2589,560 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2589,761 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -4976,7 +5083,16 @@ index 9ca9637..5495142 100644
 +	// STORY rule, not an economy one, so it binds every Cobra battle - crash site, terror site,
 +	// New Battle - whether or not this fight has a place on the globe. The economy may make
 +	// Cobra poorer than the calendar allows; it must never make Cobra better armed than it does.
++	// Two ceilings, and the harsher wins. The month table is an absolute backstop the story
++	// sets; research is the organic driver inside it, which is what a Cobra player will be
++	// playing. With no projects authored, research returns -1 and the table rules alone, so the
++	// behaviour verified before this existed is unchanged.
 +	out.maxKitTier = mod->getCobraKitTierCap((size_t)getMonthsPassed());
++	const int researched = cobraResearchedKitTier(mod);
++	if (researched >= 0 && (out.maxKitTier < 0 || researched < out.maxKitTier))
++	{
++		out.maxKitTier = researched;
++	}
 +	// Quiet on purpose. A New Battle has no globe position - its mission sits at [0, 0], which is
 +	// inside no region - and this returning "no garrison" is the right answer there, not an
 +	// error. Removing the _craft fallback closed one route to that false log line and left
@@ -5282,6 +5398,194 @@ index 9ca9637..5495142 100644
 +	return funds + materiel;
 +}
 +
++/**
++ * Pays Cobra for a mission the player let run to its end.
++ *
++ * This is the money half of John's early game: "Until it gets a terror drome it should only be
++ * launching missions for money gain and influence. Maybe that's how they expose themselves early."
++ * The influence half already worked - a despawning site adds alien activity to its region and its
++ * country, which erodes funding and raises pact odds - but nothing made a MISSION pay Cobra, so
++ * crime was flavour. Site income is monthly and site-based; this is the first money that comes
++ * from Cobra DOING something.
++ *
++ * Paid on despawn only. The player saw the site on the globe and chose not to go, so the money is
++ * a consequence of his decision rather than something that happens to him; raid it and Cobra
++ * banks nothing. Regional, like the rest of the economy, so robbing banks in North America arms
++ * North America.
++ *
++ * @param deployment The despawning site's deployment, which carries the price.
++ * @param region The region it despawned in; nothing is paid without one.
++ * @return What was banked, for the caller to log.
++ */
++int SavedGame::cobraMissionPaid(const AlienDeployment *deployment, const Region *region)
++{
++	if (deployment == 0 || region == 0)
++	{
++		return 0;
++	}
++	const int paid = deployment->getCobraPayoutFunds();
++	if (paid <= 0)
++	{
++		return 0;
++	}
++	_cobraEconomy->addFunds(region->getRules()->getType(), paid);
++	return paid;
++}
++
++/**
++ * Advances Cobra's research by a month.
++ *
++ * Three things were missing, not one: nothing created a project, nothing advanced one, and
++ * nothing happened when one finished - so the list was permanently empty, the research lab did
++ * nothing for its 800 and 60 a month, and revealOnRaid revealed an empty set.
++ *
++ * Labs turn MATERIEL into progress, so research competes with weapons for the same regional
++ * stockpile. John: "Research costs both time and resources." That also means cutting a region's
++ * supply slows its research as well as arming its men worse, which is the second consequence
++ * starving a region ought to have.
++ *
++ * Pro-rata when a region cannot pay the whole bill, the same way production is - a lab that
++ * stops dead over being one short reads as a bug.
++ */
++void SavedGame::cobraResearch(const Mod *mod)
++{
++	const auto &rules = mod->getCobraProjects();
++	if (rules.empty())
++	{
++		return;                 // no tech tree authored; nothing to advance
++	}
++
++	// Seed the save's list from the ruleset the first time. Projects are per region, because
++	// everything else in this economy is: a region Cobra has been driven out of should not keep
++	// researching, and a Cobra player would expect to site his labs somewhere.
++	if (_cobraEconomy->getProjects().empty())
++	{
++		for (const auto *region : _regions)
++		{
++			for (const auto &r : rules)
++			{
++				CobraProject p;
++				p.type = r.type;
++				p.region = region->getRules()->getType();
++				p.cost = r.cost;
++				_cobraEconomy->getProjects().push_back(p);
++			}
++		}
++	}
++
++	// What each region can push this month, from the labs standing in it.
++	std::map<std::string, int> labs;
++	for (const auto *base : _alienBases)
++	{
++		if (base->getSiteType().empty()) continue;
++		const RuleCobraSite *rule = mod->getCobraSite(base->getSiteType());
++		if (!rule || rule->getProjectProgressPerMonth() <= 0) continue;
++		const Region *there = locateRegion(*base);
++		if (!there) continue;
++		labs[there->getRules()->getType()] += rule->getProjectProgressPerMonth();
++	}
++
++	const size_t months = (size_t)getMonthsPassed();
++	// A region's labs push ONE project a month, in ruleset order, so a region works down its own
++	// tree rather than everything at once. The list is flat across every region, so this has to
++	// be tracked per region: a bare `break` here stopped the whole world after the first region
++	// advanced, which read in the log exactly like a tech tree that was simply slow.
++	std::set<std::string> advanced;
++	for (auto &p : _cobraEconomy->getProjects())
++	{
++		if (advanced.count(p.region))
++		{
++			continue;
++		}
++		const RuleCobraProject *r = 0;
++		for (const auto &cand : rules)
++		{
++			if (cand.type == p.type) { r = &cand; break; }
++		}
++		if (!r || p.progress >= p.cost)
++		{
++			continue;           // unknown to the ruleset, or already finished
++		}
++		// The calendar's far edge: it lands here however slowly Cobra worked, so the story
++		// cannot stall against a player who has been winning.
++		if (r->latestMonth > 0 && months >= r->latestMonth)
++		{
++			// The calendar's far edge lands here however slowly Cobra worked. It used to do so
++			// SILENTLY, which made a project that arrived this way look like one that never
++			// existed: a 400-day run showed lasers being researched and no sign of rifles at
++			// all, because rifles had force-completed at month 8 without a word.
++			p.progress = p.cost;
++			advanced.insert(p.region);
++			if (getenv("OXCE_ECON_LOG"))
++			{
++				Log(LOG_INFO) << "[econ] " << p.region << " got " << p.type
++					<< " for free: month " << months << " passed its latestMonth "
++					<< r->latestMonth;
++			}
++			continue;
++		}
++		int push = labs.count(p.region) ? labs[p.region] : 0;
++		if (push <= 0)
++		{
++			continue;           // no lab there
++		}
++		if (r->materielPerProgress > 0)
++		{
++			const int have = _cobraEconomy->getMateriel(p.region);
++			const int afford = have / r->materielPerProgress;
++			push = std::min(push, afford);
++			if (push <= 0)
++			{
++				continue;       // the region cannot pay for a single point
++			}
++			_cobraEconomy->addMateriel(p.region, -(push * r->materielPerProgress));
++		}
++		p.progress = std::min(p.cost, p.progress + push);
++		advanced.insert(p.region);
++		if (getenv("OXCE_ECON_LOG"))
++		{
++			Log(LOG_INFO) << "[econ] " << p.region << " researched " << p.type << " "
++				<< p.progress << "/" << p.cost
++				<< (p.progress >= p.cost && months < r->earliestMonth
++					? " (done, waiting for its earliest month)" : "");
++		}
++	}
++}
++
++/**
++ * The best itemSet tier Cobra's finished research allows.
++ *
++ * The calendar's NEAR edge lives here: a project whose progress is full still does not count
++ * until its earliestMonth, so Cobra cannot research its way past the story however rich it is.
++ * Returns -1 when no project names a tier, which leaves the month table in charge and is how the
++ * game behaved before any of this existed.
++ */
++int SavedGame::cobraResearchedKitTier(const Mod *mod) const
++{
++	int best = -1;
++	bool anyNamesATier = false;
++	const size_t months = (size_t)getMonthsPassed();
++	for (const auto &r : mod->getCobraProjects())
++	{
++		if (r.unlocksKitTier < 0) continue;
++		anyNamesATier = true;
++		if (months < r.earliestMonth) continue;
++		for (const auto &p : _cobraEconomy->getProjects())
++		{
++			if (p.type == r.type && p.progress >= p.cost && p.cost > 0)
++			{
++				best = std::max(best, r.unlocksKitTier);
++				break;
++			}
++		}
++	}
++	if (!anyNamesATier)
++	{
++		return -1;
++	}
++	return best < 0 ? 0 : best;
++}
++
 +void SavedGame::cobraMonthly(const Mod *mod)
 +{
 +	// Count what Cobra holds where, and let each site earn or cost its keep.
@@ -5477,6 +5781,10 @@ index 9ca9637..5495142 100644
 +		}
 +	}
 +
++	// Research runs after the month's materiel has landed, so a factory built this month can
++	// fund this month's progress rather than next month's.
++	cobraResearch(mod);
++
 +	_alienStrategy->clearMissionRunsWithPrefix("COBRA_SITES_");
 +	for (const auto &pair : siteCounts)
 +	{
@@ -5515,10 +5823,18 @@ index 9ca9637..5495142 100644
  {
  	Region* found = nullptr;
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..4eb30ab 100644
+index d985908..04459bb 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
-@@ -55,6 +55,7 @@ class ArticleDefinition;
+@@ -37,6 +37,7 @@ namespace OpenXcom
+ {
+ 
+ class Mod;
++class AlienDeployment;
+ class GameTime;
+ class Country;
+ class Base;
+@@ -55,6 +56,7 @@ class ArticleDefinition;
  class MissionSite;
  class AlienBase;
  class AlienStrategy;
@@ -5526,7 +5842,7 @@ index d985908..4eb30ab 100644
  class AlienMission;
  class GeoscapeEvent;
  class Target;
-@@ -140,6 +141,7 @@ private:
+@@ -140,6 +142,7 @@ private:
  	std::vector<MissionSite*> _missionSites;
  	std::vector<AlienBase*> _alienBases;
  	AlienStrategy *_alienStrategy;
@@ -5534,7 +5850,7 @@ index d985908..4eb30ab 100644
  	SavedBattleGame *_battleGame;
  	std::vector<const RuleResearch*> _discovered;
  	std::vector<ResearchDiaryEntry*> _researchDiary;
-@@ -395,6 +397,26 @@ public:
+@@ -395,6 +398,32 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -5544,6 +5860,12 @@ index d985908..4eb30ab 100644
 +	void cobraMonthly(const Mod *mod);
 +	/// Takes what a raid denies Cobra. Returns funds + materiel lost, for the debriefing line.
 +	int cobraRaided(const AlienBase *base, const Mod *mod);
++	/// Pays Cobra for a mission it got away with; returns what was banked.
++	int cobraMissionPaid(const AlienDeployment *deployment, const Region *region);
++	/// Advances Cobra's research for the month; labs burn materiel for progress.
++	void cobraResearch(const Mod *mod);
++	/// The best itemSet tier Cobra's finished research allows; -1 = unconstrained.
++	int cobraResearchedKitTier(const Mod *mod) const;
 +	/// Charges a region for a site Cobra has just built.
 +	void cobraBuilt(const AlienBase *base, const Mod *mod);
 +	/// Decides what Cobra should build next and publishes it for the mission scripts.
@@ -5561,7 +5883,7 @@ index d985908..4eb30ab 100644
  	/// Read-only access to the alien strategy data.
  	const AlienStrategy &getAlienStrategy() const { return *_alienStrategy; }
  	/// Full access to the current alien missions.
-@@ -409,6 +431,10 @@ public:
+@@ -409,6 +438,10 @@ public:
  	const std::vector<GeoscapeEvent*> &getGeoscapeEvents() const { return _geoscapeEvents; }
  	/// Locate a region containing a position.
  	Region *locateRegion(double lon, double lat) const;
