@@ -1354,3 +1354,76 @@ a different and worse game.
   right while the player is Joe and wrong the moment Cobra is playable.
 - The player's own tree is **8 topics** against roughly 195 planned, and 7 of
   the 8 are interrogations still pointing at a vanilla `lookup`.
+
+---
+
+## The tree populated, and benches made to compete (10 Nov, late)
+
+Two departments against three benches is not a design, it is a rehearsal:
+nothing competes for anything. The tree now holds **23 nodes across the design
+doc's eleven departments** — Armory, Motor pool, Air wing, Navy, Troops, Elite
+guard, Biology, Intelligence, Infiltration, Crime, Interrogation — with every
+cost and window a first pass and John's to tune.
+
+**Only the Armory changes what Cobra carries.** `unlocksKitTier` points at a
+deployment itemSet and deployments carry three (0 handguns, 1 rifles,
+2 lasers), so there is no tier above 2 to award. The calendar's "first pulse
+pistols" at months 15–22 needs a fourth itemSet in every deployment before it
+can mean anything; until then pulse is a node with no tier attached.
+
+### One node at a time per DEPARTMENT, not per bench
+
+The doc says *"one project at a time per department"*. What shipped earlier the
+same evening was one project at a time per **bench**, with a department being a
+single node — which is the same thing only while each department has one node,
+and wrong the moment one has several, because two idle benches could both pick
+up Armory work.
+
+`RuleCobraProject` gained a `department`, and the claim pass now refuses a
+department that already has a node in hand. A project naming no department is
+treated as a department of its own, so nothing breaks.
+
+Verified over a 400-day campaign — every claim a different department, and the
+two with several nodes taken in sequence rather than together:
+
+```
+LAB#1    took RIFLES        (ARMORY)
+LAB#2    took HISS_TANK     (MOTOR_POOL)
+LAB#1    took LASERS        (ARMORY)        <- after rifles finished
+LAB#3    took RATTLER       (AIR_WING)
+DROME#1  took PATROL_BOATS  (NAVY)
+DROME#1  took RECRUITMENT   (TROOPS)
+DROME#1  took CRIMSON_GUARD (ELITE_GUARD)
+DROME#1  took MEDICINE      (BIOLOGY)
+LAB#2    took HEAVY_WEAPONS (MOTOR_POOL)    <- after the H.I.S.S. finished
+```
+
+Seven departments in parallel off three labs and one Drome, and the Drome took
+exactly four — its `labSlots`.
+
+### Arm the men before opening a new front
+
+A region will not claim a **new** department while its materiel sits below the
+arming threshold. Work already in hand carries on, so a raid never strands a
+running node.
+
+**And a correction, because the reason this was written is not the reason it
+survived.** The 23-node run showed nine starved months against the two-node
+run's seven, and that was read as research bankrupting Cobra. It was not: the
+first **seven** starved months are identical in all three runs, because they
+are the months before Cobra owns a factory at all.
+
+| run | materiel by month | starved |
+| --- | --- | --- |
+| 2 nodes | 0 0 0 0 0 0 0 80 160 220 280 420 | 7 |
+| 23 nodes | 0 0 0 0 0 0 40 40 111 181 171 191 | 9 |
+| 23 nodes, restraint | 0 0 0 0 0 0 40 70 111 181 171 191 | 8 |
+
+So twenty-three nodes cost **one extra starved month**, and the restraint takes
+it back. Cobra is armed from month eight and researching eleven branches; the
+economy carries it. The rule is kept because it is cheap and right, not because
+it rescued anything.
+
+The same mistake as the XBASE1 terrain call earlier the same evening: a symptom
+read, a cause named, no control checked. **Two runs differing by one variable
+is the cheapest tool on this desk and it keeps going unused.**
