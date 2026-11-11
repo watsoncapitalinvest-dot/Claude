@@ -952,13 +952,52 @@ be brought online. So the player has a target date to hit it again."*
 Cheap, because the factory deployment, map and terrain already exist — the second mission is a
 variant of a site that is built.
 
-**It must not be empty.** An abandoned building with nothing in it is a walk, not a mission, at
-exactly the point the player should be getting hooked. `STR_BAT_TERRORIST` already exists, so the
-answer is in the mod: the androids are still running, because machines need no pay, food or
-orders. That makes it a real fight with units that exist, explains why a deserted place still
-bites, answers the question "abandoned" otherwise leaves hanging — you do not leave guards behind,
-you leave the ones that need nothing — and tells the player something true and alarming about who
-they are now fighting.
+**No B.A.T.s.** This desk proposed the androids as the thing still guarding it. John: *"No bats
+they're not until the next act."* Correct, and the B.A.T.s are a far stronger reveal held back
+than spent here — "they build machines" lands properly in Act 2 and is wasted as set dressing in
+Act 1.
+
+Which leaves the place genuinely deserted, and the objection raised against that was wrong. The
+claim was that an abandoned building with nothing in it is a walk rather than a mission. That
+confuses *empty at the start* with *empty*. John: *"As you go to leave you stumble across
+cartel?"* — so the shape is **explore, discover, ambush**:
+
+| | |
+| --- | --- |
+| the player arrives | expecting resistance, and finds none |
+| he searches | tension built by the emptiness, not spent by it |
+| he finds the intel | the activation date |
+| he turns for extraction | **and the cartel walk in** |
+
+The player does not know the factory is empty. Clearing a derelict plant expecting a fight *is*
+the mission, and the ambush is what the quiet was for.
+
+**And it answers a question the design had left hanging: how did the cartel get Cobra weapons in
+mission one?** They have been coming to this factory all along. The three beats stop being three
+missions and become cause and effect:
+
+| beat | what the player learns |
+| --- | --- |
+| cartel warehouse | Cobra weapons on the floor — where did these come from? |
+| abandoned factory | an industrial source, and nobody home |
+| the cartel arrive | they have been scavenging it |
+| the intel | and Cobra is coming back for it |
+
+**Act 1 therefore needs exactly one new enemy type.** The cartel. Everything else reuses sites,
+maps and weapons that exist, which is a real reduction in the art it costs.
+
+**The ambush must not be a gotcha.** A wave arriving as the player heads for extraction, when his
+ammo and TUs are spent and his men are out of position, punishes him for having played well.
+OXCE's reinforcement waves take `minDistanceFromXcomUnits` and `maxDistanceFromBorders`, so they
+can be forced to a map edge away from his men rather than materialising behind them — a fight he
+can see coming and choose to take or run from.
+
+**One interaction to catch before it bites.** The abandoned factory is a *Cobra* site, so the
+garrison rules shipped today would apply to anything spawning there, including cartel
+reinforcements — cartel men carrying worse weapons because *Cobra* is short of materiel, which is
+nonsense. It is the same problem as M.A.R.S. being a stable force and the same flag fixes it:
+this group is not part of Cobra's economy. One concept, two uses, which is a sign the flag is the
+right shape rather than a special case.
 
 **The date is the strongest idea in this document, and it is the thing that makes the economy
 legible.** Everything built so far is monthly arithmetic a player cannot see. A known activation
