@@ -1866,10 +1866,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..3a89171
+index 0000000..a4a01ce
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,710 @@
+@@ -0,0 +1,747 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -1885,6 +1885,7 @@ index 0000000..3a89171
 +#include "../Interface/Frame.h"
 +#include "../Interface/ArrowButton.h"
 +#include "../Interface/Bar.h"
++#include "../Interface/TextList.h"
 +#include <SDL_image.h>
 +#include <vector>
 +#include <unordered_map>
@@ -2381,13 +2382,19 @@ index 0000000..3a89171
 +		// glyphs leaves a blank slab the player cannot read and cannot recover.
 +		// If it would come out empty, stand down and let the plain button show.
 +		const Text *t = b->getTextWidget();
++		const bool hasLabel = t && !t->getText().empty();
 +		const int wanted = t ? (int)t->getHiGlyphs().size() : 0;
-+		if (wanted)
++		if (hasLabel)
 +		{
-+			const int fits = glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r, true);
++			// Two ways to end up with nothing written on the button, and both
++			// have to stand down, not just the one. wanted == 0 means the glyph
++			// list was never recorded - no sharp font sheet, the Text not drawn
++			// this pass - and a guard that only checked the clip would sail past
++			// it, claim the rect and blank the label anyway.
++			const int fits = wanted ? glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r, true) : 0;
 +			if (!fits)
 +			{
-+				Log(LOG_VERBOSE) << "HiUI: button label would draw 0 of " << wanted
++				Log(LOG_VERBOSE) << "HiUI: button \"" << t->getText() << "\" would draw 0 of " << wanted
 +					<< " glyphs at base " << r.x0 << "," << r.y0 << " " << (r.x1 - r.x0) << "x" << (r.y1 - r.y0)
 +					<< " (surface " << bw << "x" << bh << ") - leaving this one to the flat renderer";
 +				return;
@@ -2472,6 +2479,36 @@ index 0000000..3a89171
 +		}
 +		return;
 +	}
++	// Every list in the game - craft, soldiers, research, stores - is a TextList,
++	// and it owns its cells and blits them itself, so they never reach after() as
++	// widgets of their own. With no branch here they stayed flat while the window
++	// title above them went sharp, which is the "font below it is still old".
++	// Masked like a bare Text, so each row keeps the colour the 8-bit pass gave it
++	// and an empty result leaves the flat text alone.
++	if (TextList *tl = dynamic_cast<TextList*>(w))
++	{
++		if (!any || scratch.empty()) return;
++		R r = rectOf(tl);
++		if (!clipBase(r) || scratch.size() != (size_t)(r.x1 - r.x0) * (r.y1 - r.y0)) return;
++		int drawn = 0;
++		for (const Text *c : tl->getVisibleCells())
++		{
++			drawn += glyphs(c, tl->getX() + c->getX(), tl->getY() + c->getY(), r, 0, true, r);
++		}
++		if (!drawn)
++		{
++			scratch.clear();
++			return;
++		}
++		for (int y = r.y0; y < r.y1; ++y)
++		{
++			const Uint8 *p = row8(y);
++			for (int x = r.x0; x < r.x1; ++x)
++				if (scratch[(size_t)(y - r.y0) * (r.x1 - r.x0) + (x - r.x0)]) tag[y * bw + x] = p[x];
++		}
++		scratch.clear();
++		return;
++	}
 +	if (Text *t = dynamic_cast<Text*>(w))
 +	{
 +		if (!any || scratch.empty()) return;
@@ -2479,9 +2516,9 @@ index 0000000..3a89171
 +		if (!clipBase(r) || scratch.size() != (size_t)(r.x1 - r.x0) * (r.y1 - r.y0)) return;
 +		if (!glyphs(t, t->getX(), t->getY(), r, 0, true, r))
 +		{
-+			if (!t->getHiGlyphs().empty())
++			if (!t->getText().empty())
 +			{
-+				Log(LOG_VERBOSE) << "HiUI: text drew 0 of " << t->getHiGlyphs().size()
++				Log(LOG_VERBOSE) << "HiUI: text \"" << t->getText() << "\" drew 0 of " << t->getHiGlyphs().size()
 +					<< " glyphs at base " << r.x0 << "," << r.y0 << " " << (r.x1 - r.x0) << "x" << (r.y1 - r.y0)
 +					<< " (surface " << bw << "x" << bh << ") - leaving this one to the flat renderer";
 +			}
@@ -3406,6 +3443,53 @@ index 947b1e0..8fd8cf3 100644
  	/// Special handling for mouse presses.
  	void mousePress(Action *action, State *state) override;
  	/// Special handling for mouse releases.
+diff --git a/src/Interface/TextList.cpp b/src/Interface/TextList.cpp
+index 2b91ef2..f2b57e8 100644
+--- a/src/Interface/TextList.cpp
++++ b/src/Interface/TextList.cpp
+@@ -1009,6 +1009,29 @@ void TextList::setScrolling(bool scrolling, int scrollPos)
+ /**
+  * Draws the text list and all the text contained within.
+  */
++/**
++ * Returns the cells the last draw() actually blitted, in draw order.
++ * HiUI needs exactly these: a row outside the scroll window still holds a Y
++ * from whenever it was last on screen, so walking every row would hand the
++ * overlay stale coordinates. The bounds here therefore mirror draw().
++ */
++std::vector<Text*> TextList::getVisibleCells() const
++{
++	std::vector<Text*> out;
++	if (_rows.empty() || _scroll >= _rows.size())
++	{
++		return out;
++	}
++	for (size_t i = _rows[_scroll]; i < _texts.size() && i < _rows[_scroll] + _visibleRows; ++i)
++	{
++		for (auto *t : _texts[i])
++		{
++			out.push_back(t);
++		}
++	}
++	return out;
++}
++
+ void TextList::draw()
+ {
+ 	Surface::draw();
+diff --git a/src/Interface/TextList.h b/src/Interface/TextList.h
+index f707e1b..3ed4f06 100644
+--- a/src/Interface/TextList.h
++++ b/src/Interface/TextList.h
+@@ -104,6 +104,8 @@ public:
+ 	int getLastRowIndex() const;
+ 	/// Gets the amount of visible rows in the list.
+ 	size_t getVisibleRows() const;
++	/// Gets the cells the last draw() blitted, for the sharp overlay.
++	std::vector<Text*> getVisibleCells() const;
+ 	/// Adds a new row to the text list.
+ 	void addRow(int cols, ...);
+ 	/// Removes the last row from the text list.
 diff --git a/src/Interface/Window.h b/src/Interface/Window.h
 index d5e599e..8b44e52 100644
 --- a/src/Interface/Window.h
