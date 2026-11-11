@@ -943,6 +943,52 @@ sites. Unlocking a research project that names where Cobra is operating gives th
 direction and still leaves the finding to him, which is what hiding the network was for. Naming
 the sites outright would hand over the discovery the opening exists to create.
 
+### The abandoned factory, and the date
+
+John: the cartel lead points to *"an old weapons factory for more intel. Which is basically a
+cobra weapons factory that's been abandoned."* And then: *"maybe the intel there is a date it will
+be brought online. So the player has a target date to hit it again."*
+
+Cheap, because the factory deployment, map and terrain already exist — the second mission is a
+variant of a site that is built.
+
+**It must not be empty.** An abandoned building with nothing in it is a walk, not a mission, at
+exactly the point the player should be getting hooked. `STR_BAT_TERRORIST` already exists, so the
+answer is in the mod: the androids are still running, because machines need no pay, food or
+orders. That makes it a real fight with units that exist, explains why a deserted place still
+bites, answers the question "abandoned" otherwise leaves hanging — you do not leave guards behind,
+you leave the ones that need nothing — and tells the player something true and alarming about who
+they are now fighting.
+
+**The date is the strongest idea in this document, and it is the thing that makes the economy
+legible.** Everything built so far is monthly arithmetic a player cannot see. A known activation
+date turns it into a decision with a visible consequence either way:
+
+| what the player does | what he gets |
+| --- | --- |
+| hits it before the date | production never starts; the cheapest win available |
+| hits it on the date | a defended factory, freshly garrisoned |
+| leaves it | materiel starts flowing, and Cobra's men get **better weapons** |
+
+That last row is the whole point. The kit rule shipped today is invisible because nothing tells
+the player *why* Cobra's troops improved. Here he was told the date, he chose not to act, and the
+rifles that turn up three months later are the consequence of that choice. The economy stops
+being arithmetic and becomes a thing that happened because of something he did.
+
+It is also the first moment in the campaign where the player acts rather than responds.
+
+**Mechanically** this wants a dormant site with an activation date rather than a scripted spawn:
+spawning a new site at month N would put it somewhere else, and the value is in returning to a
+place he has already walked. So a flag and a date on `AlienBase`, checked on the monthly tick,
+and the site joins the economy when it fires. Small, and it needs the date surfaced on the intel
+screen, which exists.
+
+**One risk worth naming:** a deadline the player cannot meaningfully prepare for is just a
+notification. The gap between learning the date and the date arriving has to be long enough to
+do something about — recruit, re-equip, move a craft — or it is flavour text with a countdown.
+
+
+
 
 
 ## Open, and John's to settle
