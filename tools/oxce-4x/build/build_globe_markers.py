@@ -23,7 +23,16 @@ ROOT = os.path.dirname(HERE)
 # these against a real one.
 PAL_INDEX = {'COBRA': 13, 'GOLD': 144, 'JOE': 245, 'WHITE': 5, 'DIM': 161}
 
-SS, N = 6, 72                      # supersample, final marker size
+SS = 6                             # supersample; the art is drawn at N*SS and reduced
+# Final marker size in BASE pixels, not screen pixels - the globe is drawn into
+# the base surface and the marker goes down at this size regardless of zoom, so
+# 72 covered a third of Africa. Vanilla is 3x3 for exactly that reason; 28 is
+# about 6% of the globe's diameter, which reads as a pin rather than a building.
+N = int(os.environ.get('MARKER_PX', 28))
+# The icons are DRAWN on a fixed 72-unit grid - every coordinate below is in
+# those units - and only the final reduction changes. Shrinking the canvas
+# instead clips them, because C and every line still point at 72-unit space.
+GRID = 72
 U  = SS                            # one design unit at supersample
 W  = 3*U                           # standard line weight
 
@@ -37,7 +46,7 @@ WHITE = (252, 252, 252, 255)   # idx   5
 DIM   = (144, 168, 168, 255)   # idx 161
 CREAM = (252, 252, 252, 255)   # idx   5
 
-def pad():  return Image.new('RGBA', (N*SS, N*SS), (0,0,0,0))
+def pad():  return Image.new('RGBA', (GRID*SS, GRID*SS), (0,0,0,0))
 def fin(im): return im.resize((N, N), Image.LANCZOS)
 C = 36*U                            # centre at supersample
 
@@ -310,6 +319,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--palettes', default=None,
                     help='optional GEODATA/PALETTES.DAT, to verify the five indices')
+    ap.add_argument('--size', type=int, default=None,
+                    help='final marker size in base pixels (default 32)')
     ap.add_argument('--out', default=os.path.join(ROOT, 'mod', 'Resources', 'Globe'))
     a = ap.parse_args()
 
