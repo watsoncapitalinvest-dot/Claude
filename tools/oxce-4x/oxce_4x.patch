@@ -1866,10 +1866,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..a4a01ce
+index 0000000..5072f5c
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,747 @@
+@@ -0,0 +1,760 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -1926,6 +1926,7 @@ index 0000000..a4a01ce
 +	{
 +		Img im;
 +		if (!FileMap::fileExists(path)) return im;
++		const Uint32 t0 = SDL_GetTicks();
 +		SDL_Surface *raw = IMG_Load_RW(FileMap::getRWops(path), SDL_TRUE);
 +		if (!raw) return im;
 +		SDL_PixelFormat fmt = {};
@@ -1940,6 +1941,11 @@ index 0000000..a4a01ce
 +		for (int y = 0; y < im.h; ++y) memcpy(&im.px[(size_t)y * im.w], (Uint8*)c->pixels + y * c->pitch, (size_t)im.w * 4);
 +		SDL_UnlockSurface(c); SDL_FreeSurface(c);
 +		im.ok = true;
++		// Lazy loading means this runs the first time a screen opens, so a slow
++		// one IS the stall the player feels. Anything over an eyeblink is worth
++		// knowing about by name rather than guessing at the screen.
++		const Uint32 ms = SDL_GetTicks() - t0;
++		if (ms > 40) Log(LOG_INFO) << "HiUI: " << path << " (" << im.w << "x" << im.h << ") took " << ms << " ms";
 +		return im;
 +	}
 +	const Img *piece(const std::string &name)
@@ -2371,6 +2377,13 @@ index 0000000..a4a01ce
 +	}
 +	if (TextButton *b = dynamic_cast<TextButton*>(w))
 +	{
++		// The geoscape's own side buttons are left to the flat renderer. They sit
++		// on GEOBORD, which in this mod has INTERCEPT, BASES, GRAPHS and the rest
++		// painted into the background art, and they came out as unreadable blank
++		// slabs here while the same code drew Cancel in a window perfectly. The
++		// flat ones are legible, they are small furniture, and overpainting art
++		// that already carries its own lettering is not worth a sharper label.
++		if (b->isGeoscapeButton()) return;
 +		R r = rectOf(b);
 +		if (!clipBase(r) || r.x1 - r.x0 != b->getWidth() || r.y1 - r.y0 != b->getHeight()) return;
 +		const int X0 = xs[r.x0], Y0 = ys[r.y0], X1 = xs[r.x1], Y1 = ys[r.y1];
@@ -3430,7 +3443,7 @@ index ec1055a..643bfc9 100644
  	void setSecondaryColor(Uint8 color) override;
  	/// Gets the text's secondary color.
 diff --git a/src/Interface/TextButton.h b/src/Interface/TextButton.h
-index 947b1e0..8fd8cf3 100644
+index 947b1e0..0cbfdfa 100644
 --- a/src/Interface/TextButton.h
 +++ b/src/Interface/TextButton.h
 @@ -79,6 +79,9 @@ public:
@@ -3443,6 +3456,15 @@ index 947b1e0..8fd8cf3 100644
  	/// Special handling for mouse presses.
  	void mousePress(Action *action, State *state) override;
  	/// Special handling for mouse releases.
+@@ -88,6 +91,8 @@ public:
+ 	void setWidth(int width) override;
+ 	void setHeight(int height) override;
+ 	void setGeoscapeButton(bool geo);
++	/// Is this one of the geoscape's own side buttons?
++	bool isGeoscapeButton() const { return _geoscapeButton; }
+ };
+ 
+ }
 diff --git a/src/Interface/TextList.cpp b/src/Interface/TextList.cpp
 index 2b91ef2..f2b57e8 100644
 --- a/src/Interface/TextList.cpp
