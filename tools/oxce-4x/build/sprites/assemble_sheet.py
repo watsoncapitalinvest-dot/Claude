@@ -44,6 +44,10 @@ def main(src, out_dir, stem):
     ys = np.nonzero(np.asarray(probe)[..., 3] > 40)[0]
     feet5 = meta['anchors']['stand/5/0']['feet'][1] * k
     s = TALL / (feet5 - ys.min())
+    # sheets rendered on a fixed reference height keep a tall man tall: scale so a
+    # 1.78 m man (Duke) stands TALL px, everyone else in proportion
+    if 'ref_h' in meta:
+        s *= meta['h49'] / 1.78
     print('scale %.3f (standing figure %d px at render size)' % (s, feet5 - ys.min()))
     clips = [c for c in CLIPS if c in meta['clips']]
     rows = (len(clips) * 64 + COLS - 1) // COLS

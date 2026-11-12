@@ -156,8 +156,12 @@ sc.render.film_transparent = True; sc.render.image_settings.file_format = 'PNG';
 sc.view_settings.view_transform = 'Standard'; sc.view_settings.look = 'None'; sc.cycles.use_denoising = False
 sc.cycles.max_bounces = 1; sc.cycles.transparent_max_bounces = 16
 sc.world = bpy.data.worlds.new('w')
-tgt = bpy.data.objects.new('tgt', None); sc.collection.objects.link(tgt); tgt.location = (0, 0, 0.50 * H)
-cam_d = bpy.data.cameras.new('cam'); cam_d.type = 'ORTHO'; cam_d.ortho_scale = 1.12 * H
+# Framed on a fixed reference height, not the man's own, so a tall man renders taller
+# (Roadblock 1.90 m, Scarlett 1.70 m); lower and wider than render_soldier.py, whose
+# frame cut the near boot off in facing 5.
+REF = float(os.environ.get('REF_H', '1.80'))
+tgt = bpy.data.objects.new('tgt', None); sc.collection.objects.link(tgt); tgt.location = (0, 0, 0.46 * REF)
+cam_d = bpy.data.cameras.new('cam'); cam_d.type = 'ORTHO'; cam_d.ortho_scale = 1.26 * REF
 cam = bpy.data.objects.new('cam', cam_d); sc.collection.objects.link(cam); sc.camera = cam
 c = cam.constraints.new('TRACK_TO'); c.target = tgt; c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y'
 EL = math.radians(30)
@@ -209,5 +213,5 @@ for name, act in ACTIONS.items():
             id_mode(True); sc.cycles.samples = 1; sc.cycles.filter_width = 0.01; sc.view_settings.view_transform = 'Raw'
             sc.render.filepath = f'{OUT}/{name}/d{k}_f{i:02d}_id.png'; bpy.ops.render.render(write_still=True)
         print(name, 'direction', k, 'done', flush=True)
-    json.dump({'frames': NF, 'dirs': DIRS, 'clips': list(ACTIONS), 'res': RES, 'h49': float(H), 'anchors': anchors},
+    json.dump({'frames': NF, 'dirs': DIRS, 'clips': list(ACTIONS), 'res': RES, 'h49': float(H), 'ref_h': REF, 'anchors': anchors},
               open(f'{OUT}/meta.json', 'w'))
