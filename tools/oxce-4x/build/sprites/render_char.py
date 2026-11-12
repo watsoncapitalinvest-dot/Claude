@@ -117,7 +117,10 @@ for o in meshes:
         if m and m.name not in matbase:
             if HAIR and HAIR in m.name: matbase[m.name] = None
             else: matbase[m.name] = nxt[0]; nxt[0] += 6
-assert nxt[0] <= 40, 'too many materials for the 40-step id'
+# the 40-step id only limits materials that take it: one that already carries its own IDSWITCH (garment-ID maps,
+# factory / cast builders) never reads 'pid', so it may sit past the limit (Duke v4: 4 body + 4 bandolier materials)
+_own = [n for n in matbase if bpy.data.materials[n].node_tree and 'IDSWITCH' in bpy.data.materials[n].node_tree.nodes]
+assert all(matbase[n] is None or matbase[n] + 5 <= 40 for n in matbase if n not in _own), 'too many materials for the 40-step id'
 for o in meshes:
     gname = {vg.index: vg.name for vg in o.vertex_groups}
     me = o.data

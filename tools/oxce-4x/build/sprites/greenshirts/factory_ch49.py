@@ -15,6 +15,8 @@ clean collar and head as the design chat's factory, plus:
   --look JSON         the cartoon cast's look (cc\\looks\\<name>.json): headgear helmet / beret / headset from
                       cast/cast_props.py exactly as cast/build_cast.py fits them, and "build" [bulk, tall] as a
                       scaled root over the armature. The weapon in the look is ignored (empty-handed).
+  --bandolier sweep   Duke v4 (duke_build_v4.zip): the procedural diagonal bandolier, bandolier_fit.py, skin-bound;
+                      meta "drop_ids" (v4: [57], the X-harness) deletes those garment ids' faces on save
   --posmap DIR        unchanged (texel -> rest position maps for fix_collar.py / tighten_paint.py)
 Paths: env GIJOE_REF (staged Reference), ANIM_IDS (Duke's base id maps), COBRA_HELMET_STL.
 """
@@ -369,6 +371,13 @@ if helmet is not None:
         BADGE.node_tree.nodes['Combine Color'].inputs[0].default_value = 3 / 40.0 if 'Combine Color' in BADGE.node_tree.nodes else 3 / 40.0
         for i in badge_faces: helmet.data.polygons[i].material_index = 1
         print('helmet badge faces', len(badge_faces))
+if '--bandolier' in sys.argv:
+    # duke_build_v4.zip factory_blend.py, verbatim: the bandolier fitted onto the swelled torso and skin-bound
+    # (bandolier_fit.py from the same zip, next to this file). Strap id 9, pouches 10, flaps 12, snaps 15.
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from bandolier_fit import add_bandolier, add_bandolier_sweep
+    if arg('--bandolier') in ('sweep', 'sweep_over'): bandolier = add_bandolier_sweep(body_meshes, arm, cel_material, over_gear=arg('--bandolier') == 'sweep_over', gap=float(arg('--band_gap', 0.004)))
+    else: bandolier = add_bandolier(arg('--bandolier'), body_meshes, arm, cel_material, ratio=float(arg('--band_ratio', 0.08)))
 def id_mode(on):
     for m in bpy.data.materials:
         if m.node_tree and 'IDSWITCH' in m.node_tree.nodes: m.node_tree.nodes['IDSWITCH'].inputs[0].default_value = 1.0 if on else 0.0
@@ -422,6 +431,29 @@ if SAVE:
     for k in idimg:
         p = f'{d}/id_{k}_Diffuse.png'
         if os.path.exists(p): idimg[k].filepath = p; idimg[k].reload()
+    drop = meta.get('drop_ids', [])
+    if drop:                     # meta "drop_ids" (Duke v4: 57 = X-harness): as the v4 factory's _apply_drop(), but the
+        from PIL import Image as _PI     # faces are deleted for good instead of masked at render time (cobra/factory_blend.py)
+        def _slot(m):
+            for n in (m.node_tree.nodes if m and m.node_tree else []):
+                if n.type == 'TEX_IMAGE' and n.image is not None:
+                    for k_ in ('Ch49_1001', 'Ch49_1002'):
+                        if n.image.name == f'{cid}_{k_}.png': return k_
+        for o in body_meshes:
+            me = o.data; uvl = me.uv_layers.active.data
+            cen = np.array([np.mean([uvl[li].uv[:] for li in p_.loop_indices], 0) for p_ in me.polygons])
+            sh = [_slot(me.materials[p_.material_index]) for p_ in me.polygons]; kill = np.zeros(len(cen), bool)
+            for slot in ('Ch49_1001', 'Ch49_1002'):
+                p_ = f'{d}/id_{slot}_Diffuse.png'
+                if not os.path.exists(p_): continue
+                ids = np.asarray(_PI.open(p_)); ids = ids[..., 0] if ids.ndim == 3 else ids; H_, W_ = ids.shape
+                msk = np.array([s_ == slot for s_ in sh])
+                if not msk.any(): continue
+                px_ = ((cen[msk, 0] % 1) * W_).astype(int).clip(0, W_ - 1); py_ = ((1 - cen[msk, 1] % 1) * H_).astype(int).clip(0, H_ - 1)
+                kill[np.nonzero(msk)[0]] = np.isin(ids[py_, px_], drop)
+            bm = bmesh.new(); bm.from_mesh(me); bm.faces.ensure_lookup_table()
+            bmesh.ops.delete(bm, geom=[bm.faces[i] for i in np.nonzero(kill)[0]], context='FACES'); bm.to_mesh(me); bm.free()
+            print('drop', o.name, int(kill.sum()), 'faces deleted (ids', drop, ')')
     if meta.get('drop_hair') and _alive(hair_obj): bpy.data.objects.remove(hair_obj)
     if HELMET_MAT is not None and 'helmet' in meta:
         lin = [((c / 255) ** 2.2) for c in meta['helmet']]; cel = HELMET_MAT.node_tree.nodes['CEL']

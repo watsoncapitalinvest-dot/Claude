@@ -112,7 +112,26 @@ def ink_frame(beauty, idimg, shade=None):
     if soft.any():
         band = ndi.binary_dilation(soft, iterations=1) & fg & ~e
         blur = np.stack([ndi.gaussian_filter(img[..., c], 0.8) for c in range(3)], -1); img[band] = blur[band]
-    e = (ndi.binary_dilation(e, iterations=1) & fg)          # ~3 px at 2x, kept on the figure -> ~1.5 px at final size
+    # Roadblock-method fold lines (TERMIDS="3,6,11", TERMMIN=90): the design chat's compose_factory.py TERMIDS block
+    # (Duke v4 / cast v3), same logic, same place in the order (after the soft hair blur, on the undilated outline):
+    # inside chosen garments, a line where the baked shadow tone meets the lit tone; long pieces only. Drawn with the
+    # pen (x0.25 + INK x0.75) further down. Unset -> nothing here runs and the output is unchanged.
+    term = None
+    if os.environ.get('TERMIDS'):
+        lum = img.mean(-1); term = np.zeros_like(fg)
+        for g in [int(x) for x in os.environ['TERMIDS'].split(',') if x.strip()]:
+            m = (idb == g) & ndi.binary_erosion(fg, iterations=2)
+            if m.sum() < 200: continue
+            sh = m & (lum < np.percentile(lum[m], 75) * 0.79)
+            sh = ndi.gaussian_filter(sh.astype(np.float32), 2.5) > 0.5
+            ed = sh & ~ndi.binary_erosion(sh, iterations=1) & m
+            term |= ed & (ndi.maximum_filter(idb, 3) == ndi.minimum_filter(idb, 3))
+        lab, n = ndi.label(term, structure=np.ones((3, 3)))
+        if n:
+            sz = ndi.sum(term, lab, range(1, n + 1)); term &= np.isin(lab, [i for i, z in enumerate(sz, 1) if z >= int(os.environ.get('TERMMIN', 45))])
+        tsc = max(1, round(H / 640))
+        if tsc > 1: term = ndi.binary_dilation(term, iterations=max(0, tsc // 2)) & fg
+    e = (ndi.binary_dilation(e, iterations=1) & fg)         # ~3 px at 2x, kept on the figure -> ~1.5 px at final size
     eh = ndi.binary_dilation(eh, iterations=1) & (idb == 1) & ~e
     # pen fold lines inside chosen garments (FOLD_IDS env, e.g. "6"): ink where the cel shadow meets the lit tone
     # pen lines inside chosen garments: FOLD_IDS="6:0.42,20:0.35" (garment id : share of it that counts as shadow).
@@ -131,12 +150,15 @@ def ink_frame(beauty, idimg, shade=None):
             fz = ndi.sum(fe, fl, range(1, fn + 1)); fe &= np.isin(fl, [i for i, z in enumerate(fz, 1) if z >= fmin])
         img[fe & ~e] = INK
     # comic pen shading from the geometry pass (render_char.py --shade); only when PENIDS is set
+    pen = None; facepen = None
     if os.environ.get('PENIDS'):
         if shade is None: shade = _shade_for(idimg)
         if shade is not None:
             pen, facepen = pen_pass(img, idb, fg, shade, SIZE)
-            img[pen & ~e] = img[pen & ~e] * 0.25 + INK * 0.75
-            if facepen is not None: fp = facepen & ~e & ~pen; img[fp] = img[fp] * 0.45 + INK * 0.55
+    if term is not None: pen = term if pen is None else (pen | term)     # one pen mask, inked once (as compose_factory)
+    if pen is not None:
+        img[pen & ~e] = img[pen & ~e] * 0.25 + INK * 0.75
+        if facepen is not None: fp = facepen & ~e & ~pen; img[fp] = img[fp] * 0.45 + INK * 0.55
     img[e] = INK
     img[eh] = HAIR_LINE
     # with alpha, for the game: the figure's own mask, downscaled premultiplied so

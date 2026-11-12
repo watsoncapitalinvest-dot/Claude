@@ -13,17 +13,27 @@ Q=/tmp/claude-0/ws/mix/pistol
 W=/tmp/claude-0/ws/cast
 CLIPS="stand=$P/idle.fbx,walk=$P/walk forward.fbx,kneel=$P/idle crouching.fbx,aim=$P/idle aiming.fbx,death=$P/death from the front.fbx,pstand=$Q/pistol idle.fbx,pwalk=$Q/pistol walk.fbx,pkneel=$Q/pistol kneeling idle.fbx"
 # ink per man: "HAIR colour | FOLD_IDS pen fold lines | PEN env" (from the design chat's briefs).
-# A non-empty third field turns on pen shading (John, 12 Nov): render_char.py --shade renders the geometry pass and
-# soldier_ink.py reads PENIDS / PENPCT / PENDARK / PENFACE from that env.
+# The third field is env for soldier_ink.py. PENIDS in it turns on pen shading (John, 12 Nov): render_char.py --shade
+# renders the geometry pass and soldier_ink.py reads PENIDS / PENPCT / PENDARK / PENFACE. TERMIDS / TERMMIN (the
+# Roadblock method's fold lines, John 14:59; compose_factory.py's rule) need no extra pass, so no --shade for them.
 ink() { case $1 in
-  duke)      echo "||PENIDS=3,6 PENPCT=84 PENDARK=0.66 PENFACE=1" ;;
+  duke)      echo "246,182,22||TERMIDS=3,6,11 TERMMIN=90" ;;          # Duke v4, Roadblock method: tones in the texture, fold lines at compose (v4 meta hair tones)
   roadblock) echo "40,30,26|20:0.36:2:40|PENIDS=6,21 PENPCT=84 PENDARK=0.66" ;;          # pen folds replace the wavy trouser FOLD 6
   scarlett)  echo "212,66,40|24:0.35:3:80|PENIDS=24 PENPCT=84 PENDARK=0.66 PENFACE=1 PENFACEIDS=20" ;;
   snake_eyes) echo "||PENIDS=20 PENPCT=84 PENDARK=0.66" ;;                               # bodysuit; masked face, no PENFACE
   beach_head) echo "||PENIDS=20,22 PENPCT=84 PENDARK=0.66" ;;                            # shirt + camo trousers; balaclava, no PENFACE
-  doc)       echo "48,38,32|" ;;
-  stalker)   echo "36,30,26|" ;;
-  greenshirt_rifleman|greenshirt_medic) echo "||" ;;                # v4: Roadblock method, tones + fold ink in the textures; no pen, no --shade
+  # cast v3 (Roadblock textures on the v2 +1.6 cm builds): fold lines TERMIDS=3,6,11 TERMMIN=90, HAIR = <name>_cartoon.json
+  grunt)       echo "176,101,39||TERMIDS=3,6,11 TERMMIN=90" ;;
+  zap)         echo "48,38,32||TERMIDS=3,6,11 TERMMIN=90" ;;
+  rock_n_roll) echo "246,182,22||TERMIDS=3,6,11 TERMMIN=90" ;;
+  breaker)     echo "132,80,34||TERMIDS=3,6,11 TERMMIN=90" ;;
+  airborne)    echo "48,38,32||TERMIDS=3,6,11 TERMMIN=90" ;;
+  hawk)        echo "132,80,34||TERMIDS=3,6,11 TERMMIN=90" ;;
+  flint)       echo "48,38,32||TERMIDS=3,6,11 TERMMIN=90" ;;
+  doc)         echo "48,38,32||TERMIDS=3,6,11 TERMMIN=90" ;;       # Ch18 head: his hair is flat id 37, so HAIR changes nothing
+  stalker)     echo "48,38,32||TERMIDS=3,6,11 TERMMIN=90" ;;       # (was 36,30,26; cartoon.json says 48,38,32 - id 37 hair as Doc)
+  flash)       echo "|" ;;                                          # Ch15, v2 textures as shipped (his own bake); not re-inked with TERMIDS
+  greenshirt_rifleman|greenshirt_medic) echo "||" ;;                # v4: Roadblock method, tones + fold ink in the textures; no pen, no --shade (medic: satchel_* id 37, contour only)
   grand_slam) echo "||" ;;                                           # Ch15 slimmed, Roadblock-method paint; no pen, no --shade
   greenshirt_pilot) echo "||PENIDS=20 PENPCT=84 PENDARK=0.66 INKJOIN=21:20" ;;           # Ch15: suit 20, rest 21 joined for lines
   ace)       echo "||PENIDS=20 PENPCT=84 PENDARK=0.66 PENFACE=1 INKJOIN=21:20" ;;    # Ch15 slimmed: suit 20, rest 21 joined; helmet 26, Duke face 2 (PENFACE)
@@ -47,7 +57,7 @@ for n in "$@"; do
   fi
   rm -rf $W/fr_$n
   I=$(ink $n); R=${I#*|}; FOLD=${R%%|*}; PEN=""; [ "$R" != "$FOLD" ] && PEN=${R#*|}
-  SH=""; [ -n "$PEN" ] && SH="--shade"
+  SH=""; case " $PEN" in *" PENIDS="*) SH="--shade" ;; esac      # only pen shading needs the geometry pass
   python3 $HERE/render_char.py --blend $B --clips "$CL" --frames 8 $SH --out $W/fr_$n > $W/$n.render.log 2>&1 || { echo "render failed $n"; continue; }
   env $PEN HAIR=${I%%|*} FOLD_IDS=$FOLD python3 $HERE/assemble_sheet.py $W/fr_$n $W/sheets $n > $W/$n.asm.log 2>&1 || { echo "assemble failed $n"; continue; }
   echo "done $n $(date +%T)"
