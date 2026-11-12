@@ -176,6 +176,31 @@ RECTS = [(6,0,378,66),(6,72,378,66),(6,144,378,66),(6,216,378,66),(6,288,378,66)
          (18, READOUT[0], 354, READOUT[1]-READOUT[0]),   # funds, clock, weekday, date
          (6,672,186,78),(198,672,186,78),(6,756,186,78),(198,756,186,78),
          (6,840,186,78),(198,840,186,78)]
+# THE READOUT RIBS HAVE TO GO, NOT JUST GET DARKER.
+#
+# Deepening only touches pixels brighter than LIT, and this panel's readout is
+# divided by bezel ribs that sit well below it - around luminance 100 to 170
+# against a floor of 9. They survived, and the clock printed across them.
+#
+# There is no layout that avoids them. The clean sub-strips between the ribs
+# measure 6.7, 8.0, 2.3 and 5.0 base pixels, and the big clock font needs 16:
+# nothing in this panel can hold it, and the small font fits only one of the
+# four. So the ribs are the thing that is wrong, not the clock.
+#
+# The block is flattened to its own floor tone with a faint top-down gradient so
+# it does not read as a dead rectangle, feathered at the border so the bezel
+# around the window is untouched. This is what the art request asked for in the
+# first place: ONE recessed readout window, not a stack of slots.
+rx, ry, rw, rh = 18, READOUT[0], 354, READOUT[1] - READOUT[0]
+blk = out[ry:ry+rh, rx:rx+rw]
+floor = np.percentile(blk.reshape(-1, 3), 25, axis=0)
+grad = np.linspace(1.06, 0.94, rh)[:, None, None]
+flat = floor[None, None, :] * grad
+fy = np.clip(np.minimum(np.arange(rh), rh-1-np.arange(rh)) / 7.0, 0, 1)
+fx = np.clip(np.minimum(np.arange(rw), rw-1-np.arange(rw)) / 7.0, 0, 1)
+m = (fy[:, None] * fx[None, :])[:, :, None]
+out[ry:ry+rh, rx:rx+rw] = blk * (1 - m) + flat * m
+
 LIT = 210.0
 for x, y, w, h in RECTS:
     blk = out[y:y+h, x:x+w]

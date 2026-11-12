@@ -2213,10 +2213,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..719b21c
+index 0000000..e1b00aa
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,786 @@
+@@ -0,0 +1,799 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -2474,7 +2474,20 @@ index 0000000..719b21c
 +			if (!col)
 +			{
 +				const SDL_Color &c = pal[g.color];
-+				col = mix(rgb(c.r, c.g, c.b), rgb(234, 230, 214), 205);   // keep a hint of the hue's meaning, read as off-white
++				// A STRONGLY SATURATED COLOUR IS A DELIBERATE ONE. DO NOT WASH IT OUT.
++				//
++				// The wash exists because the geoscape palette gives its labels a
++				// scatter of pale blues and greens that read as noise at this size;
++				// pulling them to off-white makes the panel one piece of type. But it
++				// is applied by palette index and cannot tell a default apart from a
++				// choice, so a clock deliberately set to red (252,0,0) came out PINK -
++				// 205/255 of the way to off-white is mostly off-white.
++				//
++				// Saturation separates the two. Nothing in this palette's UI text is
++				// anywhere near this saturated; only a colour picked on purpose is.
++				const int hi = std::max(c.r, std::max(c.g, c.b));
++				const int lo = std::min(c.r, std::min(c.g, c.b));
++				col = mix(rgb(c.r, c.g, c.b), rgb(234, 230, 214), (hi - lo) > 150 ? 35 : 205);
 +			}
 +			const int X0 = xs[cx0], X1 = xs[cx1], Y0 = ys[cy0], Y1 = ys[cy1];
 +			const double kx = (double)((cx1 - cx0) * a.k) / (X1 - X0), ky = (double)((cy1 - cy0) * a.k) / (Y1 - Y0);
@@ -3673,7 +3686,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..ae3439c 100644
+index 6b4e79d..b2fc334 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -17,6 +17,7 @@
@@ -3809,7 +3822,53 @@ index 6b4e79d..ae3439c 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -712,6 +768,10 @@ void GeoscapeState::init()
+@@ -427,6 +483,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+ 		_txtSec->setX(_txtSec->getX()-10);
+ 	}
+ 
++	// RED CLOCK DIGITS, FROM THE RULESET RATHER THAN FROM HERE.
++	//
++	// The time shares the "text" interface element with the date, the weekday and
++	// the funds line, so colouring it in code would colour all of them. An optional
++	// "clockText" element colours the five time widgets only, and because it is
++	// read with getElementOptional, a mod that does not define it keeps whatever
++	// "text" gave them - nothing goes black for want of a ruleset entry.
++	//
++	// The mod sets 13: PAL_GEOSCAPE block 0 is not a ramp, so 13 (252,0,0) shades
++	// into 14 (192,0,0) and reads as a proper two-step red, where starting at 14
++	// shades into 15, which is black.
++	//
++	// AND IT ONLY APPLIES AT HI-RES, BECAUSE AT BASE RES IT CANNOT WORK.
++	//
++	// Text draws a glyph as `color + pixelValue` and FontBig's body pixels are
++	// value 4, so the colour index given is not the colour drawn - it is four
++	// below it. PAL_GEOSCAPE holds exactly two reds, 13 (252,0,0) and 14
++	// (192,0,0), and no red ramp anywhere: 13 puts the body on index 17, which is
++	// green, and the two bases that would land a red body put the glyph's own
++	// outline pixels on cyan and yellow.
++	//
++	// HiUI does not use the ramp - it reads the palette colour of the index and
++	// tints the hi-res glyph with it - so red works there and only there. At base
++	// resolution the clock keeps the pale "text" colour rather than coming out
++	// green, which is what a naive application of this ruleset entry would do.
++	const RuleInterface *geoUi = HiUI::enabled()
++		? _game->getMod()->getInterface("geoscape", false) : nullptr;
++	if (geoUi)
++	{
++		if (const Element *clockEl = geoUi->getElementOptional("clockText"))
++		{
++			_txtHour->setColor(clockEl->color);
++			_txtHourSep->setColor(clockEl->color);
++			_txtMin->setColor(clockEl->color);
++			_txtMinSep->setColor(clockEl->color);
++			_txtSec->setColor(clockEl->color);
++		}
++	}
++
+ 	_gameTimer->onTimer((StateHandler)&GeoscapeState::timeAdvance);
+ 	_gameTimer->start();
+ 
+@@ -712,6 +807,10 @@ void GeoscapeState::init()
  	updateSlackingIndicator();
  
  	_globe->onMouseClick((ActionHandler)&GeoscapeState::globeClick);
@@ -3820,7 +3879,7 @@ index 6b4e79d..ae3439c 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -1454,6 +1514,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +1553,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -3856,7 +3915,7 @@ index 6b4e79d..ae3439c 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1858,6 +1947,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +1986,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -3876,7 +3935,7 @@ index 6b4e79d..ae3439c 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -2862,6 +2964,10 @@ void GeoscapeState::time1Month()
+@@ -2862,6 +3003,10 @@ void GeoscapeState::time1Month()
  	_game->getSavedGame()->addMonth();
  
  	// Determine alien mission for this month.
@@ -3887,7 +3946,7 @@ index 6b4e79d..ae3439c 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3066,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3105,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -3918,7 +3977,7 @@ index 6b4e79d..ae3439c 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3265,6 +3395,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +3434,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
