@@ -85,7 +85,41 @@ def load_entry(path, key, name):
     raise SystemExit('no %s in %s' % (name, path))
 
 
+
+# The weapon ladder, in calendar order. The garrison is vanilla's terror deployment, and its three
+# itemSets were X-COM's alien ladder - plasma pistol, plasma rifle, heavy plasma - which put the
+# month-15 weapon in Cobra's hands on day one however well the month cap clamped. Six tiers now,
+# one per calendar band, matching maxKitTierByMonth in gijoe_tuning.rul:
+#   0 months 1-3    handguns          STR_PISTOL (Uzi)
+#   1 months 4-8    rifles, grenades  STR_RIFLE (M4 Carbine) + Cobra grenade
+#   2 months 9-14   first lasers      STR_LASER_RIFLE
+#   3 months 15-22  pulse pistols     STR_PLASMA_PISTOL
+#   4 months 23-30  pulse rifles      STR_PLASMA_RIFLE
+#   5 months 31+    heavy pulse       STR_HEAVY_PLASMA
+# Knives are in the calendar's first band but there is no knife item yet.
+# Each rank keeps whatever extra its vanilla entry carried in the matching tier (a grenade, the
+# Viper Medic's stun launcher), by keying off the old three: old tier 0 -> new 3, 1 -> 4, 2 -> 5.
+EARLY = [
+    ['STR_PISTOL', 'STR_PISTOL_CLIP', 'STR_PISTOL_CLIP'],
+    ['STR_RIFLE', 'STR_RIFLE_CLIP', 'STR_ALIEN_GRENADE', 'STR_RIFLE_CLIP'],
+    ['STR_LASER_RIFLE', 'STR_ALIEN_GRENADE'],
+]
+
+
+def six_tier(data):
+    out = []
+    for entry in data:
+        e = dict(entry)
+        old = e.get('itemSets', [])
+        if old and any(old):
+            e['itemSets'] = [list(x) for x in EARLY] + [list(x) for x in old]
+        else:
+            e['itemSets'] = [[] for _ in range(6)]   # B.A.T.s carry nothing; they are the weapon
+        out.append(e)
+    return out
+
 terror = load_entry(VANILLA_DEP, 'alienDeployments', 'STR_TERROR_MISSION')
+terror['data'] = six_tier(terror['data'])
 base_mission = load_entry(VANILLA_MIS, 'alienMissions', 'STR_ALIEN_BASE')
 
 deployments, missions, scripts = [], [], []

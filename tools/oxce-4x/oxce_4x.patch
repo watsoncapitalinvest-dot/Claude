@@ -466,7 +466,7 @@ index 7af613c..f6f1f81 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..500c853 100644
+index 1951ba7..01747bf 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -767,6 +767,7 @@ void BattlescapeGenerator::nextStage()
@@ -477,6 +477,18 @@ index 1951ba7..500c853 100644
  	bool isPreview = _save->isPreview();
  
  	_save->setAlienCustom(_alienCustomDeploy ? _alienCustomDeploy->getType() : "", _alienCustomMission ? _alienCustomMission->getType() : "");
+@@ -829,9 +830,9 @@ void BattlescapeGenerator::run()
+ 		if (_game->getSavedGame()->getMonthsPassed() != -1)
+ 		{
+ 			month =
+-			((size_t) _game->getSavedGame()->getMonthsPassed()) > _game->getMod()->getAlienItemLevels().size() - 1 ?  // if
++			((size_t) _game->getSavedGame()->getCobraMonth()) > _game->getMod()->getAlienItemLevels().size() - 1 ?  // if
+ 			_game->getMod()->getAlienItemLevels().size() - 1 : // then
+-			_game->getSavedGame()->getMonthsPassed() ;  // else
++			_game->getSavedGame()->getCobraMonth() ;  // else   (Cobra's clock: head start included)
+ 		}
+ 		else
+ 		{
 @@ -1669,6 +1670,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
@@ -507,7 +519,7 @@ index 1951ba7..500c853 100644
 + */
 +const Unit *BattlescapeGenerator::availableUnit(const Unit *rule, bool namedByMission, bool wellSupplied) const
 +{
-+	const int month = _game->getSavedGame()->getMonthsPassed();
++	const int month = _game->getSavedGame()->getCobraMonth();   // head start included
 +	if (month < 0)
 +	{
 +		return rule;    // a New Battle has no campaign clock; the calendar does not apply
@@ -5429,6 +5441,19 @@ index 0000000..e57d835
 +};
 +
 +}
+diff --git a/src/Geoscape/DogfightState.cpp b/src/Geoscape/DogfightState.cpp
+index e805e35..047890d 100644
+--- a/src/Geoscape/DogfightState.cpp
++++ b/src/Geoscape/DogfightState.cpp
+@@ -1638,7 +1638,7 @@ void DogfightState::update()
+ 					// Difference from original: No retaliation until final UFO lands (Original: Is spawned).
+ 					if (!_game->getSavedGame()->findAlienMission(targetRegion, OBJECTIVE_RETALIATION, race))
+ 					{
+-						auto* retalWeights = race->retaliationMissionWeights(_game->getSavedGame()->getMonthsPassed());
++						auto* retalWeights = race->retaliationMissionWeights(_game->getSavedGame()->getCobraMonth());
+ 						std::string retalMission = retalWeights ? retalWeights->choose() : "";
+ 						const RuleAlienMission *rule = _game->getMod()->getAlienMission(retalMission, false);
+ 						if (!rule)
 diff --git a/src/Geoscape/FundingState.cpp b/src/Geoscape/FundingState.cpp
 index a523073..1017270 100644
 --- a/src/Geoscape/FundingState.cpp
@@ -5504,7 +5529,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..0e6ab4e 100644
+index 6b4e79d..5326baa 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -17,6 +17,7 @@
@@ -5883,7 +5908,7 @@ index 6b4e79d..0e6ab4e 100644
 +	SavedGame *save = _game->getSavedGame();
 +
 +	// Cobra's current kit band: what the calendar lets it issue this month.
-+	const int tier = _game->getMod()->getCobraKitTierCap(save->getMonthsPassed());
++	const int tier = _game->getMod()->getCobraKitTierCap(std::max(0, save->getCobraMonth() < 0 ? save->getCobraHeadStart() : save->getCobraMonth()));
 +	_txtEscalation->setText(tier < 0 ? std::string("-") : std::to_string(tier + 1));
 +
 +	// Terror Dromes are alien bases; the globe draws the ones that are discovered.
@@ -5949,6 +5974,15 @@ index 6b4e79d..0e6ab4e 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
+@@ -1752,7 +2041,7 @@ void GeoscapeState::baseHunting()
+ 								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
+ 								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
+ 								{
+-									mission->setRace(rule.generateRace(_game->getSavedGame()->getMonthsPassed()));
++									mission->setRace(rule.generateRace(_game->getSavedGame()->getCobraMonth()));
+ 								}
+ 								else
+ 								{
 @@ -1858,6 +2147,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
@@ -5969,6 +6003,15 @@ index 6b4e79d..0e6ab4e 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
+@@ -2353,7 +2655,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+ 			mission->setId(_save.getId("ALIEN_MISSIONS"));
+ 			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
+ 			{
+-				mission->setRace(rule.generateRace(_save.getMonthsPassed()));
++				mission->setRace(rule.generateRace(_save.getCobraMonth()));
+ 			}
+ 			else
+ 			{
 @@ -2862,6 +3164,10 @@ void GeoscapeState::time1Month()
  	_game->getSavedGame()->addMonth();
  
@@ -6027,6 +6070,20 @@ index 6b4e79d..0e6ab4e 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
+@@ -4647,11 +4986,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+ 	// do i really need to comment this? shouldn't it be obvious what's happening here?
+ 	if (!command->hasRaceWeights())
+ 	{
+-		missionRace = missionRules->generateRace(month);
++		missionRace = missionRules->generateRace(save->getCobraMonth());   // who Cobra sends: its own clock
+ 	}
+ 	else
+ 	{
+-		missionRace = command->generate(month, GEN_RACE);
++		missionRace = command->generate(save->getCobraMonth(), GEN_RACE);
+ 	}
+ 
+ 	if (missionRace.empty())
 diff --git a/src/Geoscape/GeoscapeState.h b/src/Geoscape/GeoscapeState.h
 index 5eaf857..cd3ac94 100644
 --- a/src/Geoscape/GeoscapeState.h
@@ -7291,6 +7348,158 @@ index d5e599e..8b44e52 100644
  	/// Sets the high contrast color setting.
  	void setHighContrast(bool contrast) override;
  	/// Handles the timers.
+diff --git a/src/Menu/NewGameState.cpp b/src/Menu/NewGameState.cpp
+index a4e38dc..44f638d 100644
+--- a/src/Menu/NewGameState.cpp
++++ b/src/Menu/NewGameState.cpp
+@@ -28,6 +28,8 @@
+ #include "../Geoscape/BaseNameState.h"
+ #include "../Basescape/PlaceLiftState.h"
+ #include "../Engine/Options.h"
++#include "../Interface/Slider.h"
++#include <sstream>
+ #include "../Savegame/SavedGame.h"
+ #include "../Savegame/Base.h"
+ 
+@@ -41,17 +43,25 @@ namespace OpenXcom
+ NewGameState::NewGameState()
+ {
+ 	// Create objects
+-	_window = new Window(this, 192, 180, 64, 10, POPUP_VERTICAL);
+-	_btnBeginner = new TextButton(160, 18, 80, 32);
+-	_btnExperienced = new TextButton(160, 18, 80, 52);
+-	_btnVeteran = new TextButton(160, 18, 80, 72);
+-	_btnGenius = new TextButton(160, 18, 80, 92);
+-	_btnSuperhuman = new TextButton(160, 18, 80, 112);
+-	_btnIronman = new ToggleTextButton(78, 18, 80, 138);
+-	_btnOk = new TextButton(78, 16, 80, 164);
+-	_btnCancel = new TextButton(78, 16, 162, 164);
+-	_txtTitle = new Text(192, 9, 64, 20);
+-	_txtIronman = new Text(90, 24, 162, 135);
++	// G.I. Joe: widened to two columns - difficulty on the left, the two sliders on the right.
++	_window = new Window(this, 304, 190, 8, 5, POPUP_VERTICAL);
++	_btnBeginner = new TextButton(140, 18, 20, 30);
++	_btnExperienced = new TextButton(140, 18, 20, 50);
++	_btnVeteran = new TextButton(140, 18, 20, 70);
++	_btnGenius = new TextButton(140, 18, 20, 90);
++	_btnSuperhuman = new TextButton(140, 18, 20, 110);
++	_btnIronman = new ToggleTextButton(64, 18, 20, 136);
++	_btnOk = new TextButton(136, 16, 20, 168);
++	_btnCancel = new TextButton(136, 16, 164, 168);
++	_txtTitle = new Text(304, 9, 8, 15);
++	_txtIronman = new Text(84, 26, 88, 132);
++	_txtCash = new Text(124, 9, 174, 30);
++	_slrCash = new Slider(124, 16, 174, 40);
++	_txtCashValue = new Text(124, 9, 174, 58);
++	_txtHeadStart = new Text(124, 9, 174, 76);
++	_slrHeadStart = new Slider(124, 16, 174, 86);
++	_txtHeadStartValue = new Text(124, 9, 174, 104);
++	_txtHeadStartDesc = new Text(124, 44, 174, 116);
+ 
+ 	switch (_game->getMod()->getStartingDifficulty())
+ 	{
+@@ -89,6 +99,13 @@ NewGameState::NewGameState()
+ 	add(_btnCancel, "button", "newGameMenu");
+ 	add(_txtTitle, "text", "newGameMenu");
+ 	add(_txtIronman, "ironman", "newGameMenu");
++	add(_txtCash, "text", "newGameMenu");
++	add(_slrCash, "button", "newGameMenu");
++	add(_txtCashValue, "text", "newGameMenu");
++	add(_txtHeadStart, "text", "newGameMenu");
++	add(_slrHeadStart, "button", "newGameMenu");
++	add(_txtHeadStartValue, "text", "newGameMenu");
++	add(_txtHeadStartDesc, "ironman", "newGameMenu");
+ 
+ 	centerAllSurfaces();
+ 
+@@ -126,6 +143,43 @@ NewGameState::NewGameState()
+ 	_txtIronman->setWordWrap(true);
+ 	_txtIronman->setVerticalAlign(ALIGN_MIDDLE);
+ 	_txtIronman->setText(tr("STR_IRONMAN_DESC"));
++
++	// Starting cash, $1M to $20M in $100k steps; starts on what the ruleset gives.
++	_txtCash->setText(tr("STR_STARTING_CASH"));
++	_slrCash->setRange(10, 200);
++	_slrCash->setValue(std::max(10, std::min(200, _game->getMod()->getInitialFunding() / 100)));
++	_slrCash->onChange((ActionHandler)&NewGameState::slrChange);
++
++	// Cobra's head start, 0 to 24 months.
++	_txtHeadStart->setText(tr("STR_COBRA_HEAD_START"));
++	_slrHeadStart->setRange(0, 24);
++	_slrHeadStart->setValue(0);
++	_slrHeadStart->onChange((ActionHandler)&NewGameState::slrChange);
++	_txtHeadStartDesc->setWordWrap(true);
++	_txtHeadStartDesc->setText(tr("STR_COBRA_HEAD_START_DESC"));
++
++	updateSliderTexts();
++}
++
++/**
++ * Writes the two value lines from the sliders.
++ */
++void NewGameState::updateSliderTexts()
++{
++	const int cash = _slrCash->getValue();   // in $100k
++	std::ostringstream c;
++	c << cash / 10 << "." << cash % 10 << " MILLION";   // the menu font draws $ like an S
++	_txtCashValue->setText(c.str());
++	const int months = _slrHeadStart->getValue();
++	if (months == 0)
++		_txtHeadStartValue->setText(tr("STR_HEAD_START_NONE"));
++	else
++		_txtHeadStartValue->setText(tr("STR_HEAD_START_MONTHS").arg(months));
++}
++
++void NewGameState::slrChange(Action *)
++{
++	updateSliderTexts();
+ }
+ 
+ /**
+@@ -170,6 +224,11 @@ void NewGameState::btnOkClick(Action *)
+ 	SavedGame *save = _game->getMod()->newSave(diff);
+ 	save->setDifficulty(diff);
+ 	save->setIronman(_btnIronman->getPressed());
++	// G.I. Joe: the two sliders. Cash replaces the opening balance only - monthly funding is
++	// still the countries'. The head start moves Cobra's clock, then seeds what it implies.
++	save->setFunds((int64_t)_slrCash->getValue() * 100000);
++	save->setCobraHeadStart(_slrHeadStart->getValue());
++	save->cobraApplyHeadStart(_game->getMod());
+ 	_game->setSavedGame(save);
+ 
+ 	GeoscapeState *gs = new GeoscapeState;
+diff --git a/src/Menu/NewGameState.h b/src/Menu/NewGameState.h
+index db4fe9c..f6ee3fb 100644
+--- a/src/Menu/NewGameState.h
++++ b/src/Menu/NewGameState.h
+@@ -26,6 +26,7 @@ class TextButton;
+ class ToggleTextButton;
+ class Window;
+ class Text;
++class Slider;
+ 
+ /**
+  * New Game window that displays a list
+@@ -41,6 +42,10 @@ private:
+ 	TextButton *_btnOk, *_btnCancel;
+ 	Window *_window;
+ 	Text *_txtTitle, *_txtIronman;
++	// G.I. Joe: starting cash (in $100k steps) and Cobra's head start in months.
++	Text *_txtCash, *_txtCashValue, *_txtHeadStart, *_txtHeadStartValue, *_txtHeadStartDesc;
++	Slider *_slrCash, *_slrHeadStart;
++	void updateSliderTexts();
+ public:
+ 	/// Creates the New Game state.
+ 	NewGameState();
+@@ -50,6 +55,8 @@ public:
+ 	void btnOkClick(Action *action);
+ 	/// Handler for clicking the Cancel button.
+ 	void btnCancelClick(Action *action);
++	/// Either slider moved: rewrite its value line.
++	void slrChange(Action *action);
+ };
+ 
+ }
 diff --git a/src/Mod/AlienDeployment.cpp b/src/Mod/AlienDeployment.cpp
 index 018d604..b18330e 100644
 --- a/src/Mod/AlienDeployment.cpp
@@ -7622,7 +7831,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..321d638 100644
+index 1885346..456e350 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,7 @@
@@ -7717,7 +7926,7 @@ index 1885346..321d638 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3274,118 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3274,121 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -7812,6 +8021,9 @@ index 1885346..321d638 100644
 +		}
 +		std::sort(_cobraKitTierByMonth.begin(), _cobraKitTierByMonth.end());
 +		econ.tryRead("starvedHeadcount", _cobraStarvedHeadcount);
++		econ.tryRead("headStartFundsPerMonth", _cobraHeadStartFunds);
++		econ.tryRead("headStartMaterielPerMonth", _cobraHeadStartMateriel);
++		econ.tryRead("headStartRegion", _cobraHeadStartRegion);
 +	}
 +	// Cobra's own research, authored in the ruleset. Declared outside cobraEconomy because it is
 +	// a tech tree rather than a tuning number, and because John will be writing it.
@@ -7836,7 +8048,7 @@ index 1885346..321d638 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3831,6 +4000,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4003,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -7862,7 +8074,7 @@ index 1885346..321d638 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4257,14 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4260,14 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -7877,7 +8089,7 @@ index 1885346..321d638 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +5965,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +5968,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -7897,7 +8109,7 @@ index 1885346..321d638 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +5988,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +5991,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -7905,7 +8117,7 @@ index 1885346..321d638 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6002,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6005,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -7945,7 +8157,7 @@ index 1885346..321d638 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..4f1a7f6 100644
+index 2242d13..3af92fb 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,7 @@ class SavedGame;
@@ -7998,7 +8210,7 @@ index 2242d13..4f1a7f6 100644
  	std::map<std::string, RuleBaseFacility*> _facilities;
  	std::map<std::string, RuleCraft*> _crafts;
  	std::map<std::string, RuleCraftWeapon*> _craftWeapons;
-@@ -327,6 +356,27 @@ private:
+@@ -327,6 +356,29 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -8022,11 +8234,13 @@ index 2242d13..4f1a7f6 100644
 +	std::vector<std::pair<size_t, int> > _cobraKitTierByMonth;
 +	std::vector<RuleCobraProject> _cobraProjects;
 +	int _cobraStarvedHeadcount;
++	int _cobraHeadStartFunds = 110, _cobraHeadStartMateriel = 80;
++	std::string _cobraHeadStartRegion = "STR_NORTH_AMERICA";
 +	std::vector<std::string> _cobraSitesIndex;
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +742,38 @@ public:
+@@ -692,6 +744,44 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -8062,6 +8276,12 @@ index 2242d13..4f1a7f6 100644
 +	const std::vector<RuleCobraProject> &getCobraProjects() const { return _cobraProjects; }
 +	/// Men dropped from every rank entry in a region Cobra cannot pay for.
 +	int getCobraStarvedHeadcount() const { return _cobraStarvedHeadcount; }
++	/// What one month of New Game head start banks for Cobra, and where.
++	/// Starting funds in thousands, as the ruleset sets them (initialFunding).
++	int getInitialFunding() const { return _initialFunding; }
++	int getCobraHeadStartFunds() const { return _cobraHeadStartFunds; }
++	int getCobraHeadStartMateriel() const { return _cobraHeadStartMateriel; }
++	const std::string &getCobraHeadStartRegion() const { return _cobraHeadStartRegion; }
  	/// Gets the available regions.
  	const std::vector<std::string> &getRegionsList() const;
  	/// Gets the ruleset for a facility type.
@@ -9127,7 +9347,7 @@ index 6c121c7..a5b4ba0 100644
  	std::map<std::string, int> &getReinforcementsMemory() { return _reinforcementsMemory; }
  	/// Gets the map blocks used for reinforcements.
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..78bb053 100644
+index 9ca9637..7cc3ef9 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,6 +21,7 @@
@@ -9227,7 +9447,15 @@ index 9ca9637..78bb053 100644
  void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  {
  	std::string filepath = Options::getMasterUserFolder() + filename;
-@@ -399,6 +460,13 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -389,6 +450,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+ 	if (reader["rng"] && (_ironman || !Options::newSeedOnLoad))
+ 		RNG::setSeed(reader["rng"].readVal<uint64_t>());
+ 	reader.tryRead("monthsPassed", _monthsPassed);
++	reader.tryRead("cobraHeadStart", _cobraHeadStart);
+ 	reader.tryRead("daysPassed", _daysPassed);
+ 	reader.tryRead("vehiclesLost", _vehiclesLost);
+ 	reader.tryRead("craftLostDogfight", _craftLostDogfight);
+@@ -399,6 +461,13 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	reader.tryRead("funds", _funds);
  	reader.tryRead("maintenance", _maintenance);
  	reader.tryRead("userNotes", _userNotes);
@@ -9241,7 +9469,7 @@ index 9ca9637..78bb053 100644
  	reader.tryRead("geoscapeDebugLog", _geoscapeDebugLog);
  	reader.tryRead("researchScores", _researchScores);
  	reader.tryRead("incomes", _incomes);
-@@ -649,6 +717,21 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -649,6 +718,21 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  		}
  	}
  	_alienStrategy->load(reader["alienStrategy"], mod);
@@ -9263,7 +9491,7 @@ index 9ca9637..78bb053 100644
  
  	for (const auto& weHardlyKnewYe : reader["deadSoldiers"].children())
  	{
-@@ -690,6 +773,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -690,6 +774,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	}
  
  	_scriptValues.load(reader, mod->getScriptGlobal());
@@ -9271,7 +9499,15 @@ index 9ca9637..78bb053 100644
  }
  
  void SavedGame::loadTemplates(const YAML::YamlNodeReader& reader, const Mod* mod)
-@@ -790,6 +874,16 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -779,6 +864,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+ 	writer.write("difficulty", _difficulty);
+ 	writer.write("end", _end);
+ 	writer.write("monthsPassed", _monthsPassed);
++	if (_cobraHeadStart) writer.write("cobraHeadStart", _cobraHeadStart);
+ 	writer.write("daysPassed", _daysPassed);
+ 	writer.write("vehiclesLost", _vehiclesLost);
+ 	writer.write("craftLostDogfight", _craftLostDogfight);
+@@ -790,6 +876,16 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("funds", _funds);
  	writer.write("maintenance", _maintenance);
  	writer.write("userNotes", _userNotes);
@@ -9288,7 +9524,7 @@ index 9ca9637..78bb053 100644
  	if (Options::oxceGeoscapeDebugLogMaxEntries > 0 && _geoscapeDebugLog.size() > 0)
  	{
  		auto geoDebugLog = writer["geoscapeDebugLog"];
-@@ -849,8 +943,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -849,8 +945,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("hiddenPurchaseItems", _hiddenPurchaseItemsMap);
  	writer.write("customRuleCraftDeployments", _customRuleCraftDeployments);
  	_alienStrategy->save(writer["alienStrategy"]);
@@ -9299,7 +9535,7 @@ index 9ca9637..78bb053 100644
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
  	{
  		if (!_globalEquipmentLayout[j].empty())
-@@ -1530,8 +1626,73 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
+@@ -1530,8 +1628,73 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
   * @param base the base, in which the project was finished
   * @param score should the score be awarded or not?
   */
@@ -9373,7 +9609,7 @@ index 9ca9637..78bb053 100644
  	if (isResearchRuleStatusDisabled(research->getName()))
  	{
  		return;
-@@ -2579,6 +2740,898 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2742,950 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -9400,7 +9636,7 @@ index 9ca9637..78bb053 100644
 +	// sets; research is the organic driver inside it, which is what a Cobra player will be
 +	// playing. With no projects authored, research returns -1 and the table rules alone, so the
 +	// behaviour verified before this existed is unchanged.
-+	out.maxKitTier = mod->getCobraKitTierCap((size_t)getMonthsPassed());
++	out.maxKitTier = mod->getCobraKitTierCap((size_t)getCobraMonth());
 +	const int researched = cobraResearchedKitTier(mod);
 +	if (researched >= 0 && (out.maxKitTier < 0 || researched < out.maxKitTier))
 +	{
@@ -9839,7 +10075,7 @@ index 9ca9637..78bb053 100644
 +		}
 +	}
 +
-+	const size_t months = (size_t)getMonthsPassed();
++	const size_t months = (size_t)getCobraMonth();   // Cobra's clock, head start included
 +
 +	// Every site that can host benches, and how many of each one's are free.
 +	std::map<std::string, int> freeSlots;
@@ -9990,11 +10226,63 @@ index 9ca9637..78bb053 100644
 + * Returns -1 when no project names a tier, which leaves the month table in charge and is how the
 + * game behaved before any of this existed.
 + */
++/**
++ * The New Game head start, applied once before the first day.
++ *
++ * Cobra's clock already runs ahead by itself (getCobraMonth), which decides who it may field
++ * and the calendar's weapon ceiling. That alone is not enough: the weapon tier is ALSO capped
++ * by what Cobra has researched, so a month-9 Cobra with an empty lab still carries pistols.
++ * So every project whose earliestMonth the head start has reached is handed over finished -
++ * Cobra had those months. And its home network is given the stock those months would have
++ * banked, at the rate cobraEconomy's headStart* keys set (by default one front company's net
++ * income and one factory's output a month). Sites are not planted: Cobra builds those itself,
++ * and being richer it builds them sooner.
++ */
++void SavedGame::cobraApplyHeadStart(const Mod *mod)
++{
++	if (_cobraHeadStart <= 0)
++	{
++		return;
++	}
++	const auto &rules = mod->getCobraProjects();
++	if (_cobraEconomy->getProjects().empty())
++	{
++		for (const auto &r : rules)
++		{
++			CobraProject p;
++			p.type = r.type;
++			p.cost = r.cost;
++			_cobraEconomy->getProjects().push_back(p);
++		}
++	}
++	int done = 0;
++	for (const auto &r : rules)
++	{
++		if ((size_t)_cobraHeadStart < r.earliestMonth) continue;
++		for (auto &p : _cobraEconomy->getProjects())
++		{
++			if (p.type == r.type && p.progress < p.cost)
++			{
++				p.progress = p.cost;
++				++done;
++			}
++		}
++	}
++	const std::string &region = mod->getCobraHeadStartRegion();
++	_cobraEconomy->addFunds(region, _cobraHeadStart * mod->getCobraHeadStartFunds());
++	_cobraEconomy->addMateriel(region, _cobraHeadStart * mod->getCobraHeadStartMateriel());
++	_cobraEconomy->mirrorToCounters(*_alienStrategy);
++	Log(LOG_INFO) << "[econ] head start " << _cobraHeadStart << " months: " << done
++		<< " projects finished, " << region << " funds=" << _cobraEconomy->getFunds(region)
++		<< " materiel=" << _cobraEconomy->getMateriel(region)
++		<< ", Cobra opens the campaign at month " << (_cobraHeadStart + 1);
++}
++
 +int SavedGame::cobraResearchedKitTier(const Mod *mod) const
 +{
 +	int best = -1;
 +	bool anyNamesATier = false;
-+	const size_t months = (size_t)getMonthsPassed();
++	const size_t months = (size_t)getCobraMonth();   // Cobra's clock, head start included
 +	for (const auto &r : mod->getCobraProjects())
 +	{
 +		if (r.unlocksKitTier < 0) continue;
@@ -10272,7 +10560,7 @@ index 9ca9637..78bb053 100644
  Region *SavedGame::locateRegion(double lon, double lat) const
  {
  	Region* found = nullptr;
-@@ -2995,6 +4048,35 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
+@@ -2995,6 +4102,35 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
   * @param soldier Pointer to dead soldier.
   * @param cause Pointer to cause of death, NULL if missing in action.
   */
@@ -10309,7 +10597,7 @@ index 9ca9637..78bb053 100644
  {
  	if (resetArmor)
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..2aba6cc 100644
+index d985908..780b53d 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -37,6 +37,7 @@ namespace OpenXcom
@@ -10382,7 +10670,17 @@ index d985908..2aba6cc 100644
  	SavedBattleGame *_battleGame;
  	std::vector<const RuleResearch*> _discovered;
  	std::vector<ResearchDiaryEntry*> _researchDiary;
-@@ -164,6 +199,7 @@ private:
+@@ -157,6 +192,9 @@ private:
+ 	bool _togglePersonalLight, _toggleNightVision;
+ 	int _toggleBrightness;
+ 	int _monthsPassed;
++	/// Months Cobra starts ahead of the story, chosen on the New Game screen. Cobra's own clock
++	/// (who it fields, what it carries, what it researches) reads getCobraMonth(); the story does not.
++	int _cobraHeadStart = 0;
+ 	int _daysPassed;
+ 	int _vehiclesLost, _craftLostDogfight, _craftLostMission;
+ 	std::string _graphRegionToggles;
+@@ -164,6 +202,7 @@ private:
  	std::string _graphFinanceToggles;
  	std::vector<const RuleResearch*> _poppedResearch;
  	std::vector<Soldier*> _deadSoldiers;
@@ -10390,7 +10688,7 @@ index d985908..2aba6cc 100644
  	size_t _selectedBase;
  	std::string _lastselectedArmor; //contains the last selected armor
  	std::string _globalEquipmentLayoutName[MAX_EQUIPMENT_LAYOUT_TEMPLATES];
-@@ -293,6 +329,8 @@ public:
+@@ -293,6 +332,8 @@ public:
  	void makeAllResearchDiscovered(const Mod* mod);
  	/// Add a finished ResearchProject
  	void addFinishedResearch(const RuleResearch *research, const Mod *mod, Base *base, bool score = true);
@@ -10399,7 +10697,7 @@ index d985908..2aba6cc 100644
  	/// Add a new record to the research diary
  	void addResearchDiaryEntry(ResearchDiaryEntry* entry);
  	/// Gets the research diary.
-@@ -395,6 +433,32 @@ public:
+@@ -395,6 +436,32 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -10432,7 +10730,7 @@ index d985908..2aba6cc 100644
  	/// Read-only access to the alien strategy data.
  	const AlienStrategy &getAlienStrategy() const { return *_alienStrategy; }
  	/// Full access to the current alien missions.
-@@ -409,6 +473,10 @@ public:
+@@ -409,6 +476,10 @@ public:
  	const std::vector<GeoscapeEvent*> &getGeoscapeEvents() const { return _geoscapeEvents; }
  	/// Locate a region containing a position.
  	Region *locateRegion(double lon, double lat) const;
@@ -10443,7 +10741,21 @@ index d985908..2aba6cc 100644
  	/// Locate a region containing a Target.
  	Region *locateRegion(const Target &target) const;
  	/// Locate a country containing a position.
-@@ -493,6 +561,11 @@ public:
+@@ -419,6 +490,13 @@ public:
+ 	int selectSoldierNationalityByLocation(const Mod* mod, const RuleSoldier* rule, const Target* target) const;
+ 	/// Return the month counter.
+ 	int getMonthsPassed() const;
++	/// Cobra's month: the campaign month plus the head start. -1 (New Battle) stays -1.
++	int getCobraMonth() const { return _monthsPassed < 0 ? _monthsPassed : _monthsPassed + _cobraHeadStart; }
++	int getCobraHeadStart() const { return _cobraHeadStart; }
++	void setCobraHeadStart(int months) { _cobraHeadStart = months < 0 ? 0 : months; }
++	/// Gives Cobra what a head start means on day one: the research its months allow and the
++	/// stock its home network would have banked. Called once, from the New Game screen.
++	void cobraApplyHeadStart(const Mod *mod);
+ 	/// Return the day counter.
+ 	int getDaysPassed() const { return _daysPassed; }
+ 	void increaseDaysPassed() { _daysPassed++; }
+@@ -493,6 +571,11 @@ public:
  	bool isUfoOnIgnoreList(int ufoId);
  	/// Handles a soldier's death.
  	std::vector<Soldier*>::iterator killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause = 0);
@@ -10455,7 +10767,7 @@ index d985908..2aba6cc 100644
  	/// enables/disables autosell for an item type
  	void setAutosell(const RuleItem *itype, const bool enabled);
  	/// get autosell state for an item type
-@@ -529,6 +602,13 @@ public:
+@@ -529,6 +612,13 @@ public:
  	void handlePrimaryResearchSideEffects(const std::vector<const RuleResearch*> &topicsToCheck, const Mod* mod, Base* base);
  	/// Gets the list of user notes.
  	std::vector<std::string>& getUserNotes() { return _userNotes; }

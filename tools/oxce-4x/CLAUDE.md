@@ -55,6 +55,18 @@ allows for the current month. Organic inside the window, impossible outside it.
 No per-unit month gate exists anywhere in the engine. That is the one piece of
 plumbing the calendar actually needs.
 
+## The New Game head start (12 Nov)
+
+John asked for a slider for how strong Cobra starts, and one for starting cash.
+Cobra now has its own clock: `SavedGame::getCobraMonth()` = campaign month +
+`cobraHeadStart` (0-24, chosen on New Game). Unit availability, the kit
+ceiling, the item-level table, Cobra research gates and the race a mission
+sends all read it. **The story does not**: mission scripts still schedule on
+the real month, so Act 1 plays from the start whatever the head start.
+`cobraApplyHeadStart` finishes every Cobra project the head start has reached
+and banks `headStartFundsPerMonth` / `headStartMaterielPerMonth` (cobraEconomy
+in gijoe_tuning.rul) per month in `headStartRegion`. It does not plant sites.
+
 ## Where the open work is written down
 
 `BACK_BURNER.md` in this directory, and it keeps three things apart on
@@ -95,7 +107,15 @@ mission calls for them.
 Now `earliest: 22` with `missionOnly: true`, so a scripted mission may still
 name one and a garrison may not. Month 0 above fields troopers only.
 
-### Months 1–3 are handguns and knives — STILL BROKEN, but not where this said
+### ~~Months 1–3 are handguns and knives~~ — fixed 12 Nov
+
+Six-tier ladder in every Cobra deployment (`gen_cobra_sites.py` for the sites,
+`gen_cobra_kit.py` for the stock deployments the mod still fights), six-entry
+`maxKitTierByMonth`, `gijoe_item_levels.rul` so the base table reaches tier 5,
+and pulse rifle / heavy pulse research tiers. There is still **no knife item**,
+so months 1-3 are handguns only. The history below is kept for why.
+
+#### (history) STILL BROKEN, but not where this said
 
 The old diagnosis was that nothing checked the month. **That part is fixed and
 was already fixed when this note still said otherwise.** `maxKitTierByMonth`
