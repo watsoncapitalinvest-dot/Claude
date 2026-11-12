@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""The equipment screen's backdrop, painted fresh: TAC01.SCR and its sharp twin.
+"""The equipment screen's 8-bit backdrop, TAC01.SCR, in the console's colours.
+
+SUPERSEDED FOR DISPLAY. Since John's "it doesnt look crisp  build it from
+scratch", HiUI draws this screen itself at display resolution (nativeBackdrop,
+nativeKey, nativeText in Engine/HiUI.cpp) and nothing enlarged from a bitmap is
+shown. This file now only writes the 8-bit TAC01.png the game runs on - what
+shows with HiUI off, and the colours a pressed key inverts. The notes below
+describe the layout both share.
 
     python3 build/make_inventory_bg.py [--write]
 
@@ -187,9 +194,8 @@ def main(write):
     print('preview', prev)
     if write:
         out = os.path.join(MOD, 'Resources', 'Backgrounds')
-        hi.save(os.path.join(out, 'TAC01_hi.png'))
         base.save(os.path.join(out, 'TAC01.png'))
-        print('written TAC01.png (320x200) and TAC01_hi.png (1920x1200)')
+        print('written TAC01.png (320x200)')
 
 
 if __name__ == '__main__':

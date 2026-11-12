@@ -631,7 +631,7 @@ index 0631f32..5e821a7 100644
  		{
  			Position pos = bunit->getPosition();
 diff --git a/src/Battlescape/Inventory.cpp b/src/Battlescape/Inventory.cpp
-index 406077c..f35df8f 100644
+index 406077c..4f6bd64 100644
 --- a/src/Battlescape/Inventory.cpp
 +++ b/src/Battlescape/Inventory.cpp
 @@ -17,6 +17,8 @@
@@ -692,15 +692,17 @@ index 406077c..f35df8f 100644
  }
  
  /**
-@@ -314,6 +324,7 @@ void Inventory::drawItems()
+@@ -314,6 +324,9 @@ void Inventory::drawItems()
  
  	ScriptWorkerBlit work;
  	_items->clear();
 +	_hiItems.clear();
++	_hiNumbers.clear();
++	const bool native = HiUI::nativeOn();
  	Uint8 color = _game->getMod()->getInterface("inventory")->getElement("numStack")->color;
  	Uint8 color2 = _game->getMod()->getInterface("inventory")->getElement("numStack")->color2;
  	if (_selUnit != 0)
-@@ -344,6 +355,7 @@ void Inventory::drawItems()
+@@ -344,6 +357,7 @@ void Inventory::drawItems()
  			}
  			BattleItem::ScriptFill(&work, invItem, save, BODYPART_ITEM_INVENTORY, _animFrame, 0);
  			work.executeBlit(frame, _items, x, y, 0);
@@ -708,7 +710,17 @@ index 406077c..f35df8f 100644
  
  			// two-handed indicator
  			if (invItem->getSlot()->getType() == INV_HAND)
-@@ -401,6 +413,7 @@ void Inventory::drawItems()
+@@ -357,7 +371,8 @@ void Inventory::drawItems()
+ 					text.setX(invItem->getSlot()->getX() + RuleInventory::HAND_W * RuleInventory::SLOT_W - 5);
+ 					text.setY(invItem->getSlot()->getY() + RuleInventory::HAND_H * RuleInventory::SLOT_H - 7);
+ 					text.setValue(2);
+-					text.blit(_items->getSurface());
++					if (native) _hiNumbers.emplace_back(text.getX() + 5, text.getY() + 6, 2, text.getColor());
++					else text.blit(_items->getSurface());
+ 				}
+ 			}
+ 
+@@ -401,6 +416,7 @@ void Inventory::drawItems()
  			y = (groundItem->getSlot()->getY() + groundItem->getSlotY() * RuleInventory::SLOT_H);
  			BattleItem::ScriptFill(&work, groundItem, save, BODYPART_ITEM_INVENTORY, _animFrame, 0);
  			work.executeBlit(frame, _items, x, y, 0);
@@ -716,7 +728,38 @@ index 406077c..f35df8f 100644
  
  			// grenade primer indicators
  			if (groundItem->getFuseTimer() >= 0 && groundItem->getRules()->getInventoryWidth() > 0)
-@@ -647,6 +660,19 @@ void Inventory::blit(SDL_Surface *surface)
+@@ -445,7 +461,8 @@ void Inventory::drawItems()
+ 				_stackNumber->setValue(fatalWounds);
+ 				_stackNumber->draw();
+ 				_stackNumber->setColor(color2);
+-				_stackNumber->blit(stackLayer.getSurface());
++				if (native) _hiNumbers.emplace_back(_stackNumber->getX() + (fatalWounds > 9 ? 8 : 4), _stackNumber->getY() + 6, fatalWounds, color2);
++				else _stackNumber->blit(stackLayer.getSurface());
+ 			}
+ 
+ 			// item stacking
+@@ -460,7 +477,8 @@ void Inventory::drawItems()
+ 				_stackNumber->setValue(_stackLevel[groundItem->getSlotX()][groundItem->getSlotY()]);
+ 				_stackNumber->draw();
+ 				_stackNumber->setColor(color);
+-				_stackNumber->blit(stackLayer.getSurface());
++				if (native) _hiNumbers.emplace_back(_stackNumber->getX() + (_stackLevel[groundItem->getSlotX()][groundItem->getSlotY()] > 9 ? 8 : 4), _stackNumber->getY() + 6, _stackLevel[groundItem->getSlotX()][groundItem->getSlotY()], color);
++				else _stackNumber->blit(stackLayer.getSurface());
+ 			}
+ 		}
+ 
+@@ -641,12 +659,28 @@ void Inventory::think()
+ void Inventory::blit(SDL_Surface *surface)
+ {
+ 	clear();
+-	_grid->blitNShade(this, 0, 0);
++	// A native screen paints its own wells and sets its own labels at display
++	// resolution, so the 8-bit grid and labels are not put down under them.
++	const bool native = HiUI::nativeOn();
++	if (!native) _grid->blitNShade(this, 0, 0);
+ 	_items->blitNShade(this, 0, 0);
+-	_gridLabels->blitNShade(this, 0, 0);
++	if (!native) _gridLabels->blitNShade(this, 0, 0);
  	_selection->blitNShade(this, _selection->getX(), _selection->getY());
  	_warning->blit(this->getSurface());
  	Surface::blit(surface);
@@ -737,7 +780,7 @@ index 406077c..f35df8f 100644
  
  /**
 diff --git a/src/Battlescape/Inventory.h b/src/Battlescape/Inventory.h
-index 642c538..6617990 100644
+index 642c538..f187c4c 100644
 --- a/src/Battlescape/Inventory.h
 +++ b/src/Battlescape/Inventory.h
 @@ -19,6 +19,8 @@
@@ -757,7 +800,7 @@ index 642c538..6617990 100644
  class BattleItem;
  class BattleUnit;
  class NumberText;
-@@ -92,6 +95,14 @@ public:
+@@ -92,6 +95,17 @@ public:
  	void drawGridLabels(bool showTuCost = false);
  	/// Draws the inventory items.
  	void drawItems();
@@ -766,6 +809,9 @@ index 642c538..6617990 100644
 +	/// The slot labels as drawn this pass. Kept, not thrown away after blitting, so
 +	/// HiUI can set them again at display resolution from their recorded glyphs.
 +	std::vector<Text*> _labelTexts;
++	/// Counts drawn on the items (stack sizes, wounds, the two-handed mark) as
++	/// (right edge x, bottom y, value, colour) - set in type by HiUI on a native screen.
++	std::vector<std::tuple<int, int, int, Uint8> > _hiNumbers;
 +	const std::vector<Text*> &getLabelTexts() const { return _labelTexts; }
 +	const Surface *getGridSurface() const { return _grid; }
 +	const Surface *getLabelSurface() const { return _gridLabels; }
@@ -773,7 +819,7 @@ index 642c538..6617990 100644
  	void drawSelectedItem();
  	/// Gets the currently selected item.
 diff --git a/src/Battlescape/InventoryState.cpp b/src/Battlescape/InventoryState.cpp
-index cea8e65..5c3e906 100644
+index cea8e65..abcb852 100644
 --- a/src/Battlescape/InventoryState.cpp
 +++ b/src/Battlescape/InventoryState.cpp
 @@ -17,6 +17,7 @@
@@ -818,16 +864,57 @@ index cea8e65..5c3e906 100644
  	_txtPosition = new Text(70, 9, 65, 95);
  	_txtNameStatic = new Text(210, 17, 28, 6);
  	_txtName = new TextEdit(this, 210, 17, 28, 6);
-@@ -149,6 +168,8 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
+@@ -149,6 +168,38 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
  
  	// Set up objects
  	_game->getMod()->getSurface("TAC01.SCR")->blitNShade(_bg, 0, 0);
-+	// _bg is a COPY of TAC01, so its sharp twin is found only through an alias.
-+	HiUI::aliasImage(_bg, _game->getMod()->getSurface("TAC01.SCR"));
++	// BUILT FROM SCRATCH AT DISPLAY RESOLUTION. John: "it doesnt look crisp
++	// build it from scratch". The plate, a well for every slot, the keys and all
++	// the type are drawn by HiUI at the size they are shown; TAC01 underneath is
++	// only what the 8-bit game still clicks on.
++	if (HiUI::enabled())
++	{
++		std::vector<SDL_Rect> wells;
++		for (const auto &invPair : *_game->getMod()->getInventories())
++		{
++			const RuleInventory *ri = invPair.second;
++			if (ri->getType() == INV_SLOT)
++				for (const auto &sl : *ri->getSlots())
++					wells.push_back(SDL_Rect{ (Sint16)(ri->getX() + RuleInventory::SLOT_W * sl.x), (Sint16)(ri->getY() + RuleInventory::SLOT_H * sl.y), RuleInventory::SLOT_W, RuleInventory::SLOT_H });
++			else if (ri->getType() == INV_HAND)
++				wells.push_back(SDL_Rect{ (Sint16)ri->getX(), (Sint16)ri->getY(), RuleInventory::HAND_W * RuleInventory::SLOT_W, RuleInventory::HAND_H * RuleInventory::SLOT_H });
++			else if (ri->getType() == INV_GROUND)
++				for (int x = ri->getX(); x < 320; x += RuleInventory::SLOT_W)
++					for (int y = ri->getY(); y < 200; y += RuleInventory::SLOT_H)
++						wells.push_back(SDL_Rect{ (Sint16)x, (Sint16)y, RuleInventory::SLOT_W, (Uint16)std::min(RuleInventory::SLOT_H, 201 - y) });
++		}
++		HiUI::nativeBackdrop(_bg, wells);
++		HiUI::nativeKey(_btnOk, "OK");
++		HiUI::nativeKey(_btnPrev, "<");
++		HiUI::nativeKey(_btnNext, ">");
++		HiUI::nativeKey(_btnUnload, "UNLOAD");
++		HiUI::nativeKey(_btnGround, "->");
++		HiUI::nativeKey(_btnCreateTemplate, "COPY");
++		HiUI::nativeKey(_btnApplyTemplate, "PASTE");
++		for (Surface *t : std::initializer_list<Surface*>{ _txtPosition, _txtNameStatic, _txtName, _txtTus, _txtWeight,
++			_txtStatLine1, _txtStatLine2, _txtStatLine3, _txtStatLine4, _txtItem, _txtAmmo, _btnQuickSearch })
++			HiUI::nativeText(t);
++	}
  	add(_btnArmor, "buttonArmor", "inventory", _bg);
  
  	add(_soldier);
-@@ -432,6 +453,7 @@ void InventoryState::init()
+@@ -357,6 +408,10 @@ static void _clearInventoryTemplate(std::vector<EquipmentLayoutItem*> &inventory
+  */
+ InventoryState::~InventoryState()
+ {
++	for (const Surface *s : std::initializer_list<const Surface*>{ _bg, _btnOk, _btnPrev, _btnNext, _btnUnload, _btnGround,
++		_btnCreateTemplate, _btnApplyTemplate, _txtPosition, _txtNameStatic, _txtName, _txtTus, _txtWeight,
++		_txtStatLine1, _txtStatLine2, _txtStatLine3, _txtStatLine4, _txtItem, _txtAmmo, _btnQuickSearch })
++		HiUI::nativeForget(s);
+ 	_clearInventoryTemplate(_curInventoryTemplate);
+ 	_clearInventoryTemplate(_tempInventoryTemplate);
+ 
+@@ -432,6 +487,7 @@ void InventoryState::init()
  	}
  
  	_soldier->clear();
@@ -835,7 +922,7 @@ index cea8e65..5c3e906 100644
  	_btnRank->clear();
  
  	if (Options::oxceInventoryShowUnitSlot)
-@@ -510,7 +532,7 @@ void InventoryState::init()
+@@ -510,7 +566,7 @@ void InventoryState::init()
  			_reloadUnit = false;
  		}
  
@@ -844,7 +931,7 @@ index cea8e65..5c3e906 100644
  		auto* frame = texture->getFrame(s->getRankSpriteBattlescape());
  		if (frame)
  		{
-@@ -556,6 +578,7 @@ void InventoryState::init()
+@@ -556,6 +612,7 @@ void InventoryState::init()
  				surf = _game->getMod()->getSurface(look, true);
  			}
  			surf->blitNShade(_soldier, 0, 0);
@@ -852,7 +939,7 @@ index cea8e65..5c3e906 100644
  		}
  	}
  	else
-@@ -572,6 +595,7 @@ void InventoryState::init()
+@@ -572,6 +629,7 @@ void InventoryState::init()
  		if (armorSurface)
  		{
  			armorSurface->blitNShade(_soldier, 0, 0);
@@ -2293,10 +2380,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..f0c94ad
+index 0000000..6240d16
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,1108 @@
+@@ -0,0 +1,1527 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -2316,6 +2403,7 @@ index 0000000..f0c94ad
 +#include "../Interface/TextEdit.h"
 +#include "../Battlescape/Inventory.h"
 +#include <SDL_image.h>
++#include "../Interface/BattlescapeButton.h"
 +#include <vector>
 +#include <unordered_map>
 +#include <algorithm>
@@ -2658,6 +2746,324 @@ index 0000000..f0c94ad
 +
 +	bool shown(const Surface *s) { return s->getVisible() && !s->isHidden(); }
 +	R rectOf(const Surface *s) { return R{ s->getX(), s->getY(), s->getX() + s->getWidth(), s->getY() + s->getHeight() }; }
++
++	// ===================================================================== NATIVE
++	// Everything below draws in DISPLAY pixels from shapes and outlines, so it is
++	// as sharp as the screen it lands on. Base coordinates are mapped with the
++	// same affine the zoom uses, not snapped to whole base pixels.
++	inline double DX(double bx) { return xs[0] + bx * (double)(xs[bw] - xs[0]) / bw; }
++	inline double DY(double by) { return ys[0] + by * (double)(ys[bh] - ys[0]) / bh; }
++	inline double SK() { return (double)(ys[bh] - ys[0]) / bh; }   // display px per base px
++
++	struct Face
++	{
++		Img img; int em = 0, asc = 0, desc = 0, cap = 0; bool ok = false;
++		struct G { int x = 0, y = 0, w = 0, h = 0, l = 0, t = 0; float adv = 0; bool ok = false; } g[256];
++	};
++	std::unordered_map<std::string, Face> faces;
++	const Face *face(const std::string &name)
++	{
++		auto it = faces.find(name);
++		if (it != faces.end()) return it->second.ok ? &it->second : nullptr;
++		Face f;
++		const std::string base = "Resources/UI/type_" + name;
++		f.img = loadPng(base + ".png");
++		if (f.img.ok && FileMap::fileExists(base + ".txt"))
++		{
++			auto in = FileMap::getIStream(base + ".txt");
++			if (in && (*in >> f.em >> f.asc >> f.desc >> f.cap))
++			{
++				int c, x, y, w, h, l, t; float adv;
++				while (*in >> c >> x >> y >> w >> h >> l >> t >> adv)
++					if (c >= 0 && c < 256) f.g[c] = Face::G{ x, y, w, h, l, t, adv, true };
++				f.ok = f.em > 0 && f.cap > 0;
++			}
++		}
++		if (f.ok) Log(LOG_INFO) << "Typeface: " << name << " (em " << f.em << ")";
++		else Log(LOG_WARNING) << "Typeface missing: " << base;
++		auto &slot = faces[name] = std::move(f);
++		return slot.ok ? &slot : nullptr;
++	}
++
++	/// UTF-8 to the face's Latin-1 range; control tokens dropped, line breaks kept.
++	std::vector<int> latin1(const std::string &s)
++	{
++		std::vector<int> out;
++		for (size_t i = 0; i < s.size();)
++		{
++			unsigned char c = (unsigned char)s[i];
++			int cp, n;
++			if (c < 0x80) { cp = c; n = 1; }
++			else if ((c >> 5) == 6) { cp = c & 0x1F; n = 2; }
++			else if ((c >> 4) == 14) { cp = c & 0x0F; n = 3; }
++			else { cp = c & 0x07; n = 4; }
++			for (int k = 1; k < n && i + k < s.size(); ++k) cp = (cp << 6) | ((unsigned char)s[i + k] & 0x3F);
++			i += n;
++			if (cp == '\n' || cp == 2) { out.push_back('\n'); continue; }
++			if (cp < 32) continue;
++			out.push_back(cp < 256 ? cp : '?');
++		}
++		return out;
++	}
++
++	double lineWidth(const Face &f, const std::vector<int> &s, size_t a, size_t b, double size)
++	{
++		double w = 0;
++		for (size_t i = a; i < b; ++i) if (f.g[s[i]].ok) w += f.g[s[i]].adv;
++		return w * size / f.em;
++	}
++
++	/// One line of type. Each output pixel takes the AREA average of the atlas
++	/// under it, which is what makes a 96 px master come down to 20 px clean.
++	void drawLine(const Face &f, const std::vector<int> &s, size_t a, size_t b, double X, double baseline, double size,
++		Uint32 col, int cx0, int cy0, int cx1, int cy1)
++	{
++		const double k = size / f.em;
++		const int n = std::max(1, std::min(6, (int)std::ceil(1.0 / k)));
++		cx0 = std::max(cx0, 0); cy0 = std::max(cy0, 0); cx1 = std::min(cx1, sw); cy1 = std::min(cy1, sh);
++		double pen = X;
++		const double top = baseline - f.asc * k;
++		for (size_t i = a; i < b; ++i)
++		{
++			const Face::G &g = f.g[s[i]];
++			if (!g.ok) continue;
++			if (g.w > 0 && g.h > 0)
++			{
++				const double gx0 = pen + g.l * k, gy0 = top + g.t * k;
++				const int X0 = std::max(cx0, (int)std::floor(gx0)), X1 = std::min(cx1, (int)std::ceil(gx0 + g.w * k));
++				const int Y0 = std::max(cy0, (int)std::floor(gy0)), Y1 = std::min(cy1, (int)std::ceil(gy0 + g.h * k));
++				for (int Y = Y0; Y < Y1; ++Y)
++				{
++					Uint32 *o = over.data() + (size_t)Y * sw;
++					for (int Xp = X0; Xp < X1; ++Xp)
++					{
++						int sum = 0;
++						for (int sy = 0; sy < n; ++sy)
++						{
++							const double fy = (Y + (sy + 0.5) / n - gy0) / k;
++							if (fy < 0 || fy >= g.h) continue;
++							const Uint32 *row = f.img.px.data() + (size_t)(g.y + (int)fy) * f.img.w + g.x;
++							for (int sx = 0; sx < n; ++sx)
++							{
++								const double fx = (Xp + (sx + 0.5) / n - gx0) / k;
++								if (fx < 0 || fx >= g.w) continue;
++								sum += row[(int)fx] >> 24;
++							}
++						}
++						const int cov = sum / (n * n);
++						if (cov > 0) o[Xp] = mix(o[Xp], col, std::min(255, cov));
++					}
++				}
++			}
++			pen += g.adv * k;
++		}
++	}
++
++	/// Set a string inside a display rectangle: size from the wanted cap height,
++	/// shrunk if a line would not fit across, aligned as asked.
++	void setType(const Face &f, const std::string &str, int X0, int Y0, int X1, int Y1, double capPx, double lineH,
++		int halign, int valign, Uint32 col, bool keepInside = true)
++	{
++		const std::vector<int> s = latin1(str);
++		double size = capPx * f.em / f.cap;
++		std::vector<std::pair<size_t, size_t> > lines;
++		size_t a = 0;
++		for (size_t i = 0; i <= s.size(); ++i)
++			if (i == s.size() || s[i] == '\n') { lines.emplace_back(a, i); a = i + 1; }
++		if (keepInside)
++			for (auto &l : lines)
++			{
++				const double w = lineWidth(f, s, l.first, l.second, size);
++				if (w > X1 - X0 - 1) size *= (X1 - X0 - 1) / w;
++			}
++		const double cap = f.cap * size / f.em;
++		const double total = lineH * (lines.size() - 1) + cap;
++		double y = valign == 1 ? (Y0 + Y1 - total) / 2 : valign == 2 ? Y1 - total - (lineH - cap) / 2 : Y0 + (lineH - cap) / 2;
++		for (auto &l : lines)
++		{
++			const double w = lineWidth(f, s, l.first, l.second, size);
++			const double x = halign == 1 ? (X0 + X1 - w) / 2 : halign == 2 ? X1 - w : X0;
++			drawLine(f, s, l.first, l.second, x, y + cap, size, col, X0 - 2, Y0 - 2, X1 + 2, Y1 + 2);
++			y += lineH;
++		}
++	}
++
++	/// Anti-aliased convex polygon, 4x4 supersampled.
++	void polygonAA(const std::vector<std::pair<double, double> > &p, Uint32 col, int alpha = 255)
++	{
++		double x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
++		for (auto &q : p) { x0 = std::min(x0, q.first); y0 = std::min(y0, q.second); x1 = std::max(x1, q.first); y1 = std::max(y1, q.second); }
++		const int X0 = std::max(0, (int)std::floor(x0)), X1 = std::min(sw, (int)std::ceil(x1));
++		const int Y0 = std::max(0, (int)std::floor(y0)), Y1 = std::min(sh, (int)std::ceil(y1));
++		auto inside = [&](double x, double y)
++		{
++			bool pos = false, neg = false;
++			for (size_t i = 0; i < p.size(); ++i)
++			{
++				const auto &A = p[i], &B = p[(i + 1) % p.size()];
++				const double c = (B.first - A.first) * (y - A.second) - (B.second - A.second) * (x - A.first);
++				if (c > 0) pos = true; else if (c < 0) neg = true;
++			}
++			return !(pos && neg);
++		};
++		for (int Y = Y0; Y < Y1; ++Y)
++		{
++			Uint32 *o = over.data() + (size_t)Y * sw;
++			for (int X = X0; X < X1; ++X)
++			{
++				int c = 0;
++				for (int sy = 0; sy < 4; ++sy) for (int sx = 0; sx < 4; ++sx) c += inside(X + (sx + 0.5) / 4, Y + (sy + 0.5) / 4);
++				if (c) o[X] = mix(o[X], col, c * alpha / 16);
++			}
++		}
++	}
++
++	/// Rounded rectangle, anti-aliased on its outline, solid colour.
++	void roundRect(double x0, double y0, double x1, double y1, double rad, Uint32 col, int alpha = 255)
++	{
++		const int X0 = std::max(0, (int)std::floor(x0)), X1 = std::min(sw, (int)std::ceil(x1));
++		const int Y0 = std::max(0, (int)std::floor(y0)), Y1 = std::min(sh, (int)std::ceil(y1));
++		for (int Y = Y0; Y < Y1; ++Y)
++		{
++			Uint32 *o = over.data() + (size_t)Y * sw;
++			const double py = Y + 0.5;
++			for (int X = X0; X < X1; ++X)
++			{
++				const double px = X + 0.5;
++				const double qx = std::max(std::max(x0 + rad - px, px - (x1 - rad)), 0.0);
++				const double qy = std::max(std::max(y0 + rad - py, py - (y1 - rad)), 0.0);
++				double d;   // signed distance inside the shape
++				if (qx > 0 && qy > 0) d = rad - std::sqrt(qx * qx + qy * qy);
++				else d = std::min(std::min(px - x0, x1 - px), std::min(py - y0, y1 - py));
++				const double cov = std::max(0.0, std::min(1.0, d + 0.5));
++				if (cov > 0) o[X] = mix(o[X], col, (int)(cov * alpha));
++			}
++		}
++	}
++
++	inline Uint32 hash2(int x, int y)
++	{
++		Uint32 h = (Uint32)x * 374761393u + (Uint32)y * 668265263u;
++		h = (h ^ (h >> 13)) * 1274126177u;
++		return h ^ (h >> 16);
++	}
++
++	// The console's colours, the geoscape panel's own (make_panel.py), darker
++	// in the field so equipment reads on it.
++	const Uint32 C_PLATE = 0x282D23, C_WELL = 0x0F100D, C_RIM_DARK = 0x1A1E16, C_RIM_LIGHT = 0x60684F;
++	const Uint32 C_KEY = 0x5C644A, C_KEY_DARK = 0x343A2C, C_KEY_LIT = 0x848C6C, C_INK = 0xE2DEC4, C_LABEL = 0xD6CEA0;
++
++	struct NativeBg { std::vector<SDL_Rect> wells; Img cache; int cx0 = -1, cy0 = -1, cx1 = -1, cy1 = -1; };
++	std::unordered_map<const Surface*, NativeBg> nativeBgs;
++	std::unordered_map<const Surface*, std::string> nativeKeys;
++	std::unordered_map<const Surface*, int> nativeTexts;
++
++	/// Plate and wells for a backdrop, painted once per size into a cache.
++	void paintBackdrop(const Surface *w, NativeBg &nb, int X0, int Y0, int X1, int Y1)
++	{
++		if (!(nb.cache.ok && nb.cx0 == X0 && nb.cy0 == Y0 && nb.cx1 == X1 && nb.cy1 == Y1))
++		{
++			const double k = SK();
++			// the plate: brushed streaks running down, a lift from the upper left, grain
++			for (int Y = Y0; Y < Y1; ++Y)
++			{
++				Uint32 *o = over.data() + (size_t)Y * sw;
++				const double v = (double)(Y - Y0) / std::max(1, Y1 - Y0);
++				for (int X = X0; X < X1; ++X)
++				{
++					const double u = (double)(X - X0) / std::max(1, X1 - X0);
++					const int col = (int)((X - X0) / std::max(1.0, k * 0.5));
++					const int streak = (int)(hash2(col, 7) % 7) - 3;
++					const int grain = (int)(hash2(X, Y) % 5) - 2;
++					const int lift = (int)((1.0 - u * 0.5 - v * 0.5) * 10.0);
++					const int d = streak + grain + lift;
++					const int r = std::max(0, std::min(255, (int)((C_PLATE >> 16) & 255) + d));
++					const int g = std::max(0, std::min(255, (int)((C_PLATE >> 8) & 255) + d));
++					const int b = std::max(0, std::min(255, (int)(C_PLATE & 255) + d));
++					o[X] = rgb(r, g, b);
++				}
++			}
++			// the wells: shadow cast in at the top left, light caught on the lower lip
++			const double bx = w->getX(), by = w->getY();
++			for (const SDL_Rect &c : nb.wells)
++			{
++				const double x0 = DX(bx + c.x + 1.15), y0 = DY(by + c.y + 1.15);
++				const double x1 = DX(bx + c.x + c.w - 0.15), y1 = DY(by + c.y + c.h - 0.15);
++				const double r = k * 0.9;
++				roundRect(x0 - 1, y0 - 0.5, x1 + 1.5, y1 + 1.5, r + 1.5, C_RIM_LIGHT);
++				roundRect(x0 - 1.5, y0 - 1.5, x1 + 0.5, y1 + 0.5, r + 1.5, C_RIM_DARK);
++				roundRect(x0, y0, x1, y1, r, C_WELL);
++			}
++			nb.cache.w = X1 - X0; nb.cache.h = Y1 - Y0; nb.cache.px.resize((size_t)nb.cache.w * nb.cache.h);
++			for (int Y = Y0; Y < Y1; ++Y) memcpy(&nb.cache.px[(size_t)(Y - Y0) * nb.cache.w], over.data() + (size_t)Y * sw + X0, (size_t)nb.cache.w * 4);
++			nb.cache.ok = true; nb.cx0 = X0; nb.cy0 = Y0; nb.cx1 = X1; nb.cy1 = Y1;
++			return;
++		}
++		for (int Y = Y0; Y < Y1; ++Y) memcpy(over.data() + (size_t)Y * sw + X0, &nb.cache.px[(size_t)(Y - Y0) * nb.cache.w], (size_t)nb.cache.w * 4);
++	}
++
++	/// A raised console key on the button's own hitbox.
++	void paintKey(const std::string &legend, int bx0, int by0, int bx1, int by1, bool down)
++	{
++		const double k = SK();
++		const double x0 = DX(bx0 + 0.6), y0 = DY(by0 + 0.6), x1 = DX(bx1 - 0.6), y1 = DY(by1 - 0.6);
++		const double r = k * 1.4, push = down ? k * 0.5 : 0;
++		if (!down) roundRect(x0 + k * 0.4, y0 + k * 0.6, x1 + k * 0.4, y1 + k * 0.6, r, 0x0E0F0C, 200);
++		roundRect(x0, y0 + push, x1, y1 + push, r, 0x16190F);
++		roundRect(x0 + 1.5, y0 + 1.5 + push, x1 - 1.5, y1 - 1.5 + push, r - 1, down ? 0x4C5340 : C_KEY_DARK);
++		roundRect(x0 + 1.5, y0 + 1.5 + push, x1 - 1.5, y1 - k * 0.55 + push, r - 1, down ? 0x4C5340 : C_KEY);
++		if (!down) roundRect(x0 + r * 0.6, y0 + 2 + push, x1 - r * 0.6, y0 + k * 0.9 + push, k * 0.4, C_KEY_LIT, 140);
++		if (down) roundRect(x0 + 1.5, y0 + 1.5 + push, x1 - 1.5, y1 - 1.5 + push, r - 1, rgb(196, 118, 42), 70);
++		const double cx = (x0 + x1) / 2, cy = (y0 + y1) / 2 - k * 0.3 + push;
++		const double ink = C_INK, sh = 0x181B12;
++		(void)ink;
++		auto tri = [&](double s, int dir)
++		{
++			std::vector<std::pair<double, double> > p{ { cx + dir * s * 1.1, cy }, { cx - dir * s * 0.8, cy - s }, { cx - dir * s * 0.8, cy + s } };
++			std::vector<std::pair<double, double> > q = p;
++			for (auto &e : q) { e.first += k * 0.4; e.second += k * 0.4; }
++			polygonAA(q, (Uint32)sh, 200);
++			polygonAA(p, C_INK);
++		};
++		if (legend == "<" || legend == ">") { tri(std::min(x1 - x0, y1 - y0) * 0.24, legend == "<" ? -1 : 1); return; }
++		if (legend == "->")
++		{
++			const double s = (y1 - y0) * 0.26, L = (x1 - x0) * 0.30;
++			std::vector<std::pair<double, double> > shaft{ { cx - L, cy - s * 0.32 }, { cx + L * 0.25, cy - s * 0.32 }, { cx + L * 0.25, cy + s * 0.32 }, { cx - L, cy + s * 0.32 } };
++			std::vector<std::pair<double, double> > head{ { cx + L, cy }, { cx + L * 0.2, cy - s }, { cx + L * 0.2, cy + s } };
++			polygonAA(shaft, C_INK); polygonAA(head, C_INK);
++			return;
++		}
++		if (const Face *f = face("stencil"))
++		{
++			const double cap = (y1 - y0) * 0.42;
++			const double m = k * 3.0;     // a margin of face either side of the legend
++			setType(*f, legend, (int)(x0 + m + k * 0.4), (int)(y0 + push + k * 0.4), (int)(x1 - m + k * 0.4), (int)(y1 + push - k * 0.55 + k * 0.4), cap, cap, 1, 1, (Uint32)sh);
++			setType(*f, legend, (int)(x0 + m), (int)(y0 + push), (int)(x1 - m), (int)(y1 + push - k * 0.55), cap, cap, 1, 1, C_INK);
++		}
++	}
++
++	/// A Text widget's own colour, made readable on the dark plate.
++	Uint32 textColour(Uint8 index)
++	{
++		const SDL_Color &c = base->format->palette->colors[index];
++		const int hi = std::max(c.r, std::max(c.g, c.b)), lo = std::min(c.r, std::min(c.g, c.b));
++		return readable(c.r, c.g, c.b, (hi - lo) > 150);
++	}
++
++	/// Set a Text in the label face over its own rectangle.
++	void nativeType(const Text *t, int bx, int by, Uint32 col)
++	{
++		const Face *f = face("label");
++		if (!f || t->getText().empty()) return;
++		const double k = SK();
++		const int fh = t->getFont() ? t->getFont()->getHeight() : 9;
++		const bool big = fh >= 12;
++		const double cap = fh * (big ? 0.62 : 0.60) * k;
++		const double lineH = (fh + (t->getFont() ? t->getFont()->getSpacing() : 0)) * k;
++		const int X0 = (int)DX(bx), Y0 = (int)DY(by), X1 = (int)DX(bx + t->getWidth()), Y1 = (int)DY(by + t->getHeight());
++		setType(*f, t->getText(), X0, Y0, X1, Y1, cap, lineH, (int)t->getAlign(), (int)t->getVerticalAlign(), col);
++	}
 +}
 +
 +bool enabled()
@@ -2856,6 +3262,53 @@ index 0000000..f0c94ad
 +void after(Surface *w)
 +{
 +	if (!base || !shown(w)) return;
++	// NATIVE SCREEN PIECES first: they are drawn, not looked up.
++	{
++		auto nb = nativeBgs.find(w);
++		if (nb != nativeBgs.end())
++		{
++			R r = rectOf(w);
++			if (clipBase(r))
++			{
++				paintBackdrop(w, nb->second, xs[r.x0], ys[r.y0], xs[r.x1], ys[r.y1]);
++				claim(r);
++			}
++			return;
++		}
++		auto nk = nativeKeys.find(w);
++		if (nk != nativeKeys.end())
++		{
++			R r = rectOf(w);
++			if (clipBase(r))
++			{
++				const BattlescapeButton *bb = dynamic_cast<BattlescapeButton*>(w);
++				paintKey(nk->second, w->getX(), w->getY(), w->getX() + w->getWidth(), w->getY() + w->getHeight(), bb && bb->isInverted());
++				claim(r);
++			}
++			return;
++		}
++		if (nativeTexts.count(w))
++		{
++			const Text *t = dynamic_cast<Text*>(w);
++			int ox = w->getX(), oy = w->getY();
++			if (!t)
++				if (const TextEdit *te = dynamic_cast<TextEdit*>(w))
++					if ((t = te->getTextWidget())) { ox += t->getX(); oy += t->getY(); }
++			R r = rectOf(w);
++			if (t && any && clipBase(r) && scratch.size() == (size_t)(r.x1 - r.x0) * (r.y1 - r.y0))
++			{
++				for (int y = r.y0; y < r.y1; ++y)
++				{
++					const Uint8 *p = row8(y);
++					for (int x = r.x0; x < r.x1; ++x)
++						if (scratch[(size_t)(y - r.y0) * (r.x1 - r.x0) + (x - r.x0)]) tag[y * bw + x] = p[x];
++				}
++				nativeType(t, ox, oy, textColour(t->getColor()));
++			}
++			scratch.clear();
++			return;
++		}
++	}
 +	// A PLAIN SCREEN BACKGROUND WITH A REGISTERED SHARP TWIN.
 +	//
 +	// bgImages was only ever consulted for Window, so a mod could ship
@@ -3123,6 +3576,31 @@ index 0000000..f0c94ad
 +		if (!any) return;
 +		R r = rectOf(inv);
 +		if (!clipBase(r)) return;
++		if (nativeOn())
++		{
++			// Built from scratch: no 8-bit grid, labels or counts were drawn, so
++			// the painted wells show as they are and the type is set here.
++			const int ox = inv->getX(), oy = inv->getY();
++			const double k = SK();
++			if (const Face *f = face("label"))
++			{
++				for (const Text *t : inv->getLabelTexts())
++				{
++					const int X0 = (int)DX(ox + t->getX()), Y1 = (int)DY(oy + t->getY() + t->getHeight());
++					setType(*f, t->getText(), X0, (int)DY(oy + t->getY()), X0 + (int)(140 * k), Y1, 5.6 * k, 9 * k, 0, 2, C_LABEL, false);
++				}
++				for (const auto &n : inv->_hiNumbers)
++				{
++					const int rx = std::get<0>(n), byy = std::get<1>(n);
++					const std::string v = std::to_string(std::get<2>(n));
++					const int X0 = (int)DX(ox + rx - 14), Y0 = (int)DY(oy + byy - 7.5), X1 = (int)DX(ox + rx), Y1 = (int)DY(oy + byy);
++					const Uint32 c = textColour(std::get<3>(n));
++					setType(*f, v, X0 + 2, Y0 + 2, X1 + 2, Y1 + 2, 5.0 * k, 7.5 * k, 2, 2, 0x0A0B08, false);
++					setType(*f, v, X0, Y0, X1, Y1, 5.0 * k, 7.5 * k, 2, 2, c, false);
++				}
++			}
++			return;
++		}
 +		SDL_Surface *gs = const_cast<Surface*>(inv->getGridSurface())->getSurface();
 +		SDL_Surface *ls = const_cast<Surface*>(inv->getLabelSurface())->getSurface();
 +		const int ox = inv->getX(), oy = inv->getY();
@@ -3221,6 +3699,34 @@ index 0000000..f0c94ad
 +void cursor(int x, int y, bool visible)
 +{
 +	curX = x; curY = y; curOn = visible;
++}
++
++void nativeBackdrop(const Surface *bg, const std::vector<SDL_Rect> &wells)
++{
++	if (!enabled() || !bg) return;
++	NativeBg nb;
++	nb.wells = wells;
++	nativeBgs[bg] = std::move(nb);
++}
++
++void nativeKey(const Surface *button, const std::string &legend)
++{
++	if (enabled() && button) nativeKeys[button] = legend;
++}
++
++void nativeText(const Surface *text)
++{
++	if (enabled() && text) nativeTexts[text] = 1;
++}
++
++void nativeForget(const Surface *s)
++{
++	nativeBgs.erase(s); nativeKeys.erase(s); nativeTexts.erase(s);
++}
++
++bool nativeOn()
++{
++	return enabled() && !nativeBgs.empty();
 +}
 +
 +void vectorClear(int layer)
@@ -3407,10 +3913,10 @@ index 0000000..f0c94ad
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..47344fb
+index 0000000..abc5efe
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,60 @@
+@@ -0,0 +1,79 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -3422,6 +3928,7 @@ index 0000000..47344fb
 + */
 +#include <SDL.h>
 +#include <string>
++#include <vector>
 +
 +namespace OpenXcom
 +{
@@ -3469,6 +3976,24 @@ index 0000000..47344fb
 +	/// a stroke shows only where that surface's own pixels still do - so labels and
 +	/// markers blitted after it, and any window opened over it, cover the lines.
 +	void vectorFloor(const Surface *floor);
++
++	/// NATIVE SCREENS. A screen built at display resolution from scratch rather
++	/// than enlarged from 8 bits: the backdrop, its wells and keys are drawn as
++	/// shapes at the size they are shown, and registered text is set in a real
++	/// typeface (Resources/UI/type_<face>) instead of enlarged pixel letters.
++	/// The 8-bit screen underneath still runs the game; this only paints it.
++	///
++	/// A backdrop surface, painted as the console plate with a well cut for each
++	/// rect (base coords relative to the surface).
++	void nativeBackdrop(const Surface *bg, const std::vector<SDL_Rect> &wells);
++	/// A button drawn as a console key with this legend ("<", ">" and "->" are arrows).
++	void nativeKey(const Surface *button, const std::string &legend);
++	/// A Text or TextEdit set in the label face.
++	void nativeText(const Surface *text);
++	/// The screen is closing: forget everything it registered.
++	void nativeForget(const Surface *s);
++	/// Is a native screen up? (Its 8-bit grid, labels and numbers are then not drawn.)
++	bool nativeOn();
 +}
 +}
 diff --git a/src/Engine/Options.cpp b/src/Engine/Options.cpp
@@ -5590,6 +6115,19 @@ index 4b88688..f5c9b71 100644
  	~ArrowButton();
  	/// Sets the arrow button's color.
  	void setColor(Uint8 color) override;
+diff --git a/src/Interface/BattlescapeButton.h b/src/Interface/BattlescapeButton.h
+index 0558521..45b8b71 100644
+--- a/src/Interface/BattlescapeButton.h
++++ b/src/Interface/BattlescapeButton.h
+@@ -40,6 +40,8 @@ protected:
+ 	InversionType _toggleMode;
+ 	Surface *_altSurface;
+ public:
++	/// Drawn pressed right now (HiUI paints the key down).
++	bool isInverted() const { return _inverted; }
+ 	/// Creates a new image button with the specified size and position.
+ 	BattlescapeButton(int width, int height, int x = 0, int y = 0);
+ 	/// Cleans up the image button.
 diff --git a/src/Interface/ComboBox.h b/src/Interface/ComboBox.h
 index dc01de7..bc4de01 100644
 --- a/src/Interface/ComboBox.h
