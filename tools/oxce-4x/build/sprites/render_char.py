@@ -26,6 +26,7 @@ NF = int(arg('--frames', 8))
 OUT = arg('--out')
 DIRS = [int(x) for x in arg('--dirs', '1,2,3,4,5,6,7,8').split(',')]
 HAIR = arg('--hair', '')
+SHADE = '--shade' in sys.argv     # + <frame>_shade.png, the geometry pass for pen shading (factory_blend.py --shade)
 RES = (512, 640)
 
 bpy.ops.wm.open_mainfile(filepath=BLEND)
@@ -34,16 +35,6 @@ for o in list(bpy.data.objects):
     if o.type in ('CAMERA', 'LIGHT'): bpy.data.objects.remove(o)
 arm = [o for o in bpy.data.objects if o.type == 'ARMATURE'][0]
 meshes = [o for o in bpy.data.objects if o.type == 'MESH' and any(m.type == 'ARMATURE' for m in o.modifiers) and not o.hide_render]
-ACTIONS = {}
-for name, path in CLIPS.items():
-    before = set(bpy.data.objects); acts = set(bpy.data.actions)
-    bpy.ops.import_scene.fbx(filepath=path)
-    act = [a for a in bpy.data.actions if a not in acts][0]
-    act.use_fake_user = True; act.name = 'clip_' + name
-    ACTIONS[name] = act
-    for o in [o for o in bpy.data.objects if o not in before]: bpy.data.objects.remove(o, do_unlink=True)
-
-
 def fcurves(act):
     if hasattr(act, 'fcurves') and len(act.fcurves): return list(act.fcurves)
     out = []
@@ -53,7 +44,22 @@ def fcurves(act):
     return out
 
 
-def apply_clip(clip, travel):
+ACTIONS = {}
+for name, path in CLIPS.items():
+    before = set(bpy.data.objects); acts = set(bpy.data.actions)
+    bpy.ops.import_scene.fbx(filepath=path)
+    act = [a for a in bpy.data.actions if a not in acts][0]
+    act.use_fake_user = True; act.name = 'clip_' + name
+    # clips downloaded with a skin carry their own prefix (mixamorig1:, mixamorig6: ...): point them at mixamorig:
+    import re
+    for fc in fcurves(act):
+        dp = re.sub(r'mixamorig\d+:', 'mixamorig:', fc.data_path)
+        if dp != fc.data_path: fc.data_path = dp
+    ACTIONS[name] = act
+    for o in [o for o in bpy.data.objects if o not in before]: bpy.data.objects.remove(o, do_unlink=True)
+
+
+def apply_clip(clip, travel, fall=False):
     arm.animation_data_clear(); arm.animation_data_create()
     arm.animation_data.action = clip
     if hasattr(arm.animation_data, 'action_slot') and clip.slots: arm.animation_data.action_slot = clip.slots[0]
@@ -65,6 +71,14 @@ def apply_clip(clip, travel):
             if abs(a) * (xs.max() - xs.min()) > 30:
                 for k in fc.keyframe_points:
                     k.co[1] -= a * (k.co[0] - xs[0]); k.handle_left[1] = k.co[1]; k.handle_right[1] = k.co[1]
+    if fall:
+        # a death keeps its drop (Y, vertical in the clip) but not its slide: the hips stay over the
+        # tile, so the body lies across the cell instead of sliding out of the frame (it did, in facing 3)
+        for fc in fcurves(clip):
+            if fc.data_path == 'pose.bones["mixamorig:Hips"].location' and fc.array_index in (0, 2):
+                k0 = fc.keyframe_points[0].co[1]
+                for k in fc.keyframe_points:
+                    k.co[1] = k0; k.handle_left[1] = k0; k.handle_right[1] = k0
     fs, fe = [int(x) for x in clip.frame_range]
     return fs, fe
 
@@ -174,6 +188,25 @@ def place_camera(k):
     cam.location = tgt.location - a * 10 * math.cos(EL) + Vector((0, 0, 10 * math.sin(EL)))
 
 
+if SHADE:
+    # factory_blend.py --shade, unchanged: white diffuse override + one sun, re-aimed per facing
+    SHADE_MAT = bpy.data.materials.new('shade_override'); SHADE_MAT.use_nodes = True
+    _b = SHADE_MAT.node_tree.nodes['Principled BSDF']; _b.inputs['Base Color'].default_value = (0.8, 0.8, 0.8, 1); _b.inputs['Roughness'].default_value = 1.0
+    _sun = bpy.data.objects.new('key', bpy.data.lights.new('key', 'SUN')); _sun.data.energy = 3.0; _sun.data.angle = 0.05
+    sc.collection.objects.link(_sun); _sun.hide_render = True
+
+
+def shade_pass(path):
+    """key light from the camera's upper-left-front, so fold shadows read the same in every facing"""
+    fwd = (tgt.location - cam.location).normalized(); right = fwd.cross(Vector((0, 0, 1))).normalized(); upv = right.cross(fwd)
+    ldir = (fwd * 0.55 - right * 0.55 + upv * 0.62).normalized()
+    _sun.rotation_euler = ldir.to_track_quat('-Z', 'Y').to_euler(); _sun.hide_render = False
+    wc = tuple(sc.world.color); bpy.context.view_layer.material_override = SHADE_MAT; sc.world.color = (0.05, 0.05, 0.05)
+    sc.cycles.samples = 16; sc.cycles.filter_width = 1.0; sc.view_settings.view_transform = 'Standard'
+    sc.render.filepath = path; bpy.ops.render.render(write_still=True)
+    bpy.context.view_layer.material_override = None; _sun.hide_render = True; sc.world.color = wc
+
+
 HAND_IDX = {}
 for o in meshes:
     gi = {vg.index: vg.name for vg in o.vertex_groups}
@@ -197,7 +230,7 @@ def px(co):
 os.makedirs(OUT, exist_ok=True)
 anchors = {}
 for name, act in ACTIONS.items():
-    fs, fe = apply_clip(act, any(w in name for w in ('walk', 'run')))
+    fs, fe = apply_clip(act, any(w in name for w in ('walk', 'run')), name.startswith('death'))
     loop = not name.startswith('death')
     frames = [round(fs + (fe - fs) * i / (NF if loop else NF - 1)) for i in range(NF)]
     os.makedirs(f'{OUT}/{name}', exist_ok=True)
@@ -212,6 +245,7 @@ for name, act in ACTIONS.items():
             sc.render.filepath = f'{OUT}/{name}/d{k}_f{i:02d}_beauty.png'; bpy.ops.render.render(write_still=True)
             id_mode(True); sc.cycles.samples = 1; sc.cycles.filter_width = 0.01; sc.view_settings.view_transform = 'Raw'
             sc.render.filepath = f'{OUT}/{name}/d{k}_f{i:02d}_id.png'; bpy.ops.render.render(write_still=True)
+            if SHADE: shade_pass(f'{OUT}/{name}/d{k}_f{i:02d}_shade.png')
         print(name, 'direction', k, 'done', flush=True)
     json.dump({'frames': NF, 'dirs': DIRS, 'clips': list(ACTIONS), 'res': RES, 'h49': float(H), 'ref_h': REF, 'anchors': anchors},
               open(f'{OUT}/meta.json', 'w'))
