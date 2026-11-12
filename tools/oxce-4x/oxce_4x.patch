@@ -1,3 +1,266 @@
+diff --git a/src/Basescape/BaseView.cpp b/src/Basescape/BaseView.cpp
+index f822dab..ae266d1 100644
+--- a/src/Basescape/BaseView.cpp
++++ b/src/Basescape/BaseView.cpp
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "BaseView.h"
++#include "../Engine/HiUI.h"
+ #include <algorithm>
+ #include <sstream>
+ #include <cmath>
+@@ -659,9 +660,58 @@ void BaseView::draw()
+ void BaseView::blit(SDL_Surface *surface)
+ {
+ 	Surface::blit(surface);
++	// BUILT FROM SCRATCH at display resolution: the plan is described, not copied.
++	if (HiUI::enabled() && _base)
++	{
++		std::vector<HiUI::Room> rooms;
++		std::vector<std::pair<int, int> > right, down;
++		std::vector<HiUI::Docked> craft;
++		auto craftIt = _base->getCrafts()->begin();
++		for (const auto *fac : *_base->getFacilities())
++		{
++			const RuleBaseFacility *r = fac->getRules();
++			int kind = HiUI::ROOM_GENERIC;
++			if (r->getCrafts() > 0) kind = HiUI::ROOM_HANGAR;
++			else if (r->isLift()) kind = HiUI::ROOM_LIFT;
++			else if (r->getLaboratories() > 0) kind = HiUI::ROOM_LAB;
++			else if (r->getWorkshops() > 0) kind = HiUI::ROOM_WORKSHOP;
++			else if (r->getPsiLaboratories() > 0) kind = HiUI::ROOM_PSI;
++			else if (r->getAliens() > 0) kind = HiUI::ROOM_PRISON;
++			else if (r->getDefenseValue() > 0) kind = HiUI::ROOM_DEFENCE;
++			else if (r->getRadarRange() > 0) kind = HiUI::ROOM_RADAR;
++			else if (r->getPersonnel() > 0) kind = HiUI::ROOM_QUARTERS;
++			else if (r->getStorage() > 0) kind = HiUI::ROOM_STORES;
++			rooms.push_back(HiUI::Room{ fac->getX(), fac->getY(), r->getSizeX(), r->getSizeY(),
++				_lang ? std::string(_lang->getString(r->getType())) : r->getType(), kind, fac->getBuildTime(), fac->getDisabled(),
++				fac->getIfHadPreviousFacility(), fac->getAmmo(), r->getAmmoMax() });
++			if (fac->isBuiltOrHadPreviousFacility() && !r->connectorsDisabled())
++			{
++				const int xr = fac->getX() + r->getSizeX();
++				if (xr < BASE_SIZE)
++					for (int y = fac->getY(); y < fac->getY() + r->getSizeY(); ++y)
++						if (_facilities[xr][y] && _facilities[xr][y]->isBuiltOrHadPreviousFacility() && !_facilities[xr][y]->getRules()->connectorsDisabled())
++							right.emplace_back(xr, y);
++				const int yd = fac->getY() + r->getSizeY();
++				if (yd < BASE_SIZE)
++					for (int x = fac->getX(); x < fac->getX() + r->getSizeX(); ++x)
++						if (_facilities[x][yd] && _facilities[x][yd]->isBuiltOrHadPreviousFacility() && !_facilities[x][yd]->getRules()->connectorsDisabled())
++							down.emplace_back(x, yd);
++			}
++			if (fac->getBuildTime() == 0 && r->getCrafts() > 0 && craftIt != _base->getCrafts()->end())
++			{
++				if ((*craftIt)->getStatus() != "STR_OUT")
++					craft.push_back(HiUI::Docked{ _texture->getFrame((*craftIt)->getSkinSprite() + 33),
++						fac->getX() * GRID_SIZE + (r->getSizeX() - 1) * GRID_SIZE / 2 + 2,
++						fac->getY() * GRID_SIZE + (r->getSizeY() - 1) * GRID_SIZE / 2 - 4 });
++				++craftIt;
++			}
++		}
++		HiUI::nativeBaseView(this, GRID_SIZE, rooms, right, down, craft);
++	}
+ 	if (_selector != 0)
+ 	{
+ 		_selector->blit(surface);
++		if (HiUI::enabled() && _selector->getVisible()) HiUI::nativeSelector(_selector);
+ 	}
+ }
+ 
+diff --git a/src/Basescape/BasescapeState.cpp b/src/Basescape/BasescapeState.cpp
+index 5d0467a..1e67d06 100644
+--- a/src/Basescape/BasescapeState.cpp
++++ b/src/Basescape/BasescapeState.cpp
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "BasescapeState.h"
++#include "../Engine/HiUI.h"
+ #include "../Engine/Game.h"
+ #include "../Mod/Mod.h"
+ #include "../Engine/LocalizedText.h"
+@@ -71,6 +72,7 @@ namespace OpenXcom
+ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(globe)
+ {
+ 	// Create objects
++	_bg = new Surface(320, 200, 0, 0);
+ 	_txtFacility = new Text(192, 9, 0, 0);
+ 	_view = new BaseView(192, 192, 0, 8);
+ 	_mini = new MiniBaseView(128, 16, 192, 41);
+@@ -92,6 +94,7 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+ 	// Set palette
+ 	setInterface("basescape");
+ 
++	add(_bg);
+ 	add(_view, "baseView", "basescape");
+ 	add(_mini, "miniBase", "basescape");
+ 	add(_txtFacility, "textTooltip", "basescape");
+@@ -112,6 +115,19 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+ 
+ 	centerAllSurfaces();
+ 
++	// BUILT FROM SCRATCH AT DISPLAY RESOLUTION, as the equipment screen is: the
++	// plate, the base plan, the base strip, the keys and all the type are drawn by
++	// HiUI at the size they are shown. The 8-bit screen underneath still runs it.
++	if (HiUI::enabled())
++	{
++		HiUI::nativeBackdrop(_bg, std::vector<SDL_Rect>{ SDL_Rect{ 192, 41, 128, 16 } });
++		for (TextButton *b : { _btnNewBase, _btnBaseInfo, _btnSoldiers, _btnCrafts, _btnFacilities, _btnResearch,
++			_btnManufacture, _btnTransfer, _btnPurchase, _btnSell, _btnGeoscape })
++			HiUI::nativeKey(b, "");
++		for (Surface *t : std::initializer_list<Surface*>{ _txtFacility, _edtBase, _txtLocation, _txtFunds })
++			HiUI::nativeText(t);
++	}
++
+ 	// Set up objects
+ 	if (_globe)
+ 	{
+@@ -195,6 +211,9 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+  */
+ BasescapeState::~BasescapeState()
+ {
++	for (const Surface *x : std::initializer_list<const Surface*>{ _bg, _btnNewBase, _btnBaseInfo, _btnSoldiers, _btnCrafts, _btnFacilities,
++		_btnResearch, _btnManufacture, _btnTransfer, _btnPurchase, _btnSell, _btnGeoscape, _txtFacility, _edtBase, _txtLocation, _txtFunds })
++		HiUI::nativeForget(x);
+ 	// Clean up any temporary bases
+ 	bool exists = false;
+ 	for (const auto* xbase : *_game->getSavedGame()->getBases())
+diff --git a/src/Basescape/BasescapeState.h b/src/Basescape/BasescapeState.h
+index 711b3d9..8733ad3 100644
+--- a/src/Basescape/BasescapeState.h
++++ b/src/Basescape/BasescapeState.h
+@@ -36,6 +36,8 @@ class Globe;
+  */
+ class BasescapeState : public State
+ {
++	Surface *_bg = nullptr;   ///< the plate HiUI paints the screen on
++
+ private:
+ 	BaseView *_view;
+ 	MiniBaseView *_mini;
+diff --git a/src/Basescape/BuildFacilitiesState.cpp b/src/Basescape/BuildFacilitiesState.cpp
+index 9b139ca..19e90a1 100644
+--- a/src/Basescape/BuildFacilitiesState.cpp
++++ b/src/Basescape/BuildFacilitiesState.cpp
+@@ -18,6 +18,7 @@
+  */
+ #include <algorithm>
+ #include "BuildFacilitiesState.h"
++#include "../Engine/HiUI.h"
+ #include "../Engine/Action.h"
+ #include "../Engine/Game.h"
+ #include "../Mod/Mod.h"
+@@ -62,6 +63,14 @@ BuildFacilitiesState::BuildFacilitiesState(Base *base, State *state) : _base(bas
+ 
+ 	centerAllSurfaces();
+ 
++	// the list, its title and its key in the base screen's own type and keys
++	if (HiUI::enabled())
++	{
++		HiUI::nativeKey(_btnOk, "");
++		HiUI::nativeText(_txtTitle);
++		HiUI::nativeText(_lstFacilities);
++	}
++
+ 	// Set up objects
+ 	setWindowBackground(_window, "selectFacility");
+ 
+@@ -89,6 +98,7 @@ BuildFacilitiesState::BuildFacilitiesState(Base *base, State *state) : _base(bas
+  */
+ BuildFacilitiesState::~BuildFacilitiesState()
+ {
++	HiUI::nativeForget(_btnOk); HiUI::nativeForget(_txtTitle); HiUI::nativeForget(_lstFacilities);
+ 
+ }
+ 
+diff --git a/src/Basescape/MiniBaseView.cpp b/src/Basescape/MiniBaseView.cpp
+index 09fdfcd..8642a4a 100644
+--- a/src/Basescape/MiniBaseView.cpp
++++ b/src/Basescape/MiniBaseView.cpp
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "MiniBaseView.h"
++#include "../Engine/HiUI.h"
+ #include <cmath>
+ #include "../Engine/SurfaceSet.h"
+ #include "../Engine/Action.h"
+@@ -172,4 +173,24 @@ void MiniBaseView::setBorderColor(Uint8 color)
+ 	_blue = color;
+ }
+ 
++/**
++ * Blits the strip, then has HiUI draw it again at display resolution.
++ */
++void MiniBaseView::blit(SDL_Surface *surface)
++{
++	Surface::blit(surface);
++	if (!HiUI::enabled() || !_bases) return;
++	std::vector<HiUI::MiniBase> mb;
++	for (size_t i = 0; i < MAX_BASES; ++i)
++	{
++		HiUI::MiniBase b{ i < _bases->size(), i == _base, {} };
++		if (b.exists)
++			for (const auto *fac : *_bases->at(i)->getFacilities())
++				b.rooms.emplace_back(SDL_Rect{ (Sint16)fac->getX(), (Sint16)fac->getY(), (Uint16)fac->getRules()->getSizeX(), (Uint16)fac->getRules()->getSizeY() },
++					fac->getDisabled() ? 2 : fac->getBuildTime() > 0 ? 1 : 0);
++		mb.push_back(b);
++	}
++	HiUI::nativeMiniBases(this, MINI_SIZE + 2, mb);
++}
++
+ }
+diff --git a/src/Basescape/MiniBaseView.h b/src/Basescape/MiniBaseView.h
+index 7fe1da3..797fac5 100644
+--- a/src/Basescape/MiniBaseView.h
++++ b/src/Basescape/MiniBaseView.h
+@@ -56,6 +56,8 @@ public:
+ 	void setSelectedBase(size_t base);
+ 	/// Draws the mini base view.
+ 	void draw() override;
++	/// Also hands the strip to HiUI, which draws it at display resolution.
++	void blit(SDL_Surface *surface) override;
+ 	/// Special handling for mouse hovers.
+ 	void mouseOver(Action *action, State *state) override;
+ 	void setColor(Uint8 color) override;
+diff --git a/src/Basescape/PlaceFacilityState.cpp b/src/Basescape/PlaceFacilityState.cpp
+index c52f7ad..44470ef 100644
+--- a/src/Basescape/PlaceFacilityState.cpp
++++ b/src/Basescape/PlaceFacilityState.cpp
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "PlaceFacilityState.h"
++#include "../Engine/HiUI.h"
+ #include "../Engine/Game.h"
+ #include "../Engine/Sound.h"
+ #include "../Mod/Mod.h"
+@@ -82,6 +83,13 @@ PlaceFacilityState::PlaceFacilityState(Base *base, const RuleBaseFacility *rule,
+ 
+ 	centerAllSurfaces();
+ 
++	if (HiUI::enabled())
++	{
++		HiUI::nativeKey(_btnCancel, "");
++		for (Surface *t : std::initializer_list<Surface*>{ _txtFacility, _txtCost, _numCost, _numResources, _txtTime, _numTime, _txtMaintenance, _numMaintenance })
++			HiUI::nativeText(t);
++	}
++
+ 	// Set up objects
+ 	setWindowBackground(_window, "placeFacility");
+ 
+@@ -145,6 +153,9 @@ PlaceFacilityState::PlaceFacilityState(Base *base, const RuleBaseFacility *rule,
+  */
+ PlaceFacilityState::~PlaceFacilityState()
+ {
++	HiUI::nativeForget(_btnCancel);
++	for (const Surface *t : std::initializer_list<const Surface*>{ _txtFacility, _txtCost, _numCost, _numResources, _txtTime, _numTime, _txtMaintenance, _numMaintenance })
++		HiUI::nativeForget(t);
+ 
+ }
+ 
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
 index b7e1111..ca2477c 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
@@ -2403,10 +2666,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..54051f7
+index 0000000..7556c07
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,1664 @@
+@@ -0,0 +1,1924 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -3139,6 +3402,103 @@ index 0000000..54051f7
 +		}
 +	}
 +
++	/// An 8-bit frame enlarged by whole pixels (6x), cached per frame and palette:
++	/// crisp pixel art wherever a sprite has no painted twin yet.
++	const Img *flatTwin(const Surface *frame)
++	{
++		static std::unordered_map<const Surface*, std::pair<Uint32, Img> > flatTwins;
++		SDL_Surface *fs8 = const_cast<Surface*>(frame)->getSurface();
++		if (!fs8 || fs8->format->BitsPerPixel != 8 || !base->format->palette) return nullptr;
++		const SDL_Color *pal = base->format->palette->colors;
++		const Uint32 ph = palHash(pal);
++		auto &slot = flatTwins[frame];
++		if (!slot.second.ok || slot.first != ph)
++		{
++			const int K6 = 6;
++			Img im; im.w = fs8->w * K6; im.h = fs8->h * K6; im.px.assign((size_t)im.w * im.h, 0); im.ok = true;
++			for (int fy = 0; fy < fs8->h; ++fy)
++				for (int fx = 0; fx < fs8->w; ++fx)
++				{
++					const Uint8 v = ((const Uint8*)fs8->pixels)[fy * fs8->pitch + fx];
++					if (!v) continue;
++					const Uint32 c = 0xFF000000u | rgb(pal[v].r, pal[v].g, pal[v].b);
++					for (int yy = 0; yy < K6; ++yy)
++						for (int xx = 0; xx < K6; ++xx) im.px[(size_t)(fy * K6 + yy) * im.w + fx * K6 + xx] = c;
++				}
++			slot = std::make_pair(ph, std::move(im));
++		}
++		return &slot.second;
++	}
++
++	/// Words set across as many lines as they need inside a box, shrunk until
++	/// they fit, centred both ways. Room names on the base plan.
++	void setTypeWrapped(const Face &f, const std::string &str, int X0, int Y0, int X1, int Y1, double capPx, Uint32 col, Uint32 shadow)
++	{
++		std::vector<std::string> words;
++		{
++			std::string w;
++			for (char c : str) { if (c == ' ') { if (!w.empty()) words.push_back(w); w.clear(); } else w += c; }
++			if (!w.empty()) words.push_back(w);
++		}
++		if (words.empty()) return;
++		std::vector<std::string> lines;
++		double size = capPx * f.em / f.cap;
++		for (int tries = 0; tries < 12; ++tries)
++		{
++			lines.clear();
++			std::string cur;
++			for (auto &w : words)
++			{
++				std::string t = cur.empty() ? w : cur + " " + w;
++				const auto v = latin1(t);
++				if (!cur.empty() && lineWidth(f, v, 0, v.size(), size) > X1 - X0) { lines.push_back(cur); cur = w; }
++				else cur = t;
++			}
++			lines.push_back(cur);
++			double widest = 0;
++			for (auto &l : lines) { const auto v = latin1(l); widest = std::max(widest, lineWidth(f, v, 0, v.size(), size)); }
++			const double lineH = f.cap * size / f.em * 1.45;
++			if (widest <= X1 - X0 && lineH * lines.size() <= Y1 - Y0) break;
++			size *= 0.9;
++		}
++		const double cap = f.cap * size / f.em, lineH = cap * 1.45;
++		double y = (Y0 + Y1) / 2.0 - (lineH * (lines.size() - 1) + cap) / 2.0;
++		for (auto &l : lines)
++		{
++			const auto v = latin1(l);
++			const double w = lineWidth(f, v, 0, v.size(), size);
++			const double x = (X0 + X1 - w) / 2.0;
++			if (shadow) drawLine(f, v, 0, v.size(), x + 2, y + cap + 2, size, shadow, 0, 0, sw, sh);
++			drawLine(f, v, 0, v.size(), x, y + cap, size, col, 0, 0, sw, sh);
++			y += lineH;
++		}
++	}
++
++	/// Floor colour of a room by what it is for, from the console's own family:
++	/// muted, so the names read and nothing glares on the plan.
++	Uint32 roomTone(int kind)
++	{
++		switch (kind)
++		{
++		case ROOM_HANGAR:   return 0x4D5643;
++		case ROOM_LIFT:     return 0x5E5D4B;
++		case ROOM_LAB:      return 0x3E5562;
++		case ROOM_WORKSHOP: return 0x60533A;
++		case ROOM_QUARTERS: return 0x4F5C3E;
++		case ROOM_STORES:   return 0x59553F;
++		case ROOM_DEFENCE:  return 0x613F37;
++		case ROOM_RADAR:    return 0x3C5B51;
++		case ROOM_PSI:      return 0x514263;
++		case ROOM_PRISON:   return 0x4B4B4B;
++		default:            return 0x4C5244;
++		}
++	}
++	Uint32 lift(Uint32 c, int d)
++	{
++		auto ch = [&](int sh2) { return std::max(0, std::min(255, (int)((c >> sh2) & 255) + d)); };
++		return rgb(ch(16), ch(8), ch(0));
++	}
++
 +	/// A Text widget's own colour, made readable on the dark plate.
 +	Uint32 textColour(Uint8 index)
 +	{
@@ -3263,31 +3623,8 @@ index 0000000..54051f7
 +	// AN ITEM WITH NO SHARP PICTURE YET is fitted all the same, from its 8-bit
 +	// frame: enlarged by whole pixels (so it stays crisp pixel art, not a blur)
 +	// and cached per frame and palette.
-+	static std::unordered_map<const Surface*, std::pair<Uint32, Img> > flatTwins;
-+	if (!imp)
-+	{
-+		SDL_Surface *fs8 = const_cast<Surface*>(frame)->getSurface();
-+		if (!fs8 || fs8->format->BitsPerPixel != 8 || !base->format->palette) return;
-+		const SDL_Color *pal = base->format->palette->colors;
-+		const Uint32 ph = palHash(pal);
-+		auto &slot = flatTwins[frame];
-+		if (!slot.second.ok || slot.first != ph)
-+		{
-+			const int K6 = 6;
-+			Img im; im.w = fs8->w * K6; im.h = fs8->h * K6; im.px.assign((size_t)im.w * im.h, 0); im.ok = true;
-+			for (int fy = 0; fy < fs8->h; ++fy)
-+				for (int fx = 0; fx < fs8->w; ++fx)
-+				{
-+					const Uint8 v = ((const Uint8*)fs8->pixels)[fy * fs8->pitch + fx];
-+					if (!v) continue;
-+					const Uint32 c = 0xFF000000u | rgb(pal[v].r, pal[v].g, pal[v].b);
-+					for (int yy = 0; yy < K6; ++yy)
-+						for (int xx = 0; xx < K6; ++xx) im.px[(size_t)(fy * K6 + yy) * im.w + fx * K6 + xx] = c;
-+				}
-+			slot = std::make_pair(ph, std::move(im));
-+		}
-+		imp = &slot.second;
-+	}
++	if (!imp) imp = flatTwin(frame);
++	if (!imp) return;
 +	R r{ x, y, x + w, y + h };
 +	if (!clipBase(r)) return;
 +	// hide the 8-bit icon: every pixel the frame itself wrote shows the overlay,
@@ -3438,10 +3775,40 @@ index 0000000..54051f7
 +			if (clipBase(r))
 +			{
 +				const BattlescapeButton *bb = dynamic_cast<BattlescapeButton*>(w);
++				const TextButton *tb = dynamic_cast<TextButton*>(w);
 +				auto ia = nativeKeyInArt.find(w);
-+				paintKey(nk->second, w->getX(), w->getY(), w->getX() + w->getWidth(), w->getY() + w->getHeight(), bb && bb->isInverted(), ia == nativeKeyInArt.end() || ia->second);
++				const std::string legend = nk->second.empty() && tb ? tb->getText() : nk->second;
++				const bool down = (bb && bb->isInverted()) || (tb && tb->isPressedLook());
++				paintKey(legend, w->getX(), w->getY(), w->getX() + w->getWidth(), w->getY() + w->getHeight(), down, ia == nativeKeyInArt.end() || ia->second);
 +				claim(r);
 +			}
++			return;
++		}
++		if (nativeTexts.count(w) && dynamic_cast<TextList*>(w))
++		{
++			// A LIST set in the label face: its highlight bar drawn again, then each
++			// visible cell in its own colour and alignment.
++			TextList *tl = static_cast<TextList*>(w);
++			R r = rectOf(w);
++			if (any && clipBase(r) && scratch.size() == (size_t)(r.x1 - r.x0) * (r.y1 - r.y0))
++			{
++				for (int y = r.y0; y < r.y1; ++y)
++				{
++					const Uint8 *p = row8(y);
++					for (int x = r.x0; x < r.x1; ++x)
++						if (scratch[(size_t)(y - r.y0) * (r.x1 - r.x0) + (x - r.x0)]) tag[y * bw + x] = p[x];
++				}
++				const Surface *sel = tl->getSelectorWidget();
++				if (sel && sel->getVisible())
++				{
++					const double k = SK();
++					roundRect(DX(sel->getX()) - k * 0.6, DY(sel->getY()), DX(sel->getX() + sel->getWidth()) + k * 0.6, DY(sel->getY() + sel->getHeight()), k * 0.8, 0xC08A34, 70);
++					roundRect(DX(sel->getX()) - k * 0.6, DY(sel->getY()), DX(sel->getX()) + k * 0.2, DY(sel->getY() + sel->getHeight()), k * 0.3, 0xE8B04A, 230);
++				}
++				for (const Text *c : tl->getVisibleCells())
++					nativeType(c, tl->getX() + c->getX(), tl->getY() + c->getY(), textColour(c->getColor()));
++			}
++			scratch.clear();
 +			return;
 +		}
 +		if (nativeTexts.count(w))
@@ -3889,6 +4256,162 @@ index 0000000..54051f7
 +	return enabled() && !nativeBgs.empty();
 +}
 +
++void nativeBaseView(const Surface *view, int g, const std::vector<Room> &rooms,
++	const std::vector<std::pair<int, int> > &linksRight, const std::vector<std::pair<int, int> > &linksDown,
++	const std::vector<Docked> &craft)
++{
++	if (!base || !view || !shown(view)) return;
++	R r = rectOf(view);
++	if (!clipBase(r)) return;
++	const double k = SK();
++	const double vx = view->getX(), vy = view->getY();
++	const int X0 = xs[r.x0], Y0 = ys[r.y0], X1 = xs[r.x1], Y1 = ys[r.y1];
++	// the plotting table: dark slate, a faint line on every square
++	for (int Y = Y0; Y < Y1; ++Y)
++	{
++		Uint32 *o = over.data() + (size_t)Y * sw;
++		for (int X = X0; X < X1; ++X)
++		{
++			const int n = (int)(hash2(X, Y) % 5) - 2;
++			o[X] = lift(0x1D211A, n);
++		}
++	}
++	const int cells = view->getWidth() / g;
++	for (int i = 0; i <= cells; ++i)
++	{
++		const double gx = DX(vx + i * g), gy = DY(vy + i * g);
++		fillRect((int)gx - 1, Y0, (int)gx + 1, Y1, 0x2C3226);
++		fillRect(X0, (int)gy - 1, X1, (int)gy + 1, 0x2C3226);
++	}
++	// corridors under the rooms
++	auto corridor = [&](double bx0, double by0, double bx1, double by1)
++	{
++		roundRect(DX(bx0) - 1, DY(by0) - 1, DX(bx1) + 1, DY(by1) + 1, k * 0.6, 0x15180F);
++		roundRect(DX(bx0), DY(by0), DX(bx1), DY(by1), k * 0.5, 0x4A5040);
++		roundRect(DX(bx0) + 2, DY(by0) + 2, DX(bx1) - 2, DY(by1) - 2, k * 0.4, 0x5C634E);
++	};
++	for (auto &l : linksRight) corridor(vx + l.first * g - g * 0.3, vy + l.second * g + g * 0.38, vx + l.first * g + g * 0.3, vy + l.second * g + g * 0.62);
++	for (auto &l : linksDown) corridor(vx + l.first * g + g * 0.38, vy + l.second * g - g * 0.3, vx + l.first * g + g * 0.62, vy + l.second * g + g * 0.3);
++	const Face *f = face("label");
++	const Face *st = face("stencil");
++	for (const Room &rm : rooms)
++	{
++		const double bx0 = vx + rm.x * g + 1.4, by0 = vy + rm.y * g + 1.4, bx1 = vx + (rm.x + rm.w) * g - 1.4, by1 = vy + (rm.y + rm.h) * g - 1.4;
++		const double x0 = DX(bx0), y0 = DY(by0), x1 = DX(bx1), y1 = DY(by1), rad = k * 2.2;
++		const Uint32 tone = roomTone(rm.kind);
++		const bool building = rm.buildDays > 0;
++		roundRect(x0 + k * 0.5, y0 + k * 0.7, x1 + k * 0.5, y1 + k * 0.7, rad, 0x0C0E09, 200);   // shadow
++		roundRect(x0, y0, x1, y1, rad, 0x14170F);                                              // wall
++		roundRect(x0 + 2, y0 + 2, x1 - 2, y1 - 2, rad - 1, building ? 0x3A3D33 : lift(tone, 18)); // lit lip
++		roundRect(x0 + k * 0.9, y0 + k * 0.9, x1 - k * 0.6, y1 - k * 0.6, rad - k * 0.6, building ? 0x2E3129 : tone);
++		if (!building)
++			roundRect(x0 + k * 0.9, y0 + k * 0.9, x1 - k * 0.6, y0 + k * 2.4, k * 0.8, lift(tone, 34), 160); // the kind's band
++		if (building)
++		{
++			// tape across an unfinished room: hazard stripes, faint
++			const int ix0 = (int)(x0 + k), iy0 = (int)(y0 + k), ix1 = (int)(x1 - k), iy1 = (int)(y1 - k);
++			const int stripe = std::max(4, (int)(k * 2));
++			for (int Y = std::max(0, iy0); Y < std::min(sh, iy1); ++Y)
++			{
++				Uint32 *o = over.data() + (size_t)Y * sw;
++				for (int X = std::max(0, ix0); X < std::min(sw, ix1); ++X)
++					if (((X + Y) / stripe) % 2 == 0) o[X] = mix(o[X], 0xC09A2E, 46);
++			}
++		}
++		if (rm.disabled) roundRect(x0 + 2, y0 + 2, x1 - 2, y1 - 2, rad - 1, 0x8A2A22, 90);
++		const bool hangar = rm.kind == ROOM_HANGAR && !building;
++		if (f)
++		{
++			// the name: across the room, or along the top edge of a hangar so the craft shows
++			const int nx0 = (int)(x0 + k * 1.8), nx1 = (int)(x1 - k * 1.8);
++			const int ny0 = (int)(y0 + k * (building || rm.disabled ? 2.0 : 2.6));
++			const int ny1 = hangar ? (int)(y0 + k * 9.5) : (building || rm.disabled) ? (int)(y0 + (y1 - y0) * 0.42) : (int)(y1 - k * 1.8);
++			setTypeWrapped(*f, rm.name, nx0, ny0, nx1, ny1, k * 3.4, building ? 0xB8B49A : C_INK, 0x0A0B08);
++		}
++		if ((building || rm.disabled) && st)
++		{
++			std::string t = rm.disabled ? "OFF" : std::to_string(rm.buildDays);
++			if (rm.hadPrevious) t += "*";
++			const int ty0 = (int)(y0 + (y1 - y0) * 0.46), ty1 = (int)(y1 - k * 1.6);
++			setType(*st, t, (int)x0 + 2, ty0 + 2, (int)x1 + 2, ty1 + 2, std::min((ty1 - ty0) * 0.62, k * 9.0), k * 9, 1, 1, 0x0A0B08);
++			setType(*st, t, (int)x0, ty0, (int)x1, ty1, std::min((ty1 - ty0) * 0.62, k * 9.0), k * 9, 1, 1, rm.disabled ? 0xE07060 : 0xE8C35A);
++		}
++		if (!building && rm.ammoMax > 0 && f)
++		{
++			const Uint32 c = rm.ammo >= rm.ammoMax ? 0x8FD07A : rm.ammo <= rm.ammoMax / 2 ? 0xE07060 : 0xE8C35A;
++			const std::string t = std::to_string(rm.ammo) + "/" + std::to_string(rm.ammoMax);
++			setType(*f, t, (int)(x0 + k * 1.6), (int)(y1 - k * 6), (int)(x1 - k * 1.6), (int)(y1 - k * 1.4), k * 3.0, k * 4, 2, 2, c);
++		}
++	}
++	// craft on their pads: the craft's own sprite, never resampled into mush
++	for (const Docked &d : craft)
++	{
++		if (!d.frame) continue;
++		auto it = bgImages.find(d.frame);
++		const Img *im = (it != bgImages.end() && it->second.ok) ? &it->second : flatTwin(d.frame);
++		if (!im) continue;
++		stretch(*im, 0, 0, im->w, im->h, (int)DX(vx + d.x), (int)DY(vy + d.y + 3), (int)DX(vx + d.x + d.frame->getWidth()), (int)DY(vy + d.y + 3 + d.frame->getHeight()));
++	}
++	claim(r);
++}
++
++void nativeSelector(const Surface *sel)
++{
++	if (!base || !sel) return;
++	R r = rectOf(sel);
++	if (!clipBase(r)) return;
++	const double k = SK();
++	const double x0 = xs[r.x0], y0 = ys[r.y0], x1 = xs[r.x1], y1 = ys[r.y1];
++	// where the room will go: a translucent wash and a solid edge, the plan still
++	// readable through it
++	const double t = std::max(3.0, k * 0.6);
++	roundRect(x0 + 1, y0 + 1, x1 - 1, y1 - 1, k * 2, 0xE8B04A, 70);
++	fillRect((int)x0 + 1, (int)y0 + 1, (int)x1 - 1, (int)(y0 + 1 + t), 0xE8B04A);
++	fillRect((int)x0 + 1, (int)(y1 - 1 - t), (int)x1 - 1, (int)y1 - 1, 0xE8B04A);
++	fillRect((int)x0 + 1, (int)y0 + 1, (int)(x0 + 1 + t), (int)y1 - 1, 0xE8B04A);
++	fillRect((int)(x1 - 1 - t), (int)y0 + 1, (int)x1 - 1, (int)y1 - 1, 0xE8B04A);
++	// hollow it: put the plan back inside the ring by re-claiming only the ring's base pixels
++	SDL_Surface *ss = const_cast<Surface*>(sel)->getSurface();
++	for (int by = r.y0; by < r.y1; ++by)
++	{
++		const Uint8 *p = row8(by);
++		for (int bx = r.x0; bx < r.x1; ++bx)
++		{
++			const int sx = bx - sel->getX(), sy = by - sel->getY();
++			if (!ss || sx >= ss->w || sy >= ss->h || !((const Uint8*)ss->pixels)[sy * ss->pitch + sx]) continue;
++			tag[by * bw + bx] = p[bx]; valid[by * bw + bx] = 1;
++		}
++	}
++	any = true;
++}
++
++void nativeMiniBases(const Surface *mini, int slot, const std::vector<MiniBase> &bases)
++{
++	if (!base || !mini || !shown(mini)) return;
++	R r = rectOf(mini);
++	if (!clipBase(r)) return;
++	const double k = SK();
++	const double mx = mini->getX(), my = mini->getY();
++	fillRect(xs[r.x0], ys[r.y0], xs[r.x1], ys[r.y1], C_PLATE);
++	for (size_t i = 0; i < bases.size(); ++i)
++	{
++		const double sx0 = DX(mx + i * slot + 0.4), sy0 = DY(my + 0.4), sx1 = DX(mx + (i + 1) * slot - 0.4), sy1 = DY(my + slot - 0.4);
++		const MiniBase &b = bases[i];
++		if (b.selected) roundRect(sx0 - 2, sy0 - 2, sx1 + 2, sy1 + 2, k * 1.4, 0xE8B04A);
++		roundRect(sx0, sy0, sx1, sy1, k * 1.2, C_RIM_DARK);
++		roundRect(sx0 + 2, sy0 + 2, sx1 - 2, sy1 - 2, k * 1.0, b.exists ? 0x1D211A : C_WELL);
++		if (!b.exists) continue;
++		for (auto &rm : b.rooms)
++		{
++			const Uint32 c = rm.second == 0 ? 0x7FA864 : rm.second == 1 ? 0xC9A23E : 0x6A7E96;
++			const double cx0 = DX(mx + i * slot + 2 + rm.first.x * 2) + 1, cy0 = DY(my + 2 + rm.first.y * 2) + 1;
++			const double cx1 = DX(mx + i * slot + 2 + (rm.first.x + rm.first.w) * 2) - 1, cy1 = DY(my + 2 + (rm.first.y + rm.first.h) * 2) - 1;
++			roundRect(cx0, cy0, cx1, cy1, k * 0.4, c);
++		}
++	}
++	claim(r);
++}
++
 +void vectorClear(int layer)
 +{
 +	if (layer >= 0 && layer < VEC_LAYERS) vlayers[layer].clear();
@@ -4073,10 +4596,10 @@ index 0000000..54051f7
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..c0800aa
+index 0000000..b6977d2
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,85 @@
+@@ -0,0 +1,101 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -4160,6 +4683,22 @@ index 0000000..c0800aa
 +	void nativeForget(const Surface *s);
 +	/// Is a native screen up? (Its 8-bit grid, labels and numbers are then not drawn.)
 +	bool nativeOn();
++
++	/// THE BASE PLAN, drawn from what it shows rather than from its 8-bit frames.
++	/// Positions are in grid squares; the view maps them.
++	enum RoomKind { ROOM_GENERIC, ROOM_HANGAR, ROOM_LIFT, ROOM_LAB, ROOM_WORKSHOP, ROOM_QUARTERS,
++		ROOM_STORES, ROOM_DEFENCE, ROOM_RADAR, ROOM_PSI, ROOM_PRISON };
++	struct Room { int x, y, w, h; std::string name; int kind; int buildDays; bool disabled, hadPrevious; int ammo, ammoMax; };
++	struct Docked { const Surface *frame; int x, y; };   // a craft sprite and where the view put it (view px)
++	/// After BaseView has blitted. Paints the whole plan over it.
++	void nativeBaseView(const Surface *view, int gridPx, const std::vector<Room> &rooms,
++		const std::vector<std::pair<int, int> > &linksRight, const std::vector<std::pair<int, int> > &linksDown,
++		const std::vector<Docked> &craft);
++	/// The placement selector, after it has blitted (only while it shows).
++	void nativeSelector(const Surface *selector);
++	/// One slot of the base strip: its facilities in grid squares, state 0 built 1 building 2 off.
++	struct MiniBase { bool exists, selected; std::vector<std::pair<SDL_Rect, int> > rooms; };
++	void nativeMiniBases(const Surface *mini, int slotPx, const std::vector<MiniBase> &bases);
 +}
 +}
 diff --git a/src/Engine/Options.cpp b/src/Engine/Options.cpp
@@ -6538,15 +7077,17 @@ index 2b91ef2..f2b57e8 100644
  {
  	Surface::draw();
 diff --git a/src/Interface/TextList.h b/src/Interface/TextList.h
-index f707e1b..3ed4f06 100644
+index f707e1b..0794216 100644
 --- a/src/Interface/TextList.h
 +++ b/src/Interface/TextList.h
-@@ -104,6 +104,8 @@ public:
+@@ -104,6 +104,10 @@ public:
  	int getLastRowIndex() const;
  	/// Gets the amount of visible rows in the list.
  	size_t getVisibleRows() const;
 +	/// Gets the cells the last draw() blitted, for the sharp overlay.
 +	std::vector<Text*> getVisibleCells() const;
++	/// The row highlight, for HiUI to draw it again at display resolution.
++	const Surface *getSelectorWidget() const { return _selector; }
  	/// Adds a new row to the text list.
  	void addRow(int cols, ...);
  	/// Removes the last row from the text list.
