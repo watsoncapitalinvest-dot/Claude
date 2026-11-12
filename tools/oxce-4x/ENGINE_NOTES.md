@@ -19,7 +19,7 @@ Tag pushes are rejected by this remote (HTTP 403). Roll back by commit hash.
 | `OXCE_BATTLE_SCALE` | 1 | upscale factor for battlescape sprite sets |
 | `OXCE_HICOLOR` | follows the above | 0 falls back to the 256-colour palette |
 | `OXCE_HIUI` | follows HiColor | 0 leaves the menus 8-bit |
-| `OXCE_BULLET_SCALE` | battle scale | total upscale for projectiles (local only, not pushed) |
+| `OXCE_BULLET_SCALE` | battle scale | upscale for projectile sheets drawn smaller than the declared frame (vanilla's 3x3) |
 | `OXCE_PEN_LOG` | off | logs every terrain hit, every `penetrate()` and every re-trace |
 | `OXCE_ECON_LOG` | off | logs each Cobra site that earns nothing because its cargo was shot down, and once a month every region Cobra holds stock in: materiel and funds against the thresholds they are compared with, flagged `CANNOT ARM` / `CANNOT PAY` |
 
@@ -139,37 +139,52 @@ it. It claims only its rim rows and columns.
 text vanish.
 
 **Projectiles are the one battlescape set nobody scales.** `HIT.PCK` and `X1.PCK` are upscaled
-in `loadVanillaResources`, but the Projectiles set is created empty there and filled later by
-the mods, so the upscale pass misses it. On a 4x battlefield a bullet stayed three pixels
-against a 128-pixel tile, and a laser — drawn as 35 sprites strung along the flight path — was
-a thread of dots. Now scaled in `Mod::loadAll` once the frames are in.
+in `loadVanillaResources`, but the Projectiles set is created empty there (3x3) and filled later
+by the mods, so the upscale pass misses it.
 
-**`BULLET_SPRITES` is 35, and they are 35 *different* frames, not 35 copies.** This note
-previously said copies and that was wrong. `loadSpriteOffset(..., "Projectiles", 35)` makes 35 a
-multiplier, so `bulletSprite: 1` means frames 35..69. Vanilla's sheet is 105x33 at subX/subY 3,
-which is 35 columns by 11 rows: one row per weapon, frame 0 the head and frames 1..34 a thinning
-tail of single pixels.
+**Its frame size is now declared before any extra sprites load (12 Nov).** `Mod::loadAll`, just
+before `loadExtraResources`, sizes the set to the largest `subX`/`subY` any mod gives
+`Projectiles` (48 here), or to 3 x the bullet scale if nobody declares more. `ExtraSprites::fitCells`
+then marks the set so that (a) the loader's "resize the empty set" step no longer shrinks it back
+to whatever the first sheet says, and (b) a sheet with smaller cells - vanilla's 3x3
+`BulletSprites.png` - has each cell scaled up by the bullet scale and centred in the bigger frame.
+A vanilla-only setup gets 12x12 bullets exactly as before.
 
-**A projectile sprite is never rotated.** `Map.cpp` blits it centred, axis-aligned, whatever
-direction the shot travels, so the art has to be direction-agnostic — a round head or a glow,
-never a streak, which would point the wrong way in seven directions out of eight.
+The old way scaled the set *after* loading, which never worked with `lazyLoadResources: true`
+(the default here): the set was still empty at that point, the upscale only changed its declared
+size, and the first lazy load "resized the empty set" straight back to 3x3. So by the code, until this
+change the 4x bullets were three pixels whenever lazy loading was on (read, not measured). `OXCE_BULLET_SCALE` is still the
+scale for small cells.
 
-**Visual length is the trail, not the sprite.** The engine draws the particles along the flight
-path, so how long a bolt looks is how many of a weapon's 35 frames are non-empty and how dense
-they are. That is authored in the sheet and is tunable without new art.
+**`BULLET_SPRITES` is 35, and they are 35 *different* frames.** `loadSpriteOffset(...,
+"Projectiles", 35)` makes 35 a multiplier, so `bulletSprite: 1` means frames 35..69: frame 0 the
+head, frames 1..34 the tail, drawn one voxel apart along the flight path (about 4.5 px at 4x). How
+long a shot looks is how many of its 35 frames have anything in them. The mod's sheet starts at
+`bulletSprite: 11` (frame 385, past vanilla's eleven rows), and the rows are listed in
+`mod/Ruleset/gijoe_projectiles.rul`.
 
-**Enlarging the set is smaller than it looks.** `ExtraSprites::getSurfaceSet` already resizes a
-set to whatever `subX`/`subY` declares — but only `if (set->getTotalFrames() == 0)`. The
-`new SurfaceSet(3, 3)` in `Mod.cpp` is just a placeholder; vanilla's 105x33 sheet is what pins
-it at 3x3, because by the time a later mod declares a bigger sheet the set is no longer empty.
+**`bulletDirectional: true` on an item turns the head to where the shot flies (12 Nov).** The row
+AFTER `bulletSprite` then holds eight heads by the direction the shot travels *on screen*, in
+equal 45-degree sectors, 0 = nose up, clockwise. `Map.cpp` projects the head and a point eight
+voxels back through the camera and picks the sector, so a climb or a dive turns the nose as well as
+the map heading. The trail is drawn as before. Read from the ammo when the ammo carries the
+`bulletSprite`, else from the weapon, the same rule as the sprite itself. The flag lives in a side
+table in `RuleItem.cpp`, not a member: `RuleItem.h` is included by 284 of 385 objects and a new
+member rebuilds the whole engine for one bool.
 
-So the engine change needed is narrow: let the projectile size be declared before extra sprites
-load, and stop the auto-resize overriding it. Not done, and not worth doing until the painted
-heads exist.
+Without the flag a projectile sprite is still never rotated: blitted centred and axis-aligned, so
+non-directional art must be round.
 
-`build/build_projectiles.py` is the other half and is done: it takes one head per weapon and
-generates the 35-frame trail, since length is frames and not sprite shape. It refuses art with
-a long axis, because that art only looks wrong in seven directions out of eight.
+`build/make_projectile_sheet.py` draws the sheet (round heads procedurally; rocket and missile
+bodies from `build/sprites/render_projectile.py`, which renders a model in the battlescape camera
+with flat bands, one cel tone and an ink line - model files stay out of the repo).
+`build/build_projectiles.py` is the older tool for *painted* round heads and still refuses art with
+a long axis, because without `bulletDirectional` that is still right.
+
+**Hit animations are anchored by a point inside the frame, and that point now scales.** A bullet
+hit draws `SMOKE.PCK` at `hit - (15,15)` and a melee hit `HIT.PCK` at `hit - (15,25)` - pixel
+offsets into a 32x40 frame that were left at 1x when the frames went to 128x160, so every hit landed
+45 px right of and below where the shot struck. Now `15 * battleScale`.
 
 **The build fires on any push to this branch, with no path filter.** A commit of art or
 build scripts starts an 11-minute Windows build that nobody wanted, and one has already had to
@@ -306,7 +321,7 @@ concrete charged 37 instead of 55, masonry 20 instead of 30.
   scrollbars, the battle control panel's 30 icons, the geoscape side panel. The globe is separate.
 - Item icons are sharp only on the soldier inventory screen. Craft equipment, buy/sell and the
   UFOpaedia still draw them at 1x.
-- Projectile set size is still fixed at 3x3, so painted projectiles are blocked.
+- Air-battle (intercept window) shots are still vanilla; only the battlefield's were redrawn.
 - Neither side's AI *chooses* to shoot through cover yet. Both sides get the physics; only
   deliberate use is missing, which is the split the principle below describes.
 
