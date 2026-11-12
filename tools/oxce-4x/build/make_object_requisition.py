@@ -167,8 +167,8 @@ BACKGROUND
 NEVER
 - No text, letters, numbers or labels anywhere, including on screens, papers,
   crates and maps.
-- No logos, emblems, insignia, flags or badges - no Cobra symbol, no G.I. Joe
-  logo, no red cross.
+- Logos are included (John, 12 Nov, permanent): draw the G.I. Joe logo, the
+  Cobra emblem, insignia and a red cross wherever the real thing has them.
 - No people, no hands, no figures (a shadow shape inside a tank is allowed
   only where the list says so).
 
@@ -181,7 +181,7 @@ CHECK BEFORE SENDING
 3. Front facing the bottom of the picture?
 4. No shadow, no directional light?
 5. Magenta background with hard edges?
-6. No text, no logos, no people?
+6. No text, no people?
 '''
 
 

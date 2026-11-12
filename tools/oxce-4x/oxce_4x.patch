@@ -3206,10 +3206,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..ce4a74f
+index 0000000..5c999a1
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,2287 @@
+@@ -0,0 +1,2289 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -3450,7 +3450,7 @@ index 0000000..ce4a74f
 +		}
 +	}
 +	/// Nine-slice: corners kept, edges and middle stretched.
-+	void nine(const Img &im, int x0, int y0, int x1, int y1, int b)
++	void nine(const Img &im, int x0, int y0, int x1, int y1, int b, bool hollow = false)
 +	{
 +		b = std::min(b, std::min(im.w, im.h) / 3);
 +		const int bx = std::min(b, (x1 - x0) / 3), by = std::min(b, (y1 - y0) / 3);
@@ -3458,7 +3458,8 @@ index 0000000..ce4a74f
 +		const int dx[4] = { x0, x0 + bx, x1 - bx, x1 }, dy[4] = { y0, y0 + by, y1 - by, y1 };
 +		for (int r = 0; r < 3; ++r)
 +			for (int c = 0; c < 3; ++c)
-+				stretch(im, sx[c], sy[r], sx[c + 1], sy[r + 1], dx[c], dy[r], dx[c + 1], dy[r + 1]);
++				if (!(hollow && r == 1 && c == 1))
++					stretch(im, sx[c], sy[r], sx[c + 1], sy[r + 1], dx[c], dy[r], dx[c + 1], dy[r + 1]);
 +	}
 +
 +	/// Rounded panel with a 1-2 px rim.
@@ -4706,7 +4707,8 @@ index 0000000..ce4a74f
 +		}
 +		else fillRect(X0, Y0, X1, Y1, rgb(22, 26, 24));
 +		const Img *fr = piece(win->getWidth() >= 260 || win->getHeight() >= 150 ? "window_frame" : "window_frame_small");
-+		if (fr) nine(*fr, X0, Y0, X1, Y1, std::max(6, (int)(fr->h * 0.06)));
++		// the frame is a rim: its middle would cover the window's painted background
++		if (fr) nine(*fr, X0, Y0, X1, Y1, std::max(6, (int)(fr->h * 0.06)), bit != bgImages.end() && bit->second.ok);
 +		else
 +		{
 +			const Uint32 line = rgb(150, 156, 140);
@@ -8084,20 +8086,87 @@ index d5e599e..8b44e52 100644
  	/// Sets the high contrast color setting.
  	void setHighContrast(bool contrast) override;
  	/// Handles the timers.
+diff --git a/src/Menu/MainMenuState.cpp b/src/Menu/MainMenuState.cpp
+index 543a45c..26292dd 100644
+--- a/src/Menu/MainMenuState.cpp
++++ b/src/Menu/MainMenuState.cpp
+@@ -67,16 +67,18 @@ MainMenuState::MainMenuState(bool updateCheck)
+ #endif
+ 
+ 	// Create objects
+-	_window = new Window(this, 256, 160, 32, 20, POPUP_BOTH);
+-	_btnNewGame = new TextButton(92, 20, 64, 90);
+-	_btnNewBattle = new TextButton(92, 20, 164, 90);
+-	_btnLoad = new TextButton(92, 20, 64, 118);
+-	_btnOptions = new TextButton(92, 20, 164, 118);
+-	_btnMods = new TextButton(92, 20, 64, 146);
+-	_btnQuit = new TextButton(92, 20, 164, 146);
+-	_btnUpdate = new TextButton(72, 16, 209, 27);
+-	_txtUpdateInfo = new Text(320, 17, 0, 11);
+-	_txtTitle = new Text(256, 30, 32, 45);
++	// G.I. Joe: the title screen is full-screen key art (FRONT_END_ART_BRIEF): the
++	// title in the calm band across the top, the buttons in the dark column on the right.
++	_window = new Window(this, 320, 200, 0, 0, POPUP_BOTH);
++	_btnNewGame = new TextButton(96, 15, 212, 86);
++	_btnNewBattle = new TextButton(96, 15, 212, 103);
++	_btnLoad = new TextButton(96, 15, 212, 120);
++	_btnOptions = new TextButton(96, 15, 212, 137);
++	_btnMods = new TextButton(96, 15, 212, 154);
++	_btnQuit = new TextButton(96, 15, 212, 171);
++	_btnUpdate = new TextButton(72, 16, 244, 44);
++	_txtUpdateInfo = new Text(320, 17, 0, 46);
++	_txtTitle = new Text(160, 20, 154, 10);
+ 
+ 	// Set palette
+ 	setInterface("mainMenu");
+@@ -233,10 +235,15 @@ MainMenuState::MainMenuState(bool updateCheck)
+ 
+ 	_txtTitle->setAlign(ALIGN_CENTER);
+ 	_txtTitle->setBig();
+-	std::ostringstream title;
+-	title << tr("STR_OPENXCOM").arg(Options::getActiveMasterInfo()->getVersionDisplay()) << Unicode::TOK_NL_SMALL;
+-	title << "OpenXcom " << OPENXCOM_VERSION_SHORT << OPENXCOM_VERSION_GIT;
+-	_txtTitle->setText(title.str());
++	// G.I. Joe: the game's title alone, over the open sky at the top right of the key
++	// art; the engine version goes small in the corner, where it does not fight the art.
++	_txtTitle->setText(tr("STR_OPENXCOM").arg(Options::getActiveMasterInfo()->getVersionDisplay()));
++	std::ostringstream ver;
++	ver << "OpenXcom " << OPENXCOM_VERSION_SHORT << OPENXCOM_VERSION_GIT;
++	_txtVersion = new Text(150, 9, 166, 189);   // under the button column
++	add(_txtVersion, "text", "mainMenu");
++	_txtVersion->setAlign(ALIGN_RIGHT);
++	_txtVersion->setText(ver.str());
+ }
+ 
+ void MainMenuState::init()
+diff --git a/src/Menu/MainMenuState.h b/src/Menu/MainMenuState.h
+index 665d922..160915e 100644
+--- a/src/Menu/MainMenuState.h
++++ b/src/Menu/MainMenuState.h
+@@ -46,7 +46,7 @@ class MainMenuState : public State
+ private:
+ 	TextButton *_btnNewGame, *_btnNewBattle, *_btnLoad, *_btnOptions, *_btnMods, *_btnQuit, *_btnUpdate;
+ 	Window *_window;
+-	Text *_txtTitle, *_txtUpdateInfo;
++	Text *_txtTitle, *_txtUpdateInfo, *_txtVersion = nullptr;
+ #ifdef _WIN32
+ 	bool _debugInVisualStudio;
+ 	std::string _newVersion;
 diff --git a/src/Menu/NewGameState.cpp b/src/Menu/NewGameState.cpp
-index a4e38dc..44f638d 100644
+index a4e38dc..21c7adc 100644
 --- a/src/Menu/NewGameState.cpp
 +++ b/src/Menu/NewGameState.cpp
-@@ -28,6 +28,8 @@
+@@ -28,6 +28,9 @@
  #include "../Geoscape/BaseNameState.h"
  #include "../Basescape/PlaceLiftState.h"
  #include "../Engine/Options.h"
 +#include "../Interface/Slider.h"
++#include "CutsceneState.h"
 +#include <sstream>
  #include "../Savegame/SavedGame.h"
  #include "../Savegame/Base.h"
  
-@@ -41,17 +43,25 @@ namespace OpenXcom
+@@ -41,17 +44,25 @@ namespace OpenXcom
  NewGameState::NewGameState()
  {
  	// Create objects
@@ -8134,7 +8203,7 @@ index a4e38dc..44f638d 100644
  
  	switch (_game->getMod()->getStartingDifficulty())
  	{
-@@ -89,6 +99,13 @@ NewGameState::NewGameState()
+@@ -89,6 +100,13 @@ NewGameState::NewGameState()
  	add(_btnCancel, "button", "newGameMenu");
  	add(_txtTitle, "text", "newGameMenu");
  	add(_txtIronman, "ironman", "newGameMenu");
@@ -8148,7 +8217,7 @@ index a4e38dc..44f638d 100644
  
  	centerAllSurfaces();
  
-@@ -126,6 +143,43 @@ NewGameState::NewGameState()
+@@ -126,6 +144,43 @@ NewGameState::NewGameState()
  	_txtIronman->setWordWrap(true);
  	_txtIronman->setVerticalAlign(ALIGN_MIDDLE);
  	_txtIronman->setText(tr("STR_IRONMAN_DESC"));
@@ -8192,7 +8261,7 @@ index a4e38dc..44f638d 100644
  }
  
  /**
-@@ -170,6 +224,11 @@ void NewGameState::btnOkClick(Action *)
+@@ -170,6 +225,11 @@ void NewGameState::btnOkClick(Action *)
  	SavedGame *save = _game->getMod()->newSave(diff);
  	save->setDifficulty(diff);
  	save->setIronman(_btnIronman->getPressed());
@@ -8204,6 +8273,20 @@ index a4e38dc..44f638d 100644
  	_game->setSavedGame(save);
  
  	GeoscapeState *gs = new GeoscapeState;
+@@ -201,6 +261,13 @@ void NewGameState::btnOkClick(Action *)
+ 		// custom location, custom name
+ 		_game->pushState(new BuildNewBaseState(base, gs->getGlobe(), true));
+ 	}
++
++	// G.I. Joe: the opening briefing (stills and narration) plays before anything
++	// else in a new campaign, on top of the base placement it then hands over to.
++	if (_game->getMod()->getVideo("openingBriefing", false))
++	{
++		_game->pushState(new CutsceneState("openingBriefing"));
++	}
+ }
+ 
+ /**
 diff --git a/src/Menu/NewGameState.h b/src/Menu/NewGameState.h
 index db4fe9c..f6ee3fb 100644
 --- a/src/Menu/NewGameState.h
