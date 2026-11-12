@@ -210,6 +210,34 @@ feel like anything until the tree is populated.** Content, not engine.
 
 ---
 
+### Craft art shows sharp only after the equipment screen has been opened (12 Nov)
+
+`build/install_craft_art.py` installs the Tomahawk and Skystriker top views as
+BASEBITS 33 / 36 with `_hi` twins, and the dossiers as UP004 / UP002 with `_hi`
+twins. The twins are right — but three screens never reach them:
+
+- **Hangar on the base plan.** `HiUI::nativeBaseView` looks the docked craft's
+  frame up in `bgImages`, but a BASEBITS twin is only *pending* until
+  `resolvePending()` runs, and only `HiUI::sprite` / `spriteFit` (the equipment
+  screen) call it. So the hangar shows the blocky 8-bit craft until the player
+  has opened an equipment screen once in that session; after that it is sharp.
+  Seen both ways on screen. **Fix: `resolvePending();` as the first line of
+  `nativeBaseView` (Engine/HiUI.cpp ~1917).**
+- **Craft equipment screen** (`CraftInfoState`, 32×40 at 144,56) blits the frame
+  into its own `_sprite`, so no twin can be found. Fix: after each blit
+  (CraftInfoState.cpp:229 and :675) call `HiUI::sprite(frame, _sprite->getX(),
+  _sprite->getY(), 32, 40)` from the state's blit, or alias `_sprite` to the
+  frame — `aliasImage` would also need `resolvePending()` first.
+- **Intel craft article** blits the picture into the article's `_bg`
+  (ArticleStateCraft.cpp:59). Fix: `HiUI::aliasImage(_bg,
+  _game->getMod()->getSurface(defs->image_id))` after that line — the same thing
+  `InventoryState.cpp:195` does for TAC01.SCR. Every other article type has the
+  same copy and the same fix.
+
+Not done either: the craft's outline in an air battle (INTICON frames 11 / 14,
+22×25, geoscape palette, recoloured by the damage indicator). Cheap to make;
+not installed because it could not be checked without staging a dogfight.
+
 ## Broken
 
 ### A campaign crashes around month 15 — in THIS CONTAINER, not necessarily on a real install

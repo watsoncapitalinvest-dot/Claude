@@ -1,0 +1,157 @@
+UI ENGINE ANSWERS 2 - battle map view, portrait and figure sizes, UI timing
+(12 Nov 2026. Read from the engine source and the mod rulesets; where a number
+was also checked on screen it says so. File:line references are to the
+engine source tree, src/.)
+
+0. A CORRECTION FIRST: THE MENU SCALE
+   Menus are laid out on 320 x 200 and scaled to fit the display:
+     1920 x 1200   6.0x, no bars. The 320 x 200 page fills the screen.
+                   (Checked on screen: the Intel article's title at base
+                   (5,24) lands at display (30,144).)
+     1920 x 1080   5.4x, centred, a 96 px black bar left and right.
+   "5.4x with offset 96,60" is what a 1920 x 1080 game WINDOW looks like on a
+   1920 x 1200 desktop - the window itself sits 60 px down. It is not a mode
+   of the game. Design canvas for a full menu stays 1920 x 1200 (6x).
+
+   The battlescape is different: it is laid out on the display divided by 4
+   (option battlescapeScale 6 = SCALE_SCREEN_DIV_4, Engine/Options.h:53-66,
+   Engine/Screen.cpp:768-771), so k = 4 at both sizes:
+     1920 x 1200   battle base 480 x 300
+     1920 x 1080   battle base 480 x 270
+
+
+A. HOW MUCH BATTLE MAP IS VISIBLE
+   The map is drawn over the whole window; the control bar covers the bottom
+   42 base px (interface "icons" size [320, 42], mod/Ruleset/gijoe_battle_hud.rul;
+   visible map height = screen height - bar height,
+   Battlescape/BattlescapeState.cpp:116-117). The bar's 320-wide block is
+   centred: x = (480 - 320) / 2 = 80 (BattlescapeState.cpp:117).
+
+   A tile is a 32 x 40 base px sprite whose floor diamond is 32 wide and 16
+   tall (128 x 64 display px at k = 4). One map level is 24 base px higher than
+   the one below (Battlescape/Map.cpp:494).
+
+                         1920 x 1200           1920 x 1080
+   map area, base px     480 x 258             480 x 228
+   map area, display px  1920 x 1032           1920 x 912
+   diamonds across       15                    15
+   diamond rows down     16.1                  14.25
+   tiles on screen       about 484             about 428     (area / 256)
+   largest square block
+   fully in view         15 x 15 tiles         14 x 14 tiles
+
+   Along one map axis the view is a diagonal: one tile step moves 16 base px
+   sideways and 8 down, so a straight corridor running corner to corner can
+   show up to about 30 tiles across the width. The X-COM maps are 40 x 40 to
+   60 x 60 (some 100 x 100), so the player always sees a part of the map and
+   scrolls. These figures are from the code, not measured in a battle.
+
+
+B. PORTRAIT AND FIGURE SIZES
+   Base px are the screen's own layout units; display px are at 1920 x 1200.
+
+   Battle bar portrait (BattlescapeState.cpp:813 _hudPortrait, painted by
+   Engine/HiUI.cpp:1042-1060)
+     box            28 x 28 base at (4,11) inside the bar's 320 block
+                    -> on screen base (84, 269) at 1920x1200, (84, 239) at 1920x1080
+     display        112 x 112 px (k = 4); the picture is inset 2 display px,
+                    so 108 x 108 of picture inside a yellow frame
+     display pos    (336, 1076) at 1920x1200; (336, 956) at 1920x1080
+     source         NOT a separate portrait file. A square cut from the
+                    soldier's equipment-screen figure twin (the 1920 x 1200
+                    *_inv_hi.png): centre x 483, top y 290, side 130 px
+                    (HiUI.cpp:1054-1056). In base terms a 21.7 px square at
+                    (69.7, 48.3). A figure whose head is not in that square
+                    gets a portrait of its chest or of empty background.
+
+   Equipment screen figure (Battlescape/InventoryState.cpp:131-132, the
+   320 x 200 page centred in the 480 x 300 battle buffer; checked on screen)
+     page           320 x 200 base -> 1280 x 800 display at (320, 200)
+                    [1920x1080: at (320, 140)]
+     figure         94 base px tall, feet on row 144, centred on column 80.5
+                    (build/install_inventory_figures.py); about 31-34 wide.
+                    Display: 376 px tall, about 130 wide.
+     painted panel  the frame the page art draws round the figure is about
+                    48 x 105 base at (58, 43) - measured off a screenshot,
+                    not from a file.
+     files          <name>_inv.png 320 x 200 8-bit and <name>_inv_hi.png
+                    1920 x 1200 RGBA (6x; shown at 4x, i.e. downscaled).
+
+   Other places the same figure is drawn (by reading, not checked on screen)
+     Intel armour article    Ufopaedia/ArticleStateArmor.cpp:114-122, 320 x 200
+                             menu page, 6x at 1920x1200 -> 564 px tall figure.
+                             The page is copied into the article's own
+                             surface, so only the 8-bit figure shows (same
+                             cause as the dossier pictures below).
+     Soldier avatar screen   Basescape/SoldierAvatarState.cpp:48, 320 x 200.
+     Cobra inventory         Battlescape/AlienInventoryState.cpp:57-59,
+                             320 x 200 shifted by offsetX.
+
+   Craft pictures (for reference; installed 12 Nov by build/install_craft_art.py)
+     hangar on the base plan  BASEBITS frame 32 x 40 base -> 192 x 240 display
+                              (Basescape/BaseView.cpp:703, HiUI.cpp:2039-2046)
+     craft equipment screen   32 x 40 base at (144, 56)
+                              (Basescape/CraftInfoState.cpp:116, 229) -
+                              8-bit only, no sharp twin
+     Intel craft article      full 320 x 200 page -> 1920 x 1200; 8-bit only
+                              (Ufopaedia/ArticleStateCraft.cpp:59)
+
+
+C. UI TIMING
+   The main loop runs logic every pass (about every 1 ms, SDL_Delay(1)) and
+   draws at most Options::FPS frames a second - 60 in the shipped options,
+   30 when the window is not focused (Engine/Game.cpp:333-341, 373-377).
+   A Timer fires at most once per pass when its interval has elapsed
+   (Engine/Timer.cpp, Timer::think).
+
+   Popup window open
+     Interface/Window.cpp:30   POPUP_SPEED = 0.05 of the size per step
+     Interface/Window.cpp:46   step timer 10 ms
+     Window.cpp:141-153        grows from 0 to full in 20 steps -> about
+                               200 ms, then the contents appear all at once
+                               (showAll). No close animation: a closing
+                               window just goes.
+     Grows horizontally, vertically or both per window (Window.cpp:169-182).
+     The popup sound plays at step 0 (Window.cpp:133-139).
+     (In this container's software-rendered test display it takes several
+     seconds; that is the test machine, not the game.)
+
+   Button press feedback
+     Immediate and held, no timer: the button redraws pressed on mouse DOWN
+     (Interface/TextButton.cpp:306-323, with its press sound) and back up on
+     mouse UP (TextButton.cpp:341-345). The action itself fires on mouse UP,
+     and only if the pointer is still over the button
+     (Engine/InteractiveSurface.cpp:168-185). So the pressed look lasts
+     exactly as long as the player holds the button.
+
+   Tooltip delay
+     None. The battle bar's tooltip line is set the instant the pointer
+     enters a button (Battlescape/BattlescapeState.cpp:4263-4270), only when
+     Options::battleTooltips is on. There is no hover delay anywhere in the
+     engine and no floating tooltip box. Outside battle, tooltips exist only
+     on the options screens, the equipment screen and the debriefing (the
+     files that call setTooltip). A delay would be engine work.
+
+   Battle animation
+     Battlescape/BattlescapeState.h:130   DEFAULT_ANIM_SPEED = 100 ms
+     BattlescapeState.cpp:719  _animTimer 100 ms: map animation (animated
+                               tiles, blinking unit buttons, health bar
+                               blink) at 10 frames a second
+     BattlescapeState.cpp:722  _gameTimer: one step of whatever is happening
+                               (walking, turning, firing), interval set by
+                               the action:
+       walking / turning   Options::battleXcomSpeed or battleAlienSpeed,
+                           30 ms a step in the shipped options
+                           (UnitWalkBState.cpp:523-525, UnitTurnBState.cpp:63-65)
+       projectile flight   1000/60 ms (ProjectileFlyBState.cpp:457)
+       death fall          100 ms a frame, 33 ms for some
+                           (UnitDieBState.cpp:82-85)
+       explosion           from the item's explosionSpeed
+                           (ExplosionBState.cpp:258, 276)
+     Everything is still drawn at most 60 times a second.
+
+
+NOT FOUND
+   - No close or fade animation for windows, no slide-in for panels.
+   - No configurable tooltip delay, no hover state on buttons other than the
+     pressed one (HiUI may draw hover itself on native keys; not checked).
