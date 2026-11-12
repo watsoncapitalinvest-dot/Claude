@@ -476,3 +476,21 @@ Every `Text` is set in the label face at HD, which turned FONT_DIGITAL's
 danger role). `HiUI::pixelText` marks a widget to keep its own font's `_hi`
 twin; the clock's five widgets use it and read red 7-segment again.
 
+## A UFO article can be a whole page; a dogfight preview can be sharp (12 Nov)
+
+Vanilla's UFO article (`ArticleStateUfo`) has no picture of its own: it draws
+BACK11.SCR and copies the 160x52 interception strip into the corner, at fixed
+places. For the FANG it now takes what a craft article takes - `image_id`
+(a `_CPAL` name sets the picture's palette), `rect_text` and `rect_stats` on
+the ufopaedia entry - and draws exactly as `ArticleStateCraft` does, alias to
+the `_hi` twin included. No `image_id` keeps the vanilla page unchanged
+(checked on the Firebat). The stats are a `TextList`; a `rect_stats` 64 px or
+taller sets the four rows big, as vanilla does, anything shorter sets them small.
+
+The interception window's preview (`DogfightState::_preview`) is one surface
+built from three pieces, and only the craft in the middle (the ufo's
+`modSprite`) has a twin. A whole-widget alias would stretch it over the frame,
+so `HiUI::spriteIn(dst, src, x, y)` records "draw src's twin at (x,y) inside
+dst" and `after()` paints it there with `sprite()` on every draw.
+`surfaceGone` drops both ends.
+

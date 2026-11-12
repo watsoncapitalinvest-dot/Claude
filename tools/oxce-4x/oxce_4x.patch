@@ -3325,10 +3325,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..a0a1f1e
+index 0000000..2ddbdff
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,2850 @@
+@@ -0,0 +1,2874 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -3392,6 +3392,8 @@ index 0000000..a0a1f1e
 +	struct Pending { SurfaceSet *set; int frame; std::string file; };
 +	std::vector<Pending> pending;                                                // resolved on first draw, not at mod load
 +	std::unordered_map<std::string, Img> pieces;                                 // Resources/UI/<name>.png
++	struct Inset { const Surface *src; int x, y; };
++	std::unordered_map<const Surface*, std::vector<Inset> > insets;             // twins drawn inside part of a widget
 +
 +	Img loadPng(const std::string &path)
 +	{
@@ -4886,6 +4888,15 @@ index 0000000..a0a1f1e
 +	pending.push_back({set, frame, file});
 +}
 +
++void spriteIn(const Surface *dst, const Surface *src, int x, int y)
++{
++	if (!enabled() || !dst || !src) return;
++	auto &v = insets[dst];
++	for (auto &e : v)
++		if (e.x == x && e.y == y) { e.src = src; return; }   // a redraw of the same place replaces it
++	v.push_back({src, x, y});
++}
++
 +void resolvePending()
 +{
 +	if (pending.empty()) return;
@@ -5131,6 +5142,16 @@ index 0000000..a0a1f1e
 +			scratch.clear();
 +			return;
 +		}
++	}
++	// A TWIN INSIDE PART OF A WIDGET (spriteIn): the interception window's
++	// preview is one surface built from three pieces, and only the craft in the
++	// middle has a sharp twin. Painted over the pixels it wrote, the rest of the
++	// widget is left as it is.
++	{
++		auto in = insets.find(w);
++		if (in != insets.end())
++			for (const auto &e : in->second)
++				sprite(e.src, w->getX() + e.x, w->getY() + e.y, e.src->getWidth(), e.src->getHeight());
 +	}
 +	// A PLAIN SCREEN BACKGROUND WITH A REGISTERED SHARP TWIN.
 +	//
@@ -5607,6 +5628,9 @@ index 0000000..a0a1f1e
 +	// rotate-up key came out as a black square cut from the end of the intro.
 +	if (!s) return;
 +	bgImages.erase(s);
++	insets.erase(s);
++	for (auto &kv : insets)
++		kv.second.erase(std::remove_if(kv.second.begin(), kv.second.end(), [s](const Inset &e) { return e.src == s; }), kv.second.end());
 +	textInks.erase(s); pixelTexts.erase(s); textFaces.erase(s);
 +	nativeForget(s);
 +	if (G.v.globe == s) globeForget(s);
@@ -6181,10 +6205,10 @@ index 0000000..a0a1f1e
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..1790091
+index 0000000..557164a
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,172 @@
+@@ -0,0 +1,176 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -6225,6 +6249,10 @@ index 0000000..1790091
 +	/// A sprite frame's sharp twin. The set's frames are not in their final places yet when the mod
 +	/// loads, so the file is remembered here and the frame looked up the first time one is drawn.
 +	void registerSetFrame(SurfaceSet *set, int frame, const std::string &file);
++	/// A registered surface's sharp twin, drawn inside part of a widget it was copied
++	/// into at (x,y) - widget-relative base px - every time that widget is drawn.
++	/// For a widget composed of several pieces, of which only one has a twin.
++	void spriteIn(const Surface *dst, const Surface *src, int x, int y);
 +	/// Draw a registered sprite's sharp twin over the base rect it has just been blitted into.
 +	/// Only base pixels the sprite actually wrote are taken over, so its shape stays its own.
 +	void sprite(const Surface *frame, int x, int y, int w, int h);
@@ -6912,10 +6940,30 @@ index 0000000..e57d835
 +
 +}
 diff --git a/src/Geoscape/DogfightState.cpp b/src/Geoscape/DogfightState.cpp
-index e805e35..047890d 100644
+index e805e35..c4ebe79 100644
 --- a/src/Geoscape/DogfightState.cpp
 +++ b/src/Geoscape/DogfightState.cpp
-@@ -1638,7 +1638,7 @@ void DogfightState::update()
+@@ -54,6 +54,7 @@
+ #include "DogfightErrorState.h"
+ #include "../Mod/RuleInterface.h"
+ #include "../Mod/Mod.h"
++#include "../Engine/HiUI.h"
+ 
+ namespace OpenXcom
+ {
+@@ -471,6 +472,11 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool
+ 	crop.setX(dogfightInterface->getElement("previewTop")->x);
+ 	crop.setY(dogfightInterface->getElement("previewTop")->h);
+ 	crop.blit(_preview);
++	// G.I. Joe 4x: a mod's craft picture draws from its sharp twin (<file>_hi.png),
++	// over the middle of the preview it was copied into
++	if (!ufo->getRules()->getModSprite().empty())
++		HiUI::spriteIn(_preview, _game->getMod()->getSurface(ufo->getRules()->getModSprite()),
++			dogfightInterface->getElement("previewTop")->x, dogfightInterface->getElement("previewTop")->h);
+ 
+ 	_preview->setVisible(false);
+ 	_preview->onMouseClick((ActionHandler)&DogfightState::previewClick);
+@@ -1638,7 +1644,7 @@ void DogfightState::update()
  					// Difference from original: No retaliation until final UFO lands (Original: Is spawned).
  					if (!_game->getSavedGame()->findAlienMission(targetRegion, OBJECTIVE_RETALIATION, race))
  					{
@@ -9541,6 +9589,51 @@ index 5c8559f..18e2a50 100644
  	/// Gets the score penalty XCom receives for aborting this mission.
  	int getAbortPenalty() const { return _abortPenalty; }
  	/// Gets the (half hourly) score penalty XCom receives for this site existing.
+diff --git a/src/Mod/ArticleDefinition.cpp b/src/Mod/ArticleDefinition.cpp
+index f91e04e..ed28496 100644
+--- a/src/Mod/ArticleDefinition.cpp
++++ b/src/Mod/ArticleDefinition.cpp
+@@ -321,7 +321,11 @@ namespace OpenXcom
+ 	 * Constructor (only setting type of base class).
+ 	 */
+ 	ArticleDefinitionUfo::ArticleDefinitionUfo() : ArticleDefinition(UFOPAEDIA_TYPE_UFO)
+-	{}
++	{
++		// the vanilla page's own places, used when a picture is given without them
++		rect_stats.set(10, 68, 310, 64);
++		rect_text.set(10, 140, 300, 50);
++	}
+ 
+ 	/**
+ 	 * Loads the article definition from a YAML file.
+@@ -331,6 +335,11 @@ namespace OpenXcom
+ 	void ArticleDefinitionUfo::load(const YAML::YamlNodeReader& reader, int listOrder)
+ 	{
+ 		ArticleDefinition::load(reader, listOrder);
++		reader.tryRead("image_id", image_id);
++		if (image_id.find("_CPAL") != std::string::npos)
++			customPalette = true;
++		reader.tryRead("rect_stats", rect_stats);
++		reader.tryRead("rect_text", rect_text);
+ 	}
+ 
+ 	/**
+diff --git a/src/Mod/ArticleDefinition.h b/src/Mod/ArticleDefinition.h
+index e90d54f..41fb446 100644
+--- a/src/Mod/ArticleDefinition.h
++++ b/src/Mod/ArticleDefinition.h
+@@ -339,6 +339,11 @@ namespace OpenXcom
+ 		/// Loads the article from YAML.
+ 		void load(const YAML::YamlNodeReader& reader, int listOrder) override;
+ 
++		/// G.I. Joe 4x: a whole-page picture, as a craft article has. Empty keeps the
++		/// vanilla page (BACK11.SCR and the interception preview strip).
++		std::string image_id;
++		ArticleDefinitionRect rect_stats;
++		ArticleDefinitionRect rect_text;
+ 	};
+ 
+ 	/**
 diff --git a/src/Mod/ExtraSprites.cpp b/src/Mod/ExtraSprites.cpp
 index c71ac0d..16093ab 100644
 --- a/src/Mod/ExtraSprites.cpp
@@ -12805,3 +12898,181 @@ index 50fac40..cc4af4c 100644
  		_btnOk->setColor(Palette::blockOffset(15)-1);
  		_btnPrev->setColor(Palette::blockOffset(15)-1);
  		_btnNext->setColor(Palette::blockOffset(15)-1);
+diff --git a/src/Ufopaedia/ArticleStateUfo.cpp b/src/Ufopaedia/ArticleStateUfo.cpp
+index 5e2a483..743e298 100644
+--- a/src/Ufopaedia/ArticleStateUfo.cpp
++++ b/src/Ufopaedia/ArticleStateUfo.cpp
+@@ -17,7 +17,9 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
++#include <algorithm>
+ #include "ArticleStateUfo.h"
++#include "../Engine/HiUI.h"
+ #include "../Mod/ArticleDefinition.h"
+ #include "../Mod/Mod.h"
+ #include "../Mod/RuleUfo.h"
+@@ -38,76 +40,124 @@ namespace OpenXcom
+ 	{
+ 		RuleUfo *ufo = _game->getMod()->getUfo(defs->id, true);
+ 
++		// G.I. Joe 4x: an article with its own whole-page picture (image_id) is laid
++		// out the way a craft article is - the picture is the page, and the text and
++		// stats go where rect_text and rect_stats put them, beside the craft.
++		const bool page = !defs->image_id.empty();
++
+ 		// add screen elements
+ 		_txtTitle = new Text(155, 32, 5, 24);
+ 
+ 		// Set palette
+-		setStandardPalette("PAL_GEOSCAPE");
++		if (page && defs->customPalette)
++			setCustomPalette(_game->getMod()->getSurface(defs->image_id)->getPalette(), Mod::UFOPAEDIA_CURSOR);
++		else if (page)
++			setStandardPalette("PAL_UFOPAEDIA");
++		else
++			setStandardPalette("PAL_GEOSCAPE");
+ 
+ 		ArticleState::initLayout();
+ 
+ 		// add other elements
+ 		add(_txtTitle);
+ 
++		const Uint8 ink = page ? Palette::blockOffset(14)+15 : Palette::blockOffset(8)+5;
++		const Uint8 key = page ? Palette::blockOffset(15)-1 : Palette::blockOffset(8)+5;
++		const Uint8 ink2 = page ? Palette::blockOffset(15)+4 : Palette::blockOffset(8)+10;
++
+ 		// Set up objects
+-		_game->getMod()->getSurface("BACK11.SCR")->blitNShade(_bg, 0, 0);
+-		_btnOk->setColor(Palette::blockOffset(8)+5);
+-		_btnPrev->setColor(Palette::blockOffset(8)+5);
+-		_btnNext->setColor(Palette::blockOffset(8)+5);
+-		_btnInfo->setColor(Palette::blockOffset(8)+5);
++		if (page)
++		{
++			_game->getMod()->getSurface(defs->image_id)->blitNShade(_bg, 0, 0);
++			// _bg is a COPY of the picture, so its sharp twin is found through an alias
++			HiUI::aliasImage(_bg, _game->getMod()->getSurface(defs->image_id));
++		}
++		else
++		{
++			_game->getMod()->getSurface("BACK11.SCR")->blitNShade(_bg, 0, 0);
++		}
++		_btnOk->setColor(key);
++		_btnPrev->setColor(key);
++		_btnNext->setColor(key);
++		_btnInfo->setColor(key);
+ 		_btnInfo->setVisible(_game->getMod()->getShowPediaInfoButton());
+ 
+-		_txtTitle->setColor(Palette::blockOffset(8)+5);
++		_txtTitle->setColor(ink);
+ 		_txtTitle->setBig();
+ 		_txtTitle->setWordWrap(true);
+ 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
+ 
+-		_image = new Surface(160, 52, 160, 6);
+-		add(_image);
+-
+-		RuleInterface *dogfightInterface = _game->getMod()->getInterface("dogfight");
+-
+-		SurfaceCrop crop = _game->getMod()->getSurface("INTERWIN.DAT")->getCrop();
+-		crop.setX(0);
+-		crop.setY(0);
+-		crop.getCrop()->x = 0;
+-		crop.getCrop()->y = 0;
+-		crop.getCrop()->w = _image->getWidth();
+-		crop.getCrop()->h = _image->getHeight();
+-		_image->drawRect(crop.getCrop(), 15);
+-		crop.blit(_image);
+-
+-		if (ufo->getModSprite().empty())
+-		{
+-			crop.getCrop()->y = dogfightInterface->getElement("previewMid")->y + dogfightInterface->getElement("previewMid")->h * ufo->getSprite();
+-			crop.getCrop()->h = dogfightInterface->getElement("previewMid")->h;
+-		}
+-		else
++		_image = nullptr;
++		if (!page)
+ 		{
+-			crop = _game->getMod()->getSurface(ufo->getModSprite())->getCrop();
++			_image = new Surface(160, 52, 160, 6);
++			add(_image);
++
++			RuleInterface *dogfightInterface = _game->getMod()->getInterface("dogfight");
++
++			SurfaceCrop crop = _game->getMod()->getSurface("INTERWIN.DAT")->getCrop();
++			crop.setX(0);
++			crop.setY(0);
++			crop.getCrop()->x = 0;
++			crop.getCrop()->y = 0;
++			crop.getCrop()->w = _image->getWidth();
++			crop.getCrop()->h = _image->getHeight();
++			_image->drawRect(crop.getCrop(), 15);
++			crop.blit(_image);
++
++			if (ufo->getModSprite().empty())
++			{
++				crop.getCrop()->y = dogfightInterface->getElement("previewMid")->y + dogfightInterface->getElement("previewMid")->h * ufo->getSprite();
++				crop.getCrop()->h = dogfightInterface->getElement("previewMid")->h;
++			}
++			else
++			{
++				crop = _game->getMod()->getSurface(ufo->getModSprite())->getCrop();
++			}
++			crop.setX(0);
++			crop.setY(0);
++			crop.blit(_image);
++
++			// a mod preview that fills the strip exactly: show its sharp twin, the
++			// same one the interception window uses (_image is a copy of it)
++			if (!ufo->getModSprite().empty())
++			{
++				Surface *mod = _game->getMod()->getSurface(ufo->getModSprite());
++				if (mod->getWidth() == _image->getWidth() && mod->getHeight() == _image->getHeight())
++					HiUI::aliasImage(_image, mod);
++			}
+ 		}
+-		crop.setX(0);
+-		crop.setY(0);
+-		crop.blit(_image);
+ 
+-		_txtInfo = new Text(300, 50, 10, 140);
++		if (page)
++			_txtInfo = new Text(defs->rect_text.width, defs->rect_text.height, defs->rect_text.x, defs->rect_text.y);
++		else
++			_txtInfo = new Text(300, 50, 10, 140);
+ 		add(_txtInfo);
+ 
+-		_txtInfo->setColor(Palette::blockOffset(8)+5);
+-		_txtInfo->setSecondaryColor(Palette::blockOffset(8) + 10);
++		_txtInfo->setColor(ink);
++		_txtInfo->setSecondaryColor(ink2);
+ 		_txtInfo->setWordWrap(true);
+ 		_txtInfo->setScrollable(true);
+ 		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));
+ 
+-		_lstInfo = new TextList(310, 64, 10, 68);
++		if (page)
++			_lstInfo = new TextList(defs->rect_stats.width, defs->rect_stats.height, defs->rect_stats.x, defs->rect_stats.y);
++		else
++			_lstInfo = new TextList(310, 64, 10, 68);
+ 		add(_lstInfo);
+ 
+ 		centerAllSurfaces();
+ 
+-		_lstInfo->setColor(Palette::blockOffset(8)+5);
+-		_lstInfo->setColumns(2, 200, 110);
++		_lstInfo->setColor(ink);
++		{
++			// the value column keeps the vanilla 110 px, the label takes the rest
++			const int w = _lstInfo->getWidth();
++			_lstInfo->setColumns(2, std::max(40, w - 110), std::min(110, w - 40));
++		}
+ //		_lstInfo->setCondensed(true);
+-		_lstInfo->setBig();
++		// four rows: big type where the box is tall enough for it, as the vanilla page is
++		if (_lstInfo->getHeight() >= 64)
++			_lstInfo->setBig();
+ 		_lstInfo->setDot(true);
+ 
+ 		_lstInfo->addRow(2, tr("STR_DAMAGE_CAPACITY").c_str(), Unicode::formatNumber(ufo->getStats().damageMax).c_str());

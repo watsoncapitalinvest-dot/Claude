@@ -315,6 +315,39 @@ harvested plan; 13 vanilla facilities show them. Left over, each with its cost:
 - **`sizedTwins` caches by frame address**, like `flatTwin` below. Harmless
   unless BASEBITS is rebuilt in-process (mod change without restart).
 
+### The FANG on the battle map (12 Nov)
+
+The FANG's dossier page and its interception picture are in the game
+(`build/install_fang_art.py`). **The landed and crashed FANG on the battle map
+are not**: STR_SMALL_SCOUT still drops the vanilla small-scout hull
+(`battlescapeTerrainData: UFO1A`, sets BLANKS + UFO1, a 10x10 block), so the
+first FANG landing a player raids is a grey saucer.
+
+The art for it is kept, keyed and cleaned, NOT shipped:
+`art_briefs/returned/fang/clean/` holds `fang_top.png` (straight down, nose
+up) and the four angles the art AI drew unasked (front, rear, opposite side,
+rear three-quarter), every pixel subject or pure FF00FF. The untouched
+originals are one folder up.
+
+What the map version needs, none of which exists yet:
+
+- **A way from pictures to tiles.** The battlescape is isometric 32x40 tiles
+  stacked in levels, each tile a floor, two walls and an object, each with a
+  LOFT voxel shape for line of fire. A top-down picture cannot be sliced into
+  that; it is a footprint and a reference, not a source. Realistically a 3D
+  model of the FANG (the five angles are the modelling references) rendered to
+  iso tiles in Blender, the same road the room objects took.
+- **A tileset**: MCD/PCK/TAB with the FANG's pieces (body, rotor mast, blades,
+  skids, missile rack), and a damaged set for the crash site.
+- **A map block** for the landing and one for the crash, sized to a FANG - a
+  one-man gyrocopter is two or three tiles long, so the 10x10 saucer block is
+  mostly empty ground once it is gone - and route nodes (RMP) for the Viper
+  Pilot.
+- **The rule**: `battlescapeTerrainData` on STR_SMALL_SCOUT pointed at it.
+
+Cost: the pipeline is the big piece, and it is shared with the Stinger and the
+H.I.S.S., which need the same thing in months 4-12. Not started.
+
 ## Broken
 
 ### `flatTwin` caches by surface address
