@@ -1,8 +1,8 @@
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..b1ac735 100644
+index b7e1111..ca2477c 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
-@@ -508,8 +508,184 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
+@@ -508,8 +508,186 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
  /**
   * Ends the turn.
   */
@@ -51,6 +51,8 @@ index b7e1111..b1ac735 100644
 +		return;
 +	}
 +
++	// Forced preconditions. Deliberately BEFORE the three passes, so the passes below are the
++	// real ones and the probe only arranges the board they read.
 +	// Forced preconditions. Deliberately BEFORE the three passes, so the passes below are the
 +	// real ones and the probe only arranges the board they read.
 +	// Forced preconditions. Deliberately BEFORE the three passes, so the passes below are the
@@ -2211,10 +2213,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..c25d03f
+index 0000000..e76ee9e
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,753 @@
+@@ -0,0 +1,778 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -2682,6 +2684,31 @@ index 0000000..c25d03f
 +void after(Surface *w)
 +{
 +	if (!base || !shown(w)) return;
++	// A PLAIN SCREEN BACKGROUND WITH A REGISTERED SHARP TWIN.
++	//
++	// bgImages was only ever consulted for Window, so a mod could ship
++	// <background>_hi.png, watch the engine log "Sharp twin: ... (1920x1200)",
++	// and still see the 320x200 original on screen - which is exactly what
++	// happened to the geoscape's GEOBORD. The geoscape's backdrop is not a
++	// Window; it is the state's own background surface, so it never reached the
++	// lookup. Anything with a registered twin is drawn from it here.
++	if (!dynamic_cast<Window*>(w))
++	{
++		auto bit = bgImages.find(w);
++		if (bit != bgImages.end() && bit->second.ok)
++		{
++			R r = rectOf(w);
++			if (clipBase(r))
++			{
++				const Img &im = bit->second;
++				const double kx = (double)im.w / bw, ky = (double)im.h / bh;
++				stretch(im, (int)(r.x0 * kx), (int)(r.y0 * ky), (int)(r.x1 * kx), (int)(r.y1 * ky),
++					xs[r.x0], ys[r.y0], xs[r.x1], ys[r.y1]);
++				claim(r);
++				return;
++			}
++		}
++	}
 +	if (Window *win = dynamic_cast<Window*>(w))
 +	{
 +		if (!win->isPoppedUp()) return;
