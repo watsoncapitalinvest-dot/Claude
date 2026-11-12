@@ -2213,10 +2213,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..e1b00aa
+index 0000000..815c15c
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,799 @@
+@@ -0,0 +1,835 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -2799,10 +2799,46 @@ index 0000000..e1b00aa
 +				return;
 +			}
 +		}
-+		const Img *art = piece(square ? (down ? "button_square_pressed" : "button_square") : (down ? "button_wide_pressed" : "button_wide"));
-+		if (art) nine(*art, X0 + m, Y0 + m, X1 - m, Y1 - m, std::max(5, (int)(art->h * 0.22)));
-+        else if (down) panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(120, 30, 26), rgb(96, 24, 21), rgb(214, 96, 84), 1);
-+		else panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(62, 72, 62), rgb(46, 54, 47), rgb(112, 122, 106), 1);
++		// A BUTTON THAT SITS IN A PAINTED RECESS DRAWS NO BUTTON.
++		//
++		// button_wide/button_square are for buttons on a plain window, where there
++		// is nothing underneath and the art IS the button. The geoscape's side
++		// panel is the other case: it is a painting with a recess cut for each of
++		// these twelve, every recess fitted to these exact widget rectangles - and
++		// this then stamped a slab over each one, a few pixels out of register,
++		// with the panel's own bezel lines and indicator lamps showing around the
++		// edges. All the fitting work was invisible underneath it.
++		//
++		// isGeoscapeButton() already marks exactly those twelve.
++		//
++		// claim(r) still happens, so the flat 8-bit button underneath is suppressed
++		// and what shows through is the panel painting. The art is kept when the
++		// button is DOWN, because for the speed buttons that is the only indication
++		// of which compression is running.
++		const bool bare = b->isGeoscapeButton() && !down;
++		if (b->isGeoscapeButton() && down)
++		{
++			// The ACTIVE one is a lit recess, not a slab in a different kit.
++			//
++			// Keeping button_wide_pressed here put a blue-grey box among five
++			// olive recesses - it marked the running time compression clearly
++			// enough and looked like it came off another machine. A warm wash
++			// over the painted recess with a bright rim says the same thing in
++			// the panel's own language.
++			const int m2 = std::max(1, m);
++			fillRect(X0 + m2, Y0 + m2, X1 - m2, Y1 - m2, rgb(196, 118, 42), 92);
++			fillRect(X0 + m2, Y0 + m2, X1 - m2, Y0 + m2 + 2, rgb(248, 206, 128), 190);
++			fillRect(X0 + m2, Y1 - m2 - 2, X1 - m2, Y1 - m2, rgb(248, 206, 128), 190);
++			fillRect(X0 + m2, Y0 + m2, X0 + m2 + 2, Y1 - m2, rgb(248, 206, 128), 190);
++			fillRect(X1 - m2 - 2, Y0 + m2, X1 - m2, Y1 - m2, rgb(248, 206, 128), 190);
++		}
++		else if (!bare)
++		{
++			const Img *art = piece(square ? (down ? "button_square_pressed" : "button_square") : (down ? "button_wide_pressed" : "button_wide"));
++			if (art) nine(*art, X0 + m, Y0 + m, X1 - m, Y1 - m, std::max(5, (int)(art->h * 0.22)));
++			else if (down) panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(120, 30, 26), rgb(96, 24, 21), rgb(214, 96, 84), 1);
++			else panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(62, 72, 62), rgb(46, 54, 47), rgb(112, 122, 106), 1);
++		}
 +		claim(r);
 +		if (t) glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r);
 +		return;
@@ -4884,6 +4920,67 @@ index ec1055a..643bfc9 100644
  	/// Sets the text's secondary color.
  	void setSecondaryColor(Uint8 color) override;
  	/// Gets the text's secondary color.
+diff --git a/src/Interface/TextButton.cpp b/src/Interface/TextButton.cpp
+index 764f55c..8074254 100644
+--- a/src/Interface/TextButton.cpp
++++ b/src/Interface/TextButton.cpp
+@@ -20,6 +20,7 @@
+ #include <SDL.h>
+ #include <SDL_mixer.h>
+ #include "Text.h"
++#include "../Engine/HiUI.h"
+ #include "../Engine/Sound.h"
+ #include "../Engine/Action.h"
+ #include "ComboBox.h"
+@@ -214,6 +215,35 @@ void TextButton::draw()
+ 	square.w = getWidth();
+ 	square.h = getHeight();
+ 
++	bool press;
++	if (_group == 0)
++		press = isButtonPressed();
++	else
++		press = (*_group == this);
++
++	// A BUTTON ON PAINTED PANEL ART MUST NOT PAINT ITS OWN BOX OVER IT.
++	//
++	// This draws a five-pass bevelled rectangle filling the whole widget. On
++	// vanilla's 64-pixel bezel that IS the button - there is nothing underneath
++	// worth seeing. On the 4x geoscape there is: the side panel is a painting with
++	// a recess cut for every one of these, and the boxes landed on top of it,
++	// slightly out of register, with the art's bezel lines and indicator lamps
++	// showing around their edges. Every rectangle in the panel art had been fitted
++	// to the engine's own widget rectangles, and then this covered them up.
++	//
++	// setGeoscapeButton(true) already marks exactly the twelve that sit on that
++	// panel - six command buttons and six speed buttons - so no new flag is needed.
++	//
++	// The fill is kept when the button is PRESSED, because that is the only thing
++	// telling the player which time compression is running. One lit box among five
++	// recesses reads better than the five boxes it replaces.
++	if (_geoscapeButton && HiUI::enabled() && !press)
++	{
++		_text->setInvert(false);
++		_text->blit(this->getSurface());
++		return;
++	}
++
+ 	for (int i = 0; i < 5; ++i)
+ 	{
+ 		drawRect(&square, color);
+@@ -252,12 +282,6 @@ void TextButton::draw()
+ 		}
+ 	}
+ 
+-	bool press;
+-	if (_group == 0)
+-		press = isButtonPressed();
+-	else
+-		press = (*_group == this);
+-
+ 	if (press)
+ 	{
+ 		if (_geoscapeButton)
 diff --git a/src/Interface/TextButton.h b/src/Interface/TextButton.h
 index 947b1e0..0cbfdfa 100644
 --- a/src/Interface/TextButton.h
