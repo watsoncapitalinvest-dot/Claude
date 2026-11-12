@@ -819,7 +819,7 @@ index 642c538..f187c4c 100644
  	void drawSelectedItem();
  	/// Gets the currently selected item.
 diff --git a/src/Battlescape/InventoryState.cpp b/src/Battlescape/InventoryState.cpp
-index cea8e65..abcb852 100644
+index cea8e65..cd019c5 100644
 --- a/src/Battlescape/InventoryState.cpp
 +++ b/src/Battlescape/InventoryState.cpp
 @@ -17,6 +17,7 @@
@@ -864,7 +864,7 @@ index cea8e65..abcb852 100644
  	_txtPosition = new Text(70, 9, 65, 95);
  	_txtNameStatic = new Text(210, 17, 28, 6);
  	_txtName = new TextEdit(this, 210, 17, 28, 6);
-@@ -149,6 +168,38 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
+@@ -149,6 +168,40 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
  
  	// Set up objects
  	_game->getMod()->getSurface("TAC01.SCR")->blitNShade(_bg, 0, 0);
@@ -889,13 +889,15 @@ index cea8e65..abcb852 100644
 +						wells.push_back(SDL_Rect{ (Sint16)x, (Sint16)y, RuleInventory::SLOT_W, (Uint16)std::min(RuleInventory::SLOT_H, 201 - y) });
 +		}
 +		HiUI::nativeBackdrop(_bg, wells);
++		// the graphics AI's painting of this page, if one is installed (TAC01_hi.png)
++		HiUI::aliasImage(_bg, _game->getMod()->getSurface("TAC01.SCR"));
 +		HiUI::nativeKey(_btnOk, "OK");
 +		HiUI::nativeKey(_btnPrev, "<");
 +		HiUI::nativeKey(_btnNext, ">");
 +		HiUI::nativeKey(_btnUnload, "UNLOAD");
 +		HiUI::nativeKey(_btnGround, "->");
-+		HiUI::nativeKey(_btnCreateTemplate, "COPY");
-+		HiUI::nativeKey(_btnApplyTemplate, "PASTE");
++		HiUI::nativeKey(_btnCreateTemplate, "COPY", false);
++		HiUI::nativeKey(_btnApplyTemplate, "PASTE", false);
 +		for (Surface *t : std::initializer_list<Surface*>{ _txtPosition, _txtNameStatic, _txtName, _txtTus, _txtWeight,
 +			_txtStatLine1, _txtStatLine2, _txtStatLine3, _txtStatLine4, _txtItem, _txtAmmo, _btnQuickSearch })
 +			HiUI::nativeText(t);
@@ -903,7 +905,7 @@ index cea8e65..abcb852 100644
  	add(_btnArmor, "buttonArmor", "inventory", _bg);
  
  	add(_soldier);
-@@ -357,6 +408,10 @@ static void _clearInventoryTemplate(std::vector<EquipmentLayoutItem*> &inventory
+@@ -357,6 +410,10 @@ static void _clearInventoryTemplate(std::vector<EquipmentLayoutItem*> &inventory
   */
  InventoryState::~InventoryState()
  {
@@ -914,7 +916,7 @@ index cea8e65..abcb852 100644
  	_clearInventoryTemplate(_curInventoryTemplate);
  	_clearInventoryTemplate(_tempInventoryTemplate);
  
-@@ -432,6 +487,7 @@ void InventoryState::init()
+@@ -432,6 +489,7 @@ void InventoryState::init()
  	}
  
  	_soldier->clear();
@@ -922,7 +924,7 @@ index cea8e65..abcb852 100644
  	_btnRank->clear();
  
  	if (Options::oxceInventoryShowUnitSlot)
-@@ -510,7 +566,7 @@ void InventoryState::init()
+@@ -510,7 +568,7 @@ void InventoryState::init()
  			_reloadUnit = false;
  		}
  
@@ -931,7 +933,7 @@ index cea8e65..abcb852 100644
  		auto* frame = texture->getFrame(s->getRankSpriteBattlescape());
  		if (frame)
  		{
-@@ -556,6 +612,7 @@ void InventoryState::init()
+@@ -556,6 +614,7 @@ void InventoryState::init()
  				surf = _game->getMod()->getSurface(look, true);
  			}
  			surf->blitNShade(_soldier, 0, 0);
@@ -939,7 +941,7 @@ index cea8e65..abcb852 100644
  		}
  	}
  	else
-@@ -572,6 +629,7 @@ void InventoryState::init()
+@@ -572,6 +631,7 @@ void InventoryState::init()
  		if (armorSurface)
  		{
  			armorSurface->blitNShade(_soldier, 0, 0);
@@ -2380,10 +2382,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..6240d16
+index 0000000..e8185ab
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,1527 @@
+@@ -0,0 +1,1601 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -2953,9 +2955,56 @@ index 0000000..6240d16
 +	const Uint32 C_PLATE = 0x282D23, C_WELL = 0x0F100D, C_RIM_DARK = 0x1A1E16, C_RIM_LIGHT = 0x60684F;
 +	const Uint32 C_KEY = 0x5C644A, C_KEY_DARK = 0x343A2C, C_KEY_LIT = 0x848C6C, C_INK = 0xE2DEC4, C_LABEL = 0xD6CEA0;
 +
-+	struct NativeBg { std::vector<SDL_Rect> wells; Img cache; int cx0 = -1, cy0 = -1, cx1 = -1, cy1 = -1; };
++	struct NativeBg { std::vector<SDL_Rect> wells; Img cache; int cx0 = -1, cy0 = -1, cx1 = -1, cy1 = -1; bool painted = false; };
++	bool nativePainted = false;   // the backdrop up now is painted art: keys draw their legend only
++
++	/// Resample by AREA: every output pixel is the exact average of the source
++	/// under it. A painting made at 6x and shown at 4x stays sharp this way;
++	/// bilinear at that ratio skips source pixels and goes soft and grainy.
++	Img resampleArea(const Img &src, int W, int H)
++	{
++		Img out; out.w = W; out.h = H; out.px.assign((size_t)W * H, 0); out.ok = true;
++		if (W <= 0 || H <= 0 || !src.ok) return out;
++		std::vector<float> tmp((size_t)W * src.h * 4, 0.f);
++		const double rx = (double)src.w / W, ry = (double)src.h / H;
++		for (int x = 0; x < W; ++x)
++		{
++			const double a = x * rx, b = (x + 1) * rx;
++			for (int sx = (int)a; sx < std::min(src.w, (int)std::ceil(b)); ++sx)
++			{
++				const float wgt = (float)((std::min(b, sx + 1.0) - std::max(a, (double)sx)) / rx);
++				if (wgt <= 0) continue;
++				for (int y = 0; y < src.h; ++y)
++				{
++					const Uint32 p = src.px[(size_t)y * src.w + sx];
++					float *t = &tmp[((size_t)y * W + x) * 4];
++					t[0] += wgt * ((p >> 24) & 255); t[1] += wgt * ((p >> 16) & 255); t[2] += wgt * ((p >> 8) & 255); t[3] += wgt * (p & 255);
++				}
++			}
++		}
++		for (int y = 0; y < H; ++y)
++		{
++			const double a = y * ry, b = (y + 1) * ry;
++			float acc[4];
++			for (int x = 0; x < W; ++x)
++			{
++				acc[0] = acc[1] = acc[2] = acc[3] = 0;
++				for (int sy = (int)a; sy < std::min(src.h, (int)std::ceil(b)); ++sy)
++				{
++					const float wgt = (float)((std::min(b, sy + 1.0) - std::max(a, (double)sy)) / ry);
++					if (wgt <= 0) continue;
++					const float *t = &tmp[((size_t)sy * W + x) * 4];
++					for (int c = 0; c < 4; ++c) acc[c] += wgt * t[c];
++				}
++				auto cl = [](float v) { return (Uint32)std::max(0, std::min(255, (int)(v + 0.5f))); };
++				out.px[(size_t)y * W + x] = (cl(acc[0]) << 24) | (cl(acc[1]) << 16) | (cl(acc[2]) << 8) | cl(acc[3]);
++			}
++		}
++		return out;
++	}
 +	std::unordered_map<const Surface*, NativeBg> nativeBgs;
 +	std::unordered_map<const Surface*, std::string> nativeKeys;
++	std::unordered_map<const Surface*, bool> nativeKeyInArt;
 +	std::unordered_map<const Surface*, int> nativeTexts;
 +
 +	/// Plate and wells for a backdrop, painted once per size into a cache.
@@ -2963,6 +3012,23 @@ index 0000000..6240d16
 +	{
 +		if (!(nb.cache.ok && nb.cx0 == X0 && nb.cy0 == Y0 && nb.cx1 == X1 && nb.cy1 == Y1))
 +		{
++			// PAINTED ART, when the graphics AI's version of this page is installed
++			// (TAC01_hi.png): the painting carries the plate, the wells and the key
++			// bodies, brought to the exact display size by area. The keys then
++			// only set their legends on it, and all the type stays live.
++			auto art = bgImages.find(w);
++			if (art != bgImages.end() && art->second.ok)
++			{
++				nb.cache = resampleArea(art->second, X1 - X0, Y1 - Y0);
++				for (auto &p : nb.cache.px) p &= 0x00FFFFFFu;
++				nb.painted = true;
++				nb.cx0 = X0; nb.cy0 = Y0; nb.cx1 = X1; nb.cy1 = Y1;
++				nativePainted = true;
++				for (int Y = Y0; Y < Y1; ++Y) memcpy(over.data() + (size_t)Y * sw + X0, &nb.cache.px[(size_t)(Y - Y0) * nb.cache.w], (size_t)nb.cache.w * 4);
++				return;
++			}
++			nb.painted = false;
++			nativePainted = false;
 +			const double k = SK();
 +			// the plate: brushed streaks running down, a lift from the upper left, grain
 +			for (int Y = Y0; Y < Y1; ++Y)
@@ -2999,21 +3065,30 @@ index 0000000..6240d16
 +			nb.cache.ok = true; nb.cx0 = X0; nb.cy0 = Y0; nb.cx1 = X1; nb.cy1 = Y1;
 +			return;
 +		}
++		nativePainted = nb.painted;
 +		for (int Y = Y0; Y < Y1; ++Y) memcpy(over.data() + (size_t)Y * sw + X0, &nb.cache.px[(size_t)(Y - Y0) * nb.cache.w], (size_t)nb.cache.w * 4);
 +	}
 +
 +	/// A raised console key on the button's own hitbox.
-+	void paintKey(const std::string &legend, int bx0, int by0, int bx1, int by1, bool down)
++	void paintKey(const std::string &legend, int bx0, int by0, int bx1, int by1, bool down, bool inArt)
 +	{
 +		const double k = SK();
 +		const double x0 = DX(bx0 + 0.6), y0 = DY(by0 + 0.6), x1 = DX(bx1 - 0.6), y1 = DY(by1 - 0.6);
 +		const double r = k * 1.4, push = down ? k * 0.5 : 0;
++		if (nativePainted && inArt)
++		{
++			// the painting has the key; only say it is down
++			if (down) roundRect(x0 + 1.5, y0 + 1.5, x1 - 1.5, y1 - 1.5, r - 1, rgb(196, 118, 42), 80);
++		}
++		else
++		{
 +		if (!down) roundRect(x0 + k * 0.4, y0 + k * 0.6, x1 + k * 0.4, y1 + k * 0.6, r, 0x0E0F0C, 200);
 +		roundRect(x0, y0 + push, x1, y1 + push, r, 0x16190F);
 +		roundRect(x0 + 1.5, y0 + 1.5 + push, x1 - 1.5, y1 - 1.5 + push, r - 1, down ? 0x4C5340 : C_KEY_DARK);
 +		roundRect(x0 + 1.5, y0 + 1.5 + push, x1 - 1.5, y1 - k * 0.55 + push, r - 1, down ? 0x4C5340 : C_KEY);
 +		if (!down) roundRect(x0 + r * 0.6, y0 + 2 + push, x1 - r * 0.6, y0 + k * 0.9 + push, k * 0.4, C_KEY_LIT, 140);
 +		if (down) roundRect(x0 + 1.5, y0 + 1.5 + push, x1 - 1.5, y1 - 1.5 + push, r - 1, rgb(196, 118, 42), 70);
++		}
 +		const double cx = (x0 + x1) / 2, cy = (y0 + y1) / 2 - k * 0.3 + push;
 +		const double ink = C_INK, sh = 0x181B12;
 +		(void)ink;
@@ -3282,7 +3357,8 @@ index 0000000..6240d16
 +			if (clipBase(r))
 +			{
 +				const BattlescapeButton *bb = dynamic_cast<BattlescapeButton*>(w);
-+				paintKey(nk->second, w->getX(), w->getY(), w->getX() + w->getWidth(), w->getY() + w->getHeight(), bb && bb->isInverted());
++				auto ia = nativeKeyInArt.find(w);
++				paintKey(nk->second, w->getX(), w->getY(), w->getX() + w->getWidth(), w->getY() + w->getHeight(), bb && bb->isInverted(), ia == nativeKeyInArt.end() || ia->second);
 +				claim(r);
 +			}
 +			return;
@@ -3709,9 +3785,9 @@ index 0000000..6240d16
 +	nativeBgs[bg] = std::move(nb);
 +}
 +
-+void nativeKey(const Surface *button, const std::string &legend)
++void nativeKey(const Surface *button, const std::string &legend, bool inArt)
 +{
-+	if (enabled() && button) nativeKeys[button] = legend;
++	if (enabled() && button) { nativeKeys[button] = legend; nativeKeyInArt[button] = inArt; }
 +}
 +
 +void nativeText(const Surface *text)
@@ -3721,7 +3797,7 @@ index 0000000..6240d16
 +
 +void nativeForget(const Surface *s)
 +{
-+	nativeBgs.erase(s); nativeKeys.erase(s); nativeTexts.erase(s);
++	nativeBgs.erase(s); nativeKeys.erase(s); nativeKeyInArt.erase(s); nativeTexts.erase(s);
 +}
 +
 +bool nativeOn()
@@ -3913,10 +3989,10 @@ index 0000000..6240d16
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..abc5efe
+index 0000000..eafc797
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,79 @@
+@@ -0,0 +1,81 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -3987,7 +4063,9 @@ index 0000000..abc5efe
 +	/// rect (base coords relative to the surface).
 +	void nativeBackdrop(const Surface *bg, const std::vector<SDL_Rect> &wells);
 +	/// A button drawn as a console key with this legend ("<", ">" and "->" are arrows).
-+	void nativeKey(const Surface *button, const std::string &legend);
++	/// inArt: the page's painting carries this key's body, so only its legend
++	/// is set on it. A key that is not in the painting is always drawn whole.
++	void nativeKey(const Surface *button, const std::string &legend, bool inArt = true);
 +	/// A Text or TextEdit set in the label face.
 +	void nativeText(const Surface *text);
 +	/// The screen is closing: forget everything it registered.

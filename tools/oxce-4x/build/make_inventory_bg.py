@@ -68,6 +68,19 @@ GROUND_Y = 152
 # InventoryState.cpp: (label, x, y, w, h). The art is drawn ON these.
 KEYS = [('OK', 237, 1, 35, 22), ('<', 273, 1, 23, 22), ('>', 297, 1, 23, 22),
         ('UNLOAD', 288, 32, 32, 25), ('GROUND', 289, 137, 32, 15)]
+# COPY and PASTE (288,90 and 288,113, 32x22) exist only when equipping at base.
+# They are NOT painted into the page - in battle they would be dead keys - so
+# the engine draws them whole, over whatever art is there, when they show.
+
+# Where the game sets type at run time (InventoryState.cpp, Inventory labels).
+# Painted art keeps these plain metal so the type lands on a quiet field.
+TEXT_ZONES = [('name', 28, 6, 150, 17), ('TU', 245, 24, 40, 9), ('item', 128, 140, 156, 9),
+              ('ammo', 254, 64, 32, 24)]
+LABELS = [('RIGHT SHOULDER', 16, 28, 64), ('LEFT SHOULDER', 112, 28, 64), ('BACK PACK', 192, 28, 52),
+          ('RIGHT HAND', 0, 54, 54), ('LEFT HAND', 128, 54, 56), ('BELT', 192, 95, 40),
+          ('RIGHT LEG', 0, 111, 50), ('LEFT LEG', 128, 111, 50), ('GROUND', 0, 143, 40)]
+DOLL = (58, 44, 48, 104)        # the soldier's figure stands here
+RANK = (0, 0, 26, 23)           # the rank badge
 
 PLATE      = (40, 45, 35)       # darker than the geoscape plate: items must read on it
 PLATE_LIT  = (58, 64, 50)
@@ -97,7 +110,7 @@ def cell(d, x0, y0, x1, y1):
     d.rounded_rectangle([X0, Y0, X1, Y1], r, fill=(15, 16, 13))
 
 
-def key(img, d, label, x, y, w, h):
+def key(img, d, label, x, y, w, h, legend=True):
     """A raised console key on the button's own hitbox, label stencilled on it."""
     X0, Y0, X1, Y1 = px(x + 0.6), px(y + 0.6), px(x + w - 0.6), px(y + h - 0.6)
     r = px(1.4)
@@ -111,6 +124,8 @@ def key(img, d, label, x, y, w, h):
     d.rounded_rectangle([X0, Y0, X1, Y1], r, outline=(22, 25, 18), width=2)
     cx, cy = (X0 + X1) / 2, (Y0 + Y1) / 2 - 1
     ink = (226, 222, 196)
+    if not legend:
+        return
     if label in ('<', '>'):
         s = min(X1 - X0, Y1 - Y0) * 0.24
         sgn = -1 if label == '<' else 1
@@ -150,7 +165,7 @@ def screw(d, x, y):
     mp.screw(d, x, y)
 
 
-def build():
+def build(legends=True, screws=True):
     img = Image.new('RGB', (W * K, H * K))
     plate(img)
     d = ImageDraw.Draw(img, 'RGBA')
@@ -169,12 +184,39 @@ def build():
             cell(d, x, y, x + SLOT, min(H + 0.6, y + SLOT))
 
     for k in KEYS:
-        key(img, d, *k)
+        key(img, d, *k, legend=legends)
 
     # fasteners in the open metal
-    for x, y in ((176, 146), (240, 146), (316, 66), (316, 130), (110, 100)):
-        screw(d, x, y)
+    if screws:
+        for x, y in ((176, 146), (240, 146), (316, 66), (316, 130), (110, 100)):
+            screw(d, x, y)
     return img
+
+
+def guide(img):
+    """The plate with every fixed area outlined, for whoever paints over it."""
+    g = img.convert('RGB').copy()
+    d = ImageDraw.Draw(g)
+    def box(x, y, w, h, col, wd=3):
+        d.rectangle([px(x), px(y), px(x + w) - 1, px(y + h) - 1], outline=col, width=wd)
+    M, C, Y, Wt = (255, 0, 255), (0, 255, 255), (255, 210, 0), (255, 255, 255)
+    for _, x, y, cells in INVS:
+        for c, r in cells:
+            box(x + c * SLOT + 1, y + r * SLOT + 1, SLOT - 1, SLOT - 1, M)
+    for _, x, y in HANDS:
+        box(x + 1, y + 1, 2 * SLOT - 1, 3 * SLOT - 1, M)
+    for x in range(0, W, SLOT):
+        for y in range(GROUND_Y, H, SLOT):
+            box(x + 1, y + 1, SLOT - 1, min(SLOT, H - y) - 1, M)
+    for _, x, y, w, h in KEYS:
+        box(x, y, w, h, C)
+    for _, x, y, w, h in TEXT_ZONES:
+        box(x, y, w, h, Y)
+    for _, x, y, w in LABELS:
+        box(x, y, w, 8, Y)
+    box(*DOLL, Wt)
+    box(*RANK, Wt)
+    return g
 
 
 def palette_and_legal():
@@ -182,6 +224,14 @@ def palette_and_legal():
     import make_weapon_sprites as mws
     _, legal, lp = mws.palette_and_legal()
     return pal, legal, lp
+
+
+def template(out_dir):
+    """The page as the graphics AI gets it: plate, wells and blank keys, no type."""
+    plain = build(legends=False, screws=False)
+    plain.save(os.path.join(out_dir, 'inventory_for_painting_1920x1200.png'))
+    guide(plain).save(os.path.join(out_dir, 'inventory_guide_1920x1200.png'))
+    print('wrote inventory_for_painting_1920x1200.png and inventory_guide_1920x1200.png to', out_dir)
 
 
 def main(write):
@@ -199,4 +249,7 @@ def main(write):
 
 
 if __name__ == '__main__':
-    main('--write' in sys.argv)
+    if '--template' in sys.argv:
+        template(os.path.normpath(os.path.join(HERE, '..', 'art_briefs')))
+    else:
+        main('--write' in sys.argv)
