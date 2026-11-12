@@ -175,6 +175,35 @@ index 9b139ca..19e90a1 100644
  
  }
  
+diff --git a/src/Basescape/CraftInfoState.cpp b/src/Basescape/CraftInfoState.cpp
+index 2597a24..ee80251 100644
+--- a/src/Basescape/CraftInfoState.cpp
++++ b/src/Basescape/CraftInfoState.cpp
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "CraftInfoState.h"
++#include "../Engine/HiUI.h"
+ #include <cmath>
+ #include <sstream>
+ #include "../Engine/Game.h"
+@@ -227,6 +228,8 @@ void CraftInfoState::init()
+ 	_sprite->clear();
+ 	SurfaceSet *texture = _game->getMod()->getSurfaceSet("BASEBITS.PCK");
+ 	texture->getFrame(_craft->getSkinSprite() + 33)->blitNShade(_sprite, 0, 0);
++	// the frame is copied into _sprite, so its sharp twin is reached by alias
++	HiUI::aliasImage(_sprite, texture->getFrame(_craft->getSkinSprite() + 33));
+ 
+ 	std::ostringstream firlsLine;
+ 	firlsLine << tr("STR_DAMAGE_UC_").arg(Unicode::formatPercentage(_craft->getDamagePercentage()));
+@@ -673,6 +676,7 @@ void CraftInfoState::btnCraftIconClick(Action *action)
+ 		_sprite->clear();
+ 		SurfaceSet* texture = _game->getMod()->getSurfaceSet("BASEBITS.PCK");
+ 		texture->getFrame(_craft->getSkinSprite() + 33)->blitNShade(_sprite, 0, 0);
++		HiUI::aliasImage(_sprite, texture->getFrame(_craft->getSkinSprite() + 33));
+ 	}
+ }
+ 
 diff --git a/src/Basescape/MiniBaseView.cpp b/src/Basescape/MiniBaseView.cpp
 index 09fdfcd..8642a4a 100644
 --- a/src/Basescape/MiniBaseView.cpp
@@ -774,7 +803,7 @@ index a0bc8b3..933c149 100644
  	void deployCivilians(bool markAsVIP, int nodeRank, int max, bool roundUp = false, const std::string &civilianType = "");
  	/// Finds a spot near a friend to spawn at.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..93ca17c 100644
+index 7cd4941..2f6e535 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -88,6 +88,7 @@
@@ -794,7 +823,7 @@ index 7cd4941..93ca17c 100644
  
  	_numLayers = new NumberText(3, 5, x + 232, y + 6);
  	_rank = new Surface(26, 23, x + 107, y + 33);
-@@ -724,6 +725,289 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +725,343 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
@@ -846,7 +875,8 @@ index 7cd4941..93ca17c 100644
 +	HiUI::nativeKeyStyle(_btnEndTurn, 1);
 +	place(_btnStats, 36, 11, 54, 8);
 +	_txtName->setX(ox + 36); _txtName->setY(oy + 11); _txtName->setWidth(54); _txtName->setHeight(8);
-+	_txtTooltip->setX(ox + 178); _txtTooltip->setY(oy + 1); _txtTooltip->setWidth(138); _txtTooltip->setHeight(8);
++	// clear of the squad strip's right-hand scroll key, which ends at 181
++	_txtTooltip->setX(ox + 184); _txtTooltip->setY(oy + 1); _txtTooltip->setWidth(132); _txtTooltip->setHeight(8);
 +	_txtTooltip->setAlign(ALIGN_RIGHT);
 +
 +	// no place on the bar: shortcuts only
@@ -869,6 +899,14 @@ index 7cd4941..93ca17c 100644
 +		_hudChip[i] = new InteractiveSurface(28, 6, ox + 4 + 29 * i, oy + 2);
 +		add(_hudChip[i]);
 +		_hudChip[i]->onMouseClick((ActionHandler)&BattlescapeState::hudChipClick);
++	}
++	for (int i = 0; i < 2; ++i)
++	{
++		_hudScroll[i] = new InteractiveSurface(7, 6, ox + (i == 0 ? 4 : 174), oy + 2);
++		add(_hudScroll[i]);
++		_hudScroll[i]->onMouseClick((ActionHandler)&BattlescapeState::hudScrollClick);
++		HiUI::nativeKey(_hudScroll[i], i == 0 ? "<" : ">", false);
++		_hudScroll[i]->setVisible(false);
 +	}
 +	for (int hnd = 0; hnd < 2; ++hnd)
 +	{
@@ -999,21 +1037,60 @@ index 7cd4941..93ca17c 100644
 +		squad.push_back(bu);
 +		if (!bu->isOut() && bu->getTimeUnits() > 0 && bu->getFaction() == FACTION_PLAYER) ++canAct;
 +	}
-+	int first = 0;
-+	for (size_t i = 0; i < squad.size(); ++i) if (squad[i] == u) first = std::max(0, std::min((int)i - 2, (int)squad.size() - 6));
++	// THE WINDOW. With six or fewer Joes the strip is as it was. With more, two
++	// scroll keys take the ends and the chips close up to make room; the window
++	// still jumps to keep a newly selected Joe in view, but otherwise stays where
++	// the player scrolled it.
++	const int n = (int)squad.size();
++	const bool scroll = n > 6;
++	if (u != _hudLastSel)
++	{
++		_hudLastSel = u;
++		for (int i = 0; i < n; ++i)
++			if (squad[i] == u)
++			{
++				if (i < _hudFirst) _hudFirst = i;
++				if (i >= _hudFirst + 6) _hudFirst = i - 5;
++			}
++	}
++	_hudFirst = scroll ? std::max(0, std::min(_hudFirst, n - 6)) : 0;
++	{
++		const int ox = _hudContentX, oy = _icons->getY();
++		for (int i = 0; i < 6; ++i)
++		{
++			_hudChip[i]->setX(ox + (scroll ? 12 + 27 * i : 4 + 29 * i));
++			_hudChip[i]->setWidth(scroll ? 26 : 28);
++			_hudChip[i]->setY(oy + 2);
++		}
++		for (int i = 0; i < 2; ++i)
++		{
++			_hudScroll[i]->setVisible(scroll);
++			const bool can = i == 0 ? _hudFirst > 0 : _hudFirst + 6 < n;
++			HiUI::nativeKeyStyle(_hudScroll[i], can ? 0 : 3);
++		}
++	}
 +	for (int i = 0; i < 6; ++i)
 +	{
-+		const int si = first + i;
-+		_hudChipUnit[i] = si < (int)squad.size() ? squad[si] : nullptr;
++		const int si = _hudFirst + i;
++		_hudChipUnit[i] = si < n ? squad[si] : nullptr;
 +		_hudChip[i]->setVisible(_hudChipUnit[i] != nullptr);
 +		if (!_hudChipUnit[i]) continue;
 +		BattleUnit *bu = _hudChipUnit[i];
 +		std::string nm = bu->getName(_game->getLanguage());
 +		const auto sp = nm.find_last_of(' ');
 +		if (sp != std::string::npos && nm.size() > 12) nm = nm.substr(sp + 1);
++		// CHIP STATES. Down (out of the fight) and captured (a Joe the enemy now
++		// controls) are marked red; a Joe with no time left this turn is dimmed
++		// and marked DONE; the selected Joe is the yellow one.
 +		const bool down = bu->isOut();
-+		HiUI::nativeKey(_hudChip[i], down ? nm + " - DOWN" : nm, false);
-+		HiUI::nativeKeyStyle(_hudChip[i], bu == u ? 1 : down ? 2 : bu->getTimeUnits() == 0 ? 3 : 0);
++		const bool captured = !down && bu->getFaction() != FACTION_PLAYER;
++		const bool acted = !down && !captured && bu->getTimeUnits() == 0;
++		std::string legend = nm;
++		if (down) legend += " - DOWN";
++		else if (captured) legend += " - CAPTURED";
++		else if (acted) legend += " - DONE";
++		HiUI::nativeKey(_hudChip[i], legend, false);
++		HiUI::nativeKeyStyle(_hudChip[i], bu == u ? 1 : (down || captured) ? 2 : acted ? 3 : 0);
 +	}
 +	HiUI::nativeKey(_btnEndTurn, "END TURN|" + std::to_string(canAct) + (canAct == 1 ? " Joe can still act" : " Joes can still act"), false);
 +
@@ -1057,6 +1134,12 @@ index 7cd4941..93ca17c 100644
 +	}
 +}
 +
++void BattlescapeState::hudScrollClick(Action *action)
++{
++	_hudFirst += action->getSender() == _hudScroll[0] ? -1 : 1;
++	refreshJoeHud();   // clamps the window to the squad
++}
++
 +void BattlescapeState::hudCardClick(Action *action)
 +{
 +	if (action->getSender() == _hudCard[0]) btnRightHandItemClick(action);
@@ -1084,7 +1167,7 @@ index 7cd4941..93ca17c 100644
  }
  
  
-@@ -732,6 +1016,7 @@ BattlescapeState::BattlescapeState() :
+@@ -732,6 +1070,7 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -1092,7 +1175,7 @@ index 7cd4941..93ca17c 100644
  	delete _animTimer;
  	delete _gameTimer;
  	delete _battleGame;
-@@ -859,6 +1144,7 @@ void BattlescapeState::init()
+@@ -859,6 +1198,7 @@ void BattlescapeState::init()
  void BattlescapeState::think()
  {
  	static bool popped = false;
@@ -1100,7 +1183,7 @@ index 7cd4941..93ca17c 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -2172,7 +2458,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +2512,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -1109,7 +1192,7 @@ index 7cd4941..93ca17c 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +2678,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +2732,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -1117,7 +1200,7 @@ index 7cd4941..93ca17c 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -4052,8 +4339,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4393,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -1129,10 +1212,10 @@ index 7cd4941..93ca17c 100644
  	_map->getCamera()->jumpXY(dX/2, dY/2);
  
 diff --git a/src/Battlescape/BattlescapeState.h b/src/Battlescape/BattlescapeState.h
-index 746f3a4..ce68085 100644
+index 746f3a4..ebd4c73 100644
 --- a/src/Battlescape/BattlescapeState.h
 +++ b/src/Battlescape/BattlescapeState.h
-@@ -58,6 +58,18 @@ private:
+@@ -58,6 +58,24 @@ private:
  	InteractiveSurface *_btnStats;
  	BattlescapeButton *_btnReserveNone, *_btnReserveSnap, *_btnReserveAimed, *_btnReserveAuto, *_btnReserveKneel, *_btnZeroTUs;
  	InteractiveSurface *_btnLeftHandItem, *_btnRightHandItem;
@@ -1141,16 +1224,34 @@ index 746f3a4..ce68085 100644
 +	int _hudContentX = 0;
 +	InteractiveSurface *_hudChip[6] = {}, *_hudMode[2][3] = {}, *_hudCard[2] = {}, *_hudPortrait = nullptr;
 +	BattleUnit *_hudChipUnit[6] = {};
++	/// Squad-strip scroll keys, shown only when more than six Joes are on the field.
++	InteractiveSurface *_hudScroll[2] = {};
++	int _hudFirst = 0;
++	BattleUnit *_hudLastSel = nullptr;
 +	int _hudModeType[2][3] = {};
 +	Surface *_hudMission = nullptr;
 +	void layoutJoeHud();
 +	void refreshJoeHud();
 +	void hudChipClick(Action *action);
++	/// Scrolls the squad strip one Joe left or right.
++	void hudScrollClick(Action *action);
 +	void hudModeClick(Action *action);
 +	void hudCardClick(Action *action);
  
  	static const int SPECIAL_BUTTONS_MAX = 3;
  	int _posSpecialActions[SPECIAL_BUTTONS_MAX];
+@@ -75,7 +93,10 @@ private:
+ 	std::vector<NumberText*> _numMedikitLeft, _numMedikitRight;
+ 	NumberText *_numTwoHandedIndicatorLeft, *_numTwoHandedIndicatorRight;
+ 	Uint8 _twoHandedRed, _twoHandedGreen;
+-	Bar *_barTimeUnits, *_barEnergy, *_barHealth, *_barMorale, *_barMana;
++	Bar *_barTimeUnits, *_barEnergy, *_barHealth, *_barMorale;
++	/// Only created when mana is enabled, and the Joe HUD null-checks it: it must start null,
++	/// or loading a battle segfaults in layoutJoeHud on whatever garbage it held (12 Nov).
++	Bar *_barMana = nullptr;
+ 	bool _manaBarVisible;
+ 	Timer *_animTimer, *_gameTimer;
+ 	SavedBattleGame *_save;
 diff --git a/src/Battlescape/Camera.cpp b/src/Battlescape/Camera.cpp
 index 5a59f27..3d4e17f 100644
 --- a/src/Battlescape/Camera.cpp
@@ -2615,7 +2716,7 @@ index 8497877..78e0448 100644
  	/// Drop item on ground.
  	void itemDrop(Tile *t, BattleItem *item, bool updateLight);
 diff --git a/src/Battlescape/UnitSprite.cpp b/src/Battlescape/UnitSprite.cpp
-index 8fa87f8..525485d 100644
+index 8fa87f8..397182e 100644
 --- a/src/Battlescape/UnitSprite.cpp
 +++ b/src/Battlescape/UnitSprite.cpp
 @@ -17,6 +17,9 @@
@@ -2689,7 +2790,7 @@ index 8fa87f8..525485d 100644
  	// blit order depends on unit direction, and whether we are holding a 2 handed weapon.
  	switch (unitDir)
  	{
-@@ -643,6 +666,97 @@ void UnitSprite::drawRoutine0()
+@@ -643,6 +666,113 @@ void UnitSprite::drawRoutine0()
  }
  
  
@@ -2756,6 +2857,22 @@ index 8fa87f8..525485d 100644
 +	else if (_unit->getStatus() == STATUS_WALKING) { clip = 1; f = _unit->getWalkingPhase() % 8; }
 +	else if (_unit->getStatus() == STATUS_AIMING) clip = 3;
 +	else if (_unit->isKneeled()) clip = 2;
++	// ONE-HANDED CLIPS. A sheet with eight clips carries a pistol stance after the
++	// five stock ones: 5 stand (also aim), 6 walk, 7 kneel. Used only when the
++	// unit holds something and nothing it holds is two-handed. Death stays 4,
++	// and a five-clip sheet never gets here, so it draws exactly as before.
++	if (clip != 4 && _unitSurface && _unitSurface->getTotalFrames() >= 8 * 64)
++	{
++		const BattleItem *r = _unit->getRightHandWeapon(), *l = _unit->getLeftHandWeapon();
++		const bool holds = r || l;
++		const bool twoHanded = (r && r->getRules()->isTwoHanded()) || (l && l->getRules()->isTwoHanded());
++		if (holds && !twoHanded)
++		{
++			if (clip == 0 || clip == 3) clip = 5;
++			else if (clip == 1) clip = 6;
++			else if (clip == 2) clip = 7;
++		}
++	}
 +	const int frame = clip * 64 + dir * 8 + f;
 +	selectUnit(body, clip * 64 + dir * 8, f);
 +
@@ -3206,10 +3323,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..5c999a1
+index 0000000..3cf333c
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,2289 @@
+@@ -0,0 +1,2805 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -3628,6 +3745,9 @@ index 0000000..5c999a1
 +			i += n;
 +			if (cp == '\n' || cp == 2) { out.push_back('\n'); continue; }
 +			if (cp < 32) continue;
++			// the faces carry the en and em dash at their Windows-1252 codes
++			if (cp == 0x2013) { out.push_back(150); continue; }
++			if (cp == 0x2014) { out.push_back(151); continue; }
 +			out.push_back(cp < 256 ? cp : '?');
 +		}
 +		return out;
@@ -3941,7 +4061,7 @@ index 0000000..5c999a1
 +			std::vector<std::pair<double, double> > q = p;
 +			for (auto &e : q) { e.first += k * 0.4; e.second += k * 0.4; }
 +			polygonAA(q, (Uint32)sh, 200);
-+			polygonAA(p, C_INK);
++			polygonAA(p, style == 3 ? (Uint32)0x5C5A52 : C_INK);   // a key that can do nothing now reads dim
 +		};
 +		if (legend == "<" || legend == ">") { tri(std::min(x1 - x0, y1 - y0) * 0.24, legend == "<" ? -1 : 1); return; }
 +		if (legend == "->")
@@ -4139,13 +4259,27 @@ index 0000000..5c999a1
 +		}
 +	}
 +
++	// Per-widget overrides (fix list 12 Nov): a readout coloured by what it says,
++	// a widget kept in its pixel font, a widget forced into one face.
++	std::unordered_map<const Surface*, Uint32> textInks;
++	std::unordered_map<const Surface*, bool> pixelTexts;
++	std::unordered_map<const Surface*, std::string> textFaces;
++
 +	/// Set a Text in the label face over its own rectangle.
 +	void nativeType(const Text *t, int bx, int by, Uint32 col)
 +	{
 +		const int fh = t->getFont() ? t->getFont()->getHeight() : 9;
 +		const bool big = fh >= 12;
++		{
++			auto ink = textInks.find(t);
++			if (ink != textInks.end()) col = ink->second;
++		}
 +		// the standard: titles and headings in the stencil face, everything else Oswald
 +		const Face *f = big && face("stencil") ? face("stencil") : face("label");
++		{
++			auto tf = textFaces.find(t);
++			if (tf != textFaces.end() && face(tf->second)) f = face(tf->second);
++		}
 +		if (!f || t->getText().empty()) return;
 +		const double k = SK();
 +		// the stencil face sets wider than the pixel font it replaces, so a little smaller
@@ -4318,6 +4452,358 @@ index 0000000..5c999a1
 +		boxText(row(8.5, 5.5), hud.objective, 2.4, 0, S_TEXT);
 +		boxText(row(14.8, 5), hud.counts, 2.1, 0, S_MUTED);
 +	}
++
++	// ===================================================================== THE GLOBE
++	//
++	// The 8-bit globe is a 256x200 surface zoomed six times, so a 2048-wide
++	// earth texture reaches the screen as 6x6 blocks. Here the same projection
++	// is inverted per DISPLAY pixel and the texture sampled bilinearly, so the
++	// earth is as sharp as the texture is. Two caches: the land sample per
++	// pixel (rebuilt when the globe turns or zooms) and the shaded colour
++	// (rebuilt when the sun moves), so a still globe costs one copy a frame.
++	const double GPI = 3.14159265358979323846;
++	bool lastActive = false;
++	// The globe's own rectangle: base (gb*) and display (gc*). Everything the top
++	// layer draws stays inside it, or a name near the edge is printed over the
++	// side panel - which the panel has already claimed this frame.
++	int gbx0 = 0, gby0 = 0, gbx1 = 0, gby1 = 0, gcx0 = 0, gcy0 = 0, gcx1 = 0, gcy1 = 0;
++	/// Draw `fn` into the overlay, then put back every pixel it touched outside the globe.
++	template <class F> void clipToGlobe(double x0, double y0, double x1, double y1, F fn)
++	{
++		const int X0 = std::max(0, (int)std::floor(x0)), Y0 = std::max(0, (int)std::floor(y0));
++		const int X1 = std::min(sw, (int)std::ceil(x1)), Y1 = std::min(sh, (int)std::ceil(y1));
++		if (X0 >= gcx0 && Y0 >= gcy0 && X1 <= gcx1 && Y1 <= gcy1) { fn(); return; }
++		if (X1 <= X0 || Y1 <= Y0) return;
++		std::vector<Uint32> keep((size_t)(X1 - X0) * (Y1 - Y0));
++		for (int Y = Y0; Y < Y1; ++Y) memcpy(&keep[(size_t)(Y - Y0) * (X1 - X0)], over.data() + (size_t)Y * sw + X0, (size_t)(X1 - X0) * 4);
++		fn();
++		for (int Y = Y0; Y < Y1; ++Y)
++			for (int X = X0; X < X1; ++X)
++				if (X < gcx0 || X >= gcx1 || Y < gcy0 || Y >= gcy1) over[(size_t)Y * sw + X] = keep[(size_t)(Y - Y0) * (X1 - X0) + (X - X0)];
++	}
++	struct GlobeHD
++	{
++		GlobeView v; bool have = false;
++		std::vector<GlobeLabel> labels; std::vector<GlobePin> pins; std::vector<GlobeArt> art;
++		const Surface *texSrc = nullptr; Uint32 texKey = 0; Img tex;
++		int X0 = 0, Y0 = 0, X1 = 0, Y1 = 0;
++		double gkey[9] = {};
++		std::vector<Uint32> land;                 // ARGB, alpha = how much of this pixel is land
++		double skey[4] = {};
++		std::vector<Uint32> out; std::vector<Uint8> cov;
++		bool geomOk = false, shadeOk = false;
++	} G;
++
++	void globeTexture()
++	{
++		const Surface *t = G.v.texture;
++		if (!t) { G.tex = Img(); G.texSrc = nullptr; return; }
++		// a full-colour twin (earth_hi.png beside earth.png) wins if the mod has one
++		auto twin = bgImages.find(t);
++		if (twin != bgImages.end() && twin->second.ok)
++		{
++			if (G.texSrc != t || G.texKey != 1) { G.tex = twin->second; G.texSrc = t; G.texKey = 1; G.geomOk = false; }
++			return;
++		}
++		// otherwise the 8-bit texture itself, at its own 2048x1024, in the palette
++		// the globe is drawn in. Sea (index 0) is transparent: the ocean is shaded.
++		const Uint32 key = palHash(base->format->palette->colors) | 2u;
++		if (G.texSrc == t && G.texKey == key && G.tex.ok) return;
++		const SDL_Color *pal = base->format->palette->colors;
++		const int w = t->getWidth(), h = t->getHeight(), pitch = t->getPitch();
++		const Uint8 *src = t->getBuffer();
++		Img im; im.w = w; im.h = h; im.px.assign((size_t)w * h, 0); im.ok = src != nullptr && w > 1 && h > 1;
++		if (im.ok)
++			for (int y = 0; y < h; ++y)
++				for (int x = 0; x < w; ++x)
++				{
++					const Uint8 c = src[y * pitch + x];
++					if (c) im.px[(size_t)y * w + x] = 0xFF000000u | rgb(pal[c].r, pal[c].g, pal[c].b);
++				}
++		G.tex = std::move(im); G.texSrc = t; G.texKey = key; G.geomOk = false;
++	}
++
++	/// Bilinear, wrapping east-west, clamped at the poles. Colour is averaged over
++	/// the land texels only, so a coast fades to sea instead of to black.
++	inline Uint32 sampleEarth(const Img &im, double u, double v)
++	{
++		const double fx = u - 0.5, fy = v - 0.5;
++		int x0 = (int)std::floor(fx), y0 = (int)std::floor(fy);
++		const double ax = fx - x0, ay = fy - y0;
++		int x1 = x0 + 1, y1 = y0 + 1;
++		x0 = ((x0 % im.w) + im.w) % im.w; x1 = ((x1 % im.w) + im.w) % im.w;
++		y0 = std::max(0, std::min(im.h - 1, y0)); y1 = std::max(0, std::min(im.h - 1, y1));
++		const Uint32 p[4] = { im.px[(size_t)y0 * im.w + x0], im.px[(size_t)y0 * im.w + x1], im.px[(size_t)y1 * im.w + x0], im.px[(size_t)y1 * im.w + x1] };
++		const double wt[4] = { (1 - ax) * (1 - ay), ax * (1 - ay), (1 - ax) * ay, ax * ay };
++		double A = 0, r = 0, g = 0, b = 0;
++		for (int i = 0; i < 4; ++i)
++		{
++			const double a = wt[i] * (p[i] >> 24) / 255.0;
++			A += a; r += a * ((p[i] >> 16) & 255); g += a * ((p[i] >> 8) & 255); b += a * (p[i] & 255);
++		}
++		if (A <= 1e-6) return 0;
++		return ((Uint32)std::min(255.0, A * 255.0 + 0.5) << 24) | rgb((int)(r / A + 0.5), (int)(g / A + 0.5), (int)(b / A + 0.5));
++	}
++
++	void globeBox(int &X0, int &Y0, int &X1, int &Y1)
++	{
++		const Surface *g = G.v.globe;
++		const int gx0 = std::max(0, std::min(bw, g->getX())), gx1 = std::max(0, std::min(bw, g->getX() + g->getWidth()));
++		const int gy0 = std::max(0, std::min(bh, g->getY())), gy1 = std::max(0, std::min(bh, g->getY() + g->getHeight()));
++		const double k = SK(), cx = DX(G.v.cenX), cy = DY(G.v.cenY), R = G.v.radius * k;
++		X0 = std::max(xs[gx0], (int)std::floor(cx - R - 2)); X1 = std::min(xs[gx1], (int)std::ceil(cx + R + 2));
++		Y0 = std::max(ys[gy0], (int)std::floor(cy - R - 2)); Y1 = std::min(ys[gy1], (int)std::ceil(cy + R + 2));
++		if (X1 < X0) X1 = X0;
++		if (Y1 < Y0) Y1 = Y0;
++	}
++
++	void globeGeometry()
++	{
++		const double k = SK(), cx = DX(G.v.cenX), cy = DY(G.v.cenY), R = G.v.radius * k;
++		const double key[9] = { G.v.cenX, G.v.cenY, G.v.radius, G.v.cenLon, G.v.cenLat, (double)xs[0], (double)ys[0], k, (double)reinterpret_cast<uintptr_t>(G.tex.px.data()) };
++		if (G.geomOk && std::equal(key, key + 9, G.gkey)) return;
++		std::copy(key, key + 9, G.gkey);
++		const Uint32 t0 = SDL_GetTicks();
++		globeBox(G.X0, G.Y0, G.X1, G.Y1);
++		const int W = G.X1 - G.X0, H = G.Y1 - G.Y0;
++		G.land.assign((size_t)W * H, 0);
++		const double s0 = std::sin(G.v.cenLat), c0 = std::cos(G.v.cenLat);
++		const double tw = G.tex.w, th = G.tex.h;
++		if (G.tex.ok)
++			for (int Y = 0; Y < H; ++Y)
++			{
++				const double dy = (G.Y0 + Y + 0.5 - cy) / R;
++				for (int X = 0; X < W; ++X)
++				{
++					const double dx = (G.X0 + X + 0.5 - cx) / R;
++					double r2 = dx * dx + dy * dy;
++					if (r2 > 1.0 + 4.0 / R) continue;
++					r2 = std::min(r2, 0.999999);
++					const double nz = std::sqrt(1.0 - r2);
++					// cartToPolar, written with the unit normal: the same projection
++					const double lat = std::asin(std::max(-1.0, std::min(1.0, dy * c0 + nz * s0)));
++					const double lon = G.v.cenLon + std::atan2(dx, nz * c0 - dy * s0);
++					const double u = lon / (2 * GPI) * tw;
++					const double v = (GPI / 2 - lat) / GPI * th;
++					G.land[(size_t)Y * W + X] = sampleEarth(G.tex, u, v);
++				}
++			}
++		G.geomOk = true; G.shadeOk = false;
++		const Uint32 ms = SDL_GetTicks() - t0;
++		static int logged = 0;
++		if (logged < 3 && ms > 30) { ++logged; Log(LOG_INFO) << "HiUI globe: " << W << "x" << H << " re-projected in " << ms << " ms"; }
++	}
++
++	void globeShade()
++	{
++		const double key[4] = { G.v.sunX, G.v.sunY, G.v.sunZ, (double)G.v.ocean };
++		if (G.shadeOk && std::equal(key, key + 4, G.skey)) return;
++		std::copy(key, key + 4, G.skey);
++		const SDL_Color *pal = base->format->palette->colors;
++		// the ocean's own 32-step ramp; land is darkened by the same ratio the
++		// ramp falls by, so day and night agree between the two
++		double ramp[33][3], fac[33];
++		for (int i = 0; i < 33; ++i)
++		{
++			const int idx = std::max(0, std::min(255, G.v.ocean + (G.v.oceanShading ? std::min(i, 31) : 0)));
++			ramp[i][0] = pal[idx].r; ramp[i][1] = pal[idx].g; ramp[i][2] = pal[idx].b;
++		}
++		const double l0 = std::max(1.0, ramp[0][0] * 0.3 + ramp[0][1] * 0.59 + ramp[0][2] * 0.11);
++		for (int i = 0; i < 33; ++i)
++		{
++			const double l = ramp[i][0] * 0.3 + ramp[i][1] * 0.59 + ramp[i][2] * 0.11;
++			fac[i] = G.v.oceanShading ? std::max(0.14, std::min(1.0, l / l0)) : 1.0 - 0.7 * std::min(i, 31) / 31.0;
++		}
++		const double k = SK(), cx = DX(G.v.cenX), cy = DY(G.v.cenY), R = G.v.radius * k;
++		const int W = G.X1 - G.X0, H = G.Y1 - G.Y0;
++		G.out.assign((size_t)W * H, 0); G.cov.assign((size_t)W * H, 0);
++		const size_t nShade = G.v.shade.size();
++		for (int Y = 0; Y < H; ++Y)
++		{
++			const double dy = (G.Y0 + Y + 0.5 - cy) / R;
++			for (int X = 0; X < W; ++X)
++			{
++				const double dx = (G.X0 + X + 0.5 - cx) / R;
++				const double r2 = dx * dx + dy * dy;
++				const double d = (1.0 - std::sqrt(r2)) * R;           // display px inside the limb
++				const double c = std::max(0.0, std::min(1.0, d + 0.5));
++				if (c <= 0) continue;
++				const size_t i = (size_t)Y * W + X;
++				G.cov[i] = (Uint8)(c * 255 + 0.5);
++				const double nz = std::sqrt(std::max(0.0, 1.0 - r2));
++				const double dot = dx * G.v.sunX + dy * G.v.sunY + nz * G.v.sunZ;
++				const double t = -250.0 * dot + 128.0;
++				double s = 0;
++				if (nShade) s = G.v.shade[std::max(0, std::min((int)nShade - 1, (int)(t * 4)))];
++				s = std::max(0.0, std::min(31.0, s));
++				const int s0 = (int)s; const double sf = s - s0;
++				const double oc[3] = { ramp[s0][0] + (ramp[s0 + 1][0] - ramp[s0][0]) * sf, ramp[s0][1] + (ramp[s0 + 1][1] - ramp[s0][1]) * sf, ramp[s0][2] + (ramp[s0 + 1][2] - ramp[s0][2]) * sf };
++				const double f = fac[s0] + (fac[s0 + 1] - fac[s0]) * sf;
++				const Uint32 lp = G.land[i];
++				const double a = (lp >> 24) / 255.0;
++				const double r = oc[0] * (1 - a) + ((lp >> 16) & 255) * f * a;
++				const double g = oc[1] * (1 - a) + ((lp >> 8) & 255) * f * a;
++				const double b = oc[2] * (1 - a) + (lp & 255) * f * a;
++				G.out[i] = rgb((int)std::min(255.0, r + 0.5), (int)std::min(255.0, g + 0.5), (int)std::min(255.0, b + 0.5));
++			}
++		}
++		G.shadeOk = true;
++	}
++
++	/// Anti-aliased disc and ring, solid colour.
++	void ringAA(double cx, double cy, double rIn, double rOut, Uint32 col, int alpha = 255)
++	{
++		const int X0 = std::max(0, (int)std::floor(cx - rOut - 1)), X1 = std::min(sw, (int)std::ceil(cx + rOut + 1));
++		const int Y0 = std::max(0, (int)std::floor(cy - rOut - 1)), Y1 = std::min(sh, (int)std::ceil(cy + rOut + 1));
++		for (int Y = Y0; Y < Y1; ++Y)
++		{
++			Uint32 *o = over.data() + (size_t)Y * sw;
++			for (int X = X0; X < X1; ++X)
++			{
++				const double d = std::sqrt((X + 0.5 - cx) * (X + 0.5 - cx) + (Y + 0.5 - cy) * (Y + 0.5 - cy));
++				double c = std::max(0.0, std::min(1.0, rOut - d + 0.5));
++				if (rIn > 0) c -= std::max(0.0, std::min(1.0, rIn - d + 0.5));
++				if (c > 0) o[X] = mix(o[X], col, (int)(c * alpha));
++			}
++		}
++	}
++
++	/// Take over a base rect for the globe's top layer: pixels not already the
++	/// overlay's start from their flat colour, and vector strokes stand clear.
++	void globeClaimRect(R r)
++	{
++		r.x0 = std::max(r.x0, gbx0); r.y0 = std::max(r.y0, gby0); r.x1 = std::min(r.x1, gbx1); r.y1 = std::min(r.y1, gby1);
++		if (!clipBase(r)) return;
++		const SDL_Color *pal = base->format->palette->colors;
++		for (int by = r.y0; by < r.y1; ++by)
++		{
++			const Uint8 *p = row8(by);
++			for (int bx = r.x0; bx < r.x1; ++bx)
++			{
++				const size_t bi = (size_t)by * bw + bx;
++				if (!(valid[bi] && tag[bi] == p[bx]))
++				{
++					const Uint32 flat = rgb(pal[p[bx]].r, pal[p[bx]].g, pal[p[bx]].b);
++					fillRect(xs[bx], ys[by], xs[bx + 1], ys[by + 1], flat);
++					tag[bi] = p[bx]; valid[bi] = 1;
++				}
++				if (vvalid.size() == (size_t)bw * bh) vvalid[bi] = 0;
++			}
++		}
++		any = true;
++	}
++
++	/// Small caps: capitals at full size, lower case set as capitals at 78%.
++	double smallCapsWidth(const Face &f, const std::string &s, double size)
++	{
++		double w = 0;
++		for (int c : latin1(s))
++		{
++			const bool low = c >= 'a' && c <= 'z';
++			const int g = low ? c - 32 : c;
++			if (f.g[g].ok) w += f.g[g].adv * (low ? size * 0.78 : size) / f.em;
++		}
++		return w;
++	}
++	void smallCaps(const Face &f, const std::string &s, double x, double baseline, double size, Uint32 col)
++	{
++		for (int c : latin1(s))
++		{
++			const bool low = c >= 'a' && c <= 'z';
++			std::vector<int> one{ low ? c - 32 : c };
++			const double sz = low ? size * 0.78 : size;
++			drawLine(f, one, 0, 1, x, baseline, sz, col, 0, 0, sw, sh);
++			if (f.g[one[0]].ok) x += f.g[one[0]].adv * sz / f.em;
++		}
++	}
++
++	void globePin(const GlobePin &p)
++	{
++		const double k = SK(), cx = DX(p.x), cy = DY(p.y);
++		const int a = p.lit ? 255 : 170;
++		const double s = k * 2.1;          // half-size of a pin
++		const double o = std::max(1.5, k * 0.42);   // dark outline
++		auto poly = [&](std::vector<std::pair<double, double> > pts, double grow, Uint32 col, int al)
++		{
++			// grow a convex shape outward about its centre, for the outline
++			for (auto &q : pts) { const double vx = q.first - cx, vy = q.second - cy, L = std::sqrt(vx * vx + vy * vy); if (L > 0) { q.first += vx / L * grow; q.second += vy / L * grow; } }
++			polygonAA(pts, col, al);
++		};
++		switch (p.kind)
++		{
++		case PIN_JOE_BASE:                  // square: olive with a yellow rim
++			roundRect(cx - s - o, cy - s - o, cx + s + o, cy + s + o, k * 0.5, S_INK, 230);
++			roundRect(cx - s, cy - s, cx + s, cy + s, k * 0.35, S_YELLOW, a);
++			roundRect(cx - s + k * 0.5, cy - s + k * 0.5, cx + s - k * 0.5, cy + s - k * 0.5, k * 0.2, S_OLIVE_LIT, 255);
++			break;
++		case PIN_COBRA_SITE:                // diamond: red
++		{
++			const double d = s * 1.3;
++			std::vector<std::pair<double, double> > dia{ { cx, cy - d }, { cx + d, cy }, { cx, cy + d }, { cx - d, cy } };
++			poly(dia, o * 1.4, S_INK, 230);
++			poly(dia, 0, 0xD8392B, a);
++			std::vector<std::pair<double, double> > in{ { cx, cy - d * 0.38 }, { cx + d * 0.38, cy }, { cx, cy + d * 0.38 }, { cx - d * 0.38, cy } };
++			poly(in, 0, 0x3A0E0A, 220);
++			break;
++		}
++		case PIN_MISSION:                   // triangle: orange
++		{
++			const double d = s * 1.35;
++			std::vector<std::pair<double, double> > tri{ { cx, cy - d }, { cx + d * 0.95, cy + d * 0.7 }, { cx - d * 0.95, cy + d * 0.7 } };
++			poly(tri, o * 1.5, S_INK, 230);
++			poly(tri, 0, 0xE8873A, a);
++			break;
++		}
++		case PIN_CONTACT:                   // ring: white
++			ringAA(cx, cy, s * 0.55 - o, s * 1.1 + o, S_INK, 200);
++			ringAA(cx, cy, s * 0.62, s * 1.0, 0xF4F3EE, a);
++			ringAA(cx, cy, 0, s * 0.2, 0xF4F3EE, a);
++			break;
++		case PIN_JOE_CRAFT:                 // arrowhead: cyan
++		{
++			const double d = s * 1.25;
++			std::vector<std::pair<double, double> > hd{ { cx, cy - d }, { cx + d * 0.8, cy + d * 0.8 }, { cx, cy + d * 0.35 }, { cx - d * 0.8, cy + d * 0.8 } };
++			// not convex, so two halves
++			std::vector<std::pair<double, double> > L{ hd[0], hd[2], hd[3] }, Rr{ hd[0], hd[1], hd[2] };
++			poly(L, o * 1.4, S_INK, 220); poly(Rr, o * 1.4, S_INK, 220);
++			poly(L, 0, 0x45D3E8, a); poly(Rr, 0, 0x45D3E8, a);
++			break;
++		}
++		case PIN_WAYPOINT:                  // small cross: cyan
++			roundRect(cx - s * 0.9, cy - k * 0.45, cx + s * 0.9, cy + k * 0.45, k * 0.2, 0x45D3E8, a);
++			roundRect(cx - k * 0.45, cy - s * 0.9, cx + k * 0.45, cy + s * 0.9, k * 0.2, 0x45D3E8, a);
++			break;
++		case PIN_CITY:                      // dot: bone
++			ringAA(cx, cy, 0, k * 0.75 + o * 0.6, S_INK, 200);
++			ringAA(cx, cy, 0, k * 0.75, S_TEXT, 255);
++			break;
++		}
++	}
++
++	void globeLabel(const GlobeLabel &l)
++	{
++		const Face *f = face("label");
++		if (!f || l.text.empty()) return;
++		const double k = SK();
++		const double cap = (l.kind == 0 ? 3.4 : 2.9) * k;
++		const double size = cap * f->em / f->cap;
++		const double w = smallCapsWidth(*f, l.text, size);
++		const double x = DX(l.x) - w / 2, top = DY(l.y) + k * 0.6, baseline = top + cap;
++		const Uint32 col = l.kind == 0 ? S_TEXT : l.kind == 1 ? S_MUTED : l.kind == 2 ? S_YELLOW : 0xC9A13E;
++		// the base pixels the type covers, outline included
++		const double pad = k * 0.6;
++		R r{ (int)std::floor((x - pad - xs[0]) / k), (int)std::floor((top - pad - ys[0]) / k), (int)std::ceil((x + w + pad - xs[0]) / k), (int)std::ceil((baseline + pad - ys[0]) / k) };
++		globeClaimRect(r);
++		// a dark outline all round, then the letters
++		const double ow = std::max(1.5, k * 0.33);
++		clipToGlobe(x - pad, top - pad - cap, x + w + pad, baseline + pad + cap, [&]()
++		{
++			for (int dy = -1; dy <= 1; ++dy)
++				for (int dx = -1; dx <= 1; ++dx)
++					if (dx || dy) smallCaps(*f, l.text, x + dx * ow, baseline + dy * ow, size, S_INK);
++			smallCaps(*f, l.text, x, baseline, size, col);
++		});
++	}
 +}
 +
 +bool enabled()
@@ -4376,11 +4862,17 @@ index 0000000..5c999a1
 +	bgImages[img] = std::move(im);
 +}
 +
++void resolvePending();
++
 +void aliasImage(const Surface *dst, const Surface *src)
 +{
 +	if (!enabled() || !dst || !src) return;
++	// a sprite-set frame's twin stays pending until first draw; resolve it now,
++	// or a screen that only ever copies the frame never finds it (Job 3, 12 Nov)
++	resolvePending();
 +	auto it = bgImages.find(src);
-+	if (it == bgImages.end() || !it->second.ok) return;
++	// no twin: forget any earlier alias, or a reused surface keeps the old picture
++	if (it == bgImages.end() || !it->second.ok) { bgImages.erase(dst); return; }
 +	bgImages[dst] = it->second;
 +}
 +
@@ -4509,7 +5001,7 @@ index 0000000..5c999a1
 +
 +void beginFrame(SDL_Surface *base8, int screenW, int screenH, int left, int top, int right, int bottom)
 +{
-+	base = nullptr; any = false; curOn = false; vHave = false;
++	base = nullptr; any = false; curOn = false; vHave = false; lastActive = false;
 +	if (!enabled() || !base8 || base8->format->BitsPerPixel != 8) return;
 +	base = base8;
 +	if (bw != base8->w || bh != base8->h || sw != screenW || sh != screenH || xs.empty() || xs[0] != left || ys[0] != top)
@@ -4522,6 +5014,7 @@ index 0000000..5c999a1
 +		bgCache.clear();
 +	}
 +	else std::fill(valid.begin(), valid.end(), 0);
++	lastActive = true;
 +}
 +
 +void before(Surface *w)
@@ -5039,7 +5532,8 @@ index 0000000..5c999a1
 +		if (!any || scratch.empty()) return;
 +		R r = rectOf(t);
 +		if (!clipBase(r) || scratch.size() != (size_t)(r.x1 - r.x0) * (r.y1 - r.y0)) return;
-+		const bool std_ = face("label") && !t->getText().empty();
++		// a pixel-font widget (the 7-segment clock) keeps its own font's sharp twin
++		const bool std_ = face("label") && !t->getText().empty() && !pixelTexts.count(t);
 +		if (std_) nativeType(t, t->getX(), t->getY(), roleColour(t->getColor()));
 +		if (!std_ && !glyphs(t, t->getX(), t->getY(), r, 0, true, r))
 +		{
@@ -5103,6 +5597,19 @@ index 0000000..5c999a1
 +	nativeBgs.erase(s); nativeKeys.erase(s); nativeKeyInArt.erase(s); nativeTexts.erase(s);
 +}
 +
++void surfaceGone(const Surface *s)
++{
++	// Everything here is keyed by pointer. A surface that was registered and then
++	// freed - an intro slide - left its twin behind, and the next surface the
++	// allocator put at that address inherited the picture: the geoscape's
++	// rotate-up key came out as a black square cut from the end of the intro.
++	if (!s) return;
++	bgImages.erase(s);
++	textInks.erase(s); pixelTexts.erase(s); textFaces.erase(s);
++	nativeForget(s);
++	if (G.v.globe == s) globeForget(s);
++}
++
 +bool nativeOn()
 +{
 +	return enabled() && !nativeBgs.empty();
@@ -5130,6 +5637,9 @@ index 0000000..5c999a1
 +	const std::vector<std::pair<int, int> > &linksRight, const std::vector<std::pair<int, int> > &linksDown,
 +	const std::vector<Docked> &craft)
 +{
++	// the docked craft's twins are set frames, pending until something resolves
++	// them - without this the hangar was blocky until an equipment screen had opened
++	resolvePending();
 +	if (!base || !view || !shown(view)) return;
 +	R r = rectOf(view);
 +	if (!clipBase(r)) return;
@@ -5317,6 +5827,129 @@ index 0000000..5c999a1
 +	claim(r);
 +}
 +
++bool active()
++{
++	return lastActive;
++}
++
++void globeView(const GlobeView &v)
++{
++	if (!enabled()) return;
++	G.v = v; G.have = v.globe != nullptr;
++}
++
++void globeLabels(const std::vector<GlobeLabel> &labels) { if (enabled()) G.labels = labels; }
++void globePins(const std::vector<GlobePin> &pins) { if (enabled()) G.pins = pins; }
++void globeArt(const std::vector<GlobeArt> &art) { if (enabled()) G.art = art; }
++
++void globeForget(const Surface *globe)
++{
++	if (G.v.globe == globe)
++	{
++		G.have = false; G.v = GlobeView(); G.labels.clear(); G.pins.clear(); G.art.clear();
++		G.geomOk = G.shadeOk = false; G.land.clear(); G.out.clear(); G.cov.clear();
++	}
++}
++
++void globeFloor(const Surface *globe)
++{
++	if (!base || !G.have || G.v.globe != globe || !shown(globe) || !base->format->palette) return;
++	globeTexture();
++	globeGeometry();
++	globeShade();
++	const SDL_Color *pal = base->format->palette->colors;
++	SDL_Surface *gs = const_cast<Surface*>(globe)->getSurface();
++	if (!gs || gs->format->BitsPerPixel != 8) return;
++	const int gx = globe->getX(), gy = globe->getY();
++	{
++		R gr{ gx, gy, gx + globe->getWidth(), gy + globe->getHeight() };
++		if (!clipBase(gr)) return;
++		gbx0 = gr.x0; gby0 = gr.y0; gbx1 = gr.x1; gby1 = gr.y1;
++		gcx0 = xs[gr.x0]; gcy0 = ys[gr.y0]; gcx1 = xs[gr.x1]; gcy1 = ys[gr.y1];
++	}
++	// 1. Every base pixel the disc touches is the overlay's from here on. Its
++	// block starts as what was there - black where the 8-bit globe was, the sky's
++	// own colour where it was not - so the anti-aliased limb blends onto sky.
++	{
++		R r{ gx, gy, gx + globe->getWidth(), gy + globe->getHeight() };
++		if (clipBase(r))
++		{
++			const double lim = G.v.radius + 1.0, lim2 = lim * lim;
++			for (int by = r.y0; by < r.y1; ++by)
++			{
++				const double dy = by + 0.5 - G.v.cenY;
++				if (dy * dy > lim2) continue;
++				const Uint8 *p = row8(by);
++				const Uint8 *g8 = (const Uint8*)gs->pixels + (by - gy) * gs->pitch;
++				for (int bx = r.x0; bx < r.x1; ++bx)
++				{
++					const double dx = bx + 0.5 - G.v.cenX;
++					if (dx * dx + dy * dy > lim2) continue;
++					const Uint32 flat = g8[bx - gx] ? 0u : rgb(pal[p[bx]].r, pal[p[bx]].g, pal[p[bx]].b);
++					fillRect(xs[bx], ys[by], xs[bx + 1], ys[by + 1], flat);
++					const size_t bi = (size_t)by * bw + bx;
++					tag[bi] = p[bx]; valid[bi] = 1;
++				}
++			}
++			any = true;
++		}
++	}
++	// 2. the earth
++	{
++		const int W = G.X1 - G.X0, H = G.Y1 - G.Y0;
++		if (G.out.size() == (size_t)W * H)
++			for (int Y = 0; Y < H; ++Y)
++			{
++				const int SY = G.Y0 + Y;
++				if (SY < 0 || SY >= sh) continue;
++				Uint32 *o = over.data() + (size_t)SY * sw;
++				const Uint32 *src = G.out.data() + (size_t)Y * W;
++				const Uint8 *cv = G.cov.data() + (size_t)Y * W;
++				for (int X = 0; X < W; ++X)
++				{
++					const int SX = G.X0 + X;
++					if (SX < 0 || SX >= sw || !cv[X]) continue;
++					o[SX] = cv[X] == 255 ? src[X] : mix(o[SX], src[X], cv[X]);
++				}
++			}
++	}
++	// 3. the player's own marks, crisp from their frames
++	for (const GlobeArt &a : G.art)
++	{
++		if (!a.frame) continue;
++		const int fw = a.frame->getWidth(), fh = a.frame->getHeight();
++		const int x0 = (int)std::floor(a.x), y0 = (int)std::floor(a.y);
++		globeClaimRect(R{ x0, y0, x0 + fw, y0 + fh });
++		if (const Img *im = flatTwin(a.frame))
++			clipToGlobe(DX(x0), DY(y0), DX(x0 + fw), DY(y0 + fh), [&]() { stretch(*im, 0, 0, im->w, im->h, (int)DX(x0), (int)DY(y0), (int)DX(x0 + fw), (int)DY(y0 + fh)); });
++	}
++	// 4. pins, then 5. labels over them
++	for (const GlobePin &p : G.pins)
++	{
++		const int e = 5;
++		globeClaimRect(R{ (int)std::floor(p.x) - e, (int)std::floor(p.y) - e, (int)std::floor(p.x) + e + 1, (int)std::floor(p.y) + e + 1 });
++		const double k = SK(), e2 = k * 5;
++		clipToGlobe(DX(p.x) - e2, DY(p.y) - e2, DX(p.x) + e2, DY(p.y) + e2, [&]() { globePin(p); });
++	}
++	for (const GlobeLabel &l : G.labels) globeLabel(l);
++}
++
++void textInk(const Surface *text, Uint32 c)
++{
++	if (!enabled() || !text) return;
++	if (c) textInks[text] = c; else textInks.erase(text);
++}
++
++void pixelText(const Surface *text)
++{
++	if (enabled() && text) pixelTexts[text] = true;
++}
++
++void textFace(const Surface *text, const std::string &name)
++{
++	if (enabled() && text) textFaces[text] = name;
++}
++
 +void vectorClear(int layer)
 +{
 +	if (layer >= 0 && layer < VEC_LAYERS) vlayers[layer].clear();
@@ -5501,10 +6134,10 @@ index 0000000..5c999a1
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..19bb81c
+index 0000000..45dbecf
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,121 @@
+@@ -0,0 +1,170 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -5515,6 +6148,7 @@ index 0000000..19bb81c
 + * the last such widget finished drawing there; anything else drawn on top shows through as before.
 + */
 +#include <SDL.h>
++#include <cstdint>
 +#include <string>
 +#include <vector>
 +
@@ -5569,6 +6203,52 @@ index 0000000..19bb81c
 +	/// markers blitted after it, and any window opened over it, cover the lines.
 +	void vectorFloor(const Surface *floor);
 +
++	/// Was the HD layer running on the last frame? (enabled() only says it may.)
++	/// The globe asks this before it stops drawing 8-bit markers and labels.
++	bool active();
++
++	/// THE GLOBE AT DISPLAY RESOLUTION (fix list 12 Nov, items 6-8).
++	///
++	/// The 8-bit globe still draws, and still decides what is land, sea and
++	/// shadow for the game. Over it the earth is drawn again per DISPLAY pixel:
++	/// the orthographic projection inverted to lon/lat, the earth texture
++	/// sampled bilinearly, shaded by the same sun the 8-bit pass uses.
++	struct GlobeView
++	{
++		const Surface *globe = nullptr;     // the globe's own 8-bit surface
++		const Surface *texture = nullptr;   // GLOBE_EARTH (8-bit, index 0 = sea); its _hi twin is used if registered
++		double cenX = 0, cenY = 0, radius = 1;   // base coords, surface offset included
++		double cenLon = 0, cenLat = 0;
++		double sunX = 0, sunY = 0, sunZ = 1;
++		int ocean = 0; bool oceanShading = true;
++		std::vector<float> shade;           // continuous shadow 0..31 over t = 0..256, 4 steps per unit
++	};
++	void globeView(const GlobeView &v);
++	/// A label on the globe: centred on x, top at y, in base coords.
++	/// kind 0 country, 1 city, 2 Joe base, 3 the player's own mark.
++	struct GlobeLabel { std::string text; double x, y; int kind; };
++	void globeLabels(const std::vector<GlobeLabel> &labels);
++	/// A pin on the globe, in base coords. kind: see PinKind. lit: the blink phase.
++	enum PinKind { PIN_JOE_BASE, PIN_COBRA_SITE, PIN_MISSION, PIN_CONTACT, PIN_JOE_CRAFT, PIN_WAYPOINT, PIN_CITY };
++	struct GlobePin { double x, y; int kind; bool lit; };
++	void globePins(const std::vector<GlobePin> &pins);
++	/// An 8-bit marker frame to set on the globe crisp (the player's own marks).
++	struct GlobeArt { const Surface *frame; double x, y; };
++	void globeArt(const std::vector<GlobeArt> &art);
++	/// In Globe::blit, straight after the globe's own surface: paint the earth,
++	/// then the art, pins and labels, and take over the pixels they cover.
++	void globeFloor(const Surface *globe);
++	/// The globe screen is closing.
++	void globeForget(const Surface *globe);
++
++	/// A Text drawn in this colour (0xRRGGBB) instead of its role colour. 0 clears.
++	void textInk(const Surface *text, Uint32 rgb);
++	/// A Text kept in its own pixel font's sharp twin instead of the label face
++	/// (the geoscape clock: a 7-segment display, not type).
++	void pixelText(const Surface *text);
++	/// A Text set in this face ("label" or "stencil") whatever its size.
++	void textFace(const Surface *text, const std::string &face);
++
 +	/// NATIVE SCREENS. A screen built at display resolution from scratch rather
 +	/// than enlarged from 8 bits: the backdrop, its wells and keys are drawn as
 +	/// shapes at the size they are shown, and registered text is set in a real
@@ -5606,6 +6286,8 @@ index 0000000..19bb81c
 +	void nativeHud(const Surface *bar, const Surface *mission, const HudData &d);
 +	/// The screen is closing: forget everything it registered.
 +	void nativeForget(const Surface *s);
++	/// A surface is being destroyed: drop anything keyed by its address (Surface::~Surface).
++	void surfaceGone(const Surface *s);
 +	/// Is a native screen up? (Its 8-bit grid, labels and numbers are then not drawn.)
 +	bool nativeOn();
 +
@@ -5837,18 +6519,28 @@ index fb85c53..7c515b8 100644
  }
  
 diff --git a/src/Engine/Surface.cpp b/src/Engine/Surface.cpp
-index e2a62e9..4e62a05 100644
+index e2a62e9..4e9a6ed 100644
 --- a/src/Engine/Surface.cpp
 +++ b/src/Engine/Surface.cpp
-@@ -17,6 +17,7 @@
+@@ -17,6 +17,8 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "Surface.h"
++#include "HiUI.h"
 +#include "HiColor.h"
  #include "ShaderDraw.h"
  #include "ShaderMove.h"
  #include <vector>
-@@ -959,6 +960,7 @@ void Surface::blitRaw(SurfaceRaw<Uint8> destSurf, SurfaceRaw<const Uint8> srcSur
+@@ -283,7 +285,7 @@ Surface::Surface(const Surface& other) : Surface{ }
+  */
+ Surface::~Surface()
+ {
+-
++	HiUI::surfaceGone(this);
+ }
+ 
+ /**
+@@ -959,6 +961,7 @@ void Surface::blitRaw(SurfaceRaw<Uint8> destSurf, SurfaceRaw<const Uint8> srcSur
  	{
  		ShaderDraw<helper::StandardShade>(ShaderSurface(destSurf), src, ShaderScalar(shade));
  	}
@@ -6258,7 +6950,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..5326baa 100644
+index 6b4e79d..2835625 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -17,6 +17,7 @@
@@ -6277,7 +6969,15 @@ index 6b4e79d..5326baa 100644
  #include "../Interface/ComboBox.h"
  #include "../Interface/Text.h"
  #include "../Interface/TextButton.h"
-@@ -103,6 +105,7 @@
+@@ -87,6 +89,7 @@
+ #include "DogfightErrorState.h"
+ #include "DogfightExperienceState.h"
+ #include "../Ufopaedia/Ufopaedia.h"
++#include "../Mod/ArticleDefinition.h"
+ #include "../Savegame/ResearchProject.h"
+ #include "ResearchCompleteState.h"
+ #include "../Mod/RuleResearch.h"
+@@ -103,6 +106,7 @@
  #include "../Savegame/ItemContainer.h"
  #include "../Savegame/MissionSite.h"
  #include "../Savegame/AlienBase.h"
@@ -6285,7 +6985,7 @@ index 6b4e79d..5326baa 100644
  #include "../Mod/RuleRegion.h"
  #include "MissionDetectedState.h"
  #include "AlienBaseState.h"
-@@ -157,41 +160,150 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -157,41 +161,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_bg->setX((_globe->getWidth() - _bg->getWidth()) / 2);
  	_bg->setY((_globe->getHeight() - _bg->getHeight()) / 2);
  
@@ -6328,8 +7028,10 @@ index 6b4e79d..5326baa 100644
 +	_btnBases = new TextButton(60, 11, screenWidth-62, screenHeight/2-100+12);
 +	_btnGraphs = new TextButton(60, 11, screenWidth-62, screenHeight/2-100+24);
 +	_btnUfopaedia = new TextButton(60, 11, screenWidth-62, screenHeight/2-100+36);
-+	_btnOptions = new TextButton(60, 11, screenWidth-62, screenHeight/2-100+48);
-+	_btnFunding = new TextButton(60, 11, screenWidth-62, screenHeight/2-100+60);
++	// OPTIONS LAST (fix list 12 Nov, item 1). The two recesses are the same size
++	// and the art is untouched: only which button sits in which changed.
++	_btnFunding = new TextButton(60, 11, screenWidth-62, screenHeight/2-100+48);
++	_btnOptions = new TextButton(60, 11, screenWidth-62, screenHeight/2-100+60);
 +
 +	_btn5Secs = new TextButton(29, 11, screenWidth-62, screenHeight/2-100+134);
 +	_btn1Min = new TextButton(29, 11, screenWidth-31, screenHeight/2-100+134);
@@ -6452,32 +7154,33 @@ index 6b4e79d..5326baa 100644
 +	_txtYear = new Text(24, 9, screenWidth-27, screenHeight/2-100+90);
 +	_txtFunds = new Text(59, 8, screenWidth-61, screenHeight/2-100+74);
 +
-+	// THE FOUR NEW READOUTS. John: "can we add spots for the new stuff like
-+	// goodwill". Their LABELS are engraved into the panel by make_panel.py and are
-+	// not text widgets at all - the engine only prints the value, into the well to
-+	// the right of each engraving, so a label can never collide with its own
-+	// number and the four cost nothing at runtime.
++	// THE FOUR READOUTS: FUNDS, PUBLIC, THREAT, LEADS (fix list 12 Nov, item 2).
++	// Their LABELS are engraved into the panel by make_panel.py and are not text
++	// widgets at all - the engine only prints the value, into the well to the
++	// right of each engraving, so a label can never collide with its own number.
++	// They replaced GOODWILL, COBRA, DROMES and INTEL: Cobra's kit band and the
++	// Drome count read Cobra's own books and are not the player's to see.
 +	//
 +	// Value wells, panel-local: x 26..62, rows at y 102, 111, 120, 129.
-+	_txtGoodwill = new Text(34, 9, screenWidth-37, screenHeight/2-100+100);
-+	_txtEscalation = new Text(34, 9, screenWidth-37, screenHeight/2-100+108);
-+	_txtDromes = new Text(34, 9, screenWidth-37, screenHeight/2-100+116);
-+	_txtIntel = new Text(34, 9, screenWidth-37, screenHeight/2-100+124);
++	_txtDeskFunds = new Text(34, 9, screenWidth-37, screenHeight/2-100+100);
++	_txtDeskPublic = new Text(34, 9, screenWidth-37, screenHeight/2-100+108);
++	_txtDeskThreat = new Text(34, 9, screenWidth-37, screenHeight/2-100+116);
++	_txtDeskLeads = new Text(34, 9, screenWidth-37, screenHeight/2-100+124);
  
  	int slackingIndicatorOffset = _game->getMod()->getInterface("geoscape")->getElement("slackingIndicator")->custom;
  	_txtSlacking = new Text(59, 17, screenWidth - 61, screenHeight / 2 - 100 + slackingIndicatorOffset);
-@@ -251,6 +363,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -251,6 +367,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtMinSep, "text", "geoscape");
  	add(_txtSec, "text", "geoscape");
  	add(_txtWeekday, "text", "geoscape");
-+	add(_txtGoodwill, "text", "geoscape");
-+	add(_txtEscalation, "text", "geoscape");
-+	add(_txtDromes, "text", "geoscape");
-+	add(_txtIntel, "text", "geoscape");
++	add(_txtDeskFunds, "text", "geoscape");
++	add(_txtDeskPublic, "text", "geoscape");
++	add(_txtDeskThreat, "text", "geoscape");
++	add(_txtDeskLeads, "text", "geoscape");
  	add(_txtDay, "text", "geoscape");
  	add(_txtMonth, "text", "geoscape");
  	add(_txtYear, "text", "geoscape");
-@@ -268,10 +384,20 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -268,12 +388,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	geobord->setX(_sidebar->getX() - geobord->getWidth() + _sidebar->getWidth());
  	geobord->setY(_sidebar->getY());
  	_sidebar->copy(geobord);
@@ -6496,9 +7199,34 @@ index 6b4e79d..5326baa 100644
 +	// the buttons off FONT_GEO was tried on the wrong diagnosis, and only loosened
 +	// their letter-spacing.)
  	_btnIntercept->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
- 	_btnIntercept->setText(tr("STR_INTERCEPT"));
+-	_btnIntercept->setText(tr("STR_INTERCEPT"));
++	// The six panel keys read LAUNCH, BASES, INTEL, DOSSIERS, REPORTS, OPTIONS
++	// (fix list 12 Nov, item 1). Panel-only string ids, so the Intercept buttons
++	// in the UFO-detected and target dialogs keep their own wording. What each
++	// key OPENS is unchanged: INTEL is still the graphs, REPORTS still funding.
++	_btnIntercept->setText(tr("STR_GEO_LAUNCH"));
  	_btnIntercept->onMouseClick((ActionHandler)&GeoscapeState::btnInterceptClick);
-@@ -387,6 +513,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+ 	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnInterceptClick, Options::keyGeoIntercept);
+ 	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnUfoTrackerClick, Options::keyGeoUfoTracker);
+@@ -292,7 +426,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+ 	_btnBases->setGeoscapeButton(true);
+ 
+ 	_btnGraphs->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
+-	_btnGraphs->setText(tr("STR_GRAPHS"));
++	_btnGraphs->setText(tr("STR_GEO_INTEL"));
+ 	_btnGraphs->onMouseClick((ActionHandler)&GeoscapeState::btnGraphsClick);
+ 	_btnGraphs->onKeyboardPress((ActionHandler)&GeoscapeState::btnGraphsClick, Options::keyGeoGraphs);
+ 	_btnGraphs->setGeoscapeButton(true);
+@@ -310,7 +444,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+ 	_btnOptions->setGeoscapeButton(true);
+ 
+ 	_btnFunding->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
+-	_btnFunding->setText(Options::oxceLinks ? tr("STR_EXTENDED_UC") : tr("STR_FUNDING_UC"));
++	_btnFunding->setText(tr("STR_GEO_REPORTS"));
+ 	_btnFunding->onMouseClick((ActionHandler)&GeoscapeState::btnFundingClick);
+ 	_btnFunding->onKeyboardPress((ActionHandler)&GeoscapeState::btnFundingClick, Options::keyGeoFunding);
+ 	_btnFunding->setGeoscapeButton(true);
+@@ -387,6 +521,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -6507,36 +7235,17 @@ index 6b4e79d..5326baa 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -403,6 +531,67 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -403,6 +539,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_txtMinSep->setText(":");
  
  	_txtWeekday->setAlign(ALIGN_CENTER);
 +	_txtWeekday->setVisible(false);          // see the note where it is constructed
-+	for (Text *t : { _txtGoodwill, _txtEscalation, _txtDromes, _txtIntel })
++	for (Text *t : { _txtDeskFunds, _txtDeskPublic, _txtDeskThreat, _txtDeskLeads })
 +	{
 +		t->setAlign(ALIGN_CENTER);
 +	}
 +
-+	// WHAT EACH WELL CAN HONESTLY SHOW TODAY.
-+	//
-+	// Two of the four have a real source in this build and two do not, and a well
-+	// with no source prints an em dash rather than a number this desk invented.
-+	// Writing a plausible figure into a readout is the same mistake as asserting a
-+	// figure in an issue: it reads exactly like a correct one.
-+	//
-+	//   COBRA     Mod::getCobraKitTierCap(monthsPassed) - the calendar band's cap
-+	//             on what Cobra may issue, which is what "what is Cobra fielding"
-+	//             means mechanically. Real, and already drives the battle.
-+	//   DROMES    discovered alien bases. Terror Dromes are modelled as alien
-+	//             bases, and isDiscovered() is what the globe draws.
-+	//   GOODWILL  needs a definition first. Per-country goodwill is eroded by
-+	//             broadcast stations through the alien-activity pathway, so there
-+	//             is state, but no agreed way to roll sixteen countries into one
-+	//             figure - an average, a count of countries below a threshold, and
-+	//             a funding-weighted score all say different things.
-+	//   INTEL     needs the interrogation topic list. getDiscoveredResearch() is a
-+	//             count of ALL research, which would read as progress up the chain
-+	//             while saying nothing about it.
++	// WHAT EACH WELL SHOWS, AND WHERE IT COMES FROM: see updateDeskReadouts().
 +	// THE CLOCK IS A DISPLAY, NOT A LABEL. John: "the clock needs to be digital
 +	// readout". FONT_DIGITAL is seven bars per digit with the unlit ones left
 +	// faintly visible, built by build/make_digital_font.py and declared in the
@@ -6553,7 +7262,7 @@ index 6b4e79d..5326baa 100644
 +		// "8th Jan 1999" needs 72 in a 60-pixel well, setText falls back to the
 +		// small geo face, and that face has no lowercase - "8?? J?? 1999". The
 +		// date stays on FONT_SMALL, which fits; these four print a digit or two.
-+		for (Text *t : { _txtGoodwill, _txtEscalation, _txtDromes, _txtIntel })
++		for (Text *t : { _txtDeskFunds, _txtDeskPublic, _txtDeskThreat, _txtDeskLeads })
 +		{
 +			t->initText(geoBig, geoSmall, _game->getLanguage());
 +			// FONT_GEO_SMALL has capitals only - 153 glyphs - and printed the
@@ -6568,6 +7277,10 @@ index 6b4e79d..5326baa 100644
 +		for (Text *t : { _txtHour, _txtHourSep, _txtMin, _txtMinSep, _txtSec })
 +		{
 +			t->initText(digital, digital, _game->getLanguage());
++			// The HD layer sets every Text in the label face, which turned the
++			// clock into pink stencil type. The clock is a display, not a label:
++			// it keeps FONT_DIGITAL's own sharp twin (FontDigital_hi.png), in red.
++			HiUI::pixelText(t);
 +		}
 +	}
 +
@@ -6575,7 +7288,7 @@ index 6b4e79d..5326baa 100644
  
  	_txtDay->setAlign(ALIGN_CENTER);
  
-@@ -427,6 +616,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -427,6 +609,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  		_txtSec->setX(_txtSec->getX()-10);
  	}
  
@@ -6621,7 +7334,7 @@ index 6b4e79d..5326baa 100644
  	_gameTimer->onTimer((StateHandler)&GeoscapeState::timeAdvance);
  	_gameTimer->start();
  
-@@ -705,6 +933,34 @@ void GeoscapeState::handle(Action *action)
+@@ -705,6 +926,94 @@ void GeoscapeState::handle(Action *action)
   * Updates the timer display and resets the palette
   * since it's bound to change on other screens.
   */
@@ -6636,27 +7349,87 @@ index 6b4e79d..5326baa 100644
 +{
 +	SavedGame *save = _game->getSavedGame();
 +
-+	// Cobra's current kit band: what the calendar lets it issue this month.
-+	const int tier = _game->getMod()->getCobraKitTierCap(std::max(0, save->getCobraMonth() < 0 ? save->getCobraHeadStart() : save->getCobraMonth()));
-+	_txtEscalation->setText(tier < 0 ? std::string("-") : std::to_string(tier + 1));
-+
-+	// Terror Dromes are alien bases; the globe draws the ones that are discovered.
-+	int dromes = 0;
-+	for (auto *b : *save->getAlienBases())
++	// FUNDS - the treasury, short: $2.4M, $850K, -$1.2M. Real.
 +	{
-+		if (b->isDiscovered()) ++dromes;
++		const int64_t f = save->getFunds();
++		const int64_t a = f < 0 ? -f : f;
++		std::ostringstream ss;
++		if (f < 0) ss << "-";
++		ss << "$";
++		if (a >= 1000000000LL) ss << std::fixed << std::setprecision(1) << a / 1e9 << "B";
++		else if (a >= 1000000LL) ss << std::fixed << std::setprecision(1) << a / 1e6 << "M";
++		else if (a >= 1000LL) ss << a / 1000 << "K";
++		else ss << a;
++		_txtDeskFunds->setText(ss.str());
++		HiUI::textInk(_txtDeskFunds, f < 0 ? 0xF0B3A8 : 0);
 +	}
-+	_txtDromes->setText(std::to_string(dromes));
 +
-+	// No agreed roll-up yet, and no topic list yet. Deliberately blank.
-+	_txtGoodwill->setText("-");
-+	_txtIntel->setText("-");
++	// PUBLIC - SECRET until G.I. Joe goes public, then a percentage. There is no
++	// "goes public" state anywhere in the save or the engine yet, so it says
++	// SECRET, which is true of every campaign this build can play.
++	_txtDeskPublic->setText(tr("STR_DESK_SECRET"));
++
++	// THREAT - a word, never a number. There is no provocation gauge yet
++	// (BACK_BURNER.md, queued). Until there is, this reads the month the council
++	// is keeping score of: G.I. Joe's activity plus research score against
++	// Cobra's activity this month, banded at the same lines MonthlyReportState
++	// uses for its rating (TERRIBLE / POOR / OK / GOOD). It is what the council
++	// will say at month end, not what Cobra intends, and everything in it is on
++	// the player's own graphs already.
++	{
++		int xcom = 0, cobra = 0;
++		for (auto *region : *save->getRegions())
++		{
++			if (!region->getActivityXcom().empty()) xcom += region->getActivityXcom().back();
++			if (!region->getActivityAlien().empty()) cobra += region->getActivityAlien().back();
++		}
++		if (!save->getResearchScores().empty()) xcom += save->getResearchScores().back();
++		const int score = xcom - cobra;
++		int threshold = _game->getMod()->getDefeatScore() + 100 * save->getDifficultyCoefficient();
++		{
++			auto &custom = _game->getMod()->getMonthlyRatingThresholds();
++			const size_t diff = (size_t)save->getDifficulty();
++			if (custom.size() > diff && custom[diff] < 0) threshold = custom[diff];
++		}
++		const char *word; Uint32 ink;
++		if (score <= threshold - 300) { word = "STR_THREAT_IMMINENT"; ink = 0xE5483A; }
++		else if (score <= threshold)  { word = "STR_THREAT_HIGH";     ink = 0xE8873A; }
++		else if (score <= 0)          { word = "STR_THREAT_ELEVATED"; ink = 0xE8B923; }
++		else                          { word = "STR_THREAT_LOW";      ink = 0x8FC66A; }
++		_txtDeskThreat->setText(tr(word));
++		HiUI::textInk(_txtDeskThreat, ink);
++	}
++
++	// LEADS - dossier entries that research has opened and nobody has read yet.
++	// Entries the game starts with are not leads, so only articles that require
++	// research count. Reading one (ArticleState) clears it.
++	{
++		int fresh = 0;
++		for (const auto &id : _game->getMod()->getUfopaediaList())
++		{
++			ArticleDefinition *art = _game->getMod()->getUfopaediaArticle(id);
++			if (!art || art->_requires.empty() || art->hiddenCommendation) continue;
++			if (art->section == UFOPAEDIA_NOT_AVAILABLE || art->section == UFOPAEDIA_COMMENDATIONS) continue;
++			if (!Ufopaedia::isArticleAvailable(save, art)) continue;
++			if (save->getUfopediaRuleStatus(art->id) == ArticleDefinition::PEDIA_STATUS_NEW) ++fresh;
++		}
++		if (fresh > 0)
++		{
++			_txtDeskLeads->setText(tr("STR_DESK_LEADS_NEW").arg(fresh));
++			HiUI::textInk(_txtDeskLeads, 0xE8B923);
++		}
++		else
++		{
++			_txtDeskLeads->setText("\xE2\x80\x93");   // en dash
++			HiUI::textInk(_txtDeskLeads, 0xB9B5A8);
++		}
++	}
 +}
 +
  void GeoscapeState::init()
  {
  	State::init();
-@@ -712,6 +968,10 @@ void GeoscapeState::init()
+@@ -712,6 +1021,10 @@ void GeoscapeState::init()
  	updateSlackingIndicator();
  
  	_globe->onMouseClick((ActionHandler)&GeoscapeState::globeClick);
@@ -6667,7 +7440,18 @@ index 6b4e79d..5326baa 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -1454,6 +1714,35 @@ void GeoscapeState::time5Seconds()
+@@ -835,6 +1148,10 @@ void GeoscapeState::timeDisplay()
+ 	std::ostringstream ss5;
+ 	ss5 << _game->getSavedGame()->getTime()->getYear();
+ 	_txtYear->setText(ss5.str());
++
++	// the four readouts follow the clock, so a purchase or a read dossier shows
++	// on the panel the moment the player is back on the globe
++	updateDeskReadouts();
+ }
+ 
+ /**
+@@ -1454,6 +1771,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -6703,7 +7487,7 @@ index 6b4e79d..5326baa 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1752,7 +2041,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2098,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -6712,7 +7496,7 @@ index 6b4e79d..5326baa 100644
  								}
  								else
  								{
-@@ -1858,6 +2147,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2204,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -6732,7 +7516,7 @@ index 6b4e79d..5326baa 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -2353,7 +2655,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +2712,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -6741,7 +7525,7 @@ index 6b4e79d..5326baa 100644
  			}
  			else
  			{
-@@ -2862,6 +3164,10 @@ void GeoscapeState::time1Month()
+@@ -2862,6 +3221,10 @@ void GeoscapeState::time1Month()
  	_game->getSavedGame()->addMonth();
  
  	// Determine alien mission for this month.
@@ -6752,7 +7536,7 @@ index 6b4e79d..5326baa 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3266,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3323,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -6783,7 +7567,7 @@ index 6b4e79d..5326baa 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3265,6 +3595,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +3652,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -6799,7 +7583,7 @@ index 6b4e79d..5326baa 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -4647,11 +4986,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +5043,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -6814,7 +7598,7 @@ index 6b4e79d..5326baa 100644
  
  	if (missionRace.empty())
 diff --git a/src/Geoscape/GeoscapeState.h b/src/Geoscape/GeoscapeState.h
-index 5eaf857..cd3ac94 100644
+index 5eaf857..a02c5bc 100644
 --- a/src/Geoscape/GeoscapeState.h
 +++ b/src/Geoscape/GeoscapeState.h
 @@ -54,6 +54,13 @@ private:
@@ -6823,7 +7607,7 @@ index 5eaf857..cd3ac94 100644
  	Text *_txtFunds, *_txtHour, *_txtHourSep, *_txtMin, *_txtMinSep, *_txtSec, *_txtWeekday, *_txtDay, *_txtMonth, *_txtYear;
 +	/// The conversion's own readouts. Their labels are engraved into the panel
 +	/// artwork by build/make_panel.py, so these carry the value only.
-+	Text *_txtGoodwill, *_txtEscalation, *_txtDromes, *_txtIntel;
++	Text *_txtDeskFunds, *_txtDeskPublic, *_txtDeskThreat, *_txtDeskLeads;
 +public:
 +	/// Refreshes the conversion's own panel readouts.
 +	void updateDeskReadouts();
@@ -6841,7 +7625,7 @@ index 5eaf857..cd3ac94 100644
  	void btnZoomOutRightClick(Action *action);
  	/// Blit method - renders the state and dogfights.
 diff --git a/src/Geoscape/Globe.cpp b/src/Geoscape/Globe.cpp
-index 5b17165..d7dc967 100644
+index 5b17165..c2b6945 100644
 --- a/src/Geoscape/Globe.cpp
 +++ b/src/Geoscape/Globe.cpp
 @@ -17,6 +17,7 @@
@@ -6864,7 +7648,15 @@ index 5b17165..d7dc967 100644
  bool Globe::OCEAN_SHADING;
  Uint8 Globe::COUNTRY_LABEL_COLOR;
  Uint8 Globe::LINE_COLOR;
-@@ -411,6 +417,20 @@ void Globe::polarToCart(double lon, double lat, double *x, double *y) const
+@@ -366,6 +372,7 @@ Globe::Globe(Game* game, int cenX, int cenY, int width, int height, int x, int y
+  */
+ Globe::~Globe()
+ {
++	HiUI::globeForget(this);
+ 	delete _blinkTimer;
+ 	delete _rotTimer;
+ 	delete _countries;
+@@ -411,6 +418,20 @@ void Globe::polarToCart(double lon, double lat, double *x, double *y) const
   * @param lon Pointer to the output longitude.
   * @param lat Pointer to the output latitude.
   */
@@ -6885,7 +7677,7 @@ index 5b17165..d7dc967 100644
  void Globe::cartToPolar(Sint16 x, Sint16 y, double *lon, double *lat) const
  {
  	// Orthographic projection
-@@ -966,11 +986,24 @@ void Globe::draw()
+@@ -966,12 +987,73 @@ void Globe::draw()
  	}
  	Surface::draw();
  	drawOcean();
@@ -6909,9 +7701,58 @@ index 5b17165..d7dc967 100644
  	drawMarkers();
 +	drawMarks();
  	drawDetail();
++	publishHiView();
++}
++
++/**
++ * Hands the HD layer what it needs to draw this globe again at display
++ * resolution: where it is, which way it faces, where the sun is, and the
++ * texture. The 8-bit globe above is unchanged and still the one the game
++ * reads; this only lets the screen show it sharp (HiUI::globeFloor).
++ */
++void Globe::publishHiView()
++{
++	if (!HiUI::enabled())
++		return;
++	static std::vector<float> shadeLut;
++	if (shadeLut.empty())
++	{
++		// CreateShadow::getShadowValue without its noise: the dithered terminator
++		// becomes the smooth one it was dithering towards. t runs 0..256 in
++		// quarter steps, exactly the `temp.x` the 8-bit pass indexes by.
++		shadeLut.resize(1024);
++		for (int i = 0; i < 1024; ++i)
++		{
++			const double t = i / 4.0;
++			const int o = Clamp((int)t, 0, GlobeStaticData::shade_gradient_max - 1);
++			const double rem = t - o;
++			const double middle = static_data.shade_seq[o] + static_data.shade_step[o] * rem - GlobeStaticData::shade_step_max / 2;
++			shadeLut[i] = (float)Clamp(static_data.shade_gradient[o] + middle / GlobeStaticData::shade_step_max, 0.0, 31.0);
++		}
++	}
++	HiUI::GlobeView v;
++	v.globe = this;
++	v.texture = _game->getMod()->getSurface("GLOBE_EARTH", false);
++	v.cenX = _cenX + getX();
++	v.cenY = _cenY + getY();
++	v.radius = _radius;
++	v.cenLon = _cenLon;
++	v.cenLat = _cenLat;
++	const Cord sun = getSunDirection(_cenLon, _cenLat);
++	v.sunX = sun.x; v.sunY = sun.y; v.sunZ = sun.z;
++	v.ocean = OCEAN_COLOR;
++	v.oceanShading = OCEAN_SHADING;
++	v.shade = shadeLut;
++	HiUI::globeView(v);
++	std::vector<HiUI::GlobePin> pins = _hdPins;
++	pins.insert(pins.end(), _hdCityPins.begin(), _hdCityPins.end());
++	HiUI::globePins(pins);
++	HiUI::globeLabels(_hdLabels);
++	HiUI::globeArt(_hdArt);
  }
  
-@@ -1092,6 +1125,26 @@ void Globe::drawShadow()
+ 
+@@ -1092,6 +1174,26 @@ void Globe::drawShadow()
  }
  
  
@@ -6938,7 +7779,7 @@ index 5b17165..d7dc967 100644
  void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double x2, double y2, int shade)
  {
  	if (_clipper->LineClip(&x1,&y1,&x2,&y2) != 1) return; //empty line
-@@ -1161,9 +1214,82 @@ void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double
+@@ -1161,9 +1263,82 @@ void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double
  /**
   * Draws the radar ranges of player bases, player craft, alien bases and UFO hunter-killers on the globe.
   */
@@ -7021,7 +7862,7 @@ index 5b17165..d7dc967 100644
  
  	if (!Options::globeRadarLines)
  		return;
-@@ -1296,7 +1422,12 @@ void Globe::drawGlobeCircle(double lat, double lon, double radius, int segments,
+@@ -1296,7 +1471,12 @@ void Globe::drawGlobeCircle(double lat, double lon, double radius, int segments,
  			continue;
  		}
  		if (!pointBack(lon1,lat1) && i % frac == 0)
@@ -7035,7 +7876,7 @@ index 5b17165..d7dc967 100644
  		x2=x; y2=y;
  		i++;
  	}
-@@ -1346,6 +1477,15 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
+@@ -1346,6 +1526,15 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
  
  		if (!pointBack(ln2, lt2)&&!pointBack(ln1, lt1))
  		{
@@ -7051,7 +7892,7 @@ index 5b17165..d7dc967 100644
  			polarToCart(ln1,lt1,&x1,&y1);
  			polarToCart(ln2,lt2,&x2,&y2);
  			surface->drawLine(x1, y1, x2, y2, color);
-@@ -1358,9 +1498,140 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
+@@ -1358,9 +1547,153 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
   * Draws the details of the countries on the globe,
   * based on the current zoom level.
   */
@@ -7084,6 +7925,7 @@ index 5b17165..d7dc967 100644
 +
 +void Globe::drawMarks()
 +{
++	_hdArt.clear();
 +	if (!_showMarks || MARK_ICONS.empty())
 +	{
 +		return;
@@ -7170,6 +8012,12 @@ index 5b17165..d7dc967 100644
 +	}
 +	Sint16 x, y;
 +	polarToCart(lon, lat, &x, &y);
++	if (HiUI::active())
++	{
++		// set crisp by the HD layer; drawn into the globe it would be painted over
++		_hdArt.push_back(HiUI::GlobeArt{ marker, (double)(x - marker->getWidth() / 2 + getX()), (double)(y - marker->getHeight() / 2 + getY()) });
++		return;
++	}
 +	ShaderMove<const Uint8> surf{ marker, x - marker->getWidth() / 2, y - marker->getHeight() / 2 };
 +	ShaderMove<Uint8> dest{ this };
 +	ShaderDrawFunc(
@@ -7189,10 +8037,16 @@ index 5b17165..d7dc967 100644
  {
  	_countries->clear();
 +	HiUI::vectorClear(HiUI::VEC_DETAIL);
++	// NAMES ON THE GLOBE (fix list item 6). With the HD layer up they are set in
++	// the label face, small caps, bone with a dark outline, at display
++	// resolution - so they are collected here rather than blitted in pixel type.
++	_hdLabels.clear();
++	_hdCityPins.clear();
++	const bool hd = HiUI::active();
  
  	if (!Options::globeDetail)
  		return;
-@@ -1380,6 +1651,15 @@ void Globe::drawDetail()
+@@ -1380,6 +1713,15 @@ void Globe::drawDetail()
  				if (pointBack(polyline->getLongitude(j), polyline->getLatitude(j)) || pointBack(polyline->getLongitude(j + 1), polyline->getLatitude(j + 1)))
  					continue;
  
@@ -7208,7 +8062,65 @@ index 5b17165..d7dc967 100644
  				// Convert coordinates
  				polarToCart(polyline->getLongitude(j), polyline->getLatitude(j), &x[0], &y[0]);
  				polarToCart(polyline->getLongitude(j + 1), polyline->getLatitude(j + 1), &x[1], &y[1]);
-@@ -1500,6 +1780,31 @@ void Globe::drawDetail()
+@@ -1412,6 +1754,11 @@ void Globe::drawDetail()
+ 
+ 			label->setX(x - 75);
+ 			label->setY(y);
++			if (hd)
++			{
++				_hdLabels.push_back(HiUI::GlobeLabel{ _game->getLanguage()->getString(country->getRules()->getType()), (double)x + getX(), (double)y + getY(), 0 });
++				continue;
++			}
+ 			label->setText(_game->getLanguage()->getString(country->getRules()->getType()));
+ 			label->setColor(COUNTRY_LABEL_COLOR);
+ 			if (country->getRules()->getLabelColor() > 0)
+@@ -1446,6 +1793,11 @@ void Globe::drawDetail()
+ 
+ 				label->setX(x - 60);
+ 				label->setY(y);
++				if (hd)
++				{
++					_hdLabels.push_back(HiUI::GlobeLabel{ _game->getLanguage()->getString(rule->getType()), (double)x + getX(), (double)y + getY(), 0 });
++					continue;
++				}
+ 				label->setText(_game->getLanguage()->getString(rule->getType()));
+ 				label->setColor(COUNTRY_LABEL_COLOR);
+ 				if (rule->getLabelColor() > 0)
+@@ -1472,7 +1824,7 @@ void Globe::drawDetail()
+ 		{
+ 			for (auto* city : *region->getRules()->getCities())
+ 			{
+-				drawTarget(city, _countries);
++				if (!hd) drawTarget(city, _countries);
+ 
+ 				// Don't draw if city is facing back
+ 				if (pointBack(city->getLongitude(), city->getLatitude()))
+@@ -1480,6 +1832,14 @@ void Globe::drawDetail()
+ 
+ 				// Convert coordinates
+ 				polarToCart(city->getLongitude(), city->getLatitude(), &x, &y);
++				if (hd)
++				{
++					double fx, fy;
++					polarToCart(city->getLongitude(), city->getLatitude(), &fx, &fy);
++					_hdCityPins.push_back(HiUI::GlobePin{ fx + getX(), fy + getY(), HiUI::PIN_CITY, true });
++					_hdLabels.push_back(HiUI::GlobeLabel{ city->getName(_game->getLanguage()), (double)x + getX(), (double)y + 2 + getY(), 1 });
++					continue;
++				}
+ 
+ 				label->setX(x - 50);
+ 				label->setY(y + 2);
+@@ -1495,11 +1855,46 @@ void Globe::drawDetail()
+ 			polarToCart(xbase->getLongitude(), xbase->getLatitude(), &x, &y);
+ 			label->setX(x - 50);
+ 			label->setY(y + 2);
++			if (hd)
++			{
++				_hdLabels.push_back(HiUI::GlobeLabel{ xbase->getName(), (double)x + getX(), (double)y + 2 + getY(), 2 });
++				continue;
++			}
+ 			label->setColor(BASE_LABEL_COLOR);
+ 			label->setText(xbase->getName());
  			label->blit(_countries->getSurface());
  		}
  
@@ -7232,6 +8144,11 @@ index 5b17165..d7dc967 100644
 +				label->setX(x - 50);
 +				// clear of the icon, which is 28px tall and centred
 +				label->setY(y + 15);
++				if (hd)
++				{
++					_hdLabels.push_back(HiUI::GlobeLabel{ m.label, (double)x + getX(), (double)y + 15 + getY(), 3 });
++					continue;
++				}
 +				label->setText(m.label);
 +				label->blit(_countries->getSurface());
 +			}
@@ -7240,7 +8157,7 @@ index 5b17165..d7dc967 100644
  		delete label;
  	}
  
-@@ -1632,7 +1937,10 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
+@@ -1632,7 +2027,10 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
  
  		if (!pointBack(p1.lon, p1.lat) && !pointBack(p2.lon, p2.lat))
  		{
@@ -7252,7 +8169,7 @@ index 5b17165..d7dc967 100644
  		}
  
  		p1 = p2;
-@@ -1641,6 +1949,94 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
+@@ -1641,6 +2039,94 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
  	}
  }
  
@@ -7347,17 +8264,65 @@ index 5b17165..d7dc967 100644
  /**
   * Draws the flight paths of player craft (and hunting UFOs) flying on the globe.
   */
-@@ -1806,6 +2202,9 @@ void Globe::drawMarkers()
+@@ -1756,6 +2242,37 @@ void Globe::drawTarget(Target *target, Surface *surface)
+ void Globe::drawMarkers()
+ {
+ 	_markers->clear();
++	_hdPins.clear();
++	// THE PINS (fix list item 7). With the HD layer up, every marker is a shape
++	// drawn at display resolution - its own shape AND colour per kind - and
++	// nothing goes into the 8-bit marker layer, or its blocks would sit on top.
++	// What is clickable is decided from the targets' positions, not from this
++	// surface, so nothing about selection changes.
++	if (HiUI::active())
++	{
++		auto pin = [&](Target *t, int kind)
++		{
++			if (t->getMarker() == -1 || pointBack(t->getLongitude(), t->getLatitude()))
++				return;
++			double x, y;
++			polarToCart(t->getLongitude(), t->getLatitude(), &x, &y);
++			_hdPins.push_back(HiUI::GlobePin{ x + getX(), y + getY(), kind, _blink > 0 });
++		};
++		for (auto* xbase : *_game->getSavedGame()->getBases()) pin(xbase, HiUI::PIN_JOE_BASE);
++		for (auto* wp : *_game->getSavedGame()->getWaypoints()) pin(wp, HiUI::PIN_WAYPOINT);
++		for (auto* site : *_game->getSavedGame()->getMissionSites()) pin(site, HiUI::PIN_MISSION);
++		for (auto* ab : *_game->getSavedGame()->getAlienBases()) pin(ab, HiUI::PIN_COBRA_SITE);
++		for (auto* ufo : *_game->getSavedGame()->getUfos())
++		{
++			if (ufo->getStatus() == Ufo::IGNORE_ME) continue;
++			pin(ufo, HiUI::PIN_CONTACT);
++		}
++		for (auto* xbase : *_game->getSavedGame()->getBases())
++			for (auto* xcraft : *xbase->getCrafts())
++				pin(xcraft, HiUI::PIN_JOE_CRAFT);
++		publishHiView();
++		return;
++	}
+ 	_markers->lock();
+ 	// Draw the base markers
+ 	for (auto* xbase : *_game->getSavedGame()->getBases())
+@@ -1805,7 +2322,19 @@ void Globe::drawMarkers()
+  */
  void Globe::blit(SDL_Surface *surface)
  {
++	// The HD layer came up (or went away) since the globe was last drawn: draw
++	// it again, so markers and names go to whichever renderer is now showing.
++	if (HiUI::active() != _hdLast)
++	{
++		_hdLast = HiUI::active();
++		draw();
++	}
  	Surface::blit(surface);
 +	// The vector strokes lie on the globe and under everything blitted after
 +	// this point: country names, base markers, and any window opened over it.
 +	HiUI::vectorFloor(this);
++	// And the earth itself, its pins and its names, at display resolution.
++	HiUI::globeFloor(this);
  	_radars->blit(surface);
  	_countries->blit(surface);
  	_markers->blit(surface);
-@@ -2009,7 +2408,13 @@ void Globe::mouseClick(Action *action, State *state)
+@@ -2009,7 +2538,13 @@ void Globe::mouseClick(Action *action, State *state)
  	if (lat == lat && lon == lon)
  	{
  		InteractiveSurface::mouseClick(action, state);
@@ -7373,19 +8338,35 @@ index 5b17165..d7dc967 100644
  			center(lon, lat);
  		}
 diff --git a/src/Geoscape/Globe.h b/src/Geoscape/Globe.h
-index a0a8813..2f4dbb2 100644
+index a0a8813..47ab562 100644
 --- a/src/Geoscape/Globe.h
 +++ b/src/Geoscape/Globe.h
-@@ -62,6 +62,8 @@ private:
+@@ -22,6 +22,7 @@
+ #include "../Engine/InteractiveSurface.h"
+ #include "../Engine/FastLineClip.h"
+ #include "Cord.h"
++#include "../Engine/HiUI.h"
+ 
+ namespace OpenXcom
+ {
+@@ -62,6 +63,16 @@ private:
  	Game *_game;
  	Surface *_markers, *_countries, *_radars;
  	bool _hover, _craft;
 +	/// the player's own board, on by default and toggled with keyGeoToggleMarks
 +	bool _showMarks = true;
++	/// What the HD layer draws instead of the 8-bit markers and names (HiUI::globeFloor).
++	std::vector<HiUI::GlobePin> _hdPins, _hdCityPins;
++	std::vector<HiUI::GlobeLabel> _hdLabels;
++	std::vector<HiUI::GlobeArt> _hdArt;
++	/// Was the HD layer up when the globe was last drawn?
++	bool _hdLast = false;
++	/// Hands the HD layer this globe's view, pins and names.
++	void publishHiView();
  	int _blink;
  	Timer *_blinkTimer, *_rotTimer;
  	std::list<Polygon*> _cacheLand;
-@@ -99,12 +101,21 @@ private:
+@@ -99,12 +110,21 @@ private:
  	void drawVHLine(Surface *surface, double lon1, double lat1, double lon2, double lat2, Uint8 color);
  	/// Draw flight path.
  	void drawPath(Surface *surface, double lon1, double lat1, double lon2, double lat2);
@@ -7407,7 +8388,7 @@ index a0a8813..2f4dbb2 100644
  	static bool OCEAN_SHADING;
  	static Uint8 COUNTRY_LABEL_COLOR;
  	static Uint8 LINE_COLOR;
-@@ -121,6 +132,12 @@ public:
+@@ -121,6 +141,12 @@ public:
  	void polarToCart(double lon, double lat, double *x, double *y) const;
  	/// Converts cartesian coordinates to polar coordinates.
  	void cartToPolar(Sint16 x, Sint16 y, double *lon, double *lat) const;
@@ -7420,7 +8401,7 @@ index a0a8813..2f4dbb2 100644
  	/// Starts rotating the globe left.
  	void rotateLeft();
  	/// Starts rotating the globe right.
-@@ -177,6 +194,12 @@ public:
+@@ -177,6 +203,12 @@ public:
  	void drawOcean();
  	/// Draws the land of the globe.
  	void drawLand();
@@ -8316,6 +9297,106 @@ index db4fe9c..f6ee3fb 100644
  	void btnCancelClick(Action *action);
 +	/// Either slider moved: rewrite its value line.
 +	void slrChange(Action *action);
+ };
+ 
+ }
+diff --git a/src/Menu/PauseState.cpp b/src/Menu/PauseState.cpp
+index 574144f..7840d55 100644
+--- a/src/Menu/PauseState.cpp
++++ b/src/Menu/PauseState.cpp
+@@ -32,6 +32,7 @@
+ #include "../Savegame/SavedGame.h"
+ #include "../Savegame/SavedBattleGame.h"
+ #include "../Battlescape/BattlescapeGame.h"
++#include "../Battlescape/BattlescapeState.h"
+ #include "../version.h"
+ 
+ namespace OpenXcom
+@@ -63,6 +64,15 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
+ 	_btnAbandon = new TextButton(180, 18, x+18, 96);
+ 	_btnOptions = new TextButton(180, 18, x+18, 122);
+ 	_btnCancel = new TextButton(180, 18, x+18, 150);
++	// G.I. Joe: ABORT MISSION in the battle's options menu. The painted battle
++	// bar has no abort key, so without this it was a hotkey only. The rows close
++	// up from 22 to 20 to make room; the geoscape menu is unchanged.
++	if (_origin == OPT_BATTLESCAPE)
++	{
++		_btnLoad->setY(52); _btnSave->setY(72); _btnAbandon->setY(92);
++		_btnAbort = new TextButton(180, 18, x+18, 112);
++		_btnOptions->setY(132); _btnCancel->setY(154);
++	}
+ 	_txtTitle = new Text(206, 17, x+5, 32);
+ 	_txtVersion = new Text(216, 9, x, 11);
+ 
+@@ -75,6 +85,7 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
+ 	add(_btnAbandon, "button", "pauseMenu");
+ 	add(_btnOptions, "button", "pauseMenu");
+ 	add(_btnCancel, "button", "pauseMenu");
++	if (_btnAbort) add(_btnAbort, "button", "pauseMenu");
+ 	add(_txtTitle, "text", "pauseMenu");
+ 	add(_txtVersion, "text", "pauseMenu");
+ 
+@@ -95,6 +106,12 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
+ 	_btnOptions->setText(tr("STR_GAME_OPTIONS"));
+ 	_btnOptions->onMouseClick((ActionHandler)&PauseState::btnOptionsClick);
+ 
++	if (_btnAbort)
++	{
++		_btnAbort->setText(tr("STR_ABORT_MISSION_UC"));
++		_btnAbort->onMouseClick((ActionHandler)&PauseState::btnAbortClick);
++	}
++
+ 	_btnCancel->setText(tr("STR_CANCEL_UC"));
+ 	_btnCancel->onMouseClick((ActionHandler)&PauseState::btnCancelClick);
+ 	_btnCancel->onKeyboardPress((ActionHandler)&PauseState::btnCancelClick, Options::keyCancel);
+@@ -139,6 +156,10 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
+ 		bool debugMode = _game->getSavedGame()->getSavedBattle()->getDebugMode();
+ 		bool busy = !_game->getSavedGame()->getSavedBattle()->getBattleGame()->getStates().empty();
+ 
++		if (_btnAbort && ((!playerTurn && !debugMode) || busy || _game->getSavedGame()->getSavedBattle()->isPreview()))
++		{
++			_btnAbort->setVisible(false);   // same guard as the save: never mid-action
++		}
+ 		if ((!playerTurn && !debugMode) || busy)
+ 		{
+ 			_btnSave->setVisible(false); // non-ironman + ironman
+@@ -159,6 +180,17 @@ PauseState::~PauseState()
+ 
+ }
+ 
++/**
++ * Closes this menu and asks the battle to abort, exactly as its abort key does
++ * (AbortMissionState confirms, so this is never one click from losing a team).
++ */
++void PauseState::btnAbortClick(Action *)
++{
++	BattlescapeState *bs = _game->getSavedGame()->getSavedBattle()->getBattleState();
++	_game->popState();
++	if (bs) bs->btnAbortClick(nullptr);
++}
++
+ /**
+  * Opens the Load Game screen.
+  * @param action Pointer to an action.
+diff --git a/src/Menu/PauseState.h b/src/Menu/PauseState.h
+index 1b57bc5..5801fb3 100644
+--- a/src/Menu/PauseState.h
++++ b/src/Menu/PauseState.h
+@@ -36,7 +36,7 @@ class PauseState : public State
+ {
+ private:
+ 	OptionsOrigin _origin;
+-	TextButton *_btnLoad, *_btnSave, *_btnAbandon, *_btnOptions, *_btnCancel;
++	TextButton *_btnLoad, *_btnSave, *_btnAbandon, *_btnOptions, *_btnCancel, *_btnAbort = nullptr;
+ 	Window *_window;
+ 	Text *_txtTitle, *_txtVersion;
+ public:
+@@ -54,6 +54,8 @@ public:
+ 	void btnOptionsClick(Action *action);
+ 	/// Handler for clicking the Cancel button.
+ 	void btnCancelClick(Action *action);
++	/// Handler for clicking Abort Mission (battlescape only).
++	void btnAbortClick(Action *action);
  };
  
  }
@@ -11654,3 +12735,24 @@ index 8cf11bd..549328d 100644
  	/// Register all useful function used by script.
  	static void ScriptRegister(ScriptParserBase* parser);
  
+diff --git a/src/Ufopaedia/ArticleStateCraft.cpp b/src/Ufopaedia/ArticleStateCraft.cpp
+index 50fac40..cc4af4c 100644
+--- a/src/Ufopaedia/ArticleStateCraft.cpp
++++ b/src/Ufopaedia/ArticleStateCraft.cpp
+@@ -19,6 +19,7 @@
+ 
+ #include <sstream>
+ #include "ArticleStateCraft.h"
++#include "../Engine/HiUI.h"
+ #include "../Mod/ArticleDefinition.h"
+ #include "../Mod/Mod.h"
+ #include "../Mod/RuleCraft.h"
+@@ -57,6 +58,8 @@ namespace OpenXcom
+ 
+ 		// Set up objects
+ 		_game->getMod()->getSurface(defs->image_id)->blitNShade(_bg, 0, 0);
++		// _bg is a COPY of the picture, so its sharp twin is found through an alias
++		HiUI::aliasImage(_bg, _game->getMod()->getSurface(defs->image_id));
+ 		_btnOk->setColor(Palette::blockOffset(15)-1);
+ 		_btnPrev->setColor(Palette::blockOffset(15)-1);
+ 		_btnNext->setColor(Palette::blockOffset(15)-1);

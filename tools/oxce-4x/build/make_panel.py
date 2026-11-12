@@ -40,6 +40,11 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 K = 6                                   # 4x sheet is 6x the 64x200 base panel
 W, H = 64, 200
 TTF = '/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf'
+# The readout labels are Oswald, the face every word on the panel is set in at
+# display resolution (fix list item 5).
+OSWALD = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'fonts', 'Oswald[wght].ttf')
+BONE = (233, 230, 220)                  # UI standard S_TEXT, #E9E6DC
+INK = (16, 18, 13)
 
 # Lifted from the first pass, where the plate read as flat and the wells took
 # over. A recess only looks cut if the metal around it is clearly brighter than
@@ -55,9 +60,11 @@ RED        = (176, 40, 34)
 
 # ---------------------------------------------------------------- the layout
 # A row is (name, x, y, w, h). These ARE the widget rectangles; see --rects.
-COMMAND = [('INTERCEPT', 2, 0, 60, 11), ('BASES', 2, 12, 60, 11),
-           ('GRAPHS', 2, 24, 60, 11), ('INTEL FILES', 2, 36, 60, 11),
-           ('OPTIONS', 2, 48, 60, 11), ('FUNDING', 2, 60, 60, 11)]
+# Renamed 12 Nov (fix list item 1); OPTIONS and REPORTS swapped slots, which
+# changes nothing here - the six recesses are identical.
+COMMAND = [('LAUNCH', 2, 0, 60, 11), ('BASES', 2, 12, 60, 11),
+           ('INTEL', 2, 24, 60, 11), ('DOSSIERS', 2, 36, 60, 11),
+           ('REPORTS', 2, 48, 60, 11), ('OPTIONS', 2, 60, 60, 11)]
 # TIGHTENED, at John's word: "some of the spacing needs to be tightened up".
 # The readout rows drop from a 9 pitch to 8 and the whole lower half moves up,
 # which buys the control cluster 28 base px where it had 24 and was cramped.
@@ -66,7 +73,9 @@ COMMAND = [('INTERCEPT', 2, 0, 60, 11), ('BASES', 2, 12, 60, 11),
 CLOCK_WELL = (2, 73, 60, 16)            # hours, separators, minutes, seconds
 DATE_WELL  = (2, 90, 60, 9)             # day, month, year on one row
 # label engraved in the metal, value well to its right
-EXTRA = [('GOODWILL', 100), ('COBRA', 108), ('DROMES', 116), ('INTEL', 124)]
+# 12 Nov (fix list item 2): FUNDS, PUBLIC, THREAT, LEADS. Cobra's kit band and
+# the Drome count came off - they read Cobra's own books.
+EXTRA = [('FUNDS', 100), ('PUBLIC', 108), ('THREAT', 116), ('LEADS', 124)]
 EXTRA_LABEL_W = 24                      # engraved; the value well takes the rest
 SPEED = [(2, 134, 29, 11), (33, 134, 29, 11),
          (2, 146, 29, 11), (33, 146, 29, 11),
@@ -179,37 +188,62 @@ def screw(d, x, y):
     d.line([X - r + 2, Y, X + r - 2, Y], fill=(44, 48, 38), width=2)
 
 
+def oswald(size):
+    f = ImageFont.truetype(OSWALD, size)
+    f.set_variation_by_axes([600])
+    return f
+
+
 def engrave_labels(img):
-    """Cut GOODWILL, COBRA, DROMES and INTEL into the metal of `img`, in place.
+    """Set FUNDS, PUBLIC, THREAT and LEADS into the metal of `img`, in place.
 
     A function of its own so it can be run over artwork that came back from the
     graphics AI: the plate goes out unlabelled, so weathering cannot smear the
-    lettering, and the labels are cut back in crisp afterwards.
+    lettering, and the labels are put back crisp afterwards.
 
-    ONE SIZE THAT FITS THE LONGEST LABEL, NOT A SIZE THAT SUITS THE SHORTEST.
-    Set at a fixed 5 base px, GOODWILL and DROMES ran straight under the value
-    well beside them. The label column is EXTRA_LABEL_W wide and that is a hard
-    edge, so the size is measured down until the longest of the four clears it,
-    and all four are set at that size - four sizes would read as four machines.
+    LIGHT LETTERS, NOT A DARK GROOVE (fix list 12 Nov, item 4). The first cut
+    was dark on olive and could not be read. Now bone (#E9E6DC, the standard's
+    text colour) with a dark INNER shadow along the upper-left edge of each
+    stroke, so they still read as cut into the plate, and a hairline of ink
+    round the outside so they hold on the lighter patches of the weathering.
+
+    ONE SIZE THAT FITS THE LONGEST LABEL: measured down until the widest of the
+    four clears the label column, and all four set at that size.
     """
-    size = px(5.4)
+    col_w = px(EXTRA_LABEL_W - 3.5)
+    size = px(5.6)
     while size > 6:
-        f = stencil_font(size)
-        if max(f.getbbox(t)[2] for t, _ in EXTRA) <= px(EXTRA_LABEL_W - 3.5):
+        f = oswald(size)
+        cap = f.getbbox('H')
+        if max(f.getbbox(t)[2] - f.getbbox(t)[0] for t, _ in EXTRA) <= col_w and cap[3] - cap[1] <= px(4.4):
             break
         size -= 1
+    f = oswald(size)
+    cap = f.getbbox('H')
+    cap_h = cap[3] - cap[1]
     lab = Image.new('L', img.size, 0)
+    d = ImageDraw.Draw(lab)
     for text, y in EXTRA:
-        t = stencil(img, (px(3.2), px(y + 1.3)), text, size, 255)
-        lab = Image.composite(Image.new('L', img.size, 255), lab, t)
-    # The catch goes down FIRST and the groove on top of it, so the lit edge
-    # shows along the bottom of the cut instead of being painted over by it.
-    lit = Image.new('RGBA', img.size, (0, 0, 0, 0))
-    lit.putalpha(lab.filter(ImageFilter.GaussianBlur(1.2)).point(lambda v: int(v * 0.55)))
-    img.paste(Image.new('RGB', img.size, (186, 194, 156)), (0, 3), lit)
-    groove = Image.new('RGBA', img.size, (0, 0, 0, 0))
-    groove.putalpha(lab.point(lambda v: int(v * 0.88)))
-    img.paste(Image.new('RGB', img.size, (22, 25, 18)), (0, 0), groove)
+        # caps centred on the value well's row (y .. y+8)
+        top = px(y + 4) - cap_h / 2.0 - cap[1]
+        d.text((px(3.2), top), text, font=f, fill=255)
+    m = np.asarray(lab).astype(np.float32) / 255.0
+    # outside hairline
+    halo = np.asarray(lab.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(0.6))).astype(np.float32) / 255.0
+    halo = np.clip(halo - m, 0, 1) * 0.75
+    # inner shadow: the part of each stroke whose upper-left neighbour is metal
+    sh = 2
+    shifted = np.zeros_like(m)
+    shifted[sh:, sh:] = m[:-sh, :-sh]
+    inner = np.clip(m - shifted, 0, 1)
+    inner = np.asarray(Image.fromarray((inner * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.8))).astype(np.float32) / 255.0
+    inner = np.minimum(inner, m) * 0.8
+    a = np.asarray(img.convert('RGB')).astype(np.float32)
+    ink = np.array(INK, np.float32); bone = np.array(BONE, np.float32)
+    a = a * (1 - halo[..., None]) + ink * halo[..., None]
+    a = a * (1 - m[..., None]) + bone * m[..., None]
+    a = a * (1 - inner[..., None]) + ink * inner[..., None]
+    img.paste(Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)))
 
 
 def build(labels=True):

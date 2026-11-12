@@ -450,3 +450,29 @@ Checked and NOT the cause, so nobody repeats them:
 - `geoscapeScale`. Setting it to 4 made the whole UI render at native size in the
   middle of a black screen - worse, not better. It also WRITES ITSELF BACK to
   options.cfg, which silently broke the next two test runs until that was noticed.
+
+## Anything keyed by a Surface's address must be forgotten when it dies
+
+Found 12 Nov: the geoscape's rotate-up key drew as a black 8x8 square, at HD
+only. The panel art was fine at both resolutions. The intro slideshow registers
+each slide with `HiUI::registerImage`, then frees it; the next `Surface` the
+allocator put at that address - the rotate-up hitbox - was found in `bgImages`
+and drew a slice of the slide's dark band over itself. `Surface::~Surface` now
+calls `HiUI::surfaceGone`, which drops the address from every per-surface map.
+`flatTwin`'s function-local cache is the one place still keyed this way
+(BACK_BURNER.md, Broken).
+
+## The globe's top layer must clip to the globe
+
+HD pins and names are drawn into the overlay after the side panel has already
+claimed its pixels, so a name near the right edge was printed over the panel
+keys - "INDIA" through INTEL. `clipToGlobe` restores every pixel outside the
+globe's rectangle after each draw, and `globeClaimRect` never claims outside it.
+
+## The geoscape clock is a Text the HD layer must leave alone
+
+Every `Text` is set in the label face at HD, which turned FONT_DIGITAL's
+7-segment clock into pink stencil type (red, washed through `roleColour`'s
+danger role). `HiUI::pixelText` marks a widget to keep its own font's `_hi`
+twin; the clock's five widgets use it and read red 7-segment again.
+

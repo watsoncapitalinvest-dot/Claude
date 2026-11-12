@@ -28,7 +28,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 UI = os.path.normpath(os.path.join(HERE, '..', 'mod', 'Resources', 'UI'))
 SRC = os.path.normpath(os.path.join(HERE, '..', 'fonts'))
 EM = 96
-CHARS = [c for c in range(32, 127)] + [c for c in range(160, 256)]
+# 150 and 151 hold the en and em dash, where Windows-1252 keeps them. The faces
+# are Latin-1 otherwise; HiUI maps U+2013/U+2014 to these two codes, so a
+# readout with nothing to say can print an en dash rather than a hyphen.
+EXTRA = {150: '\u2013', 151: '\u2014'}
+CHARS = [c for c in range(32, 127)] + sorted(EXTRA) + [c for c in range(160, 256)]
+
+
+def glyph(c):
+    return EXTRA.get(c, chr(c))
 FACES = {
     'label': ('Oswald[wght].ttf', 600),
     'stencil': ('SairaStencilOne-Regular.ttf', None),
@@ -44,7 +52,7 @@ def build(face, path, weight):
     cap_h = cap[3] - cap[1]
     cells = []
     for c in CHARS:
-        ch = chr(c)
+        ch = glyph(c)
         adv = f.getlength(ch)
         bb = f.getbbox(ch)                  # relative to the pen at the top of the ascent
         w, h = max(0, bb[2] - bb[0]), max(0, bb[3] - bb[1])
@@ -60,7 +68,7 @@ def build(face, path, weight):
     for i, (c, bb, w, h, adv) in enumerate(cells):
         ox, oy = (i % cols) * cw + pad, (i // cols) * chh + pad
         if w and h:
-            d.text((ox - bb[0], oy - bb[1]), chr(c), font=f, fill=255)
+            d.text((ox - bb[0], oy - bb[1]), glyph(c), font=f, fill=255)
         # left/top: where the glyph's box sits relative to the pen (x) and the
         # top of the ascent (y), so layout needs nothing but these numbers
         lines.append('%d %d %d %d %d %d %d %.2f' % (c, ox, oy, w, h, bb[0], bb[1], adv))

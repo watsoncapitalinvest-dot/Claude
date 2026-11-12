@@ -11,7 +11,26 @@ roughly, and the cost is written down.
 
 ## Parked by decision
 
-### A textured globe from the vegetation map (parked 10 Nov, John)
+### ~~A textured globe from the vegetation map~~ — drawn at display resolution 12 Nov
+
+`HiUI::globeFloor` now redraws the earth per DISPLAY pixel: the projection is
+inverted (the same maths as `Globe::cartToPolar`), `earth.png` sampled
+bilinearly at its own 2048x1024, shaded by the same sun the 8-bit pass uses
+(its dithered terminator becomes a smooth one). Pins, names and the player's
+marks go on top at display resolution; the 8-bit globe underneath is unchanged
+and is still what the game reads. Costs: 130-250 ms to re-project when the
+globe turns or zooms (measured here, two loaded cores), one copy a frame when
+it is still.
+
+**Where it stops.** The texture is 2048 wide, so at the two closest zooms a
+texel is bigger than a screen pixel and the land goes soft and blocky again
+(zoom 3 shows it). A bigger texture fixes that with no code: the engine uses a
+full-colour `earth_hi.png` beside `earth.png` if one exists. Not shipped,
+because the only full-colour source here is the third-party model below, and
+the repo is public. The light ellipses at both poles are the texture's own
+first and last rows (no Antarctica), not the renderer.
+
+#### (history) the parked note
 
 John downloaded `earths-vegetation-index-low-poly` and asked for the
 vegetation one on the geoscape.
@@ -210,7 +229,13 @@ feel like anything until the tree is populated.** Content, not engine.
 
 ---
 
-### Craft art shows sharp only after the equipment screen has been opened (12 Nov)
+### ~~Craft art shows sharp only after the equipment screen has been opened~~ — fixed 12 Nov
+
+All three below are done as described: `resolvePending()` first in
+`nativeBaseView`, and `aliasImage` on the article's `_bg` and the equipment
+screen's `_sprite` (`aliasImage` now resolves pending frames itself, and drops
+a stale alias when the new frame has no twin). The rest of this entry is the
+diagnosis, kept.
 
 `build/install_craft_art.py` installs the Tomahawk and Skystriker top views as
 BASEBITS 33 / 36 with `_hi` twins, and the dossiers as UP004 / UP002 with `_hi`
@@ -238,7 +263,40 @@ Not done either: the craft's outline in an air battle (INTICON frames 11 / 14,
 22×25, geoscape palette, recoloured by the damage indicator). Cheap to make;
 not installed because it could not be checked without staging a dogfight.
 
+### The geoscape readouts that have no source yet (12 Nov)
+
+The panel's four wells read FUNDS, PUBLIC, THREAT, LEADS (fix list item 2).
+Two of them stand on something that is not what the label promises:
+
+- **PUBLIC** says SECRET always. Nothing in the save or the engine records
+  G.I. Joe going public. When that state exists, the well wants a percentage.
+- **THREAT** is a proxy. There is no provocation gauge (queued, below). It reads
+  this month's council score - Joe activity plus research score against Cobra
+  activity - banded at MonthlyReportState's own rating lines: TERRIBLE ->
+  IMMINENT, POOR -> HIGH, OK -> ELEVATED, GOOD -> LOW. True, and on the player's
+  own graphs, but it is "how the month is going", not "what Cobra intends".
+- **LEADS** counts dossier entries research has opened and nobody has read
+  (articles with a research requirement, status NEW). That is a reasonable
+  reading of "unread intel" and not a leads system.
+
+### Cobra site types share one pin when the HD layer is up (12 Nov)
+
+Fix list item 7 asked for one shape and colour per kind, drawn by the engine:
+Joe base olive square, Cobra site red diamond, mission orange triangle, contact
+white ring, Joe craft cyan arrowhead. That replaces the eight per-type Cobra
+marker frames (9-16) on the HD globe; they still draw at base resolution. A
+glyph per site type inside the diamond would bring the distinction back. The
+mission triangle has not been seen on screen - no save here has a mission site.
+
 ## Broken
+
+### `flatTwin` caches by surface address
+
+The same stale-pointer bug that drew a black square on the rotate-up key
+(fixed by `HiUI::surfaceGone`) can still hit `flatTwin`, whose cache is a
+function-local static keyed by frame pointer and palette. Rare - a frame would
+have to be freed and another allocated at its address under the same palette -
+and not seen, but it is the same shape.
 
 ### A campaign crashes around month 15 — in THIS CONTAINER, not necessarily on a real install
 
