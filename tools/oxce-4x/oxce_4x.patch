@@ -2213,10 +2213,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..30e4886
+index 0000000..a56f616
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,955 @@
+@@ -0,0 +1,1008 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -2324,6 +2324,43 @@ index 0000000..30e4886
 +		const int bl = ((a & 255) * (255 - t) + (b & 255) * t) / 255;
 +		return rgb(r, g, bl);
 +	}
++	/// A palette text colour as it should read at display resolution: its own hue,
++	/// lightness lifted to a floor, saturation capped.
++	Uint32 readable(int r8, int g8, int b8, bool deliberate)
++	{
++		double r = r8 / 255.0, g = g8 / 255.0, b = b8 / 255.0;
++		const double mx = std::max(r, std::max(g, b)), mn = std::min(r, std::min(g, b));
++		double h = 0, s = 0, l = (mx + mn) / 2;
++		const double dl = mx - mn;
++		if (dl > 1e-6)
++		{
++			s = l > 0.5 ? dl / (2 - mx - mn) : dl / (mx + mn);
++			if (mx == r) h = (g - b) / dl + (g < b ? 6 : 0);
++			else if (mx == g) h = (b - r) / dl + 2;
++			else h = (r - g) / dl + 4;
++			h /= 6;
++		}
++		// a deliberately saturated colour (the red clock) keeps more of itself
++		const double floorL = deliberate ? 0.56 : 0.74, capS = deliberate ? 0.95 : 0.62;
++		l = std::max(l, floorL);
++		s = std::min(s, capS);
++		auto hue = [](double p, double q, double t)
++		{
++			if (t < 0) t += 1; if (t > 1) t -= 1;
++			if (t < 1.0 / 6) return p + (q - p) * 6 * t;
++			if (t < 0.5) return q;
++			if (t < 2.0 / 3) return p + (q - p) * (2.0 / 3 - t) * 6;
++			return p;
++		};
++		double R = l, G = l, B = l;
++		if (s > 1e-6)
++		{
++			const double q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
++			R = hue(p, q, h + 1.0 / 3); G = hue(p, q, h); B = hue(p, q, h - 1.0 / 3);
++		}
++		return rgb((int)(R * 255 + 0.5), (int)(G * 255 + 0.5), (int)(B * 255 + 0.5));
++	}
++
 +	inline const Uint8 *row8(int y) { return (const Uint8*)base->pixels + y * base->pitch; }
 +
 +	struct R { int x0, y0, x1, y1; };
@@ -2496,7 +2533,23 @@ index 0000000..30e4886
 +				// anywhere near this saturated; only a colour picked on purpose is.
 +				const int hi = std::max(c.r, std::max(c.g, c.b));
 +				const int lo = std::min(c.r, std::min(c.g, c.b));
-+				col = mix(rgb(c.r, c.g, c.b), rgb(234, 230, 214), (hi - lo) > 150 ? 35 : 205);
++				// THE COLOUR IS THE MEANING. John: "all the fonts need to be correct
++				// and colors". The wash used to pull every glyph 205/255 of the way to
++				// off-white so a screen read as one typeface - and in doing so erased
++				// what the colours SAY: green craft rows, yellow READY, a wounded man
++				// in red. The palette's own colour is kept and only lifted a little
++				// toward the light, because the 8-bit text colours were picked to
++				// read against 8-bit backgrounds and some sit dark against the
++				// smoothed ones. Saturated choices are left almost untouched.
++				// KEEP THE HUE, GUARANTEE THE LIGHTNESS. A plain mix toward white has
++				// one knob and it trades the two against each other: at 205/255 every
++				// colour was the same off-white, at 60/255 the dark palette entries
++				// sat dark on dark windows and LAUNCH INTERCEPTION's title all but
++				// vanished. So the colour is taken to HSL, its lightness raised to a
++				// floor that reads on the smoothed backgrounds, its saturation capped
++				// so nothing glares - and green, yellow and red still say what they
++				// said in 8 bits.
++				col = readable(c.r, c.g, c.b, (hi - lo) > 150);
 +			}
 +			const int X0 = xs[cx0], X1 = xs[cx1], Y0 = ys[cy0], Y1 = ys[cy1];
 +			const double kx = (double)((cx1 - cx0) * a.k) / (X1 - X0), ky = (double)((cy1 - cy0) * a.k) / (Y1 - Y0);
@@ -5326,6 +5379,24 @@ index 0000000..3543fff
 +};
 +
 +}
+diff --git a/src/Geoscape/InterceptState.cpp b/src/Geoscape/InterceptState.cpp
+index 4450282..a0d123a 100644
+--- a/src/Geoscape/InterceptState.cpp
++++ b/src/Geoscape/InterceptState.cpp
+@@ -87,7 +87,12 @@ InterceptState::InterceptState(Globe *globe, bool useCustomSound, Base *base, Ta
+ 		x += WIDTH_STATUS;
+ 		_txtBase = new Text(WIDTH_BASE, 9, x, 70 - offset);
+ 		x += WIDTH_BASE;
+-		_txtWeapons = new Text(WIDTH_WEAPONS+4, 17, x-4, 62 - offset);
++		// Eight more pixels, taken from the left. The conversion renamed HWPs to
++		// MOBATs, two letters longer, and "CREW/MOBATs" needs 58 against the 52
++		// this had: the clip report caught it cut at the window edge. The header is
++		// right-aligned, so its right edge does not move; the extra comes out of
++		// the empty end of the BASE column, which holds short base names.
++		_txtWeapons = new Text(WIDTH_WEAPONS+12, 17, x-12, 62 - offset);
+ 		_lstCrafts = new TextList(290, 64 + extraHeight, 12, 78 - offset);
+ 	}
+ 	else
 diff --git a/src/Interface/ArrowButton.h b/src/Interface/ArrowButton.h
 index 4b88688..f5c9b71 100644
 --- a/src/Interface/ArrowButton.h
@@ -5382,10 +5453,20 @@ index fc79ef8..875b38b 100644
  	/// Sets the X position of the surface.
  	void setX(int x) override;
 diff --git a/src/Interface/Text.cpp b/src/Interface/Text.cpp
-index d4dc79b..ae4555c 100644
+index d4dc79b..3192a78 100644
 --- a/src/Interface/Text.cpp
 +++ b/src/Interface/Text.cpp
-@@ -500,6 +500,7 @@ int Text::getLineX(int line) const
+@@ -17,6 +17,9 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "Text.h"
++#include "../Engine/Logger.h"
++#include <set>
++#include <cstdlib>
+ #include "../fmath.h"
+ #include "../Engine/Font.h"
+ #include "../Engine/Options.h"
+@@ -500,11 +503,29 @@ int Text::getLineX(int line) const
  void Text::draw()
  {
  	Surface::draw();
@@ -5393,7 +5474,29 @@ index d4dc79b..ae4555c 100644
  	if (_text.empty() || _font == 0)
  	{
  		return;
-@@ -636,6 +637,10 @@ void Text::draw()
+ 	}
+ 
++	// CLIP REPORT. A string wider or taller than its box is cut at the box edge,
++	// silently - "WEAPONS/CREW/MOBATS" lost its front in LAUNCH INTERCEPTION and
++	// nothing said so. With OXCE_CLIP_REPORT set, each such string is logged once
++	// with what it needs and what it has, so a sweep of the screens produces the
++	// list instead of an eye having to find them one window at a time.
++	if (getenv("OXCE_CLIP_REPORT"))
++	{
++		static std::set<std::string> reported;
++		const int tw = getTextWidth(), th = getTextHeight();
++		if ((tw > getWidth() || th > getHeight()) && reported.insert(_text).second)
++		{
++			Log(LOG_INFO) << "[clip] \"" << _text << "\" needs " << tw << "x" << th
++				<< " has " << getWidth() << "x" << getHeight()
++				<< " at " << getX() << "," << getY() << (_wrap ? " (wrapped)" : "");
++		}
++	}
++
+ 	// Show text borders for debugging
+ 	if (Options::debugUi)
+ 	{
+@@ -636,6 +657,10 @@ void Text::draw()
  			chr.setX(x);
  			chr.setY(y);
  			ShaderDraw<PaletteShift>(ShaderSurface(this, 0, 0), ShaderCrop(chr), ShaderScalar(color), ShaderScalar(mul), ShaderScalar(mid));
