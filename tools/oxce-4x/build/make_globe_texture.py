@@ -45,7 +45,10 @@ BLOCKS = [1, 2, 3, 4, 7, 9, 10, 14]
 # three open-ocean points. flip=False, roll=0 scores 8/8. The old flip=True,
 # roll=87 scores 5/8: it put the Atlantic over Africa, which is why half the globe
 # had no texture and the vanilla polygons showed through underneath it.
-DIM = 0.80
+# 0.80 was too deep - John: "The globe is too dark now." 0.90 is a touch off the
+# daylight render rather than a dusk pass over it. Mean land entry: 5.2 undimmed,
+# 5.8 here, 6.4 at 0.80, out of the 16 in each block.
+DIM = 0.90
 
 def main(src_path, pal_path, out_path, flip=False, roll_deg=0.0):
     raw = open(pal_path, 'rb').read()

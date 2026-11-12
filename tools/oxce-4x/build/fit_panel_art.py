@@ -132,6 +132,21 @@ for a in anchors[1:]:
 src_y = np.array([c[0] for c in clean]); dst_y = np.array([c[1] for c in clean])
 arr = np.asarray(panel).astype(np.float32)
 inv = np.interp(np.arange(1200), dst_y, src_y)
+
+# HOW HARD IS THIS FILE BEING BENT?
+#
+# The warp pins the slots wherever the art put them, so it will always report
+# every rectangle on recess - and it buys that by stretching some stretches of
+# the picture and squashing others. Past about 1.3 the bevels visibly smear, and
+# that is a property of the DELIVERY, not of the fit: art whose slots are nearly
+# right needs almost none. Printed so two deliveries can be compared on it
+# instead of on how they look after correction.
+seg = np.diff(dst_y) / np.maximum(np.diff(src_y), 1e-6)
+worst_i = int(np.argmax(np.abs(np.log(seg))))
+print('warp: %d segments, scale %.2f to %.2f, worst %.2fx around y=%d'
+      % (len(seg), seg.min(), seg.max(), seg[worst_i], int(dst_y[worst_i])))
+print('      mean |stretch| %.3f  (0 = the art already fitted)'
+      % float(np.abs(np.log(seg)).mean()))
 out = np.zeros((1200, 384, 3), np.float32)
 for yo in range(1200):
     ys = float(inv[yo]); lo = int(np.floor(ys)); f = ys - lo

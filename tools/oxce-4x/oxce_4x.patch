@@ -3673,7 +3673,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..50a7b58 100644
+index 6b4e79d..ae3439c 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -17,6 +17,7 @@
@@ -3700,7 +3700,7 @@ index 6b4e79d..50a7b58 100644
  #include "../Mod/RuleRegion.h"
  #include "MissionDetectedState.h"
  #include "AlienBaseState.h"
-@@ -171,26 +174,70 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -171,26 +174,74 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btn1Hour = new TextButton(31, 13, screenWidth-63, screenHeight/2+40);
  	_btn1Day = new TextButton(31, 13, screenWidth-31, screenHeight/2+40);
  
@@ -3778,7 +3778,11 @@ index 6b4e79d..50a7b58 100644
 +	_txtHourSep = new Text(4, 16, screenWidth-41, screenHeight/2-27);
 +	_txtMin = new Text(20, 16, screenWidth-37, screenHeight/2-27);
 +	_txtMinSep = new Text(4, 16, screenWidth-17, screenHeight/2-27);
-+	_txtSec = new Text(11, 8, screenWidth-13, screenHeight/2-19);
++	// Vanilla hangs the seconds below the big digits like a subscript, which works
++	// on art with one clock window. This panel splits the readout into two strips,
++	// so a subscript lands in the strip below and reads as its own row - the shot
++	// had 1:40 on one line and a lone 55 under it. Level with the digit tops.
++	_txtSec = new Text(11, 8, screenWidth-13, screenHeight/2-25);
 +	_txtWeekday = new Text(59, 8, screenWidth-61, screenHeight/2-10);
 +	_txtDay = new Text(20, 8, screenWidth-61, screenHeight/2-1);
 +	_txtMonth = new Text(17, 8, screenWidth-40, screenHeight/2-1);
@@ -3786,7 +3790,7 @@ index 6b4e79d..50a7b58 100644
  	_txtFunds = new Text(59, 8, screenWidth-61, screenHeight/2-27);
  
  	int slackingIndicatorOffset = _game->getMod()->getInterface("geoscape")->getElement("slackingIndicator")->custom;
-@@ -268,6 +315,9 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -268,6 +319,9 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	geobord->setX(_sidebar->getX() - geobord->getWidth() + _sidebar->getWidth());
  	geobord->setY(_sidebar->getY());
  	_sidebar->copy(geobord);
@@ -3796,7 +3800,7 @@ index 6b4e79d..50a7b58 100644
  	_game->getMod()->getSurface("ALTGEOBORD.SCR")->blitNShade(_bg, 0, 0);
  
  	_sideLine->drawRect(0, 0, _sideLine->getWidth(), _sideLine->getHeight(), 15);
-@@ -387,6 +437,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -387,6 +441,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -3805,7 +3809,7 @@ index 6b4e79d..50a7b58 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -712,6 +764,10 @@ void GeoscapeState::init()
+@@ -712,6 +768,10 @@ void GeoscapeState::init()
  	updateSlackingIndicator();
  
  	_globe->onMouseClick((ActionHandler)&GeoscapeState::globeClick);
@@ -3816,7 +3820,7 @@ index 6b4e79d..50a7b58 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -1454,6 +1510,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +1514,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -3852,7 +3856,7 @@ index 6b4e79d..50a7b58 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1858,6 +1943,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +1947,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -3872,7 +3876,7 @@ index 6b4e79d..50a7b58 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -2862,6 +2960,10 @@ void GeoscapeState::time1Month()
+@@ -2862,6 +2964,10 @@ void GeoscapeState::time1Month()
  	_game->getSavedGame()->addMonth();
  
  	// Determine alien mission for this month.
@@ -3883,7 +3887,7 @@ index 6b4e79d..50a7b58 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3062,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3066,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -3914,7 +3918,7 @@ index 6b4e79d..50a7b58 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3265,6 +3391,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +3395,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
