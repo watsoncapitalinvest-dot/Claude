@@ -22,15 +22,16 @@ for s in ('1001', '1002'):
     cl = np.isin(ids, (SHIRT, BELT, TROU))
     best = np.full(ids.shape, 1e9, np.float32); lab = ids.copy()
     for v, c in pal.items():
-        for t in (1.0, 0.66, 0.86, 0.62):
+        for t in (1.0, 0.66, 0.86, 0.62, 0.58, 1.05):      # v3 cel tones + v4 Roadblock-method tones (cloth x0.58, highlight x1.05)
             dd = np.linalg.norm(img - np.array(c, np.float32) * t, axis=-1)
             b = cl & (dd < best); best[b] = dd[b]; lab[b] = v
     pen = cl & (np.linalg.norm(img - INK, axis=-1) < best)          # ink marks: borrow the surrounding cloth's id
     known = cl & ~pen
     _, (iy, ix) = ndi.distance_transform_edt(~known, return_indices=True)
     lab[pen] = lab[iy[pen], ix[pen]]
-    if medic:
-        white = img.min(-1) > 205; red = (img[..., 0] > 150) & (img[..., 1] < 80) & (img[..., 2] < 80)
+    if medic and s == '1002':                    # the armband is on the shirt sheet; greys on 1001 are buckles
+        white = (img.min(-1) > 120) & (img.max(-1) - img.min(-1) < 35)          # white band, lit or in shadow (v4 tones)
+        red = (img[..., 0] > 115) & (img[..., 1] < 80) & (img[..., 2] < 80)
         band = ndi.binary_closing(white | red, iterations=2) & (white | red | ndi.binary_dilation(white, iterations=2))
         lab[band] = enc(14); print(s, 'medic armband texels', int(band.sum()))
     ch = int((lab != ids).sum()); ids = lab
