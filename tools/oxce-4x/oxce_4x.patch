@@ -2213,10 +2213,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..815c15c
+index 0000000..00a63eb
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,835 @@
+@@ -0,0 +1,949 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -2257,6 +2257,15 @@ index 0000000..815c15c
 +	std::vector<Uint32> over;         // screen-sized, 0x00RRGGBB
 +	std::vector<Uint8> tag, valid;    // base-sized
 +	std::vector<Uint8> scratch;       // per-widget "was valid before its blit"
++
++	// Vector strokes. Lines are kept across frames - the globe only redraws them
++	// when it moves - and the floor mask is rebuilt every frame the globe is blitted.
++	struct VLine { float x1, y1, x2, y2; Uint32 argb; float w; };
++	std::vector<VLine> vlayers[2];
++	std::vector<Uint8> vtag, vvalid;  // base-sized: the floor's pixels as blitted
++	bool vHave = false;
++	std::vector<Uint8> vcov;          // screen-sized coverage scratch, max-combined
++	std::vector<int> vtouched;
 +	bool any = false;
 +	int curX = 0, curY = 0; bool curOn = false;
 +
@@ -2671,7 +2680,7 @@ index 0000000..815c15c
 +
 +void beginFrame(SDL_Surface *base8, int screenW, int screenH, int left, int top, int right, int bottom)
 +{
-+	base = nullptr; any = false; curOn = false;
++	base = nullptr; any = false; curOn = false; vHave = false;
 +	if (!enabled() || !base8 || base8->format->BitsPerPixel != 8) return;
 +	base = base8;
 +	if (bw != base8->w || bh != base8->h || sw != screenW || sh != screenH || xs.empty() || xs[0] != left || ys[0] != top)
@@ -2975,6 +2984,42 @@ index 0000000..815c15c
 +	curX = x; curY = y; curOn = visible;
 +}
 +
++void vectorClear(int layer)
++{
++	if (layer >= 0 && layer < VEC_LAYERS) vlayers[layer].clear();
++}
++
++void vectorLine(int layer, double x1, double y1, double x2, double y2, Uint32 argb, double width)
++{
++	if (layer < 0 || layer >= VEC_LAYERS) return;
++	vlayers[layer].push_back(VLine{ (float)x1, (float)y1, (float)x2, (float)y2, argb, (float)width });
++}
++
++void vectorFloor(const Surface *floor)
++{
++	if (!base || !floor) return;
++	if (vtag.size() != (size_t)bw * bh) { vtag.assign((size_t)bw * bh, 0); vvalid.assign((size_t)bw * bh, 0); }
++	else std::fill(vvalid.begin(), vvalid.end(), 0);
++	SDL_Surface *own = const_cast<Surface*>(floor)->getSurface();
++	if (!own || own->format->BitsPerPixel != 8) return;
++	const int fx = floor->getX(), fy = floor->getY();
++	for (int y = 0; y < own->h; ++y)
++	{
++		const int by = fy + y;
++		if (by < 0 || by >= bh) continue;
++		const Uint8 *src = (const Uint8*)own->pixels + y * own->pitch;
++		const Uint8 *dst = row8(by);
++		for (int x = 0; x < own->w; ++x)
++		{
++			const int bx = fx + x;
++			if (bx < 0 || bx >= bw || !src[x]) continue;   // 0 is space: no line there
++			vvalid[(size_t)by * bw + bx] = 1;
++			vtag[(size_t)by * bw + bx] = dst[bx];
++		}
++	}
++	vHave = true;
++}
++
 +void composite(SDL_Surface *base8, SDL_Surface *screen32)
 +{
 +	if (!base || base8 != base || screen32->format->BitsPerPixel != 32 || screen32->w != sw || screen32->h != sh) return;
@@ -2999,6 +3044,75 @@ index 0000000..815c15c
 +					Uint32 *d = (Uint32*)((Uint8*)screen32->pixels + Y * screen32->pitch);
 +					if (direct) memcpy(d + xs[bx], o + xs[bx], (xs[bx + 1] - xs[bx]) * 4);
 +					else for (int X = xs[bx]; X < xs[bx + 1]; ++X) put(X, Y, o[X]);
++				}
++			}
++		}
++	}
++	// VECTOR STROKES, after the zoomed frame and every claimed overlay pixel, and
++	// before the cursor. Each colour in a layer is rasterised into a coverage
++	// buffer with MAX, then blended once - so where two segments of one border
++	// meet, the joint is not painted twice into a darker bead.
++	if (vHave)
++	{
++		const double sxk = (double)(xs[bw] - xs[0]) / bw, syk = (double)(ys[bh] - ys[0]) / bh;
++		const double ox = xs[0], oy = ys[0];
++		if (vcov.size() != (size_t)sw * sh) vcov.assign((size_t)sw * sh, 0);
++		for (auto &layer : vlayers)
++		{
++			std::vector<Uint32> colours;
++			for (const auto &l : layer)
++				if (std::find(colours.begin(), colours.end(), l.argb) == colours.end()) colours.push_back(l.argb);
++			for (Uint32 col : colours)
++			{
++				vtouched.clear();
++				for (const auto &l : layer)
++				{
++					if (l.argb != col) continue;
++					const double X1 = ox + l.x1 * sxk, Y1 = oy + l.y1 * syk, X2 = ox + l.x2 * sxk, Y2 = oy + l.y2 * syk;
++					const double hw = l.w * 0.5, pad = hw + 1.0;
++					const int x0 = std::max(0, (int)std::floor(std::min(X1, X2) - pad));
++					const int x1 = std::min(sw - 1, (int)std::ceil(std::max(X1, X2) + pad));
++					const int y0 = std::max(0, (int)std::floor(std::min(Y1, Y2) - pad));
++					const int y1 = std::min(sh - 1, (int)std::ceil(std::max(Y1, Y2) + pad));
++					const double dx = X2 - X1, dy = Y2 - Y1, L2 = dx * dx + dy * dy;
++					for (int Y = y0; Y <= y1; ++Y)
++					{
++						const int by = (int)((Y + 0.5 - oy) / syk);
++						if (by < 0 || by >= bh) continue;
++						const Uint8 *row = row8(by);
++						for (int X = x0; X <= x1; ++X)
++						{
++							const int bx = (int)((X + 0.5 - ox) / sxk);
++							if (bx < 0 || bx >= bw) continue;
++							const size_t bi = (size_t)by * bw + bx;
++							// the floor rule: only where the globe's own pixel still shows
++							if (!vvalid[bi] || vtag[bi] != row[bx]) continue;
++							const double px = X + 0.5 - X1, py = Y + 0.5 - Y1;
++							double t = L2 > 0 ? (px * dx + py * dy) / L2 : 0.0;
++							t = t < 0 ? 0 : (t > 1 ? 1 : t);
++							const double qx = px - t * dx, qy = py - t * dy;
++							const double d = std::sqrt(qx * qx + qy * qy);
++							double cov = hw + 0.5 - d;
++							if (cov <= 0) continue;
++							if (cov > 1) cov = 1;
++							const Uint8 c8 = (Uint8)(cov * 255);
++							Uint8 &cell = vcov[(size_t)Y * sw + X];
++							if (cell == 0) vtouched.push_back(Y * sw + X);
++							if (c8 > cell) cell = c8;
++						}
++					}
++				}
++				const int a = col >> 24;
++				const Uint32 rgbc = col & 0xFFFFFF;
++				for (int idx : vtouched)
++				{
++					const int X = idx % sw, Y = idx / sw;
++					const int al = vcov[idx] * a / 255;
++					vcov[idx] = 0;
++					if (al <= 0) continue;
++					Uint32 *d = (Uint32*)((Uint8*)screen32->pixels + Y * screen32->pitch) + X;
++					const Uint32 under = direct ? (*d & 0xFFFFFF) : rgb((*d >> f->Rshift) & 255, (*d >> f->Gshift) & 255, (*d >> f->Bshift) & 255);
++					put(X, Y, mix(under, rgbc, al));
 +				}
 +			}
 +		}
@@ -3054,10 +3168,10 @@ index 0000000..815c15c
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..59ab692
+index 0000000..47344fb
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,45 @@
+@@ -0,0 +1,60 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -3101,6 +3215,21 @@ index 0000000..59ab692
 +	void sprite(const Surface *frame, int x, int y, int w, int h);
 +	/// After the 8-bit buffer has been zoomed onto the 32-bit display.
 +	void composite(SDL_Surface *base8, SDL_Surface *screen32);
++
++	/// VECTOR STROKES. Lines the game would draw one base pixel wide - country
++	/// borders, radar rings, flight paths, route marks - recorded at full precision
++	/// and stroked anti-aliased at display resolution when the frame is composited,
++	/// instead of being drawn into the 8-bit buffer and zoomed into staircases.
++	/// Layers mirror the 8-bit surfaces they replace, so each is cleared exactly when
++	/// that surface is.
++	enum VectorLayer { VEC_DETAIL = 0, VEC_RADAR = 1, VEC_LAYERS = 2 };
++	void vectorClear(int layer);
++	/// A segment in BASE coordinates; colour 0xAARRGGBB; width in DISPLAY pixels.
++	void vectorLine(int layer, double x1, double y1, double x2, double y2, Uint32 argb, double width);
++	/// The surface the strokes lie on has just been blitted. For the rest of the frame
++	/// a stroke shows only where that surface's own pixels still do - so labels and
++	/// markers blitted after it, and any window opened over it, cover the lines.
++	void vectorFloor(const Surface *floor);
 +}
 +}
 diff --git a/src/Engine/Options.cpp b/src/Engine/Options.cpp
@@ -4273,10 +4402,18 @@ index 5eaf857..cd3ac94 100644
  	void btnZoomOutRightClick(Action *action);
  	/// Blit method - renders the state and dogfights.
 diff --git a/src/Geoscape/Globe.cpp b/src/Geoscape/Globe.cpp
-index 5b17165..44a3829 100644
+index 5b17165..d7dc967 100644
 --- a/src/Geoscape/Globe.cpp
 +++ b/src/Geoscape/Globe.cpp
-@@ -61,6 +61,11 @@ const double Globe::ROTATE_LONGITUDE = 0.10;
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "Globe.h"
++#include "../Engine/HiUI.h"
+ #include "../fmath.h"
+ #include "../Engine/Action.h"
+ #include "../Engine/SurfaceSet.h"
+@@ -61,6 +62,11 @@ const double Globe::ROTATE_LONGITUDE = 0.10;
  const double Globe::ROTATE_LATITUDE = 0.06;
  
  Uint8 Globe::OCEAN_COLOR;
@@ -4288,7 +4425,7 @@ index 5b17165..44a3829 100644
  bool Globe::OCEAN_SHADING;
  Uint8 Globe::COUNTRY_LABEL_COLOR;
  Uint8 Globe::LINE_COLOR;
-@@ -411,6 +416,20 @@ void Globe::polarToCart(double lon, double lat, double *x, double *y) const
+@@ -411,6 +417,20 @@ void Globe::polarToCart(double lon, double lat, double *x, double *y) const
   * @param lon Pointer to the output longitude.
   * @param lat Pointer to the output latitude.
   */
@@ -4309,7 +4446,7 @@ index 5b17165..44a3829 100644
  void Globe::cartToPolar(Sint16 x, Sint16 y, double *lon, double *lat) const
  {
  	// Orthographic projection
-@@ -966,11 +985,24 @@ void Globe::draw()
+@@ -966,11 +986,24 @@ void Globe::draw()
  	}
  	Surface::draw();
  	drawOcean();
@@ -4335,7 +4472,34 @@ index 5b17165..44a3829 100644
  	drawDetail();
  }
  
-@@ -1161,6 +1193,78 @@ void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double
+@@ -1092,6 +1125,26 @@ void Globe::drawShadow()
+ }
+ 
+ 
++/**
++ * VECTOR LINES. At 4x every line the globe draws - borders, radar rings, flight
++ * paths, route marks - was one base pixel wide in a 320x200 surface and then
++ * zoomed 5.4 times, which is the staircase on every border. With HiUI on, the
++ * segment is handed over at full precision instead and stroked anti-aliased at
++ * display resolution (HiUI::vectorLine); nothing is drawn into the 8-bit layer,
++ * or the staircase would still show under the stroke.
++ *
++ * Coordinates arrive surface-local and go out in base coordinates.
++ */
++static Uint32 argbOf(const SDL_Color *pal, Uint8 idx, int alpha)
++{
++	const SDL_Color &c = pal[idx];
++	return ((Uint32)alpha << 24) | ((Uint32)c.r << 16) | ((Uint32)c.g << 8) | (Uint32)c.b;
++}
++// Radar range: a pale translucent ring, which is what XuLine's shift of the
++// pixel underneath reads as on the ocean. Flight paths a brighter trail.
++static const Uint32 VEC_RADAR_ARGB = 0x788CBEF0u;
++static const Uint32 VEC_FLIGHT_ARGB = 0xA0EBF0FFu;
++
+ void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double x2, double y2, int shade)
+ {
+ 	if (_clipper->LineClip(&x1,&y1,&x2,&y2) != 1) return; //empty line
+@@ -1161,9 +1214,82 @@ void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double
  /**
   * Draws the radar ranges of player bases, player craft, alien bases and UFO hunter-killers on the globe.
   */
@@ -4414,7 +4578,41 @@ index 5b17165..44a3829 100644
  void Globe::drawRadars()
  {
  	_radars->clear();
-@@ -1358,6 +1462,136 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
++	HiUI::vectorClear(HiUI::VEC_RADAR);
+ 
+ 	if (!Options::globeRadarLines)
+ 		return;
+@@ -1296,7 +1422,12 @@ void Globe::drawGlobeCircle(double lat, double lon, double radius, int segments,
+ 			continue;
+ 		}
+ 		if (!pointBack(lon1,lat1) && i % frac == 0)
+-			XuLine(_radars, this, x, y, x2, y2, 6);
++		{
++			if (HiUI::enabled())
++				HiUI::vectorLine(HiUI::VEC_RADAR, x + getX(), y + getY(), x2 + getX(), y2 + getY(), VEC_RADAR_ARGB, 1.6);
++			else
++				XuLine(_radars, this, x, y, x2, y2, 6);
++		}
+ 		x2=x; y2=y;
+ 		i++;
+ 	}
+@@ -1346,6 +1477,15 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
+ 
+ 		if (!pointBack(ln2, lt2)&&!pointBack(ln1, lt1))
+ 		{
++			if (HiUI::enabled() && surface == _countries)
++			{
++				double fx1, fy1, fx2, fy2;
++				polarToCart(ln1, lt1, &fx1, &fy1);
++				polarToCart(ln2, lt2, &fx2, &fy2);
++				HiUI::vectorLine(HiUI::VEC_DETAIL, fx1 + getX(), fy1 + getY(), fx2 + getX(), fy2 + getY(),
++					argbOf(getPalette(), color, 225), 1.4);
++				continue;
++			}
+ 			polarToCart(ln1,lt1,&x1,&y1);
+ 			polarToCart(ln2,lt2,&x2,&y2);
+ 			surface->drawLine(x1, y1, x2, y2, color);
+@@ -1358,9 +1498,140 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
   * Draws the details of the countries on the globe,
   * based on the current zoom level.
   */
@@ -4551,7 +4749,27 @@ index 5b17165..44a3829 100644
  void Globe::drawDetail()
  {
  	_countries->clear();
-@@ -1500,6 +1734,31 @@ void Globe::drawDetail()
++	HiUI::vectorClear(HiUI::VEC_DETAIL);
+ 
+ 	if (!Options::globeDetail)
+ 		return;
+@@ -1380,6 +1651,15 @@ void Globe::drawDetail()
+ 				if (pointBack(polyline->getLongitude(j), polyline->getLatitude(j)) || pointBack(polyline->getLongitude(j + 1), polyline->getLatitude(j + 1)))
+ 					continue;
+ 
++				if (HiUI::enabled())
++				{
++					double fx[2], fy[2];
++					polarToCart(polyline->getLongitude(j), polyline->getLatitude(j), &fx[0], &fy[0]);
++					polarToCart(polyline->getLongitude(j + 1), polyline->getLatitude(j + 1), &fx[1], &fy[1]);
++					HiUI::vectorLine(HiUI::VEC_DETAIL, fx[0] + getX(), fy[0] + getY(), fx[1] + getX(), fy[1] + getY(),
++						argbOf(getPalette(), LINE_COLOR, 210), 1.6);
++					continue;
++				}
+ 				// Convert coordinates
+ 				polarToCart(polyline->getLongitude(j), polyline->getLatitude(j), &x[0], &y[0]);
+ 				polarToCart(polyline->getLongitude(j + 1), polyline->getLatitude(j + 1), &x[1], &y[1]);
+@@ -1500,6 +1780,31 @@ void Globe::drawDetail()
  			label->blit(_countries->getSurface());
  		}
  
@@ -4583,7 +4801,19 @@ index 5b17165..44a3829 100644
  		delete label;
  	}
  
-@@ -1641,6 +1900,71 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
+@@ -1632,7 +1937,10 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
+ 
+ 		if (!pointBack(p1.lon, p1.lat) && !pointBack(p2.lon, p2.lat))
+ 		{
+-			XuLine(surface, this, x1, y1, x2, y2, 8);
++			if (HiUI::enabled() && surface == _radars)
++				HiUI::vectorLine(HiUI::VEC_RADAR, x1 + getX(), y1 + getY(), x2 + getX(), y2 + getY(), VEC_FLIGHT_ARGB, 1.8);
++			else
++				XuLine(surface, this, x1, y1, x2, y2, 8);
+ 		}
+ 
+ 		p1 = p2;
+@@ -1641,6 +1949,94 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
  	}
  }
  
@@ -4627,7 +4857,30 @@ index 5b17165..44a3829 100644
 +		if (!pointBack(p1.lon, p1.lat) && !pointBack(p2.lon, p2.lat))
 +		{
 +			double cx1 = x1, cy1 = y1, cx2 = x2, cy2 = y2;
-+			if (_clipper->LineClip(&cx1, &cy1, &cx2, &cy2) == 1)
++			if (HiUI::enabled())
++			{
++				// Same dash as the pixel version - 4 on, 3 off, in base pixels,
++				// phase carried across legs - cut out of the true segment.
++				const double dx = x2 - x1, dy = y2 - y1;
++				const double len = std::sqrt(dx*dx + dy*dy);
++				double t = 0.0;
++				while (t < len)
++				{
++					const double ph = std::fmod(*phase, 7.0);
++					const double run = (ph < 4.0) ? (4.0 - ph) : (7.0 - ph);
++					const double t2 = std::min(len, t + run);
++					if (ph < 4.0 && len > 0)
++					{
++						HiUI::vectorLine(HiUI::VEC_RADAR,
++							x1 + dx*t/len + getX(), y1 + dy*t/len + getY(),
++							x1 + dx*t2/len + getX(), y1 + dy*t2/len + getY(),
++							argbOf(getPalette(), colour, 235), 2.2);
++					}
++					*phase += (t2 - t);
++					t = t2;
++				}
++			}
++			else if (_clipper->LineClip(&cx1, &cy1, &cx2, &cy2) == 1)
 +			{
 +				const double dx = cx2 - cx1, dy = cy2 - cy1;
 +				const int steps = (int)std::max(std::abs(dx), std::abs(dy));
@@ -4655,7 +4908,17 @@ index 5b17165..44a3829 100644
  /**
   * Draws the flight paths of player craft (and hunting UFOs) flying on the globe.
   */
-@@ -2009,7 +2333,13 @@ void Globe::mouseClick(Action *action, State *state)
+@@ -1806,6 +2202,9 @@ void Globe::drawMarkers()
+ void Globe::blit(SDL_Surface *surface)
+ {
+ 	Surface::blit(surface);
++	// The vector strokes lie on the globe and under everything blitted after
++	// this point: country names, base markers, and any window opened over it.
++	HiUI::vectorFloor(this);
+ 	_radars->blit(surface);
+ 	_countries->blit(surface);
+ 	_markers->blit(surface);
+@@ -2009,7 +2408,13 @@ void Globe::mouseClick(Action *action, State *state)
  	if (lat == lat && lon == lon)
  	{
  		InteractiveSurface::mouseClick(action, state);
