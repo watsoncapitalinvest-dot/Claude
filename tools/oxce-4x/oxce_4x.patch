@@ -3858,7 +3858,7 @@ index 5eaf857..7344dba 100644
  	void btnZoomOutRightClick(Action *action);
  	/// Blit method - renders the state and dogfights.
 diff --git a/src/Geoscape/Globe.cpp b/src/Geoscape/Globe.cpp
-index 5b17165..72df4a8 100644
+index 5b17165..44a3829 100644
 --- a/src/Geoscape/Globe.cpp
 +++ b/src/Geoscape/Globe.cpp
 @@ -61,6 +61,11 @@ const double Globe::ROTATE_LONGITUDE = 0.10;
@@ -3894,10 +3894,23 @@ index 5b17165..72df4a8 100644
  void Globe::cartToPolar(Sint16 x, Sint16 y, double *lon, double *lat) const
  {
  	// Orthographic projection
-@@ -967,10 +986,12 @@ void Globe::draw()
+@@ -966,11 +985,24 @@ void Globe::draw()
+ 	}
  	Surface::draw();
  	drawOcean();
- 	drawLand();
+-	drawLand();
++	// THE TEXTURE IS THE GLOBE, NOT A PATCH OVER THE POLYGONS.
++	//
++	// drawEarthTexture only writes where the texture has land - index 0 is sea and
++	// is skipped so drawOcean's colour survives for shading. That left vanilla's
++	// flat-filled polygons showing through everywhere the two coastlines disagree,
++	// so half of Africa was photographic and half was three flat bands of colour.
++	// With a texture loaded the polygons are not drawn at all: ocean, then texture.
++	// Without one, nothing changes and the vanilla globe draws as it always did.
++	if (!_game->getMod()->getSurface("GLOBE_EARTH", false))
++	{
++		drawLand();
++	}
 +	drawEarthTexture();
  	drawRadars();
  	drawFlights();
@@ -3907,7 +3920,7 @@ index 5b17165..72df4a8 100644
  	drawDetail();
  }
  
-@@ -1161,6 +1182,71 @@ void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double
+@@ -1161,6 +1193,78 @@ void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double
  /**
   * Draws the radar ranges of player bases, player craft, alien bases and UFO hunter-killers on the globe.
   */
@@ -3962,9 +3975,16 @@ index 5b17165..72df4a8 100644
 +			}
 +			double lon, lat;
 +			cartToPolar((Sint16)x, (Sint16)y, &lon, &lat);
-+			int u = (int)(lon / (2 * M_PI) * tw);
++			// LONGITUDE WRAPS, IT DOES NOT CLAMP. cartToPolar builds lon from
++			// atan2, which returns -PI..PI, plus _cenLon - so lon goes negative
++			// west of centre and past 2*PI east of it. Clamping sent every pixel
++			// in the western hemisphere to texture column 0, one texel per row,
++			// which painted flat horizontal bands of land over half the globe and
++			// looked exactly like the old untextured polygons showing through.
++			// Latitude is different and is still clamped: the poles are real limits.
++			int u = (int)std::floor(lon / (2 * M_PI) * tw);
++			u = ((u % tw) + tw) % tw;
 +			int v = (int)((M_PI / 2 - lat) / M_PI * th);
-+			u = Clamp(u, 0, tw - 1);
 +			v = Clamp(v, 0, th - 1);
 +			const Uint8 col = tex->getPixel(u, v);
 +			if (col)
@@ -3979,7 +3999,7 @@ index 5b17165..72df4a8 100644
  void Globe::drawRadars()
  {
  	_radars->clear();
-@@ -1358,6 +1444,136 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
+@@ -1358,6 +1462,136 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
   * Draws the details of the countries on the globe,
   * based on the current zoom level.
   */
@@ -4116,7 +4136,7 @@ index 5b17165..72df4a8 100644
  void Globe::drawDetail()
  {
  	_countries->clear();
-@@ -1500,6 +1716,31 @@ void Globe::drawDetail()
+@@ -1500,6 +1734,31 @@ void Globe::drawDetail()
  			label->blit(_countries->getSurface());
  		}
  
@@ -4148,7 +4168,7 @@ index 5b17165..72df4a8 100644
  		delete label;
  	}
  
-@@ -1641,6 +1882,71 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
+@@ -1641,6 +1900,71 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
  	}
  }
  
@@ -4220,7 +4240,7 @@ index 5b17165..72df4a8 100644
  /**
   * Draws the flight paths of player craft (and hunting UFOs) flying on the globe.
   */
-@@ -2009,7 +2315,13 @@ void Globe::mouseClick(Action *action, State *state)
+@@ -2009,7 +2333,13 @@ void Globe::mouseClick(Action *action, State *state)
  	if (lat == lat && lon == lon)
  	{
  		InteractiveSurface::mouseClick(action, state);

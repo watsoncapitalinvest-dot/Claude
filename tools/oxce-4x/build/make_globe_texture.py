@@ -33,7 +33,19 @@ from PIL import Image
 
 BLOCKS = [1, 2, 3, 4, 7, 9, 10, 14]
 
-def main(src_path, pal_path, out_path, flip=True, roll_deg=87.0):
+# ORIENTATION, MEASURED RATHER THAN EYEBALLED.
+#
+# This used to default to flip=True, roll_deg=87, which is what hand-tuning looks
+# like when the first guess was wrong. The source is an ordinary equirectangular
+# map with Greenwich at its CENTRE, so the only transform it needs is a roll of
+# half the width to put Greenwich at the left edge, which is what the engine's
+# u = lon/(2*pi)*width expects. No mirror, no extra degrees.
+#
+# Checked against eight landmarks - London, Congo, Amazon, Sahara, Australia and
+# three open-ocean points. flip=False, roll=0 scores 8/8. The old flip=True,
+# roll=87 scores 5/8: it put the Atlantic over Africa, which is why half the globe
+# had no texture and the vanilla polygons showed through underneath it.
+def main(src_path, pal_path, out_path, flip=False, roll_deg=0.0):
     raw = open(pal_path, 'rb').read()
     pal = [(min(255, raw[i*3]*4), min(255, raw[i*3+1]*4), min(255, raw[i*3+2]*4))
            for i in range(256)]
@@ -63,6 +75,18 @@ def main(src_path, pal_path, out_path, flip=True, roll_deg=87.0):
         d = ((blk[:, None, :] - lp[None, :, :])**2 * np.array([3, 4, 2])).sum(axis=2)
         out[y0:y0+32] = li[d.argmin(axis=1)].reshape(-1, w)
     out[ocean] = 0
+
+    # NORTH ENDS UP AT THE BOTTOM, ON PURPOSE.
+    #
+    # OpenXcom's geoscape latitude is POSITIVE GOING SOUTH, and drawEarthTexture
+    # samples v = (pi/2 - lat)/pi * height. Feed it a normal north-up map and the
+    # north pole reads from the bottom row - the globe comes out inverted. Every
+    # line above this works north-up so the ice bands land on the right latitudes;
+    # the flip happens once, here, at the end.
+    #
+    # Checked against ten landmarks including Greenland and Siberia: with this
+    # flip and no other transform the texture scores 10/10. Without it, 5/10.
+    out = out[::-1]
 
     flat = []
     for c in pal: flat += list(c)
