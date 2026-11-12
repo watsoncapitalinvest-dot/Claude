@@ -107,7 +107,7 @@ def parse():
     return common, rooms, heads
 
 
-SPEC = '''WHAT THESE ARE
+SPEC = r'''WHAT THESE ARE
 Objects for the rooms of a military base, seen on the base planning map. The
 rooms themselves are already drawn as empty shells seen from directly above;
 these objects are SEPARATE pictures that the game lays onto those floors. One
@@ -141,9 +141,12 @@ LIGHT - SO OBJECTS CAN BE TURNED
 - NO SHADOW of any kind under or beside the object. The game adds the shadow
   itself, the right way round for wherever the object is placed.
 
-STYLE - MATCH THE ROOM SHELLS
-- The same clean painted illustration as the shells: solid shapes, a thin dark
-  outline round the object and its main parts, matte surfaces, light wear.
+STYLE - REAL SHAPES, CARTOON FINISH (approved 12 Nov)
+- Real-world shapes and proportions, drawn the way the 1980s Sunbow G.I. Joe
+  cartoon draws things, leaning cartoon: bold clean dark outlines round the
+  object and its main parts, flat colour with one flat cel-shadow tone, no
+  texture, grain or photographic detail. It must sit beside the approved
+  soldiers (Reference\character_art\approved\duke_1984.png) and the room shells.
 - Outline weight: about 3 pixels on these large canvases, the same on every
   object, so everything reads alike once scaled down.
 - Simple strong shapes that read when the object is only 20 to 100 pixels
