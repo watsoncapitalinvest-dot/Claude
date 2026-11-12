@@ -179,6 +179,39 @@ def screw(d, x, y):
     d.line([X - r + 2, Y, X + r - 2, Y], fill=(44, 48, 38), width=2)
 
 
+def engrave_labels(img):
+    """Cut GOODWILL, COBRA, DROMES and INTEL into the metal of `img`, in place.
+
+    A function of its own so it can be run over artwork that came back from the
+    graphics AI: the plate goes out unlabelled, so weathering cannot smear the
+    lettering, and the labels are cut back in crisp afterwards.
+
+    ONE SIZE THAT FITS THE LONGEST LABEL, NOT A SIZE THAT SUITS THE SHORTEST.
+    Set at a fixed 5 base px, GOODWILL and DROMES ran straight under the value
+    well beside them. The label column is EXTRA_LABEL_W wide and that is a hard
+    edge, so the size is measured down until the longest of the four clears it,
+    and all four are set at that size - four sizes would read as four machines.
+    """
+    size = px(5.4)
+    while size > 6:
+        f = stencil_font(size)
+        if max(f.getbbox(t)[2] for t, _ in EXTRA) <= px(EXTRA_LABEL_W - 3.5):
+            break
+        size -= 1
+    lab = Image.new('L', img.size, 0)
+    for text, y in EXTRA:
+        t = stencil(img, (px(3.2), px(y + 1.3)), text, size, 255)
+        lab = Image.composite(Image.new('L', img.size, 255), lab, t)
+    # The catch goes down FIRST and the groove on top of it, so the lit edge
+    # shows along the bottom of the cut instead of being painted over by it.
+    lit = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    lit.putalpha(lab.filter(ImageFilter.GaussianBlur(1.2)).point(lambda v: int(v * 0.55)))
+    img.paste(Image.new('RGB', img.size, (186, 194, 156)), (0, 3), lit)
+    groove = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    groove.putalpha(lab.point(lambda v: int(v * 0.88)))
+    img.paste(Image.new('RGB', img.size, (22, 25, 18)), (0, 0), groove)
+
+
 def build(labels=True):
     img = Image.new('RGB', (W * K, H * K))
     metal(img)
@@ -196,40 +229,11 @@ def build(labels=True):
     well(d, *CLOCK_WELL)
     well(d, *DATE_WELL)
 
-    # the four new readouts: engraved label in the metal, value well beside it
-    # ONE SIZE THAT FITS THE LONGEST LABEL, NOT A SIZE THAT SUITS THE SHORTEST.
-    #
-    # Set at a fixed 5 base px, GOODWILL and DROMES ran straight under the value
-    # well beside them. The label column is EXTRA_LABEL_W wide and that is a hard
-    # edge, so the size is measured down until the longest of the four clears it,
-    # and all four are then set at that size - four different sizes would read as
-    # four different machines.
-    size = px(5.4)
-    while size > 6:
-        f = stencil_font(size)
-        if max(f.getbbox(t)[2] for t, _ in EXTRA) <= px(EXTRA_LABEL_W - 3.5):
-            break
-        size -= 1
-    lab = Image.new('L', img.size, 0)
+    # the four new readouts: value wells, and the labels engraved beside them
     for text, y in EXTRA:
         well(d, 2 + EXTRA_LABEL_W, y, 60 - EXTRA_LABEL_W, 8, radius=3)
-        if not labels:
-            # The plate handed to the graphics AI for weathering goes out with
-            # NO engraving, so grime laid over GOODWILL cannot smear it; the
-            # labels are cut back in, crisp, after the art comes back.
-            continue
-        t = stencil(img, (px(3.2), px(y + 1.3)), text, size, 255)
-        lab = Image.composite(Image.new('L', img.size, 255), lab, t)
-
-    # engraving: the cut reads as a dark groove with the light catching below it
-    # The catch goes down FIRST and the groove on top of it, so the lit edge
-    # shows along the bottom of the cut instead of being painted over by it.
-    lit = Image.new('RGBA', img.size, (0, 0, 0, 0))
-    lit.putalpha(lab.filter(ImageFilter.GaussianBlur(1.2)).point(lambda v: int(v * 0.55)))
-    img.paste(Image.new('RGB', img.size, (186, 194, 156)), (0, 3), lit)
-    groove = Image.new('RGBA', img.size, (0, 0, 0, 0))
-    groove.putalpha(lab.point(lambda v: int(v * 0.88)))
-    img.paste(Image.new('RGB', img.size, (22, 25, 18)), (0, 0), groove)
+    if labels:
+        engrave_labels(img)
 
     # fasteners and indicator lamps in the metal between the groups
     for y in (72.0, 101.0, 138.0, 175.0):
