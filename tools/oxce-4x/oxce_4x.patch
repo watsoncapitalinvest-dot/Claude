@@ -2403,10 +2403,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..2e3c3d6
+index 0000000..54051f7
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,1636 @@
+@@ -0,0 +1,1664 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -3259,7 +3259,35 @@ index 0000000..2e3c3d6
 +	resolvePending();
 +	if (!base || !frame || w <= 0 || h <= 0 || boxW <= 0 || boxH <= 0) return;
 +	auto it = bgImages.find(frame);
-+	if (it == bgImages.end() || !it->second.ok) { return; }
++	const Img *imp = (it != bgImages.end() && it->second.ok) ? &it->second : nullptr;
++	// AN ITEM WITH NO SHARP PICTURE YET is fitted all the same, from its 8-bit
++	// frame: enlarged by whole pixels (so it stays crisp pixel art, not a blur)
++	// and cached per frame and palette.
++	static std::unordered_map<const Surface*, std::pair<Uint32, Img> > flatTwins;
++	if (!imp)
++	{
++		SDL_Surface *fs8 = const_cast<Surface*>(frame)->getSurface();
++		if (!fs8 || fs8->format->BitsPerPixel != 8 || !base->format->palette) return;
++		const SDL_Color *pal = base->format->palette->colors;
++		const Uint32 ph = palHash(pal);
++		auto &slot = flatTwins[frame];
++		if (!slot.second.ok || slot.first != ph)
++		{
++			const int K6 = 6;
++			Img im; im.w = fs8->w * K6; im.h = fs8->h * K6; im.px.assign((size_t)im.w * im.h, 0); im.ok = true;
++			for (int fy = 0; fy < fs8->h; ++fy)
++				for (int fx = 0; fx < fs8->w; ++fx)
++				{
++					const Uint8 v = ((const Uint8*)fs8->pixels)[fy * fs8->pitch + fx];
++					if (!v) continue;
++					const Uint32 c = 0xFF000000u | rgb(pal[v].r, pal[v].g, pal[v].b);
++					for (int yy = 0; yy < K6; ++yy)
++						for (int xx = 0; xx < K6; ++xx) im.px[(size_t)(fy * K6 + yy) * im.w + fx * K6 + xx] = c;
++				}
++			slot = std::make_pair(ph, std::move(im));
++		}
++		imp = &slot.second;
++	}
 +	R r{ x, y, x + w, y + h };
 +	if (!clipBase(r)) return;
 +	// hide the 8-bit icon: every pixel the frame itself wrote shows the overlay,
@@ -3278,7 +3306,7 @@ index 0000000..2e3c3d6
 +	any = true;
 +	const double s = std::min((boxW - 2 * inset) / boxW, (boxH - 2 * inset) / boxH);
 +	const double cx = boxX + boxW / 2.0, cy = boxY + boxH / 2.0;
-+	const Img &im = it->second;
++	const Img &im = *imp;
 +	stretch(im, 0, 0, im.w, im.h,
 +		(int)DX(cx + (x - cx) * s), (int)DY(cy + (y - cy) * s), (int)DX(cx + (x + w - cx) * s), (int)DY(cy + (y + h - cy) * s));
 +}
