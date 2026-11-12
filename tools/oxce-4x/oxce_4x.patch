@@ -2809,10 +2809,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..a9a2c29
+index 0000000..7dac5f1
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,1977 @@
+@@ -0,0 +1,2088 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -3382,6 +3382,12 @@ index 0000000..a9a2c29
 +	const Uint32 C_PLATE = 0x282D23, C_WELL = 0x0F100D, C_RIM_DARK = 0x1A1E16, C_RIM_LIGHT = 0x60684F;
 +	const Uint32 C_KEY = 0x5C644A, C_KEY_DARK = 0x343A2C, C_KEY_LIT = 0x848C6C, C_INK = 0xE2DEC4, C_LABEL = 0xD6CEA0;
 +
++	// UI STANDARD v1 colours (see roleColour)
++	const Uint32 S_TEXT = 0xE9E6DC, S_MUTED = 0xB9B5A8, S_YELLOW = 0xE8B923, S_DANGER_TXT = 0xF0B3A8,
++		S_INFO = 0x8DB4DE, S_GOOD = 0x8FC66A;
++	const Uint32 S_BUTTON = 0x2A3033, S_BUTTON_DOWN = 0x1D2326, S_BUTTON_EDGE = 0x3D464A, S_BUTTON_SHADOW = 0x161B1D,
++		S_INK = 0x0B0D0C, S_OLIVE = 0x4A5640, S_OLIVE_LIT = 0x6B7A3A;
++
 +	struct NativeBg { std::vector<SDL_Rect> wells; Img cache; int cx0 = -1, cy0 = -1, cx1 = -1, cy1 = -1; bool painted = false; };
 +	bool nativePainted = false;   // the backdrop up now is painted art: keys draw their legend only
 +
@@ -3497,6 +3503,7 @@ index 0000000..a9a2c29
 +	}
 +
 +	/// A raised console key on the button's own hitbox.
++	void stdButton(int X0, int Y0, int X1, int Y1, bool down, Uint32 fill = 0);
 +	void paintKey(const std::string &legend, int bx0, int by0, int bx1, int by1, bool down, bool inArt)
 +	{
 +		const double k = SK();
@@ -3506,6 +3513,12 @@ index 0000000..a9a2c29
 +		{
 +			// the painting has the key; only say it is down
 +			if (down) roundRect(x0 + 1.5, y0 + 1.5, x1 - 1.5, y1 - 1.5, r - 1, rgb(196, 118, 42), 80);
++		}
++		else if (face("label"))
++		{
++			// THE STANDARD (12 Nov): a key that is not part of a painting is the
++			// standard's flat steel button, like every other button in the game
++			stdButton((int)x0, (int)y0, (int)x1, (int)y1, down);
 +		}
 +		else
 +		{
@@ -3536,7 +3549,14 @@ index 0000000..a9a2c29
 +			polygonAA(shaft, C_INK); polygonAA(head, C_INK);
 +			return;
 +		}
-+		if (const Face *f = face("stencil"))
++		if (!(nativePainted && inArt) && face("label"))
++		{
++			// the standard's button legend: Oswald, cream, no stencil
++			const Face *f = face("label");
++			const double cap = (y1 - y0) * 0.36;
++			setType(*f, legend, (int)(x0 + k * 2), (int)(y0 + push), (int)(x1 - k * 2), (int)(y1 + push - k * 0.3), cap, cap, 1, 1, S_TEXT);
++		}
++		else if (const Face *f = face("stencil"))
 +		{
 +			const double cap = (y1 - y0) * 0.42;
 +			const double m = k * 3.0;     // a margin of face either side of the legend
@@ -3575,7 +3595,7 @@ index 0000000..a9a2c29
 +
 +	/// Words set across as many lines as they need inside a box, shrunk until
 +	/// they fit, centred both ways. Room names on the base plan.
-+	void setTypeWrapped(const Face &f, const std::string &str, int X0, int Y0, int X1, int Y1, double capPx, Uint32 col, Uint32 shadow)
++	void setTypeWrapped(const Face &f, const std::string &str, int X0, int Y0, int X1, int Y1, double capPx, Uint32 col, Uint32 shadow, int align = 1, int valign = 1)
 +	{
 +		std::vector<std::string> words;
 +		{
@@ -3605,12 +3625,13 @@ index 0000000..a9a2c29
 +			size *= 0.9;
 +		}
 +		const double cap = f.cap * size / f.em, lineH = cap * 1.45;
-+		double y = (Y0 + Y1) / 2.0 - (lineH * (lines.size() - 1) + cap) / 2.0;
++		const double block = lineH * (lines.size() - 1) + cap;
++		double y = valign == 0 ? Y0 + (lineH - cap) / 2.0 : valign == 2 ? Y1 - block : (Y0 + Y1) / 2.0 - block / 2.0;
 +		for (auto &l : lines)
 +		{
 +			const auto v = latin1(l);
 +			const double w = lineWidth(f, v, 0, v.size(), size);
-+			const double x = (X0 + X1 - w) / 2.0;
++			const double x = align == 0 ? X0 : align == 2 ? X1 - w : (X0 + X1 - w) / 2.0;
 +			if (shadow) drawLine(f, v, 0, v.size(), x + 2, y + cap + 2, size, shadow, 0, 0, sw, sh);
 +			drawLine(f, v, 0, v.size(), x, y + cap, size, col, 0, 0, sw, sh);
 +			y += lineH;
@@ -3650,21 +3671,77 @@ index 0000000..a9a2c29
 +		return readable(c.r, c.g, c.b, (hi - lo) > 150);
 +	}
 +
++	// UI STANDARD v1 (design chat, approved by John 12 Nov). Colour ROLES, not
++	// the game's palette entries: every screen reads alike whatever palette it runs.
++
++	/// The standard's text role for one of the game's text colours. Yellow and
++	/// orange are headings and highlights; red is danger; strong blue is information
++	/// and strong green good news (so a list that marks rows by colour keeps the
++	/// mark); everything else is main or muted text by how bright the game made it.
++	Uint32 roleColour(Uint8 index)
++	{
++		const SDL_Color &c = base->format->palette->colors[index];
++		const int hi = std::max(c.r, std::max(c.g, c.b)), lo = std::min(c.r, std::min(c.g, c.b));
++		const int sat = hi ? (hi - lo) * 255 / hi : 0;
++		double h = 0;
++		if (hi != lo)
++		{
++			if (hi == c.r) h = 60.0 * std::fmod((double)(c.g - c.b) / (hi - lo), 6.0);
++			else if (hi == c.g) h = 60.0 * ((double)(c.b - c.r) / (hi - lo) + 2.0);
++			else h = 60.0 * ((double)(c.r - c.g) / (hi - lo) + 4.0);
++			if (h < 0) h += 360;
++		}
++		if (sat > 110 && hi > 90)
++		{
++			// the game's column headers are an orange-red (hue ~15-25): headings, not danger
++			if (h >= 11 && h < 72) return S_YELLOW;
++			// the game's list headers are a soft pinkish red: headings. Only a strong
++			// pure red (a warning, a casualty) takes the danger role.
++			if (h < 11 || h >= 330) return sat > 215 && hi > 150 ? S_DANGER_TXT : S_YELLOW;
++			if (sat > 170 && h >= 190 && h < 260) return S_INFO;
++			if (sat > 170 && h >= 85 && h < 160 && hi < 200) return S_GOOD;
++		}
++		return hi >= 120 ? S_TEXT : S_MUTED;
++	}
++
++	/// THE STANDARD'S BUTTON, in the cartoon finish John chose over the canvas's
++	/// gradients: one flat steel tone, a dark ink outline, and one hard edge - a
++	/// light lip on top and a shadow under it when up, the shadow on top when down.
++	void stdButton(int X0, int Y0, int X1, int Y1, bool down, Uint32 fill)
++	{
++		const double k = SK();
++		const int t = std::max(1, (int)std::lround(k * 0.45)), e = std::max(1, (int)std::lround(k * 0.6));
++		if (!fill) fill = down ? S_BUTTON_DOWN : S_BUTTON;
++		fillRect(X0, Y0, X1, Y1, S_INK);
++		fillRect(X0 + t, Y0 + t, X1 - t, Y1 - t, fill);
++		if (down) fillRect(X0 + t, Y0 + t, X1 - t, Y0 + t + e, S_BUTTON_SHADOW);
++		else
++		{
++			fillRect(X0 + t, Y0 + t, X1 - t, Y0 + t + std::max(1, e / 2), lift(fill, 22));
++			fillRect(X0 + t, Y1 - t - e, X1 - t, Y1 - t, S_BUTTON_SHADOW);
++		}
++	}
++
 +	/// Set a Text in the label face over its own rectangle.
 +	void nativeType(const Text *t, int bx, int by, Uint32 col)
 +	{
-+		const Face *f = face("label");
-+		if (!f || t->getText().empty()) return;
-+		const double k = SK();
 +		const int fh = t->getFont() ? t->getFont()->getHeight() : 9;
 +		const bool big = fh >= 12;
-+		const double cap = fh * (big ? 0.62 : 0.60) * k;
++		// the standard: titles and headings in the stencil face, everything else Oswald
++		const Face *f = big && face("stencil") ? face("stencil") : face("label");
++		if (!f || t->getText().empty()) return;
++		const double k = SK();
++		// the stencil face sets wider than the pixel font it replaces, so a little smaller
++		const double cap = fh * (big ? (f == face("stencil") ? 0.50 : 0.62) : 0.60) * k;
 +		const double lineH = (fh + (t->getFont() ? t->getFont()->getSpacing() : 0)) * k;
 +		// a little air from the edge it is aligned to, so type never sits on a plate's rim
 +		const double pad = 1.5;
 +		const double l = t->getAlign() == ALIGN_LEFT ? pad : 0, r = t->getAlign() == ALIGN_RIGHT ? pad : 0;
 +		const int X0 = (int)DX(bx + l), Y0 = (int)DY(by), X1 = (int)DX(bx + t->getWidth() - r), Y1 = (int)DY(by + t->getHeight());
-+		setType(*f, t->getText(), X0, Y0, X1, Y1, cap, lineH, (int)t->getAlign(), (int)t->getVerticalAlign(), col);
++		// a wrapping text more than a line tall is a paragraph: wrap it, do not shrink it onto one line
++		if (t->getWordWrap() && t->getHeight() > fh * 1.6)
++			setTypeWrapped(*f, t->getText(), X0, Y0, X1, Y1, cap, col, 0, (int)t->getAlign(), (int)t->getVerticalAlign());
++		else setType(*f, t->getText(), X0, Y0, X1, Y1, cap, lineH, (int)t->getAlign(), (int)t->getVerticalAlign(), col);
 +	}
 +}
 +
@@ -3949,7 +4026,7 @@ index 0000000..a9a2c29
 +					roundRect(DX(sel->getX()) - k * 0.6, DY(sel->getY()), DX(sel->getX()) + k * 0.2, DY(sel->getY() + sel->getHeight()), k * 0.3, 0xE8B04A, 230);
 +				}
 +				for (const Text *c : tl->getVisibleCells())
-+					nativeType(c, tl->getX() + c->getX(), tl->getY() + c->getY(), textColour(c->getColor()));
++					nativeType(c, tl->getX() + c->getX(), tl->getY() + c->getY(), roleColour(c->getColor()));
 +			}
 +			scratch.clear();
 +			return;
@@ -3970,7 +4047,7 @@ index 0000000..a9a2c29
 +					for (int x = r.x0; x < r.x1; ++x)
 +						if (scratch[(size_t)(y - r.y0) * (r.x1 - r.x0) + (x - r.x0)]) tag[y * bw + x] = p[x];
 +				}
-+				nativeType(t, ox, oy, textColour(t->getColor()));
++				nativeType(t, ox, oy, roleColour(t->getColor()));
 +			}
 +			scratch.clear();
 +			return;
@@ -4071,7 +4148,8 @@ index 0000000..a9a2c29
 +		const Text *t = b->getTextWidget();
 +		const bool hasLabel = t && !t->getText().empty();
 +		const int wanted = t ? (int)t->getHiGlyphs().size() : 0;
-+		if (hasLabel)
++		const bool std_ = face("label") != nullptr;
++		if (hasLabel && !std_)
 +		{
 +			// Two ways to end up with nothing written on the button, and both
 +			// have to stand down, not just the one. wanted == 0 means the glyph
@@ -4120,6 +4198,10 @@ index 0000000..a9a2c29
 +			fillRect(X0 + m2, Y0 + m2, X0 + m2 + 2, Y1 - m2, rgb(248, 206, 128), 190);
 +			fillRect(X1 - m2 - 2, Y0 + m2, X1 - m2, Y1 - m2, rgb(248, 206, 128), 190);
 +		}
++		else if (!bare && std_)
++		{
++			stdButton(X0 + m, Y0 + m, X1 - m, Y1 - m, down);
++		}
 +		else if (!bare)
 +		{
 +			const Img *art = piece(square ? (down ? "button_square_pressed" : "button_square") : (down ? "button_wide_pressed" : "button_wide"));
@@ -4128,7 +4210,8 @@ index 0000000..a9a2c29
 +			else panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(62, 72, 62), rgb(46, 54, 47), rgb(112, 122, 106), 1);
 +		}
 +		claim(r);
-+		if (t) glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r);
++		if (t && std_) nativeType(t, b->getX() + t->getX(), b->getY() + t->getY(), S_TEXT);
++		else if (t) glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r);
 +		return;
 +	}
 +	if (Frame *fm = dynamic_cast<Frame*>(w))
@@ -4153,7 +4236,8 @@ index 0000000..a9a2c29
 +		if (!clipBase(r)) return;
 +		const int X0 = xs[r.x0], Y0 = ys[r.y0], X1 = xs[r.x1], Y1 = ys[r.y1];
 +		const int m = std::max(1, (ys[1] - ys[0]) / 3);
-+		if (const Img *art = piece("button_wide")) nine(*art, X0 + m, Y0 + m, X1 - m, Y1 - m, std::max(5, (int)(art->h * 0.22)));
++		if (face("label")) stdButton(X0 + m, Y0 + m, X1 - m, Y1 - m, false);
++		else if (const Img *art = piece("button_wide")) nine(*art, X0 + m, Y0 + m, X1 - m, Y1 - m, std::max(5, (int)(art->h * 0.22)));
 +		else panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(62, 72, 62), rgb(46, 54, 47), rgb(112, 122, 106), 1);
 +		const int aw = xs[std::min(bw, r.x0 + ComboBox::buttonWidth())] - X0;
 +		if (const Img *ar = piece("dropdown_arrow"))
@@ -4163,7 +4247,11 @@ index 0000000..a9a2c29
 +		}
 +		claim(r);
 +		if (const TextButton *b = cb->getButtonWidget())
-+			if (const Text *t = b->getTextWidget()) glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r);
++			if (const Text *t = b->getTextWidget())
++			{
++				if (face("label")) nativeType(t, b->getX() + t->getX(), b->getY() + t->getY(), S_TEXT);
++				else glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r);
++			}
 +		return;
 +	}
 +	if (Slider *sl = dynamic_cast<Slider*>(w))
@@ -4175,14 +4263,16 @@ index 0000000..a9a2c29
 +		{
 +			const int tx0 = xs[std::max(0, std::min(bw, fr->getX()))], tx1 = xs[std::max(0, std::min(bw, fr->getX() + fr->getWidth()))];
 +			const int cy = (ys[r.y0] + ys[r.y1]) / 2, th = std::max(2, (ys[3] - ys[0]) / 2);
-+			if (const Img *tr = piece("slider_track")) stretch(*tr, 0, 0, tr->w, tr->h, tx0, cy - th, tx1, cy + th);
++			if (face("label")) { fillRect(tx0, cy - th, tx1, cy + th, S_INK); fillRect(tx0 + 1, cy - th + 1, tx1 - 1, cy + th - 1, S_BUTTON); }
++			else if (const Img *tr = piece("slider_track")) stretch(*tr, 0, 0, tr->w, tr->h, tx0, cy - th, tx1, cy + th);
 +			else fillRect(tx0, cy - th, tx1, cy + th, rgb(40, 46, 42));
 +		}
 +		if (const TextButton *kb = sl->getKnobWidget())
 +		{
 +			const int kx0 = xs[std::max(0, std::min(bw, kb->getX()))], kx1 = xs[std::max(0, std::min(bw, kb->getX() + kb->getWidth()))];
 +			const int ky0 = ys[std::max(0, std::min(bh, kb->getY()))], ky1 = ys[std::max(0, std::min(bh, kb->getY() + kb->getHeight()))];
-+			if (const Img *kn = piece("slider_knob")) stretch(*kn, 0, 0, kn->w, kn->h, kx0, ky0, kx1, ky1);
++			if (face("label")) stdButton(kx0, ky0, kx1, ky1, false, S_OLIVE_LIT);
++			else if (const Img *kn = piece("slider_knob")) stretch(*kn, 0, 0, kn->w, kn->h, kx0, ky0, kx1, ky1);
 +			else panel(kx0, ky0, kx1, ky1, 3, rgb(150, 156, 140), rgb(110, 118, 104), rgb(40, 46, 42), 1);
 +		}
 +		return;
@@ -4214,7 +4304,23 @@ index 0000000..a9a2c29
 +		R r = rectOf(tl);
 +		if (!clipBase(r) || scratch.size() != (size_t)(r.x1 - r.x0) * (r.y1 - r.y0)) return;
 +		int drawn = 0;
-+		for (const Text *c : tl->getVisibleCells())
++		if (face("label"))
++		{
++			// THE STANDARD: rows set in Oswald, coloured by role; the selected row
++			// marked with a signal-yellow bar.
++			const Surface *sel = tl->getSelectorWidget();
++			if (sel && sel->getVisible())
++			{
++				const double k = SK();
++				const double sx0 = DX(tl->getX() + sel->getX()), sy0 = DY(tl->getY() + sel->getY());
++				const double sx1 = DX(tl->getX() + sel->getX() + sel->getWidth()), sy1 = DY(tl->getY() + sel->getY() + sel->getHeight());
++				roundRect(sx0, sy0, sx1, sy1, k * 0.4, S_YELLOW, 60);
++				roundRect(sx0, sy0, sx0 + k * 0.8, sy1, k * 0.2, S_YELLOW, 235);
++			}
++			for (const Text *c : tl->getVisibleCells())
++				if (!c->getText().empty()) { nativeType(c, tl->getX() + c->getX(), tl->getY() + c->getY(), roleColour(c->getColor())); ++drawn; }
++		}
++		else for (const Text *c : tl->getVisibleCells())
 +		{
 +			drawn += glyphs(c, tl->getX() + c->getX(), tl->getY() + c->getY(), r, 0, true, r);
 +		}
@@ -4328,7 +4434,10 @@ index 0000000..a9a2c29
 +		if (!any || scratch.empty() || !t) return;
 +		R r = rectOf(te);
 +		if (!clipBase(r) || scratch.size() != (size_t)(r.x1 - r.x0) * (r.y1 - r.y0)) return;
-+		if (glyphs(t, te->getX() + t->getX(), te->getY() + t->getY(), r, 0, true, r))
++		bool drew;
++		if (face("label") && !t->getText().empty()) { nativeType(t, te->getX() + t->getX(), te->getY() + t->getY(), roleColour(t->getColor())); drew = true; }
++		else drew = glyphs(t, te->getX() + t->getX(), te->getY() + t->getY(), r, 0, true, r);
++		if (drew)
 +		{
 +			for (int y = r.y0; y < r.y1; ++y)
 +			{
@@ -4345,7 +4454,9 @@ index 0000000..a9a2c29
 +		if (!any || scratch.empty()) return;
 +		R r = rectOf(t);
 +		if (!clipBase(r) || scratch.size() != (size_t)(r.x1 - r.x0) * (r.y1 - r.y0)) return;
-+		if (!glyphs(t, t->getX(), t->getY(), r, 0, true, r))
++		const bool std_ = face("label") && !t->getText().empty();
++		if (std_) nativeType(t, t->getX(), t->getY(), roleColour(t->getColor()));
++		if (!std_ && !glyphs(t, t->getX(), t->getY(), r, 0, true, r))
 +		{
 +			if (!t->getText().empty())
 +			{
@@ -7172,10 +7283,19 @@ index d4dc79b..3192a78 100644
  				x += dir * font->getCharSize(*c).w;
  		}
 diff --git a/src/Interface/Text.h b/src/Interface/Text.h
-index ec1055a..643bfc9 100644
+index ec1055a..caea98c 100644
 --- a/src/Interface/Text.h
 +++ b/src/Interface/Text.h
-@@ -90,6 +90,10 @@ public:
+@@ -74,6 +74,8 @@ public:
+ 	std::string getText() const;
+ 	/// Sets the text's wordwrap setting.
+ 	void setWordWrap(bool wrap, bool indent = false, bool ignoreSeparators = false);
++	/// Does it wrap? (HiUI sets wrapping text as a paragraph.)
++	bool getWordWrap() const { return _wrap; }
+ 	/// Sets the text's color invert setting.
+ 	void setInvert(bool invert);
+ 	/// Sets the text's high contrast color setting.
+@@ -90,6 +92,10 @@ public:
  	void setColor(Uint8 color) override;
  	/// Gets the text's color.
  	Uint8 getColor() const;
