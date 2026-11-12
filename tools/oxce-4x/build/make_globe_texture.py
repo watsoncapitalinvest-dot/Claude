@@ -45,6 +45,8 @@ BLOCKS = [1, 2, 3, 4, 7, 9, 10, 14]
 # three open-ocean points. flip=False, roll=0 scores 8/8. The old flip=True,
 # roll=87 scores 5/8: it put the Atlantic over Africa, which is why half the globe
 # had no texture and the vanilla polygons showed through underneath it.
+DIM = 0.80
+
 def main(src_path, pal_path, out_path, flip=False, roll_deg=0.0):
     raw = open(pal_path, 'rb').read()
     pal = [(min(255, raw[i*3]*4), min(255, raw[i*3+1]*4), min(255, raw[i*3+2]*4))
@@ -52,6 +54,24 @@ def main(src_path, pal_path, out_path, flip=False, roll_deg=0.0):
     legal = [b*16+k for b in BLOCKS for k in range(16) if b*16+k != 0]
 
     src = Image.open(src_path).convert('RGB')
+
+    # FORCE 2:1. THE MODEL'S TEXTURE IS NOT.
+    #
+    # John's globe model ships earth_vegetation_index.png at 2048x2048 - a 2:1
+    # equirectangular map squeezed into a square sheet, which is how it wraps onto
+    # the model's UVs. Every line below assumes equirectangular, where one row is a
+    # constant latitude and the whole sheet spans 180 degrees, so a square sheet
+    # puts the equator at row h/2 of a map that only reaches 45 degrees by then.
+    #
+    # The committed texture and gijoe_globe_earth.rul are both 2048x1024, and the
+    # ten-landmark orientation check was run at 2:1 - so the resize was happening
+    # outside this script, in a shell line nobody wrote down. Rebuilding from the
+    # raw square source without it produced a 2048x2048 file that the rul still
+    # declares as 1024 tall. It lives here now.
+    if abs(src.width / src.height - 2.0) > 0.01:
+        src = src.resize((src.width, src.width // 2), Image.LANCZOS)
+        print('source was %s, resized to 2:1 for equirectangular sampling'
+              % (Image.open(src_path).size,))
     w, h = src.size
     a = np.asarray(src)
     if flip:
@@ -59,6 +79,24 @@ def main(src_path, pal_path, out_path, flip=False, roll_deg=0.0):
     a = np.roll(a, int(round(roll_deg/360*w)), axis=1)
     a = np.roll(a, -w//2, axis=1).astype(np.int16)      # Greenwich to the left edge
     ocean = a.sum(axis=2) < 46
+
+    # DIM THE LAND BEFORE QUANTISING, NOT AFTER.
+    #
+    # John: "darken the globe a little bit". The photo is lit for a daylight render
+    # and against drawOcean's deep blue the continents read hot.
+    #
+    # It has to happen HERE, on the RGB, for two reasons. Quantising first and then
+    # subtracting from the index walks off the end of a 16-entry block and lands in
+    # whatever block follows - which is how the first globe attempt ended up with
+    # red and yellow speckle. And it has to come AFTER `ocean` is computed, because
+    # dimming pushes dark land under the sum<46 sea test and would quietly reclassify
+    # coastline as sea.
+    #
+    # Dimming the RGB instead lets the existing quantiser pick a lower entry inside
+    # each pixel's own ramp, so getLandShadow still has its whole block to shade
+    # into at the terminator. At 0.80 the mean land entry moves about 2 of 16 down
+    # its block, which leaves the night side as separable as it was.
+    a[~ocean] = (a[~ocean] * DIM).astype(np.int16)
 
     lat = 90 - np.arange(h)/h*180.0
     ice = np.array([198, 208, 216], dtype=np.int16)
@@ -92,7 +130,10 @@ def main(src_path, pal_path, out_path, flip=False, roll_deg=0.0):
     for c in pal: flat += list(c)
     im = Image.fromarray(out, mode='P'); im.putpalette(flat)
     im.save(out_path, optimize=False)
-    print('wrote %s  (%dx%d, sea %.1f%%)' % (out_path, w, h, 100*(out == 0).mean()))
+    land = out[out != 0]
+    print('wrote %s  (%dx%d, sea %.1f%%, dim %.2f, mean land entry %.1f/16 '
+          'into its block)' % (out_path, w, h, 100*(out == 0).mean(), DIM,
+                               (land % 16).mean()))
 
 if __name__ == '__main__':
     if len(sys.argv) < 4:

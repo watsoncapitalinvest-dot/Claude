@@ -3673,7 +3673,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..cee313b 100644
+index 6b4e79d..50a7b58 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -17,6 +17,7 @@
@@ -3700,7 +3700,93 @@ index 6b4e79d..cee313b 100644
  #include "../Mod/RuleRegion.h"
  #include "MissionDetectedState.h"
  #include "AlienBaseState.h"
-@@ -268,6 +271,9 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -171,26 +174,70 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+ 	_btn1Hour = new TextButton(31, 13, screenWidth-63, screenHeight/2+40);
+ 	_btn1Day = new TextButton(31, 13, screenWidth-31, screenHeight/2+40);
+ 
+-	_btnRotateLeft = new InteractiveSurface(12, 10, screenWidth-61, screenHeight/2+76);
+-	_btnRotateRight = new InteractiveSurface(12, 10, screenWidth-37, screenHeight/2+76);
+-	_btnRotateUp = new InteractiveSurface(13, 12, screenWidth-49, screenHeight/2+62);
+-	_btnRotateDown = new InteractiveSurface(13, 12, screenWidth-49, screenHeight/2+87);
+-	_btnZoomIn = new InteractiveSurface(23, 23, screenWidth-25, screenHeight/2+56);
+-	_btnZoomOut = new InteractiveSurface(13, 17, screenWidth-20, screenHeight/2+82);
++	// THE HITBOXES FOLLOW THE PANEL ART, BECAUSE THE ART IS THE ONLY VISIBLE PART.
++	//
++	// These six surfaces draw nothing - they are invisible rectangles over whatever
++	// the panel picture happens to show. Vanilla's layout is a cross of arrows in the
++	// LEFT two thirds with both zoom controls stacked in the right third:
++	//
++	//     rotateUp    x 271..284      zoomIn   x 295..318, y 156..179
++	//     rotateLeft  x 259..271      zoomOut  x 300..313, y 182..199
++	//
++	// The replacement panel is drawn symmetrically - a dial, a cross of arrows, a
++	// dial - so the cross sits further right and a dial occupies each end. Measured
++	// on the art, the drawn right arrow sat inside vanilla's zoomIn rectangle: it
++	// looked like an arrow and zoomed the globe.
++	//
++	// Measured centres on the 384-wide strip at 4x, converted back to base units
++	// (x_base = 256 + strip/6, y_base = strip/6):
++	//
++	//     up (193, 971)   down (193, 1150)   left (144, 1060)   right (242, 1060)
++	//     left dial (67, 1047)               right dial (317, 1047)
++	//
++	// The two dials become the zoom pair, left out and right in, which is the way
++	// round the shapes read. GEOBORD.png is regenerated from the same art by
++	// build/make_base_panel.py so base resolution shows this layout too - the
++	// rectangles and the picture have one source between them.
++	_btnRotateLeft = new InteractiveSurface(6, 12, screenWidth-44, screenHeight/2+71);
++	_btnRotateRight = new InteractiveSurface(8, 12, screenWidth-28, screenHeight/2+71);
++	_btnRotateUp = new InteractiveSurface(10, 10, screenWidth-37, screenHeight/2+57);
++	_btnRotateDown = new InteractiveSurface(10, 10, screenWidth-37, screenHeight/2+87);
++	_btnZoomIn = new InteractiveSurface(14, 14, screenWidth-18, screenHeight/2+68);
++	_btnZoomOut = new InteractiveSurface(14, 14, screenWidth-60, screenHeight/2+68);
+ 
+ 	int height = (screenHeight - Screen::ORIGINAL_HEIGHT) / 2 + 10;
+ 	_sideTop = new TextButton(63, height, screenWidth-63, _sidebar->getY() - height - 1);
+ 	_sideBottom = new TextButton(63, height, screenWidth-63, _sidebar->getY() + _sidebar->getHeight() + 1);
+ 
+-	_txtHour = new Text(20, 16, screenWidth-61, screenHeight/2-26);
+-	_txtHourSep = new Text(4, 16, screenWidth-41, screenHeight/2-26);
+-	_txtMin = new Text(20, 16, screenWidth-37, screenHeight/2-26);
+-	_txtMinSep = new Text(4, 16, screenWidth-17, screenHeight/2-26);
+-	_txtSec = new Text(11, 8, screenWidth-13, screenHeight/2-20);
+-	_txtWeekday = new Text(59, 8, screenWidth-61, screenHeight/2-13);
+-	_txtDay = new Text(29, 8, screenWidth-61, screenHeight/2-6);
+-	_txtMonth = new Text(29, 8, screenWidth-32, screenHeight/2-6);
+-	_txtYear = new Text(59, 8, screenWidth-61, screenHeight/2+1);
++	// THE READOUT IS RELAID TO FIT THE WINDOW, RATHER THAN THE WINDOW TO FIT IT.
++	//
++	// Vanilla stacks six readouts into the 36 base pixels between the command
++	// buttons and the speed buttons, and gets there by overlapping them:
++	//
++	//     funds   73..81     weekday  87..95      year 101..109
++	//     clock   74..90     day/mon  94..102
++	//
++	// It works on 64-pixel-wide art where the digits are tiny. Blown up six times
++	// against a painted console it reads as a collision - FRIDAY printed through
++	// the bottom of the clock and the date rows touching.
++	//
++	// 16 + 8 + 8 + 8 is 40 and the window is 36, so something has to give. Day,
++	// month and year go on ONE row instead of two, which is the only line here
++	// that was ever spread over two for want of width, and that buys the 8 pixels
++	// to separate the rest. Nothing below changes what any readout SAYS - these
++	// are positions only, and _txtFunds keeps vanilla's spot because vanilla also
++	// lays it across the top of the clock.
++	//
++	//     clock   73..89     weekday  90..98     day month year  99..107
++	_txtHour = new Text(20, 16, screenWidth-61, screenHeight/2-27);
++	_txtHourSep = new Text(4, 16, screenWidth-41, screenHeight/2-27);
++	_txtMin = new Text(20, 16, screenWidth-37, screenHeight/2-27);
++	_txtMinSep = new Text(4, 16, screenWidth-17, screenHeight/2-27);
++	_txtSec = new Text(11, 8, screenWidth-13, screenHeight/2-19);
++	_txtWeekday = new Text(59, 8, screenWidth-61, screenHeight/2-10);
++	_txtDay = new Text(20, 8, screenWidth-61, screenHeight/2-1);
++	_txtMonth = new Text(17, 8, screenWidth-40, screenHeight/2-1);
++	_txtYear = new Text(22, 8, screenWidth-22, screenHeight/2-1);
+ 	_txtFunds = new Text(59, 8, screenWidth-61, screenHeight/2-27);
+ 
+ 	int slackingIndicatorOffset = _game->getMod()->getInterface("geoscape")->getElement("slackingIndicator")->custom;
+@@ -268,6 +315,9 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	geobord->setX(_sidebar->getX() - geobord->getWidth() + _sidebar->getWidth());
  	geobord->setY(_sidebar->getY());
  	_sidebar->copy(geobord);
@@ -3710,7 +3796,7 @@ index 6b4e79d..cee313b 100644
  	_game->getMod()->getSurface("ALTGEOBORD.SCR")->blitNShade(_bg, 0, 0);
  
  	_sideLine->drawRect(0, 0, _sideLine->getWidth(), _sideLine->getHeight(), 15);
-@@ -387,6 +393,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -387,6 +437,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -3719,7 +3805,7 @@ index 6b4e79d..cee313b 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -712,6 +720,10 @@ void GeoscapeState::init()
+@@ -712,6 +764,10 @@ void GeoscapeState::init()
  	updateSlackingIndicator();
  
  	_globe->onMouseClick((ActionHandler)&GeoscapeState::globeClick);
@@ -3730,7 +3816,7 @@ index 6b4e79d..cee313b 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -1454,6 +1466,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +1510,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -3766,7 +3852,7 @@ index 6b4e79d..cee313b 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1858,6 +1899,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +1943,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -3786,7 +3872,7 @@ index 6b4e79d..cee313b 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -2862,6 +2916,10 @@ void GeoscapeState::time1Month()
+@@ -2862,6 +2960,10 @@ void GeoscapeState::time1Month()
  	_game->getSavedGame()->addMonth();
  
  	// Determine alien mission for this month.
@@ -3797,7 +3883,7 @@ index 6b4e79d..cee313b 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3018,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3062,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -3828,7 +3914,7 @@ index 6b4e79d..cee313b 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3265,6 +3347,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +3391,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
