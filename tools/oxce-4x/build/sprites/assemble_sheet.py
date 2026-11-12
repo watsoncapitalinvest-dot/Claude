@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.normpath(os.path.join(HERE, '..')))
 import soldier_ink as ink                                    # noqa: E402
 import make_weapon_sprites as mws                            # noqa: E402
 
-CLIPS = ['stand', 'walk', 'kneel', 'aim', 'death']
+CLIPS = ['stand', 'walk', 'kneel', 'aim', 'death', 'pstand', 'pwalk', 'pkneel']   # the last three (one-handed) only when rendered
 CW, CH, COLS = 128, 160, 16
 TALL, FEET_Y, CENTRE_X = 116, 152, 64
 
@@ -45,10 +45,11 @@ def main(src, out_dir, stem):
     feet5 = meta['anchors']['stand/5/0']['feet'][1] * k
     s = TALL / (feet5 - ys.min())
     print('scale %.3f (standing figure %d px at render size)' % (s, feet5 - ys.min()))
-    rows = (len(CLIPS) * 64 + COLS - 1) // COLS
+    clips = [c for c in CLIPS if c in meta['clips']]
+    rows = (len(clips) * 64 + COLS - 1) // COLS
     sheet = Image.new('RGBA', (COLS * CW, rows * CH), (0, 0, 0, 0))
     lines = []
-    for ci, clip in enumerate(CLIPS):
+    for ci, clip in enumerate(clips):
         for d in range(8):
             kdir = render_dir(d)
             fx, fy = [v * k for v in meta['anchors'][f'stand/{kdir}/0']['feet']]

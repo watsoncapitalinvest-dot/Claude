@@ -3,7 +3,14 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage as ndi
 BG = np.array([200, 200, 205], np.float32)
-HAIR_BASE = np.array([246, 182, 22], np.float32); HAIR_SHADOW = np.array([212, 140, 20], np.float32); HAIR_LINE = np.array([96, 58, 14], np.float32); INK = np.array([40, 26, 18], np.float32)
+import os
+# Duke's golden hair unless HAIR="r,g,b" is set (the cast recipes give each man's hair colour)
+if os.environ.get('HAIR'):
+    HAIR_BASE = np.array([float(x) for x in os.environ['HAIR'].split(',')], np.float32)
+    HAIR_SHADOW = HAIR_BASE * 0.86; HAIR_LINE = np.clip(HAIR_BASE * 0.39, 0, 255)
+else:
+    HAIR_BASE = np.array([246, 182, 22], np.float32); HAIR_SHADOW = np.array([212, 140, 20], np.float32); HAIR_LINE = np.array([96, 58, 14], np.float32)
+INK = np.array([40, 26, 18], np.float32)
 SIZE = (512, 640); FINAL = (256, 320); DZ = 0.10
 
 def ink_frame(beauty, idimg):
@@ -54,6 +61,22 @@ def ink_frame(beauty, idimg):
         blur = np.stack([ndi.gaussian_filter(img[..., c], 0.8) for c in range(3)], -1); img[band] = blur[band]
     e = (ndi.binary_dilation(e, iterations=1) & fg)          # ~3 px at 2x, kept on the figure -> ~1.5 px at final size
     eh = ndi.binary_dilation(eh, iterations=1) & (idb == 1) & ~e
+    # pen fold lines inside chosen garments (FOLD_IDS env, e.g. "6"): ink where the cel shadow meets the lit tone
+    # pen lines inside chosen garments: FOLD_IDS="6:0.42,20:0.35" (garment id : share of it that counts as shadow).
+    # Ink where the cel shadow meets the lit tone -> cloth folds on trousers, muscle carving on skin.
+    for spec in [x for x in os.environ.get('FOLD_IDS', '').split(',') if x.strip()]:
+        parts = spec.split(':'); fid = parts[0]; pct = parts[1] if len(parts) > 1 else '0.42'
+        blur = float(parts[2]) if len(parts) > 2 else float(os.environ.get('FOLD_BLUR', '2.2')); fmin = int(parts[3]) if len(parts) > 3 else int(os.environ.get('FOLD_MIN', '30'))
+        gm = idb == int(fid)
+        if gm.sum() < 50: continue
+        lum = ndi.gaussian_filter(img.mean(-1), blur)
+        shadow = gm & (lum < np.percentile(lum[gm], 100 * float(pct)))
+        shadow = ndi.binary_closing(ndi.binary_opening(shadow, iterations=2), iterations=1)
+        fe = shadow & ~ndi.binary_erosion(shadow, iterations=1) & ndi.binary_erosion(gm, iterations=3)
+        fl, fn = ndi.label(fe, structure=np.ones((3, 3)))
+        if fn:
+            fz = ndi.sum(fe, fl, range(1, fn + 1)); fe &= np.isin(fl, [i for i, z in enumerate(fz, 1) if z >= fmin])
+        img[fe & ~e] = INK
     img[e] = INK
     img[eh] = HAIR_LINE
     # with alpha, for the game: the figure's own mask, downscaled premultiplied so

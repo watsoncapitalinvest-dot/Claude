@@ -139,7 +139,8 @@ def add_idswitch(m):
 
 for name in matbase:
     m = bpy.data.materials[name]
-    if m.use_nodes: add_idswitch(m)
+    # a blend built by the cast builders already carries its ID switch (garment-ID maps): keep it
+    if m.node_tree and 'IDSWITCH' not in m.node_tree.nodes: add_idswitch(m)
 
 
 def id_mode(on):
