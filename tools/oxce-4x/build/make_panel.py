@@ -179,7 +179,7 @@ def screw(d, x, y):
     d.line([X - r + 2, Y, X + r - 2, Y], fill=(44, 48, 38), width=2)
 
 
-def build():
+def build(labels=True):
     img = Image.new('RGB', (W * K, H * K))
     metal(img)
     d = ImageDraw.Draw(img, 'RGBA')
@@ -213,6 +213,11 @@ def build():
     lab = Image.new('L', img.size, 0)
     for text, y in EXTRA:
         well(d, 2 + EXTRA_LABEL_W, y, 60 - EXTRA_LABEL_W, 8, radius=3)
+        if not labels:
+            # The plate handed to the graphics AI for weathering goes out with
+            # NO engraving, so grime laid over GOODWILL cannot smear it; the
+            # labels are cut back in, crisp, after the art comes back.
+            continue
         t = stencil(img, (px(3.2), px(y + 1.3)), text, size, 255)
         lab = Image.composite(Image.new('L', img.size, 255), lab, t)
 
@@ -263,8 +268,32 @@ def cluster(d):
                 d.line([X0 + 4, yy, X1 - 4, yy], fill=(v, v + 6, v - 8), width=2)
 
 
+def guide(img):
+    """The same plate with every rectangle the engine uses outlined in magenta.
+
+    Handed to whoever repaints the panel, so 'do not move the slots' is a
+    picture and not a sentence.
+    """
+    g = img.convert('RGB').copy()
+    d = ImageDraw.Draw(g)
+    M = (255, 0, 255)
+    rects = [r[1:] for r in COMMAND] + list(SPEED) + [CLOCK_WELL, DATE_WELL]
+    rects += [(2 + EXTRA_LABEL_W, y, 60 - EXTRA_LABEL_W, 8) for _, y in EXTRA]
+    for x, y, w, h in rects:
+        d.rectangle([px(x), px(y), px(x + w) - 1, px(y + h) - 1], outline=M, width=3)
+    for _, x, y, w, h in CONTROLS:
+        d.rectangle([px(x), px(y), px(x + w) - 1, px(y + h) - 1], outline=(0, 255, 255), width=3)
+    for _, y in EXTRA:
+        d.rectangle([px(3), px(y + 0.5), px(2 + EXTRA_LABEL_W - 1), px(y + 7.5)], outline=(255, 200, 0), width=2)
+    return g
+
+
 def main(out_dir, want_rects=False):
     img = build()
+    os.makedirs(out_dir, exist_ok=True)
+    plain = build(labels=False)
+    plain.convert('RGBA').save(os.path.join(out_dir, 'panel_for_weathering_384x1200.png'))
+    guide(plain).save(os.path.join(out_dir, 'panel_guide_384x1200.png'))
     hi = img.convert('RGBA')
     os.makedirs(out_dir, exist_ok=True)
     hi_path = os.path.join(out_dir, 'panel_hi.png')
