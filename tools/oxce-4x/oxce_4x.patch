@@ -631,7 +631,7 @@ index 0631f32..5e821a7 100644
  		{
  			Position pos = bunit->getPosition();
 diff --git a/src/Battlescape/Inventory.cpp b/src/Battlescape/Inventory.cpp
-index 406077c..4f6bd64 100644
+index 406077c..ca21900 100644
 --- a/src/Battlescape/Inventory.cpp
 +++ b/src/Battlescape/Inventory.cpp
 @@ -17,6 +17,8 @@
@@ -692,25 +692,30 @@ index 406077c..4f6bd64 100644
  }
  
  /**
-@@ -314,6 +324,9 @@ void Inventory::drawItems()
+@@ -314,6 +324,10 @@ void Inventory::drawItems()
  
  	ScriptWorkerBlit work;
  	_items->clear();
 +	_hiItems.clear();
++	_hiBoxes.clear();
 +	_hiNumbers.clear();
 +	const bool native = HiUI::nativeOn();
  	Uint8 color = _game->getMod()->getInterface("inventory")->getElement("numStack")->color;
  	Uint8 color2 = _game->getMod()->getInterface("inventory")->getElement("numStack")->color2;
  	if (_selUnit != 0)
-@@ -344,6 +357,7 @@ void Inventory::drawItems()
+@@ -344,6 +358,11 @@ void Inventory::drawItems()
  			}
  			BattleItem::ScriptFill(&work, invItem, save, BODYPART_ITEM_INVENTORY, _animFrame, 0);
  			work.executeBlit(frame, _items, x, y, 0);
 +			_hiItems.emplace_back(frame, x, y, frame->getWidth(), frame->getHeight());
++			if (invItem->getSlot()->getType() == INV_HAND)
++				_hiBoxes.emplace_back(invItem->getSlot()->getX(), invItem->getSlot()->getY(), RuleInventory::HAND_W * RuleInventory::SLOT_W, RuleInventory::HAND_H * RuleInventory::SLOT_H);
++			else
++				_hiBoxes.emplace_back(x, y, invItem->getRules()->getInventoryWidth() * RuleInventory::SLOT_W, invItem->getRules()->getInventoryHeight() * RuleInventory::SLOT_H);
  
  			// two-handed indicator
  			if (invItem->getSlot()->getType() == INV_HAND)
-@@ -357,7 +371,8 @@ void Inventory::drawItems()
+@@ -357,7 +376,8 @@ void Inventory::drawItems()
  					text.setX(invItem->getSlot()->getX() + RuleInventory::HAND_W * RuleInventory::SLOT_W - 5);
  					text.setY(invItem->getSlot()->getY() + RuleInventory::HAND_H * RuleInventory::SLOT_H - 7);
  					text.setValue(2);
@@ -720,15 +725,16 @@ index 406077c..4f6bd64 100644
  				}
  			}
  
-@@ -401,6 +416,7 @@ void Inventory::drawItems()
+@@ -401,6 +421,8 @@ void Inventory::drawItems()
  			y = (groundItem->getSlot()->getY() + groundItem->getSlotY() * RuleInventory::SLOT_H);
  			BattleItem::ScriptFill(&work, groundItem, save, BODYPART_ITEM_INVENTORY, _animFrame, 0);
  			work.executeBlit(frame, _items, x, y, 0);
 +			_hiItems.emplace_back(frame, x, y, frame->getWidth(), frame->getHeight());
++			_hiBoxes.emplace_back(x, y, groundItem->getRules()->getInventoryWidth() * RuleInventory::SLOT_W, groundItem->getRules()->getInventoryHeight() * RuleInventory::SLOT_H);
  
  			// grenade primer indicators
  			if (groundItem->getFuseTimer() >= 0 && groundItem->getRules()->getInventoryWidth() > 0)
-@@ -445,7 +461,8 @@ void Inventory::drawItems()
+@@ -445,7 +467,8 @@ void Inventory::drawItems()
  				_stackNumber->setValue(fatalWounds);
  				_stackNumber->draw();
  				_stackNumber->setColor(color2);
@@ -738,7 +744,7 @@ index 406077c..4f6bd64 100644
  			}
  
  			// item stacking
-@@ -460,7 +477,8 @@ void Inventory::drawItems()
+@@ -460,7 +483,8 @@ void Inventory::drawItems()
  				_stackNumber->setValue(_stackLevel[groundItem->getSlotX()][groundItem->getSlotY()]);
  				_stackNumber->draw();
  				_stackNumber->setColor(color);
@@ -748,7 +754,7 @@ index 406077c..4f6bd64 100644
  			}
  		}
  
-@@ -641,12 +659,28 @@ void Inventory::think()
+@@ -641,12 +665,40 @@ void Inventory::think()
  void Inventory::blit(SDL_Surface *surface)
  {
  	clear();
@@ -766,8 +772,20 @@ index 406077c..4f6bd64 100644
 +	// The sharp layer takes a base pixel over only once that pixel holds its final value, so the
 +	// item icons' full-resolution twins go down here, after the 8-bit inventory has been blitted.
 +	if (HiUI::enabled())
-+		for (const auto &hi : _hiItems)
-+			HiUI::sprite(std::get<0>(hi), getX() + std::get<1>(hi), getY() + std::get<2>(hi), std::get<3>(hi), std::get<4>(hi));
++		for (size_t i = 0; i < _hiItems.size(); ++i)
++		{
++			const auto &hi = _hiItems[i];
++			if (native && i < _hiBoxes.size())
++			{
++				// on the painted page every compartment has a rim: the item is
++				// fitted inside it rather than drawn over it
++				const auto &bx = _hiBoxes[i];
++				HiUI::spriteFit(std::get<0>(hi), getX() + std::get<1>(hi), getY() + std::get<2>(hi), std::get<3>(hi), std::get<4>(hi),
++					getX() + std::get<0>(bx), getY() + std::get<1>(bx), std::get<2>(bx), std::get<3>(bx), 1.6);
++			}
++			else
++				HiUI::sprite(std::get<0>(hi), getX() + std::get<1>(hi), getY() + std::get<2>(hi), std::get<3>(hi), std::get<4>(hi));
++		}
 +	// the item on the cursor, too: it was the one blocky picture left on the screen
 +	if (HiUI::enabled() && _selItem)
 +	{
@@ -780,7 +798,7 @@ index 406077c..4f6bd64 100644
  
  /**
 diff --git a/src/Battlescape/Inventory.h b/src/Battlescape/Inventory.h
-index 642c538..f187c4c 100644
+index 642c538..68a1fc5 100644
 --- a/src/Battlescape/Inventory.h
 +++ b/src/Battlescape/Inventory.h
 @@ -19,6 +19,8 @@
@@ -800,12 +818,15 @@ index 642c538..f187c4c 100644
  class BattleItem;
  class BattleUnit;
  class NumberText;
-@@ -92,6 +95,17 @@ public:
+@@ -92,6 +95,20 @@ public:
  	void drawGridLabels(bool showTuCost = false);
  	/// Draws the inventory items.
  	void drawItems();
 +	/// Where each item icon was drawn this pass, so the sharp twins can follow it.
 +	std::vector<std::tuple<const Surface*, int, int, int, int> > _hiItems;
++	/// For each of _hiItems: the box the item is fitted inside on a native screen
++	/// (its cells, or the whole hand), as x, y, w, h in base px.
++	std::vector<std::tuple<int, int, int, int> > _hiBoxes;
 +	/// The slot labels as drawn this pass. Kept, not thrown away after blitting, so
 +	/// HiUI can set them again at display resolution from their recorded glyphs.
 +	std::vector<Text*> _labelTexts;
@@ -2382,10 +2403,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..d286af1
+index 0000000..2e3c3d6
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,1607 @@
+@@ -0,0 +1,1636 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -3233,6 +3254,35 @@ index 0000000..d286af1
 +	}
 +}
 +
++void spriteFit(const Surface *frame, int x, int y, int w, int h, int boxX, int boxY, int boxW, int boxH, double inset)
++{
++	resolvePending();
++	if (!base || !frame || w <= 0 || h <= 0 || boxW <= 0 || boxH <= 0) return;
++	auto it = bgImages.find(frame);
++	if (it == bgImages.end() || !it->second.ok) { return; }
++	R r{ x, y, x + w, y + h };
++	if (!clipBase(r)) return;
++	// hide the 8-bit icon: every pixel the frame itself wrote shows the overlay,
++	// which holds the page underneath until the twin goes on top of it
++	SDL_Surface *fs = const_cast<Surface*>(frame)->getSurface();
++	for (int by = r.y0; by < r.y1; ++by)
++	{
++		const Uint8 *p = row8(by);
++		for (int bx = r.x0; bx < r.x1; ++bx)
++		{
++			const int fx = bx - x, fy = by - y;
++			if (!fs || fx >= fs->w || fy >= fs->h || !((const Uint8*)fs->pixels)[fy * fs->pitch + fx]) continue;
++			tag[by * bw + bx] = p[bx]; valid[by * bw + bx] = 1;
++		}
++	}
++	any = true;
++	const double s = std::min((boxW - 2 * inset) / boxW, (boxH - 2 * inset) / boxH);
++	const double cx = boxX + boxW / 2.0, cy = boxY + boxH / 2.0;
++	const Img &im = it->second;
++	stretch(im, 0, 0, im.w, im.h,
++		(int)DX(cx + (x - cx) * s), (int)DY(cy + (y - cy) * s), (int)DX(cx + (x + w - cx) * s), (int)DY(cy + (y + h - cy) * s));
++}
++
 +void sprite(const Surface *frame, int x, int y, int w, int h)
 +{
 +	resolvePending();
@@ -3995,10 +4045,10 @@ index 0000000..d286af1
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..eafc797
+index 0000000..c0800aa
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,85 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -4041,6 +4091,10 @@ index 0000000..eafc797
 +	/// Draw a registered sprite's sharp twin over the base rect it has just been blitted into.
 +	/// Only base pixels the sprite actually wrote are taken over, so its shape stays its own.
 +	void sprite(const Surface *frame, int x, int y, int w, int h);
++	/// The same twin, scaled down about the centre of a box (bx,by,bw,bh) so that
++	/// `inset` base px of the box stay clear all round. The 8-bit icon under it
++	/// is hidden. For items in the painted equipment page's compartments.
++	void spriteFit(const Surface *frame, int x, int y, int w, int h, int bx, int by, int bw, int bh, double inset);
 +	/// After the 8-bit buffer has been zoomed onto the 32-bit display.
 +	void composite(SDL_Surface *base8, SDL_Surface *screen32);
 +
