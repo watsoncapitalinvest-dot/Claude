@@ -261,6 +261,58 @@ index c52f7ad..44470ef 100644
  
  }
  
+diff --git a/src/Battlescape/ActionMenuState.cpp b/src/Battlescape/ActionMenuState.cpp
+index 0c2f2a1..f329a13 100644
+--- a/src/Battlescape/ActionMenuState.cpp
++++ b/src/Battlescape/ActionMenuState.cpp
+@@ -208,6 +208,25 @@ void ActionMenuState::init()
+ 	{
+ 		// Item don't have any actions, close popup.
+ 		_game->popState();
++		return;
++	}
++	if (_autoPick != BA_NONE)
++	{
++		const BattleActionType pick = _autoPick;
++		_autoPick = BA_NONE;
++		for (size_t i = 0; i < std::size(_actionMenu); ++i)
++		{
++			if (_actionMenu[i]->getVisible() && _actionMenu[i]->getAction() == pick)
++			{
++				_game->getSavedGame()->getSavedBattle()->getPathfinding()->removePreview();
++				_action->type = pick;
++				_action->skillRules = nullptr;
++				_action->updateTU();
++				handleAction();
++				return;
++			}
++		}
++		_game->popState();   // the weapon no longer offers it: no menu either
+ 	}
+ }
+ 
+diff --git a/src/Battlescape/ActionMenuState.h b/src/Battlescape/ActionMenuState.h
+index 6065b54..8db80d7 100644
+--- a/src/Battlescape/ActionMenuState.h
++++ b/src/Battlescape/ActionMenuState.h
+@@ -34,6 +34,7 @@ class ActionMenuState : public State
+ protected:
+ 	BattleAction *_action;
+ 	ActionMenuItem *_actionMenu[6];
++	BattleActionType _autoPick = BA_NONE;
+ 	/// Adds a new menu item for an action.
+ 	void addItem(BattleActionType ba, const std::string &name, int *id, SDLKey key);
+ 	/// Acts on the action instance that has been chosen and set.
+@@ -43,6 +44,9 @@ public:
+ 	ActionMenuState(BattleAction *action);
+ 	/// Creates the Action Menu state.
+ 	ActionMenuState(BattleAction *action, int x, int y);
++	/// G.I. Joe battle bar: a fire-mode button opens the menu already decided -
++	/// the same checks and the same outcome as picking that line by hand.
++	void autoPick(BattleActionType type) { _autoPick = type; }
+ 	/// Cleans up the Action Menu state.
+ 	~ActionMenuState();
+ 	/// Init function.
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
 index b7e1111..ca2477c 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
@@ -722,10 +774,18 @@ index a0bc8b3..933c149 100644
  	void deployCivilians(bool markAsVIP, int nodeRank, int max, bool roundUp = false, const std::string &civilianType = "");
  	/// Finds a spot near a friend to spawn at.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..41e4eb8 100644
+index 7cd4941..93ca17c 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
-@@ -137,7 +137,7 @@ BattlescapeState::BattlescapeState() :
+@@ -88,6 +88,7 @@
+ #include "../Mod/RuleInventory.h"
+ #include "../Mod/RuleSoldier.h"
+ #include "../Mod/RuleVideo.h"
++#include "../Engine/HiUI.h"
+ 
+ namespace OpenXcom
+ {
+@@ -137,7 +138,7 @@ BattlescapeState::BattlescapeState() :
  
  	// Create the battlemap view
  	// the actual map height is the total height minus the height of the buttonbar
@@ -734,7 +794,313 @@ index 7cd4941..41e4eb8 100644
  
  	_numLayers = new NumberText(3, 5, x + 232, y + 6);
  	_rank = new Surface(26, 23, x + 107, y + 33);
-@@ -2172,7 +2172,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -724,6 +725,289 @@ BattlescapeState::BattlescapeState() :
+ 	_battleGame = new BattlescapeGame(_save, this);
+ 
+ 	_barHealthColor = _barHealth->getColor();
++
++	if (HiUI::enabled()) layoutJoeHud();
++}
++
++/**
++ * G.I. JOE BATTLE BAR (BATTLE_HUD_SPEC_v1, approved 12 Nov).
++ *
++ * The bar is 42 base px (the interface's "icons" height); positions below are the
++ * spec's, with the bar's top at 0. Everything is PAINTED by HiUI from refreshJoeHud's
++ * data; the widgets here are only where clicks land, each drawn as a native key.
++ * Stock buttons the spec has no place for are kept 1 px big in the corner so their
++ * keyboard shortcuts still work.
++ */
++void BattlescapeState::layoutJoeHud()
++{
++	_joeHud = true;
++	const int ox = _icons->getX(), oy = _icons->getY();
++	auto place = [&](Surface *s, int x, int y, int w, int h)
++	{
++		s->setX(ox + x); s->setY(oy + y);
++		s->setWidth(w); s->setHeight(h);
++		// a button's pressed picture was cut from the stock bar at its old size: cut it again (blank)
++		if (auto *bb = dynamic_cast<BattlescapeButton*>(s)) { bb->clear(); bb->initSurfaces(); }
++	};
++	auto tuck = [&](Surface *s) { place(s, 0, 0, 1, 1); };
++	auto key = [&](Surface *s, const std::string &legend) { HiUI::nativeKey(s, legend, false); };
++
++	// the action grid: 4 x 2, each 12 x 11, 1 px apart
++	BattlescapeButton *grid[8] = { _btnMapUp, _btnMapDown, _btnKneel, _btnCenter, _btnNextSoldier, _btnShowMap, _btnInventory, _btnHelp };
++	const char *gridLegend[8] = { "UP", "DOWN", "KNEEL", "CENTER", "NEXT", "MAP", "GEAR", "OPTIONS" };
++	for (int i = 0; i < 8; ++i)
++	{
++		place(grid[i], 196 + (i % 4) * 13, 14 + (i / 4) * 12, 12, 11);
++		key(grid[i], gridLegend[i]);
++	}
++	// reserve time: four toggles under the label
++	BattlescapeButton *res[4] = { _btnReserveNone, _btnReserveSnap, _btnReserveAimed, _btnReserveAuto };
++	const char *resLegend[4] = { "NONE", "SNAP", "AIM", "AUTO" };
++	for (int i = 0; i < 4; ++i)
++	{
++		place(res[i], 251 + i * 9, 16, 8, 6);
++		key(res[i], resLegend[i]);
++	}
++	place(_btnEndTurn, 291, 11, 25, 28);
++	key(_btnEndTurn, "END TURN");
++	HiUI::nativeKeyStyle(_btnEndTurn, 1);
++	place(_btnStats, 36, 11, 54, 8);
++	_txtName->setX(ox + 36); _txtName->setY(oy + 11); _txtName->setWidth(54); _txtName->setHeight(8);
++	_txtTooltip->setX(ox + 178); _txtTooltip->setY(oy + 1); _txtTooltip->setWidth(138); _txtTooltip->setHeight(8);
++	_txtTooltip->setAlign(ALIGN_RIGHT);
++
++	// no place on the bar: shortcuts only
++	for (Surface *s : { (Surface*)_btnUnitUp, (Surface*)_btnUnitDown, (Surface*)_btnNextStop, (Surface*)_btnShowLayers,
++		(Surface*)_btnAbort, (Surface*)_btnZeroTUs, (Surface*)_btnReserveKneel, (Surface*)_btnLeftHandItem, (Surface*)_btnRightHandItem })
++		tuck(s);
++	// The stock pieces painted instead are parked off the screen: updateSoldierInfo
++	// turns their visibility back on, so hiding alone let them flash through.
++	for (Surface *s : { (Surface*)_rank, (Surface*)_rankTiny, (Surface*)_numLayers, (Surface*)_numTimeUnits, (Surface*)_numEnergy,
++		(Surface*)_numHealth, (Surface*)_numMorale, (Surface*)_barTimeUnits, (Surface*)_barEnergy, (Surface*)_barHealth,
++		(Surface*)_barMorale, (Surface*)_numTwoHandedIndicatorLeft, (Surface*)_numTwoHandedIndicatorRight })
++		{ s->setX(-400); s->setY(-400); }
++	if (_barMana) { _barMana->setX(-400); _barMana->setY(-400); }
++	for (auto *v : { &_numAmmoLeft, &_numAmmoRight, &_numMedikitLeft, &_numMedikitRight })
++		for (auto *n : *v) { n->setX(-400); n->setY(-400); }
++
++	// NEW PIECES
++	for (int i = 0; i < 6; ++i)
++	{
++		_hudChip[i] = new InteractiveSurface(28, 6, ox + 4 + 29 * i, oy + 2);
++		add(_hudChip[i]);
++		_hudChip[i]->onMouseClick((ActionHandler)&BattlescapeState::hudChipClick);
++	}
++	for (int hnd = 0; hnd < 2; ++hnd)
++	{
++		const int cx = hnd == 0 ? 94 : 145;
++		_hudCard[hnd] = new InteractiveSurface(47, 18, ox + cx, oy + 10);
++		add(_hudCard[hnd]);
++		_hudCard[hnd]->onMouseClick((ActionHandler)&BattlescapeState::hudCardClick, 0);
++		for (int m = 0; m < 3; ++m)
++		{
++			_hudMode[hnd][m] = new InteractiveSurface(14, 8, ox + cx + 1 + m * 15, oy + 30);
++			add(_hudMode[hnd][m]);
++			_hudMode[hnd][m]->onMouseClick((ActionHandler)&BattlescapeState::hudModeClick);
++		}
++	}
++	_hudPortrait = new InteractiveSurface(28, 28, ox + 4, oy + 11);
++	add(_hudPortrait);
++	_hudPortrait->onMouseClick((ActionHandler)&BattlescapeState::btnInventoryClick);
++
++	// the mission panel, top right; the special-action buttons move down under it
++	const int screenWidth = Options::baseXResolution;
++	_hudMission = new Surface(76, 22, screenWidth - 80, 4);
++	add(_hudMission);
++	_hudMission->drawRect(0, 0, 76, 22, 15);
++	for (Surface *s : { (Surface*)_btnLaunch, (Surface*)_btnPsi, (Surface*)_btnSpecial, (Surface*)_btnSkills })
++		if (s) s->setY(s->getY() + 28);
++	// the bar itself runs the full width; its contents stay in the centred block
++	_hudContentX = ox;
++	_icons->setX(0);
++	_icons->setWidth(screenWidth);
++
++	refreshJoeHud();
++}
++
++/**
++ * The bar's contents for this frame: who is selected, what they hold, the squad, the turn.
++ */
++void BattlescapeState::refreshJoeHud()
++{
++	if (!_joeHud || !_hudMission) return;
++	for (Surface *s : { (Surface*)_rank, (Surface*)_rankTiny, (Surface*)_numLayers, (Surface*)_numTimeUnits, (Surface*)_numEnergy,
++		(Surface*)_numHealth, (Surface*)_numMorale, (Surface*)_barTimeUnits, (Surface*)_barEnergy, (Surface*)_barHealth,
++		(Surface*)_barMorale, (Surface*)_numTwoHandedIndicatorLeft, (Surface*)_numTwoHandedIndicatorRight,
++		(Surface*)_btnLeftHandItem, (Surface*)_btnRightHandItem })
++		s->setVisible(false);
++	if (_barMana) _barMana->setVisible(false);
++	for (auto *n : _numAmmoLeft) n->setVisible(false);
++	for (auto *n : _numAmmoRight) n->setVisible(false);
++	for (auto *n : _numMedikitLeft) n->setVisible(false);
++	for (auto *n : _numMedikitRight) n->setVisible(false);
++	HiUI::HudData d;
++	d.on = true;
++	d.contentX = _hudContentX;
++	BattleUnit *u = _save->getSelectedUnit();
++	const bool ours = u && u->getFaction() == FACTION_PLAYER;
++	if (ours)
++	{
++		d.sub = tr(u->getRankString());
++		if (u->getGeoscapeSoldier())
++		{
++			const std::string look = u->getArmor()->getSpriteInventory();
++			d.figure = _game->getMod()->getSurface(look, false);
++			if (!d.figure) d.figure = _game->getMod()->getSurface(look + ".SPK", false);
++		}
++		d.tu = u->getTimeUnits(); d.tuMax = std::max(1, (int)u->getBaseStats()->tu);
++		d.hp = u->getHealth(); d.hpMax = std::max(1, (int)u->getBaseStats()->health);
++		d.en = u->getEnergy(); d.enMax = std::max(1, (int)u->getBaseStats()->stamina);
++		d.mo = u->getMorale(); d.moMax = 100;
++	}
++	// the hands, and the fire-mode keys under each
++	BattleAction *cur = _battleGame->getCurrentAction();
++	for (int hnd = 0; hnd < 2; ++hnd)
++	{
++		HiUI::HudHand &h = d.hand[hnd];
++		h.label = hnd == 0 ? "RIGHT HAND" : "LEFT HAND";
++		BattleItem *item = ours ? (hnd == 0 ? u->getRightHandWeapon() : u->getLeftHandWeapon()) : nullptr;
++		int m = 0;
++		if (item)
++		{
++			const RuleItem *r = item->getRules();
++			h.empty = false;
++			h.name = tr(r->getName());
++			if (r->getBattleType() == BT_FIREARM)
++			{
++				const BattleItem *ammo = item->getAmmoForSlot(0);
++				if (ammo) h.ammo = std::to_string(ammo->getAmmoQuantity()) + "/" + std::to_string(std::max(1, ammo->getRules()->getClipSize()));
++				else h.ammo = "EMPTY";
++			}
++			if (SurfaceSet *big = _game->getMod()->getSurfaceSet("BIGOBS.PCK", false))
++				h.art = big->getFrame(r->getBigSprite());
++			struct ModeDef { BattleActionType t; const char *name; bool ok; };
++			const ModeDef defs[] = {
++				{ BA_SNAPSHOT, "SNAP", r->getBattleType() == BT_FIREARM && r->getCostSnap().Time > 0 },
++				{ BA_AIMEDSHOT, "AIMED", r->getBattleType() == BT_FIREARM && r->getCostAimed().Time > 0 },
++				{ BA_AUTOSHOT, "AUTO", r->getBattleType() == BT_FIREARM && r->getCostAuto().Time > 0 },
++				{ BA_HIT, "STRIKE", r->getCostMelee().Time > 0 },
++				{ BA_THROW, "THROW", r->getBattleType() == BT_GRENADE || r->getBattleType() == BT_PROXIMITYGRENADE },
++			};
++			for (const auto &md : defs)
++			{
++				if (!md.ok || m >= 3) continue;
++				BattleActionCost cost(md.t, u, item);
++				_hudModeType[hnd][m] = md.t;
++				HiUI::nativeKey(_hudMode[hnd][m], std::string(md.name) + " " + std::to_string(cost.Time), false);
++				const bool armed = cur && cur->targeting && cur->weapon == item && cur->type == md.t;
++				const bool can = cost.Time <= u->getTimeUnits();
++				HiUI::nativeKeyStyle(_hudMode[hnd][m], armed ? 1 : can ? 0 : 3);
++				_hudMode[hnd][m]->setVisible(true);
++				++m;
++			}
++		}
++		for (; m < 3; ++m) _hudMode[hnd][m]->setVisible(false);
++		_hudCard[hnd]->setVisible(ours);
++	}
++	_hudPortrait->setVisible(ours);
++
++	// reserve: the active toggle is olive
++	BattlescapeButton *res[4] = { _btnReserveNone, _btnReserveSnap, _btnReserveAimed, _btnReserveAuto };
++	for (auto *b : res) HiUI::nativeKeyStyle(b, b == _reserve ? 4 : 0);
++	HiUI::nativeKeyStyle(_btnKneel, ours && u->isKneeled() ? 4 : 0);
++
++	// the squad strip: up to six, the window following the selected Joe
++	std::vector<BattleUnit*> squad;
++	int canAct = 0;
++	for (auto *bu : *_save->getUnits())
++	{
++		if (bu->getOriginalFaction() != FACTION_PLAYER || bu->getStatus() == STATUS_IGNORE_ME) continue;
++		if (bu->getStatus() == STATUS_DEAD && !bu->getGeoscapeSoldier()) continue;
++		squad.push_back(bu);
++		if (!bu->isOut() && bu->getTimeUnits() > 0 && bu->getFaction() == FACTION_PLAYER) ++canAct;
++	}
++	int first = 0;
++	for (size_t i = 0; i < squad.size(); ++i) if (squad[i] == u) first = std::max(0, std::min((int)i - 2, (int)squad.size() - 6));
++	for (int i = 0; i < 6; ++i)
++	{
++		const int si = first + i;
++		_hudChipUnit[i] = si < (int)squad.size() ? squad[si] : nullptr;
++		_hudChip[i]->setVisible(_hudChipUnit[i] != nullptr);
++		if (!_hudChipUnit[i]) continue;
++		BattleUnit *bu = _hudChipUnit[i];
++		std::string nm = bu->getName(_game->getLanguage());
++		const auto sp = nm.find_last_of(' ');
++		if (sp != std::string::npos && nm.size() > 12) nm = nm.substr(sp + 1);
++		const bool down = bu->isOut();
++		HiUI::nativeKey(_hudChip[i], down ? nm + " - DOWN" : nm, false);
++		HiUI::nativeKeyStyle(_hudChip[i], bu == u ? 1 : down ? 2 : bu->getTimeUnits() == 0 ? 3 : 0);
++	}
++	HiUI::nativeKey(_btnEndTurn, "END TURN|" + std::to_string(canAct) + (canAct == 1 ? " Joe can still act" : " Joes can still act"), false);
++
++	// signature move: no specials system yet, so it is shown disabled
++	d.sigOn = false;
++	d.sigTitle = "SIGNATURE MOVE";
++	d.sigName = "NONE";
++	d.sigHow = "Comes with the specials system";
++
++	// the mission panel
++	int seen = 0, civ = 0;
++	for (auto *bu : *_save->getUnits())
++	{
++		if (bu->isOut()) continue;
++		if (bu->getFaction() == FACTION_HOSTILE && bu->getVisible()) ++seen;
++		if (bu->getOriginalFaction() == FACTION_NEUTRAL) ++civ;
++	}
++	d.turn = "TURN " + std::to_string(_save->getTurn());
++	d.phase = _save->getSide() == FACTION_PLAYER ? "JOE TURN" : "COBRA TURN";
++	d.objective = tr(_save->getMissionType());
++	d.counts = "Cobra seen: " + std::to_string(seen) + "  -  Civilians: " + std::to_string(civ);
++	HiUI::nativeHud(_icons, _hudMission, d);
++}
++
++void BattlescapeState::hudChipClick(Action *action)
++{
++	if (!allowButtons()) return;
++	for (int i = 0; i < 6; ++i)
++	{
++		if (action->getSender() != _hudChip[i] || !_hudChipUnit[i]) continue;
++		BattleUnit *bu = _hudChipUnit[i];
++		if (!bu->isSelectable(_save->getSide(), false, false)) return;
++		_battleGame->cancelAllActions();
++		_save->setSelectedUnit(bu);
++		updateSoldierInfo();
++		_map->getCamera()->centerOnPosition(bu->getPosition());
++		_battleGame->getCurrentAction()->actor = bu;
++		_battleGame->setupCursor();
++		_map->refreshSelectorPosition();
++		return;
++	}
++}
++
++void BattlescapeState::hudCardClick(Action *action)
++{
++	if (action->getSender() == _hudCard[0]) btnRightHandItemClick(action);
++	else btnLeftHandItemClick(action);
++}
++
++void BattlescapeState::hudModeClick(Action *action)
++{
++	if (!playableUnitSelected() || _battleGame->isBusy()) return;
++	for (int hnd = 0; hnd < 2; ++hnd)
++		for (int m = 0; m < 3; ++m)
++		{
++			if (action->getSender() != _hudMode[hnd][m]) continue;
++			BattleUnit *u = _save->getSelectedUnit();
++			BattleItem *item = hnd == 0 ? u->getRightHandWeapon() : u->getLeftHandWeapon();
++			if (!item) return;
++			_battleGame->cancelCurrentAction();
++			if (hnd == 0) u->setActiveRightHand(); else u->setActiveLeftHand();
++			_battleGame->getCurrentAction()->weapon = item;
++			ActionMenuState *menu = new ActionMenuState(_battleGame->getCurrentAction(), _icons->getX(), _icons->getY() + 16);
++			menu->autoPick((BattleActionType)_hudModeType[hnd][m]);
++			popup(menu);
++			return;
++		}
+ }
+ 
+ 
+@@ -732,6 +1016,7 @@ BattlescapeState::BattlescapeState() :
+  */
+ BattlescapeState::~BattlescapeState()
+ {
++	if (_joeHud) HiUI::nativeForget(_icons);
+ 	delete _animTimer;
+ 	delete _gameTimer;
+ 	delete _battleGame;
+@@ -859,6 +1144,7 @@ void BattlescapeState::init()
+ void BattlescapeState::think()
+ {
+ 	static bool popped = false;
++	refreshJoeHud();
+ 
+ 	if (_gameTimer->isRunning())
+ 	{
+@@ -2172,7 +2458,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -743,7 +1109,15 @@ index 7cd4941..41e4eb8 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -4052,8 +4052,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -2392,6 +2678,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+ 	}
+ 
+ 	updateUiButton(battleUnit);
++	refreshJoeHud();   // the stock bar pieces this turned on stay hidden under the painted bar
+ }
+ 
+ void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
+@@ -4052,8 +4339,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -754,6 +1128,29 @@ index 7cd4941..41e4eb8 100644
  	_map->getCamera()->resize();
  	_map->getCamera()->jumpXY(dX/2, dY/2);
  
+diff --git a/src/Battlescape/BattlescapeState.h b/src/Battlescape/BattlescapeState.h
+index 746f3a4..ce68085 100644
+--- a/src/Battlescape/BattlescapeState.h
++++ b/src/Battlescape/BattlescapeState.h
+@@ -58,6 +58,18 @@ private:
+ 	InteractiveSurface *_btnStats;
+ 	BattlescapeButton *_btnReserveNone, *_btnReserveSnap, *_btnReserveAimed, *_btnReserveAuto, *_btnReserveKneel, *_btnZeroTUs;
+ 	InteractiveSurface *_btnLeftHandItem, *_btnRightHandItem;
++	// G.I. Joe battle bar (BATTLE_HUD_SPEC_v1): painted by HiUI, these are its clickable pieces
++	bool _joeHud = false;
++	int _hudContentX = 0;
++	InteractiveSurface *_hudChip[6] = {}, *_hudMode[2][3] = {}, *_hudCard[2] = {}, *_hudPortrait = nullptr;
++	BattleUnit *_hudChipUnit[6] = {};
++	int _hudModeType[2][3] = {};
++	Surface *_hudMission = nullptr;
++	void layoutJoeHud();
++	void refreshJoeHud();
++	void hudChipClick(Action *action);
++	void hudModeClick(Action *action);
++	void hudCardClick(Action *action);
+ 
+ 	static const int SPECIAL_BUTTONS_MAX = 3;
+ 	int _posSpecialActions[SPECIAL_BUTTONS_MAX];
 diff --git a/src/Battlescape/Camera.cpp b/src/Battlescape/Camera.cpp
 index 5a59f27..3d4e17f 100644
 --- a/src/Battlescape/Camera.cpp
@@ -2809,10 +3206,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..7dac5f1
+index 0000000..ce4a74f
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,2088 @@
+@@ -0,0 +1,2287 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -3438,6 +3835,10 @@ index 0000000..7dac5f1
 +	std::unordered_map<const Surface*, NativeBg> nativeBgs;
 +	std::unordered_map<const Surface*, std::string> nativeKeys;
 +	std::unordered_map<const Surface*, bool> nativeKeyInArt;
++	std::unordered_map<const Surface*, int> nativeKeyStyles;
++	const Surface *hudBar = nullptr, *hudMission = nullptr;
++	HudData hud;
++	std::unordered_map<const Surface*, Img> hudArt;   // item pictures turned on their side for the hand cards
 +	std::unordered_map<const Surface*, int> nativeTexts;
 +
 +	/// Plate and wells for a backdrop, painted once per size into a cache.
@@ -3504,7 +3905,7 @@ index 0000000..7dac5f1
 +
 +	/// A raised console key on the button's own hitbox.
 +	void stdButton(int X0, int Y0, int X1, int Y1, bool down, Uint32 fill = 0);
-+	void paintKey(const std::string &legend, int bx0, int by0, int bx1, int by1, bool down, bool inArt)
++	void paintKey(const std::string &legend, int bx0, int by0, int bx1, int by1, bool down, bool inArt, int style = 0)
 +	{
 +		const double k = SK();
 +		const double x0 = DX(bx0 + 0.6), y0 = DY(by0 + 0.6), x1 = DX(bx1 - 0.6), y1 = DY(by1 - 0.6);
@@ -3518,7 +3919,8 @@ index 0000000..7dac5f1
 +		{
 +			// THE STANDARD (12 Nov): a key that is not part of a painting is the
 +			// standard's flat steel button, like every other button in the game
-+			stdButton((int)x0, (int)y0, (int)x1, (int)y1, down);
++			const Uint32 fills[5] = { 0, (Uint32)(down ? 0xC9A01C : 0xE8B923), (Uint32)(down ? 0x5A221E : 0x6B2A24), (Uint32)(down ? 0x1B2023 : 0x22282A), (Uint32)0x6B7A3A };
++			stdButton((int)x0, (int)y0, (int)x1, (int)y1, down && style != 4, fills[std::max(0, std::min(4, style))]);
 +		}
 +		else
 +		{
@@ -3553,8 +3955,22 @@ index 0000000..7dac5f1
 +		{
 +			// the standard's button legend: Oswald, cream, no stencil
 +			const Face *f = face("label");
-+			const double cap = (y1 - y0) * 0.36;
-+			setType(*f, legend, (int)(x0 + k * 2), (int)(y0 + push), (int)(x1 - k * 2), (int)(y1 + push - k * 0.3), cap, cap, 1, 1, S_TEXT);
++			const Uint32 inks[5] = { S_TEXT, 0x14181A, 0xF0B3A8, 0x6E6C64, 0xF2EFE4 };
++			const Uint32 ink = inks[std::max(0, std::min(4, style))];
++			const auto bar = legend.find('|');
++			if (bar != std::string::npos)
++			{
++				// two lines: the legend, and a small line under it ("END TURN" / "3 Joes can still act")
++				const Face *st = style == 1 && face("stencil") ? face("stencil") : f;
++				const double h = y1 - y0;
++				setType(*st, legend.substr(0, bar), (int)(x0 + k), (int)(y0 + h * 0.12), (int)(x1 - k), (int)(y0 + h * 0.62), h * 0.22, h * 0.3, 1, 1, ink);
++				setType(*f, legend.substr(bar + 1), (int)(x0 + k), (int)(y0 + h * 0.60), (int)(x1 - k), (int)(y0 + h * 0.88), h * 0.10, h * 0.14, 1, 1, ink);
++			}
++			else
++			{
++				const double cap = std::min((y1 - y0) * 0.36, k * 3.4);
++				setType(*f, legend, (int)(x0 + k * 0.6), (int)(y0 + push), (int)(x1 - k * 0.6), (int)(y1 + push - k * 0.3), cap, cap, 1, 1, ink);
++			}
 +		}
 +		else if (const Face *f = face("stencil"))
 +		{
@@ -3742,6 +4158,164 @@ index 0000000..7dac5f1
 +		if (t->getWordWrap() && t->getHeight() > fh * 1.6)
 +			setTypeWrapped(*f, t->getText(), X0, Y0, X1, Y1, cap, col, 0, (int)t->getAlign(), (int)t->getVerticalAlign());
 +		else setType(*f, t->getText(), X0, Y0, X1, Y1, cap, lineH, (int)t->getAlign(), (int)t->getVerticalAlign(), col);
++	}
++
++	// ---------------------------------------------------------------- THE BATTLE BAR
++	// BATTLE_HUD_SPEC_v1, positions in base px with the bar's top at 0 (the spec's
++	// y 158). The bar runs the full width of the screen; its contents are a 320-wide
++	// block centred on it, the same block the widgets were laid out in.
++
++	/// A box in the bar's own coordinates, in display pixels.
++	struct DBox { double x0, y0, x1, y1; };
++	DBox hudBox(const Surface *bar, double x, double y, double w, double h)
++	{
++		const double ox = hud.contentX, oy = bar->getY();
++		return { DX(ox + x), DY(oy + y), DX(ox + x + w), DY(oy + y + h) };
++	}
++	void boxFill(const DBox &b, Uint32 c, int a = 255) { fillRect((int)b.x0, (int)b.y0, (int)b.x1, (int)b.y1, c, a); }
++	void boxEdge(const DBox &b, Uint32 c, double t)
++	{
++		const int T = std::max(1, (int)std::lround(t));
++		fillRect((int)b.x0, (int)b.y0, (int)b.x1, (int)b.y0 + T, c); fillRect((int)b.x0, (int)b.y1 - T, (int)b.x1, (int)b.y1, c);
++		fillRect((int)b.x0, (int)b.y0, (int)b.x0 + T, (int)b.y1, c); fillRect((int)b.x1 - T, (int)b.y0, (int)b.x1, (int)b.y1, c);
++	}
++	void boxText(const DBox &b, const std::string &str, double capBase, int align, Uint32 col, const char *faceName = "label")
++	{
++		const Face *f = face(faceName);
++		if (!f) f = face("label");
++		if (!f || str.empty()) return;
++		const double cap = capBase * SK();
++		setType(*f, str, (int)b.x0, (int)b.y0, (int)b.x1, (int)b.y1, cap, b.y1 - b.y0, align, 1, col, false);
++	}
++
++	/// An item picture laid on its side for the hand card's strip, cropped to what it draws.
++	const Img *sideways(const Surface *frame)
++	{
++		auto c = hudArt.find(frame);
++		if (c != hudArt.end()) return c->second.ok ? &c->second : nullptr;
++		Img &out = hudArt[frame];
++		auto it = bgImages.find(frame);
++		const Img *src = (it != bgImages.end() && it->second.ok) ? &it->second : flatTwin(frame);
++		if (!src) return nullptr;
++		int x0 = src->w, y0 = src->h, x1 = 0, y1 = 0;
++		for (int y = 0; y < src->h; ++y)
++			for (int x = 0; x < src->w; ++x)
++				if ((src->px[(size_t)y * src->w + x] >> 24) > 24) { x0 = std::min(x0, x); y0 = std::min(y0, y); x1 = std::max(x1, x + 1); y1 = std::max(y1, y + 1); }
++		if (x1 <= x0 || y1 <= y0) return nullptr;
++		const int w = x1 - x0, h = y1 - y0;
++		const bool turn = h > w;   // upright in the equipment screen: muzzle up. Lay it down, muzzle left.
++		out.w = turn ? h : w; out.h = turn ? w : h; out.px.assign((size_t)out.w * out.h, 0);
++		for (int y = 0; y < h; ++y)
++			for (int x = 0; x < w; ++x)
++			{
++				const Uint32 p = src->px[(size_t)(y0 + y) * src->w + (x0 + x)];
++				if (turn) out.px[(size_t)(w - 1 - x) * out.w + y] = p;     // rotate 90 degrees anticlockwise
++				else out.px[(size_t)y * out.w + x] = p;
++			}
++		out.ok = true;
++		return &out;
++	}
++
++	void hudBarRow(const Surface *bar, double y, const char *label, int v, int vmax, Uint32 col)
++	{
++		const double fr = vmax > 0 ? std::max(0.0, std::min(1.0, (double)v / vmax)) : 0;
++		boxText(hudBox(bar, 36, y - 0.6, 10, 3.6), label, 2.0, 0, S_MUTED);
++		DBox track = hudBox(bar, 46, y, 32, 2.4);
++		boxFill(track, 0x2A3033);
++		DBox fill = track; fill.x1 = track.x0 + (track.x1 - track.x0) * fr;
++		boxFill(fill, col);
++		boxText(hudBox(bar, 79, y - 0.9, 11, 4.2), std::to_string(v), 2.6, 2, S_TEXT);
++	}
++
++	void paintHud(const Surface *bar)
++	{
++		const double k = SK();
++		const int Y0 = (int)DY(bar->getY()), Y1 = (int)DY(bar->getY() + bar->getHeight());
++		// the bar: ground, the olive rule on top, the squad strip
++		fillRect(0, Y0, sw, Y1, 0x14181A);
++		fillRect(0, Y0, sw, Y0 + std::max(1, (int)std::lround(k * 0.35)), S_OLIVE);
++		fillRect(0, (int)DY(bar->getY() + 1), sw, (int)DY(bar->getY() + 8.5), 0x0F1213);
++
++		// 6 portrait: a head crop of the inventory figure, in a yellow frame
++		DBox pb = hudBox(bar, 4, 11, 28, 28);
++		boxFill(pb, 0x1B2023);
++		bool drew = false;
++		if (hud.figure)
++		{
++			auto it = bgImages.find(hud.figure);
++			if (it != bgImages.end() && it->second.ok)
++			{
++				// the figures are painted to one sheet (INVENTORY_FIGURE_BRIEF): head
++				// top at 1/40 of the height, centred. Crop a square from the top.
++				const Img &im = it->second;
++				const double scale = im.h / 1200.0;             // twins are 1920x1200 pages
++				const int cx = (int)(483 * scale), top = (int)(290 * scale), side = (int)(130 * scale);
++				stretch(im, cx - side / 2, top, cx + side / 2, top + side, (int)pb.x0 + 2, (int)pb.y0 + 2, (int)pb.x1 - 2, (int)pb.y1 - 2);
++				drew = true;
++			}
++		}
++		if (!drew) boxText(hudBox(bar, 4, 11, 28, 28), "?", 8, 1, S_MUTED, "stencil");
++		boxEdge(pb, S_YELLOW, k * 0.35);
++
++		// 7 the line under the name, then four bars
++		boxText(hudBox(bar, 36, 18.5, 54, 4), hud.sub, 2.2, 0, S_MUTED);
++		hudBarRow(bar, 23.5, "TIME", hud.tu, hud.tuMax, S_YELLOW);
++		hudBarRow(bar, 27.5, "HEALTH", hud.hp, hud.hpMax, 0x6FAE4A);
++		hudBarRow(bar, 31.5, "ENERGY", hud.en, hud.enMax, 0x5B8FC9);
++		hudBarRow(bar, 35.5, "MORALE", hud.mo, hud.moMax, 0xC9C3B1);
++
++		// 8, 9 the hand cards (the fire-mode keys are widgets drawn over them)
++		for (int i = 0; i < 2; ++i)
++		{
++			const double cx = i == 0 ? 94 : 145;
++			DBox cb = hudBox(bar, cx, 10, 47, 29);
++			boxFill(cb, 0x1B2023);
++			boxEdge(cb, 0x2E3530, k * 0.33);
++			const HudHand &h = hud.hand[i];
++			boxText(hudBox(bar, cx + 1.5, 10.8, 30, 3.6), h.label, 1.9, 0, S_MUTED);
++			if (h.empty)
++			{
++				boxText(hudBox(bar, cx + 1.5, 15, 44, 5), "EMPTY", 2.6, 1, 0x5C5A52);
++				continue;
++			}
++			boxText(hudBox(bar, cx + 27, 10.8, 18.5, 3.6), h.ammo, 2.0, 2, S_TEXT);
++			boxText(hudBox(bar, cx + 1.5, 14.6, 44, 4.4), h.name, 2.6, 0, S_TEXT);
++			if (h.art)
++				if (const Img *im = sideways(h.art))
++				{
++					// fit the strip, keep the picture's proportions
++					DBox sb = hudBox(bar, cx + 1.5, 19.2, 44, 6.2);
++					const double bw2 = sb.x1 - sb.x0, bh2 = sb.y1 - sb.y0;
++					const double sc = std::min(bw2 / im->w, bh2 / im->h);
++					const double w = im->w * sc, hgt = im->h * sc;
++					const double x = sb.x0 + (bw2 - w) / 2, y = sb.y0 + (bh2 - hgt) / 2;
++					stretch(*im, 0, 0, im->w, im->h, (int)x, (int)y, (int)(x + w), (int)(y + hgt));
++				}
++		}
++
++		// 11 reserve time: the label (the four toggles are widgets)
++		boxText(hudBox(bar, 251, 10.4, 36, 4), "RESERVE TIME", 1.9, 0, S_MUTED);
++
++		// 12 signature move
++		DBox sg = hudBox(bar, 251, 24, 36, 14);
++		boxFill(sg, hud.sigOn ? 0x232A2D : 0x1B2023);
++		boxEdge(sg, hud.sigOn ? S_YELLOW : 0x2E3530, k * 0.3);
++		boxText(hudBox(bar, 252.5, 24.8, 33, 3.4), hud.sigTitle, 1.7, 0, hud.sigOn ? S_YELLOW : 0x6E6C64);
++		boxText(hudBox(bar, 252.5, 28.4, 33, 5), hud.sigName, 2.6, 0, hud.sigOn ? S_TEXT : 0x6E6C64, "stencil");
++		boxText(hudBox(bar, 252.5, 33.6, 33, 3.6), hud.sigHow, 1.6, 0, hud.sigOn ? S_MUTED : 0x5C5A52);
++	}
++
++	void paintMission(const Surface *m)
++	{
++		const double k = SK();
++		const DBox b{ DX(m->getX()), DY(m->getY()), DX(m->getX() + m->getWidth()), DY(m->getY() + m->getHeight()) };
++		boxFill(b, 0x14181A);
++		boxEdge(b, S_OLIVE, k * 0.3);
++		auto row = [&](double y, double h) { return DBox{ b.x0 + k * 2, b.y0 + y * k, b.x1 - k * 2, b.y0 + (y + h) * k }; };
++		boxText(row(1.2, 6.5), hud.turn, 3.6, 0, S_YELLOW, "stencil");
++		boxText(row(1.2, 6.5), hud.phase, 2.2, 2, S_MUTED);
++		boxText(row(8.5, 5.5), hud.objective, 2.4, 0, S_TEXT);
++		boxText(row(14.8, 5), hud.counts, 2.1, 0, S_MUTED);
 +	}
 +}
 +
@@ -3976,6 +4550,14 @@ index 0000000..7dac5f1
 +{
 +	if (!base || !shown(w)) return;
 +	// NATIVE SCREEN PIECES first: they are drawn, not looked up.
++	if (hud.on && (w == hudBar || w == hudMission))
++	{
++		R r = rectOf(w);
++		if (!clipBase(r)) return;
++		if (w == hudBar) paintHud(w); else paintMission(w);
++		claim(r);
++		return;
++	}
 +	{
 +		auto nb = nativeBgs.find(w);
 +		if (nb != nativeBgs.end())
@@ -3999,7 +4581,8 @@ index 0000000..7dac5f1
 +				auto ia = nativeKeyInArt.find(w);
 +				const std::string legend = nk->second.empty() && tb ? tb->getText() : nk->second;
 +				const bool down = (bb && bb->isInverted()) || (tb && tb->isPressedLook());
-+				paintKey(legend, w->getX(), w->getY(), w->getX() + w->getWidth(), w->getY() + w->getHeight(), down, ia == nativeKeyInArt.end() || ia->second);
++				auto ks = nativeKeyStyles.find(w);
++				paintKey(legend, w->getX(), w->getY(), w->getX() + w->getWidth(), w->getY() + w->getHeight(), down, ia == nativeKeyInArt.end() || ia->second, ks == nativeKeyStyles.end() ? 0 : ks->second);
 +				claim(r);
 +			}
 +			return;
@@ -4500,8 +5083,21 @@ index 0000000..7dac5f1
 +	if (enabled() && text) nativeTexts[text] = 1;
 +}
 +
++void nativeKeyStyle(const Surface *button, int style)
++{
++	if (enabled() && button) nativeKeyStyles[button] = style;
++}
++
++void nativeHud(const Surface *bar, const Surface *mission, const HudData &d)
++{
++	if (!enabled()) return;
++	hudBar = bar; hudMission = mission; hud = d; hud.on = bar != nullptr;
++}
++
 +void nativeForget(const Surface *s)
 +{
++	if (s && s == hudBar) { hudBar = nullptr; hudMission = nullptr; hud.on = false; hudArt.clear(); }
++	nativeKeyStyles.erase(s);
 +	nativeBgs.erase(s); nativeKeys.erase(s); nativeKeyInArt.erase(s); nativeTexts.erase(s);
 +}
 +
@@ -4903,10 +5499,10 @@ index 0000000..7dac5f1
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..b6977d2
+index 0000000..19bb81c
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,101 @@
+@@ -0,0 +1,121 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -4986,6 +5582,26 @@ index 0000000..b6977d2
 +	void nativeKey(const Surface *button, const std::string &legend, bool inArt = true);
 +	/// A Text or TextEdit set in the label face.
 +	void nativeText(const Surface *text);
++	/// A native key's look (UI standard): 0 steel, 1 the screen's one yellow main
++	/// action, 2 danger red, 3 dimmed (acted / unavailable), 4 olive (active toggle).
++	void nativeKeyStyle(const Surface *button, int style);
++
++	/// THE BATTLE BAR (BATTLE_HUD_SPEC_v1). The bar and the mission panel are 8-bit
++	/// surfaces with nothing on them; everything they show is painted from this.
++	/// Clickable pieces stay ordinary widgets laid over it and drawn as native keys.
++	struct HudHand { std::string label, ammo, name; const Surface *art = nullptr; bool empty = true; };
++	struct HudData
++	{
++		bool on = false;
++		int contentX = 0;                      // left edge of the 320-wide block the bar's contents sit in
++		std::string sub;                       // specialty / rank line under the name
++		const Surface *figure = nullptr;       // the unit's inventory figure, for the portrait crop
++		int tu = 0, tuMax = 1, hp = 0, hpMax = 1, en = 0, enMax = 1, mo = 0, moMax = 100;
++		HudHand hand[2];                       // 0 right, 1 left
++		std::string sigTitle, sigName, sigHow; bool sigOn = false;
++		std::string turn, phase, objective, counts;
++	};
++	void nativeHud(const Surface *bar, const Surface *mission, const HudData &d);
 +	/// The screen is closing: forget everything it registered.
 +	void nativeForget(const Surface *s);
 +	/// Is a native screen up? (Its 8-bit grid, labels and numbers are then not drawn.)
