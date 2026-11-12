@@ -631,7 +631,7 @@ index 0631f32..5e821a7 100644
  		{
  			Position pos = bunit->getPosition();
 diff --git a/src/Battlescape/Inventory.cpp b/src/Battlescape/Inventory.cpp
-index 406077c..4b5a934 100644
+index 406077c..f35df8f 100644
 --- a/src/Battlescape/Inventory.cpp
 +++ b/src/Battlescape/Inventory.cpp
 @@ -17,6 +17,8 @@
@@ -643,7 +643,56 @@ index 406077c..4b5a934 100644
  #include <algorithm>
  #include <cmath>
  #include "../Mod/Mod.h"
-@@ -314,6 +316,7 @@ void Inventory::drawItems()
+@@ -125,6 +127,7 @@ Inventory::~Inventory()
+ 	delete _warning;
+ 	delete _stackNumber;
+ 	delete _animTimer;
++	for (auto *t : _labelTexts) delete t;
+ }
+ 
+ /**
+@@ -263,19 +266,25 @@ void Inventory::drawGridLabels(bool showTuCost)
+ {
+ 	_gridLabels->clear();
+ 
+-	Text text = Text(90, 9, 0, 0);
+-	text.setPalette(_gridLabels->getPalette());
+-	text.initText(_game->getMod()->getFont("FONT_BIG"), _game->getMod()->getFont("FONT_SMALL"), _game->getLanguage());
+-
+ 	RuleInterface *rule = _game->getMod()->getInterface("inventory");
+-
+-	text.setColor(rule->getElement("textSlots")->color);
+-	text.setHighContrast(true);
++	size_t n = 0;
+ 
+ 	// Note: iterating over the (sorted) invs vector instead of invs map, because we want to consider listOrder here
+ 	for (auto& invName : _game->getMod()->getInvsList())
+ 	{
+ 		auto* i = _game->getMod()->getInventory(invName, true);
++		// One Text per label, KEPT: HiUI redraws each from its recorded glyphs at
++		// display resolution, which a temporary destroyed after blitting cannot offer.
++		if (n == _labelTexts.size())
++		{
++			Text *t = new Text(90, 9, 0, 0);
++			t->setPalette(_gridLabels->getPalette());
++			t->initText(_game->getMod()->getFont("FONT_BIG"), _game->getMod()->getFont("FONT_SMALL"), _game->getLanguage());
++			t->setColor(rule->getElement("textSlots")->color);
++			t->setHighContrast(true);
++			_labelTexts.push_back(t);
++		}
++		Text &text = *_labelTexts[n++];
+ 		// Draw label
+ 		text.setX(i->getX());
+ 		text.setY(i->getY() - text.getFont()->getHeight() - text.getFont()->getSpacing());
+@@ -293,6 +302,7 @@ void Inventory::drawGridLabels(bool showTuCost)
+ 		}
+ 		text.blit(_gridLabels->getSurface());
+ 	}
++	while (_labelTexts.size() > n) { delete _labelTexts.back(); _labelTexts.pop_back(); }
+ }
+ 
+ /**
+@@ -314,6 +324,7 @@ void Inventory::drawItems()
  
  	ScriptWorkerBlit work;
  	_items->clear();
@@ -651,7 +700,7 @@ index 406077c..4b5a934 100644
  	Uint8 color = _game->getMod()->getInterface("inventory")->getElement("numStack")->color;
  	Uint8 color2 = _game->getMod()->getInterface("inventory")->getElement("numStack")->color2;
  	if (_selUnit != 0)
-@@ -344,6 +347,7 @@ void Inventory::drawItems()
+@@ -344,6 +355,7 @@ void Inventory::drawItems()
  			}
  			BattleItem::ScriptFill(&work, invItem, save, BODYPART_ITEM_INVENTORY, _animFrame, 0);
  			work.executeBlit(frame, _items, x, y, 0);
@@ -659,7 +708,7 @@ index 406077c..4b5a934 100644
  
  			// two-handed indicator
  			if (invItem->getSlot()->getType() == INV_HAND)
-@@ -401,6 +405,7 @@ void Inventory::drawItems()
+@@ -401,6 +413,7 @@ void Inventory::drawItems()
  			y = (groundItem->getSlot()->getY() + groundItem->getSlotY() * RuleInventory::SLOT_H);
  			BattleItem::ScriptFill(&work, groundItem, save, BODYPART_ITEM_INVENTORY, _animFrame, 0);
  			work.executeBlit(frame, _items, x, y, 0);
@@ -667,7 +716,7 @@ index 406077c..4b5a934 100644
  
  			// grenade primer indicators
  			if (groundItem->getFuseTimer() >= 0 && groundItem->getRules()->getInventoryWidth() > 0)
-@@ -647,6 +652,11 @@ void Inventory::blit(SDL_Surface *surface)
+@@ -647,6 +660,19 @@ void Inventory::blit(SDL_Surface *surface)
  	_selection->blitNShade(this, _selection->getX(), _selection->getY());
  	_warning->blit(this->getSurface());
  	Surface::blit(surface);
@@ -676,11 +725,19 @@ index 406077c..4b5a934 100644
 +	if (HiUI::enabled())
 +		for (const auto &hi : _hiItems)
 +			HiUI::sprite(std::get<0>(hi), getX() + std::get<1>(hi), getY() + std::get<2>(hi), std::get<3>(hi), std::get<4>(hi));
++	// the item on the cursor, too: it was the one blocky picture left on the screen
++	if (HiUI::enabled() && _selItem)
++	{
++		const Surface *frame = _selItem->getBigSprite(_game->getMod()->getSurfaceSet("BIGOBS.PCK"), _game->getSavedGame()->getSavedBattle(), _animFrame);
++		if (frame)
++			HiUI::sprite(frame, getX() + _selection->getX() + _selItem->getRules()->getHandSpriteOffX(),
++				getY() + _selection->getY() + _selItem->getRules()->getHandSpriteOffY(), frame->getWidth(), frame->getHeight());
++	}
  }
  
  /**
 diff --git a/src/Battlescape/Inventory.h b/src/Battlescape/Inventory.h
-index 642c538..1d3ece7 100644
+index 642c538..6617990 100644
 --- a/src/Battlescape/Inventory.h
 +++ b/src/Battlescape/Inventory.h
 @@ -19,6 +19,8 @@
@@ -692,17 +749,31 @@ index 642c538..1d3ece7 100644
  #include <map>
  #include <string>
  
-@@ -92,6 +94,8 @@ public:
+@@ -28,6 +30,7 @@ namespace OpenXcom
+ class RuleInventory;
+ class Game;
+ class WarningMessage;
++class Text;
+ class BattleItem;
+ class BattleUnit;
+ class NumberText;
+@@ -92,6 +95,14 @@ public:
  	void drawGridLabels(bool showTuCost = false);
  	/// Draws the inventory items.
  	void drawItems();
 +	/// Where each item icon was drawn this pass, so the sharp twins can follow it.
 +	std::vector<std::tuple<const Surface*, int, int, int, int> > _hiItems;
++	/// The slot labels as drawn this pass. Kept, not thrown away after blitting, so
++	/// HiUI can set them again at display resolution from their recorded glyphs.
++	std::vector<Text*> _labelTexts;
++	const std::vector<Text*> &getLabelTexts() const { return _labelTexts; }
++	const Surface *getGridSurface() const { return _grid; }
++	const Surface *getLabelSurface() const { return _gridLabels; }
  	/// Draws the selected item.
  	void drawSelectedItem();
  	/// Gets the currently selected item.
 diff --git a/src/Battlescape/InventoryState.cpp b/src/Battlescape/InventoryState.cpp
-index cea8e65..03e55f5 100644
+index cea8e65..5c3e906 100644
 --- a/src/Battlescape/InventoryState.cpp
 +++ b/src/Battlescape/InventoryState.cpp
 @@ -17,6 +17,7 @@
@@ -747,7 +818,16 @@ index cea8e65..03e55f5 100644
  	_txtPosition = new Text(70, 9, 65, 95);
  	_txtNameStatic = new Text(210, 17, 28, 6);
  	_txtName = new TextEdit(this, 210, 17, 28, 6);
-@@ -432,6 +451,7 @@ void InventoryState::init()
+@@ -149,6 +168,8 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
+ 
+ 	// Set up objects
+ 	_game->getMod()->getSurface("TAC01.SCR")->blitNShade(_bg, 0, 0);
++	// _bg is a COPY of TAC01, so its sharp twin is found only through an alias.
++	HiUI::aliasImage(_bg, _game->getMod()->getSurface("TAC01.SCR"));
+ 	add(_btnArmor, "buttonArmor", "inventory", _bg);
+ 
+ 	add(_soldier);
+@@ -432,6 +453,7 @@ void InventoryState::init()
  	}
  
  	_soldier->clear();
@@ -755,7 +835,7 @@ index cea8e65..03e55f5 100644
  	_btnRank->clear();
  
  	if (Options::oxceInventoryShowUnitSlot)
-@@ -510,7 +530,7 @@ void InventoryState::init()
+@@ -510,7 +532,7 @@ void InventoryState::init()
  			_reloadUnit = false;
  		}
  
@@ -764,7 +844,7 @@ index cea8e65..03e55f5 100644
  		auto* frame = texture->getFrame(s->getRankSpriteBattlescape());
  		if (frame)
  		{
-@@ -556,6 +576,7 @@ void InventoryState::init()
+@@ -556,6 +578,7 @@ void InventoryState::init()
  				surf = _game->getMod()->getSurface(look, true);
  			}
  			surf->blitNShade(_soldier, 0, 0);
@@ -772,7 +852,7 @@ index cea8e65..03e55f5 100644
  		}
  	}
  	else
-@@ -572,6 +593,7 @@ void InventoryState::init()
+@@ -572,6 +595,7 @@ void InventoryState::init()
  		if (armorSurface)
  		{
  			armorSurface->blitNShade(_soldier, 0, 0);
@@ -2213,10 +2293,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..a56f616
+index 0000000..f0c94ad
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,1008 @@
+@@ -0,0 +1,1108 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -2233,6 +2313,8 @@ index 0000000..a56f616
 +#include "../Interface/ArrowButton.h"
 +#include "../Interface/Bar.h"
 +#include "../Interface/TextList.h"
++#include "../Interface/TextEdit.h"
++#include "../Battlescape/Inventory.h"
 +#include <SDL_image.h>
 +#include <vector>
 +#include <unordered_map>
@@ -2758,6 +2840,7 @@ index 0000000..a56f616
 +	// a sharp title and sharp column headers over blocky green craft rows.
 +	Surface *t = dynamic_cast<Text*>(w);
 +	if (!t) t = dynamic_cast<TextList*>(w);
++	if (!t) t = dynamic_cast<TextEdit*>(w);
 +	if (!t || !shown(t)) return;
 +	R r = rectOf(t);
 +	if (!clipBase(r)) { scratch.clear(); return; }
@@ -2790,9 +2873,26 @@ index 0000000..a56f616
 +			if (clipBase(r))
 +			{
 +				const Img &im = bit->second;
-+				const double kx = (double)im.w / bw, ky = (double)im.h / bh;
-+				stretch(im, (int)(r.x0 * kx), (int)(r.y0 * ky), (int)(r.x1 * kx), (int)(r.y1 * ky),
-+					xs[r.x0], ys[r.y0], xs[r.x1], ys[r.y1]);
++				// A twin drawn FOR THIS WIDGET - same proportions as the widget, and the
++				// widget not the whole screen - maps onto the widget's own rectangle.
++				// The geoscape's twins are screen-sized and map onto the screen; the
++				// equipment screen's backdrop is a 320x200 surface centred in a larger
++				// battlescape buffer, and mapped onto the screen it came out cropped
++				// and shifted.
++				const bool own = w->getWidth() != bw && (long)w->getWidth() * im.h == (long)w->getHeight() * im.w;
++				if (own)
++				{
++					const double kx = (double)im.w / w->getWidth(), ky = (double)im.h / w->getHeight();
++					stretch(im, (int)((r.x0 - w->getX()) * kx), (int)((r.y0 - w->getY()) * ky),
++						(int)((r.x1 - w->getX()) * kx), (int)((r.y1 - w->getY()) * ky),
++						xs[r.x0], ys[r.y0], xs[r.x1], ys[r.y1]);
++				}
++				else
++				{
++					const double kx = (double)im.w / bw, ky = (double)im.h / bh;
++					stretch(im, (int)(r.x0 * kx), (int)(r.y0 * ky), (int)(r.x1 * kx), (int)(r.y1 * ky),
++						xs[r.x0], ys[r.y0], xs[r.x1], ys[r.y1]);
++				}
 +				claim(r);
 +				return;
 +			}
@@ -3008,6 +3108,86 @@ index 0000000..a56f616
 +			const Uint8 *p = row8(y);
 +			for (int x = r.x0; x < r.x1; ++x)
 +				if (scratch[(size_t)(y - r.y0) * (r.x1 - r.x0) + (x - r.x0)]) tag[y * bw + x] = p[x];
++		}
++		scratch.clear();
++		return;
++	}
++	// THE EQUIPMENT SCREEN. Its grid and slot labels are not widgets: the Inventory
++	// draws them into 8-bit surfaces of its own and blits the lot as one. So the
++	// grid's pixels are handed back to the painted backdrop under them - the
++	// backdrop has a well cut for every slot, and the steel between the wells IS
++	// the grid at display resolution - and the labels are set again from the Text
++	// objects the Inventory now keeps. A pixel an item has drawn over is left alone.
++	if (Inventory *inv = dynamic_cast<Inventory*>(w))
++	{
++		if (!any) return;
++		R r = rectOf(inv);
++		if (!clipBase(r)) return;
++		SDL_Surface *gs = const_cast<Surface*>(inv->getGridSurface())->getSurface();
++		SDL_Surface *ls = const_cast<Surface*>(inv->getLabelSurface())->getSurface();
++		const int ox = inv->getX(), oy = inv->getY();
++		auto at = [](SDL_Surface *s, int x, int y) -> Uint8
++		{
++			if (!s || x < 0 || y < 0 || x >= s->w || y >= s->h) return 0;
++			return ((const Uint8*)s->pixels)[y * s->pitch + x];
++		};
++		for (int y = r.y0; y < r.y1; ++y)
++		{
++			const Uint8 *p = row8(y);
++			for (int x = r.x0; x < r.x1; ++x)
++			{
++				const Uint8 gv = at(gs, x - ox, y - oy);
++				if (!gv || p[x] != gv) continue;
++				const size_t i = (size_t)y * bw + x;
++				if (valid[i] && tag[i] == p[x]) continue;      // a sharp item icon already holds it
++				tag[i] = p[x]; valid[i] = 1;
++			}
++		}
++		for (const Text *t : inv->getLabelTexts())
++		{
++			R lr{ ox + t->getX(), oy + t->getY(), ox + t->getX() + t->getWidth(), oy + t->getY() + t->getHeight() };
++			if (!clipBase(lr)) continue;
++			const int lw = lr.x1 - lr.x0;
++			scratch.assign((size_t)lw * (lr.y1 - lr.y0), 0);
++			for (int y = lr.y0; y < lr.y1; ++y)
++			{
++				const Uint8 *p = row8(y);
++				for (int x = lr.x0; x < lr.x1; ++x)
++				{
++					const size_t i = (size_t)y * bw + x;
++					const Uint8 lv = at(ls, x - ox, y - oy);
++					scratch[(size_t)(y - lr.y0) * lw + (x - lr.x0)] = (valid[i] && tag[i] == p[x]) || (lv && lv == p[x]);
++				}
++			}
++			if (glyphs(t, ox + t->getX(), oy + t->getY(), lr, 0, true, lr))
++			{
++				for (int y = lr.y0; y < lr.y1; ++y)
++				{
++					const Uint8 *p = row8(y);
++					for (int x = lr.x0; x < lr.x1; ++x)
++						if (scratch[(size_t)(y - lr.y0) * lw + (x - lr.x0)]) { tag[(size_t)y * bw + x] = p[x]; valid[(size_t)y * bw + x] = 1; }
++				}
++			}
++		}
++		scratch.clear();
++		return;
++	}
++	// A TextEdit - the soldier's name on the equipment screen - draws through a
++	// Text of its own; set that one, masked like a bare Text.
++	if (TextEdit *te = dynamic_cast<TextEdit*>(w))
++	{
++		const Text *t = te->getTextWidget();
++		if (!any || scratch.empty() || !t) return;
++		R r = rectOf(te);
++		if (!clipBase(r) || scratch.size() != (size_t)(r.x1 - r.x0) * (r.y1 - r.y0)) return;
++		if (glyphs(t, te->getX() + t->getX(), te->getY() + t->getY(), r, 0, true, r))
++		{
++			for (int y = r.y0; y < r.y1; ++y)
++			{
++				const Uint8 *p = row8(y);
++				for (int x = r.x0; x < r.x1; ++x)
++					if (scratch[(size_t)(y - r.y0) * (r.x1 - r.x0) + (x - r.x0)]) tag[y * bw + x] = p[x];
++			}
 +		}
 +		scratch.clear();
 +		return;
@@ -5606,6 +5786,19 @@ index 947b1e0..0cbfdfa 100644
  };
  
  }
+diff --git a/src/Interface/TextEdit.h b/src/Interface/TextEdit.h
+index 1cef662..bfc8e7e 100644
+--- a/src/Interface/TextEdit.h
++++ b/src/Interface/TextEdit.h
+@@ -69,6 +69,8 @@ public:
+ 	void setText(const std::string &text);
+ 	/// Gets the text edit's string.
+ 	std::string getText() const;
++	/// The Text it draws through, for HiUI to set at display resolution.
++	const Text *getTextWidget() const { return _text; }
+ 	/// Sets the text edit's wordwrap setting.
+ 	void setWordWrap(bool wrap);
+ 	/// Sets the text edit's color invert setting.
 diff --git a/src/Interface/TextList.cpp b/src/Interface/TextList.cpp
 index 2b91ef2..f2b57e8 100644
 --- a/src/Interface/TextList.cpp
