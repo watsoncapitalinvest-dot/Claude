@@ -288,6 +288,33 @@ marker frames (9-16) on the HD globe; they still draw at base resolution. A
 glyph per site type inside the diamond would bring the distinction back. The
 mission triangle has not been seen on screen - no save here has a mission site.
 
+### Stocked rooms: what the 12 Nov pass left (12 Nov)
+
+`build/install_stocked_rooms.py` stocks the 52 Pit rooms that have a shell and a
+harvested plan; 13 vanilla facilities show them. Left over, each with its cost:
+
+- **Access Lift and Supply Depot are still bare shells.** Their objects exist
+  (`obj_access_lift_*`, `obj_supply_depot_*`) but the generator has no plan for
+  either, and positions come only from the plan. Needs a plan (a `place()` list)
+  for each, then a re-run. Small.
+- **Gaps: props with no object.** Every room's run prints them. The big ones:
+  `mainframe` (130 placements across the set), `panel`, `fridge`, `radio`,
+  `transformer`, `tank`, `drums_toxic`, `crates_blue`/`drums_red`, the `v_*`
+  vehicles in the motor pools. A drawn object per prop closes each gap; the
+  installer picks it up once it is mapped in `PROP`/`ROOM_PROP`.
+- **Requisitioned objects with no harvested spot** go unplaced (e.g. the HQ's
+  big plotting table, the weapons locker's cleaning table, the pool's lounge
+  chairs). Same fix as above from the other side: a plan entry for each.
+- **Only the Joe theme.** Naval, outdoor, space and Cobra rooms wait for their
+  shells; `SHELL_THEME` and the engine's `roomShell("joe", ...)` both assume joe.
+- **The 8-bit frames are brown-walled.** Palette 1's 139 facility indices have
+  no olive, so the shell's olive walls snap to brown. Only seen with HiUI off.
+- **A room under construction**: HiUI shows the empty shell (by design); the
+  8-bit view still draws the stocked frame under the build count, as vanilla
+  draws any facility frame during construction.
+- **`sizedTwins` caches by frame address**, like `flatTwin` below. Harmless
+  unless BASEBITS is rebuilt in-process (mod change without restart).
+
 ## Broken
 
 ### `flatTwin` caches by surface address

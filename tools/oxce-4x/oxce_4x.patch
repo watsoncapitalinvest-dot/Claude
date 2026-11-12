@@ -1,5 +1,5 @@
 diff --git a/src/Basescape/BaseView.cpp b/src/Basescape/BaseView.cpp
-index f822dab..ae266d1 100644
+index f822dab..2b39106 100644
 --- a/src/Basescape/BaseView.cpp
 +++ b/src/Basescape/BaseView.cpp
 @@ -17,6 +17,7 @@
@@ -10,7 +10,7 @@ index f822dab..ae266d1 100644
  #include <algorithm>
  #include <sstream>
  #include <cmath>
-@@ -659,9 +660,58 @@ void BaseView::draw()
+@@ -659,9 +660,60 @@ void BaseView::draw()
  void BaseView::blit(SDL_Surface *surface)
  {
  	Surface::blit(surface);
@@ -37,7 +37,9 @@ index f822dab..ae266d1 100644
 +			else if (r->getStorage() > 0) kind = HiUI::ROOM_STORES;
 +			rooms.push_back(HiUI::Room{ fac->getX(), fac->getY(), r->getSizeX(), r->getSizeY(),
 +				_lang ? std::string(_lang->getString(r->getType())) : r->getType(), kind, fac->getBuildTime(), fac->getDisabled(),
-+				fac->getIfHadPreviousFacility(), fac->getAmmo(), r->getAmmoMax() });
++				fac->getIfHadPreviousFacility(), fac->getAmmo(), r->getAmmoMax(), {} });
++			for (int i = 0; i < r->getSizeX() * r->getSizeY(); ++i)
++				rooms.back().frames.push_back(_texture->getFrame(r->getSpriteFacility() + i));
 +			if (fac->isBuiltOrHadPreviousFacility() && !r->connectorsDisabled())
 +			{
 +				const int xr = fac->getX() + r->getSizeX();
@@ -3323,10 +3325,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..3cf333c
+index 0000000..a0a1f1e
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,2805 @@
+@@ -0,0 +1,2850 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -5684,8 +5686,48 @@ index 0000000..3cf333c
 +		// squares, its own margin and cut corners included. Otherwise the plate.
 +		const int sx0 = (int)DX(vx + rm.x * g), sy0 = (int)DY(vy + rm.y * g);
 +		const int sx1 = (int)DX(vx + (rm.x + rm.w) * g), sy1 = (int)DY(vy + (rm.y + rm.h) * g);
-+		const Img *shell = roomShell("joe", rm.w, rm.h, sx1 - sx0, sy1 - sy0);
-+		if (shell)
++		// THE STOCKED ROOM: each square's facility frame has a sharp twin (the shell with
++		// its objects, build/install_stocked_rooms.py). A room still being built shows the
++		// empty shell instead - nothing is moved in until it is finished.
++		bool stocked = !building && !rm.frames.empty();
++		for (const Surface *fr : rm.frames)
++		{
++			auto it = fr ? bgImages.find(fr) : bgImages.end();
++			if (it == bgImages.end() || !it->second.ok) { stocked = false; break; }
++		}
++		if (stocked)
++		{
++			static std::unordered_map<std::string, Img> sizedTwins;
++			for (int j = 0; j < rm.h; ++j)
++				for (int i = 0; i < rm.w; ++i)
++				{
++					const Surface *fr = rm.frames[(size_t)(j * rm.w + i)];
++					const Img &src = bgImages[fr];
++					const int qx0 = (int)DX(vx + (rm.x + i) * g), qy0 = (int)DY(vy + (rm.y + j) * g);
++					const int qx1 = (int)DX(vx + (rm.x + i + 1) * g), qy1 = (int)DY(vy + (rm.y + j + 1) * g);
++					const int dw = qx1 - qx0, dh = qy1 - qy0;
++					if (dw <= 0 || dh <= 0) continue;
++					const std::string key = std::to_string((uintptr_t)fr) + "@" + std::to_string(dw) + "x" + std::to_string(dh);
++					auto z = sizedTwins.find(key);
++					if (z == sizedTwins.end())
++						z = sizedTwins.emplace(key, (src.w == dw && src.h == dh) ? src : resampleArea(src, dw, dh)).first;
++					const Img &q = z->second;
++					for (int Y = std::max(0, qy0); Y < std::min(sh, qy1); ++Y)
++					{
++						Uint32 *o = over.data() + (size_t)Y * sw;
++						const Uint32 *srow = q.px.data() + (size_t)(Y - qy0) * q.w;
++						for (int X = std::max(0, qx0); X < std::min(sw, qx1); ++X)
++						{
++							const Uint32 p = srow[X - qx0];
++							const int a = p >> 24;
++							if (a) o[X] = a >= 255 ? (p & 0xFFFFFF) : mix(o[X], p & 0xFFFFFF, a);
++						}
++					}
++				}
++		}
++		const Img *shell = stocked ? nullptr : roomShell("joe", rm.w, rm.h, sx1 - sx0, sy1 - sy0);
++		if (stocked) {}
++		else if (shell)
 +		{
 +			for (int Y = std::max(0, sy0); Y < std::min(sh, sy1); ++Y)
 +			{
@@ -5729,16 +5771,21 @@ index 0000000..3cf333c
 +			const int nx0 = (int)(x0 + k * 1.8), nx1 = (int)(x1 - k * 1.8);
 +			const int ny0 = (int)(y0 + k * (building || rm.disabled ? 2.0 : 2.6));
 +			const int ny1 = hangar ? (int)(y0 + k * 9.5) : (building || rm.disabled) ? (int)(y0 + (y1 - y0) * 0.42) : (int)(y1 - k * 1.8);
-+			if (shell && !building && !rm.disabled)
++			if ((shell || stocked) && !building && !rm.disabled)
 +			{
 +				// on the bare painted floor the name sits on a plaque in the room's colour,
 +				// so it reads and still says what the room is for
-+				const double pcx = (x0 + x1) / 2, pcy = hangar ? y0 + k * 6.0 : (y0 + y1) / 2;
-+				const double pw = std::min(x1 - x0 - k * 6, k * 26.0), ph = k * (rm.name.size() > 12 && rm.w == 1 ? 10.0 : 6.0);
++				// a stocked room keeps its middle for its furniture - the centrepiece is the
++				// point of the picture - so its name sits on the bottom wall instead
++				const bool low = stocked && !hangar;
++				const bool two = rm.name.size() > 12 && rm.w == 1;
++				const double ph = k * (low ? (two ? 7.6 : 5.0) : (two ? 10.0 : 6.0));
++				const double pw = low ? x1 - x0 - k * 3 : std::min(x1 - x0 - k * 6, k * 26.0);
++				const double pcx = (x0 + x1) / 2, pcy = hangar ? y0 + k * 6.0 : low ? y1 - ph / 2 - k * 0.3 : (y0 + y1) / 2;
 +				roundRect(pcx - pw / 2 + k * 0.3, pcy - ph / 2 + k * 0.4, pcx + pw / 2 + k * 0.3, pcy + ph / 2 + k * 0.4, k * 1.0, 0x0A0B08, 150);
 +				roundRect(pcx - pw / 2, pcy - ph / 2, pcx + pw / 2, pcy + ph / 2, k * 1.0, tone, 235);
 +				roundRect(pcx - pw / 2, pcy - ph / 2, pcx + pw / 2, pcy - ph / 2 + k * 0.8, k * 0.5, lift(tone, 30), 200);
-+				setTypeWrapped(*f, rm.name, (int)(pcx - pw / 2 + k), (int)(pcy - ph / 2 + k * 0.6), (int)(pcx + pw / 2 - k), (int)(pcy + ph / 2 - k * 0.6), k * 3.2, C_INK, 0x0A0B08);
++				setTypeWrapped(*f, rm.name, (int)(pcx - pw / 2 + k), (int)(pcy - ph / 2 + k * 0.6), (int)(pcx + pw / 2 - k), (int)(pcy + ph / 2 - k * 0.6), low ? k * 2.8 : k * 3.2, C_INK, 0x0A0B08);
 +			}
 +			else
 +			setTypeWrapped(*f, rm.name, nx0, ny0, nx1, ny1, k * 3.4, building ? 0xB8B49A : C_INK, 0x0A0B08);
@@ -6134,10 +6181,10 @@ index 0000000..3cf333c
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..45dbecf
+index 0000000..1790091
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,170 @@
+@@ -0,0 +1,172 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -6295,7 +6342,9 @@ index 0000000..45dbecf
 +	/// Positions are in grid squares; the view maps them.
 +	enum RoomKind { ROOM_GENERIC, ROOM_HANGAR, ROOM_LIFT, ROOM_LAB, ROOM_WORKSHOP, ROOM_QUARTERS,
 +		ROOM_STORES, ROOM_DEFENCE, ROOM_RADAR, ROOM_PSI, ROOM_PRISON };
-+	struct Room { int x, y, w, h; std::string name; int kind; int buildDays; bool disabled, hadPrevious; int ammo, ammoMax; };
++	/// frames: the facility's BASEBITS frames, one per square in BaseView's order. When every
++	/// one has a sharp twin (<frame>_hi.png - the stocked room) that is drawn instead of the shell.
++	struct Room { int x, y, w, h; std::string name; int kind; int buildDays; bool disabled, hadPrevious; int ammo, ammoMax; std::vector<const Surface*> frames; };
 +	struct Docked { const Surface *frame; int x, y; };   // a craft sprite and where the view put it (view px)
 +	/// After BaseView has blitted. Paints the whole plan over it.
 +	void nativeBaseView(const Surface *view, int gridPx, const std::vector<Room> &rooms,

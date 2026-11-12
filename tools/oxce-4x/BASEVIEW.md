@@ -84,3 +84,28 @@ provided capacities. **Those are design numbers and are John's, not this desk's*
 inventing them is exactly how the weapon ladder ended up three calendar bands too
 high. `build/baseview_frames.json` maps each room id to its first frame index, frame
 count and size, so the definitions can be generated once the numbers exist.
+
+## Stocked rooms (12 Nov) - the frames are now used
+
+`build/install_stocked_rooms.py` lays the room objects onto the Pit shells at the
+harvested positions and writes, per square, `facilities/<room>_<i>_hi.png` (192x192,
+the shell plus its objects) and a matching 8-bit `<room>_<i>.png`.
+`mod/Ruleset/gijoe_stocked_rooms.rul` points the 13 vanilla facilities the mod renames
+(Barracks, Laboratory, Workshop, Detention Block, the radars, the defences, Brainwave
+Laboratory, SIGINT, Mind Shield, Hangar) at those frames: `spriteFacility` only, plus
+`spriteEnabled` for the 2x2 hangar, because vanilla draws a big room's frames only when
+told to. No cost, time or capacity is touched.
+
+The engine (`HiUI::nativeBaseView`) draws a room's frame twins in place of the bare
+shell when every square has one and the room is finished; the name plaque then sits on
+the bottom wall so the centrepiece shows. Under construction it is still the empty shell.
+
+**The plan cannot be copied one for one.** The objects keep their requisitioned size,
+about 2.7 times what the generator gave the same prop against its floor. Each object
+goes where its prop stood, snapped to the same wall and turned to face into the room,
+then slides up to 48 px to the nearest free spot (by its own outline, so a round turret
+leaves its corners free), or is left out. Order: the room's own objects biggest first,
+then the common kit by how much its prop identifies the room (the weighting above). A
+room holds at most three of any one object per square, except its signature prop, and
+nothing under 15 px is placed at all: at 192 px a square it is noise. Every run prints,
+per room, what was placed, what had no room, and which props have no object (gaps).
