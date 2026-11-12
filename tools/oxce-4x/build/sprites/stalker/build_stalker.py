@@ -12,7 +12,10 @@ DIRS = [int(x) for x in sys.argv[sys.argv.index('--dirs') + 1].split(',')] if '-
 STEP = int(sys.argv[sys.argv.index('--step') + 1]) if '--step' in sys.argv else 2
 FMAX = int(sys.argv[sys.argv.index('--fmax') + 1]) if '--fmax' in sys.argv else 999
 RES = (512, 640)
-SAVE = sys.argv[sys.argv.index('--save-blend') + 1] if '--save-blend' in sys.argv else None   # build session: empty-handed .blend for render_char.py
+SAVE = sys.argv[sys.argv.index('--save-blend') + 1] if '--save-blend' in sys.argv else None
+# John's 12 Nov Ch49 rules (duke_build_v3 factory_blend.py, via greenshirts/ch49_rules.py): --clean_collar, --swell 0.016
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'greenshirts')); import ch49_rules as RULES
+CLEAN = '--clean_collar' in sys.argv; SWELL = float(sys.argv[sys.argv.index('--swell') + 1]) if '--swell' in sys.argv else 0.0   # build session: empty-handed .blend for render_char.py
 os.environ.setdefault('CHAR_TEX', '/mnt/user-data/uploads/GIJoe_XCOM_4x/Reference/models/mixamo/painted/cast_cartoon/stalker')   # cc\\stalker\\ staged
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -49,8 +52,9 @@ def cut_faces(o, keep_fn):
     bmesh.ops.delete(bm, geom=kill, context='FACES'); bm.to_mesh(o.data); bm.free()
 
 for o in body_meshes:
-    cut_faces(o, lambda c: c[2] < CUT * h49)
+    RULES.cut_body(o, h49, CLEAN)
     bake_unparent(o); o.modifiers[0].object = arm if o.modifiers else None
+if SWELL > 0: RULES.swell(body_meshes, h49, SWELL, CLEAN)
 
 head_keep = []
 hb = [o for o in Hd if o.type == 'MESH' and o.name.endswith('Ch18')][0]
@@ -63,7 +67,7 @@ off = Vector(ring_b) - Vector(ring_h) * s
 # texture lookup for the Ch18 faces: drop the cap and earpiece, keep the sunglasses as their own part
 img18 = [n.image for n in hb.data.materials[0].node_tree.nodes if n.type == 'TEX_IMAGE' and 'Diffuse' in n.image.filepath][0]
 PX = np.array(img18.pixels[:]).reshape(img18.size[1], img18.size[0], 4)[..., :3]
-cut_faces(hb, lambda c: c[2] >= CUT * h33 and abs(c[0]) < 0.075 * h33)
+RULES.cut_head(hb, h33, CLEAN)
 bm = bmesh.new(); bm.from_mesh(hb.data); bm.faces.ensure_lookup_table(); uvly = bm.loops.layers.uv.active
 Wh = world_coords(hb); hc_y = Wh[Wh[:, 2] > 0.9 * h33][:, 1].mean()
 kill = []; glasses = []; hair = []
@@ -104,6 +108,7 @@ bmesh.ops.delete(bm, geom=kill, context='FACES'); bm.to_mesh(hb.data); bm.free()
 print('ch18 head: cap faces removed', len(kill), 'glasses', len(glasses), 'hair', len(hair))
 bake_unparent(hb)
 hb.data.transform(Matrix.Translation(off) @ Matrix.Scale(s, 4))
+if CLEAN: RULES.tuck_neck(hb, h49)
 mod = [m for m in hb.modifiers if m.type == 'ARMATURE'][0]; mod.object = arm
 head_keep.append(hb)
 for o in [o for o in Hd if o.type == 'MESH' and o is not hb]: bpy.data.objects.remove(o)
@@ -152,7 +157,8 @@ if not SAVE: _apply_clip()
 # ---- materials: flat emission from the painted textures; part-ID colour attribute ----
 def load(p): return bpy.data.images.load(p, check_existing=True)
 CT = os.environ['CHAR_TEX']
-tex_for = {'Ch49_1001': CT + '/Ch49_1001_Diffuse.png', 'Ch49_1002': CT + '/Ch49_1002_Diffuse.png',
+_sh = lambda k: CT + f'/{k}.png' if os.path.exists(CT + f'/{k}.png') else CT + f'/{k}_Diffuse.png'   # build session char dir or cc\\<name>\\
+tex_for = {'Ch49_1001': _sh('Ch49_1001'), 'Ch49_1002': _sh('Ch49_1002'),
            'Ch18_1001': CT + '/face18.png'}
 PART = {'Head': 0, 'Neck': 0, 'HeadTop_End': 0}
 def part_of(bone):
@@ -197,7 +203,7 @@ def rebuild_material(m):
     key = [k for k in ('Ch49_1001', 'Ch49_1002') if img is not None and k in img.filepath]
     comb = nt.nodes.new('ShaderNodeCombineColor')
     if key:
-        it = nt.nodes.new('ShaderNodeTexImage'); it.image = load(WS + f'anim/tex/id_{key[0]}_Diffuse.png')
+        it = nt.nodes.new('ShaderNodeTexImage'); it.image = load(CT + f'/id_{key[0]}_Diffuse.png' if os.path.exists(CT + f'/id_{key[0]}_Diffuse.png') else WS + f'anim/tex/id_{key[0]}_Diffuse.png')
         it.image.colorspace_settings.name = 'Non-Color'; it.interpolation = 'Closest'
         sep = nt.nodes.new('ShaderNodeSeparateColor'); nt.links.new(it.outputs['Color'], sep.inputs[0])
         nt.links.new(sep.outputs[0], comb.inputs[0])

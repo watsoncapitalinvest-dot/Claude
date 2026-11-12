@@ -13,7 +13,53 @@ else:
 INK = np.array([40, 26, 18], np.float32)
 SIZE = (512, 640); FINAL = (256, 320); DZ = 0.10
 
-def ink_frame(beauty, idimg):
+def _shade_for(idimg):
+    """the geometry-shading pass next to an ID frame (render_char.py --shade writes <frame>_shade.png)"""
+    p = getattr(idimg, 'filename', '') or ''
+    if p.endswith('_id.png') and os.path.exists(p[:-7] + '_shade.png'):
+        return Image.open(p[:-7] + '_shade.png')
+    return None
+
+
+def pen_pass(img, idb, fg, shade, size):
+    """Comic pen shading = the shade branch of the design chat's compose_factory.py ink() (Duke v3), same rules:
+    a shadow tone (x0.70) where the sculpted folds turn from the key light and pen strokes along the sharpest fold
+    edges, on the garment ids in PENIDS only; PENFACE=1 adds a light shadow + short strokes on the face/neck.
+    Env: PENIDS (e.g. 3,6), PENPCT (93), PENDARK (0.62), PENFACE, PENFACEIDS (2,16), PENFACEDARK (0.72),
+    PENFACETONE (0.84), PENFACEPCT (95). Applies the shadow tones to img; returns (pen, facepen) stroke masks."""
+    H = idb.shape[0]; sc_ = max(1, round(H / 640))
+    S = np.asarray(shade.convert('L').resize(size, Image.BILINEAR)).astype(np.float32)
+    S = ndi.gaussian_filter(S, 1.2 * sc_ / 2)
+    gm = np.hypot(ndi.sobel(S, 0), ndi.sobel(S, 1))
+    cloth = fg & np.isin(idb, [int(x) for x in os.environ['PENIDS'].split(',')])
+    pen = np.zeros_like(fg); facepen = None
+    if cloth.sum() > 50:
+        ref = np.percentile(S[cloth], 70)
+        dark = cloth & (S < ref * float(os.environ.get('PENDARK', 0.62)))
+        dark = ndi.binary_opening(ndi.binary_closing(dark, iterations=1), iterations=sc_)
+        img[dark] = img[dark] * 0.70
+        ridge = cloth & (gm > np.percentile(gm[cloth], float(os.environ.get('PENPCT', 93)))) & ndi.binary_erosion(fg, iterations=2 * sc_)
+        ridge &= dark | ndi.binary_dilation(dark, iterations=1)
+        lab, n = ndi.label(ridge, structure=np.ones((3, 3)))
+        if n:
+            sz = ndi.sum(ridge, lab, range(1, n + 1)); ridge &= np.isin(lab, [i for i, z in enumerate(sz, 1) if z >= 10 * sc_ * sc_])
+        pen |= ridge
+    if os.environ.get('PENFACE'):
+        face = fg & np.isin(idb, [int(x) for x in os.environ.get('PENFACEIDS', '2,16').split(',')]) & ndi.binary_erosion(fg, iterations=2 * sc_)
+        if face.sum() > 200:
+            fref = np.percentile(S[face], 70)
+            fd = face & (S < fref * float(os.environ.get('PENFACEDARK', 0.72)))
+            fd = ndi.binary_opening(ndi.binary_closing(fd, iterations=1), iterations=sc_)
+            img[fd] = img[fd] * float(os.environ.get('PENFACETONE', 0.84))
+            fr = face & (gm > np.percentile(gm[face], float(os.environ.get('PENFACEPCT', 95)))) & (fd | ndi.binary_dilation(fd, iterations=1))
+            lab, n = ndi.label(fr, structure=np.ones((3, 3)))
+            if n:
+                sz = ndi.sum(fr, lab, range(1, n + 1)); fr &= np.isin(lab, [i for i, z in enumerate(sz, 1) if z >= 14 * sc_ * sc_])
+            facepen = fr
+    return pen, facepen
+
+
+def ink_frame(beauty, idimg, shade=None):
     b = beauty.resize(SIZE, Image.LANCZOS); a = np.asarray(b).astype(np.float32)
     rgb, al = a[..., :3], a[..., 3] / 255.0
     idrgb = np.asarray(idimg.convert('RGB').resize(SIZE, Image.NEAREST)).astype(np.float32)
@@ -38,10 +84,17 @@ def ink_frame(beauty, idimg):
         idb[clean] = 1
     fg = idb > 0
     e = np.zeros_like(fg); eh = np.zeros_like(fg); soft = np.zeros_like(fg)
+    # throat V (garment id 16, painted skin by fix_collar.py): joins the neck skin (id 2) with no line and no
+    # depth-jump ink inside it (compose_factory.py's rule; no older id map uses 16, so nothing else changes)
+    ide = np.where(idb == 16, 2, idb); nod = idb == 16
+    # INKJOIN="a:b,...": id a draws its lines as if it were id b (an id kept apart only for PENIDS, e.g. the pilot)
+    for pair in [x for x in os.environ.get('INKJOIN', '').split(',') if x.strip()]:
+        ja, jb = (int(v) for v in pair.split(':')); ide = np.where(ide == ja, jb, ide)
     for dy, dx in ((0, 1), (1, 0)):
-        a1 = idb[:H - dy, :W - dx]; a2 = idb[dy:, dx:]
+        a1 = ide[:H - dy, :W - dx]; a2 = ide[dy:, dx:]
+        n1 = nod[:H - dy, :W - dx] | nod[dy:, dx:]
         d1 = dep[:H - dy, :W - dx]; d2 = dep[dy:, dx:]
-        diff = ((a1 != a2) & ((a1 > 0) | (a2 > 0))) | ((a1 > 0) & (a2 > 0) & (np.abs(d1 - d2) > DZ) & (a1 != 1) & (a2 != 1))
+        diff = ((a1 != a2) & ((a1 > 0) | (a2 > 0))) | ((a1 > 0) & (a2 > 0) & (np.abs(d1 - d2) > DZ) & (a1 != 1) & (a2 != 1) & ~n1)
         hp = (a1 == 1) | (a2 == 1)
         outer = diff & hp & (((a1 == 1) & (a2 == 0)) | ((a1 == 0) & (a2 == 1)))
         sj = diff & hp & ~outer
@@ -77,6 +130,13 @@ def ink_frame(beauty, idimg):
         if fn:
             fz = ndi.sum(fe, fl, range(1, fn + 1)); fe &= np.isin(fl, [i for i, z in enumerate(fz, 1) if z >= fmin])
         img[fe & ~e] = INK
+    # comic pen shading from the geometry pass (render_char.py --shade); only when PENIDS is set
+    if os.environ.get('PENIDS'):
+        if shade is None: shade = _shade_for(idimg)
+        if shade is not None:
+            pen, facepen = pen_pass(img, idb, fg, shade, SIZE)
+            img[pen & ~e] = img[pen & ~e] * 0.25 + INK * 0.75
+            if facepen is not None: fp = facepen & ~e & ~pen; img[fp] = img[fp] * 0.45 + INK * 0.55
     img[e] = INK
     img[eh] = HAIR_LINE
     # with alpha, for the game: the figure's own mask, downscaled premultiplied so
