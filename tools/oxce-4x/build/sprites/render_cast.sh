@@ -2,7 +2,7 @@
 # Render soldiers into game sheets, one after another.
 #   render_cast.sh name [name ...]
 # A ready-built character in /tmp/claude-0/ws/chars/<name>.blend is used as it is
-# (Regular Joe, Roadblock, Beach Head, Snake Eyes, Doc, Stalker, Scarlett); otherwise
+# (Regular Joe, Roadblock, Beach Head, Snake Eyes, Doc, Stalker, Scarlett, the Cobra troopers, Ace); otherwise
 # the cartoon-cast member is built from its look + textures with cast/build_cast.py.
 # Sheets land in /tmp/claude-0/ws/cast/sheets/<name>_body*.png + anchors.
 set -u
@@ -25,6 +25,8 @@ ink() { case $1 in
   stalker)   echo "36,30,26|" ;;
   greenshirt_rifleman|greenshirt_medic) echo "||PENIDS=3,6 PENPCT=84 PENDARK=0.66" ;;    # helmeted: no PENFACE
   greenshirt_pilot) echo "||PENIDS=20 PENPCT=84 PENDARK=0.66 INKJOIN=21:20" ;;           # Ch15: suit 20, rest 21 joined for lines
+  cobra_soldier|cobra_officer|crimson_guard|cobra_recruit|viper_pilot) echo "||PENIDS=3,6 PENPCT=84 PENDARK=0.66" ;;  # Ch49 +1.6 cm; masked faces, no PENFACE (Recruit = cartel gunman too)
+  ace)       echo "||PENIDS=20 PENPCT=84 PENDARK=0.66 PENFACE=1 INKJOIN=21:20" ;;    # Ch15 slimmed: suit 20, rest 21 joined; helmet 26, Duke face 2 (PENFACE)
   regular_joe) echo "|" ;;
   Ch*|Remy) echo "$(awk -v n=$1 '$1==n{print $2}' $HERE/civ/civ_hair.txt)|" ;;   # civilians: hair as rendered
   *) H=$(python3 -c "import json;print(','.join(map(str,json.load(open('$CC/$1/${1}_cartoon.json'))['colors']['hair'])))" 2>/dev/null); echo "$H|" ;;
