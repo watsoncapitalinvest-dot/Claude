@@ -1,0 +1,121 @@
+UI ENGINE ANSWERS - what the G.I. Joe 4x engine can and cannot do, for screen design
+(state of the engine on 11 Nov 2026; "not built" means possible but not there yet)
+
+1. RESOLUTION
+   Every screen is still laid out on X-COM's 320 x 200 grid (base pixels) and
+   the game logic runs on it. On top of that the engine draws the picture at
+   the display's own resolution. Two levels of this exist:
+     - Sharp twin: the stock screen with its art swapped for high-resolution
+       art and its text re-set sharply. Most menus are like this now.
+     - Native: the screen is drawn from scratch at display resolution - shapes,
+       real typefaces, painted art resampled to the exact screen size. Only the
+       equipment (inventory) screen is native so far.
+   DESIGN CANVAS: 1920 x 1200 for a full 320 x 200 screen. That is exactly 6x
+   the grid, so every base pixel is a 6 x 6 block of your canvas. Put every
+   edge on a multiple of 6.
+   OTHER SIZES: the 320 x 200 area is scaled uniformly to fit the window and
+   centred; the rest is black bars (pillarbox or letterbox). 1920x1080 shows
+   it at 5.4x with bars left and right; 2560x1440 at 7.2x; ultrawide gets wide
+   bars. The exceptions are the globe and the battle map: they fill the whole
+   window, with the geoscape side panel anchored to the right edge and the
+   battle control bar anchored to the bottom. No general anchoring system.
+
+2. COLOUR
+   UI art is full 32-bit colour with transparency (PNG RGBA). Each screen
+   also has an 8-bit palette copy underneath for the game logic; the engine
+   tools generate that, the designer does not make it.
+   Gradients, soft shadows, texture, glow: yes, baked into the art.
+   Semi-transparent panels: yes over static art. NOT over anything that moves
+   every frame (the battle map, the spinning globe) - the overlay only sits
+   on pixels the game has not changed, so live translucency over the map is
+   not built.
+
+3. FONTS
+   The engine does not open TTF/OTF at run time. Any TTF/OTF is rendered once
+   into a high-resolution atlas by a build tool, and the engine sets type from
+   it at any size, anti-aliased, sharp at every resolution. Two faces are in:
+   Oswald (condensed military sans, labels and readouts) and Saira Stencil One
+   (key legends). Free-licence (OFL or similar) fonts only - the repo is public.
+   Adding a face or weight is cheap. Bold = a separate face.
+   Screens not yet converted to native still use X-COM's own two bitmap fonts,
+   smoothed; those have fixed character widths and only two sizes.
+
+4. WIDGETS
+   The game creates the buttons, lists, scrollbars and text boxes; the engine
+   then draws them from images. 9-slice frames: yes - window frames, wide and
+   square buttons, combo boxes, sliders, scroll arrows are drawn from
+   stretchable images in Resources/UI.
+   Pressed state: yes. Hover and disabled states: art slots exist
+   (button_wide_hover, button_wide_disabled) but are NOT wired up yet.
+   Native screens draw their keys as shapes or take them from the painted
+   page, with live legends.
+
+5. TOOLTIPS AND INPUT
+   Right-click and scroll wheel: yes, used throughout.
+   Tooltips: the battle HUD buttons have them, shown as a line of text in a
+   fixed spot, not a floating box. Floating hover tooltips: not built.
+   Hotkey labels on buttons: not automatic; can be written into the legend.
+
+6. MOTION
+   Static. The overlay is redrawn every frame, so hover glows, fades and
+   pulsing are possible to add, but none are built. Slide-in panels would be
+   code per screen. Animated sprites (blinking, cycling frames) the game
+   already does for items and units.
+
+7. LAYOUT
+   Stock screens: positions are in code; colours and some positions can be
+   overridden in interfaces.rul. Absolute base pixels on the 320 x 200 grid.
+   Native screens: positions in code and the inventory ruleset (slot
+   positions). Design to absolute base-pixel rectangles; give every element
+   x, y, w, h in base pixels (or canvas pixels / 6).
+
+8. BATTLE HUD
+   Not yet converted. Stock bar is 320 x 56 base px at the bottom. Overlaying
+   the map semi-transparently: not possible today (see 2). How much map is
+   visible at 1920x1080 with 4x units: not measured yet - DON'T KNOW YET.
+   Minimum clear map area: not decided - design question.
+
+9. GEOSCAPE
+   Staying a 3D globe (high-resolution texture, borders and flight paths drawn
+   as sharp vector lines). Side panel: currently 64 x 200 base px, anchored
+   right, rebuilt as a painted console. Another width is possible but every
+   control on it is positioned in code: moderate cost, not free.
+
+10. TEXT
+    Word wrap: yes. Scrolling text lists: yes. Inline colour: one alternate
+    colour, switched on and off inside a string (two colours per text).
+    Inline bold: no. Font size change: only between lines (big to small).
+
+11. ART FILES
+    PNG, 32-bit RGBA. Full-screen art 1920 x 1200 for a 320 x 200 screen;
+    smaller pieces at 6x their base-pixel size. No practical size limit at
+    those sizes.
+    Folders (in the mod): Resources/Backgrounds (full screens),
+    Resources/UI (9-slice pieces, icons), Resources/Items (equipment),
+    Resources/Inventory (soldier figures), Resources/Units (battle sprites).
+    Naming: lower case, underscores, describe the thing (button_wide.png,
+    window_frame.png). Twin of an existing 8-bit file: same name plus _hi.
+    Every page that is painted needs a GUIDE: the same canvas with every
+    fixed rectangle outlined, as was done for the geoscape panel and the
+    equipment screen.
+
+12. PORTRAITS
+    DON'T KNOW YET. No portrait system exists in the engine (X-COM shows rank
+    badges only). Sizes should be chosen as base-pixel boxes and drawn at 6x.
+
+13. COST
+    CHEAP: screens built from windows, buttons, text and lists - nearly all
+    the base and geoscape menus (purchase, sell, transfer, research,
+    manufacture, soldiers, crafts, graphs, options). Reskin with 9-slice art
+    and a background; type is re-set sharply automatically.
+    MEDIUM: screens that are one background with click areas - equipment
+    (done), battle HUD, debriefing. Need a native conversion like the
+    equipment screen.
+    EXPENSIVE: the base layout view (grid of facilities), the battle map
+    itself, the globe, Ufopaedia article layouts.
+    KEEP CLOSE TO STOCK: the list screens - reskin, do not re-lay-out.
+
+14. TIMING
+    DON'T KNOW YET - that is John's call. The equipment screen is done now as
+    the pattern for native screens. Weapon attachment slots on the equipment
+    screen are proposed next and would change that page's layout again.
