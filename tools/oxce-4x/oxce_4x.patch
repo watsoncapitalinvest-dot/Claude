@@ -2666,10 +2666,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..7556c07
+index 0000000..a9a2c29
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,1924 @@
+@@ -0,0 +1,1977 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -4256,6 +4256,24 @@ index 0000000..7556c07
 +	return enabled() && !nativeBgs.empty();
 +}
 +
++namespace
++{
++	/// The painted empty room for a footprint (Resources/Base/shells/shell_<theme>_<w>x<h>.png),
++	/// brought by area to the size it is shown and kept. nullptr when none is installed.
++	const Img *roomShell(const std::string &theme, int w, int h, int dw, int dh)
++	{
++		static std::unordered_map<std::string, Img> src, sized;
++		const std::string id = theme + "_" + std::to_string(w) + "x" + std::to_string(h);
++		auto s = src.find(id);
++		if (s == src.end()) s = src.emplace(id, loadPng("Resources/Base/shells/shell_" + id + ".png")).first;
++		if (!s->second.ok || dw <= 0 || dh <= 0) return nullptr;
++		const std::string key = id + "@" + std::to_string(dw) + "x" + std::to_string(dh);
++		auto z = sized.find(key);
++		if (z == sized.end()) z = sized.emplace(key, resampleArea(s->second, dw, dh)).first;
++		return &z->second;
++	}
++}
++
 +void nativeBaseView(const Surface *view, int g, const std::vector<Room> &rooms,
 +	const std::vector<std::pair<int, int> > &linksRight, const std::vector<std::pair<int, int> > &linksDown,
 +	const std::vector<Docked> &craft)
@@ -4300,12 +4318,35 @@ index 0000000..7556c07
 +		const double x0 = DX(bx0), y0 = DY(by0), x1 = DX(bx1), y1 = DY(by1), rad = k * 2.2;
 +		const Uint32 tone = roomTone(rm.kind);
 +		const bool building = rm.buildDays > 0;
++		// THE PAINTED ROOM when one is installed for this footprint: the whole
++		// squares, its own margin and cut corners included. Otherwise the plate.
++		const int sx0 = (int)DX(vx + rm.x * g), sy0 = (int)DY(vy + rm.y * g);
++		const int sx1 = (int)DX(vx + (rm.x + rm.w) * g), sy1 = (int)DY(vy + (rm.y + rm.h) * g);
++		const Img *shell = roomShell("joe", rm.w, rm.h, sx1 - sx0, sy1 - sy0);
++		if (shell)
++		{
++			for (int Y = std::max(0, sy0); Y < std::min(sh, sy1); ++Y)
++			{
++				Uint32 *o = over.data() + (size_t)Y * sw;
++				const Uint32 *srow = shell->px.data() + (size_t)(Y - sy0) * shell->w;
++				for (int X = std::max(0, sx0); X < std::min(sw, sx1); ++X)
++				{
++					const Uint32 p = srow[X - sx0];
++					const int a = p >> 24;
++					if (a) o[X] = a >= 255 ? (p & 0xFFFFFF) : mix(o[X], p & 0xFFFFFF, a);
++				}
++			}
++			if (building) roundRect(x0 + k * 2.6, y0 + k * 2.6, x1 - k * 2.6, y1 - k * 2.6, k * 0.6, 0x1E2018, 150);
++		}
++		else
++		{
 +		roundRect(x0 + k * 0.5, y0 + k * 0.7, x1 + k * 0.5, y1 + k * 0.7, rad, 0x0C0E09, 200);   // shadow
 +		roundRect(x0, y0, x1, y1, rad, 0x14170F);                                              // wall
 +		roundRect(x0 + 2, y0 + 2, x1 - 2, y1 - 2, rad - 1, building ? 0x3A3D33 : lift(tone, 18)); // lit lip
 +		roundRect(x0 + k * 0.9, y0 + k * 0.9, x1 - k * 0.6, y1 - k * 0.6, rad - k * 0.6, building ? 0x2E3129 : tone);
 +		if (!building)
 +			roundRect(x0 + k * 0.9, y0 + k * 0.9, x1 - k * 0.6, y0 + k * 2.4, k * 0.8, lift(tone, 34), 160); // the kind's band
++		}
 +		if (building)
 +		{
 +			// tape across an unfinished room: hazard stripes, faint
@@ -4326,6 +4367,18 @@ index 0000000..7556c07
 +			const int nx0 = (int)(x0 + k * 1.8), nx1 = (int)(x1 - k * 1.8);
 +			const int ny0 = (int)(y0 + k * (building || rm.disabled ? 2.0 : 2.6));
 +			const int ny1 = hangar ? (int)(y0 + k * 9.5) : (building || rm.disabled) ? (int)(y0 + (y1 - y0) * 0.42) : (int)(y1 - k * 1.8);
++			if (shell && !building && !rm.disabled)
++			{
++				// on the bare painted floor the name sits on a plaque in the room's colour,
++				// so it reads and still says what the room is for
++				const double pcx = (x0 + x1) / 2, pcy = hangar ? y0 + k * 6.0 : (y0 + y1) / 2;
++				const double pw = std::min(x1 - x0 - k * 6, k * 26.0), ph = k * (rm.name.size() > 12 && rm.w == 1 ? 10.0 : 6.0);
++				roundRect(pcx - pw / 2 + k * 0.3, pcy - ph / 2 + k * 0.4, pcx + pw / 2 + k * 0.3, pcy + ph / 2 + k * 0.4, k * 1.0, 0x0A0B08, 150);
++				roundRect(pcx - pw / 2, pcy - ph / 2, pcx + pw / 2, pcy + ph / 2, k * 1.0, tone, 235);
++				roundRect(pcx - pw / 2, pcy - ph / 2, pcx + pw / 2, pcy - ph / 2 + k * 0.8, k * 0.5, lift(tone, 30), 200);
++				setTypeWrapped(*f, rm.name, (int)(pcx - pw / 2 + k), (int)(pcy - ph / 2 + k * 0.6), (int)(pcx + pw / 2 - k), (int)(pcy + ph / 2 - k * 0.6), k * 3.2, C_INK, 0x0A0B08);
++			}
++			else
 +			setTypeWrapped(*f, rm.name, nx0, ny0, nx1, ny1, k * 3.4, building ? 0xB8B49A : C_INK, 0x0A0B08);
 +		}
 +		if ((building || rm.disabled) && st)
