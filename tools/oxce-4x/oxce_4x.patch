@@ -2206,10 +2206,20 @@ index 8497877..78e0448 100644
  	/// Drop item on ground.
  	void itemDrop(Tile *t, BattleItem *item, bool updateLight);
 diff --git a/src/Battlescape/UnitSprite.cpp b/src/Battlescape/UnitSprite.cpp
-index 8fa87f8..628a943 100644
+index 8fa87f8..525485d 100644
 --- a/src/Battlescape/UnitSprite.cpp
 +++ b/src/Battlescape/UnitSprite.cpp
-@@ -149,7 +149,7 @@ void UnitSprite::blitItem(Part& item)
+@@ -17,6 +17,9 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "UnitSprite.h"
++#include <map>
++#include "../Engine/Logger.h"
++#include "../Engine/FileMap.h"
+ #include "../Engine/SurfaceSet.h"
+ #include "../Mod/RuleItem.h"
+ #include "../Mod/Armor.h"
+@@ -149,7 +152,7 @@ void UnitSprite::blitItem(Part& item)
  
  	_dest->lock();
  
@@ -2218,7 +2228,7 @@ index 8fa87f8..628a943 100644
  
  	_dest->unlock();
  }
-@@ -169,7 +169,7 @@ void UnitSprite::blitBody(Part& body)
+@@ -169,7 +172,7 @@ void UnitSprite::blitBody(Part& body)
  
  	_dest->lock();
  
@@ -2227,7 +2237,15 @@ index 8fa87f8..628a943 100644
  
  	_dest->unlock();
  }
-@@ -447,7 +447,16 @@ void UnitSprite::drawRoutine0()
+@@ -244,6 +247,7 @@ void UnitSprite::draw(const BattleUnit* unit, int part, int x, int y, int shade,
+ 		&UnitSprite::drawRoutine20,
+ 		&UnitSprite::drawRoutine21,
+ 		&UnitSprite::drawRoutine3,
++		&UnitSprite::drawRoutineWhole,
+ 	};
+ 	// Call the matching routine
+ 	(this->*(routines[_drawingRoutine]))();
+@@ -447,7 +451,16 @@ void UnitSprite::drawRoutine0()
  	if (_itemR)
  	{
  		// draw handob item
@@ -2245,7 +2263,7 @@ index 8fa87f8..628a943 100644
  		{
  			int dir = (unitDir + 2)%8;
  			selectItem(itemR, _itemR, dir);
-@@ -601,6 +610,16 @@ void UnitSprite::drawRoutine0()
+@@ -601,6 +614,16 @@ void UnitSprite::drawRoutine0()
  		rightArm.offX = (-6);
  	}
  
@@ -2262,6 +2280,117 @@ index 8fa87f8..628a943 100644
  	// blit order depends on unit direction, and whether we are holding a 2 handed weapon.
  	switch (unitDir)
  	{
+@@ -643,6 +666,97 @@ void UnitSprite::drawRoutine0()
+ }
+ 
+ 
++namespace
++{
++/// Hand positions per frame of a whole-body sheet, in 4x cell pixels:
++/// Resources/Units/anchors/<sheet type>.txt, "frame rx ry lx ly" a line.
++struct HandAnchor { float rx, ry, lx, ly; };
++const std::vector<HandAnchor> &handAnchors(const std::string &sheet)
++{
++	static std::map<std::string, std::vector<HandAnchor> > cache;
++	auto it = cache.find(sheet);
++	if (it != cache.end()) return it->second;
++	std::vector<HandAnchor> v;
++	const std::string path = "Resources/Units/anchors/" + sheet + ".txt";
++	if (FileMap::fileExists(path))
++	{
++		auto in = FileMap::getIStream(path);
++		int n; HandAnchor a;
++		while (in && (*in >> n >> a.rx >> a.ry >> a.lx >> a.ly))
++		{
++			if (n >= 0) { if ((int)v.size() <= n) v.resize(n + 1, HandAnchor{ -1, -1, -1, -1 }); v[n] = a; }
++		}
++	}
++	else Log(LOG_WARNING) << "No hand anchors for " << sheet << " (" << path << ")";
++	return cache.emplace(sheet, std::move(v)).first->second;
++}
++/// Centre of a held-weapon frame's ink, cached: the point that goes in the hands.
++std::pair<float, float> inkCentre(const Surface *s)
++{
++	static std::map<const Surface*, std::pair<float, float> > cache;
++	auto it = cache.find(s);
++	if (it != cache.end()) return it->second;
++	double sx = 0, sy = 0; long n = 0;
++	SDL_Surface *ss = const_cast<Surface*>(s)->getSurface();
++	for (int y = 0; ss && y < ss->h; ++y)
++		for (int x = 0; x < ss->w; ++x)
++			if (((const Uint8*)ss->pixels)[y * ss->pitch + x]) { sx += x; sy += y; ++n; }
++	auto r = n ? std::make_pair((float)(sx / n), (float)(sy / n)) : std::make_pair(s->getWidth() / 2.f, s->getHeight() / 2.f);
++	cache[s] = r;
++	return r;
++}
++}
++
++/**
++ * WHOLE-BODY FRAMES (drawing routine 23), for soldiers rendered from a rigged
++ * model: one picture per state, facing and frame instead of X-COM's torso, legs
++ * and arms. Sheet layout, 4x cells: frame = clip * 64 + direction * 8 + f, with
++ * clips stand, walk, kneel, aim, death. The weapon in hand is the item's own
++ * held sprite, its centre put between the hands the render recorded for that
++ * exact frame - so any weapon sits in the hands, and follows them as he walks.
++ */
++void UnitSprite::drawRoutineWhole()
++{
++	Part body{ BODYPART_TORSO }, itemR{ BODYPART_ITEM_RIGHTHAND }, itemL{ BODYPART_ITEM_LEFTHAND };
++	const int dir = _unit->getDirection();
++	int clip = 0, f = (_animationFrame / 2) % 8;
++	if (_unit->getStatus() == STATUS_COLLAPSING)
++	{
++		clip = 4;
++		const int n = std::max(1, _unit->getArmor()->getDeathFrames());
++		f = std::min(7, _unit->getFallingPhase() * 8 / n);
++	}
++	else if (_unit->getStatus() == STATUS_WALKING) { clip = 1; f = _unit->getWalkingPhase() % 8; }
++	else if (_unit->getStatus() == STATUS_AIMING) clip = 3;
++	else if (_unit->isKneeled()) clip = 2;
++	const int frame = clip * 64 + dir * 8 + f;
++	selectUnit(body, clip * 64 + dir * 8, f);
++
++	const int k = std::max(1, SurfaceSet::battleScale());
++	const auto &anch = handAnchors(_unit->getArmor()->getSpriteSheet());
++	auto hold = [&](Part &p, const BattleItem *item, bool right)
++	{
++		if (!item || _unit->getStatus() == STATUS_COLLAPSING) return;
++		selectItem(p, item, dir);
++		if (!p.src || frame >= (int)anch.size() || anch[frame].rx < 0) return;
++		const HandAnchor &a = anch[frame];
++		const bool twoHands = item->getRules()->isTwoHanded();
++		const float hx = twoHands ? (a.rx + a.lx) / 2 : (right ? a.rx : a.lx);
++		const float hy = twoHands ? (a.ry + a.ly) / 2 : (right ? a.ry : a.ly);
++		const auto c = inkCentre(p.src);
++		p.offX = (int)std::lround((hx - c.first) / k);
++		p.offY = (int)std::lround((hy - c.second) / k);
++	};
++	sortRifles();
++	hold(itemR, _itemR, true);
++	hold(itemL, _itemL, false);
++	// seen from behind (up-left, up, up-right on screen) the weapon is in front of
++	// him and so behind him in the picture
++	const bool fromBehind = dir == 7 || dir == 0 || dir == 6;
++	if (fromBehind) { blitItem(itemR); blitItem(itemL); blitBody(body); }
++	else { blitBody(body); blitItem(itemR); blitItem(itemL); }
++}
++
+ /**
+  * Drawing routine for floaters.
+  */
+diff --git a/src/Battlescape/UnitSprite.h b/src/Battlescape/UnitSprite.h
+index 599d9a2..a48a48a 100644
+--- a/src/Battlescape/UnitSprite.h
++++ b/src/Battlescape/UnitSprite.h
+@@ -97,6 +97,8 @@ private:
+ 	void drawRoutine20();
+ 	/// Drawing routine for xarquids.
+ 	void drawRoutine21();
++	/// Whole-body frames rendered from a 3D model (routine 23): one picture per state, facing and frame.
++	void drawRoutineWhole();
+ 	/// Sort two handed sprites out.
+ 	void sortRifles();
+ 	/// Get graphic for unit part.
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
 index 839f803..560f94f 100644
 --- a/src/CMakeLists.txt
