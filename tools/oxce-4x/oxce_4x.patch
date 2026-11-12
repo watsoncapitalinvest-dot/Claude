@@ -2213,10 +2213,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..e76ee9e
+index 0000000..719b21c
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,778 @@
+@@ -0,0 +1,786 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -2557,6 +2557,14 @@ index 0000000..e76ee9e
 +	if (!im.ok) return;
 +	Log(LOG_INFO) << "Sharp twin: " << file << " (" << im.w << "x" << im.h << ")";
 +	bgImages[img] = std::move(im);
++}
++
++void aliasImage(const Surface *dst, const Surface *src)
++{
++	if (!enabled() || !dst || !src) return;
++	auto it = bgImages.find(src);
++	if (it == bgImages.end() || !it->second.ok) return;
++	bgImages[dst] = it->second;
 +}
 +
 +void registerSetFrame(SurfaceSet *set, int frame, const std::string &file)
@@ -2997,10 +3005,10 @@ index 0000000..e76ee9e
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..da9df91
+index 0000000..59ab692
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,41 @@
+@@ -0,0 +1,45 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -3030,6 +3038,10 @@ index 0000000..da9df91
 +	void cursor(int x, int y, bool visible);
 +	/// A font sheet's sharp twin: <file>_hi.png, each cell K times the size of the 8-bit one.
 +	void registerFontImage(const Surface *sheet8, const std::string &file);
++	/// Point one surface at another's registered twin. A state that COPIES a mod
++	/// surface into a widget of its own - the geoscape does, for its side panel -
++	/// holds a different pointer, so the twin can never be found by lookup.
++	void aliasImage(const Surface *dst, const Surface *src);
 +	/// A screen background's or a sprite frame's sharp twin: <file>_hi.png, any size.
 +	void registerImage(const Surface *img, const std::string &file);
 +	/// A sprite frame's sharp twin. The set's frames are not in their final places yet when the mod
@@ -3661,10 +3673,18 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..7c5e7aa 100644
+index 6b4e79d..cee313b 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
-@@ -35,6 +35,7 @@
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "GeoscapeState.h"
++#include "../Engine/HiUI.h"
+ #include <set>
+ #include <sstream>
+ #include <iomanip>
+@@ -35,6 +36,7 @@
  #include "../Engine/Collections.h"
  #include "../Engine/Unicode.h"
  #include "Globe.h"
@@ -3672,7 +3692,7 @@ index 6b4e79d..7c5e7aa 100644
  #include "../Interface/ComboBox.h"
  #include "../Interface/Text.h"
  #include "../Interface/TextButton.h"
-@@ -103,6 +104,7 @@
+@@ -103,6 +105,7 @@
  #include "../Savegame/ItemContainer.h"
  #include "../Savegame/MissionSite.h"
  #include "../Savegame/AlienBase.h"
@@ -3680,7 +3700,17 @@ index 6b4e79d..7c5e7aa 100644
  #include "../Mod/RuleRegion.h"
  #include "MissionDetectedState.h"
  #include "AlienBaseState.h"
-@@ -387,6 +389,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -268,6 +271,9 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+ 	geobord->setX(_sidebar->getX() - geobord->getWidth() + _sidebar->getWidth());
+ 	geobord->setY(_sidebar->getY());
+ 	_sidebar->copy(geobord);
++	// The sidebar is a COPY of GEOBORD, so GEOBORD_hi.png was loaded, logged and
++	// never drawn - nothing could match a copy by pointer. Point them together.
++	HiUI::aliasImage(_sidebar, geobord);
+ 	_game->getMod()->getSurface("ALTGEOBORD.SCR")->blitNShade(_bg, 0, 0);
+ 
+ 	_sideLine->drawRect(0, 0, _sideLine->getWidth(), _sideLine->getHeight(), 15);
+@@ -387,6 +393,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -3689,7 +3719,7 @@ index 6b4e79d..7c5e7aa 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -712,6 +716,10 @@ void GeoscapeState::init()
+@@ -712,6 +720,10 @@ void GeoscapeState::init()
  	updateSlackingIndicator();
  
  	_globe->onMouseClick((ActionHandler)&GeoscapeState::globeClick);
@@ -3700,7 +3730,7 @@ index 6b4e79d..7c5e7aa 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -1454,6 +1462,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +1466,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -3736,7 +3766,7 @@ index 6b4e79d..7c5e7aa 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1858,6 +1895,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +1899,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -3756,7 +3786,7 @@ index 6b4e79d..7c5e7aa 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -2862,6 +2912,10 @@ void GeoscapeState::time1Month()
+@@ -2862,6 +2916,10 @@ void GeoscapeState::time1Month()
  	_game->getSavedGame()->addMonth();
  
  	// Determine alien mission for this month.
@@ -3767,7 +3797,7 @@ index 6b4e79d..7c5e7aa 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3014,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3018,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -3798,7 +3828,7 @@ index 6b4e79d..7c5e7aa 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3265,6 +3343,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +3347,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
