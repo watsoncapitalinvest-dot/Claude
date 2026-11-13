@@ -271,8 +271,68 @@ def write_tracker(out, docs):
     L[2] = f'Totals of {n}: ' + ', '.join(f'{k} {v}' for k, v in done.items()) + '.'
     open(os.path.join(docs, 'ROSTER_TRACKER.md'), 'w').write('\n'.join(L) + '\n')
 
+
+# ---------------------------------------------------------------- draft a new hand layer from the sources
+SPEC_WORDS = [  # first match wins: catalog role / Bible specialty / armory type -> stat-model specialty
+    ('Martial Arts', ('ninja', 'martial', 'W_SWORD', 'W_BOW', 'W_NUNCHAKU', 'boxing', 'staff', 'blade')),
+    ('Pilot', ('pilot', 'aviat', 'glider')),
+    ('Recon & Sniper', ('sniper', 'marksman', 'recon', 'W_SNIPER', 'tracker', 'poacher', 'hunt')),
+    ('Demolitions & Engineering', ('demolition', 'explosive', 'sabot', 'W_CHARGE', 'engineer', 'toxic')),
+    ('Covert Ops & Intel', ('intelligence', 'espionage', 'spy', 'disguise', 'infiltrat', 'assassin', 'interrogat', 'hypno')),
+    ('Medic', ('medic', 'doctor', 'surgeon')),
+    ('Comms & Tech', ('scien', 'computer', 'electronic', 'technic', 'mind')),
+    ('Armor & Vehicles', ('driver', 'tank', 'vehicle', 'motor')),
+    ('Naval & Divers', ('swamp', 'naval', 'diver', 'water', 'sea', 'croc')),
+    ('Arctic & Mountain', ('arctic', 'snow', 'mountain')),
+    ('Heavy Weapons', ('W_FLAMER', 'W_ROCKET', 'W_MISSILE', 'W_LMG', 'W_HMG', 'W_HEAVY_MELEE', 'heavy', 'anti-armor', 'weapons')),
+    ('Command', ('leader', 'command', 'emperor', 'tactician', 'warlord', 'boss', 'dictator')),
+]
+def guess_spec(text):
+    t = text.lower()
+    for sp, words in SPEC_WORDS:
+        if any(w.lower() in t for w in words): return sp
+    return 'Infantry'
+
+def draft(src, batch, arrives, factions):
+    path = os.path.join(HERE, f'characters_{batch}.yaml')
+    if os.path.exists(path): sys.exit(f'{path} exists - edit it instead')
+    import openpyxl
+    B = openpyxl.load_workbook(glob.glob(os.path.join(src, '**', 'Roster_and_Arsenal_Bible.xlsx'), recursive=True)[0], read_only=True)
+    C = openpyxl.load_workbook(glob.glob(os.path.join(src, '**', 'GI_Joe_XCOM_Catalog.xlsx'), recursive=True)[0], read_only=True)
+    L = {r['ID']: r for r in rows(B, 'Loadouts')}; F = rows(C, 'Figures')
+    done = {c.get('source') or 'C_' + c['key'] for p in glob.glob(os.path.join(HERE, 'characters_*.yaml')) for c in yaml.safe_load(open(p))['characters']}
+    out = []
+    for r in rows(B, 'Roster'):
+        if r['Arrives'] != arrives or (factions and r['Faction'] not in factions) or r['ID'] in done: continue
+        base = re.sub(r'\s*\(.*\)$', '', r['Character'])
+        fig = next((f for f in F if f.get('Code Name') == base), {})
+        lo = L.get(r['ID'], {})
+        role = ' '.join(str(x) for x in (fig.get('Role / Specialty'), r.get('Specialty / role'), lo.get('Armory type')) if x)
+        spec = r['Specialty / role'] if r['Specialty / role'] in SM.T else guess_spec(role)
+        m = re.search(r'\(([EO]-\d)\)', str(fig.get('Rank') or ''))
+        joe = r['Faction'] == 'G.I. Joe'
+        c = dict(key=r['ID'][2:], source=r['ID'])
+        if m and m.group(1) in SM.RANK: c['rank'] = m.group(1)
+        elif joe: c['rank'] = 'E-5'; c['rankNote'] = 'DRAFT: no canon rank found - check the file card'
+        else:
+            lead = any(w in role.lower() for w in ('leader', 'command', 'emperor', 'warlord', 'boss'))
+            c['rank'] = 'O-3' if lead else 'E-6'; c['rankNote'] = 'no canon rank; ' + ('lieutenant tier' if lead else 'specialist tier')
+        c |= dict(primary=spec, secondary=None, nudge={}, draftRole=role)
+        if joe: c['status'] = r['Arrives']
+        else: c |= dict(unit=f'STR_{r["ID"][2:]}_UNIT', window=f'PROPOSED ? ({r["Arrives"]})')
+        c |= dict(trait=dict(engine='script', effect=None), move=dict(engine='request' if joe else 'ai-fork', effect=None),
+                  bonds=[], grudges=[], voice={})
+        out.append(c)
+    yaml.safe_dump({'batch': batch, 'characters': out}, open(path, 'w'), sort_keys=False, allow_unicode=True, width=200)
+    print(f'drafted {len(out)} -> {path}: check primary/rank/nudge, write effect numbers, bonds, grudges and 5 voice lines; delete draftRole')
+
 if __name__ == '__main__':
-    ap = argparse.ArgumentParser(); ap.add_argument('--src'); ap.add_argument('--docs'); a = ap.parse_args()
+    ap = argparse.ArgumentParser(); ap.add_argument('--src'); ap.add_argument('--docs')
+    ap.add_argument('--draft', help='new batch name: draft characters_<batch>.yaml from the sources (needs --src, --arrives)')
+    ap.add_argument('--arrives', help="the Bible's Arrives value, e.g. 'Batch 2: Acts 3 and 4'")
+    ap.add_argument('--faction', action='append', help='limit the draft to these factions (repeatable)')
+    a = ap.parse_args()
+    if a.draft: draft(a.src, a.draft, a.arrives, a.faction); sys.exit(0)
     o, s, f = build(a.src, a.docs); write(o, s, f, a.docs)
     for k, v in f.items():
         for x in v: print(f'  {k}: {x}')
