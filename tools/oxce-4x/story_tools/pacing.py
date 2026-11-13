@@ -56,6 +56,14 @@ if FAC:
     ECON.update(lab=(375000, 20, 15000), quarters=(150000, 10, 4000))
 LAB_START, LAB_ADD = (10, 25) if FAC else (50, 50)
 HOUSE_START, HOUSE_ADD = (20, 24) if FAC else (30, 50)
+# Analysts (John 13 Nov 02:05): staff like scientists who research every INTEL-lane topic; scientists do the rest.
+# Day 1: 10 analysts, 10 seats (Computer Station); each Computer Banks / Archives / Situation Analysis adds 6 seats.
+# Same pay as scientists. Housing: the Command Center grows to 24 to house them. ANALYSTS=0 = the old model.
+ANALYSTS = os.environ.get('ANALYSTS', '1') == '1'
+AN_ROOM = (300000, 16, 10000)
+AN_TARGET = {'cautious': {0: 4, 6: 6}, 'typical': {0: 4, 2: 8, 6: 12}, 'aggressive': {0: 4, 1: 8, 4: 14}}
+AN0 = int(os.environ.get('AN0', '10'))   # John 02:10: 10 analysts on Day 1, regular-size intel topics; INTEL_SCALE = float(os.environ.get('INTEL_SCALE', '1.0'))
+if ANALYSTS: HOUSE_START += AN0
 FUNDS_SCALE = float(sys.argv[1]) if len(sys.argv) > 1 else 1.0
 ECON['other_income'] = float(sys.argv[2]) * 1e6 if len(sys.argv) > 2 else ECON['other_income']
 STRATS = {  # target scientists by month; second lab when targets pass 50
@@ -66,6 +74,7 @@ PARALLEL, PER_PROJECT = 4, 20     # projects worked at once; scientists usefully
 
 def run(strat):
     target = STRATS[strat]; day = 0; cash = ECON['start']; sci = 10; labs = LAB_START; rooms = HOUSE_START; nlab_built = 0; nq_built = 0
+    an = AN0 if ANALYSTS else 0; an_seats = AN0; nan_built = 0
     done = {k: 0.0 for k in DONE0}; prog = collections.defaultdict(float); paid = set(); building = []; spent = collections.Counter()
     def tgt(m): return max(v for mm, v in target.items() if mm <= m)
     def avail(k):
@@ -86,10 +95,19 @@ def run(strat):
             if b[1] <= day:
                 building.remove(b)
                 if b[0] == 'lab': labs += LAB_ADD; nlab_built += 1
+                elif b[0] == 'an': an_seats += 6; nan_built += 1
                 else: rooms += HOUSE_ADD; nq_built += 1
         # hire / build toward the target
         want = tgt(m)
-        while sci < want and sci + 10 < rooms and sci < labs and cash > ECON['sci_hire'] + 1e6:
+        if ANALYSTS:
+            awant = max(v for mm, v in AN_TARGET[strat].items() if mm <= m)
+            while an < awant and sci + 10 + an < rooms and an < an_seats and cash > ECON['sci_hire'] + 1e6:
+                an += 1; cash -= ECON['sci_hire']; spent['hiring'] += ECON['sci_hire']
+            if awant > an_seats and not any(b[0] == 'an' for b in building) and cash > AN_ROOM[0] + 1e6:
+                building.append(('an', day + AN_ROOM[1])); cash -= AN_ROOM[0]; spent['intel rooms'] += AN_ROOM[0]
+            if awant + want + 10 > rooms and not any(b[0] == 'q' for b in building) and cash > ECON['quarters'][0] + 1e6:
+                building.append(('q', day + ECON['quarters'][1])); cash -= ECON['quarters'][0]; spent['quarters'] += ECON['quarters'][0]
+        while sci < want and sci + 10 + an < rooms and sci < labs and cash > ECON['sci_hire'] + 1e6:
             sci += 1; cash -= ECON['sci_hire']; spent['hiring'] += ECON['sci_hire']
         if want + 10 > rooms and not any(b[0] == 'q' for b in building) and cash > ECON['quarters'][0] + 1e6:
             building.append(('q', day + ECON['quarters'][1])); cash -= ECON['quarters'][0]; spent['quarters'] += ECON['quarters'][0]
@@ -105,17 +123,19 @@ def run(strat):
                 if f > 0 and cash < f: continue
                 cash -= f; paid.add(k); spent['research money'] += f
             active.append(k)
+        intel = [k for k in active if ANALYSTS and T[k].get('lane') == 'INTEL']
+        rest = [k for k in active if k not in intel]
         for k in active:
-            n = sci / max(1, len(active))
+            n = (an / max(1, len(intel))) if k in intel else (sci / max(1, len(rest)))
             prog[k] += n
-            if prog[k] >= T[k]['cost']: done[k] = day / 30
+            if prog[k] >= T[k]['cost'] * (INTEL_SCALE if k in intel else 1): done[k] = day / 30
         # money, daily slice of the month
-        monthly = ECON['funding'] + ECON['other_income'] - ECON['soldiers'] - ECON['engineers'] - sci * ECON['sci_salary'] \
+        monthly = ECON['funding'] + ECON['other_income'] - ECON['soldiers'] - ECON['engineers'] - (sci + an) * ECON['sci_salary'] - nan_built * AN_ROOM[2] \
                   - ECON['upkeep'] - nlab_built * ECON['lab'][2] - nq_built * ECON['quarters'][2]
         cash += monthly / 30
         if cash < 0: low_cash_days += 1
         day += 1
-    return done, dict(sci=sci, lab_seats=labs, labs_built=nlab_built, cash=round(cash / 1e6, 2), spent={k: round(v / 1e6, 2) for k, v in spent.items()},
+    return done, dict(sci=sci, analysts=an, intel_rooms=nan_built, lab_seats=labs, labs_built=nlab_built, cash=round(cash / 1e6, 2), spent={k: round(v / 1e6, 2) for k, v in spent.items()},
                       broke_days=low_cash_days, monthly_at_end=round(monthly / 1e6, 2))
 out = {}
 for s in STRATS:
