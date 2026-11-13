@@ -106,6 +106,32 @@ def soldier(n, typ, arm, names):
         '    deathMale: [41, 42, 43]', '    deathFemale: [44, 45, 46]']
 
 
+def clone_armour(src, new, inv, generated):
+    """The armour block src (from gijoe_units.rul, or one written earlier in this run) as new, with
+    spriteInv set to inv."""
+    lines = None
+    for text in ('\n'.join(generated), open(UNITS).read()):
+        tl = text.split('\n')
+        for i, l in enumerate(tl):
+            if l.strip() == f'- type: {src}':
+                j = i + 1
+                while j < len(tl) and tl[j].startswith('    '):
+                    j += 1
+                lines = tl[i:j]
+                break
+        if lines:
+            break
+    if not lines:
+        raise SystemExit(f'cannot clone armour {src}: not found')
+    out = [f'  - type: {new}']
+    for l in lines[1:]:
+        if l.strip().startswith('spriteInv:'):
+            continue
+        out.append(l)
+    out.insert(2, f'    spriteInv: {inv}')
+    return out
+
+
 def main():
     sprites, armors, soldiers, lang = [], [], [], []
     done = []
@@ -113,7 +139,18 @@ def main():
         size = install(n)
         if not size and n in NEW:
             arm, typ, disp, names = NEW[n]
-            soldiers += soldier(n, typ, FALLBACK.get(n, FALLBACK_DEFAULT), names)
+            fb = FALLBACK.get(n, FALLBACK_DEFAULT)
+            if os.path.exists(os.path.join(MOD, 'Resources', 'Inventory', f'{n}_inv.png')):
+                # His own equipment-screen figure exists, but he still wears a borrowed body
+                # sheet: the figure belongs to the armour, so he gets his own copy of the borrowed
+                # armour carrying his figure (SHORTCUTS #6).
+                inv = f'GIJOE_{n.upper()}_INV'
+                sprites += [f'  - type: {inv}.SPK', '    singleImage: true', '    width: 320', '    height: 200',
+                            '    files:', f'      0: Resources/Inventory/{n}_inv.png']
+                armors += clone_armour(fb, arm, inv, armors)
+                lang += [(arm, disp.upper())]
+                fb = arm
+            soldiers += soldier(n, typ, fb, names)
             lang += [(typ, disp)]
             continue
         if not size:
