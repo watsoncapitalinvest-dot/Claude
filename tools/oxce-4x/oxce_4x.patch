@@ -622,7 +622,7 @@ index 7af613c..f6f1f81 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..01747bf 100644
+index 1951ba7..4648605 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -767,6 +767,7 @@ void BattlescapeGenerator::nextStage()
@@ -864,6 +864,37 @@ index 1951ba7..01747bf 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
+@@ -2081,8 +2266,14 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+ 	int sizex, sizey, sizez;
+ 	int x = xoff, y = yoff, z = zoff;
+ 	char size[3];
+-	unsigned char value[4];
+-	std::string filename = "MAPS/" + mapblock->getName() + ".MAP";
++	unsigned char value[8];
++	// G.I. Joe (13 Nov 2026): a .MAP2 beside (or instead of) the .MAP stores each tile part in TWO
++	// bytes, little-endian, so a map can use 65,535 part ids across its terrain sets instead of 255.
++	// Same 3-byte header (rows, columns, levels) and the same tile order as a .MAP.
++	std::string filename = "MAPS/" + mapblock->getName() + ".MAP2";
++	const bool wide = FileMap::fileExists(filename);
++	if (!wide) filename = "MAPS/" + mapblock->getName() + ".MAP";
++	const int partBytes = wide ? 2 : 1;
+ 	unsigned int terrainObjectID;
+ 
+ 	// Load file
+@@ -2141,11 +2332,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+ 		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
+ 	}
+ 
+-	while (mapFile->read((char*)&value, sizeof(value)))
++	while (mapFile->read((char*)&value, 4 * partBytes))
+ 	{
+ 		for (int part = O_FLOOR; part < O_MAX; ++part)
+ 		{
+-			terrainObjectID = ((unsigned char)value[part]);
++			terrainObjectID = wide ? (unsigned int)value[part * 2] | ((unsigned int)value[part * 2 + 1] << 8) : (unsigned int)value[part];
+ 			if (terrainObjectID>0)
+ 			{
+ 				int mapDataSetID = mapDataSetOffset;
 diff --git a/src/Battlescape/BattlescapeGenerator.h b/src/Battlescape/BattlescapeGenerator.h
 index a0bc8b3..933c149 100644
 --- a/src/Battlescape/BattlescapeGenerator.h
