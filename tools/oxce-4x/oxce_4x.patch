@@ -8235,7 +8235,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..c69bcb7 100644
+index 6b4e79d..3f8cfbf 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -17,6 +17,8 @@
@@ -8874,10 +8874,53 @@ index 6b4e79d..c69bcb7 100644
  			}
  			else
  			{
-@@ -2395,6 +2780,64 @@ void GeoscapeState::time1Day()
+@@ -2395,6 +2780,107 @@ void GeoscapeState::time1Day()
  	Mod *mod = _game->getMod();
  	bool psiStrengthEval = (Options::psiStrengthEval && saveGame->isResearched(mod->getPsiRequirements()));
  
++	// G.I. Joe spy operations (John 13 Nov 2026): a spy out on an operation comes home when the days
++	// run out: with something (success), with nothing, or not at all (caught; held like any captured
++	// Joe, leaks and all). The first operation of a campaign always succeeds (John: "safe the first time").
++	{
++		auto &missions = saveGame->getSpyMissions();
++		for (size_t i = 0; i < missions.size(); )
++		{
++			if (--missions[i].daysLeft > 0) { ++i; continue; }
++			const Mod::SpyOperationRule *op = mod->getSpyOperation(missions[i].op);
++			Soldier *spy = i < saveGame->getAwaySpies().size() ? saveGame->getAwaySpies()[i] : nullptr;
++			const std::string name = spy ? spy->getName() : std::string();
++			const std::string opName = tr(missions[i].op);
++			const bool first = saveGame->getSpyOpsRun() == 0;
++			saveGame->countSpyOp();
++			const int roll = RNG::generate(0, 99);
++			const int success = op ? op->success : 80, empty = op ? op->empty : 15;
++			if (first || roll < success)
++			{
++				Base *home = saveGame->getBases()->empty() ? nullptr : saveGame->getBases()->at(std::min((size_t)std::max(0, missions[i].base), saveGame->getBases()->size() - 1));
++				if (op && home)
++				{
++					for (const auto &it : op->items)
++						if (const RuleItem *item = mod->getItem(it.first)) home->getStorageItems()->addItem(item, it.second);
++					if (!op->lead.empty() && op->leadPoints) saveGame->addLeadPoints(mod, op->lead, op->leadPoints);
++					if (op->once) saveGame->setSpyOpDone(op->type);
++				}
++				saveGame->addLeadNews(std::string("!") + std::string(tr("STR_SPY_OP_SUCCESS").arg(name).arg(opName)));
++				saveGame->endSpyMission(i, false);
++			}
++			else if (roll < success + empty)
++			{
++				saveGame->addLeadNews(std::string("!") + std::string(tr("STR_SPY_OP_EMPTY").arg(name).arg(opName)));
++				saveGame->endSpyMission(i, false);
++			}
++			else
++			{
++				saveGame->addLeadNews(std::string("!") + std::string(tr("STR_SPY_OP_CAUGHT").arg(name).arg(opName)));
++				saveGame->endSpyMission(i, true);
++			}
++			Log(LOG_INFO) << "SPYOP " << opName << " by " << name << " roll " << roll << (first ? " (first, safe)" : "");
++		}
++	}
++
 +	// G.I. Joe capture (John 13 Nov 2026): a Joe in Cobra's hands talks. The first leak after a few
 +	// days, then about one a week; a named Joe (not a greenshirt) holds out longer. One leak at a time.
 +	// The leak this build can act on: Cobra learns which of its sites the Joes know, and moves one
@@ -8939,7 +8982,7 @@ index 6b4e79d..c69bcb7 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2862,6 +3305,10 @@ void GeoscapeState::time1Month()
+@@ -2862,6 +3348,10 @@ void GeoscapeState::time1Month()
  	_game->getSavedGame()->addMonth();
  
  	// Determine alien mission for this month.
@@ -8950,7 +8993,7 @@ index 6b4e79d..c69bcb7 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3407,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3450,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -8981,7 +9024,7 @@ index 6b4e79d..c69bcb7 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +3593,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +3636,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -8991,7 +9034,7 @@ index 6b4e79d..c69bcb7 100644
  }
  
  /**
-@@ -3265,6 +3737,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +3780,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -9007,7 +9050,7 @@ index 6b4e79d..c69bcb7 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +3823,17 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +3866,17 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -9025,7 +9068,7 @@ index 6b4e79d..c69bcb7 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -4647,11 +5139,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +5182,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -10184,10 +10227,10 @@ index 0000000..3543fff
 +}
 diff --git a/src/Geoscape/IntelBoardState.cpp b/src/Geoscape/IntelBoardState.cpp
 new file mode 100644
-index 0000000..f5ef936
+index 0000000..c234079
 --- /dev/null
 +++ b/src/Geoscape/IntelBoardState.cpp
-@@ -0,0 +1,386 @@
+@@ -0,0 +1,498 @@
 +/*
 + * G.I. Joe: USA Defense. The INTEL board (see IntelBoardState.h).
 + * Sections: what just happened, open leads with how close each is, solved leads, Cobra sites
@@ -10207,6 +10250,7 @@ index 0000000..f5ef936
 +#include "../Interface/TextList.h"
 +#include "../Mod/Mod.h"
 +#include "../Mod/RuleLead.h"
++#include "../Mod/RuleResearch.h"
 +#include "../Mod/RuleRegion.h"
 +#include "../Savegame/SavedGame.h"
 +#include "../Savegame/AlienBase.h"
@@ -10306,6 +10350,7 @@ index 0000000..f5ef936
 +	SavedGame *save = _game->getSavedGame();
 +	_lstBoard->clearList();
 +	_heldRows.clear();
++	_opRows.clear();
 +
 +	auto header = [&](const std::string &key)
 +	{
@@ -10386,6 +10431,40 @@ index 0000000..f5ef936
 +		_lstBoard->addRow(3, tr("STR_UNCONFIRMED_PINS").c_str(), p.str().c_str(), "");
 +	}
 +
++	// G.I. Joe spy operations: the ones that can be sent (click to pick a spy) and the ones running.
++	{
++		std::vector<std::string> ready;
++		for (const auto &op : mod->getSpyOperations())
++		{
++			if (save->isSpyOpDone(op.type)) continue;
++			bool running = false;
++			for (const auto &m : save->getSpyMissions()) running = running || m.op == op.type;
++			if (running) continue;
++			bool open = op.requiresAny.empty();
++			for (const auto &r : op.requiresAny)
++				if (const RuleResearch *rr = mod->getResearch(r)) open = open || save->isResearched(rr);
++			if (open) ready.push_back(op.type);
++		}
++		if (!ready.empty() || !save->getSpyMissions().empty())
++		{
++			header("STR_SPY_OPERATIONS");
++			for (const auto &type : ready)
++			{
++				_lstBoard->addRow(3, tr(type).c_str(), tr("STR_SPY_SEND").c_str(), "");
++				_opRows.resize(_lstBoard->getLastRowIndex() + 1);
++				_opRows[_lstBoard->getLastRowIndex()] = type;
++			}
++			for (size_t i = 0; i < save->getSpyMissions().size(); ++i)
++			{
++				const auto &m = save->getSpyMissions()[i];
++				std::string who = i < save->getAwaySpies().size() ? save->getAwaySpies()[i]->getName() : "";
++				std::ostringstream d;
++				d << m.daysLeft;
++				_lstBoard->addRow(3, tr(m.op).c_str(), who.c_str(), tr("STR_DAYS_LEFT").arg(d.str()).c_str());
++			}
++		}
++	}
++
 +	// G.I. Joe capture: Joes Cobra is holding. Click one to trade or rescue him.
 +	if (!save->getCapturedSoldiers()->empty())
 +	{
@@ -10426,6 +10505,10 @@ index 0000000..f5ef936
 +	if (row < _heldRows.size() && _heldRows[row])
 +	{
 +		_game->pushState(new HeldJoeState(_heldRows[row]));
++	}
++	else if (row < _opRows.size() && !_opRows[row].empty())
++	{
++		_game->pushState(new SendSpyState(_opRows[row]));
 +	}
 +}
 +
@@ -10573,13 +10656,85 @@ index 0000000..f5ef936
 +	_game->popState();
 +}
 +
++// ---- SendSpyState -------------------------------------------------------------------------------
++
++SendSpyState::SendSpyState(const std::string &op) : _op(op)
++{
++	_screen = false;
++	_window = new Window(this, 256, 160, 32, 20, POPUP_BOTH);
++	_txtTitle = new Text(236, 17, 42, 30);
++	_txtBody = new Text(228, 48, 46, 50);
++	_lstSpies = new TextList(220, 56, 46, 102);
++	_btnCancel = new TextButton(80, 14, 120, 162);
++	setInterface("fundingWindow");
++	add(_window, "window", "fundingWindow");
++	add(_txtTitle, "text1", "fundingWindow");
++	add(_txtBody, "text2", "fundingWindow");
++	add(_lstSpies, "list", "fundingWindow");
++	add(_btnCancel, "button", "fundingWindow");
++	centerAllSurfaces();
++	setWindowBackground(_window, "fundingWindow");
++
++	const Mod *mod = _game->getMod();
++	SavedGame *save = _game->getSavedGame();
++	const Mod::SpyOperationRule *rule = mod->getSpyOperation(_op);
++	_txtTitle->setBig();
++	_txtTitle->setAlign(ALIGN_CENTER);
++	_txtTitle->setText(tr(_op));
++	std::ostringstream body;
++	if (rule && !rule->desc.empty()) body << tr(rule->desc);
++	body << "\n" << tr("STR_SPY_AWAY_DAYS").arg(rule ? rule->days : 5);
++	_txtBody->setWordWrap(true);
++	_txtBody->setText(body.str());
++
++	// Spies at home and fit: not wounded, not on a craft that is out.
++	_lstSpies->setColumns(2, 140, 80);
++	_lstSpies->setSelectable(true);
++	_lstSpies->setBackground(_window);
++	_lstSpies->onMouseClick((ActionHandler)&SendSpyState::lstSpiesClick);
++	for (auto *base : *save->getBases())
++	{
++		for (auto *s : *base->getSoldiers())
++		{
++			if (!mod->isSpy(s->getRules()->getType()) || s->isWounded()) continue;
++			if (s->getCraft() && s->getCraft()->getStatus() == "STR_OUT") continue;
++			_spies.push_back(std::make_pair(s, base));
++			_lstSpies->addRow(2, s->getName().c_str(), base->getName().c_str());
++		}
++	}
++	if (_spies.empty())
++	{
++		_lstSpies->addRow(1, tr("STR_SPY_NONE_HOME").c_str());
++	}
++	_btnCancel->setText(tr("STR_CANCEL"));
++	_btnCancel->onMouseClick((ActionHandler)&SendSpyState::btnCancelClick);
++	_btnCancel->onKeyboardPress((ActionHandler)&SendSpyState::btnCancelClick, Options::keyCancel);
++}
++
++void SendSpyState::lstSpiesClick(Action *)
++{
++	unsigned row = _lstSpies->getSelectedRow();
++	if (row >= _spies.size()) return;
++	const Mod::SpyOperationRule *rule = _game->getMod()->getSpyOperation(_op);
++	if (_game->getSavedGame()->sendSpy(_spies[row].first, _spies[row].second, _op, rule ? rule->days : 5))
++	{
++		_game->getSavedGame()->addLeadNews(std::string(tr("STR_SPY_SENT").arg(_spies[row].first->getName()).arg(tr(_op))));
++	}
++	_game->popState();
++}
++
++void SendSpyState::btnCancelClick(Action *)
++{
++	_game->popState();
++}
++
 +}
 diff --git a/src/Geoscape/IntelBoardState.h b/src/Geoscape/IntelBoardState.h
 new file mode 100644
-index 0000000..59053df
+index 0000000..d0c5140
 --- /dev/null
 +++ b/src/Geoscape/IntelBoardState.h
-@@ -0,0 +1,57 @@
+@@ -0,0 +1,74 @@
 +#pragma once
 +/*
 + * G.I. Joe: USA Defense. The INTEL board: what the Joes know and what they are closing in on.
@@ -10606,6 +10761,7 @@ index 0000000..59053df
 +	Text *_txtTitle, *_txtNews;
 +	TextList *_lstBoard;
 +	std::vector<Soldier*> _heldRows; // row -> held Joe (0 for every other row)
++	std::vector<std::string> _opRows; // row -> spy operation that can be sent ("" for every other row)
 +public:
 +	IntelBoardState();
 +	~IntelBoardState() = default;
@@ -10616,6 +10772,22 @@ index 0000000..59053df
 +	void init() override;
 +private:
 +	void fill();
++};
++
++/// G.I. Joe spy operations (John 13 Nov 2026): pick a spy and send him on an operation.
++class SendSpyState : public State
++{
++private:
++	std::string _op;
++	Window *_window;
++	Text *_txtTitle, *_txtBody;
++	TextList *_lstSpies;
++	TextButton *_btnCancel;
++	std::vector<std::pair<Soldier*, class Base*>> _spies;
++public:
++	SendSpyState(const std::string &op);
++	void lstSpiesClick(Action *action);
++	void btnCancelClick(Action *action);
 +};
 +
 +/// G.I. Joe capture (John 13 Nov 2026): a Joe held by Cobra. Trade a Cobra prisoner for him,
@@ -11879,7 +12051,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..02207c9 100644
+index 1885346..18876d3 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -11996,7 +12168,7 @@ index 1885346..02207c9 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3287,154 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3287,176 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -12086,6 +12258,28 @@ index 1885346..02207c9 100644
 +		capture.tryRead("surroundJoes", _surroundJoes);
 +		capture.tryRead("surroundRange", _surroundRange);
 +		capture.tryRead("namedCobra", _namedCobra);
++		capture.tryRead("spyTypes", _spyTypes);
++	}
++	if (const auto& ops = reader["spyOperations"])
++	{
++		for (const auto& o : ops.children())
++		{
++			SpyOperationRule r;
++			o.tryRead("type", r.type);
++			if (r.type.empty()) continue;
++			auto old = std::find_if(_spyOperations.begin(), _spyOperations.end(), [&](const SpyOperationRule &x) { return x.type == r.type; });
++			if (old != _spyOperations.end()) r = *old;
++			o.tryRead("desc", r.desc);
++			o.tryRead("requiresAny", r.requiresAny);
++			o.tryRead("days", r.days);
++			o.tryRead("success", r.success);
++			o.tryRead("empty", r.empty);
++			o.tryRead("once", r.once);
++			o.tryRead("items", r.items);
++			o.tryRead("lead", r.lead);
++			o.tryRead("leadPoints", r.leadPoints);
++			if (old != _spyOperations.end()) *old = r; else _spyOperations.push_back(r);
++		}
 +	}
 +	if (const auto& recon = reader["recon"])
 +	{
@@ -12151,7 +12345,7 @@ index 1885346..02207c9 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3445,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3467,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -12159,7 +12353,7 @@ index 1885346..02207c9 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4050,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4072,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -12185,7 +12379,7 @@ index 1885346..02207c9 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4307,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4329,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -12206,7 +12400,7 @@ index 1885346..02207c9 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6021,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6043,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -12226,7 +12420,7 @@ index 1885346..02207c9 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6044,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6066,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -12234,7 +12428,7 @@ index 1885346..02207c9 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6058,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6080,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -12274,7 +12468,7 @@ index 1885346..02207c9 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..ebe45d5 100644
+index 2242d13..15d9ab2 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -12338,7 +12532,7 @@ index 2242d13..ebe45d5 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,41 @@ private:
+@@ -327,6 +360,56 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -12366,6 +12560,21 @@ index 2242d13..ebe45d5 100644
 +	std::vector<std::string> _greenshirtTypes;
 +	int _cuffTU = 8, _knockoutChance = 10, _surrenderHealthPct = 33, _surroundJoes = 2, _surroundRange = 3;
 +	std::vector<std::string> _knockoutWeapons, _namedCobra;
++public:
++	/// G.I. Joe spy operations (John 13 Nov 2026, CAPTURE_DESIGN_v1.md): a spy is away for days, then
++	/// comes back with something, comes back empty, or is caught (and held like any captured Joe).
++	struct SpyOperationRule
++	{
++		std::string type, desc;
++		std::vector<std::string> requiresAny; // offered once ANY of these topics is researched
++		int days = 5, success = 80, empty = 15; // the rest of 100 is caught
++		bool once = true;                       // a story operation runs until it succeeds, then is gone
++		std::map<std::string, int> items;      // brought home to the spy's base on a success
++		std::string lead; int leadPoints = 0;  // and lead points
++	};
++private:
++	std::vector<SpyOperationRule> _spyOperations;
++	std::vector<std::string> _spyTypes;
 +	bool _cobraSupplyAllMissions;
 +	int _cobraWellPaid;
 +	int _cobraWellPaidUpkeep;
@@ -12380,7 +12589,7 @@ index 2242d13..ebe45d5 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +760,67 @@ public:
+@@ -692,6 +775,70 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -12410,6 +12619,9 @@ index 2242d13..ebe45d5 100644
 +	int getReconTraitBonus() const { return _reconTraitBonus; }
 +	const std::vector<std::string> &getReconSoldierTypes() const { return _reconSoldierTypes; }
 +	bool isCaptureOn() const { return _captureOn; }
++	const std::vector<SpyOperationRule> &getSpyOperations() const { return _spyOperations; }
++	const SpyOperationRule *getSpyOperation(const std::string &type) const { for (const auto &o : _spyOperations) if (o.type == type) return &o; return nullptr; }
++	bool isSpy(const std::string &soldierType) const { return std::find(_spyTypes.begin(), _spyTypes.end(), soldierType) != _spyTypes.end(); }
 +	int getKnockoutChance() const { return _knockoutChance; }
 +	int getCuffTU() const { return _cuffTU; }
 +	int getOverflowPerRoom() const { return _overflowPerRoom; }
@@ -13770,7 +13982,7 @@ index 6c121c7..fb7f92b 100644
  	std::vector< std::vector<int> > &getReinforcementsBlocks() { return _reinforcementsBlocks; }
  
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..1c2d2ce 100644
+index 9ca9637..87bca8e 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,11 +21,13 @@
@@ -13884,7 +14096,7 @@ index 9ca9637..1c2d2ce 100644
  	reader.tryRead("daysPassed", _daysPassed);
  	reader.tryRead("vehiclesLost", _vehiclesLost);
  	reader.tryRead("craftLostDogfight", _craftLostDogfight);
-@@ -399,6 +462,17 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -399,6 +462,19 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	reader.tryRead("funds", _funds);
  	reader.tryRead("maintenance", _maintenance);
  	reader.tryRead("userNotes", _userNotes);
@@ -13899,10 +14111,12 @@ index 9ca9637..1c2d2ce 100644
 +	reader.tryRead("leadsSolved", _leadsSolved);
 +	reader.tryRead("leadNews", _leadNews);
 +	reader.tryRead("heldDays", _heldDays);
++	reader.tryRead("spyOpsDone", _spyOpsDone);
++	reader.tryRead("spyOpsRun", _spyOpsRun);
  	reader.tryRead("geoscapeDebugLog", _geoscapeDebugLog);
  	reader.tryRead("researchScores", _researchScores);
  	reader.tryRead("incomes", _incomes);
-@@ -649,6 +723,21 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -649,6 +725,42 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  		}
  	}
  	_alienStrategy->load(reader["alienStrategy"], mod);
@@ -13921,10 +14135,31 @@ index 9ca9637..1c2d2ce 100644
 +			_capturedSoldiers.push_back(soldier);
 +		}
 +	}
++	// Spies out on operations: the missions and the men, in the same order.
++	for (const auto& m : reader["spyMissions"].children())
++	{
++		SpyMission sm;
++		m.tryRead("op", sm.op);
++		m.tryRead("base", sm.base);
++		m.tryRead("daysLeft", sm.daysLeft);
++		_spyMissions.push_back(sm);
++	}
++	for (const auto& away : reader["awaySpies"].children())
++	{
++		std::string type = away["type"].readVal(mod->getSoldiersList().front());
++		if (mod->getSoldier(type))
++		{
++			Soldier *soldier = new Soldier(mod->getSoldier(type), nullptr, 0 /*nationality*/);
++			soldier->load(away, mod, this, mod->getScriptGlobal());
++			_awaySpies.push_back(soldier);
++		}
++	}
++	_spyMissions.resize(std::min(_spyMissions.size(), _awaySpies.size()));
++	while (_awaySpies.size() > _spyMissions.size()) { SpyMission sm; sm.daysLeft = 1; _spyMissions.push_back(sm); }
  
  	for (const auto& weHardlyKnewYe : reader["deadSoldiers"].children())
  	{
-@@ -690,6 +779,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -690,6 +802,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	}
  
  	_scriptValues.load(reader, mod->getScriptGlobal());
@@ -13932,7 +14167,7 @@ index 9ca9637..1c2d2ce 100644
  }
  
  void SavedGame::loadTemplates(const YAML::YamlNodeReader& reader, const Mod* mod)
-@@ -779,6 +869,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -779,6 +892,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("difficulty", _difficulty);
  	writer.write("end", _end);
  	writer.write("monthsPassed", _monthsPassed);
@@ -13940,7 +14175,7 @@ index 9ca9637..1c2d2ce 100644
  	writer.write("daysPassed", _daysPassed);
  	writer.write("vehiclesLost", _vehiclesLost);
  	writer.write("craftLostDogfight", _craftLostDogfight);
-@@ -790,6 +881,32 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -790,6 +904,53 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("funds", _funds);
  	writer.write("maintenance", _maintenance);
  	writer.write("userNotes", _userNotes);
@@ -13970,10 +14205,31 @@ index 9ca9637..1c2d2ce 100644
 +	{
 +		writer.write("heldDays", _heldDays);
 +	}
++	if (!_spyOpsDone.empty())
++	{
++		writer.write("spyOpsDone", _spyOpsDone);
++	}
++	if (_spyOpsRun)
++	{
++		writer.write("spyOpsRun", _spyOpsRun);
++	}
++	if (!_spyMissions.empty())
++	{
++		auto list = writer["spyMissions"];
++		list.setAsSeq();
++		for (const auto &m : _spyMissions)
++		{
++			auto n = list.write();
++			n.setAsMap();
++			n.write("op", m.op);
++			n.write("base", m.base);
++			n.write("daysLeft", m.daysLeft);
++		}
++	}
  	if (Options::oxceGeoscapeDebugLogMaxEntries > 0 && _geoscapeDebugLog.size() > 0)
  	{
  		auto geoDebugLog = writer["geoscapeDebugLog"];
-@@ -849,8 +966,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -849,8 +1010,12 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("hiddenPurchaseItems", _hiddenPurchaseItemsMap);
  	writer.write("customRuleCraftDeployments", _customRuleCraftDeployments);
  	_alienStrategy->save(writer["alienStrategy"]);
@@ -13981,10 +14237,12 @@ index 9ca9637..1c2d2ce 100644
  
  	saveVector(writer, _deadSoldiers, "deadSoldiers", mod->getScriptGlobal());
 +	saveVector(writer, _capturedSoldiers, "capturedSoldiers", mod->getScriptGlobal());
++	if (!_awaySpies.empty())
++		saveVector(writer, _awaySpies, "awaySpies", mod->getScriptGlobal());
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
  	{
  		if (!_globalEquipmentLayout[j].empty())
-@@ -1530,8 +1649,155 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
+@@ -1530,8 +1695,155 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
   * @param base the base, in which the project was finished
   * @param score should the score be awarded or not?
   */
@@ -14140,7 +14398,7 @@ index 9ca9637..1c2d2ce 100644
  	if (isResearchRuleStatusDisabled(research->getName()))
  	{
  		return;
-@@ -2579,6 +2845,950 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2891,950 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -15091,7 +15349,7 @@ index 9ca9637..1c2d2ce 100644
  Region *SavedGame::locateRegion(double lon, double lat) const
  {
  	Region* found = nullptr;
-@@ -2995,6 +4205,45 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
+@@ -2995,6 +4251,79 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
   * @param soldier Pointer to dead soldier.
   * @param cause Pointer to cause of death, NULL if missing in action.
   */
@@ -15125,6 +15383,40 @@ index 9ca9637..1c2d2ce 100644
 +	return it;
 +}
 +
++bool SavedGame::sendSpy(Soldier *soldier, Base *base, const std::string &op, int days)
++{
++	auto it = std::find(base->getSoldiers()->begin(), base->getSoldiers()->end(), soldier);
++	if (it == base->getSoldiers()->end()) return false;
++	if (soldier->getCraft() && soldier->getCraft()->getStatus() == "STR_OUT") return false;
++	soldier->setCraft(nullptr);
++	base->getSoldiers()->erase(it);
++	SpyMission m;
++	m.op = op;
++	m.daysLeft = std::max(1, days);
++	m.base = 0;
++	for (size_t i = 0; i < _bases.size(); ++i) if (_bases[i] == base) m.base = (int)i;
++	_spyMissions.push_back(m);
++	_awaySpies.push_back(soldier);
++	return true;
++}
++
++void SavedGame::endSpyMission(size_t i, bool caught)
++{
++	if (i >= _spyMissions.size() || i >= _awaySpies.size()) return;
++	Soldier *soldier = _awaySpies[i];
++	const int b = _spyMissions[i].base;
++	_awaySpies.erase(_awaySpies.begin() + i);
++	_spyMissions.erase(_spyMissions.begin() + i);
++	if (caught || _bases.empty())
++	{
++		_capturedSoldiers.push_back(soldier);
++		_heldDays[soldier->getId()] = 0;
++		return;
++	}
++	Base *home = (b >= 0 && b < (int)_bases.size()) ? _bases[b] : _bases.front();
++	home->getSoldiers()->push_back(soldier);
++}
++
 +void SavedGame::returnCapturedSoldier(Soldier *soldier, Base *base)
 +{
 +	auto it = std::find(_capturedSoldiers.begin(), _capturedSoldiers.end(), soldier);
@@ -15138,7 +15430,7 @@ index 9ca9637..1c2d2ce 100644
  {
  	if (resetArmor)
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..b564f01 100644
+index d985908..b830285 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -37,6 +37,7 @@ namespace OpenXcom
@@ -15194,7 +15486,7 @@ index d985908..b564f01 100644
  class SavedGame
  {
  public:
-@@ -126,6 +158,12 @@ private:
+@@ -126,6 +158,21 @@ private:
  	bool _ironman;
  	GameTime *_time;
  	std::vector<std::string> _userNotes;
@@ -15203,11 +15495,20 @@ index d985908..b564f01 100644
 +	std::map<std::string, int> _leadPoints;
 +	std::vector<std::string> _leadsSolved, _leadNews;
 +	std::map<int, int> _heldDays; // G.I. Joe: days each captured Joe (soldier id) has been in Cobra's hands
++public:
++	/// G.I. Joe spy operations: one spy out on one operation. The spy leaves the base roster while
++	/// away (kept in _awaySpies, same order) and comes back to the base he left from.
++	struct SpyMission { std::string op; int base = 0; int daysLeft = 0; };
++private:
++	std::vector<SpyMission> _spyMissions;
++	std::vector<Soldier*> _awaySpies;
++	std::vector<std::string> _spyOpsDone;
++	int _spyOpsRun = 0;
 +	int _globeMarkId = 0;
  	std::vector<std::string> _geoscapeDebugLog;
  	std::vector<int> _researchScores;
  	std::vector<int64_t> _funds, _maintenance, _incomes, _expenditures;
-@@ -140,6 +178,7 @@ private:
+@@ -140,6 +187,7 @@ private:
  	std::vector<MissionSite*> _missionSites;
  	std::vector<AlienBase*> _alienBases;
  	AlienStrategy *_alienStrategy;
@@ -15215,7 +15516,7 @@ index d985908..b564f01 100644
  	SavedBattleGame *_battleGame;
  	std::vector<const RuleResearch*> _discovered;
  	std::vector<ResearchDiaryEntry*> _researchDiary;
-@@ -157,6 +196,9 @@ private:
+@@ -157,6 +205,9 @@ private:
  	bool _togglePersonalLight, _toggleNightVision;
  	int _toggleBrightness;
  	int _monthsPassed;
@@ -15225,7 +15526,7 @@ index d985908..b564f01 100644
  	int _daysPassed;
  	int _vehiclesLost, _craftLostDogfight, _craftLostMission;
  	std::string _graphRegionToggles;
-@@ -164,6 +206,7 @@ private:
+@@ -164,6 +215,7 @@ private:
  	std::string _graphFinanceToggles;
  	std::vector<const RuleResearch*> _poppedResearch;
  	std::vector<Soldier*> _deadSoldiers;
@@ -15233,7 +15534,7 @@ index d985908..b564f01 100644
  	size_t _selectedBase;
  	std::string _lastselectedArmor; //contains the last selected armor
  	std::string _globalEquipmentLayoutName[MAX_EQUIPMENT_LAYOUT_TEMPLATES];
-@@ -293,6 +336,8 @@ public:
+@@ -293,6 +345,8 @@ public:
  	void makeAllResearchDiscovered(const Mod* mod);
  	/// Add a finished ResearchProject
  	void addFinishedResearch(const RuleResearch *research, const Mod *mod, Base *base, bool score = true);
@@ -15242,7 +15543,7 @@ index d985908..b564f01 100644
  	/// Add a new record to the research diary
  	void addResearchDiaryEntry(ResearchDiaryEntry* entry);
  	/// Gets the research diary.
-@@ -395,6 +440,32 @@ public:
+@@ -395,6 +449,32 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -15275,7 +15576,7 @@ index d985908..b564f01 100644
  	/// Read-only access to the alien strategy data.
  	const AlienStrategy &getAlienStrategy() const { return *_alienStrategy; }
  	/// Full access to the current alien missions.
-@@ -409,6 +480,10 @@ public:
+@@ -409,6 +489,10 @@ public:
  	const std::vector<GeoscapeEvent*> &getGeoscapeEvents() const { return _geoscapeEvents; }
  	/// Locate a region containing a position.
  	Region *locateRegion(double lon, double lat) const;
@@ -15286,7 +15587,7 @@ index d985908..b564f01 100644
  	/// Locate a region containing a Target.
  	Region *locateRegion(const Target &target) const;
  	/// Locate a country containing a position.
-@@ -419,6 +494,13 @@ public:
+@@ -419,6 +503,13 @@ public:
  	int selectSoldierNationalityByLocation(const Mod* mod, const RuleSoldier* rule, const Target* target) const;
  	/// Return the month counter.
  	int getMonthsPassed() const;
@@ -15300,7 +15601,7 @@ index d985908..b564f01 100644
  	/// Return the day counter.
  	int getDaysPassed() const { return _daysPassed; }
  	void increaseDaysPassed() { _daysPassed++; }
-@@ -493,6 +575,16 @@ public:
+@@ -493,6 +584,27 @@ public:
  	bool isUfoOnIgnoreList(int ufoId);
  	/// Handles a soldier's death.
  	std::vector<Soldier*>::iterator killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause = 0);
@@ -15314,10 +15615,21 @@ index d985908..b564f01 100644
 +	void setHeldDays(int soldierId, int days) { if (days < 0) _heldDays.erase(soldierId); else _heldDays[soldierId] = days; }
 +	/// G.I. Joe capture: give a captured Joe back to a base (traded or rescued).
 +	void returnCapturedSoldier(Soldier *soldier, Base *base);
++	/// G.I. Joe spy operations.
++	std::vector<SpyMission> &getSpyMissions() { return _spyMissions; }
++	std::vector<Soldier*> &getAwaySpies() { return _awaySpies; }
++	bool isSpyOpDone(const std::string &op) const { return std::find(_spyOpsDone.begin(), _spyOpsDone.end(), op) != _spyOpsDone.end(); }
++	void setSpyOpDone(const std::string &op) { if (!isSpyOpDone(op)) _spyOpsDone.push_back(op); }
++	int getSpyOpsRun() const { return _spyOpsRun; }
++	void countSpyOp() { ++_spyOpsRun; }
++	/// Send a spy from a base on an operation; false if he cannot go.
++	bool sendSpy(Soldier *soldier, Base *base, const std::string &op, int days);
++	/// Bring a spy home (the mission at index i), or hand him to Cobra. Removes the mission.
++	void endSpyMission(size_t i, bool caught);
  	/// enables/disables autosell for an item type
  	void setAutosell(const RuleItem *itype, const bool enabled);
  	/// get autosell state for an item type
-@@ -529,6 +621,26 @@ public:
+@@ -529,6 +641,26 @@ public:
  	void handlePrimaryResearchSideEffects(const std::vector<const RuleResearch*> &topicsToCheck, const Mod* mod, Base* base);
  	/// Gets the list of user notes.
  	std::vector<std::string>& getUserNotes() { return _userNotes; }
