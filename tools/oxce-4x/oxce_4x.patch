@@ -8131,7 +8131,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..f27beca 100644
+index 6b4e79d..6f52ccd 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -17,6 +17,8 @@
@@ -8770,7 +8770,43 @@ index 6b4e79d..f27beca 100644
  			}
  			else
  			{
-@@ -2862,6 +3247,10 @@ void GeoscapeState::time1Month()
+@@ -2395,6 +2780,35 @@ void GeoscapeState::time1Day()
+ 	Mod *mod = _game->getMod();
+ 	bool psiStrengthEval = (Options::psiStrengthEval && saveGame->isResearched(mod->getPsiRequirements()));
+ 
++	// G.I. Joe capture (John 13 Nov 2026): once a week, each prisoner cuffed outside the cells
++	// (beyond the rooms' own cells) may escape: 10%, a named Cobra 30%.
++	if (mod->isCaptureOn() && saveGame->getDaysPassed() % 7 == 0)
++	{
++		for (auto* base : *saveGame->getBases())
++		{
++			std::map<int, std::vector<const RuleItem*> > held;
++			for (const auto& c : *base->getStorageItems()->getContents())
++			{
++				if (!c.first->isAlien()) continue;
++				for (int i = 0; i < c.second; ++i) held[c.first->getPrisonType()].push_back(c.first);
++			}
++			for (auto& h : held)
++			{
++				int outside = (int)h.second.size() - base->getCellContainment(h.first);
++				RNG::shuffle(h.second);
++				for (int i = 0; i < outside && i < (int)h.second.size(); ++i)
++				{
++					const RuleItem* p = h.second[i];
++					const bool named = mod->isNamedCobra(p->getType());
++					if (!RNG::percent(named ? mod->getEscapeChanceNamed() : mod->getEscapeChance())) continue;
++					base->getStorageItems()->removeItem(p, 1);
++					saveGame->addLeadNews(std::string("!") + (named ? "STR_NAMED_PRISONER_ESCAPED" : "STR_PRISONER_ESCAPED"));
++					Log(LOG_INFO) << "CAPTURE prisoner escaped " << p->getType() << " from " << base->getName();
++				}
++			}
++		}
++	}
++
+ 	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
+ 	{
+ 		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
+@@ -2862,6 +3276,10 @@ void GeoscapeState::time1Month()
  	_game->getSavedGame()->addMonth();
  
  	// Determine alien mission for this month.
@@ -8781,7 +8817,7 @@ index 6b4e79d..f27beca 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3349,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3378,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -8812,7 +8848,7 @@ index 6b4e79d..f27beca 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +3535,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +3564,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -8822,7 +8858,7 @@ index 6b4e79d..f27beca 100644
  }
  
  /**
-@@ -3265,6 +3679,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +3708,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -8838,7 +8874,7 @@ index 6b4e79d..f27beca 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +3765,17 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +3794,17 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -8856,7 +8892,7 @@ index 6b4e79d..f27beca 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -4647,11 +5081,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +5110,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -11510,7 +11546,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..f3f68b8 100644
+index 1885346..e37e60f 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -11627,7 +11663,7 @@ index 1885346..f3f68b8 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3287,145 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3287,148 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -11703,6 +11739,9 @@ index 1885346..f3f68b8 100644
 +		_captureOn = true;
 +		capture.tryRead("knockoutChance", _knockoutChance);
 +		capture.tryRead("cuffTU", _cuffTU);
++		capture.tryRead("overflowPerRoom", _overflowPerRoom);
++		capture.tryRead("escapeChance", _escapeChance);
++		capture.tryRead("escapeChanceNamed", _escapeChanceNamed);
 +		capture.tryRead("knockoutWeapons", _knockoutWeapons);
 +		capture.tryRead("surrenderHealthPct", _surrenderHealthPct);
 +		capture.tryRead("surroundJoes", _surroundJoes);
@@ -11773,7 +11812,7 @@ index 1885346..f3f68b8 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3436,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3439,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -11781,7 +11820,7 @@ index 1885346..f3f68b8 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4041,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4044,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -11807,7 +11846,7 @@ index 1885346..f3f68b8 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4298,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4301,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -11828,7 +11867,7 @@ index 1885346..f3f68b8 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6012,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6015,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -11848,7 +11887,7 @@ index 1885346..f3f68b8 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6035,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6038,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -11856,7 +11895,7 @@ index 1885346..f3f68b8 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6049,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6052,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -11896,7 +11935,7 @@ index 1885346..f3f68b8 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..de0e9aa 100644
+index 2242d13..1fbe4fa 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -11960,7 +11999,7 @@ index 2242d13..de0e9aa 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,38 @@ private:
+@@ -327,6 +360,39 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -11983,6 +12022,7 @@ index 2242d13..de0e9aa 100644
 +	std::vector<std::string> _reconSoldierTypes;
 +	/// G.I. Joe capture (John 13 Nov 2026, CAPTURE_DESIGN_v1.md): knockouts, surrender, named Cobra.
 +	bool _captureOn = false;
++	int _overflowPerRoom = 0, _escapeChance = 10, _escapeChanceNamed = 30;
 +	int _cuffTU = 8, _knockoutChance = 10, _surrenderHealthPct = 33, _surroundJoes = 2, _surroundRange = 3;
 +	std::vector<std::string> _knockoutWeapons, _namedCobra;
 +	bool _cobraSupplyAllMissions;
@@ -11999,7 +12039,7 @@ index 2242d13..de0e9aa 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +757,60 @@ public:
+@@ -692,6 +758,63 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -12031,6 +12071,9 @@ index 2242d13..de0e9aa 100644
 +	bool isCaptureOn() const { return _captureOn; }
 +	int getKnockoutChance() const { return _knockoutChance; }
 +	int getCuffTU() const { return _cuffTU; }
++	int getOverflowPerRoom() const { return _overflowPerRoom; }
++	int getEscapeChance() const { return _escapeChance; }
++	int getEscapeChanceNamed() const { return _escapeChanceNamed; }
 +	bool isKnockoutWeapon(const std::string &type) const { return std::find(_knockoutWeapons.begin(), _knockoutWeapons.end(), type) != _knockoutWeapons.end(); }
 +	int getSurrenderHealthPct() const { return _surrenderHealthPct; }
 +	int getSurroundJoes() const { return _surroundJoes; }
@@ -12772,6 +12815,44 @@ index 97ef4f5..0dbe163 100644
  	/// Adds a mission location to our storage array.
  	void addMissionLocation(const std::string &varName, const std::string &regionName, int zoneNumber, int maximum);
  	/// Checks that a given mission location (city or whatever) isn't stored in our list of previously attacked locations.
+diff --git a/src/Savegame/Base.cpp b/src/Savegame/Base.cpp
+index ac1a454..51889e5 100644
+--- a/src/Savegame/Base.cpp
++++ b/src/Savegame/Base.cpp
+@@ -1519,6 +1519,20 @@ int Base::getUsedContainment(int prisonType, bool onlyExternal) const
+  * @return Containment Lab space.
+  */
+ int Base::getAvailableContainment(int prisonType) const
++{
++	// G.I. Joe (John 13 Nov 2026): each room holds its cells plus a few men cuffed outside them
++	int total = 0;
++	for (const auto* fac : _facilities)
++	{
++		if (fac->getBuildTime() == 0 && fac->getRules()->getPrisonType() == prisonType && fac->getRules()->getAliens() > 0)
++		{
++			total += fac->getRules()->getAliens() + _mod->getOverflowPerRoom();
++		}
++	}
++	return total;
++}
++
++int Base::getCellContainment(int prisonType) const
+ {
+ 	int total = 0;
+ 	for (const auto* fac : _facilities)
+diff --git a/src/Savegame/Base.h b/src/Savegame/Base.h
+index b25dba2..5979a5f 100644
+--- a/src/Savegame/Base.h
++++ b/src/Savegame/Base.h
+@@ -278,6 +278,8 @@ public:
+ 	int getFreeContainment(int prisonType) const;
+ 	/// Gets the total amount of Containment space.
+ 	int getAvailableContainment(int prisonType) const;
++	/// G.I. Joe: the cells alone, without the men cuffed outside them.
++	int getCellContainment(int prisonType) const;
+ 	/// Gets the total amount of used Containment space.
+ 	int getUsedContainment(int prisonType, bool onlyExternal = false) const;
+ 	/// Sets the craft's battlescape status.
 diff --git a/src/Savegame/BattleUnit.cpp b/src/Savegame/BattleUnit.cpp
 index 46fbf1f..d1d7d21 100644
 --- a/src/Savegame/BattleUnit.cpp
