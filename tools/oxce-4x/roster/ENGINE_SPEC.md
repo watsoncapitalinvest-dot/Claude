@@ -52,12 +52,12 @@ a second use.
 | Duke | Field Leadership | `newTurnUnit` [H] | Joes within 5 tiles: morale loss halved, +5 firing |
 | Roadblock | .50 Cal Suppression | `hitUnit` + `newTurnUnit` | a unit hit by his gun gets tag `GJR_PINNED`; next turn it loses 25% TU |
 | Rock 'n Roll | Sustained Fire | stock | his own M-60 item: auto x7 instead of x5 |
-| Grand Slam | Forward Observer | specialWeapon? | **clash**: a second once-per-mission strike would need a second special weapon. Proposal: fold into his laser's long range; John to say |
+| Grand Slam | Long Shot (John 21:47: "just dump the artillery") | `hitUnit` or item accuracy-by-range | his laser loses no accuracy with distance (Forward Observer removed) |
 | Short-Fuze | Mortar | stock | the weapon itself |
 | Zap | Bazooka | stock | his rocket item: +50% vs vehicles/armour (damage alter) |
 | Grunt | Steady | `reactionUnit` | +10% on his reaction checks |
 | Stalker | Ranger Lead | `newTurnUnit` [H] | turn 1: every Joe +10 TU if Stalker is on the map |
-| Breaker | Radio Net | see question 1 | |
+| Breaker | Radio Net (John 21:47) | `visibilityUnit` script (test); else fork | Cobra any Joe has spotted stay visible for one turn after every Joe loses sight of them |
 | Flash | Laser Rifle | stock | the weapon itself |
 | Scarlett | Crossbow | stock now, fork later | phase 1: nothing extra (stock fire doesn't reveal); phase 2 stealth (fork #8) makes the shot silent |
 | Snake Eyes | Silent Killer | armour `camouflage` (stock) + fork #8 | phase 1: Cobra spot him at half range; phase 2: melee kills raise no alert |
@@ -88,20 +88,17 @@ a second use.
 - **Arrives** each mission with Snake Eyes: Snake Eyes' **armour** (`STR_SNAKE_EYES_UC`) gets a second `specialWeapon`,
   `STR_GJR_TIMBER_CALL`, with `spawnUnit: STR_TIMBER`, `spawnUnitFaction: 0`, 1 round, used on turn 1 next to him.
   Phase 2: placed automatically at deployment.
-- **Look**: a wolf sprite sheet. No owner yet; DESIGN can build it in the character factory if John says so.
+- **Look**: from John's painted wolf model (Downloads\Wolf Timber - 5989163.zip); delegated (claude/HANDOFF_Timber.md).
 - Never dies (like a named Joe): goes down instead.
 
 ## Depends on (already planned by BUILD)
 - Named Joes go **down, not dead** (the master doc's damage script). Bonds and Field Surgery read "downed".
 - Fixed stats, no promotion, canon rank: the installer contract in `README.md`.
 
-## Questions for John (ROSTER will ask; BUILD needn't wait for the native parts)
-1. **Radio Net**: stock X-COM already shares sight across the squad, so "every Joe sees what any Joe sees" changes
-   nothing. Proposal: *Cobra a Joe has seen stay marked for one turn after every Joe loses sight of them*
-   (no ambush from the fog), plus Joes out of sight of each other don't lose morale for it.
-2. **Grand Slam**: Forward Observer (call artillery) and Jump Strike are both once-per-mission actions, and a soldier
-   has one special weapon. Proposal: Forward Observer becomes "his laser's long-range shots don't lose accuracy with
-   distance", and Jump Strike stays his move.
+## Decided by John (21:47)
+1. Radio Net = spotted Cobra stay marked for one turn after sight is lost ("yes").
+2. Grand Slam: "just dump the artillery": Forward Observer removed; his trait is Long Shot; Jump Strike stays his move.
+3. Timber's look: "i have wolf models already painted delegate it": handed to another chat (claude/HANDOFF_Timber.md).
 
 ## Test plan (BUILD loads, ROSTER checks numbers)
 1. Clean load with the move items and skills defined (no references to missing rules).
