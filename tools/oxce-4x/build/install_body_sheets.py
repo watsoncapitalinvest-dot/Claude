@@ -30,6 +30,7 @@ EXISTING = {'snake_eyes': 'STR_SNAKE_EYES_UC', 'roadblock': 'STR_ROADBLOCK_UC'}
 NEW = {
     'beach_head': ('STR_BEACH_HEAD_UC', 'STR_BEACH_HEAD', 'Beach Head', ['Beach Head']),
     'scarlett': ('STR_SCARLETT_UC', 'STR_SCARLETT', 'Scarlett', ['Scarlett']),
+    'ace': ('STR_ACE_UC', 'STR_ACE', 'Ace', ['Ace']),
     'greenshirt_rifleman': ('STR_REGULAR_JOE_UC', 'STR_REGULAR_JOE', 'Joe Rifleman', None),
     'greenshirt_medic': ('STR_JOE_MEDIC_UC', 'STR_JOE_MEDIC', 'Joe Medic', None),
     'greenshirt_pilot': ('STR_JOE_PILOT_UC', 'STR_JOE_PILOT', 'Joe Pilot', None),
