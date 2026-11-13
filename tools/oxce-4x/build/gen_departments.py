@@ -6,14 +6,14 @@ import os, yaml
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 ALIAS = {'STR_ROADBLOCK': 'STR_SOLDIER'}   # Roadblock plays as the stock STR_SOLDIER type
 
-DEPTS = [  # type, name, rooms, specialties, only these soldier types
-  ('COMMAND',  'STR_DEPT_COMMAND',  ['STR_ACCESS_LIFT'],      ['STR_GJR_SPEC_COMMAND'], []),
-  ('INTEL',    'STR_DEPT_INTEL',    ['STR_COMPUTER_STATION'], ['STR_GJR_SPEC_COVERT_OPS_INTEL'], []),
-  ('MOTOR_POOL','STR_DEPT_MOTOR_POOL',['STR_HANGAR'],          ['STR_GJR_SPEC_ARMOR_VEHICLES'], []),
-  ('ARMORY',   'STR_DEPT_ARMORY',   ['STR_ARMORY'],           ['STR_GJR_SPEC_HEAVY_WEAPONS', 'STR_GJR_SPEC_RECON_SNIPER', 'STR_GJR_SPEC_DEMOLITIONS_ENGINEERING'], []),
-  ('MEDICAL',  'STR_DEPT_MEDICAL',  ['STR_INFIRMARY_ROOM'],   ['STR_GJR_SPEC_MEDIC'], []),
-  ('COMMS',    'STR_DEPT_COMMS',    ['STR_SMALL_RADAR_SYSTEM', 'STR_LARGE_RADAR_SYSTEM'], ['STR_GJR_SPEC_COMMS_TECH'], []),
-  ('AIR_WING', 'STR_DEPT_AIR_WING', ['STR_AIRCRAFT_HANGAR'],  ['STR_GJR_SPEC_PILOT'], []),
+DEPTS = [  # type, name, rooms, specialties, only these soldier types (FACILITY_STATS_v1 section 7)
+  ('COMMAND',  'STR_DEPT_COMMAND',  ['STR_ACCESS_LIFT'],      ['STR_GJR_SPEC_COMMAND'], []),            # Command Center (Day 1)
+  ('INTEL',    'STR_DEPT_INTEL',    ['STR_COMPUTER_STATION'], ['STR_GJR_SPEC_COVERT_OPS_INTEL'], []),   # buildable Day 1, not at start (John 18:25)
+  ('MOTOR_POOL','STR_DEPT_MOTOR_POOL',['STR_HANGAR'],          ['STR_GJR_SPEC_ARMOR_VEHICLES'], []),     # Motor Pool and Vehicle Lift (Day 1)
+  ('ARMORY',   'STR_DEPT_ARMORY',   ['STR_GENERAL_STORES'],   ['STR_GJR_SPEC_HEAVY_WEAPONS', 'STR_GJR_SPEC_RECON_SNIPER', 'STR_GJR_SPEC_DEMOLITIONS_ENGINEERING'], []),  # Weapons Locker (Day 1; stock Stores plays it)
+  ('MEDICAL',  'STR_DEPT_MEDICAL',  ['STR_INFIRMARY_ROOM'],   ['STR_GJR_SPEC_MEDIC'], []),              # first infirmary room
+  ('COMMS',    'STR_DEPT_COMMS',    ['STR_JOE_COMMS_CENTER'], ['STR_GJR_SPEC_COMMS_TECH'], []),         # Comms Room (John 18:16), not radar
+  ('AIR_WING', 'STR_DEPT_AIR_WING', ['STR_AIRCRAFT_HANGAR'],  ['STR_GJR_SPEC_PILOT'], []),              # first hangar
   ('TRAINING', 'STR_DEPT_TRAINING', ['STR_TRAINING_ROOM', 'STR_RECRUITING_OFFICE'], [], ['STR_BEACH_HEAD', 'STR_SGT_SLAUGHTER']),
 ]
 ros = yaml.safe_load(open(os.path.join(ROOT, 'roster', 'roster_day1.yaml')))
@@ -39,23 +39,27 @@ out.append('soldierSpecialties:   # main first, then second (roster/roster_day1.
 for t, s in spec.items():
     out.append(f'  {t}: [{", ".join(s)}]')
 out += ['',
- '# PLACEHOLDER rooms (stock workshop numbers, the Pit art STORY/ART already made). Replace with the',
- '# real facility numbers when STORY sends them (Armory, Infirmary, Training Room, Recruiting Office,',
- '# aircraft hangar, Computer Station).',
+ '# PLACEHOLDER rooms: STORY\'s numbers (FACILITY_STATS_v1 section 1) on the Pit art already made,',
+ '# until facilities_1.yml is installed. STR_GENERAL_STORES plays the Day 1 Weapons Locker.',
  'facilities:']
-PH = [('STR_COMPUTER_STATION', 159, 1, {}), ('STR_ARMORY', 214, 1, {}), ('STR_INFIRMARY_ROOM', 176, 1, {}),
-      ('STR_TRAINING_ROOM', 211, 1, {}), ('STR_RECRUITING_OFFICE', 204, 1, {}),
-      ('STR_AIRCRAFT_HANGAR', 167, 2, {'crafts': 1, 'spriteEnabled': 'true'})]
-for t, spr, size, extra in PH:
+PH = [  # type, sprite, size, cost, days, monthly, extra (numbers: FACILITY_STATS_v1 section 1)
+      ('STR_COMPUTER_STATION', 159, 1, 80000, 8, 3000, {}),
+      ('STR_JOE_COMMS_CENTER', 202, 1, 100000, 8, 3000, {}),            # art requested (BRIEF_FOR_GRAPHICS_AI_Armory_CommsRoom)
+      ('STR_JOE_ARMORY', 214, 1, 150000, 10, 4000, {'storage': 30, 'provideBaseFunc': '[STR_ARMORY_ATTACHMENTS]'}),  # no department
+      ('STR_INFIRMARY_ROOM', 177, 1, 60000, 6, 2000, {}),               # the Infirmary Cot
+      ('STR_TRAINING_ROOM', 211, 1, 200000, 14, 6000, {}),              # 2x1 in the design; 1x1 until its art is cut for 2x1
+      ('STR_RECRUITING_OFFICE', 204, 1, 200000, 12, 6000, {}),
+      ('STR_AIRCRAFT_HANGAR', 167, 2, 200000, 25, 25000, {'crafts': 1, 'spriteEnabled': 'true'})]
+for t, spr, size, cost, days, monthly, extra in PH:
     out += [f'  - type: {t}', '    spriteShape: 1' if size == 1 else '    spriteShape: 9', f'    spriteFacility: {spr}',
-            f'    size: {size}', '    buildCost: 400000', '    buildTime: 20', '    monthlyCost: 20000',
+            f'    size: {size}', f'    buildCost: {cost}', f'    buildTime: {days}', f'    monthlyCost: {monthly}',
             '    mapName: XBASE_03' if size == 1 else '    mapName: XBASE_16']
     for k, v in extra.items(): out.append(f'    {k}: {v}')
 out += ['', 'extraStrings:', '  - type: en-US', '    strings: &deptstr']
 S = {'STR_DEPT_COMMAND': 'Command', 'STR_DEPT_INTEL': 'Intel', 'STR_DEPT_MOTOR_POOL': 'Motor Pool',
      'STR_DEPT_ARMORY': 'Armory', 'STR_DEPT_MEDICAL': 'Medical', 'STR_DEPT_COMMS': 'Comms & Radar',
      'STR_DEPT_AIR_WING': 'Air Wing', 'STR_DEPT_TRAINING': 'Training & Recruiting', 'STR_TOP_KICK': 'Top Kick',
-     'STR_COMPUTER_STATION': 'Computer Station', 'STR_ARMORY': 'Armory', 'STR_INFIRMARY_ROOM': 'Infirmary',
+     'STR_COMPUTER_STATION': 'Computer Station', 'STR_JOE_ARMORY': 'Armory', 'STR_JOE_COMMS_CENTER': 'Comms Room', 'STR_INFIRMARY_ROOM': 'Infirmary',
      'STR_TRAINING_ROOM': 'Training Room', 'STR_RECRUITING_OFFICE': 'Recruiting Office', 'STR_AIRCRAFT_HANGAR': 'Aircraft Hangar',
      'STR_DEPARTMENTS': 'DEPARTMENTS', 'STR_APPOINT': 'APPOINT', 'STR_APPOINT_HEAD': 'Appoint a head: {0}',
      'STR_NO_ONE_YET': 'NOBODY FOR NOW', 'STR_NO_HEAD': 'no head', 'STR_HEAD_IN_OFFICE': 'in office',
