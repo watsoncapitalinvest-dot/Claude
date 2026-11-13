@@ -292,6 +292,57 @@ index c52f7ad..44470ef 100644
  
  }
  
+diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
+index db6727f..2e6ae2f 100644
+--- a/src/Battlescape/AIModule.cpp
++++ b/src/Battlescape/AIModule.cpp
+@@ -19,6 +19,7 @@
+ #include <climits>
+ #include <algorithm>
+ #include "AIModule.h"
++#include "../Mod/AlienDeployment.h"
+ #include "../Savegame/BattleItem.h"
+ #include "../Savegame/Node.h"
+ #include "../Savegame/SavedBattleGame.h"
+@@ -489,6 +490,38 @@ void AIModule::think(BattleAction *action)
+ 		return;
+ 	}
+ 
++	// G.I. Joe robbery (13 Nov 2026): a robber told to run (NextTurnState::runVanStop) heads for the
++	// nearest free exit tile and, once there, waits for the van to take him.
++	if (_unit->getFaction() == FACTION_HOSTILE && _save->getVanStop("run:" + std::to_string(_unit->getId())))
++	{
++		const AlienDeployment* dep = _save->getMod()->getDeployment(_save->getReinforcementsDeployment(), true);
++		if (dep && !dep->getRobberExit().empty())
++		{
++			Position best = TileEngine::invalid;
++			int bestD = -1;
++			for (const auto& e : dep->getRobberExit())
++			{
++				if (e.size() != 3) continue;
++				Position p(e[0], e[1], e[2]);
++				if (p == _unit->getPosition())
++				{
++					action->type = BA_NONE;
++					return;
++				}
++				Tile* tile = _save->getTile(p);
++				if (!tile || (tile->getUnit() && tile->getUnit() != _unit)) continue;
++				int d = Position::distanceSq(p, _unit->getPosition());
++				if (bestD < 0 || d < bestD) { bestD = d; best = p; }
++			}
++			if (bestD >= 0)
++			{
++				action->type = BA_WALK;
++				action->target = best;
++				return;
++			}
++		}
++	}
++
+ 	if (action->weapon)
+ 	{
+ 		const RuleItem *rule = action->weapon->getRules();
 diff --git a/src/Battlescape/ActionMenuItem.h b/src/Battlescape/ActionMenuItem.h
 index ec94172..fd2d5e2 100644
 --- a/src/Battlescape/ActionMenuItem.h
@@ -1373,10 +1424,24 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..64f5a0c 100644
+index 0631f32..f643bc8 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
-@@ -1043,6 +1043,8 @@ void DebriefingState::prepareDebriefing()
+@@ -1039,10 +1039,22 @@ void DebriefingState::prepareDebriefing()
+ 	int playersMIA = 0;
+ 
+ 	_stats.push_back(new DebriefingStat("STR_ALIENS_KILLED", false));
++	// G.I. Joe smart play (rows show only when they score)
++	_stats.push_back(new DebriefingStat("STR_SMART_DRIVER_ALIVE", false));
++	_stats.push_back(new DebriefingStat("STR_SMART_TAKEN_ALIVE", false));
++	_stats.push_back(new DebriefingStat("STR_SMART_CALLER_DOWN", false));
++	_stats.push_back(new DebriefingStat("STR_SMART_LOOKOUT", false));
++	_stats.push_back(new DebriefingStat("STR_SMART_TRUCK_STOPPED", false));
++	_stats.push_back(new DebriefingStat("STR_SMART_LEADER_ALIVE", false));
++	_stats.push_back(new DebriefingStat("STR_SMART_NONE_ESCAPED", false));
++	_stats.push_back(new DebriefingStat("STR_SMART_LOOT_RECOVERED", false));
++	_stats.push_back(new DebriefingStat("STR_SMART_NO_CIVILIAN_HURT", false));
+ 	_stats.push_back(new DebriefingStat("STR_ALIEN_CORPSES_RECOVERED", false));
  	_stats.push_back(new DebriefingStat("STR_LIVE_ALIENS_RECOVERED", false));
  	_stats.push_back(new DebriefingStat("STR_LIVE_ALIENS_SURRENDERED", false));
  	_stats.push_back(new DebriefingStat("STR_ALIEN_ARTIFACTS_RECOVERED", false));
@@ -1385,7 +1450,7 @@ index 0631f32..64f5a0c 100644
  
  	std::string missionCompleteText, missionFailedText;
  	std::string objectiveCompleteText, objectiveFailedText;
-@@ -1417,6 +1419,13 @@ void DebriefingState::prepareDebriefing()
+@@ -1417,6 +1429,13 @@ void DebriefingState::prepareDebriefing()
  				{
  					addStat(objectiveCompleteText, 1, objectiveCompleteScore);
  				}
@@ -1399,10 +1464,83 @@ index 0631f32..64f5a0c 100644
  				save->clearLinksForAlienBase(ab, _game->getMod());
  				delete ab;
  				save->getAlienBases()->erase(abIt);
-@@ -1483,6 +1492,23 @@ void DebriefingState::prepareDebriefing()
+@@ -1476,6 +1495,65 @@ void DebriefingState::prepareDebriefing()
+ 	{
+ 		ignoreLivingCivilians = ruleDeploy->getIgnoreLivingCivilians();
+ 	}
++	// G.I. Joe smart play (van stop, 13 Nov 2026): points for playing it the clever way.
++	if (ruleDeploy && !ruleDeploy->getSmartPoints().empty() && !aborted)
++	{
++		auto pts = [&](const char* key) { auto i = ruleDeploy->getSmartPoints().find(key); return i == ruleDeploy->getSmartPoints().end() ? 0 : i->second; };
++		const int driverId = battle->getVanStop("driver", -1);
++		const int leaderId = battle->getVanStop("leader", -1);
++		const int callerId = battle->getVanStop("caller", -1);
++		for (auto* bunit : *battle->getUnits())
++		{
++			if (bunit->getOriginalFaction() != FACTION_HOSTILE || bunit->getStatus() != STATUS_UNCONSCIOUS) continue;
++			if (bunit->getId() == driverId)
++			{
++				if (pts("driverAlive")) addStat("STR_SMART_DRIVER_ALIVE", 1, pts("driverAlive"));
++			}
++			else if (bunit->getId() == leaderId)
++			{
++				if (pts("leaderAlive")) addStat("STR_SMART_LEADER_ALIVE", 1, pts("leaderAlive"));
++			}
++			else if (pts("otherAlive"))
++			{
++				addStat("STR_SMART_TAKEN_ALIVE", 1, pts("otherAlive"));
++			}
++		}
++		if (callerId >= 0 && !battle->getVanStop("call") && pts("callerDown"))
++		{
++			for (auto* bunit : *battle->getUnits())
++			{
++				if (bunit->getId() == callerId && (bunit->getStatus() == STATUS_DEAD || bunit->getStatus() == STATUS_UNCONSCIOUS))
++				{
++					addStat("STR_SMART_CALLER_DOWN", 1, pts("callerDown"));
++				}
++			}
++		}
++		if (battle->getVanStop("lookout") && pts("lookout"))
++		{
++			addStat("STR_SMART_LOOKOUT", 1, pts("lookout"));
++		}
++		if (ruleDeploy->getRobberExit().size() && !battle->getVanStop("escaped") && pts("noneEscaped"))
++		{
++			addStat("STR_SMART_NONE_ESCAPED", 1, pts("noneEscaped"));
++		}
++		if (ruleDeploy->getRobberExit().size() && !battle->getVanStop("lootGone") && pts("lootRecovered"))
++		{
++			addStat("STR_SMART_LOOT_RECOVERED", 1, pts("lootRecovered"));
++		}
++		if (pts("noCivilianHurt"))
++		{
++			bool hurt = false;
++			for (auto* bunit : *battle->getUnits())
++			{
++				if (bunit->getOriginalFaction() == FACTION_NEUTRAL && (bunit->getStatus() == STATUS_DEAD || bunit->getStatus() == STATUS_UNCONSCIOUS || bunit->getHealth() < bunit->getBaseStats()->health)) { hurt = true; break; }
++			}
++			if (!hurt) addStat("STR_SMART_NO_CIVILIAN_HURT", 1, pts("noCivilianHurt"));
++		}
++		if (driverId >= 0 && !battle->getVanStop("gone") && pts("truckStopped"))
++		{
++			addStat("STR_SMART_TRUCK_STOPPED", 1, pts("truckStopped"));
++		}
++	}
+ 	for (auto* bunit : *battle->getUnits())
+ 	{
+ 		UnitStatus status = bunit->getStatus();
+@@ -1483,6 +1561,30 @@ void DebriefingState::prepareDebriefing()
  		UnitFaction oldFaction = bunit->getOriginalFaction();
  		Soldier *soldier = save->getSoldier(bunit->getId());
  
++		// G.I. Joe: a Cobra man who got away (the van stop truck, the robbers' van) is simply gone:
++		// not killed, not captured, not a corpse.
++		if (oldFaction == FACTION_HOSTILE && battle->getVanStop("esc:" + std::to_string(bunit->getId())))
++		{
++			continue;
++		}
++
 +		// FULL CAPTURE. Cobra carried him off the map, so he is neither dead
 +		// nor recovered and none of the branches below apply to him. Handled
 +		// first and skipped past: left to fall through, STATUS_IGNORE_ME would
@@ -1423,7 +1561,7 @@ index 0631f32..64f5a0c 100644
  		if (!bunit->getTile())
  		{
  			Position pos = bunit->getPosition();
-@@ -2299,6 +2325,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
+@@ -2299,6 +2401,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
   */
  void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base, int quantity, bool considerTransformations)
  {
@@ -2302,10 +2440,10 @@ index 0fdf2ca..716f5c7 100644
  	/// Sets the palette.
  	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
 diff --git a/src/Battlescape/NextTurnState.cpp b/src/Battlescape/NextTurnState.cpp
-index d12de83..be8c2a8 100644
+index d12de83..4bac3b6 100644
 --- a/src/Battlescape/NextTurnState.cpp
 +++ b/src/Battlescape/NextTurnState.cpp
-@@ -17,6 +17,7 @@
+@@ -17,9 +17,11 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "NextTurnState.h"
@@ -2313,7 +2451,69 @@ index d12de83..be8c2a8 100644
  #include "../Engine/Game.h"
  #include "../Engine/Options.h"
  #include "../Engine/Timer.h"
-@@ -908,6 +909,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
++#include "../Engine/Logger.h"
+ #include "../Engine/RNG.h"
+ #include "../Engine/Screen.h"
+ #include "../Mod/AlienRace.h"
+@@ -38,6 +40,11 @@
+ #include "../Engine/Action.h"
+ #include "../Savegame/BattleUnit.h"
+ #include "../Savegame/Node.h"
++#include "../Savegame/Tile.h"
++#include "../Savegame/BattleItem.h"
++#include "../Mod/MapData.h"
++#include "../Mod/MapDataSet.h"
++#include "../Mod/AlienDeployment.h"
+ #include "../Savegame/SavedBattleGame.h"
+ #include "../Savegame/SavedGame.h"
+ #include "../Savegame/HitLog.h"
+@@ -292,6 +299,7 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+ 	}
+ 
+ 	std::string messageReinforcements;
++	std::string messageVanStop = runVanStop();
+ 	bool allowReinforcements = _battleGame->getSide() == FACTION_HOSTILE && _battleGame->getTurn() > 0;
+ 	if (_battleGame->getSide() == FACTION_PLAYER && _battleGame->getTurn() == 0)
+ 	{
+@@ -306,6 +314,11 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+ 			_txtMessageReinforcements->setText(messageReinforcements);
+ 		}
+ 	}
++	if (!messageVanStop.empty())
++	{
++		messageReinforcements = messageReinforcements.empty() ? messageVanStop : messageReinforcements + " " + messageVanStop;
++		_txtMessageReinforcements->setText(messageReinforcements);
++	}
+ 
+ 	if (Options::skipNextTurnScreen && message.empty() && messageReinforcements.empty())
+ 	{
+@@ -612,7 +625,16 @@ bool NextTurnState::determineReinforcements()
+ 			{
+ 				continue;
+ 			}
+-			if (wave.objectiveDestroyed)
++			if (wave.onCall)
++			{
++				// G.I. Joe van stop: only once the man at the payphone got his call through
++				int due = _battleGame->getVanStop("backupTurn", -1);
++				if (due < 0 || currentTurnReinforcements < due)
++				{
++					continue;
++				}
++			}
++			else if (wave.objectiveDestroyed)
+ 			{
+ 				if (!_battleGame->allObjectivesDestroyed())
+ 				{
+@@ -855,6 +877,7 @@ bool NextTurnState::determineReinforcements()
+ 		{
+ 			// remember success
+ 			_battleGame->getReinforcementsMemory()[wave.type] += 1;
++			Log(LOG_INFO) << "REINFORCEMENTS " << wave.type << " turn " << currentTurnReinforcements;
+ 
+ 			if (!wave.briefing.title.empty())
+ 			{
+@@ -908,6 +931,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
  		quantity += RNG::generate(0, dd.dQty);
  		quantity += RNG::generate(0, dd.extraQty);
  
@@ -2332,7 +2532,7 @@ index d12de83..be8c2a8 100644
  		for (int i = 0; i < quantity; ++i)
  		{
  			std::string alienName = dd.customUnitType.empty() ? race->getMember(dd.alienRank) : dd.customUnitType;
-@@ -915,6 +928,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
+@@ -915,6 +950,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
  			bool civilian = dd.percentageOutsideUfo != 0; // small misuse of an unused attribute ;) pls don't kill me
  			BattleUnit* unit = addReinforcement(wave, rule, dd.alienRank, civilian);
  			size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(month).at(RNG::generate(0, 9)));
@@ -2351,6 +2551,307 @@ index d12de83..be8c2a8 100644
  			if (unit)
  			{
  				success = true;
+@@ -1140,4 +1187,287 @@ bool NextTurnState::placeReinforcementNearFriend(BattleUnit *unit)
+ 	return false;
+ }
+ 
++/**
++ * G.I. Joe van stop (13 Nov 2026, John): the Cobra truck caught at a gas station.
++ * - The alarm goes up the first time a Cobra man sees a Joe or is hurt.
++ * - The driver sits in the cab starting the truck and does nothing else. At the end of the
++ *   second Cobra turn after the alarm, if he is still up, the truck leaves with everyone aboard,
++ *   the crates and the lockbox. The fight goes on. Dropping the driver is the only way to stop it.
++ * - The man at the payphone stays on the phone. If he is still up at the end of the first Cobra
++ *   turn after the alarm, the call is made and the backup (reinforcements with onCall) arrives
++ *   on the Cobra turn after next.
++ * - A Joe on a lookout spot at the start of the turn before the backup arrives sees it coming.
++ * Runs on every turn screen; the state lives in SavedBattleGame::_vanStop.
++ */
++std::string NextTurnState::runVanStop()
++{
++	const AlienDeployment* dep = _game->getMod()->getDeployment(_battleGame->getReinforcementsDeployment(), true);
++	if (!dep || !dep->hasVanStopRules() || _battleGame->getTurn() < 1)
++	{
++		return "";
++	}
++	SavedBattleGame& sb = *_battleGame;
++	Log(LOG_INFO) << "VANSTOP screen turn " << sb.getTurn() << " side " << (int)sb.getSide();
++	auto inRect = [](const std::vector<int>& r, Position p, int grow)
++	{
++		return r.size() == 5 && p.z == r[4] && p.x >= r[0] - grow && p.x <= r[2] + grow && p.y >= r[1] - grow && p.y <= r[3] + grow;
++	};
++	auto unitById = [&](int id) -> BattleUnit*
++	{
++		if (id < 0) return nullptr;
++		for (auto* u : *sb.getUnits())
++			if (u->getId() == id) return u;
++		return nullptr;
++	};
++	auto up = [](const BattleUnit* u) { return u && !u->isOut(); };
++	std::vector<int> phone;
++	if (dep->getPayphone().size() == 3)
++	{
++		const auto& p = dep->getPayphone();
++		phone = { p[0], p[1], p[0], p[1], p[2] };
++	}
++	const int reach = dep->getPayphoneReach();
++
++	// 1. who is the driver and who is on the phone (once, on the first turn screen)
++	if (sb.getVanStop("driver", -2) == -2)
++	{
++		int driver = -1, caller = -1;
++		for (auto* u : *sb.getUnits())
++		{
++			if (u->getOriginalFaction() != FACTION_HOSTILE || u->isOut()) continue;
++			if (driver == -1 && inRect(dep->getGetawayCab(), u->getPosition(), 0)) driver = u->getId();
++			else if (caller == -1 && inRect(phone, u->getPosition(), reach)) caller = u->getId();
++		}
++		int leader = -1;
++		if (!dep->getRobberLeader().empty())
++		{
++			for (auto* u : *sb.getUnits())
++			{
++				if (u->getOriginalFaction() == FACTION_HOSTILE && u->getType() == dep->getRobberLeader()) { leader = u->getId(); break; }
++			}
++		}
++		sb.setVanStop("leader", leader);
++		sb.setVanStop("driver", driver);
++		sb.setVanStop("caller", caller);
++		Log(LOG_INFO) << "VANSTOP driver " << driver << " caller " << caller;
++	}
++	BattleUnit* driver = unitById(sb.getVanStop("driver", -1));
++	BattleUnit* caller = unitById(sb.getVanStop("caller", -1));
++
++	// 2. the alarm
++	if (!sb.getVanStop("alarm"))
++	{
++		for (auto* u : *sb.getUnits())
++		{
++			if (u->getOriginalFaction() != FACTION_HOSTILE || u->isIgnored()) continue;
++			bool hurt = u->isOut() || u->getHealth() < u->getBaseStats()->health || u->getStunlevel() > 0;
++			bool sees = false;
++			if (!u->isOut())
++			{
++				for (auto* v : *u->getVisibleUnits())
++				{
++					if (v->getOriginalFaction() == FACTION_PLAYER && !v->isOut()) { sees = true; break; }
++				}
++			}
++			if (hurt || sees)
++			{
++				sb.setVanStop("alarm", 1);
++				Log(LOG_INFO) << "VANSTOP alarm turn " << sb.getTurn() << " side " << (int)sb.getSide() << (hurt ? " hurt" : " sees");
++				break;
++			}
++		}
++	}
++
++	std::string msg;
++	auto add = [&](const std::string& s) { msg = msg.empty() ? s : msg + " " + s; };
++	const bool joeTurn = sb.getSide() == FACTION_PLAYER;
++	const int turn = sb.getTurn();
++
++	// 3. the end of a Cobra turn (= the start of the Joe turn after it)
++	if (joeTurn && turn > 1 && sb.getVanStop("alarm") && sb.getVanStop("lastCounted", 0) != turn)
++	{
++		sb.setVanStop("lastCounted", turn);
++		int ends = sb.getVanStop("ends") + 1;
++		sb.setVanStop("ends", ends);
++
++		if (!sb.getVanStop("call") && up(caller) && inRect(phone, caller->getPosition(), reach))
++		{
++			sb.setVanStop("call", 1);
++			sb.setVanStop("backupTurn", turn + 1);
++			Log(LOG_INFO) << "VANSTOP call made turn " << turn;
++			if (sb.eyesOnTarget(FACTION_PLAYER, caller))
++			{
++				add(tr("STR_VANSTOP_CALL_MADE"));
++			}
++		}
++
++		if (!sb.getVanStop("gone") && ends >= dep->getGetawayTurns() && up(driver) && inRect(dep->getGetawayCab(), driver->getPosition(), 0))
++		{
++			sb.setVanStop("gone", 1);
++			Log(LOG_INFO) << "VANSTOP truck gone turn " << turn;
++			const auto& truck = dep->getGetawayTruck();
++			// everyone aboard goes with it
++			for (auto* u : *sb.getUnits())
++			{
++				if (u->getOriginalFaction() == FACTION_HOSTILE && !u->isOut() && inRect(truck, u->getPosition(), 0))
++				{
++					sb.setVanStop("esc:" + std::to_string(u->getId()), 1);
++					u->setTile(nullptr, &sb);
++					u->setPosition(TileEngine::invalid);
++					u->goToTimeOut();
++				}
++			}
++			if (truck.size() == 5)
++			{
++				Tile* floorFrom = dep->getGetawayFloorFrom().size() == 3 ? sb.getTile(Position(dep->getGetawayFloorFrom()[0], dep->getGetawayFloorFrom()[1], dep->getGetawayFloorFrom()[2])) : nullptr;
++				for (int x = truck[0] - 1; x <= truck[2] + 1; ++x)
++				{
++					for (int y = truck[1] - 1; y <= truck[3] + 1; ++y)
++					{
++						Tile* tile = sb.getTile(Position(x, y, truck[4]));
++						if (!tile) continue;
++						bool aboard = inRect(truck, tile->getPosition(), 0);
++						// the crates and the lockbox go with it; bodies stay
++						if (aboard)
++						{
++							std::vector<BattleItem*> loose(tile->getInventory()->begin(), tile->getInventory()->end());
++							for (auto* item : loose)
++							{
++								if (!item->getUnit()) sb.removeItem(item);
++							}
++						}
++						// and so does the truck
++						for (int part = O_FLOOR; part <= O_OBJECT; ++part)
++						{
++							MapData* md = tile->getMapData((TilePart)part);
++							if (!md || !md->getDataset() || md->getDataset()->getName() != dep->getGetawayDataset()) continue;
++							if (part == O_FLOOR && floorFrom && floorFrom->getMapData(O_FLOOR))
++							{
++								int id, set;
++								floorFrom->getMapData(&id, &set, O_FLOOR);
++								tile->setMapData(floorFrom->getMapData(O_FLOOR), id, set, O_FLOOR);
++							}
++							else
++							{
++								tile->setMapData(nullptr, -1, -1, (TilePart)part);
++							}
++						}
++					}
++				}
++				Position centre((truck[0] + truck[2]) / 2, (truck[1] + truck[3]) / 2, truck[4]);
++				sb.getTileEngine()->calculateLighting(LL_AMBIENT, centre, 8, true);
++				sb.getTileEngine()->recalculateFOV();
++			}
++			add(tr("STR_VANSTOP_TRUCK_GONE"));
++		}
++	}
++
++	// 3b. ROBBERY (John 02:46 + 11:17): the van never moves; it is only the exit. After the alarm, at the
++	// end of each Cobra turn, a robber standing on the exit tiles is gone with whatever he carries.
++	// The leader waits at the van until every robber carrying loot has got there or gone down.
++	const auto& exits = dep->getRobberExit();
++	auto onExit = [&](Position p)
++	{
++		for (const auto& e : exits)
++			if (e.size() == 3 && p == Position(e[0], e[1], e[2])) return true;
++		return false;
++	};
++	auto carriesLoot = [&](BattleUnit* u)
++	{
++		for (auto* item : *u->getInventory())
++			if (std::find(dep->getRobberLoot().begin(), dep->getRobberLoot().end(), item->getRules()->getType()) != dep->getRobberLoot().end()) return true;
++		return false;
++	};
++	const int leaderId = sb.getVanStop("leader", -1);
++	auto carriersLeft = [&]()
++	{
++		for (auto* u : *sb.getUnits())
++			if (u->getOriginalFaction() == FACTION_HOSTILE && !u->isOut() && u->getId() != leaderId && carriesLoot(u)) return true;
++		return false;
++	};
++	auto escape = [&](BattleUnit* u)
++	{
++		sb.setVanStop("esc:" + std::to_string(u->getId()), 1);
++		u->setTile(nullptr, &sb);
++		u->setPosition(TileEngine::invalid);
++		u->goToTimeOut();
++		sb.setVanStop("escaped", sb.getVanStop("escaped") + 1);
++	};
++	if (!exits.empty() && joeTurn && turn > 1 && sb.getVanStop("alarm") && sb.getVanStop("lastExit", 0) != turn)
++	{
++		sb.setVanStop("lastExit", turn);
++		int gone = 0, cash = 0;
++		for (auto* u : *sb.getUnits())
++		{
++			if (u->getOriginalFaction() != FACTION_HOSTILE || u->isOut() || u->getId() == leaderId || !onExit(u->getPosition())) continue;
++			if (carriesLoot(u)) { cash++; sb.setVanStop("lootGone", 1); }
++			escape(u);
++			gone++;
++		}
++		BattleUnit* leader = unitById(leaderId);
++		bool leaderGone = false;
++		if (up(leader) && onExit(leader->getPosition()) && !carriersLeft())
++		{
++			if (carriesLoot(leader)) sb.setVanStop("lootGone", 1);
++			escape(leader);
++			sb.setVanStop("leaderGone", 1);
++			leaderGone = true;
++		}
++		if (gone || leaderGone) Log(LOG_INFO) << "VANSTOP robbers gone " << gone << " with cash " << cash << (leaderGone ? " + leader" : "") << " turn " << turn;
++		if (leaderGone) add(tr("STR_ROBBERY_LEADER_GONE"));
++		if (cash) add(tr("STR_ROBBERY_CASH_GONE").arg(cash));
++		else if (gone) add(tr("STR_ROBBERY_ROBBER_GONE").arg(gone));
++		if (gone || leaderGone) sb.getTileEngine()->recalculateFOV();
++	}
++	// who runs for the van this Cobra turn (read by AIModule::think)
++	if (!exits.empty() && sb.getSide() == FACTION_HOSTILE)
++	{
++		const bool alarm = sb.getVanStop("alarm");
++		const bool left = carriersLeft();
++		for (auto* u : *sb.getUnits())
++		{
++			if (u->getOriginalFaction() != FACTION_HOSTILE || u->isOut()) continue;
++			bool run = alarm && (u->getId() == leaderId ? !left : carriesLoot(u));
++			sb.setVanStop("run:" + std::to_string(u->getId()), run ? 1 : 0);
++		}
++	}
++
++	// 4. the lookout, on the Joe turn before the backup arrives
++	if (joeTurn && sb.getVanStop("call") && turn == sb.getVanStop("backupTurn", -1) && !sb.getVanStop("lookout"))
++	{
++		bool seen = false;
++		for (auto* u : *sb.getUnits())
++		{
++			if (u->getOriginalFaction() != FACTION_PLAYER || u->isOut()) continue;
++			for (const auto& r : dep->getLookouts())
++			{
++				if (inRect(r, u->getPosition(), 0)) { seen = true; break; }
++			}
++			if (seen) break;
++		}
++		if (seen)
++		{
++			sb.setVanStop("lookout", 1);
++			Log(LOG_INFO) << "VANSTOP lookout turn " << turn;
++			add(tr("STR_VANSTOP_LOOKOUT"));
++		}
++	}
++
++	// 5. the driver and the man on the phone are busy: no time for anything else.
++	// And before the alarm nobody on Cobra's side does anything: they don't know the Joes are there.
++	if (sb.getSide() == FACTION_HOSTILE)
++	{
++		if (!sb.getVanStop("alarm") && dep->getQuietUntilAlarm())
++		{
++			for (auto* u : *sb.getUnits())
++			{
++				if (u->getOriginalFaction() == FACTION_HOSTILE && !u->isOut()) u->setTimeUnits(0);
++			}
++		}
++		if (up(driver) && !sb.getVanStop("gone")) driver->setTimeUnits(0);
++		if (up(caller) && !sb.getVanStop("call")) caller->setTimeUnits(0);
++	}
++	return msg;
++}
++
+ }
+diff --git a/src/Battlescape/NextTurnState.h b/src/Battlescape/NextTurnState.h
+index 200fb3a..33aa41c 100644
+--- a/src/Battlescape/NextTurnState.h
++++ b/src/Battlescape/NextTurnState.h
+@@ -65,6 +65,8 @@ private:
+ 
+ 	/// Runs reinforcements logic.
+ 	bool determineReinforcements();
++	/// G.I. Joe van stop: alarm, payphone call, getaway, lookout. Returns a message for the turn screen.
++	std::string runVanStop();
+ 	/// Deploys the reinforcements, according to the alien reinforcements deployment rules.
+ 	bool deployReinforcements(const ReinforcementsData &wave);
+ 	/// Adds a reinforcement unit to the game.
 diff --git a/src/Battlescape/TileEngine.cpp b/src/Battlescape/TileEngine.cpp
 index 6e68469..a8c9d39 100644
 --- a/src/Battlescape/TileEngine.cpp
@@ -10308,7 +10809,7 @@ index 115d1ce..871c8cf 100644
  				break;
  			case 7:
 diff --git a/src/Mod/AlienDeployment.cpp b/src/Mod/AlienDeployment.cpp
-index 018d604..b18330e 100644
+index 018d604..8c2d873 100644
 --- a/src/Mod/AlienDeployment.cpp
 +++ b/src/Mod/AlienDeployment.cpp
 @@ -38,7 +38,7 @@ AlienDeployment::AlienDeployment(const std::string &type) :
@@ -10320,7 +10821,27 @@ index 018d604..b18330e 100644
  	_turnLimit(0), _cheatTurn(20), _chronoTrigger(FORCE_LOSE), _keepCraftAfterFailedMission(false), _allowObjectiveRecovery(false), _escapeType(ESCAPE_NONE), _vipSurvivalPercentage(0),
  	_baseDetectionRange(0), _baseDetectionChance(100), _huntMissionMaxFrequency(60), _huntMissionRaceFromAlienBase(true),
  	_resetAlienBaseAgeAfterUpgrade(false), _resetAlienBaseAge(false), _noWeaponPile(false)
-@@ -121,6 +121,7 @@ void AlienDeployment::load(const YAML::YamlNodeReader& node, Mod *mod)
+@@ -93,6 +93,19 @@ void AlienDeployment::load(const YAML::YamlNodeReader& node, Mod *mod)
+ 	reader.tryRead("forcePercentageOutsideUfo", _forcePercentageOutsideUfo);
+ 	reader.tryRead("data", _data);
+ 	reader.tryRead("reinforcements", _reinforcements);
++	reader.tryRead("getawayCab", _getawayCab);
++	reader.tryRead("getawayTruck", _getawayTruck);
++	reader.tryRead("getawayFloorFrom", _getawayFloorFrom);
++	reader.tryRead("getawayDataset", _getawayDataset);
++	reader.tryRead("getawayTurns", _getawayTurns);
++	reader.tryRead("quietUntilAlarm", _quietUntilAlarm);
++	reader.tryRead("robberExit", _robberExit);
++	reader.tryRead("robberLoot", _robberLoot);
++	reader.tryRead("robberLeader", _robberLeader);
++	reader.tryRead("payphone", _payphone);
++	reader.tryRead("payphoneReach", _payphoneReach);
++	reader.tryRead("lookouts", _lookouts);
++	reader.tryRead("smartPoints", _smartPoints);
+ 	reader.tryRead("width", _width);
+ 	reader.tryRead("length", _length);
+ 	reader.tryRead("height", _height);
+@@ -121,6 +134,7 @@ void AlienDeployment::load(const YAML::YamlNodeReader& node, Mod *mod)
  	reader.tryRead("briefing", _briefingData);
  	reader.tryRead("alienBaseDiscoveredMessage", _alienBaseDiscoveredMessage);
  	reader.tryRead("markerName", _markerName);
@@ -10328,7 +10849,7 @@ index 018d604..b18330e 100644
  	if (reader["markerIcon"])
  	{
  		_markerIcon = mod->getOffset(reader["markerIcon"].readVal<int>(), 8);
-@@ -165,6 +166,12 @@ void AlienDeployment::load(const YAML::YamlNodeReader& node, Mod *mod)
+@@ -165,6 +179,12 @@ void AlienDeployment::load(const YAML::YamlNodeReader& node, Mod *mod)
  		_failureEvents.load(reader["failureEvents"]);
  	}
  	reader.tryRead("despawnPenalty", _despawnPenalty);
@@ -10341,11 +10862,44 @@ index 018d604..b18330e 100644
  	reader.tryRead("abortPenalty", _abortPenalty);
  	reader.tryRead("points", _points);
  	reader.tryRead("cheatTurn", _cheatTurn);
+@@ -878,6 +898,7 @@ bool read(ryml::ConstNodeRef const& n, ReinforcementsData* val)
+ 	reader.tryRead("minDifficulty", val->minDifficulty);
+ 	reader.tryRead("maxDifficulty", val->maxDifficulty);
+ 	reader.tryRead("objectiveDestroyed", val->objectiveDestroyed);
++	reader.tryRead("onCall", val->onCall);
+ 	reader.tryRead("turns", val->turns);
+ 	reader.tryRead("minTurn", val->minTurn);
+ 	reader.tryRead("maxTurn", val->maxTurn);
 diff --git a/src/Mod/AlienDeployment.h b/src/Mod/AlienDeployment.h
-index 5c8559f..18e2a50 100644
+index 5c8559f..490abef 100644
 --- a/src/Mod/AlienDeployment.h
 +++ b/src/Mod/AlienDeployment.h
-@@ -120,11 +120,15 @@ private:
+@@ -58,6 +58,7 @@ struct ReinforcementsData
+ 	int minDifficulty = 0;
+ 	int maxDifficulty = 4;
+ 	bool objectiveDestroyed = false;
++	bool onCall = false; // G.I. Joe: comes only once the payphone call is made (see payphone)
+ 	std::vector<int> turns;
+ 	int minTurn = 0;
+ 	int maxTurn = -1;
+@@ -102,6 +103,16 @@ private:
+ 	bool _forcePercentageOutsideUfo;
+ 	std::vector<DeploymentData> _data;
+ 	std::vector<ReinforcementsData> _reinforcements;
++	// G.I. Joe van stop (13 Nov 2026). Rects are [x1, y1, x2, y2, z], inclusive.
++	std::vector<int> _getawayCab, _getawayTruck, _getawayFloorFrom, _payphone;
++	std::string _getawayDataset;
++	int _getawayTurns = 2, _payphoneReach = 1;
++	bool _quietUntilAlarm = false;
++	std::vector<std::vector<int> > _robberExit;
++	std::vector<std::string> _robberLoot;
++	std::string _robberLeader;
++	std::vector<std::vector<int> > _lookouts;
++	std::map<std::string, int> _smartPoints;
+ 	int _width, _length, _height, _civilians;
+ 	bool _ignoreLivingCivilians;
+ 	bool _markCiviliansAsVIP;
+@@ -120,11 +131,15 @@ private:
  	BriefingData _briefingData;
  	std::string _alienBaseDiscoveredMessage;
  	std::string _markerName, _objectivePopup, _objectiveCompleteText, _objectiveFailedText;
@@ -10361,7 +10915,28 @@ index 5c8559f..18e2a50 100644
  	ChronoTrigger _chronoTrigger;
  	bool _keepCraftAfterFailedMission, _allowObjectiveRecovery;
  	EscapeType _escapeType;
-@@ -244,6 +248,8 @@ public:
+@@ -189,6 +204,20 @@ public:
+ 	int getMaxAlienRank() const;
+ 	/// Gets a pointer to the reinforcements data.
+ 	const std::vector<ReinforcementsData>* getReinforcementsData() const;
++	const std::vector<int>& getGetawayCab() const { return _getawayCab; }
++	const std::vector<int>& getGetawayTruck() const { return _getawayTruck; }
++	const std::vector<int>& getGetawayFloorFrom() const { return _getawayFloorFrom; }
++	const std::string& getGetawayDataset() const { return _getawayDataset; }
++	int getGetawayTurns() const { return _getawayTurns; }
++	bool getQuietUntilAlarm() const { return _quietUntilAlarm; }
++	const std::vector<std::vector<int> >& getRobberExit() const { return _robberExit; }
++	const std::vector<std::string>& getRobberLoot() const { return _robberLoot; }
++	const std::string& getRobberLeader() const { return _robberLeader; }
++	const std::vector<int>& getPayphone() const { return _payphone; }
++	int getPayphoneReach() const { return _payphoneReach; }
++	const std::vector<std::vector<int> >& getLookouts() const { return _lookouts; }
++	const std::map<std::string, int>& getSmartPoints() const { return _smartPoints; }
++	bool hasVanStopRules() const { return _getawayCab.size() == 5 || _payphone.size() == 3 || !_lookouts.empty() || !_robberExit.empty() || _quietUntilAlarm; }
+ 	/// Gets dimensions.
+ 	void getDimensions(int *width, int *length, int *height) const;
+ 	/// Gets civilians.
+@@ -244,6 +273,8 @@ public:
  	const std::string& getAlienBaseDiscoveredMessage() const { return _alienBaseDiscoveredMessage; }
  	/// Gets the marker name for this mission.
  	std::string getMarkerName() const;
@@ -10370,7 +10945,7 @@ index 5c8559f..18e2a50 100644
  	/// Gets the marker icon for this mission.
  	int getMarkerIcon() const;
  	/// Gets the minimum duration for this mission.
-@@ -268,6 +274,8 @@ public:
+@@ -268,6 +299,8 @@ public:
  	bool getObjectiveFailedInfo(std::string &text, int &score, std::string &missionText) const;
  	/// Gets the score penalty XCom receives for ignoring this site.
  	int getDespawnPenalty() const;
@@ -12292,7 +12867,7 @@ index 0000000..983b16d
 +
 +}
 diff --git a/src/Savegame/SavedBattleGame.cpp b/src/Savegame/SavedBattleGame.cpp
-index 240b22a..92d82e8 100644
+index 240b22a..910b3d6 100644
 --- a/src/Savegame/SavedBattleGame.cpp
 +++ b/src/Savegame/SavedBattleGame.cpp
 @@ -65,7 +65,7 @@ SavedBattleGame::SavedBattleGame(Mod *rule, Language *lang, bool isPreview) :
@@ -12304,7 +12879,7 @@ index 240b22a..92d82e8 100644
  	_globalShade(0), _side(FACTION_PLAYER), _turn(0), _bughuntMinTurn(20), _animFrame(0), _nameDisplay(false),
  	_debugMode(false), _bughuntMode(false), _aborted(false), _itemId(0),
  	_vipEscapeType(ESCAPE_NONE), _vipSurvivalPercentage(0), _vipsSaved(0), _vipsLost(0), _vipsWaitingOutside(0), _vipsSavedScore(0), _vipsLostScore(0), _vipsWaitingOutsideScore(0),
-@@ -164,6 +164,12 @@ void SavedBattleGame::load(const YAML::YamlNodeReader& node, Mod *mod, SavedGame
+@@ -164,7 +164,14 @@ void SavedBattleGame::load(const YAML::YamlNodeReader& node, Mod *mod, SavedGame
  	reader.tryRead("reinforcementsDeployment", _reinforcementsDeployment);
  	reader.tryRead("reinforcementsRace", _reinforcementsRace);
  	reader.tryRead("reinforcementsItemLevel", _reinforcementsItemLevel);
@@ -12315,9 +12890,11 @@ index 240b22a..92d82e8 100644
 +	reader.tryRead("reinforcementsThin", _reinforcementsThin);
 +	reader.tryRead("reinforcementsKitCap", _reinforcementsKitCap);
  	reader.tryRead("reinforcementsMemory", _reinforcementsMemory);
++	reader.tryRead("vanStop", _vanStop);
  	reader.tryRead("reinforcementsBlocks", _reinforcementsBlocks);
  	reader.tryRead("flattenedMapTerrainNames", _flattenedMapTerrainNames);
-@@ -527,6 +533,9 @@ void SavedBattleGame::save(YAML::YamlNodeWriter writer) const
+ 	reader.tryRead("flattenedMapBlockNames", _flattenedMapBlockNames);
+@@ -527,7 +534,11 @@ void SavedBattleGame::save(YAML::YamlNodeWriter writer) const
  	writer.write("reinforcementsDeployment", _reinforcementsDeployment);
  	writer.write("reinforcementsRace", _reinforcementsRace);
  	writer.write("reinforcementsItemLevel", _reinforcementsItemLevel);
@@ -12325,9 +12902,11 @@ index 240b22a..92d82e8 100644
 +	if (_reinforcementsThin) writer.write("reinforcementsThin", _reinforcementsThin);
 +	if (_reinforcementsKitCap >= 0) writer.write("reinforcementsKitCap", _reinforcementsKitCap);
  	writer.write("reinforcementsMemory", _reinforcementsMemory);
++	if (!_vanStop.empty()) writer.write("vanStop", _vanStop);
  	writer.write("reinforcementsBlocks", _reinforcementsBlocks);
  	writer.write("flattenedMapTerrainNames", _flattenedMapTerrainNames);
-@@ -2415,13 +2424,30 @@ void SavedBattleGame::prepareNewTurn()
+ 	writer.write("flattenedMapBlockNames", _flattenedMapBlockNames);
+@@ -2415,13 +2426,30 @@ void SavedBattleGame::prepareNewTurn()
  					Position pos;
  					Pathfinding::directionToVector(dir, &pos);
  					Tile *t = getTile(tileOnFire->getPosition() + pos);
@@ -12360,7 +12939,7 @@ index 240b22a..92d82e8 100644
  			}
  			// fire has burnt out
  			else
-@@ -2452,10 +2478,37 @@ void SavedBattleGame::prepareNewTurn()
+@@ -2452,10 +2480,37 @@ void SavedBattleGame::prepareNewTurn()
  						}
  					}
  				}
@@ -12399,10 +12978,10 @@ index 240b22a..92d82e8 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedBattleGame.h b/src/Savegame/SavedBattleGame.h
-index 6c121c7..a5b4ba0 100644
+index 6c121c7..fb7f92b 100644
 --- a/src/Savegame/SavedBattleGame.h
 +++ b/src/Savegame/SavedBattleGame.h
-@@ -87,6 +87,10 @@ private:
+@@ -87,7 +87,12 @@ private:
  	int _alienItemLevel = 0;
  	std::string _reinforcementsDeployment, _reinforcementsRace;
  	int _reinforcementsItemLevel;
@@ -12411,9 +12990,11 @@ index 6c121c7..a5b4ba0 100644
 +	int _reinforcementsThin;
 +	int _reinforcementsKitCap;
  	std::map<std::string, int> _reinforcementsMemory;
++	std::map<std::string, int> _vanStop; // G.I. Joe van stop state (driver, caller, alarm, call, getaway)
  	std::vector< std::vector<int> > _reinforcementsBlocks;
  	std::vector< std::vector<std::string> > _flattenedMapTerrainNames;
-@@ -203,6 +207,18 @@ public:
+ 	std::vector< std::vector<std::string> > _flattenedMapBlockNames;
+@@ -203,8 +208,23 @@ public:
  	void setReinforcementsItemLevel(int reinforcementsItemLevel) { _reinforcementsItemLevel = reinforcementsItemLevel; }
  	/// Gets the alien item level to use for reinforcements.
  	int getReinforcementsItemLevel() const { return _reinforcementsItemLevel; }
@@ -12431,7 +13012,12 @@ index 6c121c7..a5b4ba0 100644
 +	int getReinforcementsKitCap() const { return _reinforcementsKitCap; }
  	/// Gets the memory used for reinforcements.
  	std::map<std::string, int> &getReinforcementsMemory() { return _reinforcementsMemory; }
++	/// G.I. Joe van stop state; a missing key reads as def.
++	int getVanStop(const std::string &key, int def = 0) const { auto i = _vanStop.find(key); return i == _vanStop.end() ? def : i->second; }
++	void setVanStop(const std::string &key, int v) { _vanStop[key] = v; }
  	/// Gets the map blocks used for reinforcements.
+ 	std::vector< std::vector<int> > &getReinforcementsBlocks() { return _reinforcementsBlocks; }
+ 
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
 index 9ca9637..f8a2448 100644
 --- a/src/Savegame/SavedGame.cpp

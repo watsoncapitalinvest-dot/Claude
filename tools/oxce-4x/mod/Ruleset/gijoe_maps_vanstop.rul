@@ -49,7 +49,18 @@ mapScripts:
 # MAPS drew them: the payphone (node 4) first, then the truck bed, the pumps and the store
 # (nodes 1-3), and the fifth in the cab as the driver (node 0, the leader node).
 # Civilians on the twelve rank-0 nodes: clerk, mechanic, customer, the family, diner, Main Street.
-# NOT BUILT YET: the payphone call that brings the backup, the getaway, the lookout.
+#
+# John's rules (13 Nov 2026), engine side in NextTurnState::runVanStop:
+# - The alarm goes up the first time a Cobra man sees a Joe or gets hurt.
+# - GETAWAY: the driver sits in the cab starting the truck. At the end of the 2nd Cobra turn after
+#   the alarm, if he is still up, the truck leaves with everyone aboard, the crates and the lockbox.
+#   The fight goes on. Only dropping the driver stops it.
+# - PAYPHONE: the man at the phone stays on it. If he is still up at the end of the first Cobra turn
+#   after the alarm, the call goes through and 3 more troopers come in at the east end of Main Street
+#   on the Cobra turn after next.
+# - LOOKOUT: a Joe on the hardware store roof or the canopy roof on the turn before they arrive sees
+#   them coming.
+# - SMART PLAY points (MAP_DESIGN_VanStop section 7) on the debriefing.
 alienDeployments:
   - type: STR_COBRA_VAN_STOP
     data:
@@ -63,6 +74,40 @@ alienDeployments:
           - [STR_PISTOL, STR_PISTOL_CLIP, STR_PISTOL_CLIP]
           - [STR_PISTOL, STR_PISTOL_CLIP, STR_PISTOL_CLIP]
     civilians: 8
+    quietUntilAlarm: true    # the crew does not know the Joes are there until the alarm
+    getawayCab: [20, 18, 21, 20, 0]
+    getawayTruck: [16, 18, 21, 20, 0]
+    getawayDataset: CTRUCK
+    getawayFloorFrom: [15, 18, 0]
+    getawayTurns: 2
+    payphone: [12, 16, 0]
+    payphoneReach: 1
+    lookouts:
+      - [37, 9, 46, 20, 2]   # Miller Hardware roof
+      - [15, 17, 25, 21, 1]  # the pump canopy roof
+    smartPoints:
+      driverAlive: 30
+      otherAlive: 10
+      callerDown: 15
+      lookout: 10
+    reinforcements:
+      - type: STR_VANSTOP_BACKUP
+        onCall: true
+        maxRuns: 1
+        useSpawnNodes: true
+        mapBlockFilterType: 0
+        spawnNodeRanks: [2]
+        spawnZLevels: [0]
+        maxDistanceFromBorders: 3
+        data:
+          - alienRank: 5
+            lowQty: 3
+            highQty: 3
+            dQty: 0
+            itemSets:
+              - [STR_PISTOL, STR_PISTOL_CLIP, STR_PISTOL_CLIP]
+              - [STR_PISTOL, STR_PISTOL_CLIP, STR_PISTOL_CLIP]
+              - [STR_PISTOL, STR_PISTOL_CLIP, STR_PISTOL_CLIP]
     width: 50
     length: 40
     height: 3
@@ -78,6 +123,39 @@ alienDeployments:
       title: STR_COBRA_VAN_STOP
       desc: STR_COBRA_VAN_STOP_BRIEFING
 
+# On the globe (John 13 Nov: "Cartel arc, repeating"): while the cartel lead is open (until
+# STR_FACTORY_LEAD_SOLVED), a Cobra truck turns up in a small town on the cartel's roads about once a
+# month. Each one caught feeds the lead: the plate, the stencil, the manifest, the driver.
+alienMissions:
+  - type: STR_COBRA_VAN_STOP_MISSION
+    points: 0
+    objective: 3
+    spawnZone: 8
+    raceWeights:
+      0:
+        STR_COBRA: 100
+    waves:
+      - ufo: STR_COBRA_VAN_STOP       # a deployment name: the site spawns directly
+        count: 1
+        trajectory: P0
+        timer: 60
+        objective: true
+
+missionScripts:
+  - type: cobraVanStops
+    firstMonth: 0
+    executionOdds: 100
+    startDelay: 7200                  # 5 days into the month at the earliest...
+    randomDelay: 28800                # ...and up to 20 more
+    researchTriggers:
+      STR_FACTORY_LEAD_SOLVED: false
+    missionWeights:
+      0:
+        STR_COBRA_VAN_STOP_MISSION: 100
+    regionWeights:
+      0:
+        STR_NORTH_AMERICA: 100
+
 extraStrings:
   - type: en-US
     strings: &vanstopstr
@@ -85,6 +163,15 @@ extraStrings:
       STR_COBRA_VAN_STOP_SITE: Cobra Truck
       STR_COBRA_VAN_STOP_ALERT: COBRA TRUCK SPOTTED
       STR_MILLVILLE: Millville
-      STR_COBRA_VAN_STOP_BRIEFING: "The Cobra cargo truck has pulled in for gas at E·E Fuel on Main Street, Millville. The station is an Extensive Enterprises front. Five troopers: the driver, one in the truck bed, one at the pumps, one in the store, one at the payphone. You have the station surrounded. Take the driver alive if you can, keep the townspeople out of it, and mind the pumps."
+      STR_COBRA_VAN_STOP_MISSION: Cobra Truck
+      STR_VANSTOP_CALL_MADE: "The man at the payphone got his call through. Cobra backup is on the way."
+      STR_VANSTOP_TRUCK_GONE: "THE COBRA TRUCK GOT AWAY, with everyone aboard and the cargo."
+      STR_VANSTOP_LOOKOUT: "LOOKOUT: Cobra backup turning onto Main Street from the east. They hit the street next turn."
+      STR_SMART_DRIVER_ALIVE: "Smart play: driver taken alive"
+      STR_SMART_TAKEN_ALIVE: "Smart play: Cobra taken alive"
+      STR_SMART_CALLER_DOWN: "Smart play: payphone man down before the call"
+      STR_SMART_LOOKOUT: "Smart play: lookout saw the backup coming"
+      STR_SMART_TRUCK_STOPPED: "Smart play: the truck never left"
+      STR_COBRA_VAN_STOP_BRIEFING: "The Cobra cargo truck has pulled in for gas at E·E Fuel on Main Street, Millville. The station is an Extensive Enterprises front. Five troopers: the driver, one in the truck bed, one at the pumps, one in the store, one at the payphone. You have the station surrounded. Drop the driver or the truck leaves with the cargo, and take him alive if you can. Drop the man at the payphone before he gets his call through. Keep the townspeople out of it, and mind the pumps."
   - type: en-GB
     strings: *vanstopstr
