@@ -93,10 +93,14 @@ def soldier(n, typ, arm, names):
     """A soldier type wearing armour arm; a named Joe gets a names file holding only his name."""
     nam = f'Resources/Names/{"RegularJoe" if names is None else typ[4:].title().replace("_", "")}.nam'
     if names is not None:
-        key = 'femaleFirst' if n in FEMALE else 'maleFirst'
-        open(os.path.join(MOD, nam), 'w').write(f'{key}:\n' + ''.join('  - "%s"\n' % x for x in names)
+        # the engine refuses a pool with an empty maleFirst, so a woman's name is in both lists
+        lst = ''.join('  - "%s"\n' % x for x in names)
+        open(os.path.join(MOD, nam), 'w').write('maleFirst:\n' + lst + ('femaleFirst:\n' + lst if n in FEMALE else '')
                                                 + f'femaleFrequency: {100 if n in FEMALE else 0}\n')
-    return [f'  - type: {typ}'] + STATS.rstrip('\n').split('\n') + [
+    stats = STATS.rstrip('\n').split('\n')
+    if names is not None:   # a named Joe is never on the hiring list (costBuy 0 hides him)
+        stats = [l.replace('costBuy: 40000', 'costBuy: 0') for l in stats]
+    return [f'  - type: {typ}'] + stats + [
         f'    armor: {arm}', '    standHeight: 22', '    kneelHeight: 14',
         f'    femaleFrequency: {100 if n in FEMALE else 0}', '    soldierNames:', '      - delete', f'      - {nam}',
         '    deathMale: [41, 42, 43]', '    deathFemale: [44, 45, 46]']
