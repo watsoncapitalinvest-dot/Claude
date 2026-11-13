@@ -34,7 +34,22 @@ NEW = {
     'greenshirt_rifleman': ('STR_REGULAR_JOE_UC', 'STR_REGULAR_JOE', 'Joe Rifleman', None),
     'greenshirt_medic': ('STR_JOE_MEDIC_UC', 'STR_JOE_MEDIC', 'Joe Medic', None),
     'greenshirt_pilot': ('STR_JOE_PILOT_UC', 'STR_JOE_PILOT', 'Joe Pilot', None),
+    # the rest of the Day 1 sixteen (DAY1_SETUP.md); each wears FALLBACK until his sheet lands
+    'hawk': ('STR_HAWK_UC', 'STR_HAWK', 'Hawk', ['Hawk']),
+    'rock_n_roll': ('STR_ROCK_N_ROLL_UC', 'STR_ROCK_N_ROLL', "Rock 'n Roll", ["Rock 'n Roll"]),
+    'grand_slam': ('STR_GRAND_SLAM_UC', 'STR_GRAND_SLAM', 'Grand Slam', ['Grand Slam']),
+    'short_fuze': ('STR_SHORT_FUZE_UC', 'STR_SHORT_FUZE', 'Short-Fuze', ['Short-Fuze']),
+    'zap': ('STR_ZAP_UC', 'STR_ZAP', 'Zap', ['Zap']),
+    'grunt': ('STR_GRUNT_UC', 'STR_GRUNT', 'Grunt', ['Grunt']),
+    'stalker': ('STR_STALKER_UC', 'STR_STALKER', 'Stalker', ['Stalker']),
+    'breaker': ('STR_BREAKER_UC', 'STR_BREAKER', 'Breaker', ['Breaker']),
+    'flash': ('STR_FLASH_UC', 'STR_FLASH', 'Flash', ['Flash']),
+    'doc': ('STR_DOC_UC', 'STR_DOC', 'Doc', ['Doc']),
+    'airborne': ('STR_AIRBORNE_UC', 'STR_AIRBORNE', 'Airborne', ['Airborne']),
 }
+# SHORTCUTS.md #6: a soldier type whose sheet has not been rendered yet wears one that has
+FALLBACK = {'greenshirt_rifleman': 'STR_BEACH_HEAD_UC', 'greenshirt_medic': 'STR_BEACH_HEAD_UC'}
+FALLBACK_DEFAULT = 'STR_DUKE_UC'
 FEMALE = {'scarlett'}
 STATS = '''    costBuy: 40000
     costSalary: 20000
@@ -74,11 +89,29 @@ def switch_existing(armor, sheet):
     open(UNITS, 'w').write(txt[:m.start(2)] + body + txt[m.end(2):])
 
 
+def soldier(n, typ, arm, names):
+    """A soldier type wearing armour arm; a named Joe gets a names file holding only his name."""
+    nam = f'Resources/Names/{"RegularJoe" if names is None else typ[4:].title().replace("_", "")}.nam'
+    if names is not None:
+        key = 'femaleFirst' if n in FEMALE else 'maleFirst'
+        open(os.path.join(MOD, nam), 'w').write(f'{key}:\n' + ''.join('  - "%s"\n' % x for x in names)
+                                                + f'femaleFrequency: {100 if n in FEMALE else 0}\n')
+    return [f'  - type: {typ}'] + STATS.rstrip('\n').split('\n') + [
+        f'    armor: {arm}', '    standHeight: 22', '    kneelHeight: 14',
+        f'    femaleFrequency: {100 if n in FEMALE else 0}', '    soldierNames:', '      - delete', f'      - {nam}',
+        '    deathMale: [41, 42, 43]', '    deathFemale: [44, 45, 46]']
+
+
 def main():
     sprites, armors, soldiers, lang = [], [], [], []
     done = []
     for n in list(EXISTING) + list(NEW):
         size = install(n)
+        if not size and n in NEW:
+            arm, typ, disp, names = NEW[n]
+            soldiers += soldier(n, typ, FALLBACK.get(n, FALLBACK_DEFAULT), names)
+            lang += [(typ, disp)]
+            continue
         if not size:
             continue
         w, h = size
@@ -91,15 +124,7 @@ def main():
             armors += [f'  - type: {arm}', f'    spriteSheet: {sheet_name(n)}', '    drawingRoutine: 23', '    deathFrames: 8',
                        '    corpseBattle: [STR_CORPSE_DUKE]', '    frontArmor: 12', '    sideArmor: 8', '    rearArmor: 5',
                        '    underArmor: 2', '    loftempsSet: [ 3 ]']
-            nam = f'Resources/Names/{"RegularJoe" if names is None else typ[4:].title().replace("_", "")}.nam'
-            if names is not None:
-                key = 'femaleFirst' if n in FEMALE else 'maleFirst'
-                open(os.path.join(MOD, nam), 'w').write(f'{key}:\n' + ''.join(f'  - "{x}"\n' for x in names)
-                                                        + f'femaleFrequency: {100 if n in FEMALE else 0}\n')
-            soldiers += [f'  - type: {typ}'] + STATS.rstrip('\n').split('\n') + [
-                f'    armor: {arm}', '    standHeight: 22', '    kneelHeight: 14',
-                f'    femaleFrequency: {100 if n in FEMALE else 0}', '    soldierNames:', '      - delete', f'      - {nam}',
-                '    deathMale: [41, 42, 43]', '    deathFemale: [44, 45, 46]']
+            soldiers += soldier(n, typ, arm, names)
             lang += [(typ, disp), (arm, disp.upper())]
         done.append(n)
     out = ['# Whole-body soldier sheets rendered by build/sprites/render_cast.sh, drawn by routine 23.',
