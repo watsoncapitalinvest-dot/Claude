@@ -350,6 +350,18 @@ H.I.S.S., which need the same thing in months 4-12. Not started.
 
 ## Broken
 
+### WATCH: big maps (.MAP2), the first place to look if a battle will not load or runs out of memory
+
+Not broken yet; John 15:34 asked for the note instead of a guard. From 0193a43 a map can be a
+`.MAP2` with up to 65,535 part ids (BattlescapeGenerator::loadMAP). Two ways it can go wrong:
+- **A part id the terrain sets do not have.** loadMAP looks it up with no range check, so that
+  battle fails to load (or the game falls over loading it). MAPS checks ids with testblock.
+- **Too many parts.** Each part's 4x full-colour frame is held in memory (~80 KB), and John's
+  game is a 32-bit build. MAPS' budget is 1,000 parts a map (claude/BRIEF_FOR_MAPS_MAP2.txt).
+If a new map crashes on load or the game dies of memory in a big battle, check this first: the
+map's part count, and its highest id against the terrain's sets. A refuse-with-a-message guard
+in loadMAP is the fix if it ever bites.
+
 ### `flatTwin` caches by surface address
 
 The same stale-pointer bug that drew a black square on the rotate-up key
