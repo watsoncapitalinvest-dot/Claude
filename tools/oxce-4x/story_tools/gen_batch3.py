@@ -64,7 +64,7 @@ for i, n, c, deps, txt in [
  ('STR_COMBAT_STIMS', 'Combat Stims', 80, ['STR_FIELD_MEDICINE'], 'A stim pack that restores energy and cuts stun.'),
  ('STR_TRAUMA_KIT', 'Trauma Kit', 120, ['STR_FIELD_MEDICINE', 'STR_VIPER_MEDIC'], 'Built from the Medi-Viper\'s kit: a trauma kit that heals more than a medkit.'),
  ('STR_INFIRMARY', 'Infirmary', 150, ['STR_TRAUMA_KIT'], 'An infirmary for The Pit: wounded Joes recover faster.'),
- ('STR_VAMP_MK2', 'VAMP Mk II', 100, ['STR_VAMP'], 'The VAMP with a heavier gun and more armour.'),
+ ('STR_VAMP_MK2', 'VAMP Mk II', 100, ['STR_VAMP'], 'The VAMP rebuilt for heavier work: an armoured roof over the crew and a rocket pod in place of the machine gun. It hits armour the twin guns only scratch.'),   # John 13 Nov 18:09: missile upgrade of the base VAMP
  ('STR_TWIN_BATTLE_GUN', 'Twin Battle Gun', 80, ['STR_FLAK'], 'A twin anti-aircraft gun.'),
  ('STR_ANTI_AIRCRAFT_GUN', 'Anti-Aircraft Gun', 80, ['STR_FLAK'], 'A heavy anti-aircraft gun emplacement.'),
  ('STR_SNOW_CAT', 'Snow Cat', 150, ['STR_POLAR_BATTLE_BEAR'], 'A big arctic half-track with missiles. Frostbite comes with it.'),
