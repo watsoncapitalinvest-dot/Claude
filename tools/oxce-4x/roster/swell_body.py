@@ -9,7 +9,10 @@ for blends whose body mesh is not world-space:
   - skin-bound props (swords, packs) move rigidly with the body under them, so nothing sinks into the swell
 Only rest-pose vertex positions move: bones, weights, UVs and textures are untouched, every clip still plays.
 
-    python3 swell_body.py in.blend out.blend [--swell 0.016] [--body Ch45]
+    python3 swell_body.py in.blend out.blend [--swell 0.016] [--body Ch45 | --body Ch01_Body,Ch01_Shirt,...]
+--body takes a comma list for bodies whose clothes are separate meshes: the first is the base; every other listed
+mesh is swelled too and layer-locked to it (as swell_ch49: within 3 cm it copies the base's push + 2 mm), so a
+shirt over a body moves with it instead of being pushed through. Meshes not listed are rigid props.
 """
 import argparse, sys
 import numpy as np
@@ -31,7 +34,7 @@ def put_world(o, w, M):
     o.data.vertices.foreach_set('co', loc.ravel()); o.data.update()
 
 
-def swell_body(body, props, swell=0.016):
+def swell_body(body, props, swell=0.016, layers=()):
     co, w, nr, M = world(body)
     gi = {vg.index: vg.name for vg in body.vertex_groups}
     w_hand = np.zeros(len(co)); w_torso = np.zeros(len(co)); w_head = np.zeros(len(co))
@@ -52,6 +55,23 @@ def swell_body(body, props, swell=0.016):
           f'head verts held {(w_head > 0.5).sum()}, hands {(w_hand > 0.5).sum()}')
     from scipy.spatial import cKDTree
     tree = cKDTree(w); d = new - w
+    for o in layers:                                          # clothes on their own meshes: swell, then lock to the body
+        lc, lw, ln, LM = world(o)
+        gl = {vg.index: vg.name for vg in o.vertex_groups}
+        lt = np.zeros(len(lc)); lh = np.zeros(len(lc)); lhd = np.zeros(len(lc))
+        for v in o.data.vertices:
+            for g in v.groups:
+                n = gl[g.group]
+                if 'Hand' in n: lh[v.index] += g.weight
+                if any(k in n for k in ('Spine', 'Hips', 'Shoulder', 'Neck')): lt[v.index] += g.weight
+                if n.endswith('Head') or 'HeadTop' in n: lhd[v.index] += g.weight
+        lz = lw[:, 2]
+        la = swell * (0.75 + 0.35 * np.clip(lt, 0, 1)) * (1 - np.clip(lh, 0, 1)) * (1 - np.clip((0.40 - lz) / 0.08, 0, 1)) * (1 - np.clip(lhd, 0, 1))
+        lnew = lw + ln * la[:, None]
+        dist, nn = tree.query(lw); on = dist < 0.03
+        lnew[on] = lw[on] + d[nn[on]] + ln[on] * 0.002
+        put_world(o, lnew, LM)
+        print(f'  layer {o.name}: swelled, {int(on.sum())} of {len(lc)} verts locked to {body.name}')
     import re
     groups = {}                                               # parts of one prop (guard0, hilt0, scabbard0) move together
     for p in props: groups.setdefault(re.sub(r'^[A-Za-z_]+', '', p.name) or p.name, []).append(p)
@@ -71,7 +91,9 @@ if __name__ == '__main__':
     import bpy
     bpy.ops.wm.open_mainfile(filepath=a.inp)
     meshes = [o for o in bpy.data.objects if o.type == 'MESH' and any(m.type == 'ARMATURE' for m in o.modifiers)]
-    body = next(o for o in meshes if o.name == a.body) if a.body else max(meshes, key=lambda o: len(o.data.vertices))
-    swell_body(body, [o for o in meshes if o is not body], a.swell)
+    names = a.body.split(',') if a.body else [max(meshes, key=lambda o: len(o.data.vertices)).name]
+    body = next(o for o in meshes if o.name == names[0])
+    layers = [o for o in meshes if o.name in names[1:]]
+    swell_body(body, [o for o in meshes if o.name not in names], a.swell, layers)
     bpy.ops.wm.save_as_mainfile(filepath=a.out, compress=True)
     print('saved', a.out)
