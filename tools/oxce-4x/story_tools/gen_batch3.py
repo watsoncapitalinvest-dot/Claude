@@ -78,7 +78,11 @@ for i, n, c, deps, txt in [
  ('STR_AIR_COMBAT_DOCTRINE', 'Air Combat Doctrine', 150, ['STR_VIPER_PILOT'], 'How Cobra\'s pilots are taught to fly, and how to beat them. Every Joe aircraft is more accurate.'),
  ('STR_DETENTION_BLOCK', 'Detention Block', 120, ['STR_COBRA_TROOPER'], 'Cells for Cobra prisoners, with room to grow. The trail runs through the men we take alive.'),
  ('STR_SIGNALS_INTELLIGENCE_CENTER', 'Signals Intelligence Center', 250, ['STR_COBRA_FLIGHT_ROUTES'], 'A listening post in The Pit. Cobra\'s radio traffic becomes leads.'),
- ('STR_LONG_RANGE_RADAR', 'Long-Range Radar', 200, ['STR_RADAR_ROOM'], 'A radar with a far longer reach.')]:
+ ('STR_LONG_RANGE_RADAR', 'Long-Range Radar', 200, ['STR_RADAR_ROOM'], 'A radar with a far longer reach.'),
+ # squad tactics (John 23:16-23:19): researched only in a base with a Briefing Room (base function STR_BRIEFING_ROOM)
+ ('STR_OVERWATCH_DRILLS', 'Overwatch Drills', 80, None, 'Hawk drills the squads on holding ground. A Joe who ends his turn without moving gets +15% reaction-fire accuracy and reacts a little sooner.'),
+ ('STR_BREACHING_DRILLS', 'Breaching Drills', 100, ['STR_OVERWATCH_DRILLS'], 'Door drills. Opening doors and containers costs half the time units, and the first Joe through a door gets +20% accuracy that turn.'),
+ ('STR_FIRE_AND_MOVE', 'Fire and Move', 120, ['STR_OVERWATCH_DRILLS'], 'One Joe shoots, another moves. A Cobra a Joe fires at is pinned: no reaction fire until his next turn. Smoke grenades cost half the time units to throw, and Joes moving inside smoke cannot be reaction-fired.')]:
     t(i, n, c, 15, deps, txt)
 
 # research money (John 21:28: "some are money and/or resources like cobra parts"). Dollars, charged when the project
@@ -101,7 +105,9 @@ FUNDS = {
  'STR_AIR_COMBAT_DOCTRINE': 100000, 'STR_DETENTION_BLOCK': 300000, 'STR_SIGNALS_INTELLIGENCE_CENTER': 700000,
  'STR_LONG_RANGE_RADAR': 600000}
 FUNDS = {k: int(round(v * 0.75, -4)) for k, v in FUNDS.items()}   # John 21:38: research money cut by 25%
-R = [{'name': i, 'cost': c, 'points': p, **({'costFunds': FUNDS[i]} if i in FUNDS else {}), **({'dependencies': d} if d else {}), 'unlocks': []} for i, n, c, p, d, _ in T]
+FUNDS.update({'STR_OVERWATCH_DRILLS': 60000, 'STR_BREACHING_DRILLS': 80000, 'STR_FIRE_AND_MOVE': 90000})   # pitched after the cut (John 23:16-23:19)
+BASEFUNC = {'STR_OVERWATCH_DRILLS': ['STR_BRIEFING_ROOM'], 'STR_BREACHING_DRILLS': ['STR_BRIEFING_ROOM'], 'STR_FIRE_AND_MOVE': ['STR_BRIEFING_ROOM']}
+R = [{'name': i, 'cost': c, 'points': p, **({'costFunds': FUNDS[i]} if i in FUNDS else {}), **({'dependencies': d} if d else {}), **({'requiresBaseFunc': BASEFUNC[i]} if i in BASEFUNC else {}), 'unlocks': []} for i, n, c, p, d, _ in T]
 missing=[i for i,*_ in T if i not in FUNDS and not i.startswith('STR_STANDARD') and i not in ('STR_FIELD_MEDICINE','STR_BREACHING_SHOTGUN')]
 assert not missing, missing
 ART = [{'id': i, 'type_id': 8, 'section': SECTION, 'requires': [i], 'text': i + '_UFOPEDIA'} for i, *_ in T]
