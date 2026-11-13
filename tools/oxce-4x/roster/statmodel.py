@@ -20,8 +20,8 @@ T = {  # E-5 named template per specialty ("very good")
  'Arctic & Mountain':  [80, 92, 60, 80, 78, 84, 74, 58, 66],
 }
 # rank bonus: experience shows in bravery, reactions, firing, TU
-RANK = {'E-4': -3, 'E-5': 0, 'E-6': 2, 'E-7': 4, 'E-8': 6, 'E-9': 7, 'O-2': 3, 'O-3': 5, 'O-6': 8}
-OFFICER_BRAV = {'O-2': 5, 'O-3': 5, 'O-6': 10}
+RANK = {'E-4': -3, 'E-5': 0, 'E-6': 2, 'E-7': 4, 'E-8': 6, 'E-9': 7, 'O-2': 3, 'O-3': 5, 'O-4': 6, 'O-6': 8}
+OFFICER_BRAV = {'O-2': 5, 'O-3': 5, 'O-4': 5, 'O-6': 10}
 J = [  # name, rank, primary, secondary, nudge
  ('Hawk', 'O-6', 'Command', 'Comms & Tech', {}),
  ('Duke', 'E-8', 'Command', None, {'Fire': 3}),
@@ -57,12 +57,15 @@ def unnamed(prim):
     start = {k: min(GS[k], int(round(0.70 * t[k]))) for k in K}
     cap['Brav'] = int(cap['Brav'] // 10 * 10); start['Brav'] = int(start['Brav'] // 10 * 10)
     return start, cap
-res = {'named': {n: dict(rank=r, primary=p, secondary=s, stats=named(r, p, s, nd)) for n, r, p, s, nd in J},
-       'unnamed': {p: dict(zip(('start', 'cap'), unnamed(p))) for p in T}}
-import os; json.dump(res, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stats_day1.json'), 'w'), indent=1)
-print('%-13s %-4s %-26s' % ('Joe', 'rank', 'specialty') + ' '.join('%5s' % k for k in K))
-for n, d in res['named'].items():
-    print('%-13s %-4s %-26s' % (n, d['rank'], d['primary'][:26]) + ' '.join('%5d' % d['stats'][k] for k in K))
-print()
-for p, d in res['unnamed'].items():
-    print('%-27s start ' % p[:27] + ' '.join('%4d' % d['start'][k] for k in K) + '  | cap ' + ' '.join('%4d' % d['cap'][k] for k in K))
+def main():
+    res = {'named': {n: dict(rank=r, primary=p, secondary=s, stats=named(r, p, s, nd)) for n, r, p, s, nd in J},
+           'unnamed': {p: dict(zip(('start', 'cap'), unnamed(p))) for p in T}}
+    import os; json.dump(res, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stats_day1.json'), 'w'), indent=1)
+    print('%-13s %-4s %-26s' % ('Joe', 'rank', 'specialty') + ' '.join('%5s' % k for k in K))
+    for n, d in res['named'].items():
+        print('%-13s %-4s %-26s' % (n, d['rank'], d['primary'][:26]) + ' '.join('%5d' % d['stats'][k] for k in K))
+    print()
+    for p, d in res['unnamed'].items():
+        print('%-27s start ' % p[:27] + ' '.join('%4d' % d['start'][k] for k in K) + '  | cap ' + ' '.join('%4d' % d['cap'][k] for k in K))
+if __name__ == '__main__':
+    main()

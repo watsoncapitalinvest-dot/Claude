@@ -5,8 +5,11 @@ character: stats, canon rank, specialty, signature weapon, trait, move, bonds, g
 
 | File | What it is |
 |---|---|
+| `build.py` | **The builder.** Joins John's sources (Bible, Catalog, character articles; private, read with `--src`) with the hand layers and the stat model, and writes every output below plus the project docs (records, review page, tracker). Run `python3 build.py --src <design folder> --docs <out>`. |
+| `characters_<batch>.yaml` | Hand layers: only what the sources lack (stat-model inputs, engine route and numbers, bonds, grudges, voice). `characters_day1.yaml` (16 Joes), `characters_cobra_b1.yaml` (15 villains). |
+| `tracker.yaml` | What the other desks have delivered (figure art, 3D look, sprites), for the tracker. |
+| `roster_cobra_b1.yaml` | Cobra batch 1 records: unit type, fixed stats, weapon, trait, move, bonds, grudges, voice keys, window. |
 | `statmodel.py` | Stat model. Named Joe = specialty template + rank bonus + 25% of the secondary's lead + one canon nudge. Unnamed cap = 78% of the template; unnamed start = the decided greenshirt start, lowered to 70% of the template where that is less. Writes `stats_day1.json`. |
-| `gen_roster.py` | Writes `roster_day1.yaml` and `mod/Ruleset/gijoe_roster_text.rul`. Edit the script, not the outputs. Names files are BUILD's (`install_body_sheets.py`). |
 | `roster_day1.yaml` | The 16 Day-1 Joes + 14 unnamed specialties. |
 
 ## John's rules this follows (12 Nov 2026)
@@ -32,6 +35,13 @@ It does not touch soldier-type names, which are BUILD's.
 
 Short-Fuze: John 21:31 put him on the roster as WAITING (no look). BUILD's Day-1 `startingBase` still lists
 `STR_SHORT_FUZE: 1`; that is BUILD's call to change.
+
+## Contract with BUILD for named villains (roster_cobra_b1.yaml)
+- `unitType` names the OXCE unit. Three exist already (STR_COBRA_COMMANDER_UNIT, STR_DESTRO_UNIT, STR_STORM_SHADOW_UNIT);
+  the rest are new unit types for BUILD to create (armour, sprites, names).
+- unit `stats` = the record's `stats` (fixed). OXCE adds its own difficulty bonus to enemy units on top.
+- `window` = campaign months for `gijoe_availability.rul` (BUILD's file); entries marked PROPOSED wait for John.
+- trait/move `engine`: native (item or armour property), script (unit script hook), ai-fork (needs the AI to use a skill: fork).
 
 ## Not in stock OXCE (engine requests, to come as one spec)
 Bonds, signature moves (once per mission), grudges (preset + Major Bludd's: anyone who downs, stuns
