@@ -293,7 +293,7 @@ index c52f7ad..44470ef 100644
  }
  
 diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
-index db6727f..2e6ae2f 100644
+index db6727f..c828da2 100644
 --- a/src/Battlescape/AIModule.cpp
 +++ b/src/Battlescape/AIModule.cpp
 @@ -19,6 +19,7 @@
@@ -304,7 +304,7 @@ index db6727f..2e6ae2f 100644
  #include "../Savegame/BattleItem.h"
  #include "../Savegame/Node.h"
  #include "../Savegame/SavedBattleGame.h"
-@@ -489,6 +490,38 @@ void AIModule::think(BattleAction *action)
+@@ -489,6 +490,44 @@ void AIModule::think(BattleAction *action)
  		return;
  	}
  
@@ -328,9 +328,15 @@ index db6727f..2e6ae2f 100644
 +				}
 +				Tile* tile = _save->getTile(p);
 +				if (!tile || (tile->getUnit() && tile->getUnit() != _unit)) continue;
++				// the van body itself is solid: only the tiles a man can stand on count
++				if (tile->getTUCost(O_OBJECT, _unit->getMovementType()) == Pathfinding::INVALID_MOVE_COST) continue;
 +				int d = Position::distanceSq(p, _unit->getPosition());
-+				if (bestD < 0 || d < bestD) { bestD = d; best = p; }
++				if (bestD >= 0 && d >= bestD) continue;
++				_save->getPathfinding()->calculate(_unit, p, BAM_NORMAL);
++				if (_save->getPathfinding()->getStartDirection() == -1) continue;
++				bestD = d; best = p;
 +			}
++			_save->getPathfinding()->abortPath();
 +			if (bestD >= 0)
 +			{
 +				action->type = BA_WALK;
