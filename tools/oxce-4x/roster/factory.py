@@ -12,6 +12,7 @@ Steps (stops at the first failure and says why; nothing is shipped from a failed
   4 full     BUILD's kit, render_one.sh unchanged (8 clips x 8 facings x 8 frames) -> <name>_body*.png + anchors
   5 sheet QA sheet size = BUILD's layout, every rendered cell non-empty, anchors line count, magenta background
   6 gif      8-facing walk GIF (the kit's walk_gif.py) for the record
+  6b size    game-size check against in-game sheets (--ref <mod Units dir>): near-white share, brightness, palette use
   7 report   <out>/<name>/FACTORY_REPORT.txt: timings, QA lines, what to ship where, the note for BUILD
 The data side (stats, text) is build.py; run it once per batch, not per character.
 BUILD's kit is used exactly as shipped: no script, clip, camera or ink setting is changed here.
@@ -154,6 +155,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('package'); ap.add_argument('--name', required=True); ap.add_argument('--kit', required=True)
     ap.add_argument('--quick', action='store_true'); ap.add_argument('--out', default='factory_out')
+    ap.add_argument('--ref', help='folder with in-game sheets (duke_body_rgb.png...) for the game-size check')
     a = ap.parse_args()
     out = os.path.abspath(os.path.join(a.out, a.name)); os.makedirs(out, exist_ok=True)
     work = os.path.join(out, 'work'); os.makedirs(work, exist_ok=True)
@@ -180,6 +182,10 @@ def main():
         g = subprocess.run([sys.executable, os.path.join(kit, 'scripts', 'walk_gif.py'), os.path.join(kit, 'work', f'fr_{a.name}'),
                             os.path.join(out, f'{a.name}_walk_8dir.gif')], capture_output=True, text=True)
         log(rep, 'walk gif: ' + ((g.stdout or g.stderr).strip().splitlines() or ['?'])[-1])
+        if a.ref:
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import size_check
+            lines, st = size_check.check(a.name, out, os.path.join(out, f'{a.name}_size_check.png'), a.ref)
+            log(rep, 'game-size check (vs in-game sheets):'); [log(rep, l) for l in lines]
         rep += ['', 'SHIP: the three sheet files -> Reference\\sheets\\ ; GIF stays with the record.',
                 f'NOTE FOR BUILD (ROSTER.md outgoing): "sheets for {a.name} in Reference\\sheets; data in roster_<batch>.yaml"'
                 + ('' if runner.endswith('render_one.sh') else f' + "ink row to add to render_one.sh: {a.name}) {card_ink(card)}"')]
