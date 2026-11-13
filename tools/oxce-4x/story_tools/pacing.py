@@ -48,6 +48,14 @@ W=float(os.environ.get('WAGE','1.0'))
 ECON = dict(start=4.0e6, funding=float(os.environ.get('FUND','1.0'))*1e6, other_income=0.4e6,          # raids, sold loot: estimate
             soldiers=24 * 20000 * W, engineers=10 * 25000 * W, sci_salary=30000 * W, sci_hire=60000 * W,
             upkeep=0.2e6, lab=(750000, 26, 30000), quarters=(400000, 16, 10000), base_staff_room=20)
+# Facility numbers (John 23:48 OK'd claude/FACILITY_STATS_v1.md): Day 1 Lab Bench seats 10; a Lab seats 25 for $375k,
+# 20 days, $15k/month; staff housing on Day 1 = the Command Center's 20 (full with 10 scientists + 10 engineers);
+# more housing = a Barracks, 24 people for $150k, 10 days, $4k/month. FAC=0 reruns the old stock-X-COM assumption.
+FAC = os.environ.get('FAC', '1') == '1'
+if FAC:
+    ECON.update(lab=(375000, 20, 15000), quarters=(150000, 10, 4000))
+LAB_START, LAB_ADD = (10, 25) if FAC else (50, 50)
+HOUSE_START, HOUSE_ADD = (20, 24) if FAC else (30, 50)
 FUNDS_SCALE = float(sys.argv[1]) if len(sys.argv) > 1 else 1.0
 ECON['other_income'] = float(sys.argv[2]) * 1e6 if len(sys.argv) > 2 else ECON['other_income']
 STRATS = {  # target scientists by month; second lab when targets pass 50
@@ -57,7 +65,7 @@ STRATS = {  # target scientists by month; second lab when targets pass 50
 PARALLEL, PER_PROJECT = 4, 20     # projects worked at once; scientists usefully on one project
 
 def run(strat):
-    target = STRATS[strat]; day = 0; cash = ECON['start']; sci = 10; labs = 50; rooms = ECON['base_staff_room'] + 10
+    target = STRATS[strat]; day = 0; cash = ECON['start']; sci = 10; labs = LAB_START; rooms = HOUSE_START; nlab_built = 0; nq_built = 0
     done = {k: 0.0 for k in DONE0}; prog = collections.defaultdict(float); paid = set(); building = []; spent = collections.Counter()
     def tgt(m): return max(v for mm, v in target.items() if mm <= m)
     def avail(k):
@@ -77,13 +85,13 @@ def run(strat):
         for b in list(building):
             if b[1] <= day:
                 building.remove(b)
-                if b[0] == 'lab': labs += 50
-                else: rooms += 50
+                if b[0] == 'lab': labs += LAB_ADD; nlab_built += 1
+                else: rooms += HOUSE_ADD; nq_built += 1
         # hire / build toward the target
         want = tgt(m)
-        while sci < want and sci + 0 < (rooms - 10) and sci < labs and cash > ECON['sci_hire'] + 1e6:
+        while sci < want and sci + 10 < rooms and sci < labs and cash > ECON['sci_hire'] + 1e6:
             sci += 1; cash -= ECON['sci_hire']; spent['hiring'] += ECON['sci_hire']
-        if want > rooms - 10 and not any(b[0] == 'q' for b in building) and cash > ECON['quarters'][0] + 1e6:
+        if want + 10 > rooms and not any(b[0] == 'q' for b in building) and cash > ECON['quarters'][0] + 1e6:
             building.append(('q', day + ECON['quarters'][1])); cash -= ECON['quarters'][0]; spent['quarters'] += ECON['quarters'][0]
         if want > labs and not any(b[0] == 'lab' for b in building) and cash > ECON['lab'][0] + 1e6:
             building.append(('lab', day + ECON['lab'][1])); cash -= ECON['lab'][0]; spent['labs'] += ECON['lab'][0]
@@ -102,13 +110,12 @@ def run(strat):
             prog[k] += n
             if prog[k] >= T[k]['cost']: done[k] = day / 30
         # money, daily slice of the month
-        nlabs = labs // 50; nq = (rooms - 30) // 50
         monthly = ECON['funding'] + ECON['other_income'] - ECON['soldiers'] - ECON['engineers'] - sci * ECON['sci_salary'] \
-                  - ECON['upkeep'] - (nlabs - 1) * ECON['lab'][2] - max(0, nq) * ECON['quarters'][2]
+                  - ECON['upkeep'] - nlab_built * ECON['lab'][2] - nq_built * ECON['quarters'][2]
         cash += monthly / 30
         if cash < 0: low_cash_days += 1
         day += 1
-    return done, dict(sci=sci, labs=labs // 50, cash=round(cash / 1e6, 2), spent={k: round(v / 1e6, 2) for k, v in spent.items()},
+    return done, dict(sci=sci, lab_seats=labs, labs_built=nlab_built, cash=round(cash / 1e6, 2), spent={k: round(v / 1e6, 2) for k, v in spent.items()},
                       broke_days=low_cash_days, monthly_at_end=round(monthly / 1e6, 2))
 out = {}
 for s in STRATS:
