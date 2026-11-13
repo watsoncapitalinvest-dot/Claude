@@ -292,18 +292,167 @@ index c52f7ad..44470ef 100644
  
  }
  
+diff --git a/src/Basescape/ResearchState.cpp b/src/Basescape/ResearchState.cpp
+index a6004b9..0d9241d 100644
+--- a/src/Basescape/ResearchState.cpp
++++ b/src/Basescape/ResearchState.cpp
+@@ -34,6 +34,7 @@
+ #include "../Mod/RuleResearch.h"
+ #include "ResearchInfoState.h"
+ #include "TechTreeViewerState.h"
++#include "../Geoscape/DepartmentsState.h"
+ #include <algorithm>
+ 
+ namespace OpenXcom
+@@ -48,8 +49,9 @@ ResearchState::ResearchState(Base *base) : _base(base)
+ {
+ 	// Create objects
+ 	_window = new Window(this, 320, 200, 0, 0);
+-	_btnNew = new TextButton(148, 16, 8, 176);
+-	_btnOk = new TextButton(148, 16, 164, 176);
++	_btnNew = new TextButton(98, 16, 8, 176);
++	_btnDepts = new TextButton(98, 16, 111, 176); // G.I. Joe department heads
++	_btnOk = new TextButton(98, 16, 214, 176);
+ 	_txtTitle = new Text(310, 17, 5, 8);
+ 	_txtAvailable = new Text(150, 9, 10, 24);
+ 	_txtAllocated = new Text(150, 9, 160, 24);
+@@ -65,6 +67,7 @@ ResearchState::ResearchState(Base *base) : _base(base)
+ 	add(_window, "window", "researchMenu");
+ 	add(_btnNew, "button", "researchMenu");
+ 	add(_btnOk, "button", "researchMenu");
++	add(_btnDepts, "button", "researchMenu");
+ 	add(_txtTitle, "text", "researchMenu");
+ 	add(_txtAvailable, "text", "researchMenu");
+ 	add(_txtAllocated, "text", "researchMenu");
+@@ -84,6 +87,8 @@ ResearchState::ResearchState(Base *base) : _base(base)
+ 	_btnNew->onKeyboardPress((ActionHandler)&ResearchState::btnNewClick, Options::keyToggleQuickSearch);
+ 	_btnNew->onKeyboardPress((ActionHandler)&ResearchState::onCurrentGlobalResearchClick, Options::keyGeoGlobalResearch);
+ 
++	_btnDepts->setText(tr("STR_DEPARTMENTS"));
++	_btnDepts->onMouseClick((ActionHandler)&ResearchState::btnDeptsClick);
+ 	_btnOk->setText(tr("STR_OK"));
+ 	_btnOk->onMouseClick((ActionHandler)&ResearchState::btnOkClick);
+ 	_btnOk->onKeyboardPress((ActionHandler)&ResearchState::btnOkClick, Options::keyCancel);
+@@ -370,4 +375,9 @@ void ResearchState::moveTopicDown(Action* action, unsigned int row, bool max)
+ 	fillProjectList(_lstResearch->getScroll());
+ }
+ 
++void ResearchState::btnDeptsClick(Action *)
++{
++	_game->pushState(new DepartmentsState);
++}
++
+ }
+diff --git a/src/Basescape/ResearchState.h b/src/Basescape/ResearchState.h
+index d41c550..745504e 100644
+--- a/src/Basescape/ResearchState.h
++++ b/src/Basescape/ResearchState.h
+@@ -36,7 +36,7 @@ class ResearchState : public State
+ {
+ private:
+ 	Base *_base;
+-	TextButton *_btnNew, *_btnOk;
++	TextButton *_btnNew, *_btnOk, *_btnDepts;
+ 	Window *_window;
+ 	Text *_txtTitle, *_txtAvailable, *_txtAllocated, *_txtSpace, *_txtProject, *_txtScientists, *_txtProgress;
+ 	TextList *_lstResearch;
+@@ -46,6 +46,7 @@ public:
+ 	/// Cleans up the Research state.
+ 	~ResearchState();
+ 	/// Handler for clicking the OK button.
++	void btnDeptsClick(Action *action);
+ 	void btnOkClick(Action *action);
+ 	/// Handler for clicking the New Research button.
+ 	void btnNewClick(Action *action);
 diff --git a/src/Basescape/SoldierInfoState.cpp b/src/Basescape/SoldierInfoState.cpp
-index 0c7d12f..3b45610 100644
+index 0c7d12f..7281830 100644
 --- a/src/Basescape/SoldierInfoState.cpp
 +++ b/src/Basescape/SoldierInfoState.cpp
-@@ -750,6 +750,7 @@ void SoldierInfoState::btnTransformationsClick(Action*)
+@@ -44,6 +44,7 @@
+ #include "SoldierTransformState.h"
+ #include "SoldierRankState.h"
+ #include "SackSoldierState.h"
++#include "../Geoscape/DepartmentsState.h"
+ #include "../Mod/RuleInterface.h"
+ #include "../Mod/RuleSoldier.h"
+ #include "../Savegame/SoldierDeath.h"
+@@ -90,6 +91,7 @@ SoldierInfoState::SoldierInfoState(Base *base, size_t soldierId, bool forceLimit
+ 	_edtSoldier = new TextEdit(this, 210, 16, 40, 9);
+ 	_btnSack = new TextButton(60, 14, 260, 33);
+ 	_btnDiary = new TextButton(60, 14, 260, 48);
++	_btnAppoint = new TextButton(60, 12, 260, 64); // G.I. Joe department heads
+ 	_txtRank = new Text(130, 9, 0, 48);
+ 	_txtMissions = new Text(100, 9, 130, 48);
+ 	_txtKills = new Text(100, 9, 200, 48);
+@@ -184,6 +186,7 @@ SoldierInfoState::SoldierInfoState(Base *base, size_t soldierId, bool forceLimit
+ 	add(_edtSoldier, "text1", "soldierInfo");
+ 	add(_btnSack, "button", "soldierInfo");
+ 	add(_btnDiary, "button", "soldierInfo");
++	add(_btnAppoint, "button", "soldierInfo");
+ 	add(_txtRank, "text1", "soldierInfo");
+ 	add(_txtMissions, "text1", "soldierInfo");
+ 	add(_txtKills, "text1", "soldierInfo");
+@@ -319,6 +322,8 @@ SoldierInfoState::SoldierInfoState(Base *base, size_t soldierId, bool forceLimit
+ 
+ 	_btnSack->setText(tr("STR_SACK"));
+ 	_btnSack->onMouseClick((ActionHandler)&SoldierInfoState::btnSackClick);
++	_btnAppoint->setText(tr("STR_APPOINT"));
++	_btnAppoint->onMouseClick((ActionHandler)&SoldierInfoState::btnAppointClick);
+ 
+ 	_btnDiary->setText(tr("STR_DIARY"));
+ 	_btnDiary->onMouseClick((ActionHandler)&SoldierInfoState::btnDiaryClick);
+@@ -486,6 +491,7 @@ void SoldierInfoState::init()
+ 	bool showNastyButtons = !_readOnly && _game->getSavedGame()->getMonthsPassed() > -1 && !(_soldier->getCraft() && _soldier->getCraft()->getStatus() == "STR_OUT");
+ 
+ 	_btnSack->setVisible(showNastyButtons);
++	_btnAppoint->setVisible(!_readOnly && _base != 0 && _game->getSavedGame()->getMonthsPassed() > -1);
+ 	_btnTransformations->setVisible(showNastyButtons && !_noTransformations);
+ 
+ 	_txtRank->setText(tr("STR_RANK_").arg(tr(_soldier->getRankString())));
+@@ -595,6 +601,7 @@ void SoldierInfoState::init()
+ 	{
+ 		_btnArmor->setVisible(false);
+ 		_btnSack->setVisible(false);
++		_btnAppoint->setVisible(false);
+ 		_txtCraft->setVisible(false);
+ 		_txtDead->setVisible(true);
+ 		std::string status = "STR_MISSING_IN_ACTION";
+@@ -748,8 +755,14 @@ void SoldierInfoState::btnTransformationsClick(Action*)
+  * Shows the Sack Soldier window.
+  * @param action Pointer to an action.
   */
++void SoldierInfoState::btnAppointClick(Action *)
++{
++	_game->pushState(new SoldierJobsState(_soldier));
++}
++
  void SoldierInfoState::btnSackClick(Action *)
  {
 +	if (_base->getSoldiers()->at(_soldierId)->isAway()) return; // away on an operation
  	_game->pushState(new SackSoldierState(_base, _soldierId));
  }
  
+diff --git a/src/Basescape/SoldierInfoState.h b/src/Basescape/SoldierInfoState.h
+index e17971a..062f498 100644
+--- a/src/Basescape/SoldierInfoState.h
++++ b/src/Basescape/SoldierInfoState.h
+@@ -49,7 +49,7 @@ private:
+ 	Surface *_bg;
+ 	InteractiveSurface *_rank;
+ 	InteractiveSurface *_flag;
+-	TextButton *_btnOk, *_btnPrev, *_btnNext, *_btnArmor, *_btnSack, *_btnDiary, *_btnBonuses, *_btnTransformations;
++	TextButton *_btnOk, *_btnPrev, *_btnNext, *_btnArmor, *_btnSack, *_btnDiary, *_btnAppoint, *_btnBonuses, *_btnTransformations;
+ 	Text *_txtRank, *_txtMissions, *_txtKills, *_txtCraft, *_txtRecovery, *_txtPsionic, *_txtDead;
+ 	Text *_txtStuns;
+ 	TextEdit *_edtSoldier;
+@@ -87,6 +87,7 @@ public:
+ 	void btnTransformationsClick(Action* action);
+ 	/// Handler for clicking the Sack button.
+ 	void btnSackClick(Action *action);
++	void btnAppointClick(Action *action);
+ 	/// Handler for clicking the Diary button.
+ 	void btnDiaryClick(Action *action);
+ 	/// Handler for clicking the flag.
 diff --git a/src/Basescape/TransferItemsState.cpp b/src/Basescape/TransferItemsState.cpp
 index 7724953..6e4f57c 100644
 --- a/src/Basescape/TransferItemsState.cpp
@@ -3853,7 +4002,7 @@ index bc5f08f..3b09298 100644
  	_terrain->calculateFOV(_unit);
  	if (!_falling)
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..d65e012 100644
+index 839f803..e5cbcda 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -172,6 +172,8 @@ set ( engine_src
@@ -3865,12 +4014,13 @@ index 839f803..d65e012 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -201,9 +203,12 @@ set ( geoscape_src
+@@ -201,9 +203,13 @@ set ( geoscape_src
    Geoscape/DogfightState.cpp
    Geoscape/ExtendedGeoscapeLinksState.cpp
    Geoscape/FundingState.cpp
 +  Geoscape/CobraIntelState.cpp
 +  Geoscape/IntelBoardState.cpp
++  Geoscape/DepartmentsState.cpp
    Geoscape/GeoscapeCraftState.cpp
    Geoscape/GeoscapeEventState.cpp
    Geoscape/GeoscapeState.cpp
@@ -3878,7 +4028,7 @@ index 839f803..d65e012 100644
    Geoscape/Globe.cpp
    Geoscape/GraphsState.cpp
    Geoscape/InterceptState.cpp
-@@ -331,6 +336,7 @@ set ( mod_src
+@@ -331,6 +337,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -3886,7 +4036,7 @@ index 839f803..d65e012 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +362,7 @@ set ( savegame_src
+@@ -356,6 +363,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -8107,6 +8257,420 @@ index 0000000..e57d835
 +};
 +
 +}
+diff --git a/src/Geoscape/DepartmentsState.cpp b/src/Geoscape/DepartmentsState.cpp
+new file mode 100644
+index 0000000..723fff3
+--- /dev/null
++++ b/src/Geoscape/DepartmentsState.cpp
+@@ -0,0 +1,318 @@
++/*
++ * G.I. Joe: USA Defense. Department heads (see DepartmentsState.h).
++ */
++#include "DepartmentsState.h"
++#include <sstream>
++#include "../Engine/Game.h"
++#include "../Engine/Action.h"
++#include "../Engine/LocalizedText.h"
++#include "../Engine/Options.h"
++#include "../Interface/TextButton.h"
++#include "../Interface/Window.h"
++#include "../Interface/Text.h"
++#include "../Interface/TextList.h"
++#include "../Mod/Mod.h"
++#include "../Mod/RuleSoldier.h"
++#include "../Savegame/SavedGame.h"
++#include "../Savegame/Base.h"
++#include "../Savegame/Soldier.h"
++
++namespace OpenXcom
++{
++
++namespace Departments
++{
++std::string name(State *st, const std::string &dept)
++{
++	if (dept == "TOP_KICK") return st->tr("STR_TOP_KICK");
++	return st->tr("STR_DEPT_" + dept);
++}
++
++int match(const Mod *mod, const Soldier *s, const std::string &dept)
++{
++	if (dept == "TOP_KICK") return mod->topKickMatch(s->getRules()->getType());
++	const Mod::DepartmentRule *d = mod->getDepartment(dept);
++	return d ? mod->deptMatch(s->getRules()->getType(), *d) : 0;
++}
++
++void appoint(SavedGame *save, const std::string &dept, const Soldier *s)
++{
++	const int id = s ? s->getId() : -1;
++	if (id >= 0)
++	{
++		const std::string old = save->getJobOf(id);
++		if (old == "TOP_KICK") save->setTopKick(-1);
++		else if (!old.empty()) save->setDeptHead(old, -1);
++	}
++	if (dept == "TOP_KICK") save->setTopKick(id);
++	else save->setDeptHead(dept, id);
++}
++
++std::vector<std::string> pendingPrompts(const Mod *mod, SavedGame *save)
++{
++	std::vector<std::string> out;
++	for (const auto &d : mod->getDepartments())
++	{
++		if (save->isDeptPrompted(d.type) || !save->hasDeptRoom(mod, d.type)) continue;
++		save->setDeptPrompted(d.type);
++		if (save->getDeptHead(d.type) < 0) out.push_back(d.type);
++	}
++	return out;
++}
++}
++
++namespace
++{
++/// "in office" / "away" / "captured" / "no head", and the speed.
++void headLine(State *st, const Mod *mod, SavedGame *save, const std::string &dept, std::string &who, std::string &state, std::string &speed)
++{
++	bool captured = false;
++	const int id = dept == "TOP_KICK" ? save->getTopKick() : save->getDeptHead(dept);
++	const Soldier *s = save->findJoe(id, &captured);
++	who = s ? s->getName() : std::string(st->tr("STR_NO_HEAD"));
++	if (!s) state = "";
++	else if (captured) state = st->tr("STR_HEAD_CAPTURED");
++	else if (SavedGame::isJoeAway(s)) state = st->tr("STR_HEAD_AWAY");
++	else state = st->tr("STR_HEAD_IN_OFFICE");
++	std::ostringstream ss;
++	if (dept == "TOP_KICK")
++	{
++		Base *at = nullptr;
++		save->findJoe(id, nullptr, &at);
++		ss << "+" << (at ? save->getTopKickBonus(mod, at) : 0) << "%";
++	}
++	else if (!save->hasDeptRoom(mod, dept))
++	{
++		ss << st->tr("STR_DEPT_NO_ROOM");
++	}
++	else
++	{
++		ss << save->getDeptSpeed(mod, dept) << "%";
++	}
++	speed = ss.str();
++}
++
++void popupFrame(State *st, Window *&w, Text *&title, Text *&body, TextList *&lst)
++{
++	w = new Window(st, 296, 184, 12, 8, POPUP_BOTH);
++	title = new Text(276, 17, 22, 16);
++	body = new Text(268, 26, 26, 34);
++	lst = new TextList(264, 96, 26, 64);
++}
++}
++
++// ---- DepartmentsState ---------------------------------------------------------------------------
++
++DepartmentsState::DepartmentsState()
++{
++	_screen = false;
++	_window = new Window(this, 320, 200, 0, 0, POPUP_BOTH);
++	_txtTitle = new Text(320, 17, 0, 8);
++	_txtRules = new Text(288, 18, 16, 26);
++	_lst = new TextList(288, 128, 16, 48);
++	_btnOk = new TextButton(120, 14, 100, 180);
++	setInterface("fundingWindow");
++	add(_window, "window", "fundingWindow");
++	add(_txtTitle, "text1", "fundingWindow");
++	add(_txtRules, "text2", "fundingWindow");
++	add(_lst, "list", "fundingWindow");
++	add(_btnOk, "button", "fundingWindow");
++	centerAllSurfaces();
++	setWindowBackground(_window, "fundingWindow");
++	_txtTitle->setBig();
++	_txtTitle->setAlign(ALIGN_CENTER);
++	_txtTitle->setText(tr("STR_DEPARTMENTS"));
++	_txtRules->setWordWrap(true);
++	_txtRules->setText(tr("STR_DEPT_RULES"));
++	_lst->setColumns(4, 112, 70, 52, 54);
++	_lst->setSelectable(true);
++	_lst->setBackground(_window);
++	_lst->onMouseClick((ActionHandler)&DepartmentsState::lstClick);
++	_btnOk->setText(tr("STR_OK"));
++	_btnOk->onMouseClick((ActionHandler)&DepartmentsState::btnOkClick);
++	_btnOk->onKeyboardPress((ActionHandler)&DepartmentsState::btnOkClick, Options::keyCancel);
++}
++
++void DepartmentsState::init()
++{
++	State::init();
++	const Mod *mod = _game->getMod();
++	SavedGame *save = _game->getSavedGame();
++	_lst->clearList();
++	_rows.clear();
++	std::vector<std::string> all;
++	for (const auto &d : mod->getDepartments()) all.push_back(d.type);
++	all.push_back("TOP_KICK");
++	for (const auto &dept : all)
++	{
++		std::string who, state, speed;
++		headLine(this, mod, save, dept, who, state, speed);
++		_lst->addRow(4, Departments::name(this, dept).c_str(), who.c_str(), state.c_str(), speed.c_str());
++		_rows.push_back(dept);
++	}
++}
++
++void DepartmentsState::lstClick(Action *)
++{
++	unsigned row = _lst->getSelectedRow();
++	if (row < _rows.size()) _game->pushState(new AppointHeadState(_rows[row], false));
++}
++
++void DepartmentsState::btnOkClick(Action *)
++{
++	_game->popState();
++}
++
++// ---- AppointHeadState ---------------------------------------------------------------------------
++
++AppointHeadState::AppointHeadState(const std::string &dept, bool prompt) : _dept(dept)
++{
++	_screen = false;
++	popupFrame(this, _window, _txtTitle, _txtBody, _lst);
++	_btnNone = new TextButton(120, 14, 26, 170);
++	_btnCancel = new TextButton(120, 14, 170, 170);
++	setInterface("fundingWindow");
++	add(_window, "window", "fundingWindow");
++	add(_txtTitle, "text1", "fundingWindow");
++	add(_txtBody, "text2", "fundingWindow");
++	add(_lst, "list", "fundingWindow");
++	add(_btnNone, "button", "fundingWindow");
++	add(_btnCancel, "button", "fundingWindow");
++	centerAllSurfaces();
++	setWindowBackground(_window, "fundingWindow");
++
++	const Mod *mod = _game->getMod();
++	SavedGame *save = _game->getSavedGame();
++	_txtTitle->setBig();
++	_txtTitle->setAlign(ALIGN_CENTER);
++	_txtTitle->setText(tr("STR_APPOINT_HEAD").arg(Departments::name(this, _dept)));
++	std::string who, state, speed;
++	headLine(this, mod, save, _dept, who, state, speed);
++	std::ostringstream body;
++	body << who << (state.empty() ? "" : " (" + state + ")") << "  " << speed;
++	_txtBody->setWordWrap(true);
++
++	_lst->setColumns(4, 88, 64, 50, 62);
++	_lst->setSelectable(true);
++	_lst->setBackground(_window);
++	_lst->onMouseClick((ActionHandler)&AppointHeadState::lstClick);
++	for (auto *base : *save->getBases())
++	{
++		for (auto *s : *base->getSoldiers())
++		{
++			const int m = Departments::match(mod, s, _dept);
++			if (!m) continue;
++			std::string job = save->getJobOf(s->getId());
++			std::string jobText = job.empty() ? std::string() : (job == _dept ? std::string(tr("STR_HEAD_IN_OFFICE")) : Departments::name(this, job));
++			_lst->addRow(4, s->getName().c_str(), base->getName().c_str(),
++				tr(m == 1 ? "STR_DEPT_MAIN" : "STR_DEPT_SECOND").c_str(), jobText.c_str());
++			_rows.push_back(s);
++		}
++	}
++	if (_rows.empty())
++	{
++		body << "\n" << tr("STR_DEPT_NONE_QUALIFY");
++	}
++	_txtBody->setText(body.str());
++	_btnNone->setText(tr(prompt ? "STR_NO_ONE_YET" : "STR_DEPT_CLEAR"));
++	_btnNone->onMouseClick((ActionHandler)&AppointHeadState::btnNoneClick);
++	_btnCancel->setText(tr("STR_CANCEL"));
++	_btnCancel->onMouseClick((ActionHandler)&AppointHeadState::btnCancelClick);
++	_btnCancel->onKeyboardPress((ActionHandler)&AppointHeadState::btnCancelClick, Options::keyCancel);
++	_btnCancel->setVisible(!prompt);
++	if (prompt) _btnNone->setX(_btnNone->getX() + 72);
++}
++
++void AppointHeadState::lstClick(Action *)
++{
++	unsigned row = _lst->getSelectedRow();
++	if (row >= _rows.size()) return;
++	Departments::appoint(_game->getSavedGame(), _dept, _rows[row]);
++	_game->popState();
++}
++
++void AppointHeadState::btnNoneClick(Action *)
++{
++	// on a prompt this only closes it (the department stays headless); otherwise it removes the head
++	if (_btnCancel->getVisible()) Departments::appoint(_game->getSavedGame(), _dept, nullptr);
++	_game->popState();
++}
++
++void AppointHeadState::btnCancelClick(Action *)
++{
++	_game->popState();
++}
++
++// ---- SoldierJobsState ---------------------------------------------------------------------------
++
++SoldierJobsState::SoldierJobsState(Soldier *soldier) : _soldier(soldier)
++{
++	_screen = false;
++	popupFrame(this, _window, _txtTitle, _txtBody, _lst);
++	_btnClear = new TextButton(120, 14, 26, 170);
++	_btnCancel = new TextButton(120, 14, 170, 170);
++	setInterface("fundingWindow");
++	add(_window, "window", "fundingWindow");
++	add(_txtTitle, "text1", "fundingWindow");
++	add(_txtBody, "text2", "fundingWindow");
++	add(_lst, "list", "fundingWindow");
++	add(_btnClear, "button", "fundingWindow");
++	add(_btnCancel, "button", "fundingWindow");
++	centerAllSurfaces();
++	setWindowBackground(_window, "fundingWindow");
++
++	const Mod *mod = _game->getMod();
++	SavedGame *save = _game->getSavedGame();
++	_txtTitle->setBig();
++	_txtTitle->setAlign(ALIGN_CENTER);
++	_txtTitle->setText(_soldier->getName());
++	const std::string job = save->getJobOf(_soldier->getId());
++	_txtBody->setWordWrap(true);
++	_txtBody->setText(job.empty() ? std::string(tr("STR_DEPT_RULES")) : Departments::name(this, job));
++
++	_lst->setColumns(3, 120, 70, 70);
++	_lst->setSelectable(true);
++	_lst->setBackground(_window);
++	_lst->onMouseClick((ActionHandler)&SoldierJobsState::lstClick);
++	std::vector<std::string> all;
++	for (const auto &d : mod->getDepartments()) all.push_back(d.type);
++	all.push_back("TOP_KICK");
++	for (const auto &dept : all)
++	{
++		const int m = Departments::match(mod, _soldier, dept);
++		if (!m) continue;
++		std::string who, state, speed;
++		headLine(this, mod, save, dept, who, state, speed);
++		_lst->addRow(3, Departments::name(this, dept).c_str(), tr(m == 1 ? "STR_DEPT_MAIN" : "STR_DEPT_SECOND").c_str(), who.c_str());
++		_rows.push_back(dept);
++	}
++	if (_rows.empty()) _lst->addRow(1, tr("STR_DEPT_NONE_QUALIFY").c_str());
++	_btnClear->setText(tr("STR_DEPT_CLEAR"));
++	_btnClear->onMouseClick((ActionHandler)&SoldierJobsState::btnClearClick);
++	_btnClear->setVisible(!job.empty());
++	_btnCancel->setText(tr("STR_CANCEL"));
++	_btnCancel->onMouseClick((ActionHandler)&SoldierJobsState::btnCancelClick);
++	_btnCancel->onKeyboardPress((ActionHandler)&SoldierJobsState::btnCancelClick, Options::keyCancel);
++}
++
++void SoldierJobsState::lstClick(Action *)
++{
++	unsigned row = _lst->getSelectedRow();
++	if (row >= _rows.size()) return;
++	Departments::appoint(_game->getSavedGame(), _rows[row], _soldier);
++	_game->popState();
++}
++
++void SoldierJobsState::btnClearClick(Action *)
++{
++	const std::string job = _game->getSavedGame()->getJobOf(_soldier->getId());
++	if (!job.empty()) Departments::appoint(_game->getSavedGame(), job, nullptr);
++	_game->popState();
++}
++
++void SoldierJobsState::btnCancelClick(Action *)
++{
++	_game->popState();
++}
++
++}
+diff --git a/src/Geoscape/DepartmentsState.h b/src/Geoscape/DepartmentsState.h
+new file mode 100644
+index 0000000..aedd692
+--- /dev/null
++++ b/src/Geoscape/DepartmentsState.h
+@@ -0,0 +1,84 @@
++#pragma once
++/*
++ * G.I. Joe: USA Defense. Department heads (John 13 Nov 2026, claude/DEPARTMENT_HEADS_DESIGN_v1.md).
++ * DepartmentsState lists every department with its head, his state and the speed it runs at.
++ * AppointHeadState picks a head for one department (also the prompt when its room is built).
++ * SoldierJobsState is the same choice from a Joe's own screen.
++ */
++#include "../Engine/State.h"
++#include <string>
++#include <vector>
++
++namespace OpenXcom
++{
++
++class TextButton;
++class Window;
++class Text;
++class TextList;
++class Soldier;
++class Mod;
++class SavedGame;
++
++class DepartmentsState : public State
++{
++private:
++	Window *_window;
++	Text *_txtTitle, *_txtRules;
++	TextList *_lst;
++	TextButton *_btnOk;
++	std::vector<std::string> _rows;
++public:
++	DepartmentsState();
++	void init() override;
++	void lstClick(Action *action);
++	void btnOkClick(Action *action);
++};
++
++class AppointHeadState : public State
++{
++private:
++	std::string _dept; // a department type, or "TOP_KICK"
++	Window *_window;
++	Text *_txtTitle, *_txtBody;
++	TextList *_lst;
++	TextButton *_btnNone, *_btnCancel;
++	std::vector<Soldier*> _rows;
++public:
++	AppointHeadState(const std::string &dept, bool prompt);
++	void lstClick(Action *action);
++	void btnNoneClick(Action *action);
++	void btnCancelClick(Action *action);
++};
++
++class SoldierJobsState : public State
++{
++private:
++	Soldier *_soldier;
++	Window *_window;
++	Text *_txtTitle, *_txtBody;
++	TextList *_lst;
++	TextButton *_btnClear, *_btnCancel;
++	std::vector<std::string> _rows;
++public:
++	SoldierJobsState(Soldier *soldier);
++	void lstClick(Action *action);
++	void btnClearClick(Action *action);
++	void btnCancelClick(Action *action);
++};
++
++/// Shared helpers.
++namespace Departments
++{
++	/// The display name of a department type (or Top Kick).
++	std::string name(State *st, const std::string &dept);
++	/// Can this Joe hold this job (0 no, 1 main, 2 second)?
++	int match(const Mod *mod, const Soldier *s, const std::string &dept);
++	/// Give a Joe a job, taking him off any other (one job per Joe), and the job off anyone else.
++	void appoint(SavedGame *save, const std::string &dept, const Soldier *s);
++	/// Offer a head for every department whose room now exists and was never offered.
++	/// Returns the prompts to push (caller decides how).
++	std::vector<std::string> pendingPrompts(const Mod *mod, SavedGame *save);
++}
++
++}
 diff --git a/src/Geoscape/DogfightState.cpp b/src/Geoscape/DogfightState.cpp
 index e805e35..5fe6dd7 100644
 --- a/src/Geoscape/DogfightState.cpp
@@ -8272,7 +8836,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..751b736 100644
+index 6b4e79d..981a518 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -17,6 +17,8 @@
@@ -8292,15 +8856,16 @@ index 6b4e79d..751b736 100644
  #include "../Interface/ComboBox.h"
  #include "../Interface/Text.h"
  #include "../Interface/TextButton.h"
-@@ -69,6 +72,7 @@
+@@ -69,6 +72,8 @@
  #include "../Basescape/GlobalAlienContainmentState.h"
  #include "../Menu/CutsceneState.h"
  #include "../Menu/ErrorMessageState.h"
 +#include "IntelBoardState.h"
++#include "DepartmentsState.h"
  #include "GraphsState.h"
  #include "FundingState.h"
  #include "ExtendedGeoscapeLinksState.h"
-@@ -87,6 +91,7 @@
+@@ -87,6 +92,7 @@
  #include "DogfightErrorState.h"
  #include "DogfightExperienceState.h"
  #include "../Ufopaedia/Ufopaedia.h"
@@ -8308,7 +8873,7 @@ index 6b4e79d..751b736 100644
  #include "../Savegame/ResearchProject.h"
  #include "ResearchCompleteState.h"
  #include "../Mod/RuleResearch.h"
-@@ -103,6 +108,7 @@
+@@ -103,6 +109,7 @@
  #include "../Savegame/ItemContainer.h"
  #include "../Savegame/MissionSite.h"
  #include "../Savegame/AlienBase.h"
@@ -8316,7 +8881,7 @@ index 6b4e79d..751b736 100644
  #include "../Mod/RuleRegion.h"
  #include "MissionDetectedState.h"
  #include "AlienBaseState.h"
-@@ -157,41 +163,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -157,41 +164,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_bg->setX((_globe->getWidth() - _bg->getWidth()) / 2);
  	_bg->setY((_globe->getHeight() - _bg->getHeight()) / 2);
  
@@ -8500,7 +9065,7 @@ index 6b4e79d..751b736 100644
  
  	int slackingIndicatorOffset = _game->getMod()->getInterface("geoscape")->getElement("slackingIndicator")->custom;
  	_txtSlacking = new Text(59, 17, screenWidth - 61, screenHeight / 2 - 100 + slackingIndicatorOffset);
-@@ -251,6 +369,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -251,6 +370,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtMinSep, "text", "geoscape");
  	add(_txtSec, "text", "geoscape");
  	add(_txtWeekday, "text", "geoscape");
@@ -8511,7 +9076,7 @@ index 6b4e79d..751b736 100644
  	add(_txtDay, "text", "geoscape");
  	add(_txtMonth, "text", "geoscape");
  	add(_txtYear, "text", "geoscape");
-@@ -268,12 +390,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -268,12 +391,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	geobord->setX(_sidebar->getX() - geobord->getWidth() + _sidebar->getWidth());
  	geobord->setY(_sidebar->getY());
  	_sidebar->copy(geobord);
@@ -8539,7 +9104,7 @@ index 6b4e79d..751b736 100644
  	_btnIntercept->onMouseClick((ActionHandler)&GeoscapeState::btnInterceptClick);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnInterceptClick, Options::keyGeoIntercept);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnUfoTrackerClick, Options::keyGeoUfoTracker);
-@@ -292,7 +428,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -292,7 +429,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnBases->setGeoscapeButton(true);
  
  	_btnGraphs->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -8548,7 +9113,7 @@ index 6b4e79d..751b736 100644
  	_btnGraphs->onMouseClick((ActionHandler)&GeoscapeState::btnGraphsClick);
  	_btnGraphs->onKeyboardPress((ActionHandler)&GeoscapeState::btnGraphsClick, Options::keyGeoGraphs);
  	_btnGraphs->setGeoscapeButton(true);
-@@ -310,7 +446,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -310,7 +447,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnOptions->setGeoscapeButton(true);
  
  	_btnFunding->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -8557,7 +9122,7 @@ index 6b4e79d..751b736 100644
  	_btnFunding->onMouseClick((ActionHandler)&GeoscapeState::btnFundingClick);
  	_btnFunding->onKeyboardPress((ActionHandler)&GeoscapeState::btnFundingClick, Options::keyGeoFunding);
  	_btnFunding->setGeoscapeButton(true);
-@@ -387,6 +523,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -387,6 +524,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -8566,7 +9131,7 @@ index 6b4e79d..751b736 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -403,6 +541,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -403,6 +542,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_txtMinSep->setText(":");
  
  	_txtWeekday->setAlign(ALIGN_CENTER);
@@ -8619,7 +9184,7 @@ index 6b4e79d..751b736 100644
  
  	_txtDay->setAlign(ALIGN_CENTER);
  
-@@ -427,6 +611,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -427,6 +612,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  		_txtSec->setX(_txtSec->getX()-10);
  	}
  
@@ -8665,7 +9230,7 @@ index 6b4e79d..751b736 100644
  	_gameTimer->onTimer((StateHandler)&GeoscapeState::timeAdvance);
  	_gameTimer->start();
  
-@@ -512,7 +735,9 @@ void GeoscapeState::blit()
+@@ -512,7 +736,9 @@ void GeoscapeState::blit()
  	State::blit();
  	for (auto* dfs : _dogfights)
  	{
@@ -8676,7 +9241,7 @@ index 6b4e79d..751b736 100644
  	}
  }
  
-@@ -705,6 +930,94 @@ void GeoscapeState::handle(Action *action)
+@@ -705,13 +931,106 @@ void GeoscapeState::handle(Action *action)
   * Updates the timer display and resets the palette
   * since it's bound to change on other screens.
   */
@@ -8771,7 +9336,8 @@ index 6b4e79d..751b736 100644
  void GeoscapeState::init()
  {
  	State::init();
-@@ -712,6 +1025,10 @@ void GeoscapeState::init()
++
+ 	timeDisplay();
  	updateSlackingIndicator();
  
  	_globe->onMouseClick((ActionHandler)&GeoscapeState::globeClick);
@@ -8782,7 +9348,20 @@ index 6b4e79d..751b736 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -835,6 +1152,10 @@ void GeoscapeState::timeDisplay()
+@@ -753,6 +1072,12 @@ void GeoscapeState::init()
+ 		determineAlienMissions();
+ 		_game->getSavedGame()->setFunds(_game->getSavedGame()->getFunds() - (_game->getSavedGame()->getBaseMaintenance() - _game->getSavedGame()->getBases()->front()->getPersonnelMaintenance()));
+ 	}
++
++	// G.I. Joe department heads: a department whose room exists and was never offered asks for a
++	// head (Day 1: every room already built; later: when its room is finished).
++	if (_game->getSavedGame()->getMonthsPassed() > -1)
++		for (const auto &dept : Departments::pendingPrompts(_game->getMod(), _game->getSavedGame()))
++			popup(new AppointHeadState(dept, true));
+ }
+ 
+ /**
+@@ -835,6 +1160,10 @@ void GeoscapeState::timeDisplay()
  	std::ostringstream ss5;
  	ss5 << _game->getSavedGame()->getTime()->getYear();
  	_txtYear->setText(ss5.str());
@@ -8793,7 +9372,7 @@ index 6b4e79d..751b736 100644
  }
  
  /**
-@@ -1454,6 +1775,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +1783,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -8829,7 +9408,7 @@ index 6b4e79d..751b736 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +1914,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +1922,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -8860,7 +9439,7 @@ index 6b4e79d..751b736 100644
  							}
  						}
  					}
-@@ -1752,7 +2118,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2126,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -8869,7 +9448,7 @@ index 6b4e79d..751b736 100644
  								}
  								else
  								{
-@@ -1858,6 +2224,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2232,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -8889,7 +9468,7 @@ index 6b4e79d..751b736 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2263,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2271,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -8902,7 +9481,7 @@ index 6b4e79d..751b736 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2353,7 +2738,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +2746,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -8911,7 +9490,7 @@ index 6b4e79d..751b736 100644
  			}
  			else
  			{
-@@ -2395,6 +2780,114 @@ void GeoscapeState::time1Day()
+@@ -2395,6 +2788,114 @@ void GeoscapeState::time1Day()
  	Mod *mod = _game->getMod();
  	bool psiStrengthEval = (Options::psiStrengthEval && saveGame->isResearched(mod->getPsiRequirements()));
  
@@ -9026,7 +9605,30 @@ index 6b4e79d..751b736 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2862,6 +3355,10 @@ void GeoscapeState::time1Month()
+@@ -2444,12 +2945,21 @@ void GeoscapeState::time1Day()
+ 			}
+ 		}
+ 
++		// G.I. Joe department heads: a finished room may open a department
++		if (!finishedFacilities.empty())
++			for (const auto &dept : Departments::pendingPrompts(mod, saveGame))
++				popup(new AppointHeadState(dept, true));
++
+ 		// Handle science project
+ 		// 1. gather finished research
+ 		std::vector<ResearchProject*> finished;
++		const int topKick = saveGame->getTopKickBonus(mod, xbase);
+ 		for (auto* proj : xbase->getResearch())
+ 		{
+-			if (proj->step())
++			// G.I. Joe department heads: a department works at its head's speed (100/70/60), and
++			// Top Kick at this base adds his bonus on top.
++			const int pct = saveGame->getDeptSpeed(mod, proj->getRules()->getLane()) * (100 + topKick) / 100;
++			if (proj->step(pct))
+ 			{
+ 				finished.push_back(proj);
+ 			}
+@@ -2862,6 +3372,10 @@ void GeoscapeState::time1Month()
  	_game->getSavedGame()->addMonth();
  
  	// Determine alien mission for this month.
@@ -9037,7 +9639,7 @@ index 6b4e79d..751b736 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3457,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3474,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -9068,7 +9670,7 @@ index 6b4e79d..751b736 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +3643,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +3660,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -9078,7 +9680,7 @@ index 6b4e79d..751b736 100644
  }
  
  /**
-@@ -3265,6 +3787,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +3804,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -9094,7 +9696,7 @@ index 6b4e79d..751b736 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +3873,17 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +3890,17 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -9112,7 +9714,7 @@ index 6b4e79d..751b736 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -4647,11 +5189,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +5206,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -12096,7 +12698,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..8f60855 100644
+index 1885346..19d2bf6 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -12190,7 +12792,28 @@ index 1885346..8f60855 100644
  
  	Log(LOG_INFO) << "After load.";
  	// cross link rule objects
-@@ -2839,6 +2893,22 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -2321,6 +2375,20 @@ void Mod::loadAll()
+ 	afterLoadHelper("units", this, _units, &Unit::afterLoad);
+ 	afterLoadHelper("soldiers", this, _soldiers, &RuleSoldier::afterLoad);
+ 	afterLoadHelper("facilities", this, _facilities, &RuleBaseFacility::afterLoad);
++
++	// G.I. Joe department heads: each department is a base function its rooms provide and its
++	// research topics (lane:) require, so a topic cannot start at a base without the room.
++	for (auto &d : _departments)
++	{
++		d.funcBit = (int)_baseFunctionNames.addName("STR_DEPT_FUNC_" + d.type, RuleBaseFacilityFunctions().size());
++		for (const auto &room : d.rooms)
++			if (RuleBaseFacility *f = getBaseFacility(room)) f->addProvidedBaseFunc(d.funcBit);
++			else Log(LOG_WARNING) << "Department " << d.type << ": room " << room << " is not a facility";
++		int n = 0;
++		for (auto &r : _research)
++			if (r.second->getLane() == d.type) { r.second->addRequiredBaseFunc(d.funcBit); ++n; }
++		Log(LOG_INFO) << "Department " << d.type << ": " << d.rooms.size() << " rooms, " << n << " topics";
++	}
+ 	afterLoadHelper("startingConditions", this, _startingConditions, &RuleStartingCondition::afterLoad);
+ 	afterLoadHelper("enviroEffects", this, _enviroEffects, &RuleEnviroEffects::afterLoad);
+ 	afterLoadHelper("commendations", this, _commendations, &RuleCommendations::afterLoad);
+@@ -2839,6 +2907,22 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  			rule->load(ruleReader, parsers, this);
  		}
  	}
@@ -12213,7 +12836,7 @@ index 1885346..8f60855 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3287,177 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,211 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -12306,6 +12929,40 @@ index 1885346..8f60855 100644
 +		capture.tryRead("spyTypes", _spyTypes);
 +		capture.tryRead("unnamedSpyKilled", _unnamedSpyKilled);
 +	}
++	if (const auto& dep = reader["departments"])
++	{
++		if (const auto& sp = dep["speeds"])
++		{
++			sp.tryRead("main", _deptSpeedMain);
++			sp.tryRead("second", _deptSpeedSecond);
++			sp.tryRead("away", _deptSpeedAway);
++			sp.tryRead("awaySecond", _deptSpeedAwaySecond);
++			sp.tryRead("none", _deptSpeedNone);
++		}
++		if (const auto& tk = dep["topKick"])
++		{
++			tk.tryRead("specialties", _topKickSpecialties);
++			tk.tryRead("bonus", _topKickBonus);
++		}
++		for (const auto& d : dep["list"].children())
++		{
++			DepartmentRule r;
++			d.tryRead("type", r.type);
++			if (r.type.empty()) continue;
++			d.tryRead("name", r.name);
++			d.tryRead("rooms", r.rooms);
++			d.tryRead("specialties", r.specialties);
++			d.tryRead("soldierTypes", r.soldierTypes);
++			auto old = std::find_if(_departments.begin(), _departments.end(), [&](const DepartmentRule &x) { return x.type == r.type; });
++			if (old != _departments.end()) *old = r; else _departments.push_back(r);
++		}
++	}
++	if (const auto& ss = reader["soldierSpecialties"])
++	{
++		std::map<std::string, std::vector<std::string>> m;
++		ss.tryReadVal(m);
++		for (auto &kv : m) _soldierSpecialties[kv.first] = kv.second;
++	}
 +	if (const auto& ops = reader["spyOperations"])
 +	{
 +		for (const auto& o : ops.children())
@@ -12391,7 +13048,7 @@ index 1885346..8f60855 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3468,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3516,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -12399,7 +13056,7 @@ index 1885346..8f60855 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4073,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4121,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -12425,7 +13082,7 @@ index 1885346..8f60855 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4330,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4378,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -12446,7 +13103,7 @@ index 1885346..8f60855 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6044,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6092,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -12466,7 +13123,7 @@ index 1885346..8f60855 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6067,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6115,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -12474,7 +13131,7 @@ index 1885346..8f60855 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6081,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6129,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -12514,7 +13171,7 @@ index 1885346..8f60855 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..19d30d3 100644
+index 2242d13..11540db 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -12578,7 +13235,7 @@ index 2242d13..19d30d3 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,57 @@ private:
+@@ -327,6 +360,69 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -12618,7 +13275,19 @@ index 2242d13..19d30d3 100644
 +		std::map<std::string, int> items;      // brought home to the spy's base on a success
 +		std::string lead; int leadPoints = 0;  // and lead points
 +	};
++	/// G.I. Joe department heads (John 13 Nov 2026, DEPARTMENT_HEADS_DESIGN_v1.md).
++	struct DepartmentRule
++	{
++		std::string type, name;
++		std::vector<std::string> rooms, specialties, soldierTypes;
++		int funcBit = -1;
++	};
 +private:
++	std::vector<DepartmentRule> _departments;
++	std::map<std::string, std::vector<std::string>> _soldierSpecialties;
++	int _deptSpeedMain = 100, _deptSpeedSecond = 70, _deptSpeedAway = 70, _deptSpeedAwaySecond = 60, _deptSpeedNone = 60;
++	std::vector<std::string> _topKickSpecialties;
++	int _topKickBonus = 15;
 +	std::vector<SpyOperationRule> _spyOperations;
 +	std::vector<std::string> _spyTypes;
 +	int _unnamedSpyKilled = 50;
@@ -12636,7 +13305,7 @@ index 2242d13..19d30d3 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +776,71 @@ public:
+@@ -692,6 +788,97 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -12669,6 +13338,32 @@ index 2242d13..19d30d3 100644
 +	const std::vector<SpyOperationRule> &getSpyOperations() const { return _spyOperations; }
 +	const SpyOperationRule *getSpyOperation(const std::string &type) const { for (const auto &o : _spyOperations) if (o.type == type) return &o; return nullptr; }
 +	int getUnnamedSpyKilled() const { return _unnamedSpyKilled; }
++	const std::vector<DepartmentRule> &getDepartments() const { return _departments; }
++	const DepartmentRule *getDepartment(const std::string &type) const { for (const auto &d : _departments) if (d.type == type) return &d; return nullptr; }
++	/// 1 = main specialty is in the list, 2 = second specialty is, 0 = neither.
++	int specialtyMatch(const std::string &soldierType, const std::vector<std::string> &specs) const
++	{
++		auto it = _soldierSpecialties.find(soldierType);
++		if (it == _soldierSpecialties.end()) return 0;
++		for (size_t i = 0; i < it->second.size(); ++i)
++			if (std::find(specs.begin(), specs.end(), it->second[i]) != specs.end()) return i == 0 ? 1 : 2;
++		return 0;
++	}
++	/// How a soldier type qualifies to head a department: 0 no, 1 main, 2 second.
++	int deptMatch(const std::string &soldierType, const DepartmentRule &d) const
++	{
++		if (!d.soldierTypes.empty()) return std::find(d.soldierTypes.begin(), d.soldierTypes.end(), soldierType) != d.soldierTypes.end() ? 1 : 0;
++		return specialtyMatch(soldierType, d.specialties);
++	}
++	int topKickMatch(const std::string &soldierType) const { return specialtyMatch(soldierType, _topKickSpecialties); }
++	int getTopKickBonus() const { return _topKickBonus; }
++	int getDeptSpeed(int match, bool away) const
++	{
++		if (match == 0) return _deptSpeedNone;
++		if (away) return match == 1 ? _deptSpeedAway : _deptSpeedAwaySecond;
++		return match == 1 ? _deptSpeedMain : _deptSpeedSecond;
++	}
++	int getDeptSpeedNone() const { return _deptSpeedNone; }
 +	bool isSpy(const std::string &soldierType) const { return std::find(_spyTypes.begin(), _spyTypes.end(), soldierType) != _spyTypes.end(); }
 +	int getKnockoutChance() const { return _knockoutChance; }
 +	int getCuffTU() const { return _cuffTU; }
@@ -12741,6 +13436,18 @@ index fe58db2..e4a7040 100644
  	/// the research topic that interrupts this mission type (when discovered)
  	std::string _interruptResearch;
  	/// the type of missionSite to spawn (if any)
+diff --git a/src/Mod/RuleBaseFacility.h b/src/Mod/RuleBaseFacility.h
+index 0cd6d17..a1ba2dd 100644
+--- a/src/Mod/RuleBaseFacility.h
++++ b/src/Mod/RuleBaseFacility.h
+@@ -113,6 +113,7 @@ public:
+ 	RuleBaseFacilityFunctions getRequireBaseFunc() const { return _requiresBaseFunc; }
+ 	/// Gets the functions that facility provide in base.
+ 	RuleBaseFacilityFunctions getProvidedBaseFunc() const { return _provideBaseFunc; }
++	void addProvidedBaseFunc(size_t bit) { _provideBaseFunc.set(bit); } // G.I. Joe: a department's room
+ 	/// Gets the functions that facility prevent in base.
+ 	RuleBaseFacilityFunctions getForbiddenBaseFunc() const { return _forbiddenBaseFunc; }
+ 	/// Gets the facility's shape sprite.
 diff --git a/src/Mod/RuleCobraSite.cpp b/src/Mod/RuleCobraSite.cpp
 new file mode 100644
 index 0000000..abe357a
@@ -13061,7 +13768,7 @@ index 0000000..5bc7803
 +
 +}
 diff --git a/src/Mod/RuleResearch.cpp b/src/Mod/RuleResearch.cpp
-index 4514ba8..366eedf 100644
+index 4514ba8..0e791f8 100644
 --- a/src/Mod/RuleResearch.cpp
 +++ b/src/Mod/RuleResearch.cpp
 @@ -46,6 +46,7 @@ void RuleResearch::load(const YAML::YamlNodeReader& node, Mod* mod, const ModScr
@@ -13072,8 +13779,16 @@ index 4514ba8..366eedf 100644
  	reader.tryRead("cutscene", _cutscene);
  	reader.tryRead("spawnedItem", _spawnedItem);
  	reader.tryRead("spawnedItemCount", _spawnedItemCount);
+@@ -66,6 +67,7 @@ void RuleResearch::load(const YAML::YamlNodeReader& node, Mod* mod, const ModScr
+ 	mod->loadUnorderedNames(_name, _getOneFreeName, reader["getOneFree"]);
+ 	mod->loadUnorderedNames(_name, _requiresName, reader["requires"]);
+ 	mod->loadBaseFunction(_name, _requiresBaseFunc, reader["requiresBaseFunc"]);
++	reader.tryRead("lane", _lane);
+ 	reader.tryRead("sequentialGetOneFree", _sequentialGetOneFree);
+ 	mod->loadNamesToNames(_name, _getOneFreeProtectedName, reader["getOneFreeProtected"]);
+ 	mod->loadNameNull(_name, _neededItemName, reader["neededItem"]);
 diff --git a/src/Mod/RuleResearch.h b/src/Mod/RuleResearch.h
-index 7226e6b..d998812 100644
+index 7226e6b..34e863b 100644
 --- a/src/Mod/RuleResearch.h
 +++ b/src/Mod/RuleResearch.h
 @@ -45,6 +45,7 @@ class RuleResearch
@@ -13084,7 +13799,15 @@ index 7226e6b..d998812 100644
  	WeightedOptions _events;
  	int _spawnedItemCount;
  	std::vector<std::string> _spawnedItemList;
-@@ -119,6 +120,10 @@ public:
+@@ -52,6 +53,7 @@ class RuleResearch
+ 	int _cost, _points;
+ 	std::vector<std::string> _dependenciesName, _unlocksName, _disablesName, _reenablesName, _getOneFreeName, _requiresName;
+ 	RuleBaseFacilityFunctions _requiresBaseFunc;
++	std::string _lane; // G.I. Joe: the department this topic belongs to (COMMAND, INTEL, ...)
+ 	std::vector<const RuleResearch*> _dependencies, _unlocks, _disables, _reenables, _getOneFree, _requires;
+ 	bool _sequentialGetOneFree;
+ 	std::vector<std::pair<std::string, std::vector<std::string> > > _getOneFreeProtectedName;
+@@ -119,10 +121,17 @@ public:
  	const std::vector<std::pair<const RuleResearch*, std::vector<const RuleResearch*> > > &getGetOneFreeProtected() const;
  	/// Gets what to look up in the ufopedia.
  	const RuleResearch* getLookup() const { return _lookup; }
@@ -13095,6 +13818,13 @@ index 7226e6b..d998812 100644
  	/// Gets the requirements for this ResearchProject.
  	const std::vector<const RuleResearch*> &getRequirements() const;
  	/// Gets the base requirements for this ResearchProject.
+ 	RuleBaseFacilityFunctions getRequireBaseFunc() const { return _requiresBaseFunc; }
++	/// G.I. Joe department heads.
++	const std::string &getLane() const { return _lane; }
++	void addRequiredBaseFunc(size_t bit) { _requiresBaseFunc.set(bit); }
+ 	/// Gets the list weight for this research item.
+ 	int getListOrder() const;
+ 	/// Gets the cutscene to play when this item is researched
 diff --git a/src/Mod/Unit.cpp b/src/Mod/Unit.cpp
 index 836d85e..1449897 100644
 --- a/src/Mod/Unit.cpp
@@ -13151,7 +13881,7 @@ index 6bef22e..8cc3b62 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..8baaeba 100644
+index 99f24ce..e64d343 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
 @@ -511,6 +511,8 @@
@@ -13163,12 +13893,13 @@ index 99f24ce..8baaeba 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,10 +548,13 @@
+@@ -546,10 +548,14 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
 +    <ClCompile Include="Geoscape\CobraIntelState.cpp" />
 +    <ClCompile Include="Geoscape\IntelBoardState.cpp" />
++    <ClCompile Include="Geoscape\DepartmentsState.cpp" />
      <ClCompile Include="Geoscape\GeoscapeCraftState.cpp" />
      <ClCompile Include="Geoscape\NewPossibleResearchState.cpp" />
      <ClCompile Include="Geoscape\ProductionCompleteState.cpp" />
@@ -13177,7 +13908,7 @@ index 99f24ce..8baaeba 100644
      <ClCompile Include="Geoscape\Globe.cpp" />
      <ClCompile Include="Geoscape\GraphsState.cpp" />
      <ClCompile Include="Geoscape\InterceptState.cpp" />
-@@ -673,6 +678,7 @@
+@@ -673,6 +679,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -13185,7 +13916,7 @@ index 99f24ce..8baaeba 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +688,7 @@
+@@ -682,6 +689,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -13193,7 +13924,7 @@ index 99f24ce..8baaeba 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -970,6 +977,8 @@
+@@ -970,6 +978,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -13202,17 +13933,18 @@ index 99f24ce..8baaeba 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1042,9 @@
+@@ -1033,6 +1043,10 @@
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
 +    <ClInclude Include="Geoscape\CobraIntelState.h" />
 +    <ClInclude Include="Geoscape\IntelBoardState.h" />
++    <ClInclude Include="Geoscape\DepartmentsState.h" />
 +    <ClInclude Include="Mod\RuleLead.h" />
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1042,6 +1054,7 @@
+@@ -1042,6 +1056,7 @@
      <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
      <ClInclude Include="Geoscape\ProductionCompleteState.h" />
      <ClInclude Include="Geoscape\GeoscapeState.h" />
@@ -13220,7 +13952,7 @@ index 99f24ce..8baaeba 100644
      <ClInclude Include="Geoscape\Globe.h" />
      <ClInclude Include="Geoscape\GraphsState.h" />
      <ClInclude Include="Geoscape\InterceptState.h" />
-@@ -1170,6 +1183,7 @@
+@@ -1170,6 +1185,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -13228,7 +13960,7 @@ index 99f24ce..8baaeba 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1193,7 @@
+@@ -1179,6 +1195,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
@@ -13877,6 +14609,82 @@ index 0000000..983b16d
 +};
 +
 +}
+diff --git a/src/Savegame/Production.cpp b/src/Savegame/Production.cpp
+index 0f48350..c1fbe37 100644
+--- a/src/Savegame/Production.cpp
++++ b/src/Savegame/Production.cpp
+@@ -152,7 +152,17 @@ productionProgress_e Production::step(Base * b, SavedGame * g, const Mod *m, Lan
+ 	}
+ 
+ 	int done = getAmountProduced();
+-	_timeSpent += _engineers;
++	// G.I. Joe: Top Kick at this base speeds every workshop (John 13 Nov: +15%, "every category")
++	if (const int tk = g->getTopKickBonus(m, b))
++	{
++		const int work = _engineers * (100 + tk) + _tkFrac;
++		_timeSpent += work / 100;
++		_tkFrac = work % 100;
++	}
++	else
++	{
++		_timeSpent += _engineers;
++	}
+ 
+ 	if (done < getAmountProduced())
+ 	{
+diff --git a/src/Savegame/Production.h b/src/Savegame/Production.h
+index b53dae4..ed447c2 100644
+--- a/src/Savegame/Production.h
++++ b/src/Savegame/Production.h
+@@ -55,6 +55,7 @@ public:
+ 	void load(const YAML::YamlNodeReader& reader);
+ 	const std::map<std::string, int> &getRandomProductionInfo() const { return _randomProductionInfo; }
+ private:
++	int _tkFrac = 0; // G.I. Joe: Top Kick fraction carried between hours
+ 	const RuleManufacture * _rules;
+ 	int _amount;
+ 	bool _infinite;
+diff --git a/src/Savegame/ResearchProject.cpp b/src/Savegame/ResearchProject.cpp
+index f7c3a2c..041808e 100644
+--- a/src/Savegame/ResearchProject.cpp
++++ b/src/Savegame/ResearchProject.cpp
+@@ -34,6 +34,15 @@ ResearchProject::ResearchProject(RuleResearch * p, int c) : _project(p), _assign
+  * Called every day to compute time spent on this ResearchProject
+  * @return true if the ResearchProject is finished
+  */
++bool ResearchProject::step(int pct)
++{
++	if (pct == 100) return step();
++	const int work = _assigned * std::max(0, pct) + _frac;
++	_spent += work / 100;
++	_frac = work % 100;
++	return isFinished();
++}
++
+ bool ResearchProject::step()
+ {
+ 	_spent += _assigned;
+diff --git a/src/Savegame/ResearchProject.h b/src/Savegame/ResearchProject.h
+index b589b90..04411c1 100644
+--- a/src/Savegame/ResearchProject.h
++++ b/src/Savegame/ResearchProject.h
+@@ -34,6 +34,7 @@ class ResearchProject
+ 	RuleResearch * _project;
+ 	int _assigned;
+ 	int _spent;
++	int _frac = 0; // G.I. Joe: hundredths of a scientist-day carried between days (department speed)
+ 	int _cost;
+ public:
+ 	ResearchProject(RuleResearch * p, int c = 0);
+@@ -47,6 +48,8 @@ public:
+ 	int getAssigned() const;
+ 	/// get time already spent on this ResearchProject
+ 	int getSpent() const;
++	/// G.I. Joe: one day of work at pct percent speed.
++	bool step(int pct);
+ 	/// set time already spent on this ResearchProject
+ 	void setSpent (int spent);
+ 	/// get time cost of this ResearchProject
 diff --git a/src/Savegame/SavedBattleGame.cpp b/src/Savegame/SavedBattleGame.cpp
 index 240b22a..910b3d6 100644
 --- a/src/Savegame/SavedBattleGame.cpp
@@ -14030,7 +14838,7 @@ index 6c121c7..fb7f92b 100644
  	std::vector< std::vector<int> > &getReinforcementsBlocks() { return _reinforcementsBlocks; }
  
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..9ab0ad0 100644
+index 9ca9637..1be6f8d 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,11 +21,13 @@
@@ -14144,7 +14952,7 @@ index 9ca9637..9ab0ad0 100644
  	reader.tryRead("daysPassed", _daysPassed);
  	reader.tryRead("vehiclesLost", _vehiclesLost);
  	reader.tryRead("craftLostDogfight", _craftLostDogfight);
-@@ -399,6 +462,19 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -399,6 +462,22 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	reader.tryRead("funds", _funds);
  	reader.tryRead("maintenance", _maintenance);
  	reader.tryRead("userNotes", _userNotes);
@@ -14160,11 +14968,14 @@ index 9ca9637..9ab0ad0 100644
 +	reader.tryRead("leadNews", _leadNews);
 +	reader.tryRead("heldDays", _heldDays);
 +	reader.tryRead("spyOpsDone", _spyOpsDone);
++	reader.tryRead("deptHeads", _deptHeads);
++	reader.tryRead("topKick", _topKick);
++	reader.tryRead("deptPrompted", _deptPrompted);
 +	reader.tryRead("spyOpsRun", _spyOpsRun);
  	reader.tryRead("geoscapeDebugLog", _geoscapeDebugLog);
  	reader.tryRead("researchScores", _researchScores);
  	reader.tryRead("incomes", _incomes);
-@@ -649,6 +725,30 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -649,6 +728,30 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  		}
  	}
  	_alienStrategy->load(reader["alienStrategy"], mod);
@@ -14195,7 +15006,7 @@ index 9ca9637..9ab0ad0 100644
  
  	for (const auto& weHardlyKnewYe : reader["deadSoldiers"].children())
  	{
-@@ -690,6 +790,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -690,6 +793,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	}
  
  	_scriptValues.load(reader, mod->getScriptGlobal());
@@ -14203,7 +15014,7 @@ index 9ca9637..9ab0ad0 100644
  }
  
  void SavedGame::loadTemplates(const YAML::YamlNodeReader& reader, const Mod* mod)
-@@ -779,6 +880,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -779,6 +883,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("difficulty", _difficulty);
  	writer.write("end", _end);
  	writer.write("monthsPassed", _monthsPassed);
@@ -14211,7 +15022,7 @@ index 9ca9637..9ab0ad0 100644
  	writer.write("daysPassed", _daysPassed);
  	writer.write("vehiclesLost", _vehiclesLost);
  	writer.write("craftLostDogfight", _craftLostDogfight);
-@@ -790,6 +892,53 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -790,6 +895,59 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("funds", _funds);
  	writer.write("maintenance", _maintenance);
  	writer.write("userNotes", _userNotes);
@@ -14249,6 +15060,12 @@ index 9ca9637..9ab0ad0 100644
 +	{
 +		writer.write("spyOpsRun", _spyOpsRun);
 +	}
++	if (!_deptHeads.empty())
++		writer.write("deptHeads", _deptHeads);
++	if (_topKick >= 0)
++		writer.write("topKick", _topKick);
++	if (!_deptPrompted.empty())
++		writer.write("deptPrompted", _deptPrompted);
 +	if (!_spyMissions.empty())
 +	{
 +		auto list = writer["spyMissions"];
@@ -14265,7 +15082,7 @@ index 9ca9637..9ab0ad0 100644
  	if (Options::oxceGeoscapeDebugLogMaxEntries > 0 && _geoscapeDebugLog.size() > 0)
  	{
  		auto geoDebugLog = writer["geoscapeDebugLog"];
-@@ -849,8 +998,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -849,8 +1007,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("hiddenPurchaseItems", _hiddenPurchaseItemsMap);
  	writer.write("customRuleCraftDeployments", _customRuleCraftDeployments);
  	_alienStrategy->save(writer["alienStrategy"]);
@@ -14276,7 +15093,7 @@ index 9ca9637..9ab0ad0 100644
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
  	{
  		if (!_globalEquipmentLayout[j].empty())
-@@ -1530,8 +1681,155 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
+@@ -1530,8 +1690,155 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
   * @param base the base, in which the project was finished
   * @param score should the score be awarded or not?
   */
@@ -14432,7 +15249,7 @@ index 9ca9637..9ab0ad0 100644
  	if (isResearchRuleStatusDisabled(research->getName()))
  	{
  		return;
-@@ -2579,6 +2877,950 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2886,950 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -15383,7 +16200,7 @@ index 9ca9637..9ab0ad0 100644
  Region *SavedGame::locateRegion(double lon, double lat) const
  {
  	Region* found = nullptr;
-@@ -2995,6 +4237,83 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
+@@ -2995,6 +4246,143 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
   * @param soldier Pointer to dead soldier.
   * @param cause Pointer to cause of death, NULL if missing in action.
   */
@@ -15434,6 +16251,66 @@ index 9ca9637..9ab0ad0 100644
 +	return true;
 +}
 +
++Soldier *SavedGame::findJoe(int soldierId, bool *captured, Base **at) const
++{
++	if (captured) *captured = false;
++	if (at) *at = nullptr;
++	if (soldierId < 0) return nullptr;
++	for (auto *b : _bases)
++		for (auto *s : *b->getSoldiers())
++			if (s->getId() == soldierId) { if (at) *at = b; return s; }
++	for (auto *s : _capturedSoldiers)
++		if (s->getId() == soldierId) { if (captured) *captured = true; return s; }
++	return nullptr;
++}
++
++std::string SavedGame::getJobOf(int soldierId) const
++{
++	if (soldierId < 0) return "";
++	if (_topKick == soldierId) return "TOP_KICK";
++	for (const auto &kv : _deptHeads)
++		if (kv.second == soldierId) return kv.first;
++	return "";
++}
++
++bool SavedGame::isJoeAway(const Soldier *s)
++{
++	return s->isAway() || s->isWounded() || (s->getCraft() && s->getCraft()->getStatus() == "STR_OUT");
++}
++
++int SavedGame::getDeptSpeed(const Mod *mod, const std::string &dept) const
++{
++	const Mod::DepartmentRule *d = mod->getDepartment(dept);
++	if (!d) return 100; // a topic with no department (or an unknown lane) runs as stock
++	bool captured = false;
++	const Soldier *head = findJoe(getDeptHead(dept), &captured);
++	if (!head || captured) return mod->getDeptSpeedNone();
++	return mod->getDeptSpeed(mod->deptMatch(head->getRules()->getType(), *d), isJoeAway(head));
++}
++
++int SavedGame::getTopKickBonus(const Mod *mod, const Base *base) const
++{
++	bool captured = false;
++	Base *at = nullptr;
++	const Soldier *tk = findJoe(_topKick, &captured, &at);
++	if (!tk || captured || at != base) return 0;
++	const int match = mod->topKickMatch(tk->getRules()->getType());
++	if (!match) return 0;
++	// the department rule's speeds scale the bonus: main 100%, second 70%, away 70% (60% second)
++	return mod->getTopKickBonus() * mod->getDeptSpeed(match, isJoeAway(tk)) / 100;
++}
++
++bool SavedGame::hasDeptRoom(const Mod *mod, const std::string &dept) const
++{
++	const Mod::DepartmentRule *d = mod->getDepartment(dept);
++	if (!d) return false;
++	for (auto *b : _bases)
++		for (auto *f : *b->getFacilities())
++			if (f->getBuildTime() == 0 && std::find(d->rooms.begin(), d->rooms.end(), f->getRules()->getType()) != d->rooms.end())
++				return true;
++	return false;
++}
++
 +Soldier *SavedGame::getSpy(const SpyMission &m) const
 +{
 +	for (auto *b : _bases)
@@ -15468,7 +16345,7 @@ index 9ca9637..9ab0ad0 100644
  {
  	if (resetArmor)
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..ca262fd 100644
+index d985908..42a955c 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -37,6 +37,7 @@ namespace OpenXcom
@@ -15524,7 +16401,7 @@ index d985908..ca262fd 100644
  class SavedGame
  {
  public:
-@@ -126,6 +158,20 @@ private:
+@@ -126,6 +158,23 @@ private:
  	bool _ironman;
  	GameTime *_time;
  	std::vector<std::string> _userNotes;
@@ -15540,12 +16417,15 @@ index d985908..ca262fd 100644
 +private:
 +	std::vector<SpyMission> _spyMissions;
 +	std::vector<std::string> _spyOpsDone;
++	std::map<std::string, int> _deptHeads; // G.I. Joe: department -> head soldier id
++	int _topKick = -1;                      // G.I. Joe: Top Kick soldier id
++	std::vector<std::string> _deptPrompted; // departments already offered for a head
 +	int _spyOpsRun = 0;
 +	int _globeMarkId = 0;
  	std::vector<std::string> _geoscapeDebugLog;
  	std::vector<int> _researchScores;
  	std::vector<int64_t> _funds, _maintenance, _incomes, _expenditures;
-@@ -140,6 +186,7 @@ private:
+@@ -140,6 +189,7 @@ private:
  	std::vector<MissionSite*> _missionSites;
  	std::vector<AlienBase*> _alienBases;
  	AlienStrategy *_alienStrategy;
@@ -15553,7 +16433,7 @@ index d985908..ca262fd 100644
  	SavedBattleGame *_battleGame;
  	std::vector<const RuleResearch*> _discovered;
  	std::vector<ResearchDiaryEntry*> _researchDiary;
-@@ -157,6 +204,9 @@ private:
+@@ -157,6 +207,9 @@ private:
  	bool _togglePersonalLight, _toggleNightVision;
  	int _toggleBrightness;
  	int _monthsPassed;
@@ -15563,7 +16443,7 @@ index d985908..ca262fd 100644
  	int _daysPassed;
  	int _vehiclesLost, _craftLostDogfight, _craftLostMission;
  	std::string _graphRegionToggles;
-@@ -164,6 +214,7 @@ private:
+@@ -164,6 +217,7 @@ private:
  	std::string _graphFinanceToggles;
  	std::vector<const RuleResearch*> _poppedResearch;
  	std::vector<Soldier*> _deadSoldiers;
@@ -15571,7 +16451,7 @@ index d985908..ca262fd 100644
  	size_t _selectedBase;
  	std::string _lastselectedArmor; //contains the last selected armor
  	std::string _globalEquipmentLayoutName[MAX_EQUIPMENT_LAYOUT_TEMPLATES];
-@@ -293,6 +344,8 @@ public:
+@@ -293,6 +347,8 @@ public:
  	void makeAllResearchDiscovered(const Mod* mod);
  	/// Add a finished ResearchProject
  	void addFinishedResearch(const RuleResearch *research, const Mod *mod, Base *base, bool score = true);
@@ -15580,7 +16460,7 @@ index d985908..ca262fd 100644
  	/// Add a new record to the research diary
  	void addResearchDiaryEntry(ResearchDiaryEntry* entry);
  	/// Gets the research diary.
-@@ -395,6 +448,32 @@ public:
+@@ -395,6 +451,32 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -15613,7 +16493,7 @@ index d985908..ca262fd 100644
  	/// Read-only access to the alien strategy data.
  	const AlienStrategy &getAlienStrategy() const { return *_alienStrategy; }
  	/// Full access to the current alien missions.
-@@ -409,6 +488,10 @@ public:
+@@ -409,6 +491,10 @@ public:
  	const std::vector<GeoscapeEvent*> &getGeoscapeEvents() const { return _geoscapeEvents; }
  	/// Locate a region containing a position.
  	Region *locateRegion(double lon, double lat) const;
@@ -15624,7 +16504,7 @@ index d985908..ca262fd 100644
  	/// Locate a region containing a Target.
  	Region *locateRegion(const Target &target) const;
  	/// Locate a country containing a position.
-@@ -419,6 +502,13 @@ public:
+@@ -419,6 +505,13 @@ public:
  	int selectSoldierNationalityByLocation(const Mod* mod, const RuleSoldier* rule, const Target* target) const;
  	/// Return the month counter.
  	int getMonthsPassed() const;
@@ -15638,7 +16518,7 @@ index d985908..ca262fd 100644
  	/// Return the day counter.
  	int getDaysPassed() const { return _daysPassed; }
  	void increaseDaysPassed() { _daysPassed++; }
-@@ -493,6 +583,28 @@ public:
+@@ -493,6 +586,47 @@ public:
  	bool isUfoOnIgnoreList(int ufoId);
  	/// Handles a soldier's death.
  	std::vector<Soldier*>::iterator killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause = 0);
@@ -15660,6 +16540,25 @@ index d985908..ca262fd 100644
 +	void setSpyOpDone(const std::string &op) { if (!isSpyOpDone(op)) _spyOpsDone.push_back(op); }
 +	int getSpyOpsRun() const { return _spyOpsRun; }
 +	void countSpyOp() { ++_spyOpsRun; }
++	/// G.I. Joe department heads.
++	int getDeptHead(const std::string &dept) const { auto i = _deptHeads.find(dept); return i == _deptHeads.end() ? -1 : i->second; }
++	void setDeptHead(const std::string &dept, int soldierId) { if (soldierId < 0) _deptHeads.erase(dept); else _deptHeads[dept] = soldierId; }
++	int getTopKick() const { return _topKick; }
++	void setTopKick(int soldierId) { _topKick = soldierId; }
++	bool isDeptPrompted(const std::string &dept) const { return std::find(_deptPrompted.begin(), _deptPrompted.end(), dept) != _deptPrompted.end(); }
++	void setDeptPrompted(const std::string &dept) { if (!isDeptPrompted(dept)) _deptPrompted.push_back(dept); }
++	/// A Joe by id, at a base or held by Cobra (captured set), or 0.
++	Soldier *findJoe(int soldierId, bool *captured = nullptr, Base **at = nullptr) const;
++	/// The job a Joe holds: a department type, "TOP_KICK", or "".
++	std::string getJobOf(int soldierId) const;
++	/// Away from his desk: on a craft that is out, on a spy operation, or in the infirmary.
++	static bool isJoeAway(const Soldier *s);
++	/// A department's research speed in percent, from its head's state.
++	int getDeptSpeed(const Mod *mod, const std::string &dept) const;
++	/// Top Kick's bonus in percent at this base (0 if he is not there).
++	int getTopKickBonus(const Mod *mod, const Base *base) const;
++	/// Does any base have one of this department's rooms (built)?
++	bool hasDeptRoom(const Mod *mod, const std::string &dept) const;
 +	/// Send a spy from a base on an operation; false if he cannot go.
 +	bool sendSpy(Soldier *soldier, Base *base, const std::string &op, int days);
 +	/// End the mission at index i: 0 home, 1 caught and held, 2 caught and killed. Removes it.
@@ -15667,7 +16566,7 @@ index d985908..ca262fd 100644
  	/// enables/disables autosell for an item type
  	void setAutosell(const RuleItem *itype, const bool enabled);
  	/// get autosell state for an item type
-@@ -529,6 +641,26 @@ public:
+@@ -529,6 +663,26 @@ public:
  	void handlePrimaryResearchSideEffects(const std::vector<const RuleResearch*> &topicsToCheck, const Mod* mod, Base* base);
  	/// Gets the list of user notes.
  	std::vector<std::string>& getUserNotes() { return _userNotes; }
