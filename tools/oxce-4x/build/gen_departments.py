@@ -67,7 +67,13 @@ S = {'STR_DEPT_COMMAND': 'Command', 'STR_DEPT_INTEL': 'Intel', 'STR_DEPT_MOTOR_P
      'STR_DEPT_NONE_QUALIFY': 'No Joe who can head this is on the roster yet.',
      'STR_DEPT_MAIN': 'main', 'STR_DEPT_SECOND': 'second', 'STR_DEPT_HAS_JOB': 'has a job',
      'STR_DEPT_RULES': 'Head through his main specialty 100%, second 70%. Away 70% (60% second). No head or captured 60%. One job per Joe.',
-     'STR_DEPT_SPEED': '{0}%', 'STR_DEPT_CLEAR': 'REMOVE HEAD'}
+     'STR_DEPT_SPEED': '{0}%', 'STR_DEPT_CLEAR': 'REMOVE HEAD',
+     # the research tree (RESEARCH_TREE_SCREEN_SPEC)
+     'STR_RESEARCH_TREE': 'TREE', 'STR_RESEARCH_TREE_PICK': 'Pick a topic.', 'STR_TREE_DONE': 'Done',
+     'STR_TREE_RESEARCHING': 'Researching', 'STR_TREE_AVAILABLE': 'Available', 'STR_TREE_LOCKED': 'Locked',
+     'STR_TREE_NEEDS_ITEM': 'Needs something in the stores', 'STR_TREE_COST': '{0} scientist-days',
+     'STR_TREE_NEEDS': 'Needs:', 'STR_TREE_USES': 'Uses up: {0}', 'STR_START_RESEARCH': 'START',
+     'STR_ADD_SCIENTISTS': 'ADD SCIENTISTS'}
 for k, v in S.items(): out.append(f'      {k}: "{v}"')
 out += ['  - type: en-GB', '    strings: *deptstr', '']
 p = os.path.join(ROOT, 'mod', 'Ruleset', 'gijoe_departments.rul')

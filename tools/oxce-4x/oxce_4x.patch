@@ -293,50 +293,60 @@ index c52f7ad..44470ef 100644
  }
  
 diff --git a/src/Basescape/ResearchState.cpp b/src/Basescape/ResearchState.cpp
-index a6004b9..0d9241d 100644
+index a6004b9..76f9fd3 100644
 --- a/src/Basescape/ResearchState.cpp
 +++ b/src/Basescape/ResearchState.cpp
-@@ -34,6 +34,7 @@
+@@ -34,6 +34,8 @@
  #include "../Mod/RuleResearch.h"
  #include "ResearchInfoState.h"
  #include "TechTreeViewerState.h"
 +#include "../Geoscape/DepartmentsState.h"
++#include "ResearchTreeState.h"
  #include <algorithm>
  
  namespace OpenXcom
-@@ -48,8 +49,9 @@ ResearchState::ResearchState(Base *base) : _base(base)
+@@ -48,8 +50,10 @@ ResearchState::ResearchState(Base *base) : _base(base)
  {
  	// Create objects
  	_window = new Window(this, 320, 200, 0, 0);
 -	_btnNew = new TextButton(148, 16, 8, 176);
 -	_btnOk = new TextButton(148, 16, 164, 176);
-+	_btnNew = new TextButton(98, 16, 8, 176);
-+	_btnDepts = new TextButton(98, 16, 111, 176); // G.I. Joe department heads
-+	_btnOk = new TextButton(98, 16, 214, 176);
++	_btnNew = new TextButton(74, 16, 8, 176);
++	_btnTree = new TextButton(74, 16, 85, 176);   // G.I. Joe research tree
++	_btnDepts = new TextButton(74, 16, 162, 176); // G.I. Joe department heads
++	_btnOk = new TextButton(74, 16, 239, 176);
  	_txtTitle = new Text(310, 17, 5, 8);
  	_txtAvailable = new Text(150, 9, 10, 24);
  	_txtAllocated = new Text(150, 9, 160, 24);
-@@ -65,6 +67,7 @@ ResearchState::ResearchState(Base *base) : _base(base)
+@@ -65,6 +69,8 @@ ResearchState::ResearchState(Base *base) : _base(base)
  	add(_window, "window", "researchMenu");
  	add(_btnNew, "button", "researchMenu");
  	add(_btnOk, "button", "researchMenu");
 +	add(_btnDepts, "button", "researchMenu");
++	add(_btnTree, "button", "researchMenu");
  	add(_txtTitle, "text", "researchMenu");
  	add(_txtAvailable, "text", "researchMenu");
  	add(_txtAllocated, "text", "researchMenu");
-@@ -84,6 +87,8 @@ ResearchState::ResearchState(Base *base) : _base(base)
+@@ -84,6 +90,10 @@ ResearchState::ResearchState(Base *base) : _base(base)
  	_btnNew->onKeyboardPress((ActionHandler)&ResearchState::btnNewClick, Options::keyToggleQuickSearch);
  	_btnNew->onKeyboardPress((ActionHandler)&ResearchState::onCurrentGlobalResearchClick, Options::keyGeoGlobalResearch);
  
++	_btnTree->setText(tr("STR_RESEARCH_TREE"));
++	_btnTree->onMouseClick((ActionHandler)&ResearchState::btnTreeClick);
 +	_btnDepts->setText(tr("STR_DEPARTMENTS"));
 +	_btnDepts->onMouseClick((ActionHandler)&ResearchState::btnDeptsClick);
  	_btnOk->setText(tr("STR_OK"));
  	_btnOk->onMouseClick((ActionHandler)&ResearchState::btnOkClick);
  	_btnOk->onKeyboardPress((ActionHandler)&ResearchState::btnOkClick, Options::keyCancel);
-@@ -370,4 +375,9 @@ void ResearchState::moveTopicDown(Action* action, unsigned int row, bool max)
+@@ -370,4 +380,14 @@ void ResearchState::moveTopicDown(Action* action, unsigned int row, bool max)
  	fillProjectList(_lstResearch->getScroll());
  }
  
++void ResearchState::btnTreeClick(Action *)
++{
++	_game->pushState(new ResearchTreeState(_base));
++}
++
 +void ResearchState::btnDeptsClick(Action *)
 +{
 +	_game->pushState(new DepartmentsState);
@@ -344,7 +354,7 @@ index a6004b9..0d9241d 100644
 +
  }
 diff --git a/src/Basescape/ResearchState.h b/src/Basescape/ResearchState.h
-index d41c550..745504e 100644
+index d41c550..d7148f6 100644
 --- a/src/Basescape/ResearchState.h
 +++ b/src/Basescape/ResearchState.h
 @@ -36,7 +36,7 @@ class ResearchState : public State
@@ -352,18 +362,461 @@ index d41c550..745504e 100644
  private:
  	Base *_base;
 -	TextButton *_btnNew, *_btnOk;
-+	TextButton *_btnNew, *_btnOk, *_btnDepts;
++	TextButton *_btnNew, *_btnOk, *_btnDepts, *_btnTree;
  	Window *_window;
  	Text *_txtTitle, *_txtAvailable, *_txtAllocated, *_txtSpace, *_txtProject, *_txtScientists, *_txtProgress;
  	TextList *_lstResearch;
-@@ -46,6 +46,7 @@ public:
+@@ -46,6 +46,8 @@ public:
  	/// Cleans up the Research state.
  	~ResearchState();
  	/// Handler for clicking the OK button.
 +	void btnDeptsClick(Action *action);
++	void btnTreeClick(Action *action);
  	void btnOkClick(Action *action);
  	/// Handler for clicking the New Research button.
  	void btnNewClick(Action *action);
+diff --git a/src/Basescape/ResearchTreeState.cpp b/src/Basescape/ResearchTreeState.cpp
+new file mode 100644
+index 0000000..84a325a
+--- /dev/null
++++ b/src/Basescape/ResearchTreeState.cpp
+@@ -0,0 +1,375 @@
++/*
++ * G.I. Joe: USA Defense. The research tree (see ResearchTreeState.h).
++ */
++#include "ResearchTreeState.h"
++#include <algorithm>
++#include <climits>
++#include <functional>
++#include <sstream>
++#include "../Engine/Game.h"
++#include "../Engine/Action.h"
++#include "../Engine/LocalizedText.h"
++#include "../Engine/Options.h"
++#include "../Engine/InteractiveSurface.h"
++#include "../Engine/Palette.h"
++#include "../Interface/TextButton.h"
++#include "../Interface/Window.h"
++#include "../Interface/Text.h"
++#include "../Mod/Mod.h"
++#include "../Mod/RuleResearch.h"
++#include "../Mod/RuleItem.h"
++#include "../Savegame/SavedGame.h"
++#include "../Savegame/Base.h"
++#include "../Savegame/ItemContainer.h"
++#include "../Savegame/ResearchProject.h"
++#include "../Savegame/Soldier.h"
++#include "ResearchInfoState.h"
++
++namespace OpenXcom
++{
++
++namespace
++{
++const int VX = 52, VY = 18, VW = 176, VH = 162;   // the tree viewport (base px)
++const int CW = 40, CH = 13, PX = 48, PY = 16;      // card size and pitch (spec 216x80 / 288x104 at 1/6)
++}
++
++ResearchTreeState::ResearchTreeState(Base *base) : _base(base)
++{
++	_window = new Window(this, 320, 200, 0, 0);
++	_txtTitle = new Text(310, 13, 5, 3);
++	_lanes = new Surface(50, VH, 2, VY);
++	_view = new InteractiveSurface(VW, VH, VX, VY);
++	_txtName = new Text(86, 26, 232, VY);
++	_txtInfo = new Text(86, 18, 232, VY + 28);
++	_txtBody = new Text(86, 92, 232, VY + 48);
++	_btnStart = new TextButton(86, 14, 232, 144);
++	_btnLeft = new TextButton(18, 14, 52, 183);
++	_btnRight = new TextButton(18, 14, 72, 183);
++	_btnUp = new TextButton(18, 14, 92, 183);
++	_btnDown = new TextButton(18, 14, 112, 183);
++	_btnOk = new TextButton(86, 14, 232, 183);
++	setInterface("researchMenu");
++	add(_window, "window", "researchMenu");
++	add(_txtTitle, "text", "researchMenu");
++	add(_lanes);
++	add(_view);
++	add(_txtName, "text", "researchMenu");
++	add(_txtInfo, "text", "researchMenu");
++	add(_txtBody, "text", "researchMenu");
++	add(_btnStart, "button", "researchMenu");
++	add(_btnLeft, "button", "researchMenu");
++	add(_btnRight, "button", "researchMenu");
++	add(_btnUp, "button", "researchMenu");
++	add(_btnDown, "button", "researchMenu");
++	add(_btnOk, "button", "researchMenu");
++	centerAllSurfaces();
++	setWindowBackground(_window, "researchMenu");
++
++	_txtTitle->setBig();
++	_txtTitle->setText(tr("STR_RESEARCH_TREE"));
++	_txtName->setWordWrap(true);
++	_txtInfo->setWordWrap(true);
++	_txtBody->setWordWrap(true);
++	_btnStart->setText(tr("STR_START_RESEARCH"));
++	_btnStart->onMouseClick((ActionHandler)&ResearchTreeState::btnStartClick);
++	_btnOk->setText(tr("STR_OK"));
++	_btnOk->onMouseClick((ActionHandler)&ResearchTreeState::btnOkClick);
++	_btnOk->onKeyboardPress((ActionHandler)&ResearchTreeState::btnOkClick, Options::keyCancel);
++	_btnLeft->setText("<");
++	_btnRight->setText(">");
++	_btnUp->setText("^");
++	_btnDown->setText("v");
++	for (TextButton *b : { _btnLeft, _btnRight, _btnUp, _btnDown })
++		b->onMouseClick((ActionHandler)&ResearchTreeState::btnScroll);
++	_view->onMouseClick((ActionHandler)&ResearchTreeState::viewClick);
++	_view->onMouseClick((ActionHandler)&ResearchTreeState::viewClick, SDL_BUTTON_WHEELUP);
++	_view->onMouseClick((ActionHandler)&ResearchTreeState::viewClick, SDL_BUTTON_WHEELDOWN);
++	_view->onKeyboardPress((ActionHandler)&ResearchTreeState::handleKey);
++}
++
++void ResearchTreeState::init()
++{
++	State::init();
++	build();
++	draw();
++	showInfo();
++}
++
++Uint8 ResearchTreeState::nearest(Uint32 rgb) const
++{
++	const SDL_Color *pal = _view->getPalette();
++	int best = 1, bd = INT_MAX;
++	const int r = (rgb >> 16) & 255, g = (rgb >> 8) & 255, b = rgb & 255;
++	for (int i = 1; i < 256; ++i)
++	{
++		const int d = (pal[i].r - r) * (pal[i].r - r) + (pal[i].g - g) * (pal[i].g - g) + (pal[i].b - b) * (pal[i].b - b);
++		if (d < bd) { bd = d; best = i; }
++	}
++	return (Uint8)best;
++}
++
++void ResearchTreeState::build()
++{
++	const Mod *mod = _game->getMod();
++	SavedGame *save = _game->getSavedGame();
++	_nodes.clear();
++	_laneTypes.clear();
++	for (const auto &d : mod->getDepartments())
++		if (d.type != "TRAINING") _laneTypes.push_back(d.type);
++
++	// what this base can start now, and what it is working on
++	std::vector<RuleResearch*> avail;
++	save->getAvailableResearchProjects(avail, mod, _base);
++	std::map<const RuleResearch*, const ResearchProject*> working;
++	for (const auto *p : _base->getResearch()) working[p->getRules()] = p;
++	const RuleResearch *storyLock = mod->getResearch("STR_STORY_LOCK");
++
++	// depth = longest chain of dependencies back to a topic with none (column)
++	std::map<const RuleResearch*, int> depth;
++	std::function<int(const RuleResearch*, int)> col = [&](const RuleResearch *r, int guard) -> int
++	{
++		auto it = depth.find(r);
++		if (it != depth.end()) return it->second;
++		int d = 0;
++		if (guard < 40)
++			for (const auto *dep : r->getDependencies())
++				if (!dep->getLane().empty()) d = std::max(d, col(dep, guard + 1) + 1);
++		depth[r] = d;
++		return d;
++	};
++
++	auto behindLock = [&](const RuleResearch *r)
++	{
++		for (const auto *d : r->getDependencies()) if (d == storyLock) return true;
++		for (const auto *d : r->getRequirements()) if (d == storyLock) return true;
++		return false;
++	};
++
++	std::vector<Node> raw;
++	for (const auto &id : mod->getResearchList())
++	{
++		const RuleResearch *r = mod->getResearch(id);
++		if (!r || r->getLane().empty()) continue;
++		const int lane = (int)(std::find(_laneTypes.begin(), _laneTypes.end(), r->getLane()) - _laneTypes.begin());
++		if (lane >= (int)_laneTypes.size()) continue;
++		if (behindLock(r) && !save->isResearched(r)) continue;     // story stubs never show
++		Node n { r, lane, col(r, 0), 0, N_LOCKED, 0 };
++		if (save->isResearched(r)) n.st = N_DONE;
++		else if (working.count(r))
++		{
++			n.st = N_RESEARCHING;
++			n.pct = r->getCost() > 0 ? std::min(99, working[r]->getSpent() * 100 / r->getCost()) : 0;
++		}
++		else if (std::find(avail.begin(), avail.end(), r) != avail.end()) n.st = N_AVAILABLE;
++		else
++		{
++			// no spoilers: a locked topic shows only one step past something available or done
++			// a topic that only waits for an item (a prisoner, a clue) stays hidden until the item is home
++			bool near = r->getDependencies().empty() && !(r->needItem() && r->getNeededItem());
++			for (const auto *d : r->getDependencies())
++				if (save->isResearched(d) || working.count(d) || std::find(avail.begin(), avail.end(), d) != avail.end()) near = true;
++			if (!near) continue;
++			if (r->needItem() && r->getNeededItem() && _base->getStorageItems()->getItem(r->getNeededItem()) <= 0) n.st = N_NEEDITEM;
++		}
++		raw.push_back(n);
++	}
++
++	// rows: inside each lane, each column stacks its topics; the lane is as tall as its tallest column
++	_laneTop.assign(_laneTypes.size(), 0);
++	_laneRows.assign(_laneTypes.size(), 1);
++	_cols = 0;
++	int top = 0;
++	for (size_t L = 0; L < _laneTypes.size(); ++L)
++	{
++		std::map<int, int> used;
++		for (auto &n : raw)
++			if (n.lane == (int)L) { n.row = used[n.col]++; _cols = std::max(_cols, n.col + 1); }
++		int h = 2; // room for the department label (name, head, speed)
++		for (auto &u : used) h = std::max(h, u.second);
++		_laneTop[L] = top;
++		_laneRows[L] = h;
++		top += h;
++		for (auto &n : raw) if (n.lane == (int)L) { n.row += _laneTop[L]; _nodes.push_back(n); }
++	}
++	_rows = top;
++	if (_sel >= (int)_nodes.size()) _sel = -1;
++}
++
++void ResearchTreeState::draw()
++{
++	const Uint8 bandA = nearest(0x14181A), bandB = nearest(0x1B2023);
++	const Uint8 cDone = nearest(0x232A2D), cRes = nearest(0x2A3033), cAv = nearest(0x323A3E), cLock = nearest(0x1B2023);
++	const Uint8 eDone = nearest(0x6FAE4A), eRes = nearest(0x5B8FC9), eAv = nearest(0xE8B923), eLock = nearest(0x3D464A), eItem = nearest(0x6B2A24);
++	const Uint8 lineDone = nearest(0x4A5640), lineAv = nearest(0xE8B923), lineLock = nearest(0x3D464A), sel = nearest(0xE8B923);
++	_view->clear();
++	_lanes->clear();
++	const Mod *mod = _game->getMod();
++	SavedGame *save = _game->getSavedGame();
++
++	// lane bands, and the department label down the left: name, head, speed
++	for (size_t L = 0; L < _laneTypes.size(); ++L)
++	{
++		const int y0 = _laneTop[L] * PY - _scrollY, h = _laneRows[L] * PY;
++		_view->drawRect(0, std::max(0, y0), VW, std::max(0, std::min(VH, y0 + h) - std::max(0, y0)), (L % 2) ? bandB : bandA);
++		if (y0 + h <= 0 || y0 >= VH) continue;
++		const int head = save->getDeptHead(_laneTypes[L]);
++		const Soldier *s = save->findJoe(head);
++		std::ostringstream ss;
++		ss << tr("STR_DEPT_" + _laneTypes[L]) << "\n" << (s ? s->getName() : std::string(tr("STR_NO_HEAD")))
++			<< "\n" << (save->hasDeptRoom(mod, _laneTypes[L]) ? std::to_string(save->getDeptSpeed(mod, _laneTypes[L])) + "%" : std::string(tr("STR_DEPT_NO_ROOM")));
++		Text t(50, std::min(27, VH - std::max(0, y0)), 0, 0);
++		t.setPalette(_lanes->getPalette());
++		t.initText(mod->getFont("FONT_BIG"), mod->getFont("FONT_SMALL"), _game->getLanguage());
++		t.setSmall();
++		t.setColor(_txtName->getColor());
++		t.setText(ss.str());
++		t.setX(0); t.setY(std::max(0, y0) + 1);
++		t.blit(_lanes->getSurface());
++	}
++
++	auto cardX = [&](const Node &n) { return 2 + n.col * PX - _scrollX; };
++	auto cardY = [&](const Node &n) { return 1 + n.row * PY - _scrollY; };
++	// lines: out of the right side of a dependency, into the left side of the topic (elbow)
++	for (const auto &n : _nodes)
++	{
++		for (const auto *dep : n.r->getDependencies())
++		{
++			auto it = std::find_if(_nodes.begin(), _nodes.end(), [&](const Node &m) { return m.r == dep; });
++			if (it == _nodes.end()) continue;
++			const Uint8 c = n.st == N_DONE ? lineDone : (n.st == N_AVAILABLE || n.st == N_RESEARCHING) ? lineAv : lineLock;
++			const int x0 = cardX(*it) + CW, y0 = cardY(*it) + CH / 2, x1 = cardX(n), y1 = cardY(n) + CH / 2, xm = (x0 + x1) / 2;
++			auto hline = [&](int a, int b, int y) { if (y >= 0 && y < VH) for (int x = std::max(0, std::min(a, b)); x <= std::min(VW - 1, std::max(a, b)); ++x) _view->setPixel(x, y, c); };
++			auto vline = [&](int x, int a, int b) { if (x >= 0 && x < VW) for (int y = std::max(0, std::min(a, b)); y <= std::min(VH - 1, std::max(a, b)); ++y) _view->setPixel(x, y, c); };
++			hline(x0, xm, y0); vline(xm, y0, y1); hline(xm, x1, y1);
++		}
++	}
++	// cards
++	for (size_t i = 0; i < _nodes.size(); ++i)
++	{
++		const Node &n = _nodes[i];
++		const int x = cardX(n), y = cardY(n);
++		if (x + CW < 0 || x >= VW || y + CH < 0 || y >= VH) continue;
++		Uint8 fill = cLock, edge = eLock;
++		switch (n.st)
++		{
++		case N_DONE: fill = cDone; edge = eDone; break;
++		case N_RESEARCHING: fill = cRes; edge = eRes; break;
++		case N_AVAILABLE: fill = cAv; edge = eAv; break;
++		case N_NEEDITEM: fill = cLock; edge = eItem; break;
++		default: break;
++		}
++		if ((int)i == _sel) _view->drawRect(x - 1, y - 1, CW + 2, CH + 2, sel);
++		_view->drawRect(x, y, CW, CH, edge);
++		_view->drawRect(x + 1, y + 1, CW - 2, CH - 2, fill);
++		if (n.st == N_RESEARCHING) _view->drawRect(x + 1, y + CH - 2, (CW - 2) * n.pct / 100, 1, eRes);
++		Text t(CW - 3, CH - 2, 0, 0);
++		t.setPalette(_view->getPalette());
++		t.initText(mod->getFont("FONT_BIG"), mod->getFont("FONT_SMALL"), _game->getLanguage());
++		t.setSmall();
++		t.setWordWrap(true);
++		t.setColor(n.st == N_LOCKED || n.st == N_NEEDITEM ? edge : _txtName->getColor());
++		t.setText(n.st == N_NEEDITEM ? std::string("?") : std::string(tr(n.r->getName())));
++		t.setX(x + 2); t.setY(y + 1);
++		t.blit(_view->getSurface());
++	}
++}
++
++void ResearchTreeState::showInfo()
++{
++	_btnStart->setVisible(false);
++	if (_sel < 0 || _sel >= (int)_nodes.size())
++	{
++		_txtName->setText(tr("STR_RESEARCH_TREE_PICK"));
++		_txtInfo->setText("");
++		_txtBody->setText("");
++		return;
++	}
++	const Mod *mod = _game->getMod();
++	SavedGame *save = _game->getSavedGame();
++	const Node &n = _nodes[_sel];
++	_txtName->setText(n.st == N_NEEDITEM ? std::string("?") : std::string(tr(n.r->getName())));
++	const char *stKey[] = { "STR_TREE_DONE", "STR_TREE_RESEARCHING", "STR_TREE_AVAILABLE", "STR_TREE_LOCKED", "STR_TREE_NEEDS_ITEM" };
++	std::ostringstream info;
++	info << tr(stKey[n.st]);
++	if (n.st == N_RESEARCHING) info << " " << n.pct << "%";
++	info << "\n" << tr("STR_DEPT_" + n.r->getLane()) << " " << save->getDeptSpeed(mod, n.r->getLane()) << "%";
++	_txtInfo->setText(info.str());
++	std::ostringstream body;
++	body << tr("STR_TREE_COST").arg(n.r->getCost());
++	if (n.st != N_NEEDITEM && !n.r->getDependencies().empty())
++	{
++		body << "\n" << tr("STR_TREE_NEEDS");
++		for (const auto *d : n.r->getDependencies()) body << "\n- " << tr(d->getName());
++	}
++	if (n.r->needItem() && n.r->getNeededItem() && n.st != N_NEEDITEM)
++		body << "\n" << tr("STR_TREE_USES").arg(tr(n.r->getNeededItem()->getType()));
++	_txtBody->setText(body.str());
++	if (n.st == N_AVAILABLE) { _btnStart->setText(tr("STR_START_RESEARCH")); _btnStart->setVisible(true); }
++	if (n.st == N_RESEARCHING) { _btnStart->setText(tr("STR_ADD_SCIENTISTS")); _btnStart->setVisible(true); }
++}
++
++void ResearchTreeState::viewClick(Action *action)
++{
++	const Uint8 b = action->getDetails()->button.button;
++	if (b == SDL_BUTTON_WHEELUP || b == SDL_BUTTON_WHEELDOWN)
++	{
++		_scrollY = std::max(0, std::min(std::max(0, _rows * PY - VH), _scrollY + (b == SDL_BUTTON_WHEELUP ? -PY : PY)));
++		draw();
++		return;
++	}
++	const int mx = (int)(action->getRelativeXMouse() / action->getXScale());
++	const int my = (int)(action->getRelativeYMouse() / action->getYScale());
++	_sel = -1;
++	for (size_t i = 0; i < _nodes.size(); ++i)
++	{
++		const int x = 2 + _nodes[i].col * PX - _scrollX, y = 1 + _nodes[i].row * PY - _scrollY;
++		if (mx >= x && mx < x + CW && my >= y && my < y + CH) { _sel = (int)i; break; }
++	}
++	draw();
++	showInfo();
++}
++
++void ResearchTreeState::btnScroll(Action *action)
++{
++	if (action->getSender() == _btnLeft) _scrollX -= PX;
++	if (action->getSender() == _btnRight) _scrollX += PX;
++	if (action->getSender() == _btnUp) _scrollY -= PY * 3;
++	if (action->getSender() == _btnDown) _scrollY += PY * 3;
++	_scrollX = std::max(0, std::min(std::max(0, _cols * PX - VW + 4), _scrollX));
++	_scrollY = std::max(0, std::min(std::max(0, _rows * PY - VH), _scrollY));
++	draw();
++}
++
++void ResearchTreeState::handleKey(Action *action)
++{
++	switch (action->getDetails()->key.keysym.sym)
++	{
++	case SDLK_LEFT: _scrollX -= PX; break;
++	case SDLK_RIGHT: _scrollX += PX; break;
++	case SDLK_UP: _scrollY -= PY; break;
++	case SDLK_DOWN: _scrollY += PY; break;
++	default: return;
++	}
++	_scrollX = std::max(0, std::min(std::max(0, _cols * PX - VW + 4), _scrollX));
++	_scrollY = std::max(0, std::min(std::max(0, _rows * PY - VH), _scrollY));
++	draw();
++}
++
++void ResearchTreeState::btnStartClick(Action *)
++{
++	if (_sel < 0) return;
++	const Node &n = _nodes[_sel];
++	if (n.st == N_AVAILABLE)
++		_game->pushState(new ResearchInfoState(_base, const_cast<RuleResearch*>(n.r)));
++	else if (n.st == N_RESEARCHING)
++		for (auto *p : _base->getResearch())
++			if (p->getRules() == n.r) { _game->pushState(new ResearchInfoState(_base, p)); break; }
++}
++
++void ResearchTreeState::btnOkClick(Action *)
++{
++	_game->popState();
++}
++
++}
+diff --git a/src/Basescape/ResearchTreeState.h b/src/Basescape/ResearchTreeState.h
+new file mode 100644
+index 0000000..9fbc83a
+--- /dev/null
++++ b/src/Basescape/ResearchTreeState.h
+@@ -0,0 +1,55 @@
++#pragma once
++/*
++ * G.I. Joe: USA Defense. The research TREE (claude/RESEARCH_TREE_SCREEN_SPEC.md, John 12 Nov 21:43:
++ * "it needs to be a visual tree not a drop down menu"). Left to right by research depth, one band
++ * per department, the department's head and speed down the left, the selected topic on the right.
++ * Phase A: the 8-bit screen (layout, states, no spoilers, scroll, START). The display-resolution
++ * painting and the pixelated picture come in phase B.
++ */
++#include "../Engine/State.h"
++#include <string>
++#include <vector>
++#include <map>
++
++namespace OpenXcom
++{
++
++class Base;
++class TextButton;
++class Window;
++class Text;
++class InteractiveSurface;
++class Surface;
++class RuleResearch;
++
++class ResearchTreeState : public State
++{
++public:
++	enum NodeState { N_DONE, N_RESEARCHING, N_AVAILABLE, N_LOCKED, N_NEEDITEM };
++	struct Node { const RuleResearch *r; int lane, col, row; NodeState st; int pct; };
++private:
++	Base *_base;
++	Window *_window;
++	Text *_txtTitle, *_txtInfo, *_txtName, *_txtBody;
++	InteractiveSurface *_view;
++	Surface *_lanes;
++	TextButton *_btnStart, *_btnOk, *_btnLeft, *_btnRight, *_btnUp, *_btnDown;
++	std::vector<Node> _nodes;
++	std::vector<std::string> _laneTypes;
++	std::vector<int> _laneTop, _laneRows; // first row and row count per lane
++	int _scrollX = 0, _scrollY = 0, _cols = 0, _rows = 0, _sel = -1;
++	void build();
++	void draw();
++	void showInfo();
++	Uint8 nearest(Uint32 rgb) const;
++public:
++	ResearchTreeState(Base *base);
++	void init() override;
++	void viewClick(Action *action);
++	void btnStartClick(Action *action);
++	void btnOkClick(Action *action);
++	void btnScroll(Action *action);
++	void handleKey(Action *action);
++};
++
++}
 diff --git a/src/Basescape/SoldierInfoState.cpp b/src/Basescape/SoldierInfoState.cpp
 index 0c7d12f..7281830 100644
 --- a/src/Basescape/SoldierInfoState.cpp
@@ -4002,7 +4455,7 @@ index bc5f08f..3b09298 100644
  	_terrain->calculateFOV(_unit);
  	if (!_falling)
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..e5cbcda 100644
+index 839f803..e21bc7a 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -172,6 +172,8 @@ set ( engine_src
@@ -4014,13 +4467,14 @@ index 839f803..e5cbcda 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -201,9 +203,13 @@ set ( geoscape_src
+@@ -201,9 +203,14 @@ set ( geoscape_src
    Geoscape/DogfightState.cpp
    Geoscape/ExtendedGeoscapeLinksState.cpp
    Geoscape/FundingState.cpp
 +  Geoscape/CobraIntelState.cpp
 +  Geoscape/IntelBoardState.cpp
 +  Geoscape/DepartmentsState.cpp
++  Basescape/ResearchTreeState.cpp
    Geoscape/GeoscapeCraftState.cpp
    Geoscape/GeoscapeEventState.cpp
    Geoscape/GeoscapeState.cpp
@@ -4028,7 +4482,7 @@ index 839f803..e5cbcda 100644
    Geoscape/Globe.cpp
    Geoscape/GraphsState.cpp
    Geoscape/InterceptState.cpp
-@@ -331,6 +337,7 @@ set ( mod_src
+@@ -331,6 +338,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -4036,7 +4490,7 @@ index 839f803..e5cbcda 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +363,7 @@ set ( savegame_src
+@@ -356,6 +364,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -13881,7 +14335,7 @@ index 6bef22e..8cc3b62 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..e64d343 100644
+index 99f24ce..7796cf2 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
 @@ -511,6 +511,8 @@
@@ -13893,13 +14347,14 @@ index 99f24ce..e64d343 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,10 +548,14 @@
+@@ -546,10 +548,15 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
 +    <ClCompile Include="Geoscape\CobraIntelState.cpp" />
 +    <ClCompile Include="Geoscape\IntelBoardState.cpp" />
 +    <ClCompile Include="Geoscape\DepartmentsState.cpp" />
++    <ClCompile Include="Basescape\ResearchTreeState.cpp" />
      <ClCompile Include="Geoscape\GeoscapeCraftState.cpp" />
      <ClCompile Include="Geoscape\NewPossibleResearchState.cpp" />
      <ClCompile Include="Geoscape\ProductionCompleteState.cpp" />
@@ -13908,7 +14363,7 @@ index 99f24ce..e64d343 100644
      <ClCompile Include="Geoscape\Globe.cpp" />
      <ClCompile Include="Geoscape\GraphsState.cpp" />
      <ClCompile Include="Geoscape\InterceptState.cpp" />
-@@ -673,6 +679,7 @@
+@@ -673,6 +680,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -13916,7 +14371,7 @@ index 99f24ce..e64d343 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +689,7 @@
+@@ -682,6 +690,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -13924,7 +14379,7 @@ index 99f24ce..e64d343 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -970,6 +978,8 @@
+@@ -970,6 +979,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -13933,18 +14388,19 @@ index 99f24ce..e64d343 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1043,10 @@
+@@ -1033,6 +1044,11 @@
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
 +    <ClInclude Include="Geoscape\CobraIntelState.h" />
 +    <ClInclude Include="Geoscape\IntelBoardState.h" />
 +    <ClInclude Include="Geoscape\DepartmentsState.h" />
++    <ClInclude Include="Basescape\ResearchTreeState.h" />
 +    <ClInclude Include="Mod\RuleLead.h" />
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1042,6 +1056,7 @@
+@@ -1042,6 +1058,7 @@
      <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
      <ClInclude Include="Geoscape\ProductionCompleteState.h" />
      <ClInclude Include="Geoscape\GeoscapeState.h" />
@@ -13952,7 +14408,7 @@ index 99f24ce..e64d343 100644
      <ClInclude Include="Geoscape\Globe.h" />
      <ClInclude Include="Geoscape\GraphsState.h" />
      <ClInclude Include="Geoscape\InterceptState.h" />
-@@ -1170,6 +1185,7 @@
+@@ -1170,6 +1187,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -13960,7 +14416,7 @@ index 99f24ce..e64d343 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1195,7 @@
+@@ -1179,6 +1197,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
