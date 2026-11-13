@@ -76,6 +76,7 @@ def ink_frame(beauty, idimg, shade=None):
         clean = ndi.binary_opening(clean, structure=np.hypot(*np.mgrid[-1:2, -1:2]) <= 1)
         gap = clean & ~hair & ((idb == 0) | (idb == 2)); img[gap] = HAIR_BASE; idb[gap] = 1
         spike = hair & ~clean; img[spike] = BG; idb[spike] = 0
+    if hair.any() and clean.any():   # a few stray hair pixels can open away to nothing (hood up)
         # flat two-tone fill over the whole cleaned hair shape (hides scalp showing between strands)
         lum = ndi.gaussian_filter(img.mean(-1), 2.5)
         thr = np.percentile(lum[clean], 30)
