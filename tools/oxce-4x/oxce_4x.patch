@@ -293,7 +293,7 @@ index c52f7ad..44470ef 100644
  }
  
 diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
-index db6727f..c828da2 100644
+index db6727f..4b68917 100644
 --- a/src/Battlescape/AIModule.cpp
 +++ b/src/Battlescape/AIModule.cpp
 @@ -19,6 +19,7 @@
@@ -304,10 +304,41 @@ index db6727f..c828da2 100644
  #include "../Savegame/BattleItem.h"
  #include "../Savegame/Node.h"
  #include "../Savegame/SavedBattleGame.h"
-@@ -489,6 +490,44 @@ void AIModule::think(BattleAction *action)
+@@ -489,6 +490,75 @@ void AIModule::think(BattleAction *action)
  		return;
  	}
  
++	// G.I. Joe capture (13 Nov 2026): a Cobra man carrying a knocked-out Joe heads for the nearest
++	// edge of the map with him (BattlescapeGame::captureStep takes the Joe off the map there).
++	if (_unit->getFaction() == FACTION_HOSTILE && _unit->isCarrying() && _save->getMod()->isCaptureOn())
++	{
++		const Position at = _unit->getPosition();
++		const int W = _save->getMapSizeX(), H = _save->getMapSizeY();
++		if (at.x <= 0 || at.y <= 0 || at.x >= W - 1 || at.y >= H - 1)
++		{
++			action->type = BA_NONE;
++			return;
++		}
++		std::vector<Position> edges;
++		for (int x = 0; x < W; ++x) { edges.push_back(Position(x, 0, at.z)); edges.push_back(Position(x, H - 1, at.z)); }
++		for (int y = 0; y < H; ++y) { edges.push_back(Position(0, y, at.z)); edges.push_back(Position(W - 1, y, at.z)); }
++		std::sort(edges.begin(), edges.end(), [&](const Position& a, const Position& b) { return Position::distanceSq(a, at) < Position::distanceSq(b, at); });
++		int tries = 0;
++		for (const auto& e : edges)
++		{
++			if (++tries > 12) break;
++			Tile* tile = _save->getTile(e);
++			if (!tile || tile->getUnit()) continue;
++			_save->getPathfinding()->calculate(_unit, e, BAM_NORMAL);
++			if (_save->getPathfinding()->getStartDirection() == -1) continue;
++			_save->getPathfinding()->abortPath();
++			action->type = BA_WALK;
++			action->target = e;
++			return;
++		}
++		_save->getPathfinding()->abortPath();
++	}
++
 +	// G.I. Joe robbery (13 Nov 2026): a robber told to run (NextTurnState::runVanStop) heads for the
 +	// nearest free exit tile and, once there, waits for the van to take him.
 +	if (_unit->getFaction() == FACTION_HOSTILE && _save->getVanStop("run:" + std::to_string(_unit->getId())))
@@ -418,10 +449,10 @@ index 6065b54..8db80d7 100644
  	~ActionMenuState();
  	/// Init function.
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..ca2477c 100644
+index b7e1111..b883c02 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
-@@ -508,8 +508,186 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
+@@ -508,8 +508,189 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
  /**
   * Ends the turn.
   */
@@ -585,7 +616,10 @@ index b7e1111..ca2477c 100644
 +		{
 +			continue;
 +		}
-+		if (!bu->isInExitArea(START_POINT) && !bu->isInExitArea(END_POINT))
++		// G.I. Joe capture: the edge of the map is a way out too, for a man carrying a Joe
++		const Position &at = bu->getPosition();
++		const bool atEdge = at.x <= 0 || at.y <= 0 || at.x >= _save->getMapSizeX() - 1 || at.y >= _save->getMapSizeY() - 1;
++		if (!bu->isInExitArea(START_POINT) && !bu->isInExitArea(END_POINT) && !(atEdge && getMod()->isCaptureOn()))
 +		{
 +			continue;
 +		}
@@ -1509,7 +1543,7 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..4eab8ce 100644
+index 0631f32..13aacfe 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
 @@ -1039,10 +1039,22 @@ void DebriefingState::prepareDebriefing()
@@ -1535,7 +1569,46 @@ index 0631f32..4eab8ce 100644
  
  	std::string missionCompleteText, missionFailedText;
  	std::string objectiveCompleteText, objectiveFailedText;
-@@ -1417,6 +1429,13 @@ void DebriefingState::prepareDebriefing()
+@@ -1296,6 +1308,25 @@ void DebriefingState::prepareDebriefing()
+ 			deadSoldiers++;
+ 		}
+ 	}
++	// G.I. Joe capture (John 13 Nov 2026): a Joe left knocked out on the field - the squad pulled out
++	// without him, or everyone went down - is taken by Cobra, not killed. He is held until traded
++	// or rescued (SavedGame::captureSoldier, the FULL CAPTURE branch below).
++	if (_game->getMod()->isCaptureOn())
++	{
++		const bool allDown = playersUnconscious + playersMIA == playersSurvived;
++		for (auto* bu : *battle->getUnits())
++		{
++			if (bu->getOriginalFaction() != FACTION_PLAYER || bu->getStatus() == STATUS_DEAD || !bu->getGeoscapeSoldier()) continue;
++			const bool down = bu->getStatus() == STATUS_UNCONSCIOUS || (bu->isIgnored() && bu->getStunlevel() >= bu->getHealth());
++			if (!down) continue;
++			const bool leftBehind = aborted && !bu->isInExitArea(START_POINT) && !bu->isInExitArea(END_POINT);
++			if (allDown || leftBehind)
++			{
++				bu->markAsCarriedOffMap();
++				Log(LOG_INFO) << "[capture] " << bu->getId() << " left down on the field: taken by Cobra";
++			}
++		}
++	}
+ 	// if all our men are unconscious, the aliens get to have their way with them.
+ 	if (playersUnconscious + playersMIA == playersSurvived)
+ 	{
+@@ -1304,7 +1335,11 @@ void DebriefingState::prepareDebriefing()
+ 		{
+ 			if (bu->getOriginalFaction() == FACTION_PLAYER && bu->getStatus() != STATUS_DEAD)
+ 			{
+-				if (bu->getStatus() == STATUS_UNCONSCIOUS || bu->getFaction() == FACTION_HOSTILE)
++				if (bu->isCapturedByEnemy())
++				{
++					// taken alive (G.I. Joe capture)
++				}
++				else if (bu->getStatus() == STATUS_UNCONSCIOUS || bu->getFaction() == FACTION_HOSTILE)
+ 				{
+ 					bu->instaKill();
+ 				}
+@@ -1417,6 +1452,13 @@ void DebriefingState::prepareDebriefing()
  				{
  					addStat(objectiveCompleteText, 1, objectiveCompleteScore);
  				}
@@ -1549,7 +1622,7 @@ index 0631f32..4eab8ce 100644
  				save->clearLinksForAlienBase(ab, _game->getMod());
  				delete ab;
  				save->getAlienBases()->erase(abIt);
-@@ -1476,6 +1495,65 @@ void DebriefingState::prepareDebriefing()
+@@ -1476,6 +1518,65 @@ void DebriefingState::prepareDebriefing()
  	{
  		ignoreLivingCivilians = ruleDeploy->getIgnoreLivingCivilians();
  	}
@@ -1615,7 +1688,7 @@ index 0631f32..4eab8ce 100644
  	for (auto* bunit : *battle->getUnits())
  	{
  		UnitStatus status = bunit->getStatus();
-@@ -1483,6 +1561,30 @@ void DebriefingState::prepareDebriefing()
+@@ -1483,6 +1584,30 @@ void DebriefingState::prepareDebriefing()
  		UnitFaction oldFaction = bunit->getOriginalFaction();
  		Soldier *soldier = save->getSoldier(bunit->getId());
  
@@ -1646,7 +1719,7 @@ index 0631f32..4eab8ce 100644
  		if (!bunit->getTile())
  		{
  			Position pos = bunit->getPosition();
-@@ -1654,8 +1756,9 @@ void DebriefingState::prepareDebriefing()
+@@ -1654,8 +1779,9 @@ void DebriefingState::prepareDebriefing()
  					}
  				}
  			}
@@ -1657,7 +1730,7 @@ index 0631f32..4eab8ce 100644
  				&& playersSurvived > 0 && faction != FACTION_PLAYER && (!bunit->isOut() || bunit->isIgnored())
  				&& (bunit->isSurrendering() || battle->getChronoTrigger() == FORCE_WIN_SURRENDER))
  			{
-@@ -2299,6 +2402,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
+@@ -2299,6 +2425,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
   */
  void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base, int quantity, bool considerTransformations)
  {
