@@ -11210,6 +11210,39 @@ index 2242d13..4eda139 100644
  	/// Gets the available regions.
  	const std::vector<std::string> &getRegionsList() const;
  	/// Gets the ruleset for a facility type.
+diff --git a/src/Mod/RuleAlienMission.cpp b/src/Mod/RuleAlienMission.cpp
+index 50d9d2a..e2bd215 100644
+--- a/src/Mod/RuleAlienMission.cpp
++++ b/src/Mod/RuleAlienMission.cpp
+@@ -81,6 +81,7 @@ void RuleAlienMission::load(const YAML::YamlNodeReader& node)
+ 	reader.tryRead("despawnEvenIfTargeted", _despawnEvenIfTargeted);
+ 	reader.tryRead("respawnUfoAfterSiteDespawn", _respawnUfoAfterSiteDespawn);
+ 	reader.tryRead("showAlienBase", _showAlienBase);
++	reader.tryRead("ufosDetected", _ufosDetected);
+ 	reader.tryRead("interruptResearch", _interruptResearch);
+ 	reader.tryRead("siteType", _siteType);
+ 	reader.tryRead("operationType", _operationType);
+diff --git a/src/Mod/RuleAlienMission.h b/src/Mod/RuleAlienMission.h
+index fe58db2..e4a7040 100644
+--- a/src/Mod/RuleAlienMission.h
++++ b/src/Mod/RuleAlienMission.h
+@@ -167,6 +167,7 @@ public:
+ 	bool respawnUfoAfterSiteDespawn() const { return _respawnUfoAfterSiteDespawn; }
+ 	/// Should the spawned alien base be revealed immediately?
+ 	bool showAlienBase() const { return _showAlienBase; }
++	bool ufosDetected() const { return _ufosDetected; }
+ 	/// Gets the ID of the research topic that interrupts this mission (if any).
+ 	const std::string &getInterruptResearch() const { return _interruptResearch; }
+ 	/// the type of missionSite to spawn (if any)
+@@ -220,6 +221,8 @@ private:
+ 	bool _respawnUfoAfterSiteDespawn;
+ 	/// Should the spawned alien base be revealed immediately?
+ 	bool _showAlienBase;
++	/// G.I. Joe: this mission's craft are known flights (intel says when and where), seen with no radar.
++	bool _ufosDetected = false;
+ 	/// the research topic that interrupts this mission type (when discovered)
+ 	std::string _interruptResearch;
+ 	/// the type of missionSite to spawn (if any)
 diff --git a/src/Mod/RuleCobraSite.cpp b/src/Mod/RuleCobraSite.cpp
 new file mode 100644
 index 0000000..abe357a
@@ -11795,10 +11828,42 @@ index be923c1..fa01d7b 100644
  	/// Gets the month on which the base spawned.
  	int getStartMonth() const { return _startMonth; }
 diff --git a/src/Savegame/AlienMission.cpp b/src/Savegame/AlienMission.cpp
-index 5576c42..dc63963 100644
+index 5576c42..5e43b4c 100644
 --- a/src/Savegame/AlienMission.cpp
 +++ b/src/Savegame/AlienMission.cpp
-@@ -1164,9 +1164,15 @@ AlienBase *AlienMission::spawnAlienBase(Country *pactCountry, Game &engine, std:
+@@ -191,6 +191,10 @@ void AlienMission::think(Game &engine, const Globe &globe)
+ 	{
+ 		//Some missions may not spawn a UFO!
+ 		ufo->setMissionWaveNumber(_nextWave);
++		if (_rule.ufosDetected())
++		{
++			ufo->setDetected(true);   // G.I. Joe: a known flight
++		}
+ 		game.getUfos()->push_back(ufo);
+ 	}
+ 	else if ((mod.getDeployment(wave.ufoType) && !mod.getUfo(wave.ufoType) && !mod.getDeployment(wave.ufoType)->getMarkerName().empty()) // a mission site that we want to spawn directly
+@@ -892,6 +896,20 @@ void AlienMission::ufoReachedWaypoint(Ufo &ufo, Game &engine, const Globe &globe
+ 	else
+ 	{
+ 		// UFO landed.
++		// G.I. Joe: tail it home. A Joe craft following this flight (not attacking it) sees where it
++		// sets down: a hidden Cobra (or cartel) site within ~2 degrees is found.
++		if (!ufo.getCraftFollowers().empty())
++		{
++			for (auto* ab : *game.getAlienBases())
++			{
++				if (!ab->isDiscovered() && std::abs(ab->getLongitude() - ufo.getLongitude()) < 0.035
++					&& std::abs(ab->getLatitude() - ufo.getLatitude()) < 0.035)
++				{
++					ab->setDiscovered(true);
++					game.addLeadNews("!STR_TAIL_FOUND_SITE");
++				}
++			}
++		}
+ 		if (_missionSiteZoneArea != -1 && wave.objective && trajectory.getZone(curWaypoint) == (size_t)(_rule.getSpawnZone()))
+ 		{
+ 			// Remove UFO, replace with MissionSite.
+@@ -1164,9 +1182,15 @@ AlienBase *AlienMission::spawnAlienBase(Country *pactCountry, Game &engine, std:
  		ab->setPactCountry(pactCountry->getRules()->getType());
  	}
  	ab->setAlienRace(_race);
