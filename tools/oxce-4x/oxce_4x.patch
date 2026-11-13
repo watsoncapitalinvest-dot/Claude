@@ -10243,7 +10243,7 @@ index 1b57bc5..5801fb3 100644
  
  }
 diff --git a/src/Menu/SlideshowState.cpp b/src/Menu/SlideshowState.cpp
-index 5cbe289..1676e35 100644
+index 5cbe289..317df5d 100644
 --- a/src/Menu/SlideshowState.cpp
 +++ b/src/Menu/SlideshowState.cpp
 @@ -28,6 +28,7 @@
@@ -10262,6 +10262,20 @@ index 5cbe289..1676e35 100644
  		slide->onMouseClick((ActionHandler)&SlideshowState::screenClick, 0);
  		slide->onKeyboardPress((ActionHandler)&SlideshowState::screenClick, Options::keyOk);
  		slide->onKeyboardPress((ActionHandler)&SlideshowState::screenSkip, Options::keyCancel);
+@@ -72,7 +74,12 @@ SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std
+ 	_transitionTimer = new Timer(transitionSeconds * 1000);
+ 	_transitionTimer->onTimer((StateHandler)&SlideshowState::screenTimer);
+ 
+-	_game->getMod()->playMusic(_slideshowHeader.musicId);
++	// G.I. Joe: a slideshow with no music of its own keeps whatever is playing (an empty name
++	// used to match EVERY track and pick one at random, and could crash)
++	if (!_slideshowHeader.musicId.empty())
++	{
++		_game->getMod()->playMusic(_slideshowHeader.musicId);
++	}
+ 	_game->getCursor()->setVisible(false);
+ 	screenClick(0);
+ }
 diff --git a/src/Menu/StartState.cpp b/src/Menu/StartState.cpp
 index 115d1ce..871c8cf 100644
 --- a/src/Menu/StartState.cpp
@@ -10669,7 +10683,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..90aec0b 100644
+index 1885346..cd63a49 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -10716,6 +10730,15 @@ index 1885346..90aec0b 100644
  	for (auto& pair : _facilities)
  	{
  		delete pair.second;
+@@ -959,7 +982,7 @@ Music *Mod::getRandomMusic(const std::string &name) const
+ 		std::vector<Music*> music;
+ 		for (auto& pair : _musics)
+ 		{
+-			if (pair.first.find(name) != std::string::npos)
++			if (pair.second && pair.first.find(name) != std::string::npos)
+ 			{
+ 				music.push_back(pair.second);
+ 			}
 @@ -2309,6 +2332,37 @@ void Mod::loadAll()
  
  	loadExtraResources();
