@@ -1,12 +1,13 @@
 """Add `lane:` to every research topic in STORY's rulesets (John 12 Nov 22:13).
 The research tree screen (claude/RESEARCH_TREE_SCREEN_SPEC.md) puts each topic in the
-row of the department head who runs it. OXCE ignores unknown keys, so this is inert until
+band of the department that runs it (the screen shows its head, whether the head is in the office, and its efficiency). OXCE ignores unknown keys, so this is inert until
 BUILD's tree screen reads it. Run after the gen_batch scripts: python3 add_lanes.py <Ruleset dir>
 """
 import os, re, sys
 
 RD = sys.argv[1]
-H, S, D, B, R, V, A = 'Hawk', 'Scarlett', 'Doc', 'Breaker', 'Roadblock', 'Vehicles', 'Air'
+# Departments, not heads: a head can change, the department stays (John 22:18).
+H, S, D, B, R, V, A = 'COMMAND', 'INTEL', 'MEDICAL', 'COMMS', 'ARMORY', 'MOTOR_POOL', 'AIR_WING'
 LANE = {
     # interrogation spine
     'STR_COBRA_TROOPER': S, 'STR_COBRA_ORDER_OF_BATTLE': S, 'STR_VIPER_PILOT': S, 'STR_FANG_OPERATING_BASES': S,
