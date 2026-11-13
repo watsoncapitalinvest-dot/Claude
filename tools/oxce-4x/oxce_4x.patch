@@ -292,6 +292,22 @@ index c52f7ad..44470ef 100644
  
  }
  
+diff --git a/src/Battlescape/ActionMenuItem.h b/src/Battlescape/ActionMenuItem.h
+index ec94172..fd2d5e2 100644
+--- a/src/Battlescape/ActionMenuItem.h
++++ b/src/Battlescape/ActionMenuItem.h
+@@ -58,6 +58,11 @@ public:
+ 	const RuleSkill* getSkill() const;
+ 	/// Gets the assigned action TUs.
+ 	int getTUs() const;
++	/// G.I. Joe: the HD layer draws the item itself from these.
++	const Text *getDescriptionText() const { return _txtDescription; }
++	const Text *getAccuracyText() const { return _txtAcc; }
++	const Text *getTUText() const { return _txtTU; }
++	bool isHighlighted() const { return _highlighted; }
+ 	/// Sets the palettes.
+ 	void setPalette(const SDL_Color *colors, int firstcolor, int ncolors) override;
+ 	/// Redraws it.
 diff --git a/src/Battlescape/ActionMenuState.cpp b/src/Battlescape/ActionMenuState.cpp
 index 0c2f2a1..f329a13 100644
 --- a/src/Battlescape/ActionMenuState.cpp
@@ -2730,7 +2746,7 @@ index 8497877..78e0448 100644
  	/// Drop item on ground.
  	void itemDrop(Tile *t, BattleItem *item, bool updateLight);
 diff --git a/src/Battlescape/UnitSprite.cpp b/src/Battlescape/UnitSprite.cpp
-index 8fa87f8..397182e 100644
+index 8fa87f8..30212b4 100644
 --- a/src/Battlescape/UnitSprite.cpp
 +++ b/src/Battlescape/UnitSprite.cpp
 @@ -17,6 +17,9 @@
@@ -2804,7 +2820,7 @@ index 8fa87f8..397182e 100644
  	// blit order depends on unit direction, and whether we are holding a 2 handed weapon.
  	switch (unitDir)
  	{
-@@ -643,6 +666,113 @@ void UnitSprite::drawRoutine0()
+@@ -643,6 +666,120 @@ void UnitSprite::drawRoutine0()
  }
  
  
@@ -2861,14 +2877,17 @@ index 8fa87f8..397182e 100644
 +{
 +	Part body{ BODYPART_TORSO }, itemR{ BODYPART_ITEM_RIGHTHAND }, itemL{ BODYPART_ITEM_LEFTHAND };
 +	const int dir = _unit->getDirection();
-+	int clip = 0, f = (_animationFrame / 2) % 8;
++	// G.I. Joe: the rendered clips are real-time motion, so they play slower than X-COM's
++	// sprites did. Idle: one frame every 4 map ticks (was 2). Walk: a clip is a full stride
++	// (two steps), so it spans two tiles: the first half on odd steps, the second on even.
++	int clip = 0, f = (_animationFrame / 4) % 8;
 +	if (_unit->getStatus() == STATUS_COLLAPSING)
 +	{
 +		clip = 4;
 +		const int n = std::max(1, _unit->getArmor()->getDeathFrames());
 +		f = std::min(7, _unit->getFallingPhase() * 8 / n);
 +	}
-+	else if (_unit->getStatus() == STATUS_WALKING) { clip = 1; f = _unit->getWalkingPhase() % 8; }
++	else if (_unit->getStatus() == STATUS_WALKING) { clip = 1; f = ((_unit->getWalkingPhase() % 8) / 2 + 4 * (_unit->getStepCount() & 1)) % 8; }
 +	else if (_unit->getStatus() == STATUS_AIMING) clip = 3;
 +	else if (_unit->isKneeled()) clip = 2;
 +	// ONE-HANDED CLIPS. A sheet with eight clips carries a pistol stance after the
@@ -2889,6 +2908,10 @@ index 8fa87f8..397182e 100644
 +	}
 +	const int frame = clip * 64 + dir * 8 + f;
 +	selectUnit(body, clip * 64 + dir * 8, f);
++	// G.I. Joe: the sheets put the feet on row 152 of 160; X-COM's own soldiers stand on
++	// rows 33-36 of 40 (136-144 at 4x), so ours sank into the floor. Lift body and weapon.
++	constexpr int FOOT_LIFT = 4;
++	body.offY -= FOOT_LIFT;
 +
 +	const int k = std::max(1, SurfaceSet::battleScale());
 +	const auto &anch = handAnchors(_unit->getArmor()->getSpriteSheet());
@@ -2903,7 +2926,7 @@ index 8fa87f8..397182e 100644
 +		const float hy = twoHands ? (a.ry + a.ly) / 2 : (right ? a.ry : a.ly);
 +		const auto c = inkCentre(p.src);
 +		p.offX = (int)std::lround((hx - c.first) / k);
-+		p.offY = (int)std::lround((hy - c.second) / k);
++		p.offY = (int)std::lround((hy - c.second) / k) - FOOT_LIFT;
 +	};
 +	sortRifles();
 +	hold(itemR, _itemR, true);
@@ -3366,10 +3389,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..76c49e4
+index 0000000..1006270
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3017 @@
+@@ -0,0 +1,3035 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -3378,6 +3401,7 @@ index 0000000..76c49e4
 +#include "Logger.h"
 +#include "Font.h"
 +#include "../Interface/Window.h"
++#include "../Battlescape/ActionMenuItem.h"
 +#include "../Interface/TextButton.h"
 +#include "../Interface/Text.h"
 +#include "../Interface/ComboBox.h"
@@ -5440,6 +5464,23 @@ index 0000000..76c49e4
 +		claim(r);
 +		if (t && std_) nativeType(t, b->getX() + t->getX(), b->getY() + t->getY(), S_TEXT);
 +		else if (t) glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r);
++		return;
++	}
++	// THE FIRE MENU (Aimed Shot, Snap Shot, Throw...). Its frame and three texts are
++	// drawn into the item's own 8-bit surface, so nothing here saw them and the menu
++	// stayed the 1994 bevel and pixel font. A standard button plate, lit while the
++	// pointer is on it, and the three texts in the label face.
++	if (ActionMenuItem *am = dynamic_cast<ActionMenuItem*>(w))
++	{
++		R r = rectOf(am);
++		if (!clipBase(r) || !face("label")) return;
++		const int X0 = xs[r.x0], Y0 = ys[r.y0], X1 = xs[r.x1], Y1 = ys[r.y1];
++		const int m = std::max(1, (ys[1] - ys[0]) / 3);
++		stdButton(X0 + m, Y0 + m, X1 - m, Y1 - m, am->isHighlighted());
++		claim(r);
++		const Text *ts[3] = { am->getDescriptionText(), am->getAccuracyText(), am->getTUText() };
++		for (const Text *t : ts)
++			if (t && !t->getText().empty()) nativeType(t, am->getX() + t->getX(), am->getY() + t->getY(), S_TEXT);
 +		return;
 +	}
 +	if (Frame *fm = dynamic_cast<Frame*>(w))
@@ -9159,6 +9200,34 @@ index 0558521..45b8b71 100644
  	/// Creates a new image button with the specified size and position.
  	BattlescapeButton(int width, int height, int x = 0, int y = 0);
  	/// Cleans up the image button.
+diff --git a/src/Interface/ComboBox.cpp b/src/Interface/ComboBox.cpp
+index 3f32e45..a488540 100644
+--- a/src/Interface/ComboBox.cpp
++++ b/src/Interface/ComboBox.cpp
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "ComboBox.h"
++#include "../Engine/HiUI.h"
+ #include <algorithm>
+ #include "TextButton.h"
+ #include "Window.h"
+@@ -343,8 +344,15 @@ void ComboBox::blit(SDL_Surface *surface)
+ 	{
+ 		_button->blit(surface);
+ 		_arrow->blit(surface);
++		// G.I. Joe: the popup and its list are not in the state's widget list, so the HD
++		// layer never saw them and they showed as the raw 8-bit palette (bright green).
++		// Hand them to it as State::blit does for every other widget.
++		HiUI::before(_window);
+ 		_window->blit(surface);
++		HiUI::after(_window);
++		HiUI::before(_list);
+ 		_list->blit(surface);
++		HiUI::after(_list);
+ 	}
+ }
+ 
 diff --git a/src/Interface/ComboBox.h b/src/Interface/ComboBox.h
 index dc01de7..bc4de01 100644
 --- a/src/Interface/ComboBox.h
@@ -11247,7 +11316,7 @@ index 97ef4f5..0dbe163 100644
  	void addMissionLocation(const std::string &varName, const std::string &regionName, int zoneNumber, int maximum);
  	/// Checks that a given mission location (city or whatever) isn't stored in our list of previously attacked locations.
 diff --git a/src/Savegame/BattleUnit.cpp b/src/Savegame/BattleUnit.cpp
-index 46fbf1f..051e997 100644
+index 46fbf1f..306606f 100644
 --- a/src/Savegame/BattleUnit.cpp
 +++ b/src/Savegame/BattleUnit.cpp
 @@ -708,6 +708,9 @@ void BattleUnit::load(const YAML::YamlNodeReader& node, const Mod *mod, const Sc
@@ -11270,11 +11339,27 @@ index 46fbf1f..051e997 100644
  	writer.write("rankInt", _rankInt);
  	writer.write("rankIntUnified", _rankIntUnified);
  	writer.write("moraleRestored", _moraleRestored);
+@@ -1168,6 +1174,7 @@ void BattleUnit::startWalking(int direction, Position destination, SavedBattleGa
+ 	{
+ 		_direction = direction;
+ 		_status = STATUS_WALKING;
++		++_stepCount;
+ 	}
+ 	if (_haveNoFloorBelow || direction >= Pathfinding::DIR_UP)
+ 	{
 diff --git a/src/Savegame/BattleUnit.h b/src/Savegame/BattleUnit.h
-index ecc040f..4049cad 100644
+index ecc040f..b7393e4 100644
 --- a/src/Savegame/BattleUnit.h
 +++ b/src/Savegame/BattleUnit.h
-@@ -130,6 +130,11 @@ private:
+@@ -102,6 +102,7 @@ private:
+ 	UnitStatus _status;
+ 	bool _wantsToSurrender, _isSurrendering;
+ 	int _walkPhase, _fallPhase;
++	int _stepCount = 0; // G.I. Joe: steps taken, so a whole-body walk clip can span two tiles
+ 	std::vector<BattleUnit *> _visibleUnits, _unitsSpottedThisTurn;
+ 	std::vector<Tile *> _visibleTiles;
+ 	std::unordered_set<Tile *> _visibleTilesLookup;
+@@ -130,6 +131,11 @@ private:
  	BattleUnit *_charging;
  
  	Uint8 _turnsSinceSpotted[FACTION_MAX] = { 255, 255, 255 };
@@ -11286,7 +11371,16 @@ index ecc040f..4049cad 100644
  	Uint8 _turnsLeftSpottedForSnipers[FACTION_MAX] = { 0, 0, 0 };
  	Uint8 _turnsSinceStunned = 255;
  
-@@ -704,6 +709,24 @@ public:
+@@ -286,6 +292,8 @@ public:
+ 	void keepWalking(SavedBattleGame *savedBattleGame, bool fullWalkCycle);
+ 	/// Gets the walking phase for animation and sound
+ 	int getWalkingPhase() const;
++	/// G.I. Joe: how many steps this unit has started (whole-body walk clips).
++	int getStepCount() const { return _stepCount; }
+ 	/// Gets the walking phase for diagonal walking
+ 	int getDiagonalWalkingPhase() const;
+ 	/// Gets the unit's destination when walking
+@@ -704,6 +712,24 @@ public:
  	/// Set how many turns this unit will be exposed for. For specific faction.
  	void setTurnsSinceSpottedByFaction(UnitFaction faction, int turns);
  	/// Set how many turns this unit will be exposed for.
