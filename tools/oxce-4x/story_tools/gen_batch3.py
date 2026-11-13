@@ -82,7 +82,13 @@ for i, n, c, deps, txt in [
  # squad tactics (John 23:16-23:19): researched only in a base with a Briefing Room (base function STR_BRIEFING_ROOM)
  ('STR_OVERWATCH_DRILLS', 'Overwatch Drills', 80, None, 'Hawk drills the squads on holding ground. A Joe who ends his turn without moving gets +15% reaction-fire accuracy and reacts a little sooner.'),
  ('STR_BREACHING_DRILLS', 'Breaching Drills', 100, ['STR_OVERWATCH_DRILLS'], 'Door drills. Opening doors and containers costs half the time units, and the first Joe through a door gets +20% accuracy that turn.'),
- ('STR_FIRE_AND_MOVE', 'Fire and Move', 120, ['STR_OVERWATCH_DRILLS'], 'One Joe shoots, another moves. A Cobra a Joe fires at is pinned: no reaction fire until his next turn. Smoke grenades cost half the time units to throw, and Joes moving inside smoke cannot be reaction-fired.')]:
+ ('STR_FIRE_AND_MOVE', 'Fire and Move', 120, ['STR_OVERWATCH_DRILLS'], 'One Joe shoots, another moves. A Cobra a Joe fires at is pinned: no reaction fire until his next turn. Smoke grenades cost half the time units to throw, and Joes moving inside smoke cannot be reaction-fired.'),
+ # transport defences (John 13 Nov 14:11): open the first time a Joe transport is attacked in the air.
+ # STR_TRANSPORT_UNDER_FIRE is never researched by hand: BUILD's hook grants it on the first transport interception.
+ ('STR_TRANSPORT_UNDER_FIRE', 'Transport Under Fire', 1, ['STR_STORY_LOCK'], 'Cobra has started hunting our transports in the air. Our helicopters and the Hercules fly unarmed, and every squad aboard is a target. The Air Wing has three answers on the drawing board.'),
+ ('STR_TRANSPORT_DOOR_GUNS', 'Transport Door Guns', 60, ['STR_TRANSPORT_UNDER_FIRE'], 'A heavy machine gun on a swing mount in every transport door. It fires in any direction and answers anything that comes close.'),
+ ('STR_TRANSPORT_ARMOR_PLATING', 'Transport Armor Plating', 80, ['STR_TRANSPORT_UNDER_FIRE'], 'Bolt-on armour over the cockpit, the engines and the troop bay. Every transport takes more punishment before it goes down.'),
+ ('STR_TRANSPORT_COUNTERMEASURE_PODS', 'Countermeasure Pods', 60, ['STR_TRANSPORT_UNDER_FIRE'], 'Flare dispensers under every transport, and drills for the pilots on breaking a missile lock.')]:
     t(i, n, c, 15, deps, txt)
 
 # research money (John 21:28: "some are money and/or resources like cobra parts"). Dollars, charged when the project
@@ -106,9 +112,10 @@ FUNDS = {
  'STR_LONG_RANGE_RADAR': 600000}
 FUNDS = {k: int(round(v * 0.75, -4)) for k, v in FUNDS.items()}   # John 21:38: research money cut by 25%
 FUNDS.update({'STR_OVERWATCH_DRILLS': 60000, 'STR_BREACHING_DRILLS': 80000, 'STR_FIRE_AND_MOVE': 90000})   # pitched after the cut (John 23:16-23:19)
+FUNDS.update({'STR_TRANSPORT_DOOR_GUNS': 60000, 'STR_TRANSPORT_ARMOR_PLATING': 90000, 'STR_TRANSPORT_COUNTERMEASURE_PODS': 70000})   # John 13 Nov 14:11 (dogfight design 3b)
 BASEFUNC = {'STR_OVERWATCH_DRILLS': ['STR_BRIEFING_ROOM'], 'STR_BREACHING_DRILLS': ['STR_BRIEFING_ROOM'], 'STR_FIRE_AND_MOVE': ['STR_BRIEFING_ROOM']}
 R = [{'name': i, 'cost': c, 'points': p, **({'costFunds': FUNDS[i]} if i in FUNDS else {}), **({'dependencies': d} if d else {}), **({'requiresBaseFunc': BASEFUNC[i]} if i in BASEFUNC else {}), 'unlocks': []} for i, n, c, p, d, _ in T]
-missing=[i for i,*_ in T if i not in FUNDS and not i.startswith('STR_STANDARD') and i not in ('STR_FIELD_MEDICINE','STR_BREACHING_SHOTGUN')]
+missing=[i for i,*_ in T if i not in FUNDS and not i.startswith('STR_STANDARD') and i not in ('STR_FIELD_MEDICINE','STR_BREACHING_SHOTGUN','STR_TRANSPORT_UNDER_FIRE')]
 assert not missing, missing
 ART = [{'id': i, 'type_id': 8, 'section': SECTION, 'requires': [i], 'text': i + '_UFOPEDIA'} for i, *_ in T]
 S = {'STR_JOE_RESEARCH_FILES': 'G.I. JOE RESEARCH'}
