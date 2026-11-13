@@ -141,17 +141,27 @@ S.update({
 })
 
 # ---------------------------------------------------------------- ACT 1 BEATS
-act1_items = [live_item('STR_CARTEL_BOSS', 20000)] + [clue_item(t, s) for t, s in [
+act1_items = [live_item('STR_CARTEL_BOSS', 20000), live_item('STR_ROBBERY_LEADER', 10000)] + [clue_item(t, s) for t, s in [
+ ('STR_CARTEL_LOGBOOK', 0), ('STR_INFORMANT_TIP', 0), ('STR_GETAWAY_PAPERS', 0),
  ('STR_CARTEL_LEDGER', 5000), ('STR_CRATE_SERIAL_PLATE', 0), ('STR_COBRA_STENCIL', 0), ('STR_FACTORY_SCHEDULE', 0),
  ('STR_BROADCAST_RECORDING', 0), ('STR_BLUDD_CALLING_CARD', 0), ('STR_SHIPPING_MANIFEST', 0), ('STR_PILOT_LOGBOOK', 0),
  ('STR_DEPOT_RECORDS', 0), ('STR_TERROR_DROME_PLANS', 0), ('STR_MARS_MARKED_WEAPON', 0)]]
 A = [
  topic('STR_RUMOURED_TERROR_GROUP', 10, 0, deps=[LOCK]),                      # BUILD: put in the starting research
- topic('STR_CARTEL_LEDGER', 60, 20, needItem=True, destroyItem=True, unlocks=['STR_WHO_IS_COBRA']),
+ topic('STR_CARTEL_LEDGER', 30, 20, needItem=True, destroyItem=True, unlocks=['STR_WHO_IS_COBRA', 'STR_CARTEL_FLIGHT_ROUTE']),
  topic('STR_CRATE_SERIAL_PLATE', 40, 10, needItem=True, destroyItem=True),
  topic('STR_COBRA_STENCIL', 30, 10, needItem=True, destroyItem=True, unlocks=['STR_WHO_IS_COBRA']),
  topic('STR_WHO_IS_COBRA', 80, 20, deps=[LOCK]),
- topic('STR_CARTEL_BOSS', 80, 20, needItem=True, destroyItem=True, unlocks=['STR_FACTORY_REACTIVATION_DATE'], lookup='STR_CARTEL_BOSS_INTERROGATION'),
+ topic('STR_CARTEL_BOSS', 80, 20, needItem=True, destroyItem=True, unlocks=['STR_FACTORY_REACTIVATION_DATE', 'STR_CARTEL_FLIGHT_ROUTE'], lookup='STR_CARTEL_BOSS_INTERROGATION'),
+ # THE CARTEL ARC (John 13 Nov 02:31-02:38): one lead, 'Who supplies the cartel?', ranch -> factory, teaching the intel tools.
+ # Tutorial steps are kept short (10 analysts on Day 1) so the whole arc runs about 6 weeks.
+ topic('STR_CARTEL_FLIGHT_ROUTE', 20, 15, deps=[LOCK]),                       # boss or ledger: the next cartel flight shows on the map
+ topic('STR_CARTEL_LOGBOOK', 40, 10, needItem=True, destroyItem=True),        # flight shot down instead of tailed: logbook -> stash house
+ topic('STR_INFORMANT_TIP', 15, 10, needItem=True, destroyItem=True),         # Scarlett's operation: the armored-car job, days ahead
+ topic('STR_ROBBERY_LEADER', 30, 20, needItem=True, destroyItem=True, unlocks=['STR_BORDER_BANK_TRACE'], lookup='STR_ROBBERY_LEADER_INTERROGATION'),
+ topic('STR_GETAWAY_PAPERS', 40, 10, needItem=True, destroyItem=True, unlocks=['STR_BORDER_BANK_TRACE']),   # leader dead, or the safehouse raid
+ topic('STR_BORDER_BANK_TRACE', 40, 30, deps=[LOCK]),                         # lead full: the abandoned factory appears
+
  topic('STR_FACTORY_SCHEDULE', 60, 20, needItem=True, destroyItem=True, unlocks=['STR_FACTORY_REACTIVATION_DATE']),
  topic('STR_FACTORY_REACTIVATION_DATE', 20, 10, deps=[LOCK]),
  topic('STR_BROADCAST_RECORDING', 100, 30, needItem=True, destroyItem=True, lookup='STR_TRACE_THE_BROADCAST'),
@@ -176,15 +186,15 @@ S.update({
  'STR_RUMOURED_TERROR_GROUP': 'A Rumoured Terror Group',
  'STR_RUMOURED_TERROR_GROUP_UFOPEDIA': 'For a year the agencies have traded stories about a new terrorist outfit: well armed, well paid, and gone by the time anyone arrives. No name, no photograph, no defectors.{NEWLINE}{NEWLINE}Hawk says money and guns always leave a trail. I say anyone this careful has made one mistake somewhere. Either way we start with a border cartel carrying hardware it cannot afford.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_CARTEL_LEDGER': 'Cartel Ledger',
- 'STR_CARTEL_LEDGER_UFOPEDIA': 'The boss kept honest books, which is more than his customers did. Drugs, bribes, the usual. And one supplier with no name: cash in advance, collection at a West Texas machine works that went bankrupt two years ago.{NEWLINE}{NEWLINE}Bankrupt factories don\'t sell rifles. Somebody is using that one.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_CARTEL_LEDGER_UFOPEDIA': 'The boss kept honest books, which is more than his customers did. Drugs, bribes, the usual. And one supplier with no name: cash in advance, paid through a bank on the border, and the guns delivered by air.{NEWLINE}{NEWLINE}Somebody is arming a border cartel and doesn\'t want to be known. That makes me want to know.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_CRATE_SERIAL_PLATE': 'Crate Serial Plate',
- 'STR_CRATE_SERIAL_PLATE_UFOPEDIA': 'Roadblock read me the plate off a crate in the barn. The serial belongs to no army and no maker on any register we can reach. It does match a lot number, C-0417, stamped at a machine works in West Texas that went bust two years ago.{NEWLINE}{NEWLINE}One address. I like it already.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_CRATE_SERIAL_PLATE_UFOPEDIA': 'Roadblock read me the plate off a crate in the barn. The serial belongs to no army and no maker on any register we can reach. It carries a lot number, C-0417, that nobody admits to.{NEWLINE}{NEWLINE}Someone stamps their own lot numbers. That\'s a factory, somewhere.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_COBRA_STENCIL': 'Cobra Stencil',
  'STR_COBRA_STENCIL_UFOPEDIA': 'Painted inside a crate lid, where the buyer was never meant to look: a coiled snake, hood spread. Not a cartel mark. Not anybody\'s mark, as far as any file in The Pit knows.{NEWLINE}{NEWLINE}Whoever packs these guns signs their work. That\'s pride, or it\'s a message.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_WHO_IS_COBRA': 'Who Is Cobra?',
  'STR_WHO_IS_COBRA_UFOPEDIA': 'The snake on those crates has a name: Cobra. No country, no cause I can find, and more money than any terrorist group has a right to.{NEWLINE}{NEWLINE}From today, anything we take from them goes to the lab, and anyone we take from them comes to me.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_CARTEL_BOSS_INTERROGATION': 'Cartel Boss Interrogation',
- 'STR_CARTEL_BOSS_INTERROGATION_UFOPEDIA': 'The boss is a businessman and he bargained like one. His supplier warned him off the West Texas plant for a while: new owners were coming, and they wanted it back on a fixed date.{NEWLINE}{NEWLINE}He sold me the date for a better cell. Cheap at the price.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_CARTEL_BOSS_INTERROGATION_UFOPEDIA': 'The boss is a businessman and he bargained like one. He gave us his next flight: the plane, the strip and the night. He also let slip that his supplier\'s \'new owners\' want their plant back on a fixed date. He doesn\'t know where the plant is. He does know the date.{NEWLINE}{NEWLINE}He sold me both for a better cell. Cheap at the price.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_FACTORY_SCHEDULE': 'Factory Production Schedule',
  'STR_FACTORY_SCHEDULE_UFOPEDIA': 'From the plant manager\'s safe: a production schedule on letterhead with the snake on it. The lines restart, a guard detail arrives and the first shipment leaves, all on one date.{NEWLINE}{NEWLINE}Hawk has circled it. So have I.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_FACTORY_REACTIVATION_DATE': 'Factory Reactivation Date',
@@ -193,6 +203,20 @@ S.update({
  'STR_TRACE_THE_BROADCAST_UFOPEDIA': 'Cobra Commander has introduced himself to the world: a hooded man, a snake banner and ninety seconds of threats. Breaker took the signal apart. Three relays, and whoever set up the first one got lazy.{NEWLINE}{NEWLINE}It leads to one building and one Cobra cell. A cell, not a headquarters. But cells are full of people, and people talk.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_EXTENSIVE_ENTERPRISES': 'Extensive Enterprises',
  'STR_EXTENSIVE_ENTERPRISES_UFOPEDIA': 'Cobra\'s money runs through one company: Extensive Enterprises. Warehouses, shipping lines, offices in three countries, and every one of them clean on paper. The owners of record are twin brothers, Tomax and Xamot Paoli. Their signatures on the board minutes match to the pen stroke.{NEWLINE}{NEWLINE}Their offices and warehouses can now be raided.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_CARTEL_FLIGHT_ROUTE': 'Cartel Flight Route',
+ 'STR_CARTEL_FLIGHT_ROUTE_UFOPEDIA': 'The cartel\'s next flight is on the board: the plane, the strip and the night. Shoot it down and we get a wreck. Follow it home and we get their stash house.{NEWLINE}{NEWLINE}Hawk wants it followed. So do I.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_CARTEL_LOGBOOK': 'Cartel Pilot\'s Logbook',
+ 'STR_CARTEL_LOGBOOK_UFOPEDIA': 'We shot it down, so the pilot can\'t show us the way home. His logbook can. Every run ends at the same strip outside the same town: the cartel\'s stash house.{NEWLINE}{NEWLINE}It took longer than following him would have.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_INFORMANT_TIP': 'Informant\'s Tip',
+ 'STR_INFORMANT_TIP_UFOPEDIA': 'My courier at the stash house came through. The cartel lost a fortune at the ranch and means to make it back fast: an armored car, a payroll run, and a date.{NEWLINE}{NEWLINE}We\'ll be there first.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_ROBBERY_LEADER': 'Robbery Leader',
+ 'STR_ROBBERY_LEADER_INTERROGATION': 'Robbery Leader Interrogation',
+ 'STR_ROBBERY_LEADER_INTERROGATION_UFOPEDIA': 'The crew boss knows nothing about guns and everything about money. The cartel washes its cash through one bank on the border, and every month that bank pays a company in West Texas that hasn\'t made anything in two years.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_GETAWAY_PAPERS': 'Getaway Papers',
+ 'STR_GETAWAY_PAPERS_UFOPEDIA': 'Paperwork from the getaway van: a deposit book from a bank on the border and a list of account numbers the crew was told to pay into. Somebody forgot to tell them not to write it down.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_BORDER_BANK_TRACE': 'Follow the Money: the Border Bank',
+ 'STR_BORDER_BANK_TRACE_UFOPEDIA': 'My analysts walked the cartel\'s money through the border bank, and every trail ends at one account: a machine works on a rail spur in West Texas. Bankrupt for two years, still being paid. Lot C-0417 came out of there.{NEWLINE}{NEWLINE}Whoever armed the cartel built those guns in that factory. Hawk is planning the visit.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_LEAD_CARTEL_SUPPLIER': 'Who supplies the cartel?',
  'STR_FOLLOW_THE_MONEY': 'Follow the Money',
  'STR_FOLLOW_THE_MONEY_UFOPEDIA': 'Cobra washes its cash before it spends it: through the Twins\' companies, a few friendly banks, and anywhere that takes a lot of money and asks no questions. Washed money leaves cold trails.{NEWLINE}{NEWLINE}The bank wrappers and Extensive Enterprises\' books give us the method. My analysts can now trace laundered cash back to where it was washed, and with enough paper Washington can freeze the accounts.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_MAJOR_BLUDD': 'Major Bludd',

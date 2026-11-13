@@ -20,8 +20,8 @@ S['STR_BRIEFING_CARTEL_RANCH'] = P.join([
 ])
 S['STR_BRIEFING_ABANDONED_FACTORY_TITLE'] = 'OPERATION: DEAD FACTORY'
 S['STR_BRIEFING_ABANDONED_FACTORY'] = P.join([
-    "HAWK: The ranch paid off. The cartel's guns came out of a machine works on a rail spur in West Texas. It went bust two years ago and the sign is still up. A dead factory doesn't ship rifles. Somebody's been using it.",
-    "Our information says it's empty. Treat that as a guess. Search everything: the offices, the lockers, the boxcar, the furnace. I want to know who owned it, what they made, and whether they're coming back.",
+    "HAWK: We pulled one thread for a month and it held all the way. The ranch, the flight, the stash house, the robbery, the bank. Every trail ends at a machine works on a rail spur in West Texas. It went bust two years ago and it's still being paid.",
+    "Our information says it's empty. Treat that as a guess. Search everything: the offices, the lockers, the boxcar, the furnace. I want to know who owns it, what they made, and whether they're coming back.",
     "Watch your feet. People who walk away from a place like that sometimes leave a present behind. And put somebody on the water tower.",
     "Get what you find back to the A.P.C. and get out. We go in, we read their mail, we leave.",
 ])
@@ -31,6 +31,36 @@ S['STR_BRIEFING_COBRA_CELL'] = P.join([
     "Don't get excited. This is not their headquarters. A cell is a few rooms, a radio, and people who take orders. That's what we want: the people.",
     "Every one of them knows a name we don't. Bring me a Cobra soldier alive and Scarlett will have him talking by the end of the week. Dead men file no reports.",
     "Expect them to be better armed than the cartel. Expect them to fight. Expect civilians close by. Move out.",
+])
+
+
+# ------------------------------------------------------------------ the cartel arc (John 13 Nov 02:31-02:38)
+S['STR_LEAD_CARTEL_SUPPLIER_DESC'] = "Somebody is arming the border cartel. Follow the guns, the planes and the money back to whoever it is."
+S['STR_EVENT_CARTEL_FLIGHT'] = 'CARTEL FLIGHT DEPARTING'
+S['STR_EVENT_CARTEL_FLIGHT_DESCRIPTION'] = P.join([
+    "The flight the cartel boss gave us is in the air: a twin-engine cargo plane, running north without lights.",
+    "HAWK: Don't shoot it down. Follow it. Wherever it lands is where they keep their stock.",
+])
+S['STR_OP_SCARLETT_STASH_HOUSE'] = 'Operation: Quiet Courier'
+S['STR_OP_SCARLETT_STASH_HOUSE_DESC'] = P.join([
+    "Scarlett goes in alone, as a buyer, to the cartel's stash house. She'll bug a shipment or turn one of their couriers into our man. Either way we hear what they plan next.",
+    "She'll be gone for days. Intel research slows while she's out, and if she's made, they'll hold her.",
+])
+S['STR_BRIEFING_ARMORED_CAR_TITLE'] = 'OPERATION: PAYROLL'
+S['STR_BRIEFING_ARMORED_CAR'] = P.join([
+    "HAWK: The cartel lost a fortune at the ranch and they want it back fast. Scarlett's courier gave us the job: an armored car on a payroll run, hit at a gas station on the highway.",
+    "They'll come heavy and they'll come quick. The money goes into a van, and the van goes for the county line. If it gets off the map, the cash is gone.",
+    "Local police will already be there, pinned down. Get them out alive. And I want the man running the crew in one piece. He knows where the money goes.",
+])
+S['STR_BRIEFING_CARTEL_SAFEHOUSE_TITLE'] = 'OPERATION: COLD TRAIL'
+S['STR_BRIEFING_CARTEL_SAFEHOUSE'] = P.join([
+    "HAWK: They got away with the payroll. They didn't get away clean. The van was dumped two counties over, and the trail ends at a farmhouse they're using as a safehouse.",
+    "The money's probably moved on. The paperwork usually doesn't. Bring me anything with a number on it.",
+])
+S['STR_BRIEFING_STASH_HOUSE_RESCUE_TITLE'] = 'OPERATION: BUYER BEWARE'
+S['STR_BRIEFING_STASH_HOUSE_RESCUE'] = P.join([
+    "HAWK: Scarlett's cover is blown. The cartel are holding her at the stash house, and every day she's in there she's in more danger and we're more exposed.",
+    "We go in now. Get her out first. Everything else is second.",
 ])
 
 # ------------------------------------------------------------------ Cobra Commander's broadcast (Geoscape event)
