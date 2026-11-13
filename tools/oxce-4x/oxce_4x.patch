@@ -7278,7 +7278,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..0e9e2ac 100644
+index 6b4e79d..b53e227 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -17,6 +17,8 @@
@@ -7734,7 +7734,7 @@ index 6b4e79d..0e9e2ac 100644
 +		const char *word; Uint32 ink;
 +		if (score <= threshold - 300) { word = "STR_THREAT_IMMINENT"; ink = 0xE5483A; }
 +		else if (score <= threshold)  { word = "STR_THREAT_HIGH";     ink = 0xE8873A; }
-+		else if (score <= 0)          { word = "STR_THREAT_ELEVATED"; ink = 0xE8B923; }
++		else if (score < 0)           { word = "STR_THREAT_ELEVATED"; ink = 0xE8B923; }   // a quiet day one (score 0) reads LOW
 +		else                          { word = "STR_THREAT_LOW";      ink = 0x8FC66A; }
 +		_txtDeskThreat->setText(tr(word));
 +		HiUI::textInk(_txtDeskThreat, ink);
@@ -9170,6 +9170,33 @@ index ed6845f..52af3a5 100644
  	/// Cleans up the frame.
  	~Frame();
  	/// Sets the border color.
+diff --git a/src/Interface/ScrollBar.cpp b/src/Interface/ScrollBar.cpp
+index 45a5275..a0a1ba9 100644
+--- a/src/Interface/ScrollBar.cpp
++++ b/src/Interface/ScrollBar.cpp
+@@ -21,6 +21,7 @@
+ #include "../Engine/Action.h"
+ #include "TextList.h"
+ #include "../Engine/Palette.h"
++#include "../Engine/HiUI.h"
+ 
+ namespace OpenXcom
+ {
+@@ -240,6 +241,14 @@ void ScrollBar::draw()
+  */
+ void ScrollBar::drawTrack()
+ {
++	if (_bg && HiUI::enabled())
++	{
++		// G.I. Joe: under the HD layer the window art is drawn at display resolution and its
++		// 8-bit copy is only a stand-in, so copying it here showed as noise. Leave the track
++		// clear and let the art show through.
++		_track->clear();
++		return;
++	}
+ 	if (_bg)
+ 	{
+ 		_track->copy(_bg);
 diff --git a/src/Interface/Slider.h b/src/Interface/Slider.h
 index fc79ef8..875b38b 100644
 --- a/src/Interface/Slider.h
@@ -9492,7 +9519,7 @@ index 665d922..160915e 100644
  	bool _debugInVisualStudio;
  	std::string _newVersion;
 diff --git a/src/Menu/NewGameState.cpp b/src/Menu/NewGameState.cpp
-index a4e38dc..21c7adc 100644
+index a4e38dc..86e4537 100644
 --- a/src/Menu/NewGameState.cpp
 +++ b/src/Menu/NewGameState.cpp
 @@ -28,6 +28,9 @@
@@ -9564,7 +9591,7 @@ index a4e38dc..21c7adc 100644
 +	// Starting cash, $1M to $20M in $100k steps; starts on what the ruleset gives.
 +	_txtCash->setText(tr("STR_STARTING_CASH"));
 +	_slrCash->setRange(10, 200);
-+	_slrCash->setValue(std::max(10, std::min(200, _game->getMod()->getInitialFunding() / 100)));
++	_slrCash->setValue(std::max(10, std::min(200, _game->getMod()->getStartingFunds() / 100)));
 +	_slrCash->onChange((ActionHandler)&NewGameState::slrChange);
 +
 +	// Cobra's head start, 0 to 24 months.
@@ -10154,7 +10181,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..456e350 100644
+index 1885346..3efe15a 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,7 @@
@@ -10371,7 +10398,15 @@ index 1885346..456e350 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3831,6 +4003,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3227,6 +3399,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+ 	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
+ 	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
+ 	reader.tryRead("initialFunding", _initialFunding);
++	reader.tryRead("startingFunds", _startingFunds);
+ 	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
+ 	{
+ 		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
+@@ -3831,6 +4004,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -10397,7 +10432,7 @@ index 1885346..456e350 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4260,14 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4261,14 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -10412,7 +10447,7 @@ index 1885346..456e350 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +5968,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +5969,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -10432,7 +10467,7 @@ index 1885346..456e350 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +5991,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +5992,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -10440,7 +10475,7 @@ index 1885346..456e350 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6005,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6006,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -10480,7 +10515,7 @@ index 1885346..456e350 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..3af92fb 100644
+index 2242d13..757821f 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,7 @@ class SavedGame;
@@ -10533,7 +10568,15 @@ index 2242d13..3af92fb 100644
  	std::map<std::string, RuleBaseFacility*> _facilities;
  	std::map<std::string, RuleCraft*> _crafts;
  	std::map<std::string, RuleCraftWeapon*> _craftWeapons;
-@@ -327,6 +356,29 @@ private:
+@@ -225,6 +254,7 @@ private:
+ 	int _maxStaticLightDistance, _maxDynamicLightDistance, _enhancedLighting;
+ 	int _costHireEngineer, _costHireScientist;
+ 	int _costEngineer, _costScientist, _timePersonnel, _hireByCountryOdds, _hireByRegionOdds, _initialFunding;
++	int _startingFunds = 0;
+ 	int _globalTransferCostMult, _globalTransferCostDiv;
+ 
+ 	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
+@@ -327,6 +357,29 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -10563,7 +10606,7 @@ index 2242d13..3af92fb 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +744,44 @@ public:
+@@ -692,6 +745,46 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -10602,6 +10645,8 @@ index 2242d13..3af92fb 100644
 +	/// What one month of New Game head start banks for Cobra, and where.
 +	/// Starting funds in thousands, as the ruleset sets them (initialFunding).
 +	int getInitialFunding() const { return _initialFunding; }
++	/// G.I. Joe 4x: the opening balance (thousands), apart from the monthly funding initialFunding sets. 0 = same as initialFunding.
++	int getStartingFunds() const { return _startingFunds > 0 ? _startingFunds : _initialFunding; }
 +	int getCobraHeadStartFunds() const { return _cobraHeadStartFunds; }
 +	int getCobraHeadStartMateriel() const { return _cobraHeadStartMateriel; }
 +	const std::string &getCobraHeadStartRegion() const { return _cobraHeadStartRegion; }
