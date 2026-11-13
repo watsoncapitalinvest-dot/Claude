@@ -21,7 +21,7 @@ if exist "%TEMP%\oxce4x_res.bat" call "%TEMP%\oxce4x_res.bat"
 if not exist "user\" mkdir "user"
 set OXCE_BATTLE_SCALE=4
 set OXCE_MAP_HIRES=4
-start "" OpenXcom.exe -user "%~dp0user" -cfg "%~dp0user" -fullscreen true -displayWidth %W% -displayHeight %H% -battlescapeScale 6
+start "" OpenXcom.exe -user "%~dp0user" -cfg "%~dp0user" -fullscreen true -displayWidth %W% -displayHeight %H% -battlescapeScale 6 -lazyLoadResources false
 exit /b 0
 :missing
 echo Could not find the X-COM game files.

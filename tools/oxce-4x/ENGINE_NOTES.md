@@ -509,3 +509,23 @@ so `HiUI::spriteIn(dst, src, x, y)` records "draw src's twin at (x,y) inside
 dst" and `after()` paints it there with `sprite()` on every draw.
 `surfaceGone` drops both ends.
 
+
+## Frame cost and screen opening (12 Nov evening)
+John: the mouse was jittery, windows opened slowly with fuzz in between. Measured, not guessed
+(`OXCE_PERF=1` logs a frame's CPU cost every 120 frames: draw = the states + HiUI paint,
+flip = zoom + composite + present). Geoscape, before -> after, on this container:
+draw 19 -> 6 ms, flip 24 -> 17 ms.
+- `stretch()` resampled every piece of art bilinearly every frame. The stretched result is now
+  kept (keyed by image, source rect and size; capped at 160 MB, then dropped and rebuilt).
+- The globe's shading redid the whole disc whenever the sun moved at all, i.e. every game tick.
+  Now only when it has moved enough to see (0.004 on any axis).
+- The 8-bit frame is written straight into the 32-bit screen by `HiUI::composite(..., true)`,
+  only where the overlay does not cover it: one pass instead of clear + zoom + convert +
+  overwrite. `OXCE_OLDFLIP=1` brings the old path back if this ever needs ruling out.
+- The cursor is drawn at the real mouse pixel. It was drawn at the game's cursor position,
+  which is in base pixels, so at 1920 wide the arrow moved in 6-pixel jumps.
+- Opening the base took ~1.5 s because lazy loading reads that screen's 216 images the first
+  time. Play_4x.bat now passes `-lazyLoadResources false`: about 9 s more at start-up here,
+  then the base opens in ~0.25 s. Needs the large-address-aware exe (more resident art).
+- The "fuzz between windows" did not reproduce here; it is most likely those load stalls
+  showing half-drawn screens on Windows. Unconfirmed.
