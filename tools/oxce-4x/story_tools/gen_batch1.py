@@ -158,6 +158,8 @@ A = [
  # existing (gijoe_frontops.rul): the front-company books now lead to Extensive Enterprises
  topic('STR_COBRA_LEDGERS', 150, 30, needItem=True, unlocks=['STR_EXTENSIVE_ENTERPRISES']),
  topic('STR_EXTENSIVE_ENTERPRISES', 150, 40, deps=[LOCK]),
+ # John 13 Nov 02:00: laundering is fought by tracing the money (needs the front company found AND banded cash decoded)
+ topic('STR_FOLLOW_THE_MONEY', 200, 40, deps=['STR_EXTENSIVE_ENTERPRISES', 'STR_BANDED_CASH']),
  topic('STR_BLUDD_CALLING_CARD', 40, 20, needItem=True, destroyItem=True, lookup='STR_MAJOR_BLUDD'),
  topic('STR_SHIPPING_MANIFEST', 50, 15, needItem=True, destroyItem=True),
  topic('STR_PILOT_LOGBOOK', 50, 15, needItem=True, destroyItem=True),
@@ -191,6 +193,8 @@ S.update({
  'STR_TRACE_THE_BROADCAST_UFOPEDIA': 'Cobra Commander has introduced himself to the world: a hooded man, a snake banner and ninety seconds of threats. Breaker took the signal apart. Three relays, and whoever set up the first one got lazy.{NEWLINE}{NEWLINE}It leads to one building and one Cobra cell. A cell, not a headquarters. But cells are full of people, and people talk.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_EXTENSIVE_ENTERPRISES': 'Extensive Enterprises',
  'STR_EXTENSIVE_ENTERPRISES_UFOPEDIA': 'Cobra\'s money runs through one company: Extensive Enterprises. Warehouses, shipping lines, offices in three countries, and every one of them clean on paper. The owners of record are twin brothers, Tomax and Xamot Paoli. Their signatures on the board minutes match to the pen stroke.{NEWLINE}{NEWLINE}Their offices and warehouses can now be raided.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_FOLLOW_THE_MONEY': 'Follow the Money',
+ 'STR_FOLLOW_THE_MONEY_UFOPEDIA': 'Cobra washes its cash before it spends it: through the Twins\' companies, a few friendly banks, and anywhere that takes a lot of money and asks no questions. Washed money leaves cold trails.{NEWLINE}{NEWLINE}The bank wrappers and Extensive Enterprises\' books give us the method. My analysts can now trace laundered cash back to where it was washed, and with enough paper Washington can freeze the accounts.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_MAJOR_BLUDD': 'Major Bludd',
  'STR_MAJOR_BLUDD_UFOPEDIA': 'Sebastian Bludd. Mercenary, Australian, poet by his own account, and Cobra\'s now. He left a card behind with the names of the Joes who got in his way and a promise, in verse, to see each of them again.{NEWLINE}{NEWLINE}The verse is bad. The promise I\'m taking seriously.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_SHIPPING_MANIFEST': 'Shipping Manifest',
