@@ -1,7 +1,7 @@
 """Add `lane:` to every research topic in STORY's rulesets (John 12 Nov 22:13).
 The research tree screen (claude/RESEARCH_TREE_SCREEN_SPEC.md) puts each topic in the
 band of the department that runs it (the screen shows its head, whether the head is in the office, and its efficiency). OXCE ignores unknown keys, so this is inert until
-BUILD's tree screen reads it. Run after the gen_batch scripts: python3 add_lanes.py <Ruleset dir>
+BUILD's tree screen reads it. Run after the gen_batch scripts and fix_lookups.py: python3 add_lanes.py <Ruleset dir>
 """
 import os, re, sys
 
@@ -51,6 +51,13 @@ for t in ('SKYSTRIKER SKYSTRIKER_MK2 C130_HERCULES DRAGONFLY FALCON_GLIDER SKY_H
           'AIR_COMBAT_DOCTRINE AVALANCHE_MISSILE').split():
     LANE['STR_' + t] = A
 SKIP = {'STR_STORY_LOCK'}
+
+# lookup stubs (fix_lookups.py) take the lane of the topic whose lookup they are
+import yaml as _y
+for f in ['gijoe_research_spine.rul', 'gijoe_story_act1.rul', 'gijoe_research_captured.rul', 'gijoe_research_joe.rul']:
+    for r in (_y.safe_load(open(os.path.join(RD, f))) or {}).get('research') or []:
+        if r.get('lookup') and r['name'] in LANE and r['lookup'] not in LANE:
+            LANE[r['lookup']] = LANE[r['name']]
 
 missing, done = [], 0
 for f in ['gijoe_research_spine.rul', 'gijoe_story_act1.rul', 'gijoe_research_captured.rul', 'gijoe_research_joe.rul']:
