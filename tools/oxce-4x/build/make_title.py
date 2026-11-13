@@ -129,10 +129,14 @@ def main():
     if not os.path.exists(base):
         Image.open(os.path.join(FE, 'title_hi.png')).convert('RGB').save(base)
     art = Image.open(base).convert('RGBA')
-    wm = wordmark()
-    wm.save(os.path.join(FE, 'title_word.png'))
+    # John's logo (13 Nov 2026, gi-joe-usa-defense-enhanced.png) wins when it is there;
+    # the drawn wordmark is the fallback.
+    logo = os.path.join(FE, 'logo_usa_defense.png')
+    wm = Image.open(logo).convert('RGBA') if os.path.exists(logo) else wordmark()
+    if not os.path.exists(logo):
+        wm.save(os.path.join(FE, 'title_word.png'))
     # the open sky at the top right of the key art
-    w = 820
+    w = 860
     h = int(wm.height * w / wm.width)
     wm_s = wm.resize((w, h), Image.LANCZOS)
     # a soft dark glow behind it; padded so the blur is not clipped into a visible box
