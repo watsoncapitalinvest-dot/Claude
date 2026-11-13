@@ -2446,7 +2446,7 @@ index 0fdf2ca..716f5c7 100644
  	/// Sets the palette.
  	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
 diff --git a/src/Battlescape/NextTurnState.cpp b/src/Battlescape/NextTurnState.cpp
-index d12de83..985d6d9 100644
+index d12de83..0d5b8e7 100644
 --- a/src/Battlescape/NextTurnState.cpp
 +++ b/src/Battlescape/NextTurnState.cpp
 @@ -17,9 +17,11 @@
@@ -2521,15 +2521,19 @@ index d12de83..985d6d9 100644
  	_txtMessageReinforcements->setWordWrap(true);
  	_txtMessageReinforcements->setHighContrast(true);
  	_txtMessageReinforcements->setColor(_game->getMod()->getInterface("inventory")->getElement("weight")->color2); // red
-@@ -292,6 +312,7 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -292,6 +312,11 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  	}
  
  	std::string messageReinforcements;
 +	std::string messageVanStop = runVanStop();
++	{
++		std::string cap = runCapture();
++		if (!cap.empty()) messageVanStop = messageVanStop.empty() ? cap : messageVanStop + " " + cap;
++	}
  	bool allowReinforcements = _battleGame->getSide() == FACTION_HOSTILE && _battleGame->getTurn() > 0;
  	if (_battleGame->getSide() == FACTION_PLAYER && _battleGame->getTurn() == 0)
  	{
-@@ -306,6 +327,11 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -306,6 +331,11 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  			_txtMessageReinforcements->setText(messageReinforcements);
  		}
  	}
@@ -2541,7 +2545,7 @@ index d12de83..985d6d9 100644
  
  	if (Options::skipNextTurnScreen && message.empty() && messageReinforcements.empty())
  	{
-@@ -612,7 +638,16 @@ bool NextTurnState::determineReinforcements()
+@@ -612,7 +642,16 @@ bool NextTurnState::determineReinforcements()
  			{
  				continue;
  			}
@@ -2559,7 +2563,7 @@ index d12de83..985d6d9 100644
  			{
  				if (!_battleGame->allObjectivesDestroyed())
  				{
-@@ -855,6 +890,7 @@ bool NextTurnState::determineReinforcements()
+@@ -855,6 +894,7 @@ bool NextTurnState::determineReinforcements()
  		{
  			// remember success
  			_battleGame->getReinforcementsMemory()[wave.type] += 1;
@@ -2567,7 +2571,7 @@ index d12de83..985d6d9 100644
  
  			if (!wave.briefing.title.empty())
  			{
-@@ -908,6 +944,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
+@@ -908,6 +948,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
  		quantity += RNG::generate(0, dd.dQty);
  		quantity += RNG::generate(0, dd.extraQty);
  
@@ -2586,7 +2590,7 @@ index d12de83..985d6d9 100644
  		for (int i = 0; i < quantity; ++i)
  		{
  			std::string alienName = dd.customUnitType.empty() ? race->getMember(dd.alienRank) : dd.customUnitType;
-@@ -915,6 +963,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
+@@ -915,6 +967,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
  			bool civilian = dd.percentageOutsideUfo != 0; // small misuse of an unused attribute ;) pls don't kill me
  			BattleUnit* unit = addReinforcement(wave, rule, dd.alienRank, civilian);
  			size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(month).at(RNG::generate(0, 9)));
@@ -2605,7 +2609,7 @@ index d12de83..985d6d9 100644
  			if (unit)
  			{
  				success = true;
-@@ -1140,4 +1200,287 @@ bool NextTurnState::placeReinforcementNearFriend(BattleUnit *unit)
+@@ -1140,4 +1204,375 @@ bool NextTurnState::placeReinforcementNearFriend(BattleUnit *unit)
  	return false;
  }
  
@@ -2892,17 +2896,107 @@ index d12de83..985d6d9 100644
 +	return msg;
 +}
 +
++/**
++ * G.I. Joe capture (John 13 Nov 2026, CAPTURE_DESIGN_v1.md), run on every turn screen.
++ * - A Cobra man gives up (hands up, gun down, out of the fight) when badly hurt, when two or
++ *   more Joes are close, or when his morale has broken.
++ * - A Joe next to him at a turn change has cuffed him: he is secured.
++ * - Not cuffed, and a Cobra man reaches him at the end of Cobra's turn: Cobra shoots him as a
++ *   deserter, unless he is a named Cobra, whom they free to fight again.
++ * Anyone with his hands up when the Joes win comes home a prisoner (debriefing's surrender rule).
++ */
++std::string NextTurnState::runCapture()
++{
++	const Mod* mod = _game->getMod();
++	SavedBattleGame& sb = *_battleGame;
++	if (!mod->isCaptureOn() || sb.getTurn() < 1) return "";
++	std::string msg;
++	auto add = [&](const std::string& s) { msg = msg.empty() ? s : msg + " " + s; };
++	auto near = [](const BattleUnit* a, const BattleUnit* b, int range)
++	{
++		Position d = a->getPosition() - b->getPosition();
++		return std::abs(d.z) <= 1 && std::max(std::abs(d.x), std::abs(d.y)) <= range;
++	};
++	std::vector<BattleUnit*> units(sb.getUnits()->begin(), sb.getUnits()->end());
++	bool killed = false;
++	for (auto* u : units)
++	{
++		if (u->getOriginalFaction() != FACTION_HOSTILE || u->getFaction() != FACTION_HOSTILE || u->isOut()) continue;
++		const bool named = mod->isNamedCobra(u->getType());
++		if (u->isHandsUp())
++		{
++			if (!u->isCuffed())
++			{
++				for (auto* j : units)
++				{
++					if (j->getOriginalFaction() == FACTION_PLAYER && !j->isOut() && near(j, u, 1)) { u->setCuffed(true); break; }
++				}
++			}
++			if (!u->isCuffed() && sb.getSide() == FACTION_PLAYER)
++			{
++				for (auto* c : units)
++				{
++					if (c == u || c->getOriginalFaction() != FACTION_HOSTILE || c->getFaction() != FACTION_HOSTILE || c->isOut() || c->isHandsUp() || !near(c, u, 1)) continue;
++					if (named)
++					{
++						u->setHandsUp(false);
++						u->kneel(false);
++						add(tr("STR_CAPTURE_FREED"));
++					}
++					else
++					{
++						u->damage(Position(0, 0, 0), 1000, mod->getDamageType(DT_AP), &sb, {});
++						u->killedBy(FACTION_HOSTILE);
++						killed = true;
++						add(tr("STR_CAPTURE_DESERTER_SHOT"));
++					}
++					Log(LOG_INFO) << "CAPTURE " << (named ? "freed " : "shot ") << u->getType() << " " << u->getId();
++					break;
++				}
++			}
++			if (u->isHandsUp() && sb.getSide() == FACTION_HOSTILE) u->setTimeUnits(0);
++			continue;
++		}
++		const bool hurt = u->getHealth() * 100 < u->getBaseStats()->health * mod->getSurrenderHealthPct();
++		int joes = 0;
++		for (auto* j : units)
++		{
++			if (j->getOriginalFaction() == FACTION_PLAYER && !j->isOut() && near(j, u, mod->getSurroundRange())) joes++;
++		}
++		const bool surrounded = joes >= mod->getSurroundJoes();
++		const bool broken = u->wantsToSurrender() || u->getStatus() == STATUS_PANICKING;
++		if (!(hurt || surrounded || broken)) continue;
++		// hands up: guns down on the floor, kneeling, out of the fight
++		for (BattleItem* w : { u->getRightHandWeapon(), u->getLeftHandWeapon() })
++		{
++			if (w && u->getTile()) sb.getTileEngine()->itemDrop(u->getTile(), w, false);
++		}
++		u->setHandsUp(true);
++		u->kneel(true);
++		if (sb.getSide() == FACTION_HOSTILE) u->setTimeUnits(0);
++		Log(LOG_INFO) << "CAPTURE hands up " << u->getType() << " " << u->getId() << (hurt ? " hurt" : "") << (surrounded ? " surrounded" : "") << (broken ? " broken" : "");
++		if (u->getVisible()) add(tr("STR_CAPTURE_SURRENDERS"));
++	}
++	if (killed && sb.getBattleGame())
++	{
++		sb.getBattleGame()->checkForCasualties(nullptr, BattleActionAttack{}, true, false);
++	}
++	return msg;
++}
++
  }
 diff --git a/src/Battlescape/NextTurnState.h b/src/Battlescape/NextTurnState.h
-index 200fb3a..33aa41c 100644
+index 200fb3a..2b6326c 100644
 --- a/src/Battlescape/NextTurnState.h
 +++ b/src/Battlescape/NextTurnState.h
-@@ -65,6 +65,8 @@ private:
+@@ -65,6 +65,10 @@ private:
  
  	/// Runs reinforcements logic.
  	bool determineReinforcements();
 +	/// G.I. Joe van stop: alarm, payphone call, getaway, lookout. Returns a message for the turn screen.
 +	std::string runVanStop();
++	/// G.I. Joe capture: surrender (hands up), cuffs, Cobra shooting or freeing its own.
++	std::string runCapture();
  	/// Deploys the reinforcements, according to the alien reinforcements deployment rules.
  	bool deployReinforcements(const ReinforcementsData &wave);
  	/// Adds a reinforcement unit to the game.
@@ -11324,7 +11418,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..cd63a49 100644
+index 1885346..ffd1ecb 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -11441,7 +11535,7 @@ index 1885346..cd63a49 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3287,134 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3287,144 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -11512,6 +11606,16 @@ index 1885346..cd63a49 100644
 +	//     chance: 20            # percent per 10-minute check, directly overhead
 +	//     traitBonus: 50        # percent MORE (relative) with a recon Joe aboard
 +	//     soldierTypes: [STR_SCARLETT, STR_STALKER]
++	if (const auto& capture = reader["capture"])
++	{
++		_captureOn = true;
++		capture.tryRead("knockoutChance", _knockoutChance);
++		capture.tryRead("knockoutWeapons", _knockoutWeapons);
++		capture.tryRead("surrenderHealthPct", _surrenderHealthPct);
++		capture.tryRead("surroundJoes", _surroundJoes);
++		capture.tryRead("surroundRange", _surroundRange);
++		capture.tryRead("namedCobra", _namedCobra);
++	}
 +	if (const auto& recon = reader["recon"])
 +	{
 +		recon.tryRead("chance", _reconChance);
@@ -11576,7 +11680,7 @@ index 1885346..cd63a49 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3425,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3435,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -11584,7 +11688,7 @@ index 1885346..cd63a49 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4030,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4040,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -11610,7 +11714,7 @@ index 1885346..cd63a49 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4287,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4297,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -11631,7 +11735,7 @@ index 1885346..cd63a49 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6001,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6011,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -11651,7 +11755,7 @@ index 1885346..cd63a49 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6024,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6034,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -11659,7 +11763,7 @@ index 1885346..cd63a49 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6038,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6048,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -11699,7 +11803,7 @@ index 1885346..cd63a49 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..4eda139 100644
+index 2242d13..9b3b483 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -11763,7 +11867,7 @@ index 2242d13..4eda139 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,34 @@ private:
+@@ -327,6 +360,38 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -11784,6 +11888,10 @@ index 2242d13..4eda139 100644
 +	/// aboard adds; and which soldier types have the recon trait.
 +	int _reconChance = 50, _reconTraitBonus = 0;
 +	std::vector<std::string> _reconSoldierTypes;
++	/// G.I. Joe capture (John 13 Nov 2026, CAPTURE_DESIGN_v1.md): knockouts, surrender, named Cobra.
++	bool _captureOn = false;
++	int _knockoutChance = 10, _surrenderHealthPct = 33, _surroundJoes = 2, _surroundRange = 3;
++	std::vector<std::string> _knockoutWeapons, _namedCobra;
 +	bool _cobraSupplyAllMissions;
 +	int _cobraWellPaid;
 +	int _cobraWellPaidUpkeep;
@@ -11798,7 +11906,7 @@ index 2242d13..4eda139 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +753,52 @@ public:
+@@ -692,6 +757,59 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -11827,6 +11935,13 @@ index 2242d13..4eda139 100644
 +	int getReconChance() const { return _reconChance; }
 +	int getReconTraitBonus() const { return _reconTraitBonus; }
 +	const std::vector<std::string> &getReconSoldierTypes() const { return _reconSoldierTypes; }
++	bool isCaptureOn() const { return _captureOn; }
++	int getKnockoutChance() const { return _knockoutChance; }
++	bool isKnockoutWeapon(const std::string &type) const { return std::find(_knockoutWeapons.begin(), _knockoutWeapons.end(), type) != _knockoutWeapons.end(); }
++	int getSurrenderHealthPct() const { return _surrenderHealthPct; }
++	int getSurroundJoes() const { return _surroundJoes; }
++	int getSurroundRange() const { return _surroundRange; }
++	bool isNamedCobra(const std::string &type) const { return std::find(_namedCobra.begin(), _namedCobra.end(), type) != _namedCobra.end(); }
 +	bool getCobraSupplyAllMissions() const { return _cobraSupplyAllMissions; }
 +	/// Funds a region needs before Cobra can field a full garrison there.
 +	int getCobraWellPaid() const { return _cobraWellPaid; }
@@ -12564,30 +12679,42 @@ index 97ef4f5..0dbe163 100644
  	void addMissionLocation(const std::string &varName, const std::string &regionName, int zoneNumber, int maximum);
  	/// Checks that a given mission location (city or whatever) isn't stored in our list of previously attacked locations.
 diff --git a/src/Savegame/BattleUnit.cpp b/src/Savegame/BattleUnit.cpp
-index 46fbf1f..306606f 100644
+index 46fbf1f..d1ab360 100644
 --- a/src/Savegame/BattleUnit.cpp
 +++ b/src/Savegame/BattleUnit.cpp
-@@ -708,6 +708,9 @@ void BattleUnit::load(const YAML::YamlNodeReader& node, const Mod *mod, const Sc
+@@ -28,6 +28,7 @@
+ #include "../Engine/Exception.h"
+ #include "../Engine/Options.h"
+ #include "../Engine/RNG.h"
++#include "../Engine/Logger.h"
+ #include "../Battlescape/Pathfinding.h"
+ #include "../Battlescape/BattlescapeGame.h"
+ #include "../Battlescape/AIModule.h"
+@@ -708,6 +709,11 @@ void BattleUnit::load(const YAML::YamlNodeReader& node, const Mod *mod, const Sc
  	reader.tryReadAs<int>("turnsLeftSpottedForSnipersByCivilian", _turnsLeftSpottedForSnipers[FACTION_NEUTRAL]);
  	reader.tryReadAs<int>("turnsSinceStunned", _turnsSinceStunned);
  
 +	reader.tryRead("carryingId", _carryingId);
 +	reader.tryRead("capturedByEnemy", _capturedByEnemy);
++	reader.tryRead("handsUp", _handsUp);
++	reader.tryRead("cuffed", _cuffed);
 +	reader.tryRead("carriedById", _carriedById);
  	reader.tryRead("rankInt", _rankInt);
  	reader.tryRead("rankIntUnified", _rankIntUnified);
  	reader.tryRead("moraleRestored", _moraleRestored);
-@@ -826,6 +829,9 @@ void BattleUnit::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared) c
+@@ -826,6 +832,11 @@ void BattleUnit::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared) c
  	writer.tryWriteAs<int>("turnsLeftSpottedForSnipersByCivilian", _turnsLeftSpottedForSnipers[FACTION_NEUTRAL], 0);
  	writer.writeAs<int>("turnsSinceStunned", _turnsSinceStunned);
  
 +	if (_carryingId >= 0) writer.write("carryingId", _carryingId);
 +	if (_capturedByEnemy) writer.write("capturedByEnemy", _capturedByEnemy);
++	if (_handsUp) writer.write("handsUp", _handsUp);
++	if (_cuffed) writer.write("cuffed", _cuffed);
 +	if (_carriedById >= 0) writer.write("carriedById", _carriedById);
  	writer.write("rankInt", _rankInt);
  	writer.write("rankIntUnified", _rankIntUnified);
  	writer.write("moraleRestored", _moraleRestored);
-@@ -1168,6 +1174,7 @@ void BattleUnit::startWalking(int direction, Position destination, SavedBattleGa
+@@ -1168,6 +1179,7 @@ void BattleUnit::startWalking(int direction, Position destination, SavedBattleGa
  	{
  		_direction = direction;
  		_status = STATUS_WALKING;
@@ -12595,8 +12722,36 @@ index 46fbf1f..306606f 100644
  	}
  	if (_haveNoFloorBelow || direction >= Pathfinding::DIR_UP)
  	{
+@@ -1859,6 +1871,18 @@ int BattleUnit::damage(Position relative, int damage, const RuleDamageType *type
+ 
+ 		setValueMax(_currentArmor[side], - std::get<toArmor>(args.data), 0, _maxArmor[side]);
+ 
++		// G.I. Joe capture: a pistol or rifle hit that would kill an ordinary Cobra man sometimes
++		// knocks him out instead (1 in 10). Explosives and heavy guns always kill.
++		if (_health <= 0 && _originalFaction == FACTION_HOSTILE && save->getMod()->isCaptureOn()
++			&& attack.weapon_item && save->getMod()->isKnockoutWeapon(attack.weapon_item->getRules()->getType())
++			&& RNG::percent(save->getMod()->getKnockoutChance()))
++		{
++			_health = 1;
++			_stunlevel = std::max(_stunlevel, (int)_stats.health);
++			for (int i = 0; i < BODYPART_MAX; ++i) _fatalWounds[i] = 0;
++			Log(LOG_INFO) << "CAPTURE knockout " << getType() << " " << getId();
++		}
++
+ 
+ 		setFatalShotInfo(side, bodypart);
+ 
+@@ -2841,7 +2865,7 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
+ 		return;
+ 	}
+ 
+-	_isSurrendering = false;
++	_isSurrendering = _handsUp; // G.I. Joe: a man with his hands up stays surrendered
+ 	_unitsSpottedThisTurn.clear();
+ 	_meleeAttackedBy.clear();
+ 
 diff --git a/src/Savegame/BattleUnit.h b/src/Savegame/BattleUnit.h
-index ecc040f..b7393e4 100644
+index ecc040f..08c38dc 100644
 --- a/src/Savegame/BattleUnit.h
 +++ b/src/Savegame/BattleUnit.h
 @@ -102,6 +102,7 @@ private:
@@ -12607,7 +12762,7 @@ index ecc040f..b7393e4 100644
  	std::vector<BattleUnit *> _visibleUnits, _unitsSpottedThisTurn;
  	std::vector<Tile *> _visibleTiles;
  	std::unordered_set<Tile *> _visibleTilesLookup;
-@@ -130,6 +131,11 @@ private:
+@@ -130,6 +131,12 @@ private:
  	BattleUnit *_charging;
  
  	Uint8 _turnsSinceSpotted[FACTION_MAX] = { 255, 255, 255 };
@@ -12616,10 +12771,11 @@ index ecc040f..b7393e4 100644
 +	int _carryingId = -1;
 +	int _carriedById = -1;
 +	bool _capturedByEnemy = false;
++	bool _handsUp = false, _cuffed = false; // G.I. Joe capture: surrendered, and secured by a Joe
  	Uint8 _turnsLeftSpottedForSnipers[FACTION_MAX] = { 0, 0, 0 };
  	Uint8 _turnsSinceStunned = 255;
  
-@@ -286,6 +292,8 @@ public:
+@@ -286,6 +293,8 @@ public:
  	void keepWalking(SavedBattleGame *savedBattleGame, bool fullWalkCycle);
  	/// Gets the walking phase for animation and sound
  	int getWalkingPhase() const;
@@ -12628,7 +12784,7 @@ index ecc040f..b7393e4 100644
  	/// Gets the walking phase for diagonal walking
  	int getDiagonalWalkingPhase() const;
  	/// Gets the unit's destination when walking
-@@ -704,6 +712,24 @@ public:
+@@ -704,6 +713,28 @@ public:
  	/// Set how many turns this unit will be exposed for. For specific faction.
  	void setTurnsSinceSpottedByFaction(UnitFaction faction, int turns);
  	/// Set how many turns this unit will be exposed for.
@@ -12643,6 +12799,10 @@ index ecc040f..b7393e4 100644
 +	void setCarriedById(int id) { _carriedById = id; }
 +	/// Carried clear off the map by the enemy: not dead, not recovered, taken.
 +	bool isCapturedByEnemy() const { return _capturedByEnemy; }
++	bool isHandsUp() const { return _handsUp; }
++	void setHandsUp(bool b) { _handsUp = b; _isSurrendering = b; if (!b) _cuffed = false; }
++	bool isCuffed() const { return _cuffed; }
++	void setCuffed(bool b) { _cuffed = b; }
 +	void setCapturedByEnemy(bool b) { _capturedByEnemy = b; }
 +	/// Off the map in enemy hands. STATUS_IGNORE_ME and not STATUS_DEAD on
 +	/// purpose: he is gone from the battle but he is not killed, and the
