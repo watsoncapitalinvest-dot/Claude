@@ -162,6 +162,11 @@ def main():
     src, card, card_path, blends = intake(a.package, work, rep, out)
     blend = os.path.abspath(make_blend(src, card, card_path, blends, a.name, work, rep, out))
     runner = kit_runner(kit, a.name, card, rep, out)
+    sw = str((card or {}).get('swell') or '')
+    if card is not None and not sw.startswith('applied'):
+        log(rep, 'WARN: card has no "swell": "applied ..." key - the figure is NOT at the +1.6 cm build. '
+                 'Run swell_body.py on the blend (or CAST sets it in make_blend.py) if John wants it')
+    elif sw: log(rep, f'swell: {sw} (by CAST; not applied again)')
     clips = (card or {}).get('clips') or {}
     if clips: log(rep, f'WARN: card asks for its own clips {clips}; the kit renders its standard 8 - per-character clips need BUILD\'s OK')
     kit_run(kit, a.name, blend, True, rep, out, runner)
