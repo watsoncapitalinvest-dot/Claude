@@ -1617,7 +1617,7 @@ index 642c538..68a1fc5 100644
  	void drawSelectedItem();
  	/// Gets the currently selected item.
 diff --git a/src/Battlescape/InventoryState.cpp b/src/Battlescape/InventoryState.cpp
-index cea8e65..2a10185 100644
+index cea8e65..90ec9a6 100644
 --- a/src/Battlescape/InventoryState.cpp
 +++ b/src/Battlescape/InventoryState.cpp
 @@ -17,6 +17,7 @@
@@ -1733,15 +1733,25 @@ index cea8e65..2a10185 100644
  		auto* frame = texture->getFrame(s->getRankSpriteBattlescape());
  		if (frame)
  		{
-@@ -556,6 +616,7 @@ void InventoryState::init()
- 				surf = _game->getMod()->getSurface(look, true);
+@@ -553,9 +613,16 @@ void InventoryState::init()
  			}
+ 			if (!surf)
+ 			{
+-				surf = _game->getMod()->getSurface(look, true);
++				surf = _game->getMod()->getSurface(look, false);
++			}
++			// G.I. Joe: an armour with no inventory figure draws none instead of crashing the equip screen
++			if (!surf)
++			{
++				Log(LOG_WARNING) << "No inventory figure for armor " << s->getArmor()->getType();
+ 			}
++			else
  			surf->blitNShade(_soldier, 0, 0);
 +			if (auto *doll = dynamic_cast<PaperDoll*>(_soldier)) doll->art = surf;
  		}
  	}
  	else
-@@ -572,6 +633,7 @@ void InventoryState::init()
+@@ -572,6 +639,7 @@ void InventoryState::init()
  		if (armorSurface)
  		{
  			armorSurface->blitNShade(_soldier, 0, 0);
@@ -3356,10 +3366,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..0339aa5
+index 0000000..76c49e4
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3010 @@
+@@ -0,0 +1,3017 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -4247,7 +4257,13 @@ index 0000000..0339aa5
 +		std::vector<std::string> words;
 +		{
 +			std::string w;
-+			for (char c : str) { if (c == ' ') { if (!w.empty()) words.push_back(w); w.clear(); } else w += c; }
++			// a newline in the string ({NEWLINE}) is a forced break, kept as its own token
++			for (char c : str)
++			{
++				if (c == ' ') { if (!w.empty()) words.push_back(w); w.clear(); }
++				else if (c == '\n' || c == 2) { if (!w.empty()) words.push_back(w); w.clear(); words.push_back("\n"); }
++				else w += c;
++			}
 +			if (!w.empty()) words.push_back(w);
 +		}
 +		if (words.empty()) return;
@@ -4259,6 +4275,7 @@ index 0000000..0339aa5
 +			std::string cur;
 +			for (auto &w : words)
 +			{
++				if (w == "\n") { if (!cur.empty()) lines.push_back(cur); cur.clear(); continue; }
 +				std::string t = cur.empty() ? w : cur + " " + w;
 +				const auto v = latin1(t);
 +				if (!cur.empty() && lineWidth(f, v, 0, v.size(), size) > X1 - X0) { lines.push_back(cur); cur = w; }

@@ -125,7 +125,14 @@ def main():
             switch_existing(EXISTING[n], sheet_name(n))
         else:
             arm, typ, disp, names = NEW[n]
-            armors += [f'  - type: {arm}', f'    spriteSheet: {sheet_name(n)}', '    drawingRoutine: 23', '    deathFrames: 8',
+            # Inventory figure: his own if one has been painted (Resources/Inventory/<name>_inv.png), else
+            # Duke's (SHORTCUTS #6). An armour with no spriteInv crashes the equip screen before a battle.
+            inv = 'GIJOE_DUKE_INV'
+            if os.path.exists(os.path.join(MOD, 'Resources', 'Inventory', f'{n}_inv.png')):
+                inv = f'GIJOE_{n.upper()}_INV'
+                sprites += [f'  - type: {inv}.SPK', '    singleImage: true', '    width: 320', '    height: 200',
+                            '    files:', f'      0: Resources/Inventory/{n}_inv.png']
+            armors += [f'  - type: {arm}', f'    spriteSheet: {sheet_name(n)}', f'    spriteInv: {inv}', '    drawingRoutine: 23', '    deathFrames: 8',
                        '    corpseBattle: [STR_CORPSE_DUKE]', '    frontArmor: 12', '    sideArmor: 8', '    rearArmor: 5',
                        '    underArmor: 2', '    loftempsSet: [ 3 ]']
             soldiers += soldier(n, typ, arm, names)
