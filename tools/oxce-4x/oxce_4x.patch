@@ -805,7 +805,7 @@ index a0bc8b3..933c149 100644
  	void deployCivilians(bool markAsVIP, int nodeRank, int max, bool roundUp = false, const std::string &civilianType = "");
  	/// Finds a spot near a friend to spawn at.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..2f6e535 100644
+index 7cd4941..8a313c9 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -88,6 +88,7 @@
@@ -825,7 +825,7 @@ index 7cd4941..2f6e535 100644
  
  	_numLayers = new NumberText(3, 5, x + 232, y + 6);
  	_rank = new Surface(26, 23, x + 107, y + 33);
-@@ -724,6 +725,343 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +725,345 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
@@ -859,10 +859,12 @@ index 7cd4941..2f6e535 100644
 +	// the action grid: 4 x 2, each 12 x 11, 1 px apart
 +	BattlescapeButton *grid[8] = { _btnMapUp, _btnMapDown, _btnKneel, _btnCenter, _btnNextSoldier, _btnShowMap, _btnInventory, _btnHelp };
 +	const char *gridLegend[8] = { "UP", "DOWN", "KNEEL", "CENTER", "NEXT", "MAP", "GEAR", "OPTIONS" };
++	const char *gridIcon[8] = { "icon_level_up", "icon_level_down", "icon_kneel", "icon_center", "icon_next", "icon_map", "icon_gear", "icon_options" };
 +	for (int i = 0; i < 8; ++i)
 +	{
 +		place(grid[i], 196 + (i % 4) * 13, 14 + (i / 4) * 12, 12, 11);
 +		key(grid[i], gridLegend[i]);
++		HiUI::nativeKeyIcon(grid[i], std::string("battle_icons/") + gridIcon[i]);
 +	}
 +	// reserve time: four toggles under the label
 +	BattlescapeButton *res[4] = { _btnReserveNone, _btnReserveSnap, _btnReserveAimed, _btnReserveAuto };
@@ -1169,7 +1171,7 @@ index 7cd4941..2f6e535 100644
  }
  
  
-@@ -732,6 +1070,7 @@ BattlescapeState::BattlescapeState() :
+@@ -732,6 +1072,7 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -1177,7 +1179,7 @@ index 7cd4941..2f6e535 100644
  	delete _animTimer;
  	delete _gameTimer;
  	delete _battleGame;
-@@ -859,6 +1198,7 @@ void BattlescapeState::init()
+@@ -859,6 +1200,7 @@ void BattlescapeState::init()
  void BattlescapeState::think()
  {
  	static bool popped = false;
@@ -1185,7 +1187,7 @@ index 7cd4941..2f6e535 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -2172,7 +2512,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +2514,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -1194,7 +1196,7 @@ index 7cd4941..2f6e535 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +2732,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +2734,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -1202,7 +1204,7 @@ index 7cd4941..2f6e535 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -4052,8 +4393,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4395,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -2981,27 +2983,56 @@ index 1804fb9..7c50bf9 100644
  		init(_images.size() - 1, chars);
  	}
 diff --git a/src/Engine/Game.cpp b/src/Engine/Game.cpp
-index f353397..12ee74a 100644
+index f353397..2a6b483 100644
 --- a/src/Engine/Game.cpp
 +++ b/src/Engine/Game.cpp
-@@ -17,6 +17,7 @@
+@@ -17,6 +17,10 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "Game.h"
++#include <typeinfo>
++#include <ctime>
++#include <cstdlib>
 +#include "HiUI.h"
  #include "../resource.h"
  #include <algorithm>
  #include <cmath>
-@@ -363,7 +364,8 @@ void Game::run()
+@@ -350,6 +354,12 @@ void Game::run()
+ 				// make a note of when this frame update occurred.
+ 				_timeOfLastFrame = SDL_GetTicks();
+ 				_fpsCounter->addFrame();
++				// OXCE_PERF=1: frame cost in the log every 120 frames (draw = the states and the
++				// HiUI paint, flip = zoom + composite + present). Off unless asked for.
++				static const bool perf = getenv("OXCE_PERF") != nullptr;
++				static double perfDraw = 0, perfFlip = 0, perfMax = 0; static int perfN = 0;
++				auto perfNow = []() { return std::clock() * 1000.0 / CLOCKS_PER_SEC; };   // CPU time, so a busy machine does not skew it
++				const double perfT0 = perf ? perfNow() : 0;
+ 				_screen->clear();
+ 				std::list<State*>::iterator i = _states.end();
+ 				do
+@@ -363,8 +373,21 @@ void Game::run()
  					(*i)->blit();
  				}
  				_fpsCounter->blit(_screen->getSurface());
 -				_cursor->blit(_screen->getSurface());
 +				if (_screen->hiUiActive()) HiUI::cursor(_cursor->getX(), _cursor->getY(), _cursor->getVisible());
 +				else _cursor->blit(_screen->getSurface());
++				const double perfT1 = perf ? perfNow() : 0;
  				_screen->flip();
++				if (perf)
++				{
++					const double perfT2 = perfNow();
++					perfDraw += (double)(perfT1 - perfT0); perfFlip += (double)(perfT2 - perfT1);
++					perfMax = std::max(perfMax, (double)(perfT2 - perfT0));
++					if (++perfN == 120)
++					{
++						Log(LOG_INFO) << "[perf] " << typeid(*_states.back()).name() << " draw " << perfDraw / perfN << " ms, flip " << perfFlip / perfN << " ms, worst " << perfMax << " ms";
++						perfDraw = perfFlip = perfMax = 0; perfN = 0;
++					}
++				}
  			}
  		}
+ 
 diff --git a/src/Engine/HiColor.cpp b/src/Engine/HiColor.cpp
 new file mode 100644
 index 0000000..d749080
@@ -3325,10 +3356,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..2ddbdff
+index 0000000..0339aa5
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,2874 @@
+@@ -0,0 +1,3010 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -3544,10 +3575,72 @@ index 0000000..2ddbdff
 +		}
 +	}
 +
++	/// A stretched picture, kept: the same art at the same size is drawn every frame, and
++	/// resampling it each time was the biggest single cost of a frame (12 Nov profile).
++	struct Scaled { std::vector<Uint32> px; bool opaque = true; };
++	struct ScaledKey
++	{
++		const void *data; int w, h, sx0, sy0, sx1, sy1, dw, dh;
++		bool operator==(const ScaledKey &o) const { return data == o.data && w == o.w && h == o.h && sx0 == o.sx0 && sy0 == o.sy0 && sx1 == o.sx1 && sy1 == o.sy1 && dw == o.dw && dh == o.dh; }
++	};
++	struct ScaledHash { size_t operator()(const ScaledKey &k) const { size_t h = std::hash<const void*>()(k.data); for (int v : { k.w, k.h, k.sx0, k.sy0, k.sx1, k.sy1, k.dw, k.dh }) h = h * 1000003u ^ (size_t)v; return h; } };
++	std::unordered_map<ScaledKey, Scaled, ScaledHash> scaledCache;
++	size_t scaledBytes = 0;
++
 +	/// Stretch a region of an image into a screen rectangle, blending on its alpha.
++	void stretchRaw(const Img &im, int sx0, int sy0, int sx1, int sy1, int dx0, int dy0, int dx1, int dy1);
 +	void stretch(const Img &im, int sx0, int sy0, int sx1, int sy1, int dx0, int dy0, int dx1, int dy1)
 +	{
 +		if (dx1 <= dx0 || dy1 <= dy0 || sx1 <= sx0 || sy1 <= sy0) return;
++		const int dw = dx1 - dx0, dh = dy1 - dy0;
++		if ((size_t)dw * dh > (size_t)4096 * 4096) { stretchRaw(im, sx0, sy0, sx1, sy1, dx0, dy0, dx1, dy1); return; }
++		const ScaledKey key{ im.px.data(), im.w, im.h, sx0, sy0, sx1, sy1, dw, dh };
++		auto it = scaledCache.find(key);
++		if (it == scaledCache.end())
++		{
++			if (scaledBytes > (size_t)160 * 1024 * 1024) { scaledCache.clear(); scaledBytes = 0; }
++			Scaled sc;
++			sc.px.resize((size_t)dw * dh);
++			for (int Y = 0; Y < dh; ++Y)
++			{
++				const double fy = sy0 + (Y + 0.5) * (sy1 - sy0) / (double)dh - 0.5;
++				const int y0 = std::min(sy1 - 1, std::max(sy0, (int)std::floor(fy))), y1 = std::min(sy1 - 1, y0 + 1);
++				const int wy = std::min(256, std::max(0, (int)((fy - y0) * 256)));
++				for (int X = 0; X < dw; ++X)
++				{
++					const double fx = sx0 + (X + 0.5) * (sx1 - sx0) / (double)dw - 0.5;
++					const int x0 = std::min(sx1 - 1, std::max(sx0, (int)std::floor(fx))), x1 = std::min(sx1 - 1, x0 + 1);
++					const int wx = std::min(256, std::max(0, (int)((fx - x0) * 256)));
++					const Uint32 p00 = im.px[(size_t)y0 * im.w + x0], p01 = im.px[(size_t)y0 * im.w + x1];
++					const Uint32 p10 = im.px[(size_t)y1 * im.w + x0], p11 = im.px[(size_t)y1 * im.w + x1];
++					auto ch = [&](int sh2) { return (Uint32)((((p00 >> sh2 & 255) * (256 - wx) + (p01 >> sh2 & 255) * wx) * (256 - wy) + ((p10 >> sh2 & 255) * (256 - wx) + (p11 >> sh2 & 255) * wx) * wy) >> 16); };
++					const Uint32 al = ch(24);
++					if (al < 255) sc.opaque = false;
++					sc.px[(size_t)Y * dw + X] = (al << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0);
++				}
++			}
++			scaledBytes += sc.px.size() * 4;
++			it = scaledCache.emplace(key, std::move(sc)).first;
++		}
++		const Scaled &sc = it->second;
++		const int cx0 = std::max(dx0, 0), cy0 = std::max(dy0, 0), cx1 = std::min(dx1, sw), cy1 = std::min(dy1, sh);
++		if (cx1 <= cx0) return;
++		for (int Y = cy0; Y < cy1; ++Y)
++		{
++			Uint32 *o = over.data() + (size_t)Y * sw;
++			const Uint32 *s2 = sc.px.data() + (size_t)(Y - dy0) * dw - dx0;
++			if (sc.opaque) { for (int X = cx0; X < cx1; ++X) o[X] = s2[X] & 0xFFFFFF; continue; }
++			for (int X = cx0; X < cx1; ++X)
++			{
++				const Uint32 p = s2[X];
++				const int al = p >> 24;
++				if (al <= 0) continue;
++				o[X] = al >= 255 ? (p & 0xFFFFFF) : mix(o[X], p & 0xFFFFFF, al);
++			}
++		}
++	}
++	void stretchRaw(const Img &im, int sx0, int sy0, int sx1, int sy1, int dx0, int dy0, int dx1, int dy1)
++	{
 +		const int cx0 = std::max(dx0, 0), cy0 = std::max(dy0, 0), cx1 = std::min(dx1, sw), cy1 = std::min(dy1, sh);
 +		for (int Y = cy0; Y < cy1; ++Y)
 +		{
@@ -3961,6 +4054,7 @@ index 0000000..2ddbdff
 +	std::unordered_map<const Surface*, std::string> nativeKeys;
 +	std::unordered_map<const Surface*, bool> nativeKeyInArt;
 +	std::unordered_map<const Surface*, int> nativeKeyStyles;
++	std::unordered_map<const Surface*, std::string> nativeKeyIcons;   // Resources/UI/<name>.png drawn above the legend
 +	const Surface *hudBar = nullptr, *hudMission = nullptr;
 +	HudData hud;
 +	std::unordered_map<const Surface*, Img> hudArt;   // item pictures turned on their side for the hand cards
@@ -4030,7 +4124,7 @@ index 0000000..2ddbdff
 +
 +	/// A raised console key on the button's own hitbox.
 +	void stdButton(int X0, int Y0, int X1, int Y1, bool down, Uint32 fill = 0);
-+	void paintKey(const std::string &legend, int bx0, int by0, int bx1, int by1, bool down, bool inArt, int style = 0)
++	void paintKey(const std::string &legend, int bx0, int by0, int bx1, int by1, bool down, bool inArt, int style = 0, const Img *icon = nullptr)
 +	{
 +		const double k = SK();
 +		const double x0 = DX(bx0 + 0.6), y0 = DY(by0 + 0.6), x1 = DX(bx1 - 0.6), y1 = DY(by1 - 0.6);
@@ -4090,6 +4184,18 @@ index 0000000..2ddbdff
 +				const double h = y1 - y0;
 +				setType(*st, legend.substr(0, bar), (int)(x0 + k), (int)(y0 + h * 0.12), (int)(x1 - k), (int)(y0 + h * 0.62), h * 0.22, h * 0.3, 1, 1, ink);
 +				setType(*f, legend.substr(bar + 1), (int)(x0 + k), (int)(y0 + h * 0.60), (int)(x1 - k), (int)(y0 + h * 0.88), h * 0.10, h * 0.14, 1, 1, ink);
++			}
++			else if (icon)
++			{
++				// BATTLE_ICONS_BRIEF: the symbol on top, the word under it
++				const double h = y1 - y0, w = x1 - x0;
++				const double cap = std::min(h * 0.17, k * 2.0);
++				const double textTop = y1 - cap * 1.9;
++				const double side = std::max(4.0, std::min(w * 0.62, textTop - y0 - h * 0.07));
++				const double ix = (x0 + x1) / 2 - side / 2, iy = y0 + h * 0.06 + push;
++				stretch(*icon, 0, 0, icon->w, icon->h, (int)ix, (int)iy, (int)(ix + side), (int)(iy + side));
++				if (style == 3) fillRect((int)ix, (int)iy, (int)(ix + side), (int)(iy + side), 0x22282A, 120);
++				setType(*f, legend, (int)(x0 + k * 0.4), (int)(textTop + push), (int)(x1 - k * 0.4), (int)(y1 + push - k * 0.15), cap, cap, 1, 1, ink);
 +			}
 +			else
 +			{
@@ -4601,7 +4707,9 @@ index 0000000..2ddbdff
 +	void globeShade()
 +	{
 +		const double key[4] = { G.v.sunX, G.v.sunY, G.v.sunZ, (double)G.v.ocean };
-+		if (G.shadeOk && std::equal(key, key + 4, G.skey)) return;
++		// the sun creeps every game tick; redoing the whole disc for a move nobody can see
++		// was a large part of every Geoscape frame (12 Nov profile)
++		if (G.shadeOk && key[3] == G.skey[3] && std::fabs(key[0] - G.skey[0]) < 0.004 && std::fabs(key[1] - G.skey[1]) < 0.004 && std::fabs(key[2] - G.skey[2]) < 0.004) return;
 +		std::copy(key, key + 4, G.skey);
 +		const SDL_Color *pal = base->format->palette->colors;
 +		// the ocean's own 32-step ramp; land is darkened by the same ratio the
@@ -5089,7 +5197,9 @@ index 0000000..2ddbdff
 +				const std::string legend = nk->second.empty() && tb ? tb->getText() : nk->second;
 +				const bool down = (bb && bb->isInverted()) || (tb && tb->isPressedLook());
 +				auto ks = nativeKeyStyles.find(w);
-+				paintKey(legend, w->getX(), w->getY(), w->getX() + w->getWidth(), w->getY() + w->getHeight(), down, ia == nativeKeyInArt.end() || ia->second, ks == nativeKeyStyles.end() ? 0 : ks->second);
++				auto ic = nativeKeyIcons.find(w);
++				const Img *icon = ic == nativeKeyIcons.end() ? nullptr : piece(ic->second);
++				paintKey(legend, w->getX(), w->getY(), w->getX() + w->getWidth(), w->getY() + w->getHeight(), down, ia == nativeKeyInArt.end() || ia->second, ks == nativeKeyStyles.end() ? 0 : ks->second, icon);
 +				claim(r);
 +			}
 +			return;
@@ -5607,6 +5717,11 @@ index 0000000..2ddbdff
 +	if (enabled() && button) nativeKeyStyles[button] = style;
 +}
 +
++void nativeKeyIcon(const Surface *button, const std::string &piece)
++{
++	if (enabled() && button) nativeKeyIcons[button] = piece;
++}
++
 +void nativeHud(const Surface *bar, const Surface *mission, const HudData &d)
 +{
 +	if (!enabled()) return;
@@ -5616,7 +5731,7 @@ index 0000000..2ddbdff
 +void nativeForget(const Surface *s)
 +{
 +	if (s && s == hudBar) { hudBar = nullptr; hudMission = nullptr; hud.on = false; hudArt.clear(); }
-+	nativeKeyStyles.erase(s);
++	nativeKeyStyles.erase(s); nativeKeyIcons.erase(s);
 +	nativeBgs.erase(s); nativeKeys.erase(s); nativeKeyInArt.erase(s); nativeTexts.erase(s);
 +}
 +
@@ -6057,9 +6172,9 @@ index 0000000..2ddbdff
 +	vHave = true;
 +}
 +
-+void composite(SDL_Surface *base8, SDL_Surface *screen32)
++bool composite(SDL_Surface *base8, SDL_Surface *screen32, bool fillBase)
 +{
-+	if (!base || base8 != base || screen32->format->BitsPerPixel != 32 || screen32->w != sw || screen32->h != sh) return;
++	if (!base || base8 != base || screen32->format->BitsPerPixel != 32 || screen32->w != sw || screen32->h != sh) return false;
 +	const SDL_PixelFormat *f = screen32->format;
 +	const bool direct = f->Rshift == 16 && f->Gshift == 8 && f->Bshift == 0;
 +	if (SDL_MUSTLOCK(screen32)) SDL_LockSurface(screen32);
@@ -6067,7 +6182,53 @@ index 0000000..2ddbdff
 +	{
 +		((Uint32*)((Uint8*)screen32->pixels + Y * screen32->pitch))[X] = direct ? c : SDL_MapRGB(f, (c >> 16) & 255, (c >> 8) & 255, c & 255);
 +	};
-+	if (any)
++	if (fillBase)
++	{
++		// ONE PASS (12 Nov, performance): the zoomed 8-bit frame is written straight into the
++		// 32-bit screen here, cell by cell, and only where the overlay does not cover it. This
++		// replaces clearing an 8-bit screen-sized buffer, zooming into it, converting it to 32
++		// bits and then overwriting most of it with the overlay - four full-screen passes.
++		Uint32 pal[256];
++		const SDL_Color *c = base8->format->palette->colors;
++		const int nc = base8->format->palette->ncolors;
++		for (int i = 0; i < 256; ++i)
++			pal[i] = i < nc ? (direct ? rgb(c[i].r, c[i].g, c[i].b) : SDL_MapRGB(f, c[i].r, c[i].g, c[i].b)) : 0;
++		// the black bands
++		const Uint32 black = direct ? 0 : SDL_MapRGB(f, 0, 0, 0);
++		for (int Y = 0; Y < sh; ++Y)
++		{
++			Uint32 *d = (Uint32*)((Uint8*)screen32->pixels + Y * screen32->pitch);
++			if (Y < ys[0] || Y >= ys[bh]) { for (int X = 0; X < sw; ++X) d[X] = black; continue; }
++			for (int X = 0; X < xs[0]; ++X) d[X] = black;
++			for (int X = xs[bw]; X < sw; ++X) d[X] = black;
++		}
++		for (int by = 0; by < bh; ++by)
++		{
++			const Uint8 *p = row8(by);
++			const Uint8 *vr = any ? &valid[(size_t)by * bw] : nullptr;
++			const Uint8 *tr = any ? &tag[(size_t)by * bw] : nullptr;
++			for (int Y = ys[by]; Y < ys[by + 1]; ++Y)
++			{
++				Uint32 *d = (Uint32*)((Uint8*)screen32->pixels + Y * screen32->pitch);
++				const Uint32 *o = over.data() + (size_t)Y * sw;
++				for (int bx = 0; bx < bw; ++bx)
++				{
++					const int x0 = xs[bx], x1 = xs[bx + 1];
++					if (vr && vr[bx] && tr[bx] == p[bx])
++					{
++						if (direct) memcpy(d + x0, o + x0, (size_t)(x1 - x0) * 4);
++						else for (int X = x0; X < x1; ++X) put(X, Y, o[X]);
++					}
++					else
++					{
++						const Uint32 v = pal[p[bx]];
++						for (int X = x0; X < x1; ++X) d[X] = v;
++					}
++				}
++			}
++		}
++	}
++	else if (any)
 +	{
 +		for (int by = 0; by < bh; ++by)
 +		{
@@ -6157,7 +6318,12 @@ index 0000000..2ddbdff
 +	if (curOn && curX >= 0 && curY >= 0 && curX < bw && curY < bh)
 +	{
 +		const Img *cur = piece("cursor");
-+		const int oy = ys[curY], ox = xs[curX];
++		// drawn where the mouse really is, to the screen pixel: the game's cursor position is in
++		// base pixels, so drawing it there moved the arrow in 6-pixel jumps (the jitter John saw)
++		int mx = 0, my = 0;
++		SDL_GetMouseState(&mx, &my);
++		const bool real = mx >= xs[0] && my >= ys[0] && mx < xs[bw] && my < ys[bh];
++		const int oy = real ? my : ys[curY], ox = real ? mx : xs[curX];
 +		if (cur)
 +		{
 +			const int H = (ys[std::min(bh, curY + 17)] - oy), W = std::max(1, cur->w * H / cur->h);
@@ -6199,16 +6365,17 @@ index 0000000..2ddbdff
 +		}
 +	}
 +	if (SDL_MUSTLOCK(screen32)) SDL_UnlockSurface(screen32);
++	return true;
 +}
 +
 +}
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..557164a
+index 0000000..bec3455
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,176 @@
+@@ -0,0 +1,179 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -6261,7 +6428,8 @@ index 0000000..557164a
 +	/// is hidden. For items in the painted equipment page's compartments.
 +	void spriteFit(const Surface *frame, int x, int y, int w, int h, int bx, int by, int bw, int bh, double inset);
 +	/// After the 8-bit buffer has been zoomed onto the 32-bit display.
-+	void composite(SDL_Surface *base8, SDL_Surface *screen32);
++	/// fillBase: also write the zoomed 8-bit frame itself (one pass); false if HiUI is not on this frame.
++	bool composite(SDL_Surface *base8, SDL_Surface *screen32, bool fillBase = false);
 +
 +	/// VECTOR STROKES. Lines the game would draw one base pixel wide - country
 +	/// borders, radar rings, flight paths, route marks - recorded at full precision
@@ -6342,6 +6510,8 @@ index 0000000..557164a
 +	/// A native key's look (UI standard): 0 steel, 1 the screen's one yellow main
 +	/// action, 2 danger red, 3 dimmed (acted / unavailable), 4 olive (active toggle).
 +	void nativeKeyStyle(const Surface *button, int style);
++	/// A picture (Resources/UI/<piece>.png) drawn on a native key above its legend (BATTLE_ICONS_BRIEF).
++	void nativeKeyIcon(const Surface *button, const std::string &piece);
 +
 +	/// THE BATTLE BAR (BATTLE_HUD_SPEC_v1). The bar and the mission panel are 8-bit
 +	/// surfaces with nothing on them; everything they show is painted from this.
@@ -6411,7 +6581,7 @@ index a08796c..1a67209 100644
  
  // Battlescape options
 diff --git a/src/Engine/Screen.cpp b/src/Engine/Screen.cpp
-index ae9083d..965c582 100644
+index ae9083d..62b53dc 100644
 --- a/src/Engine/Screen.cpp
 +++ b/src/Engine/Screen.cpp
 @@ -1,3 +1,4 @@
@@ -6448,7 +6618,7 @@ index ae9083d..965c582 100644
  void Screen::flip()
  {
  	// perform any requested palette update
-@@ -203,6 +219,45 @@ void Screen::flip()
+@@ -203,6 +219,49 @@ void Screen::flip()
  
  	if (getWidth() != _baseWidth || getHeight() != _baseHeight || useOpenGL())
  	{
@@ -6474,6 +6644,10 @@ index ae9083d..965c582 100644
 +			mapOverlay = nullptr;
 +			HiUI::composite(_surface.get(), _screen);
 +		}
++		else if (_surface->format->BitsPerPixel == 8 && _screen->format->BitsPerPixel == 32 && !useOpenGL() && !getenv("OXCE_OLDFLIP") && HiUI::composite(_surface.get(), _screen, true))
++		{
++			// HiUI wrote the zoomed frame and its overlay in one pass
++		}
 +		else if (_surface->format->BitsPerPixel == 8 && _screen->format->BitsPerPixel == 32 && !useOpenGL())
 +		{
 +			// 8-bit game, 32-bit display: zoom in 8 bits, let SDL convert
@@ -6494,7 +6668,7 @@ index ae9083d..965c582 100644
  		Zoom::flipWithZoom(_surface.get(), _screen, _topBlackBand, _bottomBlackBand, _leftBlackBand, _rightBlackBand, &glOutput);
  	}
  	else
-@@ -236,6 +291,14 @@ void Screen::clear()
+@@ -236,6 +295,14 @@ void Screen::clear()
  {
  	Surface::CleanSdlSurface(_surface.get());
  	Surface::CleanSdlSurface(_screen);
@@ -6509,7 +6683,7 @@ index ae9083d..965c582 100644
  }
  
  /**
-@@ -350,9 +413,10 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
+@@ -350,9 +417,10 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
  	}
  	SDL_SetColorKey(_surface.get(), 0, 0); // turn off color key!
  
@@ -6522,7 +6696,7 @@ index ae9083d..965c582 100644
  
  #if defined __linux__ || defined _WIN32 || defined  __CYGWIN__
  		// Workaround for segfault when switching to opengl
-@@ -374,12 +438,12 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
+@@ -374,12 +442,12 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
  			SDL_SetCursor(SDL_CreateCursor(&cursor, &cursor, 1,1,0,0));
  		}
  #endif
