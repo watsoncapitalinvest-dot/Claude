@@ -377,10 +377,10 @@ index d41c550..d7148f6 100644
  	void btnNewClick(Action *action);
 diff --git a/src/Basescape/ResearchTreeState.cpp b/src/Basescape/ResearchTreeState.cpp
 new file mode 100644
-index 0000000..faa3d6a
+index 0000000..62a1ae0
 --- /dev/null
 +++ b/src/Basescape/ResearchTreeState.cpp
-@@ -0,0 +1,587 @@
+@@ -0,0 +1,637 @@
 +/*
 + * G.I. Joe: USA Defense. The research tree (see ResearchTreeState.h).
 + */
@@ -499,6 +499,47 @@ index 0000000..faa3d6a
 +	C_RED = 0xC0392B, C_GREEN = 0x6FAE4A, C_BLUE = 0x5B8FC9, C_ORANGE = 0xD9822B, C_GREY = 0x8D897D;
 +}
 +
++namespace
++{
++const std::string TREE = "Resources/UI/tree/";
++/// The lane emblem for a department (the art names the Day 1 heads' lanes).
++std::string laneEmblem(const std::string &dept)
++{
++	if (dept == "COMMAND") return "lane_hawk";
++	if (dept == "INTEL") return "lane_scarlett";
++	if (dept == "MEDICAL") return "lane_doc";
++	if (dept == "COMMS") return "lane_breaker";
++	if (dept == "ARMORY") return "lane_roadblock";
++	if (dept == "MOTOR_POOL") return "lane_vehicles";
++	if (dept == "AIR_WING") return "lane_air";
++	return "";
++}
++/// The category icon for a topic: what it uses up first (a prisoner, a clue, captured gear),
++/// then its department, then a few words in its id.
++std::string topicIcon(const RuleResearch *r)
++{
++	const std::string &id = r->getName();
++	auto has = [&](const char *w) { return id.find(w) != std::string::npos; };
++	if (r->needItem() && r->getNeededItem())
++	{
++		if (r->getNeededItem()->isAlien()) return "icon_interrogation";
++		if (has("WRECK") || has("PARTS") || has("CORPSE") || has("RIFLE") || has("PISTOL") || has("GRENADE") || has("CHIP")) return "icon_cobra_tech";
++		return "icon_document";
++	}
++	const std::string &L = r->getLane();
++	if (L == "MEDICAL") return "icon_medical";
++	if (L == "COMMS") return "icon_comms";
++	if (L == "MOTOR_POOL") return "icon_vehicle";
++	if (L == "AIR_WING") return "icon_aircraft";
++	if (L == "COMMAND") return "icon_command";
++	if (L == "INTEL") return "icon_document";
++	if (has("ARMOR") || has("VEST") || has("SUIT")) return "icon_armor";
++	if (has("GRENADE") || has("EXPLOSIVE") || has("CHARGE") || has("MINE") || has("ROCKET") || has("MISSILE")) return "icon_explosive";
++	if (has("ROOM") || has("RADAR") || has("BLOCK") || has("STATION") || has("TOWER")) return "icon_facility";
++	return "icon_weapon";
++}
++}
++
 +void ResearchTreeState::paintHi()
 +{
 +	if (!HiUI::enabled()) return;
@@ -547,11 +588,13 @@ index 0000000..faa3d6a
 +		HiUI::Paint::rect(X0, y0, X0 + 50 * k, y1, (L % 2) ? 0x1B2023 : 0x14181A);
 +		HiUI::Paint::rect(X0, y1 - 0.25 * k, X0 + 50 * k, y1, C_EDGE);
 +		const std::string &type = _laneTypes[L];
-+		// emblem stand-in until the lane emblems arrive: an olive ring with the department's initial
-+		const double cx = X0 + 7 * k, cy = y0 + 8 * k, r = 5 * k;
-+		HiUI::Paint::roundRect(cx - r, cy - r, cx + r, cy + r, r, C_OLIVE);
-+		HiUI::Paint::roundRect(cx - r + 0.6 * k, cy - r + 0.6 * k, cx + r - 0.6 * k, cy + r - 0.6 * k, r - 0.6 * k, C_PANEL);
-+		HiUI::Paint::text("stencil", std::string(tr("STR_DEPT_" + type)).substr(0, 1), cx - r, cy - r, cx + r, cy + r, 2.6 * k, 1, 1, C_YELLOW);
++		// the lane emblem (ART's round patch)
++		const double cx = X0 + 7 * k, cy = y0 + 8 * k, r = 5.5 * k;
++		if (!HiUI::Paint::image(TREE + laneEmblem(type) + ".png", cx - r, cy - r, cx + r, cy + r))
++		{
++			HiUI::Paint::roundRect(cx - r, cy - r, cx + r, cy + r, r, C_OLIVE);
++			HiUI::Paint::text("stencil", std::string(tr("STR_DEPT_" + type)).substr(0, 1), cx - r, cy - r, cx + r, cy + r, 2.6 * k, 1, 1, C_YELLOW);
++		}
 +		HiUI::Paint::text("stencil", tr("STR_DEPT_" + type), X0 + 13.5 * k, y0 + 2.5 * k, X0 + 49 * k, y0 + 8.5 * k, 3.0 * k, 0, 1, C_YELLOW);
 +		// head, his state chip, the department's speed bar
 +		bool captured = false;
@@ -584,7 +627,12 @@ index 0000000..faa3d6a
 +		HiUI::Paint::rect(X0, y0, X0 + VW * k, y1, (L % 2) ? 0x1B2023 : 0x14181A);
 +		HiUI::Paint::rect(X0, y1 - 0.25 * k, X0 + VW * k, y1, C_EDGE);
 +	}
-+	for (double gx = 0; gx < VW; gx += 8) HiUI::Paint::rect(X0 + gx * k, Y0, X0 + gx * k + 1, Y0 + VH * k, 0x1F2528, 90);
++	{
++		const double ts = 192;   // the blueprint tile at its own size
++		for (double ty = Y0; ty < Y0 + VH * k; ty += ts)
++			for (double tx = X0; tx < X0 + VW * k; tx += ts)
++				HiUI::Paint::image(TREE + "tree_bg_tile.png", tx, ty, tx + ts, ty + ts, 110);
++	}
 +	auto cardX = [&](const Node &n) { return X0 + (2 + n.col * PX - _scrollX) * k; };
 +	auto cardY = [&](const Node &n) { return Y0 + (1 + n.row * PY - _scrollY) * k; };
 +	const double lw = std::max(2.0, 0.5 * k);
@@ -620,25 +668,27 @@ index 0000000..faa3d6a
 +		default: break;
 +		}
 +		if ((int)i == _sel) HiUI::Paint::rect(x0 - 1.2 * k, y0 - 1.2 * k, x1 + 1.2 * k, y1 + 1.2 * k, C_YELLOW, 90);
-+		HiUI::Paint::rect(x0, y0, x1, y1, plate);
-+		if (n.st == N_AVAILABLE) HiUI::Paint::rect(x0, y0, x1, y0 + (y1 - y0) * 0.45, 0x3A4347, 120);   // raised: lit from the top
-+		HiUI::Paint::frame(x0, y0, x1, y1, (int)i == _sel ? std::max(3.0, 0.7 * k) : std::max(2.0, 0.35 * k), (int)i == _sel ? C_YELLOW : edge);
-+		// rivets in the corners
-+		for (double rx : { x0 + 1.2 * k, x1 - 1.6 * k }) for (double ry : { y0 + 1.2 * k, y1 - 1.6 * k })
-+			HiUI::Paint::rect(rx, ry, rx + 0.4 * k, ry + 0.4 * k, C_EDGE);
++		const char *plateArt = n.st == N_AVAILABLE ? "card_raised" : (n.st == N_LOCKED || n.st == N_NEEDITEM) ? "card_flat" : "card_normal";
++		if (!HiUI::Paint::image(TREE + plateArt + ".png", x0, y0, x1, y1)) HiUI::Paint::rect(x0, y0, x1, y1, plate);
++		if (n.st != N_LOCKED || (int)i == _sel)
++			HiUI::Paint::frame(x0, y0, x1, y1, (int)i == _sel ? std::max(3.0, 0.7 * k) : std::max(2.0, 0.35 * k), (int)i == _sel ? C_YELLOW : edge);
 +		// Cobra-derived topics: a red strip down the left edge (anything that uses up an item)
 +		if (n.r->needItem()) HiUI::Paint::rect(x0, y0, x0 + 1.0 * k, y1, C_RED);
-+		// icon slot (category icons still to come from ART): the "?" for item topics
-+		if (n.st == N_NEEDITEM) HiUI::Paint::text("stencil", "?", x1 - 9 * k, y0 + 2 * k, x1 - 2 * k, y1 - 2 * k, 5 * k, 1, 1, C_YELLOW);
++		// the category icon (or the "?" crate), dimmed on a locked card
++		{
++			const double s = 8.2 * k, ix = x0 + 1.6 * k, iy = y0 + (CH * k - s) / 2;
++			HiUI::Paint::image(TREE + (n.st == N_NEEDITEM ? std::string("icon_unknown") : topicIcon(n.r)) + ".png", ix, iy, ix + s, iy + s, n.st == N_LOCKED ? 110 : 255);
++		}
 +		const std::string name = n.st == N_NEEDITEM ? std::string("?") : std::string(tr(n.r->getName()));
-+		HiUI::Paint::text("label", name, x0 + 3 * k, y0 + 1.0 * k, x1 - 4.5 * k, y0 + 8.4 * k, 2.6 * k, 0, 1, ink);
++		HiUI::Paint::text("label", name, x0 + 10.6 * k, y0 + 1.0 * k, x1 - 4.5 * k, y0 + 8.4 * k, 2.4 * k, 0, 1, ink);
 +		std::ostringstream cost;
 +		cost << n.r->getCost() << " days";
 +		if (n.st == N_NEEDITEM) cost.str(std::string(tr("STR_TREE_NEEDS_ITEM")));
-+		HiUI::Paint::text("label", cost.str(), x0 + 3 * k, y0 + 8.6 * k, x1 - 2 * k, y1 - 1.4 * k, 1.9 * k, 0, 1, n.st == N_LOCKED ? C_DIM : C_MUTED);
++		if (n.st != N_NEEDITEM) HiUI::Paint::image(TREE + "cost_days.png", x0 + 10.6 * k, y0 + 9.0 * k, x0 + 13.4 * k, y0 + 11.8 * k, n.st == N_LOCKED ? 110 : 255);
++		HiUI::Paint::text("label", cost.str(), x0 + (n.st == N_NEEDITEM ? 10.6 : 14.2) * k, y0 + 8.6 * k, x1 - 2 * k, y1 - 1.4 * k, 1.9 * k, 0, 1, n.st == N_LOCKED ? C_DIM : C_MUTED);
 +		// badges: done check, padlock, progress
-+		if (n.st == N_DONE) HiUI::Paint::text("stencil", "OK", x1 - 4.5 * k, y0 + 1 * k, x1 - 1 * k, y0 + 4.5 * k, 1.6 * k, 1, 1, C_GREEN);
-+		if (n.st == N_LOCKED) { HiUI::Paint::roundRect(x1 - 3.8 * k, y0 + 2.2 * k, x1 - 1.4 * k, y0 + 4.6 * k, 0.4 * k, C_GREY); HiUI::Paint::frame(x1 - 3.4 * k, y0 + 1.0 * k, x1 - 1.8 * k, y0 + 2.4 * k, 0.35 * k, C_GREY); }
++		const char *badge = n.st == N_DONE ? "badge_done" : n.st == N_LOCKED ? "badge_locked" : n.st == N_RESEARCHING ? "badge_scientist" : nullptr;
++		if (badge) HiUI::Paint::image(TREE + badge + ".png", x1 - 5.2 * k, y0 + 0.9 * k, x1 - 0.8 * k, y0 + 5.3 * k);
 +		if (n.st == N_RESEARCHING) HiUI::Paint::rect(x0 + 1 * k, y1 - 1.2 * k, x0 + 1 * k + (CW - 2) * k * n.pct / 100.0, y1 - 0.4 * k, C_BLUE);
 +	}
 +}
@@ -5123,10 +5173,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..d4b8d0a
+index 0000000..f0e879b
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3147 @@
+@@ -0,0 +1,3178 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -7582,6 +7632,37 @@ index 0000000..d4b8d0a
 +	// count the lines so the line height follows the cap height
 +	setType(*f, s, (int)x0, (int)std::max<double>(y0, clipY0 - 1000), (int)x1, (int)y1, capPx, capPx * 1.55, halign, valign, c & 0xFFFFFF, true);
 +}
++bool image(const std::string &file, double x0, double y0, double x1, double y1, int alpha)
++{
++	static std::unordered_map<std::string, Img> srcs, sized;
++	auto s = srcs.find(file);
++	if (s == srcs.end()) s = srcs.emplace(file, loadPng(file)).first;
++	if (!s->second.ok) return false;
++	const int X0 = (int)std::lround(x0), Y0 = (int)std::lround(y0);
++	const int W = (int)std::lround(x1) - X0, H = (int)std::lround(y1) - Y0;
++	if (W <= 0 || H <= 0) return true;
++	const std::string key = file + "@" + std::to_string(W) + "x" + std::to_string(H);
++	auto z = sized.find(key);
++	if (z == sized.end())
++	{
++		if (sized.size() > 400) sized.clear();
++		z = sized.emplace(key, (s->second.w == W && s->second.h == H) ? s->second : resampleArea(s->second, W, H)).first;
++	}
++	const Img &q = z->second;
++	for (int Y = std::max(clipY0, Y0); Y < std::min(clipY1, Y0 + H); ++Y)
++	{
++		Uint32 *o = over.data() + (size_t)Y * sw;
++		const Uint32 *row = q.px.data() + (size_t)(Y - Y0) * q.w;
++		for (int X = std::max(clipX0, X0); X < std::min(clipX1, X0 + W); ++X)
++		{
++			const Uint32 p = row[X - X0];
++			const int a = (int)(p >> 24) * alpha / 255;
++			if (a) o[X] = a >= 255 ? (p & 0xFFFFFF) : mix(o[X], p & 0xFFFFFF, a);
++		}
++	}
++	return true;
++}
++
 +bool picture(const std::string &file, double x0, double y0, double x1, double y1, double progress)
 +{
 +	static std::unordered_map<std::string, Img> cache;
@@ -8276,10 +8357,10 @@ index 0000000..d4b8d0a
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..b06ad3d
+index 0000000..8a6c127
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,200 @@
+@@ -0,0 +1,203 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -8453,6 +8534,9 @@ index 0000000..b06ad3d
 +		/// pixelates and desaturates it (RESEARCH_TREE_SCREEN_SPEC 1b); 1 or more = clean.
 +		/// Returns false if the file is missing.
 +		bool picture(const std::string &file, double x0, double y0, double x1, double y1, double progress);
++		/// An art piece (path under the mod root) with its own transparency, scaled into the box
++		/// (cached per size). alpha scales its opacity. Returns false if the file is missing.
++		bool image(const std::string &file, double x0, double y0, double x1, double y1, int alpha = 255);
 +	}
 +	/// The screen is closing: forget everything it registered.
 +	void nativeForget(const Surface *s);
