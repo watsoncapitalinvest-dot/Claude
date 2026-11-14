@@ -377,10 +377,10 @@ index d41c550..d7148f6 100644
  	void btnNewClick(Action *action);
 diff --git a/src/Basescape/ResearchTreeState.cpp b/src/Basescape/ResearchTreeState.cpp
 new file mode 100644
-index 0000000..84a325a
+index 0000000..faa3d6a
 --- /dev/null
 +++ b/src/Basescape/ResearchTreeState.cpp
-@@ -0,0 +1,375 @@
+@@ -0,0 +1,587 @@
 +/*
 + * G.I. Joe: USA Defense. The research tree (see ResearchTreeState.h).
 + */
@@ -395,6 +395,8 @@ index 0000000..84a325a
 +#include "../Engine/Options.h"
 +#include "../Engine/InteractiveSurface.h"
 +#include "../Engine/Palette.h"
++#include "../Engine/HiUI.h"
++#include "../Engine/Unicode.h"
 +#include "../Interface/TextButton.h"
 +#include "../Interface/Window.h"
 +#include "../Interface/Text.h"
@@ -423,6 +425,7 @@ index 0000000..84a325a
 +	_txtTitle = new Text(310, 13, 5, 3);
 +	_lanes = new Surface(50, VH, 2, VY);
 +	_view = new InteractiveSurface(VW, VH, VX, VY);
++	_info = new Surface(88, 124, 231, VY);
 +	_txtName = new Text(86, 26, 232, VY);
 +	_txtInfo = new Text(86, 18, 232, VY + 28);
 +	_txtBody = new Text(86, 92, 232, VY + 48);
@@ -437,6 +440,7 @@ index 0000000..84a325a
 +	add(_txtTitle, "text", "researchMenu");
 +	add(_lanes);
 +	add(_view);
++	add(_info);
 +	add(_txtName, "text", "researchMenu");
 +	add(_txtInfo, "text", "researchMenu");
 +	add(_txtBody, "text", "researchMenu");
@@ -477,6 +481,214 @@ index 0000000..84a325a
 +	build();
 +	draw();
 +	showInfo();
++	paintHi();
++}
++
++ResearchTreeState::~ResearchTreeState()
++{
++	for (const Surface *s : { (const Surface*)_window, (const Surface*)_view, (const Surface*)_lanes, (const Surface*)_info })
++		HiUI::nativePanel(s, nullptr);
++}
++
++// ---- phase B: the screen at display resolution (RESEARCH_TREE_SCREEN_SPEC, the mockup) ------------
++
++namespace
++{
++const Uint32 C_GROUND = 0x14181A, C_PANEL = 0x1B2023, C_ROW = 0x232A2D, C_RAISED = 0x323A3E, C_EDGE = 0x3D464A,
++	C_OLIVE = 0x4A5640, C_YELLOW = 0xE8B923, C_BONE = 0xE9E6DC, C_MUTED = 0xB9B5A8, C_DIM = 0x5C5A52, C_DARKRED = 0x6B2A24,
++	C_RED = 0xC0392B, C_GREEN = 0x6FAE4A, C_BLUE = 0x5B8FC9, C_ORANGE = 0xD9822B, C_GREY = 0x8D897D;
++}
++
++void ResearchTreeState::paintHi()
++{
++	if (!HiUI::enabled()) return;
++	// the 8-bit texts of the info panel and the title are painted by the panels instead
++	_txtTitle->setVisible(false);
++	_txtName->setVisible(false);
++	_txtInfo->setVisible(false);
++	_txtBody->setVisible(false);
++	HiUI::nativeKeyStyle(_btnStart, 1);   // the screen's one yellow button
++	HiUI::nativePanel(_window, [this](double X0, double Y0, double k) { paintFrame(X0, Y0, k); });
++	HiUI::nativePanel(_view, [this](double X0, double Y0, double k) { paintView(X0, Y0, k); });
++	HiUI::nativePanel(_lanes, [this](double X0, double Y0, double k) { paintLanes(X0, Y0, k); });
++	HiUI::nativePanel(_info, [this](double X0, double Y0, double k) { paintInfo(X0, Y0, k); });
++}
++
++void ResearchTreeState::paintFrame(double X0, double Y0, double k)
++{
++	// ground, title bar, the info panel's column, the bottom bar
++	HiUI::Paint::rect(X0, Y0, X0 + 320 * k, Y0 + 200 * k, C_GROUND);
++	HiUI::Paint::rect(X0, Y0, X0 + 320 * k, Y0 + 16 * k, C_PANEL);
++	HiUI::Paint::rect(X0, Y0 + 16 * k, X0 + 320 * k, Y0 + 16.3 * k, C_OLIVE);
++	HiUI::Paint::rect(X0 + 230 * k, Y0 + 16.3 * k, X0 + 320 * k, Y0 + 181 * k, C_PANEL);
++	HiUI::Paint::rect(X0, Y0 + 181 * k, X0 + 320 * k, Y0 + 200 * k, C_PANEL);
++	HiUI::Paint::rect(X0, Y0 + 181 * k, X0 + 320 * k, Y0 + 181.3 * k, C_OLIVE);
++	HiUI::Paint::text("stencil", tr("STR_RESEARCH"), X0 + 4 * k, Y0 + 2 * k, X0 + 100 * k, Y0 + 14 * k, 6.5 * k, 0, 1, C_YELLOW);
++	auto stat = [&](double x, const std::string &label, const std::string &value)
++	{
++		HiUI::Paint::text("label", label, X0 + x * k, Y0 + 2 * k, X0 + (x + 70) * k, Y0 + 6 * k, 1.6 * k, 0, 1, C_GREY);
++		HiUI::Paint::text("label", value, X0 + x * k, Y0 + 7 * k, X0 + (x + 70) * k, Y0 + 14 * k, 3.2 * k, 0, 1, C_BONE);
++	};
++	std::ostringstream lab, sci;
++	lab << _base->getFreeLaboratories() << " of " << _base->getAvailableLaboratories() << " free";
++	sci << _base->getTotalScientists() << " / " << _base->getScientists() << " free";
++	stat(118, "LAB SPACE", lab.str());
++	stat(176, "SCIENTISTS", sci.str());
++	stat(240, "FUNDS", Unicode::formatFunding(_game->getSavedGame()->getFunds()));
++}
++
++void ResearchTreeState::paintLanes(double X0, double Y0, double k)
++{
++	const Mod *mod = _game->getMod();
++	SavedGame *save = _game->getSavedGame();
++	for (size_t L = 0; L < _laneTypes.size(); ++L)
++	{
++		const double y0 = Y0 + (_laneTop[L] * PY - _scrollY) * k, y1 = y0 + _laneRows[L] * PY * k;
++		HiUI::Paint::rect(X0, y0, X0 + 50 * k, y1, (L % 2) ? 0x1B2023 : 0x14181A);
++		HiUI::Paint::rect(X0, y1 - 0.25 * k, X0 + 50 * k, y1, C_EDGE);
++		const std::string &type = _laneTypes[L];
++		// emblem stand-in until the lane emblems arrive: an olive ring with the department's initial
++		const double cx = X0 + 7 * k, cy = y0 + 8 * k, r = 5 * k;
++		HiUI::Paint::roundRect(cx - r, cy - r, cx + r, cy + r, r, C_OLIVE);
++		HiUI::Paint::roundRect(cx - r + 0.6 * k, cy - r + 0.6 * k, cx + r - 0.6 * k, cy + r - 0.6 * k, r - 0.6 * k, C_PANEL);
++		HiUI::Paint::text("stencil", std::string(tr("STR_DEPT_" + type)).substr(0, 1), cx - r, cy - r, cx + r, cy + r, 2.6 * k, 1, 1, C_YELLOW);
++		HiUI::Paint::text("stencil", tr("STR_DEPT_" + type), X0 + 13.5 * k, y0 + 2.5 * k, X0 + 49 * k, y0 + 8.5 * k, 3.0 * k, 0, 1, C_YELLOW);
++		// head, his state chip, the department's speed bar
++		bool captured = false;
++		const Soldier *s = save->findJoe(save->getDeptHead(type), &captured);
++		std::string chip; Uint32 chipCol = C_GREY;
++		if (!save->hasDeptRoom(mod, type)) { chip = tr("STR_DEPT_NO_ROOM"); }
++		else if (!s) { chip = tr("STR_NO_HEAD"); }
++		else if (captured) { chip = tr("STR_HEAD_CAPTURED"); chipCol = C_DARKRED; }
++		else if (SavedGame::isJoeAway(s)) { chip = tr("STR_HEAD_AWAY"); chipCol = C_ORANGE; }
++		else { chip = tr("STR_HEAD_IN_OFFICE"); chipCol = C_GREEN; }
++		HiUI::Paint::text("label", s ? s->getName() : std::string("-"), X0 + 13.5 * k, y0 + 9 * k, X0 + 49 * k, y0 + 13 * k, 2.2 * k, 0, 1, C_BONE);
++		HiUI::Paint::text("label", chip, X0 + 13.5 * k, y0 + 13.5 * k, X0 + 49 * k, y0 + 17 * k, 1.9 * k, 0, 1, chipCol);
++		if (save->hasDeptRoom(mod, type))
++		{
++			const int spd = save->getDeptSpeed(mod, type);
++			const Uint32 bc = spd >= 100 ? C_GREEN : spd >= 70 ? C_ORANGE : C_RED;
++			HiUI::Paint::rect(X0 + 2 * k, y0 + 19 * k, X0 + 40 * k, y0 + 21 * k, C_EDGE);
++			HiUI::Paint::rect(X0 + 2 * k, y0 + 19 * k, X0 + (2 + 38 * std::min(100, spd) / 100.0) * k, y0 + 21 * k, bc);
++			HiUI::Paint::text("label", std::to_string(spd) + "%", X0 + 41 * k, y0 + 18.2 * k, X0 + 50 * k, y0 + 21.8 * k, 1.6 * k, 0, 1, bc);
++		}
++	}
++}
++
++void ResearchTreeState::paintView(double X0, double Y0, double k)
++{
++	// lane bands with a faint grid
++	for (size_t L = 0; L < _laneTypes.size(); ++L)
++	{
++		const double y0 = Y0 + (_laneTop[L] * PY - _scrollY) * k, y1 = y0 + _laneRows[L] * PY * k;
++		HiUI::Paint::rect(X0, y0, X0 + VW * k, y1, (L % 2) ? 0x1B2023 : 0x14181A);
++		HiUI::Paint::rect(X0, y1 - 0.25 * k, X0 + VW * k, y1, C_EDGE);
++	}
++	for (double gx = 0; gx < VW; gx += 8) HiUI::Paint::rect(X0 + gx * k, Y0, X0 + gx * k + 1, Y0 + VH * k, 0x1F2528, 90);
++	auto cardX = [&](const Node &n) { return X0 + (2 + n.col * PX - _scrollX) * k; };
++	auto cardY = [&](const Node &n) { return Y0 + (1 + n.row * PY - _scrollY) * k; };
++	const double lw = std::max(2.0, 0.5 * k);
++	// elbow lines: out of the right side, into the left side
++	for (size_t i = 0; i < _nodes.size(); ++i)
++	{
++		const Node &n = _nodes[i];
++		for (const auto *dep : n.r->getDependencies())
++		{
++			auto it = std::find_if(_nodes.begin(), _nodes.end(), [&](const Node &m) { return m.r == dep; });
++			if (it == _nodes.end()) continue;
++			const Uint32 c = n.st == N_DONE ? C_OLIVE : (n.st == N_AVAILABLE || n.st == N_RESEARCHING) ? C_YELLOW : C_EDGE;
++			const double w = ((int)i == _sel) ? lw * 1.7 : lw;
++			const double x0 = cardX(*it) + CW * k, y0 = cardY(*it) + CH * k / 2, x1 = cardX(n), y1 = cardY(n) + CH * k / 2, xm = (x0 + x1) / 2;
++			HiUI::Paint::rect(x0, y0 - w / 2, xm + w / 2, y0 + w / 2, c);
++			HiUI::Paint::rect(xm - w / 2, std::min(y0, y1) - w / 2, xm + w / 2, std::max(y0, y1) + w / 2, c);
++			HiUI::Paint::rect(xm - w / 2, y1 - w / 2, x1, y1 + w / 2, c);
++		}
++	}
++	// cards (spec section 3)
++	for (size_t i = 0; i < _nodes.size(); ++i)
++	{
++		const Node &n = _nodes[i];
++		const double x0 = cardX(n), y0 = cardY(n), x1 = x0 + CW * k, y1 = y0 + CH * k;
++		if (x1 < X0 || x0 > X0 + VW * k || y1 < Y0 || y0 > Y0 + VH * k) continue;
++		Uint32 plate = C_PANEL, edge = C_EDGE, ink = C_DIM;
++		switch (n.st)
++		{
++		case N_DONE: plate = C_ROW; edge = C_GREEN; ink = C_MUTED; break;
++		case N_RESEARCHING: plate = 0x2A3033; edge = C_BLUE; ink = C_BONE; break;
++		case N_AVAILABLE: plate = C_RAISED; edge = C_YELLOW; ink = C_BONE; break;
++		case N_NEEDITEM: plate = C_PANEL; edge = C_DARKRED; ink = C_GREY; break;
++		default: break;
++		}
++		if ((int)i == _sel) HiUI::Paint::rect(x0 - 1.2 * k, y0 - 1.2 * k, x1 + 1.2 * k, y1 + 1.2 * k, C_YELLOW, 90);
++		HiUI::Paint::rect(x0, y0, x1, y1, plate);
++		if (n.st == N_AVAILABLE) HiUI::Paint::rect(x0, y0, x1, y0 + (y1 - y0) * 0.45, 0x3A4347, 120);   // raised: lit from the top
++		HiUI::Paint::frame(x0, y0, x1, y1, (int)i == _sel ? std::max(3.0, 0.7 * k) : std::max(2.0, 0.35 * k), (int)i == _sel ? C_YELLOW : edge);
++		// rivets in the corners
++		for (double rx : { x0 + 1.2 * k, x1 - 1.6 * k }) for (double ry : { y0 + 1.2 * k, y1 - 1.6 * k })
++			HiUI::Paint::rect(rx, ry, rx + 0.4 * k, ry + 0.4 * k, C_EDGE);
++		// Cobra-derived topics: a red strip down the left edge (anything that uses up an item)
++		if (n.r->needItem()) HiUI::Paint::rect(x0, y0, x0 + 1.0 * k, y1, C_RED);
++		// icon slot (category icons still to come from ART): the "?" for item topics
++		if (n.st == N_NEEDITEM) HiUI::Paint::text("stencil", "?", x1 - 9 * k, y0 + 2 * k, x1 - 2 * k, y1 - 2 * k, 5 * k, 1, 1, C_YELLOW);
++		const std::string name = n.st == N_NEEDITEM ? std::string("?") : std::string(tr(n.r->getName()));
++		HiUI::Paint::text("label", name, x0 + 3 * k, y0 + 1.0 * k, x1 - 4.5 * k, y0 + 8.4 * k, 2.6 * k, 0, 1, ink);
++		std::ostringstream cost;
++		cost << n.r->getCost() << " days";
++		if (n.st == N_NEEDITEM) cost.str(std::string(tr("STR_TREE_NEEDS_ITEM")));
++		HiUI::Paint::text("label", cost.str(), x0 + 3 * k, y0 + 8.6 * k, x1 - 2 * k, y1 - 1.4 * k, 1.9 * k, 0, 1, n.st == N_LOCKED ? C_DIM : C_MUTED);
++		// badges: done check, padlock, progress
++		if (n.st == N_DONE) HiUI::Paint::text("stencil", "OK", x1 - 4.5 * k, y0 + 1 * k, x1 - 1 * k, y0 + 4.5 * k, 1.6 * k, 1, 1, C_GREEN);
++		if (n.st == N_LOCKED) { HiUI::Paint::roundRect(x1 - 3.8 * k, y0 + 2.2 * k, x1 - 1.4 * k, y0 + 4.6 * k, 0.4 * k, C_GREY); HiUI::Paint::frame(x1 - 3.4 * k, y0 + 1.0 * k, x1 - 1.8 * k, y0 + 2.4 * k, 0.35 * k, C_GREY); }
++		if (n.st == N_RESEARCHING) HiUI::Paint::rect(x0 + 1 * k, y1 - 1.2 * k, x0 + 1 * k + (CW - 2) * k * n.pct / 100.0, y1 - 0.4 * k, C_BLUE);
++	}
++}
++
++void ResearchTreeState::paintInfo(double X0, double Y0, double k)
++{
++	HiUI::Paint::rect(X0, Y0, X0 + 88 * k, Y0 + 124 * k, C_PANEL);
++	if (_sel < 0 || _sel >= (int)_nodes.size())
++	{
++		HiUI::Paint::text("label", tr("STR_RESEARCH_TREE_PICK"), X0 + 2 * k, Y0 + 2 * k, X0 + 86 * k, Y0 + 8 * k, 2.2 * k, 0, 1, C_GREY);
++		return;
++	}
++	const Mod *mod = _game->getMod();
++	SavedGame *save = _game->getSavedGame();
++	const Node &n = _nodes[_sel];
++	const bool hidden = n.st == N_NEEDITEM;
++	HiUI::Paint::text("stencil", hidden ? std::string("?") : std::string(tr(n.r->getName())), X0 + 2 * k, Y0 + 1 * k, X0 + 86 * k, Y0 + 8 * k, 3.3 * k, 0, 1, C_YELLOW);
++	// department, head, state
++	const Soldier *head = save->findJoe(save->getDeptHead(n.r->getLane()));
++	std::ostringstream sub;
++	sub << (head ? head->getName() + " - " : std::string()) << tr("STR_DEPT_" + n.r->getLane()) << " - " << save->getDeptSpeed(mod, n.r->getLane()) << "% speed";
++	HiUI::Paint::text("label", sub.str(), X0 + 2 * k, Y0 + 9 * k, X0 + 86 * k, Y0 + 12.5 * k, 1.9 * k, 0, 1, C_MUTED);
++	// the picture, sharpening with the work (1b): nothing until started, clean when done
++	const double px0 = X0 + 2 * k, py0 = Y0 + 14 * k, px1 = X0 + 86 * k, py1 = py0 + 84 * k * 240 / 432;
++	HiUI::Paint::rect(px0, py0, px1, py1, C_ROW);
++	const double prog = n.st == N_DONE ? 1.0 : n.st == N_RESEARCHING ? n.pct / 100.0 : 0.0;
++	if (!hidden && !HiUI::Paint::picture("Resources/Research/" + n.r->getName() + ".png", px0, py0, px1, py1, prog))
++		HiUI::Paint::text("label", "no picture yet", px0, py0, px1, py1, 1.6 * k, 1, 1, C_DIM);
++	HiUI::Paint::frame(px0, py0, px1, py1, std::max(1.0, 0.25 * k), C_EDGE);
++	double y = py1 + 2.5 * k;
++	auto row = [&](const std::string &label, const std::string &value)
++	{
++		HiUI::Paint::text("label", label, X0 + 2 * k, y, X0 + 22 * k, y + 4 * k, 1.8 * k, 0, 1, C_GREY);
++		HiUI::Paint::text("label", value, X0 + 22 * k, y, X0 + 86 * k, y + 4 * k, 2.2 * k, 0, 1, C_BONE);
++		y += 5 * k;
++	};
++	const char *stKey[] = { "STR_TREE_DONE", "STR_TREE_RESEARCHING", "STR_TREE_AVAILABLE", "STR_TREE_LOCKED", "STR_TREE_NEEDS_ITEM" };
++	row("STATUS", std::string(tr(stKey[n.st])) + (n.st == N_RESEARCHING ? " " + std::to_string(n.pct) + "%" : std::string()));
++	if (!hidden)
++	{
++		if (n.r->getDependencies().empty()) row("NEEDS", "nothing");
++		else for (size_t i = 0; i < n.r->getDependencies().size() && i < 3; ++i)
++			row(i == 0 ? "NEEDS" : "", tr(n.r->getDependencies()[i]->getName()));
++		int opens = 0;
++		for (const auto &m : _nodes)
++			for (const auto *d : m.r->getDependencies())
++				if (d == n.r && opens < 3 && m.st != N_NEEDITEM) { row(opens == 0 ? "OPENS" : "", tr(m.r->getName())); ++opens; }
++		row("TIME", std::to_string(n.r->getCost()) + " scientist-days");
++		if (n.r->needItem() && n.r->getNeededItem()) row("USES UP", tr(n.r->getNeededItem()->getType()));
++	}
 +}
 +
 +Uint8 ResearchTreeState::nearest(Uint32 rgb) const
@@ -758,10 +970,10 @@ index 0000000..84a325a
 +}
 diff --git a/src/Basescape/ResearchTreeState.h b/src/Basescape/ResearchTreeState.h
 new file mode 100644
-index 0000000..9fbc83a
+index 0000000..27e1078
 --- /dev/null
 +++ b/src/Basescape/ResearchTreeState.h
-@@ -0,0 +1,55 @@
+@@ -0,0 +1,61 @@
 +#pragma once
 +/*
 + * G.I. Joe: USA Defense. The research TREE (claude/RESEARCH_TREE_SCREEN_SPEC.md, John 12 Nov 21:43:
@@ -796,7 +1008,7 @@ index 0000000..9fbc83a
 +	Window *_window;
 +	Text *_txtTitle, *_txtInfo, *_txtName, *_txtBody;
 +	InteractiveSurface *_view;
-+	Surface *_lanes;
++	Surface *_lanes, *_info;
 +	TextButton *_btnStart, *_btnOk, *_btnLeft, *_btnRight, *_btnUp, *_btnDown;
 +	std::vector<Node> _nodes;
 +	std::vector<std::string> _laneTypes;
@@ -806,6 +1018,12 @@ index 0000000..9fbc83a
 +	void draw();
 +	void showInfo();
 +	Uint8 nearest(Uint32 rgb) const;
++	void paintHi();            // registers the display-resolution painters (phase B)
++	void paintView(double X0, double Y0, double k);
++	void paintLanes(double X0, double Y0, double k);
++	void paintInfo(double X0, double Y0, double k);
++	void paintFrame(double X0, double Y0, double k);
++	~ResearchTreeState();
 +public:
 +	ResearchTreeState(Base *base);
 +	void init() override;
@@ -4905,10 +5123,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..e19cee7
+index 0000000..d4b8d0a
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3047 @@
+@@ -0,0 +1,3147 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -4974,6 +5192,8 @@ index 0000000..e19cee7
 +	std::vector<Pending> pending;                                                // resolved on first draw, not at mod load
 +	std::unordered_map<std::string, Img> pieces;                                 // Resources/UI/<name>.png
 +	struct Inset { const Surface *src; int x, y; };
++	std::unordered_map<const Surface*, PanelPainter> panels;   // screens that paint themselves (nativePanel)
++	int clipX0 = 0, clipY0 = 0, clipX1 = 0, clipY1 = 0;      // the panel being painted
 +	std::unordered_map<const Surface*, std::vector<Inset> > insets;             // twins drawn inside part of a widget
 +
 +	Img loadPng(const std::string &path)
@@ -6721,6 +6941,21 @@ index 0000000..e19cee7
 +void after(Surface *w)
 +{
 +	if (!base || !shown(w)) return;
++	// A SCREEN'S OWN PANEL (the research tree): it paints itself.
++	{
++		auto pn = panels.find(w);
++		if (pn != panels.end())
++		{
++			R r = rectOf(w);
++			if (clipBase(r))
++			{
++				clipX0 = xs[r.x0]; clipY0 = ys[r.y0]; clipX1 = xs[r.x1]; clipY1 = ys[r.y1];
++				pn->second(DX(w->getX()), DY(w->getY()), SK());
++				claim(r);
++			}
++			return;
++		}
++	}
 +	// NATIVE SCREEN PIECES first: they are drawn, not looked up.
 +	if (hud.on && (w == hudBar || w == hudMission))
 +	{
@@ -7314,8 +7549,91 @@ index 0000000..e19cee7
 +	hudBar = bar; hudMission = mission; hud = d; hud.on = bar != nullptr;
 +}
 +
++void nativePanel(const Surface *s, PanelPainter painter)
++{
++	if (!s) return;
++	if (painter) panels[s] = painter; else panels.erase(s);
++}
++
++namespace Paint
++{
++void rect(double x0, double y0, double x1, double y1, Uint32 c, int alpha)
++{
++	const int X0 = std::max(clipX0, (int)std::lround(x0)), Y0 = std::max(clipY0, (int)std::lround(y0));
++	const int X1 = std::min(clipX1, (int)std::lround(x1)), Y1 = std::min(clipY1, (int)std::lround(y1));
++	if (X0 < X1 && Y0 < Y1) fillRect(X0, Y0, X1, Y1, c & 0xFFFFFF, alpha);
++}
++void roundRect(double x0, double y0, double x1, double y1, double rad, Uint32 c, int alpha)
++{
++	if (x0 >= clipX0 && y0 >= clipY0 && x1 <= clipX1 && y1 <= clipY1) OpenXcom::HiUI::roundRect(x0, y0, x1, y1, rad, c & 0xFFFFFF, alpha);
++	else rect(x0, y0, x1, y1, c, alpha);   // partly outside the panel: square, so nothing spills
++}
++void frame(double x0, double y0, double x1, double y1, double w, Uint32 c)
++{
++	rect(x0, y0, x1, y0 + w, c); rect(x0, y1 - w, x1, y1, c);
++	rect(x0, y0, x0 + w, y1, c); rect(x1 - w, y0, x1, y1, c);
++}
++void text(const std::string &faceName, const std::string &s, double x0, double y0, double x1, double y1,
++	double capPx, int halign, int valign, Uint32 c)
++{
++	const Face *f = face(faceName);
++	if (!f || s.empty()) return;
++	if (x1 <= clipX0 || x0 >= clipX1 || y1 <= clipY0 || y0 >= clipY1) return;
++	// count the lines so the line height follows the cap height
++	setType(*f, s, (int)x0, (int)std::max<double>(y0, clipY0 - 1000), (int)x1, (int)y1, capPx, capPx * 1.55, halign, valign, c & 0xFFFFFF, true);
++}
++bool picture(const std::string &file, double x0, double y0, double x1, double y1, double progress)
++{
++	static std::unordered_map<std::string, Img> cache;
++	auto it = cache.find(file);
++	if (it == cache.end()) it = cache.emplace(file, loadPng(file)).first;
++	const Img &src = it->second;
++	if (!src.ok) return false;
++	const int W = (int)std::lround(x1 - x0), H = (int)std::lround(y1 - y0);
++	if (W <= 0 || H <= 0) return true;
++	// spec 1b: block = 48 x (1 - progress) px at 432 wide, min 1; saturation 35% -> 100%
++	const double p = std::max(0.0, std::min(1.0, progress));
++	const int block = std::max(1, (int)std::lround(48.0 * (1.0 - p) * W / 432.0));
++	const int sat = (int)std::lround(256 * (0.35 + 0.65 * p));
++	const int X0 = (int)std::lround(x0), Y0 = (int)std::lround(y0);
++	// each block is the AREA average of the picture under it (the reveal strip's soft squares)
++	const Img sized = resampleArea(src, W, H);
++	const int nbx = (W + block - 1) / block, nby = (H + block - 1) / block;
++	std::vector<Uint32> blocks((size_t)nbx * nby);
++	for (int j = 0; j < nby; ++j)
++		for (int i = 0; i < nbx; ++i)
++		{
++			long r = 0, g = 0, b = 0, n = 0;
++			for (int y = j * block; y < std::min(H, (j + 1) * block); ++y)
++				for (int x = i * block; x < std::min(W, (i + 1) * block); ++x)
++				{
++					const Uint32 q = sized.px[(size_t)y * W + x];
++					r += (q >> 16) & 255; g += (q >> 8) & 255; b += q & 255; ++n;
++				}
++			blocks[(size_t)j * nbx + i] = n ? rgb((int)(r / n), (int)(g / n), (int)(b / n)) : 0;
++		}
++	for (int Y = std::max(clipY0, Y0); Y < std::min(clipY1, Y0 + H); ++Y)
++	{
++		Uint32 *o = over.data() + (size_t)Y * sw;
++		for (int X = std::max(clipX0, X0); X < std::min(clipX1, X0 + W); ++X)
++		{
++			const Uint32 q = blocks[(size_t)((Y - Y0) / block) * nbx + (X - X0) / block];
++			int r = (q >> 16) & 255, g = (q >> 8) & 255, b = q & 255;
++			if (sat < 256)
++			{
++				const int l = (r * 3 + g * 6 + b) / 10;
++				r = l + ((r - l) * sat >> 8); g = l + ((g - l) * sat >> 8); b = l + ((b - l) * sat >> 8);
++			}
++			o[X] = rgb(r, g, b);
++		}
++	}
++	return true;
++}
++}
++
 +void nativeForget(const Surface *s)
 +{
++	panels.erase(s);
 +	if (s && s == hudBar) { hudBar = nullptr; hudMission = nullptr; hud.on = false; hudArt.clear(); }
 +	nativeKeyStyles.erase(s); nativeKeyIcons.erase(s);
 +	nativeBgs.erase(s); nativeKeys.erase(s); nativeKeyInArt.erase(s); nativeTexts.erase(s);
@@ -7958,10 +8276,10 @@ index 0000000..e19cee7
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..bec3455
+index 0000000..b06ad3d
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,179 @@
+@@ -0,0 +1,200 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -7975,6 +8293,7 @@ index 0000000..bec3455
 +#include <cstdint>
 +#include <string>
 +#include <vector>
++#include <functional>
 +
 +namespace OpenXcom
 +{
@@ -8115,6 +8434,26 @@ index 0000000..bec3455
 +		std::string turn, phase, objective, counts;
 +	};
 +	void nativeHud(const Surface *bar, const Surface *mission, const HudData &d);
++	/// A PANEL a screen paints itself at display resolution (the research tree). The painter
++	/// is called every frame right after the surface's own 8-bit blit, with the display
++	/// position of the surface's top-left and k = display px per base px; the surface's
++	/// base pixels then show what it painted. Paint:: draws, clipped to the panel.
++	using PanelPainter = std::function<void(double X0, double Y0, double k)>;
++	void nativePanel(const Surface *s, PanelPainter painter);
++	namespace Paint
++	{
++		void rect(double x0, double y0, double x1, double y1, Uint32 rgb, int alpha = 255);
++		void roundRect(double x0, double y0, double x1, double y1, double rad, Uint32 rgb, int alpha = 255);
++		/// An outline w display px thick, inside the rectangle.
++		void frame(double x0, double y0, double x1, double y1, double w, Uint32 rgb);
++		/// face "label" or "stencil"; halign/valign 0 start, 1 centre, 2 end; shrinks to fit across.
++		void text(const std::string &face, const std::string &s, double x0, double y0, double x1, double y1,
++			double capPx, int halign, int valign, Uint32 rgb);
++		/// A picture from the mod (path under the mod root), fitted into the box. progress 0..1
++		/// pixelates and desaturates it (RESEARCH_TREE_SCREEN_SPEC 1b); 1 or more = clean.
++		/// Returns false if the file is missing.
++		bool picture(const std::string &file, double x0, double y0, double x1, double y1, double progress);
++	}
 +	/// The screen is closing: forget everything it registered.
 +	void nativeForget(const Surface *s);
 +	/// A surface is being destroyed: drop anything keyed by its address (Surface::~Surface).
