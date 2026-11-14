@@ -1175,18 +1175,91 @@ index e17971a..062f498 100644
  	void btnDiaryClick(Action *action);
  	/// Handler for clicking the flag.
 diff --git a/src/Basescape/TransferItemsState.cpp b/src/Basescape/TransferItemsState.cpp
-index 7724953..6e4f57c 100644
+index 7724953..778cb39 100644
 --- a/src/Basescape/TransferItemsState.cpp
 +++ b/src/Basescape/TransferItemsState.cpp
-@@ -150,7 +150,7 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo, DebriefingS
+@@ -17,6 +17,8 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "TransferItemsState.h"
++#include "../Engine/RNG.h"
++#include "../Engine/Logger.h"
+ #include "ItemLocationsState.h"
+ #include "ManufactureDependenciesTreeState.h"
+ #include <sstream>
+@@ -150,9 +152,9 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo, DebriefingS
  	for (auto* soldier : *_baseFrom->getSoldiers())
  	{
  		if (_debriefingState) break;
 -		if (soldier->getCraft() == 0)
 +		if (soldier->getCraft() == 0 && !soldier->isAway())
  		{
- 			TransferRow row = { TRANSFER_SOLDIER, soldier, soldier->getName(true), (int)(5 * _distance), 1, 0, 0, -4, 0, 0, (int)(5 * _distance) };
+-			TransferRow row = { TRANSFER_SOLDIER, soldier, soldier->getName(true), (int)(5 * _distance), 1, 0, 0, -4, 0, 0, (int)(5 * _distance) };
++			TransferRow row = { TRANSFER_SOLDIER, soldier, soldier->getName(true), (int)(5 * _distance * _game->getMod()->getCourierFeeMult()), 1, 0, 0, -4, 0, 0, (int)(5 * _distance * _game->getMod()->getCourierFeeMult()) };
  			_items.push_back(row);
+ 			std::string cat = getCategory(_items.size() - 1);
+ 			if (std::find(_cats.begin(), _cats.end(), cat) == _cats.end())
+@@ -177,7 +179,7 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo, DebriefingS
+ 	}
+ 	if (_baseFrom->getAvailableScientists() > 0 && _debriefingState == 0)
+ 	{
+-		TransferRow row = { TRANSFER_SCIENTIST, 0, tr("STR_SCIENTIST"),  (int)(5 * _distance), _baseFrom->getAvailableScientists(), _baseTo->getAvailableScientists(), 0, -2, 0, 0, _baseFrom->getAvailableScientists() * (int)(5 * _distance) };
++		TransferRow row = { TRANSFER_SCIENTIST, 0, tr("STR_SCIENTIST"),  (int)(5 * _distance * _game->getMod()->getCourierFeeMult()), _baseFrom->getAvailableScientists(), _baseTo->getAvailableScientists(), 0, -2, 0, 0, _baseFrom->getAvailableScientists() * (int)(5 * _distance * _game->getMod()->getCourierFeeMult()) };
+ 		_items.push_back(row);
+ 		std::string cat = getCategory(_items.size() - 1);
+ 		if (std::find(_cats.begin(), _cats.end(), cat) == _cats.end())
+@@ -187,7 +189,7 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo, DebriefingS
+ 	}
+ 	if (_baseFrom->getAvailableEngineers() > 0 && _debriefingState == 0)
+ 	{
+-		TransferRow row = { TRANSFER_ENGINEER, 0, tr("STR_ENGINEER"),  (int)(5 * _distance), _baseFrom->getAvailableEngineers(), _baseTo->getAvailableEngineers(), 0, -1, 0, 0, _baseFrom->getAvailableEngineers() * (int)(5 * _distance) };
++		TransferRow row = { TRANSFER_ENGINEER, 0, tr("STR_ENGINEER"),  (int)(5 * _distance * _game->getMod()->getCourierFeeMult()), _baseFrom->getAvailableEngineers(), _baseTo->getAvailableEngineers(), 0, -1, 0, 0, _baseFrom->getAvailableEngineers() * (int)(5 * _distance * _game->getMod()->getCourierFeeMult()) };
+ 		_items.push_back(row);
+ 		std::string cat = getCategory(_items.size() - 1);
+ 		if (std::find(_cats.begin(), _cats.end(), cat) == _cats.end())
+@@ -205,7 +207,7 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo, DebriefingS
+ 		}
+ 		if (qty > 0)
+ 		{
+-			TransferRow row = { TRANSFER_ITEM, rule, tr(itemType),  (int)(1 * _distance), qty, _baseTo->getStorageItems()->getItem(rule), 0, rule->getListOrder(), rule->getSize(), qty * rule->getSize(), qty * (int)(1 * _distance) };
++			TransferRow row = { TRANSFER_ITEM, rule, tr(itemType),  (int)(1 * _distance * _game->getMod()->getCourierFeeMult()), qty, _baseTo->getStorageItems()->getItem(rule), 0, rule->getListOrder(), rule->getSize(), qty * rule->getSize(), qty * (int)(1 * _distance * _game->getMod()->getCourierFeeMult()) };
+ 			_items.push_back(row);
+ 			std::string cat = getCategory(_items.size() - 1);
+ 			if (std::find(_cats.begin(), _cats.end(), cat) == _cats.end())
+@@ -551,6 +553,7 @@ void TransferItemsState::completeTransfer()
+ {
+ 	int time = (int)floor(6 + _distance / 10.0);
+ 	_game->getSavedGame()->setFunds(_game->getSavedGame()->getFunds() - getTotal());
++	const size_t transfersBefore = _baseTo->getTransfers()->size();
+ 	for (const auto& transferRow : _items)
+ 	{
+ 		if (transferRow.amount > 0)
+@@ -665,6 +668,25 @@ void TransferItemsState::completeTransfer()
+ 		}
+ 	}
+ 
++	// G.I. Joe transfer flights (John 13 Nov): all of this flies together, and Cobra may hit it
++	// on the way. The chance comes from Cobra sites and flying Cobra craft near the route.
++	if (_baseTo->getTransfers()->size() > transfersBefore)
++	{
++		SavedGame *save = _game->getSavedGame();
++		SavedGame::Flight fl;
++		fl.id = save->newFlightId();
++		fl.fromLon = _baseFrom->getLongitude(); fl.fromLat = _baseFrom->getLatitude();
++		fl.toLon = _baseTo->getLongitude(); fl.toLat = _baseTo->getLatitude();
++		fl.hours = std::max(1, time);
++		fl.dest = _baseTo->getName();
++		const int risk = save->flightRisk(_game->getMod(), fl.fromLon, fl.fromLat, fl.toLon, fl.toLat);
++		if (risk > 0 && RNG::percent(risk)) fl.interceptAt = RNG::generate(1, std::max(1, fl.hours - 1));
++		for (size_t i = transfersBefore; i < _baseTo->getTransfers()->size(); ++i)
++			(*_baseTo->getTransfers())[i]->setFlightId(fl.id);
++		save->getFlights().push_back(fl);
++		Log(LOG_INFO) << "FLIGHT " << fl.id << " to " << fl.dest << " " << fl.hours << "h risk " << risk << "% intercept@" << fl.interceptAt;
++	}
++
+ 	if (_debriefingState != 0 && _debriefingState->getTotalRecoveredItemCount() <= 0)
+ 	{
+ 		_debriefingState->hideSellTransferButtons();
 diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
 index db6727f..4b68917 100644
 --- a/src/Battlescape/AIModule.cpp
@@ -2438,7 +2511,7 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..13aacfe 100644
+index 0631f32..e4abb0d 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
 @@ -1039,10 +1039,22 @@ void DebriefingState::prepareDebriefing()
@@ -2464,7 +2537,17 @@ index 0631f32..13aacfe 100644
  
  	std::string missionCompleteText, missionFailedText;
  	std::string objectiveCompleteText, objectiveFailedText;
-@@ -1296,6 +1308,25 @@ void DebriefingState::prepareDebriefing()
+@@ -1230,6 +1242,9 @@ void DebriefingState::prepareDebriefing()
+ 				ms->setUfo(nullptr);
+ 			}
+ 			_missionStatistics->alienRace = ms->getAlienRace();
++			// G.I. Joe: a downed transfer flight's site won settles the flight as recovered
++			if (success && ms->getDeployment() && ms->getDeployment()->getType() == "STR_TRANSPORT_CRASH")
++				save->addRecoveredSite(ms->getId());
+ 			delete ms;
+ 			save->getMissionSites()->erase(msIt);
+ 			break;
+@@ -1296,6 +1311,25 @@ void DebriefingState::prepareDebriefing()
  			deadSoldiers++;
  		}
  	}
@@ -2490,7 +2573,7 @@ index 0631f32..13aacfe 100644
  	// if all our men are unconscious, the aliens get to have their way with them.
  	if (playersUnconscious + playersMIA == playersSurvived)
  	{
-@@ -1304,7 +1335,11 @@ void DebriefingState::prepareDebriefing()
+@@ -1304,7 +1338,11 @@ void DebriefingState::prepareDebriefing()
  		{
  			if (bu->getOriginalFaction() == FACTION_PLAYER && bu->getStatus() != STATUS_DEAD)
  			{
@@ -2503,7 +2586,7 @@ index 0631f32..13aacfe 100644
  				{
  					bu->instaKill();
  				}
-@@ -1417,6 +1452,13 @@ void DebriefingState::prepareDebriefing()
+@@ -1417,6 +1455,13 @@ void DebriefingState::prepareDebriefing()
  				{
  					addStat(objectiveCompleteText, 1, objectiveCompleteScore);
  				}
@@ -2517,7 +2600,7 @@ index 0631f32..13aacfe 100644
  				save->clearLinksForAlienBase(ab, _game->getMod());
  				delete ab;
  				save->getAlienBases()->erase(abIt);
-@@ -1476,6 +1518,65 @@ void DebriefingState::prepareDebriefing()
+@@ -1476,6 +1521,65 @@ void DebriefingState::prepareDebriefing()
  	{
  		ignoreLivingCivilians = ruleDeploy->getIgnoreLivingCivilians();
  	}
@@ -2583,7 +2666,7 @@ index 0631f32..13aacfe 100644
  	for (auto* bunit : *battle->getUnits())
  	{
  		UnitStatus status = bunit->getStatus();
-@@ -1483,6 +1584,30 @@ void DebriefingState::prepareDebriefing()
+@@ -1483,6 +1587,30 @@ void DebriefingState::prepareDebriefing()
  		UnitFaction oldFaction = bunit->getOriginalFaction();
  		Soldier *soldier = save->getSoldier(bunit->getId());
  
@@ -2614,7 +2697,7 @@ index 0631f32..13aacfe 100644
  		if (!bunit->getTile())
  		{
  			Position pos = bunit->getPosition();
-@@ -1654,8 +1779,9 @@ void DebriefingState::prepareDebriefing()
+@@ -1654,8 +1782,9 @@ void DebriefingState::prepareDebriefing()
  					}
  				}
  			}
@@ -2625,7 +2708,7 @@ index 0631f32..13aacfe 100644
  				&& playersSurvived > 0 && faction != FACTION_PLAYER && (!bunit->isOut() || bunit->isIgnored())
  				&& (bunit->isSurrendering() || battle->getChronoTrigger() == FORCE_WIN_SURRENDER))
  			{
-@@ -2299,6 +2425,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
+@@ -2299,6 +2428,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
   */
  void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base, int quantity, bool considerTransformations)
  {
@@ -9713,7 +9796,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..981a518 100644
+index 6b4e79d..0b4de62 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -17,6 +17,8 @@
@@ -9733,7 +9816,15 @@ index 6b4e79d..981a518 100644
  #include "../Interface/ComboBox.h"
  #include "../Interface/Text.h"
  #include "../Interface/TextButton.h"
-@@ -69,6 +72,8 @@
+@@ -54,6 +57,7 @@
+ #include "../Mod/RuleMissionScript.h"
+ #include "../Savegame/Waypoint.h"
+ #include "../Savegame/Transfer.h"
++#include "../Savegame/SoldierDeath.h"
+ #include "../Savegame/Soldier.h"
+ #include "../Savegame/SoldierDiary.h"
+ #include "../Menu/PauseState.h"
+@@ -69,6 +73,8 @@
  #include "../Basescape/GlobalAlienContainmentState.h"
  #include "../Menu/CutsceneState.h"
  #include "../Menu/ErrorMessageState.h"
@@ -9742,7 +9833,7 @@ index 6b4e79d..981a518 100644
  #include "GraphsState.h"
  #include "FundingState.h"
  #include "ExtendedGeoscapeLinksState.h"
-@@ -87,6 +92,7 @@
+@@ -87,6 +93,7 @@
  #include "DogfightErrorState.h"
  #include "DogfightExperienceState.h"
  #include "../Ufopaedia/Ufopaedia.h"
@@ -9750,7 +9841,7 @@ index 6b4e79d..981a518 100644
  #include "../Savegame/ResearchProject.h"
  #include "ResearchCompleteState.h"
  #include "../Mod/RuleResearch.h"
-@@ -103,6 +109,7 @@
+@@ -103,6 +110,7 @@
  #include "../Savegame/ItemContainer.h"
  #include "../Savegame/MissionSite.h"
  #include "../Savegame/AlienBase.h"
@@ -9758,7 +9849,7 @@ index 6b4e79d..981a518 100644
  #include "../Mod/RuleRegion.h"
  #include "MissionDetectedState.h"
  #include "AlienBaseState.h"
-@@ -157,41 +164,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -157,41 +165,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_bg->setX((_globe->getWidth() - _bg->getWidth()) / 2);
  	_bg->setY((_globe->getHeight() - _bg->getHeight()) / 2);
  
@@ -9942,7 +10033,7 @@ index 6b4e79d..981a518 100644
  
  	int slackingIndicatorOffset = _game->getMod()->getInterface("geoscape")->getElement("slackingIndicator")->custom;
  	_txtSlacking = new Text(59, 17, screenWidth - 61, screenHeight / 2 - 100 + slackingIndicatorOffset);
-@@ -251,6 +370,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -251,6 +371,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtMinSep, "text", "geoscape");
  	add(_txtSec, "text", "geoscape");
  	add(_txtWeekday, "text", "geoscape");
@@ -9953,7 +10044,7 @@ index 6b4e79d..981a518 100644
  	add(_txtDay, "text", "geoscape");
  	add(_txtMonth, "text", "geoscape");
  	add(_txtYear, "text", "geoscape");
-@@ -268,12 +391,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -268,12 +392,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	geobord->setX(_sidebar->getX() - geobord->getWidth() + _sidebar->getWidth());
  	geobord->setY(_sidebar->getY());
  	_sidebar->copy(geobord);
@@ -9981,7 +10072,7 @@ index 6b4e79d..981a518 100644
  	_btnIntercept->onMouseClick((ActionHandler)&GeoscapeState::btnInterceptClick);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnInterceptClick, Options::keyGeoIntercept);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnUfoTrackerClick, Options::keyGeoUfoTracker);
-@@ -292,7 +429,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -292,7 +430,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnBases->setGeoscapeButton(true);
  
  	_btnGraphs->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -9990,7 +10081,7 @@ index 6b4e79d..981a518 100644
  	_btnGraphs->onMouseClick((ActionHandler)&GeoscapeState::btnGraphsClick);
  	_btnGraphs->onKeyboardPress((ActionHandler)&GeoscapeState::btnGraphsClick, Options::keyGeoGraphs);
  	_btnGraphs->setGeoscapeButton(true);
-@@ -310,7 +447,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -310,7 +448,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnOptions->setGeoscapeButton(true);
  
  	_btnFunding->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -9999,7 +10090,7 @@ index 6b4e79d..981a518 100644
  	_btnFunding->onMouseClick((ActionHandler)&GeoscapeState::btnFundingClick);
  	_btnFunding->onKeyboardPress((ActionHandler)&GeoscapeState::btnFundingClick, Options::keyGeoFunding);
  	_btnFunding->setGeoscapeButton(true);
-@@ -387,6 +524,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -387,6 +525,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -10008,7 +10099,7 @@ index 6b4e79d..981a518 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -403,6 +542,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -403,6 +543,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_txtMinSep->setText(":");
  
  	_txtWeekday->setAlign(ALIGN_CENTER);
@@ -10061,7 +10152,7 @@ index 6b4e79d..981a518 100644
  
  	_txtDay->setAlign(ALIGN_CENTER);
  
-@@ -427,6 +612,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -427,6 +613,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  		_txtSec->setX(_txtSec->getX()-10);
  	}
  
@@ -10107,7 +10198,7 @@ index 6b4e79d..981a518 100644
  	_gameTimer->onTimer((StateHandler)&GeoscapeState::timeAdvance);
  	_gameTimer->start();
  
-@@ -512,7 +736,9 @@ void GeoscapeState::blit()
+@@ -512,7 +737,9 @@ void GeoscapeState::blit()
  	State::blit();
  	for (auto* dfs : _dogfights)
  	{
@@ -10118,7 +10209,7 @@ index 6b4e79d..981a518 100644
  	}
  }
  
-@@ -705,13 +931,106 @@ void GeoscapeState::handle(Action *action)
+@@ -705,13 +932,106 @@ void GeoscapeState::handle(Action *action)
   * Updates the timer display and resets the palette
   * since it's bound to change on other screens.
   */
@@ -10225,7 +10316,7 @@ index 6b4e79d..981a518 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -753,6 +1072,12 @@ void GeoscapeState::init()
+@@ -753,6 +1073,12 @@ void GeoscapeState::init()
  		determineAlienMissions();
  		_game->getSavedGame()->setFunds(_game->getSavedGame()->getFunds() - (_game->getSavedGame()->getBaseMaintenance() - _game->getSavedGame()->getBases()->front()->getPersonnelMaintenance()));
  	}
@@ -10238,7 +10329,7 @@ index 6b4e79d..981a518 100644
  }
  
  /**
-@@ -835,6 +1160,10 @@ void GeoscapeState::timeDisplay()
+@@ -835,6 +1161,10 @@ void GeoscapeState::timeDisplay()
  	std::ostringstream ss5;
  	ss5 << _game->getSavedGame()->getTime()->getYear();
  	_txtYear->setText(ss5.str());
@@ -10249,7 +10340,7 @@ index 6b4e79d..981a518 100644
  }
  
  /**
-@@ -1454,6 +1783,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +1784,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -10285,7 +10376,7 @@ index 6b4e79d..981a518 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +1922,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +1923,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -10316,7 +10407,7 @@ index 6b4e79d..981a518 100644
  							}
  						}
  					}
-@@ -1752,7 +2126,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2127,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -10325,7 +10416,7 @@ index 6b4e79d..981a518 100644
  								}
  								else
  								{
-@@ -1858,6 +2232,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2233,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -10345,7 +10436,7 @@ index 6b4e79d..981a518 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2271,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2272,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -10358,7 +10449,96 @@ index 6b4e79d..981a518 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2353,7 +2746,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2191,6 +2585,88 @@ void GeoscapeState::time1Hour()
+ 		}
+ 	}
+ 
++	// G.I. Joe transfer flights (John 13 Nov): a flight Cobra intercepts comes down as a crash site
++	// that waits two days; what was aboard waits with it. Win the site and it flies on; lose it, or
++	// let the timer run out, and Cobra has it.
++	{
++		SavedGame *save = _game->getSavedGame();
++		const Mod *mod = _game->getMod();
++		auto aboard = [&](int flightId)
++		{
++			std::vector<std::pair<Base*, Transfer*> > out;
++			for (auto *b : *save->getBases())
++				for (auto *t : *b->getTransfers())
++					if (t->getFlightId() == flightId) out.emplace_back(b, t);
++			return out;
++		};
++		auto &flights = save->getFlights();
++		for (size_t i = 0; i < flights.size(); )
++		{
++			SavedGame::Flight &fl = flights[i];
++			if (fl.siteId < 0)
++			{
++				++fl.elapsed;
++				if (fl.interceptAt > 0 && fl.elapsed == fl.interceptAt)
++				{
++					// down at the point it had reached along the route
++					const double f = std::min(1.0, fl.elapsed / (double)fl.hours);
++					const double lon = fl.fromLon + (fl.toLon - fl.fromLon) * f, lat = fl.fromLat + (fl.toLat - fl.fromLat) * f;
++					const RuleAlienMission *rule = mod->getAlienMission("STR_TRANSPORT_SHOT_DOWN");
++					AlienDeployment *dep = mod->getDeployment("STR_TRANSPORT_CRASH");
++					if (rule && dep)
++					{
++						MissionSite *ms = new MissionSite(rule, dep, nullptr);
++						ms->setLongitude(lon);
++						ms->setLatitude(lat);
++						ms->setId(save->getId(dep->getMarkerName()));
++						ms->setSecondsRemaining(48 * 3600);
++						ms->setAlienRace("STR_COBRA");
++						ms->setDetected(true);
++						save->getMissionSites()->push_back(ms);
++						fl.siteId = ms->getId();
++						for (auto &bt : aboard(fl.id)) bt.second->setHours(1 << 28);   // frozen until the site is settled
++						save->addLeadNews(std::string("!") + std::string(tr("STR_TRANSFER_SHOT_DOWN").arg(fl.dest)));
++						Log(LOG_INFO) << "FLIGHT " << fl.id << " shot down, site " << fl.siteId;
++					}
++				}
++				if (fl.elapsed >= fl.hours && fl.siteId < 0) { flights.erase(flights.begin() + i); continue; }   // arrived
++				++i;
++				continue;
++			}
++			// a downed flight: settled once its site is gone
++			bool siteUp = false;
++			for (auto *ms : *save->getMissionSites())
++				if (ms->getId() == fl.siteId && ms->getDeployment() && ms->getDeployment()->getType() == "STR_TRANSPORT_CRASH") siteUp = true;
++			if (siteUp) { ++i; continue; }
++			if (save->takeRecoveredSite(fl.siteId))
++			{
++				for (auto &bt : aboard(fl.id)) bt.second->setHours(24);
++				save->addLeadNews(std::string("!") + std::string(tr("STR_TRANSFER_RECOVERED").arg(fl.dest)));
++			}
++			else
++			{
++				// Cobra got there first: named Joes held, unnamed Joes dead or held (50/50), the rest lost
++				for (auto &bt : aboard(fl.id))
++				{
++					Transfer *t = bt.second;
++					if (Soldier *s = t->getSoldier())
++					{
++						const bool named = !mod->isGreenshirt(s->getRules()->getType());
++						if (named || RNG::percent(50)) { save->getCapturedSoldiers()->push_back(s); save->setHeldDays(s->getId(), 0); }
++						else { s->die(new SoldierDeath(*save->getTime(), nullptr)); save->getDeadSoldiers()->push_back(s); }
++						t->setSoldier(nullptr);
++					}
++					if (Craft *c = t->getCraft()) { delete c; t->setCraft(nullptr); }
++					auto &v = *bt.first->getTransfers();
++					v.erase(std::remove(v.begin(), v.end(), t), v.end());
++					delete t;
++				}
++				save->addLeadNews(std::string("!") + std::string(tr("STR_TRANSFER_LOST").arg(fl.dest)));
++			}
++			flights.erase(flights.begin() + i);
++		}
++	}
++
+ 	// Handle transfers
+ 	bool window = false;
+ 	for (auto* xbase : *_game->getSavedGame()->getBases())
+@@ -2353,7 +2829,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -10367,7 +10547,7 @@ index 6b4e79d..981a518 100644
  			}
  			else
  			{
-@@ -2395,6 +2788,114 @@ void GeoscapeState::time1Day()
+@@ -2395,6 +2871,114 @@ void GeoscapeState::time1Day()
  	Mod *mod = _game->getMod();
  	bool psiStrengthEval = (Options::psiStrengthEval && saveGame->isResearched(mod->getPsiRequirements()));
  
@@ -10482,7 +10662,7 @@ index 6b4e79d..981a518 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +2945,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3028,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -10505,7 +10685,7 @@ index 6b4e79d..981a518 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2862,6 +3372,10 @@ void GeoscapeState::time1Month()
+@@ -2862,6 +3455,10 @@ void GeoscapeState::time1Month()
  	_game->getSavedGame()->addMonth();
  
  	// Determine alien mission for this month.
@@ -10516,7 +10696,7 @@ index 6b4e79d..981a518 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3474,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3557,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -10547,7 +10727,7 @@ index 6b4e79d..981a518 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +3660,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +3743,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -10557,7 +10737,7 @@ index 6b4e79d..981a518 100644
  }
  
  /**
-@@ -3265,6 +3804,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +3887,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -10573,7 +10753,7 @@ index 6b4e79d..981a518 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +3890,17 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +3973,17 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -10591,7 +10771,7 @@ index 6b4e79d..981a518 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -4647,11 +5206,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +5289,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -13575,7 +13755,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..aa28506 100644
+index 1885346..a593c91 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -13713,7 +13893,7 @@ index 1885346..aa28506 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,218 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,223 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -13805,6 +13985,11 @@ index 1885346..aa28506 100644
 +		capture.tryRead("namedCobra", _namedCobra);
 +		capture.tryRead("spyTypes", _spyTypes);
 +		capture.tryRead("unnamedSpyKilled", _unnamedSpyKilled);
++		capture.tryRead("courierFeeMult", _courierFeeMult);
++		capture.tryRead("interceptPerSite", _interceptPerSite);
++		capture.tryRead("interceptPerUfo", _interceptPerUfo);
++		capture.tryRead("interceptCap", _interceptCap);
++		capture.tryRead("interceptRadius", _interceptRadius);
 +		capture.tryRead("downedDaysMin", _downedDaysMin);
 +		capture.tryRead("downedDaysMax", _downedDaysMax);
 +		capture.tryRead("medicBonus", _medicBonus);
@@ -13932,7 +14117,7 @@ index 1885346..aa28506 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3523,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3528,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -13940,7 +14125,7 @@ index 1885346..aa28506 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4128,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4133,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -13966,7 +14151,7 @@ index 1885346..aa28506 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4385,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4390,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -13987,7 +14172,7 @@ index 1885346..aa28506 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6099,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6104,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -14007,7 +14192,7 @@ index 1885346..aa28506 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6122,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6127,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -14015,7 +14200,7 @@ index 1885346..aa28506 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6136,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6141,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -14055,7 +14240,7 @@ index 1885346..aa28506 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..b3ce004 100644
+index 2242d13..8d6d229 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -14119,7 +14304,7 @@ index 2242d13..b3ce004 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,72 @@ private:
+@@ -327,6 +360,73 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -14175,6 +14360,7 @@ index 2242d13..b3ce004 100644
 +	std::vector<SpyOperationRule> _spyOperations;
 +	std::vector<std::string> _spyTypes;
 +	int _unnamedSpyKilled = 50;
++	int _courierFeeMult = 3, _interceptPerSite = 12, _interceptPerUfo = 10, _interceptCap = 60; double _interceptRadius = 0.15;
 +	int _downedDaysMin = 14, _downedDaysMax = 28;           // a named Joe brought down: 2-4 weeks by the overkill
 +	int _medicBonus = 15, _medicBonusInfirmary = 25, _medicSecondPct = 67;
 +	std::vector<std::string> _medicSpecialties, _infirmaryRooms;
@@ -14192,7 +14378,7 @@ index 2242d13..b3ce004 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +791,108 @@ public:
+@@ -692,6 +792,113 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -14225,6 +14411,11 @@ index 2242d13..b3ce004 100644
 +	const std::vector<SpyOperationRule> &getSpyOperations() const { return _spyOperations; }
 +	const SpyOperationRule *getSpyOperation(const std::string &type) const { for (const auto &o : _spyOperations) if (o.type == type) return &o; return nullptr; }
 +	int getUnnamedSpyKilled() const { return _unnamedSpyKilled; }
++	int getCourierFeeMult() const { return _courierFeeMult; }
++	int getInterceptPerSite() const { return _interceptPerSite; }
++	int getInterceptPerUfo() const { return _interceptPerUfo; }
++	int getInterceptCap() const { return _interceptCap; }
++	double getInterceptRadius() const { return _interceptRadius; }
 +	int getDownedDaysMin() const { return _downedDaysMin; }
 +	int getDownedDaysMax() const { return _downedDaysMax; }
 +	/// The medic bonus a soldier type gives at home, in percent (0 if not a medic).
@@ -15796,7 +15987,7 @@ index 6c121c7..fb7f92b 100644
  	std::vector< std::vector<int> > &getReinforcementsBlocks() { return _reinforcementsBlocks; }
  
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..1be6f8d 100644
+index 9ca9637..67a22eb 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,11 +21,13 @@
@@ -15910,7 +16101,7 @@ index 9ca9637..1be6f8d 100644
  	reader.tryRead("daysPassed", _daysPassed);
  	reader.tryRead("vehiclesLost", _vehiclesLost);
  	reader.tryRead("craftLostDogfight", _craftLostDogfight);
-@@ -399,6 +462,22 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -399,6 +462,32 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	reader.tryRead("funds", _funds);
  	reader.tryRead("maintenance", _maintenance);
  	reader.tryRead("userNotes", _userNotes);
@@ -15929,11 +16120,21 @@ index 9ca9637..1be6f8d 100644
 +	reader.tryRead("deptHeads", _deptHeads);
 +	reader.tryRead("topKick", _topKick);
 +	reader.tryRead("deptPrompted", _deptPrompted);
++	reader.tryRead("recoveredSites", _recoveredSites);
++	reader.tryRead("nextFlightId", _nextFlightId);
++	for (const auto& f : reader["flights"].children())
++	{
++		Flight fl;
++		f.tryRead("id", fl.id); f.tryRead("fromLon", fl.fromLon); f.tryRead("fromLat", fl.fromLat);
++		f.tryRead("toLon", fl.toLon); f.tryRead("toLat", fl.toLat); f.tryRead("hours", fl.hours);
++		f.tryRead("elapsed", fl.elapsed); f.tryRead("interceptAt", fl.interceptAt); f.tryRead("siteId", fl.siteId); f.tryRead("dest", fl.dest);
++		_flights.push_back(fl);
++	}
 +	reader.tryRead("spyOpsRun", _spyOpsRun);
  	reader.tryRead("geoscapeDebugLog", _geoscapeDebugLog);
  	reader.tryRead("researchScores", _researchScores);
  	reader.tryRead("incomes", _incomes);
-@@ -649,6 +728,30 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -649,6 +738,30 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  		}
  	}
  	_alienStrategy->load(reader["alienStrategy"], mod);
@@ -15964,7 +16165,7 @@ index 9ca9637..1be6f8d 100644
  
  	for (const auto& weHardlyKnewYe : reader["deadSoldiers"].children())
  	{
-@@ -690,6 +793,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -690,6 +803,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	}
  
  	_scriptValues.load(reader, mod->getScriptGlobal());
@@ -15972,7 +16173,7 @@ index 9ca9637..1be6f8d 100644
  }
  
  void SavedGame::loadTemplates(const YAML::YamlNodeReader& reader, const Mod* mod)
-@@ -779,6 +883,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -779,6 +893,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("difficulty", _difficulty);
  	writer.write("end", _end);
  	writer.write("monthsPassed", _monthsPassed);
@@ -15980,7 +16181,7 @@ index 9ca9637..1be6f8d 100644
  	writer.write("daysPassed", _daysPassed);
  	writer.write("vehiclesLost", _vehiclesLost);
  	writer.write("craftLostDogfight", _craftLostDogfight);
-@@ -790,6 +895,59 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -790,6 +905,75 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("funds", _funds);
  	writer.write("maintenance", _maintenance);
  	writer.write("userNotes", _userNotes);
@@ -16024,6 +16225,22 @@ index 9ca9637..1be6f8d 100644
 +		writer.write("topKick", _topKick);
 +	if (!_deptPrompted.empty())
 +		writer.write("deptPrompted", _deptPrompted);
++	if (!_recoveredSites.empty())
++		writer.write("recoveredSites", _recoveredSites);
++	writer.write("nextFlightId", _nextFlightId);
++	if (!_flights.empty())
++	{
++		auto list = writer["flights"];
++		list.setAsSeq();
++		for (const auto &fl : _flights)
++		{
++			auto n = list.write();
++			n.setAsMap();
++			n.write("id", fl.id); n.write("fromLon", fl.fromLon); n.write("fromLat", fl.fromLat);
++			n.write("toLon", fl.toLon); n.write("toLat", fl.toLat); n.write("hours", fl.hours);
++			n.write("elapsed", fl.elapsed); n.write("interceptAt", fl.interceptAt); n.write("siteId", fl.siteId); n.write("dest", fl.dest);
++		}
++	}
 +	if (!_spyMissions.empty())
 +	{
 +		auto list = writer["spyMissions"];
@@ -16040,7 +16257,7 @@ index 9ca9637..1be6f8d 100644
  	if (Options::oxceGeoscapeDebugLogMaxEntries > 0 && _geoscapeDebugLog.size() > 0)
  	{
  		auto geoDebugLog = writer["geoscapeDebugLog"];
-@@ -849,8 +1007,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -849,8 +1033,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("hiddenPurchaseItems", _hiddenPurchaseItemsMap);
  	writer.write("customRuleCraftDeployments", _customRuleCraftDeployments);
  	_alienStrategy->save(writer["alienStrategy"]);
@@ -16051,7 +16268,7 @@ index 9ca9637..1be6f8d 100644
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
  	{
  		if (!_globalEquipmentLayout[j].empty())
-@@ -1530,8 +1690,155 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
+@@ -1530,8 +1716,155 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
   * @param base the base, in which the project was finished
   * @param score should the score be awarded or not?
   */
@@ -16207,7 +16424,7 @@ index 9ca9637..1be6f8d 100644
  	if (isResearchRuleStatusDisabled(research->getName()))
  	{
  		return;
-@@ -2579,6 +2886,950 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2912,950 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -17158,7 +17375,7 @@ index 9ca9637..1be6f8d 100644
  Region *SavedGame::locateRegion(double lon, double lat) const
  {
  	Region* found = nullptr;
-@@ -2995,6 +4246,143 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
+@@ -2995,6 +4272,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
   * @param soldier Pointer to dead soldier.
   * @param cause Pointer to cause of death, NULL if missing in action.
   */
@@ -17269,6 +17486,37 @@ index 9ca9637..1be6f8d 100644
 +	return false;
 +}
 +
++int SavedGame::flightRisk(const Mod *mod, double lon1, double lat1, double lon2, double lat2) const
++{
++	// sample the great circle and take the closest approach of each Cobra site and flying Cobra craft
++	auto angle = [](double aLon, double aLat, double bLon, double bLat)
++	{
++		const double c = sin(aLat) * sin(bLat) + cos(aLat) * cos(bLat) * cos(aLon - bLon);
++		return acos(std::max(-1.0, std::min(1.0, c)));
++	};
++	const double d = angle(lon1, lat1, lon2, lat2);
++	std::vector<std::pair<double, double> > pts;
++	for (int i = 0; i <= 24; ++i)
++	{
++		const double f = i / 24.0;
++		if (d < 1e-6) { pts.emplace_back(lon1, lat1); break; }
++		const double A = sin((1 - f) * d) / sin(d), B = sin(f * d) / sin(d);
++		const double x = A * cos(lat1) * cos(lon1) + B * cos(lat2) * cos(lon2);
++		const double y = A * cos(lat1) * sin(lon1) + B * cos(lat2) * sin(lon2);
++		const double z = A * sin(lat1) + B * sin(lat2);
++		pts.emplace_back(atan2(y, x), atan2(z, sqrt(x * x + y * y)));
++	}
++	auto near = [&](double lon, double lat)
++	{
++		for (auto &p : pts) if (angle(p.first, p.second, lon, lat) <= mod->getInterceptRadius()) return true;
++		return false;
++	};
++	int risk = 0;
++	for (const auto *ab : _alienBases) if (near(ab->getLongitude(), ab->getLatitude())) risk += mod->getInterceptPerSite();
++	for (const auto *u : _ufos) if (u->getStatus() == Ufo::FLYING && near(u->getLongitude(), u->getLatitude())) risk += mod->getInterceptPerUfo();
++	return std::min(risk, mod->getInterceptCap());
++}
++
 +Soldier *SavedGame::getSpy(const SpyMission &m) const
 +{
 +	for (auto *b : _bases)
@@ -17303,7 +17551,7 @@ index 9ca9637..1be6f8d 100644
  {
  	if (resetArmor)
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..42a955c 100644
+index d985908..1428c1b 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -37,6 +37,7 @@ namespace OpenXcom
@@ -17359,7 +17607,7 @@ index d985908..42a955c 100644
  class SavedGame
  {
  public:
-@@ -126,6 +158,23 @@ private:
+@@ -126,6 +158,30 @@ private:
  	bool _ironman;
  	GameTime *_time;
  	std::vector<std::string> _userNotes;
@@ -17377,13 +17625,20 @@ index d985908..42a955c 100644
 +	std::vector<std::string> _spyOpsDone;
 +	std::map<std::string, int> _deptHeads; // G.I. Joe: department -> head soldier id
 +	int _topKick = -1;                      // G.I. Joe: Top Kick soldier id
++public:
++	/// G.I. Joe transfer flights (John 13 Nov): everything moving between bases flies, and can be hit.
++	struct Flight { int id = 0; double fromLon = 0, fromLat = 0, toLon = 0, toLat = 0; int hours = 1, elapsed = 0, interceptAt = -1, siteId = -1; std::string dest; };
++private:
++	std::vector<Flight> _flights;
++	std::vector<int> _recoveredSites;
++	int _nextFlightId = 1;
 +	std::vector<std::string> _deptPrompted; // departments already offered for a head
 +	int _spyOpsRun = 0;
 +	int _globeMarkId = 0;
  	std::vector<std::string> _geoscapeDebugLog;
  	std::vector<int> _researchScores;
  	std::vector<int64_t> _funds, _maintenance, _incomes, _expenditures;
-@@ -140,6 +189,7 @@ private:
+@@ -140,6 +196,7 @@ private:
  	std::vector<MissionSite*> _missionSites;
  	std::vector<AlienBase*> _alienBases;
  	AlienStrategy *_alienStrategy;
@@ -17391,7 +17646,7 @@ index d985908..42a955c 100644
  	SavedBattleGame *_battleGame;
  	std::vector<const RuleResearch*> _discovered;
  	std::vector<ResearchDiaryEntry*> _researchDiary;
-@@ -157,6 +207,9 @@ private:
+@@ -157,6 +214,9 @@ private:
  	bool _togglePersonalLight, _toggleNightVision;
  	int _toggleBrightness;
  	int _monthsPassed;
@@ -17401,7 +17656,7 @@ index d985908..42a955c 100644
  	int _daysPassed;
  	int _vehiclesLost, _craftLostDogfight, _craftLostMission;
  	std::string _graphRegionToggles;
-@@ -164,6 +217,7 @@ private:
+@@ -164,6 +224,7 @@ private:
  	std::string _graphFinanceToggles;
  	std::vector<const RuleResearch*> _poppedResearch;
  	std::vector<Soldier*> _deadSoldiers;
@@ -17409,7 +17664,7 @@ index d985908..42a955c 100644
  	size_t _selectedBase;
  	std::string _lastselectedArmor; //contains the last selected armor
  	std::string _globalEquipmentLayoutName[MAX_EQUIPMENT_LAYOUT_TEMPLATES];
-@@ -293,6 +347,8 @@ public:
+@@ -293,6 +354,8 @@ public:
  	void makeAllResearchDiscovered(const Mod* mod);
  	/// Add a finished ResearchProject
  	void addFinishedResearch(const RuleResearch *research, const Mod *mod, Base *base, bool score = true);
@@ -17418,7 +17673,7 @@ index d985908..42a955c 100644
  	/// Add a new record to the research diary
  	void addResearchDiaryEntry(ResearchDiaryEntry* entry);
  	/// Gets the research diary.
-@@ -395,6 +451,32 @@ public:
+@@ -395,6 +458,32 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -17451,7 +17706,7 @@ index d985908..42a955c 100644
  	/// Read-only access to the alien strategy data.
  	const AlienStrategy &getAlienStrategy() const { return *_alienStrategy; }
  	/// Full access to the current alien missions.
-@@ -409,6 +491,10 @@ public:
+@@ -409,6 +498,10 @@ public:
  	const std::vector<GeoscapeEvent*> &getGeoscapeEvents() const { return _geoscapeEvents; }
  	/// Locate a region containing a position.
  	Region *locateRegion(double lon, double lat) const;
@@ -17462,7 +17717,7 @@ index d985908..42a955c 100644
  	/// Locate a region containing a Target.
  	Region *locateRegion(const Target &target) const;
  	/// Locate a country containing a position.
-@@ -419,6 +505,13 @@ public:
+@@ -419,6 +512,13 @@ public:
  	int selectSoldierNationalityByLocation(const Mod* mod, const RuleSoldier* rule, const Target* target) const;
  	/// Return the month counter.
  	int getMonthsPassed() const;
@@ -17476,7 +17731,7 @@ index d985908..42a955c 100644
  	/// Return the day counter.
  	int getDaysPassed() const { return _daysPassed; }
  	void increaseDaysPassed() { _daysPassed++; }
-@@ -493,6 +586,47 @@ public:
+@@ -493,6 +593,54 @@ public:
  	bool isUfoOnIgnoreList(int ufoId);
  	/// Handles a soldier's death.
  	std::vector<Soldier*>::iterator killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause = 0);
@@ -17517,6 +17772,13 @@ index d985908..42a955c 100644
 +	int getTopKickBonus(const Mod *mod, const Base *base) const;
 +	/// Does any base have one of this department's rooms (built)?
 +	bool hasDeptRoom(const Mod *mod, const std::string &dept) const;
++	/// G.I. Joe transfer flights.
++	std::vector<Flight> &getFlights() { return _flights; }
++	int newFlightId() { return _nextFlightId++; }
++	void addRecoveredSite(int id) { _recoveredSites.push_back(id); }
++	bool takeRecoveredSite(int id) { auto it = std::find(_recoveredSites.begin(), _recoveredSites.end(), id); if (it == _recoveredSites.end()) return false; _recoveredSites.erase(it); return true; }
++	/// Chance in percent that Cobra intercepts a flight on this route (sites and flying Cobra craft near it).
++	int flightRisk(const Mod *mod, double lon1, double lat1, double lon2, double lat2) const;
 +	/// Send a spy from a base on an operation; false if he cannot go.
 +	bool sendSpy(Soldier *soldier, Base *base, const std::string &op, int days);
 +	/// End the mission at index i: 0 home, 1 caught and held, 2 caught and killed. Removes it.
@@ -17524,7 +17786,7 @@ index d985908..42a955c 100644
  	/// enables/disables autosell for an item type
  	void setAutosell(const RuleItem *itype, const bool enabled);
  	/// get autosell state for an item type
-@@ -529,6 +663,26 @@ public:
+@@ -529,6 +677,26 @@ public:
  	void handlePrimaryResearchSideEffects(const std::vector<const RuleResearch*> &topicsToCheck, const Mod* mod, Base* base);
  	/// Gets the list of user notes.
  	std::vector<std::string>& getUserNotes() { return _userNotes; }
@@ -17698,6 +17960,48 @@ index 8cf11bd..549328d 100644
  	/// Register all useful function used by script.
  	static void ScriptRegister(ScriptParserBase* parser);
  
+diff --git a/src/Savegame/Transfer.cpp b/src/Savegame/Transfer.cpp
+index babca51..60b529a 100644
+--- a/src/Savegame/Transfer.cpp
++++ b/src/Savegame/Transfer.cpp
+@@ -59,6 +59,7 @@ Transfer::~Transfer()
+ bool Transfer::load(const YAML::YamlNodeReader& reader, Base *base, const Mod *mod, SavedGame *save)
+ {
+ 	reader.tryRead("hours", _hours);
++	reader.tryRead("flightId", _flightId);
+ 
+ 	if (const auto& soldier = reader["soldier"])
+ 	{
+@@ -117,6 +118,7 @@ void Transfer::save(YAML::YamlNodeWriter writer, const Base* b, const Mod* mod)
+ {
+ 	writer.setAsMap();
+ 	writer.write("hours", _hours);
++	if (_flightId) writer.write("flightId", _flightId);
+ 	if (_soldier != 0)
+ 	{
+ 		_soldier->save(writer["soldier"], mod->getScriptGlobal());
+diff --git a/src/Savegame/Transfer.h b/src/Savegame/Transfer.h
+index 20e0459..5cf74d6 100644
+--- a/src/Savegame/Transfer.h
++++ b/src/Savegame/Transfer.h
+@@ -64,6 +64,7 @@ class Transfer
+ {
+ private:
+ 	int _hours;
++	int _flightId = 0; // G.I. Joe: the transfer flight this rides on (0 = none: purchases, recruits)
+ 	Soldier *_soldier;
+ 	Craft *_craft;
+ 	const RuleItem* _itemId;
+@@ -96,6 +97,9 @@ public:
+ 	std::string getName(Language *lang) const;
+ 	/// Gets the hours remaining of the transfer.
+ 	int getHours() const;
++	void setHours(int h) { _hours = h; }
++	int getFlightId() const { return _flightId; }
++	void setFlightId(int id) { _flightId = id; }
+ 	/// Gets the quantity of the transfer.
+ 	int getQuantity() const;
+ 	/// Gets the type of the transfer.
 diff --git a/src/Ufopaedia/ArticleStateCraft.cpp b/src/Ufopaedia/ArticleStateCraft.cpp
 index 50fac40..cc4af4c 100644
 --- a/src/Ufopaedia/ArticleStateCraft.cpp
