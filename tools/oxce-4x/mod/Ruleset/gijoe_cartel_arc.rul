@@ -1,0 +1,230 @@
+# THE REST OF THE CARTEL ARC (STORY_CartelArc_v1, approved 13 Nov 02:38; John's answers in
+# BUILD_DESIGN_ANSWERS_13Nov_Evening section B). Steps 1 (ranch), 3 (Scarlett's Quiet Courier), 4 (the
+# armored-car robbery) and the lead itself were already in; this file adds what was missing:
+#
+# STEP 2, THE CARTEL FLIGHT. The cartel's stash house is a hidden site on a dirt airstrip in West Texas,
+#   placed by the engine on Day 1 (GeoscapeState, `cartel:` below). It sends the cartel's smuggling
+#   flights (STR_CARTEL_FLIGHT, a supply run that lands at the stash house). Until STR_CARTEL_FLIGHT_ROUTE
+#   is researched nobody sees them; once it is, the next one in the air is put on the world map.
+#   - TAIL IT (follow without firing): when it lands, the stash house is found (AlienMission).
+#     Every hour on the tail there is a chance the cartel spots you: spotBase%, more the closer you
+#     are (up to +spotClose% right on top of it), +spotPerCobraSite% for every Cobra site near the
+#     flight (their radar). Spotted = the flight goes dark, your craft turns for home, nothing found.
+#   - SHOOT IT DOWN: the wreck gives the pilot's logbook (STR_CARTEL_LOGBOOK), which reveals the stash
+#     house when researched (lead STR_LEAD_CARTEL_STASH below), slower and with the route burned.
+# STEP 2b, THE STASH HOUSE RAID: MAPS' STASH1 map. Win it and STR_CARTEL_STASH_HOUSE (lead points).
+# STEP 4b, ROBBERY MISSED (lost, or the alert ignored): STR_ROBBERY_MISSED is granted.
+#   - With an informant (STR_INFORMANT_TIP researched): the cartel's safehouse raid appears (MAPS' FARM1,
+#     the farmhouse outside Millville). Win it: the getaway papers come home (-> the border bank trace).
+#   - Either way the analysts can also trace the money the slow way: STR_SLOW_MONEY_TRACE (about 90 days
+#     of INTEL time), which opens the border bank trace. (John: no informant = the slow trace; with an
+#     informant the raid is the fast road and the slow trace is still there.)
+#   - The factory still comes back on its date whatever happens (the existing backstop).
+#
+# STAND-INS: the cartel plane flies and crashes as the FANG (the small scout's map and art); the stash
+# house and safehouse cartel men are Cobra troopers with pistols, as at the ranch. Numbers are BUILD's.
+
+cartel:
+  stashLon: -100.35          # degrees: a dirt strip in the brush country between Del Rio and Laredo
+  stashLat: 28.45
+  spotBase: 3                # % an hour while tailing
+  spotClose: 12              # + up to this % when right on top of it (falls off over 2 degrees)
+  spotPerCobraSite: 10       # + per Cobra site within about 8 degrees of the flight (their radar)
+
+terrains:
+  - name: STASH1
+    mapDataSets: [BLANKS, JDESERT, STASH]
+    mapBlocks:
+      - name: STASH1
+        width: 50
+        length: 40
+        height: 4
+        groups: [0]
+  - name: FARM1
+    mapDataSets: [BLANKS, TOWN, BARNYRD, RANCH, FARMX]
+    mapBlocks:
+      - name: FARM1
+        width: 50
+        length: 40
+        height: 3
+        groups: [0]
+
+mapScripts:
+  - type: STASH1_SCRIPT
+    commands:
+      - type: addBlock
+        size: [5, 4]
+        groups: [0]
+        rects:
+          - [0, 0, 5, 4]
+  - type: FARM1_SCRIPT
+    commands:
+      - type: addBlock
+        size: [5, 4]
+        groups: [0]
+        rects:
+          - [0, 0, 5, 4]
+
+ufos:
+  - type: STR_CARTEL_PLANE          # a twin-engine smuggler; flies and crashes as the FANG for now
+    size: STR_VERY_SMALL
+    sprite: 0
+    damageMax: 60
+    speedMax: 1400
+    power: 0
+    range: 0
+    score: 30
+    reload: 56
+    breakOffTime: 200
+    battlescapeTerrainData:
+      name: UFO1A
+      mapDataSets:
+        - BLANKS
+        - UFO1
+      mapBlocks:
+        - name: UFO1A
+          width: 10
+          length: 10
+
+alienMissions:
+  - type: STR_CARTEL_FLIGHT
+    points: 0
+    objective: 5                     # a supply run: it lands at the base that sent it (the stash house)
+    raceWeights: {}
+    waves:
+      - ufo: STR_CARTEL_PLANE
+        count: 1
+        trajectory: P9
+        timer: 6000
+        objective: true
+  - type: STR_CARTEL_SAFEHOUSE_MISSION
+    points: 0
+    objective: 3
+    spawnZone: 9
+    raceWeights:
+      0:
+        STR_COBRA: 100
+    waves:
+      - ufo: STR_CARTEL_SAFEHOUSE
+        count: 1
+        trajectory: P0
+        timer: 60
+        objective: true
+
+missionScripts:
+  - type: cartelSafehouse
+    firstMonth: 0
+    maxRuns: 1
+    varName: cartelSafehouse
+    executionOdds: 100
+    startDelay: 1440
+    researchTriggers:
+      STR_ROBBERY_MISSED: true
+      STR_INFORMANT_TIP: true
+    missionWeights:
+      0:
+        STR_CARTEL_SAFEHOUSE_MISSION: 100
+    regionWeights:
+      0:
+        STR_NORTH_AMERICA: 100
+
+alienDeployments:
+  - type: STR_CARTEL_STASH_HOUSE
+    data:
+      - alienRank: 5
+        lowQty: 8
+        highQty: 10
+        dQty: 1
+        percentageOutsideUfo: 100
+        itemSets:
+          - [STR_PISTOL, STR_PISTOL_CLIP, STR_PISTOL_CLIP]
+          - [STR_PISTOL, STR_PISTOL_CLIP, STR_PISTOL_CLIP]
+          - [STR_PISTOL, STR_PISTOL_CLIP, STR_PISTOL_CLIP]
+    width: 50
+    length: 40
+    height: 4
+    terrains: [STASH1]
+    script: STASH1_SCRIPT
+    shade: 8
+    alienBase: true
+    markerName: STR_CARTEL_STASH_HOUSE_SITE
+    markerIcon: 9
+    genMission:
+      STR_CARTEL_FLIGHT: 100
+    genMissionFreq: 15               # % a day: about one flight a week
+    unlockedResearch: STR_CARTEL_STASH_HOUSE
+    briefingData:
+      palette: 0
+      title: STR_CARTEL_STASH_HOUSE_SITE
+      desc: STR_CARTEL_STASH_HOUSE_BRIEFING
+  - type: STR_CARTEL_SAFEHOUSE
+    data:
+      - alienRank: 5
+        lowQty: 8
+        highQty: 10
+        dQty: 1
+        percentageOutsideUfo: 100
+        itemSets:
+          - [STR_PISTOL, STR_PISTOL_CLIP, STR_PISTOL_CLIP]
+          - [STR_RIFLE, STR_RIFLE_CLIP, STR_RIFLE_CLIP]
+          - [STR_RIFLE, STR_RIFLE_CLIP, STR_RIFLE_CLIP]
+    civilians: 1
+    width: 50
+    length: 40
+    height: 3
+    terrains: [FARM1]
+    script: FARM1_SCRIPT
+    shade: 12                        # a night raid
+    duration: [120, 168]
+    markerName: STR_CARTEL_SAFEHOUSE_SITE
+    markerIcon: 22
+    missionBountyItem: STR_GETAWAY_PAPERS
+    alert: STR_CARTEL_SAFEHOUSE_ALERT
+    briefingData:
+      palette: 0
+      title: STR_BRIEFING_CARTEL_SAFEHOUSE_TITLE
+      desc: STR_BRIEFING_CARTEL_SAFEHOUSE
+
+research:
+  - name: STR_CARTEL_STASH_HOUSE     # granted by winning the stash house raid (lead points)
+    cost: 1
+    points: 10
+    requiresBaseFunc: [STR_STORY_NEVER]
+  - name: STR_ROBBERY_MISSED         # granted when the armored-car job got away
+    cost: 1
+    points: 0
+    requiresBaseFunc: [STR_STORY_NEVER]
+  - name: STR_SLOW_MONEY_TRACE
+    lane: INTEL
+    cost: 600                        # about 90 days for a small team
+    points: 10
+    dependencies: [STR_ROBBERY_MISSED]
+    unlocks: [STR_BORDER_BANK_TRACE]
+
+leads:
+  - type: STR_LEAD_CARTEL_STASH      # the logbook route to the stash house
+    listOrder: 11
+    threshold: 100
+    research:
+      STR_CARTEL_LOGBOOK: 100
+    revealSiteType: STR_CARTEL_STASH_HOUSE
+
+extraStrings:
+  - type: en-US
+    strings: &castr
+      STR_CARTEL_PLANE: "Cartel smuggling flight"
+      STR_CARTEL_FLIGHT: "Cartel flight"
+      STR_CARTEL_STASH_HOUSE_SITE: "Cartel stash house"
+      STR_CARTEL_STASH_HOUSE_BRIEFING: "The cartel's stash house: a dirt airstrip, an adobe house and a tin shed full of cash presses. Their boss runs it from the back room and their radio man can call the town. Hit it hard, keep the radio quiet, and take the boss alive if you can."
+      STR_CARTEL_STASH_HOUSE: "The Cartel Stash House"
+      STR_CARTEL_SAFEHOUSE_SITE: "Cartel safehouse"
+      STR_CARTEL_SAFEHOUSE_MISSION: "Cartel safehouse"
+      STR_CARTEL_SAFEHOUSE_ALERT: "Our informant says the robbery crew is holed up at a farm outside Millville. Hit it before they move."
+      STR_ROBBERY_MISSED: "The robbery got away"
+      STR_SLOW_MONEY_TRACE: "Follow the Money the Slow Way"
+      STR_LEAD_CARTEL_STASH: "Where the cartel's planes land"
+      STR_CARTEL_FLIGHT_SPOTTED: "The cartel flight is in the air. Follow it home without firing and it will lead us to their stash house."
+      STR_TRACKING_LEAD: "TRACKING: {0}"
+      STR_CARTEL_TAIL_SPOTTED: "The cartel spotted our tail. Their flight has gone dark and the route is burned."
+  - type: en-GB
+    strings: *castr
