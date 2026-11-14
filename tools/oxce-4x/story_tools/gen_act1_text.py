@@ -371,6 +371,46 @@ UW = {
 }
 S.update(UW)
 
+# 6. Underwater missions: briefings and debriefs (John 14 Nov 18:15; UNDERWATER_MISSIONS_v1 section 8).
+# STR_BRIEFING_<M>_TITLE / STR_BRIEFING_<M> as the land missions; STR_DEBRIEF_<M>_WIN / _LOSE for BUILD to show after.
+UWM = {
+ 'REEF_DROP': ('REEF DROP',
+   ["HAWK: The cartel's stopped flying everything in. Some of it goes off a boat at night, onto the reef, and their divers bring it up when the coast is clear.",
+    "They're down there now. Get the crates, and bring me one of those divers breathing. Watch your air: the reef is a long way from the way up."],
+   "The crates are ours, and so is what's in them. Somebody on that boat knew where to drop them. We'll find out who.",
+   "The divers got the crates away. The cartel will move the drop. We'll be looking for a new reef."),
+ 'UNDER_THE_HULL': ('UNDER THE HULL',
+   ["HAWK: There's a freighter in harbour carrying something it isn't declaring. Customs went over her twice and found nothing, because it isn't inside the ship. It's welded under the hull.",
+    "The cartel has divers guarding it until she sails. Go under, take it off her, and find out where she's headed. It's dark down there. Keep together."],
+   "Cut loose and recovered. The ship's papers say one port. What was under her says another. We're going to watch that ship.",
+   "She sailed with it still on her. Whatever it was, it's someone else's problem now, and maybe ours again later."),
+ 'CABLE_TAP': ('CABLE TAP',
+   ["HAWK: A telephone cable on the sea floor has been dropping calls. The phone company sent a diver. He didn't come back up.",
+    "Cobra has frogmen down there, Eels, and they've clamped something onto the line. Clear them off and bring me that tap in one piece. Whatever they were listening to, I want to know."],
+   "The tap is ours, and it was recording. Our people are going through what Cobra heard, and who they were listening for.",
+   "The Eels got away with the tap. Assume Cobra heard everything on that line. We'll have to change how we talk."),
+ 'SEA_CACHE': ('SEA CACHE',
+   ["HAWK: Cobra doesn't keep all its supplies on land. There's a cache on the bottom out here, crates under netting, a buoy line to bring them up when a boat comes by.",
+    "Eels guard it. Destroy what you can't carry. Every crate down there is a crate their troops won't get."],
+   "The cache is gone. Cobra's people in this region will be going short for a while.",
+   "The Eels held the cache. Cobra keeps its supplies, and now they know we know where it is."),
+ 'SALVAGE_RACE': ('SALVAGE RACE',
+   ["HAWK: It's on the bottom now, and whatever was aboard went down with it. Cobra knows where it went down too, and their divers are already on the way.",
+    "Get in, find it, and get it out before they do. You won't have long down there, and neither will they."],
+   "We got there first. What came up with you is on its way to the lab.",
+   "Cobra's divers beat us to it. Whatever was down there belongs to them now."),
+ 'HULL_BREACH': ('HULL BREACH',
+   ["HAWK: She's dead in the water, but her crew isn't, and they're waiting for us to come over the rail. So we won't.",
+    "Divers under her hull with limpets. Blow a way in below the waterline, and you're inside before they know where you came from."],
+   "We came in from below and took her. Her cargo, her logbook and her crew are ours.",
+   "The breach didn't hold, and her crew drove us back into the water. She's still Cobra's."),
+}
+for k, (title, brief, win, lose) in UWM.items():
+    S['STR_BRIEFING_%s_TITLE' % k] = title
+    S['STR_BRIEFING_%s' % k] = P.join(brief)
+    S['STR_DEBRIEF_%s_WIN' % k] = win
+    S['STR_DEBRIEF_%s_LOSE' % k] = lose
+
 hdr = ('# STORY (Act 1 writing). Hawk\'s briefings, Cobra Commander\'s broadcast and the Act 1 cutscene captions.\n'
        '# Text only. BUILD wires the ids (see story_tools/gen_act1_text.py). Generated: edit the script, not this file.\n')
 body = yaml.dump({'extraStrings': [{'type': 'en-US', 'strings': S}, {'type': 'en-GB', 'strings': S}]},
