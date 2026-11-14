@@ -1491,7 +1491,7 @@ index 10a96c4..755c149 100644
  	void btnCancelClick(Action *action);
  	/// Handler for pressing an Increase arrow in the list.
 diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
-index db6727f..fcc4bb7 100644
+index db6727f..3c2091f 100644
 --- a/src/Battlescape/AIModule.cpp
 +++ b/src/Battlescape/AIModule.cpp
 @@ -19,6 +19,7 @@
@@ -1510,7 +1510,7 @@ index db6727f..fcc4bb7 100644
  #include "../Mod/RuleItem.h"
  #include "../fmath.h"
  
-@@ -489,6 +491,116 @@ void AIModule::think(BattleAction *action)
+@@ -489,6 +491,147 @@ void AIModule::think(BattleAction *action)
  		return;
  	}
  
@@ -1546,16 +1546,47 @@ index db6727f..fcc4bb7 100644
 +	}
 +
 +	// G.I. Joe: Cobra has broken (BattlescapeGame::retreatStep). Troopers run for the nearest map edge;
-+	// officers and villains keep fighting while they still have fireTUPct of their time, then pull back.
-+	// B.A.T.s never retreat.
++	// officers and villains take the cheapest shot they have at a Joe in sight, once a turn, then pull
++	// back (John 23:20). B.A.T.s never retreat.
 +	if (_unit->getFaction() == FACTION_HOSTILE && _save->getVanStop("retreat"))
 +	{
 +		const Mod::RetreatRules &rr = _save->getMod()->getRetreatRules();
 +		const bool never = std::find(rr.neverRetreat.begin(), rr.neverRetreat.end(), _unit->getType()) != rr.neverRetreat.end();
 +		const std::string &rank = _unit->getRankString();
 +		const bool runner = rank == "STR_LIVE_SOLDIER" || rank == "STR_LIVE_TERRORIST";
-+		const bool stillFighting = !runner && _unit->getTimeUnits() * 100 >= _unit->getBaseStats()->tu * rr.fireTUPct;
-+		if (!never && !stillFighting)
++		if (!never && !runner && action->weapon && _save->canUseWeapon(action->weapon, _unit, false, BA_NONE) && action->weapon->haveAnyAmmo())
++		{
++			const std::string key = "fired:" + std::to_string(_unit->getId()) + ":" + std::to_string(_save->getTurn());
++			if (!_save->getVanStop(key))
++			{
++				// the cheapest shot the weapon has: snap, else aimed, else auto
++				BattleActionType cheapest = BA_NONE;
++				int best = -1;
++				for (BattleActionType t : { BA_SNAPSHOT, BA_AIMEDSHOT, BA_AUTOSHOT })
++				{
++					BattleActionCost c(t, _unit, action->weapon);
++					if (c.Time <= 0 || !c.haveTU()) continue;
++					if (best < 0 || c.Time < best) { best = c.Time; cheapest = t; }
++				}
++				BattleUnit *target = nullptr;
++				int closest = 1000;
++				for (auto *bu : *_save->getUnits())
++				{
++					if (bu->getFaction() != FACTION_PLAYER || bu->isOut() || !bu->getTile()) continue;
++					if (!_save->getTileEngine()->visible(_unit, bu->getTile())) continue;
++					const int d = Position::distance2d(_unit->getPosition(), bu->getPosition());
++					if (d < closest) { closest = d; target = bu; }
++				}
++				if (cheapest != BA_NONE && target)
++				{
++					_save->setVanStop(key, 1);
++					action->type = cheapest;
++					action->target = target->getPosition();
++					return;
++				}
++			}
++		}
++		if (!never)
 +		{
 +			const Position at = _unit->getPosition();
 +			const int W = _save->getMapSizeX(), H = _save->getMapSizeY();
@@ -1627,7 +1658,7 @@ index db6727f..fcc4bb7 100644
  	if (action->weapon)
  	{
  		const RuleItem *rule = action->weapon->getRules();
-@@ -1395,6 +1507,12 @@ int AIModule::selectNearestTarget()
+@@ -1395,6 +1538,12 @@ int AIModule::selectNearestTarget()
  		{
  			tally++;
  			int dist = Position::distance2d(_unit->getPosition(), bu->getPosition());
@@ -1709,7 +1740,7 @@ index 6065b54..8db80d7 100644
  	~ActionMenuState();
  	/// Init function.
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..905c872 100644
+index b7e1111..f172188 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
 @@ -16,6 +16,7 @@
@@ -1720,7 +1751,7 @@ index b7e1111..905c872 100644
  #include <sstream>
  #include "BattlescapeGame.h"
  #include "BattlescapeState.h"
-@@ -508,8 +509,261 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
+@@ -508,8 +509,269 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
  /**
   * Ends the turn.
   */
@@ -1945,13 +1976,21 @@ index b7e1111..905c872 100644
 +	if (start < 0) { start = total; _save->setVanStop("cobraStart", total); }
 +	if (!_save->getVanStop("retreat") && standing > 0)
 +	{
-+		const bool losses = start > 0 && down * 100 >= start * rr.lossPct;
++		// a chance, not a line (John 23:20 "to stiff"): nothing below breakFrom% of the men down, certain at
++		// breakAt%, more likely with the leader down or the Joes they can see outnumbering them; a man
++		// carrying off a Joe means the job is done and they go
++		const int lostPct = start > 0 ? down * 100 / start : 0;
++		int chance = rr.breakAt > rr.breakFrom ? (lostPct - rr.breakFrom) * 100 / (rr.breakAt - rr.breakFrom) : 0;
++		chance = std::max(0, std::min(100, chance));
++		if (leaderDown) chance += rr.leaderDownAdd;
 +		const bool outnumbered = rr.outnumbered > 0 && seenJoes >= standing * rr.outnumbered;
-+		if (losses || leaderDown || carrying || outnumbered)
++		if (outnumbered) chance += rr.outnumberedAdd;
++		if (carrying) chance = 100;
++		if (chance > 0 && RNG::percent(std::min(100, chance)))
 +		{
 +			_save->setVanStop("retreat", 1);
 +			_parentState->warning("STR_COBRA_PULLING_OUT");
-+			Log(LOG_INFO) << "[retreat] Cobra breaks: losses " << down << "/" << start << ", leader down " << leaderDown
++			Log(LOG_INFO) << "[retreat] Cobra breaks (" << chance << "%): losses " << down << "/" << start << ", leader down " << leaderDown
 +				<< ", carrying " << carrying << ", Joes seen " << seenJoes << " vs " << standing << " standing";
 +		}
 +	}
@@ -14679,7 +14718,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..5be7f09 100644
+index 1885346..b9d0ead 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -14817,7 +14856,7 @@ index 1885346..5be7f09 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,273 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,275 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -14891,9 +14930,11 @@ index 1885346..5be7f09 100644
 +	if (const auto& rt = reader["retreat"])
 +	{
 +		_retreat.on = true;
-+		rt.tryRead("lossPct", _retreat.lossPct);
++		rt.tryRead("breakFrom", _retreat.breakFrom);
++		rt.tryRead("breakAt", _retreat.breakAt);
++		rt.tryRead("leaderDownAdd", _retreat.leaderDownAdd);
 +		rt.tryRead("outnumbered", _retreat.outnumbered);
-+		rt.tryRead("fireTUPct", _retreat.fireTUPct);
++		rt.tryRead("outnumberedAdd", _retreat.outnumberedAdd);
 +		rt.tryRead("winGoodwillCut", _retreat.winGoodwillCut);
 +		rt.tryRead("neverRetreat", _retreat.neverRetreat);
 +	}
@@ -15091,7 +15132,7 @@ index 1885346..5be7f09 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3578,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3580,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -15099,7 +15140,7 @@ index 1885346..5be7f09 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4183,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4185,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -15125,7 +15166,7 @@ index 1885346..5be7f09 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4440,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4442,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -15146,7 +15187,7 @@ index 1885346..5be7f09 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6154,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6156,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -15166,7 +15207,7 @@ index 1885346..5be7f09 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6177,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6179,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -15174,7 +15215,7 @@ index 1885346..5be7f09 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6191,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6193,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -15214,7 +15255,7 @@ index 1885346..5be7f09 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..1dac73d 100644
+index 2242d13..d94798e 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -15278,7 +15319,7 @@ index 2242d13..1dac73d 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,114 @@ private:
+@@ -327,6 +360,115 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -15331,9 +15372,10 @@ index 2242d13..1dac73d 100644
 +	struct RetreatRules
 +	{
 +		bool on = false;
-+		int lossPct = 50;          ///< this share of Cobra's men down, dead or gone
-+		int outnumbered = 2;       ///< Joes Cobra can see >= this many times Cobra's men still standing
-+		int fireTUPct = 60;        ///< an officer withdraws firing: he fights while he has this much TU left
++		int breakFrom = 25, breakAt = 75;   ///< % of Cobra's men down: the chance to break runs from 0 here to 100 there
++		int leaderDownAdd = 40;    ///< + this % chance while their leader is down
++		int outnumbered = 2;       ///< Joes Cobra can see >= this many times Cobra's men still standing...
++		int outnumberedAdd = 30;   ///< ...adds this % chance
 +		int winGoodwillCut = 1;    ///< a win where some got away earns this much less goodwill / confidence
 +		std::vector<std::string> neverRetreat;   ///< unit types that never pull out (B.A.T.s)
 +	};
@@ -15393,7 +15435,7 @@ index 2242d13..1dac73d 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +833,122 @@ public:
+@@ -692,6 +834,122 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
