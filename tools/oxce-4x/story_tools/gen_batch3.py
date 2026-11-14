@@ -84,6 +84,10 @@ for i, n, c, deps, txt in [
  ('STR_BREACHING_DRILLS', 'Breaching Drills', 100, ['STR_OVERWATCH_DRILLS'], 'Door drills. Opening doors and containers costs half the time units, and the first Joe through a door gets +20% accuracy that turn.'),
  ('STR_FIRE_AND_MOVE', 'Fire and Move', 120, ['STR_OVERWATCH_DRILLS'], 'One Joe shoots, another moves. A Cobra a Joe fires at is pinned: no reaction fire until his next turn. Smoke grenades cost half the time units to throw, and Joes moving inside smoke cannot be reaction-fired.'),
  # transport defences (John 13 Nov 14:11): open the first time a Joe transport is attacked in the air.
+ # Outpost cap (John 13 Nov 21:13: "1, but some research aspect for more"): 1 outdoor outpost to start, +1 per step, 4 at most.
+ ('STR_FORWARD_OPERATIONS_1', 'Forward Operations I', 60, ['STR_FIELD_RADIO'], 'Supplying and commanding a second base far from The Pit. Lets G.I. Joe run two outdoor outposts.'),
+ ('STR_FORWARD_OPERATIONS_2', 'Forward Operations II', 100, ['STR_FORWARD_OPERATIONS_1', 'STR_WATCH_TOWER'], 'Regional command: outposts that watch for each other. Lets G.I. Joe run three outdoor outposts.'),
+ ('STR_FORWARD_OPERATIONS_3', 'Forward Operations III', 150, ['STR_FORWARD_OPERATIONS_2', 'STR_COBRA_DEPOTS'], 'A standing network of forward bases, placed where Cobra moves its goods. Lets G.I. Joe run four outdoor outposts.'),
  # STR_VAMP_RECOVERED is never researched by hand: BUILD's hook grants it when the junkyard mission is won, or one month after Clutch is rescued if it is lost (STORY_ClutchRescue_v1, John 17:10: no VAMP research before Clutch).
  ('STR_VAMP_RECOVERED', 'Clutch\'s VAMP', 1, ['STR_STORY_LOCK'], 'Clutch knows the VAMP bolt by bolt. With him in the Motor Pool we can build our own.'),
  # STR_TRANSPORT_UNDER_FIRE is never researched by hand: BUILD's hook grants it on the first transport interception.
@@ -113,6 +117,7 @@ FUNDS = {
  'STR_AIR_COMBAT_DOCTRINE': 100000, 'STR_DETENTION_BLOCK': 300000, 'STR_SIGNALS_INTELLIGENCE_CENTER': 700000,
  'STR_LONG_RANGE_RADAR': 600000}
 FUNDS = {k: int(round(v * 0.75, -4)) for k, v in FUNDS.items()}   # John 21:38: research money cut by 25%
+FUNDS.update({'STR_FORWARD_OPERATIONS_1': 100000, 'STR_FORWARD_OPERATIONS_2': 200000, 'STR_FORWARD_OPERATIONS_3': 300000})   # after the cut (John 13 Nov 21:13)
 FUNDS.update({'STR_OVERWATCH_DRILLS': 60000, 'STR_BREACHING_DRILLS': 80000, 'STR_FIRE_AND_MOVE': 90000})   # pitched after the cut (John 23:16-23:19)
 FUNDS.update({'STR_TRANSPORT_DOOR_GUNS': 60000, 'STR_TRANSPORT_ARMOR_PLATING': 90000, 'STR_TRANSPORT_COUNTERMEASURE_PODS': 70000})   # John 13 Nov 14:11 (dogfight design 3b)
 BASEFUNC = {'STR_OVERWATCH_DRILLS': ['STR_BRIEFING_ROOM'], 'STR_BREACHING_DRILLS': ['STR_BRIEFING_ROOM'], 'STR_FIRE_AND_MOVE': ['STR_BRIEFING_ROOM']}
