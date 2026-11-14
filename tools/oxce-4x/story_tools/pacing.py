@@ -9,6 +9,8 @@ for f in ['gijoe_research_spine.rul', 'gijoe_story_act1.rul', 'gijoe_research_ca
     for r in d['research']:
         if r['name'] == 'STR_STORY_LOCK': continue
         T[r['name']] = dict(r, disp=S.get(r.get('lookup') or r['name']) or S.get(r['name']) or 'Cobra Ledgers', file=f)
+for _k, _v in [kv.split('=') for kv in os.environ.get('COSTS', '').split(',') if kv]:
+    T[_k]['cost'] = int(_v)     # COSTS=STR_A=90,STR_B=70: try new costs without touching the rulesets
 unlocked_by = collections.defaultdict(list)
 for k, r in T.items():
     for u in r.get('unlocks', []): unlocked_by[u].append(k)
@@ -99,6 +101,7 @@ def lane_speed(lane, m):
     f = min(1.0, away / 30.0)
     return (1 - f) + f * AWAY
 
+START = {}
 def run(strat):
     target = STRATS[strat]; day = 0; cash = ECON['start']; sci = 10; labs = LAB_START; rooms = HOUSE_START; nlab_built = 0; nq_built = 0
     an = AN0 if ANALYSTS else 0; an_seats = AN0; nan_built = 0
@@ -167,6 +170,7 @@ def run(strat):
         for k in active:
             n = (an / max(1, len(intel))) if k in intel else (sci / max(1, len(rest)))
             prog[k] += n * lane_speed(T[k].get('lane'), m)
+            START.setdefault(strat, {}).setdefault(k, m)
             if prog[k] >= T[k]['cost'] * (INTEL_SCALE if k in intel else 1): done[k] = day / 30
         # money, daily slice of the month
         monthly = ECON['funding'] + ECON['other_income'] - ECON['soldiers'] - ECON['engineers'] - (sci + an) * ECON['sci_salary'] - nan_built * AN_ROOM[2] \
@@ -192,4 +196,8 @@ for k in keys:
     print(f"{T[k]['disp'][:38]:38s} {('' if EST.get(k) is None else EST[k]):>5} " + ' '.join(f"{('never' if v is None else round(v,1)):>10}" for v in vals))
 nd = {s: sum(1 for k in T if k not in out[s][0] and k not in DONE0 and T[k]['file'] == 'gijoe_research_joe.rul') for s in STRATS}
 print('Joe topics not reached in Year 1:', nd)
+if os.environ.get('DIAG'):
+    print('\nDIAG (typical): topic | lane | cost | item month | started | done | est')
+    for k in EST:
+        if k in T: print(f"{T[k]['disp'][:34]:34s} {str(T[k].get('lane')):10s} {T[k]['cost']:5} {ITEM_MONTH.get(k,'-'):>5} {round(START.get('typical',{}).get(k,-1),1):>6} {out['typical'][0].get(k)!s:>6.5} {EST[k]:>5}  deps={T[k].get('dependencies',[])}")
 json.dump({'rows': rows, 'info': {s: out[s][1] for s in STRATS}, 'notdone': nd, 'strats': list(STRATS)}, open('pacing.json', 'w'))
