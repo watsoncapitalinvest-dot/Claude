@@ -230,6 +230,23 @@ S['STR_BRIEFING_RETAKE_PIT'] = P.join([
     "Go home. Throw them out. Try not to break anything we'll need.",
 ])
 
+# ------------------------------------------------------------------ The first air fight (claude/FIRST_AIR_FIGHT_v1.md, John 13 Nov 23:46)
+S['STR_EVENT_FIRST_INTERCEPT'] = 'SMUGGLER OVER THE BORDER'
+S['STR_EVENT_FIRST_INTERCEPT_DESCRIPTION'] = P.join([
+    "Border radar has a twin-engine plane coming north low and without lights. Customs say guns, and nobody else is close enough to stop it.",
+    "HAWK: Ace, it's yours. Force it down. I want the plane, the guns and the pilot.",
+    "ACE: \"Finally. Somebody around here who needs a pilot.\"",
+])
+TIPS = {
+ 'STR_TIP_AIR_TURN': "Your Skystriker's gun only fires forward. Turn to put the target inside the bright arc in front of you before you shoot.",
+ 'STR_TIP_AIR_DECKS': "The fight has four decks, low to high. Climbing costs time units, diving gains them. A plane on another deck can't be hit by guns.",
+ 'STR_TIP_AIR_FIRE': "Fire when the target is in your arc and on your deck. The closer you are, the more of the burst hits.",
+ 'STR_TIP_AIR_MISSILES': "Missiles lock on from further away and hit hard, but you carry only two. Save them for something that shoots back.",
+ 'STR_TIP_AIR_EDGE': "A plane that reaches its edge of the map gets away. Get between it and its edge, or bring it down before it gets there.",
+ 'STR_TIP_SKIP': 'SKIP TIPS',
+}
+S.update(TIPS)
+
 # ------------------------------------------------------------------ Cobra Commander's broadcast (Geoscape event)
 S['STR_EVENT_COBRA_BROADCAST'] = 'COBRA SPEAKS'
 S['STR_EVENT_COBRA_BROADCAST_DESCRIPTION'] = P.join([
