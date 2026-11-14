@@ -76,12 +76,12 @@ STRATS = {  # target scientists by month; second lab when targets pass 50
  'cautious':   {0: 10, 3: 15, 6: 20, 9: 25},
  'typical':    {0: 10, 1: 15, 2: 20, 4: 30, 6: 40, 9: 50},
  'aggressive': {0: 10, 1: 20, 2: 30, 4: 50, 6: 70, 9: 90}}
-PARALLEL, PER_PROJECT = 4, 20
+PARALLEL, PER_PROJECT = int(os.environ.get('PARALLEL', '4')), 20   # a model assumption: the game has no cap on projects
 # Department rooms (13 Nov, John 18:04-18:25; DEPARTMENT_HEADS_DESIGN_v1): a lane's topics can't start until its room exists.
 # Day 1 base = the Bare 5, so COMMAND, ARMORY and MOTOR_POOL are open; the rest are built by the player the day a topic in
 # that lane is first ready (cost, days). ROOMGATE=0 = the old model, every lane open from Day 1.
-ROOMGATE = os.environ.get('ROOMGATE', '1') == '1'
-LANE_ROOM = {'INTEL': (80000, 8), 'COMMS': (100000, 8), 'MEDICAL': (60000, 6), 'AIR_WING': (200000, 25)}
+ROOMGATE = os.environ.get('ROOMGATE', '1') == '1'   # AIR_WING is open on Day 1: the Hangar Bay is in the start base (FIRST_AIR_FIGHT_v1)
+LANE_ROOM = {'INTEL': (80000, 8), 'COMMS': (100000, 8), 'MEDICAL': (60000, 6)}   # AIR_WING open Day 1 (14 Nov)
 # Story-locked topics granted by an event (month): Clutch's VAMP (rescue + junkyard, John 13 Nov 17:10).
 GRANT = {'STR_VAMP_RECOVERED': float(os.environ.get('VAMP_MONTH', '2.5'))}     # projects worked at once; scientists usefully on one project
 
@@ -105,7 +105,7 @@ START = {}
 def run(strat):
     target = STRATS[strat]; day = 0; cash = ECON['start']; sci = 10; labs = LAB_START; rooms = HOUSE_START; nlab_built = 0; nq_built = 0
     an = AN0 if ANALYSTS else 0; an_seats = AN0; nan_built = 0
-    open_lanes = set(T[k].get('lane') for k in T) if not ROOMGATE else {'COMMAND', 'ARMORY', 'MOTOR_POOL', None}; rooms_wanted = set(); room_day = {}
+    open_lanes = set(T[k].get('lane') for k in T) if not ROOMGATE else {'COMMAND', 'ARMORY', 'MOTOR_POOL', 'AIR_WING', None}; rooms_wanted = set(); room_day = {}
     done = {k: 0.0 for k in DONE0}; prog = collections.defaultdict(float); paid = set(); building = []; spent = collections.Counter()
     def tgt(m): return max(v for mm, v in target.items() if mm <= m)
     def avail(k):
