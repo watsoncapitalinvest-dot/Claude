@@ -1491,10 +1491,14 @@ index 10a96c4..755c149 100644
  	void btnCancelClick(Action *action);
  	/// Handler for pressing an Increase arrow in the list.
 diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
-index db6727f..3c2091f 100644
+index db6727f..72ccbd7 100644
 --- a/src/Battlescape/AIModule.cpp
 +++ b/src/Battlescape/AIModule.cpp
-@@ -19,6 +19,7 @@
+@@ -16,9 +16,11 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "AirFight.h"
  #include <climits>
  #include <algorithm>
  #include "AIModule.h"
@@ -1502,7 +1506,7 @@ index db6727f..3c2091f 100644
  #include "../Savegame/BattleItem.h"
  #include "../Savegame/Node.h"
  #include "../Savegame/SavedBattleGame.h"
-@@ -32,6 +33,7 @@
+@@ -32,6 +34,7 @@
  #include "../Engine/Game.h"
  #include "../Mod/Armor.h"
  #include "../Mod/Mod.h"
@@ -1510,7 +1514,19 @@ index db6727f..3c2091f 100644
  #include "../Mod/RuleItem.h"
  #include "../fmath.h"
  
-@@ -489,6 +491,147 @@ void AIModule::think(BattleAction *action)
+@@ -439,6 +442,11 @@ void AIModule::think(BattleAction *action)
+ 	_attackAction.weapon = action->weapon;
+ 	_attackAction.number = action->number;
+ 	_escapeAction.number = action->number;
++	// G.I. Joe air fights: the computer's pilots fly by their role (DOGFIGHT_DESIGN_v1 section 9)
++	if (AirFight::aiThink(_save, _unit, action))
++	{
++		return;
++	}
+ 	_knownEnemies = countKnownTargets();
+ 	_visibleEnemies = selectNearestTarget();
+ 	_spottingEnemies = getSpottingUnits(_unit->getPosition());
+@@ -489,6 +497,147 @@ void AIModule::think(BattleAction *action)
  		return;
  	}
  
@@ -1658,7 +1674,7 @@ index db6727f..3c2091f 100644
  	if (action->weapon)
  	{
  		const RuleItem *rule = action->weapon->getRules();
-@@ -1395,6 +1538,12 @@ int AIModule::selectNearestTarget()
+@@ -1395,6 +1544,12 @@ int AIModule::selectNearestTarget()
  		{
  			tally++;
  			int dist = Position::distance2d(_unit->getPosition(), bu->getPosition());
@@ -1739,19 +1755,458 @@ index 6065b54..8db80d7 100644
  	/// Cleans up the Action Menu state.
  	~ActionMenuState();
  	/// Init function.
+diff --git a/src/Battlescape/AirFight.cpp b/src/Battlescape/AirFight.cpp
+new file mode 100644
+index 0000000..bf9bd45
+--- /dev/null
++++ b/src/Battlescape/AirFight.cpp
+@@ -0,0 +1,353 @@
++/*
++ * G.I. Joe: air fights on the battle engine (claude/DOGFIGHT_DESIGN_v1.md, claude/AIR_SEA_BUILD_PLAN_v1.md).
++ */
++#include "AirFight.h"
++#include <algorithm>
++#include <cmath>
++#include "../Savegame/BattleUnit.h"
++#include "../Savegame/SavedBattleGame.h"
++#include "../Mod/Mod.h"
++#include "../Mod/RuleItem.h"
++#include "../Mod/RuleCraft.h"
++#include "../Mod/RuleUfo.h"
++#include "../Mod/Armor.h"
++#include "../Savegame/BattleItem.h"
++#include "../Savegame/SavedGame.h"
++#include "../Savegame/Craft.h"
++#include "../Savegame/Ufo.h"
++#include "../Savegame/Base.h"
++#include "../Savegame/Soldier.h"
++#include "../Engine/Game.h"
++#include "../Engine/RNG.h"
++#include "../Engine/Logger.h"
++#include "../Engine/Language.h"
++#include "../Engine/Options.h"
++#include "../Engine/Screen.h"
++#include "../Interface/Cursor.h"
++#include "../Geoscape/GeoscapeState.h"
++#include "BattlescapeGame.h"
++#include "Pathfinding.h"
++#include "TileEngine.h"
++
++namespace OpenXcom
++{
++namespace AirFight
++{
++
++const Mod::AirCraftRule *rule(const Mod *mod, const BattleUnit *unit)
++{
++	if (!mod || !unit) return nullptr;
++	return mod->getAirCraft(unit->getType());
++}
++
++bool isAirFight(const Mod *mod, const SavedBattleGame *save)
++{
++	return mod && save && mod->getAirFightRules().on && save->getMissionType() == mod->getAirFightRules().deployment;
++}
++
++int dirTo(Position from, Position to)
++{
++	const int dx = to.x - from.x, dy = to.y - from.y;
++	if (dx == 0 && dy == 0) return -1;
++	// 0 = north (-y), clockwise in 45 degree steps
++	const double a = std::atan2((double)dx, (double)-dy); // 0 at north, positive clockwise
++	const double quarterPi = 0.78539816339744830962;
++	int d = (int)std::lround(a / quarterPi);
++	return (d % 8 + 8) % 8;
++}
++
++namespace
++{
++	/// the steps (0-4) between two directions, either way round
++	int dirGap(int a, int b)
++	{
++		int g = std::abs(a - b) % 8;
++		return g > 4 ? 8 - g : g;
++	}
++	Position centre(const BattleUnit *u)
++	{
++		return u->getPosition(); // a 2x2 unit's corner tile is close enough for arcs and range
++	}
++}
++
++bool inArc(const BattleUnit *shooter, Position target, const std::string &arc)
++{
++	if (arc == "any") return true;
++	const int d = dirTo(centre(shooter), target);
++	if (d < 0) return true;
++	const int gap = dirGap(d, shooter->getDirection());
++	if (arc == "rear") return gap >= 3;
++	return gap <= 1; // the 90 degree cone ahead: forward, forward-left, forward-right
++}
++
++int hitChance(const Mod *mod, const BattleUnit *shooter, const BattleUnit *target)
++{
++	const auto &R = mod->getAirFightRules();
++	int c = R.baseHit;
++	c += (shooter->getBaseStats()->firing - 50) / 2;
++	// the angle: from the target's rear cone +, from its front cone -
++	const int fromTarget = dirTo(centre(target), centre(shooter));
++	if (fromTarget >= 0)
++	{
++		const int gap = dirGap(fromTarget, target->getDirection());
++		if (gap >= 3) c += R.rearBonus;
++		else if (gap <= 1) c -= R.headOnMalus;
++	}
++	const int dist = Position::distance2d(centre(shooter), centre(target));
++	c -= R.perTile * std::max(0, dist - R.freeRange);
++	if (shooter->getPosition().z != target->getPosition().z) c -= R.deckMalus;
++	if (const auto *tr = rule(mod, target)) c -= tr->agility;
++	c -= target->getBaseStats()->reactions / 5;
++	return std::max(5, std::min(95, c));
++}
++
++std::string fireCheck(const Mod *mod, const SavedBattleGame *save, const BattleUnit *shooter, Position target)
++{
++	const auto *r = rule(mod, shooter);
++	if (!r) return "";
++	const auto &R = mod->getAirFightRules();
++	if (shooter->getHealth() * 100 < shooter->getBaseStats()->health * R.noAttackBelow)
++		return "STR_AF_TOO_DAMAGED";
++	if (std::abs(target.z - shooter->getPosition().z) > 1)
++		return "STR_AF_DECK_OUT_OF_REACH";
++	if (!inArc(shooter, target, r->arc))
++		return "STR_AF_OUT_OF_ARC";
++	return "";
++}
++
++bool floorAllowed(const Mod *mod, const BattleUnit *unit, int z)
++{
++	const auto *r = rule(mod, unit);
++	if (!r) return true;
++	return z >= r->minFloor && z <= r->maxFloor;
++}
++
++bool onOuterRing(const SavedBattleGame *save, const BattleUnit *unit)
++{
++	const Position p = unit->getPosition();
++	const int s = unit->getArmor()->getSize();
++	return p.x <= 0 || p.y <= 0 || p.x + s >= save->getMapSizeX() || p.y + s >= save->getMapSizeY();
++}
++
++
++bool hasLeft(const SavedBattleGame *save, const BattleUnit *unit)
++{
++	return const_cast<SavedBattleGame*>(save)->getVanStop("afEsc:" + std::to_string(unit->getId())) != 0;
++}
++
++namespace
++{
++	/// turn on the spot, 2 TU per 45 degrees (design section 4); false if it can't afford it
++	bool turnTo(BattleUnit *u, int dir)
++	{
++		if (dir < 0) return true;
++		const int steps = dirGap(dir, u->getDirection());
++		if (steps == 0) return true;
++		if (u->getTimeUnits() < steps * 2) return false;
++		u->setTimeUnits(u->getTimeUnits() - steps * 2);
++		u->setDirection(dir);
++		u->setFaceDirection(dir);
++		return true;
++	}
++	bool walkTo(SavedBattleGame *save, BattleUnit *u, BattleAction *action, Position p, int budget = 100000, int facing = -1)
++	{
++		Tile *t = save->getTile(p);
++		if (!t || (t->getUnit() && t->getUnit() != u) || p == u->getPosition()) return false;
++		save->getPathfinding()->calculate(u, p, BAM_NORMAL);
++		const bool ok = save->getPathfinding()->getStartDirection() != -1 && save->getPathfinding()->getTotalTUCost() <= budget;
++		save->getPathfinding()->abortPath();
++		if (!ok) return false;
++		action->finalFacing = facing;
++		action->type = BA_WALK;
++		action->target = p;
++		Log(LOG_INFO) << "[air] " << u->getType() << " at " << u->getPosition() << " dir " << u->getDirection() << " TU " << u->getTimeUnits() << " -> " << p;
++		return true;
++	}
++	/// the nearest point on the map edge on this deck
++	Position nearestEdge(const SavedBattleGame *save, Position at)
++	{
++		const int W = save->getMapSizeX(), H = save->getMapSizeY();
++		const int dl = at.x, dr = W - 1 - at.x, dt = at.y, db = H - 1 - at.y;
++		const int m = std::min(std::min(dl, dr), std::min(dt, db));
++		if (m == dl) return Position(0, at.y, at.z);
++		if (m == dr) return Position(W - 1, at.y, at.z);
++		if (m == dt) return Position(at.x, 0, at.z);
++		return Position(at.x, H - 1, at.z);
++	}
++	bool runFor(SavedBattleGame *save, BattleUnit *u, BattleAction *action, Position e)
++	{
++		if (onOuterRing(save, u)) { action->type = BA_NONE; return true; }
++		for (int k = 0; k < 6; ++k)
++		{
++			Position p = e;
++			if (p.x == 0 || p.x == save->getMapSizeX() - 1) p.y += (k % 2 ? 1 : -1) * ((k + 1) / 2) * 2;
++			else p.x += (k % 2 ? 1 : -1) * ((k + 1) / 2) * 2;
++			if (walkTo(save, u, action, p)) return true;
++		}
++		action->type = BA_NONE;
++		return true;
++	}
++}
++
++bool aiThink(SavedBattleGame *save, BattleUnit *unit, BattleAction *action)
++{
++	const Mod *mod = save->getMod();
++	const auto *r = rule(mod, unit);
++	if (!r) return false;
++	action->actor = unit;
++	const int hpPct = unit->getHealth() * 100 / std::max(1, (int)unit->getBaseStats()->health);
++	const std::string id = std::to_string(unit->getId());
++
++	// cargo, recon, bomber: run for the exit edge; a door or tail gun only answers in reaction fire
++	if (r->role == "cargo" || r->role == "recon" || r->role == "bomber" || r->role == "transport")
++	{
++		const int exit = save->getVanStop("afExit:" + id); // 1 = east (the only crossing used so far)
++		Position at = unit->getPosition();
++		Position e = hpPct < mod->getAirFightRules().noAttackBelow || exit == 0 ? nearestEdge(save, at) : Position(save->getMapSizeX() - 1, at.y, at.z);
++		return runFor(save, unit, action, e);
++	}
++	// strike and fighter
++	const int breakAt = r->role == "strike" ? 40 : mod->getAirFightRules().noAttackBelow;
++	if (hpPct < breakAt)
++	{
++		return runFor(save, unit, action, nearestEdge(save, unit->getPosition()));
++	}
++	BattleItem *gun = unit->getMainHandWeapon(false);
++	BattleUnit *best = nullptr;
++	int bestChance = -1;
++	for (auto *bu : *save->getUnits())
++	{
++		if (bu->getFaction() == unit->getFaction() || bu->getFaction() == FACTION_NEUTRAL || bu->isOut() || !bu->getTile() || hasLeft(save, bu)) continue;
++		const int c = hitChance(mod, unit, bu);
++		if (c > bestChance) { bestChance = c; best = bu; }
++	}
++	if (!best) { action->type = BA_NONE; return true; }
++	const Position tp = best->getPosition();
++	const int range = gun ? gun->getRules()->getMaxRange() : 0;
++	const bool inRange = gun && Position::distance2d(unit->getPosition(), tp) <= range && std::abs(tp.z - unit->getPosition().z) <= 1;
++	Log(LOG_INFO) << "[air] think " << unit->getType() << " at " << unit->getPosition() << " dir " << unit->getDirection() << " TU " << unit->getTimeUnits()
++		<< " target " << best->getType() << " at " << tp << " gun " << (gun ? 1 : 0) << " ammo " << (gun && gun->haveAnyAmmo() ? 1 : 0)
++		<< " inRange " << inRange << " arc " << inArc(unit, tp, r->arc) << " chance " << hitChance(mod, unit, best);
++	if (gun && inRange && gun->haveAnyAmmo())
++	{
++		const RuleItemUseCost cost = unit->getActionTUs(BA_SNAPSHOT, gun);
++		if (!inArc(unit, tp, r->arc) && unit->getTimeUnits() >= cost.Time + 2 * dirGap(dirTo(unit->getPosition(), tp), unit->getDirection()))
++		{
++			turnTo(unit, dirTo(unit->getPosition(), tp));
++		}
++		if (inArc(unit, tp, r->arc) && unit->getTimeUnits() >= cost.Time && hitChance(mod, unit, best) >= 30)
++		{
++			action->type = BA_SNAPSHOT;
++			action->weapon = gun;
++			action->target = tp;
++			Log(LOG_INFO) << "[air] " << unit->getType() << " fires at " << best->getType() << " chance " << hitChance(mod, unit, best) << " TU " << unit->getTimeUnits();
++			return true;
++		}
++	}
++	// move: to where it will be - a few tiles behind the end of its next move, on its deck, facing the way
++	// it flies - keeping a burst's TU in hand for reaction fire as it goes past (design sections 6, 9)
++	if (unit->getTimeUnits() >= 8)
++	{
++		static const int vx[8] = { 0, 1, 1, 1, 0, -1, -1, -1 }, vy[8] = { -1, -1, 0, 1, 1, 1, 0, -1 };
++		const int d = best->getDirection();
++		const int speed = std::max(1, (int)best->getBaseStats()->tu / 4);
++		const int z = std::max(r->minFloor, std::min(r->maxFloor, (int)tp.z));
++		const int reserve = gun ? unit->getActionTUs(BA_SNAPSHOT, gun).Time + 4 : 0;
++		auto clampP = [&](Position p)
++		{
++			p.x = std::max(1, std::min(save->getMapSizeX() - 3, (int)p.x));
++			p.y = std::max(1, std::min(save->getMapSizeY() - 3, (int)p.y));
++			p.z = z;
++			return p;
++		};
++		for (int pass = 0; pass < 2; ++pass)
++		{
++			const int budget = pass == 0 ? unit->getTimeUnits() - reserve : 100000;
++			for (int lead : { speed, speed / 2, 0 })
++				for (int back : { 3, 5, 2, 6 })
++				{
++					Position p = clampP(Position(tp.x + vx[d] * (lead - back), tp.y + vy[d] * (lead - back), z));
++					if (walkTo(save, unit, action, p, budget, d)) return true;
++				}
++		}
++	}
++	turnTo(unit, dirTo(unit->getPosition(), tp));
++	action->type = BA_NONE;
++	return true;
++}
++
++void endTurnStep(SavedBattleGame *save)
++{
++	if (!isAirFight(save->getMod(), save)) return;
++	const UnitFaction side = save->getSide();
++	for (auto *u : *save->getUnits())
++	{
++		if (u->getOriginalFaction() != side || u->isOut() || !u->getTile() || hasLeft(save, u)) continue;
++		if (!rule(save->getMod(), u) || !onOuterRing(save, u)) continue;
++		const std::string id = std::to_string(u->getId());
++		save->setVanStop("afEsc:" + id, 1);
++		// a crossing plane that reached its own exit edge got through; anything else disengaged
++		const int exit = save->getVanStop("afExit:" + id);
++		if (exit == 1 && u->getPosition().x + u->getArmor()->getSize() >= save->getMapSizeX()) save->setVanStop("afThrough:" + id, 1);
++		u->setTile(nullptr, save);
++		u->setPosition(TileEngine::invalid);
++		u->goToTimeOut();
++		Log(LOG_INFO) << "[air] " << u->getType() << " " << u->getId() << (save->getVanStop("afThrough:" + id) ? " got through" : " left the fight");
++	}
++}
++
++void finish(Game *game)
++{
++	SavedBattleGame *save = game->getSavedGame()->getSavedBattle();
++	const Mod *mod = game->getMod();
++	const auto &AF = mod->getAirFightRules();
++	GeoscapeState::AirFightResult res;
++	for (auto *u : *save->getUnits())
++	{
++		const std::string id = std::to_string(u->getId());
++		const bool down = u->getStatus() == STATUS_DEAD || u->getHealth() <= 0;
++		const int hpPct = std::max(0, u->getHealth()) * 100 / std::max(1, (int)u->getBaseStats()->health);
++		// a Joe craft
++		for (auto *b : *game->getSavedGame()->getBases())
++			for (auto *c : *b->getCrafts())
++			{
++				if (save->getVanStop("afCraft:" + id + ":" + c->getRules()->getType()) != c->getId() || c->getId() == 0) continue;
++				GeoscapeState::AirFightResult::One one;
++				one.craft = c;
++				one.healthPct = down ? 0 : hpPct;
++				one.lost = down;
++				one.pilotId = save->getVanStop("afPilot:" + id);
++				res.crafts.push_back(one);
++			}
++		// the Cobra aircraft
++		const int ufoId = save->getVanStop("afUfo:" + id);
++		if (ufoId)
++		{
++			for (auto *ufo : *game->getSavedGame()->getUfos())
++			{
++				if (ufo->getId() + 1 != ufoId) continue;
++				res.ufo = ufo;
++				res.ufoDown = down;
++				res.ufoHealthPct = down ? 0 : hpPct;
++				res.ufoThrough = save->getVanStop("afThrough:" + id) != 0 || (!down && !hasLeft(save, u));
++			}
++		}
++	}
++	(void)AF;
++	// close the battle the way a preview closes (no debriefing: nothing on the ground to recover)
++	Options::baseXResolution = Options::baseXGeoscape;
++	Options::baseYResolution = Options::baseYGeoscape;
++	game->getScreen()->resetDisplay(false);
++	game->getCursor()->setVisible(true);
++	game->getSavedGame()->setBattleGame(0);
++	for (auto *xbase : *game->getSavedGame()->getBases())
++	{
++		xbase->setInBattlescape(false);
++		for (auto *craft : *xbase->getCrafts()) craft->setInBattlescape(false);
++	}
++	game->getMod()->playMusic("GMGEO");
++	if (game->getGeoscapeState()) game->getGeoscapeState()->finishAirFight(res);
++}
++
++}
++}
+diff --git a/src/Battlescape/AirFight.h b/src/Battlescape/AirFight.h
+new file mode 100644
+index 0000000..d9dbda0
+--- /dev/null
++++ b/src/Battlescape/AirFight.h
+@@ -0,0 +1,49 @@
++#pragma once
++/*
++ * G.I. Joe: air fights on the battle engine (claude/DOGFIGHT_DESIGN_v1.md, claude/AIR_SEA_BUILD_PLAN_v1.md).
++ * Aircraft are battle units, the floors are the decks. These are the rules the battle engine asks.
++ */
++#include <string>
++#include <vector>
++#include "Position.h"
++#include "../Mod/Mod.h"
++
++namespace OpenXcom
++{
++
++class BattleUnit;
++class SavedBattleGame;
++class Game;
++class Craft;
++class Ufo;
++struct BattleAction;
++
++namespace AirFight
++{
++	/// the air rules for this unit, or nullptr if it is not an aircraft
++	const Mod::AirCraftRule *rule(const Mod *mod, const BattleUnit *unit);
++	/// is the battle an air fight
++	bool isAirFight(const Mod *mod, const SavedBattleGame *save);
++	/// direction 0-7 from one tile to another (0 = north, clockwise)
++	int dirTo(Position from, Position to);
++	/// is the target inside the shooter's gun arc (forward / any / rear)
++	bool inArc(const BattleUnit *shooter, Position target, const std::string &arc);
++	/// the chance (5-95) that this shooter hits this target, by the design's formula (section 6)
++	int hitChance(const Mod *mod, const BattleUnit *shooter, const BattleUnit *target);
++	/// why this shot can't be fired ("" = it can): arc, deck, damage
++	std::string fireCheck(const Mod *mod, const SavedBattleGame *save, const BattleUnit *shooter, Position target);
++	/// may this unit stand on this floor
++	bool floorAllowed(const Mod *mod, const BattleUnit *unit, int z);
++	/// is this tile in the outer ring of the map (where an aircraft may disengage)
++	bool onOuterRing(const SavedBattleGame *save, const BattleUnit *unit);
++	/// has this aircraft left the fight (disengaged, escaped at its exit edge)
++	bool hasLeft(const SavedBattleGame *save, const BattleUnit *unit);
++	/// the computer's pilot (design section 9); true when it has set the action
++	bool aiThink(SavedBattleGame *save, BattleUnit *unit, BattleAction *action);
++	/// end of a side's turn: its aircraft on the outer ring leave the fight
++	void endTurnStep(SavedBattleGame *save);
++	/// the battle is over: craft damage, pilots, Cobra aircraft shot down or got away, back to the world map
++	void finish(Game *game);
++}
++
++}
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..f172188 100644
+index b7e1111..a2e16e6 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
-@@ -16,6 +16,7 @@
+@@ -16,6 +16,8 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
++#include "AirFight.h"
 +#include <algorithm>
  #include <sstream>
  #include "BattlescapeGame.h"
  #include "BattlescapeState.h"
-@@ -508,8 +509,269 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
+@@ -224,8 +226,8 @@ int BattlescapeGame::think()
+ 			_save->setUnitsFalling(false);
+ 			return ret;
+ 		}
+-		// it's a non player side (ALIENS or CIVILIANS)
+-		if (_save->getSide() != FACTION_PLAYER)
++		// it's a non player side (ALIENS or CIVILIANS) - or an air fight flown by the computer on both sides
++		if (_save->getSide() != FACTION_PLAYER || (_save->getVanStop("afAuto") && AirFight::isAirFight(getMod(), _save)))
+ 		{
+ 			auto sideBackup = _save->getSide();
+ 			_save->resetUnitHitStates();
+@@ -421,6 +423,12 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
+ 		}
+ 	}
+ 
++	// G.I. Joe air fights: the computer's pilots can't fire outside their gun arc either
++	if ((action.type == BA_SNAPSHOT || action.type == BA_AUTOSHOT || action.type == BA_AIMEDSHOT || action.type == BA_LAUNCH)
++		&& !AirFight::fireCheck(getMod(), _save, action.actor, action.target).empty())
++	{
++		action.type = BA_NONE;
++	}
+ 	if (action.type == BA_SNAPSHOT || action.type == BA_AUTOSHOT || action.type == BA_AIMEDSHOT || action.type == BA_THROW || action.type == BA_HIT || action.type == BA_MINDCONTROL || action.type == BA_USE || action.type == BA_PANIC || action.type == BA_LAUNCH)
+ 	{
+ 		ss.clear();
+@@ -508,8 +516,270 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
  /**
   * Ends the turn.
   */
@@ -2018,9 +2473,24 @@ index b7e1111..f172188 100644
  {
 +	captureStep();
 +	retreatStep();
++	AirFight::endTurnStep(_save);
  	_debugPlay = _save->getDebugMode() && _parentState->getGame()->isCtrlPressed() && (_save->getSide() != FACTION_NEUTRAL);
  	_currentAction.type = BA_NONE;
  	_currentAction.skillRules = nullptr;
+@@ -1915,6 +2185,13 @@ void BattlescapeGame::primaryAction(Position pos)
+ 		}
+ 		else
+ 		{
++			// G.I. Joe air fights: no turning to fire - the target must already be in the gun's arc
++			const std::string airWhy = AirFight::fireCheck(getMod(), _save, _currentAction.actor, pos);
++			if (!airWhy.empty())
++			{
++				_parentState->warning(airWhy);
++				return;
++			}
+ 			_currentAction.target = pos;
+ 			getMap()->setCursorType(CT_NONE);
+ 
 diff --git a/src/Battlescape/BattlescapeGame.h b/src/Battlescape/BattlescapeGame.h
 index 7af613c..f9d6e24 100644
 --- a/src/Battlescape/BattlescapeGame.h
@@ -2037,7 +2507,7 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..4648605 100644
+index 1951ba7..235a558 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -767,6 +767,7 @@ void BattlescapeGenerator::nextStage()
@@ -2060,7 +2530,159 @@ index 1951ba7..4648605 100644
  		}
  		else
  		{
-@@ -1669,6 +1670,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -961,6 +962,151 @@ void BattlescapeGenerator::run()
+ 	}
+ }
+ 
++/**
++ * G.I. Joe: an air fight (DOGFIGHT_DESIGN_v1 section 2, AIR_SEA_BUILD_PLAN_v1). The map is the deployment's
++ * sky - the ground picture on floor 0, the decks on floors 1-4 - over the terrain picked for the spot.
++ * Every Joe craft in the fight and the Cobra aircraft become units; nobody walks.
++ * A Cobra plane that is going somewhere crosses the map from a side edge; the Joes cut in from the south.
++ * A Cobra plane that came to fight starts about 25 tiles off, facing them.
++ */
++void BattlescapeGenerator::runAirFight(const std::vector<Craft*> &crafts, Ufo *ufo, const std::string &terrain, bool joeTransportHunted)
++{
++	Tile::destroyedLog.clear();
++	const Mod *mod = _game->getMod();
++	const auto &AF = mod->getAirFightRules();
++	const AlienDeployment *ruleDeploy = mod->getDeployment(AF.deployment, true);
++	_save->setMissionType(AF.deployment);
++	_save->setTurnLimit(AF.rounds);
++	_save->setChronoTrigger(FORCE_ABORT);
++	_save->setCheatTurn(ruleDeploy->getCheatTurn());
++	ruleDeploy->getDimensions(&_mapsize_x, &_mapsize_y, &_mapsize_z);
++	_unitSequence = BattleUnit::MAX_SOLDIER_ID;
++	_terrain = mod->getTerrain(terrain, false);
++	if (!_terrain && !ruleDeploy->getTerrains().empty()) _terrain = mod->getTerrain(ruleDeploy->getTerrains().front(), true);
++	if (!_terrain) throw Exception("Air fight: no sky terrain " + terrain);
++	setDepth(ruleDeploy, false);
++	if (ruleDeploy->getShade() != -1) _worldShade = ruleDeploy->getShade();
++	_save->setAlienItemLevel(0);
++	const std::vector<MapScript*> *script = mod->getMapScript(ruleDeploy->getRandomMapScript());
++	if (!script) throw Exception("Air fight: map script " + ruleDeploy->getRandomMapScript() + " not found");
++	_save->setLastUsedMapScript(ruleDeploy->getRandomMapScript());
++	_save->setStartingCondition(nullptr);
++	generateMap(script, "", nullptr);
++	setupObjectives(ruleDeploy);
++	_save->applyEnviroEffects(nullptr);
++
++	const int W = _mapsize_x, H = _mapsize_y;
++	auto unitFor = [&](const std::string &type) -> Unit*
++	{
++		auto it = AF.units.find(type);
++		return it == AF.units.end() ? nullptr : mod->getUnit(it->second, false);
++	};
++	auto place = [&](BattleUnit *u, Position p, int dir) -> bool
++	{
++		// nearest free spot on that deck, spiralling out
++		for (int r = 0; r < 8; ++r)
++			for (int dx = -r; dx <= r; ++dx)
++				for (int dy = -r; dy <= r; ++dy)
++				{
++					if (std::max(std::abs(dx), std::abs(dy)) != r) continue;
++					Position q(p.x + dx, p.y + dy, p.z);
++					const int s = u->getArmor()->getSize();
++					if (q.x < 1 || q.y < 1 || q.x + s >= W || q.y + s >= H) continue;
++					if (_save->setUnitPosition(u, q))
++					{
++						u->setDirection(dir);
++						u->setFaceDirection(dir);
++						_save->getUnits()->push_back(u);
++						_save->initUnit(u);
++						return true;
++					}
++				}
++		return false;
++	};
++	const auto *cobraRule = ufo ? mod->getAirCraft(AF.units.count(ufo->getRules()->getType()) ? AF.units.at(ufo->getRules()->getType()) : "") : nullptr;
++	const bool cobraGoing = cobraRule && (cobraRule->role == "cargo" || cobraRule->role == "recon" || cobraRule->role == "bomber");
++	const int midY = H / 2 + RNG::generate(-6, 6);
++
++	// the Joes
++	int n = 0;
++	for (auto *craft : crafts)
++	{
++		Unit *rule = unitFor(craft->getRules()->getType());
++		if (!rule) continue;
++		BattleUnit *u = _save->createTempUnit(rule, FACTION_PLAYER, _unitSequence++);
++		// the pilot flies it: his Firing, Reactions and Bravery; +1 TU per 10 Bravery over 50, at most +10%
++		auto pilots = craft->getPilotList(false, mod);
++		if (!pilots.empty())
++		{
++			const UnitStats *ps = pilots.front()->getCurrentStats();
++			UnitStats *us = u->getBaseStats();
++			us->firing = ps->firing;
++			us->reactions = ps->reactions;
++			us->bravery = ps->bravery;
++			const int bonus = std::min(std::max(0, (ps->bravery - 50) / 10), us->tu / 10);
++			us->tu += bonus;
++			u->setTimeUnits(us->tu);
++			_save->setVanStop("afPilot:" + std::to_string(u->getId()), pilots.front()->getId());
++		}
++		_save->setVanStop("afCraft:" + std::to_string(u->getId()) + ":" + craft->getRules()->getType(), craft->getId());
++		if (craft->getDamage() > 0 && craft->getDamageMax() > 0)
++		{
++			const int hp = u->getBaseStats()->health;
++			u->setHealthDirect(std::max(1, hp - hp * craft->getDamage() / craft->getDamageMax()));
++		}
++		if (getenv("OXCE_AIRFIGHT_AUTO"))
++		{
++			// the computer flies the Joes too (test rig; the headless auto-resolve will use the same)
++			_save->setVanStop("afAuto", 1);
++			u->setAIModule(new AIModule(_save, u, 0));
++		}
++		const auto *jr = mod->getAirCraft(rule->getType());
++		const bool crossing = joeTransportHunted && jr && jr->role == "transport";
++		Position p = crossing ? Position(4, midY + n * 3, 2) : Position(W / 2 - 2 + n * 3, H - 5, 2);
++		const int dir = crossing ? 2 : 0;
++		if (crossing) _save->setVanStop("afExit:" + std::to_string(u->getId()), 1); // east
++		if (!place(u, p, dir)) delete u;
++		++n;
++	}
++	// Cobra
++	if (ufo)
++	{
++		Unit *rule = unitFor(ufo->getRules()->getType());
++		if (rule)
++		{
++			BattleUnit *u = _save->createTempUnit(rule, FACTION_HOSTILE, _unitSequence++);
++			u->setRankInt(0);
++			_save->setVanStop("afUfo:" + std::to_string(u->getId()), ufo->getId() + 1); // +1: a Cobra aircraft can be number 0
++			Position p; int dir;
++			if (cobraGoing && !joeTransportHunted) { p = Position(4, midY, RNG::generate(2, 3)); dir = 2; _save->setVanStop("afExit:" + std::to_string(u->getId()), 1); }
++			else { p = Position(W / 2, H - 5 - 25, 2); dir = 4; }
++			// a little damage carried over from earlier fights (design 1b.5)
++			if (ufo->getRules()->getStats().damageMax > 0 && ufo->getDamage() > 0)
++			{
++				const int hp = u->getBaseStats()->health;
++				u->setHealthDirect(std::max(1, hp - hp * ufo->getDamage() / ufo->getRules()->getStats().damageMax));
++			}
++			if (!place(u, p, dir)) delete u;
++		}
++	}
++	if (_save->getUnits()->empty())
++	{
++		throw Exception("Air fight: no aircraft could be placed.");
++	}
++	for (auto *u : *_save->getUnits())
++	{
++		if (u->getFaction() == FACTION_PLAYER) { _save->setSelectedUnit(u); break; }
++	}
++	_save->revealMap();   // open sky: the ground below is all in view (aircraft are still seen by sight)
++	if (!_save->getSelectedUnit())
++	{
++		throw Exception("Air fight: no Joe aircraft could be placed.");
++	}
++	setMusic(ruleDeploy, false);
++	_save->setGlobalShade(_worldShade);
++	_save->getTileEngine()->calculateLighting(LL_AMBIENT, TileEngine::invalid, 0, true);
++}
++
+ /**
+  * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
+  */
+@@ -1669,6 +1815,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -2150,7 +2772,7 @@ index 1951ba7..4648605 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +1780,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +1925,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -2219,7 +2841,7 @@ index 1951ba7..4648605 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +1865,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2010,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -2236,7 +2858,7 @@ index 1951ba7..4648605 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +1894,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2039,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -2279,7 +2901,7 @@ index 1951ba7..4648605 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -2081,8 +2266,14 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,8 +2411,14 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -2296,7 +2918,7 @@ index 1951ba7..4648605 100644
  	unsigned int terrainObjectID;
  
  	// Load file
-@@ -2141,11 +2332,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2477,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -2311,7 +2933,7 @@ index 1951ba7..4648605 100644
  			{
  				int mapDataSetID = mapDataSetOffset;
 diff --git a/src/Battlescape/BattlescapeGenerator.h b/src/Battlescape/BattlescapeGenerator.h
-index a0bc8b3..933c149 100644
+index a0bc8b3..3cb4c91 100644
 --- a/src/Battlescape/BattlescapeGenerator.h
 +++ b/src/Battlescape/BattlescapeGenerator.h
 @@ -127,6 +127,8 @@ private:
@@ -2323,11 +2945,29 @@ index a0bc8b3..933c149 100644
  	/// Spawns civilians on a terror mission.
  	void deployCivilians(bool markAsVIP, int nodeRank, int max, bool roundUp = false, const std::string &civilianType = "");
  	/// Finds a spot near a friend to spawn at.
+@@ -194,6 +196,9 @@ public:
+ 	void setTerrain(RuleTerrain *terrain);
+ 	/// Runs the generator.
+ 	void run();
++	/// G.I. Joe: sets up an air fight - the sky over this terrain, the Joe craft and the Cobra aircraft as units
++	/// (DOGFIGHT_DESIGN_v1 section 2). joeTransportHunted: Cobra came for a Joe transport, so the Joe crosses.
++	void runAirFight(const std::vector<Craft*> &crafts, Ufo *ufo, const std::string &terrain, bool joeTransportHunted);
+ 	/// Gets craft position.
+ 	SDL_Rect getCraftPos() const { return _craftPos; }
+ 	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..39d1b95 100644
+index 7cd4941..91535b2 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
-@@ -88,6 +88,7 @@
+@@ -16,6 +16,7 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "AirFight.h"
+ #include <algorithm>
+ #include <sstream>
+ #include <iomanip>
+@@ -88,6 +89,7 @@
  #include "../Mod/RuleInventory.h"
  #include "../Mod/RuleSoldier.h"
  #include "../Mod/RuleVideo.h"
@@ -2335,7 +2975,7 @@ index 7cd4941..39d1b95 100644
  
  namespace OpenXcom
  {
-@@ -137,7 +138,7 @@ BattlescapeState::BattlescapeState() :
+@@ -137,7 +139,7 @@ BattlescapeState::BattlescapeState() :
  
  	// Create the battlemap view
  	// the actual map height is the total height minus the height of the buttonbar
@@ -2344,7 +2984,7 @@ index 7cd4941..39d1b95 100644
  
  	_numLayers = new NumberText(3, 5, x + 232, y + 6);
  	_rank = new Surface(26, 23, x + 107, y + 33);
-@@ -724,6 +725,389 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +726,389 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
@@ -2734,7 +3374,7 @@ index 7cd4941..39d1b95 100644
  }
  
  
-@@ -732,6 +1116,7 @@ BattlescapeState::BattlescapeState() :
+@@ -732,6 +1117,7 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -2742,7 +3382,7 @@ index 7cd4941..39d1b95 100644
  	delete _animTimer;
  	delete _gameTimer;
  	delete _battleGame;
-@@ -859,6 +1244,7 @@ void BattlescapeState::init()
+@@ -859,6 +1245,7 @@ void BattlescapeState::init()
  void BattlescapeState::think()
  {
  	static bool popped = false;
@@ -2750,7 +3390,7 @@ index 7cd4941..39d1b95 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -2172,7 +2558,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +2559,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -2759,7 +3399,7 @@ index 7cd4941..39d1b95 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +2778,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +2779,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -2767,7 +3407,20 @@ index 7cd4941..39d1b95 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -4052,8 +4439,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -3621,6 +4009,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+ 			_game->getMod()->playMusic("GMGEO");
+ 			return;
+ 		}
++		if (AirFight::isAirFight(_game->getMod(), _save))
++		{
++			// G.I. Joe air fights: no debriefing - the world map takes the result
++			AirFight::finish(_game);
++			return;
++		}
+ 		_game->pushState(new DebriefingState);
+ 		std::string cutscene;
+ 		if (ruleDeploy)
+@@ -4052,8 +4446,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -2823,6 +3476,30 @@ index 746f3a4..d880506 100644
  	bool _manaBarVisible;
  	Timer *_animTimer, *_gameTimer;
  	SavedBattleGame *_save;
+diff --git a/src/Battlescape/BriefingState.cpp b/src/Battlescape/BriefingState.cpp
+index 7f1fa7e..c29adf4 100644
+--- a/src/Battlescape/BriefingState.cpp
++++ b/src/Battlescape/BriefingState.cpp
+@@ -16,6 +16,7 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "AirFight.h"
+ #include "BriefingState.h"
+ #include "BattlescapeState.h"
+ #include "BattlescapeGame.h"
+@@ -284,9 +285,9 @@ void BriefingState::btnOkClick(Action *)
+ 		_game->pushState(bs);
+ 		_game->getSavedGame()->getSavedBattle()->setBattleState(bs);
+ 		_game->pushState(new NextTurnState(_game->getSavedGame()->getSavedBattle(), bs));
+-		if (isPreview)
++		if (isPreview || AirFight::isAirFight(_game->getMod(), _game->getSavedGame()->getSavedBattle()))
+ 		{
+-			// skip InventoryState
++			// skip InventoryState (G.I. Joe: an aircraft has no kit to hand out)
+ 			_game->getSavedGame()->getSavedBattle()->startFirstTurn();
+ 			return;
+ 		}
 diff --git a/src/Battlescape/Camera.cpp b/src/Battlescape/Camera.cpp
 index 5a59f27..3d4e17f 100644
 --- a/src/Battlescape/Camera.cpp
@@ -4792,6 +5469,105 @@ index 200fb3a..2b6326c 100644
  	/// Deploys the reinforcements, according to the alien reinforcements deployment rules.
  	bool deployReinforcements(const ReinforcementsData &wave);
  	/// Adds a reinforcement unit to the game.
+diff --git a/src/Battlescape/Pathfinding.cpp b/src/Battlescape/Pathfinding.cpp
+index d8c617e..91278ce 100644
+--- a/src/Battlescape/Pathfinding.cpp
++++ b/src/Battlescape/Pathfinding.cpp
+@@ -16,6 +16,7 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "AirFight.h"
+ #include <list>
+ #include <algorithm>
+ #include "Pathfinding.h"
+@@ -259,6 +260,11 @@ PathfindingStep Pathfinding::getTUCost(Position startPosition, int direction, co
+ 	Position pos;
+ 	directionToVector(direction, &pos);
+ 	pos += startPosition;
++	// G.I. Joe air fights: an aircraft keeps to its own floors (decks)
++	if (!AirFight::floorAllowed(_save->getMod(), unit, pos.z))
++	{
++		return {{INVALID_MOVE_COST, 0}};
++	}
+ 
+ 	const MovementType movementType = getMovementType(unit, missileTarget, bam);
+ 	const Armor* armor =  unit->getArmor();
+diff --git a/src/Battlescape/Projectile.cpp b/src/Battlescape/Projectile.cpp
+index 7f7697c..ea0b6cc 100644
+--- a/src/Battlescape/Projectile.cpp
++++ b/src/Battlescape/Projectile.cpp
+@@ -16,6 +16,8 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "AirFight.h"
++#include "../Engine/Logger.h"
+ #include "Projectile.h"
+ #include "TileEngine.h"
+ #include "Map.h"
+@@ -331,6 +333,32 @@ int Projectile::calculateThrow(double accuracy)
+  */
+ void Projectile::applyAccuracy(Position origin, Position *target, double accuracy, bool keepRange, bool extendLine)
+ {
++	// G.I. Joe air fights: the design's own hit formula (DOGFIGHT_DESIGN_v1 section 6) decides hit or miss;
++	// a hit goes to the target's centre, a miss is thrown wide of it
++	if (_action.type != BA_HIT && _action.actor && AirFight::rule(_save->getMod(), _action.actor))
++	{
++		const Tile *tt = _save->getTile(_action.target);
++		const BattleUnit *tu = tt ? tt->getUnit() : nullptr;
++		if (tu && tu != _action.actor)
++		{
++			const int airChance = AirFight::hitChance(_save->getMod(), _action.actor, tu);
++			const bool airHit = RNG::percent(airChance);
++			Log(LOG_INFO) << "[air] shot " << _action.actor->getType() << " -> " << tu->getType() << " " << airChance << "% " << (airHit ? "HIT" : "miss");
++			if (airHit)
++			{
++				return; // the target voxel is the target unit's centre already
++			}
++			// a clean miss: push the aim point a tile and a half sideways and on past the target
++			const int dx = target->x - origin.x, dy = target->y - origin.y;
++			const double len = std::max(1.0, std::sqrt((double)dx * dx + (double)dy * dy));
++			const int side = RNG::generate(0, 1) ? 1 : -1;
++			target->x += (int)std::lround(-dy / len * 24 * side + dx / len * 16);
++			target->y += (int)std::lround(dx / len * 24 * side + dy / len * 16);
++			target->z += RNG::generate(-6, 6);
++			return;
++		}
++	}
++
+ 	int xdiff = origin.x - target->x;
+ 	int ydiff = origin.y - target->y;
+ 	int zdiff = origin.z - target->z;
+diff --git a/src/Battlescape/ProjectileFlyBState.cpp b/src/Battlescape/ProjectileFlyBState.cpp
+index 529b7f2..618da3a 100644
+--- a/src/Battlescape/ProjectileFlyBState.cpp
++++ b/src/Battlescape/ProjectileFlyBState.cpp
+@@ -16,6 +16,7 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "AirFight.h"
+ #include <algorithm>
+ #include "ProjectileFlyBState.h"
+ #include "ExplosionBState.h"
+@@ -139,6 +140,16 @@ void ProjectileFlyBState::init()
+ 	case BA_AIMEDSHOT:
+ 	case BA_AUTOSHOT:
+ 	case BA_LAUNCH:
++		{
++			// G.I. Joe air fights: guns fire only inside their arc, a deck up or down at most
++			const std::string airWhy = AirFight::fireCheck(_parent->getMod(), _parent->getSave(), _unit, _action.target);
++			if (!airWhy.empty())
++			{
++				_action.result = airWhy;
++				_parent->popState();
++				return;
++			}
++		}
+ 		if (weapon->getRules()->isOutOfRange(distanceSq))
+ 		{
+ 			// out of range
 diff --git a/src/Battlescape/TileEngine.cpp b/src/Battlescape/TileEngine.cpp
 index 6e68469..a8c9d39 100644
 --- a/src/Battlescape/TileEngine.cpp
@@ -5464,10 +6240,18 @@ index bc5f08f..3b09298 100644
  	_terrain->calculateFOV(_unit);
  	if (!_falling)
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..e21bc7a 100644
+index 839f803..41a3b12 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -172,6 +172,8 @@ set ( engine_src
+@@ -71,6 +71,7 @@ set ( basescape_src
+ set ( battlescape_src
+   Battlescape/AbortMissionState.cpp
+   Battlescape/ActionMenuItem.cpp
++  Battlescape/AirFight.cpp
+   Battlescape/ActionMenuState.cpp
+   Battlescape/AIModule.cpp
+   Battlescape/AlienInventory.cpp
+@@ -172,6 +173,8 @@ set ( engine_src
    Engine/Sound.cpp
    Engine/SoundSet.cpp
    Engine/State.cpp
@@ -5476,12 +6260,13 @@ index 839f803..e21bc7a 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -201,9 +203,14 @@ set ( geoscape_src
+@@ -201,9 +204,15 @@ set ( geoscape_src
    Geoscape/DogfightState.cpp
    Geoscape/ExtendedGeoscapeLinksState.cpp
    Geoscape/FundingState.cpp
 +  Geoscape/CobraIntelState.cpp
 +  Geoscape/IntelBoardState.cpp
++  Geoscape/AirFightChoiceState.cpp
 +  Geoscape/DepartmentsState.cpp
 +  Basescape/ResearchTreeState.cpp
    Geoscape/GeoscapeCraftState.cpp
@@ -5491,7 +6276,7 @@ index 839f803..e21bc7a 100644
    Geoscape/Globe.cpp
    Geoscape/GraphsState.cpp
    Geoscape/InterceptState.cpp
-@@ -331,6 +338,7 @@ set ( mod_src
+@@ -331,6 +340,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -5499,7 +6284,7 @@ index 839f803..e21bc7a 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +364,7 @@ set ( savegame_src
+@@ -356,6 +366,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -9660,6 +10445,109 @@ index 86bd62e..46cac60 100644
  	/// Loads an X-Com DAT image file.
  	void loadDat(const std::string &filename);
  	/// Gets a particular frame from the set.
+diff --git a/src/Geoscape/AirFightChoiceState.cpp b/src/Geoscape/AirFightChoiceState.cpp
+new file mode 100644
+index 0000000..1ab7760
+--- /dev/null
++++ b/src/Geoscape/AirFightChoiceState.cpp
+@@ -0,0 +1,61 @@
++/*
++ * G.I. Joe: Fight or Auto-resolve (DOGFIGHT_DESIGN_v1 section 1, 13).
++ */
++#include "AirFightChoiceState.h"
++#include "../Engine/Game.h"
++#include "../Engine/Options.h"
++#include "../Mod/Mod.h"
++#include "../Interface/TextButton.h"
++#include "../Interface/Window.h"
++#include "../Interface/Text.h"
++#include "GeoscapeState.h"
++
++namespace OpenXcom
++{
++
++AirFightChoiceState::AirFightChoiceState(GeoscapeState *state, const std::string &title, const std::string &body, bool canAuto) : _state(state)
++{
++	_screen = false;
++	_window = new Window(this, 256, 160, 32, 20, POPUP_BOTH);
++	_txtTitle = new Text(236, 17, 42, 30);
++	_txtBody = new Text(236, 92, 42, 50);
++	_btnFight = new TextButton(100, 18, canAuto ? 48 : 110, 150);
++	_btnAuto = new TextButton(100, 18, 172, 150);
++
++	setInterface("craftError");
++	add(_window, "window", "craftError");
++	add(_txtTitle, "text1", "craftError");
++	add(_txtBody, "text1", "craftError");
++	add(_btnFight, "button", "craftError");
++	add(_btnAuto, "button", "craftError");
++	centerAllSurfaces();
++	setWindowBackground(_window, "craftError");
++
++	_txtTitle->setAlign(ALIGN_CENTER);
++	_txtTitle->setBig();
++	_txtTitle->setText(title);
++	_txtBody->setAlign(ALIGN_CENTER);
++	_txtBody->setWordWrap(true);
++	_txtBody->setText(body);
++
++	_btnFight->setText(tr("STR_AF_FIGHT"));
++	_btnFight->onMouseClick((ActionHandler)&AirFightChoiceState::btnFightClick);
++	_btnFight->onKeyboardPress((ActionHandler)&AirFightChoiceState::btnFightClick, Options::keyOk);
++	_btnAuto->setText(tr("STR_AF_AUTO_RESOLVE"));
++	_btnAuto->onMouseClick((ActionHandler)&AirFightChoiceState::btnAutoClick);
++	_btnAuto->setVisible(canAuto);
++}
++
++void AirFightChoiceState::btnFightClick(Action *)
++{
++	_game->popState();
++	_state->startAirFight();
++}
++
++void AirFightChoiceState::btnAutoClick(Action *)
++{
++	_game->popState();
++	_state->autoResolveAirFight();
++}
++
++}
+diff --git a/src/Geoscape/AirFightChoiceState.h b/src/Geoscape/AirFightChoiceState.h
+new file mode 100644
+index 0000000..88d3dda
+--- /dev/null
++++ b/src/Geoscape/AirFightChoiceState.h
+@@ -0,0 +1,30 @@
++#pragma once
++/*
++ * G.I. Joe: Fight or Auto-resolve (DOGFIGHT_DESIGN_v1 section 1, 13).
++ */
++#include <string>
++#include "../Engine/State.h"
++
++namespace OpenXcom
++{
++
++class TextButton;
++class Window;
++class Text;
++class GeoscapeState;
++
++class AirFightChoiceState : public State
++{
++private:
++	GeoscapeState *_state;
++	TextButton *_btnFight, *_btnAuto;
++	Window *_window;
++	Text *_txtTitle, *_txtBody;
++public:
++	AirFightChoiceState(GeoscapeState *state, const std::string &title, const std::string &body, bool canAuto);
++	~AirFightChoiceState() = default;
++	void btnFightClick(Action *action);
++	void btnAutoClick(Action *action);
++};
++
++}
 diff --git a/src/Geoscape/AllocateTrainingState.cpp b/src/Geoscape/AllocateTrainingState.cpp
 index 6aac96d..f116957 100644
 --- a/src/Geoscape/AllocateTrainingState.cpp
@@ -10352,7 +11240,7 @@ index 0000000..aedd692
 +
 +}
 diff --git a/src/Geoscape/DogfightState.cpp b/src/Geoscape/DogfightState.cpp
-index e805e35..5fe6dd7 100644
+index e805e35..fc9ce5f 100644
 --- a/src/Geoscape/DogfightState.cpp
 +++ b/src/Geoscape/DogfightState.cpp
 @@ -54,6 +54,7 @@
@@ -10375,6 +11263,15 @@ index e805e35..5fe6dd7 100644
  
  	_preview->setVisible(false);
  	_preview->onMouseClick((ActionHandler)&DogfightState::previewClick);
+@@ -1469,7 +1475,7 @@ void DogfightState::update()
+ 		}
+ 
+ 		// Handle UFO firing.
+-		if (_currentDist <= _ufo->getRules()->getWeaponRange() * 8 && !_ufo->isCrashed() && !_craft->isDestroyed())
++		if (_currentDist <= _ufo->getRules()->getWeaponRange() * 8 && !_ufo->isCrashed() && !_craft->isDestroyed() && !_airConcluding)
+ 		{
+ 			if (_ufo->getShootingAt() == 0)
+ 			{
 @@ -1638,7 +1644,7 @@ void DogfightState::update()
  					// Difference from original: No retaliation until final UFO lands (Original: Is spawned).
  					if (!_game->getSavedGame()->findAlienMission(targetRegion, OBJECTIVE_RETALIATION, race))
@@ -10384,7 +11281,7 @@ index e805e35..5fe6dd7 100644
  						std::string retalMission = retalWeights ? retalWeights->choose() : "";
  						const RuleAlienMission *rule = _game->getMod()->getAlienMission(retalMission, false);
  						if (!rule)
-@@ -2747,4 +2753,32 @@ void DogfightState::awardExperienceToPilots()
+@@ -2747,4 +2753,48 @@ void DogfightState::awardExperienceToPilots()
  	}
  }
  
@@ -10416,20 +11313,37 @@ index e805e35..5fe6dd7 100644
 +	return "STR_AUTO_INTERCEPT_ESCAPED";
 +}
 +
++/**
++ * G.I. Joe air fights: the battle has already decided the damage. Nothing more is fired: the craft breaks
++ * off (or the Cobra aircraft is down, which the stock logic turns into a crash site, score and mission).
++ */
++void DogfightState::concludeAirFight()
++{
++	_autoResolved = true;
++	_airConcluding = true;
++	_mode = _btnDisengage;
++	btnDisengagePress(nullptr);
++	for (int step = 0; step < 50000 && !_endDogfight && !_minimized; ++step)
++	{
++		think();
++	}
++}
++
  }
 diff --git a/src/Geoscape/DogfightState.h b/src/Geoscape/DogfightState.h
-index 175b806..c129726 100644
+index 175b806..e980e06 100644
 --- a/src/Geoscape/DogfightState.h
 +++ b/src/Geoscape/DogfightState.h
-@@ -63,6 +63,7 @@ private:
+@@ -63,6 +63,8 @@ private:
  	int _timeout, _currentDist, _targetDist, _weaponFireInterval[RuleCraft::WeaponMax], _weaponFireCountdown[RuleCraft::WeaponMax];
  	bool _end, _endUfoHandled, _endCraftHandled, _ufoBreakingOff, _destroyUfo, _destroyCraft, _weaponEnabled[RuleCraft::WeaponMax];
  	bool _minimized, _endDogfight, _animatingHit, _waitForPoly, _waitForAltitude;
 +	bool _autoResolved = false;
++	bool _airConcluding = false; ///< G.I. Joe air fights: settled in battle, nothing more is fired
  	std::vector<CraftWeaponProjectile*> _projectiles;
  	static const int _ufoBlobs[8][13][13];
  	static const int _projectileBlobs[4][6][3];
-@@ -163,6 +164,11 @@ public:
+@@ -163,6 +165,14 @@ public:
  	void moveWindow();
  	/// Checks if the dogfight should be ended.
  	bool dogfightEnded() const;
@@ -10438,6 +11352,9 @@ index 175b806..c129726 100644
 +	/// Returns the result as a string id for the report (empty if it could not be decided).
 +	std::string autoResolve();
 +	bool isAutoResolved() const { return _autoResolved; }
++	/// G.I. Joe air fights: the battle has set the damage on both sides; play the window's own
++	/// logic out (crash, score, the craft going home) with nothing more fired
++	void concludeAirFight();
  	/// Gets pointer to the UFO in this dogfight.
  	Ufo *getUfo() const;
  	/// Gets pointer to the craft in this dogfight.
@@ -10529,19 +11446,21 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..ad4da17 100644
+index 6b4e79d..cd59c81 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
-@@ -17,6 +17,8 @@
+@@ -16,7 +16,10 @@
+  * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
++#include "AirFightChoiceState.h"
  #include "GeoscapeState.h"
 +#include <cstdlib>
 +#include "../Engine/HiUI.h"
  #include <set>
  #include <sstream>
  #include <iomanip>
-@@ -35,6 +37,7 @@
+@@ -35,6 +38,7 @@
  #include "../Engine/Collections.h"
  #include "../Engine/Unicode.h"
  #include "Globe.h"
@@ -10549,7 +11468,7 @@ index 6b4e79d..ad4da17 100644
  #include "../Interface/ComboBox.h"
  #include "../Interface/Text.h"
  #include "../Interface/TextButton.h"
-@@ -48,12 +51,14 @@
+@@ -48,12 +52,14 @@
  #include "../Mod/RuleCraft.h"
  #include "../Savegame/Ufo.h"
  #include "../Mod/RuleUfo.h"
@@ -10564,7 +11483,7 @@ index 6b4e79d..ad4da17 100644
  #include "../Savegame/Soldier.h"
  #include "../Savegame/SoldierDiary.h"
  #include "../Menu/PauseState.h"
-@@ -69,6 +74,8 @@
+@@ -69,6 +75,8 @@
  #include "../Basescape/GlobalAlienContainmentState.h"
  #include "../Menu/CutsceneState.h"
  #include "../Menu/ErrorMessageState.h"
@@ -10573,7 +11492,7 @@ index 6b4e79d..ad4da17 100644
  #include "GraphsState.h"
  #include "FundingState.h"
  #include "ExtendedGeoscapeLinksState.h"
-@@ -87,6 +94,7 @@
+@@ -87,6 +95,7 @@
  #include "DogfightErrorState.h"
  #include "DogfightExperienceState.h"
  #include "../Ufopaedia/Ufopaedia.h"
@@ -10581,7 +11500,7 @@ index 6b4e79d..ad4da17 100644
  #include "../Savegame/ResearchProject.h"
  #include "ResearchCompleteState.h"
  #include "../Mod/RuleResearch.h"
-@@ -103,6 +111,7 @@
+@@ -103,6 +112,7 @@
  #include "../Savegame/ItemContainer.h"
  #include "../Savegame/MissionSite.h"
  #include "../Savegame/AlienBase.h"
@@ -10589,7 +11508,7 @@ index 6b4e79d..ad4da17 100644
  #include "../Mod/RuleRegion.h"
  #include "MissionDetectedState.h"
  #include "AlienBaseState.h"
-@@ -157,41 +166,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -157,41 +167,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_bg->setX((_globe->getWidth() - _bg->getWidth()) / 2);
  	_bg->setY((_globe->getHeight() - _bg->getHeight()) / 2);
  
@@ -10773,7 +11692,7 @@ index 6b4e79d..ad4da17 100644
  
  	int slackingIndicatorOffset = _game->getMod()->getInterface("geoscape")->getElement("slackingIndicator")->custom;
  	_txtSlacking = new Text(59, 17, screenWidth - 61, screenHeight / 2 - 100 + slackingIndicatorOffset);
-@@ -207,6 +328,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -207,6 +329,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_dogfightTimer = new Timer(Options::dogfightSpeed);
  
  	_txtDebug = new Text(254, 32, 0, 0);
@@ -10781,7 +11700,7 @@ index 6b4e79d..ad4da17 100644
  	_cbxRegion = new ComboBox(this, 150, 16, 0, 36);
  	_cbxZone = new ComboBox(this, 48, 16, 154, 36);
  	_cbxArea = new ComboBox(this, 48, 16, 206, 36);
-@@ -251,6 +373,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -251,6 +374,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtMinSep, "text", "geoscape");
  	add(_txtSec, "text", "geoscape");
  	add(_txtWeekday, "text", "geoscape");
@@ -10792,7 +11711,7 @@ index 6b4e79d..ad4da17 100644
  	add(_txtDay, "text", "geoscape");
  	add(_txtMonth, "text", "geoscape");
  	add(_txtYear, "text", "geoscape");
-@@ -258,6 +384,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -258,6 +385,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtTraining, "trainingIndicator", "geoscape");
  
  	add(_txtDebug, "text", "geoscape");
@@ -10800,7 +11719,7 @@ index 6b4e79d..ad4da17 100644
  	add(_cbxRegion, "button", "geoscape");
  	add(_cbxZone, "button", "geoscape");
  	add(_cbxArea, "button", "geoscape");
-@@ -268,12 +395,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -268,12 +396,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	geobord->setX(_sidebar->getX() - geobord->getWidth() + _sidebar->getWidth());
  	geobord->setY(_sidebar->getY());
  	_sidebar->copy(geobord);
@@ -10828,7 +11747,7 @@ index 6b4e79d..ad4da17 100644
  	_btnIntercept->onMouseClick((ActionHandler)&GeoscapeState::btnInterceptClick);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnInterceptClick, Options::keyGeoIntercept);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnUfoTrackerClick, Options::keyGeoUfoTracker);
-@@ -292,7 +433,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -292,7 +434,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnBases->setGeoscapeButton(true);
  
  	_btnGraphs->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -10837,7 +11756,7 @@ index 6b4e79d..ad4da17 100644
  	_btnGraphs->onMouseClick((ActionHandler)&GeoscapeState::btnGraphsClick);
  	_btnGraphs->onKeyboardPress((ActionHandler)&GeoscapeState::btnGraphsClick, Options::keyGeoGraphs);
  	_btnGraphs->setGeoscapeButton(true);
-@@ -310,7 +451,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -310,7 +452,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnOptions->setGeoscapeButton(true);
  
  	_btnFunding->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -10846,7 +11765,7 @@ index 6b4e79d..ad4da17 100644
  	_btnFunding->onMouseClick((ActionHandler)&GeoscapeState::btnFundingClick);
  	_btnFunding->onKeyboardPress((ActionHandler)&GeoscapeState::btnFundingClick, Options::keyGeoFunding);
  	_btnFunding->setGeoscapeButton(true);
-@@ -387,6 +528,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -387,6 +529,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -10855,7 +11774,7 @@ index 6b4e79d..ad4da17 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -403,6 +546,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -403,6 +547,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_txtMinSep->setText(":");
  
  	_txtWeekday->setAlign(ALIGN_CENTER);
@@ -10908,7 +11827,7 @@ index 6b4e79d..ad4da17 100644
  
  	_txtDay->setAlign(ALIGN_CENTER);
  
-@@ -427,6 +616,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -427,6 +617,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  		_txtSec->setX(_txtSec->getX()-10);
  	}
  
@@ -10954,7 +11873,7 @@ index 6b4e79d..ad4da17 100644
  	_gameTimer->onTimer((StateHandler)&GeoscapeState::timeAdvance);
  	_gameTimer->start();
  
-@@ -512,7 +740,9 @@ void GeoscapeState::blit()
+@@ -512,7 +741,9 @@ void GeoscapeState::blit()
  	State::blit();
  	for (auto* dfs : _dogfights)
  	{
@@ -10965,7 +11884,7 @@ index 6b4e79d..ad4da17 100644
  	}
  }
  
-@@ -705,13 +935,126 @@ void GeoscapeState::handle(Action *action)
+@@ -705,13 +936,126 @@ void GeoscapeState::handle(Action *action)
   * Updates the timer display and resets the palette
   * since it's bound to change on other screens.
   */
@@ -11092,7 +12011,7 @@ index 6b4e79d..ad4da17 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -753,6 +1096,12 @@ void GeoscapeState::init()
+@@ -753,6 +1097,12 @@ void GeoscapeState::init()
  		determineAlienMissions();
  		_game->getSavedGame()->setFunds(_game->getSavedGame()->getFunds() - (_game->getSavedGame()->getBaseMaintenance() - _game->getSavedGame()->getBases()->front()->getPersonnelMaintenance()));
  	}
@@ -11105,7 +12024,7 @@ index 6b4e79d..ad4da17 100644
  }
  
  /**
-@@ -835,6 +1184,10 @@ void GeoscapeState::timeDisplay()
+@@ -835,6 +1185,10 @@ void GeoscapeState::timeDisplay()
  	std::ostringstream ss5;
  	ss5 << _game->getSavedGame()->getTime()->getYear();
  	_txtYear->setText(ss5.str());
@@ -11116,7 +12035,7 @@ index 6b4e79d..ad4da17 100644
  }
  
  /**
-@@ -1454,6 +1807,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +1808,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -11152,7 +12071,7 @@ index 6b4e79d..ad4da17 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +1946,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +1947,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -11183,7 +12102,7 @@ index 6b4e79d..ad4da17 100644
  							}
  						}
  					}
-@@ -1752,7 +2150,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2151,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -11192,7 +12111,7 @@ index 6b4e79d..ad4da17 100644
  								}
  								else
  								{
-@@ -1858,6 +2256,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2257,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -11212,7 +12131,7 @@ index 6b4e79d..ad4da17 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2295,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2296,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -11225,7 +12144,27 @@ index 6b4e79d..ad4da17 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2145,6 +2562,92 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2126,8 +2544,18 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+ 		{
+ 			ufo->setHyperDetected(true);
+ 		}
++		// G.I. Joe: a cartel flight the flight-route intel has put on the map stays there out of radar
++		// range (the intel is the tracking), until a tail is spotted and it goes dark
++		bool cartelTracked = false;
++		if (ufo->getRules()->getType() == "STR_CARTEL_PLANE")
++		{
++			const auto &known = save->getCartelFlights();
++			const auto &burned = save->getBurnedFlights();
++			cartelTracked = std::find(known.begin(), known.end(), ufo->getId()) != known.end()
++				&& std::find(burned.begin(), burned.end(), ufo->getId()) == burned.end();
++		}
+ 		// TODO: rethink: hunting UFOs stay visible even outside of radar range?
+-		if (!maskTest(detected, DETECTION_RADAR) && !ufo->isHunting())
++		if (!maskTest(detected, DETECTION_RADAR) && !ufo->isHunting() && !cartelTracked)
+ 		{
+ 			ufo->setDetected(false);
+ 			ufo->setHyperDetected(false);
+@@ -2145,6 +2573,92 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -11318,7 +12257,7 @@ index 6b4e79d..ad4da17 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +2694,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +2705,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -11408,7 +12347,7 @@ index 6b4e79d..ad4da17 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +2939,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +2950,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -11417,7 +12356,7 @@ index 6b4e79d..ad4da17 100644
  			}
  			else
  			{
-@@ -2395,6 +2981,286 @@ void GeoscapeState::time1Day()
+@@ -2395,6 +2992,286 @@ void GeoscapeState::time1Day()
  	Mod *mod = _game->getMod();
  	bool psiStrengthEval = (Options::psiStrengthEval && saveGame->isResearched(mod->getPsiRequirements()));
  
@@ -11704,7 +12643,7 @@ index 6b4e79d..ad4da17 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3310,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3321,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -11727,7 +12666,7 @@ index 6b4e79d..ad4da17 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2861,7 +3736,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +3747,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -11756,7 +12695,7 @@ index 6b4e79d..ad4da17 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3856,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3867,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -11787,7 +12726,7 @@ index 6b4e79d..ad4da17 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4042,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4053,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -11797,7 +12736,7 @@ index 6b4e79d..ad4da17 100644
  }
  
  /**
-@@ -3265,6 +4186,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4197,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -11813,10 +12752,17 @@ index 6b4e79d..ad4da17 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4272,17 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4283,24 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
++		if (!dfs->isMinimized() && !dfs->isAutoResolved() && !getenv("OXCE_DOGFIGHT_WINDOW")
++			&& (std::find(_airPending.begin(), _airPending.end(), dfs) != _airPending.end() || offerAirFight(dfs)))
++		{
++			// G.I. Joe air fights: waiting on FIGHT / AUTO-RESOLVE, or being fought on the battle engine
++			++dfsIt;
++			continue;
++		}
 +		if (!dfs->isMinimized() && !dfs->isAutoResolved() && !getenv("OXCE_DOGFIGHT_WINDOW"))
 +		{
 +			// G.I. Joe 4x: decided at once, reported in one line (the stand-in for the air war)
@@ -11831,7 +12777,166 @@ index 6b4e79d..ad4da17 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -4647,11 +5588,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -3364,6 +4323,158 @@ void GeoscapeState::handleDogfights()
+ 	}
+ }
+ 
++/**
++ * G.I. Joe air fights (DOGFIGHT_DESIGN_v1 section 1): an interception between a craft and a Cobra aircraft
++ * that both have a battle unit is offered as FIGHT / AUTO-RESOLVE. Every Joe craft already on the same Cobra
++ * aircraft joins. Helicopters are never fought. Returns true if the offer was made.
++ */
++bool GeoscapeState::offerAirFight(DogfightState *dfs)
++{
++	const Mod *mod = _game->getMod();
++	const auto &AF = mod->getAirFightRules();
++	Ufo *ufo = dfs->getUfo();
++	Craft *craft = dfs->getCraft();
++	if (!AF.on || !ufo || !craft || !_airPending.empty()) return false;
++	if (!AF.units.count(ufo->getRules()->getType()) || !AF.units.count(craft->getRules()->getType())) return false;
++	if (std::find(AF.helicopters.begin(), AF.helicopters.end(), ufo->getRules()->getType()) != AF.helicopters.end()) return false;
++	if (ufo->isCrashed() || craft->isDestroyed()) return false;
++	std::ostringstream body;
++	int n = 0;
++	for (auto *d : _dogfights)
++	{
++		if (d->getUfo() != ufo || d->isMinimized() || d->isAutoResolved() || !d->getCraft()) continue;
++		if (!AF.units.count(d->getCraft()->getRules()->getType())) continue;
++		_airPending.push_back(d);
++		auto pilots = d->getCraft()->getPilotList(false, mod);
++		body << d->getCraft()->getName(_game->getLanguage());
++		if (!pilots.empty()) body << " - " << pilots.front()->getName();
++		body << "  " << (100 - d->getCraft()->getDamagePercentage()) << "%\n";
++		++n;
++	}
++	if (n == 0) return false;
++	body << "\n" << tr("STR_AF_VERSUS").arg(ufo->getName(_game->getLanguage())) << "\n\n" << tr("STR_AF_ODDS_LATER");
++	// story fights and 5+ a side are always flown (section 1); none yet in Phase 1, so AUTO is always offered
++	popup(new AirFightChoiceState(this, tr("STR_AF_TITLE"), body.str(), true));
++	return true;
++}
++
++void GeoscapeState::autoResolveAirFight()
++{
++	auto pending = _airPending;
++	_airPending.clear();
++	for (auto *dfs : pending)
++	{
++		if (std::find(_dogfights.begin(), _dogfights.end(), dfs) == _dogfights.end()) continue;
++		Craft *c = dfs->getCraft();
++		Ufo *u = dfs->getUfo();
++		const std::string craftName = c ? c->getName(_game->getLanguage()) : "";
++		const std::string ufoName = u ? u->getName(_game->getLanguage()) : "";
++		const std::string result = dfs->autoResolve();
++		if (!result.empty())
++			popup(new CraftErrorState(this, tr(result).arg(craftName).arg(ufoName), true, nullptr));
++	}
++}
++
++void GeoscapeState::startAirFight()
++{
++	const Mod *mod = _game->getMod();
++	const auto &AF = mod->getAirFightRules();
++	std::vector<Craft*> crafts;
++	Ufo *ufo = nullptr;
++	bool hunted = false;
++	for (auto *dfs : _airPending)
++	{
++		crafts.push_back(dfs->getCraft());
++		ufo = dfs->getUfo();
++		hunted = hunted || dfs->isUfoAttacking();
++	}
++	if (!ufo || crafts.empty()) { _airPending.clear(); return; }
++	// the ground below: the globe under the fight (section 1b.7)
++	int texture = -1, shade = 0;
++	_globe->getPolygonTextureAndShade(ufo->getLongitude(), ufo->getLatitude(), &texture, &shade);
++	std::string terrain = AF.defaultTerrain;
++	auto it = AF.textureTerrains.find(texture);
++	if (it != AF.textureTerrains.end()) terrain = it->second;
++	else if (texture < 0 && !AF.oceanTerrain.empty()) terrain = AF.oceanTerrain;
++	SavedBattleGame *bgame = new SavedBattleGame(_game->getMod(), _game->getLanguage());
++	_game->getSavedGame()->setBattleGame(bgame);
++	BattlescapeGenerator bgen(_game);
++	bgen.setWorldShade(shade);
++	bgen.runAirFight(crafts, ufo, terrain, hunted);
++	for (auto *c : crafts) c->setInBattlescape(true);
++	_game->pushState(new BriefingState(crafts.front()));
++}
++
++void GeoscapeState::finishAirFight(const AirFightResult &res)
++{
++	const Mod *mod = _game->getMod();
++	const auto &AF = mod->getAirFightRules();
++	auto pending = _airPending;
++	_airPending.clear();
++	std::ostringstream report;
++	Craft *credit = nullptr;
++	for (const auto &one : res.crafts)
++	{
++		Craft *c = one.craft;
++		if (!c) continue;
++		if (!credit && !one.lost) credit = c;
++		report << c->getName(_game->getLanguage()) << ": ";
++		if (one.lost)
++		{
++			// the pilot ejects: a named Joe always comes home hurt; an unnamed one lives on a roll (section 7)
++			for (auto *b : *_game->getSavedGame()->getBases())
++				for (auto *s : *b->getSoldiers())
++				{
++					if (s->getId() != one.pilotId || s->getCraft() != c) continue;
++					const bool named = !mod->isGreenshirt(s->getRules()->getType());
++					if (named || RNG::percent(AF.unnamedSurvive))
++					{
++						s->setCraft(nullptr);
++						s->setWoundRecovery(RNG::generate(AF.namedEjectMin, AF.namedEjectMax));
++						report << tr("STR_AF_LOST_EJECTED").arg(s->getName());
++					}
++					else
++					{
++						report << tr("STR_AF_LOST_PILOT_KILLED").arg(s->getName());
++					}
++				}
++			c->setDamage(c->getDamageMax());
++		}
++		else
++		{
++			c->setDamage(std::min(c->getDamageMax() - 1, c->getDamageMax() * (100 - one.healthPct) / 100));
++			report << tr("STR_AF_CRAFT_HEALTH").arg(one.healthPct);
++		}
++		report << "\n";
++	}
++	Ufo *ufo = res.ufo;
++	if (ufo)
++	{
++		const int dmax = ufo->getRules()->getStats().damageMax;
++		const std::string ufoName = ufo->getName(_game->getLanguage()); // before it becomes a crash site
++		if (res.ufoDown)
++		{
++			if (!credit && !res.crafts.empty()) credit = res.crafts.front().craft;
++			if (credit) ufo->setShotDownByCraftId(credit->getUniqueId());
++			ufo->setDamage(dmax / 2 + 1, mod); // down, not blown apart: a crash site (section 7)
++			ufo->setSpeed(0);
++			ufo->setDestination(0);
++			report << tr("STR_AF_UFO_DOWN").arg(ufoName);
++		}
++		else
++		{
++			ufo->setDamage(std::min(dmax / 2, dmax * (100 - res.ufoHealthPct) / 100), mod);
++			report << tr(res.ufoThrough ? "STR_AF_UFO_THROUGH" : "STR_AF_UFO_BROKE_OFF").arg(ufoName);
++		}
++	}
++	for (auto *dfs : pending)
++	{
++		if (std::find(_dogfights.begin(), _dogfights.end(), dfs) == _dogfights.end()) continue;
++		dfs->concludeAirFight();
++	}
++	popup(new CraftErrorState(this, report.str(), true, nullptr));
++}
++
+ /**
+  * Goes through all active dogfight instances and tries to perform the same action.
+  * @param button Action to perform.
+@@ -4647,11 +5758,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -11846,7 +12951,7 @@ index 6b4e79d..ad4da17 100644
  
  	if (missionRace.empty())
 diff --git a/src/Geoscape/GeoscapeState.h b/src/Geoscape/GeoscapeState.h
-index 5eaf857..9bb77ca 100644
+index 5eaf857..de0ca0f 100644
 --- a/src/Geoscape/GeoscapeState.h
 +++ b/src/Geoscape/GeoscapeState.h
 @@ -54,6 +54,14 @@ private:
@@ -11864,7 +12969,33 @@ index 5eaf857..9bb77ca 100644
  	Timer *_gameTimer, *_zoomInEffectTimer, *_zoomOutEffectTimer, *_dogfightStartTimer, *_dogfightTimer;
  	bool _pause, _zoomInEffectDone, _zoomOutEffectDone;
  	Text *_txtDebug;
-@@ -163,6 +171,8 @@ public:
+@@ -75,6 +83,25 @@ private:
+ 	void updateZoneInfo();
+ 	void cbxCountryChange(Action *action);
+ 
++public:
++	/// G.I. Joe air fights: what the battle decided, handed back to the world map
++	struct AirFightResult
++	{
++		struct One { Craft *craft = nullptr; int healthPct = 100; bool lost = false; int pilotId = 0; };
++		std::vector<One> crafts;
++		Ufo *ufo = nullptr;
++		bool ufoDown = false, ufoThrough = false;
++		int ufoHealthPct = 100;
++	};
++	/// FIGHT was pressed: the battle starts
++	void startAirFight();
++	/// AUTO-RESOLVE was pressed (the stand-in until the headless battle)
++	void autoResolveAirFight();
++	/// the battle is over: damage, crash site, the report
++	void finishAirFight(const AirFightResult &res);
++private:
++	std::vector<DogfightState*> _airPending;   ///< the interceptions waiting on FIGHT / AUTO-RESOLVE, or in battle
++	bool offerAirFight(DogfightState *dfs);
+ public:
+ 	/// Creates the Geoscape state.
+ 	GeoscapeState();
+@@ -163,6 +190,8 @@ public:
  	void btnZoomInRightClick(Action *action);
  	/// Handler for left-clicking the Zoom Out icon.
  	void btnZoomOutLeftClick(Action *action);
@@ -14894,7 +16025,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..11df0e0 100644
+index 1885346..8d66701 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -15032,7 +16163,7 @@ index 1885346..11df0e0 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,289 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,327 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -15107,6 +16238,44 @@ index 1885346..11df0e0 100644
 +		std::map<std::string, std::vector<std::string> > more;
 +		if (reader.tryRead("gijoeBounties", more))
 +			for (auto &kv : more) _gijoeBounties[kv.first] = kv.second;
++	}
++	if (const auto& af = reader["airFight"])
++	{
++		_airFight.on = true;
++		std::map<std::string, std::string> units;
++		if (af.tryRead("units", units))
++			for (auto &kv : units) _airFight.units[kv.first] = kv.second;
++		if (const auto& ac = af["aircraft"])
++		{
++			for (const auto& one : ac.children())
++			{
++				std::string type = one.readKey<std::string>();
++				AirCraftRule &r = _airFight.aircraft[type];
++				one.tryRead("role", r.role);
++				one.tryRead("agility", r.agility);
++				one.tryRead("minFloor", r.minFloor);
++				one.tryRead("maxFloor", r.maxFloor);
++				one.tryRead("arc", r.arc);
++			}
++		}
++		std::map<int, std::string> tex;
++		if (af.tryRead("textureTerrains", tex))
++			for (auto &kv : tex) _airFight.textureTerrains[kv.first] = kv.second;
++		af.tryRead("oceanTerrain", _airFight.oceanTerrain);
++		af.tryRead("defaultTerrain", _airFight.defaultTerrain);
++		af.tryRead("deployment", _airFight.deployment);
++		af.tryRead("helicopters", _airFight.helicopters);
++		af.tryRead("rounds", _airFight.rounds);
++		af.tryRead("baseHit", _airFight.baseHit);
++		af.tryRead("rearBonus", _airFight.rearBonus);
++		af.tryRead("headOnMalus", _airFight.headOnMalus);
++		af.tryRead("freeRange", _airFight.freeRange);
++		af.tryRead("perTile", _airFight.perTile);
++		af.tryRead("deckMalus", _airFight.deckMalus);
++		af.tryRead("noAttackBelow", _airFight.noAttackBelow);
++		af.tryRead("namedEjectMin", _airFight.namedEjectMin);
++		af.tryRead("namedEjectMax", _airFight.namedEjectMax);
++		af.tryRead("unnamedSurvive", _airFight.unnamedSurvive);
 +	}
 +	if (const auto& ct = reader["cartel"])
 +	{
@@ -15322,7 +16491,7 @@ index 1885346..11df0e0 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3594,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3632,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -15330,7 +16499,7 @@ index 1885346..11df0e0 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4199,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4237,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -15356,7 +16525,7 @@ index 1885346..11df0e0 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4456,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4494,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -15377,7 +16546,7 @@ index 1885346..11df0e0 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6170,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6208,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -15397,7 +16566,7 @@ index 1885346..11df0e0 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6193,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6231,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -15405,7 +16574,7 @@ index 1885346..11df0e0 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6207,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6245,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -15445,7 +16614,7 @@ index 1885346..11df0e0 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..b96fd58 100644
+index 2242d13..14643b7 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -15509,7 +16678,7 @@ index 2242d13..b96fd58 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,126 @@ private:
+@@ -327,6 +360,159 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -15572,6 +16741,39 @@ index 2242d13..b96fd58 100644
 +private:
 +	RetreatRules _retreat;
 +public:
++	/// G.I. Joe: air (and later sea) fights on the battle engine (DOGFIGHT_DESIGN_v1, AIR_SEA_BUILD_PLAN_v1).
++	/// A craft or Cobra aircraft becomes a unit; the floors are the decks.
++	struct AirCraftRule
++	{
++		std::string role = "fighter"; ///< fighter | strike | recon | cargo | bomber | transport
++		int agility = 0;              ///< subtracted from an attacker's chance to hit
++		int minFloor = 1, maxFloor = 4; ///< the floors (decks) it may use
++		std::string arc = "forward";  ///< its gun: forward | any | rear
++	};
++	struct AirFightRules
++	{
++		bool on = false;
++		std::map<std::string, std::string> units;        ///< craft type or Cobra aircraft (ufo) type -> unit type
++		std::map<std::string, AirCraftRule> aircraft;    ///< unit type -> its air rules
++		std::map<int, std::string> textureTerrains;      ///< globe texture -> terrain seen below
++		std::string oceanTerrain, defaultTerrain;
++		std::string deployment = "STR_AIR_FIGHT";
++		std::vector<std::string> helicopters;            ///< Cobra aircraft never fought (always auto-resolved)
++		int rounds = 12;
++		int baseHit = 60, rearBonus = 20, headOnMalus = 10, freeRange = 3, perTile = 3, deckMalus = 15;
++		int noAttackBelow = 25;                          ///< % health: below this it can't attack
++		int namedEjectMin = 3, namedEjectMax = 7, unnamedSurvive = 50;
++	};
++private:
++	AirFightRules _airFight;
++public:
++	const AirFightRules &getAirFightRules() const { return _airFight; }
++	/// the air rules for a battle unit type, or nullptr if it is not an aircraft
++	const AirCraftRule *getAirCraft(const std::string &unitType) const
++	{
++		auto it = _airFight.aircraft.find(unitType);
++		return it == _airFight.aircraft.end() ? nullptr : &it->second;
++	}
 +	/// G.I. Joe: the cartel arc's stash house and its flights (gijoe_cartel_arc.rul)
 +	struct CartelRules
 +	{
@@ -15636,7 +16838,7 @@ index 2242d13..b96fd58 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +845,124 @@ public:
+@@ -692,6 +878,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -16239,10 +17441,18 @@ index 6bef22e..8cc3b62 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..7796cf2 100644
+index 99f24ce..8c2e441 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
-@@ -511,6 +511,8 @@
+@@ -411,6 +411,7 @@
+     <ClCompile Include="Basescape\TransfersState.cpp" />
+     <ClCompile Include="Battlescape\AbortMissionState.cpp" />
+     <ClCompile Include="Battlescape\ActionMenuItem.cpp" />
++    <ClCompile Include="Battlescape\AirFight.cpp" />
+     <ClCompile Include="Battlescape\ActionMenuState.cpp" />
+     <ClCompile Include="Battlescape\AlienInventory.cpp" />
+     <ClCompile Include="Battlescape\AlienInventoryState.cpp" />
+@@ -511,6 +512,8 @@
      <ClCompile Include="Engine\Sound.cpp" />
      <ClCompile Include="Engine\SoundSet.cpp" />
      <ClCompile Include="Engine\State.cpp" />
@@ -16251,12 +17461,13 @@ index 99f24ce..7796cf2 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,10 +548,15 @@
+@@ -546,10 +549,16 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
 +    <ClCompile Include="Geoscape\CobraIntelState.cpp" />
 +    <ClCompile Include="Geoscape\IntelBoardState.cpp" />
++    <ClCompile Include="Geoscape\AirFightChoiceState.cpp" />
 +    <ClCompile Include="Geoscape\DepartmentsState.cpp" />
 +    <ClCompile Include="Basescape\ResearchTreeState.cpp" />
      <ClCompile Include="Geoscape\GeoscapeCraftState.cpp" />
@@ -16267,7 +17478,7 @@ index 99f24ce..7796cf2 100644
      <ClCompile Include="Geoscape\Globe.cpp" />
      <ClCompile Include="Geoscape\GraphsState.cpp" />
      <ClCompile Include="Geoscape\InterceptState.cpp" />
-@@ -673,6 +680,7 @@
+@@ -673,6 +682,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -16275,7 +17486,7 @@ index 99f24ce..7796cf2 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +690,7 @@
+@@ -682,6 +692,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -16283,7 +17494,15 @@ index 99f24ce..7796cf2 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -970,6 +979,8 @@
+@@ -890,6 +901,7 @@
+     <ClInclude Include="Basescape\TransfersState.h" />
+     <ClInclude Include="Battlescape\AbortMissionState.h" />
+     <ClInclude Include="Battlescape\ActionMenuItem.h" />
++    <ClInclude Include="Battlescape\AirFight.h" />
+     <ClInclude Include="Battlescape\ActionMenuState.h" />
+     <ClInclude Include="Battlescape\AlienInventory.h" />
+     <ClInclude Include="Battlescape\AlienInventoryState.h" />
+@@ -970,6 +982,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -16292,19 +17511,20 @@ index 99f24ce..7796cf2 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1044,11 @@
+@@ -1033,6 +1047,12 @@
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
 +    <ClInclude Include="Geoscape\CobraIntelState.h" />
 +    <ClInclude Include="Geoscape\IntelBoardState.h" />
++    <ClInclude Include="Geoscape\AirFightChoiceState.h" />
 +    <ClInclude Include="Geoscape\DepartmentsState.h" />
 +    <ClInclude Include="Basescape\ResearchTreeState.h" />
 +    <ClInclude Include="Mod\RuleLead.h" />
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1042,6 +1058,7 @@
+@@ -1042,6 +1062,7 @@
      <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
      <ClInclude Include="Geoscape\ProductionCompleteState.h" />
      <ClInclude Include="Geoscape\GeoscapeState.h" />
@@ -16312,7 +17532,7 @@ index 99f24ce..7796cf2 100644
      <ClInclude Include="Geoscape\Globe.h" />
      <ClInclude Include="Geoscape\GraphsState.h" />
      <ClInclude Include="Geoscape\InterceptState.h" />
-@@ -1170,6 +1187,7 @@
+@@ -1170,6 +1191,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -16320,7 +17540,7 @@ index 99f24ce..7796cf2 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1197,7 @@
+@@ -1179,6 +1201,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
@@ -16693,7 +17913,7 @@ index 46fbf1f..ff41988 100644
  	{
  		ModScript::ReturnFromMissionUnit::Output arg { };
 diff --git a/src/Savegame/BattleUnit.h b/src/Savegame/BattleUnit.h
-index ecc040f..6f13496 100644
+index ecc040f..22995de 100644
 --- a/src/Savegame/BattleUnit.h
 +++ b/src/Savegame/BattleUnit.h
 @@ -102,6 +102,7 @@ private:
@@ -16728,7 +17948,16 @@ index ecc040f..6f13496 100644
  	/// Gets the walking phase for diagonal walking
  	int getDiagonalWalkingPhase() const;
  	/// Gets the unit's destination when walking
-@@ -333,6 +344,8 @@ public:
+@@ -323,6 +334,8 @@ public:
+ 	int getEnergy() const;
+ 	/// Gets the unit's health.
+ 	int getHealth() const;
++	/// G.I. Joe air fights: an aircraft starts with the damage it carried in
++	void setHealthDirect(int h) { _health = h; }
+ 	/// Gets the unit's mana.
+ 	int getMana() const;
+ 	/// Gets the unit's bravery.
+@@ -333,6 +346,8 @@ public:
  	int damage(Position relative, int power, const RuleDamageType *type, SavedBattleGame *save, BattleActionAttack attack, UnitSide sideOverride = SIDE_MAX, UnitBodyPart bodypartOverride = BODYPART_MAX);
  	/// Heal stun level of the unit.
  	void healStun(int power);
@@ -16737,7 +17966,7 @@ index ecc040f..6f13496 100644
  	/// Gets the unit's stun level.
  	int getStunlevel() const;
  	/// Is the unit losing HP (due to negative health regeneration)?
-@@ -704,6 +717,31 @@ public:
+@@ -704,6 +719,31 @@ public:
  	/// Set how many turns this unit will be exposed for. For specific faction.
  	void setTurnsSinceSpottedByFaction(UnitFaction faction, int turns);
  	/// Set how many turns this unit will be exposed for.
