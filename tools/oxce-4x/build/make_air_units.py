@@ -43,6 +43,13 @@ AIRCRAFT = {
     'raft':           ('craft_raft_top.png', None, 0.6, False),
 }
 
+# 2x2 aircraft (transports, the bomber): 256 x 320 cells, 8 a row; frames 0-7 the headings, then
+# 8 + heading * 8 + f the death frames (engine: UnitSprite::drawRoutineWhole, size 2)
+BIG = {
+    'tomahawk_big':   ('craft_tomahawk_top.png', None, 0.95, False),
+    'condor':         ('craft_skystriker_top_wings_back.png', (30, 40, 90), 0.95, True),
+}
+
 
 def unmagenta(im):
     a = np.array(im.convert('RGB')).astype(np.int32)
@@ -65,25 +72,26 @@ def tint(im, rgb):
     return Image.fromarray(a.astype(np.uint8), 'RGBA')
 
 
-def heading(top, d, scale):
+def heading(top, d, scale, width=120):
     """OpenXcom heading d (0 = map north = screen up-right, clockwise) -> the iso picture"""
     plan = top.rotate(-45 * d, resample=Image.BICUBIC, expand=True)    # nose to the heading on the plan
     iso = plan.rotate(-45, resample=Image.BICUBIC, expand=True)        # the plan onto the grid
     iso = iso.resize((iso.width, iso.height // 2), Image.LANCZOS)      # the battle camera's squash
     bbox = iso.getbbox()
     iso = iso.crop(bbox) if bbox else iso
-    k = 120 * scale / max(iso.width, 1)
+    k = width * scale / max(iso.width, 1)
     return iso.resize((max(1, int(iso.width * k)), max(1, int(iso.height * k))), Image.LANCZOS)
 
 
-def cell(pic, dy=0, dark=1.0, alpha=1.0):
-    c = Image.new('RGBA', (128, 160), (0, 0, 0, 0))
+def cell(pic, dy=0, dark=1.0, alpha=1.0, big=False):
+    W, H, cy = (256, 320, 224) if big else (128, 160, 112)
+    c = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     if dark != 1.0:
         pic = ImageEnhance.Brightness(pic).enhance(dark)
     if alpha != 1.0:
         a = np.array(pic); a[..., 3] = (a[..., 3] * alpha).astype(np.uint8); pic = Image.fromarray(a, 'RGBA')
     # hangs in the middle of its tile: centre on row 112 (the floor diamond's centre is row 128)
-    c.alpha_composite(pic, (64 - pic.width // 2, 112 - pic.height // 2 + dy))
+    c.alpha_composite(pic, (W // 2 - pic.width // 2, cy - pic.height // 2 + dy))
     return c
 
 
@@ -106,7 +114,9 @@ def quantize(rgba, pal):
 def main():
     pal = Image.open(PAL_FROM).getpalette()
     units = os.path.join(MOD, 'Resources', 'Units')
+    only = sys.argv[2:]   # names to build (default: all)
     for name, (src, rgb, scale, standin) in AIRCRAFT.items():
+        if only and name not in only: continue
         top = tint(unmagenta(Image.open(os.path.join(SRC, src))), rgb)
         sheet = Image.new('RGBA', (2048, 5120), (0, 0, 0, 0))
         for d in range(8):
@@ -122,6 +132,20 @@ def main():
         sheet.save(os.path.join(units, f'air_{name}_body_rgb.png'))
         quantize(sheet, pal).save(os.path.join(units, f'air_{name}_body.png'))
         print(name, 'stand-in' if standin else 'own art')
+    for name, (src, rgb, scale, standin) in BIG.items():
+        if only and name not in only: continue
+        top = tint(unmagenta(Image.open(os.path.join(SRC, src))), rgb)
+        sheet = Image.new('RGBA', (2048, 2880), (0, 0, 0, 0))
+        for d in range(8):
+            pic = heading(top, d, scale, width=240)
+            frames = [(d, cell(pic, big=True))]
+            for f in range(8):
+                frames.append((8 + d * 8 + f, cell(pic, dy=f * 10, dark=1.0 - f * 0.08, alpha=1.0 - f * 0.1, big=True)))
+            for fr, c in frames:
+                sheet.alpha_composite(c, ((fr % 8) * 256, (fr // 8) * 320))
+        sheet.save(os.path.join(units, f'air_{name}_body_rgb.png'))
+        quantize(sheet, pal).save(os.path.join(units, f'air_{name}_body.png'))
+        print(name, '2x2', 'stand-in' if standin else 'own art')
 
 
 if __name__ == '__main__':

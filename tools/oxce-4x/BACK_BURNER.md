@@ -152,6 +152,22 @@ the fakes is what buys the ordering.
 
 ## Owed
 
+### Air fights: what Phase 1 still lacks (14 Nov)
+
+- **Transports need a pilot too (design 1b.4), but are not given the rule.** With `pilots: 1` the
+  Tomahawk's pilot would be one of the squad it carries. Whether he still fights on the ground, or the
+  transport carries a separate crew seat, is John's call. Until then only the Skystriker and the
+  Conquest need a pilot (gijoe_air_fight.rul).
+- **The C-130 and the Vulture** have no craft or Cobra-aircraft type to hang a 2x2 unit on. The
+  Tomahawk and the Condor are in (gijoe_air_big.rul); the Condor's picture is a stand-in.
+- **The odds are an estimate** (AirFight::odds, a fast abstract run of 400 fights). Tuned against
+  STORY's dogfight_sim table and two engine fights; an unnamed Skystriker against a Rattler reads about
+  45% where STORY's sim said 73%, because the engine's Rattler breaks off at 40% and this counts that as
+  not a win. Ace against a Condor read 62% and won.
+- **Not seen in the engine:** a Tomahawk (2x2 Joe transport) in a fight. It needs Cobra hunting a Joe
+  transport, which nothing in Year 1 does yet.
+
+
 ### ~~The geoscape font fix~~ — cause found and shipped 11 Nov, still unseen here
 
 Blank button labels on the geoscape, oversized text clipping in windows

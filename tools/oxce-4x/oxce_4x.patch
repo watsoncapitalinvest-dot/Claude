@@ -1757,10 +1757,10 @@ index 6065b54..8db80d7 100644
  	/// Init function.
 diff --git a/src/Battlescape/AirFight.cpp b/src/Battlescape/AirFight.cpp
 new file mode 100644
-index 0000000..7120f32
+index 0000000..bbe8974
 --- /dev/null
 +++ b/src/Battlescape/AirFight.cpp
-@@ -0,0 +1,483 @@
+@@ -0,0 +1,666 @@
 +/*
 + * G.I. Joe: air fights on the battle engine (claude/DOGFIGHT_DESIGN_v1.md, claude/AIR_SEA_BUILD_PLAN_v1.md).
 + */
@@ -1774,6 +1774,7 @@ index 0000000..7120f32
 +#include "../Mod/RuleCraft.h"
 +#include "../Mod/RuleUfo.h"
 +#include "../Mod/Armor.h"
++#include "../Mod/Unit.h"
 +#include "../Savegame/BattleItem.h"
 +#include "../Savegame/SavedGame.h"
 +#include "../Savegame/Craft.h"
@@ -2000,9 +2001,10 @@ index 0000000..7120f32
 +		return true;
 +	}
 +	/// the nearest point on the map edge on this deck
-+	Position nearestEdge(const SavedBattleGame *save, Position at)
++	Position nearestEdge(const SavedBattleGame *save, Position at, int size = 1)
 +	{
-+		const int W = save->getMapSizeX(), H = save->getMapSizeY();
++		// a 2x2 aircraft's corner can only go as far as the map less its size
++		const int W = save->getMapSizeX() - (size - 1), H = save->getMapSizeY() - (size - 1);
 +		const int dl = at.x, dr = W - 1 - at.x, dt = at.y, db = H - 1 - at.y;
 +		const int m = std::min(std::min(dl, dr), std::min(dt, db));
 +		if (m == dl) return Position(0, at.y, at.z);
@@ -2013,10 +2015,13 @@ index 0000000..7120f32
 +	bool runFor(SavedBattleGame *save, BattleUnit *u, BattleAction *action, Position e)
 +	{
 +		if (onOuterRing(save, u)) { action->type = BA_NONE; return true; }
++		const int s = u->getArmor()->getSize();
++		e.x = std::min((int)e.x, save->getMapSizeX() - s);
++		e.y = std::min((int)e.y, save->getMapSizeY() - s);
 +		for (int k = 0; k < 6; ++k)
 +		{
 +			Position p = e;
-+			if (p.x == 0 || p.x == save->getMapSizeX() - 1) p.y += (k % 2 ? 1 : -1) * ((k + 1) / 2) * 2;
++			if (p.x == 0 || p.x == save->getMapSizeX() - s) p.y += (k % 2 ? 1 : -1) * ((k + 1) / 2) * 2;
 +			else p.x += (k % 2 ? 1 : -1) * ((k + 1) / 2) * 2;
 +			if (walkTo(save, u, action, p)) return true;
 +		}
@@ -2073,20 +2078,20 @@ index 0000000..7120f32
 +	{
 +		const int exit = save->getVanStop("afExit:" + id); // 1 = east (the only crossing used so far)
 +		Position at = unit->getPosition();
-+		Position e = hpPct < mod->getAirFightRules().noAttackBelow || exit == 0 ? nearestEdge(save, at) : Position(save->getMapSizeX() - 1, at.y, at.z);
++		Position e = hpPct < mod->getAirFightRules().noAttackBelow || exit == 0 ? nearestEdge(save, at, unit->getArmor()->getSize()) : Position(save->getMapSizeX() - 1, at.y, at.z);
 +		return runFor(save, unit, action, e);
 +	}
 +	// strike and fighter
 +	const int breakAt = r->role == "strike" ? 40 : mod->getAirFightRules().noAttackBelow;
 +	if (hpPct < breakAt)
 +	{
-+		return runFor(save, unit, action, nearestEdge(save, unit->getPosition()));
++		return runFor(save, unit, action, nearestEdge(save, unit->getPosition(), unit->getArmor()->getSize()));
 +	}
 +	BattleItem *gun = unit->getMainHandWeapon(false);
 +	if (gun && !gun->haveAnyAmmo())
 +	{
 +		// bursts all spent: nothing left to fight with, so it heads out
-+		return runFor(save, unit, action, nearestEdge(save, unit->getPosition()));
++		return runFor(save, unit, action, nearestEdge(save, unit->getPosition(), unit->getArmor()->getSize()));
 +	}
 +	int flo, fhi;
 +	floorRange(mod, save, unit, flo, fhi);
@@ -2153,6 +2158,28 @@ index 0000000..7120f32
 +	return true;
 +}
 +
++void leave(SavedBattleGame *save, BattleUnit *u)
++{
++	const std::string id = std::to_string(u->getId());
++	save->setVanStop("afEsc:" + id, 1);
++	// a crossing plane that reached its own exit edge got through; anything else disengaged
++	const int exit = save->getVanStop("afExit:" + id);
++	if (exit == 1 && u->getPosition().x + u->getArmor()->getSize() >= save->getMapSizeX()) save->setVanStop("afThrough:" + id, 1);
++	u->setTile(nullptr, save);
++	u->setPosition(TileEngine::invalid);
++	u->goToTimeOut();
++	Log(LOG_INFO) << "[air] " << u->getType() << " " << u->getId() << (save->getVanStop("afThrough:" + id) ? " got through" : " left the fight");
++}
++
++std::string disengage(SavedBattleGame *save, BattleUnit *u)
++{
++	if (!u || !rule(save->getMod(), u) || !u->getTile() || hasLeft(save, u)) return "STR_AF_CANT_DISENGAGE";
++	if (isDisabled(save, u)) return "STR_SEA_GUNS_OUT";
++	if (!onOuterRing(save, u)) return "STR_AF_DISENGAGE_EDGE";
++	leave(save, u);
++	return "";
++}
++
 +void endTurnStep(SavedBattleGame *save)
 +{
 +	if (!isAirFight(save->getMod(), save)) return;
@@ -2161,15 +2188,9 @@ index 0000000..7120f32
 +	{
 +		if (u->getOriginalFaction() != side || u->isOut() || !u->getTile() || hasLeft(save, u)) continue;
 +		if (!rule(save->getMod(), u) || !onOuterRing(save, u) || isDisabled(save, u)) continue;
-+		const std::string id = std::to_string(u->getId());
-+		save->setVanStop("afEsc:" + id, 1);
-+		// a crossing plane that reached its own exit edge got through; anything else disengaged
-+		const int exit = save->getVanStop("afExit:" + id);
-+		if (exit == 1 && u->getPosition().x + u->getArmor()->getSize() >= save->getMapSizeX()) save->setVanStop("afThrough:" + id, 1);
-+		u->setTile(nullptr, save);
-+		u->setPosition(TileEngine::invalid);
-+		u->goToTimeOut();
-+		Log(LOG_INFO) << "[air] " << u->getType() << " " << u->getId() << (save->getVanStop("afThrough:" + id) ? " got through" : " left the fight");
++		// the player's own aircraft leave only by DISENGAGE; the computer's (and auto-resolve's) leave here
++		if (u->getOriginalFaction() == FACTION_PLAYER && !save->getVanStop("afAuto")) continue;
++		leave(save, u);
 +	}
 +	// a sea fight is over once every Cobra vessel is sunk, gone or dead in the water (boarding is next)
 +	if (isSeaFight(save->getMod(), save))
@@ -2186,6 +2207,163 @@ index 0000000..7120f32
 +			save->setTurnLimit(save->getTurn());
 +		}
 +	}
++}
++
++namespace
++{
++	/// one aircraft in the odds simulation
++	struct SimCraft
++	{
++		bool joe = false;
++		std::string role;
++		int hp = 1, hpMax = 1, armor = 0, agility = 0, tu = 40, firing = 50, reactions = 40;
++		int power = 0, range = 0, bursts = 0, tuSnap = 12, systemHits = 0;
++		bool down = false, gone = false, disabled = false;
++		int engines = 0, leaveAt = 0;
++		bool going() const { return role == "cargo" || role == "recon" || role == "bomber" || role == "ship" || role == "transport"; }
++	};
++
++	bool simFrom(const Mod *mod, const std::string &type, bool joe, int damagePct, SimCraft &out)
++	{
++		const auto &AF = mod->getAirFightRules();
++		auto it = AF.units.find(type);
++		if (it == AF.units.end()) return false;
++		const Unit *u = mod->getUnit(it->second, false);
++		if (!u || !u->getArmor()) return false;
++		const auto *r = mod->getAirCraft(it->second);
++		out.joe = joe;
++		out.role = r ? r->role : "fighter";
++		out.agility = r ? r->agility : 0;
++		out.systemHits = r ? r->systemHits : 0;
++		out.hpMax = std::max(1, (int)u->getStats()->health);
++		out.hp = std::max(1, out.hpMax - out.hpMax * damagePct / 100);
++		out.armor = u->getArmor()->getFrontArmor();
++		out.tu = u->getStats()->tu;
++		out.firing = u->getStats()->firing;
++		out.reactions = u->getStats()->reactions;
++		// the gun: the hardest-hitting built-in that reaches the air (a ship's anti-aircraft gun, not its deck gun)
++		for (const RuleItem *w : u->getArmor()->getBuiltInWeapons())
++		{
++			if (!w || w->getPower() <= 0) continue;
++			const auto *aw = mod->getAirWeapon(w->getType());
++			if (aw && aw->maxFloor < 2) continue;
++			if (w->getPower() > out.power)
++			{
++				out.power = w->getPower();
++				out.range = w->getMaxRange();
++				out.bursts = std::max(1, w->getClipSize());
++				out.tuSnap = std::max(1, (int)w->getCostSnap().Time);
++			}
++		}
++		return true;
++	}
++
++	/// a typical shot (about 5 tiles): a plane running away is shot from behind, mostly on its own deck;
++	/// a dogfight is a little better than side-on, half the time across a deck. Tuned against STORY's
++	/// dogfight_sim numbers (DOGFIGHT_DESIGN_v1 3c) and the engine's own AI fights, 14 Nov.
++	int simChance(const Mod *mod, const SimCraft &a, const SimCraft &t)
++	{
++		const auto &R = mod->getAirFightRules();
++		int c = R.baseHit + (a.firing - 50) / 2;
++		if (t.going() || t.leaveAt) c += R.rearBonus - R.deckMalus / 4;
++		else c += 5 - R.deckMalus / 4;
++		c -= R.perTile * std::max(0, 5 - R.freeRange);
++		c -= t.agility + t.reactions / 5;
++		return std::max(5, std::min(95, c));
++	}
++}
++
++int odds(const Mod *mod, const std::vector<Craft*> &crafts, const Ufo *ufo, int runs)
++{
++	if (!mod || !ufo || crafts.empty()) return -1;
++	const auto &R = mod->getAirFightRules();
++	std::vector<SimCraft> start;
++	for (auto *c : crafts)
++	{
++		SimCraft s;
++		const int dmg = c->getDamageMax() > 0 ? c->getDamage() * 100 / c->getDamageMax() : 0;
++		if (!simFrom(mod, c->getRules()->getType(), true, dmg, s)) continue;
++		auto pilots = c->getPilotList(false, mod);
++		if (!pilots.empty())
++		{
++			s.firing = pilots.front()->getCurrentStats()->firing;
++			s.reactions = pilots.front()->getCurrentStats()->reactions;
++			s.tu += std::min(std::max(0, (pilots.front()->getCurrentStats()->bravery - 50) / 10), s.tu / 10);
++		}
++		start.push_back(s);
++	}
++	if (start.empty()) return -1;
++	{
++		SimCraft s;
++		const int dmax = ufo->getRules()->getStats().damageMax;
++		if (!simFrom(mod, ufo->getRules()->getType(), false, dmax > 0 ? ufo->getDamage() * 100 / dmax : 0, s)) return -1;
++		start.push_back(s);
++	}
++	const int crossTiles = 36, breakRounds = 3, maxShots = 4, dogfightMoveTU = 24;
++	int wins = 0;
++	for (int run = 0; run < runs; ++run)
++	{
++		std::vector<SimCraft> f = start;
++		auto alive = [&](const SimCraft &x) { return !x.down && !x.gone; };
++		auto canShoot = [&](const SimCraft &x) { return alive(x) && !x.leaveAt && x.power > 0 && x.bursts > 0 && !x.disabled && x.hp * 100 >= x.hpMax * R.noAttackBelow; };
++		for (int round = 1; round <= R.rounds; ++round)
++		{
++			for (int side = 0; side < 2; ++side)
++			{
++				for (auto &a : f)
++				{
++					if (a.joe != (side == 0) || !canShoot(a) || round < 2) continue; // round 1: closing in
++					std::vector<SimCraft*> all, going;
++					for (auto &t : f)
++						if (t.joe != a.joe && alive(t) && !t.disabled) { all.push_back(&t); if (t.going()) going.push_back(&t); }
++					if (all.empty()) continue;
++					// the Joes go for Cobra's cargo plane first, then the weakest; Cobra shoots whoever is near
++					SimCraft *t = all[RNG::generate(0, (int)all.size() - 1)];
++					if (a.joe)
++					{
++						const auto &pool = going.empty() ? all : going;
++						t = pool.front();
++						for (auto *x : pool) if (x->hp < t->hp) t = x;
++					}
++					// keeping up with a plane that is running costs the TU to follow it
++					const int keep = (t->going() || t->leaveAt) ? t->tu * 4 / 5 : dogfightMoveTU;
++					const int shots = std::max(1, std::min(maxShots, (a.tu - keep) / a.tuSnap));
++					for (int k = 0; k < shots && a.bursts > 0 && alive(*t) && !t->disabled; ++k)
++					{
++						--a.bursts;
++						if (!RNG::percent(simChance(mod, a, *t))) continue;
++						t->hp -= std::max(1, RNG::generate(a.power * 75 / 100, a.power * 125 / 100) - t->armor);
++						if (t->systemHits > 0 && RNG::percent(30) && ++t->engines >= t->systemHits) t->disabled = true;
++						if (t->hp <= 0) t->down = true;
++					}
++				}
++			}
++			// the end of the round: who gets through, who breaks for the edge (and takes a few rounds to reach it)
++			for (auto &a : f)
++			{
++				if (!alive(a) || a.disabled || a.joe) continue;
++				const int pct = a.hp * 100 / a.hpMax;
++				if (a.going() && round * std::max(1, a.tu / 4) >= crossTiles) a.gone = true;
++				else if (!a.going() && (pct < (a.role == "strike" ? 40 : R.noAttackBelow) || a.bursts <= 0))
++				{
++					if (!a.leaveAt) a.leaveAt = round + breakRounds;
++					if (round >= a.leaveAt) a.gone = true;
++				}
++			}
++			bool cobraLeft = false, joeLeft = false;
++			for (auto &a : f)
++			{
++				if (!alive(a)) continue;
++				if (a.joe && canShoot(a)) joeLeft = true;
++				if (!a.joe && !a.disabled) cobraLeft = true;
++			}
++			if (!cobraLeft || !joeLeft) break;
++		}
++		bool win = true;
++		for (auto &a : f) if (!a.joe && !a.down && !a.disabled) win = false;
++		if (win) ++wins;
++	}
++	return wins * 100 / std::max(1, runs);
 +}
 +
 +void finish(Game *game)
@@ -2227,6 +2405,11 @@ index 0000000..7120f32
 +		}
 +	}
 +	(void)AF;
++	if (save->getVanStop("afAuto"))
++	{
++		if (Options::battleXcomSpeedOrig >= 1) { Options::battleXcomSpeed = Options::battleXcomSpeedOrig; Options::battleXcomSpeedOrig = -1; }
++		if (Options::battleAlienSpeedOrig >= 1) { Options::battleAlienSpeed = Options::battleAlienSpeedOrig; Options::battleAlienSpeedOrig = -1; }
++	}
 +	// close the battle the way a preview closes (no debriefing: nothing on the ground to recover)
 +	Options::baseXResolution = Options::baseXGeoscape;
 +	Options::baseYResolution = Options::baseYGeoscape;
@@ -2246,10 +2429,10 @@ index 0000000..7120f32
 +}
 diff --git a/src/Battlescape/AirFight.h b/src/Battlescape/AirFight.h
 new file mode 100644
-index 0000000..ba9fd5d
+index 0000000..50ba184
 --- /dev/null
 +++ b/src/Battlescape/AirFight.h
-@@ -0,0 +1,60 @@
+@@ -0,0 +1,67 @@
 +#pragma once
 +/*
 + * G.I. Joe: air fights on the battle engine (claude/DOGFIGHT_DESIGN_v1.md, claude/AIR_SEA_BUILD_PLAN_v1.md).
@@ -2301,17 +2484,24 @@ index 0000000..ba9fd5d
 +	bool onOuterRing(const SavedBattleGame *save, const BattleUnit *unit);
 +	/// has this aircraft left the fight (disengaged, escaped at its exit edge)
 +	bool hasLeft(const SavedBattleGame *save, const BattleUnit *unit);
++	/// take an aircraft out of the fight (DISENGAGE, or its exit edge); it can't come back
++	void leave(SavedBattleGame *save, BattleUnit *unit);
++	/// the player's DISENGAGE (design section 2): "" if it left, else why not
++	std::string disengage(SavedBattleGame *save, BattleUnit *unit);
 +	/// the computer's pilot (design section 9); true when it has set the action
 +	bool aiThink(SavedBattleGame *save, BattleUnit *unit, BattleAction *action);
 +	/// end of a side's turn: its aircraft on the outer ring leave the fight
 +	void endTurnStep(SavedBattleGame *save);
++	/// the odds (0-100) of a Joe win, from a fast abstract simulation of many fights (design section 8);
++	/// -1 if it can't be worked out. An estimate: the real fight is played by the battle AI and can differ.
++	int odds(const Mod *mod, const std::vector<Craft*> &crafts, const Ufo *ufo, int runs = 400);
 +	/// the battle is over: craft damage, pilots, Cobra aircraft shot down or got away, back to the world map
 +	void finish(Game *game);
 +}
 +
 +}
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..b6dddc8 100644
+index b7e1111..c78bbf9 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
 @@ -16,6 +16,8 @@
@@ -2541,7 +2731,7 @@ index b7e1111..b6dddc8 100644
 +void BattlescapeGame::retreatStep()
 +{
 +	const Mod::RetreatRules &rr = getMod()->getRetreatRules();
-+	if (!rr.on) return;
++	if (!rr.on || AirFight::isAirFight(getMod(), _save)) return; // an air fight has its own breaking-off rules
 +	auto never = [&](BattleUnit *u) { return std::find(rr.neverRetreat.begin(), rr.neverRetreat.end(), u->getType()) != rr.neverRetreat.end(); };
 +	auto escaped = [&](BattleUnit *u) { return _save->getVanStop("esc:" + std::to_string(u->getId())) != 0; };
 +	int total = 0, down = 0, standing = 0, seenJoes = 0;
@@ -2648,7 +2838,7 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..19b1426 100644
+index 1951ba7..38f73a9 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -16,6 +16,7 @@
@@ -2679,7 +2869,7 @@ index 1951ba7..19b1426 100644
  		}
  		else
  		{
-@@ -961,6 +963,161 @@ void BattlescapeGenerator::run()
+@@ -961,6 +963,162 @@ void BattlescapeGenerator::run()
  	}
  }
  
@@ -2690,7 +2880,7 @@ index 1951ba7..19b1426 100644
 + * A Cobra plane that is going somewhere crosses the map from a side edge; the Joes cut in from the south.
 + * A Cobra plane that came to fight starts about 25 tiles off, facing them.
 + */
-+void BattlescapeGenerator::runAirFight(const std::vector<Craft*> &crafts, Ufo *ufo, const std::string &terrain, bool joeTransportHunted)
++void BattlescapeGenerator::runAirFight(const std::vector<Craft*> &crafts, Ufo *ufo, const std::string &terrain, bool joeTransportHunted, bool autoPlay)
 +{
 +	Tile::destroyedLog.clear();
 +	const Mod *mod = _game->getMod();
@@ -2778,10 +2968,11 @@ index 1951ba7..19b1426 100644
 +			const int hp = u->getBaseStats()->health;
 +			u->setHealthDirect(std::max(1, hp - hp * craft->getDamage() / craft->getDamageMax()));
 +		}
-+		if (getenv("OXCE_AIRFIGHT_AUTO"))
++		if (autoPlay || getenv("OXCE_AIRFIGHT_AUTO"))
 +		{
-+			// the computer flies the Joes too (test rig; the headless auto-resolve will use the same)
++			// AUTO-RESOLVE (design section 8): the computer flies the Joes too, one real battle, no screen
 +			_save->setVanStop("afAuto", 1);
++			if (!autoPlay) _save->setVanStop("afAutoShow", 1); // the test rig watches it
 +			u->setAIModule(new AIModule(_save, u, 0));
 +		}
 +		const auto *jr = mod->getAirCraft(rule->getType());
@@ -2841,7 +3032,7 @@ index 1951ba7..19b1426 100644
  /**
   * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
   */
-@@ -1669,6 +1826,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +1827,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -2931,7 +3122,7 @@ index 1951ba7..19b1426 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +1936,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +1937,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -3000,7 +3191,7 @@ index 1951ba7..19b1426 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2021,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2022,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -3017,7 +3208,7 @@ index 1951ba7..19b1426 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2050,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2051,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -3060,7 +3251,7 @@ index 1951ba7..19b1426 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -2081,8 +2422,14 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,8 +2423,14 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -3077,7 +3268,7 @@ index 1951ba7..19b1426 100644
  	unsigned int terrainObjectID;
  
  	// Load file
-@@ -2141,11 +2488,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2489,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -3092,7 +3283,7 @@ index 1951ba7..19b1426 100644
  			{
  				int mapDataSetID = mapDataSetOffset;
 diff --git a/src/Battlescape/BattlescapeGenerator.h b/src/Battlescape/BattlescapeGenerator.h
-index a0bc8b3..3cb4c91 100644
+index a0bc8b3..60195c9 100644
 --- a/src/Battlescape/BattlescapeGenerator.h
 +++ b/src/Battlescape/BattlescapeGenerator.h
 @@ -127,6 +127,8 @@ private:
@@ -3110,12 +3301,12 @@ index a0bc8b3..3cb4c91 100644
  	void run();
 +	/// G.I. Joe: sets up an air fight - the sky over this terrain, the Joe craft and the Cobra aircraft as units
 +	/// (DOGFIGHT_DESIGN_v1 section 2). joeTransportHunted: Cobra came for a Joe transport, so the Joe crosses.
-+	void runAirFight(const std::vector<Craft*> &crafts, Ufo *ufo, const std::string &terrain, bool joeTransportHunted);
++	void runAirFight(const std::vector<Craft*> &crafts, Ufo *ufo, const std::string &terrain, bool joeTransportHunted, bool autoPlay = false);
  	/// Gets craft position.
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..91535b2 100644
+index 7cd4941..b0be516 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -16,6 +16,7 @@
@@ -3143,6 +3334,15 @@ index 7cd4941..91535b2 100644
  
  	_numLayers = new NumberText(3, 5, x + 232, y + 6);
  	_rank = new Surface(26, 23, x + 107, y + 33);
+@@ -465,7 +467,7 @@ BattlescapeState::BattlescapeState() :
+ 
+ 	_btnKneel->onMouseClick((ActionHandler)&BattlescapeState::btnKneelClick);
+ 	_btnKneel->onKeyboardPress((ActionHandler)&BattlescapeState::btnKneelClick, Options::keyBattleKneel);
+-	_btnKneel->setTooltip("STR_KNEEL");
++	_btnKneel->setTooltip(AirFight::isAirFight(_game->getMod(), _save) ? "STR_AF_DISENGAGE" : "STR_KNEEL");
+ 	_btnKneel->onMouseIn((ActionHandler)&BattlescapeState::txtTooltipIn);
+ 	_btnKneel->onMouseOut((ActionHandler)&BattlescapeState::txtTooltipOut);
+ 	_btnKneel->allowToggleInversion();
 @@ -724,6 +726,389 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
@@ -3549,7 +3749,28 @@ index 7cd4941..91535b2 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -2172,7 +2559,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -1215,6 +1602,20 @@ void BattlescapeState::btnKneelClick(Action *)
+ 	if (allowButtons())
+ 	{
+ 		BattleUnit *bu = _save->getSelectedUnit();
++		if (bu && AirFight::isAirFight(_game->getMod(), _save))
++		{
++			// an air or sea fight: the kneel button is DISENGAGE (an aircraft can't kneel)
++			const std::string why = AirFight::disengage(_save, bu);
++			if (!why.empty()) { warning(why); return; }
++			warning("STR_AF_DISENGAGED");
++			_save->getTileEngine()->recalculateFOV();
++			bool anyLeft = false;
++			for (auto *u : *_save->getUnits())
++				if (u->getOriginalFaction() == FACTION_PLAYER && !u->isOut() && u->getTile() && !AirFight::hasLeft(_save, u)) anyLeft = true;
++			if (anyLeft) selectNextPlayerUnit(false, false);
++			else { _save->setSelectedUnit(nullptr); _battleGame->requestEndTurn(false); }
++			return;
++		}
+ 		if (bu)
+ 		{
+ 			_battleGame->kneel(bu);
+@@ -2172,7 +2573,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -3558,7 +3779,7 @@ index 7cd4941..91535b2 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +2779,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +2793,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -3566,7 +3787,7 @@ index 7cd4941..91535b2 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -3621,6 +4009,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4023,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -3579,7 +3800,7 @@ index 7cd4941..91535b2 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +4446,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4460,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -4567,7 +4788,7 @@ index cea8e65..90ec9a6 100644
  	}
  
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..3138dc8 100644
+index 3665cd1..3327e10 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
 @@ -17,6 +17,7 @@
@@ -4638,7 +4859,21 @@ index 3665cd1..3138dc8 100644
  
  	Tile *t;
  
-@@ -362,6 +380,25 @@ void Map::draw()
+@@ -356,12 +374,38 @@ void Map::draw()
+ 		}
+ 	}
+ 
+-	if ((_save->getSelectedUnit() && _save->getSelectedUnit()->getVisible()) || _unitDying || _save->getSide() == FACTION_PLAYER || _save->getDebugMode() || _projectileInFOV || _explosionInFOV)
++	// an auto-resolved air fight is played with no screen: the panel says so (design section 8)
++	const bool airResolving = _save->getVanStop("afAuto") && !_save->getVanStop("afAutoShow") && !_save->getDebugMode();
++	if (airResolving && !_resolvingText)
++	{
++		_message->setText(_game->getLanguage()->getString("STR_AF_RESOLVING"), "");
++		_resolvingText = true;
++	}
++	if (!airResolving && ((_save->getSelectedUnit() && _save->getSelectedUnit()->getVisible()) || _unitDying || _save->getSide() == FACTION_PLAYER || _save->getDebugMode() || _projectileInFOV || _explosionInFOV))
+ 	{
+ 		drawTerrain(this);
  	}
  	else
  	{
@@ -4664,7 +4899,7 @@ index 3665cd1..3138dc8 100644
  		_message->blit(this->getSurface());
  	}
  }
-@@ -466,6 +503,29 @@ int getArrowBobForFrame(int frame)
+@@ -466,6 +510,29 @@ int getArrowBobForFrame(int frame)
  	return ArrowBobOffsets[frame % 8];
  }
  
@@ -4694,7 +4929,7 @@ index 3665cd1..3138dc8 100644
  int getShadePulseForFrame(int shade, int frame)
  {
  	if (shade > 7) shade = 7;
-@@ -488,9 +548,9 @@ int getShadePulseForFrame(int shade, int frame)
+@@ -488,9 +555,9 @@ int getShadePulseForFrame(int shade, int frame)
   */
  void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position currTileScreenPosition, bool topLayer, BattleUnit* movingUnit)
  {
@@ -4707,7 +4942,7 @@ index 3665cd1..3138dc8 100644
  
  	if (!unitTile)
  	{
-@@ -940,9 +1000,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -940,9 +1007,9 @@ void Map::drawTerrain(Surface *surface)
  					if (tmpSurface)
  					{
  						if (tile->getObstacle(O_FLOOR))
@@ -4719,7 +4954,7 @@ index 3665cd1..3138dc8 100644
  					}
  
  					auto* unit = tile->getUnit();
-@@ -1001,9 +1061,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1001,9 +1068,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_WESTWALL, tile);
  							if (tile->getObstacle(O_WESTWALL))
@@ -4731,7 +4966,7 @@ index 3665cd1..3138dc8 100644
  						}
  						// Draw north wall
  						tmpSurface = tile->getSprite(O_NORTHWALL);
-@@ -1011,9 +1071,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1011,9 +1078,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_NORTHWALL, tile);
  							if (tile->getObstacle(O_NORTHWALL))
@@ -4743,7 +4978,7 @@ index 3665cd1..3138dc8 100644
  						}
  						// Draw object
  						tmpSurface = tile->getSprite(O_OBJECT);
-@@ -1022,9 +1082,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1022,9 +1089,9 @@ void Map::drawTerrain(Surface *surface)
  							if (tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -4755,7 +4990,7 @@ index 3665cd1..3138dc8 100644
  							}
  						}
  						// draw an item on top of the floor (if any)
-@@ -1033,7 +1093,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1033,7 +1100,7 @@ void Map::drawTerrain(Surface *surface)
  						{
  							itemSprite.draw(item,
  								screenPosition.x,
@@ -4764,7 +4999,7 @@ index 3665cd1..3138dc8 100644
  								tileShade
  							);
  							if (_anyIndicator)
-@@ -1043,30 +1103,30 @@ void Map::drawTerrain(Surface *surface)
+@@ -1043,30 +1110,30 @@ void Map::drawTerrain(Surface *surface)
  								{
  									if (_burnIndicator && itemUnit->getFire() > 0)
  									{
@@ -4803,7 +5038,7 @@ index 3665cd1..3138dc8 100644
  											tileShade);
  									}
  								}
-@@ -1292,13 +1352,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1292,13 +1359,13 @@ void Map::drawTerrain(Surface *surface)
  							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(11);
  							if (tmpSurface)
  							{
@@ -4819,7 +5054,7 @@ index 3665cd1..3138dc8 100644
  						}
  					}
  
-@@ -1310,9 +1370,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1310,9 +1377,9 @@ void Map::drawTerrain(Surface *surface)
  							if (!tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -4831,7 +5066,7 @@ index 3665cd1..3138dc8 100644
  							}
  						}
  					}
-@@ -1528,7 +1588,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1528,7 +1595,7 @@ void Map::drawTerrain(Surface *surface)
  
  								_txtAccuracy->setText(ss.str());
  								_txtAccuracy->draw();
@@ -4840,7 +5075,7 @@ index 3665cd1..3138dc8 100644
  							}
  						}
  						else if (_camera->getViewLevel() > itZ)
-@@ -1551,7 +1611,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1551,7 +1618,7 @@ void Map::drawTerrain(Surface *surface)
  									_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::red - 1) - 1);
  									_txtAccuracy->setText("0%");
  									_txtAccuracy->draw();
@@ -4849,7 +5084,7 @@ index 3665cd1..3138dc8 100644
  								}
  							}
  							if (!ignore)
-@@ -1582,7 +1642,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1582,7 +1649,7 @@ void Map::drawTerrain(Surface *surface)
  								_numWaypid->setValue(waypid);
  								_numWaypid->setBordered(true); // OXCE, not configurable
  								_numWaypid->draw();
@@ -4858,7 +5093,7 @@ index 3665cd1..3138dc8 100644
  
  								waypXOff += waypid > 9 ? 10 : 6; // OXCE
  								if (waypXOff >= 26)
-@@ -1621,7 +1681,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1621,7 +1688,7 @@ void Map::drawTerrain(Surface *surface)
  						tile = _save->getTile(mapPosition);
  						if (!tile || !tile->isDiscovered(O_FLOOR) || tile->getPreview() == -1)
  							continue;
@@ -4867,7 +5102,7 @@ index 3665cd1..3138dc8 100644
  						if (_previewSettingArrows)
  						{
  							if (itZ > 0 && tile->hasNoFloor(_save))
-@@ -1629,14 +1689,14 @@ void Map::drawTerrain(Surface *surface)
+@@ -1629,14 +1696,14 @@ void Map::drawTerrain(Surface *surface)
  								tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(23);
  								if (tmpSurface)
  								{
@@ -4884,7 +5119,7 @@ index 3665cd1..3138dc8 100644
  							}
  						}
  
-@@ -1645,16 +1705,17 @@ void Map::drawTerrain(Surface *surface)
+@@ -1645,16 +1712,17 @@ void Map::drawTerrain(Surface *surface)
  							int off = tile->getTUMarker() > 9 ? 5 : 3;
  							int offE = tile->getEnergyMarker() > 9 ? 5 : 3;
  							int mcolor = _previewSettingArrows ? 0 : tile->getMarkerColor();
@@ -4905,7 +5140,7 @@ index 3665cd1..3138dc8 100644
  								}
  							}
  							if (_previewSettingTu)
-@@ -1664,16 +1725,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1664,16 +1732,16 @@ void Map::drawTerrain(Surface *surface)
  								if (_previewSettingEnergy)
  								{
  									// TU
@@ -4925,7 +5160,7 @@ index 3665cd1..3138dc8 100644
  								}
  							}
  							else if (_previewSettingEnergy)
-@@ -1681,7 +1742,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1681,7 +1749,7 @@ void Map::drawTerrain(Surface *surface)
  								// only Energy
  								_numWaypid->setValue(tile->getEnergyMarker());
  								_numWaypid->draw();
@@ -4934,7 +5169,7 @@ index 3665cd1..3138dc8 100644
  							}
  						}
  					}
-@@ -1702,16 +1763,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1702,16 +1770,16 @@ void Map::drawTerrain(Surface *surface)
  		Position offset = calculateWalkingOffset(selectedUnit).ScreenOffset;
  		if (selectedUnit->isBigUnit())
  		{
@@ -4955,7 +5190,7 @@ index 3665cd1..3138dc8 100644
  		}
  	}
  
-@@ -1732,26 +1793,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -1732,26 +1800,26 @@ void Map::drawTerrain(Surface *surface)
  				//calculateWalkingOffset(myUnit, &offset);
  				if (myUnit->isBigUnit())
  				{
@@ -4987,7 +5222,7 @@ index 3665cd1..3138dc8 100644
  						0);
  				}
  				else if (customMarker)
-@@ -1760,7 +1821,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1760,7 +1828,7 @@ void Map::drawTerrain(Surface *surface)
  						surface,
  						_arrow,
  						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
@@ -4996,7 +5231,7 @@ index 3665cd1..3138dc8 100644
  						0,
  						false,
  						_isTFTD ? ArrowColorsTFTD[myUnit->getCustomMarker() % 4] : ArrowColorsUFO[myUnit->getCustomMarker() % 4]);
-@@ -1779,11 +1840,11 @@ void Map::drawTerrain(Surface *surface)
+@@ -1779,11 +1847,11 @@ void Map::drawTerrain(Surface *surface)
  			{
  				_camera->convertMapToScreen(pos, &screenPosition);
  				screenPosition += _camera->getMapOffset();
@@ -5010,7 +5245,7 @@ index 3665cd1..3138dc8 100644
  					0);
  			}
  		}
-@@ -1823,12 +1884,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1823,12 +1891,13 @@ void Map::drawTerrain(Surface *surface)
  				else if (explosion->isHit())
  				{
  					tmpSurface = _game->getMod()->getSurfaceSet("HIT.PCK")->getFrame(explosion->getCurrentFrame());
@@ -5026,7 +5261,7 @@ index 3665cd1..3138dc8 100644
  				}
  			}
  		}
-@@ -2023,7 +2085,7 @@ void Map::setSelectorPosition(int mx, int my)
+@@ -2023,7 +2092,7 @@ void Map::setSelectorPosition(int mx, int my)
  {
  	int oldX = _selectorX, oldY = _selectorY;
  
@@ -5035,7 +5270,7 @@ index 3665cd1..3138dc8 100644
  
  	if (oldX != _selectorX || oldY != _selectorY)
  	{
-@@ -2267,6 +2329,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2267,6 +2336,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
  	}
  	result.ScreenOffset.y += result.TerrainLevelOffset;
@@ -5044,7 +5279,7 @@ index 3665cd1..3138dc8 100644
  	return result;
  }
  
-@@ -2506,9 +2570,10 @@ void Map::refreshSelectorPosition()
+@@ -2506,9 +2577,10 @@ void Map::refreshSelectorPosition()
  void Map::setHeight(int height)
  {
  	Surface::setHeight(height);
@@ -5058,7 +5293,7 @@ index 3665cd1..3138dc8 100644
  }
  
  /**
-@@ -2519,7 +2584,7 @@ void Map::setWidth(int width)
+@@ -2519,7 +2591,7 @@ void Map::setWidth(int width)
  {
  	int dX = width - getWidth();
  	Surface::setWidth(width);
@@ -5068,10 +5303,18 @@ index 3665cd1..3138dc8 100644
  
  /**
 diff --git a/src/Battlescape/Map.h b/src/Battlescape/Map.h
-index 0fdf2ca..716f5c7 100644
+index 0fdf2ca..3ee0323 100644
 --- a/src/Battlescape/Map.h
 +++ b/src/Battlescape/Map.h
-@@ -124,6 +124,8 @@ public:
+@@ -60,6 +60,7 @@ struct UnitWalkingOffset
+ class Map : public InteractiveSurface
+ {
+ private:
++	bool _resolvingText = false; // G.I. Joe: the auto-resolve panel's text is set
+ 	static const int SCROLL_INTERVAL = 15;
+ 	static const int FADE_INTERVAL = 23;
+ 	static const int NIGHT_VISION_SHADE = 4;
+@@ -124,6 +125,8 @@ public:
  	void think() override;
  	/// Draws the surface.
  	void draw() override;
@@ -5081,13 +5324,14 @@ index 0fdf2ca..716f5c7 100644
  	/// Sets the palette.
  	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
 diff --git a/src/Battlescape/NextTurnState.cpp b/src/Battlescape/NextTurnState.cpp
-index d12de83..4162b52 100644
+index d12de83..09c32ab 100644
 --- a/src/Battlescape/NextTurnState.cpp
 +++ b/src/Battlescape/NextTurnState.cpp
-@@ -17,9 +17,11 @@
+@@ -17,9 +17,12 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "NextTurnState.h"
++#include "AirFight.h"
 +#include <algorithm>
  #include "../Engine/Game.h"
  #include "../Engine/Options.h"
@@ -5096,7 +5340,7 @@ index d12de83..4162b52 100644
  #include "../Engine/RNG.h"
  #include "../Engine/Screen.h"
  #include "../Mod/AlienRace.h"
-@@ -38,6 +40,11 @@
+@@ -38,6 +41,11 @@
  #include "../Engine/Action.h"
  #include "../Savegame/BattleUnit.h"
  #include "../Savegame/Node.h"
@@ -5108,7 +5352,7 @@ index d12de83..4162b52 100644
  #include "../Savegame/SavedBattleGame.h"
  #include "../Savegame/SavedGame.h"
  #include "../Savegame/HitLog.h"
-@@ -99,15 +106,19 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -99,15 +107,19 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  	// Create objects
  	int y = state->getMap()->getMessageY();
  
@@ -5134,7 +5378,7 @@ index d12de83..4162b52 100644
  	_bg = new Surface(_game->getScreen()->getWidth(), _game->getScreen()->getWidth(), 0, 0);
  
  	// Set palette
-@@ -156,11 +167,20 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -156,11 +168,20 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  	_window->setColor(Palette::blockOffset(0)-1);
  	_window->setHighContrast(true);
  	_window->setBackground(_game->getMod()->getSurface(_battleGame->getHiddenMovementBackground()));
@@ -5156,7 +5400,7 @@ index d12de83..4162b52 100644
  	_txtMessageReinforcements->setWordWrap(true);
  	_txtMessageReinforcements->setHighContrast(true);
  	_txtMessageReinforcements->setColor(_game->getMod()->getInterface("inventory")->getElement("weight")->color2); // red
-@@ -292,6 +312,11 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -292,6 +313,11 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  	}
  
  	std::string messageReinforcements;
@@ -5168,7 +5412,7 @@ index d12de83..4162b52 100644
  	bool allowReinforcements = _battleGame->getSide() == FACTION_HOSTILE && _battleGame->getTurn() > 0;
  	if (_battleGame->getSide() == FACTION_PLAYER && _battleGame->getTurn() == 0)
  	{
-@@ -306,6 +331,11 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -306,10 +332,17 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  			_txtMessageReinforcements->setText(messageReinforcements);
  		}
  	}
@@ -5178,9 +5422,17 @@ index d12de83..4162b52 100644
 +		_txtMessageReinforcements->setText(messageReinforcements);
 +	}
  
- 	if (Options::skipNextTurnScreen && message.empty() && messageReinforcements.empty())
+-	if (Options::skipNextTurnScreen && message.empty() && messageReinforcements.empty())
++	// an auto-resolved air fight runs itself: no waiting on a click between turns
++	const bool autoAir = _battleGame->getVanStop("afAuto") && AirFight::isAirFight(_game->getMod(), _battleGame);
++	if (autoAir || (Options::skipNextTurnScreen && message.empty() && messageReinforcements.empty()))
  	{
-@@ -612,7 +642,16 @@ bool NextTurnState::determineReinforcements()
+-		_timer = new Timer(NEXT_TURN_DELAY);
++		_timer = new Timer(autoAir ? 100 : NEXT_TURN_DELAY);
+ 		_timer->onTimer((StateHandler)&NextTurnState::close);
+ 		_timer->start();
+ 	}
+@@ -612,7 +645,16 @@ bool NextTurnState::determineReinforcements()
  			{
  				continue;
  			}
@@ -5198,7 +5450,7 @@ index d12de83..4162b52 100644
  			{
  				if (!_battleGame->allObjectivesDestroyed())
  				{
-@@ -855,6 +894,7 @@ bool NextTurnState::determineReinforcements()
+@@ -855,6 +897,7 @@ bool NextTurnState::determineReinforcements()
  		{
  			// remember success
  			_battleGame->getReinforcementsMemory()[wave.type] += 1;
@@ -5206,7 +5458,7 @@ index d12de83..4162b52 100644
  
  			if (!wave.briefing.title.empty())
  			{
-@@ -908,6 +948,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
+@@ -908,6 +951,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
  		quantity += RNG::generate(0, dd.dQty);
  		quantity += RNG::generate(0, dd.extraQty);
  
@@ -5225,7 +5477,7 @@ index d12de83..4162b52 100644
  		for (int i = 0; i < quantity; ++i)
  		{
  			std::string alienName = dd.customUnitType.empty() ? race->getMember(dd.alienRank) : dd.customUnitType;
-@@ -915,6 +967,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
+@@ -915,6 +970,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
  			bool civilian = dd.percentageOutsideUfo != 0; // small misuse of an unused attribute ;) pls don't kill me
  			BattleUnit* unit = addReinforcement(wave, rule, dd.alienRank, civilian);
  			size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(month).at(RNG::generate(0, 9)));
@@ -5244,7 +5496,7 @@ index d12de83..4162b52 100644
  			if (unit)
  			{
  				success = true;
-@@ -1140,4 +1204,368 @@ bool NextTurnState::placeReinforcementNearFriend(BattleUnit *unit)
+@@ -1140,4 +1207,369 @@ bool NextTurnState::placeReinforcementNearFriend(BattleUnit *unit)
  	return false;
  }
  
@@ -5545,6 +5797,7 @@ index d12de83..4162b52 100644
 +	const Mod* mod = _game->getMod();
 +	SavedBattleGame& sb = *_battleGame;
 +	if (!mod->isCaptureOn() || sb.getTurn() < 1) return "";
++	if (AirFight::isAirFight(mod, &sb)) return ""; // aircraft and ships don't put their hands up
 +	std::string msg;
 +	auto add = [&](const std::string& s) { msg = msg.empty() ? s : msg + " " + s; };
 +	auto isNear = [](const BattleUnit* a, const BattleUnit* b, int range)
@@ -6169,7 +6422,7 @@ index 8497877..78e0448 100644
  	/// Drop item on ground.
  	void itemDrop(Tile *t, BattleItem *item, bool updateLight);
 diff --git a/src/Battlescape/UnitSprite.cpp b/src/Battlescape/UnitSprite.cpp
-index 8fa87f8..30212b4 100644
+index 8fa87f8..df21cab 100644
 --- a/src/Battlescape/UnitSprite.cpp
 +++ b/src/Battlescape/UnitSprite.cpp
 @@ -17,6 +17,9 @@
@@ -6243,7 +6496,7 @@ index 8fa87f8..30212b4 100644
  	// blit order depends on unit direction, and whether we are holding a 2 handed weapon.
  	switch (unitDir)
  	{
-@@ -643,6 +666,120 @@ void UnitSprite::drawRoutine0()
+@@ -643,6 +666,140 @@ void UnitSprite::drawRoutine0()
  }
  
  
@@ -6300,6 +6553,26 @@ index 8fa87f8..30212b4 100644
 +{
 +	Part body{ BODYPART_TORSO }, itemR{ BODYPART_ITEM_RIGHTHAND }, itemL{ BODYPART_ITEM_LEFTHAND };
 +	const int dir = _unit->getDirection();
++	if (_unit->getArmor()->getSize() == 2)
++	{
++		// G.I. Joe 2x2 aircraft (a transport, a bomber; DOGFIGHT_DESIGN_v1 section 3): one picture for the whole
++		// body in 256 x 320 cells (64 x 80 at base size), drawn by every one of the four parts and clipped to
++		// each part's own tile by the map, so together they make the whole. Frames: 0-7 the eight headings,
++		// then 8 + heading * 8 + f the eight death frames. No legs, no walk cycle.
++		int frame = dir;
++		if (_unit->getStatus() == STATUS_COLLAPSING)
++		{
++			const int n = std::max(1, _unit->getArmor()->getDeathFrames());
++			frame = 8 + dir * 8 + std::min(7, _unit->getFallingPhase() * 8 / n);
++		}
++		selectUnit(body, frame, 0);
++		// the part's tile from the unit's first tile: x+1 is (+16,+8) on screen, y+1 is (-16,+8)
++		const int ox = _part % 2, oy = _part / 2;
++		body.offX = -16 - 16 * ox + 16 * oy;
++		body.offY = -20 - 8 * ox - 8 * oy - 4;
++		blitBody(body);
++		return;
++	}
 +	// G.I. Joe: the rendered clips are real-time motion, so they play slower than X-COM's
 +	// sprites did. Idle: one frame every 4 map ticks (was 2). Walk: a clip is a full stride
 +	// (two steps), so it spans two tiles: the first half on odd steps, the second on even.
@@ -10625,10 +10898,10 @@ index 86bd62e..46cac60 100644
  	/// Gets a particular frame from the set.
 diff --git a/src/Geoscape/AirFightChoiceState.cpp b/src/Geoscape/AirFightChoiceState.cpp
 new file mode 100644
-index 0000000..1ab7760
+index 0000000..efee3af
 --- /dev/null
 +++ b/src/Geoscape/AirFightChoiceState.cpp
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,79 @@
 +/*
 + * G.I. Joe: Fight or Auto-resolve (DOGFIGHT_DESIGN_v1 section 1, 13).
 + */
@@ -10639,17 +10912,21 @@ index 0000000..1ab7760
 +#include "../Interface/TextButton.h"
 +#include "../Interface/Window.h"
 +#include "../Interface/Text.h"
++#include "../Interface/Bar.h"
++#include "../Engine/Palette.h"
 +#include "GeoscapeState.h"
 +
 +namespace OpenXcom
 +{
 +
-+AirFightChoiceState::AirFightChoiceState(GeoscapeState *state, const std::string &title, const std::string &body, bool canAuto) : _state(state)
++AirFightChoiceState::AirFightChoiceState(GeoscapeState *state, const std::string &title, const std::string &body, bool canAuto, int odds) : _state(state)
 +{
 +	_screen = false;
 +	_window = new Window(this, 256, 160, 32, 20, POPUP_BOTH);
 +	_txtTitle = new Text(236, 17, 42, 30);
-+	_txtBody = new Text(236, 92, 42, 50);
++	_txtBody = new Text(236, 72, 42, 50);
++	_txtOdds = new Text(236, 9, 42, 124);
++	_barOdds = new Bar(200, 6, 60, 136);
 +	_btnFight = new TextButton(100, 18, canAuto ? 48 : 110, 150);
 +	_btnAuto = new TextButton(100, 18, 172, 150);
 +
@@ -10657,6 +10934,8 @@ index 0000000..1ab7760
 +	add(_window, "window", "craftError");
 +	add(_txtTitle, "text1", "craftError");
 +	add(_txtBody, "text1", "craftError");
++	add(_txtOdds, "text1", "craftError");
++	add(_barOdds);
 +	add(_btnFight, "button", "craftError");
 +	add(_btnAuto, "button", "craftError");
 +	centerAllSurfaces();
@@ -10668,6 +10947,18 @@ index 0000000..1ab7760
 +	_txtBody->setAlign(ALIGN_CENTER);
 +	_txtBody->setWordWrap(true);
 +	_txtBody->setText(body);
++
++	// the odds (design section 8): red = the Joes ahead, blue = behind; the rest of the bar is Cobra's share
++	_txtOdds->setAlign(ALIGN_CENTER);
++	_txtOdds->setText(odds < 0 ? tr("STR_AF_ODDS_LATER") : tr("STR_AF_ODDS").arg(odds));
++	_barOdds->setScale(2.0);
++	_barOdds->setMax(100);
++	_barOdds->setColor(odds >= 50 ? 14 : 248); // the geoscape palette: red, blue
++	_barOdds->setBorderColor(odds >= 50 ? 14 : 248);
++	_barOdds->setValue(std::max(0, odds));
++	_barOdds->setValue2(0);
++	_barOdds->setSecondValueOnTop(false);
++	_barOdds->setVisible(odds >= 0);
 +
 +	_btnFight->setText(tr("STR_AF_FIGHT"));
 +	_btnFight->onMouseClick((ActionHandler)&AirFightChoiceState::btnFightClick);
@@ -10692,10 +10983,10 @@ index 0000000..1ab7760
 +}
 diff --git a/src/Geoscape/AirFightChoiceState.h b/src/Geoscape/AirFightChoiceState.h
 new file mode 100644
-index 0000000..88d3dda
+index 0000000..29cbe70
 --- /dev/null
 +++ b/src/Geoscape/AirFightChoiceState.h
-@@ -0,0 +1,30 @@
+@@ -0,0 +1,32 @@
 +#pragma once
 +/*
 + * G.I. Joe: Fight or Auto-resolve (DOGFIGHT_DESIGN_v1 section 1, 13).
@@ -10709,6 +11000,7 @@ index 0000000..88d3dda
 +class TextButton;
 +class Window;
 +class Text;
++class Bar;
 +class GeoscapeState;
 +
 +class AirFightChoiceState : public State
@@ -10717,9 +11009,10 @@ index 0000000..88d3dda
 +	GeoscapeState *_state;
 +	TextButton *_btnFight, *_btnAuto;
 +	Window *_window;
-+	Text *_txtTitle, *_txtBody;
++	Text *_txtTitle, *_txtBody, *_txtOdds;
++	Bar *_barOdds;
 +public:
-+	AirFightChoiceState(GeoscapeState *state, const std::string &title, const std::string &body, bool canAuto);
++	AirFightChoiceState(GeoscapeState *state, const std::string &title, const std::string &body, bool canAuto, int odds = -1);
 +	~AirFightChoiceState() = default;
 +	void btnFightClick(Action *action);
 +	void btnAutoClick(Action *action);
@@ -11624,21 +11917,22 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..b616a16 100644
+index 6b4e79d..170a008 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
-@@ -16,7 +16,10 @@
+@@ -16,7 +16,11 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
 +#include "AirFightChoiceState.h"
++#include "../Battlescape/AirFight.h"
  #include "GeoscapeState.h"
 +#include <cstdlib>
 +#include "../Engine/HiUI.h"
  #include <set>
  #include <sstream>
  #include <iomanip>
-@@ -35,6 +38,7 @@
+@@ -35,6 +39,7 @@
  #include "../Engine/Collections.h"
  #include "../Engine/Unicode.h"
  #include "Globe.h"
@@ -11646,7 +11940,7 @@ index 6b4e79d..b616a16 100644
  #include "../Interface/ComboBox.h"
  #include "../Interface/Text.h"
  #include "../Interface/TextButton.h"
-@@ -48,12 +52,14 @@
+@@ -48,12 +53,14 @@
  #include "../Mod/RuleCraft.h"
  #include "../Savegame/Ufo.h"
  #include "../Mod/RuleUfo.h"
@@ -11661,7 +11955,7 @@ index 6b4e79d..b616a16 100644
  #include "../Savegame/Soldier.h"
  #include "../Savegame/SoldierDiary.h"
  #include "../Menu/PauseState.h"
-@@ -69,6 +75,8 @@
+@@ -69,6 +76,8 @@
  #include "../Basescape/GlobalAlienContainmentState.h"
  #include "../Menu/CutsceneState.h"
  #include "../Menu/ErrorMessageState.h"
@@ -11670,7 +11964,7 @@ index 6b4e79d..b616a16 100644
  #include "GraphsState.h"
  #include "FundingState.h"
  #include "ExtendedGeoscapeLinksState.h"
-@@ -87,6 +95,7 @@
+@@ -87,6 +96,7 @@
  #include "DogfightErrorState.h"
  #include "DogfightExperienceState.h"
  #include "../Ufopaedia/Ufopaedia.h"
@@ -11678,7 +11972,7 @@ index 6b4e79d..b616a16 100644
  #include "../Savegame/ResearchProject.h"
  #include "ResearchCompleteState.h"
  #include "../Mod/RuleResearch.h"
-@@ -103,6 +112,7 @@
+@@ -103,6 +113,7 @@
  #include "../Savegame/ItemContainer.h"
  #include "../Savegame/MissionSite.h"
  #include "../Savegame/AlienBase.h"
@@ -11686,7 +11980,7 @@ index 6b4e79d..b616a16 100644
  #include "../Mod/RuleRegion.h"
  #include "MissionDetectedState.h"
  #include "AlienBaseState.h"
-@@ -157,41 +167,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -157,41 +168,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_bg->setX((_globe->getWidth() - _bg->getWidth()) / 2);
  	_bg->setY((_globe->getHeight() - _bg->getHeight()) / 2);
  
@@ -11870,7 +12164,7 @@ index 6b4e79d..b616a16 100644
  
  	int slackingIndicatorOffset = _game->getMod()->getInterface("geoscape")->getElement("slackingIndicator")->custom;
  	_txtSlacking = new Text(59, 17, screenWidth - 61, screenHeight / 2 - 100 + slackingIndicatorOffset);
-@@ -207,6 +329,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -207,6 +330,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_dogfightTimer = new Timer(Options::dogfightSpeed);
  
  	_txtDebug = new Text(254, 32, 0, 0);
@@ -11878,7 +12172,7 @@ index 6b4e79d..b616a16 100644
  	_cbxRegion = new ComboBox(this, 150, 16, 0, 36);
  	_cbxZone = new ComboBox(this, 48, 16, 154, 36);
  	_cbxArea = new ComboBox(this, 48, 16, 206, 36);
-@@ -251,6 +374,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -251,6 +375,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtMinSep, "text", "geoscape");
  	add(_txtSec, "text", "geoscape");
  	add(_txtWeekday, "text", "geoscape");
@@ -11889,7 +12183,7 @@ index 6b4e79d..b616a16 100644
  	add(_txtDay, "text", "geoscape");
  	add(_txtMonth, "text", "geoscape");
  	add(_txtYear, "text", "geoscape");
-@@ -258,6 +385,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -258,6 +386,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtTraining, "trainingIndicator", "geoscape");
  
  	add(_txtDebug, "text", "geoscape");
@@ -11897,7 +12191,7 @@ index 6b4e79d..b616a16 100644
  	add(_cbxRegion, "button", "geoscape");
  	add(_cbxZone, "button", "geoscape");
  	add(_cbxArea, "button", "geoscape");
-@@ -268,12 +396,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -268,12 +397,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	geobord->setX(_sidebar->getX() - geobord->getWidth() + _sidebar->getWidth());
  	geobord->setY(_sidebar->getY());
  	_sidebar->copy(geobord);
@@ -11925,7 +12219,7 @@ index 6b4e79d..b616a16 100644
  	_btnIntercept->onMouseClick((ActionHandler)&GeoscapeState::btnInterceptClick);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnInterceptClick, Options::keyGeoIntercept);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnUfoTrackerClick, Options::keyGeoUfoTracker);
-@@ -292,7 +434,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -292,7 +435,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnBases->setGeoscapeButton(true);
  
  	_btnGraphs->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -11934,7 +12228,7 @@ index 6b4e79d..b616a16 100644
  	_btnGraphs->onMouseClick((ActionHandler)&GeoscapeState::btnGraphsClick);
  	_btnGraphs->onKeyboardPress((ActionHandler)&GeoscapeState::btnGraphsClick, Options::keyGeoGraphs);
  	_btnGraphs->setGeoscapeButton(true);
-@@ -310,7 +452,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -310,7 +453,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnOptions->setGeoscapeButton(true);
  
  	_btnFunding->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -11943,7 +12237,7 @@ index 6b4e79d..b616a16 100644
  	_btnFunding->onMouseClick((ActionHandler)&GeoscapeState::btnFundingClick);
  	_btnFunding->onKeyboardPress((ActionHandler)&GeoscapeState::btnFundingClick, Options::keyGeoFunding);
  	_btnFunding->setGeoscapeButton(true);
-@@ -387,6 +529,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -387,6 +530,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -11952,7 +12246,7 @@ index 6b4e79d..b616a16 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -403,6 +547,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -403,6 +548,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_txtMinSep->setText(":");
  
  	_txtWeekday->setAlign(ALIGN_CENTER);
@@ -12005,7 +12299,7 @@ index 6b4e79d..b616a16 100644
  
  	_txtDay->setAlign(ALIGN_CENTER);
  
-@@ -427,6 +617,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -427,6 +618,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  		_txtSec->setX(_txtSec->getX()-10);
  	}
  
@@ -12051,7 +12345,7 @@ index 6b4e79d..b616a16 100644
  	_gameTimer->onTimer((StateHandler)&GeoscapeState::timeAdvance);
  	_gameTimer->start();
  
-@@ -512,7 +741,9 @@ void GeoscapeState::blit()
+@@ -512,7 +742,9 @@ void GeoscapeState::blit()
  	State::blit();
  	for (auto* dfs : _dogfights)
  	{
@@ -12062,7 +12356,7 @@ index 6b4e79d..b616a16 100644
  	}
  }
  
-@@ -705,13 +936,126 @@ void GeoscapeState::handle(Action *action)
+@@ -705,13 +937,126 @@ void GeoscapeState::handle(Action *action)
   * Updates the timer display and resets the palette
   * since it's bound to change on other screens.
   */
@@ -12189,7 +12483,7 @@ index 6b4e79d..b616a16 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -753,6 +1097,12 @@ void GeoscapeState::init()
+@@ -753,6 +1098,12 @@ void GeoscapeState::init()
  		determineAlienMissions();
  		_game->getSavedGame()->setFunds(_game->getSavedGame()->getFunds() - (_game->getSavedGame()->getBaseMaintenance() - _game->getSavedGame()->getBases()->front()->getPersonnelMaintenance()));
  	}
@@ -12202,7 +12496,7 @@ index 6b4e79d..b616a16 100644
  }
  
  /**
-@@ -835,6 +1185,10 @@ void GeoscapeState::timeDisplay()
+@@ -835,6 +1186,10 @@ void GeoscapeState::timeDisplay()
  	std::ostringstream ss5;
  	ss5 << _game->getSavedGame()->getTime()->getYear();
  	_txtYear->setText(ss5.str());
@@ -12213,7 +12507,7 @@ index 6b4e79d..b616a16 100644
  }
  
  /**
-@@ -1454,6 +1808,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +1809,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -12249,7 +12543,7 @@ index 6b4e79d..b616a16 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +1947,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +1948,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -12280,7 +12574,7 @@ index 6b4e79d..b616a16 100644
  							}
  						}
  					}
-@@ -1752,7 +2151,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2152,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -12289,7 +12583,7 @@ index 6b4e79d..b616a16 100644
  								}
  								else
  								{
-@@ -1858,6 +2257,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2258,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -12309,7 +12603,7 @@ index 6b4e79d..b616a16 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2296,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2297,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -12322,7 +12616,7 @@ index 6b4e79d..b616a16 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2126,8 +2544,18 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2126,8 +2545,18 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		{
  			ufo->setHyperDetected(true);
  		}
@@ -12342,7 +12636,7 @@ index 6b4e79d..b616a16 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2573,92 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2574,92 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -12435,7 +12729,7 @@ index 6b4e79d..b616a16 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +2705,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +2706,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -12525,7 +12819,7 @@ index 6b4e79d..b616a16 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +2950,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +2951,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -12534,7 +12828,7 @@ index 6b4e79d..b616a16 100644
  			}
  			else
  			{
-@@ -2395,6 +2992,286 @@ void GeoscapeState::time1Day()
+@@ -2395,6 +2993,286 @@ void GeoscapeState::time1Day()
  	Mod *mod = _game->getMod();
  	bool psiStrengthEval = (Options::psiStrengthEval && saveGame->isResearched(mod->getPsiRequirements()));
  
@@ -12821,7 +13115,7 @@ index 6b4e79d..b616a16 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3321,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3322,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -12844,7 +13138,7 @@ index 6b4e79d..b616a16 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2861,7 +3747,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +3748,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -12873,7 +13167,7 @@ index 6b4e79d..b616a16 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3867,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3868,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -12904,7 +13198,7 @@ index 6b4e79d..b616a16 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4053,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4054,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -12914,7 +13208,7 @@ index 6b4e79d..b616a16 100644
  }
  
  /**
-@@ -3265,6 +4197,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4198,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -12930,7 +13224,7 @@ index 6b4e79d..b616a16 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4283,24 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4284,24 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -12955,7 +13249,7 @@ index 6b4e79d..b616a16 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4323,189 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4324,189 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -12988,30 +13282,22 @@ index 6b4e79d..b616a16 100644
 +		++n;
 +	}
 +	if (n == 0) return false;
-+	body << "\n" << tr("STR_AF_VERSUS").arg(ufo->getName(_game->getLanguage())) << "\n\n" << tr("STR_AF_ODDS_LATER");
-+	// story fights and 5+ a side are always flown (section 1); none yet in Phase 1, so AUTO is always offered
-+	popup(new AirFightChoiceState(this, tr("STR_AF_TITLE"), body.str(), true));
++	body << "\n" << tr("STR_AF_VERSUS").arg(ufo->getName(_game->getLanguage()));
++	std::vector<Craft*> crafts;
++	for (auto *d : _airPending) crafts.push_back(d->getCraft());
++	const int odds = AirFight::odds(mod, crafts, ufo);
++	// story fights and 5+ a side are always flown (section 1); no story fight yet, so only the 5+ rule applies
++	popup(new AirFightChoiceState(this, tr("STR_AF_TITLE"), body.str(), n < 5, odds));
 +	return true;
 +}
 +
 +void GeoscapeState::autoResolveAirFight()
 +{
-+	auto pending = _airPending;
-+	_airPending.clear();
-+	for (auto *dfs : pending)
-+	{
-+		if (std::find(_dogfights.begin(), _dogfights.end(), dfs) == _dogfights.end()) continue;
-+		Craft *c = dfs->getCraft();
-+		Ufo *u = dfs->getUfo();
-+		const std::string craftName = c ? c->getName(_game->getLanguage()) : "";
-+		const std::string ufoName = u ? u->getName(_game->getLanguage()) : "";
-+		const std::string result = dfs->autoResolve();
-+		if (!result.empty())
-+			popup(new CraftErrorState(this, tr(result).arg(craftName).arg(ufoName), true, nullptr));
-+	}
++	// one real battle with no screen, both sides flown by the battle AI (design section 8, John 13 Nov 19:15)
++	startAirFight(true);
 +}
 +
-+void GeoscapeState::startAirFight()
++void GeoscapeState::startAirFight(bool autoPlay)
 +{
 +	const Mod *mod = _game->getMod();
 +	const auto &AF = mod->getAirFightRules();
@@ -13038,9 +13324,17 @@ index 6b4e79d..b616a16 100644
 +	_game->getSavedGame()->setBattleGame(bgame);
 +	BattlescapeGenerator bgen(_game);
 +	bgen.setWorldShade(shade);
-+	bgen.runAirFight(crafts, ufo, terrain, hunted);
++	bgen.runAirFight(crafts, ufo, terrain, hunted, autoPlay);
 +	for (auto *c : crafts) c->setInBattlescape(true);
-+	_game->pushState(new BriefingState(crafts.front()));
++	BriefingState *brief = new BriefingState(crafts.front());
++	_game->pushState(brief);
++	if (autoPlay)
++	{
++		// no briefing to read and every animation at full speed; AirFight::finish puts the speeds back
++		if (Options::battleXcomSpeedOrig == -1) { Options::battleXcomSpeedOrig = Options::battleXcomSpeed; Options::battleXcomSpeed = 1; }
++		if (Options::battleAlienSpeedOrig == -1) { Options::battleAlienSpeedOrig = Options::battleAlienSpeed; Options::battleAlienSpeed = 1; }
++		brief->btnOkClick(nullptr);
++	}
 +}
 +
 +void GeoscapeState::finishAirFight(const AirFightResult &res)
@@ -13145,7 +13439,7 @@ index 6b4e79d..b616a16 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +5789,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +5790,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -13160,7 +13454,7 @@ index 6b4e79d..b616a16 100644
  
  	if (missionRace.empty())
 diff --git a/src/Geoscape/GeoscapeState.h b/src/Geoscape/GeoscapeState.h
-index 5eaf857..8e8e8b4 100644
+index 5eaf857..ee7ef92 100644
 --- a/src/Geoscape/GeoscapeState.h
 +++ b/src/Geoscape/GeoscapeState.h
 @@ -54,6 +54,14 @@ private:
@@ -13193,7 +13487,7 @@ index 5eaf857..8e8e8b4 100644
 +		int ufoHealthPct = 100;
 +	};
 +	/// FIGHT was pressed: the battle starts
-+	void startAirFight();
++	void startAirFight(bool autoPlay = false);
 +	/// AUTO-RESOLVE was pressed (the stand-in until the headless battle)
 +	void autoResolveAirFight();
 +	/// the battle is over: damage, crash site, the report
@@ -17444,7 +17738,7 @@ index 0000000..7d92aea
 +
 +}
 diff --git a/src/Mod/RuleDamageType.cpp b/src/Mod/RuleDamageType.cpp
-index 79c669f..f54414c 100644
+index 79c669f..649892c 100644
 --- a/src/Mod/RuleDamageType.cpp
 +++ b/src/Mod/RuleDamageType.cpp
 @@ -31,7 +31,7 @@ RuleDamageType::RuleDamageType() :
@@ -17456,7 +17750,15 @@ index 79c669f..f54414c 100644
  	ToHealth(1.0f), ToMana(0.0f), ToArmor(0.1f), ToArmorPre(0.0f), ToWound(1.0f), ToItem(0.0f), ToTile(0.5f), ToStun(0.25f), ToEnergy(0.0f), ToTime(0.0f), ToMorale(0.0f),
  	RandomHealth(false), RandomMana(false), RandomArmor(false), RandomArmorPre(false), RandomWound(true), RandomItem(false), RandomTile(false), RandomStun(true), RandomEnergy(false), RandomTime(false), RandomMorale(false),
  	TileDamageMethod(1), TileDamageLimit(-1)
-@@ -171,6 +171,7 @@ void RuleDamageType::load(const YAML::YamlNodeReader& node)
+@@ -117,6 +117,7 @@ int RuleDamageType::getRandomDamage(int power, FuncRef<int(int, int)> randFunc)
+ 	case DRT_STANDARD: dmgRng = Mod::DAMAGE_RANGE; break;
+ 	case DRT_EXPLOSION: dmgRng = Mod::EXPLOSIVE_DAMAGE_RANGE; break;
+ 	case DRT_FLAT: dmgRng = 0; break;
++	case DRT_AIR: dmgRng = 25; break;
+ 	case DRT_FIRE:
+ 		return randFunc(Mod::FIRE_DAMAGE_RANGE[0], Mod::FIRE_DAMAGE_RANGE[1]);
+ 
+@@ -171,6 +172,7 @@ void RuleDamageType::load(const YAML::YamlNodeReader& node)
  	reader.tryRead("RadiusReduction", RadiusReduction);
  
  	reader.tryRead("FireThreshold", FireThreshold);
@@ -17465,10 +17767,18 @@ index 79c669f..f54414c 100644
  
  	reader.tryRead("ToHealth", ToHealth);
 diff --git a/src/Mod/RuleDamageType.h b/src/Mod/RuleDamageType.h
-index 7cfa906..e02f6f4 100644
+index 7cfa906..5ebf3a5 100644
 --- a/src/Mod/RuleDamageType.h
 +++ b/src/Mod/RuleDamageType.h
-@@ -71,6 +71,8 @@ struct RuleDamageType
+@@ -36,6 +36,7 @@ enum ItemDamageRandomType
+ 	DRT_EASY = 7,
+ 	DRT_STANDARD = 8,
+ 	DRT_EXPLOSION = 9,
++	DRT_AIR = 10, // G.I. Joe air and sea guns: +-25% (DOGFIGHT_DESIGN_v1 section 6)
+ };
+ 
+ /**
+@@ -71,6 +72,8 @@ struct RuleDamageType
  	float RadiusReduction;
  	/// Threshold of fire creation
  	int FireThreshold;
@@ -21109,6 +21419,18 @@ index 5e2a483..743e298 100644
  		_lstInfo->setDot(true);
  
  		_lstInfo->addRow(2, tr("STR_DAMAGE_CAPACITY").c_str(), Unicode::formatNumber(ufo->getStats().damageMax).c_str());
+diff --git a/src/Ufopaedia/StatsForNerdsState.cpp b/src/Ufopaedia/StatsForNerdsState.cpp
+index 1ad61f5..feccbe6 100644
+--- a/src/Ufopaedia/StatsForNerdsState.cpp
++++ b/src/Ufopaedia/StatsForNerdsState.cpp
+@@ -1335,6 +1335,7 @@ void StatsForNerdsState::addDamageRandomType(std::ostringstream &ss, const ItemD
+ 		case DRT_EASY: ss << tr("DRT_EASY"); break;
+ 		case DRT_STANDARD: ss << tr("DRT_STANDARD"); break;
+ 		case DRT_EXPLOSION: ss << tr("DRT_EXPLOSION"); break;
++		case DRT_AIR: ss << "DRT_AIR"; break;
+ 		default: ss << tr("STR_UNKNOWN"); break;
+ 	}
+ 	if (_showIds)
 diff --git a/src/main.cpp b/src/main.cpp
 index 4fd8a1d..2d54f45 100644
 --- a/src/main.cpp
