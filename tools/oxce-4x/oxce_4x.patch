@@ -1757,10 +1757,10 @@ index 6065b54..8db80d7 100644
  	/// Init function.
 diff --git a/src/Battlescape/AirFight.cpp b/src/Battlescape/AirFight.cpp
 new file mode 100644
-index 0000000..bbe8974
+index 0000000..8606f10
 --- /dev/null
 +++ b/src/Battlescape/AirFight.cpp
-@@ -0,0 +1,666 @@
+@@ -0,0 +1,668 @@
 +/*
 + * G.I. Joe: air fights on the battle engine (claude/DOGFIGHT_DESIGN_v1.md, claude/AIR_SEA_BUILD_PLAN_v1.md).
 + */
@@ -1826,6 +1826,12 @@ index 0000000..bbe8974
 +
 +namespace
 +{
++	Position centre(const BattleUnit *u)
++	{
++		// the middle tile of a big unit (a 5x5 ship's corner is 4 tiles from its far side)
++		const int h = (u->getArmor()->getSize() - 1) / 2;
++		return u->getPosition() + Position(h, h, 0);
++	}
 +	int sysCount(const SavedBattleGame *save, const BattleUnit *u, const char *sys)
 +	{
 +		return save->getVanStop(std::string("sys:") + std::to_string(u->getId()) + ":" + sys);
@@ -1846,7 +1852,7 @@ index 0000000..bbe8974
 +	if (!r || r->systemHits <= 0 || !attacker || target->isOut()) return;
 +	Log(LOG_INFO) << "[sea] " << target->getType() << " hit, health " << target->getHealth() << "/" << target->getBaseStats()->health;
 +	// which system the hit strikes, by where it comes from (sea design section 6)
-+	const int from = dirTo(target->getPosition(), attacker->getPosition());
++	const int from = dirTo(centre(target), centre(attacker));
 +	int gap = 2;
 +	if (from >= 0) { int g = std::abs(from - target->getDirection()) % 8; gap = g > 4 ? 8 - g : g; }
 +	const int roll = RNG::generate(0, 99);
@@ -1888,10 +1894,6 @@ index 0000000..bbe8974
 +	{
 +		int g = std::abs(a - b) % 8;
 +		return g > 4 ? 8 - g : g;
-+	}
-+	Position centre(const BattleUnit *u)
-+	{
-+		return u->getPosition(); // a 2x2 unit's corner tile is close enough for arcs and range
 +	}
 +}
 +
@@ -2056,7 +2058,7 @@ index 0000000..bbe8974
 +				for (auto *bu : *save->getUnits())
 +				{
 +					if (bu->getFaction() == unit->getFaction() || bu->getFaction() == FACTION_NEUTRAL || bu->isOut() || !bu->getTile() || hasLeft(save, bu)) continue;
-+					if (Position::distance2d(unit->getPosition(), bu->getPosition()) > w->getRules()->getMaxRange()) continue;
++					if (Position::distance2d(centre(unit), centre(bu)) > w->getRules()->getMaxRange()) continue;
 +					if (!fireCheck(mod, save, unit, bu->getPosition(), w).empty()) continue;
 +					const int c = hitChance(mod, unit, bu, w);
 +					if (c > pc) { pc = c; pick = bu; }
@@ -2066,7 +2068,7 @@ index 0000000..bbe8974
 +					save->setVanStop("afFired:" + id, turn);
 +					action->type = BA_SNAPSHOT;
 +					action->weapon = w;
-+					action->target = pick->getPosition();
++					action->target = centre(pick);
 +					Log(LOG_INFO) << "[sea] " << unit->getType() << " fires " << w->getRules()->getType() << " at " << pick->getType() << " chance " << pc;
 +					return true;
 +				}
@@ -2104,7 +2106,7 @@ index 0000000..bbe8974
 +		if (c > bestChance) { bestChance = c; best = bu; }
 +	}
 +	if (!best) { action->type = BA_NONE; return true; }
-+	const Position tp = best->getPosition();
++	const Position tp = centre(best); // a big target is aimed at its middle
 +	const int range = gun ? gun->getRules()->getMaxRange() : 0;
 +	const bool inRange = gun && Position::distance2d(unit->getPosition(), tp) <= range && std::abs(tp.z - unit->getPosition().z) <= 1;
 +	Log(LOG_INFO) << "[air] think " << unit->getType() << " at " << unit->getPosition() << " dir " << unit->getDirection() << " TU " << unit->getTimeUnits()
@@ -4788,7 +4790,7 @@ index cea8e65..90ec9a6 100644
  	}
  
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..3327e10 100644
+index 3665cd1..1590f54 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
 @@ -17,6 +17,7 @@
@@ -4942,6 +4944,15 @@ index 3665cd1..3327e10 100644
  
  	if (!unitTile)
  	{
+@@ -532,7 +599,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
+ 
+ 	unitOffset.x = unitTile->getPosition().x - bu->getPosition().x;
+ 	unitOffset.y = unitTile->getPosition().y - bu->getPosition().y;
+-	int part = unitOffset.x + unitOffset.y*2;
++	int part = unitOffset.x + unitOffset.y * bu->getArmor()->getSize(); // G.I. Joe: units bigger than 2x2
+ 
+ 	bool moving = bu->getStatus() == STATUS_WALKING || bu->getStatus() == STATUS_FLYING;
+ 	int bonusWidth = moving ? 0 : tileFoorWidth;
 @@ -940,9 +1007,9 @@ void Map::drawTerrain(Surface *surface)
  					if (tmpSurface)
  					{
@@ -5882,7 +5893,7 @@ index 200fb3a..2b6326c 100644
  	bool deployReinforcements(const ReinforcementsData &wave);
  	/// Adds a reinforcement unit to the game.
 diff --git a/src/Battlescape/Pathfinding.cpp b/src/Battlescape/Pathfinding.cpp
-index d8c617e..a2f3f1b 100644
+index d8c617e..ecd3ae5 100644
 --- a/src/Battlescape/Pathfinding.cpp
 +++ b/src/Battlescape/Pathfinding.cpp
 @@ -16,6 +16,7 @@
@@ -5905,6 +5916,69 @@ index d8c617e..a2f3f1b 100644
  
  	const MovementType movementType = getMovementType(unit, missileTarget, bam);
  	const Armor* armor =  unit->getArmor();
+@@ -271,21 +277,19 @@ PathfindingStep Pathfinding::getTUCost(Position startPosition, int direction, co
+ 	int maskOfPartsFlying = 0x0;
+ 	int maskOfPartsGround = 0x0;
+ 	int maskOfPartsClimb = 0x0;
+-	int maskArmor = size ? 0xF : 0x1;
+-
+-	Position offsets[4] =
+-	{
+-		{ 0, 0, 0 },
+-		{ 1, 0, 0 },
+-		{ 0, 1, 0 },
+-		{ 1, 1, 0 },
+-	};
+-	const Tile* startTile[4] = { };
+-	const Tile* aboveStart[4] = { };
+-	const Tile* belowStart[4] = { };
+-	const Tile* destinationTile[4] = { };
+-	const Tile* aboveDestination[4] = { };
+-	const Tile* belowDestination[4] = { };
++	// G.I. Joe: any square size up to 5x5 (ships), not only 1x1 and 2x2; part i is (i % N, i / N)
++	constexpr int MaxParts = 25;
++	if (numberOfParts > MaxParts) return {{INVALID_MOVE_COST, 0}};
++	const int maskArmor = (1 << numberOfParts) - 1;
++
++	Position offsets[MaxParts];
++	for (int i = 0; i < numberOfParts; ++i) offsets[i] = Position(i % (size + 1), i / (size + 1), 0);
++	const Tile* startTile[MaxParts] = { };
++	const Tile* aboveStart[MaxParts] = { };
++	const Tile* belowStart[MaxParts] = { };
++	const Tile* destinationTile[MaxParts] = { };
++	const Tile* aboveDestination[MaxParts] = { };
++	const Tile* belowDestination[MaxParts] = { };
+ 
+ 	// init variables
+ 	for (int i = 0; i < numberOfParts; ++i)
+@@ -400,7 +404,7 @@ PathfindingStep Pathfinding::getTUCost(Position startPosition, int direction, co
+ 	// don't let tanks phase through doors.
+ 	if (size)
+ 	{
+-		const Tile* t = destinationTile[3];
++		const Tile* t = destinationTile[numberOfParts - 1];
+ 		if ((t->isDoor(O_NORTHWALL)) ||
+ 			(t->isDoor(O_WESTWALL)))
+ 		{
+@@ -630,15 +634,15 @@ PathfindingStep Pathfinding::getTUCost(Position startPosition, int direction, co
+ 	if (size)
+ 	{
+ 		totalCost /= numberOfParts;
+-		const Tile *originTile = _save->getTile(pos + Position(1,1,0));
++		const Tile *originTile = _save->getTile(pos + Position(size,size,0));
+ 		const Tile *finalTile = _save->getTile(pos);
+ 		int tmpDirection = 7;
+ 		if (isBlockedDirection(unit, originTile, tmpDirection, bam, missileTarget))
+ 			return {{INVALID_MOVE_COST, 0}};
+ 		if (!triedStairsDown && abs(originTile->getTerrainLevel() - finalTile->getTerrainLevel()) > 10)
+ 			return {{INVALID_MOVE_COST, 0}};
+-		originTile = _save->getTile(pos + Position(1,0,0));
+-		finalTile = _save->getTile(pos + Position(0,1,0));
++		originTile = _save->getTile(pos + Position(size,0,0));
++		finalTile = _save->getTile(pos + Position(0,size,0));
+ 		tmpDirection = 5;
+ 		if (isBlockedDirection(unit, originTile, tmpDirection, bam, missileTarget))
+ 			return {{INVALID_MOVE_COST, 0}};
 diff --git a/src/Battlescape/Projectile.cpp b/src/Battlescape/Projectile.cpp
 index 7f7697c..9fbfa2d 100644
 --- a/src/Battlescape/Projectile.cpp
@@ -6422,7 +6496,7 @@ index 8497877..78e0448 100644
  	/// Drop item on ground.
  	void itemDrop(Tile *t, BattleItem *item, bool updateLight);
 diff --git a/src/Battlescape/UnitSprite.cpp b/src/Battlescape/UnitSprite.cpp
-index 8fa87f8..df21cab 100644
+index 8fa87f8..d2f3e0d 100644
 --- a/src/Battlescape/UnitSprite.cpp
 +++ b/src/Battlescape/UnitSprite.cpp
 @@ -17,6 +17,9 @@
@@ -6496,7 +6570,7 @@ index 8fa87f8..df21cab 100644
  	// blit order depends on unit direction, and whether we are holding a 2 handed weapon.
  	switch (unitDir)
  	{
-@@ -643,6 +666,140 @@ void UnitSprite::drawRoutine0()
+@@ -643,6 +666,143 @@ void UnitSprite::drawRoutine0()
  }
  
  
@@ -6553,23 +6627,26 @@ index 8fa87f8..df21cab 100644
 +{
 +	Part body{ BODYPART_TORSO }, itemR{ BODYPART_ITEM_RIGHTHAND }, itemL{ BODYPART_ITEM_LEFTHAND };
 +	const int dir = _unit->getDirection();
-+	if (_unit->getArmor()->getSize() == 2)
++	const int N = _unit->getArmor()->getSize();
++	if (N >= 2)
 +	{
-+		// G.I. Joe 2x2 aircraft (a transport, a bomber; DOGFIGHT_DESIGN_v1 section 3): one picture for the whole
-+		// body in 256 x 320 cells (64 x 80 at base size), drawn by every one of the four parts and clipped to
-+		// each part's own tile by the map, so together they make the whole. Frames: 0-7 the eight headings,
-+		// then 8 + heading * 8 + f the eight death frames. No legs, no walk cycle.
++		// G.I. Joe big aircraft and vessels (DOGFIGHT_DESIGN_v1 section 3, SEA_BATTLES_DESIGN_v1 2b): one picture
++		// for the whole body in cells N times a tile (N*128 x N*160 at 4x), drawn by every one of the N*N parts
++		// and clipped by the map to each part's own tile, so together they make the whole. Frames: 0-7 the
++		// eight headings; then death: 2x2 sheets have 8 + heading * 8 + f, bigger ones 8 + f (one sequence).
 +		int frame = dir;
 +		if (_unit->getStatus() == STATUS_COLLAPSING)
 +		{
 +			const int n = std::max(1, _unit->getArmor()->getDeathFrames());
-+			frame = 8 + dir * 8 + std::min(7, _unit->getFallingPhase() * 8 / n);
++			const int f = std::min(7, _unit->getFallingPhase() * 8 / n);
++			frame = N == 2 ? 8 + dir * 8 + f : 8 + f;
 +		}
 +		selectUnit(body, frame, 0);
-+		// the part's tile from the unit's first tile: x+1 is (+16,+8) on screen, y+1 is (-16,+8)
-+		const int ox = _part % 2, oy = _part / 2;
-+		body.offX = -16 - 16 * ox + 16 * oy;
-+		body.offY = -20 - 8 * ox - 8 * oy - 4;
++		// the picture's centre sits over the middle of the N x N footprint; this part's tile is (ox, oy) from
++		// the unit's first tile, and x+1 is (+16,+8) on screen, y+1 is (-16,+8)
++		const int ox = _part % N, oy = _part / N;
++		body.offX = 16 - 16 * N - 16 * ox + 16 * oy;
++		body.offY = 28 + 8 * (N - 1) - 28 * N - 8 * ox - 8 * oy - 4;
 +		blitBody(body);
 +		return;
 +	}

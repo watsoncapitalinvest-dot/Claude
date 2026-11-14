@@ -50,6 +50,12 @@ BIG = {
     'condor':         ('craft_skystriker_top_wings_back.png', (30, 40, 90), 0.95, True),
 }
 
+# 3x3 to 5x5 vessels: cells N times a tile (N*128 x N*160), 4 a row; frames 0-7 the headings, 8-15 one
+# death sequence (sinking) shared by every heading
+HUGE = {
+    'cobra_ship_5':   ('craft_cobra_ship_top.png', None, 5, 0.95, False),
+}
+
 
 def unmagenta(im):
     a = np.array(im.convert('RGB')).astype(np.int32)
@@ -83,8 +89,9 @@ def heading(top, d, scale, width=120):
     return iso.resize((max(1, int(iso.width * k)), max(1, int(iso.height * k))), Image.LANCZOS)
 
 
-def cell(pic, dy=0, dark=1.0, alpha=1.0, big=False):
+def cell(pic, dy=0, dark=1.0, alpha=1.0, big=False, n=0):
     W, H, cy = (256, 320, 224) if big else (128, 160, 112)
+    if n: W, H, cy = 128 * n, 160 * n, 112 * n
     c = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     if dark != 1.0:
         pic = ImageEnhance.Brightness(pic).enhance(dark)
@@ -146,6 +153,20 @@ def main():
         sheet.save(os.path.join(units, f'air_{name}_body_rgb.png'))
         quantize(sheet, pal).save(os.path.join(units, f'air_{name}_body.png'))
         print(name, '2x2', 'stand-in' if standin else 'own art')
+    for name, (src, rgb, n, scale, standin) in HUGE.items():
+        if only and name not in only: continue
+        top = tint(unmagenta(Image.open(os.path.join(SRC, src))), rgb)
+        W, H = 128 * n, 160 * n
+        sheet = Image.new('RGBA', (4 * W, 4 * H), (0, 0, 0, 0))
+        pics = [heading(top, d, scale, width=120 * n) for d in range(8)]
+        frames = [(d, cell(pics[d], n=n)) for d in range(8)]
+        for f in range(8):   # sinking: it settles and darkens
+            frames.append((8 + f, cell(pics[2], dy=f * 6 * n, dark=1.0 - f * 0.1, alpha=1.0 - f * 0.11, n=n)))
+        for fr, c in frames:
+            sheet.alpha_composite(c, ((fr % 4) * W, (fr // 4) * H))
+        sheet.save(os.path.join(units, f'air_{name}_body_rgb.png'))
+        quantize(sheet, pal).save(os.path.join(units, f'air_{name}_body.png'))
+        print(name, f'{n}x{n}', sheet.size, 'stand-in' if standin else 'own art')
 
 
 if __name__ == '__main__':
