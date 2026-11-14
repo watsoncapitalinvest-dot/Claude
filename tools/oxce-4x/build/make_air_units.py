@@ -48,6 +48,8 @@ AIRCRAFT = {
 BIG = {
     'tomahawk_big':   ('craft_tomahawk_top.png', None, 0.95, False),
     'condor':         ('craft_skystriker_top_wings_back.png', (30, 40, 90), 0.95, True),
+    'devilfish_big':  ('craft_devilfish_top.png', None, 0.95, False),
+    'sharc_big':      ('craft_sharc_top.png', None, 0.9, False),
 }
 
 # 3x3 to 5x5 vessels: cells N times a tile (N*128 x N*160), 4 a row; frames 0-7 the headings, 8-15 one
@@ -118,10 +120,32 @@ def quantize(rgba, pal):
     return im
 
 
+def torpedo(units, pal, art):
+    """The torpedo (SEA_BATTLES_DESIGN_v1 section 5) from Reference\\sea_art.zip's 03_effects/torpedo_<dir>.png,
+    one 64 x 64 picture per grid direction: a 1x1 sheet like the aircraft, sitting on the water (row 128)."""
+    names = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+    sheet = Image.new('RGBA', (2048, 5120), (0, 0, 0, 0))
+    for d, n in enumerate(names):
+        pic = Image.open(os.path.join(art, '03_effects', f'torpedo_{n}.png')).convert('RGBA').resize((96, 96), Image.LANCZOS)
+        for clip in range(5):
+            for f in range(8):
+                c = Image.new('RGBA', (128, 160), (0, 0, 0, 0))
+                if clip < 4:
+                    c.alpha_composite(pic, (64 - 48, 128 - 48))
+                fr = clip * 64 + d * 8 + f
+                sheet.alpha_composite(c, ((fr % 16) * 128, (fr // 16) * 160))
+    sheet.save(os.path.join(units, 'air_torpedo_body_rgb.png'))
+    quantize(sheet, pal).save(os.path.join(units, 'air_torpedo_body.png'))
+    print('torpedo')
+
+
 def main():
     pal = Image.open(PAL_FROM).getpalette()
     units = os.path.join(MOD, 'Resources', 'Units')
     only = sys.argv[2:]   # names to build (default: all)
+    if only and only[0] == '--torpedo':
+        torpedo(units, pal, only[1])
+        return
     for name, (src, rgb, scale, standin) in AIRCRAFT.items():
         if only and name not in only: continue
         top = tint(unmagenta(Image.open(os.path.join(SRC, src))), rgb)

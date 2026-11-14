@@ -1757,10 +1757,10 @@ index 6065b54..8db80d7 100644
  	/// Init function.
 diff --git a/src/Battlescape/AirFight.cpp b/src/Battlescape/AirFight.cpp
 new file mode 100644
-index 0000000..8606f10
+index 0000000..b2dd8d2
 --- /dev/null
 +++ b/src/Battlescape/AirFight.cpp
-@@ -0,0 +1,668 @@
+@@ -0,0 +1,827 @@
 +/*
 + * G.I. Joe: air fights on the battle engine (claude/DOGFIGHT_DESIGN_v1.md, claude/AIR_SEA_BUILD_PLAN_v1.md).
 + */
@@ -2035,6 +2035,7 @@ index 0000000..8606f10
 +bool aiThink(SavedBattleGame *save, BattleUnit *unit, BattleAction *action)
 +{
 +	const Mod *mod = save->getMod();
++	if (isTorpedoUnit(save, unit)) { unit->setTimeUnits(0); action->actor = unit; action->type = BA_NONE; return true; }
 +	const auto *r = rule(mod, unit);
 +	if (!r) return false;
 +	action->actor = unit;
@@ -2112,6 +2113,28 @@ index 0000000..8606f10
 +	Log(LOG_INFO) << "[air] think " << unit->getType() << " at " << unit->getPosition() << " dir " << unit->getDirection() << " TU " << unit->getTimeUnits()
 +		<< " target " << best->getType() << " at " << tp << " gun " << (gun ? 1 : 0) << " ammo " << (gun && gun->haveAnyAmmo() ? 1 : 0)
 +		<< " inRange " << inRange << " arc " << inArc(unit, tp, r->arc) << " chance " << hitChance(mod, unit, best);
++	// a torpedo at a big hull on the water, once a turn: point the bow at it and let it run (sea design 5)
++	if (isSeaFight(mod, save) && unit->getPosition().z <= 1 && tp.z <= 1 && best->getArmor()->getSize() >= 3
++		&& save->getVanStop("afTorp:" + id) != save->getTurn())
++	{
++		for (BattleItem *w : *unit->getInventory())
++		{
++			const auto *aw = w ? mod->getAirWeapon(w->getRules()->getType()) : nullptr;
++			if (!aw || aw->torpedo <= 0 || !w->haveAnyAmmo()) continue;
++			const int reach = aw->torpedoSpeed * aw->torpedoRounds;
++			const int want = dirTo(centre(unit), tp);
++			const RuleItemUseCost cost = unit->getActionTUs(BA_SNAPSHOT, w);
++			if (Position::distance2d(centre(unit), tp) > reach) break;
++			if (unit->getTimeUnits() < cost.Time + 2 * dirGap(want, unit->getDirection())) break;
++			turnTo(unit, want, save);
++			save->setVanStop("afTorp:" + id, save->getTurn());
++			action->type = BA_SNAPSHOT;
++			action->weapon = w;
++			action->target = tp;
++			Log(LOG_INFO) << "[sea] " << unit->getType() << " lines up a torpedo on " << best->getType();
++			return true;
++		}
++	}
 +	if (gun && inRange && gun->haveAnyAmmo())
 +	{
 +		const RuleItemUseCost cost = unit->getActionTUs(BA_SNAPSHOT, gun);
@@ -2182,10 +2205,146 @@ index 0000000..8606f10
 +	return "";
 +}
 +
++bool isBoat(const Mod *mod, const std::string &craftType)
++{
++	const auto &AF = mod->getAirFightRules();
++	auto it = AF.units.find(craftType);
++	if (it == AF.units.end()) return false;
++	const auto *r = mod->getAirCraft(it->second);
++	return r && r->seaOnly;
++}
++
++bool isShipType(const Mod *mod, const std::string &ufoType)
++{
++	const auto &ships = mod->getAirFightRules().ships;
++	return std::find(ships.begin(), ships.end(), ufoType) != ships.end();
++}
++
++bool isTorpedo(const Mod *mod, const BattleItem *weapon)
++{
++	if (!mod || !weapon) return false;
++	const auto *w = mod->getAirWeapon(weapon->getRules()->getType());
++	return w && w->torpedo > 0;
++}
++
++bool isTorpedoUnit(const SavedBattleGame *save, const BattleUnit *unit)
++{
++	return unit && save->getVanStop("torp:" + std::to_string(unit->getId())) > 0;
++}
++
++namespace
++{
++	const int DX[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
++	const int DY[8] = { -1, -1, 0, 1, 1, 1, 0, -1 };
++
++	void removeTorpedo(SavedBattleGame *save, BattleUnit *t)
++	{
++		save->setVanStop("torp:" + std::to_string(t->getId()), 0);
++		if (t->getTile()) t->setTile(nullptr, save);
++		t->setPosition(TileEngine::invalid);
++		t->goToTimeOut();
++	}
++
++	/// the first hull on this tile a torpedo running on floor z can strike (under the water it reaches the surface hulls too)
++	BattleUnit *hullAt(SavedBattleGame *save, Position p, const BattleUnit *torp, int firedBy)
++	{
++		for (int z = p.z; z <= std::min(p.z + 1, 1); ++z)
++		{
++			Tile *t = save->getTile(Position(p.x, p.y, z));
++			BattleUnit *u = t ? t->getUnit() : nullptr;
++			if (!u || u == torp || u->isOut() || isTorpedoUnit(save, u) || u->getId() == firedBy) continue;
++			if (z != p.z && z != 1) continue;
++			return u;
++		}
++		return nullptr;
++	}
++
++	/// one step of every running torpedo: half a round's run (sea design 5: 8 tiles a round, up to 3 rounds)
++	void stepTorpedoes(SavedBattleGame *save)
++	{
++		std::vector<BattleUnit*> torps;
++		for (auto *u : *save->getUnits()) if (isTorpedoUnit(save, u) && u->getTile()) torps.push_back(u);
++		bool anyHit = false;
++		for (auto *t : torps)
++		{
++			const std::string id = std::to_string(t->getId());
++			const int dir = save->getVanStop("torpDir:" + id), dmg = save->getVanStop("torpDmg:" + id);
++			const int firedBy = save->getVanStop("torpBy:" + id), speed = std::max(1, save->getVanStop("torpSpeed:" + id));
++			int left = save->getVanStop("torp:" + id);
++			Position p = t->getPosition();
++			bool done = false;
++			for (int k = 0; k < (speed + 1) / 2 && !done; ++k)
++			{
++				p += Position(DX[dir], DY[dir], 0);
++				if (p.x < 0 || p.y < 0 || p.x >= save->getMapSizeX() || p.y >= save->getMapSizeY()) { done = true; break; }
++				if (BattleUnit *hull = hullAt(save, p, t, firedBy))
++				{
++					// a target sees it running and steers out of its path: a big ship rarely can, a fast boat often does
++					const auto *hr = rule(save->getMod(), hull);
++					const int chance = hull->getArmor()->getSize() >= 3 ? 85 : std::max(5, 85 - 4 * (hr ? hr->agility : 0));
++					if (RNG::percent(chance))
++					{
++						// always to the hull, never to its systems: a torpedo sinks, it doesn't disable
++						const int hp = std::max(0, hull->getHealth() - dmg);
++						hull->setHealthDirect(hp);
++						Log(LOG_INFO) << "[sea] torpedo hits " << hull->getType() << " (" << chance << "%), health " << hp << "/" << hull->getBaseStats()->health;
++						anyHit = true;
++						done = true;
++						break;
++					}
++					Log(LOG_INFO) << "[sea] torpedo misses " << hull->getType() << " (" << chance << "%)";
++					continue; // it runs on past
++				}
++			}
++			if (!done)
++			{
++				// move it to where it got to, if that water is clear (else it ran under something and sank)
++				if (--left <= 0 || !save->setUnitPosition(t, p)) done = true;
++				else { t->setDirection(dir); save->setVanStop("torp:" + id, left); }
++			}
++			if (done) removeTorpedo(save, t);
++		}
++		if (anyHit && save->getBattleGame())
++			save->getBattleGame()->checkForCasualties(save->getMod()->getDamageType(DT_HE), BattleActionAttack{}, false, false);
++	}
++}
++
++std::string launchTorpedo(SavedBattleGame *save, BattleUnit *shooter, BattleItem *weapon)
++{
++	const Mod *mod = save->getMod();
++	const auto *w = mod->getAirWeapon(weapon->getRules()->getType());
++	if (!w || w->torpedo <= 0) return "STR_SEA_NOT_A_TORPEDO";
++	const int fz = shooter->getPosition().z;
++	if (isSeaFight(mod, save) && fz > 1) return "STR_SEA_TORPEDO_FROM_WATER";
++	const Unit *ur = mod->getUnit(w->torpedoUnit, false);
++	if (!ur) return "STR_SEA_NOT_A_TORPEDO";
++	const int dir = shooter->getDirection();
++	// it leaves from the bow: one tile past the firer's own footprint along its heading
++	const int half = shooter->getArmor()->getSize() / 2;
++	Position c = centre(shooter);
++	Position p = c + Position(DX[dir] * (half + 1), DY[dir] * (half + 1), 0);
++	BattleUnit *t = save->createTempUnit(ur, FACTION_NEUTRAL);
++	if (!save->getTile(p) || !save->setUnitPosition(t, p)) { delete t; return "STR_SEA_TORPEDO_BLOCKED"; }
++	t->setDirection(dir);
++	save->getUnits()->push_back(t);
++	save->initUnit(t);
++	t->setTimeUnits(0);
++	const std::string id = std::to_string(t->getId());
++	// two steps a round (after each side's turn), so a target gets its turn to steer out of the path
++	save->setVanStop("torp:" + id, std::max(1, w->torpedoRounds) * 2);
++	save->setVanStop("torpDir:" + id, dir);
++	save->setVanStop("torpDmg:" + id, w->torpedo);
++	save->setVanStop("torpSpeed:" + id, w->torpedoSpeed);
++	save->setVanStop("torpBy:" + id, shooter->getId());
++	Log(LOG_INFO) << "[sea] " << shooter->getType() << " launches a torpedo from " << p << " heading " << dir;
++	return "";
++}
++
 +void endTurnStep(SavedBattleGame *save)
 +{
 +	if (!isAirFight(save->getMod(), save)) return;
 +	const UnitFaction side = save->getSide();
++	if (side != FACTION_NEUTRAL) stepTorpedoes(save);
 +	for (auto *u : *save->getUnits())
 +	{
 +		if (u->getOriginalFaction() != side || u->isOut() || !u->getTile() || hasLeft(save, u)) continue;
@@ -2431,10 +2590,10 @@ index 0000000..8606f10
 +}
 diff --git a/src/Battlescape/AirFight.h b/src/Battlescape/AirFight.h
 new file mode 100644
-index 0000000..50ba184
+index 0000000..74920aa
 --- /dev/null
 +++ b/src/Battlescape/AirFight.h
-@@ -0,0 +1,67 @@
+@@ -0,0 +1,77 @@
 +#pragma once
 +/*
 + * G.I. Joe: air fights on the battle engine (claude/DOGFIGHT_DESIGN_v1.md, claude/AIR_SEA_BUILD_PLAN_v1.md).
@@ -2490,6 +2649,16 @@ index 0000000..50ba184
 +	void leave(SavedBattleGame *save, BattleUnit *unit);
 +	/// the player's DISENGAGE (design section 2): "" if it left, else why not
 +	std::string disengage(SavedBattleGame *save, BattleUnit *unit);
++	/// a craft type that is a boat (it can only take on ships)
++	bool isBoat(const Mod *mod, const std::string &craftType);
++	/// a Cobra aircraft (ufo) type that is a ship
++	bool isShipType(const Mod *mod, const std::string &ufoType);
++	/// is this weapon a torpedo (it is launched, not fired: it runs on its own; sea design section 5)
++	bool isTorpedo(const Mod *mod, const BattleItem *weapon);
++	/// launch a torpedo from this unit along its heading; "" if launched, else why not
++	std::string launchTorpedo(SavedBattleGame *save, BattleUnit *shooter, BattleItem *weapon);
++	/// is this unit a running torpedo
++	bool isTorpedoUnit(const SavedBattleGame *save, const BattleUnit *unit);
 +	/// the computer's pilot (design section 9); true when it has set the action
 +	bool aiThink(SavedBattleGame *save, BattleUnit *unit, BattleAction *action);
 +	/// end of a side's turn: its aircraft on the outer ring leave the fight
@@ -2840,7 +3009,7 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..38f73a9 100644
+index 1951ba7..ac259b6 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -16,6 +16,7 @@
@@ -2871,7 +3040,7 @@ index 1951ba7..38f73a9 100644
  		}
  		else
  		{
-@@ -961,6 +963,162 @@ void BattlescapeGenerator::run()
+@@ -961,6 +963,163 @@ void BattlescapeGenerator::run()
  	}
  }
  
@@ -2981,7 +3150,8 @@ index 1951ba7..38f73a9 100644
 +		const bool crossing = joeTransportHunted && jr && jr->role == "transport";
 +		int flo = 2, fhi = 2;
 +		AirFight::floorRange(mod, _save, u, flo, fhi);
-+		const int jz = std::max(flo, std::min(fhi, 2));
++		// deck 2 in the air; in a sea fight a boat starts on the surface (floor 1), a jet in the air
++		const int jz = std::max(flo, std::min(fhi, AirFight::isSeaFight(mod, _save) ? 1 : 2));
 +		Position p = crossing ? Position(4, midY + n * 3, jz) : Position(W / 2 - 2 + n * 3, H - 5, jz);
 +		const int dir = crossing ? 2 : 0;
 +		if (crossing) _save->setVanStop("afExit:" + std::to_string(u->getId()), 1); // east
@@ -3034,7 +3204,7 @@ index 1951ba7..38f73a9 100644
  /**
   * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
   */
-@@ -1669,6 +1827,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +1828,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -3124,7 +3294,7 @@ index 1951ba7..38f73a9 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +1937,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +1938,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -3193,7 +3363,7 @@ index 1951ba7..38f73a9 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2022,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2023,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -3210,7 +3380,7 @@ index 1951ba7..38f73a9 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2051,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2052,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -3253,7 +3423,7 @@ index 1951ba7..38f73a9 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -2081,8 +2423,14 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,8 +2424,14 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -3270,7 +3440,7 @@ index 1951ba7..38f73a9 100644
  	unsigned int terrainObjectID;
  
  	// Load file
-@@ -2141,11 +2489,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2490,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -6028,7 +6198,7 @@ index 7f7697c..9fbfa2d 100644
  	int ydiff = origin.y - target->y;
  	int zdiff = origin.z - target->z;
 diff --git a/src/Battlescape/ProjectileFlyBState.cpp b/src/Battlescape/ProjectileFlyBState.cpp
-index 529b7f2..9a4b286 100644
+index 529b7f2..b9d9580 100644
 --- a/src/Battlescape/ProjectileFlyBState.cpp
 +++ b/src/Battlescape/ProjectileFlyBState.cpp
 @@ -16,6 +16,7 @@
@@ -6039,7 +6209,7 @@ index 529b7f2..9a4b286 100644
  #include <algorithm>
  #include "ProjectileFlyBState.h"
  #include "ExplosionBState.h"
-@@ -139,6 +140,16 @@ void ProjectileFlyBState::init()
+@@ -139,6 +140,32 @@ void ProjectileFlyBState::init()
  	case BA_AIMEDSHOT:
  	case BA_AUTOSHOT:
  	case BA_LAUNCH:
@@ -6049,6 +6219,22 @@ index 529b7f2..9a4b286 100644
 +			if (!airWhy.empty())
 +			{
 +				_action.result = airWhy;
++				_parent->popState();
++				return;
++			}
++			// a torpedo is launched, not fired: it runs on its own along the firer's heading
++			if (AirFight::isTorpedo(_parent->getMod(), _action.weapon))
++			{
++				_unit->lookAt(_action.target, false);
++				while (_unit->getStatus() == STATUS_TURNING) _unit->turn(false);
++				if (!_action.haveTU(&_action.result)) { _parent->popState(); return; }
++				const std::string why = AirFight::launchTorpedo(_parent->getSave(), _unit, _action.weapon);
++				if (why.empty())
++				{
++					_action.spendTU();
++					_action.weapon->spendAmmoForAction(_action.type, _parent->getSave());
++				}
++				else _action.result = why;
 +				_parent->popState();
 +				return;
 +			}
@@ -11879,7 +12065,7 @@ index e805e35..fc9ce5f 100644
 +
  }
 diff --git a/src/Geoscape/DogfightState.h b/src/Geoscape/DogfightState.h
-index 175b806..e980e06 100644
+index 175b806..12a941f 100644
 --- a/src/Geoscape/DogfightState.h
 +++ b/src/Geoscape/DogfightState.h
 @@ -63,6 +63,8 @@ private:
@@ -11891,10 +12077,20 @@ index 175b806..e980e06 100644
  	std::vector<CraftWeaponProjectile*> _projectiles;
  	static const int _ufoBlobs[8][13][13];
  	static const int _projectileBlobs[4][6][3];
-@@ -163,6 +165,14 @@ public:
+@@ -76,7 +78,6 @@ private:
+ 	// craft min/max, radar min/max, damage min/max, shield min/max
+ 	int _colors[13];
+ 	// Ends the dogfight.
+-	void endDogfight();
+ 	bool _tractorLockedOn[RuleCraft::WeaponMax];
+ 	void updateOceanIndicator();
+ 
+@@ -163,6 +164,16 @@ public:
  	void moveWindow();
  	/// Checks if the dogfight should be ended.
  	bool dogfightEnded() const;
++	/// Ends the dogfight (G.I. Joe: public, so a boat sent after an aircraft can turn for home).
++	void endDogfight();
 +	/// G.I. Joe 4x stand-in until the tactical air war (master doc, Dogfights): fight the
 +	/// interception out at once on Standard, breaking off at half damage, with no window.
 +	/// Returns the result as a string id for the report (empty if it could not be decided).
@@ -11994,7 +12190,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..170a008 100644
+index 6b4e79d..390cd85 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,11 @@
@@ -13301,18 +13497,27 @@ index 6b4e79d..170a008 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4284,24 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4284,33 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
-+		if (!dfs->isMinimized() && !dfs->isAutoResolved() && !getenv("OXCE_DOGFIGHT_WINDOW")
++		if (!dfs->isMinimized() && !dfs->isAutoResolved() && dfs->getCraft() && dfs->getUfo() && !dfs->dogfightEnded()
++			&& AirFight::isBoat(_game->getMod(), dfs->getCraft()->getRules()->getType())
++			&& !AirFight::isShipType(_game->getMod(), dfs->getUfo()->getRules()->getType()))
++		{
++			// a boat can't take on an aircraft (sea design section 3): it turns for home
++			popup(new CraftErrorState(this, tr("STR_SEA_BOAT_CANT_ENGAGE").arg(dfs->getCraft()->getName(_game->getLanguage())), true, nullptr));
++			dfs->getCraft()->returnToBase();
++			dfs->endDogfight();
++		}
++		if (!dfs->isMinimized() && !dfs->isAutoResolved() && !dfs->dogfightEnded() && !getenv("OXCE_DOGFIGHT_WINDOW")
 +			&& (std::find(_airPending.begin(), _airPending.end(), dfs) != _airPending.end() || offerAirFight(dfs)))
 +		{
 +			// G.I. Joe air fights: waiting on FIGHT / AUTO-RESOLVE, or being fought on the battle engine
 +			++dfsIt;
 +			continue;
 +		}
-+		if (!dfs->isMinimized() && !dfs->isAutoResolved() && !getenv("OXCE_DOGFIGHT_WINDOW"))
++		if (!dfs->isMinimized() && !dfs->isAutoResolved() && !dfs->dogfightEnded() && !getenv("OXCE_DOGFIGHT_WINDOW"))
 +		{
 +			// G.I. Joe 4x: decided at once, reported in one line (the stand-in for the air war)
 +			Craft *c = dfs->getCraft();
@@ -13326,7 +13531,7 @@ index 6b4e79d..170a008 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4324,189 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4333,189 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -13516,7 +13721,7 @@ index 6b4e79d..170a008 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +5790,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +5799,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -16605,7 +16810,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..fe057e7 100644
+index 1885346..75aa1f3 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -16743,7 +16948,7 @@ index 1885346..fe057e7 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,343 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,348 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -16839,6 +17044,7 @@ index 1885346..fe057e7 100644
 +				one.tryRead("seaMinFloor", r.seaMinFloor);
 +				one.tryRead("seaMaxFloor", r.seaMaxFloor);
 +				one.tryRead("systemHits", r.systemHits);
++				one.tryRead("seaOnly", r.seaOnly);
 +			}
 +		}
 +		if (const auto& ws = af["weapons"])
@@ -16849,6 +17055,10 @@ index 1885346..fe057e7 100644
 +				one.tryRead("arc", w.arc);
 +				one.tryRead("minFloor", w.minFloor);
 +				one.tryRead("maxFloor", w.maxFloor);
++				one.tryRead("torpedo", w.torpedo);
++				one.tryRead("torpedoSpeed", w.torpedoSpeed);
++				one.tryRead("torpedoRounds", w.torpedoRounds);
++				one.tryRead("torpedoUnit", w.torpedoUnit);
 +			}
 +		}
 +		af.tryRead("seaDeployment", _airFight.seaDeployment);
@@ -17087,7 +17297,7 @@ index 1885346..fe057e7 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3648,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3653,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -17095,7 +17305,7 @@ index 1885346..fe057e7 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4253,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4258,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -17121,7 +17331,7 @@ index 1885346..fe057e7 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4510,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4515,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -17142,7 +17352,7 @@ index 1885346..fe057e7 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6224,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6229,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -17162,7 +17372,7 @@ index 1885346..fe057e7 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6247,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6252,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -17170,7 +17380,7 @@ index 1885346..fe057e7 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6261,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6266,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -17210,7 +17420,7 @@ index 1885346..fe057e7 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..d0a09f6 100644
+index 2242d13..1150f46 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -17274,7 +17484,7 @@ index 2242d13..d0a09f6 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,176 @@ private:
+@@ -327,6 +360,181 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -17347,12 +17557,17 @@ index 2242d13..d0a09f6 100644
 +		int seaMinFloor = 2, seaMaxFloor = 2; ///< ... and in a sea fight (0 underwater, 1 surface, 2 air)
 +		std::string arc = "forward";  ///< its gun: forward | any | rear
 +		int systemHits = 0;           ///< a ship: hits to knock out its engines, guns or steering (0 = no systems)
++		bool seaOnly = false;         ///< a boat: it can only take on ships (never an aircraft)
 +	};
 +	/// a weapon's own reach in air and sea fights
 +	struct AirWeaponRule
 +	{
 +		std::string arc;                  ///< overrides the unit's arc if set
 +		int minFloor = 0, maxFloor = 9;   ///< the floors it can hit (an AA gun: air only; a deck gun: surface only)
++		int torpedo = 0;                  ///< a torpedo's damage (0 = not a torpedo): it runs on its own (sea design 5)
++		int torpedoSpeed = 8;             ///< tiles a round
++		int torpedoRounds = 3;            ///< how long it runs
++		std::string torpedoUnit = "STR_SEA_TORPEDO"; ///< the unit that shows it running
 +	};
 +	struct AirFightRules
 +	{
@@ -17451,7 +17666,7 @@ index 2242d13..d0a09f6 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +895,124 @@ public:
+@@ -692,6 +900,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
