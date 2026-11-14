@@ -83,6 +83,22 @@ LANE_ROOM = {'INTEL': (80000, 8), 'COMMS': (100000, 8), 'MEDICAL': (60000, 6), '
 # Story-locked topics granted by an event (month): Clutch's VAMP (rescue + junkyard, John 13 Nov 17:10).
 GRANT = {'STR_VAMP_RECOVERED': float(os.environ.get('VAMP_MONTH', '2.5'))}     # projects worked at once; scientists usefully on one project
 
+
+# Department heads (14 Nov, NAMED_JOES_AT_BASE_v1): a lane runs at 100% with its head in the office, 60% while the head
+# is away (mission + 2-day stand-down, the infirmary) or there is no head. HEADS=home: heads never leave (old results);
+# HEADS=field: every head goes on MPM missions a month (from month 2, once there is a desk worth keeping him at), each
+# costing 1 day + STAND days, and from month 4 (Cobra rifles) a named Joe goes down WOUND of the time for 21 days.
+HEADS = os.environ.get('HEADS', 'home'); AWAY = float(os.environ.get('AWAY', '0.6')); STAND = float(os.environ.get('STAND', '2'))
+MPM = {0: 0, 2: float(os.environ.get('MPM2', '3')), 4: float(os.environ.get('MPM4', '5'))}; WOUND = float(os.environ.get('WOUND', '0.1'))
+def lane_speed(lane, m):
+    if HEADS != 'field' or lane is None: return 1.0
+    if lane == 'MOTOR_POOL' and m < GRANT['STR_VAMP_RECOVERED']: return AWAY        # no Armor & Vehicles Joe until Clutch
+    if lane == 'TRAINING': return 1.0
+    mpm = max(v for mm, v in MPM.items() if mm <= m)
+    away = mpm * (1 + STAND) + (mpm * WOUND * 21 if m >= 4 else 0)
+    f = min(1.0, away / 30.0)
+    return (1 - f) + f * AWAY
+
 def run(strat):
     target = STRATS[strat]; day = 0; cash = ECON['start']; sci = 10; labs = LAB_START; rooms = HOUSE_START; nlab_built = 0; nq_built = 0
     an = AN0 if ANALYSTS else 0; an_seats = AN0; nan_built = 0
@@ -150,7 +166,7 @@ def run(strat):
         rest = [k for k in active if k not in intel]
         for k in active:
             n = (an / max(1, len(intel))) if k in intel else (sci / max(1, len(rest)))
-            prog[k] += n
+            prog[k] += n * lane_speed(T[k].get('lane'), m)
             if prog[k] >= T[k]['cost'] * (INTEL_SCALE if k in intel else 1): done[k] = day / 30
         # money, daily slice of the month
         monthly = ECON['funding'] + ECON['other_income'] - ECON['soldiers'] - ECON['engineers'] - (sci + an) * ECON['sci_salary'] - nan_built * AN_ROOM[2] \
