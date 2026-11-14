@@ -63,6 +63,85 @@ S['STR_BRIEFING_STASH_HOUSE_RESCUE'] = P.join([
     "We go in now. Get her out first. Everything else is second.",
 ])
 
+# ------------------------------------------------------------------ Clutch rescue + his VAMP (claude/STORY_ClutchRescue_v1.md, John 13 Nov 17:03-17:15)
+# Backstory: an Army driver on a VAMP test run along the border; the cartel hijacked the prototype to strip it and kept him to make it run.
+# Pointers to the chop shop: the boss interrogation (fast, appended to STR_CARTEL_BOSS_INTERROGATION_UFOPEDIA in gen_batch1.py)
+# or Scarlett's informant (slower, STR_EVENT_CHOP_SHOP_INFORMANT). BUILD fires whichever comes first.
+S['STR_EVENT_CHOP_SHOP_INFORMANT'] = 'INFORMANT: A PRISONER AT THE CHOP SHOP'
+S['STR_EVENT_CHOP_SHOP_INFORMANT_DESCRIPTION'] = P.join([
+    "SCARLETT: My courier delivered more than he meant to. The cartel runs a chop shop outside the border town, and there's a man in the back room who isn't a customer.",
+    "Army driver. They took his vehicle on a test run and they've kept him alive to make it work. They're running out of patience with him.",
+])
+S['STR_BRIEFING_CHOP_SHOP_TITLE'] = 'OPERATION: SPARE PARTS'
+S['STR_BRIEFING_CHOP_SHOP'] = P.join([
+    "HAWK: Two months ago the Army lost a prototype on a test run near the border: a light attack vehicle, and the man driving it. Corporal Lance Steinberg. Everybody calls him Clutch.",
+    "The cartel took both. The vehicle went for parts. Clutch they kept, because nobody else can make it run. He's in a back room at their chop shop.",
+    "Get him out alive. Everything else in that yard is stolen, and most of it has a man with a pistol standing next to it. Don't shoot the gas cans.",
+    "If he's half the driver his file says, I want him running our Motor Pool by the end of the month.",
+])
+S['STR_EVENT_CLUTCH_MOVED'] = 'CLUTCH MOVED'
+S['STR_EVENT_CLUTCH_MOVED_DESCRIPTION'] = P.join([
+    "We didn't get him out. By the time the yard was quiet, the back room was empty and the cartel's truck was gone.",
+    "HAWK: They'll put him somewhere else and they'll be more careful. Keep listening. We get one more chance at this.",
+])
+S['STR_BRIEFING_CHOP_SHOP_2_TITLE'] = 'OPERATION: SECOND GEAR'
+S['STR_BRIEFING_CHOP_SHOP_2'] = P.join([
+    "HAWK: We found him again. The cartel moved Clutch to another of their garages, and this time they know we're coming.",
+    "More guards, fewer chances. Get in, get him, get out. There won't be a third time.",
+])
+S['STR_EVENT_CLUTCH_ESCAPED'] = 'CLUTCH WALKS IN'
+S['STR_EVENT_CLUTCH_ESCAPED_DESCRIPTION'] = P.join([
+    "A filthy man in an Army jacket walks up to the gate of The Pit and asks for whoever's in charge.",
+    "CLUTCH: \"Your rescue was lousy. Theirs was worse. I hot-wired the truck they were moving me in. Where's the coffee?\"",
+])
+S['STR_CLUTCH_ARRIVAL'] = 'CLUTCH JOINS G.I. JOE'
+S['STR_CLUTCH_ARRIVAL_DESCRIPTION'] = P.join([
+    "Corporal Lance \"Clutch\" Steinberg. Armor & Vehicles. He can head the Motor Pool.",
+    "CLUTCH: \"Two months I'm fixing their junk with a gun in my ear. Now: they still got my VAMP. It's in a junkyard. I know which one. I want it back.\"",
+])
+S['STR_BRIEFING_JUNKYARD_TITLE'] = 'OPERATION: REPO'
+S['STR_BRIEFING_JUNKYARD'] = P.join([
+    "HAWK: Clutch says the cartel never finished stripping his VAMP. It's under a tarp in a shed at their junkyard, waiting for a buyer.",
+    "Take it back. It runs, it's ours, and once Clutch has had it apart we can build more of them.",
+    "Watch the stacks. There are men up on those wrecks with a clear view of the whole yard, and a crusher in the middle that will flatten anybody who stands next to it when it starts.",
+    "CLUTCH: \"And nobody scratches the paint.\"",
+])
+S['STR_EVENT_VAMP_RECOVERED'] = 'VAMP RECOVERED'
+S['STR_EVENT_VAMP_RECOVERED_DESCRIPTION'] = P.join([
+    "The VAMP rolls into the Motor Pool on its own wheels, with Clutch at the wheel and one door missing.",
+    "It's ours, and Clutch has started on the drawings. Research: VAMP.",
+])
+S['STR_EVENT_VAMP_LOST'] = 'VAMP GONE'
+S['STR_EVENT_VAMP_LOST_DESCRIPTION'] = P.join([
+    "The shed was empty by the time we reached it. The cartel sold the VAMP before we could take it back.",
+    "CLUTCH: \"Fine. I'll draw you a new one from memory. Give me a month.\" Research: VAMP, in about a month.",
+])
+
+# ------------------------------------------------------------------ Beach Head's proving ground (BUILD_DESIGN_ANSWERS_13Nov_Evening A.4)
+# Appears once the Training Room is built. Stun weapons only, no deaths. Fail = he comes back every week until you pass. Pass = Beach Head joins.
+S['STR_EVENT_PROVING_GROUND'] = 'A VISITOR AT THE TRAINING ROOM'
+S['STR_EVENT_PROVING_GROUND_DESCRIPTION'] = P.join([
+    "A Ranger sergeant in a balaclava inspects your new Training Room, says nothing for a full minute, then hands Hawk a sealed order.",
+    "HAWK: Beach Head. The Army sent him to tell me whether my people are any good. He's offered to show us. On his range.",
+])
+S['STR_BRIEFING_PROVING_GROUND_TITLE'] = 'OPERATION: PROVING GROUND'
+S['STR_BRIEFING_PROVING_GROUND'] = P.join([
+    "BEACH HEAD: Listen up, because I'm only saying this once. You think you're soldiers. I think you're tourists. Today we find out.",
+    "My range. My men. Stun weapons only: nobody dies on my course, they just wish they had. Put my team on the ground, every last one, and you pass.",
+    "Lose, and I'll be back next week. And the week after. Until you get it right.",
+    "Move like you mean it.",
+])
+S['STR_EVENT_PROVING_GROUND_PASSED'] = 'BEACH HEAD JOINS G.I. JOE'
+S['STR_EVENT_PROVING_GROUND_PASSED_DESCRIPTION'] = P.join([
+    "Sergeant Wayne \"Beach Head\" Sneeden. Infantry, Ranger, drill instructor. He can head Training & Recruiting and train up to six Joes in the Training Room.",
+    "BEACH HEAD: \"You're slow, you're sloppy and you talk too much. You'll do. I'm staying.\"",
+])
+S['STR_EVENT_PROVING_GROUND_FAILED'] = 'PROVING GROUND: FAILED'
+S['STR_EVENT_PROVING_GROUND_FAILED_DESCRIPTION'] = P.join([
+    "Your squad is carried off Beach Head's range one stunned body at a time.",
+    "BEACH HEAD: \"Pathetic. Same time next week.\"",
+])
+
 # ------------------------------------------------------------------ Cobra Commander's broadcast (Geoscape event)
 S['STR_EVENT_COBRA_BROADCAST'] = 'COBRA SPEAKS'
 S['STR_EVENT_COBRA_BROADCAST_DESCRIPTION'] = P.join([

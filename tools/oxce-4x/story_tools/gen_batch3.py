@@ -19,7 +19,7 @@ t('STR_KEVLAR_VEST', 'Kevlar Vest', 80, 10, [], 'Soft body armour that stops pis
 t('STR_AP_ROUNDS', 'Armor-Piercing Rounds', 80, 10, [], 'Hardened-core magazines for the rifles, the sniper rifle and Roadblock\'s .50 cal. For targets behind steel.')
 t('STR_FIELD_RADIO', 'Field Radio', 60, 10, [], 'A man-pack radio like Breaker\'s. A Joe carrying one can call in support the base has researched.')
 t('STR_NIGHT_VISION', 'Night-Vision Goggles', 80, 10, [], 'Starlight goggles. Joes wearing them see as far at night as Cobra does in the day.')
-t('STR_VAMP', 'VAMP', 120, 20, [], 'The Multi-Purpose Attack Vehicle: a fast four-wheel-drive with a twin machine gun. Two Joes, any road.')
+t('STR_VAMP', 'VAMP', 120, 20, ['STR_VAMP_RECOVERED'], 'The Multi-Purpose Attack Vehicle: a fast four-wheel-drive with a twin machine gun. Two Joes, any road.')
 t('STR_SKYSTRIKER', 'Skystriker', 250, 30, [], 'The Skystriker XP-14F: G.I. Joe\'s swing-wing fighter. It needs a hangar. Upgrades keep it Joe\'s dogfighter for the whole war.')
 t('STR_RADAR_ROOM', 'Radar Room', 150, 20, [], 'A radar room for The Pit. Until it is built, Cobra is found only through leads, intel and its own mistakes.')
 t('STR_C130_HERCULES', 'C-130 Hercules', 200, 30, [], 'Strategic airlift. The A.P.C. cannot cross water; the Hercules can carry a squad and its vehicles to another continent, if there is a landing zone at the other end.')
@@ -84,6 +84,8 @@ for i, n, c, deps, txt in [
  ('STR_BREACHING_DRILLS', 'Breaching Drills', 100, ['STR_OVERWATCH_DRILLS'], 'Door drills. Opening doors and containers costs half the time units, and the first Joe through a door gets +20% accuracy that turn.'),
  ('STR_FIRE_AND_MOVE', 'Fire and Move', 120, ['STR_OVERWATCH_DRILLS'], 'One Joe shoots, another moves. A Cobra a Joe fires at is pinned: no reaction fire until his next turn. Smoke grenades cost half the time units to throw, and Joes moving inside smoke cannot be reaction-fired.'),
  # transport defences (John 13 Nov 14:11): open the first time a Joe transport is attacked in the air.
+ # STR_VAMP_RECOVERED is never researched by hand: BUILD's hook grants it when the junkyard mission is won, or one month after Clutch is rescued if it is lost (STORY_ClutchRescue_v1, John 17:10: no VAMP research before Clutch).
+ ('STR_VAMP_RECOVERED', 'Clutch\'s VAMP', 1, ['STR_STORY_LOCK'], 'Clutch knows the VAMP bolt by bolt. With him in the Motor Pool we can build our own.'),
  # STR_TRANSPORT_UNDER_FIRE is never researched by hand: BUILD's hook grants it on the first transport interception.
  ('STR_TRANSPORT_UNDER_FIRE', 'Transport Under Fire', 1, ['STR_STORY_LOCK'], 'Cobra has started hunting our transports in the air. Our helicopters and the Hercules fly unarmed, and every squad aboard is a target. The Air Wing has three answers on the drawing board.'),
  ('STR_TRANSPORT_DOOR_GUNS', 'Transport Door Guns', 60, ['STR_TRANSPORT_UNDER_FIRE'], 'A heavy machine gun on a swing mount in every transport door. It fires in any direction and answers anything that comes close.'),
@@ -115,7 +117,7 @@ FUNDS.update({'STR_OVERWATCH_DRILLS': 60000, 'STR_BREACHING_DRILLS': 80000, 'STR
 FUNDS.update({'STR_TRANSPORT_DOOR_GUNS': 60000, 'STR_TRANSPORT_ARMOR_PLATING': 90000, 'STR_TRANSPORT_COUNTERMEASURE_PODS': 70000})   # John 13 Nov 14:11 (dogfight design 3b)
 BASEFUNC = {'STR_OVERWATCH_DRILLS': ['STR_BRIEFING_ROOM'], 'STR_BREACHING_DRILLS': ['STR_BRIEFING_ROOM'], 'STR_FIRE_AND_MOVE': ['STR_BRIEFING_ROOM']}
 R = [{'name': i, 'cost': c, 'points': p, **({'costFunds': FUNDS[i]} if i in FUNDS else {}), **({'dependencies': d} if d else {}), **({'requiresBaseFunc': BASEFUNC[i]} if i in BASEFUNC else {}), 'unlocks': []} for i, n, c, p, d, _ in T]
-missing=[i for i,*_ in T if i not in FUNDS and not i.startswith('STR_STANDARD') and i not in ('STR_FIELD_MEDICINE','STR_BREACHING_SHOTGUN','STR_TRANSPORT_UNDER_FIRE')]
+missing=[i for i,*_ in T if i not in FUNDS and not i.startswith('STR_STANDARD') and i not in ('STR_FIELD_MEDICINE','STR_BREACHING_SHOTGUN','STR_TRANSPORT_UNDER_FIRE','STR_VAMP_RECOVERED')]
 assert not missing, missing
 ART = [{'id': i, 'type_id': 8, 'section': SECTION, 'requires': [i], 'text': i + '_UFOPEDIA'} for i, *_ in T]
 S = {'STR_JOE_RESEARCH_FILES': 'G.I. JOE RESEARCH'}
