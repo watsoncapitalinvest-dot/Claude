@@ -180,6 +180,26 @@ S['STR_BRIEFING_DROME_STRIKE'] = P.join([
     "Hold the base. Take prisoners if you can, pick up their weapons when it's over. I want to know who's been arming these people.",
 ])
 
+# ------------------------------------------------------------------ Sgt. Slaughter saves the day (RECRUITING_BUILD_SPEC_v1 section 4, John 13 Nov 22:57)
+# A mission that looks ordinary; 20 Cobra spring an ambush; two turns later Slaughter rolls in behind them in his Triple T.
+S['STR_BRIEFING_ROUTINE_SIGHTING_TITLE'] = 'OPERATION: ROUTINE PATROL'
+S['STR_BRIEFING_ROUTINE_SIGHTING'] = P.join([
+    "HAWK: Local police report armed men in a Cobra-style van moving through the area. Probably a supply run. Probably nothing.",
+    "Go and take a look. If it's Cobra, bring me a prisoner. If it isn't, be home for dinner.",
+])
+S['STR_EVENT_AMBUSH'] = 'AMBUSH!'
+S['STR_EVENT_AMBUSH_DESCRIPTION'] = "It was a trap. Cobra troops are coming out of every building on one side of the street. Twenty of them, at least."
+S['STR_EVENT_SLAUGHTER_ARRIVES'] = 'SOMETHING BIG IS COMING'
+S['STR_EVENT_SLAUGHTER_ARRIVES_DESCRIPTION'] = P.join([
+    "An engine roars behind the Cobra line. A small, ugly, very angry tank comes through a fence, and a man in a campaign hat is standing in the hatch.",
+    "SGT. SLAUGHTER: \"Cobra! You picked the wrong street, the wrong day and the wrong sergeant! Joes, keep your heads down and watch how it's done!\"",
+])
+S['STR_EVENT_SLAUGHTER_JOINS'] = 'SGT. SLAUGHTER JOINS G.I. JOE'
+S['STR_EVENT_SLAUGHTER_JOINS_DESCRIPTION'] = P.join([
+    "Sergeant Slaughter. Drill instructor, Command. He can head Training & Recruiting, and his Triple T tank comes with him.",
+    "SGT. SLAUGHTER: \"I've been watching your outfit, Hawk. Good people. Soft. I'm going to fix that. Where do I sign?\"",
+])
+
 # ------------------------------------------------------------------ Cobra Commander's broadcast (Geoscape event)
 S['STR_EVENT_COBRA_BROADCAST'] = 'COBRA SPEAKS'
 S['STR_EVENT_COBRA_BROADCAST_DESCRIPTION'] = P.join([
