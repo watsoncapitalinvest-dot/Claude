@@ -148,7 +148,7 @@ def build(src=None, docs=None):
                 if sp: strings['STR_GJR_SPEC_' + skey(sp)] = sp
             rec = dict(id='C_' + key, name=name)
             if is_joe:
-                rec |= dict(soldierType='STR_' + key, rosterStatus=c.get('status'), rank=c['rank'], rankString=rank_key,
+                rec |= dict(soldierType='STR_' + key, rosterStatus=c.get('arrives') or c.get('status'), rank=c['rank'], rankString=rank_key,
                             allowPromotion=False, costBuy=0)
             else:
                 rec |= dict(source=sid, faction=faction, unitType=c.get('unit'), rank=c['rank'], rankString=rank_key,
@@ -231,7 +231,7 @@ def write_docs(out, flags, docs):
             stl = ' / '.join(f'{k} {st[k]}' for k in KS)
             shown = strings_rank(r)
             L += [f"## {d['name']}", f"{d['faction']} - {shown} - {c['primary']}{(' / ' + c['secondary']) if c.get('secondary') else ''}",
-                  f"Real name: {a.get('real_name', '?')} | Version: {e.get('version')} | Bible arrives: {e.get('arrives')} | Window: {r.get('window') or '-'}",
+                  f"Real name: {a.get('real_name', '?')} | Version: {e.get('version')} | " + (f"Arrives: {c['arrives']} (Bible says: {e.get('arrives')})" if c.get('arrives') else f"Bible arrives: {e.get('arrives')}") + f" | Window: {r.get('window') or '-'}",
                   f"Unit: {r.get('unitType') or r.get('soldierType')}", f'Stats: {stl}',
                   f"Weapon: {r['weapon']['name']} ({', '.join(x for x in r['weapon']['armory'] if x)})",
                   f"Trait - {d['trait']['name']}: {d['trait']['text']} [{d['trait']['engine']}] {d['trait'].get('effect') or ''}",
