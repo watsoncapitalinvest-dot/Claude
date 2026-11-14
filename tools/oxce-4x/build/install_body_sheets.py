@@ -191,6 +191,9 @@ def main():
         if add:
             open(p, 'w').write(t.rstrip('\n') + '\n' + add)
     print('installed:', ', '.join(done) or 'nothing yet')
+    # ROSTER's records (stats, canon rank, no promotions) over the placeholder stats this script writes
+    import apply_roster
+    apply_roster.main()
 
 
 if __name__ == '__main__':
