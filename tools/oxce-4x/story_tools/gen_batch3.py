@@ -97,6 +97,29 @@ for i, n, c, deps, txt in [
  ('STR_TRANSPORT_COUNTERMEASURE_PODS', 'Countermeasure Pods', 60, ['STR_TRANSPORT_UNDER_FIRE'], 'Flare dispensers under every transport, and drills for the pilots on breaking a missile lock.')]:
     t(i, n, c, 15, deps, txt)
 
+# Head-only projects (John 14 Nov 00:40-00:51, NAMED_JOES_AT_BASE_v1 3a): new topics, no existing topic changed.
+# Each one progresses only while its department head is at base in his office (headOnly: BUILD's fork flag).
+HEAD_ONLY = [
+ ('STR_RAPID_DEPLOYMENT_DRILL', 'Rapid Deployment Drill', 100, 150000, 'Hawk\'s staff turn a squad around in a day. Named Joes need only one day of stand-down after a mission, not two.'),
+ ('STR_JOINT_CHIEFS_LIAISON', 'Joint Chiefs Liaison', 120, 200000, 'A standing line to the Joint Chiefs. Pentagon directives pay 25% more once the Pentagon Hook-up is built.'),
+ ('STR_COBRA_PATTERN_ANALYSIS', 'Cobra Pattern Analysis', 100, 150000, 'Every raid Cobra has run, laid side by side. The mission preview shows how many Cobra troops to expect.'),
+ ('STR_INFORMANT_NETWORK', 'Informant Network', 120, 150000, 'Paid eyes in the ports, the bars and the truck stops. Intel operations finish 25% faster.'),
+ ('STR_FIELD_REPAIR_KITS', 'Field Repair Kits', 80, 100000, 'Spares and tools packed for every vehicle. Vehicles repair twice as fast at base.'),
+ ('STR_LONG_RANGE_CONVOYS', 'Long-Range Convoys', 100, 150000, 'Fuel bowsers and a convoy plan. Vehicles can drive in to missions half as far again from base.'),
+ ('STR_WEAPON_CARE', 'Weapon Care', 80, 100000, 'The armorer works on each named Joe\'s own weapon. Weapon mastery grows 25% faster.'),
+ ('STR_AMMO_DISCIPLINE', 'Ammo Discipline', 80, 100000, 'Load-out drills and lighter magazine pouches. Every Joe carries one more spare clip.'),
+ ('STR_COMBAT_STRESS_PROGRAM', 'Combat Stress Program', 100, 150000, 'Rest, talk and sleep, done properly. A named Joe at base sheds two points of battle strain a week, not one.'),
+ ('STR_FIELD_SURGERY', 'Field Surgery', 120, 200000, 'Surgeons who work under fire. A downed named Joe is out one week less.'),
+ ('STR_SECURE_CHANNELS', 'Secure Channels', 100, 150000, 'Scrambled radio for every flight. Cobra radar spots our transfers and couriers 25% less often.'),
+ ('STR_SIGNAL_TRIANGULATION', 'Signal Triangulation', 100, 150000, 'Cross-bearings from every station we run. Radar range +10%.'),
+ ('STR_PILOT_ROTATION', 'Pilot Rotation', 80, 100000, 'A flying roster that keeps the pilots fresh. Dogfights add no battle strain.'),
+ ('STR_HOT_PAD', 'Hot Pad', 100, 150000, 'A fueled, armed jet and a pilot in the cockpit, day and night. Interceptors scramble twice as fast.'),
+ ('STR_DRILL_INSTRUCTOR_COURSE', 'Drill Instructor Course', 100, 150000, 'Teaching the teachers. An instructor trains eight unnamed Joes, not six.'),
+ ('STR_LEADERSHIP_SCHOOL', 'Leadership School', 120, 200000, 'Turning veterans into leaders. Steel Brigade costs 25 Flag Points less.'),
+]
+for i, n, c, f, txt in HEAD_ONLY:
+    t(i, n, c, 15, [], txt)
+
 # research money (John 21:28: "some are money and/or resources like cobra parts"). Dollars, charged when the project
 # starts. OXCE has no such field: costFunds is the name proposed to BUILD for the fork. Intel, interrogations, clues
 # and captured gear cost no money: they use up the item or prisoner instead.
@@ -120,8 +143,10 @@ FUNDS = {k: int(round(v * 0.75, -4)) for k, v in FUNDS.items()}   # John 21:38: 
 FUNDS.update({'STR_FORWARD_OPERATIONS_1': 100000, 'STR_FORWARD_OPERATIONS_2': 200000, 'STR_FORWARD_OPERATIONS_3': 300000})   # after the cut (John 13 Nov 21:13)
 FUNDS.update({'STR_OVERWATCH_DRILLS': 60000, 'STR_BREACHING_DRILLS': 80000, 'STR_FIRE_AND_MOVE': 90000})   # pitched after the cut (John 23:16-23:19)
 FUNDS.update({'STR_TRANSPORT_DOOR_GUNS': 60000, 'STR_TRANSPORT_ARMOR_PLATING': 90000, 'STR_TRANSPORT_COUNTERMEASURE_PODS': 70000})   # John 13 Nov 14:11 (dogfight design 3b)
+FUNDS.update({i: f for i, n, c, f, _ in HEAD_ONLY})   # John 14 Nov 00:51, after the cut
+HEADONLY = {i for i, *_ in HEAD_ONLY}
 BASEFUNC = {'STR_OVERWATCH_DRILLS': ['STR_BRIEFING_ROOM'], 'STR_BREACHING_DRILLS': ['STR_BRIEFING_ROOM'], 'STR_FIRE_AND_MOVE': ['STR_BRIEFING_ROOM']}
-R = [{'name': i, 'cost': c, 'points': p, **({'costFunds': FUNDS[i]} if i in FUNDS else {}), **({'dependencies': d} if d else {}), **({'requiresBaseFunc': BASEFUNC[i]} if i in BASEFUNC else {}), 'unlocks': []} for i, n, c, p, d, _ in T]
+R = [{'name': i, 'cost': c, 'points': p, **({'costFunds': FUNDS[i]} if i in FUNDS else {}), **({'dependencies': d} if d else {}), **({'requiresBaseFunc': BASEFUNC[i]} if i in BASEFUNC else {}), **({'headOnly': True} if i in HEADONLY else {}), 'unlocks': []} for i, n, c, p, d, _ in T]
 missing=[i for i,*_ in T if i not in FUNDS and not i.startswith('STR_STANDARD') and i not in ('STR_FIELD_MEDICINE','STR_BREACHING_SHOTGUN','STR_TRANSPORT_UNDER_FIRE','STR_VAMP_RECOVERED')]
 assert not missing, missing
 ART = [{'id': i, 'type_id': 8, 'section': SECTION, 'requires': [i], 'text': i + '_UFOPEDIA'} for i, *_ in T]
@@ -131,7 +156,8 @@ hdr = ('# STORY (Year 1 research + story), batch 3: G.I. Joe research for Year 1
        '# Day 1 open list = John\'s short list (12 Nov 21:10). Nothing opens by date (John 21:20): every other topic follows\n'
        '# from research; the months in the design are estimates of research time and cost. Done-at-start topics are\n'
        '# for BUILD\'s starting research. The items, crafts, facilities and manufacture these open are BUILD\'s rules.\n'
-       '# costFunds = research money in dollars (John 21:28). Not an OXCE field: BUILD to read it in the fork.\n')
+       '# costFunds = research money in dollars (John 21:28). Not an OXCE field: BUILD to read it in the fork.\n'
+       '# headOnly = progresses only while the department head is at base (NAMED_JOES_AT_BASE_v1). Fork flag.\n')
 data = {'research': R, 'ufopaedia': ART, 'extraStrings': [{'type': 'en-US', 'strings': S}, {'type': 'en-GB', 'strings': S}]}
 open(os.path.join(OUT, 'gijoe_research_joe.rul'), 'w').write(hdr + yaml.dump(data, sort_keys=False, width=200, allow_unicode=True))
 print('topics', len(R))
