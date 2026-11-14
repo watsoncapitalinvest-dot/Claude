@@ -26,7 +26,9 @@ SHEETS = sys.argv[sys.argv.index('--sheets') + 1] if '--sheets' in sys.argv else
 UNITS = os.path.join(MOD, 'Ruleset', 'gijoe_units.rul')
 
 # name: (existing armour to switch, or None) ; new ones: (armour, soldier type, display name, names list)
-EXISTING = {'snake_eyes': 'STR_SNAKE_EYES_UC', 'roadblock': 'STR_ROADBLOCK_UC'}
+EXISTING = {'snake_eyes': 'STR_SNAKE_EYES_UC', 'roadblock': 'STR_ROADBLOCK_UC',
+            # the factory's villain sheets (ROSTER 13 Nov) on the villain units that already exist
+            'cobra_commander': 'COBRA_CC_ARMOR', 'destro': 'COBRA_DESTRO_ARMOR', 'storm_shadow': 'COBRA_STORM_ARMOR'}
 NEW = {
     'beach_head': ('STR_BEACH_HEAD_UC', 'STR_BEACH_HEAD', 'Beach Head', ['Beach Head']),
     'scarlett': ('STR_SCARLETT_UC', 'STR_SCARLETT', 'Scarlett', ['Scarlett']),
