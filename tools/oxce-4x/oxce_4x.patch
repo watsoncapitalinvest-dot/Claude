@@ -1757,10 +1757,10 @@ index 6065b54..8db80d7 100644
  	/// Init function.
 diff --git a/src/Battlescape/AirFight.cpp b/src/Battlescape/AirFight.cpp
 new file mode 100644
-index 0000000..bf9bd45
+index 0000000..7120f32
 --- /dev/null
 +++ b/src/Battlescape/AirFight.cpp
-@@ -0,0 +1,353 @@
+@@ -0,0 +1,483 @@
 +/*
 + * G.I. Joe: air fights on the battle engine (claude/DOGFIGHT_DESIGN_v1.md, claude/AIR_SEA_BUILD_PLAN_v1.md).
 + */
@@ -1805,7 +1805,68 @@ index 0000000..bf9bd45
 +
 +bool isAirFight(const Mod *mod, const SavedBattleGame *save)
 +{
-+	return mod && save && mod->getAirFightRules().on && save->getMissionType() == mod->getAirFightRules().deployment;
++	return mod && save && mod->getAirFightRules().on
++		&& (save->getMissionType() == mod->getAirFightRules().deployment || save->getMissionType() == mod->getAirFightRules().seaDeployment);
++}
++
++bool isSeaFight(const Mod *mod, const SavedBattleGame *save)
++{
++	return mod && save && mod->getAirFightRules().on && save->getMissionType() == mod->getAirFightRules().seaDeployment;
++}
++
++void floorRange(const Mod *mod, const SavedBattleGame *save, const BattleUnit *unit, int &lo, int &hi)
++{
++	const auto *r = rule(mod, unit);
++	lo = 0; hi = 99;
++	if (!r) return;
++	if (isSeaFight(mod, save)) { lo = r->seaMinFloor; hi = r->seaMaxFloor; }
++	else { lo = r->minFloor; hi = r->maxFloor; }
++}
++
++namespace
++{
++	int sysCount(const SavedBattleGame *save, const BattleUnit *u, const char *sys)
++	{
++		return save->getVanStop(std::string("sys:") + std::to_string(u->getId()) + ":" + sys);
++	}
++}
++
++bool systemOut(const Mod *mod, const SavedBattleGame *save, const BattleUnit *unit, const std::string &sys)
++{
++	const auto *r = rule(mod, unit);
++	if (!r || r->systemHits <= 0) return false;
++	return sysCount(save, unit, sys.c_str()) >= r->systemHits;
++}
++
++void onHit(SavedBattleGame *save, const BattleUnit *attacker, BattleUnit *target)
++{
++	const Mod *mod = save->getMod();
++	const auto *r = rule(mod, target);
++	if (!r || r->systemHits <= 0 || !attacker || target->isOut()) return;
++	Log(LOG_INFO) << "[sea] " << target->getType() << " hit, health " << target->getHealth() << "/" << target->getBaseStats()->health;
++	// which system the hit strikes, by where it comes from (sea design section 6)
++	const int from = dirTo(target->getPosition(), attacker->getPosition());
++	int gap = 2;
++	if (from >= 0) { int g = std::abs(from - target->getDirection()) % 8; gap = g > 4 ? 8 - g : g; }
++	const int roll = RNG::generate(0, 99);
++	const char *sys = nullptr;
++	if (gap >= 3) sys = roll < 60 ? "engines" : nullptr;                                       // from behind: mostly the engines
++	else if (gap <= 1) sys = roll < 40 ? "guns" : roll < 70 ? "steering" : nullptr;              // from the front: guns and steering
++	else sys = roll < 30 ? "guns" : nullptr;                                                    // from the side: the hull, some guns
++	if (!sys) return;
++	const std::string key = std::string("sys:") + std::to_string(target->getId()) + ":" + sys;
++	save->setVanStop(key, save->getVanStop(key) + 1);
++	Log(LOG_INFO) << "[sea] " << target->getType() << " hit in the " << sys << " (" << save->getVanStop(key) << "/" << r->systemHits << ")";
++	if (std::string(sys) == "engines" && save->getVanStop(key) >= r->systemHits)
++	{
++		save->setVanStop("afDisabled:" + std::to_string(target->getId()), 1);
++		target->setTimeUnits(0);
++	}
++}
++
++bool isDisabled(const SavedBattleGame *save, const BattleUnit *unit)
++{
++	return save->getVanStop("afDisabled:" + std::to_string(unit->getId())) != 0;
 +}
 +
 +int dirTo(Position from, Position to)
@@ -1843,8 +1904,9 @@ index 0000000..bf9bd45
 +	return gap <= 1; // the 90 degree cone ahead: forward, forward-left, forward-right
 +}
 +
-+int hitChance(const Mod *mod, const BattleUnit *shooter, const BattleUnit *target)
++int hitChance(const Mod *mod, const BattleUnit *shooter, const BattleUnit *target, const BattleItem *weapon)
 +{
++	const auto *w = weapon ? mod->getAirWeapon(weapon->getRules()->getType()) : nullptr;
 +	const auto &R = mod->getAirFightRules();
 +	int c = R.baseHit;
 +	c += (shooter->getBaseStats()->firing - 50) / 2;
@@ -1858,31 +1920,41 @@ index 0000000..bf9bd45
 +	}
 +	const int dist = Position::distance2d(centre(shooter), centre(target));
 +	c -= R.perTile * std::max(0, dist - R.freeRange);
-+	if (shooter->getPosition().z != target->getPosition().z) c -= R.deckMalus;
++	if (shooter->getPosition().z != target->getPosition().z && !w) c -= R.deckMalus; // a turret is built to reach its floor
 +	if (const auto *tr = rule(mod, target)) c -= tr->agility;
 +	c -= target->getBaseStats()->reactions / 5;
 +	return std::max(5, std::min(95, c));
 +}
 +
-+std::string fireCheck(const Mod *mod, const SavedBattleGame *save, const BattleUnit *shooter, Position target)
++std::string fireCheck(const Mod *mod, const SavedBattleGame *save, const BattleUnit *shooter, Position target, const BattleItem *weapon)
 +{
 +	const auto *r = rule(mod, shooter);
 +	if (!r) return "";
 +	const auto &R = mod->getAirFightRules();
-+	if (shooter->getHealth() * 100 < shooter->getBaseStats()->health * R.noAttackBelow)
++	if (!weapon) weapon = shooter->getMainHandWeapon(false);
++	const auto *w = weapon ? mod->getAirWeapon(weapon->getRules()->getType()) : nullptr;
++	if (r->systemHits <= 0 && shooter->getHealth() * 100 < shooter->getBaseStats()->health * R.noAttackBelow)
 +		return "STR_AF_TOO_DAMAGED";
++	if (systemOut(mod, save, shooter, "guns"))
++		return "STR_SEA_GUNS_OUT";
 +	if (std::abs(target.z - shooter->getPosition().z) > 1)
 +		return "STR_AF_DECK_OUT_OF_REACH";
-+	if (!inArc(shooter, target, r->arc))
++	// a sea fight: the waterline - only a weapon made for it reaches underwater (a torpedo, a depth charge)
++	const int minF = w ? w->minFloor : (isSeaFight(mod, save) ? 1 : 0);
++	const int maxF = w ? w->maxFloor : 99;
++	if (target.z < minF || target.z > maxF)
++		return target.z < minF ? "STR_SEA_CANT_REACH_BELOW" : "STR_SEA_CANT_REACH_ABOVE";
++	if (!inArc(shooter, target, w && !w->arc.empty() ? w->arc : r->arc))
 +		return "STR_AF_OUT_OF_ARC";
 +	return "";
 +}
 +
-+bool floorAllowed(const Mod *mod, const BattleUnit *unit, int z)
++bool floorAllowed(const Mod *mod, const SavedBattleGame *save, const BattleUnit *unit, int z)
 +{
-+	const auto *r = rule(mod, unit);
-+	if (!r) return true;
-+	return z >= r->minFloor && z <= r->maxFloor;
++	if (!rule(mod, unit) || !isAirFight(mod, save)) return true;
++	int lo, hi;
++	floorRange(mod, save, unit, lo, hi);
++	return z >= lo && z <= hi;
 +}
 +
 +bool onOuterRing(const SavedBattleGame *save, const BattleUnit *unit)
@@ -1901,9 +1973,10 @@ index 0000000..bf9bd45
 +namespace
 +{
 +	/// turn on the spot, 2 TU per 45 degrees (design section 4); false if it can't afford it
-+	bool turnTo(BattleUnit *u, int dir)
++	bool turnTo(BattleUnit *u, int dir, const SavedBattleGame *save = nullptr)
 +	{
 +		if (dir < 0) return true;
++		if (save && systemOut(save->getMod(), save, u, "steering")) return false; // steering gone: straight on only
 +		const int steps = dirGap(dir, u->getDirection());
 +		if (steps == 0) return true;
 +		if (u->getTimeUnits() < steps * 2) return false;
@@ -1961,8 +2034,42 @@ index 0000000..bf9bd45
 +	const int hpPct = unit->getHealth() * 100 / std::max(1, (int)unit->getBaseStats()->health);
 +	const std::string id = std::to_string(unit->getId());
 +
-+	// cargo, recon, bomber: run for the exit edge; a door or tail gun only answers in reaction fire
-+	if (r->role == "cargo" || r->role == "recon" || r->role == "bomber" || r->role == "transport")
++	// a ship with its engines knocked out lies dead in the water
++	if (isDisabled(save, unit)) { unit->setTimeUnits(0); action->type = BA_NONE; return true; }
++	// a ship going somewhere: its turrets fire at anything they reach, once a turn, then it steams on
++	if (r->role == "ship")
++	{
++		const int turn = save->getTurn();
++		if (save->getVanStop("afFired:" + id) != turn)
++		{
++			for (BattleItem *w : { unit->getRightHandWeapon(), unit->getLeftHandWeapon() })
++			{
++				if (!w || !w->haveAnyAmmo()) continue;
++				const RuleItemUseCost cost = unit->getActionTUs(BA_SNAPSHOT, w);
++				if (unit->getTimeUnits() < cost.Time) continue;
++				BattleUnit *pick = nullptr; int pc = -1;
++				for (auto *bu : *save->getUnits())
++				{
++					if (bu->getFaction() == unit->getFaction() || bu->getFaction() == FACTION_NEUTRAL || bu->isOut() || !bu->getTile() || hasLeft(save, bu)) continue;
++					if (Position::distance2d(unit->getPosition(), bu->getPosition()) > w->getRules()->getMaxRange()) continue;
++					if (!fireCheck(mod, save, unit, bu->getPosition(), w).empty()) continue;
++					const int c = hitChance(mod, unit, bu, w);
++					if (c > pc) { pc = c; pick = bu; }
++				}
++				if (pick)
++				{
++					save->setVanStop("afFired:" + id, turn);
++					action->type = BA_SNAPSHOT;
++					action->weapon = w;
++					action->target = pick->getPosition();
++					Log(LOG_INFO) << "[sea] " << unit->getType() << " fires " << w->getRules()->getType() << " at " << pick->getType() << " chance " << pc;
++					return true;
++				}
++			}
++		}
++	}
++	// cargo, recon, bomber, ship: run for the exit edge; a door or tail gun only answers in reaction fire
++	if (r->role == "cargo" || r->role == "recon" || r->role == "bomber" || r->role == "transport" || r->role == "ship")
 +	{
 +		const int exit = save->getVanStop("afExit:" + id); // 1 = east (the only crossing used so far)
 +		Position at = unit->getPosition();
@@ -1976,6 +2083,13 @@ index 0000000..bf9bd45
 +		return runFor(save, unit, action, nearestEdge(save, unit->getPosition()));
 +	}
 +	BattleItem *gun = unit->getMainHandWeapon(false);
++	if (gun && !gun->haveAnyAmmo())
++	{
++		// bursts all spent: nothing left to fight with, so it heads out
++		return runFor(save, unit, action, nearestEdge(save, unit->getPosition()));
++	}
++	int flo, fhi;
++	floorRange(mod, save, unit, flo, fhi);
 +	BattleUnit *best = nullptr;
 +	int bestChance = -1;
 +	for (auto *bu : *save->getUnits())
@@ -1996,9 +2110,9 @@ index 0000000..bf9bd45
 +		const RuleItemUseCost cost = unit->getActionTUs(BA_SNAPSHOT, gun);
 +		if (!inArc(unit, tp, r->arc) && unit->getTimeUnits() >= cost.Time + 2 * dirGap(dirTo(unit->getPosition(), tp), unit->getDirection()))
 +		{
-+			turnTo(unit, dirTo(unit->getPosition(), tp));
++			turnTo(unit, dirTo(unit->getPosition(), tp), save);
 +		}
-+		if (inArc(unit, tp, r->arc) && unit->getTimeUnits() >= cost.Time && hitChance(mod, unit, best) >= 30)
++		if (fireCheck(mod, save, unit, tp, gun).empty() && unit->getTimeUnits() >= cost.Time && hitChance(mod, unit, best) >= 30)
 +		{
 +			action->type = BA_SNAPSHOT;
 +			action->weapon = gun;
@@ -2014,7 +2128,7 @@ index 0000000..bf9bd45
 +		static const int vx[8] = { 0, 1, 1, 1, 0, -1, -1, -1 }, vy[8] = { -1, -1, 0, 1, 1, 1, 0, -1 };
 +		const int d = best->getDirection();
 +		const int speed = std::max(1, (int)best->getBaseStats()->tu / 4);
-+		const int z = std::max(r->minFloor, std::min(r->maxFloor, (int)tp.z));
++		const int z = std::max(flo, std::min(fhi, (int)tp.z));
 +		const int reserve = gun ? unit->getActionTUs(BA_SNAPSHOT, gun).Time + 4 : 0;
 +		auto clampP = [&](Position p)
 +		{
@@ -2034,7 +2148,7 @@ index 0000000..bf9bd45
 +				}
 +		}
 +	}
-+	turnTo(unit, dirTo(unit->getPosition(), tp));
++	turnTo(unit, dirTo(unit->getPosition(), tp), save);
 +	action->type = BA_NONE;
 +	return true;
 +}
@@ -2046,7 +2160,7 @@ index 0000000..bf9bd45
 +	for (auto *u : *save->getUnits())
 +	{
 +		if (u->getOriginalFaction() != side || u->isOut() || !u->getTile() || hasLeft(save, u)) continue;
-+		if (!rule(save->getMod(), u) || !onOuterRing(save, u)) continue;
++		if (!rule(save->getMod(), u) || !onOuterRing(save, u) || isDisabled(save, u)) continue;
 +		const std::string id = std::to_string(u->getId());
 +		save->setVanStop("afEsc:" + id, 1);
 +		// a crossing plane that reached its own exit edge got through; anything else disengaged
@@ -2056,6 +2170,21 @@ index 0000000..bf9bd45
 +		u->setPosition(TileEngine::invalid);
 +		u->goToTimeOut();
 +		Log(LOG_INFO) << "[air] " << u->getType() << " " << u->getId() << (save->getVanStop("afThrough:" + id) ? " got through" : " left the fight");
++	}
++	// a sea fight is over once every Cobra vessel is sunk, gone or dead in the water (boarding is next)
++	if (isSeaFight(save->getMod(), save))
++	{
++		bool anyFree = false, anyDisabled = false;
++		for (auto *u : *save->getUnits())
++		{
++			if (u->getOriginalFaction() != FACTION_HOSTILE || u->isOut() || !u->getTile() || hasLeft(save, u)) continue;
++			if (isDisabled(save, u)) anyDisabled = true; else anyFree = true;
++		}
++		if (!anyFree && anyDisabled)
++		{
++			Log(LOG_INFO) << "[sea] every Cobra vessel is stopped: the fight ends";
++			save->setTurnLimit(save->getTurn());
++		}
 +	}
 +}
 +
@@ -2092,7 +2221,8 @@ index 0000000..bf9bd45
 +				res.ufo = ufo;
 +				res.ufoDown = down;
 +				res.ufoHealthPct = down ? 0 : hpPct;
-+				res.ufoThrough = save->getVanStop("afThrough:" + id) != 0 || (!down && !hasLeft(save, u));
++				res.ufoDisabled = !down && isDisabled(save, u);
++				res.ufoThrough = !res.ufoDisabled && (save->getVanStop("afThrough:" + id) != 0 || (!down && !hasLeft(save, u)));
 +			}
 +		}
 +	}
@@ -2116,10 +2246,10 @@ index 0000000..bf9bd45
 +}
 diff --git a/src/Battlescape/AirFight.h b/src/Battlescape/AirFight.h
 new file mode 100644
-index 0000000..d9dbda0
+index 0000000..ba9fd5d
 --- /dev/null
 +++ b/src/Battlescape/AirFight.h
-@@ -0,0 +1,49 @@
+@@ -0,0 +1,60 @@
 +#pragma once
 +/*
 + * G.I. Joe: air fights on the battle engine (claude/DOGFIGHT_DESIGN_v1.md, claude/AIR_SEA_BUILD_PLAN_v1.md).
@@ -2139,23 +2269,34 @@ index 0000000..d9dbda0
 +class Craft;
 +class Ufo;
 +struct BattleAction;
++class BattleItem;
 +
 +namespace AirFight
 +{
 +	/// the air rules for this unit, or nullptr if it is not an aircraft
 +	const Mod::AirCraftRule *rule(const Mod *mod, const BattleUnit *unit);
-+	/// is the battle an air fight
++	/// is the battle an air fight (or a sea fight: the same framework)
 +	bool isAirFight(const Mod *mod, const SavedBattleGame *save);
++	/// is the battle a sea fight (floors: 0 underwater, 1 surface, 2 air)
++	bool isSeaFight(const Mod *mod, const SavedBattleGame *save);
++	/// the floors this unit may use in this battle
++	void floorRange(const Mod *mod, const SavedBattleGame *save, const BattleUnit *unit, int &lo, int &hi);
++	/// a ship's system (engines / guns / steering) knocked out
++	bool systemOut(const Mod *mod, const SavedBattleGame *save, const BattleUnit *unit, const std::string &sys);
++	/// a ship with its engines out: dead in the water, can be boarded
++	bool isDisabled(const SavedBattleGame *save, const BattleUnit *unit);
++	/// a unit was hit: a ship's systems take it by where it came from (sea design section 6)
++	void onHit(SavedBattleGame *save, const BattleUnit *attacker, BattleUnit *target);
 +	/// direction 0-7 from one tile to another (0 = north, clockwise)
 +	int dirTo(Position from, Position to);
 +	/// is the target inside the shooter's gun arc (forward / any / rear)
 +	bool inArc(const BattleUnit *shooter, Position target, const std::string &arc);
 +	/// the chance (5-95) that this shooter hits this target, by the design's formula (section 6)
-+	int hitChance(const Mod *mod, const BattleUnit *shooter, const BattleUnit *target);
++	int hitChance(const Mod *mod, const BattleUnit *shooter, const BattleUnit *target, const BattleItem *weapon = nullptr);
 +	/// why this shot can't be fired ("" = it can): arc, deck, damage
-+	std::string fireCheck(const Mod *mod, const SavedBattleGame *save, const BattleUnit *shooter, Position target);
++	std::string fireCheck(const Mod *mod, const SavedBattleGame *save, const BattleUnit *shooter, Position target, const BattleItem *weapon = nullptr);
 +	/// may this unit stand on this floor
-+	bool floorAllowed(const Mod *mod, const BattleUnit *unit, int z);
++	bool floorAllowed(const Mod *mod, const SavedBattleGame *save, const BattleUnit *unit, int z);
 +	/// is this tile in the outer ring of the map (where an aircraft may disengage)
 +	bool onOuterRing(const SavedBattleGame *save, const BattleUnit *unit);
 +	/// has this aircraft left the fight (disengaged, escaped at its exit edge)
@@ -2170,7 +2311,7 @@ index 0000000..d9dbda0
 +
 +}
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..a2e16e6 100644
+index b7e1111..b6dddc8 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
 @@ -16,6 +16,8 @@
@@ -2199,7 +2340,7 @@ index b7e1111..a2e16e6 100644
  
 +	// G.I. Joe air fights: the computer's pilots can't fire outside their gun arc either
 +	if ((action.type == BA_SNAPSHOT || action.type == BA_AUTOSHOT || action.type == BA_AIMEDSHOT || action.type == BA_LAUNCH)
-+		&& !AirFight::fireCheck(getMod(), _save, action.actor, action.target).empty())
++		&& !AirFight::fireCheck(getMod(), _save, action.actor, action.target, action.weapon).empty())
 +	{
 +		action.type = BA_NONE;
 +	}
@@ -2482,7 +2623,7 @@ index b7e1111..a2e16e6 100644
  		else
  		{
 +			// G.I. Joe air fights: no turning to fire - the target must already be in the gun's arc
-+			const std::string airWhy = AirFight::fireCheck(getMod(), _save, _currentAction.actor, pos);
++			const std::string airWhy = AirFight::fireCheck(getMod(), _save, _currentAction.actor, pos, _currentAction.weapon);
 +			if (!airWhy.empty())
 +			{
 +				_parentState->warning(airWhy);
@@ -2507,10 +2648,18 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..235a558 100644
+index 1951ba7..19b1426 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
-@@ -767,6 +767,7 @@ void BattlescapeGenerator::nextStage()
+@@ -16,6 +16,7 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "AirFight.h"
+ #include <algorithm>
+ #include <assert.h>
+ #include <sstream>
+@@ -767,6 +768,7 @@ void BattlescapeGenerator::nextStage()
   */
  void BattlescapeGenerator::run()
  {
@@ -2518,7 +2667,7 @@ index 1951ba7..235a558 100644
  	bool isPreview = _save->isPreview();
  
  	_save->setAlienCustom(_alienCustomDeploy ? _alienCustomDeploy->getType() : "", _alienCustomMission ? _alienCustomMission->getType() : "");
-@@ -829,9 +830,9 @@ void BattlescapeGenerator::run()
+@@ -829,9 +831,9 @@ void BattlescapeGenerator::run()
  		if (_game->getSavedGame()->getMonthsPassed() != -1)
  		{
  			month =
@@ -2530,7 +2679,7 @@ index 1951ba7..235a558 100644
  		}
  		else
  		{
-@@ -961,6 +962,151 @@ void BattlescapeGenerator::run()
+@@ -961,6 +963,161 @@ void BattlescapeGenerator::run()
  	}
  }
  
@@ -2546,8 +2695,11 @@ index 1951ba7..235a558 100644
 +	Tile::destroyedLog.clear();
 +	const Mod *mod = _game->getMod();
 +	const auto &AF = mod->getAirFightRules();
-+	const AlienDeployment *ruleDeploy = mod->getDeployment(AF.deployment, true);
-+	_save->setMissionType(AF.deployment);
++	// a Cobra ship makes it a sea fight: underwater, surface and air on floors 0-2 (SEA_BATTLES_DESIGN_v1)
++	const bool sea = ufo && std::find(AF.ships.begin(), AF.ships.end(), ufo->getRules()->getType()) != AF.ships.end();
++	const std::string &depName = sea ? AF.seaDeployment : AF.deployment;
++	const AlienDeployment *ruleDeploy = mod->getDeployment(depName, true);
++	_save->setMissionType(depName);
 +	_save->setTurnLimit(AF.rounds);
 +	_save->setChronoTrigger(FORCE_ABORT);
 +	_save->setCheatTurn(ruleDeploy->getCheatTurn());
@@ -2634,7 +2786,10 @@ index 1951ba7..235a558 100644
 +		}
 +		const auto *jr = mod->getAirCraft(rule->getType());
 +		const bool crossing = joeTransportHunted && jr && jr->role == "transport";
-+		Position p = crossing ? Position(4, midY + n * 3, 2) : Position(W / 2 - 2 + n * 3, H - 5, 2);
++		int flo = 2, fhi = 2;
++		AirFight::floorRange(mod, _save, u, flo, fhi);
++		const int jz = std::max(flo, std::min(fhi, 2));
++		Position p = crossing ? Position(4, midY + n * 3, jz) : Position(W / 2 - 2 + n * 3, H - 5, jz);
 +		const int dir = crossing ? 2 : 0;
 +		if (crossing) _save->setVanStop("afExit:" + std::to_string(u->getId()), 1); // east
 +		if (!place(u, p, dir)) delete u;
@@ -2650,8 +2805,12 @@ index 1951ba7..235a558 100644
 +			u->setRankInt(0);
 +			_save->setVanStop("afUfo:" + std::to_string(u->getId()), ufo->getId() + 1); // +1: a Cobra aircraft can be number 0
 +			Position p; int dir;
-+			if (cobraGoing && !joeTransportHunted) { p = Position(4, midY, RNG::generate(2, 3)); dir = 2; _save->setVanStop("afExit:" + std::to_string(u->getId()), 1); }
-+			else { p = Position(W / 2, H - 5 - 25, 2); dir = 4; }
++			int flo = 2, fhi = 3;
++			AirFight::floorRange(mod, _save, u, flo, fhi);
++			const int cz = RNG::generate(std::max(flo, std::min(fhi, 2)), std::min(fhi, 3));
++			const bool goingSomewhere = cobraGoing || (cobraRule && cobraRule->role == "ship");
++			if (goingSomewhere && !joeTransportHunted) { p = Position(4, midY, cz); dir = 2; _save->setVanStop("afExit:" + std::to_string(u->getId()), 1); }
++			else { p = Position(W / 2, H - 5 - 25, cz); dir = 4; }
 +			// a little damage carried over from earlier fights (design 1b.5)
 +			if (ufo->getRules()->getStats().damageMax > 0 && ufo->getDamage() > 0)
 +			{
@@ -2682,7 +2841,7 @@ index 1951ba7..235a558 100644
  /**
   * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
   */
-@@ -1669,6 +1815,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +1826,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -2772,7 +2931,7 @@ index 1951ba7..235a558 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +1925,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +1936,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -2841,7 +3000,7 @@ index 1951ba7..235a558 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2010,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2021,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -2858,7 +3017,7 @@ index 1951ba7..235a558 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2039,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2050,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -2901,7 +3060,7 @@ index 1951ba7..235a558 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -2081,8 +2411,14 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,8 +2422,14 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -2918,7 +3077,7 @@ index 1951ba7..235a558 100644
  	unsigned int terrainObjectID;
  
  	// Load file
-@@ -2141,11 +2477,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2488,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -5470,7 +5629,7 @@ index 200fb3a..2b6326c 100644
  	bool deployReinforcements(const ReinforcementsData &wave);
  	/// Adds a reinforcement unit to the game.
 diff --git a/src/Battlescape/Pathfinding.cpp b/src/Battlescape/Pathfinding.cpp
-index d8c617e..91278ce 100644
+index d8c617e..a2f3f1b 100644
 --- a/src/Battlescape/Pathfinding.cpp
 +++ b/src/Battlescape/Pathfinding.cpp
 @@ -16,6 +16,7 @@
@@ -5486,7 +5645,7 @@ index d8c617e..91278ce 100644
  	directionToVector(direction, &pos);
  	pos += startPosition;
 +	// G.I. Joe air fights: an aircraft keeps to its own floors (decks)
-+	if (!AirFight::floorAllowed(_save->getMod(), unit, pos.z))
++	if (!AirFight::floorAllowed(_save->getMod(), _save, unit, pos.z))
 +	{
 +		return {{INVALID_MOVE_COST, 0}};
 +	}
@@ -5494,7 +5653,7 @@ index d8c617e..91278ce 100644
  	const MovementType movementType = getMovementType(unit, missileTarget, bam);
  	const Armor* armor =  unit->getArmor();
 diff --git a/src/Battlescape/Projectile.cpp b/src/Battlescape/Projectile.cpp
-index 7f7697c..ea0b6cc 100644
+index 7f7697c..9fbfa2d 100644
 --- a/src/Battlescape/Projectile.cpp
 +++ b/src/Battlescape/Projectile.cpp
 @@ -16,6 +16,8 @@
@@ -5506,7 +5665,7 @@ index 7f7697c..ea0b6cc 100644
  #include "Projectile.h"
  #include "TileEngine.h"
  #include "Map.h"
-@@ -331,6 +333,32 @@ int Projectile::calculateThrow(double accuracy)
+@@ -331,6 +333,34 @@ int Projectile::calculateThrow(double accuracy)
   */
  void Projectile::applyAccuracy(Position origin, Position *target, double accuracy, bool keepRange, bool extendLine)
  {
@@ -5518,12 +5677,14 @@ index 7f7697c..ea0b6cc 100644
 +		const BattleUnit *tu = tt ? tt->getUnit() : nullptr;
 +		if (tu && tu != _action.actor)
 +		{
-+			const int airChance = AirFight::hitChance(_save->getMod(), _action.actor, tu);
++			const int airChance = AirFight::hitChance(_save->getMod(), _action.actor, tu, _action.weapon);
 +			const bool airHit = RNG::percent(airChance);
 +			Log(LOG_INFO) << "[air] shot " << _action.actor->getType() << " -> " << tu->getType() << " " << airChance << "% " << (airHit ? "HIT" : "miss");
 +			if (airHit)
 +			{
-+				return; // the target voxel is the target unit's centre already
++				// on through the target's centre, so the line meets it whatever floor it is on
++				*target = Position(origin.x + (target->x - origin.x) * 2, origin.y + (target->y - origin.y) * 2, origin.z + (target->z - origin.z) * 2);
++				return;
 +			}
 +			// a clean miss: push the aim point a tile and a half sideways and on past the target
 +			const int dx = target->x - origin.x, dy = target->y - origin.y;
@@ -5540,7 +5701,7 @@ index 7f7697c..ea0b6cc 100644
  	int ydiff = origin.y - target->y;
  	int zdiff = origin.z - target->z;
 diff --git a/src/Battlescape/ProjectileFlyBState.cpp b/src/Battlescape/ProjectileFlyBState.cpp
-index 529b7f2..618da3a 100644
+index 529b7f2..9a4b286 100644
 --- a/src/Battlescape/ProjectileFlyBState.cpp
 +++ b/src/Battlescape/ProjectileFlyBState.cpp
 @@ -16,6 +16,7 @@
@@ -5557,7 +5718,7 @@ index 529b7f2..618da3a 100644
  	case BA_LAUNCH:
 +		{
 +			// G.I. Joe air fights: guns fire only inside their arc, a deck up or down at most
-+			const std::string airWhy = AirFight::fireCheck(_parent->getMod(), _parent->getSave(), _unit, _action.target);
++			const std::string airWhy = AirFight::fireCheck(_parent->getMod(), _parent->getSave(), _unit, _action.target, _action.weapon);
 +			if (!airWhy.empty())
 +			{
 +				_action.result = airWhy;
@@ -5569,10 +5730,18 @@ index 529b7f2..618da3a 100644
  		{
  			// out of range
 diff --git a/src/Battlescape/TileEngine.cpp b/src/Battlescape/TileEngine.cpp
-index 6e68469..a8c9d39 100644
+index 6e68469..ea1dd72 100644
 --- a/src/Battlescape/TileEngine.cpp
 +++ b/src/Battlescape/TileEngine.cpp
-@@ -898,7 +898,11 @@ TileEngine::TileEngine(SavedBattleGame *save, Mod *mod) :
+@@ -16,6 +16,7 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "AirFight.h"
+ #include <assert.h>
+ #include <set>
+ #include "TileEngine.h"
+@@ -898,7 +899,11 @@ TileEngine::TileEngine(SavedBattleGame *save, Mod *mod) :
  	_maxViewDistance(mod->getMaxViewDistance()), _maxViewDistanceSq(_maxViewDistance * _maxViewDistance),
  	_maxVoxelViewDistance(_maxViewDistance * 16), _maxDarknessToSeeUnits(mod->getMaxDarknessToSeeUnits()),
  	_maxStaticLightDistance(mod->getMaxStaticLightDistance()), _maxDynamicLightDistance(mod->getMaxDynamicLightDistance()),
@@ -5585,7 +5754,16 @@ index 6e68469..a8c9d39 100644
  {
  	_blockVisibility.resize(save->getMapSizeXYZ());
  	_lightPropagationTerrainBlocking.resize(save->getMapSizeXYZ());
-@@ -3217,6 +3221,97 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
+@@ -3146,6 +3151,8 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
+ 	const int stunLevelOrig = target->getStunlevel();
+ 
+ 	target->damage(relative, damage, type, _save, attack);
++	// G.I. Joe sea fights: a ship's engines, guns and steering take hits by where they come from
++	if (target->getHealth() < healthOrig) AirFight::onHit(_save, attack.attacker, target);
+ 
+ 	const int healthDamage = healthOrig - target->getHealth();
+ 	const int stunDamage = target->getStunlevel() - stunLevelOrig;
+@@ -3217,6 +3224,97 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
   * @param unit The unit that caused the explosion.
   * @param clipOrWeapon clip or weapon causing the damage.
   */
@@ -5683,7 +5861,7 @@ index 6e68469..a8c9d39 100644
  void TileEngine::hit(BattleActionAttack attack, Position center, int power, const RuleDamageType *type, bool rangeAtack, int terrainMeleeTilePart)
  {
  	bool terrainChanged = false; //did the hit destroy a tile thereby changing line of sight?
-@@ -3262,10 +3357,41 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
+@@ -3262,10 +3360,41 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
  					_save->getModuleMap()[(center.x/16)/10][(center.y/16)/10].second--;
  				}
  			}
@@ -5725,7 +5903,7 @@ index 6e68469..a8c9d39 100644
  		}
  	}
  	else if (part == V_UNIT)
-@@ -3341,6 +3467,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3341,6 +3470,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  	{
  		power /= 2;
  	}
@@ -5736,7 +5914,7 @@ index 6e68469..a8c9d39 100644
  
  	int exHeight = Clamp(Options::battleExplosionHeight, 0, 3);
  	int vertdec = 1000; //default flat explosion
-@@ -3451,7 +3581,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3451,7 +3584,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  							_save->removeItem(bi);
  						}
  
@@ -5745,7 +5923,7 @@ index 6e68469..a8c9d39 100644
  					}
  				}
  
-@@ -3512,6 +3642,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3512,6 +3645,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  	// now detonate the tiles affected by explosion
  	if (type->ToTile > 0.0f)
  	{
@@ -5753,7 +5931,7 @@ index 6e68469..a8c9d39 100644
  		for (auto& pair : tilesAffected)
  		{
  			if (detonate(pair.first, pair.second))
-@@ -3523,7 +3654,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3523,7 +3657,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  			if (j)
  				applyGravity(j);
  		}
@@ -5763,7 +5941,7 @@ index 6e68469..a8c9d39 100644
  	calculateLighting(LL_AMBIENT, centetTile, maxRadius + 1, true); // roofs could have been destroyed and fires could have been started
  	calculateFOV(centetTile, maxRadius + 1, true, true);
  	if (attack.attacker && Position::distance2d(centetTile, attack.attacker->getPosition()) > maxRadius + 1)
-@@ -3622,7 +3755,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
+@@ -3622,7 +3758,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
  			}
  		}
  		// set tile on fire
@@ -5772,7 +5950,7 @@ index 6e68469..a8c9d39 100644
  		{
  			if (tiles[i]->getMapData(O_FLOOR) || tiles[i]->getMapData(O_OBJECT))
  			{
-@@ -5156,6 +5289,156 @@ Tile *TileEngine::applyGravity(Tile *t)
+@@ -5156,6 +5292,156 @@ Tile *TileEngine::applyGravity(Tile *t)
  	return rt;
  }
  
@@ -11446,7 +11624,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..cd59c81 100644
+index 6b4e79d..b616a16 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,10 @@
@@ -12777,7 +12955,7 @@ index 6b4e79d..cd59c81 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4323,158 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4323,189 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -12854,6 +13032,8 @@ index 6b4e79d..cd59c81 100644
 +	auto it = AF.textureTerrains.find(texture);
 +	if (it != AF.textureTerrains.end()) terrain = it->second;
 +	else if (texture < 0 && !AF.oceanTerrain.empty()) terrain = AF.oceanTerrain;
++	if (std::find(AF.ships.begin(), AF.ships.end(), ufo->getRules()->getType()) != AF.ships.end() && !AF.seaTerrain.empty())
++		terrain = AF.seaTerrain; // a ship: a sea fight, the water and the sea floor below
 +	SavedBattleGame *bgame = new SavedBattleGame(_game->getMod(), _game->getLanguage());
 +	_game->getSavedGame()->setBattleGame(bgame);
 +	BattlescapeGenerator bgen(_game);
@@ -12910,7 +13090,36 @@ index 6b4e79d..cd59c81 100644
 +	{
 +		const int dmax = ufo->getRules()->getStats().damageMax;
 +		const std::string ufoName = ufo->getName(_game->getLanguage()); // before it becomes a crash site
-+		if (res.ufoDown)
++		if (res.ufoDisabled)
++		{
++			// dead in the water: the fight ends, the boarding begins (sea design section 7) - a deck mission
++			// on the spot; the ship itself leaves the map as a moving target
++			const RuleAlienMission *mrule = mod->getAlienMission("STR_COBRA_SHIP_BOARDING_MISSION");
++			AlienDeployment *dep = mod->getDeployment("STR_COBRA_SHIP_BOARDING");
++			if (mrule && dep)
++			{
++				MissionSite *ms = new MissionSite(mrule, dep, nullptr);
++				ms->setLongitude(ufo->getLongitude());
++				ms->setLatitude(ufo->getLatitude());
++				ms->setId(_game->getSavedGame()->getId(dep->getMarkerName()));
++				ms->setSecondsRemaining(2 * 24 * 3600);
++				ms->setAlienRace(ufo->getAlienRace());
++				ms->setDetected(true);
++				_game->getSavedGame()->getMissionSites()->push_back(ms);
++			}
++			ufo->setDetected(false);
++			ufo->setStatus(Ufo::DESTROYED);
++			report << tr("STR_SEA_DISABLED").arg(ufoName);
++		}
++		else if (res.ufoDown && std::find(AF.ships.begin(), AF.ships.end(), ufo->getRules()->getType()) != AF.ships.end())
++		{
++			// sunk: gone, cargo and all (a wreck the divers can work comes with the dive missions)
++			if (!credit && !res.crafts.empty()) credit = res.crafts.front().craft;
++			if (credit) ufo->setShotDownByCraftId(credit->getUniqueId());
++			ufo->setDamage(dmax * 2, mod);
++			report << tr("STR_SEA_SUNK").arg(ufoName);
++		}
++		else if (res.ufoDown)
 +		{
 +			if (!credit && !res.crafts.empty()) credit = res.crafts.front().craft;
 +			if (credit) ufo->setShotDownByCraftId(credit->getUniqueId());
@@ -12936,7 +13145,7 @@ index 6b4e79d..cd59c81 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +5758,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +5789,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -12951,7 +13160,7 @@ index 6b4e79d..cd59c81 100644
  
  	if (missionRace.empty())
 diff --git a/src/Geoscape/GeoscapeState.h b/src/Geoscape/GeoscapeState.h
-index 5eaf857..de0ca0f 100644
+index 5eaf857..8e8e8b4 100644
 --- a/src/Geoscape/GeoscapeState.h
 +++ b/src/Geoscape/GeoscapeState.h
 @@ -54,6 +54,14 @@ private:
@@ -12980,7 +13189,7 @@ index 5eaf857..de0ca0f 100644
 +		struct One { Craft *craft = nullptr; int healthPct = 100; bool lost = false; int pilotId = 0; };
 +		std::vector<One> crafts;
 +		Ufo *ufo = nullptr;
-+		bool ufoDown = false, ufoThrough = false;
++		bool ufoDown = false, ufoThrough = false, ufoDisabled = false;
 +		int ufoHealthPct = 100;
 +	};
 +	/// FIGHT was pressed: the battle starts
@@ -16025,7 +16234,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..8d66701 100644
+index 1885346..fe057e7 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -16163,7 +16372,7 @@ index 1885346..8d66701 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,327 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,343 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -16256,8 +16465,24 @@ index 1885346..8d66701 100644
 +				one.tryRead("minFloor", r.minFloor);
 +				one.tryRead("maxFloor", r.maxFloor);
 +				one.tryRead("arc", r.arc);
++				one.tryRead("seaMinFloor", r.seaMinFloor);
++				one.tryRead("seaMaxFloor", r.seaMaxFloor);
++				one.tryRead("systemHits", r.systemHits);
 +			}
 +		}
++		if (const auto& ws = af["weapons"])
++		{
++			for (const auto& one : ws.children())
++			{
++				AirWeaponRule &w = _airFight.weapons[one.readKey<std::string>()];
++				one.tryRead("arc", w.arc);
++				one.tryRead("minFloor", w.minFloor);
++				one.tryRead("maxFloor", w.maxFloor);
++			}
++		}
++		af.tryRead("seaDeployment", _airFight.seaDeployment);
++		af.tryRead("ships", _airFight.ships);
++		af.tryRead("seaTerrain", _airFight.seaTerrain);
 +		std::map<int, std::string> tex;
 +		if (af.tryRead("textureTerrains", tex))
 +			for (auto &kv : tex) _airFight.textureTerrains[kv.first] = kv.second;
@@ -16491,7 +16716,7 @@ index 1885346..8d66701 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3632,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3648,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -16499,7 +16724,7 @@ index 1885346..8d66701 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4237,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4253,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -16525,7 +16750,7 @@ index 1885346..8d66701 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4494,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4510,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -16546,7 +16771,7 @@ index 1885346..8d66701 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6208,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6224,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -16566,7 +16791,7 @@ index 1885346..8d66701 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6231,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6247,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -16574,7 +16799,7 @@ index 1885346..8d66701 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6245,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6261,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -16614,7 +16839,7 @@ index 1885346..8d66701 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..14643b7 100644
+index 2242d13..d0a09f6 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -16678,7 +16903,7 @@ index 2242d13..14643b7 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,159 @@ private:
+@@ -327,6 +360,176 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -16747,8 +16972,16 @@ index 2242d13..14643b7 100644
 +	{
 +		std::string role = "fighter"; ///< fighter | strike | recon | cargo | bomber | transport
 +		int agility = 0;              ///< subtracted from an attacker's chance to hit
-+		int minFloor = 1, maxFloor = 4; ///< the floors (decks) it may use
++		int minFloor = 1, maxFloor = 4; ///< the floors (decks) it may use in an air fight
++		int seaMinFloor = 2, seaMaxFloor = 2; ///< ... and in a sea fight (0 underwater, 1 surface, 2 air)
 +		std::string arc = "forward";  ///< its gun: forward | any | rear
++		int systemHits = 0;           ///< a ship: hits to knock out its engines, guns or steering (0 = no systems)
++	};
++	/// a weapon's own reach in air and sea fights
++	struct AirWeaponRule
++	{
++		std::string arc;                  ///< overrides the unit's arc if set
++		int minFloor = 0, maxFloor = 9;   ///< the floors it can hit (an AA gun: air only; a deck gun: surface only)
 +	};
 +	struct AirFightRules
 +	{
@@ -16758,6 +16991,10 @@ index 2242d13..14643b7 100644
 +		std::map<int, std::string> textureTerrains;      ///< globe texture -> terrain seen below
 +		std::string oceanTerrain, defaultTerrain;
 +		std::string deployment = "STR_AIR_FIGHT";
++		std::string seaDeployment = "STR_SEA_FIGHT";
++		std::vector<std::string> ships;                   ///< Cobra aircraft (ufo) types that are ships: a sea fight
++		std::string seaTerrain;                           ///< the water under a sea fight
++		std::map<std::string, AirWeaponRule> weapons;     ///< weapon item -> its reach
 +		std::vector<std::string> helicopters;            ///< Cobra aircraft never fought (always auto-resolved)
 +		int rounds = 12;
 +		int baseHit = 60, rearBonus = 20, headOnMalus = 10, freeRange = 3, perTile = 3, deckMalus = 15;
@@ -16773,6 +17010,11 @@ index 2242d13..14643b7 100644
 +	{
 +		auto it = _airFight.aircraft.find(unitType);
 +		return it == _airFight.aircraft.end() ? nullptr : &it->second;
++	}
++	const AirWeaponRule *getAirWeapon(const std::string &itemType) const
++	{
++		auto it = _airFight.weapons.find(itemType);
++		return it == _airFight.weapons.end() ? nullptr : &it->second;
 +	}
 +	/// G.I. Joe: the cartel arc's stash house and its flights (gijoe_cartel_arc.rul)
 +	struct CartelRules
@@ -16838,7 +17080,7 @@ index 2242d13..14643b7 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +878,124 @@ public:
+@@ -692,6 +895,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;

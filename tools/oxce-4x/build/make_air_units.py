@@ -22,7 +22,7 @@ from PIL import Image, ImageEnhance
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MOD = os.path.normpath(os.path.join(HERE, '..', 'mod'))
-SRC = sys.argv[1] if len(sys.argv) > 1 else '/tmp/claude-0/df/ac'
+SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, 'art', 'topviews')
 PAL_FROM = os.path.join(MOD, 'Resources', 'Units', 'hawk_body.png')
 
 # name: (top view, tint (r,g,b) or None, scale of the tile it fills, stand-in?)
@@ -35,6 +35,12 @@ AIRCRAFT = {
     'firebat':        ('craft_skystriker_top_wings_back.png', (120, 30, 40), 0.85, True),
     'night_raven':    ('craft_skystriker_top_wings_back.png', (25, 25, 35), 0.9, True),
     'cartel_plane':   ('craft_tomahawk_top.png', (215, 200, 160), 0.75, True),
+    # vessels: top views from John's 3D kits by build/render_topview.py (BUILD's quick renderer)
+    'cobra_ship':     ('craft_cobra_ship_top.png', None, 1.0, False),
+    'devilfish':      ('craft_devilfish_top.png', None, 0.9, False),
+    'moray':          ('craft_moray_top.png', None, 0.95, False),
+    'moccasin':       ('craft_moccasin_top.png', None, 0.9, False),
+    'raft':           ('craft_raft_top.png', None, 0.6, False),
 }
 
 
