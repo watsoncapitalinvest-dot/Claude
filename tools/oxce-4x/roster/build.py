@@ -137,7 +137,7 @@ def build(src=None, docs=None):
             faction = e.get('faction') or c.get('faction')
             is_joe = faction == 'G.I. Joe'
             # shown rank: the Joes' canon rank; a villain shows his canon rank only (a tier is a model input, not a title)
-            shown = RANKS[c['rank']] if is_joe else (re.sub(r'\s*\(.*\)$', '', canon_rank) if canon_rank else None)
+            shown = c.get('rankName') or (RANKS[c['rank']] if is_joe else (re.sub(r'\s*\(.*\)$', '', canon_rank) if canon_rank else None))
             rank_key = ('STR_GJR_RANK_' + skey(shown)) if shown else None
             if shown: strings[rank_key] = shown
             strings[f'STR_GJR_TRAIT_{key}'] = trait['name'] or ''; strings[f'STR_GJR_TRAIT_{key}_DESC'] = trait['text'] or ''
@@ -293,7 +293,7 @@ def guess_spec(text):
         if any(w.lower() in t for w in words): return sp
     return 'Infantry'
 
-def draft(src, batch, arrives, factions):
+def draft(src, batch, arrives, factions, ids=None):
     path = os.path.join(HERE, f'characters_{batch}.yaml')
     if os.path.exists(path): sys.exit(f'{path} exists - edit it instead')
     import openpyxl
@@ -303,7 +303,7 @@ def draft(src, batch, arrives, factions):
     done = {c.get('source') or 'C_' + c['key'] for p in glob.glob(os.path.join(HERE, 'characters_*.yaml')) for c in yaml.safe_load(open(p))['characters']}
     out = []
     for r in rows(B, 'Roster'):
-        if r['Arrives'] != arrives or (factions and r['Faction'] not in factions) or r['ID'] in done: continue
+        if (r['ID'] not in ids if ids else r['Arrives'] != arrives) or (factions and r['Faction'] not in factions) or r['ID'] in done: continue
         base = re.sub(r'\s*\(.*\)$', '', r['Character'])
         fig = next((f for f in F if f.get('Code Name') == base), {})
         lo = L.get(r['ID'], {})
@@ -330,9 +330,10 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser(); ap.add_argument('--src'); ap.add_argument('--docs')
     ap.add_argument('--draft', help='new batch name: draft characters_<batch>.yaml from the sources (needs --src, --arrives)')
     ap.add_argument('--arrives', help="the Bible's Arrives value, e.g. 'Batch 2: Acts 3 and 4'")
+    ap.add_argument('--ids', help='or: a comma list of Bible IDs to draft, whatever their Arrives (e.g. C_CLUTCH,C_BEACH_HEAD)')
     ap.add_argument('--faction', action='append', help='limit the draft to these factions (repeatable)')
     a = ap.parse_args()
-    if a.draft: draft(a.src, a.draft, a.arrives, a.faction); sys.exit(0)
+    if a.draft: draft(a.src, a.draft, a.arrives, a.faction, a.ids.split(',') if a.ids else None); sys.exit(0)
     o, s, f = build(a.src, a.docs); write(o, s, f, a.docs)
     for k, v in f.items():
         for x in v: print(f'  {k}: {x}')
