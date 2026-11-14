@@ -154,10 +154,8 @@ the fakes is what buys the ordering.
 
 ### Air fights: what Phase 1 still lacks (14 Nov)
 
-- **Transports need a pilot too (design 1b.4), but are not given the rule.** With `pilots: 1` the
-  Tomahawk's pilot would be one of the squad it carries. Whether he still fights on the ground, or the
-  transport carries a separate crew seat, is John's call. Until then only the Skystriker and the
-  Conquest need a pilot (gijoe_air_fight.rul).
+- ~~Transports need a pilot~~ — John 14 Nov 10:56 "It needs a pilot": Tomahawk, Phantom and Defiant
+  have `pilots: 1`; the pilot is one of the squad and fights on the ground with them (engine default).
 - **The C-130 and the Vulture** have no craft or Cobra-aircraft type to hang a 2x2 unit on. The
   Tomahawk and the Condor are in (gijoe_air_big.rul); the Condor's picture is a stand-in.
 - **The odds are an estimate** (AirFight::odds, a fast abstract run of 400 fights). Tuned against
