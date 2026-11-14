@@ -200,6 +200,36 @@ S['STR_EVENT_SLAUGHTER_JOINS_DESCRIPTION'] = P.join([
     "SGT. SLAUGHTER: \"I've been watching your outfit, Hawk. Good people. Soft. I'm going to fix that. Where do I sign?\"",
 ])
 
+# ------------------------------------------------------------------ If The Pit falls (claude/PIT_FALLS_DESIGN_v1.md, John 13 Nov 23:02-23:07)
+S['STR_EVENT_PIT_ATTACK'] = 'THE PIT IS UNDER ATTACK'
+S['STR_EVENT_PIT_ATTACK_DESCRIPTION'] = P.join([
+    "Cobra has found us. Trucks and troops are at the fence, and they know exactly where the lift shed is.",
+    "HAWK: Everyone who can carry a rifle, topside. We hold the yard and this ends here.",
+])
+S['STR_EVENT_PIT_BREACHED'] = 'COBRA IS IN THE PIT'
+S['STR_EVENT_PIT_BREACHED_DESCRIPTION'] = "They took the yard. Cobra is coming down the lift. Fall back to the rooms and make them pay for every corridor."
+S['STR_PIT_EVACUATE'] = 'EVACUATE'
+S['STR_PIT_EVACUATE_DESCRIPTION'] = "Get everyone to the lift and the escape hatch. Whatever we leave behind, Cobra gets."
+S['STR_PIT_SELF_DESTRUCT'] = 'SELF-DESTRUCT'
+S['STR_PIT_SELF_DESTRUCT_DESCRIPTION'] = "Charges set. Five turns. Get out, or stay and hold them while it counts down. Anyone still inside when it blows will be taken."
+S['STR_EVENT_PIT_DESTROYED'] = 'THE PIT IS GONE'
+S['STR_EVENT_PIT_DESTROYED_DESCRIPTION'] = P.join([
+    "The ground jumped and the lift shed folded into the hole. Cobra took nothing out of The Pit but its own dead.",
+    "HAWK: We start again. We've done it before.",
+])
+S['STR_EVENT_PIT_HELD'] = 'COBRA HOLDS THE PIT'
+S['STR_EVENT_PIT_HELD_DESCRIPTION'] = P.join([
+    "We got out. Cobra has The Pit: our rooms, our labs, our files. Every week they're in there, they learn more about us.",
+    "HAWK: We know exactly where it is. When we're ready, we take it back.",
+])
+S['STR_EVENT_NEW_HQ'] = 'NEW HEADQUARTERS'
+S['STR_EVENT_NEW_HQ_DESCRIPTION'] = "Command moves to {BASE}. Washington is asking hard questions."
+S['STR_BRIEFING_RETAKE_PIT_TITLE'] = 'OPERATION: HOMECOMING'
+S['STR_BRIEFING_RETAKE_PIT'] = P.join([
+    "HAWK: We built every room in that hole. We know every corridor, every blind corner and every vent better than the people sitting in it.",
+    "Go home. Throw them out. Try not to break anything we'll need.",
+])
+
 # ------------------------------------------------------------------ Cobra Commander's broadcast (Geoscape event)
 S['STR_EVENT_COBRA_BROADCAST'] = 'COBRA SPEAKS'
 S['STR_EVENT_COBRA_BROADCAST_DESCRIPTION'] = P.join([
