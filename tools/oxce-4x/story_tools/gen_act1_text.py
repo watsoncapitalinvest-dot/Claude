@@ -280,6 +280,58 @@ CUT = {
 }
 S.update(CUT)
 
+# 4. Named Joes at base, injuries, air (John 14 Nov 11:05). NAMED_JOES_AT_BASE_v1, INJURIES_v1, UNDERWATER_MISSIONS_v1.
+# {0}, {1}: values the game fills in. No "he/she": Scarlett and Lady Jaye read these too.
+STATUS = {
+    # battle strain (fatigue), named Joes only
+    'STR_STRAIN': 'Battle strain',
+    'STR_STRAIN_VALUE': 'Battle strain: {0}',
+    'STR_FATIGUE_FRESH': 'Fresh',
+    'STR_FATIGUE_TIRED': 'Tired',
+    'STR_FATIGUE_WORN': 'Worn out',
+    'STR_FATIGUE_FRESH_DESC': 'Rested and ready.',
+    'STR_FATIGUE_TIRED_DESC': 'Too many missions too close together. Aim -10, bravery -10. Each full week at base takes off one point of strain.',
+    'STR_FATIGUE_WORN_DESC': 'Running on empty. Aim -20, bravery -20, time units -10%. Needs time at base, not another mission.',
+    'STR_SQUAD_WARN_TIRED': '{0} is TIRED: aim and bravery are down.',
+    'STR_SQUAD_WARN_WORN': '{0} is WORN OUT: aim, bravery and speed are down. Send anyway?',
+    # stand-down
+    'STR_STAND_DOWN': 'Stand-down',
+    'STR_STAND_DOWN_DAYS': 'Stand-down: {0} days',
+    'STR_STAND_DOWN_DESC': 'Debrief and rest after a mission. Counts as away from the desk.',
+    'STR_STAND_DOWN_NOTICE': '{0} is back from the field: debrief and rest. Back at the desk in {1} days.',
+    'STR_STAND_DOWN_OVER': '{0} is back at the desk.',
+    # department heads away
+    'STR_HEAD_AWAY_WARN': '{0} heads {1}. While away, and for the stand-down after, {1} runs at 60%.',
+    'STR_DEPT_SPEED_AWAY': '{0}: head away, running at 60%',
+    'STR_HEAD_ONLY_PAUSED': 'Paused: needs {0} at base.',
+    'STR_HEAD_ONLY_TAG': 'Head at base only',
+    'STR_START_NEEDS_HEAD': "No head at base. {0} can't start new projects.",
+    'STR_START_BY_COMMANDER': 'Have {0} start it? {1} loses the {2} bonus for 3 days.',
+    'STR_COMMANDER_BONUS_LOST': '{0} is covering for {1}: {2} bonus back in {3} days.',
+    # Shaken (named Joes, INJURIES_v1 section 1)
+    'STR_SHAKEN': 'Shaken',
+    'STR_SHAKEN_MISSIONS': 'Shaken: {0} missions',
+    'STR_SHAKEN_DESC': 'That one was too close. Bravery -20 and quicker to panic. Each mission finished clears one.',
+    # bleed-out and scars (unnamed Joes, INJURIES_v1 sections 2-3)
+    'STR_BLEEDING_OUT': 'Bleeding out: {0} turns',
+    'STR_BLEEDING_OUT_WARN': '{0} is down and bleeding out! A medkit next to them stops it.',
+    'STR_STABILISED': '{0} is stable.',
+    'STR_BLED_OUT': '{0} did not make it.',
+    'STR_SCAR_LEGS': 'Bad leg: -{0} TU',
+    'STR_SCAR_ARMS': 'Bad arm: -{0} accuracy',
+    'STR_SCAR_HEAD': 'Head wound: -{0} reactions',
+    'STR_SCAR_BODY': 'Chest wound: -{0} health',
+    # air (UNDERWATER_MISSIONS_v1 section 3)
+    'STR_AIR': 'Air',
+    'STR_AIR_TURNS': 'Air: {0} turns',
+    'STR_AIR_LOW': '{0} has 3 turns of air left.',
+    'STR_AIR_OUT': '{0} is out of air! Get to the surface or the sub.',
+    'STR_AIR_REFILLED': '{0} refilled at the sub.',
+    'STR_DIVE_LIGHT_ON': 'Dive light: on',
+    'STR_DIVE_LIGHT_OFF': 'Dive light: off',
+}
+S.update(STATUS)
+
 hdr = ('# STORY (Act 1 writing). Hawk\'s briefings, Cobra Commander\'s broadcast and the Act 1 cutscene captions.\n'
        '# Text only. BUILD wires the ids (see story_tools/gen_act1_text.py). Generated: edit the script, not this file.\n')
 body = yaml.dump({'extraStrings': [{'type': 'en-US', 'strings': S}, {'type': 'en-GB', 'strings': S}]},
