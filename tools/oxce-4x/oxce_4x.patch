@@ -13575,7 +13575,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..19d2bf6 100644
+index 1885346..aa28506 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -13713,7 +13713,7 @@ index 1885346..19d2bf6 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,211 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,218 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -13805,6 +13805,13 @@ index 1885346..19d2bf6 100644
 +		capture.tryRead("namedCobra", _namedCobra);
 +		capture.tryRead("spyTypes", _spyTypes);
 +		capture.tryRead("unnamedSpyKilled", _unnamedSpyKilled);
++		capture.tryRead("downedDaysMin", _downedDaysMin);
++		capture.tryRead("downedDaysMax", _downedDaysMax);
++		capture.tryRead("medicBonus", _medicBonus);
++		capture.tryRead("medicBonusInfirmary", _medicBonusInfirmary);
++		capture.tryRead("medicSecondPct", _medicSecondPct);
++		capture.tryRead("medicSpecialties", _medicSpecialties);
++		capture.tryRead("infirmaryRooms", _infirmaryRooms);
 +	}
 +	if (const auto& dep = reader["departments"])
 +	{
@@ -13925,7 +13932,7 @@ index 1885346..19d2bf6 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3516,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3523,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -13933,7 +13940,7 @@ index 1885346..19d2bf6 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4121,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4128,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -13959,7 +13966,7 @@ index 1885346..19d2bf6 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4378,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4385,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -13980,7 +13987,7 @@ index 1885346..19d2bf6 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6092,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6099,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -14000,7 +14007,7 @@ index 1885346..19d2bf6 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6115,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6122,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -14008,7 +14015,7 @@ index 1885346..19d2bf6 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6129,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6136,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -14048,7 +14055,7 @@ index 1885346..19d2bf6 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..11540db 100644
+index 2242d13..b3ce004 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -14112,7 +14119,7 @@ index 2242d13..11540db 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,69 @@ private:
+@@ -327,6 +360,72 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -14168,6 +14175,9 @@ index 2242d13..11540db 100644
 +	std::vector<SpyOperationRule> _spyOperations;
 +	std::vector<std::string> _spyTypes;
 +	int _unnamedSpyKilled = 50;
++	int _downedDaysMin = 14, _downedDaysMax = 28;           // a named Joe brought down: 2-4 weeks by the overkill
++	int _medicBonus = 15, _medicBonusInfirmary = 25, _medicSecondPct = 67;
++	std::vector<std::string> _medicSpecialties, _infirmaryRooms;
 +	bool _cobraSupplyAllMissions;
 +	int _cobraWellPaid;
 +	int _cobraWellPaidUpkeep;
@@ -14182,7 +14192,7 @@ index 2242d13..11540db 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +788,97 @@ public:
+@@ -692,6 +791,108 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -14215,6 +14225,17 @@ index 2242d13..11540db 100644
 +	const std::vector<SpyOperationRule> &getSpyOperations() const { return _spyOperations; }
 +	const SpyOperationRule *getSpyOperation(const std::string &type) const { for (const auto &o : _spyOperations) if (o.type == type) return &o; return nullptr; }
 +	int getUnnamedSpyKilled() const { return _unnamedSpyKilled; }
++	int getDownedDaysMin() const { return _downedDaysMin; }
++	int getDownedDaysMax() const { return _downedDaysMax; }
++	/// The medic bonus a soldier type gives at home, in percent (0 if not a medic).
++	int medicBonus(const std::string &soldierType, bool infirmary) const
++	{
++		const int m = specialtyMatch(soldierType, _medicSpecialties);
++		if (!m) return 0;
++		const int b = infirmary ? _medicBonusInfirmary : _medicBonus;
++		return m == 1 ? b : b * _medicSecondPct / 100;
++	}
++	bool isInfirmaryRoom(const std::string &type) const { return std::find(_infirmaryRooms.begin(), _infirmaryRooms.end(), type) != _infirmaryRooms.end(); }
 +	const std::vector<DepartmentRule> &getDepartments() const { return _departments; }
 +	const DepartmentRule *getDepartment(const std::string &type) const { for (const auto &d : _departments) if (d.type == type) return &d; return nullptr; }
 +	/// 1 = main specialty is in the list, 2 = second specialty is, 0 = neither.
@@ -15032,7 +15053,7 @@ index 97ef4f5..0dbe163 100644
  	void addMissionLocation(const std::string &varName, const std::string &regionName, int zoneNumber, int maximum);
  	/// Checks that a given mission location (city or whatever) isn't stored in our list of previously attacked locations.
 diff --git a/src/Savegame/Base.cpp b/src/Savegame/Base.cpp
-index ac1a454..51889e5 100644
+index ac1a454..883506b 100644
 --- a/src/Savegame/Base.cpp
 +++ b/src/Savegame/Base.cpp
 @@ -1519,6 +1519,20 @@ int Base::getUsedContainment(int prisonType, bool onlyExternal) const
@@ -15056,11 +15077,40 @@ index ac1a454..51889e5 100644
  {
  	int total = 0;
  	for (const auto* fac : _facilities)
+@@ -2540,6 +2554,19 @@ BaseSumDailyRecovery Base::getSumRecoveryPerDay() const
+ 
+ 	result.HealthRecovery = healthMaxinum;
+ 
++	// G.I. Joe medic bonus (John 13 Nov): the best medic at home, 15% (25% with an infirmary room),
++	// a second-specialty medic about two-thirds of that; medics do not stack.
++	{
++		bool infirmary = false;
++		for (auto* bf : _facilities)
++			if (bf->getBuildTime() == 0 && _mod->isInfirmaryRoom(bf->getRules()->getType())) infirmary = true;
++		for (auto* s : _soldiers)
++		{
++			if (s->isAway() || s->isWounded() || (s->getCraft() && s->getCraft()->getStatus() == "STR_OUT")) continue;
++			result.MedicPct = std::max(result.MedicPct, _mod->medicBonus(s->getRules()->getType(), infirmary));
++		}
++	}
++
+ 	return result;
+ }
+ 
 diff --git a/src/Savegame/Base.h b/src/Savegame/Base.h
-index b25dba2..5979a5f 100644
+index b25dba2..3fcd617 100644
 --- a/src/Savegame/Base.h
 +++ b/src/Savegame/Base.h
-@@ -278,6 +278,8 @@ public:
+@@ -102,6 +102,8 @@ struct BaseSumDailyRecovery
+ 	float SickBayRelativeBonus = 0.0f;
+ 	/// Sum of the amount of additional wounds healed in this base due to sick bay facilities (in absolute number).
+ 	float SickBayAbsoluteBonus = 0.0f;
++	/// G.I. Joe: the best medic at home speeds all healing by this percent.
++	int MedicPct = 0;
+ };
+ 
+ /**
+@@ -278,6 +280,8 @@ public:
  	int getFreeContainment(int prisonType) const;
  	/// Gets the total amount of Containment space.
  	int getAvailableContainment(int prisonType) const;
@@ -15070,7 +15120,7 @@ index b25dba2..5979a5f 100644
  	int getUsedContainment(int prisonType, bool onlyExternal = false) const;
  	/// Sets the craft's battlescape status.
 diff --git a/src/Savegame/BattleUnit.cpp b/src/Savegame/BattleUnit.cpp
-index 46fbf1f..d1d7d21 100644
+index 46fbf1f..659ff21 100644
 --- a/src/Savegame/BattleUnit.cpp
 +++ b/src/Savegame/BattleUnit.cpp
 @@ -28,6 +28,7 @@
@@ -15081,11 +15131,12 @@ index 46fbf1f..d1d7d21 100644
  #include "../Battlescape/Pathfinding.h"
  #include "../Battlescape/BattlescapeGame.h"
  #include "../Battlescape/AIModule.h"
-@@ -708,6 +709,12 @@ void BattleUnit::load(const YAML::YamlNodeReader& node, const Mod *mod, const Sc
+@@ -708,6 +709,13 @@ void BattleUnit::load(const YAML::YamlNodeReader& node, const Mod *mod, const Sc
  	reader.tryReadAs<int>("turnsLeftSpottedForSnipersByCivilian", _turnsLeftSpottedForSnipers[FACTION_NEUTRAL]);
  	reader.tryReadAs<int>("turnsSinceStunned", _turnsSinceStunned);
  
 +	reader.tryRead("carryingId", _carryingId);
++	reader.tryRead("downedOverkill", _downedOverkill);
 +	reader.tryRead("capturedByEnemy", _capturedByEnemy);
 +	reader.tryRead("handsUp", _handsUp);
 +	reader.tryRead("cuffed", _cuffed);
@@ -15094,11 +15145,12 @@ index 46fbf1f..d1d7d21 100644
  	reader.tryRead("rankInt", _rankInt);
  	reader.tryRead("rankIntUnified", _rankIntUnified);
  	reader.tryRead("moraleRestored", _moraleRestored);
-@@ -826,6 +833,12 @@ void BattleUnit::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared) c
+@@ -826,6 +834,13 @@ void BattleUnit::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared) c
  	writer.tryWriteAs<int>("turnsLeftSpottedForSnipersByCivilian", _turnsLeftSpottedForSnipers[FACTION_NEUTRAL], 0);
  	writer.writeAs<int>("turnsSinceStunned", _turnsSinceStunned);
  
 +	if (_carryingId >= 0) writer.write("carryingId", _carryingId);
++	if (_downedOverkill > 0) writer.write("downedOverkill", _downedOverkill);
 +	if (_capturedByEnemy) writer.write("capturedByEnemy", _capturedByEnemy);
 +	if (_handsUp) writer.write("handsUp", _handsUp);
 +	if (_cuffed) writer.write("cuffed", _cuffed);
@@ -15107,7 +15159,7 @@ index 46fbf1f..d1d7d21 100644
  	writer.write("rankInt", _rankInt);
  	writer.write("rankIntUnified", _rankIntUnified);
  	writer.write("moraleRestored", _moraleRestored);
-@@ -1168,6 +1181,7 @@ void BattleUnit::startWalking(int direction, Position destination, SavedBattleGa
+@@ -1168,6 +1183,7 @@ void BattleUnit::startWalking(int direction, Position destination, SavedBattleGa
  	{
  		_direction = direction;
  		_status = STATUS_WALKING;
@@ -15115,7 +15167,7 @@ index 46fbf1f..d1d7d21 100644
  	}
  	if (_haveNoFloorBelow || direction >= Pathfinding::DIR_UP)
  	{
-@@ -1859,6 +1873,18 @@ int BattleUnit::damage(Position relative, int damage, const RuleDamageType *type
+@@ -1859,6 +1875,30 @@ int BattleUnit::damage(Position relative, int damage, const RuleDamageType *type
  
  		setValueMax(_currentArmor[side], - std::get<toArmor>(args.data), 0, _maxArmor[side]);
  
@@ -15131,10 +15183,22 @@ index 46fbf1f..d1d7d21 100644
 +			Log(LOG_INFO) << "CAPTURE knockout " << getType() << " " << getId();
 +		}
 +
++
++		// G.I. Joe: named Joes never die (story rule). A blow that would kill one knocks him down
++		// instead, and how far past death it went sets how long he is out (DebriefingState).
++		if (_health <= 0 && _originalFaction == FACTION_PLAYER && _geoscapeSoldier && save->getMod()->isCaptureOn()
++			&& !save->getMod()->isGreenshirt(_geoscapeSoldier->getRules()->getType()))
++		{
++			_downedOverkill = std::max(_downedOverkill, 1 - _health);
++			_health = 1;
++			_stunlevel = std::max(_stunlevel, (int)_stats.health);
++			for (int i = 0; i < BODYPART_MAX; ++i) _fatalWounds[i] = 0;
++			Log(LOG_INFO) << "NAMED down " << getType() << " overkill " << _downedOverkill;
++		}
  
  		setFatalShotInfo(side, bodypart);
  
-@@ -2841,7 +2867,7 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
+@@ -2841,7 +2881,7 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
  		return;
  	}
  
@@ -15143,8 +15207,21 @@ index 46fbf1f..d1d7d21 100644
  	_unitsSpottedThisTurn.clear();
  	_meleeAttackedBy.clear();
  
+@@ -4208,6 +4248,12 @@ bool BattleUnit::postMissionProcedures(const Mod *mod, SavedGame *geoscape, Save
+ 	{
+ 		recovery = 0;
+ 	}
++	// G.I. Joe: a named Joe brought down is out 2-4 weeks, longer the harder the blow
++	if (_downedOverkill > 0)
++	{
++		const double f = std::min(1.0, _downedOverkill / (double)std::max(1, (int)_stats.health));
++		recovery = std::max(recovery, (int)std::lround(mod->getDownedDaysMin() + f * (mod->getDownedDaysMax() - mod->getDownedDaysMin())));
++	}
+ 
+ 	{
+ 		ModScript::ReturnFromMissionUnit::Output arg { };
 diff --git a/src/Savegame/BattleUnit.h b/src/Savegame/BattleUnit.h
-index ecc040f..7009a66 100644
+index ecc040f..5eba38b 100644
 --- a/src/Savegame/BattleUnit.h
 +++ b/src/Savegame/BattleUnit.h
 @@ -102,6 +102,7 @@ private:
@@ -15155,13 +15232,14 @@ index ecc040f..7009a66 100644
  	std::vector<BattleUnit *> _visibleUnits, _unitsSpottedThisTurn;
  	std::vector<Tile *> _visibleTiles;
  	std::unordered_set<Tile *> _visibleTilesLookup;
-@@ -130,6 +131,13 @@ private:
+@@ -130,6 +131,14 @@ private:
  	BattleUnit *_charging;
  
  	Uint8 _turnsSinceSpotted[FACTION_MAX] = { 255, 255, 255 };
 +	/// Full capture: who is carrying this unit off the map, and whom this unit carries.
 +	/// Both are battle unit ids, -1 for nobody. A carried unit has no tile of its own.
 +	int _carryingId = -1;
++	int _downedOverkill = 0; // G.I. Joe: a named Joe knocked down by a killing blow, and by how much
 +	int _carriedById = -1;
 +	bool _capturedByEnemy = false;
 +	bool _handsUp = false, _cuffed = false; // G.I. Joe capture: surrendered, and secured by a Joe
@@ -15169,7 +15247,7 @@ index ecc040f..7009a66 100644
  	Uint8 _turnsLeftSpottedForSnipers[FACTION_MAX] = { 0, 0, 0 };
  	Uint8 _turnsSinceStunned = 255;
  
-@@ -286,6 +294,8 @@ public:
+@@ -286,6 +295,8 @@ public:
  	void keepWalking(SavedBattleGame *savedBattleGame, bool fullWalkCycle);
  	/// Gets the walking phase for animation and sound
  	int getWalkingPhase() const;
@@ -15178,7 +15256,7 @@ index ecc040f..7009a66 100644
  	/// Gets the walking phase for diagonal walking
  	int getDiagonalWalkingPhase() const;
  	/// Gets the unit's destination when walking
-@@ -704,6 +714,30 @@ public:
+@@ -704,6 +715,31 @@ public:
  	/// Set how many turns this unit will be exposed for. For specific faction.
  	void setTurnsSinceSpottedByFaction(UnitFaction faction, int turns);
  	/// Set how many turns this unit will be exposed for.
@@ -15186,6 +15264,7 @@ index ecc040f..7009a66 100644
 +	/// than leaving him: the project's rule is that named characters never die,
 +	/// they go down or are taken, and this is what makes that true.
 +	int getCarryingId() const { return _carryingId; }
++	int getDownedOverkill() const { return _downedOverkill; }
 +	int getCarriedById() const { return _carriedById; }
 +	bool isCarrying() const { return _carryingId >= 0; }
 +	bool isBeingCarried() const { return _carriedById >= 0; }
@@ -17473,7 +17552,7 @@ index d985908..42a955c 100644
  	std::vector<std::string>& getGeoscapeDebugLog() { return _geoscapeDebugLog; }
  };
 diff --git a/src/Savegame/Soldier.cpp b/src/Savegame/Soldier.cpp
-index 8517ba4..64a6193 100644
+index 8517ba4..e9a5ff2 100644
 --- a/src/Savegame/Soldier.cpp
 +++ b/src/Savegame/Soldier.cpp
 @@ -200,6 +200,7 @@ void Soldier::load(const YAML::YamlNodeReader& node, const Mod *mod, SavedGame *
@@ -17523,8 +17602,38 @@ index 8517ba4..64a6193 100644
  	int currentHealthPercentage = std::max(0, _currentStats.health - getWoundRecoveryInt() - getHealthMissing()) * 100 / _currentStats.health;
  	return currentHealthPercentage >= Options::oxceWoundedDefendBaseIf;
  }
+@@ -1212,16 +1222,11 @@ void Soldier::setWoundRecovery(int recovery)
+ /**
+  * Heals soldier wounds.
+  */
+-void Soldier::healWound(float absBonus, float relBonus)
++void Soldier::healWound(float absBonus, float relBonus, int medicPct)
+ {
+-	// 1 hp per day as minimum
+-	_recovery -= 1.0f;
+-
+-	// absolute bonus from sick bay facilities
+-	_recovery -= absBonus;
+-
+-	// relative bonus from sick bay facilities
+-	_recovery -= (relBonus * _currentStats.health * 0.01f);
++	// 1 hp per day as minimum, plus the sick bay facilities (absolute and relative),
++	// all of it faster by the medic at home (G.I. Joe)
++	_recovery -= (1.0f + absBonus + relBonus * _currentStats.health * 0.01f) * (1.0f + medicPct * 0.01f);
+ 
+ 	if (_recovery < 0.0f)
+ 		_recovery = 0.0f;
+@@ -1262,7 +1267,7 @@ void Soldier::replenishStats(const BaseSumDailyRecovery& recovery)
+ {
+ 	if (_recovery > 0.0f)
+ 	{
+-		healWound(recovery.SickBayAbsoluteBonus, recovery.SickBayRelativeBonus);
++		healWound(recovery.SickBayAbsoluteBonus, recovery.SickBayRelativeBonus, recovery.MedicPct);
+ 	}
+ 	else
+ 	{
 diff --git a/src/Savegame/Soldier.h b/src/Savegame/Soldier.h
-index f9d16e1..37102ca 100644
+index f9d16e1..4e1bc73 100644
 --- a/src/Savegame/Soldier.h
 +++ b/src/Savegame/Soldier.h
 @@ -78,6 +78,7 @@ private:
@@ -17535,6 +17644,15 @@ index f9d16e1..37102ca 100644
  	Armor *_armor;
  	Armor *_replacedArmor;
  	Armor *_transformedArmor;
+@@ -224,7 +225,7 @@ public:
+ 	int getWoundRecovery(float absBonus, float relBonus) const;
+ 
+ 	/// Heals wound recoveries.
+-	void healWound(float absBonus, float relBonus);
++	void healWound(float absBonus, float relBonus, int medicPct = 0);
+ 	/// Replenishes mana.
+ 	void replenishMana(int manaRecoveryPerDay);
+ 	/// Replenishes health.
 @@ -279,6 +280,10 @@ public:
  	bool isInTraining() const;
  	/// set the training status

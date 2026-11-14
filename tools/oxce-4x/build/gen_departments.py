@@ -46,7 +46,7 @@ PH = [  # type, sprite, size, cost, days, monthly, extra (numbers: FACILITY_STAT
       ('STR_COMPUTER_STATION', 159, 1, 80000, 8, 3000, {}),
       ('STR_JOE_COMMS_CENTER', 202, 1, 100000, 8, 3000, {}),            # art requested (BRIEF_FOR_GRAPHICS_AI_Armory_CommsRoom)
       ('STR_JOE_ARMORY', 214, 1, 150000, 10, 4000, {'storage': 30, 'provideBaseFunc': '[STR_ARMORY_ATTACHMENTS]'}),  # no department
-      ('STR_INFIRMARY_ROOM', 177, 1, 60000, 6, 2000, {}),               # the Infirmary Cot
+      ('STR_INFIRMARY_ROOM', 177, 1, 60000, 6, 2000, {'sickBayAbsoluteBonus': 0.1}),   # +10% healing               # the Infirmary Cot
       ('STR_TRAINING_ROOM', 211, 1, 200000, 14, 6000, {}),              # 2x1 in the design; 1x1 until its art is cut for 2x1
       ('STR_RECRUITING_OFFICE', 204, 1, 200000, 12, 6000, {}),
       ('STR_AIRCRAFT_HANGAR', 167, 2, 200000, 25, 25000, {'crafts': 1, 'spriteEnabled': 'true'})]
