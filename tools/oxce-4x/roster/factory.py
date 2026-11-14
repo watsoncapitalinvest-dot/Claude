@@ -94,22 +94,28 @@ def card_ink(card):
 
 
 def kit_runner(kit, name, card, rep, out):
-    """the kit's own render_one.sh if its ink() table lists the name; otherwise a copy with the card's row added"""
-    sh = os.path.join(kit, 'render_one.sh'); s = open(sh).read()
-    if re.search(r'^\s*[\w|]*\b' + re.escape(name) + r'\b[\w|]*\)', s, re.M): return sh
+    """(runner, extra env). BUILD's kit (13 Nov night) lists every factory villain and takes any other name's row from
+    the INK_ROW env var, so the card's row is passed in that way. An older kit without INK_ROW gets the old route: a
+    copy of render_one.sh with the card's row added (reported)."""
+    sh = os.path.join(kit, 'render_one.sh'); s = open(sh).read().replace('\r', '')
+    if re.search(r'^\s*[\w|]*\b' + re.escape(name) + r'\b[\w|]*\)', s, re.M): return sh, {}
     row = card_ink(card)
     if not row: fail(rep, out, f'the kit has no ink row for {name} and the look card has no "ink" line - back to CAST / ask BUILD')
+    if 'INK_ROW' in s:
+        log(rep, f'INK: {name} is not in the kit table; card row "{row}" passed as INK_ROW (BUILD\'s route). '
+                 f'BUILD may add it to the table: {name}) echo "{row}"')
+        return sh, {'INK_ROW': row}
     if '  *) echo "UNKNOWN" ;;' not in s: fail(rep, out, 'render_one.sh ink() table not in the expected shape - ask BUILD')
     line = f'  {name}) echo "{row}" ;;   # from CAST look card (factory, pending BUILD)\n'
     dst = os.path.join(kit, f'render_one_{name}.sh')
     open(dst, 'w').write(s.replace('  *) echo "UNKNOWN" ;;', line + '  *) echo "UNKNOWN" ;;', 1))
-    log(rep, f'INK: kit table has no row for {name}; rendered with the card\'s row "{row}" via {os.path.basename(dst)}. '
-             f'BUILD to add this row to render_one.sh (BUILD brief Q5).')
-    return dst
+    log(rep, f'INK: old kit (no INK_ROW); rendered with the card\'s row "{row}" via {os.path.basename(dst)}. BUILD to add it.')
+    return dst, {}
 
 
 def kit_run(kit, name, blend, quick, rep, out, runner):
-    env = dict(os.environ); env.pop('QUICK', None)
+    runner, extra = runner
+    env = dict(os.environ); env.pop('QUICK', None); env.update(extra)
     if quick: env['QUICK'] = '1'
     t = time.time()
     r = subprocess.run(['bash', runner, name, blend], env=env, capture_output=True, text=True)
@@ -188,7 +194,7 @@ def main():
             log(rep, 'game-size check (vs in-game sheets):'); [log(rep, l) for l in lines]
         rep += ['', 'SHIP: the three sheet files -> Reference\\sheets\\ ; GIF stays with the record.',
                 f'NOTE FOR BUILD (ROSTER.md outgoing): "sheets for {a.name} in Reference\\sheets; data in roster_<batch>.yaml"'
-                + ('' if runner.endswith('render_one.sh') else f' + "ink row to add to render_one.sh: {a.name}) {card_ink(card)}"')]
+                + ('' if runner[0].endswith('render_one.sh') and not runner[1] else f' + "ink row to add to render_one.sh: {a.name}) {card_ink(card)}"')]
     log(rep, f'total {time.time() - t0:.0f}s')
     open(os.path.join(out, 'FACTORY_REPORT.txt'), 'w').write('\n'.join(rep) + '\n')
 
