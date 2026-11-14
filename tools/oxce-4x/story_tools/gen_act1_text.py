@@ -344,7 +344,7 @@ UW = {
     'STR_ART_CARTEL_DIVER_TEXT': troop('Cartel Diver', 'Hired help - no rank', 'Salvage diving; Smuggling',
         'Commercial salvage men the cartel pays by the crate. They know the reefs and the harbour bottoms, '
         'and they know where the crates go down. They do not know who is really paying, and they are not paid enough to die for it.',
-        None, 'Nobody said anything about soldiers.'),   # Cut and Run: not taken (John 18:20)
+        'Cut and Run: if the fight turns against them, they drop what they carry and swim for the edge', 'Nobody said anything about soldiers.'),   # John 18:13: restored
     'STR_COBRA_EEL': 'Cobra Eel',
     'STR_ART_COBRA_EEL': 'Cobra Eel',
     'STR_ART_COBRA_EEL_TEXT': troop('Cobra Eel', 'Cobra trooper - E-3 or equivalent', 'Frogman; Underwater demolitions',
