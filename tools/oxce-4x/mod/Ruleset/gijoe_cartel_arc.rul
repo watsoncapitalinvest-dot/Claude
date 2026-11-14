@@ -97,6 +97,19 @@ alienMissions:
         trajectory: P9
         timer: 6000
         objective: true
+  - type: STR_ABANDONED_FACTORY_MISSION
+    points: 0
+    objective: 3
+    spawnZone: 10
+    raceWeights:
+      0:
+        STR_COBRA: 100
+    waves:
+      - ufo: STR_ABANDONED_FACTORY
+        count: 1
+        trajectory: P0
+        timer: 60
+        objective: true
   - type: STR_CARTEL_SAFEHOUSE_MISSION
     points: 0
     objective: 3
@@ -111,7 +124,78 @@ alienMissions:
         timer: 60
         objective: true
 
+# A solved lead or a missed robbery puts its mission on the map AT ONCE, not at the next month: the research it
+# grants fires an event (engine: lead- and mission-granted research now fire spawnedEvent), and the event runs
+# the ad-hoc script with its tag. The monthly scripts below stay as the catch for anything the event missed;
+# they share varName with the ad-hoc ones, so each mission still comes only once.
+events:
+  - name: STR_EVENT_FACTORY_FOUND
+    description: STR_EVENT_FACTORY_FOUND_DESCRIPTION
+    adhocMissionScriptTags: [cartelFactory]
+    timer: 60
+  - name: STR_EVENT_ROBBERY_MISSED
+    description: STR_EVENT_ROBBERY_MISSED_DESCRIPTION
+    adhocMissionScriptTags: [cartelSafehouse]
+    timer: 60
+
+adhocScripts:
+  - type: abandonedFactoryNow
+    adhocMissionScriptTags: [cartelFactory]
+    maxRuns: 1
+    varName: abandonedFactory
+    executionOdds: 100
+    researchTriggers:
+      STR_FACTORY_LEAD_SOLVED: true
+    missionWeights:
+      0:
+        STR_ABANDONED_FACTORY_MISSION: 100
+    regionWeights:
+      0:
+        STR_NORTH_AMERICA: 100
+  - type: cartelSafehouseNow
+    adhocMissionScriptTags: [cartelSafehouse]
+    maxRuns: 1
+    varName: cartelSafehouse
+    executionOdds: 100
+    researchTriggers:
+      STR_ROBBERY_MISSED: true
+      STR_INFORMANT_TIP: true
+    missionWeights:
+      0:
+        STR_CARTEL_SAFEHOUSE_MISSION: 100
+    regionWeights:
+      0:
+        STR_NORTH_AMERICA: 100
+
 missionScripts:
+  - type: abandonedFactoryFound      # the lead is full: the factory appears
+    firstMonth: 0
+    maxRuns: 1
+    varName: abandonedFactory
+    executionOdds: 100
+    startDelay: 60
+    researchTriggers:
+      STR_FACTORY_LEAD_SOLVED: true
+    missionWeights:
+      0:
+        STR_ABANDONED_FACTORY_MISSION: 100
+    regionWeights:
+      0:
+        STR_NORTH_AMERICA: 100
+  - type: abandonedFactoryBackstop   # the arc ignored or stalled: the factory turns up anyway (STORY's backstop)
+    firstMonth: 3
+    maxRuns: 1
+    varName: abandonedFactory
+    executionOdds: 100
+    startDelay: 60
+    researchTriggers:
+      STR_FACTORY_LEAD_SOLVED: false
+    missionWeights:
+      0:
+        STR_ABANDONED_FACTORY_MISSION: 100
+    regionWeights:
+      0:
+        STR_NORTH_AMERICA: 100
   - type: cartelSafehouse
     firstMonth: 0
     maxRuns: 1
@@ -129,6 +213,52 @@ missionScripts:
         STR_NORTH_AMERICA: 100
 
 alienDeployments:
+  - type: STR_ABANDONED_FACTORY      # mission 2: MAPS' mothballed Cobra outpost (gijoe_maps_m2_outpost.rul)
+    data:
+      - alienRank: 5                 # two cartel lookouts already there (stand-in: phase 1 is meant to be empty)
+        lowQty: 2
+        highQty: 2
+        dQty: 0
+        percentageOutsideUfo: 100
+        itemSets:
+          - [STR_PISTOL, STR_PISTOL_CLIP, STR_PISTOL_CLIP]
+    reinforcements:                  # phase 2: the cartel survivors drive in on turn 12, the boss with them
+      - type: cartelArrive
+        turns: [12]
+        maxRuns: 1
+        useSpawnNodes: true
+        spawnNodeRanks: [2]
+        data:
+          - alienRank: 5
+            lowQty: 6
+            highQty: 6
+            dQty: 0
+            percentageOutsideUfo: 100
+            itemSets:
+              - [STR_PISTOL, STR_PISTOL_CLIP, STR_PISTOL_CLIP]
+              - [STR_RIFLE, STR_RIFLE_CLIP, STR_RIFLE_CLIP]
+          - alienRank: 4
+            customUnitType: STR_CARTEL_BOSS
+            lowQty: 1
+            highQty: 1
+            dQty: 0
+            percentageOutsideUfo: 100
+            itemSets:
+              - [STR_PISTOL, STR_PISTOL_CLIP]
+    width: 100
+    length: 100
+    height: 5
+    terrains: [OM2RING, OM2HALL, OM2BLDG, OM2EDGE]
+    script: OM2_SCRIPT
+    shade: 0
+    duration: [720, 720]
+    markerName: STR_ABANDONED_FACTORY_SITE
+    markerIcon: 22
+    alert: STR_ABANDONED_FACTORY_ALERT
+    briefing:
+      palette: 0
+      title: STR_BRIEFING_ABANDONED_FACTORY_TITLE
+      desc: STR_BRIEFING_ABANDONED_FACTORY
   - type: STR_CARTEL_STASH_HOUSE
     data:
       - alienRank: 5
@@ -153,7 +283,7 @@ alienDeployments:
       STR_CARTEL_FLIGHT: 100
     genMissionFreq: 15               # % a day: about one flight a week
     unlockedResearch: STR_CARTEL_STASH_HOUSE
-    briefingData:
+    briefing:
       palette: 0
       title: STR_CARTEL_STASH_HOUSE_SITE
       desc: STR_CARTEL_STASH_HOUSE_BRIEFING
@@ -180,10 +310,17 @@ alienDeployments:
     markerIcon: 22
     missionBountyItem: STR_GETAWAY_PAPERS
     alert: STR_CARTEL_SAFEHOUSE_ALERT
-    briefingData:
+    briefing:
       palette: 0
       title: STR_BRIEFING_CARTEL_SAFEHOUSE_TITLE
       desc: STR_BRIEFING_CARTEL_SAFEHOUSE
+
+# Clue items a won mission brings home (engine: Mod gijoeBounties, DebriefingState). Stand-in for clue spots
+# on the maps until the clue system places them there.
+gijoeBounties:
+  STR_CARTEL_RANCH: [STR_CARTEL_LEDGER, STR_CRATE_SERIAL_PLATE, STR_COBRA_STENCIL]
+  STR_ARMORED_CAR_AMBUSH: [STR_GETAWAY_PAPERS]
+  STR_ABANDONED_FACTORY: [STR_FACTORY_SCHEDULE]
 
 research:
   - name: STR_CARTEL_STASH_HOUSE     # granted by winning the stash house raid (lead points)
@@ -193,6 +330,7 @@ research:
   - name: STR_ROBBERY_MISSED         # granted when the armored-car job got away
     cost: 1
     points: 0
+    spawnedEvent: STR_EVENT_ROBBERY_MISSED
     requiresBaseFunc: [STR_STORY_NEVER]
   - name: STR_SLOW_MONEY_TRACE
     lane: INTEL
@@ -224,6 +362,17 @@ extraStrings:
       STR_SLOW_MONEY_TRACE: "Follow the Money the Slow Way"
       STR_LEAD_CARTEL_STASH: "Where the cartel's planes land"
       STR_CARTEL_FLIGHT_SPOTTED: "The cartel flight is in the air. Follow it home without firing and it will lead us to their stash house."
+      STR_ABANDONED_FACTORY: "Abandoned factory"
+      STR_CARTEL_SAFEHOUSE: "Cartel safehouse"
+      STR_EVENT_FACTORY_FOUND: "THE MONEY ENDS IN WEST TEXAS"
+      STR_EVENT_FACTORY_FOUND_DESCRIPTION: "The bank trace is complete. Every dollar the cartel moved for its supplier went to one address: the Arbco Furniture plant in West Texas, shut for a year. It has power, it has a rail spur, and someone is paying the bills.{NEWLINE}{NEWLINE}It is on the map."
+      STR_EVENT_ROBBERY_MISSED: "THE PAYROLL IS GONE"
+      STR_EVENT_ROBBERY_MISSED_DESCRIPTION: "The armored-car job went through. The crew and the money are gone.{NEWLINE}{NEWLINE}If Scarlett's informant is still talking, we will know where they went to ground. If not, the money will turn up in a bank sooner or later, and we can follow it from there."
+      STR_ABANDONED_FACTORY_SITE: "Abandoned factory"
+      STR_ABANDONED_FACTORY_MISSION: "Abandoned factory"
+      STR_ABANDONED_FACTORY_ALERT: "The money trail ends at a machine works in West Texas: the Arbco Furniture plant, shut for a year."
+      STR_WEST_TEXAS_PLANT: "West Texas"
+      STR_PIT_MUST_BE_IN_USA: "The Pit is in the United States. Put it down inside the USA."
       STR_TRACKING_LEAD: "TRACKING: {0}"
       STR_CARTEL_TAIL_SPOTTED: "The cartel spotted our tail. Their flight has gone dark and the route is burned."
   - type: en-GB

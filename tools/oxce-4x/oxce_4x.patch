@@ -2924,7 +2924,7 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..b5b10f0 100644
+index 0631f32..e012283 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
 @@ -1028,6 +1028,35 @@ void DebriefingState::prepareDebriefing()
@@ -3180,7 +3180,7 @@ index 0631f32..b5b10f0 100644
  		else if (target == "STR_BASE")
  		{
  			_txtTitle->setText(tr("STR_BASE_IS_LOST"));
-@@ -2130,6 +2295,162 @@ void DebriefingState::prepareDebriefing()
+@@ -2130,10 +2295,173 @@ void DebriefingState::prepareDebriefing()
  		}
  	}
  
@@ -3343,7 +3343,18 @@ index 0631f32..b5b10f0 100644
  	_missionStatistics->success = success;
  
  	if (success && ruleDeploy && base)
-@@ -2299,6 +2620,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
+ 	{
++		// G.I. Joe: the clue items a won mission brings home (gijoeBounties, e.g. the ranch's ledger, crate plate
++		// and stencil). A stand-in for clue spots on the map until the clue system places them there.
++		if (const std::vector<std::string> *b = _game->getMod()->getGijoeBounty(ruleDeploy->getType()))
++		{
++			for (const auto &it : *b)
++				if (_game->getMod()->getItem(it)) addItemsToBaseStores(it, base, 1, false);
++		}
+ 		// Unlock research defined in alien deployment, if the mission was a success
+ 		const RuleResearch *research = _game->getMod()->getResearch(ruleDeploy->getUnlockedResearchOnSuccess());
+ 		save->handleResearchUnlockedByMissions(research, _game->getMod(), ruleDeploy);
+@@ -2299,6 +2627,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
   */
  void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base, int quantity, bool considerTransformations)
  {
@@ -9661,6 +9672,47 @@ index 6aac96d..f116957 100644
  
  		// wounded soldiers can be queued/dequeued
  		if (soldier->isWounded())
+diff --git a/src/Geoscape/BuildNewBaseState.cpp b/src/Geoscape/BuildNewBaseState.cpp
+index 952344e..8b16b84 100644
+--- a/src/Geoscape/BuildNewBaseState.cpp
++++ b/src/Geoscape/BuildNewBaseState.cpp
+@@ -35,6 +35,9 @@
+ #include "ConfirmNewBaseState.h"
+ #include "../Engine/Options.h"
+ #include "../Menu/ErrorMessageState.h"
++#include "../Savegame/Country.h"
++#include "../Mod/RuleCountry.h"
++#include "../Savegame/SavedGame.h"
+ #include "../Mod/RuleInterface.h"
+ 
+ namespace OpenXcom
+@@ -138,6 +141,8 @@ BuildNewBaseState::BuildNewBaseState(Base *base, Globe *globe, bool first) : _ba
+ 	if (_first)
+ 	{
+ 		_btnCancel->setVisible(false);
++		// G.I. Joe: the Pit goes in the United States, so open the globe over it (98W 39N; the engine counts north as negative)
++		_globe->center((360.0 - 98.0) * M_PI / 180.0, -39.0 * M_PI / 180.0);
+ 	}
+ }
+ 
+@@ -240,7 +245,16 @@ void BuildNewBaseState::globeClick(Action *action)
+ 				fakeUnderwaterBasesUnlocked = _game->getSavedGame()->isResearched(_game->getMod()->getFakeUnderwaterBaseUnlockResearch(), true);
+ 			}
+ 			bool fakeUnderwaterTexture = _globe->insideFakeUnderwaterTexture(lon, lat);
+-			if ((_first || !fakeUnderwaterBasesUnlocked) && fakeUnderwaterTexture)
++			// G.I. Joe: the Pit is in the United States (the cartel arc, the A.P.C.'s range and the story all
++			// start there), so the first base has to go down inside the USA
++			bool inUsa = !_first;
++			for (auto *country : *_game->getSavedGame()->getCountries())
++				if (country->getRules()->getType() == "STR_USA" && country->getRules()->insideCountry(lon, lat)) inUsa = true;
++			if (!inUsa)
++			{
++				_game->pushState(new ErrorMessageState(tr("STR_PIT_MUST_BE_IN_USA"), _palette, _game->getMod()->getInterface("geoscape")->getElement("genericWindow")->color, "BACK01.SCR", _game->getMod()->getInterface("geoscape")->getElement("palette")->color));
++			}
++			else if ((_first || !fakeUnderwaterBasesUnlocked) && fakeUnderwaterTexture)
+ 			{
+ 				// first (starting) base can't be fake underwater base
+ 				_game->pushState(new ErrorMessageState(tr("STR_XCOM_BASE_CANNOT_BE_BUILT"), _palette, _game->getMod()->getInterface("geoscape")->getElement("genericWindow")->color, "BACK01.SCR", _game->getMod()->getInterface("geoscape")->getElement("palette")->color));
 diff --git a/src/Geoscape/CobraIntelState.cpp b/src/Geoscape/CobraIntelState.cpp
 new file mode 100644
 index 0000000..b7aaee2
@@ -14842,7 +14894,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..d77b353 100644
+index 1885346..11df0e0 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -14980,7 +15032,7 @@ index 1885346..d77b353 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,284 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,289 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -15051,6 +15103,11 @@ index 1885346..d77b353 100644
 +	//     chance: 20            # percent per 10-minute check, directly overhead
 +	//     traitBonus: 50        # percent MORE (relative) with a recon Joe aboard
 +	//     soldierTypes: [STR_SCARLETT, STR_STALKER]
++	{
++		std::map<std::string, std::vector<std::string> > more;
++		if (reader.tryRead("gijoeBounties", more))
++			for (auto &kv : more) _gijoeBounties[kv.first] = kv.second;
++	}
 +	if (const auto& ct = reader["cartel"])
 +	{
 +		_cartel.on = true;
@@ -15265,7 +15322,7 @@ index 1885346..d77b353 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3589,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3594,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -15273,7 +15330,7 @@ index 1885346..d77b353 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4194,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4199,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -15299,7 +15356,7 @@ index 1885346..d77b353 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4451,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4456,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -15320,7 +15377,7 @@ index 1885346..d77b353 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6165,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6170,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -15340,7 +15397,7 @@ index 1885346..d77b353 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6188,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6193,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -15348,7 +15405,7 @@ index 1885346..d77b353 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6202,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6207,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -15388,7 +15445,7 @@ index 1885346..d77b353 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..c24897e 100644
+index 2242d13..b96fd58 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -15452,7 +15509,7 @@ index 2242d13..c24897e 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,125 @@ private:
+@@ -327,6 +360,126 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -15524,6 +15581,7 @@ index 2242d13..c24897e 100644
 +	};
 +private:
 +	CartelRules _cartel;
++	std::map<std::string, std::vector<std::string> > _gijoeBounties; ///< G.I. Joe: deployment -> items brought home on a win
 +	int _overflowPerRoom = 0, _escapeChance = 10, _escapeChanceNamed = 30;
 +	int _heldFirstLeak = 5, _heldFirstLeakNamed = 10, _heldLeakEvery = 7, _heldLeakEveryNamed = 10, _tradeCashPerRank = 25000;
 +	std::vector<std::string> _greenshirtTypes;
@@ -15578,7 +15636,7 @@ index 2242d13..c24897e 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +844,123 @@ public:
+@@ -692,6 +845,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -15612,6 +15670,7 @@ index 2242d13..c24897e 100644
 +	const CobraFileRules &getCobraFileRules() const { return _cobraFile; }
 +	const RetreatRules &getRetreatRules() const { return _retreat; }
 +	const CartelRules &getCartelRules() const { return _cartel; }
++	const std::vector<std::string> *getGijoeBounty(const std::string &dep) const { auto i = _gijoeBounties.find(dep); return i == _gijoeBounties.end() ? nullptr : &i->second; }
 +	const std::vector<SpyOperationRule> &getSpyOperations() const { return _spyOperations; }
 +	const SpyOperationRule *getSpyOperation(const std::string &type) const { for (const auto &o : _spyOperations) if (o.type == type) return &o; return nullptr; }
 +	int getUnnamedSpyKilled() const { return _unnamedSpyKilled; }
@@ -17269,7 +17328,7 @@ index 6c121c7..fb7f92b 100644
  	std::vector< std::vector<int> > &getReinforcementsBlocks() { return _reinforcementsBlocks; }
  
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..e7abd86 100644
+index 9ca9637..c2cdac8 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,11 +21,13 @@
@@ -17581,7 +17640,7 @@ index 9ca9637..e7abd86 100644
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
  	{
  		if (!_globalEquipmentLayout[j].empty())
-@@ -1530,8 +1747,155 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
+@@ -1530,8 +1747,158 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
   * @param base the base, in which the project was finished
   * @param score should the score be awarded or not?
   */
@@ -17693,6 +17752,9 @@ index 9ca9637..e7abd86 100644
 +		if (r && !isResearched(r, false))
 +		{
 +			addFinishedResearch(r, mod, nullptr, false);
++			// G.I. Joe: research a lead hands over still fires its spawnedEvent, so an event (and the ad-hoc
++			// mission scripts it names) can follow a solved lead at once instead of at the next month
++			spawnEvent(mod->getEvent(r->getSpawnedEvent(), false));
 +		}
 +	}
 +}
@@ -17737,7 +17799,7 @@ index 9ca9637..e7abd86 100644
  	if (isResearchRuleStatusDisabled(research->getName()))
  	{
  		return;
-@@ -2579,6 +2943,950 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2946,950 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -18688,7 +18750,7 @@ index 9ca9637..e7abd86 100644
  Region *SavedGame::locateRegion(double lon, double lat) const
  {
  	Region* found = nullptr;
-@@ -2995,6 +4303,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
+@@ -2995,6 +4306,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
   * @param soldier Pointer to dead soldier.
   * @param cause Pointer to cause of death, NULL if missing in action.
   */
@@ -18863,6 +18925,23 @@ index 9ca9637..e7abd86 100644
  std::vector<Soldier*>::iterator SavedGame::killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause)
  {
  	if (resetArmor)
+@@ -3328,6 +4807,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
+ 		}
+ 	}
+ 
++	// G.I. Joe: research a mission unlocks (won, lost or ignored) fires its spawnedEvent too, as lab research does
++	for (const auto* r : researchVec)
++	{
++		const RuleEvent* ev = mod->getEvent(r->getSpawnedEvent(), false);
++		if (ev && _generatedEvents.find(ev->getName()) == _generatedEvents.end())
++		{
++			spawnEvent(ev);
++		}
++	}
++
+ 	// check and interrupt alien missions if necessary (based on unlocked research)
+ 	for (auto* am : _activeMissions)
+ 	{
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
 index d985908..6fb4901 100644
 --- a/src/Savegame/SavedGame.h
