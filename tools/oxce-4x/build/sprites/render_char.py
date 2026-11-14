@@ -237,6 +237,9 @@ for name, act in ACTIONS.items():
     loop = not name.startswith('death')
     frames = [round(fs + (fe - fs) * i / (NF if loop else NF - 1)) for i in range(NF)]
     os.makedirs(f'{OUT}/{name}', exist_ok=True)
+    # a man lying flat is longer than the frame is wide: the death clip pulls the camera back 15% so his
+    # boots stay in shot in every facing (ROSTER's B1, 13 Nov). Anchors come from the same camera, so they hold.
+    cam_d.ortho_scale = 1.26 * REF * (1.15 if name.startswith('death') else 1.0)
     for k in DIRS:
         place_camera(k)
         for i, f in enumerate(frames):

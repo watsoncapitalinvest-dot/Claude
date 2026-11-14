@@ -11,6 +11,18 @@ roughly, and the cost is written down.
 
 ## Parked by decision
 
+### Short-Fuze (parked 12 Nov 21:31, John)
+
+"back burner him into the roster waiting". He has textures and a look file, no finished look, and
+ROSTER holds his record as WAITING. gijoe_day1.rul startingBase still lists STR_SHORT_FUZE: 1 (so
+Day 1 fields him as the 16th Joe in his placeholder look) until John brings him back or says drop him.
+
+### Visual inventory: a holstered pistol that shows on the figure (parked 12 Nov 23:58, John)
+
+"back burner visual inventory for the future". A sidearm equipped as the secondary would show in its
+holster on the battle sprite and the equipment figure. Nothing built; Hawk's figure keeps its pistol
+painted in the holster.
+
 ### ~~A textured globe from the vegetation map~~ — drawn at display resolution 12 Nov
 
 `HiUI::globeFloor` now redraws the earth per DISPLAY pixel: the projection is
