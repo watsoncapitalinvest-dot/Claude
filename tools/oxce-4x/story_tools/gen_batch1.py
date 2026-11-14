@@ -39,11 +39,11 @@ spine_items = [live_item(t) for t in ['STR_VIPER_PILOT', 'STR_COBRA_OFFICER', 'S
 R = [
  {'name': LOCK, 'cost': 999999, 'points': 0, 'requiresBaseFunc': ['STR_STORY_NEVER']},
  # existing prisoner topics (gijoe_campaign.rul) re-pointed at the spine; fields not listed here stay as they are
- topic('STR_COBRA_TROOPER', 150, 40, unlocks=['STR_COBRA_ORDER_OF_BATTLE'], needItem=True, destroyItem=True, lookup='STR_VIPER_INTERROGATION'),
- topic('STR_COBRA_ORDER_OF_BATTLE', 120, 30, deps=[LOCK]),
- topic('STR_VIPER_PILOT', 180, 50, unlocks=['STR_FANG_OPERATING_BASES'], needItem=True, destroyItem=True, lookup='STR_VIPER_PILOT_INTERROGATION'),
- topic('STR_FANG_OPERATING_BASES', 150, 40, deps=[LOCK]),
- topic('STR_COBRA_OFFICER', 220, 60, unlocks=['STR_COBRA_FLIGHT_ROUTES'], needItem=True, destroyItem=True, lookup='STR_COBRA_OFFICER_INTERROGATION'),
+ topic('STR_COBRA_TROOPER', 90, 40, unlocks=['STR_COBRA_ORDER_OF_BATTLE'], needItem=True, destroyItem=True, lookup='STR_VIPER_INTERROGATION'),
+ topic('STR_COBRA_ORDER_OF_BATTLE', 60, 30, deps=[LOCK]),
+ topic('STR_VIPER_PILOT', 120, 50, unlocks=['STR_FANG_OPERATING_BASES'], needItem=True, destroyItem=True, lookup='STR_VIPER_PILOT_INTERROGATION'),
+ topic('STR_FANG_OPERATING_BASES', 90, 40, deps=[LOCK]),
+ topic('STR_COBRA_OFFICER', 140, 60, unlocks=['STR_COBRA_FLIGHT_ROUTES'], needItem=True, destroyItem=True, lookup='STR_COBRA_OFFICER_INTERROGATION'),
  topic('STR_COBRA_FLIGHT_ROUTES', 200, 50, deps=[LOCK]),
  # Medi-Viper: John 21:08, a prisoner only knows what Cobra has built - so Trauma Kit (batch 3) only, no Brainwave Scanner in Act 1
  topic('STR_VIPER_MEDIC', 180, 50, unlocks=[], needItem=True, destroyItem=True, lookup='STR_MEDI_VIPER_INTERROGATION'),
@@ -151,23 +151,23 @@ A = [
  topic('STR_CARTEL_LEDGER', 30, 20, needItem=True, destroyItem=True, unlocks=['STR_WHO_IS_COBRA', 'STR_CARTEL_FLIGHT_ROUTE']),
  topic('STR_CRATE_SERIAL_PLATE', 40, 10, needItem=True, destroyItem=True),
  topic('STR_COBRA_STENCIL', 30, 10, needItem=True, destroyItem=True, unlocks=['STR_WHO_IS_COBRA']),
- topic('STR_WHO_IS_COBRA', 80, 20, deps=[LOCK]),
+ topic('STR_WHO_IS_COBRA', 50, 20, deps=[LOCK]),
  topic('STR_CARTEL_BOSS', 80, 20, needItem=True, destroyItem=True, unlocks=['STR_FACTORY_REACTIVATION_DATE', 'STR_CARTEL_FLIGHT_ROUTE'], lookup='STR_CARTEL_BOSS_INTERROGATION'),
  # THE CARTEL ARC (John 13 Nov 02:31-02:38): one lead, 'Who supplies the cartel?', ranch -> factory, teaching the intel tools.
  # Tutorial steps are kept short (10 analysts on Day 1) so the whole arc runs about 6 weeks.
- topic('STR_CARTEL_FLIGHT_ROUTE', 20, 15, deps=[LOCK]),                       # boss or ledger: the next cartel flight shows on the map
+ topic('STR_CARTEL_FLIGHT_ROUTE', 15, 15, deps=[LOCK]),                       # boss or ledger: the next cartel flight shows on the map
  topic('STR_CARTEL_LOGBOOK', 40, 10, needItem=True, destroyItem=True),        # flight shot down instead of tailed: logbook -> stash house
  topic('STR_INFORMANT_TIP', 15, 10, needItem=True, destroyItem=True),         # Scarlett's operation: the armored-car job, days ahead
  topic('STR_ROBBERY_LEADER', 30, 20, needItem=True, destroyItem=True, unlocks=['STR_BORDER_BANK_TRACE'], lookup='STR_ROBBERY_LEADER_INTERROGATION'),
  topic('STR_GETAWAY_PAPERS', 40, 10, needItem=True, destroyItem=True, unlocks=['STR_BORDER_BANK_TRACE']),   # leader dead, or the safehouse raid
- topic('STR_BORDER_BANK_TRACE', 40, 30, deps=[LOCK]),                         # lead full: the abandoned factory appears
+ topic('STR_BORDER_BANK_TRACE', 30, 30, deps=[LOCK]),                         # lead full: the abandoned factory appears
 
  topic('STR_FACTORY_SCHEDULE', 60, 20, needItem=True, destroyItem=True, unlocks=['STR_FACTORY_REACTIVATION_DATE']),
- topic('STR_FACTORY_REACTIVATION_DATE', 20, 10, deps=[LOCK]),
+ topic('STR_FACTORY_REACTIVATION_DATE', 15, 10, deps=[LOCK]),
  topic('STR_BROADCAST_RECORDING', 100, 30, needItem=True, destroyItem=True, lookup='STR_TRACE_THE_BROADCAST'),
  # existing (gijoe_frontops.rul): the front-company books now lead to Extensive Enterprises
  topic('STR_COBRA_LEDGERS', 150, 30, needItem=True, unlocks=['STR_EXTENSIVE_ENTERPRISES']),
- topic('STR_EXTENSIVE_ENTERPRISES', 150, 40, deps=[LOCK]),
+ topic('STR_EXTENSIVE_ENTERPRISES', 90, 40, deps=[LOCK]),
  # John 13 Nov 02:00: laundering is fought by tracing the money (needs the front company found AND banded cash decoded)
  topic('STR_FOLLOW_THE_MONEY', 200, 40, deps=['STR_EXTENSIVE_ENTERPRISES', 'STR_BANDED_CASH']),
  topic('STR_BLUDD_CALLING_CARD', 40, 20, needItem=True, destroyItem=True, lookup='STR_MAJOR_BLUDD'),
