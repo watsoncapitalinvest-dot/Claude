@@ -29,27 +29,27 @@ for i, n, c, dep, txt in [
  ('STR_MATCH_GRADE_OPTICS', 'Match-Grade Optics', 60, 'STR_AP_ROUNDS', 'Scopes for the M-16: a marksman in every squad.'),
  ('STR_C4_DEMOLITIONS', 'C-4 Demolitions', 60, 'STR_AP_ROUNDS', 'Satchel charges that open walls and doors.'),
  ('STR_CLAYMORE_MINES', 'Claymore Mines', 60, 'STR_AP_ROUNDS', 'Directional mines for ambushes and for guarding a flank.'),
- ('STR_MOBAT', 'MOBAT', 250, 'STR_VAMP', 'The Motorized Battle Tank: G.I. Joe\'s first tank.'),
- ('STR_RAM', 'R.A.M.', 60, 'STR_VAMP', 'The Rapid-fire Motorcycle: a scout bike with a machine gun in a sidecar.'),
+ ('STR_MOBAT', 'MOBAT', 250, None, 'The Motorized Battle Tank: G.I. Joe\'s first tank.'),
+ ('STR_RAM', 'R.A.M.', 60, None, 'The Rapid-fire Motorcycle: a scout bike with a machine gun in a sidecar.'),
  ('STR_HAL', 'H.A.L.', 150, 'STR_MOBAT', 'The Heavy Artillery Laser: a towed laser cannon.'),
  ('STR_FLAK', 'F.L.A.K.', 100, 'STR_RADAR_ROOM', 'A towed anti-aircraft gun for The Pit and the outposts.'),
  ('STR_WOLVERINE', 'Wolverine', 200, 'STR_MOBAT', 'An armoured missile carrier: light tank and fire support.'),
  ('STR_SLUGGER', 'Slugger', 250, 'STR_MOBAT', 'A self-propelled cannon: artillery on the battle map.'),
- ('STR_POLAR_BATTLE_BEAR', 'Polar Battle Bear', 150, 'STR_VAMP', 'A tracked arctic vehicle, at its best in snow and ice.'),
+ ('STR_POLAR_BATTLE_BEAR', 'Polar Battle Bear', 150, None, 'A tracked arctic vehicle, at its best in snow and ice.'),
  ('STR_MMS', 'M.M.S.', 100, 'STR_FIELD_RADIO', 'The Mobile Missile System: off-map missile support a Joe with a radio can call in.'),
  ('STR_MOUNTAIN_HOWITZER', 'Mountain Howitzer', 100, 'STR_FIELD_RADIO', 'A light howitzer for off-map fire support.'),
  ('STR_DRAGONFLY', 'Dragonfly', 200, 'STR_C130_HERCULES', 'An attack helicopter that flies over the battle map.'),
  ('STR_FALCON_GLIDER', 'Falcon Glider', 60, 'STR_C130_HERCULES', 'A silent glider for night insertions.'),
  ('STR_SKY_HAWK', 'Sky Hawk', 120, 'STR_SKYSTRIKER', 'A light VTOL that escorts transports.'),
  ('STR_SHARC', 'S.H.A.R.C.', 200, 'STR_SKYSTRIKER', 'A flying submarine: air and underwater.'),
- ('STR_MANTA', 'MANTA', 60, 'STR_VAMP', 'A small amphibious assault craft.'),
+ ('STR_MANTA', 'MANTA', 60, None, 'A small amphibious assault craft.'),
  ('STR_KILLER_WHALE', 'Killer W.H.A.L.E.', 300, 'STR_MANTA', 'A hovercraft assault transport for squads and light vehicles.'),
  ('STR_JUMP_JET_PACK', 'J.U.M.P. Jet Pack', 120, 'STR_KEVLAR_VEST', 'A jet pack launched from a ground platform.'),
  ('STR_PAC_RATS', 'PAC/RATs', 60, 'STR_FIELD_RADIO', 'Remote-controlled tracked weapons: machine gun, flamethrower and missile.'),
  ('STR_BATTLE_STATIONS', 'Battle Stations', 80, 'STR_RADAR_ROOM', 'Machine gun, missile and mortar defense units for The Pit and the outposts.'),
  ('STR_WATCH_TOWER', 'Watch Tower', 40, 'STR_RADAR_ROOM', 'A tower that spots Cobra sooner, and makes the base easier to spot.'),
  ('STR_BIVOUAC', 'Bivouac', 40, 'STR_FIELD_RADIO', 'A field camp: cheap barracks for outposts.')]:
-    t(i, n, c, 10, [dep], txt)
+    t(i, n, c, 10, [dep] if dep else [], txt)   # None = no prerequisite (John 13 Nov 20:55: only VAMP Mk II waits for Clutch)
 # --- follow-ons that can land in Year 1
 for i, n, c, deps, txt in [
  ('STR_SQUAD_AUTOMATIC_WEAPON', 'Squad Automatic Weapon', 150, ['STR_AP_ROUNDS'], 'The M249 SAW: a light machine gun for the squad.'),
