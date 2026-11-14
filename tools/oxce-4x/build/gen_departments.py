@@ -73,7 +73,7 @@ S = {'STR_DEPT_COMMAND': 'Command', 'STR_DEPT_INTEL': 'Intel', 'STR_DEPT_MOTOR_P
      'STR_TREE_RESEARCHING': 'Researching', 'STR_TREE_AVAILABLE': 'Available', 'STR_TREE_LOCKED': 'Locked',
      'STR_TREE_NEEDS_ITEM': 'Needs something in the stores', 'STR_TREE_COST': '{0} scientist-days',
      'STR_TREE_NEEDS': 'Needs:', 'STR_TREE_USES': 'Uses up: {0}', 'STR_START_RESEARCH': 'START',
-     'STR_ADD_SCIENTISTS': 'ADD SCIENTISTS'}
+     'STR_ADD_SCIENTISTS': 'ADD SCIENTISTS', 'STR_INSTRUCTOR': 'Instructor (trains up to 6 greenshirts)'}
 for k, v in S.items(): out.append(f'      {k}: "{v}"')
 out += ['  - type: en-GB', '    strings: *deptstr', '']
 p = os.path.join(ROOT, 'mod', 'Ruleset', 'gijoe_departments.rul')
