@@ -332,6 +332,44 @@ STATUS = {
 }
 S.update(STATUS)
 
+# 5. Underwater enemies (John 14 Nov 18:08; UNDERWATER_MISSIONS_v1 section 5, BRIEF_FOR_ROSTER_Underwater).
+# Names, Intel pages (the Enemy Troop Types format) and short voices. Hydro-Vipers come with their act.
+N = '{NEWLINE}'
+def troop(name, rank, spec, dossier, ability, quote):
+    return N.join([name.upper(), rank, 'Specialty: ' + spec, '', 'DOSSIER', dossier, '', 'IN THE FIELD', 'Squad ability: ' + ability, '', '"%s"' % quote])
+UW = {
+    'STR_CARTEL_DIVER': 'Cartel Diver',
+    'STR_ART_CARTEL_DIVER': 'Cartel Diver',
+    'STR_ART_CARTEL_DIVER_TEXT': troop('Cartel Diver', 'Hired help - no rank', 'Salvage diving; Smuggling',
+        'Commercial salvage men the cartel pays by the crate. They know the reefs and the harbour bottoms, '
+        'and they know where the crates go down. They do not know who is really paying, and they are not paid enough to die for it.',
+        'Cut and Run: if the fight turns against them, they drop what they carry and swim for the edge', 'Nobody said anything about soldiers.'),
+    'STR_COBRA_EEL': 'Cobra Eel',
+    'STR_ART_COBRA_EEL': 'Cobra Eel',
+    'STR_ART_COBRA_EEL_TEXT': troop('Cobra Eel', 'Cobra trooper - E-3 or equivalent', 'Frogman; Underwater demolitions',
+        "Cobra's frogmen. Trained in the dark and cold, they plant mines on hulls, tap cables on the sea floor and guard "
+        "what Cobra hides underwater. They work in silence and in teams, and they never come up where you expect them.",
+        'Limpet Run: one Eel in each team carries a limpet mine and goes for the nearest hull, door or charge point', 'Silence below.'),
+    'STR_EEL_SQUAD_LEADER': 'Eel Squad Leader',
+    'STR_ART_EEL_SQUAD_LEADER': 'Eel Squad Leader',
+    'STR_ART_EEL_SQUAD_LEADER_TEXT': troop('Eel Squad Leader', 'Cobra officer - E-6 or equivalent', 'Frogman; Small-unit command',
+        'The veteran who leads three to five Eels. He carries Cobra\'s underwater pistol and the team\'s orders, '
+        'and while he is alive his Eels hold their ground. Take him and the rest scatter.',
+        'Hand Signals: Eels within sight of him keep their nerve; if he goes down, they lose it', 'Hold. Wait. Now.'),
+    'STR_LAMPREY': 'Lamprey',
+    'STR_ART_LAMPREY': 'Lamprey',
+    'STR_ART_LAMPREY_TEXT': troop('Lamprey', 'Cobra trooper - E-4 or equivalent', 'Hydrofoil crew; Underwater assault',
+        "The crews of Cobra's Moray hydrofoils, as much at home in the water as on deck. "
+        "They go over the side with underwater rifles when a hydrofoil cannot finish the job.",
+        'Over the Side: a Lamprey can enter a fight from a Cobra boat at the map edge', 'Over the side. Finish it.'),
+    # voices (deploy / hit / down)
+    'STR_VOICE_CARTEL_DIVER_DEPLOY': "Keep it quiet. In and out.", 'STR_VOICE_CARTEL_DIVER_HIT': "I'm cut!", 'STR_VOICE_CARTEL_DIVER_DOWN': "Should've stayed on the boat...",
+    'STR_VOICE_COBRA_EEL_DEPLOY': "Silence below.", 'STR_VOICE_COBRA_EEL_HIT': "Hit!", 'STR_VOICE_COBRA_EEL_DOWN': "Cobra...!",
+    'STR_VOICE_EEL_SQUAD_LEADER_DEPLOY': "Hold. Wait. Now.", 'STR_VOICE_EEL_SQUAD_LEADER_HIT': "Keep moving!", 'STR_VOICE_EEL_SQUAD_LEADER_DOWN': "Eels... fall back...",
+    'STR_VOICE_LAMPREY_DEPLOY': "Over the side!", 'STR_VOICE_LAMPREY_HIT': "Taking water!", 'STR_VOICE_LAMPREY_DOWN': "For... Cobra...",
+}
+S.update(UW)
+
 hdr = ('# STORY (Act 1 writing). Hawk\'s briefings, Cobra Commander\'s broadcast and the Act 1 cutscene captions.\n'
        '# Text only. BUILD wires the ids (see story_tools/gen_act1_text.py). Generated: edit the script, not this file.\n')
 body = yaml.dump({'extraStrings': [{'type': 'en-US', 'strings': S}, {'type': 'en-GB', 'strings': S}]},
