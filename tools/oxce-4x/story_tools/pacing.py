@@ -74,11 +74,19 @@ STRATS = {  # target scientists by month; second lab when targets pass 50
  'cautious':   {0: 10, 3: 15, 6: 20, 9: 25},
  'typical':    {0: 10, 1: 15, 2: 20, 4: 30, 6: 40, 9: 50},
  'aggressive': {0: 10, 1: 20, 2: 30, 4: 50, 6: 70, 9: 90}}
-PARALLEL, PER_PROJECT = 4, 20     # projects worked at once; scientists usefully on one project
+PARALLEL, PER_PROJECT = 4, 20
+# Department rooms (13 Nov, John 18:04-18:25; DEPARTMENT_HEADS_DESIGN_v1): a lane's topics can't start until its room exists.
+# Day 1 base = the Bare 5, so COMMAND, ARMORY and MOTOR_POOL are open; the rest are built by the player the day a topic in
+# that lane is first ready (cost, days). ROOMGATE=0 = the old model, every lane open from Day 1.
+ROOMGATE = os.environ.get('ROOMGATE', '1') == '1'
+LANE_ROOM = {'INTEL': (80000, 8), 'COMMS': (100000, 8), 'MEDICAL': (60000, 6), 'AIR_WING': (200000, 25)}
+# Story-locked topics granted by an event (month): Clutch's VAMP (rescue + junkyard, John 13 Nov 17:10).
+GRANT = {'STR_VAMP_RECOVERED': float(os.environ.get('VAMP_MONTH', '2.5'))}     # projects worked at once; scientists usefully on one project
 
 def run(strat):
     target = STRATS[strat]; day = 0; cash = ECON['start']; sci = 10; labs = LAB_START; rooms = HOUSE_START; nlab_built = 0; nq_built = 0
     an = AN0 if ANALYSTS else 0; an_seats = AN0; nan_built = 0
+    open_lanes = set(T[k].get('lane') for k in T) if not ROOMGATE else {'COMMAND', 'ARMORY', 'MOTOR_POOL', None}; rooms_wanted = set(); room_day = {}
     done = {k: 0.0 for k in DONE0}; prog = collections.defaultdict(float); paid = set(); building = []; spent = collections.Counter()
     def tgt(m): return max(v for mm, v in target.items() if mm <= m)
     def avail(k):
@@ -87,8 +95,12 @@ def run(strat):
         if r.get('needItem') and ITEM_MONTH.get(k, 99) > day / 30: return False
         deps = [d for d in r.get('dependencies', []) if d != 'STR_STORY_LOCK']
         if 'STR_STORY_LOCK' in r.get('dependencies', []):
-            return any(u in done for u in unlocked_by[k])
-        return all(d in done for d in deps) or any(u in done for u in unlocked_by[k])
+            ok = any(u in done for u in unlocked_by[k]) or GRANT.get(k, 99) <= day / 30
+        else:
+            ok = all(d in done for d in deps) or any(u in done for u in unlocked_by[k])
+        if ok and r.get('lane') not in open_lanes:
+            rooms_wanted.add(r.get('lane')); return False
+        return ok
     order = [k for k, r in T.items() if r['file'] != 'gijoe_research_joe.rul'] + JOE_ORDER   # intel/story first
     order = [k for k in order if k in T]
     low_cash_days = 0
@@ -101,6 +113,13 @@ def run(strat):
                 if b[0] == 'lab': labs += LAB_ADD; nlab_built += 1
                 elif b[0] == 'an': an_seats += 6; nan_built += 1
                 else: rooms += HOUSE_ADD; nq_built += 1
+        # department rooms: build the room the day its lane is first wanted
+        for ln in list(rooms_wanted):
+            if ln in LANE_ROOM and ln not in room_day and cash > LANE_ROOM[ln][0]:
+                room_day[ln] = day + LANE_ROOM[ln][1]; cash -= LANE_ROOM[ln][0]; spent['department rooms'] += LANE_ROOM[ln][0]
+        for ln, d in room_day.items():
+            if d <= day: open_lanes.add(ln)
+        rooms_wanted.clear()
         # hire / build toward the target
         want = tgt(m)
         if ANALYSTS:
@@ -139,12 +158,13 @@ def run(strat):
         cash += monthly / 30
         if cash < 0: low_cash_days += 1
         day += 1
+    done['_rooms'] = {ln: round(d / 30, 2) for ln, d in room_day.items()}
     return done, dict(sci=sci, analysts=an, intel_rooms=nan_built, lab_seats=labs, labs_built=nlab_built, cash=round(cash / 1e6, 2), spent={k: round(v / 1e6, 2) for k, v in spent.items()},
                       broke_days=low_cash_days, monthly_at_end=round(monthly / 1e6, 2))
 out = {}
 for s in STRATS:
     done, info = run(s); out[s] = (done, info)
-    print(s, info)
+    print(s, info, 'rooms open (month):', done.get('_rooms'))
 print()
 print(f"{'topic':38s} {'est':>5s} " + ' '.join(f'{s:>10s}' for s in STRATS))
 keys = [k for k in EST] + [k for k in JOE_ORDER[:20] if k not in EST]
