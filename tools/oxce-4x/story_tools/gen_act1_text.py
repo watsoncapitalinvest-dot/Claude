@@ -142,6 +142,44 @@ S['STR_EVENT_PROVING_GROUND_FAILED_DESCRIPTION'] = P.join([
     "BEACH HEAD: \"Pathetic. Same time next week.\"",
 ])
 
+# ------------------------------------------------------------------ Cobra's side of Act 1 (claude/COBRA_ACT1_TIMETABLE_v1.md, John 13 Nov 21:02-21:12)
+# {JOE} = the hunted Joe's name, {BASE} = the base; BUILD substitutes them (or drops the sentence if it can't).
+S['STR_EVENT_FACTORY_REACTIVATED'] = 'THE FACTORY IS RUNNING'
+S['STR_EVENT_FACTORY_REACTIVATED_DESCRIPTION'] = P.join([
+    "The date on the production schedule came and went. The machine works in West Texas is lit up, the rail spur is busy, and there are guards on the gate.",
+    "HAWK: We knew when. We didn't get there. Cobra has a factory now, and the cartel's next shipment won't be pistols. We'll have to hit it the hard way.",
+])
+S['STR_EVENT_BLUDD_HIRED'] = 'A PRICE ON A JOE'
+S['STR_EVENT_BLUDD_HIRED_DESCRIPTION'] = P.join([
+    "SCARLETT: Word from three different informants, all the same week. Cobra has hired a mercenary. Australian, ex-Foreign Legion, writes bad poetry. Major Sebastian Bludd.",
+    "His job is one of ours: {JOE}. Cobra has seen enough of {JOE} to want him gone. Bludd will wait for him to travel. Every flight is a risk until this is settled.",
+])
+S['STR_BRIEFING_BLUDD_AMBUSH_TITLE'] = 'AMBUSH'
+S['STR_BRIEFING_BLUDD_AMBUSH'] = P.join([
+    "HAWK: Bludd hit the aircraft carrying {JOE}. It's down, and his men are already moving on the wreck.",
+    "Get everyone out of that wreck before they do. Bludd doesn't want the aircraft. He wants {JOE}.",
+])
+S['STR_BRIEFING_BLUDD_RAID_TITLE'] = 'BLUDD AT THE GATE'
+S['STR_BRIEFING_BLUDD_RAID'] = P.join([
+    "HAWK: {JOE} stayed home, so Bludd came to him. A small team is inside the wire at {BASE}.",
+    "They're not here to hold ground. They're here for one man. Keep him alive and run them off.",
+])
+S['STR_EVENT_BLUDD_CALLING_CARD'] = 'BLUDD WAS HERE'
+S['STR_EVENT_BLUDD_CALLING_CARD_DESCRIPTION'] = P.join([
+    "Bludd got away. He left a card where we'd find it: a playing card, the ace of spades, with four lines of verse on the back promising to come back for {JOE}.",
+    "HAWK: The poetry is terrible. The threat isn't. Research: Bludd's Calling Card.",
+])
+S['STR_EVENT_DROME_STRIKE'] = 'THE DROME STRIKES'
+S['STR_EVENT_DROME_STRIKE_DESCRIPTION'] = P.join([
+    "Radar has a wave of Firebats on it, and behind them Cobra transports, heading straight for {BASE}.",
+    "HAWK: We didn't go to the Drome, so the Drome is coming to us. Everyone to battle stations. This is the one we've been building to.",
+])
+S['STR_BRIEFING_DROME_STRIKE_TITLE'] = 'OPERATION: HOLD THE LINE'
+S['STR_BRIEFING_DROME_STRIKE'] = P.join([
+    "HAWK: Cobra's Terror Drome has sent everything it has at {BASE}. Troops, armour, aircraft overhead.",
+    "Hold the base. Take prisoners if you can, pick up their weapons when it's over. I want to know who's been arming these people.",
+])
+
 # ------------------------------------------------------------------ Cobra Commander's broadcast (Geoscape event)
 S['STR_EVENT_COBRA_BROADCAST'] = 'COBRA SPEAKS'
 S['STR_EVENT_COBRA_BROADCAST_DESCRIPTION'] = P.join([
