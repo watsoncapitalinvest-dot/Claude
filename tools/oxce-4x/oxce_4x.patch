@@ -1491,7 +1491,7 @@ index 10a96c4..755c149 100644
  	void btnCancelClick(Action *action);
  	/// Handler for pressing an Increase arrow in the list.
 diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
-index db6727f..990b6d3 100644
+index db6727f..fcc4bb7 100644
 --- a/src/Battlescape/AIModule.cpp
 +++ b/src/Battlescape/AIModule.cpp
 @@ -19,6 +19,7 @@
@@ -1510,7 +1510,7 @@ index db6727f..990b6d3 100644
  #include "../Mod/RuleItem.h"
  #include "../fmath.h"
  
-@@ -489,6 +491,75 @@ void AIModule::think(BattleAction *action)
+@@ -489,6 +491,116 @@ void AIModule::think(BattleAction *action)
  		return;
  	}
  
@@ -1543,6 +1543,47 @@ index db6727f..990b6d3 100644
 +			return;
 +		}
 +		_save->getPathfinding()->abortPath();
++	}
++
++	// G.I. Joe: Cobra has broken (BattlescapeGame::retreatStep). Troopers run for the nearest map edge;
++	// officers and villains keep fighting while they still have fireTUPct of their time, then pull back.
++	// B.A.T.s never retreat.
++	if (_unit->getFaction() == FACTION_HOSTILE && _save->getVanStop("retreat"))
++	{
++		const Mod::RetreatRules &rr = _save->getMod()->getRetreatRules();
++		const bool never = std::find(rr.neverRetreat.begin(), rr.neverRetreat.end(), _unit->getType()) != rr.neverRetreat.end();
++		const std::string &rank = _unit->getRankString();
++		const bool runner = rank == "STR_LIVE_SOLDIER" || rank == "STR_LIVE_TERRORIST";
++		const bool stillFighting = !runner && _unit->getTimeUnits() * 100 >= _unit->getBaseStats()->tu * rr.fireTUPct;
++		if (!never && !stillFighting)
++		{
++			const Position at = _unit->getPosition();
++			const int W = _save->getMapSizeX(), H = _save->getMapSizeY();
++			if (at.x <= 0 || at.y <= 0 || at.x >= W - 1 || at.y >= H - 1)
++			{
++				action->type = BA_NONE;
++				return;
++			}
++			std::vector<Position> edges;
++			for (int x = 0; x < W; ++x) { edges.push_back(Position(x, 0, at.z)); edges.push_back(Position(x, H - 1, at.z)); }
++			for (int y = 0; y < H; ++y) { edges.push_back(Position(0, y, at.z)); edges.push_back(Position(W - 1, y, at.z)); }
++			std::sort(edges.begin(), edges.end(), [&](const Position& a, const Position& b) { return Position::distanceSq(a, at) < Position::distanceSq(b, at); });
++			int tries = 0;
++			for (const auto& e : edges)
++			{
++				if (++tries > 12) break;
++				Tile* tile = _save->getTile(e);
++				if (!tile || tile->getUnit()) continue;
++				_save->getPathfinding()->calculate(_unit, e, BAM_NORMAL);
++				if (_save->getPathfinding()->getStartDirection() == -1) continue;
++				_save->getPathfinding()->abortPath();
++				action->type = BA_WALK;
++				action->target = e;
++				action->run = runner && _unit->getArmor()->allowsRunning(false);
++				return;
++			}
++			_save->getPathfinding()->abortPath();
++		}
 +	}
 +
 +	// G.I. Joe robbery (13 Nov 2026): a robber told to run (NextTurnState::runVanStop) heads for the
@@ -1586,7 +1627,7 @@ index db6727f..990b6d3 100644
  	if (action->weapon)
  	{
  		const RuleItem *rule = action->weapon->getRules();
-@@ -1395,6 +1466,12 @@ int AIModule::selectNearestTarget()
+@@ -1395,6 +1507,12 @@ int AIModule::selectNearestTarget()
  		{
  			tally++;
  			int dist = Position::distance2d(_unit->getPosition(), bu->getPosition());
@@ -1668,10 +1709,18 @@ index 6065b54..8db80d7 100644
  	~ActionMenuState();
  	/// Init function.
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..b883c02 100644
+index b7e1111..905c872 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
-@@ -508,8 +508,189 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
+@@ -16,6 +16,7 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include <algorithm>
+ #include <sstream>
+ #include "BattlescapeGame.h"
+ #include "BattlescapeState.h"
+@@ -508,8 +509,261 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
  /**
   * Ends the turn.
   */
@@ -1855,22 +1904,96 @@ index b7e1111..b883c02 100644
 +
 +}
 +
++/**
++ * G.I. Joe: Cobra retreats (John 13 Nov 22:44-22:50). A Cobra squad breaks when half its men are down
++ * or gone, when its leader is down, when it has what it came for (a man carrying off a Joe), or when it
++ * is clearly outnumbered by the Joes it can see. Once broken it stays broken: troopers run for the map
++ * edge, officers and villains pull back firing (AIModule), B.A.T.s never retreat. A man who reaches the
++ * edge on Cobra's turn is gone - not killed, not captured, he tells Cobra what he saw.
++ */
++void BattlescapeGame::retreatStep()
++{
++	const Mod::RetreatRules &rr = getMod()->getRetreatRules();
++	if (!rr.on) return;
++	auto never = [&](BattleUnit *u) { return std::find(rr.neverRetreat.begin(), rr.neverRetreat.end(), u->getType()) != rr.neverRetreat.end(); };
++	auto escaped = [&](BattleUnit *u) { return _save->getVanStop("esc:" + std::to_string(u->getId())) != 0; };
++	int total = 0, down = 0, standing = 0, seenJoes = 0;
++	bool leaderDown = false, carrying = false;
++	for (auto *u : *_save->getUnits())
++	{
++		if (u->getOriginalFaction() == FACTION_HOSTILE)
++		{
++			++total;
++			if (u->isOut() || escaped(u))
++			{
++				++down;
++				const std::string &r = u->getRankString();
++				if (!escaped(u) && (r == "STR_LIVE_LEADER" || r == "STR_LIVE_COMMANDER")) leaderDown = true;
++			}
++			else
++			{
++				++standing;
++				if (u->isCarrying()) carrying = true;
++			}
++		}
++		else if (u->getOriginalFaction() == FACTION_PLAYER && !u->isOut() && u->getTurnsSinceSpottedByFaction(FACTION_HOSTILE) == 0)
++		{
++			++seenJoes;
++		}
++	}
++	int start = _save->getVanStop("cobraStart", -1);
++	if (start < 0) { start = total; _save->setVanStop("cobraStart", total); }
++	if (!_save->getVanStop("retreat") && standing > 0)
++	{
++		const bool losses = start > 0 && down * 100 >= start * rr.lossPct;
++		const bool outnumbered = rr.outnumbered > 0 && seenJoes >= standing * rr.outnumbered;
++		if (losses || leaderDown || carrying || outnumbered)
++		{
++			_save->setVanStop("retreat", 1);
++			_parentState->warning("STR_COBRA_PULLING_OUT");
++			Log(LOG_INFO) << "[retreat] Cobra breaks: losses " << down << "/" << start << ", leader down " << leaderDown
++				<< ", carrying " << carrying << ", Joes seen " << seenJoes << " vs " << standing << " standing";
++		}
++	}
++	if (_save->getVanStop("retreat") && _save->getSide() == FACTION_HOSTILE)
++	{
++		const int W = _save->getMapSizeX(), H = _save->getMapSizeY();
++		for (auto *u : *_save->getUnits())
++		{
++			if (u->getOriginalFaction() != FACTION_HOSTILE || u->isOut() || escaped(u) || never(u) || u->isCarrying()) continue;
++			const Position p = u->getPosition();
++			if (p.x <= 0 || p.y <= 0 || p.x >= W - 1 || p.y >= H - 1)
++			{
++				_save->setVanStop("esc:" + std::to_string(u->getId()), 1);
++				_save->setVanStop("escaped", _save->getVanStop("escaped") + 1);
++				u->setTile(nullptr, _save);
++				u->setPosition(TileEngine::invalid);
++				u->goToTimeOut();
++				Log(LOG_INFO) << "[retreat] " << u->getType() << " " << u->getId() << " got away";
++			}
++		}
++	}
++}
++
  void BattlescapeGame::endTurn()
  {
 +	captureStep();
++	retreatStep();
  	_debugPlay = _save->getDebugMode() && _parentState->getGame()->isCtrlPressed() && (_save->getSide() != FACTION_NEUTRAL);
  	_currentAction.type = BA_NONE;
  	_currentAction.skillRules = nullptr;
 diff --git a/src/Battlescape/BattlescapeGame.h b/src/Battlescape/BattlescapeGame.h
-index 7af613c..f6f1f81 100644
+index 7af613c..f9d6e24 100644
 --- a/src/Battlescape/BattlescapeGame.h
 +++ b/src/Battlescape/BattlescapeGame.h
-@@ -149,6 +149,8 @@ private:
+@@ -149,6 +149,10 @@ private:
  
  	/// Ends the turn.
  	void endTurn();
 +	/// Full capture: Cobra picks up, carries and extracts downed Joes.
 +	void captureStep();
++	/// G.I. Joe: decide whether Cobra breaks, and take the ones who reached the edge off the map
++	void retreatStep();
  	/// Picks the first soldier that is panicking.
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
@@ -2762,7 +2885,7 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..eb99db5 100644
+index 0631f32..e630c27 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
 @@ -1028,6 +1028,35 @@ void DebriefingState::prepareDebriefing()
@@ -2801,7 +2924,7 @@ index 0631f32..eb99db5 100644
  	Craft *craft = 0;
  	Base *base = 0;
  	std::string target;
-@@ -1039,10 +1068,22 @@ void DebriefingState::prepareDebriefing()
+@@ -1039,10 +1068,23 @@ void DebriefingState::prepareDebriefing()
  	int playersMIA = 0;
  
  	_stats.push_back(new DebriefingStat("STR_ALIENS_KILLED", false));
@@ -2813,6 +2936,7 @@ index 0631f32..eb99db5 100644
 +	_stats.push_back(new DebriefingStat("STR_SMART_TRUCK_STOPPED", false));
 +	_stats.push_back(new DebriefingStat("STR_SMART_LEADER_ALIVE", false));
 +	_stats.push_back(new DebriefingStat("STR_SMART_NONE_ESCAPED", false));
++	_stats.push_back(new DebriefingStat("STR_COBRA_GOT_AWAY", false));
 +	_stats.push_back(new DebriefingStat("STR_SMART_LOOT_RECOVERED", false));
 +	_stats.push_back(new DebriefingStat("STR_SMART_NO_CIVILIAN_HURT", false));
  	_stats.push_back(new DebriefingStat("STR_ALIEN_CORPSES_RECOVERED", false));
@@ -2824,7 +2948,7 @@ index 0631f32..eb99db5 100644
  
  	std::string missionCompleteText, missionFailedText;
  	std::string objectiveCompleteText, objectiveFailedText;
-@@ -1186,7 +1227,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1186,7 +1228,7 @@ void DebriefingState::prepareDebriefing()
  					break;
  				}
  			}
@@ -2833,7 +2957,7 @@ index 0631f32..eb99db5 100644
  			{
  				_destroyBase = true;
  			}
-@@ -1230,6 +1271,10 @@ void DebriefingState::prepareDebriefing()
+@@ -1230,6 +1272,10 @@ void DebriefingState::prepareDebriefing()
  				ms->setUfo(nullptr);
  			}
  			_missionStatistics->alienRace = ms->getAlienRace();
@@ -2844,7 +2968,7 @@ index 0631f32..eb99db5 100644
  			delete ms;
  			save->getMissionSites()->erase(msIt);
  			break;
-@@ -1296,6 +1341,25 @@ void DebriefingState::prepareDebriefing()
+@@ -1296,6 +1342,25 @@ void DebriefingState::prepareDebriefing()
  			deadSoldiers++;
  		}
  	}
@@ -2870,7 +2994,7 @@ index 0631f32..eb99db5 100644
  	// if all our men are unconscious, the aliens get to have their way with them.
  	if (playersUnconscious + playersMIA == playersSurvived)
  	{
-@@ -1304,7 +1368,11 @@ void DebriefingState::prepareDebriefing()
+@@ -1304,7 +1369,11 @@ void DebriefingState::prepareDebriefing()
  		{
  			if (bu->getOriginalFaction() == FACTION_PLAYER && bu->getStatus() != STATUS_DEAD)
  			{
@@ -2883,7 +3007,7 @@ index 0631f32..eb99db5 100644
  				{
  					bu->instaKill();
  				}
-@@ -1417,6 +1485,13 @@ void DebriefingState::prepareDebriefing()
+@@ -1417,6 +1486,13 @@ void DebriefingState::prepareDebriefing()
  				{
  					addStat(objectiveCompleteText, 1, objectiveCompleteScore);
  				}
@@ -2897,7 +3021,7 @@ index 0631f32..eb99db5 100644
  				save->clearLinksForAlienBase(ab, _game->getMod());
  				delete ab;
  				save->getAlienBases()->erase(abIt);
-@@ -1476,6 +1551,65 @@ void DebriefingState::prepareDebriefing()
+@@ -1476,6 +1552,65 @@ void DebriefingState::prepareDebriefing()
  	{
  		ignoreLivingCivilians = ruleDeploy->getIgnoreLivingCivilians();
  	}
@@ -2963,7 +3087,7 @@ index 0631f32..eb99db5 100644
  	for (auto* bunit : *battle->getUnits())
  	{
  		UnitStatus status = bunit->getStatus();
-@@ -1483,6 +1617,30 @@ void DebriefingState::prepareDebriefing()
+@@ -1483,6 +1618,31 @@ void DebriefingState::prepareDebriefing()
  		UnitFaction oldFaction = bunit->getOriginalFaction();
  		Soldier *soldier = save->getSoldier(bunit->getId());
  
@@ -2971,6 +3095,7 @@ index 0631f32..eb99db5 100644
 +		// not killed, not captured, not a corpse.
 +		if (oldFaction == FACTION_HOSTILE && battle->getVanStop("esc:" + std::to_string(bunit->getId())))
 +		{
++			addStat("STR_COBRA_GOT_AWAY", 1, 0);
 +			continue;
 +		}
 +
@@ -2994,7 +3119,7 @@ index 0631f32..eb99db5 100644
  		if (!bunit->getTile())
  		{
  			Position pos = bunit->getPosition();
-@@ -1654,8 +1812,9 @@ void DebriefingState::prepareDebriefing()
+@@ -1654,8 +1814,9 @@ void DebriefingState::prepareDebriefing()
  					}
  				}
  			}
@@ -3005,7 +3130,7 @@ index 0631f32..eb99db5 100644
  				&& playersSurvived > 0 && faction != FACTION_PLAYER && (!bunit->isOut() || bunit->isIgnored())
  				&& (bunit->isSurrendering() || battle->getChronoTrigger() == FORCE_WIN_SURRENDER))
  			{
-@@ -1895,6 +2054,10 @@ void DebriefingState::prepareDebriefing()
+@@ -1895,6 +2056,10 @@ void DebriefingState::prepareDebriefing()
  		{
  			_txtTitle->setText(tr("STR_CRAFT_IS_LOST"));
  		}
@@ -3016,7 +3141,7 @@ index 0631f32..eb99db5 100644
  		else if (target == "STR_BASE")
  		{
  			_txtTitle->setText(tr("STR_BASE_IS_LOST"));
-@@ -2130,6 +2293,153 @@ void DebriefingState::prepareDebriefing()
+@@ -2130,6 +2295,156 @@ void DebriefingState::prepareDebriefing()
  		}
  	}
  
@@ -3141,14 +3266,17 @@ index 0631f32..eb99db5 100644
 +			{
 +				int g = _country->getGoodwill() < 0 ? gw.start : _country->getGoodwill();
 +				if (_country->getBaseFunding() <= 0) _country->setBaseFunding(_country->getFunding().back());
-+				g += success ? gw.win : -gw.loss;
++				// John 22:48: Cobra pulled out and some got away - still a win, slightly less goodwill
++				const int cut = battle->getVanStop("escaped") > 0 ? _game->getMod()->getRetreatRules().winGoodwillCut : 0;
++				g += success ? std::max(0, gw.win - cut) : -gw.loss;
 +				g -= civHit;
 +				if (!save->isPublic() && gw.exposureGoodwillPer > 0) g -= exposure / gw.exposureGoodwillPer;
 +				_country->setGoodwill(g);
 +			}
 +			if (save->isPublic())
 +			{
-+				int c = save->getConfidence() + (success ? gw.confidenceWin : -gw.confidenceLoss);
++				const int cutC = battle->getVanStop("escaped") > 0 ? _game->getMod()->getRetreatRules().winGoodwillCut : 0;
++				int c = save->getConfidence() + (success ? std::max(0, gw.confidenceWin - cutC) : -gw.confidenceLoss);
 +				c -= std::min(gw.civilianCap, civDead * gw.confidenceCivilian);
 +				save->setConfidence(c);
 +			}
@@ -3170,7 +3298,7 @@ index 0631f32..eb99db5 100644
  	_missionStatistics->success = success;
  
  	if (success && ruleDeploy && base)
-@@ -2299,6 +2609,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
+@@ -2299,6 +2614,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
   */
  void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base, int quantity, bool considerTransformations)
  {
@@ -14551,7 +14679,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..6599b24 100644
+index 1885346..5be7f09 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -14689,7 +14817,7 @@ index 1885346..6599b24 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,264 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,273 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -14760,6 +14888,15 @@ index 1885346..6599b24 100644
 +	//     chance: 20            # percent per 10-minute check, directly overhead
 +	//     traitBonus: 50        # percent MORE (relative) with a recon Joe aboard
 +	//     soldierTypes: [STR_SCARLETT, STR_STALKER]
++	if (const auto& rt = reader["retreat"])
++	{
++		_retreat.on = true;
++		rt.tryRead("lossPct", _retreat.lossPct);
++		rt.tryRead("outnumbered", _retreat.outnumbered);
++		rt.tryRead("fireTUPct", _retreat.fireTUPct);
++		rt.tryRead("winGoodwillCut", _retreat.winGoodwillCut);
++		rt.tryRead("neverRetreat", _retreat.neverRetreat);
++	}
 +	if (const auto& cf = reader["cobraFile"])
 +	{
 +		_cobraFile.on = true;
@@ -14954,7 +15091,7 @@ index 1885346..6599b24 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3569,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3578,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -14962,7 +15099,7 @@ index 1885346..6599b24 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4174,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4183,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -14988,7 +15125,7 @@ index 1885346..6599b24 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4431,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4440,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -15009,7 +15146,7 @@ index 1885346..6599b24 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6145,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6154,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -15029,7 +15166,7 @@ index 1885346..6599b24 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6168,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6177,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -15037,7 +15174,7 @@ index 1885346..6599b24 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6182,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6191,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -15077,7 +15214,7 @@ index 1885346..6599b24 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..f488412 100644
+index 2242d13..1dac73d 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -15141,7 +15278,7 @@ index 2242d13..f488412 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,101 @@ private:
+@@ -327,6 +360,114 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -15189,6 +15326,19 @@ index 2242d13..f488412 100644
 +	};
 +private:
 +	CobraFileRules _cobraFile;
++public:
++	/// G.I. Joe: Cobra retreats (John 13 Nov 22:44-22:50). Any one trigger breaks the squad.
++	struct RetreatRules
++	{
++		bool on = false;
++		int lossPct = 50;          ///< this share of Cobra's men down, dead or gone
++		int outnumbered = 2;       ///< Joes Cobra can see >= this many times Cobra's men still standing
++		int fireTUPct = 60;        ///< an officer withdraws firing: he fights while he has this much TU left
++		int winGoodwillCut = 1;    ///< a win where some got away earns this much less goodwill / confidence
++		std::vector<std::string> neverRetreat;   ///< unit types that never pull out (B.A.T.s)
++	};
++private:
++	RetreatRules _retreat;
 +	int _overflowPerRoom = 0, _escapeChance = 10, _escapeChanceNamed = 30;
 +	int _heldFirstLeak = 5, _heldFirstLeakNamed = 10, _heldLeakEvery = 7, _heldLeakEveryNamed = 10, _tradeCashPerRank = 25000;
 +	std::vector<std::string> _greenshirtTypes;
@@ -15243,7 +15393,7 @@ index 2242d13..f488412 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +820,121 @@ public:
+@@ -692,6 +833,122 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -15275,6 +15425,7 @@ index 2242d13..f488412 100644
 +	bool isCaptureOn() const { return _captureOn; }
 +	const GoodwillRules &getGoodwillRules() const { return _goodwill; }
 +	const CobraFileRules &getCobraFileRules() const { return _cobraFile; }
++	const RetreatRules &getRetreatRules() const { return _retreat; }
 +	const std::vector<SpyOperationRule> &getSpyOperations() const { return _spyOperations; }
 +	const SpyOperationRule *getSpyOperation(const std::string &type) const { for (const auto &o : _spyOperations) if (o.type == type) return &o; return nullptr; }
 +	int getUnnamedSpyKilled() const { return _unnamedSpyKilled; }
