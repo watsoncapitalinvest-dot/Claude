@@ -336,14 +336,15 @@ S.update(STATUS)
 # Names, Intel pages (the Enemy Troop Types format) and short voices. Hydro-Vipers come with their act.
 N = '{NEWLINE}'
 def troop(name, rank, spec, dossier, ability, quote):
-    return N.join([name.upper(), rank, 'Specialty: ' + spec, '', 'DOSSIER', dossier, '', 'IN THE FIELD', 'Squad ability: ' + ability, '', '"%s"' % quote])
+    field = ['', 'IN THE FIELD', 'Squad ability: ' + ability] if ability else []
+    return N.join([name.upper(), rank, 'Specialty: ' + spec, '', 'DOSSIER', dossier] + field + ['', '"%s"' % quote])
 UW = {
     'STR_CARTEL_DIVER': 'Cartel Diver',
     'STR_ART_CARTEL_DIVER': 'Cartel Diver',
     'STR_ART_CARTEL_DIVER_TEXT': troop('Cartel Diver', 'Hired help - no rank', 'Salvage diving; Smuggling',
         'Commercial salvage men the cartel pays by the crate. They know the reefs and the harbour bottoms, '
         'and they know where the crates go down. They do not know who is really paying, and they are not paid enough to die for it.',
-        'Cut and Run: if the fight turns against them, they drop what they carry and swim for the edge', 'Nobody said anything about soldiers.'),
+        None, 'Nobody said anything about soldiers.'),   # Cut and Run: not taken (John 18:20)
     'STR_COBRA_EEL': 'Cobra Eel',
     'STR_ART_COBRA_EEL': 'Cobra Eel',
     'STR_ART_COBRA_EEL_TEXT': troop('Cobra Eel', 'Cobra trooper - E-3 or equivalent', 'Frogman; Underwater demolitions',
