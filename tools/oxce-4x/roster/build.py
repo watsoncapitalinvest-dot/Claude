@@ -25,7 +25,7 @@ import statmodel as SM
 K = ['tu', 'stamina', 'health', 'bravery', 'reactions', 'firing', 'throwing', 'strength', 'melee']
 KS = SM.K
 EV = ['deploy', 'order', 'kill', 'hit', 'down', 'move']
-RANKS = {'O-6': 'Colonel', 'O-4': 'Major', 'O-3': 'Captain', 'O-2': 'First Lieutenant', 'E-9': 'Sergeant Major',
+RANKS = {'W-4': 'Chief Warrant Officer', 'O-6': 'Colonel', 'O-4': 'Major', 'O-3': 'Captain', 'O-2': 'First Lieutenant', 'E-9': 'Sergeant Major',
          'E-8': 'Master Sergeant', 'E-7': 'Sergeant First Class', 'E-6': 'Staff Sergeant', 'E-5': 'Sergeant', 'E-4': 'Corporal'}
 EXTRACT = os.path.join(HERE, 'source_extract.json')
 

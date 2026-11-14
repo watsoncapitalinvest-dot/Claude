@@ -20,8 +20,8 @@ T = {  # E-5 named template per specialty ("very good")
  'Arctic & Mountain':  [80, 92, 60, 80, 78, 84, 74, 58, 66],
 }
 # rank bonus: experience shows in bravery, reactions, firing, TU
-RANK = {'E-4': -3, 'E-5': 0, 'E-6': 2, 'E-7': 4, 'E-8': 6, 'E-9': 7, 'O-2': 3, 'O-3': 5, 'O-4': 6, 'O-6': 8}
-OFFICER_BRAV = {'O-2': 5, 'O-3': 5, 'O-4': 5, 'O-6': 10}
+RANK = {'E-4': -3, 'E-5': 0, 'E-6': 2, 'E-7': 4, 'E-8': 6, 'E-9': 7, 'O-2': 3, 'O-3': 5, 'O-4': 6, 'O-6': 8, 'W-4': 5}
+OFFICER_BRAV = {'O-2': 5, 'O-3': 5, 'O-4': 5, 'O-6': 10, 'W-4': 4}
 J = [  # name, rank, primary, secondary, nudge
  ('Hawk', 'O-6', 'Command', 'Comms & Tech', {}),
  ('Duke', 'E-8', 'Command', None, {'Fire': 3}),
