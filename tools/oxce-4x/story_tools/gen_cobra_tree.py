@@ -7,7 +7,7 @@ research heads (approved Nov 10)", the Crime and Infiltration tables (approved N
 tools/oxce-4x/CLAUDE.md; later decisions where they changed something (named in the notes column).
 
 How Cobra's research works (master doc + ECONOMY.md, all approved):
-- 11 departments. A department is researched at ONE bench anywhere in the world; a bench researches 10 points a month
+- 12 departments (the 11 of Nov 10 + DREADNOKS, John 13 Nov 22:08). A department is researched at ONE bench anywhere in the world; a bench researches 10 points a month
   (projectProgressPerMonth). So each department works its topics one at a time, in the order written here.
 - A topic only starts when its prerequisites are done and its earliest month has come; it is forced done at its latest
   month (the ceiling; the calendar is a rail for the AI side only).
@@ -109,21 +109,22 @@ T = [
  ('STR_COBRA_BRIBERY', 'Bribery Networks', 'CRIME', 50, 1, 31, 40, ['STR_COBRA_STOCKS'], ['ability:countries resist Cobra less and flip faster'], 'Act 4'),
  ('STR_COBRA_NARCOTICS', 'Narcotics', 'CRIME', 50, 2, 41, 50, ['STR_COBRA_BRIBERY'], ['unit:Headman', 'unit:Headhunters', 'income:big, every operation raises exposure'], 'Act 5 (loud)'),
  ('STR_COBRA_CITY_GANGS', 'City Gangs', 'CRIME', 40, 1, 41, 50, ['STR_COBRA_NARCOTICS'], ['unit:Gristle', 'mission:more crime missions in cities'], 'Act 5'),
- # ---------------- INFILTRATION (Zartan, from Act 2) — master doc table, Nov 10 ----------------
+ # ---------------- INFILTRATION (Zartan, from Act 2) — master doc table, Nov 10; the Dreadnok topics are their own
+ # department, DREADNOKS, run from the Dreadnok Garage under Zartan (John 13 Nov 22:08) ----------------
  ('STR_COBRA_DISGUISE', 'Disguise', 'INFILTRATION', 30, 1, 13, 22, [], ['ability:agents pass as civilians and officials'], 'Act 2'),
- ('STR_COBRA_DREADNOK_GANG', 'Dreadnok Gang', 'INFILTRATION', 20, 1, 13, 22, ['STR_COBRA_DISGUISE'], ['unit:Dreadnoks (hired, unreliable)'], 'Act 2'),
- ('STR_COBRA_DREADNOK_WEAPONS', 'Dreadnok Weapons', 'INFILTRATION', 20, 2, 13, 22, ['STR_COBRA_DREADNOK_GANG'], ['factory:chainsaws, cutting torches, Ripper\'s claw'], 'Act 2'),
- ('STR_COBRA_CHAMELEON', 'Chameleon', 'INFILTRATION', 20, 2, 13, 22, ['STR_COBRA_DREADNOK_WEAPONS'], ['craft:Chameleon'], 'Act 2'),
- ('STR_COBRA_JOE_UNIFORMS', 'Joe Uniforms', 'INFILTRATION', 30, 1, 15, 24, ['STR_COBRA_CHAMELEON', 'STR_COBRA_JOE_GEAR_TEARDOWN'], ['ability:disguises from captured Joe gear'], 'Act 2'),
- ('STR_COBRA_DREADNOK_VEHICLES', 'Dreadnok Bikes and Buggies', 'INFILTRATION', 30, 2, 23, 30, ['STR_COBRA_JOE_UNIFORMS'], ['craft:Ground Assault', 'craft:Dreadnok Cycle', 'craft:Thunder Machine'], 'Act 3'),
- ('STR_COBRA_DREADNOK_SWAMP', 'Dreadnok Swamp Craft', 'INFILTRATION', 30, 2, 23, 30, ['STR_COBRA_DREADNOK_VEHICLES'], ['craft:Swampfire', 'craft:Air Skiff', 'craft:Air Assault'], 'Act 3'),
- ('STR_COBRA_FALSE_FLAG', 'False Flag Operations', 'INFILTRATION', 40, 2, 23, 30, ['STR_COBRA_DREADNOK_SWAMP'], ['mission:false flag attack (goodwill loss until exposed)'], 'Act 3'),
+ ('STR_COBRA_DREADNOK_GANG', 'Dreadnok Gang', 'DREADNOKS', 20, 1, 13, 22, [], ['unit:Dreadnoks (hired, unreliable)'], 'Act 2'),
+ ('STR_COBRA_DREADNOK_WEAPONS', 'Dreadnok Weapons', 'DREADNOKS', 20, 2, 13, 22, ['STR_COBRA_DREADNOK_GANG'], ['factory:chainsaws, cutting torches, Ripper\'s claw'], 'Act 2'),
+ ('STR_COBRA_CHAMELEON', 'Chameleon', 'DREADNOKS', 20, 2, 13, 22, ['STR_COBRA_DREADNOK_WEAPONS'], ['craft:Chameleon'], 'Act 2'),
+ ('STR_COBRA_JOE_UNIFORMS', 'Joe Uniforms', 'INFILTRATION', 30, 1, 15, 24, ['STR_COBRA_DISGUISE', 'STR_COBRA_JOE_GEAR_TEARDOWN'], ['ability:disguises from captured Joe gear'], 'Act 2'),
+ ('STR_COBRA_DREADNOK_VEHICLES', 'Dreadnok Bikes and Buggies', 'DREADNOKS', 30, 2, 23, 30, ['STR_COBRA_CHAMELEON'], ['craft:Ground Assault', 'craft:Dreadnok Cycle', 'craft:Thunder Machine'], 'Act 3'),
+ ('STR_COBRA_DREADNOK_SWAMP', 'Dreadnok Swamp Craft', 'DREADNOKS', 30, 2, 23, 30, ['STR_COBRA_DREADNOK_VEHICLES'], ['craft:Swampfire', 'craft:Air Skiff', 'craft:Air Assault'], 'Act 3'),
+ ('STR_COBRA_FALSE_FLAG', 'False Flag Operations', 'INFILTRATION', 40, 2, 23, 30, ['STR_COBRA_JOE_UNIFORMS'], ['mission:false flag attack (goodwill loss until exposed)'], 'Act 3'),
  ('STR_COBRA_FAKE_SIGNALS', 'Fake Joe Signals', 'INFILTRATION', 40, 1, 23, 30, ['STR_COBRA_FALSE_FLAG'], ['mission:decoy mission requests and false recalls'], 'Act 3'),
  ('STR_COBRA_MOLES', 'Mole Insertion', 'INFILTRATION', 50, 1, 25, 32, ['STR_COBRA_FAKE_SIGNALS'], ['ability:unnamed moles inside Joe ranks (leaks, sabotage)'], 'Act 3'),
  ('STR_COBRA_INFILTRATOR_SQUADS', 'Infiltrator Squads', 'INFILTRATION', 50, 2, 31, 40, ['STR_COBRA_MOLES'], ['unit:Cobra squads disguised as Joes in battle'], 'Act 4'),
  ('STR_COBRA_IMPERSONATION', 'Impersonation', 'INFILTRATION', 50, 1, 31, 40, ['STR_COBRA_INFILTRATOR_SQUADS'], ['ability:Zartan replaces officials; countries flip faster'], 'Act 4'),
  ('STR_COBRA_SYNTHOID_DEPLOYMENT', 'Synthoid Deployment', 'INFILTRATION', 60, 2, 41, 50, ['STR_COBRA_IMPERSONATION', 'STR_COBRA_SYNTHOIDS'], ['ability:Synthoids placed in governments (can flip a country)'], 'Act 5'),
- ('STR_COBRA_DREADNOK_BATTLE_AXE', 'Dreadnok Battle Axe', 'INFILTRATION', 30, 3, 41, 50, ['STR_COBRA_SYNTHOID_DEPLOYMENT'], ['factory:late Dreadnok heavy weapons'], 'Act 5'),
+ ('STR_COBRA_DREADNOK_BATTLE_AXE', 'Dreadnok Battle Axe', 'DREADNOKS', 30, 3, 41, 50, ['STR_COBRA_DREADNOK_SWAMP'], ['factory:late Dreadnok heavy weapons'], 'Act 5'),
  # ---------------- INTERROGATION (Cobra Officers from the start, Crystal Ball in Act 4) ----------------
  ('STR_COBRA_INTERROGATION', 'Interrogation', 'INTERROGATION', 0, 0, S, None, [], ['ability:captured Joes leak (CAPTURE_DESIGN_v1)'], 'runs from the start (Nov 10)'),
  ('STR_COBRA_CRYSTAL_BALL', 'Hypnosis', 'INTERROGATION', 50, 1, 31, 40, [], ['unit:Crystal Ball', 'ability:captured Joes leak faster'], 'Act 4'),
@@ -156,7 +157,8 @@ def fit_costs():
         if not bad: break
         t = bad[0]; i = T.index(t)
         # shrink this topic, or if it is already at the floor, the dearest earlier topic in its department
-        cands = [x for x in T[:i + 1] if x[2] == t[2] and x[5] != S and x[3] > 10]
+        # only topics whose window overlaps this one's: shrinking an earlier, unrelated topic can't help it
+        cands = [x for x in T[:i + 1] if x[2] == t[2] and x[5] != S and x[3] > 10 and x[6] >= t[5]]
         if not cands: break
         v = max(cands, key=lambda x: x[3]); j = T.index(v)
         T[j] = v[:3] + (v[3] - 10,) + v[4:]
