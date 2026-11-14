@@ -72,18 +72,20 @@ index f822dab..2b39106 100644
  }
  
 diff --git a/src/Basescape/BasescapeState.cpp b/src/Basescape/BasescapeState.cpp
-index 5d0467a..1e67d06 100644
+index 5d0467a..172f637 100644
 --- a/src/Basescape/BasescapeState.cpp
 +++ b/src/Basescape/BasescapeState.cpp
-@@ -17,6 +17,7 @@
+@@ -16,7 +16,9 @@
+  * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
++#include "../Geoscape/Outposts.h"
  #include "BasescapeState.h"
 +#include "../Engine/HiUI.h"
  #include "../Engine/Game.h"
  #include "../Mod/Mod.h"
  #include "../Engine/LocalizedText.h"
-@@ -71,6 +72,7 @@ namespace OpenXcom
+@@ -71,6 +73,7 @@ namespace OpenXcom
  BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(globe)
  {
  	// Create objects
@@ -91,7 +93,7 @@ index 5d0467a..1e67d06 100644
  	_txtFacility = new Text(192, 9, 0, 0);
  	_view = new BaseView(192, 192, 0, 8);
  	_mini = new MiniBaseView(128, 16, 192, 41);
-@@ -92,6 +94,7 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+@@ -92,6 +95,7 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
  	// Set palette
  	setInterface("basescape");
  
@@ -99,7 +101,7 @@ index 5d0467a..1e67d06 100644
  	add(_view, "baseView", "basescape");
  	add(_mini, "miniBase", "basescape");
  	add(_txtFacility, "textTooltip", "basescape");
-@@ -112,6 +115,19 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+@@ -112,6 +116,19 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
  
  	centerAllSurfaces();
  
@@ -119,7 +121,7 @@ index 5d0467a..1e67d06 100644
  	// Set up objects
  	if (_globe)
  	{
-@@ -195,6 +211,9 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+@@ -195,6 +212,9 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
   */
  BasescapeState::~BasescapeState()
  {
@@ -129,6 +131,19 @@ index 5d0467a..1e67d06 100644
  	// Clean up any temporary bases
  	bool exists = false;
  	for (const auto* xbase : *_game->getSavedGame()->getBases())
+@@ -426,6 +446,12 @@ void BasescapeState::viewLeftClick(Action *)
+ 			}
+ 			int errorColor1 = _game->getMod()->getInterface("basescape")->getElement("errorMessage")->color;
+ 			int errorColor2 = _game->getMod()->getInterface("basescape")->getElement("errorPalette")->color;
++			// G.I. Joe: the buildings an outpost came with stay
++			if (Outposts::isFixed(_game->getMod(), _base, fac->getX(), fac->getY()))
++			{
++				_game->pushState(new ErrorMessageState(tr("STR_OUTPOST_FIXED_BUILDING"), _palette, errorColor1, "BACK13.SCR", errorColor2));
++				return;
++			}
+ 			// Is facility in use?
+ 			if (BasePlacementErrors placementErrorCode = fac->inUse())
+ 			{
 diff --git a/src/Basescape/BasescapeState.h b/src/Basescape/BasescapeState.h
 index 711b3d9..8733ad3 100644
 --- a/src/Basescape/BasescapeState.h
@@ -143,18 +158,21 @@ index 711b3d9..8733ad3 100644
  	BaseView *_view;
  	MiniBaseView *_mini;
 diff --git a/src/Basescape/BuildFacilitiesState.cpp b/src/Basescape/BuildFacilitiesState.cpp
-index 9b139ca..19e90a1 100644
+index 9b139ca..446b2fd 100644
 --- a/src/Basescape/BuildFacilitiesState.cpp
 +++ b/src/Basescape/BuildFacilitiesState.cpp
-@@ -18,6 +18,7 @@
+@@ -16,8 +16,10 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
++#include "../Geoscape/Outposts.h"
  #include <algorithm>
  #include "BuildFacilitiesState.h"
 +#include "../Engine/HiUI.h"
  #include "../Engine/Action.h"
  #include "../Engine/Game.h"
  #include "../Mod/Mod.h"
-@@ -62,6 +63,14 @@ BuildFacilitiesState::BuildFacilitiesState(Base *base, State *state) : _base(bas
+@@ -62,6 +64,14 @@ BuildFacilitiesState::BuildFacilitiesState(Base *base, State *state) : _base(bas
  
  	centerAllSurfaces();
  
@@ -169,13 +187,22 @@ index 9b139ca..19e90a1 100644
  	// Set up objects
  	setWindowBackground(_window, "selectFacility");
  
-@@ -89,6 +98,7 @@ BuildFacilitiesState::BuildFacilitiesState(Base *base, State *state) : _base(bas
+@@ -89,6 +99,7 @@ BuildFacilitiesState::BuildFacilitiesState(Base *base, State *state) : _base(bas
   */
  BuildFacilitiesState::~BuildFacilitiesState()
  {
 +	HiUI::nativeForget(_btnOk); HiUI::nativeForget(_txtTitle); HiUI::nativeForget(_lstFacilities);
  
  }
+ 
+@@ -159,6 +170,8 @@ void BuildFacilitiesState::populateBuildList()
+ 				continue;
+ 			}
+ 		}
++		// G.I. Joe: an outpost builds only its add-ons; a Pit no outpost-only add-ons, piers only on the water
++		if (!Outposts::canList(_game->getMod(), _base, rule)) continue;
+ 		_facilities.push_back(rule);
+ 	}
  
 diff --git a/src/Basescape/CraftInfoState.cpp b/src/Basescape/CraftInfoState.cpp
 index 2597a24..ee80251 100644
@@ -206,6 +233,57 @@ index 2597a24..ee80251 100644
  	}
  }
  
+diff --git a/src/Basescape/ManufactureInfoState.cpp b/src/Basescape/ManufactureInfoState.cpp
+index 9c5710b..71ea832 100644
+--- a/src/Basescape/ManufactureInfoState.cpp
++++ b/src/Basescape/ManufactureInfoState.cpp
+@@ -16,6 +16,7 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "../Geoscape/Outposts.h"
+ #include "ManufactureInfoState.h"
+ #include <algorithm>
+ #include "../Interface/Window.h"
+@@ -521,7 +522,7 @@ void ManufactureInfoState::lessEngineerClick(Action *action)
+ void ManufactureInfoState::moreUnit(int change)
+ {
+ 	if (change <= 0) return;
+-	if (_production->getRules()->getProducedCraft() && _base->getAvailableHangars() - _base->getUsedHangars() <= 0)
++	if (_production->getRules()->getProducedCraft() && Outposts::freeHangarsFor(_game->getMod(), _base, _production->getRules()->getProducedCraft()) <= 0)
+ 	{
+ 		_timerMoreUnit->stop();
+ 		_game->pushState(new ErrorMessageState(tr("STR_NO_FREE_HANGARS_FOR_CRAFT_PRODUCTION"), _palette, _game->getMod()->getInterface("basescape")->getElement("errorMessage")->color, "BACK17.SCR", _game->getMod()->getInterface("basescape")->getElement("errorPalette")->color));
+@@ -535,7 +536,7 @@ void ManufactureInfoState::moreUnit(int change)
+ 		}
+ 		change = std::min(INT_MAX - units, change);
+ 		if (_production->getRules()->getProducedCraft())
+-			change = std::min(_base->getAvailableHangars() - _base->getUsedHangars(), change);
++			change = std::min(Outposts::freeHangarsFor(_game->getMod(), _base, _production->getRules()->getProducedCraft()), change);
+ 		_production->setAmountTotal(units+change);
+ 		setAssignedEngineer();
+ 	}
+diff --git a/src/Basescape/ManufactureStartState.cpp b/src/Basescape/ManufactureStartState.cpp
+index a726c74..dc5cf6f 100644
+--- a/src/Basescape/ManufactureStartState.cpp
++++ b/src/Basescape/ManufactureStartState.cpp
+@@ -16,6 +16,7 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "../Geoscape/Outposts.h"
+ #include "ManufactureStartState.h"
+ #include <sstream>
+ #include "../Interface/Window.h"
+@@ -239,7 +240,7 @@ void ManufactureStartState::btnCancelClick(Action *)
+  */
+ void ManufactureStartState::btnStartClick(Action *)
+ {
+-	if (_item->getProducedCraft() && _base->getAvailableHangars() - _base->getUsedHangars() <= 0)
++	if (_item->getProducedCraft() && Outposts::freeHangarsFor(_game->getMod(), _base, _item->getProducedCraft()) <= 0)
+ 	{
+ 		_game->pushState(new ErrorMessageState(tr("STR_NO_FREE_HANGARS_FOR_CRAFT_PRODUCTION"), _palette, _game->getMod()->getInterface("basescape")->getElement("errorMessage")->color, "BACK17.SCR", _game->getMod()->getInterface("basescape")->getElement("errorPalette")->color));
+ 	}
 diff --git a/src/Basescape/MiniBaseView.cpp b/src/Basescape/MiniBaseView.cpp
 index 09fdfcd..8642a4a 100644
 --- a/src/Basescape/MiniBaseView.cpp
@@ -257,18 +335,20 @@ index 7fe1da3..797fac5 100644
  	void mouseOver(Action *action, State *state) override;
  	void setColor(Uint8 color) override;
 diff --git a/src/Basescape/PlaceFacilityState.cpp b/src/Basescape/PlaceFacilityState.cpp
-index c52f7ad..44470ef 100644
+index c52f7ad..0daf35e 100644
 --- a/src/Basescape/PlaceFacilityState.cpp
 +++ b/src/Basescape/PlaceFacilityState.cpp
-@@ -17,6 +17,7 @@
+@@ -16,7 +16,9 @@
+  * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
++#include "../Geoscape/Outposts.h"
  #include "PlaceFacilityState.h"
 +#include "../Engine/HiUI.h"
  #include "../Engine/Game.h"
  #include "../Engine/Sound.h"
  #include "../Mod/Mod.h"
-@@ -82,6 +83,13 @@ PlaceFacilityState::PlaceFacilityState(Base *base, const RuleBaseFacility *rule,
+@@ -82,6 +84,13 @@ PlaceFacilityState::PlaceFacilityState(Base *base, const RuleBaseFacility *rule,
  
  	centerAllSurfaces();
  
@@ -282,7 +362,7 @@ index c52f7ad..44470ef 100644
  	// Set up objects
  	setWindowBackground(_window, "placeFacility");
  
-@@ -145,6 +153,9 @@ PlaceFacilityState::PlaceFacilityState(Base *base, const RuleBaseFacility *rule,
+@@ -145,6 +154,9 @@ PlaceFacilityState::PlaceFacilityState(Base *base, const RuleBaseFacility *rule,
   */
  PlaceFacilityState::~PlaceFacilityState()
  {
@@ -292,6 +372,52 @@ index c52f7ad..44470ef 100644
  
  }
  
+@@ -220,6 +232,15 @@ void PlaceFacilityState::viewClick(Action *)
+ 		}
+ 
+ 		// placing a brand new facility
++		{
++			// G.I. Joe: at an outpost add-ons go only on its pads (OUTPOSTS_v2_DECISIONS)
++			const std::string why = Outposts::canBuild(_game->getMod(), _base, _rule, _view->getGridX(), _view->getGridY());
++			if (!why.empty())
++			{
++				_game->pushState(new ErrorMessageState(tr(why), _palette, _game->getMod()->getInterface("placeFacility")->getElement("errorMessage")->color, "BACK13.SCR", _game->getMod()->getInterface("placeFacility")->getElement("errorPalette")->color));
++				return;
++			}
++		}
+ 		BasePlacementErrors placementErrorCode = _view->getPlacementError(_rule);
+ 		if (placementErrorCode)
+ 		{
+diff --git a/src/Basescape/PurchaseState.cpp b/src/Basescape/PurchaseState.cpp
+index cce8616..a9fbb98 100644
+--- a/src/Basescape/PurchaseState.cpp
++++ b/src/Basescape/PurchaseState.cpp
+@@ -16,6 +16,7 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "../Geoscape/Outposts.h"
+ #include "PurchaseState.h"
+ #include "ItemLocationsState.h"
+ #include <sstream>
+@@ -1110,7 +1111,7 @@ void PurchaseState::increaseByValue(int change)
+ 			break;
+ 		case TRANSFER_CRAFT:
+ 			ruleC = (RuleCraft*)getRow().rule;
+-			if (_cQty + 1 > _base->getAvailableHangars() - _base->getUsedHangars())
++			if (_cQty + 1 > Outposts::freeHangarsFor(_game->getMod(), _base, ruleC))
+ 			{
+ 				errorMessage = tr("STR_NO_FREE_HANGARS_FOR_PURCHASE");
+ 			}
+@@ -1196,7 +1197,7 @@ void PurchaseState::increaseByValue(int change)
+ 					int maxByLimit = std::max(0, ruleC->getMonthlyBuyLimit() - craftPurchaseLimitLog[ruleC->getType()] - getRow().amount);
+ 					change = std::min(maxByLimit, change);
+ 				}
+-				int maxByHangars = _base->getAvailableHangars() - _base->getUsedHangars() - _cQty;
++				int maxByHangars = Outposts::freeHangarsFor(_game->getMod(), _base, ruleC) - _cQty;
+ 				change = std::min(maxByHangars, change);
+ 				_cQty += change;
+ 			}
 diff --git a/src/Basescape/ResearchState.cpp b/src/Basescape/ResearchState.cpp
 index a6004b9..76f9fd3 100644
 --- a/src/Basescape/ResearchState.cpp
@@ -1280,12 +1406,14 @@ index 6e57a15..2502961 100644
  };
  
 diff --git a/src/Basescape/TransferItemsState.cpp b/src/Basescape/TransferItemsState.cpp
-index 7724953..36a2216 100644
+index 7724953..067f1ad 100644
 --- a/src/Basescape/TransferItemsState.cpp
 +++ b/src/Basescape/TransferItemsState.cpp
-@@ -17,6 +17,12 @@
+@@ -16,7 +16,14 @@
+  * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
++#include "../Geoscape/Outposts.h"
  #include "TransferItemsState.h"
 +#include "../Mod/RuleCraft.h"
 +#include "../Mod/Texture.h"
@@ -1296,7 +1424,7 @@ index 7724953..36a2216 100644
  #include "ItemLocationsState.h"
  #include "ManufactureDependenciesTreeState.h"
  #include <sstream>
-@@ -150,9 +156,9 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo, DebriefingS
+@@ -150,9 +157,9 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo, DebriefingS
  	for (auto* soldier : *_baseFrom->getSoldiers())
  	{
  		if (_debriefingState) break;
@@ -1308,7 +1436,7 @@ index 7724953..36a2216 100644
  			_items.push_back(row);
  			std::string cat = getCategory(_items.size() - 1);
  			if (std::find(_cats.begin(), _cats.end(), cat) == _cats.end())
-@@ -177,7 +183,7 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo, DebriefingS
+@@ -177,7 +184,7 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo, DebriefingS
  	}
  	if (_baseFrom->getAvailableScientists() > 0 && _debriefingState == 0)
  	{
@@ -1317,7 +1445,7 @@ index 7724953..36a2216 100644
  		_items.push_back(row);
  		std::string cat = getCategory(_items.size() - 1);
  		if (std::find(_cats.begin(), _cats.end(), cat) == _cats.end())
-@@ -187,7 +193,7 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo, DebriefingS
+@@ -187,7 +194,7 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo, DebriefingS
  	}
  	if (_baseFrom->getAvailableEngineers() > 0 && _debriefingState == 0)
  	{
@@ -1326,7 +1454,7 @@ index 7724953..36a2216 100644
  		_items.push_back(row);
  		std::string cat = getCategory(_items.size() - 1);
  		if (std::find(_cats.begin(), _cats.end(), cat) == _cats.end())
-@@ -205,7 +211,7 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo, DebriefingS
+@@ -205,7 +212,7 @@ TransferItemsState::TransferItemsState(Base *baseFrom, Base *baseTo, DebriefingS
  		}
  		if (qty > 0)
  		{
@@ -1335,7 +1463,7 @@ index 7724953..36a2216 100644
  			_items.push_back(row);
  			std::string cat = getCategory(_items.size() - 1);
  			if (std::find(_cats.begin(), _cats.end(), cat) == _cats.end())
-@@ -547,10 +553,76 @@ void TransferItemsState::btnOkClick(Action *)
+@@ -547,10 +554,76 @@ void TransferItemsState::btnOkClick(Action *)
  /**
   * Completes the transfer between bases.
   */
@@ -1413,7 +1541,7 @@ index 7724953..36a2216 100644
  	for (const auto& transferRow : _items)
  	{
  		if (transferRow.amount > 0)
-@@ -665,6 +737,46 @@ void TransferItemsState::completeTransfer()
+@@ -665,6 +738,46 @@ void TransferItemsState::completeTransfer()
  		}
  	}
  
@@ -1460,6 +1588,15 @@ index 7724953..36a2216 100644
  	if (_debriefingState != 0 && _debriefingState->getTotalRecoveredItemCount() <= 0)
  	{
  		_debriefingState->hideSellTransferButtons();
+@@ -914,7 +1027,7 @@ void TransferItemsState::increaseByValue(int change)
+ 		break;
+ 	case TRANSFER_CRAFT:
+ 		craft = (Craft*)getRow().rule;
+-		if (_cQty + 1 > _baseTo->getAvailableHangars() - _baseTo->getUsedHangars())
++		if (_cQty + 1 > Outposts::freeHangarsFor(_game->getMod(), _baseTo, craft->getRules()))
+ 		{
+ 			errorMessage = tr("STR_NO_FREE_HANGARS_FOR_TRANSFER");
+ 		}
 diff --git a/src/Basescape/TransferItemsState.h b/src/Basescape/TransferItemsState.h
 index 10a96c4..755c149 100644
 --- a/src/Basescape/TransferItemsState.h
@@ -3018,18 +3155,19 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..ac259b6 100644
+index 1951ba7..d4f7998 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
-@@ -16,6 +16,7 @@
+@@ -16,6 +16,8 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
++#include "../Geoscape/Outposts.h"
 +#include "AirFight.h"
  #include <algorithm>
  #include <assert.h>
  #include <sstream>
-@@ -767,6 +768,7 @@ void BattlescapeGenerator::nextStage()
+@@ -767,11 +769,23 @@ void BattlescapeGenerator::nextStage()
   */
  void BattlescapeGenerator::run()
  {
@@ -3037,7 +3175,23 @@ index 1951ba7..ac259b6 100644
  	bool isPreview = _save->isPreview();
  
  	_save->setAlienCustom(_alienCustomDeploy ? _alienCustomDeploy->getType() : "", _alienCustomMission ? _alienCustomMission->getType() : "");
-@@ -829,9 +831,9 @@ void BattlescapeGenerator::run()
+ 
+ 	// Note: this considers also fake underwater UFO deployment (via _alienCustomMission)
++	// G.I. Joe: a raid on an outpost plays on MAPS' map of that outpost (OUTPOSTS_v2_DECISIONS), not a map built
++	// from its rooms; its deployment brings the raiders too
++	if (!_alienCustomMission && _base && _save->getMissionType() == "STR_BASE_DEFENSE")
++	{
++		const auto *ok = Outposts::kindOf(_game->getMod(), _base);
++		if (ok && !ok->deployment.empty())
++		{
++			_alienCustomMission = _game->getMod()->getDeployment(ok->deployment, false);
++			if (_alienCustomMission) Log(LOG_INFO) << "[outpost] raid on " << ok->type << " plays on " << ok->deployment;
++		}
++	}
+ 	const AlienDeployment *ruleDeploy = _alienCustomMission ? _alienCustomMission : _game->getMod()->getDeployment(_ufo?_ufo->getRules()->getType():_save->getMissionType(), true);
+ 
+ 	_save->setTurnLimit(ruleDeploy->getTurnLimit());
+@@ -829,9 +843,9 @@ void BattlescapeGenerator::run()
  		if (_game->getSavedGame()->getMonthsPassed() != -1)
  		{
  			month =
@@ -3049,7 +3203,7 @@ index 1951ba7..ac259b6 100644
  		}
  		else
  		{
-@@ -961,6 +963,163 @@ void BattlescapeGenerator::run()
+@@ -961,6 +975,163 @@ void BattlescapeGenerator::run()
  	}
  }
  
@@ -3213,7 +3367,35 @@ index 1951ba7..ac259b6 100644
  /**
   * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
   */
-@@ -1669,6 +1828,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1495,6 +1666,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+ 				_save->initUnit(unit);
+ 				return unit;
+ 			}
++			else if (_save->getMissionType() == "STR_BASE_DEFENSE" && _base && Outposts::kindOf(_game->getMod(), _base))
++			{
++				// G.I. Joe: an outpost's map without Joe start points (a placeholder): the defenders stand near the
++				// first one placed, or in the middle of the map
++				bool placed = placeUnitNearFriend(unit);
++				for (int tries = 0; !placed && tries < 400; ++tries)
++				{
++					const int r = 3 + tries / 20;
++					Position p(_mapsize_x / 2 + RNG::generate(-r, r), _mapsize_y / 2 + RNG::generate(-r, r), 0);
++					Tile *t = _save->getTile(p);
++					if (t && !t->getUnit() && t->getMapData(O_OBJECT) == nullptr && _save->setUnitPosition(unit, p)) placed = true;
++				}
++				if (placed)
++				{
++					if (!_craftInventoryTile) _craftInventoryTile = _save->getTile(unit->getPosition());
++					unit->setDirection(RNG::generate(0, 7));
++					_save->getUnits()->push_back(unit);
++					_save->initUnit(unit);
++					return unit;
++				}
++			}
+ 			else if (_save->getMissionType() != "STR_BASE_DEFENSE")
+ 			{
+ 				if (placeUnitNearFriend(unit))
+@@ -1669,6 +1861,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -3303,7 +3485,7 @@ index 1951ba7..ac259b6 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +1938,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +1971,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -3372,7 +3554,7 @@ index 1951ba7..ac259b6 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2023,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2056,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -3389,7 +3571,7 @@ index 1951ba7..ac259b6 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2052,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2085,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -3432,7 +3614,7 @@ index 1951ba7..ac259b6 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -2081,8 +2424,14 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,8 +2457,14 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -3449,7 +3631,7 @@ index 1951ba7..ac259b6 100644
  	unsigned int terrainObjectID;
  
  	// Load file
-@@ -2141,11 +2490,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2523,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -3463,6 +3645,17 @@ index 1951ba7..ac259b6 100644
  			if (terrainObjectID>0)
  			{
  				int mapDataSetID = mapDataSetOffset;
+@@ -2830,7 +3212,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+ 	// this mission type is "hard-coded" in terms of map layout
+ 	uint64_t seed = RNG::getSeed();
+ 	_baseTerrain = _terrain;
+-	if (_save->getMissionType() == "STR_BASE_DEFENSE")
++	// G.I. Joe: an outpost's raid map is MAPS' drawing of it (its deployment's script), not its rooms
++	const bool outpostMap = _base && Outposts::kindOf(_game->getMod(), _base) && !Outposts::kindOf(_game->getMod(), _base)->deployment.empty();
++	if (_save->getMissionType() == "STR_BASE_DEFENSE" && !outpostMap)
+ 	{
+ 		if (_mod->getBaseDefenseMapFromLocation() == 1)
+ 		{
 diff --git a/src/Battlescape/BattlescapeGenerator.h b/src/Battlescape/BattlescapeGenerator.h
 index a0bc8b3..60195c9 100644
 --- a/src/Battlescape/BattlescapeGenerator.h
@@ -6963,7 +7156,7 @@ index bc5f08f..3b09298 100644
  	_terrain->calculateFOV(_unit);
  	if (!_falling)
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..e7710ca 100644
+index 839f803..4dc0211 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -71,6 +71,7 @@ set ( basescape_src
@@ -6983,7 +7176,7 @@ index 839f803..e7710ca 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -201,9 +204,16 @@ set ( geoscape_src
+@@ -201,9 +204,17 @@ set ( geoscape_src
    Geoscape/DogfightState.cpp
    Geoscape/ExtendedGeoscapeLinksState.cpp
    Geoscape/FundingState.cpp
@@ -6991,6 +7184,7 @@ index 839f803..e7710ca 100644
 +  Geoscape/IntelBoardState.cpp
 +  Geoscape/AirFightChoiceState.cpp
 +  Geoscape/SeaNav.cpp
++  Geoscape/Outposts.cpp
 +  Geoscape/DepartmentsState.cpp
 +  Basescape/ResearchTreeState.cpp
    Geoscape/GeoscapeCraftState.cpp
@@ -7000,7 +7194,7 @@ index 839f803..e7710ca 100644
    Geoscape/Globe.cpp
    Geoscape/GraphsState.cpp
    Geoscape/InterceptState.cpp
-@@ -331,6 +341,7 @@ set ( mod_src
+@@ -331,6 +342,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -7008,7 +7202,7 @@ index 839f803..e7710ca 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +367,7 @@ set ( savegame_src
+@@ -356,6 +368,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -11304,12 +11498,46 @@ index 6aac96d..f116957 100644
  
  		// wounded soldiers can be queued/dequeued
  		if (soldier->isWounded())
+diff --git a/src/Geoscape/BaseNameState.cpp b/src/Geoscape/BaseNameState.cpp
+index d2e54b8..a849a44 100644
+--- a/src/Geoscape/BaseNameState.cpp
++++ b/src/Geoscape/BaseNameState.cpp
+@@ -26,6 +26,10 @@
+ #include "../Interface/TextButton.h"
+ #include "../Savegame/Base.h"
+ #include "../Basescape/PlaceLiftState.h"
++#include "../Basescape/BasescapeState.h"
++#include "../Savegame/SavedGame.h"
++#include "../Savegame/Base.h"
++#include "Outposts.h"
+ #include "../Engine/Options.h"
+ #include "../Engine/RNG.h"
+ 
+@@ -150,7 +154,14 @@ void BaseNameState::btnOkClick(Action *)
+ 			}
+ 		}
+ 
+-		if (!_first || Options::customInitialBase)
++		if (!_first && Outposts::kindOf(_game->getMod(), _base))
++		{
++			// G.I. Joe: an outpost comes with its buildings in place (OUTPOSTS_v2_DECISIONS)
++			Outposts::placeFixed(_game->getMod(), _base);
++			_game->getSavedGame()->setSelectedBase(_game->getSavedGame()->getBases()->size() - 1);
++			_game->pushState(new BasescapeState(_base, _globe));
++		}
++		else if (!_first || Options::customInitialBase)
+ 		{
+ 			_game->pushState(new PlaceLiftState(_base, _globe, _first));
+ 		}
 diff --git a/src/Geoscape/BuildNewBaseState.cpp b/src/Geoscape/BuildNewBaseState.cpp
-index 952344e..8b16b84 100644
+index 952344e..b13efa8 100644
 --- a/src/Geoscape/BuildNewBaseState.cpp
 +++ b/src/Geoscape/BuildNewBaseState.cpp
-@@ -35,6 +35,9 @@
+@@ -33,8 +33,12 @@
+ #include "../Savegame/SavedGame.h"
+ #include "BaseNameState.h"
  #include "ConfirmNewBaseState.h"
++#include "SeaNav.h"
  #include "../Engine/Options.h"
  #include "../Menu/ErrorMessageState.h"
 +#include "../Savegame/Country.h"
@@ -11318,7 +11546,7 @@ index 952344e..8b16b84 100644
  #include "../Mod/RuleInterface.h"
  
  namespace OpenXcom
-@@ -138,6 +141,8 @@ BuildNewBaseState::BuildNewBaseState(Base *base, Globe *globe, bool first) : _ba
+@@ -138,6 +142,8 @@ BuildNewBaseState::BuildNewBaseState(Base *base, Globe *globe, bool first) : _ba
  	if (_first)
  	{
  		_btnCancel->setVisible(false);
@@ -11327,7 +11555,17 @@ index 952344e..8b16b84 100644
  	}
  }
  
-@@ -240,7 +245,16 @@ void BuildNewBaseState::globeClick(Action *action)
+@@ -232,7 +238,8 @@ void BuildNewBaseState::globeClick(Action *action)
+ 	// Clicking on a polygon for a base location
+ 	if (action->getDetails()->button.button == SDL_BUTTON_LEFT)
+ 	{
+-		if (_globe->insideLand(lon, lat))
++		// G.I. Joe: an outpost may also go on the water (the Tactical Battle Platform); the kind list checks
++		if (_globe->insideLand(lon, lat) || (!_first && _game->getMod()->getOutpostRules().on && SeaNav::isWater(lon, lat)))
+ 		{
+ 			bool fakeUnderwaterBasesUnlocked = true;
+ 			if (_game->getMod()->getFakeUnderwaterBaseUnlockResearch())
+@@ -240,7 +247,16 @@ void BuildNewBaseState::globeClick(Action *action)
  				fakeUnderwaterBasesUnlocked = _game->getSavedGame()->isResearched(_game->getMod()->getFakeUnderwaterBaseUnlockResearch(), true);
  			}
  			bool fakeUnderwaterTexture = _globe->insideFakeUnderwaterTexture(lon, lat);
@@ -11548,6 +11786,136 @@ index 0000000..e57d835
 +};
 +
 +}
+diff --git a/src/Geoscape/ConfirmDestinationState.cpp b/src/Geoscape/ConfirmDestinationState.cpp
+index 2278d57..6fe30f4 100644
+--- a/src/Geoscape/ConfirmDestinationState.cpp
++++ b/src/Geoscape/ConfirmDestinationState.cpp
+@@ -16,6 +16,7 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "Outposts.h"
+ #include "CraftErrorState.h"
+ #include "CraftNotEnoughPilotsState.h"
+ #include "ConfirmDestinationState.h"
+@@ -417,7 +418,7 @@ void ConfirmDestinationState::btnTransferClick(Action *)
+ 	std::string errorMessage;
+ 	
+ 	Base *targetBase = dynamic_cast<Base*>(_target);
+-	if ((targetBase->getAvailableHangars() - targetBase->getUsedHangars()) <= 0) // don't know how you'd get less than 0 available hangars, but want to handle that just in case
++	if (_crafts.empty() || Outposts::freeHangarsFor(_game->getMod(), targetBase, _crafts.front()->getRules()) <= 0) // G.I. Joe: a boat needs a pier, an aircraft a hangar
+ 	{
+ 		errorMessage = tr("STR_NO_FREE_HANGARS_FOR_TRANSFER");
+ 	}
+diff --git a/src/Geoscape/ConfirmNewBaseState.cpp b/src/Geoscape/ConfirmNewBaseState.cpp
+index 49e1f22..ba5b12a 100644
+--- a/src/Geoscape/ConfirmNewBaseState.cpp
++++ b/src/Geoscape/ConfirmNewBaseState.cpp
+@@ -23,6 +23,8 @@
+ #include "../Interface/Window.h"
+ #include "../Interface/Text.h"
+ #include "../Interface/TextButton.h"
++#include "../Interface/TextList.h"
++#include "Outposts.h"
+ #include "../Savegame/SavedGame.h"
+ #include "../Savegame/Region.h"
+ #include "../Mod/RuleRegion.h"
+@@ -89,6 +91,47 @@ ConfirmNewBaseState::ConfirmNewBaseState(Base *base, Globe *globe) : _base(base)
+ 	_txtCost->setText(tr("STR_COST_").arg(Unicode::formatFunding(_cost)));
+ 
+ 	_txtArea->setText(tr("STR_AREA_").arg(area));
++
++	// G.I. Joe: what to found here - an outpost of one of its kinds, or a full Pit (OUTPOSTS_v2_DECISIONS)
++	const auto &R = _game->getMod()->getOutpostRules();
++	if (R.on && !R.kinds.empty())
++	{
++		_window->setHeight(150); _window->setY(25);
++		_lstKinds = new TextList(200, 72, 28, 48);
++		add(_lstKinds, "genericText", "geoscape");
++		_txtCost->setY(124); _txtArea->setY(36); _txtArea->setWidth(200); _txtArea->setX(28);
++		_txtCost->setWidth(200); _txtCost->setX(28);
++		_btnOk->setY(156); _btnCancel->setY(156);
++		_lstKinds->setColumns(3, 108, 52, 40);
++		_lstKinds->setSelectable(true);
++		_lstKinds->setBackground(_window);
++		_lstKinds->onMouseClick((ActionHandler)&ConfirmNewBaseState::lstKindsClick);
++		for (const auto &k : R.kinds)
++		{
++			const std::string why = Outposts::whyNot(_game->getMod(), _game->getSavedGame(), k, _base->getLongitude(), _base->getLatitude());
++			_kinds.push_back(&k);
++			_why.push_back(why);
++			_lstKinds->addRow(3, tr(k.type).c_str(), Unicode::formatFunding(k.cost).c_str(), why.empty() ? tr("STR_OUTPOST_OK").c_str() : "-");
++		}
++		_cost = 0;
++		_txtCost->setText(tr("STR_OUTPOST_PICK_KIND"));
++	}
++}
++
++void ConfirmNewBaseState::lstKindsClick(Action *)
++{
++	const int row = _lstKinds->getSelectedRow();
++	if (row < 0 || row >= (int)_kinds.size()) return;
++	const auto *k = (const Mod::OutpostKindRule*)_kinds[row];
++	if (!_why[row].empty())
++	{
++		_selected = -1;
++		_txtCost->setText(tr(_why[row]));
++		return;
++	}
++	_selected = row;
++	_cost = k->cost;
++	_txtCost->setText(std::string(tr(k->type)) + "  " + std::string(tr("STR_COST_").arg(Unicode::formatFunding(_cost))));
+ }
+ 
+ /**
+@@ -105,6 +148,13 @@ ConfirmNewBaseState::~ConfirmNewBaseState()
+  */
+ void ConfirmNewBaseState::btnOkClick(Action *)
+ {
++	if (_lstKinds)
++	{
++		if (_selected < 0) { _txtCost->setText(tr("STR_OUTPOST_PICK_KIND")); return; }
++		const auto *k = (const Mod::OutpostKindRule*)_kinds[_selected];
++		// a full Pit has no kind: the normal room grid and access lift
++		_base->setOutpostKind(k->pit ? "" : k->type);
++	}
+ 	if (_game->getSavedGame()->getFunds() >= _cost)
+ 	{
+ 		_game->getSavedGame()->setFunds(_game->getSavedGame()->getFunds() - _cost);
+diff --git a/src/Geoscape/ConfirmNewBaseState.h b/src/Geoscape/ConfirmNewBaseState.h
+index 111ccf8..4878eaa 100644
+--- a/src/Geoscape/ConfirmNewBaseState.h
++++ b/src/Geoscape/ConfirmNewBaseState.h
+@@ -18,6 +18,8 @@
+  * along with OpenXcom.  If not, see <http:///www.gnu.org/licenses/>.
+  */
+ #include "../Engine/State.h"
++#include <vector>
++#include <string>
+ 
+ namespace OpenXcom
+ {
+@@ -27,6 +29,7 @@ class Window;
+ class Text;
+ class TextButton;
+ class Globe;
++class TextList;
+ 
+ /**
+  * Screen that allows the player
+@@ -42,6 +45,12 @@ private:
+ 	Text *_txtCost, *_txtArea;
+ 	TextButton *_btnOk, *_btnCancel;
+ 	int _cost;
++	// G.I. Joe outposts: the kinds that can be founded here (claude/OUTPOSTS_v2_DECISIONS.md)
++	TextList *_lstKinds = nullptr;
++	std::vector<const void*> _kinds;      // Mod::OutpostKindRule*
++	std::vector<std::string> _why;        // "" = can be founded here
++	int _selected = -1;
++	void lstKindsClick(Action *action);
+ public:
+ 	/// Creates the Confirm New Base state.
+ 	ConfirmNewBaseState(Base *base, Globe *globe);
 diff --git a/src/Geoscape/DepartmentsState.cpp b/src/Geoscape/DepartmentsState.cpp
 new file mode 100644
 index 0000000..635146b
@@ -15612,12 +15980,283 @@ index f1e9acc..618b326 100644
  		// and after they've made their decisions, calculate the difference, and add
  		// them to the appropriate lists.
  		_fundingDiff += country->getFunding().back() - country->getFunding().at(country->getFunding().size()-2);
+diff --git a/src/Geoscape/Outposts.cpp b/src/Geoscape/Outposts.cpp
+new file mode 100644
+index 0000000..6f56d34
+--- /dev/null
++++ b/src/Geoscape/Outposts.cpp
+@@ -0,0 +1,214 @@
++/*
++ * G.I. Joe outposts (see Outposts.h).
++ */
++#include "Outposts.h"
++#include <algorithm>
++#include <cmath>
++#include "SeaNav.h"
++#include "../Engine/Logger.h"
++#include "../Savegame/SavedGame.h"
++#include "../Savegame/Base.h"
++#include "../Savegame/BaseFacility.h"
++#include "../Savegame/Craft.h"
++#include "../Savegame/Country.h"
++#include "../Savegame/Transfer.h"
++#include "../Savegame/Production.h"
++#include "../Mod/RuleBaseFacility.h"
++#include "../Mod/RuleCraft.h"
++#include "../Mod/RuleCountry.h"
++#include "../Mod/RuleManufacture.h"
++#include "../Mod/RuleResearch.h"
++
++namespace OpenXcom
++{
++namespace Outposts
++{
++
++namespace
++{
++	bool researched(const Mod *mod, const SavedGame *save, const std::string &topic)
++	{
++		const RuleResearch *r = mod->getResearch(topic, false);
++		return r && save->isResearched(r);
++	}
++
++	/// how much water lies within `r` half-degree steps of a point (0..(2r+1)^2)
++	int waterAround(double lon, double lat, int r)
++	{
++		const double step = 0.5 * M_PI / 180.0;
++		int n = 0;
++		for (int dy = -r; dy <= r; ++dy)
++			for (int dx = -r; dx <= r; ++dx)
++				n += SeaNav::isWater(lon + dx * step, lat + dy * step) ? 1 : 0;
++		return n;
++	}
++
++	int pierSize(const Mod *mod, const std::string &facility)
++	{
++		auto it = mod->getOutpostRules().piers.find(facility);
++		return it == mod->getOutpostRules().piers.end() ? 0 : it->second;
++	}
++
++	int boatSize(const Mod *mod, const std::string &craft)
++	{
++		auto it = mod->getOutpostRules().boats.find(craft);
++		return it == mod->getOutpostRules().boats.end() ? 0 : it->second;
++	}
++}
++
++const Mod::OutpostKindRule *kind(const Mod *mod, const std::string &type)
++{
++	if (type.empty()) return nullptr;
++	for (const auto &k : mod->getOutpostRules().kinds) if (k.type == type) return &k;
++	return nullptr;
++}
++
++const Mod::OutpostKindRule *kindOf(const Mod *mod, const Base *base)
++{
++	return base ? kind(mod, base->getOutpostKind()) : nullptr;
++}
++
++int cap(const Mod *mod, const SavedGame *save)
++{
++	const auto &R = mod->getOutpostRules();
++	int n = R.capBase;
++	for (const auto &t : R.capResearch) if (researched(mod, save, t)) ++n;
++	return n;
++}
++
++int count(const Mod *mod, const SavedGame *save)
++{
++	int n = 0;
++	for (const Base *b : *const_cast<SavedGame*>(save)->getBases())
++	{
++		const auto *k = kindOf(mod, b);
++		if (k && k->counts) ++n;
++	}
++	return n;
++}
++
++std::string whyNot(const Mod *mod, const SavedGame *save, const Mod::OutpostKindRule &k, double lon, double lat)
++{
++	for (const auto &t : k.requires) if (!researched(mod, save, t)) return "STR_OUTPOST_NEEDS_RESEARCH";
++	if (k.counts && count(mod, save) >= cap(mod, save)) return "STR_OUTPOST_CAP_REACHED";
++	// the ground: land kinds on land, a port where land meets water, the platform out on open water
++	const bool land = SeaNav::isLandExact(lon, lat);
++	if (k.place == "ocean")
++	{
++		if (land || waterAround(lon, lat, 2) < 25) return "STR_OUTPOST_NEEDS_OPEN_WATER";
++	}
++	else if (!land) return "STR_OUTPOST_NEEDS_LAND";
++	else if (k.place == "coast" && waterAround(lon, lat, 2) == 0) return "STR_OUTPOST_NEEDS_COAST"; // within about a degree
++	// permission: the US anywhere; abroad only with that country's goodwill; the open ocean needs nobody's
++	if (k.place != "ocean")
++	{
++		for (const Country *c : *const_cast<SavedGame*>(save)->getCountries())
++		{
++			if (!c->getRules()->insideCountry(lon, lat)) continue;
++			if (c->getRules()->getType() == "STR_USA") return "";
++			if (c->getGoodwill() >= 0 && c->getGoodwill() < k.goodwill) return "STR_OUTPOST_NEEDS_GOODWILL";
++			return "";
++		}
++		return "STR_OUTPOST_NEEDS_COUNTRY";
++	}
++	return "";
++}
++
++void placeFixed(const Mod *mod, Base *base)
++{
++	const auto *k = kindOf(mod, base);
++	if (!k) return;
++	for (const auto &f : k->fixed)
++	{
++		const RuleBaseFacility *rule = mod->getBaseFacility(f.facility, false);
++		if (!rule) continue;
++		BaseFacility *fac = new BaseFacility(rule, base);
++		fac->setX(f.x);
++		fac->setY(f.y);
++		// the lift is there at once (a base needs one); the rest goes up over the founding days
++		fac->setBuildTime(rule->isLift() ? 0 : k->days);
++		base->getFacilities()->push_back(fac);
++	}
++}
++
++bool isFixed(const Mod *mod, const Base *base, int x, int y)
++{
++	const auto *k = kindOf(mod, base);
++	if (!k) return false;
++	for (const auto &f : k->fixed) if (f.x == x && f.y == y) return true;
++	return false;
++}
++
++bool onWater(const Base *base)
++{
++	return waterAround(base->getLongitude(), base->getLatitude(), 2) > 0;
++}
++
++bool canList(const Mod *mod, const Base *base, const RuleBaseFacility *rule)
++{
++	const auto &R = mod->getOutpostRules();
++	if (!R.on) return true;
++	const auto *k = kindOf(mod, base);
++	if (k && !k->pit)
++		return std::find(k->addons.begin(), k->addons.end(), rule->getType()) != k->addons.end();
++	// at a Pit: no outpost-only add-ons; piers only on the water
++	if (std::find(R.addonOnly.begin(), R.addonOnly.end(), rule->getType()) != R.addonOnly.end()) return false;
++	if (pierSize(mod, rule->getType()) && !onWater(base)) return false;
++	return true;
++}
++
++std::string canBuild(const Mod *mod, const Base *base, const RuleBaseFacility *rule, int x, int y)
++{
++	if (!mod->getOutpostRules().on) return "";
++	if (!canList(mod, base, rule)) return "STR_OUTPOST_NOT_HERE";
++	const auto *k = kindOf(mod, base);
++	if (!k || k->pit) return "";
++	// at an outpost: only on its pads, one add-on to a pad
++	for (int dx = 0; dx < rule->getSizeX(); ++dx)
++		for (int dy = 0; dy < rule->getSizeY(); ++dy)
++		{
++			bool pad = false;
++			for (const auto &p : k->pads) if (p.size() >= 2 && p[0] == x + dx && p[1] == y + dy) pad = true;
++			if (!pad) return "STR_OUTPOST_PADS_ONLY";
++		}
++	return "";
++}
++
++int freeHangarsFor(const Mod *mod, const Base *base, const RuleCraft *craft)
++{
++	// the slots: aircraft spaces (every craft space not on a pier), small piers, large piers
++	int air = 0, smallP = 0, largeP = 0;
++	for (const BaseFacility *f : *const_cast<Base*>(base)->getFacilities())
++	{
++		if (f->getBuildTime() != 0) continue;
++		const int c = f->getRules()->getCrafts();
++		switch (pierSize(mod, f->getRules()->getType()))
++		{
++		case 0: air += c; break;
++		case 1: smallP += c; break;
++		default: largeP += c; break;
++		}
++	}
++	// what is using them: craft here, craft on the way, craft being made
++	int usedAir = 0, usedSmall = 0, usedLarge = 0;
++	auto use = [&](const RuleCraft *r, int n)
++	{
++		const int b = r ? boatSize(mod, r->getType()) : 0;
++		if (b == 0) usedAir += n; else if (b == 1) usedSmall += n; else usedLarge += n;
++	};
++	for (const Craft *c : *base->getCrafts()) use(c->getRules(), 1);
++	for (Transfer *t : *const_cast<Base*>(base)->getTransfers())
++		if (t->getType() == TRANSFER_CRAFT && t->getCraft()) use(t->getCraft()->getRules(), t->getQuantity());
++	for (const Production *p : base->getProductions())
++		if (p->getRules()->getProducedCraft()) use(p->getRules()->getProducedCraft(), p->getAmountTotal() - p->getAmountProduced());
++	// a small boat may use a large pier that is spare
++	const int spareLarge = largeP - usedLarge;
++	const int freeSmall = smallP - usedSmall + std::max(0, spareLarge);
++	const int b = boatSize(mod, craft->getType());
++	if (b == 0) return air - usedAir;
++	if (b == 1) return freeSmall;
++	return spareLarge - std::max(0, usedSmall - smallP);
++}
++
++}
++}
+diff --git a/src/Geoscape/Outposts.h b/src/Geoscape/Outposts.h
+new file mode 100644
+index 0000000..148b487
+--- /dev/null
++++ b/src/Geoscape/Outposts.h
+@@ -0,0 +1,45 @@
++#pragma once
++/*
++ * G.I. Joe outposts (claude/OUTPOSTS_v2_DECISIONS.md, John 14 Nov 15:40-16:31).
++ * An outpost is a base underneath (craft, boats, troops, stores, radar), but a fixed place drawn by MAPS:
++ * it comes with its buildings already in place on the base grid, and the player builds add-ons only on
++ * its pads. Kinds: forward camp, port, airstrip, listening post, the Tactical Battle Platform at sea,
++ * and a full extra Pit (the normal room grid). Boats are kept only at piers.
++ */
++#include <string>
++#include "../Mod/Mod.h"
++
++namespace OpenXcom
++{
++
++class SavedGame;
++class Base;
++class RuleBaseFacility;
++class RuleCraft;
++
++namespace Outposts
++{
++	/// the kind rule of this base, or nullptr (The Pit)
++	const Mod::OutpostKindRule *kindOf(const Mod *mod, const Base *base);
++	const Mod::OutpostKindRule *kind(const Mod *mod, const std::string &type);
++	/// outposts allowed now: capBase + one per capResearch researched
++	int cap(const Mod *mod, const SavedGame *save);
++	/// outposts that count against the cap
++	int count(const Mod *mod, const SavedGame *save);
++	/// can this kind be founded here: "" = yes, else the reason (a string id)
++	std::string whyNot(const Mod *mod, const SavedGame *save, const Mod::OutpostKindRule &k, double lon, double lat);
++	/// put the buildings an outpost comes with in place (under construction for its founding days)
++	void placeFixed(const Mod *mod, Base *base);
++	/// may this facility be built at this base, at grid (x, y): "" = yes, else the reason
++	std::string canBuild(const Mod *mod, const Base *base, const RuleBaseFacility *rule, int x, int y);
++	/// may this facility be listed for building at this base at all
++	bool canList(const Mod *mod, const Base *base, const RuleBaseFacility *rule);
++	/// is this a building the outpost came with (it can't be taken down)
++	bool isFixed(const Mod *mod, const Base *base, int x, int y);
++	/// is this base's spot on the water's edge (or on the water)
++	bool onWater(const Base *base);
++	/// free craft spaces at this base for this craft: boats only at piers of their size, aircraft never at piers
++	int freeHangarsFor(const Mod *mod, const Base *base, const RuleCraft *craft);
++}
++
++}
 diff --git a/src/Geoscape/SeaNav.cpp b/src/Geoscape/SeaNav.cpp
 new file mode 100644
-index 0000000..bcb2347
+index 0000000..054909d
 --- /dev/null
 +++ b/src/Geoscape/SeaNav.cpp
-@@ -0,0 +1,280 @@
+@@ -0,0 +1,295 @@
 +/*
 + * G.I. Joe: boats keep to the water and the rivers (see SeaNav.h).
 + */
@@ -15646,6 +16285,7 @@ index 0000000..bcb2347
 +	const int SW = W, SH = H;           // the land raster is the grid itself
 +	const double RES = 0.5;             // degrees a cell
 +	bool built = false;
++	const Mod *theMod = nullptr;
 +	std::vector<unsigned char> water;   // W * H
 +	std::vector<std::string> boats;
 +
@@ -15773,6 +16413,7 @@ index 0000000..bcb2347
 +{
 +	if (built || !mod) return;
 +	built = true;
++	theMod = mod;
 +	const auto &AF = mod->getAirFightRules();
 +	for (const auto &u : AF.units)
 +	{
@@ -15852,6 +16493,19 @@ index 0000000..bcb2347
 +	return built && water[cellOf(lon, lat)];
 +}
 +
++bool isLandExact(double lon, double lat)
++{
++	if (!theMod) return false;
++	RuleGlobe *globe = theMod->getGlobe();
++	for (const Polygon *p : *globe->getPolygons())
++	{
++		const Texture *tex = globe->getTexture(p->getTexture());
++		if (tex && tex->isCosmeticOcean()) continue;
++		if (inside(p, lon, lat)) return true;
++	}
++	return false;
++}
++
 +void forget(const void *key)
 +{
 +	plans.erase(key);
@@ -15900,10 +16554,10 @@ index 0000000..bcb2347
 +}
 diff --git a/src/Geoscape/SeaNav.h b/src/Geoscape/SeaNav.h
 new file mode 100644
-index 0000000..ae1be3f
+index 0000000..dad2693
 --- /dev/null
 +++ b/src/Geoscape/SeaNav.h
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,34 @@
 +#pragma once
 +/*
 + * G.I. Joe: boats keep to the water (John 14 Nov 14:21 "Boats kept to water and rivers").
@@ -15933,6 +16587,8 @@ index 0000000..ae1be3f
 +	void forget(const void *key);
 +	/// is this point water (or a river) on the grid
 +	bool isWater(double lon, double lat);
++	/// is this exact point on land (the globe's own polygons, not the grid)
++	bool isLandExact(double lon, double lat);
 +}
 +
 +}
@@ -17160,7 +17816,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..d708668 100644
+index 1885346..08e241d 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -17298,7 +17954,7 @@ index 1885346..d708668 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,351 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,394 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -17373,6 +18029,49 @@ index 1885346..d708668 100644
 +		std::map<std::string, std::vector<std::string> > more;
 +		if (reader.tryRead("gijoeBounties", more))
 +			for (auto &kv : more) _gijoeBounties[kv.first] = kv.second;
++	}
++	if (const auto& op = reader["outposts"])
++	{
++		_outposts.on = true;
++		op.tryRead("capBase", _outposts.capBase);
++		op.tryRead("capResearch", _outposts.capResearch);
++		op.tryRead("piers", _outposts.piers);
++		op.tryRead("boats", _outposts.boats);
++		op.tryRead("addonOnly", _outposts.addonOnly);
++		if (const auto& ks = op["kinds"])
++		{
++			for (const auto& k : ks.children())
++			{
++				OutpostKindRule r;
++				k.tryRead("type", r.type);
++				for (auto &old : _outposts.kinds) if (old.type == r.type) { r = old; break; }
++				k.tryRead("place", r.place);
++				k.tryRead("cost", r.cost);
++				k.tryRead("days", r.days);
++				k.tryRead("goodwill", r.goodwill);
++				k.tryRead("counts", r.counts);
++				k.tryRead("pit", r.pit);
++				k.tryRead("requires", r.requires);
++				k.tryRead("pads", r.pads);
++				k.tryRead("addons", r.addons);
++				k.tryRead("deployment", r.deployment);
++				if (const auto& fx = k["fixed"])
++				{
++					r.fixed.clear();
++					for (const auto& f : fx.children())
++					{
++						OutpostFixed one;
++						f.tryRead("facility", one.facility);
++						f.tryRead("x", one.x);
++						f.tryRead("y", one.y);
++						r.fixed.push_back(one);
++					}
++				}
++				bool replaced = false;
++				for (auto &old : _outposts.kinds) if (old.type == r.type) { old = r; replaced = true; }
++				if (!replaced) _outposts.kinds.push_back(r);
++			}
++		}
 +	}
 +	if (const auto& af = reader["airFight"])
 +	{
@@ -17650,7 +18349,7 @@ index 1885346..d708668 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3656,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3699,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -17658,7 +18357,7 @@ index 1885346..d708668 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4261,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4304,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -17684,7 +18383,7 @@ index 1885346..d708668 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4518,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4561,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -17705,7 +18404,7 @@ index 1885346..d708668 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6232,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6275,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -17725,7 +18424,7 @@ index 1885346..d708668 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6255,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6298,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -17733,7 +18432,7 @@ index 1885346..d708668 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6269,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6312,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -17773,7 +18472,7 @@ index 1885346..d708668 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..fdad0cc 100644
+index 2242d13..91bb4f0 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -17837,7 +18536,7 @@ index 2242d13..fdad0cc 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,182 @@ private:
+@@ -327,6 +360,212 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -17945,6 +18644,36 @@ index 2242d13..fdad0cc 100644
 +	AirFightRules _airFight;
 +public:
 +	const AirFightRules &getAirFightRules() const { return _airFight; }
++	/// G.I. Joe outposts (claude/OUTPOSTS_v2_DECISIONS.md): fixed places drawn by MAPS, bases underneath
++	struct OutpostFixed { std::string facility; int x = 0, y = 0; };
++	struct OutpostKindRule
++	{
++		std::string type;                    ///< STR_OUTPOST_PORT ...; the string is its name
++		std::string place = "land";          ///< land | coast | ocean
++		int cost = 300000, days = 10;        ///< founding
++		int goodwill = 20;                   ///< abroad: the country's goodwill it needs (the US: none; the ocean: none)
++		bool counts = true;                  ///< counts against the outpost cap (an extra Pit doesn't)
++		bool pit = false;                    ///< a full Pit: the normal room grid and access lift, no fixed buildings
++		std::vector<std::string> requires;   ///< research
++		std::vector<OutpostFixed> fixed;     ///< buildings it comes with, in place on the base grid
++		std::vector<std::vector<int>> pads;  ///< grid cells [x, y] where add-ons may be built
++		std::vector<std::string> addons;     ///< facility types that may go on its pads
++		std::string deployment;              ///< the raid map (a Cobra attack on it)
++	};
++	struct OutpostRules
++	{
++		bool on = false;
++		std::vector<OutpostKindRule> kinds;
++		int capBase = 1;
++		std::vector<std::string> capResearch;  ///< each one researched: one more outpost
++		std::map<std::string, int> piers;      ///< facility type -> pier size (1 small, 2 large)
++		std::map<std::string, int> boats;      ///< craft type -> pier size it needs
++		std::vector<std::string> addonOnly;    ///< facilities only built on outpost pads (never at a Pit)
++	};
++	const OutpostRules &getOutpostRules() const { return _outposts; }
++private:
++	OutpostRules _outposts;
++public:
 +	/// the air rules for a battle unit type, or nullptr if it is not an aircraft
 +	const AirCraftRule *getAirCraft(const std::string &unitType) const
 +	{
@@ -18020,7 +18749,7 @@ index 2242d13..fdad0cc 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +901,124 @@ public:
+@@ -692,6 +931,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -18639,7 +19368,7 @@ index 6bef22e..8cc3b62 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..6bc4305 100644
+index 99f24ce..94ba762 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
 @@ -411,6 +411,7 @@
@@ -18659,7 +19388,7 @@ index 99f24ce..6bc4305 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,10 +549,17 @@
+@@ -546,10 +549,18 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
@@ -18667,6 +19396,7 @@ index 99f24ce..6bc4305 100644
 +    <ClCompile Include="Geoscape\IntelBoardState.cpp" />
 +    <ClCompile Include="Geoscape\AirFightChoiceState.cpp" />
 +    <ClCompile Include="Geoscape\SeaNav.cpp" />
++    <ClCompile Include="Geoscape\Outposts.cpp" />
 +    <ClCompile Include="Geoscape\DepartmentsState.cpp" />
 +    <ClCompile Include="Basescape\ResearchTreeState.cpp" />
      <ClCompile Include="Geoscape\GeoscapeCraftState.cpp" />
@@ -18677,7 +19407,7 @@ index 99f24ce..6bc4305 100644
      <ClCompile Include="Geoscape\Globe.cpp" />
      <ClCompile Include="Geoscape\GraphsState.cpp" />
      <ClCompile Include="Geoscape\InterceptState.cpp" />
-@@ -673,6 +683,7 @@
+@@ -673,6 +684,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -18685,7 +19415,7 @@ index 99f24ce..6bc4305 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +693,7 @@
+@@ -682,6 +694,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -18693,7 +19423,7 @@ index 99f24ce..6bc4305 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -890,6 +902,7 @@
+@@ -890,6 +903,7 @@
      <ClInclude Include="Basescape\TransfersState.h" />
      <ClInclude Include="Battlescape\AbortMissionState.h" />
      <ClInclude Include="Battlescape\ActionMenuItem.h" />
@@ -18701,7 +19431,7 @@ index 99f24ce..6bc4305 100644
      <ClInclude Include="Battlescape\ActionMenuState.h" />
      <ClInclude Include="Battlescape\AlienInventory.h" />
      <ClInclude Include="Battlescape\AlienInventoryState.h" />
-@@ -970,6 +983,8 @@
+@@ -970,6 +984,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -18710,7 +19440,7 @@ index 99f24ce..6bc4305 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1048,13 @@
+@@ -1033,6 +1049,14 @@
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
@@ -18718,13 +19448,14 @@ index 99f24ce..6bc4305 100644
 +    <ClInclude Include="Geoscape\IntelBoardState.h" />
 +    <ClInclude Include="Geoscape\AirFightChoiceState.h" />
 +    <ClInclude Include="Geoscape\SeaNav.h" />
++    <ClInclude Include="Geoscape\Outposts.h" />
 +    <ClInclude Include="Geoscape\DepartmentsState.h" />
 +    <ClInclude Include="Basescape\ResearchTreeState.h" />
 +    <ClInclude Include="Mod\RuleLead.h" />
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1042,6 +1064,7 @@
+@@ -1042,6 +1066,7 @@
      <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
      <ClInclude Include="Geoscape\ProductionCompleteState.h" />
      <ClInclude Include="Geoscape\GeoscapeState.h" />
@@ -18732,7 +19463,7 @@ index 99f24ce..6bc4305 100644
      <ClInclude Include="Geoscape\Globe.h" />
      <ClInclude Include="Geoscape\GraphsState.h" />
      <ClInclude Include="Geoscape\InterceptState.h" />
-@@ -1170,6 +1193,7 @@
+@@ -1170,6 +1195,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -18740,7 +19471,7 @@ index 99f24ce..6bc4305 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1203,7 @@
+@@ -1179,6 +1205,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
@@ -18933,10 +19664,27 @@ index 97ef4f5..0dbe163 100644
  	void addMissionLocation(const std::string &varName, const std::string &regionName, int zoneNumber, int maximum);
  	/// Checks that a given mission location (city or whatever) isn't stored in our list of previously attacked locations.
 diff --git a/src/Savegame/Base.cpp b/src/Savegame/Base.cpp
-index ac1a454..883506b 100644
+index ac1a454..d05b726 100644
 --- a/src/Savegame/Base.cpp
 +++ b/src/Savegame/Base.cpp
-@@ -1519,6 +1519,20 @@ int Base::getUsedContainment(int prisonType, bool onlyExternal) const
+@@ -227,6 +227,7 @@ void Base::load(const YAML::YamlNodeReader& reader, SavedGame *save, bool newGam
+ 		}
+ 	}
+ 	reader.tryRead("fakeUnderwater", _fakeUnderwater);
++	reader.tryRead("outpostKind", _outpostKind);
+ 
+ 	isOverlappingOrOverflowing(); // don't crash, just report in the log file...
+ }
+@@ -387,6 +388,8 @@ void Base::save(YAML::YamlNodeWriter writer) const
+ 		writer.write("retaliationMissionUniqueId", _retaliationMission->getId());
+ 	if (_fakeUnderwater)
+ 		writer.write("fakeUnderwater", _fakeUnderwater);
++	if (!_outpostKind.empty())
++		writer.write("outpostKind", _outpostKind);
+ }
+ 
+ /**
+@@ -1519,6 +1522,20 @@ int Base::getUsedContainment(int prisonType, bool onlyExternal) const
   * @return Containment Lab space.
   */
  int Base::getAvailableContainment(int prisonType) const
@@ -18957,7 +19705,7 @@ index ac1a454..883506b 100644
  {
  	int total = 0;
  	for (const auto* fac : _facilities)
-@@ -2540,6 +2554,19 @@ BaseSumDailyRecovery Base::getSumRecoveryPerDay() const
+@@ -2540,6 +2557,19 @@ BaseSumDailyRecovery Base::getSumRecoveryPerDay() const
  
  	result.HealthRecovery = healthMaxinum;
  
@@ -18978,7 +19726,7 @@ index ac1a454..883506b 100644
  }
  
 diff --git a/src/Savegame/Base.h b/src/Savegame/Base.h
-index b25dba2..3fcd617 100644
+index b25dba2..7f250fd 100644
 --- a/src/Savegame/Base.h
 +++ b/src/Savegame/Base.h
 @@ -102,6 +102,8 @@ struct BaseSumDailyRecovery
@@ -18990,7 +19738,25 @@ index b25dba2..3fcd617 100644
  };
  
  /**
-@@ -278,6 +280,8 @@ public:
+@@ -113,6 +115,7 @@ class Base : public Target
+ private:
+ 	static const int BASE_SIZE = 6;
+ 	const Mod *_mod;
++	std::string _outpostKind; ///< G.I. Joe: the outpost kind (empty = The Pit or a full Pit)
+ 	std::vector<BaseFacility*> _facilities;
+ 	std::vector<Soldier*> _soldiers;
+ 	std::vector<Craft*> _crafts;
+@@ -135,6 +138,9 @@ private:
+ 
+ 	using Target::load;
+ public:
++	/// G.I. Joe: the outpost kind ("" = a full Pit)
++	const std::string &getOutpostKind() const { return _outpostKind; }
++	void setOutpostKind(const std::string &k) { _outpostKind = k; }
+ 	/// Creates a new base.
+ 	Base(const Mod *mod);
+ 	/// Cleans up the base.
+@@ -278,6 +284,8 @@ public:
  	int getFreeContainment(int prisonType) const;
  	/// Gets the total amount of Containment space.
  	int getAvailableContainment(int prisonType) const;
