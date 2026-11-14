@@ -120,6 +120,16 @@ HEAD_ONLY = [
 for i, n, c, f, txt in HEAD_ONLY:
     t(i, n, c, 15, [], txt)
 
+# Underwater kit (John 14 Nov 10:09, UNDERWATER_MISSIONS_v1 section 4). Day 1 gear (dive rig, spear gun, knife, limpet, flare) needs no research.
+UNDERWATER = [
+ ('STR_REBREATHER', 'Rebreather', 100, 120000, [], 'A closed-circuit rig that recycles the diver\'s own breath: no bubbles and far longer down. Dive rigs hold 18 turns of air, not 10 (Naval & Divers specialists 27, not 15).'),
+ ('STR_UNDERWATER_PISTOL', 'Underwater Pistol', 120, 150000, [], 'A pistol that fires steel darts through water, where a bullet stops dead in a few feet. Short range, but it works below the surface. 30 damage, 3 shots.'),
+ ('STR_UNDERWATER_ASSAULT_RIFLE', 'Underwater Assault Rifle', 150, 200000, ['STR_UNDERWATER_PISTOL'], 'A Soviet design for combat divers: long darts from a box magazine, fired automatic. Cobra has been buying them. We can build our own. 35 damage, 3-shot bursts.'),
+ ('STR_SONAR', 'Sonar', 120, 180000, [], 'Listening to the sea. Ships, the Flagg and coastal bases with a sonar station find underwater sites within 400 nautical miles, and in sea battles a surface unit sees underwater units within 3 tiles.'),
+]
+for i, n, c, f, dep, txt in UNDERWATER:
+    t(i, n, c, 15, dep, txt)
+
 # research money (John 21:28: "some are money and/or resources like cobra parts"). Dollars, charged when the project
 # starts. OXCE has no such field: costFunds is the name proposed to BUILD for the fork. Intel, interrogations, clues
 # and captured gear cost no money: they use up the item or prisoner instead.
@@ -144,6 +154,7 @@ FUNDS.update({'STR_FORWARD_OPERATIONS_1': 100000, 'STR_FORWARD_OPERATIONS_2': 20
 FUNDS.update({'STR_OVERWATCH_DRILLS': 60000, 'STR_BREACHING_DRILLS': 80000, 'STR_FIRE_AND_MOVE': 90000})   # pitched after the cut (John 23:16-23:19)
 FUNDS.update({'STR_TRANSPORT_DOOR_GUNS': 60000, 'STR_TRANSPORT_ARMOR_PLATING': 90000, 'STR_TRANSPORT_COUNTERMEASURE_PODS': 70000})   # John 13 Nov 14:11 (dogfight design 3b)
 FUNDS.update({i: f for i, n, c, f, _ in HEAD_ONLY})   # John 14 Nov 00:51, after the cut
+FUNDS.update({i: f for i, n, c, f, *_ in UNDERWATER})   # John 14 Nov 10:09
 HEADONLY = {i for i, *_ in HEAD_ONLY}
 BASEFUNC = {'STR_OVERWATCH_DRILLS': ['STR_BRIEFING_ROOM'], 'STR_BREACHING_DRILLS': ['STR_BRIEFING_ROOM'], 'STR_FIRE_AND_MOVE': ['STR_BRIEFING_ROOM']}
 R = [{'name': i, 'cost': c, 'points': p, **({'costFunds': FUNDS[i]} if i in FUNDS else {}), **({'dependencies': d} if d else {}), **({'requiresBaseFunc': BASEFUNC[i]} if i in BASEFUNC else {}), **({'headOnly': True} if i in HEADONLY else {}), 'unlocks': []} for i, n, c, p, d, _ in T]

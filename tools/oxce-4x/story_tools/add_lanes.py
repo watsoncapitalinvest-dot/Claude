@@ -59,6 +59,8 @@ for t, ln in [('RAPID_DEPLOYMENT_DRILL', H), ('JOINT_CHIEFS_LIAISON', H), ('COBR
               ('COMBAT_STRESS_PROGRAM', D), ('FIELD_SURGERY', D), ('SECURE_CHANNELS', B), ('SIGNAL_TRIANGULATION', B),
               ('PILOT_ROTATION', A), ('HOT_PAD', A), ('DRILL_INSTRUCTOR_COURSE', 'TRAINING'), ('LEADERSHIP_SCHOOL', 'TRAINING')]:
     LANE['STR_' + t] = ln   # head-only projects, John 14 Nov 00:51
+for t, ln in [('REBREATHER', D), ('UNDERWATER_PISTOL', R), ('UNDERWATER_ASSAULT_RIFLE', R), ('SONAR', B)]:
+    LANE['STR_' + t] = ln   # underwater kit, John 14 Nov 10:09
 SKIP = {'STR_STORY_LOCK'}
 
 # lookup stubs (fix_lookups.py) take the lane of the topic whose lookup they are
