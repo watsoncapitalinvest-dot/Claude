@@ -46,3 +46,10 @@ Short-Fuze: John 21:31 put him on the roster as WAITING (no look). BUILD's Day-1
 ## Not in stock OXCE (engine requests, to come as one spec)
 Bonds, signature moves (once per mission), grudges (preset + Major Bludd's: anyone who downs, stuns
 or captures him), Timber's strike (player picks the target), companion units, Strafing Run.
+
+## Attachment slots (15 Nov, STORY's BRIEF_FOR_ROSTER_Attachments; ATTACHMENTS_DESIGN_v2)
+Every named Joe's `weapon` now carries `slots`, keyed by armory gun:
+- `slots`: which of the six slots the gun has (optic, under-barrel, muzzle, magazine, side, stock). A gun still fits **3 at most**.
+- `items`: the v2 attachments the old `attachments` note names, read into v2's names (folding stock = adjustable stock; laser "scope" and "extended battery" = targeting computer and power cell). These are what that Joe's gun is set up to take: a choice at the Armory, not a free upgrade. Where the note names 4, he picks 3.
+- `built`: things the note lists that are part of the weapon or its ammo, not attachments (tripod, baseplate, spears, explosive bolts...). No slot.
+Laser and pulse guns have only optic, muzzle and magazine (brief rule 2). Mortar, flare launcher, harpoons, sword and nunchaku have no slots. Table: attachments.py.

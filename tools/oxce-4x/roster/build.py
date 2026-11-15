@@ -21,6 +21,7 @@ import yaml
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import statmodel as SM
+import attachments as ATT
 
 K = ['tu', 'stamina', 'health', 'bravery', 'reactions', 'firing', 'throwing', 'strength', 'melee']
 KS = SM.K
@@ -148,6 +149,7 @@ def build(src=None, docs=None):
                 if sp: strings['STR_GJR_SPEC_' + skey(sp)] = sp
             rec = dict(id='C_' + key, name=name)
             if is_joe:
+                weapon['slots'] = ATT.slots_for(weapon)   # attachment slots per gun (BRIEF_FOR_ROSTER_Attachments, 15 Nov)
                 rec |= dict(soldierType='STR_' + key, rosterStatus=c.get('arrives') or c.get('status'), rank=c['rank'], rankString=rank_key,
                             allowPromotion=False, costBuy=0)
             else:
@@ -234,6 +236,7 @@ def write_docs(out, flags, docs):
                   f"Real name: {a.get('real_name', '?')} | Version: {e.get('version')} | " + (f"Arrives: {c['arrives']} (Bible says: {e.get('arrives')})" if c.get('arrives') else f"Bible arrives: {e.get('arrives')}") + f" | Window: {r.get('window') or '-'}",
                   f"Unit: {r.get('unitType') or r.get('soldierType')}", f'Stats: {stl}',
                   f"Weapon: {r['weapon']['name']} ({', '.join(x for x in r['weapon']['armory'] if x)})",
+                  *([f"Attachment slots: " + ' | '.join(f"{a}: {', '.join(v['slots']) or 'none'}" + (f" (takes: {', '.join(v['items'])})" if v['items'] else '') + (f" [part of the weapon, no slot: {', '.join(v['built'])}]" if v['built'] else '') for a, v in r['weapon']['slots'].items())] if r['weapon'].get('slots') else []),
                   f"Trait - {d['trait']['name']}: {d['trait']['text']} [{d['trait']['engine']}] {d['trait'].get('effect') or ''}",
                   f"Move - {d['move']['name']}: {d['move']['text']} [{d['move']['engine']}] {d['move'].get('effect') or ''}",
                   f"Bonds: {'; '.join(r['bonds']) or '-'} | Grudges: {'; '.join(r['grudges']) or '-'}",
