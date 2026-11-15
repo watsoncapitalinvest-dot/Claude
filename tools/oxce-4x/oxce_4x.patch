@@ -8199,7 +8199,7 @@ index bc5f08f..74aec61 100644
  	_terrain->calculateFOV(_unit);
  	if (!_falling)
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..a838051 100644
+index 839f803..b3c46ec 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -71,6 +71,8 @@ set ( basescape_src
@@ -8220,13 +8220,15 @@ index 839f803..a838051 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -201,9 +205,17 @@ set ( geoscape_src
+@@ -201,9 +205,19 @@ set ( geoscape_src
    Geoscape/DogfightState.cpp
    Geoscape/ExtendedGeoscapeLinksState.cpp
    Geoscape/FundingState.cpp
 +  Geoscape/CobraIntelState.cpp
 +  Geoscape/IntelBoardState.cpp
 +  Geoscape/AirFightChoiceState.cpp
++  Geoscape/ShipStopState.cpp
++  Geoscape/Shipping.cpp
 +  Geoscape/SeaNav.cpp
 +  Geoscape/Outposts.cpp
 +  Geoscape/DepartmentsState.cpp
@@ -8238,7 +8240,7 @@ index 839f803..a838051 100644
    Geoscape/Globe.cpp
    Geoscape/GraphsState.cpp
    Geoscape/InterceptState.cpp
-@@ -331,6 +343,7 @@ set ( mod_src
+@@ -331,6 +345,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -8246,7 +8248,7 @@ index 839f803..a838051 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +369,7 @@ set ( savegame_src
+@@ -356,6 +371,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -8661,10 +8663,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..e156c7c
+index 0000000..0668512
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3282 @@
+@@ -0,0 +1,3290 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -10304,6 +10306,14 @@ index 0000000..e156c7c
 +			roundRect(cx - s * 0.9, cy - k * 0.45, cx + s * 0.9, cy + k * 0.45, k * 0.2, 0x45D3E8, a);
 +			roundRect(cx - k * 0.45, cy - s * 0.9, cx + k * 0.45, cy + s * 0.9, k * 0.2, 0x45D3E8, a);
 +			break;
++		case PIN_SHIP:                      // a small hull, bow up: pale grey (civilian shipping)
++		{
++			const double w = s * 0.42, h = s * 0.95;
++			std::vector<std::pair<double, double> > hull{ { cx, cy - h * 1.15 }, { cx + w, cy - h * 0.45 }, { cx + w, cy + h }, { cx - w, cy + h }, { cx - w, cy - h * 0.45 } };
++			poly(hull, o * 1.2, S_INK, 200);
++			poly(hull, 0, 0xC8CCD2, p.lit ? 230 : 150);
++			break;
++		}
 +		case PIN_CITY:                      // dot: bone
 +			ringAA(cx, cy, 0, k * 0.75 + o * 0.6, S_INK, 200);
 +			ringAA(cx, cy, 0, k * 0.75, S_TEXT, 255);
@@ -11949,7 +11959,7 @@ index 0000000..e156c7c
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..8a6c127
+index 0000000..f295acf
 --- /dev/null
 +++ b/src/Engine/HiUI.h
 @@ -0,0 +1,203 @@
@@ -12050,7 +12060,7 @@ index 0000000..8a6c127
 +	struct GlobeLabel { std::string text; double x, y; int kind; };
 +	void globeLabels(const std::vector<GlobeLabel> &labels);
 +	/// A pin on the globe, in base coords. kind: see PinKind. lit: the blink phase.
-+	enum PinKind { PIN_JOE_BASE, PIN_COBRA_SITE, PIN_MISSION, PIN_CONTACT, PIN_JOE_CRAFT, PIN_WAYPOINT, PIN_CITY };
++	enum PinKind { PIN_JOE_BASE, PIN_COBRA_SITE, PIN_MISSION, PIN_CONTACT, PIN_JOE_CRAFT, PIN_WAYPOINT, PIN_CITY, PIN_SHIP };
 +	struct GlobePin { double x, y; int kind; bool lit; };
 +	void globePins(const std::vector<GlobePin> &pins);
 +	/// An 8-bit marker frame to set on the globe crisp (the player's own marks).
@@ -13716,14 +13726,16 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..2fbf736 100644
+index 6b4e79d..8c78b25 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
-@@ -16,7 +16,12 @@
+@@ -16,7 +16,14 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
 +#include "AirFightChoiceState.h"
++#include "ShipStopState.h"
++#include "Shipping.h"
 +#include "SeaNav.h"
 +#include "../Battlescape/AirFight.h"
  #include "GeoscapeState.h"
@@ -13732,7 +13744,7 @@ index 6b4e79d..2fbf736 100644
  #include <set>
  #include <sstream>
  #include <iomanip>
-@@ -35,6 +40,7 @@
+@@ -35,6 +42,7 @@
  #include "../Engine/Collections.h"
  #include "../Engine/Unicode.h"
  #include "Globe.h"
@@ -13740,7 +13752,7 @@ index 6b4e79d..2fbf736 100644
  #include "../Interface/ComboBox.h"
  #include "../Interface/Text.h"
  #include "../Interface/TextButton.h"
-@@ -48,12 +54,14 @@
+@@ -48,12 +56,14 @@
  #include "../Mod/RuleCraft.h"
  #include "../Savegame/Ufo.h"
  #include "../Mod/RuleUfo.h"
@@ -13755,7 +13767,7 @@ index 6b4e79d..2fbf736 100644
  #include "../Savegame/Soldier.h"
  #include "../Savegame/SoldierDiary.h"
  #include "../Menu/PauseState.h"
-@@ -69,6 +77,8 @@
+@@ -69,6 +79,8 @@
  #include "../Basescape/GlobalAlienContainmentState.h"
  #include "../Menu/CutsceneState.h"
  #include "../Menu/ErrorMessageState.h"
@@ -13764,7 +13776,7 @@ index 6b4e79d..2fbf736 100644
  #include "GraphsState.h"
  #include "FundingState.h"
  #include "ExtendedGeoscapeLinksState.h"
-@@ -87,6 +97,7 @@
+@@ -87,6 +99,7 @@
  #include "DogfightErrorState.h"
  #include "DogfightExperienceState.h"
  #include "../Ufopaedia/Ufopaedia.h"
@@ -13772,7 +13784,7 @@ index 6b4e79d..2fbf736 100644
  #include "../Savegame/ResearchProject.h"
  #include "ResearchCompleteState.h"
  #include "../Mod/RuleResearch.h"
-@@ -103,6 +114,7 @@
+@@ -103,6 +116,7 @@
  #include "../Savegame/ItemContainer.h"
  #include "../Savegame/MissionSite.h"
  #include "../Savegame/AlienBase.h"
@@ -13780,7 +13792,7 @@ index 6b4e79d..2fbf736 100644
  #include "../Mod/RuleRegion.h"
  #include "MissionDetectedState.h"
  #include "AlienBaseState.h"
-@@ -157,41 +169,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -157,41 +171,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_bg->setX((_globe->getWidth() - _bg->getWidth()) / 2);
  	_bg->setY((_globe->getHeight() - _bg->getHeight()) / 2);
  
@@ -13964,7 +13976,7 @@ index 6b4e79d..2fbf736 100644
  
  	int slackingIndicatorOffset = _game->getMod()->getInterface("geoscape")->getElement("slackingIndicator")->custom;
  	_txtSlacking = new Text(59, 17, screenWidth - 61, screenHeight / 2 - 100 + slackingIndicatorOffset);
-@@ -207,6 +331,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -207,6 +333,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_dogfightTimer = new Timer(Options::dogfightSpeed);
  
  	_txtDebug = new Text(254, 32, 0, 0);
@@ -13972,7 +13984,7 @@ index 6b4e79d..2fbf736 100644
  	_cbxRegion = new ComboBox(this, 150, 16, 0, 36);
  	_cbxZone = new ComboBox(this, 48, 16, 154, 36);
  	_cbxArea = new ComboBox(this, 48, 16, 206, 36);
-@@ -251,6 +376,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -251,6 +378,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtMinSep, "text", "geoscape");
  	add(_txtSec, "text", "geoscape");
  	add(_txtWeekday, "text", "geoscape");
@@ -13983,7 +13995,7 @@ index 6b4e79d..2fbf736 100644
  	add(_txtDay, "text", "geoscape");
  	add(_txtMonth, "text", "geoscape");
  	add(_txtYear, "text", "geoscape");
-@@ -258,6 +387,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -258,6 +389,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtTraining, "trainingIndicator", "geoscape");
  
  	add(_txtDebug, "text", "geoscape");
@@ -13991,7 +14003,7 @@ index 6b4e79d..2fbf736 100644
  	add(_cbxRegion, "button", "geoscape");
  	add(_cbxZone, "button", "geoscape");
  	add(_cbxArea, "button", "geoscape");
-@@ -268,12 +398,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -268,12 +400,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	geobord->setX(_sidebar->getX() - geobord->getWidth() + _sidebar->getWidth());
  	geobord->setY(_sidebar->getY());
  	_sidebar->copy(geobord);
@@ -14019,7 +14031,7 @@ index 6b4e79d..2fbf736 100644
  	_btnIntercept->onMouseClick((ActionHandler)&GeoscapeState::btnInterceptClick);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnInterceptClick, Options::keyGeoIntercept);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnUfoTrackerClick, Options::keyGeoUfoTracker);
-@@ -292,7 +436,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -292,7 +438,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnBases->setGeoscapeButton(true);
  
  	_btnGraphs->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -14028,7 +14040,7 @@ index 6b4e79d..2fbf736 100644
  	_btnGraphs->onMouseClick((ActionHandler)&GeoscapeState::btnGraphsClick);
  	_btnGraphs->onKeyboardPress((ActionHandler)&GeoscapeState::btnGraphsClick, Options::keyGeoGraphs);
  	_btnGraphs->setGeoscapeButton(true);
-@@ -310,7 +454,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -310,7 +456,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnOptions->setGeoscapeButton(true);
  
  	_btnFunding->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -14037,7 +14049,7 @@ index 6b4e79d..2fbf736 100644
  	_btnFunding->onMouseClick((ActionHandler)&GeoscapeState::btnFundingClick);
  	_btnFunding->onKeyboardPress((ActionHandler)&GeoscapeState::btnFundingClick, Options::keyGeoFunding);
  	_btnFunding->setGeoscapeButton(true);
-@@ -387,6 +531,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -387,6 +533,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -14046,7 +14058,7 @@ index 6b4e79d..2fbf736 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -403,6 +549,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -403,6 +551,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_txtMinSep->setText(":");
  
  	_txtWeekday->setAlign(ALIGN_CENTER);
@@ -14099,7 +14111,7 @@ index 6b4e79d..2fbf736 100644
  
  	_txtDay->setAlign(ALIGN_CENTER);
  
-@@ -427,6 +619,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -427,6 +621,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  		_txtSec->setX(_txtSec->getX()-10);
  	}
  
@@ -14145,7 +14157,7 @@ index 6b4e79d..2fbf736 100644
  	_gameTimer->onTimer((StateHandler)&GeoscapeState::timeAdvance);
  	_gameTimer->start();
  
-@@ -512,7 +743,9 @@ void GeoscapeState::blit()
+@@ -512,7 +745,9 @@ void GeoscapeState::blit()
  	State::blit();
  	for (auto* dfs : _dogfights)
  	{
@@ -14156,7 +14168,7 @@ index 6b4e79d..2fbf736 100644
  	}
  }
  
-@@ -705,13 +938,127 @@ void GeoscapeState::handle(Action *action)
+@@ -705,13 +940,127 @@ void GeoscapeState::handle(Action *action)
   * Updates the timer display and resets the palette
   * since it's bound to change on other screens.
   */
@@ -14284,7 +14296,7 @@ index 6b4e79d..2fbf736 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -753,6 +1100,12 @@ void GeoscapeState::init()
+@@ -753,6 +1102,12 @@ void GeoscapeState::init()
  		determineAlienMissions();
  		_game->getSavedGame()->setFunds(_game->getSavedGame()->getFunds() - (_game->getSavedGame()->getBaseMaintenance() - _game->getSavedGame()->getBases()->front()->getPersonnelMaintenance()));
  	}
@@ -14297,7 +14309,7 @@ index 6b4e79d..2fbf736 100644
  }
  
  /**
-@@ -835,6 +1188,10 @@ void GeoscapeState::timeDisplay()
+@@ -835,6 +1190,10 @@ void GeoscapeState::timeDisplay()
  	std::ostringstream ss5;
  	ss5 << _game->getSavedGame()->getTime()->getYear();
  	_txtYear->setText(ss5.str());
@@ -14308,7 +14320,15 @@ index 6b4e79d..2fbf736 100644
  }
  
  /**
-@@ -1233,6 +1590,13 @@ void GeoscapeState::time5Seconds()
+@@ -1047,6 +1406,7 @@ void GeoscapeState::time5Seconds()
+ 					continue;
+ 				}
+ 
++				if (Shipping::reachedWaypoint(_game, ufo)) continue;   // G.I. Joe: a merchant on its lane
+ 				size_t count = _game->getSavedGame()->getMissionSites()->size();
+ 				AlienMission *mission = ufo->getMission();
+ 				bool detected = ufo->getDetected();
+@@ -1233,6 +1593,13 @@ void GeoscapeState::time5Seconds()
  			if (!ufoIsAttacking)
  			{
  				bool returnedToBase = xcraft->think();
@@ -14322,7 +14342,7 @@ index 6b4e79d..2fbf736 100644
  				if (returnedToBase)
  				{
  					_game->getSavedGame()->stopHuntingXcomCraft(xcraft); // hiding in the base is good enough, obviously
-@@ -1454,6 +1818,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +1821,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -14358,7 +14378,7 @@ index 6b4e79d..2fbf736 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +1957,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +1960,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -14389,7 +14409,7 @@ index 6b4e79d..2fbf736 100644
  							}
  						}
  					}
-@@ -1752,7 +2161,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2164,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -14398,7 +14418,7 @@ index 6b4e79d..2fbf736 100644
  								}
  								else
  								{
-@@ -1858,6 +2267,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2270,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -14418,7 +14438,7 @@ index 6b4e79d..2fbf736 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2306,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2309,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -14431,7 +14451,15 @@ index 6b4e79d..2fbf736 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2126,8 +2554,18 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2104,6 +2535,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+ 		detected = maskBitOr(detected, craft->detect(ufo, save, alreadyTracked));
+ 	}
+ 
++	if (Shipping::isMerchant(ufo)) { ufo->setDetected(true); return; }   // G.I. Joe: always shown, never announced
+ 	if (!alreadyTracked)
+ 	{
+ 		if (maskTest(detected, DETECTION_RADAR))
+@@ -2126,8 +2558,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		{
  			ufo->setHyperDetected(true);
  		}
@@ -14447,14 +14475,16 @@ index 6b4e79d..2fbf736 100644
 +		}
  		// TODO: rethink: hunting UFOs stay visible even outside of radar range?
 -		if (!maskTest(detected, DETECTION_RADAR) && !ufo->isHunting())
++		if (Shipping::isMerchant(ufo)) cartelTracked = true;   // G.I. Joe: shipping is public
 +		if (!maskTest(detected, DETECTION_RADAR) && !ufo->isHunting() && !cartelTracked)
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2583,92 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2588,93 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
++	Shipping::think(_game, _globe);   // G.I. Joe: the lanes stay full of merchant ships
 +	// G.I. Joe: the cartel's flights (gijoe_cartel_arc.rul). Once STR_CARTEL_FLIGHT_ROUTE is known the next
 +	// one in the air goes on the map. A Joe craft tailing one (following, not attacking) may be spotted:
 +	// then the flight goes dark, the craft turns for home and the landing finds nothing.
@@ -14544,7 +14574,7 @@ index 6b4e79d..2fbf736 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +2715,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +2721,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -14634,7 +14664,7 @@ index 6b4e79d..2fbf736 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +2960,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +2966,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -14643,7 +14673,7 @@ index 6b4e79d..2fbf736 100644
  			}
  			else
  			{
-@@ -2395,6 +3002,286 @@ void GeoscapeState::time1Day()
+@@ -2395,6 +3008,286 @@ void GeoscapeState::time1Day()
  	Mod *mod = _game->getMod();
  	bool psiStrengthEval = (Options::psiStrengthEval && saveGame->isResearched(mod->getPsiRequirements()));
  
@@ -14930,7 +14960,7 @@ index 6b4e79d..2fbf736 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3331,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3337,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -14953,7 +14983,7 @@ index 6b4e79d..2fbf736 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2861,7 +3757,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +3763,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -14982,7 +15012,7 @@ index 6b4e79d..2fbf736 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3877,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3883,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -15013,7 +15043,7 @@ index 6b4e79d..2fbf736 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4063,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4069,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -15023,7 +15053,7 @@ index 6b4e79d..2fbf736 100644
  }
  
  /**
-@@ -3265,6 +4207,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4213,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -15039,7 +15069,7 @@ index 6b4e79d..2fbf736 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4293,33 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4299,50 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -15051,6 +15081,23 @@ index 6b4e79d..2fbf736 100644
 +			popup(new CraftErrorState(this, tr("STR_SEA_BOAT_CANT_ENGAGE").arg(dfs->getCraft()->getName(_game->getLanguage())), true, nullptr));
 +			dfs->getCraft()->returnToBase();
 +			dfs->endDogfight();
++		}
++		if (!dfs->isMinimized() && !dfs->isAutoResolved() && !dfs->dogfightEnded() && dfs->getUfo() && dfs->getCraft()
++			&& Shipping::isMerchant(dfs->getUfo())
++			&& std::find(_shipFire.begin(), _shipFire.end(), dfs->getUfo()->getUniqueId()) == _shipFire.end())
++		{
++			// G.I. Joe: a merchant ship - stop and search, open fire, or let it go (sea design 7, 12f)
++			if (_shipPending.empty())
++			{
++				_shipPending.push_back(dfs);
++				Ufo *u = dfs->getUfo();
++				const auto &AF = _game->getMod()->getAirFightRules();
++				const bool canFire = AF.on && AF.units.count(u->getRules()->getType()) && AF.units.count(dfs->getCraft()->getRules()->getType());
++				popup(new ShipStopState(this, tr("STR_SHIP_STOP_TITLE").arg(u->getName(_game->getLanguage())),
++					Shipping::describe(_game, u), Shipping::canBoard(dfs->getCraft()), canFire));
++			}
++			++dfsIt;
++			continue;
 +		}
 +		if (!dfs->isMinimized() && !dfs->isAutoResolved() && !dfs->dogfightEnded() && !getenv("OXCE_DOGFIGHT_WINDOW")
 +			&& (std::find(_airPending.begin(), _airPending.end(), dfs) != _airPending.end() || offerAirFight(dfs)))
@@ -15073,7 +15120,7 @@ index 6b4e79d..2fbf736 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4342,189 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4365,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -15113,6 +15160,40 @@ index 6b4e79d..2fbf736 100644
 +	// story fights and 5+ a side are always flown (section 1); no story fight yet, so only the 5+ rule applies
 +	popup(new AirFightChoiceState(this, tr("STR_AF_TITLE"), body.str(), n < 5, odds));
 +	return true;
++}
++
++void GeoscapeState::shipDecision(int choice)
++{
++	if (_shipPending.empty()) return;
++	DogfightState *first = _shipPending.front();
++	_shipPending.clear();
++	if (std::find(_dogfights.begin(), _dogfights.end(), first) == _dogfights.end()) return;
++	Ufo *ufo = first->getUfo();
++	Craft *craft = first->getCraft();
++	if (!ufo || !craft) return;
++	if (choice == 1)
++	{
++		// open fire: the sea fight takes it from here (offerAirFight on the next tick)
++		_shipFire.push_back(ufo->getUniqueId());
++		return;
++	}
++	std::string report;
++	bool boarding = false;
++	if (choice == 0) report = Shipping::search(_game, ufo, craft, &boarding);
++	for (auto *d : _dogfights)
++	{
++		if (d->getUfo() != ufo || d->dogfightEnded()) continue;
++		Craft *c = d->getCraft();
++		d->endDogfight();
++		if (c && !(boarding && c == craft)) c->returnToBase();
++	}
++	if (boarding)
++	{
++		// the boarding team goes aboard (the site Shipping::search put on the spot)
++		auto *sites = _game->getSavedGame()->getMissionSites();
++		if (!sites->empty()) craft->setDestination(sites->back());
++	}
++	if (!report.empty()) popup(new CraftErrorState(this, report, true, nullptr));
 +}
 +
 +void GeoscapeState::autoResolveAirFight()
@@ -15208,6 +15289,34 @@ index 6b4e79d..2fbf736 100644
 +	{
 +		const int dmax = ufo->getRules()->getStats().damageMax;
 +		const std::string ufoName = ufo->getName(_game->getLanguage()); // before it becomes a crash site
++		const auto &SH = mod->getShippingRules();
++		if (Shipping::isMerchant(ufo))
++		{
++			// G.I. Joe: a merchant the Joes fired on (sea design 12d, 12g). An innocent one costs goodwill;
++			// a Cobra one stopped is boarded like any Cobra ship; sunk takes its cargo down with it
++			_shipFire.erase(std::remove(_shipFire.begin(), _shipFire.end(), ufo->getUniqueId()), _shipFire.end());
++			if (res.ufoDisabled && ufo->gjCobra)
++			{
++				bool boarding = false;
++				report << Shipping::search(_game, ufo, nullptr, &boarding);
++				if (boarding && credit) credit->setDestination(_game->getSavedGame()->getMissionSites()->back());
++			}
++			else if (res.ufoDisabled || res.ufoDown)
++			{
++				const bool sunk = !res.ufoDisabled;
++				if (!ufo->gjCobra) Shipping::goodwill(_game->getSavedGame(), ufo, sunk ? -SH.sinkInnocent : -SH.damageInnocent, sunk ? SH.sinkExposure : 0);
++				report << tr(sunk ? (ufo->gjCobra ? "STR_SHIP_SUNK_COBRA" : "STR_SHIP_SUNK_INNOCENT") : "STR_SHIP_DISABLED_INNOCENT").arg(ufoName)
++					.arg(sunk ? SH.sinkInnocent : SH.damageInnocent);
++				ufo->setDetected(false);
++				ufo->setStatus(Ufo::DESTROYED);
++			}
++			else
++			{
++				if (!ufo->gjCobra && res.ufoHealthPct < 100) Shipping::goodwill(_game->getSavedGame(), ufo, -SH.damageInnocent, 0);
++				report << tr(res.ufoThrough ? "STR_AF_UFO_THROUGH" : "STR_AF_UFO_BROKE_OFF").arg(ufoName);
++			}
++		}
++		else
 +		if (res.ufoDisabled)
 +		{
 +			// dead in the water: the fight ends, the boarding begins (sea design section 7) - a deck mission
@@ -15263,7 +15372,7 @@ index 6b4e79d..2fbf736 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +5808,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +5893,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -15278,7 +15387,7 @@ index 6b4e79d..2fbf736 100644
  
  	if (missionRace.empty())
 diff --git a/src/Geoscape/GeoscapeState.h b/src/Geoscape/GeoscapeState.h
-index 5eaf857..ee7ef92 100644
+index 5eaf857..da6217d 100644
 --- a/src/Geoscape/GeoscapeState.h
 +++ b/src/Geoscape/GeoscapeState.h
 @@ -54,6 +54,14 @@ private:
@@ -15296,7 +15405,7 @@ index 5eaf857..ee7ef92 100644
  	Timer *_gameTimer, *_zoomInEffectTimer, *_zoomOutEffectTimer, *_dogfightStartTimer, *_dogfightTimer;
  	bool _pause, _zoomInEffectDone, _zoomOutEffectDone;
  	Text *_txtDebug;
-@@ -75,6 +83,25 @@ private:
+@@ -75,6 +83,29 @@ private:
  	void updateZoneInfo();
  	void cbxCountryChange(Action *action);
  
@@ -15314,15 +15423,19 @@ index 5eaf857..ee7ef92 100644
 +	void startAirFight(bool autoPlay = false);
 +	/// AUTO-RESOLVE was pressed (the stand-in until the headless battle)
 +	void autoResolveAirFight();
++	/// G.I. Joe stop and search: 0 search, 1 open fire, 2 let it go (ShipStopState)
++	void shipDecision(int choice);
 +	/// the battle is over: damage, crash site, the report
 +	void finishAirFight(const AirFightResult &res);
 +private:
++	std::vector<DogfightState*> _shipPending;  ///< G.I. Joe: interceptions of a merchant waiting on the stop screen
++	std::vector<int> _shipFire;                ///< merchants the Joes chose to fire on (their unique ids)
 +	std::vector<DogfightState*> _airPending;   ///< the interceptions waiting on FIGHT / AUTO-RESOLVE, or in battle
 +	bool offerAirFight(DogfightState *dfs);
  public:
  	/// Creates the Geoscape state.
  	GeoscapeState();
-@@ -163,6 +190,8 @@ public:
+@@ -163,6 +194,8 @@ public:
  	void btnZoomInRightClick(Action *action);
  	/// Handler for left-clicking the Zoom Out icon.
  	void btnZoomOutLeftClick(Action *action);
@@ -15332,18 +15445,19 @@ index 5eaf857..ee7ef92 100644
  	void btnZoomOutRightClick(Action *action);
  	/// Blit method - renders the state and dogfights.
 diff --git a/src/Geoscape/Globe.cpp b/src/Geoscape/Globe.cpp
-index 5b17165..c2b6945 100644
+index 5b17165..01ce586 100644
 --- a/src/Geoscape/Globe.cpp
 +++ b/src/Geoscape/Globe.cpp
-@@ -17,6 +17,7 @@
+@@ -17,6 +17,8 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "Globe.h"
++#include "Shipping.h"
 +#include "../Engine/HiUI.h"
  #include "../fmath.h"
  #include "../Engine/Action.h"
  #include "../Engine/SurfaceSet.h"
-@@ -61,6 +62,11 @@ const double Globe::ROTATE_LONGITUDE = 0.10;
+@@ -61,6 +63,11 @@ const double Globe::ROTATE_LONGITUDE = 0.10;
  const double Globe::ROTATE_LATITUDE = 0.06;
  
  Uint8 Globe::OCEAN_COLOR;
@@ -15355,7 +15469,7 @@ index 5b17165..c2b6945 100644
  bool Globe::OCEAN_SHADING;
  Uint8 Globe::COUNTRY_LABEL_COLOR;
  Uint8 Globe::LINE_COLOR;
-@@ -366,6 +372,7 @@ Globe::Globe(Game* game, int cenX, int cenY, int width, int height, int x, int y
+@@ -366,6 +373,7 @@ Globe::Globe(Game* game, int cenX, int cenY, int width, int height, int x, int y
   */
  Globe::~Globe()
  {
@@ -15363,7 +15477,7 @@ index 5b17165..c2b6945 100644
  	delete _blinkTimer;
  	delete _rotTimer;
  	delete _countries;
-@@ -411,6 +418,20 @@ void Globe::polarToCart(double lon, double lat, double *x, double *y) const
+@@ -411,6 +419,20 @@ void Globe::polarToCart(double lon, double lat, double *x, double *y) const
   * @param lon Pointer to the output longitude.
   * @param lat Pointer to the output latitude.
   */
@@ -15384,7 +15498,7 @@ index 5b17165..c2b6945 100644
  void Globe::cartToPolar(Sint16 x, Sint16 y, double *lon, double *lat) const
  {
  	// Orthographic projection
-@@ -966,12 +987,73 @@ void Globe::draw()
+@@ -966,12 +988,73 @@ void Globe::draw()
  	}
  	Surface::draw();
  	drawOcean();
@@ -15459,7 +15573,7 @@ index 5b17165..c2b6945 100644
  }
  
  
-@@ -1092,6 +1174,26 @@ void Globe::drawShadow()
+@@ -1092,6 +1175,26 @@ void Globe::drawShadow()
  }
  
  
@@ -15486,7 +15600,7 @@ index 5b17165..c2b6945 100644
  void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double x2, double y2, int shade)
  {
  	if (_clipper->LineClip(&x1,&y1,&x2,&y2) != 1) return; //empty line
-@@ -1161,9 +1263,82 @@ void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double
+@@ -1161,9 +1264,82 @@ void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double
  /**
   * Draws the radar ranges of player bases, player craft, alien bases and UFO hunter-killers on the globe.
   */
@@ -15569,7 +15683,7 @@ index 5b17165..c2b6945 100644
  
  	if (!Options::globeRadarLines)
  		return;
-@@ -1296,7 +1471,12 @@ void Globe::drawGlobeCircle(double lat, double lon, double radius, int segments,
+@@ -1296,7 +1472,12 @@ void Globe::drawGlobeCircle(double lat, double lon, double radius, int segments,
  			continue;
  		}
  		if (!pointBack(lon1,lat1) && i % frac == 0)
@@ -15583,7 +15697,7 @@ index 5b17165..c2b6945 100644
  		x2=x; y2=y;
  		i++;
  	}
-@@ -1346,6 +1526,15 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
+@@ -1346,6 +1527,15 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
  
  		if (!pointBack(ln2, lt2)&&!pointBack(ln1, lt1))
  		{
@@ -15599,7 +15713,7 @@ index 5b17165..c2b6945 100644
  			polarToCart(ln1,lt1,&x1,&y1);
  			polarToCart(ln2,lt2,&x2,&y2);
  			surface->drawLine(x1, y1, x2, y2, color);
-@@ -1358,9 +1547,153 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
+@@ -1358,9 +1548,153 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
   * Draws the details of the countries on the globe,
   * based on the current zoom level.
   */
@@ -15753,7 +15867,7 @@ index 5b17165..c2b6945 100644
  
  	if (!Options::globeDetail)
  		return;
-@@ -1380,6 +1713,15 @@ void Globe::drawDetail()
+@@ -1380,6 +1714,15 @@ void Globe::drawDetail()
  				if (pointBack(polyline->getLongitude(j), polyline->getLatitude(j)) || pointBack(polyline->getLongitude(j + 1), polyline->getLatitude(j + 1)))
  					continue;
  
@@ -15769,7 +15883,7 @@ index 5b17165..c2b6945 100644
  				// Convert coordinates
  				polarToCart(polyline->getLongitude(j), polyline->getLatitude(j), &x[0], &y[0]);
  				polarToCart(polyline->getLongitude(j + 1), polyline->getLatitude(j + 1), &x[1], &y[1]);
-@@ -1412,6 +1754,11 @@ void Globe::drawDetail()
+@@ -1412,6 +1755,11 @@ void Globe::drawDetail()
  
  			label->setX(x - 75);
  			label->setY(y);
@@ -15781,7 +15895,7 @@ index 5b17165..c2b6945 100644
  			label->setText(_game->getLanguage()->getString(country->getRules()->getType()));
  			label->setColor(COUNTRY_LABEL_COLOR);
  			if (country->getRules()->getLabelColor() > 0)
-@@ -1446,6 +1793,11 @@ void Globe::drawDetail()
+@@ -1446,6 +1794,11 @@ void Globe::drawDetail()
  
  				label->setX(x - 60);
  				label->setY(y);
@@ -15793,7 +15907,7 @@ index 5b17165..c2b6945 100644
  				label->setText(_game->getLanguage()->getString(rule->getType()));
  				label->setColor(COUNTRY_LABEL_COLOR);
  				if (rule->getLabelColor() > 0)
-@@ -1472,7 +1824,7 @@ void Globe::drawDetail()
+@@ -1472,7 +1825,7 @@ void Globe::drawDetail()
  		{
  			for (auto* city : *region->getRules()->getCities())
  			{
@@ -15802,7 +15916,7 @@ index 5b17165..c2b6945 100644
  
  				// Don't draw if city is facing back
  				if (pointBack(city->getLongitude(), city->getLatitude()))
-@@ -1480,6 +1832,14 @@ void Globe::drawDetail()
+@@ -1480,6 +1833,14 @@ void Globe::drawDetail()
  
  				// Convert coordinates
  				polarToCart(city->getLongitude(), city->getLatitude(), &x, &y);
@@ -15817,7 +15931,7 @@ index 5b17165..c2b6945 100644
  
  				label->setX(x - 50);
  				label->setY(y + 2);
-@@ -1495,11 +1855,46 @@ void Globe::drawDetail()
+@@ -1495,11 +1856,46 @@ void Globe::drawDetail()
  			polarToCart(xbase->getLongitude(), xbase->getLatitude(), &x, &y);
  			label->setX(x - 50);
  			label->setY(y + 2);
@@ -15864,7 +15978,7 @@ index 5b17165..c2b6945 100644
  		delete label;
  	}
  
-@@ -1632,7 +2027,10 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
+@@ -1632,7 +2028,10 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
  
  		if (!pointBack(p1.lon, p1.lat) && !pointBack(p2.lon, p2.lat))
  		{
@@ -15876,7 +15990,7 @@ index 5b17165..c2b6945 100644
  		}
  
  		p1 = p2;
-@@ -1641,6 +2039,94 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
+@@ -1641,6 +2040,94 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
  	}
  }
  
@@ -15971,7 +16085,7 @@ index 5b17165..c2b6945 100644
  /**
   * Draws the flight paths of player craft (and hunting UFOs) flying on the globe.
   */
-@@ -1756,6 +2242,37 @@ void Globe::drawTarget(Target *target, Surface *surface)
+@@ -1756,6 +2243,37 @@ void Globe::drawTarget(Target *target, Surface *surface)
  void Globe::drawMarkers()
  {
  	_markers->clear();
@@ -15998,7 +16112,7 @@ index 5b17165..c2b6945 100644
 +		for (auto* ufo : *_game->getSavedGame()->getUfos())
 +		{
 +			if (ufo->getStatus() == Ufo::IGNORE_ME) continue;
-+			pin(ufo, HiUI::PIN_CONTACT);
++			pin(ufo, Shipping::isMerchant(ufo) ? HiUI::PIN_SHIP : HiUI::PIN_CONTACT);
 +		}
 +		for (auto* xbase : *_game->getSavedGame()->getBases())
 +			for (auto* xcraft : *xbase->getCrafts())
@@ -16009,7 +16123,7 @@ index 5b17165..c2b6945 100644
  	_markers->lock();
  	// Draw the base markers
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -1805,7 +2322,19 @@ void Globe::drawMarkers()
+@@ -1805,7 +2323,19 @@ void Globe::drawMarkers()
   */
  void Globe::blit(SDL_Surface *surface)
  {
@@ -16029,7 +16143,7 @@ index 5b17165..c2b6945 100644
  	_radars->blit(surface);
  	_countries->blit(surface);
  	_markers->blit(surface);
-@@ -2009,7 +2538,13 @@ void Globe::mouseClick(Action *action, State *state)
+@@ -2009,7 +2539,13 @@ void Globe::mouseClick(Action *action, State *state)
  	if (lat == lat && lon == lon)
  	{
  		InteractiveSurface::mouseClick(action, state);
@@ -17746,6 +17860,537 @@ index 0000000..dad2693
 +}
 +
 +}
+diff --git a/src/Geoscape/ShipStopState.cpp b/src/Geoscape/ShipStopState.cpp
+new file mode 100644
+index 0000000..d14a921
+--- /dev/null
++++ b/src/Geoscape/ShipStopState.cpp
+@@ -0,0 +1,71 @@
++/*
++ * G.I. Joe: stop and search. See ShipStopState.h.
++ */
++#include "ShipStopState.h"
++#include "../Engine/Game.h"
++#include "../Engine/Options.h"
++#include "../Interface/TextButton.h"
++#include "../Interface/Window.h"
++#include "../Interface/Text.h"
++#include "GeoscapeState.h"
++
++namespace OpenXcom
++{
++
++ShipStopState::ShipStopState(GeoscapeState *state, const std::string &title, const std::string &body, bool canSearch, bool canFire) : _state(state)
++{
++	_screen = false;
++	_window = new Window(this, 256, 160, 32, 20, POPUP_BOTH);
++	_txtTitle = new Text(236, 17, 42, 30);
++	_txtBody = new Text(236, 90, 42, 50);
++	_btnSearch = new TextButton(76, 18, 42, 150);
++	_btnFire = new TextButton(76, 18, 122, 150);
++	_btnGo = new TextButton(76, 18, 202, 150);
++
++	setInterface("craftError");
++	add(_window, "window", "craftError");
++	add(_txtTitle, "text1", "craftError");
++	add(_txtBody, "text1", "craftError");
++	add(_btnSearch, "button", "craftError");
++	add(_btnFire, "button", "craftError");
++	add(_btnGo, "button", "craftError");
++	centerAllSurfaces();
++	setWindowBackground(_window, "craftError");
++
++	_txtTitle->setAlign(ALIGN_CENTER);
++	_txtTitle->setBig();
++	_txtTitle->setText(title);
++	_txtBody->setAlign(ALIGN_CENTER);
++	_txtBody->setWordWrap(true);
++	_txtBody->setText(body);
++
++	_btnSearch->setText(tr("STR_SHIP_STOP_SEARCH"));
++	_btnSearch->onMouseClick((ActionHandler)&ShipStopState::btnSearchClick);
++	_btnSearch->setVisible(canSearch);
++	_btnFire->setText(tr("STR_SHIP_OPEN_FIRE"));
++	_btnFire->onMouseClick((ActionHandler)&ShipStopState::btnFireClick);
++	_btnFire->setVisible(canFire);
++	_btnGo->setText(tr("STR_SHIP_LET_GO"));
++	_btnGo->onMouseClick((ActionHandler)&ShipStopState::btnGoClick);
++	_btnGo->onKeyboardPress((ActionHandler)&ShipStopState::btnGoClick, Options::keyCancel);
++}
++
++void ShipStopState::btnSearchClick(Action *)
++{
++	_game->popState();
++	_state->shipDecision(0);
++}
++
++void ShipStopState::btnFireClick(Action *)
++{
++	_game->popState();
++	_state->shipDecision(1);
++}
++
++void ShipStopState::btnGoClick(Action *)
++{
++	_game->popState();
++	_state->shipDecision(2);
++}
++
++}
+diff --git a/src/Geoscape/ShipStopState.h b/src/Geoscape/ShipStopState.h
+new file mode 100644
+index 0000000..ffe2f0e
+--- /dev/null
++++ b/src/Geoscape/ShipStopState.h
+@@ -0,0 +1,32 @@
++#pragma once
++/*
++ * G.I. Joe: a Joe craft has reached a merchant ship (SEA_BATTLES_DESIGN_v1 sections 7 and 12f).
++ * STOP AND SEARCH (needs someone aboard to board), OPEN FIRE (a sea fight), or LET IT GO.
++ */
++#include <string>
++#include "../Engine/State.h"
++
++namespace OpenXcom
++{
++
++class TextButton;
++class Window;
++class Text;
++class GeoscapeState;
++
++class ShipStopState : public State
++{
++private:
++	GeoscapeState *_state;
++	TextButton *_btnSearch, *_btnFire, *_btnGo;
++	Window *_window;
++	Text *_txtTitle, *_txtBody;
++public:
++	ShipStopState(GeoscapeState *state, const std::string &title, const std::string &body, bool canSearch, bool canFire);
++	~ShipStopState() = default;
++	void btnSearchClick(Action *action);
++	void btnFireClick(Action *action);
++	void btnGoClick(Action *action);
++};
++
++}
+diff --git a/src/Geoscape/Shipping.cpp b/src/Geoscape/Shipping.cpp
+new file mode 100644
+index 0000000..3391c8d
+--- /dev/null
++++ b/src/Geoscape/Shipping.cpp
+@@ -0,0 +1,362 @@
++/*
++ * G.I. Joe: civilian shipping on the world map. See Shipping.h.
++ */
++#include "Shipping.h"
++#include <algorithm>
++#include <cmath>
++#include <sstream>
++#include "Globe.h"
++#include "../Engine/Game.h"
++#include "../Engine/Language.h"
++#include "../Engine/Logger.h"
++#include "../Engine/RNG.h"
++#include "../fmath.h"
++#include "../Mod/Mod.h"
++#include "../Mod/RuleAlienMission.h"
++#include "../Mod/RuleCountry.h"
++#include "../Mod/RuleRegion.h"
++#include "../Mod/RuleCobraSite.h"
++#include "../Mod/UfoTrajectory.h"
++#include "../Mod/AlienDeployment.h"
++#include "../Savegame/SavedGame.h"
++#include "../Savegame/AlienMission.h"
++#include "../Savegame/AlienBase.h"
++#include "../Savegame/Base.h"
++#include "../Mod/RuleCraft.h"
++#include <cstdlib>
++#include <cstring>
++#include "../Savegame/CobraEconomy.h"
++#include "../Savegame/Country.h"
++#include "../Savegame/Craft.h"
++#include "../Savegame/MissionSite.h"
++#include "../Savegame/Region.h"
++#include "../Savegame/Ufo.h"
++#include "../Savegame/Waypoint.h"
++
++namespace OpenXcom
++{
++
++namespace Shipping
++{
++
++namespace
++{
++	const double DEG = M_PI / 180.0;
++
++	/// a lane point (lat, lon in degrees, north positive) to the engine's (lon, lat) in radians
++	void toEngine(std::pair<double, double> p, double &lon, double &lat)
++	{
++		double l = p.second;
++		while (l < 0) l += 360.0;
++		while (l >= 360.0) l -= 360.0;
++		lon = l * DEG;
++		lat = -p.first * DEG;
++	}
++
++	/// the point a fraction f of the way from a to b (degrees; the short way round in longitude)
++	std::pair<double, double> lerp(std::pair<double, double> a, std::pair<double, double> b, double f)
++	{
++		double dl = b.second - a.second;
++		while (dl > 180.0) dl -= 360.0;
++		while (dl < -180.0) dl += 360.0;
++		return { a.first + (b.first - a.first) * f, a.second + dl * f };
++	}
++
++	int pointCount(const Mod::ShipLane &lane) { return (int)lane.pts.size(); }
++
++	/// the lane point index for a leg end, in the ship's direction of travel
++	std::pair<double, double> point(const Mod::ShipLane &lane, int i, bool rev)
++	{
++		const int n = pointCount(lane);
++		return lane.pts[rev ? n - 1 - i : i];
++	}
++
++	void head(Ufo *ufo, const Mod::ShipLane &lane)
++	{
++		double lon, lat;
++		toEngine(point(lane, ufo->gjLeg + 1, ufo->gjRev), lon, lat);
++		Waypoint *wp = new Waypoint();
++		wp->setLongitude(lon);
++		wp->setLatitude(lat);
++		ufo->setDestination(wp);
++		ufo->setSpeed(ufo->getCraftStats().speedMax);
++	}
++
++	/// Cobra's monthly upkeep for all its sites (the "well paid" yardstick, 12h.4)
++	int upkeep(const Game *game)
++	{
++		int sum = 0;
++		for (const auto *ab : *game->getSavedGame()->getAlienBases())
++		{
++			if (ab->getSiteType().empty()) continue;
++			if (const RuleCobraSite *r = game->getMod()->getCobraSite(ab->getSiteType())) sum += r->getUpkeepFunds();
++		}
++		return sum;
++	}
++
++	AlienMission *shippingMission(Game *game, Globe *)
++	{
++		const Mod *mod = game->getMod();
++		const auto &SH = mod->getShippingRules();
++		SavedGame *save = game->getSavedGame();
++		for (auto *m : save->getAlienMissions())
++			if (m->getRules().getType() == SH.mission) return m;
++		const RuleAlienMission *rule = mod->getAlienMission(SH.mission);
++		if (!rule || mod->getRegionsList().empty()) return nullptr;
++		AlienMission *m = new AlienMission(*rule);
++		m->setRace(rule->generateRace(0));
++		m->setId(save->getId("ALIEN_MISSIONS"));
++		m->setRegion(mod->getRegionsList().front(), *mod);
++		save->getAlienMissions().push_back(m);
++		return m;
++	}
++
++	std::string countryType(const SavedGame *save, const std::string &type)
++	{
++		if (type.empty()) return "";
++		for (const auto *c : *const_cast<SavedGame*>(save)->getCountries())
++			if (c->getRules()->getType() == type) return type;
++		return "";
++	}
++
++	/// a new merchant on a random lane (weighted by the lane's ships); anywhere along it when the sea is
++	/// being filled for the first time, at its home port otherwise
++	void spawn(Game *game, AlienMission *mission, bool anywhere)
++	{
++		const Mod *mod = game->getMod();
++		const auto &SH = mod->getShippingRules();
++		SavedGame *save = game->getSavedGame();
++		const RuleUfo *rule = mod->getUfo(SH.ufo);
++		const UfoTrajectory *traj = mod->getUfoTrajectory(SH.trajectory);
++		if (!rule || !traj) return;
++		int total = 0;
++		for (const auto &l : SH.lanes) total += std::max(0, l.ships);
++		if (total <= 0) return;
++		int pick = RNG::generate(0, total - 1), li = 0;
++		for (; li < (int)SH.lanes.size(); ++li)
++		{
++			pick -= std::max(0, SH.lanes[li].ships);
++			if (pick < 0) break;
++		}
++		if (li >= (int)SH.lanes.size()) return;
++		const auto &lane = SH.lanes[li];
++		Ufo *ufo = new Ufo(rule, save->getId("STR_UFO_UNIQUE"));
++		ufo->setMissionInfo(mission, traj);
++		ufo->setAltitude("STR_VERY_LOW");
++		ufo->gjLane = li;
++		ufo->gjRev = RNG::percent(50);
++		ufo->gjLeg = 0;
++		std::pair<double, double> at = point(lane, 0, ufo->gjRev);
++		if (anywhere)
++		{
++			ufo->gjLeg = RNG::generate(0, pointCount(lane) - 2);
++			at = lerp(point(lane, ufo->gjLeg, ufo->gjRev), point(lane, ufo->gjLeg + 1, ufo->gjRev), RNG::generate(0.0, 1.0));
++		}
++		double lon, lat;
++		toEngine(at, lon, lat);
++		ufo->setLongitude(lon);
++		ufo->setLatitude(lat);
++		ufo->gjFlag = countryType(save, RNG::percent(50) ? lane.fromFlag : lane.toFlag);
++		if (!SH.names.empty()) ufo->gjName = "MV " + SH.names[RNG::generate(0, (int)SH.names.size() - 1)];
++		ufo->setId(save->getId("STR_UFO"));
++
++		// Cobra's cargo (12g, 12h): up to the lane's share when Cobra is well paid, none when it is broke.
++		// A voyage is paid for when it sails, and needs its cargo stockpiled where it sails from.
++		CobraEconomy &eco = save->getCobraEconomy();
++		const int funds = eco.getTotalFunds();
++		const int wellPaid = std::max(1, upkeep(game) * std::max(1, mod->getCobraWellPaidUpkeep()));
++		const double share = lane.cobraShare * std::min(1.0, std::max(0, funds) / (double)wellPaid);
++		if (share > 0 && RNG::generate(0.0, 1.0) < share)
++		{
++			const Region *reg = save->locateRegionQuiet(lon, lat);
++			const std::string region = reg ? reg->getRules()->getType() : "";
++			int w[3] = {0, 0, 0}, wsum = 0;
++			for (int i = 0; i < 3 && i < (int)SH.tierWeights.size(); ++i) { w[i] = SH.tierWeights[i]; wsum += w[i]; }
++			int tier = 0;
++			if (wsum > 0)
++			{
++				int r = RNG::generate(0, wsum - 1);
++				while (tier < 2 && r >= w[tier]) { r -= w[tier]; ++tier; }
++			}
++			const int ownLine = RNG::percent(SH.ownLineShare) ? 1 : 2;
++			const int needMat[3] = { SH.materielLow, SH.materielMedium, SH.materielHigh };
++			const int cost = (ownLine == 1 ? SH.costOwnLine : SH.costContainers) + (tier == 1 ? SH.costMedium : tier == 2 ? SH.costHigh : 0);
++			// rule 2: keep a month of upkeep in hand; rule 3: no cargo, no voyage (money cargo, Medium, needs the funds)
++			const bool matOk = tier == 1 || region.empty() || eco.getMateriel(region) >= needMat[tier];
++			if (funds - cost >= upkeep(game) && matOk)
++			{
++				eco.spendFunds(region, cost);
++				if (tier != 1 && !region.empty()) eco.addMateriel(region, -needMat[tier]);
++				ufo->gjCobra = ownLine;
++				ufo->gjCargo = tier;
++				ufo->gjRegion = region;
++				Log(LOG_INFO) << "[shipping] Cobra " << (ownLine == 1 ? "own-line freighter" : "containers") << " tier " << tier
++					<< " on " << lane.id << " (paid " << cost << ", funds " << funds << ")";
++			}
++		}
++		ufo->setDetected(true);   // shipping is public: every ship shows, nothing pops up
++		head(ufo, lane);
++		save->getUfos()->push_back(ufo);
++	}
++}
++
++/// rig test (OXCE_SHIP_TEST=<0 innocent|1 own line|2 containers>[,cargo]): the first merchant is set
++/// a degree from the first base, made that kind, and the first armed craft with soldiers is sent at it
++static void testHook(Game *game)
++{
++	static bool done = false;
++	const char *env = getenv("OXCE_SHIP_TEST");
++	if (!env || done) return;
++	SavedGame *save = game->getSavedGame();
++	if (save->getBases()->empty()) return;
++	Base *b = save->getBases()->front();
++	Craft *craft = nullptr;
++	for (auto *c : *b->getCrafts()) if (c->getStatus() == "STR_READY" && c->getNumTotalSoldiers() > 0) { craft = c; break; }
++	if (!craft) for (auto *c : *b->getCrafts()) if (c->getStatus() == "STR_READY") { craft = c; break; }
++	for (auto *u : *save->getUfos())
++	{
++		if (!isMerchant(u)) continue;
++		done = true;
++		u->gjCobra = atoi(env);
++		u->gjCargo = strchr(env, ',') ? atoi(strchr(env, ',') + 1) : 1;
++		u->setLongitude(b->getLongitude() + 0.017);
++		u->setLatitude(b->getLatitude() + 0.017);
++		if (craft) { craft->setDestination(u); craft->setStatus("STR_OUT"); }
++		Log(LOG_INFO) << "[shipping] test: " << u->getName(game->getLanguage()) << " kind " << u->gjCobra << " cargo " << u->gjCargo
++			<< ", craft " << (craft ? craft->getRules()->getType() : std::string("none"));
++		break;
++	}
++}
++
++bool isMerchant(const Ufo *ufo)
++{
++	return ufo && ufo->gjLane >= 0;
++}
++
++void think(Game *game, Globe *globe)
++{
++	const auto &SH = game->getMod()->getShippingRules();
++	if (!SH.on || SH.lanes.empty() || game->getSavedGame()->getMonthsPassed() < 0) return;
++	int n = 0;
++	for (auto *u : *game->getSavedGame()->getUfos())
++		if (isMerchant(u) && u->getStatus() != Ufo::DESTROYED) ++n;
++	if (n >= SH.total) return;
++	AlienMission *m = shippingMission(game, globe);
++	if (!m) return;
++	const bool fill = n < SH.total / 2;  // a new game (or an old save): fill the sea at once
++	const int add = fill ? SH.total - n : 1 + (SH.total - n) / 8;
++	for (int i = 0; i < add; ++i) spawn(game, m, fill);
++	testHook(game);
++}
++
++bool reachedWaypoint(Game *game, Ufo *ufo)
++{
++	if (!isMerchant(ufo)) return false;
++	const auto &SH = game->getMod()->getShippingRules();
++	if (ufo->gjLane >= (int)SH.lanes.size()) { ufo->setDetected(false); ufo->setStatus(Ufo::DESTROYED); return true; }
++	const auto &lane = SH.lanes[ufo->gjLane];
++	ufo->gjLeg++;
++	if (ufo->gjLeg + 1 < pointCount(lane))
++	{
++		head(ufo, lane);
++		return true;
++	}
++	// into port: a Cobra cargo is delivered (12g)
++	if (ufo->gjCobra)
++	{
++		CobraEconomy &eco = game->getSavedGame()->getCobraEconomy();
++		// it lands where the ship docks; the region that paid for it if the port is in none
++		const Region *there = game->getSavedGame()->locateRegionQuiet(ufo->getLongitude(), ufo->getLatitude());
++		if (there) ufo->gjRegion = there->getRules()->getType();
++		const int t = std::min(2, std::max(0, ufo->gjCargo));
++		const int f = t < (int)SH.deliverFunds.size() ? SH.deliverFunds[t] : 0;
++		if (f > 0 && !ufo->gjRegion.empty()) eco.addFunds(ufo->gjRegion, f);
++		if (t == 2 && !ufo->gjRegion.empty()) eco.addMateriel(ufo->gjRegion, SH.deliverMaterielHigh);
++		Log(LOG_INFO) << "[shipping] Cobra cargo delivered on " << lane.id << " (tier " << t << ")";
++	}
++	ufo->setDetected(false);
++	ufo->setStatus(Ufo::DESTROYED);
++	return true;
++}
++
++Country *flag(SavedGame *save, const Ufo *ufo)
++{
++	if (!ufo || ufo->gjFlag.empty()) return nullptr;
++	for (auto *c : *save->getCountries())
++		if (c->getRules()->getType() == ufo->gjFlag) return c;
++	return nullptr;
++}
++
++void goodwill(SavedGame *save, const Ufo *ufo, int delta, int exposure)
++{
++	if (Country *c = flag(save, ufo)) c->setGoodwill(c->getGoodwill() + delta);
++	if (exposure) save->setExposure(save->getExposure() + exposure);
++}
++
++std::string describe(Game *game, const Ufo *ufo)
++{
++	const auto &SH = game->getMod()->getShippingRules();
++	Language *lang = game->getLanguage();
++	std::ostringstream s;
++	if (ufo->gjLane >= 0 && ufo->gjLane < (int)SH.lanes.size())
++	{
++		const auto &lane = SH.lanes[ufo->gjLane];
++		s << lang->getString("STR_SHIP_BOUND").arg(ufo->gjRev ? lane.fromName : lane.toName).arg(ufo->gjRev ? lane.toName : lane.fromName) << "\n";
++	}
++	s << lang->getString("STR_SHIP_FLAG").arg(ufo->gjFlag.empty() ? lang->getString("STR_SHIP_FLAG_NONE") : lang->getString(ufo->gjFlag)) << "\n";
++	s << lang->getString("STR_SHIP_INTEL_UNKNOWN");
++	return s.str();
++}
++
++bool canBoard(const Craft *craft)
++{
++	// a team to put aboard, and a craft that can put them there: a boat or helicopter that comes alongside or
++	// lands on her (sea design 12f.3). A Devilfish's one seat is its pilot.
++	return craft && craft->getNumTotalSoldiers() > 0 && craft->getRules()->getAllowLanding();
++}
++
++std::string search(Game *game, Ufo *ufo, Craft *craft, bool *boarding)
++{
++	const Mod *mod = game->getMod();
++	const auto &SH = mod->getShippingRules();
++	SavedGame *save = game->getSavedGame();
++	Language *lang = game->getLanguage();
++	*boarding = false;
++	const std::string name = ufo->getName(lang);
++	if (!ufo->gjCobra)
++	{
++		// innocent: it stops, the hold is searched, nothing is found, and its flag country minds (12g)
++		goodwill(save, ufo, -SH.searchInnocent, 0);
++		return lang->getString("STR_SHIP_SEARCH_NOTHING").arg(name).arg(SH.searchInnocent);
++	}
++	if (ufo->gjCobra == 2 && ufo->gjCargo == 0)
++	{
++		// cheap cargo travels alone: the containers are opened and seized with nobody to fight (12b)
++		ufo->gjCobra = 0;
++		return lang->getString("STR_SHIP_SEARCH_SEIZED").arg(name);
++	}
++	// Cobra's own line bluffs; containers with minders stop (the crew doesn't know): either way the
++	// boarding is played on the deck (7.3)
++	const std::string depType = ufo->gjCobra == 1 ? SH.boardOwnLine : SH.boardContainers;
++	const RuleAlienMission *mrule = mod->getAlienMission(SH.boardMission);
++	AlienDeployment *dep = mod->getDeployment(depType + (ufo->gjCargo == 2 ? "_HIGH" : ""));
++	if (!dep) dep = mod->getDeployment(depType);
++	if (!mrule || !dep) return lang->getString("STR_SHIP_SEARCH_NOTHING").arg(name).arg(0);
++	MissionSite *ms = new MissionSite(mrule, dep, nullptr);
++	ms->setLongitude(ufo->getLongitude());
++	ms->setLatitude(ufo->getLatitude());
++	ms->setId(save->getId(dep->getMarkerName()));
++	ms->setSecondsRemaining(12 * 3600);
++	ms->setAlienRace(mrule->generateRace(0));
++	ms->setDetected(true);
++	save->getMissionSites()->push_back(ms);
++	if (craft) craft->setDestination(ms);
++	*boarding = true;
++	ufo->setDetected(false);
++	ufo->setStatus(Ufo::DESTROYED);
++	return lang->getString(ufo->gjCobra == 1 ? "STR_SHIP_SEARCH_BLUFF" : "STR_SHIP_SEARCH_MINDERS").arg(name);
++}
++
++}
++
++}
+diff --git a/src/Geoscape/Shipping.h b/src/Geoscape/Shipping.h
+new file mode 100644
+index 0000000..08cfa94
+--- /dev/null
++++ b/src/Geoscape/Shipping.h
+@@ -0,0 +1,42 @@
++#pragma once
++/*
++ * G.I. Joe: civilian shipping on the world map (SEA_BATTLES_DESIGN_v1 sections 7, 9, 12).
++ * Merchant ships sail STORY's lanes all the time, from Day 1. Up to a lane's cobraShare of them carry
++ * Cobra's cargo, scaled by Cobra's money (12h): its own line, or hidden containers on an honest ship.
++ * A Joe craft that reaches one may stop and search it, open fire, or let it go.
++ */
++#include <string>
++
++namespace OpenXcom
++{
++
++class Game;
++class Globe;
++class Ufo;
++class Craft;
++class Country;
++class SavedGame;
++class Language;
++
++namespace Shipping
++{
++	/// a merchant ship on a lane
++	bool isMerchant(const Ufo *ufo);
++	/// every game hour: keep the lanes full
++	void think(Game *game, Globe *globe);
++	/// a merchant reached a lane point: on to the next, or into port. True if it was a merchant.
++	bool reachedWaypoint(Game *game, Ufo *ufo);
++	/// the flag country of a merchant (may be null)
++	Country *flag(SavedGame *save, const Ufo *ufo);
++	/// goodwill with a merchant's flag country moves by delta (and the exposure meter, if any)
++	void goodwill(SavedGame *save, const Ufo *ufo, int delta, int exposure);
++	/// what the stop screen says about the ship
++	std::string describe(Game *game, const Ufo *ufo);
++	/// does a craft carry anyone who could board
++	bool canBoard(const Craft *craft);
++	/// the ship stops and is searched: puts a boarding mission on the spot for a Cobra ship and returns
++	/// the report; an innocent ship is searched on the spot, costs goodwill and sails on
++	std::string search(Game *game, Ufo *ufo, Craft *craft, bool *boarding);
++}
++
++}
 diff --git a/src/Interface/ArrowButton.h b/src/Interface/ArrowButton.h
 index 4b88688..f5c9b71 100644
 --- a/src/Interface/ArrowButton.h
@@ -18180,7 +18825,7 @@ index 665d922..160915e 100644
  	bool _debugInVisualStudio;
  	std::string _newVersion;
 diff --git a/src/Menu/NewBattleState.cpp b/src/Menu/NewBattleState.cpp
-index 52b6371..25a3287 100644
+index 52b6371..3492117 100644
 --- a/src/Menu/NewBattleState.cpp
 +++ b/src/Menu/NewBattleState.cpp
 @@ -39,6 +39,10 @@
@@ -18194,7 +18839,15 @@ index 52b6371..25a3287 100644
  #include "../Battlescape/BattlescapeGenerator.h"
  #include "../Battlescape/BriefingState.h"
  #include "../Savegame/Ufo.h"
-@@ -528,15 +532,27 @@ void NewBattleState::initSave()
+@@ -230,6 +234,7 @@ NewBattleState::NewBattleState() :
+ 			_missionTypes.erase(itr);
+ 		}
+ 	}
++	if (getenv("OXCE_NB_LIST")) for (size_t i = 0; i < _missionTypes.size(); ++i) Log(LOG_INFO) << "[nb] " << i << " " << _missionTypes[i];   // rig
+ 	_cbxMission->setOptions(_missionTypes, true);
+ 	_cbxMission->onChange((ActionHandler)&NewBattleState::cbxMissionChange);
+ 
+@@ -528,15 +533,27 @@ void NewBattleState::initSave()
  	base->getCrafts()->push_back(_craft);
  
  	// Generate soldiers
@@ -18226,7 +18879,7 @@ index 52b6371..25a3287 100644
  		{
  			if (RNG::percent(70))
  				continue;
-@@ -572,19 +588,75 @@ void NewBattleState::initSave()
+@@ -572,19 +589,75 @@ void NewBattleState::initSave()
  	}
  
  	// Generate items
@@ -19095,7 +19748,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..e7c93f6 100644
+index 1885346..3396d36 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -19233,7 +19886,7 @@ index 1885346..e7c93f6 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,420 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,467 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -19460,6 +20113,53 @@ index 1885346..e7c93f6 100644
 +		st.tryRead("keenEars", _stealth.keenEars);
 +		st.tryRead("dartWeapons", _stealth.dartWeapons);
 +	}
++	if (const auto& sh = reader["shipping"])
++	{
++		_shipping.on = true;
++		sh.tryRead("ufo", _shipping.ufo);
++		sh.tryRead("mission", _shipping.mission);
++		sh.tryRead("trajectory", _shipping.trajectory);
++		sh.tryRead("total", _shipping.total);
++		sh.tryRead("costContainers", _shipping.costContainers);
++		sh.tryRead("costOwnLine", _shipping.costOwnLine);
++		sh.tryRead("costMedium", _shipping.costMedium);
++		sh.tryRead("costHigh", _shipping.costHigh);
++		sh.tryRead("materielLow", _shipping.materielLow);
++		sh.tryRead("materielMedium", _shipping.materielMedium);
++		sh.tryRead("materielHigh", _shipping.materielHigh);
++		sh.tryRead("tierWeights", _shipping.tierWeights);
++		sh.tryRead("deliverFunds", _shipping.deliverFunds);
++		sh.tryRead("deliverMaterielHigh", _shipping.deliverMaterielHigh);
++		sh.tryRead("searchInnocent", _shipping.searchInnocent);
++		sh.tryRead("damageInnocent", _shipping.damageInnocent);
++		sh.tryRead("sinkInnocent", _shipping.sinkInnocent);
++		sh.tryRead("sinkExposure", _shipping.sinkExposure);
++		sh.tryRead("ownLineShare", _shipping.ownLineShare);
++		sh.tryRead("boardOwnLine", _shipping.boardOwnLine);
++		sh.tryRead("boardContainers", _shipping.boardContainers);
++		sh.tryRead("boardMission", _shipping.boardMission);
++		sh.tryRead("names", _shipping.names);
++		if (const auto& ln = sh["lanes"])
++		{
++			_shipping.lanes.clear();
++			for (const auto& l : ln.children())
++			{
++				ShipLane lane;
++				l.tryRead("id", lane.id);
++				l.tryRead("name", lane.name);
++				l.tryRead("from", lane.fromName);
++				l.tryRead("to", lane.toName);
++				l.tryRead("fromFlag", lane.fromFlag);
++				l.tryRead("toFlag", lane.toFlag);
++				l.tryRead("ships", lane.ships);
++				l.tryRead("cobraShare", lane.cobraShare);
++				std::vector<std::vector<double>> pts;
++				l.tryRead("pts", pts);
++				for (const auto& p : pts) if (p.size() == 2) lane.pts.push_back({p[0], p[1]});
++				if (lane.pts.size() >= 2) _shipping.lanes.push_back(lane);
++			}
++		}
++	}
 +	if (const auto& cf = reader["cobraFile"])
 +	{
 +		_cobraFile.on = true;
@@ -19654,7 +20354,7 @@ index 1885346..e7c93f6 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3725,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3772,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -19662,7 +20362,7 @@ index 1885346..e7c93f6 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4330,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4377,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -19688,7 +20388,7 @@ index 1885346..e7c93f6 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4587,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4634,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -19709,7 +20409,7 @@ index 1885346..e7c93f6 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6301,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6348,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -19729,7 +20429,7 @@ index 1885346..e7c93f6 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6324,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6371,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -19737,7 +20437,7 @@ index 1885346..e7c93f6 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6338,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6385,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -19777,7 +20477,7 @@ index 1885346..e7c93f6 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..97d84a4 100644
+index 2242d13..214ff61 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -19841,7 +20541,7 @@ index 2242d13..97d84a4 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,236 @@ private:
+@@ -327,6 +360,266 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -19925,6 +20625,36 @@ index 2242d13..97d84a4 100644
 +	StealthRules _stealth;
 +public:
 +	const StealthRules &getStealthRules() const { return _stealth; }
++	/// G.I. Joe: civilian shipping on the world map (SEA_BATTLES_DESIGN_v1 sections 7, 9, 12; lanes from STORY's
++	/// story_tools/shipping_lanes.yml). Merchant ships sail the lanes all the time; a few carry Cobra's cargo.
++	struct ShipLane
++	{
++		std::string id, name, fromName, toName, fromFlag, toFlag;
++		int ships = 1;
++		double cobraShare = 0.0;
++		std::vector<std::pair<double, double>> pts;   ///< lat, lon in degrees, from port to port
++	};
++	struct ShippingRules
++	{
++		bool on = false;
++		std::string ufo = "STR_MERCHANT_SHIP", mission = "STR_CIVIL_SHIPPING", trajectory = "P_SHIPPING";
++		int total = 40;                                 ///< ships at sea at once
++		int costContainers = 5, costOwnLine = 20, costMedium = 10, costHigh = 25;   ///< Cobra funds per voyage (12h)
++		int materielLow = 10, materielMedium = 25, materielHigh = 50;               ///< no cargo, no voyage (12h.3)
++		std::vector<int> tierWeights = {60, 30, 10};    ///< Low, Medium, High cargo
++		std::vector<int> deliverFunds = {30, 90, 0};    ///< Cobra funds a delivered cargo brings (High goes to materiel)
++		int deliverMaterielHigh = 50;
++		int searchInnocent = 2, damageInnocent = 5, sinkInnocent = 15, sinkExposure = 5;  ///< goodwill / exposure (12g)
++		int ownLineShare = 50;                          ///< % of Cobra cargo that sails on Cobra's own line (the rest: containers)
++		std::string boardOwnLine = "STR_SHIP_SEARCH_LINE", boardContainers = "STR_SHIP_SEARCH_CONTAINERS";
++		std::string boardMission = "STR_SHIP_SEARCH_MISSION";
++		std::vector<ShipLane> lanes;
++		std::vector<std::string> names;                 ///< merchant ship names ("MV " is added)
++	};
++private:
++	ShippingRules _shipping;
++public:
++	const ShippingRules &getShippingRules() const { return _shipping; }
 +	/// G.I. Joe: air (and later sea) fights on the battle engine (DOGFIGHT_DESIGN_v1, AIR_SEA_BUILD_PLAN_v1).
 +	/// A craft or Cobra aircraft becomes a unit; the floors are the decks.
 +	struct AirCraftRule
@@ -20078,7 +20808,7 @@ index 2242d13..97d84a4 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +955,124 @@ public:
+@@ -692,6 +985,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -20697,7 +21427,7 @@ index 6bef22e..8cc3b62 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..26186cb 100644
+index 99f24ce..50dbf9e 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
 @@ -411,6 +411,8 @@
@@ -20718,13 +21448,15 @@ index 99f24ce..26186cb 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,10 +550,18 @@
+@@ -546,10 +550,20 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
 +    <ClCompile Include="Geoscape\CobraIntelState.cpp" />
 +    <ClCompile Include="Geoscape\IntelBoardState.cpp" />
 +    <ClCompile Include="Geoscape\AirFightChoiceState.cpp" />
++    <ClCompile Include="Geoscape\ShipStopState.cpp" />
++    <ClCompile Include="Geoscape\Shipping.cpp" />
 +    <ClCompile Include="Geoscape\SeaNav.cpp" />
 +    <ClCompile Include="Geoscape\Outposts.cpp" />
 +    <ClCompile Include="Geoscape\DepartmentsState.cpp" />
@@ -20737,7 +21469,7 @@ index 99f24ce..26186cb 100644
      <ClCompile Include="Geoscape\Globe.cpp" />
      <ClCompile Include="Geoscape\GraphsState.cpp" />
      <ClCompile Include="Geoscape\InterceptState.cpp" />
-@@ -673,6 +685,7 @@
+@@ -673,6 +687,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -20745,7 +21477,7 @@ index 99f24ce..26186cb 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +695,7 @@
+@@ -682,6 +697,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -20753,7 +21485,7 @@ index 99f24ce..26186cb 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -890,6 +904,8 @@
+@@ -890,6 +906,8 @@
      <ClInclude Include="Basescape\TransfersState.h" />
      <ClInclude Include="Battlescape\AbortMissionState.h" />
      <ClInclude Include="Battlescape\ActionMenuItem.h" />
@@ -20762,7 +21494,7 @@ index 99f24ce..26186cb 100644
      <ClInclude Include="Battlescape\ActionMenuState.h" />
      <ClInclude Include="Battlescape\AlienInventory.h" />
      <ClInclude Include="Battlescape\AlienInventoryState.h" />
-@@ -970,6 +986,8 @@
+@@ -970,6 +988,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -20771,13 +21503,15 @@ index 99f24ce..26186cb 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1051,14 @@
+@@ -1033,6 +1053,16 @@
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
 +    <ClInclude Include="Geoscape\CobraIntelState.h" />
 +    <ClInclude Include="Geoscape\IntelBoardState.h" />
 +    <ClInclude Include="Geoscape\AirFightChoiceState.h" />
++    <ClInclude Include="Geoscape\ShipStopState.h" />
++    <ClInclude Include="Geoscape\Shipping.h" />
 +    <ClInclude Include="Geoscape\SeaNav.h" />
 +    <ClInclude Include="Geoscape\Outposts.h" />
 +    <ClInclude Include="Geoscape\DepartmentsState.h" />
@@ -20786,7 +21520,7 @@ index 99f24ce..26186cb 100644
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1042,6 +1068,7 @@
+@@ -1042,6 +1072,7 @@
      <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
      <ClInclude Include="Geoscape\ProductionCompleteState.h" />
      <ClInclude Include="Geoscape\GeoscapeState.h" />
@@ -20794,7 +21528,7 @@ index 99f24ce..26186cb 100644
      <ClInclude Include="Geoscape\Globe.h" />
      <ClInclude Include="Geoscape\GraphsState.h" />
      <ClInclude Include="Geoscape\InterceptState.h" />
-@@ -1170,6 +1197,7 @@
+@@ -1170,6 +1201,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -20802,7 +21536,7 @@ index 99f24ce..26186cb 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1207,7 @@
+@@ -1179,6 +1211,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
@@ -24095,6 +24829,75 @@ index 20e0459..5cf74d6 100644
  	/// Gets the quantity of the transfer.
  	int getQuantity() const;
  	/// Gets the type of the transfer.
+diff --git a/src/Savegame/Ufo.cpp b/src/Savegame/Ufo.cpp
+index 25a05b6..7beb461 100644
+--- a/src/Savegame/Ufo.cpp
++++ b/src/Savegame/Ufo.cpp
+@@ -161,6 +161,17 @@ void Ufo::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, con
+ 	if (_inBattlescape)
+ 		setSpeed(0);
+ 
++	if (const auto& gs = reader["gjShip"])
++	{
++		gs.tryRead("lane", gjLane);
++		gs.tryRead("leg", gjLeg);
++		gs.tryRead("rev", gjRev);
++		gs.tryRead("cobra", gjCobra);
++		gs.tryRead("cargo", gjCargo);
++		gs.tryRead("flag", gjFlag);
++		gs.tryRead("region", gjRegion);
++		gs.tryRead("name", gjName);
++	}
+ 	_scriptValues.load(reader, shared);
+ }
+ 
+@@ -296,6 +307,19 @@ void Ufo::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared, bool new
+ 		writer.write("trajectoryPoint", _trajectoryPoint);
+ 	}
+ 
++	if (gjLane >= 0)
++	{
++		auto gs = writer["gjShip"];
++		gs.setAsMap();
++		gs.write("lane", gjLane);
++		gs.write("leg", gjLeg);
++		gs.write("rev", gjRev);
++		gs.write("cobra", gjCobra);
++		gs.write("cargo", gjCargo);
++		gs.write("flag", gjFlag);
++		gs.write("region", gjRegion);
++		gs.write("name", gjName);
++	}
+ 	writer.write("fireCountdown", _fireCountdown);
+ 	writer.write("escapeCountdown", _escapeCountdown);
+ 
+@@ -361,6 +385,7 @@ int Ufo::getUniqueId() const
+  */
+ std::string Ufo::getDefaultName(Language *lang) const
+ {
++	if (gjLane >= 0 && !gjName.empty()) return gjName;   // G.I. Joe: a merchant ship goes by her name
+ 	switch (_status)
+ 	{
+ 	case LANDED:
+diff --git a/src/Savegame/Ufo.h b/src/Savegame/Ufo.h
+index a4ff21b..63a420b 100644
+--- a/src/Savegame/Ufo.h
++++ b/src/Savegame/Ufo.h
+@@ -89,6 +89,14 @@ private:
+ 
+ 	void backupOriginalDestination();
+ public:
++	/// G.I. Joe civilian shipping (Geoscape/Shipping.cpp): -1 = not a merchant on a lane
++	int gjLane = -1, gjLeg = 0;
++	bool gjRev = false;
++	int gjCobra = 0;        ///< 0 innocent, 1 Cobra's own line, 2 Cobra containers aboard an honest ship
++	int gjCargo = 0;        ///< 0 Low, 1 Medium, 2 High
++	std::string gjFlag;     ///< the flag country (a country type, may be empty)
++	std::string gjRegion;   ///< the Cobra region that paid for the voyage
++	std::string gjName;     ///< the ship's name
+ 	/// Creates a UFO of the specified type.
+ 	Ufo(const RuleUfo *rules, int uniqueId, int hunterKillerPercentage = 0, int huntMode = 0, int huntBehavior = 0);
+ 	/// Cleans up the UFO.
 diff --git a/src/Ufopaedia/ArticleStateCraft.cpp b/src/Ufopaedia/ArticleStateCraft.cpp
 index 50fac40..cc4af4c 100644
 --- a/src/Ufopaedia/ArticleStateCraft.cpp
