@@ -2719,89 +2719,8496 @@
 תûûûûûûûûûûûûûû‏`ûûûûת
 
 
-תûûûûûûûûûûûûûûû‏dûûûûûתûפûûûûûûûûûûû‏hûûûûûûûûûûûû‏lûûפûûûûûûûûפ‏pפûûûûûûûûûû‏tûûûûûûûûûû‏xûûûûûû‏|ûûÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r¯_\ZYZZZZZZYZ\_‏oZ£ZZZZZZZZZZYZ\‏m__]ZYZZZZZZZZZZYZ\‏k_Y\_]ZYZZZZZZZZZZYZ\_‏i_ZZZ\_]ZYZZZZZZZZZZYZ\_‏g_ZZZZZ\_]ZYZZZZZZZZZZYZ\_‏e_ZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏c_ZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏a_ZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏__YZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏]][ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏[¯^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏Y_[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏W_ZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏U_ZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏S_ZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏Q_ZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏O_YZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏M^[ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏K_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏I_Z^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏G_ZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏E_ZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏C_ZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏A_ZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏?_YZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏=¯_\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏;\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏9^Z]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[^^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ[^¯‏7_ZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZYZ\^_‏7_ZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_^ZYZZZZYZ\¯_]‏7_ZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYYZ\_]\]‏7_ZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]\¯_]\]]]‏7_ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]\]]]]]‏7]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZY]\]]]]]]]‏7_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ]\]]]]]]]‏7^Y\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]]]‏7_ZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]]\]‏7_ZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZ]\]]]\]_¯‏7_ZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZ]\]\]_¯^‏7_ZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^Z]\]_¯^\]‏7_ZZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_]¯^\]]]‏7^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_]^]\]]]]‏7_^^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ]\]]]]]]]‏7_Y[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZ]\]]]]]]\‏7_ZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]]ZZZZZZZZZZ[^_\ZZZZZZ]\]]]]]^_‏7_ZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZ]\]]\^‏7_ZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZY]\]^_]‏7_ZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[]]_]\]‏7_ZZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_]\]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]]ZZZZZZZZZZ[^^]\]]]]]‏7_^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZY]\]]]]]]]‏7_Y[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZ]\]]]]]\]‏7_ZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZ]\]]]\]^‏7_ZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZ]\]\]^‏7_ZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZY]\]^_]‏7_ZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\]^_]\]‏7_[ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]_]\]]]‏7\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]_]\]]]]]‏7_]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZY]\]]]]]]]‏7_YZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZ]\]]]]]\]‏7_ZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZ]\]]]\]_¯‏7_ZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZ]\]\]_¯^‏7_ZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZY]\]_¯^\\‏7_YZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]]_¯^]\]]‏7\ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_^]\]]]]‏7¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\\]]]]]]]‏7_\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZY]\]]]]]]]‏7_YZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZ]\]]]]]\]‏7_ZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZ]\]]]\]_¯‏7_ZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZ]\]\]¯^‏7_ZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[Y]\]_^\]‏7^YZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^^_^\]]]‏7][ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_]\]]]]]‏7^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_\]]]]]]]‏7_[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZY]\]]]]]]]‏7_ZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZ]\]]]]]]\‏7_ZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZ]\]]]]\^_‏7_ZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZ]\]]\]¯‏7_ZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\Y]\\]¯_]\‏7^YZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_^]_]\]]‏7^\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^]_]\]]]]‏7¯_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ_\\]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZ]\]]]]]\]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZ]\]]]\\^‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZ]\]\]^_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\Z]\]^¯_]\‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]_^¯_]\]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]__]\]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ^\\]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZ]\]]]]\]^‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZ]\]]\]_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZ]\\]_¯‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]Z]]_¯^\_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_^]]]_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\^]\]]]_‏8_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ^]\]]]]]_‏9_\ZZZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]\_‏<_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]\]‏=_\ZZZZZZZZZZ[_^[ZZZZ]\]]\]_‏?_\ZZZZZZZZZZ[_^[ZZ]\]]_‏A_\ZZZZZZZZZZ[_^Z]]_^\_‏C_\ZZZZZZZZZZ[_^]]]_‏E_\ZZZZZZZZZZ[_^]]]]]_‏H_\ZZZZZZZZZY^\]]]]]]_‏I_\ZZZZZZZZ]\]]]]]\_‏K_\ZZZZZZ]\]]]\]^‏N_\ZZZZ]\]]]^‏P_\ZY]\]^¯‏Q_[]]_‏S^]_‏V¯^]]]_‏W^]]]]]_‏Y\]]]]]]_‏\]]]]]]]_‏^]]]]]]]_‏_]]]]]]]_‏a]]]]]]]_‏d]]]]]]]_‏e]]]]]]]_‏h]]]]]]]_‏j]]]]]]]_‏l]]]]]]]_‏m]]]]]_‏p]]]_‏s]_‏x¯‏{ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r\ZYZZZZZZYZ\_‏n_\ZYZZZZZZZZZZ£Z‏k\ZYZZZZZZZZZZYZ]‏i_\ZYZZZZZZZZZZYZ]^\‏g_\ZYZZZZZZZZZZYZ]^\]]‏e\ZYZZZZZZZZZZYZ]^\\]]\‏c\ZYZZZZZZZZZZYZ]^\\]]]]\‏a_\ZYZZZZZZZZZZYZ]^\\]]]]]]\‏_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]‏]\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\‏[_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏Y_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏W_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]‏U\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]__]]\‏S\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]‏Q_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]\‏O_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]\‏M_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]\‏K_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^‏I_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^¯‏G_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]]]]]]]]]]]^_]‏E\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\\‏C_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]\]^_]\]]\‏A_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]\‏?\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]\‏=_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\\‏;_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^‏9_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]]]]\]^‏7_[ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]_‏7\ZYZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]\]^_]\]]]]]]]\]^¯_]\\‏7Z]\ZYZZZZYZ]^\]]]]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]\‏7ZZZ]\ZYYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]\‏7ZZZZZ]\]^\\]]]]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯^]\]]]]]]\‏7ZZZZZZZ]¯^\\]]]]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]‏7ZZZZZZZY__\]]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^\‏7ZZZZZZZZ__\]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]‏7^ZZZZZZ__\]]\]_^\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]\‏7\_^[ZZZ__\]]_]\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]‏7ZZ\_^[Z__]^\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]\‏7ZZZZ\_[_¯]\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]]]‏7ZZZZZZ[Z_]\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]__‏7ZZZZZZZZ__\]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\‏7[ZZZZZZZ__\]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]‏7_[ZZZZZ__\]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]\‏7[^_[ZZZ__\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]‏7ZZ[^_[Z__]_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]\‏7ZZZZ[^[__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^‏7ZZZZZZ[Z__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_‏7ZZZZZZZZ__\]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\‏7_\ZZZZZZ__\]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]\]^_]\]]‏7¯\ZZZZ__\]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]\‏7Z]¯\ZZ__\]^¯^]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]‏7ZZZ]\__^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\‏7ZZZZZ]¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^_]\]]]]]]]\]^‏7ZZZZZZZ]¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]]]^_]\]]]]]]]\]^‏7ZZZZZZZY__\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯^‏7ZZZZZZZZ__\]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\‏7^ZZZZZZ__\]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]‏7\_]ZZZZ__\]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]\‏7ZZ\_]ZY__\]_^]\]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]‏7ZZZZ\]___^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\‏7ZZZZZZ\_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_¯‏7ZZZZZZZZ_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^‏7[ZZZZZZZ__\]]]]]\]_]\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\‏7^[ZZZZZ__\]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]‏7[_^[ZZZ__\]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]\‏7ZZ[_¯^[Y__\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯^]\]]]]]]]\]_^]\]]]]]]‏7ZZZZ[_^___^]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\‏7ZZZZZZ[_^\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZY_]]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]‏7ZZZZZZZZ__\]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]\‏7ZZZZZZZZ__\]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^]]]]‏7ZZZZZZZZ__\]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]\‏7ZZZZZZZZ__\^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]‏7ZZZZZZZZ__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]\‏7ZZZZZZZZ__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^‏7ZZZZZZZZ__\]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]]]^‏7ZZZZZZZZ__\]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ_¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ_¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]\]_^]\]]]]]]]\]_^]]]]]]]]\]^‏7ZZZZZZZZ__\]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZY__]_^]]]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZ[_¯^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZ_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]]]^‏:ZZZZZZZZ__\]]]]\]_^\]]]]]]]\]^‏;^ZZZZZZ__\]]\]_^\]]]]]]]]]^‏=\_^ZZZZ__\]]_^]]]]]]]]]]^‏@ZZ\_^ZY__]_^\]]]]]]]]]^‏BZZZZ\_^^\]]]]]]]]]^‏DZZZZZZ\_^\]]]]]]]\]^‏EZZZZZZZZ__\]]]]]]]\]^‏GZZZZZZZZ__\]]]]]]]^‏I_\ZZZZZZ__\]]]\]^‏K^_\ZZZZ__\]]]^‏MZZ^_\ZY__\]^‏O[ZZ[^_[__]‏RZ[[ZZZ^¯¯‏SZZZ[[Z__‏V[Z[ZZ[\_‏W[[[[Z[ZZ_‏Z[ZZZZ[[Z_‏\[[[[ZZ[Z_‏^[Z[[[ZZZ_‏_[[ZZ[[[Z_‏bZZZZZ[[Z_‏d[[[ZZZ[Z_‏e[[[[Z[[Z_‏gZZ[[Z[[Z_‏j][Z[[Z[Z_‏l]ZZZ[Z_‏o]ZZZ_‏s]Z_‏w‏{ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r¯_\ZYZZZZZZYZ\_‏oZ£ZZZZZZZZZZYZ\‏m__]ZYZZZZZZZZZZYZ\‏k_Y\_]ZYZZZZZZZZZZYZ\_‏i_ZZZ\_]ZYZZZZZZZZZZYZ\_‏g_ZZZZZ\_]ZYZZZZZZZZZZYZ\_‏e_ZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏c_ZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏a_ZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏__YZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏]][ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏[¯^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏Y_[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏W_ZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏U_ZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏S_ZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏Q_ZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏O_YZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏M^[ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏K_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏H¯]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏Dûת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏@ûת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏<תת_]]¯_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏:û
-ת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏8	תת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏6
-תת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏4
-תת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏2
-תת_]]_\ZZZZZZZZZZ[^^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ[^¯‏0ת
-תת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZYZ\^_‏0û
-תת_]^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_^ZYZZZZYZ\¯_]‏2û	
-תת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYYZ\_]\]‏4û
-תת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]\¯_]\]]]‏6ûתתת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]\]]]]]‏5û
-תת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZY]\]]]]]]]‏3
-	û
-תת_]]¯_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ]\]]]]]]]‏1
-	ûתתת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]]]‏0û	ûתתת_]]_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]]\]‏0ת		û
-תת_]]_\ZZZZZZZZZZ[_^[ZZZZ]\]]]\]_¯‏0		ûתתת_]]_\ZZZZZZZZZZ[_^[ZZ]\]\]_¯^‏0			û
-תת_]]_\ZZZZZZZZZZ[_^Z]\]_¯^\]‏0			û
-תת_]]_\ZZZZZZZZZZ[_]¯^\]]]‏0		ûתתת_]]_\ZZZZZZZZZZ[_]^]\]]]]‏0			û
-תת_]]_\ZZZZZZZZZZ]\]]]]]]]‏0			û
-תת_]]_\ZZZZZZZZ]\]]]]]]\‏0				û
-תת_]]¯_\ZZZZZZ]\]]]]]^_‏0
-			û
-תת_]]_\ZZZZ]\]]\^‏1
-			û
-תת_]]_\ZY]\]^_]‏3
-			û
-תת_]]_[]]_]\]‏5
-			û
-תת_]]_]\]]]‏7
-			ûתתת_]]^]\]]]]]‏7_]
-			ûתתת__\]]]]]]]‏7_Y[^
-			û
-ת]]]]]]\]‏7_ZZZ[^
-		û
-ת	\]]]\]^‏7_ZZZZZ[^
-		û
-ת	û\]\]^‏7_ZZZZZZZZ^
-		û
-ûת
-\]^_]‏7_ZZZZZZZZZ[^
-			מûתû
-תתת_^_]\]‏7_[ZZZZZZZZZZ[^				û
-תתתתתת^_]\]]]‏7\ZZZZZZZZZZ[^
-			û
-ûתתתû¯_]\]]]]]‏7_]\ZZZZZZZZZZ[^
-			û
-תת_^\]]]]]]]‏7_YZ]\ZZZZZZZZZZZ^
-			û
-^Z]\]]]]]\]‏7_ZZZZ]\ZZZZZZZZZZ[^			]ZZZ]\]]]\]_¯‏7_ZZZZZZ]\ZZZZZZZZZZ[^				^ZZZZ]\]\]_¯^‏7_ZZZZZZZZ]\ZZZZZZZZZZ[^
-			¯^[Y]\]_¯^\\‏7_YZZZZZZZZZ]\ZZZZZZZZZZ[^
-		]]_¯^]\]]‏7\ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
-		^]\]]]]‏7¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
-		
-^]\]]]]]]‏7_\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
-	
-ת\]]]]]]]]‏7_YZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
-	תתתת\]]]]]]\]‏7_ZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^
-	תתתת_]]]]\]_¯‏7_ZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
-
-תתתתת\]\]¯^‏7_ZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
-
-ûתתתת\]_^\]‏7^YZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
-
-תתתתת_^\]]]‏7][ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^	
-תתתת
-]\]]]]]‏7^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^	
-תתתתת\]]]]]]]‏7_[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
-
+תûûûûûûûûûûûûûûû‏dûûûûûתûפûûûûûûûûûûû‏hûûûûûûûûûûûû‏lûûפûûûûûûûûפ‏pפûûûûûûûûûû‏tûûûûûûûûûû‏xûûûûûû‏|ûûÿ`‏?ת
+‏|ת
+
+ת‏x‏h‏
+
+
+
+[[\\ת[‏d‏[
+
 ת
-û]]]]]]]]‏7_ZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^
-
-û_[]\]]]]]]\‏7_ZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZY]\]]]]\^_‏7_ZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^[ZZZ]\]]\]¯‏7_ZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^¯_\Y]\\]¯_]\‏7^YZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_^]_]\]]‏7^\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^]_]\]]]]‏7¯_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ_\\]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZ]\]]]]]\]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZ]\]]]\\^‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZ]\]\]^_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\Z]\]^¯_]\‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]_^¯_]\]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]__]\]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ^\\]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZ]\]]]]\]^‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZ]\]]\]_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZ]\\]_¯‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]Z]]_¯^\_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_^]]]_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\^]\]]]_‏8_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ^]\]]]]]_‏9_\ZZZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]\_‏<_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]\]‏=_\ZZZZZZZZZZ[_^[ZZZZ]\]]\]_‏?_\ZZZZZZZZZZ[_^[ZZ]\]]_‏A_\ZZZZZZZZZZ[_^Z]]_^\_‏C_\ZZZZZZZZZZ[_^]]]_‏E_\ZZZZZZZZZZ[_^]]]]]_‏H_\ZZZZZZZZZY^\]]]]]]_‏I_\ZZZZZZZZ]\]]]]]\_‏K_\ZZZZZZ]\]]]\]^‏N_\ZZZZ]\]]]^‏P_\ZY]\]^¯‏Q_[]]_‏S^]_‏V¯^]]]_‏W^]]]]]_‏Y\]]]]]]_‏\]]]]]]]_‏^]]]]]]]_‏_]]]]]]]_‏a]]]]]]]_‏d]]]]]]]_‏e]]]]]]]_‏h]]]]]]]_‏j]]]]]]]_‏l]]]]]]]_‏m]]]]]_‏p]]]_‏s]_‏x¯‏{ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r\ZYZZZZZZYZ\_‏n_\ZYZZZZZZZZZZ£Z‏k\ZYZZZZZZZZZZYZ]‏i_\ZYZZZZZZZZZZYZ]^\‏g_\ZYZZZZZZZZZZYZ]^\]]‏e\ZYZZZZZZZZZZYZ]^\\]]\‏c\ZYZZZZZZZZZZYZ]^\\]]]]\‏a_\ZYZZZZZZZZZZYZ]^\\]]]]]]\‏_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]‏]\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\‏[_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏Y_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏W_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]‏U\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]__]]\‏S\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]‏Q_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]\‏O_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]\‏M_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]\‏K_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^‏I_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^¯‏G_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]]]]]]]]]]]^¯_^‏D\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^¯__û‏@_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]\]^__תû‏<_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]]]^¯__תת‏9\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^¯__ת
-‏6_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^__תתת‏4_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^¯__תתת
-ת‏2_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]]]^__תתתתתתת‏0_[ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^¯__תתתתתתתתת‏0\ZYZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]\]^__תתתתתתתתתû‏0Z]\ZYZZZZYZ]^\]]]]]]]]]]]\]_]\]]]]]]]]]^¯__תתתתתתתתתû‏0ZZZ]\ZYYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^¯__תתתתתתתתתû‏2ZZZZZ]\]^\\]]]]]]]]]]\]_^]]]]]]]]]]^¯__תתתתתתתתתת‏4ZZZZZZZ]¯^\\]]]]]]]]]]\]_^]]]]]]]]\]^¯__תתתתתתתתתת‏6ZZZZZZZY__\]]]]]]]]]]\]_^\]]]]]]]]]^¯__®תתתתתתתתתת‏5ZZZZZZZZ__\]]]]]]]]\]_]\]]]]]]]]]^¯__תתתתתתתתתת	
-‏3ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]\]^__תתתתתתתתתû	
-‏1ZZZZZZZZ__\]]]]\]_^]]]]]]]]\]^¯__תתתתתתתתתת	‏0^ZZZZZZ__\]]\]_^\]]]]]]]\]^¯__תתתתתתתתתת		û‏0\_^[ZZZ__\]]_]\]]]]]]]]]^¯__תתתתתתתתתת	û
-ת‏0ZZ\_^[Z__]^\]]]]]]]\]^¯__תתתתתתתתתת		ûתתתת‏0ZZZZ\_[_¯]\]]]]]]]]]^¯__תתתתתתתתתû		ûתתתתתת‏0ZZZZZZ[Z_]\]]]]]]]\]^__תתתתתתתתתת	ûתתתתתתתת‏0ZZZZZZZZ__\]]]]]]]]]^¯__תתתתתתתתתת		ûתתתתתתתתתת‏0ZZZZZZZZ__\]]]]]]]^¯__®תתתתתתתתתת		ûתתתתתתתתתתתת‏0[ZZZZZZZ__\]]]]]^¯__®תתתתתתתתתת		ûתתתתתתתתתתתתתû‏0_[ZZZZZ__\]]]^__תתתתתתתתתת		ûתתתתתתתתתתתתת‏0[^_[ZZZ__\]^¯__תתתתתתתתתת	ûתתתתתתתתתתתתת‏1ZZ[^_[Z__]__תתתתתתתתתת		ûתתתתתתתתתתתתת‏3ZZZZ[^[_¯__תתתתתתתתתת		ûתתתתתתתתתתתתת‏5ZZZZZZ[Z___תתתתתתתתתת		ûתתתתתתתתתתתתת‏7ZZZZZZZZ_תתתתתתתתתת	û
-תתתתתתתתתתתת_‏7ZZZZZZZZ_תתתתתתתתת	ûתתתתתתתתתתתתת_]\‏7_\ZZZZZZ_	תתתתתתתתת	ûתתתתתתתתתתתתת_]\]]‏7¯\ZZZZ_ת	תתתתתתתתת	ûתתתתתתתתתתתתת_]\]]]\‏7Z]¯\ZY_û	תתתתתתתת	ûתתתתתתתתתתתתת_]\]]]]]]‏7ZZZ]\_û	תתתתתתתת		ûתתתתתתתתתתתתת_]\]]]]]]]\‏7ZZZZZ]תתתתתתתת		ûתתתתתתתתתתתתת_]\]]]]]]]\]^‏7ZZZZZZZ]¯
-	תתתתת		ûתתתתתתתתתתתתת_]\]]]]]]]\]^‏7ZZZZZZZY_¯¯
-	תתת		ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯^‏7ZZZZZZZZ__\_¯
-ת	ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\‏7^ZZZZZZ__\\]_		ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]‏7\_]ZZZZ__\]\]	ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]\‏7ZZ\_]ZY__\]_¯		ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]‏7ZZZZ\]___	ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\‏7ZZZZZZ\_	ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_¯‏7ZZZZZZZZ_
-ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_‏7ZZZZZZZZ_û
-
-ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^‏7[ZZZZZZZ_ûת
-ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\‏7^[ZZZZZ_ûתûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]‏7[_^[ZZZ_û	תתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]\‏7ZZ[_¯^[Y_û	תתתתתתתתתתת_]\]]]]]]]\]^¯^]\]]]]]]]\]_^]\]]]]]]‏7ZZZZ[_^ת	תתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\‏7ZZZZZZ[_ת	תתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZY_מ	תתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZZ_û	תתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]‏7ZZZZZZZZ__^®ûת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]\‏7ZZZZZZZZ__\\^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^]]]]‏7ZZZZZZZZ__\]\^¯_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]\‏7ZZZZZZZZ__\^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]‏7ZZZZZZZZ__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]\‏7ZZZZZZZZ__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^‏7ZZZZZZZZ__\]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]]]^‏7ZZZZZZZZ__\]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ_¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ_¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]\]_^]\]]]]]]]\]_^]]]]]]]]\]^‏7ZZZZZZZZ__\]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZY__]_^]]]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZ[_¯^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZ_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]]]^‏:ZZZZZZZZ__\]]]]\]_^\]]]]]]]\]^‏;^ZZZZZZ__\]]\]_^\]]]]]]]]]^‏=\_^ZZZZ__\]]_^]]]]]]]]]]^‏@ZZ\_^ZY__]_^\]]]]]]]]]^‏BZZZZ\_^^\]]]]]]]]]^‏DZZZZZZ\_^\]]]]]]]\]^‏EZZZZZZZZ__\]]]]]]]\]^‏GZZZZZZZZ__\]]]]]]]^‏I_\ZZZZZZ__\]]]\]^‏K^_\ZZZZ__\]]]^‏MZZ^_\ZY__\]^‏O[ZZ[^_[__]‏RZ[[ZZZ^¯¯‏SZZZ[[Z__‏V[Z[ZZ[\_‏W[[[[Z[ZZ_‏Z[ZZZZ[[Z_‏\[[[[ZZ[Z_‏^[Z[[[ZZZ_‏_[[ZZ[[[Z_‏bZZZZZ[[Z_‏d[[[ZZZ[Z_‏e[[[[Z[[Z_‏gZZ[[Z[[Z_‏j][Z[[Z[Z_‏l]ZZZ[Z_‏o]ZZZ_‏s]Z_‏w‏{ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r¯_\ZYZZZZZZYZ\_‏oZ£ZZZZZZZZZZYZ\‏m__]ZYZZZZZZZZZZYZ\‏k_Y\_]ZYZZZZZZZZZZYZ\_‏i_ZZZ\_]ZYZZZZZZZZZZYZ\_‏g_ZZZZZ\_]ZYZZZZZZZZZZYZ\_‏e_ZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏c_ZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏a_ZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏__YZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏]][ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏[¯^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏Y_[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏W_ZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏U_ZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏S_ZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏Q_ZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏O_YZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏M^[ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏K_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏I_Z^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏G_ZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏E_ZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏C_ZZZZZZ[^_\ZZZZZZZZYZ_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏A_ZZZZZZZZ[^_\ZZ\\ZZ^¯\ X^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏?_YZZZZZZZZZ[^___\‎üüü‎X^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏=¯_\ZZZZZZZZZZZ^[‎üüüüü‎X^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏;\ZZZZZZZZZZZ[‎üüüüü‎Y^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏9^Z]\ZZZZZZZZZ_[‎üüüüü‎X^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ[^¯‏7_ZZZ]\ZZZZZZZ_[‎üüüüü‎X^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZYZ\^_‏7_ZZZZZ]\ZZZZZ_[‎üüüüüüX^[ZZZZZZZZZZZZZ\_^ZYZZZZYZ\¯_]‏7_ZZZZZZZ]\ZZZ_[‎üüü‎Y_^[ZZZZZZZZZZZZZ\_]ZYYZ\_]\]‏7_ZZZZZZZZZ]]Z_[UZ]Y[[_^[ZZZZZZZZZZZZZ\_]\¯_]\]]]‏7_ZZZZZZZZZZZ]^X W[ZZ[_^[ZZZZZZZZZZZZZ\_]\]]]]]‏7]ZZZZZZZZZZZ]X¡WX[ZZZZ[_^[ZZZZZZZZZZZY]\]]]]]]]‏7_¯]ZZZZZZZZZZZ_X¡WX[ZZZZZZ[_^[ZZZZZZZZZZ]\]]]]]]]‏7^Y\¯]ZZZZZZZZZ_X¡WX[ZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]]]‏7_ZZZ\_¯]ZZZZZZZ_X¡WW_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]]\]‏7_ZZZZZ\_¯]ZZZZZ_X¡WW_\ZZZZZZZZZZ[_^[ZZZZ]\]]]\]_¯‏7_ZZZZZZZ\_¯]ZZZ_X¡WX^_\ZZZZZZZZZZ[_^[ZZ]\]\]_¯^‏7_ZZZZZZZZZ\_]Z[_X¡WX[Z^_\ZZZZZZZZZZ[_^Z]\]_¯^\]‏7_ZZZZZZZZZZZ\_¯]Z[_X¡WX[ZZ[^_\ZZZZZZZZZZ[_]¯^\]]]‏7^[ZZZZZZZZZZ\]Z[_X¡¡X[ZZZZ[^_\ZZZZZZZZZZ[_]^]\]]]]‏7_^^[ZZZZZZZZZZ\]Z[_X ZZZZZZZZ[^_\ZZZZZZZZZZ]\]]]]]]]‏7_Y[_^[ZZZZZZZZZZ\_¯]Z[_[ZZZZZZZZZZ[^_\ZZZZZZZZ]\]]]]]]\‏7_ZZZ[_^[ZZZZZZZZZZ\]Z[_^]ZZZZZZZZZZ[^_\ZZZZZZ]\]]]]]^_‏7_ZZZZZ[_^[ZZZZZZZZZZ\_¯]Z[_[YZ]\ZZZZZZZZZZ[^_\ZZZZ]\]]\^‏7_ZZZZZZZ[_^[ZZZZZZZZZZ\¯]Z[_[ZZZZ]\ZZZZZZZZZZ[^_\ZY]\]^_]‏7_ZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]Z[^]ZZZZZZZ]\ZZZZZZZZZZ[^_[]]_]\]‏7_ZZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZYZZZZZZZZZ]\ZZZZZZZZZZ[^_]\]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]]ZZZZZZZZZZ[^^]\]]]]]‏7_^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZY]\]]]]]]]‏7_Y[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZ]\]]]]]\]‏7_ZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZ]\]]]\]^‏7_ZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZ]\]\]^‏7_ZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZY]\]^_]‏7_ZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\]^_]\]‏7_[ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]_]\]]]‏7\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]_]\]]]]]‏7_]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZY]\]]]]]]]‏7_YZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZ]\]]]]]\]‏7_ZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZ]\]]]\]_¯‏7_ZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZ]\]\]_¯^‏7_ZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZY]\]_¯^\\‏7_YZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]]_¯^]\]]‏7\ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_^]\]]]]‏7¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\\]]]]]]]‏7_\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZY]\]]]]]]]‏7_YZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZ]\]]]]]\]‏7_ZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZ]\]]]\]_¯‏7_ZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZ]\]\]¯^‏7_ZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[Y]\]_^\]‏7^YZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^^_^\]]]‏7][ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_]\]]]]]‏7^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_\]]]]]]]‏7_[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZY]\]]]]]]]‏7_ZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZ]\]]]]]]\‏7_ZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZ]\]]]]\^_‏7_ZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZ]\]]\]¯‏7_ZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\Y]\\]¯_]\‏7^YZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_^]_]\]]‏7^\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^]_]\]]]]‏7¯_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ_\\]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZ]\]]]]]\]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZ]\]]]\\^‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZ]\]\]^_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\Z]\]^¯_]\‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]_^¯_]\]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]__]\]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ^\\]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZ]\]]]]\]^‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZ]\]]\]_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZ]\\]_¯‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]Z]]_¯^\_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_^]]]_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\^]\]]]_‏8_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ^]\]]]]]_‏9_\ZZZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]\_‏<_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]\]‏=_\ZZZZZZZZZZ[_^[ZZZZ]\]]\]_‏?_\ZZZZZZZZZZ[_^[ZZ]\]]_‏A_\ZZZZZZZZZZ[_^Z]]_^\_‏C_\ZZZZZZZZZZ[_^]]]_‏E_\ZZZZZZZZZZ[_^]]]]]_‏H_\ZZZZZZZZZY^\]]]]]]_‏I_\ZZZZZZZZ]\]]]]]\_‏K_\ZZZZZZ]\]]]\]^‏N_\ZZZZ]\]]]^‏P_\ZY]\]^¯‏Q_[]]_‏S^]_‏V¯^]]]_‏W^]]]]]_‏Y\]]]]]]_‏\]]]]]]]_‏^]]]]]]]_‏_]]]]]]]_‏a]]]]]]]_‏d]]]]]]]_‏e]]]]]]]_‏h]]]]]]]_‏j]]]]]]]_‏l]]]]]]]_‏m]]]]]_‏p]]]_‏s]_‏x¯‏{ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r\ZYZZZZZZYZ\_‏n_\ZYZZZZZZZZZZ£Z‏k\ZYZZZZZZZZZZYZ]‏i_\ZYZZZZZZZZZZYZ]^\‏g_\ZYZZZZZZZZZZYZ]^\]]‏e\ZYZZZZZZZZZZYZ]^\\]]\‏c\ZYZZZZZZZZZZYZ]^\\]]]]\‏a_\ZYZZZZZZZZZZYZ]^\\]]]]]]\‏_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]‏]\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\‏[_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏Y_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏W_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]‏U\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]__]]\‏S\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]‏Q_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]\‏O_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]\‏M_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]\‏K_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^‏I_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^¯‏G_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]]]]]]]]]]]^_]‏E\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\\‏C_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^_]\]]\‏A_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_\\]]]\]]]]^_]\]]]]\‏?\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_X ]_]\^^]]^_]\]]]]]]\‏=_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_X‎üüü‎\_]\]]]]]]]\]‏;_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_X‎üüüüü‎[_]\]]]]]]]\]^‏9_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_X‎üüüüü‎[]\]]]]]]]\]^‏7_[ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_X‎üüüüü‎[\]]]]]]\]^¯_]_‏7\ZYZZZZZZZZYZ]^\\]]]]]]]]]]\]_X‎üüüüü‎[\]]]]\]^¯_]\\‏7Z]\ZYZZZZYZ]^\]]]]]]]]]]]\]_Xüüüüüü‎[\]]\]^¯_]\]]\‏7ZZZ]\ZYYZ]^\\]]]]]]]]]]\]__Z‎üüü‎[\]]^¯_]\]]]]\‏7ZZZZZ]\]^\\]]]]]]]]]]\]_]]_‎Z_Z‎[\^¯^]\]]]]]]\‏7ZZZZZZZ]¯^\\]]]]]]]]]]\]_^]\^‎ü‎[¯_]\]]]]]]]\]‏7ZZZZZZZY__\]]]]]]]]]]\]_^\]]]^_‎‎ü‎O¯^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]]\]_]\]]]]]^_‎üü‎]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]]‎üü‎\]]]]]]\]_^\‏7ZZZZZZZZ__\]]]]\]_^]]]]]]]]\\_^‎‎ü‎\]]]]\]_^]]]‏7^ZZZZZZ__\]]\]_^\]]]]]]]\]^]‎‎ü‎\]]\]_^]]]]\‏7\_^[ZZZ__\]]_]\]]]]]]]]]^_‎üü‎\]]_^]]]]]]]‏7ZZ\_^[Z__]^\]]]]]]]\]^_]]‎üü‎]]_^]]]]]]]]\‏7ZZZZ\_[_¯]\]]]]]]]]]^_]\\^_‎‎ü‎^]_^]\]]]]]]]]]‏7ZZZZZZ[Z_]\]]]]]]]\]^_]\]]]^‎üü‎^]_^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]]]^_]\]]]]]]] ü‎^]_^]]]]]]]]]\]__‏7ZZZZZZZZ__\]]]]]]]^_]\]]]]]]]\]¯]X^]_^]\]]]]]]]\]_^\‏7[ZZZZZZZ__\]]]]]^_]\]]]]]]]\]^^]_^]\]]]]]]]\]_^]]]‏7_[ZZZZZ__\]]]^_]\]]]]]]]\]^¯_]\]^]_^]\]]]]]]]\]_]]]]]\‏7[^_[ZZZ__\]^_]\]]]]]]]\]^¯_]\]]]^]_^]\]]]]]]]\]_^]]]]]]]‏7ZZ[^_[Z__]_]\]]]]]]]\]^¯_]\]]]]]^_^]_^]]]]]]]]]\]_^\]]]]]]]\‏7ZZZZ[^[__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^‏7ZZZZZZ[Z__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_‏7ZZZZZZZZ__\]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\‏7_\ZZZZZZ__\]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]\]^_]\]]‏7¯\ZZZZ__\]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]\‏7Z]¯\ZZ__\]^¯^]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]‏7ZZZ]\__^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\‏7ZZZZZ]¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^_]\]]]]]]]\]^‏7ZZZZZZZ]¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]]]^_]\]]]]]]]\]^‏7ZZZZZZZY__\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯^‏7ZZZZZZZZ__\]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\‏7^ZZZZZZ__\]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]‏7\_]ZZZZ__\]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]\‏7ZZ\_]ZY__\]_^]\]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]‏7ZZZZ\]___^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\‏7ZZZZZZ\_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_¯‏7ZZZZZZZZ_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^‏7[ZZZZZZZ__\]]]]]\]_]\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\‏7^[ZZZZZ__\]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]‏7[_^[ZZZ__\]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]\‏7ZZ[_¯^[Y__\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯^]\]]]]]]]\]_^]\]]]]]]‏7ZZZZ[_^___^]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\‏7ZZZZZZ[_^\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZY_]]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]‏7ZZZZZZZZ__\]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]\‏7ZZZZZZZZ__\]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^]]]]‏7ZZZZZZZZ__\]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]\‏7ZZZZZZZZ__\^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]‏7ZZZZZZZZ__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]\‏7ZZZZZZZZ__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^‏7ZZZZZZZZ__\]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]]]^‏7ZZZZZZZZ__\]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ_¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ_¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]\]_^]\]]]]]]]\]_^]]]]]]]]\]^‏7ZZZZZZZZ__\]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZY__]_^]]]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZ[_¯^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZ_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]]]^‏:ZZZZZZZZ__\]]]]\]_^\]]]]]]]\]^‏;^ZZZZZZ__\]]\]_^\]]]]]]]]]^‏=\_^ZZZZ__\]]_^]]]]]]]]]]^‏@ZZ\_^ZY__]_^\]]]]]]]]]^‏BZZZZ\_^^\]]]]]]]]]^‏DZZZZZZ\_^\]]]]]]]\]^‏EZZZZZZZZ__\]]]]]]]\]^‏GZZZZZZZZ__\]]]]]]]^‏I_\ZZZZZZ__\]]]\]^‏K^_\ZZZZ__\]]]^‏MZZ^_\ZY__\]^‏O[ZZ[^_[__]‏RZ[[ZZZ^¯¯‏SZZZ[[Z__‏V[Z[ZZ[\_‏W[[[[Z[ZZ_‏Z[ZZZZ[[Z_‏\[[[[ZZ[Z_‏^[Z[[[ZZZ_‏_[[ZZ[[[Z_‏bZZZZZ[[Z_‏d[[[ZZZ[Z_‏e[[[[Z[[Z_‏gZZ[[Z[[Z_‏j][Z[[Z[Z_‏l]ZZZ[Z_‏o]ZZZ_‏s]Z_‏w‏{ÿQ‏I‏{_\^‏w_[YYY[^‏s_[YYZZZYY[^‏p^[YYZZZZZZZYY[^‏&‏F_[YYZZZZZZZZZY£[‏"^‏D\^¯_[YYZZZZZZYZ^_\^‏]ZYZ]‏B\Y[^_[YYZZYZ]_[YYY[^‏\ZYZZZ£Z_‏A\ZZZ[^_[YZ]_[YYZZZYY[^‏_\ZYZZZYY[_‏A\ZZZZZ[^__[YYZZZZZZZYY[^‏]YYZZYY[_¯_]_‏>\ZZZZZZZ[^ZYYZZZZZZZZZYY[^‏]\ZY[_¯_]\\_‏<]ZZ\ZZZZZZZZ]^¯_[YYZZZZZZZZZYY[^‏[Z\__¯_]\]]]_‏:\ZYZY\ZZZZZZZZ\Y[^_[YYZZZZZZZZZYY[^‏[ZZZ^]\]]]]]_‏8]ZYZZZZ\ZZZZZZZZ\ZZZ[^_[YYZZZZZZZZZYZ_‏[ZZZ]\]]]]]]_‏7Z£ZZZZZZ\ZZZZZZZZ\ZZZZZZ^_[YYZZZZZYZ]_[[^‏	[ZZZ]\]]]]]]_‏7_]ZYZZZZ_\ZZZZZZZZ\ZZZZZZZ[^_[YYZYZ]_[YYYY[^‏[ZZZ]\]]]]]]_‏7_Z\]ZYZZ\ZZZZZZZZ\ZZZZZZZZZ[^_[Z]_[YYZZZZYY[^‏[ZZZ]\]]]]]]_‏7_ZZZ\]ZY\ZZZZZZZZ\ZZZZZZZZZZZZ^[YYZZZZZZZZYY[^‏[ZZZ]\]]]]]]_‏7_YZZZZ\\\ZZZZZZZZ\ZZZZZZZZZZZZY]_[YYZZZZZZZZZYZ_‏[ZZZ]\]]]]]]_‏7¯][ZZZZZ\\ZZZZZZZZ\ZZZZZZZZZZZZZ]_Z^_[YYZZZZZYZ^_[[^[ZZZ]\]]]]]]_‏8]ZZZZZZ\ZZZZZZZZ\ZZZZZZZZZZZZZ]_ZZZ^_[YYZYZ]_[YYYY[[ZZZ]\]]]]]]_‏:]ZZZZ\ZZZZZZZZ\ZZZZZZZZZZZZZ]_ZZZZ[^_[Z]_[YYZZZZZ[ZZZ]\]]]]]]_‏<]ZZ\ZZZZZZZZ\ZZZZZZZZZZZZZ]_ZZZZZZ[^¯[YYZZZZZZZ[ZZZ]\]]]]]]_‏>]\ZZZZZZZZ\ZZZZZZZZZZZZZ]_ZZZZZZZY]¯__[YYZZZZZZ[ZZZ]\]]]]]]_‏@^ZZZZZZZZ\ZZZZZZZZZZZZZ]_ZZZZZZZZ]_Z^_[YYZZZZ[ZZZ]\]]]]]]_‏B]ZZZZZZ\ZZZZZZZZZZZZZ]_ZZZZZZZZ]_ZZ[^_[YYZZ[ZZZ]\]]]]]]_‏D]ZZZZ\ZZZZZZZZZZZZZ]_ZZZZZZZZ]_ZZZZ[^_[YZ[ZZZ]\]]]]]\_‏F]ZZ\ZZZZZZZZZZZZZ]_ZZZZZZZZ]_ZZZZZZ[^_[[ZZZ]\]]]]]]_‏H]\ZZZZZZZZZZZZZ]_ZZZZZZZZ]_ZZZZZZZZ[^[ZZZ]\]]]]]]_‏J^ZZZZZZZZZZZZZ]_ZZZZZZZZ]_ZZZZZZZZZZ[[ZZZ]\]]]]]]_‏L]ZZZZZZZZZZZ]_ZZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏N]ZZZZZZZZZ]_ZZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏P]ZZZZZZZ]_ZZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏R]ZZZZZ]_ZZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]\_‏T]ZZZ]_ZZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏V]Z]_ZZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏X__YZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏Z¯]ZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏\]ZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏^]ZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏`]Z]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏b__YZZZZZZZZZZ[ZZZ]\]]]]]]_‏d¯]ZZZZZZZZZZ[ZZZ]\]]]]]]_‏f]ZZZZZZZZ[ZZZ]\]]]]]]_‏h]ZZZZZZ[ZZZ]\]]]]]]_‏j]ZZZZ[ZZZ]\]]]]]\_‏l]ZZ[ZZZ]\]]]]\]_‏n^[ZZZ]\]]\]^‏p^ZZZ]\]]^‏t]Z]\^‏x_¯‏|ÿ<‏7‏|]]¯‏x]ZYYZ^¯‏t]ZYZZZZYZ^¯‏p]ZYZZZZZZZZYZ]‏l]ZYZZZZZZZZZZYZ\‏l\YYZZZZZZZZYZ\¯^‏l_\\ZYZZZZYZ\^]\‏l_YZ]\ZYYZ\^]\]]‏l_ZZZZ]\\^]\]]]]‏l_ZZZZZZ]^]\]]]]]]‏`‏	_ZZZZZZY^_\]]]]]]]]‏^]Z[_‏_ZZZZZZZ^_\]]]]]]]]‏\]ZYZYY[_‏_ZZZZZZZ^_\]]]]]]]]‏Z]ZYZZZZZYY[_‏_ZZZZZZZ^\]]]]]]]]‏X]ZYZZZZZZZZZY£[¯_ZZZZZZZ^_\]]]]]]]]‏V]ZYZZZZZZZZZZYZ\_¯_ZZZZZZZ^_\]]]]]]]]‏S]ZYZZZZZZZZZZYZ\¯^]_ZZZZZZZ^\]]]]]]]]‏O]ZYZZZZZZZZZZYZ\^]\]¯_ZZZZZZZ^\]]]]]]]]\Z^‏K]YYZZZZZZZZZZYZ\^]\]]]¯_ZZZZZZZ^\]]]]]]]]\YY[^‏I]ZYZZZZZZZYZ\^]\]]]]]¯_ZZZZZZZ^_\]]]]]]]]\YZZYZ‏H\[]ZYZZZYZ\^]\]]]]]]]¯_ZZZZZZZ^_\]]]]]]]]\YYY[^¯‏H\ZZ\]ZYZ\^]\]]]]]]]]]¯_ZZZZZZZ^\]]]]]]]]\£[_¯_]‏H\ZZZZ\]¯^]\]]]]]]]]]]]¯_ZZZZZZZ^\]]]]]]]]]^¯_]\\‏H\ZZZZZZ\_]\]]]]]]]]]]]]]¯_ZZZZZZZ^_\]]]]]]]]_]\]]\‏H\ZZZZZZZ]]]]]]]]]]]]]]]]¯^ZZZZZZZ^\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]\Z__[ZZZZ^\]]]]]]]]^]]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]ZYZ^_[ZY^_\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]][ZZYZ^_[^_\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]][YZZZYZ]_\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]][YZZZZYZ__\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]][ZZYY[___\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]][YY[_¯_]\__\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]Z[_¯_]\]\__\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]_¯_]\]]]\__\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]¯]\]]]]]\__\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]¯]\]]]]]]\__\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]¯^]]]]]]]\__\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]¯^]]]]]]]\__\]]]]]]]]^\]]]]]‏GZZZZZZZZ^]]]]]]]]]]]]]]]¯]]]]]]]]\__\]]]]]]]]^\]]]]\‏E^[YZZZZZZZ^]]]]]]]]]]]]]]]¯^]]]]]]]\__\]]]]]]]]^\]]\]_‏C^[YYZZZZZZZZ^]]]]]]]]]]]]]]]¯^]]]]]]]\__\]]]]]]]]^\]]_¯‏B^[YYZZZZZZZZZZ^]]]]]]]]]]]]]]]¯^]]]]]]]\__\]]]]]]]]^]_¯‏B^[YYZZZZZZZZZYY[¯^]]]]]]]]]]]]]]]¯^]]]]]]]\__\]]]]]]]\¯‏B_ZYZZZZZZZZZYY[_¯]]]]]]]]]]]]]]]]¯^]]]]]]]\__\]]]]]\]_‏B^[Z^^ZYYZZZZYY[_¯_]^]]]]]]]]]]]]]]]¯]]]]]]]]\__\]]]\]_¯‏B^[YYYYZ^^ZYZYY[_¯_]\]¯^]]]]]]]]]]]]]]]¯^]]]]]]]\__\]\]_¯‏C^[YYZZZZYYZ_^Z[_¯_]\]]]¯]]]]]]]]]]]]]]]]¯^]]]]]]]\__\]_¯‏D_ZYZZZZZZZZZYZ¯_]\]]]]]¯^]]]]]]]]]]]]]]]¯]]]]]]]]\_^¯‏F[_^ZYZZZZZYY[__\]]]]]]]¯^]]]]]]]]]]]]]]]¯]]]]]]]\]‏HZZ[_^ZYZYY[_¯_]_\]]]]]]]¯^]]]]]]]]]]]]]]]¯^]]]]\]_¯‏JZZZZ[_^Z[_¯_]\\_\]]]]]]]¯^]]]]]]]]]]]]]]]¯^]]\]_¯‏LZZZZZZ[_¯_]\]]\_\]]]]]]]¯^]]]]]]]]]]]]]]]¯]\]_¯‏NZZZZZZZY__\]]]]\_\]]]]]]]¯^]]]]]]]]]]]]]]]¯^_¯‏PZZZZZZZZ__\]]]]\_\]]]]]]]¯^]]]]]]]]]]]]]\]¯‏RZZZZZZZZ__\]]]]\_\]]]]]]]¯^]]]]]]]]]]]\]_¯‏TZZZZZZZZ__\]]]]\_\]]]]]]]¯^]]]]]]]]]\]_¯‏VZZZZZZZZ__\]]]]\_\]]]]]]]¯^]]]]]]]\]_¯‏XZZZZZZZZ__\]]]]\_\]]]]]]]¯^]]]]]\]_¯‏ZZZZZZZZZ__\]]]]\_\]]]]]]]¯^]]]\]_¯‏\ZZZZZZZZ__\]]]]\_\]]]]]]]¯^\\]_¯‏^ZZZZZZZZ__\]]]]\_\]]]]]]]¯]]_¯‏`ZZZZZZZZ__\]]]]\_\]]]]]]]_¯‏bZZZZZZZZ__\]]]]\_\]]]]\]_‏dZZZZZZZZ__\]]]]\_\]]\]_¯‏fZZZZZZZZ__\]]]]\_\\]_¯‏hZZZZZZZZ__\]]]]\_]_¯‏j\ZZZZZZZ__\]]]]\‏l\ZZZZZ__\]]\]_‏p\ZZZ__\]]_¯‏t\Z__]_¯‏x‏|ÿ‏P‏|‏{û‏{
+ת[[[[[[[[
+ת[‏a‏[
+תת[[[[[[[[[[[[ת
+תת‏_ת[[[[[[[[[[[[[[[[
+ת‏]	[\\[[[[[[[[[[[[[\\ת
+
+
+‏\	[\\[[[[[[[[[\\^^
+
+
+‏[	[\\[[[[[\\^^^^
+ת[‏X[[
+		[\[[[\^^^^\ת
+
+[‏T
+
+
+
+ת[		[]^^^^\
+
+
+
+תת[‏Pת
+
+[ת
+[[\\[	
+^^\[
+
+
+
+
+תת‏L
+ת[[[[[[\\[		
+[
+
+
+תת
+
+
+[
+‏Hת[[[[[[[[[[\\[		ת[
+
+
+[תתת\[[[‏8‏[ת[[[[[[[[[[[[[[\\[		
+[
+
+
+
+תת[[\[[[[[\\ת
+
+‏4‏תת
+תת[[[[[[[[[[[[[[[[[[]^]
+	
+ת
+
+[[[[[[[[[[[[[[ת‏1‏ת
+[[[[[[[[[[[[[[[[[\\^^^^]
+		
+[[[[[[[[[[[[[\[[\‏/
+ת[[[[[[[[[[[[[[[[[\\^^^^\
+ת
+		[\\[[[[[[[[[[[[\]
+
+ת‏-	[\[[[[[[[[[[[[[[[[\^^^^
+תת
+		[\\[[[[[[[[\]^^
+תתת‏+Y[\[[[[[[[[[[[[\^^^^ת		[\\[[[[\]^^^]תתתת
+ת[‏*Y\\[[[[[[[\\^^^^תתתת[תת
+		[\[\]^^^]
+תתתתת
+ת[‏““‏
+Y[\[[[\\^^^^\ת
+
+
+
+[[תת
+
+
+ת\[		]_^^]
+
+
+
+[‏”’’““‏
+
+
+[ת	Y[\]]^^^\ת
+
+
+
+
+
+
+
+
+
+[[[[\\[	
+
+
+תתתתתתתתתת
+
+ת‏”””“’““‏ת
+
+
+[\\[	
+^_^\תתת
+
+
+
+ת
+
+
+[[[[[[[[[\[		
+ת
+
+
+
+
+
+
+
+
+
+
+
+[[[[ת
+
+[‏”””””“’““Z[[[[[\\[	
+תתת[תתתת
+
+[[[[[[[[[[[[[\\[		
+ת
+
+ת
+
+
+[[[[[[[[
+‏”””””””“’“¢[\[[[[[[[\\[		תת
+
+
+
+תתת
+
+ת\\[[[[[[[[[[[[[[\\
+	
+[[[\[[[[[[[‏”“”””””””“““¢Z\\[[[[[[[[\\[		[
+
+תת\\[[[[[[[[[[[[[[[\]^_]
+	
+[[\[[[[[[[[[[\\ת
+ת‏ “”””””””“““¢[\\[[[[[[[[\]\		[\\[[[[[[[[[[[[[[[\]^^^]		[\[[[[[[[[[[[[[[[\‏Z¡“”””””””“““¢[\\[[[[[\^^_^
+[[[[[[[[[[[[[[[[[\]^^^]ת[
+		[\\[[[[[[[[[[\]^ת‏ת
+
+Y¡“”””””””“““¢Z\\[\^^^^\[[
+
+\\[[[[[[[[[[[[[[\]^^^]
+[[ת		[\\[[[[[[\]^^^
+ת
+
+‏ת
+ת
+
+
+[₪¡“”””””””“““¢[^^^^\
+ת
+Y[\[[[[[[[[[[\]^^^]
+תתת
+		[\\[[\]^^^^
+
+
+
+ת‏ת
+
+
+[\\₪¡“”””””””“““£\
+
+תת
+	Y[\[[[[[[\]^^^]תתתתתת
+		[\]^^^]תתת
+
+ת‏[[[\\₪¡“”””””””“’“¡Z
+[תתתתתת	Y[\[[\]^^^]תת
+תת[[\[	
+^_]
+תתתתתתת
+
+ת‏תת
+[\\₪¡“”””””””“““¢Zת
+
+תת[Z	Y\^^^^]תתתת[[[[[\\[		
+
+תתת
+
+
+‏ת
+
+[\\₪¡””””””””“““¢[ת
+[[ת\[\\[	
+^^ת[ת
+תת[[[[[[[[[\\[	
+
+
+
+
+‏[[
+תתתתת\]Y¡””””””””“““¢Z\\[[[[\\[	
+ת
+
+
+
+[[[[[[[[[[[[[\\[		
+
+ת[[תת
+
+
+‏ת
+
+תתY¡””””””””“““¢Z\\[[[[[[[[\\[		[[\[[[[[[[[[[[[[[\]]
+	
+
+
+ת
+ת‏
+
+
+ת[Y¡“”””””””“““¢[\\[[[[[[[[\\[	
+[[\[[[[[[[[[[[[[[\]^^^^		
+
+
+‏[
+
+
+
+תZ¡“”””””””“““¢[\\[[[[[[[\]^]		ת[[[[[[[[[[[[[[[[[\]^^^]
+		
+
+‏ 
+
+תתZ¡“”””””””“““¢Z\\[[[\]^^^]
+	[[[[[[[[[[[[[[[[[[\]^^^]תתתת
+ת
+
+
+
+
+‏$
+
+
+ת[Y¡“”””””””“““¢[\\]^^^]
+
+Y\\[[[[[[[[[[[[\]^^^]
+
+תת[ת‏(ת[
+[\₪¡“”””””””“““¢]_^]
+Y[\[[[[[[[[\]^^^^תתתת
+
+ת‏,תתת[[[[\\₪¡“”””””””“““£\
+
+
+Y[\[[[[\]^^^^ת
+תתת
+
+ת‏0
+
+תת
+
+[\\₪¡””””””””“““¢Z[[
+
+
+
+Y[\\]^^^]ת
+
+[ת
+
+[‏4ת
+
+[\\₪¡“”””””””“““¢Zת
+תת[\[	
+^_^]\ת[ת
+
+
+‏8תת[[\\¥¡“”””””””“““¢Z[
+[[[[\\[	
+תתתת
+
+
+‏<תת
+
+[[Y¡””””””””“““¢[\[[[[[[[\\[		תת
+תת
+
+
+
+ת‏@תתת
+
+
+
+Y¡””””””””“““¢[\\[[[[[[[[\\[	
+
+
+תתת
+
+‏D
+
+
+
+ת
+Y¡””””””””“““¢[\\[[[[[[[[[\\	
+
+
+
+תת‏Hת
+תתתת[
+
+Y¡””””””””“““¢Z\\[[[[[\]^^_
+
+
+
+
+ת‏L
+
+
+[Y¡””””””””“““¢Z\\[\]^^^]
+
+
+
+ת
+
+‏P[
+
+תת[₪¡“”””””””“““¢[^^^^]ת
+תת
+	ת
+
+
+‏T
+
+
+
+
+
+
+ת\\₪¡“”””””””“““£\^ת
+תת[ת[‏X
+
+
+תתת
+
+
+[\\₪¡“”””””””““£
+[
+
+[ת
+
+
+
+ת‏\
+
+
+תת\]\₪¡“””””””₪¥תת
+[
+
+
+‏`ת[
+[\\₪¡”””” ₪₪
+תתת
+ת‏dת
+
+תתת[[\]Y¡”” ₪₪
+ת
+
+ת‏h[ת
+תת[תY¡”₪Zתת
+
+ת‏l
+
+ת[תZ[[‏p
+
+
+ת‏t[[
+[
+
+
+
+‏x‏|ÿ`‏?‏|	‏x				‏t	‏p	‏l				‏h	‏d‏`	‏\				‏X				‏T‏P‏L‏H									‏D							‏@		‏<				‏8‏4					‏0						‏,									‏(				‏$					‏ 									‏												‏											‏												‏												‏								‏								‏								‏										‏													‏																									‏											‏						‏								‏													‏														‏ 											‏$								‏(‏,															‏0																	‏4					‏8			‏<							‏@					‏D			‏H				‏L		‏P	‏T									‏X					‏\	‏`		‏d				‏h				‏l	‏p‏t‏x‏|ÿ`‏?
+
+‏|
+
+
+
+
+ת‏x
+
+
+
+
+תûתתת‏tתתתת
+
+
+
+תתת
+
+
+‏p
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+‏l
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+‏h
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+‏d
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+‏`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+‏\
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתûûת
+
+
+
+
+
+‏X
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+‏T
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏P
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏L
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏H
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏D
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת‏@
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתûת
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+‏<ת
+
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏8תתתתת
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏4
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+תת‏0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+תûûתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+‏,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתûûûûתת
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏(
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+תûûתû	ûתתûת
+
+
+
+
+
+
+תûûûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûûת
+		û
+
+
+	
+ûתת
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+תתת
+תתûûת	תûûûת
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûûû
+
+
+
+û		תת
+תתתתתûתû
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+ûûûûû
+	
+
+
+ûתתת		
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תû	מתתûתתתתûתתû
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûûת
+תûûת
+תת
+ûûתûûûûûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת‏
+
+
+
+
+
+תûûûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+û		
+
+ת
+תת
+
+
+תתתת
+
+תתתתûûû
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+‏
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+ûû
+	ûת
+ûתתתת
+
+	ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תû
+תתתת
+
+ûתתûת
+
+תתûûת
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûתûûûûû
+תתת
+ת
+תתûû
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תû
+
+
+
+ûûתûתûת
+תתתתû
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתûûתת
+תתתתתû
+ת
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûûתתתת
+
+תתתת
+
+ת
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ûתתתתתתתתûתת
+
+
+
+
+תתתת
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ûת
+
+ûû
+	תת
+תû
+תûûת
+
+
+
+
+
+
+
+
+
+
+תתתûת
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתû
+תתתûתûûתתû
+
+תת
+
+
+
+
+
+
+
+
+
+תûûתת
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûת
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+‏ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+ûת	תûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+‏$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+ת
+ûתûת
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת‏(
+
+
+
+
+
+
+
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+תתûûûת
+
+
+
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏,
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûתת
+
+
+
+
+
+
+
+
+תתתתתת
+
+
+
+
+תתתת
+
+
+
+
+
+
+‏0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+תתתת
+
+
+
+
+‏4
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏8
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתתתתûûûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏<
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתתתתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+‏@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+תת‏D
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏H
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+‏Lתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+‏P
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏T
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏X
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏\תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏d
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+‏h
+
+
+
+
+
+תתתת
+תתûתת
+
+
+
+
+
+‏l
+
+
+
+
+תת
+
+
+תתתûûת
+
+‏p
+
+
+
+
+
+
+
+
+
+תתתת‏t
+
+
+
+
+
+
+
+
+
+‏x
+
+
+
+
+
+‏|
+
+ÿ`‏?
+
+‏|
+
+
+
+
+ת‏x
+
+
+
+
+תûתתת‏tתתתת
+
+
+
+תתת
+
+
+‏p
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+‏l
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+‏h
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+‏d
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+‏`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+‏\
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתûûת
+
+
+
+
+
+‏X
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+‏T
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏P
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏L
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏H
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏D
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת‏@
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתûת
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+‏<ת
+
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏8תתתתת
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏4
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+תת‏0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+תûûתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+‏,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתûת
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏(
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+ת
+
+ת
+
+ת
+תת
+
+
+
+
+
+
+
+תûûûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûת
+
+תûתתûûתûûת
+ûת
+ûתת
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+תת
+
+
+תû
+ûת
+ûתת
+ûתתûתת
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûûû
+
+
+
+ûûתû
+ת
+
+תûתû
+ûת
+ת
+תûתתת
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+û
+תûûת
+ת
+ûתûûûתתתתתתתת
+ת
+
+ת
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ûת
+
+
+תתתûûתתûûûûûתת
+תû
+
+תûתתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תû
+ת
+
+
+תûת
+תûûתûûתתûתתתûתûûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת‏
+
+
+
+
+
+תûûûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתûûûûûתûûûûתתûûû
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+‏
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תû
+תûתûûûûûûתûûûûתתûûת
+ûתûתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûûתתתûûûûûûûתûûתתûûתתתûûûתת
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûûתתûתתûûûûûתתûתתתû
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûתûûתûûûûûתûתתûתûûתû
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûûûûûתתû
+תתתûתûûתתûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûûûûתתûת
+ת
+תתûתתת
+ת
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ûתûûתû
+תûתûת
+תתûתתתתת
+
+
+
+
+תתתת
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ûûûת
+תתûתתתתûתûûת
+
+
+
+
+
+
+
+
+
+
+תתתûת
+
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתûתûûûתûûûתûתתתû
+
+תת
+
+
+
+
+
+
+
+
+
+תûûתת
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתûתתûûûתתתתת
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+‏ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ûûûתûûûתתתתûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+‏$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+תûתûûûת
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת‏(
+
+
+
+
+
+
+
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+תûת
+
+
+
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏,
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûתת
+
+
+
+
+
+
+
+
+תתתתתת
+
+
+
+
+תתתת
+
+
+
+
+
+
+‏0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+תתתת
+
+
+
+
+‏4
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏8
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתתתתûûûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏<
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתתתתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+‏@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+תת‏D
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏H
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+‏Lתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+‏P
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏T
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏X
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏\תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏d
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+‏h
+
+
+
+
+
+תתתת
+תתûתת
+
+
+
+
+
+‏l
+
+
+
+
+תת
+
+
+תתתûûת
+
+‏p
+
+
+
+
+
+
+
+
+
+תתתת‏t
+
+
+
+
+
+
+
+
+
+‏x
+
+
+
+
+
+‏|
+
+ÿ`‏?
+
+‏|
+
+
+
+
+ת‏x
+
+
+
+
+תûתתת‏tתתתת
+
+
+
+תתת
+
+
+‏p
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+‏l
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+‏h
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+‏d
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+‏`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+‏\
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתûûת
+
+
+
+
+
+‏X
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+‏T
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏P
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏L
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏H
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏D
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת‏@
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתûת
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+‏<ת
+
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏8תתתתת
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏4
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+תתתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+תת‏0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+תûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+‏,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûת
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏(
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+תûûûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ûûתת
+
+
+
+תתת
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+‏ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+תûת
+
+
+
+
+
+
+
+תûת
+
+
+
+‏ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûûû
+
+
+
+
+
+
+
+
+תû
+תû
+
+
+‏תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+ûûת	
+û	
+ת	
+
+
+
+‏
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+תתתûû
+
+
+‏
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+û
+
+
+ûת
+ת
+
+ûû
+
+ûû
+
+תת‏
+
+
+
+
+
+תûûûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת	
+תתת
+תתûûתתתתתת
+‏
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+תתתûû
+
+תתûתûתתת
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+תûתתתת
+
+
+
+
+
+
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+תתûû
+תû
+תתתתû
+
+
+
+
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ûû
+תתת
+ûûת
+ת
+û
+
+
+
+
+
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ûûûתתתתûûûû
+ת
+תתתûתתת
+
+
+
+‏
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûûתתתתûתת
+
+
+‏
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ûתתתתתתתתת
+
+‏
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ûת
+ûתתתû
+‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+û
+
+תת
+תתת‏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ûû
+
+
+
+
+תתûת‏ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תû
+
+
+
+
+
+
+
+
+
+תת
+‏$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+תתûûûûûתת
+ת‏(
+
+
+
+
+
+
+
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+תûת
+
+
+
+
+
+
+תתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏,
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תûת
+
+
+
+
+
+
+
+
+תתתתתת
+
+
+
+
+תתתת
+
+
+
+
+
+
+‏0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתתתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+תתתת
+
+
+
+
+‏4
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏8
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתתתתûûûת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏<
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתתתתתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+‏@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+תת‏D
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏H
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+‏Lתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תתת
+
+
+
+
+
+
+
+
+
+‏P
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏T
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏X
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+תתתת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏\תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏d
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+‏h
+
+
+
+
+
+תתתת
+תתûתת
+
+
+
+
+
+‏l
+
+
+
+
+תת
+
+
+תתתûûת
+
+‏p
+
+
+
+
+
+
+
+
+
+תתתת‏t
+
+
+
+
+
+
+
+
+
+‏x
+
+
+
+
+
+‏|
+
+ÿ‏P‏|‏{û‏{
 ‏{ת‏{
 ‏{
 ‏{
@@ -6608,3235 +15015,2412 @@
 
 ‏|
 
-ÿ`‏?
+ÿ9‏>```a‏z```a•—‏x```a–₪₪₪‏v```a–₪₪₪—₪‏t```a–₪₪₪—₪—₪‏r```a–₪₪₪—₪₪₪—₪‏p```a•₪₪₪—₪₪₪₪₪—₪‏n```a•₪₪₪—₪₪₪₪₪₪₪—₪‏l```a•₪₪₪—₪₪₪₪₪₪₪₪₪—₪‏j```a–₪₪₪—₪₪₪₪₪₪₪₪₪₪₪—₪‏h```a–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏f```a–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏d```a–₪₪₪—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏b```a•₪₪₪—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏````a•₪₪₪—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏^```a•₪₪₪—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏\```a•₪₪₪—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏Z```a•₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏X```a•₪₪₪—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏V```a–₪₪₪—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏T```a–₪₪₪—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏R```a•₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏'```‏(`a•₪₪₪—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏%```b•‏(`•₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏#```b–₪₪‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏!```b–₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏```b–₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏```b–₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏```b–₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏```b–₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏```b–₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏```b–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏```b–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏```b–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏```b–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏```b–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏```b–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏	```b–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏```b–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏```b–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—₪‏```b–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪£ ```b–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪–a``b–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪–a``b–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—a`b–₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—aa—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—aa—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—aa—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—aa—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—aa—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—aa—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—aa—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——¥]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏(`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—‏'¡`b₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—X‏$Wab₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—W‏ Wab₪₪₪₪₪₪₪₪₪₪₪₪₪——¥]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—X‏Wab₪₪₪₪₪₪₪₪₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪X‏Wab₪₪₪₪₪₪₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—X‏Wab₪₪₪₪₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—X‏Wab₪₪₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—X‏¡ab₪₪₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—X‏¡ab₪——₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪X‏Wb—₪]_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪—X‏ •^_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——£X‏
+_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪X‏
+_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪X‏
+_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——£X‏
+_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——£X‏
+_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪X‏
+_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪X‏
+_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——£X‏ 
+_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪X‏$
+_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——£X‏(
+_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪X‏,
+_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——₪X‏0
+_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪——£X‏4
+_ba—₪₪₪₪₪₪₪₪₪₪₪₪₪——£X‏8
+_ba—₪₪₪₪₪₪₪₪₪₪₪——₪X‏<
+_ba—₪₪₪₪₪₪₪₪₪——£X‏@
+_ba—₪₪₪₪₪₪₪₪—£X‏D
+_ba—₪₪₪₪₪₪—£X‏H
+_ba—₪₪₪——£X‏L
+_ba—₪——£X‏P
+ba—₪£X‏T¡”£X‏X‏\‏`‏d‏h‏l‏p‏t‏x‏|ÿ‏F‏|
+‏t‏UUU	‏qתUUVVUUU	‏oתVTUVVUUUVUUU	‏m
+	UUUVUUUUVUUU	‏k
+
+	UUUVUUUUVUUU	‏i
+U
+	UUUVUUUUVUUU	‏g
+V
+	UUUVUUUUVUUU	‏e
+V
+	UUUVUUUUVVUU	‏c
+V
+	UUUVUUUUVUUU	‏a
+V
+	UUUVUUUUVUUU	‏_
+V
+	UUUVUUUUVUUU	‏]
+V
+	UUUVUUUUVUUU	‏[תV
+	UUUVUUUUVUUU	‏Y
+V
+	UUUVUUUUVUUU	‏W	VV
+	UUUVUUUUVUUU	‏T^
+VV
+	UUUVUUUUVUUU	‏PUUV	
+VV
+	UUUVUUUUVUUU	‏LUUVVUUU	
+VV
+	UUUVUUUUVUUU	‏ITUVVUUUVUUU	
+VV
+	UUUVUUUUVUUU	‏G	UUUVUUUUVUUU
+
+VV
+	UUUVUUUUVUUU	‏E
+
+UUUVUUUUVUUU	
+VV
+	UUUVUUUUVUUU	‏C_V
+	UUUVUUUUVUUU	
+VV
+	UUUVUUUUVUUU	‏AV
+	UUUVUUUUVUUU	
+VV
+	UUUVUUUUVUUU	^‏?V
+	UUUVUUUUVUUU	
+VV
+_
+UUUVUUUVVUT‏>V
+	UUUVUUUUVUUU	
+VV
+
+UUUVVUU‏>V
+	UUUVUUUUVUUU	
+VV
+	UUU
+
+‏>V
+	UUUVUUUUVUUU	
+VV
+_תת
+‏>V
+	UUUVUUUUVUUU
+
+VV
+ת
+‏>V
+
+UUUVUUUUVUUU	
+VV
+
+‏>VV
+	UUUVUUUUVUUU	
+Vû
+‏>VV
+	UUUVUUUUVUUU	
+V
+‏<	U
+VV
+	UUUVUUUUVUUU	
+V
+‏9UUU	
+VV
+
+UUUVUUUUVUUU	
+V
+‏7UUVVUUU	
+VV
+	UUUVUUUUVUUU	
+V
+‏6TUVVUUUVUUU	UV
+	UUUVUUUUVUUU	
+V
+‏6	UUUVUUUUVUUVW^
+VV
+	UUUVUUUUVUUU	
+V
+‏6
+	UUUVUUUUVUUU	
+VV
+	UUUVUUUUVUUU	
+V
+‏6U
+	UUUVUUUUVUUU	
+VV
+	UUUVUUUUVUUU	
+
+‏6V
+	UUUVUUUUVUUU	
+VV
+	UUUVUUUUVUUU	
+_
+‏6V
+	UUUVUUUUVUUU	
+VV
+	UUUVUUUVVUT
+‏6V
+	UUUVUUUUVUUU	
+VV
+	UUUVVUU
+‏6V
+	UUUVUUUUVUUU	
+VV
+
+UUU
 
-‏|ת
+
+‏6V
+	UUUVUUUUVUUU
+
+VV
+
+
 
 
 
+
+‏6_V
+	UUUVUUUUVUUU	
+VV
+
 
-‏xתתתת
 
 
 
 
+¯
+‏6V
+	UUUVUUUUVUUU	
+VV
 
-‏t
 
 
-תת
 
 
+¯
+‏6VV
+	UUUVUUUUVUUU	
+V
 
 
 
 
 
+¯
+‏5
+VV
+	UUUVUUUUVUUU	
+U_
 
-‏pת
 
 
 
 
+¯
+‏3
+
+VV
+	UUUVUUUUVUUU	
+V
 
 
 
 
 
+¯
+‏1UUU	
+VV
+	UUUVUUUUVUUU	
+V_
 
 
 
 
 
+
+‏0UUVVUUU	VU
+_	UUUVUUUUVUUU	
+V_
 
 
-‏lתתתתת
 
 
 
+
+‏.TUVVUUUVUUU	VV
+	UUUVUUUUVUUU
+
+V
 
-תת
 
 
 
 
+
+‏.	UUUVUUUUVUUUV
+VV
+	UUUVUUUUVUUU	
+V
 
 
 
 
 
-‏hתתתûתת
+O
+‏.
+	UUUVUUUUVVUU	
+VV
+	UUUVUUUUVUUU	
+U
 
 
 
 
-תûתתת
 
+¯
+‏.U
+	UUUVUUUUVUUU	
+VV
+
+UUUVUUUUVUUU	
+
 
 
 
 
 
+¯
+‏._V
+	UUUVUUUUVUUU	VV
+	UUUVUUUUVUUU
+
+
 
 
 
-‏d
 
 
-תתת
+¯
+‏.V
+	UUUVUUUUVUUUW
+VV
+	UUUVUUUVVUT
 
 
 
 
 
+¯
+‏.V
+	UUUVUUUUVUUU	
+VV
+	UUUVVUU^
 
 
-תתתûתת
 
 
 
+¯
+‏.V
+	UUUVUUUUVUUU	
+VV
+	UUU
 
+
 
 
 
 
 
-‏`
+¯
+‏.V
+	UUUVUUUUVUUU	
+VV
+
+
 
 
 
+
 
 
 
 
 
+¯
+‏.V
+	UUUVUUUUVUUU
+
+VV
+
 
 
 
 
 
+
 
 
-תתתûתת
 
 
 
+¯
+‏.V
+	UUUVUUUUVUUU	
+VV
 
 
 
 
 
+
 
 
 
-‏\ת
 
 
+¯
+‏.VV
+	UUUVUUUUVUUU	
+U
 
 
 
 
 
+
 
 
 
 
 
+
+‏-
+VV
+	UUUVUUUUVUUU	
+V
 
 
 
-תתתתת
 
 
+
 
 
 
 
 
+¯
+‏+
+
+VV
+	UUUVUUUUVUUU	
+V_
 
 
 
 
 
+
 
 
 
-‏Xתתתתת
 
 
+
+‏)UUU	
+VV
+	UUUVUUUUVUUU	
+V
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏'UUVVUUU	VV
+	UUUVUUUUVUUU	
+V
 
 
 
 
 
+
 
 
 
 
 
+
+‏&TUVVUUUVUUU			VV
+	UUUVUUUUVUUU	
+V
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏&	UUUVUUUUVUUU^_
+VV
+_	UUUVUUUUVUUU	
+V
 
 
 
 
-‏T
 
+
 
-תת
 
 
 
 
+¯
+‏&
+	UUUVUUUUVVUU	
+VV
+	UUUVUUUUVUUU	
+U
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏&V
+	UUUVUUUUVUUU	VV
+	UUUVUUUUVUUU	
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏&V
+	UUUVUUUUVUUU	WVV
+	UUUVUUUUVUUU	
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏&V
+	UUUVUUUUVUUUV
+VV
+	UUUVUUUVVUT
 
 
 
 
 
+
 
-‏P
 
 
 
 
+¯
+‏&_V
+	UUUVUUUUVVUU	
+VV
+	UUUVVUU	
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏&V
+	UUUVUUUUVUUU	
+VV
+	UUU^
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏‏V
+	UUUVUUUUVUUU	VV
+
+^
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏‏V
+	UUUVUUUUVUUVW^
+VV
+
 
 
 
 
 
+
 
 
 
 
 
+
 
-‏L
 
 
 
 
+
+‏מ	‏V
+	UUUVUUUUVUUU	
+VV
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
+‏‏VV
+	UUUVUUUUVUUU	
+V
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת
+‏^	VV
+	UUUVUUUUVUUU	
+V_
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏	V_
+VV
+	UUUVUUUUVUUU	
+V
 
 
 
 
-‏H
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏UUU	
+VV
+	UUUVUUUUVUUU	
+V
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏UUVVUUU	VV
+	UUUVUUUUVUUU	
+V_
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏TUVVUUUVUUU		VV
+	UUUVUUUUVUUU	
+V
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏	UUUVUUUUVUUU^
+VV
+	UUVVUUUUVUUU	
+V
 
-‏D
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
+‏ת	ת‏
+	UUUVUUUUVVUU	
+VV
+	UUUVUUUUVUUU	
+U
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏U
+	UUUVUUUUVUUU	
+VV
+
+UUUVUUUUVUUU	
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏V
+	UUUVUUUUVUUU	
+VV
+	UUUVUUUUVUUU
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏V
+	UUUVUUUUVUUU	
+VV
+
+UUUVUUUVVUT
 
 
-‏@
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏V
+	UUUVUUUUVUUU	
+VV
+	UUUVVUU
 
-תתתת
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏V
+	UUUVUUUUVUUU	
+VV
+	UUU	
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
+‏ת	ת‏V
+	UUUVUUUUVUUU	
+VV
+	
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
-‏<
 
 
+
+‏ת	ת‏V
+
+UUUVUUUUVUUU	_
+VV
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
-תתתתת
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏V
+	UUUVUUUUVUUU	
+VV
 
 
-תתתתתתת
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+_
+‏ת	ת‏VV
+	UUUVUUUUVUUU	
+V
 
 
 
 
 
+
 
 
 
 
 
+
 
-‏8
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏
+VV
+	UUUVUUUUVUUU	_U_
 
 
 
 
 
+
 
 
 
 
 
-תת
+
 
 
-תת
 
 
 
+
 
 
 
 
 
+
+‏ת	ת‏
+
+
+VV
+	UUUVUUUUVUUV^
+V_
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
-‏4
 
 
 
 
+¯
+‏ת	ת‏UUU	
+VV
+	UUUVUUUUVUUU	
+V
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
-תת
 
+¯
+‏ת	ת‏UUVVUUU	VV
+	UUUVUUUUVUUU	
+V_
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
+‏ת	ת‏TUVVUUUVUUUX		VV
+	UUUVUUUUVUUU	
+V
 
 
-‏0
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏
+UUUVUUUUVUUU
+VV
+_	UUUVUUUUVUUU	
+V_
 
 
 
 
-תתתת
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏
+	UUUVUUUUVVUU	
+VVUת	UUUVUUUUVUUU	
+U
 
 
 
 
-‏,
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏_U
+	UUUVUUUUVUUU
+
+V
+û	UUUVUUUUVUUU	
+
 
 
 
 
 
+
 
-תת
 
 
 
 
+
 
 
 
 
 
+
 
 
-תתת
 
 
 
+¯
+‏ת	ת‏V
+	UUUVUUUUVUUU	
+Vûת	UUVVUUUUVUUU
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
-‏(
 
 
+
+‏ת	ת‏V
+	UUUVUUUUVUUU	
+V
+
+	UUUVUUUVVUT
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	ת‏V
+	UUUVUUUUVUUU	
+V	תתU
+	UUUVVUU
 
-ת
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
-תת
+¯
+‏ת	ת‏_V
+	UUUVUUUUVUUU	
+V	ûתV
+
+UUU^
 
+
 
 
 
 
 
+
 
 
 
 
 
-ת
+
 
 
 
 
 
+
 
 
 
 
-‏$
 
+¯
+‏ת	ת‏V
+	UUUVUUUUVUUU	
+V	ûתV
+
+
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
-תת
 
+
+‏ת	ת‏V
+	UUUVUUUUVUUU	
+V	ûתV
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
-תת
 
+
+‏ת	ת‏V
+	UUUVUUUUVUUU	
+U	ûתV
 
 
 
 
 
+
 
 
-תתתתת
 
 
 
+
 
 
 
 
 
+
 
-‏ 
 
 
 
 
+
 
 
 
 
 
+
+‏ת	ת‏VV
+_	UUVVUUUUVUUU
+
+_	ûת_
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
-ת
+
 
 
 
 
 
+
 
 
 
 
 
+
+‏ת	ת‏
+VV
+	UUUVUUUUVUUU		ûת_
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
-ת
 
+
 
 
 
 
-תתתתתתת
 
+
+‏ת	ת‏
+
+VV
+	UUUVUUUUVUUU
+	ûת_
 
 
 
 
 
+
 
 
 
 
 
-‏
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯
+‏ת	תUUU	
+VV
+	UUUVUUUUVUU	ûתV_
 
 
 
 
 
+
 
 
 
 
-ת
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
+‏ת	
+תUUVVUUU	
+VV
+	UUUVUUVUV_	ûת
+VV_
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
-ת
 
 
 
-תûûתת
+
 
 
 
 
 
+
+‏ת	
+UTUVVUUUVUUU	
+VV
+	UUUVUUV_	ûת_
+V_
 
 
 
 
 
+
 
 
 
 
 
-‏
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+û
+‏ת		UUUVUUUUVUUU	
+VV
+	UUUVV_	ûת	
+V
 
 
 
 
 
+
 
 
 
 
 
+
 
-ת
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
+
+‏ת	_
+	UUUVUUUUVUUU	
+VV
+	UUV_	ûתUU	
+V
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
-ת
 
 
 
 
-תת
+ת
+‏ת	U
+	UUUVUUUUVUUU	
+VV
+	V	ûתUVUU	
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
-‏
 
+
 
 
 
 
 
+ת
+‏ת	V
+	UUUVUUUUVUUU	
+VV
+	ûתUVVUUU	
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
-ת
 
 
 
 
+תת
+‏ת	_V
+	UUUVUUUUVUUU	
+VV
+ûתUVUVVUTX
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+û	
+‏ת	V
+	UUUVUUUUVUUU	
+VU
+ûתUUVVUU
 
 
 
 
 
+
 
 
 
-ת
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+¯^‏Uû	V
+	UUUVUUUUVUUU
+
+V	û
+
+UUU
 
+
 
 
 
 
 
+
 
 
 
 
-‏
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+û^VW‏Vû	V
+	UUUVUUUUVUUU	
+VV	ûת
+
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
-
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
+VV‏Vû	V
+_	UUUVUUUUVUUU	
+V	ûת
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
-
 
+
 
 
 
 
 
+	WV‏Uû	V
+	UUUVUUUUVUUU	
+V	ûתV
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
-‏
 
 
+
 
 
 
+WW	WV‏ûV
+	UUUVUUUUVUUU	
+V	ûת
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
-ת
+
 
 
 
 
-
 
+
 
+WWWWWWW‏VV
+	UUUVUUUUVUUU	
+V	ûת_
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+תWWWW‏VVV
+	UUUVUUUUVUUU	
+V	ûת
 
 
 
 
 
+
 
 
 
 
 
+
 
 
-ת
 
 
 
+
 
 
 
 
 
+
 
 
 
 
+		WWV‏VVV
+
+UUUVUUUUVUUU	
+V	ûת_
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
-‏
 
 
+
 
 
 
+VVV‏VVV
+	UUUVUUUUVUUU	
+_	ûת
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
-תתתת
+W‏VVV
+	UUUVUUUUVUUU		ûת
 
-תת
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+תWWWV‏ VVV
+	UUUVUUUUVUUU
+	ûת
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
+WWV‏$VVV
+	UUUVUUUUVUU	ûת_
 
 
-תת
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+	
+W‏(VVV
+	UUUVUUUUV	ûת
+
 
 
 
 
 
+
 
 
 
 
 
+
 
 
 
 
 
+VV‏,VV
+_	UUUVUUV	ûת
 
 
 
 
-‏
 
+
 
 
 
 
 
+
 
 
 
 
 
+תWVV‏0VV
+	UUVVV	ûת	
 
 
 
 
 
+
 
 
 
 
-תתתת
 
+
 
 
 
-תת
+תVVV‏3
+VV
+	UUV	ûת
 
 
-ת
 
 
 
+
 
 
 
 
 
+	
+VV‏7	VV
+	U	ûת
+
 
 
 
 
 
+
 
 
 
 
 
+WVWWW‏;
+VV
+	ûתת
+
 
 
 
 
 
+
 
 
 
 
 
+WVWWV‏?	VVV
+	ûתת
+
 
 
 
 
 
+
 
 
 
+תWVWWWWWVV‏C	VV_	ûתת
+
 
 
 
-ת
 
 
+	
+WVWWWWW‏G
+V	ûתת
+
 
 
 
 
 
+תVV‏K
+V	ûתת
+
 
 
-תתתת
 
 
 
+_‏O
+V	ûתת
+
 
 
 
+WVW‏S	V	ûתת
+	
+VWWWWV‏W	V	ûתת
+VWWW‏[
+V	ûתת
+WW‏_	V	ûת	VWW‏c
+V	ûת	‏g	_	ûתWW‏k	תתV‏o		
 
-
-
-
-
-תתתת
-
-
-
-
-‏
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתתת
-
-
-
-תתת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתתת
-
-
-
-
-
-
-
-
-
-
-
-תתתת
-
-
-
-
-‏
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתûת
-
-תת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-‏
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-‏
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-ת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-‏
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-ת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-‏
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-ת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-ת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-‏
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תû
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-‏
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-‏ 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-ûת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-‏$
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתת
-
-
-
-
-
-
-
-
-
-
-
-
-ת
-
-
-
-
-
-
-
-
-
-‏(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתûת
-
-
-
-
-
-
-
-
-
-
-
-
-תתתתת
-
-
-
-
-
-‏,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתת
-תת
-
-
-
-
-
-
-
-
-
-
-
-
-תתתתתת
-
-
-
-
-‏0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תת
-
-תתתתתת
-
-
-
-
-
-
-תתתתתת
-
-
-
-
-‏4
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתûתתת
-
-
-
-
-
-
-
-תתתתת
-
-
-
-
-
-תûתתת
-
-
-
-
-‏8
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-ת
-
-
-
-
-
-
-
-
-
-תת
-
-
-
-‏<
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-‏@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתת
-
-
-
-
-
-
-
-
-‏D
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתתתת
-
-
-
-
-‏H
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תת
-
-
-
-
-‏L
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתתת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-‏P
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתתתתת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-‏T
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתתתתת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-‏X
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתתתתת
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-‏\
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתûûתת
-
-
-
-
-
-
-
-
-
-
-
-‏`
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-תתת
-
-
-
-
-תתת
-
-
-‏d
-
-
-
-
-
-
-
-
-
-ת
-
-
-
-
-
-
-
-
-
-תûתתת‏h
-
-
-
-
-
-תתתת
-
-
-
-
-
-
-
-
-
-
-ת‏l
-
-
-
-
-תתת
-
-
-
-
-
-
-
-
-
-‏p
-
-
-
-
-
-
-
-
-
-
-
-
-
-‏t
-
-
-
-
-
-
-
-
-
-‏x
-
-
-
-
-
-‏|
-
-ÿ1‏>‏zפ‡‡פ‏vפv…††…vפ‏rפv…††††††…‡פ‏nפv…††††††††††…vפ‏lw…††††††††††††…w‏lןפ~w†…††††††††w~ן‏lן…vפ~w†…††††w~ןפx‏lן†u†‡פ~w††w~ןפxפפ‏lן†uuu†uפןןןפxפפפפ‏lן†uuuuu†u~פxפפפפפפ‏lן†uuuuuv†מ~xפפפפפפפ‏lן†uuuuuu†מxפפפפפפפ‏lן†uuuuuu†מ~xפפפפפפפ‏kן†uuuuuu†מ~xפפפפפפפ‏hן†uuuuuu†מxפפפפפפפ‏cפwפ~†uuuuuu†מxפפפפפפפפwמ‏_פv†……פ~†uuuuuu†מ~xפפפפפפפפ……†vפ‏]x…†††…פ~†uuuuuu†מ~xפפפפפפפפ…†††…x‏Zw…††††…פ~†uuuuuu†מxפפפפפפפפ…††††…w‏W‡††††††…פ†uuuuuu†מ~xפפפפפפפפ…††††††v‏Uן††††††††…פ†uuuuuu†מ~xפפפפפפפפ…††††††††ן‏Tu††††††††…פ~†uuuuuu†מ~xפפפפפפפפ…††††††††u‏Tu††††††††…פ~†uuuuuu†מ~xפפפפפפxפ…††††††††u‏Tu††††††††…xמ†uuuuuu†מ~xפפפפפפפx†††††††††u‏Tu†††††††††††uuuuuuu†מ~xפפפפפפw†††††††††††u‏Tu†††††††††††††uuuuu†מ~xפפפפw†††††††††††††u‏Tw…†††††††††††††††uu†מ~xפפw††††††††††††††…w‏Tw…†††††††††††††††u†ןxwu††††††††††††††…w‏Tפx…††††††††††††††††פפ††††††††††††††††…פן‏Tuwפ…††††††††††††††††††††††††††††††††…פפפ‏Tv†vמ†…††††††††††††††††††††††††††††…†מפxפ‏Tvuuvפw†……††††††††††††††††††††……†wפפפפפ‏Tvuuuuפןמxu†…††††††††††††††…†uxמןפפפפפ‏Tvuuuu††vxמ~פw††††††††††††wפ~מפxxפפפפפ‏Tvuuuuuuu††uwפןןפפxפפפפפפפפפ‏Tvuuuuuuuuuuu††vwwwwwwwwwwwxפxxפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuu†vפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפxxפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפןןפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפן‏Rvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפףח	
+WVV‏t	VWW‏xW‏|ÿ1‏>‏zפ‡‡פ‏vפv…††…vפ‏rפv…††††††…‡פ‏nפv…††††††††††…vפ‏lw…††††††††††††…w‏lןפ~w†…††††††††w~ן‏lן…vפ~w†…††††w~ןפx‏lן†u†‡פ~w††w~ןפxפפ‏lן†uuu†uפןןןפxפפפפ‏lן†uuuuu†u~פxפפפפפפ‏lן†uuuuuv†מ~xפפפפפפפ‏lן†uuuuuu†מxפפפפפפפ‏lן†uuuuuu†מ~xפפפפפפפ‏kן†uuuuuu†מ~xפפפפפפפ‏hן†uuuuuu†מxפפפפפפפ‏cפwפ~†uuuuuu†מxפפפפפפפפwמ‏_פv†……פ~†uuuuuu†מ~xפפפפפפפפ……†vפ‏]x…†††…פ~†uuuuuu†מ~xפפפפפפפפ…†††…x‏Zw…††††…פ~†uuuuuu†מxפפפפפפפפ…††††…w‏W‡††††††…פ†uuuuuu†מ~xפפפפפפפפ…††††††v‏Uן††††††††…פ†uuuuuu†מ~xפפפפפפפפ…††††††††ן‏Tu††††††††…פ~†uuuuuu†מ~xפפפפפפפפ…††††††††u‏Tu††††††††…פ~†uuuuuu†מ~xפפפפפפxפ…††††††††u‏Tu††††††††…xמ†uuuuuu†מ~xפפפפפפפx†††††††††u‏Tu†††††††††††uuuuuuu†מ~xפפפפפפw†††††††††††u‏Tu†††††††††††††uuuuu†מ~xפפפפw†††††††††††††u‏Tw…†††††††††††††††uu†מ~xפפw††††††††††††††…w‏Tw…†††††††††††††††u†ןxwu††††††††††††††…w‏Tפx…††††††††††††††††פפ††††††††††††††††…פן‏Tuwפ…††††††††††††††††††††††††††††††††…פפפ‏Tv†vמ†…††††††††††††††††††††††††††††…†מפxפ‏Tvuuvפw†……††††††††††††††††††††……†wפפפפפ‏Tvuuuuפןמxu†…††††††††††††††…†uxמןפפפפפ‏Tvuuuu††vxמ~פw††††††††††††wפ~מפxxפפפפפ‏Tvuuuuuuu††uwפןןפפxפפפפפפפפפ‏Tvuuuuuuuuuuu††vwwwwwwwwwwwxפxxפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuu†vפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפפפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפפxxפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפןןפפ‏Tvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפן‏Rvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפפףח	
 û‏Ovuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפפפפףת‏L
 Wvuuuuuuuuuuuuuuuuuuuuuuuuuvפפפפפפפxף	û‏I
 Vvuuuuuuuuuuuuuuuuuuuuuuuuuvפפמתף	ת‏G
@@ -10021,2653 +17605,17525 @@
 
 û‏	‏N‏û		ûתתת
 ‏‏‏[û		ûתתû‏‏mûûת‏w‏{‏‚‏}‏{û
-‏zû‏{‏}ÿ`‏?TT‏|TTTTT‏xUTTSTT‏tTTTTTTTTTTT‏pTTTUTTTUT‏lTTTTUT‏hTTTTTUUTSST‏dTTTTTTTSSTTSTT‏`TTTTTTTTTTSSTTTTT‏\TTTTTTTTTTTTTTUTTTTTTTTT‏XVTTTTTTTTTTTTTTTTTTTTTTTU‏TTUTTTTTTTTTTTTTTTTTTTTTTTUUSST‏PTTUUUTTTTTTTTTTTTTTUUTTTTTTTSTT‏LTTTUTTTTSSTTTTTUTTT‏HTTTTTTTTTTTTTTTTTTTTTTTTTTRRTTTTTTUTTSST‏DTSSTTTTTTTTTTTTTTTTTTTTSSTTTTUTTTTTTTTTV‏@TSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT‏<TTTUTTTTTTTTTTTUTTTTTTTTTTTTTTTTTTTTTTTTTTTTUTT‏8TSSTTVVUTTTTTTTTTTTTTTTTTTTTTTTTTTTT‏4TTTTTVVTTTTUTTTVVTTTTTTUTTTTTTTST‏0TTTTTTTTUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTSTT‏,TTSTTTUTTTUTTTTTUTTTTTTTTTTTSTTTTUTTTTTTTTTTTTTTTTT‏(TSSTTTTTTTTTUTTTTTTTTTTTTTTSTTTTTTTTTTTTTTTTTTTSTT‏$TTTTTUUTTTTUTTTTTTTTTTTTTTTTTSSSUTTTTTTVTTTTTTTTTTTSTT‏ TTTUUTTUTTTTTTTTTTTTTTUTTTTTTTTTTTTUVUTTTTTTTTTTTTTSTT‏TTSTTUVVTTTTTTTTSSTTTTTTTTTTTTTTTTTTTTTTTTTUTTTTTTTTTTTTTTTT‏TTTTTTTTTTTTTTTRRRRTTTTTTTTTTTTTTTUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTSTT‏TTTTTTTTTTTTTSTTTTTTTTTTTTTSSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTSTT‏TTTTTTTTTTTTTTTUTTTTTTTTTTTTTTTTTTTSSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTSTT‏TTSTTTTTTTTTTTTTTTTTTTTUTTTTTUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTSTT‏TTTTTUUUTTTTTTTTTTTTTVTTTTTVVTTTTTTTTTTTTTTTTTTTTTVVTTTTTTTTTTTVVVTTTTTTTTTTTTSST‏TTTTTTTTTTTTTTTTTTTTTTTTTTTTUTTTTTTTSRRSTTTTTTTTTTTTTTTTTTTTTTTUTTTTTTTTTTTTTTTSST‏TTTTTTTTTTTTTTTTTTTTTTTTTUTTTTTTTTTTTTSRRTTTTTTTTTTTTTSSTTTTTTTTTTTTTTTTTUTTTTTTTTTTTTTTTTTSSSSST‏TTUTTTTTTTTTTTTTTTTTTTTTTUUSTUUUTUUTTTTTUTTTTTTTTTTTTTTTTTSSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTSR‏TTTTTTTTTTTTTTTTTTTTTTTTRRRSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTSTTTTTTTTTTSSTTTTTTTTTTTTTTTTTS‏TSTTTTTTTTTTTTTTTVSTTTTTSSSTTTTTTTTTTTTTTTUTTTTTTTUTTTTTTTSSSTTTTTTTTTTTTTTSTT‏TSSTTTTTTTTTTTTVTTTTTTSSSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTSST‏TSSTTTTTTTTTTTTTTTTTTTTTSTUTTTTTTTTTTUTTTTTTTTTTTTTTTTTTTTTTTTTSTT‏TTSTTTTTTTTTUTTTTTTSRRSTUUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTUTTTTTTTSTT‏TTTUTTTTTSRTTTSSSTTTTTTTTTTTSSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT‏ TTTTTTTTTSRSSSSSTTTTTTTTTTTTTTTSSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT‏$TSSTTTTUUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTVVTTTTTTSST‏(TTTTTTTTTTTUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT‏,TTUTTTTTUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT‏0TTTTTTTTTTSSSTTTTTTTTSSTTTTTTTTTTTTTTTTTTT‏4TTTTTTTTSTTTTTUTTTTTTSTTTTTTTSSTTTTTTTTTTTTTTTTUTT‏8TSTTSRRSTTTTVVTTTTTTTTTSTTUTSTTTTTTTTTTTUUTTTTT‏<TTSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT‏@UTTTTUTTTTTTTTTTTTTTTTTTTTTTTTTTT‏DTSSTTUVVVTTTTTTTTTTTTTTTTTTTTTTTTTTTT‏HTTSTTUTTTTTTTTTTTTTTTTTTTTTTTTTTT‏LTTTTTTTTTTTTTTTTTTTTTTTTTTTTT‏PTTUTTTTTTTTTUTTTTT‏TTTTTUUTTTTTTSTT‏XTTSTUTTTTTTTTTTTUTTTTUTTTT‏\TTSTTTTTTTTTTTTTTSSTTTTTTTT‏`TTTTTTTTTTTTTTTSSSSTTTTT‏dTSSTTTTTTTTTTTTTTTTTTTT‏hTTTTTTTTTTTTTTT‏lTTSTTTTTTTTTSTT‏pTTSTTTTTTTTSST‏tTTTTSSTSTT‏xTRRT‏|ÿ`‏?UU‏|UTTU‏xUUUUUUUU‏tTTTUUUUUUUUTTT‏pUTUUUUUUUUUUUUTT‏lUUUUUUUUUUUUUUUUUTU‏hUUUUUUUUUUUUUUUUUUUUUUUUU‏dUUUUUUUTUUUUUUUUUUUUUUUUUUUTTU‏`UUUUUUUUTTUUUUUUUUUUUUUUUUUUUUUTTT‏\UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUT‏XTTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUV‏TUTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVUUU‏PUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTU‏LUTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTU‏HTTUUUUUUUUUUUUUUUUUUUUUUUUUTUUUUUUUUUUUUUVVUUUUUUUUU‏DUTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVUUUUUUUUUUUV‏@TTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTUUUUUUUUUUUUUUUUUUUUUUUUVVUUU‏<UTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTU‏8UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVVVUUUUUU‏4UUTUUUUUUUUUUTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTT‏0UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTU‏,UUUUUUUUUUUUUUUUUUUUUUUUUUUUTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTU‏(UTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏$TTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVVUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏ UTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVVUUUUUUUUUUVUUUUUUTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVVVUUUUUUUUUUUUUUUUUUUUVUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTT‏``UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVVUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTU‏`````’UTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVUUTUU‏`````````’TUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVVUUUUU‏`````````````’UUUUUUUUUUUUVVUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVUUUUUUUTTU‏`````````````````’TUUUUUUUUUUVVUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏``````````````````’TUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏``````````````````’TUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTUUUUUUTTT‏``````````````````’TUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTUUUUUUUUUUUUUUUUVTUUUUUUU‏``````````````````’UUVUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTU‏``````````````````’UVVVUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTU‏``````````````````’UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUVVUUUUUUUUTTU‏``````````````````’UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏``````````````````’UUUUUUUUUUUUUUUVUUUUUUUUUUUUUTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏ ``````````````````’UUUUUUUUUUUUUUVVUUUUUUUUUUUUUUUUUUUUUUUUUUUUVVUUUUUUUUUUUUUU‏$``````````````````’UTTUUUUUUUVUUUUUUUUUUUUUUUUUUUUUVVVUUUUUUVUUUUUUUUUUUUUU‏(``````````````````’UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTU‏,``````````````````’UUUVVUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTT‏0``````````````````’UVVUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTU‏4``````````````````’TUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏8``````````````````’UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏<``````````````````’TUUUUUUUUUUUUUUUUUUUUUVVUUUUUUUUUUUUUUUTU‏@``````````````````’UUUUUUUUUUUUUUUUVUUUUUUUUUUVTTT‏D``````````````````’UUUUUUUUUUUUTTTUUUUUUUUUUUUVV‏H``````````````````’UUUUUUUUUUUUUUUUUUUUUUUUUTU‏L``````````````````’TUUUUUUUUUUUUUUUUUUUUUUUUTTU‏P``````````````````’UUUUUUUUUUUUUUUUUUUUTT‏T``````````````````’UUUUUUUUUUUUUUUUTTU‏X``````````````````’UUUUUUUUUUUU‏\``````````````````’UUUUUUVUUTUU‏```````````````````’UUUUUUTUU‏d``````````````````’UUUUU‏h``````````````````’TU‏l````````````````a”‏p````````````a•‏t````````a•‏x````a•‏|`•ÿ ‏>‏z‏vPP‏sPP‏q
-PP‏o
-PQPP‏m
-QPP‏k
-QPP‏i
-PP‏g
-PP‏e
-QPP‏c
-PQPP‏aQQPP‏_QQPP‏]
-QPP‏[
-PQQPP‏Y
-QQPP‏W
-QQPP‏U
-PP‏S
-QQQPP‏Q
-תQQPP‏O
-QQPP‏M
-QQQQPP‏KRQQתQQPP‏I	QQPP‏G
-Q		QQQQPP‏E
-R		QQPP‏B	QR		QQQPP‏AQQR	RQQPP‏?:?
-QR		QQSQPP‏=779?
-QQR	
-QQQQPP‏;88879?
-QQR		QQQQPPS‏9888887:?
-QQR		QQPPP
-‏988888877:?
-QQR		QQQQPת‏977888888879?
-QR		QQ
-‏9?:77888888879?	QQR		QQ
-‏9N:77888888879?
-QR	Q‏9	QN:77888888879?
-QQR		QQ‏9
-R	N:77888888879?	SQQR		QQQ‏9
-QRN:77888888879?
-QQR		QQ‏9
-QRN:77888888879?
-QQR		QQQ‏9
-QRN:77888888879?	QQR	
-QתQ‏9
-QRN:77888888879?
-QQR		QQ	‏9
-QRN:7788888887:?
-QQR		QQת	‏9
-QQRN:77888888879?
-QR		RQQ	‏9QQRN:77888888879?
-QQR		QQP	‏9QQRN:77888888879?
-QR		Q‏9
-QQRN:77888888879?
-QR		Q‏9
-QתQQRN:77888888879?	QR		Q‏9
-QQRN:77888888879?	QQR		Q‏9
-QQRN:77888888879?	QR		RQ‏9
-QQQRN:77888888879?
-QQR		Q‏9
-QQRN:77888888879?	QQR		P‏9
-QSQQQRN:77888888879?	QR	
-‏9
-QQQQRN:77888888879?
-QQR	‏9
-QQQRN:77888888879?
-QR‏9	QQQQQRN:77888888879?	QP	‏9ת	QQQQQRN:77888888879?		O?‏9
-R	QQQQQRN:77888888879?
-RO?û‏9
-R		QתQQQRN:77888888879??;:;‏9
-QR		QתQQRN:77888888879N::;‏9
-QR	QQQQR	N:778888887;:;‏9
-QR		QQQRN:7788887<:û‏9
-QR		QQQQRN:77887<ûתת‏9
-QR		QQQQRN:787<:תת‏9
-PQR	
-QQQRN:6<
-
-‏9QR	QQQQQR??
-‏9QR		RQSתQQQR
-‏9
-QR		RQQQ‏9
-QQR	QתQ‏9
-QQR	
-QQ‏9
-QQR	QQQ‏9
-QQR	QQ‏9
-QQR	QSQ
-‏9
-QQR	QQ
-‏9
-QQR		RQת
-‏9
-PQQR	QQS	‏9QQQQR		QQ‏9QQQQR		QP‏9
-QQQQR	Q‏9
-PתQQQR	Q‏9
-SQQQR	Q‏9
-QתQQQR	
-Q‏9
-Q
-QQQR	Q‏9
-QתQQQR		Q‏9
-QQQQR		‏9
-QSתQQQR		‏9
-QQSתQQQR‏9RQQQQQ‏9
-QQתQQP‏9	Q	QSתQQQ‏9
-PR	QQתQQ‏9
-QR		QQSתQQ‏9
-QR		QQQQ‏9
-QR		QSQQQ‏9
-QR	QQSQQQQ	‏9
-QR	QQSתQQP‏9
-Q	QQSQQת
-‏9
-QR		QQQQQ‏9QQR		QQתQ	‏:RQQR		QQQ‏<QQR
-QQSQ‏>QQR		QQSתQ‏@QQR	
-QQQ‏BRQQR	QQQQת‏DQQR	
-QQQ‏FQQR	QQת
-‏HQQR		QQ
-‏JQQR
-QQ	ת‏LQQR	QQS	‏NQQR	QQP	‏PQQR	
-Q‏RQQR	Q‏TQQR	Q‏VRQQR	Q‏XQQR	Q‏ZRQQR	Q‏\QQR	P‏^QQR
-‏`QQR‏bRQQR‏dQQ‏fQ‏hQ‏jQ‏lQ‏nQת‏pQ‏r
-‏t
-‏x‏|ÿ ‏>‏z‏vPP‏rPP‏oPPQ‏mPP
-‏kPP	‏iPP	‏gPP	‏ePP	‏cPP	‏aPP	‏_PP	
-‏]PP	
-‏[PP	
-‏YPP	
-	‏WPPQ	
-	‏UPP	
-	‏SPP	
-	‏QPP	
-	‏OPP	
-	‏MPP	
-	‏KPP	
-	‏IPPQ	
-	‏GPP	
-	‏EPPQ	
-	‏CPP	
-	‏APP	
-	‏>PP	
-	‏=PP	
-	N<‏;PP	
-	N<;;‏9PPQ	
-	N<;;;;‏9PP	
-	N<;;;;;;‏9QP	
-	N<;;;;;;;;‏9Q	
-	N<;;;;;;;;;;‏9Q	
-N<;;;;;;;;;;>N‏9Q
-ת
-	N<;;;;;;;;;;=O‏9Qת
-	N<;;;;;;;;;;>O‏9Qת
-N<;;;;;;;;;;=O‏9Qת
-	N<;;;;;;;;;;=O‏9Qת
-	N<;;;;;;;;;;=Oת‏9RRQת
-	N<;;;;;;;;;;=O‏9RRת
-	N<;;;;;;;;;;>O‏9QQRQת	N<;;;;;;;;;;=O‏9QQQ
-	N<;;;;;;;;;;=O‏9QתN<;;;;;;;;;;=O
-‏9QתN<;;;;;;;;;;=O
-‏9QתN<;;;;;;;;;;=O
-	‏9QתN<;;;;;;;;;;>O
-‏9תN<;;;;;;;;;;=O
-	‏9QתN<;;;;;;;;;;=O
-	‏9QתN<;;;;;;;;;;>Oת
-	‏9	RQתN<;;;;;;;;;;>O
-	‏9R	PתN<;;;;;;;;;;=O
-	‏9QR	QתN<;;;;;;;;;;=O
-‏9QQQQ
-N<;;;;;;;;;;>O
-	‏9QQתN<;;;;;;;;;;=Oת
-‏9	QQתN<;;;;;;;;;;=O
-	ת‏966	PתN<;;;;;;;;;;=O
-	‏96	676תN<;;;;;;;;;;>O
-‏9766	67O<;;;;;;;;;;=O
-	‏9666	65>?:<;;;;;;;=O
-	‏9676	66>?;;;;;;;=O
-	‏966		65?;<;;;=O
-	‏96664?;;;>O
-	‏9QQ
-	?:>O
-‏9QQNN
-	‏9QQת
-	‏9Qת
-			‏9Qת
-		
-‏9Qת
-	
-‏9Qת
-		
-‏9QQת
-	
-‏9RQQת
-		
-‏9RRRת
-		
-‏9QQRRRת			
-‏9QQQR
-		
-‏9Q
-	
-
-‏9Qת	
-
-‏9Qת	
-
-‏9Qת	
-
-‏9Qת	
-
-‏9Qת	
-
-‏9RQת	
-
-‏9
-Qת	
-
-	‏9
-
-
-	
-
-‏9ת		
-
-	‏9QSת	
-
-‏9QQP	
-
-	‏9QQת	
-
-‏9Qת	
-
-	‏9Qת	
-
-‏9Qת	
-
-	‏9ת	
-
-	‏9Qת	
-
-‏9RRQת	
-
-‏9RRRת	
-
-‏9QRQ
-
-
-	‏9QQQ
-
-
-‏9Qת
-	ת‏9Qת
-ת‏:ת
-	
-‏<Qת
-	ת‏>Qת
-	ת‏@QQת
-ת‏BQQת
-
-‏DRRQת
-	ת‏FQRRת
-	
-‏HQRQת	ת‏JQQQ
-	ת‏LQתת‏NQתת‏PQתת‏Rת
-‏TQת
-‏VQQתת‏XQQת
-‏ZRRQתת‏\QRRRתת‏^QQR
-
-‏`QQ
-ת‏bQתת‏dQתת‏fQתת‏hQת
-‏jתת‏lQתת‏nתת‏pQתת‏tP
-ת‏x‏|ÿ ‏>‏z‏vPP‏sPP‏q
-PP‏o
-PQPP‏m
-QPP‏k
-QPP‏i
-PP‏g
-PP‏e
-QPP‏c
-PQPP‏aQQPP‏_QQPP‏]
-QPP‏[
-PQQPP‏Y
-QQPP‏W
-QQPP‏U
-PP‏S
-QQQPP‏Q
-תQQPP‏O
-QQPP‏M
-QQQQPP‏KRQQתQQPP‏I	QQPP‏G
-Q		QQQQPP‏E
-R		QQPP‏B	QR		QQQPP‏AQQR	RQQPP‏?:?
-QR		QQSQPP‏=779?
-QQR	
-QQQQPP‏;88879?
-QQR		QQQQPPS‏9888887:?
-QQR		QQPPP
-‏988888877:?
-QQR		QQQQPת‏977888888879?
-QR		QQ
-‏9?:77888888879?	QQR		QQ
-‏9N:77888888879?
-QR	Q‏9	QN:77888888879?
-QQR		QQ‏9
-RN:77888888879?	SQQR		QQQ‏9
-SN:77888888879?
-QQR		QQ‏9
-N:77888888879?
-QQR		QQQ‏9
-RN:77888888879?	QQR	
-QתQ‏9
-RN:77888888879?
-QQR		QQ	‏9
-RN:7788888887:?
-QQR		QQת	‏9
-N:77888888879?
-QR		RQQ	‏9N:77888888879?
-QQR		QQP	‏9N:77888888879?
-QR		Q‏9
-N:77888888879?
-QR		Q‏9
-N:77888888879?	QR		Q‏9
-RN:77888888879?	QQR		Q‏9
-PR	N:77888888879?	QR		RQ‏9
-R	N:77888888879?
-QQR		Q‏9
-RP	N:77888888879?	QQR		P‏9
-R	P	N:77888888879?	QR	
-‏9
-PRP	N:77888888879?
-QQR	‏9
-PQ	PP	N:77888888879?
-QR‏9
-PPR	N:77888888879?	QP	‏9תתP	N:77888888879?		O?‏9
-RתPP	N:77888888879?
-RO?û‏9
-Q
-SPPR	N:77888888879??;:;‏9
-Q
-PPR	N:77888888879N::;‏9
-Q
-P	N:778888887;:;‏9
-Q
-PR	N:7788887<:û‏9
-QתSP	N:77887<ûתת‏9
-Q
-PPR	N:787<:תת‏9
-PQ
-PP	N:6<
-
-‏9QתP	??
-‏9QתSP	
-PR
-‏9
-QSPP	Q‏9
-QQ
-P	‏9
-QQתSP	‏9
-QQתPP‏9
-QQתPPSQ‏9
-QQ
-PתP
-‏9
-QQ
-PPS
-‏9
-QQתP
-‏9
-PQQתת	‏9QQQQ‏9QQQQQP‏9
-QQQQ‏9
-PתQQQ‏9
-SQQQ‏9
-QתQQQ‏9
-Q
-QQQQ‏9
-QתQQQPQ‏9
-QQQQ	‏9
-QSתQQQQR		‏9
-QQSתQQQR‏9RQQQQQ‏9
-QQתQQP‏9	Q	QSתQQQ‏9
-PR	QQתQQ‏9
-QR		QQSתQQ‏9
-QR		QQQQ‏9
-QR		QSQQQ‏9
-QR	QQSQQQQ	‏9
-QR	QQSתQQP‏9
-Q	QQSQQת
-‏9
-QR		QQQQQ‏9QQR		QQתQ	‏:RQQR		QQQ‏<QQR
-QQSQ‏>QQR		QQSתQ‏@QQR	
-QQQ‏BRQQR	QQQQת‏DQQR	
-QQQ‏FQQR	QQת
-‏HQQR		QQ
-‏JQQR
-QQ	ת‏LQQR	QQS	‏NQQR	QQP	‏PQQR	
-Q‏RQQR	Q‏TQQR	Q‏VRQQR	Q‏XQQR	Q‏ZRQQR	Q‏\QQR	P‏^QQR
-‏`QQR‏bRQQR‏dQQ‏fQ‏hQ‏jQ‏lQ‏nQת‏pQ‏r
-‏t
-‏x‏|ÿ ‏>‏z‏vPP‏rPP‏oPPQ‏mPP
-‏kPP	‏iPP	‏gPP	‏ePP	‏cPP	‏aPP	‏_PP	
-‏]PP	
-‏[PP	
-‏YPP	
-	‏WPPQ	
-	‏UPP	
-	‏SPP	
-	‏QPP	
-	‏OPP	
-	‏MPP	
-	‏KPP	
-	‏IPPQ	
-	‏GPP	
-	‏EPPQ	
-	‏CPP	
-	‏APP	
-	‏>PP	
-	‏=PP	
-	N<‏;PP	
-	N<;;‏9PPQ	
-	N<;;;;‏9PP	
-	N<;;;;;;‏9QP	
-	N<;;;;;;;;‏9Q	
-	N<;;;;;;;;;;‏9Q	
-N<;;;;;;;;;;>N‏9Q
-ת
-	N<;;;;;;;;;;=O‏9Qת
-	N<;;;;;;;;;;>O‏9Qת
-N<;;;;;;;;;;=O‏9Qת
-	N<;;;;;;;;;;>O
-‏9Qת
-	N<;;;;;;;;;;>O
-
-
-‏9RRQת
-	N<;;;;;;;;;;>O
-
-‏9RRת
-	N<;;;;;;;;;;>O
-
-‏9QQRQת	N<;;;;;;;;;;>Oת
-‏9QQQ
-	N<;;;;;;;;;;>O
-
-‏9QתN<;;;;;;;;;;>O
-
-
-‏9QתN<;;;;;;;;;;>Oת
-‏9QתN<;;;;;;;;;;=O
-
-	‏9QתN<;;;;;;;;;;>O
-
-‏9תN<;;;;;;;;;;>O
-
-‏9QתN<;;;;;;;;;;=O
-
-
-‏9QתN<;;;;;;;;;;>O
-
-‏9	RQתN<;;;;;;;;;;>O
-
-ת‏9R	PתN<;;;;;;;;;;>O
-
-‏9QR	QתN<;;;;;;;;;;=O
-
-‏9QQQQ
-N<;;;;;;;;;;>O
-
-‏9QQתN<;;;;;;;;;;>O
-
-‏9	QQתN<;;;;;;;;;;=O
-
-ת‏966	PתN<;;;;;;;;;;=O
-
-‏96	676תN<;;;;;;;;;;>O
-
-
-‏9766	67O<;;;;;;;;;;>Oת
-
-‏9666	65>?:<;;;;;;;>Oת
-
-‏9676	66>?;;;;;;;>O
-
-
-‏966		65?;<;;;>O
-
-
-‏96664?;;;>O
-
-
-‏9QQ
-	?:>O
-
-
-‏9QQNN
-
-	‏9QQת
-	‏9Qת
-		‏9Qת
-	
-‏9Qת
-	
-‏9Qת	
-	
-‏9QQת
-	
-‏9RQQת	
-	
-‏9RRRת
-
-	
-‏9QQRRRת		
-	
-‏9QQQR
-
-	
-‏9Q
-
-	
-
-‏9Qת
-	
-
-‏9Qת
-	
-
-‏9Qת
-	
-
-‏9Qת
-	
-
-‏9Qת
-	
-
-‏9RQת
-	
-
-‏9
-Qת
-	
-
-	‏9
-
-
-
-	
-
-‏9ת		
-
-	‏9QSת	
-
-‏9QQP	
-
-	‏9QQת	
-
-‏9Qת	
-
-	‏9Qת	
-
-‏9Qת	
-
-	‏9ת	
-
-	‏9Qת	
-
-‏9RRQת	
-
-‏9RRRת	
-
-‏9QRQ
-
-
-	‏9QQQ
-
-
-‏9Qת
-	ת‏9Qת
-ת‏:ת
-	
-‏<Qת
-	ת‏>Qת
-	ת‏@QQת
-ת‏BQQת
-
-‏DRRQת
-	ת‏FQRRת
-	
-‏HQRQת	ת‏JQQQ
-	ת‏LQתת‏NQתת‏PQתת‏Rת
-‏TQת
-‏VQQתת‏XQQת
-‏ZRRQתת‏\QRRRתת‏^QQR
-
-‏`QQ
-ת‏bQתת‏dQתת‏fQתת‏hQת
-‏jתת‏lQתת‏nתת‏pQתת‏tP
-ת‏x‏|ÿ ‏>‏z‏vPP‏sPP‏q
-PP‏o
-PQPP‏m
-QPP‏k
-QPP‏i
-PP‏g
-PP‏e
-QPP‏c
-PQQQPP‏aQQQPPQPP‏_Q
-
-QPP‏]
-	
-RRת	QPP‏[
-PQPPS
-	RQPP‏Y
-QP
-
-	
-RPPPS
-	QQPP‏W
-	YPS
-
-RPPPS
-	QPP‏U
-		°PR
-	RPPPS
-	QPP‏S
-
-YP°°°PR
-_
-RPPPSת	QPP‏Q
-[SP°°°PR
-
-RPPPS
-	QPP‏O
-QR	
-SP°°°PS
-
-RPPPSת
-QPP‏M
-QQ	SP°°°PS
-
-RPPPSת	RQPP‏KRQQ
-TP°°°PR
-_	RPPPS
-	QQPP‏I	QQR	[SP°°°P±
-	RPPPS
-	QPP‏G
-Q		QQR	[SP°°°PS
-
-RPPPS
-	QPP‏E
-R		QQ	[SP°°°PS
-
-RPPPS
-	RQPP‏B	QR		QQR	SP°°°PR
-	RPPPS
-	RQPP‏AQQR	RQQ	[SP°°°PS
-	RPPPS
-	QPP‏?:?
-QR		QQR	[SP°°°PR
-
-RPPPSת	QPP‏=779?
-QQR	
-QQ	
-SP°°°PS
-
-RPPPS
-	QQPP‏;88879?
-QQR		QQ	[SP°°°PR
-
-RPPPS
-	QPPS‏9888887:?
-QQR		QQR	SP°°°PR
-
-RPPPS
-	QPPP
-‏988888877:?
-QQR		QQR	[SP°°°PS
-
-RPPPSת	QPת‏977888888879?
-QR		QQR	[SP°°°PS
-
-RPPPSתQ
-‏9?:77888888879?	QQR		QQR	TP°°°PR
-	RPQ
-‏9N:77888888879?
-QR	QQ	SP°°°PR
-	Q‏9	QN:77888888879?
-QQR		QQR	[SP°°°PRV	Q‏9
-R	N:77888888879?	SQQR		QQR	[TP°°PSUU
-P‏9
-QRN:77888888879?
-QQR		QQ	SPPT_VUWQQ‏9
-QRN:77888888879?
-QQR		QQR	SSV
-QQ‏9
-QRN:77888888879?	QQR	
-QQ	^SתQ‏9
-QRN:77888888879?
-QQR		QQ
-QQ	‏9
-QRN:7788888887:?
-QQR		QQQQת	‏9
-QQRN:77888888879?
-QR		RQQ	‏9QQRN:77888888879?
-QQR		QQP	‏9QQRN:77888888879?
-QR		Q‏9
-QQRN:77888888879?
-QR		Q‏9
-QתQQRN:77888888879?	QR		Q‏9
-QQRN:77888888879?	QQR		Q‏9
-QQRN:77888888879?	QR		RQ‏9
-QQQRN:77888888879?
-QQR		Q‏9
-QQRN:77888888879?	QQR		P‏9
-QSQQQRN:77888888879?	QR	
-‏9
-QQQQRN:77888888879?
-QQR	‏9
-QQQRN:77888888879?
-QR‏9	QQQQQRN:77888888879?	QP	‏9ת	QQQQQRN:77888888879?		O?‏9
-R	QQQQQRN:77888888879?
-RO?û‏9
-R		QתQQQRN:77888888879??;:;‏9
-QR		QתQQRN:77888888879N::;‏9
-QR	QQQQR	N:778888887;:;‏9
-QR		QQQRN:7788887<:û‏9
-QR		QQQQRN:77887<ûתת‏9
-QR		QQQQRN:787<:תת‏9
-PQR	
-QQQRN:6<
-
-‏9QR	QQQQQR??
-‏9QR		RQSתQQQR
-‏9
-QR		RQQQ‏9
-QQR	QתQ‏9
-QQR	
-QQ‏9
-QQR	QQQ‏9
-QQR	QQ‏9
-QQR	QSQ
-‏9
-QQR	QQ
-‏9
-QQR		RQת
-‏9
-PQQR	QQS	‏9QQQQR		QQ‏9QQQQR		QP‏9
-QQQQR	Q‏9
-PתQQQR	Q‏9
-SQQQR	Q‏9
-QתQQQR	
-Q‏9
-Q
-QQQR	Q‏9
-QתQQQR		Q‏9
-QQQQR		‏9
-QSתQQQR		‏9
-QQSתQQQR‏9RQQQQQ‏9
-QQתQQP‏9	Q	QSתQQQ‏9
-PR	QQתQQ‏9
-QR		QQSתQQ‏9
-QR		QQQQ‏9
-QR		QSQQQ‏9
-QR	QQSQQQQ	‏9
-QR	QQSתQQP‏9
-Q	QQSQQת
-‏9
-QR		QQQQQ‏9QQR		QQתQ	‏:RQQR		QQQ‏<QQR
-QQSQ‏>QQR		QQSתQ‏@QQR	
-QQQ‏BRQQR	QQQQת‏DQQR	
-QQQ‏FQQR	QQת
-‏HQQR		QQ
-‏JQQR
-QQ	ת‏LQQR	QQS	‏NQQR	QQP	‏PQQR	
-Q‏RQQR	Q‏TQQR	Q‏VRQQR	Q‏XQQR	Q‏ZRQQR	Q‏\QQR	P‏^QQR
-‏`QQR‏bRQQR‏dQQ‏fQ‏hQ‏jQ‏lQ‏nQת‏pQ‏r
-‏t
-‏x‏|ÿ ‏>‏z‏vPP‏rPP‏oPPQ‏mPP
-‏kPP	‏iPP	‏gPP	‏ePP	‏cPP	‏aPP	‏_PP	
-‏]PP	
-‏[PP	
-SR	
-‏YPP	
-SPPQ	‏WPPQ	
-SPPPR
-‏UPP	
-SPPPR	U‏SPP	
-SPPPR	WUVU‏QPP	
-SPPPR	WUVVVU‏OPP	
-SPPPR	_WUVVVUX
-‏MPP	
-SPPPR	_WUVVVUX‏KPP	_
-SPPPR	UVVVUX‏IPPQ	
-SPPPR	WUVVVUX^‏GPP	
-SPPPR	_WUVVVUX‏EPPQ	
-SPPPR	WUVVVUX‏CPP	
-SPPPR	WUVVVUX‏APP	
-SPPPR	WUVVVUX‏>PP	
-SPPPR	_WUVVVUX‏=PP	
-SPPPR	WUVVVUXN<‏;PP	
-SPPPR	UVVVUXN<;;‏9PPQ	
-SPPPR	_WUVVVUXN<;;;;‏9PP	
-SPPPR	_WUVVVUXN<;;;;;;‏9QP	
-SPPPR	_WUVVVUXN<;;;;;;;;‏9Q	
-SPPPR	UVVVUXN<;;;;;;;;;;‏9Q	PR	WUVVVUXN<;;;;;;;;;;>N‏9Q
-ת
-U	UVVVUXN<;;;;;;;;;;=O‏9QתT°WWUVVVUXN<;;;;;;;;;;>O‏9QתUPPXUVVUXN<;;;;;;;;;;=O‏9Qת
-_RP°^	UVX^N<;;;;;;;;;;=O‏9Qת
-V°XWN<;;;;;;;;;;=Oת‏9RRQת
-	
-_N<;;;;;;;;;;=O‏9RRת
-	
-N<;;;;;;;;;;>O‏9QQRQת	N<;;;;;;;;;;=O‏9QQQ
-	N<;;;;;;;;;;=O‏9QתN<;;;;;;;;;;=O
-‏9QתN<;;;;;;;;;;=O
-‏9QתN<;;;;;;;;;;=O
-	‏9QתN<;;;;;;;;;;>O
-‏9תN<;;;;;;;;;;=O
-	‏9QתN<;;;;;;;;;;=O
-	‏9QתN<;;;;;;;;;;>Oת
-	‏9	RQתN<;;;;;;;;;;>O
-	‏9R	PתN<;;;;;;;;;;=O
-	‏9QR	QתN<;;;;;;;;;;=O
-‏9QQQQ
-N<;;;;;;;;;;>O
-	‏9QQתN<;;;;;;;;;;=Oת
-‏9	QQתN<;;;;;;;;;;=O
-	ת‏966	PתN<;;;;;;;;;;=O
-	‏96	676תN<;;;;;;;;;;>O
-‏9766	67O<;;;;;;;;;;=O
-	‏9666	65>?:<;;;;;;;=O
-	‏9676	66>?;;;;;;;=O
-	‏966		65?;<;;;=O
-	‏96664?;;;>O
-	‏9QQ
-	?:>O
-‏9QQNN
-	‏9QQת
-	‏9Qת
-			‏9Qת
-		
-‏9Qת
-	
-‏9Qת
-		
-‏9QQת
-	
-‏9RQQת
-		
-‏9RRRת
-		
-‏9QQRRRת			
-‏9QQQR
-		
-‏9Q
-	
-
-‏9Qת	
-
-‏9Qת	
-
-‏9Qת	
-
-‏9Qת	
-
-‏9Qת	
-
-‏9RQת	
-
-‏9
-Qת	
-
-	‏9
-
-
-	
-
-‏9ת		
-
-	‏9QSת	
-
-‏9QQP	
-
-	‏9QQת	
-
-‏9Qת	
-
-	‏9Qת	
-
-‏9Qת	
-
-	‏9ת	
-
-	‏9Qת	
-
-‏9RRQת	
-
-‏9RRRת	
-
-‏9QRQ
-
-
-	‏9QQQ
-
-
-‏9Qת
-	ת‏9Qת
-ת‏:ת
-	
-‏<Qת
-	ת‏>Qת
-	ת‏@QQת
-ת‏BQQת
-
-‏DRRQת
-	ת‏FQRRת
-	
-‏HQRQת	ת‏JQQQ
-	ת‏LQתת‏NQתת‏PQתת‏Rת
-‏TQת
-‏VQQתת‏XQQת
-‏ZRRQתת‏\QRRRתת‏^QQR
-
-‏`QQ
-ת‏bQתת‏dQתת‏fQתת‏hQת
-‏jתת‏lQתת‏nתת‏pQתת‏tP
-ת‏x‏|ÿ‏>‏z
-
-‏v
-
-‏r
-תת
-‏n
-ûû
-‏j
-ûû
-‏f
-ûû
-‏b
-ûûû
-‏^
-ûû
-‏Zת
-ת
-
-
-‏Xת
-תת
-ת‏Xû
-ûû
-‏X
-
-
-תû
-‏Xתת
-
-
-ûû
-‏X
-תת
-
-
-ûû
-‏X
-תת
-
-
-ûû
-‏Zû
-תת
-
-
-תת
-‏^
-תת
-
-
-
-‏aû
-תת
-
-
-
-‏b	
-תת
-
-û
-‏b	û
-תתת
-ûתתת‏b	
-ת
-ûתתתתת‏b	û
-ûתתתתתתת‏b	ûתתתתתתתתת‏b	ûתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏bתתתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏bתתתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏bתתתתתתתתתתתתת‏bתתתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏bתתתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏bתתתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏bתתתתתתתתתתתתת‏b
-תתתתתתתתתתתת‏a
-תתתתתתתתתתתת‏^	
-תתתתתתתתתתתתת‏Zת
-
-תתתתתתתתתתתתת
-ת‏X
-
-
-	
-תתתתתתתתתתתת
-
-
-‏X
-
-
-	
-תתתתתתתתתת
-
-
-‏X
-
-
-
-
-	תתתתתתתתת
-
-
-‏Xתת
-
-
-
-
-	
-תתתתתת
-
-
-‏Xת
-תת
-
-
-
-
-	
+‏zû‏{‏}ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r¯_\ZYZZZZZZYZ\_‏oZ£ZZZZZZZZZZYZ\‏m__]ZYZZZZZZZZZZYZ\‏k_Y\_]ZYZZZZZZZZZZYZ\_‏i_ZZZ\_]ZYZZZZZZZZZZYZ\_‏g_ZZZZZ\_]ZYZZZZZZZZZZYZ\_‏e_ZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏c_ZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏a_ZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏__YZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏]][ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏[¯^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏Y_[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏W_ZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏U_ZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏S_ZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏Q_ZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏O_YZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏M^[ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏K_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏I_Z^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏G_ZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏E_ZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏C_ZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏A_ZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏?_YZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏=¯_\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏;\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏9^Z]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[^^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ[^¯‏7_ZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZYZ\^_‏7_ZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_^ZYZZZZYZ\¯_]‏7_ZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYYZ\_]\]‏7_ZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]\¯_]\]]]‏7_ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]\]]]]]‏7]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZY]\]]]]]]]‏7_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ]\]]]]]]]‏7^Y\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]]]‏7_ZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]]\]‏7_ZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZ]\]]]\]_¯‏7_ZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZ]\]\]_¯^‏7_ZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^Z]\]_¯^\]‏7_ZZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_]¯^\]]]‏7^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_]^]\]]]]‏7_^^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ]\]]]]]]]‏7_Y[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZ]\]]]]]]\‏7_ZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]]ZZZZZZZZZZ[^_\ZZZZZZ]\]]]]]^_‏7_ZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZ]\]]\^‏7_ZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZY]\]^_]‏7_ZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[]]_]\]‏7_ZZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_]\]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]]ZZZZZZZZZZ[^^]\]]]]]‏7_^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZY]\]]]]]]]‏7_Y[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZ]\]]]]]\]‏7_ZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZ]\]]]\]^‏7_ZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZ]\]\]^‏7_ZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZY]\]^_]‏7_ZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\]^_]\]‏7_[ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]_]\]]]‏7\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]_]\]]]]]‏7_]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZY]\]]]]]]]‏7_YZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZ]\]]]]]\]‏7_ZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZ]\]]]\]_¯‏7_ZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZ]\]\]_¯^‏7_ZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZY]\]_¯^\\‏7_YZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]]_¯^]\]]‏7\ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_^]\]]]]‏7¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\\]]]]]]]‏7_\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZY]\]]]]]]]‏7_YZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZ]\]]]]]\]‏7_ZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZ]\]]]\]_¯‏7_ZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZ]\]\]¯^‏7_ZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[Y]\]_^\]‏7^YZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^^_^\]]]‏7][ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_]\]]]]]‏7^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_\]]]]]]]‏7_[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZY]\]]]]]]]‏7_ZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZ]\]]]]]]\‏7_ZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZ]\]]]]\^_‏7_ZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZ]\]]\]¯‏7_ZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\Y]\\]¯_]\‏7^YZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_^]_]\]]‏7^\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^]_]\]]]]‏7¯_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ_\\]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZ]\]]]]]\]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZ]\]]]\\^‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZ]\]\]^_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\Z]\]^¯_]\‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]_^¯_]\]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]__]\]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ^\\]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZ]\]]]]\]^‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZ]\]]\]_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZ]\\]_¯‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]Z]]_¯^\_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_^]]]_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\^]\]]]_‏8_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ^]\]]]]]_‏9_\ZZZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]\_‏<_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]\]‏=_\ZZZZZZZZZZ[_^[ZZZZ]\]]\]_‏?_\ZZZZZZZZZZ[_^[ZZ]\]]_‏A_\ZZZZZZZZZZ[_^Z]]_^\_‏C_\ZZZZZZZZZZ[_^]]]_‏E_\ZZZZZZZZZZ[_^]]]]]_‏H_\ZZZZZZZZZY^\]]]]]]_‏I_\ZZZZZZZZ]\]]]]]\_‏K_\ZZZZZZ]\]]]\]^‏N_\ZZZZ]\]]]^‏P_\ZY]\]^¯‏Q_[]]_‏S^]_‏V¯^]]]_‏W^]]]]]_‏Y\]]]]]]_‏\]]]]]]]_‏^]]]]]]]_‏_]]]]]]]_‏a]]]]]]]_‏d]]]]]]]_‏e]]]]]]]_‏h]]]]]]]_‏j]]]]]]]_‏l]]]]]]]_‏m]]]]]_‏p]]]_‏s]_‏x¯‏{ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r¯_\ZYZZZZZZYZ\_‏oZ£ZZZZZZZZZZYZ\‏m__]ZYZZZZZZZZZZYZ\‏k_Y\_]ZYZZZZZZZZZZYZ\_‏i_ZZZ\_]ZYZZZZZZZZZZYZ\_‏g_ZZZZZ\_]ZYZZZZZZZZZZYZ\_‏e_ZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏c_ZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏a_ZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏__YZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏]][ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏[¯^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏Y_[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏W_ZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏U_ZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏S_ZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏Q_ZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏O_YZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏M^[ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏K_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏H¯]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏Dûת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏@ûת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏<תת_]]¯_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏:û
+ת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏8	תת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏6
+תת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏4
+תת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏2
+תת_]]_\ZZZZZZZZZZ[^^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ[^¯‏0ת
+תת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZYZ\^_‏0û
+תת_]^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_^ZYZZZZYZ\¯_]‏2û	
+תת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYYZ\_]\]‏4û
+תת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]\¯_]\]]]‏6ûתתת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]\]]]]]‏5û
+תת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZY]\]]]]]]]‏3
+	û
+תת_]]¯_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ]\]]]]]]]‏1
+	ûתתת_]]_\ZZZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]]]‏0û	ûתתת_]]_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]]\]‏0ת		û
+תת_]]_\ZZZZZZZZZZ[_^[ZZZZ]\]]]\]_¯‏0		ûתתת_]]_\ZZZZZZZZZZ[_^[ZZ]\]\]_¯^‏0			û
+תת_]]_\ZZZZZZZZZZ[_^Z]\]_¯^\]‏0			û
+תת_]]_\ZZZZZZZZZZ[_]¯^\]]]‏0		ûתתת_]]_\ZZZZZZZZZZ[_]^]\]]]]‏0			û
+תת_]]_\ZZZZZZZZZZ]\]]]]]]]‏0			û
+תת_]]_\ZZZZZZZZ]\]]]]]]\‏0				û
+תת_]]¯_\ZZZZZZ]\]]]]]^_‏0
+			û
+תת_]]_\ZZZZ]\]]\^‏1
+			û
+תת_]]_\ZY]\]^_]‏3
+			û
+תת_]]_[]]_]\]‏5
+			û
+תת_]]_]\]]]‏7
+			ûתתת_]]^]\]]]]]‏7_]
+			ûתתת__\]]]]]]]‏7_Y[^
+			û
+ת]]]]]]\]‏7_ZZZ[^
+		û
+ת	\]]]\]^‏7_ZZZZZ[^
+		û
+ת	û\]\]^‏7_ZZZZZZZZ^
+		û
+ûת
+\]^_]‏7_ZZZZZZZZZ[^
+			מûתû
+תתת_^_]\]‏7_[ZZZZZZZZZZ[^				û
+תתתתתת^_]\]]]‏7\ZZZZZZZZZZ[^
+			û
+ûתתתû¯_]\]]]]]‏7_]\ZZZZZZZZZZ[^
+			û
+תת_^\]]]]]]]‏7_YZ]\ZZZZZZZZZZZ^
+			û
+^Z]\]]]]]\]‏7_ZZZZ]\ZZZZZZZZZZ[^			]ZZZ]\]]]\]_¯‏7_ZZZZZZ]\ZZZZZZZZZZ[^				^ZZZZ]\]\]_¯^‏7_ZZZZZZZZ]\ZZZZZZZZZZ[^
+			¯^[Y]\]_¯^\\‏7_YZZZZZZZZZ]\ZZZZZZZZZZ[^
+		]]_¯^]\]]‏7\ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
+		^]\]]]]‏7¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
+		
+^]\]]]]]]‏7_\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
+	
+ת\]]]]]]]]‏7_YZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
+	תתתת\]]]]]]\]‏7_ZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^
+	תתתת_]]]]\]_¯‏7_ZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
+
+תתתתת\]\]¯^‏7_ZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
+
+ûתתתת\]_^\]‏7^YZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
+
+תתתתת_^\]]]‏7][ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^	
 תתתת
-
-
-‏Xת
-תת
-
-ת
-
-	תתת
-
-
-‏Zת
-תת
-
-
-
-
-
-
-
-
-‏^ת
-תת
-
-ת		ת‏bת
-תת
-
-‏fת
-תת
-
-‏jת
-תת
-
-‏nת
+]\]]]]]‏7^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^	
+תתתתת\]]]]]]]‏7_[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^
+
 ת
-‏rת
-‏v‏zÿ>‏B‏z
-
-‏v
-
-‏r	ת‏o
-ת‏n
-תת‏k
-ת
-‏i
-תת‏g
-תת‏e
-תת‏c
-תת‏a
-תת‏_
-תת‏]
-תת‏[
-תת‏Y
-ת
-‏W
-תת‏:‏û
-תת‏7
+û]]]]]]]]‏7_ZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^
 
-‏
-		
-
-תת‏5
-
-‏ûû
-ת
-תû‏3
-
-‏	
-ûתתתû‏2û
-‏	
-ûû	ת	תתתתתתû‏2תû
-‏	
-	ûתתתתתû‏2	
-û
-‏	
-		ûתתתתתû‏2	
-û
-‏
-		
-	ûתתתתתû‏2	
-û
-‏	
-
-	ûתתתתתû‏2	
-û
-‏	
-û
-û
-	ûתתתתתû‏2	
-û
-‏	
-û
-û
-	ûתתתתתû‏2	
-û
-‏	û
-û
-û
-	ûתתתתתû‏2	
-û
-
-û
-û
-	ûתתתתתû‏2	
-ת
-ת
-
-û
-û		ûתתתתתû‏2	
-û
-
-
-û
-û
-
-	ûתתתתתû‏2	
-ûת
-
-	û
-û
-	ûתתתתתû‏2	
-ûת	û
-	ûתתתתתû‏2	
-ûתû
-	ûתתתתתû‏2	
-ûתû	ûתתתתתû‏2	
-ûת
-û	ûתתתתתû‏2	
-ת
-תתתû	ûתתתתתû‏2	
-תתתתתû	ûתתתתתû‏2	û
-תתתתתû	ûתתתתתû‏2	תתתתתתû	ûתתתתתû‏2	ûתתתתתתû	ûתתתתתû‏2	ûתתתתתתû	ûתתתתתû‏2	ûתתתתתתû	ûתתתתתû‏2	ûתתתתתת	ûתתתתתû‏2	ûתתתתתתû	ûתתתתתû‏2	ûתתתתתתû	ûתתתתתû‏2	ûתתתתתתû	ûתתתתתû‏2	ûתתתתתתû	ûתתתתתû‏2	ûתתתתתתû	ûתתתתתû‏2	ûתתתתתתû	ûתתתתתû‏2	ûתתתתתתû	ûתתתתתû‏2	ûתתתתתתû	ûתתתתתû‏2	ûתתתתתתû	ûתתתתתû‏2	ûתתתתתת		ûתתתתתû‏2	ûתתתתתת		ûתתתתתû‏2	ûתתתתתת‏		ûתתתתתû‏2	ûתתתתתת‏		ûתתתתתû‏2	ûתתתתתת‏		ûתתתתתû‏2	ûתתתתתת‏		ûתתתתתû‏2	ûתתתתתת‏			ûתתתתתû‏2	ûתתתתתת‏		ûתתתתתû‏2	ûתתתתתת‏		ûתתתתתû‏2	ûתתתתתת‏		ûתתתת
-‏2	תתתתתת‏		ûתתתû‏2	ûתתתתתת‏	û
-û‏4	ûתתתתתת‏
-‏6
-ûתתתתתת‏‏8	ûתתתתתת‏V	ûתתתתתת‏X	ûתתתתתת‏Z	ûתתתתתת‏\	ûתתתתתת‏^	ûתתתתתת‏`	ûתתתתתת‏b	ûתתתתתת‏d	ûתתתתתת‏f	ûתתתתתת‏h	ûתתתתתת‏j	ûתתתתתת‏l	ûתתתתת
-‏n	ûתתתתû‏q	û
-תû‏t	ûû‏x‏|ÿ ‏>__‏z_[¢¢[_‏v_Z¢¡¢¢¡¢Z_‏r_Z¢¡¢¢¢¢¢¢¡¢[_‏n_Z¢¡¢¢¢¢¢¢¢¢¢¢¡¢Z_‏j_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏f_[¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏b_[¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏^_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏Z_[¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏V_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢[_‏R_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏N_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏J_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢[_‏F_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏B_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢[_‏>_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏:_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏6_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏2_[¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏._[¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏*_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏&_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏"_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏_[¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏_[¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢[_‏_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢[_‏_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢[_‏
-^¡¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¡]‏___Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_‏[¢\_Z¡¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_¯^[^‏\¢¢£\_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^\[[^‏\¢££¢£\_Z¡¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_¯^\[[\[^‏\¢££££¢£\_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^\[[[[[[^‏\¢££££££¢£\_Z¡¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^[[[[[[[[[^‏\¢££££££££¢£\_Z¡¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_¯_\[[[[[[[[[[^‏\¢££££££££££¢£\_Z¡¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^[[[[[[[[[[[[[^‏\¡££££££££££££¢£\_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^\[[\[[[[[[[[[[[^‏\£¢££££££££££££¢£\_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^\[[[[[[[[[[[[[[\^‏
-[£¢££££££££££££¢£\_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¡Z_^\[[[[[[[[[[[[[[\^‏\£¢££££££££££££¢£\_Z¡¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^\[[[[[[[[[[[[[[\^‏\£¢££££££££££££¢£\_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^\[[[[[[[[[[[[[[\^‏ףע\£¢££££££££££££¢£\_Z¡¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^[[[[[[[[[[[[[[[\^ûפ‏ףqrף\£¢££££££££££££¢£\_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^[[[[[[[[[[[[[[[\^פףףפ‏ףסrססף\£¢££££££££££££¢£\_Z¡¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^\[[[[[[[[[[[[[[\^פףףףףפ‏ףסrrrסrף\£¢££££££££££££¢£\_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^[[[[[[[[[[[[[[[\^פףףףףףףפ‏ףסrrrrrססף\£¢££££££££££££¢£\_Z¡¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^\[[[[[[[[[[[[[[[^¯פףףףףףףףףפ‏ףסrrrrrrrססף\£¢££££££££££££¢£\_Z¡¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^\[[[[[[[[[[[[[[\^פףףףףףףףףףףפ‏ףסrrrrrrrrrססי\£¢££££££££££££¢£\_Z¡¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^[[[[[[[[[[[[[[[\^פףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrססף\£¢££££££££££££¢£\_Z¡¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^\[[[[[[[[[[[[[[\^פףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrססף\£¢££££££££££££¢£\_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^\[[[[[[[[[[[[[[\^פףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrססu\£¢££££££££££££¢£\_Z¡¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_^\[[[[[[[[[[[[[[\^פףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrססף\£¢££££££££££££¢£\_Z¢¡¢¢¢¢¢¢¢¢¢¢¢¢¢¢¡¢Z_¯^\[[[[[[[[[[[[[[\^¯פףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrסrף\£¢££££££££££££¢£\_Z¢¡¢¢¢¢¢¢¢¢¢¢¡¢Z_^\[[[[[[[[[[[[[[[^פףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrססי\£¢££££££££££££¢£\_Z¢¡¢¢¢¢¢¢¡¢Z_¯^\[[[[[[[[[[[[[[[^פףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrססף\£¢££££££££££££¢£\_Z¡¡¢¢¡¡Z_^\[[[[[[[[[[[[[[\^פףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrססף\£¢££££££££££££¢£\_Z¢¢Z_^[[[[[[[[[[[[[[[\^פףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrסru\£¢££££££££££££¢£\^^¯^\[[[[[[[[[[[[[[\^פףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrססף\£¢££££££££££££¢£_[[[[[[[[[[[[[[[[^פףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrססף\£¢£££££££££££¢]_[\[[[[[[[[[[[[^פףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrסrף\£¢£££££££££¢]_[[[[[[[[[[[\^פףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrסrף\£¢£££££££¢]_[[[[[[[[[\^פףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrססף\£¢£££££¢]_[[[[[[[\^פףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrססף\£¢£££¢]_[[[[[\^פףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrססף\£¢£¢]_[[[\^פףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrסru\£¡]_[\^¯פףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrססף[^_]פףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrסrףפףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrסqפףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrqûףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrספףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrסûףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrספףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrספףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrספףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrספףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏ףqrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףפ‏מsסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrספףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףת‏פעסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףת‏[£^פעסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrספףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףת_\]‏[¢¢Z^פעסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrסûףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףת_\[[^‏[¢£¢¢Z^פעסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrסûףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףת_\[[\[^‏[¢£££¢¢Z^פעסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrספףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףת_\[[[[[[^‏[¢£££££¢¢Z^פעסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrספףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףת_\[[[[[[[[^‏[¢£££££££X¢Y^פעסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףת_\[[[[[[[[[[^‏[¢£££££££££X¢Z^פעסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrספףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףת_\[[[[[[[[[[[[^‏[¢£££££££££££¢¢Z^פעסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףת_\[[[[[[[[[[[[[[^‏[¢£££££££££££££X¢Z^פעסrrrrrrrrrrrrrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףףת_\[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££¢¢Z^פעסrrrrrrrrrrrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףףףףףףףףףףףת_\[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££¢¢Z^פעסrrrrrrrrrrrrrrrrrrrrrrrrrספףףףףףףףףףףףףףףףףףףףףףףףףףףףת_\[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££¢¢Y^פעסrrrrrrrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףףףףףףףת_\[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££¢¢Z^פעסrrrrrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףףףףףת_\[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££££¢¢Z^פעסrrrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףףףת_\[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££££££¢¢Z^פעסrrrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףףףת_\[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££££££££X¢Z^פעסrrrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףףףת_\[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££££££££££¢¢Y^פעסrrrrrrrrrrrrrqפףףףףףףףףףףףףףףףת_\[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££££££££££££X¢Z^פעסrrrrrrrrrrrספףףףףףףףףףףףףףת_\[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££££££££££££££¢¢Z^פעסrrrrrrrrrqפףףףףףףףףףףףת_\[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££££££££££££££££¢¢Z^פעסrrrrrrrסûףףףףףףףףףת_\[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££££££££££££££££££¢¢Z^פעסrrrrrqפףףףףףףףת_\[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££££££££££££££££££££¢¢Y^פעqrrrqפףףףףףת_\[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££££££££££££££££££££££X¢Z^פעסrספףףףת_\[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££££££££££££££££££££££££¢¢Z^פעqפ	ת_\[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££££££££££££££££££££££££££¢¢Z^תמ_\[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££££££££££££££££££££££££££££¢¢Z^¯_\[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢£££££££££££££££££££££££££££££££££££££££££££££££££X¡^_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[\[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[\[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏[¢££££££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[\[^‏\¢¢£££££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[^‏_Z¢¢£££££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]‏_Z¢¢£££££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]‏_Z¢¢£££££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]‏_Z¢¢£££££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]‏"_Z¢¢£££££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]‏&_Z¢¢£££££££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]‏*_Z¢¢£££££££££££££££££££££££££££££££££££¢]_[\[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]‏._Z¢¢£££££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]‏2_Z¢¢£££££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]‏6_Z¢¢£££££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]‏:_Z¢¢£££££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]‏>_Z¢¢£££££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[[[]‏B_Z¢¢£££££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[[[]‏F_Z¢¢£££££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[[[]‏J_Z¢¢£££££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[[[]‏N_Z¢¢£££££££££££££££££¢]_[[[[[[[[[[[[[[[[[[[[]‏R_Z¢¢£££££££££££££££¢]_[[[[[[[[[[[[[[[[[[]‏V_Z¢¢£££££££££££££¢]_[[[[[[[[[[[[[[[[]‏Z_Z¢¢£££££££££££¢]_[[[[[[[[[[[[[[]‏^_Z¢¢£££££££££¢]_[[[[[[[[[[[[]‏b_Z¢¢£££££££¢]_[[[[[[[[[[]‏f_Z¢¢£££££¢]_[[[[[[[[]‏j_Z¢¢£££¢]_[[[[[[]‏n_Z¢¢£¢]_[\[[]‏r_Z¢¡]_[[]‏v_Z]_\‏zÿC‏.‏|¦]‏z¯]£₪]‏x_¥^]£₪^‏v££¥^]₪₪^‏t_₪₪££¥^]£₪^‏r₪₪₪₪££¥^]£₪^‏p₪₪₪₪₪₪££¥^]£₪]‏n₪₪₪₪₪₪₪₪££¥_]₪₪]‏l_₪₪₪₪₪₪₪₪₪₪££¥^]£₪]‏j₪₪₪₪₪₪₪₪₪₪₪₪££¥^]₪₪^‏h_£₪₪₪₪₪₪₪₪₪₪₪₪₪££¥^]₪₪^‏f_₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥_]£₪^‏d_₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥^]£₪^‏b_£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥^]£₪^‏`_₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥^]£₪]‏^_₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥^]£₪^‏\_₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥^]£₪]‏Z₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥^]£₪^‏X_₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥_]£₪^‏V_₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥^]£₪]‏T_£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥^]£₪]‏Q^₪₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥_]£₪^‏M¯]₪\_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥^]£₪]‏I¯]₪¢££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥_]₪₪]‏E¯]₪£££££££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥^]₪_‏B¯]₪£££££££££££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪££¥___‏@]₪¢££££££££££££££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪£₪\_‏?_£¢££££££££££££££££££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪\_‏>^₪££££££££££££££££££££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪\_‏>]₪_^₪¢£££££££££££££££££££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪£₪\_‏>_₪£₪^^₪¢£££££££££££££££££££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪£₪\_‏?^¥£₪^^₪¢£££££££££££££££££££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪£₪\_‏A^¥¢₪^^₪¢£££££££££££££££££££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪£₪\_‏C_¥£₪^^₪¢£££££££££££££££££££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪£₪\_‏D
-^¥£₪^^₪¢£££££££££££££££££££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪£₪\_‏Cת_¥£₪^^₪¢£££££££££££££££££££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪₪₪£₪\_‏Cûת^¥£₪^^₪¢£££££££££££££££££££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪₪₪£₪\_‏Cû
-תû^¥£₪^^₪¢£££££££££££££££££££¦_\₪£₪₪₪₪₪₪₪₪₪₪₪£₪\_‏Cûתתתתû^¥£₪^^₪¢£££££££££££££££££££¦_\₪£₪₪₪₪₪₪₪₪₪£₪\_‏Cûתתתתתתû^¥£₪^^₪¢£££££££££££££££££££¦_\₪£₪₪₪₪₪₪₪£₪\_‏Cûתתתתתתתתû^¥£₪^^₪¢£££££££££££££££££££¦_\₪£₪₪₪₪₪£₪\_‏Cûתתתתתתתתתתû^¥£₪^^₪¢£££££££££££££££££££¦_\₪£₪₪₪£₪\_‏Cûתתתתתתתתתתתתû^¥£₪^^₪¢£££££££££££££££££££¦_\₪£₪₪₪\_‏Cûתתתתתתתתתתתתת‏^¥£₪^^₪¢£££££££££££££££££££¦_\₪£₪\^‏Cûתתתתתתתתתתתתת‏^¥£₪^^₪¢£££££££££££££££££££¦_\₪]_‏Cûתתתתתתתתתתתתת‏^¥£¥^^₪¢£££££££££££££££££££¦_¯‏Cûתתתתתתתתתתתתת‏^¥£₪^^₪¢£££££££££££££££££¢¦]_‏Cûתתתתתתתתתתתתû‏	^¥£¥^^₪¢££££££££££££££¦^\§_‏Cûתתתתתתתתתתû‏^¥£₪^^₪¢££££££££££¦¯^\\^‏Dûתתתתתתתתû‏^₪£¥^^₪¢££££££¦^\\^‏Fûתתתתתתû‏^¥£₪^^₪¢££¦_^¦\^¯‏Hûתתתתû‏^¥£₪^]¦^\\^¯‏Hû
-תû‏^¥£₪_^¦\^¯תת‏Hת‏
-^₪¦¦^¯תתתû‏I‏ת¯תתתתתû‏K‏ ת
-ûתתתתתתתû‏mתתתתתתתתתתתתתû‏mתתתתתתתתתתתתתû‏mתתתתתתתתתתתתתû‏mתתתתתתתתתתתתתû‏mתתתתתתתתתתתתתû‏mתתתתתתתתתתתתתû‏mתתתתתתתתתתתתתû‏mתתתתתתתתתתתתתû‏mתתתתתתתתתתתתתû‏mתתתתתתתתתתתתתת‏mתתתתתתתתתתתתû‏mתתתתתתתתתתû‏nתתתתתתתתû‏pתתתתתתû‏rתתתתû‏tת
-û‏vת‏zÿ‏A‏{	‏w	ת‏s	ת^TTST‏o	
-TTTTTTST‏k	
-
-SSTTTTTST‏g	
-	TSTTTTTTST‏c	
-ת
-		TSTTTTTTST‏_	
-תתת
-		TSTTTTTTTST‏[	
-תתתתת
-TU		TSTTTTTTTST‏W	תתתתתתתת
-	TSTTTTTTTST‏S	תתתתתתתתתת
-	TSTTTTTTST‏O	
-תתתתתתתתתתת
-U		TSTTTTTTTTST‏K	
-תתתתתתתתתתתתת
-U		TSTTTTTTTTST‏G	
-תתתתתתתתתתתתתתת
-		TSTTTTTTTST‏C	
-תתתתתתתתתתתתתתתתû
-U	TSTTTTTTTST‏?	
-תתתתתתתתתתתתתתתתתתת
-U	TSTTTTTTTST‏;	
-תתתתתתתתתתתתתתתתתת
-ת	U		TSTTTTTTTST‏7	
-תתתתתתתתתתתתתתתתתתתת	U		TSTTTTTTTST‏3	
-תתתתתתתתתתתתתתתתתתתתTTTT		U		TSTTTTTTTST‏/	
-תתתתתתתתתתתתתתתתתתתתTSTTTTST		U		TSTTTTTTTST‏+	תתתתתתתתתתתתתתתתתתתתתתû_
-SSTTTTTTST			TSTTTTTTST‏'	
-תתתתתתתתתתתתתתתתתתתתתתû
-	TSTTTTTTST		U		TSTTTTTTTTST‏#	
-תתתתתתתתתתתתתתתתתתתתתתתתת
-	TSTTTTTTTST		U		TSTTTTTTTST‏	תתתתתתתתתתתתתתתתתתתתתתתתתתתת
-		TSTTTTTTTTST			TSTTTTTTST‏	
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-U		TSTTTTTTTST				TSTTTTTTST‏	
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-	TSTTTTTTST		U		TSTTTTTTST‏	תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-		TSTTTTTTTST				TSTTTTTTTST‏	
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-		TSTTTTTTST		T		TSTTTTTSS‏	
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-T		TSTTTTTTTST				TSTTTTTT
-
-‏	תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-U		TSTTTTTTST	UU		TTTTת	‏	
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-		TSTTTTTTTST			ת	û‏
-
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-UU		TSTTTTTTTST	Tת	ת
-û‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-ת		U		TSTTTTTTST			
-	תתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-תתT	UT		TSTTTTTTST	Uת	תתתתתתû‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתTTTT				TSTTTTTTST		Uת	תתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתTTTTTST				TSTTTTTTTST		ת	תתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-TSTTTTTST		T		TSTTTTTTST	ת	תתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-	TSTTTTTTTTST		UU	TSTTTTTTSSת	תתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-	TSTTTTTTTST		UU		TSTTTTST
-	תתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-T	TSTTTTTTST			TTTTת	תתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-U		TSTTTTTTTSTV
-
-U	ת	תתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-U		TSTTTTTTTTTT	TTת	תתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-U		TSTTTTTTTST		
-	תתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-UU		TSTTTTTTTTST		UUת	תתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-		TSTTTTTTST		ת	תתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-UU	TSTTTTTTTST		ת	תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-		TSTTTTTTTTST		ת	תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-		TSTTTTTTSSת	תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-ת			UU	TSTTTTTT
-	תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-תתT	U		TTTT^ת	תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתTTTT		U	ת	תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתTTTTTTST	Tת	תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-TSTTTTTTST	
-	תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-	TSTTTTTTTTT	UVת	תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-U		TSTTTTTTTTT			
-	תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-		TSTTTTTTTST		U		תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-UU		TSTTTTTTST		ת
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-UU	TSTTTTTTSTת	תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-		TSTTTTTT
-	תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-	TSTT		תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-U	TTS
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-		S	û
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-U	ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-U	ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתתת
-ת		US
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתתתתת
-ת
-T	
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתתתTTTT	U
-מûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתתתTTTTTTSTT
-מûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתתû
-SSTTTTTTTST	T
-מûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתû
-	TSTTTTTTTTTT	TT
-מûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתת
-		TSTTTTTTTTT		
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתת
-		TSTTTTTTTTST	T
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתת
-		TSTTTTTTSTUT
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתת
-U		TSTTTTTTTTTT	T
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתת
-		TSTTTTTTTTTT	^ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתת
-		TSTTTTTTTSTûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתת
-		TSTTTTTTS
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתתתתתתתתת
-		TSTTTTTS
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתת
-		TSTTTS
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתתû
-U		TSTS
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתתתûת		U		TTS
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתתתûת	T		UU		S	ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתתתתûת	TTST			ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתת
-TTTTTTST	VU	ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתתû	TSTTTTTTTTST	US
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתת
-		TSTTTTTTTTTT	
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתת
-U	TSTTTTTTTTT		
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתת
-U		TSTTTTTTTTST	T
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתת
-UT		TSTTTTTTST		T
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתת
-	TSTTTTTTTTST		
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתתת
-	TSTTTTTTTST		U
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתת
-		TSTTTTTTTTST		
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתת
-U		TSTTTTTTTST		U
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתת
-UU	TSTTTTTTST		T
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתת
-T		TSTTTTTTTTST	^ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתתתתתתתתתû
-U	TSTTTTTTTSTûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתתתûת		U		TSTTTTTTTS
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתתתûת	T		TU		TSTTTTTS
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתתתûת	TTST	UT	TSTTTTS
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתת
-TTTTTTST		U	TSTS
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתתûTTTTTTTTST		U	TTS
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתת
-		TSTTTTTTTST		U		S	ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתת
-		TSTTTTTTTTST			ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתת
-	TSTTTTTTTST			ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתת
-U	TSTTTTTTTTST		S
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתת
-U		TSTTTTTTST		
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתת
-U		TSTTTTTTTST		U
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתת
-U		TSTTTTTTTST	
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתת
-	TSTTTTTTTST		UT
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתת
-U	TSTTTTTTTTS	U
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏תתתתתת
-UT		TSTTTTTTTTST		UT
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתתû
-U		TSTTTTTTTST		UT
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תתתûת				TSTTTTTST		
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏
-תûת	T			TSTTTTTTTST	T
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת‏תת	TTTST	U		TSTTTTTTST	ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת‏TTTTTTTST		U		TSTTTTTTTTST		ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏TSTTTTTTTTST		TU		TSTTTTTTTSU	ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת‏TSTTTTTTTTST		UU		TSTTTTTT	ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת‏	T	TSTTTTTTTST	U	TSTTTS
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-‏
-TU	TSTTTTTTTST		U	TSTS
-מûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתûû
-			‏
-U		TSTTTTTTST				TTS
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû						‏
-		TSTTTTTTTST	U		S	ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû						‏
-U		TSTTTTTTTST		UU	ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-						‏
-TT	TSTTTTTTTTST			ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-								ת‏S
-		TSTTTTTTTTST		UT	ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-									U‏UUT
-T		TSTTTTTTTTST			ûûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû								UTUTT‏UUT
-U		TSTTTTTTTTST		
-מûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-							UTUUUTT‏S
-SU	TSTTTTTTTST	UT
-מûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת
-									UTUUTTU‏	U		TSTTTTTTTTST		T
-מûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-								
-UTUUUUU‏	U	TSTTTTTTTST		U
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû							
-UUUUTUU‏	UU		TSTTTTTTTST	U
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-						_	UTUUTU‏	U		TSTTTTTTTST		T
-ûתתתתתתתתתתתתתתתתתתתתתתתתתתתû
-							
-		TUUUTTT‏	U	TSTTTTTTTST		T
-ûתתתתתתתתתתתתתתתתתתתתתתתתת
-										TU‏	U		TSTTTTTTTTST		T
-ûתתתתתתתתתתתתתתתתתתתתתתת							
-UUUUUUTUU‏	UTU	TSTTTTTTTSTûתתתתתתתתתתתתתתתתתתתתתû
-						UUUUUUTTU‏#	UT		TSTTTTTTST	ûתתתתתתתתתתתתתתתתתתתû
-									
-	UUUUUUTUU‏'	UU		TSTTTTTTS	ûתתתתתתתתתתתתתתתתתû
-										TTUUUU‏+	UU		TSTTTTTTS
-ûתתתתתתתתתתתתתתתû							
-VTUUUUTT‏/	UU		TSTTTS
-ûתתתתתתתתתתתתתû
-						UTUUUTTT‏3	UU	TSTS
-ûתתתתתתתתתתתû
-									
-	TUUUUUTT‏7TU		TTS
-ûתתתתתתתתת
-										UTUUUUUUU‏<T		S	ûתתתתתתתû									UUUUUUTTU‏@U	ûתתתתת
-						UUUUUUTTT‏DU	ûתתתû
-									
-	UUUUUUUU‏HS
-û
-_
-									TTUUUUTTU‏LU
-
-								VTUUUUTU‏PU
-
-						UTUUUTTU‏SVT
-	
-									
-	UUUUUUTTT‏XUT
-											UTUUUUUUU‏\UT
-							
-	UUUUUUTUU‏`V
-						UUUUUUTU‏c
-						
-	UUUUUTTU‏hT
-				TTUUUUTUU‏lUUT		
-	UUUUUTUU‏p
-UUUUUUTT‏tUTUUUTTU‏xUUUUU‏|UUÿ/‏B‏}‏yû‏vû‏uûû
-‏sûûתתת‏qûûתתתת
-‏nûûתתתתת‏mûûתתתתת‏mûûתתתתת‏lûûתתתתת‏lûûתתתתת‏lûûתתתתת‏lûûתתתתת‏lûûתתתתת‏mûûתתתתת‏lûûתתתתת‏lûûתתתתת‏lûûתתתתת‏lûûתתתתת‏lûûתתתתת‏lûûתתתתת‏lûûתתתתת‏lûûתתתתת‏lûûתתתתת‏lûûתתתתת‏mûûתתתתת‏lûûתתתתת‏lûûתתתתת‏mûûתתתתת‏_‏	ûûתתתתת‏_	‏ûûתתתתת‏_û‏ûû
-תתתת‏_	ûûת‏ûûתתתתת‏`ûתתû‏	ûתתתתת‏_ûûתתתתת‏
-תתת‏_ûתתתתתû‏
-ת‏_ûתתתתתû‏	û‏_ûûתתתתתû‏‏_	ûûתתתתתû‏l	ûתתתתתû‏lûתתתתתû‏lûûתתתתתû‏lûתתתתתû‏lûûתתתתתû‏lûתתתתתû‏lûתתתתתû‏lûûתתתתתû‏lûתתתתתû‏l	ûתתתתתû‏ZUU‏ûûתתתתתû‏ZUTTTTU‏ûתתתתתû‏ZUUTUUUUTU‏ûתתתתתû‏ZUUUUUUUUUUUTTU‏ûתתתתתû‏ZUTUUUUUUUUUUUTSUûתתתתתû‏ZUTTUUUUUUUUUUUTU
-ûûתתתתתû‏ZUTUUUUTUUUUUUUTU
-	ûûתתתתתû‏ZUUUUUUUUUUUUTU
-	ûתתתתתû‏ZUUUUUTUUUTU
-	ûתתתת
-û‏ZUTUUUUUUUUUUTU
-	ûûתתתתתûT‏XUTUUUUUUUUUUUTת	ûûתתתתתûUUU‏TTTUUUUUUUUUUUUUUU
-	ûתתתתתûVTUUUUTTT‏PUUTUUUUUUUUUUUUUUUT
-ûûתתתתתûTUUUUUUUUUTT‏LUUUUUUUUUUUUUUUT
-תתתת
-ûTUUUUUUUUUUUUTTU‏HUUUUUUUUUUUUUUUUUT
-ûתתת
-ûUUUUUUUUUUUUUUUTTU‏DUTTUUUUUUUUUUUUUUUUUUUUT
-ûתתûTUUUUUUUUUUUUUUUUUUUUUTUU‏@TTTUUUUUUUUUUUUUUUUUUUUUUUT
-ûûVTTUUUUUUUUUUUUUUUUUUUUUUUUTUU‏<TTUUUUUUUUUUUUUUUUUUUUUUUUTUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏8TTUUUUUUUUUUUUUUUUUUUUUUUUUUUV^TUUUUUUTUUUUUUUUUUUUUUUUUUUUUUUU‏4UUTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTUTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTT‏0UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTUU‏,TUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏(TTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏$UTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏ TTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏TTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTT‏TTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTT‏UTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTT‏UTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTU‏UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏UTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUT‏UUTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTT‏UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTT‏UTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTU‏UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏UUTTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏TTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTU‏UTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTT‏UUTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTTUUUUUUUUUUUUUTTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏UTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTUU‏ TTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTU‏$TTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTUU‏(UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏,UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTT‏0UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTT‏4UTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTT‏8TTUUUUUUUUUUUUUUUUUUUUTTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏<TTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTU‏@TTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTT‏DUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏HUUTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTU‏LUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTU‏PUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTU‏TUTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTT‏XUTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU‏\TUUUUUUUUUUUUUUUUUUUUUUUUUUUTUU‏`UUUUUUUUUUUUUUUUUUUUUUUUTU‏dUUUUUUUUUUUUUUUUUUUUTTU‏hTTUUUUUUUUUUUUUUUTUU‏lUUUUUUUUUUUUUTUU‏pUUUUUUUUUUTT‏tUUUUUUUTTU‏xUUUUUU‏|UUÿ‏s¯‏v_[¢’’“ ¡¢]‏s ‘ \‏p_“‘‘‘‘‘‘‘‘‘‘\‏o¥‘‘‘¡‏n_‘‘‘‘‘‘‘‘‘₪‏n\“‘₪‏n¥₪_[“’‘‘‘¡¥^_₪‏n₪’¥____^^_^¦¢¡£‏n₪‘‘‘‘’““ ¡’‘‘¡₪‏n₪‘‘‘‘‘‘‘‘‘‘‘‘’¡₪‏n₪‘‘‘‘‘‘‘‘‘‘‘‘‘¡₪‏n₪‘‘‘‘‘‘‘‘‘‘‘‘‘¡₪‏n₪‘‘‘‘‘‘‘‘‘‘‘‘‘¡₪‏n₪‘‘‘‘‘‘‘‘‘‘‘‘‘¡₪‏n₪‘‘‘‘‘‘‘‘‘‘‘‘‘¡₪‏n¥‘‘‘‘‘‘‘‘‘‘‘‘‘¡£‏o^‘‘‘‘‘‘‘‘‘‘‘‘’¡¥‏o¢‘‘‘‘‘‘‘‘‘‘‘₪¯‏q^¡‘‘‘‘‘‘‘’ ₪‏t_]\¦₪₪\‏v><?‏x6O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏x7O‏H‏/7O‏FO‏-7O‏D89‏,7O‏B8û?‏-7O‏@תû‏-7O‏>8û‏-7O‏<תû‏,7O‏:8û‏,7O‏8ת9‏,7O‏6תû‏,7O‏48û‏,7O‏28û‏-7O‏08û‏-7O‏.תû‏-7O‏,תת‏,7O‏*8û‏-7O‏(תû‏-7O‏&89‏,7O‏$8û‏,7O‏"8û‏,7O‏ 8û‏-7O‏8û‏-7O‏8û‏-7O‏8û‏-7O‏תת‏,7O‏תû‏,7O‏תû‏,7O‏8û‏,7O‏89‏,7O‏8û‏-7OO‏	8û‏-7û:‏תû‏,:ת?ûû‏79‏-?O?ûûO‏O?‏+?û8‏O?8ת‏)û8O‏O8Oתת‏(û8O‏Oת?7:?O8תO‏%û8O‏Oתתתת:8ת‏#û8O‏Oת?7תתת7û?Oתת‏"û8O‏Oת?7תתתתת7:?O8û‏û8O‏Oת7תתתתתתתת:?O8ת‏98O‏Oת?7תתתתתתתתתת:?O8û‏û8O‏O87תתתתתתתתתתתת:Oתת‏û8O‏Oת7תתתתתתתתתתתתתת:?O8ת‏û8O‏Oת7תתתתתתתתתתתתתתתת:?Oתת‏û8O‏Oת7תתתתתתתתתתתתתתתתתת:?Oתת‏û8O‏Oת7תתתתתתתתתתתתתתתתתתת7:?O8û‏û8O‏Oת7תתתתתתתתתתתתתתתתתתתתתת:?Oתû‏û8O‏Oת?7תתתתתתתתתתתתתתתתתתתתתתתת:?Oתû‏û8O‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתת:?OתûO?‏û8O‏Oת?7תתתתתתתתתתתתתתתתתתתתתתתתתתת7:?Oתû‏
-ûתO‏Oת?7תתתתתתתתתתתתתתתתתתתתתתתתתתתתת7:?O8û?‏û8O‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת:?Oתû?	‏ûתO‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת:?O8ת?O
-û8O‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû?O8û?
-û8O‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת:?Oתת?
-?:8O‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת:?Oתת
-?:תO‏ת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת:?Oתûת?9תO‏Oת?7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת:?Oתת?:תO‏Oת?7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת:?Oת9??:תO‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת8:Oת9<:תO‏ת?7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת:OתO‏Oת?7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת7:?‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתת‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏Oת?7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתûO‏Oת?7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏Oת7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû‏87תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû	‏ת77תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתûû	‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתûû	‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû	‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתûû	‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתûû	‏תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתûO	‏ת8תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתûû	‏8תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתûû	‏OתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתûO	‏$תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתûû	‏(תת88תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתûû	‏,8תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתûO	‏/תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתתû	‏38תתתתתתתתתתתתתתתתתתתתתתתתתתתתתתûû	‏7תתתתתתתתתתתתתתתתתתתתתתתתתתתתתûû	‏;תתתתתתתתתתתתתתתתתתתתתתתתתתתûû	‏?8תתתתתתתתתתתתתתתתתתתתתתתתûû	‏CתתתתתתתתתתתתתתתתתתתתתתתûOû	‏G8תתתתתתתתתתתתתתתתתתתתû	‏K8תתתתתתתתתתתתתתתתתתûOû	‏O8תתתתתתתתתתתתתתתתûOû	‏Sתתתתתתתתתתתתתתתû	‏W8תתתתתתתתתתתתûû	‏[תתתתתתתתתתתû	‏_ת8תתתתתתתû	‏c8תתתתתתûû	‏g8תתתתû	‏kתתתûOû	‏oתת<û	‏sû	‏w	‏|ÿ`‏?ת
-‏|ת
-
-ת‏x‏h‏
-
-
-
-[[\\ת[‏d‏[
-
-ת
-ת[[[[[[[[
-ת[‏a‏[
-תת[[[[[[[[[[[[ת
-תת‏_ת[[[[[[[[[[[[[[[[
-ת‏]	[\\[[[[[[[[[[[[[\\ת
-
-
-‏\	[\\[[[[[[[[[\\^^
-
-
-‏[	[\\[[[[[\\^^^^
-ת[‏X[[
-		[\[[[\^^^^\ת
-
-[‏T
-
-
-
-ת[		[]^^^^\
-
-
-
-תת[‏Pת
-
-[ת
-[[\\[	
-^^\[
-
-
-
-
-תת‏L
-ת[[[[[[\\[		
-[
-
-
-תת
-
-
-[
-‏Hת[[[[[[[[[[\\[		ת[
-
-
-[תתת\[[[‏8‏[ת[[[[[[[[[[[[[[\\[		
-[
-
-
-
-תת[[\[[[[[\\ת
-
-‏4‏תת
-תת[[[[[[[[[[[[[[[[[[]^]
-	
-ת
-
-[[[[[[[[[[[[[[ת‏1‏ת
-[[[[[[[[[[[[[[[[[\\^^^^]
-		
-[[[[[[[[[[[[[\[[\‏/
-ת[[[[[[[[[[[[[[[[[\\^^^^\
-ת
-		[\\[[[[[[[[[[[[\]
-
-ת‏-	[\[[[[[[[[[[[[[[[[\^^^^
-תת
-		[\\[[[[[[[[\]^^
-תתת‏+Y[\[[[[[[[[[[[[\^^^^ת		[\\[[[[\]^^^]תתתת
-ת[‏*Y\\[[[[[[[\\^^^^תתתת[תת
-		[\[\]^^^]
-תתתתת
-ת[‏““‏
-Y[\[[[\\^^^^\ת
-
-
-
-[[תת
-
-
-ת\[		]_^^]
-
-
-
-[‏”’’““‏
-
-
-[ת	Y[\]]^^^\ת
-
-
-
-
-
-
-
-
-
-[[[[\\[	
-
-
-תתתתתתתתתת
-
-ת‏”””“’““‏ת
-
-
-[\\[	
-^_^\תתת
-
-
-
-ת
-
-
-[[[[[[[[[\[		
-ת
-
-
-
-
-
-
-
-
-
-
-
-[[[[ת
-
-[‏”””””“’““Z[[[[[\\[	
-תתת[תתתת
-
-[[[[[[[[[[[[[\\[		
-ת
-
-ת
-
-
-[[[[[[[[
-‏”””””””“’“¢[\[[[[[[[\\[		תת
-
-
-
-תתת
-
-ת\\[[[[[[[[[[[[[[\\
-	
-[[[\[[[[[[[‏”“”””””””“““¢Z\\[[[[[[[[\\[		[
-
-תת\\[[[[[[[[[[[[[[[\]^_]
-	
-[[\[[[[[[[[[[\\ת
-ת‏ “”””””””“““¢[\\[[[[[[[[\]\		[\\[[[[[[[[[[[[[[[\]^^^]		[\[[[[[[[[[[[[[[[\‏Z¡“”””””””“““¢[\\[[[[[\^^_^
-[[[[[[[[[[[[[[[[[\]^^^]ת[
-		[\\[[[[[[[[[[\]^ת‏ת
-
-Y¡“”””””””“““¢Z\\[\^^^^\[[
-
-\\[[[[[[[[[[[[[[\]^^^]
-[[ת		[\\[[[[[[\]^^^
-ת
-
-‏ת
-ת
-
-
-[₪¡“”””””””“““¢[^^^^\
-ת
-Y[\[[[[[[[[[[\]^^^]
-תתת
-		[\\[[\]^^^^
-
-
-
-ת‏ת
-
-
-[\\₪¡“”””””””“““£\
-
-תת
-	Y[\[[[[[[\]^^^]תתתתתת
-		[\]^^^]תתת
-
-ת‏[[[\\₪¡“”””””””“’“¡Z
-[תתתתתת	Y[\[[\]^^^]תת
-תת[[\[	
-^_]
-תתתתתתת
-
-ת‏תת
-[\\₪¡“”””””””“““¢Zת
-
-תת[Z	Y\^^^^]תתתת[[[[[\\[		
-
-תתת
-
-
-‏ת
-
-[\\₪¡””””””””“““¢[ת
-[[ת\[\\[	
-^^ת[ת
-תת[[[[[[[[[\\[	
-
-
-
-
-‏[[
-תתתתת\]Y¡””””””””“““¢Z\\[[[[\\[	
-ת
-
-
-
-[[[[[[[[[[[[[\\[		
-
-ת[[תת
-
-
-‏ת
-
-תתY¡””””””””“““¢Z\\[[[[[[[[\\[		[[\[[[[[[[[[[[[[[\]]
-	
-
-
-ת
-ת‏
-
-
-ת[Y¡“”””””””“““¢[\\[[[[[[[[\\[	
-[[\[[[[[[[[[[[[[[\]^^^^		
-
-
-‏[
-
-
-
-תZ¡“”””””””“““¢[\\[[[[[[[\]^]		ת[[[[[[[[[[[[[[[[[\]^^^]
-		
-
-‏ 
-
-תתZ¡“”””””””“““¢Z\\[[[\]^^^]
-	[[[[[[[[[[[[[[[[[[\]^^^]תתתת
-ת
-
-
-
-
-‏$
-
-
-ת[Y¡“”””””””“““¢[\\]^^^]
-
-Y\\[[[[[[[[[[[[\]^^^]
-
-תת[ת‏(ת[
-[\₪¡“”””””””“““¢]_^]
-Y[\[[[[[[[[\]^^^^תתתת
-
-ת‏,תתת[[[[\\₪¡“”””””””“““£\
-
-
-Y[\[[[[\]^^^^ת
-תתת
-
-ת‏0
-
-תת
-
-[\\₪¡””””””””“““¢Z[[
-
-
-
-Y[\\]^^^]ת
-
-[ת
-
-[‏4ת
-
-[\\₪¡“”””””””“““¢Zת
-תת[\[	
-^_^]\ת[ת
-
-
-‏8תת[[\\¥¡“”””””””“““¢Z[
-[[[[\\[	
-תתתת
-
-
-‏<תת
-
-[[Y¡””””””””“““¢[\[[[[[[[\\[		תת
+û_[]\]]]]]]\‏7_ZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZY]\]]]]\^_‏7_ZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^[ZZZ]\]]\]¯‏7_ZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^¯_\Y]\\]¯_]\‏7^YZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_^]_]\]]‏7^\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^]_]\]]]]‏7¯_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ_\\]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZ]\]]]]]\]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZ]\]]]\\^‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZ]\]\]^_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\Z]\]^¯_]\‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]_^¯_]\]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]__]\]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ^\\]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZ]\]]]]\]^‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZ]\]]\]_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZ]\\]_¯‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]Z]]_¯^\_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_^]]]_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\^]\]]]_‏8_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ^]\]]]]]_‏9_\ZZZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]\_‏<_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]\]‏=_\ZZZZZZZZZZ[_^[ZZZZ]\]]\]_‏?_\ZZZZZZZZZZ[_^[ZZ]\]]_‏A_\ZZZZZZZZZZ[_^Z]]_^\_‏C_\ZZZZZZZZZZ[_^]]]_‏E_\ZZZZZZZZZZ[_^]]]]]_‏H_\ZZZZZZZZZY^\]]]]]]_‏I_\ZZZZZZZZ]\]]]]]\_‏K_\ZZZZZZ]\]]]\]^‏N_\ZZZZ]\]]]^‏P_\ZY]\]^¯‏Q_[]]_‏S^]_‏V¯^]]]_‏W^]]]]]_‏Y\]]]]]]_‏\]]]]]]]_‏^]]]]]]]_‏_]]]]]]]_‏a]]]]]]]_‏d]]]]]]]_‏e]]]]]]]_‏h]]]]]]]_‏j]]]]]]]_‏l]]]]]]]_‏m]]]]]_‏p]]]_‏s]_‏x¯‏{ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r¯_\ZYZZZZZZYZ\_‏oZ£ZZZZZZZZZZYZ\‏m__]ZYZZZZZZZZZZYZ\‏k_Y\_]ZYZZZZZZZZZZYZ\_‏i_ZZZ\_]ZYZZZZZZZZZZYZ\_‏g_ZZZZZ\_]ZYZZZZZZZZZZYZ\_‏e_ZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏c_ZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏a_ZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏__YZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏]][ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏[¯^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏Y_[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏W_ZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏U_ZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏S_ZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏Q_ZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏O_YZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏M^[ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏K_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏I_Z^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏G_ZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏E_ZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏C_ZZZZZZ[^_\ZZZZZZZZYZ_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏A_ZZZZZZZZ[^_\ZZ\\ZZ^¯\ X^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏?_YZZZZZZZZZ[^___\‎üüü‎X^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏=¯_\ZZZZZZZZZZZ^[‎üüüüü‎X^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏;\ZZZZZZZZZZZ[‎üüüüü‎Y^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏9^Z]\ZZZZZZZZZ_[‎üüüüü‎X^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ[^¯‏7_ZZZ]\ZZZZZZZ_[‎üüüüü‎X^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZYZ\^_‏7_ZZZZZ]\ZZZZZ_[‎üüüüüüX^[ZZZZZZZZZZZZZ\_^ZYZZZZYZ\¯_]‏7_ZZZZZZZ]\ZZZ_[‎üüü‎Y_^[ZZZZZZZZZZZZZ\_]ZYYZ\_]\]‏7_ZZZZZZZZZ]]Z_[UZ]Y[[_^[ZZZZZZZZZZZZZ\_]\¯_]\]]]‏7_ZZZZZZZZZZZ]^X W[ZZ[_^[ZZZZZZZZZZZZZ\_]\]]]]]‏7]ZZZZZZZZZZZ]X¡WX[ZZZZ[_^[ZZZZZZZZZZZY]\]]]]]]]‏7_¯]ZZZZZZZZZZZ_X¡WX[ZZZZZZ[_^[ZZZZZZZZZZ]\]]]]]]]‏7^Y\¯]ZZZZZZZZZ_X¡WX[ZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]]]‏7_ZZZ\_¯]ZZZZZZZ_X¡WW_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]]\]‏7_ZZZZZ\_¯]ZZZZZ_X¡WW_\ZZZZZZZZZZ[_^[ZZZZ]\]]]\]_¯‏7_ZZZZZZZ\_¯]ZZZ_X¡WX^_\ZZZZZZZZZZ[_^[ZZ]\]\]_¯^‏7_ZZZZZZZZZ\_]Z[_X¡WX[Z^_\ZZZZZZZZZZ[_^Z]\]_¯^\]‏7_ZZZZZZZZZZZ\_¯]Z[_X¡WX[ZZ[^_\ZZZZZZZZZZ[_]¯^\]]]‏7^[ZZZZZZZZZZ\]Z[_X¡¡X[ZZZZ[^_\ZZZZZZZZZZ[_]^]\]]]]‏7_^^[ZZZZZZZZZZ\]Z[_X ZZZZZZZZ[^_\ZZZZZZZZZZ]\]]]]]]]‏7_Y[_^[ZZZZZZZZZZ\_¯]Z[_[ZZZZZZZZZZ[^_\ZZZZZZZZ]\]]]]]]\‏7_ZZZ[_^[ZZZZZZZZZZ\]Z[_^]ZZZZZZZZZZ[^_\ZZZZZZ]\]]]]]^_‏7_ZZZZZ[_^[ZZZZZZZZZZ\_¯]Z[_[YZ]\ZZZZZZZZZZ[^_\ZZZZ]\]]\^‏7_ZZZZZZZ[_^[ZZZZZZZZZZ\¯]Z[_[ZZZZ]\ZZZZZZZZZZ[^_\ZY]\]^_]‏7_ZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]Z[^]ZZZZZZZ]\ZZZZZZZZZZ[^_[]]_]\]‏7_ZZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZYZZZZZZZZZ]\ZZZZZZZZZZ[^_]\]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]]ZZZZZZZZZZ[^^]\]]]]]‏7_^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZY]\]]]]]]]‏7_Y[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZ]\]]]]]\]‏7_ZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZ]\]]]\]^‏7_ZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZ]\]\]^‏7_ZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZY]\]^_]‏7_ZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\]^_]\]‏7_[ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]_]\]]]‏7\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]_]\]]]]]‏7_]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZY]\]]]]]]]‏7_YZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZ]\]]]]]\]‏7_ZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZ]\]]]\]_¯‏7_ZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZ]\]\]_¯^‏7_ZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZY]\]_¯^\\‏7_YZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]]_¯^]\]]‏7\ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_^]\]]]]‏7¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\\]]]]]]]‏7_\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZY]\]]]]]]]‏7_YZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZ]\]]]]]\]‏7_ZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZ]\]]]\]_¯‏7_ZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZ]\]\]¯^‏7_ZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[Y]\]_^\]‏7^YZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^^_^\]]]‏7][ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_]\]]]]]‏7^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZZZZ[_\]]]]]]]‏7_[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZY]\]]]]]]]‏7_ZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[ZZZZZZZ]\]]]]]]\‏7_ZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZ]\]]]]\^_‏7_ZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZ]\]]\]¯‏7_ZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\Y]\\]¯_]\‏7^YZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_^]_]\]]‏7^\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^]_]\]]]]‏7¯_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ_\\]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZ]\]]]]]\]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZ]\]]]\\^‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZ]\]\]^_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\Z]\]^¯_]\‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]_^¯_]\]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]__]\]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ^\\]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZ]\]]]]\]^‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\]ZZZZZ]\]]\]_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZ]\\]_¯‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]Z]]_¯^\_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_^]]]_‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\^]\]]]_‏8_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ^]\]]]]]_‏9_\ZZZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]\_‏<_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]\]‏=_\ZZZZZZZZZZ[_^[ZZZZ]\]]\]_‏?_\ZZZZZZZZZZ[_^[ZZ]\]]_‏A_\ZZZZZZZZZZ[_^Z]]_^\_‏C_\ZZZZZZZZZZ[_^]]]_‏E_\ZZZZZZZZZZ[_^]]]]]_‏H_\ZZZZZZZZZY^\]]]]]]_‏I_\ZZZZZZZZ]\]]]]]\_‏K_\ZZZZZZ]\]]]\]^‏N_\ZZZZ]\]]]^‏P_\ZY]\]^¯‏Q_[]]_‏S^]_‏V¯^]]]_‏W^]]]]]_‏Y\]]]]]]_‏\]]]]]]]_‏^]]]]]]]_‏_]]]]]]]_‏a]]]]]]]_‏d]]]]]]]_‏e]]]]]]]_‏h]]]]]]]_‏j]]]]]]]_‏l]]]]]]]_‏m]]]]]_‏p]]]_‏s]_‏x¯‏{ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r¯_\ZYZZZZZZYZ\_‏oZ£ZZZZZZZZZZYZ\‏m__]ZYZZZZZZZZZZYZ\‏k_Y\_]ZYZZZZZZZZZZYZ\_‏i_ZZZ\_]ZYZZZZZZZZZZYZ\_‏g_ZZZZZ\_]ZYZZZZZZZZZZYZ\_‏e_ZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏c_ZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏a_ZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏__YZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏]][ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏[¯^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏Y_[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏W_ZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏U_ZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏S_ZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏Q_ZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏O_YZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏M^[ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏K_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏I_Z^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏G_ZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏E_ZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏C_ZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏A_ZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏?_YZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏=¯_\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏;\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏9^Z]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[^^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ[^¯‏7_ZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZYZ\^_‏7_ZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_^ZYZZZZYZ\¯_]‏7_ZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYYZ\_]\]‏7_ZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]\¯_]\]]]‏7_ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]\]]]]]‏7]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZY]\]]]]]]]‏7_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ]\]]]]]]]‏7^Y\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]]]‏7_ZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]]\]‏7_ZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZ]\]]]\]_¯‏7_ZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZ]\]\]_¯^‏7_ZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^Z]\]_¯^\]‏7_ZZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_]¯^\]]]‏7^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ[_]^]\]]]]‏7_^^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZZZ]\]]]]]]]‏7_Y[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZZZZZ]\]]]]]]\‏7_ZZZ[_^[ZZZZZZZZZZ\]ZZZZZZZZZZZ]]ZZZZZZZZZZ[^_\ZZZZZZ]\]]]]]^_‏7_ZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZZZZ]\]]\^‏7_ZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_\ZY]\]^_]‏7_ZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_[]]_]\]‏7_ZZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZZ[^_]\]]]‏7_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]]ZZZZZZZZZZ[^^]\]]]]]‏7_^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]\ZZZZZZZZZY]\]]]]]]]‏7_Y[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZZZZZZZZ]\]]]]]\]‏7_ZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZZZ]\]]]\]^‏7_ZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]\ZZZZ]\]\]^‏7_ZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\ZY]\]^_]‏7_ZZ[ZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZZZZ]\]^_]\]‏7_[bbZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZZZZZZ]_]\]]]‏7^₪b₪ZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZZZ]_]\]]]]]‏7_Z[[[ZZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZZZZZZY]\]]]]]]]‏7_ZZZ[[[ZZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZZZZZZZZ]\]]]]]\]‏7_₪•₪ZZ[[[ZZZZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\¯]ZZZZZZ]\]]]\]_¯‏7_₪`ZZZZ[[[ZZZZZZZZZZZ[^_[ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]ZZZZ]\]\]_¯^‏7_Z¢”ZZZZZZ[[[ZZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_]ZY]\]_¯^\\‏7_ZZZZZZZZZZZ[[[ZZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_¯]]_¯^]\]]‏7[ZZZZZZZZZZZZ[[[ZZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\_^]\]]]]‏7]ZZZZZZZZZZZZZZ[[[ZZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ\\]]]]]]]‏7_Z[[[ZZZZZZZZZZZZZ[[[ZZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZY]\]]]]]]]‏7_ZZZZ[[ZZZZ——ZZZZZZZ[[[ZZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZ]\]]]]]\]‏7_ZZZZZZ[[ZZdc₪ZZZZZZZ[[[ZZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZ]\]]]\]_¯‏7_ZZZZZZZZ[[dc₪ZZZZZZZ[[[ZZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZ]\]\]¯^‏7_ZZZZZZZZZ[edfdZZZZZZZZ[[[ZZZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[Y]\]_^\]‏7^ZZZZZZZZZZdd^¨ecZZ₪ZZZZZZZ[[[ZZ£₪ZZZZZZZ[^_\ZZZZZZZZZZ[_^^_^\]]]‏7\ZZZZZZZZZdbd[^\Z₪bc₪ZZZZZZZ[[[¢`£[ZZZZZZZ[^_[ZZZZZZZZZZ[_]\]]]]]‏7][ZZZZZZZZdbbe[[¥c₪ZZZZZZZZ[[₪Z••ZZZZZZZZ[^_[ZZZZZZZZZZ[_\]]]]]]]‏7_ZZ[[ZZZZZZdd™d[¥cbdZZZZZZZZZZ[\–•[ZZZZZZZZ[^_\ZZZZZZZZY]\]]]]]]]‏7_ZZZZ[[ZZZZdc\]g—Z₪bbcZZ₪c—ZZZZZZZ[–₪ZZZZZZZZZZZ[^_[ZZZZZZZ]\]]]]]]\‏7_ZZZZZZ[¥£Zdb—Z\[ZZbbe₪[dc₪ZZZZZZ[[[[ZZZZZZZZZZZ[^_\ZZZZZ]\]]]]\^_‏7_ZZZZZZZ₪•[¦fc£ZZ¥c—e[bb₪Z₪ZZZZZZZ[[[ZZZZZZZZZZZ[^_\ZZZ]\]]\]¯‏7_ZZZZZZZ£•[[\¦fcZ¥c₪dcdcc₪Zdc₪ZZZZZZZ[[[ZZZZZZZZZZZ[^_\Y]\\]¯_]\‏7^YZZZZZZ₪•ZZ£•]¦ecZZc₪₪b—c₪[edZZZZZZZZ[[[ZZZZZZZZZZZ[^_^]_]\]]‏7^\ZZZZZ£•ZZ£•[•\]Z₪b₪¥d¥b₪[ebZZZZZZZZZZ[[[££ZZZZZZZZZ[^]_]\]]]]‏7¯_\ZZZ₪£ZZ₪¢[•₪[[Zf£[e¥Zb₪[eb£ZZ——ZZZZZZZ[b₪ZZZZZZZZZZZ_\\]]]]]]‏7_\ZZZZZZZZ•₪ZZ[]¨¥Z\¨[₪b₪[edd[Zcc₪ZZZZZZ£`£[ZZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZ£ZZZZZ[¥¢ZZZ₪b₪[edeb[—bcZZZZZZZZZ[[[ZZZZZZZZ]\]]]]]\]‏7_\ZZZZZZZZZZZ£`¥ZZ₪b₪[ed₪£ccdZZZZZZZZZZZ[£•ZZZZZZ]\]]]\\^‏7_\ZZZZZZZZZZ”₪[[Zf₪[ecZcbdedZZZZd—ZZZZZZ•£[ZZZZ]\]\]^_‏7_\ZZZZZZZZ•₪ZZ[]¨¥[dc[e˜ed[[Z₪c₪ZZZZZ”£[[[ZY]\]^¯_]\‏7_\ZZZZZZ•₪ZZZZ[[£₪cZ¥[ddZZ[db–ZZZZZZZZZ[[]_^¯_]\]]‏7_\ZZZZ₪ZZZZZZ₪•]¨˜Z[§¥ZddZZ₪bdcZZZZZZZZZZZ____]\]]]]‏7_\ZZZZZZZZZ₪•Z[¥₪Z[[ZddZZe¥cb¥ZZZZZZZZZZZ^\\]]]]]]‏7_\ZZZZZZZ₪¢ZZ•£[₪₪ZddZZcd[d₪[ZZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZZZ[¢¢[•₪[—c[—dZ₪d[[[ZZZZZZZZ]\]]]]\]^‏7_\ZZZZZZZ££[•₪[\¨˜ZcbbdcZZZ[[ZZZZZZ]\]]\]_‏7_\ZZZZZZZZ•₪ZZ[\Zfd§eb₪ZZZZ[[ZZZZ]\\]_¯‏7_\ZZZZZZ•₪ZZZZ[₪§¦[]§deZZZZZZ[[ZY]]_¯^\_‏7_\ZZZZ₪ZZZZZZ”[[£Z[¥cZZZZZZZ[[]_^]]]_‏7_\ZZZZZZZZZ•Z₪•[₪¥b₪ZZZZZZZZ_^]\]]]_‏8_\ZZZZZZZ•Z₪•[–£]f—ZZZZZZZZZ^]\]]]]]_‏9_\ZZZZZ¢ZZ£[¢£\][ZZZZZZZZZ]\]]]]]\_‏<_\ZZZZZZZZ¢£ZZ£•ZZZZZZZZ]\]]]]\]‏=_\ZZZZZZZZZZ₪¢•¥ZZZZZZ]\]]\]_‏?_\ZZZZZZZZZZ•Z[[ZZZZ]\]]_‏A_\ZZZZZZZZZZZZ[[ZZ]]_^\_‏C_\ZZZZZZZZZZZZ[^¯^]]]_‏E_\ZZZZZZZZZZZ^^]]]]]_‏H_\ZZZZZZZZZZ^\]]]]]]_‏I_\ZZZZZZZZ]\]]]]]\_‏K_\ZZZZZZ]\]]]\]^‏N_\ZZZZ]\]]]^‏P_\ZY]\]^¯‏Q_[]]_‏S^]_‏V¯^]]]_‏W^]]]]]_‏Y\]]]]]]_‏\]]]]]]]_‏^]]]]]]]_‏_]]]]]]]_‏a]]]]]]]_‏d]]]]]]]_‏e]]]]]]]_‏h]]]]]]]_‏j]]]]]]]_‏l]]]]]]]_‏m]]]]]_‏p]]]_‏s]_‏x¯‏{ÿQ‏I‏{_\^‏w_[YYY[^‏s_[YYZZZYY[^‏p^[YYZZZZZZZYY[^‏&‏F_[YYZZZZZZZZZY£[‏"^‏D\^¯_[YYZZZZZZYZ^_\^‏]ZYZ]‏B\Y[^_[YYZZYZ]_[YYY[^‏\ZYZZZ£Z_‏A\ZZZ[^_[YZ]_[YYZZZYY[^‏_\ZYZZZYY[_‏A\ZZZZZ[^__[YYZZZZZZZYY[^‏]YYZZYY[_¯_]_‏>\ZZZZZZZ[^ZYYZZZZZZZZZYY[^‏]\ZY[_¯_]\\_‏<]ZZ\ZZZZZZZZ]^¯_[YYZZZZZZZZZYY[^‏[Z\__¯_]\]]]_‏:\ZYZY\ZZZZZZZZ\Y[^_[YYZZZZZZZZZYY[^‏[ZZZ^]\]]]]]_‏8]ZYZZZZ\ZZZZZZZZ\ZZZ[^_[YYZZZZZZZZZYZ_‏[ZZZ]\]]]]]]_‏7Z£ZZZZZZ\ZZZZZZZZ\ZZZZZZ^_[YYZZZZZYZ]_[[^‏	[ZZZ]\]]]]]]_‏7_]ZYZZZZ_\ZZZZZZZZ\ZZZZZZZ[^_[YYZYZ]_[YYYY[^‏[ZZZ]\]]]]]]_‏7_Z\]ZYZZ\ZZZZZZZZ\ZZZZZZZZZ[^_[Z]_[YYZZZZYY[^‏[ZZZ]\]]]]]]_‏7_ZZZ\]ZY\ZZZZZZZZ\ZZZZZZZZZZZZ^[YYZZZZZZZZYY[^‏[ZZZ]\]]]]]]_‏7_YZZZZ\\\ZZZZZZZZ\ZZZZZZZZZZZZY]_[YYZZZZZZZZZYZ_‏[ZZZ]\]]]]]]_‏7¯][ZZZZZ\\ZZZZZZZZ\ZZZZZZZZZZZZZ]_Z^_[YYZZZZZYZ^_[[^[ZZZ]\]]]]]]_‏8]ZZZZZZ\ZZZZZZZZ\ZZZZZZZZZZZZZ]_ZZZ^_[YYZYZ]_[YYYY[[ZZZ]\]]]]]]_‏:]ZZZZ\ZZZZZZZZ\ZZZZZZZZZZZZZ]_ZZZZ[^_[Z]_[YYZZZZZ[ZZZ]\]]]]]]_‏<]ZZ\ZZZZZZZZ\ZZZZZZZZZZZZZ]_ZZZZZZ[^¯[YYZZZZZZZ[ZZZ]\]]]]]]_‏>]\ZZZZZZZZ\ZZZZZZZZZZZZZ]_ZZZZZZZY]¯__[YYZZZZZZ[ZZZ]\]]]]]]_‏@^ZZZZZZZZ\ZZZZZZZZZZZZZ]_ZZZZZZZZ]_Z^_[YYZZZZ[ZZZ]\]]]]]]_‏B]ZZZZZZ\ZZZZZZZZZZZZZ]_ZZZZZZZZ]_ZZ[^_[YYZZ[ZZZ]\]]]]]]_‏D]ZZZZ\ZZZZZZZZZZZZZ]_ZZZZZZZZ]_ZZZZ[^_[YZ[ZZZ]\]]]]]\_‏F]ZZ\ZZZZZZZZZZZZZ]_ZZZZZZZZ]_ZZZZZZ[^_[[ZZZ]\]]]]]]_‏H]\ZZZZZZZZZZZZZ]_ZZZZZZZZ]_ZZZZZZZZ[^[ZZZ]\]]]]]]_‏J^ZZZZZZZZZZZZZ]_ZZZZZZZZ]_ZZZZZZZZZZ[[ZZZ]\]]]]]]_‏L]ZZZZZZZZZZZ]_ZZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏N]ZZZZZZZZZ]_ZZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏P]ZZZZZZZ]_ZZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏R]ZZZZZ]_ZZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]\_‏T]ZZZ]_ZZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏V]Z]_ZZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏X__YZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏Z¯]ZZZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏\]ZZZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏^]ZZZ]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏`]Z]_ZZZZZZZZZZZ[ZZZ]\]]]]]]_‏b__YZZZZZZZZZZ[ZZZ]\]]]]]]_‏d¯]ZZZZZZZZZZ[ZZZ]\]]]]]]_‏f]ZZZZZZZZ[ZZZ]\]]]]]]_‏h]ZZZZZZ[ZZZ]\]]]]]]_‏j]ZZZZ[ZZZ]\]]]]]\_‏l]ZZ[ZZZ]\]]]]\]_‏n^[ZZZ]\]]\]^‏p^ZZZ]\]]^‏t]Z]\^‏x_¯‏|ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r¯_\ZYZZZZZZYZ\_‏oZ£ZZZZZZZZZZYZ\‏m__]ZYZZZZZZZZZZYZ\‏k_Y\_]ZYZZZZZZZZZZYZ\_‏i_ZZZ\_]ZYZZZZZZZZZZYZ\_‏g_ZZZZZ\_]ZYZZZZZZZZZZYZ\_‏e_ZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏c_ZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏a_ZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏__YZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏]][ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏[¯^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏Y_[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏W_ZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏U_ZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏S_ZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏Q_ZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏O_YZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏M^[ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏K_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏I_Z^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏G_ZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏E_ZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏C_ZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏A_ZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏?_YZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏=¯_\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏;\ZZZZZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏9^Z]\ZZZZZZZZZZ^^_\ZZZZZZZZZZ[^^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ[^¯‏7_ZZZ]\ZZZZZZZ\_Z[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZYZ\^_‏7_ZZZZZ]\ZZZZZ\[[Z[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_^ZYZZZZYZ\¯_]‏7_ZZZZZZZ]\ZZZ\[[[[Z[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYYZ\_]\]‏7_ZZZZZZZZZ]\Z\[[[[[[Z[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]\¯_]\]]]‏7_ZZZZZZZZZZZ]^Z[[[[[[[Z[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]\]]]]]‏7]ZZZZZZZZZZZ]¯][Z[[[[[[[Z[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZY]\]]]]]]]‏7_¯]ZZZZZZZZZZZ^¯][Z[[[[[[[Z[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ]\]]]]]]]‏7^Y\¯]ZZZZZZZZZ\Z]][Z[[[[[[[Z[^_\ZZZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]]]‏7_ZZZ\_¯]ZZZZZZZ\[Z[]][Z[[[[[[[Z[^_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]]\]‏7_ZZZZZ\_¯]ZZZZZ\[[[Z[]][Z[[[[[[[Z[^_\ZZZZZZZZZZ[_^[ZZZZ]\]]]\]_¯‏7_ZZZZZZZ\_¯]ZZZ\[[[[[Z[]][Z[[[[[[[Z[^_\ZZZZZZZZZZ[_^[ZZ]\]\]_¯^‏7_ZZZZZZZZZ\_]Z\[[[[[[[Z]][Z[[[[[[[Z[^_\ZZZZZZZZZZ[_^Z]\]_¯^\]‏7_ZZZZZZZZZZZ\__Z[[[[[[[[[]][Z[[[[[[[Z[^_\ZZZZZZZZZZ[_]¯^\]]]‏7^[ZZZZZZZZZZ\^[Z[[[[[[[Z[]][Z[[[[[[[Z[__\ZZZZZZZZZZ[_]^]\]]]]‏7_^^[ZZZZZZZZZZ]_¯^[Z[[[[[[[Z[]][Z[[[[[[Z_]]_\ZZZZZZZZZZ]\]]]]]]]‏7_Y[_^[ZZZZZZZZ\Z\^[Z[[[[[[[Z[]][Z[[[[Z]Y[^_\ZZZZZZZZ]\]]]]]]\‏7_ZZZ[_^[ZZZZZZ\[[Z\_¯^[Z[[[[[[[Z[]][Z[[Z]ZZZ[^_\ZZZZZZ]\]]]]]^_‏7_ZZZZZ[_^[ZZZZ\[[[[Z\_^[Z[[[[[[[Z[]][[Z]ZZZZZ[^_\ZZZZ]\]]\^‏7_ZZZZZZZ[_^[ZZ\[[[[[[Z\_^[Z[[[[[[[Z[]]Z_]ZZZZZZZ[^_\ZY]\]^_]‏7_ZZZZZZZZZ[_^Z\[[[[[[[[Z\_^[Z[[[[[[[Z[]\YZZZZZZZZ[^_[]]_]\]‏7_ZZZZZZZZZZZ[_Z[[[[[[[[[Z\_¯^[Z[[[[[[[Z[]\ZZZZZZZZZZ[^_]\]]]‏7_\ZZZZZZZZZZ[__\Z[[[[[[[[[Z\_¯^[Z[[[[[[[Z[]ZZZZZZZZZZ[^^]\]]]]]‏7_^_\ZZZZZZZZZZ]_¯_\Z[[[[[[[[[Z\_^[Z[[[[[[Z_]\\ZZZZZZZZZY]\]]]]]]]‏7_Y[^_\ZZZZZZZZ\Z\__\Z[[[[[[[[[Z\_¯^[Z[[[[Z]YZ]\ZZZZZZZZ]\]]]]]\]‏7_ZZZ[^_\ZZZZZZ\[[Z\_¯_\Z[[[[[[[[[Z\_^[Z[[Z]ZZZZ]\ZZZZZZ]\]]]\]^‏7_ZZZZZ[^_\ZZZZ\[[[[Z\_¯_\Z[[[[[[[[[Z\_^[ZZ]ZZZZZZ]\ZZZZ]\]\]^‏7_ZZZZZZZ[^_\ZY\[[[[[[Z\_\Z[[[[[[[[[Z\_^[_]ZZZZZZZZ]\ZY]\]^_]‏7_ZZZZZZZZZ[^_[\[[[[[[[[\__\Z[[[[[[[[[Z\_]YZZZZZZZZZ]\]^_]\]‏7_[ZZZZZZZZZZ[^ZZ[[[[[[[Z\__\Z[[[[[[[[[Z\¯]ZZZZZZZZZZZ]_]\]]]‏7\ZZZZZZZZZZ[^]Z[[[[[[[[Z\__\Z[[[[[[[[Z_¯¯]ZZZZZZZZZZZ]_]\]]]]]‏7_]\ZZZZZZZZZY\^\Z[[[[[[[[Z\__\Z[[[[[[[][¯]ZZZZZZZZZY]\]]]]]]]‏7_YZ]\ZZZZZZZZ\Z[^_\[[[[[[[[[Z\__\Z[[[[Z]YZ\_]ZZZZZZZZ]\]]]]]\]‏7_ZZZZ]\ZZZZZZ\[[Z[^\[[[[[[[[[Z\__\Z[[[]ZZZZ\¯]ZZZZZZ]\]]]\]_¯‏7_ZZZZZZ]\ZZZZ\[[[[Z[^_\[[[[[[[[[[\__\ZZ]ZZZZZZ\_¯]ZZZZ]\]\]_¯^‏7_ZZZZZZZZ]\ZY\[[[[[[Z[_\[[[[[[[[[[\__[_]ZZZZZZZZ\_]ZY]\]_¯^\\‏7_YZZZZZZZZZ]\\[[[[[[[[[^_\[[[[[[[[[Z\_]ZZZZZZZZZZ\_¯]]_¯^]\]]‏7\ZZZZZZZZZZZ]¯[Z[[[[[[[Z[^_\[[[[[[[[[[\_^[ZZZZZZZZZZ\_^]\]]]]‏7¯]ZZZZZZZZZZZ]][Z[[[[[[[Z[^_\[[[[[[[[[Z_^[ZZZZZZZZZZ\\]]]]]]]‏7_\¯]ZZZZZZZZZY\]][Z[[[[[[[Z[^_\[[[[[[[[][_^[ZZZZZZZZY]\]]]]]]]‏7_YZ\]ZZZZZZZZ\Z[]][Z[[[[[[[Z[^_\[[[[[Z]YZ[_^[ZZZZZZZ]\]]]]]\]‏7_ZZZZ\¯]ZZZZZZ\[[Z[]][Z[[[[[[[Z[^_\[[[[]ZZZZ[_^[ZZZZZ]\]]]\]_¯‏7_ZZZZZZ\_¯]ZZZZ\[[[[Z[]][Z[[[[[[[Z[^_\[Z]ZZZZZZ[_^[ZZZ]\]\]¯^‏7_ZZZZZZZZ\¯]ZY\[[[[[[Z[_][Z[[[[[[[Z[^_\]ZZZZZZZZ[_^[Y]\]_^\]‏7^YZZZZZZZZZ\_¯]]Z[[[[[[[[]][Z[[[[[[[Z[^]ZZZZZZZZZZ[_^^_^\]]]‏7][ZZZZZZZZZZ\_[Z[[[[[[[Z[]][Z[[[[[[[Z[^_[ZZZZZZZZZZ[_]\]]]]]‏7^[ZZZZZZZZZZ\^[Z[[[[[[[Z[]][Z[[[[[[[Z__¯_[ZZZZZZZZZZ[_\]]]]]]]‏7_[_^[ZZZZZZZZY\\_^[Z[[[[[[[Z[]][Z[[[[[[\Z^_\ZZZZZZZZY]\]]]]]]]‏7_ZZ[_^[ZZZZZZZ\ZZ\_^[Z[[[[[[[Z[]][Z[[[Z]ZZ[^_[ZZZZZZZ]\]]]]]]\‏7_ZZZZ[_^[ZZZZZ\[[[Z\_^[Z[[[[[[[Z[]][Z[[]ZZZZ[^_\ZZZZZ]\]]]]\^_‏7_ZZZZZZ[_^[ZZZ\[[[[[Z\_^[Z[[[[[[[Z[]][Z]ZZZZZZ[^_\ZZZ]\]]\]¯‏7_ZZZZZZZZ[_^[Y\[[[[[[[Z_^[Z[[[[[[[Z[]]]ZZZZZZZZ[^_\Y]\\]¯_]\‏7^YZZZZZZZZZ[_^]Z[[[[[[[[]¯^[Z[[[[[[[Z[]^ZZZZZZZZZZ[^_^]_]\]]‏7^\ZZZZZZZZZZ[_\Z[[[[[[[Z[]^[Z[[[[[[[Z[]¯\ZZZZZZZZZZ[^]_]\]]]]‏7¯_\ZZZZZZZZZZ[__\Z[[[[[[[Z[]^[Z[[[[[[[Z__\ZZZZZZZZZZZ_\\]]]]]]‏7_\ZZZZZZZZZ\__\Z[[[[[[[Z[]^[Z[[[[[[\Z]\ZZZZZZZZZ]\]]]]]]]‏7_\ZZZZZZZ\Z\__\Z[[[[[[[[[]¯^[Z[[[Z]ZZZ]\ZZZZZZZ]\]]]]]\]‏7_\ZZZZZ\[[Z\__\Z[[[[[[[Z[]¯^[Z[[]ZZZZZ]\ZZZZZ]\]]]\\^‏7_\ZZZ\[[[[[\__\Z[[[[[[[Z[]^[Z]ZZZZZZZ]\ZZZ]\]\]^_‏7_\Z\[[[[[[Z\__\Z[[[[[[[Z[]^\ZZZZZZZZZ]\Z]\]^¯_]\‏7_^Z[[[[[[[[\__\Z[[[[[[[Z[]^ZZZZZZZZZZZ]_^¯_]\]]‏7][[[[[[[[[[\__\Z[[[[[[[Z[]]ZZZZZZZZZZZ]__]\]]]]‏7¯][[[[[[[[[Z\__\Z[[[[[[[Z_^_¯]ZZZZZZZZZZZ^\\]]]]]]‏7¯_^_][Z[[[[[[[[\__\Z[[[[[[\Z\¯]ZZZZZZZZZ]\]]]]]]]‏7_^_][[[[[[[[[Z\__\Z[[[Z]ZZZ\¯]ZZZZZZZ]\]]]]\]^‏7_^][[[[[[[[[[\__\Z[[]ZZZZZ\]ZZZZZ]\]]\]_‏7^__][[[[[[[[[Z\__\Z]ZZZZZZZ\_¯]ZZZ]\\]_¯‏7___][[[[[[[[[Z\_^\ZZZZZZZZZ\¯]Z]]_¯^\_‏7^^\[[[[[[[[[[\__[ZZZZZZZZZZ\_^]]]_‏7^__][[[[[[[[[Z\^[ZZZZZZZZZZ\^]\]]]_‏8___][[[[[[[[Z_^^^[ZZZZZZZZZZ^]\]]]]]_‏9^__][[[[[[[]Y[_^[ZZZZZZZZ]\]]]]]\_‏<___][[[[Z]ZZZ[_^[ZZZZZZ]\]]]]\]‏=___\[[[]ZZZZZ[_^[ZZZZ]\]]\]_‏?_^_]Z]ZZZZZZZ[_^[ZZ]\]]_‏A^^_\YZZZZZZZZ[_^Z]]_^\_‏C___[ZZZZZZZZZZ[_^]]]_‏E_\ZZZZZZZZZZ[_^]]]]]_‏H_\ZZZZZZZZZY^\]]]]]]_‏I_\ZZZZZZZZ]\]]]]]\_‏K_\ZZZZZZ]\]]]\]^‏N_\ZZZZ]\]]]^‏P_\ZY]\]^¯‏Q_[]]_‏S^]_‏V¯^]]]_‏W^]]]]]_‏Y\]]]]]]_‏\]]]]]]]_‏^]]]]]]]_‏_]]]]]]]_‏a]]]]]]]_‏d]]]]]]]_‏e]]]]]]]_‏h]]]]]]]_‏j]]]]]]]_‏l]]]]]]]_‏m]]]]]_‏p]]]_‏s]_‏x¯‏{ÿ‏J‏z^[Z\_‏v^[YYZYZ\_‏r_[YYZZZZZYZ\_‏o[£YZZZZZZZZZYZ\_‏m¯_^ZYZZZZZZZZZZYZ\_‏f‏Z\_]ZYZZZZZZZZZZYZ\‏b^[[^ZZZ\_]ZYZZZZZZZZZZYZ\‏^^[YYYY\ZZZZZ\_]ZYZZZZZZZZZZYZ\_‏Z^[YYZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏WZ£ZZZZZZY[ZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏U_[YYZZZZY[ZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏S_Z^_[YYZZY[[ZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏Q_ZZ[^_[YYZ[ZZZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏O_ZZZZ[^_[YZ_[ZZZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏M_ZZZZZZ[^_]__[ZZZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏K_ZZZZZZZZZ_[Z^¯_[ZZZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏I_ZZZZZZZZZ\]_ZZ^_[ZZZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏G_ZZZZZZZZZ]_Y[^_ZZ^_[ZZZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYY]‏E_ZZZZZZZZZ]_ZZZZ^_ZZ__[ZZZZZZZZZZZZZZZ\_]ZYZZZZZZYY[^‏E_ZZZZZZZZZ]_ZZZZZ[^___¯_[ZZZZZZZZZZZZZZZ\_]ZYZZYY[^¯]^‏E_ZZZZZZZZZ]_ZZZZZZZ[^\\]_¯_[ZZZZZZZZZZZZZZZ\_]ZYZ^¯]\\^‏E_ZZZZZZZZZ]_ZZZZZZZZ]]]]\]_¯^[ZZZZZZZZZZZZZZZ\_^¯]\]]]^‏E_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]\^^[ZZZZZZZZZZZZZZZ]]\]]]]\^‏E_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]]‏_[ZZZZZZZZZZZZZ[]]]]]]\^‏
+‏9_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏^[ZZZZZZZZZZZ[]]]]]]\^‏^\_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏^[ZZZZZZZZZ[]]]]]]]^‏^ZY[‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏^[ZZZZZZZ[¯]]]]]]\^‏^ZY\¯^_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏	^[ZZZZZ[]]]]]]^‏^ZY\¯_]\_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏^[ZZZ\]]]]^‏]\¯_]\]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏^[Z[]]^‏\_]\]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏^]^‏¯Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏‏_\^Z]\]]]]]\_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏_\ZYZZ]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏_\ZYZZZZ]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏_[ZYZZZYZZ]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]]‏_[YYZZZYZZ]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏]^¯_[YYZZZZ]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\Y[^_[YYZZ]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZ[^_[ZZ]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZ[^_Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ^¯Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZZZ]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]\_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZZ]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]\_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZZ]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZZ]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]\_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]\_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZZ]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZZ]]]]]]]]‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]\_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_ZZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7_YZZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏7¯][ZZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏8]ZZZZZZ]_ZZZZZZZ[]]]]]]]^‏\ZZZZZZZZ[Z]\]]]]]]_‏:]ZZZZ]_ZZZZZZZ[]]]]]]\]‏‏\ZZZZZZZZ[Z]\]]]]]]_‏<]ZY]_ZZZZZZZ[]]]]]\]_‏_]‏
+\ZZZZZZZZ[Z]\]]]]]]_‏>]]_ZZZZZZZ[]]]\]__\__[YYZ]‏\ZZZZZZZZ[Z]\]]]]]]_‏@_ZZZZZZZ[]\]_¯_\YY^_[YYZZZYZ]‏\ZZZZZZZZ[Z]\]]]]]]_‏B]ZZZZZ[^_¯_\YY]_[YYZZZZZZZYZ]‏\ZZZZZZZZ[Z]\]]]]]]_‏D]ZZZ[¯_[ZYZ[\YYZZZZZZZZZZYZ]‏\ZZZZZZZZ[Z]\]]]]]\_‏F]ZZ¯]ZYZZ[]\ZYZZZZZZZYY\_‏\ZZZZZZZZ[Z]\]]]]]]_‏H^\_¯]ZY[ZZ]\ZYZZZYY\_¯_^‏\ZZZZZZZZ[Z]\]]]]]]_‏J]Z[_][ZZZZ]\ZYY\_¯_]\]‏\ZZZZZZZZ[Z]\]]]]]]_‏L]Z[_¯ZZZZZZ]]_¯_]\]]]‏\ZZZZZZZZ[Z]\]]]]]]_‏N]Z\ZZZZZZZZ]_]\]]\]_‏\ZZZZZZZZ[Z]\]]]]]]_‏P^ZZZZZZZZZ]]]\]_¯]\ZZZZZZZZ[Z]\]]]]]]_‏R^ZZZZZZZZ^\]__\ZYZ\¯\ZZZZZZZZ[Z]\]]]]]\_‏T]ZZZZZZ^_¯\YYZZZY_]ZZZZZZZZ[Z]\]]]]]]_‏V]ZZZZ¯_\ZYZZZZZY_]ZZZZZZZZ[Z]\]]]]]]_‏X]ZZ]YYZZZZZZY_]ZZZZZZZZ[Z]\]]]]]]_‏Z^]_]ZYZZZZY_]ZZZZZZZZ[Z]\]]]]]]_‏\]Z[_]ZYZZY_]ZZZZZZZZ[Z]\]]]]]]_‏^]Z[_]ZYY_]ZZZZZZZZ[Z]\]]]]]]_‏`]Z[_]Z_]ZZZZZZZZ[Z]\]]]]]]_‏b]Z\_¯\ZZZZZZZZ[Z]\]]]]]]_‏d]Z[\ZZZZZZZZ[Z]\]]]]]]_‏f]\ZZZZZZZZ[Z]\]]]]]]_‏h^ZZZZZZZZ[Z]\]]]]]]_‏j]ZZZZZZ[Z]\]]]]]\_‏l]ZZZZ[Z]\]]]]\]_‏n]ZZ[Z]\]]\]^‏p][Z]\]]^‏t¯Z]\^‏x_¯‏|ÿ ‏>‏y
+
+‏v
+	‏r
+	‏n
+	‏lת	‏j	ת	‏hת	‏f		ת	‏d
+ת	‏b
+	ת	‏`	ת	‏^		ת	‏\	ת	‏Z		ת	‏X
+ת	‏V	ת	‏T	ת	‏R	ת	‏P	ת	‏N		‏L	ת	‏J		ת	‏H		‏F		‏D	ת	‏B	ת	‏@		ת	‏>		‏<	ת	‏:	ת‏7		ת	
+	‏6	ת	
+‏6	ת	
+‏6	
+
+תת‏6	
+ת‏6	תת‏6	תת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6
+ת‏6	ת‏6	ת‏6ת		ת‏6	ת‏6
+ת‏6ת‏6ת‏6ת‏6ת‏6ת‏6ת‏6תת‏6תת‏6ת‏6	ת‏6ת‏7ת‏9תת‏;ת‏=ת‏?ת‏Aת‏Cת‏Eת‏Gת‏Iת‏Kת‏Mת‏Oתתת‏Qתתת‏Sתתת‏Uתתת‏W
+‏Y‏[‏]‏_‏a‏c‏e‏g‏i‏k‏m‏q‏u	‏y‏}ÿ ‏>‏y
+
+‏v
+	‏r
+	‏n		‏l
+	‏j	ת	‏hת	‏f		ת	‏d
+ת	‏b
+	ת	‏`	ת	‏^		ת	‏\	ת	‏Z		ת	‏X
+ת	‏V	ת	‏T	ת	‏R	ת	‏P	ת	‏N		‏L	ת	‏J		ת	‏H	
+	‏F	UX	‏D	תXTXת	‏B	XTXת	‏@	XTX	ת	‏>	XTX	‏<	XTXת	‏:		XTXת‏7	
+XTX	ת	
+	‏6	
+XTXת	
+‏6	
+ת	
+‏6	
+
+
+תת‏6	
+
+ת‏6	
+תת‏6	
+תת‏6	
+	ת‏6	
+ת‏6	
+ת‏6	
+ת‏6	
+
+ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6
+ת‏6	ת‏6	ת‏6ת		ת‏6	ת‏6
+ת‏6ת‏6ת‏6ת‏6ת‏6ת‏6ת‏6תת‏6תת‏6ת‏6	ת‏6ת‏7ת‏9תת‏;ת‏=ת‏?ת‏Aת‏Cת‏Eת‏Gת‏Iת‏Kת‏Mת‏Oתתת‏Qתתת‏Sתתת‏Uתתתת‏W
+ת‏Yת‏[ת‏]
+‏_ת‏aת‏cת‏eת‏gתת‏iתת‏kתת‏mתת‏q
+‏u	‏y‏}ÿ ‏>‏y
+
+‏v
+	‏r
+	‏n
+	‏lת	‏j	ת	‏hת	‏f		ת	‏d
+ת	‏b
+	ת	‏`	ת	‏^		ת	‏\	ת	‏Z		ת	‏X
+ת	‏V	ת	‏T	ת	‏R	ת	‏P	ת	‏N		‏L	ת	‏J		ת	‏H		‏F		‏D	ת	‏B	ת	‏@		ת	‏>		‏<	ת	‏:	ת‏7		ת	
+	‏6	ת	
+‏6	ת	
+‏6	
+
+תת‏6	
+ת‏6	תת‏6	תת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6_	ת‏6	ת‏6	VWVת‏6_	¶%¶``ת‏6_	¶%$ `Vת‏6	¶%$¶·Vת‏6	¶%$µ$%%%·ת‏6_	¶%%%%%&)Y¶Vת‏6_	¶%%%%)[$%¶ת‏6_	¶%%%%$%#VVת‏6_	¶%%¹%#$%#V%#Vת‏6_	¶%#&%¶$%#V%%$`“ת‏6	j&Y&$$%#V%%%W Uת‏6		¹%#$%#V%%%#V$#Vת‏6	VU'%µ$%#V%%&%V%%V``ת‏6	V 	i&$%#V%%·&¶%%V `Vת‏6
+V  ZW%%#V%%W&$V%%WV$$#Wת‏6	V “	)¸V%%VX%¶%%V$%%%%#VVVת‏6	V “W%%V&$%%VV%%&))&%¶V`“ת‏6ת		V “Vh'V%%%%VV%%&Z(%µ “ת‏6	 VV 
+WX%%%V%%¶V(¶ת‏6
+V VU&%%V%%¶V¶ת‏6V   	§&V¸%$V%$µ¶Wת‏6V   
+W&%W§&%#$%#WVVת‏6VVZ&$W¸%$Z)'%#“`Vת‏6UUZ'%#$%$
+(%$V` ת‏6   Z(&%%$V%%¶ת‏6UV U[)(%$$¶%%¶V$#Wת‏6ת   V¢Y(%%&¸''%$Vת‏6תV UVU‎VV	(%'	Z(&%Wת‏6VV VVW$V&%µZ%$ת‏6	VU““W'%#V$%$#µW%%Vת‏6  V£(&%%%$&%%%%µת‏7VUV‎ Z)''¹	§&%§ת‏9תV  U
+[¶¶Z&$ת‏;VV V·%#V%%µת‏=UV§&$$%%¶ת‏?[(&%%·ת‏A[§§ת‏Cת‏Eת‏Gת‏Iת‏Kת‏Mת‏Oתתת‏Qתתת‏Sתתת‏Uתתתת‏W
+ת‏Yת‏[ת‏]
+‏_ת‏aת‏cת‏eת‏gתת‏iתת‏kתת‏mתת‏q
+‏u	‏y‏}ÿ ‏>‏y
+
+‏v
+	‏r
+	‏n		‏l
+	‏j	ת	‏hת	‏f		ת	‏d
+ת	‏b
+	ת	‏`	ת	‏^		ת	‏\	ת	‏Z		ת	‏X
+ת	‏V	ת	‏T	ת	‏R	ת	‏P	ת	‏N		‏L	ת	‏J		ת	‏G
+		‏E		‏Cת	‏Bתת	‏@ת	ת	‏=
+ת	‏;		ת	‏9	ת‏7		ת	
+	‏6
+	ת	
+‏5	תת	
+‏5			
+
+תת‏5		
+ת‏6	תת‏6
+		תת‏6		ת	ת‏6				‏6
+			‏6			ת	‏6			ת	‏6				‏6				‏6					‏6			ת	‏6			ת	‏6				‏6				‏6				‏6			ת	‏6				‏6			
+	‏6			
+	‏6			‏6			‏6		ת‏6					‏6		
+	‏6		‏6		‏6	ת‏6			‏6	ת	‏6	‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6	ת‏6
+ת‏6	ת‏6	ת‏6ת		ת‏6	ת‏6
+ת‏6ת‏6ת‏6ת‏6ת‏6ת‏6ת‏6תת‏6תת‏6ת‏6	ת‏6ת‏7ת‏9תת‏;ת‏=ת‏?ת‏Aת‏Cת‏Eת‏Gת‏Iת‏Kת‏Mת‏Oתתת‏Qתתת‏Sתתת‏Uתתתת‏W
+ת‏Yת‏[ת‏]
+‏_ת‏aת‏cת‏eת‏gתת‏iתת‏kתת‏mתת‏q
+‏u	‏y‏}ÿ ‏>__‏z\ZZ\‏‏p_\ZYZZYZ\_‏l¯_\ZYZZZZZYZ]_‏jZ£ZZZZZYZ]_YY\‏h__]ZYZZZ]
+
+\YY\‏f_Y\_]ZZ_[ת\YY\‏d_ZZZ\_^_Y£ZY	ת\YY\‏b_ZZZZZ\___]Z₪ZY		ת\YY\‏`_ZZZZZZZû_Z[_]Z₪Y^ûת\YY\‏^_ZZZZZZ[û]Z[_]ZY\ûת\YY\‏\_ZZZZZZ[_^¯]Z[_]YY\ûת\YY\‏Z_ZZZZZZ[û_\]Z[_]YY\תת\YY\‏X_ZZZZZZ[û_\û
+]Z[_]ZY\תת\YY\‏V_ZZZZZZ[û_\
+]Z[_]YY\תת\YY\‏T_ZZZZZZ[û_\û		
+¯]Z[_]YY\תת\YY\‏R_ZZZZZZ[û_\û				
+]Z[_]YY\û
+\YY\‏P_ZZZZZZ[_\						
+]Z[_]YY\תת\YY\‏N_ZZZZZZ[û_\û								
+]Z[_]YY\ûת\YY\‏L_ZZZZZZ[_\										
+¯]Z[_]ZY\ûת\YY\‏J_ZZZZZZ[_\û												
+]Z[_]ZY\ûת\YY\‏H_ZZZZZZ[û_\û														
+]Z[_]YY\ûת\YY\‏F_ZZZZZZ[û_\û																
+]Z[_]YY\ûת\YY\‏D_ZZZZZZ[û_\û																		
+]Z[_]YY\ûת\YZ\^‏‏A_ZZZZZZ[û_\û																				
+]Z[_]ZY\תת_ZZ^‏?_ZZZZZZ[_\û																					
+]Z[_]YY\ûתû‏?_ZZZZZZ[û_\û		יי																			
+]Z[_]YY\_û‏?_ZZZZZZ[û_\		tדחי																			
+]Z[_[£\‏?_ZZZZZZ[û_\û		sprהחי																			
+]Z[_^ûמ[Y[_‏=_ZZZZZZ[û_\û		זr״‡סהחי																			
+¯]_[ZZZYZ\_‏;_ZZZZZZ[û_\û		sr׳׳׳‡סהחי																			
+[ZYZZZZZYZ\‏9_ZZZZZZ[û_\û		sr״׳׳׳׳‡סהחי																			[YYZZZZZZZZZYZ[_‏7_ZZZZZZ[_\		sr״‡…׳׳׳׳‡סהחי																		]ZYZZZZZZZZYZ\‏7_ZZZZZZ[û_\û		זס״r††׳׳׳׳‡סהחי																	][_^ZYZZZZYZ\¯^_‏7_ZZZZZZ[û_\û		חס״דqה†…׳׳׳׳‡סהחי														]YZ\_]ZYYZ\_]\_‏7_ZZZZZZ[û_\û		זס׳‡†דדrדqs׳׳׳׳‡qהחי												]ZZZZ\_]\¯_]\]]_‏7_ZZZZZZ[û_\û		sr״׳׳‡sגrsגs†״׳׳׳‡סהחי										]ZZZZZZ\_]\]]]]_‏7_ZZZZZZ[û_\û		זr״ײ׳׳׳†׳rסsנs‡״׳׳׳‡סהחי								]ZZZZZZY]\]]]]]]_‏7_ZZZZZZ[û_\û		זr״׳׳׳׳׳׳†‡rגגסד…׳׳׳׳‡סהחי						]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_\		sr״ײ׳…ה‡׳׳׳†‡qדqסs†׳׳׳׳‡סהחי				]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û		זס״ײ׳†ודr‡׳׳׳‡†qהגגq‡׳׳׳׳‡סהחי		]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û		חס״׳׳׳״sהגs‡׳׳׳‡qsבגsq†׳׳׳׳‡סהחי	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\û		sס״׳׳׳׳׳‡sההr‡׳׳״ײ…סqה…ג†׳׳׳׳‡סהt]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\		sס״׳׳׳׳׳׳׳‡sוהס‡׳׳׳‡rסqג…ד†׳׳׳״„ו	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û		sr״׳׳׳׳׳׳׳׳״‡sדדס‡׳׳׳ˆדq…סrs׳׳…ס	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û		sס״׳׳׳׳†ס׳׳׳׳׳ˆsדדס‡׳׳״†sגsהדs״…ס	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û		זr״ײ׳׳׳†דהs׳׳׳׳׳ˆrהס׳ײ׳״׳†…דrגˆ…ו	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û		sנ‡״׳׳׳׳‡sהדsˆ׳׳׳׳‡r‡סr‡׳׳׳‡הד׳…ו	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\			חהס‡״׳׳׳׳‡sהגr׳׳׳׳׳׳…הגr‡׳׳׳׳״…ס	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û				יחהס‡״׳ײ׳׳‡סq†…׳׳׳׳׳ˆsדqs†׳ײ״…ס	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û					יחהס‡״׳ײ׳׳ˆ†סה…‡׳׳׳׳‡sד…׳ײ״…ס	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_û							יחהס‡״׳ײ׳׳†sדה†‡׳׳׳׳‡׳׳׳״…ס	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û									יחהס‡״׳ײ׳׳‡…qד…‡׳׳׳׳׳׳״…ס	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û											יחהס‡״׳ײ׳׳‡sדוrˆ׳׳׳׳״…ס	]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_\û													יחהס‡״׳ײ׳׳‡sדs׳׳׳׳״…ס	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\															יחהס‡״׳ײ׳׳†‡׳׳׳׳״…ו	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																	יחהס‡״׳ײ׳׳׳׳׳׳״…ס	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																			יחהס‡״׳ײ׳׳׳׳״…ס	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\û																					יחהס‡״׳׳׳׳״…ס	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û																							יחהס‡״׳ײ׳…ס	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û																									יחהס‡׳״…ס	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																											יחהס‡…ס	]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_\û																													יחודס	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û																															יחt]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																		]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û																																			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û																																			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\û																																]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û																																
+ת]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\û																														
+]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û																														
+]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																														
+]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																														
+]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																														
+]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																														
+]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																														
+]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û																															]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û																																û]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_\																																	û]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_\û																																			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û																																			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û																																			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\																																			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\û																																			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û																																			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\û																																			]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_\																																			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\û																																			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\û																																			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]																																	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]—¨																																	]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]¯b`b_ן																															]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]•``—																												]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_]•``₪ן		û																									]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]•``₪ן																										]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]•``₪		ת																						]ZZZZZZZ]\]]]]]]_‏7_YZZZZZ[û_]•``₪ן																						]ZZZZZZZ]\]]]]]]_‏7¯][ZZZZ[û_b``₪			
+																	]ZZZZZZZ]\]]]]]]_‏8]ZZZ[û_–``—ן																				]ZZZZZZZ]\]]]]]]_‏:]ZZû_]•`aY			
+_•§															]ZZZZZZZ]\]]]]]]_‏<^û_]		¢¦		
+_``b­û													]ZZZZZZZ]\]]]]]]_‏>_ת
+	ת
+			
+_```¨פ									]ZZZZZZZ]\]]]]]]_‏?‏		
+_```¨û									]ZZZZZZZ]\]]]]]]_‏A‏û	
+_```¨פת						]ZZZZZZZ]\]]]]]]_‏Jû	û
+_```¨û
+
+				]ZZZZZZZ]\]]]]]\_‏Lת	ûת
+_a``¨פ
+
+		]ZZZZZZZ]\]]]]]]_‏Nת		
+_```¨פת
+		ת	]ZZZZZZZ]\]]]]]]_‏Pû	
+¯•``¨פת
+ûפ]ZZZZZZZ]\]]]]]]_‏Rû	û¨b¨פ
+
+פ§b¨]ZZZZZZZ]\]]]]]]_‏Tת	¯תת
+פ¨``©מ]ZZZZZZZ]\]]]]]]_‏Vת
+
+		
+
+פ§``¨מ]ZZZZZZZ]\]]]]]]_‏Xת	ת
+פ§``¨מ]ZZZZZZZ]\]]]]]\_‏Zû		
+פ§``¨מ]ZZZZZZZ]\]]]]]]_‏\û	û
+פ¨``¨מ]ZZZZZZZ]\]]]]]]_‏^ת			פ¨``¨מ]ZZZZZZZ]\]]]]]]_‏`ת		פ¦``¨מ]ZZZZZZZ]\]]]]]]_‏bû	û_b`¨מ]ZZZZZZZ]\]]]]]]_‏dû	û¦^]ZZZZZZZ]\]]]]]]_‏fת	]ZZZZZZZ]\]]]]]]_‏hת]ZZZZZZZ]\]]]]]]_‏j]ZZZZZZZ]\]]]]]]_‏k]ZZZZZZZ]\]]]]]]_‏k]ZZZZZZZ]\]]]]]]_‏k\ZZZZZZZ]\]]]]]\_‏k^ZZZZZZZ]\]]]]\]_‏m]ZZZZZ]\]]\]^‏p]ZZZ]\]]^‏t]Z]\^‏x_¯‏|ÿ ‏>__‏z\ZZ\‏‏p_\ZYZZYZ\_‏l¯_\ZYZZZZZYZ]_‏jZ£ZZZZZYZ]_\YZ\‏h__]ZYZZZ]_[YYZZYZ\‏f_Y\_]ZZ_[YYZZZZZZYZ\‏d_ZZZ\_^_Y£ZZZZZZZZZZYZ\‏b_ZZZZZ\___]ZYZZZZZZZZZZYZ\‏`_ZZZZZZZû_Z[_]ZYZZZZZZZZZZYZ\‏^_ZZZZZZ[û]Z[_]ZYZZZZZZZZZZYZ\‏\_ZZZZZZ[_^]Z[_]ZYZZZZZZZZZZYZ\‏Z_ZZZZZZ[û_\^]Z[_]ZYZZZZZZZZZZYZ\‏X_ZZZZZZ[û_]]^]Z\_]ZYZZZZZZZZZZYZ\‏V_ZZZZZZ[û_^]Z[_]ZYZZZZZZZZZZYZ\‏T_ZZZZZZ[û_]]^]Z[_]ZYZZZZZZZZZZYZ\‏R_ZZZZZZ[û_]]]^‏]Z[_]ZYZZZZZZZZZZYZ\‏P_ZZZZZZ[_]]^‏]Z\_]ZYZZZZZZZZZZYZ\‏N_ZZZZZZ[û_]]]^‏]Z\_]ZYZZZZZZZZZZYZ\‏L_ZZZZZZ[_]]]^‏]Z[_]ZYZZZZZZZZZZYZ\‏J_ZZZZZZ[_]^‏
+]Z[_]ZYZZZZZZZZZZYZ\‏H_ZZZZZZ[û_]]^‏]Z[_]ZYZZZZZZZZZZYZ\‏F_ZZZZZZ[û_]]]]^‏]Z[_]ZYZZZZZZZZZZYZ\‏D_ZZZZZZ[û_]]^‏]Z\_]ZYZZZZZZZZZZYZ\^‏‏A_ZZZZZZ[û_]]]^‏]Z[_]ZYZZZZZZZZZYZ^‏?_ZZZZZZ[_]]^‏]Z[_]ZYZZZZYY[_‏?_ZZZZZZ[û_]]^‏]Z[_]ZYZY[_‏?_ZZZZZZ[û_]^‏]Z[_[Y\‏?_ZZZZZZ[û_]^‏]Z[_^û[Y[_‏=_ZZZZZZ[û_]^‏][ZZZYZ\_‏;_ZZZZZZ[û_]]^‏[ZYZZZZZYZ\‏9_ZZZZZZ[û_]]^‏[YYZZZZZZZZZYZ[_‏7_ZZZZZZ[_]^‏	
+	]ZYZZZZZZZZYZ\‏7_ZZZZZZ[û_]]]^‏	
+\[_^ZYZZZZYZ\¯^_‏7_ZZZZZZ[û_]]]^‏	
+ûû]YZ\_]ZYYZ\_]\_‏7_ZZZZZZ[û_]]]]^‏	
+ûתûû]ZZZZ\_]\¯_]\]]_‏7_ZZZZZZ[û_]]]^‏	
+ûתûûûû]ZZZZZZ\_]\]]]]_‏7_ZZZZZZ[û_]]^‏	
+ûתûûûûûû]ZZZZZZY]\]]]]]]_‏7_ZZZZZZ[û_]]]]]^‏	
+ûתûûûûûûûû]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_]^‏	
+ûתûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]^‏
+	
+ûתûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]^‏	
+ûתûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_]]^‏	
+ûתûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]^‏	
+ûתûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]^‏	
+ûתûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]^	
+ûתûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]]û	
+ûתûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]^û
+ûתûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_]^
+ûתûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]^
+תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_]]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_]]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_]]]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_]]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_]]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_]]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_]]]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7_YZZZZZ[û_]]	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏7¯][ZZZZ[û_]^	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏8]ZZZ[û_]תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏:]ZZû_]]_תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏<^û_\_‏תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏>‏	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏?‏	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏A‏	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]\_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]\_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû]ZZZZZZZ]\]]]]]\_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת\YZZZZZZ]\]]]]\]_‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûûûû‏^]ZZZZZ]\]]\]^‏J	תûûûûûûûûûûûûûûûûûûûûûûûûûûû‏]ZZZ]\]]^‏L	תûûûûûûûûûûûûûûûûûûûûûûûûû‏]Z]\^‏N	תûûûûûûûûûûûûûûûûûûûûûûû‏_¯‏P	תûûûûûûûûûûûûûûûûûûûûû‏‏R	תûûûûûûûûûûûûûûûûûûû‏e	תûûûûûûûûûûûûûûûûû‏g	תûûûûûûûûûûûûûûû‏i	תûûûûûûûûûûûûû‏k	תûûûûûûûûûûû‏m	תûûûûûûûûû‏o	תûûûûûûû‏q	תûûûûû‏s	תûûû‏u	
+û‏w‏{ÿ ‏>__‏z\ZZ\‏‏p_\ZYZZYZ\_‏l¯_\ZYZZZZZYZ]_‏jZ£ZZZZZYZ]_YY\‏h__]ZYZZZ]
+ת\YY\‏f_Y\_]ZZ_[X	\YY\‏d_ZZZ\_^_Y£ZZY	ת\YY\‏b_ZZZZZ\___]ZYZY	
+	\YY\‏`_ZZZZZZZû_Z[_]ZYY^ת\YY\‏^_ZZZZZZ[û]Z[_]ZY\\YY\‏\_ZZZZZZ[_^¯]Z[_]YY\\YY\‏Z_ZZZZZZ[û_\]Z[_]YY\­\YY\‏X_ZZZZZZ[û_\ת]Z[_]ZY\\YY\‏V_ZZZZZZ[û_\			ת]Z[_]YY\\YY\‏T_ZZZZZZ[û_\					ת¯]Z[_]YY\ûת\YY\‏R_ZZZZZZ[û_\							ת]Z[_]YY\ת\YY\‏P_ZZZZZZ[_\									ת]Z[_]YY\\YY\‏N_ZZZZZZ[û_\											ת]Z[_]YY\­û\YY\‏L_ZZZZZZ[_\													ת¯]Z[_]ZY\ת\YY\‏J_ZZZZZZ[_\															ת]Z[_]ZY\\YY\‏H_ZZZZZZ[û_\																	ת]Z[_]YY\ת\YY\‏F_ZZZZZZ[û_\																			ת]Z[_]YY\\YY\‏D_ZZZZZZ[û_\																					ת]Z[_]YY\ת\YZ\^‏‏A_ZZZZZZ[û_\																							ת]Z[_]ZY\ת_ZZ^‏?_ZZZZZZ[_\																									ת]Z[_]YY\ûû‏?_ZZZZZZ[û_\																											ת]Z[_]YY\_û‏?_ZZZZZZ[û_\																													ת]Z[_[£\‏?_ZZZZZZ[û_\																															ת]Z[_^מ[Y[_‏=_ZZZZZZ[û_\																																	ת¯]_[ZZZYZ\_‏;_ZZZZZZ[û_\																																			ת[ZYZZZZZYZ\‏9_ZZZZZZ[û_\																																					[YYZZZZZZZZZYZ[_‏7_ZZZZZZ[_\																																					]ZYZZZZZZZZYZ\‏7_ZZZZZZ[û_\																																					][_^ZYZZZZYZ\¯^_‏7_ZZZZZZ[û_\																																					]YZ\_]ZYYZ\_]\_‏7_ZZZZZZ[û_\																																					]ZZZZ\_]\¯_]\]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZ\_]\]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZY]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																
+			]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																														ת		]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																															]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																															ת]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																														ת]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																														]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																	
+ת		]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]\_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_\																																					]ZZZZZZZ]\]]]]]]_‏7_ZZZZZZ[û_]
+																																					]ZZZZZZZ]\]]]]]]_‏7_YZZZZZ[û_]\																																						]ZZZZZZZ]\]]]]]]_‏7¯][ZZZZ[û_]																																						]ZZZZZZZ]\]]]]]]_‏8]ZZZ[û_]																																						]ZZZZZZZ]\]]]]]]_‏:]ZZû_]																																						]ZZZZZZZ]\]]]]]]_‏<^û_]																																						]ZZZZZZZ]\]]]]]]_‏>_
+																																				]ZZZZZZZ]\]]]]]]_‏?‏																																		]ZZZZZZZ]\]]]]]]_‏A‏																																]ZZZZZZZ]\]]]]]]_‏J																														]ZZZZZZZ]\]]]]]\_‏L																												]ZZZZZZZ]\]]]]]]_‏N																										]ZZZZZZZ]\]]]]]]_‏P																								]ZZZZZZZ]\]]]]]]_‏R																						]ZZZZZZZ]\]]]]]]_‏T																				]ZZZZZZZ]\]]]]]]_‏V																		]ZZZZZZZ]\]]]]]]_‏X																]ZZZZZZZ]\]]]]]\_‏Z														]ZZZZZZZ]\]]]]]]_‏\												]ZZZZZZZ]\]]]]]]_‏^										]ZZZZZZZ]\]]]]]]_‏`								]ZZZZZZZ]\]]]]]]_‏b						]ZZZZZZZ]\]]]]]]_‏d				]ZZZZZZZ]\]]]]]]_‏f	]ZZZZZZZ]\]]]]]]_‏h]ZZZZZZZ]\]]]]]]_‏j]ZZZZZZZ]\]]]]]]_‏k]ZZZZZZZ]\]]]]]]_‏k]ZZZZZZZ]\]]]]]]_‏k\ZZZZZZZ]\]]]]]\_‏k^ZZZZZZZ]\]]]]\]_‏m]ZZZZZ]\]]\]^‏p]ZZZ]\]]^‏t]Z]\^‏x_¯‏|ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r¯_\ZYZZZZZZYZ\_‏oZ£ZZZZZZZZZZYZ\‏m__]ZYZZZZZZZZZZYZ\‏k_Y\_]ZYZZZZZZZZZZYZ\_‏i_ZZZ\_]ZYZZZZZZZZZZYZ\_‏g_ZZZZZ\_]ZYZZZZZZZZZZYZ\_‏e_ZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏c_ZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏a_ZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏__YZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏]][ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏[¯^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏Y_[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏W_ZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏U_ZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏S_ZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏Q_ZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏O_YZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏M^[ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏K_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏I_Z^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏G_ZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏E_ZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏C_ZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏A_ZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏?_YZZZZZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏=¯_\ZZZ[[ZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\_‏;]Z\¯^ZZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ\‏9^Z]^[]_ZZZZZ[^_\ZZZZZZZZZZ[^^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZZZYZ[^¯‏7_ZZZ]^[ZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYZZZZZZZZYZ\^_‏7_ZZZZZ^¯^[ZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_^ZYZZZZYZ\¯_]‏7_ZZZZZ\\Z][ZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]ZYYZ\_]\]‏7_ZZZZZ\^[ZZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]\¯_]\]]]‏7_ZZZZZ\¯^[ZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZZZ\_]\]]]]]‏7]ZZZ\Y[\ZZZZZ^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZZY]\]]]]]]]‏7_¯]Z\__[ZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZZZ]\]]]]]]]‏7^Y\_¯_^¯^[ZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZZZ]\]]]]]]]‏7_ZZZ\_ZZ[ZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZZZ]\]]]]]\]‏7_ZZZZZ]__¯[ZZZZZ[^_\ZZZZZZZZZZ[_^[ZZZZ]\]]]\]_¯‏7_ZZZZZ\_^[ZZZZZ[^_\ZZZZZZZZZZ[_^[ZZ]\]\]_¯^‏7_ZZZZZ\__¯\YZZZZZZ^_\ZZZZZZZZZZ[_^Z]\]_¯^\]‏7_ZZZZZ\_[^YZZZZ[^_\ZZZZZZZZZZ[_]¯^\]]]‏7^[ZZ\__^[ZZZZZ[^_\ZZZZZZZZZZ[_]^]\]]]]‏7_^^Z\_^[ZZZZZ[^_\ZZZZZZZZZZ]\]]]]]]]‏7_Y[___^[ZZZZZ[^_\ZZZZZZZZ]\]]]]]]\‏7_ZZZ[__¯^[ZZZZZ[^_\ZZZZZZ]\]]]]]^_‏7_ZZZZZ]_¯^ZZZZZZ[^_\ZZZZ]\]]\^‏7_ZZZZZ\_ZZZZZZZ[^_\ZY]\\^_]‏7_ZZZZZ\_¯]][ZZZZZ[^_[]]_]\]‏7_ZZZZZ\__O¯^[ZZZZZ[^^^]\]]]‏7_\ZZ\__^\\ZZZZ[^]]\]]]]]‏7_^_[\__ZZZZZY]\]]]]]]]‏7_Y[^__[ZZZZZ]\]]]]]\]‏7_ZZZ[^__[ZZZZZ]\]]]\]^‏7_ZZZZY\__\ZZZZ]\]\]^‏7_ZZZZZ\__¯\ZY]\]^_]‏7_ZZZZZ\__¯[]\]^_]\]‏7_[ZZZZ\__[ZZ]_]\]]]‏7\ZY\__¯[ZZZZ]_]\]]]]]‏7_]\\__¯[ZZZZY]\]]]]]]]‏7_YZ]¯__¯[ZZZZZ]\]]]]]\]‏7_ZZZZ]__[ZZZZZ]\]]]\]_¯‏7_ZZZZZ\__¯]ZZZZ]\]\]_¯^‏7_ZZZZZ\__]ZY]\]_¯^\\‏7_YZZZ\__¯Z\¯]]_¯^]\]]‏7\ZZZ^__[ZZ\_^]\]]]]‏7¯^Z^__[ZZZZ\\]]]]]]]‏7_\__[ZZZZY]\]]]]]]]‏7_YZ\_ZZZZZZ]\]]]]]\]‏7_ZZZZ\
+__[ZZZZZ]\]]]\]_¯‏7_ZZZZY\
+_^[ZZZ]\]\]¯^‏7_ZZZZZ\__^[Y]\]_^\]‏7^YZZZZ\
+_¯Z[_^^_^\]]]‏7][ZZZ\_[ZZ[_]\]]]]]‏7^[Y\[_[ZZZZ[_\]]]]]]]‏7_[_^]_
+_[ZZZZY]\]]]]]]]‏7_ZZ[__^_ZZZZZZ]\]]]]]]\‏7_ZZZZ[___\ZZZZZ]\]]]]\^_‏7_ZZZZZ\_^
+__\ZZZ]\]]\]¯‏7_ZZZZZ\__^_\Y]\\]¯_]\‏7^YZZZZ\_
+_¯ZZ^_^]_]\]]‏7^\ZZZ\_
+_[ZZ[^]_]\]]]]‏7¯_\Z\_
+_[ZZZZZ_\\]]]]]]‏7_^_^_[ZZZZZ]\]]]]]]]‏7_ZZZZZZ]\]]]]]\]‏7_
+]ZZZZZ]\]]]\\^‏7_^\ZZZ]\]\]^_‏7_^¯]\Z]\]^¯_]\‏7_
+ZZ]_^¯_]\]]‏7_^¯¯[ZZZ]__]\]]]]‏7_[ZZZZZ^\\]]]]]]‏7__¯[ZZZZZ]\]]]]]]]‏7__ZZZZZZ]\]]]]\]^‏7__^ZZZZZ]\]]\]_‏7__¯]ZZZ]\\]_¯‏7_]¯]Z]\_^\_‏7__ZZ\_^¯^]]]_‏7__[ZZZ\_\]\]]]_‏8__[ZZZZZ^]]]]]]]_‏9__[ZZZZZ]\]]]]]\_‏<__ZZZZZZ]\]]]]\]‏>
+__^[ZZZZ]\]]\]_‏>^^__^[ZZ]\\]_‏?__\_^Z]]_^\_‏C__ZZ[_¯_^]]]_‏E_[ZZZ[__\\]]]]_‏E_[ZZZZY^\]]]]]]_‏I_[ZZZZZ]\]]]]]\_‏K_ZZZZZZ]\]]]\]^‏K__\ZZZZ]\]]]^‏P__\ZY]\]^¯‏Q__[]]_‏Q_^]_‏S‏^_¯^]]]_‏W_^]]]]]_‏X_\]]]]]]_‏Y_]]]]]]]_‏^
+_]]]]]]]_‏^_]]]]]]]_‏__^]]]]]]_‏d]]]]]]_‏d]]]]]]]_‏e]]]]]]]_‏j]]]]]]]_‏k]]]]]]]_‏k]]]]]_‏p]]]_‏s]_‏x¯‏{ÿ ‏:^£YYYYYYYYYYYYYYYYYYYYYY£Y\
+
+תתתתתתתת
+
+
+
+
+
+
+
+
+
+
+‏D^£YYYYYYYYYYYYYYYYYYYYYYY££Z]
+
+תתתתתתתת
+
+
+
+
+
+
+
+
+
+
+‏C^£YYYYYYYYYYYYYYYYYYYYYYYYY££Z]
+
+תתתתתתת
+
+
+
+
+
+
+
+
+
+
+
+‏A^£YYYYYYYYYYYYYYYYYYYYYYYYYYY££₪]
+
+תתתתתתת
+ת
+
+
+
+
+
+
+
+
+
+
+‏?^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYY££₪]
+
+תתתתתתת
+
+
+
+
+
+
+
+
+
+
+
+‏=^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY££₪]
+
+תתתתתתת
+
+
+
+
+
+
+
+
+
+
+
+‏;^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z]
+
+תתתתתתת
+ת
+
+
+
+
+
+
+
+
+
+
+‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY££₪]
+
+תתתתתתת
+ת
+
+
+
+
+
+
+
+ת‏:^£YYYYYYY££YYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z]
+
+תתתתתתת
+ת
+
+
+
+ת‏:^£YYYYYYYYY££YYYYYYYYYYYYYYYYYYYYYYYYYYYY££₪]
+
+תתתתתתת
+תת‏:^£YYYYYYY£¢YY££YYYYYYYYYYYYYYYYYYYYYYYYYYYY££₪]
+
+תתתתתתת
+]‏:^£YYYYY£Y•b•¢YY££YYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z]
+
+תתתתתתת
+\\\‏:^£YYYYY£Y•₪¦–•¢YY££YYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z]
+
+תתתתתתת^\\\\\‏:^£YYYYY£Y•₪bc₪–•¢YY££YYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z]
+
+תתתתת\\\\\‏:^£YYYYY£Y•₪b•₪–•¢YY££YYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z]
+
 תת
+\\\]_‏:^£YYYYY£Y•₪b•₪–•¢YY££YYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z]
+תת[]_¯¯‏:^£YYYYY£Y•₪b•₪–•¢YY££YYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z]
+_¯_\^‏:^£YYYYY£Y•₪b•₪–•¢YY££YYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z]_]\[_‏:^£YYYYY£Y•₪b•₪–•¢YY££YYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z]_[\\\^‏:^£YYYYY£Y•₪b•₪–•¢YY££YYYYYYYYYYYYYYYYYYYYYYYYYYYYY¢\[\\\_‏:^£YYYYY£Y•₪b•₪–•¢YY££YYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYY£Y•₪b•₪–•¢YY££YYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYY£Y•₪b₪¦•₪–•¢YY££YYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYY£Y•₪b¥¥₪b•₪–•¢YY££YYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYY£Y•₪b¦•¦–b•₪–•¢YY££YYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYY£Y•₪b–¥₪^^§•₪–•¢YY££YYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYY£Y•₪bb₪c₪]¥b–₪•₪–•¢YY££YYYYYYYYYYYYYYY£][\\\_‏:^£YYYYY£Y•₪b——¨––_b—•₪–•¢YY££YYYYYYYYYYYYY£][\\\_‏:^£YYYYY£Y•₪bc–b₪₪¦—¦₪••₪–•¢YY££YYYYYYYYYYY£][\\\_‏:^£YYYYY£Y•₪b–cb–––¦§–^—–•₪–•¢YY££YYYYYYYYY£][\\\_‏:^£YYYYY£Y•₪bb–––c–¦–¥cb₪b•₪–•¢YY£YYYYYYYY£\[\\\_‏:^£YYYYY£Y•₪b•₪¦—b¥—¦c^₪c•₪–•¢YYYYYYYYY£][\\\_‏:^£YYYYY£Y•₪bc¥¦₪b—§c]—b₪¦•₪–c£YYYYYYY£][\\\^‏:^£YYYYY£Y•₪b–•c—•¨–¥¥¦b₪–¢Y£YYYYY£][\\\_‏:^£YYYYY£Y•₪bb—¥—bb₪b¥]]b––¢Y£YYYYY£][\\\_‏:^£YYYYY£Y•₪bc¥¥—bb––¥b––¢Y£YYYYY£][\\\_‏:^£YYYYY£Y•₪b–d—–b––––¢Y£YYYYY£][\\\_‏:^£YYYYY£Y•₪b–•–—––––¢Y£YYYYY£\[\\\_‏:^£YYYYY£Y•₪b–¦—bb₪bc––¢Y£YYYYY£][\\\_‏:^£YYYYY£Y•–₪b¥₪¦bb–—¥₪b––¢Y£YYYYY£][\\\_‏:^£YYYYYYY£••₪—b•₪–₪bb–•¨–b––¢YYYYYYY£][\\\_‏:^£YYYYYYYYY£••₪–bc•–₪bb––₪–b––¢YYYYYYY£][\\\_‏:^£YYYYYYYY£YY£•–₪–bc–•¦b•b–¥––¢YYYYYYY£][\\\_‏:^£YYYYYYYYYY£YY£•–₪—c¥•–b–—––¢Y£YYYYY£][\\\_‏:^£YYYYYYYYYYYY£YY£•–₪–bb₪••bb––¢Y£YYYYY£\[\\\_‏:^£YYYYYYYYYYYYYY£YY£••₪—b•—¦–bb––¢Y£YYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYY£YY£•–₪–••–¦•––¢Y£YYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYY£YY£••₪–•–b₪b––¢YYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYY£YY£•–₪—b—––¢YYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYY£YY£•–₪—b––¢Y£YYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYY£YY£•–₪—b––¢Y£YYYYY£\[\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYY£YY£•–₪—b––¢Y£YYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYY£YY£•–₪–––¢YYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£YY£•–₪—––¢Y£YYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£YY£••₪—b––¢Y£YYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£YY£•–₪—b––¢Y£YYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£YY£•–₪–b––¢Y£YYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£YY£•–₪–b––¢Y£YYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£YY£•–₪–b––¢YYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£YY£•–₪–₪–¢YYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£YY£••¦•£YYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£YY£•b£YYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£YY££YYYYYYY£\[\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY££YYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\^‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£\[\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£\[\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\^‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\^‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£\[\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£\[\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\^‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\^‏:^£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£\[\\\_‏9_£££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏:\₪££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏<\₪££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏>\₪££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏@\Y££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏B\Y££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏D\₪££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\^‏F\₪££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏H\₪££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏J\Y££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏L\₪££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏N\Y££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏P\₪££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏R\Y££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏T\Y££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏V\₪££YYYYYYYYYYYYYYYYYYYYYYYYYYYY£][\\\^‏X\Y££YYYYYYYYYYYYYYYYYYYYYYYYYY£\[\\\_‏Z\Y££YYYYYYYYYYYYYYYYYYYYYYYY£][\\\_‏\\₪££YYYYYYYYYYYYYYYYYYYYYY£][\\\_‏^\₪££YYYYYYYYYYYYYYYYYYYY£][\\\_‏`\₪££YYYYYYYYYYYYYYYYYY£][\\\_‏b\₪££YYYYYYYYYYYYYYYY£][\\\^‏d\₪££YYYYYYYYYYYYYY£][\\\_‏f\₪££YYYYYYYYYYYY£][\\\_‏h\₪££YYYYYYYYYY£][\\\_‏j\₪££YYYYYYYY£][\\\_‏l\₪££YYYYYY£][\\\_‏n\₪££YYYY£][\\\_‏p\₪££YY£][\\\^‏r\₪£Y£]\\\\_‏t\₪¢][\^‏v[]]‏zÿ ‏:^£YYYYYY£^]£YYYYYYYYYYYYYYYYYYYYYYYY£Z]^Z¢££££££Z^‏K^£YYYYYY£^]£YYYYYYYYYYYYYYYYYYYYYYYYY££Z^]Z¢££££££Z^‏I^£YYYYYY£^]£YYYYYYYYYYYYYYYYYYYYYYYYYYY££Z^^Y¢£££££¢Z^‏G^£YYYYYY£^]£YYYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z^^Y¢£££££¢Z^‏E^£YYYYYY£^]¢YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z^^Z¢£££££¢Z]‏D^£YYYYYY£^¯\Y££YYYYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z^^Z¢££££[^]^‏A^£YYYYYY£^~~\Y£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z^^Z£[[£¢Z^‏?^£YYYYYY£^פ†x~\Y£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY££Z^_[££££££Z^‏=^£YYYYYY£^ש†uux\Y£YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY££\]₪¢££££££Z^‏;^£YYYYYY£^ש†vu†ux~\Y££YYYYYYYYYYYYYYYYYYYYYYYYYYYYY£[_Z^^₪¢£££££¢₪_‏:^£YYYYYY£^ש†uuuu†ux~\Y£YYYYYYYYYYYYYYYYYYYYYYYYYYYY£[_££Z^^₪¢££¢Y\¯‏:^£YYYYYY£^ש†uuuuuu†ux\Y£YYYYYYYYYYYYYYYYYYYYYYYYYY£\_£Y££Z^]Y£]]^‏:^£YYYYYY£^ש†uuuuuuuu†ux\Y££YYYYYYYYYYYYYYYYYYYYYYY£\_£YYY££Z^]\[_‏:^£YYYYYY£^ש†uuuuuuuuuu†ux\Y££YYYYYYYYYYYYYYYYYYYYY£\_££YYYY££][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuu†ux\Y££YYYYYYYYYYYYYYYYYYY£\_£YYYYYY£\_\\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuu†ux~\Y££YYYYYYYYYYYYYYYYY£\_£YYYYYY£][\\\^‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuu†ux~\Y££YYYYYYYYYYYYYYY£[_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuu†ux\Y£YYYYYYYYYYYYYY£\_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuu†ux~\Y££YYYYYYYYYYY£[_£YYYYYY£][\\\^‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuu†ux\Y£YYYYYYYYYY£\_££YYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuu†ux~\Y£YYYYYYYY£\_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuu†ux\Y£YYYYYY£[_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuu†ux~\Y£YYYY£[_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uu‡‡‡uuuuuuuuuuuuuuuuuuuuuuuuu†ux\Y££Y£[_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡Wu‡‡uuuuuuuuuuuuuuuuuuuuuuuuu†ux\Y££\_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡W–¢u‡‡uuuuuuuuuuuuuuuuuuuuuuuuu†ux\£[_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡—c–¢u‡‡uuuuuuuuuuuuuuuuuuuuuuuuu†ux~__£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡––¢u‡‡uuuuuuuuuuuuuuuuuuuuuuuuu†ux_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡––¢u‡‡uuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡––¢u‡‡uuuuuuuuuuuuuuuuuuuuuuuux_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡––¢u‡‡uuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£\[\\\_‏:^£YYYYYY£^ש†u‡––¢u‡‡uuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡––¢u‡‡uuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\^‏:^£YYYYYY£^ש†u‡–₪b–¢u‡‡uuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡–b¦–b–¢u‡‡uuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡–b¥•¥b¥–¢u‡‡uuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡–b¥–¦§––¢u‡‡uuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡–—¥–¦—c–¢u‡‡uuuuuuu†x_£YYYYYY£\[\\\_‏:^£YYYYYY£^ש†u‡–b•–₪₪¥•¥b–¢u‡‡uuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡–bc–•b•¦¥–bbb–¢u‡uuuu†x­£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡–b–₪•bb–—–¨c–¢u‡uu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡–b₪¥bb¥–§b–₪c–¡u‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡–bb₪–₪b—¨₪b–ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡–b₪₪•b–¥—–ע‡u†y_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡–•––c–b–ע‡u†x_£YYYYYY£\[\\\_‏:^£YYYYYY£^ש†u‡–b–c–•–ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡W–₪₪–b–––b–ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†u‡•–c₪––c–¥b–ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uu‡u¢–cb•—cbc––bb–ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuu‡‡u¢–bc¥bb–—–ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuu‡‡u¢–ccb•–b–ע‡u†x_£YYYYYY£\[\\\_‏:^£YYYYYY£^ש†uuuuuuu‡‡u¢–b–¥c–ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuu‡‡u¢–cc₪–b–ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuu‡‡u¢–cbb––ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuu‡‡u¢–bb–ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuu‡‡u¢–b–ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuu‡‡u¢––ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuu‡‡u¢––ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuu‡‡u¢––ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuu‡‡u¢–cb–ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuu‡‡u¢–b–ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuu‡‡u¢––ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuu‡‡u¢–––ע‡u†x_£YYYYYY£\[\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu‡‡u£•ע‡u†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu‡‡uWu‡u†y_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu‡‡‡uu†y­£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuv†x_£YYYYYY£][\\\^‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu††uuu††x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuwפתv†uפvx_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†פפ~wx_£YYYYYY£\[\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†ןפu†y_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†ןף†ux_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†ןwuuy_£YYYYYY£\[\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†ןwu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†ןw††x_£YYYYYY£][\\\^‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†ןףuux_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†ממwx_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuvפxux_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†‡פ~xu††y_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†u†uv†y_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuux_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x­£YYYYYY£][\\\^‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£\[\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£\[\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†y_£YYYYYY£][\\\^‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_££YYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\^‏:^£YYYYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£\[\\\_‏9_£££YYYY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏:\₪££YY£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏<\₪£Y£^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏>\₪¢^ש†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏@\_פ†vuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏Bןu†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏Dפ‡†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\^‏Fפ‡†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏Hפ‡†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏Jפ‡†uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏Lפ‡†uuuuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏Nפ‡†uuuuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏Pפ‡†uuuuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏Rפv†uuuuuuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏Tפv†uuuuuuuuuuuuuuuuuuuuu†y_£YYYYYY£][\\\_‏Vפ‡†uuuuuuuuuuuuuuuuuuu†x_£YYYYYY£][\\\^‏Xפ‡†uuuuuuuuuuuuuuuuu†x_£YYYYYY£\[\\\_‏Zפ‡†uuuuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏\פ‡†uuuuuuuuuuuuu†x_£YYYYYY£][\\\_‏^פ‡†uuuuuuuuuuu†x_£YYYYYY£][\\\_‏`פv†uuuuuuuuu†x_£YYYYYY£][\\\_‏bפ‡†uuuuuuu†x_£YYYYYY£][\\\^‏dפ‡†uuuuu†x_£YYYYYY£][\\\_‏fפ‡†uuu†x_£YYYYYY£][\\\_‏hפ‡†uux_£YYYYYY£][\\\_‏jפv†x_£YYYYYY£][\\\_‏lפפ_£YYYYYY£][\\\_‏n_₪££YYYY£][\\\_‏p\₪££YY£][\\\^‏r\₪£Y£]\\\\_‏t\₪¢][\^‏v[]]‏zÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r\ZYZZZZZZYZ\_‏n_\ZYZZZZZZZZZZ£Z‏k\ZYZZZZZZZZZZYZ]‏i_\ZYZZZZZZZZZZYZ]^\‏g_\ZYZZZZZZZZZZYZ]^\]]‏e\ZYZZZZZZZZZZYZ]^\\]]\‏c\ZYZZZZZZZZZZYZ]^\\]]]]\‏a_\ZYZZZZZZZZZZYZ]^\\]]]]]]\‏_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]‏]\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\‏[_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏Y_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏W_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]‏U\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]__]]\‏S\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]‏Q_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]\‏O_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]\‏M_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]\‏K_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^‏I_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^¯‏G_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]]]]]]]]]]]^_]‏E\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\\‏C_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]\]^_]\]]\‏A_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]\‏?\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]\‏=_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\\‏;_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^‏9_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]]]]\]^‏7_[ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]_‏7\ZYZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]\]^_]\]]]]]]]\]^¯_]\\‏7Z]\ZYZZZZYZ]^\]]]]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]\‏7ZZZ]\ZYYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]\‏7ZZZZZ]\]^\\]]]]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯^]\]]]]]]\‏7ZZZZZZZ]¯^\\]]]]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]‏7ZZZZZZZY__\]]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^\‏7ZZZZZZZZ__\]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]‏7^ZZZZZZ__\]]\]_^\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]\‏7\_^[ZZZ__\]]_]\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]‏7ZZ\_^[Z__]^\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]\‏7ZZZZ\_[_¯]\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]]]‏7ZZZZZZ[Z_]\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]__‏7ZZZZZZZZ__\]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\‏7[ZZZZZZZ__\]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]‏7_[ZZZZZ__\]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]\‏7[^_[ZZZ__\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]‏7ZZ[^_[Z__]_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]\‏7ZZZZ[^[__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^‏7ZZZZZZ[Z__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_‏7ZZZZZZZZ__\]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\‏7_\ZZZZZZ__\]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]\]^_]\]]‏7¯\ZZZZ__\]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]\‏7Z]¯\ZZ__\]^¯^]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]‏7ZZZ]\__^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\‏7ZZZZZ]¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^_]\]]]]]]]\]^‏7ZZZZZZZ]¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]]]^_]\]]]]]]]\]^‏7ZZZZZZZY__\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯^‏7ZZZZZZZZ__\]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\‏7^ZZZZZZ__\]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]‏7\_]ZZZZ__\]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]\‏7ZZ\_]ZY__\]_^]\]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]‏7ZZZZ\]___^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\‏7ZZZZZZ\_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_¯‏7ZZZZZZZZ_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^‏7[ZZZZZZZ__\]]]]]\]_]\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\‏7^[ZZZZZ__\]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]‏7[_^[ZZZ__\]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]\‏7ZZ[_¯^[Y__\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯^]\]]]]]]]\]_^]\]]]]]]‏7ZZZZ[_^___^]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\‏7ZZZZZZ[_^\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZY_]]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]‏7ZZZZZZZZ__\]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]\‏7ZZZZZZZZ__\]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^]]]]‏7ZZZZZZZZ__\]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]\‏7ZZZZZZZZ__\^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]‏7ZZZZZZZZ__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]\‏7ZZZZZZZZ__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^‏7ZZZZZZZZ__\]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]]]^‏7ZZZZZZZZ__\]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ_¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ_¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]\]_^]\]]]]]]]\]_^]]]]]]]]\]^‏7ZZZZZZZZ__\]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZY__]_^]]]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZ[_¯^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZ_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]]]^‏:ZZZZZZZZ__\]]]]\]_^\]]]]]]]\]^‏;^ZZZZZZ__\]]\]_^\]]]]]]]]]^‏=\_^ZZZZ__\]]_^]]]]]]]]]]^‏@ZZ\_^ZY__]_^\]]]]]]]]]^‏BZZZZ\_^^\]]]]]]]]]^‏DZZZZZZ\_^\]]]]]]]\]^‏EZZZZZZZZ__\]]]]]]]\]^‏GZZZZZZZZ__\]]]]]]]^‏I_\ZZZZZZ__\]]]\]^‏K^_\ZZZZ__\]]]^‏MZZ^_\ZY__\]^‏O[ZZ[^_[__]‏RZ[[ZZZ^¯¯‏SZZZ[[Z__‏V[Z[ZZ[\_‏W[[[[Z[ZZ_‏Z[ZZZZ[[Z_‏\[[[[ZZ[Z_‏^[Z[[[ZZZ_‏_[[ZZ[[[Z_‏bZZZZZ[[Z_‏d[[[ZZZ[Z_‏e[[[[Z[[Z_‏gZZ[[Z[[Z_‏j][Z[[Z[Z_‏l]ZZZ[Z_‏o]ZZZ_‏s]Z_‏w‏{ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r\ZYZZZZZZYZ\_‏n_\ZYZZZZZZZZZZ£Z‏k\ZYZZZZZZZZZZYZ]‏i_\ZYZZZZZZZZZZYZ]^\‏g_\ZYZZZZZZZZZZYZ]^\]]‏e\ZYZZZZZZZZZZYZ]^\\]]\‏c\ZYZZZZZZZZZZYZ]^\\]]]]\‏a_\ZYZZZZZZZZZZYZ]^\\]]]]]]\‏_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]‏]\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\‏[_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏Y_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏W_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]‏U\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]__]]\‏S\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]‏Q_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]\‏O_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]\‏M_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]\‏K_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^‏I_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^¯‏G_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]]]]]]]]]]]^¯_^‏D\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^¯__û‏@_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]\]^__תû‏<_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]]]^¯__תת‏9\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^¯__ת
+‏6_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^__תתת‏4_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^¯__תתת
+ת‏2_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]]]^__תתתתתתת‏0_[ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^¯__תתתתתתתתת‏0\ZYZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]\]^__תתתתתתתתתû‏0Z]\ZYZZZZYZ]^\]]]]]]]]]]]\]_]\]]]]]]]]]^¯__תתתתתתתתתû‏0ZZZ]\ZYYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^¯__תתתתתתתתתû‏2ZZZZZ]\]^\\]]]]]]]]]]\]_^]]]]]]]]]]^¯__תתתתתתתתתת‏4ZZZZZZZ]¯^\\]]]]]]]]]]\]_^]]]]]]]]\]^¯__תתתתתתתתתת‏6ZZZZZZZY__\]]]]]]]]]]\]_^\]]]]]]]]]^¯__®תתתתתתתתתת‏5ZZZZZZZZ__\]]]]]]]]\]_]\]]]]]]]]]^¯__תתתתתתתתתת	
+‏3ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]\]^__תתתתתתתתתû	
+‏1ZZZZZZZZ__\]]]]\]_^]]]]]]]]\]^¯__תתתתתתתתתת	‏0^ZZZZZZ__\]]\]_^\]]]]]]]\]^¯__תתתתתתתתתת		û‏0\_^[ZZZ__\]]_]\]]]]]]]]]^¯__תתתתתתתתתת	û
+ת‏0ZZ\_^[Z__]^\]]]]]]]\]^¯__תתתתתתתתתת		ûתתתת‏0ZZZZ\_[_¯]\]]]]]]]]]^¯__תתתתתתתתתû		ûתתתתתת‏0ZZZZZZ[Z_]\]]]]]]]\]^__תתתתתתתתתת	ûתתתתתתתת‏0ZZZZZZZZ__\]]]]]]]]]^¯__תתתתתתתתתת		ûתתתתתתתתתת‏0ZZZZZZZZ__\]]]]]]]^¯__®תתתתתתתתתת		ûתתתתתתתתתתתת‏0[ZZZZZZZ__\]]]]]^¯__®תתתתתתתתתת		ûתתתתתתתתתתתתתû‏0_[ZZZZZ__\]]]^__תתתתתתתתתת		ûתתתתתתתתתתתתת‏0[^_[ZZZ__\]^¯__תתתתתתתתתת	ûתתתתתתתתתתתתת‏1ZZ[^_[Z__]__תתתתתתתתתת		ûתתתתתתתתתתתתת‏3ZZZZ[^[_¯__תתתתתתתתתת		ûתתתתתתתתתתתתת‏5ZZZZZZ[Z___תתתתתתתתתת		ûתתתתתתתתתתתתת‏7ZZZZZZZZ_תתתתתתתתתת	û
+תתתתתתתתתתתת_‏7ZZZZZZZZ_תתתתתתתתת	ûתתתתתתתתתתתתת_]\‏7_\ZZZZZZ_	תתתתתתתתת	ûתתתתתתתתתתתתת_]\]]‏7¯\ZZZZ_ת	תתתתתתתתת	ûתתתתתתתתתתתתת_]\]]]\‏7Z]¯\ZY_û	תתתתתתתת	ûתתתתתתתתתתתתת_]\]]]]]]‏7ZZZ]\_û	תתתתתתתת		ûתתתתתתתתתתתתת_]\]]]]]]]\‏7ZZZZZ]תתתתתתתת		ûתתתתתתתתתתתתת_]\]]]]]]]\]^‏7ZZZZZZZ]¯
+	תתתתת		ûתתתתתתתתתתתתת_]\]]]]]]]\]^‏7ZZZZZZZY_¯¯
+	תתת		ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯^‏7ZZZZZZZZ__\_¯
+ת	ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\‏7^ZZZZZZ__\\]_		ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]‏7\_]ZZZZ__\]\]	ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]\‏7ZZ\_]ZY__\]_¯		ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]‏7ZZZZ\]___	ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\‏7ZZZZZZ\_	ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_¯‏7ZZZZZZZZ_
+ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_‏7ZZZZZZZZ_û
+
+ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^‏7[ZZZZZZZ_ûת
+ûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\‏7^[ZZZZZ_ûתûתתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]‏7[_^[ZZZ_û	תתתתתתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]\‏7ZZ[_¯^[Y_û	תתתתתתתתתתת_]\]]]]]]]\]^¯^]\]]]]]]]\]_^]\]]]]]]‏7ZZZZ[_^ת	תתתתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\‏7ZZZZZZ[_ת	תתתתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZY_מ	תתתתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZZ_û	תתת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]‏7ZZZZZZZZ__^®ûת_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]\‏7ZZZZZZZZ__\\^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^]]]]‏7ZZZZZZZZ__\]\^¯_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]\‏7ZZZZZZZZ__\^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]‏7ZZZZZZZZ__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]\‏7ZZZZZZZZ__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^‏7ZZZZZZZZ__\]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]]]^‏7ZZZZZZZZ__\]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ_¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ_¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]\]_^]\]]]]]]]\]_^]]]]]]]]\]^‏7ZZZZZZZZ__\]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZY__]_^]]]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZ[_¯^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZ_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]]]^‏:ZZZZZZZZ__\]]]]\]_^\]]]]]]]\]^‏;^ZZZZZZ__\]]\]_^\]]]]]]]]]^‏=\_^ZZZZ__\]]_^]]]]]]]]]]^‏@ZZ\_^ZY__]_^\]]]]]]]]]^‏BZZZZ\_^^\]]]]]]]]]^‏DZZZZZZ\_^\]]]]]]]\]^‏EZZZZZZZZ__\]]]]]]]\]^‏GZZZZZZZZ__\]]]]]]]^‏I_\ZZZZZZ__\]]]\]^‏K^_\ZZZZ__\]]]^‏MZZ^_\ZY__\]^‏O[ZZ[^_[__]‏RZ[[ZZZ^¯¯‏SZZZ[[Z__‏V[Z[ZZ[\_‏W[[[[Z[ZZ_‏Z[ZZZZ[[Z_‏\[[[[ZZ[Z_‏^[Z[[[ZZZ_‏_[[ZZ[[[Z_‏bZZZZZ[[Z_‏d[[[ZZZ[Z_‏e[[[[Z[[Z_‏gZZ[[Z[[Z_‏j][Z[[Z[Z_‏l]ZZZ[Z_‏o]ZZZ_‏s]Z_‏w‏{ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r\ZYZZZZZZYZ\_‏n_\ZYZZZZZZZZZZ£Z‏k\ZYZZZZZZZZZZYZ]‏i_\ZYZZZZZZZZZZYZ]^\‏g_\ZYZZZZZZZZZZYZ]^\]]‏e\ZYZZZZZZZZZZYZ]^\\]]\‏c\ZYZZZZZZZZZZYZ]^\\]]]]\‏a_\ZYZZZZZZZZZZYZ]^\\]]]]]]\‏_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]‏]\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\‏[_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏Y_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏W_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]‏U\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]__]]\‏S\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]‏Q_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]\‏O_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]\‏M_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]\‏K_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^‏I_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^¯‏G_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]]]]]]]]]]]^_]‏E\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\\‏C_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^_]\]]\‏A_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_\\]]]\]]]]^_]\]]]]\‏?\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_X ]_]\^^]]^_]\]]]]]]\‏=_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_X‎üüü‎\_]\]]]]]]]\]‏;_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_X‎üüüüü‎[_]\]]]]]]]\]^‏9_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_X‎üüüüü‎[]\]]]]]]]\]^‏7_[ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_X‎üüüüü‎[\]]]]]]\]^¯_]_‏7\ZYZZZZZZZZYZ]^\\]]]]]]]]]]\]_X‎üüüüü‎[\]]]]\]^¯_]\\‏7Z]\ZYZZZZYZ]^\]]]]]]]]]]]\]_Xüüüüüü‎[\]]\]^¯_]\]]\‏7ZZZ]\ZYYZ]^\\]]]]]]]]]]\]__Z‎üüü‎[\]]^¯_]\]]]]\‏7ZZZZZ]\]^\\]]]]]]]]]]\]_]]_‎Z_Z‎[\^¯^]\]]]]]]\‏7ZZZZZZZ]¯^\\]]]]]]]]]]\]_^]\^‎ü‎[¯_]\]]]]]]]\]‏7ZZZZZZZY__\]]]]]]]]]]\]_^\]]]^_‎‎ü‎O¯^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]]\]_]\]]]]]^_‎üü‎]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]]‎üü‎\]]]]]]\]_^\‏7ZZZZZZZZ__\]]]]\]_^]]]]]]]]\\_^‎‎ü‎\]]]]\]_^]]]‏7^ZZZZZZ__\]]\]_^\]]]]]]]\]^]‎‎ü‎\]]\]_^]]]]\‏7\_^[ZZZ__\]]_]\]]]]]]]]]^_‎üü‎\]]_^]]]]]]]‏7ZZ\_^[Z__]^\]]]]]]]\]^_]]‎üü‎]]_^]]]]]]]]\‏7ZZZZ\_[_¯]\]]]]]]]]]^_]\\^_‎‎ü‎^]_^]\]]]]]]]]]‏7ZZZZZZ[Z_]\]]]]]]]\]^_]\]]]^‎üü‎^]_^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]]]^_]\]]]]]]] ü‎^]_^]]]]]]]]]\]__‏7ZZZZZZZZ__\]]]]]]]^_]\]]]]]]]\]¯]X^]_^]\]]]]]]]\]_^\‏7[ZZZZZZZ__\]]]]]^_]\]]]]]]]\]^^]_^]\]]]]]]]\]_^]]]‏7_[ZZZZZ__\]]]^_]\]]]]]]]\]^¯_]\]^]_^]\]]]]]]]\]_]]]]]\‏7[^_[ZZZ__\]^_]\]]]]]]]\]^¯_]\]]]^]_^]\]]]]]]]\]_^]]]]]]]‏7ZZ[^_[Z__]_]\]]]]]]]\]^¯_]\]]]]]^_^]_^]]]]]]]]]\]_^\]]]]]]]\‏7ZZZZ[^[__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^‏7ZZZZZZ[Z__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_‏7ZZZZZZZZ__\]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\‏7_\ZZZZZZ__\]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]\]^_]\]]‏7¯\ZZZZ__\]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]\‏7Z]¯\ZZ__\]^¯^]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]‏7ZZZ]\__^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\‏7ZZZZZ]¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^_]\]]]]]]]\]^‏7ZZZZZZZ]¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]]]^_]\]]]]]]]\]^‏7ZZZZZZZY__\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯^‏7ZZZZZZZZ__\]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\‏7^ZZZZZZ__\]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]‏7\_]ZZZZ__\]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]\‏7ZZ\_]ZY__\]_^]\]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]‏7ZZZZ\]___^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\‏7ZZZZZZ\_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_¯‏7ZZZZZZZZ_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^‏7[ZZZZZZZ__\]]]]]\]_]\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\‏7^[ZZZZZ__\]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]‏7[_^[ZZZ__\]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]\‏7ZZ[_¯^[Y__\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯^]\]]]]]]]\]_^]\]]]]]]‏7ZZZZ[_^___^]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\‏7ZZZZZZ[_^\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZY_]]]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]‏7ZZZZZZZZ__\]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]\‏7ZZZZZZZZ__\]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^]]]]‏7ZZZZZZZZ__\]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]\‏7ZZZZZZZZ__\^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]‏7ZZZZZZZZ__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]\‏7ZZZZZZZZ__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^‏7ZZZZZZZZ__\]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]]]^‏7ZZZZZZZZ__\]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ_¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ_¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]\]_^]\]]]]]]]\]_^]]]]]]]]\]^‏7ZZZZZZZZ__\]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\\]_^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZY__]_^]]]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZ[_¯^]\]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZ_^]\]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]]\]_^]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]]]^‏:ZZZZZZZZ__\]]]]\]_^\]]]]]]]\]^‏;^ZZZZZZ__\]]\]_^\]]]]]]]]]^‏=\_^ZZZZ__\]]_^]]]]]]]]]]^‏@ZZ\_^ZY__]_^\]]]]]]]]]^‏BZZZZ\_^^\]]]]]]]]]^‏DZZZZZZ\_^\]]]]]]]\]^‏EZZZZZZZZ__\]]]]]]]\]^‏GZZZZZZZZ__\]]]]]]]^‏I_\ZZZZZZ__\]]]\]^‏K^_\ZZZZ__\]]]^‏MZZ^_\ZY__\]^‏O[ZZ[^_[__]‏RZ[[ZZZ^¯¯‏SZZZ[[Z__‏V[Z[ZZ[\_‏W[[[[Z[ZZ_‏Z[ZZZZ[[Z_‏\[[[[ZZ[Z_‏^[Z[[[ZZZ_‏_[[ZZ[[[Z_‏bZZZZZ[[Z_‏d[[[ZZZ[Z_‏e[[[[Z[[Z_‏gZZ[[Z[[Z_‏j][Z[[Z[Z_‏l]ZZZ[Z_‏o]ZZZ_‏s]Z_‏w‏{ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r\ZYZZZZZZYZ\_‏n_\ZYZZZZZZZZZZ£Z‏k\ZYZZZZZZZZZZYZ]‏i_\ZYZZZZZZZZZZYZ]^\‏g_\ZYZZZZZZZZZZYZ]^\]]‏e\ZYZZZZZZZZZZYZ]^\\]]\‏c\ZYZZZZZZZZZZYZ]^\\]]]]\‏a_\ZYZZZZZZZZZZYZ]^\\]]]]]]\‏_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]‏]\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\‏[_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏Y_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏W_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]‏U\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]__]]\‏S\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]‏Q_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]\‏O_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]\‏M_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]\‏K_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^‏I_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^¯‏G_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]]]]]]]]]]]^_]‏E\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\\‏C_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]\]^_]\]]\‏A_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]\‏?\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]\‏=_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\\‏;_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^‏9_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]]]]\]^‏7_[ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]_‏7\ZYZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]\]^_]\]]]]]]]\]^¯_]\\‏7Z]\ZYZZZZYZ]^\]]]]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]\‏7ZZZ]\ZYYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]\‏7ZZZZZ]\]^\\]]]]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\]^¯^]\]]]]]]\‏7ZZZZZZZ]¯^\\]]]]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]‏7ZZZZZZZY__\]]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^¯^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^\‏7ZZZZZZZZ__\]]]]\]_^]]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]‏7^ZZZZZZ__\]]\]_^\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]\‏7\_^[ZZZ__\]]_]\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]‏7ZZ\_^[Z__]^\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]\‏7ZZZZ\_[_¯]\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]]]‏7ZZZZZZ[Z_]\]]]]]]]\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]__‏7ZZZZZZZZ__\]]]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\‏7[ZZZZZZZ__\]]]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]‏7_[ZZZZZ__\]]]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]\‏7[^_[ZZZ__\]^_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]‏7ZZ[^_[Z__]_]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]\‏7ZZZZ[^[__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^‏7ZZZZZZ[Z__]\]]]]]]]\]^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_‏7ZZZZZZZZ__\]]]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\‏7_\ZZZZZZ__\]]]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]\]^_]\]]‏7¯\ZZZZ__\]\]^¯_]\]]]]]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]\‏7Z]¯\ZZ__\]^¯^]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]‏7ZZZ]\__^¯_]\]]]]]]]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\‏7ZZZZZ]¯_]\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]\]^_]\]]]]]]]]]^¯‏7ZZZZZZZ]¯_]\]]]]]]]\]_^]\]]]]]]]\]_]]]]]]]]]]]^_]\]]]]]]]]]]]_‏7ZZZZZZZY__\]]]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]]]]]]]]‏7ZZZZZZZZ__\]]]]]\]_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]]]\\]]]]\‏7^ZZZZZZ__\]]]\]_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]]]]\–¥]]]]\‏7\_]ZZZZ__\]\]_^]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]]]]]]¦–¦]]]]\‏7ZZ\_]ZY__\]_^]\]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]]]]]₪¦]]]\\]]]]]\‏7ZZZZ\]___^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]]]]¦•¦]]]]]]]]]]\‏7ZZZZZZ\_^]\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]]]]]]\¦]]]]]]]]]]\^‏7ZZZZZZZZ_^]\]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]]]]]]]]]]]]]]]]]]]]]_‏7ZZZZZZZZ__\]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]]]]]]]]]]]]]]]]]]]]]]]\‏7[ZZZZZZZ__\]]]]]\]_]\]]]]]]]\]^_]\]]]]]]\\]]]]]]]]]]]]]]]]]]]]]]]\‏7^[ZZZZZ__\]]]\]_^\]]]]]]]]]^_]\]]]]]]]\–₪]]]]]]]]]]§§]]]]]]]]]]]\‏7[_^[ZZZ__\]\]_^\]]]]]]]]]^_]\]]]]]]\₪¦§—\]]]]]]]]\™f˜]]]]]]]]]]]\‏7ZZ[_¯^[Y__\]_^]]]]]]]]]]^_]\]]]]]]]]\₪]]]]]]]]]]]]™fgf§]]]]]]]]]]\‏7ZZZZ[_^___^]]]]]]]]]]^_]\]]]]]]]]]]]]]]]]]]]]]]]]˜ggf™]]]]]]]]]]\‏7ZZZZZZ[_^\]]]]]]]\]^_]\]]]]]]]]]]]]]]]]]]]]§™]]]§f§§fg\]]]]]]]]\^‏7ZZZZZZZY_]]]]]]]]]]]^_]\]]]]]]]]]]]]]]]]]]]]\™fg]]]¦f§]gf¦]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]\]^_]\]]]]]]]]]]]]]]]]]]]]]]¦fg˜]]]˜g]]gf˜]]]]]]]]]\‏7ZZZZZZZZ__\]]]]\]^_]\]]]]]]]]]]]]]]]]]]]]\]]]™ff˜]]\f™¦ffgf¦]]]]]]]]\‏7ZZZZZZZZ__\]]]]^_]\]]]]]]]]]]]]]]]]]]]]§˜f\]\g™g˜]]¦fff©gg§\¦\]]]]]\‏7ZZZZZZZZ__\]]^_]\]]]]]]]]]]]]]]]]]]]]]§fff™]§g§f˜]]™f™×^]¨^]₪¦\]]]]]\‏7ZZZZZZZZ__\^_]\]]]]]]]]]]]]]]]]]]]]§§]§fggf\˜™§f˜]\gg^]\\^]\\\]]]]]]]‏7ZZZZZZZZ__]\]]]]]]]]]]]]]]]]]]]]§˜f¦]§f˜¦f˜g§§f˜]§f™]]\¦]]]]]]]]]]]\‏7ZZZZZZZZ__]\]]]]]]]]]]]]]]]]]]]]]]˜ff§]§f˜¨gfg]§f˜]¦^¦]\¥]]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]]]]]]]]]]]]]]]]]\fgf§]§fg]§f™]§fg]¨^]¥]\¦]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]]]]]]]]]]]]]§˜¦]]¦ggf§]§fg]]©]§^]¦\]¥]]]]]]]\]^‏7ZZZZZZZZ__\]]]]]]]]]]]]]]]]]]¦ffg\]˜™™f§]§f˜\]^]\]^]]¦\]\]]]]]]]^‏7ZZZZZZZZ__\]\\]]]]]]]]]]]]§]]˜fgf¦]f§™f§]§fg\]\]]]]]]¥\]]]]]]]^‏7ZZZZZZZZ__]¦–¦]]]]]]]]]]§˜f\]™f™g˜™g]˜f§]§fg]]¦§]]]]]¦\]]]]]^‏7ZZZZZZZZ__\\§]]]]]]]]]§˜ff§]]™f§™ff™]˜f§]§¨©§^¦¦]]]]]]]]]]^‏7ZZZZZZZZ_^]]]]]]]]]\™ff^_]]™f§©ff§]˜f§]]_\¥]¦¦]]]]]]]]^‏7ZZZZZZZZ_]]]]]]]]]§fg©_]§]]™f¦]™]]™¨]¦]]§¥]¦¦]]]]]]^‏7ZZZZZZZZ_]\¥\]]]]]]§fg]¦f˜]]™f¦]^^]]^_]¥]]\¦]\\]]]]^‏7ZZZZZZZZ__\—–\]]]]]]§fggf™¨]]™f¦]]\]]]]]¥]]]]]]]\]^‏7ZZZZZZZZ__\¥¦]]]]]]]§fgg©_^]]™f¦]]]]]]]]\]]]]]\]^‏7ZZZZZZZZ__\]]]]]]]]]§fg^^]§\]™]₪\]]]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]]]§f˜\§˜f\]^_]—§]]]]]]]]]]^‏7ZZZZZZZY__\]]]]]]]]]§fg˜fg§]]]]]¦¦]]]]]]]]^‏7ZZZZZZZ[__]]]]]]]]]§ffg§^^]]]]]¦¦]]]]]]^‏7ZZZZZZZ__]]]]]]]]]¦g§_¨\]]]]]]\\]]]]^‏7ZZZZZZZZ__\]]]]]]]]]]^§^¦¦]]]]]]]]\]^‏7ZZZZZZZZ__\]]]]]]]]]]]¥]¦¦]]]]]]]]^‏:ZZZZZZZZ__\]]]]]]]¦]]\¥]¦\]]]]\]^‏;^ZZZZZZ__\]]]]]]]¥]]]¦]]]]]]]^‏=\_^ZZZZ__\]]]]]]]¥]]]]]]]]]^‏@ZZ\_^ZY__\]]]]]]]¥]]]]]]]^‏BZZZZ\_^¯_]]]]]]]¥]]]]]^‏DZZZZZZ\__]]]]]]]\]\]^‏EZZZZZZZZ__\]]]]]]]]]^‏GZZZZZZZZ__\]]]]]]]^‏I_\ZZZZZZ__\]]]\]^‏K^_\ZZZZ__\]]]^‏MZZ^_\ZY__\]^‏O[ZZ[^_[__]‏RZ[[ZZZ^¯¯‏SZZZ[[Z__‏V[Z[ZZ[\_‏W[[[[Z[ZZ_‏Z[ZZZZ[[Z_‏\[[[[ZZ[Z_‏^[Z[[[ZZZ_‏_[[ZZ[[[Z_‏bZZZZZ[[Z_‏d[[[ZZZ[Z_‏e[[[[Z[[Z_‏gZZ[[Z[[Z_‏j][Z[[Z[Z_‏l]ZZZ[Z_‏o]ZZZ_‏s]Z_‏w‏{ÿ<‏7‏|]]¯‏x]ZYYZ^¯‏t]ZYZZZZYZ^¯‏p]ZYZZZZZZZZYZ]‏l]ZYZZZZZZZZZZYZ\‏l\YYZZZZZZZZYZ\¯^‏l_\\ZYZZZZYZ\^]\‏l_YZ]\ZYYZ\^]\]]‏l_ZZZZ]\\^]\]]]]‏l_ZZZZZZ]^]\]]]]]]‏`‏	_ZZZZZZY^_\]]]]]]]]‏^]Z[_‏_ZZZZZZZ^_\]]]]]]]]‏\]ZYZYY[_‏_ZZZZZZZ^_\]]]]]]]]‏Z]ZYZZZZZYY[_‏_ZZZZZZZ^\]]]]]]]]‏X]ZYZZZZZZZZZY£[¯_ZZZZZZZ^_\]]]]]]]]‏V]ZYZZZZZZZZZZYZ\_¯_ZZZZZZZ^_\]]]]]]]]‏S]ZYZZZZZZZZZZYZ\¯^]_ZZZZZZZ^\]]]]]]]]‏O]ZYZZZZZZZZZZYZ\^]\]¯_ZZZZZZZ^\]]]]]]]]\Z^‏K]YYZZZZZZZZZZYZ\^]\]]]¯_ZZZZZZZ^\]]]]]]]]\YY[^‏I]ZYZZZZZZZYZ\^]\]]]]]¯_ZZZZZZZ^_\]]]]]]]]\YZZYZ‏H\[]ZYZZZYZ\^]\]]]]]]]¯_ZZZZZZZ^_\]]]]]]]]\YYY[^¯‏H\ZZ\]ZYZ\^]\]]]]]]]]]¯_ZZZZZZZ^\]]]]]]]]\£[_¯_]‏H\ZZZZ\]¯^]\]]]]]]]]]]]¯_ZZZZZZZ^\]]]]]]]]]^¯_]\\‏H\ZZZZZZ\_]\]]]]]]]]]]]]]¯_ZZZZZZZ^_\]]]]]]]]_]\]]\‏H\ZZZZZZZ]]]]]]]]]]]]]]]]¯^ZZZZZZZ^\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]\Z__[ZZZZ^\]]]]]]]]^]]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]ZYZ^_[ZY^_\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]][ZZYZ^_[^_\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]][YZZZYZ]_\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]][YZZZZYZ__\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]][ZZYY[___\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]][YY[_¯_]\__\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]Z[_¯_]\]\__\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]_¯_]\]]]\__\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]¯]\]]]]]\__\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]¯]\]]]]]]\__\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]¯^]]]]]]]\__\]]]]]]]]^\]]]]\‏H\ZZZZZZZ^]]]]]]]]]]]]]]]¯^]]]]]]]\__\]]]]]]]]^\]]]]]‏GZZZZZZZZ^]]]]]]]]]]]]]]]¯]]]]]]]]\__\]]]]]]]]^\]]]]\‏E^[YZZZZZZZ^]]]]]]]]]]]]]]]¯^]]]]]]]\__\]]]]]]]]^\]]\]_‏C^[YYZZZZZZZZ^]]]]]]]]]]]]]]]¯^]]]]]]]\__\]]]]]]]]^\]]_¯‏B^[YYZZZZZZZZZZ^]]]]]]]]]]]]]]]¯^]]]]]]]\__\]]]]]]]]^]_¯‏B^[YYZZZZZZZZZYY[¯^]]]]]]]]]]]]]]]¯^]]]]]]]\__\]]]]]]]\¯‏B_ZYZZZZZZZZZYY[_¯]]]]]]]]]]]]]]]]¯^]]]]]]]\__\]]]]]\]_‏B^[Z^^ZYYZZZZYY[_¯_]^]]]]]]]]]]]]]]]¯]]]]]]]]\__\]]]\]_¯‏B^[YYYYZ^^ZYZYY[_¯_]\]¯^]]]]]]]]]]]]]]]¯^]]]]]]]\__\]\]_¯‏C^[YYZZZZYYZ_^Z[_¯_]\]]]¯]]]]]]]]]]]]]]]]¯^]]]]]]]\__\]_¯‏D_ZYZZZZZZZZZYZ¯_]\]]]]]¯^]]]]]]]]]]]]]]]¯]]]]]]]]\_^¯‏F[_^ZYZZZZZYY[__\]]]]]]]¯^]]]]]]]]]]]]]]]¯]]]]]]]\]‏HZZ[_^ZYZYY[_¯_]_\]]]]]]]¯^]]]]]]]]]]]]]]]¯^]]]]\]_¯‏JZZZZ[_^Z[_¯_]\\_\]]]]]]]¯^]]]]]]]]]]]]]]]¯^]]\]_¯‏LZZZZZZ[_¯_]\]]\_\]]]]]]]¯^]]]]]]]]]]]]]]]¯]\]_¯‏NZZZZZZZY__\]]]]\_\]]]]]]]¯^]]]]]]]]]]]]]]]¯^_¯‏PZZZZZZZZ__\]]]]\_\]]]]]]]¯^]]]]]]]]]]]]]\]¯‏RZZZZZZZZ__\]]]]\_\]]]]]]]¯^]]]]]]]]]]]\]_¯‏TZZZZZZZZ__\]]]]\_\]]]]]]]¯^]]]]]]]]]\]_¯‏VZZZZZZZZ__\]]]]\_\]]]]]]]¯^]]]]]]]\]_¯‏XZZZZZZZZ__\]]]]\_\]]]]]]]¯^]]]]]\]_¯‏ZZZZZZZZZ__\]]]]\_\]]]]]]]¯^]]]\]_¯‏\ZZZZZZZZ__\]]]]\_\]]]]]]]¯^\\]_¯‏^ZZZZZZZZ__\]]]]\_\]]]]]]]¯]]_¯‏`ZZZZZZZZ__\]]]]\_\]]]]]]]_¯‏bZZZZZZZZ__\]]]]\_\]]]]\]_‏dZZZZZZZZ__\]]]]\_\]]\]_¯‏fZZZZZZZZ__\]]]]\_\\]_¯‏hZZZZZZZZ__\]]]]\_]_¯‏j\ZZZZZZZ__\]]]]\‏l\ZZZZZ__\]]\]_‏p\ZZZ__\]]_¯‏t\Z__]_¯‏x‏|ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r\ZYZZZZZZYZ\_‏n_\ZYZZZZZZZZZZ£Z‏k\ZYZZZZZZZZZZYZ]‏i_\ZYZZZZZZZZZZYZ]^\‏g_\ZYZZZZZZZZZZYZ]^\]]‏e\ZYZZZZZZZZZZYZ]^\\]]\‏c\ZYZZZZZZZZZZYZ]^\\]]]]\‏a_\ZYZZZZZZZZZZYZ]^\\]]]]]]\‏_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]‏]\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\‏[_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏Y_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏W_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]‏U\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]__]]\‏S\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]‏Q_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]\‏O_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]\‏M_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]\‏K_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^‏I_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^¯‏G_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]]]]]]]]]]]^_]‏E\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\\‏C_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]\]^_]\]]\‏A_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]\‏?\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]\‏=_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\]‏;_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]]\]^‏9_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]]]]\]^‏7_[ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^_^\]]]]]]\]^¯_]_‏7\ZYZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]\]^_^]^\]]]]\]^¯_]\\‏7Z]\ZYZZZZYZ]^\]]]]]]]]]]]\]_]\]]]]]]]]]^_^]]]^\]]\]^¯_]\]]\‏7ZZZ]\ZYYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^_^]]]]]^\]]^¯_]\]]]]\‏7ZZZZZ]\]^\\]]]]]]]]]]\]_^]]]]]]]]]]^_^]]]]]]]^\^¯^]\]]]]]]\‏7ZZZZZZZ]¯^\\]]]]]]]]]]\]_^]]]]]]]]\]^_^]]]]]]]]]_¯_]\]]]]]]]\]‏7ZZZZZZZY__\]]]]]]]]]]\]_^\]]]]]]]]]^_^]]]]]]]]]]]¯^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]]\]_]\]]]]]]]]]^_^]]]]]]]]]]]]]_]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]\]^_^]]]]]]]]]]]]]]]^\]]]]]]\]_^\‏7ZZZZZZZZ__\]]]]\]_^]]]]]]]]\]^_^]]]]]]]]]]]]]]]]]^\]]]]\]_^]]]‏7^ZZZZZZ__\]]\]_^\]]]]]]]\]^_^]]]]]]]]]]]]]]]]]]]^\]]\]_^]]]]\‏7\_^[ZZZ__\]]_]\]]]]]]]]]^_^]]]]]]]]]]]__]]]]]]]]^\]]_^]]]]]]]‏7ZZ\_^[Z__]^\]]]]]]]\]^_^]]]]]]]]]]]_¯_]]]]]]]]^]_^]]]]]]]]\‏7ZZZZ\_[_¯]\]]]]]]]]]^_^]]]]]]]]]]]_¯_]]]]]]]]]]¯^]\]]]]]]]]]‏7ZZZZZZ[Z_]\]]]]]]]\]^^]]]]]]]]]]]_¯_]]]]]]]]]]^_^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]]]^__]]]]]]]]]]_¯_]]]]]]]]]]^__\]]]]]]]]\]__‏7ZZZZZZZZ__\]]]]]]]^_]\^]]]]]]]]_¯_]]]]]]]]]]^_^]^\]]]]]]\]_^\‏7[ZZZZZZZ__\]]]]]^_]\]\_]]]]]]_¯_]]]]]]]]]]]_^]]]^\]]]]\]_^]]]‏7_[ZZZZZ__\]]]^_]\]]]\_]]]]_¯_]]]]]]]]]]^_^]]]]]^\]]\]_]]]]]\‏7[^_[ZZZ__\]^_]\]]]]]\_]]_¯_]]]]]]]]]]]_^]]]]]]]^\]]_^]]]]]]]‏7ZZ[^_[Z__]_]\]]]]]]]\^^¯_]]]]]]]]]]^_^]]]]]]]]]^]_^\]]]]]]]\‏7ZZZZ[^[__]\]]]]]]]]]\_¯_]]]]]]]]]]^_^]]]]]]]]]]]^\]]]]]]]\]^‏7ZZZZZZ[Z__]\]]]]]]]]\]^]]]]]]]]]]^_^]]]]]]]]]]]^^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]]\]^¯__]]]]]]]]^_^]]]]]]]]]]]^¯_\]]]]]]]]]^_‏7ZZZZZZZZ__\]]]]]\\]^¯_]\^]]]]]]^_¯^]]]]]]]]]]]^^]^\]]]]]]]^_]\‏7_\ZZZZZZ__\]]]\]^^¯_]\]]_]]]]^_^]]]]]]]]]]]^^]]]^\]]]\]^_]\]]‏7¯\ZZZZ__\]\]^¯_]\]]]\_]]^_^]]]]]]]]]]]^^]]]]]^]]]]^_]\]]]\‏7Z]¯\ZZ__\]^¯^]\]]]]]\_]_^]]]]]]]]]]]^^]]]]]]]^\]^_]\]]]]]]‏7ZZZ]\__^¯_]\]]]]]]]\^¯^]]]]]]]]]]]^^]]]]]]]]]^^_]\]]]]]]]\‏7ZZZZZ]¯_]\]]]]]]]\]_¯¯^]]]]]]]]]]]^^]]]]]]]]]]]_]\]]]]]]]\]^¯‏7ZZZZZZZ]¯_]\]]]]]]]\]_]]]]]]]]]]^^]]]]]]]]]]]]]_]\]]]]]]]\]^‏7ZZZZZZZY__\]]]]]]]\]_^_]]]]]]]]^^]]]]]]]]]]]]]]]^\]]]]]]]\]^¯^‏7ZZZZZZZZ__\]]]]]\]_^]\_]]]]]]^^]]]]]]]]]]]]]]]]]^]]]]]]\]^¯_]\‏7^ZZZZZZ__\]]]\]_^]\]\_]]]]^¯^]]]]]]]]]]]]]]]]]]]^\]]]\]^¯_]\]]‏7\_]ZZZZ__\]\]_^]]]]]\_]]^^]]]]]]]]]]]]]]]]]]]]]^]]\]^¯_]\]]]\‏7ZZ\_]ZY__\]_^]\]]]]]\_^^]]]]]]]]]]]]]]]]]]]]]]]^\]^¯_]\]]]]]]‏7ZZZZ\]___^]\]]]]]]]\_¯^]]]]]]]]]]]]]]]]]]]]]]]]]^^¯_]\]]]]]]]\‏7ZZZZZZ\_^]\]]]]]]]\]_^]]]]]]]]]]]]]]]]]]]]]]]]]]]¯_]\]]]]]]]\]_‏7ZZZZZZZZ_^]\]]]]]]]\]_¯]]]]]]]]]]]]]]]]]]]]]]]]]]]]¯_]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]\]_]^]]]]]]]]]]]]]]]]]]]]]]]]]]]]^\]]]]]]]\]_^‏7[ZZZZZZZ__\]]]]]\]_]]\_]]]]]]]]]]]]]]]]]]]]]]]]]]]]^]]]]]]\]_^]\‏7^[ZZZZZ__\]]]\]_^\]]\_]]]]]]]]]]]]]]]]]]]]]]]]]]]]^\]]]\]_^]\]]‏7[_^[ZZZ__\]\]_^\]]]]\_]]]]]]]]]]]]]]]]]]]]]]]]]]]]^]]\]_^]\]]]\‏7ZZ[_¯^[Y__\]_^]]]]]]]\_]]]]]]]]]]]]]]]]]]]]]]]]]]]]^\]_^]\]]]]]]‏7ZZZZ[_^___^]]]]]]]]]\^]]]]]]]]]]]]]]]]]]]]]]]]]]]]^_^]\]]]]]]]\‏7ZZZZZZ[_^\]]]]]]]]]\^]]]]]]]]]]]]]]]]]]]]]]]]]]]]^]\]]]]]]]\]_‏7ZZZZZZZY_]]]]]]]]]]]\^¯]]]]]]]]]]]]]]]]]]]]]]]]]]]_^]\]]]]]]]\]_‏7ZZZZZZZZ__\]]]]]]]]\^¯_]^]]]]]]]]]]]]]]]]]]]]]]]]]_¯^\]]]]]]]\]_]‏7ZZZZZZZZ__\]]]]]]\]¯_]\\_]]]]]]]]]]]]]]]]]]]]]]]_¯_]^]]]]]]\]_^]\‏7ZZZZZZZZ__\]]]]^¯_]\]]\_]]]]]]]]]]]]]]]]]]]]]_¯_]]]^\]]]\]_^]]]]‏7ZZZZZZZZ__\]]^_]\]]]]\_]]]]]]]]]]]]]]]]]]]_¯_]]]]]^]]\]_^\]]]]\‏7ZZZZZZZZ__\^_]\]]]]]]\_]]]]]]]]]]]]]]]]]_¯_]]]]]]]^\]_^\]]]]]]]‏7ZZZZZZZZ__]\]]]]]]]]\^]]]]]]]]]]]]]]]_¯_]]]]]]]]]__^\]]]]]]]]\‏7ZZZZZZZZ__]\]]]]]]]]\]^]]]]]]]]]]]]]_¯_]]]]]]]]]]^¯^\]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]]\]^]]]]]]]]]]]_¯_]]]]]]]]]]^_^\]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]\]^¯_\^]]]]]]]]]_¯_]]]]]]]]]]^_¯^\]]]]]]\]^‏7ZZZZZZZZ__\]]]]\]]^¯_]\\_]]]]]]]_¯_]]]]]]]]]]^^]^\]]]]]]^‏7ZZZZZZZZ__\]]\]^¯_]\]]\_]]]]]_¯_]]]]]]]]]]^_^]]]^\]]]]^‏7ZZZZZZZZ__\]]^¯_]\]]]]\_]]]_¯_]]]]]]]]]]^^]]]]]^]]]^‏7ZZZZZZZZ__\^¯_]\]]]]]]]_]_¯_]]]]]]]]]]^^]]]]]]]^\^‏7ZZZZZZZZ_¯_]\]]]]]]]]\^_]]]]]]]]]]^^]]]]]]]]]_‏7ZZZZZZZZ_¯_]\]]]]]]]]\]_¯¯_]]]]]]]]]]^^]]]]]]]]]]^‏7ZZZZZZZZ_]\]]]]]]]]\]_¯]]]]]]]]]^^]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]]]]\]_¯^\^]]]]]]]^^]]]]]]]]]]^‏7ZZZZZZZZ__\]]]]\]]_¯^]\\_]]]]]^^]]]]]]]]]]^‏7ZZZZZZZZ__\]]\]_¯¯^]\]]\_]]]^^]]]]]]]]]]^__‏7ZZZZZZZZ__\\]_^]\]]]]\_]^_^]]]]]]]]]]^__‏7ZZZZZZZY__]_^]\]]]]]]\^_^]]]]]]]]]]^__‏7ZZZZZZZ[_¯^]\]]]]]]]\]^]]]]]]]]]]^__‏7ZZZZZZZ_^]\]]]]]]]\]_¯^]]]]]]]]]]^_¯‏7ZZZZZZZZ__\]]]]]]]]\]___]]]]]]]]]^__‏7ZZZZZZZZ__\]]]]]]\]_^\^]]]]]]]^__‏:ZZZZZZZZ__\]]]]\]_^\]\_]]]]]^_‏;^ZZZZZZ__\]]\]_^\]]]\_]]]^_‏=\_^ZZZZ__\]]_^]]]]]]\_]^__‏@ZZ\_^ZY__]_^\]]]]]]]\^_‏BZZZZ\_^^\]]]]]]]]]^¯_‏DZZZZZZ\_^\]]]]]]]\]^‏EZZZZZZZZ__\]]]]]]]\]^‏GZZZZZZZZ__\]]]]]]]^‏I_\ZZZZZZ__\]]]\]^‏K^_\ZZZZ__\]]]^‏MZZ^_\ZY__\]^‏O[ZZ[^_[__]‏RZ[[ZZZ^¯¯‏SZZZ[[Z__‏V[Z[ZZ[\_‏W[[[[Z[ZZ_‏Z[ZZZZ[[Z_‏\[[[[ZZ[Z_‏^[Z[[[ZZZ_‏_[[ZZ[[[Z_‏bZZZZZ[[Z_‏d[[[ZZZ[Z_‏e[[[[Z[[Z_‏gZZ[[Z[[Z_‏j][Z[[Z[Z_‏l]ZZZ[Z_‏o]ZZZ_‏s]Z_‏w‏{ÿ‏2‏z_\Z[^‏v\ZYZYY[^‏r\ZYZZZZZYY[^‏n_\ZYZZZZZZZZZY£[¯‏k\ZYZZZZZZZZZZYZ]‏i\ZYZZZZZZZZZZYZ]^]¯‏‏b_\ZYZZZZZZZZZZYZ]^\\]¯^[[^‏^_\ZYZZZZZZZZZZYZ]^\\]]]¯\YYYY[^‏Z_\ZYZZZZZZZZZZYZ]^\\]]]]]ZZZZZYY[^‏V\ZYZZZZZZZZZZYZ]^\\]]]]]]]¯[YZZZZZZYZ‏S\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]ZYZZZZYY[^¯‏Q_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]]ZYZZYY[_¯_]‏O_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]]\]¯[ZYY[_¯_]\\‏M_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]]]\^ZY[_¯_]\]]\‏K_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]]]\^¯]Z[_¯_]\]]]]\‏I_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]]]\^]ZZ_¯_]\]]]]]]\‏G_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]]]\^[^_]\]]]]]]]]\‏E]YYZZZZZZZZZZYZ]^\\]]]]]]]]]]]]\^¯^[Z]]\]]]]]]]]]]\‏C^[YYZZZZZZYZ]^\\]]]]]]]]]]]]\]¯^[ZZZZ]\]]]]]]]]]]]\‏A_\Z[_¯^ZYYZZYZ]^\\]]]]]]]]]]]]\]__[ZZZZZZ^]]]]]]]]]]]]\‏?\ZYZYY[^^ZYZ]^\\]]]]]]]]]]]]\]_\ZZZZZZZ^]]]]]]]]]]]]\‏=_\ZYZZZZZYY[^^^\\]]]]]]]]]]]]\]_‏\ZZZZZZZ^]]]]]]]]]]]]\‏;^YYZZZZZZZZZY£[_\\]]]]]]]]]]]]\]_‏\ZZZZZZZ^]]]]]]]]]]]]\‏;__[YYZZZZZZYZ]]]]]]]]]]]]]]\]_‏\ZZZZZZZ^]]]]]]]]]]]]\‏;\Z^_[YYZZYZ]^]¯^]]]]]]]]]]\^_‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZ^_[YZ]^\\]^]]]]]]]]\^_‏
+\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZ^_^\]]]]^]]]]]]]]_‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ¯_\]]]]]]^]]]]]]_‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]^]]\]_‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]]\^_‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]^_‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]¯‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]¯‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]‏\ZZZZZZZ^\]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]¯‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]¯‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]‏\ZZZZZZZ^\]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]¯‏\ZZZZZZZ^\]]]]]]]]]]]\‏;]ZZZZZZZ^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏;_]ZZZZZZZ^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏9_Z[__[ZZZZ^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7\ZZYZ^_[ZZ^\]]]]]]¯‏\ZZZZZZZ^]]]]]]]]]]]]\‏7[YYZZYZ^_[^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7Z]_\YYZZYZ^^]]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZ]_\YYYZ\^]]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZ]_\\^^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZ]¯^]\^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZY__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]¯‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]¯‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]¯‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]¯‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]¯‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^]]]]]]]]]]]]]‏7ZZZZZZZZ__\]]^\]]]]]]‏\ZZZZZZZ^\]]]]]]]]]]]\‏7ZZZZZZZZ__\]]^\]]]]]]‏\YZZZZZZ^]]]]]]]]]]\]_‏7ZZZZZZZZ__\]]^\]]]]]]‏^[ZZZZZ^]]]]]]]]\]_¯‏8ZZZZZZZZ__\]]^\]]]]]]‏\ZZ^^[ZZZ^]]]]]]\]_¯‏:ZZZZZZZZ__\]]^\]]]]]]¯‏\ZYZZY[_^[Z^]]]]\]_¯‏<ZZZZZZZZ__\]]^\]]]]]]‏\ZYZZZZZYY[_^^]]\]_¯‏>ZZZZZZZZ__\]]^\]]]]]]‏\YYZZZZZZZZZY£[]\]_¯‏@ZZZZZZZZ__\]]^\]]]]]]‏]_[YYZZZZZZZYZ]¯^_‏BZZZZZZZZ__\]]^\]]]]]]‏\ZYZ]_[YYZZZYZ]^]¯‏DZZZZZZZZ__\]]^\]]]]]]‏
+_\ZYZZZYZ]_[YYZ]^]_¯‏FZZZZZZZZ__\]]^\]]]]]]¯‏\ZYZZZZZZZYZ]_]^]_¯‏HZZZZZZZZ__\]]^\]]]]]]‏\ZYZZZZZZZZZZYY^^]_‏JZZZZZZZZ__\]]^\]]]]]]‏\ZYZZZZZZZZZZYZ]__¯‏LZZZZZZZZ__\]]^\]]]]]]¯‏\ZYZZZZZZZZZZYZ]^]_‏NZZZZZZZZ__\]]^\]]]]]]^Y£ZZZZZZZZZZYZ]^]_¯‏PZZZZZZZZ__\]]^\]]]]]]]]_\YYZZZZZZYZ]^]_¯‏RZZZZZZZZ__\]]^\]]]]]]ZYZ]_\YYZZYZ]^]_¯‏TZZZZZZZZ__\]]^\]]]]]]ZZZYZ]_[YZ]^]_¯‏VZZZZZZZZ__\]]^\]]]]]]ZYZZZYZ]_^]_¯‏XZZZZZZZZ__\]]^\]]]]]]ZYZZZYZ\_]_¯‏ZZZZZZZZZ__\]]^\]]]]]]ZZZYZ]^¯‏\ZZZZZZZZ__\]]^\]]]]]]ZYZ]^]_‏^ZZZZZZZZ__\]]^\]]]]]][]^]_¯‏`ZZZZZZZZ__\]]^\]]]]]]¯^]_¯‏bZZZZZZZZ__\]]^\]]]]]]¯^]_‏dZZZZZZZZ__\]]^\]]]]]]¯_¯‏fZZZZZZZZ__\]]^\]]]\]_‏hZZZZZZZZ__\]]^]]\]_¯‏j\ZZZZZZZ__\]]^\]_¯‏l\ZZZZZ__\]]^_¯‏p\ZZZ__\]]‏t\Z__]_¯‏x‏|ÿ ‏=‏z
+
+‏v	
+‏r	
+‏n	
+‏j	‏h	ת‏f	
+ת‏d	
+	‏b	ת	
+
+ת‏`	ת	
 
 
 
-ת‏@תתת
-
-
-
-Y¡””””””””“““¢[\\[[[[[[[[\\[	
-
-
-תתת
-
-‏D
+ת‏^	ת	
 
 
 
-ת
-Y¡””””””””“““¢[\\[[[[[[[[[\\	
+
+	ת‏\	ת	
 
 
 
-תת‏Hת
-תתתת[
-
-Y¡””””””””“““¢Z\\[[[[[\]^^_
 
 
 
-
-ת‏L
+	ת‏Z	ת	
 
 
-[Y¡””””””””“““¢Z\\[\]^^^]
-
+
+
+
+
+
+
+	ת‏X	ת	
+
+
+
+
+
+
+
+
+
+
+	ת‏V	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏T	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏R	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏P	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏N	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏L	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏J	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏H	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏F	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏D	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏B	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏@	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏>	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏<	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏:	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏7ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6	
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6ת	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6ת
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	תת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏7
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏9
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏;
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏=
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏?
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏A
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏C
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏E
+	
+
+
+
+
+
+
+
+
+
+
+
+	
+‏G
+	
+
+
+
+
+
+
+
+
+
+	
+‏I
+	
+
+
+
+
+
+
+
+	
+‏K
+	
+
+
+
+
+
+	
+‏M
+	
+
+
+
+	
+‏O
+
+	
+
+	
+‏Q	
+		
+‏S	
+
+
+
+‏U
+		
+
+
+‏W
+	
+		
+
+‏Y
+	
+
+
+		
+
+‏[
+
+
+
+
+
+
+
+	
+‏]
+
+
+
+
+
+
+
+	
+‏_
+
+
+	
+
+
+
+	
+‏a
+
+
+
+
+
+
+
+	
+‏c
+
+
+
+
+
+
+
+	
+‏e	
+
+
+
+
+
+
+	
+‏g
+		
+	
+
+	
+‏i		
+
+
+	
+‏m		
+	
+‏q
+	
+‏u‏y‏}ÿ ‏=‏z
+
+‏v	
+‏r	
+‏n		‏j	
+‏h	ת‏f	
+ת‏d	
+	‏b	ת	
+
+ת‏`	ת	
+
+
+
+ת‏^	ת	
+
+
+
+
+	ת‏\	ת	
+
+
+
+
+
+
+	ת‏Z	ת	
+
+
+
+
+
+
+
+
+	ת‏X	ת	
+
+
+
+
+
+
+
+
+
+
+	ת‏V	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏T	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏R	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏P	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏N	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏L	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏J	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏H	ת	
+
+
+
+
+
+
+
+
+
+
+	
+ת
+
+
+
+
+
+
+
+
+
+
+ת‏F	
+	
+
+
+
+
+
+
+
+
+ת	
+
+
+
+
+
+
+
+
+	ת‏D	ת	
+
+
+
+
+
+
+
+
+ת	TPS	
+
+
+
+
+
+
+
+
+	ת‏B	ת	
+
+
+
+
+
+
+
+
+ת	TPR		
+
+
+
+
+
+
+
+
+	ת‏@	ת	
+
+
+
+
+
+
+
+
+ת	T°R		
+
+
+
+
+
+
+
+
+	ת‏>	ת	
+
+
+
+
+
+
+
+
+ת	T°R
+	
+
+
+
+
+
+
+
+
+	ת‏<	ת	
+
+
+
+
+
+
+
+
+ת	T°R		
+
+
+
+
+
+
+
+
+	ת‏:	
+	
+
+
+
+
+
+
+
+
+ת	T°R
+	
+
+
+
+
+
+
+
+
+	ת‏7ת	
+
+
+
+
+
+
+
+
+ת	TPR
+
+
+
+
+
+
+
+
+
+
+	ת‏6	
+	
+	
+
+
+
+
+
+
+
+
+ת	T°R	
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	ת	
+
+
+
+
+
+
+
+
+
+
+TPR
+
+	
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6ת	
+	
+
+
+
+
+
+
+
+
+
+
+_X	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6ת
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	תת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏7
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏9
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏;
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏=
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏?
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏A
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏C
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏E
+	
+
+
+
+
+
+
+
+
+
+
+
+	
+‏G
+	
+
+
+
+
+
+
+
+
+
+	
+‏I
+	
+
+
+
+
+
+
+
+	
+‏K
+	
+
+
+
+
+
+	
+‏M
+	
+
+
+
+	
+‏O
+
+	
+
+	
+‏Q	
+		
+‏S	
+
+
+‏U	
+
+‏W	
+‏Y	
+‏[
+‏]
+‏_
+‏a
+‏c
+‏e		
+‏g
+
+‏iת
+‏mת
+‏qת
+‏u
+‏y‏}ÿ ‏=‏z
+
+‏v	
+‏r	
+‏n	
+‏j	‏h	ת‏f	
+ת‏d	
+	‏b	ת	
+
+ת‏`	ת	
+
+
+
+ת‏^	ת	
+
+
+
+
+	ת‏\	ת	
+
+
+
+
+
+
+	ת‏Z	ת	
+
+
+
+
+
+
+
+
+	ת‏X	ת	
+
+
+
+
+
+
+
+
+
+
+	ת‏V	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏T	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏R	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏P	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏N	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏L	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏J	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏H	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏F	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏D	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏B	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏@	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏>	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏<	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏:	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏7ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6	
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6ת	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6ת
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+££
+
+
+
+₪Y
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+£Z
+
+
+YY
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Z£
+Z¦§
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+()))Zת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Y
+
+
+
+
+
+
+
+
+
+
+
+Z(*l))[ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+₪–Y
+
+
+
+
+
+
+
+
+
+
+)l)*
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+₪£
+
+
+
+
+
+
+ZZ
+
+
+]ת	[)›
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Z())¦
+
+
+Z()))¥ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+¦)*))§
+
+
+§+×*)¦ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[*×j)\
+
+
+\ת§)[ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\]
+
+(+ת
+
+
+
+	Z(+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ת
-
-‏P[
-
-תת[₪¡“”””””””“““¢[^^^^]ת
-תת
-	ת
+Z())¦
 
 
-‏T
+Z¦(+]	ת‏6
+	
 
 
 
-
 
 
-ת\\₪¡“”””””””“““£\^ת
-תת[ת[‏X
 
 
-תתת
 
 
-[\\₪¡“”””””””““£
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Z)+*))
+Z((*×
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Z¦([
+
+
+
+
+
+
+[×¨))
+Z+×^ת
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+§)*+[
+
+
+
+
+
+
+
+
+	¦)\
+
+ת
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Z(*×]ת
+
+
+
+
+
+
+
+
+§)©ת
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Z
+
+
+
+Z(*]ת		Z
+
+
+
+
+
+[((*×ת
+
+
+
+
+
+
+
+
+	‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Y–Z
+
+
+()]
+
+Z))
+
+
+
+
+
+)*l]
+
+
+
+
+
+
+
+
+
+
+	תת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+£—)[
+Z)j
+
+¦))(
+
+
+
+
+
+]\
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+))Z
+§)§
+
+›k)(
+
+
+
+
+
+Y£Y
+
+
+
+
+
+
+
+
+
+
+
+	‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Z[
+
+
+))Z
+()[
+
+ת[)(
+
+
+Y
+
+Y₪Z
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+[))¦
+
+()Z
+()(
+
+Z(*]
+
+₪£
+
+YY
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+Y
+
+
+
+
+
+
+))))Z
+))Z
+)))(((*^
+
+
+Y£
+
+
+
+
+
+
+
+
+
+
+	
+‏6
+	
+
+
+
+
+₪–Y
+
+§§
+
+)))))
+()[
+\)()*l]₪
+
+
+
+Y
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+££
+
+[)(
+
+))\*)§()[
+ת^l×]ת	£
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+§¨
+[)§
+
+))Z]))))Z
+
+
 [
 
-[ת
 
 
-
-ת‏\
-
-
-תת\]\₪¡“””””””₪¥תת
-[
-
-
-‏`ת[
-[\\₪¡”””” ₪₪
-תתת
-ת‏dת
-
-תתת[[\]Y¡”” ₪₪
-ת
-
-ת‏h[ת
-תת[תY¡”₪Zתת
-
-ת‏l
-
-ת[תZ[[‏p
-
-
-ת‏t[[
-[
-
-
-
-‏x‏|ÿ+‏P‏l
-
-תתת
+£
 
 
 
 
 
-			
-‏hP	‏dQQ	‏`	‏\Q	‏X	‏TQ	‏P		‏LQ	‏H		‏DQ	‏@	Q	‏<	Q	‏8‏5Q‏‏9‏DQ‏D	‏D‏DQ‏EQ‏H‏L‏P‏T‏X‏\‏`‏d‏h‏l‏p‏t‏x‏|ÿ‏(	‏k	‏g	‏c	‏_	‏[	‏W	‏S	‏O	‏K	‏G	‏C	‏?	‏;	‏7	‏3	‏/	‏+Q	‏'P		‏#Pת		‏P
-
-		‏P
-
-		‏P
-
-		‏P
-ת
-	‏P
-ג
-	‏P
-גא		‏P
-גPPאאP
-	‏P
-גPPאPPPPאPP		‏P
-גPPאPPPPPPPPאP
-	‏P
-גPPאPPPPPPPPPPPPאP
-	‏P
-גאPאPPPPPPPPPPPPPPPPאא		‏P
-גPPאPPPPPPPPPPPPPPPPPאPPP‏		‏P
-גPPאPPPPPPPPPPPPPPPPPאPPP‏		‏P
-גPPאPPPPPPPPPPPPPPPPPאPPP‏‏‏%P
-גPPאPPPPPPPPPPPPPPPPPאPPP‏?P
-גאPאPPPPPPPPPPPPPPPPPאPPP‏CP
-גPPאPPPPPPPPPPPPPPPPPאPPP‏GP
-גPPאPPPPPPPPPPPPPPPPPאPPP‏K
-גPPאPPPPPPPPPPPPPPPPPאPPP‏O
-גPPאPPPPPPPPPPPPPPPPPאPPP‏VגPPאPPPPPPPPPPPPPPPPPאPPP‏_זגPאPPPPPPPPPPPPPPPPPאPPP‏fPPPאPPPPPPPPPPPPPPאPPP‏jPPPאPPPPPPPPPPאPPP‏nPPPאPPPPPPאPPP‏rPPPאPPאPPP‏vPPPPPP‏zPPÿ‏!P‏zP‏vPPאPP
-	‏`PPPPPPאP		‏\PPPPPPPPPPאPP
-	‏XPPPPPPPPPPPPPPאPP
-	‏TPPPPPPPPPPPPPPPPPPאP		‏PPPPPPPPPPPPPPPPPPPPPPPאP
-	‏LPPPPPPPPPPPPPPPPPPPPPPPPPPאP		‏HPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאPP		‏DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאPב
-	‏@PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבגגבג		‏<PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבגגגגגבגמ
-	‏8PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבגגגגגגגגבג		‏4PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבגגגגגגגגגגגבג
-	‏0PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבגגגגגגגגגגגגגגגבג		‏,PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבגגגגגגגגגגגגגגגגגגבג
-	‏)אPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבגגגגגגגגגגגגגגגגגגגגגבג
-	‏'PPPאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגבג
-	‏'PPPאPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגבגû	‏'PPPאPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגב
-	‏'PPPאPPPPPPPPPPPPPPPPPPאבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב	‏'PPPאPPPPPPPPPPPPPPאאבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבP	‏'PPPאPPPPPPPPPPאאבבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגבבP	‏'PPPאPPPPPPאאבבבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגבבזP	‏'PPPאPPאאבבבבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגבבזP	‏'PPאבבבבבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגבבזP	‏'אבבבבבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגזP	‏'בבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגP	‏&בבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגבא	‏%באבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגבא	‏$באבבבבגגגגגגגגגגגגגגגגגגגגגגגבא	‏#בבבגגגגגגגגגגגגגגגגגגגגגגגבא	‏#בגגגגגגגגגגגגגגגגגגגגגבא	‏"בבגגגגגגגגגגגגגגגגגבא‏"בבגגגגגגגגגגגגגגבא‏‏)גבגגגגגגגגגגגבא‏7גבגגגגגגגגבא‏;בגגגגגבא‏>בגגבא‏Aב‏D‏H‏L‏P‏T‏X‏\‏`‏d‏h‏l‏p‏t‏x‏|ÿ‏(	‏k	‏g	‏c	‏_	‏[	‏W	‏S	‏O	‏K	‏Gתת	‏C
-û
-P	‏?ת		
-û	P	‏;ת		
-û	‏7ת		‏3		גבבב	‏/
-		גבגגגגבג	‏+ת	גבגגגגגגגגבב	‏'ת	הגבגגגגגגגגגגגגבב	‏#
-גבגגגגגגגגגגגגגגגגבג	‏
-‏גבגגגגגגגגגגגגגגגגגגגגבב	‏
-‏		גבגגגגגגגגגגגגגגגגגגגגגגגגבבמ	‏R
-‏דבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב	‏4בבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב	‏4בבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב	‏4בבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב	‏4בבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב	‏4בבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב	‏4בבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב	‏4בבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבQ	‏4בבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבגת	‏4בבבגגגגגגגגגגגגגגגגגגגגגגגגגגדדדג	‏4בבבגגגגגגגגגגגגגגגגגגגגגגדדדדדדג	‏5בבבגגגגגגגגגגגגגגגגגגדדדדדדדדדגד‏‏=בבבגגגגגגגגגגגגגגדדדדדדדדדדדדדג
-‏Lבבבגגגגגגגגגגדדדדדדדדדדדדדדגגג‏‏Pבבבגגגגגגדדדדדדדדדדדדדדגגד‏	‏Tבבבגגדדדדדדדדדדדדדדגגד‏‏Xגגדדדדדדדדדדדדדגגד‏
-‏[גדדדדדדדדדדגגד‏‏_גדדדדדדגגד‏‏bגדדדגגד‏yגגגג‏|גÿ‏(	‏k	‏S	‏	‏Oדגג‏	‏Kדגגדדג‏	‏Gדגגדדדדדגה‏	‏Cדגגדדדדדדדדדד
-‏	‏?דגגדדדדדדדדדדדדג‏	‏;דגגדדדדדדדדדדדדדדדג	‏7גגגדדדדדדדדדדדדדדדדדדגד	‏3דגגדדדדדדדדדדדדדדדדדדדדג
-	‏1גדדדדדדדדדדדדדדדדדדדדגה
-	‏0דדדדדדדדדדדדדדדדדגה
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+(*	¦)§
+
+))Z
+©)))[
+
+YYY
+
+
+Z
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+¦)]
+
+¦)§
+
+))Z	**×ת
+ZYYY
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+
+¦)
+Z)k
+
+
+¦)§
+
+))Z
+
+]
+
+
+
+YYY
+
+
+
+
+
+
+
+	
+‏6
+Z))
+(*
+
+
+¦)(
+
+()[
+
+
+
+
+
+
+
+₪
+
+
+
+
+
+
+
+	
+ת‏6
+Z))¦)\
+
+
+
+¦)§
+
+›×[Y
+
+
+
+
+
+
+Y
+
+
+
+
+
+	
+ת‏6
+Z))))[
+
+
+
+[)(
+
+[תYY
+
+
+
+
+
+
+
+
+
+
+
+	
+‏6
+Z)))))(Z
+
+¦+]
+
+£
+ZY
+
+
+
+
+
+
+
+
+
+	
+‏7
+Z))+*())(Z\ZY
+₪
+
+Y
+
+
+
+
+
+
+
+	
+‏9
+Z))^l)*×
+
+YZ
+£
+
+
+
+
+
+
+
+
+	
+‏;
+Z))
+
+^\
+
+
+
+
+
+
+Y
+
+
+
+
+
+
+	
+‏=
+Z))
+
+
+
+£
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏?
+Z+©
+£
+
+₪
+
+
+
+
+
+
+
+
+
+
+	
+‏A
+
+
+
+₪
+
+Y
+
+
+
+
+
+
+
+
+	
+‏C
+	
+
+
+£
+
+
+
+
+
+
+
+
+
+	
+‏E
+	
+
+
+£
+
+
+
+
+
+
+
+	
+‏G
+	
+
+
+Y
+
+
+
+
+
+	
+‏I
+	
+
+
+
+
+
+
+
+	
+‏K
+	
+
+
+
+
+
+	
+‏M
+	
+
+
+
+	
+‏O
+
+	
+
+	
+‏Q	
+		
+‏S	
+
+
+‏U	
+
+‏W	
+‏Y	
+‏[
+‏]
+‏_
+‏a
+‏c
+‏e		
+‏g
+
+‏iת
+‏mת
+‏qת
+‏u
+‏y‏}ÿ ‏=‏z
+
+‏v	
+‏r	
+‏n		‏j	
+‏h	ת‏f	
+ת‏d	
+	‏b	ת	
+
+ת‏`	ת	
+
+
+
+ת‏^	ת	
+
+
+
+
+	ת‏\	ת	
+
+
+
+
+
+
+	ת‏Z	ת	
+
+
+
+
+
+
+
+
+	ת‏X	ת	
+
+
+
+
+
+
+
+
+
+
+	ת‏V	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏T	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏R	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏P	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏N	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏L	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏J	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏H	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏F	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏C	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏A	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏?	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏>	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏<	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏9	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏5	
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6
+	ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6ת	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏5ת
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏5
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏5ת	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת‏6	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+תת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת	‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+
+
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6
+
+
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+ת
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	תת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+ת‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏6
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏7
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏9
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏;
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏=
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏?
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏A
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏C
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+‏E
+	
+
+
+
+
+
+
+
+
+
+
+
+	
+‏G
+	
+
+
+
+
+
+
+
+
+
+	
+‏I
+	
+
+
+
+
+
+
+
+	
+‏K
+	
+
+
+
+
+
+	
+‏M
+	
+
+
+
+	
+‏O
+
+	
+
+	
+‏Q	
+		
+‏S	
+
+
+‏U	
+
+‏W	
+‏Y	
+‏[
+‏]
+‏_
+‏a
+‏c
+‏e		
+‏g
+
+‏iת
+‏mת
+‏qת
+‏u
+‏y‏}ÿ ‏>__‏t‏\ZZ\‏p_\ZYZZYZ\_‏m__]YYZZZZZYZ\_‏i\YY_]ZYZZZZZ£Z‏f\YY]
+
+]ZZZYZ]‏d\YY\ת[__ZZ]^\‏b\YY\ת	YZ£Z_¯^^\]]‏`\YY\ת		YZ₪Z]^\\]]\‏^\YY\תת^Y₪Z]^]]\]]]]\‏\\YY\תû\YZ]^]_¯]]]]]]\‏Z\YY\תת\YZ]^]_[^]]]]]]\‏X\YY\תû­\YY]^]_Y^]]]]]]\‏V\YY\תû\YY]^]_¯ת_Y^¯]]]]]]\‏T\YY\תû\YZ]^]_תתת_Y^]]]]]]\‏R\YY\תû\YZ]^]_תתûûת_Y^]]]]]]\‏P\YY\תת\YZ]^]_תתûûûûת_Y^]]]]]]\‏N\YY\תû\YZ]^]_¯תתûûûûûûת_Y^]]]]]]\‏L\YY\תû\YY]^]_תתûûûûûûûûת_Y^]]]]]]\‏J\YY\תû\YY]^]_¯תתûûûûûûûûûûת_Y^]]]]]]\‏H\YY\תת\YZ]^]_¯תתûûûûûûûûûûûûת_Y^]]]]]]\‏F\YY\תû\YZ]^]_¯תתûûûûûûûûûûûûûûת_Y^]]]]]]\‏D\YY\תû\YZ]^]_¯תתûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏A_\YY\תû\YY]^]_¯תתûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏?_Z\תû\YZ]^]_¯תתûûûûûûûûûûûûûûûûûûûûת_Y]]]]]]\‏?ûû\YY]^]_¯תתûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏?û_\YY]^]_¯תתûûûûûûûûûûûûûûûûûûûûפפûûת_Y^]]]]]]\‏?
+
+û\£[^]_¯תתûûûûûûûûûûûûûûûûûûûûûכטכûûת_Y^]]]]]]\‏=_[ZZ
+
+ûû^_]]_¯תתûûûûûûûûûûûûûûûûûûûûûכיףיףûûת_Y^]]]]]]\‏;_\ZYZZZZ
+
+û_¯תתûûûûûûûûûûûûûûûûûûûûûכיףywףûûת_Y^]]]]]]\‏9_\ZYZZZZZZZZ
+
+תתûûûûûûûûûûûûûûûûûûûûכיךy‹ףףûûת_Y^]]]]]]\‏7_[ZYZZZZZZZZZ₪YZתתûûûûûûûûûûûûûûûûûûûûפכיךy‹‹ףףûûת_Y^]]]]]]\‏7^^\ZYZZZZZZZZYZ]¯תûûûûûûûûûûûûûûûûûûûûכיףy‹‹‹xxףףûûת_Y^]]]]]]\‏7Z\\ZYZZZZYZ]^^תûûûûûûûûûûûûûûûûûûכיףy‹‹‹yייףףûûת_Y^]]]]]]\‏7ZZZ]\ZYYZ]^\\^תûûûûûûûûûûûûûûûûכיףy‹yטףטףיףףûûתY^]]]]]]\‏7ZZZZZ]\]^\\]]^תûûûûûûûûûûûûûפכיךy‹‹‹xטיxי‹ףףûûתY^]]]]]]\‏7ZZZZZZZ]¯^\\]]]\^תûûûûûûûûûûûכיףy‹‹yxיךwx‹‹‹ףףûûת_Y^]]]]]]\‏7ZZZZZZZY__\]]]]]\^תûûûûûûûûûפכיךy‹‹‹xףיףיטxy‹‹‹‹ףףûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûכיךy‹‹‹yxטףטיy‹‹‹‹‹ףףûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûכיףy‹‹‹‹יטטxy‹zףy‹‹ףףûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûפכיךy‹‹‹ףטwךיx‹‹‹zףךי‹‹‹ףףûûת_Y]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûכיךy‹‹‹xיייף‹‹‹‹yףטף‹‹‹‹ףףûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תליךy‹‹‹yךטטטzy‹‹‹‹‹ייw‹‹‹‹‹ףףûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךw‹‹‹‹ףףטxףx‹‹yףף‹w‹‹‹‹‹‹‹ףףûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךx‹yxייxףx‹‹yףיw‹‹‹‹‹‹‹‹‹ףףûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךxxףיy‹‹‹‹zףטwz‹‹zףy‹‹‹‹ףףûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךxייwy‹‹‹‹wטw‹‹‹‹‹ףיטy‹‹‹‹ףףûûתY^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךx‹טxy‹zףייx‹‹‹‹‹ףיטwy‹‹‹‹zיכûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךx‹z‹yףיw‹‹‹‹‹zwףיךy‹‹‹‹yךיכûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךx‹‹yךיw‹‹‹‹‹‹yיטף‹‹‹‹yףיכûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךx‹ףיxz‹‹yzwךף‹‹‹‹yךיכפûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךx‹‹y‹‹‹‹wףzx‹‹‹yvיכפûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךx‹‹‹‹‹‹ףייףz‹‹‹‹yךיכפûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךx‹‹‹‹‹ףייףz‹‹‹yךיכûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךx‹‹‹wטwy‹‹‹yךיכפûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךx‹‹‹‹yy‹‹‹yףיכפûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךx‹‹‹‹‹‹‹‹yףיכûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךx‹‹‹‹‹‹yךיכûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךx‹‹‹‹yךיכûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךx‹‹yךיכûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךxyףיכûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךxzייכûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûךטךכûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûxכûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûתתûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûתY^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ûתûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûתY^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûתY]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûתû_Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûû^§Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûת_¥–¥Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûûûתתûûת§––¥Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûûûתûûûת¨––¥Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûûתûûûת§––¥Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûûûûûתûûת¨––¥Z^]]]]]]]‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûûתתûûתûûת¨––¥Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûûûתûûûתûûת¦––¥Z^]]]]\]_‏7ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûûתûûûתûûû[—––¦Z^]]\]_¯‏8ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûûû_¥תתûûûZ–₪^_Z^]]_¯‏:ZZZZZZZZ__\]]]]]\^תûûûûûûûûûûûûûתמ¥––תתûûת_Y^_¯‏<ZZZZZZZZ__\]]]]]\^תûûûûûûûûûתתתûתן^–£—תתûûû^‏>ZZZZZZZZ__\]]]]]\^תûûûûûûûתûûûת_––—תתûתתû‏‏?ZZZZZZZZ__\]]]]]\^תûûûûûûûתת_––—תתתû‏‏AZZZZZZZZ__\]]]]]\^תûûûûתתת_––—ûת‏JZZZZZZZZ__\]]]]]\^תûתûûתתת_––—תתû‏LZZZZZZZZ__\]]]]]\^תûûûתתת_–£–ûûתû‏NZZZZZZZZ__\]]]]]\^¯תתתת_––¥¯תû‏PZZZZZZZZ__\]]]]]\^_₪^תתתת_₪^û‏RZZZZZZZZ__\]]]]]\^_––^תתתת¯û‏TZZZZZZZZ__\]]]]]\^_––^תתתû‏VZZZZZZZZ__\]]]]]\^_––^תתתתû‏XZZZZZZZZ__\]]]]]\^_––^תתûû‏ZZZZZZZZZ__\]]]]]\^_––^תת‏\ZZZZZZZZ__\]]]]]\^_––^תûûû‏^ZZZZZZZZ__\]]]]]\^_––^תûתû‏`ZZZZZZZZ__\]]]]]\^_–₪תû‏bZZZZZZZZ__\]]]]]\^_©û‏dZZZZZZZZ__\]]]]]\^‏fZZZZZZZZ__\]]]]]\^‏hZZZZZZZZ__\]]]]]\^‏jZZZZZZZZ__\]]]]]\^‏kZZZZZZZZ__\]]]]]\^‏kZZZZZZZZ__\]]]]]\^‏k\ZZZZZZZ__\]]]]\]_‏k\ZZZZZ__\]]\]_¯‏o\ZZZ__\]]_¯‏t\Z__]_¯‏x‏|ÿ ‏>__‏t‏\ZZ\‏p_\ZYZZYZ\_‏m_]YYZZZZZYZ\_‏i\ZY[_]ZYZZZZZ£Z‏f\ZYZZYY[_]ZZZYZ]‏d\ZYZZZZZZYY[_ZZ]^\‏b\ZYZZZZZZZZZZYZ_¯^^\]]‏`\ZYZZZZZZZZZZYZ]^\\]]\‏^\ZYZZZZZZZZZZYZ]^]]\]]]]\‏\\ZYZZZZZZZZZZYZ]^]_¯]]]]]]\‏Z\ZYZZZZZZZZZZYZ]^]_¯_[^]]]]]]\‏X\ZYZZZZZZZZZZYZ]^]_¯_\ZZ^]]]]]]\‏V\ZYZZZZZZZZZZYZ]^]_¯_\ZZ[Z^¯]]]]]]\‏T\ZYZZZZZZZZZZYZ]^]_\ZZZZZZ^]]]]]]\‏R\ZYZZZZZZZZZZYZ]^]_¯[Z[ZZZZZ^]]]]]]\‏P\ZYZZZZZZZZZZYZ]^]_¯‏\ZZZ
+ZZZ^]]]]]]\‏N\ZYZZZZZZZZZZYZ]^]_¯‏\ZZZZZZZ^]]]]]]\‏L\ZYZZZZZZZZZZYZ]^]_¯‏\ZZZZZZZ^]]]]]]\‏J\ZYZZZZZZZZZZYZ]^]_¯‏\ZZZZ
+[Z^]]]]]]\‏H\ZYZZZZZZZZZZYZ]^]_¯‏
+\ZZZZZZZ^]]]]]]\‏F\ZYZZZZZZZZZZYZ]^]_¯‏ZZZZZZZ^]]]]]]\‏D\ZYZZZZZZZZZZYZ]^]_¯‏\ZZZZZ[Z^]]]]]]\‏A_\ZYZZZZZZZZZZYZ]^]_¯‏\ZZZZZZZ^]]]]]]\‏?_ZYZZZZZZZZZYZ]^]_¯‏ZZZZ
+[Z^]]]]]]\‏?_[YYZZZZYZ]^]_¯‏\ZZZZZZZ^]]]]]]\‏?û_[YZYZ]^]_¯‏\ZZZZZZZ^]]]]]]\‏?
+
+û\YZ^]_¯‏ZZZZZZZ^]]]]]]\‏=_[ZZ
+
+ûû^_]]_¯‏ZZZZZ[Z^]]]]]]\‏;_\ZYZZZZ
+
+û^¯‏\Z[ZZZZZ^]]]]]]\‏9_\ZYZZZZZZZZ
+
+‏\ZZZZZZZ^]]]]]]\‏7_[ZYZZZZZZZZZ₪YZ‏\ZZZZZZZ^]]]]]]\‏7^^\ZYZZZZZZZZYZ]	
+	‏\ZZZZZZZ^]]]]]]\‏7Z\\ZYZZZZYZ]^_
 
-	‏/דגדדדדדדדדדדדדדגה
-
-		‏.דגדדדדדדדדדדגה
-
-				‏-דגדדדדדדדגה
-
-						‏-גדדדדגה
-
-							‏,דגגה
-
-						
-	‏+ד
-
-						
-		‏*
-						
-		‏(						
-		‏&					
-		‏$			
-		‏"		
-		‏ 
-		‏	Q			‏Q		
-		‏		
-		‏		ת		‏	מ	
-
-	‏Q		
-		‏		‏		‏		‏		‏		‏‏‏%		ז‏?		ז‏C		ז‏G		ז‏K		ז‏O		ז‏S		ז‏W		ז‏[Q		ז‏_		ז‏cQ		ז‏gPז‏lז‏tז‏}ÿ‏!
-‏zP‏vבPP
-	‏`בPPPאP		‏\בPPPPPPPאPP
-	‏XבPPPPPPPPPPPאPP
-	‏TבPPPPPPPPPPPPPPPאP
-	‏PבPPPPPPPPPPPPPPPPPPPאP
-	‏LבPPPPPPPPPPPPPPPPPPPPPPPאP		‏HבPPPPPPPPPPPPPPPPPPPPPPPPPPPאPP
-	‏DבPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאP
-	‏@בPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאPP
-	‏<בPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאP
-	‏8בPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאP
-	‏4בPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאP
-	‏0בPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאPP		‏,בPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאP
-	‏)בPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבג
-	‏'PאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבגגגבג
-	‏'PPPאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבגגגגגגבג
-	‏'PPPאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבגגגגגגגגגבג
-	‏'PPPאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבגגגגגגגגגגגגבג
-	‏'PPPאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבגגגגגגגגגגגגגגגגבג		‏'PPPאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבגגגגגגגגגגגגגגגגגגגבג
-	‏'PPPאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבגגגגגגגגגגגגגגגגגגגגגגבג		‏'PPPאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגבג		‏'PPPאPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבû	‏'PPPאPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבגת	‏'PPPאPPPPPPPPPPPPPPPPPאבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבג		‏'PPPאPPPPPPPPPPPPPאבבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגבג	‏'PPPאPPPPPPPPPאבבבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגבג	‏'PPPאPPPPPאבבבבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגבג	‏'PPPPPאבבבבבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגבג	‏'Pבבבבבבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגבג	‏'באבבבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגגבג	‏(בבבבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגגבג‏‏/בבבבבבבבבגגגגגגגגגגגגגגגגגגגגגגבג‏=בבבבבבבגגגגגגגגגגגגגגגגגגגגגבג‏@באבבבגגגגגגגגגגגגגגגגגגגגבג‏Cבאגגגגגגגגגגגגגגגגגגגגבג‏Fבבגגגגגגגגגגגגגגגגגבג‏Jבגגגגגגגגגגגגגגבג‏Mבבגגגגגגגגגגבג‏Pבבגגגגגגגבג‏Sגבגגגגבג‏Vגבגבג‏Yגג‏]‏`‏d‏h‏l‏p‏t‏x‏|ÿ‏(	‏k	‏g	‏c	‏_	‏[	‏W	‏S	‏O	‏K	‏G	‏C	‏?	‏;	‏7	‏3	‏/	‏+	‏'	‏#	‏	‏	‏‏Q‏‏R	‏אQ	‏א
-‏P
-‏אPת‏PP‏PP‏אא‏P	‏א‏4P‏7P‏;P‏?P‏CP‏GP‏Kא‏OP‏SP‏W
-P‏[P‏_‏c‏g‏k‏o‏s‏v‏zÿ‏+ת‏k‏g‏d	‏`Q	‏\Q	‏X	‏T
-‏P
-‏LPRת‏HP‏DP‏@א‏<‏9‏5	‏1Q	‏-	‏)
-‏%
-‏!PRת‏P‏P‏א‏	‏ת‏‏Q‏	‏ת‏P‏‏ Q	‏ת‏P‏ ‏!‏5‏9‏=‏A‏E‏I‏L‏Q‏T‏X‏\‏`‏d‏h‏k‏o‏s‏w‏zÿ‏+‏‏yP‏j	‏fת‏bP‏_‏[
-‏WR‏SP‏P	‏L
-‏HR‏DP‏A	‏=
-‏9‏5P‏2	‏.ת‏*‏'P		‏$	‏#
-‏#P	ת‏#א
-‏#	
-‏#ת‏$P		‏$את‏$‏$	ת‏$‏%ז
-‏$Pג‏%PPPאז	‏%PPPPP‏&PPPPPPPאדז‏%PPPPPPPPPב
-‏%PPPPPPPPPPPז‏&PPPPPPPPPPז	‏&PPPPPPPP‏‏&PPPPPPP‏>PPPPP‏BPPP‏FPPP‏I‏M‏Q‏U‏X‏\‏`‏d‏g‏k‏n‏r‏u‏y‏}ÿ!‏'זז‏v‏kPPג‏fPPPPPPאז	‏bPPPPPPPPPPת‏^PPPPPPPPPPPPPא‏[PPPPPPPPPPPPPPPPPב
-‏WPPPPPPPPPPPPPPPPPPPPP‏TPPPPPPPPPPPPPPPPPPPPPPPPה	‏PPPPPPPPPPPPPPPPPPPPPPPPPPPPג‏MPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPא
-‏IPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏FPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏CPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPב	‏?PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPג‏<PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPה
-‏9PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPג	‏5PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPא‏2PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPב
-‏0PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏,PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPה‏+PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPגז	‏*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏+PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPגת‏+PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאדז	‏+PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPבזז‏,PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPזז
-‏,PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPהז‏,PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPגזזז‏,PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאגוזז	‏,PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבהז‏,PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבאגזזז‏-PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבאבבבבבבאבוחז	‏-PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבאבבבבבבבבבבבדזז‏-PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבאגזחזז
-‏.PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבהחז	‏.PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבדזזז	‏/PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבאגוחזז‏.PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבהחזז‏/PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאגזחזז‏0PPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאבוחז‏0PPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבהחזז‏1PPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבגסחז‏1PPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאבוזזז‏2PPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא‏זזזזז‏2PPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאבב‏זז
-‏3PPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאב‏	‏4PPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאבב‏	‏4Pאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאבב‏	‏5אאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאב‏‏4אאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאבא‏	‏5אאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאב‏‏6אאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאא‏Yאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאבא‏]אאבבבבבבבבבבבבבבבבבבבבבבבבבבבבאבא‏`אאבבבבבבבבבבבבבבבבבבבבבבבבבאבב‏cאאאבבבבבבבבבבבבבבבבבבבבבאבב‏gאאבבבבבבבבבבבבבבבבבבאבב‏jאאבבבבבבבבבבבבבבבאבא‏nאאבבבבבבבבבבבאבב‏qאאבבבבבבבבאבב‏tאאאבבבאאבא‏xאאאאאב‏{אאÿ,‏&באאהחזז‏wאאאבבבדזזזזז‏rבאאבבבבבאגסחזזז‏mאבאבבבבבבבבבבהחזזז	‏jבבאבבבבבבבבבבבבאדזחזזז	‏gבבאבבבבבבבבבבבבבבבאבוחזז	‏cבבאבבבבבבבבבבבבבבבבבבבבהחז	‏`באאבבבבבבבבבבבבבבבבבבבבבבאגזחז‏]בבאבבבבבבבבבבבבבבבבבבבבבבבבבאבוחז‏Yבבאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבדחז‏Vבבאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאגסחז‏Sבבאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבהחח‏Pבאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבדזחז‏Mבבאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאגוחז‏Jבאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבהח‏Gבבאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאגזח‏Cבבאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאבסח‏?בבאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבqח‏;אאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבpחא‏7באאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבהח	‏5Pאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבנח	‏3באבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבנע‏3אאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבנעP‏2אאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבגע‏1באאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€ע‏1באבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€ע‏0אאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€ע‏0אאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבע‏/אאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבע‏.אאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבע‏.אאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבח‏-באבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€בח‏,באאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€אח‏,באבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€אח‏+באבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€אחR‏+אאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€אח‏*אאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€אע‏)באבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€אע‏(בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€איQ‏(בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€איQ‏'בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€אסQ‏&בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€בבנע‏%בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€€€€בני	‏$בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€בני	û‏#בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€בני	PQ‏%בבבבבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€בני	
-‏(בבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€ב€ף	‏+בבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€בנף	
-‏.באבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€בני	בת‏1€ב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€בנף	Q	ת‏4€ב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€בנף	באQ‏8ב€€€€€€€€€€€€€€€€€€€€€€€€€€€בנ		בא‏;ב€€€€€€€€€€€€€€€€€€€€€€€€בנף	בבבQ	‏>ב€€€€€€€€€€€€€€€€€€€€€בני	אבבבב‏@€€€€€€€€€€€€€€€€€€€בני		בבבבבאא‏@€€€€€€€€€€€€€€€€בנף	אבבבבאב‏Aבב€€€€€€€€€€€בנף	
-בבבבאב‏B€ב€€€€€€€€בנף		אבבאב‏C€ב€€€€€בני	
-באא‏E€ב€€בני	
-גבא‏E€בנ		
-גבגגבב‏Gח	
-גבגגגגגגאב	‏H	
-גבגגגגגגבבג‏K
-גבגגגגגגבבב‏M	גבגגגגגגבבב‏P
-ûדבבגגגגבבב‏R
-ת
+	‏\Z[ZZZZZ^]]]]]]\‏7ZZZ]\ZYYZ]^\\_	
+	‏\ZZZZZ[Z^]]]]]]\‏7ZZZZZ]\]^\\]\_			
+	‏\ZZZZZZZ^]]]]]]\‏7ZZZZZZZ]¯^\\]]]\_					
+	‏ZZZZ
+ZZ^]]]]]]\‏7ZZZZZZZY__\]]]]]\_							
+	‏\ZZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_									
+	‏ZZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_											
+	‏ZZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_													
+	‏
+ZZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^															
+	‏\ZZ
+ZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																	
+	‏\ZZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																			
+	‏\ZZ
+ZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																					
+	‏\ZZZ
+ZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																							
+	[ZZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																									
+	û_[ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^																											
+û\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^																													\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																														ת\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZ
+ZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZ
+ZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\Z[ZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZ
+ZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZ
+ZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZ[Z^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\Z
+ZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]]‏7ZZZZZZZZ__\]]]]]\_																															û\ZZZZZZ^]]]]]]\‏7ZZZZZZZZ__\]]]]]\_																															û[Z[ZZZZ^]]]]\]_‏7ZZZZZZZZ__\]]]]]\_																															ת[ZZ[ZZ^]]\]_¯‏8ZZZZZZZZ__\]]]]]\_																															ת^[Z
+Z^]]_¯‏:ZZZZZZZZ__\]]]]]\_																															û‏^[Y^_¯‏<ZZZZZZZZ__\]]]]]\_																															û‏‏>ZZZZZZZZ__\]]]]]\_																															û‏‏?ZZZZZZZZ__\]]]]]\_																															û‏‏AZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\^																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\^																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏JZZZZZZZZ__\]]]]]\_																															û‏J\ZZZZZZZ__\]]]]\\^																														û‏J\ZZZZZ__\]]\]_‏תû
+																													û‏L\ZZZ__\]]_¯‏
+																											û‏N\Z__]_¯‏
+																									û‏P‏
+																							û‏R‏
+																					û‏e
+																			û‏g
+																	û‏i
+															û‏k
+													û‏m
+											û‏o
+									û‏q
+							û‏s
+					û‏u
+			ת‏w
+û‏y‏{ÿ ‏>__‏t‏\ZZ\‏p_\ZYZZYZ\_‏m__]YYZZZZZYZ\_‏i\YY_]ZYZZZZZ£Z‏f\YY\ת
+]ZZZYZ]‏d\YY\		[__ZZ]^\‏b\YY\		ZZ£Z_¯^^\]]‏`\YY\	
+	YZ₪Z]^\\]]\‏^\YY\^Y₪Z]^]]\]]]]\‏\\YY\ת\YZ]^]_¯]]]]]]\‏Z\YY\תû\YZ]^]_[^]]]]]]\‏X\YY\\YY]^]_Y^]]]]]]\‏V\YY\ת\YY]^]_¯ת_Y^¯]]]]]]\‏T\YY\ת\YZ]^]__Y^]]]]]]\‏R\YY\ת\YZ]^]__Y^]]]]]]\‏P\YY\\YZ]^]__Y^]]]]]]\‏N\YY\\YZ]^]_¯_Y^]]]]]]\‏L\YY\ת\YY]^]__Y^]]]]]]\‏J\YY\ת\YY]^]_¯_Y^]]]]]]\‏H\YY\ת\YZ]^]_¯_Y^]]]]]]\‏F\YY\ת\YZ]^]_¯_Y^]]]]]]\‏D\YY\ת\YZ]^]_¯_Y^]]]]]]\‏A_\YY\ת\YY]^]_¯_Y^]]]]]]\‏?_Z\\YZ]^]_¯_Y]]]]]]\‏?­\YY]^]__Y^]]]]]]\‏?ûû_\YY]^]_¯_Y^]]]]]]\‏?
 
-ûהבבבבב‏U
-û	בה
-ûהב‏W
-û	גדגהת‏Z
-û	גדדדג‏Z
-û	גדדדד‏[
-û	גדדדד‏\
-û	גדדדד‏\
-û	גדדדד‏]
-û	גדדדד‏]
-û	גדדדד‏^
-û	גדדדד‏^	û	גדדדד‏_û	גדדדד‏_תגגדדד‏_		ûדדד‏_		ûבגד‏_				ûבבגגבג‏_							ûבבגגגגגבאב‏`										ûבבגגגגגבבבג‏a												ûבבגגגגגבבבב‏c										ûבבגגגגגבבבב‏e								ûבבגגגגגבבבב‏g						ûבבגגגגגבבבב‏i				ûבבגגגגגבבבב‏k			ûבבגגגגגבבבב‏m	ûבבגגגגגבבבב‏oûûבבגגגגגבבבב‏qבבגגגגגבבבב‏tאבבבגגבבבב‏xבבבבבב‏|בבÿ7‏9‏|א‏x‏t‏p‏l‏hPא‏e^_‏c[¡]‏b
-[¡  ]‏bת[¡ ¡¡ ]‏bPב[¡ ¡¡¡¡ ]‏bבבבאת[¡ ¡¡¡¡¡¡ ]‏bבבבבבא	ת_[¡ ¡¡¡¡¡¡¡W ]‏bבבבבבבבא	[¡ ¡¡¡¡¡¡¡¡¡ ¡_‏aבבבבבבבבבא
-\¡¡¡¡¡¡¡¡¡¡¡¡¢\û‏`באבבבבבבבבאג_¡¡¢¡¡¡¡¡¢¡¡¢\בג‏^באבבבבבבד_¢¡¡¡¡¡¢¡¡¢\בבגגבג‏Zבבאבבבבד_¢¡¡¡¢¡¡¢\בבגגגגגגבב‏Vבבבגבבבאבבד_¢¡¢¡¡¢\בבגגגגגגגגגגבב‏Rבבבגגגגגבבבאד_¢¡¡¢\בבגגגגגגגגגגגגגגבב‏Nבבבגגגגגגגגגבבג_¢¢\בבגגגגגגגגגגגגגגגגגגבב‏Jבבבגגגגגגגגגגגגגבב	¢U
-ובבגגגגגגגגגגגגגגגגגגגגגגבב‏Fבבגגגגגגגגגגגגגגגגגבבבבבגגגגגגגגגגגגגגגגגגגגגגגגגגבב‏Bדבגגגגגגגגגגגגגגגגגגגגבגגבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבדû‏A
-ûהבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב‏?גה
-תהבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבדת‏>דדגה
-תהבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב‏<דדדדגהתûהבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבדת‏;דדדדדדגה
-ûהבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב‏9דדדדדדדדגהתûהבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבת‏8דדדדדדדדדדגה
-ûהבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב‏6דדדדדדדדדדדדגהתûהבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבת‏5דדדדדדדדדדדדדדגה
-תהבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב‏3דדדדדדדדדדדדדדדדגה
-תהבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגב
-‏2דדדדדדדדדדדדדדדדדדגה
-ûהבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב‏0דדדדדדדדדדדדדדדדדדדדגה
-ûהבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבג
-‏/דההדדדדדדדדדדדדדדדדדדדגה
-ûהבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב‏-דדהההההההההההההההההההההדגתûבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבג
-‏+ûדדההההההההההההההההההההההד
-בבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב‏(בגדדהההההההההההההההההההההדדה	גבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבג
-‏$בבבבגבבהדהההההההההההההההההההההדדד	דבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבא‏ בבבבגגגגגבג	הדההההההההההההההההההההההדג
-בבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבד
-‏בבבבגגגגגגגגגבב	הדההההההההההההההההההההההדגתûבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבד
-	û‏בבבבגגגגגגגגגגגגגבב	דדהההההההההההההההההההההדדגה
-גבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב
-	û‏בבבבגגגגגגגגגגגגגגגגגבג	הדההההההההההההההההההההדדדגדגבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבד
-		û‏בבבבגגגגגגגגגגגגגגגגגגגגגבבדדהההההההההההההההההההדדדדגד
-דבבגגגגגגגגגגגגגגגגגגגגגגגגבבד
-				û‏בבבבגגגגגגגגגגגגגגגגגגגגגגגגגבב	דדההההההההההההההההההדדדדדגגזûתהבבגגגגגגגגגגגגגגגגגגגגבבד
-					û‏בבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבגדדההההההההההההההההההדדדדדדג
-בבגגגגגגגגגגגגגגגגבבד
-						û‏בבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבגדדהההההההההההההההההדדדדדדדגה	גבבגגגגגגגגגגגבבד
-							û‏בבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבדדההההההההההההההההדדדדדדדדגד	בבגגגגגגגבבד
-								û‏בבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבהדהההההההההההההההדדדדדדדדדגד
-בבגגגבבד
-									û‏גבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבגדדדההההההההההההההדדדדדדדדדגגûûבבבד
-										û‏גבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגאבû
-זדדדההההההההההההדדדדדדדדדדדגה
-
-									
-‏בבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבת
-	דדדההההההההההדדדדדדדדדדדדג									
-‏בבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבû	ûהדדההההההההההדדדדדדדדדדדדג
-							
-‏בבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבû				
-תדדדההההההההדדדדדדדדדדדדת					
-‏בבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבû										ת	דדדההההההדדדדדדדדדדדת				
-‏בבבבגגגגגגגגגגגגגגגגגגגגגגגגגגגבבû													ת	הדדדההההדדדדדדדדדדמת			
-‏!בבבבגגגגגגגגגגגגגגגגגגגגגגגבבû												
-‏תהדדההההדדדדדדדדת		
-‏%בבבבגגגגגגגגגגגגגגגגגגגבבû												
-‏
-זדדדההדדדדדדדמת		
-‏*בבבבגגגגגגגגגגגגגגגבבû											
-‏	דדדהדדדדדת	
-‏-בבבבגגגגגגגגגגגבגû											
-‏הדדדדדדת
-‏1בבבבגגגגגגגבבû											
-‏תהגדדת
-‏5בבבבגגגבבû										
-‏
-גת	‏9בבבבגû										
-‏‏=בû									
-‏$‏Aû									
-‏i									
-‏k								
-‏m								
-‏o								
-‏q						
-‏s				
-‏u		
-‏w	
-‏y
-‏{ÿ ‏c‏{Q‏w‏sQ‏oQ‏kQ‏gQ‏c	Q‏_Q‏[Q‏WQ‏SQ‏OQ‏K‏GQ‏E‏DQ‏D‏DQ‏D	‏DQ‏E‏FP‏GP‏HP‏Iת‏Jת‏K
-‏L
-‏M
-‏N
-‏O	‏P	‏Q	‏R	‏S‏T‏T	‏U	‏V^µ]‏W^²²µ]‏X_³³²²µ]‏Y^³³³³²²µ]‏Z^³³³³³³²²µ]‏[^³³³³³³³³²²µ]‏\_³³³³³³³³³³²²µ]‏]_³³³³³³³³³³³³²²µ]‏^^³³³³³³³³³³³³³³²²µ]‏_^³³³³³³³³³³³³³³³³²²µ]	‏`_³³³³³³³³³³³³³³³³³³²²µ]‏a^³³³³³³³³³³³³³³³³³³³³²²µ]‏b^³³³³³³³³³³³³³³³³³³³³³³²²µ]‏c^³³³³³³³³³³³³³³³³³³³³³³³³²²µ‏d_³³³³³³³³³³³³³³³³³³³³³³³³³³²²‏c^³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏c^³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏c_³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏c^³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏c^³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏c^³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏c^³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏a_³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏^
-	^²³³³³³³³³³³³³³³³³³³³³³³³³³²³‏\	דב¯Z³²³³³³³³³³³³³³³³³³³³³³³³³²³‏Zבבגדגז_¹³²³³³³³³³³³³³³³³³³³³³³³²³‏Yהבגגגגגבû_¹³²³³³³³³³³³³³³³³³³³³³²³‏X	גבגגגגגב_¹³²³³³³³³³³³³³³³³³³³²³‏Vמהבגגגגגגגבבבב_Z³²³³³³³³³³³³³³³³³²³‏U
-גבגגגגגגגגבבבבבב_¹³²³³³³³³³³³³³³³²³‏T
-בגגגגגגגגגגבבבבבבבב_Z³²³³³³³³³³³³³²³‏Tגגגגגגגגגגגגבבבבבבבבבבû_¹³²³³³³³³³³³²³‏Sבגגגגגגגגגגגבבבבבבבבבבב_Z³²³³³³³³³²³‏Rûגגגגגגגגגגגגגבבבבבבבבבבבבב_¹³²³³³³³²³‏Rבגגגגגגגגגגגגבבבבבבבבבבבבבב_¹³²³³³²³‏R
-הבגגגגגגגגגגבבבבבבבבבבבבבבבבב_¹³²³²³‏Tתגגגגגגגגגבבבבבבבבבבבבבבבבב_¹³²³‏Uתהגגדגגגגגבבבבבבבבבבבבבבבבבבבû¸´‏Wתהגגדגגגזבבבבבבבבבבבבבבבבבבבבב‏Yתהגגדגזבבבבבבבבבבבבבבבבבבבבבבבאד‏[תהגבזבבבבבבבבבבבבבבבבבבבבבבבבבב‏]תהבבבבבבבבבבבבבבבבבבבבבבבבב‏_בבבבבבבבבבבבבבבבבבבבבבבבבב‏aבבבבבבבבבבבבבבבבבבבבבבבבב‏cבבבבבבבבבבבבבבבבבבבבבבבבבב‏cבבבבבבבבבבבבבבבבבבבבבבבבבב‏cבבבבבבבבבבבבבבבבבבבבבבבבב‏cבבבבבבבבבבבבבבבבבבבבבבבבבב‏cבבבבבבבבבבבבבבבבבבבבבבבבבב‏cבבבבבבבבבבבבבבבבבבבבבבבבבב‏cבבבבבבבבבבבבבבבבבבבבבב‏cבבבבבבבבבבבבבבבבבבבבבבב‏c
-בבבבבבבבבבבבבבבבבבבב‏d
-דבבבבבבבבבבבבבבבבבב‏f
-בבבבבבבבבבבבבבבבב‏h
-בבבבבבבבבבבבבב‏j
-דבבבבבבבבבבבבב‏l
-בבבבבבבבבבב‏n
-בבבבבבבבב‏p
-בבבבבבב‏r
-בבבבב‏t
-בבב‏v
-דבב‏x
-דב‏z
-P‏}	‏~‏ÿ‏‏‏~‏~	‏~‏ÿ‏>‏z‏v‏r‏n‏j‏f‏b‏^‏Z‏V‏R‏N‏J‏F‏B‏>‏:‏5P	‏,P
-‏%P
-P‏!P
-גP‏P
-גPPPPP‏P
-גאPאPPPPPP‏P
-גPPאPPPPPPPPPP‏P
-גPPאPPPPPPPPPPPPPPP‏P
-גPPאPPPPPPPPPPPPPPPPPא‏P
-גPPאPPPPPPPPPPPPPPPPPPPPP‏P
-גאPאPPPPPPPPPPPPPPPPPאPPP‏P
-גPPPPPPPPPPPPPPPPPPPPאPPP‏P
-גPPאPPPPPPPPPPPPPPPPPאPPP‏P
-גPPאPPPPPPPPPPPPPPPPPאPPP‏P
-גPPאPPPPPPPPPPPPPPPPPאPPP‏P
-גPPאPPPPPPPPPPPPPPPPPאPPP‏P
-גPPאPPPPPPPPPPPPPPPPPאPPP‏P
-גאPאPPPPPPPPPPPPPPPPPאPPP‏P
-גPPאPPPPPPPPPPPPPPPPPאPPP‏P
-זגPPאPPPPPPPPPPPPPPPPPאPPP‏¶]	גבגדגגגגגגבבבבבבבבבבאPPPPPPPPPPPPPPPPPPPאPPP‏²²µ]	באבבבבבבבבבבבבבבבבבבאאPPPPPPPPPPPPPPאPPP‏³³²²µ]באבבבבבבבבבבבבבבבבבאאאPPPPPPPPPPאPPP‏³³³³²²µ]באבבבבבבבבבבבבבבבבאאאאPPPPPPאPPP‏!³³³³³³²²µ]באבבבבבבבבבבבבבבבבאאאאPPPPPP‏#³³³³³³³³²²µ\באבבבבבבבבבבבבבבבאאאאאP‏%³³³³³³³³³³²²µ]באבבבבבבבבבבבבבבאאאאא‏'³³³³³³³³³³³³²²µ\באבבבבבבבבבבבבבבאא‏(³³³³³³³³³³³³³³²²µ]באבבבבבבבבבבבבא‏)³³³³³³³³³³³³³³³³²²µ]באבבבבבבבבבא‏*³³³³³³³³³³³³³³³³³³²²µ\באבבבבבבאב‏*³³³³³³³³³³³³³³³³³³³³²²µ]באבבבב‏+³³³³³³³³³³³³³³³³³³³³³³²²µ]באבא‏,³³³³³³³³³³³³³³³³³³³³³³³³²²µ]ב‏,³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏-³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏.³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏/³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏0³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏1³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏2³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏3³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏4³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏5²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏6¹³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏7_Z³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏8_¹³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏9û_Z³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏:בב_¹³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]	‏;בב_Z³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏<בבבב_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏=בבבבבב¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏>בבבבבבבבבû_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ‏?בבבבבבבבבבבאא_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²‏>בבבבבבבבבבבבא_Z³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבאאû_¹³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבאא¹³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבא_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבא_Z³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבא_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבא_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבא_Z³²³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_Z³²³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_Z³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא_¹³²³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאû_¹³²³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_¹³²³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_Z³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא_¹³²³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא_Z³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאû_¹³²³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_Z³²³³³³³³³²³‏>
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא_¹³²³³³³³³³‏>
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא_¹³²³³³³³‏@
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_¹³³³³³‏B
-דבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_¹³²³‏Dתבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאû¸´‏F
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא‏F		תבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאד‏Fתתבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא‏F	דתתבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏Fזההדתתבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏G	הההדדתתבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏Gûהההההדדתתבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב‏Hהההההההדדתתבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב‏Hגההההההההדדתתבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב‏Iהדדהההההההדדתתבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב‏I
-הדדההההההדדתתבבבבבבבבבבבבבבבבבבבבבבבבבבבבב‏Lתהדדהההההדדתתבבבבבבבבבבבבבבבבבבבבבבבבבבב‏Oתהדדההההדדתתבבבבבבבבבבבבבבבבבבבבבבבב‏Rûהדדההההדûתבבבבבבבבבבבבבבבבבבבבבבב‏Uûדדהההדתתבבבבבבבבבבבבבבבבבבבב‏Xûדדההדתתבבבבבבבבבבבבבבבבבב‏\דדדדתתבבבבבבבבבבבבבבבבב‏_	דדגתתבבבבבבבבבבבבבב‏b	זדגתתבבבבבבבבבבבבב‏e
-גה
-בבבבבבבבבבב‏h	
-תבבבבבבבבב‏k	ת
-בבבבבבב‏nû
-דבבבבב‏q
-דבבב‏t
-דבב‏w
-דב‏z
-P‏}	‏~‏ÿ‏ÿ‏
-‏~‏}ת‏~ÿ‏?‏|‏xPPPא‏tPPPPPPPP‏pPPPPPPPPPPPP‏lPPPPPPPPPPPPPPPP‏hPPPPPPPPPPPPPPPPPPPP‏dPPPPPPPPPPPPPPPPPPPPPPPP‏`PPPPPPPPPPPPPPPPPPPPPPPPPPPP‏\PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPא‏XPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאא‏UPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבב‏QPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבאב‏NPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבאב‏KPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבב‏HPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבב‏EPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבב‏BאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבבגגבג‏?אאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבבבגגגגבג‏=אPאאאאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבבבבגגגגגגבג‏<אאאאאאאאPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגבב‏:בבבאאאאאאאאPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגגגב‏8באבבבאאאאאאאאאPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגגגגגגב‏7אבבבבבבאאאאאאאאאPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגגגגגגגגא‏4בבבבבבבבבאאאאאאאאאאPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגגגגבבגבא‏1בPבבבבבבבבבאאאאאאאאאאאPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגגגבב‏.תבאבבבבבבבבבאאאאאאאאאאאPPאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגגבבא‏,PבאבבבבבבבבאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגבבP‏(באבבבבבבבאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגבבP‏%באבבבבבבאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגבבP‏"באבבבבבבאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגבבזP‏באבבבבבאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבגגגגגגבבזP‏באבבבבאאאאאאאאבבבבבבבבבבבבבבבבבבבבבגגגגגבבP‏באבבבבאאאאאאאבבבבבבבבבבבבבבבבבבבגגגגבבP‏באבבבאאאאאאבבבבבבבבבבבבבבבבבגגגגבבP‏באבבאאאאאאבבבבבבבבבבבבבבבגגגבבP‏באבבאאאאבבבבבבבבבבבבבבגגבבP‏באבאאאאבבבבבבבבבבבבגבבP‏
-באאאאאבבבבבבבבבבבבP‏	באאאבבבבבבבבבבזP‏	בPאבבבבבאבזP‏
-אאבבאP‏באP‏P‏¶]P‏²²µ]‏³³²²µ]‏³³³³²²µ]‏³³³³³³²²µ]‏³³³³³³³³²²µ\‏³³³³³³³³³³²²µ]‏³³³³³³³³³³³³²²µ\‏³³³³³³³³³³³³³³²²µ]‏ ³³³³³³³³³³³³³³³³²²µ]‏"³³³³³³³³³³³³³³³³³³²²µ\‏$³³³³³³³³³³³³³³³³³³³³²²µ]‏&³³³³³³³³³³³³³³³³³³³³³³²²µ]‏(³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏*³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏,³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏.³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏/³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏0³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏1³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏2³³³³³³³³³³³²³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏3³³³³³³³³³²³¶³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏4³³³³³³³³³·_VUUU´³²³³³³³³³³³³³³³³³³³³³³³²²µ]‏5³³³³³³³·]
-חזהבאב±²³³³³³³³³³³³³³³³³³³³³²²µ]‏6¹³³³³µ^
-			דבאבבאבR²³³³³³³³³³³³³³³³³³³³³²²µ]‏7_Z³²¸תמ
-דאאבבבבבאא²³³³³³³³³³³³³³³³³³³³³²²µ]‏8_¸¹‏תבאאבבבאאאב±²³³³³³³³³³³³³³³³³³³³²²µ]‏9באû‏גאאבבבאאאבR²³³³³³³³³³³³³³³³³³³³²²µ]‏:בבבא	‏	האאבבאאאא²³³³³³³³³³³³³³³³³³³³²²µ]	‏;בבבא‏ûבאאבבאאאאב±³³³³³³³³³³³³³³³³³³³²²µ]‏<בבבבא‏גאאאבאאאאR²³³²³³³³³³³³³³³³³³³²²µ]‏=בבבבא‏
-האאאבאאאP	_·³²³³³³³³³³³³³³³³³²²µ]‏>בבא‏ûבPאבאאPא^·³²³³³³³³³³³³³³³³³²²µ‏?בב‏באאP^·³²³³³³³³³³³³³³³³³²²‏>בב‏אאPP_·³²³³³³³³³³³³³³³²³‏>בב‏אאPP_·³²³³³³³³³³³³³²³‏>בב‏אאPP_·³²³³³³³³³³³²³‏>בב‏!אאPP^·³²³³³³³³³²³‏>בב‏#אאPP_·³²³³³³³²³‏>בב‏%אאPP_·³²³³³²³‏>בב‏'אאP^·³²³²³‏>בב‏
-û‏אאPP^·³²‏?בב‏û‏אאPP_¶³‏>בבבû‏
-
-û‏אאPP‏?בבבבב
-‏
-ת‏P‏@בבבבב	‏
-	בהûû‏P‏Bבבבבב	‏מ
-	€אבהת‏‏Dבבבבבב‏
-	€בבבבהת‏Lבבבבבבב‏
-	€בבבבבבהתû‏Jבבבבבבבבב‏
-	€בבבבבבבבהת‏Hבבבבבבבבב‏
-	€בבבבבבבבבבהû‏Fבבבבבבבבבג	‏
-	€בבבבבבבבבבבבהû‏D
-בבבבבבבבב‏
-	€בבבבבבבבבבבבבבהת‏B
-בבבבבבבב‏מ
-	€בבבבבבבבבבבבבבבבqת‏B
-בבבבבבבב‏
-בבבבבבבבבבבבבבבבבבבהû‏D
-בבבבבבבב	‏מ
-זעבאבבבבבבבבבבבבבבבבבא‏F
-בבבבבבב‏תûתע€אבבבבבבבבבבבבבבבב‏H
-דבבבבבבבב‏	
-דבבבע€אבבבבבבבבבבבבבב‏Jתבבבבבבב‏תבבבבע€אבבבבבבבבבבבב‏Lûבבבבבבב
-‏ûבבבבאע€אבבבבבבבבבב‏Lה	בבבבבבû‏ûבבבבבעבאבבבבבבבב‏Lבג
-תבבבבבבב‏ûבבבבבע€אבבבבבב‏Mבאד
-תבבבבב‏ûבבבבבע€אבבבב‏Nגבבד
-תבבבבבבג‏ûבבבבבעבאבב‏Oûבגגבד
-בבבבבג‏ûבבבבבעבא‏Pûבגגבד
-תבבבבבג‏ûבבבבאח‏Qבבגגבד
-תבבבבבג‏ûבבבאה‏Sûהבגגגבד
-תבבבבבג‏ûבאבP‏Uגבגגבבד
-בבבבבג‏ûג‏Yבגגגגבג
-תבבבבבג‏e
-בגבב
-בבבבבג‏dבהת
-		תתבבבבבאג‏dת	ת
-בבבבבבג‏cההההזתû
-דבבבבבג‏cûדדהדדהû
-בבבבבג‏bûדההההדדה
-דבבבבבג‏aתדהההדדדדד	תדבבבבבג‏`
-דהד	דההדדדתתבבבבבג‏aûגתגדדהההדדהתבבבבבPב‏aהדדדדדההדדדתדבבבב‏cגדדדדדדדהדדדתבב‏dהגגדדדדדדדדדדתדבב‏fûהגגדדדדדדדדדתדב‏h	הגגדדדדדדגדתP‏jמ	הגגדדדדגגד
-‏k	דה		גגגגגגגד‏kגדהבגגגגדד‏k
-דגדדה
-בגגגגגדדד‏kזגדדגזבגגגגדדדד‏m	דדהדדתבגגגגגדהג‏nגדדגהבגגגגדג‏o	דגדדהתגגגגבג‏q
-הגגדבג‏u
-דדת‏y
-ז‏}û‏}‏}ÿ‏Iû‏x	‏j‏	‏cR	דב‏^ת		גבבבב‏Zת	גבגגגגבבב‏Vת	גבגגגגגגגגבבב‏R
-	גבגגגגגגגגגגגגבבב‏Nתגבגגגגגגגגגגגגגגגגבבב‏J	ת	גבגגגגגגגגגגגגגגגגגגגגבבב‏F
+û\£[^]_¯_Y^]]]]]]\‏=_[ZZ
 
-ה	ûת		גבגגגגגגגגגגגגגגגגגגגגגגגגבבב‏B
+ûû^_]]_¯_Y^]]]]]]\‏;_\ZYZZZZ
 
-דדדגדה	ûתגבגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבב‏>
+û_¯_Y^]]]]]]\‏9_\ZYZZZZZZZZ
 
-דההההדדגגדה	תגבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבב‏:
+_Y^]]]]]]\‏7_[ZYZZZZZZZZZ₪YZ_Y^]]]]]]\‏7^^\ZYZZZZZZZZYZ]¯_Y^]]]]]]\‏7Z\\ZYZZZZYZ]^^_Y^]]]]]]\‏7ZZZ]\ZYYZ]^\\^Y^]]]]]]\‏7ZZZZZ]\]^\\]]^Y^]]]]]]\‏7ZZZZZZZ]¯^\\]]]\^_Y^]]]]]]\‏7ZZZZZZZY__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^
+ת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^
+_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^ת_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^O	_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^O	_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^O
+Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^
 
-דההההההדדדדדגגדמגבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבב‏6
+_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]]‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]]]\‏7ZZZZZZZZ__\]]]]]\^_Y^]]]]\]_‏7ZZZZZZZZ__\]]]]]\^_Y^]]\]_¯‏8ZZZZZZZZ__\]]]]]\^_Y^]]_¯‏:ZZZZZZZZ__\]]]]]\^_Y^_¯‏<ZZZZZZZZ__\]]]]]\^^‏>ZZZZZZZZ__\]]]]]\^‏‏?ZZZZZZZZ__\]]]]]\^‏‏AZZZZZZZZ__\]]]]]\^‏JZZZZZZZZ__\]]]]]\^‏LZZZZZZZZ__\]]]]]\^‏NZZZZZZZZ__\]]]]]\^‏PZZZZZZZZ__\]]]]]\^‏RZZZZZZZZ__\]]]]]\^‏TZZZZZZZZ__\]]]]]\^‏VZZZZZZZZ__\]]]]]\^‏XZZZZZZZZ__\]]]]]\^‏ZZZZZZZZZ__\]]]]]\^‏\ZZZZZZZZ__\]]]]]\^‏^ZZZZZZZZ__\]]]]]\^‏`ZZZZZZZZ__\]]]]]\^‏bZZZZZZZZ__\]]]]]\^‏dZZZZZZZZ__\]]]]]\^‏fZZZZZZZZ__\]]]]]\^‏hZZZZZZZZ__\]]]]]\^‏jZZZZZZZZ__\]]]]]\^‏kZZZZZZZZ__\]]]]]\^‏kZZZZZZZZ__\]]]]]\^‏k\ZZZZZZZ__\]]]]\]_‏k\ZZZZZ__\]]\]_¯‏o\ZZZ__\]]_¯‏t\Z__]_¯‏x‏|ÿ ‏>__‏z\ZZ\‏v_\ZYZZYZ\_‏r\ZYZZZZZZYZ\_‏n_\ZYZZZZZZZZZZ£Z‏k\ZYZZZZZZZZZZYZ]‏i_\ZYZZZZZZZZZZYZ]^\‏g_\ZYZZZZZZZZZZYZ]^\]]‏e\ZYZZZZZZZZZZYZ]^\\]]\‏c\ZYZZZZZZZZZZYZ]^\\]]]]\‏a_\ZYZZZZZZZZZZYZ]^\\]]]]]]\‏_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]‏]\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\‏[_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏Y_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_‏W_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]‏U\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]__]]\‏S\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]‏Q_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]\‏O_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]\‏M_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]\‏K_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^‏I_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^¯‏G_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]]]]]]]]]]]^_]‏E\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\\‏C_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]\]^_]\]]\‏A_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]\‏?\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]]]]\‏=_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]]]^_]\]]]]]]]\]‏;_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]\^]]\]^‏9_\ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]]]^_]\]]]]]_^\^‏7_[ZYZZZZZZZZZZYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^_]\]]]]^_¯_]_‏7\ZYZZZZZZZZYZ]^\\]]]]]]]]]]\]_]\]]]]]]]\]^_]\]]]\]_¯_]\\‏7Z]\ZYZZZZYZ]^\]]]]]]]]]]]\]_]\]]]]]]]]]^_]\]]\]]__]\]]\‏7ZZZ]\ZYYZ]^\\]]]]]]]]]]\]_^]]]]]]]]\]^_]\]]\^_\\^\]]]\‏7ZZZZZ]\]^\\]]]]]]]]]]\]_^]]]]]]]]]]^_]]]]]\]_^\]]]\‏7ZZZZZZZ]¯^\\]]]]]]]]]]\]_^]]]]]]]]\]^_]\]]]]]_^\]]\]‏7ZZZZZZZY__\]]]]]]]]]]\]_^\]]]]]]]]]^_]\]]]^^[^\\]_‏7ZZZZZZZZ__\]]]]]]]]\]_]\]]]]]]]]]^_]\]]]\]^]_‏7ZZZZZZZZ__\]]]]]]\]_^]]]]]]]]\]^_]\]]]]]_^\‏7ZZZZZZZZ__\]]]]\]_^]]]]]]]]\]^_]\]]]^\\¯^]]]‏7^ZZZZZZ__\]]\]_^\]]]]]]]\]^_]\]]]\^__\]]]\‏7\_^[ZZZ__\]]_]\]]]]]]]]]^_]\]]]]]_^\]]]]‏7ZZ\_^[Z__]^\]]]]]]]\]^_]\]]]]\^^\]]]\‏7ZZZZ\_[_¯]\]]]]]]]]]^_]\]]]\_\^\]]\]‏7ZZZZZZ[Z_]\]]]]]]]\]^_]\]]]\]_^\]]_‏7ZZZZZZZZ__\]]]]]]]]]^_]\]]]\]_O_^]__‏7ZZZZZZZZ__\]]]]]]]^_]\]]]\]__^\‏7[ZZZZZZZ__\]]]]]^_]\]]]\]__^]]]‏7_[ZZZZZ__\]]]^_]\]]]]]__^\]]]\‏7[^_[ZZZ__\]^_]\]]]\][\_^]]]]]‏7ZZ[^_[Z__]_]\]]]\]^^
+^\]]]\‏7ZZZZ[^[__]\]]]\]_^]]\]^‏7ZZZZZZ[Z__]\]]]^^__^\]^‏7ZZZZZZZZ__\]]]]]_^^_‏7ZZZZZZZZ__\]]]]]_¯_]\‏7_\ZZZZZZ__\]]]\]___]\]]‏7¯\ZZZZ__\]\]^_^\]]]\‏7Z]¯\ZZ__\]^¯^]]]]]‏7ZZZ]Z__^¯^]_^\]]]\‏7ZZZZZ]_¯_]\]_^]]\]^¯‏7ZZZZZZZ]¯_]\]]]_^\]^‏7ZZZZZZZY__\]]]]]_^^¯^‏7ZZZZZZZZ__\]]]]]__¯_]\‏7^ZZZZZZ__\]]]\]_¯_]\]]‏7\_]ZZZZ__\]\]__^\]]]\‏7ZZ\_]ZY__\]__^\]]]]‏7ZZZZ\]___^]_^^]]]\‏7ZZZZZZ\_^]\]__\]]_‏7ZZZZZZZZ_^]\]]]_]_‏7ZZZZZZZZ__\]]]]]__¯¯^‏7[ZZZZZZZ__\]]]]]__^]\‏7^[ZZZZZ__\]]]\^_O^^]\]]‏7[_^[ZZZ__\]\]__^^\]]]\‏7ZZ[_¯^[Y__\]__O_^^]]]]]‏7ZZZZ[_^___]]_^\]]]\‏7ZZZZZZ[_^]\]_^^]]\]_‏7ZZZZZZZY_]]]]]]_^\]_‏7ZZZZZZZZ__\]]]]]_¯^__]‏7ZZZZZZZZ__\]]]]]^]\‏7ZZZZZZZZ__\]]]\^__^]]]]‏7ZZZZZZZZ__\]]^_¯^\]]]\‏7ZZZZZZZZ__\^__¯^]]]]\‏7ZZZZZZZZ__]]_^\]]]\‏7ZZZZZZZZ__]\]]_^]]]^‏7ZZZZZZZZ_]\]]]]_^\^‏7ZZZZZZZZ__\]]]]]___‏7ZZZZZZZZ__\]]]]]__‏7ZZZZZZZZ__\]]\]^_^_‏7ZZZZZZZZ__\]]^_‏7ZZZZZZZZ__\^¯_^^_‏7ZZZZZZZZ_¯_]]__‏7ZZZZZZZZ_¯_]\]]_‏7ZZZZZZZZ_]\]]]]_‏7ZZZZZZZZ__\]]]]]_‏7ZZZZZZZZ__\]]]]]_‏7ZZZZZZZZ__\]]\]___^‏7ZZZZZZZZ__\\]__‏7ZZZZZZZY__]_^_O^‏7ZZZZZZZ[_¯^]]_‏7ZZZZZZZ_^]\]]_‏7ZZZZZZZZ__\]]]]]_‏7ZZZZZZZZ__\]]]]]_^‏:ZZZZZZZZ__\]]]\]‏<^ZZZZZZ__\]]\]__‏>\_^ZZZZ__\]]_O_‏>ZZ\_^ZZ__]_^_‏?ZZZZ\_¯^\]‏DZZZZZZ\_^\]]]__‏EZZZZZZZZ__\]]]]]_‏EZZZZZZZZ__\]]]]]__‏I_\ZZZZZZ__\]]]\]^‏K^_\ZZZZ__\]]]^__‏KZZ^_\ZY__\]^_^‏O[ZZ[^_[__]_‏QZ[[ZZZ^¯¯‏QZZZ[[Z__‏‏S[Z[ZZ[\_‏W[[[[Z[ZZ_‏X[ZZZZ[[Z_‏Y[[[[ZZ[Z__^‏][Z[[[Z[Z_‏^[[ZZ[[[[__‏_ZZZZZ[[_‏d[[[ZZZZZ_‏d[[[[Z[[Z__‏eZZ[[Z[[Z__‏i][Z[[Z[Z_‏k]ZZZ[Z_‏m]ZZZ_‏t]Z_‏w‏{ÿ ‏
+
 
-דהההההההדדדדדהדדדגבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבב‏2
-תגהההההההההדדדדדדדדדגבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבב‏.דדהההההההדדדדדדדדדגגבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבב‏*דדהההההההדדדדדדדדגג	גבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבב‏&דדהההההההדדדדדדדדגגגבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבב‏"דדההההההדדדדדדדדדגגגבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבג‏דדההההההדדדדדדדדדגגגבגגגגגגגגגגגגגגגגגגגגגגגגגגגדדג‏דדההההההדדדדדדדדדגגגבגגגגגגגגגגגגגגגגגגגגגגגדדדדדג‏דדהההההדדדדדדדדדדגגגבגגגגגגגגגגגגגגגגגגגדדדדדדדדדג‏דדהההההדדדדדדדדדדגגגבגגגגגגגגגגגגגגגדדדדדדדדדדדדגד‏דדההההדדדדדדדדדדדגגגבגגגגגגגגגגגדדדדדדדדדדדדדדגג‏דדההההדדדדדדדדדדדגדגבגגגגגגגדדדדדדדדדדדדדדגג‏דדההההדדדדדדדדדדדגגגבגגגדדדדדדדדדדדדדדגג‏דדהההדדדדדדדדדדדדגבדדדדדדדדדדדדדדגג‏דדהההדדדדדדדדדדדדגדûדגדדדדדדדדדדגג‏דדהההדדדדדדדדדדדדגדגדדדדדדדגג‏דדההדדדדדדדדדדדדדג
-גדדדדגג‏דדההדדדדדדדדדדדדג	גדגג‏דהההדדדדדדדדדדדגûדג‏דדההדדדדדדדדדדדה‏דדהדדדדדדדדדדדד‏דדהדדדדדדדדדד‏דדהדדדדדדדד‏דדדדדדדדד‏דדדדדדד‏דדדד‏¶]דדד‏²²µ]ג‏³³²²µ]ת‏³³³³²²µ]‏³³³³³³²²µ]P‏³³³³³³³³²²µ\‏³³³³³³³³³³²²µ]‏³³³³³³³³³³³³²²µ\‏³³³³³³³³³³³³³³²²µ]‏ ²³³³³³³³³³³³³³³³²²µ]‏"·³²³³³³³³³³³³³³³³³²²µ\‏#_·³²³³³³³³³³³³³³³³³²²µ]‏#PP_·³²³³³³³³³³³³³³³³³²²µ]‏#אאPP^·³²³³³³³³³³³³³³³³³²²µ]‏%באאP_·³²³³³³³³³³³³³³³³³²²µ]‏(אאPP^·³²³³³³³³³³³³³³³³³²²µ]‏,אאPP_·³²³³³³³³³³³³³³³³³²²µ]‏/אאPP_·³²³³³³³³³³³³³³³³³²²µ]‏2אאPP^·³²³³³³³³³³³³³³³³³²²µ]‏5באאP_·³²³³³³³³³³³³³³³³³²²µ]‏8אאPP^·³²³³³³³³³³³³³³³³³²²µ]‏;אאP^·³²³³³³³³³³³³³³³³³²²µ]‏3ת‏אאPP^·³²³³³³³³³³³³³³³³³²²µ]‏4אהûû‏אאPP_·³²³³³³³³³³³³³³³³³²²µ]‏5בבבהת‏אאPP^·³²³³³³³³³³³³³³³³³²²µ]‏6בבבבבהתû‏אאPP_·³²³³³³³³³³³³³³³³³²²µ]‏7בבבבבבבהת‏אאPP_·³²³³³³³³³³³³³³³³³²²µ]‏8בבבבבבבבבות‏אאPP_·³²³³³³³³³³³³³³³³³²²µ]‏9בבבבבבבבבבבהû‏אאPP_·³²³³³³³³³³³³³³³³³²²µ]	‏:בבבבבבבבבבבבבהת‏אאPP^·³²³³³³³³³³³³³³³³³²²µ]‏;בבבבבבבבבבבבבבבהת‏אאPP_·³²³³³³³³³³³³³³³³³²²µ]‏<בבבבבבבבבבבבבבבבבהת‏באאPP_·³²³³³³³³³³³³³³³³³²²µ]‏=אבבבבבבבבבבבבבבבבבבהת‏אאPP^·³²³³³³³³³³³³³³³³³²²µ‏>עבאבבבבבבבבבבבבבבבבבאהת‏באאP^·³²³³³³³³³³³³³³³³³²²‏;בהעבאבבבבבבבבבבבבבבבבבאהת‏אאPP_·³²³³³³³³³³³³³³³²³‏9אאאבאע€אבבבבבבבבבבבבבבבבבאהת‏אאPP_·³²³³³³³³³³³³³²³‏9
-בבבבאע€אבבבבבבבבבבבבבבבבאאהת‏אאPP_·³²³³³³³³³³³²³‏9ûבבבבאע€אבבבבבבבבבבבבבבבבאאהת‏אאPP^·³²³³³³³³³²³‏;ûבבבבבע€אבבבבבבבבבבבבבבבבאאהתû‏אאPP_·³²³³³³³²³‏=ûבבבבבעבאבבבבבבבבבבבבבבבבאאהת‏אאPP_·³²³³³²³‏?ûבבבבבע€אבבבבבבבבבבבבבבבבאאהת‏אאP^·³²³²³‏Aûבבבבאע€אבבבבבבבבבבבבבבבבאאהתû‏אאPP^·³²‏Dûבבבבאע€אבבבבבבבבבבבבבבבבאאהת‏אאPP_¶³‏Eûבבבבבע€אבבבבבבבבבבבבבבבבאאהת‏אאPP‏Hûבבבבאע€אבבבבבבבבבבבבבבבבאאהת‏P‏@	‏ûבבבבבעבאבבבבבבבבבבבבבבבבאאהתû‏P‏Bא‏ûבבבבאע€אבבבבבבבבבבבבבבבבאאהת‏‏Dבג‏ûבבבבע€אבבבבבבבבבבבבבבבבאאהת‏Lבבבג‏ûבבבבאע€אבבבבבבבבבבבבבבבבאאהתû‏Jבבבג‏ûבבבבעבאבבבבבבבבבבבבבבבבאאהת‏Hבבבבג‏ûבבבבבע€אבבבבבבבבבבבבבבבבאאהû‏Fבבבבג‏ûבבבבבעבאבבבבבבבבבבבבבבבבאאהû‏D
-בבבבבג‏ûבבבבבע€אבבבבבבבבבבבבבבבבאאהת‏B
-בבבבבג‏ûבבבבאע€אבבבבבבבבבבבבבבבבאאהת‏B
-בבבבבג‏ûבבבבבע€אבבבבבבבבבבבבבבבבאאהû‏Dתדבבבבבג‏ûבבבבבעבאבבבבבבבבבבבבבבבבאא‏Eתבבבבבג‏ûבבבבבע€אבבבבבבבבבבבבבבבא‏Eגדתדבבבבבג‏ûבבבבבע€אבבבבבבבבבבבבבא‏Eדהדדתבבבבבג‏ûבבבבע€אבבבבבבבבבבבא‏Dגגדהדדדתדבבבבבג‏ûבבבבאע€אבבבבבבבבבא‏Cגגגגדדהדדדתדבבבבבג‏ûבבבבבעבאבבבבבבבא‏Aבגגגגגדההדדדתבבבבבג‏ûבבבבבע€אבבבבבב‏Aתדגדגגגדההההדדתדבבבבבג‏ûבבבבבע€אבבבב‏Aûגגגגגגהההההדדתבבבבבג‏ûבבבבבעבאבב‏Bתההדגגבגדדהההדדûתבבבבבג‏ûבבבבבעבא‏Eûת
-	הההההדדתתבבבבבג‏ûבבבבאח‏Eו	
-תûתהההההההדדתתבבבבבג‏ûבבבאה‏Gûוגגדדדהההההההההדדתתבבבבבג‏ûבאבP‏Jדדההההההההההההדדתתבבבבבג‏ûג‏Nדדהההההההההההההדהתתבבבבבג‏Zדדהההההההההההההדתתבבבבבג‏Zדדההההההההההההדדהתתבבבבבאג‏Zדדההההההההההההדגהתתבבבבבג‏Zûדדההההההההההההדגהתתבבבבבג‏Zדדההההההההההההדגתתבבבבבג‏Zûדדההההההההההההדגתתבבבבבג‏Zûדדההההההההההההדגהתתבבבבבג‏Zדדההההההההההההדגתתבבבבבג‏\דדההההההההההההדגהתתבבבבבPב‏]דדההההההההההההדגהתתבבבב‏_ûדדההההההההההההדגהתתבב‏aדדהההההההההההדדגהתתבב‏cדדההההההההההדדדגה
-תב‏eדדההההההההההדדדגהתתP‏hûדדההההההההההדדדגהת
-‏iûדדהההההההההדדהדגהת‏jדדהההההההההדדהדגה
-‏jûדדהההההההההדדהדג
-‏kדדההההההההדדדהדגה‏mûדדההההההההדדדהג‏oûדדההההההההדדד‏qûדדהההההההדד‏sûדדההההההד‏uûדדההההד‏wדדההד‏yדדד‏{ûד‏}ûÿ‏>גג‏{גגדג‏xגגדדדדדגד‏tגגדדדדדדדדגד‏qגגדדדדדדדדדדדגד‏nגגדדדדדדדדדדדדדדדג‏kגגדדדדדדדדדדדדדדדדדדגג‏gדגגדדדדדדדדדדדדדדדדדדדדגדû‏dגגדדדדדדדדדדדדדדדדדדדדגה
-‏dûהגדדדדדדדדדדדדדדדדדגה
-
-‏dגתגדדדדדדדדדדדדדדגה
-
-‏dדג	גדדדדדדדדדדדגה
-
-		‏dדהגזתגדדדדדדדגה
-
-					‏dדדהדהגדדדדגה
-
-						‏dדדדהדדûגגה
-
-						
-‏dדדדדדדג	ד
-
-						
-	Q‏bדדדדדדהג
-						
-	‏`גדדדדדדהג						
-	‏^גדדדדהד					
-	‏Zזגדדהג			
-	‏Vזגדד	
-	‏Rב	
-	‏Nûûמ	‏J	‏F‏B‏>‏:‏6‏2‏/‏,‏(‏%‏"ת‏		‏P
-	‏P‏Pז‏Pז‏Pז‏Pז‏	ז‏		ז‏Q		ז‏		ז‏		ז‏Q	מ	ז‏¶]		ז‏²²µ]		ז‏³³²²µ]	מ	ז‏³³³³²²µ]Q	ז‏!³³³³³³²²µ]	זז‏#³³³³³³³³²²µ\Q	ז‏%³³³³³³³³³³²²µ]ûזזזהההדה‏'³³³³³³³³³³³³²²µ\Pûבאבבבבבבבבבבבבבבאא‏(³³³³³³³³³³³³³³²²µ]באבבבבבבבבבבבבב‏)²³³³³³³³³³³³³³³³²²µ]באבבבבבבבבבא‏*·³²³³³³³³³³³³³³³³³²²µ\באבבבבבבאב‏)_·³²³³³³³³³³³³³³³³³²²µ]באבבבב‏(PP_·³²³³³³³³³³³³³³³³³²²µ]באבא‏'אאPP^·³²³³³³³³³³³³³³³³³²²µ]ב‏'באאP_·³²³³³³³³³³³³³³³³³²²µ]‏)אאPP_·³²³³³³³³³³³³³³³³³²²µ]‏,אאPP_·³²³³³³³³³³³³³³³³³²²µ]‏/אאPP_·³²³³³³³³³³³³³³³³³²²µ]‏2אאPP^·³²³³³³³³³³³³³³³³³²²µ]‏5באאP_¸³²³³³³³³³³³³³³³³³²²µ]‏8אאPP_¸³²³³³³³³³³³³³³³³³²²µ]‏;אאP_¸³²³³³³³³³³³³³³³³³²²µ]‏3
-‏אאPP^¸³²³³³³³³³³³³³³³³³²²µ]‏4אהûû‏אאPP_¸³³³³³³³³³³³³³³³³³²²µ]‏5אאאהת‏אאPP^·³³³³³³³³³³³³³³³³³²²µ]‏6אבבאאהתû‏אאPP_·³³³³³³³³³³³³³³³³³²²µ]‏7אבבבבאאהת‏אאPP_·³³³³³³³³³³³³³³³³³²²µ]‏8אבבבבבבאאהת‏אאPP_·³³³³³³³³³³³³³³³³³²²µ]‏9אבבבבבבבבאאהת‏אאPP_·³³³³³³³³³³³³³³³³³²²µ]	‏:בבבבבבבבבבבאאהתû‏אאPP_¸³³³³³³³³³³³³³³³³³²²µ]‏;בבבבבבבבבבבבבאאהת‏אאPP_¸³³³³³³³³³³³³³³³³³²²µ]‏<בבבבבבבבבבבבבבבאאהת‏אאPP_·³³³³³³³³³³³³³³³³³²²µ]‏=אבבבבבבבבבבבבבבבבאאהת‏אאPP^¸³³³³³³³³³³³³³³³³³²²µ‏>עבאבבבבבבבבבבבבבבבבאאהת‏באאPû³³³³³³³³³³³³³³³³³³³²²‏;העבאבבבבבבבבבבבבבבבבאאהת‏אאPPR³ ³³³³³³³³³³³³³³³²³‏9אאאבאע€אבבבבבבבבבבבבבבבבאאהת‏PאאPPPא±³ ³³³³³³³³³³³³³²³‏9תבבבבאע€אבבבבבבבבבבבבבבבבאאהת‏PאאPPPPא±³ ³³³³³³³³³³³²³‏9ûבבבבאע€אבבבבבבבבבבבבבבבבאאהת‏אPPPאPQ² ³³³³³³³³³³²³‏;ûבבבבבע€אבבבבבבבבבבבבבבבבאאהתû‏תאPPאPאR³ ³³³³³³³³²³‏=ûבבבבבעבאבבבבבבבבבבבבבבבבאאהתû‏	PאPאאPא±³ ³³³³³³³³‏?ûבבבבבע€אבבבבבבבבבבבבבבבבאאה‏PאאאאאP²³³³³³³³³‏Aûבבבבאע€אבבבבבבבבבבבבבבבבP‏
-אאאאאPQ² ³³³³³‏Cûבבבבאע€אבבבבבבבבבבבבבבאח‏
-PאאאאPאR³ ³²³‏Eûבבבבבע€אבבבבבבבבבבבבאח‏אאאאאPא±³ ³‏Gûבבבבאע€אבבבבבבבבבבאחû‏PאאאאאP°‏?	‏ûבבבבבע€אבבבבבבבבאח‏אאאא‏?א‏ûבבבבאע€אבבבבבבאח‏
-Pא‏Aבג‏ûבבבבע€אבבבבאח‏א‏Cבבבג‏ûבבבבאעבאבבאח‏[בבבג‏ûבבבבעבאאח‏[בבבבג‏ûבבבבבעאז‏[בבבבג‏ûבבבבבû‏[תבבבבבג‏ûבבבבבû‏[
-בבבבבג‏ûבבבא‏]תבבבבבג‏ûבא‏_תבבבבבג‏ûה‏`התתבבבבבג‏ת‏`גגהתתבבבבבג‏ת‏aדהדגתתבבבבבג‏hדדדהדגהתתבבבבבג‏fדדדדדהדגתבבבבבג‏dדההדדדדהדגהתתבבבבבג‏bדהההדדדדדהדגתתבבבבבג‏`דהההההדדדדדהדגהתתבבבבבג‏^דדההההההדדדדדהדגהתתבבבבבגû‏[ûדדהההההדדדדדדהדגהתדבבבבבג‏Yûדדהההההדדדדדדהדהתבבבבבב
-‏Yדדהההההדדדדדדדדדתדבבבבב	‏Xûדדההההדדדדדדדדדדתבבבבבב‏Xדדההההדדדדדדדדדדתדבבבבבבב
-‏Xדדההההדדדדדדדדדדתדבבבבבב‏Wדדהההדדדדדדדהדדדמתדבבבבבבבת‏Wדדהההדדדדדדדהדדדתדבבבבבבבב
-ת‏Sûדדהההדדדדדדדדדתדבבבבבבב	
-ת‏Tדדהההגûûגדדדהדדדתבבבבבבבבאא‏Uûדדהדדדדדדדדדגגתדבבבבבבב‏Xûדדהגדדדדדד	הגזמתבבבבבבבבבב‏Yג
-דגגדדדהתבבבבבבבבב‏[ûûהגגדג			תבבבבבבב‏]	הגגגגג	תדבבבבב‏_
-	גגגגגה		גתבבב‏aזה		דגדגבגגדתדבב‏c
-גג		גגגגגגגדתדב‏eגגדההבגגגגדדד
-דא‏h
-דדדגד
-	בגגגגגדדד		‏iזגהדגהבגגגגדהדהû‏j
-דדהדד
-בגגגגגדהג‏iזגדדגהבגגגגûûגדת‏i
-הדגדתגגגגהזג‏j
-הבזהגגגב
-גד	‏nתה
-גגדבהוב‏q
 
-תדגדגג		‏sגגגאד‏uתת
-	‏yתת‏{
-זג‏}מ‏ÿ‏‏ÿ‏?‏|‏xבP‏tבPPPPP‏pבPPPPPPPPP‏lבPPPPPPPPPPPPP‏hבPPPPPPPPPPPPPPPPP‏dבPPPPPPPPPPPPPPPPPPPPP‏`בPPPPPPPPPPPPPPPPPPPPPPPPP‏\בPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏XבPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏TבPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏PבPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏LבPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏HבPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏DבPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏@בPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאא‏<בPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבאב‏:דדPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבב‏8באבבאאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבב‏7אבבבבאאאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבאב‏4בבבבבבבבאאאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבאב‏2באבבבבבבבבאאאאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבאב‏1אבבבבבבבבבבאאאאאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבג‏/בבבבבבבבבבבבבבאאאאאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבגגגב‏-בPבבבבבבבבבבבבבבאאאאאאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבגגגגגבג‏*תבאבבבבבבבבבבבבבאאאאאאאPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגבג‏)PבאבבבבבבבבבבבבאאאאאאאPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגבב‏&באבבבבבבבבבבבבאאאאאאאאPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגגגגבג‏$באבבבבבבבבבבבאאאאאאאאאPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגגגגגגאג‏"באבבבבבבבבבבאאאאאאאאאאPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגגגגגבג‏באבבבבבבבבבבאאאאאאאאאאPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגגגגבג	‏באבבבבבבבבבאאאאאאאאאאאPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגגגבג‏באבבבבבבבבאאאאאאאאאאאאPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגגבג‏באבבבבבבבבאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגבג‏באבבבבבבבאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגגבג‏באבבבבבבאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגגבג‏באבבבבבאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבגגגגגגגבג‏
-באבבבבבאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבגגגגגגבג‏	באבבבבאאאאאאאבבבבבבבבבבבבבבבבבבבבגגגגגבג‏	באבבבאאאאאאאבבבבבבבבבבבבבבבבבבגגגגגבג‏
-באבבבאאאאאאבבבבבבבבבבבבבבבבגגגגבג	‏באבבאאאאאבבבבבבבבבבבבבבבגגגבג‏באבבאאאאבבבבבבבבבבבבבגגבג	‏¶]באאאאאאבבבבבבבבבבגגבג‏²²µ]באאאאבבבבבבבבבבבג‏³³²²µ]בPאאבבבבבבבבג‏³³³³²²µ]בבבבבאג‏³³³³³³²²µ]אאבאב‏³³³³³³³³²²µ\ג‏³³³³³³³³³³²²µ]‏³³³³³³³³³³³³²²µ\‏³³³³³³³³³³³³³³²²µ]‏ ³³³³³³³³³³³³³³³³²²µ]‏"³³³³³³³³³³³³³³³³³³²²µ\‏$³²³³³³³³³³³³³³³³³³³³²²µ]‏&_·³³³³³³³³³³³³³³³³³³³³²²µ]‏&PאZ²³³³³³³³³³³³³³³³³³³³³²²µ]‏&PPPבאג[²³³³³³³³³³³³³³³³³³³³³³²²µ]‏'Pבבבאג\³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏)ûאאבבבאב]³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏+ûבאבבבאב^³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏-באבבבאאת_³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏/גאבבבבא
-^´³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏2דאבבבאא_³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏4דאאא´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏6ת_´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏8ת_´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏9	µ³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏:
-´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏;
-´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏<
-µ³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏=
-_³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]	‏>
-[³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏?
-_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏@
-ג¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]‏A
-אû_¹³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ‏B
-בבא_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²‏A
-בבבא_Z³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏A
-בבבבבאאû_¹³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³‏A
-בבבבבבבאא¹³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³‏A
-בבבבבבבבבא_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³‏A
-בבבבבבבבבבבבא_Z³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³‏A	תבבבבבבבבבבבבבבא_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³‏?	‏אבבבבבבבבבבבבבבבבבא_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³‏>אבבבבבבבבבבבבבבבבבבבבבא_Z³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבאא_Z³²³³³³³³³³³³³³³³³³³³³³³³³³³³³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא_Z³³³³³³³³³³³³³³³³³³³³³³³³³³³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא_¹³²³³³³³³³³³³³³³³³³³³³³³³³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאû_¹³²³³³³³³³³³³³³³³³³³³³³³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_¹³²³³³³³³³³³³³³³³³³³³³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_Z³³³³³³³³³³³³³³³³³³³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא_¹³²³³³³³³³³³³³³³³³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא_Z³³³³³³³³³³³³³³³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאû_¹³²³³³³³³³³³³³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_Z³²³³³³³³³³³‏>
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא_¹³²³³³³³³³‏>
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא_¹³²³³³³³‏@
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_¹³³³³³‏B
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_¹³²³‏Cמתבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאû¸´‏C	ת
-תבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא‏Cג	תבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאד‏Cדדד	
-ה
-תבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא‏Bבבגדגהûהתבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏A	זדג	וגתתבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏Aהדג	גדתתבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏Cגדההדדהד	דדד
-תבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏C	דדדההד	דדדבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏Dהגדדג	בד
-תבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏Gת
 
-תûבבגבבד
-תבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏I	גבגגגגגבבד
-תבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏L
-גבבגגגגגגבבד
-בבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏O	הבבבגגגגגבבד
-תבבבבבבבבבבבבבבבבבבבבבבבבבאב‏Qדבבגגגגגבבד
-בבבבבבבבבבבבבבבבבבבבבבבאב‏Tûגבבגגגגבבד
-תבבבבבבבבבבבבבבבבבבבבבאב‏W
-בבבגגגבבג	תבבבבבבבבבבבבבבבבבבבאב‏Yדבבבגגבאג	בבבבבבבבבבבבבבבבבאב‏\ûגבבגגבאג
-תבבבבבבבבבבבבבבבאב‏_
-גבבבבאד
-תבבבבבבבבבבבבבאב‏aהבאבבבד
-תבבבבבבבבבבבאב‏dגבבבאדת
-בבבבבבבבבאב‏g
-בבבבבבב‏r
-בבבבב‏t
-בבב‏v
-דבב‏x
-דב‏z
-P‏}	‏~ÿ‏>‏z‏v‏r‏n‏j‏f‏b‏^‏Z‏V‏R‏N‏J‏F‏B‏>‏:‏6‏2‏/‏,‏(‏%‏"‏P‏P‏P‏P‏P‏P‏P‏
-P‏	P‏P‏	P‏
-א‏א‏¶]א‏²²µ]P‏³³²²µ]א‏³³³³²²µ]P‏³³³³³³²²µ]P‏³³³³³³³³²²µ\א‏³³³³³³³³³³²²µ]P‏³³³³³³³³³³³³²²µ\‏³³³³³³³³³³³³³³³²µ]‏³³³³³³³³³³³³³³³³³²µ]‏!³³³³³³³³³³³³³³³³³³³²µ\R‏#³³³³³³³³³³³³³³³³³³³³³²µ]‏%³³³³³³³³³³³³³³³³³³³³³³³²µ]‏'³³³³³³³³³³³³³³³³³³³³³³³³³²µ]‏)³³³³³³³³³³³³³³³³³³³³³³³³³³³²µ]‏,³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²µ]‏-³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²µ]Q‏/³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²µ]‏0³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³µ]	‏1³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³µ]	‏2³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³µ]	‏3³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³µ]
-א‏4³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³µ]	P‏5³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³µ]	א‏6¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³´]P‏7_Z³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ^P‏8_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²¶^‏9באû_Z³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²·^‏:בבבא_¹³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²·_‏;בבבבבא_Z³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³¸_‏<בבבבבבבא_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³¹_ת‏=בבבבבבבבב¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³Z_
-‏>בבבבבבבבבבבאû_¹³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³[_‏>בבבבבבבבבבבבבא_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²±³‏>בבבבבבבבבבבבבבבא_Z³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבאאû_¹³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבאא¹³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבא_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבא_Z³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבא_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבא_¹³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבא_Z³²³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_Z³²³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_Z³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבא_¹³²³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאû_¹³²³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_¹³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא_¹³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא
-µ³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאבR²³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבR²³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבR³³³³³³³³³³³³³‏>
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב±³ ³³³³³³³³³‏>
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב±³ ³³³³³³³‏@
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב²³ ³³³³³‏B
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב²³ ³³³‏D
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב²³ ³‏F
-דבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבR²³‏H
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאR‏J
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏L
-דבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏N
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏P
-דבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏R
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏T
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏V
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏X
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏Z
-דבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏\
-בבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏^
-בבבבבבבבבבבבבבבבבבבבבבבבבאב‏`
-דבבבבבבבבבבבבבבבבבבבבבבבאב‏b
-בבבבבבבבבבבבבבבבבבבבבאב‏dתבבבבבבבבבבבבבבבבבבבאב‏eבבבבבבבבבבבבבבבבבאב‏f	תבבבבבבבבבבבבבבבאב‏gגג
-תבבבבבבבבבבבבבאב‏hדאד
-בבבבבבבבבבבאב‏hדבבד
-בבבבבבבבבאב‏iגבגבד
-תבבבבבבבאב‏jדבגגבד
-תבבבבבאב‏kבבגגבד
-בבבאב‏mהבגגגבד
-ûבאב‏n	גבגגגבד
-תב‏pבגגגגבד	תP‏sתדבגגבב
-‏sבגû		û‏tת
-‏sזתתû‏sדדדדדהû‏tדדהההדד	‏vדההההדדג‏wûדההדד‏xגגד‏y	דמ‏|û‏}‏ÿ‏?‏{‏w‏s‏o‏k‏g‏c‏_‏[‏X‏S‏P‏L‏H‏D‏@‏<‏8‏4‏1‏/‏+‏)‏&‏#‏ ‏‏‏‏‏‏‏‏
-‏‏‏‏	Z_
-‏²³[_	Q‏³²²´\‏³³³²²µ]P‏³²³³³²²µ^P‏³²³³³³³²²¶^‏³³³³³³³³³²²·^‏³³³³³³³³³³³²²·_‏³²³³³³³³³³³³³²²¸_‏³²³³³³³³³³³³³³³²³¸_û‏³²³³³³³³³³³³³³³³³²³Z_
-‏³²³³³³³³³³³³³³³³³³³²³[_	‏!³²³³³³³³³³³³³³³³³³³³²²³[	Q‏#³²³³³³³³³³³³³³³³³³³³³³²²´\_‏%³²³³³³³³³³³³³³³³³³³³³³³³²²´]P‏'³³³³³³³³³³³³³³³³³³³³³³³³³³²²µ]P‏)³²³³³³³³³³³³³³³³³³³³³³³³³³³³²²¶^‏+³²³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²·^‏-³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²·_‏/³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²¸_‏/³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³¹_‏0³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³Z_
-Q‏1³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³\P‏2³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²µ^‏3³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²·_‏4²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³Z_	Q‏5בR²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²´\P‏6בבR³ ³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²µ^‏7בבבבב±³ ³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²·_‏8בבבבבבב±³ ³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³Z_	‏9בבבבבבבב²³ ³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²´\‏:בבבבבבבבבב²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²¶^‏;בבבבבבבבבבבבR² ³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²·_R‏<בבבבבבבבבבבבבב±³ ³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³Z	‏=בבבבבבבבבבבבבבב²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²´\‏>בבבבבבבבבבבבבבבבבR³ ³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²µ‏?בבבבבבבבבבבבבבבבבבב²³ ³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²²‏>בבבבבבבבבבבבבבבבבבבב²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבב±³ ³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבב²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבR² ³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבב±³ ³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבב²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבR³ ³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב²³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב² ³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב±³³³³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב² ³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב²³³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבR³³³³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב² ³³³³³³³³³³³³³³³³³³³³³²³‏>בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב²³³³³³³³³³³³³³³³³³³³³³²³‏>
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב±³³³³³³³³³³³³³³³³³³³³²³‏>
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב³ ³³³³³³³³³³³³³³³³³²³‏@
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב²³³³³³³³³³³³³³³³³³²³‏B
-דבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב±³³³³³³³³³³³³³³³³²³‏C
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבR³ ³³³³³³³³³³³³³²³‏C
-דבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב² ³³³³³³³³³³³³ ´‏Cגדז
-
-בבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב±³³³³³³³³´´´³ ´‏CדהדדהûתדבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבS ³´´³³³³³³³ ´‏Bדדדהההדדהתדבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב² ³³³³³³³³³ ´‏Aדדדדההדדדתבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב³ ³³³³³³³³ ´‏A
-גדדדדדדדההדדתדבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבR³³³³³³³³³ ´‏Bדגגדדדדדדדההתבבבבבבבבבבבבבבבבבבבבבבבבבבבבב² ³³³³³³³ ´‏Bתהגגדדדדûתבבבבבבבבבבבבבבבבבבבבבבבבבבבב³ ´´³³³³ ´‏Dûהגגדדד
-ûתבבבבבבבבבבבבבבבבבבבבבבבבב³ ³´´³³ ´‏E		הגגגגדגגתבבבבבבבבבבבבבבבבבבבבבבבבS¹´³³´´ ´‏G
-דה
-	הגדגבגגגדתדבבבבבבבבבבבבבבבבבבבבבבג_Z´ ³³´‏Hגד	הבגגגגדדתאבבבבבבבבבבבבבבבבבבבבבדZ´²³‏Jתהגדד
-	גבגגגגדדדתדאבבבבבבבבבבבבבבבבבבבהדד¹µ‏Kדדדגהבגגגגדדדדתאבבבבבבבבבבבבבבבבבהההדד‏M
-דדהדד
-	גגגגגגדדדדמתדאבבבבבבבבבבבבבבבהההההדגז‏Nגדהגזהבגגגגדדדדדתדאבבבבבבבבבבבבבההההההדה‏P
-דגדדד
-	גגגגגגדהדדדתדאבבבבבבבבבבבההההההדה‏Q	ודגגזהבגגגגדדהדדד
-דאבבבבבבבבבההההההדה‏S
-דג
-גגגגגגדההדדד
-אבבבבבבבההההההדה‏V
-ûהגגגגגדההההדדתאבבבבבההההההדה‏Y
-גגגגגגהההההדדתאבבההההההדה‏[ûהגגגבבגדדהההדדתאבההההההדה‏]û
-	הההההדדתתאבההההההדה‏_		
-תדההההההדתתדדההההדה‏aûגגדדדההההההההההדתזדדההדה‏cדדהההההההההההההד
-ûזדדדה‏eדדהההההההההההההדהתזג‏hûדדהההההההההההההדהתû‏iûדדההההההההההההדדהת‏jדדההההההההההההדגה
-‏jûדדההההההההההההדגה
-‏kדדההההההההההההדגה‏mûדדההההההההההההד‏oûדדההההההההההד‏qûדדההההההההד‏sûדדההההההד‏uûדדההההד‏wדדההד‏yדדד‏{ûד‏}ûÿ‏?‏|‏x‏t‏q‏m‏i‏e‏b‏^‏Z‏V‏S‏O‏K‏G‏D‏@‏<‏8‏5‏2‏/‏,‏*‏'‏$‏!‏‏‏‏‏‏P‏‏‏
-‏‏‏¶^‏²²·_תR‏³³²³Z	‏
-³³³³²´]‏³³³³³³²¶^‏³³³³³³³²²·_ת‏³³³³³³³³³²³[	‏³³³³³³³³³³³²´]‏³³³³³³³³³³³³³²¶^‏³³³³³³³³³³³³³³²²¸_ת‏³³³³³³³³³³³³³³³³²³Z	‏³³³³³³³³³³³³³³³³³³²´]PQRP‏³³³³³³³³³³³³³³³³³³³²²¶^PQ	
-בP‏³³³³³³³³³³³³³³³³³³³³³²³¸_ת
-תû
-	אPP‏ ³³³³³³³³³³³³³³³³³³³³³³³²³[_א
-ת
-PPPPP‏"³³³³³³³³³³³³³³³³³³³³³³³³³²´]
-ת	אPPPPPPPPPPPPPPPP‏$³³³³³³³³³³³³³³³³³³³³³³³³³³³²·]^û
-	QPPPPPPPPPPPPPPPPPPPPPPPPPP‏&³³³³³³³³³³³³³³³³³³³³³³³³³³³´³³³°PPPPPPPPPPPPPPPPPPPPPPPP‏(³³³³³³³³³³³³³³³³³³³³³³³´´´³³´³³!³°PPPPPPPPPPPPPPPPPPPPPPPP‏*³³³³³³³³³³³³³³³³³´´´³³³³³³³³³³³³  ±PPPPPPPPPPPPPPPPPPPPPPP‏-³³³³³³³³³³³³´´´³³³³³³³³³³³³³³³³³³³ ³°PPPPPPPPPPPPPPPPPPPP‏.³³³³³³´´´³³³³³³³³³³³³³³³³³³³³³³³³³³ ³²PPPPPPPPPPPPPPPPPP‏/³³´´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ³°PPPPPPPPPPPPPP‏0³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ²PPPPPPPPPPPP‏1³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³±PPPPPPPPP‏2³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ²°PPPPPPP‏3³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³±PPPPPP‏4³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ³°PPP‏4³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³´³³³ ²PP‏5³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ³±‏6³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ²‏7³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³´³³³³³±‏8´³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³´³³³³ ³°‏9³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³´³³³³³³±P‏:Z´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ³°‏;מ_Z´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ²P‏<ד_Z´³³´´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ³±‏=הדד_Z´³³´´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ²‏=הההדד_Z´³³´´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³°P‏>הההההדד_Z´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ‏?הההההההדד_Z´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³‏>הההההההההדד_Z´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³´³³³³³³‏>הההההההההההדד_Z´³³´´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³‏>הההההההההההההדד_Z´³³´´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³‏>הההההההההההההההדדZ´³³´´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³´³³‏>הההההההההההההההההדדZ´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ´‏>הההההההההההההההההההד_Z´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ´‏>הההההההההההההההההההההדג_Z´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ´‏>דדהההההההההההההההההההההדג_Z´³³´´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ´‏>ûדדהההההההההההההההההההההדגZ´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ´‏>תדדהההההההההההההההההההההדג_Z´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³ ´‏@ûדדהההההההההההההההההההההדג_Z´³³´´³³³³³³³³³³³³³³³³³³³³³³³³ ´‏Bזדדהההההההההההההההההההההג_Z´³³´³³³³³³³³³³³³³³³³³³³³³³³ ´‏CהתדדההההההההההההההההההההדגגZ´³³´´³³³³³³³³³³³³³³³³³³³³ ´‏CדגהתûזדדההההההההההההההההההההדגגZ´³³´´³³³³³³³³³³³³³³³³³³ ´‏Cדהדגהתדדההההההההההההההההההההדגג_Z´³³´³³³³³³³³³³³³³³³³³ ´‏Cדהההדגהתזדדההההההההההההההההההההדגג_Z´³³´³³³³³³³³³³³³³³³ ´‏Cדהההההדגתזדדהההההההההההההההההההדדגג_Z´³³´³³³³³³³³³³³³³ ´‏Cדהההההההדגה
-דדהההההההההההההההההההדדגג_Z´³³´³³³³³³³³³³³ ´‏Cדהההההההההדגהתûזדדהההההההההההההההההההדדג_Z´³³´³³³³³³³³³ ´‏Cדהההההההההההדגהתדדההההההההההההההההההדדדגג_Z´³³´³³³³³³³ ´‏Cדדהההההההההההדדגהתדדההההההההההההההההההדדדגג_Z´³³´³³³³³ ´‏Cûדדההההההההההדדדגה
-זדדההההההההההההההההההדדדג_Z´³³´´³³ ´‏Cûדדההההההההההדדדגהתזדדההההההההההההההההההדדדגג_Z´³³´´ ´‏Eדדהההההההההדדהדגה
-זדדהההההההההההההההההדדדדגג_Z´³³³´‏GûדדהההההההההדדדדגהתזדדהההההההההההההההההדדדדגגZ´²³‏Iדדהההההההההדדהדגהתזדדהההההההההההההההההדדדדגג¹µ‏Kדדההההההההדדדהדגהתזדדהההההההההההההההההדדדדגג‏Mדדההההההההדדדהדגהתזדדהההההההההההההההההדדדדגג‏Oדדההההההההדדדהדגהתûזדדההההההההההההההההדדדדגד‏Qûדדהההההההדדדדהדגה
-זדדההההההההההההההההדדגד‏Sדדהההההההדדדדהדגתûדדההההההההההההההההגד‏Uûדדהההההההדדדדהדגתûזדדההההההההההההההדה‏Wûדדההההההדדדדדהדגה
-זדדההההההההההההדה‏Yדדההההההדדדדדהדגתדדההההההההההדה‏[דדההההההדדדדדהדגהתûזדדההההההההדה‏]דדהההההדדדדדדהדגהûûזדדההההההדה‏_ûדדהההההדדדדדדהדהזדדההההדה‏aדדהההההדדדדדדדגדודדההדה‏cדדההההדדדדדדהדדדûודדדה‏eדדההההדדדדדדדדדדûזג‏hûדדההההדדדדדדדדדדû‏iûדדהההדדדדדדדהדדד‏jדדהההדדדדדדדהדדד‏jûדדהההדדדההדדדדדד‏kדדהההדדדדדהדדד‏mûדדהההזדדדדדדג‏oûדדד
-גדדדדדדג‏qûגדגדדדגד‏sûתהגד‏w
-‏z‏}‏~‏~ÿ‏?‏|‏y‏u‏r‏n‏k‏g‏c‏`‏\‏Y‏UP‏RPP‏NPPPPPP‏JPPPPPPP‏GPPPPPPPP‏CPPPPPPPPPPP‏@PPPPPPPPPPPP‏<PPPPPPPPPPPPPP‏:PPPPPPPPPPPPPPPP‏6PPPPPPPPPPPPPPPPPPPP‏3PPPPPPPPPPPPPPPPPPPPPPP‏2PPPPPPPPPPPPPPPPPPPPPPPPPPP‏/PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏-PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏(PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP‏%PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPא‏"PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאאא‏ PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבאא‏PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבאאא‏PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבאא‏PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבאא‏PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבאאא‏PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבאא‏PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבבבבאא‏PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבבבבבבבבאא‏PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא‏PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאא‏	±PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא‏³²°PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא‏³³³²PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאב‏³³³ ³°PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאP‏³³³³³³²PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאאב‏³³³³³³ ³±PPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאאא‏³³³³³³³³ ²QPPPPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאאא‏	´³³³³³³³³³³±PPPPPPPPPPPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאאא‏³³³³³³³³³³³ ²אאאאאאאאאאPPPPPPPPPPPPPPPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאאא‏³³´³³³³³³³³³ ³°Pאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאאא‏³³³³³³³³³³³³³³ ±PPPאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאאא‏³³´³³³³³³³³³³³³ ³PPPאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאאא‏³³´³³³´³³³³³³³³³³³±PPPPאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאאא‏³³´³³³³³³³³³³³³³³³ ²PPPPPPאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאאא‏³³´³³³³³³´³³³³³³³³³ ³°PPPPPPאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאאא‏³³´³³³³³³³´³³³³³³³³³³ ±PPPPPPאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבאאאא‏³³³³³³³³³³³³³³³³³³³³³³ ²אPPPPPPPPאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבאאאא‏³³³³³³³³³³³³³³³³³³³³³³³ ³°PPPPPPPPPאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבאאאא‏³³´³³³³³³³³³³³³³³³³³³³³³³ ±PPPPPPPPPPאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבאאאא‏!³³´³³³³³³³³³³³³³³³³³³³³³³³ ³PPPPPPPPPPPאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבאאאא‏#³³´³³³³³³³³³³³³³´³³³³³³³³³³ ³°PPPPPPPPPPPאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבאאאא‏%³³´³³³³³³³³³³³³³³³³³³³³³³³³³³ ²PPPPPPPPPPPPPPאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבאאאא‏'³³´³³³³³³³³³³³³³³³³´³³³³³³³³³³ ³°PPPPPPPPPPPPPPאאאאאאאאאאאאאאאאאאאאאאאאאבבאאאא‏)³³´³³³³³³³³³³³³³³³³³´³³³³³³³³³³ ³±PPPPPPPPPPPPPPאאאאאאאאאאאאאאאאאאאאאאאאאאא‏,³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ²PPPPPPPPPPPPPPPPPאאאאאאאאאאאאאאאאאאאאאאPא‏-³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ³°PPPPPPPPPPPPPPPPPאאאאאאאאאאאאאאאאאאאאPא‏.´³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ±PPPPPPPPPPPPPPPPPPאאאאאאאאאאאאאאאאאאא‏/³³´³³³³³³³³³³³³³³³³³³³³³³´³³³³³³³³³³³ ²PPPPPPPPPPPPPPPPPPPאאאאאאאאאאאאאאאאא‏0Z´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ³°PPPPPPPPPPPPPPPPPPPאאאאאאאאאאאאאאא‏1_Z´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ²PPPPPPPPPPPPPPPPPPPPPPאאאאאאאאאאאPא‏1ג_Z´³³´´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ³QPPPPPPPPPPPPPPPPPPPPPPאאאאאאאאאPא‏2דג_Z´³³´´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ³±PPPPPPPPPPPPPPPPPPPPPPאאאאאאאאא‏3דדדג_Z´³³´´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ²אPPPPPPPPPPPPPPPPPPPPPPPאאאאאא‏4דדדדדגג_Z´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ³אPאאאPPPPPPPPPPPPPPPPPPPאאאP‏5הדדדדדדגג_Z´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ³QPאאאאאאאאאPPPPPPPPPPPPPאא‏5הההדדדדדדגג_Z´³³´³³³³³³³³³³³³³³³³³³³³³³³³³³³³ ³QPאאאאאאאאאאאאאאאאPPPPPP‏6הההההדדדדדדג_Z´³³´´³³³³³³³³³³³³³³´³³³³³³³³³³³ ³QPאאאאאאאאאאאאאאאאאאאא‏7הההההההדדדדדדגג_Z´³³´´³³³³³³³³³³³³³³³³³³³³³³³³³³³RPאאאאאאאאאאאאאאאאאאא‏7הההההההההדדדדדדגגZ´³³´´³³³³³³³³³³³³³³³³³³³³³³³³³ ±PאאאאאאאאאאאאאאאאPP‏8הההההההההההדדדדדדגZ´³³´³³³³³³³³³³³³³³³³³³³³³³³³³ ±Pאאאאאאאאאאאאאאאא‏8ההההההההההההדדדדדדדגג_Z´³³´³³³³³³³³³³³³³³³³³³³³³³³³ ±PאאאאאאאאאאאאאPP‏9ההההההההההההההדדדדדדדג_Z´³³´³³³³³³³³³³³³³³³³³³³³³³³ ²Pאאאאאאאאאאאא‏:דדההההההההההההההדדדדדדדגג_Z´³³´´³³³³³³³³³³³³³³³³³³³³³ ²אאאאאאאאאאאא‏:ûזדדההההההההההההההדדדדדדדגZ´³³´³³³³³³³³³³³³³³³³³³³³³ ²אPאאאאאאאא‏;תזדדהההההההההההההדדדדדדדדגג_Z´³³´³³³³³³³³³´³³³³³³³³³³ ³אPאאאאאאא‏=ûזדדהההההההההההההדדדדדדדדגג_Z´³³´´³³³³³³³³³³³³³³³³³³ ³אPאאאאPP‏@ûודדהההההההההההההדדדדדדדדגג_Z´³³´³³³³³³³³³³³³³³³³³³ ³Pאאאא‏AûזדדהההההההההההההדדדדדדדדגגZ´³³´´³³³³³³³³³³³³³³³³ ³QPאPP‏BגדûודדההההההההההההדדדדדדדדדגגZ´³³´´³³³³³³³³³³³³³³³ ³QP‏Cדדדדûזדדההההההההההההדדדדדדדדדגג_Z´³³´³³³³³³³³³³³³³³³ ´QP‏Bדדדדדדûודדההההההההההההדדדדדדדדדגג_Z´³³´³³³³³³³³³³³³³³ ³‏Aגבדדדדדדדדדודדההההההההההההדדדדדדדדדגג_Z´³³´³³³³³³³³³³³³³  ‏?תהגגדדדדדדגדמûזדדההההההההההההדדדדדדדדדגג_Z´³³´´³³³³³³³³³³ ³‏?תהגגדדדדדגגûודדהההההההההההדדדדדדדדדדג_Z´³³´³³³³³³³³³ ´‏?ה
-הגגדדגגגדûזדדהההההההההההדדדדדדדדדדגג_Z´³³´³³³³³³³³´‏A
-דג	גבגגגגגדמזדדהההההההההההדדדדדדדדדדגג_Z´³³´´³³³³³³‏Bגגד	בגגגגגדדûודדהההההההההההדדדדדדדדדדגג_Z´³³´´³³³³‏Cתהדדגד		גבגגגגדדד	ûזדדההההההההההדדדדדדדדדדדגג_Z´³³´³³³‏Eגדהגהבגגגגדדדûתזדדההההההההההדדדדדדדדדדדגג_Z´³³ ³‏G
-דדהדד
-	גגגגגגדדגûזדדההההההההההדדדדדדדדדדדגגZ´²³‏Hגדדגהבגגגבדד
-ûדדההההההההההדדדדדדדדדדדגג¹µ‏J
-דדגד
-	גגגגדûגûדדהההההההההדדדדדדדדדדדדגג‏K
-דבהבגגבתדג	ûתדדהההההההההדדדדדדדדדדדדגג‏N
-זד	גגדבדג	זדדהההההההההדדדדדדדדדדדגד‏Q		ûהגדגג
-דגת	זדדהההההההההדדדדדדדדדגד‏Sגגגבדזגהûהתûדדההההההההדדדדדדדדגד‏Uû			ת
-הגבתûזדדההההההההדדדדדדגד‏Xûדגגדהתדדההההההההדדדדגד‏Zמ	דהוהדהדדדדתûדדההההההההדדגד‏]	הדדדדהדדהגדûדדההההההההגד‏`ûהגדדגזה
-ûהד
-זדדההההההדה‏c
-		
-ûהבבבבד
-דדההההדה‏eûבבגגגגבבד
-זדדההדה‏h	הבבבגגגגגגבבד	זדדדה‏j	הבבבגגגגגבבד
-ג‏nדבבגגגגגבבד
-û‏pתגבבגגגגבבד	‏q	הבבבגגגבבג	‏rדבבגגגבאג	‏sתגבבגגבאג	‏t	הבבבגבאד	‏tדבבבבבד	‏uûגבאאג
-‏x
 
-תûûÿ ‏?אא‏{אאאאאא‏xאאאאבבבבאב‏tאאאאבבבבבבבאב‏qאאאאבבבבבבבבבבאאב‏mאאאאבבבבבבבבבבבבבבאב‏jאאאאבבבבבבבבבבבבבבבבבאא‏gאאאאבבבבבבבבבבבבבבבבבבבבבאא‏cאאאאבבבבבבבבבבבבבבבבבבבבבבבבאא‏`אאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבאא‏]אאאאבבבבבבבבבבבבבאבבבבבבבבבבבבבבבבבאב‏Yאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏Vאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאאב‏Rאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא‏Oאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא‏Lאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאא‏Hאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏Eאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב‏Bאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€בב‏?אאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€בב‏=אאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€בב‏;אאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב‏9אPאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב‏7אPאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב‏5Pאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏3אאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏1אאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב‏/אPאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבאב‏-אPאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€בב‏,אאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€€בב‏*אאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€ב€‏(אPאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€‏&אאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€‏%אPאאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ב‏#אאאאאבבאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ב‏"אאאאאאבבבבבבבבבאאאאאאאאאאאאאאאאבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ב‏ PPאאאאאאאבבבבבבבבבבבבבבבבאאאאאאאאאאבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ב€‏אאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבאאב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ב€‏PPאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ב€‏אאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ב€‏אאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€בב‏אאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€בני‏אאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€בנ	‏PPאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€בני	‏אאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€בני	‏Pאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€בנף	‏Qאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€בני	‏³RPאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€בנ		‏´ ±Pאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€בנף	‏³³ ±אאאאאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€בנף	‏³³³ Rבבאאאאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ב€ף	‏³³³ ³דבבאאאאאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€€€€בני	‏³³´³µגבבבאאאאאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€€€€בנף	‏³³³´³]PPבבבבבאאאאאאאאאאבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€€€€€בנף	‏³³³³³¶אבבבבבבבאאאאאאבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€€€€בני	‏´³³³´³]	PPאבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€€€€בני	‏ ³³³³³µPPאבבבבבבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€€€€בני	‏Z´³³³³³\תאאPאבבגבבבבבבבבבבבבבבבבבבבבבבב€€€€€€€€€€בני	
-‏
-_Z´³³³´PאאPבבגגבבבבבבבבבבבבבבבבבבבבב€€€€€€€ב€ף	
-‏
-ג_Z´³³÷PאאאאPאבבבבבבבבבבבבבבבבבבב€€€€בנף	
-û‏
-דג_Z´³­אאאאPאבבבבבבבבבבבבבבבבב€€נף	
-û‏
-דדדג¸¹אאאאאאPבבבבבבבבבבבאז	
-û	‏
-דדדדדגג_אאאאאאאאPאבבבבבבבבב	
-û‏
-דדדדדדדגגûאאאאאאאאPאבבבבבבבבב
-û‏
-דדדדדדדדדדאאאאאאאאPבבבג
-ב
-û‏
-דדדדדדדדדדדגגQאאאאאאאאPאב
-û‏
-דדדדדדדדדדדדדגגבאאאאאאאא	
-û				‏
-הדדדדדדדדדדדדדדגגPאאאאאאאP
-
-û								‏
-הההדדדדדדדדדדדדדדגגבPאאאאאאאאP
-
-û													‏
-הההההדדדדדדדדדדדדדדגגאאאאאאאאP	
-û																	‏
-הההההההדדדדדדדדדדדדדדגגאאאאאאאאP
-	û																						‏
-דדההההההדדדדדדדדדדדדדדדגגאבבאאאאאאP	
-																						‏
-ûדדההההההדדדדדדדדדדדדדדדגגאבבאאאאP
-
-	
-																			‏
-תדדההההההדדדדדדדדדדדדדדדגגאבבבאאאאא
-	גבבד	
-															ûב‏
-ûûדדההההההדדדדדדדדדדדדדדדגגאבבבאאאא‏
-ûבאגגגבבד	
-											בבבב‏ûדדהההההדדדדדדדדדדדדדדדדגגאבבבבאאא‏	ûבבגגבבא‏
-							ûבבגגגבבג‏ûדדהההההדדדדדדדדדדדדדדדדגג	אבבבבאא‏
-ûבבב‏
-			ûבבגגגגגבבג‏ûזדדהההההדדדדדדדדדדדדדדדדגגאבבבבבאא‏ת	‏	
-	ûבבגגגגגבבב‏זדדהההההדדדדדדדדדדדדדדדדגג	אבבבבבבאא‏ûהבבגגגגגבבבב‏
-זדדהההההדדדדדדדדדדדדדדדדגגאבבבבבבבאא‏"
-דבבגגגבבבב‏
-זדדההההדדדדדדדדדדדדדדדדדגגאבבבבבבבבא‏&
-הבבבבב‏גה
-דדההההדדדדדדדדדדדדדדדדדגגאבבבבבבבבא‏*
-דב‏דדגה
-ûזדדההההדדדדדדדדדדדדדדדדדגגאבבבבבבבבPא‏Kדדדדגה
-זדדההההדדדדדדדדדדדדדדדדדגגאבבבבבבבבב‏Lדדדדדדגה
-דדהההדדדדדדדדדדדדדדדדדדגגאבבבבבבבאב‏Kדדדדדדדדגה
-זדדהההדדדדדדדדדדדדדדדדדדגגאבבבבבאב‏Kדדדדדדדדדדגהתזדדהההדדדדדדדדדדדדדדדדדדגגאבבבאב‏Kדדדדדדדדדדדדגה
-זדדהההדדדדדדדדדדדדדדדדדדגגאבאב‏Kדדדדדדדדדדדדדדגהתזדדההדדדדדדדדדדדדדדדדדדדגגב‏Kגדדדדדדדדדדדדדדדגהתדדההדדדדדדדדדדדדדדדדדדדגגג‏K
-הגדדדדדדדדדדדדדדדגהתזדדההדדדדדדדדדדדדדדדדדדדגג‏L
-הגדדדדדדדדדדדדדדדגה
-זדדההדדדדדדדדדדדדדדדדדדדגג‏N
-דדדדדדדדדדדדדדדדגה
-ûזדדההדדדדדדדדדדדדדדדדדדגד‏P
-דדהדדדדדדדדדדדדדגה
-זדדההדדדדדדדדדדדדדדדדגד‏R
-דהההדדדדדדדדדדדדגה
-ûדדהדדדדדדדדדדדדדדדגד‏T
-דהההההדדדדדדדדדדגהתûזדדהדדדדדדדדדדדדדגד‏V
-דהההההההדדדדדדדדגה
-זדדהדדדדדדדדדדדגד‏X
-דההההההההדדדדדדדגהתדדהדדדדדדדדדגד‏Z
-דההההההההההדדדדדגהתדדהדדדדדדדגד‏\
-דההההההההההההדדדגה
-ûזדדדדדדדדגד‏^
-דההההההההההההההדגה
-דדדדדדגד‏`
-דההההההההההההההדדהתזדדדדגד‏b
-דהההההההההההההההד
-ûזדדגד‏d
-דהההההההההההההההדתגד‏f
-דהההההההההההההההדה
-û‏h
-דההההההההההההההדגה
-‏j
-דההההההההההההדדדגה‏l
-דההההההההההדדדדג‏n
-דההההההההדדדדד‏p
-דההההההדדדדד‏r
-דההההדדדדד‏t
-דההדדדדד‏v
-דדדדדד‏x
-גגדד‏zהג‏}ת‏ÿI‏‏zP‏	‏jP‏בבבד	‏בב‏NP	באבגגבבד	‏בבבבבב‏JPזבבגגגבבד	‏בבבבגגבבבב‏FPûהבגגגגבבד	‏
-בבבבגגגגגגבבבב‏B	בגגגגגגבבד	‏בבבבגגגגגגגגגגבבבב‏>Z^	בגגגגגגגגבבד	‏גבבגגגגגגגגגגגגגגבבבב‏;[¡ ]	בגגגגגגגגגגבבד	ûדבגגגגגגגגגגגגגגגגגבבבב‏8[¡ ¡ ]	בגגגגגגגגגגגגבבד
-תבבגגגגגגגגגגגגגגגגגבבבב‏6P[¡ ¡¡¡ ]	בגגגגגגגגגגגגגגבבד
-תהבבגגגגגגגגגגגגגגגגגבבבב‏4בא[¡ ¡¡¡¡¡ ]	בגגגגגגגגגגגגגגגגבבד
-תהבבגגגגגגגגגגגגגגגגגבבבב‏2בבבבאב[¡ ¡¡¡¡¡¡¡ ]	בגגגגגגגגגגגגגגגגגגבבד
-תבבגגגגגגגגגגגגגגגגגבבבב‏0בבבבבבאב[¡ ¡¡¡¡¡¡¡¡¡ ^	בגגגגגגגגגגגגגגגגגגגגבבד
-תבבגגגגגגגגגגגגגגגגגבבבב‏.בבבבבבבבאב\¡ ¡¡¡¡¡¡¡¡¡¡¢¡בגגגגגגגגגגגגגגגגגגגגגגבבד
-תדבגגגגגגגגגגגגגגגגגגבבבב‏,אבבבבבבבבאג£ ¡¢¡¡¡¡¡¡¡¡¢¡Uגגגגגגגגגגגגגגגגגגגגגגגגגגגבבד
-בבגגגגגגגגגגגגגגגגגגבבבא‏*	אבבבבבבבבג£¡¡¡¡¡¡¡¡¡¢¡Uבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבהדבגגגגגגגגגגגגגגגגגגבב‏)אבבבבב_£¡¡¡¡¡¡¡¢¡Uבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב	בבגגגגגגגגגגגגגגבבת‏)גאבבבג£¡¡¡¡¡¢¡Uבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבהבגגגגגגגגגגגבבû‏)דגגאבבג£¡¡¡¢¡Uבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב	בבגגגגגגגבבû‏)דדדגגאג£¡¢¡Uבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבהבגגגגבבû‏)דדדדדגג£¡Uבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב		בבבבû‏)דדדדדדדגגWבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבהû‏)דדדדדדדדדגגגבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב	û		‏)דדדדדדדדדדדגד	גבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגב				‏)דדדדדדדדדדדדדגג	גבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב					‏)דדדדדדדדדדדדדדדגג	גבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגב						‏)דדדדדדדדדדדדדדדדדגג	גבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב		
-‏)דדדדדדדדדדדדדדדדדדדגג	גבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבה
-
-‏)דדדדדדדדדדדדדדדדדדדדדגג	גבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב‏,דדדדדדדדדדדדדדדדדדדדדדדגג	דבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגב‏,ûדדדדדדדדדדדדדדדדדדדדדדדגג
-בבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב‏*ûדדדדדדדדדדדדדדדדדדדדדדדגדזûûבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבד‏*ה
-דדדדדדדדדדדדדדדדדדדדדדהדדה
-בבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבב‏(גגה
-זגדדדדדדדדדדדדדדדדדדדדההדגה	גבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבד	‏(דדדגה
-גדדדדדדדדדדדדדדדדדדההההדגד	דבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבד
-ת‏(דדדדדגה
-ûגדדדדדדדדדדדדדדדההההההדגג
-הבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבד
-		‏(דדדדדדדגה
-זגדדדדדדדדדדדדדדהההההההדדגגתûבבגגגגגגגגגגגגגגגגגגגגגגגגגגגגגגבבד
-		
-‏(דדדדדדדדדגהתגדדדדדדדדדדדדההההההההדדדדגה
-גבבגגגגגגגגגגגגגגגגגגגגגגגגגבבד
-			
-‏(דדדדדדדדדדגהתגדדדדדדדדדדהההההההההדדדדדגד	גבבגגגגגגגגגגגגגגגגגגגגגבבד
-					
-‏(דדדדדדדדההההדדתûגדדדדדדדדהההההההההההדדדדדגדמ	דבבגגגגגגגגגגגגגגגגגבבד
-					
-‏(גדהההההההההההההדתûגדדדדדדההההההההההההדדדדדדגגûתהבבגגגגגגגגגגגגגבבד
-						
-‏(ûחהדדהההההההההההדדתûגדדדדהההההההההההההדדדדדדדדג
-ûזבבגגגגגגגגגבבד
-							
-‏(
-זדדדההההההההההדדתûגדהההההההההההההההדדדדדדדדדגה	גבבגגגגבבד
-								
-‏+	דדהההההההההההגה
-ûדדדההההההההההההההדדדדדדדדדגד	בבבבד
-										‏.ûהדדהההההההההדגהתהדדהההההההההההההדדדדדדדדדדגד
-דד
-									ת‏1תדדדהההההדדדדגה
-תדדדהההההההההההדדדדדדדדדדדגגû								
-‏4
-ודדהההדדדדדדדהû
-דדדהההההההההדדדדדדדדדדדדדב
-							
-‏8	דדדדדדההההדדה		הדדהההההההההדדדדדדדדדדדג							
-‏=ûהדדדדדדדדדדגגה	תדדדהההההההדדדדדדדדדדג						
-‏Bûûûתתת
-		ת
-זדדדהההההדדדדדדדדדג					
-‏O‏	דדדהההדדדדדדדדג				
-‏^ûהדדהההדדדדדדג
-		
-‏dתדדדההדדדדג		
-‏g	דדדדדדג		
-‏l	הדדדג	
-‏qûהב	
-‏u	ת‏{ÿ
+
+
+
+
+
+
+ת¯^\\\\\\\\\\\\\\\\\\\\\\\\\_‏C
+
+
+
+
+
+
+
+
+
+
+¯_\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏@
+
+
+
+
+
+
+
+
+
+
+ת¯_\[\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏>
+
+
+
+
+
+
+
+
+
+
+¯_\[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏=
+
+
+
+
+
+
+
+
+
+
+ת¯_\[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:
+
+
+
+
+
+
+
+
+
+
+¯_\[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:
+
+
+
+
+
+
+
+
+
+
+¯_\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:ת
+
+
+
+
+
+
+
+ת¯_\[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:ת
+
+
+
+_\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:תתת¯_\[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:ת¯_\[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\¦[\\\\\\\\_‏:
+_ת¯_\[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\¦¥˜¥\\\\\\\\_‏:
+
+
+¯_\[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\¦¥¦©¨¥\\\\\\\\_‏:
+
+
+
+
+_¯_\[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\¦¥¦¨¥˜¨¥\\\\\\\\_‏:
+
+
+ת
+¯_\[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\¦¥§¨¦—–˜¨¥\\\\\\\\_‏:YZ
+ת
+¯_\[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\¦¥§¨¦—–——˜¨¥\\\\\\\[_‏:££YZ
+¯_\[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\¦¥§¨¦—–———–˜¨¥\\\\\\\\_‏:£Y££Y^¯_\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\¦¥§¨¦—–—————–˜¨¥\\\\\\\\_‏:££YY£^¯_\[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\¦¥§¨¦—–———————–˜¨¥\\\\\\\[_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\¦¥§¨¦—–—————————–˜¨¥\\\\\\\[_‏:£YYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\¦¥§¨¦—–———————————–˜¨¥\\\\\\\\_‏:Y£YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\¦¥§¨¦—–———––————————–˜¨¥\\\\\\\\_‏:YYYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\¦¥§¨¦—–—————˜©¦–——————–˜¨¥\\\\\\\\_‏:£YYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\¦¥§¨¦—–———–——¦^©¦–——————–˜¨¥\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\¦¥§¨¦—–———––˜¨¦¦__¨–——————–˜¨¥\\\\\\\[_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\¦¥§¨¦—–—————¦—^^¥¦^¥¨———————–˜¨¥\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\¦¥§¨¦—–————–—¨§—^¨˜¦§––———————–˜¨¥\\\\\\\[_‏:££YY£^_[\\\\\\\\\\\\\\\\\¦¥§¨¦—–—————˜—¨¦§¦^^¦———————————–˜¨¥\\\\\\\\_‏:Y£YY£^_[\\\\\\\\\\\\\\\¦¥§¨¦—–—————˜—^¦_—_¦¥¥–—————¦˜————–˜¨¥\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\¦¥§¨¦—–————––˜§©¦_^¦—––——–—¥¥©˜————–˜¨¥\\\\\\\\_‏:Y£YY£^_[\\\\\\\\\\\¦¥§¨¦—–——————©—¥_^˜—˜–———–—¥¥¦—§—————–˜¨¥\\\\\\\\_‏:Y£YY£^_[\\\\\\\\\¦¥§¨¦—–———––—–¦§¥^˜¨—–—————¦§^¦¦—–—————–˜¨¥\\\\\\\\_‏:££YY£^_[\\\\\\\\¥¦¨¦—–—————˜©^—©¨¦¦––—————˜¦¨¨¦—–———————–˜¨¥\\\\\\\\_‏:££YY£^_[\\\\\\\¦¦¨––—————–¥_¥_¦_¦¦—–—————–§¨§˜—–—————————–˜¨¥\\\\\\\\_‏:££YY£^_[\\\\\\\¦¦¦–——————–¦©–^¦¦––———–—¦§—¦¦—————————————–˜¨¥\\\\\\\\_‏:££YY£^_[\\\\\\\¦¦¦–——————–¦_¨¥–——————¥¦§¦————————————————–˜¨¥\\\\\\\\_‏:Y£YY£^_[\\\\\\\¦¦¦–——————–¥¨—–———–—˜§¨¥§—————————————————–˜¨¥\\\\\\\\_‏:££YY£^_[\\\\\\\¦¦¦–————————–———–—˜¨^§¦—————————¦¥————————–˜¨¥\\\\\\\\_‏:YYYY£^_[\\\\\\\¦¦¦–——————————–—¦¦¨¦¦—–———————¦¦§¥–———————–˜¨¥\\\\\\\\_‏:££YY£^_[\\\\\\\¦¦¦–————————–—¥§©—¦—–—————–—¦¦©—˜————————–—¨¦¥\\\\\\\[_‏:££YY£^_[\\\\\\\¦¦¦–——————–—¦§_¨¥–————————¦¨¨¥¦–———————–₪§¨¦¥\\\\\\\\\_‏:££YY£^_[\\\\\\\¦¦¦–——————¥¦§¨¥˜–———————–§¦¨¦————————–—§¨¦¥[\\\\\\\\\\_‏:££YY£^_[\\\\\\\[¦¦–—————¦˜¨¥——–——————¦§–§¦————————–—§¨¦¥[\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\¦¦¦–———–¥¨————————–—¦¥^¨—————————–—§¨¦¥[\\\\\\\\\\\\\\_‏:Y£YY£^_[\\\\\\\¦¦¦–—————˜——————–—¦¦©˜¦————————–—§¨¦¥[\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\¦¦¦–—————–——————¦¥¨˜¦—–——————–—§¨¦¥[\\\\\\\\\\\\\\\\\\_‏:£YYY£^_[\\\\\\\¦¦¦–————————–—¥¦©¨¥—–——————–—§¨¦¥[\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\¦¦¦–———————–¥§^§¥————————–—§¨¦¥[\\\\\\\\\\\\\\\\\\\\\\_‏:£YYY£^_[\\\\\\\¦¦¦–———————–¦©¥—–——————–₪§¨¦¥[\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\¦¦¦–——————————–——————–₪§¨¦¥[\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\¦¦¦–———————————————–—§¨¦¥[\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\¦¦¦–—————————————–—§¨¦¥[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:£YYY£^_[\\\\\\\¦¦¦–———————————–—§¨¦¥[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:Y£YY£^_[\\\\\\\¦¦¦–—————————–—§¨¦¥[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\[¦¦–———————–—§¨¦¥[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[_‏:£YYY£^_[\\\\\\\[¦¦–—————–—§¨¦¥[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[_‏:££YY£^_[\\\\\\\¦¦¦–———–₪§¨¦¥[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:£YYY£^_[\\\\\\\¦¦¦–—–—§¨¦¥[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\¦¦¦–˜§¨¦¥[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\¦¦¨¦¨¦¥[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\[¦©¦¥[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\₪¥[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[_‏:£YYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:£YYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:Y£YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:£YYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:£YYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:YYYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:Y£YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[_‏:£YYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:Y£YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:YYYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:YYYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[_‏:£YYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:YYYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:£YYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[_‏:Y£YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\‏9Y£YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\^‏:££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\^‏<YYYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[\^‏>Y£YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\^‏@££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[\^‏BYYYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\^‏D££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\^‏FYYYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[\^‏HYYYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[\^‏J££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\^‏L££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[\^‏N£YYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\^‏PYYYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\^‏R££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[\^‏TYYYY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[\^‏V££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\^‏X££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\[\^‏Z££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\\\^‏\££YY£^_[\\\\\\\\\\\\\\\\\\\\\\\^‏^£YYY£^_[\\\\\\\\\\\\\\\\\\\\\^‏`££YY£^_[\\\\\\\\\\\\\\\\\\\^‏b££YY£^_[\\\\\\\\\\\\\\\\\^‏dY£YY£^_[\\\\\\\\\\\\\\\^‏f£YYY£^_[\\\\\\\\\\\\\^‏hYYYY£^_[\\\\\\\\\[\^‏j£YYY£^_[\\\\\\\\\^‏lYYYY£^_[\\\\\[\^‏n££YY£^_[\\\[\^‏p[££Y£^_[\\\^‏r_[££^_[\^‏v_[^_^¯‏zÿ ‏^Z££££££¢₪^¯_\\\\\\\\\\\\\\\\\\\\\\\\\\[__[\\\\\\\_‏I^Z££££££¢₪^_]\\\\\\\\\\\\\\\\\\\\\\\\\\\[__[\\\\\\\_‏G^Z££££££¢Y]_][\\\\\\\\\\\\\\\\\\\\\\\\\\\\[__[\\\\\\\_‏F^Z¢£££££¢Y]_][\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\__[\\\\\\\_‏D¯\₪¢£££££¢Y^_][\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[__[\\\\\\\_‏A^^_[££££¢Z]_][\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[\^¯_\\\\\\\\_‏?^Z¢£\_[£Y]¯_][\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[\^¯_\\\\\\\\_‏=^Z¢£££££[__][\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[\^¯|xן_[\\\\\\\_‏;^Z¢££££££Y]^[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[\^מפפx~_[\\\\\\\_‏:^Y¢£££££¢₪]_]^\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\[\^¯מפפפפx}_[\\\\\\\_‏:]^\£¢££¢Y^_][\^\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\^¯מפפפפפפx}_[\\\\\\\_‏:£Z_]£Y]_][\\\^\\\\\\\\\\\\\\\\\\\\\\\\\\\[\^¯|פפפפפפפפx}_[\\\\\\\_‏:Y££Z__][\\\\\^\\\\\\\\\\\\\\\\\\\\\\\\\[\^מפפפפפפפפפפx}_[\\\\\\\_‏:£YY££__[\\\\\\\^\\\\\\\\\\\\\\\\\\\\\\\[\^מפפפפפפפפפפפפx}_[\\\\\\\_‏:Y£YY£^_[\\\\\\\^\\\\\\\\\\\\\\\\\\\\\[\^¯מפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\^\\\\\\\\\\\\\\\\\\\[\^¯מפפפפפפפפפפפפפפפפx}_[\\\\\\[_‏:££YY£^_[\\\\\\\^\\\\\\\\\\\\\\\\\[\^¯מפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\^\\\\\\\\\\\\\\\\\^מפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\^\\\\\\\\\\\\\[\^¯מפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\[_‏:££YY£^_[\\\\\\\^\\\\\\\\\\\[\^¯מפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\[_‏:£YYY£^_[\\\\\\\^\\\\\\\\\[\^¯מפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:Y£YY£^_[\\\\\\\^\\\\\\\[\^¯מפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:YYYY£^_[\\\\\\\^\\\\\[\^מפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:£YYY£^_[\\\\\\\^\\\[\^¯מפפפפפפפפפפפפפפפפפפפפפפפפפפפפyפפפxן_[\\\\\\\_‏:££YY£^_[\\\\\\\^\\\^מפפפפפפפפפפפפפפפפפפפפפפפפפפפפyפ[תyפx}_[\\\\\\[_‏:££YY£^_[\\\\\\\]\^¯מפפפפפפפפפפפפפפפפפפפפפפפפפפפפyפ¦¦[yפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\_מפפפפפפפפפפפפפפפפפפפפפפפפפפפפyפ¦§¥§yפx}_[\\\\\\[_‏:££YY£^_[\\\\\\\מפפפפפפפפפפפפפפפפפפפפפפפפפפפפyפ¦¦¥—–¦yפx}_[\\\\\\\_‏:Y£YY£^_[\\\\\\\מxפפפפפפפפפפפפפפפפפפפפפפפפפפyפ¦¦¥—–——¦[yפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפyפ¦¦¥—–————¦yפx}_[\\\\\\\_‏:Y£YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפyפ¦¦¥—–——————¦[yפx}_[\\\\\\\_‏:Y£YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפyפ¦¦¥—–————————¦yפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפyפ¦¦¥—–——–———————¦yפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפyפ¦¦¥—–———˜§———————¦yפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\מפפפפפפפפפפפפפפפyפ¦¦¥—–————¥^^———————¦yפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפyפ¦¦¥—–————§§¦^^˜–—————¦yפx}_[\\\\\\\_‏:Y£YY£^_[\\\\\\\|פפפפפפפפפפפyפ¦¦¥—–——–˜§˜^¦¥¦————————¦yפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפyפ¦¦¥—–——–—˜§¦¦^§———–——————¦[yפx}_[\\\\\\\_‏:YYYY£^_[\\\\\\\|פפפפפפפyפ¦¦¥—–——–˜¥¦¨¨§¦˜—————¦—————¦yפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפyפ¦¦¥—–———˜—¦_^¦¨¥–—–——¥¥¨—————¦yפx}_[\\\\\\[_‏:££YY£^_[\\\\\\\|פפפפפ¦¦¥—–——––—_§¦§¨—–————¦¨¦¥——————¦yפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפ¦¦¥—–————¨¨¦^^¦—–————¥¨§¦————————¦yפx~_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפת§˜–————–©¥©¨¦—————˜—¦§˜—–————————¦yפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפת¦———————©§¦——————¦§˜——–——————————¦yפx}_[\\\\\\\_‏:Y£YY£^_[\\\\\\\|פפפת¦—–—————§¦–————¥§¦¥——————————————¦yפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפת¦—–——————–———¥¨¨¦———————¦————————¦yפx}_[\\\\\\\_‏:£YYY£^_[\\\\\\\|פפפת¦—–————————¦¦¦¥—–——–——¦¦¦——————–—§[yפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפת¦˜–————–—¦©¨———————˜¦¦¦——————–—¥¦¦תפפx}_[\\\\\\\_‏:£YYY£^_[\\\\\\\|פפפת¦—–————¥¦§¥———————˜§§¥—————–—¥¦¦תפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפת¦—————¦¥¦—–——–——§¦—¦—————–—¥¦¦פyפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\מפפפת¦—–———¦——————˜¦¦¦¥—————–—¥¦¦פyפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפת¦—–———–———–—¦¦¦¥—————–—¥¦¦פyפפפפפפפפx}_[\\\\\\\_‏:£YYY£^_[\\\\\\\|פפפת¦—–———————¦§¨˜—————–—¥¦¦פyפפפפפפפפפפx}_[\\\\\\\_‏:Y£YY£^_[\\\\\\\|פפפת§˜–——————¨¨¥—————–—¥¦¦פyפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפת¦—–——————¥—————–—¥¦¦פyפפפפפפפפפפפפפפx}_[\\\\\\[_‏:£YYY£^_[\\\\\\\|פפפת¦—–——————–———–—¥¦¦פyפפפפפפפפפפפפפפפפx}_[\\\\\\[_‏:££YY£^_[\\\\\\\|פפפת¦—–————————–—¥¦¦פyפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:£YYY£^_[\\\\\\\|פפפת¦————————–—¥¦¦פyפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\מפפפת¦—–————–—¥§¦פyפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפת¦————–—¥¦¦פyפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפת¦˜––—¥¦¦תפyפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\מפפפת¦——¥¦¦פyפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפת§¦¦¦פyפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\[_‏:£YYY£^_[\\\\\\\|פפפת¦\תפyפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפxן_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפ
+פyפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|xפפפyפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:£YYY£^_[\\\\\\\מפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:Y£YY£^_[\\\\\\\|xפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:£YYY£^_[\\\\\\\מפמפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\מפןןפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\מxפן¯פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:£YYY£^_[\\\\\\\|פפפ~פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\מפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\מפ~פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\מפמןפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\מפפפמןפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:YYYY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx~_[\\\\\\[_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:Y£YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\[_‏:£YYY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx~_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:Y£YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:YYYY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:YYYY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\[_‏:£YYY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:YYYY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:£YYY£^_[\\\\\\\מפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\[_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\_‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפxן_[\\\\\\\_‏:££YY£^_[\\\\\\\מפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\[_‏:Y£YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\\\\\\\‏9Y£YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפxן_[\\\\\^‏:££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_\\\\^‏<YYYY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפx}_[\^‏>Y£YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפxן_^‏@££YY£^_[\\\\\\\מפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפ~‏BYYYY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפן‏D££YY£^_[\\\\\\\מפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפן‏FYYYY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפxפן‏HYYYY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפxפן‏J££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפפן‏L££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפxפן‏N£YYY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפפפן‏PYYYY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפפפפפפפן‏R££YY£^_[\\\\\\\מפפפפפפפפפפפפפפפפפפפפפפxפן‏TYYYY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפxפן‏V££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפפפפפן‏X££YY£^_[\\\\\\\מפפפפפפפפפפפפפפפפxפן‏Z££YY£^_[\\\\\\\|פפפפפפפפפפפפפפפפן‏\££YY£^_[\\\\\\\|פפפפפפפפפפפפפפן‏^£YYY£^_[\\\\\\\|פפפפפפפפפפפפן‏`££YY£^_[\\\\\\\|פפפפפפפפפפן‏b££YY£^_[\\\\\\\|פפפפפפפפן‏dY£YY£^_[\\\\\\\|פפפפפפן‏f£YYY£^_[\\\\\\\|פפפפן‏hYYYY£^_[\\\\\\\מxפן‏j£YYY£^_[\\\\\\\|מ‏lYYYY£^_[\\\\\[\‏n££YY£^_[\\\[\^‏p[££Y£^_[\\\^‏r_[££^_[\^‏v_[^_^¯‏zÿ ‏:
+תתתת
+ת\₪[^¯‏p
+תת
+ת\¥]^‏p
+
+ת\¥]¯_]]‏p
+\¥]¯_]]]]‏p\¥]¯_]]]]]]‏o\¥]¯_]]]]]]]]‏m_\¥]¯_]]]]]]]]]]‏k_\¥]¯_]]]]]]]]]]]]‏i_\¥]¯_]]]]]]]]]]]]]]‏g_\¥]¯_]]]]]]]]]]]]]]]]‏,‏8_\¥]¯_]]]]]]]]]]]]]]]]]]‏*‏4_\¥]¯_]]]]]]]]]]]]]]]]]]]]‏(
+
+‏0_\¥]¯_]]]]]]]]]]]]]]]]]]]]]]‏&
+
+
+
+
+
+‏,_\¥]¯_]]]]]]]]]]]]]]]]]]]]]]]]‏&
+
+
+
+
+
+
+‏(_\¥]¯_]]]]]]]]]]]]]]]]]]]]]]]]]]‏&
+
+
+
+
+
+
+ת‏%_\¥]¯_]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&
+
+
+
+
+
+‏#_\¥]¯_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתת
+ת‏"]]¯_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתת
+‏"¯]¯_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯¥__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]‏&תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]_‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]^‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]^‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]_‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]^_‏&תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]^_‏'תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]]]^_‏)תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]]]]]]]]]]]^_‏+תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]]]^_‏-תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]]]^_‏/תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]]]^_‏1תתתתתתת
+‏"¯[__]]]]]]]]]]]]]]]]]]]^_‏3תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]]]^_‏5תתתתתתת
+‏"¯[_]]]]]]]]]]]]]]]^_‏7תתתתתתת
+‏"¯[__]]]]]]]]]]]]]^_‏9תתתתתתת
+‏"¯[_]]]]]]]]]]]^_‏;תתתתתתת
+‏"¯[_]]]]]]]]]^_‏=תתתתתתת
+‏"¯[__]]]]]]]^_‏?תתתתתתת
+‏"¯[__]]]]]^_‏Aתתתתתתת
+‏"¯[_]]]^_‏Cתתתתתתת
+‏"¯¥__]^_‏Eתתתתתתת
+‏"^__‏Gתתתתתתת
+‏#‏Iתתתתתתת
+‏pתתתתתתת
+‏pתתתתתתת
+‏p
+תתתתתת
+‏pת
+תתתתת
+‏pת
+תתת
+‏rת
+ת
+‏t
+‏v‏zÿ ‏6^_^[₪\‏p]\^¥\‏p_¥[]]¥\‏p_[[[[]]¥\‏p_¥[[[[[]]¥\‏p_¥[[[[[[[]]¥\‏o_¥[[[[[[[[[]]¥\_‏m_¥[[[[[[[[[[[]]¥\_‏k_¥[[[[[[[[[[[[[]]¥\_‏<‏,_¥[[[[[[[[[[[[[[[]]¥\‏8‏*_¥[[[[[[[[[[[[[[[[[]]¥\_‏4
+
+‏(_¥[[[[[[[[[[[[[[[[[[[]]¥\_‏0
+
+
+
+
+
+‏&_¥[[[[[[[[[[[[[[[[[[[[[]]¥\_‏,
+
+
+
+
+
+
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[]]¥\_‏)ת
+
+
+
+
+
+
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[]]¥\_‏'
+
+
+
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[]]¥\_‏%
+ת‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]¥\_‏#תת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]_‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&_¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏&¯^\¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏'¯^\¥[[[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏)¯^\¥[[[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏+¯^\¥[[[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏-¯^\¥[[[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏/¯^\¥[[[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏1¯^\¥[[[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏3¯^\¥[[[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏5¯^\¥[[[[[[[[[[[[[[[¥^]‏"תתתת
+‏7¯^\¥[[[[[[[[[[[[[¥^]‏"תתתת
+‏9¯^\¥[[[[[[[[[[[¥^]‏"תתתת
+‏;¯^\¥[[[[[[[[[¥^]‏"תתתת
+‏=¯^\¥[[[[[[[¥^]‏"תתתת
+‏?¯^\¥[[[[[¥^]‏"תתתת
+‏A¯^\¥[[[¥^]‏"תתתת
+‏C¯^\¥[¥^]‏"תתתת
+‏E¯^\¥^]‏"תתתת
+‏G¯^__‏"תתתת
+‏I‏#תתתת
+‏pתתתת
+‏pתתתת
+‏pתתתת
+‏p
+תתת
+‏pת
+ת
+‏rת
+‏v‏zÿ
