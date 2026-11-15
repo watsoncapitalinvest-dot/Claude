@@ -7631,10 +7631,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..f0e879b
+index 0000000..bea49a2
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3178 @@
+@@ -0,0 +1,3254 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -7786,6 +7786,82 @@ index 0000000..f0e879b
 +		}
 +		return rgb((int)(R * 255 + 0.5), (int)(G * 255 + 0.5), (int)(B * 255 + 0.5));
 +	}
++
++	// ============================================================ STENCILLED PAINT
++	// John 14 Nov 19:14: "I'd like the text to look higher quality ... a better colour or treatment",
++	// and he picked stencilled paint: cream letters, a slight worn / speckled texture, a faint
++	// shadow for depth. Every letter the overlay draws goes through paintPx, so the briefings, the
++	// turn page and the screens all get it. The texture is keyed to the letter's own position, so
++	// it does not crawl when the text moves. Small type gets the colour and the shadow only: wear
++	// on a 10-pixel letter reads as a rendering fault, not as paint.
++	inline Uint32 hash2(int u, int v)
++	{
++		Uint32 h = (Uint32)u * 374761393u + (Uint32)v * 668265263u;
++		h = (h ^ (h >> 13)) * 1274126177u;
++		return h ^ (h >> 16);
++	}
++	/// smooth value noise, 0..255, blobs about `cell` pixels across
++	inline int blobs(int u, int v, int cell)
++	{
++		const int cu = u >= 0 ? u / cell : (u - cell + 1) / cell, cv = v >= 0 ? v / cell : (v - cell + 1) / cell;
++		const int fu = ((u - cu * cell) * 256) / cell, fv = ((v - cv * cell) * 256) / cell;
++		const int a = hash2(cu, cv) & 255, b = hash2(cu + 1, cv) & 255, c = hash2(cu, cv + 1) & 255, d = hash2(cu + 1, cv + 1) & 255;
++		const int top = a + (((b - a) * fu) >> 8), bot = c + (((d - c) * fu) >> 8);
++		return top + (((bot - top) * fv) >> 8);
++	}
++	/// a light, unsaturated ink becomes cream; a colour that says something keeps its hue
++	inline Uint32 creamy(Uint32 col)
++	{
++		const int r = (col >> 16) & 255, g = (col >> 8) & 255, b = col & 255;
++		const int hi = std::max(r, std::max(g, b)), lo = std::min(r, std::min(g, b));
++		if (hi < 150) return col;
++		if (hi - lo > 40)
++		{
++			// the old palettes' washed pinks (the briefing's 233,172,161) say nothing: cream them.
++			// A red picked on purpose is far more saturated (the readable() wash keeps it so) and
++			// green, yellow and blue keep their hue, because there the colour is the meaning.
++			if (hi - lo >= 120 || hi != r) return col;
++			const int hue = g >= b ? (g - b) * 60 / (hi - lo) : 360 - (b - g) * 60 / (hi - lo);
++			if (hue > 25 && hue < 300) return col;
++		}
++		const Uint32 cream = rgb(243, 232, 206);
++		return mix(col, rgb(cream >> 16 & 255, cream >> 8 & 255, cream & 255), 200);
++	}
++	inline bool lightInk(Uint32 col)
++	{
++		return ((col >> 16 & 255) * 3 + (col >> 8 & 255) * 6 + (col & 255)) / 10 > 120;
++	}
++	/// one pixel of a painted letter: (u, v) are letter-local display pixels, cov its coverage,
++	/// strength 0..256 how much wear this size of type takes, sd the shadow offset (0 = none)
++	inline void paintPx(int X, int Y, int u, int v, int cov, Uint32 col, int strength, int sd)
++	{
++		if (cov <= 0) return;
++		cov = std::min(255, cov);
++		if (sd > 0 && X + sd < sw && Y + sd < sh)
++		{
++			// the faint shadow, written ahead of the letter: the rows and columns it lands on are
++			// drawn later, so the letter's own pixels cover it where they overlap
++			Uint32 &s = over[(size_t)(Y + sd) * sw + X + sd];
++			s = mix(s, rgb(14, 12, 9), cov * 105 / 255);
++		}
++		if (strength > 0)
++		{
++			// worn patches where the paint is thin, a fine speckle of chips, and a grain in the tone
++			const int patch = std::max(0, blobs(u, v, 7) - 150) * 2;          // 0..210 over about a third of the area
++			const int chip = (hash2(u * 3 + 11, v * 5 + 7) & 255) < 8 ? 110 : 0;  // about 3% of pixels
++			const int wear = std::min(200, std::max(patch * 3 / 5, chip));
++			cov = cov * (256 - (wear * strength >> 8)) >> 8;
++			const int grain = ((int)(hash2(u, v) >> 8 & 31) - 16) * strength >> 8;      // -16..15
++			const int r = std::max(0, std::min(255, (int)(col >> 16 & 255) + grain));
++			const int g = std::max(0, std::min(255, (int)(col >> 8 & 255) + grain));
++			const int b = std::max(0, std::min(255, (int)(col & 255) + grain));
++			col = rgb(r, g, b);
++		}
++		Uint32 &o = over[(size_t)Y * sw + X];
++		o = mix(o, col, cov);
++	}
++	/// how much wear type of this many display pixels tall takes: none below 16, all from 34
++	inline int wearFor(int px) { return std::max(0, std::min(256, (px - 16) * 256 / 18)); }
 +
 +	inline const Uint8 *row8(int y) { return (const Uint8*)base->pixels + y * base->pitch; }
 +
@@ -8042,12 +8118,15 @@ index 0000000..f0e879b
 +			}
 +			const int X0 = xs[cx0], X1 = xs[cx1], Y0 = ys[cy0], Y1 = ys[cy1];
 +			const double kx = (double)((cx1 - cx0) * a.k) / (X1 - X0), ky = (double)((cy1 - cy0) * a.k) / (Y1 - Y0);
++			col = creamy(col);
++			const int gh = ys[std::min(bh, by0 + g.h)] - ys[std::max(0, by0)];
++			const bool light = lightInk(col);
++			const int wear = light ? wearFor(gh) : 0, sd = light ? std::max(1, gh / 14) : 0;
 +			for (int Y = Y0; Y < Y1; ++Y)
 +			{
 +				const int by = cy0 + (Y - Y0) * (cy1 - cy0) / (Y1 - Y0);
 +				if (by < clip.y0 || by >= clip.y1) continue;
 +				const double fy = (g.sy + (cy0 - by0)) * a.k + (Y - Y0 + 0.5) * ky - 0.5; const int sy0 = std::max(0, (int)fy), sy1 = std::min(a.h - 1, sy0 + 1); const int wy = (int)((fy - sy0) * 256);
-+				Uint32 *o = over.data() + (size_t)Y * sw;
 +				for (int X = X0; X < X1; ++X)
 +				{
 +					const int bx = cx0 + (X - X0) * (cx1 - cx0) / (X1 - X0);
@@ -8056,7 +8135,7 @@ index 0000000..f0e879b
 +					const double fx = (g.sx + (cx0 - bx0)) * a.k + (X - X0 + 0.5) * kx - 0.5; const int sx0 = std::max(0, (int)fx), sx1 = std::min(a.w - 1, sx0 + 1); const int wx = (int)((fx - sx0) * 256);
 +					const int c00 = a.cov[(size_t)sy0 * a.w + sx0], c01 = a.cov[(size_t)sy0 * a.w + sx1], c10 = a.cov[(size_t)sy1 * a.w + sx0], c11 = a.cov[(size_t)sy1 * a.w + sx1];
 +					const int cov = ((c00 * (256 - wx) + c01 * wx) * (256 - wy) + (c10 * (256 - wx) + c11 * wx) * wy) >> 16;
-+					if (cov > 0) o[X] = mix(o[X], col, std::min(255, cov));
++					paintPx(X, Y, X - X0 + g.sx * 3, Y - Y0 + g.sy * 3, cov, col, wear, sd);
 +				}
 +			}
 +		}
@@ -8142,6 +8221,11 @@ index 0000000..f0e879b
 +	{
 +		const double k = size / f.em;
 +		const int n = std::max(1, std::min(6, (int)std::ceil(1.0 / k)));
++		// stencilled paint: a light ink is a painted letter; a dark one is somebody's shadow pass
++		const Uint32 ink = creamy(col);
++		const bool light = lightInk(ink);
++		const int capPx = (int)(f.cap * k);
++		const int wear = light ? wearFor(capPx) : 0, sd = light ? std::max(1, capPx / 14) : 0;
 +		cx0 = std::max(cx0, 0); cy0 = std::max(cy0, 0); cx1 = std::min(cx1, sw); cy1 = std::min(cy1, sh);
 +		double pen = X;
 +		const double top = baseline - f.asc * k;
@@ -8156,7 +8240,6 @@ index 0000000..f0e879b
 +				const int Y0 = std::max(cy0, (int)std::floor(gy0)), Y1 = std::min(cy1, (int)std::ceil(gy0 + g.h * k));
 +				for (int Y = Y0; Y < Y1; ++Y)
 +				{
-+					Uint32 *o = over.data() + (size_t)Y * sw;
 +					for (int Xp = X0; Xp < X1; ++Xp)
 +					{
 +						int sum = 0;
@@ -8173,7 +8256,7 @@ index 0000000..f0e879b
 +							}
 +						}
 +						const int cov = sum / (n * n);
-+						if (cov > 0) o[Xp] = mix(o[Xp], col, std::min(255, cov));
++						if (cov > 0) paintPx(Xp, Y, Xp - X0 + (int)(g.x * k), Y - Y0 + (int)(g.y * k), cov, ink, wear, sd);
 +					}
 +				}
 +			}
@@ -8261,13 +8344,6 @@ index 0000000..f0e879b
 +				if (cov > 0) o[X] = mix(o[X], col, (int)(cov * alpha));
 +			}
 +		}
-+	}
-+
-+	inline Uint32 hash2(int x, int y)
-+	{
-+		Uint32 h = (Uint32)x * 374761393u + (Uint32)y * 668265263u;
-+		h = (h ^ (h >> 13)) * 1274126177u;
-+		return h ^ (h >> 16);
 +	}
 +
 +	// The console's colours, the geoscape panel's own (make_panel.py), darker
