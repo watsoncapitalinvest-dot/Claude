@@ -435,6 +435,25 @@ for k, (title, brief, win, lose) in UWM.items():
     S['STR_DEBRIEF_%s_WIN' % k] = win
     S['STR_DEBRIEF_%s_LOSE' % k] = lose
 
+# ------------------------------------------------------------------ 8. Replacing BUILD's placeholders (BUILD 13 Nov 21:50, 14 Nov 01:15; John 14 Nov 20:50)
+# Same ids as gijoe_cartel_arc.rul / gijoe_proving_ground.rul. BUILD: delete your copies so only these load.
+S['STR_EVENT_FACTORY_FOUND'] = 'THE MONEY ENDS IN WEST TEXAS'
+S['STR_EVENT_FACTORY_FOUND_DESCRIPTION'] = P.join([
+    "SCARLETT: The border bank paid out to a \"machine works\" account for eleven months. The account belongs to the Arbco Furniture plant in West Texas. Arbco closed a year ago.",
+    "Somebody is still paying its power bill, and the rail spur behind it was cleared last month. Nobody clears a spur to a plant that makes nothing.",
+    "HAWK: It's on the map. Let's go and see what furniture looks like these days."])
+S['STR_EVENT_ROBBERY_MISSED'] = 'THE PAYROLL IS GONE'
+S['STR_EVENT_ROBBERY_MISSED_DESCRIPTION'] = P.join([
+    "HAWK: The armored car was hit on schedule and we weren't there. Two guards in the hospital, the payroll gone, and the evening news asking who's supposed to stop this.",
+    "If Scarlett's informant is still talking, we'll hear where the crew went to ground. If not, that money has to go through a bank sooner or later, and we'll follow it the slow way."])
+S['STR_PROVING_GROUND_BRIEFING'] = P.join([
+    "HAWK: A Ranger called Beach Head heard we'd built a Training Room. He doesn't think much of it, or of us. He's set up a course outside the wire and brought his own cadre.",
+    "Every round on that course is a stun round. Nobody gets hurt. Everybody gets embarrassed.",
+    "Put down every man he's got, Beach Head included, and he'll come and train our people. Pull out, or get put down, and he'll be back next week to try again. He'll enjoy that."])
+S['STR_PROVING_GROUND_UP'] = "Beach Head has set up a proving ground near {0}. Beat his cadre and he joins. Every hit only stuns."
+S['STR_PROVING_GROUND_PASSED'] = "BEACH HEAD: You'll do. Barely. I start Monday, and your people won't like me. Beach Head has joined G.I. Joe at {0}."
+S['STR_PROVING_GROUND_FAILED'] = "BEACH HEAD: That was sad. Same time next week. Bring people who can shoot."
+
 hdr = ('# STORY (Act 1 writing). Hawk\'s briefings, Cobra Commander\'s broadcast and the Act 1 cutscene captions.\n'
        '# Text only. BUILD wires the ids (see story_tools/gen_act1_text.py). Generated: edit the script, not this file.\n')
 body = yaml.dump({'extraStrings': [{'type': 'en-US', 'strings': S}, {'type': 'en-GB', 'strings': S}]},
