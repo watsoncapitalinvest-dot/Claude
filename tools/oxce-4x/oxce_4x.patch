@@ -7631,10 +7631,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..967b7a8
+index 0000000..e156c7c
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3275 @@
+@@ -0,0 +1,3282 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -7833,32 +7833,37 @@ index 0000000..967b7a8
 +	}
 +	/// one pixel of a painted letter: (u, v) are letter-local display pixels, cov its coverage,
 +	/// strength 0..256 how much wear this size of type takes, sd the shadow offset (0 = none)
++	/// the dark the letters sit on: one pass for every letter of a line BEFORE any ink, so a
++	/// letter's outline never darkens its neighbour (John 14 Nov 20:08 "just make it look better")
++	inline void darkPx(int X, int Y, int cov, int sd)
++	{
++		if (cov <= 0 || sd <= 0) return;
++		cov = std::min(255, cov);
++		auto put = [&](int x, int y, int a)
++		{
++			if (x < 0 || y < 0 || x >= sw || y >= sh) return;
++			Uint32 &s = over[(size_t)y * sw + x];
++			s = mix(s, rgb(10, 9, 7), cov * a >> 8);
++		};
++		// a thin keyline all round, so the edge is crisp on any background
++		const int k = std::max(1, sd / 3);
++		for (int dy = -k; dy <= k; ++dy)
++			for (int dx = -k; dx <= k; ++dx)
++				if (dx || dy) put(X + dx, Y + dy, 150);
++		// a soft drop shadow down and to the right: three steps, each fainter, reads as a blur
++		put(X + sd, Y + sd, 170);
++		put(X + sd + 1, Y + sd + 1, 110);
++		put(X + sd * 2, Y + sd * 2, 55);
++	}
++	/// one pixel of a letter's ink: lit from above, and on big type the paint a little thin in patches
 +	inline void paintPx(int X, int Y, int u, int v, int cov, Uint32 col, int strength, int sd, int t = 128)
 +	{
 +		if (cov <= 0) return;
 +		cov = std::min(255, cov);
 +		if (sd > 0)
 +		{
-+			// the drop shadow, written ahead of the letter: the rows and columns it lands on are
-+			// drawn later, so the letter's own pixels cover it where they overlap. John 14 Nov 19:53
-+			// "the letters seem flat on the page": a firm shadow close in and a soft one further out,
-+			// so the letter stands off the plate
-+			if (X + sd < sw && Y + sd < sh)
-+			{
-+				Uint32 &s = over[(size_t)(Y + sd) * sw + X + sd];
-+				s = mix(s, rgb(8, 7, 5), cov * 185 / 255);
-+			}
-+			const int sd2 = sd * 2;
-+			if (X + sd2 < sw && Y + sd2 < sh)
-+			{
-+				Uint32 &s = over[(size_t)(Y + sd2) * sw + X + sd2];
-+				s = mix(s, rgb(8, 7, 5), cov * 80 / 255);
-+			}
-+		}
-+		if (sd > 0)
-+		{
 +			// lit from above: the top of the letter a touch brighter, the foot a touch darker
-+			const int f = 276 - (t * 52 >> 8);                                   // 276 at the top .. 224 at the foot
++			const int f = 272 - (t * 44 >> 8);                                   // 272 at the top .. 228 at the foot
 +			const int r = std::min(255, (int)(col >> 16 & 255) * f >> 8);
 +			const int g = std::min(255, (int)(col >> 8 & 255) * f >> 8);
 +			const int b = std::min(255, (int)(col & 255) * f >> 8);
@@ -7866,16 +7871,10 @@ index 0000000..967b7a8
 +		}
 +		if (strength > 0)
 +		{
-+			// worn patches where the paint is thin, a fine speckle of chips, and a grain in the tone
-+			const int patch = std::max(0, blobs(u, v, 7) - 150) * 2;          // 0..210 over about a third of the area
-+			const int chip = (hash2(u * 3 + 11, v * 5 + 7) & 255) < 8 ? 110 : 0;  // about 3% of pixels
-+			const int wear = std::min(200, std::max(patch * 3 / 5, chip));
-+			cov = cov * (256 - (wear * strength >> 8)) >> 8;
-+			const int grain = ((int)(hash2(u, v) >> 8 & 31) - 16) * strength >> 8;      // -16..15
-+			const int r = std::max(0, std::min(255, (int)(col >> 16 & 255) + grain));
-+			const int g = std::max(0, std::min(255, (int)(col >> 8 & 255) + grain));
-+			const int b = std::max(0, std::min(255, (int)(col & 255) + grain));
-+			col = rgb(r, g, b);
++			// only soft worn patches now: the chips and the grain read as noise (20:06 "that looks bad")
++			const int patch = std::max(0, blobs(u, v, 9) - 165) * 2;           // 0..180 over about a quarter
++			const int dim = patch * strength >> 9;                                // up to about 90/255 darker
++			col = mix(col, rgb(120, 112, 96), dim);
 +		}
 +		Uint32 &o = over[(size_t)Y * sw + X];
 +		o = mix(o, col, cov);
@@ -8082,6 +8081,8 @@ index 0000000..967b7a8
 +	{
 +		const SDL_Color *pal = base->format->palette->colors;
 +		int drawn = 0;
++		// two passes: every letter's shadow and keyline first, then every letter's ink
++		for (int pass = dry ? 1 : 0; pass < 2; ++pass)
 +		for (const auto &g : t->getHiGlyphs())
 +		{
 +			if (!g.sheet) continue;
@@ -8099,7 +8100,7 @@ index 0000000..967b7a8
 +			const int cx0 = std::max(0, std::min(bw, bx0)), cx1 = std::max(0, std::min(bw, bx1));
 +			const int cy0 = std::max(0, std::min(bh, by0)), cy1 = std::max(0, std::min(bh, by1));
 +			if (cx1 <= cx0 || cy1 <= cy0) continue;
-+			++drawn;
++			if (pass == 1) ++drawn;
 +			if (dry) continue;
 +			Uint32 col = ink;
 +			if (!col)
@@ -8155,7 +8156,8 @@ index 0000000..967b7a8
 +					const double fx = (g.sx + (cx0 - bx0)) * a.k + (X - X0 + 0.5) * kx - 0.5; const int sx0 = std::max(0, (int)fx), sx1 = std::min(a.w - 1, sx0 + 1); const int wx = (int)((fx - sx0) * 256);
 +					const int c00 = a.cov[(size_t)sy0 * a.w + sx0], c01 = a.cov[(size_t)sy0 * a.w + sx1], c10 = a.cov[(size_t)sy1 * a.w + sx0], c11 = a.cov[(size_t)sy1 * a.w + sx1];
 +					const int cov = ((c00 * (256 - wx) + c01 * wx) * (256 - wy) + (c10 * (256 - wx) + c11 * wx) * wy) >> 16;
-+					paintPx(X, Y, X - X0 + g.sx * 3, Y - Y0 + g.sy * 3, cov, col, wear, sd, (Y - Y0) * 256 / std::max(1, Y1 - Y0));
++					if (pass == 0) darkPx(X, Y, cov, sd);
++					else paintPx(X, Y, X - X0 + g.sx * 3, Y - Y0 + g.sy * 3, cov, col, wear, sd, (Y - Y0) * 256 / std::max(1, Y1 - Y0));
 +				}
 +			}
 +		}
@@ -8247,8 +8249,10 @@ index 0000000..967b7a8
 +		const int capPx = (int)(f.cap * k);
 +		const int wear = light ? wearFor(capPx) : 0, sd = light ? std::max(1, capPx / 10) : 0;
 +		cx0 = std::max(cx0, 0); cy0 = std::max(cy0, 0); cx1 = std::min(cx1, sw); cy1 = std::min(cy1, sh);
-+		double pen = X;
 +		const double top = baseline - f.asc * k;
++		for (int pass = sd > 0 ? 0 : 1; pass < 2; ++pass)
++		{
++		double pen = X;
 +		for (size_t i = a; i < b; ++i)
 +		{
 +			const Face::G &g = f.g[s[i]];
@@ -8276,12 +8280,15 @@ index 0000000..967b7a8
 +							}
 +						}
 +						const int cov = sum / (n * n);
-+						if (cov > 0) paintPx(Xp, Y, Xp - X0 + (int)(g.x * k), Y - Y0 + (int)(g.y * k), cov, ink, wear, sd,
++						if (cov <= 0) continue;
++						if (pass == 0) darkPx(Xp, Y, cov, sd);
++						else paintPx(Xp, Y, Xp - X0 + (int)(g.x * k), Y - Y0 + (int)(g.y * k), cov, ink, wear, sd,
 +							std::max(0, std::min(256, (int)((Y - gy0) * 256 / std::max(1.0, g.h * k)))));
 +					}
 +				}
 +			}
 +			pen += g.adv * k;
++		}
 +		}
 +	}
 +
