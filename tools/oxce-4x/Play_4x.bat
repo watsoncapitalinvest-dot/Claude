@@ -19,9 +19,9 @@ set H=1080
 powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; $b=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds; 'set W=' + $b.Width; 'set H=' + $b.Height" > "%TEMP%\oxce4x_res.bat" 2>nul
 if exist "%TEMP%\oxce4x_res.bat" call "%TEMP%\oxce4x_res.bat"
 if not exist "user\" mkdir "user"
-rem mod_update.zip, mod_update_2.zip, then mod_update_3.zip, next to this file are unpacked into user\mods before the game starts
+rem mod_update.zip, mod_update_2.zip, mod_update_3.zip, then mod_update_4.zip, next to this file are unpacked into user\mods before the game starts
 rem (in that order: each is newer than the one before), then renamed so each runs once.
-for %%Z in (mod_update mod_update_2 mod_update_3) do (
+for %%Z in (mod_update mod_update_2 mod_update_3 mod_update_4) do (
   if exist "%%Z.zip" (
     echo Applying %%Z.zip...
     powershell -NoProfile -Command "Expand-Archive -Force -Path '%%Z.zip' -DestinationPath 'user\mods'"
