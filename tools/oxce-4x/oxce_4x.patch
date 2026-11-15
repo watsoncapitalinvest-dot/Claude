@@ -1894,10 +1894,10 @@ index 6065b54..8db80d7 100644
  	/// Init function.
 diff --git a/src/Battlescape/AirFight.cpp b/src/Battlescape/AirFight.cpp
 new file mode 100644
-index 0000000..fd42e49
+index 0000000..7bb6da0
 --- /dev/null
 +++ b/src/Battlescape/AirFight.cpp
-@@ -0,0 +1,989 @@
+@@ -0,0 +1,995 @@
 +/*
 + * G.I. Joe: air fights on the battle engine (claude/DOGFIGHT_DESIGN_v1.md, claude/AIR_SEA_BUILD_PLAN_v1.md).
 + */
@@ -1908,6 +1908,7 @@ index 0000000..fd42e49
 +#include "../Savegame/SavedBattleGame.h"
 +#include "../Mod/Mod.h"
 +#include "../Mod/RuleItem.h"
++#include "../Mod/RuleInventory.h"
 +#include "../Mod/RuleCraft.h"
 +#include "../Mod/RuleUfo.h"
 +#include "../Mod/Armor.h"
@@ -2219,7 +2220,10 @@ index 0000000..fd42e49
 +	// a boat over something under the water rolls a depth charge (sea design 5), once a turn
 +	if (unit->getPosition().z == 1 && isSeaFight(mod, save) && save->getVanStop("afDepth:" + id) != save->getTurn())
 +	{
-+		for (BattleItem *w : { unit->getRightHandWeapon(), unit->getLeftHandWeapon() })
++		if (getenv("OXCE_AIRFIGHT_TRACE"))
++			for (BattleItem *w : *unit->getInventory())
++				Log(LOG_INFO) << "[sea] " << unit->getType() << " carries " << w->getRules()->getType() << " slot " << (w->getSlot() ? w->getSlot()->getId() : "-") << " ammo " << w->haveAnyAmmo();
++		for (BattleItem *w : *unit->getInventory())
 +		{
 +			if (!isDepthCharge(mod, w) || !w->haveAnyAmmo()) continue;
 +			if (unit->getTimeUnits() < unit->getActionTUs(BA_SNAPSHOT, w).Time) continue;
@@ -2236,7 +2240,9 @@ index 0000000..fd42e49
 +			save->setVanStop("afDepth:" + id, save->getTurn());
 +			action->type = BA_SNAPSHOT;
 +			action->weapon = w;
-+			action->target = Position(p.x, p.y, 0);
++			// aim at the water's surface just ahead: the shot itself is never fired, the charge rolls off the stern
++			action->target = Position(std::min(save->getMapSizeX() - 1, p.x + s), p.y, 1);
++			Log(LOG_INFO) << "[sea] " << unit->getType() << " goes to roll a depth charge";
 +			return true;
 +		}
 +	}
@@ -2306,7 +2312,7 @@ index 0000000..fd42e49
 +	if (isSeaFight(mod, save) && tp.z == 0 && unit->getPosition().z == 1 && unit->getTimeUnits() >= 8)
 +	{
 +		bool charges = false;
-+		for (BattleItem *w : { unit->getRightHandWeapon(), unit->getLeftHandWeapon() })
++		for (BattleItem *w : *unit->getInventory())
 +			if (isDepthCharge(mod, w) && w->haveAnyAmmo()) charges = true;
 +		if (charges)
 +		{
@@ -3333,7 +3339,7 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..0b931a8 100644
+index 1951ba7..be9e4b1 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -16,6 +16,8 @@
@@ -3381,7 +3387,7 @@ index 1951ba7..0b931a8 100644
  		}
  		else
  		{
-@@ -961,6 +975,183 @@ void BattlescapeGenerator::run()
+@@ -961,6 +975,184 @@ void BattlescapeGenerator::run()
  	}
  }
  
@@ -3536,7 +3542,8 @@ index 1951ba7..0b931a8 100644
 +					e->setRankInt(0);
 +					int elo = 1, ehi = 1;
 +					AirFight::floorRange(mod, _save, e, elo, ehi);
-+					const Position ep(p.x + 2 + 2 * (k % 3), p.y + (k % 2 ? 7 : -3), elo);
++					Position ep(p.x + 2 + 2 * (k % 3), p.y + (k % 2 ? 7 : -3), elo);
++					if (getenv("OXCE_SEA_TEST_UNDER")) ep = Position(W / 2 + 2, H - 8, elo); // test rig: start it near the Joes
 +					if (!place(e, ep, dir)) { Log(LOG_WARNING) << "[sea] escort " << type << " could not be placed near " << ep; delete e; }
 +					else Log(LOG_INFO) << "[sea] escort " << type << " at " << e->getPosition();
 +					++k;
@@ -3565,7 +3572,7 @@ index 1951ba7..0b931a8 100644
  /**
   * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
   */
-@@ -1495,6 +1686,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1495,6 +1687,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  				_save->initUnit(unit);
  				return unit;
  			}
@@ -3593,7 +3600,7 @@ index 1951ba7..0b931a8 100644
  			else if (_save->getMissionType() != "STR_BASE_DEFENSE")
  			{
  				if (placeUnitNearFriend(unit))
-@@ -1669,6 +1881,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +1882,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -3683,7 +3690,7 @@ index 1951ba7..0b931a8 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +1991,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +1992,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -3752,7 +3759,7 @@ index 1951ba7..0b931a8 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2076,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2077,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -3769,7 +3776,7 @@ index 1951ba7..0b931a8 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2105,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2106,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -3812,7 +3819,7 @@ index 1951ba7..0b931a8 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -2081,17 +2477,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,17 +2478,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -3843,7 +3850,7 @@ index 1951ba7..0b931a8 100644
  
  	mapblock->setSizeZ(sizez);
  
-@@ -2141,11 +2545,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2546,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -3857,7 +3864,7 @@ index 1951ba7..0b931a8 100644
  			if (terrainObjectID>0)
  			{
  				int mapDataSetID = mapDataSetOffset;
-@@ -2830,7 +3234,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2830,7 +3235,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  	// this mission type is "hard-coded" in terms of map layout
  	uint64_t seed = RNG::getSeed();
  	_baseTerrain = _terrain;
