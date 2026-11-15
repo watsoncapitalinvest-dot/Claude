@@ -80,6 +80,13 @@ for typ, terr, script, crew, civ, title in [
           "    duration: [12, 12]", "    markerName: STR_SHIP_STOPPED_SITE", "    markerIcon: 22",
           f"    briefing: {{palette: 0, title: {title}, desc: {title}_BRIEFING}}"]
 
+# hostage rescue (12c): MAPS' hijacked ship, 8-10 hijackers and their leader, 12 hostages (5 on the bridge, 7 in the mess)
+L += ["  - type: STR_SHIP_HIJACK", "    data:"] + trooper(8, 10) + [
+      "      - alienRank: 5", "        customUnitType: STR_ROBBERY_LEADER", "        lowQty: 1", "        highQty: 1", "        dQty: 0",
+      "        percentageOutsideUfo: 100", "        itemSets:", "          - [STR_PISTOL, STR_PISTOL_CLIP]",
+      "    civilians: 12", "    width: 60", "    length: 20", "    height: 8", "    terrains: [HIJACKED_T]", "    script: HIJACKED_SCRIPT",
+      "    shade: 0", "    duration: [72, 72]", "    markerName: STR_SHIP_HIJACK_SITE", "    markerIcon: 22",
+      "    briefing: {palette: 0, title: STR_SHIP_HIJACK, desc: STR_SHIP_HIJACK_BRIEFING}"]
 L += ["", "airFightExtra: {}   # the merchant's sea-fight unit is in gijoe_sea_fight.rul (airFight is one block)", ""]
 L += ["extraSprites:", "  - type: GlobeMarkers", "    width: 28", "    height: 28", "    subX: 28", "    subY: 28", "    files:",
       "      36: Resources/Globe/marker_36_merchant_ship.png",
@@ -109,6 +116,17 @@ S = {
     "STR_SHIP_SUNK_COBRA": "{0} SUNK, and Cobra's cargo with her.",
     "STR_SHIP_DISABLED_INNOCENT": "{0} is dead in the water. She was an honest ship (goodwill -{1}).",
     "STR_SHIP_SEARCH_LINE": "STOP AND SEARCH",
+    "STR_SHIP_HIJACK": "HOSTAGE RESCUE AT SEA",
+    "STR_SHIP_HIJACK_SITE": "Hijacked ship",
+    "STR_SHIP_HIJACK_SITE_": "Hijacked ship",
+    "STR_SHIP_HIJACK_BRIEFING": "Cobra took her at sea. They hold the officers on the bridge and the rest of the crew in the mess. Every hostage you bring out alive counts with her flag country. Come over the forecastle rail and work aft.",
+    "STR_SHIP_HIJACKED_TITLE": "{0} - HIJACKED",
+    "STR_SHIP_HIJACKED_HOURS": "Cobra holds her crew. {0} hours before they take the cargo or name a ransom.",
+    "STR_SHIP_BOARD": "BOARD HER",
+    "STR_SHIP_HIJACK_ALERT": "MAYDAY - {0} reports armed men aboard and the radio goes dead. Cobra has her. {1} hours to get a team aboard before they take the cargo or ransom the crew.",
+    "STR_SHIP_HIJACK_BOARD": "{0} is dead in the water with Cobra aboard. The team goes over the rail.",
+    "STR_SHIP_HIJACK_RANSOM": "{0}: {1} paid Cobra's ransom and got her crew back. They wanted to know where G.I. Joe was (goodwill -{2}).",
+    "STR_SHIP_HIJACK_SEIZED": "{0}: Cobra stripped her hold and let her go.",
     "STR_SHIP_SEARCH_LINE_HIGH": "STOP AND SEARCH",
     "STR_SHIP_SEARCH_LINE_BRIEFING": "She stopped when told to and her master is all smiles. Her papers say machine parts. Search her: the hold, the bridge, the crew quarters. If this is a Cobra ship, her crew will not let you finish.",
     "STR_SHIP_SEARCH_CONTAINERS": "STOP AND SEARCH",

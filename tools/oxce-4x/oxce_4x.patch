@@ -4649,7 +4649,7 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..157c1c3 100644
+index 0631f32..180e749 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
 @@ -20,6 +20,7 @@
@@ -4913,7 +4913,7 @@ index 0631f32..157c1c3 100644
  		else if (target == "STR_BASE")
  		{
  			_txtTitle->setText(tr("STR_BASE_IS_LOST"));
-@@ -2130,10 +2296,185 @@ void DebriefingState::prepareDebriefing()
+@@ -2130,10 +2296,197 @@ void DebriefingState::prepareDebriefing()
  		}
  	}
  
@@ -5045,6 +5045,17 @@ index 0631f32..157c1c3 100644
 +				Log(LOG_INFO) << "[stealth] quiet mission: exposure " << exposure << ", score +" << sr.quietScorePct << "%";
 +			}
 +			const int civHit = std::min(gw.civilianCap, civDead * gw.civilianDead);
++			// G.I. Joe: a hijacked ship is at sea, in no country: the goodwill is its flag country's, and every
++			// hostage brought out alive adds to it (sea design 12g)
++			int hostageBonus = 0;
++			const auto &SHr = _game->getMod()->getShippingRules();
++			if (dep == SHr.boardHijack && !save->getHijackFlag().empty())
++			{
++				for (auto *c : *save->getCountries())
++					if (c->getRules()->getType() == save->getHijackFlag()) _country = c;
++				if (success) hostageBonus = std::min(SHr.hostageGoodwillCap, (civilians - civDead) * SHr.hostageGoodwill);
++				save->setHijackFlag("");
++			}
 +			if (_country)
 +			{
 +				int g = _country->getGoodwill() < 0 ? gw.start : _country->getGoodwill();
@@ -5053,6 +5064,7 @@ index 0631f32..157c1c3 100644
 +				const int cut = battle->getVanStop("escaped") > 0 ? _game->getMod()->getRetreatRules().winGoodwillCut : 0;
 +				g += success ? std::max(0, gw.win - cut) : -gw.loss;
 +				if (quiet) g += _game->getMod()->getStealthRules().quietGoodwill;
++				g += hostageBonus;
 +				g -= civHit;
 +				if (!save->isPublic() && gw.exposureGoodwillPer > 0) g -= exposure / gw.exposureGoodwillPer;
 +				_country->setGoodwill(g);
@@ -5099,7 +5111,7 @@ index 0631f32..157c1c3 100644
  		// Unlock research defined in alien deployment, if the mission was a success
  		const RuleResearch *research = _game->getMod()->getResearch(ruleDeploy->getUnlockedResearchOnSuccess());
  		save->handleResearchUnlockedByMissions(research, _game->getMod(), ruleDeploy);
-@@ -2299,6 +2640,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
+@@ -2299,6 +2652,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
   */
  void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base, int quantity, bool considerTransformations)
  {
@@ -8663,10 +8675,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..0668512
+index 0000000..a459570
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3290 @@
+@@ -0,0 +1,3291 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -10306,12 +10318,13 @@ index 0000000..0668512
 +			roundRect(cx - s * 0.9, cy - k * 0.45, cx + s * 0.9, cy + k * 0.45, k * 0.2, 0x45D3E8, a);
 +			roundRect(cx - k * 0.45, cy - s * 0.9, cx + k * 0.45, cy + s * 0.9, k * 0.2, 0x45D3E8, a);
 +			break;
-+		case PIN_SHIP:                      // a small hull, bow up: pale grey (civilian shipping)
++		case PIN_SHIP:                      // a small hull, bow up: pale grey (civilian shipping); red when hijacked
++		case PIN_SHIP_HIJACKED:
 +		{
 +			const double w = s * 0.42, h = s * 0.95;
 +			std::vector<std::pair<double, double> > hull{ { cx, cy - h * 1.15 }, { cx + w, cy - h * 0.45 }, { cx + w, cy + h }, { cx - w, cy + h }, { cx - w, cy - h * 0.45 } };
 +			poly(hull, o * 1.2, S_INK, 200);
-+			poly(hull, 0, 0xC8CCD2, p.lit ? 230 : 150);
++			poly(hull, 0, p.kind == PIN_SHIP_HIJACKED ? 0xD8392B : 0xC8CCD2, p.kind == PIN_SHIP_HIJACKED ? a : (p.lit ? 230 : 150));
 +			break;
 +		}
 +		case PIN_CITY:                      // dot: bone
@@ -11959,7 +11972,7 @@ index 0000000..0668512
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..f295acf
+index 0000000..75ecbe3
 --- /dev/null
 +++ b/src/Engine/HiUI.h
 @@ -0,0 +1,203 @@
@@ -12060,7 +12073,7 @@ index 0000000..f295acf
 +	struct GlobeLabel { std::string text; double x, y; int kind; };
 +	void globeLabels(const std::vector<GlobeLabel> &labels);
 +	/// A pin on the globe, in base coords. kind: see PinKind. lit: the blink phase.
-+	enum PinKind { PIN_JOE_BASE, PIN_COBRA_SITE, PIN_MISSION, PIN_CONTACT, PIN_JOE_CRAFT, PIN_WAYPOINT, PIN_CITY, PIN_SHIP };
++	enum PinKind { PIN_JOE_BASE, PIN_COBRA_SITE, PIN_MISSION, PIN_CONTACT, PIN_JOE_CRAFT, PIN_WAYPOINT, PIN_CITY, PIN_SHIP, PIN_SHIP_HIJACKED };
 +	struct GlobePin { double x, y; int kind; bool lit; };
 +	void globePins(const std::vector<GlobePin> &pins);
 +	/// An 8-bit marker frame to set on the globe crisp (the player's own marks).
@@ -13726,7 +13739,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..8c78b25 100644
+index 6b4e79d..8c86b1e 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,14 @@
@@ -14480,11 +14493,19 @@ index 6b4e79d..8c78b25 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2588,93 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2588,101 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
-+	Shipping::think(_game, _globe);   // G.I. Joe: the lanes stay full of merchant ships
++	{
++		// G.I. Joe: the lanes stay full of merchant ships; hijackings start and end here
++		const std::string news = Shipping::think(_game, _globe);
++		if (!news.empty())
++		{
++			_game->getSavedGame()->addLeadNews(std::string("!") + news);
++			popup(new CraftErrorState(this, news, true, nullptr));
++		}
++	}
 +	// G.I. Joe: the cartel's flights (gijoe_cartel_arc.rul). Once STR_CARTEL_FLIGHT_ROUTE is known the next
 +	// one in the air goes on the map. A Joe craft tailing one (following, not attacking) may be spotted:
 +	// then the flight goes dark, the craft turns for home and the landing finds nothing.
@@ -14574,7 +14595,7 @@ index 6b4e79d..8c78b25 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +2721,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +2729,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -14664,7 +14685,7 @@ index 6b4e79d..8c78b25 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +2966,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +2974,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -14673,7 +14694,7 @@ index 6b4e79d..8c78b25 100644
  			}
  			else
  			{
-@@ -2395,6 +3008,286 @@ void GeoscapeState::time1Day()
+@@ -2395,6 +3016,286 @@ void GeoscapeState::time1Day()
  	Mod *mod = _game->getMod();
  	bool psiStrengthEval = (Options::psiStrengthEval && saveGame->isResearched(mod->getPsiRequirements()));
  
@@ -14960,7 +14981,7 @@ index 6b4e79d..8c78b25 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3337,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3345,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -14983,7 +15004,7 @@ index 6b4e79d..8c78b25 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2861,7 +3763,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +3771,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -15012,7 +15033,7 @@ index 6b4e79d..8c78b25 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3883,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3891,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -15043,7 +15064,7 @@ index 6b4e79d..8c78b25 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4069,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4077,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -15053,7 +15074,7 @@ index 6b4e79d..8c78b25 100644
  }
  
  /**
-@@ -3265,6 +4213,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4221,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -15069,7 +15090,7 @@ index 6b4e79d..8c78b25 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4299,50 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4307,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -15092,9 +15113,11 @@ index 6b4e79d..8c78b25 100644
 +				_shipPending.push_back(dfs);
 +				Ufo *u = dfs->getUfo();
 +				const auto &AF = _game->getMod()->getAirFightRules();
-+				const bool canFire = AF.on && AF.units.count(u->getRules()->getType()) && AF.units.count(dfs->getCraft()->getRules()->getType());
-+				popup(new ShipStopState(this, tr("STR_SHIP_STOP_TITLE").arg(u->getName(_game->getLanguage())),
-+					Shipping::describe(_game, u), Shipping::canBoard(dfs->getCraft()), canFire));
++				// a hijacked ship has hostages aboard: board her or leave her, no shooting
++				const bool hijacked = Shipping::isHijacked(u);
++				const bool canFire = !hijacked && AF.on && AF.units.count(u->getRules()->getType()) && AF.units.count(dfs->getCraft()->getRules()->getType());
++				popup(new ShipStopState(this, tr(hijacked ? "STR_SHIP_HIJACKED_TITLE" : "STR_SHIP_STOP_TITLE").arg(u->getName(_game->getLanguage())),
++					Shipping::describe(_game, u), Shipping::canBoard(dfs->getCraft()), canFire, hijacked ? "STR_SHIP_BOARD" : "STR_SHIP_STOP_SEARCH"));
 +			}
 +			++dfsIt;
 +			continue;
@@ -15120,7 +15143,7 @@ index 6b4e79d..8c78b25 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4365,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4375,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -15372,7 +15395,7 @@ index 6b4e79d..8c78b25 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +5893,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +5903,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -15445,7 +15468,7 @@ index 5eaf857..da6217d 100644
  	void btnZoomOutRightClick(Action *action);
  	/// Blit method - renders the state and dogfights.
 diff --git a/src/Geoscape/Globe.cpp b/src/Geoscape/Globe.cpp
-index 5b17165..01ce586 100644
+index 5b17165..c588c83 100644
 --- a/src/Geoscape/Globe.cpp
 +++ b/src/Geoscape/Globe.cpp
 @@ -17,6 +17,8 @@
@@ -16112,7 +16135,7 @@ index 5b17165..01ce586 100644
 +		for (auto* ufo : *_game->getSavedGame()->getUfos())
 +		{
 +			if (ufo->getStatus() == Ufo::IGNORE_ME) continue;
-+			pin(ufo, Shipping::isMerchant(ufo) ? HiUI::PIN_SHIP : HiUI::PIN_CONTACT);
++			pin(ufo, Shipping::isHijacked(ufo) ? HiUI::PIN_SHIP_HIJACKED : Shipping::isMerchant(ufo) ? HiUI::PIN_SHIP : HiUI::PIN_CONTACT);
 +		}
 +		for (auto* xbase : *_game->getSavedGame()->getBases())
 +			for (auto* xcraft : *xbase->getCrafts())
@@ -17862,7 +17885,7 @@ index 0000000..dad2693
 +}
 diff --git a/src/Geoscape/ShipStopState.cpp b/src/Geoscape/ShipStopState.cpp
 new file mode 100644
-index 0000000..d14a921
+index 0000000..89b180d
 --- /dev/null
 +++ b/src/Geoscape/ShipStopState.cpp
 @@ -0,0 +1,71 @@
@@ -17880,7 +17903,7 @@ index 0000000..d14a921
 +namespace OpenXcom
 +{
 +
-+ShipStopState::ShipStopState(GeoscapeState *state, const std::string &title, const std::string &body, bool canSearch, bool canFire) : _state(state)
++ShipStopState::ShipStopState(GeoscapeState *state, const std::string &title, const std::string &body, bool canSearch, bool canFire, const std::string &searchLabel) : _state(state)
 +{
 +	_screen = false;
 +	_window = new Window(this, 256, 160, 32, 20, POPUP_BOTH);
@@ -17907,7 +17930,7 @@ index 0000000..d14a921
 +	_txtBody->setWordWrap(true);
 +	_txtBody->setText(body);
 +
-+	_btnSearch->setText(tr("STR_SHIP_STOP_SEARCH"));
++	_btnSearch->setText(tr(searchLabel));
 +	_btnSearch->onMouseClick((ActionHandler)&ShipStopState::btnSearchClick);
 +	_btnSearch->setVisible(canSearch);
 +	_btnFire->setText(tr("STR_SHIP_OPEN_FIRE"));
@@ -17939,7 +17962,7 @@ index 0000000..d14a921
 +}
 diff --git a/src/Geoscape/ShipStopState.h b/src/Geoscape/ShipStopState.h
 new file mode 100644
-index 0000000..ffe2f0e
+index 0000000..3886f85
 --- /dev/null
 +++ b/src/Geoscape/ShipStopState.h
 @@ -0,0 +1,32 @@
@@ -17967,7 +17990,7 @@ index 0000000..ffe2f0e
 +	Window *_window;
 +	Text *_txtTitle, *_txtBody;
 +public:
-+	ShipStopState(GeoscapeState *state, const std::string &title, const std::string &body, bool canSearch, bool canFire);
++	ShipStopState(GeoscapeState *state, const std::string &title, const std::string &body, bool canSearch, bool canFire, const std::string &searchLabel = "STR_SHIP_STOP_SEARCH");
 +	~ShipStopState() = default;
 +	void btnSearchClick(Action *action);
 +	void btnFireClick(Action *action);
@@ -17977,10 +18000,10 @@ index 0000000..ffe2f0e
 +}
 diff --git a/src/Geoscape/Shipping.cpp b/src/Geoscape/Shipping.cpp
 new file mode 100644
-index 0000000..3391c8d
+index 0000000..a30c690
 --- /dev/null
 +++ b/src/Geoscape/Shipping.cpp
-@@ -0,0 +1,362 @@
+@@ -0,0 +1,461 @@
 +/*
 + * G.I. Joe: civilian shipping on the world map. See Shipping.h.
 + */
@@ -18200,11 +18223,12 @@ index 0000000..3391c8d
 +	{
 +		if (!isMerchant(u)) continue;
 +		done = true;
-+		u->gjCobra = atoi(env);
++		u->gjCobra = atoi(env) == 3 ? 0 : atoi(env);
++		if (atoi(env) == 3) { u->gjHijack = game->getMod()->getShippingRules().hijackHours; u->setSpeed(0); }
 +		u->gjCargo = strchr(env, ',') ? atoi(strchr(env, ',') + 1) : 1;
 +		u->setLongitude(b->getLongitude() + 0.017);
 +		u->setLatitude(b->getLatitude() + 0.017);
-+		if (craft) { craft->setDestination(u); craft->setStatus("STR_OUT"); }
++		if (craft && !getenv("OXCE_SHIP_TEST_NOCRAFT")) { craft->setDestination(u); craft->setStatus("STR_OUT"); }
 +		Log(LOG_INFO) << "[shipping] test: " << u->getName(game->getLanguage()) << " kind " << u->gjCobra << " cargo " << u->gjCargo
 +			<< ", craft " << (craft ? craft->getRules()->getType() : std::string("none"));
 +		break;
@@ -18216,20 +18240,93 @@ index 0000000..3391c8d
 +	return ufo && ufo->gjLane >= 0;
 +}
 +
-+void think(Game *game, Globe *globe)
++std::string think(Game *game, Globe *globe)
 +{
 +	const auto &SH = game->getMod()->getShippingRules();
-+	if (!SH.on || SH.lanes.empty() || game->getSavedGame()->getMonthsPassed() < 0) return;
++	if (!SH.on || SH.lanes.empty() || game->getSavedGame()->getMonthsPassed() < 0) return "";
++	SavedGame *save = game->getSavedGame();
++	Language *lang = game->getLanguage();
++	std::string news;
 +	int n = 0;
-+	for (auto *u : *game->getSavedGame()->getUfos())
-+		if (isMerchant(u) && u->getStatus() != Ufo::DESTROYED) ++n;
-+	if (n >= SH.total) return;
-+	AlienMission *m = shippingMission(game, globe);
-+	if (!m) return;
-+	const bool fill = n < SH.total / 2;  // a new game (or an old save): fill the sea at once
-+	const int add = fill ? SH.total - n : 1 + (SH.total - n) / 8;
-+	for (int i = 0; i < add; ++i) spawn(game, m, fill);
++	Ufo *held = nullptr;
++	for (auto *u : *save->getUfos())
++	{
++		if (!isMerchant(u) || u->getStatus() == Ufo::DESTROYED) continue;
++		++n;
++		if (u->gjHijack > 0) held = u;
++	}
++
++	// a rescue that was never flown (its site timed out) leaves nothing to remember
++	if (!held && !save->getHijackFlag().empty())
++	{
++		bool site = false;
++		for (auto *ms : *save->getMissionSites()) if (ms->getDeployment() && ms->getDeployment()->getType() == SH.boardHijack) site = true;
++		if (!site && !save->getSavedBattle()) save->setHijackFlag("");
++	}
++	// hijacking (12c): a held ship waits out its hours, then Cobra has its way - the cargo, or a ransom
++	// the flag country pays (and blames the Joes for)
++	if (held && --held->gjHijack <= 0)
++	{
++		CobraEconomy &eco = save->getCobraEconomy();
++		const Region *reg = save->locateRegionQuiet(held->getLongitude(), held->getLatitude());
++		const std::string region = reg ? reg->getRules()->getType() : "";
++		const std::string name = held->getName(lang);
++		if (flag(save, held) && RNG::percent(50))
++		{
++			goodwill(save, held, -SH.ransomGoodwill, 0);
++			if (!region.empty()) eco.addFunds(region, SH.ransomFunds);
++			news = lang->getString("STR_SHIP_HIJACK_RANSOM").arg(name).arg(lang->getString(held->gjFlag)).arg(SH.ransomGoodwill);
++		}
++		else
++		{
++			if (!region.empty()) { eco.addFunds(region, SH.seizeFunds); eco.addMateriel(region, SH.seizeMateriel); }
++			news = lang->getString("STR_SHIP_HIJACK_SEIZED").arg(name);
++		}
++		Log(LOG_INFO) << "[shipping] hijack of " << name << " ended: " << news;
++		held->gjHijack = 0;
++		held->setSpeed(held->getCraftStats().speedMax);
++		save->setHijackFlag("");
++		held = nullptr;
++	}
++	// a new one: one at a time, about one every hijackEveryDays, paid for by Cobra (12g, 12h)
++	else if (!held && save->getHijackFlag().empty() && SH.hijackEveryDays > 0 && RNG::generate(0, SH.hijackEveryDays * 24 - 1) == 0
++		&& save->getCobraEconomy().getTotalFunds() - SH.hijackCost >= upkeep(game))
++	{
++		std::vector<Ufo*> pick, flagged;
++		for (auto *u : *save->getUfos())
++		{
++			if (!isMerchant(u) || u->getStatus() != Ufo::FLYING || u->gjCobra) continue;
++			pick.push_back(u);
++			if (flag(save, u)) flagged.push_back(u);
++		}
++		auto &from = flagged.empty() ? pick : flagged;
++		if (!from.empty())
++		{
++			Ufo *u = from[RNG::generate(0, (int)from.size() - 1)];
++			u->gjHijack = SH.hijackHours;
++			u->setSpeed(0);
++			save->getCobraEconomy().spendFunds("", SH.hijackCost);
++			news = lang->getString("STR_SHIP_HIJACK_ALERT").arg(u->getName(lang)).arg(SH.hijackHours);
++			Log(LOG_INFO) << "[shipping] hijack: " << u->getName(lang) << " (" << u->gjFlag << ")";
++		}
++	}
++
++	if (n < SH.total)
++	{
++		if (AlienMission *m = shippingMission(game, globe))
++		{
++			const bool fill = n < SH.total / 2;  // a new game (or an old save): fill the sea at once
++			const int add = fill ? SH.total - n : 1 + (SH.total - n) / 8;
++			for (int i = 0; i < add; ++i) spawn(game, m, fill);
++		}
++	}
 +	testHook(game);
++	return news;
++}
++
++bool isHijacked(const Ufo *ufo)
++{
++	return isMerchant(ufo) && ufo->gjHijack > 0;
 +}
 +
 +bool reachedWaypoint(Game *game, Ufo *ufo)
@@ -18287,7 +18384,8 @@ index 0000000..3391c8d
 +		s << lang->getString("STR_SHIP_BOUND").arg(ufo->gjRev ? lane.fromName : lane.toName).arg(ufo->gjRev ? lane.toName : lane.fromName) << "\n";
 +	}
 +	s << lang->getString("STR_SHIP_FLAG").arg(ufo->gjFlag.empty() ? lang->getString("STR_SHIP_FLAG_NONE") : lang->getString(ufo->gjFlag)) << "\n";
-+	s << lang->getString("STR_SHIP_INTEL_UNKNOWN");
++	if (ufo->gjHijack > 0) s << lang->getString("STR_SHIP_HIJACKED_HOURS").arg(ufo->gjHijack);
++	else s << lang->getString("STR_SHIP_INTEL_UNKNOWN");
 +	return s.str();
 +}
 +
@@ -18306,6 +18404,30 @@ index 0000000..3391c8d
 +	Language *lang = game->getLanguage();
 +	*boarding = false;
 +	const std::string name = ufo->getName(lang);
++	if (ufo->gjHijack > 0)
++	{
++		// hostage rescue on deck (12c): the hijackers hold the crew; the flag country is remembered for the debrief
++		const RuleAlienMission *mrule = mod->getAlienMission(SH.boardMission);
++		AlienDeployment *dep = mod->getDeployment(SH.boardHijack);
++		if (mrule && dep)
++		{
++			MissionSite *ms = new MissionSite(mrule, dep, nullptr);
++			ms->setLongitude(ufo->getLongitude());
++			ms->setLatitude(ufo->getLatitude());
++			ms->setId(save->getId(dep->getMarkerName()));
++			ms->setSecondsRemaining(std::max(1, ufo->gjHijack) * 3600);
++			ms->setAlienRace(mrule->generateRace(0));
++			ms->setDetected(true);
++			save->getMissionSites()->push_back(ms);
++			if (craft) craft->setDestination(ms);
++			save->setHijackFlag(ufo->gjFlag.empty() ? "-" : ufo->gjFlag);
++			*boarding = true;
++			ufo->gjHijack = 0;
++			ufo->setDetected(false);
++			ufo->setStatus(Ufo::DESTROYED);
++			return lang->getString("STR_SHIP_HIJACK_BOARD").arg(name);
++		}
++	}
 +	if (!ufo->gjCobra)
 +	{
 +		// innocent: it stops, the hold is searched, nothing is found, and its flag country minds (12g)
@@ -18345,10 +18467,10 @@ index 0000000..3391c8d
 +}
 diff --git a/src/Geoscape/Shipping.h b/src/Geoscape/Shipping.h
 new file mode 100644
-index 0000000..08cfa94
+index 0000000..527a84a
 --- /dev/null
 +++ b/src/Geoscape/Shipping.h
-@@ -0,0 +1,42 @@
+@@ -0,0 +1,44 @@
 +#pragma once
 +/*
 + * G.I. Joe: civilian shipping on the world map (SEA_BATTLES_DESIGN_v1 sections 7, 9, 12).
@@ -18373,8 +18495,10 @@ index 0000000..08cfa94
 +{
 +	/// a merchant ship on a lane
 +	bool isMerchant(const Ufo *ufo);
-+	/// every game hour: keep the lanes full
-+	void think(Game *game, Globe *globe);
++	/// every game hour: keep the lanes full, run hijackings; returns news for a popup (may be empty)
++	std::string think(Game *game, Globe *globe);
++	/// held by hijackers
++	bool isHijacked(const Ufo *ufo);
 +	/// a merchant reached a lane point: on to the next, or into port. True if it was a merchant.
 +	bool reachedWaypoint(Game *game, Ufo *ufo);
 +	/// the flag country of a merchant (may be null)
@@ -19748,7 +19872,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..3396d36 100644
+index 1885346..c96c99b 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -19886,7 +20010,7 @@ index 1885346..3396d36 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,467 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,477 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -20139,6 +20263,16 @@ index 1885346..3396d36 100644
 +		sh.tryRead("boardContainers", _shipping.boardContainers);
 +		sh.tryRead("boardMission", _shipping.boardMission);
 +		sh.tryRead("names", _shipping.names);
++		sh.tryRead("hijackEveryDays", _shipping.hijackEveryDays);
++		sh.tryRead("hijackHours", _shipping.hijackHours);
++		sh.tryRead("hijackCost", _shipping.hijackCost);
++		sh.tryRead("ransomFunds", _shipping.ransomFunds);
++		sh.tryRead("ransomGoodwill", _shipping.ransomGoodwill);
++		sh.tryRead("seizeFunds", _shipping.seizeFunds);
++		sh.tryRead("seizeMateriel", _shipping.seizeMateriel);
++		sh.tryRead("hostageGoodwill", _shipping.hostageGoodwill);
++		sh.tryRead("hostageGoodwillCap", _shipping.hostageGoodwillCap);
++		sh.tryRead("boardHijack", _shipping.boardHijack);
 +		if (const auto& ln = sh["lanes"])
 +		{
 +			_shipping.lanes.clear();
@@ -20354,7 +20488,7 @@ index 1885346..3396d36 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3772,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3782,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -20362,7 +20496,7 @@ index 1885346..3396d36 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4377,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4387,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -20388,7 +20522,7 @@ index 1885346..3396d36 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4634,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4644,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -20409,7 +20543,7 @@ index 1885346..3396d36 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6348,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6358,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -20429,7 +20563,7 @@ index 1885346..3396d36 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6371,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6381,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -20437,7 +20571,7 @@ index 1885346..3396d36 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6385,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6395,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -20477,7 +20611,7 @@ index 1885346..3396d36 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..214ff61 100644
+index 2242d13..7e4ad9a 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -20541,7 +20675,7 @@ index 2242d13..214ff61 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,266 @@ private:
+@@ -327,6 +360,271 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -20650,6 +20784,11 @@ index 2242d13..214ff61 100644
 +		std::string boardMission = "STR_SHIP_SEARCH_MISSION";
 +		std::vector<ShipLane> lanes;
 +		std::vector<std::string> names;                 ///< merchant ship names ("MV " is added)
++		// hijacking (12c, 12g): one at a time, about one every hijackEveryDays while Cobra can pay for it
++		int hijackEveryDays = 60, hijackHours = 72, hijackCost = 15;
++		int ransomFunds = 50, ransomGoodwill = 10, seizeFunds = 30, seizeMateriel = 25;
++		int hostageGoodwill = 2, hostageGoodwillCap = 10;
++		std::string boardHijack = "STR_SHIP_HIJACK";
 +	};
 +private:
 +	ShippingRules _shipping;
@@ -20808,7 +20947,7 @@ index 2242d13..214ff61 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +985,124 @@ public:
+@@ -692,6 +990,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -22718,7 +22857,7 @@ index 6c121c7..fb7f92b 100644
  	std::vector< std::vector<int> > &getReinforcementsBlocks() { return _reinforcementsBlocks; }
  
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..dd84821 100644
+index 9ca9637..7588420 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,11 +21,13 @@
@@ -22832,7 +22971,7 @@ index 9ca9637..dd84821 100644
  	reader.tryRead("daysPassed", _daysPassed);
  	reader.tryRead("vehiclesLost", _vehiclesLost);
  	reader.tryRead("craftLostDogfight", _craftLostDogfight);
-@@ -399,6 +462,43 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -399,6 +462,44 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	reader.tryRead("funds", _funds);
  	reader.tryRead("maintenance", _maintenance);
  	reader.tryRead("userNotes", _userNotes);
@@ -22854,6 +22993,7 @@ index 9ca9637..dd84821 100644
 +	reader.tryRead("recoveredSites", _recoveredSites);
 +	reader.tryRead("provingDays", _provingDays);
 +	reader.tryRead("exposure", _exposure);
++	reader.tryRead("gjHijackFlag", _gjHijackFlag);
 +	reader.tryRead("hunts", _hunts);
 +	reader.tryRead("huntInside", _huntInside);
 +	reader.tryRead("cartelStash", _cartelStash);
@@ -22876,7 +23016,7 @@ index 9ca9637..dd84821 100644
  	reader.tryRead("geoscapeDebugLog", _geoscapeDebugLog);
  	reader.tryRead("researchScores", _researchScores);
  	reader.tryRead("incomes", _incomes);
-@@ -649,6 +749,30 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -649,6 +750,30 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  		}
  	}
  	_alienStrategy->load(reader["alienStrategy"], mod);
@@ -22907,7 +23047,7 @@ index 9ca9637..dd84821 100644
  
  	for (const auto& weHardlyKnewYe : reader["deadSoldiers"].children())
  	{
-@@ -690,6 +814,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -690,6 +815,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	}
  
  	_scriptValues.load(reader, mod->getScriptGlobal());
@@ -22915,7 +23055,7 @@ index 9ca9637..dd84821 100644
  }
  
  void SavedGame::loadTemplates(const YAML::YamlNodeReader& reader, const Mod* mod)
-@@ -779,6 +904,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -779,6 +905,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("difficulty", _difficulty);
  	writer.write("end", _end);
  	writer.write("monthsPassed", _monthsPassed);
@@ -22923,7 +23063,7 @@ index 9ca9637..dd84821 100644
  	writer.write("daysPassed", _daysPassed);
  	writer.write("vehiclesLost", _vehiclesLost);
  	writer.write("craftLostDogfight", _craftLostDogfight);
-@@ -790,6 +916,95 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -790,6 +917,97 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("funds", _funds);
  	writer.write("maintenance", _maintenance);
  	writer.write("userNotes", _userNotes);
@@ -22983,6 +23123,8 @@ index 9ca9637..dd84821 100644
 +		writer.write("hunts", _hunts);
 +	if (_exposure != 0)
 +		writer.write("exposure", _exposure);
++	if (!_gjHijackFlag.empty())
++		writer.write("gjHijackFlag", _gjHijackFlag);
 +	if (_confidence >= 0)
 +		writer.write("confidence", _confidence);
 +	if (_provingDays != 0)
@@ -23019,7 +23161,7 @@ index 9ca9637..dd84821 100644
  	if (Options::oxceGeoscapeDebugLogMaxEntries > 0 && _geoscapeDebugLog.size() > 0)
  	{
  		auto geoDebugLog = writer["geoscapeDebugLog"];
-@@ -849,8 +1064,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -849,8 +1067,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("hiddenPurchaseItems", _hiddenPurchaseItemsMap);
  	writer.write("customRuleCraftDeployments", _customRuleCraftDeployments);
  	_alienStrategy->save(writer["alienStrategy"]);
@@ -23030,7 +23172,7 @@ index 9ca9637..dd84821 100644
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
  	{
  		if (!_globalEquipmentLayout[j].empty())
-@@ -1530,8 +1747,158 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
+@@ -1530,8 +1750,158 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
   * @param base the base, in which the project was finished
   * @param score should the score be awarded or not?
   */
@@ -23189,7 +23331,7 @@ index 9ca9637..dd84821 100644
  	if (isResearchRuleStatusDisabled(research->getName()))
  	{
  		return;
-@@ -2579,6 +2946,950 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2949,950 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -24140,7 +24282,7 @@ index 9ca9637..dd84821 100644
  Region *SavedGame::locateRegion(double lon, double lat) const
  {
  	Region* found = nullptr;
-@@ -2995,6 +4306,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
+@@ -2995,6 +4309,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
   * @param soldier Pointer to dead soldier.
   * @param cause Pointer to cause of death, NULL if missing in action.
   */
@@ -24315,7 +24457,7 @@ index 9ca9637..dd84821 100644
  std::vector<Soldier*>::iterator SavedGame::killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause)
  {
  	if (resetArmor)
-@@ -3328,6 +4807,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
+@@ -3328,6 +4810,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
  		}
  	}
  
@@ -24333,7 +24475,7 @@ index 9ca9637..dd84821 100644
  	for (auto* am : _activeMissions)
  	{
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..6fb4901 100644
+index d985908..1b09338 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -37,6 +37,7 @@ namespace OpenXcom
@@ -24389,7 +24531,7 @@ index d985908..6fb4901 100644
  class SavedGame
  {
  public:
-@@ -126,6 +158,39 @@ private:
+@@ -126,6 +158,40 @@ private:
  	bool _ironman;
  	GameTime *_time;
  	std::vector<std::string> _userNotes;
@@ -24418,6 +24560,7 @@ index d985908..6fb4901 100644
 +	std::vector<int> _cartelFlights, _burnedFlights; // G.I. Joe: cartel flights put on the map / that spotted their tail
 +	std::string _trackedLead;                  // G.I. Joe: the lead shown on the world map
 +	int _huntInside = -1; // G.I. Joe: a strike team pushing into a base after this named Joe (soldier id)
++	std::string _gjHijackFlag; // G.I. Joe: the flag country of the hijacked ship the Joes are boarding
 +	int _exposure = 0, _confidence = -1; // G.I. Joe: world exposure; public confidence (-1 = still secret)
 +	int _provingDays = 0; // G.I. Joe: days to Beach Head's next proving ground; -1 once he has joined
 +	std::vector<int> _instructors;             // G.I. Joe: named Joes set to TRAIN
@@ -24429,7 +24572,7 @@ index d985908..6fb4901 100644
  	std::vector<std::string> _geoscapeDebugLog;
  	std::vector<int> _researchScores;
  	std::vector<int64_t> _funds, _maintenance, _incomes, _expenditures;
-@@ -140,6 +205,7 @@ private:
+@@ -140,6 +206,7 @@ private:
  	std::vector<MissionSite*> _missionSites;
  	std::vector<AlienBase*> _alienBases;
  	AlienStrategy *_alienStrategy;
@@ -24437,7 +24580,7 @@ index d985908..6fb4901 100644
  	SavedBattleGame *_battleGame;
  	std::vector<const RuleResearch*> _discovered;
  	std::vector<ResearchDiaryEntry*> _researchDiary;
-@@ -157,6 +223,9 @@ private:
+@@ -157,6 +224,9 @@ private:
  	bool _togglePersonalLight, _toggleNightVision;
  	int _toggleBrightness;
  	int _monthsPassed;
@@ -24447,7 +24590,7 @@ index d985908..6fb4901 100644
  	int _daysPassed;
  	int _vehiclesLost, _craftLostDogfight, _craftLostMission;
  	std::string _graphRegionToggles;
-@@ -164,6 +233,7 @@ private:
+@@ -164,6 +234,7 @@ private:
  	std::string _graphFinanceToggles;
  	std::vector<const RuleResearch*> _poppedResearch;
  	std::vector<Soldier*> _deadSoldiers;
@@ -24455,7 +24598,7 @@ index d985908..6fb4901 100644
  	size_t _selectedBase;
  	std::string _lastselectedArmor; //contains the last selected armor
  	std::string _globalEquipmentLayoutName[MAX_EQUIPMENT_LAYOUT_TEMPLATES];
-@@ -293,6 +363,8 @@ public:
+@@ -293,6 +364,8 @@ public:
  	void makeAllResearchDiscovered(const Mod* mod);
  	/// Add a finished ResearchProject
  	void addFinishedResearch(const RuleResearch *research, const Mod *mod, Base *base, bool score = true);
@@ -24464,7 +24607,7 @@ index d985908..6fb4901 100644
  	/// Add a new record to the research diary
  	void addResearchDiaryEntry(ResearchDiaryEntry* entry);
  	/// Gets the research diary.
-@@ -395,6 +467,32 @@ public:
+@@ -395,6 +468,32 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -24497,7 +24640,7 @@ index d985908..6fb4901 100644
  	/// Read-only access to the alien strategy data.
  	const AlienStrategy &getAlienStrategy() const { return *_alienStrategy; }
  	/// Full access to the current alien missions.
-@@ -409,6 +507,10 @@ public:
+@@ -409,6 +508,10 @@ public:
  	const std::vector<GeoscapeEvent*> &getGeoscapeEvents() const { return _geoscapeEvents; }
  	/// Locate a region containing a position.
  	Region *locateRegion(double lon, double lat) const;
@@ -24508,7 +24651,7 @@ index d985908..6fb4901 100644
  	/// Locate a region containing a Target.
  	Region *locateRegion(const Target &target) const;
  	/// Locate a country containing a position.
-@@ -419,6 +521,13 @@ public:
+@@ -419,6 +522,13 @@ public:
  	int selectSoldierNationalityByLocation(const Mod* mod, const RuleSoldier* rule, const Target* target) const;
  	/// Return the month counter.
  	int getMonthsPassed() const;
@@ -24522,7 +24665,7 @@ index d985908..6fb4901 100644
  	/// Return the day counter.
  	int getDaysPassed() const { return _daysPassed; }
  	void increaseDaysPassed() { _daysPassed++; }
-@@ -493,6 +602,74 @@ public:
+@@ -493,6 +603,76 @@ public:
  	bool isUfoOnIgnoreList(int ufoId);
  	/// Handles a soldier's death.
  	std::vector<Soldier*>::iterator killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause = 0);
@@ -24580,6 +24723,8 @@ index d985908..6fb4901 100644
 +	int getHuntInside() const { return _huntInside; }
 +	void setHuntInside(int id) { _huntInside = id; }
 +	int getExposure() const { return _exposure; }
++	const std::string &getHijackFlag() const { return _gjHijackFlag; }
++	void setHijackFlag(const std::string &f) { _gjHijackFlag = f; }
 +	void setExposure(int e) { _exposure = e; }
 +	bool isPublic() const { return _confidence >= 0; }
 +	int getConfidence() const { return _confidence; }
@@ -24597,7 +24742,7 @@ index d985908..6fb4901 100644
  	/// enables/disables autosell for an item type
  	void setAutosell(const RuleItem *itype, const bool enabled);
  	/// get autosell state for an item type
-@@ -529,6 +706,26 @@ public:
+@@ -529,6 +709,26 @@ public:
  	void handlePrimaryResearchSideEffects(const std::vector<const RuleResearch*> &topicsToCheck, const Mod* mod, Base* base);
  	/// Gets the list of user notes.
  	std::vector<std::string>& getUserNotes() { return _userNotes; }
@@ -24830,10 +24975,10 @@ index 20e0459..5cf74d6 100644
  	int getQuantity() const;
  	/// Gets the type of the transfer.
 diff --git a/src/Savegame/Ufo.cpp b/src/Savegame/Ufo.cpp
-index 25a05b6..7beb461 100644
+index 25a05b6..6c1e447 100644
 --- a/src/Savegame/Ufo.cpp
 +++ b/src/Savegame/Ufo.cpp
-@@ -161,6 +161,17 @@ void Ufo::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, con
+@@ -161,6 +161,18 @@ void Ufo::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, con
  	if (_inBattlescape)
  		setSpeed(0);
  
@@ -24847,11 +24992,12 @@ index 25a05b6..7beb461 100644
 +		gs.tryRead("flag", gjFlag);
 +		gs.tryRead("region", gjRegion);
 +		gs.tryRead("name", gjName);
++		gs.tryRead("hijack", gjHijack);
 +	}
  	_scriptValues.load(reader, shared);
  }
  
-@@ -296,6 +307,19 @@ void Ufo::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared, bool new
+@@ -296,6 +308,20 @@ void Ufo::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared, bool new
  		writer.write("trajectoryPoint", _trajectoryPoint);
  	}
  
@@ -24867,11 +25013,12 @@ index 25a05b6..7beb461 100644
 +		gs.write("flag", gjFlag);
 +		gs.write("region", gjRegion);
 +		gs.write("name", gjName);
++		if (gjHijack) gs.write("hijack", gjHijack);
 +	}
  	writer.write("fireCountdown", _fireCountdown);
  	writer.write("escapeCountdown", _escapeCountdown);
  
-@@ -361,6 +385,7 @@ int Ufo::getUniqueId() const
+@@ -361,6 +387,7 @@ int Ufo::getUniqueId() const
   */
  std::string Ufo::getDefaultName(Language *lang) const
  {
@@ -24880,10 +25027,10 @@ index 25a05b6..7beb461 100644
  	{
  	case LANDED:
 diff --git a/src/Savegame/Ufo.h b/src/Savegame/Ufo.h
-index a4ff21b..63a420b 100644
+index a4ff21b..f9a610f 100644
 --- a/src/Savegame/Ufo.h
 +++ b/src/Savegame/Ufo.h
-@@ -89,6 +89,14 @@ private:
+@@ -89,6 +89,15 @@ private:
  
  	void backupOriginalDestination();
  public:
@@ -24895,6 +25042,7 @@ index a4ff21b..63a420b 100644
 +	std::string gjFlag;     ///< the flag country (a country type, may be empty)
 +	std::string gjRegion;   ///< the Cobra region that paid for the voyage
 +	std::string gjName;     ///< the ship's name
++	int gjHijack = 0;       ///< hijacked: hours until Cobra has its way (0 = not)
  	/// Creates a UFO of the specified type.
  	Ufo(const RuleUfo *rules, int uniqueId, int hunterKillerPercentage = 0, int huntMode = 0, int huntBehavior = 0);
  	/// Cleans up the UFO.
