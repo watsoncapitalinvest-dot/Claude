@@ -432,10 +432,10 @@ H.I.S.S., which need the same thing in months 4-12. Not started.
 ### Villains: what the 15 Nov pass left (build/gen_villains.py, Battlescape/Villains.cpp)
 - **Arrival is John's open question** ("save this for later. Deeper discussion"): every villain is missionOnly, so
   in a campaign none appears unless a deployment names him.
-- **Moves built (Year 1):** Bludd's mark, Firefly's charge, Storm Shadow's strike, Scrap-Iron's launcher (stock
+- **Moves built (Year 1):** Bludd's mark, Firefly's charge, Storm Shadow's silent shot from hiding (John replaced the Arashikage Strike, 17:31), Scrap-Iron's launcher (stock
   launcher AI, vehicles first), Copperhead's drop, Buzzer's cut-through, Ripper's door, Torch's cut and burn.
   Seen in the test: the mark, the drop, Torch's breach, the charge left. NOT seen: the charge going off on a Joe,
-  Storm Shadow's strike landing, Buzzer, Ripper, a Scrap-Iron launch. Bludd's marked list is Duke and Hawk only
+  Storm Shadow's shot from hiding, Buzzer, Ripper, a Scrap-Iron launch. Bludd's marked list is Duke and Hawk only
   ("any Joe who has downed him" needs memory across missions).
 - **Not built:** Zartan's disguise (parked fork), Wild Weasel's strafing run (air fights), and every Move and
   scripted trait from months 14 on (Baroness, Tomax/Xamot, Destro, CC, Mindbender, Serpentor, Big Boa, Croc

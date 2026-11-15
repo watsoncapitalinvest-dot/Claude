@@ -66,7 +66,7 @@ CAMO = {'STR_BARONESS_UNIT', 'STR_ZARTAN_UNIT', 'STR_ZARANA_UNIT', 'STR_ZANDAR_U
 VILLAINS = {
     'STR_MAJOR_BLUDD_UNIT': {'move': 'MARK', 'trait': 'MARKED_LIST', 'pct': 115, 'marked': ['STR_DUKE', 'STR_HAWK']},
     'STR_FIREFLY_UNIT': {'move': 'BOOBY_TRAP', 'item': 'STR_GJV_FIREFLY_CHARGE'},
-    'STR_STORM_SHADOW_UNIT': {'move': 'ARASHIKAGE'},
+    'STR_STORM_SHADOW_UNIT': {'move': 'SILENT_ASSASSIN'},   # John 15 Nov 17:31: replaces the Arashikage Strike
     'STR_SCRAP_IRON_UNIT': {'move': 'REMOTE_MISSILE', 'trait': 'VEHICLE_HUNTER', 'pct': 150},
     'STR_COPPERHEAD_UNIT': {'move': 'MOCCASIN_DROP', 'spawn': 'STR_GJV_DROP_TROOPER', 'count': 3},
     'STR_BUZZER_UNIT': {'move': 'CUT_THROUGH', 'trait': 'STEADY'},
@@ -192,7 +192,7 @@ def main():
         'STR_VILLAIN_TEST_BRIEFING': 'Major Bludd, Firefly, Storm Shadow, Scrap-Iron, Copperhead, Buzzer, Ripper and Torch are on the farm. Each uses his special Move once.',
         'STR_GJV_MARK': '{0} marks {1}: every Cobra gun is on him.',
         'STR_GJV_MOCCASIN': 'A boat engine roars somewhere on the map.',
-        'STR_GJV_STRIKE': '{0} strikes from nowhere.',
+        'STR_GJV_ASSASSIN': 'A bolt from nowhere.',
         'STR_GJV_BREACH': '{0} cuts through the wall.',
         'STR_GJV_DOOR': '{0} rips the door off.',
         'STR_GJV_BURN': '{0} cuts through and sets it burning.',

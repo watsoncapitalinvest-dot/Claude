@@ -8588,14 +8588,14 @@ index bc5f08f..74aec61 100644
  	if (!_falling)
 diff --git a/src/Battlescape/Villains.cpp b/src/Battlescape/Villains.cpp
 new file mode 100644
-index 0000000..5bd048c
+index 0000000..d836dd0
 --- /dev/null
 +++ b/src/Battlescape/Villains.cpp
-@@ -0,0 +1,508 @@
+@@ -0,0 +1,485 @@
 +/*
 + * G.I. Joe: the named villains' Moves and traits. See Villains.h.
 + *
-+ * Year 1 Moves (John 15 Nov "1"): Major Bludd's mark, Firefly's booby trap, Storm Shadow's Arashikage Strike,
++ * Year 1 Moves (John 15 Nov "1"): Major Bludd's mark, Firefly's booby trap, Storm Shadow's silent shot from hiding (John replaced his strike),
 + * Scrap-Iron's remote missile (the stock launcher AI, vehicles first), Copperhead's Water Moccasin drop, Buzzer's
 + * cut-through, Ripper's door, Torch's cut and burn. Each is used once a mission (SavedBattleGame's vanStop store:
 + * "gjv:<id>"). Zartan's disguise and Wild Weasel's strafing run are not built (the disguise fork is parked; the
@@ -8825,64 +8825,34 @@ index 0000000..5bd048c
 +	return false;
 +}
 +
-+/// Storm Shadow: closes on a Joe in sight in one move, drawing no reaction fire, and strikes with the sword
-+bool moveStrike(SavedBattleGame *save, BattleUnit *u, BattleAction *action)
++/// Storm Shadow (John 15 Nov, replacing the Arashikage Strike): the silent assassin. From hiding - no Joe can see
++/// him - one aimed bow shot at a Joe who hasn't seen him: double damage, and it doesn't give him away.
++bool moveAssassin(SavedBattleGame *save, BattleUnit *u, BattleAction *action)
 +{
-+	BattleItem *sword = meleeWeapon(u);
-+	if (!sword) return false;
-+	const int planned = save->getVanStop(key("gjvS", u));
-+	if (planned > 0)
-+	{
-+		save->setVanStop(key("gjvS", u), 0);
-+		BattleUnit *t = nullptr;
-+		for (auto *b : *save->getUnits()) if (b->getId() + 1 == planned) t = b;
-+		if (t && isJoe(t) && Position::distance2d(t->getPosition(), u->getPosition()) <= 1 && t->getPosition().z == u->getPosition().z)
-+		{
-+			BattleActionCost c(BA_HIT, u, sword);
-+			if (c.haveTU())
-+			{
-+				action->type = BA_HIT;
-+				action->weapon = sword;
-+				action->target = t->getPosition();
-+				markUsed(save, u);
-+				Log(LOG_INFO) << "[villain] " << u->getType() << " strikes " << t->getType();
-+				notice(save, "STR_GJV_STRIKE", u);
-+				return true;
-+			}
-+		}
-+		Log(LOG_INFO) << "[villain] " << u->getType() << " strike broken off at " << u->getPosition() << ": choosing again";
-+	}
-+	std::vector<Position> can = reachable(save, u, BattleActionCost(BA_HIT, u, sword));
++	BattleItem *bow = u->getRightHandWeapon();
++	if (!bow || bow->getRules()->getBattleType() != BT_FIREARM || !bow->haveAnyAmmo()) bow = u->getLeftHandWeapon();
++	if (!bow || bow->getRules()->getBattleType() != BT_FIREARM || !bow->haveAnyAmmo()) return false;
++	for (auto *b : *save->getUnits()) // hidden: no Joe sees him now
++		if (isJoe(b) && std::find(b->getVisibleUnits()->begin(), b->getVisibleUnits()->end(), u) != b->getVisibleUnits()->end()) return false;
++	BattleActionCost cost(BA_AIMEDSHOT, u, bow);
++	if (!cost.haveTU()) return false;
 +	BattleUnit *pick = nullptr;
-+	Position stand = TileEngine::invalid;
 +	int bd = INT_MAX;
 +	for (auto *b : *u->getVisibleUnits())
 +	{
 +		if (!isJoe(b)) continue;
-+		for (int dx = -1; dx <= 1; ++dx)
-+			for (int dy = -1; dy <= 1; ++dy)
-+			{
-+				if (!dx && !dy) continue;
-+				const Position p = b->getPosition() + Position(dx, dy, 0);
-+				if (p != u->getPosition() && std::find(can.begin(), can.end(), p) == can.end()) continue;
-+				if (p != u->getPosition() && !standable(save, p)) continue;
-+				const int d = Position::distanceSq(p, u->getPosition());
-+				if (d < bd) { bd = d; pick = b; stand = p; }
-+			}
++		const int d = Position::distanceSq(b->getPosition(), u->getPosition());
++		if (d < bd) { bd = d; pick = b; }
 +	}
 +	if (!pick) return false;
-+	save->setVanStop(key("gjvS", u), pick->getId() + 1);
-+	save->setVanStop(key("gjvNR", u), save->getTurn() + 1);
-+	if (stand == u->getPosition())
-+	{
-+		return moveStrike(save, u, action);
-+	}
-+	if (!walkTo(save, u, stand, action))
-+	{
-+		save->setVanStop(key("gjvS", u), 0);
-+		return false;
-+	}
-+	Log(LOG_INFO) << "[villain] " << u->getType() << " closes on " << typeOf(pick) << " from " << u->getPosition() << " to " << stand;
++	action->type = BA_AIMEDSHOT;
++	action->weapon = bow;
++	action->target = pick->getPosition();
++	save->setVanStop(key("gjvAss", u), pick->getId() + 1);
++	save->setVanStop(key("gjvAssT", u), save->getTurn() + 1);
++	markUsed(save, u);
++	Log(LOG_INFO) << "[villain] " << u->getType() << " shoots " << typeOf(pick) << " from hiding";
++	notice(save, "STR_GJV_ASSASSIN", u);
 +	return true;
 +}
 +
@@ -9028,10 +8998,9 @@ index 0000000..5bd048c
 +			if (isJoe(b)) { b->setTurnsSinceSpottedByFaction(FACTION_HOSTILE, 0); b->setTurnsLeftSpottedForSnipersByFaction(FACTION_HOSTILE, 2); }
 +	const Mod::VillainRule *r = rule(save, unit);
 +	if (!r || r->move.empty() || r->move == "NONE" || unit->getFaction() != FACTION_HOSTILE) return false;
-+	// a strike already under way finishes even though the Move is spent only when it lands
-+	if (r->move == "ARASHIKAGE" && !used(save, unit)) return moveStrike(save, unit, action);
 +	if (used(save, unit)) return false;
 +	if (r->move == "MARK") return moveMark(save, unit, *r);
++	if (r->move == "SILENT_ASSASSIN") return moveAssassin(save, unit, action);
 +	if (r->move == "BOOBY_TRAP") return moveTrap(save, unit, *r, action);
 +	if (r->move == "CUT_THROUGH" || r->move == "RIP_DOOR" || r->move == "CUT_BURN") return moveBreach(save, unit, *r, action);
 +	if (r->move == "MOCCASIN_DROP") return moveDrop(save, unit, *r, action);
@@ -9041,7 +9010,15 @@ index 0000000..5bd048c
 +int damagePct(SavedBattleGame *save, const BattleUnit *attacker, const BattleUnit *victim)
 +{
 +	const Mod::VillainRule *r = rule(save, attacker);
-+	if (!r || !victim || r->trait.empty()) return 100;
++	if (!r || !victim) return 100;
++	// Storm Shadow's shot from hiding: double damage, that one shot
++	if (save->getVanStop(key("gjvAss", attacker)) == victim->getId() + 1 && save->getVanStop(key("gjvAssT", attacker)) == save->getTurn() + 1)
++	{
++		save->setVanStop(key("gjvAss", attacker), 0);
++		Log(LOG_INFO) << "[villain] " << attacker->getType() << "'s shot from hiding hits " << typeOf(victim) << ": double damage";
++		return 200;
++	}
++	if (r->trait.empty()) return 100;
 +	if (r->trait == "MARKED_LIST")
 +	{
 +		const bool marked = std::find(r->marked.begin(), r->marked.end(), typeOf(victim)) != r->marked.end();
@@ -9102,7 +9079,7 @@ index 0000000..5bd048c
 +}
 diff --git a/src/Battlescape/Villains.h b/src/Battlescape/Villains.h
 new file mode 100644
-index 0000000..0a55cb3
+index 0000000..c0c5e19
 --- /dev/null
 +++ b/src/Battlescape/Villains.h
 @@ -0,0 +1,42 @@
@@ -9135,7 +9112,7 @@ index 0000000..0a55cb3
 +	bool steady(SavedBattleGame *save, const BattleUnit *unit);
 +	/// a villain never dies: a killing hit leaves him down instead (named characters never die)
 +	bool neverDies(SavedBattleGame *save, const BattleUnit *unit);
-+	/// this unit's move draws no reaction fire this turn (Storm Shadow's Arashikage Strike)
++	/// this unit draws no reaction fire (only the OXCE_VILLAIN_TEST bench uses it now)
 +	bool noReactions(SavedBattleGame *save, const BattleUnit *unit);
 +	/// an item the Joes never see on the floor (Firefly's charge)
 +	bool hiddenItem(SavedBattleGame *save, const BattleItem *item);
