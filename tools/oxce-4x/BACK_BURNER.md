@@ -415,6 +415,20 @@ What the map version needs, none of which exists yet:
 Cost: the pipeline is the big piece, and it is shared with the Stinger and the
 H.I.S.S., which need the same thing in months 4-12. Not started.
 
+### The canon Pit battle: what the 15 Nov pass left (build/gen_pit_canon.py, BattlescapeGenerator::applyPitModules)
+- **Only CLASSIFIED is wired.** The other 31 slots keep MAPS' stand-in furniture whatever is built. When MAPS
+  builds modules (PIT_BUILD_SPEC_v1) they should come as a module library: one map holding each module in its own
+  rectangle plus a JSON of rects, so the engine copies from the library instead of from a slot on the canon map.
+  Then add a slot group per room family in SLOT_GROUPS and a slot cap per family (only CLASSIFIED is capped now).
+- **No surface.** Cobra comes in at Staging (the vehicle elevator garage) and the alternate escape tunnel. Stacking
+  PITSURF over the underground needs one map (84 x 58 surface over the 46 x 32 block) and waits on PITSURF v2.
+- **Brainwave Lab and Jammer** count against CLASSIFIED's four slots but show as empty slots (no module yet).
+- **Not seen:** a full fight to the end, Cobra using the lifts all the way to Utility, the slot cap refusing in the
+  base screen, a campaign base defence (seen only through New Battle's base defence). Two Cobra died on Staging
+  in the first five turns with no Joe in sight: cause not found.
+- **Surface install (BRIEF_FOR_BUILD_SurfaceInstall):** the cap is off (surfaceCap 99). The rest (13 fixed spots,
+  INSTALL orders instead of placement, the gym-roof second copy) is not built.
+
 ## Broken
 
 ### WATCH: big maps (.MAP2), the first place to look if a battle will not load or runs out of memory

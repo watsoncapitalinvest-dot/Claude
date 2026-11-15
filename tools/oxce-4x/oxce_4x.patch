@@ -436,7 +436,7 @@ index 7fe1da3..797fac5 100644
  	void mouseOver(Action *action, State *state) override;
  	void setColor(Uint8 color) override;
 diff --git a/src/Basescape/PlaceFacilityState.cpp b/src/Basescape/PlaceFacilityState.cpp
-index c52f7ad..2807495 100644
+index c52f7ad..9fbcbb5 100644
 --- a/src/Basescape/PlaceFacilityState.cpp
 +++ b/src/Basescape/PlaceFacilityState.cpp
 @@ -16,7 +16,10 @@
@@ -482,7 +482,7 @@ index c52f7ad..2807495 100644
  
  }
  
-@@ -220,6 +234,26 @@ void PlaceFacilityState::viewClick(Action *)
+@@ -220,6 +234,37 @@ void PlaceFacilityState::viewClick(Action *)
  		}
  
  		// placing a brand new facility
@@ -500,6 +500,17 @@ index c52f7ad..2807495 100644
 +					if (Mod::pitFloorAt(f->getX(), f->getY()) == 0) ++used;
 +				if (used >= cap) why = "STR_PIT_SURFACE_FULL";
 +			}
++			// G.I. Joe: a room family the canon Pit draws in fixed slots (CLASSIFIED: the Lab Bench, the Brainwave Lab
++			// and the Jammer share four) can't outgrow them, so the battle map always shows what the Pit has built
++			if (why.empty() && PF.on && _view->_game_pitFloors())
++				for (const auto &g : _game->getMod()->getPitBattleRules().groups)
++				{
++					if (std::find(g.facilities.begin(), g.facilities.end(), _rule->getType()) == g.facilities.end()) continue;
++					size_t used = 0;
++					for (const auto *f : *_base->getFacilities())
++						if (std::find(g.facilities.begin(), g.facilities.end(), f->getRules()->getType()) != g.facilities.end()) ++used;
++					if (used >= g.slots.size()) why = "STR_PIT_SLOTS_FULL";
++				}
 +			if (!why.empty())
 +			{
 +				_game->pushState(new ErrorMessageState(tr(why), _palette, _game->getMod()->getInterface("placeFacility")->getElement("errorMessage")->color, "BACK13.SCR", _game->getMod()->getInterface("placeFacility")->getElement("errorPalette")->color));
@@ -3508,19 +3519,104 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..5090456 100644
+index 1951ba7..594b305 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
-@@ -16,6 +16,8 @@
+@@ -16,6 +16,9 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
++#include <array>
 +#include "../Geoscape/Outposts.h"
 +#include "AirFight.h"
  #include <algorithm>
  #include <assert.h>
  #include <sstream>
-@@ -767,11 +769,23 @@ void BattlescapeGenerator::nextStage()
+@@ -96,6 +99,83 @@ BattlescapeGenerator::~BattlescapeGenerator()
+ /**
+  * Sets up all our various arrays and whatnot according to the size of the map.
+  */
++/**
++ * G.I. Joe: a base defence in a Pit (not an outpost) is fought on MAPS' canon Pit (BRIEF_FOR_BUILD_PitBase), when
++ * the map is installed. Without MAPS/<map>.MAP2 (the map is private, zip only) the old room-by-room map stays.
++ */
++bool BattlescapeGenerator::isPitBattle() const
++{
++	if (!_base || _save->getMissionType() != "STR_BASE_DEFENSE") return false;
++	const auto &pb = _game->getMod()->getPitBattleRules();
++	if (!_game->getMod()->getPitFloorRules().on || pb.deployment.empty() || pb.map.empty()) return false;
++	const auto *k = Outposts::kindOf(_game->getMod(), _base);
++	if (k && !k->pit) return false;
++	return FileMap::fileExists("MAPS/" + pb.map + ".MAP2") && _game->getMod()->getDeployment(pb.deployment, false);
++}
++
++/**
++ * G.I. Joe (PIT_MODULES_v1): every slot group's slots are filled in order, one per built facility of the group:
++ * the facility's module if MAPS has built one (copied from its template slot), else a bare slot; the slots left
++ * over are bare. Templates are read before anything is written, so a template slot may itself be refilled.
++ */
++void BattlescapeGenerator::applyPitModules()
++{
++	const auto &pb = _game->getMod()->getPitBattleRules();
++	typedef std::vector<std::array<std::pair<int,int>, O_MAX>> Snap;
++	auto snap = [&](const Mod::PitSlot &s) {
++		Snap out;
++		for (int y = 0; y < s.h; ++y)
++			for (int x = 0; x < s.w; ++x)
++			{
++				std::array<std::pair<int,int>, O_MAX> parts;
++				Tile *t = _save->getTile(Position(s.x + x, s.y + y, s.z));
++				for (int k = 0; k < O_MAX; ++k)
++				{
++					int id = -1, set = -1;
++					if (t) t->getMapData(&id, &set, (TilePart)k);
++					parts[k] = std::make_pair(id, set);
++				}
++				out.push_back(parts);
++			}
++		return out;
++	};
++	for (const auto &g : pb.groups)
++	{
++		std::map<std::string, Snap> tpl;
++		for (const auto &s : g.slots)
++		{
++			for (const auto &m : g.modules) if (m.second == s.id) tpl[m.first] = snap(s);
++			if (s.id == g.empty) tpl[""] = snap(s);
++		}
++		std::vector<std::string> fill;
++		for (const auto &type : g.facilities)
++			for (const auto *f : *_base->getFacilities())
++				if (f->getRules()->getType() == type && f->getBuildTime() == 0) fill.push_back(type);
++		for (size_t i = 0; i < g.slots.size(); ++i)
++		{
++			const Mod::PitSlot &s = g.slots[i];
++			std::string want = i < fill.size() && tpl.count(fill[i]) ? fill[i] : "";
++			auto it = tpl.find(want);
++			if (it == tpl.end()) continue;
++			const Snap &src = it->second;
++			size_t n = 0;
++			for (int y = 0; y < s.h; ++y)
++				for (int x = 0; x < s.w; ++x, ++n)
++				{
++					Tile *t = _save->getTile(Position(s.x + x, s.y + y, s.z));
++					if (!t || n >= src.size()) continue;
++					for (int k = 0; k < O_MAX; ++k)
++					{
++						const auto &pr = src[n][k];
++						MapData *md = pr.first >= 0 && pr.second >= 0 ? _save->getMapDataSets()->at(pr.second)->getObject(pr.first) : nullptr;
++						t->setMapData(md, md ? pr.first : -1, md ? pr.second : -1, (TilePart)k);
++					}
++				}
++			Log(LOG_INFO) << "[pit] slot " << s.id << ": " << (want.empty() ? std::string("empty") : want);
++		}
++	}
++}
++
+ void BattlescapeGenerator::init(bool resetTerrain)
+ {
+ 	_blocks.clear();
+@@ -767,11 +847,31 @@ void BattlescapeGenerator::nextStage()
   */
  void BattlescapeGenerator::run()
  {
@@ -3540,11 +3636,19 @@ index 1951ba7..5090456 100644
 +			_alienCustomMission = _game->getMod()->getDeployment(ok->deployment, false);
 +			if (_alienCustomMission) Log(LOG_INFO) << "[outpost] raid on " << ok->type << " plays on " << ok->deployment;
 +		}
++		else if (isPitBattle())
++		{
++			_alienCustomMission = _game->getMod()->getDeployment(_game->getMod()->getPitBattleRules().deployment, false);
++			Log(LOG_INFO) << "[pit] base defence plays on the canon Pit (" << _game->getMod()->getPitBattleRules().map << ")";
++			// its own terrain, whatever a New Battle or the globe picked for a base
++			if (_alienCustomMission && !_alienCustomMission->getTerrains().empty())
++				_terrain = _game->getMod()->getTerrain(_alienCustomMission->getTerrains().front(), true);
++		}
 +	}
  	const AlienDeployment *ruleDeploy = _alienCustomMission ? _alienCustomMission : _game->getMod()->getDeployment(_ufo?_ufo->getRules()->getType():_save->getMissionType(), true);
  
  	_save->setTurnLimit(ruleDeploy->getTurnLimit());
-@@ -829,9 +843,9 @@ void BattlescapeGenerator::run()
+@@ -829,9 +929,9 @@ void BattlescapeGenerator::run()
  		if (_game->getSavedGame()->getMonthsPassed() != -1)
  		{
  			month =
@@ -3556,7 +3660,15 @@ index 1951ba7..5090456 100644
  		}
  		else
  		{
-@@ -961,6 +975,184 @@ void BattlescapeGenerator::run()
+@@ -884,6 +984,7 @@ void BattlescapeGenerator::run()
+ 	_save->setStartingCondition(startingCondition);
+ 
+ 	generateMap(script, ruleDeploy->getCustomUfoName(), startingCondition);
++	if (isPitBattle()) applyPitModules();
+ 
+ 	if (isPreview && ruleDeploy->isHidden())
+ 	{
+@@ -961,6 +1062,184 @@ void BattlescapeGenerator::run()
  	}
  }
  
@@ -3741,11 +3853,11 @@ index 1951ba7..5090456 100644
  /**
   * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
   */
-@@ -1483,6 +1675,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1483,6 +1762,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  			setCustomCraftInventoryTile();
  
  			Node* node = _save->getSpawnNode(NR_XCOM, unit);
-+			if (!node && unit->getArmor()->getSize() > 1 && _save->getMissionType() != "STR_BASE_DEFENSE")
++			if (!node && unit->getArmor()->getSize() > 1 && (_save->getMissionType() != "STR_BASE_DEFENSE" || isPitBattle()))
 +			{
 +				// G.I. Joe: no Joe start point is big enough for a tank: park it on open ground near one
 +				for (Node *n : *_save->getNodes())
@@ -3774,11 +3886,11 @@ index 1951ba7..5090456 100644
  			if (node)
  			{
  				_save->setUnitPosition(unit, node->getPosition());
-@@ -1495,6 +1713,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1495,6 +1800,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  				_save->initUnit(unit);
  				return unit;
  			}
-+			else if (_save->getMissionType() == "STR_BASE_DEFENSE" && _base && Outposts::kindOf(_game->getMod(), _base))
++			else if (_save->getMissionType() == "STR_BASE_DEFENSE" && _base && (Outposts::kindOf(_game->getMod(), _base) || isPitBattle()))
 +			{
 +				// G.I. Joe: an outpost's map without Joe start points (a placeholder): the defenders stand near the
 +				// first one placed, or in the middle of the map
@@ -3802,7 +3914,7 @@ index 1951ba7..5090456 100644
  			else if (_save->getMissionType() != "STR_BASE_DEFENSE")
  			{
  				if (placeUnitNearFriend(unit))
-@@ -1669,6 +1908,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +1995,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -3892,7 +4004,7 @@ index 1951ba7..5090456 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +2018,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +2105,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -3961,7 +4073,7 @@ index 1951ba7..5090456 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2103,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2190,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -3978,7 +4090,7 @@ index 1951ba7..5090456 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2132,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2219,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -4021,7 +4133,7 @@ index 1951ba7..5090456 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -2081,17 +2504,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,17 +2591,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -4052,7 +4164,7 @@ index 1951ba7..5090456 100644
  
  	mapblock->setSizeZ(sizez);
  
-@@ -2141,11 +2572,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2659,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -4066,19 +4178,19 @@ index 1951ba7..5090456 100644
  			if (terrainObjectID>0)
  			{
  				int mapDataSetID = mapDataSetOffset;
-@@ -2830,7 +3261,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2830,7 +3348,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  	// this mission type is "hard-coded" in terms of map layout
  	uint64_t seed = RNG::getSeed();
  	_baseTerrain = _terrain;
 -	if (_save->getMissionType() == "STR_BASE_DEFENSE")
 +	// G.I. Joe: an outpost's raid map is MAPS' drawing of it (its deployment's script), not its rooms
-+	const bool outpostMap = _base && Outposts::kindOf(_game->getMod(), _base) && !Outposts::kindOf(_game->getMod(), _base)->deployment.empty();
++	const bool outpostMap = (_base && Outposts::kindOf(_game->getMod(), _base) && !Outposts::kindOf(_game->getMod(), _base)->deployment.empty()) || isPitBattle();
 +	if (_save->getMissionType() == "STR_BASE_DEFENSE" && !outpostMap)
  	{
  		if (_mod->getBaseDefenseMapFromLocation() == 1)
  		{
 diff --git a/src/Battlescape/BattlescapeGenerator.h b/src/Battlescape/BattlescapeGenerator.h
-index a0bc8b3..60195c9 100644
+index a0bc8b3..cdbe66c 100644
 --- a/src/Battlescape/BattlescapeGenerator.h
 +++ b/src/Battlescape/BattlescapeGenerator.h
 @@ -127,6 +127,8 @@ private:
@@ -4090,7 +4202,18 @@ index a0bc8b3..60195c9 100644
  	/// Spawns civilians on a terror mission.
  	void deployCivilians(bool markAsVIP, int nodeRank, int max, bool roundUp = false, const std::string &civilianType = "");
  	/// Finds a spot near a friend to spawn at.
-@@ -194,6 +196,9 @@ public:
+@@ -147,6 +149,10 @@ private:
+ 	bool selectPosition(const std::vector<SDL_Rect *> *rects, int &X, int &Y, int sizeX, int sizeY);
+ 	/// Generates a map from base modules.
+ 	void generateBaseMap();
++	/// G.I. Joe: is this base defence fought on MAPS' canon Pit
++	bool isPitBattle() const;
++	/// G.I. Joe: fill the canon Pit's slots from what the base has built
++	void applyPitModules();
+ 	/// Populates _verticalLevels vector according to a mapscript command and sorts them for use
+ 	bool populateVerticalLevels(MapScript *command);
+ 	/// Gets a terrain from a terrain name for a command or a vertical level
+@@ -194,6 +200,9 @@ public:
  	void setTerrain(RuleTerrain *terrain);
  	/// Runs the generator.
  	void run();
@@ -20147,7 +20270,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..8b789d3 100644
+index 1885346..dd132e4 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -20285,7 +20408,7 @@ index 1885346..8b789d3 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,490 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,514 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -20519,6 +20642,30 @@ index 1885346..8b789d3 100644
 +		pf.tryRead("names", _pitFloors.names);
 +		pf.tryRead("surfaceCap", _pitFloors.surfaceCap);
 +		pf.tryRead("surfaceCapResearch", _pitFloors.surfaceCapResearch);
++	}
++	if (const auto& pb = reader["pitBattle"])
++	{
++		pb.tryRead("deployment", _pitBattle.deployment);
++		pb.tryRead("map", _pitBattle.map);
++		if (const auto& gs = pb["groups"])
++		{
++			_pitBattle.groups.clear();
++			for (const auto& g : gs.children())
++			{
++				PitSlotGroup grp;
++				g.tryRead("facilities", grp.facilities);
++				g.tryRead("modules", grp.modules);
++				g.tryRead("empty", grp.empty);
++				if (const auto& ss = g["slots"])
++					for (const auto& s : ss.children())
++					{
++						PitSlot sl;
++						s.tryRead("id", sl.id); s.tryRead("z", sl.z); s.tryRead("x", sl.x); s.tryRead("y", sl.y); s.tryRead("w", sl.w); s.tryRead("h", sl.h);
++						grp.slots.push_back(sl);
++					}
++				_pitBattle.groups.push_back(grp);
++			}
++		}
 +	}
 +	if (const auto& sh = reader["shipping"])
 +	{
@@ -20776,7 +20923,7 @@ index 1885346..8b789d3 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3795,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3819,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -20784,7 +20931,7 @@ index 1885346..8b789d3 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4400,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4424,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -20810,7 +20957,7 @@ index 1885346..8b789d3 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4657,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4681,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -20831,7 +20978,7 @@ index 1885346..8b789d3 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6371,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6395,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -20851,7 +20998,7 @@ index 1885346..8b789d3 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6394,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6418,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -20859,7 +21006,7 @@ index 1885346..8b789d3 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6408,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6432,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -20899,7 +21046,7 @@ index 1885346..8b789d3 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..dc7dd6a 100644
+index 2242d13..ad613ee 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -20963,7 +21110,7 @@ index 2242d13..dc7dd6a 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,294 @@ private:
+@@ -327,6 +360,310 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -21103,6 +21250,22 @@ index 2242d13..dc7dd6a 100644
 +	PitFloorRules _pitFloors;
 +public:
 +	const PitFloorRules &getPitFloorRules() const { return _pitFloors; }
++	/// G.I. Joe: the Pit's base-defence battle on MAPS' canon map (PIT_MODULES_v1). A slot group is a set of
++	/// rooms on the map that hold one family of facilities; the engine fills them at battle start from what is
++	/// built (a module copied from a template slot), and a Pit may not build more of the family than it has slots.
++	struct PitSlot { std::string id; int z = 0, x = 0, y = 0, w = 0, h = 0; };
++	struct PitSlotGroup
++	{
++		std::vector<std::string> facilities;     ///< the facility types the slots hold, filled in this order
++		std::vector<PitSlot> slots;
++		std::map<std::string, std::string> modules; ///< facility type -> the slot whose contents are its module
++		std::string empty;                        ///< the slot whose contents are a bare slot
++	};
++	struct PitBattleRules { std::string deployment, map; std::vector<PitSlotGroup> groups; };
++private:
++	PitBattleRules _pitBattle;
++public:
++	const PitBattleRules &getPitBattleRules() const { return _pitBattle; }
 +	/// the floor of a grid square (0..5)
 +	static int pitFloorAt(int x, int y) { return (y / 2) * 2 + (x / 3); }
 +	/// G.I. Joe: air (and later sea) fights on the battle engine (DOGFIGHT_DESIGN_v1, AIR_SEA_BUILD_PLAN_v1).
@@ -21258,7 +21421,7 @@ index 2242d13..dc7dd6a 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1013,124 @@ public:
+@@ -692,6 +1029,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
