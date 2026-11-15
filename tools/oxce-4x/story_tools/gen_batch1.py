@@ -145,7 +145,8 @@ act1_items = [live_item('STR_CARTEL_BOSS', 20000), live_item('STR_ROBBERY_LEADER
  ('STR_CARTEL_LOGBOOK', 0), ('STR_INFORMANT_TIP', 0), ('STR_GETAWAY_PAPERS', 0),
  ('STR_CARTEL_LEDGER', 5000), ('STR_CRATE_SERIAL_PLATE', 0), ('STR_COBRA_STENCIL', 0), ('STR_FACTORY_SCHEDULE', 0),
  ('STR_BROADCAST_RECORDING', 0), ('STR_BLUDD_CALLING_CARD', 0), ('STR_SHIPPING_MANIFEST', 0), ('STR_PILOT_LOGBOOK', 0),
- ('STR_DEPOT_RECORDS', 0), ('STR_TERROR_DROME_PLANS', 0), ('STR_MARS_MARKED_WEAPON', 0)]]
+ ('STR_DEPOT_RECORDS', 0), ('STR_TERROR_DROME_PLANS', 0), ('STR_MARS_MARKED_WEAPON', 0),
+ ('STR_RANGE_BUNKER_FILES', 0), ('STR_SPRINGFIELD_LEDGERS', 10000), ('STR_CRIMSON_GUARD_TRAINING_LOG', 0)]] + [live_item('STR_DANNY_MARSH', 30000)]
 A = [
  topic('STR_RUMOURED_TERROR_GROUP', 10, 0, deps=[LOCK]),                      # BUILD: put in the starting research
  topic('STR_CARTEL_LEDGER', 30, 20, needItem=True, destroyItem=True, unlocks=['STR_WHO_IS_COBRA', 'STR_CARTEL_FLIGHT_ROUTE']),
@@ -183,6 +184,19 @@ A = [
  topic('STR_TERROR_DROME_RUMOURS', 200, 50, deps=['STR_COBRA_DEPOTS', 'STR_DEPOT_RECORDS']),
  topic('STR_TERROR_DROME_PLANS', 150, 60, needItem=True, destroyItem=True),
  topic('STR_MARS_MARKED_WEAPON', 100, 50, needItem=True, destroyItem=True, lookup='STR_MARS_MARKINGS'),
+ # SPRINGFIELD (claude/STORY_Springfield_v1.md, John 15 Nov 09:06-09:20). Act 2. STR_CRIMSON_GUARD done -> BUILD fires
+ # STR_EVENT_SPRINGFIELD_WALK_IN, which opens The Springfield Story. Its end opens the B.A.T. test range (Part 1).
+ topic('STR_SPRINGFIELD_STORY', 150, 40, deps=[LOCK]),                         # done: BUILD opens the test-range mission
+ topic('STR_RANGE_BUNKER_FILES', 120, 30, needItem=True, destroyItem=True, unlocks=['STR_ARBCO']),   # from the control bunker
+ topic('STR_RANGE_LAND_RECORDS', 300, 30, deps=[LOCK], unlocks=['STR_ARBCO']),  # no bunker files: STR_EVENT_SPRINGFIELD_RANGE_NO_FILES opens this (slower)
+ topic('STR_ARBCO', 200, 50, deps=[LOCK]),                                     # done: BUILD opens the real Springfield (Part 2)
+ # What comes out of the real town (any number of each; each evidence item or prisoner shortens the suspension)
+ topic('STR_SPRINGFIELD_LEDGERS', 150, 40, needItem=True, destroyItem=True, unlocks=['STR_ARBCO_NETWORK']),
+ topic('STR_ARBCO_NETWORK', 200, 50, deps=[LOCK]),                             # done: Arbco front-business raids (BUILD/MAPS)
+ topic('STR_CRIMSON_GUARD_TRAINING_LOG', 150, 40, needItem=True, destroyItem=True, unlocks=['STR_CRIMSON_GUARD_DRILLS']),
+ topic('STR_CRIMSON_GUARD_DRILLS', 200, 50, deps=[LOCK]),                      # done: Joes +10% to hit Crimson Guard (BUILD)
+ topic('STR_DANNY_MARSH', 200, 60, needItem=True, destroyItem=True, unlocks=['STR_BARONESS_AGENTS'], lookup='STR_DANNY_MARSH_INTERROGATION'),
+ topic('STR_BARONESS_AGENTS', 200, 50, deps=[LOCK]),                           # STORY proposal: done -> the Baroness's next field mission is marked
 ]
 looked = {t['name']: t.get('lookup') for t in A}
 ART_A = [article(looked[t['name']] or t['name'], t['name']) for t in A if t['name'] != 'STR_COBRA_LEDGERS']
@@ -249,6 +263,28 @@ S.update({
  'STR_MARS_MARKINGS_UFOPEDIA': 'Roadblock found it on a rifle from the Drome, under Cobra\'s paint: a maker\'s mark. M.A.R.S., Military Armaments Research Syndicate.{NEWLINE}{NEWLINE}Cobra doesn\'t build its own guns. Somebody sells them, and a seller that size never has just one customer. I want to know who signs his invoices.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_CARTEL_BOSS': 'Cartel Boss', 'STR_BROADCAST_RECORDING': 'Broadcast Recording', 'STR_BLUDD_CALLING_CARD': 'Bludd\'s Calling Card',
  'STR_MARS_MARKED_WEAPON': 'M.A.R.S.-Marked Weapon',
+ # SPRINGFIELD
+ 'STR_SPRINGFIELD_STORY': 'The Springfield Story',
+ 'STR_SPRINGFIELD_STORY_UFOPEDIA': 'Danny Marsh is twenty-six, a mechanic, and afraid of the town he grew up in. He says it\'s called Springfield, that every adult there works for Cobra, and that the Crimson Guard train there behind its shopfronts. He got out last spring, he says, and nobody gets out.{NEWLINE}{NEWLINE}His story holds: the town is on the map, out in the hills, and his school and his family are where he says. I\'ve put Springfield on the board. Hawk is planning the visit.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_RANGE_BUNKER_FILES': 'Range Bunker Files',
+ 'STR_RANGE_BUNKER_FILES_UFOPEDIA': 'Nobody ever lived in that Springfield. It\'s a range: painted windows, shopfronts with nothing behind them, and a bunker full of film of B.A.T.s walking down Main Street shooting at dummies.{NEWLINE}{NEWLINE}A building firm called Arbco built it and still pays for it. We\'ve seen that name before, on a furniture plant in West Texas that made rifles. And on the bunker\'s staff list, under range security, there\'s a photograph of Danny Marsh.{NEWLINE}{NEWLINE}He was the Baroness\'s from the start. I vouched for him. I\'ll find the real town.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_RANGE_LAND_RECORDS': 'Range Land Records',
+ 'STR_RANGE_LAND_RECORDS_UFOPEDIA': 'We came away from that range without its files. So we did it the slow way: county land records, power bills, the company that graded the road. Every one of them ends at a building firm called Arbco.{NEWLINE}{NEWLINE}We\'ve seen that name before, on a furniture plant in West Texas that made rifles. Danny Marsh hasn\'t been seen since. He was the Baroness\'s from the start, and I vouched for him.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_ARBCO': 'Arbco',
+ 'STR_ARBCO_UFOPEDIA': 'On paper Arbco is a dozen small firms: furniture, building, offices, vans. Off paper it\'s one, and every one of its accounts is settled from the same town. Springfield. Not the one Danny sent us to. The other one.{NEWLINE}{NEWLINE}It has an airport, a police force, a museum, a high school and an Arbco office on the square. Its tax records show full employment, and nobody has moved away in eleven years.{NEWLINE}{NEWLINE}That\'s the town. Hawk has it on the map.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_SPRINGFIELD_LEDGERS': 'Springfield Ledgers',
+ 'STR_SPRINGFIELD_LEDGERS_UFOPEDIA': 'Arbco\'s real books, out of the office on the square before Cobra could burn them. They\'re in a good code. Give my analysts time.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_ARBCO_NETWORK': 'The Arbco Network',
+ 'STR_ARBCO_NETWORK_UFOPEDIA': 'The Springfield ledgers are broken. Every front business Cobra runs in this country pays into Arbco, and now we have the list: dry cleaners, car lots, a travel agency, a chain of hardware stores. They move money, and some of them move men.{NEWLINE}{NEWLINE}Some are still open, and they don\'t know we have this. Each one can be raided. Every one we close is money Cobra doesn\'t have and an office full of paper we do.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_CRIMSON_GUARD_TRAINING_LOG': 'Crimson Guard Training Log',
+ 'STR_CRIMSON_GUARD_TRAINING_LOG_UFOPEDIA': 'From the Springfield training rooms: one Crimson Guard\'s log, years of it. Drills, scores and his instructors\' notes in the margin. Whoever kept it was proud of it.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_CRIMSON_GUARD_DRILLS': 'Crimson Guard Drills',
+ 'STR_CRIMSON_GUARD_DRILLS_UFOPEDIA': 'This is how Cobra makes a Crimson Guard: the same drills, in the same order, for years, until every man moves the way the manual says. That\'s what makes them good. It also makes them predictable.{NEWLINE}{NEWLINE}The drills are in our training now. Our people know where a Crimson Guard will step before he does, and they shoot accordingly.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_DANNY_MARSH': 'Danny Marsh',
+ 'STR_DANNY_MARSH_INTERROGATION': 'Danny Marsh Interrogation',
+ 'STR_DANNY_MARSH_INTERROGATION_UFOPEDIA': 'Danny Marsh, Crimson Guard, of Springfield and nowhere else. Everything he told me the first time was true except the part where he left.{NEWLINE}{NEWLINE}He broke faster this time. He thinks he has failed the Baroness, and he\'s more afraid of her than of us. He gave me the people she runs near us: names, drops, and how the pay reaches them.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_BARONESS_AGENTS': 'The Baroness\'s Agents',
+ 'STR_BARONESS_AGENTS_UFOPEDIA': 'Danny\'s names checked out, all of them. Agents talk to handlers, and handlers talk to her. We have been listening for three weeks.{NEWLINE}{NEWLINE}The next time the Baroness goes into the field herself, we\'ll know where.{NEWLINE}{NEWLINE}- Scarlett',
 })
 
 hdr = ('# STORY (Year 1 research + story). The interrogation spine: the 29-step chain from the master doc, as research.\n'

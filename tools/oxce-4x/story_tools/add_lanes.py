@@ -61,6 +61,9 @@ for t, ln in [('RAPID_DEPLOYMENT_DRILL', H), ('JOINT_CHIEFS_LIAISON', H), ('COBR
     LANE['STR_' + t] = ln   # head-only projects, John 14 Nov 00:51
 for t, ln in [('FLAGG_ODD_REQUESTS', S), ('FLAGG_THE_LIAISON', S), ('FLAGG_MISSING_FILE', S)]:
     LANE['STR_' + t] = ln   # the Flagg arc, John 14 Nov 19:25
+for t in ['SPRINGFIELD_STORY', 'RANGE_BUNKER_FILES', 'RANGE_LAND_RECORDS', 'ARBCO', 'SPRINGFIELD_LEDGERS', 'ARBCO_NETWORK',
+          'CRIMSON_GUARD_TRAINING_LOG', 'CRIMSON_GUARD_DRILLS', 'DANNY_MARSH', 'DANNY_MARSH_INTERROGATION', 'BARONESS_AGENTS']:
+    LANE['STR_' + t] = S   # Springfield, John 15 Nov 09:06
 for t, ln in [('REBREATHER', D), ('UNDERWATER_PISTOL', R), ('UNDERWATER_ASSAULT_RIFLE', R), ('SONAR', B)]:
     LANE['STR_' + t] = ln   # underwater kit, John 14 Nov 10:09
 SKIP = {'STR_STORY_LOCK'}

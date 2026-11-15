@@ -454,6 +454,52 @@ S['STR_PROVING_GROUND_UP'] = "Beach Head has set up a proving ground near {0}. B
 S['STR_PROVING_GROUND_PASSED'] = "BEACH HEAD: You'll do. Barely. I start Monday, and your people won't like me. Beach Head has joined G.I. Joe at {0}."
 S['STR_PROVING_GROUND_FAILED'] = "BEACH HEAD: That was sad. Same time next week. Bring people who can shoot."
 
+# ------------------------------------------------------------------ 9. Springfield (claude/STORY_Springfield_v1.md, John 15 Nov 09:06-09:20). Act 2.
+# Order: STR_CRIMSON_GUARD done -> WALK_IN (opens STR_SPRINGFIELD_STORY) -> range briefing -> RANGE_DEBRIEF (bunker files taken)
+# or RANGE_NO_FILES (opens STR_RANGE_LAND_RECORDS) -> STR_ARBCO done -> assault briefing -> INQUIRY -> INQUIRY_OVER.
+S['STR_EVENT_SPRINGFIELD_WALK_IN'] = 'SCARLETT HAS A WALK-IN'
+S['STR_EVENT_SPRINGFIELD_WALK_IN_DESCRIPTION'] = P.join([
+    "SCARLETT: A young man walked into an Army recruiting office yesterday and asked for whoever handles Cobra. The sergeant called me. His name is Danny Marsh.",
+    "He says he grew up in a town called Springfield, where every adult works for Cobra and the Crimson Guard train in the open. He says he got out. He's frightened, and he's very sure.",
+    "HAWK: We've been asking Cobra's people about the Crimson Guard for weeks, and now one of their neighbours walks in. Take a few days with him. Check every word."])
+S['STR_BRIEFING_SPRINGFIELD_RANGE_TITLE'] = 'OPERATION: MAIN STREET'
+S['STR_BRIEFING_SPRINGFIELD_RANGE'] = P.join([
+    "HAWK: Danny Marsh says this is Springfield: a town in the hills where Cobra trains the Crimson Guard. Scarlett has checked his story and it holds.",
+    "He says the training is run from a bunker at the end of Main Street. That's the target. Get inside and bring back whatever they keep in it.",
+    "He also says there are families here. Check every target before you fire.",
+    "If this is what he says it is, it's the biggest thing we've found since the Drome. If it isn't, I want to know that too. Move out."])
+S['STR_EVENT_SPRINGFIELD_RANGE_DEBRIEF'] = 'NOBODY LIVES IN SPRINGFIELD'
+S['STR_EVENT_SPRINGFIELD_RANGE_DEBRIEF_DESCRIPTION'] = P.join([
+    "SCARLETT: There were no families. There were no people at all. That town is a firing range dressed as a town, and those were B.A.T.s, and they were waiting for us.",
+    "Danny Marsh walked out of his safe house the morning we left. He was the Baroness's from the start, and I vouched for him. That's mine.",
+    "HAWK: Then you'll want the bunker files. Read them."])
+S['STR_EVENT_SPRINGFIELD_RANGE_NO_FILES'] = 'NOBODY LIVES IN SPRINGFIELD'
+S['STR_EVENT_SPRINGFIELD_RANGE_NO_FILES_DESCRIPTION'] = P.join([
+    "SCARLETT: There were no families. There were no people at all. That town is a firing range dressed as a town, and those were B.A.T.s, and they were waiting for us.",
+    "Danny Marsh walked out of his safe house the morning we left. He was the Baroness's from the start, and I vouched for him. That's mine.",
+    "We didn't get into the bunker. Somebody built that range and somebody pays for it, so I'll find them on paper. It'll take longer.",
+    "HAWK: Then start."])
+S['STR_BRIEFING_SPRINGFIELD_TITLE'] = 'OPERATION: HOMETOWN'
+S['STR_BRIEFING_SPRINGFIELD'] = P.join([
+    "HAWK: This is the real Springfield. Cobra built it, Cobra runs it, and Cobra trains the Crimson Guard under it. The mayor is Cobra. The police are Cobra. Nearly everyone in it is Cobra or married to it.",
+    "Three objectives first: the airport, the police station, and the roads out of town. Then the museum on the square. That's their headquarters.",
+    "They will run. Destro is running the evacuation, from the helicopter pad at the high school and a tunnel under the airport. We won't stop all of it. Every turn we hold them is another prisoner and another box of files, and I want both. Take Crimson Guard alive.",
+    "Armed townsfolk are combatants. Unarmed ones are civilians, whoever they vote for. Check your fire."])
+S['STR_EVENT_SPRINGFIELD_INQUIRY'] = 'THE PENTAGON INQUIRY'
+S['STR_EVENT_SPRINGFIELD_INQUIRY_DESCRIPTION'] = P.join([
+    "HAWK: We took a town, and the town got away. Cobra blew the tunnel, burned what it couldn't carry and flew out from the high school.",
+    "Washington wants to know how an American town belonged to Cobra for twenty years, and how we let it leave. Until the inquiry is done, G.I. Joe launches nothing for {DAYS} days. The labs, the shops and the base keep working. The money will be short next month.",
+    "What we brought out is thin. They'll use that against us."])
+S['STR_EVENT_SPRINGFIELD_INQUIRY_STRONG'] = P.join([
+    "HAWK: We took a town, and the town got away. Cobra blew the tunnel, burned what it couldn't carry and flew out from the high school.",
+    "Washington wants to know how an American town belonged to Cobra for twenty years, and how we let it leave. Until the inquiry is done, G.I. Joe launches nothing for {DAYS} days. The labs, the shops and the base keep working.",
+    "What we brought out is on the committee's table, and it's doing our talking for us."])
+S['STR_EVENT_SPRINGFIELD_DANNY_TAKEN'] = "SCARLETT: Danny Marsh is in our cells. He was wearing a Crimson Guard uniform this time."
+S['STR_EVENT_SPRINGFIELD_INQUIRY_OVER'] = 'CLEARED TO OPERATE'
+S['STR_EVENT_SPRINGFIELD_INQUIRY_OVER_DESCRIPTION'] = P.join([
+    "HAWK: The committee is done with us. We're cleared to operate. Nobody said thank you, and nobody's going to.",
+    "Springfield is empty. Its people are somewhere else now, and they know our faces. Back to work."])
+
 hdr = ('# STORY (Act 1 writing). Hawk\'s briefings, Cobra Commander\'s broadcast and the Act 1 cutscene captions.\n'
        '# Text only. BUILD wires the ids (see story_tools/gen_act1_text.py). Generated: edit the script, not this file.\n')
 body = yaml.dump({'extraStrings': [{'type': 'en-US', 'strings': S}, {'type': 'en-GB', 'strings': S}]},
