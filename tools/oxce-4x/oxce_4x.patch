@@ -8028,7 +8028,7 @@ index 8497877..78e0448 100644
  	/// Drop item on ground.
  	void itemDrop(Tile *t, BattleItem *item, bool updateLight);
 diff --git a/src/Battlescape/UnitSprite.cpp b/src/Battlescape/UnitSprite.cpp
-index 8fa87f8..d2f3e0d 100644
+index 8fa87f8..c8ff45e 100644
 --- a/src/Battlescape/UnitSprite.cpp
 +++ b/src/Battlescape/UnitSprite.cpp
 @@ -17,6 +17,9 @@
@@ -8102,7 +8102,7 @@ index 8fa87f8..d2f3e0d 100644
  	// blit order depends on unit direction, and whether we are holding a 2 handed weapon.
  	switch (unitDir)
  	{
-@@ -643,6 +666,143 @@ void UnitSprite::drawRoutine0()
+@@ -643,6 +666,158 @@ void UnitSprite::drawRoutine0()
  }
  
  
@@ -8180,6 +8180,21 @@ index 8fa87f8..d2f3e0d 100644
 +		body.offX = 16 - 16 * N - 16 * ox + 16 * oy;
 +		body.offY = 28 + 8 * (N - 1) - 28 * N - 8 * ox - 8 * oy - 4;
 +		blitBody(body);
++		// G.I. Joe: the turret, turned to its own heading, where the hull at this heading carries it
++		const Armor *ar = _unit->getArmor();
++		if (!ar->getGjTurretSheet().empty() && _unit->getStatus() != STATUS_COLLAPSING)
++		{
++			SurfaceSet *ts = const_cast<Mod*>(_mod)->getSurfaceSet(ar->getGjTurretSheet(), false);
++			const int td = _unit->getTurretType() >= 0 ? _unit->getTurretDirection() : dir;
++			if (ts && ts->getFrame(td))
++			{
++				Part turret{ BODYPART_TORSO, ts->getFrame(td) };
++				const auto &off = ar->getGjTurretOffsets();
++				turret.offX = body.offX + (dir < (int)off.size() && off[dir].size() >= 2 ? off[dir][0] : 0);
++				turret.offY = body.offY + (dir < (int)off.size() && off[dir].size() >= 2 ? off[dir][1] : 0);
++				blitBody(turret);
++			}
++		}
 +		return;
 +	}
 +	// G.I. Joe: the rendered clips are real-time motion, so they play slower than X-COM's
@@ -19792,6 +19807,42 @@ index 5c8559f..490abef 100644
  	/// Gets the score penalty XCom receives for aborting this mission.
  	int getAbortPenalty() const { return _abortPenalty; }
  	/// Gets the (half hourly) score penalty XCom receives for this site existing.
+diff --git a/src/Mod/Armor.cpp b/src/Mod/Armor.cpp
+index 7a41042..43fdfd7 100644
+--- a/src/Mod/Armor.cpp
++++ b/src/Mod/Armor.cpp
+@@ -85,6 +85,8 @@ void Armor::load(const YAML::YamlNodeReader& node, Mod *mod, const ModScript &pa
+ 
+ 	reader.tryRead("ufopediaType", _ufopediaType);
+ 	reader.tryRead("spriteSheet", _spriteSheet);
++	reader.tryRead("gjTurretSheet", _gjTurretSheet);
++	reader.tryRead("gjTurretOffsets", _gjTurretOffsets);
+ 	reader.tryRead("spriteInv", _spriteInv);
+ 	reader.tryRead("allowInv", _hasInventory);
+ 	if (reader["corpseItem"])
+diff --git a/src/Mod/Armor.h b/src/Mod/Armor.h
+index f42ba28..5d48a75 100644
+--- a/src/Mod/Armor.h
++++ b/src/Mod/Armor.h
+@@ -100,6 +100,8 @@ public:
+ 	static const std::string NONE;
+ private:
+ 	std::string _ufopediaType;
++	std::string _gjTurretSheet;                       // G.I. Joe: a turret drawn over a big unit at its own heading
++	std::vector<std::vector<int>> _gjTurretOffsets;  // per hull heading, [dx, dy] at 1x
+ 	std::string _type, _spriteSheet, _spriteInv, _corpseGeoName, _storeItemName, _selfDestructItemName, _specWeaponName;
+ 	std::string _requiresName;
+ 	std::string _requiresAwardName;
+@@ -220,6 +222,9 @@ public:
+ 	const std::string& getType() const;
+ 	/// Gets the unit's sprite sheet.
+ 	std::string getSpriteSheet() const;
++	/// G.I. Joe: the turret sheet (frames 0-7 = turret headings) and where it sits for each hull heading
++	const std::string &getGjTurretSheet() const { return _gjTurretSheet; }
++	const std::vector<std::vector<int>> &getGjTurretOffsets() const { return _gjTurretOffsets; }
+ 	/// Gets the unit's inventory sprite.
+ 	std::string getSpriteInventory() const;
+ 	/// Gets the front armor level.
 diff --git a/src/Mod/ArticleDefinition.cpp b/src/Mod/ArticleDefinition.cpp
 index f91e04e..ed28496 100644
 --- a/src/Mod/ArticleDefinition.cpp
