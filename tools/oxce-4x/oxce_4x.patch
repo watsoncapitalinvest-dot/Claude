@@ -1894,10 +1894,10 @@ index 6065b54..8db80d7 100644
  	/// Init function.
 diff --git a/src/Battlescape/AirFight.cpp b/src/Battlescape/AirFight.cpp
 new file mode 100644
-index 0000000..7f0900b
+index 0000000..fd42e49
 --- /dev/null
 +++ b/src/Battlescape/AirFight.cpp
-@@ -0,0 +1,836 @@
+@@ -0,0 +1,989 @@
 +/*
 + * G.I. Joe: air fights on the battle engine (claude/DOGFIGHT_DESIGN_v1.md, claude/AIR_SEA_BUILD_PLAN_v1.md).
 + */
@@ -1929,6 +1929,7 @@ index 0000000..7f0900b
 +#include "BattlescapeGame.h"
 +#include "Pathfinding.h"
 +#include "TileEngine.h"
++#include "../Savegame/Tile.h"
 +
 +namespace OpenXcom
 +{
@@ -2131,6 +2132,8 @@ index 0000000..7f0900b
 +		if (!t || (t->getUnit() && t->getUnit() != u) || p == u->getPosition()) return false;
 +		save->getPathfinding()->calculate(u, p, BAM_NORMAL);
 +		const bool ok = save->getPathfinding()->getStartDirection() != -1 && save->getPathfinding()->getTotalTUCost() <= budget;
++		if (!ok && getenv("OXCE_AIRFIGHT_TRACE"))
++			Log(LOG_INFO) << "[air] no path " << u->getType() << " " << u->getPosition() << " -> " << p << " dir " << save->getPathfinding()->getStartDirection() << " cost " << save->getPathfinding()->getTotalTUCost();
 +		save->getPathfinding()->abortPath();
 +		if (!ok) return false;
 +		action->finalFacing = facing;
@@ -2213,6 +2216,30 @@ index 0000000..7f0900b
 +			}
 +		}
 +	}
++	// a boat over something under the water rolls a depth charge (sea design 5), once a turn
++	if (unit->getPosition().z == 1 && isSeaFight(mod, save) && save->getVanStop("afDepth:" + id) != save->getTurn())
++	{
++		for (BattleItem *w : { unit->getRightHandWeapon(), unit->getLeftHandWeapon() })
++		{
++			if (!isDepthCharge(mod, w) || !w->haveAnyAmmo()) continue;
++			if (unit->getTimeUnits() < unit->getActionTUs(BA_SNAPSHOT, w).Time) continue;
++			const Position p = unit->getPosition();
++			const int s = unit->getArmor()->getSize();
++			bool below = false;
++			for (auto *bu : *save->getUnits())
++			{
++				if (bu->getFaction() == unit->getFaction() || bu->isOut() || !bu->getTile() || isTorpedoUnit(save, bu)) continue;
++				const Position q = bu->getPosition();
++				if (q.z == 0 && q.x >= p.x - 1 && q.x <= p.x + s && q.y >= p.y - 1 && q.y <= p.y + s) below = true;
++			}
++			if (!below) continue;
++			save->setVanStop("afDepth:" + id, save->getTurn());
++			action->type = BA_SNAPSHOT;
++			action->weapon = w;
++			action->target = Position(p.x, p.y, 0);
++			return true;
++		}
++	}
 +	// cargo, recon, bomber, ship: run for the exit edge; a door or tail gun only answers in reaction fire
 +	if (r->role == "cargo" || r->role == "recon" || r->role == "bomber" || r->role == "transport" || r->role == "ship")
 +	{
@@ -2227,7 +2254,10 @@ index 0000000..7f0900b
 +	{
 +		return runFor(save, unit, action, nearestEdge(save, unit->getPosition(), unit->getArmor()->getSize()));
 +	}
-+	BattleItem *gun = unit->getMainHandWeapon(false);
++	// the gun is the hand weapon that shoots: not the depth charges, the mines or a torpedo tube
++	BattleItem *gun = nullptr;
++	for (BattleItem *w : { unit->getRightHandWeapon(), unit->getLeftHandWeapon() })
++		if (w && !gun && !isDepthCharge(mod, w) && !isMineLayer(mod, w) && !isTorpedo(mod, w)) gun = w;
 +	if (gun && !gun->haveAnyAmmo())
 +	{
 +		// bursts all spent: nothing left to fight with, so it heads out
@@ -2270,6 +2300,25 @@ index 0000000..7f0900b
 +			action->target = tp;
 +			Log(LOG_INFO) << "[sea] " << unit->getType() << " lines up a torpedo on " << best->getType();
 +			return true;
++		}
++	}
++	// something under the water and depth charges aboard: get over it (the charge rolls next turn, above)
++	if (isSeaFight(mod, save) && tp.z == 0 && unit->getPosition().z == 1 && unit->getTimeUnits() >= 8)
++	{
++		bool charges = false;
++		for (BattleItem *w : { unit->getRightHandWeapon(), unit->getLeftHandWeapon() })
++			if (isDepthCharge(mod, w) && w->haveAnyAmmo()) charges = true;
++		if (charges)
++		{
++			const int s = unit->getArmor()->getSize();
++			for (int k = 0; k < 9; ++k)
++			{
++				Position p(tp.x - (s - 1) + (k % 3) - 1 + (s > 1 ? 1 : 0), tp.y - (s - 1) + (k / 3) - 1 + (s > 1 ? 1 : 0), 1);
++				if (k == 0) p = Position(tp.x - s / 2, tp.y - s / 2, 1);
++				p.x = std::max(0, std::min(save->getMapSizeX() - s, (int)p.x));
++				p.y = std::max(0, std::min(save->getMapSizeY() - s, (int)p.y));
++				if (walkTo(save, unit, action, p, unit->getTimeUnits() - 10)) return true;
++			}
 +		}
 +	}
 +	if (gun && inRange && gun->haveAnyAmmo())
@@ -2477,6 +2526,109 @@ index 0000000..7f0900b
 +	return "";
 +}
 +
++bool waterSurface(const SavedBattleGame *save, const Tile *tile)
++{
++	return tile && tile->getPosition().z == 1 && isSeaFight(save->getMod(), save);
++}
++
++bool isDepthCharge(const Mod *mod, const BattleItem *weapon)
++{
++	if (!mod || !weapon) return false;
++	const auto *w = mod->getAirWeapon(weapon->getRules()->getType());
++	return w && w->depthCharge > 0;
++}
++
++std::string dropDepthCharge(SavedBattleGame *save, BattleUnit *shooter, BattleItem *weapon)
++{
++	const Mod *mod = save->getMod();
++	const auto *w = mod->getAirWeapon(weapon->getRules()->getType());
++	if (!w || w->depthCharge <= 0) return "STR_SEA_NOT_A_DEPTH_CHARGE";
++	if (!isSeaFight(mod, save) || shooter->getPosition().z != 1) return "STR_SEA_DEPTH_CHARGE_SURFACE";
++	// the water under the boat's own footprint and one tile round it (a 1x1 boat: the 3x3 below)
++	const Position p = shooter->getPosition();
++	const int s = shooter->getArmor()->getSize();
++	std::vector<BattleUnit*> hit;
++	for (int x = p.x - 1; x <= p.x + s; ++x)
++		for (int y = p.y - 1; y <= p.y + s; ++y)
++		{
++			Tile *t = save->getTile(Position(x, y, 0));
++			BattleUnit *u = t ? t->getUnit() : nullptr;
++			if (!u || u->isOut() || isTorpedoUnit(save, u) || std::find(hit.begin(), hit.end(), u) != hit.end()) continue;
++			hit.push_back(u);
++		}
++	for (auto *u : hit)
++	{
++		const int hp = std::max(0, u->getHealth() - w->depthCharge);
++		u->setHealthDirect(hp);
++		Log(LOG_INFO) << "[sea] depth charge hits " << u->getType() << ", health " << hp << "/" << u->getBaseStats()->health;
++	}
++	Log(LOG_INFO) << "[sea] " << shooter->getType() << " drops a depth charge at " << p << ": " << hit.size() << " under the water hit";
++	if (!hit.empty() && save->getBattleGame())
++		save->getBattleGame()->checkForCasualties(mod->getDamageType(DT_HE), BattleActionAttack{}, false, false);
++	return "";
++}
++
++bool isMineLayer(const Mod *mod, const BattleItem *weapon)
++{
++	if (!mod || !weapon) return false;
++	const auto *w = mod->getAirWeapon(weapon->getRules()->getType());
++	return w && w->mine > 0;
++}
++
++std::string layMine(SavedBattleGame *save, BattleUnit *layer, BattleItem *weapon)
++{
++	const Mod *mod = save->getMod();
++	const auto *w = mod->getAirWeapon(weapon->getRules()->getType());
++	if (!w || w->mine <= 0) return "STR_SEA_NOT_A_MINE";
++	if (isSeaFight(mod, save) && layer->getPosition().z > 1) return "STR_SEA_MINE_FROM_WATER";
++	const RuleItem *mr = mod->getItem("STR_SEA_MINE", false);
++	// it goes in the water at the stern: the layer's own corner tile, on its level
++	Tile *t = save->getTile(centre(layer));
++	if (!mr || !t) return "STR_SEA_NOT_A_MINE";
++	BattleItem *m = save->createItemForTile(mr, t);
++	const std::string id = std::to_string(m->getId());
++	save->setVanStop("mine:" + id, w->mine);
++	save->setVanStop("mineBy:" + id, layer->getId() + 1);
++	save->setVanStop("mineArm:" + id, 0);
++	Log(LOG_INFO) << "[sea] " << layer->getType() << " lays a mine at " << t->getPosition();
++	return "";
++}
++
++bool mineCheck(SavedBattleGame *save, BattleUnit *unit)
++{
++	if (!isAirFight(save->getMod(), save) || !unit->getTile()) return false;
++	const Position p = unit->getPosition();
++	const int s = unit->getArmor()->getSize();
++	auto under = [&](const Position &q) { return q.z == p.z && q.x >= p.x && q.x < p.x + s && q.y >= p.y && q.y < p.y + s; };
++	BattleItem *boom = nullptr;
++	for (BattleItem *it : *save->getItems())
++	{
++		if (!it->getTile()) continue;
++		const std::string id = std::to_string(it->getId());
++		if (save->getVanStop("mine:" + id) <= 0) continue;
++		const Position q = it->getTile()->getPosition();
++		const bool mine = save->getVanStop("mineBy:" + id) == unit->getId() + 1;
++		if (!save->getVanStop("mineArm:" + id))
++		{
++			// it arms once the boat that laid it has moved off it
++			if (mine && !under(q)) save->setVanStop("mineArm:" + id, 1);
++			continue;
++		}
++		if (!boom && under(q)) boom = it;
++	}
++	if (!boom) return false;
++	const std::string id = std::to_string(boom->getId());
++	const int dmg = save->getVanStop("mine:" + id);
++	const int hp = std::max(0, unit->getHealth() - dmg);
++	unit->setHealthDirect(hp);
++	Log(LOG_INFO) << "[sea] " << unit->getType() << " runs onto a mine at " << boom->getTile()->getPosition() << ", health " << hp << "/" << unit->getBaseStats()->health;
++	save->setVanStop("mine:" + id, 0);
++	save->removeItem(boom);
++	if (save->getBattleGame())
++		save->getBattleGame()->checkForCasualties(save->getMod()->getDamageType(DT_HE), BattleActionAttack{}, false, false);
++	return true;
++}
++
 +void endTurnStep(SavedBattleGame *save)
 +{
 +	if (!isAirFight(save->getMod(), save)) return;
@@ -2497,6 +2649,7 @@ index 0000000..7f0900b
 +		for (auto *u : *save->getUnits())
 +		{
 +			if (u->getOriginalFaction() != FACTION_HOSTILE || u->isOut() || !u->getTile() || hasLeft(save, u)) continue;
++			if (!save->getVanStop("afUfo:" + std::to_string(u->getId()))) continue; // an escort doesn't hold the fight open
 +			if (isDisabled(save, u)) anyDisabled = true; else anyFree = true;
 +		}
 +		if (!anyFree && anyDisabled)
@@ -2736,10 +2889,10 @@ index 0000000..7f0900b
 +}
 diff --git a/src/Battlescape/AirFight.h b/src/Battlescape/AirFight.h
 new file mode 100644
-index 0000000..74920aa
+index 0000000..014b0f2
 --- /dev/null
 +++ b/src/Battlescape/AirFight.h
-@@ -0,0 +1,77 @@
+@@ -0,0 +1,90 @@
 +#pragma once
 +/*
 + * G.I. Joe: air fights on the battle engine (claude/DOGFIGHT_DESIGN_v1.md, claude/AIR_SEA_BUILD_PLAN_v1.md).
@@ -2760,6 +2913,7 @@ index 0000000..74920aa
 +class Ufo;
 +struct BattleAction;
 +class BattleItem;
++class Tile;
 +
 +namespace AirFight
 +{
@@ -2803,8 +2957,20 @@ index 0000000..74920aa
 +	bool isTorpedo(const Mod *mod, const BattleItem *weapon);
 +	/// launch a torpedo from this unit along its heading; "" if launched, else why not
 +	std::string launchTorpedo(SavedBattleGame *save, BattleUnit *shooter, BattleItem *weapon);
++	/// in a sea fight, is this tile the water's surface (a floor you can dive through)
++	bool waterSurface(const SavedBattleGame *save, const Tile *tile);
 +	/// is this unit a running torpedo
 +	bool isTorpedoUnit(const SavedBattleGame *save, const BattleUnit *unit);
++	/// is this weapon a depth charge (sea design 5: the 3x3 under the boat, no aim roll)
++	bool isDepthCharge(const Mod *mod, const BattleItem *weapon);
++	/// roll a depth charge off this boat: everything under the water below it and round it takes the damage; "" if done
++	std::string dropDepthCharge(SavedBattleGame *save, BattleUnit *shooter, BattleItem *weapon);
++	/// is this weapon a mine layer
++	bool isMineLayer(const Mod *mod, const BattleItem *weapon);
++	/// lay a mine where this unit is, on its own level; "" if laid
++	std::string layMine(SavedBattleGame *save, BattleUnit *layer, BattleItem *weapon);
++	/// a unit has just moved: a mine under it goes off (true), and the layer's own mines arm once it has moved off them
++	bool mineCheck(SavedBattleGame *save, BattleUnit *unit);
 +	/// the computer's pilot (design section 9); true when it has set the action
 +	bool aiThink(SavedBattleGame *save, BattleUnit *unit, BattleAction *action);
 +	/// end of a side's turn: its aircraft on the outer ring leave the fight
@@ -2818,7 +2984,7 @@ index 0000000..74920aa
 +
 +}
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..c78bbf9 100644
+index b7e1111..f23d204 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
 @@ -16,6 +16,8 @@
@@ -3139,6 +3305,18 @@ index b7e1111..c78bbf9 100644
  			_currentAction.target = pos;
  			getMap()->setCursorType(CT_NONE);
  
+@@ -3141,6 +3418,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
+ 	{
+ 		return 0;
+ 	}
++	// G.I. Joe sea fights: a sea mine under the unit goes off (and a layer's own mines arm as it moves off them)
++	if (AirFight::mineCheck(_save, unit))
++	{
++		return 2;
++	}
+ 
+ 	// death trap?
+ 	Tile* deathTrapTile = nullptr;
 diff --git a/src/Battlescape/BattlescapeGame.h b/src/Battlescape/BattlescapeGame.h
 index 7af613c..f9d6e24 100644
 --- a/src/Battlescape/BattlescapeGame.h
@@ -3155,7 +3333,7 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..d67b86b 100644
+index 1951ba7..0b931a8 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -16,6 +16,8 @@
@@ -3203,7 +3381,7 @@ index 1951ba7..d67b86b 100644
  		}
  		else
  		{
-@@ -961,6 +975,163 @@ void BattlescapeGenerator::run()
+@@ -961,6 +975,183 @@ void BattlescapeGenerator::run()
  	}
  }
  
@@ -3344,6 +3522,26 @@ index 1951ba7..d67b86b 100644
 +				u->setHealthDirect(std::max(1, hp - hp * ufo->getDamage() / ufo->getRules()->getStats().damageMax));
 +			}
 +			if (!place(u, p, dir)) delete u;
++			// its escorts sail with it (sea: a Sea Sled under the water), on the lowest level they may use
++			auto es = AF.escorts.find(ufo->getRules()->getType());
++			Log(LOG_INFO) << "[sea] escorts listed: " << AF.escorts.size();
++			if (es != AF.escorts.end())
++			{
++				int k = 0;
++				for (const auto &type : es->second)
++				{
++					Unit *er = mod->getUnit(type, false);
++					if (!er) continue;
++					BattleUnit *e = _save->createTempUnit(er, FACTION_HOSTILE, _unitSequence++);
++					e->setRankInt(0);
++					int elo = 1, ehi = 1;
++					AirFight::floorRange(mod, _save, e, elo, ehi);
++					const Position ep(p.x + 2 + 2 * (k % 3), p.y + (k % 2 ? 7 : -3), elo);
++					if (!place(e, ep, dir)) { Log(LOG_WARNING) << "[sea] escort " << type << " could not be placed near " << ep; delete e; }
++					else Log(LOG_INFO) << "[sea] escort " << type << " at " << e->getPosition();
++					++k;
++				}
++			}
 +		}
 +	}
 +	if (_save->getUnits()->empty())
@@ -3367,7 +3565,7 @@ index 1951ba7..d67b86b 100644
  /**
   * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
   */
-@@ -1495,6 +1666,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1495,6 +1686,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  				_save->initUnit(unit);
  				return unit;
  			}
@@ -3395,7 +3593,7 @@ index 1951ba7..d67b86b 100644
  			else if (_save->getMissionType() != "STR_BASE_DEFENSE")
  			{
  				if (placeUnitNearFriend(unit))
-@@ -1669,6 +1861,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +1881,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -3485,7 +3683,7 @@ index 1951ba7..d67b86b 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +1971,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +1991,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -3554,7 +3752,7 @@ index 1951ba7..d67b86b 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2056,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2076,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -3571,7 +3769,7 @@ index 1951ba7..d67b86b 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2085,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2105,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -3614,7 +3812,7 @@ index 1951ba7..d67b86b 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -2081,17 +2457,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,17 +2477,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -3645,7 +3843,7 @@ index 1951ba7..d67b86b 100644
  
  	mapblock->setSizeZ(sizez);
  
-@@ -2141,11 +2525,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2545,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -3659,7 +3857,7 @@ index 1951ba7..d67b86b 100644
  			if (terrainObjectID>0)
  			{
  				int mapDataSetID = mapDataSetOffset;
-@@ -2830,7 +3214,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2830,7 +3234,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  	// this mission type is "hard-coded" in terms of map layout
  	uint64_t seed = RNG::getSeed();
  	_baseTerrain = _terrain;
@@ -6279,7 +6477,7 @@ index 200fb3a..2b6326c 100644
  	bool deployReinforcements(const ReinforcementsData &wave);
  	/// Adds a reinforcement unit to the game.
 diff --git a/src/Battlescape/Pathfinding.cpp b/src/Battlescape/Pathfinding.cpp
-index d8c617e..ecd3ae5 100644
+index d8c617e..b5e09c7 100644
 --- a/src/Battlescape/Pathfinding.cpp
 +++ b/src/Battlescape/Pathfinding.cpp
 @@ -16,6 +16,7 @@
@@ -6337,6 +6535,15 @@ index d8c617e..ecd3ae5 100644
  
  	// init variables
  	for (int i = 0; i < numberOfParts; ++i)
+@@ -338,7 +342,7 @@ PathfindingStep Pathfinding::getTUCost(Position startPosition, int direction, co
+ 			}
+ 		}
+ 
+-		if (aboveStart[i] && aboveStart[i]->hasNoFloor(_save))
++		if (aboveStart[i] && (aboveStart[i]->hasNoFloor(_save) || AirFight::waterSurface(_save, aboveStart[i])))
+ 		{
+ 			maskOfPartsHoleUp |= maskCurrentPart;
+ 		}
 @@ -400,7 +404,7 @@ PathfindingStep Pathfinding::getTUCost(Position startPosition, int direction, co
  	// don't let tanks phase through doors.
  	if (size)
@@ -6365,6 +6572,18 @@ index d8c617e..ecd3ae5 100644
  		tmpDirection = 5;
  		if (isBlockedDirection(unit, originTile, tmpDirection, bam, missileTarget))
  			return {{INVALID_MOVE_COST, 0}};
+@@ -1160,8 +1164,9 @@ bool Pathfinding::validateUpDown(const BattleUnit *bu, const Position& startPosi
+ 	{
+ 		if (bu->getMovementType() == MT_FLY || startTile->hasLadder())
+ 		{
+-			if ((direction == DIR_UP && destinationTile->hasNoFloor(_save)) // flying up only possible when there is no roof
+-				|| (direction == DIR_DOWN && startTile->hasNoFloor(_save)) // falling down only possible when there is no floor
++			// G.I. Joe sea fights: the sea's surface is drawn as a floor, but a sub or a diver goes through it
++			if ((direction == DIR_UP && (destinationTile->hasNoFloor(_save) || AirFight::waterSurface(_save, destinationTile))) // flying up only possible when there is no roof
++				|| (direction == DIR_DOWN && (startTile->hasNoFloor(_save) || AirFight::waterSurface(_save, startTile))) // falling down only possible when there is no floor
+ 				)
+ 			{
+ 				return true;
 diff --git a/src/Battlescape/Projectile.cpp b/src/Battlescape/Projectile.cpp
 index 7f7697c..9fbfa2d 100644
 --- a/src/Battlescape/Projectile.cpp
@@ -6414,7 +6633,7 @@ index 7f7697c..9fbfa2d 100644
  	int ydiff = origin.y - target->y;
  	int zdiff = origin.z - target->z;
 diff --git a/src/Battlescape/ProjectileFlyBState.cpp b/src/Battlescape/ProjectileFlyBState.cpp
-index 529b7f2..b9d9580 100644
+index 529b7f2..3f244bf 100644
 --- a/src/Battlescape/ProjectileFlyBState.cpp
 +++ b/src/Battlescape/ProjectileFlyBState.cpp
 @@ -16,6 +16,7 @@
@@ -6425,7 +6644,7 @@ index 529b7f2..b9d9580 100644
  #include <algorithm>
  #include "ProjectileFlyBState.h"
  #include "ExplosionBState.h"
-@@ -139,6 +140,32 @@ void ProjectileFlyBState::init()
+@@ -139,6 +140,48 @@ void ProjectileFlyBState::init()
  	case BA_AIMEDSHOT:
  	case BA_AUTOSHOT:
  	case BA_LAUNCH:
@@ -6435,6 +6654,22 @@ index 529b7f2..b9d9580 100644
 +			if (!airWhy.empty())
 +			{
 +				_action.result = airWhy;
++				_parent->popState();
++				return;
++			}
++			// a depth charge rolls off the stern and a mine goes over the side: no shot, no aim roll
++			if (AirFight::isDepthCharge(_parent->getMod(), _action.weapon) || AirFight::isMineLayer(_parent->getMod(), _action.weapon))
++			{
++				if (!_action.haveTU(&_action.result)) { _parent->popState(); return; }
++				const std::string why = AirFight::isDepthCharge(_parent->getMod(), _action.weapon)
++					? AirFight::dropDepthCharge(_parent->getSave(), _unit, _action.weapon)
++					: AirFight::layMine(_parent->getSave(), _unit, _action.weapon);
++				if (why.empty())
++				{
++					_action.spendTU();
++					_action.weapon->spendAmmoForAction(_action.type, _parent->getSave());
++				}
++				else _action.result = why;
 +				_parent->popState();
 +				return;
 +			}
@@ -17934,7 +18169,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..08e241d 100644
+index 1885346..6af3520 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -18072,7 +18307,7 @@ index 1885346..08e241d 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,394 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,399 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -18226,10 +18461,15 @@ index 1885346..08e241d 100644
 +				one.tryRead("torpedoSpeed", w.torpedoSpeed);
 +				one.tryRead("torpedoRounds", w.torpedoRounds);
 +				one.tryRead("torpedoUnit", w.torpedoUnit);
++				one.tryRead("depthCharge", w.depthCharge);
++				one.tryRead("mine", w.mine);
 +			}
 +		}
 +		af.tryRead("seaDeployment", _airFight.seaDeployment);
 +		af.tryRead("ships", _airFight.ships);
++		if (const auto& es = af["escorts"])
++			for (const auto& one : es.children())
++				one.tryReadVal(_airFight.escorts[one.readKey<std::string>()]);
 +		if (const auto& rv = af["rivers"])
 +			for (const auto& one : rv.children())
 +				one.tryReadVal(_airFight.rivers[one.readKey<std::string>()]);
@@ -18467,7 +18707,7 @@ index 1885346..08e241d 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3699,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3704,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -18475,7 +18715,7 @@ index 1885346..08e241d 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4304,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4309,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -18501,7 +18741,7 @@ index 1885346..08e241d 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4561,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4566,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -18522,7 +18762,7 @@ index 1885346..08e241d 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6275,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6280,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -18542,7 +18782,7 @@ index 1885346..08e241d 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6298,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6303,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -18550,7 +18790,7 @@ index 1885346..08e241d 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6312,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6317,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -18590,7 +18830,7 @@ index 1885346..08e241d 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..91bb4f0 100644
+index 2242d13..8dbba29 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -18654,7 +18894,7 @@ index 2242d13..91bb4f0 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,212 @@ private:
+@@ -327,6 +360,215 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -18738,6 +18978,8 @@ index 2242d13..91bb4f0 100644
 +		int torpedoSpeed = 8;             ///< tiles a round
 +		int torpedoRounds = 3;            ///< how long it runs
 +		std::string torpedoUnit = "STR_SEA_TORPEDO"; ///< the unit that shows it running
++		int depthCharge = 0;              ///< a depth charge's damage (0 = not one): the 3x3 under the boat, no aim (sea design 5)
++		int mine = 0;                     ///< a mine's damage (0 = not one): dropped where the layer is, goes off on whoever enters
 +	};
 +	struct AirFightRules
 +	{
@@ -18749,6 +18991,7 @@ index 2242d13..91bb4f0 100644
 +		std::string deployment = "STR_AIR_FIGHT";
 +		std::string seaDeployment = "STR_SEA_FIGHT";
 +		std::vector<std::string> ships;                   ///< Cobra aircraft (ufo) types that are ships: a sea fight
++		std::map<std::string, std::vector<std::string>> escorts; ///< Cobra aircraft (ufo) type -> unit types that sail with it
 +		std::map<std::string, std::vector<std::vector<double>>> rivers; ///< navigable rivers: [lon, lat] degrees, the game's convention (north negative)
 +		std::string seaTerrain;                           ///< the water under a sea fight
 +		std::map<std::string, AirWeaponRule> weapons;     ///< weapon item -> its reach
@@ -18867,7 +19110,7 @@ index 2242d13..91bb4f0 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +931,124 @@ public:
+@@ -692,6 +934,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
