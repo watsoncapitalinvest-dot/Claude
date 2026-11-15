@@ -89,8 +89,6 @@ for i, n, c, deps, txt in [
  ('STR_FORWARD_OPERATIONS_2', 'Forward Operations II', 100, ['STR_FORWARD_OPERATIONS_1', 'STR_WATCH_TOWER'], 'Regional command: outposts that watch for each other. Lets G.I. Joe run three outdoor outposts.'),
  ('STR_FORWARD_OPERATIONS_3', 'Forward Operations III', 150, ['STR_FORWARD_OPERATIONS_2', 'STR_COBRA_DEPOTS'], 'A standing network of forward bases, placed where Cobra moves its goods. Lets G.I. Joe run four outdoor outposts.'),
  # Pit surface spots (John 15 Nov 01:59-02:02: "2 +1 +1 with research"): the motor pool hides 2 surface facilities to start, 4 at most; the rest go to outposts.
- ('STR_PIT_CONCEALMENT_1', 'Motor Pool Cover I', 80, ['STR_RADAR_ROOM'], 'Another dull building in the motor pool that hides a gun or a dish. The Pit can hold three hidden surface facilities.'),
- ('STR_PIT_CONCEALMENT_2', 'Motor Pool Cover II', 150, ['STR_PIT_CONCEALMENT_1', 'STR_FORWARD_OPERATIONS_1'], 'The yard is rebuilt round one more cover building. The Pit can hold four hidden surface facilities, and that is all it can hide.'),
  # STR_VAMP_RECOVERED is never researched by hand: BUILD's hook grants it when the junkyard mission is won, or one month after Clutch is rescued if it is lost (STORY_ClutchRescue_v1, John 17:10: no VAMP research before Clutch).
  ('STR_VAMP_RECOVERED', 'Clutch\'s VAMP', 1, ['STR_STORY_LOCK'], 'Clutch knows the VAMP bolt by bolt. With him in the Motor Pool we can build our own.'),
  # STR_TRANSPORT_UNDER_FIRE is never researched by hand: BUILD's hook grants it on the first transport interception.
@@ -154,7 +152,6 @@ FUNDS = {
  'STR_LONG_RANGE_RADAR': 600000}
 FUNDS = {k: int(round(v * 0.75, -4)) for k, v in FUNDS.items()}   # John 21:38: research money cut by 25%
 FUNDS.update({'STR_FORWARD_OPERATIONS_1': 100000, 'STR_FORWARD_OPERATIONS_2': 200000, 'STR_FORWARD_OPERATIONS_3': 300000})   # after the cut (John 13 Nov 21:13)
-FUNDS.update({'STR_PIT_CONCEALMENT_1': 100000, 'STR_PIT_CONCEALMENT_2': 200000})   # John 15 Nov 02:02
 FUNDS.update({'STR_OVERWATCH_DRILLS': 60000, 'STR_BREACHING_DRILLS': 80000, 'STR_FIRE_AND_MOVE': 90000})   # pitched after the cut (John 23:16-23:19)
 FUNDS.update({'STR_TRANSPORT_DOOR_GUNS': 60000, 'STR_TRANSPORT_ARMOR_PLATING': 90000, 'STR_TRANSPORT_COUNTERMEASURE_PODS': 70000})   # John 13 Nov 14:11 (dogfight design 3b)
 FUNDS.update({i: f for i, n, c, f, _ in HEAD_ONLY})   # John 14 Nov 00:51, after the cut
