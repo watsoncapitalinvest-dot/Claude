@@ -13,25 +13,22 @@ echo Copying X-COM game files (one time only)...
 for %%D in (GEODATA GEOGRAPH MAPS ROUTES SOUND TERRAIN UFOGRAPH UFOINTRO UNITS) do robocopy "%XC%\%%D" "UFO\%%D" /E /NFL /NDL /NJH /NJS /NP >nul
 if not exist "UFO\GEODATA\" goto missing
 :play
-rem Install a mod update if one is waiting: mod_update.zip unpacks over user\mods, then is renamed so it runs once.
-if not exist "mod_update.zip" goto noupdate
-echo Installing the mod update, this takes a minute...
-if not exist "user\mods\" mkdir "user\mods"
-powershell -NoProfile -Command "try { Expand-Archive -Force -LiteralPath 'mod_update.zip' -DestinationPath 'user\mods' -ErrorAction Stop } catch { Write-Host $_; exit 1 }"
-if errorlevel 1 goto updatefailed
-if exist "mod_update_applied.zip" del "mod_update_applied.zip"
-ren "mod_update.zip" "mod_update_applied.zip"
-goto noupdate
-:updatefailed
-echo The mod update could not be unpacked. The game will start with the old files.
-pause
-:noupdate
 rem Full screen at the desktop resolution, battlescape at screen/4 so the 4x map lands 1:1 on screen.
 set W=1920
 set H=1080
 powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; $b=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds; 'set W=' + $b.Width; 'set H=' + $b.Height" > "%TEMP%\oxce4x_res.bat" 2>nul
 if exist "%TEMP%\oxce4x_res.bat" call "%TEMP%\oxce4x_res.bat"
 if not exist "user\" mkdir "user"
+rem mod_update.zip, mod_update_2.zip, then mod_update_3.zip, next to this file are unpacked into user\mods before the game starts
+rem (in that order: each is newer than the one before), then renamed so each runs once.
+for %%Z in (mod_update mod_update_2 mod_update_3) do (
+  if exist "%%Z.zip" (
+    echo Applying %%Z.zip...
+    powershell -NoProfile -Command "Expand-Archive -Force -Path '%%Z.zip' -DestinationPath 'user\mods'"
+    if exist "%%Z_applied.zip" del "%%Z_applied.zip"
+    ren "%%Z.zip" "%%Z_applied.zip"
+  )
+)
 set OXCE_BATTLE_SCALE=4
 set OXCE_MAP_HIRES=4
 start "" OpenXcom.exe -user "%~dp0user" -cfg "%~dp0user" -fullscreen true -displayWidth %W% -displayHeight %H% -battlescapeScale 6 -lazyLoadResources false
