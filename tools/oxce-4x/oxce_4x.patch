@@ -1772,10 +1772,10 @@ index 10a96c4..755c149 100644
  	void btnCancelClick(Action *action);
  	/// Handler for pressing an Increase arrow in the list.
 diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
-index db6727f..bd3f70d 100644
+index db6727f..a176173 100644
 --- a/src/Battlescape/AIModule.cpp
 +++ b/src/Battlescape/AIModule.cpp
-@@ -16,9 +16,12 @@
+@@ -16,9 +16,13 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -1784,11 +1784,12 @@ index db6727f..bd3f70d 100644
  #include <climits>
  #include <algorithm>
  #include "AIModule.h"
++#include "Villains.h"
 +#include "../Mod/AlienDeployment.h"
  #include "../Savegame/BattleItem.h"
  #include "../Savegame/Node.h"
  #include "../Savegame/SavedBattleGame.h"
-@@ -32,6 +35,7 @@
+@@ -32,6 +36,7 @@
  #include "../Engine/Game.h"
  #include "../Mod/Armor.h"
  #include "../Mod/Mod.h"
@@ -1796,7 +1797,7 @@ index db6727f..bd3f70d 100644
  #include "../Mod/RuleItem.h"
  #include "../fmath.h"
  
-@@ -439,6 +443,11 @@ void AIModule::think(BattleAction *action)
+@@ -439,6 +444,11 @@ void AIModule::think(BattleAction *action)
  	_attackAction.weapon = action->weapon;
  	_attackAction.number = action->number;
  	_escapeAction.number = action->number;
@@ -1808,7 +1809,7 @@ index db6727f..bd3f70d 100644
  	_knownEnemies = countKnownTargets();
  	_visibleEnemies = selectNearestTarget();
  	_spottingEnemies = getSpottingUnits(_unit->getPosition());
-@@ -489,6 +498,181 @@ void AIModule::think(BattleAction *action)
+@@ -489,6 +499,187 @@ void AIModule::think(BattleAction *action)
  		return;
  	}
  
@@ -1949,6 +1950,12 @@ index db6727f..bd3f70d 100644
 +		}
 +	}
 +
++	// G.I. Joe: a named villain may use his Move (Villains.cpp)
++	if (_unit->getFaction() == FACTION_HOSTILE && Villains::think(_save, _unit, action))
++	{
++		return;
++	}
++
 +	// G.I. Joe robbery (13 Nov 2026): a robber told to run (NextTurnState::runVanStop) heads for the
 +	// nearest free exit tile and, once there, waits for the van to take him.
 +	if (_unit->getFaction() == FACTION_HOSTILE && _save->getVanStop("run:" + std::to_string(_unit->getId())))
@@ -1990,7 +1997,7 @@ index db6727f..bd3f70d 100644
  	if (action->weapon)
  	{
  		const RuleItem *rule = action->weapon->getRules();
-@@ -1395,6 +1579,12 @@ int AIModule::selectNearestTarget()
+@@ -1395,6 +1586,12 @@ int AIModule::selectNearestTarget()
  		{
  			tally++;
  			int dist = Position::distance2d(_unit->getPosition(), bu->getPosition());
@@ -2003,6 +2010,27 @@ index db6727f..bd3f70d 100644
  			if (dist < _closestDist)
  			{
  				bool valid = false;
+@@ -2367,7 +2564,11 @@ void AIModule::wayPointAction()
+ 		return;
+ 	}
+ 	_aggroTarget = 0;
+-	for (auto* bu : *_save->getUnits())
++	// G.I. Joe: Scrap-Iron's remote missile goes for a Joe vehicle first
++	std::vector<BattleUnit*> order(_save->getUnits()->begin(), _save->getUnits()->end());
++	if (Villains::prefersVehicles(_save, _unit))
++		std::stable_partition(order.begin(), order.end(), [](BattleUnit *b) { return Villains::isJoeVehicle(b); });
++	for (auto* bu : order)
+ 	{
+ 		if (_aggroTarget != 0) break; // loop finished
+ 		if (!validTarget(bu, true, true))
+@@ -2386,6 +2587,7 @@ void AIModule::wayPointAction()
+ 
+ 	if (_aggroTarget != 0)
+ 	{
++		if (Villains::prefersVehicles(_save, _unit)) Log(LOG_INFO) << "[villain] " << _unit->getType() << " launches at " << _aggroTarget->getType() << (Villains::isJoeVehicle(_aggroTarget) ? " (vehicle)" : "");
+ 		_attackAction.type = BA_LAUNCH;
+ 		_attackAction.updateTU();
+ 		if (!_attackAction.haveTU())
 diff --git a/src/Battlescape/ActionMenuItem.h b/src/Battlescape/ActionMenuItem.h
 index ec94172..fd2d5e2 100644
 --- a/src/Battlescape/ActionMenuItem.h
@@ -3169,10 +3197,10 @@ index 0000000..014b0f2
 +
 +}
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..0c5f4d4 100644
+index b7e1111..5290fdf 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
-@@ -16,6 +16,9 @@
+@@ -16,8 +16,13 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -3180,9 +3208,13 @@ index b7e1111..0c5f4d4 100644
 +#include "Stealth.h"
 +#include <algorithm>
  #include <sstream>
++#include <cstdlib>
  #include "BattlescapeGame.h"
++#include "Villains.h"
  #include "BattlescapeState.h"
-@@ -224,8 +227,8 @@ int BattlescapeGame::think()
+ #include "Map.h"
+ #include "Camera.h"
+@@ -224,8 +229,8 @@ int BattlescapeGame::think()
  			_save->setUnitsFalling(false);
  			return ret;
  		}
@@ -3193,7 +3225,7 @@ index b7e1111..0c5f4d4 100644
  		{
  			auto sideBackup = _save->getSide();
  			_save->resetUnitHitStates();
-@@ -421,6 +424,12 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
+@@ -421,6 +426,12 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
  		}
  	}
  
@@ -3206,7 +3238,7 @@ index b7e1111..0c5f4d4 100644
  	if (action.type == BA_SNAPSHOT || action.type == BA_AUTOSHOT || action.type == BA_AIMEDSHOT || action.type == BA_THROW || action.type == BA_HIT || action.type == BA_MINDCONTROL || action.type == BA_USE || action.type == BA_PANIC || action.type == BA_LAUNCH)
  	{
  		ss.clear();
-@@ -508,8 +517,270 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
+@@ -508,8 +519,271 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
  /**
   * Ends the turn.
   */
@@ -3401,6 +3433,7 @@ index b7e1111..0c5f4d4 100644
 +{
 +	const Mod::RetreatRules &rr = getMod()->getRetreatRules();
 +	if (!rr.on || AirFight::isAirFight(getMod(), _save)) return; // an air fight has its own breaking-off rules
++	if (getenv("OXCE_VILLAIN_TEST")) return; // the villain test: Cobra stays to show every Move
 +	auto never = [&](BattleUnit *u) { return std::find(rr.neverRetreat.begin(), rr.neverRetreat.end(), u->getType()) != rr.neverRetreat.end(); };
 +	auto escaped = [&](BattleUnit *u) { return _save->getVanStop("esc:" + std::to_string(u->getId())) != 0; };
 +	int total = 0, down = 0, standing = 0, seenJoes = 0;
@@ -3477,7 +3510,7 @@ index b7e1111..0c5f4d4 100644
  	_debugPlay = _save->getDebugMode() && _parentState->getGame()->isCtrlPressed() && (_save->getSide() != FACTION_NEUTRAL);
  	_currentAction.type = BA_NONE;
  	_currentAction.skillRules = nullptr;
-@@ -1915,6 +2186,13 @@ void BattlescapeGame::primaryAction(Position pos)
+@@ -1915,6 +2189,13 @@ void BattlescapeGame::primaryAction(Position pos)
  		}
  		else
  		{
@@ -3491,7 +3524,7 @@ index b7e1111..0c5f4d4 100644
  			_currentAction.target = pos;
  			getMap()->setCursorType(CT_NONE);
  
-@@ -3141,6 +3419,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
+@@ -3141,6 +3422,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
  	{
  		return 0;
  	}
@@ -3503,6 +3536,19 @@ index b7e1111..0c5f4d4 100644
  
  	// death trap?
  	Tile* deathTrapTile = nullptr;
+@@ -3209,10 +3495,12 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
+ 				{
+ 					const RuleItem *ruleItem = item->getRules();
+ 					bool g = item->getGlow();
++					if (Villains::ignoresCharge(_save, item, unit)) continue; // G.I. Joe: Firefly's charge
+ 					if (item->fuseProximityEvent())
+ 					{
+ 						if (ruleItem->getBattleType() == BT_GRENADE || ruleItem->getBattleType() == BT_PROXIMITYGRENADE)
+ 						{
++							if (Villains::hiddenItem(_save, item)) Log(LOG_INFO) << "[villain] charge set off by " << unit->getType() << " faction " << (int)unit->getFaction();
+ 							Position p = t->getPosition().toVoxel() + Position(8, 8, t->getTerrainLevel());
+ 							statePushNext(new ExplosionBState(this, p, BattleActionAttack::GetBeforeShoot(BA_TRIGGER_PROXY_GRENADE, nullptr, item)));
+ 							exploded = true;
 diff --git a/src/Battlescape/BattlescapeGame.h b/src/Battlescape/BattlescapeGame.h
 index 7af613c..f9d6e24 100644
 --- a/src/Battlescape/BattlescapeGame.h
@@ -5392,10 +5438,15 @@ index c999789..d4d682a 100644
  	std::vector<DebriefingStat*> _stats;
  	std::vector<SoldierStatsEntry> _soldierStats;
 diff --git a/src/Battlescape/ExplosionBState.cpp b/src/Battlescape/ExplosionBState.cpp
-index ff9973e..b4868cb 100644
+index ff9973e..8f1020b 100644
 --- a/src/Battlescape/ExplosionBState.cpp
 +++ b/src/Battlescape/ExplosionBState.cpp
-@@ -18,6 +18,7 @@
+@@ -1,3 +1,4 @@
++#include <cstdlib>
+ /*
+  * Copyright 2010-2016 OpenXcom Developers.
+  *
+@@ -18,6 +19,7 @@
   */
  
  #include "ExplosionBState.h"
@@ -5403,7 +5454,17 @@ index ff9973e..b4868cb 100644
  #include "BattlescapeState.h"
  #include "Explosion.h"
  #include "TileEngine.h"
-@@ -150,11 +151,19 @@ void ExplosionBState::init()
+@@ -86,6 +88,9 @@ void ExplosionBState::init()
+ 	BattleActionType action = _attack.type;
+ 	const RuleItem* itemRule = 0;
+ 	bool miss = false;
++	if (getenv("OXCE_VILLAIN_TEST"))
++		Log(LOG_INFO) << "[villain-test] explosion at " << _center.toTile() << " item " << (_attack.damage_item ? _attack.damage_item->getRules()->getType() : std::string("-"))
++			<< " by " << (_attack.attacker ? _attack.attacker->getType() : std::string("-")) << " action " << (int)_attack.type;
+ 	if (_attack.damage_item)
+ 	{
+ 		itemRule = _attack.damage_item->getRules();
+@@ -150,11 +155,19 @@ void ExplosionBState::init()
  		}
  		else if (type == BT_MELEE || _hit)
  		{
@@ -5424,7 +5485,7 @@ index ff9973e..b4868cb 100644
  		}
  		else if (type == BT_FIREARM)
  		{
-@@ -206,6 +215,11 @@ void ExplosionBState::init()
+@@ -206,6 +219,11 @@ void ExplosionBState::init()
  	{
  		if (_power > 0)
  		{
@@ -5436,7 +5497,7 @@ index ff9973e..b4868cb 100644
  			_parent->getSave()->getTileEngine()->explode(_attack, _center, _power, _damageType, _radius, range);
  
  			int powerForAnimation = _power;
-@@ -271,6 +285,16 @@ void ExplosionBState::init()
+@@ -271,6 +289,16 @@ void ExplosionBState::init()
  	else
  	// create a bullet hit
  	{
@@ -5818,19 +5879,20 @@ index cea8e65..90ec9a6 100644
  	}
  
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..3947f90 100644
+index 3665cd1..250d125 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
-@@ -17,6 +17,8 @@
+@@ -17,6 +17,9 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "Map.h"
++#include "Villains.h"
 +#include "Stealth.h"
 +#include "../Engine/HiColor.h"
  #include "Camera.h"
  #include "UnitSprite.h"
  #include "ItemSprite.h"
-@@ -156,9 +158,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
+@@ -156,9 +159,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
  
  	_spriteWidth = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getWidth();
  	_spriteHeight = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getHeight();
@@ -5843,7 +5905,7 @@ index 3665cd1..3947f90 100644
  	_message->setTextColor(_messageColor);
  	_camera = new Camera(_spriteWidth, _spriteHeight, _save->getMapSizeX(), _save->getMapSizeY(), _save->getMapSizeZ(), this, visibleMapHeight);
  	_scrollMouseTimer = new Timer(SCROLL_INTERVAL);
-@@ -272,12 +275,13 @@ void Map::init()
+@@ -272,12 +276,13 @@ void Map::init()
  					   0, 0, 0, b, f, b, 0, 0, 0,
  					   0, 0, 0, 0, b, 0, 0, 0, 0 };
  
@@ -5861,7 +5923,7 @@ index 3665cd1..3947f90 100644
  	_arrow->unlock();
  
  	_projectile = 0;
-@@ -305,6 +309,20 @@ void Map::think()
+@@ -305,6 +310,20 @@ void Map::think()
  /**
   * Draws the whole map, part by part.
   */
@@ -5882,7 +5944,7 @@ index 3665cd1..3947f90 100644
  void Map::draw()
  {
  	if (!_redraw)
-@@ -325,6 +343,7 @@ void Map::draw()
+@@ -325,6 +344,7 @@ void Map::draw()
  		ShaderSurface(this),
  		ShaderScalar<Uint8>(Palette::blockOffset(0) + _bgColor)
  	);
@@ -5890,7 +5952,7 @@ index 3665cd1..3947f90 100644
  
  	Tile *t;
  
-@@ -356,12 +375,38 @@ void Map::draw()
+@@ -356,12 +376,38 @@ void Map::draw()
  		}
  	}
  
@@ -5930,7 +5992,7 @@ index 3665cd1..3947f90 100644
  		_message->blit(this->getSurface());
  	}
  }
-@@ -466,6 +511,29 @@ int getArrowBobForFrame(int frame)
+@@ -466,6 +512,29 @@ int getArrowBobForFrame(int frame)
  	return ArrowBobOffsets[frame % 8];
  }
  
@@ -5960,7 +6022,7 @@ index 3665cd1..3947f90 100644
  int getShadePulseForFrame(int shade, int frame)
  {
  	if (shade > 7) shade = 7;
-@@ -488,9 +556,9 @@ int getShadePulseForFrame(int shade, int frame)
+@@ -488,9 +557,9 @@ int getShadePulseForFrame(int shade, int frame)
   */
  void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position currTileScreenPosition, bool topLayer, BattleUnit* movingUnit)
  {
@@ -5973,7 +6035,7 @@ index 3665cd1..3947f90 100644
  
  	if (!unitTile)
  	{
-@@ -532,7 +600,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
+@@ -532,7 +601,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
  
  	unitOffset.x = unitTile->getPosition().x - bu->getPosition().x;
  	unitOffset.y = unitTile->getPosition().y - bu->getPosition().y;
@@ -5982,7 +6044,7 @@ index 3665cd1..3947f90 100644
  
  	bool moving = bu->getStatus() == STATUS_WALKING || bu->getStatus() == STATUS_FLYING;
  	int bonusWidth = moving ? 0 : tileFoorWidth;
-@@ -940,9 +1008,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -940,9 +1009,9 @@ void Map::drawTerrain(Surface *surface)
  					if (tmpSurface)
  					{
  						if (tile->getObstacle(O_FLOOR))
@@ -5994,7 +6056,7 @@ index 3665cd1..3947f90 100644
  					}
  
  					auto* unit = tile->getUnit();
-@@ -1001,9 +1069,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1001,9 +1070,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_WESTWALL, tile);
  							if (tile->getObstacle(O_WESTWALL))
@@ -6006,7 +6068,7 @@ index 3665cd1..3947f90 100644
  						}
  						// Draw north wall
  						tmpSurface = tile->getSprite(O_NORTHWALL);
-@@ -1011,9 +1079,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1011,9 +1080,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_NORTHWALL, tile);
  							if (tile->getObstacle(O_NORTHWALL))
@@ -6018,7 +6080,7 @@ index 3665cd1..3947f90 100644
  						}
  						// Draw object
  						tmpSurface = tile->getSprite(O_OBJECT);
-@@ -1022,9 +1090,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1022,18 +1091,19 @@ void Map::drawTerrain(Surface *surface)
  							if (tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -6030,7 +6092,9 @@ index 3665cd1..3947f90 100644
  							}
  						}
  						// draw an item on top of the floor (if any)
-@@ -1033,7 +1101,7 @@ void Map::drawTerrain(Surface *surface)
+ 						BattleItem* item = tile->getTopItem();
++						if (item && Villains::hiddenItem(_save, item)) item = nullptr; // G.I. Joe: Firefly's charge
+ 						if (item)
  						{
  							itemSprite.draw(item,
  								screenPosition.x,
@@ -6039,7 +6103,7 @@ index 3665cd1..3947f90 100644
  								tileShade
  							);
  							if (_anyIndicator)
-@@ -1043,30 +1111,30 @@ void Map::drawTerrain(Surface *surface)
+@@ -1043,30 +1113,30 @@ void Map::drawTerrain(Surface *surface)
  								{
  									if (_burnIndicator && itemUnit->getFire() > 0)
  									{
@@ -6078,7 +6142,7 @@ index 3665cd1..3947f90 100644
  											tileShade);
  									}
  								}
-@@ -1292,13 +1360,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1292,13 +1362,13 @@ void Map::drawTerrain(Surface *surface)
  							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(11);
  							if (tmpSurface)
  							{
@@ -6094,7 +6158,7 @@ index 3665cd1..3947f90 100644
  						}
  					}
  
-@@ -1310,9 +1378,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1310,9 +1380,9 @@ void Map::drawTerrain(Surface *surface)
  							if (!tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -6106,7 +6170,7 @@ index 3665cd1..3947f90 100644
  							}
  						}
  					}
-@@ -1528,7 +1596,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1528,7 +1598,7 @@ void Map::drawTerrain(Surface *surface)
  
  								_txtAccuracy->setText(ss.str());
  								_txtAccuracy->draw();
@@ -6115,7 +6179,7 @@ index 3665cd1..3947f90 100644
  							}
  						}
  						else if (_camera->getViewLevel() > itZ)
-@@ -1551,7 +1619,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1551,7 +1621,7 @@ void Map::drawTerrain(Surface *surface)
  									_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::red - 1) - 1);
  									_txtAccuracy->setText("0%");
  									_txtAccuracy->draw();
@@ -6124,7 +6188,7 @@ index 3665cd1..3947f90 100644
  								}
  							}
  							if (!ignore)
-@@ -1582,7 +1650,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1582,7 +1652,7 @@ void Map::drawTerrain(Surface *surface)
  								_numWaypid->setValue(waypid);
  								_numWaypid->setBordered(true); // OXCE, not configurable
  								_numWaypid->draw();
@@ -6133,7 +6197,7 @@ index 3665cd1..3947f90 100644
  
  								waypXOff += waypid > 9 ? 10 : 6; // OXCE
  								if (waypXOff >= 26)
-@@ -1621,7 +1689,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1621,7 +1691,7 @@ void Map::drawTerrain(Surface *surface)
  						tile = _save->getTile(mapPosition);
  						if (!tile || !tile->isDiscovered(O_FLOOR) || tile->getPreview() == -1)
  							continue;
@@ -6142,7 +6206,7 @@ index 3665cd1..3947f90 100644
  						if (_previewSettingArrows)
  						{
  							if (itZ > 0 && tile->hasNoFloor(_save))
-@@ -1629,14 +1697,14 @@ void Map::drawTerrain(Surface *surface)
+@@ -1629,14 +1699,14 @@ void Map::drawTerrain(Surface *surface)
  								tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(23);
  								if (tmpSurface)
  								{
@@ -6159,7 +6223,7 @@ index 3665cd1..3947f90 100644
  							}
  						}
  
-@@ -1645,16 +1713,17 @@ void Map::drawTerrain(Surface *surface)
+@@ -1645,16 +1715,17 @@ void Map::drawTerrain(Surface *surface)
  							int off = tile->getTUMarker() > 9 ? 5 : 3;
  							int offE = tile->getEnergyMarker() > 9 ? 5 : 3;
  							int mcolor = _previewSettingArrows ? 0 : tile->getMarkerColor();
@@ -6180,7 +6244,7 @@ index 3665cd1..3947f90 100644
  								}
  							}
  							if (_previewSettingTu)
-@@ -1664,16 +1733,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1664,16 +1735,16 @@ void Map::drawTerrain(Surface *surface)
  								if (_previewSettingEnergy)
  								{
  									// TU
@@ -6200,7 +6264,7 @@ index 3665cd1..3947f90 100644
  								}
  							}
  							else if (_previewSettingEnergy)
-@@ -1681,7 +1750,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1681,7 +1752,7 @@ void Map::drawTerrain(Surface *surface)
  								// only Energy
  								_numWaypid->setValue(tile->getEnergyMarker());
  								_numWaypid->draw();
@@ -6209,7 +6273,7 @@ index 3665cd1..3947f90 100644
  							}
  						}
  					}
-@@ -1702,16 +1771,62 @@ void Map::drawTerrain(Surface *surface)
+@@ -1702,16 +1773,62 @@ void Map::drawTerrain(Surface *surface)
  		Position offset = calculateWalkingOffset(selectedUnit).ScreenOffset;
  		if (selectedUnit->isBigUnit())
  		{
@@ -6276,7 +6340,7 @@ index 3665cd1..3947f90 100644
  		}
  	}
  
-@@ -1732,26 +1847,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -1732,26 +1849,26 @@ void Map::drawTerrain(Surface *surface)
  				//calculateWalkingOffset(myUnit, &offset);
  				if (myUnit->isBigUnit())
  				{
@@ -6308,7 +6372,7 @@ index 3665cd1..3947f90 100644
  						0);
  				}
  				else if (customMarker)
-@@ -1760,7 +1875,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1760,7 +1877,7 @@ void Map::drawTerrain(Surface *surface)
  						surface,
  						_arrow,
  						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
@@ -6317,7 +6381,7 @@ index 3665cd1..3947f90 100644
  						0,
  						false,
  						_isTFTD ? ArrowColorsTFTD[myUnit->getCustomMarker() % 4] : ArrowColorsUFO[myUnit->getCustomMarker() % 4]);
-@@ -1779,11 +1894,11 @@ void Map::drawTerrain(Surface *surface)
+@@ -1779,11 +1896,11 @@ void Map::drawTerrain(Surface *surface)
  			{
  				_camera->convertMapToScreen(pos, &screenPosition);
  				screenPosition += _camera->getMapOffset();
@@ -6331,7 +6395,7 @@ index 3665cd1..3947f90 100644
  					0);
  			}
  		}
-@@ -1823,12 +1938,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1823,12 +1940,13 @@ void Map::drawTerrain(Surface *surface)
  				else if (explosion->isHit())
  				{
  					tmpSurface = _game->getMod()->getSurfaceSet("HIT.PCK")->getFrame(explosion->getCurrentFrame());
@@ -6347,7 +6411,7 @@ index 3665cd1..3947f90 100644
  				}
  			}
  		}
-@@ -2023,7 +2139,7 @@ void Map::setSelectorPosition(int mx, int my)
+@@ -2023,7 +2141,7 @@ void Map::setSelectorPosition(int mx, int my)
  {
  	int oldX = _selectorX, oldY = _selectorY;
  
@@ -6356,7 +6420,7 @@ index 3665cd1..3947f90 100644
  
  	if (oldX != _selectorX || oldY != _selectorY)
  	{
-@@ -2267,6 +2383,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2267,6 +2385,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
  	}
  	result.ScreenOffset.y += result.TerrainLevelOffset;
@@ -6365,7 +6429,7 @@ index 3665cd1..3947f90 100644
  	return result;
  }
  
-@@ -2506,9 +2624,10 @@ void Map::refreshSelectorPosition()
+@@ -2506,9 +2626,10 @@ void Map::refreshSelectorPosition()
  void Map::setHeight(int height)
  {
  	Surface::setHeight(height);
@@ -6379,7 +6443,7 @@ index 3665cd1..3947f90 100644
  }
  
  /**
-@@ -2519,7 +2638,7 @@ void Map::setWidth(int width)
+@@ -2519,7 +2640,7 @@ void Map::setWidth(int width)
  {
  	int dX = width - getWidth();
  	Surface::setWidth(width);
@@ -7134,10 +7198,10 @@ index 7f7697c..9fbfa2d 100644
  	int ydiff = origin.y - target->y;
  	int zdiff = origin.z - target->z;
 diff --git a/src/Battlescape/ProjectileFlyBState.cpp b/src/Battlescape/ProjectileFlyBState.cpp
-index 529b7f2..9ee4cf8 100644
+index 529b7f2..ecf234d 100644
 --- a/src/Battlescape/ProjectileFlyBState.cpp
 +++ b/src/Battlescape/ProjectileFlyBState.cpp
-@@ -16,6 +16,8 @@
+@@ -16,8 +16,11 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -7145,8 +7209,11 @@ index 529b7f2..9ee4cf8 100644
 +#include "Stealth.h"
  #include <algorithm>
  #include "ProjectileFlyBState.h"
++#include "Villains.h"
  #include "ExplosionBState.h"
-@@ -139,6 +141,48 @@ void ProjectileFlyBState::init()
+ #include "Projectile.h"
+ #include "TileEngine.h"
+@@ -139,6 +142,48 @@ void ProjectileFlyBState::init()
  	case BA_AIMEDSHOT:
  	case BA_AUTOSHOT:
  	case BA_LAUNCH:
@@ -7195,7 +7262,7 @@ index 529b7f2..9ee4cf8 100644
  		if (weapon->getRules()->isOutOfRange(distanceSq))
  		{
  			// out of range
-@@ -517,6 +561,7 @@ bool ProjectileFlyBState::createNewProjectile()
+@@ -517,6 +562,7 @@ bool ProjectileFlyBState::createNewProjectile()
  			{
  				_parent->getMod()->getSoundByDepth(_parent->getDepth(), _action.weapon->getRules()->getFireSound())->play(-1, _parent->getMap()->getSoundAngle(_unit->getPosition()));
  			}
@@ -7203,7 +7270,27 @@ index 529b7f2..9ee4cf8 100644
  			if (_action.type != BA_LAUNCH)
  			{
  				_action.weapon->spendAmmoForAction(_action.type, _parent->getSave());
-@@ -559,6 +604,7 @@ bool ProjectileFlyBState::createNewProjectile()
+@@ -538,13 +584,17 @@ bool ProjectileFlyBState::createNewProjectile()
+ 	}
+ 	else
+ 	{
++		// G.I. Joe: Major Bludd's mark - every Cobra gun +20 against the marked Joe
++		double markBonus = 0;
++		if (Tile *tt = _parent->getSave()->getTile(_action.target))
++			markBonus = Villains::accuracyBonus(_parent->getSave(), _unit, tt->getUnit()) / accuracyDivider;
+ 		if (_originVoxel != TileEngine::invalid)
+ 		{
+-			_projectileImpact = projectile->calculateTrajectory(BattleUnit::getFiringAccuracy(attack, _parent->getMod()) / accuracyDivider, _originVoxel, false);
++			_projectileImpact = projectile->calculateTrajectory(BattleUnit::getFiringAccuracy(attack, _parent->getMod()) / accuracyDivider + markBonus, _originVoxel, false);
+ 		}
+ 		else
+ 		{
+-			_projectileImpact = projectile->calculateTrajectory(BattleUnit::getFiringAccuracy(attack, _parent->getMod()) / accuracyDivider);
++			_projectileImpact = projectile->calculateTrajectory(BattleUnit::getFiringAccuracy(attack, _parent->getMod()) / accuracyDivider + markBonus);
+ 		}
+ 		if (_targetVoxel != TileEngine::invalid.toVoxel() && (_projectileImpact != V_EMPTY || _action.type == BA_LAUNCH))
+ 		{
+@@ -559,6 +609,7 @@ bool ProjectileFlyBState::createNewProjectile()
  			{
  				_parent->getMod()->getSoundByDepth(_parent->getDepth(), _action.weapon->getRules()->getFireSound())->play(-1, _parent->getMap()->getSoundAngle(projectile->getOrigin()));
  			}
@@ -7681,10 +7768,10 @@ index 0000000..8a0b33f
 +
 +}
 diff --git a/src/Battlescape/TileEngine.cpp b/src/Battlescape/TileEngine.cpp
-index 6e68469..3276c12 100644
+index 6e68469..881386c 100644
 --- a/src/Battlescape/TileEngine.cpp
 +++ b/src/Battlescape/TileEngine.cpp
-@@ -16,6 +16,8 @@
+@@ -16,9 +16,12 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -7693,7 +7780,11 @@ index 6e68469..3276c12 100644
  #include <assert.h>
  #include <set>
  #include "TileEngine.h"
-@@ -898,7 +900,11 @@ TileEngine::TileEngine(SavedBattleGame *save, Mod *mod) :
++#include "Villains.h"
+ #include "AIModule.h"
+ #include "Map.h"
+ #include "Camera.h"
+@@ -898,7 +901,11 @@ TileEngine::TileEngine(SavedBattleGame *save, Mod *mod) :
  	_maxViewDistance(mod->getMaxViewDistance()), _maxViewDistanceSq(_maxViewDistance * _maxViewDistance),
  	_maxVoxelViewDistance(_maxViewDistance * 16), _maxDarknessToSeeUnits(mod->getMaxDarknessToSeeUnits()),
  	_maxStaticLightDistance(mod->getMaxStaticLightDistance()), _maxDynamicLightDistance(mod->getMaxDynamicLightDistance()),
@@ -7706,7 +7797,7 @@ index 6e68469..3276c12 100644
  {
  	_blockVisibility.resize(save->getMapSizeXYZ());
  	_lightPropagationTerrainBlocking.resize(save->getMapSizeXYZ());
-@@ -1457,6 +1463,11 @@ bool TileEngine::calculateUnitsInFOV(BattleUnit* unit, const Position eventPos,
+@@ -1457,6 +1464,11 @@ bool TileEngine::calculateUnitsInFOV(BattleUnit* unit, const Position eventPos,
  
  	if (unit->isOut())
  		return false;
@@ -7718,7 +7809,19 @@ index 6e68469..3276c12 100644
  
  	Position posSelf = unit->getPosition();
  	if (setupEventVisibilitySector(posSelf, eventPos, eventRadius))
-@@ -2560,7 +2571,7 @@ std::vector<TileEngine::ReactionScore> TileEngine::getSpottingUnits(BattleUnit*
+@@ -2501,6 +2513,11 @@ bool TileEngine::checkReactionFire(BattleUnit *unit, const BattleAction &origina
+ 	{
+ 		return false;
+ 	}
++	// G.I. Joe: Storm Shadow's Arashikage Strike draws no reaction fire
++	if (Villains::noReactions(_save, unit))
++	{
++		return false;
++	}
+ 
+ 	std::vector<ReactionScore> spotters = getSpottingUnits(unit);
+ 	bool result = false;
+@@ -2560,7 +2577,7 @@ std::vector<TileEngine::ReactionScore> TileEngine::getSpottingUnits(BattleUnit*
  				// not dying or not about to pass out
  				!bu->isOutThresholdExceed() &&
  				// have any chances for reacting
@@ -7727,7 +7830,7 @@ index 6e68469..3276c12 100644
  				// not a friend
  				bu->getFaction() != _save->getSide() &&
  				// not a civilian, or a civilian shooting at bad non-ignored guys
-@@ -2698,7 +2709,7 @@ TileEngine::ReactionScore TileEngine::determineReactionType(BattleUnit *unit, Ba
+@@ -2698,7 +2715,7 @@ TileEngine::ReactionScore TileEngine::determineReactionType(BattleUnit *unit, Ba
  		unit,
  		nullptr,
  		BA_NONE,
@@ -7736,16 +7839,18 @@ index 6e68469..3276c12 100644
  		0.0,
  		1,
  	};
-@@ -3146,6 +3157,8 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
+@@ -3145,7 +3162,10 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
+ 	const int healthOrig = target->getHealth();
  	const int stunLevelOrig = target->getStunlevel();
  
++	damage = damage * Villains::damagePct(_save, attack.attacker, target) / 100; // G.I. Joe: villains' traits
  	target->damage(relative, damage, type, _save, attack);
 +	// G.I. Joe sea fights: a ship's engines, guns and steering take hits by where they come from
 +	if (target->getHealth() < healthOrig) AirFight::onHit(_save, attack.attacker, target);
  
  	const int healthDamage = healthOrig - target->getHealth();
  	const int stunDamage = target->getStunlevel() - stunLevelOrig;
-@@ -3217,6 +3230,97 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
+@@ -3217,6 +3237,97 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
   * @param unit The unit that caused the explosion.
   * @param clipOrWeapon clip or weapon causing the damage.
   */
@@ -7843,7 +7948,7 @@ index 6e68469..3276c12 100644
  void TileEngine::hit(BattleActionAttack attack, Position center, int power, const RuleDamageType *type, bool rangeAtack, int terrainMeleeTilePart)
  {
  	bool terrainChanged = false; //did the hit destroy a tile thereby changing line of sight?
-@@ -3262,10 +3366,41 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
+@@ -3262,10 +3373,41 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
  					_save->getModuleMap()[(center.x/16)/10][(center.y/16)/10].second--;
  				}
  			}
@@ -7885,7 +7990,7 @@ index 6e68469..3276c12 100644
  		}
  	}
  	else if (part == V_UNIT)
-@@ -3341,6 +3476,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3341,6 +3483,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  	{
  		power /= 2;
  	}
@@ -7896,7 +8001,7 @@ index 6e68469..3276c12 100644
  
  	int exHeight = Clamp(Options::battleExplosionHeight, 0, 3);
  	int vertdec = 1000; //default flat explosion
-@@ -3451,7 +3590,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3451,7 +3597,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  							_save->removeItem(bi);
  						}
  
@@ -7905,7 +8010,7 @@ index 6e68469..3276c12 100644
  					}
  				}
  
-@@ -3512,6 +3651,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3512,6 +3658,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  	// now detonate the tiles affected by explosion
  	if (type->ToTile > 0.0f)
  	{
@@ -7913,7 +8018,7 @@ index 6e68469..3276c12 100644
  		for (auto& pair : tilesAffected)
  		{
  			if (detonate(pair.first, pair.second))
-@@ -3523,7 +3663,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3523,7 +3670,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  			if (j)
  				applyGravity(j);
  		}
@@ -7923,7 +8028,7 @@ index 6e68469..3276c12 100644
  	calculateLighting(LL_AMBIENT, centetTile, maxRadius + 1, true); // roofs could have been destroyed and fires could have been started
  	calculateFOV(centetTile, maxRadius + 1, true, true);
  	if (attack.attacker && Position::distance2d(centetTile, attack.attacker->getPosition()) > maxRadius + 1)
-@@ -3622,7 +3764,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
+@@ -3622,7 +3771,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
  			}
  		}
  		// set tile on fire
@@ -7932,7 +8037,7 @@ index 6e68469..3276c12 100644
  		{
  			if (tiles[i]->getMapData(O_FLOOR) || tiles[i]->getMapData(O_OBJECT))
  			{
-@@ -5156,6 +5298,156 @@ Tile *TileEngine::applyGravity(Tile *t)
+@@ -5156,6 +5305,156 @@ Tile *TileEngine::applyGravity(Tile *t)
  	return rt;
  }
  
@@ -8481,20 +8586,583 @@ index bc5f08f..74aec61 100644
  	_terrain->calculateLighting(LL_UNITS, _unit->getPosition());
  	_terrain->calculateFOV(_unit);
  	if (!_falling)
+diff --git a/src/Battlescape/Villains.cpp b/src/Battlescape/Villains.cpp
+new file mode 100644
+index 0000000..5bd048c
+--- /dev/null
++++ b/src/Battlescape/Villains.cpp
+@@ -0,0 +1,508 @@
++/*
++ * G.I. Joe: the named villains' Moves and traits. See Villains.h.
++ *
++ * Year 1 Moves (John 15 Nov "1"): Major Bludd's mark, Firefly's booby trap, Storm Shadow's Arashikage Strike,
++ * Scrap-Iron's remote missile (the stock launcher AI, vehicles first), Copperhead's Water Moccasin drop, Buzzer's
++ * cut-through, Ripper's door, Torch's cut and burn. Each is used once a mission (SavedBattleGame's vanStop store:
++ * "gjv:<id>"). Zartan's disguise and Wild Weasel's strafing run are not built (the disguise fork is parked; the
++ * strafing run belongs to the air fights).
++ */
++#include "Villains.h"
++#include <algorithm>
++#include <climits>
++#include <cstdlib>
++#include "../Savegame/SavedBattleGame.h"
++#include "../Savegame/BattleUnit.h"
++#include "../Savegame/BattleItem.h"
++#include "../Savegame/Tile.h"
++#include "../Savegame/Soldier.h"
++#include "../Battlescape/TileEngine.h"
++#include "../Battlescape/Pathfinding.h"
++#include "../Battlescape/BattlescapeState.h"
++#include "../Battlescape/BattlescapeGame.h"
++#include "../Mod/Mod.h"
++#include "../Mod/RuleItem.h"
++#include "../Mod/Armor.h"
++#include "../Mod/MapData.h"
++#include "../Mod/Unit.h"
++#include "../Mod/RuleSoldier.h"
++#include "../Engine/Game.h"
++#include "../Engine/Logger.h"
++#include "../Engine/Language.h"
++
++namespace OpenXcom
++{
++namespace Villains
++{
++
++namespace
++{
++
++const Mod::VillainRule *rule(SavedBattleGame *save, const BattleUnit *u)
++{
++	if (!u || !save) return nullptr;
++	return save->getMod()->getVillainRule(u->getType());
++}
++
++std::string key(const char *what, const BattleUnit *u) { return std::string(what) + ":" + std::to_string(u->getId()); }
++bool used(SavedBattleGame *save, const BattleUnit *u) { return save->getVanStop(key("gjv", u)) > 0; }
++void markUsed(SavedBattleGame *save, const BattleUnit *u) { save->setVanStop(key("gjv", u), 1); }
++
++int encode(const Position &p) { return 1 + p.x + p.y * 1000 + p.z * 1000000; }
++Position decode(int v) { --v; return Position(v % 1000, (v / 1000) % 1000, v / 1000000); }
++
++std::string nameOf(SavedBattleGame *save, BattleUnit *u)
++{
++	BattlescapeState *st = save->getBattleState();
++	if (!st) return u->getType();
++	return u->getName(st->getGame()->getLanguage(), false);
++}
++
++void notice(SavedBattleGame *save, const std::string &k, BattleUnit *a, BattleUnit *b = nullptr)
++{
++	BattlescapeState *st = save->getBattleState();
++	if (!st) return;
++	std::string s = st->tr(k).arg(nameOf(save, a)).arg(b ? nameOf(save, b) : std::string());
++	st->warningRaw(s);
++}
++
++/// the type a record names him by: a Joe's soldier type (STR_DUKE), else the unit type
++std::string typeOf(const BattleUnit *b)
++{
++	if (b && b->getGeoscapeSoldier()) return b->getGeoscapeSoldier()->getRules()->getType();
++	return b ? b->getType() : std::string();
++}
++
++bool isJoe(const BattleUnit *b) { return b && b->getFaction() == FACTION_PLAYER && !b->isOut() && b->getTile(); }
++
++/// the nearest Joe Cobra knows about (seen this turn or lately), or any Joe if allowAny
++BattleUnit *nearestKnownJoe(SavedBattleGame *save, BattleUnit *u, bool allowAny)
++{
++	BattleUnit *best = nullptr;
++	int bd = INT_MAX;
++	for (auto *b : *save->getUnits())
++	{
++		if (!isJoe(b)) continue;
++		// OXCE_VILLAIN_TEST: the villains know where every Joe is, so each Move can be seen in a short test
++		static const bool test = getenv("OXCE_VILLAIN_TEST") != nullptr;
++		if (!allowAny && !test && b->getTurnsSinceSpottedByFaction(FACTION_HOSTILE) > 2) continue;
++		const int d = Position::distanceSq(b->getPosition(), u->getPosition());
++		if (d < bd) { bd = d; best = b; }
++	}
++	return best;
++}
++
++/// the tile part between two orthogonal neighbours a -> b (the wall you'd walk through), or false
++bool boundary(SavedBattleGame *save, const Position &a, const Position &b, Tile **tile, TilePart *part)
++{
++	if (a.z != b.z) return false;
++	const int dx = b.x - a.x, dy = b.y - a.y;
++	if (std::abs(dx) + std::abs(dy) != 1) return false;
++	if (dx == 1) { *tile = save->getTile(b); *part = O_WESTWALL; }
++	else if (dx == -1) { *tile = save->getTile(a); *part = O_WESTWALL; }
++	else if (dy == 1) { *tile = save->getTile(b); *part = O_NORTHWALL; }
++	else { *tile = save->getTile(a); *part = O_NORTHWALL; }
++	return *tile && (*tile)->getMapData(*part) && !(*tile)->getMapData(*part)->isGravLift();
++}
++
++bool isDoorPart(Tile *t, TilePart p)
++{
++	MapData *md = t ? t->getMapData(p) : nullptr;
++	return md && (md->isDoor() || md->isUFODoor());
++}
++
++/// tear out a wall or door part and let the battle see through the gap
++void breach(SavedBattleGame *save, Tile *t, TilePart p, bool fire, const Position &other)
++{
++	t->destroy(p, save->getObjectiveType());
++	if (fire)
++	{
++		t->ignite(60);
++		if (Tile *o = save->getTile(other)) o->ignite(60);
++	}
++	save->getTileEngine()->calculateLighting(LL_FIRE, t->getPosition(), 1, true);
++	save->getTileEngine()->calculateFOV(t->getPosition(), 1, true, true);
++}
++
++BattleItem *meleeWeapon(BattleUnit *u)
++{
++	for (BattleItem *w : { u->getRightHandWeapon(), u->getLeftHandWeapon() })
++		if (w && w->getRules()->getBattleType() == BT_MELEE) return w;
++	return nullptr;
++}
++
++/// a free tile with a floor (or the ground) a man can stand on
++bool standable(SavedBattleGame *save, const Position &p)
++{
++	Tile *t = save->getTile(p);
++	if (!t || t->getUnit()) return false;
++	if (t->getTUCost(O_OBJECT, MT_WALK) == Pathfinding::INVALID_MOVE_COST) return false;
++	return !t->hasNoFloor(save);
++}
++
++/// a two-step plan: walk to a tile, then act there. Returns the stored target, or invalid.
++Position plan(SavedBattleGame *save, const BattleUnit *u, const char *what)
++{
++	const int v = save->getVanStop(key(what, u));
++	return v > 0 ? decode(v) : TileEngine::invalid;
++}
++
++bool walkTo(SavedBattleGame *save, BattleUnit *u, const Position &to, BattleAction *action)
++{
++	save->getPathfinding()->calculate(u, to, BAM_NORMAL);
++	const bool can = save->getPathfinding()->getStartDirection() != -1;
++	save->getPathfinding()->abortPath();
++	if (!can) return false;
++	action->type = BA_WALK;
++	action->target = to;
++	return true;
++}
++
++std::vector<Position> reachable(SavedBattleGame *save, BattleUnit *u, const BattleActionCost &cost)
++{
++	std::vector<Position> out;
++	for (int i : save->getPathfinding()->findReachable(u, cost))
++	{
++		out.push_back(save->getTileCoords(i));
++	}
++	return out;
++}
++
++// ---- the Moves ----
++
++/// Major Bludd: marks one Joe in sight; every Cobra +20 to hit him for the rest of the mission
++bool moveMark(SavedBattleGame *save, BattleUnit *u, const Mod::VillainRule &r)
++{
++	BattleUnit *pick = nullptr;
++	int bd = INT_MAX;
++	for (auto *b : *u->getVisibleUnits())
++	{
++		if (!isJoe(b)) continue;
++		int d = Position::distanceSq(b->getPosition(), u->getPosition());
++		if (std::find(r.marked.begin(), r.marked.end(), typeOf(b)) != r.marked.end()) d -= 100000;
++		if (d < bd) { bd = d; pick = b; }
++	}
++	if (!pick) return false;
++	save->setVanStop("gjvMark", pick->getId() + 1);
++	markUsed(save, u);
++	Log(LOG_INFO) << "[villain] " << u->getType() << " marks " << typeOf(pick) << " #" << pick->getId();
++	notice(save, "STR_GJV_MARK", u, pick);
++	return false; // a free action: he goes on with his turn
++}
++
++/// Firefly: walks to a door or doorway toward the Joes and leaves a hidden charge there
++bool moveTrap(SavedBattleGame *save, BattleUnit *u, const Mod::VillainRule &r, BattleAction *action)
++{
++	const RuleItem *charge = save->getMod()->getItem(r.item, false);
++	if (!charge) return false;
++	Position goal = plan(save, u, "gjvT");
++	if (goal == TileEngine::invalid)
++	{
++		BattleUnit *joe = nearestKnownJoe(save, u, false);
++		if (!joe) return false;
++		int best = INT_MIN;
++		for (const auto &p : reachable(save, u, BattleActionCost()))
++		{
++			if (p.z != u->getPosition().z) continue;
++			const int dj = Position::distance2d(p, joe->getPosition());
++			if (dj < 3 || dj > 14) continue;
++			Tile *t = save->getTile(p);
++			if (!t || (t->getUnit() && t->getUnit() != u)) continue;
++			bool door = isDoorPart(t, O_WESTWALL) || isDoorPart(t, O_NORTHWALL)
++				|| isDoorPart(save->getTile(p + Position(1, 0, 0)), O_WESTWALL) || isDoorPart(save->getTile(p + Position(0, 1, 0)), O_NORTHWALL);
++			const int score = (door ? 20 : 0) - dj;
++			if (score > best) { best = score; goal = p; }
++		}
++		if (goal == TileEngine::invalid) goal = u->getPosition();
++		save->setVanStop(key("gjvT", u), encode(goal));
++	}
++	if (u->getPosition() != goal)
++	{
++		if (walkTo(save, u, goal, action)) return true;
++		goal = u->getPosition(); // can't get there: leave it where he stands
++	}
++	BattleItem *it = save->createItemForTile(charge, save->getTile(goal));
++	it->setFuseTimer(0);
++	save->setVanStop("gjvCharge:" + std::to_string(it->getId()), 1);
++	markUsed(save, u);
++	save->setVanStop(key("gjvT", u), 0);
++	u->spendTimeUnits(std::min(15, u->getTimeUnits()));
++	Log(LOG_INFO) << "[villain] " << u->getType() << " leaves a charge at " << goal << " (item " << it->getId() << ")";
++	return false;
++}
++
++/// Storm Shadow: closes on a Joe in sight in one move, drawing no reaction fire, and strikes with the sword
++bool moveStrike(SavedBattleGame *save, BattleUnit *u, BattleAction *action)
++{
++	BattleItem *sword = meleeWeapon(u);
++	if (!sword) return false;
++	const int planned = save->getVanStop(key("gjvS", u));
++	if (planned > 0)
++	{
++		save->setVanStop(key("gjvS", u), 0);
++		BattleUnit *t = nullptr;
++		for (auto *b : *save->getUnits()) if (b->getId() + 1 == planned) t = b;
++		if (t && isJoe(t) && Position::distance2d(t->getPosition(), u->getPosition()) <= 1 && t->getPosition().z == u->getPosition().z)
++		{
++			BattleActionCost c(BA_HIT, u, sword);
++			if (c.haveTU())
++			{
++				action->type = BA_HIT;
++				action->weapon = sword;
++				action->target = t->getPosition();
++				markUsed(save, u);
++				Log(LOG_INFO) << "[villain] " << u->getType() << " strikes " << t->getType();
++				notice(save, "STR_GJV_STRIKE", u);
++				return true;
++			}
++		}
++		Log(LOG_INFO) << "[villain] " << u->getType() << " strike broken off at " << u->getPosition() << ": choosing again";
++	}
++	std::vector<Position> can = reachable(save, u, BattleActionCost(BA_HIT, u, sword));
++	BattleUnit *pick = nullptr;
++	Position stand = TileEngine::invalid;
++	int bd = INT_MAX;
++	for (auto *b : *u->getVisibleUnits())
++	{
++		if (!isJoe(b)) continue;
++		for (int dx = -1; dx <= 1; ++dx)
++			for (int dy = -1; dy <= 1; ++dy)
++			{
++				if (!dx && !dy) continue;
++				const Position p = b->getPosition() + Position(dx, dy, 0);
++				if (p != u->getPosition() && std::find(can.begin(), can.end(), p) == can.end()) continue;
++				if (p != u->getPosition() && !standable(save, p)) continue;
++				const int d = Position::distanceSq(p, u->getPosition());
++				if (d < bd) { bd = d; pick = b; stand = p; }
++			}
++	}
++	if (!pick) return false;
++	save->setVanStop(key("gjvS", u), pick->getId() + 1);
++	save->setVanStop(key("gjvNR", u), save->getTurn() + 1);
++	if (stand == u->getPosition())
++	{
++		return moveStrike(save, u, action);
++	}
++	if (!walkTo(save, u, stand, action))
++	{
++		save->setVanStop(key("gjvS", u), 0);
++		return false;
++	}
++	Log(LOG_INFO) << "[villain] " << u->getType() << " closes on " << typeOf(pick) << " from " << u->getPosition() << " to " << stand;
++	return true;
++}
++
++/// Buzzer, Ripper, Torch: through a wall or door. Buzzer goes for a Joe behind a wall and cuts him down; Ripper
++/// tears a door off on the way to the Joes; Torch cuts a wall or door on the way and sets it burning.
++bool moveBreach(SavedBattleGame *save, BattleUnit *u, const Mod::VillainRule &r, BattleAction *action)
++{
++	const bool buzzer = r.move == "CUT_THROUGH", doorsOnly = r.move == "RIP_DOOR", fire = r.move == "CUT_BURN";
++	BattleItem *melee = meleeWeapon(u);
++	Position at = plan(save, u, "gjvB"), through = plan(save, u, "gjvBT");
++	if (at == TileEngine::invalid)
++	{
++		BattleUnit *joe = nearestKnownJoe(save, u, false);
++		if (!joe) return false;
++		const BattleActionCost cost = buzzer && melee ? BattleActionCost(BA_HIT, u, melee) : BattleActionCost();
++		std::vector<Position> can = reachable(save, u, cost);
++		can.push_back(u->getPosition());
++		int best = INT_MAX;
++		static const Position dirs[4] = { Position(1, 0, 0), Position(-1, 0, 0), Position(0, 1, 0), Position(0, -1, 0) };
++		for (const auto &p : can)
++		{
++			for (const auto &d : dirs)
++			{
++				const Position n = p + d;
++				Tile *t; TilePart part;
++				if (!boundary(save, p, n, &t, &part)) continue;
++				if (doorsOnly && !isDoorPart(t, part)) continue;
++				int score;
++				Tile *nt = save->getTile(n);
++				if (buzzer && nt && isJoe(nt->getUnit()))
++				{
++					score = Position::distanceSq(p, u->getPosition()); // a Joe right behind the wall: best of all
++				}
++				else if (buzzer && Position::distanceSq(n, joe->getPosition()) > 25)
++				{
++					continue; // otherwise only a wall within 5 tiles of a Joe is worth cutting
++				}
++				else
++				{
++					const int dn = Position::distanceSq(n, joe->getPosition()), dp = Position::distanceSq(p, joe->getPosition());
++					if (dn >= dp || n.z != joe->getPosition().z) continue;
++					score = 1000 + dn * 4 + Position::distanceSq(p, u->getPosition());
++				}
++				if (score < best) { best = score; at = p; through = n; }
++			}
++		}
++		if (at == TileEngine::invalid) return false;
++		save->setVanStop(key("gjvB", u), encode(at));
++		save->setVanStop(key("gjvBT", u), encode(through));
++	}
++	if (u->getPosition() != at)
++	{
++		if (walkTo(save, u, at, action)) return true;
++		save->setVanStop(key("gjvB", u), 0);
++		save->setVanStop(key("gjvBT", u), 0);
++		return false;
++	}
++	save->setVanStop(key("gjvB", u), 0);
++	save->setVanStop(key("gjvBT", u), 0);
++	Tile *t; TilePart part;
++	if (!boundary(save, at, through, &t, &part)) return false;
++	breach(save, t, part, fire, through);
++	markUsed(save, u);
++	u->spendTimeUnits(std::min(10, u->getTimeUnits()));
++	Log(LOG_INFO) << "[villain] " << u->getType() << " breaches " << at << " -> " << through;
++	notice(save, buzzer ? "STR_GJV_BREACH" : fire ? "STR_GJV_BURN" : "STR_GJV_DOOR", u);
++	Tile *nt = save->getTile(through);
++	if (buzzer && melee && nt && isJoe(nt->getUnit()))
++	{
++		BattleActionCost c(BA_HIT, u, melee);
++		if (c.haveTU())
++		{
++			action->type = BA_HIT;
++			action->weapon = melee;
++			action->target = through;
++			return true;
++		}
++	}
++	return false;
++}
++
++/// Copperhead: his Water Moccasin crosses the map in one turn and drops Cobra troops close to the Joes, out of
++/// their sight; he comes with them, and his turn is spent
++bool moveDrop(SavedBattleGame *save, BattleUnit *u, const Mod::VillainRule &r, BattleAction *action)
++{
++	const Unit *type = save->getMod()->getUnit(r.spawn, false);
++	BattleUnit *joe = nearestKnownJoe(save, u, false);
++	if (!type || !joe) return false;
++	const Position jp = joe->getPosition();
++	auto seen = [&](const Position &p) {
++		for (auto *b : *save->getUnits())
++			if (isJoe(b) && save->getTileEngine()->visible(b, save->getTile(p))) return true;
++		return false;
++	};
++	Position drop = TileEngine::invalid;
++	for (int r2 = 6; r2 <= 12 && drop == TileEngine::invalid; ++r2)
++		for (int dx = -r2; dx <= r2 && drop == TileEngine::invalid; ++dx)
++			for (int dy = -r2; dy <= r2 && drop == TileEngine::invalid; ++dy)
++			{
++				if (std::max(std::abs(dx), std::abs(dy)) != r2) continue;
++				const Position p = jp + Position(dx, dy, 0);
++				if (!standable(save, p) || seen(p)) continue;
++				int room = 0;
++				for (int ax = -1; ax <= 1; ++ax) for (int ay = -1; ay <= 1; ++ay) if (standable(save, p + Position(ax, ay, 0))) ++room;
++				if (room >= r.count + 2) drop = p;
++			}
++	if (drop == TileEngine::invalid) return false;
++	// Copperhead himself
++	save->setUnitPosition(u, drop);
++	u->setDirection(save->getTileEngine()->getDirectionTo(drop, jp));
++	int made = 0;
++	for (int ax = -1; ax <= 1 && made < r.count; ++ax)
++		for (int ay = -1; ay <= 1 && made < r.count; ++ay)
++		{
++			const Position p = drop + Position(ax, ay, 0);
++			if (!standable(save, p)) continue;
++			BattleUnit *nu = save->createTempUnit(type, FACTION_HOSTILE);
++			nu->setTile(save->getTile(p), save);
++			nu->setPosition(p);
++			nu->setDirection(save->getTileEngine()->getDirectionTo(p, jp));
++			nu->clearTimeUnits();
++			nu->setVisible(false);
++			save->getUnits()->push_back(nu);
++			save->initUnit(nu, 0);
++			++made;
++		}
++	save->getTileEngine()->calculateFOV(drop);
++	markUsed(save, u);
++	u->clearTimeUnits();
++	Log(LOG_INFO) << "[villain] " << u->getType() << " drops " << made << " troopers at " << drop;
++	notice(save, "STR_GJV_MOCCASIN", u);
++	action->type = BA_NONE;
++	return true;
++}
++
++} // namespace
++
++bool think(SavedBattleGame *save, BattleUnit *unit, BattleAction *action)
++{
++	static const bool test = getenv("OXCE_VILLAIN_TEST") != nullptr;
++	if (test) // the test: Cobra knows where every Joe is
++		for (auto *b : *save->getUnits())
++			if (isJoe(b)) { b->setTurnsSinceSpottedByFaction(FACTION_HOSTILE, 0); b->setTurnsLeftSpottedForSnipersByFaction(FACTION_HOSTILE, 2); }
++	const Mod::VillainRule *r = rule(save, unit);
++	if (!r || r->move.empty() || r->move == "NONE" || unit->getFaction() != FACTION_HOSTILE) return false;
++	// a strike already under way finishes even though the Move is spent only when it lands
++	if (r->move == "ARASHIKAGE" && !used(save, unit)) return moveStrike(save, unit, action);
++	if (used(save, unit)) return false;
++	if (r->move == "MARK") return moveMark(save, unit, *r);
++	if (r->move == "BOOBY_TRAP") return moveTrap(save, unit, *r, action);
++	if (r->move == "CUT_THROUGH" || r->move == "RIP_DOOR" || r->move == "CUT_BURN") return moveBreach(save, unit, *r, action);
++	if (r->move == "MOCCASIN_DROP") return moveDrop(save, unit, *r, action);
++	return false; // REMOTE_MISSILE is the stock launcher AI (prefersVehicles), one bomb
++}
++
++int damagePct(SavedBattleGame *save, const BattleUnit *attacker, const BattleUnit *victim)
++{
++	const Mod::VillainRule *r = rule(save, attacker);
++	if (!r || !victim || r->trait.empty()) return 100;
++	if (r->trait == "MARKED_LIST")
++	{
++		const bool marked = std::find(r->marked.begin(), r->marked.end(), typeOf(victim)) != r->marked.end();
++		return marked ? r->pct : 100;
++	}
++	if (r->trait == "VEHICLE_HUNTER") return isJoeVehicle(victim) ? r->pct : 100;
++	if (r->trait == "CLOSE_QUARTERS")
++		return Position::distance2d(attacker->getPosition(), victim->getPosition()) <= r->range ? r->pct : 100;
++	return 100;
++}
++
++int accuracyBonus(SavedBattleGame *save, const BattleUnit *attacker, const BattleUnit *target)
++{
++	if (!attacker || !target || attacker->getFaction() != FACTION_HOSTILE) return 0;
++	return save->getVanStop("gjvMark") == target->getId() + 1 ? 20 : 0;
++}
++
++bool steady(SavedBattleGame *save, const BattleUnit *unit)
++{
++	const Mod::VillainRule *r = rule(save, unit);
++	return r && r->trait == "STEADY";
++}
++
++bool neverDies(SavedBattleGame *save, const BattleUnit *unit)
++{
++	return rule(save, unit) != nullptr;
++}
++
++bool noReactions(SavedBattleGame *save, const BattleUnit *unit)
++{
++	static const bool test = getenv("OXCE_VILLAIN_TEST") != nullptr; // the test: Joes hold fire so every Move is seen
++	if (test && unit && unit->getFaction() == FACTION_HOSTILE) return true;
++	return save && unit && save->getVanStop(key("gjvNR", unit)) == save->getTurn() + 1;
++}
++
++bool hiddenItem(SavedBattleGame *save, const BattleItem *item)
++{
++	return save && item && save->getVanStop("gjvCharge:" + std::to_string(item->getId())) > 0;
++}
++
++bool ignoresCharge(SavedBattleGame *save, const BattleItem *item, const BattleUnit *walker)
++{
++	return walker && walker->getFaction() == FACTION_HOSTILE && hiddenItem(save, item);
++}
++
++bool prefersVehicles(SavedBattleGame *save, const BattleUnit *unit)
++{
++	const Mod::VillainRule *r = rule(save, unit);
++	return r && r->move == "REMOTE_MISSILE";
++}
++
++bool isJoeVehicle(const BattleUnit *unit)
++{
++	return unit && unit->getOriginalFaction() == FACTION_PLAYER && !unit->getGeoscapeSoldier();
++}
++
++}
++}
+diff --git a/src/Battlescape/Villains.h b/src/Battlescape/Villains.h
+new file mode 100644
+index 0000000..0a55cb3
+--- /dev/null
++++ b/src/Battlescape/Villains.h
+@@ -0,0 +1,42 @@
++#pragma once
++/*
++ * G.I. Joe: the named villains' Moves and traits (ROSTER's records, roster_cobra_b1/b2.yaml; BUILD 15 Nov).
++ * Stock OpenXcom's AI can't choose to use a special ability, so each villain's Move is engine code here,
++ * called from AIModule::think. The table (which villain has which Move and trait) is the ruleset's
++ * `villains:` list, written by build/gen_villains.py. A Move is used once a mission.
++ */
++#include <string>
++
++namespace OpenXcom
++{
++
++class SavedBattleGame;
++class BattleUnit;
++class BattleItem;
++struct BattleAction;
++
++namespace Villains
++{
++	/// the AI's turn: a villain may use his Move. True if it set the action.
++	bool think(SavedBattleGame *save, BattleUnit *unit, BattleAction *action);
++	/// damage percentage for a hit (traits: marked list, vehicle hunter, close quarters)
++	int damagePct(SavedBattleGame *save, const BattleUnit *attacker, const BattleUnit *victim);
++	/// accuracy added to a shot (Major Bludd's mark: every Cobra +20 against the marked Joe)
++	int accuracyBonus(SavedBattleGame *save, const BattleUnit *attacker, const BattleUnit *target);
++	/// no morale loss from wounds (Buzzer)
++	bool steady(SavedBattleGame *save, const BattleUnit *unit);
++	/// a villain never dies: a killing hit leaves him down instead (named characters never die)
++	bool neverDies(SavedBattleGame *save, const BattleUnit *unit);
++	/// this unit's move draws no reaction fire this turn (Storm Shadow's Arashikage Strike)
++	bool noReactions(SavedBattleGame *save, const BattleUnit *unit);
++	/// an item the Joes never see on the floor (Firefly's charge)
++	bool hiddenItem(SavedBattleGame *save, const BattleItem *item);
++	/// a Cobra man walking past a villain's charge doesn't set it off
++	bool ignoresCharge(SavedBattleGame *save, const BattleItem *item, const BattleUnit *walker);
++	/// launcher targets: Joe vehicles first (Scrap-Iron)
++	bool prefersVehicles(SavedBattleGame *save, const BattleUnit *unit);
++	/// a Joe vehicle (a player unit with no soldier behind it)
++	bool isJoeVehicle(const BattleUnit *unit);
++}
++
++}
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..b3c46ec 100644
+index 839f803..f2c6421 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -71,6 +71,8 @@ set ( basescape_src
+@@ -71,6 +71,9 @@ set ( basescape_src
  set ( battlescape_src
    Battlescape/AbortMissionState.cpp
    Battlescape/ActionMenuItem.cpp
 +  Battlescape/AirFight.cpp
 +  Battlescape/Stealth.cpp
++  Battlescape/Villains.cpp
    Battlescape/ActionMenuState.cpp
    Battlescape/AIModule.cpp
    Battlescape/AlienInventory.cpp
-@@ -172,6 +174,8 @@ set ( engine_src
+@@ -172,6 +175,8 @@ set ( engine_src
    Engine/Sound.cpp
    Engine/SoundSet.cpp
    Engine/State.cpp
@@ -8503,7 +9171,7 @@ index 839f803..b3c46ec 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -201,9 +205,19 @@ set ( geoscape_src
+@@ -201,9 +206,19 @@ set ( geoscape_src
    Geoscape/DogfightState.cpp
    Geoscape/ExtendedGeoscapeLinksState.cpp
    Geoscape/FundingState.cpp
@@ -8523,7 +9191,7 @@ index 839f803..b3c46ec 100644
    Geoscape/Globe.cpp
    Geoscape/GraphsState.cpp
    Geoscape/InterceptState.cpp
-@@ -331,6 +345,7 @@ set ( mod_src
+@@ -331,6 +346,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -8531,7 +9199,7 @@ index 839f803..b3c46ec 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +371,7 @@ set ( savegame_src
+@@ -356,6 +372,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -20270,7 +20938,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..dd132e4 100644
+index 1885346..bd7d1cb 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -20408,7 +21076,7 @@ index 1885346..dd132e4 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,514 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,525 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -20642,6 +21310,17 @@ index 1885346..dd132e4 100644
 +		pf.tryRead("names", _pitFloors.names);
 +		pf.tryRead("surfaceCap", _pitFloors.surfaceCap);
 +		pf.tryRead("surfaceCapResearch", _pitFloors.surfaceCapResearch);
++	}
++	if (const auto& vl = reader["villains"])
++	{
++		for (const auto& v : vl.children())
++		{
++			VillainRule r;
++			v.tryRead("unit", r.unit); v.tryRead("move", r.move); v.tryRead("trait", r.trait); v.tryRead("item", r.item);
++			v.tryRead("spawn", r.spawn); v.tryRead("pct", r.pct); v.tryRead("range", r.range); v.tryRead("count", r.count);
++			v.tryRead("marked", r.marked);
++			if (!r.unit.empty()) _villains[r.unit] = r;
++		}
 +	}
 +	if (const auto& pb = reader["pitBattle"])
 +	{
@@ -20923,7 +21602,7 @@ index 1885346..dd132e4 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3819,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3830,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -20931,7 +21610,7 @@ index 1885346..dd132e4 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4424,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4435,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -20957,7 +21636,7 @@ index 1885346..dd132e4 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4681,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4692,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -20978,7 +21657,7 @@ index 1885346..dd132e4 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6395,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6406,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -20998,7 +21677,7 @@ index 1885346..dd132e4 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6418,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6429,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -21006,7 +21685,7 @@ index 1885346..dd132e4 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6432,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6443,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -21046,7 +21725,7 @@ index 1885346..dd132e4 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..ad613ee 100644
+index 2242d13..100bb6c 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -21110,7 +21789,7 @@ index 2242d13..ad613ee 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,310 @@ private:
+@@ -327,6 +360,321 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -21266,6 +21945,17 @@ index 2242d13..ad613ee 100644
 +	PitBattleRules _pitBattle;
 +public:
 +	const PitBattleRules &getPitBattleRules() const { return _pitBattle; }
++	/// G.I. Joe: a named villain's Move and trait (Battlescape/Villains.cpp, build/gen_villains.py)
++	struct VillainRule
++	{
++		std::string unit, move, trait, item, spawn;
++		int pct = 100, range = 0, count = 0;
++		std::vector<std::string> marked;
++	};
++private:
++	std::map<std::string, VillainRule> _villains;
++public:
++	const VillainRule *getVillainRule(const std::string &unitType) const { auto i = _villains.find(unitType); return i == _villains.end() ? nullptr : &i->second; }
 +	/// the floor of a grid square (0..5)
 +	static int pitFloorAt(int x, int y) { return (y / 2) * 2 + (x / 3); }
 +	/// G.I. Joe: air (and later sea) fights on the battle engine (DOGFIGHT_DESIGN_v1, AIR_SEA_BUILD_PLAN_v1).
@@ -21421,7 +22111,7 @@ index 2242d13..ad613ee 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1029,124 @@ public:
+@@ -692,6 +1040,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -22040,19 +22730,20 @@ index 6bef22e..8cc3b62 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..50dbf9e 100644
+index 99f24ce..305bdf0 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
-@@ -411,6 +411,8 @@
+@@ -411,6 +411,9 @@
      <ClCompile Include="Basescape\TransfersState.cpp" />
      <ClCompile Include="Battlescape\AbortMissionState.cpp" />
      <ClCompile Include="Battlescape\ActionMenuItem.cpp" />
 +    <ClCompile Include="Battlescape\AirFight.cpp" />
 +    <ClCompile Include="Battlescape\Stealth.cpp" />
++    <ClCompile Include="Battlescape\Villains.cpp" />
      <ClCompile Include="Battlescape\ActionMenuState.cpp" />
      <ClCompile Include="Battlescape\AlienInventory.cpp" />
      <ClCompile Include="Battlescape\AlienInventoryState.cpp" />
-@@ -511,6 +513,8 @@
+@@ -511,6 +514,8 @@
      <ClCompile Include="Engine\Sound.cpp" />
      <ClCompile Include="Engine\SoundSet.cpp" />
      <ClCompile Include="Engine\State.cpp" />
@@ -22061,7 +22752,7 @@ index 99f24ce..50dbf9e 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,10 +550,20 @@
+@@ -546,10 +551,20 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
@@ -22082,7 +22773,7 @@ index 99f24ce..50dbf9e 100644
      <ClCompile Include="Geoscape\Globe.cpp" />
      <ClCompile Include="Geoscape\GraphsState.cpp" />
      <ClCompile Include="Geoscape\InterceptState.cpp" />
-@@ -673,6 +687,7 @@
+@@ -673,6 +688,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -22090,7 +22781,7 @@ index 99f24ce..50dbf9e 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +697,7 @@
+@@ -682,6 +698,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -22098,16 +22789,17 @@ index 99f24ce..50dbf9e 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -890,6 +906,8 @@
+@@ -890,6 +907,9 @@
      <ClInclude Include="Basescape\TransfersState.h" />
      <ClInclude Include="Battlescape\AbortMissionState.h" />
      <ClInclude Include="Battlescape\ActionMenuItem.h" />
 +    <ClInclude Include="Battlescape\AirFight.h" />
 +    <ClInclude Include="Battlescape\Stealth.h" />
++    <ClInclude Include="Battlescape\Villains.h" />
      <ClInclude Include="Battlescape\ActionMenuState.h" />
      <ClInclude Include="Battlescape\AlienInventory.h" />
      <ClInclude Include="Battlescape\AlienInventoryState.h" />
-@@ -970,6 +988,8 @@
+@@ -970,6 +990,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -22116,7 +22808,7 @@ index 99f24ce..50dbf9e 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1053,16 @@
+@@ -1033,6 +1055,16 @@
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
@@ -22133,7 +22825,7 @@ index 99f24ce..50dbf9e 100644
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1042,6 +1072,7 @@
+@@ -1042,6 +1074,7 @@
      <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
      <ClInclude Include="Geoscape\ProductionCompleteState.h" />
      <ClInclude Include="Geoscape\GeoscapeState.h" />
@@ -22141,7 +22833,7 @@ index 99f24ce..50dbf9e 100644
      <ClInclude Include="Geoscape\Globe.h" />
      <ClInclude Include="Geoscape\GraphsState.h" />
      <ClInclude Include="Geoscape\InterceptState.h" />
-@@ -1170,6 +1201,7 @@
+@@ -1170,6 +1203,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -22149,7 +22841,7 @@ index 99f24ce..50dbf9e 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1211,7 @@
+@@ -1179,6 +1213,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
@@ -22464,10 +23156,18 @@ index b25dba2..7f250fd 100644
  	int getUsedContainment(int prisonType, bool onlyExternal = false) const;
  	/// Sets the craft's battlescape status.
 diff --git a/src/Savegame/BattleUnit.cpp b/src/Savegame/BattleUnit.cpp
-index 46fbf1f..1ef652a 100644
+index 46fbf1f..6093476 100644
 --- a/src/Savegame/BattleUnit.cpp
 +++ b/src/Savegame/BattleUnit.cpp
-@@ -28,6 +28,7 @@
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "BattleUnit.h"
++#include "../Battlescape/Villains.h"
+ #include "BattleItem.h"
+ #include <sstream>
+ #include <algorithm>
+@@ -28,6 +29,7 @@
  #include "../Engine/Exception.h"
  #include "../Engine/Options.h"
  #include "../Engine/RNG.h"
@@ -22475,7 +23175,7 @@ index 46fbf1f..1ef652a 100644
  #include "../Battlescape/Pathfinding.h"
  #include "../Battlescape/BattlescapeGame.h"
  #include "../Battlescape/AIModule.h"
-@@ -708,6 +709,13 @@ void BattleUnit::load(const YAML::YamlNodeReader& node, const Mod *mod, const Sc
+@@ -708,6 +710,13 @@ void BattleUnit::load(const YAML::YamlNodeReader& node, const Mod *mod, const Sc
  	reader.tryReadAs<int>("turnsLeftSpottedForSnipersByCivilian", _turnsLeftSpottedForSnipers[FACTION_NEUTRAL]);
  	reader.tryReadAs<int>("turnsSinceStunned", _turnsSinceStunned);
  
@@ -22489,7 +23189,7 @@ index 46fbf1f..1ef652a 100644
  	reader.tryRead("rankInt", _rankInt);
  	reader.tryRead("rankIntUnified", _rankIntUnified);
  	reader.tryRead("moraleRestored", _moraleRestored);
-@@ -826,6 +834,13 @@ void BattleUnit::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared) c
+@@ -826,6 +835,13 @@ void BattleUnit::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared) c
  	writer.tryWriteAs<int>("turnsLeftSpottedForSnipersByCivilian", _turnsLeftSpottedForSnipers[FACTION_NEUTRAL], 0);
  	writer.writeAs<int>("turnsSinceStunned", _turnsSinceStunned);
  
@@ -22503,7 +23203,7 @@ index 46fbf1f..1ef652a 100644
  	writer.write("rankInt", _rankInt);
  	writer.write("rankIntUnified", _rankIntUnified);
  	writer.write("moraleRestored", _moraleRestored);
-@@ -1168,6 +1183,7 @@ void BattleUnit::startWalking(int direction, Position destination, SavedBattleGa
+@@ -1168,6 +1184,7 @@ void BattleUnit::startWalking(int direction, Position destination, SavedBattleGa
  	{
  		_direction = direction;
  		_status = STATUS_WALKING;
@@ -22511,7 +23211,7 @@ index 46fbf1f..1ef652a 100644
  	}
  	if (_haveNoFloorBelow || direction >= Pathfinding::DIR_UP)
  	{
-@@ -1635,6 +1651,11 @@ int BattleUnit::damage(Position relative, int damage, const RuleDamageType *type
+@@ -1635,6 +1652,11 @@ int BattleUnit::damage(Position relative, int damage, const RuleDamageType *type
  	{
  		return 0;
  	}
@@ -22523,7 +23223,22 @@ index 46fbf1f..1ef652a 100644
  
  	RNG::RandomState rand = RNG::globalRandomState().subSequence();
  	damage = reduceByResistance(damage, type->ResistType);
-@@ -1859,6 +1880,30 @@ int BattleUnit::damage(Position relative, int damage, const RuleDamageType *type
+@@ -1841,7 +1863,7 @@ int BattleUnit::damage(Position relative, int damage, const RuleDamageType *type
+ 			setValueMax(_stunlevel, std::get<toStun>(args.data), 0, UnitStats::StunMultipler * _stats.health);
+ 		}
+ 
+-		moraleChange(- reduceByBravery(std::get<toMorale>(args.data)));
++		if (!Villains::steady(save, this)) moraleChange(- reduceByBravery(std::get<toMorale>(args.data)));
+ 
+ 		setValueMax(_tu, - std::get<toTime>(args.data), 0, _stats.tu);
+ 
+@@ -1854,11 +1876,44 @@ int BattleUnit::damage(Position relative, int damage, const RuleDamageType *type
+ 		if (isWoundable())
+ 		{
+ 			setValueMax(_fatalWounds[bodypart], std::get<toWound>(args.data), 0, UnitStats::BaseStatLimit);
+-			moraleChange(-std::get<toWound>(args.data));
++			if (!Villains::steady(save, this)) moraleChange(-std::get<toWound>(args.data)); // G.I. Joe: Buzzer
+ 		}
  
  		setValueMax(_currentArmor[side], - std::get<toArmor>(args.data), 0, _maxArmor[side]);
  
@@ -22551,10 +23266,19 @@ index 46fbf1f..1ef652a 100644
 +			for (int i = 0; i < BODYPART_MAX; ++i) _fatalWounds[i] = 0;
 +			Log(LOG_INFO) << "NAMED down " << getType() << " overkill " << _downedOverkill;
 +		}
++
++		// G.I. Joe: named villains never die either: they go down, are captured or escape
++		if (_health <= 0 && _originalFaction == FACTION_HOSTILE && Villains::neverDies(save, this))
++		{
++			_health = 1;
++			_stunlevel = std::max(_stunlevel, (int)_stats.health);
++			for (int i = 0; i < BODYPART_MAX; ++i) _fatalWounds[i] = 0;
++			Log(LOG_INFO) << "[villain] down " << getType();
++		}
  
  		setFatalShotInfo(side, bodypart);
  
-@@ -2317,8 +2362,11 @@ void BattleUnit::applyPercentages(RuleItemUseCost &cost, const RuleItemUseFlat &
+@@ -2317,8 +2372,11 @@ void BattleUnit::applyPercentages(RuleItemUseCost &cost, const RuleItemUseFlat &
   * @param tu
   * @return flag if it could spend the time units or not.
   */
@@ -22566,7 +23290,7 @@ index 46fbf1f..1ef652a 100644
  	if (tu <= _tu)
  	{
  		_tu -= tu;
-@@ -2337,6 +2385,7 @@ bool BattleUnit::spendTimeUnits(int tu)
+@@ -2337,6 +2395,7 @@ bool BattleUnit::spendTimeUnits(int tu)
   */
  bool BattleUnit::spendEnergy(int energy)
  {
@@ -22574,7 +23298,7 @@ index 46fbf1f..1ef652a 100644
  	if (energy <= _energy)
  	{
  		_energy -= energy;
-@@ -2354,8 +2403,11 @@ bool BattleUnit::spendEnergy(int energy)
+@@ -2354,8 +2413,11 @@ bool BattleUnit::spendEnergy(int energy)
   */
  void BattleUnit::spendCost(const RuleItemUseCost& cost)
  {
@@ -22588,7 +23312,7 @@ index 46fbf1f..1ef652a 100644
  	_morale -= cost.Morale;
  	_health -= cost.Health;
  	_stunlevel += cost.Stun;
-@@ -2841,7 +2893,7 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
+@@ -2841,7 +2903,7 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
  		return;
  	}
  
@@ -22597,7 +23321,7 @@ index 46fbf1f..1ef652a 100644
  	_unitsSpottedThisTurn.clear();
  	_meleeAttackedBy.clear();
  
-@@ -4208,6 +4260,12 @@ bool BattleUnit::postMissionProcedures(const Mod *mod, SavedGame *geoscape, Save
+@@ -4208,6 +4270,12 @@ bool BattleUnit::postMissionProcedures(const Mod *mod, SavedGame *geoscape, Save
  	{
  		recovery = 0;
  	}

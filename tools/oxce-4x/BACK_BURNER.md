@@ -429,6 +429,23 @@ H.I.S.S., which need the same thing in months 4-12. Not started.
 - **Surface install (BRIEF_FOR_BUILD_SurfaceInstall):** the cap is off (surfaceCap 99). The rest (13 fixed spots,
   INSTALL orders instead of placement, the gym-roof second copy) is not built.
 
+### Villains: what the 15 Nov pass left (build/gen_villains.py, Battlescape/Villains.cpp)
+- **Arrival is John's open question** ("save this for later. Deeper discussion"): every villain is missionOnly, so
+  in a campaign none appears unless a deployment names him.
+- **Moves built (Year 1):** Bludd's mark, Firefly's charge, Storm Shadow's strike, Scrap-Iron's launcher (stock
+  launcher AI, vehicles first), Copperhead's drop, Buzzer's cut-through, Ripper's door, Torch's cut and burn.
+  Seen in the test: the mark, the drop, Torch's breach, the charge left. NOT seen: the charge going off on a Joe,
+  Storm Shadow's strike landing, Buzzer, Ripper, a Scrap-Iron launch. Bludd's marked list is Duke and Hawk only
+  ("any Joe who has downed him" needs memory across missions).
+- **Not built:** Zartan's disguise (parked fork), Wild Weasel's strafing run (air fights), and every Move and
+  scripted trait from months 14 on (Baroness, Tomax/Xamot, Destro, CC, Mindbender, Serpentor, Big Boa, Croc
+  Master, Crystal Ball, Raptor's reveal, Zarana, Zandar, Monkeywrench, Thrasher, Zanzibar, Road Pig,
+  Gnawgahyde, Overkill). Copperhead's swamp movement and Torch's faster fire are not built either.
+- **Look:** 19 villains wear the Cobra trooper's sheet until ROSTER renders them; downed villains drop a trooper
+  corpse. Weapons are stand-ins from items the game has (chainsaw, claw and gloves use the sword's sprites).
+- **Test:** New Battle "Cobra villains (Year 1 test)" on HUNTAMB; OXCE_VILLAIN_TEST=1 makes Cobra know every
+  Joe, the Joes hold reaction fire and Cobra never retreats, so each Move shows in a few turns.
+
 ## Broken
 
 ### WATCH: big maps (.MAP2), the first place to look if a battle will not load or runs out of memory
