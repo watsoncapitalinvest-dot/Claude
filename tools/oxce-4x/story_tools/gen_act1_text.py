@@ -380,17 +380,17 @@ S.update({
  ]),
  'STR_EVENT_FLAGG_TURNS_TITLE': 'GENERAL FLAGG',
  'STR_EVENT_FLAGG_TURNS': P.join([
-   "FLAGG: I read it twice. Then I put the man from Langley on a plane.",
+   "FLAGG: I read it twice. Then I put the man from Langley on a plane, and every one of your people he borrowed is home tonight.",
    "I was sent here to hand you over. I'm staying to make sure nobody ever tries again. From today I speak for G.I. Joe in Washington, and the Pentagon hears it from me first. Colonel Hawk commands this team. I'll keep the politicians off his back.",
  ]),
  'STR_EVENT_FLAGG_TURNS_EFFECTS': 'General Flagg is G.I. Joe\'s high commander and Pentagon liaison: funding +10%, Pentagon directives pay 25% more and failed ones cost half the goodwill, public exposure grows more slowly, and the U.S.S. Flagg and Admiral Keel-Haul join the team.',
  'STR_EVENT_CIA_TAKES_JOE_TITLE': 'TEMPORARY ASSIGNMENT',
  'STR_EVENT_CIA_TAKES_JOE': P.join([
    "HAWK: Orders came down this morning. {0} has been reassigned to \"a joint task force\" for an unspecified period. No unit, no location, no number to call.",
-   "Nobody in my chain of command signed this. Find out who did.",
+   "Nobody in my chain of command signed this, and it isn't the first time. Find out who did.",
  ]),
  'STR_EVENT_CIA_RETURNS_JOE_TITLE': 'BACK WITH US',
- 'STR_EVENT_CIA_RETURNS_JOE': "HAWK: General Flagg made one phone call. {0} is back with us. Give them a few days; wherever they were, it wasn't a holiday.",
+ 'STR_EVENT_CIA_RETURNS_JOE': "HAWK: {0} is back with us. No report, no explanation, and orders not to discuss it. Give them a few days; wherever they were, it wasn't a holiday.",
  'STR_FLAGG_HIGH_COMMANDER': 'High Commander',
  'STR_CIA_ASSIGNMENT': 'CIA assignment',
 })

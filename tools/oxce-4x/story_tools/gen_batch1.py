@@ -170,10 +170,10 @@ A = [
  topic('STR_EXTENSIVE_ENTERPRISES', 90, 40, deps=[LOCK]),
  # John 13 Nov 02:00: laundering is fought by tracing the money (needs the front company found AND banded cash decoded)
  topic('STR_FOLLOW_THE_MONEY', 200, 40, deps=['STR_EXTENSIVE_ENTERPRISES', 'STR_BANDED_CASH']),
- # John 14 Nov 19:25: General Flagg and the CIA (STORY_FlaggArc_v1). The month-7 event 'Flagg arrives' unlocks the first.
+ # John 14 Nov 19:25-19:42: General Flagg and the CIA (STORY_FlaggArc_v1). Each topic is opened by a CIA pull (1st, 2nd, 3rd) and needs the one before.
  topic('STR_FLAGG_ODD_REQUESTS', 40, 20, deps=[LOCK], unlocks=['STR_FLAGG_THE_LIAISON']),
  topic('STR_FLAGG_THE_LIAISON', 60, 20, deps=[LOCK], unlocks=['STR_FLAGG_MISSING_FILE']),
- topic('STR_FLAGG_MISSING_FILE', 60, 40, deps=[LOCK]),                          # done: the 'Flagg turns' event (BUILD)
+ topic('STR_FLAGG_MISSING_FILE', 60, 40, deps=[LOCK]),                          # opened by the 3rd CIA pull; done: the 'Flagg turns' event (BUILD)
  topic('STR_BLUDD_CALLING_CARD', 40, 20, needItem=True, destroyItem=True, lookup='STR_MAJOR_BLUDD'),
  topic('STR_SHIPPING_MANIFEST', 50, 15, needItem=True, destroyItem=True),
  topic('STR_PILOT_LOGBOOK', 50, 15, needItem=True, destroyItem=True),
