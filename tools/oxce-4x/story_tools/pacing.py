@@ -101,6 +101,15 @@ def lane_speed(lane, m):
     f = min(1.0, away / 30.0)
     return (1 - f) + f * AWAY
 
+# Pit floors (PIT_FLOORS_v1, John 15 Nov 02:14-02:45): only Lab Benches (10 seats, 1 square) fit in the Pit, on Utility;
+# the full Lab (25) goes on an outpost pad, at most 1 per ordinary outpost (the HQ airfield is the Day 1 outpost);
+# more labs need a Research Lab outpost (Forward Operations I first; founding $300k / 10 days, comes with a Lab, every pad
+# can take another, labs there work 25% faster). PITFLOORS=0 = the old open grid. BENCHES = extra benches that fit on Utility.
+PITFLOORS = os.environ.get('PITFLOORS', '1') == '1'
+BENCHES = int(os.environ.get('BENCHES', '3'))
+BENCH = (150000, 10, 7500)
+RL_FOUND = (300000, 10, 20000)
+if PITFLOORS and 'STR_FORWARD_OPERATIONS_1' not in JOE_ORDER: JOE_ORDER.insert(JOE_ORDER.index('STR_FIELD_RADIO') + 1, 'STR_FORWARD_OPERATIONS_1')
 START = {}
 def run(strat):
     target = STRATS[strat]; day = 0; cash = ECON['start']; sci = 10; labs = LAB_START; rooms = HOUSE_START; nlab_built = 0; nq_built = 0
@@ -123,6 +132,14 @@ def run(strat):
     order = [k for k, r in T.items() if r['file'] != 'gijoe_research_joe.rul'] + JOE_ORDER   # intel/story first
     order = [k for k in order if k in T]
     low_cash_days = 0
+    st = dict(bench=0, hq=0, rl=0, rl_seats=0, monthly_extra=0)
+    def next_lab():
+        if st['bench'] < BENCHES: return ('bench', BENCH, 10)
+        if st['hq'] < 1: return ('hq', ECON['lab'], 25)
+        if 'STR_FORWARD_OPERATIONS_1' not in done: return None
+        if st['rl'] == 0: return ('rl_found', (RL_FOUND[0] + ECON['lab'][0], RL_FOUND[1] + 10, RL_FOUND[2] + ECON['lab'][2]), 25)
+        if st['rl'] < 5: return ('rl', ECON['lab'], 25)
+        return None
     while day < 365:
         m = day / 30
         # finish construction
@@ -130,6 +147,11 @@ def run(strat):
             if b[1] <= day:
                 building.remove(b)
                 if b[0] == 'lab': labs += LAB_ADD; nlab_built += 1
+                elif b[0].startswith('pf_'):
+                    kind, seats, mon = b[2]; labs += seats; st['monthly_extra'] += mon
+                    if kind == 'bench': st['bench'] += 1
+                    elif kind == 'hq': st['hq'] += 1
+                    else: st['rl'] += 1; st['rl_seats'] += seats
                 elif b[0] == 'an': an_seats += 6; nan_built += 1
                 else: rooms += HOUSE_ADD; nq_built += 1
         # department rooms: build the room the day its lane is first wanted
@@ -153,7 +175,11 @@ def run(strat):
             sci += 1; cash -= ECON['sci_hire']; spent['hiring'] += ECON['sci_hire']
         if want + 10 > rooms and not any(b[0] == 'q' for b in building) and cash > ECON['quarters'][0] + 1e6:
             building.append(('q', day + ECON['quarters'][1])); cash -= ECON['quarters'][0]; spent['quarters'] += ECON['quarters'][0]
-        if want > labs and not any(b[0] == 'lab' for b in building) and cash > ECON['lab'][0] + 1e6:
+        if PITFLOORS:
+            nl = next_lab()
+            if want > labs and nl and not any(b[0].startswith('pf_') for b in building) and cash > nl[1][0] + 1e6:
+                building.append(('pf_' + nl[0], day + nl[1][1], (nl[0], nl[2], nl[1][2]))); cash -= nl[1][0]; spent['labs'] += nl[1][0]
+        elif want > labs and not any(b[0] == 'lab' for b in building) and cash > ECON['lab'][0] + 1e6:
             building.append(('lab', day + ECON['lab'][1])); cash -= ECON['lab'][0]; spent['labs'] += ECON['lab'][0]
         # research: up to PARALLEL projects in priority order
         active = []
@@ -168,17 +194,19 @@ def run(strat):
         intel = [k for k in active if ANALYSTS and T[k].get('lane') == 'INTEL']
         rest = [k for k in active if k not in intel]
         for k in active:
-            n = (an / max(1, len(intel))) if k in intel else (sci / max(1, len(rest)))
+            eff = sci + (0.25 * min(st['rl_seats'], max(0, sci - (labs - st['rl_seats']))) if PITFLOORS else 0)
+            n = (an / max(1, len(intel))) if k in intel else (eff / max(1, len(rest)))
             prog[k] += n * lane_speed(T[k].get('lane'), m)
             START.setdefault(strat, {}).setdefault(k, m)
             if prog[k] >= T[k]['cost'] * (INTEL_SCALE if k in intel else 1): done[k] = day / 30
         # money, daily slice of the month
         monthly = ECON['funding'] + ECON['other_income'] - ECON['soldiers'] - ECON['engineers'] - (sci + an) * ECON['sci_salary'] - nan_built * AN_ROOM[2] \
-                  - ECON['upkeep'] - nlab_built * ECON['lab'][2] - nq_built * ECON['quarters'][2]
+                  - ECON['upkeep'] - nlab_built * ECON['lab'][2] - nq_built * ECON['quarters'][2] - st['monthly_extra']
         cash += monthly / 30
         if cash < 0: low_cash_days += 1
         day += 1
     done['_rooms'] = {ln: round(d / 30, 2) for ln, d in room_day.items()}
+    done['_labs'] = dict(st)
     return done, dict(sci=sci, analysts=an, intel_rooms=nan_built, lab_seats=labs, labs_built=nlab_built, cash=round(cash / 1e6, 2), spent={k: round(v / 1e6, 2) for k, v in spent.items()},
                       broke_days=low_cash_days, monthly_at_end=round(monthly / 1e6, 2))
 out = {}
