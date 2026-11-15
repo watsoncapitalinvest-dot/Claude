@@ -152,6 +152,25 @@ the fakes is what buys the ordering.
 
 ## Owed
 
+### The Pit floors: what the 15 Nov pass left (PIT_FLOORS_v1)
+Built: six 3 x 2 blocks on the 6 x 6 grid (Surface + floors 1-5), a room only on its floor, no corridors
+needed, the Day 1 layout, Lab Bench 10 seats, the Surface cap 2/3/4, Research Lab and Manufacturing outpost
+kinds, the Lab and Fabrication Shop as outpost add-ons. Owed:
+- the HQ Command Center airfield as the Day 1 outpost with Ace's Skystriker (needs a new-game hook; the game
+  starts with no Skystriker today, so nothing is lost yet);
+- labs and shops 25% faster at the two new outpost kinds; at most one Lab or Fabrication Shop on an ordinary outpost;
+- the Command Center as a 2x1 room (it is the 1x1 Access Lift);
+- base defence on the stacked canon Pit (MAPS' per-facility pieces; the floors fight side by side on one flat map now);
+- the second Pit: its Command Center placement does not check the floor yet (PlaceLiftState);
+- old campaign saves keep their 6 x 6 layout; rooms off their floor stay where they are.
+
+### Shipping: what the 15 Nov pass left (SEA design 7, 9, 12)
+- the warning network for hijackings (always alerted now); the held ship sailing to a hidden Cobra port to be tailed;
+- Washington impounding a Cobra line at 3 Confirmed ships; wrecks and the wreck dive;
+- a bluffing crew that reveals itself partway through boarding (aboard from the start now);
+- a merchant picture for the sea fight (the Cobra ship greyed is the stand-in);
+- trackers from bugged crates confirming a ship at once (only research and analysts feed ship intel now).
+
 ### MAPS' 13-14 Nov maps: wired for New Battle, not for the campaign (14 Nov)
 
 Harbour, hijacked ship, container ship, riot, chop shop, junkyard, small city (day and damaged),

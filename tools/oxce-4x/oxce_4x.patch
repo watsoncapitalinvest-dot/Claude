@@ -1,5 +1,5 @@
 diff --git a/src/Basescape/BaseView.cpp b/src/Basescape/BaseView.cpp
-index f822dab..2b39106 100644
+index f822dab..e182a99 100644
 --- a/src/Basescape/BaseView.cpp
 +++ b/src/Basescape/BaseView.cpp
 @@ -17,6 +17,7 @@
@@ -10,7 +10,53 @@ index f822dab..2b39106 100644
  #include <algorithm>
  #include <sstream>
  #include <cmath>
-@@ -659,9 +660,60 @@ void BaseView::draw()
+@@ -31,6 +32,7 @@
+ #include "../Engine/Options.h"
+ #include <climits>
+ #include "../Mod/Texture.h"
++#include "../Geoscape/Outposts.h"
+ 
+ namespace OpenXcom
+ {
+@@ -218,6 +220,18 @@ void BaseView::setSelectable(int sizeX, int sizeY)
+  * 6: trying to upgrade over existing facility, but ruleset disallows it
+  * 7: trying to upgrade over existing facility, but all buildings next to it are under construction and build queue is off
+  */
++const Mod *BaseView::pitMod = nullptr;
++
++/// G.I. Joe: is this base a Pit laid out in floors
++bool BaseView::_game_pitFloors() const
++{
++	const Mod *mod = pitMod;
++	if (!_base || !mod) return false;
++	if (!mod->getPitFloorRules().on) return false;
++	const auto *k = Outposts::kindOf(mod, _base);
++	return !k || k->pit;
++}
++
+ BasePlacementErrors BaseView::getPlacementError(const RuleBaseFacility *rule, BaseFacility *facilityBeingMoved, bool isStartFacility) const
+ {
+ 	// We'll need to know for the final check if we're upgrading an existing facility
+@@ -305,6 +319,10 @@ BasePlacementErrors BaseView::getPlacementError(const RuleBaseFacility *rule, Ba
+ 		}
+ 	}
+ 
++	// G.I. Joe: in a Pit every floor is reached by the shafts, so a room needs no neighbour (PIT_FLOORS_v1)
++	if (_game_pitFloors())
++		return BPE_None;
++
+ 	bool bq=Options::allowBuildingQueue;
+ 	bool hasConnectingFacility = false;
+ 
+@@ -358,6 +376,7 @@ BasePlacementErrors BaseView::getPlacementError(const RuleBaseFacility *rule, Ba
+  */
+ bool BaseView::isQueuedBuilding(const RuleBaseFacility *rule) const
+ {
++	if (_game_pitFloors()) return false;
+ 	for (int i = 0; i < rule->getSizeX(); ++i)
+ 	{
+ 		if ((_gridY > 0 && _facilities[_gridX + i][_gridY - 1] != 0 && _facilities[_gridX + i][_gridY - 1]->isBuiltOrHadPreviousFacility()) ||
+@@ -659,9 +678,63 @@ void BaseView::draw()
  void BaseView::blit(SDL_Surface *surface)
  {
  	Surface::blit(surface);
@@ -62,6 +108,9 @@ index f822dab..2b39106 100644
 +				++craftIt;
 +			}
 +		}
++		HiUI::baseFloorNames.clear();
++		if (_game_pitFloors() && _lang)
++			for (const auto &n : pitMod->getPitFloorRules().names) HiUI::baseFloorNames.push_back(_lang->getString(n));
 +		HiUI::nativeBaseView(this, GRID_SIZE, rooms, right, down, craft);
 +	}
  	if (_selector != 0)
@@ -71,8 +120,29 @@ index f822dab..2b39106 100644
  	}
  }
  
+diff --git a/src/Basescape/BaseView.h b/src/Basescape/BaseView.h
+index 149e889..225926a 100644
+--- a/src/Basescape/BaseView.h
++++ b/src/Basescape/BaseView.h
+@@ -36,6 +36,7 @@ enum BasePlacementErrors : int;
+  * Takes a certain base and displays all its facilities
+  * and status, allowing players to manage them.
+  */
++class Mod;
+ class BaseView : public InteractiveSurface
+ {
+ private:
+@@ -58,6 +59,8 @@ private:
+ 	/// Updates the neighborFacility's build time. This is for internal use only (reCalcQueuedBuildings()).
+ 	void updateNeighborFacilityBuildTime(BaseFacility* facility, BaseFacility* neighbor);
+ public:
++	bool _game_pitFloors() const;   // G.I. Joe
++	static const Mod *pitMod;  // G.I. Joe: set by the states that make a BaseView
+ 	/// Creates a new base view at the specified position and size.
+ 	BaseView(int width, int height, int x = 0, int y = 0);
+ 	/// Cleans up the base view.
 diff --git a/src/Basescape/BasescapeState.cpp b/src/Basescape/BasescapeState.cpp
-index 5d0467a..172f637 100644
+index 5d0467a..2cffcba 100644
 --- a/src/Basescape/BasescapeState.cpp
 +++ b/src/Basescape/BasescapeState.cpp
 @@ -16,7 +16,9 @@
@@ -85,15 +155,18 @@ index 5d0467a..172f637 100644
  #include "../Engine/Game.h"
  #include "../Mod/Mod.h"
  #include "../Engine/LocalizedText.h"
-@@ -71,6 +73,7 @@ namespace OpenXcom
+@@ -71,8 +73,10 @@ namespace OpenXcom
  BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(globe)
  {
  	// Create objects
 +	_bg = new Surface(320, 200, 0, 0);
  	_txtFacility = new Text(192, 9, 0, 0);
  	_view = new BaseView(192, 192, 0, 8);
++	BaseView::pitMod = _game->getMod();
  	_mini = new MiniBaseView(128, 16, 192, 41);
-@@ -92,6 +95,7 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+ 	_edtBase = new TextEdit(this, 127, 17, 193, 0);
+ 	_txtLocation = new Text(126, 9, 194, 16);
+@@ -92,6 +96,7 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
  	// Set palette
  	setInterface("basescape");
  
@@ -101,7 +174,7 @@ index 5d0467a..172f637 100644
  	add(_view, "baseView", "basescape");
  	add(_mini, "miniBase", "basescape");
  	add(_txtFacility, "textTooltip", "basescape");
-@@ -112,6 +116,19 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+@@ -112,6 +117,19 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
  
  	centerAllSurfaces();
  
@@ -121,7 +194,7 @@ index 5d0467a..172f637 100644
  	// Set up objects
  	if (_globe)
  	{
-@@ -195,6 +212,9 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+@@ -195,6 +213,9 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
   */
  BasescapeState::~BasescapeState()
  {
@@ -131,7 +204,7 @@ index 5d0467a..172f637 100644
  	// Clean up any temporary bases
  	bool exists = false;
  	for (const auto* xbase : *_game->getSavedGame()->getBases())
-@@ -426,6 +446,12 @@ void BasescapeState::viewLeftClick(Action *)
+@@ -426,6 +447,12 @@ void BasescapeState::viewLeftClick(Action *)
  			}
  			int errorColor1 = _game->getMod()->getInterface("basescape")->getElement("errorMessage")->color;
  			int errorColor2 = _game->getMod()->getInterface("basescape")->getElement("errorPalette")->color;
@@ -158,7 +231,7 @@ index 711b3d9..8733ad3 100644
  	BaseView *_view;
  	MiniBaseView *_mini;
 diff --git a/src/Basescape/BuildFacilitiesState.cpp b/src/Basescape/BuildFacilitiesState.cpp
-index 9b139ca..446b2fd 100644
+index 9b139ca..1b2feca 100644
 --- a/src/Basescape/BuildFacilitiesState.cpp
 +++ b/src/Basescape/BuildFacilitiesState.cpp
 @@ -16,8 +16,10 @@
@@ -195,7 +268,7 @@ index 9b139ca..446b2fd 100644
  
  }
  
-@@ -159,6 +170,8 @@ void BuildFacilitiesState::populateBuildList()
+@@ -159,13 +170,26 @@ void BuildFacilitiesState::populateBuildList()
  				continue;
  			}
  		}
@@ -204,6 +277,34 @@ index 9b139ca..446b2fd 100644
  		_facilities.push_back(rule);
  	}
  
+ 	int row = 0;
++	// G.I. Joe: in a Pit each room says which floor it goes on
++	const auto &PF = _game->getMod()->getPitFloorRules();
++	const auto *ok = Outposts::kindOf(_game->getMod(), _base);
++	auto label = [&](const RuleBaseFacility *r) -> std::string
++	{
++		std::string s = tr(r->getType());
++		auto it = PF.floors.find(r->getType());
++		if (PF.on && (!ok || ok->pit) && it != PF.floors.end() && it->second >= 0 && it->second < (int)PF.names.size())
++			s += it->second == 0 ? std::string(" [S]") : " [" + std::to_string(it->second) + "]";
++		return s;
++	};
+ 	for (const auto* facRule : _facilities)
+ 	{
+-		_lstFacilities->addRow(1, tr(facRule->getType()).c_str());
++		_lstFacilities->addRow(1, label(facRule).c_str());
+ 		++row;
+ 	}
+ 
+@@ -174,7 +198,7 @@ void BuildFacilitiesState::populateBuildList()
+ 		Uint8 disabledColor = _lstFacilities->getSecondaryColor();
+ 		for (const auto* facRule : _disabledFacilities)
+ 		{
+-			_lstFacilities->addRow(1, tr(facRule->getType()).c_str());
++			_lstFacilities->addRow(1, label(facRule).c_str());
+ 			_lstFacilities->setRowColor(row, disabledColor);
+ 			++row;
+ 		}
 diff --git a/src/Basescape/CraftInfoState.cpp b/src/Basescape/CraftInfoState.cpp
 index 2597a24..ee80251 100644
 --- a/src/Basescape/CraftInfoState.cpp
@@ -335,20 +436,29 @@ index 7fe1da3..797fac5 100644
  	void mouseOver(Action *action, State *state) override;
  	void setColor(Uint8 color) override;
 diff --git a/src/Basescape/PlaceFacilityState.cpp b/src/Basescape/PlaceFacilityState.cpp
-index c52f7ad..0daf35e 100644
+index c52f7ad..2807495 100644
 --- a/src/Basescape/PlaceFacilityState.cpp
 +++ b/src/Basescape/PlaceFacilityState.cpp
-@@ -16,7 +16,9 @@
+@@ -16,7 +16,10 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
 +#include "../Geoscape/Outposts.h"
  #include "PlaceFacilityState.h"
++#include "../Mod/RuleResearch.h"
 +#include "../Engine/HiUI.h"
  #include "../Engine/Game.h"
  #include "../Engine/Sound.h"
  #include "../Mod/Mod.h"
-@@ -82,6 +84,13 @@ PlaceFacilityState::PlaceFacilityState(Base *base, const RuleBaseFacility *rule,
+@@ -54,6 +57,7 @@ PlaceFacilityState::PlaceFacilityState(Base *base, const RuleBaseFacility *rule,
+ 	// Create objects
+ 	_window = new Window(this, 128, 160, 192, 40);
+ 	_view = new BaseView(192, 192, 0, 8);
++	BaseView::pitMod = _game->getMod();
+ 	_btnCancel = new TextButton(112, 16, 200, 176);
+ 	_txtFacility = new Text(110, 9, 202, 50);
+ 	_txtCost = new Text(110, 9, 202, 62);
+@@ -82,6 +86,13 @@ PlaceFacilityState::PlaceFacilityState(Base *base, const RuleBaseFacility *rule,
  
  	centerAllSurfaces();
  
@@ -362,7 +472,7 @@ index c52f7ad..0daf35e 100644
  	// Set up objects
  	setWindowBackground(_window, "placeFacility");
  
-@@ -145,6 +154,9 @@ PlaceFacilityState::PlaceFacilityState(Base *base, const RuleBaseFacility *rule,
+@@ -145,6 +156,9 @@ PlaceFacilityState::PlaceFacilityState(Base *base, const RuleBaseFacility *rule,
   */
  PlaceFacilityState::~PlaceFacilityState()
  {
@@ -372,13 +482,24 @@ index c52f7ad..0daf35e 100644
  
  }
  
-@@ -220,6 +232,15 @@ void PlaceFacilityState::viewClick(Action *)
+@@ -220,6 +234,26 @@ void PlaceFacilityState::viewClick(Action *)
  		}
  
  		// placing a brand new facility
 +		{
 +			// G.I. Joe: at an outpost add-ons go only on its pads (OUTPOSTS_v2_DECISIONS)
-+			const std::string why = Outposts::canBuild(_game->getMod(), _base, _rule, _view->getGridX(), _view->getGridY());
++			std::string why = Outposts::canBuild(_game->getMod(), _base, _rule, _view->getGridX(), _view->getGridY());
++			// G.I. Joe: the Surface holds only what the cover hides - 2 rooms, 3 and 4 with Motor Pool Cover I and II
++			const auto &PF = _game->getMod()->getPitFloorRules();
++			if (why.empty() && PF.on && _view->_game_pitFloors() && Mod::pitFloorAt(_view->getGridX(), _view->getGridY()) == 0)
++			{
++				int cap = PF.surfaceCap, used = 0;
++				for (const auto &r : PF.surfaceCapResearch)
++					if (const RuleResearch *rr = _game->getMod()->getResearch(r)) if (_game->getSavedGame()->isResearched(rr, false)) ++cap;
++				for (const auto *f : *_base->getFacilities())
++					if (Mod::pitFloorAt(f->getX(), f->getY()) == 0) ++used;
++				if (used >= cap) why = "STR_PIT_SURFACE_FULL";
++			}
 +			if (!why.empty())
 +			{
 +				_game->pushState(new ErrorMessageState(tr(why), _palette, _game->getMod()->getInterface("placeFacility")->getElement("errorMessage")->color, "BACK13.SCR", _game->getMod()->getInterface("placeFacility")->getElement("errorPalette")->color));
@@ -388,6 +509,18 @@ index c52f7ad..0daf35e 100644
  		BasePlacementErrors placementErrorCode = _view->getPlacementError(_rule);
  		if (placementErrorCode)
  		{
+diff --git a/src/Basescape/PlaceLiftState.cpp b/src/Basescape/PlaceLiftState.cpp
+index cafb429..778c73c 100644
+--- a/src/Basescape/PlaceLiftState.cpp
++++ b/src/Basescape/PlaceLiftState.cpp
+@@ -51,6 +51,7 @@ PlaceLiftState::PlaceLiftState(Base *base, Globe *globe, bool first) : _base(bas
+ {
+ 	// Create objects
+ 	_view = new BaseView(192, 192, 0, 8);
++	BaseView::pitMod = _game->getMod();
+ 	_txtTitle = new Text(320, 9, 0, 0);
+ 	_window = new Window(this, 128, 160, 192, 40, POPUP_NONE);
+ 	_txtHeader = new Text(118, 17, 197, 48);
 diff --git a/src/Basescape/PurchaseState.cpp b/src/Basescape/PurchaseState.cpp
 index cce8616..a9fbb98 100644
 --- a/src/Basescape/PurchaseState.cpp
@@ -8675,10 +8808,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..433eb85
+index 0000000..37647e0
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3294 @@
+@@ -0,0 +1,3311 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -11377,6 +11510,8 @@ index 0000000..433eb85
 +	}
 +}
 +
++std::vector<std::string> baseFloorNames;
++
 +void nativeBaseView(const Surface *view, int g, const std::vector<Room> &rooms,
 +	const std::vector<std::pair<int, int> > &linksRight, const std::vector<std::pair<int, int> > &linksDown,
 +	const std::vector<Docked> &craft)
@@ -11555,6 +11690,21 @@ index 0000000..433eb85
 +		const Img *im = (it != bgImages.end() && it->second.ok) ? &it->second : flatTwin(d.frame);
 +		if (!im) continue;
 +		stretch(*im, 0, 0, im->w, im->h, (int)DX(vx + d.x), (int)DY(vy + d.y + 3), (int)DX(vx + d.x + d.frame->getWidth()), (int)DY(vy + d.y + 3 + d.frame->getHeight()));
++	}
++	// G.I. Joe: the Pit's floors (PIT_FLOORS_v1): six blocks of 3 x 2, a gold rule between them, each named
++	if (baseFloorNames.size() >= 6)
++	{
++		const Uint32 gold = 0xC9A13E;
++		fillRect((int)DX(vx + 3 * g) - 2, Y0, (int)DX(vx + 3 * g) + 2, Y1, gold);
++		for (int yy = 2; yy <= 4; yy += 2) fillRect(X0, (int)DY(vy + yy * g) - 2, X1, (int)DY(vy + yy * g) + 2, gold);
++		for (int b = 0; b < 6; ++b)
++		{
++			const int bx = b % 2, by = b / 2;
++			const int lx0 = (int)DX(vx + bx * 3 * g) + (int)(k * 1.5), ly0 = (int)DY(vy + by * 2 * g) + (int)(k * 1.2);
++			const int lx1 = (int)DX(vx + (bx + 1) * 3 * g) - (int)(k * 1.5), ly1 = ly0 + (int)(k * 5);
++			fillRect(lx0 - 2, ly0 - 1, std::min(lx1, lx0 + (int)(k * 3.1 * baseFloorNames[b].size()) + 4), ly1 + 1, 0x101309);
++			if (f) setType(*f, baseFloorNames[b], lx0, ly0, lx1, ly1, k * 3.0, k * 4, 0, 0, gold);
++		}
 +	}
 +	claim(r);
 +}
@@ -11975,10 +12125,10 @@ index 0000000..433eb85
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..b1a7581
+index 0000000..61de77a
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,203 @@
+@@ -0,0 +1,205 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -12172,6 +12322,8 @@ index 0000000..b1a7581
 +	struct Room { int x, y, w, h; std::string name; int kind; int buildDays; bool disabled, hadPrevious; int ammo, ammoMax; std::vector<const Surface*> frames; };
 +	struct Docked { const Surface *frame; int x, y; };   // a craft sprite and where the view put it (view px)
 +	/// After BaseView has blitted. Paints the whole plan over it.
++	/// G.I. Joe: the Pit's six floor names (empty = no floors drawn)
++	extern std::vector<std::string> baseFloorNames;
 +	void nativeBaseView(const Surface *view, int gridPx, const std::vector<Room> &rooms,
 +		const std::vector<std::pair<int, int> > &linksRight, const std::vector<std::pair<int, int> > &linksDown,
 +		const std::vector<Docked> &craft);
@@ -17301,10 +17453,10 @@ index f1e9acc..618b326 100644
  		_fundingDiff += country->getFunding().back() - country->getFunding().at(country->getFunding().size()-2);
 diff --git a/src/Geoscape/Outposts.cpp b/src/Geoscape/Outposts.cpp
 new file mode 100644
-index 0000000..c095785
+index 0000000..6395920
 --- /dev/null
 +++ b/src/Geoscape/Outposts.cpp
-@@ -0,0 +1,217 @@
+@@ -0,0 +1,231 @@
 +/*
 + * G.I. Joe outposts (see Outposts.h).
 + */
@@ -17463,6 +17615,9 @@ index 0000000..c095785
 +		return std::find(k->addons.begin(), k->addons.end(), rule->getType()) != k->addons.end();
 +	// at a Pit: no outpost-only add-ons; piers only on the water
 +	if (std::find(R.addonOnly.begin(), R.addonOnly.end(), rule->getType()) != R.addonOnly.end()) return false;
++	// the Pit's floors: only the rooms that have a floor (the big Lab, the Fabrication Shop, hangars: off site)
++	const auto &PF = mod->getPitFloorRules();
++	if (PF.on && !PF.floors.count(rule->getType())) return false;
 +	if (pierSize(mod, rule->getType()) && !onWater(base)) return false;
 +	return true;
 +}
@@ -17472,7 +17627,18 @@ index 0000000..c095785
 +	if (!mod->getOutpostRules().on) return "";
 +	if (!canList(mod, base, rule)) return "STR_OUTPOST_NOT_HERE";
 +	const auto *k = kindOf(mod, base);
-+	if (!k || k->pit) return "";
++	if (!k || k->pit)
++	{
++		// a room goes on its own floor, wholly inside it (PIT_FLOORS_v1 section 2)
++		const auto &PF = mod->getPitFloorRules();
++		if (!PF.on) return "";
++		auto it = PF.floors.find(rule->getType());
++		if (it == PF.floors.end()) return "STR_OUTPOST_NOT_HERE";
++		for (int dx = 0; dx < rule->getSizeX(); ++dx)
++			for (int dy = 0; dy < rule->getSizeY(); ++dy)
++				if (Mod::pitFloorAt(x + dx, y + dy) != it->second) return "STR_PIT_WRONG_FLOOR";
++		return "";
++	}
 +	// at an outpost: only on its pads, one add-on to a pad
 +	for (int dx = 0; dx < rule->getSizeX(); ++dx)
 +		for (int dy = 0; dy < rule->getSizeY(); ++dy)
@@ -19930,7 +20096,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..9006224 100644
+index 1885346..8b789d3 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -20068,7 +20234,7 @@ index 1885346..9006224 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,482 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,490 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -20294,6 +20460,14 @@ index 1885346..9006224 100644
 +		st.tryRead("silentUnits", _stealth.silentUnits);
 +		st.tryRead("keenEars", _stealth.keenEars);
 +		st.tryRead("dartWeapons", _stealth.dartWeapons);
++	}
++	if (const auto& pf = reader["pitFloors"])
++	{
++		_pitFloors.on = true;
++		pf.tryRead("floors", _pitFloors.floors);
++		pf.tryRead("names", _pitFloors.names);
++		pf.tryRead("surfaceCap", _pitFloors.surfaceCap);
++		pf.tryRead("surfaceCapResearch", _pitFloors.surfaceCapResearch);
 +	}
 +	if (const auto& sh = reader["shipping"])
 +	{
@@ -20551,7 +20725,7 @@ index 1885346..9006224 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3787,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3795,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -20559,7 +20733,7 @@ index 1885346..9006224 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4392,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4400,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -20585,7 +20759,7 @@ index 1885346..9006224 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4649,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4657,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -20606,7 +20780,7 @@ index 1885346..9006224 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6363,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6371,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -20626,7 +20800,7 @@ index 1885346..9006224 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6386,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6394,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -20634,7 +20808,7 @@ index 1885346..9006224 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6400,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6408,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -20674,7 +20848,7 @@ index 1885346..9006224 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..4341a7f 100644
+index 2242d13..dc7dd6a 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -20738,7 +20912,7 @@ index 2242d13..4341a7f 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,276 @@ private:
+@@ -327,6 +360,294 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -20862,6 +21036,24 @@ index 2242d13..4341a7f 100644
 +	ShippingRules _shipping;
 +public:
 +	const ShippingRules &getShippingRules() const { return _shipping; }
++	/// G.I. Joe: the Pit's five floors and its surface (claude/PIT_FLOORS_v1.md). The 6 x 6 grid is six blocks of
++	/// 3 x 2 free squares, one a floor (the fixed shaft column is not drawn): block (bx, by) = (x / 3, y / 2) is
++	/// floor by * 2 + bx: 0 Surface, 1 Staging, 2 Operations, 3 Training, 4 Quarters, 5 Utility.
++	/// A room goes only on its own floor, wholly inside it; every floor is reached by the shafts.
++	struct PitFloorRules
++	{
++		bool on = false;
++		std::map<std::string, int> floors;      ///< room type -> its floor; a room not listed can't be built in a Pit
++		std::vector<std::string> names;         ///< the six floor names (string ids)
++		int surfaceCap = 2;                     ///< rooms on the Surface; +1 for each of surfaceCapResearch known
++		std::vector<std::string> surfaceCapResearch;
++	};
++private:
++	PitFloorRules _pitFloors;
++public:
++	const PitFloorRules &getPitFloorRules() const { return _pitFloors; }
++	/// the floor of a grid square (0..5)
++	static int pitFloorAt(int x, int y) { return (y / 2) * 2 + (x / 3); }
 +	/// G.I. Joe: air (and later sea) fights on the battle engine (DOGFIGHT_DESIGN_v1, AIR_SEA_BUILD_PLAN_v1).
 +	/// A craft or Cobra aircraft becomes a unit; the floors are the decks.
 +	struct AirCraftRule
@@ -21015,7 +21207,7 @@ index 2242d13..4341a7f 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +995,124 @@ public:
+@@ -692,6 +1013,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -21936,10 +22128,18 @@ index 97ef4f5..0dbe163 100644
  	void addMissionLocation(const std::string &varName, const std::string &regionName, int zoneNumber, int maximum);
  	/// Checks that a given mission location (city or whatever) isn't stored in our list of previously attacked locations.
 diff --git a/src/Savegame/Base.cpp b/src/Savegame/Base.cpp
-index ac1a454..d05b726 100644
+index ac1a454..aa8d97c 100644
 --- a/src/Savegame/Base.cpp
 +++ b/src/Savegame/Base.cpp
-@@ -227,6 +227,7 @@ void Base::load(const YAML::YamlNodeReader& reader, SavedGame *save, bool newGam
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "Base.h"
++#include "../Geoscape/Outposts.h"
+ #include "../fmath.h"
+ #include <stack>
+ #include <algorithm>
+@@ -227,6 +228,7 @@ void Base::load(const YAML::YamlNodeReader& reader, SavedGame *save, bool newGam
  		}
  	}
  	reader.tryRead("fakeUnderwater", _fakeUnderwater);
@@ -21947,7 +22147,7 @@ index ac1a454..d05b726 100644
  
  	isOverlappingOrOverflowing(); // don't crash, just report in the log file...
  }
-@@ -387,6 +388,8 @@ void Base::save(YAML::YamlNodeWriter writer) const
+@@ -387,6 +389,8 @@ void Base::save(YAML::YamlNodeWriter writer) const
  		writer.write("retaliationMissionUniqueId", _retaliationMission->getId());
  	if (_fakeUnderwater)
  		writer.write("fakeUnderwater", _fakeUnderwater);
@@ -21956,7 +22156,7 @@ index ac1a454..d05b726 100644
  }
  
  /**
-@@ -1519,6 +1522,20 @@ int Base::getUsedContainment(int prisonType, bool onlyExternal) const
+@@ -1519,6 +1523,20 @@ int Base::getUsedContainment(int prisonType, bool onlyExternal) const
   * @return Containment Lab space.
   */
  int Base::getAvailableContainment(int prisonType) const
@@ -21977,7 +22177,19 @@ index ac1a454..d05b726 100644
  {
  	int total = 0;
  	for (const auto* fac : _facilities)
-@@ -2540,6 +2557,19 @@ BaseSumDailyRecovery Base::getSumRecoveryPerDay() const
+@@ -1812,6 +1830,11 @@ void Base::destroyDisconnectedFacilities()
+ std::list<BASEFACILITIESITERATOR> Base::getDisconnectedFacilities(BaseFacility *remove)
+ {
+ 	std::list<BASEFACILITIESITERATOR> result;
++	// G.I. Joe: a Pit laid out in floors has every room on a shaft, so nothing is ever cut off (PIT_FLOORS_v1)
++	if (_mod && _mod->getPitFloorRules().on && (!Outposts::kindOf(_mod, this) || Outposts::kindOf(_mod, this)->pit))
++	{
++		return result;
++	}
+ 
+ 	if (remove != 0 && remove->getRules()->isLift())
+ 	{ // Theoretically this is impossible, but sanity check is good :)
+@@ -2540,6 +2563,19 @@ BaseSumDailyRecovery Base::getSumRecoveryPerDay() const
  
  	result.HealthRecovery = healthMaxinum;
  
