@@ -1628,14 +1628,15 @@ index 10a96c4..755c149 100644
  	void btnCancelClick(Action *action);
  	/// Handler for pressing an Increase arrow in the list.
 diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
-index db6727f..72ccbd7 100644
+index db6727f..bd3f70d 100644
 --- a/src/Battlescape/AIModule.cpp
 +++ b/src/Battlescape/AIModule.cpp
-@@ -16,9 +16,11 @@
+@@ -16,9 +16,12 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
 +#include "AirFight.h"
++#include "Stealth.h"
  #include <climits>
  #include <algorithm>
  #include "AIModule.h"
@@ -1643,7 +1644,7 @@ index db6727f..72ccbd7 100644
  #include "../Savegame/BattleItem.h"
  #include "../Savegame/Node.h"
  #include "../Savegame/SavedBattleGame.h"
-@@ -32,6 +34,7 @@
+@@ -32,6 +35,7 @@
  #include "../Engine/Game.h"
  #include "../Mod/Armor.h"
  #include "../Mod/Mod.h"
@@ -1651,7 +1652,7 @@ index db6727f..72ccbd7 100644
  #include "../Mod/RuleItem.h"
  #include "../fmath.h"
  
-@@ -439,6 +442,11 @@ void AIModule::think(BattleAction *action)
+@@ -439,6 +443,11 @@ void AIModule::think(BattleAction *action)
  	_attackAction.weapon = action->weapon;
  	_attackAction.number = action->number;
  	_escapeAction.number = action->number;
@@ -1663,10 +1664,44 @@ index db6727f..72ccbd7 100644
  	_knownEnemies = countKnownTargets();
  	_visibleEnemies = selectNearestTarget();
  	_spottingEnemies = getSpottingUnits(_unit->getPosition());
-@@ -489,6 +497,147 @@ void AIModule::think(BattleAction *action)
+@@ -489,6 +498,181 @@ void AIModule::think(BattleAction *action)
  		return;
  	}
  
++	// G.I. Joe sound and stealth (SOUND_STEALTH_DESIGN_v1): a sleeper does nothing; a man who heard
++	// something and can't see a Joe walks to look at the spot, then goes back to his duty
++	if (_unit->getFaction() == FACTION_HOSTILE && Stealth::on(_save))
++	{
++		if (Stealth::asleep(_save, _unit))
++		{
++			action->type = BA_NONE;
++			return;
++		}
++		const Position look = Stealth::lookTarget(_save, _unit);
++		if (look != TileEngine::invalid && _visibleEnemies == 0)
++		{
++			if (Position::distance2d(look, _unit->getPosition()) <= 1)
++			{
++				Stealth::clearLook(_save, _unit);
++			}
++			else
++			{
++				Position goal = look;
++				goal.z = _unit->getPosition().z;
++				_save->getPathfinding()->calculate(_unit, goal, BAM_NORMAL);
++				const bool can = _save->getPathfinding()->getStartDirection() != -1;
++				_save->getPathfinding()->abortPath();
++				if (can)
++				{
++					action->type = BA_WALK;
++					action->target = goal;
++					return;
++				}
++				Stealth::clearLook(_save, _unit);
++			}
++		}
++	}
++
 +	// G.I. Joe capture (13 Nov 2026): a Cobra man carrying a knocked-out Joe heads for the nearest
 +	// edge of the map with him (BattlescapeGame::captureStep takes the Joe off the map there).
 +	if (_unit->getFaction() == FACTION_HOSTILE && _unit->isCarrying() && _save->getMod()->isCaptureOn())
@@ -1811,7 +1846,7 @@ index db6727f..72ccbd7 100644
  	if (action->weapon)
  	{
  		const RuleItem *rule = action->weapon->getRules();
-@@ -1395,6 +1544,12 @@ int AIModule::selectNearestTarget()
+@@ -1395,6 +1579,12 @@ int AIModule::selectNearestTarget()
  		{
  			tally++;
  			int dist = Position::distance2d(_unit->getPosition(), bu->getPosition());
@@ -2990,19 +3025,20 @@ index 0000000..014b0f2
 +
 +}
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..f23d204 100644
+index b7e1111..0c5f4d4 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
-@@ -16,6 +16,8 @@
+@@ -16,6 +16,9 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
 +#include "AirFight.h"
++#include "Stealth.h"
 +#include <algorithm>
  #include <sstream>
  #include "BattlescapeGame.h"
  #include "BattlescapeState.h"
-@@ -224,8 +226,8 @@ int BattlescapeGame::think()
+@@ -224,8 +227,8 @@ int BattlescapeGame::think()
  			_save->setUnitsFalling(false);
  			return ret;
  		}
@@ -3013,7 +3049,7 @@ index b7e1111..f23d204 100644
  		{
  			auto sideBackup = _save->getSide();
  			_save->resetUnitHitStates();
-@@ -421,6 +423,12 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
+@@ -421,6 +424,12 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
  		}
  	}
  
@@ -3026,7 +3062,7 @@ index b7e1111..f23d204 100644
  	if (action.type == BA_SNAPSHOT || action.type == BA_AUTOSHOT || action.type == BA_AIMEDSHOT || action.type == BA_THROW || action.type == BA_HIT || action.type == BA_MINDCONTROL || action.type == BA_USE || action.type == BA_PANIC || action.type == BA_LAUNCH)
  	{
  		ss.clear();
-@@ -508,8 +516,270 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
+@@ -508,8 +517,270 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
  /**
   * Ends the turn.
   */
@@ -3249,7 +3285,7 @@ index b7e1111..f23d204 100644
 +	}
 +	int start = _save->getVanStop("cobraStart", -1);
 +	if (start < 0) { start = total; _save->setVanStop("cobraStart", total); }
-+	if (!_save->getVanStop("retreat") && standing > 0)
++	if (!_save->getVanStop("retreat") && standing > 0 && !(Stealth::on(_save) && !Stealth::alarm(_save)))
 +	{
 +		// a chance, not a line (John 23:20 "to stiff"): nothing below breakFrom% of the men down, certain at
 +		// breakAt%, more likely with the leader down or the Joes they can see outnumbering them; a man
@@ -3297,7 +3333,7 @@ index b7e1111..f23d204 100644
  	_debugPlay = _save->getDebugMode() && _parentState->getGame()->isCtrlPressed() && (_save->getSide() != FACTION_NEUTRAL);
  	_currentAction.type = BA_NONE;
  	_currentAction.skillRules = nullptr;
-@@ -1915,6 +2185,13 @@ void BattlescapeGame::primaryAction(Position pos)
+@@ -1915,6 +2186,13 @@ void BattlescapeGame::primaryAction(Position pos)
  		}
  		else
  		{
@@ -3311,7 +3347,7 @@ index b7e1111..f23d204 100644
  			_currentAction.target = pos;
  			getMap()->setCursorType(CT_NONE);
  
-@@ -3141,6 +3418,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
+@@ -3141,6 +3419,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
  	{
  		return 0;
  	}
@@ -4580,10 +4616,18 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..e012283 100644
+index 0631f32..157c1c3 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
-@@ -1028,6 +1028,35 @@ void DebriefingState::prepareDebriefing()
+@@ -20,6 +20,7 @@
+ #include <functional>
+ #include <climits>
+ #include "TileEngine.h"
++#include "Stealth.h"
+ #include "DebriefingState.h"
+ #include "CannotReequipState.h"
+ #include "../Geoscape/GeoscapeEventState.h"
+@@ -1028,6 +1029,35 @@ void DebriefingState::prepareDebriefing()
  
  	bool aborted = battle->isAborted();
  	bool success = !aborted || battle->allObjectivesDestroyed();
@@ -4619,7 +4663,7 @@ index 0631f32..e012283 100644
  	Craft *craft = 0;
  	Base *base = 0;
  	std::string target;
-@@ -1039,10 +1068,23 @@ void DebriefingState::prepareDebriefing()
+@@ -1039,10 +1069,23 @@ void DebriefingState::prepareDebriefing()
  	int playersMIA = 0;
  
  	_stats.push_back(new DebriefingStat("STR_ALIENS_KILLED", false));
@@ -4643,7 +4687,7 @@ index 0631f32..e012283 100644
  
  	std::string missionCompleteText, missionFailedText;
  	std::string objectiveCompleteText, objectiveFailedText;
-@@ -1186,7 +1228,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1186,7 +1229,7 @@ void DebriefingState::prepareDebriefing()
  					break;
  				}
  			}
@@ -4652,7 +4696,7 @@ index 0631f32..e012283 100644
  			{
  				_destroyBase = true;
  			}
-@@ -1230,6 +1272,10 @@ void DebriefingState::prepareDebriefing()
+@@ -1230,6 +1273,10 @@ void DebriefingState::prepareDebriefing()
  				ms->setUfo(nullptr);
  			}
  			_missionStatistics->alienRace = ms->getAlienRace();
@@ -4663,7 +4707,7 @@ index 0631f32..e012283 100644
  			delete ms;
  			save->getMissionSites()->erase(msIt);
  			break;
-@@ -1296,6 +1342,25 @@ void DebriefingState::prepareDebriefing()
+@@ -1296,6 +1343,25 @@ void DebriefingState::prepareDebriefing()
  			deadSoldiers++;
  		}
  	}
@@ -4689,7 +4733,7 @@ index 0631f32..e012283 100644
  	// if all our men are unconscious, the aliens get to have their way with them.
  	if (playersUnconscious + playersMIA == playersSurvived)
  	{
-@@ -1304,7 +1369,11 @@ void DebriefingState::prepareDebriefing()
+@@ -1304,7 +1370,11 @@ void DebriefingState::prepareDebriefing()
  		{
  			if (bu->getOriginalFaction() == FACTION_PLAYER && bu->getStatus() != STATUS_DEAD)
  			{
@@ -4702,7 +4746,7 @@ index 0631f32..e012283 100644
  				{
  					bu->instaKill();
  				}
-@@ -1417,6 +1486,13 @@ void DebriefingState::prepareDebriefing()
+@@ -1417,6 +1487,13 @@ void DebriefingState::prepareDebriefing()
  				{
  					addStat(objectiveCompleteText, 1, objectiveCompleteScore);
  				}
@@ -4716,7 +4760,7 @@ index 0631f32..e012283 100644
  				save->clearLinksForAlienBase(ab, _game->getMod());
  				delete ab;
  				save->getAlienBases()->erase(abIt);
-@@ -1476,6 +1552,65 @@ void DebriefingState::prepareDebriefing()
+@@ -1476,6 +1553,65 @@ void DebriefingState::prepareDebriefing()
  	{
  		ignoreLivingCivilians = ruleDeploy->getIgnoreLivingCivilians();
  	}
@@ -4782,7 +4826,7 @@ index 0631f32..e012283 100644
  	for (auto* bunit : *battle->getUnits())
  	{
  		UnitStatus status = bunit->getStatus();
-@@ -1483,6 +1618,31 @@ void DebriefingState::prepareDebriefing()
+@@ -1483,6 +1619,31 @@ void DebriefingState::prepareDebriefing()
  		UnitFaction oldFaction = bunit->getOriginalFaction();
  		Soldier *soldier = save->getSoldier(bunit->getId());
  
@@ -4814,7 +4858,7 @@ index 0631f32..e012283 100644
  		if (!bunit->getTile())
  		{
  			Position pos = bunit->getPosition();
-@@ -1654,8 +1814,9 @@ void DebriefingState::prepareDebriefing()
+@@ -1654,8 +1815,9 @@ void DebriefingState::prepareDebriefing()
  					}
  				}
  			}
@@ -4825,7 +4869,7 @@ index 0631f32..e012283 100644
  				&& playersSurvived > 0 && faction != FACTION_PLAYER && (!bunit->isOut() || bunit->isIgnored())
  				&& (bunit->isSurrendering() || battle->getChronoTrigger() == FORCE_WIN_SURRENDER))
  			{
-@@ -1895,6 +2056,10 @@ void DebriefingState::prepareDebriefing()
+@@ -1895,6 +2057,10 @@ void DebriefingState::prepareDebriefing()
  		{
  			_txtTitle->setText(tr("STR_CRAFT_IS_LOST"));
  		}
@@ -4836,7 +4880,7 @@ index 0631f32..e012283 100644
  		else if (target == "STR_BASE")
  		{
  			_txtTitle->setText(tr("STR_BASE_IS_LOST"));
-@@ -2130,10 +2295,173 @@ void DebriefingState::prepareDebriefing()
+@@ -2130,10 +2296,185 @@ void DebriefingState::prepareDebriefing()
  		}
  	}
  
@@ -4955,7 +4999,18 @@ index 0631f32..e012283 100644
 +			}
 +			const std::string &dep = battle->getMissionType();
 +			const bool city = std::find(gw.cityDeployments.begin(), gw.cityDeployments.end(), dep) != gw.cityDeployments.end();
-+			const int exposure = civilians > 0 ? named * (city ? gw.exposureCity : gw.exposurePerJoe) : 0;
++			int exposure = civilians > 0 ? named * (city ? gw.exposureCity : gw.exposurePerJoe) : 0;
++			// G.I. Joe sound and stealth: a quiet mission (the alarm never went up) pays (SOUND_STEALTH_DESIGN 10)
++			const bool quiet = success && Stealth::quietWin(battle);
++			if (quiet)
++			{
++				const auto &sr = _game->getMod()->getStealthRules();
++				exposure = exposure * sr.quietExposurePct / 100;
++				int sum = 0;
++				for (auto *ds : _stats) sum += ds->score;
++				if (sum > 0 && sr.quietScorePct > 0) addStat("STR_QUIET_MISSION", 1, sum * sr.quietScorePct / 100);
++				Log(LOG_INFO) << "[stealth] quiet mission: exposure " << exposure << ", score +" << sr.quietScorePct << "%";
++			}
 +			const int civHit = std::min(gw.civilianCap, civDead * gw.civilianDead);
 +			if (_country)
 +			{
@@ -4964,6 +5019,7 @@ index 0631f32..e012283 100644
 +				// John 22:48: Cobra pulled out and some got away - still a win, slightly less goodwill
 +				const int cut = battle->getVanStop("escaped") > 0 ? _game->getMod()->getRetreatRules().winGoodwillCut : 0;
 +				g += success ? std::max(0, gw.win - cut) : -gw.loss;
++				if (quiet) g += _game->getMod()->getStealthRules().quietGoodwill;
 +				g -= civHit;
 +				if (!save->isPublic() && gw.exposureGoodwillPer > 0) g -= exposure / gw.exposureGoodwillPer;
 +				_country->setGoodwill(g);
@@ -5010,7 +5066,7 @@ index 0631f32..e012283 100644
  		// Unlock research defined in alien deployment, if the mission was a success
  		const RuleResearch *research = _game->getMod()->getResearch(ruleDeploy->getUnlockedResearchOnSuccess());
  		save->handleResearchUnlockedByMissions(research, _game->getMod(), ruleDeploy);
-@@ -2299,6 +2627,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
+@@ -2299,6 +2640,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
   */
  void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base, int quantity, bool considerTransformations)
  {
@@ -5034,6 +5090,80 @@ index c999789..d4d682a 100644
  	Base *_base;
  	std::vector<DebriefingStat*> _stats;
  	std::vector<SoldierStatsEntry> _soldierStats;
+diff --git a/src/Battlescape/ExplosionBState.cpp b/src/Battlescape/ExplosionBState.cpp
+index ff9973e..b4868cb 100644
+--- a/src/Battlescape/ExplosionBState.cpp
++++ b/src/Battlescape/ExplosionBState.cpp
+@@ -18,6 +18,7 @@
+  */
+ 
+ #include "ExplosionBState.h"
++#include "Stealth.h"
+ #include "BattlescapeState.h"
+ #include "Explosion.h"
+ #include "TileEngine.h"
+@@ -150,11 +151,19 @@ void ExplosionBState::init()
+ 		}
+ 		else if (type == BT_MELEE || _hit)
+ 		{
+-			if (!_parent->getTileEngine()->meleeAttack(_attack, _targetPsiOrHit, _terrainMeleeTilePart))
++			// G.I. Joe: a knife from behind on a man who doesn't know you're there (SOUND_STEALTH_DESIGN 6)
++			const int td = Stealth::takedown(_parent->getSave(), _attack.attacker, _targetPsiOrHit, _attack.weapon_item, false);
++			if (td == 1)
++			{
++				_power = std::max(_power, 999);
++				_gjSilent = true;
++			}
++			else if (!_parent->getTileEngine()->meleeAttack(_attack, _targetPsiOrHit, _terrainMeleeTilePart))
+ 			{
+ 				_power = 0;
+ 				miss = true;
+ 			}
++			if (td != 1) Stealth::noise(_parent->getSave(), _center.toTile(), Stealth::radius(_parent->getSave(), "melee"), _attack.attacker, false);
+ 		}
+ 		else if (type == BT_FIREARM)
+ 		{
+@@ -206,6 +215,11 @@ void ExplosionBState::init()
+ 	{
+ 		if (_power > 0)
+ 		{
++			// G.I. Joe: an explosion is heard far off (smoke grenades only pop)
++			{
++				const bool smoke = _damageType && _damageType->ResistType == DT_SMOKE;
++				Stealth::noise(_parent->getSave(), _center.toTile(), Stealth::radius(_parent->getSave(), smoke ? "window" : "explosion"), _attack.attacker, !smoke);
++			}
+ 			_parent->getSave()->getTileEngine()->explode(_attack, _center, _power, _damageType, _radius, range);
+ 
+ 			int powerForAnimation = _power;
+@@ -271,6 +285,16 @@ void ExplosionBState::init()
+ 	else
+ 	// create a bullet hit
+ 	{
++		// G.I. Joe: a tranq dart into a man who doesn't know you're there drops him at once
++		if (!_hit && _attack.weapon_item && Stealth::isDart(_parent->getSave(), _attack.weapon_item))
++		{
++			Tile *tt = _parent->getSave()->getTile(_center.toTile());
++			BattleUnit *tu = tt ? tt->getOverlappingUnit(_parent->getSave()) : nullptr;
++			if (tu && Stealth::takedown(_parent->getSave(), _attack.attacker, tu, _attack.weapon_item, true) == 1)
++			{
++				_power = std::max(_power, 999);
++			}
++		}
+ 		_parent->getSave()->getTileEngine()->hit(_attack, _center, _power, _damageType, range, _terrainMeleeTilePart);
+ 
+ 		_parent->setStateInterval(std::max(1, ((BattlescapeState::DEFAULT_ANIM_SPEED/2) - (10 * itemRule->getExplosionSpeed()))));
+diff --git a/src/Battlescape/ExplosionBState.h b/src/Battlescape/ExplosionBState.h
+index c112ccb..3e91bbb 100644
+--- a/src/Battlescape/ExplosionBState.h
++++ b/src/Battlescape/ExplosionBState.h
+@@ -46,6 +46,7 @@ private:
+ 	int _power;
+ 	int _radius;
+ 	int _range;
++	bool _gjSilent = false;
+ 	bool _areaOfEffect, _lowerWeapon, _hit, _psi;
+ 
+ 	/// Calculates the effects of the explosion.
 diff --git a/src/Battlescape/Inventory.cpp b/src/Battlescape/Inventory.cpp
 index 406077c..ca21900 100644
 --- a/src/Battlescape/Inventory.cpp
@@ -5387,18 +5517,19 @@ index cea8e65..90ec9a6 100644
  	}
  
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..1590f54 100644
+index 3665cd1..3947f90 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
-@@ -17,6 +17,7 @@
+@@ -17,6 +17,8 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "Map.h"
++#include "Stealth.h"
 +#include "../Engine/HiColor.h"
  #include "Camera.h"
  #include "UnitSprite.h"
  #include "ItemSprite.h"
-@@ -156,9 +157,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
+@@ -156,9 +158,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
  
  	_spriteWidth = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getWidth();
  	_spriteHeight = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getHeight();
@@ -5411,7 +5542,7 @@ index 3665cd1..1590f54 100644
  	_message->setTextColor(_messageColor);
  	_camera = new Camera(_spriteWidth, _spriteHeight, _save->getMapSizeX(), _save->getMapSizeY(), _save->getMapSizeZ(), this, visibleMapHeight);
  	_scrollMouseTimer = new Timer(SCROLL_INTERVAL);
-@@ -272,12 +274,13 @@ void Map::init()
+@@ -272,12 +275,13 @@ void Map::init()
  					   0, 0, 0, b, f, b, 0, 0, 0,
  					   0, 0, 0, 0, b, 0, 0, 0, 0 };
  
@@ -5429,7 +5560,7 @@ index 3665cd1..1590f54 100644
  	_arrow->unlock();
  
  	_projectile = 0;
-@@ -305,6 +308,20 @@ void Map::think()
+@@ -305,6 +309,20 @@ void Map::think()
  /**
   * Draws the whole map, part by part.
   */
@@ -5450,7 +5581,7 @@ index 3665cd1..1590f54 100644
  void Map::draw()
  {
  	if (!_redraw)
-@@ -325,6 +342,7 @@ void Map::draw()
+@@ -325,6 +343,7 @@ void Map::draw()
  		ShaderSurface(this),
  		ShaderScalar<Uint8>(Palette::blockOffset(0) + _bgColor)
  	);
@@ -5458,7 +5589,7 @@ index 3665cd1..1590f54 100644
  
  	Tile *t;
  
-@@ -356,12 +374,38 @@ void Map::draw()
+@@ -356,12 +375,38 @@ void Map::draw()
  		}
  	}
  
@@ -5498,7 +5629,7 @@ index 3665cd1..1590f54 100644
  		_message->blit(this->getSurface());
  	}
  }
-@@ -466,6 +510,29 @@ int getArrowBobForFrame(int frame)
+@@ -466,6 +511,29 @@ int getArrowBobForFrame(int frame)
  	return ArrowBobOffsets[frame % 8];
  }
  
@@ -5528,7 +5659,7 @@ index 3665cd1..1590f54 100644
  int getShadePulseForFrame(int shade, int frame)
  {
  	if (shade > 7) shade = 7;
-@@ -488,9 +555,9 @@ int getShadePulseForFrame(int shade, int frame)
+@@ -488,9 +556,9 @@ int getShadePulseForFrame(int shade, int frame)
   */
  void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position currTileScreenPosition, bool topLayer, BattleUnit* movingUnit)
  {
@@ -5541,7 +5672,7 @@ index 3665cd1..1590f54 100644
  
  	if (!unitTile)
  	{
-@@ -532,7 +599,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
+@@ -532,7 +600,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
  
  	unitOffset.x = unitTile->getPosition().x - bu->getPosition().x;
  	unitOffset.y = unitTile->getPosition().y - bu->getPosition().y;
@@ -5550,7 +5681,7 @@ index 3665cd1..1590f54 100644
  
  	bool moving = bu->getStatus() == STATUS_WALKING || bu->getStatus() == STATUS_FLYING;
  	int bonusWidth = moving ? 0 : tileFoorWidth;
-@@ -940,9 +1007,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -940,9 +1008,9 @@ void Map::drawTerrain(Surface *surface)
  					if (tmpSurface)
  					{
  						if (tile->getObstacle(O_FLOOR))
@@ -5562,7 +5693,7 @@ index 3665cd1..1590f54 100644
  					}
  
  					auto* unit = tile->getUnit();
-@@ -1001,9 +1068,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1001,9 +1069,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_WESTWALL, tile);
  							if (tile->getObstacle(O_WESTWALL))
@@ -5574,7 +5705,7 @@ index 3665cd1..1590f54 100644
  						}
  						// Draw north wall
  						tmpSurface = tile->getSprite(O_NORTHWALL);
-@@ -1011,9 +1078,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1011,9 +1079,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_NORTHWALL, tile);
  							if (tile->getObstacle(O_NORTHWALL))
@@ -5586,7 +5717,7 @@ index 3665cd1..1590f54 100644
  						}
  						// Draw object
  						tmpSurface = tile->getSprite(O_OBJECT);
-@@ -1022,9 +1089,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1022,9 +1090,9 @@ void Map::drawTerrain(Surface *surface)
  							if (tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -5598,7 +5729,7 @@ index 3665cd1..1590f54 100644
  							}
  						}
  						// draw an item on top of the floor (if any)
-@@ -1033,7 +1100,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1033,7 +1101,7 @@ void Map::drawTerrain(Surface *surface)
  						{
  							itemSprite.draw(item,
  								screenPosition.x,
@@ -5607,7 +5738,7 @@ index 3665cd1..1590f54 100644
  								tileShade
  							);
  							if (_anyIndicator)
-@@ -1043,30 +1110,30 @@ void Map::drawTerrain(Surface *surface)
+@@ -1043,30 +1111,30 @@ void Map::drawTerrain(Surface *surface)
  								{
  									if (_burnIndicator && itemUnit->getFire() > 0)
  									{
@@ -5646,7 +5777,7 @@ index 3665cd1..1590f54 100644
  											tileShade);
  									}
  								}
-@@ -1292,13 +1359,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1292,13 +1360,13 @@ void Map::drawTerrain(Surface *surface)
  							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(11);
  							if (tmpSurface)
  							{
@@ -5662,7 +5793,7 @@ index 3665cd1..1590f54 100644
  						}
  					}
  
-@@ -1310,9 +1377,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1310,9 +1378,9 @@ void Map::drawTerrain(Surface *surface)
  							if (!tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -5674,7 +5805,7 @@ index 3665cd1..1590f54 100644
  							}
  						}
  					}
-@@ -1528,7 +1595,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1528,7 +1596,7 @@ void Map::drawTerrain(Surface *surface)
  
  								_txtAccuracy->setText(ss.str());
  								_txtAccuracy->draw();
@@ -5683,7 +5814,7 @@ index 3665cd1..1590f54 100644
  							}
  						}
  						else if (_camera->getViewLevel() > itZ)
-@@ -1551,7 +1618,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1551,7 +1619,7 @@ void Map::drawTerrain(Surface *surface)
  									_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::red - 1) - 1);
  									_txtAccuracy->setText("0%");
  									_txtAccuracy->draw();
@@ -5692,7 +5823,7 @@ index 3665cd1..1590f54 100644
  								}
  							}
  							if (!ignore)
-@@ -1582,7 +1649,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1582,7 +1650,7 @@ void Map::drawTerrain(Surface *surface)
  								_numWaypid->setValue(waypid);
  								_numWaypid->setBordered(true); // OXCE, not configurable
  								_numWaypid->draw();
@@ -5701,7 +5832,7 @@ index 3665cd1..1590f54 100644
  
  								waypXOff += waypid > 9 ? 10 : 6; // OXCE
  								if (waypXOff >= 26)
-@@ -1621,7 +1688,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1621,7 +1689,7 @@ void Map::drawTerrain(Surface *surface)
  						tile = _save->getTile(mapPosition);
  						if (!tile || !tile->isDiscovered(O_FLOOR) || tile->getPreview() == -1)
  							continue;
@@ -5710,7 +5841,7 @@ index 3665cd1..1590f54 100644
  						if (_previewSettingArrows)
  						{
  							if (itZ > 0 && tile->hasNoFloor(_save))
-@@ -1629,14 +1696,14 @@ void Map::drawTerrain(Surface *surface)
+@@ -1629,14 +1697,14 @@ void Map::drawTerrain(Surface *surface)
  								tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(23);
  								if (tmpSurface)
  								{
@@ -5727,7 +5858,7 @@ index 3665cd1..1590f54 100644
  							}
  						}
  
-@@ -1645,16 +1712,17 @@ void Map::drawTerrain(Surface *surface)
+@@ -1645,16 +1713,17 @@ void Map::drawTerrain(Surface *surface)
  							int off = tile->getTUMarker() > 9 ? 5 : 3;
  							int offE = tile->getEnergyMarker() > 9 ? 5 : 3;
  							int mcolor = _previewSettingArrows ? 0 : tile->getMarkerColor();
@@ -5748,7 +5879,7 @@ index 3665cd1..1590f54 100644
  								}
  							}
  							if (_previewSettingTu)
-@@ -1664,16 +1732,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1664,16 +1733,16 @@ void Map::drawTerrain(Surface *surface)
  								if (_previewSettingEnergy)
  								{
  									// TU
@@ -5768,7 +5899,7 @@ index 3665cd1..1590f54 100644
  								}
  							}
  							else if (_previewSettingEnergy)
-@@ -1681,7 +1749,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1681,7 +1750,7 @@ void Map::drawTerrain(Surface *surface)
  								// only Energy
  								_numWaypid->setValue(tile->getEnergyMarker());
  								_numWaypid->draw();
@@ -5777,7 +5908,7 @@ index 3665cd1..1590f54 100644
  							}
  						}
  					}
-@@ -1702,16 +1770,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1702,16 +1771,62 @@ void Map::drawTerrain(Surface *surface)
  		Position offset = calculateWalkingOffset(selectedUnit).ScreenOffset;
  		if (selectedUnit->isBigUnit())
  		{
@@ -5795,10 +5926,56 @@ index 3665cd1..1590f54 100644
  		{
 -			_arrow->blitNShade(surface, screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2), screenPosition.y + offset.y - _arrow->getHeight() + getArrowBobForFrame(_animFrame), 0);
 +			_arrow->blitNShade(surface, screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2), screenPosition.y + offset.y - _arrow->getHeight() + getArrowBobForFrame(_animFrame) * SurfaceSet::battleScale(), 0);
++		}
++	}
++
++	// G.I. Joe sound and stealth: "z" over a sleeping Cobra man and "!" over an alerted one (only when seen),
++	// and a ring where the Joes heard something they can't see
++	if (Stealth::on(_save) && _save->getSide() == FACTION_PLAYER)
++	{
++		const auto *ie = _save->getMod()->getInterface("battlescape")->getElement("warning");
++		const Uint8 ink = ie ? ie->color : 1, red = ie ? ie->color2 : 1;
++		const int k = SurfaceSet::battleScale();
++		for (auto *u : *_save->getUnits())
++		{
++			if (u->isOut() || !u->getVisible() || u->getOriginalFaction() != FACTION_HOSTILE || u->getPosition().z > _camera->getViewLevel()) continue;
++			const int st = Stealth::state(_save, u);
++			if (st != Stealth::ASLEEP && !(st == Stealth::ALERT && !Stealth::alarm(_save))) continue;
++			_camera->convertMapToScreen(u->getPosition(), &screenPosition);
++			screenPosition += _camera->getMapOffset();
++			Position off = calculateWalkingOffset(u).ScreenOffset;
++			const int x = screenPosition.x + off.x + _spriteWidth / 2, y = screenPosition.y + off.y + (Position::TileZ - u->getHeight()) * k - 6 * k;
++			if (st == Stealth::ASLEEP)
++			{
++				for (int t = 0; t < k; ++t)
++				{
++					surface->drawLine(x - 3 * k, y - 4 * k + t, x + 3 * k, y - 4 * k + t, ink);
++					surface->drawLine(x + 3 * k, y - 4 * k + t, x - 3 * k, y + 2 * k + t, ink);
++					surface->drawLine(x - 3 * k, y + 2 * k + t, x + 3 * k, y + 2 * k + t, ink);
++				}
++			}
++			else
++			{
++				surface->drawRect(x - k, y - 6 * k, 2 * k, 6 * k, red);
++				surface->drawRect(x - k, y + 2 * k, 2 * k, 2 * k, red);
++			}
++		}
++		for (int i = 0; i < Stealth::markers(_save); ++i)
++		{
++			const Position m = Stealth::marker(_save, i);
++			if (m.z > _camera->getViewLevel()) continue;
++			_camera->convertMapToScreen(m, &screenPosition);
++			screenPosition += _camera->getMapOffset();
++			const int cx = screenPosition.x + _spriteWidth / 2, cy = screenPosition.y + _spriteHeight - _spriteWidth / 4;
++			for (int t = 0; t < k; ++t)
++			{
++				surface->drawCircle(cx, cy, _spriteWidth / 4 + t, red);
++				surface->drawCircle(cx, cy, _spriteWidth / 8 + t, red);
++			}
  		}
  	}
  
-@@ -1732,26 +1800,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -1732,26 +1847,26 @@ void Map::drawTerrain(Surface *surface)
  				//calculateWalkingOffset(myUnit, &offset);
  				if (myUnit->isBigUnit())
  				{
@@ -5830,7 +6007,7 @@ index 3665cd1..1590f54 100644
  						0);
  				}
  				else if (customMarker)
-@@ -1760,7 +1828,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1760,7 +1875,7 @@ void Map::drawTerrain(Surface *surface)
  						surface,
  						_arrow,
  						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
@@ -5839,7 +6016,7 @@ index 3665cd1..1590f54 100644
  						0,
  						false,
  						_isTFTD ? ArrowColorsTFTD[myUnit->getCustomMarker() % 4] : ArrowColorsUFO[myUnit->getCustomMarker() % 4]);
-@@ -1779,11 +1847,11 @@ void Map::drawTerrain(Surface *surface)
+@@ -1779,11 +1894,11 @@ void Map::drawTerrain(Surface *surface)
  			{
  				_camera->convertMapToScreen(pos, &screenPosition);
  				screenPosition += _camera->getMapOffset();
@@ -5853,7 +6030,7 @@ index 3665cd1..1590f54 100644
  					0);
  			}
  		}
-@@ -1823,12 +1891,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1823,12 +1938,13 @@ void Map::drawTerrain(Surface *surface)
  				else if (explosion->isHit())
  				{
  					tmpSurface = _game->getMod()->getSurfaceSet("HIT.PCK")->getFrame(explosion->getCurrentFrame());
@@ -5869,7 +6046,7 @@ index 3665cd1..1590f54 100644
  				}
  			}
  		}
-@@ -2023,7 +2092,7 @@ void Map::setSelectorPosition(int mx, int my)
+@@ -2023,7 +2139,7 @@ void Map::setSelectorPosition(int mx, int my)
  {
  	int oldX = _selectorX, oldY = _selectorY;
  
@@ -5878,7 +6055,7 @@ index 3665cd1..1590f54 100644
  
  	if (oldX != _selectorX || oldY != _selectorY)
  	{
-@@ -2267,6 +2336,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2267,6 +2383,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
  	}
  	result.ScreenOffset.y += result.TerrainLevelOffset;
@@ -5887,7 +6064,7 @@ index 3665cd1..1590f54 100644
  	return result;
  }
  
-@@ -2506,9 +2577,10 @@ void Map::refreshSelectorPosition()
+@@ -2506,9 +2624,10 @@ void Map::refreshSelectorPosition()
  void Map::setHeight(int height)
  {
  	Surface::setHeight(height);
@@ -5901,7 +6078,7 @@ index 3665cd1..1590f54 100644
  }
  
  /**
-@@ -2519,7 +2591,7 @@ void Map::setWidth(int width)
+@@ -2519,7 +2638,7 @@ void Map::setWidth(int width)
  {
  	int dX = width - getWidth();
  	Surface::setWidth(width);
@@ -5932,13 +6109,14 @@ index 0fdf2ca..3ee0323 100644
  	/// Sets the palette.
  	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
 diff --git a/src/Battlescape/NextTurnState.cpp b/src/Battlescape/NextTurnState.cpp
-index d12de83..09c32ab 100644
+index d12de83..a72c449 100644
 --- a/src/Battlescape/NextTurnState.cpp
 +++ b/src/Battlescape/NextTurnState.cpp
-@@ -17,9 +17,12 @@
+@@ -17,9 +17,13 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "NextTurnState.h"
++#include "Stealth.h"
 +#include "AirFight.h"
 +#include <algorithm>
  #include "../Engine/Game.h"
@@ -5948,7 +6126,7 @@ index d12de83..09c32ab 100644
  #include "../Engine/RNG.h"
  #include "../Engine/Screen.h"
  #include "../Mod/AlienRace.h"
-@@ -38,6 +41,11 @@
+@@ -38,6 +42,11 @@
  #include "../Engine/Action.h"
  #include "../Savegame/BattleUnit.h"
  #include "../Savegame/Node.h"
@@ -5960,7 +6138,7 @@ index d12de83..09c32ab 100644
  #include "../Savegame/SavedBattleGame.h"
  #include "../Savegame/SavedGame.h"
  #include "../Savegame/HitLog.h"
-@@ -99,15 +107,19 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -99,15 +108,19 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  	// Create objects
  	int y = state->getMap()->getMessageY();
  
@@ -5986,7 +6164,7 @@ index d12de83..09c32ab 100644
  	_bg = new Surface(_game->getScreen()->getWidth(), _game->getScreen()->getWidth(), 0, 0);
  
  	// Set palette
-@@ -156,11 +168,20 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -156,11 +169,20 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  	_window->setColor(Palette::blockOffset(0)-1);
  	_window->setHighContrast(true);
  	_window->setBackground(_game->getMod()->getSurface(_battleGame->getHiddenMovementBackground()));
@@ -6008,7 +6186,7 @@ index d12de83..09c32ab 100644
  	_txtMessageReinforcements->setWordWrap(true);
  	_txtMessageReinforcements->setHighContrast(true);
  	_txtMessageReinforcements->setColor(_game->getMod()->getInterface("inventory")->getElement("weight")->color2); // red
-@@ -292,6 +313,11 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -292,11 +314,20 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  	}
  
  	std::string messageReinforcements;
@@ -6016,11 +6194,20 @@ index d12de83..09c32ab 100644
 +	{
 +		std::string cap = runCapture();
 +		if (!cap.empty()) messageVanStop = messageVanStop.empty() ? cap : messageVanStop + " " + cap;
++		// G.I. Joe sound and stealth: sleepers, alerts settling, the alarm
++		std::string st = Stealth::turnStart(_battleGame);
++		if (!st.empty()) { std::string t = tr(st); messageVanStop = messageVanStop.empty() ? t : messageVanStop + " " + t; }
 +	}
  	bool allowReinforcements = _battleGame->getSide() == FACTION_HOSTILE && _battleGame->getTurn() > 0;
  	if (_battleGame->getSide() == FACTION_PLAYER && _battleGame->getTurn() == 0)
  	{
-@@ -306,10 +332,17 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+ 		allowReinforcements = true;
+ 	}
++	if (Stealth::on(_battleGame) && !Stealth::alarm(_battleGame) && _battleGame->getTurn() > 0) allowReinforcements = false;   // G.I. Joe: no alarm, nobody calls for help
+ 	if (allowReinforcements && !_battleGame->getBattleGame()->areAllEnemiesNeutralized())
+ 	{
+ 		bool showAlert = determineReinforcements();
+@@ -306,10 +337,17 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  			_txtMessageReinforcements->setText(messageReinforcements);
  		}
  	}
@@ -6040,7 +6227,7 @@ index d12de83..09c32ab 100644
  		_timer->onTimer((StateHandler)&NextTurnState::close);
  		_timer->start();
  	}
-@@ -612,7 +645,16 @@ bool NextTurnState::determineReinforcements()
+@@ -612,7 +650,16 @@ bool NextTurnState::determineReinforcements()
  			{
  				continue;
  			}
@@ -6058,7 +6245,7 @@ index d12de83..09c32ab 100644
  			{
  				if (!_battleGame->allObjectivesDestroyed())
  				{
-@@ -855,6 +897,7 @@ bool NextTurnState::determineReinforcements()
+@@ -855,6 +902,7 @@ bool NextTurnState::determineReinforcements()
  		{
  			// remember success
  			_battleGame->getReinforcementsMemory()[wave.type] += 1;
@@ -6066,7 +6253,7 @@ index d12de83..09c32ab 100644
  
  			if (!wave.briefing.title.empty())
  			{
-@@ -908,6 +951,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
+@@ -908,6 +956,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
  		quantity += RNG::generate(0, dd.dQty);
  		quantity += RNG::generate(0, dd.extraQty);
  
@@ -6085,7 +6272,7 @@ index d12de83..09c32ab 100644
  		for (int i = 0; i < quantity; ++i)
  		{
  			std::string alienName = dd.customUnitType.empty() ? race->getMember(dd.alienRank) : dd.customUnitType;
-@@ -915,6 +970,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
+@@ -915,6 +975,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
  			bool civilian = dd.percentageOutsideUfo != 0; // small misuse of an unused attribute ;) pls don't kill me
  			BattleUnit* unit = addReinforcement(wave, rule, dd.alienRank, civilian);
  			size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(month).at(RNG::generate(0, 9)));
@@ -6104,7 +6291,7 @@ index d12de83..09c32ab 100644
  			if (unit)
  			{
  				success = true;
-@@ -1140,4 +1207,369 @@ bool NextTurnState::placeReinforcementNearFriend(BattleUnit *unit)
+@@ -1140,4 +1212,369 @@ bool NextTurnState::placeReinforcementNearFriend(BattleUnit *unit)
  	return false;
  }
  
@@ -6646,18 +6833,19 @@ index 7f7697c..9fbfa2d 100644
  	int ydiff = origin.y - target->y;
  	int zdiff = origin.z - target->z;
 diff --git a/src/Battlescape/ProjectileFlyBState.cpp b/src/Battlescape/ProjectileFlyBState.cpp
-index 529b7f2..3f244bf 100644
+index 529b7f2..9ee4cf8 100644
 --- a/src/Battlescape/ProjectileFlyBState.cpp
 +++ b/src/Battlescape/ProjectileFlyBState.cpp
-@@ -16,6 +16,7 @@
+@@ -16,6 +16,8 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
 +#include "AirFight.h"
++#include "Stealth.h"
  #include <algorithm>
  #include "ProjectileFlyBState.h"
  #include "ExplosionBState.h"
-@@ -139,6 +140,48 @@ void ProjectileFlyBState::init()
+@@ -139,6 +141,48 @@ void ProjectileFlyBState::init()
  	case BA_AIMEDSHOT:
  	case BA_AUTOSHOT:
  	case BA_LAUNCH:
@@ -6706,19 +6894,505 @@ index 529b7f2..3f244bf 100644
  		if (weapon->getRules()->isOutOfRange(distanceSq))
  		{
  			// out of range
+@@ -517,6 +561,7 @@ bool ProjectileFlyBState::createNewProjectile()
+ 			{
+ 				_parent->getMod()->getSoundByDepth(_parent->getDepth(), _action.weapon->getRules()->getFireSound())->play(-1, _parent->getMap()->getSoundAngle(_unit->getPosition()));
+ 			}
++			Stealth::shot(_parent->getSave(), _unit, _action.weapon, _ammo);   // G.I. Joe: the shot is heard
+ 			if (_action.type != BA_LAUNCH)
+ 			{
+ 				_action.weapon->spendAmmoForAction(_action.type, _parent->getSave());
+@@ -559,6 +604,7 @@ bool ProjectileFlyBState::createNewProjectile()
+ 			{
+ 				_parent->getMod()->getSoundByDepth(_parent->getDepth(), _action.weapon->getRules()->getFireSound())->play(-1, _parent->getMap()->getSoundAngle(projectile->getOrigin()));
+ 			}
++			Stealth::shot(_parent->getSave(), _unit, _action.weapon, _ammo);   // G.I. Joe: the shot is heard
+ 			if (_action.type != BA_LAUNCH)
+ 			{
+ 				_action.weapon->spendAmmoForAction(_action.type, _parent->getSave());
+diff --git a/src/Battlescape/Stealth.cpp b/src/Battlescape/Stealth.cpp
+new file mode 100644
+index 0000000..b2290c3
+--- /dev/null
++++ b/src/Battlescape/Stealth.cpp
+@@ -0,0 +1,386 @@
++/*
++ * G.I. Joe: sound and stealth. See Stealth.h and claude/SOUND_STEALTH_DESIGN_v1.md.
++ */
++#include "Stealth.h"
++#include <algorithm>
++#include <cmath>
++#include "AirFight.h"
++#include "TileEngine.h"
++#include "Pathfinding.h"
++#include "../Mod/Mod.h"
++#include "../Mod/RuleItem.h"
++#include "../Mod/RuleDamageType.h"
++#include "../Mod/AlienDeployment.h"
++#include "../Savegame/SavedBattleGame.h"
++#include "../Savegame/BattleUnit.h"
++#include "../Savegame/BattleItem.h"
++#include "../Savegame/Tile.h"
++#include "../Savegame/Soldier.h"
++#include "../Mod/RuleSoldier.h"
++#include "../Engine/RNG.h"
++#include "../Engine/Logger.h"
++
++namespace OpenXcom
++{
++namespace Stealth
++{
++
++namespace
++{
++	SavedBattleGame *mut(const SavedBattleGame *s) { return const_cast<SavedBattleGame*>(s); }
++	std::string key(const char *k, const BattleUnit *u) { return std::string(k) + std::to_string(u->getId()); }
++	int pack(Position p) { return (p.x & 2047) | ((p.y & 2047) << 11) | ((p.z & 31) << 22); }
++	Position unpack(int v) { return Position(v & 2047, (v >> 11) & 2047, (v >> 22) & 31); }
++	bool cobra(const BattleUnit *u) { return u && u->getOriginalFaction() == FACTION_HOSTILE && u->getFaction() == FACTION_HOSTILE; }
++	int seniority(const BattleUnit *u)
++	{
++		static const char *ranks[] = { "STR_LIVE_COMMANDER", "STR_LIVE_LEADER", "STR_LIVE_ENGINEER", "STR_LIVE_MEDIC", "STR_LIVE_NAVIGATOR", "STR_LIVE_SOLDIER", "STR_LIVE_TERRORIST" };
++		for (int i = 0; i < 7; ++i) if (u->getRankString() == ranks[i]) return i;
++		return 8;
++	}
++	bool listed(const std::vector<std::string> &v, const std::string &t) { return std::find(v.begin(), v.end(), t) != v.end(); }
++	std::string typeOf(const BattleUnit *u)
++	{
++		if (u->getGeoscapeSoldier()) return u->getGeoscapeSoldier()->getRules()->getType();
++		return u->getType();
++	}
++	float hearing(const SavedBattleGame *save, const BattleUnit *u)
++	{
++		float h = 0.75f + u->getBaseStats()->reactions / 200.0f;
++		if (listed(save->getMod()->getStealthRules().keenEars, typeOf(u))) h *= 1.25f;
++		if (asleep(save, u)) h *= 0.5f;
++		return h;
++	}
++	/// the radius left after walls (halve each) and floors (quarter each) between two tiles
++	float carried(SavedBattleGame *save, Position from, Position to, float r)
++	{
++		const int dz = std::abs(from.z - to.z);
++		for (int i = 0; i < dz && r >= 1; ++i) r /= 4.0f;
++		// walk the line on the listener's level
++		int x0 = from.x, y0 = from.y;
++		const int x1 = to.x, y1 = to.y, z = to.z;
++		const int dx = std::abs(x1 - x0), sx = x0 < x1 ? 1 : -1, dy = -std::abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
++		int err = dx + dy, walls = 0;
++		Tile *prev = save->getTile(Position(x0, y0, z));
++		while ((x0 != x1 || y0 != y1) && r >= 1 && walls < 6)
++		{
++			const int e2 = 2 * err;
++			if (e2 >= dy) { err += dy; x0 += sx; }
++			if (e2 <= dx) { err += dx; y0 += sy; }
++			Tile *t = save->getTile(Position(x0, y0, z));
++			if (prev && t && save->getTileEngine()->horizontalBlockage(prev, t, DT_NONE, true) > 0) { r /= 2.0f; ++walls; }
++			prev = t;
++		}
++		return r;
++	}
++	int noiseOf(const SavedBattleGame *save, const char *k, int def)
++	{
++		const auto &n = save->getMod()->getStealthRules().noise;
++		auto i = n.find(k);
++		return i == n.end() ? def : i->second;
++	}
++	void setState(SavedBattleGame *save, const BattleUnit *u, int st)
++	{
++		save->setVanStop(key("st:s:", u), st);
++		if (st == ALERT) save->setVanStop(key("st:at:", u), save->getMod()->getStealthRules().alertTurns);
++	}
++	void addMarker(SavedBattleGame *save, Position p)
++	{
++		int n = save->getVanStop("st:mkn");
++		if (n >= 12) return;
++		// within 2 tiles of the true spot
++		p.x += RNG::generate(-2, 2); p.y += RNG::generate(-2, 2);
++		p.x = std::max(0, std::min(save->getMapSizeX() - 1, (int)p.x));
++		p.y = std::max(0, std::min(save->getMapSizeY() - 1, (int)p.y));
++		save->setVanStop("st:mk" + std::to_string(n), pack(p));
++		save->setVanStop("st:mkn", n + 1);
++	}
++	void burnClues(SavedBattleGame *save)
++	{
++		const int pct = save->getMod()->getStealthRules().burnCluesPct;
++		if (pct <= 0) return;
++		std::vector<BattleItem*> clues;
++		for (auto *it : *save->getItems())
++		{
++			if (!it->getTile() || it->getOwner()) continue;
++			const std::string &t = it->getRules()->getType();
++			if (t.rfind("STR_CLUE_", 0) == 0 && t.find("DECOY") == std::string::npos) clues.push_back(it);
++		}
++		int burn = (int)clues.size() * pct / 100;
++		for (int i = 0; i < burn; ++i)
++		{
++			const int j = RNG::generate(0, (int)clues.size() - 1);
++			save->removeItem(clues[j]);
++			clues.erase(clues.begin() + j);
++		}
++		if (burn > 0) Log(LOG_INFO) << "[stealth] the alarm burned " << burn << " clue items";
++	}
++}
++
++bool on(const SavedBattleGame *save) { return save && save->getVanStop("st:on") != 0; }
++bool alarm(const SavedBattleGame *save) { return save->getVanStop("st:alarm") != 0; }
++
++int state(const SavedBattleGame *save, const BattleUnit *u)
++{
++	if (!on(save) || !cobra(u)) return ALERT;
++	if (alarm(save)) return ALERT;
++	return save->getVanStop(key("st:s:", u), ON_POST);
++}
++bool asleep(const SavedBattleGame *save, const BattleUnit *u) { return on(save) && cobra(u) && state(save, u) == ASLEEP; }
++bool unaware(const SavedBattleGame *save, const BattleUnit *u) { return on(save) && cobra(u) && state(save, u) != ALERT; }
++float reactionFactor(const SavedBattleGame *save, const BattleUnit *u)
++{
++	if (!on(save) || !cobra(u)) return 1.0f;
++	const int s = state(save, u);
++	return s == ASLEEP ? 0.0f : s == ON_POST ? 0.7f : 1.0f;
++}
++
++void begin(SavedBattleGame *save)
++{
++	if (save->getVanStop("st:init")) return;
++	save->setVanStop("st:init", 1);
++	const Mod *mod = save->getMod();
++	const auto &r = mod->getStealthRules();
++	if (!r.on || AirFight::isAirFight(mod, save)) return;
++	save->setVanStop("st:on", 1);
++	const std::string &dep = save->getMissionType();
++	bool quiet = false;
++	for (const auto &q : r.quietDeployments)
++	{
++		if (!q.empty() && q.back() == '*' ? dep.rfind(q.substr(0, q.size() - 1), 0) == 0 : dep == q) { quiet = true; break; }
++	}
++	// the bank's own rule says it is quiet until its alarm
++	const AlienDeployment *ad = mod->getDeployment(dep, false);
++	if (ad && ad->getQuietUntilAlarm()) quiet = true;
++	if (!quiet)
++	{
++		save->setVanStop("st:alarm", 1);
++		Log(LOG_INFO) << "[stealth] " << dep << " starts loud";
++		return;
++	}
++	save->setVanStop("st:quiet", 1);
++	const bool night = save->getGlobalShade() >= 9;
++	const int sleepPct = night ? r.sleepNight : r.sleepDay;
++	BattleUnit *radio = nullptr;
++	int sleepers = 0, n = 0;
++	for (auto *u : *save->getUnits())
++	{
++		if (!cobra(u) || u->isOut()) continue;
++		++n;
++		const bool zz = RNG::percent(sleepPct);
++		setState(save, u, zz ? ASLEEP : ON_POST);
++		if (zz) ++sleepers;
++		// the radio man: the senior man awake
++		if (!zz && (!radio || seniority(u) < seniority(radio))) radio = u;
++	}
++	if (radio) save->setVanStop("st:radio", radio->getId() + 1);
++	Log(LOG_INFO) << "[stealth] " << dep << " starts quiet: " << n << " Cobra, " << sleepers << " asleep (" << (night ? "night" : "day")
++		<< "), radio man " << (radio ? radio->getType() : std::string("none"));
++}
++
++bool tryAlarm(SavedBattleGame *save, const char *why)
++{
++	if (!on(save) || alarm(save)) return false;
++	const int rid = save->getVanStop("st:radio") - 1;
++	BattleUnit *radio = nullptr;
++	for (auto *u : *save->getUnits()) if (u->getId() == rid) radio = u;
++	if (!radio || radio->isOut() || asleep(save, radio) || radio->getStunlevel() >= radio->getHealth())
++	{
++		Log(LOG_INFO) << "[stealth] alarm wanted (" << why << ") but nobody can call it in";
++		return false;
++	}
++	save->setVanStop("st:alarm", 1);
++	for (auto *u : *save->getUnits()) if (cobra(u) && !u->isOut()) setState(save, u, ALERT);
++	burnClues(save);
++	save->setVanStop("st:alarmNews", 1);
++	Log(LOG_INFO) << "[stealth] ALARM (" << why << ") turn " << save->getTurn();
++	return true;
++}
++
++bool quietWin(const SavedBattleGame *save) { return on(save) && save->getVanStop("st:quiet") && !alarm(save); }
++
++void noise(SavedBattleGame *save, Position at, int rad, const BattleUnit *maker, bool loud)
++{
++	if (!on(save) || rad <= 0) return;
++	const auto &r = save->getMod()->getStealthRules();
++	const bool byCobra = maker && maker->getOriginalFaction() == FACTION_HOSTILE;
++	std::vector<BattleUnit*> goers;
++	bool joeHeard = false;
++	int nearest = 9999, heard = 0;
++	for (auto *u : *save->getUnits())
++	{
++		if (u->isOut() || u == maker || !u->getTile()) continue;
++		const bool listenerCobra = cobra(u);
++		if (byCobra == listenerCobra) continue;
++		if (!listenerCobra && u->getOriginalFaction() != FACTION_PLAYER) continue;
++		const float reach = rad * hearing(save, u);
++		const int d = Position::distance2d(at, u->getPosition());
++		if (listenerCobra) nearest = std::min(nearest, d);
++		if (d > reach) continue;
++		const float c = carried(save, at, u->getPosition(), reach);
++		if (listenerCobra && d <= 15) Log(LOG_DEBUG) << "[stealth]  " << u->getType() << " at " << u->getPosition() << " d " << d << " reach " << reach << " after walls " << c;
++		if (c < std::max(1, d)) continue;
++		if (!listenerCobra) { joeHeard = true; continue; }
++		// a Cobra unit heard it
++		++heard;
++		if (alarm(save)) continue;
++		const int was = state(save, u);
++		setState(save, u, ALERT);
++		bool holds = false;
++		for (auto *g : goers) if (Position::distance2d(g->getPosition(), u->getPosition()) <= r.pairRadius) holds = true;
++		if (!holds) { goers.push_back(u); save->setVanStop(key("st:look:", u), pack(at) + 1); }
++		// the shout: everyone near turns to face the noise
++		for (auto *v : *save->getUnits())
++		{
++			if (v == u || !cobra(v) || v->isOut() || asleep(save, v)) continue;
++			if (Position::distance2d(v->getPosition(), u->getPosition()) > r.shoutRadius) continue;
++			v->lookAt(at);
++			while (v->getStatus() == STATUS_TURNING) v->turn();
++		}
++		if (was == ASLEEP) Log(LOG_INFO) << "[stealth] " << u->getType() << " " << u->getId() << " woke";
++		if (loud) tryAlarm(save, "gunfire heard");
++	}
++	if (!byCobra && rad >= 10) Log(LOG_INFO) << "[stealth] noise " << rad << " at " << at << (loud ? " (loud)" : "") << ": nearest Cobra " << nearest << " tiles, " << heard << " heard it";
++	if (byCobra && joeHeard && !(maker && maker->getVisible()))
++	{
++		addMarker(save, at);
++	}
++}
++
++int radius(const SavedBattleGame *save, const std::string &kind)
++{
++	static const std::map<std::string, int> defs = {
++		{"pistol", 15}, {"rifle", 20}, {"heavy", 25}, {"launcher", 30}, {"explosion", 35}, {"silenced", 4}, {"silencedSniper", 6},
++		{"melee", 2}, {"dart", 2}, {"failedTakedown", 8}, {"window", 8}, {"car", 15}, {"door", 3}, {"walk", 2}, {"run", 5}, {"crouch", 1} };
++	auto d = defs.find(kind);
++	return noiseOf(save, kind.c_str(), d == defs.end() ? 0 : d->second);
++}
++
++bool isDart(const SavedBattleGame *save, const BattleItem *weapon)
++{
++	return weapon && listed(save->getMod()->getStealthRules().dartWeapons, weapon->getRules()->getType());
++}
++
++void shot(SavedBattleGame *save, const BattleUnit *shooter, const BattleItem *weapon, const BattleItem *ammo)
++{
++	if (!on(save) || !shooter || !weapon) return;
++	const RuleItem *w = weapon->getRules();
++	const RuleItem *a = ammo ? ammo->getRules() : w;
++	std::string kind;
++	if (isDart(save, weapon)) kind = "dart";
++	else
++	{
++		const auto *dt = a->getDamageType();
++		const bool blast = dt && (dt->ResistType == DT_HE || dt->ResistType == DT_IN) || w->getArcingShot() || a->getArcingShot();
++		if (blast) kind = "launcher";
++		else if (w->getConfigAuto()->shots >= 5 || w->getWeight() >= 12 || (w->getAccuracyAimed() >= 110 && w->getConfigAuto()->shots <= 1)) kind = "heavy";
++		else if (!w->isTwoHanded()) kind = "pistol";
++		else kind = "rifle";
++	}
++	noise(save, shooter->getPosition(), radius(save, kind), shooter, kind != "dart");
++}
++
++void step(SavedBattleGame *save, const BattleUnit *u)
++{
++	if (!on(save) || !u) return;
++	const std::string k = "st:steps:" + std::to_string(u->getId()) + ":" + std::to_string(save->getTurn());
++	const int n = save->getVanStop(k) + 1;
++	save->setVanStop(k, n);
++	const char *kind = u->isKneeled() ? "crouch" : n > save->getMod()->getStealthRules().runTiles ? "run" : "walk";
++	noise(save, u->getPosition(), radius(save, kind), u, false);
++}
++
++int takedown(SavedBattleGame *save, BattleUnit *attacker, BattleUnit *target, const BattleItem *weapon, bool dart)
++{
++	if (!on(save) || !attacker || !target || target->isOut()) return -1;
++	const bool targetCobra = cobra(target);
++	if (targetCobra && !unaware(save, target)) return -1;
++	if (!targetCobra && !(cobra(attacker) && !attacker->getVisible())) return -1;   // a Cobra ninja the Joes can't see
++	// from behind: outside the target's three front directions
++	const int to = save->getTileEngine()->getDirectionTo(target->getPosition(), attacker->getPosition());
++	const int diff = std::abs(((to - target->getDirection()) + 12) % 8 - 4);   // 4 = straight ahead ... 0 = straight behind
++	if (diff >= 3 && !asleep(save, target)) return -1;
++	const auto &r = save->getMod()->getStealthRules();
++	int chance;
++	if (listed(r.silentUnits, typeOf(attacker))) chance = 100;
++	else
++	{
++		chance = dart ? attacker->getBaseStats()->firing : attacker->getBaseStats()->melee;
++		chance = std::min(chance, r.takedownCap);
++	}
++	const bool ok = RNG::percent(chance);
++	Log(LOG_INFO) << "[stealth] takedown " << attacker->getType() << " on " << target->getType() << " " << chance << "% -> " << (ok ? "silent" : "FAILED");
++	if (!ok)
++	{
++		if (targetCobra) setState(save, target, ALERT);
++		noise(save, target->getPosition(), radius(save, "failedTakedown"), attacker, false);
++	}
++	return ok ? 1 : 0;
++}
++
++Position lookTarget(const SavedBattleGame *save, const BattleUnit *u)
++{
++	const int v = save->getVanStop(key("st:look:", u));
++	return v ? unpack(v - 1) : TileEngine::invalid;
++}
++void clearLook(SavedBattleGame *save, const BattleUnit *u) { save->setVanStop(key("st:look:", u), 0); }
++
++int markers(const SavedBattleGame *save) { return on(save) ? save->getVanStop("st:mkn") : 0; }
++Position marker(const SavedBattleGame *save, int i) { return unpack(save->getVanStop("st:mk" + std::to_string(i))); }
++
++std::string turnStart(SavedBattleGame *save)
++{
++	begin(save);
++	if (!on(save)) return "";
++	std::string msg;
++	if (save->getSide() == FACTION_HOSTILE)
++	{
++		save->setVanStop("st:mkn", 0);
++		for (auto *u : *save->getUnits())
++		{
++			if (!cobra(u) || u->isOut()) continue;
++			const int s = state(save, u);
++			if (s == ASLEEP) { u->setTimeUnits(0); continue; }
++			if (s == ALERT && !alarm(save))
++			{
++				int left = save->getVanStop(key("st:at:", u)) - 1;
++				save->setVanStop(key("st:at:", u), left);
++				if (left <= 0) setState(save, u, WARY);
++			}
++			// a man who sees a Joe and is still standing at his next turn
++			for (auto *v : *u->getVisibleUnits())
++			{
++				if (v->getOriginalFaction() == FACTION_PLAYER && !v->isOut())
++				{
++					setState(save, u, ALERT);
++					tryAlarm(save, "a Joe seen");
++					break;
++				}
++			}
++			// a body he can see
++			if (!alarm(save))
++			{
++				for (auto *b : *save->getUnits())
++				{
++					if (!b->isOut() || b->getOriginalFaction() != FACTION_HOSTILE || !b->getTile()) continue;
++					if (Position::distance2d(b->getPosition(), u->getPosition()) > 20) continue;
++					if (save->getTileEngine()->visible(u, b->getTile()))
++					{
++						setState(save, u, ALERT);
++						tryAlarm(save, "a body found");
++						break;
++					}
++				}
++			}
++		}
++	}
++	if (save->getVanStop("st:alarmNews"))
++	{
++		save->setVanStop("st:alarmNews", 0);
++		msg = "STR_COBRA_ALARM_UP";
++	}
++	return msg;
++}
++
++}
++}
+diff --git a/src/Battlescape/Stealth.h b/src/Battlescape/Stealth.h
+new file mode 100644
+index 0000000..8a0b33f
+--- /dev/null
++++ b/src/Battlescape/Stealth.h
+@@ -0,0 +1,71 @@
++#pragma once
++/*
++ * G.I. Joe: sound and stealth (claude/SOUND_STEALTH_DESIGN_v1.md, approved by John 14 Nov 23:35).
++ * Noise travels from what a unit does; Cobra units that hear it wake, look and raise the alarm.
++ * All state lives in SavedBattleGame's key/int store (getVanStop / setVanStop), so it saves with the battle.
++ *   st:on        stealth runs in this battle          st:alarm   the alarm is up
++ *   st:quiet     the battle started quiet              st:radio   the radio man's unit id
++ *   st:s:<id>    0 on post / patrol, 1 asleep, 2 wary, 3 alert          st:at:<id>  alert turns left
++ *   st:look:<id> a packed tile the unit is walking to look at          st:mk*      Joe hearing markers
++ */
++#include <string>
++#include "Position.h"
++
++namespace OpenXcom
++{
++
++class BattleUnit;
++class BattleItem;
++class SavedBattleGame;
++class Mod;
++
++namespace Stealth
++{
++	enum State { ON_POST = 0, ASLEEP = 1, WARY = 2, ALERT = 3 };
++
++	/// does stealth run in this battle (set up on the first turn)
++	bool on(const SavedBattleGame *save);
++	/// first turn: quiet or loud, who is asleep, who is the radio man
++	void begin(SavedBattleGame *save);
++	/// every turn screen: sleepers lose their turn, alerts settle, seen Joes and bodies raise the alarm
++	std::string turnStart(SavedBattleGame *save);
++
++	/// a unit's state (Cobra only; anyone else reads ALERT)
++	int state(const SavedBattleGame *save, const BattleUnit *u);
++	bool asleep(const SavedBattleGame *save, const BattleUnit *u);
++	/// asleep, on post, patrolling or wary: what a silent takedown works on
++	bool unaware(const SavedBattleGame *save, const BattleUnit *u);
++	/// reactions: 0 asleep, 0.7 on post / patrolling, 1 otherwise
++	float reactionFactor(const SavedBattleGame *save, const BattleUnit *u);
++
++	/// a noise of this radius (tiles) at this tile, made by this unit (may be null).
++	/// loud = unsilenced gunfire or an explosion (it raises the alarm if a Cobra unit hears it)
++	void noise(SavedBattleGame *save, Position at, int radius, const BattleUnit *maker, bool loud);
++	/// the noise of firing this weapon (picks the radius from the noise table)
++	void shot(SavedBattleGame *save, const BattleUnit *shooter, const BattleItem *weapon, const BattleItem *ammo);
++	/// a unit stepped onto a new tile
++	void step(SavedBattleGame *save, const BattleUnit *u);
++	/// named noises from the table (door, window, car, explosion, melee...)
++	int radius(const SavedBattleGame *save, const std::string &kind);
++
++	/// a melee or dart attack: -1 not a takedown, 0 failed (noise 8, target alert), 1 silent success
++	int takedown(SavedBattleGame *save, BattleUnit *attacker, BattleUnit *target, const BattleItem *weapon, bool dart);
++	/// is this weapon a dart gun (quiet shots, takedowns at range)
++	bool isDart(const SavedBattleGame *save, const BattleItem *weapon);
++
++	/// the alarm tries to go up (a radio man must be alive and awake to call it)
++	bool tryAlarm(SavedBattleGame *save, const char *why);
++	bool alarm(const SavedBattleGame *save);
++	/// the battle started quiet and the alarm never went up: the quiet-mission rewards apply
++	bool quietWin(const SavedBattleGame *save);
++
++	/// a Cobra unit heard something: the tile it should walk to look at, or invalid
++	Position lookTarget(const SavedBattleGame *save, const BattleUnit *u);
++	void clearLook(SavedBattleGame *save, const BattleUnit *u);
++
++	/// markers for noises the Joes heard but cannot see (this turn): count and tile
++	int markers(const SavedBattleGame *save);
++	Position marker(const SavedBattleGame *save, int i);
++}
++
++}
 diff --git a/src/Battlescape/TileEngine.cpp b/src/Battlescape/TileEngine.cpp
-index 6e68469..ea1dd72 100644
+index 6e68469..3276c12 100644
 --- a/src/Battlescape/TileEngine.cpp
 +++ b/src/Battlescape/TileEngine.cpp
-@@ -16,6 +16,7 @@
+@@ -16,6 +16,8 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
 +#include "AirFight.h"
++#include "Stealth.h"
  #include <assert.h>
  #include <set>
  #include "TileEngine.h"
-@@ -898,7 +899,11 @@ TileEngine::TileEngine(SavedBattleGame *save, Mod *mod) :
+@@ -898,7 +900,11 @@ TileEngine::TileEngine(SavedBattleGame *save, Mod *mod) :
  	_maxViewDistance(mod->getMaxViewDistance()), _maxViewDistanceSq(_maxViewDistance * _maxViewDistance),
  	_maxVoxelViewDistance(_maxViewDistance * 16), _maxDarknessToSeeUnits(mod->getMaxDarknessToSeeUnits()),
  	_maxStaticLightDistance(mod->getMaxStaticLightDistance()), _maxDynamicLightDistance(mod->getMaxDynamicLightDistance()),
@@ -6731,7 +7405,37 @@ index 6e68469..ea1dd72 100644
  {
  	_blockVisibility.resize(save->getMapSizeXYZ());
  	_lightPropagationTerrainBlocking.resize(save->getMapSizeXYZ());
-@@ -3146,6 +3151,8 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
+@@ -1457,6 +1463,11 @@ bool TileEngine::calculateUnitsInFOV(BattleUnit* unit, const Position eventPos,
+ 
+ 	if (unit->isOut())
+ 		return false;
++	if (Stealth::asleep(_save, unit))   // G.I. Joe: asleep in his bunk
++	{
++		unit->clearVisibleUnits();
++		return false;
++	}
+ 
+ 	Position posSelf = unit->getPosition();
+ 	if (setupEventVisibilitySector(posSelf, eventPos, eventRadius))
+@@ -2560,7 +2571,7 @@ std::vector<TileEngine::ReactionScore> TileEngine::getSpottingUnits(BattleUnit*
+ 				// not dying or not about to pass out
+ 				!bu->isOutThresholdExceed() &&
+ 				// have any chances for reacting
+-				bu->getReactionScore() >= threshold &&
++				bu->getReactionScore() * Stealth::reactionFactor(_save, bu) >= threshold && Stealth::reactionFactor(_save, bu) > 0 &&
+ 				// not a friend
+ 				bu->getFaction() != _save->getSide() &&
+ 				// not a civilian, or a civilian shooting at bad non-ignored guys
+@@ -2698,7 +2709,7 @@ TileEngine::ReactionScore TileEngine::determineReactionType(BattleUnit *unit, Ba
+ 		unit,
+ 		nullptr,
+ 		BA_NONE,
+-		unit->getReactionScore(),
++		unit->getReactionScore() * Stealth::reactionFactor(_save, unit),   // G.I. Joe: on post -30%, asleep 0
+ 		0.0,
+ 		1,
+ 	};
+@@ -3146,6 +3157,8 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
  	const int stunLevelOrig = target->getStunlevel();
  
  	target->damage(relative, damage, type, _save, attack);
@@ -6740,7 +7444,7 @@ index 6e68469..ea1dd72 100644
  
  	const int healthDamage = healthOrig - target->getHealth();
  	const int stunDamage = target->getStunlevel() - stunLevelOrig;
-@@ -3217,6 +3224,97 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
+@@ -3217,6 +3230,97 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
   * @param unit The unit that caused the explosion.
   * @param clipOrWeapon clip or weapon causing the damage.
   */
@@ -6838,7 +7542,7 @@ index 6e68469..ea1dd72 100644
  void TileEngine::hit(BattleActionAttack attack, Position center, int power, const RuleDamageType *type, bool rangeAtack, int terrainMeleeTilePart)
  {
  	bool terrainChanged = false; //did the hit destroy a tile thereby changing line of sight?
-@@ -3262,10 +3360,41 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
+@@ -3262,10 +3366,41 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
  					_save->getModuleMap()[(center.x/16)/10][(center.y/16)/10].second--;
  				}
  			}
@@ -6880,7 +7584,7 @@ index 6e68469..ea1dd72 100644
  		}
  	}
  	else if (part == V_UNIT)
-@@ -3341,6 +3470,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3341,6 +3476,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  	{
  		power /= 2;
  	}
@@ -6891,7 +7595,7 @@ index 6e68469..ea1dd72 100644
  
  	int exHeight = Clamp(Options::battleExplosionHeight, 0, 3);
  	int vertdec = 1000; //default flat explosion
-@@ -3451,7 +3584,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3451,7 +3590,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  							_save->removeItem(bi);
  						}
  
@@ -6900,7 +7604,7 @@ index 6e68469..ea1dd72 100644
  					}
  				}
  
-@@ -3512,6 +3645,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3512,6 +3651,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  	// now detonate the tiles affected by explosion
  	if (type->ToTile > 0.0f)
  	{
@@ -6908,7 +7612,7 @@ index 6e68469..ea1dd72 100644
  		for (auto& pair : tilesAffected)
  		{
  			if (detonate(pair.first, pair.second))
-@@ -3523,7 +3657,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3523,7 +3663,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  			if (j)
  				applyGravity(j);
  		}
@@ -6918,7 +7622,7 @@ index 6e68469..ea1dd72 100644
  	calculateLighting(LL_AMBIENT, centetTile, maxRadius + 1, true); // roofs could have been destroyed and fires could have been started
  	calculateFOV(centetTile, maxRadius + 1, true, true);
  	if (attack.attacker && Position::distance2d(centetTile, attack.attacker->getPosition()) > maxRadius + 1)
-@@ -3622,7 +3758,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
+@@ -3622,7 +3764,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
  			}
  		}
  		// set tile on fire
@@ -6927,7 +7631,7 @@ index 6e68469..ea1dd72 100644
  		{
  			if (tiles[i]->getMapData(O_FLOOR) || tiles[i]->getMapData(O_OBJECT))
  			{
-@@ -5156,6 +5292,156 @@ Tile *TileEngine::applyGravity(Tile *t)
+@@ -5156,6 +5298,156 @@ Tile *TileEngine::applyGravity(Tile *t)
  	return rt;
  }
  
@@ -7377,11 +8081,55 @@ index 599d9a2..a48a48a 100644
  	/// Sort two handed sprites out.
  	void sortRifles();
  	/// Get graphic for unit part.
+diff --git a/src/Battlescape/UnitTurnBState.cpp b/src/Battlescape/UnitTurnBState.cpp
+index 31f9454..32f8337 100644
+--- a/src/Battlescape/UnitTurnBState.cpp
++++ b/src/Battlescape/UnitTurnBState.cpp
+@@ -18,6 +18,7 @@
+  */
+ 
+ #include "UnitTurnBState.h"
++#include "Stealth.h"
+ #include "TileEngine.h"
+ #include "Map.h"
+ #include "../Savegame/BattleUnit.h"
+@@ -75,6 +76,7 @@ void UnitTurnBState::init()
+ 		{
+ 			// try to open a door
+ 			int door = _parent->getTileEngine()->unitOpensDoor(_unit, true);
++			if (door == 0 || door == 1) Stealth::noise(_parent->getSave(), _unit->getPosition(), Stealth::radius(_parent->getSave(), "door"), _unit, false);
+ 			if (door == 0)
+ 			{
+ 				_parent->getMod()->getSoundByDepth(_parent->getDepth(), Mod::DOOR_OPEN)->play(-1, _parent->getMap()->getSoundAngle(_unit->getPosition())); // normal door
 diff --git a/src/Battlescape/UnitWalkBState.cpp b/src/Battlescape/UnitWalkBState.cpp
-index bc5f08f..3b09298 100644
+index bc5f08f..74aec61 100644
 --- a/src/Battlescape/UnitWalkBState.cpp
 +++ b/src/Battlescape/UnitWalkBState.cpp
-@@ -508,6 +508,35 @@ void UnitWalkBState::postPathProcedures()
+@@ -18,6 +18,7 @@
+  */
+ 
+ #include "UnitWalkBState.h"
++#include "Stealth.h"
+ #include "MeleeAttackBState.h"
+ #include "TileEngine.h"
+ #include "Pathfinding.h"
+@@ -218,6 +219,7 @@ void UnitWalkBState::think()
+ 				_unit->setVisible(false);
+ 			}
+ 
++			Stealth::step(_parent->getSave(), _unit);   // G.I. Joe: footsteps are heard
+ 			int change = _parent->checkForProximityGrenades(_unit);
+ 			// move our personal lighting with us
+ 			_terrain->calculateLighting(change ? LL_ITEMS : LL_UNITS, _unit->getPosition(), 2);
+@@ -342,6 +344,7 @@ void UnitWalkBState::think()
+ 				{
+ 					return; // don't start walking yet, wait for the ufo door to open
+ 				}
++				if (door == 0 || door == 1) Stealth::noise(_parent->getSave(), _unit->getPosition(), Stealth::radius(_parent->getSave(), "door"), _unit, false);
+ 				if (door == 0)
+ 				{
+ 					_parent->getMod()->getSoundByDepth(_parent->getDepth(), Mod::DOOR_OPEN)->play(-1, _parent->getMap()->getSoundAngle(_unit->getPosition())); // normal door
+@@ -508,6 +511,35 @@ void UnitWalkBState::postPathProcedures()
  		_unit->clearTimeUnits();
  	}
  
@@ -7418,18 +8166,19 @@ index bc5f08f..3b09298 100644
  	_terrain->calculateFOV(_unit);
  	if (!_falling)
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..4dc0211 100644
+index 839f803..a838051 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -71,6 +71,7 @@ set ( basescape_src
+@@ -71,6 +71,8 @@ set ( basescape_src
  set ( battlescape_src
    Battlescape/AbortMissionState.cpp
    Battlescape/ActionMenuItem.cpp
 +  Battlescape/AirFight.cpp
++  Battlescape/Stealth.cpp
    Battlescape/ActionMenuState.cpp
    Battlescape/AIModule.cpp
    Battlescape/AlienInventory.cpp
-@@ -172,6 +173,8 @@ set ( engine_src
+@@ -172,6 +174,8 @@ set ( engine_src
    Engine/Sound.cpp
    Engine/SoundSet.cpp
    Engine/State.cpp
@@ -7438,7 +8187,7 @@ index 839f803..4dc0211 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -201,9 +204,17 @@ set ( geoscape_src
+@@ -201,9 +205,17 @@ set ( geoscape_src
    Geoscape/DogfightState.cpp
    Geoscape/ExtendedGeoscapeLinksState.cpp
    Geoscape/FundingState.cpp
@@ -7456,7 +8205,7 @@ index 839f803..4dc0211 100644
    Geoscape/Globe.cpp
    Geoscape/GraphsState.cpp
    Geoscape/InterceptState.cpp
-@@ -331,6 +342,7 @@ set ( mod_src
+@@ -331,6 +343,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -7464,7 +8213,7 @@ index 839f803..4dc0211 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +368,7 @@ set ( savegame_src
+@@ -356,6 +369,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -18282,7 +19031,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..6af3520 100644
+index 1885346..e7c93f6 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -18420,7 +19169,7 @@ index 1885346..6af3520 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,399 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,420 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -18626,6 +19375,27 @@ index 1885346..6af3520 100644
 +		rt.tryRead("winGoodwillCut", _retreat.winGoodwillCut);
 +		rt.tryRead("neverRetreat", _retreat.neverRetreat);
 +	}
++	if (const auto& st = reader["stealth"])
++	{
++		_stealth.on = true;
++		st.tryRead("noise", _stealth.noise);
++		st.tryRead("runTiles", _stealth.runTiles);
++		st.tryRead("sleepNight", _stealth.sleepNight);
++		st.tryRead("sleepDay", _stealth.sleepDay);
++		st.tryRead("alertTurns", _stealth.alertTurns);
++		st.tryRead("shoutRadius", _stealth.shoutRadius);
++		st.tryRead("pairRadius", _stealth.pairRadius);
++		st.tryRead("takedownCap", _stealth.takedownCap);
++		st.tryRead("burnCluesPct", _stealth.burnCluesPct);
++		st.tryRead("quietScorePct", _stealth.quietScorePct);
++		st.tryRead("quietGoodwill", _stealth.quietGoodwill);
++		st.tryRead("quietExposurePct", _stealth.quietExposurePct);
++		st.tryRead("quietInterrogationPct", _stealth.quietInterrogationPct);
++		st.tryRead("quietDeployments", _stealth.quietDeployments);
++		st.tryRead("silentUnits", _stealth.silentUnits);
++		st.tryRead("keenEars", _stealth.keenEars);
++		st.tryRead("dartWeapons", _stealth.dartWeapons);
++	}
 +	if (const auto& cf = reader["cobraFile"])
 +	{
 +		_cobraFile.on = true;
@@ -18820,7 +19590,7 @@ index 1885346..6af3520 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3704,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3725,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -18828,7 +19598,7 @@ index 1885346..6af3520 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4309,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4330,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -18854,7 +19624,7 @@ index 1885346..6af3520 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4566,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4587,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -18875,7 +19645,7 @@ index 1885346..6af3520 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6280,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6301,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -18895,7 +19665,7 @@ index 1885346..6af3520 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6303,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6324,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -18903,7 +19673,7 @@ index 1885346..6af3520 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6317,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6338,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -18943,7 +19713,7 @@ index 1885346..6af3520 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..8dbba29 100644
+index 2242d13..97d84a4 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -19007,7 +19777,7 @@ index 2242d13..8dbba29 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,215 @@ private:
+@@ -327,6 +360,236 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -19070,6 +19840,27 @@ index 2242d13..8dbba29 100644
 +private:
 +	RetreatRules _retreat;
 +public:
++	/// G.I. Joe: sound and stealth (SOUND_STEALTH_DESIGN_v1). Every number is a first guess (TUNING_RECORD 35-38).
++	struct StealthRules
++	{
++		bool on = false;
++		std::map<std::string, int> noise;          ///< radius in tiles by kind (pistol, rifle, heavy, launcher, explosion, dart, melee, failedTakedown, window, car, door, walk, run)
++		int runTiles = 6;                          ///< more tiles than this in one turn is running
++		int sleepNight = 30, sleepDay = 10;        ///< % of a quiet garrison asleep
++		int alertTurns = 5;                        ///< then a unit settles to wary
++		int shoutRadius = 6, pairRadius = 5;       ///< who turns to face a noise; who holds while a mate goes to look
++		int takedownCap = 95;                      ///< % chance ceiling for anyone without the Silent trait
++		int burnCluesPct = 50;                     ///< the alarm burns this % of the clue items still lying on the map
++		int quietScorePct = 20, quietGoodwill = 1, quietExposurePct = 50, quietInterrogationPct = 50;
++		std::vector<std::string> quietDeployments; ///< these start quiet (a trailing * matches a prefix); the rest start loud
++		std::vector<std::string> silentUnits;      ///< soldier or unit types whose takedowns always succeed
++		std::vector<std::string> keenEars;         ///< +25% hearing
++		std::vector<std::string> dartWeapons;      ///< quiet shots that can take down at range
++	};
++private:
++	StealthRules _stealth;
++public:
++	const StealthRules &getStealthRules() const { return _stealth; }
 +	/// G.I. Joe: air (and later sea) fights on the battle engine (DOGFIGHT_DESIGN_v1, AIR_SEA_BUILD_PLAN_v1).
 +	/// A craft or Cobra aircraft becomes a unit; the floors are the decks.
 +	struct AirCraftRule
@@ -19223,7 +20014,7 @@ index 2242d13..8dbba29 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +934,124 @@ public:
+@@ -692,6 +955,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -19842,18 +20633,19 @@ index 6bef22e..8cc3b62 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..94ba762 100644
+index 99f24ce..26186cb 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
-@@ -411,6 +411,7 @@
+@@ -411,6 +411,8 @@
      <ClCompile Include="Basescape\TransfersState.cpp" />
      <ClCompile Include="Battlescape\AbortMissionState.cpp" />
      <ClCompile Include="Battlescape\ActionMenuItem.cpp" />
 +    <ClCompile Include="Battlescape\AirFight.cpp" />
++    <ClCompile Include="Battlescape\Stealth.cpp" />
      <ClCompile Include="Battlescape\ActionMenuState.cpp" />
      <ClCompile Include="Battlescape\AlienInventory.cpp" />
      <ClCompile Include="Battlescape\AlienInventoryState.cpp" />
-@@ -511,6 +512,8 @@
+@@ -511,6 +513,8 @@
      <ClCompile Include="Engine\Sound.cpp" />
      <ClCompile Include="Engine\SoundSet.cpp" />
      <ClCompile Include="Engine\State.cpp" />
@@ -19862,7 +20654,7 @@ index 99f24ce..94ba762 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,10 +549,18 @@
+@@ -546,10 +550,18 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
@@ -19881,7 +20673,7 @@ index 99f24ce..94ba762 100644
      <ClCompile Include="Geoscape\Globe.cpp" />
      <ClCompile Include="Geoscape\GraphsState.cpp" />
      <ClCompile Include="Geoscape\InterceptState.cpp" />
-@@ -673,6 +684,7 @@
+@@ -673,6 +685,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -19889,7 +20681,7 @@ index 99f24ce..94ba762 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +694,7 @@
+@@ -682,6 +695,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -19897,15 +20689,16 @@ index 99f24ce..94ba762 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -890,6 +903,7 @@
+@@ -890,6 +904,8 @@
      <ClInclude Include="Basescape\TransfersState.h" />
      <ClInclude Include="Battlescape\AbortMissionState.h" />
      <ClInclude Include="Battlescape\ActionMenuItem.h" />
 +    <ClInclude Include="Battlescape\AirFight.h" />
++    <ClInclude Include="Battlescape\Stealth.h" />
      <ClInclude Include="Battlescape\ActionMenuState.h" />
      <ClInclude Include="Battlescape\AlienInventory.h" />
      <ClInclude Include="Battlescape\AlienInventoryState.h" />
-@@ -970,6 +984,8 @@
+@@ -970,6 +986,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -19914,7 +20707,7 @@ index 99f24ce..94ba762 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1049,14 @@
+@@ -1033,6 +1051,14 @@
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
@@ -19929,7 +20722,7 @@ index 99f24ce..94ba762 100644
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1042,6 +1066,7 @@
+@@ -1042,6 +1068,7 @@
      <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
      <ClInclude Include="Geoscape\ProductionCompleteState.h" />
      <ClInclude Include="Geoscape\GeoscapeState.h" />
@@ -19937,7 +20730,7 @@ index 99f24ce..94ba762 100644
      <ClInclude Include="Geoscape\Globe.h" />
      <ClInclude Include="Geoscape\GraphsState.h" />
      <ClInclude Include="Geoscape\InterceptState.h" />
-@@ -1170,6 +1195,7 @@
+@@ -1170,6 +1197,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -19945,7 +20738,7 @@ index 99f24ce..94ba762 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1205,7 @@
+@@ -1179,6 +1207,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
