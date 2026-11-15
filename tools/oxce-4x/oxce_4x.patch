@@ -3899,7 +3899,7 @@ index a0bc8b3..60195c9 100644
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..e885452 100644
+index 7cd4941..66a2f6b 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -16,6 +16,7 @@
@@ -3936,12 +3936,14 @@ index 7cd4941..e885452 100644
  	_btnKneel->onMouseIn((ActionHandler)&BattlescapeState::txtTooltipIn);
  	_btnKneel->onMouseOut((ActionHandler)&BattlescapeState::txtTooltipOut);
  	_btnKneel->allowToggleInversion();
-@@ -724,6 +726,393 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +726,395 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
 +
 +	if (HiUI::enabled()) layoutJoeHud();
++	// G.I. Joe: New Battle is the test bench, so the player side never runs out of time units (John, 15 Nov)
++	BattleUnit::gjInfiniteTU = (_game->getSavedGame()->getMonthsPassed() == -1);
 +}
 +
 +/**
@@ -4330,7 +4332,7 @@ index 7cd4941..e885452 100644
  }
  
  
-@@ -732,6 +1121,7 @@ BattlescapeState::BattlescapeState() :
+@@ -732,6 +1123,7 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -4338,7 +4340,7 @@ index 7cd4941..e885452 100644
  	delete _animTimer;
  	delete _gameTimer;
  	delete _battleGame;
-@@ -859,6 +1249,7 @@ void BattlescapeState::init()
+@@ -859,6 +1251,7 @@ void BattlescapeState::init()
  void BattlescapeState::think()
  {
  	static bool popped = false;
@@ -4346,7 +4348,7 @@ index 7cd4941..e885452 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1215,6 +1606,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1215,6 +1608,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -4367,7 +4369,7 @@ index 7cd4941..e885452 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -2172,7 +2577,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +2579,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -4376,7 +4378,7 @@ index 7cd4941..e885452 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +2797,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +2799,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -4384,7 +4386,7 @@ index 7cd4941..e885452 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -3621,6 +4027,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4029,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -4397,7 +4399,7 @@ index 7cd4941..e885452 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +4464,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4466,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -17396,7 +17398,7 @@ index 665d922..160915e 100644
  	bool _debugInVisualStudio;
  	std::string _newVersion;
 diff --git a/src/Menu/NewBattleState.cpp b/src/Menu/NewBattleState.cpp
-index 52b6371..6408122 100644
+index 52b6371..33fb803 100644
 --- a/src/Menu/NewBattleState.cpp
 +++ b/src/Menu/NewBattleState.cpp
 @@ -39,6 +39,10 @@
@@ -17462,7 +17464,7 @@ index 52b6371..6408122 100644
 -			int howMany = rule->getBattleType() == BT_AMMO ? 2 : 1;
 +			const auto& cats = rule->getCategories();
 +			bool inKit = !gjKit || std::find(cats.begin(), cats.end(), "STR_JOE_KIT") != cats.end();
-+			int howMany = rule->getBattleType() == BT_AMMO ? (gjKit && inKit ? 8 : 2) : (gjKit && inKit ? 2 : 1);
++			int howMany = rule->getBattleType() == BT_AMMO ? (gjKit && inKit ? 8 : 2) : (gjKit && inKit ? ((rule->getBattleType() == BT_GRENADE || rule->getBattleType() == BT_PROXIMITYGRENADE) ? 12 : 2) : 1);
  			base->getStorageItems()->addItem(rule, howMany);
 -			if (rule->getBattleType() != BT_NONE && rule->isInventoryItem())
 +			if (rule->getBattleType() != BT_NONE && rule->isInventoryItem() && inKit)
@@ -20238,7 +20240,7 @@ index b25dba2..7f250fd 100644
  	int getUsedContainment(int prisonType, bool onlyExternal = false) const;
  	/// Sets the craft's battlescape status.
 diff --git a/src/Savegame/BattleUnit.cpp b/src/Savegame/BattleUnit.cpp
-index 46fbf1f..ff41988 100644
+index 46fbf1f..1ef652a 100644
 --- a/src/Savegame/BattleUnit.cpp
 +++ b/src/Savegame/BattleUnit.cpp
 @@ -28,6 +28,7 @@
@@ -20328,7 +20330,41 @@ index 46fbf1f..ff41988 100644
  
  		setFatalShotInfo(side, bodypart);
  
-@@ -2841,7 +2886,7 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
+@@ -2317,8 +2362,11 @@ void BattleUnit::applyPercentages(RuleItemUseCost &cost, const RuleItemUseFlat &
+  * @param tu
+  * @return flag if it could spend the time units or not.
+  */
++bool BattleUnit::gjInfiniteTU = false;
++
+ bool BattleUnit::spendTimeUnits(int tu)
+ {
++	if (gjInfiniteTU && _faction == FACTION_PLAYER) return true;
+ 	if (tu <= _tu)
+ 	{
+ 		_tu -= tu;
+@@ -2337,6 +2385,7 @@ bool BattleUnit::spendTimeUnits(int tu)
+  */
+ bool BattleUnit::spendEnergy(int energy)
+ {
++	if (gjInfiniteTU && _faction == FACTION_PLAYER) return true;
+ 	if (energy <= _energy)
+ 	{
+ 		_energy -= energy;
+@@ -2354,8 +2403,11 @@ bool BattleUnit::spendEnergy(int energy)
+  */
+ void BattleUnit::spendCost(const RuleItemUseCost& cost)
+ {
+-	_tu -= cost.Time;
+-	_energy -= cost.Energy;
++	if (!(gjInfiniteTU && _faction == FACTION_PLAYER))
++	{
++		_tu -= cost.Time;
++		_energy -= cost.Energy;
++	}
+ 	_morale -= cost.Morale;
+ 	_health -= cost.Health;
+ 	_stunlevel += cost.Stun;
+@@ -2841,7 +2893,7 @@ void BattleUnit::prepareNewTurn(bool fullProcess)
  		return;
  	}
  
@@ -20337,7 +20373,7 @@ index 46fbf1f..ff41988 100644
  	_unitsSpottedThisTurn.clear();
  	_meleeAttackedBy.clear();
  
-@@ -4208,6 +4253,12 @@ bool BattleUnit::postMissionProcedures(const Mod *mod, SavedGame *geoscape, Save
+@@ -4208,6 +4260,12 @@ bool BattleUnit::postMissionProcedures(const Mod *mod, SavedGame *geoscape, Save
  	{
  		recovery = 0;
  	}
@@ -20351,7 +20387,7 @@ index 46fbf1f..ff41988 100644
  	{
  		ModScript::ReturnFromMissionUnit::Output arg { };
 diff --git a/src/Savegame/BattleUnit.h b/src/Savegame/BattleUnit.h
-index ecc040f..22995de 100644
+index ecc040f..3702d2d 100644
 --- a/src/Savegame/BattleUnit.h
 +++ b/src/Savegame/BattleUnit.h
 @@ -102,6 +102,7 @@ private:
@@ -20404,7 +20440,16 @@ index ecc040f..22995de 100644
  	/// Gets the unit's stun level.
  	int getStunlevel() const;
  	/// Is the unit losing HP (due to negative health regeneration)?
-@@ -704,6 +719,31 @@ public:
+@@ -394,6 +409,8 @@ public:
+ 	/// Clear visible tiles.
+ 	void clearVisibleTiles();
+ 	/// Calculate psi attack accuracy.
++	/// G.I. Joe test switch: New Battle gives the player side endless time units and energy.
++	static bool gjInfiniteTU;
+ 	static int getPsiAccuracy(BattleActionAttack::ReadOnly attack);
+ 	/// Calculate firing accuracy.
+ 	static int getFiringAccuracy(BattleActionAttack::ReadOnly attack, const Mod *mod);
+@@ -704,6 +721,31 @@ public:
  	/// Set how many turns this unit will be exposed for. For specific faction.
  	void setTurnsSinceSpottedByFaction(UnitFaction faction, int turns);
  	/// Set how many turns this unit will be exposed for.

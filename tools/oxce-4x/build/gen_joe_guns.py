@@ -171,6 +171,8 @@ for (k, name, rounds, price, wt, fit, big) in AMMO:
 # the two grenades and the field kit already exist with Joe art: only put them in the kit
 for t in ["STR_GRENADE", "STR_SMOKE_GRENADE", "STR_MEDI_KIT", "STR_MOTION_SCANNER"]:
     L += [f"  - type: {t}", "    categories: [STR_JOE_KIT]"]
+# John 15 Nov 01:10: "make all grenades incendiary for now" (frag and Cobra's; smoke stays smoke). Undo by deleting these lines.
+L += ["  - type: STR_GRENADE", "    damageType: 2", "  - type: STR_ALIEN_GRENADE", "    damageType: 2"]
 L += ["", "extraStrings:", "  - type: en-US", "    strings: &joeguns"]
 L += [f'      {T(g[0])}: "{g[1]}"' for g in G] + [f'      {T(m[0])}: "{m[1]}"' for m in MELEE] + [f'      {A(a[0])}: "{a[1]}"' for a in AMMO]
 L += ['      STR_JOE_KIT: "Joe kit"', "  - type: en-GB", "    strings: *joeguns"]
