@@ -8675,10 +8675,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..a459570
+index 0000000..433eb85
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3291 @@
+@@ -0,0 +1,3294 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -10320,11 +10320,14 @@ index 0000000..a459570
 +			break;
 +		case PIN_SHIP:                      // a small hull, bow up: pale grey (civilian shipping); red when hijacked
 +		case PIN_SHIP_HIJACKED:
++		case PIN_SHIP_SUSPECTED:
++		case PIN_SHIP_CONFIRMED:
 +		{
 +			const double w = s * 0.42, h = s * 0.95;
 +			std::vector<std::pair<double, double> > hull{ { cx, cy - h * 1.15 }, { cx + w, cy - h * 0.45 }, { cx + w, cy + h }, { cx - w, cy + h }, { cx - w, cy - h * 0.45 } };
 +			poly(hull, o * 1.2, S_INK, 200);
-+			poly(hull, 0, p.kind == PIN_SHIP_HIJACKED ? 0xD8392B : 0xC8CCD2, p.kind == PIN_SHIP_HIJACKED ? a : (p.lit ? 230 : 150));
++			const Uint32 col = p.kind == PIN_SHIP_HIJACKED ? 0xFF6A3C : p.kind == PIN_SHIP_CONFIRMED ? 0xD8392B : p.kind == PIN_SHIP_SUSPECTED ? 0xE8A33A : 0xC8CCD2;
++			poly(hull, 0, col, p.kind == PIN_SHIP ? (p.lit ? 230 : 150) : a);
 +			break;
 +		}
 +		case PIN_CITY:                      // dot: bone
@@ -11972,7 +11975,7 @@ index 0000000..a459570
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..75ecbe3
+index 0000000..b1a7581
 --- /dev/null
 +++ b/src/Engine/HiUI.h
 @@ -0,0 +1,203 @@
@@ -12073,7 +12076,7 @@ index 0000000..75ecbe3
 +	struct GlobeLabel { std::string text; double x, y; int kind; };
 +	void globeLabels(const std::vector<GlobeLabel> &labels);
 +	/// A pin on the globe, in base coords. kind: see PinKind. lit: the blink phase.
-+	enum PinKind { PIN_JOE_BASE, PIN_COBRA_SITE, PIN_MISSION, PIN_CONTACT, PIN_JOE_CRAFT, PIN_WAYPOINT, PIN_CITY, PIN_SHIP, PIN_SHIP_HIJACKED };
++	enum PinKind { PIN_JOE_BASE, PIN_COBRA_SITE, PIN_MISSION, PIN_CONTACT, PIN_JOE_CRAFT, PIN_WAYPOINT, PIN_CITY, PIN_SHIP, PIN_SHIP_HIJACKED, PIN_SHIP_SUSPECTED, PIN_SHIP_CONFIRMED };
 +	struct GlobePin { double x, y; int kind; bool lit; };
 +	void globePins(const std::vector<GlobePin> &pins);
 +	/// An 8-bit marker frame to set on the globe crisp (the player's own marks).
@@ -13739,7 +13742,7 @@ index 9527579..ea222bc 100644
  	void init() override;
  	/// Sorts the funding countries list.
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..8c86b1e 100644
+index 6b4e79d..0a6f570 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,14 @@
@@ -14694,7 +14697,14 @@ index 6b4e79d..8c86b1e 100644
  			}
  			else
  			{
-@@ -2395,6 +3016,286 @@ void GeoscapeState::time1Day()
+@@ -2389,12 +3010,293 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+  */
+ void GeoscapeState::time1Day()
+ {
++	Shipping::daily(_game);   // G.I. Joe: analysts work the open ship files
+ 	_game->getSavedGame()->increaseDaysPassed();
+ 
+ 	SavedGame *saveGame = _game->getSavedGame();
  	Mod *mod = _game->getMod();
  	bool psiStrengthEval = (Options::psiStrengthEval && saveGame->isResearched(mod->getPsiRequirements()));
  
@@ -14981,7 +14991,7 @@ index 6b4e79d..8c86b1e 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3345,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3346,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -15004,7 +15014,7 @@ index 6b4e79d..8c86b1e 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2861,7 +3771,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +3772,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -15033,7 +15043,7 @@ index 6b4e79d..8c86b1e 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3891,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3892,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -15064,7 +15074,7 @@ index 6b4e79d..8c86b1e 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4077,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4078,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -15074,7 +15084,7 @@ index 6b4e79d..8c86b1e 100644
  }
  
  /**
-@@ -3265,6 +4221,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4222,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -15090,7 +15100,7 @@ index 6b4e79d..8c86b1e 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4307,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4308,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -15143,7 +15153,7 @@ index 6b4e79d..8c86b1e 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4375,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4376,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -15395,7 +15405,7 @@ index 6b4e79d..8c86b1e 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +5903,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +5904,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -15468,7 +15478,7 @@ index 5eaf857..da6217d 100644
  	void btnZoomOutRightClick(Action *action);
  	/// Blit method - renders the state and dogfights.
 diff --git a/src/Geoscape/Globe.cpp b/src/Geoscape/Globe.cpp
-index 5b17165..c588c83 100644
+index 5b17165..76b824e 100644
 --- a/src/Geoscape/Globe.cpp
 +++ b/src/Geoscape/Globe.cpp
 @@ -17,6 +17,8 @@
@@ -16108,7 +16118,7 @@ index 5b17165..c588c83 100644
  /**
   * Draws the flight paths of player craft (and hunting UFOs) flying on the globe.
   */
-@@ -1756,6 +2243,37 @@ void Globe::drawTarget(Target *target, Surface *surface)
+@@ -1756,6 +2243,39 @@ void Globe::drawTarget(Target *target, Surface *surface)
  void Globe::drawMarkers()
  {
  	_markers->clear();
@@ -16135,7 +16145,9 @@ index 5b17165..c588c83 100644
 +		for (auto* ufo : *_game->getSavedGame()->getUfos())
 +		{
 +			if (ufo->getStatus() == Ufo::IGNORE_ME) continue;
-+			pin(ufo, Shipping::isHijacked(ufo) ? HiUI::PIN_SHIP_HIJACKED : Shipping::isMerchant(ufo) ? HiUI::PIN_SHIP : HiUI::PIN_CONTACT);
++			pin(ufo, !Shipping::isMerchant(ufo) ? HiUI::PIN_CONTACT : Shipping::isHijacked(ufo) ? HiUI::PIN_SHIP_HIJACKED
++				: ufo->gjIntel >= _game->getMod()->getShippingRules().confirmedAt ? HiUI::PIN_SHIP_CONFIRMED
++				: ufo->gjIntel >= _game->getMod()->getShippingRules().suspectedAt ? HiUI::PIN_SHIP_SUSPECTED : HiUI::PIN_SHIP);
 +		}
 +		for (auto* xbase : *_game->getSavedGame()->getBases())
 +			for (auto* xcraft : *xbase->getCrafts())
@@ -16146,7 +16158,7 @@ index 5b17165..c588c83 100644
  	_markers->lock();
  	// Draw the base markers
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -1805,7 +2323,19 @@ void Globe::drawMarkers()
+@@ -1805,7 +2325,19 @@ void Globe::drawMarkers()
   */
  void Globe::blit(SDL_Surface *surface)
  {
@@ -16166,7 +16178,7 @@ index 5b17165..c588c83 100644
  	_radars->blit(surface);
  	_countries->blit(surface);
  	_markers->blit(surface);
-@@ -2009,7 +2539,13 @@ void Globe::mouseClick(Action *action, State *state)
+@@ -2009,7 +2541,13 @@ void Globe::mouseClick(Action *action, State *state)
  	if (lat == lat && lon == lon)
  	{
  		InteractiveSurface::mouseClick(action, state);
@@ -16586,16 +16598,17 @@ index 0000000..3543fff
 +}
 diff --git a/src/Geoscape/IntelBoardState.cpp b/src/Geoscape/IntelBoardState.cpp
 new file mode 100644
-index 0000000..53a0156
+index 0000000..fcb1698
 --- /dev/null
 +++ b/src/Geoscape/IntelBoardState.cpp
-@@ -0,0 +1,529 @@
+@@ -0,0 +1,551 @@
 +/*
 + * G.I. Joe: USA Defense. The INTEL board (see IntelBoardState.h).
 + * Sections: what just happened, open leads with how close each is, solved leads, Cobra sites
 + * the Joes know about, unconfirmed pins, and craft out on recon.
 + */
 +#include "IntelBoardState.h"
++#include "../Savegame/Ufo.h"
 +#include <algorithm>
 +#include <sstream>
 +#include "../Engine/Game.h"
@@ -16677,6 +16690,10 @@ index 0000000..53a0156
 +		if (mod->getLead(id))
 +		{
 +			line = big ? tr("STR_LEAD_SOLVED").arg(tr(id)) : tr("STR_LEAD_PROGRESS").arg(tr(id));
++		}
++		else if (id.find('|') != std::string::npos)
++		{
++			line = tr(id.substr(0, id.find('|'))).arg(id.substr(id.find('|') + 1));   // G.I. Joe: a key and its one argument
 +		}
 +		else
 +		{
@@ -16765,6 +16782,23 @@ index 0000000..53a0156
 +		for (const auto *rule : solved)
 +		{
 +			_lstBoard->addRow(3, tr(rule->getType()).c_str(), tr("STR_LEAD_DONE").c_str(), "");
++		}
++	}
++
++	// G.I. Joe: ships under investigation (sea design 12f.4) - "Investigate <ship>"
++	{
++		const auto &SH = mod->getShippingRules();
++		bool any = false;
++		for (const auto *u : *save->getUfos())
++		{
++			if (u->gjLane < 0 || u->gjIntel <= 0 || u->getStatus() == Ufo::DESTROYED) continue;
++			if (!any) { header("STR_SHIP_INTEL_HEADER"); any = true; }
++			const int need = std::max(1, SH.confirmedAt);
++			const int cells = 10, lit = std::min(cells, u->gjIntel * cells / need);
++			std::string bar = std::string(lit, '|') + std::string(cells - lit, '.');
++			const char *state = u->gjIntel >= SH.confirmedAt ? "STR_SHIP_CONFIRMED" : u->gjIntel >= SH.suspectedAt ? "STR_SHIP_SUSPECTED" : "STR_SHIP_UNDER_INVESTIGATION";
++			std::string name = tr("STR_SHIP_INVESTIGATE").arg(u->getName(_game->getLanguage()));
++			_lstBoard->addRow(3, name.c_str(), bar.c_str(), tr(state).c_str());
 +		}
 +	}
 +
@@ -18000,10 +18034,10 @@ index 0000000..3886f85
 +}
 diff --git a/src/Geoscape/Shipping.cpp b/src/Geoscape/Shipping.cpp
 new file mode 100644
-index 0000000..a30c690
+index 0000000..bdf2734
 --- /dev/null
 +++ b/src/Geoscape/Shipping.cpp
-@@ -0,0 +1,461 @@
+@@ -0,0 +1,483 @@
 +/*
 + * G.I. Joe: civilian shipping on the world map. See Shipping.h.
 + */
@@ -18020,6 +18054,7 @@ index 0000000..a30c690
 +#include "../Mod/Mod.h"
 +#include "../Mod/RuleAlienMission.h"
 +#include "../Mod/RuleCountry.h"
++#include "../Mod/RuleResearch.h"
 +#include "../Mod/RuleRegion.h"
 +#include "../Mod/RuleCobraSite.h"
 +#include "../Mod/UfoTrajectory.h"
@@ -18194,6 +18229,9 @@ index 0000000..a30c690
 +				eco.spendFunds(region, cost);
 +				if (tier != 1 && !region.empty()) eco.addMateriel(region, -needMat[tier]);
 +				ufo->gjCobra = ownLine;
++				// Follow the Money done: the front company's ships are known the day they sail (12a)
++				const RuleResearch *ftm = mod->getResearch(SH.followMoneyResearch);
++				if (ownLine == 1 && ftm && save->isResearched(ftm, false)) ufo->gjIntel = SH.confirmedAt;
 +				ufo->gjCargo = tier;
 +				ufo->gjRegion = region;
 +				Log(LOG_INFO) << "[shipping] Cobra " << (ownLine == 1 ? "own-line freighter" : "containers") << " tier " << tier
@@ -18226,6 +18264,7 @@ index 0000000..a30c690
 +		u->gjCobra = atoi(env) == 3 ? 0 : atoi(env);
 +		if (atoi(env) == 3) { u->gjHijack = game->getMod()->getShippingRules().hijackHours; u->setSpeed(0); }
 +		u->gjCargo = strchr(env, ',') ? atoi(strchr(env, ',') + 1) : 1;
++		if (const char *c2 = strchr(env, ',')) if (const char *c3 = strchr(c2 + 1, ',')) u->gjIntel = atoi(c3 + 1);
 +		u->setLongitude(b->getLongitude() + 0.017);
 +		u->setLatitude(b->getLatitude() + 0.017);
 +		if (craft && !getenv("OXCE_SHIP_TEST_NOCRAFT")) { craft->setDestination(u); craft->setStatus("STR_OUT"); }
@@ -18324,6 +18363,21 @@ index 0000000..a30c690
 +	return news;
 +}
 +
++void daily(Game *game)
++{
++	// the analysts keep working every open ship file (12f.4)
++	const auto &SH = game->getMod()->getShippingRules();
++	SavedGame *save = game->getSavedGame();
++	for (auto *u : *save->getUfos())
++	{
++		if (!isMerchant(u) || u->gjIntel <= 0 || u->gjIntel >= SH.confirmedAt || u->getStatus() == Ufo::DESTROYED) continue;
++		const int before = u->gjIntel;
++		u->gjIntel = std::min(SH.confirmedAt, u->gjIntel + SH.intelPerDay);
++		if (u->gjIntel >= SH.confirmedAt) save->addLeadNews("!STR_SHIP_INTEL_CONFIRMED|" + u->gjName);
++		else if (u->gjIntel >= SH.suspectedAt && before < SH.suspectedAt) save->addLeadNews("!STR_SHIP_INTEL_SUSPECTED|" + u->gjName);
++	}
++}
++
 +bool isHijacked(const Ufo *ufo)
 +{
 +	return isMerchant(ufo) && ufo->gjHijack > 0;
@@ -18385,6 +18439,8 @@ index 0000000..a30c690
 +	}
 +	s << lang->getString("STR_SHIP_FLAG").arg(ufo->gjFlag.empty() ? lang->getString("STR_SHIP_FLAG_NONE") : lang->getString(ufo->gjFlag)) << "\n";
 +	if (ufo->gjHijack > 0) s << lang->getString("STR_SHIP_HIJACKED_HOURS").arg(ufo->gjHijack);
++	else if (ufo->gjIntel >= SH.confirmedAt) s << lang->getString("STR_SHIP_INTEL_IS_CONFIRMED");
++	else if (ufo->gjIntel >= SH.suspectedAt) s << lang->getString("STR_SHIP_INTEL_IS_SUSPECTED");
 +	else s << lang->getString("STR_SHIP_INTEL_UNKNOWN");
 +	return s.str();
 +}
@@ -18467,10 +18523,10 @@ index 0000000..a30c690
 +}
 diff --git a/src/Geoscape/Shipping.h b/src/Geoscape/Shipping.h
 new file mode 100644
-index 0000000..527a84a
+index 0000000..78da07f
 --- /dev/null
 +++ b/src/Geoscape/Shipping.h
-@@ -0,0 +1,44 @@
+@@ -0,0 +1,46 @@
 +#pragma once
 +/*
 + * G.I. Joe: civilian shipping on the world map (SEA_BATTLES_DESIGN_v1 sections 7, 9, 12).
@@ -18497,6 +18553,8 @@ index 0000000..527a84a
 +	bool isMerchant(const Ufo *ufo);
 +	/// every game hour: keep the lanes full, run hijackings; returns news for a popup (may be empty)
 +	std::string think(Game *game, Globe *globe);
++	/// every game day: the analysts work the open ship files
++	void daily(Game *game);
 +	/// held by hijackers
 +	bool isHijacked(const Ufo *ufo);
 +	/// a merchant reached a lane point: on to the next, or into port. True if it was a merchant.
@@ -19872,7 +19930,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..c96c99b 100644
+index 1885346..9006224 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -20010,7 +20068,7 @@ index 1885346..c96c99b 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,477 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,482 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -20273,6 +20331,11 @@ index 1885346..c96c99b 100644
 +		sh.tryRead("hostageGoodwill", _shipping.hostageGoodwill);
 +		sh.tryRead("hostageGoodwillCap", _shipping.hostageGoodwillCap);
 +		sh.tryRead("boardHijack", _shipping.boardHijack);
++		sh.tryRead("intelResearch", _shipping.intelResearch);
++		sh.tryRead("intelPerDay", _shipping.intelPerDay);
++		sh.tryRead("suspectedAt", _shipping.suspectedAt);
++		sh.tryRead("confirmedAt", _shipping.confirmedAt);
++		sh.tryRead("followMoneyResearch", _shipping.followMoneyResearch);
 +		if (const auto& ln = sh["lanes"])
 +		{
 +			_shipping.lanes.clear();
@@ -20488,7 +20551,7 @@ index 1885346..c96c99b 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3782,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3787,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -20496,7 +20559,7 @@ index 1885346..c96c99b 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4387,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4392,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -20522,7 +20585,7 @@ index 1885346..c96c99b 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4644,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4649,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -20543,7 +20606,7 @@ index 1885346..c96c99b 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6358,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6363,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -20563,7 +20626,7 @@ index 1885346..c96c99b 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6381,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6386,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -20571,7 +20634,7 @@ index 1885346..c96c99b 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6395,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6400,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -20611,7 +20674,7 @@ index 1885346..c96c99b 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..7e4ad9a 100644
+index 2242d13..4341a7f 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -20675,7 +20738,7 @@ index 2242d13..7e4ad9a 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,271 @@ private:
+@@ -327,6 +360,276 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -20789,6 +20852,11 @@ index 2242d13..7e4ad9a 100644
 +		int ransomFunds = 50, ransomGoodwill = 10, seizeFunds = 30, seizeMateriel = 25;
 +		int hostageGoodwill = 2, hostageGoodwillCap = 10;
 +		std::string boardHijack = "STR_SHIP_HIJACK";
++		// ship intel (12f.4): a clue's research points at a Cobra ship at sea; analysts keep at it daily;
++		// half = Suspected, full = Confirmed; Follow the Money confirms Cobra's own line
++		std::map<std::string, int> intelResearch;
++		int intelPerDay = 4, suspectedAt = 50, confirmedAt = 100;
++		std::string followMoneyResearch = "STR_FOLLOW_THE_MONEY";
 +	};
 +private:
 +	ShippingRules _shipping;
@@ -20947,7 +21015,7 @@ index 2242d13..7e4ad9a 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +990,124 @@ public:
+@@ -692,6 +995,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -22857,7 +22925,7 @@ index 6c121c7..fb7f92b 100644
  	std::vector< std::vector<int> > &getReinforcementsBlocks() { return _reinforcementsBlocks; }
  
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..7588420 100644
+index 9ca9637..7e5510f 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,11 +21,13 @@
@@ -23172,7 +23240,7 @@ index 9ca9637..7588420 100644
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
  	{
  		if (!_globalEquipmentLayout[j].empty())
-@@ -1530,8 +1750,158 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
+@@ -1530,8 +1750,191 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
   * @param base the base, in which the project was finished
   * @param score should the score be awarded or not?
   */
@@ -23317,6 +23385,38 @@ index 9ca9637..7588420 100644
 +	}
 +}
 +
++/**
++ * G.I. Joe ship intel (sea design 12f.4): a finished clue topic points at one of Cobra's ships at sea - the
++ * one the Joes already know most about - and Follow the Money confirms every ship of Cobra's own line.
++ */
++void SavedGame::shipIntelOnResearch(const Mod *mod, const std::string &research)
++{
++	const auto &SH = mod->getShippingRules();
++	if (!SH.on) return;
++	if (research == SH.followMoneyResearch)
++	{
++		int n = 0;
++		for (auto *u : _ufos)
++			if (u->gjLane >= 0 && u->gjCobra == 1 && u->gjIntel < SH.confirmedAt) { u->gjIntel = SH.confirmedAt; ++n; }
++		if (n) _leadNews.push_back("!STR_SHIP_INTEL_LINE_CONFIRMED|" + std::to_string(n));
++		return;
++	}
++	auto it = SH.intelResearch.find(research);
++	if (it == SH.intelResearch.end()) return;
++	Ufo *best = nullptr;
++	for (auto *u : _ufos)
++	{
++		if (u->gjLane < 0 || !u->gjCobra || u->gjIntel >= SH.confirmedAt || u->getStatus() != Ufo::FLYING) continue;
++		if (!best || u->gjIntel > best->gjIntel) best = u;
++	}
++	if (!best) { _leadNews.push_back("STR_SHIP_INTEL_NO_SHIP"); return; }
++	const int before = best->gjIntel;
++	best->gjIntel = std::min(SH.confirmedAt, best->gjIntel + it->second);
++	if (best->gjIntel >= SH.confirmedAt && before < SH.confirmedAt) _leadNews.push_back("!STR_SHIP_INTEL_CONFIRMED|" + best->gjName);
++	else if (best->gjIntel >= SH.suspectedAt && before < SH.suspectedAt) _leadNews.push_back("!STR_SHIP_INTEL_SUSPECTED|" + best->gjName);
++	else _leadNews.push_back("STR_SHIP_INTEL_OPENED|" + best->gjName);
++}
++
  void SavedGame::addFinishedResearch(const RuleResearch * research, const Mod * mod, Base * base, bool score)
  {
 +	if (!research->getCobraSiteIntel().empty())
@@ -23326,12 +23426,13 @@ index 9ca9637..7588420 100644
 +	if (!isResearched(research, false))
 +	{
 +		leadsOnResearch(mod, research->getName());
++		shipIntelOnResearch(mod, research->getName());
 +	}
 +
  	if (isResearchRuleStatusDisabled(research->getName()))
  	{
  		return;
-@@ -2579,6 +2949,950 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2982,950 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -24282,7 +24383,7 @@ index 9ca9637..7588420 100644
  Region *SavedGame::locateRegion(double lon, double lat) const
  {
  	Region* found = nullptr;
-@@ -2995,6 +4309,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
+@@ -2995,6 +4342,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
   * @param soldier Pointer to dead soldier.
   * @param cause Pointer to cause of death, NULL if missing in action.
   */
@@ -24457,7 +24558,7 @@ index 9ca9637..7588420 100644
  std::vector<Soldier*>::iterator SavedGame::killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause)
  {
  	if (resetArmor)
-@@ -3328,6 +4810,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
+@@ -3328,6 +4843,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
  		}
  	}
  
@@ -24475,7 +24576,7 @@ index 9ca9637..7588420 100644
  	for (auto* am : _activeMissions)
  	{
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..1b09338 100644
+index d985908..a4461a5 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -37,6 +37,7 @@ namespace OpenXcom
@@ -24742,7 +24843,7 @@ index d985908..1b09338 100644
  	/// enables/disables autosell for an item type
  	void setAutosell(const RuleItem *itype, const bool enabled);
  	/// get autosell state for an item type
-@@ -529,6 +709,26 @@ public:
+@@ -529,6 +709,28 @@ public:
  	void handlePrimaryResearchSideEffects(const std::vector<const RuleResearch*> &topicsToCheck, const Mod* mod, Base* base);
  	/// Gets the list of user notes.
  	std::vector<std::string>& getUserNotes() { return _userNotes; }
@@ -24753,6 +24854,8 @@ index d985908..1b09338 100644
 +	bool isLeadSolved(const std::string &lead) const;
 +	/// Adds points to a lead; solves it (reveals, pins, grants) when it reaches its threshold.
 +	void addLeadPoints(const Mod *mod, const std::string &lead, int points);
++	/// G.I. Joe: a finished topic that tells the Joes about a Cobra ship at sea
++	void shipIntelOnResearch(const Mod *mod, const std::string &research);
 +	/// Every lead that counts this research topic, or this recovered item, gets its points.
 +	void leadsOnResearch(const Mod *mod, const std::string &research);
 +	void leadsOnItem(const Mod *mod, const std::string &item, int quantity);
@@ -24975,10 +25078,10 @@ index 20e0459..5cf74d6 100644
  	int getQuantity() const;
  	/// Gets the type of the transfer.
 diff --git a/src/Savegame/Ufo.cpp b/src/Savegame/Ufo.cpp
-index 25a05b6..6c1e447 100644
+index 25a05b6..2f11c86 100644
 --- a/src/Savegame/Ufo.cpp
 +++ b/src/Savegame/Ufo.cpp
-@@ -161,6 +161,18 @@ void Ufo::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, con
+@@ -161,6 +161,19 @@ void Ufo::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, con
  	if (_inBattlescape)
  		setSpeed(0);
  
@@ -24993,11 +25096,12 @@ index 25a05b6..6c1e447 100644
 +		gs.tryRead("region", gjRegion);
 +		gs.tryRead("name", gjName);
 +		gs.tryRead("hijack", gjHijack);
++		gs.tryRead("intel", gjIntel);
 +	}
  	_scriptValues.load(reader, shared);
  }
  
-@@ -296,6 +308,20 @@ void Ufo::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared, bool new
+@@ -296,6 +309,21 @@ void Ufo::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared, bool new
  		writer.write("trajectoryPoint", _trajectoryPoint);
  	}
  
@@ -25014,11 +25118,12 @@ index 25a05b6..6c1e447 100644
 +		gs.write("region", gjRegion);
 +		gs.write("name", gjName);
 +		if (gjHijack) gs.write("hijack", gjHijack);
++		if (gjIntel) gs.write("intel", gjIntel);
 +	}
  	writer.write("fireCountdown", _fireCountdown);
  	writer.write("escapeCountdown", _escapeCountdown);
  
-@@ -361,6 +387,7 @@ int Ufo::getUniqueId() const
+@@ -361,6 +389,7 @@ int Ufo::getUniqueId() const
   */
  std::string Ufo::getDefaultName(Language *lang) const
  {
@@ -25027,10 +25132,10 @@ index 25a05b6..6c1e447 100644
  	{
  	case LANDED:
 diff --git a/src/Savegame/Ufo.h b/src/Savegame/Ufo.h
-index a4ff21b..f9a610f 100644
+index a4ff21b..12a59de 100644
 --- a/src/Savegame/Ufo.h
 +++ b/src/Savegame/Ufo.h
-@@ -89,6 +89,15 @@ private:
+@@ -89,6 +89,16 @@ private:
  
  	void backupOriginalDestination();
  public:
@@ -25042,6 +25147,7 @@ index a4ff21b..f9a610f 100644
 +	std::string gjFlag;     ///< the flag country (a country type, may be empty)
 +	std::string gjRegion;   ///< the Cobra region that paid for the voyage
 +	std::string gjName;     ///< the ship's name
++	int gjIntel = 0;        ///< what the Joes know (points toward Suspected / Confirmed)
 +	int gjHijack = 0;       ///< hijacked: hours until Cobra has its way (0 = not)
  	/// Creates a UFO of the specified type.
  	Ufo(const RuleUfo *rules, int uniqueId, int hunterKillerPercentage = 0, int huntMode = 0, int huntBehavior = 0);
