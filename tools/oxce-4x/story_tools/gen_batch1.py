@@ -196,7 +196,7 @@ A = [
  topic('STR_CRIMSON_GUARD_TRAINING_LOG', 150, 40, needItem=True, destroyItem=True, unlocks=['STR_CRIMSON_GUARD_DRILLS']),
  topic('STR_CRIMSON_GUARD_DRILLS', 200, 50, deps=[LOCK]),                      # done: Joes +10% to hit Crimson Guard (BUILD)
  topic('STR_DANNY_MARSH', 200, 60, needItem=True, destroyItem=True, unlocks=['STR_BARONESS_AGENTS'], lookup='STR_DANNY_MARSH_INTERROGATION'),
- topic('STR_BARONESS_AGENTS', 200, 50, deps=[LOCK]),                           # STORY proposal: done -> the Baroness's next field mission is marked
+ topic('STR_BARONESS_AGENTS', 200, 50, deps=[LOCK]),                           # John 10:11: done -> the Baroness's next field mission is marked
 ]
 looked = {t['name']: t.get('lookup') for t in A}
 ART_A = [article(looked[t['name']] or t['name'], t['name']) for t in A if t['name'] != 'STR_COBRA_LEDGERS']
