@@ -3375,7 +3375,7 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..be9e4b1 100644
+index 1951ba7..5090456 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -16,6 +16,8 @@
@@ -3608,7 +3608,40 @@ index 1951ba7..be9e4b1 100644
  /**
   * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
   */
-@@ -1495,6 +1687,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1483,6 +1675,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+ 			setCustomCraftInventoryTile();
+ 
+ 			Node* node = _save->getSpawnNode(NR_XCOM, unit);
++			if (!node && unit->getArmor()->getSize() > 1 && _save->getMissionType() != "STR_BASE_DEFENSE")
++			{
++				// G.I. Joe: no Joe start point is big enough for a tank: park it on open ground near one
++				for (Node *n : *_save->getNodes())
++				{
++					if (n->isDummy() || n->getRank() != NR_XCOM) continue;
++					const Position c = n->getPosition();
++					for (int r = 1; r <= 8 && !unit->getTile(); ++r)
++						for (int dx = -r; dx <= r && !unit->getTile(); ++dx)
++							for (int dy = -r; dy <= r && !unit->getTile(); ++dy)
++							{
++								if (std::abs(dx) != r && std::abs(dy) != r) continue;
++								const Position p = c + Position(dx, dy, 0);
++								if (_save->setUnitPosition(unit, p, true)) _save->setUnitPosition(unit, p);
++							}
++					if (unit->getTile()) break;
++				}
++				if (unit->getTile())
++				{
++					if (!_craftInventoryTile) _craftInventoryTile = _save->getTile(unit->getPosition());
++					unit->setDirection(RNG::generate(0, 7));
++					_save->getUnits()->push_back(unit);
++					_save->initUnit(unit);
++					return unit;
++				}
++			}
+ 			if (node)
+ 			{
+ 				_save->setUnitPosition(unit, node->getPosition());
+@@ -1495,6 +1713,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  				_save->initUnit(unit);
  				return unit;
  			}
@@ -3636,7 +3669,7 @@ index 1951ba7..be9e4b1 100644
  			else if (_save->getMissionType() != "STR_BASE_DEFENSE")
  			{
  				if (placeUnitNearFriend(unit))
-@@ -1669,6 +1882,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +1908,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -3726,7 +3759,7 @@ index 1951ba7..be9e4b1 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +1992,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +2018,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -3795,7 +3828,7 @@ index 1951ba7..be9e4b1 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2077,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2103,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -3812,7 +3845,7 @@ index 1951ba7..be9e4b1 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2106,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2132,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -3855,7 +3888,7 @@ index 1951ba7..be9e4b1 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -2081,17 +2478,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,17 +2504,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -3886,7 +3919,7 @@ index 1951ba7..be9e4b1 100644
  
  	mapblock->setSizeZ(sizez);
  
-@@ -2141,11 +2546,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2572,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -3900,7 +3933,7 @@ index 1951ba7..be9e4b1 100644
  			if (terrainObjectID>0)
  			{
  				int mapDataSetID = mapDataSetOffset;
-@@ -2830,7 +3235,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2830,7 +3261,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  	// this mission type is "hard-coded" in terms of map layout
  	uint64_t seed = RNG::getSeed();
  	_baseTerrain = _terrain;
@@ -18147,7 +18180,7 @@ index 665d922..160915e 100644
  	bool _debugInVisualStudio;
  	std::string _newVersion;
 diff --git a/src/Menu/NewBattleState.cpp b/src/Menu/NewBattleState.cpp
-index 52b6371..33fb803 100644
+index 52b6371..25a3287 100644
 --- a/src/Menu/NewBattleState.cpp
 +++ b/src/Menu/NewBattleState.cpp
 @@ -39,6 +39,10 @@
@@ -18193,7 +18226,7 @@ index 52b6371..33fb803 100644
  		{
  			if (RNG::percent(70))
  				continue;
-@@ -572,19 +588,44 @@ void NewBattleState::initSave()
+@@ -572,19 +588,75 @@ void NewBattleState::initSave()
  	}
  
  	// Generate items
@@ -18216,17 +18249,48 @@ index 52b6371..33fb803 100644
 +			int howMany = rule->getBattleType() == BT_AMMO ? (gjKit && inKit ? 8 : 2) : (gjKit && inKit ? ((rule->getBattleType() == BT_GRENADE || rule->getBattleType() == BT_PROXIMITYGRENADE) ? 12 : 2) : 1);
  			base->getStorageItems()->addItem(rule, howMany);
 -			if (rule->getBattleType() != BT_NONE && rule->isInventoryItem())
-+			if (rule->getBattleType() != BT_NONE && rule->isInventoryItem() && inKit)
++			if (rule->getBattleType() != BT_NONE && rule->isInventoryItem() && inKit && !rule->getVehicleUnit())
  			{
  				_craft->getItems()->addItem(rule, howMany);
  			}
  		}
  	}
-+	// G.I. Joe: every tank (HWP) onto the craft while it has room; the rest wait in the stores.
++	// G.I. Joe: every tank (HWP) onto the craft while it has room, smallest first; the rest wait in the stores.
++	// With the kit on, only kit vehicles (the Joe and Cobra ones) and none of X-COM's.
++	std::vector<const RuleItem*> gjVehicles;
 +	for (auto& itemType : mod->getItemsList())
 +	{
 +		const RuleItem *rule = mod->getItem(itemType);
 +		if (!rule->getVehicleUnit() || !rule->isRecoverable()) continue;
++		const auto& cats = rule->getCategories();
++		if (gjKit && std::find(cats.begin(), cats.end(), "STR_JOE_KIT") == cats.end()) continue;
++		gjVehicles.push_back(rule);
++	}
++	std::stable_sort(gjVehicles.begin(), gjVehicles.end(), [](const RuleItem *x, const RuleItem *y)
++		{ return x->getVehicleUnit()->getArmor()->getTotalSize() < y->getVehicleUnit()->getArmor()->getTotalSize(); });
++	// the VAMP goes aboard first, making room by leaving the last-made (unnamed) soldiers at base
++	for (const char *want : { "STR_GJ_VEH_VAMP" })
++	{
++		const RuleItem *rule = mod->getItem(want);
++		if (!gjKit || !rule || !rule->getVehicleUnit()) continue;
++		int size = rule->getVehicleUnit()->getArmor()->getTotalSize();
++		auto &sol = *base->getSoldiers();
++		for (auto it = sol.rbegin(); it != sol.rend() && _craft->validateAddingVehicles(size) <= 0; ++it)
++		{
++			if ((*it)->getCraft() == _craft) (*it)->setCraft(nullptr);
++		}
++		if (_craft->validateAddingVehicles(size) > 0)
++		{
++			_craft->getVehicles()->push_back(new Vehicle(rule, rule->getVehicleClipSize(), size));
++		}
++		gjVehicles.erase(std::remove(gjVehicles.begin(), gjVehicles.end(), rule), gjVehicles.end());
++		if (rule->getVehicleClipAmmo())
++		{
++			base->getStorageItems()->addItem(rule->getVehicleClipAmmo(), 4 * std::max(1, rule->getVehicleClipsLoaded()));
++		}
++	}
++	for (const RuleItem *rule : gjVehicles)
++	{
 +		int size = rule->getVehicleUnit()->getArmor()->getTotalSize();
 +		if (_craft->validateAddingVehicles(size) > 0)
 +		{
