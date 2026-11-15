@@ -371,6 +371,30 @@ UW = {
 }
 S.update(UW)
 
+# 7. General Flagg and the CIA (John 14 Nov 19:25; STORY_FlaggArc_v1). Event text for BUILD's triggers.
+S.update({
+ 'STR_EVENT_FLAGG_ARRIVES_TITLE': 'A NEW COMMANDER',
+ 'STR_EVENT_FLAGG_ARRIVES': P.join([
+   "HAWK: Washington has sent us a general. Brigadier General Lawrence Flagg takes command of G.I. Joe as of today. I still run the Pit. He runs me.",
+   "He's a good soldier with a good record. He also brought a staff I've never heard of. Keep your eyes open.",
+ ]),
+ 'STR_EVENT_FLAGG_TURNS_TITLE': 'GENERAL FLAGG',
+ 'STR_EVENT_FLAGG_TURNS': P.join([
+   "FLAGG: I read it twice. Then I put the man from Langley on a plane.",
+   "I was sent here to hand you over. I'm staying to make sure nobody ever tries again. From today I speak for G.I. Joe in Washington, and the Pentagon hears it from me first. Colonel Hawk commands this team. I'll keep the politicians off his back.",
+ ]),
+ 'STR_EVENT_FLAGG_TURNS_EFFECTS': 'General Flagg is G.I. Joe\'s high commander and Pentagon liaison: funding +10%, Pentagon directives pay 25% more and failed ones cost half the goodwill, public exposure grows more slowly, and the U.S.S. Flagg and Admiral Keel-Haul join the team.',
+ 'STR_EVENT_CIA_TAKES_JOE_TITLE': 'TEMPORARY ASSIGNMENT',
+ 'STR_EVENT_CIA_TAKES_JOE': P.join([
+   "HAWK: Orders came down this morning. {0} has been reassigned to \"a joint task force\" for an unspecified period. No unit, no location, no number to call.",
+   "Nobody in my chain of command signed this. Find out who did.",
+ ]),
+ 'STR_EVENT_CIA_RETURNS_JOE_TITLE': 'BACK WITH US',
+ 'STR_EVENT_CIA_RETURNS_JOE': "HAWK: General Flagg made one phone call. {0} is back with us. Give them a few days; wherever they were, it wasn't a holiday.",
+ 'STR_FLAGG_HIGH_COMMANDER': 'High Commander',
+ 'STR_CIA_ASSIGNMENT': 'CIA assignment',
+})
+
 # 6. Underwater missions: briefings and debriefs (John 14 Nov 18:15; UNDERWATER_MISSIONS_v1 section 8).
 # STR_BRIEFING_<M>_TITLE / STR_BRIEFING_<M> as the land missions; STR_DEBRIEF_<M>_WIN / _LOSE for BUILD to show after.
 UWM = {

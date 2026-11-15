@@ -170,6 +170,10 @@ A = [
  topic('STR_EXTENSIVE_ENTERPRISES', 90, 40, deps=[LOCK]),
  # John 13 Nov 02:00: laundering is fought by tracing the money (needs the front company found AND banded cash decoded)
  topic('STR_FOLLOW_THE_MONEY', 200, 40, deps=['STR_EXTENSIVE_ENTERPRISES', 'STR_BANDED_CASH']),
+ # John 14 Nov 19:25: General Flagg and the CIA (STORY_FlaggArc_v1). The month-7 event 'Flagg arrives' unlocks the first.
+ topic('STR_FLAGG_ODD_REQUESTS', 40, 20, deps=[LOCK], unlocks=['STR_FLAGG_THE_LIAISON']),
+ topic('STR_FLAGG_THE_LIAISON', 60, 20, deps=[LOCK], unlocks=['STR_FLAGG_MISSING_FILE']),
+ topic('STR_FLAGG_MISSING_FILE', 60, 40, deps=[LOCK]),                          # done: the 'Flagg turns' event (BUILD)
  topic('STR_BLUDD_CALLING_CARD', 40, 20, needItem=True, destroyItem=True, lookup='STR_MAJOR_BLUDD'),
  topic('STR_SHIPPING_MANIFEST', 50, 15, needItem=True, destroyItem=True),
  topic('STR_PILOT_LOGBOOK', 50, 15, needItem=True, destroyItem=True),
@@ -215,6 +219,12 @@ S.update({
  'STR_GETAWAY_PAPERS': 'Getaway Papers',
  'STR_GETAWAY_PAPERS_UFOPEDIA': 'Paperwork from the getaway van: a deposit book from a bank on the border and a list of account numbers the crew was told to pay into. Somebody forgot to tell them not to write it down.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_BORDER_BANK_TRACE': 'Follow the Money: the Border Bank',
+ 'STR_FLAGG_ODD_REQUESTS': 'Odd Requests',
+ 'STR_FLAGG_ODD_REQUESTS_UFOPEDIA': 'General Flagg\'s staff have asked for copies of every Intel file we hold. All of them, the Cobra files and our own people\'s. Then a request for "joint custody" of our next senior prisoner, signed by an office I can\'t find on any chart.{NEWLINE}{NEWLINE}Generals ask for things. Generals don\'t usually ask for things like this.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_FLAGG_THE_LIAISON': 'The Liaison',
+ 'STR_FLAGG_THE_LIAISON_UFOPEDIA': 'The quiet man who sits at the back of every briefing isn\'t on the General\'s staff. He\'s on the CIA\'s. He takes no notes, because he doesn\'t need to: every request in his hand ends at Langley, and none of it goes through Flagg.{NEWLINE}{NEWLINE}I don\'t think the General knows who he brought with him.{NEWLINE}{NEWLINE}- Scarlett',
+ 'STR_FLAGG_MISSING_FILE': 'The Missing File',
+ 'STR_FLAGG_MISSING_FILE_UFOPEDIA': 'Found it. A plan to fold G.I. Joe into the CIA: our files, our prisoners, our people, a deniable unit under someone else\'s orders. General Flagg is named in it as the man who hands us over. He never signed it. He was never shown it.{NEWLINE}{NEWLINE}Hawk and I are taking it to him tonight.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_BORDER_BANK_TRACE_UFOPEDIA': 'My analysts walked the cartel\'s money through the border bank, and every trail ends at one account: a machine works on a rail spur in West Texas. Bankrupt for two years, still being paid. Lot C-0417 came out of there.{NEWLINE}{NEWLINE}Whoever armed the cartel built those guns in that factory. Hawk is planning the visit.{NEWLINE}{NEWLINE}- Scarlett',
  'STR_LEAD_CARTEL_SUPPLIER': 'Who supplies the cartel?',
  'STR_FOLLOW_THE_MONEY': 'Follow the Money',
