@@ -521,6 +521,15 @@ built and verified.
 
 ## Designed, agreed, not yet built
 
+### Muzzle flashes - HELD until John says "build now" (15 Nov 19:56)
+- Art (John's downloads, licences unknown: private, zip only, never the repo):
+  C:\Users\Chairman\Downloads\muzzle_flashs.zip (16 cartoon flashes, 256x256, red/orange/yellow) and
+  rc_art_-_muzzle_effects.zip (Reactorcore Art: 232 pixel sprites, yellow fire, blue ion, red/green melee slashes).
+- Plan given to John: the game has no muzzle flash today. Engine: on each firearm shot draw a flash for 1-2
+  frames at the weapon's hand anchor pushed out along the shooter's facing, turned to the facing (8 directions),
+  a new one per round on auto. Cartoon set on rifles, pistols, MGs (random pick; scaled up for heavy guns and
+  vehicle cannons); RC blue ion on lasers / pulse; RC slashes on melee hits. About 2-3 hours with screenshots.
+
 ### ~~Player pins, notes and routes on the globe~~ — built 11 Nov
 
 John: *"in game i'd like to be able to make notes on the globe. pins with
