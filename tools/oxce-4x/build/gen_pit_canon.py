@@ -212,6 +212,81 @@ def main(root):
                     else: report.append('%s has no %s fit-out of its shape' % (sid, NAMES[fac]))
         groups.append({'facilities': g['facilities'], 'slots': g['slots'], 'from': frm})
     allslots = [rect(s) for s in slots]
+
+    # 4. FREE PLACEMENT (PIT_FLOORS_v1 s.1 v2; John 16 Nov "build it now"): each floor's sheet, the modules and Day 1.
+    # Until MAPS delivers permanent-only floors and a module library with footprints (NOTE_FOR_MAPS_PitFreePlacementModules),
+    # the sheet is read off the Day 1 map with the old slots' furniture taken out, and each module is the showcase
+    # fit-out of the slot that held it (its size; a turned copy where the showcase has it in a turned slot).
+    FLOOR_OF = {'stg': 1, 'ops': 2, 'trn': 3, 'qtr': 4, 'utl': 5}
+    zof = {}
+    for sid, s in slots.items():
+        zof.setdefault(FLOOR_OF.get(sid[:3]), s['level_z'])
+    bays = [s for s in slots if s.startswith('stg_bay')]
+    open_slots = [s for s in slots if s not in bays]
+    floors_out = []
+    for fl, z in sorted((k, v) for k, v in zof.items() if k):
+        layer = Z - 1 - z
+        inslot = set()
+        for sid in open_slots:
+            if slots[sid]['level_z'] == z:
+                r = rect(sid)
+                inslot |= {(r['x'] + i, r['y'] + j) for i in range(r['w']) for j in range(r['h'])}
+        inbay = set()
+        for sid in bays:
+            if slots[sid]['level_z'] == z:
+                r = rect(sid)
+                inbay |= {(r['x'] + i, r['y'] + j) for i in range(r['w']) for j in range(r['h'])}
+        rows = []
+        for y in range(PY):
+            row = ''
+            for x in range(PX):
+                m = 0
+                if x < X and y < Y:
+                    if part(layer, x, y, 0): m |= 1
+                    if part(layer, x, y, 1): m |= 2
+                    if part(layer, x, y, 2): m |= 4
+                    if (part(layer, x, y, 3) and (x, y) not in inslot) or (x, y) in inbay: m |= 8
+                row += '%x' % m
+            rows.append(row)
+        floors_out.append({'floor': fl, 'z': z, 'mask': ''.join(rows)})
+    modules_out, day1_out = [], {}
+    for g in SLOT_GROUPS:
+        for fac in g['facilities']:
+            if any(m['facility'] == fac for m in modules_out): continue
+            names = g['accept'][fac]
+            name = next((n for n in names if n in showmod.values()), None)
+            if not name:
+                report.append('no showcase fit-out for %s: it places as an empty room' % NAMES[fac]); continue
+            held = [s for s in slots if showmod.get(s) == name]
+            held.sort(key=lambda s: bool(slots[s].get('rotated')))
+            b = rect(held[0])
+            mod = {'facility': fac, 'name': NAMES[fac], 'w': b['w'], 'h': b['h'], 'lib': [b['x'], b['y'], b['z']]}
+            tn = [s for s in held if (rect(s)['w'], rect(s)['h']) == (b['h'], b['w']) and b['w'] != b['h']]
+            if tn:
+                r = rect(tn[0]); mod['turned'] = [r['x'], r['y'], r['z']]
+            # where an old save's rooms (and New Battle's) go first: the canon rooms of their family that fit them
+            pref = []
+            for sid in g['slots']:
+                r = rect(sid)
+                if (r['w'], r['h']) == (mod['w'], mod['h']): pref.append([r['x'], r['y'], 0])
+                elif 'turned' in mod and (r['w'], r['h']) == (mod['h'], mod['w']): pref.append([r['x'], r['y'], 1])
+            if pref: mod['prefer'] = pref
+            modules_out.append(mod)
+    hangar_spots = [[rect(s)['x'], rect(s)['y']] for s in sorted(bays)]
+    if hangar_spots:
+        modules_out.append({'facility': 'STR_HANGAR', 'name': 'Motor Pool Bay', 'w': rect(bays[0])['w'], 'h': rect(bays[0])['h'], 'spots': hangar_spots})
+    for sid, name in day1.items():
+        r = rect(sid)
+        if sid in bays:
+            day1_out['STR_HANGAR'] = [r['x'], r['y'], 0]; continue
+        for g in SLOT_GROUPS:
+            for fac in g['facilities']:
+                if name in g['accept'][fac] and fac not in day1_out:
+                    m = next((m for m in modules_out if m['facility'] == fac), None)
+                    turned = 1 if m and (m['w'], m['h']) != (r['w'], r['h']) else 0
+                    day1_out[fac] = [r['x'], r['y'], turned]
+    clear = [[rect(s)['z'], rect(s)['x'], rect(s)['y'], rect(s)['w'], rect(s)['h']] for s in open_slots]
+    pit_place = {'w': PX, 'h': PY, 'floors': floors_out, 'modules': modules_out, 'day1': day1_out, 'clear': clear}
     rul = {
         'terrains': [{'name': 'PITCANON', 'mapDataSets': sets,
                       'mapBlocks': [{'name': 'PITCANON', 'width': PX, 'length': PY, 'height': Z}]}],
@@ -221,10 +296,19 @@ def main(root):
                               'terrains': ['PITCANON'], 'script': 'PITCANON_SCRIPT', 'shade': 0,
                               'briefing': {'palette': 0, 'title': 'STR_PIT_DEFENSE_TITLE', 'desc': 'STR_PIT_DEFENSE_BRIEFING'}}],
         'pitBattle': {'deployment': 'STR_PIT_DEFENSE', 'map': 'PITCANON', 'library': 'PITSHOW', 'slots': allslots, 'groups': groups},
+        'pitPlace': pit_place,
         'extraStrings': [{'type': 'en-US', 'strings': {
             'STR_PIT_DEFENSE': 'The Pit (base defence)',
             'STR_PIT_DEFENSE_TITLE': 'THE PIT IS UNDER ATTACK',
             'STR_PIT_SLOTS_FULL': 'No room left for it: every room on that floor that can hold it is in use.',
+            'STR_PIT_DOES_NOT_FIT': "It doesn't fit there.",
+            'STR_PIT_SEALS_OFF': 'That would seal off part of the floor.',
+            'STR_PIT_BAY_ONLY': 'A Motor Pool Bay goes in one of the garage bays.',
+            'STR_PIT_FITS': 'It fits here. Click to build.',
+            'STR_PIT_PLACE_HOW': 'Drop it where it fits on its floor. Right-click or R turns it.',
+            'STR_PIT_PLACE_HOW_FIXED': 'Drop it where it fits on its floor.',
+            'STR_PIT_SURFACE_NOTE': 'Surface defences are installed in their hiding places, not placed.',
+            'STR_DAYS_SHORT': 'days',
             'STR_PIT_DEFENSE_BRIEFING': "Cobra has found the Pit. They are coming down the vehicle elevator into the garage on Staging, and through the old escape tunnel under Utility.{NEWLINE}Hold every level. Nobody gets past Operations."}}],
     }
     hdr = ('# GENERATED by build/gen_pit_canon.py from MAPS\' pit_canon.zip: do not edit by hand.\n'

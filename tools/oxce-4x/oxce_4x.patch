@@ -1,5 +1,5 @@
 diff --git a/src/Basescape/BaseView.cpp b/src/Basescape/BaseView.cpp
-index f822dab..e182a99 100644
+index f822dab..67c7744 100644
 --- a/src/Basescape/BaseView.cpp
 +++ b/src/Basescape/BaseView.cpp
 @@ -17,6 +17,7 @@
@@ -18,7 +18,15 @@ index f822dab..e182a99 100644
  
  namespace OpenXcom
  {
-@@ -218,6 +220,18 @@ void BaseView::setSelectable(int sizeX, int sizeY)
+@@ -110,6 +112,7 @@ void BaseView::setBase(Base *base)
+ 	// Fill grid with base facilities
+ 	for (auto* fac : *_base->getFacilities())
+ 	{
++		if (fac->isPitPlaced()) continue; // G.I. Joe: placed on a Pit floor, not the grid
+ 		for (int y = fac->getY(); y < fac->getY() + fac->getRules()->getSizeY(); ++y)
+ 		{
+ 			for (int x = fac->getX(); x < fac->getX() + fac->getRules()->getSizeX(); ++x)
+@@ -218,6 +221,18 @@ void BaseView::setSelectable(int sizeX, int sizeY)
   * 6: trying to upgrade over existing facility, but ruleset disallows it
   * 7: trying to upgrade over existing facility, but all buildings next to it are under construction and build queue is off
   */
@@ -37,7 +45,7 @@ index f822dab..e182a99 100644
  BasePlacementErrors BaseView::getPlacementError(const RuleBaseFacility *rule, BaseFacility *facilityBeingMoved, bool isStartFacility) const
  {
  	// We'll need to know for the final check if we're upgrading an existing facility
-@@ -305,6 +319,10 @@ BasePlacementErrors BaseView::getPlacementError(const RuleBaseFacility *rule, Ba
+@@ -305,6 +320,10 @@ BasePlacementErrors BaseView::getPlacementError(const RuleBaseFacility *rule, Ba
  		}
  	}
  
@@ -48,7 +56,7 @@ index f822dab..e182a99 100644
  	bool bq=Options::allowBuildingQueue;
  	bool hasConnectingFacility = false;
  
-@@ -358,6 +376,7 @@ BasePlacementErrors BaseView::getPlacementError(const RuleBaseFacility *rule, Ba
+@@ -358,6 +377,7 @@ BasePlacementErrors BaseView::getPlacementError(const RuleBaseFacility *rule, Ba
   */
  bool BaseView::isQueuedBuilding(const RuleBaseFacility *rule) const
  {
@@ -56,7 +64,39 @@ index f822dab..e182a99 100644
  	for (int i = 0; i < rule->getSizeX(); ++i)
  	{
  		if ((_gridY > 0 && _facilities[_gridX + i][_gridY - 1] != 0 && _facilities[_gridX + i][_gridY - 1]->isBuiltOrHadPreviousFacility()) ||
-@@ -659,9 +678,63 @@ void BaseView::draw()
+@@ -386,6 +406,7 @@ void BaseView::reCalcQueuedBuildings()
+ 	std::vector<BaseFacility*> facilities;
+ 	for (auto* fac : *_base->getFacilities())
+ 	{
++		if (fac->isPitPlaced()) continue; // G.I. Joe: placed on a Pit floor, not the grid
+ 		if (fac->getAdjustedBuildTime() > 0)
+ 		{
+ 			// Set all queued buildings to infinite.
+@@ -504,6 +525,7 @@ void BaseView::draw()
+ 
+ 	for (const auto* fac : *_base->getFacilities())
+ 	{
++		if (fac->isPitPlaced()) continue; // G.I. Joe: placed on a Pit floor, not the grid
+ 		// Draw facility shape
+ 		int num = 0;
+ 		for (int y = fac->getY(); y < fac->getY() + fac->getRules()->getSizeY(); ++y)
+@@ -529,6 +551,7 @@ void BaseView::draw()
+ 
+ 	for (const auto* fac : *_base->getFacilities())
+ 	{
++		if (fac->isPitPlaced()) continue; // G.I. Joe: placed on a Pit floor, not the grid
+ 		// Draw connectors
+ 		if (fac->isBuiltOrHadPreviousFacility() && !fac->getRules()->connectorsDisabled())
+ 		{
+@@ -569,6 +592,7 @@ void BaseView::draw()
+ 	// TODO: make const in the future
+ 	for (auto* fac : *_base->getFacilities())
+ 	{
++		if (fac->isPitPlaced()) continue; // G.I. Joe: placed on a Pit floor, not the grid
+ 		// Draw facility graphic
+ 		int num = 0;
+ 		for (int y = fac->getY(); y < fac->getY() + fac->getRules()->getSizeY(); ++y)
+@@ -659,9 +683,64 @@ void BaseView::draw()
  void BaseView::blit(SDL_Surface *surface)
  {
  	Surface::blit(surface);
@@ -69,6 +109,7 @@ index f822dab..e182a99 100644
 +		auto craftIt = _base->getCrafts()->begin();
 +		for (const auto *fac : *_base->getFacilities())
 +		{
++			if (fac->isPitPlaced()) continue; // G.I. Joe: placed on a Pit floor, not the grid
 +			const RuleBaseFacility *r = fac->getRules();
 +			int kind = HiUI::ROOM_GENERIC;
 +			if (r->getCrafts() > 0) kind = HiUI::ROOM_HANGAR;
@@ -142,7 +183,7 @@ index 149e889..225926a 100644
  	BaseView(int width, int height, int x = 0, int y = 0);
  	/// Cleans up the base view.
 diff --git a/src/Basescape/BasescapeState.cpp b/src/Basescape/BasescapeState.cpp
-index 5d0467a..2cffcba 100644
+index 5d0467a..2e8001f 100644
 --- a/src/Basescape/BasescapeState.cpp
 +++ b/src/Basescape/BasescapeState.cpp
 @@ -16,7 +16,9 @@
@@ -155,26 +196,38 @@ index 5d0467a..2cffcba 100644
  #include "../Engine/Game.h"
  #include "../Mod/Mod.h"
  #include "../Engine/LocalizedText.h"
-@@ -71,8 +73,10 @@ namespace OpenXcom
+@@ -26,6 +28,8 @@
+ #include "../Interface/Text.h"
+ #include "../Interface/TextEdit.h"
+ #include "BaseView.h"
++#include "PitBlueprintView.h"
++#include "PitPlace.h"
+ #include "MiniBaseView.h"
+ #include "../Savegame/SavedGame.h"
+ #include "../Savegame/Base.h"
+@@ -71,8 +75,11 @@ namespace OpenXcom
  BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(globe)
  {
  	// Create objects
 +	_bg = new Surface(320, 200, 0, 0);
  	_txtFacility = new Text(192, 9, 0, 0);
  	_view = new BaseView(192, 192, 0, 8);
++	_blue = new PitBlueprintView(192, 192, 0, 8);
 +	BaseView::pitMod = _game->getMod();
  	_mini = new MiniBaseView(128, 16, 192, 41);
  	_edtBase = new TextEdit(this, 127, 17, 193, 0);
  	_txtLocation = new Text(126, 9, 194, 16);
-@@ -92,6 +96,7 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+@@ -92,7 +99,9 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
  	// Set palette
  	setInterface("basescape");
  
 +	add(_bg);
  	add(_view, "baseView", "basescape");
++	add(_blue);
  	add(_mini, "miniBase", "basescape");
  	add(_txtFacility, "textTooltip", "basescape");
-@@ -112,6 +117,19 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+ 	add(_edtBase, "text1", "basescape");
+@@ -112,6 +121,19 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
  
  	centerAllSurfaces();
  
@@ -194,7 +247,19 @@ index 5d0467a..2cffcba 100644
  	// Set up objects
  	if (_globe)
  	{
-@@ -195,6 +213,9 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+@@ -135,6 +157,11 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+ 	_view->onMouseClick((ActionHandler)&BasescapeState::viewMiddleClick, SDL_BUTTON_MIDDLE);
+ 	_view->onMouseOver((ActionHandler)&BasescapeState::viewMouseOver);
+ 	_view->onMouseOut((ActionHandler)&BasescapeState::viewMouseOut);
++	_blue->onMouseClick((ActionHandler)&BasescapeState::blueLeftClick, SDL_BUTTON_LEFT);
++	_blue->onMouseClick((ActionHandler)&BasescapeState::blueRightClick, SDL_BUTTON_RIGHT);
++	_blue->onMouseOver((ActionHandler)&BasescapeState::blueMouseOver);
++	_blue->onMouseOut((ActionHandler)&BasescapeState::viewMouseOut);
++	_blue->setup(_game->getMod(), _base, [this](const std::string &s) { return std::string((const std::string&)tr(s)); });
+ 
+ 	_mini->setTexture(_game->getMod()->getSurfaceSet("BASEBITS.PCK"));
+ 	_mini->setBases(_game->getSavedGame()->getBases());
+@@ -195,6 +222,9 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
   */
  BasescapeState::~BasescapeState()
  {
@@ -204,7 +269,56 @@ index 5d0467a..2cffcba 100644
  	// Clean up any temporary bases
  	bool exists = false;
  	for (const auto* xbase : *_game->getSavedGame()->getBases())
-@@ -426,6 +447,12 @@ void BasescapeState::viewLeftClick(Action *)
+@@ -221,6 +251,13 @@ void BasescapeState::init()
+ 
+ 	setBase(_base);
+ 	_view->setBase(_base);
++	{
++		// G.I. Joe: the Pit is laid out on blueprints; the grid stays for outposts (PIT_FLOORS_v1 s.1 v2)
++		const bool blue = PitPlace::on(_game->getMod(), _base);
++		_blue->setup(_game->getMod(), _base, [this](const std::string &s) { return std::string((const std::string&)tr(s)); });
++		_blue->setVisible(blue);
++		_view->setVisible(!blue);
++	}
+ 	_mini->draw();
+ 	_edtBase->setText(_base->getName());
+ 
+@@ -393,10 +430,32 @@ void BasescapeState::btnGeoscapeClick(Action *)
+  */
+ void BasescapeState::viewLeftClick(Action *)
+ {
+-	BaseFacility *fac = _view->getSelectedFacility();
++	facilityClicked(_view->getSelectedFacility());
++}
++
++void BasescapeState::blueLeftClick(Action *)
++{
++	const int tab = _blue->tabUnderMouse();
++	if (tab >= 0) { _blue->setFloor(tab); return; }
++	facilityClicked(_blue->roomUnderMouse());
++}
++
++void BasescapeState::blueRightClick(Action *)
++{
++	if (!_blue->roomUnderMouse() && _blue->tabUnderMouse() < 0) _game->pushState(new BaseInfoState(_base, this));
++}
++
++void BasescapeState::blueMouseOver(Action *)
++{
++	BaseFacility *f = _blue->roomUnderMouse();
++	_txtFacility->setText(f ? std::string((const std::string&)tr(f->getRules()->getType())) : std::string());
++}
++
++void BasescapeState::facilityClicked(BaseFacility *fac)
++{
+ 	if (fac != 0)
+ 	{
+-		if (_game->isCtrlPressed() && Options::isPasswordCorrect())
++		if (_game->isCtrlPressed() && Options::isPasswordCorrect() && !fac->isPitPlaced())
+ 		{
+ 			// Ctrl + left click on a base facility allows moving it
+ 			_game->pushState(new PlaceFacilityState(_base, fac->getRules(), fac));
+@@ -426,6 +485,12 @@ void BasescapeState::viewLeftClick(Action *)
  			}
  			int errorColor1 = _game->getMod()->getInterface("basescape")->getElement("errorMessage")->color;
  			int errorColor2 = _game->getMod()->getInterface("basescape")->getElement("errorPalette")->color;
@@ -218,20 +332,44 @@ index 5d0467a..2cffcba 100644
  			if (BasePlacementErrors placementErrorCode = fac->inUse())
  			{
 diff --git a/src/Basescape/BasescapeState.h b/src/Basescape/BasescapeState.h
-index 711b3d9..8733ad3 100644
+index 711b3d9..6dadbe9 100644
 --- a/src/Basescape/BasescapeState.h
 +++ b/src/Basescape/BasescapeState.h
-@@ -36,6 +36,8 @@ class Globe;
+@@ -23,6 +23,8 @@ namespace OpenXcom
+ {
+ 
+ class BaseView;
++class PitBlueprintView;
++class BaseFacility;
+ class MiniBaseView;
+ class Text;
+ class TextButton;
+@@ -36,7 +38,10 @@ class Globe;
   */
  class BasescapeState : public State
  {
 +	Surface *_bg = nullptr;   ///< the plate HiUI paints the screen on
 +
  private:
++	PitBlueprintView *_blue;
  	BaseView *_view;
  	MiniBaseView *_mini;
+ 	Text *_txtFacility, *_txtLocation, *_txtFunds;
+@@ -77,6 +82,12 @@ public:
+ 	void btnGeoscapeClick(Action *action);
+ 	/// Handler for clicking the base view.
+ 	void viewLeftClick(Action *action);
++	/// G.I. Joe: what clicking a room does (the grid or a Pit blueprint)
++	void facilityClicked(BaseFacility *fac);
++	/// G.I. Joe: the Pit's blueprint sheets (PitBlueprintView)
++	void blueLeftClick(Action *action);
++	void blueRightClick(Action *action);
++	void blueMouseOver(Action *action);
+ 	/// Handler for right clicking the base view.
+ 	void viewRightClick(Action *action);
+ 	/// Handler for middle clicking the base view.
 diff --git a/src/Basescape/BuildFacilitiesState.cpp b/src/Basescape/BuildFacilitiesState.cpp
-index 9b139ca..1b2feca 100644
+index 9b139ca..4b076c4 100644
 --- a/src/Basescape/BuildFacilitiesState.cpp
 +++ b/src/Basescape/BuildFacilitiesState.cpp
 @@ -16,8 +16,10 @@
@@ -245,7 +383,16 @@ index 9b139ca..1b2feca 100644
  #include "../Engine/Action.h"
  #include "../Engine/Game.h"
  #include "../Mod/Mod.h"
-@@ -62,6 +64,14 @@ BuildFacilitiesState::BuildFacilitiesState(Base *base, State *state) : _base(bas
+@@ -31,6 +33,8 @@
+ #include "../Savegame/SavedGame.h"
+ #include "../Savegame/Base.h"
+ #include "PlaceFacilityState.h"
++#include "PitPlaceState.h"
++#include "PitPlace.h"
+ #include "../Ufopaedia/Ufopaedia.h"
+ 
+ namespace OpenXcom
+@@ -62,6 +66,14 @@ BuildFacilitiesState::BuildFacilitiesState(Base *base, State *state) : _base(bas
  
  	centerAllSurfaces();
  
@@ -260,7 +407,7 @@ index 9b139ca..1b2feca 100644
  	// Set up objects
  	setWindowBackground(_window, "selectFacility");
  
-@@ -89,6 +99,7 @@ BuildFacilitiesState::BuildFacilitiesState(Base *base, State *state) : _base(bas
+@@ -89,6 +101,7 @@ BuildFacilitiesState::BuildFacilitiesState(Base *base, State *state) : _base(bas
   */
  BuildFacilitiesState::~BuildFacilitiesState()
  {
@@ -268,7 +415,7 @@ index 9b139ca..1b2feca 100644
  
  }
  
-@@ -159,13 +170,26 @@ void BuildFacilitiesState::populateBuildList()
+@@ -159,13 +172,26 @@ void BuildFacilitiesState::populateBuildList()
  				continue;
  			}
  		}
@@ -296,7 +443,7 @@ index 9b139ca..1b2feca 100644
  		++row;
  	}
  
-@@ -174,7 +198,7 @@ void BuildFacilitiesState::populateBuildList()
+@@ -174,7 +200,7 @@ void BuildFacilitiesState::populateBuildList()
  		Uint8 disabledColor = _lstFacilities->getSecondaryColor();
  		for (const auto* facRule : _disabledFacilities)
  		{
@@ -305,6 +452,19 @@ index 9b139ca..1b2feca 100644
  			_lstFacilities->setRowColor(row, disabledColor);
  			++row;
  		}
+@@ -228,6 +254,12 @@ void BuildFacilitiesState::lstFacilitiesClick(Action *action)
+ 	{
+ 		return;
+ 	}
++	// G.I. Joe: a room on the Pit's floors is dropped on its blueprint (PIT_FLOORS_v1 s.1 v2)
++	if (PitPlace::on(_game->getMod(), _base) && PitPlace::placed(_game->getMod(), _facilities[index]->getType()))
++	{
++		_game->pushState(new PitPlaceState(_base, _facilities[index]));
++		return;
++	}
+ 	_game->pushState(new PlaceFacilityState(_base, _facilities[index]));
+ }
+ 
 diff --git a/src/Basescape/CraftInfoState.cpp b/src/Basescape/CraftInfoState.cpp
 index 2597a24..ee80251 100644
 --- a/src/Basescape/CraftInfoState.cpp
@@ -334,6 +494,19 @@ index 2597a24..ee80251 100644
  	}
  }
  
+diff --git a/src/Basescape/DismantleFacilityState.cpp b/src/Basescape/DismantleFacilityState.cpp
+index e1f9829..b77db0a 100644
+--- a/src/Basescape/DismantleFacilityState.cpp
++++ b/src/Basescape/DismantleFacilityState.cpp
+@@ -162,7 +162,7 @@ void DismantleFacilityState::btnOkClick(Action *)
+ 			{
+ 				_base->getFacilities()->erase(facIt);
+ 				// Determine if we leave behind any facilities when this one is removed
+-				if (_fac->getBuildTime() == 0 && _fac->getRules()->getLeavesBehindOnSell().size() != 0)
++				if (_fac->getBuildTime() == 0 && _fac->getRules()->getLeavesBehindOnSell().size() != 0 && !_fac->isPitPlaced())
+ 				{
+ 					const auto& facList = _fac->getRules()->getLeavesBehindOnSell();
+ 					if (facList.at(0)->getPlaceSound() != Mod::NO_SOUND)
 diff --git a/src/Basescape/ManufactureInfoState.cpp b/src/Basescape/ManufactureInfoState.cpp
 index 9c5710b..71ea832 100644
 --- a/src/Basescape/ManufactureInfoState.cpp
@@ -386,7 +559,7 @@ index a726c74..dc5cf6f 100644
  		_game->pushState(new ErrorMessageState(tr("STR_NO_FREE_HANGARS_FOR_CRAFT_PRODUCTION"), _palette, _game->getMod()->getInterface("basescape")->getElement("errorMessage")->color, "BACK17.SCR", _game->getMod()->getInterface("basescape")->getElement("errorPalette")->color));
  	}
 diff --git a/src/Basescape/MiniBaseView.cpp b/src/Basescape/MiniBaseView.cpp
-index 09fdfcd..8642a4a 100644
+index 09fdfcd..e1bc759 100644
 --- a/src/Basescape/MiniBaseView.cpp
 +++ b/src/Basescape/MiniBaseView.cpp
 @@ -17,6 +17,7 @@
@@ -397,7 +570,15 @@ index 09fdfcd..8642a4a 100644
  #include <cmath>
  #include "../Engine/SurfaceSet.h"
  #include "../Engine/Action.h"
-@@ -172,4 +173,24 @@ void MiniBaseView::setBorderColor(Uint8 color)
+@@ -113,6 +114,7 @@ void MiniBaseView::draw()
+ 			lock();
+ 			for (const auto* fac : *_bases->at(i)->getFacilities())
+ 			{
++				if (fac->isPitPlaced()) continue; // G.I. Joe: placed on a Pit floor, not the grid
+ 				int color;
+ 				if (fac->getDisabled())
+ 					color = _blue;
+@@ -172,4 +174,25 @@ void MiniBaseView::setBorderColor(Uint8 color)
  	_blue = color;
  }
  
@@ -414,6 +595,7 @@ index 09fdfcd..8642a4a 100644
 +		HiUI::MiniBase b{ i < _bases->size(), i == _base, {} };
 +		if (b.exists)
 +			for (const auto *fac : *_bases->at(i)->getFacilities())
++				if (!fac->isPitPlaced())
 +				b.rooms.emplace_back(SDL_Rect{ (Sint16)fac->getX(), (Sint16)fac->getY(), (Uint16)fac->getRules()->getSizeX(), (Uint16)fac->getRules()->getSizeY() },
 +					fac->getDisabled() ? 2 : fac->getBuildTime() > 0 ? 1 : 0);
 +		mb.push_back(b);
@@ -435,8 +617,851 @@ index 7fe1da3..797fac5 100644
  	/// Special handling for mouse hovers.
  	void mouseOver(Action *action, State *state) override;
  	void setColor(Uint8 color) override;
+diff --git a/src/Basescape/PitBlueprintView.cpp b/src/Basescape/PitBlueprintView.cpp
+new file mode 100644
+index 0000000..f6883d4
+--- /dev/null
++++ b/src/Basescape/PitBlueprintView.cpp
+@@ -0,0 +1,267 @@
++#include "PitBlueprintView.h"
++#include <algorithm>
++#include <cmath>
++#include "PitPlace.h"
++#include "../Engine/Action.h"
++#include "../Engine/HiUI.h"
++#include "../Mod/Mod.h"
++#include "../Mod/RuleBaseFacility.h"
++#include "../Savegame/Base.h"
++#include "../Savegame/BaseFacility.h"
++
++namespace OpenXcom
++{
++
++namespace
++{
++const Uint32 NAVY = 0x0a1f4a, SHEET = 0x10306a, GRID = 0x1b4282, OPEN = 0x143873, BLOCK = 0x2c5ca6,
++	LINE = 0xe6efff, CARD = 0x1d4f9c, CARD_EDGE = 0xdfeaff, BUILDING = 0xd8b45a, GOOD = 0x36c76a, BAD = 0xe04848,
++	TAB = 0x16386f, TAB_ON = 0x2f63b8, DIM = 0x8fb0e0;
++}
++
++PitBlueprintView::PitBlueprintView(int width, int height, int x, int y) : InteractiveSurface(width, height, x, y)
++{
++}
++
++PitBlueprintView::~PitBlueprintView()
++{
++	HiUI::nativePanel(this, nullptr);
++}
++
++void PitBlueprintView::setup(const Mod *mod, Base *base, Namer tr)
++{
++	_mod = mod; _base = base; _tr = tr;
++	const auto &R = mod->getPitPlaceRules();
++	int x0 = R.w, y0 = R.h, x1 = -1, y1 = -1;
++	for (const auto &f : R.floors)
++		for (int y = 0; y < R.h; ++y)
++			for (int x = 0; x < R.w; ++x)
++				if (PitPlace::maskAt(mod, f.first, x, y)) { x0 = std::min(x0, x); y0 = std::min(y0, y); x1 = std::max(x1, x); y1 = std::max(y1, y); }
++	if (x1 < 0) { x0 = 0; y0 = 0; x1 = std::max(0, R.w - 1); y1 = std::max(0, R.h - 1); }
++	_bx0 = x0; _by0 = y0; _bw = x1 - x0 + 1; _bh = y1 - y0 + 1;
++	HiUI::nativePanel(this, [this](double X0, double Y0, double k) { paint(X0, Y0, k); });
++	_redraw = true;
++}
++
++double PitBlueprintView::scale() const
++{
++	return std::min((double)(getWidth() - 4) / _bw, (double)(getHeight() - TAB_H - 6) / _bh);
++}
++// the screen position of map tile 0,0 (the sheet itself starts at tile _bx0, _by0)
++double PitBlueprintView::sheetX() const
++{
++	return (getWidth() - _bw * scale()) / 2 - _bx0 * scale();
++}
++double PitBlueprintView::sheetY() const
++{
++	return TAB_H + 2 + (getHeight() - TAB_H - 2 - _bh * scale()) / 2 - _by0 * scale();
++}
++
++void PitBlueprintView::mouseOver(Action *action, State *state)
++{
++	_mx = action->getRelativeXMouse() / action->getXScale();
++	_my = action->getRelativeYMouse() / action->getYScale();
++	_redraw = true;
++	InteractiveSurface::mouseOver(action, state);
++}
++
++void PitBlueprintView::mousePress(Action *action, State *state)
++{
++	_mx = action->getRelativeXMouse() / action->getXScale();
++	_my = action->getRelativeYMouse() / action->getYScale();
++	InteractiveSurface::mousePress(action, state);
++}
++
++int PitBlueprintView::tabUnderMouse() const
++{
++	if (_my < 0 || _my >= TAB_H || _mx < 0 || _mx >= getWidth()) return -1;
++	return std::min(5, (int)(_mx / (getWidth() / 6.0)));
++}
++
++bool PitBlueprintView::tileUnderMouse(int &x, int &y) const
++{
++	if (!_mod || _my < TAB_H) return false;
++	const double s = scale();
++	const double fx = (_mx - sheetX()) / s, fy = (_my - sheetY()) / s;
++	const auto &R = _mod->getPitPlaceRules();
++	if (!_ghost.empty())
++	{
++		int w, h;
++		PitPlace::footprint(_mod, _ghost, _turned, w, h);
++		x = (int)std::floor(fx - w / 2.0 + 0.5);
++		y = (int)std::floor(fy - h / 2.0 + 0.5);
++		const auto *m = R.module(_ghost);
++		if (m && !m->spots.empty())
++		{
++			// a bay: snap to the nearest bay
++			double best = 1e9;
++			for (const auto &sp : m->spots)
++				if (sp.size() >= 2)
++				{
++					const double d = std::hypot(sp[0] + w / 2.0 - fx, sp[1] + h / 2.0 - fy);
++					if (d < best) { best = d; x = sp[0]; y = sp[1]; }
++				}
++		}
++		return fx >= -2 && fy >= -2 && fx < R.w + 2 && fy < R.h + 2;
++	}
++	x = (int)std::floor(fx); y = (int)std::floor(fy);
++	return x >= 0 && y >= 0 && x < R.w && y < R.h;
++}
++
++BaseFacility *PitBlueprintView::roomUnderMouse() const
++{
++	if (!_mod || !_base || _my < TAB_H) return nullptr;
++	if (_floor == 0)
++	{
++		// the Surface keeps the grid: three by two squares across the sheet
++		const double s = scale(), cw = _bw * s / 3, ch = _bh * s / 2;
++		const int gx = (int)std::floor((_mx - sheetX() - _bx0 * s) / cw), gy = (int)std::floor((_my - sheetY() - _by0 * s) / ch);
++		for (auto *f : *_base->getFacilities())
++			if (!f->isPitPlaced() && Mod::pitFloorAt(f->getX(), f->getY()) == 0
++				&& gx >= f->getX() % 3 && gx < f->getX() % 3 + f->getRules()->getSizeX() && gy >= f->getY() && gy < f->getY() + f->getRules()->getSizeY())
++				return f;
++		return nullptr;
++	}
++	for (const auto &u : unplaced())
++		if (_mx >= u.second[0] && _mx < u.second[0] + u.second[2] && _my >= u.second[1] && _my < u.second[1] + u.second[3]) return u.first;
++	int x, y;
++	if (!tileUnderMouse(x, y)) return nullptr;
++	return PitPlace::roomAt(_mod, _base, _floor, x, y);
++}
++
++std::vector<std::pair<BaseFacility*, std::array<double, 4> > > PitBlueprintView::unplaced() const
++{
++	std::vector<std::pair<BaseFacility*, std::array<double, 4> > > out;
++	if (!_mod || !_base || _floor == 0) return out;
++	const double y0 = sheetY() + (_by0 + _bh) * scale() + 3;
++	int i = 0;
++	for (auto *f : *_base->getFacilities())
++		if (!f->isPitPlaced() && PitPlace::placed(_mod, f->getRules()->getType()) && PitPlace::floorOf(_mod, f->getRules()->getType()) == _floor)
++		{
++			out.push_back({ f, std::array<double, 4>{ { 4.0 + i * 46, y0, 44.0, 10.0 } } });
++			++i;
++		}
++	return out;
++}
++
++std::string PitBlueprintView::ghostWhy() const
++{
++	int x, y;
++	if (_ghost.empty() || !tileUnderMouse(x, y)) return "STR_PIT_DOES_NOT_FIT";
++	return PitPlace::fits(_mod, _base, _ghost, x, y, _turned);
++}
++
++void PitBlueprintView::draw()
++{
++	Surface::draw();
++	clear();
++}
++
++void PitBlueprintView::paint(double X0, double Y0, double k)
++{
++	if (!_mod || !_base) return;
++	namespace P = HiUI::Paint;
++	const auto &R = _mod->getPitPlaceRules();
++	const double W = getWidth() * k, H = getHeight() * k;
++	P::rect(X0, Y0, X0 + W, Y0 + H, NAVY);
++	// tabs
++	const auto &names = _mod->getPitFloorRules().names;
++	const double tw = W / 6;
++	for (int i = 0; i < 6; ++i)
++	{
++		const bool on = i == _floor, hot = !_tabsLocked && tabUnderMouse() == i;
++		const double x0 = X0 + i * tw + k * 0.5, x1 = X0 + (i + 1) * tw - k * 0.5;
++		P::rect(x0, Y0, x1, Y0 + TAB_H * k, on ? TAB_ON : hot ? GRID : TAB);
++		if (on) P::rect(x0, Y0 + (TAB_H - 1) * k, x1, Y0 + TAB_H * k, LINE);
++		const std::string label = i < (int)names.size() && _tr ? _tr(names[i]) : std::to_string(i);
++		P::text("label", label, x0 + k, Y0, x1 - k, Y0 + TAB_H * k, 3.6 * k, 1, 1, (on || !_tabsLocked) ? LINE : DIM);
++	}
++	const double s = scale() * k, sx = X0 + sheetX() * k, sy = Y0 + sheetY() * k;
++	const double bx = sx + _bx0 * s, by = sy + _by0 * s, bw = _bw * s, bh = _bh * s;   // the sheet
++	P::rect(bx - 2 * k, by - 2 * k, bx + bw + 2 * k, by + bh + 2 * k, SHEET);
++	if (_floor == 0)
++	{
++		// the Surface: its grid rooms, and what goes there is installed, not placed (John 00:05)
++		const double cw = bw / 3, ch = bh / 2;
++		for (int gy = 0; gy < 2; ++gy)
++			for (int gx = 0; gx < 3; ++gx)
++				P::frame(bx + gx * cw + k, by + gy * ch + k, bx + (gx + 1) * cw - k, by + (gy + 1) * ch - k, k * 0.4, GRID);
++		for (const auto *f : *_base->getFacilities())
++		{
++			if (f->isPitPlaced() || Mod::pitFloorAt(f->getX(), f->getY()) != 0) continue;
++			const double x0 = bx + (f->getX() % 3) * cw + 2 * k, y0 = by + f->getY() * ch + 2 * k;
++			const double x1 = bx + (f->getX() % 3 + f->getRules()->getSizeX()) * cw - 2 * k, y1 = by + (f->getY() + f->getRules()->getSizeY()) * ch - 2 * k;
++			P::rect(x0, y0, x1, y1, CARD);
++			P::frame(x0, y0, x1, y1, k * 0.6, f->getBuildTime() > 0 ? BUILDING : CARD_EDGE);
++			P::text("label", _tr ? _tr(f->getRules()->getType()) : f->getRules()->getType(), x0 + k, y0 + k, x1 - k, y1 - k, 4.2 * k, 1, 1, LINE);
++		}
++		P::text("label", _tr ? _tr("STR_PIT_SURFACE_NOTE") : "", bx, by + bh + 1 * k, bx + bw, by + bh + 10 * k, 3.4 * k, 1, 1, DIM);
++		return;
++	}
++	if (!R.floors.count(_floor)) return;
++	// the sheet: open floor, permanent fixtures, walls
++	for (int y = 0; y < R.h; ++y)
++		for (int x = 0; x < R.w; ++x)
++		{
++			const int m = PitPlace::maskAt(_mod, _floor, x, y);
++			if (!(m & 1)) continue;
++			const double x0 = sx + x * s, y0 = sy + y * s;
++			P::rect(x0, y0, x0 + s, y0 + s, (m & 8) ? BLOCK : OPEN);
++			P::rect(x0, y0, x0 + s, y0 + std::max(1.0, k * 0.15), GRID);
++			P::rect(x0, y0, x0 + std::max(1.0, k * 0.15), y0 + s, GRID);
++		}
++	const double lw = std::max(1.0, k * 0.55);
++	for (int y = 0; y < R.h; ++y)
++		for (int x = 0; x < R.w; ++x)
++		{
++			const int m = PitPlace::maskAt(_mod, _floor, x, y);
++			const double x0 = sx + x * s, y0 = sy + y * s;
++			if (m & 2) P::rect(x0 - lw / 2, y0, x0 + lw / 2, y0 + s, LINE);
++			if (m & 4) P::rect(x0, y0 - lw / 2, x0 + s, y0 + lw / 2, LINE);
++		}
++	// the rooms
++	const BaseFacility *hover = _ghost.empty() ? roomUnderMouse() : nullptr;
++	for (const auto *f : *_base->getFacilities())
++	{
++		const std::string &type = f->getRules()->getType();
++		if (!f->isPitPlaced() || PitPlace::floorOf(_mod, type) != _floor) continue;
++		int w, h;
++		PitPlace::footprint(_mod, type, f->getPitTurned(), w, h);
++		const double x0 = sx + f->getPitX() * s + k * 0.4, y0 = sy + f->getPitY() * s + k * 0.4;
++		const double x1 = sx + (f->getPitX() + w) * s - k * 0.4, y1 = sy + (f->getPitY() + h) * s - k * 0.4;
++		P::rect(x0, y0, x1, y1, f == hover ? TAB_ON : CARD, 235);
++		P::frame(x0, y0, x1, y1, k * 0.6, f->getBuildTime() > 0 ? BUILDING : CARD_EDGE);
++		std::string label = _tr ? _tr(type) : type;
++		if (f->getBuildTime() > 0)
++		{
++			const int days = f->getBuildTime() > f->getRules()->getBuildTime() ? f->getRules()->getBuildTime() : f->getBuildTime();
++			label += "\n" + std::to_string(days) + (_tr ? " " + _tr("STR_DAYS_SHORT") : std::string(" d"));
++		}
++		P::text("label", label, x0 + k * 0.6, y0 + k * 0.6, x1 - k * 0.6, y1 - k * 0.6, std::min(4.0 * k, (y1 - y0) / 3), 1, 1, LINE);
++	}
++	// rooms an old save had here that fit nowhere: still built, shown under the sheet so they can be dismantled
++	for (const auto &u : unplaced())
++	{
++		const double x0 = X0 + u.second[0] * k, y0 = Y0 + u.second[1] * k, x1 = x0 + u.second[2] * k, y1 = y0 + u.second[3] * k;
++		P::rect(x0, y0, x1, y1, u.first == hover ? TAB_ON : CARD);
++		P::frame(x0, y0, x1, y1, k * 0.5, BUILDING);
++		P::text("label", (_tr ? _tr(u.first->getRules()->getType()) : u.first->getRules()->getType()) + "*", x0 + k, y0, x1 - k, y1, 3.2 * k, 1, 1, LINE);
++	}
++	// the ghost
++	if (!_ghost.empty())
++	{
++		int gx, gy;
++		if (tileUnderMouse(gx, gy))
++		{
++			int w, h;
++			PitPlace::footprint(_mod, _ghost, _turned, w, h);
++			const bool ok = PitPlace::fits(_mod, _base, _ghost, gx, gy, _turned).empty();
++			const double x0 = sx + gx * s, y0 = sy + gy * s, x1 = x0 + w * s, y1 = y0 + h * s;
++			P::rect(x0, y0, x1, y1, ok ? GOOD : BAD, 120);
++			P::frame(x0, y0, x1, y1, k * 0.7, ok ? GOOD : BAD);
++			P::text("label", _tr ? _tr(_ghost) : _ghost, x0 + k, y0 + k, x1 - k, y1 - k, std::min(4.0 * k, (y1 - y0) / 3), 1, 1, LINE);
++		}
++	}
++}
++
++}
+diff --git a/src/Basescape/PitBlueprintView.h b/src/Basescape/PitBlueprintView.h
+new file mode 100644
+index 0000000..2995eca
+--- /dev/null
++++ b/src/Basescape/PitBlueprintView.h
+@@ -0,0 +1,69 @@
++#pragma once
++/*
++ * G.I. Joe: the Pit's base screen as blueprints (PIT_FLOORS_v1 s.1 v2; John's look: Reference\basebuild\).
++ * One sheet per floor: the battle map's tiles, permanent things drawn in white on blueprint blue, rooms as cards
++ * laid on top. Floor tabs along the top. While placing, a ghost of the module follows the mouse, green where it
++ * fits and red where it doesn't. Painted at display resolution (HiUI::nativePanel); the 8-bit fallback is plain.
++ */
++#include <array>
++#include <functional>
++#include <vector>
++#include <string>
++#include "../Engine/InteractiveSurface.h"
++
++namespace OpenXcom
++{
++
++class Mod;
++class Base;
++class BaseFacility;
++
++class PitBlueprintView : public InteractiveSurface
++{
++public:
++	using Namer = std::function<std::string(const std::string&)>;
++private:
++	const Mod *_mod = nullptr;
++	Base *_base = nullptr;
++	Namer _tr;
++	int _floor = 1;
++	bool _tabsLocked = false;
++	// placing
++	std::string _ghost;
++	bool _turned = false;
++	// mouse, in this surface's base pixels
++	double _mx = -1, _my = -1;
++	// geometry
++	static const int TAB_H = 12;
++	int _bx0 = 0, _by0 = 0, _bw = 1, _bh = 1;   // the part of the map any floor uses (the sheet shows only that)
++	double scale() const;
++	double sheetX() const;
++	double sheetY() const;
++	void paint(double X0, double Y0, double k);
++	/// rooms of this floor that fit nowhere on it (an old save): a row of cards under the sheet, base px
++	std::vector<std::pair<BaseFacility*, std::array<double, 4> > > unplaced() const;
++public:
++	PitBlueprintView(int width, int height, int x = 0, int y = 0);
++	~PitBlueprintView();
++	void setup(const Mod *mod, Base *base, Namer tr);
++	void setFloor(int floor) { _floor = floor; }
++	int getFloor() const { return _floor; }
++	void lockTabs(bool locked) { _tabsLocked = locked; }
++	/// show a module following the mouse (empty: stop)
++	void setGhost(const std::string &type, bool turned) { _ghost = type; _turned = turned; }
++	bool getTurned() const { return _turned; }
++	void setTurned(bool t) { _turned = t; }
++	/// the tile under the mouse (the ghost's north-west tile while placing); false off the sheet
++	bool tileUnderMouse(int &x, int &y) const;
++	/// the floor tab under the mouse, -1 if none
++	int tabUnderMouse() const;
++	/// the room under the mouse on this floor, if any (the Surface: its grid rooms)
++	BaseFacility *roomUnderMouse() const;
++	/// why the ghost can't go where the mouse is ("" = it fits)
++	std::string ghostWhy() const;
++	void mouseOver(Action *action, State *state) override;
++	void mousePress(Action *action, State *state) override;
++	void draw() override;
++};
++
++}
+diff --git a/src/Basescape/PitPlace.cpp b/src/Basescape/PitPlace.cpp
+new file mode 100644
+index 0000000..c7cf22f
+--- /dev/null
++++ b/src/Basescape/PitPlace.cpp
+@@ -0,0 +1,232 @@
++#include "PitPlace.h"
++#include <algorithm>
++#include <functional>
++#include "../Mod/Mod.h"
++#include "../Mod/RuleBaseFacility.h"
++#include "../Savegame/Base.h"
++#include "../Savegame/BaseFacility.h"
++#include "../Geoscape/Outposts.h"
++#include "../Engine/Logger.h"
++
++namespace OpenXcom
++{
++namespace PitPlace
++{
++
++bool on(const Mod *mod, const Base *base)
++{
++	if (!mod || !base || !mod->getPitPlaceRules().on || !mod->getPitFloorRules().on) return false;
++	const auto *k = Outposts::kindOf(mod, base);
++	return !k || k->pit;
++}
++
++int floorOf(const Mod *mod, const std::string &type)
++{
++	const auto &F = mod->getPitFloorRules().floors;
++	auto i = F.find(type);
++	return i == F.end() ? -1 : i->second;
++}
++
++bool placed(const Mod *mod, const std::string &type)
++{
++	const int f = floorOf(mod, type);
++	return f >= 1 && mod->getPitPlaceRules().floors.count(f);
++}
++
++void footprint(const Mod *mod, const std::string &type, bool turned, int &w, int &h)
++{
++	const auto *m = mod->getPitPlaceRules().module(type);
++	w = m ? m->w : 4;
++	h = m ? m->h : 4;
++	if (turned) std::swap(w, h);
++}
++
++bool canTurn(const Mod *mod, const std::string &type)
++{
++	const auto *m = mod->getPitPlaceRules().module(type);
++	if (!m) return true;                  // an empty room turns freely
++	if (!m->spots.empty()) return false;  // a vehicle bay is where it is
++	if (m->w == m->h && m->lx < 0) return false;
++	return m->lx < 0 || m->tx >= 0;
++}
++
++int maskAt(const Mod *mod, int floor, int x, int y)
++{
++	const auto &R = mod->getPitPlaceRules();
++	auto f = R.floors.find(floor);
++	if (f == R.floors.end() || x < 0 || y < 0 || x >= R.w || y >= R.h) return 0;
++	const size_t i = (size_t)y * R.w + x;
++	if (i >= f->second.mask.size()) return 0;
++	const char c = f->second.mask[i];
++	return (c >= '0' && c <= '9') ? c - '0' : (c >= 'a' && c <= 'f') ? c - 'a' + 10 : (c >= 'A' && c <= 'F') ? c - 'A' + 10 : 0;
++}
++
++namespace
++{
++struct Rect { int x, y, w, h; };
++
++Rect rectOf(const Mod *mod, const BaseFacility *f)
++{
++	int w, h;
++	footprint(mod, f->getRules()->getType(), f->getPitTurned(), w, h);
++	return Rect{ f->getPitX(), f->getPitY(), w, h };
++}
++
++bool overlap(const Rect &a, const Rect &b)
++{
++	return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
++}
++
++/// the rooms placed on a floor
++std::vector<Rect> roomsOn(const Mod *mod, const Base *base, int floor, const BaseFacility *ignore)
++{
++	std::vector<Rect> out;
++	for (const auto *f : *const_cast<Base*>(base)->getFacilities())
++		if (f != ignore && f->isPitPlaced() && floorOf(mod, f->getRules()->getType()) == floor)
++			out.push_back(rectOf(mod, f));
++	return out;
++}
++
++/// open-floor regions of eight tiles or more: rooms are walls to walk round
++int regions(const Mod *mod, int floor, const std::vector<Rect> &rooms)
++{
++	const auto &R = mod->getPitPlaceRules();
++	std::vector<char> walk((size_t)R.w * R.h, 0), seen((size_t)R.w * R.h, 0);
++	for (int y = 0; y < R.h; ++y)
++		for (int x = 0; x < R.w; ++x)
++		{
++			const int m = maskAt(mod, floor, x, y);
++			if (!(m & 1) || (m & 8)) continue;
++			bool in = false;
++			for (const auto &r : rooms) if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) { in = true; break; }
++			walk[(size_t)y * R.w + x] = !in;
++		}
++	int count = 0;
++	std::vector<int> stack;
++	for (int s = 0; s < R.w * R.h; ++s)
++	{
++		if (!walk[s] || seen[s]) continue;
++		int size = 0;
++		stack.assign(1, s); seen[s] = 1;
++		while (!stack.empty())
++		{
++			const int c = stack.back(); stack.pop_back(); ++size;
++			const int x = c % R.w, y = c / R.w;
++			auto go = [&](int nx, int ny, bool blocked) {
++				if (nx < 0 || ny < 0 || nx >= R.w || ny >= R.h || blocked) return;
++				const int n = ny * R.w + nx;
++				if (walk[n] && !seen[n]) { seen[n] = 1; stack.push_back(n); }
++			};
++			go(x + 1, y, x + 1 < R.w && (maskAt(mod, floor, x + 1, y) & 2));
++			go(x - 1, y, (maskAt(mod, floor, x, y) & 2));
++			go(x, y + 1, y + 1 < R.h && (maskAt(mod, floor, x, y + 1) & 4));
++			go(x, y - 1, (maskAt(mod, floor, x, y) & 4));
++		}
++		if (size >= 8) ++count;   // a strip left between a module and its room wall is not a sealed-off part
++	}
++	return count;
++}
++}
++
++std::string fits(const Mod *mod, const Base *base, const std::string &type, int x, int y, bool turned, const BaseFacility *ignore)
++{
++	const auto &R = mod->getPitPlaceRules();
++	const int floor = floorOf(mod, type);
++	if (!placed(mod, type)) return "STR_OUTPOST_NOT_HERE";
++	if (turned && !canTurn(mod, type)) turned = false;
++	int w, h;
++	footprint(mod, type, turned, w, h);
++	const Rect me{ x, y, w, h };
++	if (x < 0 || y < 0 || x + w > R.w || y + h > R.h) return "STR_PIT_DOES_NOT_FIT";
++	const auto *m = R.module(type);
++	const bool spotted = m && !m->spots.empty();
++	if (spotted)
++	{
++		bool ok = false;
++		for (const auto &s : m->spots) if (s.size() >= 2 && s[0] == x && s[1] == y) ok = true;
++		if (!ok) return "STR_PIT_BAY_ONLY";
++	}
++	else
++	{
++		for (int dy = 0; dy < h; ++dy)
++			for (int dx = 0; dx < w; ++dx)
++			{
++				const int k = maskAt(mod, floor, x + dx, y + dy);
++				if (!(k & 1) || (k & 8)) return "STR_PIT_DOES_NOT_FIT";
++				if ((k & 2) && dx > 0) return "STR_PIT_DOES_NOT_FIT";   // a wall would run through the room
++				if ((k & 4) && dy > 0) return "STR_PIT_DOES_NOT_FIT";
++			}
++	}
++	auto rooms = roomsOn(mod, base, floor, ignore);
++	for (const auto &r : rooms) if (overlap(r, me)) return "STR_PIT_DOES_NOT_FIT";
++	// it may not seal off part of the floor (John 00:07: restrictions acceptable)
++	if (!spotted)
++	{
++		const int before = regions(mod, floor, rooms);
++		rooms.push_back(me);
++		if (regions(mod, floor, rooms) > before) return "STR_PIT_SEALS_OFF";
++	}
++	return "";
++}
++
++bool findSpot(const Mod *mod, const Base *base, const std::string &type, int &x, int &y, bool &turned)
++{
++	const auto &R = mod->getPitPlaceRules();
++	const auto *m = R.module(type);
++	if (m && !m->spots.empty())
++	{
++		for (const auto &s : m->spots)
++			if (s.size() >= 2 && fits(mod, base, type, s[0], s[1], false).empty()) { x = s[0]; y = s[1]; turned = false; return true; }
++		return false;
++	}
++	if (m)
++		for (const auto &p : m->prefer)
++			if (p.size() >= 3 && fits(mod, base, type, p[0], p[1], p[2] != 0).empty()) { x = p[0]; y = p[1]; turned = p[2] != 0; return true; }
++	for (int t = 0; t < (canTurn(mod, type) ? 2 : 1); ++t)
++		for (int yy = 0; yy < R.h; ++yy)
++			for (int xx = 0; xx < R.w; ++xx)
++				if (fits(mod, base, type, xx, yy, t == 1).empty()) { x = xx; y = yy; turned = t == 1; return true; }
++	return false;
++}
++
++void migrate(const Mod *mod, Base *base)
++{
++	if (!on(mod, base)) return;
++	const auto &R = mod->getPitPlaceRules();
++	for (auto *f : *base->getFacilities())
++	{
++		const std::string &type = f->getRules()->getType();
++		if (f->isPitPlaced() || !placed(mod, type)) continue;
++		int x = -1, y = -1; bool turned = false;
++		auto d = R.day1.find(type);
++		bool used = false;   // Broca's spot, once per type
++		for (const auto *g : *base->getFacilities())
++			if (g != f && g->isPitPlaced() && g->getRules()->getType() == type && d != R.day1.end() && d->second.size() >= 2 && g->getPitX() == d->second[0] && g->getPitY() == d->second[1]) used = true;
++		if (d != R.day1.end() && d->second.size() >= 2 && !used
++			&& fits(mod, base, type, d->second[0], d->second[1], d->second.size() > 2 && d->second[2]).empty())
++		{
++			x = d->second[0]; y = d->second[1]; turned = d->second.size() > 2 && d->second[2];
++		}
++		else if (!findSpot(mod, base, type, x, y, turned))
++		{
++			Log(LOG_WARNING) << "[pitplace] no room on its floor for " << type << ": it stays on the grid";
++			continue;
++		}
++		f->setPitPlace(x, y, turned);
++		Log(LOG_INFO) << "[pitplace] " << type << " placed at " << x << "," << y << (turned ? " turned" : "");
++	}
++}
++
++BaseFacility *roomAt(const Mod *mod, Base *base, int floor, int x, int y)
++{
++	for (auto *f : *base->getFacilities())
++	{
++		if (!f->isPitPlaced() || floorOf(mod, f->getRules()->getType()) != floor) continue;
++		const Rect r = rectOf(mod, f);
++		if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) return f;
++	}
++	return nullptr;
++}
++
++}
++}
+diff --git a/src/Basescape/PitPlace.h b/src/Basescape/PitPlace.h
+new file mode 100644
+index 0000000..fd35537
+--- /dev/null
++++ b/src/Basescape/PitPlace.h
+@@ -0,0 +1,48 @@
++#pragma once
++/*
++ * G.I. Joe: FREE PLACEMENT on the Pit's floors (PIT_FLOORS_v1 s.1 v2; BRIEF_FOR_BUILD_PitFreePlacement; John 16 Nov
++ * 00:01-00:41, "build it now" 08:03). Each floor below the Surface is a blueprint of the battle map's tiles. A room is
++ * a module with a footprint: bought, then dropped anywhere on its own floor where it fits on open floor, turned 90
++ * degrees if it has a turned fit-out. Module size is what limits how many fit. The battle stamps each module's
++ * fit-out on the tiles it was dropped on (BattlescapeGenerator::applyPitModules).
++ *
++ * A placed room has NO grid square (BaseFacility::isPitPlaced): every grid routine skips it. The Surface and every
++ * outpost keep the grid.
++ */
++#include <string>
++#include <vector>
++
++namespace OpenXcom
++{
++
++class Mod;
++class Base;
++class BaseFacility;
++class RuleBaseFacility;
++
++namespace PitPlace
++{
++	/// is this base laid out on blueprints? (the Pit, with the rules loaded)
++	bool on(const Mod *mod, const Base *base);
++	/// the floor a room type belongs on (1..5), 0 for the Surface, -1 if it can't go in a Pit
++	int floorOf(const Mod *mod, const std::string &type);
++	/// does this room type go on a blueprint (a floor 1..5 with a sheet)?
++	bool placed(const Mod *mod, const std::string &type);
++	/// footprint in tiles (turned swaps it)
++	void footprint(const Mod *mod, const std::string &type, bool turned, int &w, int &h);
++	/// can it be turned?
++	bool canTurn(const Mod *mod, const std::string &type);
++	/// mask bits of a tile on a floor (0 outside the sheet)
++	int maskAt(const Mod *mod, int floor, int x, int y);
++	/// why it can't go there ("" = it fits). ignore: a room to leave out (the one being moved).
++	std::string fits(const Mod *mod, const Base *base, const std::string &type, int x, int y, bool turned, const BaseFacility *ignore = nullptr);
++	/// the first place it fits (scanning rows), false if none
++	bool findSpot(const Mod *mod, const Base *base, const std::string &type, int &x, int &y, bool &turned);
++	/// put every room that should be on a blueprint and isn't there yet (Day 1, an old save): where Broca has it,
++	/// else the first place it fits. Rooms that fit nowhere stay on the grid (logged).
++	void migrate(const Mod *mod, Base *base);
++	/// the room placed over this tile of a floor, if any
++	BaseFacility *roomAt(const Mod *mod, Base *base, int floor, int x, int y);
++}
++
++}
+diff --git a/src/Basescape/PitPlaceState.cpp b/src/Basescape/PitPlaceState.cpp
+new file mode 100644
+index 0000000..14c72e0
+--- /dev/null
++++ b/src/Basescape/PitPlaceState.cpp
+@@ -0,0 +1,154 @@
++#include "PitPlaceState.h"
++#include "PitBlueprintView.h"
++#include "PitPlace.h"
++#include "../Engine/Game.h"
++#include "../Engine/HiUI.h"
++#include "../Engine/Options.h"
++#include "../Engine/Sound.h"
++#include "../Engine/Unicode.h"
++#include "../Engine/LocalizedText.h"
++#include "../Interface/TextButton.h"
++#include "../Interface/Window.h"
++#include "../Interface/Text.h"
++#include "../Mod/Mod.h"
++#include "../Mod/RuleBaseFacility.h"
++#include "../Mod/RuleInterface.h"
++#include "../Savegame/Base.h"
++#include "../Savegame/BaseFacility.h"
++#include "../Savegame/ItemContainer.h"
++#include "../Savegame/SavedGame.h"
++#include "../Menu/ErrorMessageState.h"
++#include "../Geoscape/Outposts.h"
++
++namespace OpenXcom
++{
++
++PitPlaceState::PitPlaceState(Base *base, const RuleBaseFacility *rule) : _base(base), _rule(rule)
++{
++	_screen = false;
++	_window = new Window(this, 128, 160, 192, 40);
++	_view = new PitBlueprintView(192, 192, 0, 8);
++	_btnCancel = new TextButton(112, 16, 200, 176);
++	_txtFacility = new Text(110, 17, 202, 50);
++	_txtCost = new Text(110, 9, 202, 68);
++	_numCost = new Text(110, 17, 202, 76);
++	_txtTime = new Text(110, 9, 202, 94);
++	_numTime = new Text(110, 17, 202, 102);
++	_txtHow = new Text(110, 25, 202, 122);
++	_txtFit = new Text(110, 17, 202, 150);
++
++	setInterface("placeFacility");
++	add(_window, "window", "placeFacility");
++	add(_view);
++	add(_btnCancel, "button", "placeFacility");
++	add(_txtFacility, "text", "placeFacility");
++	add(_txtCost, "text", "placeFacility");
++	add(_numCost, "numbers", "placeFacility");
++	add(_txtTime, "text", "placeFacility");
++	add(_numTime, "numbers", "placeFacility");
++	add(_txtHow, "text", "placeFacility");
++	add(_txtFit, "text", "placeFacility");
++	centerAllSurfaces();
++	if (HiUI::enabled())
++	{
++		HiUI::nativeKey(_btnCancel, "");
++		for (Surface *t : std::initializer_list<Surface*>{ _txtFacility, _txtCost, _numCost, _txtTime, _numTime, _txtHow, _txtFit })
++			HiUI::nativeText(t);
++	}
++	setWindowBackground(_window, "placeFacility");
++
++	_view->setup(_game->getMod(), _base, [this](const std::string &s) { return std::string((const std::string&)tr(s)); });
++	_view->setFloor(PitPlace::floorOf(_game->getMod(), _rule->getType()));
++	_view->lockTabs(true);
++	_view->setGhost(_rule->getType(), false);
++	_view->onMouseClick((ActionHandler)&PitPlaceState::viewClick);
++	_view->onMouseClick((ActionHandler)&PitPlaceState::viewTurn, SDL_BUTTON_RIGHT);
++	_view->onKeyboardPress((ActionHandler)&PitPlaceState::viewTurn, SDLK_r);
++
++	_btnCancel->setText(tr("STR_CANCEL"));
++	_btnCancel->onMouseClick((ActionHandler)&PitPlaceState::btnCancelClick);
++	_btnCancel->onKeyboardPress((ActionHandler)&PitPlaceState::btnCancelClick, Options::keyCancel);
++
++	_txtFacility->setWordWrap(true);
++	_txtFacility->setText(tr(_rule->getType()));
++	_txtCost->setText(tr("STR_COST_UC"));
++	_numCost->setBig();
++	_numCost->setText(Unicode::formatFunding(_rule->getBuildCost()));
++	_txtTime->setText(tr("STR_CONSTRUCTION_TIME_UC"));
++	_numTime->setBig();
++	_numTime->setText(tr("STR_DAY", _rule->getBuildTime()));
++	_txtHow->setWordWrap(true);
++	_txtHow->setText(tr(PitPlace::canTurn(_game->getMod(), _rule->getType()) ? "STR_PIT_PLACE_HOW" : "STR_PIT_PLACE_HOW_FIXED"));
++	_txtFit->setWordWrap(true);
++}
++
++PitPlaceState::~PitPlaceState()
++{
++	HiUI::nativeForget(_btnCancel);
++	for (const Surface *t : std::initializer_list<const Surface*>{ _txtFacility, _txtCost, _numCost, _txtTime, _numTime, _txtHow, _txtFit })
++		HiUI::nativeForget(t);
++}
++
++void PitPlaceState::think()
++{
++	State::think();
++	const std::string why = _view->ghostWhy();
++	if (why != _lastWhy)
++	{
++		_lastWhy = why;
++		_txtFit->setText(why.empty() ? tr("STR_PIT_FITS") : tr(why));
++	}
++}
++
++void PitPlaceState::btnCancelClick(Action *)
++{
++	_game->popState();
++}
++
++void PitPlaceState::viewTurn(Action *)
++{
++	if (PitPlace::canTurn(_game->getMod(), _rule->getType())) _view->setTurned(!_view->getTurned());
++}
++
++void PitPlaceState::viewClick(Action *)
++{
++	int x, y;
++	const bool turned = _view->getTurned() && PitPlace::canTurn(_game->getMod(), _rule->getType());
++	if (!_view->tileUnderMouse(x, y)) return;
++	const std::string why = PitPlace::fits(_game->getMod(), _base, _rule->getType(), x, y, turned);
++	const int c1 = _game->getMod()->getInterface("placeFacility")->getElement("errorMessage")->color;
++	const int c2 = _game->getMod()->getInterface("placeFacility")->getElement("errorPalette")->color;
++	if (!why.empty())
++	{
++		_game->pushState(new ErrorMessageState(tr(why), _palette, c1, "BACK13.SCR", c2));
++		return;
++	}
++	if (_game->getSavedGame()->getFunds() < _rule->getBuildCost())
++	{
++		_game->popState();
++		_game->pushState(new ErrorMessageState(tr("STR_NOT_ENOUGH_MONEY"), _palette, c1, "BACK01.SCR", c2));
++		return;
++	}
++	for (const auto &item : _rule->getBuildCostItems())
++	{
++		const int needed = item.second.first - _base->getStorageItems()->getItem(item.first);
++		if (needed > 0)
++		{
++			_game->popState();
++			_game->pushState(new ErrorMessageState(tr("STR_NOT_ENOUGH_ITEMS").arg(tr(item.first)).arg(needed), _palette, c1, "BACK01.SCR", c2));
++			return;
++		}
++	}
++	BaseFacility *fac = new BaseFacility(_rule, _base);
++	fac->setPitPlace(x, y, turned);
++	fac->setBuildTime(_rule->getBuildTime());
++	_base->getFacilities()->push_back(fac);
++	if (_rule->getPlaceSound() != Mod::NO_SOUND)
++		_game->getMod()->getSound("GEO.CAT", _rule->getPlaceSound())->play();
++	_game->getSavedGame()->setFunds(_game->getSavedGame()->getFunds() - _rule->getBuildCost());
++	for (const auto &item : _rule->getBuildCostItems())
++		_base->getStorageItems()->removeItem(item.first, item.second.first);
++	if (!_game->isShiftPressed()) _game->popState();
++}
++
++}
+diff --git a/src/Basescape/PitPlaceState.h b/src/Basescape/PitPlaceState.h
+new file mode 100644
+index 0000000..876134e
+--- /dev/null
++++ b/src/Basescape/PitPlaceState.h
+@@ -0,0 +1,37 @@
++#pragma once
++/*
++ * G.I. Joe: placing a bought room on the Pit's blueprint (PIT_FLOORS_v1 s.1 v2). The sheet of its own floor;
++ * the module follows the mouse, green where it fits, red where it doesn't; right-click (or R) turns it;
++ * left-click builds it there. Moving a room = dismantle + rebuild (STORY's default).
++ */
++#include "../Engine/State.h"
++
++namespace OpenXcom
++{
++
++class Base;
++class RuleBaseFacility;
++class PitBlueprintView;
++class TextButton;
++class Window;
++class Text;
++
++class PitPlaceState : public State
++{
++	Base *_base;
++	const RuleBaseFacility *_rule;
++	PitBlueprintView *_view;
++	TextButton *_btnCancel;
++	Window *_window;
++	Text *_txtFacility, *_txtCost, *_numCost, *_txtTime, *_numTime, *_txtHow, *_txtFit;
++	std::string _lastWhy = "?";
++public:
++	PitPlaceState(Base *base, const RuleBaseFacility *rule);
++	~PitPlaceState();
++	void think() override;
++	void btnCancelClick(Action *action);
++	void viewClick(Action *action);
++	void viewTurn(Action *action);
++};
++
++}
 diff --git a/src/Basescape/PlaceFacilityState.cpp b/src/Basescape/PlaceFacilityState.cpp
-index c52f7ad..9fbcbb5 100644
+index c52f7ad..62d2fb5 100644
 --- a/src/Basescape/PlaceFacilityState.cpp
 +++ b/src/Basescape/PlaceFacilityState.cpp
 @@ -16,7 +16,10 @@
@@ -497,7 +1522,7 @@ index c52f7ad..9fbcbb5 100644
 +				for (const auto &r : PF.surfaceCapResearch)
 +					if (const RuleResearch *rr = _game->getMod()->getResearch(r)) if (_game->getSavedGame()->isResearched(rr, false)) ++cap;
 +				for (const auto *f : *_base->getFacilities())
-+					if (Mod::pitFloorAt(f->getX(), f->getY()) == 0) ++used;
++					if (!f->isPitPlaced() && Mod::pitFloorAt(f->getX(), f->getY()) == 0) ++used;
 +				if (used >= cap) why = "STR_PIT_SURFACE_FULL";
 +			}
 +			// G.I. Joe: a room family the canon Pit draws in fixed slots (CLASSIFIED: the Lab Bench, the Brainwave Lab
@@ -3565,10 +4590,10 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..a8c34ce 100644
+index 1951ba7..4f27d39 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
-@@ -16,6 +16,9 @@
+@@ -16,10 +16,14 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -3578,7 +4603,12 @@ index 1951ba7..a8c34ce 100644
  #include <algorithm>
  #include <assert.h>
  #include <sstream>
-@@ -96,6 +99,118 @@ BattlescapeGenerator::~BattlescapeGenerator()
+ #include "BattlescapeGenerator.h"
++#include "../Basescape/PitPlace.h"
+ #include "TileEngine.h"
+ #include "Inventory.h"
+ #include "AIModule.h"
+@@ -96,6 +100,160 @@ BattlescapeGenerator::~BattlescapeGenerator()
  /**
   * Sets up all our various arrays and whatnot according to the size of the map.
   */
@@ -3645,6 +4675,48 @@ index 1951ba7..a8c34ce 100644
 +		}
 +		return parts;
 +	};
++	// G.I. Joe FREE PLACEMENT (PIT_FLOORS_v1 s.1 v2): the old slots' furniture is cleared, then every finished room
++	// placed on a blueprint gets its module's fit-out (floor and objects, never walls) on the tiles it was dropped on
++	const auto &PP = _game->getMod()->getPitPlaceRules();
++	if (PitPlace::on(_game->getMod(), _base))
++	{
++		for (const auto &c : PP.clear)
++		{
++			if (c.size() < 5) continue;
++			for (int y = c[2]; y < c[2] + c[4]; ++y)
++				for (int x = c[1]; x < c[1] + c[3]; ++x)
++					if (Tile *t = _save->getTile(Position(x, y, c[0]))) t->setMapData(nullptr, -1, -1, O_OBJECT);
++		}
++		for (const auto *f : *_base->getFacilities())
++		{
++			if (!f->isPitPlaced() || f->getBuildTime() > 0) continue;
++			const std::string &type = f->getRules()->getType();
++			const auto *m = PP.module(type);
++			auto fl = PP.floors.find(PitPlace::floorOf(_game->getMod(), type));
++			if (!m || fl == PP.floors.end()) continue;
++			const bool turned = f->getPitTurned() && m->tx >= 0;
++			const int sx = turned ? m->tx : m->lx, sy = turned ? m->ty : m->ly, sz = turned ? m->tz : m->lz;
++			if (sx < 0 || lib.empty()) continue;
++			int w, h;
++			PitPlace::footprint(_game->getMod(), type, turned, w, h);
++			for (int y = 0; y < h; ++y)
++				for (int x = 0; x < w; ++x)
++				{
++					Tile *t = _save->getTile(Position(f->getPitX() + x, f->getPitY() + y, fl->second.z));
++					if (!t) continue;
++					const Parts p = fromLib(sx + x, sy + y, sz);
++					for (int k : { (int)O_FLOOR, (int)O_OBJECT })
++					{
++						const auto &pr = p[k];
++						if (k == O_FLOOR && pr.first < 0) continue;   // keep the room's own floor where the module has none
++						MapData *md = pr.first >= 0 && pr.second >= 0 ? _save->getMapDataSets()->at(pr.second)->getObject(pr.first) : nullptr;
++						t->setMapData(md, md ? pr.first : -1, md ? pr.second : -1, (TilePart)k);
++					}
++				}
++			Log(LOG_INFO) << "[pit] " << type << " at " << f->getPitX() << "," << f->getPitY() << (turned ? " turned" : "") << " from the library";
++		}
++		return;
++	}
 +	// a bare slot's look is read from this map before any slot is written
 +	std::map<std::string, std::vector<Parts>> dsnap;
 +	for (const auto &g : pb.groups)
@@ -3697,7 +4769,7 @@ index 1951ba7..a8c34ce 100644
  void BattlescapeGenerator::init(bool resetTerrain)
  {
  	_blocks.clear();
-@@ -767,11 +882,31 @@ void BattlescapeGenerator::nextStage()
+@@ -767,11 +925,31 @@ void BattlescapeGenerator::nextStage()
   */
  void BattlescapeGenerator::run()
  {
@@ -3729,7 +4801,7 @@ index 1951ba7..a8c34ce 100644
  	const AlienDeployment *ruleDeploy = _alienCustomMission ? _alienCustomMission : _game->getMod()->getDeployment(_ufo?_ufo->getRules()->getType():_save->getMissionType(), true);
  
  	_save->setTurnLimit(ruleDeploy->getTurnLimit());
-@@ -829,9 +964,9 @@ void BattlescapeGenerator::run()
+@@ -829,9 +1007,9 @@ void BattlescapeGenerator::run()
  		if (_game->getSavedGame()->getMonthsPassed() != -1)
  		{
  			month =
@@ -3741,7 +4813,7 @@ index 1951ba7..a8c34ce 100644
  		}
  		else
  		{
-@@ -884,6 +1019,7 @@ void BattlescapeGenerator::run()
+@@ -884,6 +1062,7 @@ void BattlescapeGenerator::run()
  	_save->setStartingCondition(startingCondition);
  
  	generateMap(script, ruleDeploy->getCustomUfoName(), startingCondition);
@@ -3749,7 +4821,7 @@ index 1951ba7..a8c34ce 100644
  
  	if (isPreview && ruleDeploy->isHidden())
  	{
-@@ -961,6 +1097,184 @@ void BattlescapeGenerator::run()
+@@ -961,6 +1140,184 @@ void BattlescapeGenerator::run()
  	}
  }
  
@@ -3934,7 +5006,7 @@ index 1951ba7..a8c34ce 100644
  /**
   * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
   */
-@@ -1483,6 +1797,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1483,6 +1840,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  			setCustomCraftInventoryTile();
  
  			Node* node = _save->getSpawnNode(NR_XCOM, unit);
@@ -3967,7 +5039,7 @@ index 1951ba7..a8c34ce 100644
  			if (node)
  			{
  				_save->setUnitPosition(unit, node->getPosition());
-@@ -1495,6 +1835,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1495,6 +1878,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  				_save->initUnit(unit);
  				return unit;
  			}
@@ -3995,7 +5067,7 @@ index 1951ba7..a8c34ce 100644
  			else if (_save->getMissionType() != "STR_BASE_DEFENSE")
  			{
  				if (placeUnitNearFriend(unit))
-@@ -1669,6 +2030,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +2073,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -4085,7 +5157,7 @@ index 1951ba7..a8c34ce 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +2140,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +2183,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -4154,7 +5226,7 @@ index 1951ba7..a8c34ce 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2225,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2268,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -4171,7 +5243,7 @@ index 1951ba7..a8c34ce 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2254,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2297,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -4214,7 +5286,7 @@ index 1951ba7..a8c34ce 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -2081,17 +2626,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,17 +2669,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -4245,7 +5317,7 @@ index 1951ba7..a8c34ce 100644
  
  	mapblock->setSizeZ(sizez);
  
-@@ -2141,11 +2694,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2737,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -4259,7 +5331,7 @@ index 1951ba7..a8c34ce 100644
  			if (terrainObjectID>0)
  			{
  				int mapDataSetID = mapDataSetOffset;
-@@ -2830,7 +3383,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2830,7 +3426,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  	// this mission type is "hard-coded" in terms of map layout
  	uint64_t seed = RNG::getSeed();
  	_baseTerrain = _terrain;
@@ -4270,6 +5342,14 @@ index 1951ba7..a8c34ce 100644
  	{
  		if (_mod->getBaseDefenseMapFromLocation() == 1)
  		{
+@@ -3365,6 +3963,7 @@ void BattlescapeGenerator::generateBaseMap()
+ 	// add modules based on the base's layout
+ 	for (const auto* fac : *_base->getFacilities())
+ 	{
++		if (fac->isPitPlaced()) continue; // G.I. Joe: placed on a Pit floor, not the grid
+ 		if (fac->isBuiltOrHadPreviousFacility())
+ 		{
+ 			int num = 0;
 diff --git a/src/Battlescape/BattlescapeGenerator.h b/src/Battlescape/BattlescapeGenerator.h
 index a0bc8b3..cdbe66c 100644
 --- a/src/Battlescape/BattlescapeGenerator.h
@@ -5024,7 +6104,7 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..180e749 100644
+index 0631f32..3837a4c 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
 @@ -20,6 +20,7 @@
@@ -5104,6 +6184,15 @@ index 0631f32..180e749 100644
  			{
  				_destroyBase = true;
  			}
+@@ -1198,7 +1241,7 @@ void DebriefingState::prepareDebriefing()
+ 			for (auto* fac : *base->getFacilities())
+ 			{
+ 				// this facility was demolished
+-				if (battle->getModuleMap()[fac->getX()][fac->getY()].second == 0)
++				if (!fac->isPitPlaced() && battle->getModuleMap()[fac->getX()][fac->getY()].second == 0)
+ 				{
+ 					toBeDamaged.push_back(fac);
+ 				}
 @@ -1230,6 +1273,10 @@ void DebriefingState::prepareDebriefing()
  				ms->setUfo(nullptr);
  			}
@@ -9241,10 +10330,20 @@ index 0000000..c0c5e19
 +
 +}
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..f2c6421 100644
+index 839f803..605c9fe 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -71,6 +71,9 @@ set ( basescape_src
+@@ -35,6 +35,9 @@ set ( basescape_src
+   Basescape/NewManufactureListState.cpp
+   Basescape/NewResearchListState.cpp
+   Basescape/PlaceFacilityState.cpp
++  Basescape/PitPlaceState.cpp
++  Basescape/PitBlueprintView.cpp
++  Basescape/PitPlace.cpp
+   Basescape/PlaceLiftState.cpp
+   Basescape/PlaceStartFacilityState.cpp
+   Basescape/PurchaseState.cpp
+@@ -71,6 +74,9 @@ set ( basescape_src
  set ( battlescape_src
    Battlescape/AbortMissionState.cpp
    Battlescape/ActionMenuItem.cpp
@@ -9254,7 +10353,7 @@ index 839f803..f2c6421 100644
    Battlescape/ActionMenuState.cpp
    Battlescape/AIModule.cpp
    Battlescape/AlienInventory.cpp
-@@ -172,6 +175,8 @@ set ( engine_src
+@@ -172,6 +178,8 @@ set ( engine_src
    Engine/Sound.cpp
    Engine/SoundSet.cpp
    Engine/State.cpp
@@ -9263,7 +10362,7 @@ index 839f803..f2c6421 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -201,9 +206,19 @@ set ( geoscape_src
+@@ -201,9 +209,19 @@ set ( geoscape_src
    Geoscape/DogfightState.cpp
    Geoscape/ExtendedGeoscapeLinksState.cpp
    Geoscape/FundingState.cpp
@@ -9283,7 +10382,7 @@ index 839f803..f2c6421 100644
    Geoscape/Globe.cpp
    Geoscape/GraphsState.cpp
    Geoscape/InterceptState.cpp
-@@ -331,6 +346,7 @@ set ( mod_src
+@@ -331,6 +349,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -9291,7 +10390,7 @@ index 839f803..f2c6421 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +372,7 @@ set ( savegame_src
+@@ -356,6 +375,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -21229,7 +22328,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..40868a6 100644
+index 1885346..dc5fabe 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -21367,7 +22466,7 @@ index 1885346..40868a6 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,547 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,577 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -21630,6 +22729,36 @@ index 1885346..40868a6 100644
 +			v.tryRead("marked", r.marked);
 +			if (!r.unit.empty()) _villains[r.unit] = r;
 +		}
++	}
++	if (const auto& pp = reader["pitPlace"])
++	{
++		_pitPlace = PitPlaceRules();
++		_pitPlace.on = true;
++		pp.tryRead("w", _pitPlace.w);
++		pp.tryRead("h", _pitPlace.h);
++		if (const auto& fs = pp["floors"])
++			for (const auto& f : fs.children())
++			{
++				int n = 0; PitPlaceFloor pf;
++				f.tryRead("floor", n); f.tryRead("z", pf.z); f.tryRead("mask", pf.mask);
++				_pitPlace.floors[n] = pf;
++			}
++		if (const auto& ms = pp["modules"])
++			for (const auto& m : ms.children())
++			{
++				std::string type; PitPlaceModule pm;
++				m.tryRead("facility", type); m.tryRead("name", pm.name);
++				m.tryRead("w", pm.w); m.tryRead("h", pm.h);
++				std::vector<int> lib, turned;
++				m.tryRead("lib", lib); m.tryRead("turned", turned);
++				if (lib.size() == 3) { pm.lx = lib[0]; pm.ly = lib[1]; pm.lz = lib[2]; }
++				if (turned.size() == 3) { pm.tx = turned[0]; pm.ty = turned[1]; pm.tz = turned[2]; }
++				m.tryRead("spots", pm.spots);
++				m.tryRead("prefer", pm.prefer);
++				if (!type.empty()) _pitPlace.modules[type] = pm;
++			}
++		pp.tryRead("day1", _pitPlace.day1);
++		pp.tryRead("clear", _pitPlace.clear);
 +	}
 +	if (const auto& pb = reader["pitBattle"])
 +	{
@@ -21915,7 +23044,7 @@ index 1885346..40868a6 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3852,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3882,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -21923,7 +23052,7 @@ index 1885346..40868a6 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4457,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4487,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -21949,7 +23078,7 @@ index 1885346..40868a6 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4714,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4744,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -21970,7 +23099,7 @@ index 1885346..40868a6 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6428,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6458,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -21990,7 +23119,7 @@ index 1885346..40868a6 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6451,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6481,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -21998,7 +23127,7 @@ index 1885346..40868a6 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6465,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6495,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -22038,7 +23167,7 @@ index 1885346..40868a6 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..94e4f34 100644
+index 2242d13..d898e54 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -22102,7 +23231,7 @@ index 2242d13..94e4f34 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,338 @@ private:
+@@ -327,6 +360,370 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -22263,6 +23392,38 @@ index 2242d13..94e4f34 100644
 +	PitBattleRules _pitBattle;
 +public:
 +	const PitBattleRules &getPitBattleRules() const { return _pitBattle; }
++	/// G.I. Joe: FREE PLACEMENT on the Pit's floors (PIT_FLOORS_v1 s.1 v2, BRIEF_FOR_BUILD_PitFreePlacement;
++	/// Basescape/PitPlace.cpp). Each floor is a sheet of the battle map's tiles: what is permanent there is in the
++	/// mask, a room is a module with a footprint dropped anywhere it fits, and the battle stamps its fit-out on the
++	/// tiles it was dropped on. Generated by build/gen_pit_canon.py from MAPS' maps.
++	struct PitPlaceModule
++	{
++		int w = 4, h = 4;                       ///< footprint as drawn (turned: h x w)
++		int lx = -1, ly = -1, lz = -1;          ///< its fit-out in the library map, as drawn (-1: none, an empty room)
++		int tx = -1, ty = -1, tz = -1;          ///< ... turned 90 degrees (-1: it can't turn, unless it has no fit-out)
++		std::vector<std::vector<int> > spots;   ///< only these north-west tiles (the vehicle bays); empty = anywhere
++		std::vector<std::vector<int> > prefer;  ///< x, y, turned: tried first when a room is placed for the player (the canon rooms)
++		std::string name;                       ///< what the sheet calls it
++	};
++	struct PitPlaceFloor
++	{
++		int z = -1;                             ///< the battle map level
++		std::string mask;                       ///< w*h hex digits, row by row: 1 floor, 2 west wall, 4 north wall, 8 blocked
++	};
++	struct PitPlaceRules
++	{
++		bool on = false;
++		int w = 0, h = 0;
++		std::map<int, PitPlaceFloor> floors;                 ///< 1..5
++		std::map<std::string, PitPlaceModule> modules;       ///< facility type -> module (missing: a 4 x 4 empty room)
++		std::map<std::string, std::vector<int> > day1;       ///< facility type -> x, y, turned (where Broca has it)
++		std::vector<std::vector<int> > clear;                ///< z, x, y, w, h: furniture cleared at battle start (the old slots)
++		const PitPlaceModule *module(const std::string &type) const { auto i = modules.find(type); return i == modules.end() ? nullptr : &i->second; }
++	};
++private:
++	PitPlaceRules _pitPlace;
++public:
++	const PitPlaceRules &getPitPlaceRules() const { return _pitPlace; }
 +	/// G.I. Joe: a named villain's Move and trait (Battlescape/Villains.cpp, build/gen_villains.py)
 +	struct VillainRule
 +	{
@@ -22441,7 +23602,7 @@ index 2242d13..94e4f34 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1057,124 @@ public:
+@@ -692,6 +1089,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -23060,10 +24221,20 @@ index 6bef22e..8cc3b62 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..305bdf0 100644
+index 99f24ce..92b7b6b 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
-@@ -411,6 +411,9 @@
+@@ -377,6 +377,9 @@
+     <ClCompile Include="Basescape\MonthlyCostsState.cpp" />
+     <ClCompile Include="Basescape\NewResearchListState.cpp" />
+     <ClCompile Include="Basescape\PlaceFacilityState.cpp" />
++    <ClCompile Include="Basescape\PitPlaceState.cpp" />
++    <ClCompile Include="Basescape\PitBlueprintView.cpp" />
++    <ClCompile Include="Basescape\PitPlace.cpp" />
+     <ClCompile Include="Basescape\PlaceLiftState.cpp" />
+     <ClCompile Include="Basescape\ManufactureStartState.cpp" />
+     <ClCompile Include="Basescape\PlaceStartFacilityState.cpp" />
+@@ -411,6 +414,9 @@
      <ClCompile Include="Basescape\TransfersState.cpp" />
      <ClCompile Include="Battlescape\AbortMissionState.cpp" />
      <ClCompile Include="Battlescape\ActionMenuItem.cpp" />
@@ -23073,7 +24244,7 @@ index 99f24ce..305bdf0 100644
      <ClCompile Include="Battlescape\ActionMenuState.cpp" />
      <ClCompile Include="Battlescape\AlienInventory.cpp" />
      <ClCompile Include="Battlescape\AlienInventoryState.cpp" />
-@@ -511,6 +514,8 @@
+@@ -511,6 +517,8 @@
      <ClCompile Include="Engine\Sound.cpp" />
      <ClCompile Include="Engine\SoundSet.cpp" />
      <ClCompile Include="Engine\State.cpp" />
@@ -23082,7 +24253,7 @@ index 99f24ce..305bdf0 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,10 +551,20 @@
+@@ -546,10 +554,20 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
@@ -23103,7 +24274,7 @@ index 99f24ce..305bdf0 100644
      <ClCompile Include="Geoscape\Globe.cpp" />
      <ClCompile Include="Geoscape\GraphsState.cpp" />
      <ClCompile Include="Geoscape\InterceptState.cpp" />
-@@ -673,6 +688,7 @@
+@@ -673,6 +691,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -23111,7 +24282,7 @@ index 99f24ce..305bdf0 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +698,7 @@
+@@ -682,6 +701,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -23119,7 +24290,17 @@ index 99f24ce..305bdf0 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -890,6 +907,9 @@
+@@ -856,6 +876,9 @@
+     <ClInclude Include="Basescape\MonthlyCostsState.h" />
+     <ClInclude Include="Basescape\NewResearchListState.h" />
+     <ClInclude Include="Basescape\PlaceFacilityState.h" />
++    <ClInclude Include="Basescape\PitPlaceState.h" />
++    <ClInclude Include="Basescape\PitBlueprintView.h" />
++    <ClInclude Include="Basescape\PitPlace.h" />
+     <ClInclude Include="Basescape\PlaceLiftState.h" />
+     <ClInclude Include="Basescape\ManufactureStartState.h" />
+     <ClInclude Include="Basescape\PlaceStartFacilityState.h" />
+@@ -890,6 +913,9 @@
      <ClInclude Include="Basescape\TransfersState.h" />
      <ClInclude Include="Battlescape\AbortMissionState.h" />
      <ClInclude Include="Battlescape\ActionMenuItem.h" />
@@ -23129,7 +24310,7 @@ index 99f24ce..305bdf0 100644
      <ClInclude Include="Battlescape\ActionMenuState.h" />
      <ClInclude Include="Battlescape\AlienInventory.h" />
      <ClInclude Include="Battlescape\AlienInventoryState.h" />
-@@ -970,6 +990,8 @@
+@@ -970,6 +996,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -23138,7 +24319,7 @@ index 99f24ce..305bdf0 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1055,16 @@
+@@ -1033,6 +1061,16 @@
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
@@ -23155,7 +24336,7 @@ index 99f24ce..305bdf0 100644
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1042,6 +1074,7 @@
+@@ -1042,6 +1080,7 @@
      <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
      <ClInclude Include="Geoscape\ProductionCompleteState.h" />
      <ClInclude Include="Geoscape\GeoscapeState.h" />
@@ -23163,7 +24344,7 @@ index 99f24ce..305bdf0 100644
      <ClInclude Include="Geoscape\Globe.h" />
      <ClInclude Include="Geoscape\GraphsState.h" />
      <ClInclude Include="Geoscape\InterceptState.h" />
-@@ -1170,6 +1203,7 @@
+@@ -1170,6 +1209,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -23171,7 +24352,7 @@ index 99f24ce..305bdf0 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1213,7 @@
+@@ -1179,6 +1219,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
@@ -23179,6 +24360,42 @@ index 99f24ce..305bdf0 100644
      <ClInclude Include="Savegame\AlienMission.h" />
      <ClInclude Include="Savegame\Base.h" />
      <ClInclude Include="Savegame\BaseFacility.h" />
+diff --git a/src/OpenXcom.2010.vcxproj.filters b/src/OpenXcom.2010.vcxproj.filters
+index 92dbcdf..d0b0883 100644
+--- a/src/OpenXcom.2010.vcxproj.filters
++++ b/src/OpenXcom.2010.vcxproj.filters
+@@ -11,6 +11,15 @@
+     <ClCompile Include="Basescape\PlaceFacilityState.cpp">
+       <Filter>Basescape</Filter>
+     </ClCompile>
++    <ClCompile Include="Basescape\PitPlaceState.cpp">
++      <Filter>Basescape</Filter>
++    </ClCompile>
++    <ClCompile Include="Basescape\PitBlueprintView.cpp">
++      <Filter>Basescape</Filter>
++    </ClCompile>
++    <ClCompile Include="Basescape\PitPlace.cpp">
++      <Filter>Basescape</Filter>
++    </ClCompile>
+     <ClCompile Include="Basescape\PurchaseState.cpp">
+       <Filter>Basescape</Filter>
+     </ClCompile>
+@@ -1247,6 +1256,15 @@
+     <ClInclude Include="Basescape\PlaceFacilityState.h">
+       <Filter>Basescape</Filter>
+     </ClInclude>
++    <ClInclude Include="Basescape\PitPlaceState.h">
++      <Filter>Basescape</Filter>
++    </ClInclude>
++    <ClInclude Include="Basescape\PitBlueprintView.h">
++      <Filter>Basescape</Filter>
++    </ClInclude>
++    <ClInclude Include="Basescape\PitPlace.h">
++      <Filter>Basescape</Filter>
++    </ClInclude>
+     <ClInclude Include="Basescape\PurchaseState.h">
+       <Filter>Basescape</Filter>
+     </ClInclude>
 diff --git a/src/Savegame/AlienBase.cpp b/src/Savegame/AlienBase.cpp
 index 09525a3..f1134f5 100644
 --- a/src/Savegame/AlienBase.cpp
@@ -23364,10 +24581,10 @@ index 97ef4f5..0dbe163 100644
  	void addMissionLocation(const std::string &varName, const std::string &regionName, int zoneNumber, int maximum);
  	/// Checks that a given mission location (city or whatever) isn't stored in our list of previously attacked locations.
 diff --git a/src/Savegame/Base.cpp b/src/Savegame/Base.cpp
-index ac1a454..aa8d97c 100644
+index ac1a454..75464ad 100644
 --- a/src/Savegame/Base.cpp
 +++ b/src/Savegame/Base.cpp
-@@ -17,6 +17,7 @@
+@@ -17,11 +17,13 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "Base.h"
@@ -23375,15 +24592,33 @@ index ac1a454..aa8d97c 100644
  #include "../fmath.h"
  #include <stack>
  #include <algorithm>
-@@ -227,6 +228,7 @@ void Base::load(const YAML::YamlNodeReader& reader, SavedGame *save, bool newGam
+ #include <functional>
+ #include "BaseFacility.h"
++#include "../Basescape/PitPlace.h"
+ #include "../Mod/RuleBaseFacility.h"
+ #include "Craft.h"
+ #include "SavedGame.h"
+@@ -227,6 +229,11 @@ void Base::load(const YAML::YamlNodeReader& reader, SavedGame *save, bool newGam
  		}
  	}
  	reader.tryRead("fakeUnderwater", _fakeUnderwater);
 +	reader.tryRead("outpostKind", _outpostKind);
++
++	// G.I. Joe: a Pit's rooms go on its floor blueprints (Day 1 where Broca has them; an old save's rooms the
++	// first place they fit) - PIT_FLOORS_v1 s.1 v2
++	PitPlace::migrate(_mod, this);
  
  	isOverlappingOrOverflowing(); // don't crash, just report in the log file...
  }
-@@ -387,6 +389,8 @@ void Base::save(YAML::YamlNodeWriter writer) const
+@@ -311,6 +318,7 @@ bool Base::isOverlappingOrOverflowing()
+ 
+ 	for (auto* fac : _facilities)
+ 	{
++		if (fac->isPitPlaced()) continue; // G.I. Joe: placed on a Pit floor, not the grid
+ 		const RuleBaseFacility *rules = fac->getRules();
+ 		int facilityX = fac->getX();
+ 		int facilityY = fac->getY();
+@@ -387,6 +395,8 @@ void Base::save(YAML::YamlNodeWriter writer) const
  		writer.write("retaliationMissionUniqueId", _retaliationMission->getId());
  	if (_fakeUnderwater)
  		writer.write("fakeUnderwater", _fakeUnderwater);
@@ -23392,7 +24627,7 @@ index ac1a454..aa8d97c 100644
  }
  
  /**
-@@ -1519,6 +1523,20 @@ int Base::getUsedContainment(int prisonType, bool onlyExternal) const
+@@ -1519,6 +1529,20 @@ int Base::getUsedContainment(int prisonType, bool onlyExternal) const
   * @return Containment Lab space.
   */
  int Base::getAvailableContainment(int prisonType) const
@@ -23413,7 +24648,24 @@ index ac1a454..aa8d97c 100644
  {
  	int total = 0;
  	for (const auto* fac : _facilities)
-@@ -1812,6 +1830,11 @@ void Base::destroyDisconnectedFacilities()
+@@ -1752,6 +1776,7 @@ int Base::damageFacility(BaseFacility *toBeDamaged)
+ 		BaseFacility *fac = new BaseFacility(toBeDamaged->getRules()->getDestroyedFacility(), this);
+ 		fac->setX(toBeDamaged->getX());
+ 		fac->setY(toBeDamaged->getY());
++		fac->setPitPlace(toBeDamaged->getPitX(), toBeDamaged->getPitY(), toBeDamaged->getPitTurned());
+ 		fac->setBuildTime(0);
+ 		_facilities.push_back(fac);
+ 
+@@ -1762,7 +1787,7 @@ int Base::damageFacility(BaseFacility *toBeDamaged)
+ 			toBeDamaged->setCraftForDrawing(0);
+ 		}
+ 	}
+-	else if (_mod->getDestroyedFacility())
++	else if (_mod->getDestroyedFacility() && !toBeDamaged->isPitPlaced())
+ 	{
+ 		for (int x = 0; x < toBeDamaged->getRules()->getSizeX(); ++x)
+ 		{
+@@ -1812,6 +1837,11 @@ void Base::destroyDisconnectedFacilities()
  std::list<BASEFACILITIESITERATOR> Base::getDisconnectedFacilities(BaseFacility *remove)
  {
  	std::list<BASEFACILITIESITERATOR> result;
@@ -23425,7 +24677,16 @@ index ac1a454..aa8d97c 100644
  
  	if (remove != 0 && remove->getRules()->isLift())
  	{ // Theoretically this is impossible, but sanity check is good :)
-@@ -2540,6 +2563,19 @@ BaseSumDailyRecovery Base::getSumRecoveryPerDay() const
+@@ -1838,7 +1868,7 @@ std::list<BASEFACILITIESITERATOR> Base::getDisconnectedFacilities(BaseFacility *
+ 	for (BASEFACILITIESITERATOR iter = _facilities.begin(); iter != _facilities.end(); ++iter)
+ 	{
+ 		BaseFacility* fac = (*iter);
+-		if (fac != remove)
++		if (fac != remove && !fac->isPitPlaced())
+ 		{
+ 			if (fac->getRules()->isLift()) lift = fac;
+ 			for (int x = 0; x != fac->getRules()->getSizeX(); ++x)
+@@ -2540,6 +2570,19 @@ BaseSumDailyRecovery Base::getSumRecoveryPerDay() const
  
  	result.HealthRecovery = healthMaxinum;
  
@@ -23485,6 +24746,60 @@ index b25dba2..7f250fd 100644
  	/// Gets the total amount of used Containment space.
  	int getUsedContainment(int prisonType, bool onlyExternal = false) const;
  	/// Sets the craft's battlescape status.
+diff --git a/src/Savegame/BaseFacility.cpp b/src/Savegame/BaseFacility.cpp
+index 1ec565e..2234054 100644
+--- a/src/Savegame/BaseFacility.cpp
++++ b/src/Savegame/BaseFacility.cpp
+@@ -61,6 +61,9 @@ void BaseFacility::load(const YAML::YamlNodeReader& reader)
+ 	reader.tryRead("ammoMissingReported", _ammoMissingReported);
+ 	reader.tryRead("disabled", _disabled);
+ 	reader.tryRead("hadPreviousFacility", _hadPreviousFacility);
++	reader.tryRead("pitX", _pitX);
++	reader.tryRead("pitY", _pitY);
++	reader.tryRead("pitTurned", _pitTurned);
+ }
+ 
+ /**
+@@ -83,6 +86,12 @@ void BaseFacility::save(YAML::YamlNodeWriter writer) const
+ 		writer.write("disabled", _disabled);
+ 	if (_hadPreviousFacility)
+ 		writer.write("hadPreviousFacility", _hadPreviousFacility);
++	if (_pitX >= 0)
++	{
++		writer.write("pitX", _pitX);
++		writer.write("pitY", _pitY);
++		if (_pitTurned) writer.write("pitTurned", _pitTurned);
++	}
+ }
+ 
+ /**
+diff --git a/src/Savegame/BaseFacility.h b/src/Savegame/BaseFacility.h
+index 0bd7220..e0bbc9e 100644
+--- a/src/Savegame/BaseFacility.h
++++ b/src/Savegame/BaseFacility.h
+@@ -41,6 +41,8 @@ private:
+ 	const RuleBaseFacility *_rules;
+ 	Base *_base;
+ 	int _x, _y, _buildTime;
++	int _pitX = -1, _pitY = -1;   ///< G.I. Joe free placement: the module's north-west tile on its Pit floor (-1 = on the grid)
++	bool _pitTurned = false;      ///< ... drawn turned 90 degrees
+ 	int _ammo;
+ 	bool _ammoMissingReported;
+ 	bool _disabled;
+@@ -55,6 +57,13 @@ public:
+ 	void load(const YAML::YamlNodeReader& reader);
+ 	/// Saves the base facility to YAML.
+ 	void save(YAML::YamlNodeWriter writer) const;
++	/// G.I. Joe: a Pit room placed on its floor's blueprint (PIT_FLOORS_v1 s.1 v2). Such a room has no grid square:
++	/// every grid routine skips it (its x, y are meaningless).
++	bool isPitPlaced() const { return _pitX >= 0; }
++	int getPitX() const { return _pitX; }
++	int getPitY() const { return _pitY; }
++	bool getPitTurned() const { return _pitTurned; }
++	void setPitPlace(int x, int y, bool turned) { _pitX = x; _pitY = y; _pitTurned = turned; if (x >= 0) { _x = -10; _y = -10; } }
+ 	/// Gets the facility's ruleset.
+ 	const RuleBaseFacility *getRules() const;
+ 	/// Gets the facility's X position.
 diff --git a/src/Savegame/BattleUnit.cpp b/src/Savegame/BattleUnit.cpp
 index 46fbf1f..6093476 100644
 --- a/src/Savegame/BattleUnit.cpp
