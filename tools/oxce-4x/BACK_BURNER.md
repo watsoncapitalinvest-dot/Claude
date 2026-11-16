@@ -415,19 +415,20 @@ What the map version needs, none of which exists yet:
 Cost: the pipeline is the big piece, and it is shared with the Stinger and the
 H.I.S.S., which need the same thing in months 4-12. Not started.
 
-### The canon Pit battle: what the 15 Nov pass left (build/gen_pit_canon.py, BattlescapeGenerator::applyPitModules)
-- **Only CLASSIFIED is wired.** The other 31 slots keep MAPS' stand-in furniture whatever is built. When MAPS
-  builds modules (PIT_BUILD_SPEC_v1) they should come as a module library: one map holding each module in its own
-  rectangle plus a JSON of rects, so the engine copies from the library instead of from a slot on the canon map.
-  Then add a slot group per room family in SLOT_GROUPS and a slot cap per family (only CLASSIFIED is capped now).
-- **No surface.** Cobra comes in at Staging (the vehicle elevator garage) and the alternate escape tunnel. Stacking
-  PITSURF over the underground needs one map (84 x 58 surface over the 46 x 32 block) and waits on PITSURF v2.
-- **Brainwave Lab and Jammer** count against CLASSIFIED's four slots but show as empty slots (no module yet).
-- **Not seen:** a full fight to the end, Cobra using the lifts all the way to Utility, the slot cap refusing in the
-  base screen, a campaign base defence (seen only through New Battle's base defence). Two Cobra died on Staging
-  in the first five turns with no Joe in sight: cause not found.
-- **Surface install (BRIEF_FOR_BUILD_SurfaceInstall):** the cap is off (surfaceCap 99). The rest (13 fixed spots,
-  INSTALL orders instead of placement, the gym-roof second copy) is not built.
+### The canon Pit battle: what is left (build/gen_pit_canon.py, BattlescapeGenerator::applyPitModules)
+- **pit_canon_v4 in (15 Nov evening):** 27 of the 35 slots follow what is built, fit-outs copied from MAPS'
+  showcase map (PITSHOW). Day 1 = STORY's v1.1 (Command Center, Bunks in NCO 1, Lab Bench, one A.P.C.); CAST's
+  spec says Lab Bench only, STORY to settle (one line in MAPS' pitfit.py STATES).
+- **Rooms with no facility in the game** stay as Day 1 draws them: Pentagon Hook-up, Briefing, Hologram,
+  Situation Analysis, Archives, Computer Banks, the two MG nests, Ammo Dump, Backup Data Vault.
+- **A fit-out copied from another slot** keeps its own facing (Comms Room in ops_g1 comes from ops_g2, the second
+  Lab Bench from CLASSIFIED 1, the Workbench in the SW garage from the SE one); seen and they read fine, but a
+  door-side mismatch is possible elsewhere. Only floors and objects travel; walls stay the slot's own.
+- **Caps** now apply per group (comms rooms 3, training 4, recruiting 2, quarters 8, infirmary 1, CLASSIFIED 4,
+  detention 1, workbench 2). The cap refusal in the base screen has still not been seen.
+- **No surface.** Cobra comes in at Staging and the alternate escape tunnel. Stacking PITSURF over it waits.
+- **Not seen:** a campaign base defence, a fight to the end. Two Cobra died on Staging in the first 5 turns of
+  one test with no Joe in sight: cause not found.
 
 ### Villains: what the 15 Nov pass left (build/gen_villains.py, Battlescape/Villains.cpp)
 - **Arrival is John's open question** ("save this for later. Deeper discussion"): every villain is missionOnly, so

@@ -3565,7 +3565,7 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..594b305 100644
+index 1951ba7..a8c34ce 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -16,6 +16,9 @@
@@ -3578,7 +3578,7 @@ index 1951ba7..594b305 100644
  #include <algorithm>
  #include <assert.h>
  #include <sstream>
-@@ -96,6 +99,83 @@ BattlescapeGenerator::~BattlescapeGenerator()
+@@ -96,6 +99,118 @@ BattlescapeGenerator::~BattlescapeGenerator()
  /**
   * Sets up all our various arrays and whatnot according to the size of the map.
   */
@@ -3597,64 +3597,99 @@ index 1951ba7..594b305 100644
 +}
 +
 +/**
-+ * G.I. Joe (PIT_MODULES_v1): every slot group's slots are filled in order, one per built facility of the group:
-+ * the facility's module if MAPS has built one (copied from its template slot), else a bare slot; the slots left
-+ * over are bare. Templates are read before anything is written, so a template slot may itself be refilled.
++ * G.I. Joe (PIT_MODULES_v1, pit_canon_v4): every slot group's slots are claimed in order, one per built facility of
++ * the group. A claimed slot gets that facility's fit-out from MAPS' showcase map (the library, "S:"); a slot nobody
++ * has built gets a bare slot from the Day 1 map itself ("D:", read before anything is written). A fit-out taken from
++ * a DIFFERENT slot brings only its floors and objects, since that slot's walls are not this one's.
 + */
 +void BattlescapeGenerator::applyPitModules()
 +{
 +	const auto &pb = _game->getMod()->getPitBattleRules();
-+	typedef std::vector<std::array<std::pair<int,int>, O_MAX>> Snap;
-+	auto snap = [&](const Mod::PitSlot &s) {
-+		Snap out;
-+		for (int y = 0; y < s.h; ++y)
-+			for (int x = 0; x < s.w; ++x)
-+			{
-+				std::array<std::pair<int,int>, O_MAX> parts;
-+				Tile *t = _save->getTile(Position(s.x + x, s.y + y, s.z));
-+				for (int k = 0; k < O_MAX; ++k)
-+				{
-+					int id = -1, set = -1;
-+					if (t) t->getMapData(&id, &set, (TilePart)k);
-+					parts[k] = std::make_pair(id, set);
-+				}
-+				out.push_back(parts);
-+			}
-+		return out;
++	// the library map, read straight from its file (same terrain sets, same size as the canon map)
++	int lx = 0, ly = 0, lz = 0;
++	std::vector<unsigned int> lib;
++	if (!pb.library.empty() && FileMap::fileExists("MAPS/" + pb.library + ".MAP2"))
++	{
++		auto f = FileMap::getIStream("MAPS/" + pb.library + ".MAP2");
++		unsigned char h[3];
++		f->read((char*)h, 3);
++		ly = h[0]; lx = h[1]; lz = h[2];
++		unsigned char v[2];
++		while (f->read((char*)v, 2)) lib.push_back((unsigned int)v[0] | ((unsigned int)v[1] << 8));
++		if (lib.size() != (size_t)lx * ly * lz * 4) { Log(LOG_ERROR) << "[pit] library " << pb.library << " is the wrong size"; lib.clear(); }
++	}
++	typedef std::array<std::pair<int,int>, O_MAX> Parts;
++	auto fromMap = [&](int x, int y, int z) {
++		Parts parts;
++		Tile *t = _save->getTile(Position(x, y, z));
++		for (int k = 0; k < O_MAX; ++k)
++		{
++			int id = -1, set = -1;
++			if (t) t->getMapData(&id, &set, (TilePart)k);
++			parts[k] = std::make_pair(id, set);
++		}
++		return parts;
 +	};
++	auto fromLib = [&](int x, int y, int z) {
++		Parts parts;
++		for (int k = 0; k < O_MAX; ++k) parts[k] = std::make_pair(-1, -1);
++		if (lib.empty() || x < 0 || y < 0 || z < 0 || x >= lx || y >= ly || z >= lz) return parts;
++		const size_t i = (((size_t)(lz - 1 - z) * ly + y) * lx + x) * 4;
++		for (int k = 0; k < O_MAX; ++k)
++		{
++			unsigned int id = lib[i + k];
++			if (!id) continue;
++			int set = 0;
++			MapData *md = _terrain->getMapData(&id, &set);
++			if (md) parts[k] = std::make_pair((int)id, set);
++		}
++		return parts;
++	};
++	// a bare slot's look is read from this map before any slot is written
++	std::map<std::string, std::vector<Parts>> dsnap;
++	for (const auto &g : pb.groups)
++		for (const auto &kv : g.from)
++			if (kv.second.compare(0, 2, "D:") == 0 && !dsnap.count(kv.second))
++				if (const Mod::PitSlot *s = pb.slot(kv.second.substr(2)))
++				{
++					auto &v = dsnap[kv.second];
++					for (int y = 0; y < s->h; ++y) for (int x = 0; x < s->w; ++x) v.push_back(fromMap(s->x + x, s->y + y, s->z));
++				}
 +	for (const auto &g : pb.groups)
 +	{
-+		std::map<std::string, Snap> tpl;
-+		for (const auto &s : g.slots)
-+		{
-+			for (const auto &m : g.modules) if (m.second == s.id) tpl[m.first] = snap(s);
-+			if (s.id == g.empty) tpl[""] = snap(s);
-+		}
 +		std::vector<std::string> fill;
 +		for (const auto &type : g.facilities)
 +			for (const auto *f : *_base->getFacilities())
 +				if (f->getRules()->getType() == type && f->getBuildTime() == 0) fill.push_back(type);
 +		for (size_t i = 0; i < g.slots.size(); ++i)
 +		{
-+			const Mod::PitSlot &s = g.slots[i];
-+			std::string want = i < fill.size() && tpl.count(fill[i]) ? fill[i] : "";
-+			auto it = tpl.find(want);
-+			if (it == tpl.end()) continue;
-+			const Snap &src = it->second;
++			const Mod::PitSlot *s = pb.slot(g.slots[i]);
++			if (!s) continue;
++			const std::string fac = i < fill.size() ? fill[i] : std::string();
++			auto it = g.from.find(fac + "|" + s->id);
++			if (it == g.from.end()) it = g.from.find("|" + s->id);
++			if (it == g.from.end()) continue;
++			const bool library = it->second.compare(0, 2, "S:") == 0;
++			const Mod::PitSlot *src = pb.slot(it->second.substr(2));
++			if (!src || src->w != s->w || src->h != s->h) continue;
++			if (library && lib.empty()) continue;
++			const bool full = src->id == s->id;
 +			size_t n = 0;
-+			for (int y = 0; y < s.h; ++y)
-+				for (int x = 0; x < s.w; ++x, ++n)
++			for (int y = 0; y < s->h; ++y)
++				for (int x = 0; x < s->w; ++x, ++n)
 +				{
-+					Tile *t = _save->getTile(Position(s.x + x, s.y + y, s.z));
-+					if (!t || n >= src.size()) continue;
++					Tile *t = _save->getTile(Position(s->x + x, s->y + y, s->z));
++					if (!t) continue;
++					const Parts p = library ? fromLib(src->x + x, src->y + y, src->z) : dsnap[it->second][n];
 +					for (int k = 0; k < O_MAX; ++k)
 +					{
-+						const auto &pr = src[n][k];
++						if (!full && (k == O_WESTWALL || k == O_NORTHWALL)) continue;
++						const auto &pr = p[k];
 +						MapData *md = pr.first >= 0 && pr.second >= 0 ? _save->getMapDataSets()->at(pr.second)->getObject(pr.first) : nullptr;
 +						t->setMapData(md, md ? pr.first : -1, md ? pr.second : -1, (TilePart)k);
 +					}
 +				}
-+			Log(LOG_INFO) << "[pit] slot " << s.id << ": " << (want.empty() ? std::string("empty") : want);
++			Log(LOG_INFO) << "[pit] slot " << s->id << ": " << (fac.empty() ? std::string("bare") : fac) << " from " << it->second;
 +		}
 +	}
 +}
@@ -3662,7 +3697,7 @@ index 1951ba7..594b305 100644
  void BattlescapeGenerator::init(bool resetTerrain)
  {
  	_blocks.clear();
-@@ -767,11 +847,31 @@ void BattlescapeGenerator::nextStage()
+@@ -767,11 +882,31 @@ void BattlescapeGenerator::nextStage()
   */
  void BattlescapeGenerator::run()
  {
@@ -3694,7 +3729,7 @@ index 1951ba7..594b305 100644
  	const AlienDeployment *ruleDeploy = _alienCustomMission ? _alienCustomMission : _game->getMod()->getDeployment(_ufo?_ufo->getRules()->getType():_save->getMissionType(), true);
  
  	_save->setTurnLimit(ruleDeploy->getTurnLimit());
-@@ -829,9 +929,9 @@ void BattlescapeGenerator::run()
+@@ -829,9 +964,9 @@ void BattlescapeGenerator::run()
  		if (_game->getSavedGame()->getMonthsPassed() != -1)
  		{
  			month =
@@ -3706,7 +3741,7 @@ index 1951ba7..594b305 100644
  		}
  		else
  		{
-@@ -884,6 +984,7 @@ void BattlescapeGenerator::run()
+@@ -884,6 +1019,7 @@ void BattlescapeGenerator::run()
  	_save->setStartingCondition(startingCondition);
  
  	generateMap(script, ruleDeploy->getCustomUfoName(), startingCondition);
@@ -3714,7 +3749,7 @@ index 1951ba7..594b305 100644
  
  	if (isPreview && ruleDeploy->isHidden())
  	{
-@@ -961,6 +1062,184 @@ void BattlescapeGenerator::run()
+@@ -961,6 +1097,184 @@ void BattlescapeGenerator::run()
  	}
  }
  
@@ -3899,7 +3934,7 @@ index 1951ba7..594b305 100644
  /**
   * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
   */
-@@ -1483,6 +1762,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1483,6 +1797,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  			setCustomCraftInventoryTile();
  
  			Node* node = _save->getSpawnNode(NR_XCOM, unit);
@@ -3932,7 +3967,7 @@ index 1951ba7..594b305 100644
  			if (node)
  			{
  				_save->setUnitPosition(unit, node->getPosition());
-@@ -1495,6 +1800,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1495,6 +1835,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  				_save->initUnit(unit);
  				return unit;
  			}
@@ -3960,7 +3995,7 @@ index 1951ba7..594b305 100644
  			else if (_save->getMissionType() != "STR_BASE_DEFENSE")
  			{
  				if (placeUnitNearFriend(unit))
-@@ -1669,6 +1995,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +2030,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -4050,7 +4085,7 @@ index 1951ba7..594b305 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +2105,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +2140,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -4119,7 +4154,7 @@ index 1951ba7..594b305 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2190,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2225,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -4136,7 +4171,7 @@ index 1951ba7..594b305 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2219,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2254,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -4179,7 +4214,7 @@ index 1951ba7..594b305 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -2081,17 +2591,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,17 +2626,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -4210,7 +4245,7 @@ index 1951ba7..594b305 100644
  
  	mapblock->setSizeZ(sizez);
  
-@@ -2141,11 +2659,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2694,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -4224,7 +4259,7 @@ index 1951ba7..594b305 100644
  			if (terrainObjectID>0)
  			{
  				int mapDataSetID = mapDataSetOffset;
-@@ -2830,7 +3348,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2830,7 +3383,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  	// this mission type is "hard-coded" in terms of map layout
  	uint64_t seed = RNG::getSeed();
  	_baseTerrain = _terrain;
@@ -4270,10 +4305,16 @@ index a0bc8b3..cdbe66c 100644
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..66a2f6b 100644
+index 7cd4941..585c5c9 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
-@@ -16,6 +16,7 @@
+@@ -1,3 +1,5 @@
++#include <cstdio>
++#include <cstdlib>
+ /*
+  * Copyright 2010-2016 OpenXcom Developers.
+  *
+@@ -16,6 +18,7 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -4281,7 +4322,7 @@ index 7cd4941..66a2f6b 100644
  #include <algorithm>
  #include <sstream>
  #include <iomanip>
-@@ -88,6 +89,7 @@
+@@ -88,6 +91,7 @@
  #include "../Mod/RuleInventory.h"
  #include "../Mod/RuleSoldier.h"
  #include "../Mod/RuleVideo.h"
@@ -4289,7 +4330,7 @@ index 7cd4941..66a2f6b 100644
  
  namespace OpenXcom
  {
-@@ -137,7 +139,7 @@ BattlescapeState::BattlescapeState() :
+@@ -137,7 +141,7 @@ BattlescapeState::BattlescapeState() :
  
  	// Create the battlemap view
  	// the actual map height is the total height minus the height of the buttonbar
@@ -4298,7 +4339,7 @@ index 7cd4941..66a2f6b 100644
  
  	_numLayers = new NumberText(3, 5, x + 232, y + 6);
  	_rank = new Surface(26, 23, x + 107, y + 33);
-@@ -465,7 +467,7 @@ BattlescapeState::BattlescapeState() :
+@@ -465,7 +469,7 @@ BattlescapeState::BattlescapeState() :
  
  	_btnKneel->onMouseClick((ActionHandler)&BattlescapeState::btnKneelClick);
  	_btnKneel->onKeyboardPress((ActionHandler)&BattlescapeState::btnKneelClick, Options::keyBattleKneel);
@@ -4307,7 +4348,7 @@ index 7cd4941..66a2f6b 100644
  	_btnKneel->onMouseIn((ActionHandler)&BattlescapeState::txtTooltipIn);
  	_btnKneel->onMouseOut((ActionHandler)&BattlescapeState::txtTooltipOut);
  	_btnKneel->allowToggleInversion();
-@@ -724,6 +726,395 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +728,395 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
@@ -4703,7 +4744,7 @@ index 7cd4941..66a2f6b 100644
  }
  
  
-@@ -732,6 +1123,7 @@ BattlescapeState::BattlescapeState() :
+@@ -732,6 +1125,7 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -4711,7 +4752,20 @@ index 7cd4941..66a2f6b 100644
  	delete _animTimer;
  	delete _gameTimer;
  	delete _battleGame;
-@@ -859,6 +1251,7 @@ void BattlescapeState::init()
+@@ -789,6 +1183,12 @@ void BattlescapeState::init()
+ 	_map->draw();
+ 	_battleGame->init();
+ 	updateSoldierInfo();
++	// G.I. Joe rig: OXCE_CAM=x,y,z points the camera there whenever the battle screen comes back (screenshots)
++	if (const char *cam = getenv("OXCE_CAM"))
++	{
++		int cx = 0, cy = 0, cz = 0;
++		if (sscanf(cam, "%d,%d,%d", &cx, &cy, &cz) == 3) _map->getCamera()->centerOnPosition(Position(cx, cy, cz), true);
++	}
+ 
+ 	switch (_save->getTUReserved())
+ 	{
+@@ -859,6 +1259,7 @@ void BattlescapeState::init()
  void BattlescapeState::think()
  {
  	static bool popped = false;
@@ -4719,7 +4773,7 @@ index 7cd4941..66a2f6b 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1215,6 +1608,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1215,6 +1616,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -4740,7 +4794,7 @@ index 7cd4941..66a2f6b 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -2172,7 +2579,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +2587,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -4749,7 +4803,7 @@ index 7cd4941..66a2f6b 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +2799,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +2807,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -4757,7 +4811,7 @@ index 7cd4941..66a2f6b 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -3621,6 +4029,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4037,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -4770,7 +4824,7 @@ index 7cd4941..66a2f6b 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +4466,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4474,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -20915,7 +20969,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..bd7d1cb 100644
+index 1885346..79a0952 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -21053,7 +21107,7 @@ index 1885346..bd7d1cb 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,525 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,529 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -21303,6 +21357,17 @@ index 1885346..bd7d1cb 100644
 +	{
 +		pb.tryRead("deployment", _pitBattle.deployment);
 +		pb.tryRead("map", _pitBattle.map);
++		pb.tryRead("library", _pitBattle.library);
++		if (const auto& ss = pb["slots"])
++		{
++			_pitBattle.slots.clear();
++			for (const auto& s : ss.children())
++			{
++				PitSlot sl;
++				s.tryRead("id", sl.id); s.tryRead("z", sl.z); s.tryRead("x", sl.x); s.tryRead("y", sl.y); s.tryRead("w", sl.w); s.tryRead("h", sl.h);
++				_pitBattle.slots.push_back(sl);
++			}
++		}
 +		if (const auto& gs = pb["groups"])
 +		{
 +			_pitBattle.groups.clear();
@@ -21310,15 +21375,8 @@ index 1885346..bd7d1cb 100644
 +			{
 +				PitSlotGroup grp;
 +				g.tryRead("facilities", grp.facilities);
-+				g.tryRead("modules", grp.modules);
-+				g.tryRead("empty", grp.empty);
-+				if (const auto& ss = g["slots"])
-+					for (const auto& s : ss.children())
-+					{
-+						PitSlot sl;
-+						s.tryRead("id", sl.id); s.tryRead("z", sl.z); s.tryRead("x", sl.x); s.tryRead("y", sl.y); s.tryRead("w", sl.w); s.tryRead("h", sl.h);
-+						grp.slots.push_back(sl);
-+					}
++				g.tryRead("slots", grp.slots);
++				g.tryRead("from", grp.from);
 +				_pitBattle.groups.push_back(grp);
 +			}
 +		}
@@ -21579,7 +21637,7 @@ index 1885346..bd7d1cb 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3830,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3834,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -21587,7 +21645,7 @@ index 1885346..bd7d1cb 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4435,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4439,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -21613,7 +21671,7 @@ index 1885346..bd7d1cb 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4692,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4696,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -21634,7 +21692,7 @@ index 1885346..bd7d1cb 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6406,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6410,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -21654,7 +21712,7 @@ index 1885346..bd7d1cb 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6429,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6433,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -21662,7 +21720,7 @@ index 1885346..bd7d1cb 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6443,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6447,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -21702,7 +21760,7 @@ index 1885346..bd7d1cb 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..100bb6c 100644
+index 2242d13..ef12490 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -21766,7 +21824,7 @@ index 2242d13..100bb6c 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,321 @@ private:
+@@ -327,6 +360,326 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -21913,11 +21971,16 @@ index 2242d13..100bb6c 100644
 +	struct PitSlotGroup
 +	{
 +		std::vector<std::string> facilities;     ///< the facility types the slots hold, filled in this order
-+		std::vector<PitSlot> slots;
-+		std::map<std::string, std::string> modules; ///< facility type -> the slot whose contents are its module
-+		std::string empty;                        ///< the slot whose contents are a bare slot
++		std::vector<std::string> slots;          ///< slot ids, in the order they are claimed
++		std::map<std::string, std::string> from; ///< "FACILITY|slot" (or "|slot" for bare) -> "S:src" (library) / "D:src" (this map)
 +	};
-+	struct PitBattleRules { std::string deployment, map; std::vector<PitSlotGroup> groups; };
++	struct PitBattleRules
++	{
++		std::string deployment, map, library;    ///< library: MAPS' showcase map, every slot filled
++		std::vector<PitSlot> slots;
++		std::vector<PitSlotGroup> groups;
++		const PitSlot *slot(const std::string &id) const { for (const auto &s : slots) if (s.id == id) return &s; return nullptr; }
++	};
 +private:
 +	PitBattleRules _pitBattle;
 +public:
@@ -22088,7 +22151,7 @@ index 2242d13..100bb6c 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1040,124 @@ public:
+@@ -692,6 +1045,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
