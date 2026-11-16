@@ -4724,7 +4724,7 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..507c5a6 100644
+index 1951ba7..2ea3011 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -16,10 +16,14 @@
@@ -5080,6 +5080,15 @@ index 1951ba7..507c5a6 100644
  
  	if (isPreview && ruleDeploy->isHidden())
  	{
+@@ -897,7 +1177,7 @@ void BattlescapeGenerator::run()
+ 	{
+ 		enviro = _game->getMod()->getEnviroEffects(_terrain->getEnviroEffects());
+ 	}
+-	deployXCOM(isPreview ? nullptr : startingCondition, isPreview ? nullptr : enviro);
++	if (!_airRaid) deployXCOM(isPreview ? nullptr : startingCondition, isPreview ? nullptr : enviro);
+ 
+ 	int civilianSpawnNodeRank = ruleDeploy->getCivilianSpawnNodeRank();
+ 	bool markCiviliansAsVIP = ruleDeploy->getMarkCiviliansAsVIP();
 @@ -961,6 +1241,184 @@ void BattlescapeGenerator::run()
  	}
  }
@@ -5545,6 +5554,24 @@ index 1951ba7..507c5a6 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
+@@ -1824,7 +2513,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
+ 		unit->getAIModule()->setStartNode(node);
+ 		unit->setRankInt(alienRank);
+ 		int dir = _save->getTileEngine()->faceWindow(node->getPosition());
+-		Position craft = _game->getSavedGame()->getSavedBattle()->getUnits()->at(0)->getPosition();
++		Position craft = _save->getUnits()->empty() ? Position(_mapsize_x / 2, _mapsize_y - 1, 0) : _save->getUnits()->at(0)->getPosition();   // G.I. Joe: an air raid has no Joes on the ground
+ 		if (Position::distance2d(node->getPosition(), craft) <= 20 && RNG::percent(aliensFacingCraftOdds))
+ 			dir = unit->directionTo(craft);
+ 		if (dir != -1)
+@@ -1843,7 +2532,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
+ 		{
+ 			unit->setRankInt(alienRank);
+ 			int dir = _save->getTileEngine()->faceWindow(unit->getPosition());
+-			Position craft = _game->getSavedGame()->getSavedBattle()->getUnits()->at(0)->getPosition();
++			Position craft = _save->getUnits()->empty() ? Position(_mapsize_x / 2, _mapsize_y - 1, 0) : _save->getUnits()->at(0)->getPosition();   // G.I. Joe: an air raid has no Joes on the ground
+ 			if (Position::distance2d(unit->getPosition(), craft) <= 20 && RNG::percent(aliensFacingCraftOdds))
+ 				dir = unit->directionTo(craft);
+ 			if (dir != -1)
 @@ -2081,17 +2770,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
@@ -5610,10 +5637,19 @@ index 1951ba7..507c5a6 100644
  		{
  			int num = 0;
 diff --git a/src/Battlescape/BattlescapeGenerator.h b/src/Battlescape/BattlescapeGenerator.h
-index a0bc8b3..ccc733f 100644
+index a0bc8b3..30c1ff4 100644
 --- a/src/Battlescape/BattlescapeGenerator.h
 +++ b/src/Battlescape/BattlescapeGenerator.h
-@@ -127,6 +127,8 @@ private:
+@@ -54,6 +54,8 @@ class Position;
+ class BattlescapeGenerator
+ {
+ private:
++
++	bool _airRaid = false;
+ 	Game *_game;
+ 	SavedBattleGame *_save;
+ 	Mod *_mod;
+@@ -127,6 +129,8 @@ private:
  	bool canPlaceXCOMUnit(Tile *tile);
  	/// Deploys the aliens, according to the alien deployment rules.
  	void deployAliens(const AlienDeployment *deployment);
@@ -5622,7 +5658,7 @@ index a0bc8b3..ccc733f 100644
  	/// Spawns civilians on a terror mission.
  	void deployCivilians(bool markAsVIP, int nodeRank, int max, bool roundUp = false, const std::string &civilianType = "");
  	/// Finds a spot near a friend to spawn at.
-@@ -147,6 +149,14 @@ private:
+@@ -147,6 +151,14 @@ private:
  	bool selectPosition(const std::vector<SDL_Rect *> *rects, int &X, int &Y, int sizeX, int sizeY);
  	/// Generates a map from base modules.
  	void generateBaseMap();
@@ -5637,7 +5673,13 @@ index a0bc8b3..ccc733f 100644
  	/// Populates _verticalLevels vector according to a mapscript command and sorts them for use
  	bool populateVerticalLevels(MapScript *command);
  	/// Gets a terrain from a terrain name for a command or a vertical level
-@@ -194,6 +204,9 @@ public:
+@@ -190,10 +202,15 @@ public:
+ 	void setMissionSite(MissionSite* mission);
+ 	/// Sets the alien base
+ 	void setAlienBase(AlienBase* base);
++	/// G.I. Joe: an AIR RAID (Geoscape/AirRaid): the site's map and garrison, no Joes on the ground
++	void setAirRaid(bool on) { _airRaid = on; }
+ 	/// Sets the terrain.
  	void setTerrain(RuleTerrain *terrain);
  	/// Runs the generator.
  	void run();
@@ -10756,20 +10798,21 @@ index 0000000..c0c5e19
 +
 +}
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..605c9fe 100644
+index 839f803..4b2e6c8 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -35,6 +35,9 @@ set ( basescape_src
+@@ -35,6 +35,10 @@ set ( basescape_src
    Basescape/NewManufactureListState.cpp
    Basescape/NewResearchListState.cpp
    Basescape/PlaceFacilityState.cpp
 +  Basescape/PitPlaceState.cpp
 +  Basescape/PitBlueprintView.cpp
 +  Basescape/PitPlace.cpp
++  Geoscape/AirRaid.cpp
    Basescape/PlaceLiftState.cpp
    Basescape/PlaceStartFacilityState.cpp
    Basescape/PurchaseState.cpp
-@@ -71,6 +74,9 @@ set ( basescape_src
+@@ -71,6 +75,9 @@ set ( basescape_src
  set ( battlescape_src
    Battlescape/AbortMissionState.cpp
    Battlescape/ActionMenuItem.cpp
@@ -10779,7 +10822,7 @@ index 839f803..605c9fe 100644
    Battlescape/ActionMenuState.cpp
    Battlescape/AIModule.cpp
    Battlescape/AlienInventory.cpp
-@@ -172,6 +178,8 @@ set ( engine_src
+@@ -172,6 +179,8 @@ set ( engine_src
    Engine/Sound.cpp
    Engine/SoundSet.cpp
    Engine/State.cpp
@@ -10788,7 +10831,7 @@ index 839f803..605c9fe 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -201,9 +209,19 @@ set ( geoscape_src
+@@ -201,9 +210,19 @@ set ( geoscape_src
    Geoscape/DogfightState.cpp
    Geoscape/ExtendedGeoscapeLinksState.cpp
    Geoscape/FundingState.cpp
@@ -10808,7 +10851,7 @@ index 839f803..605c9fe 100644
    Geoscape/Globe.cpp
    Geoscape/GraphsState.cpp
    Geoscape/InterceptState.cpp
-@@ -331,6 +349,7 @@ set ( mod_src
+@@ -331,6 +350,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -10816,7 +10859,7 @@ index 839f803..605c9fe 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +375,7 @@ set ( savegame_src
+@@ -356,6 +376,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -15285,6 +15328,664 @@ index 0000000..29cbe70
 +};
 +
 +}
+diff --git a/src/Geoscape/AirRaid.cpp b/src/Geoscape/AirRaid.cpp
+new file mode 100644
+index 0000000..9b391cd
+--- /dev/null
++++ b/src/Geoscape/AirRaid.cpp
+@@ -0,0 +1,544 @@
++#include "AirRaid.h"
++#include <algorithm>
++#include <cmath>
++#include <map>
++#include <sstream>
++#include "GeoscapeState.h"
++#include "../Engine/Game.h"
++#include "../Engine/Action.h"
++#include "../Engine/HiUI.h"
++#include "../Engine/Logger.h"
++#include "../Engine/Palette.h"
++#include "../Engine/RNG.h"
++#include "../Engine/SurfaceSet.h"
++#include "../Engine/LocalizedText.h"
++#include "../Engine/Options.h"
++#include "../Interface/Window.h"
++#include "../Interface/Text.h"
++#include "../Interface/TextButton.h"
++#include "../Mod/Mod.h"
++#include "../Mod/MapData.h"
++#include "../Mod/AlienRace.h"
++#include "../Mod/AlienDeployment.h"
++#include "../Mod/RuleCraft.h"
++#include "../Mod/RuleDamageType.h"
++#include "../Savegame/SavedGame.h"
++#include "../Savegame/SavedBattleGame.h"
++#include "../Savegame/AlienBase.h"
++#include "../Savegame/Base.h"
++#include "../Savegame/Craft.h"
++#include "../Savegame/Soldier.h"
++#include "../Savegame/Tile.h"
++#include "../Savegame/BattleUnit.h"
++#include "../Battlescape/BattlescapeGenerator.h"
++#include "../Battlescape/TileEngine.h"
++#include "../Battlescape/BattlescapeGame.h"
++
++namespace OpenXcom
++{
++
++namespace AirRaid
++{
++
++bool canBomb(const Mod *mod, const Craft *craft)
++{
++	const auto &R = mod->getAirRaidRules();
++	return R.on && craft && R.bombers.count(craft->getRules()->getType());
++}
++
++bool canBeBombed(const Mod *mod, const AlienBase *base)
++{
++	return mod->getAirRaidRules().on && base && !base->getSiteType().empty();
++}
++
++namespace
++{
++/// the top of a tile column: the highest level with anything on it (-1 = nothing)
++int topLevel(SavedBattleGame *save, int x, int y)
++{
++	for (int z = save->getMapSizeZ() - 1; z >= 0; --z)
++	{
++		Tile *t = save->getTile(Position(x, y, z));
++		if (!t) continue;
++		for (int p = O_FLOOR; p < O_MAX; ++p) if (t->getMapData((TilePart)p)) return z;
++	}
++	return -1;
++}
++
++bool structure(SavedBattleGame *save, int x, int y)
++{
++	for (int z = 0; z < save->getMapSizeZ(); ++z)
++	{
++		Tile *t = save->getTile(Position(x, y, z));
++		if (t && (t->getMapData(O_OBJECT) || t->getMapData(O_WESTWALL) || t->getMapData(O_NORTHWALL))) return true;
++	}
++	return false;
++}
++
++const char *speedName(int s) { return s == 0 ? "STR_AR_SLOW" : s == 1 ? "STR_AR_MEDIUM" : "STR_AR_FAST"; }
++}
++
++}
++
++// ---------------------------------------------------------------------------------------------------------- the view
++
++AirRaidMapView::AirRaidMapView(int width, int height, int x, int y) : InteractiveSurface(width, height, x, y)
++{
++}
++
++AirRaidMapView::~AirRaidMapView()
++{
++	HiUI::nativePanel(this, nullptr);
++}
++
++void AirRaidMapView::setup(const Mod *mod, SavedBattleGame *save, std::vector<AirRaid::Plane> *planes, std::vector<AirRaid::Impact> *impacts)
++{
++	_mod = mod; _save = save; _planes = planes; _impacts = impacts;
++	HiUI::nativePanel(this, [this](double X0, double Y0, double k) { paint(X0, Y0, k); });
++}
++
++double AirRaidMapView::cell() const
++{
++	if (!_save) return 1;
++	return std::min((getWidth() - 4) / (double)_save->getMapSizeX(), (getHeight() - 12) / (double)_save->getMapSizeY());
++}
++
++bool AirRaidMapView::tileUnderMouse(int &x, int &y) const
++{
++	if (!_save || _mx < 0) return false;
++	const double c = cell();
++	x = (int)std::floor((_mx - 2) / c);
++	y = (int)std::floor((_my - 2) / c);
++	return x >= 0 && y >= 0 && x < _save->getMapSizeX() && y < _save->getMapSizeY();
++}
++
++void AirRaidMapView::mouseOver(Action *action, State *state)
++{
++	_mx = action->getRelativeXMouse() / action->getXScale();
++	_my = action->getRelativeYMouse() / action->getYScale();
++	_redraw = true;
++	InteractiveSurface::mouseOver(action, state);
++}
++
++void AirRaidMapView::mousePress(Action *action, State *state)
++{
++	_mx = action->getRelativeXMouse() / action->getXScale();
++	_my = action->getRelativeYMouse() / action->getYScale();
++	InteractiveSurface::mousePress(action, state);
++}
++
++void AirRaidMapView::draw()
++{
++	Surface::draw();
++	clear();
++}
++
++void AirRaidMapView::paint(double X0, double Y0, double k)
++{
++	if (!_save || !_mod) return;
++	namespace P = HiUI::Paint;
++	const int W = _save->getMapSizeX(), H = _save->getMapSizeY();
++	const double c = cell() * k, ox = X0 + 2 * k, oy = Y0 + 2 * k;
++	P::rect(X0, Y0, X0 + getWidth() * k, Y0 + getHeight() * k, 0x101418);
++	// the site from above: each column's top, in the mini-map's own colours, lighter the higher it stands
++	static std::map<int, Uint32> colourOf;
++	SurfaceSet *scang = const_cast<Mod*>(_mod)->getSurfaceSet("SCANG.DAT", false);
++	Palette *pal = _mod->getPalette("PAL_BATTLESCAPE", false);
++	auto mapColour = [&](const MapData *d) -> Uint32
++	{
++		const int idx = d->getMiniMapIndex();
++		auto it = colourOf.find(idx);
++		if (it != colourOf.end()) return it->second;
++		Uint32 rgb = d->getObjectType() == O_FLOOR ? 0x55604a : 0x8a8a8a;
++		Surface *f = (scang && pal && idx) ? scang->getFrame(idx + 35) : nullptr;
++		if (f)
++		{
++			long r = 0, g = 0, b = 0, n = 0;
++			for (int y = 0; y < f->getHeight(); ++y)
++				for (int x = 0; x < f->getWidth(); ++x)
++				{
++					const Uint8 p = f->getPixel(x, y);
++					if (!p) continue;
++					const SDL_Color *col = pal->getColors(p);
++					r += col->r; g += col->g; b += col->b; ++n;
++				}
++			if (n) rgb = ((r / n) << 16) | ((g / n) << 8) | (b / n);
++		}
++		colourOf[idx] = rgb;
++		return rgb;
++	};
++	auto lighten = [](Uint32 rgb, int pct) -> Uint32
++	{
++		int r = (rgb >> 16) & 255, g = (rgb >> 8) & 255, b = rgb & 255;
++		r = std::min(255, r + (255 - r) * pct / 100); g = std::min(255, g + (255 - g) * pct / 100); b = std::min(255, b + (255 - b) * pct / 100);
++		return (r << 16) | (g << 8) | b;
++	};
++	for (int y = 0; y < H; ++y)
++		for (int x = 0; x < W; ++x)
++		{
++			const int z = AirRaid::topLevel(_save, x, y);
++			if (z < 0) { P::rect(ox + x * c, oy + y * c, ox + (x + 1) * c, oy + (y + 1) * c, 0x0c0c0c); continue; }
++			Tile *t = _save->getTile(Position(x, y, z));
++			const MapData *d = t->getMapData(O_OBJECT) ? t->getMapData(O_OBJECT) : t->getMapData(O_FLOOR) ? t->getMapData(O_FLOOR)
++				: t->getMapData(O_WESTWALL) ? t->getMapData(O_WESTWALL) : t->getMapData(O_NORTHWALL);
++			P::rect(ox + x * c, oy + y * c, ox + (x + 1) * c + 0.5, oy + (y + 1) * c + 0.5, lighten(mapColour(d), z * 14));
++			// walls as dark rules on the tile's edge
++			for (int zz = 0; zz <= z; ++zz)
++			{
++				Tile *w = _save->getTile(Position(x, y, zz));
++				if (!w) continue;
++				if (w->getMapData(O_WESTWALL)) P::rect(ox + x * c, oy + y * c, ox + x * c + std::max(1.0, c * 0.18), oy + (y + 1) * c, 0x202020);
++				if (w->getMapData(O_NORTHWALL)) P::rect(ox + x * c, oy + y * c, ox + (x + 1) * c, oy + y * c + std::max(1.0, c * 0.18), 0x202020);
++			}
++		}
++	// the approach: the planes come in from the south edge
++	P::text("label", "APPROACH", X0, oy + H * c + 1 * k, X0 + getWidth() * k, Y0 + getHeight() * k, 3.4 * k, 1, 1, 0xd8b45a);
++	// targets
++	static const Uint32 PLANE[6] = { 0x4fc3f7, 0xffd54f, 0x81c784, 0xf06292, 0xba68c8, 0xffb74d };
++	if (_planes)
++		for (size_t i = 0; i < _planes->size(); ++i)
++		{
++			const auto &p = (*_planes)[i];
++			if (p.tx < 0) continue;
++			const double cx = ox + (p.tx + 0.5) * c, cy = oy + (p.ty + 0.5) * c, r = std::max(3.0 * k, c * 1.6);
++			P::frame(cx - r, cy - r, cx + r, cy + r, std::max(1.0, k * 0.8), PLANE[i % 6]);
++			P::text("label", std::to_string(i + 1), cx - r, cy - r - 4.5 * k, cx + r, cy - r, 3.6 * k, 1, 1, PLANE[i % 6]);
++			// its run, from the south edge
++			P::rect(cx - 0.4 * k, cy + r, cx + 0.4 * k, oy + H * c, PLANE[i % 6], (int)i == _selected ? 200 : 90);
++		}
++	// impacts
++	if (_impacts)
++		for (const auto &im : *_impacts)
++		{
++			static const Uint32 KIND[4] = { 0xc20f16, 0xff8c1a, 0xd8b45a, 0x9e9e9e };
++			const double cx = ox + (im.x + 0.5) * c, cy = oy + (im.y + 0.5) * c, r = std::max(2.5 * k, c * 1.1);
++			P::roundRect(cx - r, cy - r, cx + r, cy + r, r, KIND[im.kind], 210);
++		}
++	// the hover tile
++	int hx, hy;
++	if (_planes && tileUnderMouse(hx, hy))
++		P::frame(ox + hx * c, oy + hy * c, ox + (hx + 1) * c, oy + (hy + 1) * c, std::max(1.0, k * 0.6), 0xffffff);
++}
++
++// ---------------------------------------------------------------------------------------------------------- the state
++
++AirRaidState::AirRaidState(Craft *craft, AlienBase *base, Texture *missionTexture, Texture *globeTexture, int shade) : _base(base)
++{
++	_screen = true;
++	const Mod *mod = _game->getMod();
++	const auto &R = mod->getAirRaidRules();
++	_siteType = base->getSiteType();
++
++	_window = new Window(this, 320, 200, 0, 0, POPUP_NONE);
++	_txtTitle = new Text(310, 14, 5, 4);
++	_map = new AirRaidMapView(188, 176, 4, 20);
++	_txtInfo = new Text(118, 60, 196, 20);
++	_txtResult = new Text(118, 120, 196, 20);
++	_btnFly = new TextButton(56, 16, 196, 180);
++	_btnCancel = new TextButton(56, 16, 258, 180);
++	setInterface("confirmLanding");
++	add(_window, "window", "confirmLanding");
++	add(_txtTitle, "text", "confirmLanding");
++	add(_map);
++	add(_txtInfo, "text", "confirmLanding");
++	add(_txtResult, "text", "confirmLanding");
++	add(_btnFly, "button", "confirmLanding");
++	add(_btnCancel, "button", "confirmLanding");
++
++	// the planes: every bomber that has reached this site
++	for (auto *b : *_game->getSavedGame()->getBases())
++		for (auto *c : *b->getCrafts())
++		{
++			if (!AirRaid::canBomb(mod, c)) continue;
++			if (c != craft && (c->getDestination() != base || c->getDistance(base) > 0.002)) continue;
++			if ((int)_planes.size() >= 6) break;
++			AirRaid::Plane p;
++			p.craft = c;
++			const auto &br = R.bombers.at(c->getRules()->getType());
++			p.bombs = br.bombs;
++			p.heavy = br.heavy;
++			auto pilots = c->getPilotList(false, mod);
++			if (!pilots.empty()) p.pilotId = pilots.front()->getId();
++			_planes.push_back(p);
++		}
++	for (size_t i = 0; i < _planes.size(); ++i)
++	{
++		auto *b = new TextButton(118, 14, 196, 84 + (int)i * 15);
++		add(b, "button", "confirmLanding");
++		b->onMouseClick((ActionHandler)&AirRaidState::btnPlaneClick);
++		_btnPlanes.push_back(b);
++	}
++	centerAllSurfaces();
++	setWindowBackground(_window, "confirmLanding");
++
++	// the site's battle map, its garrison on it, no Joes on the ground
++	SavedBattleGame *bgame = new SavedBattleGame(_game->getMod(), _game->getLanguage());
++	_game->getSavedGame()->setBattleGame(bgame);
++	bgame->setMissionType(base->getDeployment()->getType());
++	BattlescapeGenerator bgen(_game);
++	bgen.setWorldTexture(0, globeTexture);
++	(void)missionTexture;
++	bgen.setWorldShade(shade);
++	bgen.setAlienBase(base);
++	bgen.setAlienRace(base->getAlienRace());
++	if (AlienRace *race = _game->getMod()->getAlienRace(base->getAlienRace()))
++		bgen.setAlienCustomDeploy(_game->getMod()->getDeployment(race->getBaseCustomDeploy()), _game->getMod()->getDeployment(race->getBaseCustomMission()));
++	bgen.setAirRaid(true);
++	bgen.run();
++	base->setInBattlescape(false);
++	Tile::destroyedLog.clear();
++
++	_map->setup(mod, bgame, &_planes, &_impacts);
++	_map->onMouseClick((ActionHandler)&AirRaidState::mapClick);
++
++	_txtTitle->setBig();
++	_txtTitle->setAlign(ALIGN_CENTER);
++	_txtTitle->setText(tr("STR_AR_TITLE").arg(base->getName(_game->getLanguage())));
++	_txtInfo->setWordWrap(true);
++	_txtResult->setWordWrap(true);
++	_txtResult->setVisible(false);
++	_btnFly->setText(tr("STR_AR_FLY"));
++	_btnFly->onMouseClick((ActionHandler)&AirRaidState::btnFlyClick);
++	_btnCancel->setText(tr("STR_AR_CANCEL"));
++	_btnCancel->onMouseClick((ActionHandler)&AirRaidState::btnCancelClick);
++	_btnCancel->onKeyboardPress((ActionHandler)&AirRaidState::btnCancelClick, Options::keyCancel);
++	refresh();
++}
++
++AirRaidState::~AirRaidState()
++{
++}
++
++void AirRaidState::refresh()
++{
++	const Mod *mod = _game->getMod();
++	const auto &R = mod->getAirRaidRules();
++	if (!_flown)
++	{
++		// what the Joes know of the defence: the guns this kind of site has (stand-in table, phase 1)
++		std::map<std::string, int> guns;
++		auto it = R.siteGuns.find(_siteType);
++		if (it != R.siteGuns.end()) for (const auto &g : it->second) guns[g]++;
++		std::ostringstream ss;
++		ss << tr("STR_AR_PLAN") << "\n" << tr("STR_AR_DEFENCES");
++		if (guns.empty()) ss << " " << tr("STR_AR_NONE");
++		for (const auto &g : guns) ss << "\n  " << g.second << " x " << tr(g.first);
++		_txtInfo->setText(ss.str());
++	}
++	bool ready = !_planes.empty();
++	for (size_t i = 0; i < _planes.size(); ++i)
++	{
++		const auto &p = _planes[i];
++		std::ostringstream s;
++		s << (int)(i + 1) << ". " << p.craft->getName(_game->getLanguage()) << " - " << tr(AirRaid::speedName(p.speed));
++		s << (p.tx < 0 ? " - ?" : "");
++		if (_flown) s << (p.down ? " - " + std::string(tr("STR_AR_DOWN")) : "");
++		_btnPlanes[i]->setText(s.str());
++		if (p.tx < 0) ready = false;
++	}
++	_btnFly->setVisible(!_flown ? ready : true);
++	_btnFly->setText(tr(_flown ? "STR_OK" : "STR_AR_FLY"));
++	_btnCancel->setVisible(!_flown);
++	_map->setSelected(_selected);
++}
++
++void AirRaidState::btnPlaneClick(Action *action)
++{
++	if (_flown) return;
++	for (size_t i = 0; i < _btnPlanes.size(); ++i)
++	{
++		if (action->getSender() != _btnPlanes[i]) continue;
++		// first click picks the plane to aim; a click on the picked plane changes its speed
++		if ((int)i == _selected) _planes[i].speed = (_planes[i].speed + 1) % 3;
++		_selected = (int)i;
++	}
++	refresh();
++}
++
++void AirRaidState::mapClick(Action *)
++{
++	if (_flown || _planes.empty()) return;
++	int x, y;
++	if (!_map->tileUnderMouse(x, y)) return;
++	_planes[_selected].tx = x;
++	_planes[_selected].ty = y;
++	// on to the next plane without a target
++	for (size_t n = 1; n <= _planes.size(); ++n)
++	{
++		const int j = (_selected + (int)n) % (int)_planes.size();
++		if (_planes[j].tx < 0) { _selected = j; break; }
++	}
++	refresh();
++}
++
++void AirRaidState::btnCancelClick(Action *)
++{
++	_game->getSavedGame()->setBattleGame(nullptr);
++	for (auto &p : _planes) p.craft->returnToBase();
++	_game->popState();
++}
++
++void AirRaidState::btnFlyClick(Action *)
++{
++	if (_flown) { finish(); return; }
++	fly();
++}
++
++void AirRaidState::fly()
++{
++	Mod *mod = _game->getMod();
++	const auto &R = mod->getAirRaidRules();
++	SavedBattleGame *save = _game->getSavedGame()->getSavedBattle();
++	std::ostringstream log;
++	const int W = save->getMapSizeX(), H = save->getMapSizeY();
++
++	// 1. the guns fire first, every shot from every gun (Cobra's guns plan blind: a plane and a lead per shot)
++	auto it = R.siteGuns.find(_siteType);
++	int nShot = 0;
++	if (it != R.siteGuns.end())
++		for (const auto &gunType : it->second)
++		{
++			auto g = R.guns.find(gunType);
++			if (g == R.guns.end()) continue;
++			const auto &gun = g->second;
++			for (int s = 0; s < gun.shots; ++s, ++nShot)
++			{
++				std::vector<int> alive;
++				for (size_t i = 0; i < _planes.size(); ++i) if (!_planes[i].down) alive.push_back((int)i);
++				if (alive.empty()) break;
++				const int pi = alive[nShot % alive.size()];
++				auto &p = _planes[pi];
++				const int roll = RNG::generate(0, 99);
++				const int lead = roll < 25 ? 0 : roll < 65 ? 1 : 2;       // its guess at the plane's speed
++				const int d = std::abs(lead - p.speed);
++				bool hit = false, graze = false;
++				if (gun.kind == "mg") hit = p.speed == 0 && d == 0 && RNG::percent(gun.chance);   // low planes only
++				else if (gun.kind == "missile") hit = RNG::percent(d == 0 ? gun.chance : gun.chance / 2);
++				else if (gun.kind == "aa" || gun.kind == "flak") { if (d == 0) hit = RNG::percent(gun.chance); else if (d == 1) graze = true; }
++				else { if (d == 0) hit = RNG::percent(gun.chance); else if (d == 1) hit = RNG::percent(gun.chance / 2); }
++				log << tr(gunType) << " > " << (pi + 1) << ": ";
++				if (hit)
++				{
++					if (p.hit || RNG::percent(R.downOnHit)) { p.down = true; log << tr("STR_AR_SHOT_DOWN"); }
++					else { p.hit = true; log << tr("STR_AR_SHOT_HIT"); }
++					if (gun.kind == "flak")
++						for (auto &o : _planes)
++							if (&o != &p && !o.down && std::abs(o.tx - p.tx) <= R.flakSplash && std::abs(o.ty - p.ty) <= R.flakSplash)
++								o.grazes++;
++				}
++				else if (graze) { p.grazes++; log << tr("STR_AR_SHOT_GRAZE"); }
++				else log << tr("STR_AR_SHOT_MISS");
++				log << "\n";
++			}
++		}
++
++	// 2. every plane still flying drops on its target; every bomb lands somewhere
++	int unitsBefore = 0, hpBefore = 0;
++	for (auto *u : *save->getUnits()) if (u->getOriginalFaction() == FACTION_HOSTILE && u->getHealth() > 0) { ++unitsBefore; hpBefore += u->getHealth(); }
++	// what stands before the bombs: every part of every tile (a part destroyed is gone or swapped for its wreck)
++	auto snapshot = [&]() {
++		std::vector<const MapData*> v;
++		v.reserve((size_t)save->getMapSizeXYZ() * O_MAX);
++		for (int i = 0; i < save->getMapSizeXYZ(); ++i)
++			for (int part = O_FLOOR; part < O_MAX; ++part) v.push_back(save->getTile(i)->getMapData((TilePart)part));
++		return v;
++	};
++	const std::vector<const MapData*> before = snapshot();
++	const RuleDamageType *he = mod->getDamageType(DT_HE);
++	auto inMap = [&](int &x, int &y) { x = std::max(0, std::min(W - 1, x)); y = std::max(0, std::min(H - 1, y)); };
++	for (size_t i = 0; i < _planes.size(); ++i)
++	{
++		auto &p = _planes[i];
++		if (p.down) continue;
++		int acc = R.accuracy.size() > (size_t)p.speed ? R.accuracy[p.speed] : 80;
++		acc -= R.graze * p.grazes + (p.hit ? R.hit : 0);
++		acc = std::max(0, std::min(100, acc));
++		for (int b = 0; b < p.bombs; ++b)
++		{
++			const int r = RNG::generate(0, 99);
++			int kind = r < acc ? 0 : 1 + std::min(2, (r - acc) * 3 / std::max(1, 100 - acc));
++			int x = p.tx, y = p.ty;
++			if (kind == 1)
++			{
++				// beside it: the nearest structure two to four tiles off
++				bool found = false;
++				for (int rad = 2; rad <= 4 && !found; ++rad)
++				{
++					std::vector<std::pair<int, int> > cand;
++					for (int dy = -rad; dy <= rad; ++dy)
++						for (int dx = -rad; dx <= rad; ++dx)
++						{
++							if (std::max(std::abs(dx), std::abs(dy)) != rad) continue;
++							int cx = p.tx + dx, cy = p.ty + dy;
++							if (cx < 0 || cy < 0 || cx >= W || cy >= H) continue;
++							if (AirRaid::structure(save, cx, cy)) cand.push_back({ cx, cy });
++						}
++					if (!cand.empty()) { auto c = cand[RNG::generate(0, (int)cand.size() - 1)]; x = c.first; y = c.second; found = true; }
++				}
++				if (!found) { x += RNG::generate(-2, 2); y += 2; }
++			}
++			else if (kind == 2)
++			{
++				// short, on the way in: the first wall on its run from the south edge
++				bool found = false;
++				for (int yy = p.ty + 3; yy < H && !found; ++yy)
++					if (AirRaid::structure(save, p.tx, yy)) { y = yy; found = true; }
++				if (!found) kind = 3;
++			}
++			if (kind == 3)
++			{
++				const double a = RNG::generate(0, 359) * M_PI / 180.0;
++				const int rad = RNG::generate(6, 9);
++				x = p.tx + (int)std::lround(std::cos(a) * rad);
++				y = p.ty + (int)std::lround(std::sin(a) * rad);
++			}
++			inMap(x, y);
++			const int z = std::max(0, AirRaid::topLevel(save, x, y));
++			const Position voxel(x * 16 + 8, y * 16 + 8, z * 24 + 2);
++			save->getTileEngine()->explode(BattleActionAttack{ }, voxel, p.heavy ? R.heavyPower : R.lightPower, he,
++				p.heavy ? R.heavyRadius : R.lightRadius);
++			_impacts.push_back(AirRaid::Impact{ (int)i, x, y, kind });
++			static const char *KINDS[4] = { "STR_AR_DIRECT", "STR_AR_NEAR", "STR_AR_WALL", "STR_AR_CLEAN" };
++			log << (i + 1) << ": " << tr(KINDS[kind]) << "\n";
++		}
++	}
++	int unitsAfter = 0, hpAfter = 0;
++	for (auto *u : *save->getUnits()) if (u->getOriginalFaction() == FACTION_HOSTILE && u->getHealth() > 0) { ++unitsAfter; hpAfter += u->getHealth(); }
++	const std::vector<const MapData*> after = snapshot();
++	int parts = 0, standing = 0;
++	for (size_t i = 0; i < before.size(); ++i) { if (before[i]) ++standing; if (before[i] && before[i] != after[i]) ++parts; }
++	const int lossPct = std::min(R.lossCap, parts * 100 * R.lossScale / std::max(1, standing));
++	const int taken = _game->getSavedGame()->cobraBombed(_base, mod, lossPct);
++	std::ostringstream res;
++	res << tr("STR_AR_RESULT").arg(parts).arg(unitsBefore - unitsAfter).arg(std::max(0, hpBefore - hpAfter - 0)).arg(taken) << "\n\n" << log.str();
++	_txtInfo->setVisible(false);
++	_txtResult->setVisible(true);
++	_txtResult->setText(res.str());
++	Log(LOG_INFO) << "[airraid] " << _siteType << ": " << _impacts.size() << " bombs, " << parts << " parts destroyed, "
++		<< (unitsBefore - unitsAfter) << " Cobra down, " << lossPct << "% loss (" << taken << ")";
++	for (auto *b : _btnPlanes) b->setVisible(false);
++	_flown = true;
++	refresh();
++}
++
++void AirRaidState::finish()
++{
++	const auto &R = _game->getMod()->getAirRaidRules();
++	GeoscapeState::AirFightResult res;
++	for (auto &p : _planes)
++	{
++		GeoscapeState::AirFightResult::One one;
++		one.craft = p.craft;
++		one.lost = p.down;
++		one.pilotId = p.pilotId;
++		const int now = p.craft->getDamageMax() > 0 ? 100 - p.craft->getDamage() * 100 / p.craft->getDamageMax() : 100;
++		one.healthPct = std::max(1, now - R.grazeDamage * p.grazes - (p.hit ? R.hitDamage : 0));
++		res.crafts.push_back(one);
++		if (!p.down) p.craft->returnToBase();
++	}
++	_game->getSavedGame()->setBattleGame(nullptr);
++	_game->popState();
++	if (GeoscapeState *gs = _game->getGeoscapeState()) gs->finishAirFight(res);
++}
++
++}
+diff --git a/src/Geoscape/AirRaid.h b/src/Geoscape/AirRaid.h
+new file mode 100644
+index 0000000..3d7fb2c
+--- /dev/null
++++ b/src/Geoscape/AirRaid.h
+@@ -0,0 +1,102 @@
++#pragma once
++/*
++ * G.I. Joe: AIR RAIDS, phase 1 - the Joes bomb a Cobra site (claude/AIR_RAID_DESIGN_v1.md; BRIEF_FOR_BUILD_AirRaids;
++ * John 16 Nov 14:26 "Go"). One pass, Battleship-style:
++ *   1. the Joes plan in secret: each plane a speed (slow / medium / fast) and one target on the site's map;
++ *   2. Cobra's guns plan in secret: each shot a plane and a lead (its guess at that plane's speed);
++ *   3. every gun fires all its shots, then every plane still flying drops on its target;
++ *   4. each bomb is a real engine explosion on the site's real battle map (collapse included); the ladder
++ *      (direct / near miss / wall / clean miss) only decides where it lands.
++ * Phase 1 limits, said plainly: the site's guns are a STAND-IN per site type (airRaid: siteGuns) until
++ * COBRA_OUTPOSTS_v1 settles what Cobra builds; the wreckage does NOT persist yet (phase 2) - what a raid takes
++ * from Cobra now is men and a share of the site's funds and materiel.
++ */
++#include <string>
++#include <vector>
++#include "../Engine/State.h"
++#include "../Engine/InteractiveSurface.h"
++#include "../Battlescape/Position.h"
++
++namespace OpenXcom
++{
++
++class Mod;
++class Game;
++class Craft;
++class AlienBase;
++class SavedBattleGame;
++class Texture;
++class Window;
++class Text;
++class TextButton;
++
++namespace AirRaid
++{
++	struct Plane
++	{
++		Craft *craft = nullptr;
++		int speed = 1;            ///< 0 slow, 1 medium, 2 fast
++		int tx = -1, ty = -1;     ///< target tile
++		int bombs = 1;
++		bool heavy = false;
++		bool down = false, hit = false;
++		int grazes = 0;
++		int pilotId = 0;
++	};
++	struct Impact { int plane; int x, y; int kind; };   ///< kind 0 direct, 1 near miss, 2 wall, 3 clean miss
++	/// can this craft fly a raid?
++	bool canBomb(const Mod *mod, const Craft *craft);
++	/// the Cobra site type the raid can be flown on ("" = none)
++	bool canBeBombed(const Mod *mod, const AlienBase *base);
++}
++
++/// The overhead view of the site (painted at display resolution), the targets and, after the pass, the impacts.
++class AirRaidMapView : public InteractiveSurface
++{
++	const Mod *_mod = nullptr;
++	SavedBattleGame *_save = nullptr;
++	std::vector<AirRaid::Plane> *_planes = nullptr;
++	std::vector<AirRaid::Impact> *_impacts = nullptr;
++	int _selected = 0;
++	double _mx = -1, _my = -1;
++	double cell() const;
++	void paint(double X0, double Y0, double k);
++public:
++	AirRaidMapView(int width, int height, int x, int y);
++	~AirRaidMapView();
++	void setup(const Mod *mod, SavedBattleGame *save, std::vector<AirRaid::Plane> *planes, std::vector<AirRaid::Impact> *impacts);
++	void setSelected(int i) { _selected = i; }
++	/// the tile under the mouse; false off the map
++	bool tileUnderMouse(int &x, int &y) const;
++	void mouseOver(Action *action, State *state) override;
++	void mousePress(Action *action, State *state) override;
++	void draw() override;
++};
++
++/// The raid: plan, the pass, the results.
++class AirRaidState : public State
++{
++	AlienBase *_base;
++	Window *_window;
++	Text *_txtTitle, *_txtInfo, *_txtResult;
++	AirRaidMapView *_map;
++	std::vector<TextButton*> _btnPlanes;
++	TextButton *_btnFly, *_btnCancel;
++	std::vector<AirRaid::Plane> _planes;
++	std::vector<AirRaid::Impact> _impacts;
++	int _selected = 0;
++	bool _flown = false;
++	std::string _siteType;
++	void refresh();
++	void fly();
++	void finish();
++public:
++	AirRaidState(Craft *craft, AlienBase *base, Texture *missionTexture, Texture *globeTexture, int shade);
++	~AirRaidState();
++	void btnPlaneClick(Action *action);
++	void mapClick(Action *action);
++	void btnFlyClick(Action *action);
++	void btnCancelClick(Action *action);
++};
++
++}
 diff --git a/src/Geoscape/AllocateTrainingState.cpp b/src/Geoscape/AllocateTrainingState.cpp
 index 6aac96d..f116957 100644
 --- a/src/Geoscape/AllocateTrainingState.cpp
@@ -15606,6 +16307,103 @@ index 2278d57..6fe30f4 100644
  	{
  		errorMessage = tr("STR_NO_FREE_HANGARS_FOR_TRANSFER");
  	}
+diff --git a/src/Geoscape/ConfirmLandingState.cpp b/src/Geoscape/ConfirmLandingState.cpp
+index d74a01d..1c71279 100644
+--- a/src/Geoscape/ConfirmLandingState.cpp
++++ b/src/Geoscape/ConfirmLandingState.cpp
+@@ -42,6 +42,7 @@
+ #include "../Mod/AlienRace.h"
+ #include "../Mod/Mod.h"
+ #include "../Mod/Texture.h"
++#include "AirRaid.h"
+ 
+ namespace OpenXcom
+ {
+@@ -59,8 +60,13 @@ ConfirmLandingState::ConfirmLandingState(Craft *craft, Texture *missionTexture,
+ 
+ 	// Create objects
+ 	_window = new Window(this, 216, 160, 20, 20, POPUP_BOTH);
+-	_btnYes = new TextButton(80, 20, 40, 150);
+-	_btnNo = new TextButton(80, 20, 136, 150);
++	// G.I. Joe: a bomber at a Cobra site can fly an air raid instead (AIR_RAID_DESIGN_v1)
++	AlienBase *bombable = dynamic_cast<AlienBase*>(craft->getDestination());
++	const bool canRaid = bombable && AirRaid::canBomb(_game->getMod(), craft) && AirRaid::canBeBombed(_game->getMod(), bombable);
++	_btnYes = canRaid ? new TextButton(62, 20, 28, 150) : new TextButton(80, 20, 40, 150);
++	_btnNo = canRaid ? new TextButton(62, 20, 166, 150) : new TextButton(80, 20, 136, 150);
++	if (canRaid) _btnBomb = new TextButton(62, 20, 97, 150);
++	const bool canLand = craft->getNumTotalUnits() > 0 && craft->getRules()->getAllowLanding();
+ 	_txtMessage = new Text(206, 80, 25, 40);
+ 	_txtBegin = new Text(206, 17, 25, 130);
+ 	_sprite = new Surface(24, 24, 202, 30);
+@@ -71,6 +77,7 @@ ConfirmLandingState::ConfirmLandingState(Craft *craft, Texture *missionTexture,
+ 	add(_window, "window", "confirmLanding");
+ 	add(_btnYes, "button", "confirmLanding");
+ 	add(_btnNo, "button", "confirmLanding");
++	if (_btnBomb) add(_btnBomb, "button", "confirmLanding");
+ 	add(_txtMessage, "text", "confirmLanding");
+ 	add(_txtBegin, "text", "confirmLanding");
+ 	add(_sprite);
+@@ -93,6 +100,12 @@ ConfirmLandingState::ConfirmLandingState(Craft *craft, Texture *missionTexture,
+ 		_btnNo->setText(tr("STR_NO"));
+ 	}
+ 	_btnNo->onMouseClick((ActionHandler)&ConfirmLandingState::btnNoClick);
++	if (!canLand) _btnYes->setVisible(false);   // a bomber with nobody aboard can only bomb or turn back
++	if (_btnBomb)
++	{
++		_btnBomb->setText(tr("STR_AR_BOMB"));
++		_btnBomb->onMouseClick((ActionHandler)&ConfirmLandingState::btnBombClick);
++	}
+ 	_btnNo->onKeyboardPress((ActionHandler)&ConfirmLandingState::btnNoClick, Options::keyCancel);
+ 	_btnNo->onKeyboardPress((ActionHandler)&ConfirmLandingState::togglePatrolButton, SDLK_LCTRL);
+ 	_btnNo->onKeyboardRelease((ActionHandler)&ConfirmLandingState::togglePatrolButton, SDLK_LCTRL);
+@@ -242,6 +255,7 @@ std::string ConfirmLandingState::checkStartingCondition()
+  */
+ void ConfirmLandingState::btnYesClick(Action *)
+ {
++	if (!_btnYes->getVisible()) return;   // G.I. Joe: nobody aboard to land (an air-raid-only prompt)
+ 	std::string message = checkStartingCondition();
+ 	if (!message.empty())
+ 	{
+@@ -310,6 +324,17 @@ void ConfirmLandingState::btnYesClick(Action *)
+  * Returns the craft to base and closes the window.
+  * @param action Pointer to an action.
+  */
++void ConfirmLandingState::btnBombClick(Action *)
++{
++	AlienBase *b = dynamic_cast<AlienBase*>(_craft->getDestination());
++	if (!b) return;
++	Craft *craft = _craft;
++	Texture *mt = _missionTexture, *gt = _globeTexture;
++	const int shade = _shade;
++	_game->popState();
++	_game->pushState(new AirRaidState(craft, b, mt, gt, shade));
++}
++
+ void ConfirmLandingState::btnNoClick(Action *)
+ {
+ 	if (_game->isCtrlPressed())
+diff --git a/src/Geoscape/ConfirmLandingState.h b/src/Geoscape/ConfirmLandingState.h
+index e4c5a64..a542b4e 100644
+--- a/src/Geoscape/ConfirmLandingState.h
++++ b/src/Geoscape/ConfirmLandingState.h
+@@ -41,7 +41,7 @@ private:
+ 	Texture *_missionTexture, *_globeTexture;
+ 	int _shade;
+ 	Text *_txtMessage, *_txtBegin;
+-	TextButton *_btnYes, *_btnNo;
++	TextButton *_btnYes, *_btnNo, *_btnBomb = nullptr;
+ 	Surface *_sprite;
+ 	// Checks the starting condition
+ 	std::string checkStartingCondition();
+@@ -56,6 +56,8 @@ public:
+ 	void btnYesClick(Action *action);
+ 	/// Handler for clicking the No button.
+ 	void btnNoClick(Action *action);
++	/// G.I. Joe: fly an air raid on the site instead of landing
++	void btnBombClick(Action *action);
+ 	/// Handler for pressing/releasing CTRL.
+ 	void togglePatrolButton(Action *action);
+ };
 diff --git a/src/Geoscape/ConfirmNewBaseState.cpp b/src/Geoscape/ConfirmNewBaseState.cpp
 index 49e1f22..c32f2b3 100644
 --- a/src/Geoscape/ConfirmNewBaseState.cpp
@@ -16388,10 +17186,10 @@ index e609d3c..24a1628 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..0a6f570 100644
+index 6b4e79d..535ced0 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
-@@ -16,7 +16,14 @@
+@@ -16,7 +16,15 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -16401,12 +17199,13 @@ index 6b4e79d..0a6f570 100644
 +#include "SeaNav.h"
 +#include "../Battlescape/AirFight.h"
  #include "GeoscapeState.h"
++#include "AirRaid.h"
 +#include <cstdlib>
 +#include "../Engine/HiUI.h"
  #include <set>
  #include <sstream>
  #include <iomanip>
-@@ -35,6 +42,7 @@
+@@ -35,6 +43,7 @@
  #include "../Engine/Collections.h"
  #include "../Engine/Unicode.h"
  #include "Globe.h"
@@ -16414,7 +17213,7 @@ index 6b4e79d..0a6f570 100644
  #include "../Interface/ComboBox.h"
  #include "../Interface/Text.h"
  #include "../Interface/TextButton.h"
-@@ -48,12 +56,14 @@
+@@ -48,12 +57,14 @@
  #include "../Mod/RuleCraft.h"
  #include "../Savegame/Ufo.h"
  #include "../Mod/RuleUfo.h"
@@ -16429,7 +17228,7 @@ index 6b4e79d..0a6f570 100644
  #include "../Savegame/Soldier.h"
  #include "../Savegame/SoldierDiary.h"
  #include "../Menu/PauseState.h"
-@@ -69,6 +79,8 @@
+@@ -69,6 +80,8 @@
  #include "../Basescape/GlobalAlienContainmentState.h"
  #include "../Menu/CutsceneState.h"
  #include "../Menu/ErrorMessageState.h"
@@ -16438,7 +17237,7 @@ index 6b4e79d..0a6f570 100644
  #include "GraphsState.h"
  #include "FundingState.h"
  #include "ExtendedGeoscapeLinksState.h"
-@@ -87,6 +99,7 @@
+@@ -87,6 +100,7 @@
  #include "DogfightErrorState.h"
  #include "DogfightExperienceState.h"
  #include "../Ufopaedia/Ufopaedia.h"
@@ -16446,7 +17245,7 @@ index 6b4e79d..0a6f570 100644
  #include "../Savegame/ResearchProject.h"
  #include "ResearchCompleteState.h"
  #include "../Mod/RuleResearch.h"
-@@ -103,6 +116,7 @@
+@@ -103,6 +117,7 @@
  #include "../Savegame/ItemContainer.h"
  #include "../Savegame/MissionSite.h"
  #include "../Savegame/AlienBase.h"
@@ -16454,7 +17253,7 @@ index 6b4e79d..0a6f570 100644
  #include "../Mod/RuleRegion.h"
  #include "MissionDetectedState.h"
  #include "AlienBaseState.h"
-@@ -157,41 +171,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -157,41 +172,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_bg->setX((_globe->getWidth() - _bg->getWidth()) / 2);
  	_bg->setY((_globe->getHeight() - _bg->getHeight()) / 2);
  
@@ -16638,7 +17437,7 @@ index 6b4e79d..0a6f570 100644
  
  	int slackingIndicatorOffset = _game->getMod()->getInterface("geoscape")->getElement("slackingIndicator")->custom;
  	_txtSlacking = new Text(59, 17, screenWidth - 61, screenHeight / 2 - 100 + slackingIndicatorOffset);
-@@ -207,6 +333,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -207,6 +334,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_dogfightTimer = new Timer(Options::dogfightSpeed);
  
  	_txtDebug = new Text(254, 32, 0, 0);
@@ -16646,7 +17445,7 @@ index 6b4e79d..0a6f570 100644
  	_cbxRegion = new ComboBox(this, 150, 16, 0, 36);
  	_cbxZone = new ComboBox(this, 48, 16, 154, 36);
  	_cbxArea = new ComboBox(this, 48, 16, 206, 36);
-@@ -251,6 +378,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -251,6 +379,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtMinSep, "text", "geoscape");
  	add(_txtSec, "text", "geoscape");
  	add(_txtWeekday, "text", "geoscape");
@@ -16657,7 +17456,7 @@ index 6b4e79d..0a6f570 100644
  	add(_txtDay, "text", "geoscape");
  	add(_txtMonth, "text", "geoscape");
  	add(_txtYear, "text", "geoscape");
-@@ -258,6 +389,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -258,6 +390,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtTraining, "trainingIndicator", "geoscape");
  
  	add(_txtDebug, "text", "geoscape");
@@ -16665,7 +17464,7 @@ index 6b4e79d..0a6f570 100644
  	add(_cbxRegion, "button", "geoscape");
  	add(_cbxZone, "button", "geoscape");
  	add(_cbxArea, "button", "geoscape");
-@@ -268,12 +400,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -268,12 +401,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	geobord->setX(_sidebar->getX() - geobord->getWidth() + _sidebar->getWidth());
  	geobord->setY(_sidebar->getY());
  	_sidebar->copy(geobord);
@@ -16693,7 +17492,7 @@ index 6b4e79d..0a6f570 100644
  	_btnIntercept->onMouseClick((ActionHandler)&GeoscapeState::btnInterceptClick);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnInterceptClick, Options::keyGeoIntercept);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnUfoTrackerClick, Options::keyGeoUfoTracker);
-@@ -292,7 +438,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -292,7 +439,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnBases->setGeoscapeButton(true);
  
  	_btnGraphs->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -16702,7 +17501,7 @@ index 6b4e79d..0a6f570 100644
  	_btnGraphs->onMouseClick((ActionHandler)&GeoscapeState::btnGraphsClick);
  	_btnGraphs->onKeyboardPress((ActionHandler)&GeoscapeState::btnGraphsClick, Options::keyGeoGraphs);
  	_btnGraphs->setGeoscapeButton(true);
-@@ -310,7 +456,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -310,7 +457,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnOptions->setGeoscapeButton(true);
  
  	_btnFunding->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -16711,7 +17510,7 @@ index 6b4e79d..0a6f570 100644
  	_btnFunding->onMouseClick((ActionHandler)&GeoscapeState::btnFundingClick);
  	_btnFunding->onKeyboardPress((ActionHandler)&GeoscapeState::btnFundingClick, Options::keyGeoFunding);
  	_btnFunding->setGeoscapeButton(true);
-@@ -387,6 +533,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -387,6 +534,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -16720,7 +17519,7 @@ index 6b4e79d..0a6f570 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -403,6 +551,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -403,6 +552,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_txtMinSep->setText(":");
  
  	_txtWeekday->setAlign(ALIGN_CENTER);
@@ -16773,7 +17572,7 @@ index 6b4e79d..0a6f570 100644
  
  	_txtDay->setAlign(ALIGN_CENTER);
  
-@@ -427,6 +621,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -427,6 +622,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  		_txtSec->setX(_txtSec->getX()-10);
  	}
  
@@ -16819,7 +17618,7 @@ index 6b4e79d..0a6f570 100644
  	_gameTimer->onTimer((StateHandler)&GeoscapeState::timeAdvance);
  	_gameTimer->start();
  
-@@ -512,7 +745,9 @@ void GeoscapeState::blit()
+@@ -512,7 +746,9 @@ void GeoscapeState::blit()
  	State::blit();
  	for (auto* dfs : _dogfights)
  	{
@@ -16830,7 +17629,7 @@ index 6b4e79d..0a6f570 100644
  	}
  }
  
-@@ -705,13 +940,127 @@ void GeoscapeState::handle(Action *action)
+@@ -705,13 +941,127 @@ void GeoscapeState::handle(Action *action)
   * Updates the timer display and resets the palette
   * since it's bound to change on other screens.
   */
@@ -16958,7 +17757,7 @@ index 6b4e79d..0a6f570 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -753,6 +1102,12 @@ void GeoscapeState::init()
+@@ -753,6 +1103,12 @@ void GeoscapeState::init()
  		determineAlienMissions();
  		_game->getSavedGame()->setFunds(_game->getSavedGame()->getFunds() - (_game->getSavedGame()->getBaseMaintenance() - _game->getSavedGame()->getBases()->front()->getPersonnelMaintenance()));
  	}
@@ -16971,7 +17770,7 @@ index 6b4e79d..0a6f570 100644
  }
  
  /**
-@@ -835,6 +1190,10 @@ void GeoscapeState::timeDisplay()
+@@ -835,6 +1191,10 @@ void GeoscapeState::timeDisplay()
  	std::ostringstream ss5;
  	ss5 << _game->getSavedGame()->getTime()->getYear();
  	_txtYear->setText(ss5.str());
@@ -16982,7 +17781,7 @@ index 6b4e79d..0a6f570 100644
  }
  
  /**
-@@ -1047,6 +1406,7 @@ void GeoscapeState::time5Seconds()
+@@ -1047,6 +1407,7 @@ void GeoscapeState::time5Seconds()
  					continue;
  				}
  
@@ -16990,7 +17789,7 @@ index 6b4e79d..0a6f570 100644
  				size_t count = _game->getSavedGame()->getMissionSites()->size();
  				AlienMission *mission = ufo->getMission();
  				bool detected = ufo->getDetected();
-@@ -1233,6 +1593,13 @@ void GeoscapeState::time5Seconds()
+@@ -1233,6 +1594,13 @@ void GeoscapeState::time5Seconds()
  			if (!ufoIsAttacking)
  			{
  				bool returnedToBase = xcraft->think();
@@ -17004,7 +17803,18 @@ index 6b4e79d..0a6f570 100644
  				if (returnedToBase)
  				{
  					_game->getSavedGame()->stopHuntingXcomCraft(xcraft); // hiding in the base is good enough, obviously
-@@ -1454,6 +1821,35 @@ void GeoscapeState::time5Seconds()
+@@ -1422,7 +1790,9 @@ void GeoscapeState::time5Seconds()
+ 				{
+ 					if (b->isDiscovered())
+ 					{
+-						if (xcraft->getNumTotalUnits() > 0 && xcraft->getRules()->getAllowLanding() && !suppressLanding)
++						// G.I. Joe: a bomber at a Cobra site is offered the air raid even with nobody aboard
++						const bool raid = AirRaid::canBomb(_game->getMod(), xcraft) && AirRaid::canBeBombed(_game->getMod(), b);
++						if ((xcraft->getNumTotalUnits() > 0 && xcraft->getRules()->getAllowLanding() && !suppressLanding) || raid)
+ 						{
+ 							int texture, shade;
+ 							_globe->getPolygonTextureAndShade(b->getLongitude(), b->getLatitude(), &texture, &shade);
+@@ -1454,6 +1824,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -17040,7 +17850,7 @@ index 6b4e79d..0a6f570 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +1960,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +1963,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -17071,7 +17881,7 @@ index 6b4e79d..0a6f570 100644
  							}
  						}
  					}
-@@ -1752,7 +2164,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2167,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -17080,7 +17890,7 @@ index 6b4e79d..0a6f570 100644
  								}
  								else
  								{
-@@ -1858,6 +2270,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2273,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -17100,7 +17910,7 @@ index 6b4e79d..0a6f570 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2309,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2312,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -17113,7 +17923,7 @@ index 6b4e79d..0a6f570 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2104,6 +2535,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2104,6 +2538,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		detected = maskBitOr(detected, craft->detect(ufo, save, alreadyTracked));
  	}
  
@@ -17121,7 +17931,7 @@ index 6b4e79d..0a6f570 100644
  	if (!alreadyTracked)
  	{
  		if (maskTest(detected, DETECTION_RADAR))
-@@ -2126,8 +2558,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2126,8 +2561,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		{
  			ufo->setHyperDetected(true);
  		}
@@ -17142,7 +17952,7 @@ index 6b4e79d..0a6f570 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2588,101 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2591,101 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -17244,7 +18054,7 @@ index 6b4e79d..0a6f570 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +2729,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +2732,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -17334,7 +18144,7 @@ index 6b4e79d..0a6f570 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +2974,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +2977,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -17343,7 +18153,7 @@ index 6b4e79d..0a6f570 100644
  			}
  			else
  			{
-@@ -2389,12 +3010,293 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3013,293 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
@@ -17637,7 +18447,7 @@ index 6b4e79d..0a6f570 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3346,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3349,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -17660,7 +18470,7 @@ index 6b4e79d..0a6f570 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2861,7 +3772,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +3775,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -17689,7 +18499,7 @@ index 6b4e79d..0a6f570 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3892,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3895,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -17720,7 +18530,7 @@ index 6b4e79d..0a6f570 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4078,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4081,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -17730,7 +18540,7 @@ index 6b4e79d..0a6f570 100644
  }
  
  /**
-@@ -3265,6 +4222,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4225,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -17746,7 +18556,7 @@ index 6b4e79d..0a6f570 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4308,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4311,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -17799,7 +18609,7 @@ index 6b4e79d..0a6f570 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4376,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4379,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -18051,7 +18861,7 @@ index 6b4e79d..0a6f570 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +5904,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +5907,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -22754,7 +23564,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..1ea485c 100644
+index 1885346..686361d 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -22892,7 +23702,7 @@ index 1885346..1ea485c 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,599 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,634 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -23155,6 +23965,41 @@ index 1885346..1ea485c 100644
 +			v.tryRead("marked", r.marked);
 +			if (!r.unit.empty()) _villains[r.unit] = r;
 +		}
++	}
++	if (const auto& ar = reader["airRaid"])
++	{
++		_airRaid.on = true;
++		if (const auto& bs = ar["bombers"])
++			for (const auto& b : bs.children())
++			{
++				AirRaidRules::Bomber x;
++				b.tryRead("bombs", x.bombs);
++				b.tryRead("heavy", x.heavy);
++				_airRaid.bombers[b.readKey<std::string>()] = x;
++			}
++		if (const auto& gs = ar["guns"])
++			for (const auto& g : gs.children())
++			{
++				AirRaidRules::Gun x;
++				g.tryRead("shots", x.shots);
++				g.tryRead("chance", x.chance);
++				g.tryRead("kind", x.kind);
++				_airRaid.guns[g.readKey<std::string>()] = x;
++			}
++		ar.tryRead("siteGuns", _airRaid.siteGuns);
++		ar.tryRead("accuracy", _airRaid.accuracy);
++		ar.tryRead("graze", _airRaid.graze);
++		ar.tryRead("hit", _airRaid.hit);
++		ar.tryRead("downOnHit", _airRaid.downOnHit);
++		ar.tryRead("flakSplash", _airRaid.flakSplash);
++		ar.tryRead("lightPower", _airRaid.lightPower);
++		ar.tryRead("lightRadius", _airRaid.lightRadius);
++		ar.tryRead("heavyPower", _airRaid.heavyPower);
++		ar.tryRead("heavyRadius", _airRaid.heavyRadius);
++		ar.tryRead("grazeDamage", _airRaid.grazeDamage);
++		ar.tryRead("hitDamage", _airRaid.hitDamage);
++		ar.tryRead("lossScale", _airRaid.lossScale);
++		ar.tryRead("lossCap", _airRaid.lossCap);
 +	}
 +	if (const auto& sb = reader["pitSurfaceBattle"])
 +	{
@@ -23492,7 +24337,7 @@ index 1885346..1ea485c 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3904,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3939,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -23500,7 +24345,7 @@ index 1885346..1ea485c 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4509,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4544,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -23526,7 +24371,7 @@ index 1885346..1ea485c 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4766,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4801,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -23547,7 +24392,7 @@ index 1885346..1ea485c 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6480,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6515,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -23567,7 +24412,7 @@ index 1885346..1ea485c 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6503,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6538,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -23575,7 +24420,7 @@ index 1885346..1ea485c 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6517,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6552,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -23615,7 +24460,7 @@ index 1885346..1ea485c 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..5b9a997 100644
+index 2242d13..a9d70e5 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -23679,7 +24524,7 @@ index 2242d13..5b9a997 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,393 @@ private:
+@@ -327,6 +360,412 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -23890,6 +24735,25 @@ index 2242d13..5b9a997 100644
 +		std::vector<std::vector<int> > escape;                    ///< x, y, z: where they come in, on the Pit map
 +	};
 +	PitSurfaceBattleRules _pitSurfaceBattle;
++	/// G.I. Joe: AIR RAIDS (AIR_RAID_DESIGN_v1; Geoscape/AirRaid.cpp). One pass, Battleship-style: the attacker sets each
++	/// plane's speed and target in secret, the defender each shot's plane and lead; guns fire, then the bombs fall on
++	/// the site's real battle map. Numbers: TUNING_RECORD rows 51 and 55 (first guesses).
++	struct AirRaidRules
++	{
++		struct Bomber { int bombs = 1; bool heavy = false; };
++		struct Gun { int shots = 1; int chance = 50; std::string kind = "aa"; };   ///< kind: aa, flak, air, missile, mg
++		bool on = false;
++		std::map<std::string, Bomber> bombers;                     ///< craft type -> what it carries
++		std::vector<int> accuracy = {95, 80, 55};                  ///< direct-hit chance, slow / medium / fast
++		std::map<std::string, Gun> guns;
++		std::map<std::string, std::vector<std::string> > siteGuns; ///< Cobra site type -> its guns (stand-in until COBRA_OUTPOSTS)
++		int graze = 20, hit = 40, downOnHit = 50, flakSplash = 3;  ///< accuracy lost; % a hit downs it; splash reach (tiles)
++		int lightPower = 120, lightRadius = 4, heavyPower = 200, heavyRadius = 6;
++		int grazeDamage = 10, hitDamage = 50;                      ///< % of a craft's hull a graze / a hit takes
++		int lossScale = 3, lossCap = 60;                           ///< Cobra's funds and materiel lost: x the % of the site's parts destroyed, cap
++	};
++	AirRaidRules _airRaid;
++	const AirRaidRules &getAirRaidRules() const { return _airRaid; }
 +	const PitSurfaceBattleRules &getPitSurfaceBattleRules() const { return _pitSurfaceBattle; }
 +private:
 +	PitSurfaceRules _pitSurface;
@@ -24073,7 +24937,7 @@ index 2242d13..5b9a997 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1112,124 @@ public:
+@@ -692,6 +1131,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -24692,20 +25556,21 @@ index 6bef22e..8cc3b62 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..92b7b6b 100644
+index 99f24ce..2f6973b 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
-@@ -377,6 +377,9 @@
+@@ -377,6 +377,10 @@
      <ClCompile Include="Basescape\MonthlyCostsState.cpp" />
      <ClCompile Include="Basescape\NewResearchListState.cpp" />
      <ClCompile Include="Basescape\PlaceFacilityState.cpp" />
 +    <ClCompile Include="Basescape\PitPlaceState.cpp" />
 +    <ClCompile Include="Basescape\PitBlueprintView.cpp" />
 +    <ClCompile Include="Basescape\PitPlace.cpp" />
++    <ClCompile Include="Geoscape\AirRaid.cpp" />
      <ClCompile Include="Basescape\PlaceLiftState.cpp" />
      <ClCompile Include="Basescape\ManufactureStartState.cpp" />
      <ClCompile Include="Basescape\PlaceStartFacilityState.cpp" />
-@@ -411,6 +414,9 @@
+@@ -411,6 +415,9 @@
      <ClCompile Include="Basescape\TransfersState.cpp" />
      <ClCompile Include="Battlescape\AbortMissionState.cpp" />
      <ClCompile Include="Battlescape\ActionMenuItem.cpp" />
@@ -24715,7 +25580,7 @@ index 99f24ce..92b7b6b 100644
      <ClCompile Include="Battlescape\ActionMenuState.cpp" />
      <ClCompile Include="Battlescape\AlienInventory.cpp" />
      <ClCompile Include="Battlescape\AlienInventoryState.cpp" />
-@@ -511,6 +517,8 @@
+@@ -511,6 +518,8 @@
      <ClCompile Include="Engine\Sound.cpp" />
      <ClCompile Include="Engine\SoundSet.cpp" />
      <ClCompile Include="Engine\State.cpp" />
@@ -24724,7 +25589,7 @@ index 99f24ce..92b7b6b 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,10 +554,20 @@
+@@ -546,10 +555,20 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
@@ -24745,7 +25610,7 @@ index 99f24ce..92b7b6b 100644
      <ClCompile Include="Geoscape\Globe.cpp" />
      <ClCompile Include="Geoscape\GraphsState.cpp" />
      <ClCompile Include="Geoscape\InterceptState.cpp" />
-@@ -673,6 +691,7 @@
+@@ -673,6 +692,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -24753,7 +25618,7 @@ index 99f24ce..92b7b6b 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +701,7 @@
+@@ -682,6 +702,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -24761,17 +25626,18 @@ index 99f24ce..92b7b6b 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -856,6 +876,9 @@
+@@ -856,6 +877,10 @@
      <ClInclude Include="Basescape\MonthlyCostsState.h" />
      <ClInclude Include="Basescape\NewResearchListState.h" />
      <ClInclude Include="Basescape\PlaceFacilityState.h" />
 +    <ClInclude Include="Basescape\PitPlaceState.h" />
 +    <ClInclude Include="Basescape\PitBlueprintView.h" />
 +    <ClInclude Include="Basescape\PitPlace.h" />
++    <ClInclude Include="Geoscape\AirRaid.h" />
      <ClInclude Include="Basescape\PlaceLiftState.h" />
      <ClInclude Include="Basescape\ManufactureStartState.h" />
      <ClInclude Include="Basescape\PlaceStartFacilityState.h" />
-@@ -890,6 +913,9 @@
+@@ -890,6 +915,9 @@
      <ClInclude Include="Basescape\TransfersState.h" />
      <ClInclude Include="Battlescape\AbortMissionState.h" />
      <ClInclude Include="Battlescape\ActionMenuItem.h" />
@@ -24781,7 +25647,7 @@ index 99f24ce..92b7b6b 100644
      <ClInclude Include="Battlescape\ActionMenuState.h" />
      <ClInclude Include="Battlescape\AlienInventory.h" />
      <ClInclude Include="Battlescape\AlienInventoryState.h" />
-@@ -970,6 +996,8 @@
+@@ -970,6 +998,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -24790,7 +25656,7 @@ index 99f24ce..92b7b6b 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1061,16 @@
+@@ -1033,6 +1063,16 @@
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
@@ -24807,7 +25673,7 @@ index 99f24ce..92b7b6b 100644
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1042,6 +1080,7 @@
+@@ -1042,6 +1082,7 @@
      <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
      <ClInclude Include="Geoscape\ProductionCompleteState.h" />
      <ClInclude Include="Geoscape\GeoscapeState.h" />
@@ -24815,7 +25681,7 @@ index 99f24ce..92b7b6b 100644
      <ClInclude Include="Geoscape\Globe.h" />
      <ClInclude Include="Geoscape\GraphsState.h" />
      <ClInclude Include="Geoscape\InterceptState.h" />
-@@ -1170,6 +1209,7 @@
+@@ -1170,6 +1211,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -24823,7 +25689,7 @@ index 99f24ce..92b7b6b 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1219,7 @@
+@@ -1179,6 +1221,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
@@ -24832,10 +25698,10 @@ index 99f24ce..92b7b6b 100644
      <ClInclude Include="Savegame\Base.h" />
      <ClInclude Include="Savegame\BaseFacility.h" />
 diff --git a/src/OpenXcom.2010.vcxproj.filters b/src/OpenXcom.2010.vcxproj.filters
-index 92dbcdf..d0b0883 100644
+index 92dbcdf..56a9444 100644
 --- a/src/OpenXcom.2010.vcxproj.filters
 +++ b/src/OpenXcom.2010.vcxproj.filters
-@@ -11,6 +11,15 @@
+@@ -11,6 +11,18 @@
      <ClCompile Include="Basescape\PlaceFacilityState.cpp">
        <Filter>Basescape</Filter>
      </ClCompile>
@@ -24848,10 +25714,13 @@ index 92dbcdf..d0b0883 100644
 +    <ClCompile Include="Basescape\PitPlace.cpp">
 +      <Filter>Basescape</Filter>
 +    </ClCompile>
++    <ClCompile Include="Geoscape\AirRaid.cpp">
++      <Filter>Geoscape</Filter>
++    </ClCompile>
      <ClCompile Include="Basescape\PurchaseState.cpp">
        <Filter>Basescape</Filter>
      </ClCompile>
-@@ -1247,6 +1256,15 @@
+@@ -1247,6 +1259,18 @@
      <ClInclude Include="Basescape\PlaceFacilityState.h">
        <Filter>Basescape</Filter>
      </ClInclude>
@@ -24863,6 +25732,9 @@ index 92dbcdf..d0b0883 100644
 +    </ClInclude>
 +    <ClInclude Include="Basescape\PitPlace.h">
 +      <Filter>Basescape</Filter>
++    </ClInclude>
++    <ClInclude Include="Geoscape\AirRaid.h">
++      <Filter>Geoscape</Filter>
 +    </ClInclude>
      <ClInclude Include="Basescape\PurchaseState.h">
        <Filter>Basescape</Filter>
@@ -26191,7 +27063,7 @@ index 6c121c7..fb7f92b 100644
  	std::vector< std::vector<int> > &getReinforcementsBlocks() { return _reinforcementsBlocks; }
  
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..ec6407c 100644
+index 9ca9637..3186ad8 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,11 +21,13 @@
@@ -26698,7 +27570,7 @@ index 9ca9637..ec6407c 100644
  	if (isResearchRuleStatusDisabled(research->getName()))
  	{
  		return;
-@@ -2579,6 +2982,957 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,6 +2982,974 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -27010,6 +27882,23 @@ index 9ca9637..ec6407c 100644
 +static std::string cobraSiteKey(const AlienBase *base)
 +{
 +	return base->getSiteType() + "#" + std::to_string(base->getId());
++}
++
++int SavedGame::cobraBombed(const AlienBase *base, const Mod *mod, int pct)
++{
++	if (pct <= 0 || base->getSiteType().empty()) return 0;
++	RuleCobraSite *rule = mod->getCobraSite(base->getSiteType());
++	Region *region = locateRegion(*base);
++	if (rule == 0 || region == 0) return 0;
++	const std::string &regionType = region->getRules()->getType();
++	// what burns is a share of what this site holds; a depot holds the region's stockpile
++	int funds = rule->getLootsRegionalStockpile() ? _cobraEconomy->getFunds(regionType) : std::min(rule->getLootFunds(), _cobraEconomy->getFunds(regionType));
++	int materiel = rule->getLootsRegionalStockpile() ? _cobraEconomy->getMateriel(regionType) : std::min(rule->getLootMateriel(), _cobraEconomy->getMateriel(regionType));
++	funds = std::max(0, funds) * pct / 100;
++	materiel = std::max(0, materiel) * pct / 100;
++	_cobraEconomy->addFunds(regionType, -funds);
++	_cobraEconomy->addMateriel(regionType, -materiel);
++	return funds + materiel;
 +}
 +
 +int SavedGame::cobraRaided(const AlienBase *base, const Mod *mod)
@@ -27656,7 +28545,7 @@ index 9ca9637..ec6407c 100644
  Region *SavedGame::locateRegion(double lon, double lat) const
  {
  	Region* found = nullptr;
-@@ -2995,6 +4349,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
+@@ -2995,6 +4366,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
   * @param soldier Pointer to dead soldier.
   * @param cause Pointer to cause of death, NULL if missing in action.
   */
@@ -27831,7 +28720,7 @@ index 9ca9637..ec6407c 100644
  std::vector<Soldier*>::iterator SavedGame::killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause)
  {
  	if (resetArmor)
-@@ -3328,6 +4850,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
+@@ -3328,6 +4867,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
  		}
  	}
  
@@ -27849,7 +28738,7 @@ index 9ca9637..ec6407c 100644
  	for (auto* am : _activeMissions)
  	{
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..73662c9 100644
+index d985908..483cf9c 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -37,6 +37,7 @@ namespace OpenXcom
@@ -27981,7 +28870,7 @@ index d985908..73662c9 100644
  	/// Add a new record to the research diary
  	void addResearchDiaryEntry(ResearchDiaryEntry* entry);
  	/// Gets the research diary.
-@@ -395,6 +468,34 @@ public:
+@@ -395,6 +468,36 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -27991,6 +28880,8 @@ index d985908..73662c9 100644
 +	void cobraMonthly(const Mod *mod);
 +	/// Takes what a raid denies Cobra. Returns funds + materiel lost, for the debriefing line.
 +	int cobraRaided(const AlienBase *base, const Mod *mod);
++	/// G.I. Joe air raid: the site loses pct% of what a ground raid would take (funds + materiel lost)
++	int cobraBombed(const AlienBase *base, const Mod *mod, int pct);
 +	/// Pays Cobra for a mission it got away with; returns what was banked.
 +	int cobraMissionPaid(const AlienDeployment *deployment, const Region *region);
 +	/// Advances Cobra's research for the month; labs burn materiel for progress.
@@ -28016,7 +28907,7 @@ index d985908..73662c9 100644
  	/// Read-only access to the alien strategy data.
  	const AlienStrategy &getAlienStrategy() const { return *_alienStrategy; }
  	/// Full access to the current alien missions.
-@@ -409,6 +510,10 @@ public:
+@@ -409,6 +512,10 @@ public:
  	const std::vector<GeoscapeEvent*> &getGeoscapeEvents() const { return _geoscapeEvents; }
  	/// Locate a region containing a position.
  	Region *locateRegion(double lon, double lat) const;
@@ -28027,7 +28918,7 @@ index d985908..73662c9 100644
  	/// Locate a region containing a Target.
  	Region *locateRegion(const Target &target) const;
  	/// Locate a country containing a position.
-@@ -419,6 +524,13 @@ public:
+@@ -419,6 +526,13 @@ public:
  	int selectSoldierNationalityByLocation(const Mod* mod, const RuleSoldier* rule, const Target* target) const;
  	/// Return the month counter.
  	int getMonthsPassed() const;
@@ -28041,7 +28932,7 @@ index d985908..73662c9 100644
  	/// Return the day counter.
  	int getDaysPassed() const { return _daysPassed; }
  	void increaseDaysPassed() { _daysPassed++; }
-@@ -493,6 +605,76 @@ public:
+@@ -493,6 +607,76 @@ public:
  	bool isUfoOnIgnoreList(int ufoId);
  	/// Handles a soldier's death.
  	std::vector<Soldier*>::iterator killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause = 0);
@@ -28118,7 +29009,7 @@ index d985908..73662c9 100644
  	/// enables/disables autosell for an item type
  	void setAutosell(const RuleItem *itype, const bool enabled);
  	/// get autosell state for an item type
-@@ -529,6 +711,28 @@ public:
+@@ -529,6 +713,28 @@ public:
  	void handlePrimaryResearchSideEffects(const std::vector<const RuleResearch*> &topicsToCheck, const Mod* mod, Base* base);
  	/// Gets the list of user notes.
  	std::vector<std::string>& getUserNotes() { return _userNotes; }
