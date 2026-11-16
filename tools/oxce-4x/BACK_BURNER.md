@@ -521,7 +521,7 @@ built and verified.
 
 ## Designed, agreed, not yet built
 
-### Muzzle flashes - HELD until John says "build now" (15 Nov 19:56)
+### ~~Muzzle flashes~~ - BUILT 16 Nov ("build muzzle flashes" 13:53): build/install_muzzle_flashes.py + Map::setMuzzleFlash; melee slashes NOT done (HIT.PCK still plays on melee)
 - Art (John's downloads, licences unknown: private, zip only, never the repo):
   C:\Users\Chairman\Downloads\muzzle_flashs.zip (16 cartoon flashes, 256x256, red/orange/yellow) and
   rc_art_-_muzzle_effects.zip (Reactorcore Art: 232 pixel sprites, yellow fire, blue ion, red/green melee slashes).

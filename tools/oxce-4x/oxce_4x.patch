@@ -7360,7 +7360,7 @@ index cea8e65..90ec9a6 100644
  	}
  
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..250d125 100644
+index 3665cd1..8fde387 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
 @@ -17,6 +17,9 @@
@@ -7373,7 +7373,16 @@ index 3665cd1..250d125 100644
  #include "Camera.h"
  #include "UnitSprite.h"
  #include "ItemSprite.h"
-@@ -156,9 +159,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
+@@ -52,6 +55,8 @@
+ #include "../Interface/NumberText.h"
+ #include "../Interface/Text.h"
+ #include "../fmath.h"
++#include "../Engine/RNG.h"
++#include <cmath>
+ 
+ 
+ /*
+@@ -156,9 +161,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
  
  	_spriteWidth = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getWidth();
  	_spriteHeight = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getHeight();
@@ -7386,7 +7395,7 @@ index 3665cd1..250d125 100644
  	_message->setTextColor(_messageColor);
  	_camera = new Camera(_spriteWidth, _spriteHeight, _save->getMapSizeX(), _save->getMapSizeY(), _save->getMapSizeZ(), this, visibleMapHeight);
  	_scrollMouseTimer = new Timer(SCROLL_INTERVAL);
-@@ -272,12 +276,13 @@ void Map::init()
+@@ -272,12 +278,13 @@ void Map::init()
  					   0, 0, 0, b, f, b, 0, 0, 0,
  					   0, 0, 0, 0, b, 0, 0, 0, 0 };
  
@@ -7404,7 +7413,7 @@ index 3665cd1..250d125 100644
  	_arrow->unlock();
  
  	_projectile = 0;
-@@ -305,6 +310,20 @@ void Map::think()
+@@ -305,6 +312,20 @@ void Map::think()
  /**
   * Draws the whole map, part by part.
   */
@@ -7425,7 +7434,7 @@ index 3665cd1..250d125 100644
  void Map::draw()
  {
  	if (!_redraw)
-@@ -325,6 +344,7 @@ void Map::draw()
+@@ -325,6 +346,7 @@ void Map::draw()
  		ShaderSurface(this),
  		ShaderScalar<Uint8>(Palette::blockOffset(0) + _bgColor)
  	);
@@ -7433,7 +7442,7 @@ index 3665cd1..250d125 100644
  
  	Tile *t;
  
-@@ -356,12 +376,38 @@ void Map::draw()
+@@ -356,12 +378,38 @@ void Map::draw()
  		}
  	}
  
@@ -7473,7 +7482,7 @@ index 3665cd1..250d125 100644
  		_message->blit(this->getSurface());
  	}
  }
-@@ -466,6 +512,29 @@ int getArrowBobForFrame(int frame)
+@@ -466,6 +514,29 @@ int getArrowBobForFrame(int frame)
  	return ArrowBobOffsets[frame % 8];
  }
  
@@ -7503,7 +7512,7 @@ index 3665cd1..250d125 100644
  int getShadePulseForFrame(int shade, int frame)
  {
  	if (shade > 7) shade = 7;
-@@ -488,9 +557,9 @@ int getShadePulseForFrame(int shade, int frame)
+@@ -488,9 +559,9 @@ int getShadePulseForFrame(int shade, int frame)
   */
  void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position currTileScreenPosition, bool topLayer, BattleUnit* movingUnit)
  {
@@ -7516,7 +7525,7 @@ index 3665cd1..250d125 100644
  
  	if (!unitTile)
  	{
-@@ -532,7 +601,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
+@@ -532,7 +603,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
  
  	unitOffset.x = unitTile->getPosition().x - bu->getPosition().x;
  	unitOffset.y = unitTile->getPosition().y - bu->getPosition().y;
@@ -7525,7 +7534,7 @@ index 3665cd1..250d125 100644
  
  	bool moving = bu->getStatus() == STATUS_WALKING || bu->getStatus() == STATUS_FLYING;
  	int bonusWidth = moving ? 0 : tileFoorWidth;
-@@ -940,9 +1009,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -940,9 +1011,9 @@ void Map::drawTerrain(Surface *surface)
  					if (tmpSurface)
  					{
  						if (tile->getObstacle(O_FLOOR))
@@ -7537,7 +7546,7 @@ index 3665cd1..250d125 100644
  					}
  
  					auto* unit = tile->getUnit();
-@@ -1001,9 +1070,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1001,9 +1072,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_WESTWALL, tile);
  							if (tile->getObstacle(O_WESTWALL))
@@ -7549,7 +7558,7 @@ index 3665cd1..250d125 100644
  						}
  						// Draw north wall
  						tmpSurface = tile->getSprite(O_NORTHWALL);
-@@ -1011,9 +1080,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1011,9 +1082,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_NORTHWALL, tile);
  							if (tile->getObstacle(O_NORTHWALL))
@@ -7561,7 +7570,7 @@ index 3665cd1..250d125 100644
  						}
  						// Draw object
  						tmpSurface = tile->getSprite(O_OBJECT);
-@@ -1022,18 +1091,19 @@ void Map::drawTerrain(Surface *surface)
+@@ -1022,18 +1093,19 @@ void Map::drawTerrain(Surface *surface)
  							if (tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -7584,7 +7593,7 @@ index 3665cd1..250d125 100644
  								tileShade
  							);
  							if (_anyIndicator)
-@@ -1043,30 +1113,30 @@ void Map::drawTerrain(Surface *surface)
+@@ -1043,30 +1115,30 @@ void Map::drawTerrain(Surface *surface)
  								{
  									if (_burnIndicator && itemUnit->getFire() > 0)
  									{
@@ -7623,7 +7632,7 @@ index 3665cd1..250d125 100644
  											tileShade);
  									}
  								}
-@@ -1292,13 +1362,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1292,13 +1364,13 @@ void Map::drawTerrain(Surface *surface)
  							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(11);
  							if (tmpSurface)
  							{
@@ -7639,7 +7648,7 @@ index 3665cd1..250d125 100644
  						}
  					}
  
-@@ -1310,9 +1380,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1310,9 +1382,9 @@ void Map::drawTerrain(Surface *surface)
  							if (!tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -7651,7 +7660,7 @@ index 3665cd1..250d125 100644
  							}
  						}
  					}
-@@ -1528,7 +1598,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1528,7 +1600,7 @@ void Map::drawTerrain(Surface *surface)
  
  								_txtAccuracy->setText(ss.str());
  								_txtAccuracy->draw();
@@ -7660,7 +7669,7 @@ index 3665cd1..250d125 100644
  							}
  						}
  						else if (_camera->getViewLevel() > itZ)
-@@ -1551,7 +1621,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1551,7 +1623,7 @@ void Map::drawTerrain(Surface *surface)
  									_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::red - 1) - 1);
  									_txtAccuracy->setText("0%");
  									_txtAccuracy->draw();
@@ -7669,7 +7678,7 @@ index 3665cd1..250d125 100644
  								}
  							}
  							if (!ignore)
-@@ -1582,7 +1652,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1582,7 +1654,7 @@ void Map::drawTerrain(Surface *surface)
  								_numWaypid->setValue(waypid);
  								_numWaypid->setBordered(true); // OXCE, not configurable
  								_numWaypid->draw();
@@ -7678,7 +7687,7 @@ index 3665cd1..250d125 100644
  
  								waypXOff += waypid > 9 ? 10 : 6; // OXCE
  								if (waypXOff >= 26)
-@@ -1621,7 +1691,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1621,7 +1693,7 @@ void Map::drawTerrain(Surface *surface)
  						tile = _save->getTile(mapPosition);
  						if (!tile || !tile->isDiscovered(O_FLOOR) || tile->getPreview() == -1)
  							continue;
@@ -7687,7 +7696,7 @@ index 3665cd1..250d125 100644
  						if (_previewSettingArrows)
  						{
  							if (itZ > 0 && tile->hasNoFloor(_save))
-@@ -1629,14 +1699,14 @@ void Map::drawTerrain(Surface *surface)
+@@ -1629,14 +1701,14 @@ void Map::drawTerrain(Surface *surface)
  								tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(23);
  								if (tmpSurface)
  								{
@@ -7704,7 +7713,7 @@ index 3665cd1..250d125 100644
  							}
  						}
  
-@@ -1645,16 +1715,17 @@ void Map::drawTerrain(Surface *surface)
+@@ -1645,16 +1717,17 @@ void Map::drawTerrain(Surface *surface)
  							int off = tile->getTUMarker() > 9 ? 5 : 3;
  							int offE = tile->getEnergyMarker() > 9 ? 5 : 3;
  							int mcolor = _previewSettingArrows ? 0 : tile->getMarkerColor();
@@ -7725,7 +7734,7 @@ index 3665cd1..250d125 100644
  								}
  							}
  							if (_previewSettingTu)
-@@ -1664,16 +1735,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1664,16 +1737,16 @@ void Map::drawTerrain(Surface *surface)
  								if (_previewSettingEnergy)
  								{
  									// TU
@@ -7745,7 +7754,7 @@ index 3665cd1..250d125 100644
  								}
  							}
  							else if (_previewSettingEnergy)
-@@ -1681,7 +1752,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1681,7 +1754,7 @@ void Map::drawTerrain(Surface *surface)
  								// only Energy
  								_numWaypid->setValue(tile->getEnergyMarker());
  								_numWaypid->draw();
@@ -7754,7 +7763,7 @@ index 3665cd1..250d125 100644
  							}
  						}
  					}
-@@ -1702,16 +1773,62 @@ void Map::drawTerrain(Surface *surface)
+@@ -1702,16 +1775,62 @@ void Map::drawTerrain(Surface *surface)
  		Position offset = calculateWalkingOffset(selectedUnit).ScreenOffset;
  		if (selectedUnit->isBigUnit())
  		{
@@ -7821,7 +7830,7 @@ index 3665cd1..250d125 100644
  		}
  	}
  
-@@ -1732,26 +1849,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -1732,26 +1851,26 @@ void Map::drawTerrain(Surface *surface)
  				//calculateWalkingOffset(myUnit, &offset);
  				if (myUnit->isBigUnit())
  				{
@@ -7853,7 +7862,7 @@ index 3665cd1..250d125 100644
  						0);
  				}
  				else if (customMarker)
-@@ -1760,7 +1877,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1760,7 +1879,7 @@ void Map::drawTerrain(Surface *surface)
  						surface,
  						_arrow,
  						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
@@ -7862,7 +7871,7 @@ index 3665cd1..250d125 100644
  						0,
  						false,
  						_isTFTD ? ArrowColorsTFTD[myUnit->getCustomMarker() % 4] : ArrowColorsUFO[myUnit->getCustomMarker() % 4]);
-@@ -1779,11 +1896,11 @@ void Map::drawTerrain(Surface *surface)
+@@ -1779,11 +1898,11 @@ void Map::drawTerrain(Surface *surface)
  			{
  				_camera->convertMapToScreen(pos, &screenPosition);
  				screenPosition += _camera->getMapOffset();
@@ -7876,7 +7885,7 @@ index 3665cd1..250d125 100644
  					0);
  			}
  		}
-@@ -1823,12 +1940,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1823,17 +1942,40 @@ void Map::drawTerrain(Surface *surface)
  				else if (explosion->isHit())
  				{
  					tmpSurface = _game->getMod()->getSurfaceSet("HIT.PCK")->getFrame(explosion->getCurrentFrame());
@@ -7892,7 +7901,34 @@ index 3665cd1..250d125 100644
  				}
  			}
  		}
-@@ -2023,7 +2141,7 @@ void Map::setSelectorPosition(int mx, int my)
+ 	}
+ 
++	// G.I. Joe: the muzzle flash, over everything, for the moment the round leaves the barrel
++	if (_muzzleBase >= 0 && SDL_GetTicks() < _muzzleUntil && _muzzleFrom.z / 24 <= _camera->getViewLevel())
++	{
++		if (SurfaceSet *ms = _game->getMod()->getSurfaceSet("MUZZLE.PCK", false))
++		{
++			Position a, b;
++			_camera->convertVoxelToScreen(_muzzleFrom, &a);
++			_camera->convertVoxelToScreen(_muzzleTo, &b);
++			double ang = std::atan2((double)(b.y - a.y), (double)(b.x - a.x)) * 180.0 / M_PI;
++			if (ang < 0) ang += 360.0;
++			const int d = (int)std::lround(ang / 22.5) % 16;
++			if (Surface *fr = ms->getFrame(_muzzleBase + _muzzleVariant * 16 + d))
++			{
++				Surface::blitRaw(surface, fr, a.x - fr->getWidth() / 2, a.y - fr->getHeight() / 2, 0, false, _nvColor);
++			}
++		}
++	}
++	else
++	{
++		_muzzleBase = -1;
++	}
++
+ 	surface->unlock();
+ }
+ 
+@@ -2023,7 +2165,7 @@ void Map::setSelectorPosition(int mx, int my)
  {
  	int oldX = _selectorX, oldY = _selectorY;
  
@@ -7901,7 +7937,7 @@ index 3665cd1..250d125 100644
  
  	if (oldX != _selectorX || oldY != _selectorY)
  	{
-@@ -2267,6 +2385,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2267,6 +2409,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
  	}
  	result.ScreenOffset.y += result.TerrainLevelOffset;
@@ -7910,7 +7946,23 @@ index 3665cd1..250d125 100644
  	return result;
  }
  
-@@ -2506,9 +2626,10 @@ void Map::refreshSelectorPosition()
+@@ -2327,6 +2471,15 @@ CursorType Map::getCursorType() const
+  * Puts a projectile sprite on the map.
+  * @param projectile Projectile to place.
+  */
++void Map::setMuzzleFlash(Position fromVoxel, Position toVoxel, int base, int variants)
++{
++	_muzzleFrom = fromVoxel;
++	_muzzleTo = toVoxel;
++	_muzzleBase = base;
++	_muzzleVariant = variants > 1 ? RNG::generate(0, variants - 1) : 0;
++	_muzzleUntil = SDL_GetTicks() + (getenv("OXCE_MUZZLE_MS") ? atoi(getenv("OXCE_MUZZLE_MS")) : 70);   // one or two frames: the barrel, not a torch (rig: hold it)
++}
++
+ void Map::setProjectile(Projectile *projectile)
+ {
+ 	_projectile = projectile;
+@@ -2506,9 +2659,10 @@ void Map::refreshSelectorPosition()
  void Map::setHeight(int height)
  {
  	Surface::setHeight(height);
@@ -7924,7 +7976,7 @@ index 3665cd1..250d125 100644
  }
  
  /**
-@@ -2519,7 +2640,7 @@ void Map::setWidth(int width)
+@@ -2519,7 +2673,7 @@ void Map::setWidth(int width)
  {
  	int dX = width - getWidth();
  	Surface::setWidth(width);
@@ -7934,7 +7986,7 @@ index 3665cd1..250d125 100644
  
  /**
 diff --git a/src/Battlescape/Map.h b/src/Battlescape/Map.h
-index 0fdf2ca..3ee0323 100644
+index 0fdf2ca..d9cafb2 100644
 --- a/src/Battlescape/Map.h
 +++ b/src/Battlescape/Map.h
 @@ -60,6 +60,7 @@ struct UnitWalkingOffset
@@ -7945,7 +7997,18 @@ index 0fdf2ca..3ee0323 100644
  	static const int SCROLL_INTERVAL = 15;
  	static const int FADE_INTERVAL = 23;
  	static const int NIGHT_VISION_SHADE = 4;
-@@ -124,6 +125,8 @@ public:
+@@ -94,6 +95,10 @@ private:
+ 	std::vector<std::vector<Particle>> _vaporParticlesInit;
+ 	std::vector<std::vector<Particle>> _vaporParticles;
+ 	bool _explosionInFOV, _launch;
++	// G.I. Joe: the muzzle flash of the round just fired (MUZZLE.PCK; base -1 = none)
++	Position _muzzleFrom, _muzzleTo;
++	int _muzzleBase = -1, _muzzleVariant = 0;
++	Uint32 _muzzleUntil = 0;
+ 	BattlescapeMessage *_message;
+ 	Camera *_camera;
+ 	int _visibleMapHeight;
+@@ -124,6 +129,8 @@ public:
  	void think() override;
  	/// Draws the surface.
  	void draw() override;
@@ -7954,6 +8017,15 @@ index 0fdf2ca..3ee0323 100644
  	void refreshAIProgress(int progress);
  	/// Sets the palette.
  	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
+@@ -153,6 +160,8 @@ public:
+ 
+ 	/// Sets projectile.
+ 	void setProjectile(Projectile *projectile);
++	/// G.I. Joe: flash at the muzzle for a moment, pointing from -> to (voxels). base: the MUZZLE.PCK set, variants in it.
++	void setMuzzleFlash(Position fromVoxel, Position toVoxel, int base, int variants);
+ 	/// Gets projectile.
+ 	Projectile *getProjectile() const;
+ 	/// Sets follow projectile flag.
 diff --git a/src/Battlescape/NextTurnState.cpp b/src/Battlescape/NextTurnState.cpp
 index d12de83..a72c449 100644
 --- a/src/Battlescape/NextTurnState.cpp
@@ -8679,7 +8751,7 @@ index 7f7697c..9fbfa2d 100644
  	int ydiff = origin.y - target->y;
  	int zdiff = origin.z - target->z;
 diff --git a/src/Battlescape/ProjectileFlyBState.cpp b/src/Battlescape/ProjectileFlyBState.cpp
-index 529b7f2..ecf234d 100644
+index 529b7f2..d14cacf 100644
 --- a/src/Battlescape/ProjectileFlyBState.cpp
 +++ b/src/Battlescape/ProjectileFlyBState.cpp
 @@ -16,8 +16,11 @@
@@ -8694,7 +8766,16 @@ index 529b7f2..ecf234d 100644
  #include "ExplosionBState.h"
  #include "Projectile.h"
  #include "TileEngine.h"
-@@ -139,6 +142,48 @@ void ProjectileFlyBState::init()
+@@ -32,6 +35,8 @@
+ #include "../Engine/RNG.h"
+ #include "../Mod/Armor.h"
+ #include "../Mod/RuleItem.h"
++#include "../Mod/RuleDamageType.h"
++#include <cmath>
+ #include "../Engine/Options.h"
+ #include "AIModule.h"
+ #include "Camera.h"
+@@ -139,6 +144,48 @@ void ProjectileFlyBState::init()
  	case BA_AIMEDSHOT:
  	case BA_AUTOSHOT:
  	case BA_LAUNCH:
@@ -8743,7 +8824,33 @@ index 529b7f2..ecf234d 100644
  		if (weapon->getRules()->isOutOfRange(distanceSq))
  		{
  			// out of range
-@@ -517,6 +562,7 @@ bool ProjectileFlyBState::createNewProjectile()
+@@ -453,6 +500,25 @@ bool ProjectileFlyBState::createNewProjectile()
+ 	// add the projectile on the map
+ 	_parent->getMap()->setProjectile(projectile);
+ 
++	// G.I. Joe: a flash at the muzzle for every round fired from a gun, seen only where the shooter can be seen
++	if (_action.type != BA_THROW && _action.type != BA_HIT && _action.weapon && _action.weapon->getRules()->getBattleType() == BT_FIREARM
++		&& _action.actor && (_action.actor->getFaction() == FACTION_PLAYER || (_action.actor->getTile() && _action.actor->getTile()->getVisible())))
++	{
++		const RuleItem *ammoRule = _ammo ? _ammo->getRules() : _action.weapon->getRules();
++		const ItemDamageType dt = ammoRule->getDamageType()->ResistType;
++		const bool ion = dt == DT_LASER || dt == DT_PLASMA;
++		const bool heavy = _action.type == BA_LAUNCH || _action.actor->getArmor()->getSize() > 1 || ammoRule->getPower() >= 70;
++		const Position ov = _originVoxel != TileEngine::invalid ? _originVoxel : _parent->getTileEngine()->getOriginVoxel(_action, _parent->getSave()->getTile(_origin));
++		Position dir = _targetVoxel - ov;
++		const double len = std::sqrt((double)dir.x * dir.x + (double)dir.y * dir.y + (double)dir.z * dir.z);
++		if (len > 0.5)
++		{
++			const Position step((int)std::lround(dir.x * 14 / len), (int)std::lround(dir.y * 14 / len), (int)std::lround(dir.z * 14 / len));
++			// the engine's origin voxel is already at the muzzle (a voxel is 8 screen pixels at 4x): the flash roots there
++			_parent->getMap()->setMuzzleFlash(ov, ov + step, ion ? (heavy ? 352 : 256) : (heavy ? 128 : 0), ion ? 6 : 8);
++		}
++	}
++
+ 	// set the speed of the state think cycle to 16 ms (roughly one think cycle per frame)
+ 	_parent->setStateInterval(1000/60);
+ 
+@@ -517,6 +583,7 @@ bool ProjectileFlyBState::createNewProjectile()
  			{
  				_parent->getMod()->getSoundByDepth(_parent->getDepth(), _action.weapon->getRules()->getFireSound())->play(-1, _parent->getMap()->getSoundAngle(_unit->getPosition()));
  			}
@@ -8751,7 +8858,7 @@ index 529b7f2..ecf234d 100644
  			if (_action.type != BA_LAUNCH)
  			{
  				_action.weapon->spendAmmoForAction(_action.type, _parent->getSave());
-@@ -538,13 +584,17 @@ bool ProjectileFlyBState::createNewProjectile()
+@@ -538,13 +605,17 @@ bool ProjectileFlyBState::createNewProjectile()
  	}
  	else
  	{
@@ -8771,7 +8878,7 @@ index 529b7f2..ecf234d 100644
  		}
  		if (_targetVoxel != TileEngine::invalid.toVoxel() && (_projectileImpact != V_EMPTY || _action.type == BA_LAUNCH))
  		{
-@@ -559,6 +609,7 @@ bool ProjectileFlyBState::createNewProjectile()
+@@ -559,6 +630,7 @@ bool ProjectileFlyBState::createNewProjectile()
  			{
  				_parent->getMod()->getSoundByDepth(_parent->getDepth(), _action.weapon->getRules()->getFireSound())->play(-1, _parent->getMap()->getSoundAngle(projectile->getOrigin()));
  			}
