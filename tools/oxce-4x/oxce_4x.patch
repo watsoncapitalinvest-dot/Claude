@@ -498,18 +498,52 @@ index 9b139ca..9262619 100644
  }
  
 diff --git a/src/Basescape/CraftInfoState.cpp b/src/Basescape/CraftInfoState.cpp
-index 2597a24..ee80251 100644
+index 2597a24..207ee41 100644
 --- a/src/Basescape/CraftInfoState.cpp
 +++ b/src/Basescape/CraftInfoState.cpp
-@@ -17,6 +17,7 @@
+@@ -17,6 +17,8 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "CraftInfoState.h"
++#include "../Geoscape/AirRaid.h"
 +#include "../Engine/HiUI.h"
  #include <cmath>
  #include <sstream>
  #include "../Engine/Game.h"
-@@ -227,6 +228,8 @@ void CraftInfoState::init()
+@@ -88,7 +90,10 @@ CraftInfoState::CraftInfoState(Base *base, size_t craftId) : _base(base), _craft
+ 	const int bottom = 125;
+ 	const int bottom_row = 17;
+ 	bool pilots = _craft->getRules()->getPilots() > 0;
+-	_btnOk = new TextButton((pilots ? 218 : 288) - showNewBattle * 98, 16, pilots ? 86 : 16, 176);
++	// G.I. Joe squadrons: an aircraft gets a SQUADRON button where New Battle would sit
++	const bool squad = pilots && !showNewBattle && _game->getMod()->getAirRaidRules().on;
++	_btnOk = new TextButton((pilots ? 218 : 288) - (showNewBattle || squad) * 98, 16, pilots ? 86 : 16, 176);
++	if (squad) _btnSquad = new TextButton(92, 16, 212, 176);
+ 	_btnNewBattle = new TextButton(92, 16, 212, 176);
+ 	for (int i = 0; i < _weaponNum; ++i)
+ 	{
+@@ -129,6 +134,7 @@ CraftInfoState::CraftInfoState(Base *base, size_t craftId) : _base(base), _craft
+ 	add(_window, "window", "craftInfo");
+ 	add(_btnOk, "button", "craftInfo");
+ 	add(_btnNewBattle, "button", "craftInfo");
++	if (_btnSquad) add(_btnSquad, "button", "craftInfo");
+ 	for (int i = 0; i < _weaponNum; ++i)
+ 	{
+ 		add(_btnW[i], "button", "craftInfo");
+@@ -165,6 +171,7 @@ CraftInfoState::CraftInfoState(Base *base, size_t craftId) : _base(base), _craft
+ 	_btnNewBattle->setText(tr("STR_NEW_BATTLE"));
+ 	_btnNewBattle->onMouseClick((ActionHandler)&CraftInfoState::btnNewBattleClick);
+ 	_btnNewBattle->setVisible(showNewBattle > 0);
++	if (_btnSquad) _btnSquad->onMouseClick((ActionHandler)&CraftInfoState::btnSquadClick);
+ 
+ 	for (int i = 0; i < _weaponNum; ++i)
+ 	{
+@@ -223,10 +230,13 @@ void CraftInfoState::init()
+ 	State::init();
+ 
+ 	_edtCraft->setText(_craft->getName(_game->getLanguage()));
++	refreshSquad();
+ 
  	_sprite->clear();
  	SurfaceSet *texture = _game->getMod()->getSurfaceSet("BASEBITS.PCK");
  	texture->getFrame(_craft->getSkinSprite() + 33)->blitNShade(_sprite, 0, 0);
@@ -518,7 +552,7 @@ index 2597a24..ee80251 100644
  
  	std::ostringstream firlsLine;
  	firlsLine << tr("STR_DAMAGE_UC_").arg(Unicode::formatPercentage(_craft->getDamagePercentage()));
-@@ -673,6 +676,7 @@ void CraftInfoState::btnCraftIconClick(Action *action)
+@@ -673,6 +683,7 @@ void CraftInfoState::btnCraftIconClick(Action *action)
  		_sprite->clear();
  		SurfaceSet* texture = _game->getMod()->getSurfaceSet("BASEBITS.PCK");
  		texture->getFrame(_craft->getSkinSprite() + 33)->blitNShade(_sprite, 0, 0);
@@ -526,6 +560,71 @@ index 2597a24..ee80251 100644
  	}
  }
  
+@@ -733,4 +744,41 @@ void CraftInfoState::edtCraftChange(Action *action)
+ 	}
+ }
+ 
++
++/**
++ * G.I. Joe squadrons: what the button says. Leading (others fly with this one), flying with a lead, or alone.
++ */
++void CraftInfoState::refreshSquad()
++{
++	if (!_btnSquad) return;
++	const Mod *mod = _game->getMod();
++	if (Craft *lead = Squadron::leadOf(mod, _base, _craft))
++		_btnSquad->setText(tr("STR_SQUAD_WITH").arg(lead->getName(_game->getLanguage())));
++	else if (!_craft->getSquadLead().first.empty())
++		_btnSquad->setText(tr("STR_SQUAD_LEAD_GONE"));
++	else if (int n = Squadron::followers(_base, _craft))
++		_btnSquad->setText(tr("STR_SQUAD_LEADS").arg(n));
++	else
++		_btnSquad->setText(tr("STR_SQUAD_NONE"));
++}
++
++/**
++ * G.I. Joe squadrons: each click joins the next aircraft here that can lead (a named pilot), then flies alone again.
++ * A craft others follow can't itself follow (one level only).
++ */
++void CraftInfoState::btnSquadClick(Action *)
++{
++	const Mod *mod = _game->getMod();
++	if (Squadron::followers(_base, _craft) > 0) { refreshSquad(); return; }
++	std::vector<Craft*> leads;
++	for (auto *c : *_base->getCrafts())
++		if (c != _craft && c->getSquadLead().first.empty() && Squadron::canLead(mod, c)) leads.push_back(c);
++	size_t next = 0;
++	if (!_craft->getSquadLead().first.empty())
++		for (size_t i = 0; i < leads.size(); ++i) if (leads[i]->getUniqueId() == _craft->getSquadLead()) next = i + 1;
++	if (next < leads.size()) _craft->setSquadLead(leads[next]->getUniqueId());
++	else _craft->setSquadLead(CraftId());
++	refreshSquad();
++}
++
+ }
+diff --git a/src/Basescape/CraftInfoState.h b/src/Basescape/CraftInfoState.h
+index 515e702..4ce7ac9 100644
+--- a/src/Basescape/CraftInfoState.h
++++ b/src/Basescape/CraftInfoState.h
+@@ -44,7 +44,7 @@ private:
+ 	Craft *_craft;
+ 	int _weaponNum;
+ 
+-	TextButton *_btnOk, *_btnW[RuleCraft::WeaponMax], *_btnCrew, *_btnEquip, *_btnArmor, *_btnPilots, *_btnNewBattle;
++	TextButton *_btnOk, *_btnW[RuleCraft::WeaponMax], *_btnCrew, *_btnEquip, *_btnArmor, *_btnPilots, *_btnNewBattle, *_btnSquad = nullptr;
+ 	Window *_window;
+ 	TextEdit *_edtCraft;
+ 	Text *_txtDamage, *_txtShield, *_txtFuel, *_txtSkin;
+@@ -81,6 +81,9 @@ public:
+ 	void btnArmorClick(Action *action);
+ 	/// Handler for clicking the Pilots button.
+ 	void btnPilotsClick(Action *action);
++	/// G.I. Joe squadrons: cycles who this craft flies with
++	void btnSquadClick(Action *action);
++	void refreshSquad();
+ 	/// Handler for changing the text on the Name edit.
+ 	void edtCraftChange(Action *action);
+ };
 diff --git a/src/Basescape/DismantleFacilityState.cpp b/src/Basescape/DismantleFacilityState.cpp
 index e1f9829..b77db0a 100644
 --- a/src/Basescape/DismantleFacilityState.cpp
@@ -15532,10 +15631,10 @@ index 0000000..29cbe70
 +}
 diff --git a/src/Geoscape/AirRaid.cpp b/src/Geoscape/AirRaid.cpp
 new file mode 100644
-index 0000000..aa61c1f
+index 0000000..6de1e1c
 --- /dev/null
 +++ b/src/Geoscape/AirRaid.cpp
-@@ -0,0 +1,790 @@
+@@ -0,0 +1,871 @@
 +#include "AirRaid.h"
 +#include <algorithm>
 +#include <cmath>
@@ -15572,6 +15671,8 @@ index 0000000..aa61c1f
 +#include "../Savegame/Craft.h"
 +#include "../Savegame/Soldier.h"
 +#include "../Savegame/Tile.h"
++#include "../Savegame/Ufo.h"
++#include "../Mod/RuleSoldier.h"
 +#include "../Savegame/BattleUnit.h"
 +#include "../Battlescape/BattlescapeGenerator.h"
 +#include "../Battlescape/TileEngine.h"
@@ -15619,6 +15720,82 @@ index 0000000..aa61c1f
 +}
 +
 +const char *speedName(int s) { return s == 0 ? "STR_AR_SLOW" : s == 1 ? "STR_AR_MEDIUM" : "STR_AR_FAST"; }
++}
++
++}
++
++// ---------------------------------------------------------------------------------------------------------- squadrons
++
++namespace Squadron
++{
++
++bool canLead(const Mod *mod, Craft *craft)
++{
++	if (!craft || craft->getRules()->getPilots() <= 0) return false;
++	auto pilots = craft->getPilotList(false, mod);
++	return !pilots.empty() && !mod->isGreenshirt(pilots.front()->getRules()->getType());
++}
++
++Craft *leadOf(const Mod *mod, Base *base, const Craft *craft)
++{
++	if (!base || craft->getSquadLead().first.empty()) return nullptr;
++	for (auto *c : *base->getCrafts())
++		if (c != craft && c->getUniqueId() == craft->getSquadLead()) return canLead(mod, c) ? c : nullptr;
++	return nullptr;
++}
++
++int followers(Base *base, const Craft *lead)
++{
++	int n = 0;
++	for (auto *c : *base->getCrafts()) if (c != lead && c->getSquadLead() == lead->getUniqueId()) ++n;
++	return n;
++}
++
++void sync(Game *game)
++{
++	const Mod *mod = game->getMod();
++	for (auto *base : *game->getSavedGame()->getBases())
++	{
++		std::map<Craft*, int> slowest;   // lead -> the slowest speed among those flying with it
++		for (auto *c : *base->getCrafts())
++		{
++			Craft *lead = leadOf(mod, base, c);
++			if (!lead || c->isDestroyed() || c->isInBattlescape()) continue;
++			Target *ld = lead->getDestination();
++			const bool leadOut = lead->getStatus() == "STR_OUT" && ld;
++			const bool leadHome = leadOut && ld == (Target*)lead->getBase();
++			if (leadOut && !leadHome)
++			{
++				// a Cobra aircraft: chase the same one, so every plane gets its dogfight; anything else: on the lead's wing
++				Target *want = dynamic_cast<Ufo*>(ld) ? ld : (Target*)lead;
++				if (c->getStatus() == "STR_READY" && !c->getLowFuel())
++				{
++					c->setDestination(want);
++					c->setStatus("STR_OUT");
++				}
++				else if (c->getStatus() == "STR_OUT" && c->getDestination() != want
++					&& (c->getDestination() == (Target*)lead || dynamic_cast<Ufo*>(c->getDestination())))
++				{
++					c->setDestination(want);
++				}
++				if (c->getStatus() == "STR_OUT")
++				{
++					const int s = c->getCraftStats().speedMax;
++					auto it = slowest.find(lead);
++					slowest[lead] = it == slowest.end() ? std::min(s, lead->getCraftStats().speedMax) : std::min(it->second, s);
++				}
++			}
++			else if (leadHome && c->getStatus() == "STR_OUT" && c->getDestination() != (Target*)c->getBase())
++			{
++				c->returnToBase();   // the lead turned for home: so does its squadron
++			}
++		}
++		// they fly together: nobody outruns the slowest
++		for (const auto &sl : slowest)
++			for (auto *c : *base->getCrafts())
++				if ((c == sl.first || (c->getSquadLead() == sl.first->getUniqueId() && c->getStatus() == "STR_OUT")) && c->getSpeed() > sl.second)
++					c->setSpeed(sl.second);
++	}
 +}
 +
 +}
@@ -15793,7 +15970,10 @@ index 0000000..aa61c1f
 +		for (auto *c : *b->getCrafts())
 +		{
 +			if (!AirRaid::canBomb(mod, c)) continue;
-+			if (c != craft && (c->getDestination() != base || c->getDistance(base) > 0.002)) continue;
++			// every bomber already over the site, and every one of the lead's squadron on its wing (they fly as one)
++			const bool here = c->getDestination() == base && c->getDistance(base) <= 0.002;
++			const bool onWing = c->getDestination() == (Target*)craft && c->getStatus() == "STR_OUT";
++			if (c != craft && !here && !onWing) continue;
 +			if ((int)_planes.size() >= 6) break;
 +			AirRaid::Plane p;
 +			p.craft = c;
@@ -16328,10 +16508,10 @@ index 0000000..aa61c1f
 +}
 diff --git a/src/Geoscape/AirRaid.h b/src/Geoscape/AirRaid.h
 new file mode 100644
-index 0000000..ee4483e
+index 0000000..83fa430
 --- /dev/null
 +++ b/src/Geoscape/AirRaid.h
-@@ -0,0 +1,116 @@
+@@ -0,0 +1,131 @@
 +#pragma once
 +/*
 + * G.I. Joe: AIR RAIDS, phase 1 - the Joes bomb a Cobra site (claude/AIR_RAID_DESIGN_v1.md; BRIEF_FOR_BUILD_AirRaids;
@@ -16384,6 +16564,21 @@ index 0000000..ee4483e
 +	bool canBomb(const Mod *mod, const Craft *craft);
 +	/// the Cobra site type the raid can be flown on ("" = none)
 +	bool canBeBombed(const Mod *mod, const AlienBase *base);
++}
++
++/// G.I. Joe SQUADRONS (phase 4; John 13:36-13:47): two or more aircraft that launch, fly and come home together,
++/// at the slowest one's speed. The lead plane needs a named pilot. A travel group only: every plane is its own unit
++/// in a dogfight or an air raid; no bonus, no penalty.
++namespace Squadron
++{
++	/// can this craft lead a squadron (an aircraft with a named pilot in the seat)?
++	bool canLead(const Mod *mod, Craft *craft);
++	/// the lead this craft flies with (nullptr: none, or the lead is gone or can't lead)
++	Craft *leadOf(const Mod *mod, Base *base, const Craft *craft);
++	/// how many fly with this lead
++	int followers(Base *base, const Craft *lead);
++	/// every 5 seconds: followers launch with their lead, keep with it, come home with it
++	void sync(Game *game);
 +}
 +
 +/// The overhead view of the site (painted at display resolution), the targets and, after the pass, the impacts.
@@ -17648,7 +17843,7 @@ index e609d3c..24a1628 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..1b58a8f 100644
+index 6b4e79d..3abbca3 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,15 @@
@@ -18251,7 +18446,17 @@ index 6b4e79d..1b58a8f 100644
  				size_t count = _game->getSavedGame()->getMissionSites()->size();
  				AlienMission *mission = ufo->getMission();
  				bool detected = ufo->getDetected();
-@@ -1233,6 +1594,13 @@ void GeoscapeState::time5Seconds()
+@@ -1139,6 +1500,9 @@ void GeoscapeState::time5Seconds()
+ 		}
+ 	}
+ 
++	// G.I. Joe squadrons: followers launch, fly and come home with their lead
++	Squadron::sync(_game);
++
+ 	// Handle craft logic
+ 	for (auto* xbase : *_game->getSavedGame()->getBases())
+ 	{
+@@ -1233,6 +1597,13 @@ void GeoscapeState::time5Seconds()
  			if (!ufoIsAttacking)
  			{
  				bool returnedToBase = xcraft->think();
@@ -18265,7 +18470,7 @@ index 6b4e79d..1b58a8f 100644
  				if (returnedToBase)
  				{
  					_game->getSavedGame()->stopHuntingXcomCraft(xcraft); // hiding in the base is good enough, obviously
-@@ -1422,7 +1790,9 @@ void GeoscapeState::time5Seconds()
+@@ -1422,7 +1793,9 @@ void GeoscapeState::time5Seconds()
  				{
  					if (b->isDiscovered())
  					{
@@ -18276,7 +18481,7 @@ index 6b4e79d..1b58a8f 100644
  						{
  							int texture, shade;
  							_globe->getPolygonTextureAndShade(b->getLongitude(), b->getLatitude(), &texture, &shade);
-@@ -1454,6 +1824,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +1827,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -18312,7 +18517,7 @@ index 6b4e79d..1b58a8f 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +1963,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +1966,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -18343,7 +18548,7 @@ index 6b4e79d..1b58a8f 100644
  							}
  						}
  					}
-@@ -1752,7 +2167,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2170,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -18352,7 +18557,7 @@ index 6b4e79d..1b58a8f 100644
  								}
  								else
  								{
-@@ -1858,6 +2273,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2276,19 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -18372,7 +18577,7 @@ index 6b4e79d..1b58a8f 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2312,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2315,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -18385,7 +18590,7 @@ index 6b4e79d..1b58a8f 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2104,6 +2538,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2104,6 +2541,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		detected = maskBitOr(detected, craft->detect(ufo, save, alreadyTracked));
  	}
  
@@ -18393,7 +18598,7 @@ index 6b4e79d..1b58a8f 100644
  	if (!alreadyTracked)
  	{
  		if (maskTest(detected, DETECTION_RADAR))
-@@ -2126,8 +2561,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2126,8 +2564,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		{
  			ufo->setHyperDetected(true);
  		}
@@ -18414,7 +18619,7 @@ index 6b4e79d..1b58a8f 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2591,101 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2594,101 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -18516,7 +18721,7 @@ index 6b4e79d..1b58a8f 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +2732,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +2735,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -18606,7 +18811,7 @@ index 6b4e79d..1b58a8f 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +2977,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +2980,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -18615,7 +18820,7 @@ index 6b4e79d..1b58a8f 100644
  			}
  			else
  			{
-@@ -2389,12 +3013,304 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3016,304 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
@@ -18920,7 +19125,7 @@ index 6b4e79d..1b58a8f 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3360,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3363,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -18943,7 +19148,7 @@ index 6b4e79d..1b58a8f 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2861,7 +3786,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +3789,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -18972,7 +19177,7 @@ index 6b4e79d..1b58a8f 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3906,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3909,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -19003,7 +19208,7 @@ index 6b4e79d..1b58a8f 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4092,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4095,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -19013,7 +19218,7 @@ index 6b4e79d..1b58a8f 100644
  }
  
  /**
-@@ -3265,6 +4236,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4239,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -19029,7 +19234,7 @@ index 6b4e79d..1b58a8f 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4322,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4325,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -19082,7 +19287,7 @@ index 6b4e79d..1b58a8f 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4390,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4393,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -19334,7 +19539,7 @@ index 6b4e79d..1b58a8f 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +5918,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +5921,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -27301,7 +27506,7 @@ index ff59738..2588d50 100644
  	void addActivityXcom(int activity);
  	/// add alien activity in this country
 diff --git a/src/Savegame/Craft.cpp b/src/Savegame/Craft.cpp
-index 177232b..c07da1a 100644
+index 177232b..2021fc1 100644
 --- a/src/Savegame/Craft.cpp
 +++ b/src/Savegame/Craft.cpp
 @@ -17,6 +17,7 @@
@@ -27312,7 +27517,27 @@ index 177232b..c07da1a 100644
  #include <algorithm>
  #include "../fmath.h"
  #include "../Engine/Language.h"
-@@ -2420,4 +2421,24 @@ void write(ryml::NodeRef* n, VehicleDeploymentData const& val)
+@@ -257,6 +258,7 @@ void Craft::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, c
+ 	reader.tryRead("lonAuto", _lonAuto);
+ 	reader.tryRead("latAuto", _latAuto);
+ 	reader.tryRead("pilots", _pilots);
++	if (reader["squadLeadType"]) { reader.tryRead("squadLeadType", _squadLead.first); reader.tryRead("squadLeadId", _squadLead.second); }
+ 	reader.tryRead("customSoldierDeployment", _customSoldierDeployment);
+ 	reader.tryRead("customVehicleDeployment", _customVehicleDeployment);
+ 	reader.tryRead("skinIndex", _skinIndex);
+@@ -377,6 +379,11 @@ void Craft::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared) const
+ 	writer.write("latAuto", serializeDouble(_latAuto));
+ 	if (_pilots.size())
+ 		writer.write("pilots", _pilots);
++	if (!_squadLead.first.empty())
++	{
++		writer.write("squadLeadType", _squadLead.first);
++		writer.write("squadLeadId", _squadLead.second);
++	}
+ 	if (!_customSoldierDeployment.empty())
+ 		writer.write("customSoldierDeployment", _customSoldierDeployment);
+ 	if (!_customVehicleDeployment.empty())
+@@ -2420,4 +2427,24 @@ void write(ryml::NodeRef* n, VehicleDeploymentData const& val)
  	// writer.write("used", val.used); // not needed
  }
  
@@ -27338,7 +27563,7 @@ index 177232b..c07da1a 100644
 +
  }
 diff --git a/src/Savegame/Craft.h b/src/Savegame/Craft.h
-index 7e53cbf..a4dc5ef 100644
+index 7e53cbf..376d5b8 100644
 --- a/src/Savegame/Craft.h
 +++ b/src/Savegame/Craft.h
 @@ -80,6 +80,11 @@ struct VehicleDeploymentData
@@ -27353,14 +27578,28 @@ index 7e53cbf..a4dc5ef 100644
  	/// Name of class used in script.
  	static constexpr const char *ScriptName = "Craft";
  	/// Register all useful function used by script.
-@@ -100,6 +105,7 @@ private:
+@@ -100,8 +105,12 @@ private:
  	double _speedMaxRadian;
  	RuleCraftStats _stats;
  	bool _isAutoPatrolling;
 +	bool _noSeaRoute = false; ///< G.I. Joe: a boat with no water route to where it was sent
  	double _lonAuto, _latAuto;
  	std::vector<int> _pilots;
++	/// G.I. Joe SQUADRONS (AIR_RAID_DESIGN_v1 s.1, John 13:36-13:47): the craft this one flies with as its lead
++	/// (empty = none). A travel group only: launch, fly and come home together; every plane fights on its own.
++	CraftId _squadLead;
  	std::map<int, SoldierDeploymentData> _customSoldierDeployment;
+ 	std::vector<VehicleDeploymentData> _customVehicleDeployment;
+ 	int _skinIndex;
+@@ -305,6 +314,8 @@ public:
+ 	void removeAllPilots();
+ 	/// Gets the list of craft pilots.
+ 	const std::vector<Soldier*> getPilotList(bool autoAdd, const Mod* mod);
++	const CraftId &getSquadLead() const { return _squadLead; }
++	void setSquadLead(const CraftId &lead) { _squadLead = lead; }
+ 	/// Calculates the accuracy bonus based on pilot skills.
+ 	int getPilotAccuracyBonus(const std::vector<Soldier*> &pilots, const Mod *mod) const;
+ 	/// Calculates the dodge bonus based on pilot skills.
 diff --git a/src/Savegame/MovingTarget.cpp b/src/Savegame/MovingTarget.cpp
 index 8d3fa0c..d8ea9d4 100644
 --- a/src/Savegame/MovingTarget.cpp
