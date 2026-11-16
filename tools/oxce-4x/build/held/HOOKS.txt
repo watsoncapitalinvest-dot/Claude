@@ -1,0 +1,15 @@
+Continue-or-exfiltrate: the three hooks to add when John says "build now" (SecureAreaState.h/.cpp are beside this file;
+add Battlescape/SecureAreaState.cpp to src/CMakeLists.txt and both vcxproj files; #include "SecureAreaState.h" in each file below).
+
+1. BattlescapeGame::autoEndBattle(), right after the isPreview() return:
+	if (SecureAreaState::offer(_parentState->getGame(), _save, this) || SecureAreaState::secured(_save)) return;
+
+2. BattlescapeGame (end-of-turn check): battleComplete = (!killingAllAliensIsNotEnough && tally.liveAliens == 0 && !SecureAreaState::secured(_save)) || tally.liveSoldiers == 0;
+
+3. NextTurnState (where it calls finishBattle when liveAliens == 0):
+	const bool secureAsk = !killingAllAliensIsNotEnough && tally.liveAliens == 0 && tally.liveSoldiers > 0
+		&& (SecureAreaState::secured(_battleGame) || SecureAreaState::offer(_game, _battleGame, _state->getBattleGame()));
+	if (!secureAsk && (...the existing condition...)) _state->finishBattle(false, tally.liveSoldiers);
+
+4. AbortMissionState::btnOkClick, after popState():
+	if (SecureAreaState::secured(_battleGame)) { _state->finishBattle(false, _state->getBattleGame()->tallyUnits().liveSoldiers); return; }

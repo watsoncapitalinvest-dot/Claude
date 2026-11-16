@@ -640,7 +640,7 @@ Plan offered: (1) stage 1 on PITGATE, hold the surface = attack beaten; (2) lose
 Unchecked: nextStage on a base-defence mission (fallback: yard stacked on top as one tall map). Not covered: surface guns opening (surface install), Evacuate / Self-Destruct.
 
 ## Continue or exfiltrate - HELD until John says "build now" (16 Nov 00:22)
-John 00:19: "all targets neutralized - continue or exfiltrate? every map". Written, not built: build/held/ (held_exfiltrate.diff + SecureAreaState.h/.cpp; add SecureAreaState.cpp to CMakeLists + vcxproj when applied).
+John 00:19: "all targets neutralized - continue or exfiltrate? every map". Written, not built: build/held/ (HOOKS.txt + SecureAreaState.h/.cpp).
 Asked once when the last Cobra goes down (also on Cobra's turn); not air/sea fights, MUST_DESTROY or VIP escorts. EXFILTRATE = end now, a win. CONTINUE = turns pass, ABORT ends it as a full win (not a retreat).
 
 ## Pit free placement (STORY's BRIEF_FOR_BUILD_PitFreePlacement) - HELD until John says "build now" (16 Nov 00:22)
