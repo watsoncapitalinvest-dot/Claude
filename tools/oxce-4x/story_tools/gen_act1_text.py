@@ -500,6 +500,19 @@ S['STR_EVENT_SPRINGFIELD_INQUIRY_OVER_DESCRIPTION'] = P.join([
     "HAWK: The committee is done with us. We're cleared to operate. Nobody said thank you, and nobody's going to.",
     "Springfield is empty. Its people are somewhere else now, and they know our faces. Back to work."])
 
+# ------------------------------------------------------------------ The HQ airfield arrives (claude/HQ_AIRFIELD_DESIGN_v1.md s.0, John 16 Nov 01:53-02:04)
+# Fires when the abandoned factory mission is won (either version: before or after reactivation). Ceiling: day 120 if it never is.
+S['STR_EVENT_HQ_ARRIVES'] = 'A HEADQUARTERS OF OUR OWN'
+S['STR_EVENT_HQ_ARRIVES_DESCRIPTION'] = P.join([
+    "HAWK: Washington saw the factory footage. Somebody over there finally believes in Cobra, and they've decided we're worth more than a hole under a motor pool.",
+    "We've been given a Headquarters Command Center: a hardened compound with a runway, already garrisoned. It comes with a squad, two vehicles, an anti-aircraft gun, and Ace with his Skystriker. We have air cover.",
+    "Cobra will find out we have it. Keep the guns manned."])
+S['STR_EVENT_HQ_ARRIVES_LATE'] = 'A HEADQUARTERS OF OUR OWN'
+S['STR_EVENT_HQ_ARRIVES_LATE_DESCRIPTION'] = P.join([
+    "HAWK: We still haven't taken that factory, and Washington has stopped waiting for us to. Cobra flights are crossing our airspace and nobody's stopping them.",
+    "We've been given a Headquarters Command Center: a hardened compound with a runway, already garrisoned. It comes with a squad, two vehicles, an anti-aircraft gun, and Ace with his Skystriker.",
+    "It's a vote of confidence we haven't earned yet. Let's earn it."])
+
 hdr = ('# STORY (Act 1 writing). Hawk\'s briefings, Cobra Commander\'s broadcast and the Act 1 cutscene captions.\n'
        '# Text only. BUILD wires the ids (see story_tools/gen_act1_text.py). Generated: edit the script, not this file.\n')
 body = yaml.dump({'extraStrings': [{'type': 'en-US', 'strings': S}, {'type': 'en-GB', 'strings': S}]},
