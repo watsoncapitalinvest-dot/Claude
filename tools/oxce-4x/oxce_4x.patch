@@ -2998,7 +2998,7 @@ index 10a96c4..755c149 100644
  	void btnCancelClick(Action *action);
  	/// Handler for pressing an Increase arrow in the list.
 diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
-index db6727f..a176173 100644
+index db6727f..1154234 100644
 --- a/src/Battlescape/AIModule.cpp
 +++ b/src/Battlescape/AIModule.cpp
 @@ -16,9 +16,13 @@
@@ -3035,7 +3035,7 @@ index db6727f..a176173 100644
  	_knownEnemies = countKnownTargets();
  	_visibleEnemies = selectNearestTarget();
  	_spottingEnemies = getSpottingUnits(_unit->getPosition());
-@@ -489,6 +499,187 @@ void AIModule::think(BattleAction *action)
+@@ -489,6 +499,241 @@ void AIModule::think(BattleAction *action)
  		return;
  	}
  
@@ -3069,6 +3069,60 @@ index db6727f..a176173 100644
 +					return;
 +				}
 +				Stealth::clearLook(_save, _unit);
++			}
++		}
++	}
++
++	// G.I. Joe SABOTAGE (SABOTAGE_DESIGN_v1): once the alarm is up, Cobra goes for the charges the Joes planted.
++	// A man with no Joe in sight walks to the nearest one; a full turn beside it disarms it (two for a specialist's).
++	if (_unit->getFaction() == FACTION_HOSTILE && _visibleEnemies == 0 && !_unit->isCarrying()
++		&& !_save->getMod()->getSabotageRules().charge.empty() && (!Stealth::on(_save) || Stealth::alarm(_save)))
++	{
++		const std::string &chargeType = _save->getMod()->getSabotageRules().charge;
++		BattleItem *best = nullptr;
++		int bestD = 15 * 15 + 1;
++		for (auto *it : *_save->getItems())
++		{
++			if (!it->getTile() || it->getRules()->getType() != chargeType || it->getFuseTimer() < 0) continue;
++			const std::string claim = "disarmBy:" + std::to_string(it->getId());
++			const int by = _save->getVanStop(claim);
++			if (by && by != _unit->getId() + 1)
++			{
++				// someone else has it, unless he is down
++				bool alive = false;
++				for (auto *u : *_save->getUnits()) if (u->getId() + 1 == by && !u->isOut()) alive = true;
++				if (alive) continue;
++			}
++			const int d = Position::distanceSq(it->getTile()->getPosition(), _unit->getPosition());
++			if (d < bestD) { bestD = d; best = it; }
++		}
++		if (best)
++		{
++			const std::string id = std::to_string(best->getId());
++			_save->setVanStop("disarmBy:" + id, _unit->getId() + 1);
++			const Position at = best->getTile()->getPosition();
++			if (Position::distance2d(at, _unit->getPosition()) <= 1 && at.z == _unit->getPosition().z)
++			{
++				const int turn = _save->getTurn();
++				const int since = _save->getVanStop("disarmSince:" + id);
++				const int need = _save->getVanStop("chargeHard:" + id) ? 2 : 1;
++				if (!since) _save->setVanStop("disarmSince:" + id, turn);
++				else if (turn - since >= need)
++				{
++					best->setFuseTimer(-1);
++					Log(LOG_INFO) << "[sabotage] a Cobra man disarmed a charge (" << need << " turn" << (need > 1 ? "s" : "") << ")";
++				}
++				action->type = BA_NONE;
++				return;
++			}
++			_save->getPathfinding()->calculate(_unit, at, BAM_NORMAL);
++			const bool can = _save->getPathfinding()->getStartDirection() != -1;
++			_save->getPathfinding()->abortPath();
++			if (can)
++			{
++				action->type = BA_WALK;
++				action->target = at;
++				return;
 +			}
 +		}
 +	}
@@ -3223,7 +3277,7 @@ index db6727f..a176173 100644
  	if (action->weapon)
  	{
  		const RuleItem *rule = action->weapon->getRules();
-@@ -1395,6 +1586,12 @@ int AIModule::selectNearestTarget()
+@@ -1395,6 +1640,12 @@ int AIModule::selectNearestTarget()
  		{
  			tally++;
  			int dist = Position::distance2d(_unit->getPosition(), bu->getPosition());
@@ -3236,7 +3290,7 @@ index db6727f..a176173 100644
  			if (dist < _closestDist)
  			{
  				bool valid = false;
-@@ -2367,7 +2564,11 @@ void AIModule::wayPointAction()
+@@ -2367,7 +2618,11 @@ void AIModule::wayPointAction()
  		return;
  	}
  	_aggroTarget = 0;
@@ -3249,7 +3303,7 @@ index db6727f..a176173 100644
  	{
  		if (_aggroTarget != 0) break; // loop finished
  		if (!validTarget(bu, true, true))
-@@ -2386,6 +2587,7 @@ void AIModule::wayPointAction()
+@@ -2386,6 +2641,7 @@ void AIModule::wayPointAction()
  
  	if (_aggroTarget != 0)
  	{
@@ -4455,7 +4509,7 @@ index 0000000..014b0f2
 +
 +}
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..5290fdf 100644
+index b7e1111..392c3ee 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
 @@ -16,8 +16,13 @@
@@ -4472,7 +4526,28 @@ index b7e1111..5290fdf 100644
  #include "BattlescapeState.h"
  #include "Map.h"
  #include "Camera.h"
-@@ -224,8 +229,8 @@ int BattlescapeGame::think()
+@@ -49,6 +54,7 @@
+ #include "../Mod/RuleItem.h"
+ #include "../Mod/RuleInventory.h"
+ #include "../Mod/RuleSoldier.h"
++#include "../Savegame/Soldier.h"
+ #include "../Mod/Armor.h"
+ #include "../Engine/Options.h"
+ #include "../Engine/RNG.h"
+@@ -77,6 +83,12 @@ void BattleActionCost::updateTU()
+ 	else if (actor && weapon)
+ 	{
+ 		*(RuleItemUseCost*)this = actor->getActionTUs(type, weapon);
++		// G.I. Joe sabotage: a demolitions specialist plants a charge in half the time
++		if (type == BA_PRIME && actor->getGeoscapeSoldier() && weapon->getRules()->getType() == Mod::sabotageCharge
++			&& std::find(Mod::sabotageSpecialists.begin(), Mod::sabotageSpecialists.end(), actor->getGeoscapeSoldier()->getRules()->getType()) != Mod::sabotageSpecialists.end())
++		{
++			Time /= 2;
++		}
+ 	}
+ 	else
+ 	{
+@@ -224,8 +236,8 @@ int BattlescapeGame::think()
  			_save->setUnitsFalling(false);
  			return ret;
  		}
@@ -4483,7 +4558,7 @@ index b7e1111..5290fdf 100644
  		{
  			auto sideBackup = _save->getSide();
  			_save->resetUnitHitStates();
-@@ -421,6 +426,12 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
+@@ -421,6 +433,12 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
  		}
  	}
  
@@ -4496,7 +4571,7 @@ index b7e1111..5290fdf 100644
  	if (action.type == BA_SNAPSHOT || action.type == BA_AUTOSHOT || action.type == BA_AIMEDSHOT || action.type == BA_THROW || action.type == BA_HIT || action.type == BA_MINDCONTROL || action.type == BA_USE || action.type == BA_PANIC || action.type == BA_LAUNCH)
  	{
  		ss.clear();
-@@ -508,8 +519,271 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
+@@ -508,8 +526,271 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
  /**
   * Ends the turn.
   */
@@ -4768,7 +4843,7 @@ index b7e1111..5290fdf 100644
  	_debugPlay = _save->getDebugMode() && _parentState->getGame()->isCtrlPressed() && (_save->getSide() != FACTION_NEUTRAL);
  	_currentAction.type = BA_NONE;
  	_currentAction.skillRules = nullptr;
-@@ -1915,6 +2189,13 @@ void BattlescapeGame::primaryAction(Position pos)
+@@ -1915,6 +2196,13 @@ void BattlescapeGame::primaryAction(Position pos)
  		}
  		else
  		{
@@ -4782,7 +4857,7 @@ index b7e1111..5290fdf 100644
  			_currentAction.target = pos;
  			getMap()->setCursorType(CT_NONE);
  
-@@ -3141,6 +3422,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
+@@ -3141,6 +3429,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
  	{
  		return 0;
  	}
@@ -4794,7 +4869,7 @@ index b7e1111..5290fdf 100644
  
  	// death trap?
  	Tile* deathTrapTile = nullptr;
-@@ -3209,10 +3495,12 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
+@@ -3209,10 +3502,12 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
  				{
  					const RuleItem *ruleItem = item->getRules();
  					bool g = item->getGlow();
@@ -4823,10 +4898,10 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..fed6900 100644
+index 1951ba7..4458b3b 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
-@@ -16,10 +16,14 @@
+@@ -16,10 +16,15 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -4837,11 +4912,12 @@ index 1951ba7..fed6900 100644
  #include <assert.h>
  #include <sstream>
  #include "BattlescapeGenerator.h"
++#include "../Geoscape/AirRaid.h"
 +#include "../Basescape/PitPlace.h"
  #include "TileEngine.h"
  #include "Inventory.h"
  #include "AIModule.h"
-@@ -96,6 +100,207 @@ BattlescapeGenerator::~BattlescapeGenerator()
+@@ -96,6 +101,207 @@ BattlescapeGenerator::~BattlescapeGenerator()
  /**
   * Sets up all our various arrays and whatnot according to the size of the map.
   */
@@ -5049,7 +5125,7 @@ index 1951ba7..fed6900 100644
  void BattlescapeGenerator::init(bool resetTerrain)
  {
  	_blocks.clear();
-@@ -236,6 +441,15 @@ void BattlescapeGenerator::setMissionSite(MissionSite *mission)
+@@ -236,6 +442,15 @@ void BattlescapeGenerator::setMissionSite(MissionSite *mission)
   */
  void BattlescapeGenerator::nextStage()
  {
@@ -5065,7 +5141,7 @@ index 1951ba7..fed6900 100644
  	// check if the unit is available in the next stage
  	auto isUnitStillActive = [](const BattleUnit* u)
  	{
-@@ -618,6 +832,7 @@ void BattlescapeGenerator::nextStage()
+@@ -618,6 +833,7 @@ void BattlescapeGenerator::nextStage()
  	}
  
  	generateMap(script, ruleDeploy->getCustomUfoName(), nullptr);
@@ -5073,7 +5149,7 @@ index 1951ba7..fed6900 100644
  
  	setupObjectives(ruleDeploy);
  
-@@ -739,7 +954,36 @@ void BattlescapeGenerator::nextStage()
+@@ -739,7 +955,36 @@ void BattlescapeGenerator::nextStage()
  
  	size_t unitCount = _save->getUnits()->size();
  
@@ -5111,7 +5187,7 @@ index 1951ba7..fed6900 100644
  
  	if (unitCount == _save->getUnits()->size())
  	{
-@@ -767,12 +1011,52 @@ void BattlescapeGenerator::nextStage()
+@@ -767,12 +1012,55 @@ void BattlescapeGenerator::nextStage()
   */
  void BattlescapeGenerator::run()
  {
@@ -5119,6 +5195,9 @@ index 1951ba7..fed6900 100644
  	bool isPreview = _save->isPreview();
 +	// G.I. Joe air raids: a site that has been bombed is built from its own seed, so the ground assault lands on the
 +	// map the bombs fell on; the dice go back to where they were once the map is made
++	// SABOTAGE (lasting damage, any battle): every Cobra site keeps one map from its first battle on
++	if (_alienBase && !isPreview && !_alienBase->getSiteType().empty() && !_alienBase->getMapSeed())
++		_alienBase->setMapSeed(((uint64_t)RNG::generate(1, 0x7fffffff) << 31) ^ (uint64_t)RNG::generate(1, 0x7fffffff));
 +	const uint64_t siteSeed = (_alienBase && !isPreview) ? _alienBase->getMapSeed() : 0;
 +	const uint64_t diceBefore = RNG::getSeed();
 +	if (siteSeed) RNG::setSeed(siteSeed);
@@ -5164,7 +5243,7 @@ index 1951ba7..fed6900 100644
  
  	_save->setTurnLimit(ruleDeploy->getTurnLimit());
  	_save->setChronoTrigger(ruleDeploy->getChronoTrigger());
-@@ -829,9 +1113,9 @@ void BattlescapeGenerator::run()
+@@ -829,9 +1117,9 @@ void BattlescapeGenerator::run()
  		if (_game->getSavedGame()->getMonthsPassed() != -1)
  		{
  			month =
@@ -5176,7 +5255,7 @@ index 1951ba7..fed6900 100644
  		}
  		else
  		{
-@@ -883,7 +1167,28 @@ void BattlescapeGenerator::run()
+@@ -883,7 +1171,29 @@ void BattlescapeGenerator::run()
  	}
  	_save->setStartingCondition(startingCondition);
  
@@ -5199,13 +5278,14 @@ index 1951ba7..fed6900 100644
 +			}
 +		Log(LOG_INFO) << "[airraid] site map built from its seed, fingerprint " << print;
 +		applySiteWreck();
++		_save->getSitePristine() = AirRaid::snapshot(_save);
 +	}
 +	if (isPitSurface()) applyPitSurface();
 +	else if (isPitBattle()) applyPitModules();
  
  	if (isPreview && ruleDeploy->isHidden())
  	{
-@@ -897,13 +1202,13 @@ void BattlescapeGenerator::run()
+@@ -897,13 +1207,13 @@ void BattlescapeGenerator::run()
  	{
  		enviro = _game->getMod()->getEnviroEffects(_terrain->getEnviroEffects());
  	}
@@ -5221,7 +5301,7 @@ index 1951ba7..fed6900 100644
  	{
  		deployCivilians(markCiviliansAsVIP, civilianSpawnNodeRank, ruleDeploy->getCivilians());
  		for (auto& pair : ruleDeploy->getCiviliansByType())
-@@ -914,18 +1219,18 @@ void BattlescapeGenerator::run()
+@@ -914,18 +1224,18 @@ void BattlescapeGenerator::run()
  
  	size_t unitCount = _save->getUnits()->size();
  
@@ -5243,7 +5323,7 @@ index 1951ba7..fed6900 100644
  	{
  		deployCivilians(markCiviliansAsVIP, civilianSpawnNodeRank, ruleDeploy->getCivilians());
  		for (auto& pair : ruleDeploy->getCiviliansByType())
-@@ -961,6 +1266,211 @@ void BattlescapeGenerator::run()
+@@ -961,6 +1271,211 @@ void BattlescapeGenerator::run()
  	}
  }
  
@@ -5455,7 +5535,7 @@ index 1951ba7..fed6900 100644
  /**
   * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
   */
-@@ -1483,6 +1993,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1483,6 +1998,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  			setCustomCraftInventoryTile();
  
  			Node* node = _save->getSpawnNode(NR_XCOM, unit);
@@ -5488,7 +5568,7 @@ index 1951ba7..fed6900 100644
  			if (node)
  			{
  				_save->setUnitPosition(unit, node->getPosition());
-@@ -1495,6 +2031,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1495,6 +2036,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  				_save->initUnit(unit);
  				return unit;
  			}
@@ -5516,7 +5596,7 @@ index 1951ba7..fed6900 100644
  			else if (_save->getMissionType() != "STR_BASE_DEFENSE")
  			{
  				if (placeUnitNearFriend(unit))
-@@ -1669,6 +2226,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +2231,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -5606,7 +5686,7 @@ index 1951ba7..fed6900 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +2336,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +2341,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -5675,7 +5755,7 @@ index 1951ba7..fed6900 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2421,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2426,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -5692,7 +5772,7 @@ index 1951ba7..fed6900 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2450,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2455,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -5735,7 +5815,7 @@ index 1951ba7..fed6900 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -1824,7 +2565,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
+@@ -1824,7 +2570,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  		unit->getAIModule()->setStartNode(node);
  		unit->setRankInt(alienRank);
  		int dir = _save->getTileEngine()->faceWindow(node->getPosition());
@@ -5744,7 +5824,7 @@ index 1951ba7..fed6900 100644
  		if (Position::distance2d(node->getPosition(), craft) <= 20 && RNG::percent(aliensFacingCraftOdds))
  			dir = unit->directionTo(craft);
  		if (dir != -1)
-@@ -1843,7 +2584,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
+@@ -1843,7 +2589,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  		{
  			unit->setRankInt(alienRank);
  			int dir = _save->getTileEngine()->faceWindow(unit->getPosition());
@@ -5753,7 +5833,7 @@ index 1951ba7..fed6900 100644
  			if (Position::distance2d(unit->getPosition(), craft) <= 20 && RNG::percent(aliensFacingCraftOdds))
  				dir = unit->directionTo(craft);
  			if (dir != -1)
-@@ -2081,17 +2822,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,17 +2827,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -5784,7 +5864,7 @@ index 1951ba7..fed6900 100644
  
  	mapblock->setSizeZ(sizez);
  
-@@ -2141,11 +2890,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2895,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -5798,7 +5878,7 @@ index 1951ba7..fed6900 100644
  			if (terrainObjectID>0)
  			{
  				int mapDataSetID = mapDataSetOffset;
-@@ -2817,10 +3566,11 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2817,10 +3571,11 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  	// determine globe terrain from globe texture
  	_globeTerrain = _terrain;
@@ -5812,7 +5892,7 @@ index 1951ba7..fed6900 100644
  		if (tmpTerrain)
  		{
  			_globeTerrain = tmpTerrain;
-@@ -2830,7 +3580,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2830,7 +3585,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  	// this mission type is "hard-coded" in terms of map layout
  	uint64_t seed = RNG::getSeed();
  	_baseTerrain = _terrain;
@@ -5823,7 +5903,7 @@ index 1951ba7..fed6900 100644
  	{
  		if (_mod->getBaseDefenseMapFromLocation() == 1)
  		{
-@@ -3010,25 +3762,34 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3010,25 +3767,34 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  					break;
  				case MSC_ADDCRAFT:
@@ -5867,7 +5947,7 @@ index 1951ba7..fed6900 100644
  								+ ") could not be placed on the map. You may try turning on 'save scumming' to work around this issue.");
  						}
  						if (craftPlaced)
-@@ -3062,12 +3823,12 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3062,12 +3828,12 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  								}
  							}
  
@@ -5882,7 +5962,7 @@ index 1951ba7..fed6900 100644
  							success = true;
  						}
  					}
-@@ -3365,6 +4126,7 @@ void BattlescapeGenerator::generateBaseMap()
+@@ -3365,6 +4131,7 @@ void BattlescapeGenerator::generateBaseMap()
  	// add modules based on the base's layout
  	for (const auto* fac : *_base->getFacilities())
  	{
@@ -5890,7 +5970,7 @@ index 1951ba7..fed6900 100644
  		if (fac->isBuiltOrHadPreviousFacility())
  		{
  			int num = 0;
-@@ -4268,10 +5030,38 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
+@@ -4268,10 +5035,38 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
   * @param craftPos the position of the craft is stored here.
   * @return if the craft was placed or not.
   */
@@ -6766,18 +6846,20 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..3837a4c 100644
+index 0631f32..e1d9e44 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
-@@ -20,6 +20,7 @@
+@@ -20,7 +20,9 @@
  #include <functional>
  #include <climits>
  #include "TileEngine.h"
 +#include "Stealth.h"
  #include "DebriefingState.h"
++#include "../Geoscape/AirRaid.h"
  #include "CannotReequipState.h"
  #include "../Geoscape/GeoscapeEventState.h"
-@@ -1028,6 +1029,35 @@ void DebriefingState::prepareDebriefing()
+ #include "../Engine/Action.h"
+@@ -1028,6 +1030,35 @@ void DebriefingState::prepareDebriefing()
  
  	bool aborted = battle->isAborted();
  	bool success = !aborted || battle->allObjectivesDestroyed();
@@ -6813,7 +6895,7 @@ index 0631f32..3837a4c 100644
  	Craft *craft = 0;
  	Base *base = 0;
  	std::string target;
-@@ -1039,10 +1069,23 @@ void DebriefingState::prepareDebriefing()
+@@ -1039,10 +1070,23 @@ void DebriefingState::prepareDebriefing()
  	int playersMIA = 0;
  
  	_stats.push_back(new DebriefingStat("STR_ALIENS_KILLED", false));
@@ -6837,7 +6919,7 @@ index 0631f32..3837a4c 100644
  
  	std::string missionCompleteText, missionFailedText;
  	std::string objectiveCompleteText, objectiveFailedText;
-@@ -1186,7 +1229,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1186,7 +1230,7 @@ void DebriefingState::prepareDebriefing()
  					break;
  				}
  			}
@@ -6846,7 +6928,7 @@ index 0631f32..3837a4c 100644
  			{
  				_destroyBase = true;
  			}
-@@ -1198,7 +1241,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1198,7 +1242,7 @@ void DebriefingState::prepareDebriefing()
  			for (auto* fac : *base->getFacilities())
  			{
  				// this facility was demolished
@@ -6855,7 +6937,7 @@ index 0631f32..3837a4c 100644
  				{
  					toBeDamaged.push_back(fac);
  				}
-@@ -1230,6 +1273,10 @@ void DebriefingState::prepareDebriefing()
+@@ -1230,6 +1274,10 @@ void DebriefingState::prepareDebriefing()
  				ms->setUfo(nullptr);
  			}
  			_missionStatistics->alienRace = ms->getAlienRace();
@@ -6866,7 +6948,7 @@ index 0631f32..3837a4c 100644
  			delete ms;
  			save->getMissionSites()->erase(msIt);
  			break;
-@@ -1296,6 +1343,25 @@ void DebriefingState::prepareDebriefing()
+@@ -1296,6 +1344,25 @@ void DebriefingState::prepareDebriefing()
  			deadSoldiers++;
  		}
  	}
@@ -6892,7 +6974,7 @@ index 0631f32..3837a4c 100644
  	// if all our men are unconscious, the aliens get to have their way with them.
  	if (playersUnconscious + playersMIA == playersSurvived)
  	{
-@@ -1304,7 +1370,11 @@ void DebriefingState::prepareDebriefing()
+@@ -1304,7 +1371,11 @@ void DebriefingState::prepareDebriefing()
  		{
  			if (bu->getOriginalFaction() == FACTION_PLAYER && bu->getStatus() != STATUS_DEAD)
  			{
@@ -6905,7 +6987,7 @@ index 0631f32..3837a4c 100644
  				{
  					bu->instaKill();
  				}
-@@ -1417,6 +1487,13 @@ void DebriefingState::prepareDebriefing()
+@@ -1417,6 +1488,13 @@ void DebriefingState::prepareDebriefing()
  				{
  					addStat(objectiveCompleteText, 1, objectiveCompleteScore);
  				}
@@ -6919,7 +7001,20 @@ index 0631f32..3837a4c 100644
  				save->clearLinksForAlienBase(ab, _game->getMod());
  				delete ab;
  				save->getAlienBases()->erase(abIt);
-@@ -1476,6 +1553,65 @@ void DebriefingState::prepareDebriefing()
+@@ -1424,6 +1502,12 @@ void DebriefingState::prepareDebriefing()
+ 			}
+ 			else
+ 			{
++				// SABOTAGE_DESIGN_v1 (lasting damage): what the fight broke stays broken until Cobra repairs it
++				if (!battle->getSitePristine().empty())
++				{
++					const int parts = AirRaid::recordWreck(ab, battle, battle->getSitePristine());
++					if (parts) Log(LOG_INFO) << "[sabotage] " << ab->getSiteType() << ": " << parts << " parts broken in the fight stay broken";
++				}
+ 				ab->setInBattlescape(false);
+ 				break;
+ 			}
+@@ -1476,6 +1560,65 @@ void DebriefingState::prepareDebriefing()
  	{
  		ignoreLivingCivilians = ruleDeploy->getIgnoreLivingCivilians();
  	}
@@ -6985,7 +7080,7 @@ index 0631f32..3837a4c 100644
  	for (auto* bunit : *battle->getUnits())
  	{
  		UnitStatus status = bunit->getStatus();
-@@ -1483,6 +1619,31 @@ void DebriefingState::prepareDebriefing()
+@@ -1483,6 +1626,31 @@ void DebriefingState::prepareDebriefing()
  		UnitFaction oldFaction = bunit->getOriginalFaction();
  		Soldier *soldier = save->getSoldier(bunit->getId());
  
@@ -7017,7 +7112,7 @@ index 0631f32..3837a4c 100644
  		if (!bunit->getTile())
  		{
  			Position pos = bunit->getPosition();
-@@ -1654,8 +1815,9 @@ void DebriefingState::prepareDebriefing()
+@@ -1654,8 +1822,9 @@ void DebriefingState::prepareDebriefing()
  					}
  				}
  			}
@@ -7028,7 +7123,7 @@ index 0631f32..3837a4c 100644
  				&& playersSurvived > 0 && faction != FACTION_PLAYER && (!bunit->isOut() || bunit->isIgnored())
  				&& (bunit->isSurrendering() || battle->getChronoTrigger() == FORCE_WIN_SURRENDER))
  			{
-@@ -1895,6 +2057,10 @@ void DebriefingState::prepareDebriefing()
+@@ -1895,6 +2064,10 @@ void DebriefingState::prepareDebriefing()
  		{
  			_txtTitle->setText(tr("STR_CRAFT_IS_LOST"));
  		}
@@ -7039,7 +7134,7 @@ index 0631f32..3837a4c 100644
  		else if (target == "STR_BASE")
  		{
  			_txtTitle->setText(tr("STR_BASE_IS_LOST"));
-@@ -2130,10 +2296,197 @@ void DebriefingState::prepareDebriefing()
+@@ -2130,10 +2303,197 @@ void DebriefingState::prepareDebriefing()
  		}
  	}
  
@@ -7237,7 +7332,7 @@ index 0631f32..3837a4c 100644
  		// Unlock research defined in alien deployment, if the mission was a success
  		const RuleResearch *research = _game->getMod()->getResearch(ruleDeploy->getUnlockedResearchOnSuccess());
  		save->handleResearchUnlockedByMissions(research, _game->getMod(), ruleDeploy);
-@@ -2299,6 +2652,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
+@@ -2299,6 +2659,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
   */
  void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base, int quantity, bool considerTransformations)
  {
@@ -9045,6 +9140,57 @@ index d8c617e..b5e09c7 100644
  				)
  			{
  				return true;
+diff --git a/src/Battlescape/PrimeGrenadeState.cpp b/src/Battlescape/PrimeGrenadeState.cpp
+index 62ca00c..9f10b07 100644
+--- a/src/Battlescape/PrimeGrenadeState.cpp
++++ b/src/Battlescape/PrimeGrenadeState.cpp
+@@ -28,6 +28,11 @@
+ #include "../Savegame/SavedGame.h"
+ #include "../Savegame/SavedBattleGame.h"
+ #include "../Mod/Mod.h"
++#include <algorithm>
++#include "../Mod/RuleSoldier.h"
++#include "../Savegame/Soldier.h"
++#include "../Savegame/BattleUnit.h"
++#include "../Mod/RuleItem.h"
+ #include "../Mod/RuleInterface.h"
+ #include "../Engine/Sound.h"
+ 
+@@ -111,6 +116,14 @@ PrimeGrenadeState::PrimeGrenadeState(BattleAction *action, bool inInventoryView,
+ 		_number[i]->setVerticalAlign(ALIGN_MIDDLE);
+ 	}
+ 
++	// G.I. Joe sabotage: a demolition charge is set between its own limits (2-5 turns)
++	{
++		const BattleItem *it = _inInventoryView ? _grenadeInInventory : _action->weapon;
++		const auto &SB = _game->getMod()->getSabotageRules();
++		if (it && !SB.charge.empty() && it->getRules()->getType() == SB.charge)
++			for (int i = 0; i < 24; ++i)
++				if (i < SB.timerMin || i > SB.timerMax) { _button[i]->setVisible(false); _number[i]->setVisible(false); }
++	}
+ 	_button[0]->onKeyboardRelease((ActionHandler)&PrimeGrenadeState::btnClick, SDLK_q); // FIXME: this is just a workaround, fix it better!
+ 	_button[0]->onKeyboardPress((ActionHandler)&PrimeGrenadeState::btnClick, SDLK_0);
+ 	_button[1]->onKeyboardPress((ActionHandler)&PrimeGrenadeState::btnClick, SDLK_1);
+@@ -173,8 +186,19 @@ void PrimeGrenadeState::btnClick(Action *action)
+ 		}
+ 	}
+ 
++	if (btnID != -1 && !_button[btnID]->getVisible()) return;   // a charge's timer outside its range
+ 	if (btnID != -1)
+ 	{
++		// G.I. Joe sabotage: a specialist's charge takes Cobra two turns to disarm
++		{
++			BattleItem *it = _inInventoryView ? _grenadeInInventory : _action->weapon;
++			SavedBattleGame *sb = _game->getSavedGame()->getSavedBattle();
++			BattleUnit *who = _inInventoryView ? sb->getSelectedUnit() : _action->actor;
++			const auto &SB = _game->getMod()->getSabotageRules();
++			if (it && who && who->getGeoscapeSoldier() && it->getRules()->getType() == SB.charge
++				&& std::find(SB.specialists.begin(), SB.specialists.end(), who->getGeoscapeSoldier()->getRules()->getType()) != SB.specialists.end())
++				sb->setVanStop("chargeHard:" + std::to_string(it->getId()), 1);
++		}
+ 		if (_inInventoryView)
+ 		{
+ 			_grenadeInInventory->setFuseTimer(0 + btnID);
 diff --git a/src/Battlescape/Projectile.cpp b/src/Battlescape/Projectile.cpp
 index 7f7697c..9fbfa2d 100644
 --- a/src/Battlescape/Projectile.cpp
@@ -15631,10 +15777,10 @@ index 0000000..29cbe70
 +}
 diff --git a/src/Geoscape/AirRaid.cpp b/src/Geoscape/AirRaid.cpp
 new file mode 100644
-index 0000000..6de1e1c
+index 0000000..af6be6a
 --- /dev/null
 +++ b/src/Geoscape/AirRaid.cpp
-@@ -0,0 +1,871 @@
+@@ -0,0 +1,880 @@
 +#include "AirRaid.h"
 +#include <algorithm>
 +#include <cmath>
@@ -15693,6 +15839,49 @@ index 0000000..6de1e1c
 +bool canBeBombed(const Mod *mod, const AlienBase *base)
 +{
 +	return mod->getAirRaidRules().on && base && !base->getSiteType().empty();
++}
++
++std::vector<const MapData*> snapshot(SavedBattleGame *save)
++{
++	std::vector<const MapData*> v;
++	v.reserve((size_t)save->getMapSizeXYZ() * O_MAX);
++	for (int i = 0; i < save->getMapSizeXYZ(); ++i)
++		for (int part = O_FLOOR; part < O_MAX; ++part) v.push_back(save->getTile(i)->getMapData((TilePart)part));
++	return v;
++}
++
++int recordWreck(AlienBase *base, SavedBattleGame *save, const std::vector<const MapData*> &before)
++{
++	const std::vector<const MapData*> after = snapshot(save);
++	if (after.size() != before.size()) return 0;
++	std::map<std::string, std::string> wreck;
++	for (const auto &line : base->getWreck())
++	{
++		std::istringstream ss(line);
++		int x, y, z, part;
++		if (ss >> x >> y >> z >> part) wreck[std::to_string(x) + " " + std::to_string(y) + " " + std::to_string(z) + " " + std::to_string(part)] = line;
++	}
++	int changed = 0;
++	for (size_t i = 0; i < before.size(); ++i)
++	{
++		if (before[i] == after[i]) continue;
++		++changed;
++		Tile *t = save->getTile((int)(i / O_MAX));
++		const int part = (int)(i % O_MAX);
++		int id = -1, setId = -1;
++		t->getMapData(&id, &setId, (TilePart)part);
++		const Position pos = t->getPosition();
++		const std::string key = std::to_string(pos.x) + " " + std::to_string(pos.y) + " " + std::to_string(pos.z) + " " + std::to_string(part);
++		std::string set = "-";
++		if (after[i] && setId >= 0 && setId < (int)save->getMapDataSets()->size()) set = save->getMapDataSets()->at(setId)->getName();
++		else id = -1;
++		wreck[key] = key + " " + set + " " + std::to_string(after[i] ? id : -1);
++	}
++	if (!changed) return 0;
++	base->getWreck().clear();
++	for (const auto &w : wreck) base->getWreck().push_back(w.second);
++	base->setRepairDays(0);   // the repair starts over
++	return changed;
 +}
 +
 +namespace
@@ -16315,14 +16504,7 @@ index 0000000..6de1e1c
 +	int unitsBefore = 0, hpBefore = 0;
 +	for (auto *u : *save->getUnits()) if (u->getOriginalFaction() == FACTION_HOSTILE && u->getHealth() > 0) { ++unitsBefore; hpBefore += u->getHealth(); }
 +	// what stands before the bombs: every part of every tile (a part destroyed is gone or swapped for its wreck)
-+	auto snapshot = [&]() {
-+		std::vector<const MapData*> v;
-+		v.reserve((size_t)save->getMapSizeXYZ() * O_MAX);
-+		for (int i = 0; i < save->getMapSizeXYZ(); ++i)
-+			for (int part = O_FLOOR; part < O_MAX; ++part) v.push_back(save->getTile(i)->getMapData((TilePart)part));
-+		return v;
-+	};
-+	const std::vector<const MapData*> before = snapshot();
++	const std::vector<const MapData*> before = AirRaid::snapshot(save);
 +	const RuleDamageType *he = mod->getDamageType(DT_HE);
 +	auto inMap = [&](int &x, int &y) { x = std::max(0, std::min(W - 1, x)); y = std::max(0, std::min(H - 1, y)); };
 +	for (size_t i = 0; i < _planes.size(); ++i)
@@ -16387,36 +16569,9 @@ index 0000000..6de1e1c
 +	}
 +	int unitsAfter = 0, hpAfter = 0;
 +	for (auto *u : *save->getUnits()) if (u->getOriginalFaction() == FACTION_HOSTILE && u->getHealth() > 0) { ++unitsAfter; hpAfter += u->getHealth(); }
-+	const std::vector<const MapData*> after = snapshot();
++	const std::vector<const MapData*> after = AirRaid::snapshot(save);
 +	// what broke stays broken until Cobra repairs it: record it on the site, newest over oldest
-+	if (_base)
-+	{
-+		std::map<std::string, std::string> wreck;
-+		for (const auto &line : _base->getWreck())
-+		{
-+			std::istringstream ss(line);
-+			int x, y, z, part;
-+			if (ss >> x >> y >> z >> part) wreck[std::to_string(x) + " " + std::to_string(y) + " " + std::to_string(z) + " " + std::to_string(part)] = line;
-+		}
-+		const int parts = O_MAX;
-+		for (size_t i = 0; i < before.size(); ++i)
-+		{
-+			if (before[i] == after[i]) continue;
-+			Tile *t = save->getTile((int)(i / parts));
-+			const int part = (int)(i % parts);
-+			int id = -1, setId = -1;
-+			t->getMapData(&id, &setId, (TilePart)part);
-+			const Position pos = t->getPosition();
-+			const std::string key = std::to_string(pos.x) + " " + std::to_string(pos.y) + " " + std::to_string(pos.z) + " " + std::to_string(part);
-+			std::string set = "-";
-+			if (after[i] && setId >= 0 && setId < (int)save->getMapDataSets()->size()) set = save->getMapDataSets()->at(setId)->getName();
-+			else id = -1;
-+			wreck[key] = key + " " + set + " " + std::to_string(after[i] ? id : -1);
-+		}
-+		_base->getWreck().clear();
-+		for (const auto &w : wreck) _base->getWreck().push_back(w.second);
-+		_base->setRepairDays(0);   // the repair starts over
-+	}
++	if (_base) AirRaid::recordWreck(_base, save, before);
 +	int parts = 0, standing = 0;
 +	for (size_t i = 0; i < before.size(); ++i) { if (before[i]) ++standing; if (before[i] && before[i] != after[i]) ++parts; }
 +	std::ostringstream res;
@@ -16508,10 +16663,10 @@ index 0000000..6de1e1c
 +}
 diff --git a/src/Geoscape/AirRaid.h b/src/Geoscape/AirRaid.h
 new file mode 100644
-index 0000000..83fa430
+index 0000000..242ac59
 --- /dev/null
 +++ b/src/Geoscape/AirRaid.h
-@@ -0,0 +1,131 @@
+@@ -0,0 +1,137 @@
 +#pragma once
 +/*
 + * G.I. Joe: AIR RAIDS, phase 1 - the Joes bomb a Cobra site (claude/AIR_RAID_DESIGN_v1.md; BRIEF_FOR_BUILD_AirRaids;
@@ -16539,6 +16694,7 @@ index 0000000..83fa430
 +class Craft;
 +class AlienBase;
 +class SavedBattleGame;
++class MapData;
 +class Texture;
 +class Base;
 +class BaseFacility;
@@ -16564,6 +16720,11 @@ index 0000000..83fa430
 +	bool canBomb(const Mod *mod, const Craft *craft);
 +	/// the Cobra site type the raid can be flown on ("" = none)
 +	bool canBeBombed(const Mod *mod, const AlienBase *base);
++	/// every part of every tile of a battle map, in tile order
++	std::vector<const MapData*> snapshot(SavedBattleGame *save);
++	/// what changed since 'before' is kept on the site until Cobra repairs it (SABOTAGE_DESIGN: lasting damage);
++	/// returns how many parts changed
++	int recordWreck(AlienBase *base, SavedBattleGame *save, const std::vector<const MapData*> &before);
 +}
 +
 +/// G.I. Joe SQUADRONS (phase 4; John 13:36-13:47): two or more aircraft that launch, fly and come home together,
@@ -23757,7 +23918,7 @@ index 115d1ce..871c8cf 100644
  				break;
  			case 7:
 diff --git a/src/Mod/AlienDeployment.cpp b/src/Mod/AlienDeployment.cpp
-index 018d604..8c2d873 100644
+index 018d604..3079be9 100644
 --- a/src/Mod/AlienDeployment.cpp
 +++ b/src/Mod/AlienDeployment.cpp
 @@ -38,7 +38,7 @@ AlienDeployment::AlienDeployment(const std::string &type) :
@@ -23810,7 +23971,23 @@ index 018d604..8c2d873 100644
  	reader.tryRead("abortPenalty", _abortPenalty);
  	reader.tryRead("points", _points);
  	reader.tryRead("cheatTurn", _cheatTurn);
-@@ -878,6 +898,7 @@ bool read(ryml::ConstNodeRef const& n, ReinforcementsData* val)
+@@ -762,10 +782,14 @@ EscapeType AlienDeployment::getEscapeType() const
+  */
+ std::string AlienDeployment::generateHuntMission(const size_t monthsPassed) const
+ {
++	// G.I. Joe: a site that detects craft but names no hunt missions (the front company) used to read past an
++	// empty list here and crash the moment a Joe aircraft flew near it
++	if (_huntMissionDistribution.empty()) return "";
+ 	std::vector<std::pair<size_t, WeightedOptions*> >::const_reverse_iterator rw;
+ 	rw = _huntMissionDistribution.rbegin();
+-	while (monthsPassed < rw->first)
++	while (rw != _huntMissionDistribution.rend() && monthsPassed < rw->first)
+ 		++rw;
++	if (rw == _huntMissionDistribution.rend()) return "";
+ 	return rw->second->choose();
+ }
+ 
+@@ -878,6 +902,7 @@ bool read(ryml::ConstNodeRef const& n, ReinforcementsData* val)
  	reader.tryRead("minDifficulty", val->minDifficulty);
  	reader.tryRead("maxDifficulty", val->maxDifficulty);
  	reader.tryRead("objectiveDestroyed", val->objectiveDestroyed);
@@ -24242,7 +24419,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..862bb70 100644
+index 1885346..1f6e4c9 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -24254,7 +24431,17 @@ index 1885346..862bb70 100644
  #include "RuleBaseFacility.h"
  #include "RuleCraft.h"
  #include "RuleCraftWeapon.h"
-@@ -423,6 +425,19 @@ public:
+@@ -116,6 +118,9 @@
+ namespace OpenXcom
+ {
+ 
++std::string Mod::sabotageCharge;
++std::vector<std::string> Mod::sabotageSpecialists;
++
+ namespace
+ {
+ 
+@@ -423,6 +428,19 @@ public:
   * Creates an empty mod.
   */
  Mod::Mod() :
@@ -24274,7 +24461,7 @@ index 1885346..862bb70 100644
  	_inventoryOverlapsPaperdoll(false),
  	_maxViewDistance(20), _maxDarknessToSeeUnits(9), _maxStaticLightDistance(16), _maxDynamicLightDistance(24), _enhancedLighting(0),
  	_costHireEngineer(0), _costHireScientist(0),
-@@ -650,6 +665,14 @@ Mod::~Mod()
+@@ -650,6 +668,14 @@ Mod::~Mod()
  	{
  		delete pair.second;
  	}
@@ -24289,7 +24476,7 @@ index 1885346..862bb70 100644
  	for (auto& pair : _facilities)
  	{
  		delete pair.second;
-@@ -959,7 +982,7 @@ Music *Mod::getRandomMusic(const std::string &name) const
+@@ -959,7 +985,7 @@ Music *Mod::getRandomMusic(const std::string &name) const
  		std::vector<Music*> music;
  		for (auto& pair : _musics)
  		{
@@ -24298,7 +24485,7 @@ index 1885346..862bb70 100644
  			{
  				music.push_back(pair.second);
  			}
-@@ -2309,6 +2332,37 @@ void Mod::loadAll()
+@@ -2309,6 +2335,37 @@ void Mod::loadAll()
  
  	loadExtraResources();
  
@@ -24336,7 +24523,7 @@ index 1885346..862bb70 100644
  
  	Log(LOG_INFO) << "After load.";
  	// cross link rule objects
-@@ -2321,6 +2375,20 @@ void Mod::loadAll()
+@@ -2321,6 +2378,20 @@ void Mod::loadAll()
  	afterLoadHelper("units", this, _units, &Unit::afterLoad);
  	afterLoadHelper("soldiers", this, _soldiers, &RuleSoldier::afterLoad);
  	afterLoadHelper("facilities", this, _facilities, &RuleBaseFacility::afterLoad);
@@ -24357,7 +24544,7 @@ index 1885346..862bb70 100644
  	afterLoadHelper("startingConditions", this, _startingConditions, &RuleStartingCondition::afterLoad);
  	afterLoadHelper("enviroEffects", this, _enviroEffects, &RuleEnviroEffects::afterLoad);
  	afterLoadHelper("commendations", this, _commendations, &RuleCommendations::afterLoad);
-@@ -2839,6 +2907,22 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -2839,6 +2910,22 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  			rule->load(ruleReader, parsers, this);
  		}
  	}
@@ -24380,7 +24567,7 @@ index 1885346..862bb70 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,643 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3304,652 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -24643,6 +24830,15 @@ index 1885346..862bb70 100644
 +			v.tryRead("marked", r.marked);
 +			if (!r.unit.empty()) _villains[r.unit] = r;
 +		}
++	}
++	if (const auto& sb = reader["sabotage"])
++	{
++		sb.tryRead("charge", _sabotage.charge);
++		sb.tryRead("timerMin", _sabotage.timerMin);
++		sb.tryRead("timerMax", _sabotage.timerMax);
++		sb.tryRead("specialists", _sabotage.specialists);
++		sabotageCharge = _sabotage.charge;
++		sabotageSpecialists = _sabotage.specialists;
 +	}
 +	if (const auto& ar = reader["airRaid"])
 +	{
@@ -25024,7 +25220,7 @@ index 1885346..862bb70 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3948,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3960,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -25032,7 +25228,7 @@ index 1885346..862bb70 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4553,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4565,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -25058,7 +25254,7 @@ index 1885346..862bb70 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4810,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4822,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -25079,7 +25275,7 @@ index 1885346..862bb70 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6524,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6536,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -25099,7 +25295,7 @@ index 1885346..862bb70 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6547,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6559,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -25107,7 +25303,7 @@ index 1885346..862bb70 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6561,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6573,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -25147,7 +25343,7 @@ index 1885346..862bb70 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..a705694 100644
+index 2242d13..7a36461 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -25211,7 +25407,7 @@ index 2242d13..a705694 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,420 @@ private:
+@@ -327,6 +360,432 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -25448,6 +25644,18 @@ index 2242d13..a705694 100644
 +		int lossScale = 3, lossCap = 60;                           ///< Cobra's funds and materiel lost: x the % of the site's parts destroyed, cap
 +	};
 +	AirRaidRules _airRaid;
++	/// G.I. Joe SABOTAGE (SABOTAGE_DESIGN_v1, TUNING_RECORD row 53): the demolition charge
++	struct SabotageRules
++	{
++		std::string charge;                         ///< the charge item
++		int timerMin = 2, timerMax = 5;             ///< turns the player may set
++		std::vector<std::string> specialists;       ///< soldier types who plant it in half the time
++	};
++	SabotageRules _sabotage;
++	const SabotageRules &getSabotageRules() const { return _sabotage; }
++	/// the same, where no Mod is to hand (BattleActionCost)
++	static std::string sabotageCharge;
++	static std::vector<std::string> sabotageSpecialists;
 +	const AirRaidRules &getAirRaidRules() const { return _airRaid; }
 +	const PitSurfaceBattleRules &getPitSurfaceBattleRules() const { return _pitSurfaceBattle; }
 +private:
@@ -25632,7 +25840,7 @@ index 2242d13..a705694 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1139,124 @@ public:
+@@ -692,6 +1151,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -27814,10 +28022,19 @@ index 240b22a..910b3d6 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedBattleGame.h b/src/Savegame/SavedBattleGame.h
-index 6c121c7..fb7f92b 100644
+index 6c121c7..8fcf33f 100644
 --- a/src/Savegame/SavedBattleGame.h
 +++ b/src/Savegame/SavedBattleGame.h
-@@ -87,7 +87,12 @@ private:
+@@ -75,6 +75,8 @@ private:
+ 	Mod *_rule;
+ 	int _mapsize_x, _mapsize_y, _mapsize_z;
+ 	std::vector<MapDataSet*> _mapDataSets;
++	/// G.I. Joe: a Cobra site's map as the battle began (not saved: a battle reloaded mid-way keeps no new wreck)
++	std::vector<const MapData*> _sitePristine;
+ 	std::vector<Tile> _tiles;
+ 	BattleUnit *_selectedUnit, *_undoUnit, *_lastSelectedUnit;
+ 	std::vector<Node*> _nodes;
+@@ -87,7 +89,12 @@ private:
  	int _alienItemLevel = 0;
  	std::string _reinforcementsDeployment, _reinforcementsRace;
  	int _reinforcementsItemLevel;
@@ -27830,7 +28047,15 @@ index 6c121c7..fb7f92b 100644
  	std::vector< std::vector<int> > _reinforcementsBlocks;
  	std::vector< std::vector<std::string> > _flattenedMapTerrainNames;
  	std::vector< std::vector<std::string> > _flattenedMapBlockNames;
-@@ -203,8 +208,23 @@ public:
+@@ -151,6 +158,7 @@ public:
+ 	bool isBaseCraftInventory();
+ 	/// Gets the game's mapdata files.
+ 	std::vector<MapDataSet*> *getMapDataSets();
++	std::vector<const MapData*> &getSitePristine() { return _sitePristine; }
+ 	/// Sets the mission type.
+ 	void setMissionType(const std::string &missionType);
+ 	/// Gets the mission type.
+@@ -203,8 +211,23 @@ public:
  	void setReinforcementsItemLevel(int reinforcementsItemLevel) { _reinforcementsItemLevel = reinforcementsItemLevel; }
  	/// Gets the alien item level to use for reinforcements.
  	int getReinforcementsItemLevel() const { return _reinforcementsItemLevel; }
