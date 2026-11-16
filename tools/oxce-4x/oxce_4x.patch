@@ -15330,10 +15330,10 @@ index 0000000..29cbe70
 +}
 diff --git a/src/Geoscape/AirRaid.cpp b/src/Geoscape/AirRaid.cpp
 new file mode 100644
-index 0000000..1de5f44
+index 0000000..f9f401d
 --- /dev/null
 +++ b/src/Geoscape/AirRaid.cpp
-@@ -0,0 +1,544 @@
+@@ -0,0 +1,548 @@
 +#include "AirRaid.h"
 +#include <algorithm>
 +#include <cmath>
@@ -15789,7 +15789,7 @@ index 0000000..1de5f44
 +		int acc = R.accuracy.size() > (size_t)p.speed ? R.accuracy[p.speed] : 80;
 +		acc -= R.graze * p.grazes + (p.hit ? R.hit : 0);
 +		acc = std::max(0, std::min(100, acc));
-+		for (int b = 0; b < p.bombs; ++b)
++		// one bombing run (John 16 Nov 15:39): one roll on the ladder, the whole load lands as a stick along the run
 +		{
 +			const int r = RNG::generate(0, 99);
 +			int kind = r < acc ? 0 : 1 + std::min(2, (r - acc) * 3 / std::max(1, 100 - acc));
@@ -15828,12 +15828,16 @@ index 0000000..1de5f44
 +				x = p.tx + (int)std::lround(std::cos(a) * rad);
 +				y = p.ty + (int)std::lround(std::sin(a) * rad);
 +			}
-+			inMap(x, y);
-+			const int z = std::max(0, AirRaid::topLevel(save, x, y));
-+			const Position voxel(x * 16 + 8, y * 16 + 8, z * 24 + 2);
-+			save->getTileEngine()->explode(BattleActionAttack{ }, voxel, p.heavy ? R.heavyPower : R.lightPower, he,
-+				p.heavy ? R.heavyRadius : R.lightRadius);
-+			_impacts.push_back(AirRaid::Impact{ (int)i, x, y, kind });
++			for (int b = 0; b < p.bombs; ++b)
++			{
++				int bx = x, by = y + 2 * b - (p.bombs - 1);   // two tiles apart, north-south, the way it flies
++				inMap(bx, by);
++				const int z = std::max(0, AirRaid::topLevel(save, bx, by));
++				const Position voxel(bx * 16 + 8, by * 16 + 8, z * 24 + 2);
++				save->getTileEngine()->explode(BattleActionAttack{ }, voxel, p.heavy ? R.heavyPower : R.lightPower, he,
++					p.heavy ? R.heavyRadius : R.lightRadius);
++				_impacts.push_back(AirRaid::Impact{ (int)i, bx, by, kind });
++			}
 +			static const char *KINDS[4] = { "STR_AR_DIRECT", "STR_AR_NEAR", "STR_AR_WALL", "STR_AR_CLEAN" };
 +			log << (i + 1) << ": " << tr(KINDS[kind]) << "\n";
 +		}
