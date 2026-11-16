@@ -632,3 +632,9 @@ Held from earlier sessions. These are not parked — they are queued.
   site; restocks at a threshold; stock is its armoury.
 - **The Drome superseding the crime launchers** — regional suppression on
   `genMission` once a Terror Drome stands.
+
+## Pit attack from the surface - HELD until John says "go" (15 Nov 21:51)
+John 21:51: "fight should start with cobra landing on the surface, they don't know about the secret entrances unless through their intel. then they fight their way down." 21:51: "dont build until i say go".
+This is PIT_FALLS_DESIGN_v1 section 1 (approved 13 Nov). What is shipped (237004b) starts Cobra in the garage AND the escape tunnel, intel or not - wrong on both counts.
+Plan offered: (1) stage 1 on PITGATE, hold the surface = attack beaten; (2) lose it -> stage 2 on the canon Pit, survivors carried, Cobra starts at the lift landing; (3) the water-tower hatch is Cobra's only if leaked (stand-in: Cobra's file on the Joes past a threshold) - leaked = guarded on the surface, maybe a 2nd team through it; (4) Joes use the hatch to flank, 2 turns. About a day for 1-3, half a day for 4.
+Unchecked: nextStage on a base-defence mission (fallback: yard stacked on top as one tall map). Not covered: surface guns opening (surface install), Evacuate / Self-Destruct.
