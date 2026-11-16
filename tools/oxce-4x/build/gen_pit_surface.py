@@ -80,7 +80,7 @@ def main(root):
         # the vent) is an exit: a Joe standing on one when you abort falls back below
         'MCDPatches': [{'type': 'PHATCH', 'data': [{'MCDIndex': i, 'specialType': 13} for i in range(phatch)]}],
         'pitSurfaceBattle': {'deployment': 'STR_PIT_SURFACE', 'library': 'PITSURFO', 'spots': spots,
-                             'leakTeam': 3, 'escape': [[x, y, 0] for (x, y) in ESCAPE]},
+                             'leakNeeds': 'STR_COBRA_PIT_ESCAPE_TUNNEL', 'leakTeam': 3, 'escape': [[x, y, 0] for (x, y) in ESCAPE]},
         'extraStrings': [{'type': 'en-US', 'strings': {
             'STR_PIT_SURFACE': 'The Pit (surface)',
             'STR_PIT_SURFACE_TITLE': 'COBRA IS AT THE GATE',
