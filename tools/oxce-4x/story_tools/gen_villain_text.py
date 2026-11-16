@@ -1,4 +1,4 @@
-"""Villain arrival missions (STORY, 16 Nov 2026; John 16:36 "Do them all"). Design: claude/VILLAIN_ARRIVALS_v1.md (DRAFT).
+"""Villain arrival missions (STORY, 16 Nov 2026; John 16:36 "Do them all"). Design: claude/VILLAIN_ARRIVALS_v1.md (APPROVED John 16:39).
 The seven villains who arrive through a story mission (VILLAINS_DESIGN_v1, Q1): Storm Shadow, Zartan and the Dreadnoks,
 Destro, the Baroness, Tomax and Xamot, Dr. Mindbender, Serpentor. Each: the Geoscape event that opens it, Hawk's briefing,
 and one line per outcome. Every outcome has a version; named characters never die.
@@ -130,7 +130,7 @@ S['STR_EVENT_SERPENTOR_ARRIVAL_LOST'] = P.join([
     "SCARLETT: They got the last relic. Cobra has crowned a new leader, grown in a vat from every great conqueror in history: Serpentor, emperor of Cobra.",
     "Cobra Commander stood at his side at the coronation. He didn't look happy about it."])
 
-hdr = ('# STORY: the seven villain arrival missions (claude/VILLAIN_ARRIVALS_v1.md, DRAFT).\n'
+hdr = ('# STORY: the seven villain arrival missions (claude/VILLAIN_ARRIVALS_v1.md, APPROVED John 16:39).\n'
        '# Text only. BUILD wires the ids. Generated: edit story_tools/gen_villain_text.py, not this file.\n')
 body = yaml.dump({'extraStrings': [{'type': 'en-US', 'strings': S}, {'type': 'en-GB', 'strings': S}]},
                  sort_keys=False, width=200, allow_unicode=True)
