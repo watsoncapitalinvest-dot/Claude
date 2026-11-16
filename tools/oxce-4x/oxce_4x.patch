@@ -9696,10 +9696,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..37647e0
+index 0000000..29b4e44
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3311 @@
+@@ -0,0 +1,3324 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -12021,6 +12021,19 @@ index 0000000..37647e0
 +	// and an empty result leaves the flat text alone.
 +	if (TextList *tl = dynamic_cast<TextList*>(w))
 +	{
++		// the row arrows (buy/sell, transfer, craft arm...) belong to the list, not the
++		// state, so the ArrowButton branch never saw them and the list paint hid them:
++		// the purchase screen had no visible + / - (John 15 Nov)
++		for (ArrowButton *ab : tl->getShownArrows())
++		{
++			const ArrowShape sp = ab->getShape();
++			if (sp == ARROW_NONE) continue;
++			R ar = rectOf(ab);
++			if (!clipBase(ar)) continue;
++			const char *nm = (sp == ARROW_BIG_UP || sp == ARROW_SMALL_UP) ? "arrow_up" : (sp == ARROW_BIG_DOWN || sp == ARROW_SMALL_DOWN) ? "arrow_down" : (sp == ARROW_SMALL_LEFT) ? "arrow_left" : "arrow_right";
++			if (const Img *im = piece(nm))
++				stretch(*im, 0, 0, im->w, im->h, xs[ar.x0], ys[ar.y0], xs[ar.x1], ys[ar.y1]);
++		}
 +		if (!any || scratch.empty()) return;
 +		R r = rectOf(tl);
 +		if (!clipBase(r) || scratch.size() != (size_t)(r.x1 - r.x0) * (r.y1 - r.y0)) return;
@@ -19927,7 +19940,7 @@ index 1cef662..bfc8e7e 100644
  	void setWordWrap(bool wrap);
  	/// Sets the text edit's color invert setting.
 diff --git a/src/Interface/TextList.cpp b/src/Interface/TextList.cpp
-index 2b91ef2..f2b57e8 100644
+index 2b91ef2..cc9327f 100644
 --- a/src/Interface/TextList.cpp
 +++ b/src/Interface/TextList.cpp
 @@ -1009,6 +1009,29 @@ void TextList::setScrolling(bool scrolling, int scrollPos)
@@ -19960,11 +19973,36 @@ index 2b91ef2..f2b57e8 100644
  void TextList::draw()
  {
  	Surface::draw();
+@@ -1051,6 +1074,7 @@ void TextList::blit(SDL_Surface *surface)
+ 		_selector->blit(surface);
+ 	}
+ 	Surface::blit(surface);
++	_shownArrows.clear();
+ 	if (_visible && !_hidden)
+ 	{
+ 		if (_arrowPos != -1 && !_rows.empty())
+@@ -1071,6 +1095,8 @@ void TextList::blit(SDL_Surface *surface)
+ 					// only blit arrows that belong to texts that have their first row on-screen
+ 					_arrowLeft[i]->blit(surface);
+ 					_arrowRight[i]->blit(surface);
++					_shownArrows.push_back(_arrowLeft[i]);
++					_shownArrows.push_back(_arrowRight[i]);
+ 				}
+ 
+ 				if (!_texts[i].empty())
 diff --git a/src/Interface/TextList.h b/src/Interface/TextList.h
-index f707e1b..0794216 100644
+index f707e1b..2e788af 100644
 --- a/src/Interface/TextList.h
 +++ b/src/Interface/TextList.h
-@@ -104,6 +104,10 @@ public:
+@@ -40,6 +40,7 @@ class ScrollBar;
+ class TextList : public InteractiveSurface
+ {
+ private:
++	std::vector<ArrowButton*> _shownArrows;
+ 	std::vector< std::vector<Text*> > _texts;
+ 	std::vector<size_t> _columns, _rows;
+ 	Font *_big, *_small, *_font;
+@@ -104,6 +105,12 @@ public:
  	int getLastRowIndex() const;
  	/// Gets the amount of visible rows in the list.
  	size_t getVisibleRows() const;
@@ -19972,6 +20010,8 @@ index f707e1b..0794216 100644
 +	std::vector<Text*> getVisibleCells() const;
 +	/// The row highlight, for HiUI to draw it again at display resolution.
 +	const Surface *getSelectorWidget() const { return _selector; }
++	/// the row arrows the last blit() drew (HiUI repaints them; they are not widgets of the state)
++	const std::vector<ArrowButton*> &getShownArrows() const { return _shownArrows; }
  	/// Adds a new row to the text list.
  	void addRow(int cols, ...);
  	/// Removes the last row from the text list.
@@ -20061,7 +20101,7 @@ index 665d922..160915e 100644
  	bool _debugInVisualStudio;
  	std::string _newVersion;
 diff --git a/src/Menu/NewBattleState.cpp b/src/Menu/NewBattleState.cpp
-index 52b6371..3492117 100644
+index 52b6371..badc227 100644
 --- a/src/Menu/NewBattleState.cpp
 +++ b/src/Menu/NewBattleState.cpp
 @@ -39,6 +39,10 @@
@@ -20193,6 +20233,57 @@ index 52b6371..3492117 100644
  
  	// Add research
  	save->makeAllResearchDiscovered(mod);
+@@ -610,6 +683,50 @@ void NewBattleState::btnOkClick(Action *)
+ 		return;
+ 	}
+ 
++	// AIR / SEA FIGHT (John 15 Nov: "froze when i tried to battle map air or sea battle"). These maps have no
++	// soldier start points: the fighting units are the aircraft and ships themselves, built by runAirFight from
++	// a craft and a Cobra ufo, exactly as an interception on the globe does. New Battle never did that, so the
++	// generator found nowhere to put the squad and stopped.
++	{
++		const Mod *mod = _game->getMod();
++		const auto &AF = mod->getAirFightRules();
++		const std::string &mt = _missionTypes[_cbxMission->getSelected()];
++		const bool sea = AF.on && !AF.seaDeployment.empty() && mt == AF.seaDeployment;
++		if (AF.on && (mt == AF.deployment || sea))
++		{
++			Base *base = _craft->getBase();
++			Craft *jet = (AF.units.count(_craft->getRules()->getType())) ? _craft : nullptr;
++			if (!jet)
++			{
++				for (const char *t : {"STR_INTERCEPTOR", "STR_FIRESTORM", "STR_LIGHTNING"})
++					if (mod->getCraft(t, false) && AF.units.count(t)) { jet = new Craft(mod->getCraft(t), base, 1); base->getCrafts()->push_back(jet); break; }
++			}
++			std::string enemy;
++			if (sea) { if (!AF.ships.empty()) enemy = AF.ships.front(); }
++			else for (const char *t : {"STR_MEDIUM_SCOUT", "STR_LARGE_SCOUT", "STR_ABDUCTOR"}) if (mod->getUfo(t, false) && AF.units.count(t)) { enemy = t; break; }
++			if (jet && !enemy.empty())
++			{
++				Ufo *u = new Ufo(mod->getUfo(enemy), 1);
++				u->setId(1);
++				_game->getSavedGame()->getUfos()->push_back(u);
++				jet->setSpeed(0);
++				SavedBattleGame *bgame = new SavedBattleGame(_game->getMod(), _game->getLanguage());
++				_game->getSavedGame()->setBattleGame(bgame);
++				_game->getSavedGame()->setDifficulty((GameDifficulty)_cbxDifficulty->getSelected());
++				BattlescapeGenerator bgen(_game);
++				bgen.setWorldShade(_slrDarkness->getValue());
++				const std::string terrain = sea && !AF.seaTerrain.empty() ? AF.seaTerrain : AF.defaultTerrain;
++				bgen.runAirFight(std::vector<Craft*>{jet}, u, terrain, false);
++				jet->setInBattlescape(true);
++				_game->popState();
++				_game->popState();
++				_game->pushState(new BriefingState(jet));
++				_craft = 0;
++				return;
++			}
++		}
++	}
++
+ 	SavedBattleGame *bgame = new SavedBattleGame(_game->getMod(), _game->getLanguage());
+ 	_game->getSavedGame()->setBattleGame(bgame);
+ 	bgame->setMissionType(_missionTypes[_cbxMission->getSelected()]);
 diff --git a/src/Menu/NewGameState.cpp b/src/Menu/NewGameState.cpp
 index a4e38dc..86e4537 100644
 --- a/src/Menu/NewGameState.cpp
