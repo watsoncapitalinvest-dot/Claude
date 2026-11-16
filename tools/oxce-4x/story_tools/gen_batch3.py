@@ -88,6 +88,22 @@ for i, n, c, deps, txt in [
  ('STR_FORWARD_OPERATIONS_1', 'Forward Operations I', 60, ['STR_FIELD_RADIO'], 'Supplying and commanding a second base far from The Pit. Lets G.I. Joe run two outdoor outposts.'),
  ('STR_FORWARD_OPERATIONS_2', 'Forward Operations II', 100, ['STR_FORWARD_OPERATIONS_1', 'STR_WATCH_TOWER'], 'Regional command: outposts that watch for each other. Lets G.I. Joe run three outdoor outposts.'),
  ('STR_FORWARD_OPERATIONS_3', 'Forward Operations III', 150, ['STR_FORWARD_OPERATIONS_2', 'STR_COBRA_DEPOTS'], 'A standing network of forward bases, placed where Cobra moves its goods. Lets G.I. Joe run four outdoor outposts.'),
+ # Outposts (claude/OUTPOSTS_v3.md, John 16 Nov 00:24-00:31): one topic per kind opens it and its basic add-ons, one upgrade topic its better ones.
+ ('STR_CAMP_FORTIFICATION', 'Camp Fortification', 80, ['STR_FORWARD_OPERATIONS_1'], 'Wire, towers and a proper gate. Forward camps can build watch towers, check points and outpost defenders.'),
+ ('STR_PORT_OPERATIONS', 'Port Operations', 80, ['STR_FORWARD_OPERATIONS_1'], 'Running a harbour of our own on a coast or a river. G.I. Joe can found port outposts, with piers for boats and ships.'),
+ ('STR_HARBOUR_WORKS', 'Harbour Works', 150, ['STR_PORT_OPERATIONS'], 'Cranes, a dry dock and guns on the breakwater. Ports can build a dry dock for repairs, a flak gun and a watch tower.'),
+ ('STR_JOE_CARGO_SHIP', 'Joe Cargo Ship', 150, ['STR_PORT_OPERATIONS'], 'A cargo ship of our own for supply runs between our bases by sea.'),
+ ('STR_FORWARD_AIRFIELDS', 'Forward Airfields', 80, ['STR_FORWARD_OPERATIONS_1'], 'A runway, a hangar and a tower anywhere we need fighters. G.I. Joe can found airstrip outposts.'),
+ ('STR_AIRFIELD_DEFENCE', 'Airfield Defence', 120, ['STR_FORWARD_AIRFIELDS'], 'Flak and radar for our airfields, the HQ airfield included.'),
+ ('STR_LISTENING_POSTS', 'Listening Posts', 80, ['STR_FORWARD_OPERATIONS_1'], 'A bunker and a dish on a mountain, listening to Cobra. Hard for Cobra to find.'),
+ ('STR_DEEP_COVER', 'Deep Cover', 120, ['STR_LISTENING_POSTS'], 'Camouflage nets and a defender for our listening posts. With the nets, Cobra almost never finds one.'),
+ ('STR_RESEARCH_ANNEX', 'Research Annex', 100, ['STR_FORWARD_OPERATIONS_1'], 'A secure laboratory away from The Pit, behind a defence contractor\'s name. G.I. Joe can found Research Lab outposts.'),
+ ('STR_ANNEX_EXPANSION', 'Annex Expansion', 150, ['STR_RESEARCH_ANNEX'], 'More quarters for scientists and a secure vault at the Research Lab outposts.'),
+ ('STR_FIELD_MANUFACTURING', 'Field Manufacturing', 100, ['STR_FORWARD_OPERATIONS_1'], 'A plant with a loading dock, making what The Pit has no room for. G.I. Joe can found Manufacturing outposts.'),
+ ('STR_PRODUCTION_LINES', 'Production Lines', 150, ['STR_FIELD_MANUFACTURING'], 'Stores sheds and a rail spur at the Manufacturing outposts: more stock, faster deliveries.'),
+ ('STR_TACTICAL_BATTLE_PLATFORM', 'Tactical Battle Platform', 300, ['STR_HARBOUR_WORKS', 'STR_FORWARD_OPERATIONS_2'], 'A fortified platform anchored on the open ocean: a pier, a helipad and its own guns, in waters no country owns.'),
+ ('STR_PLATFORM_ARMAMENT', 'Platform Armament', 200, ['STR_TACTICAL_BATTLE_PLATFORM'], 'Flak guns and radar for the Tactical Battle Platform.'),
+ ('STR_SECOND_PIT', 'A Second Pit', 400, ['STR_FORWARD_OPERATIONS_3'], 'Everything we learned building The Pit, done again somewhere else. G.I. Joe can found a second full headquarters, one more per act.'),
  # Pit surface spots (John 15 Nov 01:59-02:02: "2 +1 +1 with research"): the motor pool hides 2 surface facilities to start, 4 at most; the rest go to outposts.
  # STR_VAMP_RECOVERED is never researched by hand: BUILD's hook grants it when the junkyard mission is won, or one month after Clutch is rescued if it is lost (STORY_ClutchRescue_v1, John 17:10: no VAMP research before Clutch).
  ('STR_VAMP_RECOVERED', 'Clutch\'s VAMP', 1, ['STR_STORY_LOCK'], 'Clutch knows the VAMP bolt by bolt. With him in the Motor Pool we can build our own.'),
@@ -152,6 +168,7 @@ FUNDS = {
  'STR_LONG_RANGE_RADAR': 600000}
 FUNDS = {k: int(round(v * 0.75, -4)) for k, v in FUNDS.items()}   # John 21:38: research money cut by 25%
 FUNDS.update({'STR_FORWARD_OPERATIONS_1': 100000, 'STR_FORWARD_OPERATIONS_2': 200000, 'STR_FORWARD_OPERATIONS_3': 300000})   # after the cut (John 13 Nov 21:13)
+FUNDS.update({'STR_CAMP_FORTIFICATION': 100000, 'STR_PORT_OPERATIONS': 100000, 'STR_HARBOUR_WORKS': 150000, 'STR_JOE_CARGO_SHIP': 150000, 'STR_FORWARD_AIRFIELDS': 100000, 'STR_AIRFIELD_DEFENCE': 150000, 'STR_LISTENING_POSTS': 100000, 'STR_DEEP_COVER': 150000, 'STR_RESEARCH_ANNEX': 100000, 'STR_ANNEX_EXPANSION': 150000, 'STR_FIELD_MANUFACTURING': 100000, 'STR_PRODUCTION_LINES': 150000, 'STR_TACTICAL_BATTLE_PLATFORM': 300000, 'STR_PLATFORM_ARMAMENT': 200000, 'STR_SECOND_PIT': 500000})   # OUTPOSTS_v3 (16 Nov), first guesses
 FUNDS.update({'STR_OVERWATCH_DRILLS': 60000, 'STR_BREACHING_DRILLS': 80000, 'STR_FIRE_AND_MOVE': 90000})   # pitched after the cut (John 23:16-23:19)
 FUNDS.update({'STR_TRANSPORT_DOOR_GUNS': 60000, 'STR_TRANSPORT_ARMOR_PLATING': 90000, 'STR_TRANSPORT_COUNTERMEASURE_PODS': 70000})   # John 13 Nov 14:11 (dogfight design 3b)
 FUNDS.update({i: f for i, n, c, f, _ in HEAD_ONLY})   # John 14 Nov 00:51, after the cut
