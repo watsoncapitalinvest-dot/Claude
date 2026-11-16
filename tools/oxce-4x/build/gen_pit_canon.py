@@ -64,7 +64,8 @@ NAMES = {'STR_ACCESS_LIFT': 'Command Center', 'STR_HYPER_WAVE_DECODER': 'Signals
          'STR_LIVING_QUARTERS': 'Barracks', 'STR_INFIRMARY_ROOM': 'Infirmary', 'STR_LABORATORY': 'Lab Bench',
          'STR_PSIONIC_LABORATORY': 'Brainwave Laboratory', 'STR_MIND_SHIELD': 'Jammer',
          'STR_ALIEN_CONTAINMENT': 'Detention Block', 'STR_WORKSHOP': 'Workbench'}
-PRIVATE_SETS = ('PIT', 'PHATCH', 'PITB', 'PITART', 'PITFLR', 'PITC', 'PITROT')
+PRIVATE_SETS = ('PIT', 'PHATCH', 'PITB', 'PITART', 'PITFLR', 'PITC', 'PITROT',
+                'PITM', 'PITEXIT', 'PITDEC', 'PITVEH', 'PITTOMA', 'PITTUG', 'PITMECH')  # v29: ROSTER renders, John's kits, unknown-licence props: private
 
 
 def load_map(p):

@@ -4305,7 +4305,7 @@ index a0bc8b3..cdbe66c 100644
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..aacc0e7 100644
+index 7cd4941..7ea9762 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -1,3 +1,5 @@
@@ -4322,15 +4322,16 @@ index 7cd4941..aacc0e7 100644
  #include <algorithm>
  #include <sstream>
  #include <iomanip>
-@@ -88,6 +91,7 @@
+@@ -88,6 +91,8 @@
  #include "../Mod/RuleInventory.h"
  #include "../Mod/RuleSoldier.h"
  #include "../Mod/RuleVideo.h"
 +#include "../Engine/HiUI.h"
++#include "../Engine/CrossPlatform.h"
  
  namespace OpenXcom
  {
-@@ -137,7 +141,7 @@ BattlescapeState::BattlescapeState() :
+@@ -137,7 +142,7 @@ BattlescapeState::BattlescapeState() :
  
  	// Create the battlemap view
  	// the actual map height is the total height minus the height of the buttonbar
@@ -4339,7 +4340,7 @@ index 7cd4941..aacc0e7 100644
  
  	_numLayers = new NumberText(3, 5, x + 232, y + 6);
  	_rank = new Surface(26, 23, x + 107, y + 33);
-@@ -465,7 +469,7 @@ BattlescapeState::BattlescapeState() :
+@@ -465,7 +470,7 @@ BattlescapeState::BattlescapeState() :
  
  	_btnKneel->onMouseClick((ActionHandler)&BattlescapeState::btnKneelClick);
  	_btnKneel->onKeyboardPress((ActionHandler)&BattlescapeState::btnKneelClick, Options::keyBattleKneel);
@@ -4348,7 +4349,7 @@ index 7cd4941..aacc0e7 100644
  	_btnKneel->onMouseIn((ActionHandler)&BattlescapeState::txtTooltipIn);
  	_btnKneel->onMouseOut((ActionHandler)&BattlescapeState::txtTooltipOut);
  	_btnKneel->allowToggleInversion();
-@@ -724,6 +728,395 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +729,395 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
@@ -4744,7 +4745,7 @@ index 7cd4941..aacc0e7 100644
  }
  
  
-@@ -732,6 +1125,7 @@ BattlescapeState::BattlescapeState() :
+@@ -732,6 +1126,7 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -4752,7 +4753,7 @@ index 7cd4941..aacc0e7 100644
  	delete _animTimer;
  	delete _gameTimer;
  	delete _battleGame;
-@@ -789,6 +1183,12 @@ void BattlescapeState::init()
+@@ -789,6 +1184,12 @@ void BattlescapeState::init()
  	_map->draw();
  	_battleGame->init();
  	updateSoldierInfo();
@@ -4765,16 +4766,25 @@ index 7cd4941..aacc0e7 100644
  
  	switch (_save->getTUReserved())
  	{
-@@ -807,6 +1207,8 @@ void BattlescapeState::init()
+@@ -807,6 +1208,17 @@ void BattlescapeState::init()
  	}
  	if (_firstInit)
  	{
 +		_save->getTileEngine()->anchorStructure(); // G.I. Joe: what the map was drawn standing stays standing
++		{
++			// G.I. Joe: memory at battle start, so the part budget (MAPS: 1,500 a map) can be set from John's
++			// own 32-bit build. Address space used is what runs out first on 32-bit Windows.
++			long long usedMB = -1, totalMB = -1;
++			CrossPlatform::memoryUsedMB(usedMB, totalMB);
++			Log(LOG_INFO) << "[mem] battle start: " << usedMB << " MB used of " << totalMB << " MB address space; map "
++				<< _save->getMapSizeX() << "x" << _save->getMapSizeY() << "x" << _save->getMapSizeZ()
++				<< ", " << _save->getMapDataSets()->size() << " terrain sets";
++		}
 +
  		// Set music
  		if (Options::oxcePlayBriefingMusicDuringEquipment)
  		{
-@@ -859,6 +1261,7 @@ void BattlescapeState::init()
+@@ -859,6 +1271,7 @@ void BattlescapeState::init()
  void BattlescapeState::think()
  {
  	static bool popped = false;
@@ -4782,7 +4792,7 @@ index 7cd4941..aacc0e7 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1215,6 +1618,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1215,6 +1628,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -4803,7 +4813,7 @@ index 7cd4941..aacc0e7 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -2172,7 +2589,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +2599,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -4812,7 +4822,7 @@ index 7cd4941..aacc0e7 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +2809,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +2819,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -4820,7 +4830,7 @@ index 7cd4941..aacc0e7 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -3621,6 +4039,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4049,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -4833,7 +4843,7 @@ index 7cd4941..aacc0e7 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +4476,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4486,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -9290,10 +9300,34 @@ index 839f803..f2c6421 100644
    Savegame/BaseFacility.cpp
    Savegame/BattleItem.cpp
 diff --git a/src/Engine/CrossPlatform.cpp b/src/Engine/CrossPlatform.cpp
-index bea3b31..5ea0f2b 100644
+index bea3b31..0eef88f 100644
 --- a/src/Engine/CrossPlatform.cpp
 +++ b/src/Engine/CrossPlatform.cpp
-@@ -186,7 +186,7 @@ const std::vector<std::string>& getArgs() { return args; }
+@@ -97,6 +97,23 @@ namespace OpenXcom
+ {
+ namespace CrossPlatform
+ {
++
++void memoryUsedMB(long long &used, long long &total)
++{
++	used = -1; total = -1;
++#ifdef _WIN32
++	MEMORYSTATUSEX ms; ms.dwLength = sizeof(ms);
++	if (GlobalMemoryStatusEx(&ms))
++	{
++		total = (long long)(ms.ullTotalVirtual >> 20);
++		used = (long long)((ms.ullTotalVirtual - ms.ullAvailVirtual) >> 20);
++	}
++#else
++	std::ifstream st("/proc/self/status"); std::string ln;
++	while (std::getline(st, ln)) if (ln.rfind("VmRSS:", 0) == 0) used = std::stoll(ln.substr(6)) / 1024;
++#endif
++}
++
+ 	std::string errorDlg;
+ 
+ /**
+@@ -186,7 +203,7 @@ const std::vector<std::string>& getArgs() { return args; }
  void showError(const std::string &error)
  {
  #ifdef _WIN32
@@ -9302,6 +9336,19 @@ index bea3b31..5ea0f2b 100644
  	auto errorW = pathToWindows(error, false);
  	MessageBoxW(NULL, errorW.c_str(), titleW.c_str(), MB_ICONERROR | MB_OK);
  #else
+diff --git a/src/Engine/CrossPlatform.h b/src/Engine/CrossPlatform.h
+index 101d6c2..a0ad536 100644
+--- a/src/Engine/CrossPlatform.h
++++ b/src/Engine/CrossPlatform.h
+@@ -176,6 +176,8 @@ protected:
+  */
+ namespace CrossPlatform
+ {
++	/// G.I. Joe: memory in use (MB) and, on Windows, the process's address space (MB; -1 elsewhere)
++	void memoryUsedMB(long long &used, long long &total);
+ 	/// Retrieve and decode command-line arguments
+ 	void processArgs (int argc, char *argv[]);
+ 	/// Returns the command-line arguments
 diff --git a/src/Engine/Font.cpp b/src/Engine/Font.cpp
 index 1804fb9..7c50bf9 100644
 --- a/src/Engine/Font.cpp
@@ -14035,7 +14082,7 @@ index 2278d57..6fe30f4 100644
  		errorMessage = tr("STR_NO_FREE_HANGARS_FOR_TRANSFER");
  	}
 diff --git a/src/Geoscape/ConfirmNewBaseState.cpp b/src/Geoscape/ConfirmNewBaseState.cpp
-index 49e1f22..ba5b12a 100644
+index 49e1f22..c32f2b3 100644
 --- a/src/Geoscape/ConfirmNewBaseState.cpp
 +++ b/src/Geoscape/ConfirmNewBaseState.cpp
 @@ -23,6 +23,8 @@
@@ -14047,7 +14094,7 @@ index 49e1f22..ba5b12a 100644
  #include "../Savegame/SavedGame.h"
  #include "../Savegame/Region.h"
  #include "../Mod/RuleRegion.h"
-@@ -89,6 +91,47 @@ ConfirmNewBaseState::ConfirmNewBaseState(Base *base, Globe *globe) : _base(base)
+@@ -89,6 +91,48 @@ ConfirmNewBaseState::ConfirmNewBaseState(Base *base, Globe *globe) : _base(base)
  	_txtCost->setText(tr("STR_COST_").arg(Unicode::formatFunding(_cost)));
  
  	_txtArea->setText(tr("STR_AREA_").arg(area));
@@ -14068,6 +14115,7 @@ index 49e1f22..ba5b12a 100644
 +		_lstKinds->onMouseClick((ActionHandler)&ConfirmNewBaseState::lstKindsClick);
 +		for (const auto &k : R.kinds)
 +		{
++			if (k.byEvent) continue;   // handed over by a story event only (the HQ airfield)
 +			const std::string why = Outposts::whyNot(_game->getMod(), _game->getSavedGame(), k, _base->getLongitude(), _base->getLatitude());
 +			_kinds.push_back(&k);
 +			_why.push_back(why);
@@ -14095,7 +14143,7 @@ index 49e1f22..ba5b12a 100644
  }
  
  /**
-@@ -105,6 +148,13 @@ ConfirmNewBaseState::~ConfirmNewBaseState()
+@@ -105,6 +149,13 @@ ConfirmNewBaseState::~ConfirmNewBaseState()
   */
  void ConfirmNewBaseState::btnOkClick(Action *)
  {
@@ -14794,6 +14842,26 @@ index 9527579..ea222bc 100644
  	/// Sets up the funding countries list.
  	void init() override;
  	/// Sorts the funding countries list.
+diff --git a/src/Geoscape/GeoscapeEventState.cpp b/src/Geoscape/GeoscapeEventState.cpp
+index e609d3c..24a1628 100644
+--- a/src/Geoscape/GeoscapeEventState.cpp
++++ b/src/Geoscape/GeoscapeEventState.cpp
+@@ -42,6 +42,7 @@
+ #include "../Savegame/Region.h"
+ #include "../Savegame/ResearchDiary.h"
+ #include "../Savegame/SavedGame.h"
++#include "Outposts.h"
+ #include "../Savegame/Soldier.h"
+ #include "../Savegame/Transfer.h"
+ #include "../Ufopaedia/Ufopaedia.h"
+@@ -143,6 +144,7 @@ void GeoscapeEventState::eventLogic()
+ 	}
+ 
+ 	SavedGame *save = _game->getSavedGame();
++	Outposts::grantByEvent(_game->getMod(), save, _eventRule.getName());   // G.I. Joe: the HQ airfield arrives
+ 	Base *hq = save->getBases()->front();
+ 	const Mod *mod = _game->getMod();
+ 	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
 index 6b4e79d..0a6f570 100644
 --- a/src/Geoscape/GeoscapeState.cpp
@@ -18354,10 +18422,10 @@ index f1e9acc..618b326 100644
  		_fundingDiff += country->getFunding().back() - country->getFunding().at(country->getFunding().size()-2);
 diff --git a/src/Geoscape/Outposts.cpp b/src/Geoscape/Outposts.cpp
 new file mode 100644
-index 0000000..6395920
+index 0000000..24f17d2
 --- /dev/null
 +++ b/src/Geoscape/Outposts.cpp
-@@ -0,0 +1,231 @@
+@@ -0,0 +1,279 @@
 +/*
 + * G.I. Joe outposts (see Outposts.h).
 + */
@@ -18373,6 +18441,10 @@ index 0000000..6395920
 +#include "../Savegame/Base.h"
 +#include "../Savegame/BaseFacility.h"
 +#include "../Savegame/Craft.h"
++#include "../Savegame/Soldier.h"
++#include "../Savegame/ItemContainer.h"
++#include "../Mod/RuleSoldier.h"
++#include "../Mod/RuleItem.h"
 +#include "../Savegame/Country.h"
 +#include "../Savegame/Transfer.h"
 +#include "../Savegame/Production.h"
@@ -18494,6 +18566,50 @@ index 0000000..6395920
 +	}
 +}
 +
++Base *grantByEvent(const Mod *mod, SavedGame *save, const std::string &eventName)
++{
++	for (const auto &g : mod->getOutpostRules().grants)
++	{
++		if (std::find(g.events.begin(), g.events.end(), eventName) == g.events.end()) continue;
++		bool have = false;
++		for (const Base *b : *save->getBases()) if (b->getOutpostKind() == g.kind) have = true;
++		if (have || !kind(mod, g.kind)) continue;
++		Base *base = new Base(mod);
++		base->setLongitude(g.lon * M_PI / 180.0);
++		base->setLatitude(-g.lat * M_PI / 180.0);   // the ruleset gives north positive; the globe counts north negative
++		base->setName(g.name.empty() ? g.kind : g.name);
++		base->setOutpostKind(g.kind);
++		placeFixed(mod, base);
++		for (BaseFacility *f : *base->getFacilities()) f->setBuildTime(0);   // handed over finished
++		for (const auto &s : g.soldiers)
++		{
++			const RuleSoldier *rs = mod->getSoldier(s.first, false);
++			if (!rs) { Log(LOG_WARNING) << "[outpost] grant: no soldier type " << s.first; continue; }
++			for (int i = 0; i < s.second; ++i)
++				base->getSoldiers()->push_back(mod->genSoldier(save, rs, save->selectSoldierNationalityByLocation(mod, rs, base)));
++		}
++		for (const auto &c : g.crafts)
++		{
++			const RuleCraft *rc = mod->getCraft(c, false);
++			if (!rc) { Log(LOG_WARNING) << "[outpost] grant: no craft type " << c; continue; }
++			Craft *craft = new Craft(rc, base, save->getId(c));
++			craft->setFuel(rc->getMaxFuel());
++			craft->setStatus("STR_READY");
++			base->getCrafts()->push_back(craft);
++		}
++		for (const auto &it : g.items)
++		{
++			if (!mod->getItem(it.first, false)) { Log(LOG_WARNING) << "[outpost] grant: no item " << it.first; continue; }
++			base->getStorageItems()->addItem(mod->getItem(it.first), it.second);
++		}
++		save->getBases()->push_back(base);
++		Log(LOG_INFO) << "[outpost] " << eventName << " hands over " << g.kind << ": " << base->getSoldiers()->size()
++			<< " soldiers, " << base->getCrafts()->size() << " craft";
++		return base;
++	}
++	return nullptr;
++}
++
 +bool isFixed(const Mod *mod, const Base *base, int x, int y)
 +{
 +	const auto *k = kindOf(mod, base);
@@ -18591,10 +18707,10 @@ index 0000000..6395920
 +}
 diff --git a/src/Geoscape/Outposts.h b/src/Geoscape/Outposts.h
 new file mode 100644
-index 0000000..148b487
+index 0000000..67bd246
 --- /dev/null
 +++ b/src/Geoscape/Outposts.h
-@@ -0,0 +1,45 @@
+@@ -0,0 +1,47 @@
 +#pragma once
 +/*
 + * G.I. Joe outposts (claude/OUTPOSTS_v2_DECISIONS.md, John 14 Nov 15:40-16:31).
@@ -18627,6 +18743,8 @@ index 0000000..148b487
 +	std::string whyNot(const Mod *mod, const SavedGame *save, const Mod::OutpostKindRule &k, double lon, double lat);
 +	/// put the buildings an outpost comes with in place (under construction for its founding days)
 +	void placeFixed(const Mod *mod, Base *base);
++/// a story event popped: found any outpost it hands over (built, garrisoned; once). The new base, or null.
++Base *grantByEvent(const Mod *mod, SavedGame *save, const std::string &eventName);
 +	/// may this facility be built at this base, at grid (x, y): "" = yes, else the reason
 +	std::string canBuild(const Mod *mod, const Base *base, const RuleBaseFacility *rule, int x, int y);
 +	/// may this facility be listed for building at this base at all
@@ -21111,7 +21229,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..79a0952 100644
+index 1885346..40868a6 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -21249,7 +21367,7 @@ index 1885346..79a0952 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,529 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,547 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -21346,6 +21464,7 @@ index 1885346..79a0952 100644
 +				k.tryRead("goodwill", r.goodwill);
 +				k.tryRead("counts", r.counts);
 +				k.tryRead("pit", r.pit);
++				k.tryRead("byEvent", r.byEvent);
 +				k.tryRead("requires", r.requires);
 +				k.tryRead("pads", r.pads);
 +				k.tryRead("addons", r.addons);
@@ -21365,6 +21484,23 @@ index 1885346..79a0952 100644
 +				bool replaced = false;
 +				for (auto &old : _outposts.kinds) if (old.type == r.type) { old = r; replaced = true; }
 +				if (!replaced) _outposts.kinds.push_back(r);
++			}
++		}
++		if (const auto& gs = op["grants"])
++		{
++			_outposts.grants.clear();
++			for (const auto& g : gs.children())
++			{
++				OutpostGrant one;
++				g.tryRead("events", one.events);
++				g.tryRead("kind", one.kind);
++				g.tryRead("name", one.name);
++				g.tryRead("lon", one.lon);
++				g.tryRead("lat", one.lat);
++				g.tryRead("soldiers", one.soldiers);
++				g.tryRead("crafts", one.crafts);
++				g.tryRead("items", one.items);
++				_outposts.grants.push_back(one);
 +			}
 +		}
 +	}
@@ -21779,7 +21915,7 @@ index 1885346..79a0952 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3834,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3852,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -21787,7 +21923,7 @@ index 1885346..79a0952 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4439,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4457,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -21813,7 +21949,7 @@ index 1885346..79a0952 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4696,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4714,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -21834,7 +21970,7 @@ index 1885346..79a0952 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6410,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6428,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -21854,7 +21990,7 @@ index 1885346..79a0952 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6433,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6451,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -21862,7 +21998,7 @@ index 1885346..79a0952 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6447,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6465,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -21902,7 +22038,7 @@ index 1885346..79a0952 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..ef12490 100644
+index 2242d13..94e4f34 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -21966,7 +22102,7 @@ index 2242d13..ef12490 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,326 @@ private:
+@@ -327,6 +360,338 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -22198,15 +22334,27 @@ index 2242d13..ef12490 100644
 +		int goodwill = 20;                   ///< abroad: the country's goodwill it needs (the US: none; the ocean: none)
 +		bool counts = true;                  ///< counts against the outpost cap (an extra Pit doesn't)
 +		bool pit = false;                    ///< a full Pit: the normal room grid and access lift, no fixed buildings
++		bool byEvent = false;                ///< never founded by the player: a story event hands it over (the HQ airfield)
 +		std::vector<std::string> requires;   ///< research
 +		std::vector<OutpostFixed> fixed;     ///< buildings it comes with, in place on the base grid
 +		std::vector<std::vector<int>> pads;  ///< grid cells [x, y] where add-ons may be built
 +		std::vector<std::string> addons;     ///< facility types that may go on its pads
 +		std::string deployment;              ///< the raid map (a Cobra attack on it)
 +	};
++	/// an outpost a story event hands over, built and garrisoned (HQ_AIRFIELD_DESIGN_v1 s.0)
++	struct OutpostGrant
++	{
++		std::vector<std::string> events;     ///< any of these events popping founds it (once)
++		std::string kind, name;
++		double lon = 0, lat = 0;             ///< degrees, east and NORTH positive
++		std::map<std::string, int> soldiers; ///< soldier type -> count
++		std::vector<std::string> crafts;     ///< craft types, ready in its hangars
++		std::map<std::string, int> items;    ///< into its stores (vehicles are items)
++	};
 +	struct OutpostRules
 +	{
 +		bool on = false;
++		std::vector<OutpostGrant> grants;
 +		std::vector<OutpostKindRule> kinds;
 +		int capBase = 1;
 +		std::vector<std::string> capResearch;  ///< each one researched: one more outpost
@@ -22293,7 +22441,7 @@ index 2242d13..ef12490 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1045,124 @@ public:
+@@ -692,6 +1057,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
