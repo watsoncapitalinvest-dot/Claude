@@ -174,6 +174,30 @@ S['STR_EVENT_DROME_STRIKE_DESCRIPTION'] = P.join([
     "Radar has a wave of Firebats on it, and behind them Cobra transports, heading straight for {BASE}.",
     "HAWK: We didn't go to the Drome, so the Drome is coming to us. Everyone to battle stations. This is the one we've been building to.",
 ])
+# The climax, 16 Nov (Game Logic doc, Act 1 missions tab, cards 30-34)
+S['STR_BRIEFING_DROME_PLANS_TITLE'] = 'OPERATION: BLUEPRINT'
+S['STR_BRIEFING_DROME_PLANS'] = P.join([
+    "HAWK: Every prisoner we take says the same word now: Drome. Scarlett thinks it's a fortress, and that it's close.",
+    "This site holds the plans. An officer carries them, and he will try to burn them the moment he knows we're there. Go in quiet. Take him before he gets the chance.",
+    "If we get the plans, we know where it is and where its guns point. If we don't, we find it the hard way.",
+])
+S['STR_BRIEFING_DROME_ASSAULT_TITLE'] = 'OPERATION: DRAWBRIDGE'
+S['STR_BRIEFING_DROME_ASSAULT'] = P.join([
+    "HAWK: That's it. Cobra's Terror Drome. Firebats in the silo, anti-aircraft on every tower. Fly at it and we lose the aircraft.",
+    "But it was built to stop planes, not people. We go in on the ground. Take the command centre and the rest of it is just concrete.",
+    "Pick up their weapons when it's over. Somebody has been arming these people, and I want to know who.",
+])
+S['STR_BRIEFING_DROME_ASSAULT_UNFINISHED'] = P.join([
+    "HAWK: Cobra's Terror Drome, half built. The towers have no guns on them yet and the silo is an open hole.",
+    "This is the best chance we will ever get. Wreck the construction and it never opens. Leave it a month and we fight it finished.",
+    "Watch the crews. They're workmen with rifles, and they know the scaffolding better than you do.",
+])
+S['STR_EVENT_COBRA_RETREATS'] = 'COBRA PULLS OUT'
+S['STR_EVENT_COBRA_RETREATS_DESCRIPTION'] = P.join([
+    "SCARLETT: The front companies are shut. The factory is rubble. Their radio traffic has gone quiet across the whole region.",
+    "HAWK: They didn't lose a battle. They lost North America. Cobra doesn't quit, so they'll be somewhere else, rebuilding.",
+    "Roadblock, that last crate we seized. Tell me what's stamped under the paint.",
+])
 S['STR_BRIEFING_DROME_STRIKE_TITLE'] = 'OPERATION: HOLD THE LINE'
 S['STR_BRIEFING_DROME_STRIKE'] = P.join([
     "HAWK: Cobra's Terror Drome has sent everything it has at {BASE}. Troops, armour, aircraft overhead.",
@@ -277,6 +301,11 @@ CUT = {
     'STR_CUT_CLOSE_2': "Under the Cobra paint, a maker's mark: M.A.R.S.",
     'STR_CUT_CLOSE_3': "Somewhere far from Texas, someone is watching the footage.",
     'STR_CUT_CLOSE_4': "He has seen enough. He is interested.",
+    # 16 Nov (John 10:01-11:44, the Game Logic doc): incentivize, never force. The Drome can be found half-built,
+    # and Act 1 can end with Cobra's network broken (ending B). Same closing slides 2-4 after each.
+    'STR_CUT_DROME_C1': "Not finished. Scaffolding, cranes and half a wall. Cobra is still building it.",
+    'STR_CUT_CLOSE_U1': "The first Terror Drome never got its roof. What Cobra built, G.I. Joe tore down.",
+    'STR_CUT_CLOSE_C1': "No Drome. No factory. No front companies. Cobra is gone from North America, for now.",
 }
 S.update(CUT)
 
