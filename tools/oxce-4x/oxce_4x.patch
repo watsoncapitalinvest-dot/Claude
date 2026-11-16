@@ -4724,7 +4724,7 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..40c43f2 100644
+index 1951ba7..fed6900 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -16,10 +16,14 @@
@@ -5106,7 +5106,7 @@ index 1951ba7..40c43f2 100644
  
  	if (isPreview && ruleDeploy->isHidden())
  	{
-@@ -897,7 +1202,7 @@ void BattlescapeGenerator::run()
+@@ -897,13 +1202,13 @@ void BattlescapeGenerator::run()
  	{
  		enviro = _game->getMod()->getEnviroEffects(_terrain->getEnviroEffects());
  	}
@@ -5115,6 +5115,35 @@ index 1951ba7..40c43f2 100644
  
  	int civilianSpawnNodeRank = ruleDeploy->getCivilianSpawnNodeRank();
  	bool markCiviliansAsVIP = ruleDeploy->getMarkCiviliansAsVIP();
+ 
+ 	// Special case: deploy civilians before aliens
+-	if (!isPreview && civilianSpawnNodeRank > 0)
++	if (!isPreview && !_airRaidEmpty && civilianSpawnNodeRank > 0)
+ 	{
+ 		deployCivilians(markCiviliansAsVIP, civilianSpawnNodeRank, ruleDeploy->getCivilians());
+ 		for (auto& pair : ruleDeploy->getCiviliansByType())
+@@ -914,18 +1219,18 @@ void BattlescapeGenerator::run()
+ 
+ 	size_t unitCount = _save->getUnits()->size();
+ 
+-	if (!isPreview)
++	if (!isPreview && !_airRaidEmpty)
+ 	{
+ 		deployAliens(_alienCustomDeploy && !_alienCustomDeploy->getDeploymentData()->empty() ? _alienCustomDeploy : ruleDeploy);
+ 	}
+ 
+-	if (!isPreview && unitCount == _save->getUnits()->size())
++	if (!isPreview && !_airRaidEmpty && unitCount == _save->getUnits()->size())
+ 	{
+ 		throw Exception("Map generator encountered an error: no alien units could be placed on the map.");
+ 	}
+ 
+ 	// Normal case: deploy civilians after aliens
+-	if (!isPreview && civilianSpawnNodeRank == 0)
++	if (!isPreview && !_airRaidEmpty && civilianSpawnNodeRank == 0)
+ 	{
+ 		deployCivilians(markCiviliansAsVIP, civilianSpawnNodeRank, ruleDeploy->getCivilians());
+ 		for (auto& pair : ruleDeploy->getCiviliansByType())
 @@ -961,6 +1266,211 @@ void BattlescapeGenerator::run()
  	}
  }
@@ -5804,7 +5833,7 @@ index 1951ba7..40c43f2 100644
  	int x, y;
  
 diff --git a/src/Battlescape/BattlescapeGenerator.h b/src/Battlescape/BattlescapeGenerator.h
-index a0bc8b3..d359703 100644
+index a0bc8b3..9882f6e 100644
 --- a/src/Battlescape/BattlescapeGenerator.h
 +++ b/src/Battlescape/BattlescapeGenerator.h
 @@ -54,6 +54,10 @@ class Position;
@@ -5812,7 +5841,7 @@ index a0bc8b3..d359703 100644
  {
  private:
 +
-+	bool _airRaid = false;
++	bool _airRaid = false, _airRaidEmpty = false;
 +	bool _siteFixed = false;   ///< G.I. Joe: a bombed site, built from its own seed with a fixed landing zone
 +	void fixedLandingZone(int &w, int &h) const;
  	Game *_game;
@@ -5842,12 +5871,14 @@ index a0bc8b3..d359703 100644
  	/// Populates _verticalLevels vector according to a mapscript command and sorts them for use
  	bool populateVerticalLevels(MapScript *command);
  	/// Gets a terrain from a terrain name for a command or a vertical level
-@@ -190,10 +204,17 @@ public:
+@@ -190,10 +204,19 @@ public:
  	void setMissionSite(MissionSite* mission);
  	/// Sets the alien base
  	void setAlienBase(AlienBase* base);
 +	/// G.I. Joe: an AIR RAID (Geoscape/AirRaid): the site's map and garrison, no Joes on the ground
 +	void setAirRaid(bool on) { _airRaid = on; }
++	/// ... and with nobody on the map at all (Cobra bombing a Joe outpost)
++	void setAirRaidEmpty(bool on) { _airRaidEmpty = on; }
 +	/// G.I. Joe air raids: what the bombs broke, laid back over a bombed site's map
 +	void applySiteWreck();
  	/// Sets the terrain.
@@ -15501,10 +15532,10 @@ index 0000000..29cbe70
 +}
 diff --git a/src/Geoscape/AirRaid.cpp b/src/Geoscape/AirRaid.cpp
 new file mode 100644
-index 0000000..b5f0a79
+index 0000000..aa61c1f
 --- /dev/null
 +++ b/src/Geoscape/AirRaid.cpp
-@@ -0,0 +1,580 @@
+@@ -0,0 +1,790 @@
 +#include "AirRaid.h"
 +#include <algorithm>
 +#include <cmath>
@@ -15526,6 +15557,10 @@ index 0000000..b5f0a79
 +#include "../Mod/Mod.h"
 +#include "../Mod/MapData.h"
 +#include "../Mod/MapDataSet.h"
++#include "../Mod/RuleBaseFacility.h"
++#include "../Savegame/BaseFacility.h"
++#include "../Engine/Unicode.h"
++#include "Outposts.h"
 +#include "../Mod/AlienRace.h"
 +#include "../Mod/AlienDeployment.h"
 +#include "../Mod/RuleCraft.h"
@@ -15816,6 +15851,107 @@ index 0000000..b5f0a79
 +	refresh();
 +}
 +
++AirRaidState::AirRaidState(Base *outpost, int planes) : _outpost(outpost), _defend(true)
++{
++	_screen = true;
++	const Mod *mod = _game->getMod();
++	const auto &R = mod->getAirRaidRules();
++
++	_window = new Window(this, 320, 200, 0, 0, POPUP_NONE);
++	_txtTitle = new Text(310, 14, 5, 4);
++	_map = new AirRaidMapView(188, 176, 4, 20);
++	_txtInfo = new Text(118, 40, 196, 20);
++	_txtResult = new Text(118, 150, 196, 20);
++	_btnFly = new TextButton(56, 16, 196, 180);
++	_btnCancel = new TextButton(56, 16, 258, 180);
++	setInterface("confirmLanding");
++	add(_window, "window", "confirmLanding");
++	add(_txtTitle, "text", "confirmLanding");
++	add(_map);
++	add(_txtInfo, "text", "confirmLanding");
++	add(_txtResult, "text", "confirmLanding");
++	add(_btnFly, "button", "confirmLanding");
++	add(_btnCancel, "button", "confirmLanding");
++
++	// the outpost's battle map, nobody on it (phase 3 does not hurt people yet)
++	SavedBattleGame *bgame = new SavedBattleGame(_game->getMod(), _game->getLanguage());
++	_game->getSavedGame()->setBattleGame(bgame);
++	bgame->setMissionType("STR_BASE_DEFENSE");
++	BattlescapeGenerator bgen(_game);
++	bgen.setBase(outpost);
++	bgen.setAlienRace("STR_COBRA");
++	bgen.setAirRaid(true);
++	bgen.setAirRaidEmpty(true);
++	bgen.run();
++	outpost->setInBattlescape(false);
++	Tile::destroyedLog.clear();
++	const int W = bgame->getMapSizeX(), H = bgame->getMapSizeY();
++
++	// Cobra's plan, in secret: a speed each, and a module each - the guns first, then the rest (s.6)
++	std::vector<BaseFacility*> guns, rest;
++	for (auto *f : *outpost->getFacilities())
++	{
++		if (f->getBuildTime() > 0 || f->getRules()->isLift()) continue;
++		(R.facilityGuns.count(f->getRules()->getType()) ? guns : rest).push_back(f);
++	}
++	std::vector<std::pair<int, int> > aims;
++	for (int y = 0; y < H; ++y)
++		for (int x = 0; x < W; ++x)
++			if (AirRaid::structure(bgame, x, y)) aims.push_back({ x, y });
++	for (int i = 0; i < planes; ++i)
++	{
++		AirRaid::Plane p;
++		const int r = RNG::generate(0, 99);
++		p.speed = r < 20 ? 0 : r < 60 ? 1 : 2;
++		p.bombs = 2;
++		std::vector<BaseFacility*> &pool = !guns.empty() ? guns : rest;
++		BaseFacility *target = pool.empty() ? nullptr : pool[RNG::generate(0, (int)pool.size() - 1)];
++		if (target && !guns.empty()) guns.erase(std::find(guns.begin(), guns.end(), target));
++		_planeTargets.push_back(target);
++		auto a = aims.empty() ? std::make_pair(W / 2, H / 2) : aims[RNG::generate(0, (int)aims.size() - 1)];
++		p.tx = a.first; p.ty = a.second;
++		_planes.push_back(p);
++	}
++	// the outpost's guns, a row per shot: left-click picks the plane, right-click the lead
++	int k = 0;
++	for (auto *f : *outpost->getFacilities())
++	{
++		if (f->getBuildTime() > 0) continue;
++		auto fg = R.facilityGuns.find(f->getRules()->getType());
++		if (fg == R.facilityGuns.end()) continue;
++		auto g = R.guns.find(fg->second);
++		if (g == R.guns.end()) continue;
++		for (int s = 0; s < g->second.shots && _shots.size() < 10; ++s, ++k)
++		{
++			Shot sh; sh.gun = fg->second; sh.plane = k % std::max(1, planes); sh.lead = 1;
++			_shots.push_back(sh);
++		}
++	}
++	for (size_t i = 0; i < _shots.size(); ++i)
++	{
++		auto *b = new TextButton(118, 12, 196, 62 + (int)i * 11);
++		add(b, "button", "confirmLanding");
++		b->onMouseClick((ActionHandler)&AirRaidState::btnShotClick, SDL_BUTTON_LEFT);
++		b->onMouseClick((ActionHandler)&AirRaidState::btnShotRightClick, SDL_BUTTON_RIGHT);
++		_btnShots.push_back(b);
++	}
++	centerAllSurfaces();
++	setWindowBackground(_window, "confirmLanding");
++
++	// planes are listed only once the pass is flown
++	_map->setup(mod, bgame, nullptr, &_impacts);
++	_txtTitle->setBig();
++	_txtTitle->setAlign(ALIGN_CENTER);
++	_txtTitle->setText(tr("STR_AR_DEFEND_TITLE").arg(outpost->getName(_game->getLanguage())));
++	_txtInfo->setWordWrap(true);
++	_txtResult->setWordWrap(true);
++	_txtResult->setVisible(false);
++	_btnFly->onMouseClick((ActionHandler)&AirRaidState::btnFlyClick);
++	_btnFly->onKeyboardPress((ActionHandler)&AirRaidState::btnFlyClick, Options::keyOk);
++	_btnCancel->setVisible(false);
++	refresh();
++}
++
 +AirRaidState::~AirRaidState()
 +{
 +}
@@ -15824,7 +15960,22 @@ index 0000000..b5f0a79
 +{
 +	const Mod *mod = _game->getMod();
 +	const auto &R = mod->getAirRaidRules();
-+	if (!_flown)
++	if (!_flown && _defend)
++	{
++		std::ostringstream ss;
++		ss << tr("STR_AR_DEFEND_PLAN").arg((int)_planes.size()).arg(tr(R.bomberName));
++		if (_shots.empty()) ss << "\n" << tr("STR_AR_NO_GUNS");
++		_txtInfo->setText(ss.str());
++		for (size_t i = 0; i < _btnShots.size(); ++i)
++		{
++			const auto &sh = _shots[i];
++			std::ostringstream s;
++			s << tr(sh.gun) << " > " << tr(R.bomberName) << " " << (sh.plane + 1) << " - " << tr("STR_AR_LEAD") << " " << tr(AirRaid::speedName(sh.lead));
++			_btnShots[i]->setText(s.str());
++			_btnShots[i]->setVisible(!_flown);
++		}
++	}
++	else if (!_flown)
 +	{
 +		// what the Joes know of the defence: the guns this kind of site has (stand-in table, phase 1)
 +		std::map<std::string, int> guns;
@@ -15837,25 +15988,43 @@ index 0000000..b5f0a79
 +		_txtInfo->setText(ss.str());
 +	}
 +	bool ready = !_planes.empty();
-+	for (size_t i = 0; i < _planes.size(); ++i)
++	for (size_t i = 0; i < _planes.size() && i < _btnPlanes.size(); ++i)
 +	{
 +		const auto &p = _planes[i];
 +		std::ostringstream s;
-+		s << (int)(i + 1) << ". " << p.craft->getName(_game->getLanguage()) << " - " << tr(AirRaid::speedName(p.speed));
-+		s << (p.tx < 0 ? " - ?" : "");
++		if (p.craft) s << (int)(i + 1) << ". " << p.craft->getName(_game->getLanguage()) << " - " << tr(AirRaid::speedName(p.speed));
++		else s << tr(R.bomberName) << " " << (int)(i + 1) << (_flown ? " - " + std::string(tr(AirRaid::speedName(p.speed))) : "");   // its speed is Cobra's secret until the pass
++		if (p.craft) s << (p.tx < 0 ? " - ?" : "");
 +		if (_flown) s << (p.down ? " - " + std::string(tr("STR_AR_DOWN")) : "");
 +		_btnPlanes[i]->setText(s.str());
 +		if (p.tx < 0) ready = false;
 +	}
++	if (_defend) ready = true;
 +	_btnFly->setVisible(!_flown ? ready : true);
-+	_btnFly->setText(tr(_flown ? "STR_OK" : "STR_AR_FLY"));
-+	_btnCancel->setVisible(!_flown);
++	_btnFly->setText(tr(_flown ? "STR_OK" : _defend ? "STR_AR_FIRE" : "STR_AR_FLY"));
++	_btnCancel->setVisible(!_flown && !_defend);
 +	_map->setSelected(_selected);
++}
++
++void AirRaidState::btnShotClick(Action *action)
++{
++	if (_flown || _planes.empty()) return;
++	for (size_t i = 0; i < _btnShots.size(); ++i)
++		if (action->getSender() == _btnShots[i]) _shots[i].plane = (_shots[i].plane + 1) % (int)_planes.size();
++	refresh();
++}
++
++void AirRaidState::btnShotRightClick(Action *action)
++{
++	if (_flown) return;
++	for (size_t i = 0; i < _btnShots.size(); ++i)
++		if (action->getSender() == _btnShots[i]) _shots[i].lead = (_shots[i].lead + 1) % 3;
++	refresh();
 +}
 +
 +void AirRaidState::btnPlaneClick(Action *action)
 +{
-+	if (_flown) return;
++	if (_flown || _defend) return;
 +	for (size_t i = 0; i < _btnPlanes.size(); ++i)
 +	{
 +		if (action->getSender() != _btnPlanes[i]) continue;
@@ -15868,7 +16037,7 @@ index 0000000..b5f0a79
 +
 +void AirRaidState::mapClick(Action *)
 +{
-+	if (_flown || _planes.empty()) return;
++	if (_flown || _planes.empty() || _defend) return;
 +	int x, y;
 +	if (!_map->tileUnderMouse(x, y)) return;
 +	_planes[_selected].tx = x;
@@ -15903,45 +16072,64 @@ index 0000000..b5f0a79
 +	std::ostringstream log;
 +	const int W = save->getMapSizeX(), H = save->getMapSizeY();
 +
-+	// 1. the guns fire first, every shot from every gun (Cobra's guns plan blind: a plane and a lead per shot)
-+	auto it = R.siteGuns.find(_siteType);
-+	int nShot = 0;
-+	if (it != R.siteGuns.end())
-+		for (const auto &gunType : it->second)
-+		{
-+			auto g = R.guns.find(gunType);
-+			if (g == R.guns.end()) continue;
-+			const auto &gun = g->second;
-+			for (int s = 0; s < gun.shots; ++s, ++nShot)
++	// 1. the guns fire first, every shot from every gun; each was planned blind: a plane and a lead
++	std::vector<Shot> shots;
++	if (_defend) shots = _shots;   // the player's plan
++	else
++	{
++		// Cobra's guns: a lead guessed per shot, spread over the planes still flying
++		auto it = R.siteGuns.find(_siteType);
++		if (it != R.siteGuns.end())
++			for (const auto &gunType : it->second)
 +			{
-+				std::vector<int> alive;
-+				for (size_t i = 0; i < _planes.size(); ++i) if (!_planes[i].down) alive.push_back((int)i);
-+				if (alive.empty()) break;
-+				const int pi = alive[nShot % alive.size()];
-+				auto &p = _planes[pi];
-+				const int roll = RNG::generate(0, 99);
-+				const int lead = roll < 25 ? 0 : roll < 65 ? 1 : 2;       // its guess at the plane's speed
-+				const int d = std::abs(lead - p.speed);
-+				bool hit = false, graze = false;
-+				if (gun.kind == "mg") hit = p.speed == 0 && d == 0 && RNG::percent(gun.chance);   // low planes only
-+				else if (gun.kind == "missile") hit = RNG::percent(d == 0 ? gun.chance : gun.chance / 2);
-+				else if (gun.kind == "aa" || gun.kind == "flak") { if (d == 0) hit = RNG::percent(gun.chance); else if (d == 1) graze = true; }
-+				else { if (d == 0) hit = RNG::percent(gun.chance); else if (d == 1) hit = RNG::percent(gun.chance / 2); }
-+				log << tr(gunType) << " > " << (pi + 1) << ": ";
-+				if (hit)
++				auto g = R.guns.find(gunType);
++				if (g == R.guns.end()) continue;
++				for (int s = 0; s < g->second.shots; ++s)
 +				{
-+					if (p.hit || RNG::percent(R.downOnHit)) { p.down = true; log << tr("STR_AR_SHOT_DOWN"); }
-+					else { p.hit = true; log << tr("STR_AR_SHOT_HIT"); }
-+					if (gun.kind == "flak")
-+						for (auto &o : _planes)
-+							if (&o != &p && !o.down && std::abs(o.tx - p.tx) <= R.flakSplash && std::abs(o.ty - p.ty) <= R.flakSplash)
-+								o.grazes++;
++					Shot sh; sh.gun = gunType; sh.plane = -1;
++					const int roll = RNG::generate(0, 99);
++					sh.lead = roll < 25 ? 0 : roll < 65 ? 1 : 2;
++					shots.push_back(sh);
 +				}
-+				else if (graze) { p.grazes++; log << tr("STR_AR_SHOT_GRAZE"); }
-+				else log << tr("STR_AR_SHOT_MISS");
-+				log << "\n";
 +			}
++	}
++	int nShot = 0;
++	for (const auto &sh : shots)
++	{
++		auto g = R.guns.find(sh.gun);
++		if (g == R.guns.end()) continue;
++		const auto &gun = g->second;
++		int pi = sh.plane;
++		if (pi < 0)
++		{
++			std::vector<int> alive;
++			for (size_t i = 0; i < _planes.size(); ++i) if (!_planes[i].down) alive.push_back((int)i);
++			if (alive.empty()) break;
++			pi = alive[nShot++ % alive.size()];
 +		}
++		if (pi >= (int)_planes.size()) continue;
++		auto &p = _planes[pi];
++		log << tr(sh.gun) << " > " << (pi + 1) << ": ";
++		if (p.down) { log << tr("STR_AR_SHOT_ALREADY_DOWN") << "\n"; continue; }
++		const int d = std::abs(sh.lead - p.speed);
++		bool hit = false, graze = false;
++		if (gun.kind == "mg") hit = p.speed == 0 && d == 0 && RNG::percent(gun.chance);   // low planes only
++		else if (gun.kind == "missile") hit = RNG::percent(d == 0 ? gun.chance : gun.chance / 2);
++		else if (gun.kind == "aa" || gun.kind == "flak") { if (d == 0) hit = RNG::percent(gun.chance); else if (d == 1) graze = true; }
++		else { if (d == 0) hit = RNG::percent(gun.chance); else if (d == 1) hit = RNG::percent(gun.chance / 2); }
++		if (hit)
++		{
++			if (p.hit || RNG::percent(R.downOnHit)) { p.down = true; log << tr("STR_AR_SHOT_DOWN"); }
++			else { p.hit = true; log << tr("STR_AR_SHOT_HIT"); }
++			if (gun.kind == "flak")
++				for (auto &o : _planes)
++					if (&o != &p && !o.down && std::abs(o.tx - p.tx) <= R.flakSplash && std::abs(o.ty - p.ty) <= R.flakSplash)
++						o.grazes++;
++		}
++		else if (graze) { p.grazes++; log << tr("STR_AR_SHOT_GRAZE"); }
++		else log << tr("STR_AR_SHOT_MISS");
++		log << "\n";
++	}
 +
 +	// 2. every plane still flying drops on its target; every bomb lands somewhere
 +	int unitsBefore = 0, hpBefore = 0;
@@ -16021,6 +16209,7 @@ index 0000000..b5f0a79
 +	for (auto *u : *save->getUnits()) if (u->getOriginalFaction() == FACTION_HOSTILE && u->getHealth() > 0) { ++unitsAfter; hpAfter += u->getHealth(); }
 +	const std::vector<const MapData*> after = snapshot();
 +	// what broke stays broken until Cobra repairs it: record it on the site, newest over oldest
++	if (_base)
 +	{
 +		std::map<std::string, std::string> wreck;
 +		for (const auto &line : _base->getWreck())
@@ -16050,16 +16239,57 @@ index 0000000..b5f0a79
 +	}
 +	int parts = 0, standing = 0;
 +	for (size_t i = 0; i < before.size(); ++i) { if (before[i]) ++standing; if (before[i] && before[i] != after[i]) ++parts; }
-+	const int lossPct = std::min(R.lossCap, parts * 100 * R.lossScale / std::max(1, standing));
-+	const int taken = _game->getSavedGame()->cobraBombed(_base, mod, lossPct);
 +	std::ostringstream res;
-+	res << tr("STR_AR_RESULT").arg(parts).arg(unitsBefore - unitsAfter).arg(std::max(0, hpBefore - hpAfter - 0)).arg(taken) << "\n\n" << log.str();
++	int lossPct = 0, taken = 0;
++	if (_defend)
++	{
++		// the outpost: a direct hit wrecks the module the plane was after, a near miss damages the one beside it;
++		// either way it is out until repaired (half the build cost now, half the build days: AIR_RAID_DESIGN_v1 s.1)
++		std::vector<BaseFacility*> hitList;
++		int down = 0;
++		for (size_t i = 0; i < _planes.size(); ++i)
++		{
++			if (_planes[i].down) { ++down; continue; }
++			int kind = 3;
++			for (const auto &im : _impacts) if (im.plane == (int)i) { kind = im.kind; break; }
++			BaseFacility *f = nullptr;
++			if (kind == 0) f = i < _planeTargets.size() ? _planeTargets[i] : nullptr;
++			else if (kind == 1)
++			{
++				std::vector<BaseFacility*> others;
++				for (auto *g : *_outpost->getFacilities())
++					if (g != (i < _planeTargets.size() ? _planeTargets[i] : nullptr) && g->getBuildTime() == 0 && !g->getRules()->isLift()) others.push_back(g);
++				if (!others.empty()) f = others[RNG::generate(0, (int)others.size() - 1)];
++			}
++			if (f && f->getBuildTime() == 0 && std::find(hitList.begin(), hitList.end(), f) == hitList.end()) hitList.push_back(f);
++		}
++		int cost = 0;
++		for (auto *f : hitList)
++		{
++			f->setBuildTime(std::max(1, f->getRules()->getBuildTime() / 2));
++			cost += f->getRules()->getBuildCost() / 2;
++			_hitReport.push_back(tr(f->getRules()->getType()));
++		}
++		_game->getSavedGame()->setFunds(_game->getSavedGame()->getFunds() - cost);
++		std::ostringstream wrecked;
++		for (size_t j = 0; j < _hitReport.size(); ++j) wrecked << (j ? ", " : "") << _hitReport[j];
++		res << tr("STR_AR_DEFEND_RESULT").arg(down).arg((int)_planes.size()).arg(_hitReport.empty() ? std::string(tr("STR_AR_NOTHING")) : wrecked.str()).arg(Unicode::formatFunding(cost))
++			<< "\n\n" << log.str();
++		lossPct = (int)hitList.size();
++	}
++	else
++	{
++		lossPct = std::min(R.lossCap, parts * 100 * R.lossScale / std::max(1, standing));
++		taken = _game->getSavedGame()->cobraBombed(_base, mod, lossPct);
++		res << tr("STR_AR_RESULT").arg(parts).arg(unitsBefore - unitsAfter).arg(std::max(0, hpBefore - hpAfter - 0)).arg(taken) << "\n\n" << log.str();
++	}
 +	_txtInfo->setVisible(false);
 +	_txtResult->setVisible(true);
 +	_txtResult->setText(res.str());
-+	Log(LOG_INFO) << "[airraid] " << _siteType << ": " << _impacts.size() << " bombs, " << parts << " parts destroyed, "
++	Log(LOG_INFO) << "[airraid] " << (_defend ? std::string("defence") : _siteType) << ": " << _impacts.size() << " bombs, " << parts << " parts destroyed, "
 +		<< (unitsBefore - unitsAfter) << " Cobra down, " << lossPct << "% loss (" << taken << ")";
 +	for (auto *b : _btnPlanes) b->setVisible(false);
++	for (auto *b : _btnShots) b->setVisible(false);
 +	_flown = true;
 +	refresh();
 +}
@@ -16067,6 +16297,17 @@ index 0000000..b5f0a79
 +void AirRaidState::finish()
 +{
 +	const auto &R = _game->getMod()->getAirRaidRules();
++	if (_defend)
++	{
++		int down = 0;
++		for (auto &p : _planes) if (p.down) ++down;
++		_game->getSavedGame()->cobraBombersLost(_game->getMod(), _outpost, down);
++		_outpost->addAirRaid();
++		_game->getSavedGame()->setBattleGame(nullptr);
++		_outpost->setInBattlescape(false);
++		_game->popState();
++		return;
++	}
 +	GeoscapeState::AirFightResult res;
 +	for (auto &p : _planes)
 +	{
@@ -16087,10 +16328,10 @@ index 0000000..b5f0a79
 +}
 diff --git a/src/Geoscape/AirRaid.h b/src/Geoscape/AirRaid.h
 new file mode 100644
-index 0000000..3d7fb2c
+index 0000000..ee4483e
 --- /dev/null
 +++ b/src/Geoscape/AirRaid.h
-@@ -0,0 +1,102 @@
+@@ -0,0 +1,116 @@
 +#pragma once
 +/*
 + * G.I. Joe: AIR RAIDS, phase 1 - the Joes bomb a Cobra site (claude/AIR_RAID_DESIGN_v1.md; BRIEF_FOR_BUILD_AirRaids;
@@ -16119,6 +16360,8 @@ index 0000000..3d7fb2c
 +class AlienBase;
 +class SavedBattleGame;
 +class Texture;
++class Base;
++class BaseFacility;
 +class Window;
 +class Text;
 +class TextButton;
@@ -16169,7 +16412,15 @@ index 0000000..3d7fb2c
 +/// The raid: plan, the pass, the results.
 +class AirRaidState : public State
 +{
-+	AlienBase *_base;
++	AlienBase *_base = nullptr;
++	// phase 3: Cobra bombs a Joe outpost; the player is the defence
++	Base *_outpost = nullptr;
++	bool _defend = false;
++	struct Shot { std::string gun; int plane = 0; int lead = 1; };
++	std::vector<Shot> _shots;
++	std::vector<TextButton*> _btnShots;
++	std::vector<BaseFacility*> _planeTargets;   ///< what each Cobra plane is after (defend)
++	std::vector<std::string> _hitReport;
 +	Window *_window;
 +	Text *_txtTitle, *_txtInfo, *_txtResult;
 +	AirRaidMapView *_map;
@@ -16185,6 +16436,10 @@ index 0000000..3d7fb2c
 +	void finish();
 +public:
 +	AirRaidState(Craft *craft, AlienBase *base, Texture *missionTexture, Texture *globeTexture, int shade);
++	/// Cobra's bombers over a Joe outpost (phase 3)
++	AirRaidState(Base *outpost, int planes);
++	void btnShotClick(Action *action);
++	void btnShotRightClick(Action *action);
 +	~AirRaidState();
 +	void btnPlaneClick(Action *action);
 +	void mapClick(Action *action);
@@ -17393,7 +17648,7 @@ index e609d3c..24a1628 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..433c2b4 100644
+index 6b4e79d..1b58a8f 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,15 @@
@@ -18360,12 +18615,22 @@ index 6b4e79d..433c2b4 100644
  			}
  			else
  			{
-@@ -2389,12 +3013,294 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3013,304 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
 +	Shipping::daily(_game);   // G.I. Joe: analysts work the open ship files
 +	_game->getSavedGame()->cobraRepairDaily(_game->getMod());   // G.I. Joe: Cobra repairs what the Joes bombed
++	{
++		// G.I. Joe air raids, phase 3: Cobra's Rattlers come for an outpost it has found
++		int planes = 0;
++		if (Base *target = _game->getSavedGame()->cobraAirRaidToday(_game->getMod(), planes))
++		{
++			Log(LOG_INFO) << "[airraid] Cobra bombs " << target->getName(_game->getLanguage()) << " with " << planes;
++			timerReset();
++			popup(new AirRaidState(target, planes));
++		}
++	}
  	_game->getSavedGame()->increaseDaysPassed();
  
  	SavedGame *saveGame = _game->getSavedGame();
@@ -18655,7 +18920,7 @@ index 6b4e79d..433c2b4 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3350,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3360,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -18678,7 +18943,7 @@ index 6b4e79d..433c2b4 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2861,7 +3776,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +3786,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -18707,7 +18972,7 @@ index 6b4e79d..433c2b4 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +3896,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +3906,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -18738,7 +19003,7 @@ index 6b4e79d..433c2b4 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4082,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4092,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -18748,7 +19013,7 @@ index 6b4e79d..433c2b4 100644
  }
  
  /**
-@@ -3265,6 +4226,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4236,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -18764,7 +19029,7 @@ index 6b4e79d..433c2b4 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4312,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4322,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -18817,7 +19082,7 @@ index 6b4e79d..433c2b4 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4380,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4390,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -19069,7 +19334,7 @@ index 6b4e79d..433c2b4 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +5908,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +5918,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -23772,7 +24037,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..99bc4fd 100644
+index 1885346..862bb70 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -23910,7 +24175,7 @@ index 1885346..99bc4fd 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,635 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,643 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -24208,6 +24473,14 @@ index 1885346..99bc4fd 100644
 +		ar.tryRead("hitDamage", _airRaid.hitDamage);
 +		ar.tryRead("lossScale", _airRaid.lossScale);
 +		ar.tryRead("repairDays", _airRaid.repairDays);
++		ar.tryRead("threatByKind", _airRaid.threatByKind);
++		ar.tryRead("facilityGuns", _airRaid.facilityGuns);
++		ar.tryRead("chancePerThreat", _airRaid.chancePerThreat);
++		ar.tryRead("chanceCap", _airRaid.chanceCap);
++		ar.tryRead("rangeKm", _airRaid.rangeKm);
++		ar.tryRead("maxPlanes", _airRaid.maxPlanes);
++		ar.tryRead("bomberRebuildDays", _airRaid.bomberRebuildDays);
++		ar.tryRead("bomberName", _airRaid.bomberName);
 +		ar.tryRead("lossCap", _airRaid.lossCap);
 +	}
 +	if (const auto& sb = reader["pitSurfaceBattle"])
@@ -24546,7 +24819,7 @@ index 1885346..99bc4fd 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3940,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3948,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -24554,7 +24827,7 @@ index 1885346..99bc4fd 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4545,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4553,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -24580,7 +24853,7 @@ index 1885346..99bc4fd 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4802,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4810,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -24601,7 +24874,7 @@ index 1885346..99bc4fd 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6516,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6524,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -24621,7 +24894,7 @@ index 1885346..99bc4fd 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6539,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6547,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -24629,7 +24902,7 @@ index 1885346..99bc4fd 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6553,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6561,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -24669,7 +24942,7 @@ index 1885346..99bc4fd 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..fb9a889 100644
+index 2242d13..a705694 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -24733,7 +25006,7 @@ index 2242d13..fb9a889 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,413 @@ private:
+@@ -327,6 +360,420 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -24960,6 +25233,13 @@ index 2242d13..fb9a889 100644
 +		int lightPower = 120, lightRadius = 4, heavyPower = 200, heavyRadius = 6;
 +		int grazeDamage = 10, hitDamage = 50;                      ///< % of a craft's hull a graze / a hit takes
 +		int repairDays = 10;                                       ///< Cobra's repair of a bombed site (it pays half the build cost)
++		// phase 3: Cobra raids the Joes' outposts
++		std::map<std::string, int> threatByKind;                   ///< outpost kind -> its base threat (s.1)
++		std::map<std::string, std::string> facilityGuns;           ///< Joe facility type -> the gun it fires as
++		int chancePerThreat = 10, chanceCap = 60;                  ///< monthly raid chance on a found outpost, %
++		int rangeKm = 3000;                                        ///< a Rattler's reach from its airstrip
++		int maxPlanes = 6, bomberRebuildDays = 14;
++		std::string bomberName = "STR_AR_RATTLER";
 +		int lossScale = 3, lossCap = 60;                           ///< Cobra's funds and materiel lost: x the % of the site's parts destroyed, cap
 +	};
 +	AirRaidRules _airRaid;
@@ -25147,7 +25427,7 @@ index 2242d13..fb9a889 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1132,124 @@ public:
+@@ -692,6 +1139,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -25319,10 +25599,10 @@ index 0cd6d17..a1ba2dd 100644
  	/// Gets the facility's shape sprite.
 diff --git a/src/Mod/RuleCobraSite.cpp b/src/Mod/RuleCobraSite.cpp
 new file mode 100644
-index 0000000..abe357a
+index 0000000..41b99a3
 --- /dev/null
 +++ b/src/Mod/RuleCobraSite.cpp
-@@ -0,0 +1,70 @@
+@@ -0,0 +1,72 @@
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
 + *
@@ -25390,15 +25670,17 @@ index 0000000..abe357a
 +	reader.tryRead("materielCostFunds", _materielCostFunds);
 +	reader.tryRead("stockpileCap", _stockpileCap);
 +	reader.tryRead("revealOnRaid", _revealOnRaid);
++	reader.tryRead("needsProject", _needsProject);
++	reader.tryRead("bombers", _bombers);
 +}
 +
 +}
 diff --git a/src/Mod/RuleCobraSite.h b/src/Mod/RuleCobraSite.h
 new file mode 100644
-index 0000000..7d92aea
+index 0000000..723afec
 --- /dev/null
 +++ b/src/Mod/RuleCobraSite.h
-@@ -0,0 +1,111 @@
+@@ -0,0 +1,115 @@
 +#pragma once
 +/*
 + * Copyright 2010-2016 OpenXcom Developers.
@@ -25477,6 +25759,8 @@ index 0000000..7d92aea
 +	int _materielCostFunds;            ///< funds spent to make its materielPerMonth; 0 = free
 +	int _stockpileCap;                 ///< what this site lets the region hold; 0 means no limit of its own
 +	int _revealOnRaid;                 ///< how many unknown projects raiding this reveals
++	std::string _needsProject;         ///< G.I. Joe: the planner wants none until Cobra has finished this research
++	int _bombers = 0;                  ///< G.I. Joe air raids: bombers based here (an airstrip's Rattlers)
 +
 +public:
 +	RuleCobraSite(const std::string& type);
@@ -25507,6 +25791,8 @@ index 0000000..7d92aea
 +	bool getIncomeNeedsShipment() const { return _incomeNeedsShipment; }
 +	int getStockpileCap() const { return _stockpileCap; }
 +	int getRevealOnRaid() const { return _revealOnRaid; }
++	const std::string &getNeedsProject() const { return _needsProject; }
++	int getBombers() const { return _bombers; }
 +};
 +
 +}
@@ -25950,7 +26236,7 @@ index 92dbcdf..56a9444 100644
        <Filter>Basescape</Filter>
      </ClInclude>
 diff --git a/src/Savegame/AlienBase.cpp b/src/Savegame/AlienBase.cpp
-index 09525a3..7adf8c3 100644
+index 09525a3..26b29cb 100644
 --- a/src/Savegame/AlienBase.cpp
 +++ b/src/Savegame/AlienBase.cpp
 @@ -25,7 +25,7 @@ namespace OpenXcom
@@ -25962,7 +26248,7 @@ index 09525a3..7adf8c3 100644
  {
  	// allow spawning hunt missions immediately after the base is created, i.e. no initial delay
  	_minutesSinceLastHuntMissionGeneration = _deployment->getHuntMissionMaxFrequency();
-@@ -46,12 +46,17 @@ void AlienBase::load(const YAML::YamlNodeReader& reader)
+@@ -46,12 +46,19 @@ void AlienBase::load(const YAML::YamlNodeReader& reader)
  {
  	Target::load(reader);
  	reader.tryRead("pactCountry", _pactCountry);
@@ -25977,10 +26263,12 @@ index 09525a3..7adf8c3 100644
 +	reader.tryRead("mapSeed", _mapSeed);
 +	reader.tryRead("wreck", _wreck);
 +	reader.tryRead("repairDays", _repairDays);
++	reader.tryRead("bombersLost", _bombersLost);
++	reader.tryRead("bomberRebuildDays", _bomberRebuildDays);
  }
  
  /**
-@@ -64,6 +69,8 @@ void AlienBase::save(YAML::YamlNodeWriter writer) const
+@@ -64,6 +71,8 @@ void AlienBase::save(YAML::YamlNodeWriter writer) const
  	Target::save(writer);
  
  	writer.write("pactCountry", _pactCountry);
@@ -25989,7 +26277,7 @@ index 09525a3..7adf8c3 100644
  	writer.write("race", _race);
  	if (_inBattlescape)
  		writer.write("inBattlescape", _inBattlescape);
-@@ -73,6 +80,10 @@ void AlienBase::save(YAML::YamlNodeWriter writer) const
+@@ -73,6 +82,12 @@ void AlienBase::save(YAML::YamlNodeWriter writer) const
  	writer.write("startMonth", _startMonth);
  	writer.write("minutesSinceLastHuntMissionGeneration", _minutesSinceLastHuntMissionGeneration);
  	writer.write("genMissionCount", _genMissionCount);
@@ -25997,14 +26285,16 @@ index 09525a3..7adf8c3 100644
 +	if (_mapSeed) writer.write("mapSeed", _mapSeed);
 +	if (!_wreck.empty()) writer.write("wreck", _wreck);
 +	if (_repairDays) writer.write("repairDays", _repairDays);
++	if (_bombersLost) writer.write("bombersLost", _bombersLost);
++	if (_bomberRebuildDays) writer.write("bomberRebuildDays", _bomberRebuildDays);
  }
  
  /**
 diff --git a/src/Savegame/AlienBase.h b/src/Savegame/AlienBase.h
-index be923c1..8217ca5 100644
+index be923c1..f9aea06 100644
 --- a/src/Savegame/AlienBase.h
 +++ b/src/Savegame/AlienBase.h
-@@ -32,13 +32,30 @@ class AlienBase : public Target
+@@ -32,13 +32,35 @@ class AlienBase : public Target
  {
  private:
  	std::string _pactCountry;
@@ -26026,16 +26316,21 @@ index be923c1..8217ca5 100644
 +	uint64_t _mapSeed = 0;
 +	std::vector<std::string> _wreck;
 +	int _repairDays = 0;     ///< days left on the repair under way (0: none started)
++	int _bombersLost = 0, _bomberRebuildDays = 0;   ///< an airstrip's Rattlers shot down, and the next one's rebuild
  public:
 +	uint64_t getMapSeed() const { return _mapSeed; }
 +	void setMapSeed(uint64_t s) { _mapSeed = s; }
 +	std::vector<std::string> &getWreck() { return _wreck; }
 +	int getRepairDays() const { return _repairDays; }
 +	void setRepairDays(int d) { _repairDays = d; }
++	int getBombersLost() const { return _bombersLost; }
++	void setBombersLost(int n) { _bombersLost = n; }
++	int getBomberRebuildDays() const { return _bomberRebuildDays; }
++	void setBomberRebuildDays(int d) { _bomberRebuildDays = d; }
  	/// Creates an alien base.
  	AlienBase(AlienDeployment *deployment, int startMonth);
  	/// Cleans up the alien base.
-@@ -52,6 +69,9 @@ public:
+@@ -52,6 +74,9 @@ public:
  	/// Gets the alien base's marker sprite.
  	int getMarker() const override;
  	/// Gets the alien base's pact country.
@@ -26045,7 +26340,7 @@ index be923c1..8217ca5 100644
  	const std::string &getPactCountry() const;
  	/// Sets the alien base's pact country.
  	void setPactCountry(const std::string &pactCountry);
-@@ -70,6 +90,9 @@ public:
+@@ -70,6 +95,9 @@ public:
  
  	AlienDeployment *getDeployment() const;
  	void setDeployment(AlienDeployment *deployment);
@@ -26151,7 +26446,7 @@ index 97ef4f5..0dbe163 100644
  	void addMissionLocation(const std::string &varName, const std::string &regionName, int zoneNumber, int maximum);
  	/// Checks that a given mission location (city or whatever) isn't stored in our list of previously attacked locations.
 diff --git a/src/Savegame/Base.cpp b/src/Savegame/Base.cpp
-index ac1a454..75464ad 100644
+index ac1a454..c251488 100644
 --- a/src/Savegame/Base.cpp
 +++ b/src/Savegame/Base.cpp
 @@ -17,11 +17,13 @@
@@ -26168,7 +26463,15 @@ index ac1a454..75464ad 100644
  #include "../Mod/RuleBaseFacility.h"
  #include "Craft.h"
  #include "SavedGame.h"
-@@ -227,6 +229,11 @@ void Base::load(const YAML::YamlNodeReader& reader, SavedGame *save, bool newGam
+@@ -214,6 +216,7 @@ void Base::load(const YAML::YamlNodeReader& reader, SavedGame *save, bool newGam
+ 	}
+ 
+ 	reader.tryRead("retaliationTarget", _retaliationTarget);
++	reader.tryRead("airRaids", _airRaids);
+ 	if (const auto& missionIdReader = reader["retaliationMissionUniqueId"])
+ 	{
+ 		int missionId = missionIdReader.readVal<int>();
+@@ -227,6 +230,11 @@ void Base::load(const YAML::YamlNodeReader& reader, SavedGame *save, bool newGam
  		}
  	}
  	reader.tryRead("fakeUnderwater", _fakeUnderwater);
@@ -26180,7 +26483,7 @@ index ac1a454..75464ad 100644
  
  	isOverlappingOrOverflowing(); // don't crash, just report in the log file...
  }
-@@ -311,6 +318,7 @@ bool Base::isOverlappingOrOverflowing()
+@@ -311,6 +319,7 @@ bool Base::isOverlappingOrOverflowing()
  
  	for (auto* fac : _facilities)
  	{
@@ -26188,7 +26491,13 @@ index ac1a454..75464ad 100644
  		const RuleBaseFacility *rules = fac->getRules();
  		int facilityX = fac->getX();
  		int facilityY = fac->getY();
-@@ -387,6 +395,8 @@ void Base::save(YAML::YamlNodeWriter writer) const
+@@ -383,10 +392,14 @@ void Base::save(YAML::YamlNodeWriter writer) const
+ 		{ p->save(vectorWriter.write()); });
+ 	if (_retaliationTarget)
+ 		writer.write("retaliationTarget", _retaliationTarget);
++	if (_airRaids)
++		writer.write("airRaids", _airRaids);
+ 	if (_retaliationMission)
  		writer.write("retaliationMissionUniqueId", _retaliationMission->getId());
  	if (_fakeUnderwater)
  		writer.write("fakeUnderwater", _fakeUnderwater);
@@ -26197,7 +26506,7 @@ index ac1a454..75464ad 100644
  }
  
  /**
-@@ -1519,6 +1529,20 @@ int Base::getUsedContainment(int prisonType, bool onlyExternal) const
+@@ -1519,6 +1532,20 @@ int Base::getUsedContainment(int prisonType, bool onlyExternal) const
   * @return Containment Lab space.
   */
  int Base::getAvailableContainment(int prisonType) const
@@ -26218,7 +26527,7 @@ index ac1a454..75464ad 100644
  {
  	int total = 0;
  	for (const auto* fac : _facilities)
-@@ -1752,6 +1776,7 @@ int Base::damageFacility(BaseFacility *toBeDamaged)
+@@ -1752,6 +1779,7 @@ int Base::damageFacility(BaseFacility *toBeDamaged)
  		BaseFacility *fac = new BaseFacility(toBeDamaged->getRules()->getDestroyedFacility(), this);
  		fac->setX(toBeDamaged->getX());
  		fac->setY(toBeDamaged->getY());
@@ -26226,7 +26535,7 @@ index ac1a454..75464ad 100644
  		fac->setBuildTime(0);
  		_facilities.push_back(fac);
  
-@@ -1762,7 +1787,7 @@ int Base::damageFacility(BaseFacility *toBeDamaged)
+@@ -1762,7 +1790,7 @@ int Base::damageFacility(BaseFacility *toBeDamaged)
  			toBeDamaged->setCraftForDrawing(0);
  		}
  	}
@@ -26235,7 +26544,7 @@ index ac1a454..75464ad 100644
  	{
  		for (int x = 0; x < toBeDamaged->getRules()->getSizeX(); ++x)
  		{
-@@ -1812,6 +1837,11 @@ void Base::destroyDisconnectedFacilities()
+@@ -1812,6 +1840,11 @@ void Base::destroyDisconnectedFacilities()
  std::list<BASEFACILITIESITERATOR> Base::getDisconnectedFacilities(BaseFacility *remove)
  {
  	std::list<BASEFACILITIESITERATOR> result;
@@ -26247,7 +26556,7 @@ index ac1a454..75464ad 100644
  
  	if (remove != 0 && remove->getRules()->isLift())
  	{ // Theoretically this is impossible, but sanity check is good :)
-@@ -1838,7 +1868,7 @@ std::list<BASEFACILITIESITERATOR> Base::getDisconnectedFacilities(BaseFacility *
+@@ -1838,7 +1871,7 @@ std::list<BASEFACILITIESITERATOR> Base::getDisconnectedFacilities(BaseFacility *
  	for (BASEFACILITIESITERATOR iter = _facilities.begin(); iter != _facilities.end(); ++iter)
  	{
  		BaseFacility* fac = (*iter);
@@ -26256,7 +26565,7 @@ index ac1a454..75464ad 100644
  		{
  			if (fac->getRules()->isLift()) lift = fac;
  			for (int x = 0; x != fac->getRules()->getSizeX(); ++x)
-@@ -2540,6 +2570,19 @@ BaseSumDailyRecovery Base::getSumRecoveryPerDay() const
+@@ -2540,6 +2573,19 @@ BaseSumDailyRecovery Base::getSumRecoveryPerDay() const
  
  	result.HealthRecovery = healthMaxinum;
  
@@ -26277,7 +26586,7 @@ index ac1a454..75464ad 100644
  }
  
 diff --git a/src/Savegame/Base.h b/src/Savegame/Base.h
-index b25dba2..7f250fd 100644
+index b25dba2..1c989bd 100644
 --- a/src/Savegame/Base.h
 +++ b/src/Savegame/Base.h
 @@ -102,6 +102,8 @@ struct BaseSumDailyRecovery
@@ -26297,7 +26606,15 @@ index b25dba2..7f250fd 100644
  	std::vector<BaseFacility*> _facilities;
  	std::vector<Soldier*> _soldiers;
  	std::vector<Craft*> _crafts;
-@@ -135,6 +138,9 @@ private:
+@@ -123,6 +126,7 @@ private:
+ 	std::vector<Production *> _productions;
+ 	bool _inBattlescape;
+ 	bool _retaliationTarget;
++	int _airRaids = 0;   ///< G.I. Joe: Cobra air raids on this outpost so far (a follow-up hits harder)
+ 	AlienMission* _retaliationMission;
+ 	bool _fakeUnderwater;
+ 	std::vector<Vehicle*> _vehicles;
+@@ -135,6 +139,9 @@ private:
  
  	using Target::load;
  public:
@@ -26307,7 +26624,7 @@ index b25dba2..7f250fd 100644
  	/// Creates a new base.
  	Base(const Mod *mod);
  	/// Cleans up the base.
-@@ -278,6 +284,8 @@ public:
+@@ -278,6 +285,8 @@ public:
  	int getFreeContainment(int prisonType) const;
  	/// Gets the total amount of Containment space.
  	int getAvailableContainment(int prisonType) const;
@@ -26316,6 +26633,15 @@ index b25dba2..7f250fd 100644
  	/// Gets the total amount of used Containment space.
  	int getUsedContainment(int prisonType, bool onlyExternal = false) const;
  	/// Sets the craft's battlescape status.
+@@ -288,6 +297,8 @@ public:
+ 	void setRetaliationTarget(bool mark = true);
+ 	/// Gets the retaliation status of this base.
+ 	bool getRetaliationTarget() const;
++	int getAirRaids() const { return _airRaids; }
++	void addAirRaid() { ++_airRaids; }
+ 	/// Sets the corresponding alien retaliation mission.
+ 	void setRetaliationMission(AlienMission* retaliationMission) { _retaliationMission = retaliationMission; }
+ 	/// Gets the corresponding alien retaliation mission.
 diff --git a/src/Savegame/BaseFacility.cpp b/src/Savegame/BaseFacility.cpp
 index 1ec565e..2234054 100644
 --- a/src/Savegame/BaseFacility.cpp
@@ -27290,7 +27616,7 @@ index 6c121c7..fb7f92b 100644
  	std::vector< std::vector<int> > &getReinforcementsBlocks() { return _reinforcementsBlocks; }
  
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..d5d2686 100644
+index 9ca9637..08e9a1e 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,11 +21,13 @@
@@ -27307,7 +27633,7 @@ index 9ca9637..d5d2686 100644
  #include "../Mod/Mod.h"
  #include "../Engine/RNG.h"
  #include "../Engine/Exception.h"
-@@ -55,7 +57,10 @@
+@@ -55,13 +57,17 @@
  #include "MissionSite.h"
  #include "AlienBase.h"
  #include "AlienStrategy.h"
@@ -27318,7 +27644,14 @@ index 9ca9637..d5d2686 100644
  #include "GeoscapeEvent.h"
  #include "../Mod/RuleCountry.h"
  #include "../Mod/RuleRegion.h"
-@@ -110,6 +115,7 @@ SavedGame::SavedGame() :
+ #include "../Mod/RuleSoldier.h"
+ #include "../Mod/SoldierNamePool.h"
+ #include "BaseFacility.h"
++#include "../Geoscape/Outposts.h"
+ #include "MissionStatistics.h"
+ #include "SoldierDeath.h"
+ #include "SoldierDiary.h"
+@@ -110,6 +116,7 @@ SavedGame::SavedGame() :
  {
  	_time = new GameTime(6, 1, 1, 1999, 12, 0, 0);
  	_alienStrategy = new AlienStrategy();
@@ -27326,7 +27659,7 @@ index 9ca9637..d5d2686 100644
  	_funds.push_back(0);
  	_maintenance.push_back(0);
  	_researchScores.push_back(0);
-@@ -159,6 +165,7 @@ SavedGame::~SavedGame()
+@@ -159,6 +166,7 @@ SavedGame::~SavedGame()
  		delete ab;
  	}
  	delete _alienStrategy;
@@ -27334,7 +27667,7 @@ index 9ca9637..d5d2686 100644
  	for (auto* am : _activeMissions)
  	{
  		delete am;
-@@ -371,6 +378,61 @@ SaveInfo SavedGame::getSaveInfo(const std::string &file, Language *lang)
+@@ -371,6 +379,61 @@ SaveInfo SavedGame::getSaveInfo(const std::string &file, Language *lang)
   * @param mod Mod for the saved game.
   * @param lang Loaded language.
   */
@@ -27396,7 +27729,7 @@ index 9ca9637..d5d2686 100644
  void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  {
  	std::string filepath = Options::getMasterUserFolder() + filename;
-@@ -389,6 +451,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -389,6 +452,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	if (reader["rng"] && (_ironman || !Options::newSeedOnLoad))
  		RNG::setSeed(reader["rng"].readVal<uint64_t>());
  	reader.tryRead("monthsPassed", _monthsPassed);
@@ -27404,7 +27737,7 @@ index 9ca9637..d5d2686 100644
  	reader.tryRead("daysPassed", _daysPassed);
  	reader.tryRead("vehiclesLost", _vehiclesLost);
  	reader.tryRead("craftLostDogfight", _craftLostDogfight);
-@@ -399,6 +462,44 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -399,6 +463,44 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	reader.tryRead("funds", _funds);
  	reader.tryRead("maintenance", _maintenance);
  	reader.tryRead("userNotes", _userNotes);
@@ -27449,7 +27782,7 @@ index 9ca9637..d5d2686 100644
  	reader.tryRead("geoscapeDebugLog", _geoscapeDebugLog);
  	reader.tryRead("researchScores", _researchScores);
  	reader.tryRead("incomes", _incomes);
-@@ -649,6 +750,30 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -649,6 +751,30 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  		}
  	}
  	_alienStrategy->load(reader["alienStrategy"], mod);
@@ -27480,7 +27813,7 @@ index 9ca9637..d5d2686 100644
  
  	for (const auto& weHardlyKnewYe : reader["deadSoldiers"].children())
  	{
-@@ -690,6 +815,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -690,6 +816,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	}
  
  	_scriptValues.load(reader, mod->getScriptGlobal());
@@ -27488,7 +27821,7 @@ index 9ca9637..d5d2686 100644
  }
  
  void SavedGame::loadTemplates(const YAML::YamlNodeReader& reader, const Mod* mod)
-@@ -779,6 +905,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -779,6 +906,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("difficulty", _difficulty);
  	writer.write("end", _end);
  	writer.write("monthsPassed", _monthsPassed);
@@ -27496,7 +27829,7 @@ index 9ca9637..d5d2686 100644
  	writer.write("daysPassed", _daysPassed);
  	writer.write("vehiclesLost", _vehiclesLost);
  	writer.write("craftLostDogfight", _craftLostDogfight);
-@@ -790,6 +917,97 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -790,6 +918,97 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("funds", _funds);
  	writer.write("maintenance", _maintenance);
  	writer.write("userNotes", _userNotes);
@@ -27594,7 +27927,7 @@ index 9ca9637..d5d2686 100644
  	if (Options::oxceGeoscapeDebugLogMaxEntries > 0 && _geoscapeDebugLog.size() > 0)
  	{
  		auto geoDebugLog = writer["geoscapeDebugLog"];
-@@ -849,8 +1067,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -849,8 +1068,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("hiddenPurchaseItems", _hiddenPurchaseItemsMap);
  	writer.write("customRuleCraftDeployments", _customRuleCraftDeployments);
  	_alienStrategy->save(writer["alienStrategy"]);
@@ -27605,7 +27938,7 @@ index 9ca9637..d5d2686 100644
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
  	{
  		if (!_globalEquipmentLayout[j].empty())
-@@ -1530,8 +1750,191 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
+@@ -1530,8 +1751,191 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
   * @param base the base, in which the project was finished
   * @param score should the score be awarded or not?
   */
@@ -27797,10 +28130,16 @@ index 9ca9637..d5d2686 100644
  	if (isResearchRuleStatusDisabled(research->getName()))
  	{
  		return;
-@@ -2579,6 +2982,1003 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,89 +2983,1166 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
+-Region *SavedGame::locateRegion(double lon, double lat) const
+-{
+-	Region* found = nullptr;
+-	for (auto* region : _regions)
+-	{
+-		if (region->getRules()->insideRegion(lon, lat))
 +/**
 + * What Cobra's training camps do to a battle fought at this spot.
 + *
@@ -27858,7 +28197,9 @@ index 9ca9637..d5d2686 100644
 +	for (const auto *base : _alienBases)
 +	{
 +		if (base->getSiteType().empty())
-+		{
+ 		{
+-			found = region;
+-			break;
 +			continue;
 +		}
 +		const RuleCobraSite *rule = mod->getCobraSite(base->getSiteType());
@@ -27910,15 +28251,17 @@ index 9ca9637..d5d2686 100644
 +		if (underFlat || underKeep)
 +		{
 +			out.headcountPenalty = mod->getCobraStarvedHeadcount();
-+		}
-+	}
+ 		}
+ 	}
+-	if (found)
 +
 +	// A camp lifts the cap entirely, so out.rankUnlock stays -1. With no camp standing, the cap
 +	// a camp WOULD have lifted is the one that applies. Tracked with its own flag rather than
 +	// inferred from the bonus, because a camp priced at garrisonBonus 0 is still a camp and
 +	// would otherwise have left its own region capped.
 +	if (!campHere)
-+	{
+ 	{
+-		return found;
 +		for (const auto &siteType : mod->getCobraSitesList())
 +		{
 +			const RuleCobraSite *rule = mod->getCobraSite(siteType);
@@ -27929,12 +28272,22 @@ index 9ca9637..d5d2686 100644
 +				break;
 +			}
 +		}
-+	}
+ 	}
+-	Log(LOG_ERROR) << "Failed to find a region at location [" << lon << ", " << lat << "].";
+-	return 0;
 +	return out;
-+}
-+
+ }
+ 
+-/**
+- * Find the region containing this target.
+- * @param target The target to locate.
+- * @return Pointer to the region, or 0.
+- */
+-Region *SavedGame::locateRegion(const Target &target) const
 +void SavedGame::cobraPlan(const Mod *mod)
-+{
+ {
+-	return locateRegion(target.getLongitude(), target.getLatitude());
+-}
 +	// THE DECISION LAYER. Everything else in the economy is state and rules; this is the only
 +	// place that chooses anything, and it is deliberately the dullest code in it.
 +	//
@@ -27955,15 +28308,27 @@ index 9ca9637..d5d2686 100644
 +			owned[base->getSiteType()]++;
 +		}
 +	}
-+
+ 
+-/**
+- * Find the country containing this location.
+- * @param lon The longitude.
+- * @param lat The latitude.
+- * @return Pointer to the country, or 0.
+- */
+-Country* SavedGame::locateCountry(double lon, double lat) const
+-{
+-	Country* found = nullptr;
+-	for (auto* country : _countries)
 +	// What the network earns and spends in a month, read from the sites themselves rather than
 +	// from the balance, so a raid is felt at once instead of a month later.
 +	int netFunds = 0, netMateriel = 0;
 +	for (const auto &pair : owned)
-+	{
+ 	{
+-		if (country->getRules()->insideCountry(lon, lat))
 +		RuleCobraSite *rule = mod->getCobraSite(pair.first);
 +		if (rule == 0)
-+		{
+ 		{
+-			found = country;
 +			continue;
 +		}
 +		netFunds += (rule->getFundsPerMonth() - rule->getUpkeepFunds()) * pair.second;
@@ -27981,9 +28346,10 @@ index 9ca9637..d5d2686 100644
 +		if (r && r->getRunsThePlanning() && pair.second > 0)
 +		{
 +			planning = true;
-+			break;
-+		}
-+	}
+ 			break;
+ 		}
+ 	}
+-	if (found)
 +
 +	const int funds = _cobraEconomy->getTotalFunds();
 +	const bool broke = netFunds <= 0;
@@ -27997,7 +28363,8 @@ index 9ca9637..d5d2686 100644
 +	int cheapest = 0;
 +	bool hasEarner = false;
 +	for (const auto &siteType : mod->getCobraSitesList())
-+	{
+ 	{
+-		return found;
 +		RuleCobraSite *r = mod->getCobraSite(siteType);
 +		if (r == 0 || r->getFundsPerMonth() <= r->getUpkeepFunds())
 +		{
@@ -28012,7 +28379,9 @@ index 9ca9637..d5d2686 100644
 +			freeEarner = siteType;
 +			cheapest = r->getBuildCostFunds();
 +		}
-+	}
+ 	}
+-	//Log(LOG_DEBUG) << "Failed to find a country at location [" << lon << ", " << lat << "].";
+-	return 0;
 +	if (hasEarner)
 +	{
 +		freeEarner.clear();
@@ -28057,6 +28426,8 @@ index 9ca9637..d5d2686 100644
 +			wanted = (have == 0);       // one of everything first; breadth before depth
 +		}
 +
++		// G.I. Joe: a site that needs research (an airstrip needs its Rattlers) is not wanted before it
++		if (!rule->getNeedsProject().empty() && !cobraProjectDone(rule->getNeedsProject())) wanted = false;
 +		const bool afford = funds >= rule->getBuildCostFunds() || siteType == freeEarner;
 +		_alienStrategy->setMissionRun("COBRA_BUILD_" + siteType, (wanted && afford) ? 1 : 0);
 +	}
@@ -28080,9 +28451,12 @@ index 9ca9637..d5d2686 100644
 +	// by funds being liquid while materiel stays where it is made.
 +	_cobraEconomy->spendFunds(region->getRules()->getType(), rule->getBuildCostFunds());
 +	_cobraEconomy->mirrorToCounters(*_alienStrategy);
-+}
-+
-+/**
+ }
+ 
+ /**
+- * Find the country containing this target.
+- * @param target The target to locate.
+- * @return Pointer to the country, or 0.
 + * Cobra's economy lines are ON by default, and that is deliberate.
 + *
 + * They used to be behind OXCE_ECON_LOG, which meant a player who hit a crash sent back a log
@@ -28092,28 +28466,120 @@ index 9ca9637..d5d2686 100644
 + * raid events), which is nothing against a crash report that cannot be explained.
 + *
 + * OXCE_ECON_QUIET turns them off for anyone who wants a clean log.
-+ */
+  */
+-Country* SavedGame::locateCountry(const Target& target) const
 +static bool cobraLogOn()
-+{
+ {
+-	return locateCountry(target.getLongitude(), target.getLatitude());
 +	static const bool on = (getenv("OXCE_ECON_QUIET") == 0);
 +	return on;
-+}
-+
-+/**
+ }
+ 
+ /**
+- * Select a soldier nationality based on mod rules and location on the globe.
 + * Names a Cobra site uniquely. AlienBase ids come from SavedGame::getId keyed by the
 + * deployment's MARKER NAME, so every site type starts its own count at 1 - the first depot and
 + * the first research lab are both id 1. A bench keyed on the bare id therefore pointed at two
 + * buildings at once: raiding a depot wiped a lab's current node, and the two shared a pool of
 + * benches. The type has to be part of the key.
-+ */
+  */
+-int SavedGame::selectSoldierNationalityByLocation(const Mod* mod, const RuleSoldier* rule, const Target* target) const
 +static std::string cobraSiteKey(const AlienBase *base)
-+{
+ {
+-	if (!target)
 +	return base->getSiteType() + "#" + std::to_string(base->getId());
++}
++
++namespace
++{
++const double EARTH_KM = 6371.0;
++}
++
++int SavedGame::cobraBombersInRange(const Mod *mod, const Base *base) const
++{
++	const auto &R = mod->getAirRaidRules();
++	int n = 0;
++	for (const auto *ab : _alienBases)
+ 	{
+-		return -1;
++		if (ab->getSiteType().empty()) continue;
++		const RuleCobraSite *r = mod->getCobraSite(ab->getSiteType());
++		if (!r || r->getBombers() <= 0) continue;
++		if (ab->getDistance(base) * EARTH_KM > R.rangeKm) continue;
++		n += std::max(0, r->getBombers() - ab->getBombersLost());
+ 	}
++	return n;
++}
+ 
+-	if (mod->getHireByCountryOdds() > 0 && RNG::percent(mod->getHireByCountryOdds()))
++Base *SavedGame::cobraAirRaidToday(const Mod *mod, int &planes)
++{
++	const auto &R = mod->getAirRaidRules();
++	planes = 0;
++	if (!R.on) return nullptr;
++	for (auto *base : _bases)
+ 	{
+-		Country* country = locateCountry(*target);
+-		if (country)
+-		{
+-			int nationality = 0;
+-			for (auto* namepool : rule->getNames())
+-			{
+-				// we assume there is only one such name pool (or none), thus we stop searching on the first hit
++		// only an outpost Cobra has found (vanilla's retaliation mark: Cobra knows where it is); never the Pit
++		const auto *k = Outposts::kindOf(mod, base);
++		if (!k || k->pit || !base->getRetaliationTarget()) continue;
++		const int have = cobraBombersInRange(mod, base);
++		if (have <= 0) continue;
++		auto t = R.threatByKind.find(k->type);
++		const int threat = t == R.threatByKind.end() ? 1 : t->second;
++		const int monthly = std::min(R.chanceCap, R.chancePerThreat * threat);
++		// a month's chance spread over thirty days
++		if (!getenv("OXCE_AIRRAID_TODAY") && RNG::generate(0, 2999) >= monthly) continue;   // monthly% / 30 a day (rig: OXCE_AIRRAID_TODAY)
++		// how many it sends follows the motive (s.1): a first look is one plane; a strike, two or three;
++		// back at a place it has hit before and that is still mending, everything it has
++		bool mending = false;
++		for (const auto *f : *base->getFacilities()) if (f->getBuildTime() > 0 && f->getBuildTime() < f->getRules()->getBuildTime()) mending = true;
++		if (base->getAirRaids() == 0) planes = 1;
++		else if (mending) planes = have;
++		else planes = RNG::generate(2, 3);
++		planes = std::max(1, std::min({ planes, have, R.maxPlanes }));
++		return base;
++	}
++	return nullptr;
++}
++
++void SavedGame::cobraBombersLost(const Mod *mod, const Base *base, int n)
++{
++	const auto &R = mod->getAirRaidRules();
++	for (auto *ab : _alienBases)
++	{
++		if (n <= 0) break;
++		if (ab->getSiteType().empty()) continue;
++		const RuleCobraSite *r = mod->getCobraSite(ab->getSiteType());
++		if (!r || r->getBombers() <= 0 || ab->getDistance(base) * EARTH_KM > R.rangeKm) continue;
++		const int take = std::min(n, r->getBombers() - ab->getBombersLost());
++		if (take <= 0) continue;
++		ab->setBombersLost(ab->getBombersLost() + take);
++		if (ab->getBomberRebuildDays() <= 0) ab->setBomberRebuildDays(R.bomberRebuildDays);
++		n -= take;
++	}
 +}
 +
 +void SavedGame::cobraRepairDaily(const Mod *mod)
 +{
 +	const auto &R = mod->getAirRaidRules();
++	// airstrips build back the Rattlers they lost, one at a time
++	for (auto *ab : _alienBases)
++	{
++		if (ab->getBombersLost() <= 0) continue;
++		ab->setBomberRebuildDays(ab->getBomberRebuildDays() - 1);
++		if (ab->getBomberRebuildDays() <= 0)
++		{
++			ab->setBombersLost(ab->getBombersLost() - 1);
++			ab->setBomberRebuildDays(ab->getBombersLost() > 0 ? R.bomberRebuildDays : 0);
++		}
++	}
 +	for (auto *base : _alienBases)
 +	{
 +		if (base->getWreck().empty() || base->isInBattlescape()) continue;
@@ -28798,10 +29264,93 @@ index 9ca9637..d5d2686 100644
 +	return 0;
 +}
 +
- Region *SavedGame::locateRegion(double lon, double lat) const
- {
- 	Region* found = nullptr;
-@@ -2995,6 +4395,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
++Region *SavedGame::locateRegion(double lon, double lat) const
++{
++	Region* found = nullptr;
++	for (auto* region : _regions)
++	{
++		if (region->getRules()->insideRegion(lon, lat))
++		{
++			found = region;
++			break;
++		}
++	}
++	if (found)
++	{
++		return found;
++	}
++	Log(LOG_ERROR) << "Failed to find a region at location [" << lon << ", " << lat << "].";
++	return 0;
++}
++
++/**
++ * Find the region containing this target.
++ * @param target The target to locate.
++ * @return Pointer to the region, or 0.
++ */
++Region *SavedGame::locateRegion(const Target &target) const
++{
++	return locateRegion(target.getLongitude(), target.getLatitude());
++}
++
++/**
++ * Find the country containing this location.
++ * @param lon The longitude.
++ * @param lat The latitude.
++ * @return Pointer to the country, or 0.
++ */
++Country* SavedGame::locateCountry(double lon, double lat) const
++{
++	Country* found = nullptr;
++	for (auto* country : _countries)
++	{
++		if (country->getRules()->insideCountry(lon, lat))
++		{
++			found = country;
++			break;
++		}
++	}
++	if (found)
++	{
++		return found;
++	}
++	//Log(LOG_DEBUG) << "Failed to find a country at location [" << lon << ", " << lat << "].";
++	return 0;
++}
++
++/**
++ * Find the country containing this target.
++ * @param target The target to locate.
++ * @return Pointer to the country, or 0.
++ */
++Country* SavedGame::locateCountry(const Target& target) const
++{
++	return locateCountry(target.getLongitude(), target.getLatitude());
++}
++
++/**
++ * Select a soldier nationality based on mod rules and location on the globe.
++ */
++int SavedGame::selectSoldierNationalityByLocation(const Mod* mod, const RuleSoldier* rule, const Target* target) const
++{
++	if (!target)
++	{
++		return -1;
++	}
++
++	if (mod->getHireByCountryOdds() > 0 && RNG::percent(mod->getHireByCountryOdds()))
++	{
++		Country* country = locateCountry(*target);
++		if (country)
++		{
++			int nationality = 0;
++			for (auto* namepool : rule->getNames())
++			{
++				// we assume there is only one such name pool (or none), thus we stop searching on the first hit
+ 				if (country->getRules()->getType() == namepool->getCountry())
+ 				{
+ 					return nationality;
+@@ -2995,6 +4476,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
   * @param soldier Pointer to dead soldier.
   * @param cause Pointer to cause of death, NULL if missing in action.
   */
@@ -28976,7 +29525,7 @@ index 9ca9637..d5d2686 100644
  std::vector<Soldier*>::iterator SavedGame::killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause)
  {
  	if (resetArmor)
-@@ -3328,6 +4896,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
+@@ -3328,6 +4977,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
  		}
  	}
  
@@ -28994,7 +29543,7 @@ index 9ca9637..d5d2686 100644
  	for (auto* am : _activeMissions)
  	{
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..5e7c826 100644
+index d985908..1dc7471 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -37,6 +37,7 @@ namespace OpenXcom
@@ -29126,7 +29675,7 @@ index d985908..5e7c826 100644
  	/// Add a new record to the research diary
  	void addResearchDiaryEntry(ResearchDiaryEntry* entry);
  	/// Gets the research diary.
-@@ -395,6 +468,38 @@ public:
+@@ -395,6 +468,44 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -29140,6 +29689,12 @@ index d985908..5e7c826 100644
 +	int cobraBombed(const AlienBase *base, const Mod *mod, int pct);
 +	/// G.I. Joe air raids: Cobra repairs its bombed sites (half the build cost, airRaid repairDays)
 +	void cobraRepairDaily(const Mod *mod);
++	/// G.I. Joe air raids, phase 3: the Rattlers Cobra has in range of this outpost
++	int cobraBombersInRange(const Mod *mod, const Base *base) const;
++	/// the outpost Cobra bombs today and with how many planes (nullptr: none today)
++	Base *cobraAirRaidToday(const Mod *mod, int &planes);
++	/// Rattlers shot down over this outpost: the airstrips in range lose them, and rebuild one at a time
++	void cobraBombersLost(const Mod *mod, const Base *base, int n);
 +	/// Pays Cobra for a mission it got away with; returns what was banked.
 +	int cobraMissionPaid(const AlienDeployment *deployment, const Region *region);
 +	/// Advances Cobra's research for the month; labs burn materiel for progress.
@@ -29165,7 +29720,7 @@ index d985908..5e7c826 100644
  	/// Read-only access to the alien strategy data.
  	const AlienStrategy &getAlienStrategy() const { return *_alienStrategy; }
  	/// Full access to the current alien missions.
-@@ -409,6 +514,10 @@ public:
+@@ -409,6 +520,10 @@ public:
  	const std::vector<GeoscapeEvent*> &getGeoscapeEvents() const { return _geoscapeEvents; }
  	/// Locate a region containing a position.
  	Region *locateRegion(double lon, double lat) const;
@@ -29176,7 +29731,7 @@ index d985908..5e7c826 100644
  	/// Locate a region containing a Target.
  	Region *locateRegion(const Target &target) const;
  	/// Locate a country containing a position.
-@@ -419,6 +528,13 @@ public:
+@@ -419,6 +534,13 @@ public:
  	int selectSoldierNationalityByLocation(const Mod* mod, const RuleSoldier* rule, const Target* target) const;
  	/// Return the month counter.
  	int getMonthsPassed() const;
@@ -29190,7 +29745,7 @@ index d985908..5e7c826 100644
  	/// Return the day counter.
  	int getDaysPassed() const { return _daysPassed; }
  	void increaseDaysPassed() { _daysPassed++; }
-@@ -493,6 +609,76 @@ public:
+@@ -493,6 +615,76 @@ public:
  	bool isUfoOnIgnoreList(int ufoId);
  	/// Handles a soldier's death.
  	std::vector<Soldier*>::iterator killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause = 0);
@@ -29267,7 +29822,7 @@ index d985908..5e7c826 100644
  	/// enables/disables autosell for an item type
  	void setAutosell(const RuleItem *itype, const bool enabled);
  	/// get autosell state for an item type
-@@ -529,6 +715,28 @@ public:
+@@ -529,6 +721,28 @@ public:
  	void handlePrimaryResearchSideEffects(const std::vector<const RuleResearch*> &topicsToCheck, const Mod* mod, Base* base);
  	/// Gets the list of user notes.
  	std::vector<std::string>& getUserNotes() { return _userNotes; }
