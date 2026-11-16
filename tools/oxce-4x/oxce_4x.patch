@@ -3158,6 +3158,38 @@ index db6727f..a176173 100644
  		_attackAction.type = BA_LAUNCH;
  		_attackAction.updateTU();
  		if (!_attackAction.haveTU())
+diff --git a/src/Battlescape/AbortMissionState.cpp b/src/Battlescape/AbortMissionState.cpp
+index fd1e93e..94c010f 100644
+--- a/src/Battlescape/AbortMissionState.cpp
++++ b/src/Battlescape/AbortMissionState.cpp
+@@ -72,6 +72,9 @@ AbortMissionState::AbortMissionState(SavedBattleGame *battleGame, BattlescapeSta
+ 	if (deployment != 0)
+ 	{
+ 		exit = !deployment->getNextStage().empty() || deployment->getEscapeType() == ESCAPE_EXIT || deployment->getEscapeType() == ESCAPE_EITHER;
++		// G.I. Joe: the Pit's surface stage falls back down its ways down
++		const auto &SB = _game->getMod()->getPitSurfaceBattleRules();
++		if (!SB.deployment.empty() && _battleGame->getAlienCustomMission() == SB.deployment) exit = true;
+ 		std::string lastUsedMapScript = _battleGame->getLastUsedMapScript();
+ 		if (lastUsedMapScript.empty())
+ 		{
+@@ -141,7 +144,16 @@ AbortMissionState::AbortMissionState(SavedBattleGame *battleGame, BattlescapeSta
+ 	_txtOutside->setText(tr("STR_UNITS_OUTSIDE", _outside + tally.vipInField));
+ 
+ 
+-	if (_battleGame->getMissionType() == "STR_BASE_DEFENSE")
++	const bool pitSurface = !_game->getMod()->getPitSurfaceBattleRules().deployment.empty()
++		&& _battleGame->getAlienCustomMission() == _game->getMod()->getPitSurfaceBattleRules().deployment;
++	if (pitSurface)
++	{
++		// G.I. Joe: falling back below - who is on a way down goes, who isn't stays (PIT_FALLS s.1)
++		_txtInEntrance->setText(tr("STR_PIT_FALL_BACK"));
++		_txtInExit->setText(tr("STR_PIT_UNITS_ON_WAYS_DOWN").arg(_inExit + tally.vipInExit));
++		_txtOutside->setText(tr("STR_PIT_UNITS_LEFT_BEHIND").arg(_outside + tally.vipInField));
++	}
++	else if (_battleGame->getMissionType() == "STR_BASE_DEFENSE")
+ 	{
+ 		_txtInEntrance->setVisible(false);
+ 		_txtInExit->setVisible(false);
 diff --git a/src/Battlescape/ActionMenuItem.h b/src/Battlescape/ActionMenuItem.h
 index ec94172..fd2d5e2 100644
 --- a/src/Battlescape/ActionMenuItem.h
@@ -4692,7 +4724,7 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..4f27d39 100644
+index 1951ba7..40b9c8e 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -16,10 +16,14 @@
@@ -4710,7 +4742,7 @@ index 1951ba7..4f27d39 100644
  #include "TileEngine.h"
  #include "Inventory.h"
  #include "AIModule.h"
-@@ -96,6 +100,160 @@ BattlescapeGenerator::~BattlescapeGenerator()
+@@ -96,6 +100,207 @@ BattlescapeGenerator::~BattlescapeGenerator()
  /**
   * Sets up all our various arrays and whatnot according to the size of the map.
   */
@@ -4734,6 +4766,53 @@ index 1951ba7..4f27d39 100644
 + * has built gets a bare slot from the Day 1 map itself ("D:", read before anything is written). A fit-out taken from
 + * a DIFFERENT slot brings only its floors and objects, since that slot's walls are not this one's.
 + */
++bool BattlescapeGenerator::isPitSurface() const
++{
++	const auto &SB = _game->getMod()->getPitSurfaceBattleRules();
++	return isPitBattle() && !SB.deployment.empty() && _alienCustomMission && _alienCustomMission->getType() == SB.deployment;
++}
++
++void BattlescapeGenerator::applyPitSurface()
++{
++	const auto &SB = _game->getMod()->getPitSurfaceBattleRules();
++	const auto &spots = _game->getMod()->getPitSurfaceRules().spots;
++	if (SB.library.empty() || !FileMap::fileExists("MAPS/" + SB.library + ".MAP2")) return;
++	auto f = FileMap::getIStream("MAPS/" + SB.library + ".MAP2");
++	unsigned char h[3];
++	f->read((char*)h, 3);
++	const int ly = h[0], lx = h[1], lz = h[2];
++	std::vector<unsigned int> lib;
++	unsigned char v[2];
++	while (f->read((char*)v, 2)) lib.push_back((unsigned int)v[0] | ((unsigned int)v[1] << 8));
++	if (lib.size() != (size_t)lx * ly * lz * 4) { Log(LOG_ERROR) << "[pit] " << SB.library << " is the wrong size"; return; }
++	for (const auto *fac : *_base->getFacilities())
++	{
++		if (!PitPlace::isSurface(fac) || fac->getBuildTime() > 0) continue;
++		const int i = fac->getPitX() - PitPlace::SURFACE_BASE;
++		if (i < 0 || i >= (int)spots.size()) continue;
++		auto cells = SB.spots.find(spots[i].id);
++		if (cells == SB.spots.end()) continue;
++		for (const auto &c : cells->second)
++		{
++			if (c.size() < 2 || c[0] >= lx || c[1] >= ly) continue;
++			for (int z = 0; z < lz && z < _mapsize_z; ++z)
++			{
++				Tile *t = _save->getTile(Position(c[0], c[1], z));
++				if (!t) continue;
++				const size_t at = (((size_t)(lz - 1 - z) * ly + c[1]) * lx + c[0]) * 4;
++				for (int k = 0; k < O_MAX; ++k)
++				{
++					unsigned int id = lib[at + k];
++					int set = 0;
++					MapData *md = id ? _terrain->getMapData(&id, &set) : nullptr;
++					t->setMapData(md, md ? (int)id : -1, md ? set : -1, (TilePart)k);
++				}
++			}
++		}
++		Log(LOG_INFO) << "[pit] surface: " << fac->getRules()->getType() << " opens at " << spots[i].id;
++	}
++}
++
 +void BattlescapeGenerator::applyPitModules()
 +{
 +	const auto &pb = _game->getMod()->getPitBattleRules();
@@ -4871,7 +4950,72 @@ index 1951ba7..4f27d39 100644
  void BattlescapeGenerator::init(bool resetTerrain)
  {
  	_blocks.clear();
-@@ -767,11 +925,31 @@ void BattlescapeGenerator::nextStage()
+@@ -236,6 +441,15 @@ void BattlescapeGenerator::setMissionSite(MissionSite *mission)
+  */
+ void BattlescapeGenerator::nextStage()
+ {
++	// G.I. Joe: leaving the Pit's surface, whatever Cobra still has standing follows the Joes down (PIT_FALLS s.1)
++	std::map<std::string, int> cobraFollows;
++	{
++		const auto &SB = _game->getMod()->getPitSurfaceBattleRules();
++		if (!SB.deployment.empty() && _save->getAlienCustomMission() == SB.deployment)
++			for (const auto *bu : *_save->getUnits())
++				if (bu->getOriginalFaction() == FACTION_HOSTILE && !bu->isOut() && bu->getUnitRules())
++					cobraFollows[bu->getUnitRules()->getType()]++;
++	}
+ 	// check if the unit is available in the next stage
+ 	auto isUnitStillActive = [](const BattleUnit* u)
+ 	{
+@@ -618,6 +832,7 @@ void BattlescapeGenerator::nextStage()
+ 	}
+ 
+ 	generateMap(script, ruleDeploy->getCustomUfoName(), nullptr);
++	if (isPitBattle()) applyPitModules();   // G.I. Joe: the underground stage is the Pit as the player built it
+ 
+ 	setupObjectives(ruleDeploy);
+ 
+@@ -739,7 +954,39 @@ void BattlescapeGenerator::nextStage()
+ 
+ 	size_t unitCount = _save->getUnits()->size();
+ 
+-	deployAliens(_alienCustomDeploy && !_alienCustomDeploy->getDeploymentData()->empty() ? _alienCustomDeploy : ruleDeploy);
++	if (!cobraFollows.empty())
++	{
++		// G.I. Joe: the men who won the surface come down the lift (the Pit's Cobra nodes are the lift landing)
++		for (const auto &cf : cobraFollows)
++			if (Unit *ur = _game->getMod()->getUnit(cf.first, false))
++				for (int i = 0; i < cf.second; ++i) addAlien(ur, 5, false);
++		// and if the escape tunnel leaked (stand-in: Cobra holds a bounty-level file on a Joe of this base), a team
++		// comes up it behind the Joes
++		const auto &SB = _game->getMod()->getPitSurfaceBattleRules();
++		bool leaked = false;
++		if (_base && _game->getMod()->getCobraFileRules().on)
++			for (const auto *s : *_base->getSoldiers())
++				if (s->getCobraFile() >= _game->getMod()->getCobraFileRules().bountyAt) leaked = true;
++		if (leaked && !cobraFollows.empty())
++		{
++			Unit *ur = _game->getMod()->getUnit(cobraFollows.begin()->first, false);
++			for (int i = 0; ur && i < SB.leakTeam && i < (int)SB.escape.size(); ++i)
++				if (BattleUnit *bu = addAlien(ur, 5, false))
++				{
++					const auto &e = SB.escape[i];
++					if (e.size() >= 3) _save->setUnitPosition(bu, Position(e[0], e[1], e[2]));
++				}
++			Log(LOG_INFO) << "[pit] the escape tunnel leaked: Cobra comes up it too";
++		}
++		Log(LOG_INFO) << "[pit] Cobra follows the Joes down: " << (_save->getUnits()->size() - unitCount) << " men";
++		if (unitCount == _save->getUnits()->size())
++		{
++			Log(LOG_WARNING) << "[pit] nowhere to put the men who followed: the Pit's own deployment instead";
++			deployAliens(_alienCustomDeploy && !_alienCustomDeploy->getDeploymentData()->empty() ? _alienCustomDeploy : ruleDeploy);
++		}
++	}
++	else
++		deployAliens(_alienCustomDeploy && !_alienCustomDeploy->getDeploymentData()->empty() ? _alienCustomDeploy : ruleDeploy);
+ 
+ 	if (unitCount == _save->getUnits()->size())
+ 	{
+@@ -767,12 +1014,46 @@ void BattlescapeGenerator::nextStage()
   */
  void BattlescapeGenerator::run()
  {
@@ -4893,17 +5037,32 @@ index 1951ba7..4f27d39 100644
 +		}
 +		else if (isPitBattle())
 +		{
++			// G.I. Joe: the attack starts on the surface when its map is installed (PIT_FALLS_DESIGN_v1 s.1)
++			const auto &SB = _game->getMod()->getPitSurfaceBattleRules();
++			const AlienDeployment *surf = SB.deployment.empty() ? nullptr : _game->getMod()->getDeployment(SB.deployment, false);
++			if (surf && !surf->getTerrains().empty() && FileMap::fileExists("MAPS/PITSURF.MAP2") && !_save->isPreview())
++			{
++				_alienCustomMission = surf;
++				_terrain = _game->getMod()->getTerrain(surf->getTerrains().front(), true);
++				Log(LOG_INFO) << "[pit] the attack starts on the surface (" << SB.deployment << ")";
++			}
++			else
++			{
 +			_alienCustomMission = _game->getMod()->getDeployment(_game->getMod()->getPitBattleRules().deployment, false);
 +			Log(LOG_INFO) << "[pit] base defence plays on the canon Pit (" << _game->getMod()->getPitBattleRules().map << ")";
 +			// its own terrain, whatever a New Battle or the globe picked for a base
 +			if (_alienCustomMission && !_alienCustomMission->getTerrains().empty())
 +				_terrain = _game->getMod()->getTerrain(_alienCustomMission->getTerrains().front(), true);
++			}
 +		}
 +	}
  	const AlienDeployment *ruleDeploy = _alienCustomMission ? _alienCustomMission : _game->getMod()->getDeployment(_ufo?_ufo->getRules()->getType():_save->getMissionType(), true);
++	// G.I. Joe: remember an outpost / Pit deployment chosen above, so a next stage and the end of battle can see it
++	_save->setAlienCustom(_alienCustomDeploy ? _alienCustomDeploy->getType() : "", _alienCustomMission ? _alienCustomMission->getType() : "");
  
  	_save->setTurnLimit(ruleDeploy->getTurnLimit());
-@@ -829,9 +1007,9 @@ void BattlescapeGenerator::run()
+ 	_save->setChronoTrigger(ruleDeploy->getChronoTrigger());
+@@ -829,9 +1110,9 @@ void BattlescapeGenerator::run()
  		if (_game->getSavedGame()->getMonthsPassed() != -1)
  		{
  			month =
@@ -4915,15 +5074,16 @@ index 1951ba7..4f27d39 100644
  		}
  		else
  		{
-@@ -884,6 +1062,7 @@ void BattlescapeGenerator::run()
+@@ -884,6 +1165,8 @@ void BattlescapeGenerator::run()
  	_save->setStartingCondition(startingCondition);
  
  	generateMap(script, ruleDeploy->getCustomUfoName(), startingCondition);
-+	if (isPitBattle()) applyPitModules();
++	if (isPitSurface()) applyPitSurface();
++	else if (isPitBattle()) applyPitModules();
  
  	if (isPreview && ruleDeploy->isHidden())
  	{
-@@ -961,6 +1140,184 @@ void BattlescapeGenerator::run()
+@@ -961,6 +1244,184 @@ void BattlescapeGenerator::run()
  	}
  }
  
@@ -5108,7 +5268,7 @@ index 1951ba7..4f27d39 100644
  /**
   * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
   */
-@@ -1483,6 +1840,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1483,6 +1944,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  			setCustomCraftInventoryTile();
  
  			Node* node = _save->getSpawnNode(NR_XCOM, unit);
@@ -5141,7 +5301,7 @@ index 1951ba7..4f27d39 100644
  			if (node)
  			{
  				_save->setUnitPosition(unit, node->getPosition());
-@@ -1495,6 +1878,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1495,6 +1982,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  				_save->initUnit(unit);
  				return unit;
  			}
@@ -5169,7 +5329,7 @@ index 1951ba7..4f27d39 100644
  			else if (_save->getMissionType() != "STR_BASE_DEFENSE")
  			{
  				if (placeUnitNearFriend(unit))
-@@ -1669,6 +2073,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +2177,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -5259,7 +5419,7 @@ index 1951ba7..4f27d39 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +2183,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +2287,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -5328,7 +5488,7 @@ index 1951ba7..4f27d39 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2268,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2372,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -5345,7 +5505,7 @@ index 1951ba7..4f27d39 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2297,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2401,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -5388,7 +5548,7 @@ index 1951ba7..4f27d39 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -2081,17 +2669,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,17 +2773,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -5419,7 +5579,7 @@ index 1951ba7..4f27d39 100644
  
  	mapblock->setSizeZ(sizez);
  
-@@ -2141,11 +2737,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2841,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -5433,7 +5593,7 @@ index 1951ba7..4f27d39 100644
  			if (terrainObjectID>0)
  			{
  				int mapDataSetID = mapDataSetOffset;
-@@ -2830,7 +3426,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2830,7 +3530,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  	// this mission type is "hard-coded" in terms of map layout
  	uint64_t seed = RNG::getSeed();
  	_baseTerrain = _terrain;
@@ -5444,7 +5604,7 @@ index 1951ba7..4f27d39 100644
  	{
  		if (_mod->getBaseDefenseMapFromLocation() == 1)
  		{
-@@ -3365,6 +3963,7 @@ void BattlescapeGenerator::generateBaseMap()
+@@ -3365,6 +4067,7 @@ void BattlescapeGenerator::generateBaseMap()
  	// add modules based on the base's layout
  	for (const auto* fac : *_base->getFacilities())
  	{
@@ -5453,7 +5613,7 @@ index 1951ba7..4f27d39 100644
  		{
  			int num = 0;
 diff --git a/src/Battlescape/BattlescapeGenerator.h b/src/Battlescape/BattlescapeGenerator.h
-index a0bc8b3..cdbe66c 100644
+index a0bc8b3..ccc733f 100644
 --- a/src/Battlescape/BattlescapeGenerator.h
 +++ b/src/Battlescape/BattlescapeGenerator.h
 @@ -127,6 +127,8 @@ private:
@@ -5465,7 +5625,7 @@ index a0bc8b3..cdbe66c 100644
  	/// Spawns civilians on a terror mission.
  	void deployCivilians(bool markAsVIP, int nodeRank, int max, bool roundUp = false, const std::string &civilianType = "");
  	/// Finds a spot near a friend to spawn at.
-@@ -147,6 +149,10 @@ private:
+@@ -147,6 +149,14 @@ private:
  	bool selectPosition(const std::vector<SDL_Rect *> *rects, int &X, int &Y, int sizeX, int sizeY);
  	/// Generates a map from base modules.
  	void generateBaseMap();
@@ -5473,10 +5633,14 @@ index a0bc8b3..cdbe66c 100644
 +	bool isPitBattle() const;
 +	/// G.I. Joe: fill the canon Pit's slots from what the base has built
 +	void applyPitModules();
++	/// G.I. Joe: the surface stage - every installed defence's hiding spot opened (copied from the deployed map)
++	void applyPitSurface();
++	/// G.I. Joe: is this the surface stage of a Pit attack?
++	bool isPitSurface() const;
  	/// Populates _verticalLevels vector according to a mapscript command and sorts them for use
  	bool populateVerticalLevels(MapScript *command);
  	/// Gets a terrain from a terrain name for a command or a vertical level
-@@ -194,6 +200,9 @@ public:
+@@ -194,6 +204,9 @@ public:
  	void setTerrain(RuleTerrain *terrain);
  	/// Runs the generator.
  	void run();
@@ -5487,7 +5651,7 @@ index a0bc8b3..cdbe66c 100644
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..7ea9762 100644
+index 7cd4941..723dde1 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -1,3 +1,5 @@
@@ -5935,10 +6099,36 @@ index 7cd4941..7ea9762 100644
  	delete _animTimer;
  	delete _gameTimer;
  	delete _battleGame;
-@@ -789,6 +1184,12 @@ void BattlescapeState::init()
+@@ -789,6 +1184,38 @@ void BattlescapeState::init()
  	_map->draw();
  	_battleGame->init();
  	updateSoldierInfo();
++	// G.I. Joe rig: OXCE_PUT=x,y,z;x,y,z... stands the first player units there, once a battle (test bench only)
++	if (const char *put = getenv("OXCE_PUT"))
++	{
++		static const void *done = nullptr;
++		if (done != (const void*)_save)
++		{
++			done = _save;
++			std::string s(put); size_t i = 0;
++			for (auto *bu : *_save->getUnits())
++			{
++				if (bu->getFaction() != FACTION_PLAYER || bu->isOut() || bu->getArmor()->getSize() > 1) continue;
++				size_t semi = s.find(';', i);
++				const std::string one = s.substr(i, semi == std::string::npos ? std::string::npos : semi - i);
++				int x, y, z;
++				if (sscanf(one.c_str(), "%d,%d,%d", &x, &y, &z) == 3 && _save->getTile(Position(x, y, z)))
++				{
++					Tile *old = bu->getTile();
++					if (old) old->setUnit(nullptr);
++					_save->setUnitPosition(bu, Position(x, y, z));
++					_save->getTile(Position(x, y, z))->setUnit(bu);
++				}
++				if (semi == std::string::npos) break;
++				i = semi + 1;
++			}
++		}
++	}
 +	// G.I. Joe rig: OXCE_CAM=x,y,z points the camera there whenever the battle screen comes back (screenshots)
 +	if (const char *cam = getenv("OXCE_CAM"))
 +	{
@@ -5948,7 +6138,7 @@ index 7cd4941..7ea9762 100644
  
  	switch (_save->getTUReserved())
  	{
-@@ -807,6 +1208,17 @@ void BattlescapeState::init()
+@@ -807,6 +1234,17 @@ void BattlescapeState::init()
  	}
  	if (_firstInit)
  	{
@@ -5966,7 +6156,7 @@ index 7cd4941..7ea9762 100644
  		// Set music
  		if (Options::oxcePlayBriefingMusicDuringEquipment)
  		{
-@@ -859,6 +1271,7 @@ void BattlescapeState::init()
+@@ -859,6 +1297,7 @@ void BattlescapeState::init()
  void BattlescapeState::think()
  {
  	static bool popped = false;
@@ -5974,7 +6164,7 @@ index 7cd4941..7ea9762 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1215,6 +1628,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1215,6 +1654,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -5995,7 +6185,7 @@ index 7cd4941..7ea9762 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -2172,7 +2599,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +2625,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -6004,7 +6194,7 @@ index 7cd4941..7ea9762 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +2819,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +2845,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -6012,7 +6202,37 @@ index 7cd4941..7ea9762 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -3621,6 +4049,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3577,13 +4031,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+ 	{
+ 		nextStage = ruleDeploy->getNextStage();
+ 	}
++	// G.I. Joe: the Pit's surface stage (PIT_FALLS_DESIGN_v1 s.1). Holding it wins; falling back down a way down
++	// (ABORT with Joes on one) takes the fight below, still a base defence
++	bool pitBelow = false;
++	{
++		const auto &SB = _game->getMod()->getPitSurfaceBattleRules();
++		if (!SB.deployment.empty() && _save->getAlienCustomMission() == SB.deployment)
++		{
++			const AlienDeployment *surf = _game->getMod()->getDeployment(SB.deployment, false);
++			nextStage = (abort && surf) ? surf->getNextStage() : std::string();
++			pitBelow = !nextStage.empty();
++		}
++	}
+ 
+ 	if (!nextStage.empty() && inExitArea && !isPreview)
+ 	{
+ 		// if there is a next mission stage + we have people in exit area OR we killed all aliens, load the next stage
+ 		_popups.clear();
+-		_save->setMissionType(nextStage);
++		if (!pitBelow) _save->setMissionType(nextStage);
+ 		BattlescapeGenerator bgen = BattlescapeGenerator(_game);
++		if (pitBelow)
++			for (auto *b : *_game->getSavedGame()->getBases())
++				if (b->isInBattlescape()) bgen.setBase(b);
+ 		bgen.nextStage();
+ 		_game->popState();
+ 		_game->pushState(new BriefingState(0, 0));
+@@ -3621,6 +4090,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -6025,7 +6245,7 @@ index 7cd4941..7ea9762 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +4486,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4527,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -22430,7 +22650,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..e88835d 100644
+index 1885346..0ea611a 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -22568,7 +22788,7 @@ index 1885346..e88835d 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3301,590 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3301,598 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -22831,6 +23051,14 @@ index 1885346..e88835d 100644
 +			v.tryRead("marked", r.marked);
 +			if (!r.unit.empty()) _villains[r.unit] = r;
 +		}
++	}
++	if (const auto& sb = reader["pitSurfaceBattle"])
++	{
++		sb.tryRead("deployment", _pitSurfaceBattle.deployment);
++		sb.tryRead("library", _pitSurfaceBattle.library);
++		sb.tryRead("spots", _pitSurfaceBattle.spots);
++		sb.tryRead("leakTeam", _pitSurfaceBattle.leakTeam);
++		sb.tryRead("escape", _pitSurfaceBattle.escape);
 +	}
 +	if (const auto& ps = reader["pitSurface"])
 +	{
@@ -23159,7 +23387,7 @@ index 1885346..e88835d 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3895,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3903,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -23167,7 +23395,7 @@ index 1885346..e88835d 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4500,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4508,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -23193,7 +23421,7 @@ index 1885346..e88835d 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4757,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4765,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -23214,7 +23442,7 @@ index 1885346..e88835d 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6471,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6479,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -23234,7 +23462,7 @@ index 1885346..e88835d 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6494,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6502,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -23242,7 +23470,7 @@ index 1885346..e88835d 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6508,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6516,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -23282,7 +23510,7 @@ index 1885346..e88835d 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..cff056f 100644
+index 2242d13..e151191 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -23346,7 +23574,7 @@ index 2242d13..cff056f 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,382 @@ private:
+@@ -327,6 +360,392 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -23547,6 +23775,16 @@ index 2242d13..cff056f 100644
 +		bool flexible = false;                 ///< the 13th spot: any researched surface defence
 +	};
 +	struct PitSurfaceRules { std::vector<PitSurfaceSpot> spots; };
++	/// G.I. Joe: the Pit attack starts on the surface (PIT_FALLS_DESIGN_v1 s.1; build/gen_pit_surface.py)
++	struct PitSurfaceBattleRules
++	{
++		std::string deployment, library;                          ///< STR_PIT_SURFACE; the map with every defence deployed
++		std::map<std::string, std::vector<std::vector<int> > > spots; ///< spot id -> x, y cells (every level copied)
++		int leakTeam = 3;                                         ///< Cobra men who come up the escape tunnel if it leaked
++		std::vector<std::vector<int> > escape;                    ///< x, y, z: where they come in, on the Pit map
++	};
++	PitSurfaceBattleRules _pitSurfaceBattle;
++	const PitSurfaceBattleRules &getPitSurfaceBattleRules() const { return _pitSurfaceBattle; }
 +private:
 +	PitSurfaceRules _pitSurface;
 +public:
@@ -23729,7 +23967,7 @@ index 2242d13..cff056f 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1101,124 @@ public:
+@@ -692,6 +1111,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
