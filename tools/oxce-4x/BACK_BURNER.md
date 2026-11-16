@@ -638,3 +638,10 @@ John 21:51: "fight should start with cobra landing on the surface, they don't kn
 This is PIT_FALLS_DESIGN_v1 section 1 (approved 13 Nov). What is shipped (237004b) starts Cobra in the garage AND the escape tunnel, intel or not - wrong on both counts.
 Plan offered: (1) stage 1 on PITGATE, hold the surface = attack beaten; (2) lose it -> stage 2 on the canon Pit, survivors carried, Cobra starts at the lift landing; (3) the water-tower hatch is Cobra's only if leaked (stand-in: Cobra's file on the Joes past a threshold) - leaked = guarded on the surface, maybe a 2nd team through it; (4) Joes use the hatch to flank, 2 turns. About a day for 1-3, half a day for 4.
 Unchecked: nextStage on a base-defence mission (fallback: yard stacked on top as one tall map). Not covered: surface guns opening (surface install), Evacuate / Self-Destruct.
+
+## Continue or exfiltrate - HELD until John says "build now" (16 Nov 00:22)
+John 00:19: "all targets neutralized - continue or exfiltrate? every map". Written, not built: build/held/ (held_exfiltrate.diff + SecureAreaState.h/.cpp; add SecureAreaState.cpp to CMakeLists + vcxproj when applied).
+Asked once when the last Cobra goes down (also on Cobra's turn); not air/sea fights, MUST_DESTROY or VIP escorts. EXFILTRATE = end now, a win. CONTINUE = turns pass, ABORT ends it as a full win (not a retreat).
+
+## Pit free placement (STORY's BRIEF_FOR_BUILD_PitFreePlacement) - HELD until John says "build now" (16 Nov 00:22)
+Replaces the 35 slots and applyPitModules' slot groups. Stamping at any tile: yes, the copy is per tile, no coarse grid. Rotation: only with a drawn rotated version from MAPS (sprites can't turn). The cost is the screen: five blueprint sheets, drag a card, green/red fit, rotate, save tile positions (each module keeps a hidden 6x6 grid spot for capacity/build/dismantle). 2-3 days vs about 1 for the slots. Reachability flood fill is cheap: include it. Throws away the slot groups (mod_update_13) and rewrites the bay plan in BRIEF_FOR_MAPS_PitModuleSpec.
