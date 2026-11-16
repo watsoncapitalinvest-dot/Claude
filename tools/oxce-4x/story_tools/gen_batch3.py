@@ -103,6 +103,7 @@ for i, n, c, deps, txt in [
  ('STR_PRODUCTION_LINES', 'Production Lines', 150, ['STR_FIELD_MANUFACTURING'], 'Stores sheds and a rail spur at the Manufacturing outposts: more stock, faster deliveries.'),
  ('STR_TACTICAL_BATTLE_PLATFORM', 'Tactical Battle Platform', 300, ['STR_HARBOUR_WORKS', 'STR_FORWARD_OPERATIONS_2'], 'A fortified platform anchored on the open ocean: a pier, a helipad and its own guns, in waters no country owns.'),
  ('STR_PLATFORM_ARMAMENT', 'Platform Armament', 200, ['STR_TACTICAL_BATTLE_PLATFORM'], 'Flak guns and radar for the Tactical Battle Platform.'),
+ ('STR_OUTPOST_BASEMENTS', 'Outpost Basements', 150, ['STR_FORWARD_OPERATIONS_2'], 'Digging under our outposts: a basement level with room for more of what each one does best. Each outpost digs its own.'),
  ('STR_SECOND_PIT', 'A Second Pit', 400, ['STR_FORWARD_OPERATIONS_3'], 'Everything we learned building The Pit, done again somewhere else. G.I. Joe can found a second full headquarters, one more per act.'),
  # Pit surface spots (John 15 Nov 01:59-02:02: "2 +1 +1 with research"): the motor pool hides 2 surface facilities to start, 4 at most; the rest go to outposts.
  # STR_VAMP_RECOVERED is never researched by hand: BUILD's hook grants it when the junkyard mission is won, or one month after Clutch is rescued if it is lost (STORY_ClutchRescue_v1, John 17:10: no VAMP research before Clutch).
@@ -168,7 +169,7 @@ FUNDS = {
  'STR_LONG_RANGE_RADAR': 600000}
 FUNDS = {k: int(round(v * 0.75, -4)) for k, v in FUNDS.items()}   # John 21:38: research money cut by 25%
 FUNDS.update({'STR_FORWARD_OPERATIONS_1': 100000, 'STR_FORWARD_OPERATIONS_2': 200000, 'STR_FORWARD_OPERATIONS_3': 300000})   # after the cut (John 13 Nov 21:13)
-FUNDS.update({'STR_CAMP_FORTIFICATION': 100000, 'STR_PORT_OPERATIONS': 100000, 'STR_HARBOUR_WORKS': 150000, 'STR_JOE_CARGO_SHIP': 150000, 'STR_FORWARD_AIRFIELDS': 100000, 'STR_AIRFIELD_DEFENCE': 150000, 'STR_LISTENING_POSTS': 100000, 'STR_DEEP_COVER': 150000, 'STR_RESEARCH_ANNEX': 100000, 'STR_ANNEX_EXPANSION': 150000, 'STR_FIELD_MANUFACTURING': 100000, 'STR_PRODUCTION_LINES': 150000, 'STR_TACTICAL_BATTLE_PLATFORM': 300000, 'STR_PLATFORM_ARMAMENT': 200000, 'STR_SECOND_PIT': 500000})   # OUTPOSTS_v3 (16 Nov), first guesses
+FUNDS.update({'STR_CAMP_FORTIFICATION': 100000, 'STR_PORT_OPERATIONS': 100000, 'STR_HARBOUR_WORKS': 150000, 'STR_JOE_CARGO_SHIP': 150000, 'STR_FORWARD_AIRFIELDS': 100000, 'STR_AIRFIELD_DEFENCE': 150000, 'STR_LISTENING_POSTS': 100000, 'STR_DEEP_COVER': 150000, 'STR_RESEARCH_ANNEX': 100000, 'STR_ANNEX_EXPANSION': 150000, 'STR_FIELD_MANUFACTURING': 100000, 'STR_PRODUCTION_LINES': 150000, 'STR_TACTICAL_BATTLE_PLATFORM': 300000, 'STR_PLATFORM_ARMAMENT': 200000, 'STR_SECOND_PIT': 500000, 'STR_OUTPOST_BASEMENTS': 150000})   # OUTPOSTS_v3 (16 Nov), first guesses
 FUNDS.update({'STR_OVERWATCH_DRILLS': 60000, 'STR_BREACHING_DRILLS': 80000, 'STR_FIRE_AND_MOVE': 90000})   # pitched after the cut (John 23:16-23:19)
 FUNDS.update({'STR_TRANSPORT_DOOR_GUNS': 60000, 'STR_TRANSPORT_ARMOR_PLATING': 90000, 'STR_TRANSPORT_COUNTERMEASURE_PODS': 70000})   # John 13 Nov 14:11 (dogfight design 3b)
 FUNDS.update({i: f for i, n, c, f, _ in HEAD_ONLY})   # John 14 Nov 00:51, after the cut
