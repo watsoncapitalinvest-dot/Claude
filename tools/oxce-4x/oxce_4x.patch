@@ -18437,10 +18437,10 @@ index 0000000..e57d835
 +}
 diff --git a/src/Geoscape/CobraNetwork.cpp b/src/Geoscape/CobraNetwork.cpp
 new file mode 100644
-index 0000000..5573448
+index 0000000..28bc34a
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.cpp
-@@ -0,0 +1,702 @@
+@@ -0,0 +1,729 @@
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5. See CobraNetwork.h.
 + *
@@ -18592,7 +18592,7 @@ index 0000000..5573448
 +{
 +	SavedGame *save = game->getSavedGame();
 +	AlienBase *b = baseByKey(save, key);
-+	if (!b || b->isDiscovered()) return;
++	if (!b || b->isDiscovered() || save->getCobraNet().count("sleeper:" + key)) return;
 +	int &n = save->getCobraNet()["leads:" + key];
 +	n += found ? 2 : 1;
 +	if (n >= 2)
@@ -18928,6 +18928,27 @@ index 0000000..5573448
 +		net["willMonth"] = save->getMonthsPassed() + 1;
 +		willMonthly(game);
 +		bluddMonthly(game);
++		// New cells (COBRA_OUTPOSTS 4i, answers 2h): Cobra plants a cell beside a front company when it has fewer than two,
++		// for 100 of its funds; one in three is a SLEEPER, silent and unfindable for 2-4 months before it wakes.
++		{
++			int cells = 0;
++			std::vector<AlienBase*> fronts;
++			for (auto *b : *save->getAlienBases()) { if (b->getSiteType() == CELL) cells++; if (b->getSiteType() == FRONT) fronts.push_back(b); }
++			if (cells < 2 && !fronts.empty() && save->getCobraEconomy().getFunds("STR_NORTH_AMERICA") >= 100 && save->getMonthsPassed() >= 1)
++			{
++				AlienBase *f = fronts[RNG::generate(0, (int)fronts.size() - 1)];
++				Town t; t.name = townOf(save, f, towns(mod)); t.lon = f->getLongitude(); t.lat = f->getLatitude();
++				if (AlienBase *c = plant(game, RNG::percent(50) && mod->getDeployment("STR_COBRA_CELL_FARM_SITE") ? "STR_COBRA_CELL_FARM_SITE" : "STR_COBRA_CELL_SITE", t, 25))
++				{
++					save->getCobraEconomy().addFunds("STR_NORTH_AMERICA", -100);
++					if (RNG::percent(33))
++					{
++						net["sleeper:" + siteKey(c)] = save->getMonthsPassed() + RNG::generate(2, 4);
++						Log(LOG_INFO) << "[network] the new cell is a sleeper";
++					}
++				}
++			}
++		}
 +		// piece 9, the M.A.R.S. standing order (John's rule, Act1Fixes item 8): Cobra always buys some guns - the larger of
 +		// a flat 40 and a tenth of its funds - and they come in by road, a convoy the Joes can stop. A convoy that gets
 +		// through delivers the materiel to the region; one that is stopped delivers nothing.
@@ -18978,6 +18999,12 @@ index 0000000..5573448
 +	{
 +		const std::string key = siteKey(b);
 +		const bool isCell = b->getSiteType() == CELL;
++		if (isCell && net.count("sleeper:" + key))
++		{
++			if (net["sleeper:" + key] > month) continue;   // still asleep: no jobs, nothing to find
++			net.erase("sleeper:" + key);
++			Log(LOG_INFO) << "[network] the sleeper cell " << key << " wakes";
++		}
 +		Region *rg = save->locateRegion(*b);
 +		const std::string region = rg ? rg->getRules()->getType() : std::string();
 +		const int bold = (net.count("bold:" + region) && net["bold:" + region] == month) ? 125 : 100;
@@ -23173,7 +23200,7 @@ index 0000000..3543fff
 +}
 diff --git a/src/Geoscape/IntelBoardState.cpp b/src/Geoscape/IntelBoardState.cpp
 new file mode 100644
-index 0000000..fcb1698
+index 0000000..38b9e8f
 --- /dev/null
 +++ b/src/Geoscape/IntelBoardState.cpp
 @@ -0,0 +1,551 @@
@@ -23272,7 +23299,7 @@ index 0000000..fcb1698
 +		}
 +		else
 +		{
-+			line = tr(id);
++			line = id.compare(0, 4, "STR_") == 0 ? std::string(tr(id)) : id;   // Cobra alerts arrive already written
 +		}
 +		if (shown++ < 3)
 +		{
