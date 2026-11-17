@@ -1,8 +1,8 @@
 # scale that fills an n x m footprint over all 8 headings (STORY rule), hull only (no barrels/antenna), 5% margin
 import bpy, sys, math, numpy as np
 bpy.ops.wm.open_mainfile(filepath=sys.argv[1]); fx, fy = int(sys.argv[2]), int(sys.argv[3])
-skip = ('turret', 'thunderclap_trailer.004')
-pts = np.array([(o.matrix_world @ v.co)[:2] for o in bpy.data.objects if o.type == 'MESH' and not o.name.startswith(skip) and len(o.data.vertices) > 0 and o.dimensions.z < 12 for v in o.data.vertices])
+skip = ('turret', 'antenna', 'decal', 'thunderclap_trailer.004')   # barrels and antennas may hang over (STORY rule)
+pts = np.array([(o.matrix_world @ v.co)[:2] for o in bpy.data.objects if o.type == 'MESH' and not o.name.startswith(skip) and len(o.data.vertices) > 0 for v in o.data.vertices])
 pts -= (pts.min(0) + pts.max(0)) / 2
 best = 9
 for k in range(8):
