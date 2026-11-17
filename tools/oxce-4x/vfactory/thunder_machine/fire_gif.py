@@ -3,7 +3,9 @@
 import sys, json, math
 from PIL import Image, ImageDraw
 P, HEAD, OUT = sys.argv[1:4]; CASE = sys.argv[4] if len(sys.argv) > 4 else None
-case = Image.open(CASE).convert('RGBA') if CASE else None; m = json.load(open(f'{P}/manifest.json')); AX, AY = m['anchor']
+case = Image.open(CASE).convert('RGBA') if CASE else None
+if case is not None: case = case.resize((max(4, round(case.width * 0.6)), max(2, round(case.height * 0.6))), Image.LANCZOS)   # John 18:19 'smaller'
+m = json.load(open(f'{P}/manifest.json')); AX, AY = m['anchor']
 hs = Image.open(HEAD).convert('RGBA'); Z = hs.height; heads = [hs.crop((k * Z, 0, k * Z + Z, Z)) for k in range(8)]
 W, H = 1100, 620
 def ground():
@@ -26,7 +28,7 @@ for hd in ('E', 'SE', 'S'):
                 o = f['muzzles']['gatL']['xy'], f['muzzles']['gatR']['xy']; sx, sy = o[0][0] - o[1][0], o[0][1] - o[1][1]; sl = math.hypot(sx, sy) or 1
                 side = 1 if g == 'gatL' else -1; sx, sy = side * sx / sl, side * sy / sl
                 ex, ey = mx - dx * 47 + sx * 8, my - dy * 47 + sy * 8          # the receiver, ~47 px back from the muzzle
-                shells.append([ex, ey, sx * 5.5 + (n % 3 - 1) * 0.8, -9.0 - (n % 4), ey + 70 + (n % 5) * 4, n * 37 % 360])
+                shells.append([ex, ey, sx * 3.0 + (n % 3 - 1) * 0.5, -6.0 - (n % 3) * 0.7, ey + 40 + (n % 5) * 3, n * 37 % 360])   # John 18:19 'not as far'
             fx = next((x for x in m['fx_frames'] if x.get('weapon') == g and x.get('heading') == hd and x.get('frame') == n % 2), None)
             if fx: c.alpha_composite(Image.open(f'{P}/{fx["file"]}').convert('RGBA'), (int(mx - 48), int(my - 48)))
         if case is not None:
