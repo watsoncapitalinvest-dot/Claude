@@ -475,6 +475,69 @@ S['STR_EVENT_ROBBERY_MISSED'] = 'THE PAYROLL IS GONE'
 S['STR_EVENT_ROBBERY_MISSED_DESCRIPTION'] = P.join([
     "HAWK: The armored car was hit on schedule and we weren't there. Two guards in the hospital, the payroll gone, and the evening news asking who's supposed to stop this.",
     "If Scarlett's informant is still talking, we'll hear where the crew went to ground. If not, that money has to go through a bank sooner or later, and we'll follow it the slow way."])
+# ------------------------------------------------------------------ Act 1 campaign layer, pieces 1-5 (claude/BRIEF_FOR_BUILD_Act1Layer_Part1_Answers.txt, John 17 Nov)
+# Placeholders BUILD substitutes: {REGION}, {TOWN}, {COUNTRY}, {TARGET} (one of the STR_CELL_TARGET_* lines), {HOURS}, {DAYS}.
+# Alerts come in two forms: _SCANNER (the Police Scanner, short countdown) and _TIPOFF (informants or SIGINT, days ahead).
+# 1. Before a site is found: a region-level line in Situation Analysis, never a town.
+S['STR_COBRA_ACTIVITY_REPORTED'] = "Cobra activity reported: {REGION}. {BAND}"
+S['STR_COBRA_ACTIVITY_FEW'] = "A few reports. Nothing confirmed."
+S['STR_COBRA_ACTIVITY_SEVERAL'] = "Several reports, from more than one source."
+S['STR_COBRA_ACTIVITY_MANY'] = "Many reports. Cobra is well established here."
+# 2. Cell strikes. A small crew hits a small local target.
+S['STR_CELL_TARGET_POLICE'] = "the police station"
+S['STR_CELL_TARGET_GAS_STATION'] = "a gas station on the highway"
+S['STR_CELL_TARGET_SHOPPING_STREET'] = "the shopping street"
+S['STR_CELL_TARGET_BANK'] = "the town bank"
+S['STR_CELL_TARGET_SUBSTATION'] = "the power substation"
+S['STR_ALERT_CELL_STRIKE_SCANNER'] = "POLICE SCANNER: Shots fired at {TARGET}, {TOWN}. Officers pinned down. Armed men in blue. {HOURS} hours before they're gone."
+S['STR_ALERT_CELL_STRIKE_TIPOFF'] = "TIP-OFF: A Cobra crew is planning to hit {TARGET} in {TOWN}. We have {DAYS} days to be waiting for them."
+S['STR_BRIEFING_CELL_STRIKE_TITLE'] = 'OPERATION: LOCAL CALL'
+S['STR_BRIEFING_CELL_STRIKE'] = P.join([
+    "HAWK: A Cobra cell is hitting {TARGET} in {TOWN}. It's a small crew, and they want to be seen doing it. The point is to show a town that the police can't protect it.",
+    "So we show it something else. The police are already there and outgunned: keep them alive. Every civilian you get out is one more person who saw G.I. Joe turn up.",
+    "Take one of them alive. A crew this size works out of a house, not a fortress, and somebody in it knows the address."])
+S['STR_EVENT_CELL_STRIKE_STOPPED'] = 'THE CREW IS IN CUSTODY'
+S['STR_EVENT_CELL_STRIKE_STOPPED_DESCRIPTION'] = P.join([
+    "SCARLETT: {TOWN} has its main street back. One of the crew is talking, mostly to say he doesn't know anything.",
+    "He knows a phone number. It's in the file now. Every one of these crews answers to somebody."])
+S['STR_EVENT_CELL_STRIKE_MISSED'] = 'COBRA WAS IN {TOWN}'
+S['STR_EVENT_CELL_STRIKE_MISSED_DESCRIPTION'] = P.join([
+    "HAWK: A Cobra crew hit {TARGET} in {TOWN} and left before anyone could stop it. Nobody in that town is asking the police for help this evening. They're asking who Cobra is.",
+    "That's what the strike was for. They'll try it again somewhere nearby, because it worked."])
+# 3. Crime that pays Cobra. A getaway pays; a stopped crime gives a lead.
+S['STR_ALERT_BANK_ROBBERY_SCANNER'] = "POLICE SCANNER: Armed robbery in progress at a bank in {TOWN}. A van is waiting at the back. {HOURS} hours."
+S['STR_ALERT_BANK_ROBBERY_TIPOFF'] = "TIP-OFF: A crew has been watching a bank in {TOWN}. They go in within {DAYS} days."
+S['STR_ALERT_ARMORED_CAR_SCANNER'] = "POLICE SCANNER: An armored car has stopped answering its radio outside {TOWN}. {HOURS} hours."
+S['STR_ALERT_ARMORED_CAR_TIPOFF'] = "TIP-OFF: Somebody bought the payroll route for an armored car out of {TOWN}. The hit is within {DAYS} days."
+S['STR_ALERT_VAN_STOP_SCANNER'] = "POLICE SCANNER: A highway patrolman has pulled over a van at a gas station near {TOWN} and called for backup. Then he stopped answering. {HOURS} hours."
+S['STR_ALERT_VAN_STOP_TIPOFF'] = "TIP-OFF: A van carrying Cobra cargo refuels near {TOWN} within {DAYS} days. It will be guarded."
+S['STR_ALERT_CONVOY_SCANNER'] = "POLICE SCANNER: Trucks running without lights on the desert highway near {TOWN}, with an escort. {HOURS} hours to the state line."
+S['STR_ALERT_CONVOY_TIPOFF'] = "TIP-OFF: A Cobra convoy runs the desert highway past {TOWN} within {DAYS} days."
+S['STR_EVENT_CRIME_STOPPED'] = 'THE MONEY STAYED'
+S['STR_EVENT_CRIME_STOPPED_DESCRIPTION'] = P.join([
+    "HAWK: The van didn't leave. The cash goes back where it came from, and Cobra goes a month short.",
+    "Scarlett is going through the crew's pockets. One lead is a start. Two will be an address."])
+S['STR_EVENT_CRIME_LEADER_TALKS'] = 'THE LEADER TALKED'
+S['STR_EVENT_CRIME_LEADER_TALKS_DESCRIPTION'] = P.join([
+    "SCARLETT: The man who ran the job lasted an hour. He wasn't paid enough to last longer.",
+    "He gave us the place the money was going. It's on the map."])
+S['STR_EVENT_BANK_ROBBERY_MISSED'] = 'THE BANK IS EMPTY'
+S['STR_EVENT_BANK_ROBBERY_MISSED_DESCRIPTION'] = P.join([
+    "HAWK: The bank in {TOWN} was cleaned out and the van was gone before we got there. {COUNTRY} wants to know what it's paying us for.",
+    "The van left a trail. It always does. Somewhere there's a safehouse with a lot of cash in it, and Scarlett is looking for it."])
+S['STR_EVENT_VAN_STOP_MISSED'] = 'THE VAN GOT THROUGH'
+S['STR_EVENT_VAN_STOP_MISSED_DESCRIPTION'] = P.join([
+    "HAWK: The patrolman is alive. The van and whatever was in it are gone.",
+    "Somebody saw which way it turned off the highway. It's not much, but it's a trail."])
+S['STR_EVENT_CONVOY_MISSED'] = 'THE CONVOY CROSSED'
+S['STR_EVENT_CONVOY_MISSED_DESCRIPTION'] = P.join([
+    "HAWK: The trucks made it across the state line. Whatever Cobra was moving, it has it now.",
+    "Trucks need fuel and drivers need sleep. Somebody along that road was paid to look the other way, and they'll remember the faces."])
+# 5. The factory: the 7-day warning, once the Factory Production Schedule is researched.
+S['STR_EVENT_FACTORY_WARNING'] = 'SEVEN DAYS'
+S['STR_EVENT_FACTORY_WARNING_DESCRIPTION'] = P.join([
+    "SCARLETT: The date on the production schedule is a week away. Fuel deliveries to the Arbco plant started on Monday, and the rail spur has a train booked.",
+    "HAWK: If we're going to chain those gates, it's this week. After that we'll be raiding a working factory with guards on it."])
 S['STR_PROVING_GROUND_BRIEFING'] = P.join([
     "HAWK: A Ranger called Beach Head heard we'd built a Training Room. He doesn't think much of it, or of us. He's set up a course outside the wire and brought his own cadre.",
     "Every round on that course is a stun round. Nobody gets hurt. Everybody gets embarrassed.",
