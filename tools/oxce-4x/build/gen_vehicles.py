@@ -27,13 +27,14 @@ HEAD = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 # side: joe = buyable HWP; cobra = New Battle only (needs STR_NEW_BATTLE_ONLY)
 # stats: tu, hp, (front, side, rear, under); weapon: (name, power, damage type, clip, snap(acc,tu), aimed, auto(acc,tu,shots), blast, bullet sprite, sound key)
 V = {
- "vamp":      dict(pack="vamp", asset="vamp", state=None, side="joe", name="VAMP (guns)", tu=80, hp=45, arm=(30, 25, 20, 15),
+ "vamp":      dict(pack="vamp", asset="vamp", state="m0", side="joe", name="VAMP (guns)", tu=80, hp=45, arm=(30, 25, 20, 15),
                   wpn=("Twin machine gun", 30, 1, 100, (50, 25), (75, 45), (40, 35, 4), 0, 2, "m60"), price=100000),
  "vamp_mk2":  dict(pack="vamp_mk2", asset="vamp_mk2", state="m4", side="joe", name="VAMP Mk II (rockets)", tu=70, hp=55, arm=(45, 35, 30, 20),
+                  stores=["m3", "m2", "m1", "m0"], store_weapon="self", head="proj_vamp_mk2_head0",
                   wpn=("Rocket pod", 90, 3, 4, None, (85, 50), None, 1, 0, "bazooka_launch"), price=160000),
  "triple_t":  dict(pack="triple_t", asset="triple_t", state="m2", side="joe", name="Triple T", tu=64, hp=80, arm=(70, 55, 45, 40),
                   wpn=("Side-pod missiles", 100, 3, 2, None, (85, 50), None, 2, 0, "power_javelin_launch"), price=250000),
- "mobat":     dict(pack="mobat", asset="mobat", state=None, side="joe", name="MOBAT", tu=56, hp=120, arm=(90, 75, 60, 60),
+ "mobat":     dict(pack="mobat", asset="mobat", state="m0", side="joe", name="MOBAT", tu=56, hp=120, arm=(90, 75, 60, 60),
                   wpn=("Main gun", 90, 1, 20, (55, 33), (85, 70), None, 0, 4, "m2x_50cal"), price=420000),
  "wolverine": dict(pack="wolverine", asset="wolverine", state=None, side="joe", name="Wolverine", tu=60, hp=100, arm=(80, 65, 50, 50),
                   wpn=("Missile rack", 80, 3, 6, None, (85, 55), None, 1, 0, "power_javelin_launch"), price=380000),
@@ -41,7 +42,7 @@ V = {
                   wpn=("Main gun", 110, 1, 20, (50, 35), (80, 70), None, 0, 4, "m2x_50cal"), price=600000),
  "stinger":   dict(pack="stinger", asset="stinger", state=None, side="cobra", name="Cobra Stinger", tu=72, hp=50, arm=(35, 25, 20, 15),
                   wpn=("Quad cannon", 40, 1, 100, (45, 30), None, (35, 40, 4), 0, 4, "m60"), price=0),
- "hiss":      dict(pack="hiss", asset="hiss", state=None, side="cobra", name="Cobra H.I.S.S.", tu=60, hp=110, arm=(85, 70, 55, 55),
+ "hiss":      dict(pack="hiss", asset="hiss", state="m0", side="cobra", name="Cobra H.I.S.S.", tu=60, hp=110, arm=(85, 70, 55, 55),
                   wpn=("Twin cannon", 60, 1, 40, (50, 30), (80, 55), (40, 40, 2), 0, 4, "m2x_50cal"), price=0),
  "ferret":    dict(pack="ferret", asset="ferret", state=None, side="cobra", name="Cobra Ferret", tu=80, hp=30, arm=(20, 15, 10, 10),
                   wpn=("Machine gun", 30, 1, 60, (50, 25), None, (35, 35, 3), 0, 2, "m60"), price=0),
@@ -108,7 +109,7 @@ def cellOf(pic, anchor, n, dy=0, dark=1.0, alpha=1.0):
 def sheet(v, d):
     base = glob.glob(os.path.join(PACKS, d["pack"], "*", "manifest.json"))[0]
     root = os.path.dirname(base); man = json.load(open(base))
-    n = man["footprint"][0]; anchor = man["anchor"]
+    n = max(man["footprint"]); anchor = man["anchor"]          # non-square classes go in as their enclosing square (BUILD-1 16:35)
     clean = [frame(root, man, "clean", h, d["state"]) for h in HEAD]
     # a turret that turns on its own (2x2 and up): the standing frames are the hull alone, and the turret is its
     # own sheet, frames 0-7 its headings, placed like the hull; the engine moves it by the hull's paste offset
@@ -211,7 +212,7 @@ for i, (v, d) in enumerate(V.items()):
     if d.get("wpn2"):                                # a second built-in weapon (missiles beside the gun), its own item + ammo
         A += [f"    builtInWeapons: [{T}_W2, {T}_A2]"]
     if d.get("stores"):                              # the missiles leave the hull picture one by one as the _W2 weapon fires (engine, VFACTORY)
-        A += [f"    gjStoreWeapon: {T}_W2", f"    gjStoreStates: {len(d['stores'])}"]
+        A += [f"    gjStoreWeapon: {T if d.get('store_weapon') == 'self' else T + '_W2'}", f"    gjStoreStates: {len(d['stores'])}"]
     if turret:
         A += [f"    gjTurretSheet: VEH_{v.upper()}_TURRET.PCK", "    gjTurretOffsets: [" + ", ".join(f"[{o[0]}, {o[1]}]" for o in turret[1]) + "]"]
     U += [f"  - type: {T}", f"    race: {T}", f"    armor: GJ_VEH_{v.upper()}_ARMOR",
@@ -224,6 +225,7 @@ for i, (v, d) in enumerate(V.items()):
           f"    bigSprite: {340 + i}", "    floorSprite: 0", "    handSprite: 0", f"    bulletSprite: {bullet}", f"    fireSound: {cast(snd)}",
           f"    compatibleAmmo: [{ammo}]", "    turretType: 0", f"    costBuy: {d['price']}", f"    costSell: {d['price'] // 2}", "    transferTime: 96"]
     if d["side"] == "cobra": I += ["    requires: [STR_NEW_BATTLE_ONLY]", "    requiresBuy: [STR_NEW_BATTLE_ONLY]"]
+    if d.get("head") and not d.get("wpn2"): I += [f"    gjBulletHeadSheet: GJ_HEAD_{v.upper()}.PCK"]   # the main weapon's own full-size shot
     if snap: I += [f"    accuracySnap: {snap[0]}", f"    tuSnap: {snap[1]}"]
     if aimed: I += [f"    accuracyAimed: {aimed[0]}", f"    tuAimed: {aimed[1]}"]
     if auto: I += [f"    accuracyAuto: {auto[0]}", f"    tuAuto: {auto[1]}", f"    confAuto: {{shots: {auto[2]}}}"]
@@ -232,6 +234,7 @@ for i, (v, d) in enumerate(V.items()):
           "    invWidth: 1", "    invHeight: 1", "    bigSprite: 16" if dt == 3 else "    bigSprite: 12", "    floorSprite: 16" if dt == 3 else "    floorSprite: 12",
           f"    hitSound: {hit}", f"    hitAnimation: {0 if dt == 3 else 26}", f"    costBuy: {2000 if dt == 3 else 400}", "    transferTime: 24"]
     if blast: I += [f"    blastRadius: {blast}"]
+    if d.get("head") and not d.get("wpn2"): I += [f"    gjBulletHeadSheet: GJ_HEAD_{v.upper()}.PCK"]
     if d["side"] == "cobra": I += ["    requires: [STR_NEW_BATTLE_ONLY]", "    requiresBuy: [STR_NEW_BATTLE_ONLY]"]
     S2[T] = d["name"]; S2[ammo] = f"{d['name']}: {' '.join(w if any(c.isdigit() for c in w) or w[1:] != w[1:].lower() else w.lower() for w in wn.split())} ammo"
     if d.get("wpn2"):
