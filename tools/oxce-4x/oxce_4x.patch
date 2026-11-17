@@ -20009,7 +20009,7 @@ index e609d3c..24a1628 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..d6f52e8 100644
+index 6b4e79d..a861ddc 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,15 @@
@@ -20618,7 +20618,7 @@ index 6b4e79d..d6f52e8 100644
  }
  
  /**
-@@ -847,6 +1212,163 @@ void GeoscapeState::timeDisplay()
+@@ -847,6 +1212,169 @@ void GeoscapeState::timeDisplay()
   * on 1 Day speed) or until an event occurs, since updating
   * the screen on each step would become cumbersomely slow.
   */
@@ -20652,12 +20652,36 @@ index 6b4e79d..d6f52e8 100644
 +	std::set<int> decided;
 +	std::map<std::string, int> foundDay;
 +	out << "FAST FORWARD: " << days << " days, " << (style == 0 ? "absent" : style == 1 ? "typical" : "aggressive") << " player. Start " << stamp() << ", Cobra head start " << save->getCobraHeadStart() << " months\n\n";
++	// the player's answer to a crime or strike he hears of (typical / aggressive styles): settled within the half hour
++	auto settleJobs = [&]()
++	{
++		if (style == 0) return;
++		const int stopP = style == 1 ? 50 : 80, leaderP = style == 1 ? 30 : 50;
++		std::vector<int> settle;
++		for (auto *ms : *save->getMissionSites())
++			if (save->getCobraNetSites().count(ms->getId()) && !decided.count(ms->getId()))
++			{
++				decided.insert(ms->getId());
++				if (RNG::percent(stopP)) settle.push_back(ms->getId());
++			}
++		for (int id : settle)
++			for (auto it = save->getMissionSites()->begin(); it != save->getMissionSites()->end(); ++it)
++				if ((*it)->getId() == id && save->getCobraNetSites().count(id))
++				{
++					const std::string what = save->getCobraNetSites()[id];
++					CobraNetwork::battleResult(_game, id, true, RNG::percent(leaderP));
++					out << stamp() << "  STOPPED " << what << "\n";
++					delete *it; save->getMissionSites()->erase(it); break;
++				}
++	};
 +	int lastMonth = save->getMonthsPassed();
 +	for (int d = 0; d < days; ++d)
 +	{
 +		for (int i = 0; i < 17280; ++i)
 +		{
-+			switch (save->getTime()->advance())
++			const TimeTrigger tt = save->getTime()->advance();
++			if (tt != TIME_5SEC && tt != TIME_10MIN) settleJobs();
++			switch (tt)
 +			{
 +			case TIME_1MONTH: time1Month(); FALLTHROUGH;
 +			case TIME_1DAY: time1Day(); FALLTHROUGH;
@@ -20674,25 +20698,7 @@ index 6b4e79d..d6f52e8 100644
 +		// within ten days. A crude stand-in for play, so the report can be read against STORY's sim v5.
 +		if (style != 0)
 +		{
-+			const int stopP = style == 1 ? 50 : 80, leaderP = style == 1 ? 30 : 50, raidAfter = style == 1 ? 30 : 10;
-+			std::vector<int> settle;
-+			for (auto *ms : *save->getMissionSites())
-+				if (save->getCobraNetSites().count(ms->getId()) && !decided.count(ms->getId()))
-+				{
-+					decided.insert(ms->getId());
-+					if (RNG::percent(stopP)) settle.push_back(ms->getId());
-+				}
-+			for (int id : settle)
-+			{
-+				for (auto it = save->getMissionSites()->begin(); it != save->getMissionSites()->end(); ++it)
-+					if ((*it)->getId() == id && save->getCobraNetSites().count(id))
-+					{
-+						const std::string what = save->getCobraNetSites()[id];
-+						CobraNetwork::battleResult(_game, id, true, RNG::percent(leaderP));
-+						out << stamp() << "  STOPPED " << what << "\n";
-+						delete *it; save->getMissionSites()->erase(it); break;
-+					}
-+			}
++			const int raidAfter = style == 1 ? 30 : 10;
 +			for (auto it = save->getAlienBases()->begin(); it != save->getAlienBases()->end(); )
 +			{
 +				AlienBase *b = *it;
@@ -20782,7 +20788,7 @@ index 6b4e79d..d6f52e8 100644
  void GeoscapeState::timeAdvance()
  {
  	int timeSpan = 0;
-@@ -1047,6 +1569,7 @@ void GeoscapeState::time5Seconds()
+@@ -1047,6 +1575,7 @@ void GeoscapeState::time5Seconds()
  					continue;
  				}
  
@@ -20790,7 +20796,7 @@ index 6b4e79d..d6f52e8 100644
  				size_t count = _game->getSavedGame()->getMissionSites()->size();
  				AlienMission *mission = ufo->getMission();
  				bool detected = ufo->getDetected();
-@@ -1139,6 +1662,9 @@ void GeoscapeState::time5Seconds()
+@@ -1139,6 +1668,9 @@ void GeoscapeState::time5Seconds()
  		}
  	}
  
@@ -20800,7 +20806,7 @@ index 6b4e79d..d6f52e8 100644
  	// Handle craft logic
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -1233,6 +1759,13 @@ void GeoscapeState::time5Seconds()
+@@ -1233,6 +1765,13 @@ void GeoscapeState::time5Seconds()
  			if (!ufoIsAttacking)
  			{
  				bool returnedToBase = xcraft->think();
@@ -20814,7 +20820,7 @@ index 6b4e79d..d6f52e8 100644
  				if (returnedToBase)
  				{
  					_game->getSavedGame()->stopHuntingXcomCraft(xcraft); // hiding in the base is good enough, obviously
-@@ -1422,7 +1955,9 @@ void GeoscapeState::time5Seconds()
+@@ -1422,7 +1961,9 @@ void GeoscapeState::time5Seconds()
  				{
  					if (b->isDiscovered())
  					{
@@ -20825,7 +20831,7 @@ index 6b4e79d..d6f52e8 100644
  						{
  							int texture, shade;
  							_globe->getPolygonTextureAndShade(b->getLongitude(), b->getLatitude(), &texture, &shade);
-@@ -1454,6 +1989,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +1995,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -20861,7 +20867,7 @@ index 6b4e79d..d6f52e8 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +2128,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +2134,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -20892,7 +20898,7 @@ index 6b4e79d..d6f52e8 100644
  							}
  						}
  					}
-@@ -1752,7 +2332,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2338,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -20901,7 +20907,7 @@ index 6b4e79d..d6f52e8 100644
  								}
  								else
  								{
-@@ -1858,6 +2438,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2444,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -20922,7 +20928,7 @@ index 6b4e79d..d6f52e8 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2478,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2484,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -20935,7 +20941,7 @@ index 6b4e79d..d6f52e8 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2104,6 +2704,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2104,6 +2710,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		detected = maskBitOr(detected, craft->detect(ufo, save, alreadyTracked));
  	}
  
@@ -20943,7 +20949,7 @@ index 6b4e79d..d6f52e8 100644
  	if (!alreadyTracked)
  	{
  		if (maskTest(detected, DETECTION_RADAR))
-@@ -2126,8 +2727,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2126,8 +2733,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		{
  			ufo->setHyperDetected(true);
  		}
@@ -20964,7 +20970,7 @@ index 6b4e79d..d6f52e8 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2757,101 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2763,101 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -21066,7 +21072,7 @@ index 6b4e79d..d6f52e8 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +2898,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +2904,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -21156,7 +21162,7 @@ index 6b4e79d..d6f52e8 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +3143,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +3149,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -21165,7 +21171,7 @@ index 6b4e79d..d6f52e8 100644
  			}
  			else
  			{
-@@ -2389,12 +3179,305 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3185,305 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
@@ -21471,7 +21477,7 @@ index 6b4e79d..d6f52e8 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3527,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3533,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -21494,7 +21500,7 @@ index 6b4e79d..d6f52e8 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2776,6 +3868,7 @@ void GeoscapeState::time1Day()
+@@ -2776,6 +3874,7 @@ void GeoscapeState::time1Day()
  					{
  						chanceToDetect = 50 - (distance * 50 / facility->getRules()->getSightRange()); // dynamic 0-50% based on relative distance
  					}
@@ -21502,7 +21508,7 @@ index 6b4e79d..d6f52e8 100644
  					if (RNG::percent(chanceToDetect))
  					{
  						alienBase->setDiscovered(true);
-@@ -2861,7 +3954,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +3960,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -21531,7 +21537,7 @@ index 6b4e79d..d6f52e8 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +4074,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +4080,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -21562,7 +21568,7 @@ index 6b4e79d..d6f52e8 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4260,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4266,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -21572,7 +21578,7 @@ index 6b4e79d..d6f52e8 100644
  }
  
  /**
-@@ -3265,6 +4404,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4410,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -21588,7 +21594,7 @@ index 6b4e79d..d6f52e8 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4490,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4496,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -21641,7 +21647,7 @@ index 6b4e79d..d6f52e8 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4558,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4564,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -21893,7 +21899,7 @@ index 6b4e79d..d6f52e8 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +6086,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +6092,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -29003,7 +29009,7 @@ index 6bef22e..8cc3b62 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..2f6973b 100644
+index 99f24ce..27382ac 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
 @@ -377,6 +377,10 @@
@@ -29036,7 +29042,7 @@ index 99f24ce..2f6973b 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,10 +555,20 @@
+@@ -546,10 +555,21 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
@@ -29047,6 +29053,7 @@ index 99f24ce..2f6973b 100644
 +    <ClCompile Include="Geoscape\Shipping.cpp" />
 +    <ClCompile Include="Geoscape\SeaNav.cpp" />
 +    <ClCompile Include="Geoscape\Outposts.cpp" />
++    <ClCompile Include="Geoscape\CobraNetwork.cpp" />
 +    <ClCompile Include="Geoscape\DepartmentsState.cpp" />
 +    <ClCompile Include="Basescape\ResearchTreeState.cpp" />
      <ClCompile Include="Geoscape\GeoscapeCraftState.cpp" />
@@ -29057,7 +29064,7 @@ index 99f24ce..2f6973b 100644
      <ClCompile Include="Geoscape\Globe.cpp" />
      <ClCompile Include="Geoscape\GraphsState.cpp" />
      <ClCompile Include="Geoscape\InterceptState.cpp" />
-@@ -673,6 +692,7 @@
+@@ -673,6 +693,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -29065,7 +29072,7 @@ index 99f24ce..2f6973b 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +702,7 @@
+@@ -682,6 +703,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -29073,7 +29080,7 @@ index 99f24ce..2f6973b 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -856,6 +877,10 @@
+@@ -856,6 +878,10 @@
      <ClInclude Include="Basescape\MonthlyCostsState.h" />
      <ClInclude Include="Basescape\NewResearchListState.h" />
      <ClInclude Include="Basescape\PlaceFacilityState.h" />
@@ -29084,7 +29091,7 @@ index 99f24ce..2f6973b 100644
      <ClInclude Include="Basescape\PlaceLiftState.h" />
      <ClInclude Include="Basescape\ManufactureStartState.h" />
      <ClInclude Include="Basescape\PlaceStartFacilityState.h" />
-@@ -890,6 +915,9 @@
+@@ -890,6 +916,9 @@
      <ClInclude Include="Basescape\TransfersState.h" />
      <ClInclude Include="Battlescape\AbortMissionState.h" />
      <ClInclude Include="Battlescape\ActionMenuItem.h" />
@@ -29094,7 +29101,7 @@ index 99f24ce..2f6973b 100644
      <ClInclude Include="Battlescape\ActionMenuState.h" />
      <ClInclude Include="Battlescape\AlienInventory.h" />
      <ClInclude Include="Battlescape\AlienInventoryState.h" />
-@@ -970,6 +998,8 @@
+@@ -970,6 +999,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -29103,7 +29110,7 @@ index 99f24ce..2f6973b 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1063,16 @@
+@@ -1033,6 +1064,17 @@
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
@@ -29114,13 +29121,14 @@ index 99f24ce..2f6973b 100644
 +    <ClInclude Include="Geoscape\Shipping.h" />
 +    <ClInclude Include="Geoscape\SeaNav.h" />
 +    <ClInclude Include="Geoscape\Outposts.h" />
++    <ClInclude Include="Geoscape\CobraNetwork.h" />
 +    <ClInclude Include="Geoscape\DepartmentsState.h" />
 +    <ClInclude Include="Basescape\ResearchTreeState.h" />
 +    <ClInclude Include="Mod\RuleLead.h" />
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1042,6 +1082,7 @@
+@@ -1042,6 +1084,7 @@
      <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
      <ClInclude Include="Geoscape\ProductionCompleteState.h" />
      <ClInclude Include="Geoscape\GeoscapeState.h" />
@@ -29128,7 +29136,7 @@ index 99f24ce..2f6973b 100644
      <ClInclude Include="Geoscape\Globe.h" />
      <ClInclude Include="Geoscape\GraphsState.h" />
      <ClInclude Include="Geoscape\InterceptState.h" />
-@@ -1170,6 +1211,7 @@
+@@ -1170,6 +1213,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -29136,7 +29144,7 @@ index 99f24ce..2f6973b 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1221,7 @@
+@@ -1179,6 +1223,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
