@@ -27227,7 +27227,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..84dd2ff 100644
+index 1885346..2d7cb17 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -27490,7 +27490,7 @@ index 1885346..84dd2ff 100644
 +		{
 +			CraftVariant v; std::string craft;
 +			e.tryRead("craft", craft); e.tryRead("research", v.research); e.tryRead("terrain", v.terrain);
-+			e.tryRead("guns", v.guns); e.tryRead("gunUnit", v.gunUnit); e.tryRead("gunItem", v.gunItem);
++			e.tryRead("guns", v.guns); e.tryRead("gunUnit", v.gunUnit); e.tryRead("gunItem", v.gunItem); e.tryRead("seatsLost", v.seatsLost);
 +			if (!craft.empty()) _craftVariants[craft].push_back(v);
 +		}
 +	if (const auto& op = reader["outposts"])
@@ -28244,7 +28244,7 @@ index 1885346..84dd2ff 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..e9974ff 100644
+index 2242d13..26e89ac 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -28793,7 +28793,7 @@ index 2242d13..e9974ff 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1203,129 @@ public:
+@@ -692,6 +1203,130 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -28827,9 +28827,10 @@ index 2242d13..e9974ff 100644
 +	const CobraFileRules &getCobraFileRules() const { return _cobraFile; }
 +	const RetreatRules &getRetreatRules() const { return _retreat; }
 +	const CartelRules &getCartelRules() const { return _cartel; }
-+	struct CraftVariant { std::string research, terrain, gunUnit, gunItem; std::vector<std::vector<int> > guns; };
++	struct CraftVariant { std::string research, terrain, gunUnit, gunItem; std::vector<std::vector<int> > guns; int seatsLost = 0; };
 +	const std::vector<CraftVariant> *getCraftVariants(const std::string &craft) const { auto i = _craftVariants.find(craft); return i == _craftVariants.end() ? nullptr : &i->second; }
 +	std::map<std::string, std::vector<CraftVariant> > _craftVariants;
++	const std::map<std::string, std::vector<CraftVariant> > &getAllCraftVariants() const { return _craftVariants; }
 +	const std::vector<std::string> *getGijoeBounty(const std::string &dep) const { auto i = _gijoeBounties.find(dep); return i == _gijoeBounties.end() ? nullptr : &i->second; }
 +	const std::vector<SpyOperationRule> &getSpyOperations() const { return _spyOperations; }
 +	const SpyOperationRule *getSpyOperation(const std::string &type) const { for (const auto &o : _spyOperations) if (o.type == type) return &o; return nullptr; }
@@ -30776,7 +30777,7 @@ index ff59738..2588d50 100644
  	void addActivityXcom(int activity);
  	/// add alien activity in this country
 diff --git a/src/Savegame/Craft.cpp b/src/Savegame/Craft.cpp
-index 177232b..2021fc1 100644
+index 177232b..025f9ce 100644
 --- a/src/Savegame/Craft.cpp
 +++ b/src/Savegame/Craft.cpp
 @@ -17,6 +17,7 @@
@@ -30807,7 +30808,23 @@ index 177232b..2021fc1 100644
  	if (!_customSoldierDeployment.empty())
  		writer.write("customSoldierDeployment", _customSoldierDeployment);
  	if (!_customVehicleDeployment.empty())
-@@ -2420,4 +2427,24 @@ void write(ryml::NodeRef* n, VehicleDeploymentData const& val)
+@@ -1016,7 +1023,14 @@ int Craft::getFuelLimit(Base *base) const
+  */
+ int Craft::getMaxUnitsClamped() const
+ {
+-	return Clamp(_stats.soldiers, 0, _rules->getMaxUnitsLimit());
++	auto i = seatPenalty().find(_rules->getType());
++	return Clamp(_stats.soldiers - (i == seatPenalty().end() ? 0 : i->second), 0, _rules->getMaxUnitsLimit());
++}
++
++std::map<std::string, int> &Craft::seatPenalty()
++{
++	static std::map<std::string, int> m;
++	return m;
+ }
+ 
+ /**
+@@ -2420,4 +2434,24 @@ void write(ryml::NodeRef* n, VehicleDeploymentData const& val)
  	// writer.write("used", val.used); // not needed
  }
  
@@ -30833,7 +30850,7 @@ index 177232b..2021fc1 100644
 +
  }
 diff --git a/src/Savegame/Craft.h b/src/Savegame/Craft.h
-index 7e53cbf..376d5b8 100644
+index 7e53cbf..b3aa07a 100644
 --- a/src/Savegame/Craft.h
 +++ b/src/Savegame/Craft.h
 @@ -80,6 +80,11 @@ struct VehicleDeploymentData
@@ -30861,7 +30878,16 @@ index 7e53cbf..376d5b8 100644
  	std::map<int, SoldierDeploymentData> _customSoldierDeployment;
  	std::vector<VehicleDeploymentData> _customVehicleDeployment;
  	int _skinIndex;
-@@ -305,6 +314,8 @@ public:
+@@ -231,6 +240,8 @@ public:
+ 	int getFuelLimit(Base *base) const;
+ 
+ 	/// Gets the craft's maximum unit capacity (soldiers and vehicles, small and large).
++	/// G.I. Joe: seats a fitted upgrade takes, per craft type (the Tomahawk's door guns: 2); kept current by SavedGame
++	static std::map<std::string, int> &seatPenalty();
+ 	int getMaxUnitsClamped() const;
+ 	int getMaxUnitsRaw() const { return _stats.soldiers; }
+ 	/// Gets the craft's maximum vehicle capacity (incl. 2x2 soldiers).
+@@ -305,6 +316,8 @@ public:
  	void removeAllPilots();
  	/// Gets the list of craft pilots.
  	const std::vector<Soldier*> getPilotList(bool autoAdd, const Mod* mod);
@@ -31166,7 +31192,7 @@ index 6c121c7..8fcf33f 100644
  	std::vector< std::vector<int> > &getReinforcementsBlocks() { return _reinforcementsBlocks; }
  
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..df05b59 100644
+index 9ca9637..390102a 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,11 +21,13 @@
@@ -31201,15 +31227,18 @@ index 9ca9637..df05b59 100644
  #include "MissionStatistics.h"
  #include "SoldierDeath.h"
  #include "SoldierDiary.h"
-@@ -110,6 +116,7 @@ SavedGame::SavedGame() :
+@@ -108,8 +114,10 @@ SavedGame::SavedGame() :
+ 	_monthsPassed(-1), _daysPassed(0), _vehiclesLost(0), _craftLostDogfight(0), _craftLostMission(0),
+ 	_selectedBase(0), _autosales(), _disableSoldierEquipment(false), _alienContainmentChecked(false)
  {
++	Craft::seatPenalty().clear();   // G.I. Joe: a new game has no upgrades fitted
  	_time = new GameTime(6, 1, 1, 1999, 12, 0, 0);
  	_alienStrategy = new AlienStrategy();
 +	_cobraEconomy = new CobraEconomy();
  	_funds.push_back(0);
  	_maintenance.push_back(0);
  	_researchScores.push_back(0);
-@@ -159,6 +166,7 @@ SavedGame::~SavedGame()
+@@ -159,6 +167,7 @@ SavedGame::~SavedGame()
  		delete ab;
  	}
  	delete _alienStrategy;
@@ -31217,7 +31246,7 @@ index 9ca9637..df05b59 100644
  	for (auto* am : _activeMissions)
  	{
  		delete am;
-@@ -371,6 +379,61 @@ SaveInfo SavedGame::getSaveInfo(const std::string &file, Language *lang)
+@@ -371,6 +380,61 @@ SaveInfo SavedGame::getSaveInfo(const std::string &file, Language *lang)
   * @param mod Mod for the saved game.
   * @param lang Loaded language.
   */
@@ -31279,7 +31308,7 @@ index 9ca9637..df05b59 100644
  void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  {
  	std::string filepath = Options::getMasterUserFolder() + filename;
-@@ -389,6 +452,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -389,6 +453,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	if (reader["rng"] && (_ironman || !Options::newSeedOnLoad))
  		RNG::setSeed(reader["rng"].readVal<uint64_t>());
  	reader.tryRead("monthsPassed", _monthsPassed);
@@ -31287,7 +31316,7 @@ index 9ca9637..df05b59 100644
  	reader.tryRead("daysPassed", _daysPassed);
  	reader.tryRead("vehiclesLost", _vehiclesLost);
  	reader.tryRead("craftLostDogfight", _craftLostDogfight);
-@@ -399,6 +463,46 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -399,6 +464,46 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	reader.tryRead("funds", _funds);
  	reader.tryRead("maintenance", _maintenance);
  	reader.tryRead("userNotes", _userNotes);
@@ -31334,7 +31363,7 @@ index 9ca9637..df05b59 100644
  	reader.tryRead("geoscapeDebugLog", _geoscapeDebugLog);
  	reader.tryRead("researchScores", _researchScores);
  	reader.tryRead("incomes", _incomes);
-@@ -649,6 +753,30 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -649,6 +754,30 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  		}
  	}
  	_alienStrategy->load(reader["alienStrategy"], mod);
@@ -31365,15 +31394,15 @@ index 9ca9637..df05b59 100644
  
  	for (const auto& weHardlyKnewYe : reader["deadSoldiers"].children())
  	{
-@@ -690,6 +818,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
+@@ -690,6 +819,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
  	}
  
  	_scriptValues.load(reader, mod->getScriptGlobal());
-+
++	refreshCraftSeats(mod);
  }
  
  void SavedGame::loadTemplates(const YAML::YamlNodeReader& reader, const Mod* mod)
-@@ -779,6 +908,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -779,6 +909,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("difficulty", _difficulty);
  	writer.write("end", _end);
  	writer.write("monthsPassed", _monthsPassed);
@@ -31381,7 +31410,7 @@ index 9ca9637..df05b59 100644
  	writer.write("daysPassed", _daysPassed);
  	writer.write("vehiclesLost", _vehiclesLost);
  	writer.write("craftLostDogfight", _craftLostDogfight);
-@@ -790,6 +920,101 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -790,6 +921,101 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("funds", _funds);
  	writer.write("maintenance", _maintenance);
  	writer.write("userNotes", _userNotes);
@@ -31483,7 +31512,7 @@ index 9ca9637..df05b59 100644
  	if (Options::oxceGeoscapeDebugLogMaxEntries > 0 && _geoscapeDebugLog.size() > 0)
  	{
  		auto geoDebugLog = writer["geoscapeDebugLog"];
-@@ -849,8 +1074,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
+@@ -849,8 +1075,10 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
  	writer.write("hiddenPurchaseItems", _hiddenPurchaseItemsMap);
  	writer.write("customRuleCraftDeployments", _customRuleCraftDeployments);
  	_alienStrategy->save(writer["alienStrategy"]);
@@ -31494,7 +31523,7 @@ index 9ca9637..df05b59 100644
  	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
  	{
  		if (!_globalEquipmentLayout[j].empty())
-@@ -1530,8 +1757,194 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
+@@ -1530,8 +1758,213 @@ void SavedGame::makeAllResearchDiscovered(const Mod* mod)
   * @param base the base, in which the project was finished
   * @param score should the score be awarded or not?
   */
@@ -31674,6 +31703,25 @@ index 9ca9637..df05b59 100644
 +	else _leadNews.push_back("STR_SHIP_INTEL_OPENED|" + best->gjName);
 +}
 +
++void SavedGame::refreshCraftSeats(const Mod *mod) const
++{
++	Craft::seatPenalty().clear();
++	for (const auto &kv : mod->getAllCraftVariants())
++		for (const auto &v : kv.second)
++		{
++			bool on = !v.research.empty();
++			std::string rest = v.research;
++			while (on && !rest.empty())
++			{
++				const size_t k = rest.find('+');
++				const RuleResearch *r = mod->getResearch(rest.substr(0, k), false);
++				on = r && isResearched(r, false);
++				rest = k == std::string::npos ? "" : rest.substr(k + 1);
++			}
++			if (on) Craft::seatPenalty()[kv.first] = std::max(Craft::seatPenalty()[kv.first], v.seatsLost);
++		}
++}
++
  void SavedGame::addFinishedResearch(const RuleResearch * research, const Mod * mod, Base * base, bool score)
  {
 +	if (!research->getCobraSiteIntel().empty())
@@ -31689,7 +31737,15 @@ index 9ca9637..df05b59 100644
  	if (isResearchRuleStatusDisabled(research->getName()))
  	{
  		return;
-@@ -2579,142 +2992,1293 @@ void SavedGame::setWarned(bool warned)
+@@ -1671,6 +2104,7 @@ void SavedGame::addFinishedResearch(const RuleResearch * research, const Mod * m
+ 		// 4. process remaining items in the queue
+ 		++currentQueueIndex;
+ 	}
++	refreshCraftSeats(mod);   // G.I. Joe: an upgrade that takes seats
+ }
+ 
+ void SavedGame::addResearchDiaryEntry(ResearchDiaryEntry* entry)
+@@ -2579,132 +3013,1283 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -31980,13 +32036,20 @@ index 9ca9637..df05b59 100644
 -				}
 -				++nationality;
 -			}
--
++			planning = true;
++			break;
++		}
++	}
+ 
 -			// the modder wants to have regional name pools, but didn't provide any, sigh
 -			if (totalFilteredNamePoolWeight < 1)
 -			{
 -				return -1; // let's just ignore the modder's unfulfillable wish
 -			}
--
++	const int funds = _cobraEconomy->getTotalFunds();
++	const bool broke = netFunds <= 0;
++	const bool starved = netMateriel < 0;
+ 
 -			// select the nationality from the filtered pool, by weight
 -			int tmp = RNG::generate(1, totalFilteredNamePoolWeight);
 -			for (const auto& namepoolPair : filteredNames)
@@ -31996,21 +32059,6 @@ index 9ca9637..df05b59 100644
 -					return namepoolPair.second;
 -				}
 -				tmp -= namepoolPair.first->getGlobalWeight();
--			}
-+			planning = true;
-+			break;
- 		}
- 	}
- 
--	return -1;
--}
-+	const int funds = _cobraEconomy->getTotalFunds();
-+	const bool broke = netFunds <= 0;
-+	const bool starved = netMateriel < 0;
- 
--/*
-- * @return the month counter.
-- */
 +	// Cobra can always establish its first income. Without this it starts with nothing, so
 +	// nothing is affordable, so it never earns and the economy never begins - the same deadlock
 +	// the ruleset used to dodge by leaving the earner ungated, now stated once where the
@@ -33076,20 +33124,10 @@ index 9ca9637..df05b59 100644
 +					return namepoolPair.second;
 +				}
 +				tmp -= namepoolPair.first->getGlobalWeight();
-+			}
-+		}
-+	}
-+
-+	return -1;
-+}
-+
-+/*
-+ * @return the month counter.
-+ */
- int SavedGame::getMonthsPassed() const
- {
- 	return _monthsPassed;
-@@ -2995,6 +4559,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
+ 			}
+ 		}
+ 	}
+@@ -2995,6 +4580,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
   * @param soldier Pointer to dead soldier.
   * @param cause Pointer to cause of death, NULL if missing in action.
   */
@@ -33264,7 +33302,7 @@ index 9ca9637..df05b59 100644
  std::vector<Soldier*>::iterator SavedGame::killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause)
  {
  	if (resetArmor)
-@@ -3328,6 +5060,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
+@@ -3328,6 +5081,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
  		}
  	}
  
@@ -33282,7 +33320,7 @@ index 9ca9637..df05b59 100644
  	for (auto* am : _activeMissions)
  	{
 diff --git a/src/Savegame/SavedGame.h b/src/Savegame/SavedGame.h
-index d985908..a99cbec 100644
+index d985908..edf894b 100644
 --- a/src/Savegame/SavedGame.h
 +++ b/src/Savegame/SavedGame.h
 @@ -37,6 +37,7 @@ namespace OpenXcom
@@ -33407,16 +33445,19 @@ index d985908..a99cbec 100644
  	size_t _selectedBase;
  	std::string _lastselectedArmor; //contains the last selected armor
  	std::string _globalEquipmentLayoutName[MAX_EQUIPMENT_LAYOUT_TEMPLATES];
-@@ -293,6 +366,8 @@ public:
+@@ -292,7 +365,11 @@ public:
+ 	/// Make all research discovered (used in New Battle)
  	void makeAllResearchDiscovered(const Mod* mod);
  	/// Add a finished ResearchProject
++	/// G.I. Joe: the seats each craft type's fitted upgrades take (Mod craftVariants seatsLost), into Craft::seatPenalty
++	void refreshCraftSeats(const Mod *mod) const;
  	void addFinishedResearch(const RuleResearch *research, const Mod *mod, Base *base, bool score = true);
 +	/// Drops intel LEADS on every hidden Cobra site of a type. Returns how many.
 +	int addCobraSiteIntel(const std::string &siteType);
  	/// Add a new record to the research diary
  	void addResearchDiaryEntry(ResearchDiaryEntry* entry);
  	/// Gets the research diary.
-@@ -395,6 +470,44 @@ public:
+@@ -395,6 +472,44 @@ public:
  
  	/// Full access to the alien strategy data.
  	AlienStrategy &getAlienStrategy() { return *_alienStrategy; }
@@ -33461,7 +33502,7 @@ index d985908..a99cbec 100644
  	/// Read-only access to the alien strategy data.
  	const AlienStrategy &getAlienStrategy() const { return *_alienStrategy; }
  	/// Full access to the current alien missions.
-@@ -409,6 +522,10 @@ public:
+@@ -409,6 +524,10 @@ public:
  	const std::vector<GeoscapeEvent*> &getGeoscapeEvents() const { return _geoscapeEvents; }
  	/// Locate a region containing a position.
  	Region *locateRegion(double lon, double lat) const;
@@ -33472,7 +33513,7 @@ index d985908..a99cbec 100644
  	/// Locate a region containing a Target.
  	Region *locateRegion(const Target &target) const;
  	/// Locate a country containing a position.
-@@ -419,6 +536,13 @@ public:
+@@ -419,6 +538,13 @@ public:
  	int selectSoldierNationalityByLocation(const Mod* mod, const RuleSoldier* rule, const Target* target) const;
  	/// Return the month counter.
  	int getMonthsPassed() const;
@@ -33486,7 +33527,7 @@ index d985908..a99cbec 100644
  	/// Return the day counter.
  	int getDaysPassed() const { return _daysPassed; }
  	void increaseDaysPassed() { _daysPassed++; }
-@@ -493,6 +617,78 @@ public:
+@@ -493,6 +619,78 @@ public:
  	bool isUfoOnIgnoreList(int ufoId);
  	/// Handles a soldier's death.
  	std::vector<Soldier*>::iterator killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause = 0);
@@ -33565,7 +33606,7 @@ index d985908..a99cbec 100644
  	/// enables/disables autosell for an item type
  	void setAutosell(const RuleItem *itype, const bool enabled);
  	/// get autosell state for an item type
-@@ -529,6 +725,28 @@ public:
+@@ -529,6 +727,28 @@ public:
  	void handlePrimaryResearchSideEffects(const std::vector<const RuleResearch*> &topicsToCheck, const Mod* mod, Base* base);
  	/// Gets the list of user notes.
  	std::vector<std::string>& getUserNotes() { return _userNotes; }
