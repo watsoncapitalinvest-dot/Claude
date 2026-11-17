@@ -4929,7 +4929,7 @@ index 7af613c..f9d6e24 100644
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..4458b3b 100644
+index 1951ba7..ad9b23b 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -16,10 +16,15 @@
@@ -5566,7 +5566,26 @@ index 1951ba7..4458b3b 100644
  /**
   * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
   */
-@@ -1483,6 +1998,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1433,7 +1948,17 @@ BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
+ 	{
+ 		if (!_save->isPreview())
+ 		{
+-			_save->createItemForUnit(v->getRules(), unit, true);
++			BattleItem *main = _save->createItemForUnit(v->getRules(), unit, true);
++			// G.I. Joe ARSENAL: the vehicle's own gun is the one it starts armed with; the armour's built-in
++			// weapons were placed first and may hold the right hand
++			BattleItem *rh = unit->getRightHandWeapon();
++			if (main && rh && rh != main)
++			{
++				const RuleInventory *slot = main->getSlot();
++				const int sx = main->getSlotX(), sy = main->getSlotY();
++				main->setSlot(rh->getSlot()); main->setSlotX(rh->getSlotX()); main->setSlotY(rh->getSlotY());
++				rh->setSlot(slot); rh->setSlotX(sx); rh->setSlotY(sy);
++			}
+ 			if (v->getRules()->getVehicleClipAmmo())
+ 			{
+ 				BattleItem *ammoItem = _save->createItemForUnit(v->getRules()->getVehicleClipAmmo(), unit);
+@@ -1483,6 +2008,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  			setCustomCraftInventoryTile();
  
  			Node* node = _save->getSpawnNode(NR_XCOM, unit);
@@ -5599,7 +5618,7 @@ index 1951ba7..4458b3b 100644
  			if (node)
  			{
  				_save->setUnitPosition(unit, node->getPosition());
-@@ -1495,6 +2036,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1495,6 +2046,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  				_save->initUnit(unit);
  				return unit;
  			}
@@ -5627,7 +5646,7 @@ index 1951ba7..4458b3b 100644
  			else if (_save->getMissionType() != "STR_BASE_DEFENSE")
  			{
  				if (placeUnitNearFriend(unit))
-@@ -1669,6 +2231,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +2241,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -5717,7 +5736,7 @@ index 1951ba7..4458b3b 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +2341,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +2351,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -5786,7 +5805,7 @@ index 1951ba7..4458b3b 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2426,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2436,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -5803,7 +5822,7 @@ index 1951ba7..4458b3b 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2455,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2465,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -5846,7 +5865,7 @@ index 1951ba7..4458b3b 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -1824,7 +2570,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
+@@ -1824,7 +2580,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  		unit->getAIModule()->setStartNode(node);
  		unit->setRankInt(alienRank);
  		int dir = _save->getTileEngine()->faceWindow(node->getPosition());
@@ -5855,7 +5874,7 @@ index 1951ba7..4458b3b 100644
  		if (Position::distance2d(node->getPosition(), craft) <= 20 && RNG::percent(aliensFacingCraftOdds))
  			dir = unit->directionTo(craft);
  		if (dir != -1)
-@@ -1843,7 +2589,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
+@@ -1843,7 +2599,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  		{
  			unit->setRankInt(alienRank);
  			int dir = _save->getTileEngine()->faceWindow(unit->getPosition());
@@ -5864,7 +5883,7 @@ index 1951ba7..4458b3b 100644
  			if (Position::distance2d(unit->getPosition(), craft) <= 20 && RNG::percent(aliensFacingCraftOdds))
  				dir = unit->directionTo(craft);
  			if (dir != -1)
-@@ -2081,17 +2827,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,17 +2837,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -5895,7 +5914,7 @@ index 1951ba7..4458b3b 100644
  
  	mapblock->setSizeZ(sizez);
  
-@@ -2141,11 +2895,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2905,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -5909,7 +5928,7 @@ index 1951ba7..4458b3b 100644
  			if (terrainObjectID>0)
  			{
  				int mapDataSetID = mapDataSetOffset;
-@@ -2817,10 +3571,11 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2817,10 +3581,11 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  	// determine globe terrain from globe texture
  	_globeTerrain = _terrain;
@@ -5923,7 +5942,7 @@ index 1951ba7..4458b3b 100644
  		if (tmpTerrain)
  		{
  			_globeTerrain = tmpTerrain;
-@@ -2830,7 +3585,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2830,7 +3595,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  	// this mission type is "hard-coded" in terms of map layout
  	uint64_t seed = RNG::getSeed();
  	_baseTerrain = _terrain;
@@ -5934,7 +5953,7 @@ index 1951ba7..4458b3b 100644
  	{
  		if (_mod->getBaseDefenseMapFromLocation() == 1)
  		{
-@@ -3010,25 +3767,34 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3010,25 +3777,34 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  					break;
  				case MSC_ADDCRAFT:
@@ -5978,7 +5997,7 @@ index 1951ba7..4458b3b 100644
  								+ ") could not be placed on the map. You may try turning on 'save scumming' to work around this issue.");
  						}
  						if (craftPlaced)
-@@ -3062,12 +3828,12 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3062,12 +3838,12 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  								}
  							}
  
@@ -5993,7 +6012,7 @@ index 1951ba7..4458b3b 100644
  							success = true;
  						}
  					}
-@@ -3365,6 +4131,7 @@ void BattlescapeGenerator::generateBaseMap()
+@@ -3365,6 +4141,7 @@ void BattlescapeGenerator::generateBaseMap()
  	// add modules based on the base's layout
  	for (const auto* fac : *_base->getFacilities())
  	{
@@ -6001,7 +6020,7 @@ index 1951ba7..4458b3b 100644
  		if (fac->isBuiltOrHadPreviousFacility())
  		{
  			int num = 0;
-@@ -4268,10 +5035,38 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
+@@ -4268,10 +5045,38 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
   * @param craftPos the position of the craft is stored here.
   * @return if the craft was placed or not.
   */
@@ -6102,7 +6121,7 @@ index a0bc8b3..9882f6e 100644
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..bc4d555 100644
+index 7cd4941..da8ad91 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -1,3 +1,5 @@
@@ -6438,7 +6457,7 @@ index 7cd4941..bc4d555 100644
 +				BattleItem *it = _hudListItem[i];
 +				const BattleItem *am = it->getAmmoForSlot(0);
 +				const int left = am ? am->getAmmoQuantity() : 0;
-+				HiUI::nativeKey(_hudList[i], tr(it->getRules()->getName()) + "  " + std::to_string(left), false);
++				HiUI::nativeKey(_hudList[i], std::string(tr(it->getRules()->getName())) + "  " + std::to_string(left), false);
 +				HiUI::nativeKeyStyle(_hudList[i], it == u->getRightHandWeapon() ? 1 : left > 0 ? 0 : 3);
 +			}
 +			_hudListPage->setVisible(v.size() > 6);
