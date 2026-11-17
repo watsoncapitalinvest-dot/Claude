@@ -18437,10 +18437,10 @@ index 0000000..e57d835
 +}
 diff --git a/src/Geoscape/CobraNetwork.cpp b/src/Geoscape/CobraNetwork.cpp
 new file mode 100644
-index 0000000..a07f51c
+index 0000000..f80c2bd
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.cpp
-@@ -0,0 +1,662 @@
+@@ -0,0 +1,687 @@
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5. See CobraNetwork.h.
 + *
@@ -18932,6 +18932,23 @@ index 0000000..a07f51c
 +				}
 +			}
 +		}
++		// piece 9, money to a starving region (ledger 1.7, Act1Fixes item 6): with fewer than 4 working sites in North
++		// America, Cobra sends in 150 funds for each one missing. STAND-IN: it comes by road (the van stop), not by air,
++		// until a cargo flight can be tracked from launch to landing; stop the van and the money never arrives.
++		{
++			int working = 0;
++			for (auto *b : *save->getAlienBases())
++				if (!b->getSiteType().empty() && b->getSiteType() != "STR_COBRA_TERROR_DROME_BUILDING" && b->getSiteType() != "STR_CARTEL_STASH_HOUSE") working++;
++			if (working < 4 && save->getMonthsPassed() >= 1)
++			{
++				AlienBase *dest = nullptr;
++				for (auto *b : *save->getAlienBases()) if (!b->getSiteType().empty() && b->getSiteType() != "STR_COBRA_TERROR_DROME_BUILDING") { dest = b; break; }
++				if (dest)
++					if (MissionSite *ms = spawnSite(game, "STR_COBRA_CRIME_MISSION", "STR_COBRA_VAN_STOP", dest, "money|" + siteKey(dest),
++						"STR_ALERT_VAN_STOP", townOf(save, dest, towns(mod)), ""))
++						net["mars:" + std::to_string(ms->getId())] = 150 * (4 - working);
++			}
++		}
 +	}
 +
 +	// 2, 3: the crimes and the strikes, rolled a day at a time (a monthly chance spread over thirty days)
@@ -19013,6 +19030,14 @@ index 0000000..a07f51c
 +	auto &net = save->getCobraNet();
 +	Region *rg = save->locateRegion(*site);
 +	if (rg) net["bold:" + rg->getRules()->getType()] = save->getMonthsPassed() + 1;   // bolder there next month
++	if (kind == "money")
++	{
++		const std::string mk = "mars:" + std::to_string(site->getId());
++		if (rg) save->getCobraEconomy().addFunds(rg->getRules()->getType(), net[mk]);
++		Log(LOG_INFO) << "[network] Cobra's money run got through near " << town << ": " << net[mk] << " funds";
++		net.erase(mk);
++		return;
++	}
 +	if (kind == "mars")
 +	{
 +		// the guns got through
@@ -19047,7 +19072,7 @@ index 0000000..a07f51c
 +	if (parts.size() < 3) return;
 +	const std::string kind = parts[0], key = parts[1], town = parts[2];
 +	auto &net = save->getCobraNet();
-+	if (kind == "mars")
++	if (kind == "mars" || kind == "money")
 +	{
 +		net.erase("mars:" + std::to_string(siteId));   // stopped or not, a convoy that was fought delivers nothing
 +		if (success) addLead(game, key, false);
