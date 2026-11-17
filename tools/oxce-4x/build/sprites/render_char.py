@@ -49,7 +49,11 @@ def fcurves(act):
 ACTIONS = {}
 for name, path in CLIPS.items():
     before = set(bpy.data.objects); acts = set(bpy.data.actions)
-    bpy.ops.import_scene.fbx(filepath=path)
+    if '.blend#' in path:   # a clip kept as an action in a .blend library (path.blend#action): no FBX round trip
+        lib, aname = path.split('.blend#'); lib += '.blend'
+        with bpy.data.libraries.load(lib) as (src, dst): dst.actions = [aname]
+    else:
+        bpy.ops.import_scene.fbx(filepath=path)
     act = [a for a in bpy.data.actions if a not in acts][0]
     act.use_fake_user = True; act.name = 'clip_' + name
     # clips downloaded with a skin carry their own prefix (mixamorig1:, mixamorig6: ...): point them at mixamorig:
