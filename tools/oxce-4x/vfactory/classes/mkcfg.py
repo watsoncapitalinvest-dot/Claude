@@ -55,11 +55,14 @@ s, lim = fit(16.0, 9.4, 2, 1)     # Ferret ATV 1x2; guns fixed
 c = base('ferret', s, 2, [1, 2], 'ferret', {'m0': []}, {'muzzle': [5.62, -3.56, 7.1, 1, 0, 0]}, 'Cobra',
          R + f'Cobra Ferret ATV, class 1x2 (installed as size 2). Scale {s} (was 0.0406; {lim} axis limits).\n')
 c['guns'] = ['muzzle']; c['preview']['script'] = [['move', 'NE', 2], ['gun', ['muzzle']], ['wait', 6]]; cf2['ferret'] = c
-s, lim = fit(30.0, 13.34, 3, 2)   # Stinger 2x3; quad cannon turret
-c = base('stinger', s, 3, [2, 3], 'stinger', {'m0': ['GJTURRET']}, {'muzzle': [-1.64, 3.0, 14.0, 1, 0, 0]}, 'Cobra',
-         R + f'Cobra Stinger, class 2x3 (installed as size 3). Scale {s} (was 0.0433; {lim} axis limits).\n')
-c['turret'] = {'objs': ['GJTURRET'], 'pivot': [-7.48, 0.0, 6.86], 'muzzles': {'mg': [-1.64, 3.0, 14.0, 1, 0, 0]}, 'note': 'quad cannon turret'}
-c['preview']['script'] = [['move', 'NE', 2], ['gun', ['mg']], ['tturn', 'SE'], ['gun', ['mg']], ['tturn', 'NE'], ['wait', 6]]; cf2['stinger'] = c
+s, lim = fit(30.0, 13.34, 3, 2)   # Stinger 2x3; ground-to-air rocket rack turret (file card: rotates 360); John 18:37 rework
+SM = {'rk1': [-1.658, 3.665, 13.611, 1, 0, 0], 'rk3': [-1.658, -3.665, 13.611, 1, 0, 0]}
+c = base('stinger', s, 3, [2, 3], 'stinger_v2', {'m0': ['GJTURRET']}, dict(SM), 'Cobra',
+         R + f'Cobra Stinger, class 2x3 (installed as size 3). Scale {s} (was 0.0433; {lim} axis limits). Weapon: ground-to-air rockets (3 on the rack); the flying rocket is one of them cut out (vfactory/stinger/cut_rocket.py).\n')
+c['turret'] = {'objs': ['GJTURRET'], 'pivot': [-7.48, 0.0, 6.86], 'muzzles': dict(SM), 'note': 'ground-to-air rocket rack, turns 360'}
+c['launchers'] = [{'name': 'rkt', 'muzzles': ['rk1', 'rk3'], 'fx_scale': 0.25, 'from_tube': True}]
+c['preview']['script'] = [['move', 'NE', 2], ['missile', 'rk1', 'm0', 'rkt', 13.6], ['missile', 'rk3', 'm0', 'rkt', 13.6], ['wait', 6]]
+cf2['stinger'] = c
 s, lim = fit(24.0, 11.0, 3, 2)    # Thunder Machine 2x3; rework (John 17:36-17:37): twin Penetrator Gatlings as a turret, detail, markings
 GZ = 6.196; GM = {'gatL': [11.45, 0.62, GZ, 1, 0, 0], 'gatR': [11.45, -0.62, GZ, 1, 0, 0]}
 c = base('thunder_machine', s, 3, [2, 3], 'thunder_machine_v2', {'m0': []}, dict(GM), 'Dreadnok',
