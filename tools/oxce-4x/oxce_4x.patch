@@ -9121,7 +9121,7 @@ index cea8e652d..90ec9a6f8 100644
  	}
  
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd199..d7e151af4 100644
+index 3665cd199..1ac2a85c9 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
 @@ -17,6 +17,10 @@
@@ -9405,15 +9405,16 @@ index 3665cd199..d7e151af4 100644
  
  	bool moving = bu->getStatus() == STATUS_WALKING || bu->getStatus() == STATUS_FLYING;
  	int bonusWidth = moving ? 0 : tileFoorWidth;
-@@ -746,6 +920,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -746,6 +920,8 @@ void Map::drawTerrain(Surface *surface)
  	int beginZ = 0, endZ = _save->getMapSizeZ() - 1;
  	Position mapPosition, screenPosition, bulletPositionScreen, movingUnitPosition;
  	int bulletLowX=16000, bulletLowY=16000, bulletLowZ=16000, bulletHighX=0, bulletHighY=0, bulletHighZ=0;
 +	int bulletHead = Mod::NO_SURFACE; // G.I. Joe 4x: a directional shot's head, picked by where it flies on screen
++	SurfaceSet *headSet = nullptr;     // G.I. Joe (VFACTORY): the head from its own set (gjBulletHeadSheet), full size
  	int dummy;
  	BattleUnit *movingUnit = _save->getTileEngine()->getMovingUnit();
  	int tileShade, tileColor, obstacleShade;
-@@ -777,6 +952,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -777,6 +953,31 @@ void Map::drawTerrain(Surface *surface)
  			if (_projectile->getPosition(1-i).z > bulletHighZ)
  				bulletHighZ = _projectile->getPosition(1-i).z;
  		}
@@ -9434,13 +9435,18 @@ index 3665cd199..d7e151af4 100644
 +				const double ang = std::atan2((double)(a.x - b.x), (double)(b.y - a.y)) * (180.0 / 3.14159265358979);
 +				const int dir = ((int)std::floor((ang + 22.5) / 45.0) % 8 + 8) % 8;
 +				bulletHead = _projectile->getDirectionalHead(dir);
++				if (!_projectile->getHeadSheet().empty())
++				{
++					headSet = _game->getMod()->getSurfaceSet(_projectile->getHeadSheet(), false);
++					if (headSet && headSet->getFrame(dir)) bulletHead = dir; else headSet = nullptr;
++				}
 +			}
 +		}
 +
  		// divide by 16 to go from voxel to tile position
  		bulletLowX = bulletLowX / 16;
  		bulletLowY = bulletLowY / 16;
-@@ -940,15 +1135,15 @@ void Map::drawTerrain(Surface *surface)
+@@ -940,15 +1141,15 @@ void Map::drawTerrain(Surface *surface)
  					if (tmpSurface)
  					{
  						if (tile->getObstacle(O_FLOOR))
@@ -9460,7 +9466,7 @@ index 3665cd199..d7e151af4 100644
  					{
  						if (_camera->getViewLevel() == itZ)
  						{
-@@ -1001,9 +1196,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1001,9 +1202,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_WESTWALL, tile);
  							if (tile->getObstacle(O_WESTWALL))
@@ -9472,7 +9478,7 @@ index 3665cd199..d7e151af4 100644
  						}
  						// Draw north wall
  						tmpSurface = tile->getSprite(O_NORTHWALL);
-@@ -1011,9 +1206,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1011,9 +1212,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_NORTHWALL, tile);
  							if (tile->getObstacle(O_NORTHWALL))
@@ -9484,7 +9490,7 @@ index 3665cd199..d7e151af4 100644
  						}
  						// Draw object
  						tmpSurface = tile->getSprite(O_OBJECT);
-@@ -1022,18 +1217,19 @@ void Map::drawTerrain(Surface *surface)
+@@ -1022,18 +1223,19 @@ void Map::drawTerrain(Surface *surface)
  							if (tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -9507,7 +9513,7 @@ index 3665cd199..d7e151af4 100644
  								tileShade
  							);
  							if (_anyIndicator)
-@@ -1043,30 +1239,30 @@ void Map::drawTerrain(Surface *surface)
+@@ -1043,30 +1245,30 @@ void Map::drawTerrain(Surface *surface)
  								{
  									if (_burnIndicator && itemUnit->getFire() > 0)
  									{
@@ -9546,16 +9552,16 @@ index 3665cd199..d7e151af4 100644
  											tileShade);
  									}
  								}
-@@ -1134,7 +1330,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1134,7 +1336,7 @@ void Map::drawTerrain(Surface *surface)
  
  								for (int i = begin; i != end; i += direction)
  								{
 -									tmpSurface = _projectileSet->getFrame(_projectile->getParticle(i));
-+									tmpSurface = _projectileSet->getFrame(i == 0 && bulletHead != Mod::NO_SURFACE ? bulletHead : _projectile->getParticle(i));
++									tmpSurface = (i == 0 && headSet) ? headSet->getFrame(bulletHead) : _projectileSet->getFrame(i == 0 && bulletHead != Mod::NO_SURFACE ? bulletHead : _projectile->getParticle(i));
  									if (tmpSurface)
  									{
  										Position voxelPos = _projectile->getPosition(1-i);
-@@ -1292,13 +1488,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1292,13 +1494,13 @@ void Map::drawTerrain(Surface *surface)
  							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(11);
  							if (tmpSurface)
  							{
@@ -9571,7 +9577,7 @@ index 3665cd199..d7e151af4 100644
  						}
  					}
  
-@@ -1310,9 +1506,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1310,9 +1512,9 @@ void Map::drawTerrain(Surface *surface)
  							if (!tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -9583,7 +9589,7 @@ index 3665cd199..d7e151af4 100644
  							}
  						}
  					}
-@@ -1335,8 +1531,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1335,8 +1537,13 @@ void Map::drawTerrain(Surface *surface)
  								else
  									frameNumber = 6; // red static crosshairs
  							}
@@ -9599,7 +9605,7 @@ index 3665cd199..d7e151af4 100644
  
  							// UFO extender accuracy: display adjusted accuracy value on crosshair in real-time.
  							if (_cursorType >= CT_AIM && _showInfoOnCursor && (_cursorType != CT_THROW || !Options::oxceDisableInfoOnThrowCursor))
-@@ -1528,14 +1729,18 @@ void Map::drawTerrain(Surface *surface)
+@@ -1528,14 +1735,18 @@ void Map::drawTerrain(Surface *surface)
  
  								_txtAccuracy->setText(ss.str());
  								_txtAccuracy->draw();
@@ -9621,7 +9627,7 @@ index 3665cd199..d7e151af4 100644
  						}
  						if (!_isAltPressed && _cursorType > CT_AIM && _camera->getViewLevel() == itZ)
  						{
-@@ -1551,7 +1756,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1551,7 +1762,7 @@ void Map::drawTerrain(Surface *surface)
  									_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::red - 1) - 1);
  									_txtAccuracy->setText("0%");
  									_txtAccuracy->draw();
@@ -9630,7 +9636,7 @@ index 3665cd199..d7e151af4 100644
  								}
  							}
  							if (!ignore)
-@@ -1582,7 +1787,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1582,7 +1793,7 @@ void Map::drawTerrain(Surface *surface)
  								_numWaypid->setValue(waypid);
  								_numWaypid->setBordered(true); // OXCE, not configurable
  								_numWaypid->draw();
@@ -9639,7 +9645,7 @@ index 3665cd199..d7e151af4 100644
  
  								waypXOff += waypid > 9 ? 10 : 6; // OXCE
  								if (waypXOff >= 26)
-@@ -1621,7 +1826,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1621,7 +1832,7 @@ void Map::drawTerrain(Surface *surface)
  						tile = _save->getTile(mapPosition);
  						if (!tile || !tile->isDiscovered(O_FLOOR) || tile->getPreview() == -1)
  							continue;
@@ -9648,7 +9654,7 @@ index 3665cd199..d7e151af4 100644
  						if (_previewSettingArrows)
  						{
  							if (itZ > 0 && tile->hasNoFloor(_save))
-@@ -1629,14 +1834,14 @@ void Map::drawTerrain(Surface *surface)
+@@ -1629,14 +1840,14 @@ void Map::drawTerrain(Surface *surface)
  								tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(23);
  								if (tmpSurface)
  								{
@@ -9665,7 +9671,7 @@ index 3665cd199..d7e151af4 100644
  							}
  						}
  
-@@ -1645,16 +1850,17 @@ void Map::drawTerrain(Surface *surface)
+@@ -1645,16 +1856,17 @@ void Map::drawTerrain(Surface *surface)
  							int off = tile->getTUMarker() > 9 ? 5 : 3;
  							int offE = tile->getEnergyMarker() > 9 ? 5 : 3;
  							int mcolor = _previewSettingArrows ? 0 : tile->getMarkerColor();
@@ -9686,7 +9692,7 @@ index 3665cd199..d7e151af4 100644
  								}
  							}
  							if (_previewSettingTu)
-@@ -1664,16 +1870,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1664,16 +1876,16 @@ void Map::drawTerrain(Surface *surface)
  								if (_previewSettingEnergy)
  								{
  									// TU
@@ -9706,7 +9712,7 @@ index 3665cd199..d7e151af4 100644
  								}
  							}
  							else if (_previewSettingEnergy)
-@@ -1681,7 +1887,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1681,7 +1893,7 @@ void Map::drawTerrain(Surface *surface)
  								// only Energy
  								_numWaypid->setValue(tile->getEnergyMarker());
  								_numWaypid->draw();
@@ -9715,7 +9721,7 @@ index 3665cd199..d7e151af4 100644
  							}
  						}
  					}
-@@ -1702,16 +1908,108 @@ void Map::drawTerrain(Surface *surface)
+@@ -1702,16 +1914,108 @@ void Map::drawTerrain(Surface *surface)
  		Position offset = calculateWalkingOffset(selectedUnit).ScreenOffset;
  		if (selectedUnit->isBigUnit())
  		{
@@ -9828,7 +9834,7 @@ index 3665cd199..d7e151af4 100644
  		}
  	}
  
-@@ -1732,26 +2030,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -1732,26 +2036,26 @@ void Map::drawTerrain(Surface *surface)
  				//calculateWalkingOffset(myUnit, &offset);
  				if (myUnit->isBigUnit())
  				{
@@ -9860,7 +9866,7 @@ index 3665cd199..d7e151af4 100644
  						0);
  				}
  				else if (customMarker)
-@@ -1760,7 +2058,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1760,7 +2064,7 @@ void Map::drawTerrain(Surface *surface)
  						surface,
  						_arrow,
  						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
@@ -9869,7 +9875,7 @@ index 3665cd199..d7e151af4 100644
  						0,
  						false,
  						_isTFTD ? ArrowColorsTFTD[myUnit->getCustomMarker() % 4] : ArrowColorsUFO[myUnit->getCustomMarker() % 4]);
-@@ -1779,11 +2077,11 @@ void Map::drawTerrain(Surface *surface)
+@@ -1779,11 +2083,11 @@ void Map::drawTerrain(Surface *surface)
  			{
  				_camera->convertMapToScreen(pos, &screenPosition);
  				screenPosition += _camera->getMapOffset();
@@ -9883,7 +9889,7 @@ index 3665cd199..d7e151af4 100644
  					0);
  			}
  		}
-@@ -1823,17 +2121,40 @@ void Map::drawTerrain(Surface *surface)
+@@ -1823,17 +2127,40 @@ void Map::drawTerrain(Surface *surface)
  				else if (explosion->isHit())
  				{
  					tmpSurface = _game->getMod()->getSurfaceSet("HIT.PCK")->getFrame(explosion->getCurrentFrame());
@@ -9926,7 +9932,7 @@ index 3665cd199..d7e151af4 100644
  	surface->unlock();
  }
  
-@@ -2023,7 +2344,7 @@ void Map::setSelectorPosition(int mx, int my)
+@@ -2023,7 +2350,7 @@ void Map::setSelectorPosition(int mx, int my)
  {
  	int oldX = _selectorX, oldY = _selectorY;
  
@@ -9935,7 +9941,7 @@ index 3665cd199..d7e151af4 100644
  
  	if (oldX != _selectorX || oldY != _selectorY)
  	{
-@@ -2267,6 +2588,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2267,6 +2594,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
  	}
  	result.ScreenOffset.y += result.TerrainLevelOffset;
@@ -9944,7 +9950,7 @@ index 3665cd199..d7e151af4 100644
  	return result;
  }
  
-@@ -2327,6 +2650,15 @@ CursorType Map::getCursorType() const
+@@ -2327,6 +2656,15 @@ CursorType Map::getCursorType() const
   * Puts a projectile sprite on the map.
   * @param projectile Projectile to place.
   */
@@ -9960,7 +9966,7 @@ index 3665cd199..d7e151af4 100644
  void Map::setProjectile(Projectile *projectile)
  {
  	_projectile = projectile;
-@@ -2506,9 +2838,10 @@ void Map::refreshSelectorPosition()
+@@ -2506,9 +2844,10 @@ void Map::refreshSelectorPosition()
  void Map::setHeight(int height)
  {
  	Surface::setHeight(height);
@@ -9974,7 +9980,7 @@ index 3665cd199..d7e151af4 100644
  }
  
  /**
-@@ -2519,7 +2852,7 @@ void Map::setWidth(int width)
+@@ -2519,7 +2858,7 @@ void Map::setWidth(int width)
  {
  	int dX = width - getWidth();
  	Surface::setWidth(width);
@@ -10867,7 +10873,7 @@ index 62ca00c83..9f10b07e7 100644
  		{
  			_grenadeInInventory->setFuseTimer(0 + btnID);
 diff --git a/src/Battlescape/Projectile.cpp b/src/Battlescape/Projectile.cpp
-index 7f7697c1d..a0c6cdef8 100644
+index 7f7697c1d..5759f1b9d 100644
 --- a/src/Battlescape/Projectile.cpp
 +++ b/src/Battlescape/Projectile.cpp
 @@ -16,6 +16,8 @@
@@ -10879,33 +10885,40 @@ index 7f7697c1d..a0c6cdef8 100644
  #include "Projectile.h"
  #include "TileEngine.h"
  #include "Map.h"
-@@ -36,6 +38,9 @@
+@@ -36,6 +38,11 @@
  namespace OpenXcom
  {
  
 +/// G.I. Joe 4x: the item's bulletDirectional key (RuleItem.cpp).
 +bool isBulletDirectional(const RuleItem *rule);
++/// G.I. Joe (VFACTORY): the item's gjBulletHeadSheet key (RuleItem.cpp).
++const std::string &gjBulletHeadSheet(const RuleItem *rule);
 +
  /**
   * Sets up a UnitSprite with the specified size and position.
   * @param mod Pointer to mod.
-@@ -57,6 +62,7 @@ Projectile::Projectile(Mod *mod, SavedBattleGame *save, BattleAction action, Pos
+@@ -57,6 +64,8 @@ Projectile::Projectile(Mod *mod, SavedBattleGame *save, BattleAction action, Pos
  
  			// try to get all the required info from the ammo
  			_bulletSprite = _ammo->getRules()->getBulletSprite();
 +			_bulletDirectional = isBulletDirectional(_ammo->getRules());
++			_headSheet = gjBulletHeadSheet(_ammo->getRules());
  			_vaporColor = _ammo->getRules()->getVaporColor(_save->getDepth());
  			_vaporDensity = _ammo->getRules()->getVaporDensity(_save->getDepth());
  			_vaporProbability = _ammo->getRules()->getVaporProbability(_save->getDepth());
-@@ -66,6 +72,7 @@ Projectile::Projectile(Mod *mod, SavedBattleGame *save, BattleAction action, Pos
+@@ -66,6 +75,11 @@ Projectile::Projectile(Mod *mod, SavedBattleGame *save, BattleAction action, Pos
  			if (_bulletSprite == Mod::NO_SURFACE)
  			{
  				_bulletSprite = _action.weapon->getRules()->getBulletSprite();
 +				_bulletDirectional = isBulletDirectional(_action.weapon->getRules());
++			}
++			if (_headSheet.empty())
++			{
++				_headSheet = gjBulletHeadSheet(_action.weapon->getRules());
  			}
  			if (_vaporColor == -1)
  			{
-@@ -331,6 +338,34 @@ int Projectile::calculateThrow(double accuracy)
+@@ -331,6 +345,34 @@ int Projectile::calculateThrow(double accuracy)
   */
  void Projectile::applyAccuracy(Position origin, Position *target, double accuracy, bool keepRange, bool extendLine)
  {
@@ -10941,18 +10954,19 @@ index 7f7697c1d..a0c6cdef8 100644
  	int ydiff = origin.y - target->y;
  	int zdiff = origin.z - target->z;
 diff --git a/src/Battlescape/Projectile.h b/src/Battlescape/Projectile.h
-index a263ca287..f946cb717 100644
+index a263ca287..e893825d7 100644
 --- a/src/Battlescape/Projectile.h
 +++ b/src/Battlescape/Projectile.h
-@@ -57,6 +57,7 @@ private:
+@@ -57,6 +57,8 @@ private:
  	float _distanceMax;
  	int _speed;
  	int _bulletSprite;
 +	bool _bulletDirectional = false;
++	std::string _headSheet;   // G.I. Joe (VFACTORY): gjBulletHeadSheet of the ammo or weapon
  	bool _reversed;
  	int _vaporColor, _vaporDensity, _vaporProbability;
  	void applyAccuracy(Position origin, Position *target, double accuracy, bool keepRange, bool extendLine);
-@@ -78,6 +79,10 @@ public:
+@@ -78,6 +80,12 @@ public:
  	LastPositions getLastPositions(int offset = 0) const { return LastPositions(getPosition(offset), getPosition(offset + ItemDropVoxelOffset)); }
  	/// Gets a particle from the particle array.
  	int getParticle(int i) const;
@@ -10960,6 +10974,8 @@ index a263ca287..f946cb717 100644
 +	bool isDirectional() const { return _bulletDirectional && _bulletSprite >= 0; }
 +	/// G.I. Joe 4x: the head for one of 8 screen directions (0 = nose up, clockwise).
 +	int getDirectionalHead(int dir) const { return _bulletSprite + 35 + (dir & 7); }
++	/// G.I. Joe (VFACTORY): a sprite set whose frames 0-7 are the head by screen direction, at any size
++	const std::string &getHeadSheet() const { return _headSheet; }
  	/// Gets the item.
  	BattleItem *getItem() const;
  	/// Skips the bullet flight.
@@ -30679,7 +30695,7 @@ index ebaccaff2..6b4c7ba90 100644
  
  /**
 diff --git a/src/Mod/RuleItem.cpp b/src/Mod/RuleItem.cpp
-index 41a6ee4ec..826214bd4 100644
+index 41a6ee4ec..60962d898 100644
 --- a/src/Mod/RuleItem.cpp
 +++ b/src/Mod/RuleItem.cpp
 @@ -17,6 +17,7 @@
@@ -30690,7 +30706,7 @@ index 41a6ee4ec..826214bd4 100644
  #include "LoadYaml.h"
  #include "Mod.h"
  #include "Armor.h"
-@@ -139,6 +140,22 @@ BattleActionAttack BattleActionAttack::GetAferShoot(BattleActionType type, Battl
+@@ -139,6 +140,38 @@ BattleActionAttack BattleActionAttack::GetAferShoot(BattleActionType type, Battl
  
  
  
@@ -30703,6 +30719,22 @@ index 41a6ee4ec..826214bd4 100644
 +	return t;
 +}
 +
++/// G.I. Joe (VFACTORY): `gjBulletHeadSheet` - the shot's head drawn from its own sprite set (frames 0-7 by screen direction),
++/// so a vehicle's missile flies at the size it sits on the rack instead of inside a 48-pixel projectile cell.
++static std::unordered_map<const RuleItem*, std::string> &bulletHeadSheetTable()
++{
++	static std::unordered_map<const RuleItem*, std::string> t;
++	return t;
++}
++
++const std::string &gjBulletHeadSheet(const RuleItem *rule)
++{
++	static const std::string none;
++	if (!rule) return none;
++	auto it = bulletHeadSheetTable().find(rule);
++	return it != bulletHeadSheetTable().end() ? it->second : none;
++}
++
 +bool isBulletDirectional(const RuleItem *rule)
 +{
 +	if (!rule) return false;
@@ -30713,15 +30745,16 @@ index 41a6ee4ec..826214bd4 100644
  const float VexelsToTiles = 0.0625f;
  const float TilesToVexels = 16.0f;
  
-@@ -228,6 +245,7 @@ RuleItem::RuleItem(const std::string &type, int listOrder) :
+@@ -228,6 +261,8 @@ RuleItem::RuleItem(const std::string &type, int listOrder) :
   */
  RuleItem::~RuleItem()
  {
 +	bulletDirectionalTable().erase(this); // a later rule at this address must not inherit the flag
++	bulletHeadSheetTable().erase(this);
  }
  
  /**
-@@ -351,6 +369,12 @@ void RuleItem::load(const YAML::YamlNodeReader& node, Mod *mod, const ModScript&
+@@ -351,6 +386,16 @@ void RuleItem::load(const YAML::YamlNodeReader& node, Mod *mod, const ModScript&
  	mod->loadSpriteOffset(_type, _handSprite, reader["handSprite"], "HANDOB.PCK");
  	// Projectiles: 0-384 entries ((105*33) / (3*3)) (35 sprites per projectile(0-34), 11 projectiles (0-10))
  	mod->loadSpriteOffset(_type, _bulletSprite, reader["bulletSprite"], "Projectiles", 35);
@@ -30731,10 +30764,14 @@ index 41a6ee4ec..826214bd4 100644
 +	{
 +		bulletDirectionalTable()[this] = reader["bulletDirectional"].readVal<bool>();
 +	}
++	if (reader["gjBulletHeadSheet"])
++	{
++		bulletHeadSheetTable()[this] = reader["gjBulletHeadSheet"].readVal<std::string>();
++	}
  	mod->loadSpriteOffset(_type, _specialIconSprite, reader["specialIconSprite"], "SPICONS.DAT");
  
  	mod->loadSoundOffset(_type, _reloadSound, reader["reloadSound"], "BATTLE.CAT");
-@@ -565,6 +589,8 @@ void RuleItem::load(const YAML::YamlNodeReader& node, Mod *mod, const ModScript&
+@@ -565,6 +610,8 @@ void RuleItem::load(const YAML::YamlNodeReader& node, Mod *mod, const ModScript&
  	reader["inventoryMoveCost"]["basePercent"].tryReadVal(_inventoryMoveCostPercent);
  	mod->loadNameNull(_type, _defaultInventorySlotName, reader["defaultInventorySlot"]);
  	reader.tryRead("defaultInvSlotX", _defaultInvSlotX);

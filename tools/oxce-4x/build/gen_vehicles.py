@@ -51,11 +51,11 @@ V = {
  "thunderclap_tractor": dict(pack="thunderclap_tractor", asset="thunderclap_tractor", state="m0", side="joe", name="Thunderclap Tractor", tu=50, hp=170, arm=(100, 80, 60, 60),
                   wpn=("MG-999 dual-barrelled pulsating assault weapon", 60, 1, 60, (50, 30), (80, 55), (40, 40, 3), 0, 12, "m2x_50cal"),
                   wpn2=("Low attack missile", 100, 3, 3, None, (85, 55), None, 2, 22, "power_javelin_launch"), price=520000,
-                  stores=["m1", "m2", "m3"], proj="proj_thunderclap"),
+                  stores=["m1", "m2", "m3"], proj="proj_thunderclap", head="proj_thunderclap_head0"),
  "thunderclap_trailer": dict(pack="thunderclap_trailer", asset="thunderclap_trailer", state="m0", side="joe", name="Thunderclap Trailer", tu=46, hp=150, arm=(90, 75, 60, 55),
                   wpn=("Rapid-fire blaster cannon", 75, 1, 40, (55, 30), (85, 55), (40, 40, 2), 0, 12, "m2x_50cal"),
                   wpn2=("ZPJ-79 cruise missile", 110, 3, 3, None, (90, 60), None, 2, 24, "power_javelin_launch"), price=480000,
-                  stores=["m1", "m2", "m3"], proj="proj_thunderclap"),
+                  stores=["m1", "m2", "m3"], proj="proj_thunderclap", head="proj_thunderclap_head1"),
 }
 
 CAST = sorted(["ak47", "bazooka_launch", "explosion_large", "flare_launcher", "frag_grenade", "m16", "m1911_pistol", "m2x_50cal",
@@ -238,13 +238,13 @@ for i, (v, d) in enumerate(V.items()):
         wn2, pw2, dt2, clip2, snap2, aimed2, auto2, blast2, bullet2, snd2 = d["wpn2"]
         I += [f"  - type: {T}_W2", "    battleType: 1", "    fixedWeapon: true", "    invWidth: 1", "    invHeight: 1", "    weight: 1",
               "    bigSprite: 16", "    floorSprite: 0", "    handSprite: 0", f"    bulletSprite: {bullet2}", f"    fireSound: {cast(snd2)}", f"    compatibleAmmo: [{T}_A2]",
-              "    arcingShot: false"] + (["    bulletDirectional: true"] if bullet2 >= 18 else [])
+              "    arcingShot: false"] + (["    bulletDirectional: true"] if bullet2 >= 18 else []) + ([f"    gjBulletHeadSheet: GJ_HEAD_{v.upper()}.PCK"] if d.get("head") else [])
         if snap2: I += [f"    accuracySnap: {snap2[0]}", f"    tuSnap: {snap2[1]}"]
         if aimed2: I += [f"    accuracyAimed: {aimed2[0]}", f"    tuAimed: {aimed2[1]}"]
         if auto2: I += [f"    accuracyAuto: {auto2[0]}", f"    tuAuto: {auto2[1]}", f"    confAuto: {{shots: {auto2[2]}}}"]
         hit2 = cast("explosion_large") if dt2 == 3 else [577, 578, 579, 574, 575]
         I += [f"  - type: {T}_A2", "    battleType: 2", f"    clipSize: {clip2}", f"    power: {pw2}", f"    damageType: {dt2}", "    weight: 1", "    invWidth: 1", "    invHeight: 1",
-              "    bigSprite: 16", "    floorSprite: 16", f"    bulletSprite: {bullet2}", f"    hitSound: {hit2}", f"    hitAnimation: {0 if dt2 == 3 else 26}", "    transferTime: 24"] + (["    bulletDirectional: true"] if bullet2 >= 18 else [])
+              "    bigSprite: 16", "    floorSprite: 16", f"    bulletSprite: {bullet2}", f"    hitSound: {hit2}", f"    hitAnimation: {0 if dt2 == 3 else 26}", "    transferTime: 24"] + (["    bulletDirectional: true"] if bullet2 >= 18 else []) + ([f"    gjBulletHeadSheet: GJ_HEAD_{v.upper()}.PCK"] if d.get("head") else [])
         if blast2: I += [f"    blastRadius: {blast2}"]
         S2[f"{T}_W2"] = wn2; S2[f"{T}_A2"] = wn2
     print(v, f"{n}x{n}", size)
@@ -252,5 +252,9 @@ PROJ = sorted({d["proj"] for d in V.values() if d.get("proj")})
 for pj in PROJ:                                      # VFACTORY's own projectile rows from 22 (missile_heads.py): trail + 8 directional heads per missile
     L += ["  - type: Projectiles", "    width: 1680", f"    height: {Image.open(os.path.join(OUT, pj + '.png')).height}", "    subX: 48", "    subY: 48",
           "    files:", f"      {22 * 35}: Resources/VehiclesPrivate/{pj}.png"]
+for v, d in V.items():                               # full-size missile heads (engine gjBulletHeadSheet): frames 0-7 by screen direction
+    if d.get("head"):
+        L += [f"  - type: GJ_HEAD_{v.upper()}.PCK", "    width: 1024", "    height: 128", "    subX: 128", "    subY: 128",
+              "    files:", f"      0: Resources/VehiclesPrivate/{d['head']}.png"]
 L += [""] + U + [""] + A + [""] + I + ["", "extraStrings:", "  - type: en-US", "    strings: &veh"] + [f'      {k}: "{s}"' for k, s in S2.items()] + ["  - type: en-GB", "    strings: *veh"]
 open(os.path.join(MOD, "Ruleset", "gijoe_vehicles.rul"), "w").write("\n".join(L) + "\n")

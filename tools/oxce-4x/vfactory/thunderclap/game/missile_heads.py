@@ -20,3 +20,17 @@ pal = Image.open(PAL); P = np.array(pal.getpalette()[:768], np.int32).reshape(-1
 a = np.asarray(S).astype(np.int32); out = np.zeros(a.shape[:2], np.uint8); m = a[..., 3] > 127
 f = a[..., :3][m]; out[m] = ((f[:, None, :] - P[None, 1:]) ** 2).sum(-1).argmin(1) + 1
 q = Image.fromarray(out, 'P'); q.putpalette(pal.getpalette()); q.save(OUT + '.png'); print('rows', 2 * len(PKGS), S.size)
+
+# Full-size heads (engine gjBulletHeadSheet, VFACTORY): the same missile at the size it sits on the rack, flame at the tail,
+# one 128x128 frame per screen direction -> <OUT>_head<i>.png (+ _rgb), i = package order.
+for i, p in enumerate(PKGS):
+    m = json.load(open(f'{p}/manifest.json')); e = m['missile_full']['by_heading']['NE']
+    h = Image.open(f'{p}/{e["file"]}').convert('RGBA'); h = h.crop(h.getbbox())
+    H = Image.new('RGBA', (8 * 128, 128), (0, 0, 0, 0))
+    for d in range(8):
+        r = h.rotate((2 - d) * 45, resample=Image.BICUBIC, expand=True)
+        H.alpha_composite(r, (d * 128 + (128 - r.width) // 2, (128 - r.height) // 2))
+    H.save(f'{OUT}_head{i}_rgb.png')
+    a = np.asarray(H).astype(np.int32); out = np.zeros(a.shape[:2], np.uint8); mk = a[..., 3] > 127
+    f = a[..., :3][mk]; out[mk] = ((f[:, None, :] - P[None, 1:]) ** 2).sum(-1).argmin(1) + 1
+    q = Image.fromarray(out, 'P'); q.putpalette(pal.getpalette()); q.save(f'{OUT}_head{i}.png'); print('head', i, h.size)
