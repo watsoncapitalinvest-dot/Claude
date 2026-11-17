@@ -17,9 +17,16 @@ WHAT COMES OUT
   About 13-15 minutes a model for the sheet, about 1.5 more for each extra clip in extras.txt (all 21: about 30).
 
 A MODEL MUST BE
-  A .blend built like the cartel and civilian models: one Mixamo skeleton (mixamorig: bones), the mesh skinned to it.
-  The file name is the character's name. Hair outline tones are set for the cartel nine and the twelve civilians;
-  any other name still renders, its hair outline is just a little softer.
+  A .blend on one Mixamo skeleton (mixamorig: bones), the mesh skinned to it, textures packed in. The file name is
+  the character's name. The machine does not change the model: what you build and paint is what comes out.
+
+THE FINISH (same as the current Joes / Cobra troopers / greenshirts)
+  Default: the painted textures carry the shading and fold lines; the machine adds the outline. Nothing to set.
+  For an older-style finish, put a text file beside the model, <name>.ink.txt, with one line in the render
+  script's ink format  HAIR|FOLD|PEN  - for example:
+      48,38,32||TERMIDS=3,6,11 TERMMIN=90          hair tone + fold lines on garment parts 3, 6, 11
+      ||PENIDS=20 PENPCT=84 PENDARK=0.66            pen shading on garment part 20 (adds the shade pass)
+  The log says "ink from <name>.ink.txt" when it is used.
 
 ONE-OFF RUNS (instead of the machine)
   RENDER_CARTEL.bat                      every model in Reference\cartel, then stop

@@ -95,6 +95,21 @@ def where(n):
     return None, False
 
 
+def ink_for(n, blend):
+    """The outline settings for one model. <name>.ink.txt beside the .blend wins - one line in render_cast.sh's ink()
+    format: HAIR|FOLD|PEN, e.g.  48,38,32||TERMIDS=3,6,11 TERMMIN=90   or   ||PENIDS=20 PENPCT=84 PENDARK=0.66
+    No file: the hair tone from the table above (or none) and outline only - the current standard, for models whose
+    painted textures already carry their shading and fold lines."""
+    f = os.path.splitext(blend)[0] + '.ink.txt'
+    if os.path.exists(f):
+        line = [l.strip() for l in open(f) if l.strip() and not l.strip().startswith('#')]
+        if line:
+            parts = (line[0] + '||').split('|')
+            log(n, 'ink from', os.path.basename(f) + ':', line[0])
+            return parts[0], parts[1], parts[2]
+    return HAIR.get(n, ''), '', ''
+
+
 def civ_stills(stills):
     # a civilian holds nothing: every still is the plain Standing Idle (as the civilian sheets were made); death stays
     idle = os.path.join(DOWN, 'Standing Idle.fbx')
@@ -124,13 +139,17 @@ def sheet(R, n, blend, civ, stills, walks, outdir):
     rc = os.path.join(SPRITES, 'render_char.py'); asm = os.path.join(SPRITES, 'assemble_sheet.py')
     t0 = time.time(); log('==', n, 'start', '(unarmed)' if civ else '(armed)')
     fr = os.path.join(WORK, 'fr16_' + n); shutil.rmtree(fr, ignore_errors=True)
+    hair, fold, pen = ink_for(n, blend)
     st = civ_stills(stills) if civ else stills
     clips = ','.join('%s=%s' % kv for kv in list(st.items()) + list(walks.items()))
+    shade = ['--shade'] if 'PENIDS=' in pen else []
     c = run(rc_cmd(R, rc, ['--blend', blend, '--clips', clips, '--frames', '8',
-                           '--clipframes', 'walk=16,pwalk=16,swalk=16,ewalk=16', '--out', fr]),
+                           '--clipframes', 'walk=16,pwalk=16,swalk=16,ewalk=16', '--out', fr] + shade),
             os.path.join(WORK, n + '.render.log'))
     if c: log('RENDER FAILED', n, '- see', n + '.render.log'); return False
-    env = dict(os.environ, W16='1', HAIR=HAIR.get(n, ''), FOLD_IDS='', XCOM_UNITS=UNITS)
+    env = dict(os.environ, W16='1', HAIR=hair, FOLD_IDS=fold, XCOM_UNITS=UNITS)
+    for kv in pen.split():                       # PENIDS=.. PENPCT=.. TERMIDS=.. etc, as render_walk16.sh passes them
+        if '=' in kv: k, v = kv.split('=', 1); env[k] = v
     c = run([sys.executable, asm, fr, os.path.join(WORK, 'sheets16'), n], os.path.join(WORK, n + '.assemble.log'), env)
     if c: log('ASSEMBLE FAILED', n, '- see', n + '.assemble.log'); return False
     ok, why = check(n)
