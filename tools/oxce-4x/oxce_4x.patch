@@ -7042,7 +7042,7 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..e1d9e44 100644
+index 0631f32..b15d933 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
 @@ -20,7 +20,9 @@
@@ -7055,7 +7055,7 @@ index 0631f32..e1d9e44 100644
  #include "CannotReequipState.h"
  #include "../Geoscape/GeoscapeEventState.h"
  #include "../Engine/Action.h"
-@@ -1028,6 +1030,35 @@ void DebriefingState::prepareDebriefing()
+@@ -1028,6 +1030,54 @@ void DebriefingState::prepareDebriefing()
  
  	bool aborted = battle->isAborted();
  	bool success = !aborted || battle->allObjectivesDestroyed();
@@ -7088,10 +7088,29 @@ index 0631f32..e1d9e44 100644
 +		success = true;   // keeps the squad's gear coming home; the result shown is drillPassed (below)
 +		Log(LOG_INFO) << "[proving ground] cadre " << cadre << ", passed " << drillPassed;
 +	}
++	// G.I. Joe ARSENAL: a Cobra vehicle's wreck recovered (the Joes won and it is down) opens its weapons' Intel File cards
++	if (success && !aborted)
++	{
++		for (auto* bu : *battle->getUnits())
++		{
++			if (bu->getOriginalFaction() != FACTION_HOSTILE || bu->getStatus() != STATUS_DEAD) continue;
++			for (auto* it : *bu->getInventory())
++			{
++				const std::string &gate = it->getRules()->getGjaUnlock();
++				if (gate.empty()) continue;
++				const RuleResearch *r = _game->getMod()->getResearch(gate, false);
++				if (r && !save->isResearched(r, false))
++				{
++					save->addFinishedResearch(r, _game->getMod(), nullptr, false);
++					Log(LOG_INFO) << "[arsenal] wreck of " << bu->getType() << " recovered: " << gate << " opens";
++				}
++			}
++		}
++	}
  	Craft *craft = 0;
  	Base *base = 0;
  	std::string target;
-@@ -1039,10 +1070,23 @@ void DebriefingState::prepareDebriefing()
+@@ -1039,10 +1089,23 @@ void DebriefingState::prepareDebriefing()
  	int playersMIA = 0;
  
  	_stats.push_back(new DebriefingStat("STR_ALIENS_KILLED", false));
@@ -7115,7 +7134,7 @@ index 0631f32..e1d9e44 100644
  
  	std::string missionCompleteText, missionFailedText;
  	std::string objectiveCompleteText, objectiveFailedText;
-@@ -1186,7 +1230,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1186,7 +1249,7 @@ void DebriefingState::prepareDebriefing()
  					break;
  				}
  			}
@@ -7124,7 +7143,7 @@ index 0631f32..e1d9e44 100644
  			{
  				_destroyBase = true;
  			}
-@@ -1198,7 +1242,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1198,7 +1261,7 @@ void DebriefingState::prepareDebriefing()
  			for (auto* fac : *base->getFacilities())
  			{
  				// this facility was demolished
@@ -7133,7 +7152,7 @@ index 0631f32..e1d9e44 100644
  				{
  					toBeDamaged.push_back(fac);
  				}
-@@ -1230,6 +1274,10 @@ void DebriefingState::prepareDebriefing()
+@@ -1230,6 +1293,10 @@ void DebriefingState::prepareDebriefing()
  				ms->setUfo(nullptr);
  			}
  			_missionStatistics->alienRace = ms->getAlienRace();
@@ -7144,7 +7163,7 @@ index 0631f32..e1d9e44 100644
  			delete ms;
  			save->getMissionSites()->erase(msIt);
  			break;
-@@ -1296,6 +1344,25 @@ void DebriefingState::prepareDebriefing()
+@@ -1296,6 +1363,25 @@ void DebriefingState::prepareDebriefing()
  			deadSoldiers++;
  		}
  	}
@@ -7170,7 +7189,7 @@ index 0631f32..e1d9e44 100644
  	// if all our men are unconscious, the aliens get to have their way with them.
  	if (playersUnconscious + playersMIA == playersSurvived)
  	{
-@@ -1304,7 +1371,11 @@ void DebriefingState::prepareDebriefing()
+@@ -1304,7 +1390,11 @@ void DebriefingState::prepareDebriefing()
  		{
  			if (bu->getOriginalFaction() == FACTION_PLAYER && bu->getStatus() != STATUS_DEAD)
  			{
@@ -7183,7 +7202,7 @@ index 0631f32..e1d9e44 100644
  				{
  					bu->instaKill();
  				}
-@@ -1417,6 +1488,13 @@ void DebriefingState::prepareDebriefing()
+@@ -1417,6 +1507,13 @@ void DebriefingState::prepareDebriefing()
  				{
  					addStat(objectiveCompleteText, 1, objectiveCompleteScore);
  				}
@@ -7197,7 +7216,7 @@ index 0631f32..e1d9e44 100644
  				save->clearLinksForAlienBase(ab, _game->getMod());
  				delete ab;
  				save->getAlienBases()->erase(abIt);
-@@ -1424,6 +1502,12 @@ void DebriefingState::prepareDebriefing()
+@@ -1424,6 +1521,12 @@ void DebriefingState::prepareDebriefing()
  			}
  			else
  			{
@@ -7210,7 +7229,7 @@ index 0631f32..e1d9e44 100644
  				ab->setInBattlescape(false);
  				break;
  			}
-@@ -1476,6 +1560,65 @@ void DebriefingState::prepareDebriefing()
+@@ -1476,6 +1579,65 @@ void DebriefingState::prepareDebriefing()
  	{
  		ignoreLivingCivilians = ruleDeploy->getIgnoreLivingCivilians();
  	}
@@ -7276,7 +7295,7 @@ index 0631f32..e1d9e44 100644
  	for (auto* bunit : *battle->getUnits())
  	{
  		UnitStatus status = bunit->getStatus();
-@@ -1483,6 +1626,31 @@ void DebriefingState::prepareDebriefing()
+@@ -1483,6 +1645,31 @@ void DebriefingState::prepareDebriefing()
  		UnitFaction oldFaction = bunit->getOriginalFaction();
  		Soldier *soldier = save->getSoldier(bunit->getId());
  
@@ -7308,7 +7327,7 @@ index 0631f32..e1d9e44 100644
  		if (!bunit->getTile())
  		{
  			Position pos = bunit->getPosition();
-@@ -1654,8 +1822,9 @@ void DebriefingState::prepareDebriefing()
+@@ -1654,8 +1841,9 @@ void DebriefingState::prepareDebriefing()
  					}
  				}
  			}
@@ -7319,7 +7338,7 @@ index 0631f32..e1d9e44 100644
  				&& playersSurvived > 0 && faction != FACTION_PLAYER && (!bunit->isOut() || bunit->isIgnored())
  				&& (bunit->isSurrendering() || battle->getChronoTrigger() == FORCE_WIN_SURRENDER))
  			{
-@@ -1895,6 +2064,10 @@ void DebriefingState::prepareDebriefing()
+@@ -1895,6 +2083,10 @@ void DebriefingState::prepareDebriefing()
  		{
  			_txtTitle->setText(tr("STR_CRAFT_IS_LOST"));
  		}
@@ -7330,7 +7349,7 @@ index 0631f32..e1d9e44 100644
  		else if (target == "STR_BASE")
  		{
  			_txtTitle->setText(tr("STR_BASE_IS_LOST"));
-@@ -2130,10 +2303,197 @@ void DebriefingState::prepareDebriefing()
+@@ -2130,10 +2322,197 @@ void DebriefingState::prepareDebriefing()
  		}
  	}
  
@@ -7528,7 +7547,7 @@ index 0631f32..e1d9e44 100644
  		// Unlock research defined in alien deployment, if the mission was a success
  		const RuleResearch *research = _game->getMod()->getResearch(ruleDeploy->getUnlockedResearchOnSuccess());
  		save->handleResearchUnlockedByMissions(research, _game->getMod(), ruleDeploy);
-@@ -2299,6 +2659,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
+@@ -2299,6 +2678,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
   */
  void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base, int quantity, bool considerTransformations)
  {
