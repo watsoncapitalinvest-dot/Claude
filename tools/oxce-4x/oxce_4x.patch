@@ -7753,7 +7753,7 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..04ad728 100644
+index 0631f32..f48b643 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
 @@ -20,7 +20,10 @@
@@ -7874,7 +7874,7 @@ index 0631f32..04ad728 100644
 +			if (success && ms->getDeployment() && (ms->getDeployment()->getType() == "STR_TRANSPORT_CRASH" || ms->getDeployment()->getType() == "STR_CONVOY_AMBUSHED"))
 +				save->addRecoveredSite(ms->getId());
 +			if (save->getHunts().count(ms->getId())) huntSite = ms->getId();
-+			if (CobraNetwork::owns(save, ms)) cobraNetSite = ms->getId();   // G.I. Joe Act 1 layer
++			if (CobraNetwork::owns(save, ms)) { cobraNetSite = ms->getId(); _netSiteBattle = true; }   // G.I. Joe Act 1 layer
  			delete ms;
  			save->getMissionSites()->erase(msIt);
  			break;
@@ -8296,8 +8296,29 @@ index 0631f32..04ad728 100644
  	if (!considerTransformations)
  	{
  		base->getStorageItems()->addItem(ruleItem, quantity);
+@@ -2707,6 +3110,20 @@ void DebriefingState::recoverAlien(BattleUnit *from, Base *base, Craft* craft)
+ 	}
+ 
+ 	bool killPrisonersAutomatically = base->getAvailableContainment(ruleLiveAlienItem->getPrisonType()) == 0;
++	// G.I. Joe Act 1 layer: at a crime or cell strike, anyone taken alive with no cell anywhere to hold him is handed
++	// to the police (the leader after he talks, CobraNetwork::battleResult), rather than "dying for want of a
++	// containment facility"
++	if (killPrisonersAutomatically && _netSiteBattle)
++	{
++		bool anywhere = false;
++		for (auto* xbase : *_game->getSavedGame()->getBases())
++			if (xbase->getAvailableContainment(ruleLiveAlienItem->getPrisonType()) > 0) anywhere = true;
++		if (!anywhere)
++		{
++			Log(LOG_INFO) << "[network] " << from->getType() << " taken alive, handed to the police (no detention)";
++			return;
++		}
++	}
+ 	if (killPrisonersAutomatically)
+ 	{
+ 		// check also other bases, maybe we can transfer/redirect prisoners there
 diff --git a/src/Battlescape/DebriefingState.h b/src/Battlescape/DebriefingState.h
-index c999789..d4d682a 100644
+index c999789..6caa781 100644
 --- a/src/Battlescape/DebriefingState.h
 +++ b/src/Battlescape/DebriefingState.h
 @@ -65,6 +65,7 @@ private:
@@ -8308,6 +8329,14 @@ index c999789..d4d682a 100644
  	Base *_base;
  	std::vector<DebriefingStat*> _stats;
  	std::vector<SoldierStatsEntry> _soldierStats;
+@@ -82,6 +83,7 @@ private:
+ 	std::map<int, RecoveryItem*> _recoveryStats;
+ 	bool _positiveScore, _destroyBase, _promotions, _showSellButton, _initDone;
+ 	std::map<int, int>  _containmentStateInfo;
++	bool _netSiteBattle = false;   // G.I. Joe Act 1 layer: a crime or cell strike (its leader goes to the police, not to containment)
+ 	int _limitsEnforced;
+ 	MissionStatistics *_missionStatistics;
+ 	std::vector<Soldier*> _soldiersCommended, _deadSoldiersCommended;
 diff --git a/src/Battlescape/ExplosionBState.cpp b/src/Battlescape/ExplosionBState.cpp
 index ff9973e..8f1020b 100644
 --- a/src/Battlescape/ExplosionBState.cpp
@@ -18457,10 +18486,10 @@ index 0000000..e57d835
 +}
 diff --git a/src/Geoscape/CobraNetwork.cpp b/src/Geoscape/CobraNetwork.cpp
 new file mode 100644
-index 0000000..c3b3f5b
+index 0000000..91a4721
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.cpp
-@@ -0,0 +1,840 @@
+@@ -0,0 +1,848 @@
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5. See CobraNetwork.h.
 + *
@@ -18908,6 +18937,14 @@ index 0000000..c3b3f5b
 +					}
 +					break;
 +				}
++	// test rig (OXCE_RESEARCH_TODAY=<topic>): that topic counts as researched from today, once (to see what it sets off)
++	if (const char *t = getenv("OXCE_RESEARCH_TODAY"))
++		if (!net.count("researchTested") && mod->getResearch(t, false))
++		{
++			net["researchTested"] = 1;
++			save->addFinishedResearch(mod->getResearch(t, false), mod, save->getBases()->empty() ? nullptr : save->getBases()->front(), false);
++			Log(LOG_INFO) << "[rig] " << t << " researched";
++		}
 +	// The Drome seen without its plans (the plans' own research plays act1DromePlans): the reconnaissance photograph
 +	if (!net.count("dromeSeen"))
 +	{
