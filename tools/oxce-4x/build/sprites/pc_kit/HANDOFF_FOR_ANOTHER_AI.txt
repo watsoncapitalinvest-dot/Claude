@@ -1,0 +1,295 @@
+HANDOFF: THE RENDER MACHINE AND EVERYTHING BEHIND IT
+Written 17 Nov 2026 by the CIV render desk (a Claude session) for whoever picks this up next - another AI or a person.
+John Watson owns the project: a G.I. Joe-themed total conversion of OpenXcom (OXCE). This desk made the civilian walk
+sheets, the nine cartel men, the extra animations, and the offline render machine + app that runs on John's PC.
+Read all of it once. Section 13 (pitfalls) will save you hours.
+
+======================================================================================================================
+1. WHAT THIS IS, IN ONE PARAGRAPH
+======================================================================================================================
+The game shows every soldier as a sprite sheet: one PNG of 896 small pictures (poses and walk frames in 8 facings).
+Those pictures are rendered in Blender from a rigged 3D model (.blend on a Mixamo skeleton) played through Mixamo
+animation clips (.fbx), then assembled into the sheet with an outline ("ink") pass and the game's palette.
+The RENDER MACHINE does that on John's PC with no cloud: drop a .blend in a folder, a finished, checked sheet comes
+out. The APP is a window over the machine (start/stop, add models, progress, preview, pick extra animations) with an
+EDIT LOOK window that changes a model's skins, colours and gear without opening Blender.
+
+======================================================================================================================
+2. WHERE EVERYTHING IS
+======================================================================================================================
+John's PC (Windows), base folder  C:\GI-Joe-Silent-Storm\GIJoe_XCOM_4x\
+  render_kit\                         THE MACHINE + APP (run RENDER_APP.bat)
+    RENDER_APP.bat                    opens the app (use this)
+    RENDER_MACHINE.bat                the machine without the app (console window, watches folders)
+    RENDER_CARTEL.bat / RENDER_CIVILIANS.bat   one-off: render a folder once and stop
+    render_app.py                     the app (tkinter)
+    render_cartel.py                  the machine (all the real logic)
+    dress.py                          the Edit look worker (runs inside Blender's Python)
+    extras.txt                        which extra animations to render (one per line, # = skip)
+    README.txt                        user guide for John
+    HANDOFF_FOR_ANOTHER_AI.txt        this file
+    build\sprites\render_char.py      renders frames from a .blend + clips (shared with the cloud pipeline)
+    build\sprites\assemble_sheet.py   builds the 896-frame sheet from the frames (ink + palette)
+    build\sprites\soldier_ink.py      the outline/ink code assemble_sheet uses
+    build\make_weapon_sprites.py      palette + legal-colour table (reads the game's UNITS files)
+    build\pck.py                      reads the game's .PCK sprite packs
+    mod\Resources\Cobra\hold_pistol.png   source of the game palette
+  Reference\cartel\                   ARMED models folder (machine watches it): cartel_*.blend + clips_17nov.blend
+  Reference\cartel\_versions\         old versions kept by Edit look (Apply)
+  Reference\civ\                      CIVILIAN (unarmed) models folder (machine watches it)
+  Reference\sheets\cartel\            output for armed models (+ extras\)
+  Reference\sheets\civ\               output for civilians (+ extras\)
+  Reference\walk16_kit\civ_kit.zip    the 8 civilian .blend files (Ch12 Ch13 Ch20 Ch21 Ch23 Ch28 Ch42 Remy)
+  Reference\walk16_kit\               also another desk's (CAST) PC kit: SETUP_v3.bat, walk16_kit.zip, run_villains.py
+  render_work\                        machine scratch: render_log.txt, MACHINE_STATUS.txt, machine_state.json,
+                                      per-model .render.log/.assemble.log/.extras.log, packs16\ (unpacked clips).
+                                      Safe to delete; it rebuilds.
+  _BACKUPS\render_machine_backup_17Nov.zip   full safe copy (also in Downloads). RESTORE.txt inside.
+  XCom UFO Defense\XCOM\UNITS\        game files the assembler needs (HANDOB, FLOOROB, BIGOBS .PCK/.TAB)
+C:\Users\Chairman\Downloads\          the Mixamo clip downloads the machine uses:
+  Basic Shooter Pack.zip (the 2.4 MB one), Pistol_Handgun Locomotion Pack.zip, Rifle 8-Way Locomotion Pack.zip,
+  Action Adventure Pack.zip, Standing Idle.fbx  (+ the loose clips used for the extras, see section 8)
+
+GitHub repo (PUBLIC): watsoncapitalinvest-dot/Claude, branch claude/oxce-gijoe-4x
+  tools/oxce-4x/build/sprites/pc_kit/     the machine, app, dress.py, README, extras.txt, this handoff
+  tools/oxce-4x/build/sprites/cartel/     make_cartel.py, cartel.json, clip_lib.py, spell_hold.py, loop_close.py
+  tools/oxce-4x/build/sprites/render_char.py, assemble_sheet.py, soldier_ink.py, render_walk16.sh, render_cast.sh
+  tools/oxce-4x/build/install_walk16.py   installs finished sheets into the mod (heights in the rulesets)
+  tools/oxce-4x/mod/Resources/Units/      the sheets the game loads (civ_ch12_body.png etc.)
+  Commit messages end with [skip ci]. NEVER commit .blend files, Mixamo packs or skins: private, and the repo is public.
+
+claude.ai Project "Gi Joe XCom": the desks talk through text files there (claude/BRIEF_*, NOTE_*, HANDOFF_*,
+  claude/status/<DESK>.md). This desk's: claude/status/CIV.md, claude/NOTE_Cartel_Models_ForRender.txt,
+  claude/NOTE_FOR_BUILD_CivDesk_Progress.txt, claude/HANDOFF_RenderMachine.txt (= this file).
+
+======================================================================================================================
+3. WHAT THE PC NEEDS (already installed 17 Nov by CAST's SETUP_v3.bat)
+======================================================================================================================
+  Python 3.13 via the Python install manager:  py install 3.13
+  py -3.13 -m pip install bpy==5.3.0 numpy scipy pillow      (bpy = Blender 5.3 as a Python module, ~1 GB)
+  tkinter comes with that Python (the app needs it).
+  No separate Blender install is needed. The .bat files check and reinstall if missing.
+  render_cartel.py uses the Python that runs it if it can import bpy; else a Blender install (blender.exe -b --python).
+
+======================================================================================================================
+4. THE SHEET FORMAT (walk16, what the game reads)
+======================================================================================================================
+  <name>_body.png        2048 x 8960, 8-bit palette (game palette), 128 x 160 cells, 16 cells per row = 896 frames
+  <name>_body_rgb.png    same, full colour
+  <name>_body_anchors.txt  896 lines, one per frame: hand and feet positions (the game hangs the gun on the hand)
+  Layout: frame = base + facing * per + f.  facing 0 = up-right on screen, then clockwise.
+    stand 0, kneel 64, aim 128, death 192, pstand 256, pkneel 320     (8 frames a facing)
+    walk 384 (two-handed gun), pwalk 512 (pistol), swalk 640 (crouched), ewalk 768 (empty hands)   (16 a facing)
+  Check every sheet: size 2048x8960, 896 anchor lines, 0 empty cells. Look at one walk row and the death row by eye.
+
+======================================================================================================================
+5. HOW ONE MODEL BECOMES A SHEET (what the machine runs, in order)
+======================================================================================================================
+A) RENDER FRAMES  (build/sprites/render_char.py, needs bpy)
+   python render_char.py --blend M.blend --clips "stand=a.fbx,kneel=b.fbx,...,walk=w.fbx,..." --frames 8
+          --clipframes walk=16,pwalk=16,swalk=16,ewalk=16 --out FRAMES_DIR [--dirs 1,..,8] [--shade]
+   A clip can also be an action inside a .blend:  name=C:\path\clips_17nov.blend#cast_spell_hold
+   It writes FRAMES_DIR/<clip>/d<facing>_f<NN>_beauty.png and _id.png (part-ID pass for the outline) + meta.json.
+   Clip names matter: names containing walk/run get their forward travel removed (walk in place);
+   names starting with death keep the fall but not the slide, are not looped, and get a wider camera.
+   Clips used for the SHEET:
+     ARMED  stand = Rifle 8-Way\idle.fbx, kneel = Rifle 8-Way\idle crouching.fbx, aim = Rifle 8-Way\idle aiming.fbx,
+            death = Rifle 8-Way\death from the front.fbx, pstand = Pistol\pistol idle.fbx,
+            pkneel = Pistol\pistol kneeling idle.fbx
+     CIVILIAN (unarmed): every still = Downloads\Standing Idle.fbx, except death (same as armed)
+     WALKS (both): walk = Basic Shooter Pack\walking.fbx, pwalk = Pistol pack\pistol walk.fbx,
+            swalk = Rifle 8-Way\walk crouching forward.fbx, ewalk = Action Adventure Pack\walking.fbx
+B) ASSEMBLE  (build/sprites/assemble_sheet.py, plain Python: numpy scipy pillow)
+   env W16=1 HAIR=<r,g,b or empty> FOLD_IDS=<ids or empty> XCOM_UNITS=<game UNITS folder> [PENIDS=.. PENPCT=.. etc]
+   python assemble_sheet.py FRAMES_DIR OUT_DIR <name>      (OUT_DIR must exist)
+   -> <name>_body.png, _body_rgb.png, _body_anchors.txt
+C) CHECK  size / anchors / empty cells (render_cartel.check()), copy to Reference\sheets\<cartel|civ>\
+D) EXTRAS  render_char again with the clips from clips_17nov.blend, 16 frames each, 8 facings; the machine pastes
+   each clip into one PNG: extras\<name>_<clip>.png = 8 rows (facings) x 16 frames, raw (no outline, no palette).
+Timings measured: sheet 13-14 min a model on the 2-core cloud box; extras ~1.4 min per clip. John's PC is faster.
+
+THE INK (outline) SETTINGS - the "HAIR|FOLD|PEN" row
+   The cloud pipeline keeps one row per character in render_cast.sh ink(). The machine reads, in this order:
+   <name>.ink.txt beside the .blend (one line HAIR|FOLD|PEN, e.g. "48,38,32||TERMIDS=3,6,11 TERMMIN=90"),
+   else the HAIR table in render_cartel.py (cartel nine + the 12 civilians), else outline only.
+   PEN containing PENIDS= also adds --shade to render_char. Current standard (newest characters): the painted
+   textures carry shading and fold lines, the renderer only adds the outline = no ink file needed.
+
+======================================================================================================================
+6. THE MACHINE (render_kit\render_cartel.py)
+======================================================================================================================
+  py -3.13 render_cartel.py --watch        THE MACHINE: loops forever (RENDER_MACHINE.bat; the app starts this)
+  py -3.13 render_cartel.py                every model in Reference\cartel once (armed)
+  py -3.13 render_cartel.py --civ          every model in Reference\civ once (unarmed)
+  py -3.13 render_cartel.py NAME [NAME..]  just those (looked for in cartel, then civ)
+  flags: --no-extras, --extras-only
+  Watch loop: every 20 s scans Reference\cartel (armed) and Reference\civ (unarmed) for *.blend (not clips_*).
+  A model is due if its file's modified time differs from machine_state.json (or it has none) and the file is
+  older than 10 s (still copying). One model at a time: sheet, then extras. State + MACHINE_STATUS.txt updated.
+  To re-render a model: touch/overwrite its .blend (the app's "Re-render selected" does that).
+  Env overrides used for testing: KIT_BASE (base folder), KIT_DOWNLOADS, KIT_EXTRAS (comma list), BLENDER.
+  First run unpacks the four pack zips from Downloads into render_work\packs16\.
+
+======================================================================================================================
+7. THE APP AND EDIT LOOK (render_app.py + dress.py)
+======================================================================================================================
+  render_app.py (tkinter): imports render_cartel as M for paths and lists. Starts the machine as a child process
+  (python.exe render_cartel.py --watch, no console window); Stop kills the whole process tree (taskkill /T /F).
+  Progress = count of *_beauty.png in render_work\fr16_<name> / 896 (sheet) or extras_<name> / (clips*128).
+  The current model = last "== name start" in render_log.txt with no done/FAILED after it.
+  Preview panel: stand, walk, aim, death cells of facing 5 cut from the finished _body.png.
+  Extras checkboxes rewrite extras.txt (the machine re-reads it before each model).
+
+  EDIT LOOK window -> dress.py, run as  python dress.py --blend M.blend ...  (Blender's Python):
+    --list                          prints DRESS_JSON {materials:[{name,image,tinted,tint}], gear:[...], props:[...]}
+    --spec SPEC.json --out O.blend  applies: {"skins": {material: image_path}, "colours": {material: [r,g,b] | null},
+                                    "gear": [...] (omit = unchanged, [] = none), "props_add": [...], "props_remove": [names]}
+    --template MATERIAL --out x.png the material's image with that part's UV seams drawn in magenta (for the AI painter)
+  Skins: replaces the Image Texture node's image (packed into the .blend). Colour: luminance-keeping recolour =
+    RGBToBW(texture) x colour/meanLuminance into the Emission colour (null removes it). Materials are flat EMISSION
+    (no lights in these renders) - anything new must be emission too.
+  Built-in gear (bandana, cap, dome=helmet, vest+pouches, sunglasses, chain): simple meshes measured off the body
+    (head and torso cross-sections by bone weights), rigidly weighted to one bone each, one shared material
+    'cartel_gear' coloured by a 'gcol' colour attribute. The list is stored on the armature as arm['gear_spec'].
+  Gear files (props): .glb/.gltf/.fbx/.obj imported, merged to one mesh, scaled to the attach point (head width,
+    torso width, 0.25 m at the hip, 0.6 m in the hand), offset/rotated by the sliders, weighted 100% to one bone
+    (Head, Spine2, Hips, RightHand, LeftHand). Its materials are converted to emission and given their OWN
+    IDSWITCH with a constant part id (39) so they don't count against render_char's 6-material limit.
+    Stored as objects named Prop_<file> with obj['gear_prop'] = the JSON it was added with.
+  Preview: dress to render_work\preview_<name>.blend, render stand + walk frame 0, facings 2,5,7.
+  Apply: copies the old .blend to <folder>\_versions\<name>_<YYYYmmdd-HHMMSS>.blend, writes <name>.blend.new.blend,
+    replaces. Undo: moves the newest version back. Both change the file time, so the machine re-renders.
+
+======================================================================================================================
+8. THE ANIMATION LIBRARY  (Reference\cartel\clips_17nov.blend, 22 actions)
+======================================================================================================================
+  Built with source_tools/clip_lib.py:  python clip_lib.py LIB.blend [--append] name=file.fbx ...
+  (imports each FBX, keeps only its action, renames bone paths mixamorigN: -> mixamorig:, fake user, saves)
+  cast_spell        Standing 2H Cast Spell 01.fbx, as downloaded (arms go overhead)
+  cast_spell_hold   John's fix ("hold them in the right spot"): spell_hold.py. Arms + spine ease from a plain idle
+                    (Standing Idle frame 1) into the crouch (f1-18), as animated to the chest-height push (f37), HELD
+                    at f37 to f56, ease back to idle by f66. Hands never above the head (checked on 3 bodies).
+  run, run_b, run_forward, fast_run, pistol_run, injured_run, run_up_stairs   the seven 17 Nov run downloads
+  walk_up_stairs    Walking Up The Stairs.fbx (loops as downloaded)
+  walk_down_stairs  Descending Stairs.fbx - did NOT loop (ends crouched); loop_close.py eases the last 8 frames
+                    back to frame 1. Both stairs render stepping in place (the game moves the unit between levels).
+  death_back (Death.fbx), death_dying (Dying.fbx), death_dying_b (Dying (1).fbx), death_crouch (Crouch Death.fbx),
+  death_headshot (Death From Front Headshot.fbx)
+  sword_draw (Withdrawing Sword.fbx), sword_sheathe (Sheathing Sword.fbx), sword_fight (Sword Fight One.fbx,
+  246 frames shown as 16), sword_run (Run With Sword.fbx), sword_slash_in / sword_slash_out (Stable Sword ... Slash)
+  The renders show the body only - a held sword/item is drawn by the game, which has no sword art yet.
+  Not yet added: a hands-up/surrender clip (John has none downloaded; maybe inside Anims_Only_FBX_V1.zip, 463 MB).
+  To add a clip: clip_lib.py LIB --append name=file.fbx ; add the name to ALL_EXTRAS in render_cartel.py and a
+  line in extras.txt ; the app's checkbox appears automatically. Re-embed into the models only if someone needs
+  the clips inside them (the machine reads them from the library).
+
+======================================================================================================================
+9. THE MODELS THIS DESK MADE
+======================================================================================================================
+  CIVILIANS (8, from Mixamo characters John downloaded): Ch12 Ch13 Ch20 Ch21 Ch23 Ch28 Ch42 Remy - in civ_kit.zip.
+    Their walk16 sheets are in the game (commits 4613f09 84fc292 8b07524 e55ff0f d21ae2f 23d2632 05e33a3 4e358a0),
+    installed with install_walk16.py (maps Ch12 -> mod/Resources/Units/civ_ch12_body.png and sets the height in
+    gijoe_civilians.rul). Ch02 Ch06 Ch07 Ch08 were rendered by BUILD-1 (another desk).
+    Ch13 and Ch21 are female bodies; Ch20 is a red racing suit with a full helmet.
+  CARTEL MEN (9, original looks, John 14:42 "using the models i have downloaded for civilians make several cartel
+    members of 3 different types. foot soldiers, heavies, leaders"; 14:50 "no women"; 15:15 lose the big hats):
+    made by source_tools/make_cartel.py + cartel.json from the civilian bodies: luminance recolour per garment,
+    built-in gear. Then the clip library embedded and arm['gear_spec'] recorded (so Edit look shows the gear).
+      foot_a Ch28 black hoody, jeans, maroon bandana     foot_b Ch42 off-white tee, khaki shorts, black bandana + cap
+      foot_c Remy charcoal top, jeans, tan bandana        heavy_a Remy black tee, olive cargo, olive vest+helmet, bandana
+      heavy_b Ch28 black, coyote vest, black helmet+bandana   heavy_c Ch12 green shirt (hue-keyed), tan vest, cap, bandana
+      boss_a Ch23 cream suit, black shirt, sunglasses, gold chain   boss_b Ch12 burgundy shirt, sunglasses, chain
+      boss_c Ch23 black suit, red shirt, sunglasses, chain
+    Not yet rendered to sheets as of writing (John is running the machine). Not yet in the game: BUILD-1 owns the
+    rulesets (claude/BRIEF_FOR_BUILD_CartelDay1.txt: STR_CARTEL race, STR_CARTEL_GUNMAN, STR_CARTEL_BOSS).
+
+======================================================================================================================
+10. GETTING SHEETS INTO THE GAME (not the machine's job - BUILD-1's)
+======================================================================================================================
+  For a sheet that replaces one the game already loads: python tools/oxce-4x/build/install_walk16.py NAME
+  (--sheets DIR to point at the sheets). It copies the PNGs into mod/Resources/Units, sets the extraSprites height
+  to 8960 and copies the anchors to Resources/Units/anchors/<SHEET>.txt. New units need ruleset entries first.
+  The extra animations (runs, stairs, deaths, swords, spell) have NO slot in the engine yet: BUILD-1 decides.
+
+======================================================================================================================
+11. TROUBLESHOOTING
+======================================================================================================================
+  Look in render_work\: render_log.txt (one line per step), <name>.render.log, <name>.assemble.log,
+  <name>.extras.log, dress_<name>_*.log, machine_console.txt (the app's machine output), MACHINE_STATUS.txt.
+  "No renderer"            -> py -3.13 -c "import bpy" fails: run SETUP_v3.bat or the pip line in section 3.
+  "MISSING ...zip"         -> a pack zip is not in Downloads under that exact name.
+  RENDER FAILED, log says "can't open file ...render_char.py" -> the kit's build\sprites folder is missing: restore.
+  ASSEMBLE FAILED          -> usually XCOM_UNITS path wrong or OUT dir missing (the machine creates it).
+  CHECK FAILED / empty frames -> look at the frames in render_work\fr16_<name>; often a clip that does not fit the
+                              skeleton or a model with non-Mixamo bone names.
+  Model renders in T-pose  -> the clip's bone names are not mixamorig: (fixed automatically for mixamorigN:).
+  App window does not open -> run RENDER_MACHINE.bat (same machine, no window) and check tkinter: py -3.13 -m tkinter
+  Material limit assert ("too many materials for the 40-step id") -> render_char allows 6 materials per model
+                              (each takes 6 ids). Merge materials, or give extras their own IDSWITCH (see 7).
+
+======================================================================================================================
+12. HOW THINGS WERE TESTED (repeat these after changing anything)
+======================================================================================================================
+  - Sheet path: render a civilian with the kit and compare with the sheet already in the game - Ch42 and Ch28 came
+    out PIXEL-IDENTICAL (0 differing pixels of 18,350,080). That proves render + assemble + palette are unchanged.
+  - Armed path: cartel_boss_b / cartel_foot_b full sheets: 2048x8960, 896 anchors, 0 empty, ~13 min.
+  - Machine: run --watch, drop one armed + one civilian .blend in: both picked up within a minute, right mode,
+    MACHINE_STATUS shows both OK.
+  - App + Edit look: under a virtual display (Xvfb) on Linux with Python 3.12 + tkinter: start, live progress,
+    stop (no processes left), recolour + cap + gear file -> Preview -> Apply (version kept) -> Undo.
+  - Clips: measure, don't eyeball only - e.g. hand height vs the top of the head over every frame for the spell.
+  Not yet tested ON JOHN'S PC at the time of writing: the machine script, the app window, Edit look on Windows.
+
+======================================================================================================================
+13. PITFALLS THAT COST TIME (read these)
+======================================================================================================================
+  1. NEVER re-export a clip to FBX from Blender for this pipeline. Blender's FBX export changes the bones' rest
+     axes; render_char applies a clip's rotations onto the model's own skeleton, so the arms come out twisted.
+     Keep edited clips as ACTIONS in a .blend and pass name=lib.blend#action (render_char supports it).
+  2. Blender REUSES appended data from the same library path. If a model already has an action appended from
+     clips_17nov.blend, loading again from that path silently gives you the OLD copy. Before re-embedding: delete
+     the model's actions AND its bpy.data.libraries entries. For one-off test renders, copy the library to a new
+     path first.
+  3. The civilian/cartel .blend files are saved with the armature in REST position. Set
+     arm.data.pose_position = 'POSE' before measuring a posed skeleton (render_char does this itself).
+  4. Blender 5 actions are layered: fcurves live in action.layers[0].strips[0].channelbags[0].fcurves.
+  5. The game camera looks down steeply: a hand BEHIND the body draws ABOVE the head on screen. Judge "arms up" by
+     numbers (hand z vs HeadTop_End z), not only by the picture.
+  6. Do not edit an evaluated mesh (obj.evaluated_get(...).to_mesh()) - Blender segfaults. Copy obj.data instead.
+  7. assemble_sheet.py does not create its output folder.
+  8. Containers/sessions restart and kill background jobs: push each finished sheet to git straight away.
+  9. Gear and props must use EMISSION materials - there are no lights; a Principled material renders black.
+ 10. render_char counts every material: max 6 per model unless the material carries its own IDSWITCH node.
+ 11. Mixamo "with skin" downloads are ~120 MB, "without skin" ~2 MB; both work as clips. Numbered duplicates in
+     Downloads ("Withdrawing Sword (3).fbx") are usually the same move on other characters - use the plain one.
+
+======================================================================================================================
+14. JOHN'S DECISIONS AND HOW HE WORKS (honour these)
+======================================================================================================================
+  - Blunt, short answers; no hedging; do the work without asking much; ask before big builds.
+  - Batch his testing: one test run, one report back. Don't send him previews to approve unless asked.
+  - Never overstate what was tested. Say plainly what ran where.
+  - Cartel: no women; no big (cowboy) hats - caps are fine. Spell: hold the arms in the push, not overhead.
+  - Rendering happens on HIS PC (offline machine), not in the cloud ("use the outside tool").
+  - He makes his own original pieces (models, skins, gear via his graphics AI); the machine just "pumps them out".
+  - This desk did not render or set up the official G.I. Joe / Cobra characters; other desks (CAST, BUILD-1,
+    ROSTER) own that pipeline (render_cast.sh rows, Reference\looks\C_<NAME>_look_vN.zip, walk16_kit).
+  - The repo is public: nothing private (models, skins, packs, his strategy) goes in it.
+
+======================================================================================================================
+15. OPEN ITEMS
+======================================================================================================================
+  - John to run RENDER_APP.bat on his PC: first real Windows run of the machine, app and Edit look.
+  - Cartel sheets -> BUILD-1 installs and wires STR_CARTEL (BRIEF_FOR_BUILD_CartelDay1.txt).
+  - Engine slots for the extra animations; held-sword art.
+  - Hands-up / surrender clip when John finds or downloads one.
+  - Civilians Ch02/06/07/08 .blend files: in BUILD-1's walk16_kit.zip if needed for extras.
+  - Optional: the drop-in <name>.skin.png idea (swap a skin without the app) was offered, not built.
+
+======================================================================================================================
+16. BACKUP / RESTORE
+======================================================================================================================
+  render_machine_backup_17Nov.zip (in _BACKUPS\ and Downloads\): render_kit\, Reference\cartel\ (nine models +
+  library), Reference\civ\, source_tools\ (make_cartel.py cartel.json clip_lib.py spell_hold.py loop_close.py),
+  RESTORE.txt. Unzip, copy render_kit and Reference into GIJoe_XCOM_4x, replace files, run RENDER_APP.bat.
+  The GitHub repo holds every script too (section 2). Refresh the zip after changing the kit.
