@@ -4540,7 +4540,7 @@ index 0000000..014b0f2
 +
 +}
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..392c3ee 100644
+index b7e1111..e588e81 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
 @@ -16,8 +16,13 @@
@@ -4888,7 +4888,22 @@ index b7e1111..392c3ee 100644
  			_currentAction.target = pos;
  			getMap()->setCursorType(CT_NONE);
  
-@@ -3141,6 +3429,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
+@@ -1985,6 +2273,14 @@ void BattlescapeGame::primaryAction(Position pos)
+ 			{
+ 				_currentAction.sneak = _save->getSelectedUnit()->getArmor()->allowsSneaking(_save->getSelectedUnit()->isSmallUnit());
+ 			}
++			else if (_gjWalkMode == 1)
++			{
++				_currentAction.run = _save->getSelectedUnit()->getArmor()->allowsRunning(_save->getSelectedUnit()->isSmallUnit());
++			}
++			else if (_gjWalkMode == 2)
++			{
++				_currentAction.sneak = _save->getSelectedUnit()->getArmor()->allowsSneaking(_save->getSelectedUnit()->isSmallUnit());
++			}
+ 
+ 			// recalculate path after setting new move types
+ 			if (BAM_NORMAL != _currentAction.getMoveType())
+@@ -3141,6 +3437,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
  	{
  		return 0;
  	}
@@ -4900,7 +4915,7 @@ index b7e1111..392c3ee 100644
  
  	// death trap?
  	Tile* deathTrapTile = nullptr;
-@@ -3209,10 +3502,12 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
+@@ -3209,10 +3510,12 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
  				{
  					const RuleItem *ruleItem = item->getRules();
  					bool g = item->getGlow();
@@ -4914,7 +4929,7 @@ index b7e1111..392c3ee 100644
  							statePushNext(new ExplosionBState(this, p, BattleActionAttack::GetBeforeShoot(BA_TRIGGER_PROXY_GRENADE, nullptr, item)));
  							exploded = true;
 diff --git a/src/Battlescape/BattlescapeGame.h b/src/Battlescape/BattlescapeGame.h
-index 7af613c..f9d6e24 100644
+index 7af613c..39a7278 100644
 --- a/src/Battlescape/BattlescapeGame.h
 +++ b/src/Battlescape/BattlescapeGame.h
 @@ -149,6 +149,10 @@ private:
@@ -4928,6 +4943,16 @@ index 7af613c..f9d6e24 100644
  	/// Picks the first soldier that is panicking.
  	bool handlePanickingPlayer();
  	/// Common function for handling panicking units.
+@@ -240,6 +244,9 @@ public:
+ 	Map *getMap();
+ 	/// Gets the save.
+ 	SavedBattleGame *getSave();
++	/// G.I. Joe HUD v2: the MENU's walk mode (0 walk, 1 run, 2 sneak), used when no Ctrl / Alt is held
++	void setGjWalkMode(int m) { _gjWalkMode = m; }
++	int _gjWalkMode = 0;
+ 	/// Gets the tile engine.
+ 	TileEngine *getTileEngine();
+ 	/// Gets the pathfinding.
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
 index 1951ba7..ad9b23b 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
@@ -6121,7 +6146,7 @@ index a0bc8b3..9882f6e 100644
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..da8ad91 100644
+index 7cd4941..5bff42f 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -1,3 +1,5 @@
@@ -6173,7 +6198,7 @@ index 7cd4941..da8ad91 100644
  	_btnKneel->onMouseIn((ActionHandler)&BattlescapeState::txtTooltipIn);
  	_btnKneel->onMouseOut((ActionHandler)&BattlescapeState::txtTooltipOut);
  	_btnKneel->allowToggleInversion();
-@@ -724,6 +730,522 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +730,686 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
@@ -6206,25 +6231,18 @@ index 7cd4941..da8ad91 100644
 +	auto tuck = [&](Surface *s) { place(s, 0, 0, 1, 1); };
 +	auto key = [&](Surface *s, const std::string &legend) { HiUI::nativeKey(s, legend, false); };
 +
-+	// the action grid: 4 x 2, each 12 x 11, 1 px apart
++	// HUD v2: the old action grid's buttons move into the MENU; they stay 1 px big so their shortcuts still work
 +	BattlescapeButton *grid[8] = { _btnMapUp, _btnMapDown, _btnKneel, _btnCenter, _btnNextSoldier, _btnShowMap, _btnInventory, _btnHelp };
-+	const char *gridLegend[8] = { "UP", "DOWN", "KNEEL", "CENTER", "NEXT", "MAP", "GEAR", "OPTIONS" };
-+	const char *gridIcon[8] = { "icon_level_up", "icon_level_down", "icon_kneel", "icon_center", "icon_next", "icon_map", "icon_gear", "icon_options" };
-+	for (int i = 0; i < 8; ++i)
-+	{
-+		place(grid[i], 196 + (i % 4) * 13, 14 + (i / 4) * 12, 12, 11);
-+		key(grid[i], gridLegend[i]);
-+		HiUI::nativeKeyIcon(grid[i], std::string("battle_icons/") + gridIcon[i]);
-+	}
-+	// reserve time: four toggles under the label
++	for (int i = 0; i < 8; ++i) tuck(grid[i]);
++	// reserve time (196,26 30x13): the label, then the four toggles 2 x 2
 +	BattlescapeButton *res[4] = { _btnReserveNone, _btnReserveSnap, _btnReserveAimed, _btnReserveAuto };
 +	const char *resLegend[4] = { "NONE", "SNAP", "AIM", "AUTO" };
 +	for (int i = 0; i < 4; ++i)
 +	{
-+		place(res[i], 251 + i * 9, 16, 8, 6);
++		place(res[i], 196 + (i % 2) * 15, 30 + (i / 2) * 4, 14, 4);
 +		key(res[i], resLegend[i]);
 +	}
-+	place(_btnEndTurn, 291, 11, 25, 28);
++	place(_btnEndTurn, 262, 11, 54, 28);
 +	key(_btnEndTurn, "END TURN");
 +	HiUI::nativeKeyStyle(_btnEndTurn, 1);
 +	place(_btnStats, 36, 11, 54, 8);
@@ -6250,13 +6268,13 @@ index 7cd4941..da8ad91 100644
 +	// NEW PIECES
 +	for (int i = 0; i < 6; ++i)
 +	{
-+		_hudChip[i] = new InteractiveSurface(28, 6, ox + 4 + 29 * i, oy + 2);
++		_hudChip[i] = new InteractiveSurface(25, 6, ox + 26 + 26 * i, oy + 2);
 +		add(_hudChip[i]);
 +		_hudChip[i]->onMouseClick((ActionHandler)&BattlescapeState::hudChipClick);
 +	}
 +	for (int i = 0; i < 2; ++i)
 +	{
-+		_hudScroll[i] = new InteractiveSurface(7, 6, ox + (i == 0 ? 4 : 174), oy + 2);
++		_hudScroll[i] = new InteractiveSurface(7, 6, ox + (i == 0 ? 26 : 174), oy + 2);
 +		add(_hudScroll[i]);
 +		_hudScroll[i]->onMouseClick((ActionHandler)&BattlescapeState::hudScrollClick);
 +		HiUI::nativeKey(_hudScroll[i], i == 0 ? "<" : ">", false);
@@ -6270,35 +6288,51 @@ index 7cd4941..da8ad91 100644
 +		_hudCard[hnd]->onMouseClick((ActionHandler)&BattlescapeState::hudCardClick, 0);
 +		for (int m = 0; m < 3; ++m)
 +		{
-+			_hudMode[hnd][m] = new InteractiveSurface(14, 8, ox + cx + 1 + m * 15, oy + 30);
++			_hudMode[hnd][m] = new InteractiveSurface(14, 8, ox + cx + 1 + m * 15, oy + 21);
 +			add(_hudMode[hnd][m]);
 +			_hudMode[hnd][m]->onMouseClick((ActionHandler)&BattlescapeState::hudModeClick);
 +		}
++		// HUD v2: THROW, STRIKE, RELOAD, SWAP along the card's foot, each lit only if possible
++		for (int j = 0; j < 4; ++j)
++		{
++			_hudFoot[hnd][j] = new InteractiveSurface(11, 8, ox + cx + 1 + (int)(j * 11.5), oy + 30);
++			add(_hudFoot[hnd][j]);
++			_hudFoot[hnd][j]->onMouseClick((ActionHandler)&BattlescapeState::hudFootClick);
++		}
 +	}
-+	// G.I. Joe ARSENAL: a vehicle's weapon lists (HUD v2, John 16 Nov 21:29 "B"). The five group keys take the grid
-+	// places of UP, DOWN, KNEEL, CENTER and GEAR, which a vehicle has no use for (UP / DOWN keep their keys).
++	// HUD v2: the eight choice buttons (196,10, 4 x 2 of 15 x 7) and the list they open over the hand cards
++	for (int i = 0; i < 8; ++i)
 +	{
-+		const int slot[5] = { 0, 1, 2, 3, 6 };
-+		for (int i = 0; i < 5; ++i)
-+		{
-+			_hudGroup[i] = new InteractiveSurface(12, 11, ox + 196 + (slot[i] % 4) * 13, oy + 14 + (slot[i] / 4) * 12);
-+			add(_hudGroup[i]);
-+			_hudGroup[i]->onMouseClick((ActionHandler)&BattlescapeState::hudGroupClick);
-+			_hudGroup[i]->setVisible(false);
-+		}
-+		for (int i = 0; i < 6; ++i)
-+		{
-+			_hudList[i] = new InteractiveSurface(47, 8, ox + 94 + (i % 2) * 51, oy + 15 + (i / 2) * 8);
-+			add(_hudList[i]);
-+			_hudList[i]->onMouseClick((ActionHandler)&BattlescapeState::hudListClick);
-+			_hudList[i]->setVisible(false);
-+		}
-+		_hudListPage = new InteractiveSurface(12, 5, ox + 180, oy + 10);
-+		add(_hudListPage);
-+		_hudListPage->onMouseClick((ActionHandler)&BattlescapeState::hudListClick);
-+		_hudListPage->setVisible(false);
++		_hudChoice[i] = new InteractiveSurface(15, 7, ox + 196 + (i % 4) * 16, oy + 10 + (i / 4) * 8);
++		add(_hudChoice[i]);
++		_hudChoice[i]->onMouseClick((ActionHandler)&BattlescapeState::hudGroupClick);
 +	}
-+	_hudSig = new InteractiveSurface(36, 14, ox + 251, oy + 24);
++	for (int i = 0; i < 6; ++i)
++	{
++		_hudList[i] = new InteractiveSurface(47, 8, ox + 94 + (i % 2) * 51, oy + 15 + (i / 2) * 8);
++		add(_hudList[i]);
++		_hudList[i]->onMouseClick((ActionHandler)&BattlescapeState::hudListClick);
++		_hudList[i]->setVisible(false);
++	}
++	_hudListPage = new InteractiveSurface(12, 5, ox + 180, oy + 10);
++	add(_hudListPage);
++	_hudListPage->onMouseClick((ActionHandler)&BattlescapeState::hudListClick);
++	_hudListPage->setVisible(false);
++	// the MENU button, first in the squad strip, and the MENU it opens up the left edge (14 x 28 x 8, 1 px apart)
++	_hudMenuBtn = new InteractiveSurface(20, 6, ox + 4, oy + 2);
++	add(_hudMenuBtn);
++	_hudMenuBtn->onMouseClick((ActionHandler)&BattlescapeState::hudMenuBtnClick);
++	HiUI::nativeKey(_hudMenuBtn, "MENU", false);
++	for (int i = 0; i < 14; ++i)
++	{
++		_hudMenu[i] = new InteractiveSurface(28, 8, 0, oy - 125 + 9 * i);
++		add(_hudMenu[i]);
++		_hudMenu[i]->onMouseClick((ActionHandler)&BattlescapeState::hudMenuClick);
++		_hudMenu[i]->onMouseIn((ActionHandler)&BattlescapeState::hudOverIn);
++		_hudMenu[i]->onMouseOut((ActionHandler)&BattlescapeState::hudOverOut);
++		_hudMenu[i]->setVisible(false);
++	}
++	_hudSig = new InteractiveSurface(30, 13, ox + 228, oy + 26);
 +	add(_hudSig);
 +	_hudSig->onMouseClick((ActionHandler)&BattlescapeState::hudSigClick);
 +	_hudPortrait = new InteractiveSurface(28, 28, ox + 4, oy + 11);
@@ -6406,67 +6440,133 @@ index 7cd4941..da8ad91 100644
 +	}
 +	_hudPortrait->setVisible(ours);
 +
-+	// G.I. Joe ARSENAL: a vehicle shows ONE armed weapon (the right hand) across both cards, and its weapon lists
++	// HUD v2 (BATTLE_HUD_SPEC_v2). A vehicle shows ONE armed weapon (the right hand) across both cards. Eight choice
++	// buttons: the five weapon groups (vehicles), SPECIALS, ORDERS, ACTIONS; an open one lays its choices out where
++	// the hand cards are, 6 a page, greyed with the reason when they can't be used now.
 +	{
 +		static const char *GROUPS[5] = { "GUNS", "MISSILES", "ARTY", "DROPS", "SP. ROUNDS" };
-+		static const char *KEYS[5] = { "GUNS", "MISSL", "ARTY", "DROPS", "SP.RD" };
-+		std::vector<BattleItem*> byGroup[5];
++		static const char *KEYS[8] = { "GUNS", "MISSL", "ARTY", "DROPS", "SP.RD", "SPECL", "ORDER", "ACTN" };
++		static const char *TITLES[8] = { "GUNS", "MISSILES", "ARTY", "DROPS", "SP. ROUNDS", "SPECIALS", "ORDERS", "ACTIONS" };
++		std::vector<HudEntry> lists[8];
 +		if (ours)
++		{
 +			for (auto *it : *u->getInventory())
 +				if (it->getRules()->getBattleType() == BT_FIREARM)
 +					for (int g = 0; g < 5; ++g)
-+						if (it->getRules()->getGjaGroup() == GROUPS[g]) byGroup[g].push_back(it);
-+		bool any = false;
-+		for (auto &v : byGroup) if (!v.empty()) any = true;
-+		_hudVehicle = ours && any && !u->getGeoscapeSoldier();
-+		if (!_hudVehicle) _hudOpenGroup = -1;
-+		BattlescapeButton *gridOff[5] = { _btnMapUp, _btnMapDown, _btnKneel, _btnCenter, _btnInventory };
-+		for (int g = 0; g < 5; ++g)
-+		{
-+			gridOff[g]->setVisible(!_hudVehicle);
-+			_hudGroup[g]->setVisible(_hudVehicle);
-+			if (!_hudVehicle) continue;
-+			HiUI::nativeKey(_hudGroup[g], KEYS[g], false);
-+			HiUI::nativeKeyStyle(_hudGroup[g], byGroup[g].empty() ? 3 : g == _hudOpenGroup ? 1 : 0);
++						if (it->getRules()->getGjaGroup() == GROUPS[g])
++						{
++							HudEntry e; e.kind = HE_ARM; e.item = it;
++							const BattleItem *am = it->getAmmoForSlot(0);
++							const int left = am ? am->getAmmoQuantity() : 0;
++							e.label = std::string(tr(it->getRules()->getName())) + "  " + std::to_string(left);
++							e.usable = left > 0; e.why = "EMPTY";
++							lists[g].push_back(e);
++						}
++			// ORDERS: what exists today. The civilian orders (BRIEF_FOR_BUILD_CivilianOrders) are not built yet.
++			{ HudEntry e; e.kind = HE_ABORT; e.label = "ABORT MISSION"; lists[6].push_back(e); }
++			// ACTIONS: only what this man can do right now is lit
++			if (u->getGeoscapeSoldier())
++			{
++				{ HudEntry e; e.kind = HE_CUFF; e.label = "CUFF"; e.usable = cuffTarget(u) != nullptr; e.why = "NOBODY TO CUFF"; lists[7].push_back(e); }
++				{ HudEntry e; e.kind = HE_RELOAD; e.label = "RELOAD"; lists[7].push_back(e); }
++				for (BattleItem *h : { u->getRightHandWeapon(), u->getLeftHandWeapon() })
++				{
++					if (!h) continue;
++					if (h->getRules()->getType() == Mod::sabotageCharge)
++					{ HudEntry e; e.kind = HE_PRIME; e.item = h; e.label = "PLANT CHARGE"; e.usable = h->getFuseTimer() < 0; e.why = "ALREADY SET"; lists[7].push_back(e); }
++					if (h->getRules()->getBattleType() == BT_MEDIKIT)
++					{ HudEntry e; e.kind = HE_MEDIKIT; e.item = h; e.label = "MEDKIT"; lists[7].push_back(e); }
++				}
++			}
 +		}
++		bool anyGun = false;
++		for (int g = 0; g < 5; ++g) if (!lists[g].empty()) anyGun = true;
++		_hudVehicle = ours && anyGun && !u->getGeoscapeSoldier();
++		for (int g = 0; g < 8; ++g)
++		{
++			_hudChoice[g]->setVisible(ours);
++			HiUI::nativeKey(_hudChoice[g], KEYS[g], false);
++			HiUI::nativeKeyStyle(_hudChoice[g], lists[g].empty() ? 3 : g == _hudOpenGroup ? 1 : 0);
++		}
++		if (!ours || _hudOpenGroup < 0 || _hudOpenGroup >= 8 || lists[_hudOpenGroup].empty()) _hudOpenGroup = -1;
++		const bool open = _hudOpenGroup >= 0;
 +		d.vehicle = _hudVehicle;
-+		const bool open = _hudVehicle && _hudOpenGroup >= 0 && !byGroup[_hudOpenGroup].empty();
-+		if (_hudVehicle && !open) _hudOpenGroup = -1;
 +		d.listOpen = open;
 +		if (_hudVehicle)
 +		{
 +			d.hand[0].label = "ARMED WEAPON";
 +			if (BattleItem *a = u->getRightHandWeapon())
 +				for (int g = 0; g < 5; ++g) if (a->getRules()->getGjaGroup() == GROUPS[g]) d.hand[0].label += std::string(" - ") + GROUPS[g];
-+			_hudCard[1]->setVisible(false);
-+			for (int mm = 0; mm < 3; ++mm) { _hudMode[1][mm]->setVisible(false); if (open) _hudMode[0][mm]->setVisible(false); }
-+			_hudCard[0]->setVisible(!open);
++		}
++		// cards hidden under an open list, or the second card of a vehicle
++		for (int hnd = 0; hnd < 2; ++hnd)
++		{
++			const bool hide = open || (_hudVehicle && hnd == 1);
++			if (hide)
++			{
++				_hudCard[hnd]->setVisible(false);
++				for (int mm = 0; mm < 3; ++mm) _hudMode[hnd][mm]->setVisible(false);
++			}
++			// a vehicle's modes sit lower (no foot buttons on a vehicle card)
++			for (int mm = 0; mm < 3; ++mm) _hudMode[hnd][mm]->setY(_icons->getY() + (_hudVehicle ? 30 : 21));
++			// the foot buttons: THROW, STRIKE, RELOAD, SWAP
++			BattleItem *item = ours ? (hnd == 0 ? u->getRightHandWeapon() : u->getLeftHandWeapon()) : nullptr;
++			const RuleItem *r = item ? item->getRules() : nullptr;
++			const bool can[4] = {
++				r && !r->isFixed() && (r->getBattleType() == BT_GRENADE || r->getBattleType() == BT_PROXIMITYGRENADE || r->getCostThrow().Time > 0),
++				r && r->getCostMelee().Time > 0,
++				r && r->getBattleType() == BT_FIREARM && !r->isFixed(),
++				ours && !_hudVehicle && (u->getRightHandWeapon() || u->getLeftHandWeapon()) };
++			static const char *FOOT[4] = { "THROW", "STRIKE", "RELOAD", "SWAP" };
++			for (int j = 0; j < 4; ++j)
++			{
++				const bool show = ours && !hide && !_hudVehicle;
++				_hudFoot[hnd][j]->setVisible(show);
++				if (!show) continue;
++				HiUI::nativeKey(_hudFoot[hnd][j], FOOT[j], false);
++				HiUI::nativeKeyStyle(_hudFoot[hnd][j], can[j] ? 0 : 3);
++			}
 +		}
 +		if (open)
 +		{
-+			auto &v = byGroup[_hudOpenGroup];
-+			_hudListFirst = std::max(0, std::min(_hudListFirst, (int)v.size() - 1));
-+			if (_hudListFirst % 6) _hudListFirst -= _hudListFirst % 6;
-+			d.listTitle = std::string(GROUPS[_hudOpenGroup]) + " - " + std::to_string(v.size());
++			_hudEntries = lists[_hudOpenGroup];
++			const int n = (int)_hudEntries.size();
++			if (_hudListFirst >= n) _hudListFirst = 0;
++			_hudListFirst -= _hudListFirst % 6;
++			d.listTitle = std::string(TITLES[_hudOpenGroup]) + " - " + std::to_string(n) + (n > 6 ? "  (page " + std::to_string(_hudListFirst / 6 + 1) + ")" : "");
 +			for (int i = 0; i < 6; ++i)
 +			{
 +				const int k = _hudListFirst + i;
-+				_hudListItem[i] = k < (int)v.size() ? v[k] : nullptr;
-+				_hudList[i]->setVisible(_hudListItem[i] != nullptr);
-+				if (!_hudListItem[i]) continue;
-+				BattleItem *it = _hudListItem[i];
-+				const BattleItem *am = it->getAmmoForSlot(0);
-+				const int left = am ? am->getAmmoQuantity() : 0;
-+				HiUI::nativeKey(_hudList[i], std::string(tr(it->getRules()->getName())) + "  " + std::to_string(left), false);
-+				HiUI::nativeKeyStyle(_hudList[i], it == u->getRightHandWeapon() ? 1 : left > 0 ? 0 : 3);
++				_hudList[i]->setVisible(k < n);
++				if (k >= n) continue;
++				const HudEntry &e = _hudEntries[k];
++				HiUI::nativeKey(_hudList[i], e.usable ? e.label : e.label + " - " + e.why, false);
++				const bool armed = e.kind == HE_ARM && e.item == u->getRightHandWeapon();
++				HiUI::nativeKeyStyle(_hudList[i], armed ? 1 : e.usable ? 0 : 3);
 +			}
-+			_hudListPage->setVisible(v.size() > 6);
-+			if (v.size() > 6) HiUI::nativeKey(_hudListPage, ">", false);
++			_hudListPage->setVisible(n > 6);
++			if (n > 6) HiUI::nativeKey(_hudListPage, ">", false);
 +		}
 +		else
 +		{
++			_hudEntries.clear();
 +			for (auto *s : _hudList) s->setVisible(false);
 +			_hudListPage->setVisible(false);
++		}
++		// the MENU
++		static const char *MENU[14] = { "WALK", "KNEEL", "PRONE", "GROUND", "OVERWATCH", "DOORS", "UP", "DOWN", "CENTRE", "NEXT", "MAP", "GEAR", "STATS", "OPTIONS" };
++		static const char *WALKS[3] = { "WALK", "RUN", "SNEAK" };
++		static const char *ICON[14] = { "", "icon_kneel", "", "", "", "", "icon_level_up", "icon_level_down", "icon_center", "icon_next", "icon_map", "icon_gear", "", "icon_options" };
++		HiUI::nativeKeyStyle(_hudMenuBtn, _hudMenuOpen ? 1 : 0);
++		for (int i = 0; i < 14; ++i)
++		{
++			_hudMenu[i]->setVisible(_hudMenuOpen);
++			if (!_hudMenuOpen) continue;
++			HiUI::nativeKey(_hudMenu[i], i == 0 ? WALKS[_hudWalkMode] : MENU[i], false);
++			if (ICON[i][0]) HiUI::nativeKeyIcon(_hudMenu[i], std::string("battle_icons/") + ICON[i]);
++			// PRONE, GO TO GROUND, OVERWATCH, DOORS are not built yet: shown, greyed
++			const bool built = !(i >= 2 && i <= 5);
++			HiUI::nativeKeyStyle(_hudMenu[i], !built ? 3 : (i == 1 && ours && u->isKneeled()) ? 4 : 0);
 +		}
 +	}
 +
@@ -6506,8 +6606,8 @@ index 7cd4941..da8ad91 100644
 +		const int ox = _hudContentX, oy = _icons->getY();
 +		for (int i = 0; i < 6; ++i)
 +		{
-+			_hudChip[i]->setX(ox + (scroll ? 12 + 27 * i : 4 + 29 * i));
-+			_hudChip[i]->setWidth(scroll ? 26 : 28);
++			_hudChip[i]->setX(ox + (scroll ? 34 + 23 * i : 26 + 26 * i));   // HUD v2: the MENU button comes first
++			_hudChip[i]->setWidth(scroll ? 22 : 25);
 +			_hudChip[i]->setY(oy + 2);
 +		}
 +		for (int i = 0; i < 2; ++i)
@@ -6637,8 +6737,8 @@ index 7cd4941..da8ad91 100644
 +
 +void BattlescapeState::hudGroupClick(Action *action)
 +{
-+	for (int g = 0; g < 5; ++g)
-+		if (action->getSender() == _hudGroup[g])
++	for (int g = 0; g < 8; ++g)
++		if (action->getSender() == _hudChoice[g])
 +		{
 +			_hudOpenGroup = _hudOpenGroup == g ? -1 : g;   // the open one again closes it
 +			_hudListFirst = 0;
@@ -6646,7 +6746,8 @@ index 7cd4941..da8ad91 100644
 +	refreshJoeHud();
 +}
 +
-+/// A weapon from the open list: it becomes the armed weapon (it and the right hand's weapon change places).
++/// A choice from the open list: a weapon becomes the armed weapon (it and the right hand's weapon change places);
++/// an order or action is done or made ready to aim.
 +void BattlescapeState::hudListClick(Action *action)
 +{
 +	if (action->getSender() == _hudListPage) { _hudListFirst += 6; refreshJoeHud(); return; }
@@ -6654,25 +6755,113 @@ index 7cd4941..da8ad91 100644
 +	BattleUnit *u = _save->getSelectedUnit();
 +	for (int i = 0; i < 6; ++i)
 +	{
-+		if (action->getSender() != _hudList[i] || !_hudListItem[i]) continue;
-+		BattleItem *pick = _hudListItem[i];
-+		BattleItem *cur = u->getRightHandWeapon();
-+		if (pick != cur)
++		const int k = _hudListFirst + i;
++		if (action->getSender() != _hudList[i] || k >= (int)_hudEntries.size()) continue;
++		const HudEntry e = _hudEntries[k];
++		if (!e.usable) return;
++		_hudOpenGroup = -1;
++		switch (e.kind)
++		{
++		case HE_ARM:
++		{
++			BattleItem *pick = e.item, *cur = u->getRightHandWeapon();
++			if (pick != cur)
++			{
++				_battleGame->cancelCurrentAction();
++				const RuleInventory *slot = pick->getSlot();
++				const int sx = pick->getSlotX(), sy = pick->getSlotY();
++				pick->setSlot(_game->getMod()->getInventoryRightHand());
++				pick->setSlotX(0); pick->setSlotY(0);
++				if (cur) { cur->setSlot(slot); cur->setSlotX(sx); cur->setSlotY(sy); }
++				u->setActiveRightHand();
++				Log(LOG_INFO) << "[arsenal] " << u->getType() << " arms " << pick->getRules()->getType();
++			}
++			break;
++		}
++		case HE_ABORT: refreshJoeHud(); btnAbortClick(action); return;
++		case HE_CUFF: refreshJoeHud(); hudSigClick(action); return;
++		case HE_RELOAD: refreshJoeHud(); btnReloadClick(action); return;
++		case HE_PRIME:
++		case HE_MEDIKIT:
 +		{
 +			_battleGame->cancelCurrentAction();
-+			const RuleInventory *slot = pick->getSlot();
-+			const int sx = pick->getSlotX(), sy = pick->getSlotY();
-+			pick->setSlot(_game->getMod()->getInventoryRightHand());
-+			pick->setSlotX(0); pick->setSlotY(0);
-+			if (cur) { cur->setSlot(slot); cur->setSlotX(sx); cur->setSlotY(sy); }
-+			u->setActiveRightHand();
-+			Log(LOG_INFO) << "[arsenal] " << u->getType() << " arms " << pick->getRules()->getType();
++			if (e.item == u->getRightHandWeapon()) u->setActiveRightHand(); else u->setActiveLeftHand();
++			_battleGame->getCurrentAction()->weapon = e.item;
++			ActionMenuState *menu = new ActionMenuState(_battleGame->getCurrentAction(), _icons->getX(), _icons->getY() + 16);
++			menu->autoPick(e.kind == HE_PRIME ? BA_PRIME : BA_USE);
++			refreshJoeHud();
++			popup(menu);
++			return;
 +		}
-+		_hudOpenGroup = -1;
++		}
 +		break;
 +	}
 +	updateSoldierInfo();
 +	refreshJoeHud();
++}
++
++void BattlescapeState::hudMenuBtnClick(Action *)
++{
++	_hudMenuOpen = !_hudMenuOpen;
++	if (!_hudMenuOpen) _mouseOverIcons = false;
++	refreshJoeHud();
++}
++
++void BattlescapeState::hudOverIn(Action *) { _mouseOverIcons = true; }
++void BattlescapeState::hudOverOut(Action *) { _mouseOverIcons = false; }
++
++void BattlescapeState::hudMenuClick(Action *action)
++{
++	int i = 0;
++	while (i < 14 && action->getSender() != _hudMenu[i]) ++i;
++	switch (i)
++	{
++	case 0: _hudWalkMode = (_hudWalkMode + 1) % 3; _battleGame->setGjWalkMode(_hudWalkMode); break;
++	case 1: btnKneelClick(action); break;
++	case 6: btnMapUpClick(action); break;
++	case 7: btnMapDownClick(action); break;
++	case 8: btnCenterClick(action); break;
++	case 9: btnNextSoldierClick(action); break;
++	case 10: btnShowMapClick(action); return;
++	case 11: btnInventoryClick(action); return;
++	case 12: btnStatsClick(action); return;
++	case 13: btnHelpClick(action); return;
++	default: return;   // PRONE, GO TO GROUND, OVERWATCH, DOORS: not built yet
++	}
++	refreshJoeHud();
++}
++
++/// THROW, STRIKE, RELOAD, SWAP under a hand card.
++void BattlescapeState::hudFootClick(Action *action)
++{
++	if (!playableUnitSelected() || _battleGame->isBusy()) return;
++	BattleUnit *u = _save->getSelectedUnit();
++	for (int hnd = 0; hnd < 2; ++hnd)
++		for (int j = 0; j < 4; ++j)
++		{
++			if (action->getSender() != _hudFoot[hnd][j]) continue;
++			BattleItem *item = hnd == 0 ? u->getRightHandWeapon() : u->getLeftHandWeapon();
++			if (j == 3)
++			{
++				// SWAP: the two hands change what they hold
++				BattleItem *r = u->getRightHandWeapon(), *l = u->getLeftHandWeapon();
++				if (!r && !l) return;
++				_battleGame->cancelCurrentAction();
++				if (r) r->setSlot(_game->getMod()->getInventoryLeftHand());
++				if (l) l->setSlot(_game->getMod()->getInventoryRightHand());
++				updateSoldierInfo(); refreshJoeHud();
++				return;
++			}
++			if (j == 2) { if (hnd == 0) u->setActiveRightHand(); else u->setActiveLeftHand(); btnReloadClick(action); return; }
++			if (!item) return;
++			_battleGame->cancelCurrentAction();
++			if (hnd == 0) u->setActiveRightHand(); else u->setActiveLeftHand();
++			_battleGame->getCurrentAction()->weapon = item;
++			ActionMenuState *menu = new ActionMenuState(_battleGame->getCurrentAction(), _icons->getX(), _icons->getY() + 16);
++			menu->autoPick(j == 0 ? BA_THROW : BA_HIT);
++			popup(menu);
++			return;
++		}
 +}
 +
 +void BattlescapeState::hudModeClick(Action *action)
@@ -6696,7 +6885,7 @@ index 7cd4941..da8ad91 100644
  }
  
  
-@@ -732,9 +1254,11 @@ BattlescapeState::BattlescapeState() :
+@@ -732,9 +1418,11 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -6708,7 +6897,7 @@ index 7cd4941..da8ad91 100644
  
  	resetPalettes();
  }
-@@ -789,6 +1313,38 @@ void BattlescapeState::init()
+@@ -789,6 +1477,38 @@ void BattlescapeState::init()
  	_map->draw();
  	_battleGame->init();
  	updateSoldierInfo();
@@ -6747,7 +6936,7 @@ index 7cd4941..da8ad91 100644
  
  	switch (_save->getTUReserved())
  	{
-@@ -807,6 +1363,17 @@ void BattlescapeState::init()
+@@ -807,6 +1527,17 @@ void BattlescapeState::init()
  	}
  	if (_firstInit)
  	{
@@ -6765,7 +6954,7 @@ index 7cd4941..da8ad91 100644
  		// Set music
  		if (Options::oxcePlayBriefingMusicDuringEquipment)
  		{
-@@ -859,6 +1426,7 @@ void BattlescapeState::init()
+@@ -859,6 +1590,7 @@ void BattlescapeState::init()
  void BattlescapeState::think()
  {
  	static bool popped = false;
@@ -6773,7 +6962,7 @@ index 7cd4941..da8ad91 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1215,6 +1783,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1215,6 +1947,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -6794,7 +6983,7 @@ index 7cd4941..da8ad91 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -2172,7 +2754,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +2918,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -6803,7 +6992,7 @@ index 7cd4941..da8ad91 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +2974,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +3138,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -6811,7 +7000,7 @@ index 7cd4941..da8ad91 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -3577,13 +4160,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3577,13 +4324,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  	{
  		nextStage = ruleDeploy->getNextStage();
  	}
@@ -6841,7 +7030,7 @@ index 7cd4941..da8ad91 100644
  		bgen.nextStage();
  		_game->popState();
  		_game->pushState(new BriefingState(0, 0));
-@@ -3621,6 +4219,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4383,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -6854,7 +7043,7 @@ index 7cd4941..da8ad91 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +4656,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4820,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -6866,10 +7055,10 @@ index 7cd4941..da8ad91 100644
  	_map->getCamera()->jumpXY(dX/2, dY/2);
  
 diff --git a/src/Battlescape/BattlescapeState.h b/src/Battlescape/BattlescapeState.h
-index 746f3a4..0d7cf57 100644
+index 746f3a4..c01df74 100644
 --- a/src/Battlescape/BattlescapeState.h
 +++ b/src/Battlescape/BattlescapeState.h
-@@ -58,6 +58,35 @@ private:
+@@ -58,6 +58,48 @@ private:
  	InteractiveSurface *_btnStats;
  	BattlescapeButton *_btnReserveNone, *_btnReserveSnap, *_btnReserveAimed, *_btnReserveAuto, *_btnReserveKneel, *_btnZeroTUs;
  	InteractiveSurface *_btnLeftHandItem, *_btnRightHandItem;
@@ -6885,12 +7074,25 @@ index 746f3a4..0d7cf57 100644
 +	BattleUnit *_hudLastSel = nullptr;
 +	int _hudModeType[2][3] = {};
 +	// G.I. Joe ARSENAL / HUD v2 weapon lists (vehicles): GUNS, MISSILES, ARTY, DROPS, SP. ROUNDS; the open list, 6 a page
-+	InteractiveSurface *_hudGroup[5] = {}, *_hudList[6] = {}, *_hudListPage = nullptr;
-+	BattleItem *_hudListItem[6] = {};
++	// HUD v2 (BATTLE_HUD_SPEC_v2, John 16 Nov 22:3x "Rest of HUD v2"): eight CHOICE buttons - GUNS, MISSILES, ARTY,
++	// DROPS, SP. ROUNDS, SPECIALS, ORDERS, ACTIONS - whose choices line up in the armed-weapon spot, 6 a page.
++	struct HudEntry { std::string label; int kind = 0; BattleItem *item = nullptr; bool usable = true; std::string why; };
++	enum { HE_ARM = 0, HE_ABORT, HE_CUFF, HE_RELOAD, HE_PRIME, HE_MEDIKIT };
++	InteractiveSurface *_hudChoice[8] = {}, *_hudList[6] = {}, *_hudListPage = nullptr;
++	std::vector<HudEntry> _hudEntries;
 +	int _hudOpenGroup = -1, _hudListFirst = 0;
 +	bool _hudVehicle = false;
 +	void hudGroupClick(Action *action);
 +	void hudListClick(Action *action);
++	// the MENU (the 14 general buttons up the left edge) and the hand cards' foot buttons
++	InteractiveSurface *_hudMenuBtn = nullptr, *_hudMenu[14] = {}, *_hudFoot[2][4] = {};
++	bool _hudMenuOpen = false;
++	int _hudWalkMode = 0;   ///< 0 walk, 1 run, 2 sneak (sticky; Ctrl / Alt still override)
++	void hudMenuBtnClick(Action *action);
++	void hudMenuClick(Action *action);
++	void hudFootClick(Action *action);
++	void hudOverIn(Action *action);
++	void hudOverOut(Action *action);
 +	Surface *_hudMission = nullptr;
 +	void layoutJoeHud();
 +	void refreshJoeHud();
@@ -6905,7 +7107,7 @@ index 746f3a4..0d7cf57 100644
  
  	static const int SPECIAL_BUTTONS_MAX = 3;
  	int _posSpecialActions[SPECIAL_BUTTONS_MAX];
-@@ -75,7 +104,10 @@ private:
+@@ -75,7 +117,10 @@ private:
  	std::vector<NumberText*> _numMedikitLeft, _numMedikitRight;
  	NumberText *_numTwoHandedIndicatorLeft, *_numTwoHandedIndicatorRight;
  	Uint8 _twoHandedRed, _twoHandedGreen;
@@ -12189,7 +12391,7 @@ index 0000000..8277a64
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..22e6837
+index 0000000..03ab241
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
 @@ -0,0 +1,3335 @@
@@ -13458,7 +13660,7 @@ index 0000000..22e6837
 +
 +		// 8, 9 the hand cards (the fire-mode keys are widgets drawn over them)
 +		// G.I. Joe ARSENAL: a vehicle has one ARMED WEAPON card across both, or its open weapon list there
-+		if (hud.vehicle && hud.listOpen)
++		if (hud.listOpen)
 +		{
 +			DBox cb = hudBox(bar, 94, 10, 98, 29);
 +			boxFill(cb, 0x1B2023);
@@ -13467,7 +13669,7 @@ index 0000000..22e6837
 +		}
 +		for (int i = 0; i < 2; ++i)
 +		{
-+			if (hud.vehicle && (i == 1 || hud.listOpen)) continue;
++			if (hud.listOpen || (hud.vehicle && i == 1)) continue;
 +			const double cx = i == 0 ? 94 : 145;
 +			const double cw = hud.vehicle ? 98 : 47;
 +			DBox cb = hudBox(bar, cx, 10, cw, 29);
@@ -13483,7 +13685,7 @@ index 0000000..22e6837
 +			boxText(hudBox(bar, cx + cw - 20, 10.8, 18.5, 3.6), h.ammo, 2.0, 2, S_TEXT);
 +			// the name shrinks to fit rather than being cut (59 of the Arsenal's names are longer than a hand card)
 +			boxText(hudBox(bar, cx + 1.5, 14.6, cw - 3, 4.4), h.name, 2.6, 0, S_TEXT, "label", true);
-+			if (h.art)
++			if (h.art && hud.vehicle)   // HUD v2: a Joe's card has its fire modes and foot buttons where the picture was
 +				if (const Img *im = sideways(h.art))
 +				{
 +					// fit the strip, keep the picture's proportions
@@ -13497,15 +13699,15 @@ index 0000000..22e6837
 +		}
 +
 +		// 11 reserve time: the label (the four toggles are widgets)
-+		boxText(hudBox(bar, 251, 10.4, 36, 4), "RESERVE TIME", 1.9, 0, S_MUTED);
++		boxText(hudBox(bar, 196, 26.2, 30, 3.6), "RESERVE TIME", 1.7, 0, S_MUTED);
 +
 +		// 12 signature move
-+		DBox sg = hudBox(bar, 251, 24, 36, 14);
++		DBox sg = hudBox(bar, 228, 26, 30, 13);
 +		boxFill(sg, hud.sigOn ? 0x232A2D : 0x1B2023);
 +		boxEdge(sg, hud.sigOn ? S_YELLOW : 0x2E3530, k * 0.3);
-+		boxText(hudBox(bar, 252.5, 24.8, 33, 3.4), hud.sigTitle, 1.7, 0, hud.sigOn ? S_YELLOW : 0x6E6C64);
-+		boxText(hudBox(bar, 252.5, 28.4, 33, 5), hud.sigName, 2.6, 0, hud.sigOn ? S_TEXT : 0x6E6C64, "stencil");
-+		boxText(hudBox(bar, 252.5, 33.6, 33, 3.6), hud.sigHow, 1.6, 0, hud.sigOn ? S_MUTED : 0x5C5A52);
++		boxText(hudBox(bar, 229.5, 26.6, 27, 3.2), hud.sigTitle, 1.6, 0, hud.sigOn ? S_YELLOW : 0x6E6C64, "label", true);
++		boxText(hudBox(bar, 229.5, 30, 27, 4.6), hud.sigName, 2.4, 0, hud.sigOn ? S_TEXT : 0x6E6C64, "stencil", true);
++		boxText(hudBox(bar, 229.5, 34.8, 27, 3.4), hud.sigHow, 1.5, 0, hud.sigOn ? S_MUTED : 0x5C5A52, "label", true);
 +	}
 +
 +	void paintMission(const Surface *m)
