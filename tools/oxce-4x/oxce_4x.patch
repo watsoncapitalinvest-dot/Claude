@@ -18437,10 +18437,10 @@ index 0000000..e57d835
 +}
 diff --git a/src/Geoscape/CobraNetwork.cpp b/src/Geoscape/CobraNetwork.cpp
 new file mode 100644
-index 0000000..f80c2bd
+index 0000000..5573448
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.cpp
-@@ -0,0 +1,687 @@
+@@ -0,0 +1,702 @@
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5. See CobraNetwork.h.
 + *
@@ -18768,7 +18768,21 @@ index 0000000..f80c2bd
 +	SavedGame *save = game->getSavedGame();
 +	auto &net = save->getCobraNet();
 +	const int cm = save->getCobraMonth();
-+	if (net.count("bluddHired") || cm < 2 || cm > 4) return;
++	// the grudge (COBRA_ACT1_TIMETABLE): after the first meeting Bludd comes back for the same Joe every 4 months - his
++	// bounty is renewed, so the hunters find him again on a flight or at home
++	if (net.count("bluddHired"))
++	{
++		if (save->getMonthsPassed() - net["bluddHired"] >= 4 && (save->getMonthsPassed() - net["bluddHired"]) % 4 == 0)
++			for (auto *b : *save->getBases())
++				for (auto *s : *b->getSoldiers())
++					if (s->getId() == net["bluddTarget"] && s->getCobraFile() < game->getMod()->getCobraFileRules().bountyAt)
++					{
++						s->setCobraFile(game->getMod()->getCobraFileRules().bountyAt);
++						Log(LOG_INFO) << "[bludd] the grudge: Bludd is back for " << s->getName();
++					}
++		return;
++	}
++	if (cm < 2 || cm > 4) return;
 +	const int fee = 60;
 +	if (save->getCobraEconomy().getFunds("STR_NORTH_AMERICA") < fee && cm < 4) return;   // by month 5 he is hired anyway
 +	Soldier *target = nullptr;
@@ -18824,7 +18838,8 @@ index 0000000..f80c2bd
 +	for (int i = 0; i < cells; ++i)
 +	{
 +		const Town &t = !frontTowns.empty() ? frontTowns[i % frontTowns.size()] : townsOnly[(fronts + i) % townsOnly.size()];
-+		plant(game, "STR_COBRA_CELL_SITE", t, 25);
++		// a cell hides in a rented house or a farmhouse (answers 2a; the apartment over a shop waits for its map)
++		plant(game, game->getMod()->getDeployment("STR_COBRA_CELL_FARM_SITE") && RNG::percent(50) ? "STR_COBRA_CELL_FARM_SITE" : "STR_COBRA_CELL_SITE", t, 25);
 +	}
 +	if (junctions.empty()) junctions = townsOnly;
 +	for (int i = 0; i < depots && !junctions.empty(); ++i) plant(game, "STR_COBRA_DEPOT_SITE", junctions[i % junctions.size()], 8);
@@ -26806,7 +26821,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..8e1ec8b 100644
+index 1885346..cdb0feb 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -27200,7 +27215,7 @@ index 1885346..8e1ec8b 100644
 +		cn.tryRead("headStartDepotPerMonths", n.headStartDepotPerMonths);
 +		cn.tryRead("minKmFromPit", n.minKmFromPit); cn.tryRead("nearKmFromPit", n.nearKmFromPit);
 +		cn.tryRead("crimeChance", n.crimeChance); cn.tryRead("strikeChance", n.strikeChance); cn.tryRead("strikeFirstMonth", n.strikeFirstMonth);
-+		cn.tryRead("diffChance", n.diffChance); cn.tryRead("diffFind", n.diffFind);
++		cn.tryRead("diffChance", n.diffChance); cn.tryRead("diffFind", n.diffFind); cn.tryRead("diffGarrison", n.diffGarrison);
 +		cn.tryRead("crimePayout", n.crimePayout); cn.tryRead("strikePayout", n.strikePayout); cn.tryRead("cellGrowsAt", n.cellGrowsAt);
 +		cn.tryRead("scannerHours", n.scannerHours); cn.tryRead("tipoffDays", n.tipoffDays); cn.tryRead("tipoffResearch", n.tipoffResearch);
 +		cn.tryRead("frontCrimes", n.frontCrimes); cn.tryRead("cellCrimes", n.cellCrimes); cn.tryRead("strikeTargets", n.strikeTargets);
@@ -27812,7 +27827,7 @@ index 1885346..8e1ec8b 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..6ac6a22 100644
+index 2242d13..a360cac 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -28289,7 +28304,7 @@ index 2242d13..6ac6a22 100644
 +		int headStartFrontPerMonths = 6, headStartCellPerMonths = 6, headStartDepotPerMonths = 12;
 +		int minKmFromPit = 300, nearKmFromPit = 1500;
 +		int crimeChance = 25, strikeChance = 20, strikeFirstMonth = 1;
-+		std::vector<int> diffChance, diffFind;
++		std::vector<int> diffChance, diffFind, diffGarrison;
 +		int crimePayout = 150, strikePayout = 80, cellGrowsAt = 300;
 +		int scannerHours = 12;
 +		std::vector<int> tipoffDays;
@@ -30730,7 +30745,7 @@ index 6c121c7..8fcf33f 100644
  	std::vector< std::vector<int> > &getReinforcementsBlocks() { return _reinforcementsBlocks; }
  
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..0f09ec3 100644
+index 9ca9637..df05b59 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,11 +21,13 @@
@@ -31253,7 +31268,7 @@ index 9ca9637..0f09ec3 100644
  	if (isResearchRuleStatusDisabled(research->getName()))
  	{
  		return;
-@@ -2579,142 +2992,1287 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,142 +2992,1293 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -31394,6 +31409,12 @@ index 9ca9637..0f09ec3 100644
 +		}
 +		out.bonus += rule->getGarrisonBonus();
 +		campHere = true;
++	}
++	// Act 1 layer, answers (i): a Cobra site's garrison grows with the difficulty chosen at New Game (+0 / +1 / +2)
++	if (cobraSite && mod->getCobraNetworkRules().on && !mod->getCobraNetworkRules().diffGarrison.empty())
++	{
++		const auto &g = mod->getCobraNetworkRules().diffGarrison;
++		out.bonus += g[std::min((size_t)std::max(0, (int)_difficulty), g.size() - 1)];
 +	}
 +
 +	// And can it pay for them? John: "if the troops portion of that fails then cobra should have
@@ -32647,7 +32668,7 @@ index 9ca9637..0f09ec3 100644
  int SavedGame::getMonthsPassed() const
  {
  	return _monthsPassed;
-@@ -2995,6 +4553,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
+@@ -2995,6 +4559,174 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
   * @param soldier Pointer to dead soldier.
   * @param cause Pointer to cause of death, NULL if missing in action.
   */
@@ -32822,7 +32843,7 @@ index 9ca9637..0f09ec3 100644
  std::vector<Soldier*>::iterator SavedGame::killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause)
  {
  	if (resetArmor)
-@@ -3328,6 +5054,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
+@@ -3328,6 +5060,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
  		}
  	}
  
