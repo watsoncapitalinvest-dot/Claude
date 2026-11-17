@@ -39,6 +39,10 @@ def render_dir(d):
 # the six still clips at 8 facings x 8 frames, then four walks at 8 facings x 16 frames.
 W16 = [('stand', 0, 8), ('kneel', 64, 8), ('aim', 128, 8), ('death', 192, 8), ('pstand', 256, 8), ('pkneel', 320, 8),
        ('walk', 384, 16), ('pwalk', 512, 16), ('swalk', 640, 16), ('ewalk', 768, 16)]
+# FIRST HOUR (John 17 Nov 18:19 "all of the animations they need including stairs and hands up"): 1216 frames, the
+# 896 above and then up the stairs, down the stairs (16 a facing, stepping in place: the game moves the man), and
+# hands up (8 a facing, CAPTURE_DESIGN_v1's surrender). UnitSprite reads it by its size, like the 896.
+W16X = W16 + [('upstairs', 896, 16), ('downstairs', 1024, 16), ('handsup', 1152, 8)]
 
 
 def load_meta(srcs):
@@ -54,6 +58,9 @@ def load_meta(srcs):
         else:
             meta['anchors'].update(m['anchors'])
     return meta, where
+
+
+SHIFTS, TOPCUT = [], []
 
 
 def main(src, out_dir, stem):
@@ -74,10 +81,11 @@ def main(src, out_dir, stem):
         s *= meta['h49'] / 1.78
     print('scale %.3f (standing figure %d px at render size)' % (s, feet5 - ys.min()))
     if w16:
-        missing = [c for c, _, _ in W16 if c not in where]
+        want = W16X if any(c in where for c, _, _ in W16X[len(W16):]) else W16
+        missing = [c for c, _, _ in want if c not in where]
         if missing:
             sys.exit('W16 sheet needs every clip; missing: %s' % ', '.join(missing))
-        layout = W16
+        layout = want
     else:
         layout = [(c, i * 64, 8) for i, c in enumerate([c for c in CLIPS if c in where])]
     clips = [c for c, _, _ in layout]
@@ -91,11 +99,30 @@ def main(src, out_dir, stem):
         for d in range(8):
             kdir = render_dir(d)
             fx, fy = [v * k for v in meta['anchors'][f'stand/{kdir}/0']['feet']]
+            ox, oy = round(CENTRE_X - fx * s), round(FEET_Y - fy * s)
+            bigs = []
             for f in range(per):
                 p = f'{csrc}/{clip}/d{kdir}_f{f:02d}'
                 fr = ink.ink_frame(Image.open(p + '_beauty.png').convert('RGBA'), Image.open(p + '_id.png'))
-                big = fr.resize((round(fr.width * s), round(fr.height * s)), Image.LANCZOS)
-                ox, oy = round(CENTRE_X - fx * s), round(FEET_Y - fy * s)
+                bigs.append(fr.resize((round(fr.width * s), round(fr.height * s)), Image.LANCZOS))
+            # CUT-OFF FRAMES (DESIGN_PASS_17Nov A2, FirstHour item 5): a fall or a sneak that runs past the cell's
+            # side is moved back in, the whole clip in this facing by one amount (no jump between its frames), the
+            # least that keeps 1 px clear each side. The man is never shrunk. What still cannot fit is reported.
+            xs = [np.nonzero(np.asarray(b)[..., 3].max(0) > 40)[0] for b in bigs]
+            xs = [x for x in xs if len(x)]
+            if xs:
+                lo, hi = min(x.min() for x in xs) + ox, max(x.max() for x in xs) + ox
+                dx = 0
+                if hi - lo > CW - 3:
+                    dx = round((CW - 1 - hi - lo) / 2)
+                elif lo < 1: dx = 1 - lo
+                elif hi > CW - 2: dx = CW - 2 - hi
+                if dx:
+                    ox += dx; SHIFTS.append((clip, d, dx, hi - lo <= CW - 3))
+            tops = [np.nonzero(np.asarray(b)[..., 3].max(1) > 40)[0] for b in bigs]
+            tops = [t.min() + oy for t in tops if len(t)]
+            if tops and min(tops) < 1: TOPCUT.append((clip, d, 1 - min(tops)))
+            for f, big in enumerate(bigs):
                 cell = Image.new('RGBA', (CW, CH), (0, 0, 0, 0))
                 cell.alpha_composite(big, (max(0, ox), max(0, oy)), (max(0, -ox), max(0, -oy)))
                 n = base + d * per + f
@@ -117,6 +144,8 @@ def main(src, out_dir, stem):
     sheet.save(os.path.join(out_dir, f'{stem}_body_rgb.png'))
     base.save(os.path.join(out_dir, f'{stem}_body.png'))
     open(os.path.join(out_dir, f'{stem}_body_anchors.txt'), 'w').write('\n'.join(lines) + '\n')
+    for c, d, dx, ok in SHIFTS: print('fit: %s facing %d moved %+d px%s' % (c, d, dx, '' if ok else ' - STILL WIDER THAN THE CELL'))
+    for c, d, t in TOPCUT: print('fit: %s facing %d runs %d px over the top' % (c, d, t))
     print('wrote %s_body.png, %s_body_rgb.png (%dx%d), %d anchors' % (stem, stem, sheet.width, sheet.height, len(lines)))
 
 

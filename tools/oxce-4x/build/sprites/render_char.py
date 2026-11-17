@@ -89,6 +89,50 @@ def apply_clip(clip, travel, fall=False):
     return fs, fe
 
 
+def make_handsup(act, fs):
+    """HANDS UP (CAPTURE_DESIGN_v1, John 17 Nov 18:19): no downloaded clip has it, so it is posed on THIS model's own
+    skeleton: a plain idle for the body, both upper arms out to the side and a little forward, just above level,
+    forearms and hands straight up, so the hands stand a hand's width above the head. Posed by aiming each bone in
+    armature space, then read back as the bone's local rotation and keyed flat over the idle, so it works on any rest
+    pose (A or T). The idle's breathing still moves the body under the raised arms."""
+    pb = arm.pose.bones
+    sc.frame_set(fs); bpy.context.view_layer.update()
+    W = arm.matrix_world; Wi = W.inverted().to_3x3()   # the FBX armature is rotated (and scaled): aim in WORLD terms
+    wp = lambda b: W @ pb['mixamorig:' + b].head
+    foot, toe = wp('LeftFoot'), wp('LeftToeBase')
+    fwd = Vector((toe.x - foot.x, toe.y - foot.y, 0)).normalized(); up = Vector((0, 0, 1))
+    spine = wp('Spine2')
+    keys = {}
+    for side in ('Left', 'Right'):
+        sh = wp(f'{side}Arm')
+        lat = Vector((sh.x - spine.x, sh.y - spine.y, 0)); lat -= fwd * lat.dot(fwd); lat.normalize()
+        upper = (lat * math.cos(math.radians(12)) + up * math.sin(math.radians(12))) * math.cos(math.radians(22)) + fwd * math.sin(math.radians(22))
+        fore = (up * 0.97 + fwd * 0.12 + lat * 0.05).normalized()
+        for bn, dw in ((f'{side}Arm', upper.normalized()), (f'{side}ForeArm', fore), (f'{side}Hand', fore)):
+            d = (Wi @ dw).normalized()
+            b = pb['mixamorig:' + bn]; b.rotation_mode = 'QUATERNION'
+            m = b.matrix.copy(); y = Vector(m.col[1][:3]).normalized()
+            q = y.rotation_difference(d); r = q.to_matrix() @ m.to_3x3()
+            nm = r.to_4x4(); nm.translation = m.translation; b.matrix = nm
+            bpy.context.view_layer.update()
+            keys['mixamorig:' + bn] = tuple(b.rotation_quaternion)
+    fcs = fcurves(act)
+    for bn, qv in keys.items():
+        path = f'pose.bones["{bn}"].rotation_quaternion'
+        for fc in [f for f in fcs if f.data_path == path]:
+            for k in fc.keyframe_points:
+                k.co[1] = qv[fc.array_index]; k.handle_left[1] = k.co[1]; k.handle_right[1] = k.co[1]
+                k.interpolation = 'LINEAR'
+        if not any(f.data_path == path for f in fcs):
+            for i in range(4):
+                arm.keyframe_insert(data_path=path, index=i, frame=fs)
+    # measured, not eyeballed (HANDOFF s.13 #5): hands above the head top, and by how much
+    sc.frame_set(fs); bpy.context.view_layer.update()
+    top = (arm.matrix_world @ pb['mixamorig:HeadTop_End'].head).z if 'mixamorig:HeadTop_End' in pb else None
+    print('handsup: hand z %.2f / %.2f, head top %s' % ((arm.matrix_world @ pb['mixamorig:LeftHand'].tail).z,
+          (arm.matrix_world @ pb['mixamorig:RightHand'].tail).z, '%.2f' % top if top else '?'), flush=True)
+
+
 def evaluated(o):
     dg = bpy.context.evaluated_depsgraph_get()
     me = o.evaluated_get(dg).to_mesh()
@@ -241,7 +285,8 @@ def px(co):
 os.makedirs(OUT, exist_ok=True)
 anchors = {}
 for name, act in ACTIONS.items():
-    fs, fe = apply_clip(act, any(w in name for w in ('walk', 'run')), name.startswith('death'))
+    fs, fe = apply_clip(act, any(w in name for w in ('walk', 'run', 'stairs')), name.startswith('death'))
+    if name == 'handsup': make_handsup(act, fs)
     loop = not name.startswith('death')
     nf = CLIPNF.get(name, NF)
     # exact fractions (Walk16 brief 2): rounding to whole frames gave uneven gaps (3,4,4,3...) - a visible stutter
