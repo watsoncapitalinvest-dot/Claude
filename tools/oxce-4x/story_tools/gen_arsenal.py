@@ -59,8 +59,11 @@ def card(row, shown):
     lines.append(('G.I. JOE' if row['Faction'] == 'Joe' else 'COBRA') + ' ARSENAL')
     return N.join(lines)
 
+# Short HUD names (<= 26 chars, BUILD 17 Nov: the choice-list key's full-size limit; the engine shrinks, never cuts).
+SHORT = yaml.safe_load(open(os.path.join(HERE, 'arsenal', 'short_names.yml'), encoding='utf-8')) or {}
+HUD_MAX = 26
 rows = list(csv.DictReader(open(os.path.join(HERE, 'arsenal', 'vehicle_weapons.csv'), encoding='utf-8')))
-S, index, seen = {}, {}, set()
+S, index, seen, used = {}, {}, set(), set()
 for r in rows:
     shown = display(r)
     fac = 'JOE' if r['Faction'] == 'Joe' else 'COBRA'
@@ -69,11 +72,13 @@ for r in rows:
     while sid in seen:
         sid = f"{sid}_{n}"; n += 1
     seen.add(sid)
-    S[sid] = shown
+    hud = SHORT.get(shown, shown)
+    used.add(shown)
+    S[sid] = hud
     S[sid + '_UFOPEDIA'] = card(r, shown)
     index.setdefault(r['Vehicle'].strip(), {'faction': r['Faction'], 'modelOnPC': r['Model on PC'] == 'yes',
                                             'unlock': 'vehicle acquired' if fac == 'JOE' else 'first fired at the Joes, or wreck recovered',
-                                            'weapons': []})['weapons'].append({'id': sid, 'name': shown})
+                                            'weapons': []})['weapons'].append({'id': sid, 'name': hud, **({'fullName': shown} if hud != shown else {})})
 S['STR_GJA_SECTION'] = 'ARSENAL'
 hdr = ('# STORY: the ARSENAL, every vehicle weapon and ammo by its canon name (John\'s Sheet; story_tools/gen_arsenal.py).\n'
        '# STR_GJA_<id> = the name the HUD shows in the weapon slot; STR_GJA_<id>_UFOPEDIA = its Intel File card.\n'
@@ -83,5 +88,17 @@ body = yaml.dump({'extraStrings': [{'type': 'en-US', 'strings': S}, {'type': 'en
 open(os.path.join(OUT, 'gijoe_story_arsenal_text.rul'), 'w', encoding='utf-8').write(hdr + body)
 yaml.dump(index, open(os.path.join(HERE, 'arsenal', 'arsenal_index.yml'), 'w', encoding='utf-8'), sort_keys=False,
           width=200, allow_unicode=True)
+stale = sorted(set(SHORT) - used)
+if stale:
+    sys.exit(f'short_names.yml has names no row builds (Sheet changed?): {stale}')
+over = [v for k, v in S.items() if not k.endswith('_UFOPEDIA') and k != 'STR_GJA_SECTION' and len(v) > HUD_MAX]
+if over:
+    sys.exit(f'{len(over)} HUD names over {HUD_MAX}: add them to arsenal/short_names.yml: {over}')
+for v, d in index.items():
+    names = [w['name'] for w in d['weapons']]
+    dup = {n for n in names if names.count(n) > 1}
+    if dup:
+        print(f'note: {v} shows the same name twice: {sorted(dup)}')
 longest = max((v for k, v in S.items() if not k.endswith('_UFOPEDIA')), key=len)
-print(f'arsenal: {len(rows)} weapons, {len(index)} vehicles, {len(S)} strings; longest HUD name {len(longest)}: {longest}')
+print(f'arsenal: {len(rows)} weapons, {len(index)} vehicles, {len(S)} strings; {len(used & set(SHORT))} short names; '
+      f'longest HUD name {len(longest)}: {longest}')
