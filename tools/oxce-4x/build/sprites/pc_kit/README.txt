@@ -14,7 +14,7 @@ WHAT COMES OUT
                                (no outline, no game palette). The game has no slot for these yet - BUILD decides.
   render_work\MACHINE_STATUS.txt   what is queued, what is done, OK or FAILED
   render_work\render_log.txt       start/finish/minutes per model and the sheet check
-  About 13-15 minutes a model for the sheet, about 15 more for the ten extra clips.
+  About 13-15 minutes a model for the sheet, about 1.5 more for each extra clip in extras.txt (all 21: about 30).
 
 A MODEL MUST BE
   A .blend built like the cartel and civilian models: one Mixamo skeleton (mixamorig: bones), the mesh skinned to it.

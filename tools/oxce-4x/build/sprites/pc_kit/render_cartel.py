@@ -25,8 +25,19 @@ HAIR = {'cartel_foot_a': '16,18,22', 'cartel_foot_b': '50,35,32', 'cartel_foot_c
         'Ch02': '163,141,100', 'Ch06': '', 'Ch07': '24,17,9', 'Ch08': '35,26,21', 'Ch12': '48,46,39', 'Ch13': '106,81,55',
         'Ch20': '', 'Ch21': '154,130,104', 'Ch23': '16,15,14', 'Ch28': '16,18,22', 'Ch42': '50,35,32', 'Remy': '166,126,93'}
 PACKS = ['Basic Shooter Pack', 'Pistol_Handgun Locomotion Pack', 'Rifle 8-Way Locomotion Pack', 'Action Adventure Pack']
-EXTRAS = os.environ['KIT_EXTRAS'].split(',') if os.environ.get('KIT_EXTRAS') else ['cast_spell_hold', 'run', 'run_b', 'run_forward', 'fast_run', 'pistol_run', 'injured_run', 'run_up_stairs',
-          'walk_up_stairs', 'walk_down_stairs']
+ALL_EXTRAS = ['cast_spell_hold', 'run', 'run_b', 'run_forward', 'fast_run', 'pistol_run', 'injured_run', 'run_up_stairs',
+              'walk_up_stairs', 'walk_down_stairs',
+              'death_back', 'death_dying', 'death_dying_b', 'death_crouch', 'death_headshot',
+              'sword_draw', 'sword_sheathe', 'sword_fight', 'sword_run', 'sword_slash_in', 'sword_slash_out']
+
+
+def extras_list():
+    """extras.txt next to this script: one clip a line, delete a line to skip it, # for notes. Read every model,
+    so it can be edited while the machine runs."""
+    if os.environ.get('KIT_EXTRAS'): return os.environ['KIT_EXTRAS'].split(',')
+    f = os.path.join(KIT, 'extras.txt')
+    if not os.path.exists(f): return ALL_EXTRAS
+    return [l.split('#')[0].strip() for l in open(f) if l.split('#')[0].strip()]
 
 
 def log(*a):
@@ -136,11 +147,13 @@ def extras(R, n, blend, outdir):
     lib = os.path.join(CARTEL, 'clips_17nov.blend')   # the extra clips are read from here for every man, civilians too
     if not os.path.exists(lib): log('no clips_17nov.blend in', CARTEL, '- extras skipped'); return False
     t0 = time.time(); fr = os.path.join(WORK, 'extras_' + n); shutil.rmtree(fr, ignore_errors=True)
-    clips = ','.join('%s=%s#%s' % (e, lib, e) for e in EXTRAS)
+    EX = [e for e in extras_list() if e in ALL_EXTRAS]
+    if not EX: return True
+    clips = ','.join('%s=%s#%s' % (e, lib, e) for e in EX)
     c = run(rc_cmd(R, rc, ['--blend', blend, '--clips', clips, '--frames', '16', '--out', fr]),
             os.path.join(WORK, n + '.extras.log'))
     if c: log('EXTRAS FAILED', n, '- see', n + '.extras.log'); return False
-    strips(n, fr, outdir); shutil.rmtree(fr, ignore_errors=True)
+    strips(n, fr, outdir, EX); shutil.rmtree(fr, ignore_errors=True)
     log('extras', n, '%.1f min' % ((time.time() - t0) / 60))
     return True
 
@@ -218,11 +231,11 @@ def status(todo, state):
     open(os.path.join(WORK, 'MACHINE_STATUS.txt'), 'w').write('\n'.join(lines) + '\n')
 
 
-def strips(n, fr, outdir):
+def strips(n, fr, outdir, EX):
     # one PNG per clip: 8 facings (rows) x 16 frames, 128x160 cells, raw beauty frames (no outline / palette)
     from PIL import Image
     d = os.path.join(outdir, 'extras'); os.makedirs(d, exist_ok=True)
-    for e in EXTRAS:
+    for e in EX:
         sheet = Image.new('RGBA', (16 * 128, 8 * 160))
         for k in range(8):
             for i in range(16):
