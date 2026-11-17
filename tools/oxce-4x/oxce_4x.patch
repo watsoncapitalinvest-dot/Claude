@@ -13230,10 +13230,10 @@ index 0000000..8277a64
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..9a41c2f
+index 0000000..55703e8
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3337 @@
+@@ -0,0 +1,3345 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -15247,11 +15247,15 @@ index 0000000..9a41c2f
 +						if (scratch[(size_t)(y - r.y0) * (r.x1 - r.x0) + (x - r.x0)]) tag[y * bw + x] = p[x];
 +				}
 +				const Surface *sel = tl->getSelectorWidget();
-+				if (sel && sel->getVisible())
++				// a selector that is not where its list is (a combo box's drop-down: its bar landed half a list to the right
++				// and rows down, past the window - John's screens 023, 046) is not drawn at all
++				if (sel && sel->getVisible() && sel->getX() == tl->getX() && sel->getY() >= tl->getY() && sel->getY() < tl->getY() + tl->getHeight())
 +				{
 +					const double k = SK();
-+					roundRect(DX(sel->getX()) - k * 0.6, DY(sel->getY()), DX(sel->getX() + sel->getWidth()) + k * 0.6, DY(sel->getY() + sel->getHeight()), k * 0.8, 0xC08A34, 70);
-+					roundRect(DX(sel->getX()) - k * 0.6, DY(sel->getY()), DX(sel->getX()) + k * 0.2, DY(sel->getY() + sel->getHeight()), k * 0.3, 0xE8B04A, 230);
++					// the bar stays inside the list (it ran past the window's right edge: John's screens 023, 033, 046)
++					const int sx0 = std::max(sel->getX(), tl->getX()), sx1 = std::min({sel->getX() + sel->getWidth(), tl->getX() + tl->getWidth(), tl->getScrollColumnX() > sx0 + 8 ? tl->getScrollColumnX() - 2 : 1 << 20});
++					roundRect(DX(sx0), DY(sel->getY()), DX(sx1), DY(sel->getY() + sel->getHeight()), k * 0.8, 0xC08A34, 70);
++					roundRect(DX(sx0), DY(sel->getY()), DX(sx0) + k * 0.8, DY(sel->getY() + sel->getHeight()), k * 0.3, 0xE8B04A, 230);
 +				}
 +				for (const Text *c : tl->getVisibleCells())
 +					nativeType(c, tl->getX() + c->getX(), tl->getY() + c->getY(), roleColour(c->getColor()));
@@ -15593,8 +15597,12 @@ index 0000000..9a41c2f
 +			if (sel && sel->getVisible())
 +			{
 +				const double k = SK();
-+				const double sx0 = DX(tl->getX() + sel->getX()), sy0 = DY(tl->getY() + sel->getY());
-+				const double sx1 = DX(tl->getX() + sel->getX() + sel->getWidth()), sy1 = DY(tl->getY() + sel->getY() + sel->getHeight());
++				// the selector's x/y are already absolute (adding the list's again put the bar half a list right and rows
++				// down, past the window: John's screens 023, 033, 046); it also stops at the scroll arrows
++				const int bx0 = std::max(sel->getX(), tl->getX());
++				const int bx1 = std::min({sel->getX() + sel->getWidth(), tl->getX() + tl->getWidth(), tl->getScrollColumnX() > bx0 + 8 ? tl->getScrollColumnX() - 2 : 1 << 20});
++				const double sx0 = DX(bx0), sy0 = DY(sel->getY());
++				const double sx1 = DX(bx1), sy1 = DY(sel->getY() + sel->getHeight());
 +				roundRect(sx0, sy0, sx1, sy1, k * 0.4, S_YELLOW, 60);
 +				roundRect(sx0, sy0, sx0 + k * 0.8, sy1, k * 0.2, S_YELLOW, 235);
 +			}
@@ -25908,7 +25916,7 @@ index 1cef662..bfc8e7e 100644
  	void setWordWrap(bool wrap);
  	/// Sets the text edit's color invert setting.
 diff --git a/src/Interface/TextList.cpp b/src/Interface/TextList.cpp
-index 2b91ef2..cc9327f 100644
+index 2b91ef2..89ded0a 100644
 --- a/src/Interface/TextList.cpp
 +++ b/src/Interface/TextList.cpp
 @@ -1009,6 +1009,29 @@ void TextList::setScrolling(bool scrolling, int scrollPos)
@@ -25958,8 +25966,18 @@ index 2b91ef2..cc9327f 100644
  				}
  
  				if (!_texts[i].empty())
+@@ -1391,3 +1417,9 @@ void TextList::setIgnoreSeparators(bool ignoreSeparators)
+ }
+ 
+ }
++
++
++namespace OpenXcom
++{
++int TextList::getScrollColumnX() const { return getX() + getWidth() + _scrollPos; }
++}
 diff --git a/src/Interface/TextList.h b/src/Interface/TextList.h
-index f707e1b..2e788af 100644
+index f707e1b..3d57332 100644
 --- a/src/Interface/TextList.h
 +++ b/src/Interface/TextList.h
 @@ -40,6 +40,7 @@ class ScrollBar;
@@ -25970,7 +25988,7 @@ index f707e1b..2e788af 100644
  	std::vector< std::vector<Text*> > _texts;
  	std::vector<size_t> _columns, _rows;
  	Font *_big, *_small, *_font;
-@@ -104,6 +105,12 @@ public:
+@@ -104,6 +105,14 @@ public:
  	int getLastRowIndex() const;
  	/// Gets the amount of visible rows in the list.
  	size_t getVisibleRows() const;
@@ -25978,6 +25996,8 @@ index f707e1b..2e788af 100644
 +	std::vector<Text*> getVisibleCells() const;
 +	/// The row highlight, for HiUI to draw it again at display resolution.
 +	const Surface *getSelectorWidget() const { return _selector; }
++	/// G.I. Joe HiUI: where the scroll arrows sit (the highlight bar stops there)
++	int getScrollColumnX() const;
 +	/// the row arrows the last blit() drew (HiUI repaints them; they are not widgets of the state)
 +	const std::vector<ArrowButton*> &getShownArrows() const { return _shownArrows; }
  	/// Adds a new row to the text list.
@@ -26116,7 +26136,7 @@ index 665d922..160915e 100644
  	bool _debugInVisualStudio;
  	std::string _newVersion;
 diff --git a/src/Menu/NewBattleState.cpp b/src/Menu/NewBattleState.cpp
-index 52b6371..185edf0 100644
+index 52b6371..77069a6 100644
 --- a/src/Menu/NewBattleState.cpp
 +++ b/src/Menu/NewBattleState.cpp
 @@ -39,6 +39,10 @@
@@ -26130,15 +26150,34 @@ index 52b6371..185edf0 100644
  #include "../Battlescape/BattlescapeGenerator.h"
  #include "../Battlescape/BriefingState.h"
  #include "../Savegame/Ufo.h"
-@@ -230,6 +234,7 @@ NewBattleState::NewBattleState() :
+@@ -230,7 +234,25 @@ NewBattleState::NewBattleState() :
  			_missionTypes.erase(itr);
  		}
  	}
+-	_cbxMission->setOptions(_missionTypes, true);
 +	if (getenv("OXCE_NB_LIST")) for (size_t i = 0; i < _missionTypes.size(); ++i) Log(LOG_INFO) << "[nb] " << i << " " << _missionTypes[i];   // rig
- 	_cbxMission->setOptions(_missionTypes, true);
++	{
++		// G.I. Joe: several deployments share a name (three STOP AND SEARCH, two Cobra Cell): tell them apart in the list
++		std::vector<std::string> shown;
++		std::map<std::string, int> seen;
++		for (const auto &m : _missionTypes) seen[tr(m)]++;
++		for (const auto &m : _missionTypes)
++		{
++			std::string s = tr(m);
++			if (seen[s] > 1)
++			{
++				std::string t = m.compare(0, 4, "STR_") == 0 ? m.substr(4) : m;
++				for (auto &ch : t) ch = (ch == '_') ? ' ' : (char)tolower(ch);
++				s += " (" + t + ")";
++			}
++			shown.push_back(s);
++		}
++		_cbxMission->setOptions(shown, false);
++	}
  	_cbxMission->onChange((ActionHandler)&NewBattleState::cbxMissionChange);
  
-@@ -398,6 +403,9 @@ void NewBattleState::load(const std::string &filename)
+ 	for (auto& craftType : _game->getMod()->getCraftsList())
+@@ -398,6 +420,9 @@ void NewBattleState::load(const std::string &filename)
  		{
  			YAML::YamlRootNodeReader cfgReader(s);
  			_cbxMission->setSelected(std::min(cfgReader["mission"].readVal<size_t>(0), _missionTypes.size() - 1));
@@ -26148,7 +26187,7 @@ index 52b6371..185edf0 100644
  			cbxMissionChange(0);
  			_cbxCraft->setSelected(std::min(cfgReader["craft"].readVal<size_t>(0), _crafts.size() - 1));
  			_slrDarkness->setValue(cfgReader["darkness"].readVal<size_t>(0));
-@@ -528,15 +536,27 @@ void NewBattleState::initSave()
+@@ -528,15 +553,27 @@ void NewBattleState::initSave()
  	base->getCrafts()->push_back(_craft);
  
  	// Generate soldiers
@@ -26158,9 +26197,7 @@ index 52b6371..185edf0 100644
 -	for (int i = 0; i < 30; ++i)
 +	std::vector<std::string> gjNamed, gjGeneric;
 +	for (auto& st : mod->getSoldiersList())
- 	{
--		int randomType = RNG::generate(0, mod->getSoldiersList().size() - 1);
--		RuleSoldier* ruleSoldier = mod->getSoldier(mod->getSoldiersList().at(randomType), true);
++	{
 +		RuleSoldier* rs = mod->getSoldier(st, true);
 +		(rs->getBuyCost() == 0 ? gjNamed : gjGeneric).push_back(st);
 +	}
@@ -26168,7 +26205,9 @@ index 52b6371..185edf0 100644
 +	// Joes before the New-Battle-only types (Cobra's people, which need research nothing can do), so the craft fills with Joes
 +	std::stable_partition(gjNamed.begin(), gjNamed.end(), [&](const std::string& t) { return mod->getSoldier(t, true)->getRequirements().empty(); });
 +	for (int i = 0; i < 30 || i < (int)gjNamed.size(); ++i)
-+	{
+ 	{
+-		int randomType = RNG::generate(0, mod->getSoldiersList().size() - 1);
+-		RuleSoldier* ruleSoldier = mod->getSoldier(mod->getSoldiersList().at(randomType), true);
 +		bool gjIsNamed = i < (int)gjNamed.size();
 +		const std::string& gjType = gjIsNamed ? gjNamed[i] : gjGeneric[RNG::generate(0, (int)gjGeneric.size() - 1)];
 +		RuleSoldier* ruleSoldier = mod->getSoldier(gjType, true);
@@ -26180,7 +26219,7 @@ index 52b6371..185edf0 100644
  		{
  			if (RNG::percent(70))
  				continue;
-@@ -572,19 +592,76 @@ void NewBattleState::initSave()
+@@ -572,19 +609,76 @@ void NewBattleState::initSave()
  	}
  
  	// Generate items
@@ -26259,7 +26298,7 @@ index 52b6371..185edf0 100644
  
  	// Add research
  	save->makeAllResearchDiscovered(mod);
-@@ -610,6 +687,50 @@ void NewBattleState::btnOkClick(Action *)
+@@ -610,6 +704,50 @@ void NewBattleState::btnOkClick(Action *)
  		return;
  	}
  
