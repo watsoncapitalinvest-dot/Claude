@@ -48,10 +48,30 @@ S['STR_OP_SCARLETT_STASH_HOUSE_DESC'] = P.join([
 ])
 S['STR_BRIEFING_ARMORED_CAR_TITLE'] = 'OPERATION: PAYROLL'
 S['STR_BRIEFING_ARMORED_CAR'] = P.join([
-    "HAWK: The cartel lost a fortune at the ranch and they want it back fast. Scarlett's courier gave us the job: an armored car on a payroll run, hit at a gas station on the highway.",
-    "They'll come heavy and they'll come quick. The money goes into a van, and the van goes for the county line. If it gets off the map, the cash is gone.",
-    "Local police will already be there, pinned down. Get them out alive. And I want the man running the crew in one piece. He knows where the money goes.",
+    "HAWK: The cartel lost a fortune at the ranch and they want it back fast. Scarlett's courier gave us the job: the SECURE-TRANS payroll car, hit at Sundown Gas on US-90.",
+    "Six of them. Two loading the cash, the man running the crew at the getaway van, the rest covering. The deputies took one look and left. It's us or nobody.",
+    "The money goes into the van, and the van goes for the county line. Anyone who reaches it is gone with what he's carrying, and the leader drives off once the cash is aboard. Stop that van, and bring me the man running the crew in one piece. He knows where the money goes.",
 ])
+# The stash house raid (cartel arc step 2b). The boss is NOT here: he is the ranch's only (John 17 Nov 14:28).
+S['STR_BRIEFING_STASH_HOUSE_TITLE'] = 'OPERATION: HOME STRIP'
+S['STR_BRIEFING_STASH_HOUSE'] = P.join([
+    "HAWK: The flight led us home. A dirt strip in the brush country, an adobe house and a tin shed, and enough men to guard what's inside: the cartel's cash and whatever is left of their guns.",
+    "They have a radio in the house and a town twenty minutes down the road. If they get a call out, everything worth finding goes in the stove before we reach it. Take the radio man first.",
+    "Search the shed and the house. Whoever runs this place for the cartel answers to somebody, and I want his name.",
+])
+# The ranch lost, pulled out of or never raided (zz_gijoe_cartel_side: STR_EVENT_RANCH_LOST pops 3-5 days later).
+S['STR_EVENT_RANCH_LOST'] = 'THE CARTEL MOVES'
+S['STR_EVENT_RANCH_LOST_DESCRIPTION'] = P.join([
+    "SCARLETT: The ranch is empty. They loaded the trucks the night after and burned what they couldn't carry. Whatever was in that safe went with them.",
+    "Cartels move. Their planes don't, not far. A crop-duster pilot I know swears the same twin-engine has been coming over the river at night, low and without lights, and he wrote down when.",
+    "It's not the ledger. It's a flight to follow, and it will lead us to wherever they went.",
+])
+# The opening briefing (front end, before the base is placed). Replaces BUILD's draft captions, which had Cobra
+# Commander broadcasting on day 1; in the approved story the broadcast comes on day 20-60 and the war opens on a cartel.
+S['STR_BRIEF_1'] = "1982. Bombings on three continents, and nobody claims them. General Hawk is given a team, and a hole in the ground to run it from: G.I. Joe."
+S['STR_BRIEF_2'] = "Somewhere a man in a blue hood has recorded a message to the world. He is waiting for the right day to send it."
+S['STR_BRIEF_3'] = "The Joes start with the one lead they have: a cartel on the Rio Grande carrying guns nobody can trace."
+S['STR_BRIEF_4'] = "Before first light, G.I. Joe goes in."
 S['STR_BRIEFING_CARTEL_SAFEHOUSE_TITLE'] = 'OPERATION: COLD TRAIL'
 S['STR_BRIEFING_CARTEL_SAFEHOUSE'] = P.join([
     "HAWK: They got away with the payroll. They didn't get away clean. The van was dumped two counties over, and the trail ends at a farmhouse they're using as a safehouse.",
@@ -468,7 +488,7 @@ for k, (title, brief, win, lose) in UWM.items():
 # Same ids as gijoe_cartel_arc.rul / gijoe_proving_ground.rul. BUILD: delete your copies so only these load.
 S['STR_EVENT_FACTORY_FOUND'] = 'THE MONEY ENDS IN WEST TEXAS'
 S['STR_EVENT_FACTORY_FOUND_DESCRIPTION'] = P.join([
-    "SCARLETT: The border bank paid out to a \"machine works\" account for eleven months. The account belongs to the Arbco Furniture plant in West Texas. Arbco closed a year ago.",
+    "SCARLETT: The border bank pays out to a \"machine works\" account every month. The account belongs to the old Arbco Furniture plant in West Texas, which went bust two years ago.",
     "Somebody is still paying its power bill, and the rail spur behind it was cleared last month. Nobody clears a spur to a plant that makes nothing.",
     "HAWK: It's on the map. Let's go and see what furniture looks like these days."])
 S['STR_EVENT_ROBBERY_MISSED'] = 'THE PAYROLL IS GONE'
