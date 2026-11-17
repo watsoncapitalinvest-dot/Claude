@@ -44,6 +44,8 @@ T = [
  ('STR_COBRA_STINGER', 'Stinger', 'MOTOR_POOL', 30, 2, 3, 8, [], ['craft:Stinger', 'unit:Stinger Driver'], 'calendar 4-8'),
  ('STR_COBRA_HISS_TANK', 'H.I.S.S.', 'MOTOR_POOL', 50, 3, 6, 12, ['STR_COBRA_STINGER'], ['craft:H.I.S.S.', 'unit:H.I.S.S. Driver'], 'calendar: by month 12'),
  ('STR_COBRA_HEAVY_WEAPONS', 'M.A.R.S. Heavy Weapons', 'MOTOR_POOL', 40, 3, 9, 14, ['STR_COBRA_HISS_TANK'], ['factory:rocket launchers, heavy machine guns'], 'calendar 9-14'),
+ ('STR_COBRA_MAGGOT', 'The Maggot', 'MOTOR_POOL', 40, 3, 12, 20, ['STR_COBRA_HEAVY_WEAPONS'], ['craft:Maggot', 'ability:Cobra calls in artillery (RAP long-range rounds)'], 'Act 2; first Cobra artillery (SHELLING_DESIGN_v1 s.4)'),
+ ('STR_COBRA_ADDER', 'The Adder', 'MOTOR_POOL', 50, 3, 18, 26, ['STR_COBRA_MAGGOT'], ['craft:Adder', 'ability:Cobra artillery adds White Heat II cluster missiles'], 'Act 2-3; second Cobra artillery (SHELLING_DESIGN_v1 s.4)'),
  ('STR_COBRA_VEHICLE_LASERS', 'Vehicle Lasers', 'MOTOR_POOL', 60, 4, 23, 30, ['STR_COBRA_HEAVY_WEAPONS'], ['ability:Cobra vehicles carry lasers'], 'Act 3'),
  ('STR_COBRA_HISS_II', 'H.I.S.S. II', 'MOTOR_POOL', 70, 4, 31, 40, ['STR_COBRA_VEHICLE_LASERS'], ['craft:H.I.S.S. II'], 'Act 4'),
  # ---------------- AIR WING (Wild Weasel from Act 2; Viper Pilot officers before) ----------------
