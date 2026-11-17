@@ -2998,7 +2998,7 @@ index 10a96c4..755c149 100644
  	void btnCancelClick(Action *action);
  	/// Handler for pressing an Increase arrow in the list.
 diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
-index db6727f..1154234 100644
+index db6727f..b429fe0 100644
 --- a/src/Battlescape/AIModule.cpp
 +++ b/src/Battlescape/AIModule.cpp
 @@ -16,9 +16,13 @@
@@ -3311,6 +3311,37 @@ index db6727f..1154234 100644
  		_attackAction.type = BA_LAUNCH;
  		_attackAction.updateTU();
  		if (!_attackAction.haveTU())
+@@ -2976,6 +3232,30 @@ AIAttackWeight AIModule::getTargetAttackWeight(BattleUnit* target) const
+ 		weight = target->getAITargetWeightAsNeutral(_save->getMod());
+ 	}
+ 
++	// G.I. Joe Act 1 battle AI (BRIEF_FOR_BUILD_BattleAI 2, 4, 5): a Joe it can finish first, then the Joe with
++	// the biggest Cobra file, then the nearest; heavy weapons go for vehicles; civilians only in a terror attack
++	const auto &BA = _save->getMod()->getBattleAIRules();
++	if (BA.on && _unit->getFaction() == FACTION_HOSTILE && weight > AIW_IGNORED && target->getFaction() != _unit->getFaction())
++	{
++		int w = weight;
++		if (target->getFaction() == FACTION_PLAYER)
++		{
++			if (target->getHealth() * 100 <= target->getBaseStats()->health * BA.finishPct) w = w * BA.finishMul / 100;
++			if (const Soldier *s = target->getGeoscapeSoldier()) w += s->getCobraFile() * BA.filePerPoint;
++			w += std::max(0, BA.nearBonus - Position::distance2d(_unit->getPosition(), target->getPosition()));
++			const BattleItem *wpn = _unit->getMainHandWeapon(false);
++			const bool heavy = wpn && wpn->getRules()->getPower() >= BA.heavyPower;
++			const bool vehicle = !target->getGeoscapeSoldier() || target->getArmor()->getSize() > 1;
++			if (heavy) w = w * (vehicle ? BA.heavyOnVehicle : BA.heavyOnMan) / 100;
++		}
++		else if (target->getOriginalFaction() == FACTION_NEUTRAL)
++		{
++			const auto &T = BA.terrorDeployments;
++			if (std::find(T.begin(), T.end(), _save->getMissionType()) == T.end()) w = AIW_IGNORED;
++		}
++		weight = (AIAttackWeight)std::max(0, w);
++	}
++
+ 	weight = (AIAttackWeight)ModScript::scriptFunc2<ModScript::AiCalculateTargetWeight>(
+ 		_unit->getArmor(),
+ 		weight, weight,
 diff --git a/src/Battlescape/AbortMissionState.cpp b/src/Battlescape/AbortMissionState.cpp
 index fd1e93e..94c010f 100644
 --- a/src/Battlescape/AbortMissionState.cpp
@@ -8465,7 +8496,7 @@ index 0fdf2ca..d9cafb2 100644
  	Projectile *getProjectile() const;
  	/// Sets follow projectile flag.
 diff --git a/src/Battlescape/NextTurnState.cpp b/src/Battlescape/NextTurnState.cpp
-index d12de83..a72c449 100644
+index d12de83..b429f85 100644
 --- a/src/Battlescape/NextTurnState.cpp
 +++ b/src/Battlescape/NextTurnState.cpp
 @@ -17,9 +17,13 @@
@@ -8542,11 +8573,15 @@ index d12de83..a72c449 100644
  	_txtMessageReinforcements->setWordWrap(true);
  	_txtMessageReinforcements->setHighContrast(true);
  	_txtMessageReinforcements->setColor(_game->getMod()->getInterface("inventory")->getElement("weight")->color2); // red
-@@ -292,11 +314,20 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -292,11 +314,24 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  	}
  
  	std::string messageReinforcements;
 +	std::string messageVanStop = runVanStop();
++	{
++		std::string lc = runLeaderCall();
++		if (!lc.empty()) messageVanStop = messageVanStop.empty() ? lc : messageVanStop + " " + lc;
++	}
 +	{
 +		std::string cap = runCapture();
 +		if (!cap.empty()) messageVanStop = messageVanStop.empty() ? cap : messageVanStop + " " + cap;
@@ -8563,7 +8598,7 @@ index d12de83..a72c449 100644
  	if (allowReinforcements && !_battleGame->getBattleGame()->areAllEnemiesNeutralized())
  	{
  		bool showAlert = determineReinforcements();
-@@ -306,10 +337,17 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -306,10 +341,17 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  			_txtMessageReinforcements->setText(messageReinforcements);
  		}
  	}
@@ -8583,7 +8618,7 @@ index d12de83..a72c449 100644
  		_timer->onTimer((StateHandler)&NextTurnState::close);
  		_timer->start();
  	}
-@@ -612,7 +650,16 @@ bool NextTurnState::determineReinforcements()
+@@ -612,7 +654,16 @@ bool NextTurnState::determineReinforcements()
  			{
  				continue;
  			}
@@ -8601,7 +8636,7 @@ index d12de83..a72c449 100644
  			{
  				if (!_battleGame->allObjectivesDestroyed())
  				{
-@@ -855,6 +902,7 @@ bool NextTurnState::determineReinforcements()
+@@ -855,6 +906,7 @@ bool NextTurnState::determineReinforcements()
  		{
  			// remember success
  			_battleGame->getReinforcementsMemory()[wave.type] += 1;
@@ -8609,7 +8644,7 @@ index d12de83..a72c449 100644
  
  			if (!wave.briefing.title.empty())
  			{
-@@ -908,6 +956,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
+@@ -908,6 +960,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
  		quantity += RNG::generate(0, dd.dQty);
  		quantity += RNG::generate(0, dd.extraQty);
  
@@ -8628,7 +8663,7 @@ index d12de83..a72c449 100644
  		for (int i = 0; i < quantity; ++i)
  		{
  			std::string alienName = dd.customUnitType.empty() ? race->getMember(dd.alienRank) : dd.customUnitType;
-@@ -915,6 +975,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
+@@ -915,6 +979,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
  			bool civilian = dd.percentageOutsideUfo != 0; // small misuse of an unused attribute ;) pls don't kill me
  			BattleUnit* unit = addReinforcement(wave, rule, dd.alienRank, civilian);
  			size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(month).at(RNG::generate(0, 9)));
@@ -8647,10 +8682,70 @@ index d12de83..a72c449 100644
  			if (unit)
  			{
  				success = true;
-@@ -1140,4 +1212,369 @@ bool NextTurnState::placeReinforcementNearFriend(BattleUnit *unit)
+@@ -1140,4 +1216,429 @@ bool NextTurnState::placeReinforcementNearFriend(BattleUnit *unit)
  	return false;
  }
  
++/**
++ * G.I. Joe battle AI (BRIEF_FOR_BUILD_BattleAI 3, John 14:25): THE LEADER'S CALL. A deployment with men off the map
++ * (a reinforcement wave marked onCall) gets them only if its leader - the highest-ranked Cobra man on the field -
++ * is still up when he first sees a Joe: he calls once, and they arrive three turns later. Leader down before the
++ * call: nobody comes. The van stop runs its own call (the payphone) and is left alone here.
++ */
++std::string NextTurnState::runLeaderCall()
++{
++	const AlienDeployment* dep = _game->getMod()->getDeployment(_battleGame->getReinforcementsDeployment(), false);
++	// checked as the Joes' turn opens, so the player sees the radio message (the Cobra turn screen is not read)
++	if (!dep || dep->hasVanStopRules() || _battleGame->getTurn() < 1 || _battleGame->getSide() != FACTION_PLAYER) return "";
++	bool hasCall = false;
++	for (const auto& wave : *dep->getReinforcementsData()) if (wave.onCall) hasCall = true;
++	if (!hasCall) return "";
++	SavedBattleGame& sb = *_battleGame;
++	if (getenv("OXCE_LEADER_SEES"))   // rig only: count Cobra each Joe turn
++	{
++		int n = 0; for (auto* u : *sb.getUnits()) if (u->getOriginalFaction() == FACTION_HOSTILE && !u->isOut()) n++;
++		Log(LOG_INFO) << "[battleai] turn " << sb.getTurn() << ": " << n << " Cobra standing";
++	}
++	if (sb.getVanStop("backupTurn", -1) >= 0 || sb.getVanStop("leaderLost")) return "";
++	if (sb.getVanStop("leaderId", -2) == -2)
++	{
++		int best = -1, bestRank = 1 << 30;
++		for (auto* u : *sb.getUnits())
++		{
++			if (u->getOriginalFaction() != FACTION_HOSTILE || u->isOut() || u->getArmor()->getSize() > 1) continue;
++			if (u->getRankInt() < bestRank) { bestRank = u->getRankInt(); best = u->getId(); }
++		}
++		sb.setVanStop("leaderId", best);
++		Log(LOG_INFO) << "[battleai] the leader is unit " << best;
++	}
++	BattleUnit* leader = nullptr;
++	for (auto* u : *sb.getUnits()) if (u->getId() == sb.getVanStop("leaderId", -1)) leader = u;
++	if (!leader || leader->isOut())
++	{
++		sb.setVanStop("leaderLost", 1);
++		Log(LOG_INFO) << "[battleai] the leader is down before his call: no reinforcements";
++		return "";
++	}
++	bool forced = getenv("OXCE_LEADER_SEES") != nullptr;   // rig only: as if he had seen a Joe
++	for (auto* v : *leader->getVisibleUnits())
++	{
++		if (forced || (v->getOriginalFaction() == FACTION_PLAYER && !v->isOut()))
++		{
++			sb.setVanStop("backupTurn", sb.getTurn() + 3);
++			Log(LOG_INFO) << "[battleai] the leader calls for reinforcements on turn " << sb.getTurn() << ": they come on turn " << sb.getTurn() + 3;
++			return tr("STR_LEADER_CALLED");
++		}
++	}
++	if (forced)
++	{
++		sb.setVanStop("backupTurn", sb.getTurn() + 3);
++		sb.setVanStop("st:alarm", 1);
++		Log(LOG_INFO) << "[battleai] (forced) the leader calls on turn " << sb.getTurn();
++		return tr("STR_LEADER_CALLED");
++	}
++	return "";
++}
++
 +/**
 + * G.I. Joe van stop (13 Nov 2026, John): the Cobra truck caught at a gas station.
 + * - The alarm goes up the first time a Cobra man sees a Joe or is hurt.
@@ -9018,15 +9113,17 @@ index d12de83..a72c449 100644
 +
  }
 diff --git a/src/Battlescape/NextTurnState.h b/src/Battlescape/NextTurnState.h
-index 200fb3a..2b6326c 100644
+index 200fb3a..b26a926 100644
 --- a/src/Battlescape/NextTurnState.h
 +++ b/src/Battlescape/NextTurnState.h
-@@ -65,6 +65,10 @@ private:
+@@ -65,6 +65,12 @@ private:
  
  	/// Runs reinforcements logic.
  	bool determineReinforcements();
 +	/// G.I. Joe van stop: alarm, payphone call, getaway, lookout. Returns a message for the turn screen.
 +	std::string runVanStop();
++	/// G.I. Joe battle AI (BRIEF_FOR_BUILD_BattleAI 3): the leader's one call for reinforcements
++	std::string runLeaderCall();
 +	/// G.I. Joe capture: surrender (hands up), cuffs, Cobra shooting or freeing its own.
 +	std::string runCapture();
  	/// Deploys the reinforcements, according to the alien reinforcements deployment rules.
@@ -24419,7 +24516,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..1f6e4c9 100644
+index 1885346..7384e6d 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -24567,7 +24664,7 @@ index 1885346..1f6e4c9 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3304,652 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3304,664 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -24830,6 +24927,18 @@ index 1885346..1f6e4c9 100644
 +			v.tryRead("marked", r.marked);
 +			if (!r.unit.empty()) _villains[r.unit] = r;
 +		}
++	}
++	if (const auto& ba = reader["battleAI"])
++	{
++		_battleAI.on = true;
++		ba.tryRead("finishPct", _battleAI.finishPct);
++		ba.tryRead("finishMul", _battleAI.finishMul);
++		ba.tryRead("filePerPoint", _battleAI.filePerPoint);
++		ba.tryRead("nearBonus", _battleAI.nearBonus);
++		ba.tryRead("heavyPower", _battleAI.heavyPower);
++		ba.tryRead("heavyOnVehicle", _battleAI.heavyOnVehicle);
++		ba.tryRead("heavyOnMan", _battleAI.heavyOnMan);
++		ba.tryRead("terrorDeployments", _battleAI.terrorDeployments);
 +	}
 +	if (const auto& sb = reader["sabotage"])
 +	{
@@ -25220,7 +25329,7 @@ index 1885346..1f6e4c9 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +3960,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +3972,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -25228,7 +25337,7 @@ index 1885346..1f6e4c9 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4565,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4577,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -25254,7 +25363,7 @@ index 1885346..1f6e4c9 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4822,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4834,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -25275,7 +25384,7 @@ index 1885346..1f6e4c9 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6536,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6548,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -25295,7 +25404,7 @@ index 1885346..1f6e4c9 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6559,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6571,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -25303,7 +25412,7 @@ index 1885346..1f6e4c9 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6573,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6585,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -25343,7 +25452,7 @@ index 1885346..1f6e4c9 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..7a36461 100644
+index 2242d13..b9f2e13 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -25407,7 +25516,7 @@ index 2242d13..7a36461 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +360,432 @@ private:
+@@ -327,6 +360,445 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -25652,6 +25761,19 @@ index 2242d13..7a36461 100644
 +		std::vector<std::string> specialists;       ///< soldier types who plant it in half the time
 +	};
 +	SabotageRules _sabotage;
++	/// G.I. Joe ACT 1 BATTLE AI (BRIEF_FOR_BUILD_BattleAI 2, 4, 5): who Cobra shoots first
++	struct BattleAIRules
++	{
++		bool on = false;
++		int finishPct = 34, finishMul = 300;        ///< a Joe at or under this % health is one to finish: weight x this %
++		int filePerPoint = 2;                       ///< + weight per point of the Joe's Cobra file
++		int nearBonus = 20;                         ///< + weight for being close: this minus the distance in tiles
++		int heavyPower = 70;                        ///< a weapon this strong or more is a heavy weapon
++		int heavyOnVehicle = 200, heavyOnMan = 75;  ///< heavy weapons: weight % on a vehicle, on a man
++		std::vector<std::string> terrorDeployments; ///< the only battles where Cobra shoots civilians on purpose
++	};
++	BattleAIRules _battleAI;
++	const BattleAIRules &getBattleAIRules() const { return _battleAI; }
 +	const SabotageRules &getSabotageRules() const { return _sabotage; }
 +	/// the same, where no Mod is to hand (BattleActionCost)
 +	static std::string sabotageCharge;
@@ -25840,7 +25962,7 @@ index 2242d13..7a36461 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1151,124 @@ public:
+@@ -692,6 +1164,124 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
