@@ -148,10 +148,17 @@ out['events'] = [
     {'name': 'STR_EVENT_FACTORY_WRECKED', 'description': 'STR_CUT_FACTORY_B2', 'cutscene': 'act1FactoryWrecked', 'timer': 60},
     {'name': 'STR_EVENT_COBRA_RETREATS', 'description': 'STR_EVENT_COBRA_RETREATS_DESCRIPTION', 'timer': 60},
     {'name': 'STR_EVENT_FACTORY_WARNING', 'description': 'STR_EVENT_FACTORY_WARNING_DESCRIPTION', 'timer': 60},
+    # the Drome found without its plans, and the two closes of Act 1 (CobraNetwork::daily; STORY's captions and cutscenes)
+    {'name': 'STR_EVENT_DROME_NO_PLANS', 'description': 'STR_CUT_DROME_B1', 'cutscene': 'act1DromeNoPlans', 'timer': 60},
+    {'name': 'STR_EVENT_ACT1_CLOSE_TAKEN', 'description': 'STR_CUT_CLOSE_A1', 'cutscene': 'act1CloseDromeTaken', 'timer': 60},
+    {'name': 'STR_EVENT_ACT1_CLOSE_STANDS', 'description': 'STR_CUT_CLOSE_B1', 'cutscene': 'act1CloseDromeStands', 'timer': 60},
 ]
+# the plans' own research plays the Drome cutscene with the stolen blueprints
+out['research'] = [{'name': 'STR_TERROR_DROME_PLANS', 'cutscene': 'act1DromePlans'}]
 strs = {'STR_COBRA_CELL': 'Cobra Cell', 'STR_COBRA_CELL_SITE': 'Cobra Cell', 'STR_COBRA_BANK_JOB': 'Bank Job',
         'STR_COBRA_CELL_STRIKE': 'Cell Strike', 'STR_COBRA_CRIME_MISSION': 'Cobra Crime', 'STR_COBRA_CELL_STRIKE_MISSION': 'Cell Strike',
-        'STR_EVENT_FACTORY_WRECKED': 'THE GATES ARE CHAINED', 'STR_COBRA_TERROR_DROME_BUILDING': 'Terror Drome (building)', 'STR_COBRA_DROME_STRIKE': 'Drome Strike'}
+        'STR_EVENT_FACTORY_WRECKED': 'THE GATES ARE CHAINED', 'STR_COBRA_TERROR_DROME_BUILDING': 'Terror Drome (building)', 'STR_COBRA_DROME_STRIKE': 'Drome Strike',
+        'STR_EVENT_DROME_NO_PLANS': 'THE TERROR DROME', 'STR_EVENT_ACT1_CLOSE_TAKEN': 'END OF ACT 1', 'STR_EVENT_ACT1_CLOSE_STANDS': 'END OF ACT 1'}
 for m in MAPS:
     for tier in (1, 2, 3):
         strs['STR_COBRA_CELL_STRIKE_%s_%d' % (m, tier)] = 'Cell Strike'
