@@ -18,7 +18,8 @@ HAIR = {'cartel_foot_a': '16,18,22', 'cartel_foot_b': '50,35,32', 'cartel_foot_c
         'cartel_heavy_a': '166,126,93', 'cartel_heavy_b': '16,18,22', 'cartel_heavy_c': '48,46,39',
         'cartel_boss_a': '16,15,14', 'cartel_boss_b': '48,46,39', 'cartel_boss_c': '16,15,14'}
 PACKS = ['Basic Shooter Pack', 'Pistol_Handgun Locomotion Pack', 'Rifle 8-Way Locomotion Pack', 'Action Adventure Pack']
-EXTRAS = ['cast_spell_hold', 'run', 'run_b', 'run_forward', 'fast_run', 'pistol_run', 'injured_run', 'run_up_stairs']
+EXTRAS = ['cast_spell_hold', 'run', 'run_b', 'run_forward', 'fast_run', 'pistol_run', 'injured_run', 'run_up_stairs',
+          'walk_up_stairs', 'walk_down_stairs']
 
 
 def log(*a):

@@ -20,7 +20,7 @@ RUN
 
 WHAT COMES OUT  (Reference\sheets\cartel)
   <name>_body.png, <name>_body_rgb.png, <name>_body_anchors.txt   the walk16 sheet BUILD-1 installs (2048x8960, 896 frames)
-  extras\<name>_<clip>.png   cast_spell_hold and the seven runs: 8 facings x 16 frames, raw renders (no outline,
+  extras\<name>_<clip>.png   cast_spell_hold, the seven runs, walk_up_stairs and walk_down_stairs (stepping in place): 8 facings x 16 frames, raw renders (no outline,
                              no game palette). The game has no slot for these yet - BUILD decides where they go.
   render_work\render_log.txt   start/finish/minutes for every man, and the check result
                                (2048x8960, 896 anchors, 0 empty frames). Safe to delete render_work afterwards.
