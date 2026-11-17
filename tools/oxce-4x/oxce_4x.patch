@@ -3853,10 +3853,21 @@ index ec94172..fd2d5e2 100644
  	void setPalette(const SDL_Color *colors, int firstcolor, int ncolors) override;
  	/// Redraws it.
 diff --git a/src/Battlescape/ActionMenuState.cpp b/src/Battlescape/ActionMenuState.cpp
-index 0c2f2a1..f329a13 100644
+index 0c2f2a1..0270f4f 100644
 --- a/src/Battlescape/ActionMenuState.cpp
 +++ b/src/Battlescape/ActionMenuState.cpp
-@@ -208,6 +208,25 @@ void ActionMenuState::init()
+@@ -65,7 +65,9 @@ ActionMenuState::ActionMenuState(BattleAction *action, int x, int y) : _action(a
+ 
+ 	for (int i = 0; i < 6; ++i)
+ 	{
+-		_actionMenu[i] = new ActionMenuItem(i, _game, x, y);
++		// G.I. Joe HUD v2: the menu stands on top of the HUD bar instead of over it (the bottom entries ran off the screen,
++		// John's screen 028): y is the HUD top + 16, an entry is 40 tall
++		_actionMenu[i] = new ActionMenuItem(i, _game, x, y - 56);
+ 		add(_actionMenu[i]);
+ 		_actionMenu[i]->setVisible(false);
+ 		_actionMenu[i]->onMouseClick((ActionHandler)&ActionMenuState::btnActionMenuItemClick);
+@@ -208,6 +210,25 @@ void ActionMenuState::init()
  	{
  		// Item don't have any actions, close popup.
  		_game->popState();
@@ -6738,7 +6749,7 @@ index a0bc8b3..b073f80 100644
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..07ca96a 100644
+index 7cd4941..e7a8b64 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -1,3 +1,5 @@
@@ -6782,7 +6793,19 @@ index 7cd4941..07ca96a 100644
  
  	_numLayers = new NumberText(3, 5, x + 232, y + 6);
  	_rank = new Surface(26, 23, x + 107, y + 33);
-@@ -465,7 +472,7 @@ BattlescapeState::BattlescapeState() :
+@@ -186,7 +193,10 @@ BattlescapeState::BattlescapeState() :
+ 	const int visibleUnitY = _game->getMod()->getInterface("battlescape")->getElement("visibleUnits")->y;
+ 	for (int i = 0; i < VISIBLE_MAX; ++i)
+ 	{
+-		_btnVisibleUnit[i] = new InteractiveSurface(15, 12, x + visibleUnitX, y + visibleUnitY - (i * 13));
++		// G.I. Joe HUD v2: one row along the HUD's top edge, from the right (the stock column stood over the map, John's
++		// screen 041); the interface element's x/y are no longer used
++		(void)visibleUnitX; (void)visibleUnitY;
++		_btnVisibleUnit[i] = new InteractiveSurface(15, 12, x + iconsWidth - 16 * (i + 1) - 2, y - 13);
+ 		_numVisibleUnit[i] = new NumberText(15, 12, _btnVisibleUnit[i]->getX() + 6 , _btnVisibleUnit[i]->getY() + 4);
+ 	}
+ 	_numVisibleUnit[9]->setX(_numVisibleUnit[9]->getX() - 2); // center number 10
+@@ -465,7 +475,7 @@ BattlescapeState::BattlescapeState() :
  
  	_btnKneel->onMouseClick((ActionHandler)&BattlescapeState::btnKneelClick);
  	_btnKneel->onKeyboardPress((ActionHandler)&BattlescapeState::btnKneelClick, Options::keyBattleKneel);
@@ -6791,7 +6814,7 @@ index 7cd4941..07ca96a 100644
  	_btnKneel->onMouseIn((ActionHandler)&BattlescapeState::txtTooltipIn);
  	_btnKneel->onMouseOut((ActionHandler)&BattlescapeState::txtTooltipOut);
  	_btnKneel->allowToggleInversion();
-@@ -724,6 +731,710 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +734,710 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
@@ -7502,7 +7525,7 @@ index 7cd4941..07ca96a 100644
  }
  
  
-@@ -732,9 +1443,11 @@ BattlescapeState::BattlescapeState() :
+@@ -732,9 +1446,11 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -7514,7 +7537,7 @@ index 7cd4941..07ca96a 100644
  
  	resetPalettes();
  }
-@@ -789,6 +1502,38 @@ void BattlescapeState::init()
+@@ -789,6 +1505,38 @@ void BattlescapeState::init()
  	_map->draw();
  	_battleGame->init();
  	updateSoldierInfo();
@@ -7553,7 +7576,7 @@ index 7cd4941..07ca96a 100644
  
  	switch (_save->getTUReserved())
  	{
-@@ -807,6 +1552,17 @@ void BattlescapeState::init()
+@@ -807,6 +1555,17 @@ void BattlescapeState::init()
  	}
  	if (_firstInit)
  	{
@@ -7571,7 +7594,7 @@ index 7cd4941..07ca96a 100644
  		// Set music
  		if (Options::oxcePlayBriefingMusicDuringEquipment)
  		{
-@@ -859,6 +1615,7 @@ void BattlescapeState::init()
+@@ -859,6 +1618,7 @@ void BattlescapeState::init()
  void BattlescapeState::think()
  {
  	static bool popped = false;
@@ -7579,7 +7602,7 @@ index 7cd4941..07ca96a 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1215,6 +1972,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1215,6 +1975,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -7600,7 +7623,7 @@ index 7cd4941..07ca96a 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -2172,7 +2943,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +2946,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -7609,7 +7632,7 @@ index 7cd4941..07ca96a 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +3163,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +3166,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -7617,7 +7640,7 @@ index 7cd4941..07ca96a 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -3577,13 +4349,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3577,13 +4352,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  	{
  		nextStage = ruleDeploy->getNextStage();
  	}
@@ -7647,7 +7670,7 @@ index 7cd4941..07ca96a 100644
  		bgen.nextStage();
  		_game->popState();
  		_game->pushState(new BriefingState(0, 0));
-@@ -3621,6 +4408,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4411,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -7660,7 +7683,7 @@ index 7cd4941..07ca96a 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +4845,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4848,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -8909,20 +8932,21 @@ index cea8e65..90ec9a6 100644
  	}
  
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..7472406 100644
+index 3665cd1..cf2bd37 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
-@@ -17,6 +17,9 @@
+@@ -17,6 +17,10 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "Map.h"
++#include "../Engine/HiUI.h"
 +#include "Villains.h"
 +#include "Stealth.h"
 +#include "../Engine/HiColor.h"
  #include "Camera.h"
  #include "UnitSprite.h"
  #include "ItemSprite.h"
-@@ -52,6 +55,8 @@
+@@ -52,6 +56,8 @@
  #include "../Interface/NumberText.h"
  #include "../Interface/Text.h"
  #include "../fmath.h"
@@ -8931,7 +8955,7 @@ index 3665cd1..7472406 100644
  
  
  /*
-@@ -156,9 +161,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
+@@ -156,9 +162,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
  
  	_spriteWidth = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getWidth();
  	_spriteHeight = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getHeight();
@@ -8944,7 +8968,7 @@ index 3665cd1..7472406 100644
  	_message->setTextColor(_messageColor);
  	_camera = new Camera(_spriteWidth, _spriteHeight, _save->getMapSizeX(), _save->getMapSizeY(), _save->getMapSizeZ(), this, visibleMapHeight);
  	_scrollMouseTimer = new Timer(SCROLL_INTERVAL);
-@@ -272,12 +278,13 @@ void Map::init()
+@@ -272,12 +279,13 @@ void Map::init()
  					   0, 0, 0, b, f, b, 0, 0, 0,
  					   0, 0, 0, 0, b, 0, 0, 0, 0 };
  
@@ -8962,7 +8986,7 @@ index 3665cd1..7472406 100644
  	_arrow->unlock();
  
  	_projectile = 0;
-@@ -305,6 +312,20 @@ void Map::think()
+@@ -305,6 +313,103 @@ void Map::think()
  /**
   * Draws the whole map, part by part.
   */
@@ -8971,6 +8995,8 @@ index 3665cd1..7472406 100644
 +	if (Screen::hiRes() <= 1)
 +	{
 +		InteractiveSurface::blit(surface);
++		// the vector tile cursor lies on the map and under the HUD and any window over it
++		if (_visible && !_hidden) HiUI::vectorFloor(this, HiUI::VEC_MAP, HiUI::VEC_MAP);
 +		return;
 +	}
 +	if (!_visible || _hidden) return;
@@ -8978,12 +9004,101 @@ index 3665cd1..7472406 100644
 +	SDL_Rect r = { 0, 0, (Uint16)(getWidth() / Screen::hiRes()), (Uint16)(getHeight() / Screen::hiRes()) };
 +	SDL_FillRect(surface, &r, 0);
 +	Screen::mapOverlay = this;
++	HiUI::vectorFloorRect(getX(), getY(), r.w, r.h, HiUI::VEC_MAP, HiUI::VEC_MAP);
++}
++
++/**
++ * G.I. Joe 4x (John, 15 Nov: "the aim cursor needs to be redone in vector", "the selection box
++ * needs to look more interesting and modern"). The 8-bit CURSOR.PCK box and crosshair, drawn
++ * again as anti-aliased strokes at the display's resolution: a floor plate with lit corner
++ * brackets and a ghost of the cube above it; on aim, a ring with four ticks over the man's chest.
++ * Amber when there is a man in the tile, cyan when it is empty (red on aim), blue a level down.
++ */
++void Map::vecCursor(Position sp, int kind, bool onUnit)
++{
++	const double hr = Screen::hiRes();   // the hi-res map is hr times the base frame
++	const double s = _spriteWidth / 32.0 / hr;
++	const double X = getX() + sp.x / hr, Y = getY() + sp.y / hr;
++	auto P = [&](double x, double y) { return std::make_pair(X + x * s, Y + y * s); };
++	const double ph = (_animFrame % 8) / 8.0 * 6.283185307;
++	const double breathe = 0.5 + 0.5 * std::sin(ph);
++	Uint32 rgb = kind == 1 ? 0x5C8DFF : kind == 2 ? (onUnit ? 0xFFC83C : 0xFF3B30) : (onUnit ? 0xFFC83C : 0x7FE3FF);
++	auto line = [&](std::pair<double,double> a, std::pair<double,double> b, int alpha, double w)
++	{
++		HiUI::vectorLine(HiUI::VEC_MAP, a.first, a.second, b.first, b.second, ((Uint32)alpha << 24) | rgb, w);
++	};
++	auto lerp = [](std::pair<double,double> a, std::pair<double,double> b, double t)
++	{
++		return std::make_pair(a.first + (b.first - a.first) * t, a.second + (b.second - a.second) * t);
++	};
++	// glow then core, so every mark has a soft halo and a hard edge
++	auto mark = [&](std::pair<double,double> a, std::pair<double,double> b, int alpha)
++	{
++		line(a, b, alpha / 4, 7.0);
++		line(a, b, alpha, 2.4);
++	};
++	const std::pair<double,double> f[4] = { P(16, 24), P(32, 32), P(16, 40), P(0, 32) };   // floor diamond
++	const std::pair<double,double> t[4] = { P(16, 0), P(32, 8), P(16, 16), P(0, 8) };     // its top, a storey up
++	const int faint = kind == 1 ? 0x30 : 0x48;
++	for (int i = 0; i < 4; ++i) line(f[i], f[(i + 1) % 4], faint, 1.2);
++	if (kind != 2)
++	{
++		const double len = 0.22 + 0.08 * breathe;
++		const int bright = kind == 1 ? 0x90 : 0xF0;
++		for (int i = 0; i < 4; ++i)
++		{
++			mark(f[i], lerp(f[i], f[(i + 1) % 4], len), bright);
++			mark(f[i], lerp(f[i], f[(i + 3) % 4], len), bright);
++		}
++		if (kind == 0)
++		{
++			// the cube above: posts at the side corners fading upward, and a ghost of the top
++			for (int i = 1; i < 4; i += 2) line(f[i], lerp(f[i], t[i], 0.35), 0x70, 1.4);
++			for (int i = 0; i < 4; ++i) line(t[i], t[(i + 1) % 4], onUnit ? 0x50 : 0x26, 1.0);
++			// a soft fill line through the plate, east to west, breathing
++			line(lerp(f[3], f[1], 0.3), lerp(f[3], f[1], 0.7), (int)(0x30 + 0x30 * breathe), 1.0);
++		}
++		return;
++	}
++	// AIM: a ring at chest height, four ticks that close in when there is a man to shoot
++	const auto c = P(16, 18);
++	const double r = 8.5 * s;
++	const double spin = onUnit ? ph / 4 : 0.0;
++	const int ringA = 0xE8;
++	const int N = 28;
++	for (int i = 0; i < N; ++i)
++	{
++		// the ring is broken where the ticks cross it
++		const double a0 = (i + 0.0) / N * 6.283185307, a1 = (i + 1.0) / N * 6.283185307;
++		double mid = std::fmod((a0 + a1) / 2 - spin + 6.283185307 * 4, 1.5707963);
++		if (mid < 0.16 || mid > 1.5707963 - 0.16) continue;
++		mark(std::make_pair(c.first + r * std::cos(a0), c.second + r * std::sin(a0)), std::make_pair(c.first + r * std::cos(a1), c.second + r * std::sin(a1)), ringA);
++	}
++	const double in = (onUnit ? 0.35 + 0.1 * breathe : 0.55) * r, out = 1.35 * r;
++	for (int k = 0; k < 4; ++k)
++	{
++		const double a = spin + k * 1.5707963;
++		mark(std::make_pair(c.first + in * std::cos(a), c.second + in * std::sin(a)), std::make_pair(c.first + out * std::cos(a), c.second + out * std::sin(a)), 0xF8);
++	}
++	const double d = 0.9 * s;
++	mark(std::make_pair(c.first - d, c.second), std::make_pair(c.first + d, c.second), 0xFF);
++	mark(std::make_pair(c.first, c.second - d), std::make_pair(c.first, c.second + d), 0xFF);
++	// and where it stands: a faint line from the ring down to the plate
++	line(std::make_pair(c.first, c.second + out), lerp(f[0], f[2], 0.5), 0x40, 1.0);
 +}
 +
  void Map::draw()
  {
  	if (!_redraw)
-@@ -325,6 +346,7 @@ void Map::draw()
+@@ -317,6 +422,7 @@ void Map::draw()
+ 	// we use colour 15 because that actually corresponds to the colour we DO want in all variations of the xcom and tftd palettes.
+ 	// Note: un-hardcoded the color from 15 to ruleset value, default 15
+ 	_redraw = false;
++	HiUI::vectorClear(HiUI::VEC_MAP);
+ 	ShaderDrawFunc(
+ 		[](Uint8& dest, Uint8 color)
+ 		{
+@@ -325,6 +431,7 @@ void Map::draw()
  		ShaderSurface(this),
  		ShaderScalar<Uint8>(Palette::blockOffset(0) + _bgColor)
  	);
@@ -8991,7 +9106,7 @@ index 3665cd1..7472406 100644
  
  	Tile *t;
  
-@@ -356,12 +378,38 @@ void Map::draw()
+@@ -356,12 +463,38 @@ void Map::draw()
  		}
  	}
  
@@ -9031,7 +9146,7 @@ index 3665cd1..7472406 100644
  		_message->blit(this->getSurface());
  	}
  }
-@@ -466,6 +514,29 @@ int getArrowBobForFrame(int frame)
+@@ -466,6 +599,29 @@ int getArrowBobForFrame(int frame)
  	return ArrowBobOffsets[frame % 8];
  }
  
@@ -9061,7 +9176,7 @@ index 3665cd1..7472406 100644
  int getShadePulseForFrame(int shade, int frame)
  {
  	if (shade > 7) shade = 7;
-@@ -488,9 +559,9 @@ int getShadePulseForFrame(int shade, int frame)
+@@ -488,9 +644,9 @@ int getShadePulseForFrame(int shade, int frame)
   */
  void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position currTileScreenPosition, bool topLayer, BattleUnit* movingUnit)
  {
@@ -9074,7 +9189,7 @@ index 3665cd1..7472406 100644
  
  	if (!unitTile)
  	{
-@@ -532,7 +603,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
+@@ -532,7 +688,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
  
  	unitOffset.x = unitTile->getPosition().x - bu->getPosition().x;
  	unitOffset.y = unitTile->getPosition().y - bu->getPosition().y;
@@ -9083,7 +9198,7 @@ index 3665cd1..7472406 100644
  
  	bool moving = bu->getStatus() == STATUS_WALKING || bu->getStatus() == STATUS_FLYING;
  	int bonusWidth = moving ? 0 : tileFoorWidth;
-@@ -746,6 +817,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -746,6 +902,7 @@ void Map::drawTerrain(Surface *surface)
  	int beginZ = 0, endZ = _save->getMapSizeZ() - 1;
  	Position mapPosition, screenPosition, bulletPositionScreen, movingUnitPosition;
  	int bulletLowX=16000, bulletLowY=16000, bulletLowZ=16000, bulletHighX=0, bulletHighY=0, bulletHighZ=0;
@@ -9091,7 +9206,7 @@ index 3665cd1..7472406 100644
  	int dummy;
  	BattleUnit *movingUnit = _save->getTileEngine()->getMovingUnit();
  	int tileShade, tileColor, obstacleShade;
-@@ -777,6 +849,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -777,6 +934,26 @@ void Map::drawTerrain(Surface *surface)
  			if (_projectile->getPosition(1-i).z > bulletHighZ)
  				bulletHighZ = _projectile->getPosition(1-i).z;
  		}
@@ -9118,7 +9233,7 @@ index 3665cd1..7472406 100644
  		// divide by 16 to go from voxel to tile position
  		bulletLowX = bulletLowX / 16;
  		bulletLowY = bulletLowY / 16;
-@@ -940,9 +1032,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -940,15 +1117,15 @@ void Map::drawTerrain(Surface *surface)
  					if (tmpSurface)
  					{
  						if (tile->getObstacle(O_FLOOR))
@@ -9130,7 +9245,15 @@ index 3665cd1..7472406 100644
  					}
  
  					auto* unit = tile->getUnit();
-@@ -1001,9 +1093,9 @@ void Map::drawTerrain(Surface *surface)
+ 
+-					// Draw cursor back
+-					if (_cursorType != CT_NONE && _selectorX > itX - _cursorSize && _selectorY > itY - _cursorSize && _selectorX < itX+1 && _selectorY < itY+1 && !_save->getBattleState()->getMouseOverIcons())
++					// Draw cursor back (G.I. Joe 4x: with the HD layer up the cursor is vector, drawn with the front)
++					if (!HiUI::active() && _cursorType != CT_NONE && _selectorX > itX - _cursorSize && _selectorY > itY - _cursorSize && _selectorX < itX+1 && _selectorY < itY+1 && !_save->getBattleState()->getMouseOverIcons())
+ 					{
+ 						if (_camera->getViewLevel() == itZ)
+ 						{
+@@ -1001,9 +1178,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_WESTWALL, tile);
  							if (tile->getObstacle(O_WESTWALL))
@@ -9142,7 +9265,7 @@ index 3665cd1..7472406 100644
  						}
  						// Draw north wall
  						tmpSurface = tile->getSprite(O_NORTHWALL);
-@@ -1011,9 +1103,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1011,9 +1188,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_NORTHWALL, tile);
  							if (tile->getObstacle(O_NORTHWALL))
@@ -9154,7 +9277,7 @@ index 3665cd1..7472406 100644
  						}
  						// Draw object
  						tmpSurface = tile->getSprite(O_OBJECT);
-@@ -1022,18 +1114,19 @@ void Map::drawTerrain(Surface *surface)
+@@ -1022,18 +1199,19 @@ void Map::drawTerrain(Surface *surface)
  							if (tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -9177,7 +9300,7 @@ index 3665cd1..7472406 100644
  								tileShade
  							);
  							if (_anyIndicator)
-@@ -1043,30 +1136,30 @@ void Map::drawTerrain(Surface *surface)
+@@ -1043,30 +1221,30 @@ void Map::drawTerrain(Surface *surface)
  								{
  									if (_burnIndicator && itemUnit->getFire() > 0)
  									{
@@ -9216,7 +9339,7 @@ index 3665cd1..7472406 100644
  											tileShade);
  									}
  								}
-@@ -1134,7 +1227,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1134,7 +1312,7 @@ void Map::drawTerrain(Surface *surface)
  
  								for (int i = begin; i != end; i += direction)
  								{
@@ -9225,7 +9348,7 @@ index 3665cd1..7472406 100644
  									if (tmpSurface)
  									{
  										Position voxelPos = _projectile->getPosition(1-i);
-@@ -1292,13 +1385,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1292,13 +1470,13 @@ void Map::drawTerrain(Surface *surface)
  							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(11);
  							if (tmpSurface)
  							{
@@ -9241,7 +9364,7 @@ index 3665cd1..7472406 100644
  						}
  					}
  
-@@ -1310,9 +1403,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1310,9 +1488,9 @@ void Map::drawTerrain(Surface *surface)
  							if (!tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -9253,7 +9376,23 @@ index 3665cd1..7472406 100644
  							}
  						}
  					}
-@@ -1528,7 +1621,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1335,8 +1513,13 @@ void Map::drawTerrain(Surface *surface)
+ 								else
+ 									frameNumber = 6; // red static crosshairs
+ 							}
+-							tmpSurface = _game->getMod()->getSurfaceSet("CURSOR.PCK")->getFrame(frameNumber);
+-							Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y, 0);
++							if (HiUI::active())
++								vecCursor(screenPosition, _cursorType == CT_AIM ? 2 : 0, unit && (unit->getVisible() || _save->getDebugMode()));
++							else
++							{
++								tmpSurface = _game->getMod()->getSurfaceSet("CURSOR.PCK")->getFrame(frameNumber);
++								Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y, 0);
++							}
+ 
+ 							// UFO extender accuracy: display adjusted accuracy value on crosshair in real-time.
+ 							if (_cursorType >= CT_AIM && _showInfoOnCursor && (_cursorType != CT_THROW || !Options::oxceDisableInfoOnThrowCursor))
+@@ -1528,14 +1711,18 @@ void Map::drawTerrain(Surface *surface)
  
  								_txtAccuracy->setText(ss.str());
  								_txtAccuracy->draw();
@@ -9262,7 +9401,20 @@ index 3665cd1..7472406 100644
  							}
  						}
  						else if (_camera->getViewLevel() > itZ)
-@@ -1551,7 +1644,7 @@ void Map::drawTerrain(Surface *surface)
+ 						{
+ 							frameNumber = 5; // blue box
+-							tmpSurface = _game->getMod()->getSurfaceSet("CURSOR.PCK")->getFrame(frameNumber);
+-							Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y, 0);
++							if (HiUI::active()) vecCursor(screenPosition, 1, false);
++							else
++							{
++								tmpSurface = _game->getMod()->getSurfaceSet("CURSOR.PCK")->getFrame(frameNumber);
++								Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y, 0);
++							}
+ 						}
+ 						if (!_isAltPressed && _cursorType > CT_AIM && _camera->getViewLevel() == itZ)
+ 						{
+@@ -1551,7 +1738,7 @@ void Map::drawTerrain(Surface *surface)
  									_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::red - 1) - 1);
  									_txtAccuracy->setText("0%");
  									_txtAccuracy->draw();
@@ -9271,7 +9423,7 @@ index 3665cd1..7472406 100644
  								}
  							}
  							if (!ignore)
-@@ -1582,7 +1675,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1582,7 +1769,7 @@ void Map::drawTerrain(Surface *surface)
  								_numWaypid->setValue(waypid);
  								_numWaypid->setBordered(true); // OXCE, not configurable
  								_numWaypid->draw();
@@ -9280,7 +9432,7 @@ index 3665cd1..7472406 100644
  
  								waypXOff += waypid > 9 ? 10 : 6; // OXCE
  								if (waypXOff >= 26)
-@@ -1621,7 +1714,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1621,7 +1808,7 @@ void Map::drawTerrain(Surface *surface)
  						tile = _save->getTile(mapPosition);
  						if (!tile || !tile->isDiscovered(O_FLOOR) || tile->getPreview() == -1)
  							continue;
@@ -9289,7 +9441,7 @@ index 3665cd1..7472406 100644
  						if (_previewSettingArrows)
  						{
  							if (itZ > 0 && tile->hasNoFloor(_save))
-@@ -1629,14 +1722,14 @@ void Map::drawTerrain(Surface *surface)
+@@ -1629,14 +1816,14 @@ void Map::drawTerrain(Surface *surface)
  								tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(23);
  								if (tmpSurface)
  								{
@@ -9306,7 +9458,7 @@ index 3665cd1..7472406 100644
  							}
  						}
  
-@@ -1645,16 +1738,17 @@ void Map::drawTerrain(Surface *surface)
+@@ -1645,16 +1832,17 @@ void Map::drawTerrain(Surface *surface)
  							int off = tile->getTUMarker() > 9 ? 5 : 3;
  							int offE = tile->getEnergyMarker() > 9 ? 5 : 3;
  							int mcolor = _previewSettingArrows ? 0 : tile->getMarkerColor();
@@ -9327,7 +9479,7 @@ index 3665cd1..7472406 100644
  								}
  							}
  							if (_previewSettingTu)
-@@ -1664,16 +1758,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1664,16 +1852,16 @@ void Map::drawTerrain(Surface *surface)
  								if (_previewSettingEnergy)
  								{
  									// TU
@@ -9347,7 +9499,7 @@ index 3665cd1..7472406 100644
  								}
  							}
  							else if (_previewSettingEnergy)
-@@ -1681,7 +1775,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1681,7 +1869,7 @@ void Map::drawTerrain(Surface *surface)
  								// only Energy
  								_numWaypid->setValue(tile->getEnergyMarker());
  								_numWaypid->draw();
@@ -9356,7 +9508,7 @@ index 3665cd1..7472406 100644
  							}
  						}
  					}
-@@ -1702,16 +1796,91 @@ void Map::drawTerrain(Surface *surface)
+@@ -1702,16 +1890,91 @@ void Map::drawTerrain(Surface *surface)
  		Position offset = calculateWalkingOffset(selectedUnit).ScreenOffset;
  		if (selectedUnit->isBigUnit())
  		{
@@ -9452,7 +9604,7 @@ index 3665cd1..7472406 100644
  		}
  	}
  
-@@ -1732,26 +1901,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -1732,26 +1995,26 @@ void Map::drawTerrain(Surface *surface)
  				//calculateWalkingOffset(myUnit, &offset);
  				if (myUnit->isBigUnit())
  				{
@@ -9484,7 +9636,7 @@ index 3665cd1..7472406 100644
  						0);
  				}
  				else if (customMarker)
-@@ -1760,7 +1929,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1760,7 +2023,7 @@ void Map::drawTerrain(Surface *surface)
  						surface,
  						_arrow,
  						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
@@ -9493,7 +9645,7 @@ index 3665cd1..7472406 100644
  						0,
  						false,
  						_isTFTD ? ArrowColorsTFTD[myUnit->getCustomMarker() % 4] : ArrowColorsUFO[myUnit->getCustomMarker() % 4]);
-@@ -1779,11 +1948,11 @@ void Map::drawTerrain(Surface *surface)
+@@ -1779,11 +2042,11 @@ void Map::drawTerrain(Surface *surface)
  			{
  				_camera->convertMapToScreen(pos, &screenPosition);
  				screenPosition += _camera->getMapOffset();
@@ -9507,7 +9659,7 @@ index 3665cd1..7472406 100644
  					0);
  			}
  		}
-@@ -1823,17 +1992,40 @@ void Map::drawTerrain(Surface *surface)
+@@ -1823,17 +2086,40 @@ void Map::drawTerrain(Surface *surface)
  				else if (explosion->isHit())
  				{
  					tmpSurface = _game->getMod()->getSurfaceSet("HIT.PCK")->getFrame(explosion->getCurrentFrame());
@@ -9550,7 +9702,7 @@ index 3665cd1..7472406 100644
  	surface->unlock();
  }
  
-@@ -2023,7 +2215,7 @@ void Map::setSelectorPosition(int mx, int my)
+@@ -2023,7 +2309,7 @@ void Map::setSelectorPosition(int mx, int my)
  {
  	int oldX = _selectorX, oldY = _selectorY;
  
@@ -9559,7 +9711,7 @@ index 3665cd1..7472406 100644
  
  	if (oldX != _selectorX || oldY != _selectorY)
  	{
-@@ -2267,6 +2459,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2267,6 +2553,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
  	}
  	result.ScreenOffset.y += result.TerrainLevelOffset;
@@ -9568,7 +9720,7 @@ index 3665cd1..7472406 100644
  	return result;
  }
  
-@@ -2327,6 +2521,15 @@ CursorType Map::getCursorType() const
+@@ -2327,6 +2615,15 @@ CursorType Map::getCursorType() const
   * Puts a projectile sprite on the map.
   * @param projectile Projectile to place.
   */
@@ -9584,7 +9736,7 @@ index 3665cd1..7472406 100644
  void Map::setProjectile(Projectile *projectile)
  {
  	_projectile = projectile;
-@@ -2506,9 +2709,10 @@ void Map::refreshSelectorPosition()
+@@ -2506,9 +2803,10 @@ void Map::refreshSelectorPosition()
  void Map::setHeight(int height)
  {
  	Surface::setHeight(height);
@@ -9598,7 +9750,7 @@ index 3665cd1..7472406 100644
  }
  
  /**
-@@ -2519,7 +2723,7 @@ void Map::setWidth(int width)
+@@ -2519,7 +2817,7 @@ void Map::setWidth(int width)
  {
  	int dX = width - getWidth();
  	Surface::setWidth(width);
@@ -9608,7 +9760,7 @@ index 3665cd1..7472406 100644
  
  /**
 diff --git a/src/Battlescape/Map.h b/src/Battlescape/Map.h
-index 0fdf2ca..d9cafb2 100644
+index 0fdf2ca..15ee822 100644
 --- a/src/Battlescape/Map.h
 +++ b/src/Battlescape/Map.h
 @@ -60,6 +60,7 @@ struct UnitWalkingOffset
@@ -9630,7 +9782,16 @@ index 0fdf2ca..d9cafb2 100644
  	BattlescapeMessage *_message;
  	Camera *_camera;
  	int _visibleMapHeight;
-@@ -124,6 +129,8 @@ public:
+@@ -106,6 +111,8 @@ private:
+ 
+ 	void drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position tileScreenPosition, bool topLayer, BattleUnit* movingUnit = nullptr);
+ 	void drawTerrain(Surface *surface);
++	/// G.I. Joe 4x: the tile cursor as vector strokes at display resolution. kind 0 box, 1 box on a lower level, 2 aim.
++	void vecCursor(Position screenPosition, int kind, bool onUnit);
+ 	int getTerrainLevel(const Position& pos, int size) const;
+ 	int getWallShade(TilePart part, Tile* tileFrot);
+ 	int _iconHeight, _iconWidth, _messageColor;
+@@ -124,6 +131,8 @@ public:
  	void think() override;
  	/// Draws the surface.
  	void draw() override;
@@ -9639,7 +9800,7 @@ index 0fdf2ca..d9cafb2 100644
  	void refreshAIProgress(int progress);
  	/// Sets the palette.
  	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
-@@ -153,6 +160,8 @@ public:
+@@ -153,6 +162,8 @@ public:
  
  	/// Sets projectile.
  	void setProjectile(Projectile *projectile);
@@ -13230,10 +13391,10 @@ index 0000000..8277a64
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..55703e8
+index 0000000..7f0c012
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3345 @@
+@@ -0,0 +1,3376 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -13282,7 +13443,8 @@ index 0000000..55703e8
 +	// Vector strokes. Lines are kept across frames - the globe only redraws them
 +	// when it moves - and the floor mask is rebuilt every frame the globe is blitted.
 +	struct VLine { float x1, y1, x2, y2; Uint32 argb; float w; };
-+	std::vector<VLine> vlayers[2];
++	std::vector<VLine> vlayers[VEC_LAYERS];
++	int vFirst = 0, vLast = VEC_LAYERS - 1;
 +	std::vector<Uint8> vtag, vvalid;  // base-sized: the floor's pixels as blitted
 +	bool vHave = false;
 +	std::vector<Uint8> vcov;          // screen-sized coverage scratch, max-combined
@@ -14437,12 +14599,26 @@ index 0000000..55703e8
 +		if (x1 <= x0 || y1 <= y0) return nullptr;
 +		const int w = x1 - x0, h = y1 - y0;
 +		const bool turn = h > w;   // upright in the equipment screen: muzzle up. Lay it down, muzzle left.
++		// Which side of the barrel the grip hangs: the spine is the busiest column, and the grip and
++		// magazine are the bulk off it. Painted with the grip on the right, a plain quarter turn lays
++		// the gun on its back (John's Uzi, screen040), so that one is mirrored as it turns.
++		bool mirror = false;
++		if (turn)
++		{
++			std::vector<double> col(w, 0.0);
++			for (int y = 0; y < h; ++y)
++				for (int x = 0; x < w; ++x) col[x] += (src->px[(size_t)(y0 + y) * src->w + (x0 + x)] >> 24) / 255.0;
++			const int spine = (int)(std::max_element(col.begin(), col.end()) - col.begin());
++			double side = 0;
++			for (int x = 0; x < w; ++x) side += col[x] * (x - spine);
++			mirror = side > 0;
++		}
 +		out.w = turn ? h : w; out.h = turn ? w : h; out.px.assign((size_t)out.w * out.h, 0);
 +		for (int y = 0; y < h; ++y)
 +			for (int x = 0; x < w; ++x)
 +			{
 +				const Uint32 p = src->px[(size_t)(y0 + y) * src->w + (x0 + x)];
-+				if (turn) out.px[(size_t)(w - 1 - x) * out.w + y] = p;     // rotate 90 degrees anticlockwise
++				if (turn) out.px[(size_t)(mirror ? x : w - 1 - x) * out.w + y] = p;     // a quarter turn anticlockwise, grip down
 +				else out.px[(size_t)y * out.w + x] = p;
 +			}
 +		out.ok = true;
@@ -16356,9 +16532,10 @@ index 0000000..55703e8
 +	vlayers[layer].push_back(VLine{ (float)x1, (float)y1, (float)x2, (float)y2, argb, (float)width });
 +}
 +
-+void vectorFloor(const Surface *floor)
++void vectorFloor(const Surface *floor, int firstLayer, int lastLayer)
 +{
 +	if (!base || !floor) return;
++	vFirst = firstLayer; vLast = lastLayer;
 +	if (vtag.size() != (size_t)bw * bh) { vtag.assign((size_t)bw * bh, 0); vvalid.assign((size_t)bw * bh, 0); }
 +	else std::fill(vvalid.begin(), vvalid.end(), 0);
 +	SDL_Surface *own = const_cast<Surface*>(floor)->getSurface();
@@ -16377,6 +16554,20 @@ index 0000000..55703e8
 +			vvalid[(size_t)by * bw + bx] = 1;
 +			vtag[(size_t)by * bw + bx] = dst[bx];
 +		}
++	}
++	vHave = true;
++}
++
++void vectorFloorRect(int x, int y, int w, int h, int firstLayer, int lastLayer)
++{
++	if (!base) return;
++	if (vtag.size() != (size_t)bw * bh) { vtag.assign((size_t)bw * bh, 0); vvalid.assign((size_t)bw * bh, 0); }
++	else std::fill(vvalid.begin(), vvalid.end(), 0);
++	vFirst = firstLayer; vLast = lastLayer;
++	for (int by = std::max(0, y); by < std::min(bh, y + h); ++by)
++	{
++		const Uint8 *dst = row8(by);
++		for (int bx = std::max(0, x); bx < std::min(bw, x + w); ++bx) { vvalid[(size_t)by * bw + bx] = 1; vtag[(size_t)by * bw + bx] = dst[bx]; }
 +	}
 +	vHave = true;
 +}
@@ -16464,8 +16655,9 @@ index 0000000..55703e8
 +		const double sxk = (double)(xs[bw] - xs[0]) / bw, syk = (double)(ys[bh] - ys[0]) / bh;
 +		const double ox = xs[0], oy = ys[0];
 +		if (vcov.size() != (size_t)sw * sh) vcov.assign((size_t)sw * sh, 0);
-+		for (auto &layer : vlayers)
++		for (int li = vFirst; li <= vLast && li < VEC_LAYERS; ++li)
 +		{
++			auto &layer = vlayers[li];
 +			std::vector<Uint32> colours;
 +			for (const auto &l : layer)
 +				if (std::find(colours.begin(), colours.end(), l.argb) == colours.end()) colours.push_back(l.argb);
@@ -16581,10 +16773,10 @@ index 0000000..55703e8
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..428d7ed
+index 0000000..27e4b62
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,208 @@
+@@ -0,0 +1,212 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -16647,14 +16839,18 @@ index 0000000..428d7ed
 +	/// instead of being drawn into the 8-bit buffer and zoomed into staircases.
 +	/// Layers mirror the 8-bit surfaces they replace, so each is cleared exactly when
 +	/// that surface is.
-+	enum VectorLayer { VEC_DETAIL = 0, VEC_RADAR = 1, VEC_LAYERS = 2 };
++	enum VectorLayer { VEC_DETAIL = 0, VEC_RADAR = 1, VEC_MAP = 2, VEC_LAYERS = 3 };   // VEC_MAP: the battlescape tile cursor
 +	void vectorClear(int layer);
 +	/// A segment in BASE coordinates; colour 0xAARRGGBB; width in DISPLAY pixels.
 +	void vectorLine(int layer, double x1, double y1, double x2, double y2, Uint32 argb, double width);
 +	/// The surface the strokes lie on has just been blitted. For the rest of the frame
 +	/// a stroke shows only where that surface's own pixels still do - so labels and
 +	/// markers blitted after it, and any window opened over it, cover the lines.
-+	void vectorFloor(const Surface *floor);
++	/// Only layers first..last are drawn this frame: the globe's lines never land on the battle map.
++	void vectorFloor(const Surface *floor, int firstLayer = VEC_DETAIL, int lastLayer = VEC_RADAR);
++	/// The same over a base rectangle that has just been cleared to colour 0 (the hi-res battle map
++	/// path: the map itself goes to the screen separately, the 8-bit frame keeps a hole for it).
++	void vectorFloorRect(int x, int y, int w, int h, int firstLayer, int lastLayer);
 +
 +	/// Was the HD layer running on the last frame? (enabled() only says it may.)
 +	/// The globe asks this before it stops drawing 8-bit markers and labels.
