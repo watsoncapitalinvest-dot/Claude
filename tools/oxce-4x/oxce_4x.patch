@@ -8240,7 +8240,7 @@ index cea8e65..90ec9a6 100644
  	}
  
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..8fde387 100644
+index 3665cd1..646fa32 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
 @@ -17,6 +17,9 @@
@@ -8643,7 +8643,7 @@ index 3665cd1..8fde387 100644
  							}
  						}
  					}
-@@ -1702,16 +1775,62 @@ void Map::drawTerrain(Surface *surface)
+@@ -1702,16 +1775,91 @@ void Map::drawTerrain(Surface *surface)
  		Position offset = calculateWalkingOffset(selectedUnit).ScreenOffset;
  		if (selectedUnit->isBigUnit())
  		{
@@ -8695,6 +8695,35 @@ index 3665cd1..8fde387 100644
 +				surface->drawRect(x - k, y + 2 * k, 2 * k, 2 * k, red);
 +			}
 +		}
++		// HUD v2 s.3: the NOISE RING - how far the armed shot, or this walk, will be heard, drawn on the ground
++		// around the selected Joe (open ground; walls cut it in the rules but not in this ring)
++		BattleUnit *sel = _save->getSelectedUnit();
++		BattlescapeGame *bg = _save->getBattleGame();
++		if (sel && bg && _save->getSide() == FACTION_PLAYER && sel->getFaction() == FACTION_PLAYER && !sel->isOut() && sel->getPosition().z <= _camera->getViewLevel())
++		{
++			const BattleAction *act = bg->getCurrentAction();
++			int rad = 0;
++			if (act && act->targeting && act->weapon && act->weapon->getRules()->getBattleType() == BT_FIREARM)
++				rad = Stealth::shotRadius(_save, act->weapon, act->weapon->getAmmoForSlot(0));
++			else if (_cursorType != CT_NONE)
++				rad = Stealth::radius(_save, bg->_gjWalkMode == 2 || sel->isKneeled() ? "crouch" : bg->_gjWalkMode == 1 ? "run" : "walk");
++			if (rad > 0)
++			{
++				const Uint8 ring = 144;   // signal yellow in the battle palette
++				const Position c = sel->getPosition();
++				const int steps = std::max(16, rad * 8);
++				for (int s = 0; s < steps; ++s)
++				{
++					const double ang = 2 * 3.14159265358979 * s / steps;
++					Position p(c.x + (int)std::lround(rad * std::cos(ang)), c.y + (int)std::lround(rad * std::sin(ang)), c.z);
++					if (p.x < 0 || p.y < 0 || p.x >= _save->getMapSizeX() || p.y >= _save->getMapSizeY()) continue;
++					_camera->convertMapToScreen(p, &screenPosition);
++					screenPosition += _camera->getMapOffset();
++					const int cx = screenPosition.x + _spriteWidth / 2, cy = screenPosition.y + _spriteHeight - _spriteWidth / 4;
++					surface->drawRect(cx - k, cy - k, 2 * k, 2 * k, ring);
++				}
++			}
++		}
 +		for (int i = 0; i < Stealth::markers(_save); ++i)
 +		{
 +			const Position m = Stealth::marker(_save, i);
@@ -8710,7 +8739,7 @@ index 3665cd1..8fde387 100644
  		}
  	}
  
-@@ -1732,26 +1851,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -1732,26 +1880,26 @@ void Map::drawTerrain(Surface *surface)
  				//calculateWalkingOffset(myUnit, &offset);
  				if (myUnit->isBigUnit())
  				{
@@ -8742,7 +8771,7 @@ index 3665cd1..8fde387 100644
  						0);
  				}
  				else if (customMarker)
-@@ -1760,7 +1879,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1760,7 +1908,7 @@ void Map::drawTerrain(Surface *surface)
  						surface,
  						_arrow,
  						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
@@ -8751,7 +8780,7 @@ index 3665cd1..8fde387 100644
  						0,
  						false,
  						_isTFTD ? ArrowColorsTFTD[myUnit->getCustomMarker() % 4] : ArrowColorsUFO[myUnit->getCustomMarker() % 4]);
-@@ -1779,11 +1898,11 @@ void Map::drawTerrain(Surface *surface)
+@@ -1779,11 +1927,11 @@ void Map::drawTerrain(Surface *surface)
  			{
  				_camera->convertMapToScreen(pos, &screenPosition);
  				screenPosition += _camera->getMapOffset();
@@ -8765,7 +8794,7 @@ index 3665cd1..8fde387 100644
  					0);
  			}
  		}
-@@ -1823,17 +1942,40 @@ void Map::drawTerrain(Surface *surface)
+@@ -1823,17 +1971,40 @@ void Map::drawTerrain(Surface *surface)
  				else if (explosion->isHit())
  				{
  					tmpSurface = _game->getMod()->getSurfaceSet("HIT.PCK")->getFrame(explosion->getCurrentFrame());
@@ -8808,7 +8837,7 @@ index 3665cd1..8fde387 100644
  	surface->unlock();
  }
  
-@@ -2023,7 +2165,7 @@ void Map::setSelectorPosition(int mx, int my)
+@@ -2023,7 +2194,7 @@ void Map::setSelectorPosition(int mx, int my)
  {
  	int oldX = _selectorX, oldY = _selectorY;
  
@@ -8817,7 +8846,7 @@ index 3665cd1..8fde387 100644
  
  	if (oldX != _selectorX || oldY != _selectorY)
  	{
-@@ -2267,6 +2409,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2267,6 +2438,8 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
  	}
  	result.ScreenOffset.y += result.TerrainLevelOffset;
@@ -8826,7 +8855,7 @@ index 3665cd1..8fde387 100644
  	return result;
  }
  
-@@ -2327,6 +2471,15 @@ CursorType Map::getCursorType() const
+@@ -2327,6 +2500,15 @@ CursorType Map::getCursorType() const
   * Puts a projectile sprite on the map.
   * @param projectile Projectile to place.
   */
@@ -8842,7 +8871,7 @@ index 3665cd1..8fde387 100644
  void Map::setProjectile(Projectile *projectile)
  {
  	_projectile = projectile;
-@@ -2506,9 +2659,10 @@ void Map::refreshSelectorPosition()
+@@ -2506,9 +2688,10 @@ void Map::refreshSelectorPosition()
  void Map::setHeight(int height)
  {
  	Surface::setHeight(height);
@@ -8856,7 +8885,7 @@ index 3665cd1..8fde387 100644
  }
  
  /**
-@@ -2519,7 +2673,7 @@ void Map::setWidth(int width)
+@@ -2519,7 +2702,7 @@ void Map::setWidth(int width)
  {
  	int dX = width - getWidth();
  	Surface::setWidth(width);
@@ -9907,10 +9936,10 @@ index 529b7f2..bd54715 100644
  				_action.weapon->spendAmmoForAction(_action.type, _parent->getSave());
 diff --git a/src/Battlescape/Stealth.cpp b/src/Battlescape/Stealth.cpp
 new file mode 100644
-index 0000000..b2290c3
+index 0000000..b965aad
 --- /dev/null
 +++ b/src/Battlescape/Stealth.cpp
-@@ -0,0 +1,386 @@
+@@ -0,0 +1,405 @@
 +/*
 + * G.I. Joe: sound and stealth. See Stealth.h and claude/SOUND_STEALTH_DESIGN_v1.md.
 + */
@@ -10174,6 +10203,25 @@ index 0000000..b2290c3
 +	return weapon && listed(save->getMod()->getStealthRules().dartWeapons, weapon->getRules()->getType());
 +}
 +
++int shotRadius(const SavedBattleGame *save, const BattleItem *weapon, const BattleItem *ammo)
++{
++	if (!weapon) return 0;
++	const RuleItem *w = weapon->getRules();
++	const RuleItem *a = ammo ? ammo->getRules() : w;
++	std::string kind;
++	if (isDart(save, weapon)) kind = "dart";
++	else
++	{
++		const auto *dt = a->getDamageType();
++		const bool blast = dt && (dt->ResistType == DT_HE || dt->ResistType == DT_IN) || w->getArcingShot() || a->getArcingShot();
++		if (blast) kind = "launcher";
++		else if (w->getConfigAuto()->shots >= 5 || w->getWeight() >= 12 || (w->getAccuracyAimed() >= 110 && w->getConfigAuto()->shots <= 1)) kind = "heavy";
++		else if (!w->isTwoHanded()) kind = "pistol";
++		else kind = "rifle";
++	}
++	return radius(save, kind);
++}
++
 +void shot(SavedBattleGame *save, const BattleUnit *shooter, const BattleItem *weapon, const BattleItem *ammo)
 +{
 +	if (!on(save) || !shooter || !weapon) return;
@@ -10299,10 +10347,10 @@ index 0000000..b2290c3
 +}
 diff --git a/src/Battlescape/Stealth.h b/src/Battlescape/Stealth.h
 new file mode 100644
-index 0000000..8a0b33f
+index 0000000..32f6f30
 --- /dev/null
 +++ b/src/Battlescape/Stealth.h
-@@ -0,0 +1,71 @@
+@@ -0,0 +1,74 @@
 +#pragma once
 +/*
 + * G.I. Joe: sound and stealth (claude/SOUND_STEALTH_DESIGN_v1.md, approved by John 14 Nov 23:35).
@@ -10337,6 +10385,9 @@ index 0000000..8a0b33f
 +
 +	/// a unit's state (Cobra only; anyone else reads ALERT)
 +	int state(const SavedBattleGame *save, const BattleUnit *u);
++	/// how far a shot from this weapon is heard (HUD v2 noise ring)
++	int shotRadius(const SavedBattleGame *save, const BattleItem *weapon, const BattleItem *ammo);
++	int radius(const SavedBattleGame *save, const std::string &kind);
 +	bool asleep(const SavedBattleGame *save, const BattleUnit *u);
 +	/// asleep, on post, patrolling or wary: what a silent takedown works on
 +	bool unaware(const SavedBattleGame *save, const BattleUnit *u);
