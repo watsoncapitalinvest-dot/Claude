@@ -39,3 +39,45 @@ c['preview']['script'] = [['move', 'NE', 2], ['gun', ['main']], ['tturn', 'SE'],
 cf['mobat'] = c
 for k, v in cf.items(): json.dump(v, open(f'cfg_{k}.json', 'w'), indent=1)
 print({k: (v['scale'], v['foot_frame']) for k, v in cf.items()})
+
+# ---- second pass (John 17:13 "get the rest to official size"; Triple T 3x3 John 17:16) ----
+# Scale = 0.95 x class side / model extent on the limiting axis, x 0.967 = the same calibration the first four got from their
+# 8-heading sprite measurement (VAMP 0.964, H.I.S.S. 0.969), so the whole set is filled the same way. Barrels may overhang.
+CAL = 0.967
+def fit(L, W, fl, fs):
+    a, b = 0.95 * fl / L, 0.95 * fs / W
+    return round(min(a, b) * CAL, 5), ('long' if a <= b else 'short')
+cf2 = {}
+s, lim = fit(16.0, 9.4, 2, 1)     # Ferret ATV 1x2; guns fixed
+c = base('ferret', s, 2, [1, 2], 'ferret', {'m0': []}, {'muzzle': [5.62, -3.56, 7.1, 1, 0, 0]}, 'Cobra',
+         R + f'Cobra Ferret ATV, class 1x2 (installed as size 2). Scale {s} (was 0.0406; {lim} axis limits).\n')
+c['guns'] = ['muzzle']; c['preview']['script'] = [['move', 'NE', 2], ['gun', ['muzzle']], ['wait', 6]]; cf2['ferret'] = c
+s, lim = fit(30.0, 13.34, 3, 2)   # Stinger 2x3; quad cannon turret
+c = base('stinger', s, 3, [2, 3], 'stinger', {'m0': ['GJTURRET']}, {'muzzle': [-1.64, 3.0, 14.0, 1, 0, 0]}, 'Cobra',
+         R + f'Cobra Stinger, class 2x3 (installed as size 3). Scale {s} (was 0.0433; {lim} axis limits).\n')
+c['turret'] = {'objs': ['GJTURRET'], 'pivot': [-7.48, 0.0, 6.86], 'muzzles': {'mg': [-1.64, 3.0, 14.0, 1, 0, 0]}, 'note': 'quad cannon turret'}
+c['preview']['script'] = [['move', 'NE', 2], ['gun', ['mg']], ['tturn', 'SE'], ['gun', ['mg']], ['tturn', 'NE'], ['wait', 6]]; cf2['stinger'] = c
+s, lim = fit(24.0, 11.0, 3, 2)    # Thunder Machine 2x3; rockets fixed (direction never confirmed, carried from ROSTER)
+c = base('thunder_machine', s, 3, [2, 3], 'thunder_machine', {'m0': []}, {'muzzle': [-7.4, 3.5, 7.0, 1, 0, 0]}, 'Dreadnok',
+         R + f'Dreadnok Thunder Machine, class 2x3 (installed as size 3). Scale {s} (was 0.0813; {lim} axis limits). Rocket direction never confirmed.\n')
+c['guns'] = ['muzzle']; c['preview']['script'] = [['move', 'NE', 2], ['gun', ['muzzle']], ['wait', 6]]; cf2['thunder_machine'] = c
+s, lim = fit(26.0, 16.02, 3, 2)   # Wolverine 2x3; missile turret, loaded
+W12 = [f'wrk{i:02d}' for i in range(1, 13)]; M12 = [f'mouth{i:02d}' for i in range(1, 13)]
+c = base('wolverine', s, 3, [2, 3], 'wolverine', {'m0': ['GJTURRET', 'wrk_fly'] + W12 + M12}, {'muzzle': [-3.55, 6.43, 14.73, 1, 0, 0]}, 'Joe',
+         R + f'Wolverine, class 2x3 (installed as size 3). Scale {s} (was 0.075; {lim} axis limits). Turret drawn loaded (12 missiles).\n')
+c['turret'] = {'objs': ['GJTURRET'] + W12 + M12, 'pivot': [-7.47, 0.0, 7.48], 'muzzles': {'rack': [-3.55, 6.43, 14.73, 1, 0, 0]}, 'note': 'missile turret'}
+c['preview']['script'] = [['move', 'NE', 2], ['gun', ['rack']], ['tturn', 'SE'], ['tturn', 'NE'], ['wait', 6]]; cf2['wolverine'] = c
+s, lim = fit(33.01, 17.34, 5, 4)  # Mauler 4x5 (barrel included, as for the MOBAT)
+c = base('mauler', s, 5, [4, 5], 'mauler', {'m0': ['GJTURRET01', 'GJBARREL01']}, {'muzzle': [17.51, 0.0, 13.57, 1, 0, 0]}, 'Joe',
+         R + f'Mauler M.B.T., class 4x5 (installed as size 5). Scale {s} (was 0.1048; {lim} axis limits).\n')
+c['turret'] = {'objs': ['GJTURRET01', 'GJBARREL01'], 'pivot': [-2.1, 0.0, 8.73], 'muzzles': {'main': [17.51, 0.0, 13.57, 1, 0, 0]}, 'note': 'main gun turret'}
+c['preview']['script'] = [['move', 'NE', 2], ['gun', ['main']], ['tturn', 'SE'], ['gun', ['main']], ['tturn', 'NE'], ['wait', 6]]; cf2['mauler'] = c
+s, lim = fit(26.0, 20.34, 3, 3)   # Triple T 3x3 (John 17:16); pods empty left first  (rendered FOOT 5: taller than the 3x3 frame)
+c = base('triple_t', s, 5, [3, 3], 'triple_t', {'m2': [], 'm1': ['missile_L'], 'm0': ['missile_L', 'missile_R']},
+         {'missile_L': [5.5, 8.9, 10.78, 1, 0, 0], 'missile_R': [5.5, -8.9, 10.78, 1, 0, 0]}, 'Joe',
+         R + f'Triple T, class 3x3 (John 17:16). Scale {s} (was 0.05; {lim} axis limits). States m2..m0: left pod fires first.\n')
+c['launchers'] = [{'name': 'pod', 'muzzles': ['missile_L', 'missile_R'], 'fx_scale': 0.3, 'from_tube': True}]
+c['preview']['script'] = [['move', 'NE', 2], ['missile', 'missile_L', 'm1', 'pod', 10.78], ['missile', 'missile_R', 'm0', 'pod', 10.78], ['wait', 6]]
+cf2['triple_t'] = c
+for k, v in cf2.items(): json.dump(v, open(f'cfg_{k}.json', 'w'), indent=1)
+print({k: (v['scale'], v['foot_frame']) for k, v in cf2.items()})

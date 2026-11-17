@@ -6,6 +6,7 @@ cd /tmp && python3 -I /home/claude/rt/gen/render.py $C | tail -1
 [ $T = 1 ] && python3 -I /home/claude/rt/gen/turret.py $C | tail -1
 rm -rf $P; mkdir -p $P && echo '{}' > $P/manifest.json
 if [ $V = vamp_mk2 ]; then cd /home/claude/rt/veh && SHADE=detail LEVEL=1 python3 /home/claude/rt/vamp2/full_launch.py $V /home/claude/vb/vamp_mk2/vamp_mk2/vamp_mk2_clean.blend rocket_fly $SC $FT $P whole 0,0,0 -4.46,3.0,11.25 | tail -1; fi
+if [ $V = triple_t ]; then cd /home/claude/rt/veh && SHADE=detail LEVEL=1 python3 /home/claude/rt/vamp2/full_launch.py $V /home/claude/vb/triple_t/triple_t/triple_t_clean.blend missile_R $SC $FT $P whole 0,0,0 5.5,-8.9,10.78 | tail -1; fi
 cd /tmp && python3 -I /home/claude/rt/gen/pkg.py $C | tail -1
 [ $T = 1 ] && python3 -I /home/claude/rt/gen/turret_pkg.py $C | tail -c 120
 python3 -I /home/claude/rt/gen/preview.py $C && python3 -I /home/claude/rt/gen/turntable.py $P $V 0 $P/${V}_turntable.gif 1.2

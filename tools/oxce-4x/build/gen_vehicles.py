@@ -32,21 +32,21 @@ V = {
  "vamp_mk2":  dict(pack="vamp_mk2", asset="vamp_mk2", state="m4", side="joe", name="VAMP Mk II (rockets)", tu=70, hp=55, arm=(45, 35, 30, 20),
                   stores=["m3", "m2", "m1", "m0"], store_weapon="self", head="proj_vamp_mk2_head0",
                   wpn=("Rocket pod", 90, 3, 4, None, (85, 50), None, 1, 0, "bazooka_launch"), price=160000),
- "triple_t":  dict(pack="triple_t", asset="triple_t", state="m2", side="joe", name="Triple T", tu=64, hp=80, arm=(70, 55, 45, 40),
+ "triple_t":  dict(pack="triple_t", asset="triple_t", state="m2", side="joe", stores=["m1", "m0"], store_weapon="self", head="proj_triple_t_head0", name="Triple T", tu=64, hp=80, arm=(70, 55, 45, 40),
                   wpn=("Side-pod missiles", 100, 3, 2, None, (85, 50), None, 2, 0, "power_javelin_launch"), price=250000),
  "mobat":     dict(pack="mobat", asset="mobat", state="m0", side="joe", name="MOBAT", tu=56, hp=120, arm=(90, 75, 60, 60),
                   wpn=("Main gun", 90, 1, 20, (55, 33), (85, 70), None, 0, 4, "m2x_50cal"), price=420000),
- "wolverine": dict(pack="wolverine", asset="wolverine", state=None, side="joe", name="Wolverine", tu=60, hp=100, arm=(80, 65, 50, 50),
+ "wolverine": dict(pack="wolverine", asset="wolverine", state="m0", side="joe", name="Wolverine", tu=60, hp=100, arm=(80, 65, 50, 50),
                   wpn=("Missile rack", 80, 3, 6, None, (85, 55), None, 1, 0, "power_javelin_launch"), price=380000),
- "mauler":    dict(pack="mauler", asset="mauler", state=None, side="joe", name="Mauler M.B.T.", tu=50, hp=200, arm=(120, 100, 80, 80),
+ "mauler":    dict(pack="mauler", asset="mauler", state="m0", side="joe", name="Mauler M.B.T.", tu=50, hp=200, arm=(120, 100, 80, 80),
                   wpn=("Main gun", 110, 1, 20, (50, 35), (80, 70), None, 0, 4, "m2x_50cal"), price=600000),
- "stinger":   dict(pack="stinger", asset="stinger", state=None, side="cobra", name="Cobra Stinger", tu=72, hp=50, arm=(35, 25, 20, 15),
+ "stinger":   dict(pack="stinger", asset="stinger", state="m0", side="cobra", name="Cobra Stinger", tu=72, hp=50, arm=(35, 25, 20, 15),
                   wpn=("Quad cannon", 40, 1, 100, (45, 30), None, (35, 40, 4), 0, 4, "m60"), price=0),
  "hiss":      dict(pack="hiss", asset="hiss", state="m0", side="cobra", name="Cobra H.I.S.S.", tu=60, hp=110, arm=(85, 70, 55, 55),
                   wpn=("Twin cannon", 60, 1, 40, (50, 30), (80, 55), (40, 40, 2), 0, 4, "m2x_50cal"), price=0),
- "ferret":    dict(pack="ferret", asset="ferret", state=None, side="cobra", name="Cobra Ferret", tu=80, hp=30, arm=(20, 15, 10, 10),
+ "ferret":    dict(pack="ferret", asset="ferret", state="m0", side="cobra", name="Cobra Ferret", tu=80, hp=30, arm=(20, 15, 10, 10),
                   wpn=("Machine gun", 30, 1, 60, (50, 25), None, (35, 35, 3), 0, 2, "m60"), price=0),
- "thunder":   dict(pack="thunder_machine", asset="thunder_machine", state=None, side="cobra", name="Dreadnok Thunder Machine", tu=54, hp=110, arm=(70, 60, 50, 40),
+ "thunder":   dict(pack="thunder_machine", asset="thunder_machine", state="m0", side="cobra", name="Dreadnok Thunder Machine", tu=54, hp=110, arm=(70, 60, 50, 40),
                   wpn=("Rocket rack", 70, 3, 8, None, (75, 50), None, 1, 0, "bazooka_launch"), price=0), # Thunderclap tractor + trailer (VFACTORY, 17 Nov 2026; John's TechnoViper3D kit, 3x3 each). Canon weapon names from the kit blueprint.
  # Numbers are VFACTORY stand-ins scaled off the Mauler/MOBAT until STORY sets them; the ZPJ-79 copies STORY's arsenal item (power 110, 3, blast 2).
  "thunderclap_tractor": dict(pack="thunderclap_tractor", asset="thunderclap_tractor", state="m0", side="joe", name="Thunderclap Tractor", tu=50, hp=170, arm=(100, 80, 60, 60),
@@ -103,7 +103,10 @@ def cellOf(pic, anchor, n, dy=0, dark=1.0, alpha=1.0):
     if dark != 1.0: pic = ImageEnhance.Brightness(pic).enhance(dark)
     if alpha != 1.0:
         a = np.array(pic); a[..., 3] = (a[..., 3] * alpha).astype(np.uint8); pic = Image.fromarray(a, "RGBA")
-    c.alpha_composite(pic, (W // 2 - anchor[0], 112 * n - anchor[1] + dy))
+    x, y = W // 2 - anchor[0], 112 * n - anchor[1] + dy               # a render frame bigger than the cell (a tall model rendered in a
+    l, t = max(0, -x), max(0, -y)                                       # bigger FOOT frame) is cropped to the cell
+    pic = pic.crop((l, t, min(pic.width, W - x), min(pic.height, H - y)))
+    c.alpha_composite(pic, (x + l, y + t))
     return c
 
 def sheet(v, d):
@@ -257,7 +260,8 @@ for pj in PROJ:                                      # VFACTORY's own projectile
           "    files:", f"      {22 * 35}: Resources/VehiclesPrivate/{pj}.png"]
 for v, d in V.items():                               # full-size missile heads (engine gjBulletHeadSheet): frames 0-7 by screen direction
     if d.get("head"):
-        L += [f"  - type: GJ_HEAD_{v.upper()}.PCK", "    width: 1024", "    height: 128", "    subX: 128", "    subY: 128",
+        hs = Image.open(os.path.join(OUT, d["head"] + ".png")).height       # square frames, 128 or bigger for a long missile
+        L += [f"  - type: GJ_HEAD_{v.upper()}.PCK", f"    width: {8 * hs}", f"    height: {hs}", f"    subX: {hs}", f"    subY: {hs}",
               "    files:", f"      0: Resources/VehiclesPrivate/{d['head']}.png"]
 L += [""] + U + [""] + A + [""] + I + ["", "extraStrings:", "  - type: en-US", "    strings: &veh"] + [f'      {k}: "{s}"' for k, s in S2.items()] + ["  - type: en-GB", "    strings: *veh"]
 open(os.path.join(MOD, "Ruleset", "gijoe_vehicles.rul"), "w").write("\n".join(L) + "\n")
