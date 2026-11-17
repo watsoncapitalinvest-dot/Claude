@@ -29,7 +29,7 @@ OUT = arg('--out')
 DIRS = [int(x) for x in arg('--dirs', '1,2,3,4,5,6,7,8').split(',')]
 HAIR = arg('--hair', '')
 SHADE = '--shade' in sys.argv     # + <frame>_shade.png, the geometry pass for pen shading (factory_blend.py --shade)
-RES = (512, 640)
+RES = tuple(int(v) for v in arg('--res', '512x640').split('x'))   # --res 256x320: the half-size test (John 16 Nov 23:06)
 
 bpy.ops.wm.open_mainfile(filepath=BLEND)
 sc = bpy.context.scene
@@ -169,6 +169,8 @@ def id_mode(on):
 
 # ---- camera / render: identical to render_soldier.py ----
 sc.render.engine = 'CYCLES'; sc.cycles.device = 'CPU'
+# keep the scene between frames: identical pixels, ~1.9x faster (measured 16 Nov 23:15); --no-persist turns it off
+if '--no-persist' not in sys.argv: sc.render.use_persistent_data = True
 sc.render.use_freestyle = False
 sc.render.resolution_x, sc.render.resolution_y = RES; sc.render.resolution_percentage = 100
 sc.render.film_transparent = True; sc.render.image_settings.file_format = 'PNG'; sc.render.image_settings.color_mode = 'RGBA'
