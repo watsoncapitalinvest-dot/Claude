@@ -60,28 +60,29 @@ old = bpy.data.objects.get('GJTURRET')
 if old: bpy.data.objects.remove(old)
 g = Builder('GJTURRET')
 GZ = ZG + 0.55                                                    # gun axis height
-g.cyl_z(6.3, 0, ZD, GZ - 0.3, 0.38, 'dark')                       # pedestal up from the deck (fixed: the guns only fire forward, John 18:04)
-g.cyl_z(6.3, 0, GZ - 0.42, GZ - 0.3, 0.6, 'red')                  # mount plate
+g.box((6.6, 0, (ZD + GZ) / 2 - 0.2), (1.4, 1.0, GZ - ZD - 0.4), 'red')   # the red gun mount, a box up from the deck (fixed, John 18:04)
 g.box((6.6, 0, GZ), (1.6, 1.0, 0.7), 'dark')                      # cradle between the guns
 for s in (1, -1):
     y = 0.62 * s
     g.box((6.9, y, GZ), (1.8, 0.62, 0.72), 'red')                 # receiver (toy: red gun mount)
-    g.box((6.3, y, GZ + 0.45), (0.7, 0.4, 0.22), 'dark')          # drive motor on top
     for k in range(6):                                            # six barrels round the axis
         a = 2 * math.pi * k / 6; by, bz = y + 0.17 * math.cos(a), GZ + 0.17 * math.sin(a)
         g.cyl_x(7.8, 11.4, by, bz, 0.065, 'dark', seg=8)          # black barrels, as on the toy
         g.cyl_x(11.35, 11.45, by, bz, 0.04, 'bore', seg=6)
-    for xr in (8.6, 10.9):                                        # barrel clamps
-        g.cyl_x(xr - 0.12, xr + 0.12, y, GZ, 0.3, 'dark')
-    g.cyl_x(7.75, 8.05, y, GZ, 0.33, 'dark')                      # front of the receiver
-# the "Fast Fire" woven ammo belt (black toothed links, as on the toy): one wide drum of linked rounds wrapped round the middle of the gun armature, across
-# nearly the whole width between the front wheels (John 17:45 top view; instructions step 7A "wrap ammo belt around
-# middle of gun armature"). Links alternate black link / brass round so it reads as a belt, not a pipe.
-for i in range(30):
-    yy = -2.55 + i * 0.17
-    if i % 2: g.cyl_y(6.85, yy, yy + 0.17, GZ, 0.76, 'dark', seg=14)      # link teeth (toy: a black toothed chain)
-    else: g.cyl_y(6.85, yy, yy + 0.17, GZ, 0.64, 'bore', seg=14)
-g.cyl_y(6.85, -2.6, 2.6, GZ, 0.22, 'steel')                       # armature axle through it
+# the "Fast Fire" ammo belts (John 18:07 "the belts come into the gun in an arc and point forward"): one belt per gun,
+# rising from the deck at the outside in an arc and feeding into the side of the receiver; every round points forward (+X).
+for s in (1, -1):
+    P0 = Vector((0, s * 2.45, ZD + 0.2)); P1 = Vector((0, s * 2.25, GZ + 1.45)); P2 = Vector((0, s * 0.98, GZ + 0.05))
+    pts = [(1 - t) ** 2 * P0 + 2 * (1 - t) * t * P1 + t ** 2 * P2 for t in [i / 200 for i in range(201)]]
+    acc, nxt = 0.0, 0.0
+    for a_, b_ in zip(pts, pts[1:]):
+        acc += (b_ - a_).length
+        if acc >= nxt:
+            yy, zz = b_.y, b_.z
+            g.cyl_x(6.55, 6.97, yy, zz, 0.075, 'brass', seg=8)          # case
+            g.cyl_x(6.97, 7.17, yy, zz, 0.05, 'dark', seg=6)           # projectile, pointing forward
+            g.box((6.62, yy, zz), (0.16, 0.2, 0.2), 'dark')            # the link
+            nxt += 0.17
 print('GUN_AXIS_Z %.3f PIVOT 6.3 0 %.3f' % (GZ, ZD))
 g.done()
 
