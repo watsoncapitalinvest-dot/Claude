@@ -28,7 +28,7 @@ def troopers(lo, hi):
     return t
 
 def officer():
-    t = copy.deepcopy(trooper); t['lowQty'] = 1; t['highQty'] = 1; t['dQty'] = 0; t['customUnitType'] = 'STR_COBRA_OFFICER'
+    t = copy.deepcopy(trooper); t['lowQty'] = 1; t['highQty'] = 1; t['dQty'] = 0; t['customUnitType'] = 'STR_ROBBERY_LEADER'   # no Cobra officer unit exists yet; the robbery leader is the one with a leader's AI
     t['percentageOutsideUfo'] = 100
     return t
 

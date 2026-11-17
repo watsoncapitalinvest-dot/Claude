@@ -20,10 +20,10 @@ for line in rep:
         if re.search(r'\)\s+%s\s' % tag, line):
             events[month(line)].append((tag, line.split(tag, 1)[1].strip()))
 net = [l.split('] ', 2)[-1] for l in log if '[network]' in l or '[will]' in l or '[bludd]' in l]
-crimes = sum(1 for l in net if '-> ' in l and l.startswith('[network] crime'))
-strikes = sum(1 for l in net if '-> ' in l and l.startswith('[network] strike'))
+crimes = sum(1 for l in net if '-> ' in l and l.startswith('crime'))
+strikes = sum(1 for l in net if '-> ' in l and l.startswith('strike'))
 away = sum(1 for l in net if 'got away' in l)
-stopped = sum(1 for l in net if ' stopped' in l)
+stopped = sum(1 for l in net if ' stopped' in l and ' not stopped' not in l)
 print('FAST-FORWARD YEAR %s' % label)
 print(head)
 print('Crimes started %d, cell strikes %d; got away %d, stopped %d' % (crimes, strikes, away, stopped))
