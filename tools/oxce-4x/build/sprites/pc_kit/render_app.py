@@ -2,7 +2,8 @@
 # watch each model's progress, see the last finished sheet. Run from RENDER_APP.bat (py -3.13 render_app.py).
 import os, sys, json, time, shutil, subprocess, re
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, colorchooser
+import threading, glob
 
 KIT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, KIT)
@@ -104,7 +105,8 @@ class App:
         self.cur_lbl = ttk.Label(row, text='', style='Panel.TLabel'); self.cur_lbl.pack(side='left')
         self.bar = ttk.Progressbar(left, mode='determinate', maximum=100); self.bar.pack(fill='x', pady=(6, 8))
         btns = ttk.Frame(left, style='Panel.TFrame'); btns.pack(fill='x')
-        ttk.Button(btns, text='Re-render selected', command=self.rerender).pack(side='left')
+        ttk.Button(btns, text='Edit look…', command=self.edit_look).pack(side='left')
+        ttk.Button(btns, text='Re-render selected', command=self.rerender).pack(side='left', padx=6)
         ttk.Button(btns, text='Armed results', command=lambda: open_path(M.OUT)).pack(side='right')
         ttk.Button(btns, text='Civilian results', command=lambda: open_path(M.OUT_CIV)).pack(side='right', padx=6)
 
@@ -231,6 +233,14 @@ class App:
         return {'sheet': 'Rendering sheet  %d%%' % pct, 'assembling': 'Assembling sheet', 'extras': 'Extras  %d%%' % pct,
                 'starting': 'Starting'}[phase]
 
+    def edit_look(self):
+        n = self.selected()
+        if not n: messagebox.showinfo('Render Machine', 'Pick a model in the list first.'); return
+        if self.running() and current_model() == n:
+            messagebox.showinfo('Render Machine', '%s is rendering right now. Edit him when he is done, or Stop the machine.' % n); return
+        blend, civ = M.where(n)
+        if blend: LookEditor(self, n, blend, civ)
+
     # ---------------- extras
     def save_extras(self):
         f = os.path.join(KIT, 'extras.txt')
@@ -299,6 +309,9 @@ class App:
         except Exception as e:
             self.pv.configure(image='', text='Preview failed: %s' % e)
 
+    def refresh_now(self):
+        self.preview_name = None
+
     # ---------------- refresh loop
     def refresh(self):
         run = self.running()
@@ -325,6 +338,315 @@ class App:
         self.log.configure(state='normal'); self.log.delete('1.0', 'end'); self.log.insert('end', '\n'.join(read_log_tail()))
         self.log.see('end'); self.log.configure(state='disabled')
         self.root.after(3000, self.refresh)
+
+
+def worker_python():
+    py = os.environ.get('KIT_PY', sys.executable)
+    return py[:-len('pythonw.exe')] + 'python.exe' if py.lower().endswith('pythonw.exe') else py
+
+
+def run_quiet(cmd, log):
+    kw = {'creationflags': 0x08000000} if WIN else {}
+    with open(log, 'w') as f: return subprocess.call(cmd, stdout=f, stderr=subprocess.STDOUT, cwd=KIT, **kw)
+
+
+def hexcol(rgb): return '#%02x%02x%02x' % tuple(int(c) for c in rgb)
+
+
+GEAR_KINDS = [('bandana', 'Bandana', [118, 28, 30]), ('cap', 'Cap', [30, 30, 32]), ('dome', 'Helmet', [70, 76, 50]),
+              ('vest', 'Plate vest', [84, 90, 58]), ('sunglasses', 'Sunglasses', [16, 16, 18]), ('chain', 'Gold chain', [214, 170, 52])]
+ATTACH_NAMES = [('head', 'Head (hat, helmet)'), ('face', 'Face (mask, goggles)'), ('chest', 'Chest (vest, rig)'),
+                ('back', 'Back (pack, sword)'), ('hip_l', 'Left hip'), ('hip_r', 'Right hip'), ('hand_r', 'Right hand'),
+                ('hand_l', 'Left hand')]
+
+
+class LookEditor:
+    """Edit look: skins, colours, built-in gear and gear files for one model. Preview renders one picture;
+    Apply keeps the old file in _versions and the machine re-renders the model by itself."""
+
+    def __init__(self, app, name, blend, civ):
+        self.app, self.name, self.blend, self.civ = app, name, blend, civ
+        self.skins, self.colours, self.props_add, self.props_remove = {}, {}, [], []
+        self.gear_changed = False; self.img = None
+        w = self.w = tk.Toplevel(app.root); w.title('Edit look - ' + name); w.configure(bg=BG); w.geometry('1320x780'); w.minsize(1200, 700)
+        w.transient(app.root)
+        self.status = ttk.Label(w, text='Reading the model…'); self.status.pack(anchor='w', padx=16, pady=(12, 0))
+        self.body = ttk.Frame(w, padding=(16, 8)); self.body.pack(fill='both', expand=True)
+        self.busy(True)
+        self.bg(lambda: self.read(), self.build)
+
+    # -- plumbing
+    def bg(self, work, done):
+        def run():
+            try: r = work()
+            except Exception as e: r = e
+            self.w.after(0, lambda: done(r))
+        threading.Thread(target=run, daemon=True).start()
+
+    def busy(self, on, text=None):
+        if text: self.status.configure(text=text)
+        self.w.configure(cursor='watch' if on else '')
+
+    def dress(self, args, tag):
+        os.makedirs(M.WORK, exist_ok=True)
+        log = os.path.join(M.WORK, 'dress_%s_%s.log' % (self.name, tag))
+        c = run_quiet([worker_python(), os.path.join(KIT, 'dress.py'), '--blend', self.blend] + args, log)
+        txt = open(log, errors='replace').read()
+        if c != 0 or ('DRESS_OK' not in txt and 'DRESS_JSON' not in txt):
+            raise RuntimeError('the model editor failed - see %s' % log)
+        return txt
+
+    def read(self):
+        txt = self.dress(['--list'], 'list')
+        line = [l for l in txt.splitlines() if l.startswith('DRESS_JSON ')][0]
+        return json.loads(line[len('DRESS_JSON '):])
+
+    # -- the window
+    def build(self, info):
+        self.busy(False)
+        if isinstance(info, Exception): self.status.configure(text=str(info)); return
+        self.info = info
+        self.status.configure(text='Changes are only made when you press Apply. Preview shows them first.')
+        b = self.body; b.columnconfigure(0, weight=0); b.columnconfigure(1, weight=1); b.rowconfigure(0, weight=1)
+        left = ttk.Frame(b); left.grid(row=0, column=0, sticky='nsew', padx=(0, 12))
+        right = ttk.Frame(b, style='Panel.TFrame', padding=12); right.grid(row=0, column=1, sticky='nsew')
+
+        # skins & colours
+        sk = ttk.Frame(left, style='Panel.TFrame', padding=12); sk.pack(fill='x')
+        ttk.Label(sk, text='Skins and colours', style='H.TLabel').grid(row=0, column=0, columnspan=6, sticky='w', pady=(0, 6))
+        self.mat_lbl = {}
+        base = self.name
+        for r, m in enumerate([m for m in info['materials'] if m['image']], start=1):
+            short = re.sub(r'^civ_[^_]+_[^_]+_', '', m['name']) or m['name']
+            short = short.replace('body_', '').replace('Ch', 'Ch')
+            ttk.Label(sk, text=short, style='Panel.TLabel', width=16).grid(row=r, column=0, sticky='w')
+            lab = ttk.Label(sk, text=self.mat_text(m), style='Panel.TLabel', width=30); lab.grid(row=r, column=1, sticky='w')
+            self.mat_lbl[m['name']] = (lab, m)
+            ttk.Button(sk, text='New skin…', command=lambda m=m: self.pick_skin(m)).grid(row=r, column=2, padx=2, pady=2)
+            ttk.Button(sk, text='Colour…', command=lambda m=m: self.pick_colour(m)).grid(row=r, column=3, padx=2)
+            ttk.Button(sk, text='Original', command=lambda m=m: self.clear_colour(m)).grid(row=r, column=4, padx=2)
+            ttk.Button(sk, text='Template…', command=lambda m=m: self.save_template(m)).grid(row=r, column=5, padx=2)
+
+        # built-in gear
+        g = ttk.Frame(left, style='Panel.TFrame', padding=12); g.pack(fill='x', pady=(12, 0))
+        ttk.Label(g, text='Built-in gear', style='H.TLabel').grid(row=0, column=0, columnspan=6, sticky='w', pady=(0, 6))
+        now = {x[0]: x[1:] for x in info['gear'] if x and x[0] != 'unknown'}
+        self.gear_on, self.gear_col = {}, {}
+        for i, (k, label, dflt) in enumerate(GEAR_KINDS):
+            v = tk.BooleanVar(value=k in now); self.gear_on[k] = v
+            col = list(now[k][0]) if k in now and now[k] else dflt; self.gear_col[k] = col
+            r, c = 1 + i // 3, (i % 3) * 2
+            ttk.Checkbutton(g, text=label, variable=v, command=self.mark_gear).grid(row=r, column=c, sticky='w', pady=2)
+            sw = tk.Button(g, bg=hexcol(col), width=3, relief='flat', command=lambda k=k: self.pick_gear_colour(k))
+            sw.grid(row=r, column=c + 1, sticky='w', padx=(2, 14)); self.gear_col[k + '_btn'] = sw
+        if any(x and x[0] == 'unknown' for x in info['gear']):
+            ttk.Label(g, text='This model has gear from before the editor. Ticking a box replaces all of it.', style='Panel.TLabel',
+                      foreground=WARN).grid(row=4, column=0, columnspan=6, sticky='w', pady=(6, 0))
+
+        # gear files
+        gf = ttk.Frame(left, style='Panel.TFrame', padding=12); gf.pack(fill='both', expand=True, pady=(12, 0))
+        hdr = ttk.Frame(gf, style='Panel.TFrame'); hdr.pack(fill='x')
+        ttk.Label(hdr, text='Gear files (.glb .fbx .obj)', style='H.TLabel').pack(side='left')
+        ttk.Button(hdr, text='+ Add gear file…', command=self.add_prop).pack(side='right')
+        self.props_box = tk.Listbox(gf, height=5, bg='#121418', fg=FG, relief='flat', selectbackground='#3a3f4b')
+        self.props_box.pack(fill='both', expand=True, pady=(8, 4))
+        ttk.Button(gf, text='Remove selected', command=self.remove_prop).pack(anchor='w')
+        self.refresh_props()
+
+        # right: preview + actions
+        ttk.Label(right, text='Preview', style='H.TLabel').pack(anchor='w')
+        self.pv = tk.Label(right, bg='#2a2d35', fg=DIM, text='Press Preview to see the changes\n(about 20-40 seconds)', height=16)
+        self.pv.pack(fill='both', expand=True, pady=(8, 10))
+        acts = ttk.Frame(right, style='Panel.TFrame'); acts.pack(fill='x')
+        ttk.Button(acts, text='Preview', command=self.preview).pack(side='left')
+        ttk.Button(acts, text='Apply', style='Go.TButton', command=self.apply).pack(side='left', padx=6)
+        acts2 = ttk.Frame(right, style='Panel.TFrame'); acts2.pack(fill='x', pady=(6, 0))
+        ttk.Button(acts2, text='Undo last change', command=self.undo).pack(side='left')
+        ttk.Button(acts2, text='Close', command=self.w.destroy).pack(side='right')
+
+    def mat_text(self, m):
+        n = m['name']; parts = []
+        if n in self.skins: parts.append('new skin: ' + os.path.basename(self.skins[n]))
+        else: parts.append(m['image'] or '')
+        if n in self.colours: parts.append('colour %s' % (hexcol(self.colours[n]) if self.colours[n] else 'original'))
+        elif m['tinted']: parts.append('recoloured')
+        return '  ·  '.join(parts)
+
+    def update_mat(self, m):
+        self.mat_lbl[m['name']][0].configure(text=self.mat_text(m))
+
+    def pick_skin(self, m):
+        f = filedialog.askopenfilename(parent=self.w, title='New skin for ' + m['name'],
+                                       filetypes=[('Image', '*.png *.jpg *.jpeg *.tga *.bmp')])
+        if not f: return
+        self.skins[m['name']] = f
+        if m['tinted'] and m['name'] not in self.colours and messagebox.askyesno(
+                'Edit look', 'This part is recoloured. Show the new skin in its own colours instead?', parent=self.w):
+            self.colours[m['name']] = None
+        self.update_mat(m)
+
+    def pick_colour(self, m):
+        c = colorchooser.askcolor(parent=self.w, title='Colour for ' + m['name'])
+        if c and c[0]: self.colours[m['name']] = [int(x) for x in c[0]]; self.update_mat(m)
+
+    def clear_colour(self, m):
+        self.colours[m['name']] = None; self.update_mat(m)
+
+    def save_template(self, m):
+        f = filedialog.asksaveasfilename(parent=self.w, title='Save skin template', defaultextension='.png',
+                                         initialfile='%s_%s_template.png' % (self.name, re.sub(r'[^A-Za-z0-9]+', '_', m['name'])))
+        if not f: return
+        self.busy(True, 'Making the template…')
+        self.bg(lambda: self.dress(['--template', m['name'], '--out', f], 'template'),
+                lambda r: (self.busy(False, str(r) if isinstance(r, Exception) else
+                                     'Template saved: %s - give it to the AI with the note: keep every part inside its magenta outlines' % f)))
+
+    def mark_gear(self): self.gear_changed = True
+
+    def pick_gear_colour(self, k):
+        c = colorchooser.askcolor(parent=self.w, color=hexcol(self.gear_col[k]), title='Colour')
+        if c and c[0]:
+            self.gear_col[k] = [int(x) for x in c[0]]; self.gear_col[k + '_btn'].configure(bg=hexcol(self.gear_col[k]))
+            self.gear_changed = True
+
+    def refresh_props(self):
+        self.props_box.delete(0, 'end')
+        for p in self.info.get('props', []):
+            mark = '  (will be removed)' if p['name'] in self.props_remove else ''
+            self.props_box.insert('end', '%s - %s%s' % (p['name'].replace('Prop_', ''), p.get('attach'), mark))
+        for p in self.props_add:
+            self.props_box.insert('end', '%s - %s  (new)' % (os.path.basename(p['file']), p['attach']))
+
+    def remove_prop(self):
+        sel = self.props_box.curselection()
+        if not sel: return
+        i = sel[0]; have = self.info.get('props', [])
+        if i < len(have): self.props_remove.append(have[i]['name'])
+        else: self.props_add.pop(i - len(have))
+        self.refresh_props()
+
+    def add_prop(self):
+        f = filedialog.askopenfilename(parent=self.w, title='Gear file', filetypes=[('3D model', '*.glb *.gltf *.fbx *.obj')])
+        if f: PropDialog(self, f)
+
+    def spec(self):
+        sp = {'skins': self.skins, 'colours': self.colours, 'props_add': self.props_add, 'props_remove': self.props_remove}
+        if self.gear_changed:
+            sp['gear'] = []
+            for k, _, _ in GEAR_KINDS:
+                if self.gear_on[k].get():
+                    c = self.gear_col[k]; sp['gear'].append([k, c, [int(x * 0.8) for x in c]] if k == 'vest' else [k, c])
+        return sp
+
+    def write_spec(self):
+        p = os.path.join(M.WORK, 'dress_%s_spec.json' % self.name); json.dump(self.spec(), open(p, 'w'), indent=1); return p
+
+    # -- preview / apply / undo
+    def preview(self):
+        self.busy(True, 'Preview: applying the changes to a copy and rendering one picture…')
+        def work():
+            out = os.path.join(M.WORK, 'preview_%s.blend' % self.name)
+            self.dress(['--spec', self.write_spec(), '--out', out], 'preview')
+            stills, walks = M.unpack()
+            stand = M.civ_stills(stills)['stand'] if self.civ else stills['stand']
+            fr = os.path.join(M.WORK, 'preview_%s' % self.name); shutil.rmtree(fr, ignore_errors=True)
+            c = run_quiet([worker_python(), os.path.join(KIT, 'build', 'sprites', 'render_char.py'), '--blend', out,
+                           '--clips', 'stand=%s,walk=%s' % (stand, walks['walk']), '--frames', '1', '--dirs', '2,5,7', '--out', fr],
+                          os.path.join(M.WORK, 'preview_%s.log' % self.name))
+            if c: raise RuntimeError('preview render failed - see preview_%s.log in render_work' % self.name)
+            return fr
+        self.bg(work, self.show)
+
+    def show(self, fr):
+        self.busy(False)
+        if isinstance(fr, Exception): self.status.configure(text=str(fr)); return
+        from PIL import Image, ImageTk
+        cells = []
+        for clip in ('stand', 'walk'):
+            for d in (2, 5, 7):
+                p = os.path.join(fr, clip, 'd%d_f00_beauty.png' % d)
+                if os.path.exists(p): cells.append(Image.open(p).convert('RGBA'))
+        box = None
+        for c in cells:
+            bb = c.getbbox()
+            if bb: box = bb if not box else (min(box[0], bb[0]), min(box[1], bb[1]), max(box[2], bb[2]), max(box[3], bb[3]))
+        box = box or (0, 0, 512, 640); cw, ch = box[2] - box[0], box[3] - box[1]
+        sheet = Image.new('RGBA', (cw * 3, ch * 2), (42, 45, 53, 255))
+        for i, c in enumerate(cells): sheet.alpha_composite(c.crop(box), ((i % 3) * cw, (i // 3) * ch))
+        self.w.update_idletasks(); W = max(300, self.pv.winfo_width() - 8); H = max(300, self.pv.winfo_height() - 8)
+        sc = min(W / sheet.width, H / sheet.height); sheet = sheet.resize((int(sheet.width * sc), int(sheet.height * sc)), Image.LANCZOS)
+        self.img = ImageTk.PhotoImage(sheet); self.pv.configure(image=self.img, text='')
+        self.status.configure(text='Preview ready (top: standing, bottom: walking; three directions). Apply to keep it.')
+
+    def apply(self):
+        if not (self.skins or self.colours or self.props_add or self.props_remove or self.gear_changed):
+            messagebox.showinfo('Edit look', 'Nothing changed yet.', parent=self.w); return
+        if self.app.running() and current_model() == self.name:
+            messagebox.showinfo('Edit look', 'He started rendering meanwhile - Stop the machine first.', parent=self.w); return
+        self.busy(True, 'Applying… (the old version is kept)')
+        def work():
+            vd = os.path.join(os.path.dirname(self.blend), '_versions'); os.makedirs(vd, exist_ok=True)
+            shutil.copy2(self.blend, os.path.join(vd, '%s_%s.blend' % (self.name, time.strftime('%Y%m%d-%H%M%S'))))
+            tmp = self.blend + '.new.blend'
+            self.dress(['--spec', self.write_spec(), '--out', tmp], 'apply')
+            os.replace(tmp, self.blend); return True
+        def done(r):
+            self.busy(False)
+            if isinstance(r, Exception): self.status.configure(text=str(r)); return
+            M.log('look edited:', self.name, json.dumps(self.spec())[:300])
+            self.skins, self.colours, self.props_add, self.props_remove, self.gear_changed = {}, {}, [], [], False
+            self.status.configure(text='Applied. %s is queued and the machine re-renders him by itself (if it is running).' % self.name)
+            self.bg(lambda: self.read(), self.reload)
+        self.bg(work, done)
+
+    def reload(self, info):
+        if isinstance(info, Exception): return
+        for c in self.body.winfo_children(): c.destroy()
+        self.build(info); self.app.refresh_now()
+
+    def undo(self):
+        vd = os.path.join(os.path.dirname(self.blend), '_versions')
+        vs = sorted(glob.glob(os.path.join(vd, self.name + '_*.blend')))
+        if not vs: messagebox.showinfo('Edit look', 'No earlier version of %s.' % self.name, parent=self.w); return
+        if not messagebox.askyesno('Edit look', 'Go back to the version saved %s?' % os.path.basename(vs[-1])[len(self.name) + 1:-6], parent=self.w): return
+        shutil.copy2(self.blend, self.blend + '.undone'); shutil.move(vs[-1], self.blend); os.utime(self.blend, None)
+        os.remove(self.blend + '.undone')
+        M.log('look undone:', self.name, 'back to', os.path.basename(vs[-1]))
+        self.status.configure(text='Back to the earlier version - he is queued to re-render.')
+        self.bg(lambda: self.read(), self.reload)
+
+
+class PropDialog:
+    """Where a gear file goes and how it sits: attach point, size, nudges, turns."""
+
+    def __init__(self, ed, f):
+        self.ed, self.f = ed, f
+        w = self.w = tk.Toplevel(ed.w); w.title('Gear file - ' + os.path.basename(f)); w.configure(bg=PANEL); w.transient(ed.w)
+        fr = ttk.Frame(w, style='Panel.TFrame', padding=14); fr.pack(fill='both', expand=True)
+        ttk.Label(fr, text=os.path.basename(f), style='H.TLabel').grid(row=0, column=0, columnspan=2, sticky='w', pady=(0, 8))
+        ttk.Label(fr, text='Goes on', style='Panel.TLabel').grid(row=1, column=0, sticky='w')
+        self.attach = ttk.Combobox(fr, values=[n for _, n in ATTACH_NAMES], state='readonly', width=24); self.attach.current(0)
+        self.attach.grid(row=1, column=1, sticky='w', pady=4)
+        self.vars = {}
+        rows = [('size', 'Size', 0.3, 3.0, 1.0), ('up', 'Up / down (cm)', -30, 30, 0), ('forward', 'Forward / back (cm)', -30, 30, 0),
+                ('side', 'Left / right (cm)', -30, 30, 0), ('turn', 'Turn (deg)', -180, 180, 0), ('tilt', 'Tilt (deg)', -180, 180, 0),
+                ('roll', 'Roll (deg)', -180, 180, 0)]
+        for i, (k, label, lo, hi, d) in enumerate(rows, start=2):
+            ttk.Label(fr, text=label, style='Panel.TLabel').grid(row=i, column=0, sticky='w')
+            v = tk.DoubleVar(value=d); self.vars[k] = v
+            tk.Scale(fr, variable=v, from_=lo, to=hi, resolution=0.05 if k == 'size' else 1, orient='horizontal', length=260,
+                     bg=PANEL, fg=FG, highlightthickness=0, troughcolor='#2c3039').grid(row=i, column=1, sticky='w')
+        b = ttk.Frame(fr, style='Panel.TFrame'); b.grid(row=20, column=0, columnspan=2, sticky='e', pady=(10, 0))
+        ttk.Button(b, text='Add', style='Go.TButton', command=self.ok).pack(side='left')
+        ttk.Button(b, text='Cancel', command=w.destroy).pack(side='left', padx=6)
+        ttk.Label(fr, text='Add it, Preview, then adjust: remove it and add again with new numbers.', style='Panel.TLabel',
+                  foreground=DIM).grid(row=21, column=0, columnspan=2, sticky='w', pady=(8, 0))
+
+    def ok(self):
+        a = ATTACH_NAMES[[n for _, n in ATTACH_NAMES].index(self.attach.get())][0]
+        p = {'file': self.f, 'attach': a}
+        p.update({k: round(v.get(), 2) for k, v in self.vars.items()})
+        self.ed.props_add.append(p); self.ed.refresh_props(); self.w.destroy()
 
 
 if __name__ == '__main__':

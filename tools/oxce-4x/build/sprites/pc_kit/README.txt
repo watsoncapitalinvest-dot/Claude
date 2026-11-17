@@ -8,7 +8,22 @@ THE APP (easiest)
                                  to open its results folder. Re-render selected = do that model again.
     Extra animations             tick the clips to make for each model (saved to extras.txt, used from the next model)
     Log                          the last lines of render_log.txt
+    Edit look…                   change a model without Blender (see EDIT LOOK below)
   Closing the window stops the machine. RENDER_MACHINE.bat still works without the app.
+
+EDIT LOOK (pick a model, press Edit look…)
+  Skins and colours   one row per part of the model:
+                        New skin…   any PNG/JPG - must be painted for THIS model's layout (use Template…)
+                        Colour…     recolour that part (keeps its shading)    Original = back to its own colours
+                        Template…   saves the current skin with the part's seams drawn in magenta: give that
+                                    to your graphics AI and ask it to paint inside the outlines
+  Built-in gear       bandana, cap, helmet, plate vest, sunglasses, gold chain - tick, pick a colour
+  Gear files          + Add gear file… : a .glb .gltf .fbx or .obj (e.g. from your AI). Pick where it goes
+                      (head, face, chest, back, hips, hands); it is sized to that part and moves with him.
+                      Size / up / forward / side / turn / tilt / roll to adjust. Remove selected to take one off.
+  Preview             applies everything to a copy and renders him standing and walking from 3 sides (20-40 s)
+  Apply               keeps the old file in _versions\, saves the change; the machine re-renders him by itself
+  Undo last change    back to the previous saved version (and re-render)
 
 START IT
   Double-click RENDER_MACHINE.bat and leave the window open. It watches two folders:
