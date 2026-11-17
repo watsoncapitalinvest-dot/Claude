@@ -88,5 +88,13 @@ c = base('triple_t', s, 5, [3, 3], 'triple_t', {'m2': [], 'm1': ['missile_L'], '
 c['launchers'] = [{'name': 'pod', 'muzzles': ['missile_L', 'missile_R'], 'fx_scale': 0.3, 'from_tube': True}]
 c['preview']['script'] = [['move', 'NE', 2], ['missile', 'missile_L', 'm1', 'pod', 10.78], ['missile', 'missile_R', 'm0', 'pod', 10.78], ['wait', 6]]
 cf2['triple_t'] = c
+# H.I.S.S. rocket-rack variant (John 18:41: Cobra research upgrade): the original Generals rack, 4 rockets, class 3x4
+RM = {'rk1': [1.297, 1.649, 18.912, 1, 0, 0], 'rk2': [1.297, -1.649, 18.912, 1, 0, 0]}
+c = base('hiss_rack', round(0.0672 * 1.89, 5), 6, [3, 4], 'hiss_rack', {'m0': ['GJTURRET01']}, dict(RM), 'Cobra',
+         R + 'Cobra H.I.S.S. rocket-rack variant (Cobra research upgrade, John 18:41), class 3x4 (size 4). Scale 0.12701. The Generals rocket rack, 4 rockets; the flying rocket is one cut from the rack (vfactory/hiss/cut_rack_rocket.py).\n')
+c['turret'] = {'objs': ['GJTURRET01'], 'pivot': [-4.27, 0.0, 13.42], 'muzzles': dict(RM), 'note': 'rocket rack, 4 rockets'}
+c['launchers'] = [{'name': 'rkt', 'muzzles': ['rk1', 'rk2'], 'fx_scale': 0.25, 'from_tube': True}]
+c['preview']['script'] = [['move', 'NE', 2], ['missile', 'rk1', 'm0', 'rkt', 18.9], ['missile', 'rk2', 'm0', 'rkt', 18.9], ['wait', 6]]
+cf2['hiss_rack'] = c
 for k, v in cf2.items(): json.dump(v, open(f'cfg_{k}.json', 'w'), indent=1)
 print({k: (v['scale'], v['foot_frame']) for k, v in cf2.items()})

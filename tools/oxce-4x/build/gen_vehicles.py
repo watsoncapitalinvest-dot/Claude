@@ -44,6 +44,8 @@ V = {
                   wpn=("Ground-to-air rockets", 80, 3, 3, None, (80, 55), None, 1, 0, "bazooka_launch"), price=0, head="proj_stinger_head0"),  # file card (John 18:37 rework); was "Quad cannon". 3 rockets on the rack; stand-in numbers
  "hiss":      dict(pack="hiss", asset="hiss", state="m0", side="cobra", name="Cobra H.I.S.S.", tu=60, hp=110, arm=(85, 70, 55, 55),
                   wpn=("Twin 30mm automatic cannons", 60, 1, 40, (50, 30), (80, 55), (40, 40, 2), 0, 4, "m2x_50cal"), price=0, head="proj_thunder_round_head0"),  # blueprint name (John 18:29 rework); same 30mm round as the Thunder Machine
+ "hiss_rack": dict(pack="hiss_rack", asset="hiss_rack", state="m0", side="cobra", name="Cobra H.I.S.S. (rocket rack)", tu=60, hp=110, arm=(85, 70, 55, 55),
+                  wpn=("H.I.S.S. rocket rack", 90, 3, 4, None, (80, 55), None, 1, 0, "bazooka_launch"), price=0, head="proj_hiss_rack_head0"),  # Cobra research upgrade (John 18:41); research gate + deployment are STORY/BUILD's; stand-in numbers
  "ferret":    dict(pack="ferret", asset="ferret", state="m0", side="cobra", name="Cobra Ferret", tu=80, hp=30, arm=(20, 15, 10, 10),
                   wpn=("Machine gun", 30, 1, 60, (50, 25), None, (35, 35, 3), 0, 2, "m60"), price=0),
  "thunder":   dict(pack="thunder_machine", asset="thunder_machine", state="m0", head="proj_thunder_round_head0", side="cobra", name="Dreadnok Thunder Machine", tu=54, hp=110, arm=(70, 60, 50, 40),

@@ -6,7 +6,11 @@ import bpy, bmesh, sys, numpy as np
 IN, OUT = sys.argv[-2:]; bpy.ops.wm.open_mainfile(filepath=IN)
 t = bpy.data.objects['GJTURRET']; M = t.matrix_world
 bm = bmesh.new(); bm.from_mesh(t.data); bm.transform(M)
-cs = [f for f in bm.faces if 2.3 < f.calc_center_median().y < 5.1 and f.calc_center_median().z > 12.45 and abs(f.normal.z) < 0.97 or (2.3 < f.calc_center_median().y < 5.1 and f.calc_center_median().z > 13.0)]
+AX_Y, AX_Z, RMAX = 3.665, 13.611, 1.45                              # the rocket's own axis (through its tip) and fin span
+def near(f):                                                         # John 18:43 "clean and accurate": nothing of the rack
+    c = f.calc_center_median(); return -13.4 < c.x and ((c.y - AX_Y) ** 2 + (c.z - AX_Z) ** 2) ** 0.5 < RMAX and \
+        all(((v.co.y - AX_Y) ** 2 + (v.co.z - AX_Z) ** 2) ** 0.5 < RMAX + 0.15 for v in f.verts)
+cs = [f for f in bm.faces if near(f)]
 keep = set(cs); bmesh.ops.delete(bm, geom=[f for f in bm.faces if f not in keep], context='FACES')
 me = bpy.data.meshes.new('rocket_fly'); bm.to_mesh(me); bm.free()
 for m in t.data.materials: me.materials.append(m)
