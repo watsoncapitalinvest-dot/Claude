@@ -5,8 +5,8 @@
 import os, sys, glob, json, time, shutil, zipfile, subprocess
 
 KIT = os.path.dirname(os.path.abspath(__file__))
-BASE = r'C:\GI-Joe-Silent-Storm\GIJoe_XCOM_4x'
-DOWN = os.path.join(os.path.expanduser('~'), 'Downloads')
+BASE = os.environ.get('KIT_BASE', r'C:\GI-Joe-Silent-Storm\GIJoe_XCOM_4x')
+DOWN = os.environ.get('KIT_DOWNLOADS', os.path.join(os.path.expanduser('~'), 'Downloads'))
 CARTEL = os.path.join(BASE, 'Reference', 'cartel')            # the nine .blend + clips_17nov.blend
 UNITS = os.path.join(BASE, 'XCom UFO Defense', 'XCOM', 'UNITS')
 WORK = os.path.join(BASE, 'render_work')                         # frames, logs; safe to delete afterwards
@@ -18,7 +18,7 @@ HAIR = {'cartel_foot_a': '16,18,22', 'cartel_foot_b': '50,35,32', 'cartel_foot_c
         'cartel_heavy_a': '166,126,93', 'cartel_heavy_b': '16,18,22', 'cartel_heavy_c': '48,46,39',
         'cartel_boss_a': '16,15,14', 'cartel_boss_b': '48,46,39', 'cartel_boss_c': '16,15,14'}
 PACKS = ['Basic Shooter Pack', 'Pistol_Handgun Locomotion Pack', 'Rifle 8-Way Locomotion Pack', 'Action Adventure Pack']
-EXTRAS = ['cast_spell_hold', 'run', 'run_b', 'run_forward', 'fast_run', 'pistol_run', 'injured_run', 'run_up_stairs',
+EXTRAS = os.environ['KIT_EXTRAS'].split(',') if os.environ.get('KIT_EXTRAS') else ['cast_spell_hold', 'run', 'run_b', 'run_forward', 'fast_run', 'pistol_run', 'injured_run', 'run_up_stairs',
           'walk_up_stairs', 'walk_down_stairs']
 
 
@@ -28,12 +28,21 @@ def log(*a):
     with open(os.path.join(WORK, 'render_log.txt'), 'a') as f: f.write(line + '\n')
 
 
-def find_blender():
-    if os.environ.get('BLENDER') and os.path.exists(os.environ['BLENDER']): return os.environ['BLENDER']
-    c = sorted(glob.glob(r'C:\Program Files\Blender Foundation\Blender*\blender.exe')) + \
-        sorted(glob.glob(os.path.join(KIT, 'blender*', 'blender.exe'))) + \
-        sorted(glob.glob(os.path.join(DOWN, 'blender-*', 'blender.exe')))
-    return c[-1] if c else None
+def find_renderer():
+    """The command that runs render_char.py: this Python when it has the bpy module (the PC was set up with
+    py -3.13 + bpy 5.3.0 on 17 Nov), else a Blender install."""
+    try:
+        import bpy  # noqa: F401
+        return [sys.executable]
+    except ImportError:
+        pass
+    if os.environ.get('BLENDER') and os.path.exists(os.environ['BLENDER']): return [os.environ['BLENDER'], '-b', '--factory-startup', '--python']
+    c = sorted(glob.glob(r'C:\Program Files\Blender Foundation\Blender*\blender.exe'))
+    return [c[-1], '-b', '--factory-startup', '--python'] if c else None
+
+
+def rc_cmd(R, rc, args):
+    return R + [rc] + (['--'] if len(R) > 1 else []) + args
 
 
 def unpack():
@@ -83,9 +92,9 @@ def main():
     os.makedirs(WORK, exist_ok=True); os.makedirs(OUT, exist_ok=True); os.makedirs(os.path.join(WORK, 'sheets16'), exist_ok=True)
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     names = args or [n for n in HAIR if os.path.exists(os.path.join(CARTEL, n + '.blend'))]
-    blender = find_blender()
-    if not blender: sys.exit('Blender not found. Install Blender 5.x from blender.org (or set BLENDER=path\\to\\blender.exe).')
-    log('blender:', blender); log('men:', ' '.join(names))
+    R = find_renderer()
+    if not R: sys.exit('No renderer: run this with py -3.13 (bpy installed by SETUP_v3.bat), or install Blender 5.x.')
+    log('renderer:', ' '.join(R)); log('men:', ' '.join(names))
     stills, walks = unpack()
     rc = os.path.join(SPRITES, 'render_char.py'); asm = os.path.join(SPRITES, 'assemble_sheet.py')
     if '--extras-only' not in sys.argv:
@@ -93,8 +102,8 @@ def main():
             t0 = time.time(); log('==', n, 'start')
             fr = os.path.join(WORK, 'fr16_' + n); shutil.rmtree(fr, ignore_errors=True)
             clips = ','.join('%s=%s' % kv for kv in list(stills.items()) + list(walks.items()))
-            c = run([blender, '-b', '--factory-startup', '--python', rc, '--', '--blend', os.path.join(CARTEL, n + '.blend'),
-                     '--clips', clips, '--frames', '8', '--clipframes', 'walk=16,pwalk=16,swalk=16,ewalk=16', '--out', fr],
+            c = run(rc_cmd(R, rc, ['--blend', os.path.join(CARTEL, n + '.blend'),
+                     '--clips', clips, '--frames', '8', '--clipframes', 'walk=16,pwalk=16,swalk=16,ewalk=16', '--out', fr]),
                     os.path.join(WORK, n + '.render.log'))
             if c: log('RENDER FAILED', n, '- see', n + '.render.log'); continue
             env = dict(os.environ, W16='1', HAIR=HAIR.get(n, ''), FOLD_IDS='', XCOM_UNITS=UNITS)
@@ -109,8 +118,8 @@ def main():
     for n in names:
         t0 = time.time(); fr = os.path.join(WORK, 'extras_' + n); shutil.rmtree(fr, ignore_errors=True)
         clips = ','.join('%s=%s#%s' % (e, lib, e) for e in EXTRAS)
-        c = run([blender, '-b', '--factory-startup', '--python', rc, '--', '--blend', os.path.join(CARTEL, n + '.blend'),
-                 '--clips', clips, '--frames', '16', '--out', fr], os.path.join(WORK, n + '.extras.log'))
+        c = run(rc_cmd(R, rc, ['--blend', os.path.join(CARTEL, n + '.blend'),
+                 '--clips', clips, '--frames', '16', '--out', fr]), os.path.join(WORK, n + '.extras.log'))
         if c: log('EXTRAS FAILED', n); continue
         strips(n, fr)
         log('extras', n, '%.1f min' % ((time.time() - t0) / 60))

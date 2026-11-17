@@ -1,8 +1,14 @@
 @echo off
-REM Cartel render on this PC. Needs Blender 5.x and Python 3 (python.org or the Python install manager).
+REM Cartel render on this PC, offline. Uses the Python 3.13 + Blender module that SETUP_v3.bat installed.
 cd /d "%~dp0"
-python -m pip install --quiet numpy pillow scipy
-python render_cartel.py %*
+py -3.13 -c "import bpy, numpy, scipy, PIL" 2>nul
+if errorlevel 1 (
+  echo Installing the render modules once - about 1 GB, a few minutes...
+  py install 3.13
+  py -3.13 -m pip install bpy==5.3.0 numpy scipy pillow
+)
+py -3.13 render_cartel.py %*
 echo.
 echo Finished. Sheets: C:\GI-Joe-Silent-Storm\GIJoe_XCOM_4x\Reference\sheets\cartel
+echo Log: C:\GI-Joe-Silent-Storm\GIJoe_XCOM_4x\render_work\render_log.txt
 pause

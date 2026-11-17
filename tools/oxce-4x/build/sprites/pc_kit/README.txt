@@ -1,9 +1,11 @@
 CARTEL RENDER KIT - runs on your PC, not in the cloud.
 
-WHAT YOU NEED (once)
-  1. Blender 5.x - blender.org/download. The normal installer is fine (it goes to C:\Program Files\Blender Foundation).
-  2. Python 3 - you downloaded the Python install manager today; run it, then open a new window and type:  python --version
-  The .bat installs numpy, pillow and scipy itself.
+WHAT YOU NEED
+  Nothing new. It uses the Python 3.13 + Blender module that SETUP_v3.bat (walk16_kit) installed on 17 Nov.
+  If that is ever missing, RENDER_CARTEL.bat installs it itself the first time (about 1 GB, a few minutes).
+
+TESTED (cloud, same scripts, your folder layout): cartel_boss_b -> 2048x8960, 896 anchors, 0 empty frames in 13.6 min;
+  walk_down_stairs extra in 1.4 min. Not yet run on this PC.
 
 WHAT IT USES (already on your PC)
   Reference\cartel\          the nine cartel_*.blend + clips_17nov.blend
@@ -13,7 +15,7 @@ WHAT IT USES (already on your PC)
 
 RUN
   Unzip this kit to C:\GI-Joe-Silent-Storm\GIJoe_XCOM_4x\render_kit and double-click RENDER_CARTEL.bat.
-  All nine, then the extra clips. Or from a command window in the kit folder:
+  All nine (about 12-15 min a man), then the extra clips (about 1.5 min a clip a man). Or from a command window in the kit folder:
     python render_cartel.py cartel_boss_a            one man
     python render_cartel.py --no-extras              sheets only
     python render_cartel.py --extras-only            only the runs + spell strips
