@@ -18437,10 +18437,10 @@ index 0000000..e57d835
 +}
 diff --git a/src/Geoscape/CobraNetwork.cpp b/src/Geoscape/CobraNetwork.cpp
 new file mode 100644
-index 0000000..2156124
+index 0000000..a07f51c
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.cpp
-@@ -0,0 +1,625 @@
+@@ -0,0 +1,662 @@
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5. See CobraNetwork.h.
 + *
@@ -18480,7 +18480,9 @@ index 0000000..2156124
 +#include "../Savegame/Region.h"
 +#include "../Savegame/GameTime.h"
 +#include "../Savegame/CobraEconomy.h"
++#include <algorithm>
 +#include <cmath>
++#include <cstdlib>
 +#include <sstream>
 +#include <vector>
 +
@@ -18911,6 +18913,25 @@ index 0000000..2156124
 +		net["willMonth"] = save->getMonthsPassed() + 1;
 +		willMonthly(game);
 +		bluddMonthly(game);
++		// piece 9, the M.A.R.S. standing order (John's rule, Act1Fixes item 8): Cobra always buys some guns - the larger of
++		// a flat 40 and a tenth of its funds - and they come in by road, a convoy the Joes can stop. A convoy that gets
++		// through delivers the materiel to the region; one that is stopped delivers nothing.
++		{
++			const int funds = save->getCobraEconomy().getFunds("STR_NORTH_AMERICA");
++			const int buy = std::min(funds, std::max(40, funds / 10));
++			AlienBase *dest = nullptr;
++			for (auto *b : *save->getAlienBases()) if (b->getSiteType() == DEPOT) { dest = b; break; }
++			if (!dest) for (auto *b : *save->getAlienBases()) if (b->getSiteType() == FRONT) { dest = b; break; }
++			if (buy >= 40 && dest)
++			{
++				if (MissionSite *ms = spawnSite(game, "STR_COBRA_CRIME_MISSION", "STR_COBRA_CONVOY", dest, "mars|" + siteKey(dest),
++					"STR_ALERT_CONVOY", townOf(save, dest, towns(mod)), ""))
++				{
++					save->getCobraEconomy().addFunds("STR_NORTH_AMERICA", -buy);
++					net["mars:" + std::to_string(ms->getId())] = buy;
++				}
++			}
++		}
 +	}
 +
 +	// 2, 3: the crimes and the strikes, rolled a day at a time (a monthly chance spread over thirty days)
@@ -18992,6 +19013,15 @@ index 0000000..2156124
 +	auto &net = save->getCobraNet();
 +	Region *rg = save->locateRegion(*site);
 +	if (rg) net["bold:" + rg->getRules()->getType()] = save->getMonthsPassed() + 1;   // bolder there next month
++	if (kind == "mars")
++	{
++		// the guns got through
++		const std::string mk = "mars:" + std::to_string(site->getId());
++		if (rg) save->getCobraEconomy().addMateriel(rg->getRules()->getType(), net[mk]);
++		Log(LOG_INFO) << "[network] the M.A.R.S. convoy got through near " << town << ": " << net[mk] << " materiel";
++		net.erase(mk);
++		return;
++	}
 +	if (kind == "strike") net["purse:" + key] += r.strikePayout;
 +	addLead(game, key, false);   // the getaway leaves a trail
 +	std::string title = kind == "strike" ? tr(game, "STR_EVENT_CELL_STRIKE_MISSED") : tr(game, "STR_EVENT_CRIME_STOPPED");
@@ -19017,6 +19047,13 @@ index 0000000..2156124
 +	if (parts.size() < 3) return;
 +	const std::string kind = parts[0], key = parts[1], town = parts[2];
 +	auto &net = save->getCobraNet();
++	if (kind == "mars")
++	{
++		net.erase("mars:" + std::to_string(siteId));   // stopped or not, a convoy that was fought delivers nothing
++		if (success) addLead(game, key, false);
++		Log(LOG_INFO) << "[network] the M.A.R.S. convoy near " << town << (success ? " was stopped" : " was fought");
++		return;
++	}
 +	if (success)
 +	{
 +		// stopped: the crew is lost and the site's next job waits a month; the leader taken alive gives the site away
@@ -20009,7 +20046,7 @@ index e609d3c..24a1628 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..a861ddc 100644
+index 6b4e79d..a0fbad0 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,15 @@
@@ -20060,18 +20097,20 @@ index 6b4e79d..a861ddc 100644
  #include "GraphsState.h"
  #include "FundingState.h"
  #include "ExtendedGeoscapeLinksState.h"
-@@ -80,6 +93,10 @@
+@@ -80,6 +93,12 @@
  #include "UfoLostState.h"
  #include "CraftPatrolState.h"
  #include "LowFuelState.h"
 +#include "CobraNetwork.h"
 +#include <fstream>
 +#include <sstream>
++#include <set>
++#include <map>
 +#include "../Savegame/CobraEconomy.h"
  #include "MultipleTargetsState.h"
  #include "ConfirmLandingState.h"
  #include "ItemsArrivingState.h"
-@@ -87,6 +104,7 @@
+@@ -87,6 +106,7 @@
  #include "DogfightErrorState.h"
  #include "DogfightExperienceState.h"
  #include "../Ufopaedia/Ufopaedia.h"
@@ -20079,7 +20118,7 @@ index 6b4e79d..a861ddc 100644
  #include "../Savegame/ResearchProject.h"
  #include "ResearchCompleteState.h"
  #include "../Mod/RuleResearch.h"
-@@ -103,6 +121,7 @@
+@@ -103,6 +123,7 @@
  #include "../Savegame/ItemContainer.h"
  #include "../Savegame/MissionSite.h"
  #include "../Savegame/AlienBase.h"
@@ -20087,7 +20126,7 @@ index 6b4e79d..a861ddc 100644
  #include "../Mod/RuleRegion.h"
  #include "MissionDetectedState.h"
  #include "AlienBaseState.h"
-@@ -157,41 +176,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -157,41 +178,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_bg->setX((_globe->getWidth() - _bg->getWidth()) / 2);
  	_bg->setY((_globe->getHeight() - _bg->getHeight()) / 2);
  
@@ -20271,7 +20310,7 @@ index 6b4e79d..a861ddc 100644
  
  	int slackingIndicatorOffset = _game->getMod()->getInterface("geoscape")->getElement("slackingIndicator")->custom;
  	_txtSlacking = new Text(59, 17, screenWidth - 61, screenHeight / 2 - 100 + slackingIndicatorOffset);
-@@ -207,6 +338,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -207,6 +340,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_dogfightTimer = new Timer(Options::dogfightSpeed);
  
  	_txtDebug = new Text(254, 32, 0, 0);
@@ -20279,7 +20318,7 @@ index 6b4e79d..a861ddc 100644
  	_cbxRegion = new ComboBox(this, 150, 16, 0, 36);
  	_cbxZone = new ComboBox(this, 48, 16, 154, 36);
  	_cbxArea = new ComboBox(this, 48, 16, 206, 36);
-@@ -251,6 +383,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -251,6 +385,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtMinSep, "text", "geoscape");
  	add(_txtSec, "text", "geoscape");
  	add(_txtWeekday, "text", "geoscape");
@@ -20290,7 +20329,7 @@ index 6b4e79d..a861ddc 100644
  	add(_txtDay, "text", "geoscape");
  	add(_txtMonth, "text", "geoscape");
  	add(_txtYear, "text", "geoscape");
-@@ -258,6 +394,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -258,6 +396,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtTraining, "trainingIndicator", "geoscape");
  
  	add(_txtDebug, "text", "geoscape");
@@ -20298,7 +20337,7 @@ index 6b4e79d..a861ddc 100644
  	add(_cbxRegion, "button", "geoscape");
  	add(_cbxZone, "button", "geoscape");
  	add(_cbxArea, "button", "geoscape");
-@@ -268,12 +405,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -268,12 +407,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	geobord->setX(_sidebar->getX() - geobord->getWidth() + _sidebar->getWidth());
  	geobord->setY(_sidebar->getY());
  	_sidebar->copy(geobord);
@@ -20326,7 +20365,7 @@ index 6b4e79d..a861ddc 100644
  	_btnIntercept->onMouseClick((ActionHandler)&GeoscapeState::btnInterceptClick);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnInterceptClick, Options::keyGeoIntercept);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnUfoTrackerClick, Options::keyGeoUfoTracker);
-@@ -292,7 +443,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -292,7 +445,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnBases->setGeoscapeButton(true);
  
  	_btnGraphs->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -20335,7 +20374,7 @@ index 6b4e79d..a861ddc 100644
  	_btnGraphs->onMouseClick((ActionHandler)&GeoscapeState::btnGraphsClick);
  	_btnGraphs->onKeyboardPress((ActionHandler)&GeoscapeState::btnGraphsClick, Options::keyGeoGraphs);
  	_btnGraphs->setGeoscapeButton(true);
-@@ -310,7 +461,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -310,7 +463,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnOptions->setGeoscapeButton(true);
  
  	_btnFunding->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -20344,7 +20383,7 @@ index 6b4e79d..a861ddc 100644
  	_btnFunding->onMouseClick((ActionHandler)&GeoscapeState::btnFundingClick);
  	_btnFunding->onKeyboardPress((ActionHandler)&GeoscapeState::btnFundingClick, Options::keyGeoFunding);
  	_btnFunding->setGeoscapeButton(true);
-@@ -387,6 +538,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -387,6 +540,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -20353,7 +20392,7 @@ index 6b4e79d..a861ddc 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -403,6 +556,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -403,6 +558,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_txtMinSep->setText(":");
  
  	_txtWeekday->setAlign(ALIGN_CENTER);
@@ -20406,7 +20445,7 @@ index 6b4e79d..a861ddc 100644
  
  	_txtDay->setAlign(ALIGN_CENTER);
  
-@@ -427,6 +626,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -427,6 +628,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  		_txtSec->setX(_txtSec->getX()-10);
  	}
  
@@ -20452,7 +20491,7 @@ index 6b4e79d..a861ddc 100644
  	_gameTimer->onTimer((StateHandler)&GeoscapeState::timeAdvance);
  	_gameTimer->start();
  
-@@ -512,7 +750,9 @@ void GeoscapeState::blit()
+@@ -512,7 +752,9 @@ void GeoscapeState::blit()
  	State::blit();
  	for (auto* dfs : _dogfights)
  	{
@@ -20463,7 +20502,7 @@ index 6b4e79d..a861ddc 100644
  	}
  }
  
-@@ -705,13 +945,127 @@ void GeoscapeState::handle(Action *action)
+@@ -705,13 +947,127 @@ void GeoscapeState::handle(Action *action)
   * Updates the timer display and resets the palette
   * since it's bound to change on other screens.
   */
@@ -20591,7 +20630,7 @@ index 6b4e79d..a861ddc 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -751,8 +1105,15 @@ void GeoscapeState::init()
+@@ -751,8 +1107,15 @@ void GeoscapeState::init()
  		_game->getSavedGame()->addMonth();
  		_game->getSavedGame()->increaseDaysPassed();
  		determineAlienMissions();
@@ -20607,7 +20646,7 @@ index 6b4e79d..a861ddc 100644
  }
  
  /**
-@@ -835,6 +1196,10 @@ void GeoscapeState::timeDisplay()
+@@ -835,6 +1198,10 @@ void GeoscapeState::timeDisplay()
  	std::ostringstream ss5;
  	ss5 << _game->getSavedGame()->getTime()->getYear();
  	_txtYear->setText(ss5.str());
@@ -20618,7 +20657,7 @@ index 6b4e79d..a861ddc 100644
  }
  
  /**
-@@ -847,6 +1212,169 @@ void GeoscapeState::timeDisplay()
+@@ -847,6 +1214,169 @@ void GeoscapeState::timeDisplay()
   * on 1 Day speed) or until an event occurs, since updating
   * the screen on each step would become cumbersomely slow.
   */
@@ -20788,7 +20827,7 @@ index 6b4e79d..a861ddc 100644
  void GeoscapeState::timeAdvance()
  {
  	int timeSpan = 0;
-@@ -1047,6 +1575,7 @@ void GeoscapeState::time5Seconds()
+@@ -1047,6 +1577,7 @@ void GeoscapeState::time5Seconds()
  					continue;
  				}
  
@@ -20796,7 +20835,7 @@ index 6b4e79d..a861ddc 100644
  				size_t count = _game->getSavedGame()->getMissionSites()->size();
  				AlienMission *mission = ufo->getMission();
  				bool detected = ufo->getDetected();
-@@ -1139,6 +1668,9 @@ void GeoscapeState::time5Seconds()
+@@ -1139,6 +1670,9 @@ void GeoscapeState::time5Seconds()
  		}
  	}
  
@@ -20806,7 +20845,7 @@ index 6b4e79d..a861ddc 100644
  	// Handle craft logic
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -1233,6 +1765,13 @@ void GeoscapeState::time5Seconds()
+@@ -1233,6 +1767,13 @@ void GeoscapeState::time5Seconds()
  			if (!ufoIsAttacking)
  			{
  				bool returnedToBase = xcraft->think();
@@ -20820,7 +20859,7 @@ index 6b4e79d..a861ddc 100644
  				if (returnedToBase)
  				{
  					_game->getSavedGame()->stopHuntingXcomCraft(xcraft); // hiding in the base is good enough, obviously
-@@ -1422,7 +1961,9 @@ void GeoscapeState::time5Seconds()
+@@ -1422,7 +1963,9 @@ void GeoscapeState::time5Seconds()
  				{
  					if (b->isDiscovered())
  					{
@@ -20831,7 +20870,7 @@ index 6b4e79d..a861ddc 100644
  						{
  							int texture, shade;
  							_globe->getPolygonTextureAndShade(b->getLongitude(), b->getLatitude(), &texture, &shade);
-@@ -1454,6 +1995,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +1997,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -20867,7 +20906,7 @@ index 6b4e79d..a861ddc 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +2134,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +2136,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -20898,7 +20937,7 @@ index 6b4e79d..a861ddc 100644
  							}
  						}
  					}
-@@ -1752,7 +2338,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2340,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -20907,7 +20946,7 @@ index 6b4e79d..a861ddc 100644
  								}
  								else
  								{
-@@ -1858,6 +2444,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2446,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -20928,7 +20967,7 @@ index 6b4e79d..a861ddc 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2484,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2486,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -20941,7 +20980,7 @@ index 6b4e79d..a861ddc 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2104,6 +2710,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2104,6 +2712,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		detected = maskBitOr(detected, craft->detect(ufo, save, alreadyTracked));
  	}
  
@@ -20949,7 +20988,7 @@ index 6b4e79d..a861ddc 100644
  	if (!alreadyTracked)
  	{
  		if (maskTest(detected, DETECTION_RADAR))
-@@ -2126,8 +2733,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2126,8 +2735,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		{
  			ufo->setHyperDetected(true);
  		}
@@ -20970,7 +21009,7 @@ index 6b4e79d..a861ddc 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2763,101 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2765,101 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -21072,7 +21111,7 @@ index 6b4e79d..a861ddc 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +2904,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +2906,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -21162,7 +21201,7 @@ index 6b4e79d..a861ddc 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +3149,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +3151,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -21171,7 +21210,7 @@ index 6b4e79d..a861ddc 100644
  			}
  			else
  			{
-@@ -2389,12 +3185,305 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3187,305 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
@@ -21477,7 +21516,7 @@ index 6b4e79d..a861ddc 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3533,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3535,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -21500,7 +21539,7 @@ index 6b4e79d..a861ddc 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2776,6 +3874,7 @@ void GeoscapeState::time1Day()
+@@ -2776,6 +3876,7 @@ void GeoscapeState::time1Day()
  					{
  						chanceToDetect = 50 - (distance * 50 / facility->getRules()->getSightRange()); // dynamic 0-50% based on relative distance
  					}
@@ -21508,7 +21547,7 @@ index 6b4e79d..a861ddc 100644
  					if (RNG::percent(chanceToDetect))
  					{
  						alienBase->setDiscovered(true);
-@@ -2861,7 +3960,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +3962,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -21537,7 +21576,7 @@ index 6b4e79d..a861ddc 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +4080,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +4082,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -21568,7 +21607,7 @@ index 6b4e79d..a861ddc 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4266,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4268,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -21578,7 +21617,7 @@ index 6b4e79d..a861ddc 100644
  }
  
  /**
-@@ -3265,6 +4410,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4412,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -21594,7 +21633,7 @@ index 6b4e79d..a861ddc 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4496,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4498,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -21647,7 +21686,7 @@ index 6b4e79d..a861ddc 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4564,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4566,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -21899,7 +21938,7 @@ index 6b4e79d..a861ddc 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +6092,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +6094,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -25525,7 +25564,7 @@ index d5e599e..8b44e52 100644
  	void setHighContrast(bool contrast) override;
  	/// Handles the timers.
 diff --git a/src/Menu/MainMenuState.cpp b/src/Menu/MainMenuState.cpp
-index 543a45c..c4f43b0 100644
+index 543a45c..7452e48 100644
 --- a/src/Menu/MainMenuState.cpp
 +++ b/src/Menu/MainMenuState.cpp
 @@ -35,6 +35,11 @@
@@ -25610,8 +25649,8 @@ index 543a45c..c4f43b0 100644
 +			Base *base = save->getBases()->back();
 +			if (base->getMarker() == -1)
 +			{
-+				base->setLongitude(-105.0 * M_PI / 180.0);
-+				base->setLatitude(-39.0 * M_PI / 180.0);
++				base->setLongitude(-105.0 * 3.14159265358979323846 / 180.0);
++				base->setLatitude(-39.0 * 3.14159265358979323846 / 180.0);
 +			}
 +			if (base->getName().empty()) base->setName("The Pit");
 +			base->calculateServices(save);
