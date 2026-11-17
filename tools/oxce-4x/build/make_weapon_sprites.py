@@ -41,7 +41,7 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MOD = os.path.normpath(os.path.join(HERE, '..', 'mod'))
-UNITS = '/mnt/user-data/uploads/XCom UFO Defense/XCOM/UNITS'
+UNITS = os.environ.get('XCOM_UNITS', '/mnt/user-data/uploads/XCom UFO Defense/XCOM/UNITS')   # XCOM_UNITS: the PC render kit
 sys.path.insert(0, HERE)
 import pck                                                  # noqa: E402
 
