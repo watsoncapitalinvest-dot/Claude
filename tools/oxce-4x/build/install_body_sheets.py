@@ -54,6 +54,8 @@ NEW = {
 # SHORTCUTS.md #6: a soldier type whose sheet has not been rendered yet wears one that has
 FALLBACK = {'greenshirt_rifleman': 'STR_BEACH_HEAD_UC', 'greenshirt_medic': 'STR_BEACH_HEAD_UC'}
 FALLBACK_DEFAULT = 'STR_DUKE_UC'
+# an equipment-screen figure borrowed until his own is painted (the medic wears the greenshirt uniform)
+INV_FALLBACK = {'greenshirt_medic': 'GIJOE_GREENSHIRT_RIFLEMAN_INV'}
 FEMALE = {'scarlett'}
 STATS = '''    costBuy: 40000
     costSalary: 20000
@@ -168,7 +170,7 @@ def main():
             arm, typ, disp, names = NEW[n]
             # Inventory figure: his own if one has been painted (Resources/Inventory/<name>_inv.png), else
             # Duke's (SHORTCUTS #6). An armour with no spriteInv crashes the equip screen before a battle.
-            inv = 'GIJOE_DUKE_INV'
+            inv = INV_FALLBACK.get(n, 'GIJOE_DUKE_INV')
             if os.path.exists(os.path.join(MOD, 'Resources', 'Inventory', f'{n}_inv.png')):
                 inv = f'GIJOE_{n.upper()}_INV'
                 sprites += [f'  - type: {inv}.SPK', '    singleImage: true', '    width: 320', '    height: 200',
