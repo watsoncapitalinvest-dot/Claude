@@ -7607,7 +7607,7 @@ index 746f3a4..c01df74 100644
  	Timer *_animTimer, *_gameTimer;
  	SavedBattleGame *_save;
 diff --git a/src/Battlescape/BriefingState.cpp b/src/Battlescape/BriefingState.cpp
-index 7f1fa7e..7eafb45 100644
+index 7f1fa7e..d392a8d 100644
 --- a/src/Battlescape/BriefingState.cpp
 +++ b/src/Battlescape/BriefingState.cpp
 @@ -16,7 +16,10 @@
@@ -7629,7 +7629,7 @@ index 7f1fa7e..7eafb45 100644
 +	{
 +		// G.I. Joe Act 1 layer: a crime or cell strike names its town and target ({TOWN}, {TARGET})
 +		int siteId = -1;
-+		for (auto *ms : *_game->getSavedGame()->getMissionSites()) if (ms->isInBattlescape()) siteId = ms->getId();
++		for (auto *ms : *_game->getSavedGame()->getMissionSites()) if (ms->isInBattlescape() && CobraNetwork::owns(_game->getSavedGame(), ms)) siteId = ms->getId();
 +		std::string bd = CobraNetwork::fill(_game, std::string(tr(desc)), siteId), bt = CobraNetwork::fill(_game, std::string(tr(title)), siteId);
 +		if (base)
 +			for (std::string *x : {&bd, &bt})
@@ -7753,7 +7753,7 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..0c8ec64 100644
+index 0631f32..04ad728 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
 @@ -20,7 +20,10 @@
@@ -7874,7 +7874,7 @@ index 0631f32..0c8ec64 100644
 +			if (success && ms->getDeployment() && (ms->getDeployment()->getType() == "STR_TRANSPORT_CRASH" || ms->getDeployment()->getType() == "STR_CONVOY_AMBUSHED"))
 +				save->addRecoveredSite(ms->getId());
 +			if (save->getHunts().count(ms->getId())) huntSite = ms->getId();
-+			if (save->getCobraNetSites().count(ms->getId())) cobraNetSite = ms->getId();   // G.I. Joe Act 1 layer
++			if (CobraNetwork::owns(save, ms)) cobraNetSite = ms->getId();   // G.I. Joe Act 1 layer
  			delete ms;
  			save->getMissionSites()->erase(msIt);
  			break;
@@ -18457,10 +18457,10 @@ index 0000000..e57d835
 +}
 diff --git a/src/Geoscape/CobraNetwork.cpp b/src/Geoscape/CobraNetwork.cpp
 new file mode 100644
-index 0000000..745b7dd
+index 0000000..c3b3f5b
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.cpp
-@@ -0,0 +1,811 @@
+@@ -0,0 +1,840 @@
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5. See CobraNetwork.h.
 + *
@@ -18651,7 +18651,9 @@ index 0000000..745b7dd
 +	const double j = 40.0 / EARTH_KM;   // the job is in or near its town
 +	ms->setLongitude(near->getLongitude() + RNG::generate(-100, 100) / 100.0 * j);
 +	ms->setLatitude(near->getLatitude() + RNG::generate(-100, 100) / 100.0 * j);
-+	ms->setId(save->getId(dep->getMarkerName()));
++	// one counter for every network site: the record is keyed by this id, and per-marker ids collided (Bank Job #1 and the
++	// M.A.R.S. Convoy #1 shared a key, so the bank fight was booked to the convoy)
++	ms->setId(save->getId("STR_COBRA_NET_SITE"));
 +	bool tipoff = false;
 +	const int hours = noticeHours(game, tipoff);
 +	ms->setSecondsRemaining((size_t)hours * 3600);
@@ -18890,6 +18892,22 @@ index 0000000..745b7dd
 +	const int day = save->getDaysPassed();
 +	(void)geo;
 +
++	// test rig (OXCE_CRIME_TODAY=<deployment>): one crime from the first cell, set down beside the first Joe base, 48 h
++	if (const char *t = getenv("OXCE_CRIME_TODAY"))
++		if (!net.count("crimeTested") && !save->getBases()->empty())
++			for (auto *b : *save->getAlienBases())
++				if (b->getSiteType() == CELL)
++				{
++					net["crimeTested"] = 1;
++					if (MissionSite *ms = spawnSite(game, "STR_COBRA_CRIME_MISSION", *t ? t : "STR_COBRA_BANK_JOB", b, "crime|" + siteKey(b),
++						"STR_ALERT_BANK_ROBBERY", townOf(save, b, towns(mod)), ""))
++					{
++						Base *home = save->getBases()->front();
++						ms->setLongitude(home->getLongitude() + 0.01); ms->setLatitude(home->getLatitude() + 0.01);
++						ms->setSecondsRemaining(48 * 3600);
++					}
++					break;
++				}
 +	// The Drome seen without its plans (the plans' own research plays act1DromePlans): the reconnaissance photograph
 +	if (!net.count("dromeSeen"))
 +	{
@@ -19103,8 +19121,8 @@ index 0000000..745b7dd
 +void siteExpired(Game *game, MissionSite *site)
 +{
 +	SavedGame *save = game->getSavedGame();
++	if (!owns(save, site)) return;
 +	auto it = save->getCobraNetSites().find(site->getId());
-+	if (it == save->getCobraNetSites().end()) return;
 +	const auto parts = split(it->second, '|');
 +	save->getCobraNetSites().erase(it);
 +	if (parts.size() < 3) return;
@@ -19195,6 +19213,17 @@ index 0000000..745b7dd
 +	Log(LOG_INFO) << "[network] " << kind << " from " << key << (success ? " stopped" : " not stopped") << (leaderTaken ? ", leader taken" : "");
 +}
 +
++bool owns(const SavedGame *save, const MissionSite *site)
++{
++	if (!site || !site->getDeployment()) return false;
++	auto &m = const_cast<SavedGame*>(save)->getCobraNetSites();
++	auto it = m.find(site->getId());
++	if (it == m.end()) return false;
++	const std::string &dep = site->getDeployment()->getType();
++	// the record ends with the deployment it was made for: an unrelated site that happens to share the id is not ours
++	return it->second.size() > dep.size() && it->second.compare(it->second.size() - dep.size() - 1, std::string::npos, "|" + dep) == 0;
++}
++
 +void dromeFight(Game *game, Base *home)
 +{
 +	SavedGame *save = game->getSavedGame();
@@ -19274,10 +19303,10 @@ index 0000000..745b7dd
 +} // namespace OpenXcom
 diff --git a/src/Geoscape/CobraNetwork.h b/src/Geoscape/CobraNetwork.h
 new file mode 100644
-index 0000000..9333822
+index 0000000..8725d17
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.h
-@@ -0,0 +1,46 @@
+@@ -0,0 +1,48 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5 (BRIEF_FOR_BUILD_Act1Layer_Part1_Answers, approved by John 17 Nov 2026).
@@ -19318,6 +19347,8 @@ index 0000000..9333822
 +	Base *strikeDue(Game *game);
 +	/// The strike's base defence ended (held or not).
 +	void strikeFought(Game *game, bool held);
++	/// Whether this mission site is one of the network's (its record, and made for this deployment).
++	bool owns(const SavedGame *save, const MissionSite *site);
 +	/// The share of the usual spotting chance a Cobra site gets (0 = never spotted: cells).
 +	int findPercent(const Game *game, const AlienBase *base);
 +	/// Replaces {TOWN} {TARGET} {HOURS} {DAYS} {REGION} {BAND} for the site the text is about (-1: none).
@@ -20224,7 +20255,7 @@ index e609d3c..24a1628 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..2098ad3 100644
+index 6b4e79d..039b039 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,15 @@
@@ -20876,14 +20907,14 @@ index 6b4e79d..2098ad3 100644
 +		const int stopP = style == 1 ? 50 : 80, leaderP = style == 1 ? 30 : 50;
 +		std::vector<int> settle;
 +		for (auto *ms : *save->getMissionSites())
-+			if (save->getCobraNetSites().count(ms->getId()) && !decided.count(ms->getId()))
++			if (CobraNetwork::owns(save, ms) && !decided.count(ms->getId()))
 +			{
 +				decided.insert(ms->getId());
 +				if (RNG::percent(stopP)) settle.push_back(ms->getId());
 +			}
 +		for (int id : settle)
 +			for (auto it = save->getMissionSites()->begin(); it != save->getMissionSites()->end(); ++it)
-+				if ((*it)->getId() == id && save->getCobraNetSites().count(id))
++				if ((*it)->getId() == id && CobraNetwork::owns(save, *it))
 +				{
 +					const std::string what = save->getCobraNetSites()[id];
 +					if (what.compare(0, 12, "dromeStrike|") == 0) CobraNetwork::dromeFight(_game, nullptr);
@@ -21439,7 +21470,7 @@ index 6b4e79d..2098ad3 100644
  			}
  			else
  			{
-@@ -2389,12 +3238,305 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3238,314 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
@@ -21456,7 +21487,16 @@ index 6b4e79d..2098ad3 100644
 +		}
 +	}
  	_game->getSavedGame()->increaseDaysPassed();
-+	CobraNetwork::daily(_game, this);   // G.I. Joe Act 1 layer: dates, crimes, cell strikes
++	{
++		// G.I. Joe Act 1 layer: dates, crimes, cell strikes. A new crime or strike opens with the usual INTERCEPT / CENTER box,
++		// so twelve hours' notice is not spent finding the pin.
++		const size_t before = _game->getSavedGame()->getMissionSites()->size();
++		CobraNetwork::daily(_game, this);
++		auto *sites = _game->getSavedGame()->getMissionSites();
++		for (size_t i = before; i < sites->size(); ++i)
++			if (CobraNetwork::owns(_game->getSavedGame(), (*sites)[i]))
++				popup(new MissionDetectedState((*sites)[i], this));
++	}
  
  	SavedGame *saveGame = _game->getSavedGame();
  	Mod *mod = _game->getMod();
@@ -21745,7 +21785,7 @@ index 6b4e79d..2098ad3 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3586,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3595,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -21768,7 +21808,7 @@ index 6b4e79d..2098ad3 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2776,6 +3927,7 @@ void GeoscapeState::time1Day()
+@@ -2776,6 +3936,7 @@ void GeoscapeState::time1Day()
  					{
  						chanceToDetect = 50 - (distance * 50 / facility->getRules()->getSightRange()); // dynamic 0-50% based on relative distance
  					}
@@ -21776,7 +21816,7 @@ index 6b4e79d..2098ad3 100644
  					if (RNG::percent(chanceToDetect))
  					{
  						alienBase->setDiscovered(true);
-@@ -2861,7 +4013,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +4022,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -21805,7 +21845,7 @@ index 6b4e79d..2098ad3 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +4133,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +4142,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -21836,7 +21876,7 @@ index 6b4e79d..2098ad3 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4319,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4328,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -21846,7 +21886,7 @@ index 6b4e79d..2098ad3 100644
  }
  
  /**
-@@ -3265,6 +4463,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4472,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -21862,7 +21902,7 @@ index 6b4e79d..2098ad3 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4549,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4558,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -21915,7 +21955,7 @@ index 6b4e79d..2098ad3 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4617,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4626,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -22167,7 +22207,7 @@ index 6b4e79d..2098ad3 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +6145,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +6154,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{

@@ -89,17 +89,20 @@ bank = {'type': 'STR_COBRA_BANK_JOB', 'data': [troopers(5, 7), dict(officer(), c
         'robberLoot': ['STR_BANDED_CASH'], 'robberLeader': 'STR_ROBBERY_LEADER', 'quietUntilAlarm': True,
         'width': 50, 'length': 40, 'height': 3, 'terrains': ['BANK1'], 'script': 'BANK1_SCRIPT', 'shade': 0,
         'duration': [12, 24], 'markerName': 'STR_COBRA_BANK_JOB', 'markerIcon': 22, 'cobraPayoutFunds': 150, 'despawnPenalty': 20,
-        'briefing': {'palette': 0, 'title': 'STR_MAP_BANK_ROBBERY', 'desc': 'STR_MAP_BANK_ROBBERY_BRIEFING'}}
+        'alert': 'STR_ALERT_POLICE_SCANNER_TITLE',
+        'briefing': {'palette': 0, 'title': 'STR_MAP_BANK_ROBBERY', 'desc': 'STR_BRIEFING_COBRA_BANK_JOB'}}
 deps.append(bank)
+# the globe's INTERCEPT box for a crime reads as the scanner call it is (the stock title said 'COBRA CONVOY STOPPED' before anyone went)
 for t in ('STR_ARMORED_CAR_AMBUSH', 'STR_COBRA_CONVOY', 'STR_COBRA_VAN_STOP'):
-    deps.append({'type': t, 'cobraPayoutFunds': 150, 'despawnPenalty': 20})
+    deps.append({'type': t, 'cobraPayoutFunds': 150, 'despawnPenalty': 20, 'alert': 'STR_ALERT_POLICE_SCANNER_TITLE'})
 MAPS = {'GAS': (['VSTOWN'], 'VSTOWN_SCRIPT', 50, 40, 3, 8), 'BANK': (['BANK1'], 'BANK1_SCRIPT', 50, 40, 3, 8),
         'TOWN': (['CITYDAY'], 'CITY_SCRIPT', 100, 100, 4, 16)}
 for m, (ter, scr, w, l, h, civ) in MAPS.items():
     for tier, (lo, hi, off) in enumerate([(4, 6, False), (5, 7, True), (6, 8, True)], 1):
         d = {'type': 'STR_COBRA_CELL_STRIKE_%s_%d' % (m, tier), 'data': [troopers(lo, hi)] + ([officer()] if off else []),
              'civilians': civ, 'width': w, 'length': l, 'height': h, 'terrains': ter, 'script': scr, 'shade': 0,
-             'duration': [12, 24], 'markerName': 'STR_COBRA_CELL_STRIKE', 'markerIcon': 22, 'despawnPenalty': 30,   # pays the cell's purse (engine), not the region
+             'duration': [12, 24], 'markerName': 'STR_COBRA_CELL_STRIKE', 'markerIcon': 22, 'despawnPenalty': 30,
+             'alert': 'STR_ALERT_POLICE_SCANNER_TITLE',   # pays the cell's purse (engine), not the region
              'briefing': {'palette': 0, 'title': 'STR_BRIEFING_CELL_STRIKE_TITLE', 'desc': 'STR_BRIEFING_CELL_STRIKE'}}
         deps.append(d)
 # Piece 6: the Drome while it is being built (Cobra Commander's will). Raidable: the assault on it is the 'unfinished' version.
@@ -158,7 +161,8 @@ out['research'] = [{'name': 'STR_TERROR_DROME_PLANS', 'cutscene': 'act1DromePlan
 strs = {'STR_COBRA_CELL': 'Cobra Cell', 'STR_COBRA_CELL_SITE': 'Cobra Cell', 'STR_COBRA_BANK_JOB': 'Bank Job',
         'STR_COBRA_CELL_STRIKE': 'Cell Strike', 'STR_COBRA_CRIME_MISSION': 'Cobra Crime', 'STR_COBRA_CELL_STRIKE_MISSION': 'Cell Strike',
         'STR_EVENT_FACTORY_WRECKED': 'THE GATES ARE CHAINED', 'STR_COBRA_TERROR_DROME_BUILDING': 'Terror Drome (building)', 'STR_COBRA_DROME_STRIKE': 'Drome Strike',
-        'STR_EVENT_DROME_NO_PLANS': 'THE TERROR DROME', 'STR_EVENT_ACT1_CLOSE_TAKEN': 'END OF ACT 1', 'STR_EVENT_ACT1_CLOSE_STANDS': 'END OF ACT 1'}
+        'STR_EVENT_DROME_NO_PLANS': 'THE TERROR DROME', 'STR_ALERT_POLICE_SCANNER_TITLE': 'POLICE SCANNER',
+        'STR_BRIEFING_COBRA_BANK_JOB': 'Robbers hold a bank in {TOWN}. Their van is in the back alley.', 'STR_EVENT_ACT1_CLOSE_TAKEN': 'END OF ACT 1', 'STR_EVENT_ACT1_CLOSE_STANDS': 'END OF ACT 1'}
 for m in MAPS:
     for tier in (1, 2, 3):
         strs['STR_COBRA_CELL_STRIKE_%s_%d' % (m, tier)] = 'Cell Strike'
