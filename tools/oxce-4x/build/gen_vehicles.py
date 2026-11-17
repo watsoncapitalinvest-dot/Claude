@@ -50,10 +50,12 @@ V = {
  # Numbers are VFACTORY stand-ins scaled off the Mauler/MOBAT until STORY sets them; the ZPJ-79 copies STORY's arsenal item (power 110, 3, blast 2).
  "thunderclap_tractor": dict(pack="thunderclap_tractor", asset="thunderclap_tractor", state="m0", side="joe", name="Thunderclap Tractor", tu=50, hp=170, arm=(100, 80, 60, 60),
                   wpn=("MG-999 dual-barrelled pulsating assault weapon", 60, 1, 60, (50, 30), (80, 55), (40, 40, 3), 0, 12, "m2x_50cal"),
-                  wpn2=("Low attack missile", 100, 3, 3, None, (85, 55), None, 2, 20, "power_javelin_launch"), price=520000),
+                  wpn2=("Low attack missile", 100, 3, 3, None, (85, 55), None, 2, 22, "power_javelin_launch"), price=520000,
+                  stores=["m1", "m2", "m3"], proj="proj_thunderclap"),
  "thunderclap_trailer": dict(pack="thunderclap_trailer", asset="thunderclap_trailer", state="m0", side="joe", name="Thunderclap Trailer", tu=46, hp=150, arm=(90, 75, 60, 55),
                   wpn=("Rapid-fire blaster cannon", 75, 1, 40, (55, 30), (85, 55), (40, 40, 2), 0, 12, "m2x_50cal"),
-                  wpn2=("ZPJ-79 cruise missile", 110, 3, 3, None, (90, 60), None, 2, 20, "power_javelin_launch"), price=480000),
+                  wpn2=("ZPJ-79 cruise missile", 110, 3, 3, None, (90, 60), None, 2, 24, "power_javelin_launch"), price=480000,
+                  stores=["m1", "m2", "m3"], proj="proj_thunderclap"),
 }
 
 CAST = sorted(["ak47", "bazooka_launch", "explosion_large", "flare_launcher", "frag_grenade", "m16", "m1911_pistol", "m2x_50cal",
@@ -151,12 +153,18 @@ def sheet(v, d):
                 S.alpha_composite(cellOf(dmg[hd], anchor, 2, dy=f * 3, dark=1 - f * 0.08, alpha=1 - f * 0.1), ((fr % 8) * 256, (fr // 8) * 320))
     else:
         W, H = 128 * n, 160 * n
-        S = Image.new("RGBA", (4 * W, 4 * H), (0, 0, 0, 0))
+        ns = len(d.get("stores", []))
+        S = Image.new("RGBA", (4 * W, (4 + 2 * ns) * H), (0, 0, 0, 0))
         for hd in range(8):
             S.alpha_composite(cellOf(standing[hd], anchor, n), ((hd % 4) * W, (hd // 4) * H))
         for f in range(8):
             fr = 8 + f
             S.alpha_composite(cellOf(dmg[2], anchor, n, dy=f * 2 * n, dark=1 - f * 0.08, alpha=1 - f * 0.1), ((fr % 4) * W, (fr // 4) * H))
+        # stores on the hull (engine gjStoreStates): frame 16 + (fired - 1) * 8 + heading = the picture with that many gone
+        for k, st in enumerate(d.get("stores", [])):
+            for hd, h in enumerate(HEAD):
+                fr = 16 + k * 8 + hd
+                S.alpha_composite(cellOf(frame(root, man, "clean", h, st, turret=turret is None), anchor, n), ((fr % 4) * W, (fr // 4) * H))
     os.makedirs(OUT, exist_ok=True)
     S.save(os.path.join(OUT, f"veh_{v}_body_rgb.png"))
     quantize(S).save(os.path.join(OUT, f"veh_{v}_body.png"))
@@ -202,6 +210,8 @@ for i, (v, d) in enumerate(V.items()):
           "    damageModifier: [1.0, 1.0, 0.4, 0.75, 1.0, 1.0, 1.0, 1.0]"]
     if d.get("wpn2"):                                # a second built-in weapon (missiles beside the gun), its own item + ammo
         A += [f"    builtInWeapons: [{T}_W2, {T}_A2]"]
+    if d.get("stores"):                              # the missiles leave the hull picture one by one as the _W2 weapon fires (engine, VFACTORY)
+        A += [f"    gjStoreWeapon: {T}_W2", f"    gjStoreStates: {len(d['stores'])}"]
     if turret:
         A += [f"    gjTurretSheet: VEH_{v.upper()}_TURRET.PCK", "    gjTurretOffsets: [" + ", ".join(f"[{o[0]}, {o[1]}]" for o in turret[1]) + "]"]
     U += [f"  - type: {T}", f"    race: {T}", f"    armor: GJ_VEH_{v.upper()}_ARMOR",
@@ -228,15 +238,19 @@ for i, (v, d) in enumerate(V.items()):
         wn2, pw2, dt2, clip2, snap2, aimed2, auto2, blast2, bullet2, snd2 = d["wpn2"]
         I += [f"  - type: {T}_W2", "    battleType: 1", "    fixedWeapon: true", "    invWidth: 1", "    invHeight: 1", "    weight: 1",
               "    bigSprite: 16", "    floorSprite: 0", "    handSprite: 0", f"    bulletSprite: {bullet2}", f"    fireSound: {cast(snd2)}", f"    compatibleAmmo: [{T}_A2]",
-              "    arcingShot: false"]
+              "    arcingShot: false"] + (["    bulletDirectional: true"] if bullet2 >= 18 else [])
         if snap2: I += [f"    accuracySnap: {snap2[0]}", f"    tuSnap: {snap2[1]}"]
         if aimed2: I += [f"    accuracyAimed: {aimed2[0]}", f"    tuAimed: {aimed2[1]}"]
         if auto2: I += [f"    accuracyAuto: {auto2[0]}", f"    tuAuto: {auto2[1]}", f"    confAuto: {{shots: {auto2[2]}}}"]
         hit2 = cast("explosion_large") if dt2 == 3 else [577, 578, 579, 574, 575]
         I += [f"  - type: {T}_A2", "    battleType: 2", f"    clipSize: {clip2}", f"    power: {pw2}", f"    damageType: {dt2}", "    weight: 1", "    invWidth: 1", "    invHeight: 1",
-              "    bigSprite: 16", "    floorSprite: 16", f"    bulletSprite: {bullet2}", f"    hitSound: {hit2}", f"    hitAnimation: {0 if dt2 == 3 else 26}", "    transferTime: 24"]
+              "    bigSprite: 16", "    floorSprite: 16", f"    bulletSprite: {bullet2}", f"    hitSound: {hit2}", f"    hitAnimation: {0 if dt2 == 3 else 26}", "    transferTime: 24"] + (["    bulletDirectional: true"] if bullet2 >= 18 else [])
         if blast2: I += [f"    blastRadius: {blast2}"]
         S2[f"{T}_W2"] = wn2; S2[f"{T}_A2"] = wn2
     print(v, f"{n}x{n}", size)
+PROJ = sorted({d["proj"] for d in V.values() if d.get("proj")})
+for pj in PROJ:                                      # VFACTORY's own projectile rows from 22 (missile_heads.py): trail + 8 directional heads per missile
+    L += ["  - type: Projectiles", "    width: 1680", f"    height: {Image.open(os.path.join(OUT, pj + '.png')).height}", "    subX: 48", "    subY: 48",
+          "    files:", f"      {22 * 35}: Resources/VehiclesPrivate/{pj}.png"]
 L += [""] + U + [""] + A + [""] + I + ["", "extraStrings:", "  - type: en-US", "    strings: &veh"] + [f'      {k}: "{s}"' for k, s in S2.items()] + ["  - type: en-GB", "    strings: *veh"]
 open(os.path.join(MOD, "Ruleset", "gijoe_vehicles.rul"), "w").write("\n".join(L) + "\n")
