@@ -412,7 +412,7 @@ S.update({
    "FLAGG: I read it twice. Then I put the man from Langley on a plane, and every one of your people he borrowed is home tonight.",
    "I was sent here to hand you over. I'm staying to make sure nobody ever tries again. From today I speak for G.I. Joe in Washington, and the Pentagon hears it from me first. Colonel Hawk commands this team. I'll keep the politicians off his back.",
  ]),
- 'STR_EVENT_FLAGG_TURNS_EFFECTS': 'General Flagg is G.I. Joe\'s high commander and Pentagon liaison: funding +10%, Pentagon directives pay 25% more and failed ones cost half the goodwill, and public exposure grows more slowly.',
+ 'STR_EVENT_FLAGG_TURNS_EFFECTS': 'General Flagg is G.I. Joe\'s high commander and Pentagon liaison: funding +10%, Pentagon directives pay 25% more and failed ones cost half the goodwill, public exposure grows more slowly, and the carrier U.S.S. Liberty and Admiral Keel-Haul join the team.',
  'STR_EVENT_CIA_TAKES_JOE_TITLE': 'TEMPORARY ASSIGNMENT',
  'STR_EVENT_CIA_TAKES_JOE': P.join([
    "HAWK: Orders came down this morning. {0} has been reassigned to \"a joint task force\" for an unspecified period. No unit, no location, no number to call.",

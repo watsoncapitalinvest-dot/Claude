@@ -57,6 +57,9 @@ CARD_FIXES = {
     'STR_ART_WILDCARD_TEXT':  [('Birthplace: North Hampton, Massachusetts', 'Birthplace: Northampton, Massachusetts')],
     'STR_ART_BLIZZARD_TEXT':  [('Wolfboro, North Hampshire', 'Wolfboro, New Hampshire')],
     'STR_ART_WINDMILL_TEXT':  [('Allentown, Philadelphia', 'Allentown, Pennsylvania')],
+    # John 17 Nov 15:50: the carrier is the U.S.S. Liberty until, acts later, it is renamed for the wounded General Flagg.
+    'STR_ART_KEEL_HAUL_TEXT': [('Specialty: U.S.S. Flagg commander', 'Specialty: Carrier commander'),
+                               ('Keel-Haul commands the U.S.S. Flagg, the aircraft carrier', 'Keel-Haul commands the U.S.S. Liberty, the aircraft carrier')],
     # John 17 Nov 15:34: Jinx stays TOP SECRET, as on her card; the Arashikage DLC reveals her name (PARKED_IDEAS_STORY s.5).
     'STR_ART_JINX_TEXT':      [('Real name: Kim Arashikage', 'Real name: Top Secret'), ('Birthplace: Los Angeles, CA', 'Birthplace: Los Angeles, California')],
 }
