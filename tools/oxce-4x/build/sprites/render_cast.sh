@@ -39,7 +39,7 @@ ink() { case $1 in
   ace)       echo "||PENIDS=20 PENPCT=84 PENDARK=0.66 PENFACE=1 INKJOIN=21:20" ;;    # Ch15 slimmed: suit 20, rest 21 joined; helmet 26, Duke face 2 (PENFACE)
   regular_joe) echo "|" ;;
   cobra_soldier|cobra_officer|crimson_guard|cobra_recruit|viper_pilot) echo "|" ;;   # Cobra v4: Roadblock shading, fold ink baked into the texture, outline only
-  Ch*|Remy) echo "$(awk -v n=$1 '$1==n{print $2}' $HERE/civ/civ_hair.txt)|" ;;   # civilians: hair as rendered
+  Ch*|Remy|cartel_*) echo "$(awk -v n=$1 '$1==n{print $2}' $HERE/civ/civ_hair.txt)|" ;;   # civilians: hair as rendered
   *) H=$(python3 -c "import json;print(','.join(map(str,json.load(open('$CC/$1/${1}_cartoon.json'))['colors']['hair'])))" 2>/dev/null); echo "$H|" ;;
 esac; }
 D=/mnt/user-data/uploads/Downloads
