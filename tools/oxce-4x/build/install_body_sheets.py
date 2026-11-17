@@ -48,6 +48,8 @@ NEW = {
     'flash': ('STR_FLASH_UC', 'STR_FLASH', 'Flash', ['Flash']),
     'doc': ('STR_DOC_UC', 'STR_DOC', 'Doc', ['Doc']),
     'airborne': ('STR_AIRBORNE_UC', 'STR_AIRBORNE', 'Airborne', ['Airborne']),
+    # not in the Day 1 sixteen: his sheet is ready for when ROSTER brings him in (a named Joe is never on the hiring list)
+    'flint': ('STR_FLINT_UC', 'STR_FLINT', 'Flint', ['Flint']),
 }
 # SHORTCUTS.md #6: a soldier type whose sheet has not been rendered yet wears one that has
 FALLBACK = {'greenshirt_rifleman': 'STR_BEACH_HEAD_UC', 'greenshirt_medic': 'STR_BEACH_HEAD_UC'}
