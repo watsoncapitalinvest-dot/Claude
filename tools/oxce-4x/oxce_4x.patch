@@ -6146,7 +6146,7 @@ index a0bc8b3..9882f6e 100644
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..5bff42f 100644
+index 7cd4941..07ca96a 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -1,3 +1,5 @@
@@ -6163,15 +6163,16 @@ index 7cd4941..5bff42f 100644
  #include <algorithm>
  #include <sstream>
  #include <iomanip>
-@@ -24,6 +27,7 @@
+@@ -24,6 +27,8 @@
  #include "Map.h"
  #include "Camera.h"
  #include "BattlescapeState.h"
++#include "Stealth.h"
 +#include "../Engine/HiColor.h"
  #include "AbortMissionState.h"
  #include "TileEngine.h"
  #include "ActionMenuState.h"
-@@ -88,6 +92,8 @@
+@@ -88,6 +93,8 @@
  #include "../Mod/RuleInventory.h"
  #include "../Mod/RuleSoldier.h"
  #include "../Mod/RuleVideo.h"
@@ -6180,7 +6181,7 @@ index 7cd4941..5bff42f 100644
  
  namespace OpenXcom
  {
-@@ -137,7 +143,7 @@ BattlescapeState::BattlescapeState() :
+@@ -137,7 +144,7 @@ BattlescapeState::BattlescapeState() :
  
  	// Create the battlemap view
  	// the actual map height is the total height minus the height of the buttonbar
@@ -6189,7 +6190,7 @@ index 7cd4941..5bff42f 100644
  
  	_numLayers = new NumberText(3, 5, x + 232, y + 6);
  	_rank = new Surface(26, 23, x + 107, y + 33);
-@@ -465,7 +471,7 @@ BattlescapeState::BattlescapeState() :
+@@ -465,7 +472,7 @@ BattlescapeState::BattlescapeState() :
  
  	_btnKneel->onMouseClick((ActionHandler)&BattlescapeState::btnKneelClick);
  	_btnKneel->onKeyboardPress((ActionHandler)&BattlescapeState::btnKneelClick, Options::keyBattleKneel);
@@ -6198,7 +6199,7 @@ index 7cd4941..5bff42f 100644
  	_btnKneel->onMouseIn((ActionHandler)&BattlescapeState::txtTooltipIn);
  	_btnKneel->onMouseOut((ActionHandler)&BattlescapeState::txtTooltipOut);
  	_btnKneel->allowToggleInversion();
-@@ -724,6 +730,686 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +731,710 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
@@ -6341,9 +6342,9 @@ index 7cd4941..5bff42f 100644
 +
 +	// the mission panel, top right; the special-action buttons move down under it
 +	const int screenWidth = Options::baseXResolution;
-+	_hudMission = new Surface(76, 22, screenWidth - 80, 4);
++	_hudMission = new Surface(76, 27, screenWidth - 80, 4);   // HUD v2: + the ALARM line
 +	add(_hudMission);
-+	_hudMission->drawRect(0, 0, 76, 22, 15);
++	_hudMission->drawRect(0, 0, 76, 27, 15);
 +	for (Surface *s : { (Surface*)_btnLaunch, (Surface*)_btnPsi, (Surface*)_btnSpecial, (Surface*)_btnSkills })
 +		if (s) s->setY(s->getY() + 28);
 +	// the warning strip sat at the stock bar's y+32, which is below the 42 px Joe bar and off the
@@ -6673,6 +6674,30 @@ index 7cd4941..5bff42f 100644
 +	d.phase = _save->getSide() == FACTION_PLAYER ? "JOE TURN" : "COBRA TURN";
 +	d.objective = tr(_save->getMissionType());
 +	d.counts = "Cobra seen: " + std::to_string(seen) + "  -  Civilians: " + std::to_string(civ);
++	// HUD v2 s.3: the ALARM line - QUIET / SUSPICIOUS / ALARM, and once raised what is coming
++	{
++		SavedBattleGame *sb = _save;
++		const bool stealth = Stealth::on(sb);
++		const bool vanAlarm = sb->getVanStop("alarm") != 0;
++		if (stealth || vanAlarm)
++		{
++			bool wary = false;
++			for (auto *bu : *sb->getUnits())
++				if (bu->getOriginalFaction() == FACTION_HOSTILE && !bu->isOut() && Stealth::state(sb, bu) >= Stealth::WARY) wary = true;
++			const bool raised = (stealth && Stealth::alarm(sb)) || vanAlarm;
++			d.alarm = raised ? "ALARM" : wary ? "SUSPICIOUS" : "QUIET";
++			d.alarmLevel = raised ? 2 : wary ? 1 : 0;
++			const int turn = sb->getTurn();
++			const int backup = sb->getVanStop("backupTurn", -1);
++			if (raised && backup >= turn) d.alarm += "  -  reinforcements in " + std::to_string(backup - turn) + (backup - turn == 1 ? " turn" : " turns");
++			const AlienDeployment *dep = _game->getMod()->getDeployment(sb->getMissionType(), false);
++			if (vanAlarm && dep && dep->getGetawayTurns() > 0 && !sb->getVanStop("gone"))
++			{
++				const int left = std::max(0, dep->getGetawayTurns() - sb->getVanStop("ends"));
++				d.alarm += "  -  cash leaving in " + std::to_string(left) + (left == 1 ? " turn" : " turns");
++			}
++		}
++	}
 +	HiUI::nativeHud(_icons, _hudMission, d);
 +}
 +
@@ -6885,7 +6910,7 @@ index 7cd4941..5bff42f 100644
  }
  
  
-@@ -732,9 +1418,11 @@ BattlescapeState::BattlescapeState() :
+@@ -732,9 +1443,11 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -6897,7 +6922,7 @@ index 7cd4941..5bff42f 100644
  
  	resetPalettes();
  }
-@@ -789,6 +1477,38 @@ void BattlescapeState::init()
+@@ -789,6 +1502,38 @@ void BattlescapeState::init()
  	_map->draw();
  	_battleGame->init();
  	updateSoldierInfo();
@@ -6936,7 +6961,7 @@ index 7cd4941..5bff42f 100644
  
  	switch (_save->getTUReserved())
  	{
-@@ -807,6 +1527,17 @@ void BattlescapeState::init()
+@@ -807,6 +1552,17 @@ void BattlescapeState::init()
  	}
  	if (_firstInit)
  	{
@@ -6954,7 +6979,7 @@ index 7cd4941..5bff42f 100644
  		// Set music
  		if (Options::oxcePlayBriefingMusicDuringEquipment)
  		{
-@@ -859,6 +1590,7 @@ void BattlescapeState::init()
+@@ -859,6 +1615,7 @@ void BattlescapeState::init()
  void BattlescapeState::think()
  {
  	static bool popped = false;
@@ -6962,7 +6987,7 @@ index 7cd4941..5bff42f 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1215,6 +1947,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1215,6 +1972,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -6983,7 +7008,7 @@ index 7cd4941..5bff42f 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -2172,7 +2918,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +2943,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -6992,7 +7017,7 @@ index 7cd4941..5bff42f 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +3138,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +3163,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -7000,7 +7025,7 @@ index 7cd4941..5bff42f 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -3577,13 +4324,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3577,13 +4349,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  	{
  		nextStage = ruleDeploy->getNextStage();
  	}
@@ -7030,7 +7055,7 @@ index 7cd4941..5bff42f 100644
  		bgen.nextStage();
  		_game->popState();
  		_game->pushState(new BriefingState(0, 0));
-@@ -3621,6 +4383,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4408,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -7043,7 +7068,7 @@ index 7cd4941..5bff42f 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +4820,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4845,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -12391,10 +12416,10 @@ index 0000000..8277a64
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..03ab241
+index 0000000..9a41c2f
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3335 @@
+@@ -0,0 +1,3337 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -13721,6 +13746,8 @@ index 0000000..03ab241
 +		boxText(row(1.2, 6.5), hud.phase, 2.2, 2, S_MUTED);
 +		boxText(row(8.5, 5.5), hud.objective, 2.4, 0, S_TEXT);
 +		boxText(row(14.8, 5), hud.counts, 2.1, 0, S_MUTED);
++		if (!hud.alarm.empty())
++			boxText(row(20.4, 5), hud.alarm, 2.1, 0, hud.alarmLevel >= 2 ? 0xE04A3A : hud.alarmLevel == 1 ? S_YELLOW : 0x6FAE4A, "label", true);
 +	}
 +
 +	// ===================================================================== THE GLOBE
@@ -15732,10 +15759,10 @@ index 0000000..03ab241
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..9eb416c
+index 0000000..428d7ed
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,207 @@
+@@ -0,0 +1,208 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -15890,6 +15917,7 @@ index 0000000..9eb416c
 +		std::string turn, phase, objective, counts;
 +		bool vehicle = false, listOpen = false;   // G.I. Joe ARSENAL: one wide armed-weapon card; an open weapon list
 +		std::string listTitle;
++		std::string alarm; int alarmLevel = -1;   // HUD v2: QUIET / SUSPICIOUS / ALARM (+ what is coming); -1 none
 +	};
 +	void nativeHud(const Surface *bar, const Surface *mission, const HudData &d);
 +	/// A PANEL a screen paints itself at display resolution (the research tree). The painter
