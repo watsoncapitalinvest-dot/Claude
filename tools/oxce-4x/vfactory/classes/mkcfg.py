@@ -57,10 +57,12 @@ c = base('stinger', s, 3, [2, 3], 'stinger', {'m0': ['GJTURRET']}, {'muzzle': [-
          R + f'Cobra Stinger, class 2x3 (installed as size 3). Scale {s} (was 0.0433; {lim} axis limits).\n')
 c['turret'] = {'objs': ['GJTURRET'], 'pivot': [-7.48, 0.0, 6.86], 'muzzles': {'mg': [-1.64, 3.0, 14.0, 1, 0, 0]}, 'note': 'quad cannon turret'}
 c['preview']['script'] = [['move', 'NE', 2], ['gun', ['mg']], ['tturn', 'SE'], ['gun', ['mg']], ['tturn', 'NE'], ['wait', 6]]; cf2['stinger'] = c
-s, lim = fit(24.0, 11.0, 3, 2)    # Thunder Machine 2x3; rockets fixed (direction never confirmed, carried from ROSTER)
-c = base('thunder_machine', s, 3, [2, 3], 'thunder_machine', {'m0': []}, {'muzzle': [-7.4, 3.5, 7.0, 1, 0, 0]}, 'Dreadnok',
-         R + f'Dreadnok Thunder Machine, class 2x3 (installed as size 3). Scale {s} (was 0.0813; {lim} axis limits). Rocket direction never confirmed.\n')
-c['guns'] = ['muzzle']; c['preview']['script'] = [['move', 'NE', 2], ['gun', ['muzzle']], ['wait', 6]]; cf2['thunder_machine'] = c
+s, lim = fit(24.0, 11.0, 3, 2)    # Thunder Machine 2x3; rework (John 17:36-17:37): twin Penetrator Gatlings as a turret, detail, markings
+GZ = 6.196; GM = {'gatL': [11.45, 0.62, GZ, 1, 0, 0], 'gatR': [11.45, -0.62, GZ, 1, 0, 0]}
+c = base('thunder_machine', s, 3, [2, 3], 'thunder_machine_v2', {'m0': ['GJTURRET']}, dict(GM), 'Dreadnok',
+         R + f'Dreadnok Thunder Machine, class 2x3 (installed as size 3). Scale {s} (was 0.0813; {lim} axis limits). Rework 17 Nov (vfactory/thunder_machine): twin 6-barrel Penetrator Gatlings on a raised turret (they turn to aim), side pipes, stack, jerry cans, push bar, Dreadnok markings. The old rear "rocket" points were the jet exhausts.\n')
+c['turret'] = {'objs': ['GJTURRET'], 'pivot': [6.3, 0.0, 3.627], 'muzzles': dict(GM), 'note': 'twin Gatlings on one mount'}
+c['preview']['script'] = [['move', 'NE', 2], ['gun', ['gatL', 'gatR']], ['tturn', 'SE'], ['gun', ['gatL', 'gatR']], ['tturn', 'E'], ['gun', ['gatL', 'gatR']], ['tturn', 'NE'], ['wait', 6]]; cf2['thunder_machine'] = c
 s, lim = fit(26.0, 16.02, 3, 2)   # Wolverine 2x3; missile turret, loaded
 W12 = [f'wrk{i:02d}' for i in range(1, 13)]; M12 = [f'mouth{i:02d}' for i in range(1, 13)]
 c = base('wolverine', s, 3, [2, 3], 'wolverine', {'m0': ['GJTURRET', 'wrk_fly'] + W12 + M12}, {'muzzle': [-3.55, 6.43, 14.73, 1, 0, 0]}, 'Joe',

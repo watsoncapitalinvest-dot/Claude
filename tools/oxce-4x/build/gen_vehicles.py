@@ -47,7 +47,7 @@ V = {
  "ferret":    dict(pack="ferret", asset="ferret", state="m0", side="cobra", name="Cobra Ferret", tu=80, hp=30, arm=(20, 15, 10, 10),
                   wpn=("Machine gun", 30, 1, 60, (50, 25), None, (35, 35, 3), 0, 2, "m60"), price=0),
  "thunder":   dict(pack="thunder_machine", asset="thunder_machine", state="m0", side="cobra", name="Dreadnok Thunder Machine", tu=54, hp=110, arm=(70, 60, 50, 40),
-                  wpn=("Rocket rack", 70, 3, 8, None, (75, 50), None, 1, 0, "bazooka_launch"), price=0), # Thunderclap tractor + trailer (VFACTORY, 17 Nov 2026; John's TechnoViper3D kit, 3x3 each). Canon weapon names from the kit blueprint.
+                  wpn=("Penetrator Gatling cannons (30mm)", 45, 1, 120, (45, 30), None, (35, 40, 5), 0, 4, "m60"), price=0),  # John 17:36: the twin Gatlings (VFACTORY stand-in numbers for STORY); was a "Rocket rack" firing from the jet exhausts # Thunderclap tractor + trailer (VFACTORY, 17 Nov 2026; John's TechnoViper3D kit, 3x3 each). Canon weapon names from the kit blueprint.
  # Numbers are VFACTORY stand-ins scaled off the Mauler/MOBAT until STORY sets them; the ZPJ-79 copies STORY's arsenal item (power 110, 3, blast 2).
  "thunderclap_tractor": dict(pack="thunderclap_tractor", asset="thunderclap_tractor", state="m0", side="joe", name="Thunderclap Tractor", tu=50, hp=170, arm=(100, 80, 60, 60),
                   wpn=("MG-999 dual-barrelled pulsating assault weapon", 60, 1, 60, (50, 30), (80, 55), (40, 40, 3), 0, 12, "m2x_50cal"),
