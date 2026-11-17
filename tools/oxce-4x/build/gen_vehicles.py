@@ -43,7 +43,7 @@ V = {
  "stinger":   dict(pack="stinger", asset="stinger", state="m0", side="cobra", name="Cobra Stinger", tu=72, hp=50, arm=(35, 25, 20, 15),
                   wpn=("Quad cannon", 40, 1, 100, (45, 30), None, (35, 40, 4), 0, 4, "m60"), price=0),
  "hiss":      dict(pack="hiss", asset="hiss", state="m0", side="cobra", name="Cobra H.I.S.S.", tu=60, hp=110, arm=(85, 70, 55, 55),
-                  wpn=("Twin cannon", 60, 1, 40, (50, 30), (80, 55), (40, 40, 2), 0, 4, "m2x_50cal"), price=0),
+                  wpn=("Twin 30mm automatic cannons", 60, 1, 40, (50, 30), (80, 55), (40, 40, 2), 0, 4, "m2x_50cal"), price=0, head="proj_thunder_round_head0"),  # blueprint name (John 18:29 rework); same 30mm round as the Thunder Machine
  "ferret":    dict(pack="ferret", asset="ferret", state="m0", side="cobra", name="Cobra Ferret", tu=80, hp=30, arm=(20, 15, 10, 10),
                   wpn=("Machine gun", 30, 1, 60, (50, 25), None, (35, 35, 3), 0, 2, "m60"), price=0),
  "thunder":   dict(pack="thunder_machine", asset="thunder_machine", state="m0", head="proj_thunder_round_head0", side="cobra", name="Dreadnok Thunder Machine", tu=54, hp=110, arm=(70, 60, 50, 40),

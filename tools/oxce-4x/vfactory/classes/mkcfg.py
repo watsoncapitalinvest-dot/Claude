@@ -25,11 +25,14 @@ c = base('vamp_mk2', round(0.052 * 2.016, 5), 3, [2, 3], 'vamp_mk2', st, mz, 'Jo
 c['launchers'] = [{'name': 'rkt', 'muzzles': rk, 'fx_scale': 0.22, 'from_tube': True}]
 c['preview']['script'] = [['move', 'NE', 2]] + [['missile', r, f'm{3 - i}', 'rkt', 11.25] for i, r in enumerate(rk)] + [['wait', 6]]
 cf['vamp_mk2'] = c
-# H.I.S.S.: tank class 3x4, was 0.0672 in 3x3 -> x1.89
-c = base('hiss', round(0.0672 * 1.89, 5), 4, [3, 4], 'hiss', {'m0': ['GJTURRET01']}, {'muzzle': [2.22, 0.06, 17.34, 1, 0, 0]}, 'Cobra',
-         R + 'Cobra H.I.S.S., class 3x4 (installed as size 4 until rectangles). Scale 0.12701 = 0.0672 x 1.89 (95% long / 43% short).\n')
-c['turret'] = {'objs': ['GJTURRET01'], 'pivot': [-4.27, 0.0, 13.42], 'muzzles': {'cannon': [2.22, 0.06, 17.34, 1, 0, 0]}, 'note': 'twin cannon turret turns on its own'}
-c['preview']['script'] = [['move', 'NE', 2], ['gun', ['cannon']], ['tturn', 'SE'], ['gun', ['cannon']], ['tturn', 'NE'], ['wait', 6]]
+# H.I.S.S.: tank class 3x4, was 0.0672 in 3x3 -> x1.89. Turret = the real 1983 turret (vfactory/hiss/build_hiss.py, John 18:29)
+HM = {'cannonL': [6.179, 2.014, 17.142, 1, 0, 0], 'cannonR': [6.179, -2.014, 17.142, 1, 0, 0]}
+c = base('hiss', round(0.0672 * 1.89, 5), 6, [3, 4], 'hiss_v2',   # FOOT 6 frame: the rear rack is taller than a FOOT 4 frame (SE heading clipped)
+         {'m0': ['GJTURRET01']}, dict(HM), 'Cobra',
+         R + 'Cobra H.I.S.S., class 3x4 (installed as size 4 until rectangles). Scale 0.12701 = 0.0672 x 1.89 (95% long / 43% short). Turret: the 1983 toy\'s gunner pod with dorsal twin 30mm automatic cannons (Thingiverse 776353 v3), replacing the Generals rocket rack.\n')
+c['turret'] = {'objs': ['GJTURRET01'], 'pivot': [-4.27, 0.0, 13.42], 'muzzles': dict(HM), 'note': 'gunner pod with twin 30mm cannons'}
+c['gun_fx_scale'] = 1.0
+c['preview']['script'] = [['move', 'NE', 2], ['gun', ['cannonL', 'cannonR']], ['tturn', 'SE'], ['gun', ['cannonL', 'cannonR']], ['tturn', 'NE'], ['wait', 6]]
 cf['hiss'] = c
 # MOBAT: tank class 3x4, was 0.089 -> x1.37
 c = base('mobat', round(0.089 * 1.37, 5), 4, [3, 4], 'mobat', {'m0': ['GJTURRET', 'GJBARREL01']}, {'muzzle': [16.032, 0.0, 8.08, 1, 0, 0]}, 'Joe',
