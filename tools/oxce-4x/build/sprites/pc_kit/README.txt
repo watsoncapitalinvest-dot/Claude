@@ -1,5 +1,15 @@
 RENDER MACHINE - runs on your PC, offline. Drop a model in, a finished game sheet comes out.
 
+THE APP (easiest)
+  Double-click RENDER_APP.bat. In the window:
+    Start machine / Stop         run or stop the machine (Stop ends every render; that model starts over next time)
+    + Add armed / + Add civilian pick .blend files - they are copied into the right folder and queued
+    Models list                  queued / rendering with % / done / failed. Click one to preview it, double-click
+                                 to open its results folder. Re-render selected = do that model again.
+    Extra animations             tick the clips to make for each model (saved to extras.txt, used from the next model)
+    Log                          the last lines of render_log.txt
+  Closing the window stops the machine. RENDER_MACHINE.bat still works without the app.
+
 START IT
   Double-click RENDER_MACHINE.bat and leave the window open. It watches two folders:
     Reference\cartel   ARMED men      (gun poses: rifle stand/kneel/aim, pistol stand/kneel)
