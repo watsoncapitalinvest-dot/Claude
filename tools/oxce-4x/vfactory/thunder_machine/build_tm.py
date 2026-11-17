@@ -4,8 +4,8 @@
 #   cradle (canon: belt-fed synchronized Gatling guns), with ammo boxes and feed chutes; it becomes the turret layer.
 # - Toy references (John 17:43: instructions, blueprint, toy photo): navy lower hull under the red armour panels, blue tube
 #   roll cage in front of the guns, ammo-belt gear beside them, antenna behind the cab.
-# - Dreadnok junk the toy's story asks for ("fabricated from used auto and truck parts"): side exhaust pipes, a vertical
-#   stack, jerry cans on the rear deck, a push bar on the front. Sizes chosen to read at sprite size (>= 3 px).
+# - Jerry cans on the rear deck. (Side pipes and a stack were added, then removed 18:00 John "what are those silver
+#   things": not on the toy.) Sizes chosen to read at sprite size (>= 3 px).
 # Decals are placed afterwards by veh/damage_generic.py (decals.json). The rear points ROSTER listed as rocket muzzles
 # are the jet exhausts; nothing fires from them now.
 # usage: python3 -I build_tm.py in.blend out.blend
@@ -60,27 +60,27 @@ old = bpy.data.objects.get('GJTURRET')
 if old: bpy.data.objects.remove(old)
 g = Builder('GJTURRET')
 GZ = ZG + 0.55                                                    # gun axis height
-g.cyl_z(6.3, 0, ZD, GZ - 0.3, 0.38, 'dark')                       # pedestal up from the deck (the turret turns on it)
-g.cyl_z(6.3, 0, GZ - 0.42, GZ - 0.3, 0.6, 'steel')                # traverse ring
+g.cyl_z(6.3, 0, ZD, GZ - 0.3, 0.38, 'dark')                       # pedestal up from the deck (fixed: the guns only fire forward, John 18:04)
+g.cyl_z(6.3, 0, GZ - 0.42, GZ - 0.3, 0.6, 'red')                  # mount plate
 g.box((6.6, 0, GZ), (1.6, 1.0, 0.7), 'dark')                      # cradle between the guns
 for s in (1, -1):
     y = 0.62 * s
-    g.box((6.9, y, GZ), (1.8, 0.62, 0.72), 'steel')               # receiver
+    g.box((6.9, y, GZ), (1.8, 0.62, 0.72), 'red')                 # receiver (toy: red gun mount)
     g.box((6.3, y, GZ + 0.45), (0.7, 0.4, 0.22), 'dark')          # drive motor on top
     for k in range(6):                                            # six barrels round the axis
         a = 2 * math.pi * k / 6; by, bz = y + 0.17 * math.cos(a), GZ + 0.17 * math.sin(a)
-        g.cyl_x(7.8, 11.4, by, bz, 0.065, 'steel', seg=8)
+        g.cyl_x(7.8, 11.4, by, bz, 0.065, 'dark', seg=8)          # black barrels, as on the toy
         g.cyl_x(11.35, 11.45, by, bz, 0.04, 'bore', seg=6)
     for xr in (8.6, 10.9):                                        # barrel clamps
         g.cyl_x(xr - 0.12, xr + 0.12, y, GZ, 0.3, 'dark')
     g.cyl_x(7.75, 8.05, y, GZ, 0.33, 'dark')                      # front of the receiver
-# the "Fast Fire" woven ammo belt: one wide drum of linked rounds wrapped round the middle of the gun armature, across
+# the "Fast Fire" woven ammo belt (black toothed links, as on the toy): one wide drum of linked rounds wrapped round the middle of the gun armature, across
 # nearly the whole width between the front wheels (John 17:45 top view; instructions step 7A "wrap ammo belt around
 # middle of gun armature"). Links alternate black link / brass round so it reads as a belt, not a pipe.
 for i in range(30):
     yy = -2.55 + i * 0.17
-    if i % 2: g.cyl_y(6.85, yy, yy + 0.17, GZ, 0.74, 'dark', seg=14)
-    else: g.cyl_y(6.85, yy, yy + 0.17, GZ, 0.66, 'brass', seg=14)
+    if i % 2: g.cyl_y(6.85, yy, yy + 0.17, GZ, 0.76, 'dark', seg=14)      # link teeth (toy: a black toothed chain)
+    else: g.cyl_y(6.85, yy, yy + 0.17, GZ, 0.64, 'bore', seg=14)
 g.cyl_y(6.85, -2.6, 2.6, GZ, 0.22, 'steel')                       # armature axle through it
 print('GUN_AXIS_Z %.3f PIVOT 6.3 0 %.3f' % (GZ, ZD))
 g.done()
@@ -104,16 +104,23 @@ for p in ch.data.polygons:
     c = W @ p.center
     if c.z < 3.6 and -11.0 < c.x < 5.5: p.material_index = NV; nn += 1    # whole lower side band: the big hull triangles make any x cut diagonal
 print('NAVY_FACES', nn)
+# the turbojet on the rear deck is black, its nozzle bell navy (toy photos; John 17:56 "paint the engine black").
+# Same texture darkened to near-black (shading kept), so its detail still reads.
+blk = px.copy(); lum = px[..., :3].mean(-1, keepdims=True); blk[..., :3] = np.clip(0.10 + lum * 0.28, 0, 1)
+bimg = bpy.data.images.new('gjtm_black_tex', w, hgt, alpha=True); bimg.pixels = blk.ravel().tolist(); bimg.pack()
+bk = src.copy(); bk.name = 'gjtm_black'; next(n for n in bk.node_tree.nodes if n.type == 'TEX_IMAGE').image = bimg
+ch.data.materials.append(bk); BK = len(ch.data.materials) - 1; nb = nz = 0
+for p in ch.data.polygons:
+    c = W @ p.center
+    if c.x < -11.0 and abs(c.y) < 1.9: p.material_index = NV; nz += 1           # nozzle bell
+    elif c.x < -6.5 and abs(c.y) < 1.9 and c.z > 3.0: p.material_index = BK; nb += 1   # jet body
+print('ENGINE_FACES', nb, 'NOZZLE_FACES', nz)
 
 # ---- hull junk (all on the hull layer)
 h = Builder('GJJUNK')
 for s in (1, -1):
-    h.cyl_x(-9.0, -1.5, 4.55 * s, 0.9, 0.32, 'chrome')            # side exhaust pipes
-    h.cyl_x(-9.4, -9.0, 4.55 * s, 0.9, 0.36, 'rust')              # rusty pipe ends
     h.box((-8.6, 2.0 * s, ZC[s] + 0.6), (1.0, 0.7, 1.2), 'olive')  # jerry cans standing on the rear deck
     h.box((-8.6, 2.0 * s, ZC[s] + 1.26), (0.3, 0.25, 0.12), 'dark') # can handles
-h.cyl_z(-3.0, 4.2, 1.0, 7.8, 0.3, 'chrome')                       # exhaust stack up the side (driver's side)
-h.cyl_z(-3.0, 4.2, 7.8, 8.1, 0.36, 'rust')
 ZF = top(11.6, 2.4)                                               # blue tubular roll cage in front of the guns (blueprint item 4)
 for yy in (2.4, -2.4):
     h.tube([(11.6, yy, ZF), (11.9, yy, ZF + 2.2), (11.2, yy * 0.8, ZG + 1.5), (9.8, yy * 0.8, ZG + 1.7)], 0.16, 'blue')

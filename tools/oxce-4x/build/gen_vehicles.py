@@ -46,7 +46,7 @@ V = {
                   wpn=("Twin cannon", 60, 1, 40, (50, 30), (80, 55), (40, 40, 2), 0, 4, "m2x_50cal"), price=0),
  "ferret":    dict(pack="ferret", asset="ferret", state="m0", side="cobra", name="Cobra Ferret", tu=80, hp=30, arm=(20, 15, 10, 10),
                   wpn=("Machine gun", 30, 1, 60, (50, 25), None, (35, 35, 3), 0, 2, "m60"), price=0),
- "thunder":   dict(pack="thunder_machine", asset="thunder_machine", state="m0", side="cobra", name="Dreadnok Thunder Machine", tu=54, hp=110, arm=(70, 60, 50, 40),
+ "thunder":   dict(pack="thunder_machine", asset="thunder_machine", state="m0", head="proj_thunder_round_head0", side="cobra", name="Dreadnok Thunder Machine", tu=54, hp=110, arm=(70, 60, 50, 40),
                   wpn=("Penetrator Gatling cannons (30mm)", 45, 1, 120, (45, 30), None, (35, 40, 5), 0, 4, "m60"), price=0),  # John 17:36: the twin Gatlings (VFACTORY stand-in numbers for STORY); was a "Rocket rack" firing from the jet exhausts # Thunderclap tractor + trailer (VFACTORY, 17 Nov 2026; John's TechnoViper3D kit, 3x3 each). Canon weapon names from the kit blueprint.
  # Numbers are VFACTORY stand-ins scaled off the Mauler/MOBAT until STORY sets them; the ZPJ-79 copies STORY's arsenal item (power 110, 3, blast 2).
  "thunderclap_tractor": dict(pack="thunderclap_tractor", asset="thunderclap_tractor", state="m0", side="joe", name="Thunderclap Tractor", tu=50, hp=170, arm=(100, 80, 60, 60),
@@ -228,7 +228,7 @@ for i, (v, d) in enumerate(V.items()):
           f"    bigSprite: {340 + i}", "    floorSprite: 0", "    handSprite: 0", f"    bulletSprite: {bullet}", f"    fireSound: {cast(snd)}",
           f"    compatibleAmmo: [{ammo}]", "    turretType: 0", f"    costBuy: {d['price']}", f"    costSell: {d['price'] // 2}", "    transferTime: 96"]
     if d["side"] == "cobra": I += ["    requires: [STR_NEW_BATTLE_ONLY]", "    requiresBuy: [STR_NEW_BATTLE_ONLY]"]
-    if d.get("head") and not d.get("wpn2"): I += [f"    gjBulletHeadSheet: GJ_HEAD_{v.upper()}.PCK"]   # the main weapon's own full-size shot
+    if d.get("head") and not d.get("wpn2"): I += [f"    gjBulletHeadSheet: GJ_HEAD_{v.upper()}.PCK", "    bulletDirectional: true"]   # the hook only draws directional shots   # the main weapon's own full-size shot
     if snap: I += [f"    accuracySnap: {snap[0]}", f"    tuSnap: {snap[1]}"]
     if aimed: I += [f"    accuracyAimed: {aimed[0]}", f"    tuAimed: {aimed[1]}"]
     if auto: I += [f"    accuracyAuto: {auto[0]}", f"    tuAuto: {auto[1]}", f"    confAuto: {{shots: {auto[2]}}}"]
@@ -237,7 +237,7 @@ for i, (v, d) in enumerate(V.items()):
           "    invWidth: 1", "    invHeight: 1", "    bigSprite: 16" if dt == 3 else "    bigSprite: 12", "    floorSprite: 16" if dt == 3 else "    floorSprite: 12",
           f"    hitSound: {hit}", f"    hitAnimation: {0 if dt == 3 else 26}", f"    costBuy: {2000 if dt == 3 else 400}", "    transferTime: 24"]
     if blast: I += [f"    blastRadius: {blast}"]
-    if d.get("head") and not d.get("wpn2"): I += [f"    gjBulletHeadSheet: GJ_HEAD_{v.upper()}.PCK"]
+    if d.get("head") and not d.get("wpn2"): I += [f"    gjBulletHeadSheet: GJ_HEAD_{v.upper()}.PCK", "    bulletDirectional: true"]   # the hook only draws directional shots
     if d["side"] == "cobra": I += ["    requires: [STR_NEW_BATTLE_ONLY]", "    requiresBuy: [STR_NEW_BATTLE_ONLY]"]
     S2[T] = d["name"]; S2[ammo] = f"{d['name']}: {' '.join(w if any(c.isdigit() for c in w) or w[1:] != w[1:].lower() else w.lower() for w in wn.split())} ammo"
     if d.get("wpn2"):
