@@ -35,8 +35,32 @@ def render_dir(d):
     return ((d + 1) % 8) + 1          # game 0 (up-right) = render 2 'away-right'
 
 
+# WALK16 layout (BRIEF_FOR_BUILD_Walk16; UnitSprite::drawRoutineWhole reads it when a sheet has 896 frames):
+# the six still clips at 8 facings x 8 frames, then four walks at 8 facings x 16 frames.
+W16 = [('stand', 0, 8), ('kneel', 64, 8), ('aim', 128, 8), ('death', 192, 8), ('pstand', 256, 8), ('pkneel', 320, 8),
+       ('walk', 384, 16), ('pwalk', 512, 16), ('swalk', 640, 16), ('ewalk', 768, 16)]
+
+
+def load_meta(srcs):
+    """One or more render dirs (the Walk16 walks are rendered on their own): clip -> (dir, frames), anchors merged."""
+    meta, where = None, {}
+    for s in srcs:
+        m = json.load(open(os.path.join(s, 'meta.json')))
+        cf = m.get('clipframes', {})
+        for c in m['clips']:
+            where[c] = (s, cf.get(c, m['frames']))
+        if meta is None:
+            meta = m
+        else:
+            meta['anchors'].update(m['anchors'])
+    return meta, where
+
+
 def main(src, out_dir, stem):
-    meta = json.load(open(os.path.join(src, 'meta.json')))
+    srcs = src.split(',')
+    meta, where = load_meta(srcs)
+    src = srcs[0]
+    w16 = os.environ.get('W16') == '1'
     nf = meta['frames']
     k = ink.FINAL[0] / meta['res'][0]
     # one scale for the sheet: from the standing man facing the camera
@@ -49,22 +73,32 @@ def main(src, out_dir, stem):
     if 'ref_h' in meta:
         s *= meta['h49'] / 1.78
     print('scale %.3f (standing figure %d px at render size)' % (s, feet5 - ys.min()))
-    clips = [c for c in CLIPS if c in meta['clips']]
-    rows = (len(clips) * 64 + COLS - 1) // COLS
+    if w16:
+        missing = [c for c, _, _ in W16 if c not in where]
+        if missing:
+            sys.exit('W16 sheet needs every clip; missing: %s' % ', '.join(missing))
+        layout = W16
+    else:
+        layout = [(c, i * 64, 8) for i, c in enumerate([c for c in CLIPS if c in where])]
+    clips = [c for c, _, _ in layout]
+    rows = (max(b + 8 * n for _, b, n in layout) + COLS - 1) // COLS
     sheet = Image.new('RGBA', (COLS * CW, rows * CH), (0, 0, 0, 0))
     lines = []
-    for ci, clip in enumerate(clips):
+    for clip, base, per in layout:
+        csrc, cnf = where[clip]
+        if cnf != per:
+            sys.exit('clip %s rendered at %d frames, layout wants %d' % (clip, cnf, per))
         for d in range(8):
             kdir = render_dir(d)
             fx, fy = [v * k for v in meta['anchors'][f'stand/{kdir}/0']['feet']]
-            for f in range(nf):
-                p = f'{src}/{clip}/d{kdir}_f{f:02d}'
+            for f in range(per):
+                p = f'{csrc}/{clip}/d{kdir}_f{f:02d}'
                 fr = ink.ink_frame(Image.open(p + '_beauty.png').convert('RGBA'), Image.open(p + '_id.png'))
                 big = fr.resize((round(fr.width * s), round(fr.height * s)), Image.LANCZOS)
                 ox, oy = round(CENTRE_X - fx * s), round(FEET_Y - fy * s)
                 cell = Image.new('RGBA', (CW, CH), (0, 0, 0, 0))
                 cell.alpha_composite(big, (max(0, ox), max(0, oy)), (max(0, -ox), max(0, -oy)))
-                n = ci * 64 + d * 8 + f
+                n = base + d * per + f
                 sheet.alpha_composite(cell, ((n % COLS) * CW, (n // COLS) * CH))
                 a = meta['anchors'][f'{clip}/{kdir}/{f}']
                 rx, ry = [v * k * s for v in a['rh']]

@@ -23,6 +23,8 @@ def arg(k, d=None):
 BLEND = arg('--blend')
 CLIPS = dict(kv.split('=', 1) for kv in arg('--clips').split(','))
 NF = int(arg('--frames', 8))
+# Walk16: per-clip frame counts, e.g. --clipframes walk=16,pwalk=16 (others keep --frames)
+CLIPNF = {k: int(v) for k, v in (kv.split('=') for kv in arg('--clipframes', '').split(',') if kv)}
 OUT = arg('--out')
 DIRS = [int(x) for x in arg('--dirs', '1,2,3,4,5,6,7,8').split(',')]
 HAIR = arg('--hair', '')
@@ -235,7 +237,9 @@ anchors = {}
 for name, act in ACTIONS.items():
     fs, fe = apply_clip(act, any(w in name for w in ('walk', 'run')), name.startswith('death'))
     loop = not name.startswith('death')
-    frames = [round(fs + (fe - fs) * i / (NF if loop else NF - 1)) for i in range(NF)]
+    nf = CLIPNF.get(name, NF)
+    # exact fractions (Walk16 brief 2): rounding to whole frames gave uneven gaps (3,4,4,3...) - a visible stutter
+    frames = [fs + (fe - fs) * i / (nf if loop else nf - 1) for i in range(nf)]
     os.makedirs(f'{OUT}/{name}', exist_ok=True)
     # a man lying flat is longer than the frame is wide: the death clip pulls the camera back 15% so his
     # boots stay in shot in every facing (ROSTER's B1, 13 Nov). Anchors come from the same camera, so they hold.
@@ -243,7 +247,7 @@ for name, act in ACTIONS.items():
     for k in DIRS:
         place_camera(k)
         for i, f in enumerate(frames):
-            sc.frame_set(f); bpy.context.view_layer.update()
+            sc.frame_set(int(f), subframe=f - int(f)); bpy.context.view_layer.update()
             rh, lh = hand('Right'), hand('Left')
             hips = arm.matrix_world @ arm.pose.bones['mixamorig:Hips'].head
             anchors[f'{name}/{k}/{i}'] = {'rh': px(rh), 'lh': px(lh), 'feet': px(Vector((hips.x, hips.y, 0)))}
@@ -253,5 +257,5 @@ for name, act in ACTIONS.items():
             sc.render.filepath = f'{OUT}/{name}/d{k}_f{i:02d}_id.png'; bpy.ops.render.render(write_still=True)
             if SHADE: shade_pass(f'{OUT}/{name}/d{k}_f{i:02d}_shade.png')
         print(name, 'direction', k, 'done', flush=True)
-    json.dump({'frames': NF, 'dirs': DIRS, 'clips': list(ACTIONS), 'res': RES, 'h49': float(H), 'ref_h': REF, 'anchors': anchors},
+    json.dump({'frames': NF, 'clipframes': {n: CLIPNF.get(n, NF) for n in ACTIONS}, 'dirs': DIRS, 'clips': list(ACTIONS), 'res': RES, 'h49': float(H), 'ref_h': REF, 'anchors': anchors},
               open(f'{OUT}/meta.json', 'w'))

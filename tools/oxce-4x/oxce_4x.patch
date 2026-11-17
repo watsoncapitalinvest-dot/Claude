@@ -6102,7 +6102,7 @@ index a0bc8b3..9882f6e 100644
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..723dde1 100644
+index 7cd4941..bc4d555 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -1,3 +1,5 @@
@@ -6119,7 +6119,15 @@ index 7cd4941..723dde1 100644
  #include <algorithm>
  #include <sstream>
  #include <iomanip>
-@@ -88,6 +91,8 @@
+@@ -24,6 +27,7 @@
+ #include "Map.h"
+ #include "Camera.h"
+ #include "BattlescapeState.h"
++#include "../Engine/HiColor.h"
+ #include "AbortMissionState.h"
+ #include "TileEngine.h"
+ #include "ActionMenuState.h"
+@@ -88,6 +92,8 @@
  #include "../Mod/RuleInventory.h"
  #include "../Mod/RuleSoldier.h"
  #include "../Mod/RuleVideo.h"
@@ -6128,7 +6136,7 @@ index 7cd4941..723dde1 100644
  
  namespace OpenXcom
  {
-@@ -137,7 +142,7 @@ BattlescapeState::BattlescapeState() :
+@@ -137,7 +143,7 @@ BattlescapeState::BattlescapeState() :
  
  	// Create the battlemap view
  	// the actual map height is the total height minus the height of the buttonbar
@@ -6137,7 +6145,7 @@ index 7cd4941..723dde1 100644
  
  	_numLayers = new NumberText(3, 5, x + 232, y + 6);
  	_rank = new Surface(26, 23, x + 107, y + 33);
-@@ -465,7 +470,7 @@ BattlescapeState::BattlescapeState() :
+@@ -465,7 +471,7 @@ BattlescapeState::BattlescapeState() :
  
  	_btnKneel->onMouseClick((ActionHandler)&BattlescapeState::btnKneelClick);
  	_btnKneel->onKeyboardPress((ActionHandler)&BattlescapeState::btnKneelClick, Options::keyBattleKneel);
@@ -6146,7 +6154,7 @@ index 7cd4941..723dde1 100644
  	_btnKneel->onMouseIn((ActionHandler)&BattlescapeState::txtTooltipIn);
  	_btnKneel->onMouseOut((ActionHandler)&BattlescapeState::txtTooltipOut);
  	_btnKneel->allowToggleInversion();
-@@ -724,6 +729,395 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +730,522 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
@@ -6247,6 +6255,29 @@ index 7cd4941..723dde1 100644
 +			add(_hudMode[hnd][m]);
 +			_hudMode[hnd][m]->onMouseClick((ActionHandler)&BattlescapeState::hudModeClick);
 +		}
++	}
++	// G.I. Joe ARSENAL: a vehicle's weapon lists (HUD v2, John 16 Nov 21:29 "B"). The five group keys take the grid
++	// places of UP, DOWN, KNEEL, CENTER and GEAR, which a vehicle has no use for (UP / DOWN keep their keys).
++	{
++		const int slot[5] = { 0, 1, 2, 3, 6 };
++		for (int i = 0; i < 5; ++i)
++		{
++			_hudGroup[i] = new InteractiveSurface(12, 11, ox + 196 + (slot[i] % 4) * 13, oy + 14 + (slot[i] / 4) * 12);
++			add(_hudGroup[i]);
++			_hudGroup[i]->onMouseClick((ActionHandler)&BattlescapeState::hudGroupClick);
++			_hudGroup[i]->setVisible(false);
++		}
++		for (int i = 0; i < 6; ++i)
++		{
++			_hudList[i] = new InteractiveSurface(47, 8, ox + 94 + (i % 2) * 51, oy + 15 + (i / 2) * 8);
++			add(_hudList[i]);
++			_hudList[i]->onMouseClick((ActionHandler)&BattlescapeState::hudListClick);
++			_hudList[i]->setVisible(false);
++		}
++		_hudListPage = new InteractiveSurface(12, 5, ox + 180, oy + 10);
++		add(_hudListPage);
++		_hudListPage->onMouseClick((ActionHandler)&BattlescapeState::hudListClick);
++		_hudListPage->setVisible(false);
 +	}
 +	_hudSig = new InteractiveSurface(36, 14, ox + 251, oy + 24);
 +	add(_hudSig);
@@ -6355,6 +6386,70 @@ index 7cd4941..723dde1 100644
 +		_hudCard[hnd]->setVisible(ours);
 +	}
 +	_hudPortrait->setVisible(ours);
++
++	// G.I. Joe ARSENAL: a vehicle shows ONE armed weapon (the right hand) across both cards, and its weapon lists
++	{
++		static const char *GROUPS[5] = { "GUNS", "MISSILES", "ARTY", "DROPS", "SP. ROUNDS" };
++		static const char *KEYS[5] = { "GUNS", "MISSL", "ARTY", "DROPS", "SP.RD" };
++		std::vector<BattleItem*> byGroup[5];
++		if (ours)
++			for (auto *it : *u->getInventory())
++				if (it->getRules()->getBattleType() == BT_FIREARM)
++					for (int g = 0; g < 5; ++g)
++						if (it->getRules()->getGjaGroup() == GROUPS[g]) byGroup[g].push_back(it);
++		bool any = false;
++		for (auto &v : byGroup) if (!v.empty()) any = true;
++		_hudVehicle = ours && any && !u->getGeoscapeSoldier();
++		if (!_hudVehicle) _hudOpenGroup = -1;
++		BattlescapeButton *gridOff[5] = { _btnMapUp, _btnMapDown, _btnKneel, _btnCenter, _btnInventory };
++		for (int g = 0; g < 5; ++g)
++		{
++			gridOff[g]->setVisible(!_hudVehicle);
++			_hudGroup[g]->setVisible(_hudVehicle);
++			if (!_hudVehicle) continue;
++			HiUI::nativeKey(_hudGroup[g], KEYS[g], false);
++			HiUI::nativeKeyStyle(_hudGroup[g], byGroup[g].empty() ? 3 : g == _hudOpenGroup ? 1 : 0);
++		}
++		d.vehicle = _hudVehicle;
++		const bool open = _hudVehicle && _hudOpenGroup >= 0 && !byGroup[_hudOpenGroup].empty();
++		if (_hudVehicle && !open) _hudOpenGroup = -1;
++		d.listOpen = open;
++		if (_hudVehicle)
++		{
++			d.hand[0].label = "ARMED WEAPON";
++			if (BattleItem *a = u->getRightHandWeapon())
++				for (int g = 0; g < 5; ++g) if (a->getRules()->getGjaGroup() == GROUPS[g]) d.hand[0].label += std::string(" - ") + GROUPS[g];
++			_hudCard[1]->setVisible(false);
++			for (int mm = 0; mm < 3; ++mm) { _hudMode[1][mm]->setVisible(false); if (open) _hudMode[0][mm]->setVisible(false); }
++			_hudCard[0]->setVisible(!open);
++		}
++		if (open)
++		{
++			auto &v = byGroup[_hudOpenGroup];
++			_hudListFirst = std::max(0, std::min(_hudListFirst, (int)v.size() - 1));
++			if (_hudListFirst % 6) _hudListFirst -= _hudListFirst % 6;
++			d.listTitle = std::string(GROUPS[_hudOpenGroup]) + " - " + std::to_string(v.size());
++			for (int i = 0; i < 6; ++i)
++			{
++				const int k = _hudListFirst + i;
++				_hudListItem[i] = k < (int)v.size() ? v[k] : nullptr;
++				_hudList[i]->setVisible(_hudListItem[i] != nullptr);
++				if (!_hudListItem[i]) continue;
++				BattleItem *it = _hudListItem[i];
++				const BattleItem *am = it->getAmmoForSlot(0);
++				const int left = am ? am->getAmmoQuantity() : 0;
++				HiUI::nativeKey(_hudList[i], tr(it->getRules()->getName()) + "  " + std::to_string(left), false);
++				HiUI::nativeKeyStyle(_hudList[i], it == u->getRightHandWeapon() ? 1 : left > 0 ? 0 : 3);
++			}
++			_hudListPage->setVisible(v.size() > 6);
++			if (v.size() > 6) HiUI::nativeKey(_hudListPage, ">", false);
++		}
++		else
++		{
++			for (auto *s : _hudList) s->setVisible(false);
++			_hudListPage->setVisible(false);
++		}
++	}
 +
 +	// reserve: the active toggle is olive
 +	BattlescapeButton *res[4] = { _btnReserveNone, _btnReserveSnap, _btnReserveAimed, _btnReserveAuto };
@@ -6521,6 +6616,46 @@ index 7cd4941..723dde1 100644
 +	else btnLeftHandItemClick(action);
 +}
 +
++void BattlescapeState::hudGroupClick(Action *action)
++{
++	for (int g = 0; g < 5; ++g)
++		if (action->getSender() == _hudGroup[g])
++		{
++			_hudOpenGroup = _hudOpenGroup == g ? -1 : g;   // the open one again closes it
++			_hudListFirst = 0;
++		}
++	refreshJoeHud();
++}
++
++/// A weapon from the open list: it becomes the armed weapon (it and the right hand's weapon change places).
++void BattlescapeState::hudListClick(Action *action)
++{
++	if (action->getSender() == _hudListPage) { _hudListFirst += 6; refreshJoeHud(); return; }
++	if (!playableUnitSelected() || _battleGame->isBusy()) return;
++	BattleUnit *u = _save->getSelectedUnit();
++	for (int i = 0; i < 6; ++i)
++	{
++		if (action->getSender() != _hudList[i] || !_hudListItem[i]) continue;
++		BattleItem *pick = _hudListItem[i];
++		BattleItem *cur = u->getRightHandWeapon();
++		if (pick != cur)
++		{
++			_battleGame->cancelCurrentAction();
++			const RuleInventory *slot = pick->getSlot();
++			const int sx = pick->getSlotX(), sy = pick->getSlotY();
++			pick->setSlot(_game->getMod()->getInventoryRightHand());
++			pick->setSlotX(0); pick->setSlotY(0);
++			if (cur) { cur->setSlot(slot); cur->setSlotX(sx); cur->setSlotY(sy); }
++			u->setActiveRightHand();
++			Log(LOG_INFO) << "[arsenal] " << u->getType() << " arms " << pick->getRules()->getType();
++		}
++		_hudOpenGroup = -1;
++		break;
++	}
++	updateSoldierInfo();
++	refreshJoeHud();
++}
++
 +void BattlescapeState::hudModeClick(Action *action)
 +{
 +	if (!playableUnitSelected() || _battleGame->isBusy()) return;
@@ -6542,7 +6677,7 @@ index 7cd4941..723dde1 100644
  }
  
  
-@@ -732,6 +1126,7 @@ BattlescapeState::BattlescapeState() :
+@@ -732,9 +1254,11 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -6550,7 +6685,11 @@ index 7cd4941..723dde1 100644
  	delete _animTimer;
  	delete _gameTimer;
  	delete _battleGame;
-@@ -789,6 +1184,38 @@ void BattlescapeState::init()
++	HiColor::releaseLazySheets();   // G.I. Joe: soldier sheets are held only for the battle
+ 
+ 	resetPalettes();
+ }
+@@ -789,6 +1313,38 @@ void BattlescapeState::init()
  	_map->draw();
  	_battleGame->init();
  	updateSoldierInfo();
@@ -6589,7 +6728,7 @@ index 7cd4941..723dde1 100644
  
  	switch (_save->getTUReserved())
  	{
-@@ -807,6 +1234,17 @@ void BattlescapeState::init()
+@@ -807,6 +1363,17 @@ void BattlescapeState::init()
  	}
  	if (_firstInit)
  	{
@@ -6607,7 +6746,7 @@ index 7cd4941..723dde1 100644
  		// Set music
  		if (Options::oxcePlayBriefingMusicDuringEquipment)
  		{
-@@ -859,6 +1297,7 @@ void BattlescapeState::init()
+@@ -859,6 +1426,7 @@ void BattlescapeState::init()
  void BattlescapeState::think()
  {
  	static bool popped = false;
@@ -6615,7 +6754,7 @@ index 7cd4941..723dde1 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1215,6 +1654,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1215,6 +1783,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -6636,7 +6775,7 @@ index 7cd4941..723dde1 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -2172,7 +2625,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +2754,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -6645,7 +6784,7 @@ index 7cd4941..723dde1 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +2845,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +2974,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -6653,7 +6792,7 @@ index 7cd4941..723dde1 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -3577,13 +4031,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3577,13 +4160,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  	{
  		nextStage = ruleDeploy->getNextStage();
  	}
@@ -6683,7 +6822,7 @@ index 7cd4941..723dde1 100644
  		bgen.nextStage();
  		_game->popState();
  		_game->pushState(new BriefingState(0, 0));
-@@ -3621,6 +4090,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4219,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -6696,7 +6835,7 @@ index 7cd4941..723dde1 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +4527,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4656,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -6708,10 +6847,10 @@ index 7cd4941..723dde1 100644
  	_map->getCamera()->jumpXY(dX/2, dY/2);
  
 diff --git a/src/Battlescape/BattlescapeState.h b/src/Battlescape/BattlescapeState.h
-index 746f3a4..d880506 100644
+index 746f3a4..0d7cf57 100644
 --- a/src/Battlescape/BattlescapeState.h
 +++ b/src/Battlescape/BattlescapeState.h
-@@ -58,6 +58,28 @@ private:
+@@ -58,6 +58,35 @@ private:
  	InteractiveSurface *_btnStats;
  	BattlescapeButton *_btnReserveNone, *_btnReserveSnap, *_btnReserveAimed, *_btnReserveAuto, *_btnReserveKneel, *_btnZeroTUs;
  	InteractiveSurface *_btnLeftHandItem, *_btnRightHandItem;
@@ -6726,6 +6865,13 @@ index 746f3a4..d880506 100644
 +	int _hudFirst = 0;
 +	BattleUnit *_hudLastSel = nullptr;
 +	int _hudModeType[2][3] = {};
++	// G.I. Joe ARSENAL / HUD v2 weapon lists (vehicles): GUNS, MISSILES, ARTY, DROPS, SP. ROUNDS; the open list, 6 a page
++	InteractiveSurface *_hudGroup[5] = {}, *_hudList[6] = {}, *_hudListPage = nullptr;
++	BattleItem *_hudListItem[6] = {};
++	int _hudOpenGroup = -1, _hudListFirst = 0;
++	bool _hudVehicle = false;
++	void hudGroupClick(Action *action);
++	void hudListClick(Action *action);
 +	Surface *_hudMission = nullptr;
 +	void layoutJoeHud();
 +	void refreshJoeHud();
@@ -6740,7 +6886,7 @@ index 746f3a4..d880506 100644
  
  	static const int SPECIAL_BUTTONS_MAX = 3;
  	int _posSpecialActions[SPECIAL_BUTTONS_MAX];
-@@ -75,7 +97,10 @@ private:
+@@ -75,7 +104,10 @@ private:
  	std::vector<NumberText*> _numMedikitLeft, _numMedikitRight;
  	NumberText *_numTwoHandedIndicatorLeft, *_numTwoHandedIndicatorRight;
  	Uint8 _twoHandedRed, _twoHandedGreen;
@@ -9337,10 +9483,10 @@ index 7f7697c..9fbfa2d 100644
  	int ydiff = origin.y - target->y;
  	int zdiff = origin.z - target->z;
 diff --git a/src/Battlescape/ProjectileFlyBState.cpp b/src/Battlescape/ProjectileFlyBState.cpp
-index 529b7f2..d14cacf 100644
+index 529b7f2..bd54715 100644
 --- a/src/Battlescape/ProjectileFlyBState.cpp
 +++ b/src/Battlescape/ProjectileFlyBState.cpp
-@@ -16,8 +16,11 @@
+@@ -16,8 +16,14 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -9348,11 +9494,14 @@ index 529b7f2..d14cacf 100644
 +#include "Stealth.h"
  #include <algorithm>
  #include "ProjectileFlyBState.h"
++#include "../Engine/Logger.h"
++#include "../Mod/RuleResearch.h"
++#include "../Savegame/SavedGame.h"
 +#include "Villains.h"
  #include "ExplosionBState.h"
  #include "Projectile.h"
  #include "TileEngine.h"
-@@ -32,6 +35,8 @@
+@@ -32,6 +38,8 @@
  #include "../Engine/RNG.h"
  #include "../Mod/Armor.h"
  #include "../Mod/RuleItem.h"
@@ -9361,7 +9510,7 @@ index 529b7f2..d14cacf 100644
  #include "../Engine/Options.h"
  #include "AIModule.h"
  #include "Camera.h"
-@@ -139,6 +144,48 @@ void ProjectileFlyBState::init()
+@@ -139,6 +147,48 @@ void ProjectileFlyBState::init()
  	case BA_AIMEDSHOT:
  	case BA_AUTOSHOT:
  	case BA_LAUNCH:
@@ -9410,7 +9559,26 @@ index 529b7f2..d14cacf 100644
  		if (weapon->getRules()->isOutOfRange(distanceSq))
  		{
  			// out of range
-@@ -453,6 +500,25 @@ bool ProjectileFlyBState::createNewProjectile()
+@@ -447,12 +497,44 @@ bool ProjectileFlyBState::createNewProjectile()
+ 		_action.waypoints.pop_back();
+ 	}
+ 
++	// G.I. Joe ARSENAL: the first time Cobra fires a vehicle weapon at the Joes, its Intel File card opens
++	if (_action.actor && _action.actor->getFaction() == FACTION_HOSTILE && _action.weapon
++		&& !_action.weapon->getRules()->getGjaUnlock().empty())
++	{
++		SavedGame *sg = _parent->getSave()->getGeoscapeSave();
++		const RuleResearch *seen = _parent->getMod()->getResearch(_action.weapon->getRules()->getGjaUnlock(), false);
++		if (sg && seen && !sg->isResearched(seen, false))
++		{
++			sg->addFinishedResearch(seen, _parent->getMod(), nullptr, false);
++			Log(LOG_INFO) << "[arsenal] Cobra fired " << _action.weapon->getRules()->getType() << ": " << seen->getName() << " opens";
++		}
++	}
++
+ 	// create a new projectile
+ 	Projectile *projectile = new Projectile(_parent->getMod(), _parent->getSave(), _action, _origin, _targetVoxel, _ammo);
+ 
  	// add the projectile on the map
  	_parent->getMap()->setProjectile(projectile);
  
@@ -9436,7 +9604,7 @@ index 529b7f2..d14cacf 100644
  	// set the speed of the state think cycle to 16 ms (roughly one think cycle per frame)
  	_parent->setStateInterval(1000/60);
  
-@@ -517,6 +583,7 @@ bool ProjectileFlyBState::createNewProjectile()
+@@ -517,6 +599,7 @@ bool ProjectileFlyBState::createNewProjectile()
  			{
  				_parent->getMod()->getSoundByDepth(_parent->getDepth(), _action.weapon->getRules()->getFireSound())->play(-1, _parent->getMap()->getSoundAngle(_unit->getPosition()));
  			}
@@ -9444,7 +9612,7 @@ index 529b7f2..d14cacf 100644
  			if (_action.type != BA_LAUNCH)
  			{
  				_action.weapon->spendAmmoForAction(_action.type, _parent->getSave());
-@@ -538,13 +605,17 @@ bool ProjectileFlyBState::createNewProjectile()
+@@ -538,13 +621,17 @@ bool ProjectileFlyBState::createNewProjectile()
  	}
  	else
  	{
@@ -9464,7 +9632,7 @@ index 529b7f2..d14cacf 100644
  		}
  		if (_targetVoxel != TileEngine::invalid.toVoxel() && (_projectileImpact != V_EMPTY || _action.type == BA_LAUNCH))
  		{
-@@ -559,6 +630,7 @@ bool ProjectileFlyBState::createNewProjectile()
+@@ -559,6 +646,7 @@ bool ProjectileFlyBState::createNewProjectile()
  			{
  				_parent->getMod()->getSoundByDepth(_parent->getDepth(), _action.weapon->getRules()->getFireSound())->play(-1, _parent->getMap()->getSoundAngle(projectile->getOrigin()));
  			}
@@ -10472,20 +10640,21 @@ index 8497877..f4e01be 100644
  	/// Drop item on ground.
  	void itemDrop(Tile *t, BattleItem *item, bool updateLight);
 diff --git a/src/Battlescape/UnitSprite.cpp b/src/Battlescape/UnitSprite.cpp
-index 8fa87f8..c8ff45e 100644
+index 8fa87f8..cbdb39e 100644
 --- a/src/Battlescape/UnitSprite.cpp
 +++ b/src/Battlescape/UnitSprite.cpp
-@@ -17,6 +17,9 @@
+@@ -17,6 +17,10 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "UnitSprite.h"
++#include "../Engine/HiColor.h"
 +#include <map>
 +#include "../Engine/Logger.h"
 +#include "../Engine/FileMap.h"
  #include "../Engine/SurfaceSet.h"
  #include "../Mod/RuleItem.h"
  #include "../Mod/Armor.h"
-@@ -149,7 +152,7 @@ void UnitSprite::blitItem(Part& item)
+@@ -149,7 +153,7 @@ void UnitSprite::blitItem(Part& item)
  
  	_dest->lock();
  
@@ -10494,7 +10663,7 @@ index 8fa87f8..c8ff45e 100644
  
  	_dest->unlock();
  }
-@@ -169,7 +172,7 @@ void UnitSprite::blitBody(Part& body)
+@@ -169,7 +173,7 @@ void UnitSprite::blitBody(Part& body)
  
  	_dest->lock();
  
@@ -10503,7 +10672,15 @@ index 8fa87f8..c8ff45e 100644
  
  	_dest->unlock();
  }
-@@ -244,6 +247,7 @@ void UnitSprite::draw(const BattleUnit* unit, int part, int x, int y, int shade,
+@@ -200,6 +204,7 @@ void UnitSprite::draw(const BattleUnit* unit, int part, int x, int y, int shade,
+ 	_itemL = getIfVisible(_unit->getLeftHandWeapon());
+ 
+ 	_unitSurface = const_cast<Mod*>(_mod)->getSurfaceSet(armor->getSpriteSheet());
++	HiColor::ensureSheet(const_cast<SurfaceSet*>(_unitSurface));   // G.I. Joe: soldier sheets load on first use
+ 
+ 	_drawingRoutine = armor->getDrawingRoutine();
+ 
+@@ -244,6 +249,7 @@ void UnitSprite::draw(const BattleUnit* unit, int part, int x, int y, int shade,
  		&UnitSprite::drawRoutine20,
  		&UnitSprite::drawRoutine21,
  		&UnitSprite::drawRoutine3,
@@ -10511,7 +10688,7 @@ index 8fa87f8..c8ff45e 100644
  	};
  	// Call the matching routine
  	(this->*(routines[_drawingRoutine]))();
-@@ -447,7 +451,16 @@ void UnitSprite::drawRoutine0()
+@@ -447,7 +453,16 @@ void UnitSprite::drawRoutine0()
  	if (_itemR)
  	{
  		// draw handob item
@@ -10529,7 +10706,7 @@ index 8fa87f8..c8ff45e 100644
  		{
  			int dir = (unitDir + 2)%8;
  			selectItem(itemR, _itemR, dir);
-@@ -601,6 +614,16 @@ void UnitSprite::drawRoutine0()
+@@ -601,6 +616,16 @@ void UnitSprite::drawRoutine0()
  		rightArm.offX = (-6);
  	}
  
@@ -10546,7 +10723,7 @@ index 8fa87f8..c8ff45e 100644
  	// blit order depends on unit direction, and whether we are holding a 2 handed weapon.
  	switch (unitDir)
  	{
-@@ -643,6 +666,158 @@ void UnitSprite::drawRoutine0()
+@@ -643,6 +668,189 @@ void UnitSprite::drawRoutine0()
  }
  
  
@@ -10645,7 +10822,38 @@ index 8fa87f8..c8ff45e 100644
 +	// sprites did. Idle: one frame every 4 map ticks (was 2). Walk: a clip is a full stride
 +	// (two steps), so it spans two tiles: the first half on odd steps, the second on even.
 +	int clip = 0, f = (_animationFrame / 4) % 8;
-+	if (_unit->getStatus() == STATUS_COLLAPSING)
++	// G.I. Joe WALK16 (BRIEF_FOR_BUILD_Walk16, John 15 Nov / 16 Nov 21:29 "do the animations now"). A sheet of 896
++	// frames (56 rows) is the new layout: the six still clips at 64 frames each (8 facings x 8), then four walks
++	// at 16 frames a facing - two-handed gun, pistol, crouched (sneaking), and empty-handed or a knife. A stride
++	// still spans two tiles, so the walk plays 8 frames a tile: twice as many frames at the same speed.
++	const bool w16 = _unitSurface && _unitSurface->getTotalFrames() >= 896;
++	if (w16)
++	{
++		enum { STAND = 0, KNEEL = 64, AIM = 128, DEATH = 192, PSTAND = 256, PKNEEL = 320, WALK = 384, PWALK = 512, SWALK = 640, EWALK = 768 };
++		const BattleItem *r = _unit->getRightHandWeapon(), *l = _unit->getLeftHandWeapon();
++		const bool twoHanded = (r && r->getRules()->isTwoHanded()) || (l && l->getRules()->isTwoHanded());
++		auto gun = [](const BattleItem *i) { return i && i->getRules()->getBattleType() == BT_FIREARM; };
++		const bool pistol = !twoHanded && (gun(r) || gun(l));
++		int base = STAND, per = 8;
++		if (_unit->getStatus() == STATUS_COLLAPSING)
++		{
++			base = DEATH;
++			const int n = std::max(1, _unit->getArmor()->getDeathFrames());
++			f = std::min(7, _unit->getFallingPhase() * 8 / n);
++		}
++		else if (_unit->getStatus() == STATUS_WALKING)
++		{
++			base = _unit->getGjSneaking() ? SWALK : twoHanded ? WALK : pistol ? PWALK : EWALK;
++			per = 16;
++			f = (_unit->getWalkingPhase() % 8) + 8 * (_unit->getStepCount() & 1);
++		}
++		else if (_unit->getStatus() == STATUS_AIMING) base = pistol ? PSTAND : AIM;
++		else if (_unit->isKneeled()) base = pistol ? PKNEEL : KNEEL;
++		else base = pistol ? PSTAND : STAND;
++		clip = -1;
++		_w16Frame = base + dir * per + f;
++	}
++	else if (_unit->getStatus() == STATUS_COLLAPSING)
 +	{
 +		clip = 4;
 +		const int n = std::max(1, _unit->getArmor()->getDeathFrames());
@@ -10658,7 +10866,7 @@ index 8fa87f8..c8ff45e 100644
 +	// five stock ones: 5 stand (also aim), 6 walk, 7 kneel. Used only when the
 +	// unit holds something and nothing it holds is two-handed. Death stays 4,
 +	// and a five-clip sheet never gets here, so it draws exactly as before.
-+	if (clip != 4 && _unitSurface && _unitSurface->getTotalFrames() >= 8 * 64)
++	if (!w16 && clip != 4 && _unitSurface && _unitSurface->getTotalFrames() >= 8 * 64)
 +	{
 +		const BattleItem *r = _unit->getRightHandWeapon(), *l = _unit->getLeftHandWeapon();
 +		const bool holds = r || l;
@@ -10670,8 +10878,8 @@ index 8fa87f8..c8ff45e 100644
 +			else if (clip == 2) clip = 7;
 +		}
 +	}
-+	const int frame = clip * 64 + dir * 8 + f;
-+	selectUnit(body, clip * 64 + dir * 8, f);
++	const int frame = w16 ? _w16Frame : clip * 64 + dir * 8 + f;
++	selectUnit(body, frame, 0);
 +	// G.I. Joe: the sheets put the feet on row 152 of 160; X-COM's own soldiers stand on
 +	// rows 33-36 of 40 (136-144 at 4x), so ours sank into the floor. Lift body and weapon.
 +	constexpr int FOOT_LIFT = 4;
@@ -10706,10 +10914,18 @@ index 8fa87f8..c8ff45e 100644
   * Drawing routine for floaters.
   */
 diff --git a/src/Battlescape/UnitSprite.h b/src/Battlescape/UnitSprite.h
-index 599d9a2..a48a48a 100644
+index 599d9a2..bf0a51d 100644
 --- a/src/Battlescape/UnitSprite.h
 +++ b/src/Battlescape/UnitSprite.h
-@@ -97,6 +97,8 @@ private:
+@@ -35,6 +35,7 @@ class Mod;
+  */
+ class UnitSprite
+ {
++	int _w16Frame = 0;   ///< G.I. Joe: the frame chosen on a Walk16 sheet
+ private:
+ 	struct Part
+ 	{
+@@ -97,6 +98,8 @@ private:
  	void drawRoutine20();
  	/// Drawing routine for xarquids.
  	void drawRoutine21();
@@ -10739,7 +10955,7 @@ index 31f9454..32f8337 100644
  			{
  				_parent->getMod()->getSoundByDepth(_parent->getDepth(), Mod::DOOR_OPEN)->play(-1, _parent->getMap()->getSoundAngle(_unit->getPosition())); // normal door
 diff --git a/src/Battlescape/UnitWalkBState.cpp b/src/Battlescape/UnitWalkBState.cpp
-index bc5f08f..74aec61 100644
+index bc5f08f..205575f 100644
 --- a/src/Battlescape/UnitWalkBState.cpp
 +++ b/src/Battlescape/UnitWalkBState.cpp
 @@ -18,6 +18,7 @@
@@ -10750,7 +10966,15 @@ index bc5f08f..74aec61 100644
  #include "MeleeAttackBState.h"
  #include "TileEngine.h"
  #include "Pathfinding.h"
-@@ -218,6 +219,7 @@ void UnitWalkBState::think()
+@@ -61,6 +62,7 @@ UnitWalkBState::~UnitWalkBState()
+ void UnitWalkBState::init()
+ {
+ 	_unit = _action.actor;
++	_unit->setGjSneaking(_action.sneak);   // G.I. Joe Walk16: the crouched walk clip
+ 	_numUnitsSpotted = _unit->getUnitsSpottedThisTurn().size();
+ 	setNormalWalkSpeed();
+ 	_pf = _parent->getPathfinding();
+@@ -218,6 +220,7 @@ void UnitWalkBState::think()
  				_unit->setVisible(false);
  			}
  
@@ -10758,7 +10982,7 @@ index bc5f08f..74aec61 100644
  			int change = _parent->checkForProximityGrenades(_unit);
  			// move our personal lighting with us
  			_terrain->calculateLighting(change ? LL_ITEMS : LL_UNITS, _unit->getPosition(), 2);
-@@ -342,6 +344,7 @@ void UnitWalkBState::think()
+@@ -342,6 +345,7 @@ void UnitWalkBState::think()
  				{
  					return; // don't start walking yet, wait for the ufo door to open
  				}
@@ -10766,7 +10990,7 @@ index bc5f08f..74aec61 100644
  				if (door == 0)
  				{
  					_parent->getMod()->getSoundByDepth(_parent->getDepth(), Mod::DOOR_OPEN)->play(-1, _parent->getMap()->getSoundAngle(_unit->getPosition())); // normal door
-@@ -508,6 +511,35 @@ void UnitWalkBState::postPathProcedures()
+@@ -508,6 +512,35 @@ void UnitWalkBState::postPathProcedures()
  		_unit->clearTimeUnits();
  	}
  
@@ -11534,10 +11758,10 @@ index f353397..2a6b483 100644
  
 diff --git a/src/Engine/HiColor.cpp b/src/Engine/HiColor.cpp
 new file mode 100644
-index 0000000..d749080
+index 0000000..75a8890
 --- /dev/null
 +++ b/src/Engine/HiColor.cpp
-@@ -0,0 +1,266 @@
+@@ -0,0 +1,335 @@
 +#include "HiColor.h"
 +#include "Surface.h"
 +#include "Screen.h"
@@ -11724,26 +11948,40 @@ index 0000000..d749080
 +	if (done) Log(LOG_INFO) << "Full-colour sprites: " << done;
 +}
 +
-+void registerSheet(const std::string &pngPath, SurfaceSet *set, int firstFrame, int sheetW, int sheetH, int subX, int subY)
++namespace
 +{
-+	if (!enabled() || !set || subX <= 0 || subY <= 0) return;
-+	const auto dot = pngPath.find_last_of('.');
-+	if (dot == std::string::npos) return;
-+	const std::string twin = pngPath.substr(0, dot) + "_rgb.png";
-+	if (!FileMap::fileExists(twin)) return;
++	/// G.I. Joe (Walk16, 16 Nov): a soldier's full-colour sheet is ~40 MB in memory, and 16-frame walks make it ~70.
++	/// Loading every one at start held ~1.7 GB on John's 32-bit build before a battle began. So a soldier sheet
++	/// (128x160 cells under Resources/Units/, not the aircraft or ships) is only remembered here, loaded the first
++	/// time a unit wearing it is drawn, and dropped when the battle closes.
++	struct LazySheet
++	{
++		std::string twin; int firstFrame, sheetW, sheetH, subX, subY;
++		bool loaded = false;
++		std::vector<std::vector<Uint32>> px;
++		std::vector<const Uint8*> keys;
++	};
++	std::unordered_map<SurfaceSet*, LazySheet> lazySheets;
++	int lazyLoadedMB = 0;
++}
++
++/// Loads <twin> and registers each cell against the set's frames. With 'own', the pixels are kept there
++/// (so they can be dropped); without, for the rest of the run.
++static int loadSheet(const std::string &twin, SurfaceSet *set, int firstFrame, int sheetW, int sheetH, int subX, int subY, LazySheet *own)
++{
 +	SDL_Surface *img = IMG_Load_RW(FileMap::getRWops(twin), SDL_TRUE);
-+	if (!img) { Log(LOG_WARNING) << "Full-colour sheet unreadable: " << twin; return; }
++	if (!img) { Log(LOG_WARNING) << "Full-colour sheet unreadable: " << twin; return 0; }
 +	SDL_PixelFormat fmt = {};
 +	fmt.BitsPerPixel = 32; fmt.BytesPerPixel = 4;
 +	fmt.Rmask = 0x00FF0000; fmt.Gmask = 0x0000FF00; fmt.Bmask = 0x000000FF; fmt.Amask = 0xFF000000;
 +	fmt.Rshift = 16; fmt.Gshift = 8; fmt.Bshift = 0; fmt.Ashift = 24;
 +	SDL_Surface *conv = SDL_ConvertSurface(img, &fmt, SDL_SWSURFACE);
 +	SDL_FreeSurface(img);
-+	if (!conv) return;
++	if (!conv) return 0;
 +	if (conv->w != sheetW || conv->h != sheetH)
 +	{
 +		Log(LOG_WARNING) << "Full-colour sheet " << twin << " is " << conv->w << "x" << conv->h << ", expected " << sheetW << "x" << sheetH;
-+		SDL_FreeSurface(conv); return;
++		SDL_FreeSurface(conv); return 0;
 +	}
 +	SDL_LockSurface(conv);
 +	int frame = firstFrame, used = 0;
@@ -11760,12 +11998,67 @@ index 0000000..d749080
 +				if (!any) for (int x = 0; x < subX; ++x) if (px[(size_t)y * subX + x] >> 24) { any = true; break; }
 +			}
 +			if (!any) continue;
-+			registerSprite(f->getBuffer(), keep(std::move(px)));
++			if (own)
++			{
++				own->px.push_back(std::move(px));
++				own->keys.push_back(f->getBuffer());
++				registerSprite(f->getBuffer(), own->px.back().data());
++			}
++			else registerSprite(f->getBuffer(), keep(std::move(px)));
 +			++used;
 +		}
 +	SDL_UnlockSurface(conv);
 +	SDL_FreeSurface(conv);
++	return used;
++}
++
++void registerSheet(const std::string &pngPath, SurfaceSet *set, int firstFrame, int sheetW, int sheetH, int subX, int subY)
++{
++	if (!enabled() || !set || subX <= 0 || subY <= 0) return;
++	const auto dot = pngPath.find_last_of('.');
++	if (dot == std::string::npos) return;
++	const std::string twin = pngPath.substr(0, dot) + "_rgb.png";
++	if (!FileMap::fileExists(twin)) return;
++	const auto slash = pngPath.find_last_of('/');
++	const std::string leaf = slash == std::string::npos ? pngPath : pngPath.substr(slash + 1);
++	const bool soldier = subX == 128 && subY == 160 && pngPath.find("Resources/Units/") != std::string::npos
++		&& leaf.rfind("air_", 0) != 0 && leaf.rfind("sea_", 0) != 0 && !getenv("OXCE_EAGER_SHEETS");
++	if (soldier)
++	{
++		LazySheet &l = lazySheets[set];
++		l.twin = twin; l.firstFrame = firstFrame; l.sheetW = sheetW; l.sheetH = sheetH; l.subX = subX; l.subY = subY;
++		return;
++	}
++	const int used = loadSheet(twin, set, firstFrame, sheetW, sheetH, subX, subY, nullptr);
 +	Log(LOG_INFO) << "Full-colour sheet: " << twin << " (" << used << " frames)";
++}
++
++void ensureSheet(SurfaceSet *set)
++{
++	if (!set || lazySheets.empty()) return;
++	auto it = lazySheets.find(set);
++	if (it == lazySheets.end() || it->second.loaded) return;
++	LazySheet &l = it->second;
++	l.loaded = true;
++	const int used = loadSheet(l.twin, set, l.firstFrame, l.sheetW, l.sheetH, l.subX, l.subY, &l);
++	lazyLoadedMB += (int)((size_t)used * l.subX * l.subY * 4 / (1024 * 1024));
++	Log(LOG_INFO) << "Full-colour sheet (on use): " << l.twin << " (" << used << " frames, " << lazyLoadedMB << " MB of soldier sheets held)";
++}
++
++void releaseLazySheets()
++{
++	int n = 0;
++	for (auto &e : lazySheets)
++	{
++		LazySheet &l = e.second;
++		if (!l.loaded) continue;
++		for (const Uint8 *k : l.keys) unregisterSprite(k);
++		std::vector<std::vector<Uint32>>().swap(l.px);
++		std::vector<const Uint8*>().swap(l.keys);
++		l.loaded = false; ++n;
++	}
++	if (n) Log(LOG_INFO) << "Full-colour soldier sheets released: " << n << " (" << lazyLoadedMB << " MB)";
++	lazyLoadedMB = 0;
 +}
 +
 +bool composite(SDL_Surface *map8, SDL_Surface *screen32, int dx, int dy)
@@ -11806,10 +12099,10 @@ index 0000000..d749080
 +}
 diff --git a/src/Engine/HiColor.h b/src/Engine/HiColor.h
 new file mode 100644
-index 0000000..4abbbb1
+index 0000000..8277a64
 --- /dev/null
 +++ b/src/Engine/HiColor.h
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,46 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: full-colour battlescape.
@@ -11846,6 +12139,9 @@ index 0000000..4abbbb1
 +	const Uint32 *keep(std::vector<Uint32> &&argb);
 +	/// For a sprite sheet <file>.png, loads <file>_rgb.png (same size) and registers each subX x subY cell against the matching frame.
 +	void registerSheet(const std::string &pngPath, SurfaceSet *set, int firstFrame, int sheetW, int sheetH, int subX, int subY);
++	/// G.I. Joe: soldier sheets load on first use (ensureSheet, from UnitSprite) and are dropped when a battle closes.
++	void ensureSheet(SurfaceSet *set);
++	void releaseLazySheets();
 +	/// One sprite that came from its own file: <file>_rgb.png. The set's frames are still being
 +	/// rebuilt when the mod loads, so this is remembered and resolved at the first frame drawn.
 +	void registerSetFrame(SurfaceSet *set, int frame, const std::string &file);
@@ -11855,10 +12151,10 @@ index 0000000..4abbbb1
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..29b4e44
+index 0000000..22e6837
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3324 @@
+@@ -0,0 +1,3335 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -13037,13 +13333,13 @@ index 0000000..29b4e44
 +		fillRect((int)b.x0, (int)b.y0, (int)b.x1, (int)b.y0 + T, c); fillRect((int)b.x0, (int)b.y1 - T, (int)b.x1, (int)b.y1, c);
 +		fillRect((int)b.x0, (int)b.y0, (int)b.x0 + T, (int)b.y1, c); fillRect((int)b.x1 - T, (int)b.y0, (int)b.x1, (int)b.y1, c);
 +	}
-+	void boxText(const DBox &b, const std::string &str, double capBase, int align, Uint32 col, const char *faceName = "label")
++	void boxText(const DBox &b, const std::string &str, double capBase, int align, Uint32 col, const char *faceName = "label", bool fit = false)
 +	{
 +		const Face *f = face(faceName);
 +		if (!f) f = face("label");
 +		if (!f || str.empty()) return;
 +		const double cap = capBase * SK();
-+		setType(*f, str, (int)b.x0, (int)b.y0, (int)b.x1, (int)b.y1, cap, b.y1 - b.y0, align, 1, col, false);
++		setType(*f, str, (int)b.x0, (int)b.y0, (int)b.x1, (int)b.y1, cap, b.y1 - b.y0, align, 1, col, fit);
 +	}
 +
 +	/// An item picture laid on its side for the hand card's strip, cropped to what it draws.
@@ -13123,10 +13419,20 @@ index 0000000..29b4e44
 +		hudBarRow(bar, 35.5, "MORALE", hud.mo, hud.moMax, 0xC9C3B1);
 +
 +		// 8, 9 the hand cards (the fire-mode keys are widgets drawn over them)
++		// G.I. Joe ARSENAL: a vehicle has one ARMED WEAPON card across both, or its open weapon list there
++		if (hud.vehicle && hud.listOpen)
++		{
++			DBox cb = hudBox(bar, 94, 10, 98, 29);
++			boxFill(cb, 0x1B2023);
++			boxEdge(cb, S_YELLOW, k * 0.33);
++			boxText(hudBox(bar, 95.5, 10.8, 80, 3.6), hud.listTitle, 1.9, 0, S_YELLOW);
++		}
 +		for (int i = 0; i < 2; ++i)
 +		{
++			if (hud.vehicle && (i == 1 || hud.listOpen)) continue;
 +			const double cx = i == 0 ? 94 : 145;
-+			DBox cb = hudBox(bar, cx, 10, 47, 29);
++			const double cw = hud.vehicle ? 98 : 47;
++			DBox cb = hudBox(bar, cx, 10, cw, 29);
 +			boxFill(cb, 0x1B2023);
 +			boxEdge(cb, 0x2E3530, k * 0.33);
 +			const HudHand &h = hud.hand[i];
@@ -13136,13 +13442,14 @@ index 0000000..29b4e44
 +				boxText(hudBox(bar, cx + 1.5, 15, 44, 5), "EMPTY", 2.6, 1, 0x5C5A52);
 +				continue;
 +			}
-+			boxText(hudBox(bar, cx + 27, 10.8, 18.5, 3.6), h.ammo, 2.0, 2, S_TEXT);
-+			boxText(hudBox(bar, cx + 1.5, 14.6, 44, 4.4), h.name, 2.6, 0, S_TEXT);
++			boxText(hudBox(bar, cx + cw - 20, 10.8, 18.5, 3.6), h.ammo, 2.0, 2, S_TEXT);
++			// the name shrinks to fit rather than being cut (59 of the Arsenal's names are longer than a hand card)
++			boxText(hudBox(bar, cx + 1.5, 14.6, cw - 3, 4.4), h.name, 2.6, 0, S_TEXT, "label", true);
 +			if (h.art)
 +				if (const Img *im = sideways(h.art))
 +				{
 +					// fit the strip, keep the picture's proportions
-+					DBox sb = hudBox(bar, cx + 1.5, 19.2, 44, 6.2);
++					DBox sb = hudBox(bar, cx + 1.5, 19.2, cw - 3, 6.2);
 +					const double bw2 = sb.x1 - sb.x0, bh2 = sb.y1 - sb.y0;
 +					const double sc = std::min(bw2 / im->w, bh2 / im->h);
 +					const double w = im->w * sc, hgt = im->h * sc;
@@ -15185,10 +15492,10 @@ index 0000000..29b4e44
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..61de77a
+index 0000000..9eb416c
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,205 @@
+@@ -0,0 +1,207 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -15341,6 +15648,8 @@ index 0000000..61de77a
 +		HudHand hand[2];                       // 0 right, 1 left
 +		std::string sigTitle, sigName, sigHow; bool sigOn = false;
 +		std::string turn, phase, objective, counts;
++		bool vehicle = false, listOpen = false;   // G.I. Joe ARSENAL: one wide armed-weapon card; an open weapon list
++		std::string listTitle;
 +	};
 +	void nativeHud(const Surface *bar, const Surface *mission, const HudData &d);
 +	/// A PANEL a screen paints itself at display resolution (the research tree). The painter
@@ -23490,7 +23799,7 @@ index 665d922..160915e 100644
  	bool _debugInVisualStudio;
  	std::string _newVersion;
 diff --git a/src/Menu/NewBattleState.cpp b/src/Menu/NewBattleState.cpp
-index 52b6371..badc227 100644
+index 52b6371..5395bd2 100644
 --- a/src/Menu/NewBattleState.cpp
 +++ b/src/Menu/NewBattleState.cpp
 @@ -39,6 +39,10 @@
@@ -23544,7 +23853,7 @@ index 52b6371..badc227 100644
  		{
  			if (RNG::percent(70))
  				continue;
-@@ -572,19 +589,75 @@ void NewBattleState::initSave()
+@@ -572,19 +589,76 @@ void NewBattleState::initSave()
  	}
  
  	// Generate items
@@ -23587,7 +23896,8 @@ index 52b6371..badc227 100644
 +	std::stable_sort(gjVehicles.begin(), gjVehicles.end(), [](const RuleItem *x, const RuleItem *y)
 +		{ return x->getVehicleUnit()->getArmor()->getTotalSize() < y->getVehicleUnit()->getArmor()->getTotalSize(); });
 +	// the VAMP goes aboard first, making room by leaving the last-made (unnamed) soldiers at base
-+	for (const char *want : { "STR_GJ_VEH_VAMP" })
++	const char *firstVeh = getenv("OXCE_NB_VEH") ? getenv("OXCE_NB_VEH") : "STR_GJ_VEH_VAMP";   // rig: which vehicle boards first
++	for (const char *want : { firstVeh })
 +	{
 +		const RuleItem *rule = mod->getItem(want);
 +		if (!gjKit || !rule || !rule->getVehicleUnit()) continue;
@@ -23622,7 +23932,7 @@ index 52b6371..badc227 100644
  
  	// Add research
  	save->makeAllResearchDiscovered(mod);
-@@ -610,6 +683,50 @@ void NewBattleState::btnOkClick(Action *)
+@@ -610,6 +684,50 @@ void NewBattleState::btnOkClick(Action *)
  		return;
  	}
  
@@ -26405,6 +26715,40 @@ index ebaccaf..6b4c7ba 100644
  }
  
  /**
+diff --git a/src/Mod/RuleItem.cpp b/src/Mod/RuleItem.cpp
+index 41a6ee4..ff6ad16 100644
+--- a/src/Mod/RuleItem.cpp
++++ b/src/Mod/RuleItem.cpp
+@@ -565,6 +565,8 @@ void RuleItem::load(const YAML::YamlNodeReader& node, Mod *mod, const ModScript&
+ 	reader["inventoryMoveCost"]["basePercent"].tryReadVal(_inventoryMoveCostPercent);
+ 	mod->loadNameNull(_type, _defaultInventorySlotName, reader["defaultInventorySlot"]);
+ 	reader.tryRead("defaultInvSlotX", _defaultInvSlotX);
++	reader.tryRead("gjaGroup", _gjaGroup);
++	reader.tryRead("gjaUnlock", _gjaUnlock);
+ 	reader.tryRead("defaultInvSlotY", _defaultInvSlotY);
+ 	mod->loadUnorderedNames(_type, _supportedInventorySectionsNames, reader["supportedInventorySections"]);
+ 	reader.tryRead("isConsumable", _isConsumable);
+diff --git a/src/Mod/RuleItem.h b/src/Mod/RuleItem.h
+index feaf6ff..4ed55e4 100644
+--- a/src/Mod/RuleItem.h
++++ b/src/Mod/RuleItem.h
+@@ -431,6 +431,7 @@ private:
+ 	bool _specialUseEmptyHand, _specialUseEmptyHandShow;
+ 	int _inventoryMoveCostPercent = 100;
+ 	std::string _defaultInventorySlotName;
++	std::string _gjaGroup, _gjaUnlock;   ///< G.I. Joe ARSENAL: HUD weapon list (GUNS / MISSILES / ARTY / DROPS / SP. ROUNDS); research set when Cobra first fires it
+ 	const RuleInventory* _defaultInventorySlot = nullptr;
+ 	int _defaultInvSlotX, _defaultInvSlotY;
+ 	std::vector<std::string> _supportedInventorySectionsNames;
+@@ -587,6 +588,8 @@ public:
+ 	bool getFixedShow() const;
+ 	/// Get name of the default inventory slot.
+ 	const RuleInventory* getDefaultInventorySlot() const { return _defaultInventorySlot; }
++	const std::string &getGjaGroup() const { return _gjaGroup; }
++	const std::string &getGjaUnlock() const { return _gjaUnlock; }
+ 	/// Get inventory slot default X position.
+ 	int getDefaultInventorySlotX() const { return _defaultInvSlotX; }
+ 	/// Get inventory slot default Y position.
 diff --git a/src/Mod/RuleLead.h b/src/Mod/RuleLead.h
 new file mode 100644
 index 0000000..5bc7803
@@ -27411,10 +27755,10 @@ index 46fbf1f..6093476 100644
  	{
  		ModScript::ReturnFromMissionUnit::Output arg { };
 diff --git a/src/Savegame/BattleUnit.h b/src/Savegame/BattleUnit.h
-index ecc040f..3702d2d 100644
+index ecc040f..42767d2 100644
 --- a/src/Savegame/BattleUnit.h
 +++ b/src/Savegame/BattleUnit.h
-@@ -102,6 +102,7 @@ private:
+@@ -102,11 +102,13 @@ private:
  	UnitStatus _status;
  	bool _wantsToSurrender, _isSurrendering;
  	int _walkPhase, _fallPhase;
@@ -27422,7 +27766,13 @@ index ecc040f..3702d2d 100644
  	std::vector<BattleUnit *> _visibleUnits, _unitsSpottedThisTurn;
  	std::vector<Tile *> _visibleTiles;
  	std::unordered_set<Tile *> _visibleTilesLookup;
-@@ -130,6 +131,14 @@ private:
+ 	int _tu, _energy, _health, _morale, _stunlevel, _mana;
+ 	bool _kneeled, _floating, _dontReselect, _aiMedikitUsed;
++	bool _gjSneaking = false;
+ 	bool _haveNoFloorBelow = false;
+ 	int _currentArmor[SIDE_MAX], _maxArmor[SIDE_MAX];
+ 	int _fatalWounds[BODYPART_MAX];
+@@ -130,6 +132,14 @@ private:
  	BattleUnit *_charging;
  
  	Uint8 _turnsSinceSpotted[FACTION_MAX] = { 255, 255, 255 };
@@ -27437,7 +27787,7 @@ index ecc040f..3702d2d 100644
  	Uint8 _turnsLeftSpottedForSnipers[FACTION_MAX] = { 0, 0, 0 };
  	Uint8 _turnsSinceStunned = 255;
  
-@@ -286,6 +295,8 @@ public:
+@@ -286,6 +296,8 @@ public:
  	void keepWalking(SavedBattleGame *savedBattleGame, bool fullWalkCycle);
  	/// Gets the walking phase for animation and sound
  	int getWalkingPhase() const;
@@ -27446,7 +27796,17 @@ index ecc040f..3702d2d 100644
  	/// Gets the walking phase for diagonal walking
  	int getDiagonalWalkingPhase() const;
  	/// Gets the unit's destination when walking
-@@ -323,6 +334,8 @@ public:
+@@ -308,6 +320,9 @@ public:
+ 	void kneel(bool kneeled);
+ 	/// Is kneeled?
+ 	bool isKneeled() const;
++	/// G.I. Joe Walk16: this walk is a sneak (crouched walk clip)
++	bool getGjSneaking() const { return _gjSneaking; }
++	void setGjSneaking(bool s) { _gjSneaking = s; }
+ 	/// Is floating?
+ 	bool isFloating() const;
+ 	/// Have unit floor below?
+@@ -323,6 +338,8 @@ public:
  	int getEnergy() const;
  	/// Gets the unit's health.
  	int getHealth() const;
@@ -27455,7 +27815,7 @@ index ecc040f..3702d2d 100644
  	/// Gets the unit's mana.
  	int getMana() const;
  	/// Gets the unit's bravery.
-@@ -333,6 +346,8 @@ public:
+@@ -333,6 +350,8 @@ public:
  	int damage(Position relative, int power, const RuleDamageType *type, SavedBattleGame *save, BattleActionAttack attack, UnitSide sideOverride = SIDE_MAX, UnitBodyPart bodypartOverride = BODYPART_MAX);
  	/// Heal stun level of the unit.
  	void healStun(int power);
@@ -27464,7 +27824,7 @@ index ecc040f..3702d2d 100644
  	/// Gets the unit's stun level.
  	int getStunlevel() const;
  	/// Is the unit losing HP (due to negative health regeneration)?
-@@ -394,6 +409,8 @@ public:
+@@ -394,6 +413,8 @@ public:
  	/// Clear visible tiles.
  	void clearVisibleTiles();
  	/// Calculate psi attack accuracy.
@@ -27473,7 +27833,7 @@ index ecc040f..3702d2d 100644
  	static int getPsiAccuracy(BattleActionAttack::ReadOnly attack);
  	/// Calculate firing accuracy.
  	static int getFiringAccuracy(BattleActionAttack::ReadOnly attack, const Mod *mod);
-@@ -704,6 +721,31 @@ public:
+@@ -704,6 +725,31 @@ public:
  	/// Set how many turns this unit will be exposed for. For specific faction.
  	void setTurnsSinceSpottedByFaction(UnitFaction faction, int turns);
  	/// Set how many turns this unit will be exposed for.
@@ -28033,7 +28393,7 @@ index b589b90..04411c1 100644
  	void setSpent (int spent);
  	/// get time cost of this ResearchProject
 diff --git a/src/Savegame/SavedBattleGame.cpp b/src/Savegame/SavedBattleGame.cpp
-index 240b22a..910b3d6 100644
+index 240b22a..001cb64 100644
 --- a/src/Savegame/SavedBattleGame.cpp
 +++ b/src/Savegame/SavedBattleGame.cpp
 @@ -65,7 +65,7 @@ SavedBattleGame::SavedBattleGame(Mod *rule, Language *lang, bool isPreview) :
@@ -28072,7 +28432,31 @@ index 240b22a..910b3d6 100644
  	writer.write("reinforcementsBlocks", _reinforcementsBlocks);
  	writer.write("flattenedMapTerrainNames", _flattenedMapTerrainNames);
  	writer.write("flattenedMapBlockNames", _flattenedMapBlockNames);
-@@ -2415,13 +2426,30 @@ void SavedBattleGame::prepareNewTurn()
+@@ -2007,7 +2018,22 @@ BattleItem *SavedBattleGame::createItemForUnit(const RuleItem *rule, BattleUnit
+ 	}
+ 
+ 	BattleItem *item = new BattleItem(rule, getCurrentItemId());
+-	if (!unit->addItem(item, _rule, false, fixedWeapon, fixedWeapon))
++	bool ok = unit->addItem(item, _rule, false, fixedWeapon, fixedWeapon);
++	// G.I. Joe ARSENAL: a vehicle carries every weapon on John's Sheet. The two hands hold two; the rest wait in the
++	// vehicle's rack (STR_GJA_RACK, an inventory section no soldier sees) until the HUD's weapon list arms one,
++	// and an ammo item that no hand weapon takes is loaded into the rack weapon it belongs to.
++	if (!ok && fixedWeapon && rule->isFixed())
++	{
++		if (RuleInventory *rack = _rule->getInventory("STR_GJA_RACK", false))
++			ok = unit->fitItemToInventory(rack, item);
++		if (ok) item->setXCOMProperty(unit->getFaction() == FACTION_PLAYER && !unit->isSummonedPlayerUnit());
++	}
++	if (!ok && rule->getBattleType() == BT_AMMO)
++	{
++		for (auto *w : *unit->getInventory())
++			if (w->isWeaponWithAmmo() && w->getRules()->isFixed() && !w->getAmmoForSlot(0) && w->setAmmoPreMission(item)) { ok = true; break; }
++	}
++	if (!ok)
+ 	{
+ 		delete item;
+ 		item = nullptr;
+@@ -2415,13 +2441,30 @@ void SavedBattleGame::prepareNewTurn()
  					Position pos;
  					Pathfinding::directionToVector(dir, &pos);
  					Tile *t = getTile(tileOnFire->getPosition() + pos);
@@ -28105,7 +28489,7 @@ index 240b22a..910b3d6 100644
  			}
  			// fire has burnt out
  			else
-@@ -2452,10 +2480,37 @@ void SavedBattleGame::prepareNewTurn()
+@@ -2452,10 +2495,37 @@ void SavedBattleGame::prepareNewTurn()
  						}
  					}
  				}
