@@ -47,7 +47,8 @@ V = {
                   wpn=("Twin 30mm automatic cannons", 60, 1, 40, (50, 30), (80, 55), (40, 40, 2), 0, 4, "m2x_50cal"), price=0, head="proj_thunder_round_head0", turret_tu=3),  # blueprint name (John 18:29 rework); same 30mm round as the Thunder Machine
  "hiss_rack": dict(pack="hiss_rack", asset="hiss_rack", state="m0", side="cobra", name="Cobra H.I.S.S. (rocket rack)", tu=60, hp=110, arm=(85, 70, 55, 55),
                   wpn=("H.I.S.S. rocket rack", 90, 3, 4, None, (80, 55), None, 1, 0, "bazooka_launch"), price=0, head="proj_hiss_rack_head0", turret_tu=3),  # Cobra research upgrade (John 18:41); research gate + deployment are STORY/BUILD's; stand-in numbers
- "ferret":    dict(pack="ferret", asset="ferret", state="m0", side="cobra", name="Cobra Ferret", tu=80, hp=30, arm=(20, 15, 10, 10),
+ "ferret":    dict(pack="ferret", asset="ferret", state="m2", side="cobra", stores=["m1", "m0"], store_weapon="self", head="proj_ferret_head0",   # Com-Bats leave the pegs (John 23:17)
+                  name="Cobra Ferret", tu=80, hp=30, arm=(20, 15, 10, 10),
                   wpn=("Machine gun", 30, 1, 60, (50, 25), None, (35, 35, 3), 0, 2, "m60"), price=0),
  "thunder":   dict(pack="thunder_machine", asset="thunder_machine", state="m0", head="proj_thunder_round_head0", side="cobra", name="Dreadnok Thunder Machine", tu=54, hp=110, arm=(70, 60, 50, 40),
                   wpn=("Penetrator Gatling cannons (30mm)", 45, 1, 120, (45, 30), None, (35, 40, 5), 0, 4, "m60"), price=0),  # John 17:36: the twin Gatlings (VFACTORY stand-in numbers for STORY); was a "Rocket rack" firing from the jet exhausts # Thunderclap tractor + trailer (VFACTORY, 17 Nov 2026; John's TechnoViper3D kit, 3x3 each). Canon weapon names from the kit blueprint.
@@ -177,12 +178,19 @@ def sheet(v, d):
                     fr = clip * 64 + hd * 8 + f
                     S.alpha_composite(c, ((fr % 16) * 128, (fr // 16) * 160))
     elif n == 2:
-        S = Image.new("RGBA", (2048, 2880), (0, 0, 0, 0))
+        ns = len(d.get("stores", []))
+        S = Image.new("RGBA", (2048, (9 + ns) * 320), (0, 0, 0, 0))
         for hd in range(8):
             S.alpha_composite(cellOf(standing[hd], anchor, 2), ((hd % 8) * 256, (hd // 8) * 320))
             for f in range(8):
                 fr = 8 + hd * 8 + f
                 S.alpha_composite(cellOf(dmg[hd], anchor, 2, dy=f * 3, dark=1 - f * 0.08, alpha=1 - f * 0.1), ((fr % 8) * 256, (fr // 8) * 320))
+        # stores on the hull, 2x2 sheets (engine gjStoreStates, N == 2): frame 72 + (fired - 1) * 8 + heading, after the 64 death frames
+        # (Cobra Ferret's Com-Bats, John 17 Nov 23:17 "they should shoot off the vehicle")
+        for k, st in enumerate(d.get("stores", [])):
+            for hd, h in enumerate(HEAD):
+                fr = 72 + k * 8 + hd
+                S.alpha_composite(cellOf(frame(root, man, "clean", h, st, turret=turret is None), anchor, 2), ((fr % 8) * 256, (fr // 8) * 320))
     else:
         W, H = 128 * n, 160 * n
         ns = len(d.get("stores", []))

@@ -56,9 +56,11 @@ def fit(L, W, fl, fs):
     return round(min(a, b) * CAL, 5), ('long' if a <= b else 'short')
 cf2 = {}
 s, lim = fit(16.0, 9.4, 2, 1)     # Ferret ATV 1x2; guns fixed
-c = base('ferret', s, 2, [1, 2], 'ferret_v2', {'m0': []}, {'muzzle': [5.62, -3.56, 7.1, 1, 0, 0]}, 'Cobra',
+c = base('ferret', s, 2, [1, 2], 'ferret_v2', {'m2': [], 'm1': ['combat_L'], 'm0': ['combat_L', 'combat_R']},   # John 23:17: the Com-Bats leave the pegs
+         {'muzzle': [5.62, -3.56, 7.1, 1, 0, 0], 'combat_L': [3.55, 4.45, 2.05, 1, 0, 0], 'combat_R': [3.55, -4.45, 2.05, 1, 0, 0]}, 'Cobra',
          R + f'Cobra Ferret ATV, class 1x2 (installed as size 2). Scale {s} (was 0.0406; {lim} axis limits).\n')
-c['guns'] = ['muzzle']; c['preview']['script'] = [['move', 'NE', 2], ['gun', ['muzzle']], ['wait', 6]]; cf2['ferret'] = c
+c['guns'] = ['muzzle']; c['launchers'] = [{'name': 'peg', 'muzzles': ['combat_L', 'combat_R'], 'fx_scale': 0.2, 'from_tube': True}]
+c['preview']['script'] = [['move', 'NE', 2], ['gun', ['muzzle']], ['missile', 'combat_L', 'm1', 'peg', 2.05], ['missile', 'combat_R', 'm0', 'peg', 2.05], ['wait', 6]]; cf2['ferret'] = c
 s, lim = fit(30.0, 13.34, 3, 2)   # Stinger 2x3; ground-to-air rocket rack turret (file card: rotates 360); John 18:37 rework
 SM = {'rk1': [-1.658, 3.665, 13.611, 1, 0, 0], 'rk3': [-1.658, -3.665, 13.611, 1, 0, 0]}
 c = base('stinger', s, 3, [2, 3], 'stinger_v2', {'m0': ['GJTURRET']}, dict(SM), 'Cobra',
