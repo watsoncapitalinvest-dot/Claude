@@ -35,9 +35,9 @@ c['gun_fx_scale'] = 1.0
 c['preview']['script'] = [['move', 'NE', 2], ['gun', ['cannonL', 'cannonR']], ['tturn', 'SE'], ['gun', ['cannonL', 'cannonR']], ['tturn', 'NE'], ['wait', 6]]
 cf['hiss'] = c
 # MOBAT: tank class 3x4, was 0.089 -> x1.37
-c = base('mobat', round(0.089 * 1.37, 5), 4, [3, 4], 'mobat', {'m0': ['GJTURRET', 'GJBARREL01']}, {'muzzle': [16.032, 0.0, 8.08, 1, 0, 0]}, 'Joe',
+c = base('mobat', round(0.089 * 1.37, 5), 4, [3, 4], 'mobat_v2', {'m0': ['GJTURRET', 'GJBARREL01', 'GJMG']}, {'muzzle': [16.032, 0.0, 8.08, 1, 0, 0]}, 'Joe',
          R + 'M.O.B.A.T., class 3x4 (installed as size 4 until rectangles). Scale 0.12193 = 0.089 x 1.37 (95% long / 51% short).\n')
-c['turret'] = {'objs': ['GJTURRET', 'GJBARREL01'], 'pivot': [0.0, 0.0, 6.662], 'muzzles': {'main': [16.032, 0.0, 8.08, 1, 0, 0]}, 'note': 'main gun turret turns on its own'}
+c['turret'] = {'objs': ['GJTURRET', 'GJBARREL01', 'GJMG'], 'pivot': [0.0, 0.0, 6.662], 'muzzles': {'main': [16.032, 0.0, 8.08, 1, 0, 0]}, 'note': 'main gun turret turns on its own; toy pass 17 Nov: the toy\'s single long gun + commander\'s M2 (GJMG) ride it'}
 c['preview']['script'] = [['move', 'NE', 2], ['gun', ['main']], ['tturn', 'SE'], ['gun', ['main']], ['tturn', 'NE'], ['wait', 6]]
 cf['mobat'] = c
 for _c in cf.values():                                   # turret decals ride the turret layer: never on hull frames (17 Nov 20:32)
