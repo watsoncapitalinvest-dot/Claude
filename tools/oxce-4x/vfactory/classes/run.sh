@@ -13,4 +13,5 @@ if [ $V = triple_t ]; then cd /home/claude/rt/veh && SHADE=detail LEVEL=1 python
 cd /tmp && python3 -I /home/claude/rt/gen/pkg.py $C | tail -1
 [ $T = 1 ] && python3 -I /home/claude/rt/gen/turret_pkg.py $C | tail -c 120
 python3 -I /home/claude/rt/gen/preview.py $C && python3 -I /home/claude/rt/gen/turntable.py $P $V 0 $P/${V}_turntable.gif 1.2
+[ $V = wolverine ] && (cd /tmp && python3 /home/claude/repo/tools/oxce-4x/vfactory/classes/turret_states.py $C wrk01,wrk02,wrk03,wrk04,wrk05,wrk06,wrk07,wrk08,wrk09,wrk10,wrk11,wrk12 | tail -1)
 echo DONE_$V

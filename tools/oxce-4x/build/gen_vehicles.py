@@ -37,7 +37,7 @@ V = {
  "mobat":     dict(pack="mobat", asset="mobat", state="m0", side="joe", name="MOBAT", tu=56, hp=120, arm=(90, 75, 60, 60),
                   wpn=("Main gun", 90, 1, 20, (55, 33), (85, 70), None, 0, 4, "m2x_50cal"), price=420000),
  "wolverine": dict(pack="wolverine", asset="wolverine", state="m0", side="joe", name="Wolverine", tu=60, hp=100, arm=(80, 65, 50, 50),
-                  wpn=("Missile rack", 80, 3, 6, None, (85, 55), None, 1, 0, "power_javelin_launch"), price=380000, head="proj_wolverine_head0"),  # its own missile flies full size (John 20:10 "can i see it shoot")
+                  wpn=("Missile rack", 80, 3, 6, None, (85, 55), None, 1, 0, "power_javelin_launch"), price=380000, head="proj_wolverine_head0", turret_stores=12),  # its own missile flies full size (John 20:10 "can i see it shoot")
  "mauler":    dict(pack="mauler", asset="mauler", state="m0", side="joe", name="Mauler M.B.T.", tu=50, hp=200, arm=(120, 100, 80, 80),
                   wpn=("Main gun", 110, 1, 20, (50, 35), (80, 70), None, 0, 4, "m2x_50cal"), price=600000),
  "stinger":   dict(pack="stinger", asset="stinger", state="m0", side="cobra", name="Cobra Stinger", tu=72, hp=50, arm=(35, 25, 20, 15),
@@ -131,9 +131,15 @@ def sheet(v, d):
             offs.append([int(round(ox / 4)), int(round(oy / 4))])
         W, H = 128 * n, 160 * n
         per = 8 if n == 2 else 4
-        TS = Image.new("RGBA", (per * W, (8 // per) * H), (0, 0, 0, 0))
+        ts_n = d.get("turret_stores", 0)            # missiles on the turret leave it one by one (engine: frame 8 + (fired - 1) * 8 + turret heading)
+        TS = Image.new("RGBA", (per * W, ((8 + 8 * ts_n) // per) * H), (0, 0, 0, 0))
         for hd in range(8):
             TS.alpha_composite(cellOf(tur[hd], anchor, n), ((hd % per) * W, (hd // per) * H))
+        for k in range(1, ts_n + 1):
+            for hd, h in enumerate(HEAD):
+                fr = 8 + (k - 1) * 8 + hd
+                im = Image.open(os.path.join(root, "turret", f"{man['asset']}_turret_clean_s{k}_{h}.png")).convert("RGBA")
+                TS.alpha_composite(cellOf(im, anchor, n), ((fr % per) * W, (fr // per) * H))
         os.makedirs(OUT, exist_ok=True)
         TS.save(os.path.join(OUT, f"veh_{v}_turret_rgb.png")); quantize(TS).save(os.path.join(OUT, f"veh_{v}_turret.png"))
         turret = (TS.size, offs)
@@ -218,6 +224,8 @@ for i, (v, d) in enumerate(V.items()):
         A += [f"    builtInWeapons: [{T}_W2, {T}_A2]"]
     if d.get("stores"):                              # the missiles leave the hull picture one by one as the _W2 weapon fires (engine, VFACTORY)
         A += [f"    gjStoreWeapon: {T if d.get('store_weapon') == 'self' else T + '_W2'}", f"    gjStoreStates: {len(d['stores'])}"]
+    elif d.get("turret_stores"):                     # the same, for missiles carried on the turret (Wolverine; John 17 Nov 20:21)
+        A += [f"    gjStoreWeapon: {T}", f"    gjStoreStates: {d['turret_stores']}"]
     if turret:
         A += [f"    gjTurretSheet: VEH_{v.upper()}_TURRET.PCK", "    gjTurretOffsets: [" + ", ".join(f"[{o[0]}, {o[1]}]" for o in turret[1]) + "]"]
     U += [f"  - type: {T}", f"    race: {T}", f"    armor: GJ_VEH_{v.upper()}_ARMOR",

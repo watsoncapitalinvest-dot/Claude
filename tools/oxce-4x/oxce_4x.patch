@@ -12981,7 +12981,7 @@ index 849787736..f4e01be53 100644
  	/// Drop item on ground.
  	void itemDrop(Tile *t, BattleItem *item, bool updateLight);
 diff --git a/src/Battlescape/UnitSprite.cpp b/src/Battlescape/UnitSprite.cpp
-index 8fa87f892..2e0024a0c 100644
+index 8fa87f892..d368de26f 100644
 --- a/src/Battlescape/UnitSprite.cpp
 +++ b/src/Battlescape/UnitSprite.cpp
 @@ -17,6 +17,10 @@
@@ -13072,7 +13072,7 @@ index 8fa87f892..2e0024a0c 100644
  	// blit order depends on unit direction, and whether we are holding a 2 handed weapon.
  	switch (unitDir)
  	{
-@@ -643,6 +669,227 @@ void UnitSprite::drawRoutine0()
+@@ -643,6 +669,236 @@ void UnitSprite::drawRoutine0()
  }
  
  
@@ -13137,32 +13137,33 @@ index 8fa87f892..2e0024a0c 100644
 +		// and clipped by the map to each part's own tile, so together they make the whole. Frames: 0-7 the
 +		// eight headings; then death: 2x2 sheets have 8 + heading * 8 + f, bigger ones 8 + f (one sequence).
 +		int frame = dir;
++		// G.I. Joe (VFACTORY): rounds the store weapon has fired (gjStoreStates); -1 when the armour has no stores
++		int fired = -1;
++		const Armor *sa = _unit->getArmor();
++		if (sa->getGjStoreStates() > 0)
++		{
++			for (const BattleItem *it : *_unit->getInventory())
++			{
++				if (it->getRules()->getType() != sa->getGjStoreWeapon()) continue;
++				const BattleItem *ammo = it->getAmmoForSlot(0);
++				fired = ammo ? std::max(0, ammo->getRules()->getClipSize() - ammo->getAmmoQuantity()) : sa->getGjStoreStates();   // spent clip is taken away
++				break;
++			}
++		}
 +		if (_unit->getStatus() == STATUS_COLLAPSING)
 +		{
 +			const int n = std::max(1, _unit->getArmor()->getDeathFrames());
 +			const int f = std::min(7, _unit->getFallingPhase() * 8 / n);
 +			frame = N == 2 ? 8 + dir * 8 + f : 8 + f;
 +		}
-+		else if (_unit->getArmor()->getGjStoreStates() > 0)
++		else if (fired > 0)
 +		{
 +			// G.I. Joe (VFACTORY, John 17 Nov "finish the missiles"): a rack of missiles drawn on the hull. Each round the store
 +			// weapon has fired takes one off the picture: frames after the death frames, 8 headings per missile gone.
-+			const Armor *sa = _unit->getArmor();
-+			const int states = sa->getGjStoreStates();
-+			int fired = -1;
-+			for (const BattleItem *it : *_unit->getInventory())
-+			{
-+				if (it->getRules()->getType() != sa->getGjStoreWeapon()) continue;
-+				const BattleItem *ammo = it->getAmmoForSlot(0);
-+				fired = ammo ? std::max(0, ammo->getRules()->getClipSize() - ammo->getAmmoQuantity()) : states;   // spent clip is taken away
-+				break;
-+			}
-+			if (fired > 0)
-+			{
-+				const int base = N == 2 ? 72 : 16;
-+				const int want = base + (std::min(fired, states) - 1) * 8 + dir;
-+				if (_unitSurface && want < (int)_unitSurface->getTotalFrames()) frame = want;
-+			}
++			// (Missiles on a turret come off the turret sheet instead, below; the hull sheet then has no such frames.)
++			const int base = N == 2 ? 72 : 16;
++			const int want = base + (std::min(fired, sa->getGjStoreStates()) - 1) * 8 + dir;
++			if (_unitSurface && want < (int)_unitSurface->getTotalFrames()) frame = want;
 +		}
 +		selectUnit(body, frame, 0);
 +		// the picture's centre sits over the middle of the N x N footprint; this part's tile is (ox, oy) from
@@ -13177,9 +13178,17 @@ index 8fa87f892..2e0024a0c 100644
 +		{
 +			SurfaceSet *ts = const_cast<Mod*>(_mod)->getSurfaceSet(ar->getGjTurretSheet(), false);
 +			const int td = _unit->getTurretType() >= 0 ? _unit->getTurretDirection() : dir;
-+			if (ts && ts->getFrame(td))
++			// G.I. Joe (VFACTORY, John 17 Nov 20:21 "they dont disappear"): missiles carried on the turret (Wolverine) come
++			// off the turret sheet: frame 8 + (fired - 1) * 8 + turret heading, when the sheet has those frames
++			int tf = td;
++			if (ts && fired > 0)
 +			{
-+				Part turret{ BODYPART_TORSO, ts->getFrame(td) };
++				const int want = 8 + (std::min(fired, sa->getGjStoreStates()) - 1) * 8 + td;
++				if (want < (int)ts->getTotalFrames()) tf = want;
++			}
++			if (ts && ts->getFrame(tf))
++			{
++				Part turret{ BODYPART_TORSO, ts->getFrame(tf) };
 +				const auto &off = ar->getGjTurretOffsets();
 +				turret.offX = body.offX + (dir < (int)off.size() && off[dir].size() >= 2 ? off[dir][0] : 0);
 +				turret.offY = body.offY + (dir < (int)off.size() && off[dir].size() >= 2 ? off[dir][1] : 0);
