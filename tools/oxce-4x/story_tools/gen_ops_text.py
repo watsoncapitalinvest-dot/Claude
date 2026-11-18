@@ -59,6 +59,18 @@ S['STR_CARTEL_BOAT_FOUND_CONTRABAND'] = "The hold is full of fish on top and bal
 S['STR_CARTEL_BOAT_FOUND_CASH'] = "No drugs, no guns: a waterproof bag of cash in the engine room, and three men who suddenly can't speak English. The money goes to the war chest."
 S['STR_CARTEL_BOAT_FIGHT'] = "The crew went for the guns under the nets when the boarding party came over the rail. Clear the deck."
 S['STR_CARTEL_BOAT_CLEAN'] = "Fish, ice and a very angry captain. He'll be telling everyone in port about the Americans who wasted his morning."
+# Booking the proving ground (BUILD-1 item 4; John 18:53, C: open from Day 1, a real short battle, results decide the gains)
+S['STR_PROVING_BOOK'] = 'Book the Proving Ground'
+S['STR_PROVING_BOOK_DESC'] = "Send up to six Joes for three days of live exercises: stun weapons, a course of their own, and somebody shouting at them. They come back sharper and tired. While they're out there, they're not available for anything else."
+S['STR_PROVING_BOOK_DESC_INSTRUCTOR'] = "Send up to six Joes for three days on the course. {INSTRUCTOR} runs it, which means they'll learn more and enjoy it less."
+S['STR_BRIEFING_PROVING_EXERCISE_TITLE'] = "OPERATION: LET'S PLAY SOLDIER"
+S['STR_BRIEFING_PROVING_EXERCISE'] = P.join([
+    "The course is set: stun weapons only, a training squad playing Cobra, and a clock. Take the objective, keep your people standing, and do it fast.",
+    "Play it, or leave it to the instructors and read the report.",
+])
+S['STR_PROVING_RESULT_GOOD'] = "A clean run. The instructors had nothing to say, which from them is a medal."
+S['STR_PROVING_RESULT_FAIR'] = "They passed, and they know where they nearly didn't."
+S['STR_PROVING_RESULT_POOR'] = "A mess. They learned something anyway, mostly about what not to do."
 hdr = '# STORY: covert operations board text (gen_ops_text.py). Generated: edit the script, not this file.\n'
 body = yaml.dump({'extraStrings': [{'type': 'en-US', 'strings': S}, {'type': 'en-GB', 'strings': S}]},
                  allow_unicode=True, width=120, sort_keys=False)
