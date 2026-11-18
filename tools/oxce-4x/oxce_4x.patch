@@ -6349,10 +6349,10 @@ index 0000000..6358ac5
 +}
 +}
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..d0dbce2 100644
+index b7e1111..50be1b8 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
-@@ -16,8 +16,16 @@
+@@ -16,8 +16,17 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -6362,6 +6362,7 @@ index b7e1111..d0dbce2 100644
  #include <sstream>
 +#include <cstdlib>
  #include "BattlescapeGame.h"
++#include "SecureAreaState.h"
 +#include "BattleSim.h"
 +#include "Villains.h"
 +#include "Artillery.h"
@@ -6369,7 +6370,7 @@ index b7e1111..d0dbce2 100644
  #include "BattlescapeState.h"
  #include "Map.h"
  #include "Camera.h"
-@@ -49,6 +57,7 @@
+@@ -49,6 +58,7 @@
  #include "../Mod/RuleItem.h"
  #include "../Mod/RuleInventory.h"
  #include "../Mod/RuleSoldier.h"
@@ -6377,7 +6378,7 @@ index b7e1111..d0dbce2 100644
  #include "../Mod/Armor.h"
  #include "../Engine/Options.h"
  #include "../Engine/RNG.h"
-@@ -77,6 +86,12 @@ void BattleActionCost::updateTU()
+@@ -77,6 +87,12 @@ void BattleActionCost::updateTU()
  	else if (actor && weapon)
  	{
  		*(RuleItemUseCost*)this = actor->getActionTUs(type, weapon);
@@ -6390,7 +6391,7 @@ index b7e1111..d0dbce2 100644
  	}
  	else
  	{
-@@ -215,6 +230,117 @@ BattlescapeGame::~BattlescapeGame()
+@@ -215,6 +231,117 @@ BattlescapeGame::~BattlescapeGame()
  int BattlescapeGame::think()
  {
  	int ret = -1;
@@ -6508,7 +6509,7 @@ index b7e1111..d0dbce2 100644
  	// nothing is happening - see if we need some alien AI or units panicking or what have you
  	if (_states.empty())
  	{
-@@ -224,11 +350,16 @@ int BattlescapeGame::think()
+@@ -224,11 +351,16 @@ int BattlescapeGame::think()
  			_save->setUnitsFalling(false);
  			return ret;
  		}
@@ -6527,7 +6528,7 @@ index b7e1111..d0dbce2 100644
  			if (!_debugPlay)
  			{
  				if (_save->getSelectedUnit())
-@@ -336,6 +467,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
+@@ -336,6 +468,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
  		return;
  	}
  
@@ -6535,7 +6536,7 @@ index b7e1111..d0dbce2 100644
  	unit->setVisible(false); //Possible TODO: check number of player unit observers, then hide the unit if no one can see it. Should then be able to skip the next FOV call.
  
  	_save->getTileEngine()->calculateFOV(unit->getPosition(), 1, false); // might need this populate _visibleUnit for a newly-created alien.
-@@ -350,6 +482,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
+@@ -350,6 +483,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
  		unit->setAIModule(new AIModule(_save, unit, 0));
  		ai = unit->getAIModule();
  	}
@@ -6543,7 +6544,7 @@ index b7e1111..d0dbce2 100644
  	_AIActionCounter++;
  	if (_AIActionCounter == 1)
  	{
-@@ -421,6 +554,12 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
+@@ -421,6 +555,12 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
  		}
  	}
  
@@ -6556,7 +6557,7 @@ index b7e1111..d0dbce2 100644
  	if (action.type == BA_SNAPSHOT || action.type == BA_AUTOSHOT || action.type == BA_AIMEDSHOT || action.type == BA_THROW || action.type == BA_HIT || action.type == BA_MINDCONTROL || action.type == BA_USE || action.type == BA_PANIC || action.type == BA_LAUNCH)
  	{
  		ss.clear();
-@@ -508,8 +647,271 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
+@@ -508,8 +648,271 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
  /**
   * Ends the turn.
   */
@@ -6828,7 +6829,7 @@ index b7e1111..d0dbce2 100644
  	_debugPlay = _save->getDebugMode() && _parentState->getGame()->isCtrlPressed() && (_save->getSide() != FACTION_NEUTRAL);
  	_currentAction.type = BA_NONE;
  	_currentAction.skillRules = nullptr;
-@@ -620,6 +1022,7 @@ void BattlescapeGame::endTurn()
+@@ -620,6 +1023,7 @@ void BattlescapeGame::endTurn()
  
  
  		_save->endTurn();
@@ -6836,7 +6837,7 @@ index b7e1111..d0dbce2 100644
  		t = _save->getTileEngine()->checkForTerrainExplosions();
  		if (t)
  		{
-@@ -678,7 +1081,9 @@ void BattlescapeGame::endTurn()
+@@ -678,7 +1082,9 @@ void BattlescapeGame::endTurn()
  		}
  	}
  
@@ -6847,7 +6848,7 @@ index b7e1111..d0dbce2 100644
  	{
  		showInfoBoxQueue();
  
-@@ -695,7 +1100,7 @@ void BattlescapeGame::endTurn()
+@@ -695,7 +1101,7 @@ void BattlescapeGame::endTurn()
  	// objective type MUST_DESTROY was already handled above
  	bool killingAllAliensIsNotEnough = (_save->getVIPSurvivalPercentage() > 0 && _save->getVIPEscapeType() != ESCAPE_NONE);
  
@@ -6856,7 +6857,7 @@ index b7e1111..d0dbce2 100644
  
  	if ((_save->getSide() != FACTION_NEUTRAL || battleComplete)
  		&& _endTurnRequested)
-@@ -1367,6 +1772,9 @@ bool BattlescapeGame::noActionsPending(BattleUnit *bu)
+@@ -1367,6 +1773,9 @@ bool BattlescapeGame::noActionsPending(BattleUnit *bu)
   */
  void BattlescapeGame::setStateInterval(Uint32 interval)
  {
@@ -6866,7 +6867,7 @@ index b7e1111..d0dbce2 100644
  	_parentState->setStateInterval(interval);
  }
  
-@@ -1915,6 +2323,13 @@ void BattlescapeGame::primaryAction(Position pos)
+@@ -1915,6 +2324,13 @@ void BattlescapeGame::primaryAction(Position pos)
  		}
  		else
  		{
@@ -6880,7 +6881,7 @@ index b7e1111..d0dbce2 100644
  			_currentAction.target = pos;
  			getMap()->setCursorType(CT_NONE);
  
-@@ -1985,6 +2400,14 @@ void BattlescapeGame::primaryAction(Position pos)
+@@ -1985,6 +2401,14 @@ void BattlescapeGame::primaryAction(Position pos)
  			{
  				_currentAction.sneak = _save->getSelectedUnit()->getArmor()->allowsSneaking(_save->getSelectedUnit()->isSmallUnit());
  			}
@@ -6895,7 +6896,7 @@ index b7e1111..d0dbce2 100644
  
  			// recalculate path after setting new move types
  			if (BAM_NORMAL != _currentAction.getMoveType())
-@@ -3141,6 +3564,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
+@@ -3141,6 +3565,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
  	{
  		return 0;
  	}
@@ -6907,7 +6908,7 @@ index b7e1111..d0dbce2 100644
  
  	// death trap?
  	Tile* deathTrapTile = nullptr;
-@@ -3209,10 +3637,12 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
+@@ -3209,10 +3638,12 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
  				{
  					const RuleItem *ruleItem = item->getRules();
  					bool g = item->getGlow();
@@ -6920,7 +6921,7 @@ index b7e1111..d0dbce2 100644
  							Position p = t->getPosition().toVoxel() + Position(8, 8, t->getTerrainLevel());
  							statePushNext(new ExplosionBState(this, p, BattleActionAttack::GetBeforeShoot(BA_TRIGGER_PROXY_GRENADE, nullptr, item)));
  							exploded = true;
-@@ -3346,12 +3776,35 @@ std::list<BattleState*> BattlescapeGame::getStates()
+@@ -3346,12 +3777,35 @@ std::list<BattleState*> BattlescapeGame::getStates()
   * Ends the turn if auto-end battle is enabled
   * and all mission objectives are completed.
   */
@@ -6938,7 +6939,7 @@ index b7e1111..d0dbce2 100644
 +	if (_securedAnnounced) return;
 +	_securedAnnounced = true;
 +	Log(LOG_INFO) << "[secure] every Cobra down: the squad searches, END MISSION ends it";
-+	_parentState->getGame()->pushState(new InfoboxOKState(_parentState->getGame()->getLanguage()->getString("STR_GJ_AREA_SECURE")));
++	_parentState->getGame()->pushState(new SecureAreaState(_parentState, this));   // continue or exfiltrate (John 16 Nov 00:19)
 +	_parentState->refreshJoeHudPublic();
 +}
 +
@@ -13264,6 +13265,104 @@ index 067c7b3..e9320c1 100644
  
  public:
  	/// Creates a new ProjectileFly class
+diff --git a/src/Battlescape/SecureAreaState.cpp b/src/Battlescape/SecureAreaState.cpp
+new file mode 100644
+index 0000000..f6e3ede
+--- /dev/null
++++ b/src/Battlescape/SecureAreaState.cpp
+@@ -0,0 +1,61 @@
++#include "SecureAreaState.h"
++#include "../Engine/Game.h"
++#include "../Engine/Options.h"
++#include "../Engine/Logger.h"
++#include "../Engine/LocalizedText.h"
++#include "../Interface/Window.h"
++#include "../Interface/Text.h"
++#include "../Interface/TextButton.h"
++#include "../Mod/Mod.h"
++#include "../Savegame/SavedGame.h"
++#include "../Savegame/SavedBattleGame.h"
++#include "BattlescapeState.h"
++#include "BattlescapeGame.h"
++
++namespace OpenXcom
++{
++
++SecureAreaState::SecureAreaState(BattlescapeState *state, BattlescapeGame *bg) : _state(state), _bg(bg)
++{
++	_screen = false;
++	_window = new Window(this, 320, 144, 0, 0);
++	_txtTitle = new Text(304, 34, 8, 22);
++	_txtAsk = new Text(304, 44, 8, 58);
++	_btnContinue = new TextButton(136, 16, 16, 114);
++	_btnExfil = new TextButton(136, 16, 168, 114);
++	_game->getSavedGame()->getSavedBattle()->setPaletteByDepth(this);
++	add(_window, "messageWindowBorder", "battlescape");
++	add(_txtTitle, "messageWindows", "battlescape");
++	add(_txtAsk, "messageWindows", "battlescape");
++	add(_btnContinue, "messageWindowButtons", "battlescape");
++	add(_btnExfil, "messageWindowButtons", "battlescape");
++	_window->setHighContrast(true);
++	_window->setBackground(_game->getMod()->getSurface("TAC00.SCR"));
++	_txtTitle->setBig(); _txtTitle->setHighContrast(true); _txtTitle->setAlign(ALIGN_CENTER); _txtTitle->setWordWrap(true);
++	_txtTitle->setText(tr("STR_GJ_SECURE_TITLE"));
++	_txtAsk->setHighContrast(true); _txtAsk->setAlign(ALIGN_CENTER); _txtAsk->setWordWrap(true);
++	_txtAsk->setText(tr("STR_GJ_SECURE_ASK"));
++	_btnContinue->setText(tr("STR_GJ_SECURE_CONTINUE")); _btnContinue->setHighContrast(true);
++	_btnContinue->onMouseClick((ActionHandler)&SecureAreaState::btnContinueClick);
++	_btnContinue->onKeyboardPress((ActionHandler)&SecureAreaState::btnContinueClick, Options::keyCancel);
++	_btnExfil->setText(tr("STR_GJ_SECURE_EXFILTRATE")); _btnExfil->setHighContrast(true);
++	_btnExfil->onMouseClick((ActionHandler)&SecureAreaState::btnExfilClick);
++	_btnExfil->onKeyboardPress((ActionHandler)&SecureAreaState::btnExfilClick, Options::keyOk);
++	centerAllSurfaces();
++}
++
++void SecureAreaState::btnContinueClick(Action *)
++{
++	Log(LOG_INFO) << "[secure] CONTINUE: the squad searches, END MISSION ends it";
++	_game->popState();
++}
++
++void SecureAreaState::btnExfilClick(Action *)
++{
++	_game->popState();
++	BattlescapeTally tally = _bg->tallyUnits();
++	Log(LOG_INFO) << "[secure] EXFILTRATE: a win with " << tally.liveSoldiers << " standing";
++	_state->finishBattle(false, tally.liveSoldiers);
++}
++
++}
+diff --git a/src/Battlescape/SecureAreaState.h b/src/Battlescape/SecureAreaState.h
+new file mode 100644
+index 0000000..a8e336b
+--- /dev/null
++++ b/src/Battlescape/SecureAreaState.h
+@@ -0,0 +1,25 @@
++#pragma once
++#include "../Engine/State.h"
++
++namespace OpenXcom
++{
++class Window; class Text; class TextButton; class BattlescapeState; class BattlescapeGame;
++
++/**
++ * ALL TARGETS NEUTRALIZED (John 16 Nov 00:19 "continue or exfiltrate? every map"; built 18 Nov 17:42 "go").
++ * Asked once, when the last Cobra goes down on a mission that ends that way. CONTINUE: the squad stays to search the
++ * site (the AREA SECURE mode: END MISSION ends it as a win whenever). EXFILTRATE: the mission ends now, a win.
++ */
++class SecureAreaState : public State
++{
++	BattlescapeState *_state;
++	BattlescapeGame *_bg;
++	Window *_window;
++	Text *_txtTitle, *_txtAsk;
++	TextButton *_btnContinue, *_btnExfil;
++public:
++	SecureAreaState(BattlescapeState *state, BattlescapeGame *bg);
++	void btnContinueClick(Action *action);
++	void btnExfilClick(Action *action);
++};
++}
 diff --git a/src/Battlescape/Stealth.cpp b/src/Battlescape/Stealth.cpp
 new file mode 100644
 index 0000000..b965aad
@@ -16693,7 +16792,7 @@ index ff6f452..2d8ea7d 100644
  	void think() override;
  	/// Fades the message.
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..1465e28 100644
+index 839f803..112c37f 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -35,6 +35,10 @@ set ( basescape_src
@@ -16707,9 +16806,11 @@ index 839f803..1465e28 100644
    Basescape/PlaceLiftState.cpp
    Basescape/PlaceStartFacilityState.cpp
    Basescape/PurchaseState.cpp
-@@ -71,6 +75,13 @@ set ( basescape_src
+@@ -70,7 +74,15 @@ set ( basescape_src
+ 
  set ( battlescape_src
    Battlescape/AbortMissionState.cpp
++  Battlescape/SecureAreaState.cpp
    Battlescape/ActionMenuItem.cpp
 +  Battlescape/AirFight.cpp
 +  Battlescape/Stealth.cpp
@@ -16721,7 +16822,7 @@ index 839f803..1465e28 100644
    Battlescape/ActionMenuState.cpp
    Battlescape/AIModule.cpp
    Battlescape/AlienInventory.cpp
-@@ -172,6 +183,8 @@ set ( engine_src
+@@ -172,6 +184,8 @@ set ( engine_src
    Engine/Sound.cpp
    Engine/SoundSet.cpp
    Engine/State.cpp
@@ -16730,7 +16831,7 @@ index 839f803..1465e28 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -201,9 +214,20 @@ set ( geoscape_src
+@@ -201,9 +215,20 @@ set ( geoscape_src
    Geoscape/DogfightState.cpp
    Geoscape/ExtendedGeoscapeLinksState.cpp
    Geoscape/FundingState.cpp
@@ -16751,7 +16852,7 @@ index 839f803..1465e28 100644
    Geoscape/Globe.cpp
    Geoscape/GraphsState.cpp
    Geoscape/InterceptState.cpp
-@@ -331,6 +355,7 @@ set ( mod_src
+@@ -331,6 +356,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -16759,7 +16860,7 @@ index 839f803..1465e28 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +381,7 @@ set ( savegame_src
+@@ -356,6 +382,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -34434,7 +34535,7 @@ index 6bef22e..8cc3b62 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..1eaf617 100644
+index 99f24ce..26fc705 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
 @@ -377,6 +377,10 @@
@@ -34448,9 +34549,11 @@ index 99f24ce..1eaf617 100644
      <ClCompile Include="Basescape\PlaceLiftState.cpp" />
      <ClCompile Include="Basescape\ManufactureStartState.cpp" />
      <ClCompile Include="Basescape\PlaceStartFacilityState.cpp" />
-@@ -411,6 +415,13 @@
+@@ -410,7 +414,15 @@
+     <ClCompile Include="Basescape\TransferItemsState.cpp" />
      <ClCompile Include="Basescape\TransfersState.cpp" />
      <ClCompile Include="Battlescape\AbortMissionState.cpp" />
++    <ClCompile Include="Battlescape\SecureAreaState.cpp" />
      <ClCompile Include="Battlescape\ActionMenuItem.cpp" />
 +    <ClCompile Include="Battlescape\AirFight.cpp" />
 +    <ClCompile Include="Battlescape\Stealth.cpp" />
@@ -34462,7 +34565,7 @@ index 99f24ce..1eaf617 100644
      <ClCompile Include="Battlescape\ActionMenuState.cpp" />
      <ClCompile Include="Battlescape\AlienInventory.cpp" />
      <ClCompile Include="Battlescape\AlienInventoryState.cpp" />
-@@ -511,6 +522,8 @@
+@@ -511,6 +523,8 @@
      <ClCompile Include="Engine\Sound.cpp" />
      <ClCompile Include="Engine\SoundSet.cpp" />
      <ClCompile Include="Engine\State.cpp" />
@@ -34471,7 +34574,7 @@ index 99f24ce..1eaf617 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,10 +559,21 @@
+@@ -546,10 +560,21 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
@@ -34493,7 +34596,7 @@ index 99f24ce..1eaf617 100644
      <ClCompile Include="Geoscape\Globe.cpp" />
      <ClCompile Include="Geoscape\GraphsState.cpp" />
      <ClCompile Include="Geoscape\InterceptState.cpp" />
-@@ -673,6 +697,7 @@
+@@ -673,6 +698,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -34501,7 +34604,7 @@ index 99f24ce..1eaf617 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +707,7 @@
+@@ -682,6 +708,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -34509,7 +34612,7 @@ index 99f24ce..1eaf617 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -856,6 +882,10 @@
+@@ -856,6 +883,10 @@
      <ClInclude Include="Basescape\MonthlyCostsState.h" />
      <ClInclude Include="Basescape\NewResearchListState.h" />
      <ClInclude Include="Basescape\PlaceFacilityState.h" />
@@ -34520,7 +34623,7 @@ index 99f24ce..1eaf617 100644
      <ClInclude Include="Basescape\PlaceLiftState.h" />
      <ClInclude Include="Basescape\ManufactureStartState.h" />
      <ClInclude Include="Basescape\PlaceStartFacilityState.h" />
-@@ -890,6 +920,13 @@
+@@ -890,6 +921,13 @@
      <ClInclude Include="Basescape\TransfersState.h" />
      <ClInclude Include="Battlescape\AbortMissionState.h" />
      <ClInclude Include="Battlescape\ActionMenuItem.h" />
@@ -34534,7 +34637,7 @@ index 99f24ce..1eaf617 100644
      <ClInclude Include="Battlescape\ActionMenuState.h" />
      <ClInclude Include="Battlescape\AlienInventory.h" />
      <ClInclude Include="Battlescape\AlienInventoryState.h" />
-@@ -970,6 +1007,8 @@
+@@ -970,6 +1008,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -34543,7 +34646,7 @@ index 99f24ce..1eaf617 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1072,17 @@
+@@ -1033,6 +1073,17 @@
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
@@ -34561,7 +34664,7 @@ index 99f24ce..1eaf617 100644
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1042,6 +1092,7 @@
+@@ -1042,6 +1093,7 @@
      <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
      <ClInclude Include="Geoscape\ProductionCompleteState.h" />
      <ClInclude Include="Geoscape\GeoscapeState.h" />
@@ -34569,7 +34672,7 @@ index 99f24ce..1eaf617 100644
      <ClInclude Include="Geoscape\Globe.h" />
      <ClInclude Include="Geoscape\GraphsState.h" />
      <ClInclude Include="Geoscape\InterceptState.h" />
-@@ -1170,6 +1221,7 @@
+@@ -1170,6 +1222,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -34577,7 +34680,7 @@ index 99f24ce..1eaf617 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1231,7 @@
+@@ -1179,6 +1232,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
