@@ -5,6 +5,8 @@ twin .50 cal on its mount, a Com-Bat rocket on each side, XO2 on the sides - wit
   foot pegs, and that is all; the game's Ferret carries those two). The racks come off: orange faces behind x -4.4 above the
   side rockets, and every non-blue face behind x -4.7 above z 4.5 (the racks' shaded faces; the breech box ends at x -4.2).
 - its weapons are orange; the toy's are red. Orange texels go red (same shading); the two Com-Bat rockets (body blue here) go red.
+- (23:04 "fix the decals") its Cobra sigils are on the body sides; the toy's are on the right-side fenders with ATV. The side ones
+  are painted out here; the toy's stickers go on as decals (make_decals.py, decals.json).
 The model is one mesh of loose triangles, so parts are picked by their texture colour and position, not by object.
 python3 build_ferret.py in.blend out.blend"""
 import bpy, bmesh, sys
@@ -28,6 +30,16 @@ for f in bm.faces:
         gone.append(f)
 bmesh.ops.delete(bm, geom=gone, context='FACES'); bm.to_mesh(me); bm.free()
 print('rear racks: faces removed', len(gone))
+# the Generals put the Cobra sigil on the body sides (four texture patches, found from the faces there); the toy has only XO2 there
+# and carries the sigil on its right-side fenders (decals.json, John's own sigil). Red texels in those patches are inpainted from the blue.
+import cv2
+tl = np.ascontiguousarray(rgb[::-1].astype(np.uint8))                     # top-left origin, as the boxes are
+for x, y, w, h in [(389, 689, 46, 26), (393, 745, 42, 34), (57, 881, 38, 50), (189, 961, 46, 38)]:
+    x0, y0, x1, y1 = x - 6, y - 6, x + w + 6, y + h + 6
+    r = tl[y0:y1, x0:x1].astype(int); notblue = ~(r[..., 2] > r[..., 0] + 10)
+    mask = np.zeros(tl.shape[:2], np.uint8); mask[y0:y1, x0:x1] = (notblue * 255).astype(np.uint8)
+    tl = cv2.inpaint(tl, cv2.dilate(mask, np.ones((3, 3), np.uint8)), 5, cv2.INPAINT_TELEA)
+rgb = tl[::-1].astype(int)
 # orange -> toy red, keeping each texel's shading (scale the red to the texel's brightness)
 R, G, B = rgb[..., 0], rgb[..., 1], rgb[..., 2]
 m = (R > 120) & (G > 45) & (G < 175) & (B < 120) & (R - G > 35) & (R - B > 70)
