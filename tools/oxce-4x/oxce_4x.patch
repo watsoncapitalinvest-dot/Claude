@@ -2998,10 +2998,10 @@ index 10a96c470..755c149b4 100644
  	void btnCancelClick(Action *action);
  	/// Handler for pressing an Increase arrow in the list.
 diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
-index db6727f4e..2e097f090 100644
+index db6727f4e..16cb8f85b 100644
 --- a/src/Battlescape/AIModule.cpp
 +++ b/src/Battlescape/AIModule.cpp
-@@ -16,9 +16,15 @@
+@@ -16,9 +16,16 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -3010,6 +3010,7 @@ index db6727f4e..2e097f090 100644
  #include <climits>
  #include <algorithm>
  #include "AIModule.h"
++#include "Testbed.h"
 +#include "Villains.h"
 +#include "VehicleSpecials.h"
 +#include "Artillery.h"
@@ -3017,7 +3018,7 @@ index db6727f4e..2e097f090 100644
  #include "../Savegame/BattleItem.h"
  #include "../Savegame/Node.h"
  #include "../Savegame/SavedBattleGame.h"
-@@ -32,6 +38,7 @@
+@@ -32,6 +39,7 @@
  #include "../Engine/Game.h"
  #include "../Mod/Armor.h"
  #include "../Mod/Mod.h"
@@ -3025,7 +3026,7 @@ index db6727f4e..2e097f090 100644
  #include "../Mod/RuleItem.h"
  #include "../fmath.h"
  
-@@ -418,11 +425,406 @@ bool AIModule::medikit_think(BattleMediKitType healOrStim)
+@@ -418,11 +426,407 @@ bool AIModule::medikit_think(BattleMediKitType healOrStim)
  	return used;
  }
  
@@ -3101,6 +3102,7 @@ index db6727f4e..2e097f090 100644
 +{
 +	// rig hook: Cobra sits out turn 1 so the staged specials test (OXCE_VS_SELFTEST=3) has a Joe left on turn 2
 +	if (getenv("OXCE_VS_SELFTEST") && std::string(getenv("OXCE_VS_SELFTEST")) == "3" && _save->getTurn() == 1) { action->type = BA_NONE; return; }
++	if (Testbed::freeze(_save, _unit, action)) return;   // G.I. Joe test range: Cobra stands still
 +	_gjVillainActed = false;
 +	_gjStock = false;
 +	thinkCore(action);
@@ -3432,7 +3434,7 @@ index db6727f4e..2e097f090 100644
  {
  	// Workaround: AI freeze
  	if (_walkAbortCounter > 200)
-@@ -439,6 +841,11 @@ void AIModule::think(BattleAction *action)
+@@ -439,6 +843,11 @@ void AIModule::think(BattleAction *action)
  	_attackAction.weapon = action->weapon;
  	_attackAction.number = action->number;
  	_escapeAction.number = action->number;
@@ -3444,7 +3446,7 @@ index db6727f4e..2e097f090 100644
  	_knownEnemies = countKnownTargets();
  	_visibleEnemies = selectNearestTarget();
  	_spottingEnemies = getSpottingUnits(_unit->getPosition());
-@@ -489,6 +896,350 @@ void AIModule::think(BattleAction *action)
+@@ -489,6 +898,350 @@ void AIModule::think(BattleAction *action)
  		return;
  	}
  
@@ -3795,7 +3797,7 @@ index db6727f4e..2e097f090 100644
  	if (action->weapon)
  	{
  		const RuleItem *rule = action->weapon->getRules();
-@@ -1395,6 +2146,12 @@ int AIModule::selectNearestTarget()
+@@ -1395,6 +2148,12 @@ int AIModule::selectNearestTarget()
  		{
  			tally++;
  			int dist = Position::distance2d(_unit->getPosition(), bu->getPosition());
@@ -3808,7 +3810,7 @@ index db6727f4e..2e097f090 100644
  			if (dist < _closestDist)
  			{
  				bool valid = false;
-@@ -2367,7 +3124,11 @@ void AIModule::wayPointAction()
+@@ -2367,7 +3126,11 @@ void AIModule::wayPointAction()
  		return;
  	}
  	_aggroTarget = 0;
@@ -3821,7 +3823,7 @@ index db6727f4e..2e097f090 100644
  	{
  		if (_aggroTarget != 0) break; // loop finished
  		if (!validTarget(bu, true, true))
-@@ -2386,6 +3147,7 @@ void AIModule::wayPointAction()
+@@ -2386,6 +3149,7 @@ void AIModule::wayPointAction()
  
  	if (_aggroTarget != 0)
  	{
@@ -3829,7 +3831,7 @@ index db6727f4e..2e097f090 100644
  		_attackAction.type = BA_LAUNCH;
  		_attackAction.updateTU();
  		if (!_attackAction.haveTU())
-@@ -2976,6 +3738,30 @@ AIAttackWeight AIModule::getTargetAttackWeight(BattleUnit* target) const
+@@ -2976,6 +3740,30 @@ AIAttackWeight AIModule::getTargetAttackWeight(BattleUnit* target) const
  		weight = target->getAITargetWeightAsNeutral(_save->getMod());
  	}
  
@@ -6009,10 +6011,10 @@ index 7af613cc7..53dbe263a 100644
  	void resetAllEnemiesNeutralized() { _allEnemiesNeutralized = false; }
  };
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba749..27e52ab34 100644
+index 1951ba749..6debf6f0a 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
-@@ -16,10 +16,15 @@
+@@ -16,10 +16,16 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -6023,12 +6025,13 @@ index 1951ba749..27e52ab34 100644
  #include <assert.h>
  #include <sstream>
  #include "BattlescapeGenerator.h"
++#include "Testbed.h"
 +#include "../Geoscape/AirRaid.h"
 +#include "../Basescape/PitPlace.h"
  #include "TileEngine.h"
  #include "Inventory.h"
  #include "AIModule.h"
-@@ -96,6 +101,207 @@ BattlescapeGenerator::~BattlescapeGenerator()
+@@ -96,6 +102,207 @@ BattlescapeGenerator::~BattlescapeGenerator()
  /**
   * Sets up all our various arrays and whatnot according to the size of the map.
   */
@@ -6236,7 +6239,7 @@ index 1951ba749..27e52ab34 100644
  void BattlescapeGenerator::init(bool resetTerrain)
  {
  	_blocks.clear();
-@@ -236,6 +442,15 @@ void BattlescapeGenerator::setMissionSite(MissionSite *mission)
+@@ -236,6 +443,15 @@ void BattlescapeGenerator::setMissionSite(MissionSite *mission)
   */
  void BattlescapeGenerator::nextStage()
  {
@@ -6252,7 +6255,7 @@ index 1951ba749..27e52ab34 100644
  	// check if the unit is available in the next stage
  	auto isUnitStillActive = [](const BattleUnit* u)
  	{
-@@ -540,6 +755,10 @@ void BattlescapeGenerator::nextStage()
+@@ -540,6 +756,10 @@ void BattlescapeGenerator::nextStage()
  	_save->setChronoTrigger(ruleDeploy->getChronoTrigger());
  	_save->setCheatTurn(ruleDeploy->getCheatTurn());
  	ruleDeploy->getDimensions(&_mapsize_x, &_mapsize_y, &_mapsize_z);
@@ -6263,7 +6266,7 @@ index 1951ba749..27e52ab34 100644
  	size_t pick = RNG::generate(0, ruleDeploy->getTerrains().size() -1);
  	_terrain = _game->getMod()->getTerrain(ruleDeploy->getTerrains().at(pick), true);
  	setDepth(ruleDeploy, true);
-@@ -618,6 +837,7 @@ void BattlescapeGenerator::nextStage()
+@@ -618,6 +838,7 @@ void BattlescapeGenerator::nextStage()
  	}
  
  	generateMap(script, ruleDeploy->getCustomUfoName(), nullptr);
@@ -6271,7 +6274,7 @@ index 1951ba749..27e52ab34 100644
  
  	setupObjectives(ruleDeploy);
  
-@@ -739,7 +959,36 @@ void BattlescapeGenerator::nextStage()
+@@ -739,7 +960,36 @@ void BattlescapeGenerator::nextStage()
  
  	size_t unitCount = _save->getUnits()->size();
  
@@ -6309,7 +6312,7 @@ index 1951ba749..27e52ab34 100644
  
  	if (unitCount == _save->getUnits()->size())
  	{
-@@ -767,12 +1016,55 @@ void BattlescapeGenerator::nextStage()
+@@ -767,12 +1017,55 @@ void BattlescapeGenerator::nextStage()
   */
  void BattlescapeGenerator::run()
  {
@@ -6365,7 +6368,7 @@ index 1951ba749..27e52ab34 100644
  
  	_save->setTurnLimit(ruleDeploy->getTurnLimit());
  	_save->setChronoTrigger(ruleDeploy->getChronoTrigger());
-@@ -829,9 +1121,9 @@ void BattlescapeGenerator::run()
+@@ -829,9 +1122,9 @@ void BattlescapeGenerator::run()
  		if (_game->getSavedGame()->getMonthsPassed() != -1)
  		{
  			month =
@@ -6377,7 +6380,7 @@ index 1951ba749..27e52ab34 100644
  		}
  		else
  		{
-@@ -863,7 +1155,7 @@ void BattlescapeGenerator::run()
+@@ -863,7 +1156,7 @@ void BattlescapeGenerator::run()
  	if (isPreview && _craftRules)
  	{
  		// resize the map if needed
@@ -6386,7 +6389,7 @@ index 1951ba749..27e52ab34 100644
  		{
  			if (dims->getSizeX() > _mapsize_x)
  			{
-@@ -883,7 +1175,29 @@ void BattlescapeGenerator::run()
+@@ -883,7 +1176,29 @@ void BattlescapeGenerator::run()
  	}
  	_save->setStartingCondition(startingCondition);
  
@@ -6416,7 +6419,7 @@ index 1951ba749..27e52ab34 100644
  
  	if (isPreview && ruleDeploy->isHidden())
  	{
-@@ -897,13 +1211,13 @@ void BattlescapeGenerator::run()
+@@ -897,13 +1212,13 @@ void BattlescapeGenerator::run()
  	{
  		enviro = _game->getMod()->getEnviroEffects(_terrain->getEnviroEffects());
  	}
@@ -6432,7 +6435,7 @@ index 1951ba749..27e52ab34 100644
  	{
  		deployCivilians(markCiviliansAsVIP, civilianSpawnNodeRank, ruleDeploy->getCivilians());
  		for (auto& pair : ruleDeploy->getCiviliansByType())
-@@ -914,18 +1228,18 @@ void BattlescapeGenerator::run()
+@@ -914,18 +1229,18 @@ void BattlescapeGenerator::run()
  
  	size_t unitCount = _save->getUnits()->size();
  
@@ -6454,10 +6457,13 @@ index 1951ba749..27e52ab34 100644
  	{
  		deployCivilians(markCiviliansAsVIP, civilianSpawnNodeRank, ruleDeploy->getCivilians());
  		for (auto& pair : ruleDeploy->getCiviliansByType())
-@@ -961,11 +1275,246 @@ void BattlescapeGenerator::run()
+@@ -959,6 +1274,212 @@ void BattlescapeGenerator::run()
+ 	{
+ 		explodeOtherJunk();
  	}
- }
- 
++	Testbed::prepare(_save);   // G.I. Joe test range (BUILD-2): Cobra stands still with nothing to shoot
++}
++
 +/**
 + * G.I. Joe: an air fight (DOGFIGHT_DESIGN_v1 section 2, AIR_SEA_BUILD_PLAN_v1). The map is the deployment's
 + * sky - the ground picture on floor 0, the decks on floors 1-4 - over the terrain picked for the spot.
@@ -6661,10 +6667,10 @@ index 1951ba749..27e52ab34 100644
 +	setMusic(ruleDeploy, false);
 +	_save->setGlobalShade(_worldShade);
 +	_save->getTileEngine()->calculateLighting(LL_AMBIENT, TileEngine::invalid, 0, true);
-+}
-+
+ }
+ 
  /**
-  * Deploys all the X-COM units and equipment based on the Geoscape base / craft.
+@@ -966,6 +1487,36 @@ void BattlescapeGenerator::run()
   */
  void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondition, const RuleEnviroEffects* enviro)
  {
@@ -6701,7 +6707,7 @@ index 1951ba749..27e52ab34 100644
  	bool isPreview = _save->isPreview();
  
  	_save->applyEnviroEffects(enviro);
-@@ -1345,6 +1894,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
+@@ -1345,6 +1896,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
  
  	// auto-equip soldiers (only soldiers without layout) and clean up moved items
  	autoEquip(*_save->getUnits(), _game->getMod(), &tempItemList, ground, _worldShade, _allowAutoLoadout, false);
@@ -6709,7 +6715,7 @@ index 1951ba749..27e52ab34 100644
  }
  
  void BattlescapeGenerator::autoEquip(std::vector<BattleUnit*> units, Mod *mod, std::vector<BattleItem*> *craftInv,
-@@ -1433,7 +1983,17 @@ BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
+@@ -1433,7 +1985,17 @@ BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
  	{
  		if (!_save->isPreview())
  		{
@@ -6728,7 +6734,7 @@ index 1951ba749..27e52ab34 100644
  			if (v->getRules()->getVehicleClipAmmo())
  			{
  				BattleItem *ammoItem = _save->createItemForUnit(v->getRules()->getVehicleClipAmmo(), unit);
-@@ -1448,6 +2008,40 @@ BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
+@@ -1448,6 +2010,40 @@ BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
  	return unit;
  }
  
@@ -6769,7 +6775,7 @@ index 1951ba749..27e52ab34 100644
  /**
   * Adds a soldier to the game and places him on a free spawnpoint.
   * Spawnpoints are either tiles in case of an XCom craft that landed.
-@@ -1483,6 +2077,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1483,6 +2079,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  			setCustomCraftInventoryTile();
  
  			Node* node = _save->getSpawnNode(NR_XCOM, unit);
@@ -6802,11 +6808,11 @@ index 1951ba749..27e52ab34 100644
  			if (node)
  			{
  				_save->setUnitPosition(unit, node->getPosition());
-@@ -1495,6 +2115,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1495,6 +2117,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  				_save->initUnit(unit);
  				return unit;
  			}
-+			else if (_save->getMissionType() == "STR_BASE_DEFENSE" && _base && (Outposts::kindOf(_game->getMod(), _base) || isPitBattle()))
++			else if ((_save->getMissionType() == "STR_BASE_DEFENSE" && _base && (Outposts::kindOf(_game->getMod(), _base) || isPitBattle())) || Testbed::is(_save))
 +			{
 +				// G.I. Joe: an outpost's map without Joe start points (a placeholder): the defenders stand near the
 +				// first one placed, or in the middle of the map
@@ -6830,7 +6836,7 @@ index 1951ba749..27e52ab34 100644
  			else if (_save->getMissionType() != "STR_BASE_DEFENSE")
  			{
  				if (placeUnitNearFriend(unit))
-@@ -1669,6 +2310,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +2312,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -6861,7 +6867,7 @@ index 1951ba749..27e52ab34 100644
 +const Unit *BattlescapeGenerator::availableUnit(const Unit *rule, bool namedByMission, bool wellSupplied) const
 +{
 +	const int month = _game->getSavedGame()->getCobraMonth();   // head start included
-+	if (month < 0)
++	if (month < 0 || Testbed::is(_save))   // G.I. Joe test range (BUILD-2): one of everything, whatever the month
 +	{
 +		return rule;    // a New Battle has no campaign clock; the calendar does not apply
 +	}
@@ -6920,7 +6926,7 @@ index 1951ba749..27e52ab34 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +2420,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +2422,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -6989,7 +6995,7 @@ index 1951ba749..27e52ab34 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2505,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2507,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -7006,12 +7012,17 @@ index 1951ba749..27e52ab34 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2534,40 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2536,45 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
 -			Unit *rule = _game->getMod()->getUnit(alienName, true);
 -			BattleUnit *unit = addAlien(rule, dd.alienRank, outside);
++			if (Testbed::is(_save) && !_game->getMod()->getUnit(alienName, false))   // G.I. Joe test range: an install without it skips it
++			{
++				Log(LOG_WARNING) << "[testbed] no unit " << alienName << " in this install: skipped";
++				continue;
++			}
 +			const Unit *rule = _game->getMod()->getUnit(alienName, true);
 +			// The escalation calendar. A deployment that asks for a B.A.T. in month 2
 +			// gets a trooper; the deployment is not rewritten, the unit is refused.
@@ -7049,7 +7060,7 @@ index 1951ba749..27e52ab34 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -1824,7 +2649,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
+@@ -1824,7 +2656,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  		unit->getAIModule()->setStartNode(node);
  		unit->setRankInt(alienRank);
  		int dir = _save->getTileEngine()->faceWindow(node->getPosition());
@@ -7058,7 +7069,7 @@ index 1951ba749..27e52ab34 100644
  		if (Position::distance2d(node->getPosition(), craft) <= 20 && RNG::percent(aliensFacingCraftOdds))
  			dir = unit->directionTo(craft);
  		if (dir != -1)
-@@ -1843,7 +2668,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
+@@ -1843,7 +2675,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  		{
  			unit->setRankInt(alienRank);
  			int dir = _save->getTileEngine()->faceWindow(unit->getPosition());
@@ -7067,7 +7078,7 @@ index 1951ba749..27e52ab34 100644
  			if (Position::distance2d(unit->getPosition(), craft) <= 20 && RNG::percent(aliensFacingCraftOdds))
  				dir = unit->directionTo(craft);
  			if (dir != -1)
-@@ -2081,17 +2906,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,17 +2913,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -7098,7 +7109,7 @@ index 1951ba749..27e52ab34 100644
  
  	mapblock->setSizeZ(sizez);
  
-@@ -2141,11 +2974,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2981,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -7112,7 +7123,7 @@ index 1951ba749..27e52ab34 100644
  			if (terrainObjectID>0)
  			{
  				int mapDataSetID = mapDataSetOffset;
-@@ -2817,10 +3650,11 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2817,10 +3657,11 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  	// determine globe terrain from globe texture
  	_globeTerrain = _terrain;
@@ -7126,7 +7137,7 @@ index 1951ba749..27e52ab34 100644
  		if (tmpTerrain)
  		{
  			_globeTerrain = tmpTerrain;
-@@ -2830,7 +3664,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2830,7 +3671,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  	// this mission type is "hard-coded" in terms of map layout
  	uint64_t seed = RNG::getSeed();
  	_baseTerrain = _terrain;
@@ -7137,7 +7148,7 @@ index 1951ba749..27e52ab34 100644
  	{
  		if (_mod->getBaseDefenseMapFromLocation() == 1)
  		{
-@@ -3010,25 +3846,34 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3010,25 +3853,34 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  					break;
  				case MSC_ADDCRAFT:
@@ -7181,7 +7192,7 @@ index 1951ba749..27e52ab34 100644
  								+ ") could not be placed on the map. You may try turning on 'save scumming' to work around this issue.");
  						}
  						if (craftPlaced)
-@@ -3062,12 +3907,12 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3062,12 +3914,12 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  								}
  							}
  
@@ -7196,7 +7207,7 @@ index 1951ba749..27e52ab34 100644
  							success = true;
  						}
  					}
-@@ -3302,13 +4147,13 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3302,13 +4154,13 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  	if (craftMap)
  	{
@@ -7213,7 +7224,7 @@ index 1951ba749..27e52ab34 100644
  		loadRMP(craftMap, _craftPos.x * 10, _craftPos.y * 10, _craftZ, Node::CRAFTSEGMENT);
  		for (int i = 0; i < craftMap->getSizeX() / 10; ++i)
  		{
-@@ -3365,6 +4210,7 @@ void BattlescapeGenerator::generateBaseMap()
+@@ -3365,6 +4217,7 @@ void BattlescapeGenerator::generateBaseMap()
  	// add modules based on the base's layout
  	for (const auto* fac : *_base->getFacilities())
  	{
@@ -7221,7 +7232,7 @@ index 1951ba749..27e52ab34 100644
  		if (fac->isBuiltOrHadPreviousFacility())
  		{
  			int num = 0;
-@@ -4268,10 +5114,38 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
+@@ -4268,10 +5121,38 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
   * @param craftPos the position of the craft is stored here.
   * @return if the craft was placed or not.
   */
@@ -12232,6 +12243,209 @@ index 000000000..32f6f305c
 +}
 +
 +}
+diff --git a/src/Battlescape/Testbed.cpp b/src/Battlescape/Testbed.cpp
+new file mode 100644
+index 000000000..1a4f3c247
+--- /dev/null
++++ b/src/Battlescape/Testbed.cpp
+@@ -0,0 +1,156 @@
++/*
++ * G.I. Joe: the TEST RANGE (BUILD-2). See Testbed.h.
++ */
++#include "Testbed.h"
++#include <algorithm>
++#include <set>
++#include <vector>
++#include "BattlescapeGame.h"
++#include "../Engine/Logger.h"
++#include "../Mod/Mod.h"
++#include "../Mod/Armor.h"
++#include "../Mod/RuleItem.h"
++#include "../Mod/RuleSoldier.h"
++#include "../Mod/AlienDeployment.h"
++#include "../Mod/Unit.h"
++#include "../Savegame/Base.h"
++#include "../Savegame/Craft.h"
++#include "../Savegame/ItemContainer.h"
++#include "../Savegame/Vehicle.h"
++#include "../Savegame/Soldier.h"
++#include "../Savegame/SavedGame.h"
++#include "../Savegame/SavedBattleGame.h"
++#include "../Savegame/BattleUnit.h"
++#include "../Savegame/BattleItem.h"
++#include "../Savegame/Tile.h"
++
++namespace OpenXcom
++{
++
++namespace Testbed
++{
++
++const char *MISSION = "STR_GJ_TESTBED";
++
++bool is(const std::string &missionType) { return missionType == MISSION; }
++bool is(const SavedBattleGame *save) { return save && save->getMissionType() == MISSION; }
++
++void loadNewBattle(const Mod *mod, SavedGame *save, Base *base, Craft *craft)
++{
++	// the Cobra side, as the deployment names it: those vehicles stay off the Joes' craft
++	std::set<std::string> cobra;
++	if (const AlienDeployment *dep = mod->getDeployment(MISSION, false))
++		for (const auto &dd : *dep->getDeploymentData())
++			if (!dd.customUnitType.empty()) cobra.insert(dd.customUnitType);
++
++	// every named Joe (a soldier type nobody pays for and nothing has to be researched for): made if the saved New
++	// Battle setup lacks him, then aboard; nobody else
++	auto named = [](const RuleSoldier *r) { return r->getBuyCost() == 0 && r->getRequirements().empty(); };
++	std::set<std::string> have;
++	for (auto *s : *base->getSoldiers()) have.insert(s->getRules()->getType());
++	for (auto &t : mod->getSoldiersList())
++	{
++		const RuleSoldier *r = mod->getSoldier(t, true);
++		if (!named(r) || have.count(t)) continue;
++		Soldier *s = mod->genSoldier(save, r, save->selectSoldierNationalityByLocation(mod, r, nullptr));
++		base->getSoldiers()->push_back(s);
++	}
++	int joes = 0;
++	for (auto *s : *base->getSoldiers())
++	{
++		const bool n = named(s->getRules());
++		s->setCraft(n ? craft : nullptr);
++		if (n) ++joes;
++	}
++
++	// every Joe vehicle: a kit vehicle whose unit is not on Cobra's side
++	bool kit = false;
++	for (auto &t : mod->getItemsList())
++	{
++		const auto &c = mod->getItem(t)->getCategories();
++		if (std::find(c.begin(), c.end(), "STR_JOE_KIT") != c.end()) { kit = true; break; }
++	}
++	for (auto *v : *craft->getVehicles()) delete v;
++	craft->getVehicles()->clear();
++	int vehicles = 0;
++	for (auto &t : mod->getItemsList())
++	{
++		const RuleItem *rule = mod->getItem(t);
++		if (!rule->getVehicleUnit() || !rule->isRecoverable()) continue;
++		const auto &c = rule->getCategories();
++		if (kit && std::find(c.begin(), c.end(), "STR_JOE_KIT") == c.end()) continue;
++		if (cobra.count(rule->getVehicleUnit()->getType())) continue;
++		const int size = rule->getVehicleUnit()->getArmor()->getTotalSize();
++		craft->getVehicles()->push_back(new Vehicle(rule, rule->getVehicleClipSize(), size));
++		++vehicles;
++	}
++	// the armory: every piece of kit a man can carry, topped up to New Battle's numbers (a saved setup may hold less)
++	for (auto &t : mod->getItemsList())
++	{
++		const RuleItem *rule = mod->getItem(t);
++		if (rule->getBattleType() == BT_NONE || rule->getBattleType() == BT_CORPSE || !rule->isInventoryItem() || rule->getVehicleUnit() || !rule->isRecoverable()) continue;
++		const auto &c = rule->getCategories();
++		if (kit && std::find(c.begin(), c.end(), "STR_JOE_KIT") == c.end()) continue;
++		const BattleType bt = rule->getBattleType();
++		const int want = bt == BT_AMMO ? 8 : (bt == BT_GRENADE || bt == BT_PROXIMITYGRENADE) ? 12 : 2;
++		const int now = craft->getItems()->getItem(rule);
++		if (now < want) craft->getItems()->addItem(rule, want - now);
++	}
++	Log(LOG_INFO) << "[testbed] aboard: " << joes << " named Joes, " << vehicles << " vehicles, "
++		<< craft->getItems()->getTotalQuantity() << " items; Cobra side " << cobra.size() << " units";
++}
++
++void prepare(SavedBattleGame *save)
++{
++	if (!is(save)) return;
++	std::vector<BattleItem*> drop;
++	int emptied = 0, cobra = 0;
++	for (auto *it : *save->getItems())
++	{
++		BattleUnit *o = it->getOwner();
++		if (!o || o->getOriginalFaction() != FACTION_HOSTILE) continue;
++		const BattleType bt = it->getRules()->getBattleType();
++		if (bt == BT_GRENADE || bt == BT_PROXIMITYGRENADE || (bt == BT_AMMO && it->getSlot()))
++		{
++			drop.push_back(it);   // thrown or loaded later: take them away
++			continue;
++		}
++		if (it->getRules()->getClipSize() > 0) { it->setAmmoQuantity(0); ++emptied; }
++		for (int s = 0; s < 4; ++s)
++			if (BattleItem *a = it->getAmmoForSlot(s)) { if (a != it) a->setAmmoQuantity(0); ++emptied; }
++	}
++	for (auto *it : drop) save->removeItem(it);
++	for (auto *u : *save->getUnits())
++		if (u->getOriginalFaction() == FACTION_HOSTILE && !u->isOut()) { u->setTimeUnits(0); ++cobra; }
++	// the armory pile: it lands where the first Joe unit stood, and vehicles go first, so it can be under a tank where
++	// no man can reach it. Move it onto the tile of the first man who carries an inventory.
++	BattleUnit *man = nullptr;
++	for (auto *u : *save->getUnits())
++		if (u->getOriginalFaction() == FACTION_PLAYER && u->hasInventory() && u->getArmor()->getSize() == 1 && u->getTile()) { man = u; break; }
++	std::vector<BattleItem*> pile;
++	for (auto *it : *save->getItems())
++		if (!it->getOwner() && it->getTile() && it->getXCOMProperty()) pile.push_back(it);
++	if (man && !pile.empty())
++	{
++		Tile *from = pile.front()->getTile();
++		for (auto *it : pile) { it->getTile()->removeItem(it); man->getTile()->addItem(it, save->getMod()->getInventoryGround()); }
++		Log(LOG_INFO) << "[testbed] the armory: " << pile.size() << " items moved from " << from->getPosition() << " to "
++			<< man->getTile()->getPosition() << ", under " << man->getType();
++	}
++	int joes = 0;
++	for (auto *u : *save->getUnits()) if (u->getOriginalFaction() == FACTION_PLAYER) ++joes;
++	Log(LOG_INFO) << "[testbed] " << cobra << " Cobra standing, " << drop.size() << " grenades and spare clips taken, "
++		<< emptied << " guns emptied; " << joes << " on the Joes' side";
++}
++
++bool freeze(SavedBattleGame *save, BattleUnit *unit, BattleAction *action)
++{
++	if (!is(save) || unit->getOriginalFaction() != FACTION_HOSTILE) return false;
++	unit->setTimeUnits(0);
++	action->type = BA_NONE;
++	return true;
++}
++
++}
++
++}
+diff --git a/src/Battlescape/Testbed.h b/src/Battlescape/Testbed.h
+new file mode 100644
+index 000000000..ef5e32678
+--- /dev/null
++++ b/src/Battlescape/Testbed.h
+@@ -0,0 +1,35 @@
++#pragma once
++/*
++ * G.I. Joe: the TEST RANGE (BUILD-2, John 17 Nov 2026 19:33). A New Battle mission, STR_GJ_TESTBED, that starts with
++ * every named Joe, every Joe vehicle and every piece of kit on the ground at the start, against one of every Cobra
++ * unit standing still with no ammo. For looking at things and trying them, not for play.
++ * Rules: mod/Ruleset/zz_gijoe_testbed.rul (the deployment lists the Cobra side by customUnitType).
++ */
++#include <string>
++
++namespace OpenXcom
++{
++
++class Mod;
++class SavedGame;
++class Base;
++class Craft;
++class SavedBattleGame;
++class BattleUnit;
++struct BattleAction;
++
++namespace Testbed
++{
++	/// the mission type
++	extern const char *MISSION;
++	bool is(const std::string &missionType);
++	bool is(const SavedBattleGame *save);
++	/// New Battle, OK pressed on the test range: every named Joe and every Joe vehicle aboard, whatever the craft holds
++	void loadNewBattle(const Mod *mod, SavedGame *save, Base *base, Craft *craft);
++	/// end of battle generation: Cobra loses its grenades and loose clips, every gun is emptied, no TU for reactions
++	void prepare(SavedBattleGame *save);
++	/// Cobra's turn on the test range: nobody moves (and nobody has TU left to react with on the Joes' turn)
++	bool freeze(SavedBattleGame *save, BattleUnit *unit, BattleAction *action);
++}
++
++}
 diff --git a/src/Battlescape/TileEngine.cpp b/src/Battlescape/TileEngine.cpp
 index 6e6846977..fac0626f8 100644
 --- a/src/Battlescape/TileEngine.cpp
@@ -14721,7 +14935,7 @@ index 000000000..c0c5e19b1
 +
 +}
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f80345..9994b853e 100644
+index 839f80345..78057b42f 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -35,6 +35,10 @@ set ( basescape_src
@@ -14735,19 +14949,20 @@ index 839f80345..9994b853e 100644
    Basescape/PlaceLiftState.cpp
    Basescape/PlaceStartFacilityState.cpp
    Basescape/PurchaseState.cpp
-@@ -71,6 +75,11 @@ set ( basescape_src
+@@ -71,6 +75,12 @@ set ( basescape_src
  set ( battlescape_src
    Battlescape/AbortMissionState.cpp
    Battlescape/ActionMenuItem.cpp
 +  Battlescape/AirFight.cpp
 +  Battlescape/Stealth.cpp
 +  Battlescape/Villains.cpp
++  Battlescape/Testbed.cpp
 +  Battlescape/VehicleSpecials.cpp
 +  Battlescape/Artillery.cpp
    Battlescape/ActionMenuState.cpp
    Battlescape/AIModule.cpp
    Battlescape/AlienInventory.cpp
-@@ -172,6 +181,8 @@ set ( engine_src
+@@ -172,6 +182,8 @@ set ( engine_src
    Engine/Sound.cpp
    Engine/SoundSet.cpp
    Engine/State.cpp
@@ -14756,7 +14971,7 @@ index 839f80345..9994b853e 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -201,9 +212,20 @@ set ( geoscape_src
+@@ -201,9 +213,20 @@ set ( geoscape_src
    Geoscape/DogfightState.cpp
    Geoscape/ExtendedGeoscapeLinksState.cpp
    Geoscape/FundingState.cpp
@@ -14777,7 +14992,7 @@ index 839f80345..9994b853e 100644
    Geoscape/Globe.cpp
    Geoscape/GraphsState.cpp
    Geoscape/InterceptState.cpp
-@@ -331,6 +353,7 @@ set ( mod_src
+@@ -331,6 +354,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -14785,7 +15000,7 @@ index 839f80345..9994b853e 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +379,7 @@ set ( savegame_src
+@@ -356,6 +380,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -28340,10 +28555,18 @@ index 665d92206..160915e85 100644
  	bool _debugInVisualStudio;
  	std::string _newVersion;
 diff --git a/src/Menu/NewBattleState.cpp b/src/Menu/NewBattleState.cpp
-index 52b63716a..37b558275 100644
+index 52b63716a..84a408ffd 100644
 --- a/src/Menu/NewBattleState.cpp
 +++ b/src/Menu/NewBattleState.cpp
-@@ -39,6 +39,10 @@
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "NewBattleState.h"
++#include "../Battlescape/Testbed.h"
+ #include <cmath>
+ #include <algorithm>
+ #include "../Engine/Yaml.h"
+@@ -39,6 +40,10 @@
  #include "../Savegame/Craft.h"
  #include "../Savegame/ItemContainer.h"
  #include "../Savegame/Soldier.h"
@@ -28354,7 +28577,7 @@ index 52b63716a..37b558275 100644
  #include "../Battlescape/BattlescapeGenerator.h"
  #include "../Battlescape/BriefingState.h"
  #include "../Savegame/Ufo.h"
-@@ -230,7 +234,25 @@ NewBattleState::NewBattleState() :
+@@ -230,7 +235,25 @@ NewBattleState::NewBattleState() :
  			_missionTypes.erase(itr);
  		}
  	}
@@ -28381,7 +28604,7 @@ index 52b63716a..37b558275 100644
  	_cbxMission->onChange((ActionHandler)&NewBattleState::cbxMissionChange);
  
  	for (auto& craftType : _game->getMod()->getCraftsList())
-@@ -398,6 +420,9 @@ void NewBattleState::load(const std::string &filename)
+@@ -398,6 +421,9 @@ void NewBattleState::load(const std::string &filename)
  		{
  			YAML::YamlRootNodeReader cfgReader(s);
  			_cbxMission->setSelected(std::min(cfgReader["mission"].readVal<size_t>(0), _missionTypes.size() - 1));
@@ -28391,7 +28614,7 @@ index 52b63716a..37b558275 100644
  			cbxMissionChange(0);
  			_cbxCraft->setSelected(std::min(cfgReader["craft"].readVal<size_t>(0), _crafts.size() - 1));
  			_slrDarkness->setValue(cfgReader["darkness"].readVal<size_t>(0));
-@@ -528,15 +553,27 @@ void NewBattleState::initSave()
+@@ -528,15 +554,27 @@ void NewBattleState::initSave()
  	base->getCrafts()->push_back(_craft);
  
  	// Generate soldiers
@@ -28423,7 +28646,7 @@ index 52b63716a..37b558275 100644
  		{
  			if (RNG::percent(70))
  				continue;
-@@ -572,19 +609,76 @@ void NewBattleState::initSave()
+@@ -572,19 +610,76 @@ void NewBattleState::initSave()
  	}
  
  	// Generate items
@@ -28502,7 +28725,16 @@ index 52b63716a..37b558275 100644
  
  	// Add research
  	save->makeAllResearchDiscovered(mod);
-@@ -610,6 +704,50 @@ void NewBattleState::btnOkClick(Action *)
+@@ -603,6 +698,8 @@ void NewBattleState::btnOkClick(Action *)
+ 	{
+ 		// just in case somebody manually edited battle.cfg
+ 		_craft->resetCustomDeployment();
++		// G.I. Joe test range (BUILD-2): everybody and everything aboard, whatever the craft holds
++		if (Testbed::is(_missionTypes[_cbxMission->getSelected()])) Testbed::loadNewBattle(_game->getMod(), _game->getSavedGame(), _craft->getBase(), _craft);
+ 	}
+ 	save();
+ 	if (_missionTypes[_cbxMission->getSelected()] != "STR_BASE_DEFENSE" && _craft->getNumTotalUnits() == 0)
+@@ -610,6 +707,50 @@ void NewBattleState::btnOkClick(Action *)
  		return;
  	}
  
@@ -28553,7 +28785,7 @@ index 52b63716a..37b558275 100644
  	SavedBattleGame *bgame = new SavedBattleGame(_game->getMod(), _game->getLanguage());
  	_game->getSavedGame()->setBattleGame(bgame);
  	bgame->setMissionType(_missionTypes[_cbxMission->getSelected()]);
-@@ -752,6 +890,11 @@ void NewBattleState::cbxMissionChange(Action *)
+@@ -752,6 +893,11 @@ void NewBattleState::cbxMissionChange(Action *)
  {
  	AlienDeployment *ruleDeploy = _game->getMod()->getDeployment(_missionTypes[_cbxMission->getSelected()]);
  	std::set<std::string> terrains;
@@ -31903,7 +32135,7 @@ index 6bef22e13..8cc3b62a0 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce43..0cdb3ca90 100644
+index 99f24ce43..8a72463dd 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
 @@ -377,6 +377,10 @@
@@ -31917,19 +32149,20 @@ index 99f24ce43..0cdb3ca90 100644
      <ClCompile Include="Basescape\PlaceLiftState.cpp" />
      <ClCompile Include="Basescape\ManufactureStartState.cpp" />
      <ClCompile Include="Basescape\PlaceStartFacilityState.cpp" />
-@@ -411,6 +415,11 @@
+@@ -411,6 +415,12 @@
      <ClCompile Include="Basescape\TransfersState.cpp" />
      <ClCompile Include="Battlescape\AbortMissionState.cpp" />
      <ClCompile Include="Battlescape\ActionMenuItem.cpp" />
 +    <ClCompile Include="Battlescape\AirFight.cpp" />
 +    <ClCompile Include="Battlescape\Stealth.cpp" />
 +    <ClCompile Include="Battlescape\Villains.cpp" />
++    <ClCompile Include="Battlescape\Testbed.cpp" />
 +    <ClCompile Include="Battlescape\VehicleSpecials.cpp" />
 +    <ClCompile Include="Battlescape\Artillery.cpp" />
      <ClCompile Include="Battlescape\ActionMenuState.cpp" />
      <ClCompile Include="Battlescape\AlienInventory.cpp" />
      <ClCompile Include="Battlescape\AlienInventoryState.cpp" />
-@@ -511,6 +520,8 @@
+@@ -511,6 +521,8 @@
      <ClCompile Include="Engine\Sound.cpp" />
      <ClCompile Include="Engine\SoundSet.cpp" />
      <ClCompile Include="Engine\State.cpp" />
@@ -31938,7 +32171,7 @@ index 99f24ce43..0cdb3ca90 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,10 +557,21 @@
+@@ -546,10 +558,21 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
@@ -31960,7 +32193,7 @@ index 99f24ce43..0cdb3ca90 100644
      <ClCompile Include="Geoscape\Globe.cpp" />
      <ClCompile Include="Geoscape\GraphsState.cpp" />
      <ClCompile Include="Geoscape\InterceptState.cpp" />
-@@ -673,6 +695,7 @@
+@@ -673,6 +696,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -31968,7 +32201,7 @@ index 99f24ce43..0cdb3ca90 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +705,7 @@
+@@ -682,6 +706,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -31976,7 +32209,7 @@ index 99f24ce43..0cdb3ca90 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -856,6 +880,10 @@
+@@ -856,6 +881,10 @@
      <ClInclude Include="Basescape\MonthlyCostsState.h" />
      <ClInclude Include="Basescape\NewResearchListState.h" />
      <ClInclude Include="Basescape\PlaceFacilityState.h" />
@@ -31987,19 +32220,20 @@ index 99f24ce43..0cdb3ca90 100644
      <ClInclude Include="Basescape\PlaceLiftState.h" />
      <ClInclude Include="Basescape\ManufactureStartState.h" />
      <ClInclude Include="Basescape\PlaceStartFacilityState.h" />
-@@ -890,6 +918,11 @@
+@@ -890,6 +919,12 @@
      <ClInclude Include="Basescape\TransfersState.h" />
      <ClInclude Include="Battlescape\AbortMissionState.h" />
      <ClInclude Include="Battlescape\ActionMenuItem.h" />
 +    <ClInclude Include="Battlescape\AirFight.h" />
 +    <ClInclude Include="Battlescape\Stealth.h" />
 +    <ClInclude Include="Battlescape\Villains.h" />
++    <ClInclude Include="Battlescape\Testbed.h" />
 +    <ClInclude Include="Battlescape\VehicleSpecials.h" />
 +    <ClInclude Include="Battlescape\Artillery.h" />
      <ClInclude Include="Battlescape\ActionMenuState.h" />
      <ClInclude Include="Battlescape\AlienInventory.h" />
      <ClInclude Include="Battlescape\AlienInventoryState.h" />
-@@ -970,6 +1003,8 @@
+@@ -970,6 +1005,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -32008,7 +32242,7 @@ index 99f24ce43..0cdb3ca90 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1068,17 @@
+@@ -1033,6 +1070,17 @@
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
@@ -32026,7 +32260,7 @@ index 99f24ce43..0cdb3ca90 100644
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1042,6 +1088,7 @@
+@@ -1042,6 +1090,7 @@
      <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
      <ClInclude Include="Geoscape\ProductionCompleteState.h" />
      <ClInclude Include="Geoscape\GeoscapeState.h" />
@@ -32034,7 +32268,7 @@ index 99f24ce43..0cdb3ca90 100644
      <ClInclude Include="Geoscape\Globe.h" />
      <ClInclude Include="Geoscape\GraphsState.h" />
      <ClInclude Include="Geoscape\InterceptState.h" />
-@@ -1170,6 +1217,7 @@
+@@ -1170,6 +1219,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -32042,7 +32276,7 @@ index 99f24ce43..0cdb3ca90 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1227,7 @@
+@@ -1179,6 +1229,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
