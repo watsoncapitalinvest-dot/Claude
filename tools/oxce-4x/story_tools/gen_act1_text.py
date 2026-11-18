@@ -39,7 +39,7 @@ S['STR_LEAD_CARTEL_SUPPLIER_DESC'] = "Somebody is arming the border cartel. Foll
 S['STR_EVENT_CARTEL_FLIGHT'] = 'CARTEL FLIGHT DEPARTING'
 S['STR_EVENT_CARTEL_FLIGHT_DESCRIPTION'] = P.join([
     "The flight the cartel boss gave us is in the air: a twin-engine cargo plane, running north without lights.",
-    "HAWK: Don't shoot it down. Follow it. Wherever it lands is where they keep their stock.",
+    "HAWK: Don't shoot it down, and don't crowd it. It's slow enough for the A.P.C. to keep it in sight from the roads. Wherever it lands is where they keep their stock.",
 ])
 S['STR_OP_SCARLETT_STASH_HOUSE'] = 'Operation: Quiet Courier'
 S['STR_OP_SCARLETT_STASH_HOUSE_DESC'] = P.join([
@@ -52,6 +52,18 @@ S['STR_BRIEFING_ARMORED_CAR'] = P.join([
     "Six of them. Two loading the cash, the man running the crew at the getaway van, the rest covering. The deputies took one look and left. It's us or nobody.",
     "The money goes into the van, and the van goes for the county line. Anyone who reaches it is gone with what he's carrying, and the leader drives off once the cash is aboard. Stop that van, and bring me the man running the crew in one piece. He knows where the money goes.",
 ])
+# The same job when nobody tipped us (BUILD-1 18 Nov: shown while STR_INFORMANT_TIP is not researched; the robbery comes ~day 55).
+S['STR_BRIEFING_ARMORED_CAR_UNTIPPED'] = P.join([
+    "HAWK: The cartel lost a fortune at the ranch and they want it back fast. Nobody warned us this time. A sheriff's deputy called it in a few minutes ago: the SECURE-TRANS payroll car, hit at Sundown Gas on US-90. We go now or we don't go at all.",
+    "Six of them, from what the deputy saw. Two loading the cash, the man running the crew at the getaway van, the rest covering. The deputies took one look and pulled back. It's us or nobody.",
+    "The money goes into the van, and the van goes for the county line. Anyone who reaches it is gone with what he's carrying, and the leader drives off once the cash is aboard. Stop that van, and bring me the man running the crew in one piece. He knows where the money goes.",
+])
+# Day 1 departments (BUILD-1 18 Nov: one screen, the likeliest Joe already in each post).
+S['STR_DEPT_SUGGESTED'] = "HAWK: I've put the obvious man in every post. Click a post to change him, or OK to keep them."
+# Cobra crime sites spawn near any front or cell in North America (BUILD-1 18 Nov), so no fixed place: {TOWN} (CobraNetwork::fill).
+# These override MAPS' first drafts in gijoe_maps_m3_convoy.rul and gijoe_maps_vanstop.rul (this file loads after them).
+S['STR_COBRA_CONVOY_BRIEFING'] = "Two Cobra semis hit a spike strip on the highway outside {TOWN}. The drivers and guards are holding the trucks and the officer is on the radio: more are coming. Take the cargo or wreck the rigs. Careful with explosives: the paperwork in the crates and cabs burns."
+S['STR_COBRA_VAN_STOP_BRIEFING'] = "The Cobra cargo truck has pulled in for gas at an E·E Fuel station in {TOWN}. The station is an Extensive Enterprises front. Five troopers: the driver, one in the truck bed, one at the pumps, one in the store, one at the payphone. You have the station surrounded. Drop the driver or the truck leaves with the cargo, and take him alive if you can. Drop the man at the payphone before he gets his call through. Keep the townspeople out of it, and mind the pumps."
 # The stash house raid (cartel arc step 2b). The boss is NOT here: he is the ranch's only (John 17 Nov 14:28).
 S['STR_BRIEFING_STASH_HOUSE_TITLE'] = 'OPERATION: HOME STRIP'
 S['STR_BRIEFING_STASH_HOUSE'] = P.join([
