@@ -20,6 +20,14 @@ def _row(a):
     bbs = [f.getbbox() for f in fr if f.getbbox()]; box = (min(b[0] for b in bbs), min(b[1] for b in bbs), max(b[2] for b in bbs), max(b[3] for b in bbs))
     return [f.crop(box) for f in fr]
 BLAST, FIRE, SMOKE = _row(8), _row(16), _row(24)
+BLAST_W = BLAST[0].width                                  # the row's full width: every frame is scaled by the same factor
+BLAST_EACH = [f.crop(f.getbbox()) if f.getbbox() else f for f in BLAST]   # each frame cut to its own drawing
+def blast(c, f, x, y, w, base=False):
+    """the big blast, frame f, at the row's scale (w = the whole row's width on screen). Jets: each frame's drawing centred on
+    (x, y), so the flash starts in the middle of the jet and the ball grows round it (John 18 Nov 02:04 "the animation should
+    start higher"). Boats (base=True): each frame stands on y, the waterline - the art is a ground blast."""
+    k = w / BLAST_W; a = BLAST_EACH[f]; a = a.resize((max(1, int(a.width * k)), max(1, int(a.height * k))), Image.LANCZOS)
+    c.alpha_composite(a, (int(x - a.width / 2), int(y - a.height) if base else int(y - a.height / 2)))
 def fx(c, art, x, y, w, bottom=False):
     """paste effect art scaled to width w, centred on (x, y) (or standing on it, bottom=True)"""
     k = w / art.width; a = art.resize((max(1, int(art.width * k)), max(1, int(art.height * k))), Image.LANCZOS)
@@ -57,7 +65,7 @@ def death(pic, anchor, n):
         c = cell(pic, anchor, n, dy=drop, dark=1 - f * 0.08, alpha=1 - max(0, f - 3) * 0.2)
         W = 128 * n; ox, oy = W // 2, 112 * n
         if f >= 1: fx(c, FIRE[min(7, 2 + f // 2)], ox + cx, oy + cy + drop + bw * 0.05, bw * 0.28, bottom=True)
-        fx(c, BLAST[f], ox + cx, oy + cy, bw * 0.75)
+        blast(c, f, ox + cx, oy + cy, bw * 0.75)
         out.append(c)
     return out
 
@@ -77,7 +85,7 @@ def sink(pic, anchor, n):
                 ang = k * 1.047 + f * 0.3; r = (6 + f * 2) * n * 0.6
                 blob(c, ox + cx + np.cos(ang) * r, oy + cy + 4 * n + np.sin(ang) * r * 0.5, 2.2 * n * 0.6, (225, 238, 240), 0.7 - (f - 3) * 0.12)
         if 1 <= f <= 6: fx(c, FIRE[min(7, 1 + f)], ox + cx, oy + cy + drop + bw * 0.04, bw * 0.3, bottom=True)
-        fx(c, BLAST[f], ox + cx, oy + cy, bw * 0.75)
+        blast(c, f, ox + cx, oy + bb[3] - anchor[1] - bw * 0.08, bw * 0.75, base=True)
         out.append(c)
     return out
 
