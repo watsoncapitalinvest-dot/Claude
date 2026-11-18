@@ -56,7 +56,7 @@ def fit(L, W, fl, fs):
     return round(min(a, b) * CAL, 5), ('long' if a <= b else 'short')
 cf2 = {}
 s, lim = fit(16.0, 9.4, 2, 1)     # Ferret ATV 1x2; guns fixed
-c = base('ferret', s, 2, [1, 2], 'ferret', {'m0': []}, {'muzzle': [5.62, -3.56, 7.1, 1, 0, 0]}, 'Cobra',
+c = base('ferret', s, 2, [1, 2], 'ferret_v2', {'m0': []}, {'muzzle': [5.62, -3.56, 7.1, 1, 0, 0]}, 'Cobra',
          R + f'Cobra Ferret ATV, class 1x2 (installed as size 2). Scale {s} (was 0.0406; {lim} axis limits).\n')
 c['guns'] = ['muzzle']; c['preview']['script'] = [['move', 'NE', 2], ['gun', ['muzzle']], ['wait', 6]]; cf2['ferret'] = c
 s, lim = fit(30.0, 13.34, 3, 2)   # Stinger 2x3; ground-to-air rocket rack turret (file card: rotates 360); John 18:37 rework
@@ -86,7 +86,7 @@ c = base('mauler', s, 5, [4, 5], 'mauler_v2', {'m0': ['GJTURRET01', 'GJBARREL01'
 c['turret'] = {'objs': ['GJTURRET01', 'GJBARREL01', 'GJANTENNA'], 'pivot': [-2.1, 0.0, 8.73], 'muzzles': {'main': [17.51, 0.0, 13.57, 1, 0, 0]}, 'note': 'main gun turret; toy pass 17 Nov: the toy\'s two antennas (GJANTENNA) ride it'}
 c['preview']['script'] = [['move', 'NE', 2], ['gun', ['main']], ['tturn', 'SE'], ['gun', ['main']], ['tturn', 'NE'], ['wait', 6]]; cf2['mauler'] = c
 s, lim = fit(26.0, 20.34, 3, 3)   # Triple T 3x3 (John 17:16); pods empty left first  (rendered FOOT 5: taller than the 3x3 frame)
-c = base('triple_t', s, 5, [3, 3], 'triple_t', {'m2': [], 'm1': ['missile_L'], 'm0': ['missile_L', 'missile_R']},
+c = base('triple_t', s, 5, [3, 3], 'triple_t_v2', {'m2': [], 'm1': ['missile_L'], 'm0': ['missile_L', 'missile_R']},
          {'missile_L': [5.5, 8.9, 10.78, 1, 0, 0], 'missile_R': [5.5, -8.9, 10.78, 1, 0, 0]}, 'Joe',
          R + f'Triple T, class 3x3 (John 17:16). Scale {s} (was 0.05; {lim} axis limits). States m2..m0: left pod fires first.\n')
 c['launchers'] = [{'name': 'pod', 'muzzles': ['missile_L', 'missile_R'], 'fx_scale': 0.3, 'from_tube': True}]
