@@ -37,9 +37,9 @@ def kind(result):
 class Runner(threading.Thread):
     """Plays the missions one game at a time. Talks to the window only through the queue."""
 
-    def __init__(self, q, first, only, turns):
+    def __init__(self, q, first, only, turns, joes='normal', cobra='normal'):
         super().__init__(daemon=True)
-        self.q, self.first, self.only, self.turns = q, first, only, turns
+        self.q, self.first, self.only, self.turns, self.joes, self.cobra = q, first, only, turns, joes, cobra
         self.stop = False
         self.proc = None
         self.dir = None
@@ -76,6 +76,7 @@ class Runner(threading.Thread):
             self.dir = d
             self.post('battle', run, m, d)
             env = dict(os.environ, OXCE_BATTLESIM=str(m), OXCE_BATTLESIM_OUT=d, OXCE_BATTLESIM_TURNS=str(self.turns),
+                       OXCE_BATTLESIM_JOES=self.joes, OXCE_BATTLESIM_COBRA=self.cobra,
                        OXCE_BATTLE_SCALE='4', OXCE_MAP_HIRES='4')
             log = os.path.join(USER_SIM, 'openxcom.log')
             if os.path.exists(log):
@@ -106,11 +107,11 @@ class Runner(threading.Thread):
             errs = 0
             if os.path.exists(os.path.join(d, 'log.txt')):
                 errs = sum(1 for l in open(os.path.join(d, 'log.txt'), encoding='utf-8', errors='replace') if '[ERROR]' in l or '[FATAL]' in l)
-            line = f'r{run} m{m}: {res}' + (f'  ({errs} errors in the log)' if errs else '')
+            line = f'r{run} m{m}: {res}  [Joes {self.joes}, Cobra {self.cobra}]' + (f'  ({errs} errors in the log)' if errs else '')
             with open(os.path.join(OUT, 'results.txt'), 'a', encoding='utf-8') as f: f.write(line + '\n')
             if (kind(res) == 'bad' or errs) and kind(res) != 'stopped':
                 with open(os.path.join(OUT, 'problems.txt'), 'a', encoding='utf-8') as f: f.write(line + '\n')
-            self.post('result', run, m, res, errs, int(time.time() - t0), d)
+            self.post('result', run, m, res + f'  [Joes {self.joes}, Cobra {self.cobra}]', errs, int(time.time() - t0), d)
             run += 1
             if self.only: break
             m += 1
@@ -161,7 +162,14 @@ class App:
         ttk.Checkbutton(opts, text='only that one', variable=self.only).pack(side='left', padx=(0, 16))
         ttk.Label(opts, text='Joes pull out after turn').pack(side='left')
         self.turns = tk.IntVar(value=30)
-        ttk.Spinbox(opts, from_=5, to=99, width=5, textvariable=self.turns).pack(side='left', padx=4)
+        ttk.Spinbox(opts, from_=5, to=99, width=5, textvariable=self.turns).pack(side='left', padx=(4, 16))
+        styles = ('defensive', 'normal', 'aggressive')
+        ttk.Label(opts, text='Joes play').pack(side='left')
+        self.joes = tk.StringVar(value='normal')
+        ttk.Combobox(opts, values=styles, textvariable=self.joes, width=10, state='readonly').pack(side='left', padx=(4, 12))
+        ttk.Label(opts, text='Cobra plays').pack(side='left')
+        self.cobra = tk.StringVar(value='normal')
+        ttk.Combobox(opts, values=styles, textvariable=self.cobra, width=10, state='readonly').pack(side='left', padx=4)
         self.status = ttk.Label(opts, text='Ready. Press Start: the game window opens and plays by itself.', foreground=GREY)
         self.status.pack(side='right')
 
@@ -197,8 +205,8 @@ class App:
         for tag, col in (('turn', GOLD), ('down', RED), ('ok', GREY), ('end', GREEN)): self.t_ev.tag_configure(tag, foreground=col)
         res = ttk.Frame(body, style='Panel.TFrame', padding=10); res.grid(row=1, column=1, sticky='nsew')
         self.l_tot = ttk.Label(res, text='RESULTS', style='Dim.TLabel'); self.l_tot.pack(anchor='w')
-        self.tree = ttk.Treeview(res, columns=('m', 'r', 't'), show='headings', height=12)
-        for c, w, h in (('m', 190, 'Mission'), ('r', 70, 'Result'), ('t', 60, 'Turns')):
+        self.tree = ttk.Treeview(res, columns=('m', 'r', 't', 's'), show='headings', height=12)
+        for c, w, h in (('m', 170, 'Mission'), ('r', 70, 'Result'), ('t', 50, 'Turns'), ('s', 130, 'Joes / Cobra')):
             self.tree.heading(c, text=h); self.tree.column(c, width=w, anchor='w')
         self.tree.pack(fill='both', expand=True)
         for k, col in (('win', GREEN), ('loss', AMBER), ('bad', RED), ('stopped', GREY)): self.tree.tag_configure(k, foreground=col)
@@ -226,7 +234,11 @@ class App:
         if not turns and ' turns ' in res:
             try: turns = res.split(' turns ')[1].split()[0]
             except IndexError: pass
-        iid = self.tree.insert('', 0, values=(name.replace('STR_', '').replace('_', ' ').title(), word, turns), tags=(k,))
+        style = ''
+        if '[Joes ' in res:
+            try: j, c = res.split('[Joes ')[1].rstrip(']').split(', Cobra '); style = f'{j[:3]} / {c[:3]}'
+            except ValueError: pass
+        iid = self.tree.insert('', 0, values=(name.replace('STR_', '').replace('_', ' ').title(), word, turns, style), tags=(k,))
         self.paths[iid] = d
         self.counts[k] += 1
         self.l_tot.configure(text=f'RESULTS   {self.counts["win"]} won   {self.counts["loss"]} lost   '
@@ -247,7 +259,7 @@ class App:
         except (tk.TclError, ValueError): messagebox.showerror('Simulator', 'The mission number and turn limit must be numbers.'); return
         if not os.path.exists(GAME): messagebox.showerror('Simulator', 'Put this next to OpenXcom.exe.'); return
         self.bar.configure(maximum=turns)
-        self.runner = Runner(self.q, first, self.only.get(), turns); self.runner.start()
+        self.runner = Runner(self.q, first, self.only.get(), turns, self.joes.get(), self.cobra.get()); self.runner.start()
         self.btn_go.configure(state='disabled'); self.btn_stop.configure(state='normal')
         self.status.configure(text='Running. You can use the PC; leave the game window alone.')
 

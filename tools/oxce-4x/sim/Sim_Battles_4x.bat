@@ -40,6 +40,9 @@ echo [!date! !time!] battle !RUN!: New Battle mission !M!
 set OXCE_BATTLESIM=!M!
 set OXCE_BATTLESIM_OUT=%~dp0!D!
 set OXCE_BATTLESIM_TURNS=30
+rem how each side plays: defensive, normal or aggressive
+set OXCE_BATTLESIM_JOES=normal
+set OXCE_BATTLESIM_COBRA=normal
 set OXCE_BATTLE_SCALE=4
 set OXCE_MAP_HIRES=4
 start "" /wait OpenXcom.exe -user "%~dp0user_sim" -cfg "%~dp0user_sim" -displayWidth 1280 -displayHeight 800 -fullscreen false -debug false
