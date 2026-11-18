@@ -5545,10 +5545,10 @@ index 0000000..542761d
 +}
 diff --git a/src/Battlescape/BattleSim.cpp b/src/Battlescape/BattleSim.cpp
 new file mode 100644
-index 0000000..c84f83b
+index 0000000..38d939e
 --- /dev/null
 +++ b/src/Battlescape/BattleSim.cpp
-@@ -0,0 +1,716 @@
+@@ -0,0 +1,720 @@
 +/*
 + * G.I. Joe BATTLE SIMULATOR - see BattleSim.h.
 + */
@@ -6150,7 +6150,11 @@ index 0000000..c84f83b
 +	}
 +	if (campaign() > 0)
 +	{
-+		if (auto *lf = dynamic_cast<LowFuelState*>(top)) { (void)lf; static const State *lfSeen = nullptr; if (lfSeen != top && game->getSavedGame()) { lfSeen = top; tl(game->getSavedGame(), "LOW FUEL popup"); } }
++		if (auto *lf = dynamic_cast<LowFuelState*>(top)) { (void)lf; static const State *lfSeen = nullptr; if (lfSeen != top && game->getSavedGame()) { lfSeen = top; std::ostringstream lfs; lfs << "LOW FUEL popup:";
++				for (auto *b : *game->getSavedGame()->getBases()) for (auto *c : *b->getCrafts()) if (c->getStatus() == "STR_OUT" || c->getLowFuel())
++					lfs << " " << c->getRules()->getType() << " fuel " << c->getFuel() << "/" << c->getCraftStats().fuelMax << " limit " << c->getFuelLimit()
++					    << " home " << (int)(c->getDistance(b) * 3440) << " nm at " << (int)(c->getLongitude() * 57.2958) << "," << (int)(c->getLatitude() * -57.2958);
++				tl(game->getSavedGame(), lfs.str()); } }
 +		// department heads: the simulator leaves the posts as they are (a head picked at random would skew the run)
 +		if (auto *ah = dynamic_cast<AppointHeadState*>(top)) { if (held > 1200 && !presses) { presses = 1; note("department head: left as it is"); ah->btnCancelClick(nullptr); } return; }
 +		if (auto *ds = dynamic_cast<DepartmentsState*>(top)) { if (held > 1200 && !presses) { presses = 1; ds->btnOkClick(nullptr); } return; }
@@ -34640,7 +34644,7 @@ index be923c1..f9aea06 100644
  	/// Gets the month on which the base spawned.
  	int getStartMonth() const { return _startMonth; }
 diff --git a/src/Savegame/AlienMission.cpp b/src/Savegame/AlienMission.cpp
-index 5576c42..acd9d7b 100644
+index 5576c42..b294cef 100644
 --- a/src/Savegame/AlienMission.cpp
 +++ b/src/Savegame/AlienMission.cpp
 @@ -191,6 +191,10 @@ void AlienMission::think(Game &engine, const Globe &globe)
@@ -34654,12 +34658,13 @@ index 5576c42..acd9d7b 100644
  		game.getUfos()->push_back(ufo);
  	}
  	else if ((mod.getDeployment(wave.ufoType) && !mod.getUfo(wave.ufoType) && !mod.getDeployment(wave.ufoType)->getMarkerName().empty()) // a mission site that we want to spawn directly
-@@ -892,6 +896,20 @@ void AlienMission::ufoReachedWaypoint(Ufo &ufo, Game &engine, const Globe &globe
+@@ -892,6 +896,34 @@ void AlienMission::ufoReachedWaypoint(Ufo &ufo, Game &engine, const Globe &globe
  	else
  	{
  		// UFO landed.
 +		// G.I. Joe: tail it home. A Joe craft following this flight (not attacking it) sees where it
 +		// sets down: a hidden Cobra (or cartel) site within ~2 degrees is found.
++		AlienBase *found = nullptr;
 +		if (!ufo.getCraftFollowers().empty() && std::find(game.getBurnedFlights().begin(), game.getBurnedFlights().end(), ufo.getId()) == game.getBurnedFlights().end())
 +		{
 +			for (auto* ab : *game.getAlienBases())
@@ -34669,13 +34674,26 @@ index 5576c42..acd9d7b 100644
 +				{
 +					ab->setDiscovered(true);
 +					game.addLeadNews("!STR_TAIL_FOUND_SITE");
++					found = ab;
 +				}
++			}
++		}
++		// G.I. Joe (18 Nov): the tail is over when it lands. The follower goes on to the site it found (the landing asks
++		// YES/NO there, so it is the player's call) or turns for home; left on the landed plane it offered a landing on
++		// it, and the cartel plane has no battle map: "Alien Deployment STR_CARTEL_PLANE not found", a crash.
++		if (ufo.getRules()->getType() == "STR_CARTEL_PLANE")
++		{
++			const auto followers = ufo.getCraftFollowers();
++			for (auto* follower : followers)
++			{
++				if (found && follower->getNumTotalUnits() > 0) follower->setDestination(found);
++				else follower->returnToBase();
 +			}
 +		}
  		if (_missionSiteZoneArea != -1 && wave.objective && trajectory.getZone(curWaypoint) == (size_t)(_rule.getSpawnZone()))
  		{
  			// Remove UFO, replace with MissionSite.
-@@ -1164,9 +1182,15 @@ AlienBase *AlienMission::spawnAlienBase(Country *pactCountry, Game &engine, std:
+@@ -1164,9 +1196,15 @@ AlienBase *AlienMission::spawnAlienBase(Country *pactCountry, Game &engine, std:
  		ab->setPactCountry(pactCountry->getRules()->getType());
  	}
  	ab->setAlienRace(_race);
