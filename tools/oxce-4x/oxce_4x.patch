@@ -9447,7 +9447,7 @@ index 746f3a4..573ad8e 100644
  	void selectNextPlayerUnit(bool checkReselect = false, bool setReselect = false, bool checkInventory = false, bool checkFOV = true, bool byDistance = false);
  	/// Selects the previous soldier.
 diff --git a/src/Battlescape/BriefingState.cpp b/src/Battlescape/BriefingState.cpp
-index 7f1fa7e..d392a8d 100644
+index 7f1fa7e..5ddc253 100644
 --- a/src/Battlescape/BriefingState.cpp
 +++ b/src/Battlescape/BriefingState.cpp
 @@ -16,7 +16,10 @@
@@ -9461,9 +9461,27 @@ index 7f1fa7e..d392a8d 100644
  #include "BattlescapeState.h"
  #include "BattlescapeGame.h"
  #include "AliensCrashState.h"
-@@ -215,7 +218,17 @@ BriefingState::BriefingState(Craft *craft, Base *base, bool infoOnly, BriefingDa
+@@ -41,6 +44,8 @@
+ #include "../Menu/CutsceneState.h"
+ #include "../Savegame/AlienMission.h"
+ #include "../Mod/RuleAlienMission.h"
++#include "../Mod/RuleResearch.h"
++#include "../Engine/Language.h"
+ 
+ namespace OpenXcom
+ {
+@@ -214,8 +219,26 @@ BriefingState::BriefingState(Craft *craft, Base *base, bool infoOnly, BriefingDa
+ 			desc = desc + "_PREVIEW";
  		}
  	}
++	// G.I. Joe (John 18 Nov "later fallback"): the cartel robbery comes either from Scarlett's informant or on its own late
++	// date; the late one must not say the courier tipped us off. <desc>_UNTIPPED is used while the tip is not in hand.
++	if (desc == "STR_BRIEFING_ARMORED_CAR")
++	{
++		const RuleResearch *tip = _game->getMod()->getResearch("STR_INFORMANT_TIP");
++		if (tip && !_game->getSavedGame()->isResearched(tip, false) && std::string(_game->getLanguage()->getString(desc + "_UNTIPPED")) != desc + "_UNTIPPED")
++			desc = desc + "_UNTIPPED";
++	}
  	_txtBriefing->setWordWrap(true);
 -	_txtBriefing->setText(tr(desc));
 +	{
@@ -9480,7 +9498,7 @@ index 7f1fa7e..d392a8d 100644
  
  	if (_infoOnly) return;
  
-@@ -284,9 +297,9 @@ void BriefingState::btnOkClick(Action *)
+@@ -284,9 +307,9 @@ void BriefingState::btnOkClick(Action *)
  		_game->pushState(bs);
  		_game->getSavedGame()->getSavedBattle()->setBattleState(bs);
  		_game->pushState(new NextTurnState(_game->getSavedGame()->getSavedBattle(), bs));
@@ -24052,10 +24070,10 @@ index 111ccf8..4878eaa 100644
  	ConfirmNewBaseState(Base *base, Globe *globe);
 diff --git a/src/Geoscape/DepartmentsState.cpp b/src/Geoscape/DepartmentsState.cpp
 new file mode 100644
-index 0000000..635146b
+index 0000000..e65e3f4
 --- /dev/null
 +++ b/src/Geoscape/DepartmentsState.cpp
-@@ -0,0 +1,339 @@
+@@ -0,0 +1,353 @@
 +/*
 + * G.I. Joe: USA Defense. Department heads (see DepartmentsState.h).
 + */
@@ -24121,6 +24139,20 @@ index 0000000..635146b
 +	else save->setDeptHead(dept, id);
 +}
 +
++const Soldier *suggest(const Mod *mod, SavedGame *save, const std::string &dept)
++{
++	const Soldier *second = nullptr;
++	for (auto *base : *save->getBases())
++		for (auto *s : *base->getSoldiers())
++		{
++			if (!save->getJobOf(s->getId()).empty()) continue;
++			const int m = match(mod, s, dept);
++			if (m == 1) return s;
++			if (m == 2 && !second) second = s;
++		}
++	return second;
++}
++
 +std::vector<std::string> pendingPrompts(const Mod *mod, SavedGame *save)
 +{
 +	std::vector<std::string> out;
@@ -24176,7 +24208,7 @@ index 0000000..635146b
 +
 +// ---- DepartmentsState ---------------------------------------------------------------------------
 +
-+DepartmentsState::DepartmentsState()
++DepartmentsState::DepartmentsState(bool suggested)
 +{
 +	_screen = false;
 +	_window = new Window(this, 320, 200, 0, 0, POPUP_BOTH);
@@ -24196,7 +24228,7 @@ index 0000000..635146b
 +	_txtTitle->setAlign(ALIGN_CENTER);
 +	_txtTitle->setText(tr("STR_DEPARTMENTS"));
 +	_txtRules->setWordWrap(true);
-+	_txtRules->setText(tr("STR_DEPT_RULES"));
++	_txtRules->setText(tr(suggested ? "STR_DEPT_SUGGESTED" : "STR_DEPT_RULES"));
 +	_lst->setColumns(4, 112, 70, 52, 54);
 +	_lst->setSelectable(true);
 +	_lst->setBackground(_window);
@@ -24397,10 +24429,10 @@ index 0000000..635146b
 +}
 diff --git a/src/Geoscape/DepartmentsState.h b/src/Geoscape/DepartmentsState.h
 new file mode 100644
-index 0000000..aedd692
+index 0000000..4143ad4
 --- /dev/null
 +++ b/src/Geoscape/DepartmentsState.h
-@@ -0,0 +1,84 @@
+@@ -0,0 +1,87 @@
 +#pragma once
 +/*
 + * G.I. Joe: USA Defense. Department heads (John 13 Nov 2026, claude/DEPARTMENT_HEADS_DESIGN_v1.md).
@@ -24432,7 +24464,8 @@ index 0000000..aedd692
 +	TextButton *_btnOk;
 +	std::vector<std::string> _rows;
 +public:
-+	DepartmentsState();
++	/// suggested: opened on Day 1 with the suggested heads already in post (John 18 Nov "one screen")
++	DepartmentsState(bool suggested = false);
 +	void init() override;
 +	void lstClick(Action *action);
 +	void btnOkClick(Action *action);
@@ -24482,6 +24515,8 @@ index 0000000..aedd692
 +	/// Offer a head for every department whose room now exists and was never offered.
 +	/// Returns the prompts to push (caller decides how).
 +	std::vector<std::string> pendingPrompts(const Mod *mod, SavedGame *save);
++	/// The Joe a player would most likely pick: a main-specialty match with no other job, else a second match; null if none.
++	const Soldier *suggest(const Mod *mod, SavedGame *save, const std::string &dept);
 +}
 +
 +}
@@ -24738,7 +24773,7 @@ index e609d3c..fad706b 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..039b039 100644
+index 6b4e79d..18d2b22 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,15 @@
@@ -25322,7 +25357,7 @@ index 6b4e79d..039b039 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -751,8 +1107,15 @@ void GeoscapeState::init()
+@@ -751,8 +1107,28 @@ void GeoscapeState::init()
  		_game->getSavedGame()->addMonth();
  		_game->getSavedGame()->increaseDaysPassed();
  		determineAlienMissions();
@@ -25333,12 +25368,25 @@ index 6b4e79d..039b039 100644
 +	// G.I. Joe department heads: a department whose room exists and was never offered asks for a
 +	// head (Day 1: every room already built; later: when its room is finished).
 +	if (_game->getSavedGame()->getMonthsPassed() > -1)
-+		for (const auto &dept : Departments::pendingPrompts(_game->getMod(), _game->getSavedGame()))
-+			popup(new AppointHeadState(dept, true));
++	{
++		// Day 1 opens several departments at once: one screen with the likeliest Joe already in each post, not a box per
++		// department (John 18 Nov "one screen"). A single new department later still asks on its own.
++		const auto pending = Departments::pendingPrompts(_game->getMod(), _game->getSavedGame());
++		if (pending.size() > 1)
++		{
++			for (const auto &dept : pending)
++				if (const Soldier *s = Departments::suggest(_game->getMod(), _game->getSavedGame(), dept))
++					Departments::appoint(_game->getSavedGame(), dept, s);
++			popup(new DepartmentsState(true));
++		}
++		else
++			for (const auto &dept : pending)
++				popup(new AppointHeadState(dept, true));
++	}
  }
  
  /**
-@@ -835,6 +1198,10 @@ void GeoscapeState::timeDisplay()
+@@ -835,6 +1211,10 @@ void GeoscapeState::timeDisplay()
  	std::ostringstream ss5;
  	ss5 << _game->getSavedGame()->getTime()->getYear();
  	_txtYear->setText(ss5.str());
@@ -25349,7 +25397,7 @@ index 6b4e79d..039b039 100644
  }
  
  /**
-@@ -847,6 +1214,179 @@ void GeoscapeState::timeDisplay()
+@@ -847,6 +1227,179 @@ void GeoscapeState::timeDisplay()
   * on 1 Day speed) or until an event occurs, since updating
   * the screen on each step would become cumbersomely slow.
   */
@@ -25529,7 +25577,7 @@ index 6b4e79d..039b039 100644
  void GeoscapeState::timeAdvance()
  {
  	int timeSpan = 0;
-@@ -1047,6 +1587,7 @@ void GeoscapeState::time5Seconds()
+@@ -1047,6 +1600,7 @@ void GeoscapeState::time5Seconds()
  					continue;
  				}
  
@@ -25537,7 +25585,7 @@ index 6b4e79d..039b039 100644
  				size_t count = _game->getSavedGame()->getMissionSites()->size();
  				AlienMission *mission = ufo->getMission();
  				bool detected = ufo->getDetected();
-@@ -1139,6 +1680,9 @@ void GeoscapeState::time5Seconds()
+@@ -1139,6 +1693,9 @@ void GeoscapeState::time5Seconds()
  		}
  	}
  
@@ -25547,7 +25595,7 @@ index 6b4e79d..039b039 100644
  	// Handle craft logic
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -1233,6 +1777,13 @@ void GeoscapeState::time5Seconds()
+@@ -1233,6 +1790,13 @@ void GeoscapeState::time5Seconds()
  			if (!ufoIsAttacking)
  			{
  				bool returnedToBase = xcraft->think();
@@ -25561,7 +25609,7 @@ index 6b4e79d..039b039 100644
  				if (returnedToBase)
  				{
  					_game->getSavedGame()->stopHuntingXcomCraft(xcraft); // hiding in the base is good enough, obviously
-@@ -1422,7 +1973,9 @@ void GeoscapeState::time5Seconds()
+@@ -1422,7 +1986,9 @@ void GeoscapeState::time5Seconds()
  				{
  					if (b->isDiscovered())
  					{
@@ -25572,7 +25620,7 @@ index 6b4e79d..039b039 100644
  						{
  							int texture, shade;
  							_globe->getPolygonTextureAndShade(b->getLongitude(), b->getLatitude(), &texture, &shade);
-@@ -1454,6 +2007,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +2020,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -25608,7 +25656,7 @@ index 6b4e79d..039b039 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +2146,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +2159,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -25639,7 +25687,7 @@ index 6b4e79d..039b039 100644
  							}
  						}
  					}
-@@ -1752,7 +2350,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2363,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -25648,7 +25696,7 @@ index 6b4e79d..039b039 100644
  								}
  								else
  								{
-@@ -1858,6 +2456,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2469,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -25669,7 +25717,7 @@ index 6b4e79d..039b039 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2496,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2509,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -25682,7 +25730,7 @@ index 6b4e79d..039b039 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2104,6 +2722,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2104,6 +2735,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		detected = maskBitOr(detected, craft->detect(ufo, save, alreadyTracked));
  	}
  
@@ -25690,7 +25738,7 @@ index 6b4e79d..039b039 100644
  	if (!alreadyTracked)
  	{
  		if (maskTest(detected, DETECTION_RADAR))
-@@ -2126,8 +2745,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2126,8 +2758,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		{
  			ufo->setHyperDetected(true);
  		}
@@ -25711,7 +25759,7 @@ index 6b4e79d..039b039 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2775,142 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2788,142 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -25854,7 +25902,7 @@ index 6b4e79d..039b039 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +2957,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +2970,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -25944,7 +25992,7 @@ index 6b4e79d..039b039 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +3202,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +3215,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -25953,7 +26001,7 @@ index 6b4e79d..039b039 100644
  			}
  			else
  			{
-@@ -2389,12 +3238,314 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3251,314 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
@@ -26268,7 +26316,7 @@ index 6b4e79d..039b039 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3595,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3608,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -26291,7 +26339,7 @@ index 6b4e79d..039b039 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2776,6 +3936,7 @@ void GeoscapeState::time1Day()
+@@ -2776,6 +3949,7 @@ void GeoscapeState::time1Day()
  					{
  						chanceToDetect = 50 - (distance * 50 / facility->getRules()->getSightRange()); // dynamic 0-50% based on relative distance
  					}
@@ -26299,7 +26347,7 @@ index 6b4e79d..039b039 100644
  					if (RNG::percent(chanceToDetect))
  					{
  						alienBase->setDiscovered(true);
-@@ -2861,7 +4022,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +4035,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -26328,7 +26376,7 @@ index 6b4e79d..039b039 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +4142,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +4155,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -26359,7 +26407,7 @@ index 6b4e79d..039b039 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4328,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4341,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -26369,7 +26417,7 @@ index 6b4e79d..039b039 100644
  }
  
  /**
-@@ -3265,6 +4472,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4485,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -26385,7 +26433,7 @@ index 6b4e79d..039b039 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4558,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4571,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -26438,7 +26486,7 @@ index 6b4e79d..039b039 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4626,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4639,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -26690,7 +26738,7 @@ index 6b4e79d..039b039 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +6154,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +6167,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
