@@ -87,6 +87,91 @@ def tracer(t, heavy=False):
     return L.image((1 - t) ** 1.1)
 
 
+def calibre_tracer(t, size, hot=False):
+    """a real tracer by calibre (John 18 Nov 01:42: the shots must match the gun and the round it fires):
+    a short bright streak, its head and glow scaled to the round, no cartoon blob"""
+    s = size * (1 - 0.6 * t)
+    core = (255, 252, 235) if t == 0 else (255, 232, 160)
+    warm = np.array([255, 190, 80]) * (1 - t) + np.array([255, 110, 30]) * t
+    if hot:
+        warm = np.array([255, 160, 60]) * (1 - t) + np.array([230, 70, 20]) * t
+    L = Layer().over(glow(min(1.6 * s, 6.5), 0.55 if not hot else 0.8), warm)   # the glow stays inside the 48 px cell
+    L.over(disc(1.05 * s), core)
+    if t == 0:
+        L.over(disc(0.55 * s), (255, 255, 255))
+    return L.image((1 - t) ** 1.3)
+
+
+def slug_heads(length, width, body, nose=None, band=None):
+    """a real round in flight, very small (John 18 Nov 01:49 "real bullet sprites" / "very small yes"): the projectile
+    alone - ogive nose, parallel body, flat base - lit from the left, eight of them by the screen direction it flies
+    (0 = nose up, clockwise in 45 degree steps). length / width in final pixels."""
+    S = SS * 2
+    W = H = CELL * S
+    yy2, xx2 = np.mgrid[0:H, 0:W].astype(np.float32)
+    L, R = length * S, width * S / 2
+    cy, cx = H / 2, W / 2
+    y = (yy2 - (cy - L / 2)) / L            # 0 nose tip .. 1 base
+    x = (xx2 - cx) / R                      # -1 .. 1 across
+    ogive = 0.38                            # the nose is the first 38% of the length
+    prof = np.where(y < ogive, np.sqrt(np.clip(1 - ((ogive - y) / ogive) ** 2, 0, 1)), 1.0)
+    inside = (y >= 0) & (y <= 1) & (np.abs(x) <= prof)
+    shade = np.clip(0.8 - 0.3 * x - 0.15 * y, 0.35, 1.25)
+    rgb = np.zeros((H, W, 3), np.float32)
+    rgb[:] = np.array(body, np.float32)
+    if nose is not None:
+        rgb[y < ogive * 0.7] = nose
+    if band is not None:
+        b0, b1, bc = band
+        rgb[(y > b0) & (y < b1)] = bc
+    rgb = rgb * shade[..., None]
+    a = inside.astype(np.float32)
+    head = Image.fromarray(np.dstack([np.clip(rgb, 0, 255), a * 255]).astype(np.uint8), 'RGBA')
+    out = []
+    for d in range(8):
+        r = head.rotate(-45 * d, resample=Image.BICUBIC, center=(W / 2, H / 2))
+        out.append(r.resize((CELL, CELL), Image.LANCZOS))
+    return out
+
+
+def photo_heads(name, length):
+    """the real projectile (build/art/bullet_tips, cut from MYSE4321's CC BY render - CREDIT.txt there), nose up, scaled
+    to `length` final pixels long, eight of them by the screen direction it flies (0 = nose up, clockwise 45 degrees)"""
+    tip = Image.open(os.path.join(HERE, 'art', 'bullet_tips', 'tip_%s.png' % name)).convert('RGBA')
+    S = SS * 2
+    k = length * S / tip.height
+    tip = tip.resize((max(1, int(tip.width * k)), max(1, int(tip.height * k))), Image.LANCZOS)
+    big = Image.new('RGBA', (CELL * S, CELL * S), (0, 0, 0, 0))
+    big.alpha_composite(tip, ((big.width - tip.width) // 2, (big.height - tip.height) // 2))
+    out = []
+    for d in range(8):
+        r = big.rotate(-45 * d, resample=Image.BICUBIC, center=(big.width / 2, big.height / 2))
+        out.append(r.resize((CELL, CELL), Image.LANCZOS))
+    return out
+
+
+def slug_row(_unused, streak):
+    """the row the engine strings along the path: frame 0 the head (set from the heads row below), then a faint thin
+    tracer streak of `streak` frames so the eye can follow the round"""
+    row = [blank() for _ in range(FRAMES)]
+    for i in range(1, streak + 1):
+        t = i / (streak + 1)
+        L = Layer().over(glow(0.9, 0.35 * (1 - t)), (255, 200, 120))
+        L.over(disc(0.45 * (1 - 0.5 * t)), (255, 235, 190))
+        row[i] = L.image((1 - t) ** 1.5 * 0.8)
+    return row
+
+
+def pellets(t):
+    """buckshot: a loose cluster of small hot pellets, fading fast"""
+    L = Layer()
+    for (cx, cy) in ((0, 0), (4.2, -2.2), (-3.8, 1.9), (1.9, 4.0), (-2.4, -3.8)):
+        s = 1.6 * (1 - 0.5 * t)
+        L.over(glow(1.4 * s, 0.5, cx * (1 + t), cy * (1 + t)), (255, 170, 60))
+        L.over(disc(0.9 * s, cx * (1 + t), cy * (1 + t)), (255, 240, 200))
+    return L.image((1 - t) ** 1.5)
+
+
 def laser(t, side):
     """a bolt: bright white core, coloured rim, long glow; the tail is the same bolt fading"""
     glow_c, rim_c = {'joe': ((40, 130, 255), (110, 195, 255)),
@@ -176,6 +261,21 @@ def body_row(src):
 # --------------------------------------------------------------------------- the sheet
 rocket_dirs = body_row(arg('--rocket'))
 missile_dirs = body_row(arg('--missile'))
+
+
+def existing_row(r):
+    """row r (0 = bulletSprite 11) of the sheet already on disk: the rocket and missile rows were rendered from 3D
+    models that are not kept here, so a rebuild without --rocket/--missile keeps the ones it has"""
+    f = os.path.join(OUTDIR, 'projectiles_rgb.png')
+    if not os.path.exists(f):
+        return None
+    im = Image.open(f).convert('RGBA')
+    if im.height < (r + 1) * CELL:
+        return None
+    return [im.crop((i * CELL, r * CELL, (i + 1) * CELL, (r + 1) * CELL)) for i in range(FRAMES)]
+
+
+KEEP = {} if (arg('--rocket') or arg('--missile')) else {7: existing_row(7), 8: existing_row(8), 9: existing_row(9), 10: existing_row(10)}
 ROWS = [
     ('tracer',       trail(lambda t: tracer(t), 7)),
     ('tracer_heavy', trail(lambda t: tracer(t, True), 9)),
@@ -188,8 +288,25 @@ ROWS = [
     ('rocket_dirs',  rocket_dirs or [blank()] * FRAMES),
     ('missile',      smoke_row(missile_dirs[2] if missile_dirs else ball())),
     ('missile_dirs', missile_dirs or [blank()] * FRAMES),
+    # 22-31: real rounds by calibre, very small, pointing where they fly (bulletDirectional: the row after each is its
+    # eight heads); 32 buckshot. gen_tracers_by_calibre.py assigns them and the muzzle flash size.
+    ('cal_pistol',       slug_row(0, 2)),
+    ('cal_pistol_dirs',  photo_heads('pistol', 4.5) + [blank()] * (FRAMES - 8)),
+    ('cal_rifle',        slug_row(0, 4)),
+    ('cal_rifle_dirs',   photo_heads('rifle', 6.0) + [blank()] * (FRAMES - 8)),
+    ('cal_hmg',          slug_row(0, 6)),
+    ('cal_hmg_dirs',     photo_heads('hmg', 8.5) + [blank()] * (FRAMES - 8)),
+    ('cal_autocannon',   slug_row(0, 7)),
+    ('cal_autocannon_dirs', photo_heads('autocannon', 11.0) + [blank()] * (FRAMES - 8)),
+    ('cal_cannon',       slug_row(0, 7)),
+    ('cal_cannon_dirs',  photo_heads('cannon', 15.0) + [blank()] * (FRAMES - 8)),
+    ('cal_shotgun',      trail(lambda t: pellets(t), 3)),
 ]
 
+ROWS = [(n, KEEP[i] if KEEP.get(i) else fr) for i, (n, fr) in enumerate(ROWS)]
+for i, (n, fr) in enumerate(ROWS):
+    if n.startswith('cal_') and not n.endswith('_dirs') and i + 1 < len(ROWS) and ROWS[i + 1][0] == n + '_dirs':
+        fr[0] = ROWS[i + 1][1][0]
 rgba = Image.new('RGBA', (CELL * FRAMES, CELL * len(ROWS)), (0, 0, 0, 0))
 for r, (name, frames) in enumerate(ROWS):
     for i, f in enumerate(frames):
