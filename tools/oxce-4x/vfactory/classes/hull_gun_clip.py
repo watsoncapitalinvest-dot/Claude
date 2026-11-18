@@ -1,6 +1,6 @@
 # Firing clip for John: a one-layer vehicle whose weapons are fixed to the hull (Cobra Ferret: twin .50 cal forward, the CMF-1
 # 10-round launcher along its right side, a Com-Bat rocket on each foot peg). The vehicle turns to aim (no turret). At each heading:
-# a .50 cal burst (barrels alternating), a CMF-1 ripple from the end of its tube, then one Com-Bat leaves its peg - the package's own
+# a .50 cal burst (barrels alternating), a CMF-1 ripple of lobbed grenades from the end of its tube, then one Com-Bat leaves its peg - the package's own
 # full-size rocket, and the vehicle picture switches to the next store state (the peg empties, as gjStoreStates shows it in the game);
 # the body stays in front of the rocket until it is clear (clip_mask.py). Muzzles: model points (guns) and the package manifest's
 # muzzle names (cannon, rockets) [deploy states per rocket 'dL1,dL2;dR1,dR2'], projected with the battle camera. Tracers, flashes, slugs and smoke are drawn here.
@@ -48,14 +48,31 @@ for si, hd in enumerate(HDS):
         for r in rounds:
             dr.line([(r[0], r[1]), (r[0] + dx * 10, r[1] + dy * 10)], fill=(255, 205, 90, 255), width=2); r[0] += dx * 22; r[1] += dy * 22
         out(c)
-    mz = frm(hd, STATES[fired])['muzzles'][CAN]['xy']; cx, cy = ox - AX + mz[0], oy - AY + mz[1]; slugs = []
-    for n in range(16):                                      # CMF-1: a ripple of three slugs from the end of the tube
+    # CMF-1 (John 18 Nov 00:04 "it's a ten round grenade launcher basically, not a machine gun"; STORY's item is an arcing HE shot):
+    # three grenades lobbed in a ripple from the end of the tube - a puff at the muzzle, each round climbs and drops on its own arc
+    # (height above its own ground track, so the arc reads the same at every heading) and bursts where it lands
+    mz = frm(hd, STATES[fired])['muzzles'][CAN]['xy']; cx, cy = ox - AX + mz[0], oy - AY + mz[1]
+    h0 = abs(scr((0, 0, float(os.environ.get('CAN_Z', '0'))), hd)[1])          # muzzle height above the ground (env CAN_Z, model units)
+    nades, puffs, booms = [], [], []
+    for n in range(34):
         c, _ = base(hd); dr = ImageDraw.Draw(c)
-        if n in (0, 3, 6):
-            slugs.append([cx, cy]); dr.ellipse((cx - 7, cy - 5, cx + 7, cy + 5), fill=(255, 220, 140, 255)); dr.ellipse((cx - 3 + dx * 5, cy - 3 + dy * 5, cx + 3 + dx * 5, cy + 3 + dy * 5), fill=(255, 255, 230, 255))
-        for sl in slugs:
-            dr.line([(sl[0] - dx * 8, sl[1] - dy * 8), (sl[0], sl[1])], fill=(140, 200, 255, 255), width=3); dr.ellipse((sl[0] - 2, sl[1] - 2, sl[0] + 2, sl[1] + 2), fill=(230, 245, 255, 255))
-            sl[0] += dx * 26; sl[1] += dy * 26
+        if n in (0, 4, 8):
+            nades.append([0.0, h0, 2.5]); puffs.append([cx, cy, 0])                     # ground distance, height, climb rate
+        for pf in puffs:
+            r = 2.5 + pf[2] * 1.1; a = max(0, 120 - pf[2] * 16)
+            if a: dr.ellipse((pf[0] - r + dx * pf[2], pf[1] - r - pf[2], pf[0] + r + dx * pf[2], pf[1] + r - pf[2]), fill=(205, 200, 188, a))
+            if pf[2] == 0: dr.ellipse((cx - 5 + dx * 3, cy - 4 + dy * 3, cx + 5 + dx * 3, cy + 4 + dy * 3), fill=(255, 226, 150, 255))
+            pf[2] += 1
+        for g in nades[:]:
+            g[0] += 4; g[1] += g[2]; g[2] -= 0.45
+            gx, gy = cx + dx * g[0], cy + h0 + dy * g[0] - g[1]
+            if g[1] <= 0: booms.append([gx, cy + h0 + dy * g[0], 0]); nades.remove(g); continue
+            dr.ellipse((gx - 3, gy - 3, gx + 3, gy + 3), fill=(52, 58, 40, 255)); dr.point((gx - 1, gy - 1), fill=(150, 160, 120, 255))
+        for b in booms:
+            if b[2] < 6:
+                r = 5 + b[2] * 3; dr.ellipse((b[0] - r, b[1] - r * 0.6, b[0] + r, b[1] + r * 0.6), fill=(255, 170 - b[2] * 18, 60, 230 - b[2] * 30))
+                dr.ellipse((b[0] - r * 0.6, b[1] - r - 2, b[0] + r * 0.6, b[1] - 2), fill=(110, 104, 96, 200 - b[2] * 25))
+            b[2] += 1
         out(c)
     if fired < len(RK):                                      # one Com-Bat off its peg: the package's own rocket, the peg empties
         dep = DEP[fired] if fired < len(DEP) else []

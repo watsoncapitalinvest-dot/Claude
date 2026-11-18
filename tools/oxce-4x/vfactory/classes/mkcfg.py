@@ -68,7 +68,7 @@ c = base('ferret', s, 2, [1, 2], 'ferret_v2', {'m2': fr('combat_L_s', 'combat_R_
                                                'dL2': fr('combat_L_x', 'fr_arm_L_x', 'combat_R_s', 'fr_arm_R_s'),
                                                'dR1': fr('fr_arm_L_s', 'combat_R_h', 'fr_arm_R_h'),
                                                'dR2': fr('fr_arm_L_s', 'combat_R_x', 'fr_arm_R_x')},
-         {'muzzle': [5.62, -3.56, 7.1, 1, 0, 0], 'gun_a': [8.0, -0.35, 5.64, 1, 0, 0], 'gun_b': [8.0, 0.35, 5.64, 1, 0, 0],
+         {'muzzle': [6.7, -3.56, 6.58, 1, 0, 0], 'gun_a': [8.0, -0.35, 5.64, 1, 0, 0], 'gun_b': [8.0, 0.35, 5.64, 1, 0, 0],
           'combat_L': [2.3, 5.45, 2.05, 1, 0, 0], 'combat_R': [2.3, -5.45, 2.05, 1, 0, 0]}, 'Cobra',
          R + f'Cobra Ferret ATV, class 1x2 (installed as size 2). Scale {s} (was 0.0406; {lim} axis limits).\n')
 c['guns'] = ['muzzle']; c['launchers'] = [{'name': 'peg', 'muzzles': ['combat_L', 'combat_R'], 'fx_scale': 0.2, 'from_tube': True}]

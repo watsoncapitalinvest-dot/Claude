@@ -51,7 +51,7 @@ V = {
                   deploy=["dL1", "dL2", "dR1", "dR2"],   # John 23:28: rams push each Com-Bat out from between the wheels, then it fires
                   # where each shot leaves (voxels: forward, left, up from the footprint middle; model units x 1.564 / 1.915, checked against
                   # the rendered muzzles at all 8 headings): the Com-Bats off their rams (left first), the CMF-1 tube, the .50s
-                  launch={"self": [[4, 9, 4], [4, -9, 4]], "STR_GJA_COBRA_FERRET_A_T_V_CMF_1_W": [[9, -6, 14]],
+                  launch={"self": [[4, 9, 4], [4, -9, 4]], "STR_GJA_COBRA_FERRET_A_T_V_CMF_1_W": [[10, -6, 13]],
                           "STR_GJA_COBRA_FERRET_A_T_V_50_CAL_MACHINE_GUNS_W": [[13, -1, 11], [13, 1, 11]]},   # John 18 Nov 00:02: the twin .50s are the front gun (x 8.0, y +-0.35, z 5.64), barrels alternating
                   name="Cobra Ferret", tu=80, hp=30, arm=(20, 15, 10, 10),
                   wpn=("Machine gun", 30, 1, 60, (50, 25), None, (35, 35, 3), 0, 2, "m60"), price=0),
