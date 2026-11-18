@@ -559,7 +559,8 @@ function worldReplay(P, style, n) { const R = rng((P.seed * 7919 + n * 104729) >
 const INTEL_STYLES = ['absent', 'cautious', 'typical', 'aggressive'];
 const INTEL_POLICIES = ['everything', 'pick', 'little'];
 const INTEL_SOURCES = ['officer', 'papers', 'gear', 'siteFiles', 'deptHead', 'villain'];
-const INTEL_KEYS = ['Flight routes', 'A depot', 'The second depot', 'Drome rumours', 'Where the Drome is', 'M.A.R.S. markings'];
+// the Act 1 spine (STORY_Year1_ResearchMap, approved 12 Nov): the six links intel has to find
+const INTEL_KEYS = ['Viper Interrogation', 'Extensive Enterprises', 'Cobra Flight Routes', 'Cobra Depots', 'Rumours of a Terror Drome', 'Terror Drome Defense Plans'];
 const INTEL_DEFAULTS = {
   runs: 400, months: 18, seed: 23,
   // what one mission brings home (average count per mission)
@@ -575,7 +576,7 @@ const INTEL_DEFAULTS = {
   analystsStart: 10, analystShare: 0.5, casesPerAnalyst: 1,
   // what a hit is: a key clue (only once that clue is due), a lead to act on, or a name
   keyChance: 0.35, leadChance: 0.4,
-  keyDue: [3, 5, 7, 9, 10, 12], keyEarly: 2, keyGrace: 3,           // a key can be found from due-early; it comes back by another road at due+grace
+  keyDue: [2, 4, 7, 8, 10, 11], keyEarly: 2, keyGrace: 3,           // a key can be found from due-early; it comes back by another road at due+grace
   // field work on a name: an intel Joe, a few jobs a month
   joeJobsPerMonth: 2, namePays: 0.3, joeCaught: 0.05, joeHeldMonths: 2,
   // leads: acting on one is a raid; Cobra may have moved since (hidden)
