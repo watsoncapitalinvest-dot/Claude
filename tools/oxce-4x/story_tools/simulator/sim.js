@@ -558,7 +558,7 @@ function worldReplay(P, style, n) { const R = rng((P.seed * 7919 + n * 104729) >
 // moved is hidden and depends on how alert it is. A key clue the player misses comes back by another road, late.
 const INTEL_STYLES = ['absent', 'cautious', 'typical', 'aggressive'];
 const INTEL_POLICIES = ['everything', 'pick', 'little'];
-const INTEL_SOURCES = ['officer', 'papers', 'gear', 'lab', 'villain'];
+const INTEL_SOURCES = ['officer', 'papers', 'gear', 'siteFiles', 'deptHead', 'villain'];
 const INTEL_KEYS = ['Flight routes', 'A depot', 'The second depot', 'Drome rumours', 'Where the Drome is', 'M.A.R.S. markings'];
 const INTEL_DEFAULTS = {
   runs: 400, months: 18, seed: 23,
@@ -566,8 +566,10 @@ const INTEL_DEFAULTS = {
   bring: {officer: {perMission: 0.5, pays: 0.35, send_pick: 1, send_little: 1},
           papers: {perMission: 0.8, pays: 0.20, send_pick: 1, send_little: 0.5},
           gear: {perMission: 3.0, pays: 0.075, send_pick: 0.2, send_little: 0},
-          // places and people that carry key intel (John 23:06): a lab outpost's research files, a captured named villain
-          lab: {perMission: 0.08, pays: 0.6, send_pick: 1, send_little: 1, key: 0.6, leads: 1},
+          // places and people that carry key intel (John 23:06, 23:10): the files of a lab, factory, depot, camp, broadcast
+          // station or front office; a Cobra department head posted at a site; a captured named villain
+          siteFiles: {perMission: 0.15, pays: 0.6, send_pick: 1, send_little: 1, key: 0.6, leads: 1},
+          deptHead: {perMission: 0.03, pays: 1, send_pick: 1, send_little: 1, key: 1, leads: 2, from: 2},
           villain: {perMission: 0.06, pays: 1, send_pick: 1, send_little: 1, key: 1, leads: 3, from: 8}},   // Storm Shadow, Zartan: window 8-13
   // analysts: seats on Day 1, the share put on cases (the rest research), cases one analyst closes a month
   analystsStart: 10, analystShare: 0.5, casesPerAnalyst: 1,
@@ -640,9 +642,10 @@ function intelRun(P, style, policy, R, rec) {
     for (const c of work) { L.worked++; L.waitSum += m - c.opened;
       if (R() < P.bring[c.src].pays) { L.hits++;
         const extra = P.bring[c.src].leads || 0;
-        for (let x = 0; x < extra; x++) newLead(c.src === 'villain' ? 'The captured villain talks: a site to hit' : 'The lab\'s research files point somewhere');
+        for (let x = 0; x < extra; x++) newLead(c.src === 'villain' ? 'The captured villain talks: a site to hit' : (c.src === 'deptHead' ? 'The captured department head talks: a site to hit' : 'The site\'s files point somewhere'));
         if (c.src === 'villain') ev('villain', 'A NAMED VILLAIN IS CAPTURED AND TALKS');
-        if (R() < (P.bring[c.src].key ?? P.keyChance) && findKey('case', c.src === 'villain' ? 'the captured villain' : c.src)) { done.push({c, out: 'key'}); continue; }
+        if (c.src === 'deptHead') ev('villain', 'A COBRA DEPARTMENT HEAD IS CAPTURED AND TALKS');
+        if (R() < (P.bring[c.src].key ?? P.keyChance) && findKey('case', c.src === 'villain' ? 'the captured villain' : c.src === 'deptHead' ? 'the captured department head' : c.src === 'siteFiles' ? 'a site\'s files' : c.src)) { done.push({c, out: 'key'}); continue; }
         if (R() < P.leadChance / (1 - P.keyChance)) { newLead(`Case ${c.id} (${c.src}): a delivery time or a site to hit`); done.push({c, out: 'lead'}); }
         else { names.push({found: m}); done.push({c, out: 'name'}); ev('name', `Case ${c.id} (${c.src}): a name, nobody on file`); } }
       else { L.dead++; done.push({c, out: 'dead'}); } }
@@ -698,8 +701,8 @@ function intel(P) {
 }
 const INTEL_SCENARIOS = {
   'As designed (far less: 35 / 20 / 5-10%)': {},
-  'STORY\'s first odds (70 / 50 / 25%)': {bring: {officer: {perMission: 0.5, pays: 0.7, send_pick: 1, send_little: 1}, papers: {perMission: 0.8, pays: 0.5, send_pick: 1, send_little: 0.5}, gear: {perMission: 3, pays: 0.25, send_pick: 0.2, send_little: 0}, lab: INTEL_DEFAULTS.bring.lab, villain: INTEL_DEFAULTS.bring.villain}},
-  'No labs or villains (before 23:06)': {bring: Object.assign({}, INTEL_DEFAULTS.bring, {lab: Object.assign({}, INTEL_DEFAULTS.bring.lab, {perMission: 0}), villain: Object.assign({}, INTEL_DEFAULTS.bring.villain, {perMission: 0})})},
+  'STORY\'s first odds (70 / 50 / 25%)': {bring: {officer: {perMission: 0.5, pays: 0.7, send_pick: 1, send_little: 1}, papers: {perMission: 0.8, pays: 0.5, send_pick: 1, send_little: 0.5}, gear: {perMission: 3, pays: 0.25, send_pick: 0.2, send_little: 0}, siteFiles: INTEL_DEFAULTS.bring.siteFiles, deptHead: INTEL_DEFAULTS.bring.deptHead, villain: INTEL_DEFAULTS.bring.villain}},
+  'No big-intel places or people (before 23:06)': {bring: Object.assign({}, INTEL_DEFAULTS.bring, {siteFiles: Object.assign({}, INTEL_DEFAULTS.bring.siteFiles, {perMission: 0}), deptHead: Object.assign({}, INTEL_DEFAULTS.bring.deptHead, {perMission: 0}), villain: Object.assign({}, INTEL_DEFAULTS.bring.villain, {perMission: 0})})},
   'All analysts on cases': {analystShare: 1},
   'Few analysts on cases (a quarter)': {analystShare: 0.25},
   'No fallback: a missed key clue never comes back': {keyGrace: 99},
