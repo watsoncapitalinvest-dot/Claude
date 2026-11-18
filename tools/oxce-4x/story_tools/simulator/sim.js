@@ -430,8 +430,128 @@ const SPLIT_SCENARIOS = {
   'One region only': {regions: 1},
 };
 
+
+// ---------------------------------------------------------------------------- MODE 3: THE SECRET WAR (COBRA_WORLDWIDE_v1)
+// Cobra worldwide from day one; the Joes US-only until the reveal. Leaks fill a worldwide count; the reveal (Cobra takes
+// Sierra Gordo, goes public, M.A.R.S. alliance) fires when the count is full and the floor has passed, or at the ceiling.
+// Abroad runs on its own budget (it never touches the US fight). After the reveal: imports to Sierra Gordo, Joe strikes abroad.
+const WORLD_REGIONS = ['Sierra Gordo', 'South America', 'Europe', 'Middle East', 'Africa', 'Asia'];
+const LEAKS = ['covert', 'interrogation', 'paperwork', 'liaison', 'news'];
+const WORLD_STYLES = ['absent', 'cautious', 'typical', 'aggressive'];
+const WORLD_DEFAULTS = {
+  runs: 400, months: 24, seed: 11,
+  // the reveal
+  revealThreshold: 100, revealFloor: 10, revealCeiling: 15,
+  // the leaks: points each, and how often
+  points: {covert: 10, interrogation: 6, paperwork: 5, liaison: 2, news: 1},
+  covertSuccess: 0.7, covertCaught: 0.12, covertMarks: 1,       // per operation abroad
+  paperworkPerRaid: 0.3, paperworkMarks: 0.5,                     // per US raid
+  interrogationPerCapture: 0.5, interrogationMarks: 0.2,                                    // per prisoner taken
+  liaisonPerMonth: 0.25, newsPerMonth: 0.5,
+  // Cobra abroad grows offstage (its own budget), capped so 'big everywhere' is not too big
+  startSitesAbroad: 2, growthPerMonth: 0.35, capSitesAbroad: 7,
+  sgStartSites: 6, sgGrowthPerMonth: 0.5, sgCap: 14, sgStartMen: 60, sgMenPerMonth: 6,
+  // after the reveal: Sierra Gordo makes rifles and grenades; lasers and up arrive as M.A.R.S. imports
+  importsPerMonth: 2, importLoad: 6, importInterceptBase: 0.2, importInterceptPerPaperwork: 0.05, importInterceptMax: 0.7,
+  cellsPerLaserMan: 1, regrowAfterReveal: 0.25, findUnknownPerOp: 0.5,
+  styles: {
+    absent:     {ops: 0,   raids: 0,   captures: 0,   strikes: 0,   goodwill: 1},
+    cautious:   {ops: 0.3, raids: 0.5, captures: 0.3, strikes: 0.5, goodwill: 1},
+    typical:    {ops: 0.6, raids: 1.0, captures: 0.6, strikes: 1,   goodwill: 1.2},
+    aggressive: {ops: 1.0, raids: 2.0, captures: 1.0, strikes: 2,   goodwill: 1.2},
+  },
+};
+
+function worldRun(P, style, R, rec) {
+  const st = P.styles[style];
+  const roll = x => Math.floor(x) + (R() < x % 1 ? 1 : 0);
+  const regs = WORLD_REGIONS.map((name, i) => ({name, sg: i === 0, sites: i === 0 ? P.sgStartSites : P.startSitesAbroad, known: 0,
+    cap: i === 0 ? P.sgCap : P.capSitesAbroad, grow: i === 0 ? P.sgGrowthPerMonth : P.growthPerMonth}));
+  let count = 0, revealM = null, early = false, spiesHeld = 0, sgMen = P.sgStartMen, cellsStock = 0, laserMen = 0;
+  const L = {by: Object.fromEntries(LEAKS.map(k => [k, 0])), opsRun: 0, caught: 0, imports: 0, intercepted: 0, struck: 0,
+    track: {count: [], sites: [], known: [], laser: []}, frames: [], paperwork: 0};
+  for (let m = 0; m < P.months; m++) {
+    const E = []; const ev = (kind, text, extra) => { if (rec) E.push(Object.assign({kind, text}, extra || {})); };
+    const pre = revealM == null;
+    // Cobra abroad grows on its own budget; after the reveal it keeps growing a little
+    for (const r of regs) { const g = pre ? r.grow : P.regrowAfterReveal; const add = roll(g); const room = r.cap - r.sites;
+      const n = Math.max(0, Math.min(add, room)); if (n) { r.sites += n; ev('grow', `${r.name}: Cobra opens ${n > 1 ? n + ' sites' : 'a site'}`, {r: r.name}); } }
+    if (pre) sgMen += P.sgMenPerMonth;
+    const leak = (k, text, reg) => { if (!pre) return; count += P.points[k]; L.by[k] += P.points[k]; ev('leak', text, {k, r: reg}); };
+    const mark = r => { if (r.known < r.sites) { r.known++; ev('mark', `${r.name}: a Cobra site is now known`, {r: r.name}); } };
+    // covert operations abroad (pre-reveal: intel only)
+    const ops = roll(st.ops);
+    for (let i = 0; i < ops; i++) { L.opsRun++; const r = regs[Math.floor(R() * regs.length)];
+      if (R() < P.covertCaught) { L.caught++; spiesHeld++; ev('caught', `A Joe spy is caught in ${r.name}`, {r: r.name}); continue; }
+      if (R() < P.covertSuccess) { if (pre) leak('covert', `Covert operation in ${r.name} brings back a leak`, r.name);
+        if (R() < (pre ? P.covertMarks : P.findUnknownPerOp)) mark(r); }
+      else ev('op', `Covert operation in ${r.name} comes back empty`, {r: r.name}); }
+    // US raids: paperwork with foreign addresses; captures: interrogations
+    const raids = roll(st.raids);
+    for (let i = 0; i < raids; i++) if (R() < P.paperworkPerRaid) { L.paperwork++;
+      const r = regs[Math.floor(R() * regs.length)]; leak('paperwork', `Captured paperwork with an address in ${r.name}`, r.name); if (R() < P.paperworkMarks) mark(r); }
+    const caps = roll(st.captures);
+    for (let i = 0; i < caps; i++) if (R() < P.interrogationPerCapture) { leak('interrogation', 'A Cobra prisoner talks about "the other cells"'); if (R() < P.interrogationMarks) mark(regs[Math.floor(R() * regs.length)]); }
+    if (R() < P.liaisonPerMonth * st.goodwill) leak('liaison', 'A foreign government quietly passes something on');
+    if (R() < P.newsPerMonth) leak('news', ['An unexplained bombing abroad', 'The junta tightens its grip in Sierra Gordo', 'A ship vanishes off West Africa'][Math.floor(R() * 3)]);
+    // the reveal
+    if (pre && ((count >= P.revealThreshold && m >= P.revealFloor) || m >= P.revealCeiling)) {
+      revealM = m; early = m < P.revealCeiling;
+      ev('reveal', `THE REVEAL: Cobra takes Sierra Gordo and goes public; M.A.R.S. joins${early ? ' (the leaks brought it early)' : ' (the ceiling: it happens anyway)'}`);
+    }
+    // after the reveal: M.A.R.S. imports to Sierra Gordo, Joe strikes on known sites abroad
+    if (revealM != null && m > revealM) {
+      const ic = Math.min(P.importInterceptMax, P.importInterceptBase + P.importInterceptPerPaperwork * L.paperwork);
+      const n = roll(P.importsPerMonth);
+      for (let i = 0; i < n; i++) { L.imports++; if (R() < ic * (st.strikes > 0 ? 1 : 0)) { L.intercepted++; ev('intercept', 'A M.A.R.S. cargo to Sierra Gordo is intercepted'); }
+        else { cellsStock += P.importLoad; ev('import', 'A M.A.R.S. cargo reaches Sierra Gordo'); } }
+      const arm = Math.min(Math.floor(cellsStock / P.cellsPerLaserMan), sgMen - laserMen); laserMen += arm; cellsStock -= arm * P.cellsPerLaserMan;
+      const sk = roll(st.strikes);
+      for (let i = 0; i < sk; i++) { const tg = regs.filter(r => r.known > 0); if (!tg.length) break; const r = tg[Math.floor(R() * tg.length)];
+        r.known--; r.sites--; L.struck++; ev('strike', `The Joes strike a known Cobra site in ${r.name}`, {r: r.name}); }
+    }
+    const sites = regs.reduce((a, r) => a + r.sites, 0), known = regs.reduce((a, r) => a + r.known, 0);
+    L.track.count.push(count); L.track.sites.push(sites); L.track.known.push(known); L.track.laser.push(sgMen ? laserMen * 100 / sgMen : 0);
+    if (rec) L.frames.push({m, count, revealed: revealM != null && m >= revealM, revealNow: revealM === m, spiesHeld,
+      regions: regs.map(r => ({name: r.name, sg: r.sg, sites: r.sites, known: r.known})), sgMen, laserMen, events: E});
+  }
+  const atReveal = revealM == null ? null : {sites: L.track.sites[revealM], known: L.track.known[revealM]};
+  return Object.assign(L, {revealM, early, atReveal});
+}
+
+function world(P) {
+  const R = rng(P.seed), out = {};
+  for (const style of WORLD_STYLES) {
+    const Ls = []; for (let i = 0; i < P.runs; i++) Ls.push(worldRun(P, style, R));
+    const hist = Array(P.months).fill(0); for (const l of Ls) if (l.revealM != null) hist[l.revealM]++;
+    const tr = k => { const res = []; for (let m = 0; m < P.months; m++) res.push(median(Ls.map(l => l.track[k][m]))); return res; };
+    out[style] = {revealMed: median(Ls.map(l => l.revealM).filter(x => x != null)), earlyPct: Ls.filter(l => l.early).length * 100 / P.runs,
+      hist, sitesAtReveal: mean(Ls.filter(l => l.atReveal).map(l => l.atReveal.sites)), knownAtReveal: mean(Ls.filter(l => l.atReveal).map(l => l.atReveal.known)),
+      knownPctAtReveal: mean(Ls.filter(l => l.atReveal).map(l => l.atReveal.sites ? l.atReveal.known * 100 / l.atReveal.sites : 0)),
+      leakBy: Object.fromEntries(LEAKS.map(k => [k, mean(Ls.map(l => l.by[k]))])), caught: mean(Ls.map(l => l.caught)), ops: mean(Ls.map(l => l.opsRun)),
+      imports: mean(Ls.map(l => l.imports)), intercepted: mean(Ls.map(l => l.intercepted)), struck: mean(Ls.map(l => l.struck)),
+      laserEnd: mean(Ls.map(l => l.track.laser.at(-1))), sitesEnd: mean(Ls.map(l => l.track.sites.at(-1))),
+      track: {count: tr('count'), sites: tr('sites'), known: tr('known'), laser: tr('laser')}};
+  }
+  return out;
+}
+const WORLD_SCENARIOS = {
+  'As designed': {},
+  'The player never digs (no covert ops)': {styles: {absent: WORLD_DEFAULTS.styles.absent, cautious: Object.assign({}, WORLD_DEFAULTS.styles.cautious, {ops: 0}), typical: Object.assign({}, WORLD_DEFAULTS.styles.typical, {ops: 0}), aggressive: Object.assign({}, WORLD_DEFAULTS.styles.aggressive, {ops: 0})}},
+  'Spy-heavy player (two operations a month)': {styles: {absent: WORLD_DEFAULTS.styles.absent, cautious: Object.assign({}, WORLD_DEFAULTS.styles.cautious, {ops: 2}), typical: Object.assign({}, WORLD_DEFAULTS.styles.typical, {ops: 2}), aggressive: Object.assign({}, WORLD_DEFAULTS.styles.aggressive, {ops: 2})}},
+  'Cobra grows fast abroad (0.7 a month, cap 10)': {growthPerMonth: 0.7, capSitesAbroad: 10},
+  'Cobra grows slowly abroad (0.15 a month, cap 4)': {growthPerMonth: 0.15, capSitesAbroad: 4},
+  'Easier reveal (threshold 60)': {revealThreshold: 60},
+  'Harder reveal (threshold 140)': {revealThreshold: 140},
+  'Earlier window (floor 8, ceiling 12)': {revealFloor: 8, revealCeiling: 12},
+  'Later window (floor 12, ceiling 18)': {revealFloor: 12, revealCeiling: 18},
+  'Heavy M.A.R.S. imports (4 a month)': {importsPerMonth: 4},
+  'Leaky spies (25% caught)': {covertCaught: 0.25},
+};
+function worldReplay(P, style, n) { const R = rng((P.seed * 7919 + n * 104729) >>> 0); return worldRun(P, style, R, true); }
+
 function act1Replay(P, style, n) { const R = rng((P.seed * 7919 + n * 104729) >>> 0); return act1Run(P, style, R, true); }
 function splitReplay(P, style, n) { const R = rng((P.seed * 7919 + n * 104729) >>> 0); return splitRun(P, style, R, true); }
-return {NAMES, act1Replay, splitReplay, act1, split, ACT1_DEFAULTS, SPLIT_DEFAULTS, ACT1_SCENARIOS, SPLIT_SCENARIOS, ACT1_STYLES, SPLIT_STYLES, STOCKS};
+return {world, worldReplay, WORLD_DEFAULTS, WORLD_SCENARIOS, WORLD_STYLES, WORLD_REGIONS, LEAKS, NAMES, act1Replay, splitReplay, act1, split, ACT1_DEFAULTS, SPLIT_DEFAULTS, ACT1_SCENARIOS, SPLIT_SCENARIOS, ACT1_STYLES, SPLIT_STYLES, STOCKS};
 })();
 if (typeof module !== 'undefined') module.exports = SIM;
