@@ -577,12 +577,15 @@ const INTEL_DEFAULTS = {
   // the squad is shared (John 22:54, C): answering Cobra's own moves (terror, robberies, outpost defence) comes first, and
   // lead raids get what is left; an answered move is a mission that brings things home
   cobraMoves: 1.5, cobraMovesGrowth: 0.1, answerFirst: 1,
+  // leads point at something (John 22:58): some at the key clue the player is after; he raids those first and lets old side
+  // leads lapse once he has found what he was looking for
+  keyLeadChance: 0.35, dropSideOnKey: 1,
   staleAfter: 2, moveQuiet: 0.08, moveAlert: 0.3, alertRaids: 3, trapShare: 0.3, raidCaptures: 0.6,
   styles: {
-    absent:     {squad: 0.5, seatsPerMonth: 0,    joeEvery: 0},
-    cautious:   {squad: 1.5, seatsPerMonth: 0.25, joeEvery: 8},
-    typical:    {squad: 3,   seatsPerMonth: 0.5,  joeEvery: 5},
-    aggressive: {squad: 4.5, seatsPerMonth: 0.75, joeEvery: 4},
+    absent:     {squad: 0.5, squadGrowth: 0,    seatsPerMonth: 0,    joeEvery: 0},
+    cautious:   {squad: 1.5, squadGrowth: 0.05, seatsPerMonth: 0.25, joeEvery: 8},
+    typical:    {squad: 3,   squadGrowth: 0.1,  seatsPerMonth: 0.5,  joeEvery: 5},
+    aggressive: {squad: 4.5, squadGrowth: 0.15, seatsPerMonth: 0.75, joeEvery: 4},
   },
 };
 
@@ -594,7 +597,7 @@ function intelRun(P, style, policy, R, rec) {
   const queue = [], leads = [], names = [], keyMonth = Array(INTEL_KEYS.length).fill(null), keyRoad = Array(INTEL_KEYS.length).fill(null);
   const raidHist = [];
   const L = {moves: 0, answered: 0, unanswered: 0, opened: 0, worked: 0, dead: 0, hits: 0, byKeyRoad: 0, missedKeys: 0, notSent: 0, waitSum: 0,
-    leadsActed: 0, leadsOld: 0, empty: 0, traps: 0, good: 0, namesChased: 0, namesPaid: 0, joesCaught: 0, extraCaptures: 0,
+    leadsActed: 0, keyRaids: 0, keyByRaid: 0, dropped: 0, leadsOld: 0, empty: 0, traps: 0, good: 0, namesChased: 0, namesPaid: 0, joesCaught: 0, extraCaptures: 0,
     track: {keys: [], backlog: [], seats: [], leads: []}, frames: []};
   const send = src => policy === 'everything' ? 1 : P.bring[src][policy === 'pick' ? 'send_pick' : 'send_little'];
   let carry = 0;   // captures from raids on good leads, brought home next month
@@ -605,9 +608,16 @@ function intelRun(P, style, policy, R, rec) {
     held = held.filter(h => { if (h <= m) { joes++; ev('joe', 'A held intel Joe is back'); return false; } return true; });
     const due = k => m >= P.keyDue[k] - P.keyEarly;
     const findKey = (how, src) => { if (keys >= INTEL_KEYS.length || !due(keys)) return false;
-      keyMonth[keys] = m; keyRoad[keys] = how; ev('key', `KEY CLUE: ${INTEL_KEYS[keys]} (${how === 'road' ? 'came back by another road' : 'from ' + src})`); keys++; return true; };
+      keyMonth[keys] = m; keyRoad[keys] = how; ev('key', `KEY CLUE: ${INTEL_KEYS[keys]} (${how === 'road' ? 'came back by another road' : 'from ' + src})`); keys++;
+      // what he was after is found: leads aimed at it become side leads, and old side leads are let go
+      for (const l of leads) if (l.key != null && l.key < keys) l.key = null;
+      if (P.dropSideOnKey) { const before = leads.length; for (let j = leads.length - 1; j >= 0; j--) if (leads[j].key == null && m - leads[j].found >= P.staleAfter) leads.splice(j, 1);
+        if (before > leads.length) { L.dropped += before - leads.length; ev('drop', `${before - leads.length} old side lead${before - leads.length > 1 ? 's' : ''} let go`); } }
+      return true; };
+    const newLead = (text) => { const key = keys < INTEL_KEYS.length && R() < P.keyLeadChance ? keys : null; leads.push({found: m, key});
+      ev('lead', text + (key != null ? ` (points toward ${INTEL_KEYS[key]})` : '')); };
     // the squad: Cobra's moves first (if the player answers them first), then lead raids with what is left
-    let squad = roll(st.squad); const moves = pois(P.cobraMoves + P.cobraMovesGrowth * m); L.moves += moves;   // busy months and quiet months
+    let squad = roll(st.squad + st.squadGrowth * m); const moves = pois(P.cobraMoves + P.cobraMovesGrowth * m); L.moves += moves;   // busy months and quiet months
     const answered = Math.min(moves, R() < P.answerFirst ? squad : Math.max(0, squad - leads.length)); squad -= answered;
     L.answered += answered; L.unanswered += moves - answered;
     if (moves) ev('moves', `Cobra makes ${moves} move${moves > 1 ? 's' : ''}; the Joes answer ${answered}`);
@@ -627,22 +637,25 @@ function intelRun(P, style, policy, R, rec) {
     for (const c of work) { L.worked++; L.waitSum += m - c.opened;
       if (R() < P.bring[c.src].pays) { L.hits++;
         if (R() < P.keyChance && findKey('case', c.src)) { done.push({c, out: 'key'}); continue; }
-        if (R() < P.leadChance / (1 - P.keyChance)) { leads.push({found: m}); done.push({c, out: 'lead'}); ev('lead', `Case ${c.id} (${c.src}): a delivery time or a site to hit`); }
+        if (R() < P.leadChance / (1 - P.keyChance)) { newLead(`Case ${c.id} (${c.src}): a delivery time or a site to hit`); done.push({c, out: 'lead'}); }
         else { names.push({found: m}); done.push({c, out: 'name'}); ev('name', `Case ${c.id} (${c.src}): a name, nobody on file`); } }
       else { L.dead++; done.push({c, out: 'dead'}); } }
     // field work: intel Joes chase names
     const jobs = joes * P.joeJobsPerMonth;
     for (let j = 0; j < jobs && names.length; j++) { names.shift(); L.namesChased++;
       if (R() < P.joeCaught) { L.joesCaught++; joes--; held.push(m + P.joeHeldMonths); ev('caught', 'An intel Joe is caught chasing a name'); if (joes <= 0) break; continue; }
-      if (R() < P.namePays) { L.namesPaid++; if (!findKey('case', 'a name')) { leads.push({found: m}); ev('lead', 'A name pays: an address worth hitting'); } }
+      if (R() < P.namePays) { L.namesPaid++; if (!findKey('case', 'a name')) newLead('A name pays: an address worth hitting'); }
       else ev('deadname', 'A name leads nowhere (a regular guy, asleep)'); }
     // raids on leads, oldest first; Cobra may have moved (hidden, more likely when it is alert)
     const alert = raidHist.slice(-2).reduce((a, b) => a + b, 0) >= P.alertRaids;
     let raids = 0; const rc = squad;
-    for (let i = 0; i < rc && leads.length; i++) { const ld = leads.shift(); raids++; L.leadsActed++;
+    // leads aimed at the clue he is after go first (freshest first), then side leads (freshest first)
+    leads.sort((a, b) => ((a.key != null ? 0 : 1) - (b.key != null ? 0 : 1)) || (b.found - a.found));
+    for (let i = 0; i < rc && leads.length; i++) { const ld = leads.shift(); raids++; L.leadsActed++; if (ld.key != null) L.keyRaids++;
       const age = m - ld.found; if (age >= P.staleAfter) L.leadsOld++;
       const moved = 1 - Math.pow(1 - (alert ? P.moveAlert : P.moveQuiet), age + 1);
       if (R() < moved) { if (R() < P.trapShare) { L.traps++; ev('trap', `Raid on a ${age}-month-old lead: a trap`); } else { L.empty++; ev('empty', `Raid on a ${age}-month-old lead: empty, Cobra moved`); } }
+      else if (ld.key != null && ld.key === keys && findKey('raid', 'a raid')) { L.good++; L.keyByRaid++; }
       else { L.good++; const c = roll(P.raidCaptures); carry += c; L.extraCaptures += c; ev('raid', `Raid on a ${age}-month-old lead pays${c ? ': an officer taken' : ''}`); } }
     raidHist.push(raids + answered);   // every fight counts toward Cobra's alertness
     // a key clue the player missed comes back by another road
@@ -650,7 +663,7 @@ function intelRun(P, style, policy, R, rec) {
     L.track.keys.push(keys); L.track.backlog.push(queue.length); L.track.seats.push(cap);
     L.track.leads.push(leads.length);
     if (rec) L.frames.push({m, moves, answered, seats: cap, joes, held: held.length, queue: queue.map(c => ({id: c.id, src: c.src, age: m - c.opened})),
-      done: done.map(d => ({id: d.c.id, src: d.c.src, out: d.out})), leads: leads.map(l => m - l.found), names: names.length, keys, alert, events: E});
+      done: done.map(d => ({id: d.c.id, src: d.c.src, out: d.out})), leads: leads.map(l => ({age: m - l.found, key: l.key != null})), names: names.length, keys, alert, events: E});
   }
   return Object.assign(L, {keyMonth, keyRoad, spineDone: keys >= INTEL_KEYS.length ? keyMonth.at(-1) : null});
 }
@@ -670,6 +683,7 @@ function intel(P) {
         backlogPeak: mean(Ls.map(l => Math.max(...l.track.backlog))), notSent: mean(Ls.map(l => l.notSent)),
         leadsActed: mean(Ls.map(l => l.leadsActed)), oldPct: mean(Ls.map(l => l.leadsActed ? l.leadsOld * 100 / l.leadsActed : 0)),
         emptyPct: mean(Ls.map(l => l.leadsActed ? l.empty * 100 / l.leadsActed : 0)), trapPct: mean(Ls.map(l => l.leadsActed ? l.traps * 100 / l.leadsActed : 0)),
+        keyRaids: mean(Ls.map(l => l.keyRaids)), keyByRaid: mean(Ls.map(l => l.keyByRaid)), dropped: mean(Ls.map(l => l.dropped)),
         names: mean(Ls.map(l => l.namesChased)), namesPaidPct: mean(Ls.map(l => l.namesChased ? l.namesPaid * 100 / l.namesChased : 0)), joesCaught: mean(Ls.map(l => l.joesCaught)),
         unansweredPct: mean(Ls.map(l => l.moves ? l.unanswered * 100 / l.moves : 0)), leadsEnd: mean(Ls.map(l => l.track.leads.at(-1))),
         track: {keys: tr('keys'), backlog: tr('backlog'), seats: tr('seats'), leads: tr('leads')}};
