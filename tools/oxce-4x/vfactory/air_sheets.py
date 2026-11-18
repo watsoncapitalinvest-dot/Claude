@@ -20,6 +20,11 @@ def _row(a):
     bbs = [f.getbbox() for f in fr if f.getbbox()]; box = (min(b[0] for b in bbs), min(b[1] for b in bbs), max(b[2] for b in bbs), max(b[3] for b in bbs))
     return [f.crop(box) for f in fr]
 BLAST, FIRE, SMOKE = _row(8), _row(16), _row(24)
+BURST = _row(0)                                          # the small blast: a ball that bursts from its middle - the mid-air one
+def _each(r): return [f.crop(f.getbbox()) if f.getbbox() else f for f in r]
+BURST_EACH = _each(BURST); BURST_MAXW = max(f.width for f in BURST_EACH)
+POINTS = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'blast_points.json')))
+SIZE = {'s': 0.16, 'r': 0.30, 'b': 0.50}                 # the drawing's widest frame, as a share of the plane's width (the click page's rings)
 BLAST_W = BLAST[0].width                                  # the row's full width: every frame is scaled by the same factor
 BLAST_EACH = [f.crop(f.getbbox()) if f.getbbox() else f for f in BLAST]   # each frame cut to its own drawing
 def blast(c, f, x, y, w, base=False):
@@ -69,6 +74,46 @@ def death(pic, anchor, n):
         out.append(c)
     return out
 
+def _at(pic, anchor, pt):
+    """a mark (fractions of the picture's opaque box) -> offset from the anchor"""
+    bb = pic.getbbox(); return bb[0] + pt[0] * (bb[2] - bb[0]) - anchor[0], bb[1] + pt[1] * (bb[3] - bb[1]) - anchor[1]
+
+def burst(c, f, x, y, w):
+    """the small blast, frame f, its widest frame w wide, each frame centred on (x, y)"""
+    k = w / BURST_MAXW; a = BURST_EACH[f]; a = a.resize((max(1, int(a.width * k)), max(1, int(a.height * k))), Image.LANCZOS)
+    c.alpha_composite(a, (int(x - a.width / 2), int(y - a.height / 2)))
+
+def boom(c, f, x, y, size, bw):
+    if size == 'b': blast(c, f, x, y + bw * 0.04, bw * SIZE['b'] * BLAST_W / max(b.width for b in BLAST_EACH), base=True)
+    else: burst(c, f, x, y, bw * SIZE[size])
+
+def death2(pic, anchor, n, pts):
+    """John 18 Nov 02:15-02:23: shot down = his two marks go off one after the other (mark 1, then mark 2 two frames later), at the
+    sizes he chose; the plane drops out from under them burning at both"""
+    out = []; bw = pic.getbbox()[2] - pic.getbbox()[0]; W = 128 * n; ox, oy = W // 2, 112 * n
+    (x1, y1), (x2, y2) = _at(pic, anchor, pts[0]), _at(pic, anchor, pts[-1])
+    for f in range(8):
+        drop = int(max(0, f - 2) ** 2 * 2.2 * n)
+        c = cell(pic, anchor, n, dy=drop, dark=1 - max(0, f - 1) * 0.08, alpha=1 - max(0, f - 4) * 0.22)
+        if f >= 1: fx(c, FIRE[min(7, 2 + f // 2)], ox + x1, oy + y1 + drop + bw * 0.03, bw * 0.14, bottom=True)
+        if f >= 3 and len(pts) > 1: fx(c, FIRE[min(7, f)], ox + x2, oy + y2 + drop + bw * 0.03, bw * 0.16, bottom=True)
+        boom(c, f, ox + x1, oy + y1, pts[0][2], bw)
+        if len(pts) > 1 and f >= 2: boom(c, min(7, round((f - 2) * 7 / 5)), ox + x2, oy + y2, pts[1][2], bw)
+        out.append(c)
+    return out
+
+def direct(pic, anchor, n, pts):
+    """John 02:23: a direct hit (the instant-kill roll) = one big blast on mark 2; the plane drops out of it at once"""
+    out = []; bw = pic.getbbox()[2] - pic.getbbox()[0]; W = 128 * n; ox, oy = W // 2, 112 * n
+    x2, y2 = _at(pic, anchor, pts[-1])
+    for f in range(8):
+        drop = int(f * f * 2.2 * n)
+        c = cell(pic, anchor, n, dy=drop, dark=1 - f * 0.1, alpha=1 - max(0, f - 3) * 0.22)
+        if f >= 1: fx(c, FIRE[min(7, 2 + f // 2)], ox + x2, oy + y2 + drop + bw * 0.03, bw * 0.22, bottom=True)
+        boom(c, f, ox + x2, oy + y2, 'b', bw)
+        out.append(c)
+    return out
+
 def sink(pic, anchor, n):
     """8 frames, a boat sunk: the mod's big blast on the hull, then it settles into the water - lower, sea-tinted, darker, fading,
     still burning (the mod's fire frames) and leaving the mod's smoke, with a ring of foam where it goes under"""
@@ -105,7 +150,10 @@ for name, spec in JOBS:
     clean = [fr('clean', h) for h in HEAD]
     dmg = [fr('damaged', h) for h in HEAD]
     per = 8 if n == 2 else 4
-    frames = clean + (sum((dies(dmg[h], anchor, n) for h in range(8)), []) if n == 2 else dies(dmg[2], anchor, n))
+    if mode != 'sea' and name in POINTS and n >= 3:     # frames 8-15 shot down (his marks), 16-23 direct hit (big blast on mark 2)
+        frames = clean + death2(dmg[2], anchor, n, POINTS[name]) + direct(dmg[2], anchor, n, POINTS[name])
+    else:
+        frames = clean + (sum((dies(dmg[h], anchor, n) for h in range(8)), []) if n == 2 else dies(dmg[2], anchor, n))
     S = Image.new('RGBA', (per * W, -(-len(frames) // per) * H), (0, 0, 0, 0))
     for i, p in enumerate(frames):
         S.alpha_composite(p if p.size == (W, H) else cell(p, anchor, n), ((i % per) * W, (i // per) * H))
