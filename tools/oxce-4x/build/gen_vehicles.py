@@ -52,7 +52,9 @@ V = {
                   # where each shot leaves (voxels: forward, left, up from the footprint middle; model units x 1.564 / 1.915, checked against
                   # the rendered muzzles at all 8 headings): the Com-Bats off their rams (left first), the CMF-1 tube, the .50s
                   launch={"self": [[4, 9, 4], [4, -9, 4]], "STR_GJA_COBRA_FERRET_A_T_V_CMF_1_W": [[10, -6, 13]],
-                          "STR_GJA_COBRA_FERRET_A_T_V_50_CAL_MACHINE_GUNS_W": [[13, -1, 11], [13, 1, 11]]},   # John 18 Nov 00:02: the twin .50s are the front gun (x 8.0, y +-0.35, z 5.64), barrels alternating
+                          "STR_GJA_COBRA_FERRET_A_T_V_50_CAL_MACHINE_GUNS_W": [[13, -1, 11], [13, 1, 11]]},
+                  # the CMF-1's round flies as itself (John 18 Nov 00:14 "use a better graphic"): STORY's item, VFACTORY's picture
+                  item_heads={"STR_GJA_COBRA_FERRET_A_T_V_CMF_1": "proj_ferret_cmf_head"},   # John 18 Nov 00:02: the twin .50s are the front gun (x 8.0, y +-0.35, z 5.64), barrels alternating
                   name="Cobra Ferret", tu=80, hp=30, arm=(20, 15, 10, 10),
                   wpn=("Machine gun", 30, 1, 60, (50, 25), None, (35, 35, 3), 0, 2, "m60"), price=0),
  "thunder":   dict(pack="thunder_machine", asset="thunder_machine", state="m0", head="proj_thunder_round_head0", side="cobra", name="Dreadnok Thunder Machine", tu=54, hp=110, arm=(70, 60, 50, 40),
@@ -321,5 +323,11 @@ for v, d in V.items():                               # full-size missile heads (
         hs = Image.open(os.path.join(OUT, d["head"] + ".png")).height       # square frames, 128 or bigger for a long missile
         L += [f"  - type: GJ_HEAD_{v.upper()}.PCK", f"    width: {8 * hs}", f"    height: {hs}", f"    subX: {hs}", f"    subY: {hs}",
               "    files:", f"      0: Resources/VehiclesPrivate/{d['head']}.png"]
+for v, d in V.items():                               # heads for other desks' items (STORY's arsenal): sheet + the two head keys only;
+    for it, png in d.get("item_heads", {}).items():   # the arsenal loads after this file and fills in everything else
+        L += [f"  - type: GJ_HEAD_{png.upper()}.PCK", "    width: 1024", "    height: 128", "    subX: 128", "    subY: 128",
+              "    files:", f"      0: Resources/VehiclesPrivate/{png}.png"]
+        for suf in ("W", "A"):
+            I += [f"  - type: {it}_{suf}", f"    gjBulletHeadSheet: GJ_HEAD_{png.upper()}.PCK", "    bulletDirectional: true"]
 L += [""] + U + [""] + A + [""] + I + ["", "extraStrings:", "  - type: en-US", "    strings: &veh"] + [f'      {k}: "{s}"' for k, s in S2.items()] + ["  - type: en-GB", "    strings: *veh"]
 open(os.path.join(MOD, "Ruleset", "gijoe_vehicles.rul"), "w").write("\n".join(L) + "\n")

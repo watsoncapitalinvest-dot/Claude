@@ -31,6 +31,29 @@ def frm(hd, st): return next(x for x in m['frames'] if x['look'] == 'clean' and 
 def veh(hd, st): v = Image.new('RGBA', (W, H), (0, 0, 0, 0)); v.alpha_composite(Image.open(f'{P}/{frm(hd, st)["file"]}').convert('RGBA'), (ox - AX, oy - AY)); return v
 frames = []; fired = 0
 def out(c): frames.append(c.convert('RGB').resize((W * Z, H * Z), Image.LANCZOS))
+import numpy as np
+SMOKE = (196, 190, 178)
+def blob(c, x, y, r, col, a):                        # a soft round blob (gaussian alpha), colour col, peak alpha a
+    if a <= 0 or r <= 0: return
+    R = int(r * 2.2) + 2; yy, xx = np.mgrid[-R:R + 1, -R:R + 1]; al = np.clip(1.25 * np.exp(-(xx ** 2 + yy ** 2) / (2 * (r * 0.75) ** 2)), 0, 1) * a * 255
+    im = np.zeros((2 * R + 1, 2 * R + 1, 4), np.uint8); im[..., :3] = col; im[..., 3] = np.clip(al, 0, 255)
+    c.alpha_composite(Image.fromarray(im, 'RGBA'), (int(x) - R, int(y) - R))
+def flash(c, x, y, dx, dy, k):                      # muzzle flash: a hot core and a short tongue along the shot
+    for t, r, col in ((0, 6, (255, 150, 40)), (0, 3.5, (255, 240, 190)), (5, 4, (255, 190, 80)), (9, 2.5, (255, 220, 140))):
+        blob(c, x + dx * t, y + dy * t, r * k, col, 0.95 * k)
+def fireball(c, x, y, t):                            # an HE burst: white-yellow core, orange ball, then rising grey smoke
+    if t < 5:
+        blob(c, x, y, 6 + t * 2.8, (255, 110, 25), 1.0 - t * 0.12); blob(c, x, y, 3 + t * 1.6, (255, 200, 80), 0.95 - t * 0.17)
+        if t < 3: blob(c, x, y, 2.5 + t, (255, 250, 220), 1 - t * 0.3)
+    s = max(0, t - 2); blob(c, x + 1, y - 3 - s * 1.6, 5 + s * 1.8, (110, 104, 96), min(0.75, 0.25 * s + 0.2) * (1 - t / 14))
+    blob(c, x - 3, y - 1 - s * 1.0, 4 + s * 1.4, (140, 132, 120), min(0.6, 0.2 * s + 0.15) * (1 - t / 14))
+_rp = os.environ.get('CMF_ROUND')
+if _rp:
+    ROUND = Image.open(_rp).convert('RGBA'); ROUND = ROUND.crop(ROUND.getbbox()); _k = float(os.environ.get('CMF_ROUND_PX', '15')) / ROUND.width
+    ROUND = ROUND.resize((max(1, round(ROUND.width * _k)), max(1, round(ROUND.height * _k))), Image.LANCZOS)
+    from PIL import ImageEnhance; _a = ROUND.getchannel('A'); ROUND = ImageEnhance.Brightness(ROUND.convert('RGB')).enhance(1.6).convert('RGBA'); ROUND.putalpha(_a)
+else:
+    ROUND = Image.new('RGBA', (8, 6), (52, 58, 40, 255))
 def base(hd): c = ground(); v = veh(hd, STATES[fired]); c.alpha_composite(v); return c, v
 for si, hd in enumerate(HDS):
     if si:
@@ -49,29 +72,26 @@ for si, hd in enumerate(HDS):
             dr.line([(r[0], r[1]), (r[0] + dx * 10, r[1] + dy * 10)], fill=(255, 205, 90, 255), width=2); r[0] += dx * 22; r[1] += dy * 22
         out(c)
     # CMF-1 (John 18 Nov 00:04 "it's a ten round grenade launcher basically, not a machine gun"; 00:11 "the grenades shoot like a
-    # cannon"): three grenades in a ripple, fired flat and straight from the end of the tube - flash and puff at the muzzle, a short
-    # smoke trail, and each one bursts where it hits
+    # cannon"; 00:14 "use a better graphic"): three rendered 40mm-style HE rounds (vfactory/ferret/cmf_round.py, env CMF_ROUND) fired
+    # flat from the end of the tube in a ripple - soft muzzle flash and smoke, a faint trail, a fireball and smoke where each hits
     mz = frm(hd, STATES[fired])['muzzles'][CAN]['xy']; cx, cy = ox - AX + mz[0], oy - AY + mz[1]
+    ang = math.degrees(math.atan2(-dy, dx)); rnd = ROUND.rotate(ang, resample=Image.BICUBIC, expand=True)
     nades, puffs, booms = [], [], []
-    for n in range(24):
-        c, _ = base(hd); dr = ImageDraw.Draw(c)
+    for n in range(26):
+        c, _ = base(hd)
         if n in (0, 4, 8):
             nades.append([cx, cy, 0]); puffs.append([cx, cy, 0])
         for pf in puffs:
-            r = 2 + pf[2] * 0.9; a = max(0, 90 - pf[2] * 14)
-            if a: dr.ellipse((pf[0] - r + dx * pf[2], pf[1] - r - pf[2] * 0.6, pf[0] + r + dx * pf[2], pf[1] + r - pf[2] * 0.6), fill=(205, 200, 188, a))
-            if pf[2] == 0: dr.ellipse((cx - 6 + dx * 4, cy - 5 + dy * 4, cx + 6 + dx * 4, cy + 5 + dy * 4), fill=(255, 226, 150, 255))
+            if pf[2] < 9: blob(c, pf[0] + dx * (4 + pf[2] * 1.5), pf[1] + dy * (4 + pf[2] * 1.5) - pf[2] * 0.8, 3 + pf[2] * 1.3, SMOKE, 0.55 * (1 - pf[2] / 9))
+            if pf[2] < 2: flash(c, cx + dx * 5, cy + dy * 5, dx, dy, 1.0 if pf[2] == 0 else 0.5)
             pf[2] += 1
         for g in nades[:]:
-            g[2] += 1; g[0] += dx * 13; g[1] += dy * 13
-            if g[2] > 7: booms.append([g[0], g[1], 0]); nades.remove(g); continue
-            for k in range(1, 4):
-                tr = 2.0 - k * 0.4; dr.ellipse((g[0] - dx * 7 * k - tr, g[1] - dy * 7 * k - tr, g[0] - dx * 7 * k + tr, g[1] - dy * 7 * k + tr), fill=(170, 165, 155, 150 - k * 35))
-            dr.ellipse((g[0] - 3, g[1] - 3, g[0] + 3, g[1] + 3), fill=(52, 58, 40, 255)); dr.point((g[0] - 1, g[1] - 1), fill=(150, 160, 120, 255))
+            g[2] += 1; g[0] += dx * 12; g[1] += dy * 12
+            if g[2] > 6: booms.append([g[0], g[1], 0]); nades.remove(g); continue
+            for k in range(1, 5): blob(c, g[0] - dx * 5 * k, g[1] - dy * 5 * k, 1.6 + k * 0.5, SMOKE, 0.35 - k * 0.07)
+            c.alpha_composite(rnd, (int(g[0] - rnd.width / 2), int(g[1] - rnd.height / 2)))
         for b in booms:
-            if b[2] < 6:
-                r = 5 + b[2] * 3; dr.ellipse((b[0] - r, b[1] - r * 0.7, b[0] + r, b[1] + r * 0.7), fill=(255, 170 - b[2] * 18, 60, 230 - b[2] * 30))
-                dr.ellipse((b[0] - r * 0.6, b[1] - r - 2, b[0] + r * 0.6, b[1] - 2), fill=(110, 104, 96, 200 - b[2] * 25))
+            if b[2] < 12: fireball(c, b[0], b[1], b[2])
             b[2] += 1
         out(c)
     if fired < len(RK):                                      # one Com-Bat off its peg: the package's own rocket, the peg empties
