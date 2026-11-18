@@ -81,9 +81,9 @@ c = base('wolverine', s, 3, [2, 3], 'wolverine_v2', {'m0': ['GJTURRET', 'wrk_fly
 c['turret'] = {'objs': ['GJTURRET'] + W12 + M12, 'pivot': [-7.47, 0.0, 7.48], 'muzzles': {'rack': [-3.55, 6.43, 14.73, 1, 0, 0]}, 'note': 'missile turret'}
 c['preview']['script'] = [['move', 'NE', 2], ['gun', ['rack']], ['tturn', 'SE'], ['tturn', 'NE'], ['wait', 6]]; cf2['wolverine'] = c
 s, lim = fit(33.01, 17.34, 5, 4)  # Mauler 4x5 (barrel included, as for the MOBAT)
-c = base('mauler', s, 5, [4, 5], 'mauler', {'m0': ['GJTURRET01', 'GJBARREL01']}, {'muzzle': [17.51, 0.0, 13.57, 1, 0, 0]}, 'Joe',
+c = base('mauler', s, 5, [4, 5], 'mauler_v2', {'m0': ['GJTURRET01', 'GJBARREL01', 'GJANTENNA']}, {'muzzle': [17.51, 0.0, 13.57, 1, 0, 0]}, 'Joe',
          R + f'Mauler M.B.T., class 4x5 (installed as size 5). Scale {s} (was 0.1048; {lim} axis limits).\n')
-c['turret'] = {'objs': ['GJTURRET01', 'GJBARREL01'], 'pivot': [-2.1, 0.0, 8.73], 'muzzles': {'main': [17.51, 0.0, 13.57, 1, 0, 0]}, 'note': 'main gun turret'}
+c['turret'] = {'objs': ['GJTURRET01', 'GJBARREL01', 'GJANTENNA'], 'pivot': [-2.1, 0.0, 8.73], 'muzzles': {'main': [17.51, 0.0, 13.57, 1, 0, 0]}, 'note': 'main gun turret; toy pass 17 Nov: the toy\'s two antennas (GJANTENNA) ride it'}
 c['preview']['script'] = [['move', 'NE', 2], ['gun', ['main']], ['tturn', 'SE'], ['gun', ['main']], ['tturn', 'NE'], ['wait', 6]]; cf2['mauler'] = c
 s, lim = fit(26.0, 20.34, 3, 3)   # Triple T 3x3 (John 17:16); pods empty left first  (rendered FOOT 5: taller than the 3x3 frame)
 c = base('triple_t', s, 5, [3, 3], 'triple_t', {'m2': [], 'm1': ['missile_L'], 'm0': ['missile_L', 'missile_R']},

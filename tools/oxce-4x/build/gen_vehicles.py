@@ -40,13 +40,13 @@ V = {
  "wolverine": dict(pack="wolverine", asset="wolverine", state="m0", side="joe", name="Wolverine", tu=60, hp=100, arm=(80, 65, 50, 50),
                   wpn=("Missile rack", 80, 3, 6, None, (85, 55), None, 1, 0, "power_javelin_launch"), price=380000, head="proj_wolverine_head0", turret_stores=12, turret_tu=3),  # its own missile flies full size (John 20:10 "can i see it shoot")
  "mauler":    dict(pack="mauler", asset="mauler", state="m0", side="joe", name="Mauler M.B.T.", tu=50, hp=200, arm=(120, 100, 80, 80),
-                  wpn=("Main gun", 110, 1, 20, (50, 35), (80, 70), None, 0, 4, "m2x_50cal"), price=600000),
+                  wpn=("Main gun", 110, 1, 20, (50, 35), (80, 70), None, 0, 4, "m2x_50cal"), price=600000, turret_tu=3),
  "stinger":   dict(pack="stinger", asset="stinger", state="m0", side="cobra", name="Cobra Stinger", tu=72, hp=50, arm=(35, 25, 20, 15),
-                  wpn=("Ground-to-air rockets", 80, 3, 3, None, (80, 55), None, 1, 0, "bazooka_launch"), price=0, head="proj_stinger_head0"),  # file card (John 18:37 rework); was "Quad cannon". 3 rockets on the rack; stand-in numbers
+                  wpn=("Ground-to-air rockets", 80, 3, 3, None, (80, 55), None, 1, 0, "bazooka_launch"), price=0, head="proj_stinger_head0", turret_tu=3),  # file card (John 18:37 rework); was "Quad cannon". 3 rockets on the rack; stand-in numbers
  "hiss":      dict(pack="hiss", asset="hiss", state="m0", side="cobra", name="Cobra H.I.S.S.", tu=60, hp=110, arm=(85, 70, 55, 55),
-                  wpn=("Twin 30mm automatic cannons", 60, 1, 40, (50, 30), (80, 55), (40, 40, 2), 0, 4, "m2x_50cal"), price=0, head="proj_thunder_round_head0"),  # blueprint name (John 18:29 rework); same 30mm round as the Thunder Machine
+                  wpn=("Twin 30mm automatic cannons", 60, 1, 40, (50, 30), (80, 55), (40, 40, 2), 0, 4, "m2x_50cal"), price=0, head="proj_thunder_round_head0", turret_tu=3),  # blueprint name (John 18:29 rework); same 30mm round as the Thunder Machine
  "hiss_rack": dict(pack="hiss_rack", asset="hiss_rack", state="m0", side="cobra", name="Cobra H.I.S.S. (rocket rack)", tu=60, hp=110, arm=(85, 70, 55, 55),
-                  wpn=("H.I.S.S. rocket rack", 90, 3, 4, None, (80, 55), None, 1, 0, "bazooka_launch"), price=0, head="proj_hiss_rack_head0"),  # Cobra research upgrade (John 18:41); research gate + deployment are STORY/BUILD's; stand-in numbers
+                  wpn=("H.I.S.S. rocket rack", 90, 3, 4, None, (80, 55), None, 1, 0, "bazooka_launch"), price=0, head="proj_hiss_rack_head0", turret_tu=3),  # Cobra research upgrade (John 18:41); research gate + deployment are STORY/BUILD's; stand-in numbers
  "ferret":    dict(pack="ferret", asset="ferret", state="m0", side="cobra", name="Cobra Ferret", tu=80, hp=30, arm=(20, 15, 10, 10),
                   wpn=("Machine gun", 30, 1, 60, (50, 25), None, (35, 35, 3), 0, 2, "m60"), price=0),
  "thunder":   dict(pack="thunder_machine", asset="thunder_machine", state="m0", head="proj_thunder_round_head0", side="cobra", name="Dreadnok Thunder Machine", tu=54, hp=110, arm=(70, 60, 50, 40),
@@ -55,11 +55,11 @@ V = {
  "thunderclap_tractor": dict(pack="thunderclap_tractor", asset="thunderclap_tractor", state="m0", side="joe", name="Thunderclap Tractor", tu=50, hp=170, arm=(100, 80, 60, 60),
                   wpn=("MG-999 dual-barrelled pulsating assault weapon", 60, 1, 60, (50, 30), (80, 55), (40, 40, 3), 0, 12, "m2x_50cal"),
                   wpn2=("Low attack missile", 100, 3, 3, None, (85, 55), None, 2, 22, "power_javelin_launch"), price=520000,
-                  stores=["m1", "m2", "m3"], proj="proj_thunderclap", head="proj_thunderclap_head0"),
+                  stores=["m1", "m2", "m3"], proj="proj_thunderclap", head="proj_thunderclap_head0", turret_tu=3),
  "thunderclap_trailer": dict(pack="thunderclap_trailer", asset="thunderclap_trailer", state="m0", side="joe", name="Thunderclap Trailer", tu=46, hp=150, arm=(90, 75, 60, 55),
                   wpn=("Rapid-fire blaster cannon", 75, 1, 40, (55, 30), (85, 55), (40, 40, 2), 0, 12, "m2x_50cal"),
                   wpn2=("ZPJ-79 cruise missile", 110, 3, 3, None, (90, 60), None, 2, 24, "power_javelin_launch"), price=480000,
-                  stores=["m1", "m2", "m3"], proj="proj_thunderclap", head="proj_thunderclap_head1"),
+                  stores=["m1", "m2", "m3"], proj="proj_thunderclap", head="proj_thunderclap_head1", turret_tu=3),
 }
 
 CAST = sorted(["ak47", "bazooka_launch", "explosion_large", "flare_launcher", "frag_grenade", "m16", "m1911_pistol", "m2x_50cal",
