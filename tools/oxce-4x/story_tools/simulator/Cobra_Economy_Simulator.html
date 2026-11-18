@@ -650,14 +650,17 @@ function worldReplay(P, style, n) { const R = rng((P.seed * 7919 + n * 104729) >
 // moved is hidden and depends on how alert it is. A key clue the player misses comes back by another road, late.
 const INTEL_STYLES = ['absent', 'cautious', 'typical', 'aggressive'];
 const INTEL_POLICIES = ['everything', 'pick', 'little'];
-const INTEL_SOURCES = ['officer', 'papers', 'gear'];
+const INTEL_SOURCES = ['officer', 'papers', 'gear', 'lab', 'villain'];
 const INTEL_KEYS = ['Flight routes', 'A depot', 'The second depot', 'Drome rumours', 'Where the Drome is', 'M.A.R.S. markings'];
 const INTEL_DEFAULTS = {
   runs: 400, months: 18, seed: 23,
   // what one mission brings home (average count per mission)
   bring: {officer: {perMission: 0.5, pays: 0.35, send_pick: 1, send_little: 1},
           papers: {perMission: 0.8, pays: 0.20, send_pick: 1, send_little: 0.5},
-          gear: {perMission: 3.0, pays: 0.075, send_pick: 0.2, send_little: 0}},
+          gear: {perMission: 3.0, pays: 0.075, send_pick: 0.2, send_little: 0},
+          // places and people that carry key intel (John 23:06): a lab outpost's research files, a captured named villain
+          lab: {perMission: 0.08, pays: 0.6, send_pick: 1, send_little: 1, key: 0.6, leads: 1},
+          villain: {perMission: 0.03, pays: 1, send_pick: 1, send_little: 1, key: 1, leads: 3}},
   // analysts: seats on Day 1, the share put on cases (the rest research), cases one analyst closes a month
   analystsStart: 10, analystShare: 0.5, casesPerAnalyst: 1,
   // what a hit is: a key clue (only once that clue is due), a lead to act on, or a name
@@ -720,7 +723,7 @@ function intelRun(P, style, policy, R, rec) {
       const n = roll(P.bring[src].perMission * missions) + (src === 'officer' ? carry : 0);
       for (let i = 0; i < n; i++) { brought++;
         if (R() < send(src)) { sent++; L.opened++; queue.push({id: nextCase++, src, opened: m}); }
-        else { L.notSent++; if (R() < P.bring[src].pays && R() < P.keyChance && keys < INTEL_KEYS.length && due(keys)) L.missedKeys++; } } }
+        else { L.notSent++; if (R() < P.bring[src].pays && R() < (P.bring[src].key ?? P.keyChance) && keys < INTEL_KEYS.length && due(keys)) L.missedKeys++; } } }
     carry = 0;
     if (missions) ev('debrief', `${missions} mission${missions > 1 ? 's' : ''}: ${brought} things brought home, ${sent} sent to Intel`);
     // analysts work the queue, oldest first
@@ -728,7 +731,10 @@ function intelRun(P, style, policy, R, rec) {
     const work = queue.splice(0, cap), done = [];
     for (const c of work) { L.worked++; L.waitSum += m - c.opened;
       if (R() < P.bring[c.src].pays) { L.hits++;
-        if (R() < P.keyChance && findKey('case', c.src)) { done.push({c, out: 'key'}); continue; }
+        const extra = P.bring[c.src].leads || 0;
+        for (let x = 0; x < extra; x++) newLead(c.src === 'villain' ? 'The captured villain talks: a site to hit' : 'The lab\'s research files point somewhere');
+        if (c.src === 'villain') ev('villain', 'A NAMED VILLAIN IS CAPTURED AND TALKS');
+        if (R() < (P.bring[c.src].key ?? P.keyChance) && findKey('case', c.src === 'villain' ? 'the captured villain' : c.src)) { done.push({c, out: 'key'}); continue; }
         if (R() < P.leadChance / (1 - P.keyChance)) { newLead(`Case ${c.id} (${c.src}): a delivery time or a site to hit`); done.push({c, out: 'lead'}); }
         else { names.push({found: m}); done.push({c, out: 'name'}); ev('name', `Case ${c.id} (${c.src}): a name, nobody on file`); } }
       else { L.dead++; done.push({c, out: 'dead'}); } }
@@ -784,7 +790,8 @@ function intel(P) {
 }
 const INTEL_SCENARIOS = {
   'As designed (far less: 35 / 20 / 5-10%)': {},
-  'STORY\'s first odds (70 / 50 / 25%)': {bring: {officer: {perMission: 0.5, pays: 0.7, send_pick: 1, send_little: 1}, papers: {perMission: 0.8, pays: 0.5, send_pick: 1, send_little: 0.5}, gear: {perMission: 3, pays: 0.25, send_pick: 0.2, send_little: 0}}},
+  'STORY\'s first odds (70 / 50 / 25%)': {bring: {officer: {perMission: 0.5, pays: 0.7, send_pick: 1, send_little: 1}, papers: {perMission: 0.8, pays: 0.5, send_pick: 1, send_little: 0.5}, gear: {perMission: 3, pays: 0.25, send_pick: 0.2, send_little: 0}, lab: INTEL_DEFAULTS.bring.lab, villain: INTEL_DEFAULTS.bring.villain}},
+  'No labs or villains (before 23:06)': {bring: Object.assign({}, INTEL_DEFAULTS.bring, {lab: Object.assign({}, INTEL_DEFAULTS.bring.lab, {perMission: 0}), villain: Object.assign({}, INTEL_DEFAULTS.bring.villain, {perMission: 0})})},
   'All analysts on cases': {analystShare: 1},
   'Few analysts on cases (a quarter)': {analystShare: 0.25},
   'No fallback: a missed key clue never comes back': {keyGrace: 99},
@@ -865,8 +872,8 @@ MODES.intel = {
       ['Leads with a target', ['keyLeadChance', 'dropSideOnKey']],
       ['Leads and old intel', ['staleAfter', 'moveQuiet', 'moveAlert', 'alertRaids', 'trapShare', 'raidCaptures']],
     ],
-    tables: [['What a mission brings home', SIM.INTEL_SOURCES, ['perMission', 'pays', 'send_pick', 'send_little'],
-              {perMission: 'per mission', pays: 'pays (0-1)', send_pick: 'sent: pick', send_little: 'sent: little'}, true, 'bring.'],
+    tables: [['What a mission brings home', SIM.INTEL_SOURCES, ['perMission', 'pays', 'send_pick', 'send_little', 'key', 'leads'],
+              {perMission: 'per mission', pays: 'pays (0-1)', send_pick: 'sent: pick', send_little: 'sent: little', key: 'key clue (blank = normal)', leads: 'extra leads'}, true, 'bring.'],
              ['Key clues: due month', ['keyDue'], ['0', '1', '2', '3', '4', '5'], {0: 'routes', 1: 'depot', 2: 'depot 2', 3: 'rumours', 4: 'Drome', 5: 'M.A.R.S.'}, true],
              ['Player styles', SIM.INTEL_STYLES, ['squad', 'squadGrowth', 'seatsPerMonth', 'joeEvery'],
               {squad: 'squad sorties/mo', squadGrowth: 'squad added/mo', seatsPerMonth: 'new seats/mo', joeEvery: 'new intel Joe every (mo)'}]],
@@ -1307,7 +1314,7 @@ function showIntel(R, B, scen, ms) {
 }
 function drawIntel(run, i) {
   const fr = run.frames[i], W = 1100, H = 470, svg = document.getElementById('rp-svg');
-  const SRC = {officer: '#d8b45a', papers: '#e8ecef', gear: '#7d8a96'};
+  const SRC = {officer: '#d8b45a', papers: '#e8ecef', gear: '#7d8a96', lab: '#5fb06a', villain: '#d0453a'};
   let g = `<rect width="${W}" height="${H}" fill="#0f1317"/>`;
   // the Intel app: three panels
   const panel = (x, w, t, sub) => `<rect x="${x}" y="20" width="${w}" height="${H - 40}" rx="8" fill="#141a20" stroke="#33404c"/><text x="${x + 12}" y="44" font-size="13" font-weight="700" fill="#e8ecef">${t}</text><text x="${x + 12}" y="62" font-size="11" fill="#93a1ad">${sub}</text>`;
@@ -1334,7 +1341,7 @@ function drawIntel(run, i) {
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = g;
   document.getElementById('rp-mon').textContent = 'Month ' + fr.m;
   logList(fr.events);
-  document.getElementById('rp-key').innerHTML = `<span>box outline colour = source: gold officer, white papers, grey gear</span><span>waiting boxes fade as they age</span><span>worked: grey cross = dead end, gold = key clue, green = lead, blue = a name</span><span>lead boxes: green = fresh, gold = old (warned); thick with * = points at the key clue he is after; whether Cobra moved is hidden</span><span>key clue bars: gold = found by the Joes, grey = came late by another road</span>`;
+  document.getElementById('rp-key').innerHTML = `<span>box outline colour = source: gold officer, white papers, grey gear, green lab files, red named villain</span><span>waiting boxes fade as they age</span><span>worked: grey cross = dead end, gold = key clue, green = lead, blue = a name</span><span>lead boxes: green = fresh, gold = old (warned); thick with * = points at the key clue he is after; whether Cobra moved is hidden</span><span>key clue bars: gold = found by the Joes, grey = came late by another road</span>`;
 }
 
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => { document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t)); mode = t.dataset.mode; stopPlay(); build(); });
