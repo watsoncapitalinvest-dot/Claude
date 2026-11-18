@@ -24810,7 +24810,7 @@ index e609d3c..fad706b 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..db612af 100644
+index 6b4e79d..d9e6c94 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,15 @@
@@ -25811,7 +25811,7 @@ index 6b4e79d..db612af 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2796,150 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2796,182 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -25831,6 +25831,36 @@ index 6b4e79d..db612af 100644
 +		SavedGame *save = _game->getSavedGame();
 +		const Mod::CartelRules &cr = _game->getMod()->getCartelRules();
 +		const RuleResearch *route = _game->getMod()->getResearch("STR_CARTEL_FLIGHT_ROUTE");
++		// John 18 Nov "scripted": the cartel flies one run a week, announced. Reading the flight route sets the first for
++		// two days later; each run sets the next a week on, until the stash house is found. (The stash house's own random
++		// flights are off: gijoe_cartel_arc.rul.)
++		if (cr.on && route && save->isResearched(route, false))
++		{
++			AlienBase *stash = nullptr;
++			for (auto *ab : *save->getAlienBases()) if (ab->getSiteType() == "STR_CARTEL_STASH_HOUSE") stash = ab;
++			auto &net = save->getCobraNet();
++			const int day = save->getDaysPassed();
++			if (stash && !stash->isDiscovered())
++			{
++				if (!net.count("cartelRunDay")) net["cartelRunDay"] = day + 2;
++				bool flying = false;
++				for (auto *ufo : *save->getUfos()) flying = flying || ufo->getRules()->getType() == "STR_CARTEL_PLANE";
++				const RuleAlienMission *rule = _game->getMod()->getAlienMission("STR_CARTEL_FLIGHT");
++				if (!flying && rule && day >= net["cartelRunDay"] && save->getTime()->getHour() >= 12)
++				{
++					AlienMission *mission = new AlienMission(*rule);
++					mission->setRegion(save->locateRegion(*stash)->getRules()->getType(), *_game->getMod());
++					mission->setId(save->getId("ALIEN_MISSIONS"));
++					mission->setRace(stash->getAlienRace());
++					mission->setAlienBase(stash);
++					mission->setMissionSiteZoneArea(-1);
++					mission->start(*_game, *_globe);
++					save->getAlienMissions().push_back(mission);
++					net["cartelRunDay"] = day + 7;
++					Log(LOG_INFO) << "[cartel] scripted run launched; the next one on day " << net["cartelRunDay"];
++				}
++			}
++		}
 +		if (cr.on)
 +		{
 +			for (auto *ufo : *save->getUfos())
@@ -25852,6 +25882,8 @@ index 6b4e79d..db612af 100644
 +					known.push_back(ufo->getId());
 +					ufo->setDetected(true);
 +					save->addLeadNews(std::string("!") + std::string(tr("STR_CARTEL_FLIGHT_SPOTTED")));
++					// John 18 Nov "scripted": Scarlett's word that the flight is coming in tonight (STORY's text)
++					if (const RuleEvent *ev = _game->getMod()->getEvent("STR_EVENT_CARTEL_FLIGHT")) popup(new GeoscapeEventState(*ev));
 +				}
 +				const auto followers = ufo->getCraftFollowers();
 +				if (isBurned || followers.empty()) continue;
@@ -25962,7 +25994,7 @@ index 6b4e79d..db612af 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +2986,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +3018,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -26052,7 +26084,7 @@ index 6b4e79d..db612af 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +3231,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +3263,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -26061,7 +26093,7 @@ index 6b4e79d..db612af 100644
  			}
  			else
  			{
-@@ -2389,12 +3267,314 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3299,314 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
@@ -26376,7 +26408,7 @@ index 6b4e79d..db612af 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3624,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3656,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -26399,7 +26431,7 @@ index 6b4e79d..db612af 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2776,6 +3965,7 @@ void GeoscapeState::time1Day()
+@@ -2776,6 +3997,7 @@ void GeoscapeState::time1Day()
  					{
  						chanceToDetect = 50 - (distance * 50 / facility->getRules()->getSightRange()); // dynamic 0-50% based on relative distance
  					}
@@ -26407,7 +26439,7 @@ index 6b4e79d..db612af 100644
  					if (RNG::percent(chanceToDetect))
  					{
  						alienBase->setDiscovered(true);
-@@ -2861,7 +4051,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +4083,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -26436,7 +26468,7 @@ index 6b4e79d..db612af 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2894,7 +4105,9 @@ void GeoscapeState::time1Month()
+@@ -2894,7 +4137,9 @@ void GeoscapeState::time1Month()
  	{
  		for (auto* ab : *_game->getSavedGame()->getAlienBases())
  		{
@@ -26447,7 +26479,7 @@ index 6b4e79d..db612af 100644
  			{
  				ab->setDiscovered(true);
  				popup(new AlienBaseState(ab, this));
-@@ -2960,6 +4173,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +4205,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -26478,7 +26510,7 @@ index 6b4e79d..db612af 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4359,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4391,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -26488,7 +26520,7 @@ index 6b4e79d..db612af 100644
  }
  
  /**
-@@ -3265,6 +4503,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4535,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -26504,7 +26536,7 @@ index 6b4e79d..db612af 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4589,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4621,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -26557,7 +26589,7 @@ index 6b4e79d..db612af 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4657,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4689,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -26809,7 +26841,7 @@ index 6b4e79d..db612af 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +6185,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +6217,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
