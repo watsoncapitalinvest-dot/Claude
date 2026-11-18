@@ -5545,10 +5545,10 @@ index 0000000..542761d
 +}
 diff --git a/src/Battlescape/BattleSim.cpp b/src/Battlescape/BattleSim.cpp
 new file mode 100644
-index 0000000..57d9a98
+index 0000000..9754d22
 --- /dev/null
 +++ b/src/Battlescape/BattleSim.cpp
-@@ -0,0 +1,676 @@
+@@ -0,0 +1,687 @@
 +/*
 + * G.I. Joe BATTLE SIMULATOR - see BattleSim.h.
 + */
@@ -5602,6 +5602,8 @@ index 0000000..57d9a98
 +#include "../Geoscape/UfoDetectedState.h"
 +#include "../Basescape/ResearchState.h"
 +#include "../Interface/Text.h"
++#include "../Geoscape/LowFuelState.h"
++#include "../Savegame/Craft.h"
 +#include "../Savegame/Ufo.h"
 +#include "../Mod/RuleUfo.h"
 +#include "../Mod/RuleSoldier.h"
@@ -5885,8 +5887,15 @@ index 0000000..57d9a98
 +			save->getAvailableResearchProjects(avail, mod, base);
 +			if (avail.empty()) continue;
 +			// a player reads the clues first: anything that needs an item brought home, then the cheapest
-+			std::sort(avail.begin(), avail.end(), [](RuleResearch *a, RuleResearch *b) {
-+				if (a->needItem() != b->needItem()) return a->needItem();
++			// then the story's own steps (the cartel arc and the spine), then the cheapest
++			auto rank = [](RuleResearch *r) {
++				if (r->needItem()) return 2;
++				static const char *story[] = { "STR_CARTEL_", "STR_ROBBERY", "STR_GETAWAY", "STR_BORDER_BANK", "STR_SLOW_MONEY", "STR_FACTORY_",
++					"STR_INFORMANT", "STR_WHO_IS_COBRA", "STR_TRACE_", "STR_SPINE", "STR_LEAD_" };
++				for (const char *s : story) if (r->getName().rfind(s, 0) == 0) return 1;
++				return 0; };
++			std::sort(avail.begin(), avail.end(), [&rank](RuleResearch *a, RuleResearch *b) {
++				if (rank(a) != rank(b)) return rank(a) > rank(b);
 +				return a->getCost() < b->getCost(); });
 +			RuleResearch *r = avail.front();
 +			int cost = r->getCost() * RNG::generate(50, 150) / 100;
@@ -5951,7 +5960,8 @@ index 0000000..57d9a98
 +			c->setDestination(t);
 +			c->setStatus("STR_OUT");
 +			camp.sent[t] = c;
-+			tl(save, "SENT " + c->getRules()->getType() + " with " + std::to_string(c->getNumTotalSoldiers()) + " to " + targetName(t));
++			tl(save, "SENT " + c->getRules()->getType() + " with " + std::to_string(c->getNumTotalSoldiers()) + " to " + targetName(t)
++				+ " (fuel " + std::to_string(c->getFuel()) + "/" + std::to_string(c->getCraftStats().fuelMax) + ", " + std::to_string((int)(c->getDistance(t) * 3440)) + " nm, speed " + std::to_string(c->getCraftStats().speedMax) + ")");
 +		}
 +		// Scarlett's operations: a player sends a spy the day one opens (as the INTEL board offers it)
 +		for (const auto &op : game->getMod()->getSpyOperations())
@@ -6081,7 +6091,7 @@ index 0000000..57d9a98
 +		Base *base = save->getBases()->back();
 +		if (base->getMarker() == -1)
 +		{
-+			base->setLongitude(-105.0 * 3.14159265358979323846 / 180.0);
++			base->setLongitude(255.0 * 3.14159265358979323846 / 180.0);   // 105 W, written as the globe stores it (0-360)
 +			base->setLatitude(-39.0 * 3.14159265358979323846 / 180.0);
 +		}
 +		if (base->getName().empty()) base->setName("The Pit");
@@ -6111,6 +6121,7 @@ index 0000000..57d9a98
 +	}
 +	if (campaign() > 0)
 +	{
++		if (auto *lf = dynamic_cast<LowFuelState*>(top)) { (void)lf; static const State *lfSeen = nullptr; if (lfSeen != top && game->getSavedGame()) { lfSeen = top; tl(game->getSavedGame(), "LOW FUEL popup"); } }
 +		// department heads: the simulator leaves the posts as they are (a head picked at random would skew the run)
 +		if (auto *ah = dynamic_cast<AppointHeadState*>(top)) { if (held > 1200 && !presses) { presses = 1; note("department head: left as it is"); ah->btnCancelClick(nullptr); } return; }
 +		if (auto *ds = dynamic_cast<DepartmentsState*>(top)) { if (held > 1200 && !presses) { presses = 1; ds->btnOkClick(nullptr); } return; }
@@ -22824,10 +22835,10 @@ index 0000000..e57d835
 +}
 diff --git a/src/Geoscape/CobraNetwork.cpp b/src/Geoscape/CobraNetwork.cpp
 new file mode 100644
-index 0000000..b67a0e3
+index 0000000..f02d24f
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.cpp
-@@ -0,0 +1,874 @@
+@@ -0,0 +1,878 @@
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5. See CobraNetwork.h.
 + *
@@ -23473,8 +23484,12 @@ index 0000000..b67a0e3
 +				// John 18 Nov 02:45 "Shouldn't be seeing cobra so early": until Cobra Commander's broadcast (day 20-60) the
 +				// network's jobs are done by hired hands - only the cartel's own jobs run; nothing that fields Cobra men
 +				std::vector<std::string> list = isCell ? r.cellCrimes : r.frontCrimes;
++				// 18 Nov (BUILD-1's 60-day run): the hired hands' armored-car job turned up outside Billings on day 19, a second
++				// "armored car" robbery before the cartel arc's own one (its step 4, tipped off by the informant, on US-90) and
++				// far from the cartel's border. So before the broadcast the network does no jobs at all; the opening belongs to
++				// the cartel arc. Cobra's jobs start the day after the broadcast.
 +				if (!net.count("broadcastDone"))
-+					list.erase(std::remove_if(list.begin(), list.end(), [](const std::string &d) { return d.rfind("STR_COBRA_", 0) == 0; }), list.end());
++					list.clear();
 +				if (!list.empty())
 +				{
 +					const std::string dep = list[RNG::generate(0, (int)list.size() - 1)];
@@ -29325,10 +29340,10 @@ index 0000000..3886f85
 +}
 diff --git a/src/Geoscape/Shipping.cpp b/src/Geoscape/Shipping.cpp
 new file mode 100644
-index 0000000..bdf2734
+index 0000000..1ef4a1c
 --- /dev/null
 +++ b/src/Geoscape/Shipping.cpp
-@@ -0,0 +1,483 @@
+@@ -0,0 +1,484 @@
 +/*
 + * G.I. Joe: civilian shipping on the world map. See Shipping.h.
 + */
@@ -29619,7 +29634,8 @@ index 0000000..bdf2734
 +		held = nullptr;
 +	}
 +	// a new one: one at a time, about one every hijackEveryDays, paid for by Cobra (12g, 12h)
-+	else if (!held && save->getHijackFlag().empty() && SH.hijackEveryDays > 0 && RNG::generate(0, SH.hijackEveryDays * 24 - 1) == 0
++	// 18 Nov: no hijacking before Cobra Commander's broadcast - the MAYDAY says "Cobra has her" (BUILD-1's 60-day run had one on day 21)
++	else if (!held && save->getCobraNet().count("broadcastDone") && save->getHijackFlag().empty() && SH.hijackEveryDays > 0 && RNG::generate(0, SH.hijackEveryDays * 24 - 1) == 0
 +		&& save->getCobraEconomy().getTotalFunds() - SH.hijackCost >= upkeep(game))
 +	{
 +		std::vector<Ufo*> pick, flagged;
@@ -30251,11 +30267,45 @@ index f707e1b..3d57332 100644
  	/// Adds a new row to the text list.
  	void addRow(int cols, ...);
  	/// Removes the last row from the text list.
+diff --git a/src/Interface/Window.cpp b/src/Interface/Window.cpp
+index 200141f..cd62760 100644
+--- a/src/Interface/Window.cpp
++++ b/src/Interface/Window.cpp
+@@ -19,6 +19,7 @@
+ #include "Window.h"
+ #include <SDL.h>
+ #include <SDL_mixer.h>
++#include <algorithm>
+ #include "../fmath.h"
+ #include "../Engine/Timer.h"
+ #include "../Engine/Sound.h"
+@@ -138,9 +139,12 @@ void Window::popup()
+ 			soundPopup[sound]->play(Mix_GroupAvailable(0));
+ 		}
+ 	}
++	// G.I. Joe (18 Nov): the grow runs on the clock, not on frames. It took 20 frames, so on a slow world map
++	// (10-15 fps) every popup sat for one to two seconds as a bare picture before its words and buttons came in.
++	if (AreSame(_popupStep, 0.0)) _popupStart = SDL_GetTicks();
+ 	if (_popupStep < 1.0)
+ 	{
+-		_popupStep += POPUP_SPEED;
++		_popupStep = std::max(_popupStep + POPUP_SPEED, std::min(1.0, (SDL_GetTicks() - _popupStart) / 180.0));
+ 	}
+ 	else
+ 	{
 diff --git a/src/Interface/Window.h b/src/Interface/Window.h
-index d5e599e..8b44e52 100644
+index d5e599e..f14b354 100644
 --- a/src/Interface/Window.h
 +++ b/src/Interface/Window.h
-@@ -63,6 +63,11 @@ public:
+@@ -46,6 +46,7 @@ private:
+ 	Uint8 _color;
+ 	WindowPopup _popup;
+ 	double _popupStep;
++	Uint32 _popupStart = 0;   // G.I. Joe: the grow is timed (Window::popup)
+ 	Timer *_timer;
+ 	State *_state;
+ 	bool _contrast, _screen, _thinBorder;
+@@ -63,6 +64,11 @@ public:
  	void setColor(Uint8 color) override;
  	/// Gets the border color.
  	Uint8 getColor() const;
