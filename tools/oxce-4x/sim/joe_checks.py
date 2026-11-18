@@ -185,6 +185,32 @@ def c_no_cobra_early(r):
     return PASS, 'broadcast day %d; first Cobra job %s' % (b[0], ('day %d' % cobra[0]) if cobra else 'not yet')
 
 
+def c_first_job(r):
+    if not r.markers: return NOTREACHED, 'an older game: it does not log the broadcast'
+    b = r.first(r'^BROADCAST')
+    if not b: return NOTREACHED, 'no broadcast in this run'
+    job = [x for x in r.all(r'MISSION appears: STR_COBRA_') if x[0] >= b[0]]
+    if job and job[0][0] - b[0] <= 5: return PASS, 'broadcast day %d, first Cobra job day %d: %s' % (b[0], job[0][0], job[0][1].split(': ', 1)[1])
+    if job: return FAIL, 'broadcast day %d but the first Cobra job waited until day %d' % (b[0], job[0][0])
+    if r.last_day - b[0] <= 5: return NOTREACHED, 'run ended %d day(s) after the broadcast' % (r.last_day - b[0])
+    return FAIL, 'broadcast day %d and no Cobra job by day %d' % (b[0], r.last_day)
+
+
+def c_trace(r):
+    if not r.markers: return NOTREACHED, 'an older game: it does not log the broadcast'
+    b = r.first(r'^BROADCAST')
+    if not b: return NOTREACHED, 'no broadcast in this run'
+    rec = r.first(r'RESEARCHED STR_BROADCAST_RECORDING')
+    cell = [x for x in r.all(r'COBRA SITE found: STR_COBRA_CELL') if x[0] >= b[0]]
+    if cell: return PASS, 'broadcast day %d, recording read day %s, cell found day %d' % (b[0], rec[0] if rec else '?', cell[0][0])
+    if rec: return (NOTREACHED, 'recording read day %d; run ended before the cell' % rec[0]) if r.last_day - rec[0] <= 3 else \
+                   (FAIL, 'recording read day %d, no cell found by day %d' % (rec[0], r.last_day))
+    started = r.first(r'RESEARCH starts STR_BROADCAST_RECORDING')
+    if started: return NOTREACHED, 'recording under research from day %d when the run ended' % started[0]
+    if r.last_day - b[0] <= 10: return NOTREACHED, 'run ended %d day(s) after the broadcast' % (r.last_day - b[0])
+    return FAIL, 'broadcast day %d; the recording was never researched (locked?)' % b[0]
+
+
 def c_debrief_title(r):
     deb = [s for s in r.screens if s[2] == 'DebriefingState']
     if not deb: return NOTREACHED, 'no debrief screens'
@@ -249,6 +275,8 @@ CHECKS = [
     ('stashraid',  'The stash house gets raided', c_stash_raid),
     ('tip',        "Scarlett's tip brings the robbery within days", c_tip),
     ('broadcast',  'No Cobra jobs or Cobra sites before the broadcast', c_no_cobra_early),
+    ('firstjob',   "Cobra's first job comes within days of the broadcast", c_first_job),
+    ('trace',      'The broadcast recording gets researched and finds a Cobra cell', c_trace),
     ('dromes',     'Debriefs never say "Terror Drome" for a Cobra site', c_debrief_title),
     ('cartel',     'Cartel debriefs say cartel, not Cobra', c_cartel_words),
     ('board',      'The Intel board never repeats a line', c_intel_dupes),

@@ -22926,10 +22926,10 @@ index 0000000..e57d835
 +}
 diff --git a/src/Geoscape/CobraNetwork.cpp b/src/Geoscape/CobraNetwork.cpp
 new file mode 100644
-index 0000000..d391806
+index 0000000..0f1d6e3
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.cpp
-@@ -0,0 +1,881 @@
+@@ -0,0 +1,920 @@
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5. See CobraNetwork.h.
 + *
@@ -23426,6 +23426,7 @@ index 0000000..d391806
 +	if (!net.count("broadcastDone") && day >= net["broadcastDay"])
 +	{
 +		net["broadcastDone"] = day;
++		net["firstJobDay"] = day + RNG::generate(2, 4);   // Cobra's first job follows the broadcast within days (below)
 +		if (const RuleEvent *ev = mod->getEvent("STR_EVENT_COBRA_BROADCAST")) save->spawnEvent(ev);
 +		Log(LOG_INFO) << "[network] Cobra Commander's broadcast, day " << day;
 +	}
@@ -23587,7 +23588,10 @@ index 0000000..d391806
 +					auto a = r.crimeAlerts.find(dep);
 +					const std::string alert = "STR_ALERT_" + (a != r.crimeAlerts.end() ? a->second : std::string("VAN_STOP"));
 +					if (spawnSite(game, "STR_COBRA_CRIME_MISSION", dep, b, "crime|" + key, alert, townOf(save, b, ts), ""))
++					{
 +						net["cool:" + key] = day + 30;
++						net["firstJobDone"] = day;
++					}
 +				}
 +			}
 +		}
@@ -23604,6 +23608,41 @@ index 0000000..d391806
 +				const std::string dep = "STR_COBRA_CELL_STRIKE_" + map + "_" + std::to_string(tier);
 +				if (spawnSite(game, "STR_COBRA_CELL_STRIKE_MISSION", dep, b, "strike|" + key, "STR_ALERT_CELL_STRIKE", townOf(save, b, ts), target))
 +					net["scool:" + key] = day + 30;
++			}
++		}
++	}
++	// The broadcast's follow-through (BUILD-1 18 Nov, John "1"): at 25% a site a month Cobra's first job came on average three
++	// to four weeks after the broadcast (day 44 -> day 59 in the 60-day run), so the broadcast landed on nothing. Now one job
++	// is pulled 2-4 days after it, from a front company if one is awake, else a cell; the daily rolls carry on after.
++	if (net.count("broadcastDone") && !net.count("firstJobDone") && net.count("firstJobDay") && day >= net["firstJobDay"])
++	{
++		AlienBase *from = nullptr;
++		for (int pass = 0; pass < 2 && !from; ++pass)
++			for (auto *b : launchers)
++			{
++				const bool isCell = b->getSiteType() == CELL;
++				if ((pass == 0) == isCell) continue;   // fronts first
++				if (isCell && net.count("sleeper:" + siteKey(b))) continue;
++				from = b; break;
++			}
++		net["firstJobDone"] = day;   // once, whether or not a site could send it
++		if (from)
++		{
++			const std::string key = siteKey(from);
++			// the first one reads as Cobra's: not a second armored-car robbery straight after the cartel's own
++			std::vector<std::string> list;
++			for (const auto &c : from->getSiteType() == CELL ? r.cellCrimes : r.frontCrimes)
++				if (c != "STR_ARMORED_CAR_AMBUSH") list.push_back(c);
++			if (!list.empty())
++			{
++				const std::string dep = list[RNG::generate(0, (int)list.size() - 1)];
++				auto a = r.crimeAlerts.find(dep);
++				const std::string alert = "STR_ALERT_" + (a != r.crimeAlerts.end() ? a->second : std::string("VAN_STOP"));
++				if (spawnSite(game, "STR_COBRA_CRIME_MISSION", dep, from, "crime|" + key, alert, townOf(save, from, ts), ""))
++				{
++					net["cool:" + key] = day + 30;
++					Log(LOG_INFO) << "[network] Cobra's first job after the broadcast, day " << day << ": " << dep;
++				}
 +			}
 +		}
 +	}
