@@ -5545,10 +5545,10 @@ index 0000000..542761d
 +}
 diff --git a/src/Battlescape/BattleSim.cpp b/src/Battlescape/BattleSim.cpp
 new file mode 100644
-index 0000000..38d939e
+index 0000000..32e2815
 --- /dev/null
 +++ b/src/Battlescape/BattleSim.cpp
-@@ -0,0 +1,720 @@
+@@ -0,0 +1,723 @@
 +/*
 + * G.I. Joe BATTLE SIMULATOR - see BattleSim.h.
 + */
@@ -5606,6 +5606,7 @@ index 0000000..38d939e
 +#include "../Savegame/Craft.h"
 +#include "../Savegame/Ufo.h"
 +#include "../Mod/RuleUfo.h"
++#include "../Mod/UfoTrajectory.h"
 +#include "../Mod/RuleSoldier.h"
 +#include "../Interface/TextButton.h"
 +#include <typeinfo>
@@ -6014,6 +6015,8 @@ index 0000000..38d939e
 +		for (auto *ufo : *save->getUfos())
 +		{
 +			if (ufo->getRules()->getType() != "STR_CARTEL_PLANE" || !ufo->getDetected() || ufo->getStatus() != Ufo::FLYING || !ufo->getCraftFollowers().empty()) continue;
++			// a player who has read the flight route waits for the run home (the radar can show it going out, to Mexico)
++			if (ufo->getTrajectoryPoint() + 1 < ufo->getTrajectory().getWaypointCount()) continue;
 +			static std::set<int> logged;
 +			Craft *tail = nullptr;
 +			for (auto *base : *save->getBases())
@@ -24807,7 +24810,7 @@ index e609d3c..fad706b 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..e5e888b 100644
+index 6b4e79d..db612af 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,15 @@
@@ -25808,7 +25811,7 @@ index 6b4e79d..e5e888b 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2796,145 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2796,150 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -25838,7 +25841,12 @@ index 6b4e79d..e5e888b 100644
 +				const bool isBurned = std::find(burned.begin(), burned.end(), ufo->getId()) != burned.end();
 +				// 18 Nov: it goes on the board for its run HOME (the last leg, loaded, to the stash house). On the way out to Mexico
 +				// the Day 1 A.P.C. chased it a thousand miles south and ran out of fuel; the intel is about the night it comes in.
-+				const bool homeward = ufo->getTrajectoryPoint() + 1 >= ufo->getTrajectory().getWaypointCount();
++				bool homeward = ufo->getTrajectoryPoint() + 1 >= ufo->getTrajectory().getWaypointCount();
++				// ...and only once it is within about 600 nm of the stash house: picked up at the start of the leg, off Yucatan,
++				// the A.P.C. drove 1,264 nm to meet it and ran low before it got home (18 Nov)
++				if (homeward)
++					for (auto *ab : *save->getAlienBases())
++						if (ab->getSiteType() == "STR_CARTEL_STASH_HOUSE" && ab->getDistance(ufo) > 0.175) homeward = false;
 +				if (!isBurned && homeward && route && save->isResearched(route, false) && std::find(known.begin(), known.end(), ufo->getId()) == known.end())
 +				{
 +					known.push_back(ufo->getId());
@@ -25954,7 +25962,7 @@ index 6b4e79d..e5e888b 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +2981,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +2986,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -26044,7 +26052,7 @@ index 6b4e79d..e5e888b 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +3226,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +3231,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -26053,7 +26061,7 @@ index 6b4e79d..e5e888b 100644
  			}
  			else
  			{
-@@ -2389,12 +3262,314 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3267,314 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
@@ -26368,7 +26376,7 @@ index 6b4e79d..e5e888b 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3619,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3624,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -26391,7 +26399,7 @@ index 6b4e79d..e5e888b 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2776,6 +3960,7 @@ void GeoscapeState::time1Day()
+@@ -2776,6 +3965,7 @@ void GeoscapeState::time1Day()
  					{
  						chanceToDetect = 50 - (distance * 50 / facility->getRules()->getSightRange()); // dynamic 0-50% based on relative distance
  					}
@@ -26399,7 +26407,7 @@ index 6b4e79d..e5e888b 100644
  					if (RNG::percent(chanceToDetect))
  					{
  						alienBase->setDiscovered(true);
-@@ -2861,7 +4046,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +4051,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -26428,7 +26436,7 @@ index 6b4e79d..e5e888b 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2894,7 +4100,9 @@ void GeoscapeState::time1Month()
+@@ -2894,7 +4105,9 @@ void GeoscapeState::time1Month()
  	{
  		for (auto* ab : *_game->getSavedGame()->getAlienBases())
  		{
@@ -26439,7 +26447,7 @@ index 6b4e79d..e5e888b 100644
  			{
  				ab->setDiscovered(true);
  				popup(new AlienBaseState(ab, this));
-@@ -2960,6 +4168,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +4173,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -26470,7 +26478,7 @@ index 6b4e79d..e5e888b 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4354,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4359,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -26480,7 +26488,7 @@ index 6b4e79d..e5e888b 100644
  }
  
  /**
-@@ -3265,6 +4498,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4503,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -26496,7 +26504,7 @@ index 6b4e79d..e5e888b 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4584,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4589,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -26549,7 +26557,7 @@ index 6b4e79d..e5e888b 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4652,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4657,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -26801,7 +26809,7 @@ index 6b4e79d..e5e888b 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +6180,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +6185,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
