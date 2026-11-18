@@ -1,9 +1,10 @@
 # Firing clip for John: a turret missile vehicle (hull + turret layers as the game draws them), the hull still and the turret turning
-# to aim (headings list: first = hull), every tube firing in turn (pods alternate), each one leaving the turret (turret store states), the package's own full-size missile flying from each tube's nose with the launch smoke at its tail.
+# to aim (headings list: first = hull), every tube firing in turn (pods alternate), each one leaving the turret (turret store states), the pod's face in front of it until clear (clip_mask.py), the package's own full-size missile flying from each tube's nose with the launch smoke at its tail.
 # Tube noses: model points projected with the battle camera (30 deg, ppu 90.51 x scale), offset from the turret's 'rack' muzzle.
 # usage: python3 fire_clip.py pkg_dir scale "x,y,z;x,y,z;..." out.gif [headings]
 import sys, json, math
 from PIL import Image, ImageDraw, ImageChops
+sys.path.insert(0, __import__('os').path.dirname(__file__)); from clip_mask import occluder, draw as mdraw
 P, SC, TUBES, OUT = sys.argv[1:5]; HDS = (sys.argv[5] if len(sys.argv) > 5 else 'NE,E,SE').split(',')
 SC = float(SC); K = 90.50966799187809 * SC
 T = [tuple(map(float, t.split(','))) for t in TUBES.split(';')]
@@ -48,27 +49,19 @@ for si, hd in enumerate(HDS):
     mz = tr0['muzzles']['rack']['xy']; m0 = (tpx + mz[0], tpy + mz[1]); s0 = scr(T[0], hd)
     noses = [(m0[0] + scr(t, hd)[0] - s0[0], m0[1] + scr(t, hd)[1] - s0[1]) for t in T]
     live = []; burst = list(range(fired, min(len(T), fired + per)))
+    def veh(k):                                                      # hull + turret with k missiles gone, alone on a clip canvas
+        v = Image.new('RGBA', (W, H), (0, 0, 0, 0)); v.alpha_composite(body, (ox - AX, oy - AY)); v.alpha_composite(turret_img(hd, k)[0], (tpx, tpy)); return v
     for n in range(len(burst) * 3 + 20):
-        if n % 3 == 0 and n // 3 < len(burst): k = burst[n // 3]; live.append([noses[k][0], noses[k][1], 0, False]); fired = k + 1
-        tur, _ = turret_img(hd, fired)
-        c = ground(); c.alpha_composite(body, (ox - AX, oy - AY))
-        under, over = [], []                                         # a missile still inside the pods is drawn under the turret,
-        for s in live:                                               # and over it once it has flown clear (John 20:21)
-            x, y, age, clear = s; px, py = int(x - nx), int(y - ny)
-            if not clear:
-                lay = Image.new('L', (W, H), 0); lay.paste(ms.getchannel('A'), (px, py))
-                tl = Image.new('L', (W, H), 0); tl.paste(tur.getchannel('A'), (tpx, tpy))
-                ov = sum(ImageChops.multiply(lay, tl).point(lambda v: 255 if v > 64 else 0).histogram()[255:])
-                s[3] = clear = ov < 0.03 * sum(lay.point(lambda v: 255 if v > 64 else 0).histogram()[255:])
-            (over if clear else under).append(s)
-        def draw(group):
-            for s in group:
-                x, y, age = s[0], s[1], s[2]; sx, sy = x - (nx - tx), y - (ny - ty)   # the tail, where the launch smoke sits
-                if age < len(fxs):
-                    g = Image.open(f'{P}/{fxs[age]["file"]}').convert('RGBA'); ga = fxs[age]['anchor']; c.alpha_composite(g, (int(sx - ga[0]), int(sy - ga[1])))
-                px, py = int(x - nx), int(y - ny)
-                if -100 < px < W and -100 < py < H: c.alpha_composite(ms, (px, py))
-        draw(under); c.alpha_composite(tur, (tpx, tpy)); draw(over)
+        if n % 3 == 0 and n // 3 < len(burst):                       # launch: the pod's face stays in front of it until clear (clip_mask.py)
+            k = burst[n // 3]; x0, y0 = noses[k]
+            live.append([x0, y0, 0, occluder(veh(k), veh(k + 1), ms, (int(x0 - nx), int(y0 - ny)))]); fired = k + 1
+        cur = veh(fired); c = ground(); c.alpha_composite(cur)
+        for s in live:
+            x, y, age, mask = s; sx, sy = x - (nx - tx), y - (ny - ty)   # the tail, where the launch smoke sits
+            if age < len(fxs):
+                g = Image.open(f'{P}/{fxs[age]["file"]}').convert('RGBA'); ga = fxs[age]['anchor']; c.alpha_composite(g, (int(sx - ga[0]), int(sy - ga[1])))
+            px, py = int(x - nx), int(y - ny)
+            if -100 < px < W and -100 < py < H: mdraw(c, ms, (px, py), mask, cur)
         for s in live: s[0] += dx * 24; s[1] += dy * 24; s[2] += 1
         frames.append(c.convert('RGB').resize((W * 3 // 4, H * 3 // 4), Image.LANCZOS))
 frames[0].save(OUT, save_all=True, append_images=frames[1:], duration=70, loop=0)
