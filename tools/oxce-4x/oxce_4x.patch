@@ -5888,7 +5888,7 @@ index 0000000..6892937
 +}
 +}
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..f796f6d 100644
+index b7e1111..4f5f92b 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
 @@ -16,8 +16,16 @@
@@ -5929,7 +5929,7 @@ index b7e1111..f796f6d 100644
  	}
  	else
  	{
-@@ -224,8 +239,10 @@ int BattlescapeGame::think()
+@@ -224,11 +239,16 @@ int BattlescapeGame::think()
  			_save->setUnitsFalling(false);
  			return ret;
  		}
@@ -5942,7 +5942,13 @@ index b7e1111..f796f6d 100644
  		{
  			auto sideBackup = _save->getSide();
  			_save->resetUnitHitStates();
-@@ -336,6 +353,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
++			// G.I. Joe (Tier 1): with nothing on screen to watch, the AI takes its next decision on the next tick, not 100 ms later
++			if (sideBackup != FACTION_PLAYER && _save->getSelectedUnit() && !_save->getSelectedUnit()->getVisible() && !_save->getDebugMode())
++				setStateInterval(1);
+ 			if (!_debugPlay)
+ 			{
+ 				if (_save->getSelectedUnit())
+@@ -336,6 +356,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
  		return;
  	}
  
@@ -5950,7 +5956,7 @@ index b7e1111..f796f6d 100644
  	unit->setVisible(false); //Possible TODO: check number of player unit observers, then hide the unit if no one can see it. Should then be able to skip the next FOV call.
  
  	_save->getTileEngine()->calculateFOV(unit->getPosition(), 1, false); // might need this populate _visibleUnit for a newly-created alien.
-@@ -350,6 +368,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
+@@ -350,6 +371,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
  		unit->setAIModule(new AIModule(_save, unit, 0));
  		ai = unit->getAIModule();
  	}
@@ -5958,7 +5964,7 @@ index b7e1111..f796f6d 100644
  	_AIActionCounter++;
  	if (_AIActionCounter == 1)
  	{
-@@ -421,6 +440,12 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
+@@ -421,6 +443,12 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
  		}
  	}
  
@@ -5971,7 +5977,7 @@ index b7e1111..f796f6d 100644
  	if (action.type == BA_SNAPSHOT || action.type == BA_AUTOSHOT || action.type == BA_AIMEDSHOT || action.type == BA_THROW || action.type == BA_HIT || action.type == BA_MINDCONTROL || action.type == BA_USE || action.type == BA_PANIC || action.type == BA_LAUNCH)
  	{
  		ss.clear();
-@@ -508,8 +533,271 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
+@@ -508,8 +536,271 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
  /**
   * Ends the turn.
   */
@@ -6243,7 +6249,7 @@ index b7e1111..f796f6d 100644
  	_debugPlay = _save->getDebugMode() && _parentState->getGame()->isCtrlPressed() && (_save->getSide() != FACTION_NEUTRAL);
  	_currentAction.type = BA_NONE;
  	_currentAction.skillRules = nullptr;
-@@ -620,6 +908,7 @@ void BattlescapeGame::endTurn()
+@@ -620,6 +911,7 @@ void BattlescapeGame::endTurn()
  
  
  		_save->endTurn();
@@ -6251,7 +6257,7 @@ index b7e1111..f796f6d 100644
  		t = _save->getTileEngine()->checkForTerrainExplosions();
  		if (t)
  		{
-@@ -678,7 +967,9 @@ void BattlescapeGame::endTurn()
+@@ -678,7 +970,9 @@ void BattlescapeGame::endTurn()
  		}
  	}
  
@@ -6262,7 +6268,7 @@ index b7e1111..f796f6d 100644
  	{
  		showInfoBoxQueue();
  
-@@ -695,7 +986,7 @@ void BattlescapeGame::endTurn()
+@@ -695,7 +989,7 @@ void BattlescapeGame::endTurn()
  	// objective type MUST_DESTROY was already handled above
  	bool killingAllAliensIsNotEnough = (_save->getVIPSurvivalPercentage() > 0 && _save->getVIPEscapeType() != ESCAPE_NONE);
  
@@ -6271,7 +6277,7 @@ index b7e1111..f796f6d 100644
  
  	if ((_save->getSide() != FACTION_NEUTRAL || battleComplete)
  		&& _endTurnRequested)
-@@ -1915,6 +2206,13 @@ void BattlescapeGame::primaryAction(Position pos)
+@@ -1915,6 +2209,13 @@ void BattlescapeGame::primaryAction(Position pos)
  		}
  		else
  		{
@@ -6285,7 +6291,7 @@ index b7e1111..f796f6d 100644
  			_currentAction.target = pos;
  			getMap()->setCursorType(CT_NONE);
  
-@@ -1985,6 +2283,14 @@ void BattlescapeGame::primaryAction(Position pos)
+@@ -1985,6 +2286,14 @@ void BattlescapeGame::primaryAction(Position pos)
  			{
  				_currentAction.sneak = _save->getSelectedUnit()->getArmor()->allowsSneaking(_save->getSelectedUnit()->isSmallUnit());
  			}
@@ -6300,7 +6306,7 @@ index b7e1111..f796f6d 100644
  
  			// recalculate path after setting new move types
  			if (BAM_NORMAL != _currentAction.getMoveType())
-@@ -3141,6 +3447,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
+@@ -3141,6 +3450,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
  	{
  		return 0;
  	}
@@ -6312,7 +6318,7 @@ index b7e1111..f796f6d 100644
  
  	// death trap?
  	Tile* deathTrapTile = nullptr;
-@@ -3209,10 +3520,12 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
+@@ -3209,10 +3523,12 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
  				{
  					const RuleItem *ruleItem = item->getRules();
  					bool g = item->getGlow();
@@ -6325,7 +6331,7 @@ index b7e1111..f796f6d 100644
  							Position p = t->getPosition().toVoxel() + Position(8, 8, t->getTerrainLevel());
  							statePushNext(new ExplosionBState(this, p, BattleActionAttack::GetBeforeShoot(BA_TRIGGER_PROXY_GRENADE, nullptr, item)));
  							exploded = true;
-@@ -3346,12 +3659,35 @@ std::list<BattleState*> BattlescapeGame::getStates()
+@@ -3346,12 +3662,35 @@ std::list<BattleState*> BattlescapeGame::getStates()
   * Ends the turn if auto-end battle is enabled
   * and all mission objectives are completed.
   */
@@ -12995,7 +13001,7 @@ index 0000000..ef5e326
 +
 +}
 diff --git a/src/Battlescape/TileEngine.cpp b/src/Battlescape/TileEngine.cpp
-index 6e68469..5f6b9a1 100644
+index 6e68469..7f739d1 100644
 --- a/src/Battlescape/TileEngine.cpp
 +++ b/src/Battlescape/TileEngine.cpp
 @@ -16,9 +16,13 @@
@@ -13268,7 +13274,23 @@ index 6e68469..5f6b9a1 100644
  		{
  			if (tiles[i]->getMapData(O_FLOOR) || tiles[i]->getMapData(O_OBJECT))
  			{
-@@ -5156,6 +5309,188 @@ Tile *TileEngine::applyGravity(Tile *t)
+@@ -4614,7 +4767,14 @@ VoxelType TileEngine::voxelCheck(Position voxel, BattleUnit *excludeUnit, bool e
+ 				{
+ 					tilepos = tile->getPosition();
+ 					const static int parts[] = {1,0,3,2}; // Change order 0,1,2,3 -> 1,0,3,2  (read commit description)
+-					part = parts[tilepos.x - unitpos.x + (tilepos.y - unitpos.y)*2];
++					// G.I. Joe (BUILD-1, 18 Nov): the stock table only knows 2x2 units; a 3x3 or bigger
++					// vehicle read past it and crashed ("invalid vector subscript", John 01:01).
++					const int usz = unit->getArmor()->getSize();
++					const int dx = tilepos.x - unitpos.x, dy = tilepos.y - unitpos.y;
++					if (usz == 2 && dx >= 0 && dx < 2 && dy >= 0 && dy < 2)
++						part = parts[dx + dy*2];
++					else if (dx >= 0 && dx < usz && dy >= 0 && dy < usz)
++						part = dx + dy*usz;
+ 				}
+ 				int idx = (unit->getLoftemps(part) * 16) + y;
+ 				if (_voxelData->at(idx) & (1 << x))
+@@ -5156,6 +5316,188 @@ Tile *TileEngine::applyGravity(Tile *t)
  	return rt;
  }
  
@@ -13457,7 +13479,7 @@ index 6e68469..5f6b9a1 100644
  /**
   * Drop item on ground.
   */
-@@ -5837,6 +6172,31 @@ Position TileEngine::getOriginVoxel(BattleAction &action, Tile *tile)
+@@ -5837,6 +6179,31 @@ Position TileEngine::getOriginVoxel(BattleAction &action, Tile *tile)
  	Tile *tileAbove = _save->getTile(origin + Position(0,0,1));
  	Position originVoxel = Position(origin.x*16, origin.y*16, origin.z*24);
  
@@ -13939,7 +13961,7 @@ index 599d9a2..bf0a51d 100644
  	void sortRifles();
  	/// Get graphic for unit part.
 diff --git a/src/Battlescape/UnitTurnBState.cpp b/src/Battlescape/UnitTurnBState.cpp
-index 31f9454..2d5aede 100644
+index 31f9454..0f3b5c8 100644
 --- a/src/Battlescape/UnitTurnBState.cpp
 +++ b/src/Battlescape/UnitTurnBState.cpp
 @@ -18,6 +18,7 @@
@@ -13950,7 +13972,13 @@ index 31f9454..2d5aede 100644
  #include "TileEngine.h"
  #include "Map.h"
  #include "../Savegame/BattleUnit.h"
-@@ -66,6 +67,8 @@ void UnitTurnBState::init()
+@@ -63,9 +64,14 @@ void UnitTurnBState::init()
+ 		_parent->setStateInterval(Options::battleXcomSpeed);
+ 	else
+ 		_parent->setStateInterval(Options::battleAlienSpeed);
++	// G.I. Joe (John 17 Nov 23:24, Tier 1): a Cobra man nobody can see turns at once - the Cobra screen hides it anyway
++	if (_unit->getFaction() != FACTION_PLAYER && !_unit->getVisible() && !_parent->getSave()->getDebugMode())
++		_parent->setStateInterval(1);
  
  	// if the unit has a turret and we are turning during targeting, then only the turret turns
  	_turret = _unit->getTurretType() != -1 && (_action.targeting || _action.strafe);
@@ -13959,7 +13987,7 @@ index 31f9454..2d5aede 100644
  
  	_unit->lookAt(_action.target, _turret);
  
-@@ -75,6 +78,7 @@ void UnitTurnBState::init()
+@@ -75,6 +81,7 @@ void UnitTurnBState::init()
  		{
  			// try to open a door
  			int door = _parent->getTileEngine()->unitOpensDoor(_unit, true);
@@ -13967,7 +13995,7 @@ index 31f9454..2d5aede 100644
  			if (door == 0)
  			{
  				_parent->getMod()->getSoundByDepth(_parent->getDepth(), Mod::DOOR_OPEN)->play(-1, _parent->getMap()->getSoundAngle(_unit->getPosition())); // normal door
-@@ -97,7 +101,8 @@ void UnitTurnBState::init()
+@@ -97,7 +104,8 @@ void UnitTurnBState::init()
   */
  void UnitTurnBState::think()
  {
@@ -33607,7 +33635,7 @@ index 0bd7220..e0bbc9e 100644
  	const RuleBaseFacility *getRules() const;
  	/// Gets the facility's X position.
 diff --git a/src/Savegame/BattleUnit.cpp b/src/Savegame/BattleUnit.cpp
-index 46fbf1f..6002104 100644
+index 46fbf1f..98b2fbd 100644
 --- a/src/Savegame/BattleUnit.cpp
 +++ b/src/Savegame/BattleUnit.cpp
 @@ -17,6 +17,8 @@
@@ -33934,7 +33962,19 @@ index 46fbf1f..6002104 100644
  
  	{
  		ModScript::ReturnFromMissionUnit::Output arg { };
-@@ -4587,7 +4739,7 @@ int BattleUnit::getIntelligence() const
+@@ -4501,7 +4653,10 @@ int BattleUnit::getFloatHeight() const
+   */
+ int BattleUnit::getLoftemps(int entry) const
+ {
+-	return _loftempsSet.at(entry);
++	// G.I. Joe (BUILD-1): a short loftempsSet on a big unit must not end the game.
++	if (_loftempsSet.empty()) return 0;
++	if (entry < 0 || entry >= (int)_loftempsSet.size()) entry = 0;
++	return _loftempsSet[entry];
+ }
+ 
+ /**
+@@ -4587,7 +4742,7 @@ int BattleUnit::getIntelligence() const
   */
  int BattleUnit::getAggression() const
  {
