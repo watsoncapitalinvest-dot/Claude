@@ -11,7 +11,7 @@ def base(name, scale, foot, fp, blend, states, muzzles, faction, readme):
 R = 'SIZE-CLASS RE-RENDER (VFACTORY, 17 Nov 2026) from ROSTER\'s source blend (Reference\\vehicle_blends). PRIVATE GAME ASSETS.\n'
 cf = {}
 # VAMP gun fit: 2x3, was 0.052 in 2x2 -> x2.114
-c = base('vamp', round(0.052 * 2.114, 5), 3, [2, 3], 'vamp', {'m0': ['GJTURRET']}, {'muzzle': [2.111, 0.429, 10.539, 1, 0, 0]}, 'Joe',
+c = base('vamp', round(0.052 * 2.114, 5), 3, [2, 3], 'vamp_v2', {'m0': ['GJTURRET']}, {'muzzle': [2.111, 0.429, 10.539, 1, 0, 0]}, 'Joe',
          R + 'V.A.M.P. gun fit, class 2x3 (installed as size 3 until rectangles). Scale 0.10993 = 0.052 x 2.114 (95% long / 56% short).\n')
 c['turret'] = {'objs': ['GJTURRET'], 'pivot': [-5.579, 0.429, 9.191], 'muzzles': {'mg': [2.111, 0.429, 10.539, 1, 0, 0]}, 'note': 'twin MG head turns on its own'}
 c['preview']['script'] = [['move', 'NE', 2], ['gun', ['mg']], ['tturn', 'SE'], ['gun', ['mg']], ['tturn', 'NE'], ['wait', 6]]
