@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Puzzle Prototype</title>
+<style>
+:root{--bg:#0f1317;--panel:#141a20;--line:#2b3742;--ink:#e8ecef;--mute:#93a1ad;--gold:#d8b45a;--green:#5fb06a;--red:#d0453a;--blue:#4b8ed8;--olive:#8a9a5b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,Segoe UI,Arial,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);background:#11171c}
+header h1{font-size:15px;margin:0;letter-spacing:.08em;color:var(--gold)}header label{color:var(--mute);font-size:12px}
+select,input,button{font:inherit;color:var(--ink);background:#1b232b;border:1px solid var(--line);border-radius:5px;padding:5px 8px}
+button{cursor:pointer}button:hover{border-color:var(--olive)}button.go{background:#26301f;border-color:var(--olive)}button:disabled{opacity:.4;cursor:default}
+.wrap{display:grid;grid-template-columns:200px 1fr 260px;gap:12px;padding:12px;min-height:calc(100vh - 54px)}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}}
+nav,main,aside{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px}
+nav button{display:block;width:100%;text-align:left;margin:0 0 6px;background:none}nav button.on{background:#26301f;border-color:var(--olive)}
+nav small{display:block;color:var(--mute);font-size:11px}
+main h2{margin:0 0 4px;font-size:16px}.sub{color:var(--mute);font-size:12px;margin:0 0 12px}
+aside h3{font-size:12px;color:var(--mute);letter-spacing:.08em;margin:0 0 6px;text-transform:uppercase}
+.line{border:1px solid var(--line);border-radius:6px;padding:8px;margin-bottom:12px}.redact{background:#000;color:#000;border-radius:2px}
+.clock{display:inline-block;padding:3px 10px;border-radius:12px;background:#2a1414;color:var(--gold);font-weight:700;margin-bottom:10px}
+.msg{margin-top:12px;min-height:22px;font-weight:600}.ok{color:var(--green)}.bad{color:var(--red)}.note{color:var(--mute);font-size:12px}
+.btns{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+/* cipher */
+.cw{display:flex;flex-wrap:wrap;gap:2px 10px}.word{display:flex;gap:2px}.cc{display:flex;flex-direction:column;align-items:center;width:24px}
+.cc b{font-family:ui-monospace,Consolas,monospace;color:var(--mute);font-size:13px}.cc input{width:24px;padding:2px 0;text-align:center;text-transform:uppercase;font-family:ui-monospace,Consolas,monospace}
+.cc input.given{color:var(--gold);border-color:#5a4a20}
+/* tables */
+table{border-collapse:collapse}td,th{border:1px solid var(--line);padding:5px 8px;text-align:left}th{color:var(--mute);font-weight:600;font-size:12px}
+.frag{display:inline-block;margin:4px;padding:6px 9px;background:#e9e1cc;color:#2a2418;border-radius:2px;font-family:ui-monospace,Consolas,monospace;font-size:12px;transform:rotate(var(--r));clip-path:polygon(0 4%,8% 0,30% 5%,52% 0,75% 4%,100% 0,97% 50%,100% 100%,70% 95%,45% 100%,20% 96%,0 100%,3% 50%)}
+.frag.decoy{background:#ddd6c4}
+/* photos */
+.photos{display:flex;gap:10px;flex-wrap:wrap}.photos svg{width:340px;max-width:100%;border:1px solid var(--line);border-radius:4px;background:#2c3326}
+/* radio */
+.meter{height:16px;background:#11161b;border:1px solid var(--line);border-radius:3px;overflow:hidden;width:100%;max-width:520px}.meter div{height:100%;background:linear-gradient(90deg,var(--olive),var(--gold))}
+input[type=range]{width:100%;max-width:520px}
+/* keypad */
+.keys{display:grid;grid-template-columns:repeat(3,52px);gap:6px;margin:8px 0}.keys button{height:44px;font-size:18px}
+.disp{font-family:ui-monospace,Consolas,monospace;font-size:24px;letter-spacing:.3em;padding:6px 12px;background:#0b0f12;border:1px solid var(--line);border-radius:5px;display:inline-block;min-width:150px}
+/* bomb */
+.wires{display:flex;flex-direction:column;gap:8px;max-width:520px}.wire{display:flex;align-items:center;gap:10px}
+.wire span{flex:1;height:10px;border-radius:5px}.wire.cut span{background-image:linear-gradient(90deg,transparent 46%,var(--bg) 46%,var(--bg) 54%,transparent 54%)!important}
+.wire.safe span{outline:2px dashed var(--green);outline-offset:3px}
+.card{background:#1b1f14;border:1px solid #4a5530;border-radius:5px;padding:8px 12px;margin:10px 0;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;max-width:520px}
+/* net */
+.grid{display:grid;gap:2px;background:var(--line);padding:2px;border-radius:4px;width:max-content}.grid div{width:44px;height:44px;background:#11161b;cursor:pointer;position:relative}
+.grid svg{width:44px;height:44px;display:block}
+</style></head><body>
+<header><h1>PUZZLE PROTOTYPE</h1>
+<label>Cobra tier <select id="tier"><option value="1">1 · front company</option><option value="2">2 · depot</option><option value="3" selected>3 · factory</option><option value="4">4 · M.A.R.S. kit</option><option value="5">5 · Terror Drome</option></select></label>
+<label>Setting <select id="shift"><option value="-1">Easier</option><option value="0" selected>Normal</option><option value="1">Harder</option></select></label>
+<label><input type="checkbox" id="spec" checked> Specialist on it</label>
+<label>Seed <input id="seed" style="width:90px"></label>
+<button class="go" id="new">New puzzle</button>
+</header>
+<div class="wrap"><nav id="nav"></nav><main id="main"></main><aside id="side"></aside></div>
+<script>
+// Every puzzle is built from a seed and checked to have one answer before it is shown. All text is ours.
+let R;
+function rng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;}}
+const ri=n=>Math.floor(R()*n), pick=a=>a[ri(a.length)], shuf=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=ri(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const $=id=>document.getElementById(id), esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function perms(arr,k){const out=[];const go=(cur,used)=>{if(cur.length===k){out.push(cur.slice());return;}for(let i=0;i<arr.length;i++)if(!used[i]){used[i]=1;cur.push(arr[i]);go(cur,used);cur.pop();used[i]=0;}};go([],[]);return out;}
+const D=()=>Math.max(1,Math.min(5,+$('tier').value + +$('shift').value)); // effective difficulty 1..5
+const SPEC=()=>$('spec').checked;
+let cur='cipher', state={}, hintUsed=false;
+const msg=(t,ok)=>{$('msg').innerHTML=t;$('msg').className='msg '+(ok===true?'ok':ok===false?'bad':'');};
+
+const PUZ={
+// ---------------------------------------------------------------- 1 Cobra cipher
+cipher:{name:'Cobra cipher',where:'papers',spec:'Covert Ops & Intel',line:'Cargo route: ███ ███ ████',around:'Give to analysts: decoded in about 6 days. The second message on the page is missed.',
+ phrases:['THE TRUCKS LEAVE THE RANCH AT DAWN ON THE FIFTH','SHIP THE CRATES THROUGH LARKHALL NOT THE DOCKS','THE NEW CELL MEETS BEHIND THE GRAIN ELEVATOR','PAY THE CAPTAIN TWICE AND HE SEES NOTHING','DESTROY THIS PAGE AFTER THE DROP AT PIER NINE','MOVE THE RADIO VAN EVERY THIRD NIGHT','THE BANK CREW USES THE LAUNDRY ON ELM STREET','HOLD THE RIFLES UNTIL THE COMMANDER SIGNALS','NO CALLS FROM THE FACTORY UNTIL THE INSPECTORS GO','THE BOOKKEEPER KNOWS TOO MUCH WATCH HIM'],
+ build(){const d=D();const p=pick(this.phrases);const al='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');let key;do{key=shuf(al);}while(key.some((c,i)=>c===al[i]));
+  const map={};al.forEach((c,i)=>map[c]=key[i]);const ct=p.replace(/[A-Z]/g,c=>map[c]);const letters=[...new Set(p.replace(/ /g,''))];
+  const nGiven=Math.max(1,9-2*d+(SPEC()?0:0));const given=new Set(shuf(letters).slice(0,Math.min(nGiven,letters.length-3)).map(c=>map[c]));
+  const second=d>=4?pick(this.phrases.filter(x=>x!==p)):null;
+  return {p,ct,map,inv:Object.fromEntries(Object.entries(map).map(([a,b])=>[b,a])),given,guess:{},second};},
+ render(s){let h=`<div class="cw">`;for(const w of s.ct.split(' ')){h+=`<div class="word">`;for(const c of w){const g=s.given.has(c);h+=`<div class="cc"><b>${c}</b><input maxlength="1" data-c="${c}" class="${g?'given':''}" ${g?`value="${s.inv[c]}" readonly`:''}></div>`;}h+=`</div>`;}
+  h+=`</div><p class="note">Type a letter under a cipher letter: every copy of it fills in. Gold letters are known.${s.second?' This page has a second message in the margin: solve the first to see it.':''}</p>`;return h;},
+ wire(s){document.querySelectorAll('.cc input:not(.given)').forEach(i=>i.oninput=()=>{const v=i.value.toUpperCase().replace(/[^A-Z]/g,'');document.querySelectorAll(`.cc input[data-c="${i.dataset.c}"]`).forEach(j=>{if(!j.classList.contains('given'))j.value=v;});s.guess[i.dataset.c]=v;});},
+ check(s){const ok=[...s.ct].every(c=>c===' '||s.given.has(c)||(s.guess[c]||'')===s.inv[c]);return ok?`Decoded: "${s.p}".`+(s.second?` The margin holds a second message: "${s.second}" (an extra case line).`:' Solving it also turns up a second message the analysts would have missed.'):null;},
+ hint(s){const left=Object.keys(s.inv).filter(c=>s.ct.includes(c)&&!s.given.has(c));if(left.length){s.given.add(pick(left));}}},
+// ---------------------------------------------------------------- 2 Manifest match
+manifest:{name:'Manifest match',where:'papers',spec:'Covert Ops & Intel',line:'Next shipment: ███ to ███ on ███',around:'Give to analysts: matched in about 5 days, last shipment only.',
+ build(){const d=D();const n=Math.min(5,2+Math.ceil(d/2)+(d>=5?1:0));const lots=shuf(['C-0412','C-0417','C-0423','C-0431','C-0438','C-0446','C-0452']).slice(0,n);
+  const ships=shuf(['Santa Inés','Marisol','Coral Queen','Northern Star','Bahía Roja','Gull Point','Iron Maiden II']).slice(0,n);
+  const ports=shuf(['Rio Lindo','Baltimore','Newark','Galveston','Mobile','Savannah','Norfolk']).slice(0,n);
+  const dates=shuf(['3 Mar','9 Mar','14 Mar','21 Mar','27 Mar','2 Apr','8 Apr']).slice(0,n);
+  const rows=lots.map((l,i)=>({lot:l,ship:ships[i],port:ports[i],date:dates[i]}));
+  const frags=[];rows.forEach(r=>{frags.push(`LOT ${r.lot} · loaded on ${r.ship}`);frags.push(`${r.ship} · bound for ${r.port}`);frags.push(`${r.port} berth · arrives ${r.date}`);});
+  const decoys=d>=3?Array.from({length:d-2},()=>`LOT C-09${ri(90)+10} · loaded on ${pick(['Lady Fern','Ocean Dawn','Kestrel'])}`):[];
+  return {rows,frags:shuf([...frags.map(t=>({t})),...decoys.map(t=>({t,decoy:1}))]),ships,ports,dates,ans:{},next:pick(rows)};},
+ render(s){let h=`<div>${s.frags.map(f=>`<span class="frag ${f.decoy?'decoy':''}" style="--r:${(ri(7)-3)}deg">${esc(f.t)}</span>`).join('')}</div>`;
+  h+=`<p class="note">Torn shipping papers. Follow each lot to its ship, the ship to its port, the port to its date. Some scraps are from another shipment.</p><table><tr><th>Lot</th><th>Ship</th><th>Port</th><th>Arrives</th></tr>`;
+  const sel=(k,i,opts)=>`<select data-i="${i}" data-k="${k}"><option value="">?</option>${opts.map(o=>`<option ${s.ans[i]&&s.ans[i][k]===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  s.rows.forEach((r,i)=>h+=`<tr><td>${r.lot}</td><td>${sel('ship',i,s.ships)}</td><td>${sel('port',i,s.ports)}</td><td>${sel('date',i,s.dates)}</td></tr>`);return h+`</table>`;},
+ wire(s){document.querySelectorAll('main select').forEach(e=>e.onchange=()=>{(s.ans[e.dataset.i]=s.ans[e.dataset.i]||{})[e.dataset.k]=e.value;});},
+ check(s){const ok=s.rows.every((r,i)=>s.ans[i]&&['ship','port','date'].every(k=>s.ans[i][k]===r[k]));return ok?`Matched. The papers also show the next run: lot ${s.next.lot} on the ${s.next.ship}, into ${s.next.port}, ${s.next.date} (a fresh lead to raid).`:null;},
+ hint(s){const i=s.rows.findIndex((r,i)=>!(s.ans[i]&&['ship','port','date'].every(k=>s.ans[i][k]===r[k])));if(i>=0)s.ans[i]={ship:s.rows[i].ship,port:s.rows[i].port,date:s.rows[i].date};}},
+// ---------------------------------------------------------------- 3 Photo comparison
+photo:{name:'Photo comparison',where:'papers',spec:'Covert Ops & Intel',line:'Site changes since month 4: ███',around:'Give to analysts: compared in about 4 days. They miss one change.',
+ build(){const d=D();const k=Math.min(6,1+d);const objs=[];const kinds=['shed','crate','truck','tank','guard','drum'];
+  for(let i=0;i<14;i++)objs.push({k:pick(kinds),x:20+ri(280),y:20+ri(180),c:pick(['#6b6f52','#7a5a3a','#4d5a62','#8a7f5e'])});
+  const b=objs.map(o=>({...o}));const diffs=[];const used=new Set();
+  while(diffs.length<k){const t=pick(['move','add','remove','colour']);if(t==='add'){const o={k:pick(['truck','tank','guard','crate']),x:20+ri(280),y:20+ri(180),c:'#5d6b3a',added:1};b.push(o);diffs.push({x:o.x,y:o.y,t:'a new '+o.k});continue;}
+   const i=ri(objs.length);if(used.has(i))continue;used.add(i);const o=b[i];
+   if(t==='move'){const ox=o.x,oy=o.y;o.x=Math.max(20,Math.min(300,o.x+(ri(2)?1:-1)*(30+ri(40))));o.y=Math.max(20,Math.min(200,o.y+(ri(2)?1:-1)*(20+ri(30))));diffs.push({x:o.x,y:o.y,t:'the '+o.k+' has moved',ox,oy});}
+   if(t==='remove'){o.gone=1;diffs.push({x:o.x,y:o.y,t:'a '+o.k+' is gone'});}
+   if(t==='colour'){o.c='#a33a2a';diffs.push({x:o.x,y:o.y,t:'the '+o.k+' is new paint / a new sign'});}}
+  return {a:objs,b,diffs,found:new Set(),marked:new Set()};},
+ shape(o){const c=o.c;switch(o.k){case'shed':return`<rect x="${o.x-18}" y="${o.y-12}" width="36" height="24" fill="${c}" stroke="#222"/>`;case'crate':return`<rect x="${o.x-6}" y="${o.y-6}" width="12" height="12" fill="${c}" stroke="#222"/>`;
+  case'truck':return`<rect x="${o.x-14}" y="${o.y-6}" width="28" height="12" rx="2" fill="${c}" stroke="#222"/><rect x="${o.x+8}" y="${o.y-6}" width="6" height="12" fill="#333"/>`;case'tank':return`<rect x="${o.x-12}" y="${o.y-8}" width="24" height="16" rx="3" fill="${c}" stroke="#222"/><circle cx="${o.x}" cy="${o.y}" r="5" fill="#333"/><rect x="${o.x}" y="${o.y-1.5}" width="16" height="3" fill="#333"/>`;
+  case'guard':return`<circle cx="${o.x}" cy="${o.y}" r="4" fill="${c}" stroke="#111"/>`;default:return`<circle cx="${o.x}" cy="${o.y}" r="6" fill="${c}" stroke="#222"/>`;}},
+ svg(list,id,s,marks){let g=`<rect width="320" height="220" fill="#2c3326"/><path d="M0 110H320M160 0V220" stroke="#3a4232" stroke-width="10"/>`;for(const o of list)if(!o.gone)g+=this.shape(o);
+  if(marks)for(const i of s.marked){const df=s.diffs[i];g+=`<circle cx="${df.x}" cy="${df.y}" r="16" fill="none" stroke="${s.found.has(i)?'#5fb06a':'#d8b45a'}" stroke-width="2.5"/>`;}
+  return`<svg id="${id}" viewBox="0 0 320 220">${g}</svg>`;},
+ render(s){return`<div class="photos">${this.svg(s.a,'pa',s)}${this.svg(s.b,'pb',s,true)}</div><p class="note">Month 4 (left) and this week (right). Click every change on the right-hand photo. ${s.found.size} of ${s.diffs.length} found.</p>`;},
+ wire(s){$('pb').onclick=e=>{const r=$('pb').getBoundingClientRect(),x=(e.clientX-r.left)*320/r.width,y=(e.clientY-r.top)*220/r.height;
+  const i=s.diffs.findIndex((df,i)=>!s.found.has(i)&&(Math.hypot(df.x-x,df.y-y)<20||(df.ox!=null&&Math.hypot(df.ox-x,df.oy-y)<20)));if(i>=0){s.found.add(i);s.marked.add(i);msg('Found: '+s.diffs[i].t+'.',true);}else msg('Nothing changed there.',false);draw();};},
+ check(s){return s.found.size===s.diffs.length?`All ${s.diffs.length} changes: ${s.diffs.map(d=>d.t).join('; ')}. The analysts would have missed one of these.`:null;},
+ hint(s){const i=s.diffs.findIndex((d,i)=>!s.marked.has(i));if(i>=0)s.marked.add(i);}},
+// ---------------------------------------------------------------- 4 Radio frequency hunt
+radio:{name:'Radio frequency hunt',where:'papers / Comms',spec:'Comms & Tech',line:'Cobra channel and schedule: ███',around:'Wait for the next traffic scan to find the channel. No schedule.',
+ build(){const d=D();const target=20+R()*160;const decoys=Array.from({length:1+d},()=>({f:10+R()*180,s:0.35+R()*0.35}));const tol=[3,2.5,2,1.5,1][d-1];
+  return {target,decoys,tol,lo:0,hi:200,val:100,tries:0,maxTries:4+Math.max(0,4-d)};},
+ strength(s,f){let v=Math.exp(-Math.pow((f-s.target)/6,2));for(const dc of s.decoys)v=Math.max(v,dc.s*Math.exp(-Math.pow((f-dc.f)/5,2)));return Math.min(1,v+R()*0.12);},
+ render(s){return`<p>Dial: <b id="fv">${s.val.toFixed(1)}</b> MHz</p><input type="range" id="dial" min="${s.lo}" max="${s.hi}" step="0.1" value="${s.val}"><p>Signal</p><div class="meter"><div id="sm" style="width:0%"></div></div>
+  <div class="btns"><button id="lock">Lock on this frequency</button></div><p class="note">Sweep the dial and watch the signal. Some carriers are decoys: they peak, but weaker. Locks left: ${s.maxTries-s.tries}. Band: ${s.lo.toFixed(0)}-${s.hi.toFixed(0)} MHz.</p>`;},
+ wire(s){const up=()=>{s.val=+$('dial').value;$('fv').textContent=s.val.toFixed(1);$('sm').style.width=(this.strength(s,s.val)*100).toFixed(0)+'%';};$('dial').oninput=up;up();
+  $('lock').onclick=()=>{s.tries++;if(Math.abs(s.val-s.target)<=s.tol){s.done=true;checkNow();}else{msg(s.tries>=s.maxTries?'Out of locks: the channel goes quiet. Go around.':'Wrong carrier: only noise and music.',false);if(s.tries>=s.maxTries)$('lock').disabled=true;}};},
+ check(s){return s.done?`Locked on ${s.target.toFixed(1)} MHz. The log gives the schedule: Cobra talks on this channel every ${pick(['Tuesday','Thursday','second night'])} at ${pick(['0200','2300','0430'])}. The Joes can listen again without a new hunt.`:null;},
+ hint(s){const w=40;s.lo=Math.max(0,s.target-w/2-R()*10);s.hi=Math.min(200,s.lo+w);s.val=(s.lo+s.hi)/2;}},
+// ---------------------------------------------------------------- 5 Keypad logic
+keypad:{name:'Keypad logic',where:'missions',spec:'Comms & Tech',line:'Door to the records room',around:'Blow the door: loud. Cobra on the map reacts this turn.',
+ build(){const d=D();const len=Math.min(5,2+Math.ceil(d/2));const digits=[0,1,2,3,4,5,6,7,8,9];const code=shuf(digits).slice(0,len);
+  const all=perms(digits,len);const mk=()=>{const t=ri(6);const x=pick(code),y=pick(digits.filter(v=>!code.includes(v)));
+   if(t===0)return{t:`${x} is in the code.`,f:c=>c.includes(x)};if(t===1)return{t:`${y} is not in the code.`,f:c=>!c.includes(y)};
+   if(t===2){const i=ri(len-1);let a=code[i],b=code[i+1+ri(len-1-i)];return{t:`${a} comes before ${b}.`,f:c=>c.includes(a)&&c.includes(b)&&c.indexOf(a)<c.indexOf(b)};}
+   if(t===3){const z=pick(code.slice(1));return{t:`${z} is not first.`,f:c=>c[0]!==z};}
+   if(t===4){const sm=code.reduce((a,b)=>a+b,0);return{t:`The digits add up to ${sm}.`,f:c=>c.reduce((a,b)=>a+b,0)===sm};}
+   const i=ri(len);const odd=code[i]%2;return{t:`Digit ${i+1} is ${odd?'odd':'even'}.`,f:c=>c[i]%2===odd};};
+  const clues=[];let left=all;let guard=0;while(left.length>1&&guard++<400){const c=mk();if(clues.some(x=>x.t===c.t))continue;const nl=left.filter(c.f);if(nl.length<left.length&&nl.length>=1){clues.push(c);left=nl;}}
+  if(left.length!==1)return this.build();
+  const paper=clues.length>2?ri(clues.length):-1;
+  return {code,len,clues,paper,entry:'',tries:0,maxTries:[6,5,4,3,3][d-1],given:-1};},
+ render(s){return`<div class="card">${s.clues.map((c,i)=>`<div>${i===s.paper?'<span style="color:#d8b45a">[from the captured papers]</span> ':''}· ${esc(c.t)}</div>`).join('')}<div>· Every digit is different.</div></div>
+  <div class="disp" id="kd">${(s.entry+'_'.repeat(s.len)).slice(0,s.len)}</div>${s.given>=0?`<p class="note">Specialist: digit ${s.given+1} is ${s.code[s.given]}.</p>`:''}
+  <div class="keys">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-n="${n}">${n}</button>`).join('')}<button data-n="C">C</button><button data-n="0">0</button><button data-n="E">OK</button></div>
+  <p class="note">Tries before the alarm: ${s.maxTries-s.tries}. Each try is a turn.</p>`;},
+ wire(s){document.querySelectorAll('.keys button').forEach(b=>b.onclick=()=>{const n=b.dataset.n;if(n==='C')s.entry='';else if(n==='E'){if(s.entry.length<s.len)return;s.tries++;
+   if(s.entry===s.code.join('')){s.done=true;checkNow();return;}msg(s.tries>=s.maxTries?'The alarm trips. Go around: blow the door.':'Wrong code. The light blinks red.',false);s.entry='';}else if(s.entry.length<s.len)s.entry+=n;$('kd').textContent=(s.entry+'_'.repeat(s.len)).slice(0,s.len);});},
+ check(s){return s.done?'The door clicks open. Quiet: Cobra on the map does not react.':null;},
+ hint(s){s.given=ri(s.len);}},
+// ---------------------------------------------------------------- 6 Bomb wires
+bomb:{name:'Bomb wires',where:'missions',spec:'Demolitions & Engineering',line:'Device in the depot (casing markings: ███)',around:'Evacuate the area and let it go off. The casing is lost.',
+ cols:{red:'#c8372d',blue:'#2f6fd0',yellow:'#e0c03a',green:'#3fa04f',white:'#e8e8e8',black:'#262626',orange:'#e07a2a'},
+ build(){const d=D();const n=Math.min(7,2+d);const wires=shuf(Object.keys(this.cols)).slice(0,n);const order=shuf([...Array(n).keys()]);// order[k] = wire index cut kth
+  const pos=i=>order.indexOf(i);const nm=i=>`the ${wires[i]} wire`;const all=perms([...Array(n).keys()],n);
+  const mk=()=>{const t=ri(4);const a=ri(n);let b=ri(n);if(a===b)return null;
+   if(t===0||t===3){const [x,y]=pos(a)<pos(b)?[a,b]:[b,a];return{t:`Cut ${nm(x)} before ${nm(y)}.`,f:p=>p.indexOf(x)<p.indexOf(y)};}
+   if(t===1){const w=order[0];return{t:`Cut ${nm(w)} first.`,f:p=>p[0]===w};}
+   const w=order[n-1];return{t:`${nm(w)[0].toUpperCase()+nm(w).slice(1)} is cut last.`,f:p=>p[n-1]===w};};
+  let left=all,rules=[],g=0;while(left.length>1&&g++<500){const r=mk();if(!r||rules.some(x=>x.t===r.t))continue;const nl=left.filter(r.f);if(nl.length<left.length){rules.push(r);left=nl;}}
+  if(left.length!==1)return this.build();
+  return {wires,order,rules,cut:[],turns:n+[3,2,2,1,1][d-1],safe:-1,mark:`C-04${ri(90)+10}`};},
+ render(s){return`<span class="clock">Turns left: ${s.turns}</span><div class="card"><b>On the casing:</b>${s.rules.map(r=>`<div>· ${esc(r.t)}</div>`).join('')}</div>
+  <div class="wires">${s.wires.map((w,i)=>`<div class="wire ${s.cut.includes(i)?'cut':''} ${s.safe===i?'safe':''}"><span style="background:${this.cols[w]}"></span><button data-i="${i}" ${s.cut.includes(i)||s.dead?'disabled':''}>Cut</button></div>`).join('')}</div>
+  <p class="note">Each cut is a turn. A wrong cut sets it off.</p>`;},
+ wire(s){document.querySelectorAll('.wire button').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;const want=s.order[s.cut.length];s.turns--;
+   if(i!==want){s.dead=true;msg('BOOM. (In the game: the device goes off; in "required" mode you try again.)',false);draw();return;}s.cut.push(i);s.safe=-1;
+   if(s.cut.length===s.wires.length){s.done=true;draw();checkNow();return;}if(s.turns<s.wires.length-s.cut.length){s.dead=true;draw();msg('Out of time: not enough turns left for the remaining wires.',false);return;}draw();});},
+ check(s){return s.done?`Disarmed with the casing intact. Its markings read lot ${s.mark}: a new ammo-style case opens (maker, lot range).`:null;},
+ hint(s){if(!s.dead)s.safe=s.order[s.cut.length];}},
+// ---------------------------------------------------------------- 7 Safe dial
+safe:{name:'Safe dial',where:'missions',spec:'Demolitions & Engineering',line:'The manager\'s safe (papers inside)',around:'Blow it: loud, and half the time the papers inside burn.',
+ build(){const d=D();const n=d>=4?4:3;const combo=Array.from({length:n},()=>ri(40));const note=ri(n);
+  return {combo,n,step:0,val:0,turns:[14,12,11,10,9][d-1]+n*2,faint:d>=4,note,given:-1,log:[]};},
+ feel(s,v){const t=s.combo[s.step];const dd=Math.min(Math.abs(v-t),40-Math.abs(v-t));if(dd===0)return'a heavy CLUNK';if(dd<=2)return s.faint?'a faint click':'a sharp click';if(dd<=6)return s.faint?'nothing much':'a faint click';return'nothing';},
+ render(s){return`<span class="clock">Turns left: ${s.turns}</span><p>Number ${s.step+1} of ${s.n} · dial at <b id="sv">${s.val}</b></p><input type="range" id="sd" min="0" max="39" value="${s.val}">
+  <div class="btns"><button id="lis">Listen (1 turn)</button></div><div class="card" id="slog">${s.log.slice(-6).map(esc).join('<br>')||'—'}</div>
+  <p class="note">A pencilled note on the desk: "${s.combo[s.note]>=10?'the '+['first','second','third','fourth'][s.note]+' starts with '+String(s.combo[s.note])[0]:'the '+['first','second','third','fourth'][s.note]+' is under ten'}".${s.given>=0?` Specialist: number ${s.given+1} is ${s.combo[s.given]}.`:''} A CLUNK means the number is right and the dial moves to the next.</p>`;},
+ wire(s){$('sd').oninput=()=>{s.val=+$('sd').value;$('sv').textContent=s.val;};$('lis').onclick=()=>{if(s.turns<=0)return;s.turns--;const f=this.feel(s,s.val);s.log.push(`${s.val}: ${f}`);
+   if(f==='a heavy CLUNK'){s.step++;if(s.step===s.n){s.done=true;draw();checkNow();return;}}if(s.turns<=0)msg('Out of time. Go around: blow it.',false);draw();};},
+ check(s){return s.done?'The safe swings open: all the papers intact.':null;},
+ hint(s){s.given=s.step;}},
+// ---------------------------------------------------------------- 8 Computer hack (a network-rotation mechanic; our own code)
+net:{name:'Computer hack',where:'missions',spec:'Comms & Tech',line:'Cobra terminal: files, cameras, network',around:'Carry the drive out: two turns, and it may be wiped.',
+ build(){const d=D();const w=[4,5,5,6,7][d-1],h=[4,4,5,6,6][d-1];const N=w*h;const con=Array.from({length:N},()=>0);// bits: 1 up,2 right,4 down,8 left
+  const seen=new Set([0]);const st=[0];const dirs=[[0,-1,1,4],[1,0,2,8],[0,1,4,1],[-1,0,8,2]];
+  while(st.length){const c=st[st.length-1],x=c%w,y=Math.floor(c/w);const nb=shuf(dirs).filter(([dx,dy])=>{const nx=x+dx,ny=y+dy;return nx>=0&&ny>=0&&nx<w&&ny<h&&!seen.has(ny*w+nx);});
+   if(!nb.length){st.pop();continue;}const [dx,dy,b,ob]=nb[0];const n=(y+dy)*w+x+dx;con[c]|=b;con[n]|=ob;seen.add(n);st.push(n);}
+  const rot=v=>((v<<1)|(v>>3))&15;const tiles=con.map(v=>{let r=v,k=ri(4);for(let i=0;i<k;i++)r=rot(r);return r;});
+  const src=ri(N);let need=0;tiles.forEach((t,i)=>{let r=t,k=0;while(r!==con[i]&&k<4){r=rot(r);k++;}need+=k;});
+  return {w,h,tiles,src,con,moves:need+[14,10,7,5,3][d-1]+Math.floor(N/4),rot};},
+ lit(s){const {w,h,tiles}=s;const on=new Set([s.src]);const q=[s.src];const d=[[0,-1,1,4],[1,0,2,8],[0,1,4,1],[-1,0,8,2]];
+  while(q.length){const c=q.shift(),x=c%w,y=Math.floor(c/w);for(const [dx,dy,b,ob] of d){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=w||ny>=h)continue;const n=ny*w+nx;if((tiles[c]&b)&&(tiles[n]&ob)&&!on.has(n)){on.add(n);q.push(n);}}}return on;},
+ solved(s){const on=this.lit(s);if(on.size!==s.tiles.length)return false;const {w,h,tiles}=s;for(let c=0;c<tiles.length;c++){const x=c%w,y=Math.floor(c/w);
+  if((tiles[c]&1)&&(y===0||!(tiles[c-w]&4)))return false;if((tiles[c]&2)&&(x===w-1||!(tiles[c+1]&8)))return false;if((tiles[c]&4)&&(y===h-1||!(tiles[c+w]&1)))return false;if((tiles[c]&8)&&(x===0||!(tiles[c-1]&2)))return false;}return true;},
+ render(s){const on=this.lit(s);let h=`<span class="clock">Trace arrives in: ${s.moves} moves</span><div class="grid" style="grid-template-columns:repeat(${s.w},44px)">`;
+  s.tiles.forEach((t,i)=>{const c=on.has(i)?'#5fb06a':'#55606b';let g='';if(t&1)g+=`<path d="M22 22V0"/>`;if(t&2)g+=`<path d="M22 22H44"/>`;if(t&4)g+=`<path d="M22 22V44"/>`;if(t&8)g+=`<path d="M22 22H0"/>`;
+   const end=[1,2,4,8].includes(t);h+=`<div data-i="${i}"><svg viewBox="0 0 44 44"><g stroke="${c}" stroke-width="6" stroke-linecap="round">${g}</g>${i===s.src?`<rect x="13" y="13" width="18" height="18" fill="#d8b45a"/>`:end?`<circle cx="22" cy="22" r="7" fill="${c}"/>`:''}</svg></div>`;});
+  return h+`</div><p class="note">Click a tile to turn it. Connect every terminal (dots) to the entry (gold) with no loose ends before the trace arrives.</p>`;},
+ wire(s){document.querySelectorAll('.grid div').forEach(e=>e.onclick=()=>{if(s.done||s.moves<=0)return;const i=+e.dataset.i;s.tiles[i]=s.rot(s.tiles[i]);s.moves--;
+   if(this.solved(s)){s.done=true;draw();checkNow();return;}if(s.moves<=0)msg('Traced. Cobra cuts the line: go around, carry the drive out.',false);draw();});},
+ check(s){return s.done?'In. The files are copied. Choose: kill the cameras and turrets now, or plant a bug in Cobra\'s network (the Joes\' own mole).':null;},
+ hint(s){s.moves+=6;}},
+};
+const ORDER=['cipher','manifest','photo','radio','keypad','bomb','safe','net'];
+function newPuzzle(seed){if(seed==null){seed=Math.floor(Math.random()*1e9);$('seed').value=seed;}R=rng(+seed);state=PUZ[cur].build();hintUsed=false;draw();msg('');}
+function draw(){const P=PUZ[cur];$('main').innerHTML=`<h2>${P.name}</h2><p class="sub">${P.where} · effective difficulty ${D()} of 5 · seed ${esc($('seed').value)}</p>${P.render(state)}
+ <div class="btns"><button id="chk">Check</button><button id="hint" ${SPEC()&&!hintUsed?'':'disabled'}>Hint (${esc(P.spec)})</button><button id="around">Go around</button></div><div id="msg" class="msg"></div>`;
+ P.wire&&P.wire(state);$('chk').onclick=checkNow;$('hint').onclick=()=>{hintUsed=true;P.hint(state);draw();msg('Specialist hint used.');};$('around').onclick=()=>msg(P.around);
+ $('side').innerHTML=`<h3>The case line it fills</h3><div class="line">${P.line.replace(/███/g,'<span class="redact">█████</span>')}</div><h3>Who does best</h3><div class="line">${esc(P.spec)} (a hint)</div><h3>If you go around</h3><div class="line note">${esc(P.around)}</div><h3>About this page</h3><p class="note">A test bench for the eight puzzle kinds (PUZZLES_v1). Every puzzle is generated from the seed and checked to have one answer. Same seed + same settings = same puzzle.</p>`;}
+function checkNow(){const r=PUZ[cur].check(state);if(r)msg('SOLVED. '+r,true);else msg('Not yet.',false);}
+$('nav').innerHTML=ORDER.map(k=>`<button data-k="${k}" class="${k===cur?'on':''}">${PUZ[k].name}<small>${PUZ[k].where}</small></button>`).join('');
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{cur=b.dataset.k;document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));newPuzzle();});
+$('new').onclick=()=>newPuzzle();$('seed').onchange=()=>newPuzzle($('seed').value);['tier','shift','spec'].forEach(id=>$(id).onchange=()=>newPuzzle($('seed').value));
+newPuzzle();
+</script></body></html>
