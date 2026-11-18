@@ -367,7 +367,7 @@ class LookEditor:
     def __init__(self, app, name, blend, civ):
         self.app, self.name, self.blend, self.civ = app, name, blend, civ
         self.skins, self.colours, self.props_add, self.props_remove = {}, {}, [], []
-        self.gear_changed = False; self.img = None; self.face = None
+        self.gear_changed = False; self.img = None; self.face = None; self.body = None
         w = self.w = tk.Toplevel(app.root); w.title('Edit look - ' + name); w.configure(bg=BG); w.geometry('1320x780'); w.minsize(1200, 700)
         w.transient(app.root)
         self.status = ttk.Label(w, text='Reading the model…'); self.status.pack(anchor='w', padx=16, pady=(12, 0))
@@ -414,7 +414,9 @@ class LookEditor:
         # skins & colours
         sk = ttk.Frame(left, style='Panel.TFrame', padding=12); sk.pack(fill='x')
         ttk.Label(sk, text='Skins and colours', style='H.TLabel').grid(row=0, column=0, columnspan=3, sticky='w', pady=(0, 6))
-        ttk.Button(sk, text='Face from photo…', command=self.face_photo).grid(row=0, column=3, columnspan=3, sticky='e', pady=(0, 6))
+        fb = ttk.Frame(sk, style='Panel.TFrame'); fb.grid(row=0, column=2, columnspan=4, sticky='e', pady=(0, 6))
+        ttk.Button(fb, text='Whole body from photo…', command=self.body_photo).pack(side='right')
+        ttk.Button(fb, text='Face from photo…', command=self.face_photo).pack(side='right', padx=6)
         self.face_lbl = ttk.Label(sk, text='', style='Panel.TLabel', foreground=ACC)
         self.face_lbl.grid(row=99, column=0, columnspan=6, sticky='w', pady=(6, 0))
         self.mat_lbl = {}
@@ -509,6 +511,17 @@ class LookEditor:
                                        filetypes=[('Image', '*.png *.jpg *.jpeg *.bmp *.webp')])
         if f: FaceDialog(self, f)
 
+    def body_photo(self):
+        if not messagebox.askyesno('Whole body from photo', BODY_TIPS + '\n\nPick the front photo now?', parent=self.w): return
+        f = filedialog.askopenfilename(parent=self.w, title='Full-length FRONT photo',
+                                       filetypes=[('Image', '*.png *.jpg *.jpeg *.bmp *.webp')])
+        if f: BodyDialog(self, f)
+
+    def set_body(self, body):
+        self.body = body
+        self.face_lbl.configure(text='Clothes from %s%s - Preview to see, Apply to keep. Then Face from photo for the face.' % (
+            os.path.basename(body['photo']), ' + back photo' if body.get('back_photo') else ''))
+
     def set_face(self, face):
         self.face = face
         self.face_lbl.configure(text='Face from %s - press Preview to see it, Apply to keep it' % os.path.basename(face['photo']))
@@ -544,6 +557,7 @@ class LookEditor:
     def spec(self):
         sp = {'skins': self.skins, 'colours': self.colours, 'props_add': self.props_add, 'props_remove': self.props_remove}
         if self.face: sp['face'] = self.face
+        if self.body: sp['body'] = self.body
         if self.gear_changed:
             sp['gear'] = []
             for k, _, _ in GEAR_KINDS:
@@ -592,7 +606,7 @@ class LookEditor:
         self.status.configure(text='Preview ready (top: standing, bottom: walking; three directions). Apply to keep it.')
 
     def apply(self):
-        if not (self.skins or self.colours or self.props_add or self.props_remove or self.gear_changed or self.face):
+        if not (self.skins or self.colours or self.props_add or self.props_remove or self.gear_changed or self.face or self.body):
             messagebox.showinfo('Edit look', 'Nothing changed yet.', parent=self.w); return
         if self.app.running() and current_model() == self.name:
             messagebox.showinfo('Edit look', 'He started rendering meanwhile - Stop the machine first.', parent=self.w); return
@@ -607,7 +621,7 @@ class LookEditor:
             self.busy(False)
             if isinstance(r, Exception): self.status.configure(text=str(r)); return
             M.log('look edited:', self.name, json.dumps(self.spec())[:300])
-            self.skins, self.colours, self.props_add, self.props_remove, self.gear_changed, self.face = {}, {}, [], [], False, None
+            self.skins, self.colours, self.props_add, self.props_remove, self.gear_changed, self.face, self.body = {}, {}, [], [], False, None, None
             self.status.configure(text='Applied. %s is queued and the machine re-renders him by itself (if it is running).' % self.name)
             self.bg(lambda: self.read(), self.reload)
         self.bg(work, done)
@@ -629,6 +643,23 @@ class LookEditor:
         self.bg(lambda: self.read(), self.reload)
 
 
+FACE_TIPS = '''PHOTO CHECKLIST - FACE
+- Straight on: camera at eye height, you looking into the lens
+- Eyes level, head not tilted or turned
+- Even light from the front (face a window); no hard shadows
+- Neutral face, mouth closed; hair off the eyes and forehead
+- Glasses only if you want them on the model
+- The face fills at least a third of the picture; sharp, not blurry'''
+BODY_TIPS = '''PHOTO CHECKLIST - WHOLE BODY
+- Plain wall behind you, a different colour from your clothes
+- Whole body in the picture, top of the head to the feet, a little space around
+- Stand straight, face the camera, feet a little apart
+- Arms hanging slightly away from your sides (hands not touching the body)
+- Camera at chest height, about 3 metres away, not tilted
+- Even light, no strong shadows; clothes you want on the model
+- Optional back photo: same pose from behind, same distance'''
+
+
 class FaceDialog:
     """Six clicks: left eye, right eye, mouth on the photo and the same three on the model's face."""
     LABELS = ['1 left eye', '2 right eye', '3 mouth']
@@ -642,6 +673,7 @@ class FaceDialog:
                   '3 the middle of the mouth.', style='Panel.TLabel').pack(anchor='w')
         ttk.Label(top, text='Use a photo taken straight on, eyes level, nothing covering the face. Right-click clears that picture.',
                   style='Panel.TLabel', foreground=DIM).pack(anchor='w')
+        ttk.Button(top, text='Photo checklist', command=lambda: messagebox.showinfo('Face photo', FACE_TIPS, parent=w)).place(relx=1.0, x=-4, y=4, anchor='ne')
         mid = ttk.Frame(w, style='Panel.TFrame', padding=(14, 4)); mid.pack(fill='both', expand=True)
         self.cv_p = tk.Canvas(mid, width=540, height=560, bg='#121418', highlightthickness=0); self.cv_p.pack(side='left', padx=(0, 10))
         self.cv_m = tk.Canvas(mid, width=540, height=560, bg='#121418', highlightthickness=0); self.cv_m.pack(side='left')
@@ -694,6 +726,103 @@ class FaceDialog:
         self.ed.set_face({'photo': self.photo, 'photo_pts': photo_pts, 'model_pts': model_pts,
                           **{k: round(v.get(), 2) for k, v in self.vars.items()}})
         self.w.destroy()
+
+
+class BodyDialog:
+    """Twelve clicks on a full-length photo: shoulders, elbows, wrists, hips, knees, ankles (picture-left first).
+    Optional back photo with the same twelve. The model's own joints are known, so nothing to click on the model."""
+    NAMES = ['shoulder_l', 'shoulder_r', 'elbow_l', 'elbow_r', 'wrist_l', 'wrist_r', 'hip_l', 'hip_r', 'knee_l', 'knee_r',
+             'ankle_l', 'ankle_r']
+    SAY = {'l': 'on the LEFT of the picture', 'r': 'on the RIGHT of the picture'}
+
+    def __init__(self, ed, photo):
+        self.ed = ed; self.views = []                          # [(path, scale, points dict)]
+        w = self.w = tk.Toplevel(ed.w); w.title('Whole body from photo'); w.configure(bg=PANEL); w.transient(ed.w); w.geometry('1200x880')
+        top = ttk.Frame(w, style='Panel.TFrame', padding=(14, 10)); top.pack(fill='x')
+        self.prompt = ttk.Label(top, text='', style='H.TLabel'); self.prompt.pack(anchor='w')
+        ttk.Label(top, text='Click each joint in turn. Right-click undoes the last click. The model keeps its own hands and face '
+                  '(use Face from photo for the face).', style='Panel.TLabel', foreground=DIM).pack(anchor='w')
+        ttk.Button(top, text='Photo checklist', command=lambda: messagebox.showinfo('Body photo', BODY_TIPS, parent=w)).place(relx=1.0, x=-4, y=4, anchor='ne')
+        mid = ttk.Frame(w, style='Panel.TFrame', padding=(14, 4)); mid.pack(fill='both', expand=True)
+        self.cv = tk.Canvas(mid, width=760, height=680, bg='#121418', highlightthickness=0); self.cv.pack(side='left')
+        side = ttk.Frame(mid, style='Panel.TFrame', padding=(12, 0)); side.pack(side='left', fill='both', expand=True)
+        self.list = tk.Listbox(side, height=14, bg='#121418', fg=FG, relief='flat', font=('Segoe UI', 10)); self.list.pack(fill='x')
+        self.back_btn = ttk.Button(side, text='+ Add BACK photo (optional)', command=self.add_back); self.back_btn.pack(fill='x', pady=(10, 0))
+        self.back_lbl = ttk.Label(side, text='No back photo: the back of the clothes takes the front\'s colours.', style='Panel.TLabel',
+                                  foreground=DIM, wraplength=330); self.back_lbl.pack(anchor='w', pady=(6, 0))
+        bot = ttk.Frame(w, style='Panel.TFrame', padding=14); bot.pack(fill='x')
+        self.vars = {}
+        for i, (k, label, lo, hi, d, res) in enumerate([('strength', 'Strength', 0.3, 1.0, 1.0, 0.05), ('cartoon', 'Cartoon look', 0, 3, 1, 1),
+                                                       ('fit', 'Clothes fit (narrower <> wider)', 0.5, 1.2, 0.85, 0.05)]):
+            ttk.Label(bot, text=label, style='Panel.TLabel').grid(row=0, column=i * 2, sticky='e', padx=(0, 4))
+            v = tk.DoubleVar(value=d); self.vars[k] = v
+            tk.Scale(bot, variable=v, from_=lo, to=hi, resolution=res, orient='horizontal', length=170, bg=PANEL, fg=FG,
+                     highlightthickness=0, troughcolor='#2c3039').grid(row=0, column=i * 2 + 1, padx=(0, 14))
+        ttk.Button(bot, text='Use these clothes', style='Go.TButton', command=self.ok).grid(row=0, column=7, padx=(8, 6))
+        ttk.Button(bot, text='Cancel', command=w.destroy).grid(row=0, column=8)
+        self.msg = ttk.Label(bot, text='', style='Panel.TLabel', foreground=WARN); self.msg.grid(row=1, column=0, columnspan=9, sticky='w', pady=(6, 0))
+        self.cv.bind('<Button-1>', self.click); self.cv.bind('<Button-3>', self.undo)
+        self.load(photo)
+
+    def load(self, path):
+        from PIL import Image, ImageTk
+        im = Image.open(path).convert('RGB'); sc = min(760 / im.width, 680 / im.height)
+        self.img = ImageTk.PhotoImage(im.resize((int(im.width * sc), int(im.height * sc)), Image.LANCZOS))
+        self.views.append([path, sc, {}]); self.cv.delete('all'); self.cv.create_image(0, 0, anchor='nw', image=self.img)
+        self.update()
+
+    def cur(self): return self.views[-1]
+
+    def next_name(self):
+        pts = self.cur()[2]
+        for n in self.NAMES:
+            if n not in pts: return n
+        return None
+
+    def update(self):
+        n = self.next_name(); back = len(self.views) > 1
+        pts = self.cur()[2]
+        self.list.delete(0, 'end')
+        for k in self.NAMES:
+            part, side = k.split('_')
+            self.list.insert('end', ('✓ ' if k in pts else '   ') + '%s %s' % (part, self.SAY[side]))
+        if n:
+            part, side = n.split('_')
+            self.prompt.configure(text='%s photo - click the %s %s' % ('BACK' if back else 'FRONT', part.upper(), self.SAY[side]))
+            self.list.selection_clear(0, 'end'); self.list.selection_set(self.NAMES.index(n))
+        else:
+            self.prompt.configure(text='All 12 joints set on the %s photo.' % ('back' if back else 'front'))
+
+    def click(self, e):
+        n = self.next_name()
+        if not n: return
+        path, sc, pts = self.cur(); pts[n] = (e.x / sc, e.y / sc)
+        self.cv.create_oval(e.x - 6, e.y - 6, e.x + 6, e.y + 6, outline=ACC, width=2, tags=n)
+        self.cv.create_text(e.x + 10, e.y, text=n.split('_')[0], fill=ACC, anchor='w', tags=n, font=('Segoe UI', 9, 'bold'))
+        self.update()
+
+    def undo(self, e=None):
+        pts = self.cur()[2]
+        done = [k for k in self.NAMES if k in pts]
+        if done: k = done[-1]; del pts[k]; self.cv.delete(k); self.update()
+
+    def add_back(self):
+        if len(self.views[0][2]) < 12: self.msg.configure(text='Finish the 12 clicks on the front photo first.'); return
+        if len(self.views) > 1: return
+        f = filedialog.askopenfilename(parent=self.w, title='Full-length BACK photo (same pose, from behind)',
+                                       filetypes=[('Image', '*.png *.jpg *.jpeg *.bmp *.webp')])
+        if f:
+            self.load(f); self.back_btn.state(['disabled'])
+            self.back_lbl.configure(text='Back photo: click the same 12 joints. From behind, the picture-left side is his LEFT.')
+
+    def ok(self):
+        for i, (path, sc, pts) in enumerate(self.views):
+            if len(pts) < 12: self.msg.configure(text='Twelve clicks needed on the %s photo.' % ('front' if i == 0 else 'back')); return
+        body = {'photo': self.views[0][0], 'points': {k: list(v) for k, v in self.views[0][2].items()},
+                **{k: round(v.get(), 2) for k, v in self.vars.items()}}
+        if len(self.views) > 1:
+            body['back_photo'] = self.views[1][0]; body['back_points'] = {k: list(v) for k, v in self.views[1][2].items()}
+        self.ed.set_body(body); self.w.destroy()
 
 
 class PropDialog:

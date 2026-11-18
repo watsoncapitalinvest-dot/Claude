@@ -21,6 +21,12 @@ EDIT LOOK (pick a model, press Edit look…)
                       same three on the model's face. The photo is cartooned, lined up by those points and blended
                       into the skin. Sliders: Strength, Cartoon look, Match body skin tone. Then Preview / Apply.
                       At game size a face is a few pixels: hair, beard, glasses and skin tone show; fine detail won't.
+  Whole body from photo…  a full-length photo (plain wall, arms a little away from the sides - press Photo checklist).
+                      Click 12 joints in order: shoulders, elbows, wrists, hips, knees, ankles (left of the picture
+                      first). Each part of the model takes its clothes from the matching part of the photo - sleeves
+                      from your arms, trousers from your legs. Optional BACK photo, same 12 clicks; without it the back
+                      takes the front's colours. The model keeps its own hands; do the face with Face from photo.
+                      Sliders: Strength, Cartoon look, Clothes fit (narrower <> wider - lower it if wall colour shows).
   Built-in gear       bandana, cap, helmet, plate vest, sunglasses, gold chain - tick, pick a colour
   Gear files          + Add gear file… : a .glb .gltf .fbx or .obj (e.g. from your AI). Pick where it goes
                       (head, face, chest, back, hips, hands); it is sized to that part and moves with him.

@@ -4,6 +4,7 @@
 #   python dress.py --blend M.blend --template MATERIAL --out guide.png   -> the skin with the model's seams drawn on
 #   python dress.py --blend M.blend --faceview front.png                   -> the face seen from the front (+ .json mapping)
 #   SPEC may also hold "face": {photo, photo_pts, model_pts, strength, cartoon, match} - see apply_face()
+#   and "body": {photo, points {shoulder_l..ankle_r: [x,y]}, back_photo, back_points, strength, cartoon, fit} - apply_body()
 # SPEC: {"skins": {"<material>": "C:/path/skin.png"}, "colours": {"<material>": [r,g,b] | null}, "gear": [...] | absent}
 #   colours null = back to the texture's own colours.  gear absent = leave gear as it is; [] = no gear.
 #   props_add: [{file, attach: head|face|chest|back|hip_l|hip_r|hand_r|hand_l, size, up, forward, side (cm), turn, tilt, roll (deg)}]
@@ -500,6 +501,168 @@ def apply_face(f):
     m = bpy.data.materials[mat]; m['face_from'] = os.path.basename(f['photo'])
 
 
+# ---------------- whole body (clothes) from photo
+# photo points, picture-left first: shoulder, shoulder, elbow, elbow, wrist, wrist, hip, hip, knee, knee, ankle, ankle
+BODY_POINTS = ['shoulder_l', 'shoulder_r', 'elbow_l', 'elbow_r', 'wrist_l', 'wrist_r',
+               'hip_l', 'hip_r', 'knee_l', 'knee_r', 'ankle_l', 'ankle_r']
+
+
+def model_joints(back=False):
+    """The model's joints in its front view (world x, z), named by picture side. Seen from the front, the picture's
+    left is the character's RIGHT; seen from behind it is his LEFT."""
+    bh = lambda b: AW @ arm.data.bones['mixamorig:' + b].head_local
+    L, R = ('Right', 'Left') if not back else ('Left', 'Right')
+    J = {'shoulder_l': bh(L + 'Arm'), 'shoulder_r': bh(R + 'Arm'), 'elbow_l': bh(L + 'ForeArm'), 'elbow_r': bh(R + 'ForeArm'),
+         'wrist_l': bh(L + 'Hand'), 'wrist_r': bh(R + 'Hand'), 'hip_l': bh(L + 'UpLeg'), 'hip_r': bh(R + 'UpLeg'),
+         'knee_l': bh(L + 'Leg'), 'knee_r': bh(R + 'Leg'), 'ankle_l': bh(L + 'Foot'), 'ankle_r': bh(R + 'Foot')}
+    return {k: np.array([v.x, v.z]) for k, v in J.items()}
+
+
+def body_texels():
+    """Every skin texel of the body (not hair, not gear): image, texel x/y, world xyz, facing (+front), bone."""
+    per_img = {}
+    for o in body_meshes():
+        if 'hair' in o.name.lower() or any('hair' in (m.name.lower() if m else '') for m in o.data.materials[:1]): continue
+        if not o.data.uv_layers.active: continue
+        names = {vg.index: vg.name.replace('mixamorig:', '') for vg in o.vertex_groups}
+        me = o.data; me.calc_loop_triangles(); uvl = me.uv_layers.active.data; mw = o.matrix_world; nm = mw.to_3x3().normalized()
+        dom = [names.get(max(v.groups, key=lambda g: g.weight).group, '') if v.groups else '' for v in me.vertices]
+        co = np.array([(mw @ v.co)[:] for v in me.vertices])
+        for t in me.loop_triangles:
+            m = me.materials[t.material_index] if me.materials else None
+            if not m or 'hair' in m.name.lower(): continue
+            tex, _ = mat_nodes(m)
+            if not (tex and tex.image): continue
+            bs = [dom[v] for v in t.vertices]; bone = max(set(bs), key=bs.count)
+            img = tex.image; W, H = img.size
+            uv = np.array([uvl[l].uv[:] for l in t.loops]); tp = np.c_[uv[:, 0] % 1 * W, (1 - uv[:, 1] % 1) * H]
+            p = co[list(t.vertices)]; facing = -(nm @ t.normal).normalized().y
+            x0, y0 = np.floor(tp.min(0)).astype(int); x1, y1 = np.ceil(tp.max(0)).astype(int)
+            xs, ys = np.meshgrid(np.arange(max(x0, 0), min(x1 + 1, W)), np.arange(max(y0, 0), min(y1 + 1, H)))
+            if xs.size == 0: continue
+            px = np.c_[xs.ravel() + 0.5, ys.ravel() + 0.5]; a, b, c = tp; v0, v1 = b - a, c - a
+            d = v0[0] * v1[1] - v1[0] * v0[1]
+            if abs(d) < 1e-9: continue
+            r = px - a; l1 = (r[:, 0] * v1[1] - v1[0] * r[:, 1]) / d; l2 = (v0[0] * r[:, 1] - r[:, 0] * v0[1]) / d; l0 = 1 - l1 - l2
+            ins = (l0 >= -1e-3) & (l1 >= -1e-3) & (l2 >= -1e-3)
+            if not ins.any(): continue
+            wp = np.c_[l0[ins], l1[ins], l2[ins]] @ p
+            per_img.setdefault(img.name, []).append(
+                (np.c_[xs.ravel()[ins], ys.ravel()[ins], wp, np.full(ins.sum(), facing)], bone))
+    return per_img
+
+
+def region(bone):
+    b = bone
+    for side in ('Left', 'Right'):
+        if b.startswith(side):
+            rest = b[len(side):]
+            if rest == 'Arm': return side, 'upper_arm'
+            if rest == 'ForeArm': return side, 'forearm'
+            if rest.startswith('Hand'): return side, 'hand'
+            if rest == 'UpLeg': return side, 'thigh'
+            if rest == 'Leg': return side, 'shin'
+            if rest.startswith('Foot') or rest.startswith('Toe'): return side, 'foot'
+            if rest == 'Shoulder': return None, 'torso'
+    return None, 'torso'                      # Hips, Spine*, Neck, Head (the face feature refines the head)
+
+
+SEG = {'upper_arm': ('shoulder', 'elbow', 1.0), 'forearm': ('elbow', 'wrist', 1.0), 'hand': ('wrist', None, 0.4),
+       'thigh': ('hip', 'knee', 1.0), 'shin': ('knee', 'ankle', 1.0), 'foot': ('ankle', None, 0.18)}
+
+
+def bleed(ph):
+    """Find the person against a plain background (the border's colour) and paint every background pixel with the
+    nearest person pixel, so a sample that lands just outside the outline picks up clothes, not the wall."""
+    from scipy import ndimage
+    bw = max(4, min(ph.shape[:2]) // 60)
+    border = np.concatenate([ph[:bw].reshape(-1, 3), ph[-bw:].reshape(-1, 3), ph[:, :bw].reshape(-1, 3), ph[:, -bw:].reshape(-1, 3)])
+    bg = np.median(border, 0)
+    diff = np.abs(ndimage.uniform_filter(ph, size=(5, 5, 1)) - bg).max(2)
+    person = diff > 0.10
+    person = ndimage.binary_opening(person, iterations=2); person = ndimage.binary_closing(person, iterations=3)
+    lab, n = ndimage.label(person)
+    if n == 0: return ph
+    sizes = ndimage.sum(person, lab, range(1, n + 1)); person = lab == (1 + int(np.argmax(sizes)))
+    person = ndimage.binary_fill_holes(person)
+    if person.mean() > 0.95 or person.mean() < 0.02: return ph          # no clear background: leave the photo as is
+    core = ndimage.binary_erosion(person, iterations=max(3, bw // 2))   # borrow colour from well inside the outline
+    if core.mean() < 0.01: core = person
+    _, (iy, ix) = ndimage.distance_transform_edt(~core, return_indices=True)
+    return ph[iy, ix]
+
+
+def apply_body(spec):
+    """spec: {photo, points {name: [x,y] photo px}, back_photo?, back_points?, strength, cartoon, fit}"""
+    from PIL import Image
+    def load(path, pts, back):
+        im = cartoon(Image.open(path).convert('RGB'), spec.get('cartoon', 1))
+        ph = bleed(np.asarray(im).astype(np.float32) / 255.0)
+        P = {k: np.array([v[0], -v[1]], float) for k, v in pts.items()}          # photo, y up
+        return ph, P, model_joints(back)
+    views = [load(spec['photo'], spec['points'], False)]
+    if spec.get('back_photo'): views.append(load(spec['back_photo'], spec['back_points'], True))
+    per_img = body_texels(); fit = float(spec.get('fit', 0.85)); strength = float(spec.get('strength', 1.0))
+
+    def sample(ph, uvY):
+        PH, PW = ph.shape[:2]; x = np.clip(uvY[:, 0], 0, PW - 1.001); y = np.clip(-uvY[:, 1], 0, PH - 1.001)
+        x0, y0 = x.astype(int), y.astype(int); fx, fy = (x - x0)[:, None], (y - y0)[:, None]
+        return (ph[y0, x0] * (1 - fx) * (1 - fy) + ph[y0, x0 + 1] * fx * (1 - fy) + ph[y0 + 1, x0] * (1 - fx) * fy + ph[y0 + 1, x0 + 1] * fx * fy)
+
+    def map_view(view, xz, bone_key, hw):
+        ph, P, J = view
+        side, reg = bone_key
+        if reg == 'torso':
+            Q = np.array([J['shoulder_l'], J['shoulder_r'], J['hip_l'], J['hip_r']])
+            Pp = np.array([P['shoulder_l'], P['shoulder_r'], P['hip_l'], P['hip_r']])
+            A, *_ = np.linalg.lstsq(np.c_[Q, np.ones(4)], Pp, rcond=None)
+            return np.c_[xz, np.ones(len(xz))] @ A
+        # picture side of this limb: front view - character Right is picture left; back view - character Left
+        pic = ('l' if side == 'Right' else 'r') if view is views[0] or not spec.get('back_photo') else ('l' if side == 'Left' else 'r')
+        j0, j1, ext = SEG[reg]
+        a, A_ = J[j0 + '_' + pic], P[j0 + '_' + pic]
+        if j1: b, B_ = J[j1 + '_' + pic], P[j1 + '_' + pic]
+        else:
+            prev = {'wrist': 'elbow', 'ankle': 'knee'}[j0]
+            b = a + (a - J[prev + '_' + pic]) * ext; B_ = A_ + (A_ - P[prev + '_' + pic]) * ext
+        d = b - a; L2 = max(d @ d, 1e-9); t = ((xz - a) @ d) / L2
+        n = np.array([-d[1], d[0]]) / np.sqrt(L2); sl = (xz - a - np.outer(t, d)) @ n
+        D = B_ - A_; N = np.array([-D[1], D[0]]) / max(np.linalg.norm(D), 1e-9)
+        sc = np.linalg.norm(P['shoulder_l'] - P['ankle_l']) / max(np.linalg.norm(J['shoulder_l'] - J['ankle_l']), 1e-9)
+        return A_ + np.outer(t, D) + np.outer(np.clip(sl / max(hw, 1e-4), -1, 1) * hw * sc * fit, N)
+
+    touched = set()
+    for img_name, chunks in per_img.items():
+        img = bpy.data.images[img_name]; W, H = img.size
+        px = np.array(img.pixels[:]).reshape(H, W, 4)[::-1].copy()
+        groups = {}
+        for arr, bone in chunks: groups.setdefault(region(bone), []).append(arr)
+        for key, arrs in groups.items():
+            if key[1] == 'hand': continue                           # the model keeps its own hands (skin)
+            T = np.vstack(arrs); xz = T[:, [2, 4]]
+            if key[1] != 'torso':                                   # this limb's half-width on the model
+                j0, j1, ext = SEG[key[1]]; J = views[0][2]; pic = 'l' if key[0] == 'Right' else 'r'
+                a = J[j0 + '_' + pic]
+                b = J[j1 + '_' + pic] if j1 else a + (a - J[{'wrist': 'elbow', 'ankle': 'knee'}[j0] + '_' + pic]) * ext
+                d = b - a; n = np.array([-d[1], d[0]]) / max(np.linalg.norm(d), 1e-9)
+                t = ((xz - a) @ d) / max(d @ d, 1e-9); hw = np.percentile(np.abs((xz - a - np.outer(t, d)) @ n), 90)
+            else: hw = 1.0
+            front = sample(views[0][0], map_view(views[0], xz, key, hw))
+            if len(views) > 1:
+                back = sample(views[1][0], map_view(views[1], xz, key, hw))
+                wf = np.clip((T[:, 5] + 0.2) / 0.4, 0, 1)[:, None]; col = front * wf + back * (1 - wf)
+            else: col = front
+            tx, ty = T[:, 0].astype(int), T[:, 1].astype(int)
+            px[ty, tx, :3] = px[ty, tx, :3] * (1 - strength) + col * strength
+        new = bpy.data.images.new(img_name.split('.')[0] + '_body', W, H, alpha=True)
+        new.pixels[:] = px[::-1].ravel(); new.pack()
+        for m in bpy.data.materials:
+            tex, _ = mat_nodes(m)
+            if tex and tex.image and tex.image.name == img_name:
+                tex.image = new; clear_tint(m); touched.add(m.name)
+    return sorted(touched)
+
+
 def gear_now():
     if 'gear_spec' in arm: return json.loads(arm['gear_spec'])
     kinds = sorted(set(o.get('gear_kind', 'unknown') for o in bpy.data.objects if is_gear(o)))
@@ -525,6 +688,7 @@ for name, rgb in spec.get('colours', {}).items():
     if not m: continue
     if rgb is None: clear_tint(m)
     else: set_tint(m, rgb)
+if spec.get('body'): apply_body(spec['body'])
 if spec.get('face'): apply_face(spec['face'])
 if 'gear' in spec: build_gear(spec['gear'])
 for n in spec.get('props_remove', []):
