@@ -27,25 +27,25 @@ HEAD = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 # side: joe = buyable HWP; cobra = New Battle only (needs STR_NEW_BATTLE_ONLY)
 # stats: tu, hp, (front, side, rear, under); weapon: (name, power, damage type, clip, snap(acc,tu), aimed, auto(acc,tu,shots), blast, bullet sprite, sound key)
 V = {
- "vamp":      dict(pack="vamp", asset="vamp", state="m0", side="joe", name="VAMP (guns)", tu=80, hp=45, arm=(30, 25, 20, 15),
+ "vamp":      dict(launch={"self": [[19, 0, 23, -10, 1]]}, pack="vamp", asset="vamp", state="m0", side="joe", name="VAMP (guns)", tu=80, hp=45, arm=(30, 25, 20, 15),
                   wpn=("Twin machine gun", 30, 1, 100, (50, 25), (75, 45), (40, 35, 4), 0, 2, "m60"), price=100000),
- "vamp_mk2":  dict(pack="vamp_mk2", asset="vamp_mk2", state="m4", side="joe", name="VAMP Mk II (rockets)", tu=70, hp=55, arm=(45, 35, 30, 20),
+ "vamp_mk2":  dict(launch={"self": [[-7, 5, 23], [-7, 2, 23], [-7, -2, 23], [-7, -5, 23]]}, pack="vamp_mk2", asset="vamp_mk2", state="m4", side="joe", name="VAMP Mk II (rockets)", tu=70, hp=55, arm=(45, 35, 30, 20),
                   stores=["m3", "m2", "m1", "m0"], store_weapon="self", head="proj_vamp_mk2_head0",
                   wpn=("Rocket pod", 90, 3, 4, None, (85, 50), None, 1, 0, "bazooka_launch"), price=160000),
- "triple_t":  dict(pack="triple_t", asset="triple_t", state="m2", side="joe", stores=["m1", "m0"], store_weapon="self", head="proj_triple_t_head0", name="Triple T", tu=64, hp=80, arm=(70, 55, 45, 40),
+ "triple_t":  dict(launch={"STR_GJA_JOE_TRIPLE_T_MISSILES_W": [[9, 15, 22], [9, -15, 22]]}, pack="triple_t", asset="triple_t", state="m2", side="joe", stores=["m1", "m0"], store_weapon="STR_GJA_JOE_TRIPLE_T_MISSILES_W", item_heads={"STR_GJA_JOE_TRIPLE_T_MISSILES": "proj_triple_t_head0"}, name="Triple T", tu=64, hp=80, arm=(70, 55, 45, 40),
                   wpn=("Side-pod missiles", 100, 3, 2, None, (85, 50), None, 2, 0, "power_javelin_launch"), price=250000),
- "mobat":     dict(pack="mobat", asset="mobat", state="m0", side="joe", name="MOBAT", tu=56, hp=120, arm=(90, 75, 60, 60),
+ "mobat":     dict(launch={"self": [[31, 0, 19, 0, 0]], "STR_GJA_JOE_M_O_B_A_T_MACHINE_GUN_W": [[8, 0, 27, 0, 0, 4, 1]]}, pack="mobat", asset="mobat", state="m0", side="joe", name="MOBAT", tu=56, hp=120, arm=(90, 75, 60, 60),
                   wpn=("Main gun", 90, 1, 20, (55, 33), (85, 70), None, 0, 4, "m2x_50cal"), price=420000,
                   turret_tu=3, cupola_weapon="STR_GJA_JOE_M_O_B_A_T_MACHINE_GUN_W", cupola_tu=1),   # John 22:01: the M2 cupola turns on its own, faster (180 = 4 TU; the turret 12)
- "wolverine": dict(pack="wolverine", asset="wolverine", state="m0", side="joe", name="Wolverine", tu=60, hp=100, arm=(80, 65, 50, 50),
+ "wolverine": dict(launch={"self": [[7, 11, 31, -13, 0]]}, pack="wolverine", asset="wolverine", state="m0", side="joe", name="Wolverine", tu=60, hp=100, arm=(80, 65, 50, 50),
                   wpn=("Missile rack", 80, 3, 6, None, (85, 55), None, 1, 0, "power_javelin_launch"), price=380000, head="proj_wolverine_head0", turret_stores=12, turret_tu=3),  # its own missile flies full size (John 20:10 "can i see it shoot")
- "mauler":    dict(pack="mauler", asset="mauler", state="m0", side="joe", name="Mauler M.B.T.", tu=50, hp=200, arm=(120, 100, 80, 80),
+ "mauler":    dict(launch={"self": [[44, 0, 37, -5, 0]]}, pack="mauler", asset="mauler", state="m0", side="joe", name="Mauler M.B.T.", tu=50, hp=200, arm=(120, 100, 80, 80),
                   wpn=("Main gun", 110, 1, 20, (50, 35), (80, 70), None, 0, 4, "m2x_50cal"), price=600000, turret_tu=3),
- "stinger":   dict(pack="stinger", asset="stinger", state="m0", side="cobra", name="Cobra Stinger", tu=72, hp=50, arm=(35, 25, 20, 15),
+ "stinger":   dict(launch={"self": [[9, 5, 25, -11, 0], [9, 0, 25, -11, 0], [9, -5, 25, -11, 0]]}, pack="stinger", asset="stinger", state="m0", side="cobra", name="Cobra Stinger", tu=72, hp=50, arm=(35, 25, 20, 15),
                   wpn=("Ground-to-air rockets", 80, 3, 3, None, (80, 55), None, 1, 0, "bazooka_launch"), price=0, head="proj_stinger_head0", turret_tu=3),  # file card (John 18:37 rework); was "Quad cannon". 3 rockets on the rack; stand-in numbers
- "hiss":      dict(pack="hiss", asset="hiss", state="m0", side="cobra", name="Cobra H.I.S.S.", tu=60, hp=110, arm=(85, 70, 55, 55),
+ "hiss":      dict(launch={"self": [[21, 4, 43, -9, 0], [21, -4, 43, -9, 0]]}, pack="hiss", asset="hiss", state="m0", side="cobra", name="Cobra H.I.S.S.", tu=60, hp=110, arm=(85, 70, 55, 55),
                   wpn=("Twin 30mm automatic cannons", 60, 1, 40, (50, 30), (80, 55), (40, 40, 2), 0, 4, "m2x_50cal"), price=0, head="proj_thunder_round_head0", turret_tu=3),  # blueprint name (John 18:29 rework); same 30mm round as the Thunder Machine
- "hiss_rack": dict(pack="hiss_rack", asset="hiss_rack", state="m0", side="cobra", name="Cobra H.I.S.S. (rocket rack)", tu=60, hp=110, arm=(85, 70, 55, 55),
+ "hiss_rack": dict(launch={"self": [[11, 3, 47, -9, 0], [11, -3, 47, -9, 0]]}, pack="hiss_rack", asset="hiss_rack", state="m0", side="cobra", name="Cobra H.I.S.S. (rocket rack)", tu=60, hp=110, arm=(85, 70, 55, 55),
                   wpn=("H.I.S.S. rocket rack", 90, 3, 4, None, (80, 55), None, 1, 0, "bazooka_launch"), price=0, head="proj_hiss_rack_head0", turret_tu=3),  # Cobra research upgrade (John 18:41); research gate + deployment are STORY/BUILD's; stand-in numbers
  "ferret":    dict(pack="ferret", asset="ferret", state="m2", side="cobra", stores=["m1", "m0"], store_weapon="self", head="proj_ferret_head0",   # Com-Bats leave the pegs (John 23:17)
                   deploy=["dL1", "dL2", "dR1", "dR2"],   # John 23:28: rams push each Com-Bat out from between the wheels, then it fires
@@ -57,7 +57,7 @@ V = {
                   item_heads={"STR_GJA_COBRA_FERRET_A_T_V_CMF_1": "proj_ferret_cmf_head"},   # John 18 Nov 00:02: the twin .50s are the front gun (x 8.0, y +-0.35, z 5.64), barrels alternating
                   name="Cobra Ferret", tu=80, hp=30, arm=(20, 15, 10, 10),
                   wpn=("Machine gun", 30, 1, 60, (50, 25), None, (35, 35, 3), 0, 2, "m60"), price=0),
- "thunder":   dict(pack="thunder_machine", asset="thunder_machine", state="m0", head="proj_thunder_round_head0", side="cobra", name="Dreadnok Thunder Machine", tu=54, hp=110, arm=(70, 60, 50, 40),
+ "thunder":   dict(launch={"self": [[21, 1, 14], [21, -1, 14]]}, pack="thunder_machine", asset="thunder_machine", state="m0", head="proj_thunder_round_head0", side="cobra", name="Dreadnok Thunder Machine", tu=54, hp=110, arm=(70, 60, 50, 40),
                   wpn=("Penetrator Gatling cannons (30mm)", 45, 1, 120, (45, 30), None, (35, 40, 5), 0, 4, "m60"), price=0),  # John 17:36: the twin Gatlings (VFACTORY stand-in numbers for STORY); was a "Rocket rack" firing from the jet exhausts # Thunderclap tractor + trailer (VFACTORY, 17 Nov 2026; John's TechnoViper3D kit, 3x3 each). Canon weapon names from the kit blueprint.
  # Numbers are VFACTORY stand-ins scaled off the Mauler/MOBAT until STORY sets them; the ZPJ-79 copies STORY's arsenal item (power 110, 3, blast 2).
  "thunderclap_tractor": dict(pack="thunderclap_tractor", asset="thunderclap_tractor", state="m0", side="joe", name="Thunderclap Tractor", tu=50, hp=170, arm=(100, 80, 60, 60),
@@ -263,13 +263,14 @@ for i, (v, d) in enumerate(V.items()):
     if d.get("wpn2"):                                # a second built-in weapon (missiles beside the gun), its own item + ammo
         A += [f"    builtInWeapons: [{T}_W2, {T}_A2]"]
     if d.get("stores"):                              # the missiles leave the hull picture one by one as the _W2 weapon fires (engine, VFACTORY)
-        A += [f"    gjStoreWeapon: {T if d.get('store_weapon') == 'self' else T + '_W2'}", f"    gjStoreStates: {len(d['stores'])}"]
+        sw = d.get('store_weapon'); sw = T if sw == 'self' else sw if (sw or '').startswith('STR_') else T + '_W2'
+        A += [f"    gjStoreWeapon: {sw}", f"    gjStoreStates: {len(d['stores'])}"]
         if d.get("deploy"):                          # pushed out on its arm before it fires (engine, VFACTORY; John 17 Nov 23:28)
             A += [f"    gjStoreDeploy: {len(d['deploy']) // len(d['stores'])}"]
-    if d.get("launch"):                              # where each weapon's shot leaves the vehicle (engine gjLaunchPoints; John 17 Nov 23:24)
-        A += ["    gjLaunchPoints:"] + [f"      {w if w.startswith('STR_') else T}: [" + ", ".join(f"[{p[0]}, {p[1]}, {p[2]}]" for p in pts) + "]" for w, pts in d["launch"].items()]
     elif d.get("turret_stores"):                     # the same, for missiles carried on the turret (Wolverine; John 17 Nov 20:21)
         A += [f"    gjStoreWeapon: {T}", f"    gjStoreStates: {d['turret_stores']}"]
+    if d.get("launch"):                              # where each weapon's shot leaves the vehicle (engine gjLaunchPoints; John 17 Nov 23:24)
+        A += ["    gjLaunchPoints:"] + [f"      {w if w.startswith('STR_') else T}: [" + ", ".join("[" + ", ".join(str(x) for x in p) + "]" for p in pts) + "]" for w, pts in d["launch"].items()]
     if turret:
         A += [f"    gjTurretSheet: VEH_{v.upper()}_TURRET.PCK", "    gjTurretOffsets: [" + ", ".join(f"[{o[0]}, {o[1]}]" for o in turret[1]) + "]"]
         # turn costs (John 15 Nov 15:08, 17 Nov 22:01: a machine gun turns faster, for fewer TU, than a cannon or missile turret):
@@ -286,7 +287,7 @@ for i, (v, d) in enumerate(V.items()):
     I += [f"  - type: {T}", "    categories: [STR_JOE_KIT]" if d["side"] == "joe" else "    categories: [STR_JOE_KIT]",
           "    battleType: 1", "    fixedWeapon: true", f"    invWidth: 2", "    invHeight: 3", "    weight: 1", f"    size: {2 * n}",
           f"    bigSprite: {340 + i}", "    floorSprite: 0", "    handSprite: 0", f"    bulletSprite: {bullet}", f"    fireSound: {cast(snd)}",
-          f"    compatibleAmmo: [{ammo}]", "    turretType: 0", f"    costBuy: {d['price']}", f"    costSell: {d['price'] // 2}", "    transferTime: 96"]
+          f"    compatibleAmmo: [{ammo}]"] + (["    turretType: 0"] if turret else []) + [f"    costBuy: {d['price']}", f"    costSell: {d['price'] // 2}", "    transferTime: 96"]
     if d["side"] == "cobra": I += ["    requires: [STR_NEW_BATTLE_ONLY]", "    requiresBuy: [STR_NEW_BATTLE_ONLY]"]
     if d.get("head") and not d.get("wpn2"): I += [f"    gjBulletHeadSheet: GJ_HEAD_{v.upper()}.PCK", "    bulletDirectional: true"]   # the hook only draws directional shots   # the main weapon's own full-size shot
     if snap: I += [f"    accuracySnap: {snap[0]}", f"    tuSnap: {snap[1]}"]
@@ -325,7 +326,8 @@ for v, d in V.items():                               # full-size missile heads (
               "    files:", f"      0: Resources/VehiclesPrivate/{d['head']}.png"]
 for v, d in V.items():                               # heads for other desks' items (STORY's arsenal): sheet + the two head keys only;
     for it, png in d.get("item_heads", {}).items():   # the arsenal loads after this file and fills in everything else
-        L += [f"  - type: GJ_HEAD_{png.upper()}.PCK", "    width: 1024", "    height: 128", "    subX: 128", "    subY: 128",
+        hs = Image.open(os.path.join(OUT, png + ".png")).height                    # square frames, 128 or bigger for a long missile
+        L += [f"  - type: GJ_HEAD_{png.upper()}.PCK", f"    width: {8 * hs}", f"    height: {hs}", f"    subX: {hs}", f"    subY: {hs}",
               "    files:", f"      0: Resources/VehiclesPrivate/{png}.png"]
         for suf in ("W", "A"):
             I += [f"  - type: {it}_{suf}", f"    gjBulletHeadSheet: GJ_HEAD_{png.upper()}.PCK", "    bulletDirectional: true"]
