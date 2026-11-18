@@ -37,7 +37,7 @@ V = {
  "mobat":     dict(pack="mobat", asset="mobat", state="m0", side="joe", name="MOBAT", tu=56, hp=120, arm=(90, 75, 60, 60),
                   wpn=("Main gun", 90, 1, 20, (55, 33), (85, 70), None, 0, 4, "m2x_50cal"), price=420000),
  "wolverine": dict(pack="wolverine", asset="wolverine", state="m0", side="joe", name="Wolverine", tu=60, hp=100, arm=(80, 65, 50, 50),
-                  wpn=("Missile rack", 80, 3, 6, None, (85, 55), None, 1, 0, "power_javelin_launch"), price=380000),
+                  wpn=("Missile rack", 80, 3, 6, None, (85, 55), None, 1, 0, "power_javelin_launch"), price=380000, head="proj_wolverine_head0"),  # its own missile flies full size (John 20:10 "can i see it shoot")
  "mauler":    dict(pack="mauler", asset="mauler", state="m0", side="joe", name="Mauler M.B.T.", tu=50, hp=200, arm=(120, 100, 80, 80),
                   wpn=("Main gun", 110, 1, 20, (50, 35), (80, 70), None, 0, 4, "m2x_50cal"), price=600000),
  "stinger":   dict(pack="stinger", asset="stinger", state="m0", side="cobra", name="Cobra Stinger", tu=72, hp=50, arm=(35, 25, 20, 15),
