@@ -60,6 +60,18 @@ canvas { width: 100%; height: 230px; display: block; }
 .busy { color: var(--gold); font-size: 13px; }
 .cmp { font-size: 11px; color: var(--mute); }
 .up { color: var(--red); } .down { color: var(--green); }
+.replay { margin-top: 18px; }
+.rp-ctl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; font-size: 12.5px; color: var(--mute); }
+.rp-ctl select, .rp-ctl input[type=number] { width: auto; padding: 4px 6px; }
+.rp-ctl input[type=range] { flex: 1; min-width: 200px; accent-color: var(--gold); }
+.rp-ctl button { background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 5px 12px; cursor: pointer; font: inherit; }
+.rp-month { color: var(--gold); font-weight: 700; min-width: 74px; }
+.rp-svg { width: 100%; background: #0f1317; border: 1px solid var(--line); border-radius: 8px; display: block; }
+.rp-log { margin: 8px 0 0; padding: 0; list-style: none; font-size: 12.5px; columns: 2; column-gap: 24px; }
+.rp-log li { margin: 2px 0; break-inside: avoid; }
+.rp-log li::before { content: '\25B8 '; color: var(--olive); }
+.rp-key { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 11.5px; color: var(--mute); margin-top: 8px; }
+
 </style>
 </head>
 <body>
@@ -227,6 +239,7 @@ function showAct1(R, B, scen, ms) {
   const ser = key => S.map(s => ({col: css(STYLE_COL[s]), data: R[s].track[key]}));
   line('c1', ser('funds')); line('c2', ser('mat')); line('c3', ser('sites'));
   line('c4', S.map(s => ({col: css(STYLE_COL[s]), data: R[s].endHist.map(x => x * 100 / params.runs)})), '%');
+  replayCard();
 }
 
 function showSplit(R, B, scen, ms) {
@@ -245,6 +258,7 @@ function showSplit(R, B, scen, ms) {
     <p class="note">Stock held across region 1: its hub plus every garrison. Bullets are drawn on their own scale-free line like the rest; switch a stock off by setting its production to 0.</p>`;
   document.getElementById('out').innerHTML = h;
   S.forEach((s, i) => line('s' + i, K.map(k => ({col: css(STOCK_COL[k]), data: R[s].track[k]})), '', true));
+  replayCard();
 }
 
 function line(id, series, unit = '', log = false) {
@@ -263,7 +277,151 @@ function line(id, series, unit = '', log = false) {
     s.data.forEach((v, i) => { if (v == null) { on = false; return; } on ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)); on = true; }); g.stroke(); }
 }
 
-document.querySelectorAll('.tab').forEach(t => t.onclick = () => { document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t)); mode = t.dataset.mode; build(); });
+
+// ------------------------------------------------------------------ the map: replay one campaign
+let RP = {timer: null};
+function replayCard() {
+  const S = MODES[mode].styles, out = document.getElementById('out');
+  const box = document.createElement('div'); box.className = 'card replay';
+  box.innerHTML = `<h3>Map: replay one campaign</h3>
+    <div class="rp-ctl">Player <select id="rp-style">${S.map(s => `<option ${s === 'typical' ? 'selected' : ''}>${s}</option>`).join('')}</select>
+    Campaign # <input type="number" id="rp-n" value="1" min="1" style="width:64px">
+    <button id="rp-play">&#9654; Play</button><span class="rp-month" id="rp-mon"></span><input type="range" id="rp-m" min="0" value="0"></div>
+    <svg class="rp-svg" id="rp-svg"></svg><ul class="rp-log" id="rp-log"></ul><div class="rp-key" id="rp-key"></div>
+    <p class="note">One campaign from the same numbers, month by month. The tables above are averages over many campaigns; this is what a single one looks like.</p>`;
+  out.appendChild(box);
+  const load = () => { stopPlay(); const st = document.getElementById('rp-style').value, n = +document.getElementById('rp-n').value || 1;
+    RP.run = (mode === 'act1' ? SIM.act1Replay : SIM.splitReplay)(clone(params), st, n); RP.mode = mode; RP.slots = null;
+    const sl = document.getElementById('rp-m'); sl.max = RP.run.frames.length - 1; sl.value = 0; draw(); };
+  const draw = () => { const i = +document.getElementById('rp-m').value; (RP.mode === 'act1' ? drawAct1 : drawSplit)(RP.run, i); };
+  document.getElementById('rp-style').onchange = load; document.getElementById('rp-n').onchange = load;
+  document.getElementById('rp-m').oninput = draw;
+  document.getElementById('rp-play').onclick = () => { if (RP.timer) return stopPlay();
+    const sl = document.getElementById('rp-m'); if (+sl.value >= +sl.max) sl.value = 0;
+    document.getElementById('rp-play').innerHTML = '&#10074;&#10074; Pause';
+    RP.timer = setInterval(() => { if (+sl.value >= +sl.max) return stopPlay(); sl.value = +sl.value + 1; draw(); }, 900); };
+  load();
+}
+function stopPlay() { if (RP.timer) clearInterval(RP.timer); RP.timer = null; const b = document.getElementById('rp-play'); if (b) b.innerHTML = '&#9654; Play'; }
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+function logList(events, extra) { document.getElementById('rp-log').innerHTML = (extra || '') + (events.length ? events.map(e => `<li>${esc(e.text)}</li>`).join('') : '<li>A quiet month.</li>'); }
+
+// icons: x, y centre, r size; st = {fill, stroke, dash, op}
+function icon(type, x, y, r, st) {
+  const a = `fill="${st.fill}" stroke="${st.stroke}" stroke-width="1.6" ${st.dash ? 'stroke-dasharray="3 2"' : ''} opacity="${st.op}"`;
+  switch (type) {
+    case 'FRONT': return `<g ${a}><rect x="${x - r * .7}" y="${y - r}" width="${r * 1.4}" height="${r * 2}"/><g stroke="none" fill="${st.stroke}" opacity=".7"><rect x="${x - r * .4}" y="${y - r * .6}" width="${r * .3}" height="${r * .3}"/><rect x="${x + r * .1}" y="${y - r * .6}" width="${r * .3}" height="${r * .3}"/><rect x="${x - r * .4}" y="${y}" width="${r * .3}" height="${r * .3}"/><rect x="${x + r * .1}" y="${y}" width="${r * .3}" height="${r * .3}"/></g></g>`;
+    case 'CELL': return `<circle cx="${x}" cy="${y}" r="${r * .55}" ${a}/>`;
+    case 'DEPOT': return `<g ${a}><rect x="${x - r * .9}" y="${y - r * .7}" width="${r * 1.8}" height="${r * 1.4}"/><path d="M${x - r * .9} ${y - r * .7}L${x + r * .9} ${y + r * .7}M${x + r * .9} ${y - r * .7}L${x - r * .9} ${y + r * .7}" fill="none"/></g>`;
+    case 'FACTORY': return `<g ${a}><path d="M${x - r} ${y + r * .8}V${y - r * .1}L${x - r * .4} ${y - r * .5}V${y - r * .1}L${x + r * .2} ${y - r * .5}V${y - r * .1}H${x + r * .5}V${y - r}H${x + r}V${y + r * .8}Z"/></g>`;
+    case 'LAB': return `<g ${a}><path d="M${x - r * .3} ${y - r}H${x + r * .3}V${y - r * .3}L${x + r * .9} ${y + r * .8}H${x - r * .9}L${x - r * .3} ${y - r * .3}Z"/></g>`;
+    case 'CAMP': return `<path d="M${x - r} ${y + r * .8}L${x} ${y - r}L${x + r} ${y + r * .8}Z" ${a}/>`;
+    case 'BROADCAST': return `<g ${a}><path d="M${x} ${y + r}V${y - r * .4}M${x - r * .5} ${y + r}L${x} ${y - r * .4}L${x + r * .5} ${y + r}" fill="none"/><circle cx="${x}" cy="${y - r * .6}" r="${r * .25}"/><path d="M${x - r * .7} ${y - r * 1.1}Q${x} ${y - r * 1.6} ${x + r * .7} ${y - r * 1.1}" fill="none"/></g>`;
+    case 'DROME': case 'DROME_BUILDING': return `<g ${a}><circle cx="${x}" cy="${y}" r="${r * 1.5}"/><circle cx="${x}" cy="${y}" r="${r * .8}" fill="none"/></g>`;
+    case 'HUB': return `<g ${a}><circle cx="${x}" cy="${y}" r="${r}"/></g>`;
+    default: return `<circle cx="${x}" cy="${y}" r="${r * .6}" ${a}/>`;
+  }
+}
+const cross = (x, y, r, c = '#d0453a') => `<path d="M${x - r} ${y - r}L${x + r} ${y + r}M${x + r} ${y - r}L${x - r} ${y + r}" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`;
+const burst = (x, y, r) => { let p = ''; for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, rr = i % 2 ? r * .45 : r; p += (i ? 'L' : 'M') + (x + rr * Math.cos(a)).toFixed(1) + ' ' + (y + rr * Math.sin(a)).toFixed(1); } return `<path d="${p}Z" fill="#d8b45a" opacity=".85"/>`; };
+
+const COLS = ['FRONT', 'CELL', 'DEPOT', 'FACTORY', 'LAB', 'CAMP', 'BROADCAST', 'DROME'];
+const COLNAME = {FRONT: 'Front companies', CELL: 'Cells', DEPOT: 'Depots', FACTORY: 'Factories', LAB: 'Labs', CAMP: 'Camps', BROADCAST: 'Broadcast', DROME: 'Terror Drome'};
+function drawAct1(run, i) {
+  const W = 1000, H = 440, F = run.frames, fr = F[i], svg = document.getElementById('rp-svg');
+  if (!RP.slots) { RP.slots = {}; const taken = {};   // a slot is reused once its site is gone, so columns stay compact
+    for (const f of F) {
+      const here = new Set(f.sites.map(s => s.id)), gone = new Set(f.events.filter(e => e.kind === 'destroy').map(e => e.id));
+      for (const [id, sl] of Object.entries(RP.slots)) if (!here.has(+id) && !gone.has(+id) && taken[sl.col]) taken[sl.col].delete(sl.n);
+      for (const s of f.sites) if (!(s.id in RP.slots)) { const col = s.type === 'DROME_BUILDING' ? 'DROME' : s.type;
+        const used = taken[col] = taken[col] || new Set(); let n = 0; while (used.has(n)) n++; used.add(n); RP.slots[s.id] = {col, n}; } } }
+  const cw = (W - 40) / COLS.length, top = 120;
+  const pos = id => { const sl = RP.slots[id]; if (!sl) return null; const c = COLS.indexOf(sl.col);
+    const big = sl.col === 'DROME'; const per = big ? 1 : 2, rowH = big ? 90 : 46;
+    return {x: 20 + cw * c + cw / 2 + (big ? 0 : (sl.n % per - .5) * 44), y: top + 40 + Math.floor(sl.n / per) * rowH, r: big ? 22 : 14}; };
+  const ids = new Set(fr.sites.map(s => s.id));
+  const evIds = k => new Set(fr.events.filter(e => e.kind === k && e.id != null).map(e => e.id));
+  const built = evIds('build'), dromeEv = evIds('drome'), raided = evIds('raid'), destroyed = fr.events.filter(e => e.kind === 'destroy');
+  let g = `<rect width="${W}" height="${H}" fill="#0f1317"/>`;
+  // Cobra Commander and the network
+  const cc = {x: W / 2, y: 46};
+  g += `<g><circle cx="${cc.x}" cy="${cc.y}" r="20" fill="#1b3d6e" stroke="#4b8ed8" stroke-width="2"/><text x="${cc.x}" y="${cc.y + 5}" text-anchor="middle" font-size="14" font-weight="700" fill="#e8ecef">CC</text>
+    <text x="${cc.x + 30}" y="${cc.y - 4}" font-size="12" fill="#93a1ad">Cobra Commander (off the map)</text><text x="${cc.x + 30}" y="${cc.y + 12}" font-size="12" fill="#d8b45a">funds ${Math.round(fr.funds)} &middot; materiel ${Math.round(fr.mat)}</text></g>`;
+  for (const s of fr.sites) { const p = pos(s.id); if (!p) continue;
+    g += `<line x1="${cc.x}" y1="${cc.y + 20}" x2="${p.x}" y2="${p.y - p.r}" stroke="#4b8ed8" stroke-width="1" opacity="${s.hidden && !s.found ? .12 : .28}"/>`; }
+  if (fr.events.some(e => e.kind === 'transfer')) g += `<path d="M${cc.x - 80} ${cc.y}H${cc.x - 22}" stroke="#d8b45a" stroke-width="2" stroke-dasharray="5 3"/><text x="${cc.x - 84}" y="${cc.y + 4}" text-anchor="end" font-size="11" fill="#d8b45a">network transfer</text>`;
+  if (fr.events.some(e => e.kind === 'intercept')) g += cross(cc.x - 60, cc.y, 6);
+  COLS.forEach((c, k) => { g += `<text x="${20 + cw * k + cw / 2}" y="${top + 6}" text-anchor="middle" font-size="11.5" fill="#93a1ad">${COLNAME[c]}</text>`; });
+  for (const s of fr.sites) { const p = pos(s.id); if (!p) continue;
+    const st = s.found ? {fill: '#2f5f9e', stroke: '#8fbaf0', op: 1} : s.hidden ? {fill: 'none', stroke: '#7d8a96', dash: true, op: .6} : {fill: '#16263a', stroke: '#4b8ed8', op: 1};
+    if (s.type === 'DROME_BUILDING') st.dash = true;
+    if (built.has(s.id) || dromeEv.has(s.id)) g += `<circle cx="${p.x}" cy="${p.y}" r="${p.r * (s.type.startsWith('DROME') ? 2.1 : 1.45)}" fill="none" stroke="#d8b45a" stroke-width="2" opacity=".8"/>`;
+    g += icon(s.type, p.x, p.y, p.r, st);
+    if (s.fort) g += `<path d="M${p.x + p.r} ${p.y - p.r - 4}l7 3v5c0 4-3 6-7 8c-4-2-7-4-7-8v-5z" fill="#d8b45a" stroke="#111" stroke-width="1"/>`;
+    if (raided.has(s.id)) g += burst(p.x - p.r, p.y - p.r, 9);
+  }
+  for (const e of destroyed) { const p = pos(e.id); if (p) { g += icon(e.type, p.x, p.y, p.r, {fill: 'none', stroke: '#555', op: .6}) + cross(p.x, p.y, p.r * .9); } }
+  for (const e of fr.events.filter(e => e.kind === 'crime' || e.kind === 'crimeStopped')) { const p = pos(e.id); if (p) g += `<text x="${p.x + p.r + 2}" y="${p.y + 4}" font-size="13" font-weight="700" fill="${e.kind === 'crime' ? '#5fb06a' : '#d0453a'}">$</text>`; }
+  if (fr.events.some(e => e.kind === 'terror')) g += `<text x="${W - 20}" y="${H - 16}" text-anchor="end" font-size="13" font-weight="700" fill="#d0453a">TERROR ATTACK</text>`;
+  if (fr.end) g += `<rect x="${W / 2 - 230}" y="${H - 44}" width="460" height="30" rx="5" fill="#26301f" stroke="#8a9a5b"/><text x="${W / 2}" y="${H - 24}" text-anchor="middle" font-size="14" font-weight="700" fill="#d8b45a">ACT 1 ENDS: ${esc(fr.end)}</text>`;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = g;
+  document.getElementById('rp-mon').textContent = 'Month ' + fr.m;
+  logList(fr.events);
+  document.getElementById('rp-key').innerHTML = `<span>dashed grey = hidden</span><span>blue outline = built, not found</span><span>solid blue = found by the Joes</span><span>gold ring = new this month</span><span>gold shield = dug in</span><span>gold burst = raided</span><span>red cross = destroyed</span><span>green $ = robbery got away &middot; red $ = stopped</span>`;
+}
+
+const SC = {bullets: '#e8ecef', guns: '#9aa5ad', missiles: '#d0453a', vehicles: '#d8b45a', aircraft: '#4b8ed8', cells: '#b06fd8'};
+function drawSplit(run, i) {
+  const F = run.frames, fr = F[i], K = SIM.STOCKS, nR = fr.regions.length, svg = document.getElementById('rp-svg');
+  const PW = 300, gap = 30, W = nR * PW + (nR - 1) * gap + 40, H = 430, need = params.battleNeed;
+  let g = `<rect width="${W}" height="${H}" fill="#0f1317"/>`;
+  const geo = r => { const x0 = 20 + r * (PW + gap); return {x0, prod: k => ({x: x0 + 30 + K.indexOf(k) * 48, y: 70}), hub: {x: x0 + PW / 2, y: 190}, gar: (j, n) => ({x: x0 + 30 + j * ((PW - 60) / Math.max(1, n - 1)), y: 330})}; };
+  fr.regions.forEach((reg, r) => { const G = geo(r);
+    g += `<rect x="${G.x0}" y="18" width="${PW}" height="${H - 36}" rx="8" fill="${reg.quiet > 0 ? '#1a1712' : '#141a20'}" stroke="#33404c"/>
+      <text x="${G.x0 + 12}" y="38" font-size="12.5" font-weight="700" fill="#e8ecef">Region ${r + 1}</text><text x="${G.x0 + PW - 12}" y="38" text-anchor="end" font-size="11.5" fill="#d8b45a">funds ${Math.round(reg.funds)}</text>`;
+    if (reg.quiet > 0) g += `<text x="${G.x0 + PW / 2}" y="${H - 30}" text-anchor="middle" font-size="12" font-weight="700" fill="#d8b45a">QUIET: COBRA HAS PULLED BACK</text>`;
+    // producers -> hub
+    for (const k of K) { const p = G.prod(k), down = reg.producers[k];
+      const live = down === 0, locked = down === -1;
+      g += `<line x1="${p.x}" y1="${p.y + 14}" x2="${G.hub.x}" y2="${G.hub.y - 26}" stroke="${live ? SC[k] : '#444'}" stroke-width="${live ? 1.6 : 1}" ${live ? '' : 'stroke-dasharray="3 3"'} opacity="${locked ? .15 : .55}"/>`;
+      g += `<rect x="${p.x - 14}" y="${p.y - 14}" width="28" height="28" rx="4" fill="${live ? '#1d252d' : '#151515'}" stroke="${locked ? '#333' : SC[k]}" stroke-width="2" opacity="${locked ? .45 : 1}"/>
+        <text x="${p.x}" y="${p.y + 4}" text-anchor="middle" font-size="11" font-weight="700" fill="${locked ? '#555' : SC[k]}">${k[0].toUpperCase()}${k === 'cells' ? '' : ''}</text>`;
+      if (down > 0) g += cross(p.x, p.y, 10) + `<text x="${p.x}" y="${p.y + 28}" text-anchor="middle" font-size="10" fill="#d0453a">${down} mo</text>`;
+      if (locked) g += `<text x="${p.x}" y="${p.y + 28}" text-anchor="middle" font-size="9.5" fill="#666">Destro</text>`;
+    }
+    // hub with stock bars
+    g += icon('HUB', G.hub.x, G.hub.y, 24, {fill: '#1b3d6e', stroke: '#4b8ed8', op: 1}) + `<text x="${G.hub.x}" y="${G.hub.y + 4}" text-anchor="middle" font-size="11" font-weight="700" fill="#e8ecef">HUB</text>`;
+    K.forEach((k, j) => { const v = reg.hub[k], h = Math.min(30, Math.log10(1 + v) * 12);
+      g += `<rect x="${G.hub.x + 34 + j * 9}" y="${G.hub.y + 14 - h}" width="6" height="${h}" fill="${SC[k]}"/>`; });
+    // garrisons and vans
+    const n = reg.garrisons.length;
+    reg.garrisons.forEach((gs, j) => { const q = G.gar(j, n);
+      const vans = fr.vans.filter(v => v.r === r && v.g === j), hit = vans.some(v => v.hit), got = vans.some(v => !v.hit);
+      if (vans.length) { g += `<line x1="${G.hub.x}" y1="${G.hub.y + 24}" x2="${q.x}" y2="${q.y - 16}" stroke="${got ? '#c9d2d9' : '#555'}" stroke-width="${got ? 1.4 : 1}" opacity=".55"/>`;
+        if (hit) { const mx = (G.hub.x + q.x) / 2, my = (G.hub.y + 24 + q.y - 16) / 2; g += cross(mx, my, 6); } }
+      const att = gs.attacked === 2;
+      g += `<rect x="${q.x - 13}" y="${q.y - 13}" width="26" height="26" rx="3" fill="#16263a" stroke="${gs.short.length ? '#d0453a' : '#4b8ed8'}" stroke-width="${gs.short.length ? 2.5 : 1.5}"/>`;
+      if (att) g += burst(q.x + 13, q.y - 13, 8);
+      K.forEach((k, s) => { const has = gs.stock[k] >= need[k], cx = q.x - 12.5 + s * 5, cy = q.y + 22;
+        const lock = k === 'cells' && reg.producers.cells === -1;
+        g += `<circle cx="${cx}" cy="${cy}" r="2.1" fill="${has ? SC[k] : 'none'}" stroke="${lock ? '#333' : (has ? SC[k] : (gs.short.includes(k) ? '#d0453a' : '#555'))}" stroke-width="1"/>`; });
+      g += `<text x="${q.x}" y="${q.y + 4}" text-anchor="middle" font-size="10" fill="#93a1ad">G${j + 1}</text>`;
+    });
+  });
+  // emergency shipments between hubs
+  for (const e of fr.events.filter(e => e.kind === 'emergency')) { const a = geo(e.from).hub, b = geo(e.to).hub, mx = (a.x + b.x) / 2;
+    g += `<path d="M${a.x} ${a.y - 26}Q${mx} ${a.y - 120} ${b.x} ${b.y - 26}" fill="none" stroke="${SC[e.k]}" stroke-width="2.2" stroke-dasharray="6 4"/>`;
+    if (e.hit) g += cross(mx, a.y - 74, 7); }
+  for (const e of fr.events.filter(e => e.kind === 'raidHub')) { const G = geo(e.r); g += burst(G.hub.x - 22, G.hub.y - 22, 11); }
+  for (const e of fr.events.filter(e => e.kind === 'raidProducer')) { const p = geo(e.r).prod(e.k); g += burst(p.x + 14, p.y - 14, 9); }
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = g;
+  document.getElementById('rp-mon').textContent = 'Month ' + fr.m;
+  const shorts = []; fr.regions.forEach((reg, r) => reg.garrisons.forEach((gs, j) => { if (gs.short.length) shorts.push(`<li>Region ${r + 1}, G${j + 1}: a battle found no ${gs.short.join(', no ')}</li>`); }));
+  logList(fr.events.filter(e => e.kind !== 'van'), (fr.events.filter(e => e.kind === 'van').length ? `<li>${fr.events.filter(e => e.kind === 'van').length} supply van(s) ambushed</li>` : '') + shorts.join(''));
+  document.getElementById('rp-key').innerHTML = `<span>top row: producers (B G M V A C), red cross = wrecked, months to rebuild</span><span>circle: the region's hub, bars = its stock</span><span>bottom: garrisons; dots = which stocks it holds (filled = enough for a battle)</span><span>red border = a battle there found something missing</span><span>grey lines = this month's van deliveries, red cross = ambushed</span><span>dashed curve = emergency shipment</span><span>gold burst = Joe raid</span>`;
+}
+
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => { document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t)); mode = t.dataset.mode; stopPlay(); build(); });
 build();
 </script>
 </body>

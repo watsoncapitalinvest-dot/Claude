@@ -60,6 +60,18 @@ canvas { width: 100%; height: 230px; display: block; }
 .busy { color: var(--gold); font-size: 13px; }
 .cmp { font-size: 11px; color: var(--mute); }
 .up { color: var(--red); } .down { color: var(--green); }
+.replay { margin-top: 18px; }
+.rp-ctl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; font-size: 12.5px; color: var(--mute); }
+.rp-ctl select, .rp-ctl input[type=number] { width: auto; padding: 4px 6px; }
+.rp-ctl input[type=range] { flex: 1; min-width: 200px; accent-color: var(--gold); }
+.rp-ctl button { background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 5px 12px; cursor: pointer; font: inherit; }
+.rp-month { color: var(--gold); font-weight: 700; min-width: 74px; }
+.rp-svg { width: 100%; background: #0f1317; border: 1px solid var(--line); border-radius: 8px; display: block; }
+.rp-log { margin: 8px 0 0; padding: 0; list-style: none; font-size: 12.5px; columns: 2; column-gap: 24px; }
+.rp-log li { margin: 2px 0; break-inside: avoid; }
+.rp-log li::before { content: '\25B8 '; color: var(--olive); }
+.rp-key { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 11.5px; color: var(--mute); margin-top: 8px; }
+
 </style>
 </head>
 <body>
@@ -115,13 +127,17 @@ const ACT1_DEFAULTS = {
   },
 };
 
-function act1Run(P, style, R) {
+const NAMES = {FRONT: 'front company', FACTORY: 'factory', CAMP: 'training camp', DEPOT: 'depot', LAB: 'lab', BROADCAST: 'broadcast station', CELL: 'cell', DROME: 'Terror Drome', DROME_BUILDING: 'Drome under construction'};
+const NM = t => NAMES[t] || t.toLowerCase();
+function act1Run(P, style, R, rec) {
   const SITES = {FRONT: P.front, FACTORY: P.factory, CAMP: P.camp, DEPOT: P.depot, LAB: P.lab, BROADCAST: P.broadcast,
                  DROME: Object.assign({cost: P.dromeCost}, P.drome)};
   const isSite = t => t in SITES;
   const st = P.styles[style];
   const startTypes = [...Array(P.startFronts).fill('FRONT'), ...Array(P.startDepots).fill('DEPOT'), ...Array(P.startCells).fill('CELL')];
-  const sites = startTypes.map(t => ({type: t, found: false, hidden: true}));
+  let nid = 0; const mk = (type, found, hidden) => ({id: nid++, type, found, hidden});
+  const sites = startTypes.map(t => mk(t, false, true));
+  const frames = [], E = []; const ev = (kind, text, extra) => { if (rec) E.push(Object.assign({kind, text}, extra || {})); };
   let funds = P.startFunds, mat = P.startMateriel;
   const done = {}, prog = {}; TREE.forEach(t => prog[t.name] = 0);
   const drome = {saved: 0, building: null, built: null};
@@ -134,7 +150,8 @@ function act1Run(P, style, R) {
   const spineM = loc == null ? null : loc + (R() * 3 - 1.5);
   const prio = ['DROME', 'DROME_BUILDING', 'FACTORY', 'FRONT', 'CELL', 'LAB', 'DEPOT', 'CAMP', 'BROADCAST'];
   for (let m = 0; m < P.months; m++) {
-    if (m === 2 && factoryLive) sites.push({type: 'FACTORY', found: true, hidden: false});
+    E.length = 0;
+    if (m === 2 && factoryLive) { const s0 = mk('FACTORY', true, false); sites.push(s0); ev('build', 'The abandoned factory reactivates (found)', {id: s0.id}); }
     let types = sites.map(s => s.type);
     let econ = types.filter(isSite);
     let inc = 0;
@@ -145,26 +162,26 @@ function act1Run(P, style, R) {
     for (const t of econ) if (SITES[t].mat) { const pay = Math.min(funds, SITES[t].mc); funds -= pay; mat += Math.floor(SITES[t].mat * pay / SITES[t].mc); }
     const hasDrome = types.includes('DROME');
     if (m >= P.transferFrom) { const missing = Math.max(0, P.transferTargetSites - econ.length);
-      if (missing && R() >= st.intercept) funds += P.transferPerMissing * missing; }
+      if (missing) { if (R() >= st.intercept) { funds += P.transferPerMissing * missing; ev('transfer', `The network flies in ${P.transferPerMissing * missing} funds`); } else ev('intercept', 'A Cobra cash transfer is intercepted'); } }
     if (!hasDrome) {
       for (const ls of sites.filter(x => x.type === 'FRONT' || x.type === 'CELL')) {
         if (R() < P.crimeOdds) {
-          if (R() < st.respond) { for (const s of sites) if ((s.type === 'FRONT' || s.type === 'CELL') && !s.found) { s.found = true; break; } }
-          else { L.crimePaid++; if (ls.type === 'CELL') ls.purse = (ls.purse || 0) + P.crimePays; else funds += P.crimePays; }
+          if (R() < st.respond) { ev('crimeStopped', 'A Cobra robbery is stopped', {id: ls.id}); for (const s of sites) if ((s.type === 'FRONT' || s.type === 'CELL') && !s.found) { s.found = true; ev('found', `The robbery leads the Joes to a ${NM(s.type)}`, {id: s.id}); break; } }
+          else { L.crimePaid++; ev('crime', 'A robbery gets away', {id: ls.id}); if (ls.type === 'CELL') ls.purse = (ls.purse || 0) + P.crimePays; else funds += P.crimePays; }
         }
       }
       for (const c of sites.filter(x => x.type === 'CELL' && (x.purse || 0) >= P.cellGoal)) {
         const ec = sites.filter(x => isSite(x.type)).map(x => x.type);
         const othersN = ec.filter(t => t !== 'FRONT').length;
         c.purse -= P.cellGoal;
-        if (ec.filter(t => t === 'FRONT').length < frontCap(othersN)) { sites.push({type: 'FRONT', found: false, hidden: false}); L.cellFronts++; }
+        if (ec.filter(t => t === 'FRONT').length < frontCap(othersN)) { const s0 = mk('FRONT', false, false); sites.push(s0); L.cellFronts++; ev('build', 'A cell grows into a front company', {id: s0.id, from: c.id}); }
         else funds += P.cellGoal;
       }
       if (m >= P.cellStrikeFrom) { const nc = types.filter(t => t === 'CELL').length; for (let i = 0; i < nc; i++) if (R() < P.cellStrikeOdds) L.strikes++; }
-      if (m >= P.terrorFirstMonth && R() < P.terrorPreDrome) { L.terror++; if (L.firstTerror == null) L.firstTerror = m; }
+      if (m >= P.terrorFirstMonth && R() < P.terrorPreDrome) { L.terror++; ev('terror', 'Cobra stages a terror attack'); if (L.firstTerror == null) L.firstTerror = m; }
     } else {
       let n = 0; const nd = types.filter(t => t === 'DROME').length; for (let i = 0; i < nd; i++) if (R() < P.terrorPerDrome) n++;
-      if (n) { L.terror += n; if (L.firstTerror == null) L.firstTerror = m; }
+      if (n) { L.terror += n; ev('terror', `The Drome launches ${n > 1 ? n + ' terror attacks' : 'a terror attack'}`); if (L.firstTerror == null) L.firstTerror = m; }
     }
     let benches = P.offmapBenches + econ.reduce((a, t) => a + SITES[t].benches, 0);
     const busy = new Set();
@@ -182,10 +199,10 @@ function act1Run(P, style, R) {
       drome.saved += P.donorStep * (m - P.dromeFrom + 1);
       const spare = Math.max(0, funds - reserve); drome.saved += spare; funds -= spare;
       if (drome.building == null && drome.saved >= P.dromeCost * P.startBuildingAt) {
-        drome.building = m; L.dromeStarted = m; sites.push({type: 'DROME_BUILDING', found: false, hidden: false}); }
+        drome.building = m; L.dromeStarted = m; const s0 = mk('DROME_BUILDING', false, false); sites.push(s0); ev('drome', 'Cobra starts building the Terror Drome', {id: s0.id}); }
       if (drome.building != null && drome.saved >= P.dromeCost && m - drome.building >= P.minBuildMonths) {
         for (const s of sites) if (s.type === 'DROME_BUILDING') s.type = 'DROME';
-        drome.built = m; L.dromeBuilt = m; }
+        drome.built = m; L.dromeBuilt = m; ev('drome', 'The Terror Drome is finished'); }
     }
     econ = sites.map(s => s.type).filter(isSite);
     if (m >= P.buildStart && !(m >= P.dromeFrom && !hasDrome)) {
@@ -203,42 +220,45 @@ function act1Run(P, style, R) {
         else if (netF <= 0) wanted = earner;
         else if (netM < 0 && maker) wanted = true;
         else wanted = have === 0;
-        if (wanted && funds - reserve >= r.cost && R() * 100 < r.odds) { funds -= r.cost; sites.push({type: t, found: false, hidden: false}); econ.push(t); }
+        if (wanted && funds - reserve >= r.cost && R() * 100 < r.odds) { funds -= r.cost; const s0 = mk(t, false, false); sites.push(s0); econ.push(t); ev('build', `Cobra builds a ${NM(t)}`, {id: s0.id}); }
       }
     }
     for (const s of sites) {
       let p = st.find * (s.hidden ? P.hiddenFindMult : 1);
       if (s.type === 'DROME' || s.type === 'DROME_BUILDING') p = (loc != null && m >= spineM) ? 1 : 0;
-      if (!s.found && R() < p) s.found = true;
+      if (!s.found && R() < p) { s.found = true; ev('found', `The Joes find a ${NM(s.type)}`, {id: s.id}); }
     }
     for (const s of sites)
-      if (s.found && !s.fort && isSite(s.type) && s.type !== 'DROME' && funds - reserve >= P.defenceCost) { funds -= P.defenceCost; s.fort = 2; L.fortified++; }
+      if (s.found && !s.fort && isSite(s.type) && s.type !== 'DROME' && funds - reserve >= P.defenceCost) { funds -= P.defenceCost; s.fort = 2; L.fortified++; ev('fort', `Cobra digs in at a found ${NM(s.type)}`, {id: s.id}); }
     const n = Math.floor(st.raids) + (R() < st.raids % 1 ? 1 : 0);
     for (let i = 0; i < n; i++) {
       const found = sites.filter(s => s.found).sort((a, b) => prio.indexOf(a.type) - prio.indexOf(b.type));
       if (!found.length) break;
       const tgt = found[0];
       if (tgt.type === 'DROME' || tgt.type === 'DROME_BUILDING') {
-        if (R() < st.assault) { L.end = m; L.version = tgt.type === 'DROME' ? 'A: Drome assault (finished)' : 'A: Drome assault (unfinished)'; break; }
-        continue;
+        if (R() < st.assault) { ev('raid', 'The Joes assault the Drome', {id: tgt.id, win: true}); L.end = m; L.version = tgt.type === 'DROME' ? 'A: Drome assault (finished)' : 'A: Drome assault (unfinished)'; break; }
+        ev('raid', 'The Joes are not ready to assault the Drome', {id: tgt.id}); continue;
       }
-      if ((tgt.fort || 0) > 1) { tgt.fort--; continue; }
-      sites.splice(sites.indexOf(tgt), 1);
+      if ((tgt.fort || 0) > 1) { tgt.fort--; ev('raid', `A raid breaks the defences of a ${NM(tgt.type)}`, {id: tgt.id}); continue; }
+      sites.splice(sites.indexOf(tgt), 1); ev('destroy', `The Joes destroy a ${NM(tgt.type)}`, {id: tgt.id, type: tgt.type});
       if (isSite(tgt.type)) funds = Math.max(0, funds - SITES[tgt.type].loot);
       if (tgt.type === 'DEPOT') mat = 0;
     }
     L.track.funds.push(funds); L.track.mat.push(mat); L.track.sites.push(sites.length);
+    const snap = () => { if (rec) frames.push({m, funds, mat, sites: sites.map(x => ({id: x.id, type: x.type, found: x.found, hidden: x.hidden, fort: x.fort || 0})), events: E.slice(), end: L.version}); };
+    if (L.end != null) { snap(); }
     if (L.end != null) break;
     const e2 = sites.map(s => s.type);
     if (m >= P.dromeFrom && !['FRONT', 'FACTORY', 'DROME', 'DROME_BUILDING'].some(t => e2.includes(t))) {
-      L.broken++; if (L.broken >= P.bNeedsMonths) { L.end = m; L.version = 'B: network broken'; break; }
+      L.broken++; if (L.broken >= P.bNeedsMonths) { L.end = m; L.version = 'B: network broken'; ev('end', 'Cobra\'s network is broken'); snap(); break; }
     } else L.broken = 0;
-    if (drome.built != null && m - drome.built >= 3) { L.end = m; L.version = 'Drome strike'; break; }
+    if (drome.built != null && m - drome.built >= 3) { L.end = m; L.version = 'Drome strike'; ev('end', 'The Drome strikes the nearest Joe base'); snap(); break; }
+    snap();
     if (L.rifles == null && done.RIFLES != null && mat >= P.wellSupplied) L.rifles = m;
     if (mat < P.wellSupplied) L.dry++;
     L.peak = Math.max(L.peak, sites.length); L.fronts = Math.max(L.fronts, econ.filter(t => t === 'FRONT').length);
   }
-  return L;
+  L.frames = frames; return L;
 }
 
 function act1(P) {
@@ -299,7 +319,7 @@ const SPLIT_DEFAULTS = {
   },
 };
 
-function splitRun(P, style, R) {
+function splitRun(P, style, R, rec) {
   const st = P.styles[style], T = P.ticksPerMonth, NT = P.months * T;
   const regions = [];
   for (let r = 0; r < P.regions; r++) {
@@ -312,7 +332,9 @@ function splitRun(P, style, R) {
     onFloor: 0, vans: 0, vansSpotted: 0, vansHit: 0, emergSent: 0, emergHit: 0, quietMonths: 0, producerRaids: 0, hubRaids: 0,
     downMonths: 0, prodScale: 0, prodScaleN: 0, track: Object.fromEntries(STOCKS.map(k => [k, []]))};
   const total = (reg, k) => reg.hub[k] + reg.garrisons.reduce((a, g) => a + g.stock[k], 0);
-  const intransit = [];
+  const intransit = [], frames = [];
+  let E = [], VANS = [];
+  const ev = (kind, text, extra) => { if (rec) E.push(Object.assign({kind, text}, extra || {})); };
   const battle = (reg, g) => {
     L.battles++;
     for (const k of STOCKS) {
@@ -322,7 +344,7 @@ function splitRun(P, style, R) {
       const need = P.battleNeed[k];
       if (g.stock[k] >= need) g.stock[k] -= need;
       else if (k === 'bullets' || k === 'guns') { g.stock[k] = 0; L.onFloor++; }   // the floor: sidearms and a magazine
-      else { L.short[k]++; g.stock[k] = 0; }                                         // all or nothing
+      else { L.short[k]++; g.stock[k] = 0; if (rec) g.shortNow = (g.shortNow || []).concat(k); }   // all or nothing
     }
   };
   const monthOf = t => Math.floor(t / T);
@@ -370,7 +392,8 @@ function splitRun(P, style, R) {
         const load = loads[gi]; if (!STOCKS.some(k => load[k] > 0)) continue;
         L.vans++;
         const spotted = R() < P.vanSpot * st.intelBoost;
-        if (spotted) { L.vansSpotted++; if (R() < st.ambush) { L.vansHit++; continue; } }
+        if (rec) VANS.push({r: ri, g: gi, load, hit: false});
+        if (spotted) { L.vansSpotted++; if (R() < st.ambush) { L.vansHit++; if (rec) VANS.at(-1).hit = true; ev('van', `Region ${ri + 1}: a supply van is ambushed`, {r: ri, g: gi}); continue; } }
         for (const k of STOCKS) g.stock[k] += load[k];
       }
       if (newMonth) {
@@ -392,10 +415,11 @@ function splitRun(P, style, R) {
         else if (P.strategy === 'missileWorks' && reg.producers.missiles.down === 0) tgt = 'missiles';
         else if (P.strategy === 'hub' && R() < 0.6) tgt = 'hub';
         else if ((strangle || P.strategy === 'balanced') && R() < 0.3 && live.length) tgt = 'producer';
-        if (tgt === 'producer') { const k = live[Math.floor(R() * live.length)]; reg.producers[k].down = P.rebuildMonths; L.producerRaids++; }
-        else if (tgt === 'missiles') { reg.producers.missiles.down = P.rebuildMonths; L.producerRaids++; }
-        else if (tgt === 'hub') { for (const k of STOCKS) reg.hub[k] *= 0.2; L.hubRaids++; }
-        else { const g = reg.garrisons[Math.floor(R() * reg.garrisons.length)]; g.attacked = 2; battle(reg, g); }
+        const ri = regions.indexOf(reg);
+        if (tgt === 'producer') { const k = live[Math.floor(R() * live.length)]; reg.producers[k].down = P.rebuildMonths; L.producerRaids++; ev('raidProducer', `Region ${ri + 1}: the Joes wreck the ${k} producer`, {r: ri, k}); }
+        else if (tgt === 'missiles') { reg.producers.missiles.down = P.rebuildMonths; L.producerRaids++; ev('raidProducer', `Region ${ri + 1}: the Joes wreck the missile works`, {r: ri, k: 'missiles'}); }
+        else if (tgt === 'hub') { for (const k of STOCKS) reg.hub[k] *= 0.2; L.hubRaids++; ev('raidHub', `Region ${ri + 1}: the Joes raid the hub and blow its stock`, {r: ri}); }
+        else { const gi = Math.floor(R() * reg.garrisons.length), g = reg.garrisons[gi]; g.attacked = 2; battle(reg, g); ev('raidGarrison', `Region ${ri + 1}: the Joes hit garrison ${gi + 1}`, {r: ri, g: gi}); }
       }
     }
     if (t % T === T - 1) {
@@ -412,19 +436,28 @@ function splitRun(P, style, R) {
               const load = need * P.emergencyLoadBattles;
               if (load > 0 && donor && donor.hub[k] >= load * 2) {
                 donor.hub[k] -= load; L.emergSent++; reg.cool[k] = m + 1;
-                if (R() < st.intercept) L.emergHit++; else intransit.push({at: t + 1, to: reg, load: {[k]: load}});
+                const from = regions.indexOf(donor), hit = R() < st.intercept;
+                ev('emergency', `Emergency ${k} from region ${from + 1} to region ${ri + 1}${hit ? ': intercepted' : ''}`, {from, to: ri, k, hit});
+                if (hit) L.emergHit++; else intransit.push({at: t + 1, to: reg, load: {[k]: load}});
               }
             }
           }
         }
         if (reg.quiet > 0) { reg.quiet--; L.quietMonths++; }
-        else if (empty >= P.pullbackEmptyStocks) { reg.starvedMonths++; if (reg.starvedMonths >= 2) { reg.quiet = P.pullbackMonths; reg.starvedMonths = 0; } }
+        else if (empty >= P.pullbackEmptyStocks) { reg.starvedMonths++; if (reg.starvedMonths >= 2) { reg.quiet = P.pullbackMonths; reg.starvedMonths = 0; ev('quiet', `Region ${ri + 1} is starved: Cobra pulls back there`, {r: ri}); } }
         else reg.starvedMonths = 0;
       }
       for (const k of STOCKS) L.track[k].push(total(regions[0], k));
+      if (rec) {
+        frames.push({m, events: E, vans: VANS, regions: regions.map(reg => ({funds: reg.funds, quiet: reg.quiet,
+          hub: Object.fromEntries(STOCKS.map(k => [k, Math.floor(reg.hub[k])])),
+          producers: Object.fromEntries(STOCKS.map(k => [k, k === 'cells' && m < P.destroMonth ? -1 : reg.producers[k].down])),
+          garrisons: reg.garrisons.map(g => { const o = {stock: Object.fromEntries(STOCKS.map(k => [k, Math.floor(g.stock[k])])), short: g.shortNow || [], attacked: g.attacked}; g.shortNow = []; return o; })}))});
+        E = []; VANS = [];
+      }
     }
   }
-  return L;
+  L.frames = frames; return L;
 }
 
 function split(P) {
@@ -458,7 +491,9 @@ const SPLIT_SCENARIOS = {
   'One region only': {regions: 1},
 };
 
-return {act1, split, ACT1_DEFAULTS, SPLIT_DEFAULTS, ACT1_SCENARIOS, SPLIT_SCENARIOS, ACT1_STYLES, SPLIT_STYLES, STOCKS};
+function act1Replay(P, style, n) { const R = rng((P.seed * 7919 + n * 104729) >>> 0); return act1Run(P, style, R, true); }
+function splitReplay(P, style, n) { const R = rng((P.seed * 7919 + n * 104729) >>> 0); return splitRun(P, style, R, true); }
+return {NAMES, act1Replay, splitReplay, act1, split, ACT1_DEFAULTS, SPLIT_DEFAULTS, ACT1_SCENARIOS, SPLIT_SCENARIOS, ACT1_STYLES, SPLIT_STYLES, STOCKS};
 })();
 if (typeof module !== 'undefined') module.exports = SIM;
 
@@ -612,6 +647,7 @@ function showAct1(R, B, scen, ms) {
   const ser = key => S.map(s => ({col: css(STYLE_COL[s]), data: R[s].track[key]}));
   line('c1', ser('funds')); line('c2', ser('mat')); line('c3', ser('sites'));
   line('c4', S.map(s => ({col: css(STYLE_COL[s]), data: R[s].endHist.map(x => x * 100 / params.runs)})), '%');
+  replayCard();
 }
 
 function showSplit(R, B, scen, ms) {
@@ -630,6 +666,7 @@ function showSplit(R, B, scen, ms) {
     <p class="note">Stock held across region 1: its hub plus every garrison. Bullets are drawn on their own scale-free line like the rest; switch a stock off by setting its production to 0.</p>`;
   document.getElementById('out').innerHTML = h;
   S.forEach((s, i) => line('s' + i, K.map(k => ({col: css(STOCK_COL[k]), data: R[s].track[k]})), '', true));
+  replayCard();
 }
 
 function line(id, series, unit = '', log = false) {
@@ -648,7 +685,151 @@ function line(id, series, unit = '', log = false) {
     s.data.forEach((v, i) => { if (v == null) { on = false; return; } on ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)); on = true; }); g.stroke(); }
 }
 
-document.querySelectorAll('.tab').forEach(t => t.onclick = () => { document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t)); mode = t.dataset.mode; build(); });
+
+// ------------------------------------------------------------------ the map: replay one campaign
+let RP = {timer: null};
+function replayCard() {
+  const S = MODES[mode].styles, out = document.getElementById('out');
+  const box = document.createElement('div'); box.className = 'card replay';
+  box.innerHTML = `<h3>Map: replay one campaign</h3>
+    <div class="rp-ctl">Player <select id="rp-style">${S.map(s => `<option ${s === 'typical' ? 'selected' : ''}>${s}</option>`).join('')}</select>
+    Campaign # <input type="number" id="rp-n" value="1" min="1" style="width:64px">
+    <button id="rp-play">&#9654; Play</button><span class="rp-month" id="rp-mon"></span><input type="range" id="rp-m" min="0" value="0"></div>
+    <svg class="rp-svg" id="rp-svg"></svg><ul class="rp-log" id="rp-log"></ul><div class="rp-key" id="rp-key"></div>
+    <p class="note">One campaign from the same numbers, month by month. The tables above are averages over many campaigns; this is what a single one looks like.</p>`;
+  out.appendChild(box);
+  const load = () => { stopPlay(); const st = document.getElementById('rp-style').value, n = +document.getElementById('rp-n').value || 1;
+    RP.run = (mode === 'act1' ? SIM.act1Replay : SIM.splitReplay)(clone(params), st, n); RP.mode = mode; RP.slots = null;
+    const sl = document.getElementById('rp-m'); sl.max = RP.run.frames.length - 1; sl.value = 0; draw(); };
+  const draw = () => { const i = +document.getElementById('rp-m').value; (RP.mode === 'act1' ? drawAct1 : drawSplit)(RP.run, i); };
+  document.getElementById('rp-style').onchange = load; document.getElementById('rp-n').onchange = load;
+  document.getElementById('rp-m').oninput = draw;
+  document.getElementById('rp-play').onclick = () => { if (RP.timer) return stopPlay();
+    const sl = document.getElementById('rp-m'); if (+sl.value >= +sl.max) sl.value = 0;
+    document.getElementById('rp-play').innerHTML = '&#10074;&#10074; Pause';
+    RP.timer = setInterval(() => { if (+sl.value >= +sl.max) return stopPlay(); sl.value = +sl.value + 1; draw(); }, 900); };
+  load();
+}
+function stopPlay() { if (RP.timer) clearInterval(RP.timer); RP.timer = null; const b = document.getElementById('rp-play'); if (b) b.innerHTML = '&#9654; Play'; }
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+function logList(events, extra) { document.getElementById('rp-log').innerHTML = (extra || '') + (events.length ? events.map(e => `<li>${esc(e.text)}</li>`).join('') : '<li>A quiet month.</li>'); }
+
+// icons: x, y centre, r size; st = {fill, stroke, dash, op}
+function icon(type, x, y, r, st) {
+  const a = `fill="${st.fill}" stroke="${st.stroke}" stroke-width="1.6" ${st.dash ? 'stroke-dasharray="3 2"' : ''} opacity="${st.op}"`;
+  switch (type) {
+    case 'FRONT': return `<g ${a}><rect x="${x - r * .7}" y="${y - r}" width="${r * 1.4}" height="${r * 2}"/><g stroke="none" fill="${st.stroke}" opacity=".7"><rect x="${x - r * .4}" y="${y - r * .6}" width="${r * .3}" height="${r * .3}"/><rect x="${x + r * .1}" y="${y - r * .6}" width="${r * .3}" height="${r * .3}"/><rect x="${x - r * .4}" y="${y}" width="${r * .3}" height="${r * .3}"/><rect x="${x + r * .1}" y="${y}" width="${r * .3}" height="${r * .3}"/></g></g>`;
+    case 'CELL': return `<circle cx="${x}" cy="${y}" r="${r * .55}" ${a}/>`;
+    case 'DEPOT': return `<g ${a}><rect x="${x - r * .9}" y="${y - r * .7}" width="${r * 1.8}" height="${r * 1.4}"/><path d="M${x - r * .9} ${y - r * .7}L${x + r * .9} ${y + r * .7}M${x + r * .9} ${y - r * .7}L${x - r * .9} ${y + r * .7}" fill="none"/></g>`;
+    case 'FACTORY': return `<g ${a}><path d="M${x - r} ${y + r * .8}V${y - r * .1}L${x - r * .4} ${y - r * .5}V${y - r * .1}L${x + r * .2} ${y - r * .5}V${y - r * .1}H${x + r * .5}V${y - r}H${x + r}V${y + r * .8}Z"/></g>`;
+    case 'LAB': return `<g ${a}><path d="M${x - r * .3} ${y - r}H${x + r * .3}V${y - r * .3}L${x + r * .9} ${y + r * .8}H${x - r * .9}L${x - r * .3} ${y - r * .3}Z"/></g>`;
+    case 'CAMP': return `<path d="M${x - r} ${y + r * .8}L${x} ${y - r}L${x + r} ${y + r * .8}Z" ${a}/>`;
+    case 'BROADCAST': return `<g ${a}><path d="M${x} ${y + r}V${y - r * .4}M${x - r * .5} ${y + r}L${x} ${y - r * .4}L${x + r * .5} ${y + r}" fill="none"/><circle cx="${x}" cy="${y - r * .6}" r="${r * .25}"/><path d="M${x - r * .7} ${y - r * 1.1}Q${x} ${y - r * 1.6} ${x + r * .7} ${y - r * 1.1}" fill="none"/></g>`;
+    case 'DROME': case 'DROME_BUILDING': return `<g ${a}><circle cx="${x}" cy="${y}" r="${r * 1.5}"/><circle cx="${x}" cy="${y}" r="${r * .8}" fill="none"/></g>`;
+    case 'HUB': return `<g ${a}><circle cx="${x}" cy="${y}" r="${r}"/></g>`;
+    default: return `<circle cx="${x}" cy="${y}" r="${r * .6}" ${a}/>`;
+  }
+}
+const cross = (x, y, r, c = '#d0453a') => `<path d="M${x - r} ${y - r}L${x + r} ${y + r}M${x + r} ${y - r}L${x - r} ${y + r}" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`;
+const burst = (x, y, r) => { let p = ''; for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, rr = i % 2 ? r * .45 : r; p += (i ? 'L' : 'M') + (x + rr * Math.cos(a)).toFixed(1) + ' ' + (y + rr * Math.sin(a)).toFixed(1); } return `<path d="${p}Z" fill="#d8b45a" opacity=".85"/>`; };
+
+const COLS = ['FRONT', 'CELL', 'DEPOT', 'FACTORY', 'LAB', 'CAMP', 'BROADCAST', 'DROME'];
+const COLNAME = {FRONT: 'Front companies', CELL: 'Cells', DEPOT: 'Depots', FACTORY: 'Factories', LAB: 'Labs', CAMP: 'Camps', BROADCAST: 'Broadcast', DROME: 'Terror Drome'};
+function drawAct1(run, i) {
+  const W = 1000, H = 440, F = run.frames, fr = F[i], svg = document.getElementById('rp-svg');
+  if (!RP.slots) { RP.slots = {}; const taken = {};   // a slot is reused once its site is gone, so columns stay compact
+    for (const f of F) {
+      const here = new Set(f.sites.map(s => s.id)), gone = new Set(f.events.filter(e => e.kind === 'destroy').map(e => e.id));
+      for (const [id, sl] of Object.entries(RP.slots)) if (!here.has(+id) && !gone.has(+id) && taken[sl.col]) taken[sl.col].delete(sl.n);
+      for (const s of f.sites) if (!(s.id in RP.slots)) { const col = s.type === 'DROME_BUILDING' ? 'DROME' : s.type;
+        const used = taken[col] = taken[col] || new Set(); let n = 0; while (used.has(n)) n++; used.add(n); RP.slots[s.id] = {col, n}; } } }
+  const cw = (W - 40) / COLS.length, top = 120;
+  const pos = id => { const sl = RP.slots[id]; if (!sl) return null; const c = COLS.indexOf(sl.col);
+    const big = sl.col === 'DROME'; const per = big ? 1 : 2, rowH = big ? 90 : 46;
+    return {x: 20 + cw * c + cw / 2 + (big ? 0 : (sl.n % per - .5) * 44), y: top + 40 + Math.floor(sl.n / per) * rowH, r: big ? 22 : 14}; };
+  const ids = new Set(fr.sites.map(s => s.id));
+  const evIds = k => new Set(fr.events.filter(e => e.kind === k && e.id != null).map(e => e.id));
+  const built = evIds('build'), dromeEv = evIds('drome'), raided = evIds('raid'), destroyed = fr.events.filter(e => e.kind === 'destroy');
+  let g = `<rect width="${W}" height="${H}" fill="#0f1317"/>`;
+  // Cobra Commander and the network
+  const cc = {x: W / 2, y: 46};
+  g += `<g><circle cx="${cc.x}" cy="${cc.y}" r="20" fill="#1b3d6e" stroke="#4b8ed8" stroke-width="2"/><text x="${cc.x}" y="${cc.y + 5}" text-anchor="middle" font-size="14" font-weight="700" fill="#e8ecef">CC</text>
+    <text x="${cc.x + 30}" y="${cc.y - 4}" font-size="12" fill="#93a1ad">Cobra Commander (off the map)</text><text x="${cc.x + 30}" y="${cc.y + 12}" font-size="12" fill="#d8b45a">funds ${Math.round(fr.funds)} &middot; materiel ${Math.round(fr.mat)}</text></g>`;
+  for (const s of fr.sites) { const p = pos(s.id); if (!p) continue;
+    g += `<line x1="${cc.x}" y1="${cc.y + 20}" x2="${p.x}" y2="${p.y - p.r}" stroke="#4b8ed8" stroke-width="1" opacity="${s.hidden && !s.found ? .12 : .28}"/>`; }
+  if (fr.events.some(e => e.kind === 'transfer')) g += `<path d="M${cc.x - 80} ${cc.y}H${cc.x - 22}" stroke="#d8b45a" stroke-width="2" stroke-dasharray="5 3"/><text x="${cc.x - 84}" y="${cc.y + 4}" text-anchor="end" font-size="11" fill="#d8b45a">network transfer</text>`;
+  if (fr.events.some(e => e.kind === 'intercept')) g += cross(cc.x - 60, cc.y, 6);
+  COLS.forEach((c, k) => { g += `<text x="${20 + cw * k + cw / 2}" y="${top + 6}" text-anchor="middle" font-size="11.5" fill="#93a1ad">${COLNAME[c]}</text>`; });
+  for (const s of fr.sites) { const p = pos(s.id); if (!p) continue;
+    const st = s.found ? {fill: '#2f5f9e', stroke: '#8fbaf0', op: 1} : s.hidden ? {fill: 'none', stroke: '#7d8a96', dash: true, op: .6} : {fill: '#16263a', stroke: '#4b8ed8', op: 1};
+    if (s.type === 'DROME_BUILDING') st.dash = true;
+    if (built.has(s.id) || dromeEv.has(s.id)) g += `<circle cx="${p.x}" cy="${p.y}" r="${p.r * (s.type.startsWith('DROME') ? 2.1 : 1.45)}" fill="none" stroke="#d8b45a" stroke-width="2" opacity=".8"/>`;
+    g += icon(s.type, p.x, p.y, p.r, st);
+    if (s.fort) g += `<path d="M${p.x + p.r} ${p.y - p.r - 4}l7 3v5c0 4-3 6-7 8c-4-2-7-4-7-8v-5z" fill="#d8b45a" stroke="#111" stroke-width="1"/>`;
+    if (raided.has(s.id)) g += burst(p.x - p.r, p.y - p.r, 9);
+  }
+  for (const e of destroyed) { const p = pos(e.id); if (p) { g += icon(e.type, p.x, p.y, p.r, {fill: 'none', stroke: '#555', op: .6}) + cross(p.x, p.y, p.r * .9); } }
+  for (const e of fr.events.filter(e => e.kind === 'crime' || e.kind === 'crimeStopped')) { const p = pos(e.id); if (p) g += `<text x="${p.x + p.r + 2}" y="${p.y + 4}" font-size="13" font-weight="700" fill="${e.kind === 'crime' ? '#5fb06a' : '#d0453a'}">$</text>`; }
+  if (fr.events.some(e => e.kind === 'terror')) g += `<text x="${W - 20}" y="${H - 16}" text-anchor="end" font-size="13" font-weight="700" fill="#d0453a">TERROR ATTACK</text>`;
+  if (fr.end) g += `<rect x="${W / 2 - 230}" y="${H - 44}" width="460" height="30" rx="5" fill="#26301f" stroke="#8a9a5b"/><text x="${W / 2}" y="${H - 24}" text-anchor="middle" font-size="14" font-weight="700" fill="#d8b45a">ACT 1 ENDS: ${esc(fr.end)}</text>`;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = g;
+  document.getElementById('rp-mon').textContent = 'Month ' + fr.m;
+  logList(fr.events);
+  document.getElementById('rp-key').innerHTML = `<span>dashed grey = hidden</span><span>blue outline = built, not found</span><span>solid blue = found by the Joes</span><span>gold ring = new this month</span><span>gold shield = dug in</span><span>gold burst = raided</span><span>red cross = destroyed</span><span>green $ = robbery got away &middot; red $ = stopped</span>`;
+}
+
+const SC = {bullets: '#e8ecef', guns: '#9aa5ad', missiles: '#d0453a', vehicles: '#d8b45a', aircraft: '#4b8ed8', cells: '#b06fd8'};
+function drawSplit(run, i) {
+  const F = run.frames, fr = F[i], K = SIM.STOCKS, nR = fr.regions.length, svg = document.getElementById('rp-svg');
+  const PW = 300, gap = 30, W = nR * PW + (nR - 1) * gap + 40, H = 430, need = params.battleNeed;
+  let g = `<rect width="${W}" height="${H}" fill="#0f1317"/>`;
+  const geo = r => { const x0 = 20 + r * (PW + gap); return {x0, prod: k => ({x: x0 + 30 + K.indexOf(k) * 48, y: 70}), hub: {x: x0 + PW / 2, y: 190}, gar: (j, n) => ({x: x0 + 30 + j * ((PW - 60) / Math.max(1, n - 1)), y: 330})}; };
+  fr.regions.forEach((reg, r) => { const G = geo(r);
+    g += `<rect x="${G.x0}" y="18" width="${PW}" height="${H - 36}" rx="8" fill="${reg.quiet > 0 ? '#1a1712' : '#141a20'}" stroke="#33404c"/>
+      <text x="${G.x0 + 12}" y="38" font-size="12.5" font-weight="700" fill="#e8ecef">Region ${r + 1}</text><text x="${G.x0 + PW - 12}" y="38" text-anchor="end" font-size="11.5" fill="#d8b45a">funds ${Math.round(reg.funds)}</text>`;
+    if (reg.quiet > 0) g += `<text x="${G.x0 + PW / 2}" y="${H - 30}" text-anchor="middle" font-size="12" font-weight="700" fill="#d8b45a">QUIET: COBRA HAS PULLED BACK</text>`;
+    // producers -> hub
+    for (const k of K) { const p = G.prod(k), down = reg.producers[k];
+      const live = down === 0, locked = down === -1;
+      g += `<line x1="${p.x}" y1="${p.y + 14}" x2="${G.hub.x}" y2="${G.hub.y - 26}" stroke="${live ? SC[k] : '#444'}" stroke-width="${live ? 1.6 : 1}" ${live ? '' : 'stroke-dasharray="3 3"'} opacity="${locked ? .15 : .55}"/>`;
+      g += `<rect x="${p.x - 14}" y="${p.y - 14}" width="28" height="28" rx="4" fill="${live ? '#1d252d' : '#151515'}" stroke="${locked ? '#333' : SC[k]}" stroke-width="2" opacity="${locked ? .45 : 1}"/>
+        <text x="${p.x}" y="${p.y + 4}" text-anchor="middle" font-size="11" font-weight="700" fill="${locked ? '#555' : SC[k]}">${k[0].toUpperCase()}${k === 'cells' ? '' : ''}</text>`;
+      if (down > 0) g += cross(p.x, p.y, 10) + `<text x="${p.x}" y="${p.y + 28}" text-anchor="middle" font-size="10" fill="#d0453a">${down} mo</text>`;
+      if (locked) g += `<text x="${p.x}" y="${p.y + 28}" text-anchor="middle" font-size="9.5" fill="#666">Destro</text>`;
+    }
+    // hub with stock bars
+    g += icon('HUB', G.hub.x, G.hub.y, 24, {fill: '#1b3d6e', stroke: '#4b8ed8', op: 1}) + `<text x="${G.hub.x}" y="${G.hub.y + 4}" text-anchor="middle" font-size="11" font-weight="700" fill="#e8ecef">HUB</text>`;
+    K.forEach((k, j) => { const v = reg.hub[k], h = Math.min(30, Math.log10(1 + v) * 12);
+      g += `<rect x="${G.hub.x + 34 + j * 9}" y="${G.hub.y + 14 - h}" width="6" height="${h}" fill="${SC[k]}"/>`; });
+    // garrisons and vans
+    const n = reg.garrisons.length;
+    reg.garrisons.forEach((gs, j) => { const q = G.gar(j, n);
+      const vans = fr.vans.filter(v => v.r === r && v.g === j), hit = vans.some(v => v.hit), got = vans.some(v => !v.hit);
+      if (vans.length) { g += `<line x1="${G.hub.x}" y1="${G.hub.y + 24}" x2="${q.x}" y2="${q.y - 16}" stroke="${got ? '#c9d2d9' : '#555'}" stroke-width="${got ? 1.4 : 1}" opacity=".55"/>`;
+        if (hit) { const mx = (G.hub.x + q.x) / 2, my = (G.hub.y + 24 + q.y - 16) / 2; g += cross(mx, my, 6); } }
+      const att = gs.attacked === 2;
+      g += `<rect x="${q.x - 13}" y="${q.y - 13}" width="26" height="26" rx="3" fill="#16263a" stroke="${gs.short.length ? '#d0453a' : '#4b8ed8'}" stroke-width="${gs.short.length ? 2.5 : 1.5}"/>`;
+      if (att) g += burst(q.x + 13, q.y - 13, 8);
+      K.forEach((k, s) => { const has = gs.stock[k] >= need[k], cx = q.x - 12.5 + s * 5, cy = q.y + 22;
+        const lock = k === 'cells' && reg.producers.cells === -1;
+        g += `<circle cx="${cx}" cy="${cy}" r="2.1" fill="${has ? SC[k] : 'none'}" stroke="${lock ? '#333' : (has ? SC[k] : (gs.short.includes(k) ? '#d0453a' : '#555'))}" stroke-width="1"/>`; });
+      g += `<text x="${q.x}" y="${q.y + 4}" text-anchor="middle" font-size="10" fill="#93a1ad">G${j + 1}</text>`;
+    });
+  });
+  // emergency shipments between hubs
+  for (const e of fr.events.filter(e => e.kind === 'emergency')) { const a = geo(e.from).hub, b = geo(e.to).hub, mx = (a.x + b.x) / 2;
+    g += `<path d="M${a.x} ${a.y - 26}Q${mx} ${a.y - 120} ${b.x} ${b.y - 26}" fill="none" stroke="${SC[e.k]}" stroke-width="2.2" stroke-dasharray="6 4"/>`;
+    if (e.hit) g += cross(mx, a.y - 74, 7); }
+  for (const e of fr.events.filter(e => e.kind === 'raidHub')) { const G = geo(e.r); g += burst(G.hub.x - 22, G.hub.y - 22, 11); }
+  for (const e of fr.events.filter(e => e.kind === 'raidProducer')) { const p = geo(e.r).prod(e.k); g += burst(p.x + 14, p.y - 14, 9); }
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = g;
+  document.getElementById('rp-mon').textContent = 'Month ' + fr.m;
+  const shorts = []; fr.regions.forEach((reg, r) => reg.garrisons.forEach((gs, j) => { if (gs.short.length) shorts.push(`<li>Region ${r + 1}, G${j + 1}: a battle found no ${gs.short.join(', no ')}</li>`); }));
+  logList(fr.events.filter(e => e.kind !== 'van'), (fr.events.filter(e => e.kind === 'van').length ? `<li>${fr.events.filter(e => e.kind === 'van').length} supply van(s) ambushed</li>` : '') + shorts.join(''));
+  document.getElementById('rp-key').innerHTML = `<span>top row: producers (B G M V A C), red cross = wrecked, months to rebuild</span><span>circle: the region's hub, bars = its stock</span><span>bottom: garrisons; dots = which stocks it holds (filled = enough for a battle)</span><span>red border = a battle there found something missing</span><span>grey lines = this month's van deliveries, red cross = ambushed</span><span>dashed curve = emergency shipment</span><span>gold burst = Joe raid</span>`;
+}
+
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => { document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t)); mode = t.dataset.mode; stopPlay(); build(); });
 build();
 </script>
 </body>
