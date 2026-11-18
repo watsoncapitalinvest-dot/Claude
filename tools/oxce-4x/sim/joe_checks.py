@@ -73,7 +73,8 @@ def c_finished(r):
 
 def c_errors(r):
     if not r.log: return NOTREACHED, 'no log.txt in the run folder'
-    bad = [l for l in r.log.splitlines() if '[ERROR]' in l or '[FATAL]' in l]
+    # a PC with no sound device logs that as an error; it says nothing about the game
+    bad = [l for l in r.log.splitlines() if ('[ERROR]' in l or '[FATAL]' in l) and not re.search(r'audio device|ALSA|Mix_OpenAudio', l)]
     if not bad: return PASS, 'no errors in the game log'
     return FAIL, '%d error line(s); first: %s' % (len(bad), bad[0][:160])
 
