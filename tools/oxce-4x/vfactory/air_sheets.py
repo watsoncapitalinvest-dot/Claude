@@ -12,6 +12,18 @@ from PIL import Image, ImageEnhance
 PKG, MOD = sys.argv[1:3]; JOBS = [a.split('=') for a in sys.argv[3:]]
 HEAD = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 PAL = Image.open(os.path.join(MOD, "Resources", "Units", "hawk_body.png")).getpalette()
+# The mod's own cartoon battle effects (ART's set, gijoe_battle_effects.rul X1.PCK; John 18 Nov 02:01 "make the explosions from the
+# gi joe explosion animations"): 4 rows of 8 - 0-7 small blast, 8-15 big blast, 16-23 fire, 24-31 smoke. Each row is cut to the box
+# that holds all 8 of its frames, so the animation keeps its own centre.
+def _row(a):
+    fr = [Image.open(os.path.join(MOD, 'Resources', 'Effects', f'x1_{i:02d}_rgb.png')).convert('RGBA') for i in range(a, a + 8)]
+    bbs = [f.getbbox() for f in fr if f.getbbox()]; box = (min(b[0] for b in bbs), min(b[1] for b in bbs), max(b[2] for b in bbs), max(b[3] for b in bbs))
+    return [f.crop(box) for f in fr]
+BLAST, FIRE, SMOKE = _row(8), _row(16), _row(24)
+def fx(c, art, x, y, w, bottom=False):
+    """paste effect art scaled to width w, centred on (x, y) (or standing on it, bottom=True)"""
+    k = w / art.width; a = art.resize((max(1, int(art.width * k)), max(1, int(art.height * k))), Image.LANCZOS)
+    c.alpha_composite(a, (int(x - a.width / 2), int(y - (a.height if bottom else a.height / 2))))
 
 def quantize(rgba):
     a = np.array(rgba).astype(np.int32); out = np.zeros(a.shape[:2], np.uint8); m = a[..., 3] > 127
@@ -25,8 +37,8 @@ def cell(pic, anchor, n, dy=0, dark=1.0, alpha=1.0):
     if dark != 1.0: a = pic.getchannel("A"); pic = ImageEnhance.Brightness(pic.convert("RGB")).enhance(dark).convert("RGBA"); pic.putalpha(a)
     if alpha != 1.0: a = np.array(pic); a[..., 3] = (a[..., 3] * alpha).astype(np.uint8); pic = Image.fromarray(a, "RGBA")
     x, y = W // 2 - anchor[0], 112 * n - anchor[1] + dy
-    l, t = max(0, -x), max(0, -y); pic = pic.crop((l, t, min(pic.width, W - x), min(pic.height, H - y)))
-    if pic.width > 0 and pic.height > 0: c.alpha_composite(pic, (x + l, y + t))
+    l, t = max(0, -x), max(0, -y); r, b = min(pic.width, W - x), min(pic.height, H - y)
+    if r > l and b > t: c.alpha_composite(pic.crop((l, t, r, b)), (x + l, y + t))   # nothing left in the cell (fallen out): empty
     return c
 
 def blob(c, x, y, r, col, a):
@@ -37,43 +49,35 @@ def blob(c, x, y, r, col, a):
     c.alpha_composite(Image.fromarray(im, "RGBA"), (int(x) - R, int(y) - R))
 
 def death(pic, anchor, n):
-    """8 frames: hit flash -> burning -> falling, darkening and fading; fire and a smoke trail ride with it"""
-    out = []; rng = np.random.default_rng(7)
-    bb = pic.getbbox(); cx = (bb[0] + bb[2]) / 2 - anchor[0]; cy = (bb[1] + bb[3]) / 2 - anchor[1]   # body centre from the anchor
-    spots = [(cx + rng.uniform(-0.25, 0.25) * (bb[2] - bb[0]), cy + rng.uniform(-0.2, 0.2) * (bb[3] - bb[1])) for _ in range(3)]
+    """8 frames, a jet shot down: the mod's big blast where it was hit (it stays in the sky), the jet falling out of it faster each
+    frame, darkening and fading, burning (the mod's fire frames) as it goes"""
+    out = []; bb = pic.getbbox(); cx = (bb[0] + bb[2]) / 2 - anchor[0]; cy = (bb[1] + bb[3]) / 2 - anchor[1]; bw = bb[2] - bb[0]
     for f in range(8):
         drop = int(f * f * 2.2 * n)
         c = cell(pic, anchor, n, dy=drop, dark=1 - f * 0.08, alpha=1 - max(0, f - 3) * 0.2)
-        W = 128 * n; ox, oy = W // 2, 112 * n + drop
-        if f == 0: blob(c, ox + cx, oy + cy, 9 * n, (255, 240, 200), 0.95); blob(c, ox + cx, oy + cy, 16 * n, (255, 150, 40), 0.7)
-        for k, (sx, sy) in enumerate(spots):
-            if f >= 1:
-                for t in range(min(f, 5)):                       # smoke left behind, higher up (it stays while the jet falls)
-                    blob(c, ox + sx + t * 2, oy + sy - t * (2.2 * n * (2 * f - 1) / max(1, f)) - 4, (4 + t * 2.5) * n * 0.6, (95, 90, 84), 0.5 - t * 0.08)
-                blob(c, ox + sx, oy + sy, (5 + (f % 2) * 2) * n * 0.6, (255, 120, 30), 0.85 - f * 0.06)
-                blob(c, ox + sx, oy + sy, 2.5 * n * 0.6, (255, 230, 150), 0.9 - f * 0.08)
+        W = 128 * n; ox, oy = W // 2, 112 * n
+        if f >= 1: fx(c, FIRE[min(7, 2 + f // 2)], ox + cx, oy + cy + drop + bw * 0.05, bw * 0.28, bottom=True)
+        fx(c, BLAST[f], ox + cx, oy + cy, bw * 0.75)
         out.append(c)
     return out
 
 def sink(pic, anchor, n):
-    """8 frames for a boat (sea battles): hit flash, fire, then settling into the water - lower, darker, sea-tinted, fading, with
-    smoke above and a ring of foam where it goes down"""
-    out = []; bb = pic.getbbox(); cx = (bb[0] + bb[2]) / 2 - anchor[0]; cy = (bb[1] + bb[3]) / 2 - anchor[1]
+    """8 frames, a boat sunk: the mod's big blast on the hull, then it settles into the water - lower, sea-tinted, darker, fading,
+    still burning (the mod's fire frames) and leaving the mod's smoke, with a ring of foam where it goes under"""
+    out = []; bb = pic.getbbox(); cx = (bb[0] + bb[2]) / 2 - anchor[0]; cy = (bb[1] + bb[3]) / 2 - anchor[1]; bw = bb[2] - bb[0]
     for f in range(8):
         drop = int(f * 2.5 * n); p2 = pic
-        if f >= 3:                                           # the water takes it: tint toward sea blue-green
+        if f >= 3:
             a = np.array(pic).astype(np.float32); k = min(0.7, (f - 2) * 0.14)
             a[..., :3] = a[..., :3] * (1 - k) + np.array([34, 96, 110]) * k; p2 = Image.fromarray(a.astype(np.uint8), 'RGBA')
         c = cell(p2, anchor, n, dy=drop, dark=1 - f * 0.06, alpha=1 - max(0, f - 3) * 0.22)
         W = 128 * n; ox, oy = W // 2, 112 * n
-        if f == 0: blob(c, ox + cx, oy + cy, 9 * n, (255, 240, 200), 0.95); blob(c, ox + cx, oy + cy, 16 * n, (255, 150, 40), 0.7)
-        if 1 <= f <= 4: blob(c, ox + cx, oy + cy + drop, (5 + f) * n * 0.6, (255, 120, 30), 0.8 - f * 0.12)
-        for t in range(min(f, 5)):
-            blob(c, ox + cx + t * 3, oy + cy - 6 * n - t * 5 * n * 0.6, (4 + t * 2.5) * n * 0.6, (95, 90, 84), 0.5 - t * 0.08)
         if f >= 3:                                           # foam where it goes under
             for k in range(6):
                 ang = k * 1.047 + f * 0.3; r = (6 + f * 2) * n * 0.6
                 blob(c, ox + cx + np.cos(ang) * r, oy + cy + 4 * n + np.sin(ang) * r * 0.5, 2.2 * n * 0.6, (225, 238, 240), 0.7 - (f - 3) * 0.12)
+        if 1 <= f <= 6: fx(c, FIRE[min(7, 1 + f)], ox + cx, oy + cy + drop + bw * 0.04, bw * 0.3, bottom=True)
+        fx(c, BLAST[f], ox + cx, oy + cy, bw * 0.75)
         out.append(c)
     return out
 
