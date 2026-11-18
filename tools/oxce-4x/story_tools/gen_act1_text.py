@@ -27,7 +27,7 @@ S['STR_BRIEFING_ABANDONED_FACTORY'] = P.join([
 ])
 S['STR_BRIEFING_COBRA_CELL_TITLE'] = 'OPERATION: FIRST CONTACT'
 S['STR_BRIEFING_COBRA_CELL'] = P.join([
-    "HAWK: Now we know what they call themselves. Breaker pulled Cobra Commander's broadcast apart. It bounced through three relays, and the first one was sloppy. It leads to one building with a Cobra cell in it.",
+    "HAWK: Now we know what they call themselves. Breaker pulled Cobra Commander's message apart. It bounced through three relays, and the first one was sloppy. It leads to one building with a Cobra cell in it.",
     "Don't get excited. This is not their headquarters. A cell is a few rooms, a radio, and people who take orders. That's what we want: the people.",
     "Every one of them knows a name we don't. Bring me a Cobra soldier alive and Scarlett will have him talking by the end of the week. Dead men file no reports.",
     "Expect them to be better armed than the cartel. Expect them to fight. Expect civilians close by. Move out.",
@@ -292,13 +292,21 @@ TIPS = {
 S.update(TIPS)
 
 # ------------------------------------------------------------------ Cobra Commander's broadcast (Geoscape event)
-S['STR_EVENT_COBRA_BROADCAST'] = 'COBRA SPEAKS'
+# John 17 Nov 21:21-21:29: Cobra stays secret. This message goes to Washington only, classified; the public reveal comes
+# later, when Cobra takes a country (claude/COBRA_WORLDWIDE_v1.md). Same event id, same item, same trace.
+S['STR_EVENT_COBRA_BROADCAST'] = 'A MESSAGE FOR WASHINGTON'
 S['STR_EVENT_COBRA_BROADCAST_DESCRIPTION'] = P.join([
-    "Every television and radio station in the free world loses its signal for ninety seconds. When the picture returns, a man in a blue hood stands in front of a banner bearing a coiled snake.",
-    "\"People of the world. You have been governed by the weak, defended by the timid, and lied to by both. That ends now. My name does not matter. My organisation does. We are COBRA.",
-    "We are already in your cities, your factories and your banks. Governments that cooperate will find us generous. Governments that resist will learn what we are named for. This is your only warning. COBRA!\"",
-    "Breaker has the recording. The signal was relayed, and every relay leaves a trace. Research: Trace the Broadcast.",
+    "HAWK: Twenty minutes ago every secure screen in the White House Situation Room lost its feed for ninety seconds. When the picture came back, a man behind a mirrored mask was standing in front of a banner with a coiled snake on it.",
+    "\"Mr. President. The bombings your newspapers cannot explain are ours. We are already in your cities, your factories and your banks. You will hear from us again when it suits us. Until then, tell no one. Your people would only panic. We are COBRA.\"",
+    "The President has seen it. So have the Joint Chiefs, and now so have I. It is classified, and it stays that way. Officially, Cobra does not exist.",
+    "Breaker has a copy. The signal was relayed into the Situation Room, and every relay leaves a trace. Research: Trace the Broadcast.",
 ])
+
+# Overrides batch 1's research text (this file loads after gijoe_story_act1.rul): the message was private, not to the world.
+S['STR_TRACE_THE_BROADCAST_UFOPEDIA'] = P.join([
+    "Cobra Commander has introduced himself to the President: a masked man, a snake banner and ninety seconds of threats, sent into the Situation Room and nowhere else. Breaker took the signal apart. Three relays, and whoever set up the first one got lazy.",
+    "It leads to one building and one Cobra cell. A cell, not a headquarters. But cells are full of people, and people talk.",
+    "- Scarlett"])
 
 # ------------------------------------------------------------------ cutscene captions (ART paints the slides)
 CUT = {
