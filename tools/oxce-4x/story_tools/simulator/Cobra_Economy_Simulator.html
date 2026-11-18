@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cobra Economy Simulator</title>
+<style>
+:root {
+  --bg: #12161b; --panel: #1b2128; --panel2: #232b33; --line: #33404c; --ink: #e8ecef; --mute: #93a1ad;
+  --olive: #8a9a5b; --gold: #d8b45a; --red: #d0453a; --blue: #4b8ed8; --green: #5fb06a;
+  --s1: #9aa5ad; --s2: #5fb06a; --s3: #d8b45a; --s4: #d0453a;
+  --k1: #e8ecef; --k2: #9aa5ad; --k3: #d0453a; --k4: #d8b45a; --k5: #4b8ed8; --k6: #b06fd8;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: #0d1014; flex-wrap: wrap; }
+header h1 { margin: 0; font-size: 17px; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
+header .sub { color: var(--mute); font-size: 12px; }
+.tabs { display: flex; gap: 4px; margin-left: auto; }
+.tab { background: var(--panel); border: 1px solid var(--line); color: var(--mute); padding: 7px 14px; border-radius: 6px; cursor: pointer; font: inherit; }
+.tab.on { color: var(--ink); border-color: var(--olive); background: #26301f; }
+main { display: grid; grid-template-columns: 360px 1fr; min-height: calc(100vh - 58px); }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+aside { border-right: 1px solid var(--line); padding: 14px 16px; overflow-y: auto; max-height: calc(100vh - 58px); background: var(--panel); }
+@media (max-width: 900px) { aside { max-height: none; border-right: 0; border-bottom: 1px solid var(--line); } }
+section.out { padding: 16px 20px; overflow-x: auto; }
+label.f { display: block; margin: 9px 0 2px; font-size: 12px; color: var(--mute); }
+select, input[type=number] { width: 100%; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; font: inherit; }
+.row { display: grid; grid-template-columns: 1fr 70px; gap: 8px; align-items: center; margin: 5px 0; }
+.row span { font-size: 12.5px; }
+.row span small { display: block; color: var(--mute); font-size: 11px; line-height: 1.3; }
+.row input { padding: 4px 6px; text-align: right; }
+.row input.changed { border-color: var(--gold); color: var(--gold); }
+details { margin: 10px 0; border: 1px solid var(--line); border-radius: 6px; background: #161b21; }
+details > summary { cursor: pointer; padding: 7px 10px; font-weight: 600; font-size: 12.5px; letter-spacing: .03em; color: var(--olive); }
+details > div { padding: 2px 10px 10px; }
+.grid { display: grid; gap: 4px; font-size: 11.5px; }
+.grid input { padding: 3px 4px; text-align: right; font-size: 11.5px; }
+.grid .h { color: var(--mute); text-align: right; }
+.btns { display: flex; gap: 8px; margin: 14px 0 6px; position: sticky; bottom: 0; background: var(--panel); padding: 8px 0; }
+button.go { flex: 1; background: var(--olive); color: #111; border: 0; border-radius: 6px; padding: 10px; font-weight: 700; letter-spacing: .05em; cursor: pointer; font-size: 14px; }
+button.go:hover { background: #9fb06a; }
+button.reset { background: transparent; color: var(--mute); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; cursor: pointer; font: inherit; }
+.note { color: var(--mute); font-size: 12px; margin: 4px 0 12px; }
+.warn { border-left: 3px solid var(--gold); padding: 8px 12px; background: #221e12; color: #e8dcb5; font-size: 12.5px; margin-bottom: 14px; border-radius: 0 6px 6px 0; }
+h2 { font-size: 15px; margin: 18px 0 8px; color: var(--ink); letter-spacing: .02em; }
+h2:first-child { margin-top: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; margin-bottom: 10px; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--mute); font-weight: 600; font-size: 12px; }
+.chip { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.card h3 { margin: 0 0 8px; font-size: 13px; color: var(--mute); font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+canvas { width: 100%; height: 230px; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--mute); margin-top: 6px; }
+.bar { display: flex; height: 18px; border-radius: 3px; overflow: hidden; background: var(--panel2); }
+.bar div { height: 100%; }
+.busy { color: var(--gold); font-size: 13px; }
+.cmp { font-size: 11px; color: var(--mute); }
+.up { color: var(--red); } .down { color: var(--green); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Cobra Economy Simulator</h1>
+  <span class="sub">G.I. Joe XCOM design desk &middot; runs entirely on this PC, nothing is sent anywhere</span>
+  <div class="tabs">
+    <button class="tab on" data-mode="act1">Act 1 economy</button>
+    <button class="tab" data-mode="split">Supply split (parked design)</button>
+  </div>
+</header>
+<main>
+  <aside id="side"></aside>
+  <section class="out" id="out"><p class="note">Pick a scenario, change any number, press RUN.</p></section>
+</main>
+<script>
+// ===================================================================================================
+// G.I. Joe: Cobra Economy Simulator — engine (STORY, 17 Nov 2026)
+// Mode 1 is a faithful port of story_tools/act1_cobra_sim_v6.py (Act 1 as designed).
+// Mode 2 is the parked supply-split design (claude/COBRA_SUPPLY_SPLIT_v1.md); its numbers are first guesses.
+// ===================================================================================================
+const SIM = (() => {
+
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a;
+  t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const median = v => { if (!v.length) return null; const s = [...v].sort((a, b) => a - b), n = s.length;
+  return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; };
+const mean = v => v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0;
+
+// ---------------------------------------------------------------------------- MODE 1: ACT 1 ECONOMY
+const TREE = [{"name":"RIFLES","dept":"ARMORY","cost":20,"mpp":2,"early":3,"late":8,"req":[]},{"name":"GRENADES","dept":"ARMORY","cost":20,"mpp":2,"early":3,"late":8,"req":["RIFLES"]},{"name":"LASERS","dept":"ARMORY","cost":40,"mpp":3,"early":8,"late":14,"req":["GRENADES"]},{"name":"BODY_ARMOR","dept":"ARMORY","cost":40,"mpp":2,"early":12,"late":20,"req":["LASERS"]},{"name":"STINGER","dept":"MOTOR_POOL","cost":30,"mpp":2,"early":3,"late":8,"req":[]},{"name":"HISS_TANK","dept":"MOTOR_POOL","cost":30,"mpp":3,"early":6,"late":12,"req":["STINGER"]},{"name":"HEAVY_WEAPONS","dept":"MOTOR_POOL","cost":40,"mpp":3,"early":9,"late":14,"req":["HISS_TANK"]},{"name":"MAGGOT","dept":"MOTOR_POOL","cost":40,"mpp":3,"early":12,"late":20,"req":["HEAVY_WEAPONS"]},{"name":"RATTLER","dept":"AIR_WING","cost":20,"mpp":3,"early":3,"late":8,"req":[]},{"name":"NIGHT_RAVEN","dept":"AIR_WING","cost":20,"mpp":3,"early":6,"late":12,"req":["RATTLER"]},{"name":"AIR_SUPERIORITY","dept":"AIR_WING","cost":30,"mpp":3,"early":8,"late":12,"req":["NIGHT_RAVEN"]},{"name":"PATROL_BOATS","dept":"NAVY","cost":40,"mpp":2,"early":4,"late":12,"req":[]},{"name":"FLAGGED_SHIPS","dept":"NAVY","cost":40,"mpp":3,"early":8,"late":16,"req":["PATROL_BOATS"]},{"name":"OFFICER_CORPS","dept":"TROOPS","cost":30,"mpp":1,"early":3,"late":8,"req":[]},{"name":"VIPER_PROGRAM","dept":"TROOPS","cost":30,"mpp":2,"early":12,"late":20,"req":["OFFICER_CORPS"]},{"name":"MEDI_VIPER","dept":"BIOLOGY","cost":30,"mpp":1,"early":3,"late":8,"req":[]},{"name":"MEDICINE","dept":"BIOLOGY","cost":40,"mpp":2,"early":6,"late":14,"req":["MEDI_VIPER"]},{"name":"SPY_NETWORK","dept":"INTELLIGENCE","cost":40,"mpp":2,"early":4,"late":12,"req":[]},{"name":"JOE_GEAR_TEARDOWN","dept":"INTELLIGENCE","cost":40,"mpp":2,"early":6,"late":16,"req":["SPY_NETWORK"]},{"name":"BANK_JOBS","dept":"CRIME","cost":20,"mpp":1,"early":1,"late":6,"req":[]},{"name":"HACKING","dept":"CRIME","cost":20,"mpp":1,"early":6,"late":14,"req":["BANK_JOBS"]},{"name":"KIDNAPPING","dept":"CRIME","cost":30,"mpp":1,"early":6,"late":12,"req":["BANK_JOBS"]}];
+
+const ACT1_STYLES = ['absent', 'cautious', 'typical', 'aggressive'];
+const ACT1_DEFAULTS = {
+  runs: 500, months: 18, seed: 1,
+  dromeCost: 1550, donorStep: 200, dromeFrom: 8, startBuildingAt: 0.5, minBuildMonths: 2,
+  leakPct: 25, startFunds: 400, startMateriel: 150, startFronts: 3, startDepots: 2, startCells: 2, hiddenFindMult: 0.5,
+  offmapBenches: 3, crimeOdds: 0.25, crimePays: 150, terrorFirstMonth: 4, terrorPreDrome: 0.15, cellStrikeFrom: 2,
+  cellStrikeOdds: 0.20, cellGoal: 300, defenceCost: 150, terrorPerDrome: 0.9, transferFrom: 2, transferTargetSites: 4,
+  transferPerMissing: 150, bNeedsMonths: 2, pushPastLatest: 2.0, wellSupplied: 50, buildStart: 2,
+  front: {cost: 300, funds: 120, uf: 8,  mat: 0,  um: 0,  mc: 0,  benches: 0, odds: 66, loot: 60},
+  factory: {cost: 680, funds: 0, uf: 28, mat: 80, um: 0, mc: 48, benches: 0, odds: 44, loot: 0},
+  camp: {cost: 400, funds: 0, uf: 12, mat: 0, um: 20, mc: 0, benches: 0, odds: 26, loot: 0},
+  depot: {cost: 160, funds: 0, uf: 5, mat: 0, um: 0, mc: 0, benches: 0, odds: 26, loot: 0},
+  lab: {cost: 300, funds: 0, uf: 10, mat: 0, um: 10, mc: 0, benches: 1, odds: 45, loot: 0},
+  broadcast: {cost: 200, funds: 0, uf: 6, mat: 0, um: 0, mc: 0, benches: 0, odds: 18, loot: 0},
+  drome: {funds: 0, uf: 58, mat: 0, um: 30, mc: 0, benches: 4, odds: 0, loot: 200},
+  styles: {
+    absent:     {find: 0.0,  raids: 0.0, factory: 0.0, intercept: 0.0,  respond: 0.0, assault: 0.0, spine: null, spend: 15},
+    cautious:   {find: 0.25, raids: 0.5, factory: 0.3, intercept: 0.05, respond: 0.3, assault: 0.5, spine: 12,   spend: 40},
+    typical:    {find: 0.40, raids: 1.0, factory: 0.6, intercept: 0.15, respond: 0.5, assault: 0.8, spine: 10.5, spend: 70},
+    aggressive: {find: 0.55, raids: 2.0, factory: 0.9, intercept: 0.30, respond: 0.7, assault: 1.0, spine: 9.5,  spend: 120},
+  },
+};
+
+function act1Run(P, style, R) {
+  const SITES = {FRONT: P.front, FACTORY: P.factory, CAMP: P.camp, DEPOT: P.depot, LAB: P.lab, BROADCAST: P.broadcast,
+                 DROME: Object.assign({cost: P.dromeCost}, P.drome)};
+  const isSite = t => t in SITES;
+  const st = P.styles[style];
+  const startTypes = [...Array(P.startFronts).fill('FRONT'), ...Array(P.startDepots).fill('DEPOT'), ...Array(P.startCells).fill('CELL')];
+  const sites = startTypes.map(t => ({type: t, found: false, hidden: true}));
+  let funds = P.startFunds, mat = P.startMateriel;
+  const done = {}, prog = {}; TREE.forEach(t => prog[t.name] = 0);
+  const drome = {saved: 0, building: null, built: null};
+  const L = {end: null, version: null, terror: 0, firstTerror: null, rifles: null, dry: 0, peak: 0, fronts: 0, crimePaid: 0,
+             strikes: 0, cellFronts: 0, fortified: 0, dromeBuilt: null, dromeStarted: null, broken: 0, leaked: 0,
+             track: {funds: [], mat: [], sites: []}};
+  const frontCap = others => 2 + Math.floor(others / 3);
+  const factoryLive = R() >= st.factory;
+  const loc = st.spine;
+  const spineM = loc == null ? null : loc + (R() * 3 - 1.5);
+  const prio = ['DROME', 'DROME_BUILDING', 'FACTORY', 'FRONT', 'CELL', 'LAB', 'DEPOT', 'CAMP', 'BROADCAST'];
+  for (let m = 0; m < P.months; m++) {
+    if (m === 2 && factoryLive) sites.push({type: 'FACTORY', found: true, hidden: false});
+    let types = sites.map(s => s.type);
+    let econ = types.filter(isSite);
+    let inc = 0;
+    for (const t of econ) if (SITES[t].funds && R() >= st.intercept) inc += SITES[t].funds;
+    const leak = P.leakPct * st.spend / 100; inc += leak; L.leaked += leak;
+    funds = Math.max(0, funds + inc - econ.reduce((a, t) => a + SITES[t].uf, 0));
+    mat = Math.max(0, mat - econ.reduce((a, t) => a + SITES[t].um, 0));
+    for (const t of econ) if (SITES[t].mat) { const pay = Math.min(funds, SITES[t].mc); funds -= pay; mat += Math.floor(SITES[t].mat * pay / SITES[t].mc); }
+    const hasDrome = types.includes('DROME');
+    if (m >= P.transferFrom) { const missing = Math.max(0, P.transferTargetSites - econ.length);
+      if (missing && R() >= st.intercept) funds += P.transferPerMissing * missing; }
+    if (!hasDrome) {
+      for (const ls of sites.filter(x => x.type === 'FRONT' || x.type === 'CELL')) {
+        if (R() < P.crimeOdds) {
+          if (R() < st.respond) { for (const s of sites) if ((s.type === 'FRONT' || s.type === 'CELL') && !s.found) { s.found = true; break; } }
+          else { L.crimePaid++; if (ls.type === 'CELL') ls.purse = (ls.purse || 0) + P.crimePays; else funds += P.crimePays; }
+        }
+      }
+      for (const c of sites.filter(x => x.type === 'CELL' && (x.purse || 0) >= P.cellGoal)) {
+        const ec = sites.filter(x => isSite(x.type)).map(x => x.type);
+        const othersN = ec.filter(t => t !== 'FRONT').length;
+        c.purse -= P.cellGoal;
+        if (ec.filter(t => t === 'FRONT').length < frontCap(othersN)) { sites.push({type: 'FRONT', found: false, hidden: false}); L.cellFronts++; }
+        else funds += P.cellGoal;
+      }
+      if (m >= P.cellStrikeFrom) { const nc = types.filter(t => t === 'CELL').length; for (let i = 0; i < nc; i++) if (R() < P.cellStrikeOdds) L.strikes++; }
+      if (m >= P.terrorFirstMonth && R() < P.terrorPreDrome) { L.terror++; if (L.firstTerror == null) L.firstTerror = m; }
+    } else {
+      let n = 0; const nd = types.filter(t => t === 'DROME').length; for (let i = 0; i < nd; i++) if (R() < P.terrorPerDrome) n++;
+      if (n) { L.terror += n; if (L.firstTerror == null) L.firstTerror = m; }
+    }
+    let benches = P.offmapBenches + econ.reduce((a, t) => a + SITES[t].benches, 0);
+    const busy = new Set();
+    for (const t of TREE) {
+      if (t.name in done || m < t.early || busy.has(t.dept) || benches <= 0) continue;
+      if (t.req.some(r => !(r in done))) continue;
+      busy.add(t.dept); benches--;
+      let pts = 10 * (t.late != null && m >= t.late ? P.pushPastLatest : 1);
+      if (t.mpp) { pts = Math.min(pts, Math.floor(mat / t.mpp)); mat -= Math.trunc(pts * t.mpp); }
+      prog[t.name] += pts;
+      if (prog[t.name] >= t.cost) done[t.name] = m;
+    }
+    const reserve = econ.reduce((a, t) => a + SITES[t].uf, 0);
+    if (m >= P.dromeFrom && !hasDrome) {
+      drome.saved += P.donorStep * (m - P.dromeFrom + 1);
+      const spare = Math.max(0, funds - reserve); drome.saved += spare; funds -= spare;
+      if (drome.building == null && drome.saved >= P.dromeCost * P.startBuildingAt) {
+        drome.building = m; L.dromeStarted = m; sites.push({type: 'DROME_BUILDING', found: false, hidden: false}); }
+      if (drome.building != null && drome.saved >= P.dromeCost && m - drome.building >= P.minBuildMonths) {
+        for (const s of sites) if (s.type === 'DROME_BUILDING') s.type = 'DROME';
+        drome.built = m; L.dromeBuilt = m; }
+    }
+    econ = sites.map(s => s.type).filter(isSite);
+    if (m >= P.buildStart && !(m >= P.dromeFrom && !hasDrome)) {
+      const planning = econ.includes('DROME');
+      const netF = econ.reduce((a, t) => a + SITES[t].funds - SITES[t].uf, 0);
+      const netM = econ.reduce((a, t) => a + SITES[t].mat - SITES[t].um, 0);
+      const others = econ.filter(t => t !== 'FRONT').length;
+      for (const [t, r] of Object.entries(SITES)) {
+        if (t === 'DROME') continue;
+        const have = econ.filter(x => x === t).length;
+        const earner = r.funds > r.uf, maker = r.mat > r.um;
+        let wanted;
+        if (t === 'FRONT') wanted = have < frontCap(others);
+        else if (!planning) wanted = have === 0;
+        else if (netF <= 0) wanted = earner;
+        else if (netM < 0 && maker) wanted = true;
+        else wanted = have === 0;
+        if (wanted && funds - reserve >= r.cost && R() * 100 < r.odds) { funds -= r.cost; sites.push({type: t, found: false, hidden: false}); econ.push(t); }
+      }
+    }
+    for (const s of sites) {
+      let p = st.find * (s.hidden ? P.hiddenFindMult : 1);
+      if (s.type === 'DROME' || s.type === 'DROME_BUILDING') p = (loc != null && m >= spineM) ? 1 : 0;
+      if (!s.found && R() < p) s.found = true;
+    }
+    for (const s of sites)
+      if (s.found && !s.fort && isSite(s.type) && s.type !== 'DROME' && funds - reserve >= P.defenceCost) { funds -= P.defenceCost; s.fort = 2; L.fortified++; }
+    const n = Math.floor(st.raids) + (R() < st.raids % 1 ? 1 : 0);
+    for (let i = 0; i < n; i++) {
+      const found = sites.filter(s => s.found).sort((a, b) => prio.indexOf(a.type) - prio.indexOf(b.type));
+      if (!found.length) break;
+      const tgt = found[0];
+      if (tgt.type === 'DROME' || tgt.type === 'DROME_BUILDING') {
+        if (R() < st.assault) { L.end = m; L.version = tgt.type === 'DROME' ? 'A: Drome assault (finished)' : 'A: Drome assault (unfinished)'; break; }
+        continue;
+      }
+      if ((tgt.fort || 0) > 1) { tgt.fort--; continue; }
+      sites.splice(sites.indexOf(tgt), 1);
+      if (isSite(tgt.type)) funds = Math.max(0, funds - SITES[tgt.type].loot);
+      if (tgt.type === 'DEPOT') mat = 0;
+    }
+    L.track.funds.push(funds); L.track.mat.push(mat); L.track.sites.push(sites.length);
+    if (L.end != null) break;
+    const e2 = sites.map(s => s.type);
+    if (m >= P.dromeFrom && !['FRONT', 'FACTORY', 'DROME', 'DROME_BUILDING'].some(t => e2.includes(t))) {
+      L.broken++; if (L.broken >= P.bNeedsMonths) { L.end = m; L.version = 'B: network broken'; break; }
+    } else L.broken = 0;
+    if (drome.built != null && m - drome.built >= 3) { L.end = m; L.version = 'Drome strike'; break; }
+    if (L.rifles == null && done.RIFLES != null && mat >= P.wellSupplied) L.rifles = m;
+    if (mat < P.wellSupplied) L.dry++;
+    L.peak = Math.max(L.peak, sites.length); L.fronts = Math.max(L.fronts, econ.filter(t => t === 'FRONT').length);
+  }
+  return L;
+}
+
+function act1(P) {
+  const R = rng(P.seed), out = {};
+  for (const style of ACT1_STYLES) {
+    const Ls = []; for (let i = 0; i < P.runs; i++) Ls.push(act1Run(P, style, R));
+    const med = k => { const v = Ls.map(l => l[k]).filter(x => x != null); return {med: median(v), pct: Math.floor(v.length * 100 / P.runs)}; };
+    const vers = {}; for (const l of Ls) { const k = l.version || `not over by month ${P.months}`; vers[k] = (vers[k] || 0) + 1; }
+    const endHist = Array(P.months).fill(0); for (const l of Ls) if (l.end != null) endHist[l.end]++;
+    const trackMed = key => { const res = []; for (let m = 0; m < P.months; m++) { const v = Ls.filter(l => l.track[key].length > m).map(l => l.track[key][m]); res.push(v.length >= P.runs * 0.25 ? median(v) : null); } return res; };
+    out[style] = {end: med('end'), versions: vers, endHist, firstTerror: med('firstTerror'), terror: median(Ls.map(l => l.terror)),
+      crimePaid: median(Ls.map(l => l.crimePaid)), strikes: median(Ls.map(l => l.strikes)), dromeStarted: med('dromeStarted'),
+      dromeBuilt: med('dromeBuilt'), rifles: med('rifles'), dry: median(Ls.map(l => l.dry)), peak: median(Ls.map(l => l.peak)),
+      fronts: median(Ls.map(l => l.fronts)), leaked: mean(Ls.map(l => l.leaked)), cellFronts: mean(Ls.map(l => l.cellFronts)),
+      fortified: mean(Ls.map(l => l.fortified)),
+      track: {funds: trackMed('funds'), mat: trackMed('mat'), sites: trackMed('sites')}};
+  }
+  return out;
+}
+
+const ACT1_SCENARIOS = {
+  'As designed (M.A.R.S. leak 25%)': {},
+  'No M.A.R.S. leak': {leakPct: 0},
+  'Heavy leak (50%)': {leakPct: 50},
+  'Stingy backers (100 a month)': {donorStep: 100},
+  'Generous backers (300 a month)': {donorStep: 300},
+  'Expensive Drome (2,000)': {dromeCost: 2000},
+  'Cheap Drome (1,100)': {dromeCost: 1100},
+  'Early Drome planning (month 6)': {dromeFrom: 6},
+  'No crime money': {crimeOdds: 0},
+  'Rich start (funds 800, materiel 300)': {startFunds: 800, startMateriel: 300},
+  'Lean start (1 front, 1 depot, 1 cell)': {startFronts: 1, startDepots: 1, startCells: 1},
+  'No network transfers': {transferPerMissing: 0},
+  'Cheap defences (75)': {defenceCost: 75},
+};
+
+// ---------------------------------------------------------------------------- MODE 2: SUPPLY SPLIT
+const STOCKS = ['bullets', 'guns', 'missiles', 'vehicles', 'aircraft', 'cells'];
+const SPLIT_STYLES = ['absent', 'cautious', 'typical', 'aggressive'];
+const SPLIT_DEFAULTS = {
+  runs: 300, months: 24, seed: 7, regions: 3, garrisons: 6, destroMonth: 11,
+  startFunds: 300, regionIncome: 230, producerUpkeep: 6, rebuildMonths: 3, rebuildCost: 200,
+  produce:  {bullets: 50,  guns: 12, missiles: 10, vehicles: 3,   aircraft: 3,   cells: 14},
+  unitCost: {bullets: 0.4, guns: 1.5, missiles: 3, vehicles: 12, aircraft: 16, cells: 2},
+  upkeep:   {bullets: 3,   guns: 0.6, missiles: 0.5, vehicles: 0.1, aircraft: 0.1, cells: 0.8},   // per garrison per month
+  battleNeed: {bullets: 10, guns: 2,  missiles: 3,   vehicles: 1,   aircraft: 1,   cells: 4},     // what one battle draws
+  battleWants: {bullets: 1, guns: 1,  missiles: 0.5, vehicles: 0.25, aircraft: 0.15, cells: 0.4},   // chance a battle calls for it
+  startStock: {bullets: 120, guns: 40, missiles: 20, vehicles: 4, aircraft: 3, cells: 0},          // per region, at the hub
+  floor: 1, shipFraction: 0.5, ticksPerMonth: 3, cobraMissions: 2,
+  postureWeight: 1.2, attackPlanBonus: 1.0, underAttackBonus: 1.0,
+  vanSpot: 0.03, emergencyThreshold: 2, emergencyLoadBattles: 4, pullbackEmptyStocks: 2, pullbackMonths: 2, quietFactor: 0.3,
+  strategy: 'balanced',   // balanced | producers | missileWorks | hub | vans | strangle
+  styles: {
+    absent:     {raids: 0,   ambush: 0,   intercept: 0,    intelBoost: 1},
+    cautious:   {raids: 0.7, ambush: 0.4, intercept: 0.1,  intelBoost: 1},
+    typical:    {raids: 1.5, ambush: 0.6, intercept: 0.25, intelBoost: 1.5},
+    aggressive: {raids: 3,   ambush: 0.8, intercept: 0.4,  intelBoost: 2},
+  },
+};
+
+function splitRun(P, style, R) {
+  const st = P.styles[style], T = P.ticksPerMonth, NT = P.months * T;
+  const regions = [];
+  for (let r = 0; r < P.regions; r++) {
+    const g = []; for (let i = 0; i < P.garrisons; i++) g.push({stock: Object.fromEntries(STOCKS.map(k => [k, 0])), attacked: 0});
+    regions.push({hub: Object.assign({}, P.startStock), garrisons: g, funds: P.startFunds,
+      producers: Object.fromEntries(STOCKS.map(k => [k, {down: 0}])), quiet: 0, starvedMonths: 0, cool: {}, plan: -1,
+      emptyMonths: Object.fromEntries(STOCKS.map(k => [k, 0]))});
+  }
+  const L = {battles: 0, battlesBy: Object.fromEntries(STOCKS.map(k => [k, 0])), short: Object.fromEntries(STOCKS.map(k => [k, 0])),
+    onFloor: 0, vans: 0, vansSpotted: 0, vansHit: 0, emergSent: 0, emergHit: 0, quietMonths: 0, producerRaids: 0, hubRaids: 0,
+    downMonths: 0, prodScale: 0, prodScaleN: 0, track: Object.fromEntries(STOCKS.map(k => [k, []]))};
+  const total = (reg, k) => reg.hub[k] + reg.garrisons.reduce((a, g) => a + g.stock[k], 0);
+  const intransit = [];
+  const battle = (reg, g) => {
+    L.battles++;
+    for (const k of STOCKS) {
+      if (k === 'cells' && monthOf(curT) < P.destroMonth) continue;
+      if (R() >= P.battleWants[k]) continue;
+      L.battlesBy[k]++;
+      const need = P.battleNeed[k];
+      if (g.stock[k] >= need) g.stock[k] -= need;
+      else if (k === 'bullets' || k === 'guns') { g.stock[k] = 0; L.onFloor++; }   // the floor: sidearms and a magazine
+      else { L.short[k]++; g.stock[k] = 0; }                                         // all or nothing
+    }
+  };
+  const monthOf = t => Math.floor(t / T);
+  let curT = 0;
+  for (let t = 0; t < NT; t++) {
+    curT = t; const m = monthOf(t), newMonth = t % T === 0;
+    // deliveries in transit arrive
+    for (let i = intransit.length - 1; i >= 0; i--) if (intransit[i].at <= t) { const d = intransit[i]; for (const k in d.load) d.to.hub[k] += d.load[k]; intransit.splice(i, 1); }
+    for (const [ri, reg] of regions.entries()) {
+      if (newMonth) {
+        // income and production (funds only; cells only once Destro has joined)
+        reg.funds += P.regionIncome * (reg.quiet > 0 ? 0.7 : 1);
+        const running = [];
+        for (const k of STOCKS) {
+          const p = reg.producers[k];
+          if (p.down > 0) { p.down--; L.downMonths++; if (p.down === 0) { if (reg.funds >= P.rebuildCost) reg.funds -= P.rebuildCost; else p.down = 1; } continue; }
+          if (k === 'cells' && m < P.destroMonth) continue;
+          running.push(k);
+        }
+        // every running line is paid together; if money is short, every line slows by the same share
+        const bill = running.reduce((a, k) => a + P.producerUpkeep + P.produce[k] * P.unitCost[k], 0);
+        const scale = bill > 0 ? Math.min(1, reg.funds / bill) : 0;
+        for (const k of running) { reg.hub[k] += Math.floor(P.produce[k] * scale); }
+        reg.funds -= bill * scale; L.prodScale += scale; L.prodScaleN++;
+        reg.funds = Math.max(0, reg.funds);
+        // garrison upkeep
+        for (const g of reg.garrisons) for (const k of STOCKS) g.stock[k] = Math.max(0, g.stock[k] - P.upkeep[k] * (k === 'cells' && m < P.destroMonth ? 0 : 1));
+        reg.plan = R() < 0.5 ? Math.floor(R() * reg.garrisons.length) : -1;   // a site staging an attack this month
+        for (const g of reg.garrisons) g.attacked = Math.max(0, g.attacked - 1);
+      }
+      // standing orders: the hub ships a share of its stock to every garrison, one van each
+      const w = reg.garrisons.map((g, i) => P.postureWeight + (i === reg.plan ? P.attackPlanBonus : 0) + (g.attacked > 0 ? P.underAttackBonus : 0));
+      const wsum = w.reduce((a, b) => a + b, 0);
+      // whole units only: each stock's shipment is split by the shares, largest remainder first; the rest stays at the hub
+      const loads = reg.garrisons.map(() => Object.fromEntries(STOCKS.map(k => [k, 0])));
+      for (const k of STOCKS) {
+        const amount = Math.floor(reg.hub[k] * P.shipFraction); if (amount <= 0) continue;
+        const raw = w.map(x => amount * x / wsum), base = raw.map(Math.floor);
+        let left = amount - base.reduce((a, b) => a + b, 0);
+        const order = raw.map((x, i) => [x - base[i], i]).sort((a, b) => b[0] - a[0]);
+        for (let j = 0; j < left; j++) base[order[j % order.length][1]]++;
+        base.forEach((n, i) => loads[i][k] = n); reg.hub[k] -= amount;
+      }
+      for (const [gi, g] of reg.garrisons.entries()) {
+        const load = loads[gi]; if (!STOCKS.some(k => load[k] > 0)) continue;
+        L.vans++;
+        const spotted = R() < P.vanSpot * st.intelBoost;
+        if (spotted) { L.vansSpotted++; if (R() < st.ambush) { L.vansHit++; continue; } }
+        for (const k of STOCKS) g.stock[k] += load[k];
+      }
+      if (newMonth) {
+        // Cobra's own missions draw stock (fewer while the region is quiet)
+        const nm = P.cobraMissions * (reg.quiet > 0 ? P.quietFactor : 1);
+        const k1 = Math.floor(nm) + (R() < nm % 1 ? 1 : 0);
+        for (let i = 0; i < k1; i++) battle(reg, reg.garrisons[Math.floor(R() * reg.garrisons.length)]);
+      }
+    }
+    if (t % T === 0) {
+      // the player: raids this month, by strategy
+      const strangle = P.strategy === 'strangle';
+      const n = Math.floor(st.raids) + (R() < st.raids % 1 ? 1 : 0);
+      for (let i = 0; i < n; i++) {
+        const reg = strangle ? regions[0] : regions[Math.floor(R() * regions.length)];
+        const live = STOCKS.filter(k => reg.producers[k].down === 0 && !(k === 'cells' && m < P.destroMonth));
+        let tgt = 'garrison';
+        if (P.strategy === 'producers' && live.length) tgt = 'producer';
+        else if (P.strategy === 'missileWorks' && reg.producers.missiles.down === 0) tgt = 'missiles';
+        else if (P.strategy === 'hub' && R() < 0.6) tgt = 'hub';
+        else if ((strangle || P.strategy === 'balanced') && R() < 0.3 && live.length) tgt = 'producer';
+        if (tgt === 'producer') { const k = live[Math.floor(R() * live.length)]; reg.producers[k].down = P.rebuildMonths; L.producerRaids++; }
+        else if (tgt === 'missiles') { reg.producers.missiles.down = P.rebuildMonths; L.producerRaids++; }
+        else if (tgt === 'hub') { for (const k of STOCKS) reg.hub[k] *= 0.2; L.hubRaids++; }
+        else { const g = reg.garrisons[Math.floor(R() * reg.garrisons.length)]; g.attacked = 2; battle(reg, g); }
+      }
+    }
+    if (t % T === T - 1) {
+      // end of month: emergency shipments, pull-back, tracking
+      for (const [ri, reg] of regions.entries()) {
+        let empty = 0;
+        for (const k of STOCKS) {
+          if (k === 'cells' && m < P.destroMonth) continue;
+          const need = P.battleNeed[k];
+          if (total(reg, k) < need * P.emergencyThreshold) {
+            if (k === 'missiles' || k === 'vehicles' || k === 'aircraft') empty++;
+            if (!(reg.cool[k] > m)) {
+              const donor = regions.filter(o => o !== reg).sort((a, b) => b.hub[k] - a.hub[k])[0];
+              const load = need * P.emergencyLoadBattles;
+              if (load > 0 && donor && donor.hub[k] >= load * 2) {
+                donor.hub[k] -= load; L.emergSent++; reg.cool[k] = m + 1;
+                if (R() < st.intercept) L.emergHit++; else intransit.push({at: t + 1, to: reg, load: {[k]: load}});
+              }
+            }
+          }
+        }
+        if (reg.quiet > 0) { reg.quiet--; L.quietMonths++; }
+        else if (empty >= P.pullbackEmptyStocks) { reg.starvedMonths++; if (reg.starvedMonths >= 2) { reg.quiet = P.pullbackMonths; reg.starvedMonths = 0; } }
+        else reg.starvedMonths = 0;
+      }
+      for (const k of STOCKS) L.track[k].push(total(regions[0], k));
+    }
+  }
+  return L;
+}
+
+function split(P) {
+  const R = rng(P.seed), out = {};
+  for (const style of SPLIT_STYLES) {
+    const Ls = []; for (let i = 0; i < P.runs; i++) Ls.push(splitRun(P, style, R));
+    const sum = k => mean(Ls.map(l => l[k]));
+    const shortPct = {}, wanted = {};
+    for (const k of STOCKS) { const b = Ls.reduce((a, l) => a + l.battlesBy[k], 0), s = Ls.reduce((a, l) => a + l.short[k], 0); wanted[k] = b; shortPct[k] = b ? s * 100 / b : 0; }
+    const track = {}; for (const k of STOCKS) { track[k] = []; for (let m = 0; m < P.months; m++) track[k].push(median(Ls.map(l => l.track[k][m]))); }
+    out[style] = {battles: sum('battles'), shortPct, onFloor: sum('onFloor'), vans: sum('vans'), vansSpotted: sum('vansSpotted'),
+      vansHit: sum('vansHit'), emergSent: sum('emergSent'), emergHit: sum('emergHit'), quietMonths: sum('quietMonths'),
+      producerRaids: sum('producerRaids'), prodPct: mean(Ls.map(l => l.prodScaleN ? l.prodScale * 100 / l.prodScaleN : 0)), hubRaids: sum('hubRaids'), downMonths: sum('downMonths'), track};
+  }
+  return out;
+}
+
+const SPLIT_SCENARIOS = {
+  'Balanced player (mostly garrisons, some producers)': {strategy: 'balanced'},
+  'Producer hunter (hit any factory line)': {strategy: 'producers'},
+  'Missile works hunter': {strategy: 'missileWorks'},
+  'Hub raider (hit the Drome / depot stock)': {strategy: 'hub'},
+  'Van hunter (strong intel)': {strategy: 'vans', vanSpot: 0.12},
+  'Strangle one region (all raids on region 1)': {strategy: 'strangle'},
+  'Destro joins early (month 6)': {destroMonth: 6},
+  'Destro joins late (month 16)': {destroMonth: 16},
+  'Poor Cobra (income 120)': {regionIncome: 120},
+  'Rich Cobra (income 350)': {regionIncome: 350},
+  'No emergency shipments': {emergencyLoadBattles: 0},
+  'Hoarding hub (ships 25% a tick)': {shipFraction: 0.25},
+  'One region only': {regions: 1},
+};
+
+return {act1, split, ACT1_DEFAULTS, SPLIT_DEFAULTS, ACT1_SCENARIOS, SPLIT_SCENARIOS, ACT1_STYLES, SPLIT_STYLES, STOCKS};
+})();
+if (typeof module !== 'undefined') module.exports = SIM;
+
+</script>
+<script>
+const MODES = {
+  act1: {
+    title: 'Act 1 economy', defaults: SIM.ACT1_DEFAULTS, scenarios: SIM.ACT1_SCENARIOS, run: SIM.act1, styles: SIM.ACT1_STYLES,
+    intro: 'Cobra\'s Act 1 as designed and built: sites, funds, materiel, research, crime, the Terror Drome, and the M.A.R.S. leak from Joe purchases. Same rules as story_tools/act1_cobra_sim_v6.py. One fund = $1,000.',
+    groups: [
+      ['Run', ['runs', 'months', 'seed']],
+      ['The Terror Drome', ['dromeCost', 'donorStep', 'dromeFrom', 'startBuildingAt', 'minBuildMonths']],
+      ['M.A.R.S. supply leak', ['leakPct']],
+      ['Cobra at the start', ['startFunds', 'startMateriel', 'startFronts', 'startDepots', 'startCells', 'hiddenFindMult', 'offmapBenches']],
+      ['Crime, terror and cells', ['crimeOdds', 'crimePays', 'terrorFirstMonth', 'terrorPreDrome', 'terrorPerDrome', 'cellStrikeFrom', 'cellStrikeOdds', 'cellGoal']],
+      ['Network and defences', ['defenceCost', 'transferFrom', 'transferTargetSites', 'transferPerMissing', 'bNeedsMonths', 'wellSupplied', 'buildStart', 'pushPastLatest']],
+    ],
+    tables: [['Cobra sites', ['front', 'factory', 'camp', 'depot', 'lab', 'broadcast', 'drome'], ['cost', 'funds', 'uf', 'mat', 'um', 'mc', 'benches', 'odds', 'loot'],
+              {cost: 'cost', funds: 'income', uf: 'upkeep', mat: 'makes', um: 'uses mat', mc: 'mat cost', benches: 'benches', odds: 'build %', loot: 'raid loss'}],
+             ['Player styles', SIM.ACT1_STYLES, ['find', 'raids', 'factory', 'intercept', 'respond', 'assault', 'spine', 'spend'],
+              {find: 'find', raids: 'raids/mo', factory: 'hit fact.', intercept: 'intercept', respond: 'respond', assault: 'assault', spine: 'Drome found mo', spend: 'buys $k/mo'}]],
+  },
+  split: {
+    title: 'Supply split', defaults: SIM.SPLIT_DEFAULTS, scenarios: SIM.SPLIT_SCENARIOS, run: SIM.split, styles: SIM.SPLIT_STYLES,
+    intro: 'The parked design (COBRA_SUPPLY_SPLIT_v1): six stocks, producers as separate sites, a hub per region, standing orders shipped by van, all-or-nothing shortages with a sidearms floor, emergency shipments and pull-back. Every number here is a first guess: this mode is for exploring, not for verdicts.',
+    groups: [
+      ['Run', ['runs', 'months', 'seed', 'regions', 'garrisons', 'destroMonth']],
+      ['Money', ['startFunds', 'regionIncome', 'producerUpkeep', 'rebuildMonths', 'rebuildCost']],
+      ['Distribution', ['shipFraction', 'ticksPerMonth', 'postureWeight', 'attackPlanBonus', 'underAttackBonus', 'vanSpot']],
+      ['Fighting', ['cobraMissions', 'floor']],
+      ['Death spiral', ['emergencyThreshold', 'emergencyLoadBattles', 'pullbackEmptyStocks', 'pullbackMonths', 'quietFactor']],
+    ],
+    tables: [['Per stock', ['produce', 'unitCost', 'upkeep', 'battleNeed', 'battleWants', 'startStock'], SIM.STOCKS, null, true],
+             ['Player styles', SIM.SPLIT_STYLES, ['raids', 'ambush', 'intercept', 'intelBoost'],
+              {raids: 'raids/mo', ambush: 'ambush', intercept: 'intercept', intelBoost: 'intel x'}]],
+  },
+};
+const LABEL = {
+  runs: ['Runs per player style', 'More runs = steadier numbers, slower.'], months: ['Months simulated', ''], seed: ['Random seed', 'Same seed + same numbers = same result.'],
+  dromeCost: ['Terror Drome cost', 'funds'], donorStep: ['Backers\' money per month', 'added each month past the Drome month, cumulative'],
+  dromeFrom: ['Drome planning starts (month)', ''], startBuildingAt: ['Start building at', 'share of the cost saved'], minBuildMonths: ['Minimum build time (months)', ''],
+  leakPct: ['Leak: % of Joe purchases to Cobra', 'AMMO_SUPPLY_v1 is 25'],
+  startFunds: ['Starting funds', ''], startMateriel: ['Starting materiel', ''], startFronts: ['Hidden front companies', ''], startDepots: ['Hidden depots', ''], startCells: ['Hidden cells', ''],
+  hiddenFindMult: ['Hidden sites: find multiplier', ''], offmapBenches: ['Off-map research benches', 'Cobra Commander\'s own lab'],
+  crimeOdds: ['Crime chance per front/cell a month', ''], crimePays: ['A robbery that gets away pays', 'funds'], terrorFirstMonth: ['First terror possible (month)', ''],
+  terrorPreDrome: ['Terror chance a month, no Drome', ''], terrorPerDrome: ['Terror chance a month, per Drome', ''], cellStrikeFrom: ['Cell strikes from (month)', ''],
+  cellStrikeOdds: ['Cell strike chance per cell a month', ''], cellGoal: ['Cell purse that opens a front', 'funds'],
+  defenceCost: ['Defences for a found site', 'funds; then it takes 2 raids'], transferFrom: ['Network transfers from (month)', ''], transferTargetSites: ['Transfers keep a region at', 'working sites'],
+  transferPerMissing: ['Transfer per missing site', 'funds'], bNeedsMonths: ['Ending B: network broken for (months)', ''], wellSupplied: ['Well supplied at (materiel)', ''],
+  buildStart: ['Cobra builds from (month)', ''], pushPastLatest: ['Research push past the latest month', 'x'],
+  regions: ['Regions', ''], garrisons: ['Garrison sites per region', ''], destroMonth: ['Destro joins (month)', 'cells only from then'],
+  regionIncome: ['Income per region a month', 'funds'], producerUpkeep: ['Producer upkeep a month', 'funds per site'], rebuildMonths: ['Raided producer down for (months)', ''], rebuildCost: ['Rebuild cost', 'funds'],
+  shipFraction: ['Hub ships this share each tick', 'standing orders'], ticksPerMonth: ['Delivery rounds a month', ''], postureWeight: ['Base share weight (posture)', ''],
+  attackPlanBonus: ['Share bonus: staging an attack', ''], underAttackBonus: ['Share bonus: under attack', ''], vanSpot: ['Chance a van is spotted', 'before the intel multiplier'],
+  cobraMissions: ['Cobra missions per region a month', 'battles that draw stock'], floor: ['Sidearms floor', 'bullets and guns never run out'],
+  emergencyThreshold: ['Emergency when region stock below', 'x one battle\'s need'], emergencyLoadBattles: ['Emergency load', 'battles\' worth; 0 = none'],
+  pullbackEmptyStocks: ['Pull back when this many stocks empty', 'missiles, vehicles, aircraft'], pullbackMonths: ['Quiet for (months)', ''], quietFactor: ['Missions while quiet', 'x normal'],
+  strategy: ['Player strategy', ''],
+};
+const STYLE_COL = {absent: 'var(--s1)', cautious: 'var(--s2)', typical: 'var(--s3)', aggressive: 'var(--s4)'};
+const STOCK_COL = {bullets: 'var(--k1)', guns: 'var(--k2)', missiles: 'var(--k3)', vehicles: 'var(--k4)', aircraft: 'var(--k5)', cells: 'var(--k6)'};
+const VERSION_COL = {'A: Drome assault (finished)': '#5fb06a', 'A: Drome assault (unfinished)': '#9fd08a', 'B: network broken': '#4b8ed8', 'Drome strike': '#d0453a'};
+let mode = 'act1', params = {}, baseline = {act1: null, split: null};
+const clone = o => JSON.parse(JSON.stringify(o));
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v.replace(/var\((--[^)]+)\)/, '$1')).trim() || v;
+
+function build() {
+  const M = MODES[mode], side = document.getElementById('side');
+  params = clone(M.defaults);
+  let h = `<p class="note">${M.intro}</p><label class="f">Scenario</label><select id="scen">` +
+    Object.keys(M.scenarios).map(k => `<option>${k}</option>`).join('') + `</select>`;
+  if (mode === 'split') h += `<label class="f">Player strategy</label><select id="strategy">${['balanced', 'producers', 'missileWorks', 'hub', 'vans', 'strangle'].map(s => `<option value="${s}">${{balanced: 'Balanced', producers: 'Hit producers', missileWorks: 'Hit the missile works', hub: 'Hit the hub', vans: 'Hunt vans', strangle: 'Strangle region 1'}[s]}</option>`).join('')}</select>`;
+  for (const [g, keys] of M.groups) {
+    h += `<details ${g === 'Run' || g === 'The Terror Drome' || g === 'Money' ? 'open' : ''}><summary>${g}</summary><div>`;
+    for (const k of keys) { const [lab, help] = LABEL[k] || [k, '']; h += `<div class="row"><span>${lab}${help ? `<small>${help}</small>` : ''}</span><input type="number" step="any" data-k="${k}"></div>`; }
+    h += `</div></details>`;
+  }
+  for (const [title, rows, cols, names, byStockRows] of M.tables) {
+    h += `<details><summary>${title}</summary><div><div class="grid" style="grid-template-columns: 74px repeat(${cols.length}, 1fr)"><span></span>` +
+      cols.map(c => `<span class="h">${names ? names[c] : c}</span>`).join('');
+    for (const r of rows) {
+      h += `<span>${r}</span>` + cols.map(c => `<input type="number" step="any" data-t="${byStockRows ? r + '.' + c : (title === 'Player styles' ? 'styles.' + r + '.' + c : r + '.' + c)}">`).join('');
+    }
+    h += `</div></div></details>`;
+  }
+  h += `<div class="btns"><button class="go" id="go">RUN</button><button class="reset" id="reset">Reset</button></div>`;
+  side.innerHTML = h;
+  document.getElementById('scen').onchange = applyScenario;
+  document.getElementById('go').onclick = run;
+  document.getElementById('reset').onclick = () => { document.getElementById('scen').selectedIndex = 0; applyScenario(); };
+  if (mode === 'split') document.getElementById('strategy').onchange = e => { params.strategy = e.target.value; };
+  side.querySelectorAll('input').forEach(i => i.oninput = () => { setPath(i.dataset.k || i.dataset.t, i.value === '' ? null : Number(i.value)); mark(); });
+  applyScenario();
+  const out = document.getElementById('out');
+  out.innerHTML = `<p class="note">Pick a scenario, change any number, press RUN. The first run of each mode is kept as the baseline and later runs are compared against it.</p>`;
+}
+const getPath = p => p.split('.').reduce((o, k) => o == null ? o : o[k], params);
+function setPath(p, v) { const ks = p.split('.'); let o = params; for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]]; o[ks.at(-1)] = v; }
+function fill() { document.querySelectorAll('#side input').forEach(i => { const v = getPath(i.dataset.k || i.dataset.t); i.value = v == null ? '' : v; }); mark(); }
+function mark() { const D = MODES[mode].defaults; document.querySelectorAll('#side input').forEach(i => { const p = i.dataset.k || i.dataset.t;
+  const d = p.split('.').reduce((o, k) => o == null ? o : o[k], D); i.classList.toggle('changed', String(d) !== String(getPath(p))); }); }
+function applyScenario() {
+  const M = MODES[mode]; params = clone(M.defaults);
+  const ov = M.scenarios[document.getElementById('scen').value] || {};
+  for (const [k, v] of Object.entries(ov)) params[k] = clone(v);
+  if (mode === 'split') document.getElementById('strategy').value = params.strategy;
+  fill();
+}
+
+function run() {
+  const out = document.getElementById('out');
+  out.innerHTML = `<p class="busy">Running ${params.runs} campaigns per player style&hellip;</p>`;
+  setTimeout(() => {
+    const t0 = performance.now(), res = MODES[mode].run(clone(params)), ms = performance.now() - t0;
+    const scen = document.getElementById('scen').value;
+    if (!baseline[mode]) baseline[mode] = {res, scen};
+    (mode === 'act1' ? showAct1 : showSplit)(res, baseline[mode], scen, ms);
+  }, 30);
+}
+
+const f = (x, d = 0) => x == null ? '&ndash;' : Number(x).toFixed(d);
+const pct = (x, d = 0) => x == null ? '&ndash;' : Number(x).toFixed(d) + '%';
+function delta(now, then, d = 0, goodDown = false) {
+  if (now == null || then == null) return ''; const df = now - then; if (Math.abs(df) < Math.pow(10, -d) / 2) return '';
+  const cls = (df > 0) === goodDown ? 'up' : 'down'; return ` <span class="cmp ${cls}">${df > 0 ? '+' : ''}${df.toFixed(d)}</span>`;
+}
+
+function showAct1(R, B, scen, ms) {
+  const S = SIM.ACT1_STYLES, b = B.res, same = B.res === R;
+  let h = `<h2>Act 1 &middot; ${scen}</h2><p class="note">${params.runs} campaigns per style, ${ms.toFixed(0)} ms. ${same ? 'This run is the baseline.' : `Small numbers compare with the baseline run (${B.scen}).`}</p>`;
+  h += `<table><tr><th>Player style</th><th>Act 1 ends (month)</th><th>Drome started</th><th>Drome finished</th><th>Terror attacks</th><th>Robberies paid</th><th>Months on sidearms</th><th>Peak sites</th><th>Leak to Cobra (funds)</th></tr>`;
+  for (const s of S) { const r = R[s], o = b[s];
+    h += `<tr><td><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</td><td>${f(r.end.med, 1)} <span class="cmp">(${r.end.pct}%)</span>${delta(r.end.med, o.end.med, 1)}</td>
+      <td>${f(r.dromeStarted.med, 1)} <span class="cmp">(${r.dromeStarted.pct}%)</span></td><td>${f(r.dromeBuilt.med, 1)} <span class="cmp">(${r.dromeBuilt.pct}%)</span></td>
+      <td>${f(r.terror)}${delta(r.terror, o.terror, 0, true)}</td><td>${f(r.crimePaid)}</td><td>${f(r.dry)}</td><td>${f(r.peak)}</td><td>${f(r.leaked)}</td></tr>`; }
+  h += `</table><h2>How Act 1 ends</h2>`;
+  const allV = [...new Set(S.flatMap(s => Object.keys(R[s].versions)))];
+  for (const s of S) { const v = R[s].versions;
+    h += `<div style="display:grid;grid-template-columns:90px 1fr;gap:10px;align-items:center;margin:5px 0"><span>${s}</span><div class="bar">` +
+      allV.map(k => v[k] ? `<div title="${k}: ${(v[k] * 100 / params.runs).toFixed(0)}%" style="width:${v[k] * 100 / params.runs}%;background:${VERSION_COL[k] || '#555'}"></div>` : '').join('') + `</div></div>`;
+    h += `<div class="cmp" style="margin:-2px 0 6px 100px">` + allV.filter(k => v[k]).map(k => `${k} ${(v[k] * 100 / params.runs).toFixed(0)}%${delta(v[k] * 100 / params.runs, (b[s].versions[k] || 0) * 100 / params.runs, 0)}`).join(' &middot; ') + `</div>`; }
+  h += `<div class="legend">` + allV.map(k => `<span><span class="chip" style="background:${VERSION_COL[k] || '#555'}"></span>${k}</span>`).join('') + `</div>`;
+  h += `<div class="cards" style="margin-top:16px">
+    <div class="card"><h3>Cobra funds by month (median)</h3><canvas id="c1"></canvas></div>
+    <div class="card"><h3>Cobra materiel by month (median)</h3><canvas id="c2"></canvas></div>
+    <div class="card"><h3>Cobra sites by month (median)</h3><canvas id="c3"></canvas></div>
+    <div class="card"><h3>Month Act 1 ends (share of campaigns)</h3><canvas id="c4"></canvas></div></div>
+    <div class="legend">${S.map(s => `<span><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</span>`).join('')}</div>
+    <p class="note">Lines stop once fewer than a quarter of the campaigns are still running.</p>`;
+  document.getElementById('out').innerHTML = h;
+  const ser = key => S.map(s => ({col: css(STYLE_COL[s]), data: R[s].track[key]}));
+  line('c1', ser('funds')); line('c2', ser('mat')); line('c3', ser('sites'));
+  line('c4', S.map(s => ({col: css(STYLE_COL[s]), data: R[s].endHist.map(x => x * 100 / params.runs)})), '%');
+}
+
+function showSplit(R, B, scen, ms) {
+  const S = SIM.SPLIT_STYLES, K = SIM.STOCKS, b = B.res, same = B.res === R;
+  let h = `<h2>Supply split &middot; ${scen}</h2><p class="note">${params.runs} campaigns per style over ${params.months} months, ${ms.toFixed(0)} ms. ${same ? 'This run is the baseline.' : `Small numbers compare with the baseline run (${B.scen}).`}</p>`;
+  h += `<div class="warn">First-guess numbers. Read the shapes and the differences between scenarios, not the exact figures.</div>`;
+  h += `<h2>Battles where Cobra wanted a stock and had none</h2><table><tr><th>Player style</th>${K.map(k => `<th><span class="chip" style="background:${STOCK_COL[k]}"></span>${k}</th>`).join('')}<th>on the sidearms floor</th></tr>`;
+  for (const s of S) { const r = R[s], o = b[s];
+    h += `<tr><td><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</td>` + K.map(k => `<td>${(k === 'bullets' || k === 'guns') ? '<span class="cmp">floor</span>' : pct(r.shortPct[k]) + delta(r.shortPct[k], o.shortPct[k], 0, true)}</td>`).join('') + `<td>${f(r.onFloor)} battles</td></tr>`; }
+  h += `</table><h2>Supply war</h2><table><tr><th>Player style</th><th>Battles</th><th>Producer raids</th><th>Hub raids</th><th>Producer-months down</th><th>Vans</th><th>Vans spotted</th><th>Vans hit</th><th>Emergency loads (hit)</th><th>Quiet months</th><th>Production paid</th></tr>`;
+  for (const s of S) { const r = R[s], o = b[s];
+    h += `<tr><td><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</td><td>${f(r.battles)}</td><td>${f(r.producerRaids, 1)}</td><td>${f(r.hubRaids, 1)}</td><td>${f(r.downMonths, 1)}</td><td>${f(r.vans)}</td><td>${f(r.vansSpotted, 1)}</td><td>${f(r.vansHit, 1)}${delta(r.vansHit, o.vansHit, 1)}</td><td>${f(r.emergSent, 1)} (${f(r.emergHit, 1)})</td><td>${f(r.quietMonths, 1)}${delta(r.quietMonths, o.quietMonths, 1)}</td><td>${pct(r.prodPct)}</td></tr>`; }
+  h += `</table><h2>Region 1 stock over time (median)</h2><div class="cards">` +
+    S.map((s, i) => `<div class="card"><h3>${s}</h3><canvas id="s${i}"></canvas></div>`).join('') + `</div>
+    <div class="legend">${K.map(k => `<span><span class="chip" style="background:${STOCK_COL[k]}"></span>${k}</span>`).join('')}</div>
+    <p class="note">Stock held across region 1: its hub plus every garrison. Bullets are drawn on their own scale-free line like the rest; switch a stock off by setting its production to 0.</p>`;
+  document.getElementById('out').innerHTML = h;
+  S.forEach((s, i) => line('s' + i, K.map(k => ({col: css(STOCK_COL[k]), data: R[s].track[k]})), '', true));
+}
+
+function line(id, series, unit = '', log = false) {
+  const c = document.getElementById(id), dpr = window.devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight;
+  c.width = W * dpr; c.height = H * dpr; const g = c.getContext('2d'); g.scale(dpr, dpr);
+  const pad = {l: 44, r: 10, t: 8, b: 22}, n = Math.max(...series.map(s => s.data.length));
+  const vals = series.flatMap(s => s.data.filter(v => v != null));
+  const tr = v => log ? Math.log10(1 + Math.max(0, v)) : v;
+  const max = Math.max(1e-9, ...vals.map(tr)), min = 0;
+  const X = i => pad.l + (W - pad.l - pad.r) * (n > 1 ? i / (n - 1) : 0), Y = v => pad.t + (H - pad.t - pad.b) * (1 - (tr(v) - min) / (max - min));
+  g.strokeStyle = css('var(--line)'); g.fillStyle = css('var(--mute)'); g.font = '11px system-ui'; g.lineWidth = 1;
+  for (let j = 0; j <= 4; j++) { const v = log ? Math.pow(10, max * j / 4) - 1 : max * j / 4, y = Y(v);
+    g.beginPath(); g.moveTo(pad.l, y); g.lineTo(W - pad.r, y); g.stroke(); g.textAlign = 'right'; g.fillText((v >= 100 ? v.toFixed(0) : v.toFixed(v >= 10 ? 0 : 1)) + unit, pad.l - 5, y + 4); }
+  g.textAlign = 'center'; for (let i = 0; i < n; i += Math.max(1, Math.ceil(n / 9))) g.fillText(String(i), X(i), H - 6);
+  for (const s of series) { g.strokeStyle = s.col; g.lineWidth = 2; g.beginPath(); let on = false;
+    s.data.forEach((v, i) => { if (v == null) { on = false; return; } on ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)); on = true; }); g.stroke(); }
+}
+
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => { document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t)); mode = t.dataset.mode; build(); });
+build();
+</script>
+</body>
+</html>

@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cobra Economy Simulator</title>
+<style>
+:root {
+  --bg: #12161b; --panel: #1b2128; --panel2: #232b33; --line: #33404c; --ink: #e8ecef; --mute: #93a1ad;
+  --olive: #8a9a5b; --gold: #d8b45a; --red: #d0453a; --blue: #4b8ed8; --green: #5fb06a;
+  --s1: #9aa5ad; --s2: #5fb06a; --s3: #d8b45a; --s4: #d0453a;
+  --k1: #e8ecef; --k2: #9aa5ad; --k3: #d0453a; --k4: #d8b45a; --k5: #4b8ed8; --k6: #b06fd8;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: #0d1014; flex-wrap: wrap; }
+header h1 { margin: 0; font-size: 17px; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
+header .sub { color: var(--mute); font-size: 12px; }
+.tabs { display: flex; gap: 4px; margin-left: auto; }
+.tab { background: var(--panel); border: 1px solid var(--line); color: var(--mute); padding: 7px 14px; border-radius: 6px; cursor: pointer; font: inherit; }
+.tab.on { color: var(--ink); border-color: var(--olive); background: #26301f; }
+main { display: grid; grid-template-columns: 360px 1fr; min-height: calc(100vh - 58px); }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+aside { border-right: 1px solid var(--line); padding: 14px 16px; overflow-y: auto; max-height: calc(100vh - 58px); background: var(--panel); }
+@media (max-width: 900px) { aside { max-height: none; border-right: 0; border-bottom: 1px solid var(--line); } }
+section.out { padding: 16px 20px; overflow-x: auto; }
+label.f { display: block; margin: 9px 0 2px; font-size: 12px; color: var(--mute); }
+select, input[type=number] { width: 100%; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; font: inherit; }
+.row { display: grid; grid-template-columns: 1fr 70px; gap: 8px; align-items: center; margin: 5px 0; }
+.row span { font-size: 12.5px; }
+.row span small { display: block; color: var(--mute); font-size: 11px; line-height: 1.3; }
+.row input { padding: 4px 6px; text-align: right; }
+.row input.changed { border-color: var(--gold); color: var(--gold); }
+details { margin: 10px 0; border: 1px solid var(--line); border-radius: 6px; background: #161b21; }
+details > summary { cursor: pointer; padding: 7px 10px; font-weight: 600; font-size: 12.5px; letter-spacing: .03em; color: var(--olive); }
+details > div { padding: 2px 10px 10px; }
+.grid { display: grid; gap: 4px; font-size: 11.5px; }
+.grid input { padding: 3px 4px; text-align: right; font-size: 11.5px; }
+.grid .h { color: var(--mute); text-align: right; }
+.btns { display: flex; gap: 8px; margin: 14px 0 6px; position: sticky; bottom: 0; background: var(--panel); padding: 8px 0; }
+button.go { flex: 1; background: var(--olive); color: #111; border: 0; border-radius: 6px; padding: 10px; font-weight: 700; letter-spacing: .05em; cursor: pointer; font-size: 14px; }
+button.go:hover { background: #9fb06a; }
+button.reset { background: transparent; color: var(--mute); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; cursor: pointer; font: inherit; }
+.note { color: var(--mute); font-size: 12px; margin: 4px 0 12px; }
+.warn { border-left: 3px solid var(--gold); padding: 8px 12px; background: #221e12; color: #e8dcb5; font-size: 12.5px; margin-bottom: 14px; border-radius: 0 6px 6px 0; }
+h2 { font-size: 15px; margin: 18px 0 8px; color: var(--ink); letter-spacing: .02em; }
+h2:first-child { margin-top: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; margin-bottom: 10px; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--mute); font-weight: 600; font-size: 12px; }
+.chip { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.card h3 { margin: 0 0 8px; font-size: 13px; color: var(--mute); font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+canvas { width: 100%; height: 230px; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--mute); margin-top: 6px; }
+.bar { display: flex; height: 18px; border-radius: 3px; overflow: hidden; background: var(--panel2); }
+.bar div { height: 100%; }
+.busy { color: var(--gold); font-size: 13px; }
+.cmp { font-size: 11px; color: var(--mute); }
+.up { color: var(--red); } .down { color: var(--green); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Cobra Economy Simulator</h1>
+  <span class="sub">G.I. Joe XCOM design desk &middot; runs entirely on this PC, nothing is sent anywhere</span>
+  <div class="tabs">
+    <button class="tab on" data-mode="act1">Act 1 economy</button>
+    <button class="tab" data-mode="split">Supply split (parked design)</button>
+  </div>
+</header>
+<main>
+  <aside id="side"></aside>
+  <section class="out" id="out"><p class="note">Pick a scenario, change any number, press RUN.</p></section>
+</main>
+<script>
+/*__SIM__*/
+</script>
+<script>
+const MODES = {
+  act1: {
+    title: 'Act 1 economy', defaults: SIM.ACT1_DEFAULTS, scenarios: SIM.ACT1_SCENARIOS, run: SIM.act1, styles: SIM.ACT1_STYLES,
+    intro: 'Cobra\'s Act 1 as designed and built: sites, funds, materiel, research, crime, the Terror Drome, and the M.A.R.S. leak from Joe purchases. Same rules as story_tools/act1_cobra_sim_v6.py. One fund = $1,000.',
+    groups: [
+      ['Run', ['runs', 'months', 'seed']],
+      ['The Terror Drome', ['dromeCost', 'donorStep', 'dromeFrom', 'startBuildingAt', 'minBuildMonths']],
+      ['M.A.R.S. supply leak', ['leakPct']],
+      ['Cobra at the start', ['startFunds', 'startMateriel', 'startFronts', 'startDepots', 'startCells', 'hiddenFindMult', 'offmapBenches']],
+      ['Crime, terror and cells', ['crimeOdds', 'crimePays', 'terrorFirstMonth', 'terrorPreDrome', 'terrorPerDrome', 'cellStrikeFrom', 'cellStrikeOdds', 'cellGoal']],
+      ['Network and defences', ['defenceCost', 'transferFrom', 'transferTargetSites', 'transferPerMissing', 'bNeedsMonths', 'wellSupplied', 'buildStart', 'pushPastLatest']],
+    ],
+    tables: [['Cobra sites', ['front', 'factory', 'camp', 'depot', 'lab', 'broadcast', 'drome'], ['cost', 'funds', 'uf', 'mat', 'um', 'mc', 'benches', 'odds', 'loot'],
+              {cost: 'cost', funds: 'income', uf: 'upkeep', mat: 'makes', um: 'uses mat', mc: 'mat cost', benches: 'benches', odds: 'build %', loot: 'raid loss'}],
+             ['Player styles', SIM.ACT1_STYLES, ['find', 'raids', 'factory', 'intercept', 'respond', 'assault', 'spine', 'spend'],
+              {find: 'find', raids: 'raids/mo', factory: 'hit fact.', intercept: 'intercept', respond: 'respond', assault: 'assault', spine: 'Drome found mo', spend: 'buys $k/mo'}]],
+  },
+  split: {
+    title: 'Supply split', defaults: SIM.SPLIT_DEFAULTS, scenarios: SIM.SPLIT_SCENARIOS, run: SIM.split, styles: SIM.SPLIT_STYLES,
+    intro: 'The parked design (COBRA_SUPPLY_SPLIT_v1): six stocks, producers as separate sites, a hub per region, standing orders shipped by van, all-or-nothing shortages with a sidearms floor, emergency shipments and pull-back. Every number here is a first guess: this mode is for exploring, not for verdicts.',
+    groups: [
+      ['Run', ['runs', 'months', 'seed', 'regions', 'garrisons', 'destroMonth']],
+      ['Money', ['startFunds', 'regionIncome', 'producerUpkeep', 'rebuildMonths', 'rebuildCost']],
+      ['Distribution', ['shipFraction', 'ticksPerMonth', 'postureWeight', 'attackPlanBonus', 'underAttackBonus', 'vanSpot']],
+      ['Fighting', ['cobraMissions', 'floor']],
+      ['Death spiral', ['emergencyThreshold', 'emergencyLoadBattles', 'pullbackEmptyStocks', 'pullbackMonths', 'quietFactor']],
+    ],
+    tables: [['Per stock', ['produce', 'unitCost', 'upkeep', 'battleNeed', 'battleWants', 'startStock'], SIM.STOCKS, null, true],
+             ['Player styles', SIM.SPLIT_STYLES, ['raids', 'ambush', 'intercept', 'intelBoost'],
+              {raids: 'raids/mo', ambush: 'ambush', intercept: 'intercept', intelBoost: 'intel x'}]],
+  },
+};
+const LABEL = {
+  runs: ['Runs per player style', 'More runs = steadier numbers, slower.'], months: ['Months simulated', ''], seed: ['Random seed', 'Same seed + same numbers = same result.'],
+  dromeCost: ['Terror Drome cost', 'funds'], donorStep: ['Backers\' money per month', 'added each month past the Drome month, cumulative'],
+  dromeFrom: ['Drome planning starts (month)', ''], startBuildingAt: ['Start building at', 'share of the cost saved'], minBuildMonths: ['Minimum build time (months)', ''],
+  leakPct: ['Leak: % of Joe purchases to Cobra', 'AMMO_SUPPLY_v1 is 25'],
+  startFunds: ['Starting funds', ''], startMateriel: ['Starting materiel', ''], startFronts: ['Hidden front companies', ''], startDepots: ['Hidden depots', ''], startCells: ['Hidden cells', ''],
+  hiddenFindMult: ['Hidden sites: find multiplier', ''], offmapBenches: ['Off-map research benches', 'Cobra Commander\'s own lab'],
+  crimeOdds: ['Crime chance per front/cell a month', ''], crimePays: ['A robbery that gets away pays', 'funds'], terrorFirstMonth: ['First terror possible (month)', ''],
+  terrorPreDrome: ['Terror chance a month, no Drome', ''], terrorPerDrome: ['Terror chance a month, per Drome', ''], cellStrikeFrom: ['Cell strikes from (month)', ''],
+  cellStrikeOdds: ['Cell strike chance per cell a month', ''], cellGoal: ['Cell purse that opens a front', 'funds'],
+  defenceCost: ['Defences for a found site', 'funds; then it takes 2 raids'], transferFrom: ['Network transfers from (month)', ''], transferTargetSites: ['Transfers keep a region at', 'working sites'],
+  transferPerMissing: ['Transfer per missing site', 'funds'], bNeedsMonths: ['Ending B: network broken for (months)', ''], wellSupplied: ['Well supplied at (materiel)', ''],
+  buildStart: ['Cobra builds from (month)', ''], pushPastLatest: ['Research push past the latest month', 'x'],
+  regions: ['Regions', ''], garrisons: ['Garrison sites per region', ''], destroMonth: ['Destro joins (month)', 'cells only from then'],
+  regionIncome: ['Income per region a month', 'funds'], producerUpkeep: ['Producer upkeep a month', 'funds per site'], rebuildMonths: ['Raided producer down for (months)', ''], rebuildCost: ['Rebuild cost', 'funds'],
+  shipFraction: ['Hub ships this share each tick', 'standing orders'], ticksPerMonth: ['Delivery rounds a month', ''], postureWeight: ['Base share weight (posture)', ''],
+  attackPlanBonus: ['Share bonus: staging an attack', ''], underAttackBonus: ['Share bonus: under attack', ''], vanSpot: ['Chance a van is spotted', 'before the intel multiplier'],
+  cobraMissions: ['Cobra missions per region a month', 'battles that draw stock'], floor: ['Sidearms floor', 'bullets and guns never run out'],
+  emergencyThreshold: ['Emergency when region stock below', 'x one battle\'s need'], emergencyLoadBattles: ['Emergency load', 'battles\' worth; 0 = none'],
+  pullbackEmptyStocks: ['Pull back when this many stocks empty', 'missiles, vehicles, aircraft'], pullbackMonths: ['Quiet for (months)', ''], quietFactor: ['Missions while quiet', 'x normal'],
+  strategy: ['Player strategy', ''],
+};
+const STYLE_COL = {absent: 'var(--s1)', cautious: 'var(--s2)', typical: 'var(--s3)', aggressive: 'var(--s4)'};
+const STOCK_COL = {bullets: 'var(--k1)', guns: 'var(--k2)', missiles: 'var(--k3)', vehicles: 'var(--k4)', aircraft: 'var(--k5)', cells: 'var(--k6)'};
+const VERSION_COL = {'A: Drome assault (finished)': '#5fb06a', 'A: Drome assault (unfinished)': '#9fd08a', 'B: network broken': '#4b8ed8', 'Drome strike': '#d0453a'};
+let mode = 'act1', params = {}, baseline = {act1: null, split: null};
+const clone = o => JSON.parse(JSON.stringify(o));
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v.replace(/var\((--[^)]+)\)/, '$1')).trim() || v;
+
+function build() {
+  const M = MODES[mode], side = document.getElementById('side');
+  params = clone(M.defaults);
+  let h = `<p class="note">${M.intro}</p><label class="f">Scenario</label><select id="scen">` +
+    Object.keys(M.scenarios).map(k => `<option>${k}</option>`).join('') + `</select>`;
+  if (mode === 'split') h += `<label class="f">Player strategy</label><select id="strategy">${['balanced', 'producers', 'missileWorks', 'hub', 'vans', 'strangle'].map(s => `<option value="${s}">${{balanced: 'Balanced', producers: 'Hit producers', missileWorks: 'Hit the missile works', hub: 'Hit the hub', vans: 'Hunt vans', strangle: 'Strangle region 1'}[s]}</option>`).join('')}</select>`;
+  for (const [g, keys] of M.groups) {
+    h += `<details ${g === 'Run' || g === 'The Terror Drome' || g === 'Money' ? 'open' : ''}><summary>${g}</summary><div>`;
+    for (const k of keys) { const [lab, help] = LABEL[k] || [k, '']; h += `<div class="row"><span>${lab}${help ? `<small>${help}</small>` : ''}</span><input type="number" step="any" data-k="${k}"></div>`; }
+    h += `</div></details>`;
+  }
+  for (const [title, rows, cols, names, byStockRows] of M.tables) {
+    h += `<details><summary>${title}</summary><div><div class="grid" style="grid-template-columns: 74px repeat(${cols.length}, 1fr)"><span></span>` +
+      cols.map(c => `<span class="h">${names ? names[c] : c}</span>`).join('');
+    for (const r of rows) {
+      h += `<span>${r}</span>` + cols.map(c => `<input type="number" step="any" data-t="${byStockRows ? r + '.' + c : (title === 'Player styles' ? 'styles.' + r + '.' + c : r + '.' + c)}">`).join('');
+    }
+    h += `</div></div></details>`;
+  }
+  h += `<div class="btns"><button class="go" id="go">RUN</button><button class="reset" id="reset">Reset</button></div>`;
+  side.innerHTML = h;
+  document.getElementById('scen').onchange = applyScenario;
+  document.getElementById('go').onclick = run;
+  document.getElementById('reset').onclick = () => { document.getElementById('scen').selectedIndex = 0; applyScenario(); };
+  if (mode === 'split') document.getElementById('strategy').onchange = e => { params.strategy = e.target.value; };
+  side.querySelectorAll('input').forEach(i => i.oninput = () => { setPath(i.dataset.k || i.dataset.t, i.value === '' ? null : Number(i.value)); mark(); });
+  applyScenario();
+  const out = document.getElementById('out');
+  out.innerHTML = `<p class="note">Pick a scenario, change any number, press RUN. The first run of each mode is kept as the baseline and later runs are compared against it.</p>`;
+}
+const getPath = p => p.split('.').reduce((o, k) => o == null ? o : o[k], params);
+function setPath(p, v) { const ks = p.split('.'); let o = params; for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]]; o[ks.at(-1)] = v; }
+function fill() { document.querySelectorAll('#side input').forEach(i => { const v = getPath(i.dataset.k || i.dataset.t); i.value = v == null ? '' : v; }); mark(); }
+function mark() { const D = MODES[mode].defaults; document.querySelectorAll('#side input').forEach(i => { const p = i.dataset.k || i.dataset.t;
+  const d = p.split('.').reduce((o, k) => o == null ? o : o[k], D); i.classList.toggle('changed', String(d) !== String(getPath(p))); }); }
+function applyScenario() {
+  const M = MODES[mode]; params = clone(M.defaults);
+  const ov = M.scenarios[document.getElementById('scen').value] || {};
+  for (const [k, v] of Object.entries(ov)) params[k] = clone(v);
+  if (mode === 'split') document.getElementById('strategy').value = params.strategy;
+  fill();
+}
+
+function run() {
+  const out = document.getElementById('out');
+  out.innerHTML = `<p class="busy">Running ${params.runs} campaigns per player style&hellip;</p>`;
+  setTimeout(() => {
+    const t0 = performance.now(), res = MODES[mode].run(clone(params)), ms = performance.now() - t0;
+    const scen = document.getElementById('scen').value;
+    if (!baseline[mode]) baseline[mode] = {res, scen};
+    (mode === 'act1' ? showAct1 : showSplit)(res, baseline[mode], scen, ms);
+  }, 30);
+}
+
+const f = (x, d = 0) => x == null ? '&ndash;' : Number(x).toFixed(d);
+const pct = (x, d = 0) => x == null ? '&ndash;' : Number(x).toFixed(d) + '%';
+function delta(now, then, d = 0, goodDown = false) {
+  if (now == null || then == null) return ''; const df = now - then; if (Math.abs(df) < Math.pow(10, -d) / 2) return '';
+  const cls = (df > 0) === goodDown ? 'up' : 'down'; return ` <span class="cmp ${cls}">${df > 0 ? '+' : ''}${df.toFixed(d)}</span>`;
+}
+
+function showAct1(R, B, scen, ms) {
+  const S = SIM.ACT1_STYLES, b = B.res, same = B.res === R;
+  let h = `<h2>Act 1 &middot; ${scen}</h2><p class="note">${params.runs} campaigns per style, ${ms.toFixed(0)} ms. ${same ? 'This run is the baseline.' : `Small numbers compare with the baseline run (${B.scen}).`}</p>`;
+  h += `<table><tr><th>Player style</th><th>Act 1 ends (month)</th><th>Drome started</th><th>Drome finished</th><th>Terror attacks</th><th>Robberies paid</th><th>Months on sidearms</th><th>Peak sites</th><th>Leak to Cobra (funds)</th></tr>`;
+  for (const s of S) { const r = R[s], o = b[s];
+    h += `<tr><td><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</td><td>${f(r.end.med, 1)} <span class="cmp">(${r.end.pct}%)</span>${delta(r.end.med, o.end.med, 1)}</td>
+      <td>${f(r.dromeStarted.med, 1)} <span class="cmp">(${r.dromeStarted.pct}%)</span></td><td>${f(r.dromeBuilt.med, 1)} <span class="cmp">(${r.dromeBuilt.pct}%)</span></td>
+      <td>${f(r.terror)}${delta(r.terror, o.terror, 0, true)}</td><td>${f(r.crimePaid)}</td><td>${f(r.dry)}</td><td>${f(r.peak)}</td><td>${f(r.leaked)}</td></tr>`; }
+  h += `</table><h2>How Act 1 ends</h2>`;
+  const allV = [...new Set(S.flatMap(s => Object.keys(R[s].versions)))];
+  for (const s of S) { const v = R[s].versions;
+    h += `<div style="display:grid;grid-template-columns:90px 1fr;gap:10px;align-items:center;margin:5px 0"><span>${s}</span><div class="bar">` +
+      allV.map(k => v[k] ? `<div title="${k}: ${(v[k] * 100 / params.runs).toFixed(0)}%" style="width:${v[k] * 100 / params.runs}%;background:${VERSION_COL[k] || '#555'}"></div>` : '').join('') + `</div></div>`;
+    h += `<div class="cmp" style="margin:-2px 0 6px 100px">` + allV.filter(k => v[k]).map(k => `${k} ${(v[k] * 100 / params.runs).toFixed(0)}%${delta(v[k] * 100 / params.runs, (b[s].versions[k] || 0) * 100 / params.runs, 0)}`).join(' &middot; ') + `</div>`; }
+  h += `<div class="legend">` + allV.map(k => `<span><span class="chip" style="background:${VERSION_COL[k] || '#555'}"></span>${k}</span>`).join('') + `</div>`;
+  h += `<div class="cards" style="margin-top:16px">
+    <div class="card"><h3>Cobra funds by month (median)</h3><canvas id="c1"></canvas></div>
+    <div class="card"><h3>Cobra materiel by month (median)</h3><canvas id="c2"></canvas></div>
+    <div class="card"><h3>Cobra sites by month (median)</h3><canvas id="c3"></canvas></div>
+    <div class="card"><h3>Month Act 1 ends (share of campaigns)</h3><canvas id="c4"></canvas></div></div>
+    <div class="legend">${S.map(s => `<span><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</span>`).join('')}</div>
+    <p class="note">Lines stop once fewer than a quarter of the campaigns are still running.</p>`;
+  document.getElementById('out').innerHTML = h;
+  const ser = key => S.map(s => ({col: css(STYLE_COL[s]), data: R[s].track[key]}));
+  line('c1', ser('funds')); line('c2', ser('mat')); line('c3', ser('sites'));
+  line('c4', S.map(s => ({col: css(STYLE_COL[s]), data: R[s].endHist.map(x => x * 100 / params.runs)})), '%');
+}
+
+function showSplit(R, B, scen, ms) {
+  const S = SIM.SPLIT_STYLES, K = SIM.STOCKS, b = B.res, same = B.res === R;
+  let h = `<h2>Supply split &middot; ${scen}</h2><p class="note">${params.runs} campaigns per style over ${params.months} months, ${ms.toFixed(0)} ms. ${same ? 'This run is the baseline.' : `Small numbers compare with the baseline run (${B.scen}).`}</p>`;
+  h += `<div class="warn">First-guess numbers. Read the shapes and the differences between scenarios, not the exact figures.</div>`;
+  h += `<h2>Battles where Cobra wanted a stock and had none</h2><table><tr><th>Player style</th>${K.map(k => `<th><span class="chip" style="background:${STOCK_COL[k]}"></span>${k}</th>`).join('')}<th>on the sidearms floor</th></tr>`;
+  for (const s of S) { const r = R[s], o = b[s];
+    h += `<tr><td><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</td>` + K.map(k => `<td>${(k === 'bullets' || k === 'guns') ? '<span class="cmp">floor</span>' : pct(r.shortPct[k]) + delta(r.shortPct[k], o.shortPct[k], 0, true)}</td>`).join('') + `<td>${f(r.onFloor)} battles</td></tr>`; }
+  h += `</table><h2>Supply war</h2><table><tr><th>Player style</th><th>Battles</th><th>Producer raids</th><th>Hub raids</th><th>Producer-months down</th><th>Vans</th><th>Vans spotted</th><th>Vans hit</th><th>Emergency loads (hit)</th><th>Quiet months</th><th>Production paid</th></tr>`;
+  for (const s of S) { const r = R[s], o = b[s];
+    h += `<tr><td><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</td><td>${f(r.battles)}</td><td>${f(r.producerRaids, 1)}</td><td>${f(r.hubRaids, 1)}</td><td>${f(r.downMonths, 1)}</td><td>${f(r.vans)}</td><td>${f(r.vansSpotted, 1)}</td><td>${f(r.vansHit, 1)}${delta(r.vansHit, o.vansHit, 1)}</td><td>${f(r.emergSent, 1)} (${f(r.emergHit, 1)})</td><td>${f(r.quietMonths, 1)}${delta(r.quietMonths, o.quietMonths, 1)}</td><td>${pct(r.prodPct)}</td></tr>`; }
+  h += `</table><h2>Region 1 stock over time (median)</h2><div class="cards">` +
+    S.map((s, i) => `<div class="card"><h3>${s}</h3><canvas id="s${i}"></canvas></div>`).join('') + `</div>
+    <div class="legend">${K.map(k => `<span><span class="chip" style="background:${STOCK_COL[k]}"></span>${k}</span>`).join('')}</div>
+    <p class="note">Stock held across region 1: its hub plus every garrison. Bullets are drawn on their own scale-free line like the rest; switch a stock off by setting its production to 0.</p>`;
+  document.getElementById('out').innerHTML = h;
+  S.forEach((s, i) => line('s' + i, K.map(k => ({col: css(STOCK_COL[k]), data: R[s].track[k]})), '', true));
+}
+
+function line(id, series, unit = '', log = false) {
+  const c = document.getElementById(id), dpr = window.devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight;
+  c.width = W * dpr; c.height = H * dpr; const g = c.getContext('2d'); g.scale(dpr, dpr);
+  const pad = {l: 44, r: 10, t: 8, b: 22}, n = Math.max(...series.map(s => s.data.length));
+  const vals = series.flatMap(s => s.data.filter(v => v != null));
+  const tr = v => log ? Math.log10(1 + Math.max(0, v)) : v;
+  const max = Math.max(1e-9, ...vals.map(tr)), min = 0;
+  const X = i => pad.l + (W - pad.l - pad.r) * (n > 1 ? i / (n - 1) : 0), Y = v => pad.t + (H - pad.t - pad.b) * (1 - (tr(v) - min) / (max - min));
+  g.strokeStyle = css('var(--line)'); g.fillStyle = css('var(--mute)'); g.font = '11px system-ui'; g.lineWidth = 1;
+  for (let j = 0; j <= 4; j++) { const v = log ? Math.pow(10, max * j / 4) - 1 : max * j / 4, y = Y(v);
+    g.beginPath(); g.moveTo(pad.l, y); g.lineTo(W - pad.r, y); g.stroke(); g.textAlign = 'right'; g.fillText((v >= 100 ? v.toFixed(0) : v.toFixed(v >= 10 ? 0 : 1)) + unit, pad.l - 5, y + 4); }
+  g.textAlign = 'center'; for (let i = 0; i < n; i += Math.max(1, Math.ceil(n / 9))) g.fillText(String(i), X(i), H - 6);
+  for (const s of series) { g.strokeStyle = s.col; g.lineWidth = 2; g.beginPath(); let on = false;
+    s.data.forEach((v, i) => { if (v == null) { on = false; return; } on ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)); on = true; }); g.stroke(); }
+}
+
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => { document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t)); mode = t.dataset.mode; build(); });
+build();
+</script>
+</body>
+</html>
