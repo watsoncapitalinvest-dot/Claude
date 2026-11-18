@@ -48,6 +48,11 @@ V = {
  "hiss_rack": dict(pack="hiss_rack", asset="hiss_rack", state="m0", side="cobra", name="Cobra H.I.S.S. (rocket rack)", tu=60, hp=110, arm=(85, 70, 55, 55),
                   wpn=("H.I.S.S. rocket rack", 90, 3, 4, None, (80, 55), None, 1, 0, "bazooka_launch"), price=0, head="proj_hiss_rack_head0", turret_tu=3),  # Cobra research upgrade (John 18:41); research gate + deployment are STORY/BUILD's; stand-in numbers
  "ferret":    dict(pack="ferret", asset="ferret", state="m2", side="cobra", stores=["m1", "m0"], store_weapon="self", head="proj_ferret_head0",   # Com-Bats leave the pegs (John 23:17)
+                  deploy=["dL1", "dL2", "dR1", "dR2"],   # John 23:28: rams push each Com-Bat out from between the wheels, then it fires
+                  # where each shot leaves (voxels: forward, left, up from the footprint middle; model units x 1.564 / 1.915, checked against
+                  # the rendered muzzles at all 8 headings): the Com-Bats off their rams (left first), the CMF-1 tube, the .50s
+                  launch={"self": [[4, 9, 4], [4, -9, 4]], "STR_GJA_COBRA_FERRET_A_T_V_CMF_1_W": [[9, -6, 14]],
+                          "STR_GJA_COBRA_FERRET_A_T_V_50_CAL_MACHINE_GUNS_W": [[10, -6, 12]]},
                   name="Cobra Ferret", tu=80, hp=30, arm=(20, 15, 10, 10),
                   wpn=("Machine gun", 30, 1, 60, (50, 25), None, (35, 35, 3), 0, 2, "m60"), price=0),
  "thunder":   dict(pack="thunder_machine", asset="thunder_machine", state="m0", head="proj_thunder_round_head0", side="cobra", name="Dreadnok Thunder Machine", tu=54, hp=110, arm=(70, 60, 50, 40),
@@ -178,7 +183,7 @@ def sheet(v, d):
                     fr = clip * 64 + hd * 8 + f
                     S.alpha_composite(c, ((fr % 16) * 128, (fr // 16) * 160))
     elif n == 2:
-        ns = len(d.get("stores", []))
+        ns = len(d.get("stores", []) + d.get("deploy", []))
         S = Image.new("RGBA", (2048, (9 + ns) * 320), (0, 0, 0, 0))
         for hd in range(8):
             S.alpha_composite(cellOf(standing[hd], anchor, 2), ((hd % 8) * 256, (hd // 8) * 320))
@@ -186,14 +191,15 @@ def sheet(v, d):
                 fr = 8 + hd * 8 + f
                 S.alpha_composite(cellOf(dmg[hd], anchor, 2, dy=f * 3, dark=1 - f * 0.08, alpha=1 - f * 0.1), ((fr % 8) * 256, (fr // 8) * 320))
         # stores on the hull, 2x2 sheets (engine gjStoreStates, N == 2): frame 72 + (fired - 1) * 8 + heading, after the 64 death frames
-        # (Cobra Ferret's Com-Bats, John 17 Nov 23:17 "they should shoot off the vehicle")
-        for k, st in enumerate(d.get("stores", [])):
+        # (Cobra Ferret's Com-Bats, John 17 Nov 23:17 "they should shoot off the vehicle"); then the deploy frames (gjStoreDeploy,
+        # John 23:28 "actuators push them out ... and then they fire"): 72 + stores * 8 + (fired * steps + step) * 8 + heading
+        for k, st in enumerate(d.get("stores", []) + d.get("deploy", [])):
             for hd, h in enumerate(HEAD):
                 fr = 72 + k * 8 + hd
                 S.alpha_composite(cellOf(frame(root, man, "clean", h, st, turret=turret is None), anchor, 2), ((fr % 8) * 256, (fr // 8) * 320))
     else:
         W, H = 128 * n, 160 * n
-        ns = len(d.get("stores", []))
+        ns = len(d.get("stores", []) + d.get("deploy", []))
         S = Image.new("RGBA", (4 * W, (4 + 2 * ns) * H), (0, 0, 0, 0))
         for hd in range(8):
             S.alpha_composite(cellOf(standing[hd], anchor, n), ((hd % 4) * W, (hd // 4) * H))
@@ -201,7 +207,7 @@ def sheet(v, d):
             fr = 8 + f
             S.alpha_composite(cellOf(dmg[2], anchor, n, dy=f * 2 * n, dark=1 - f * 0.08, alpha=1 - f * 0.1), ((fr % 4) * W, (fr // 4) * H))
         # stores on the hull (engine gjStoreStates): frame 16 + (fired - 1) * 8 + heading = the picture with that many gone
-        for k, st in enumerate(d.get("stores", [])):
+        for k, st in enumerate(d.get("stores", []) + d.get("deploy", [])):
             for hd, h in enumerate(HEAD):
                 fr = 16 + k * 8 + hd
                 S.alpha_composite(cellOf(frame(root, man, "clean", h, st, turret=turret is None), anchor, n), ((fr % 4) * W, (fr // 4) * H))
@@ -256,6 +262,10 @@ for i, (v, d) in enumerate(V.items()):
         A += [f"    builtInWeapons: [{T}_W2, {T}_A2]"]
     if d.get("stores"):                              # the missiles leave the hull picture one by one as the _W2 weapon fires (engine, VFACTORY)
         A += [f"    gjStoreWeapon: {T if d.get('store_weapon') == 'self' else T + '_W2'}", f"    gjStoreStates: {len(d['stores'])}"]
+        if d.get("deploy"):                          # pushed out on its arm before it fires (engine, VFACTORY; John 17 Nov 23:28)
+            A += [f"    gjStoreDeploy: {len(d['deploy']) // len(d['stores'])}"]
+    if d.get("launch"):                              # where each weapon's shot leaves the vehicle (engine gjLaunchPoints; John 17 Nov 23:24)
+        A += ["    gjLaunchPoints:"] + [f"      {w if w.startswith('STR_') else T}: [" + ", ".join(f"[{p[0]}, {p[1]}, {p[2]}]" for p in pts) + "]" for w, pts in d["launch"].items()]
     elif d.get("turret_stores"):                     # the same, for missiles carried on the turret (Wolverine; John 17 Nov 20:21)
         A += [f"    gjStoreWeapon: {T}", f"    gjStoreStates: {d['turret_stores']}"]
     if turret:

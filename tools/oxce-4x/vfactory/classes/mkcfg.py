@@ -56,8 +56,20 @@ def fit(L, W, fl, fs):
     return round(min(a, b) * CAL, 5), ('long' if a <= b else 'short')
 cf2 = {}
 s, lim = fit(16.0, 9.4, 2, 1)     # Ferret ATV 1x2; guns fixed
-c = base('ferret', s, 2, [1, 2], 'ferret_v2', {'m2': [], 'm1': ['combat_L'], 'm0': ['combat_L', 'combat_R']},   # John 23:17: the Com-Bats leave the pegs
-         {'muzzle': [5.62, -3.56, 7.1, 1, 0, 0], 'combat_L': [3.55, 4.45, 2.05, 1, 0, 0], 'combat_R': [3.55, -4.45, 2.05, 1, 0, 0]}, 'Cobra',
+# John 23:28: the Com-Bats ride rams between the wheels and are pushed out, then fire. Each rocket and its rams exist stowed (_s),
+# half out (_h) and out (_x); a state shows one of each. m2/m1/m0 = both / one / none left (stowed); dL1, dL2 = the left one going
+# out (both on), dR1, dR2 = the right one going out (left gone). The rams stay when a rocket has gone.
+FR = [f'{k}_{sd}_{p}' for k in ('combat', 'fr_arm') for sd in 'LR' for p in 'shx']
+def fr(*show): return [o for o in FR if o not in show]
+c = base('ferret', s, 2, [1, 2], 'ferret_v2', {'m2': fr('combat_L_s', 'combat_R_s', 'fr_arm_L_s', 'fr_arm_R_s'),
+                                               'm1': fr('combat_R_s', 'fr_arm_L_s', 'fr_arm_R_s'),
+                                               'm0': fr('fr_arm_L_s', 'fr_arm_R_s'),
+                                               'dL1': fr('combat_L_h', 'fr_arm_L_h', 'combat_R_s', 'fr_arm_R_s'),
+                                               'dL2': fr('combat_L_x', 'fr_arm_L_x', 'combat_R_s', 'fr_arm_R_s'),
+                                               'dR1': fr('fr_arm_L_s', 'combat_R_h', 'fr_arm_R_h'),
+                                               'dR2': fr('fr_arm_L_s', 'combat_R_x', 'fr_arm_R_x')},
+         {'muzzle': [5.62, -3.56, 7.1, 1, 0, 0], 'gun_a': [6.7, -3.8, 6.5, 1, 0, 0], 'gun_b': [6.7, -3.3, 6.5, 1, 0, 0],
+          'combat_L': [2.3, 5.45, 2.05, 1, 0, 0], 'combat_R': [2.3, -5.45, 2.05, 1, 0, 0]}, 'Cobra',
          R + f'Cobra Ferret ATV, class 1x2 (installed as size 2). Scale {s} (was 0.0406; {lim} axis limits).\n')
 c['guns'] = ['muzzle']; c['launchers'] = [{'name': 'peg', 'muzzles': ['combat_L', 'combat_R'], 'fx_scale': 0.2, 'from_tube': True}]
 c['preview']['script'] = [['move', 'NE', 2], ['gun', ['muzzle']], ['missile', 'combat_L', 'm1', 'peg', 2.05], ['missile', 'combat_R', 'm0', 'peg', 2.05], ['wait', 6]]; cf2['ferret'] = c

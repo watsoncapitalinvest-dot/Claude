@@ -9,7 +9,7 @@ if [ $V = vamp_mk2 ]; then cd /home/claude/rt/veh && SHADE=detail LEVEL=1 python
 if [ $V = hiss_rack ]; then cd /home/claude/rt/veh && SHADE=detail LEVEL=1 python3 /home/claude/rt/vamp2/full_launch.py $V /home/claude/vb/hiss_rack/hiss_rack/hiss_rack_clean.blend rocket_fly $SC $FT $P whole 0,0,0 1.297,1.649,18.912 | tail -1; fi
 if [ $V = wolverine ]; then cd /home/claude/rt/veh && SHADE=detail LEVEL=1 python3 /home/claude/rt/vamp2/full_launch.py $V /home/claude/vb/wolverine_v2/wolverine_v2/wolverine_v2_clean.blend wrk_fly $SC $FT $P whole 0,0,0 -3.55,6.43,14.73 | tail -1; fi
 if [ $V = stinger ]; then cd /home/claude/rt/veh && SHADE=detail LEVEL=1 python3 /home/claude/rt/vamp2/full_launch.py $V /home/claude/vb/stinger_v2/stinger_v2/stinger_v2_clean.blend rocket_fly $SC $FT $P whole 0,0,0 -1.658,3.665,13.611 | tail -1; fi
-if [ $V = ferret ]; then cd /home/claude/rt/veh && SHADE=detail LEVEL=1 python3 /home/claude/rt/vamp2/full_launch.py $V /home/claude/vb/ferret_v2/ferret_v2/ferret_v2_clean.blend combat_R $SC $FT $P whole 0,0,0 3.55,-4.45,2.05 | tail -1; fi   # the Com-Bat in flight, full size
+if [ $V = ferret ]; then cd /home/claude/rt/veh && SHADE=detail LEVEL=1 python3 /home/claude/rt/vamp2/full_launch.py $V /home/claude/vb/ferret_v2/ferret_v2/ferret_v2_clean.blend combat_R_x $SC $FT $P whole 0,0,0 2.3,-5.45,2.05 | tail -1; fi   # the Com-Bat in flight, full size
 if [ $V = triple_t ]; then cd /home/claude/rt/veh && SHADE=detail LEVEL=1 python3 /home/claude/rt/vamp2/full_launch.py $V /home/claude/vb/triple_t/triple_t/triple_t_clean.blend missile_R $SC $FT $P whole 0,0,0 5.5,-8.9,10.78 | tail -1; fi
 cd /tmp && python3 -I /home/claude/rt/gen/pkg.py $C | tail -1
 [ $T = 1 ] && python3 -I /home/claude/rt/gen/turret_pkg.py $C | tail -c 120

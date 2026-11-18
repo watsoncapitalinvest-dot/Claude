@@ -3,13 +3,14 @@
 # a .50 cal burst (barrels alternating), a CMF-1 ripple from the end of its tube, then one Com-Bat leaves its peg - the package's own
 # full-size rocket, and the vehicle picture switches to the next store state (the peg empties, as gjStoreStates shows it in the game);
 # the body stays in front of the rocket until it is clear (clip_mask.py). Muzzles: model points (guns) and the package manifest's
-# muzzle names (cannon, rockets), projected with the battle camera. Tracers, flashes, slugs and smoke are drawn here.
-# usage: python3 hull_gun_clip.py pkg_dir "x,y,z;x,y,z" cannon_muzzle rocket1,rocket2 out.gif [headings] [zoom]
+# muzzle names (cannon, rockets) [deploy states per rocket 'dL1,dL2;dR1,dR2'], projected with the battle camera. Tracers, flashes, slugs and smoke are drawn here.
+# usage: python3 hull_gun_clip.py pkg_dir "x,y,z;x,y,z" cannon_muzzle rocket1,rocket2 out.gif [headings] [zoom] [deploy]
 import sys, os, json, math
 from PIL import Image, ImageDraw
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from clip_mask import occluder, draw as mdraw
 P, GUNS, CAN, RKS, OUT = sys.argv[1:6]; HDS = (sys.argv[6] if len(sys.argv) > 6 else 'NE,E').split(','); Z = int(sys.argv[7]) if len(sys.argv) > 7 else 2
 G = [tuple(map(float, t.split(','))) for t in GUNS.split(';')]; RK = RKS.split(',')
+DEP = [g.split(',') for g in sys.argv[8].split(';')] if len(sys.argv) > 8 else []   # deploy states per rocket (John 23:28: rams push it out, then it fires)
 m = json.load(open(f'{P}/manifest.json')); AX, AY = m['anchor']; K = 90.50966799187809 * m['model_scale']; H8 = m['heading_order']
 STATES = [s.strip() for s in m['states_note'].split(',')]               # loaded first
 FL = m['weapons'].get('missile_flight', {'start_px_per_frame': 1.5, 'accel_px_per_frame2': 1.5, 'max_px_per_frame': 26})
@@ -57,10 +58,14 @@ for si, hd in enumerate(HDS):
             sl[0] += dx * 26; sl[1] += dy * 26
         out(c)
     if fired < len(RK):                                      # one Com-Bat off its peg: the package's own rocket, the peg empties
+        dep = DEP[fired] if fired < len(DEP) else []
+        for ds in dep:                                       # the rams push it out from between the wheels
+            for _ in range(3): c = ground(); c.alpha_composite(veh(hd, ds)); out(c)
+        out_st = dep[-1] if dep else STATES[fired]
         name = RK[fired]; mf = m['missile_full']['by_heading'][hd]; ms = Image.open(f'{P}/{mf["file"]}').convert('RGBA')
         nx, ny = mf['nose_px']; tx, ty = mf['tail_px']; fdx, fdy = mf['flight_dir_screen']; L = math.hypot(fdx, fdy); fdx, fdy = fdx / L, fdy / L
-        mz = frm(hd, STATES[fired])['muzzles'][name]['xy']; x0, y0 = ox - AX + mz[0], oy - AY + mz[1]
-        mask = occluder(veh(hd, STATES[fired]), veh(hd, STATES[fired + 1]), ms, (int(x0 - nx), int(y0 - ny))); fired += 1
+        mz = frm(hd, out_st)['muzzles'][name]['xy']; x0, y0 = ox - AX + mz[0], oy - AY + mz[1]
+        mask = occluder(veh(hd, out_st), veh(hd, STATES[fired + 1]), ms, (int(x0 - nx), int(y0 - ny))); fired += 1
         x, y, v, trail = x0, y0, FL['start_px_per_frame'], []
         for n in range(20):
             c, cur = base(hd); dr = ImageDraw.Draw(c); sx, sy = x - (nx - tx), y - (ny - ty)

@@ -58,7 +58,7 @@ print('orange texels -> red', int(m.sum()))
 # The Com-Bat rockets (John 23:17: "the 2 side missiles are small but they should shoot off the vehicle"). The Generals' side missiles
 # are fused into the body mesh, so they cannot leave it: cut them out (between the wheel hubs, body component only - the wheels and
 # hub caps are their own parts once the triangle soup is welded) and fit the toy's Com-Bat as two separate red parts, combat_L and
-# combat_R, on short foot-peg stubs. The renderer hides them per store state: m2 both on, m1 the left one gone, m0 both gone.
+# combat_R. The renderer hides them per store state: m2 both on, m1 the left one gone, m0 both gone.
 def lin(c): return tuple((v / 255) ** 2.2 for v in c) + (1,)
 def mat(n, c):
     m_ = bpy.data.materials.new(n); m_.use_nodes = True; m_.diffuse_color = lin(c); m_.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = lin(c); return m_
@@ -80,30 +80,42 @@ for v, c in comp.items():
 body_c = {c for c, (lo, hi) in span.items() if hi - lo > 8}                  # the body: the one part longer than a wheel
 cut = [f for f in bm.faces if comp[f.verts[0]] in body_c and (lambda c: 4.05 < abs(c.y) < 4.8 and 1.55 < c.z < 2.6 and -2.5 < c.x < 3.6)(Mw @ f.calc_center_median())]
 bmesh.ops.delete(bm, geom=cut, context='FACES'); bm.to_mesh(me); bm.free(); print('Generals side missiles: faces cut', len(cut))
-AY, AZ = 4.45, 2.05                                                          # rocket axis: the old missiles' line
+# Sized and placed off John's top-view photo (17 Nov 23:28 "they're smaller and actually have actuators that push them out from between
+# the wheels and then they fire"; blueprint item 4, "driver-adjustable hydraulic missile extenders"). Photo scale from the wheel centres
+# (385 px = 7.3 units): rocket 4.9 long (was 5.65), body r 0.12, rear fins a little behind the middle, nose a little behind the front
+# wheel; two blue rams at x -0.95 and 0.55. Stowed the rocket sits in the wheel gap at y 3.95 (its ends tuck behind the tyres);
+# pushed out it clears the tyre (photo: missile axis 1.19x the tyre's outer face). Three copies of each rocket and its rams - stowed
+# (_s), half out (_h), out (_x) - and the renderer shows one per state.
+AZ = 2.05
+POS = {'s': 3.95, 'h': 4.7, 'x': 5.45}
+X0, X1 = -2.6, 2.3                                                           # tail nozzle .. nose tip
+BLUE = mat('fr_ram', (40, 62, 190))
 for side, sy in (('L', 1), ('R', -1)):
-    bm = bmesh.new(); mats = {}
-    def piece(g, mi):
-        for f in {f for v in g['verts'] for f in v.link_faces}: f.material_index = mi
-    def tube(x0, x1, r0, r1, mi, seg=10):
-        g = bmesh.ops.create_cone(bm, cap_ends=True, segments=seg, radius1=r0, radius2=r1, depth=x1 - x0)
-        bmesh.ops.transform(bm, matrix=Matrix.Translation(((x0 + x1) / 2, sy * AY, AZ)) @ Matrix.Rotation(math.pi / 2, 4, 'Y'), verts=g['verts']); piece(g, mi)
-    def fin(x0, x1, span, ang):
-        g = bmesh.ops.create_cube(bm, size=1)
-        M = Matrix.Translation(((x0 + x1) / 2, sy * AY, AZ)) @ Matrix.Rotation(ang, 4, 'X') @ Matrix.Translation((0, 0, span / 2)) @ Matrix.Diagonal((x1 - x0, 0.05, span, 1))
-        bmesh.ops.transform(bm, matrix=M, verts=g['verts']); piece(g, 0)
-    tube(-1.9, 2.9, 0.16, 0.16, 0); tube(2.9, 3.55, 0.16, 0.0, 0); tube(2.2, 2.45, 0.175, 0.175, 1); tube(-2.1, -1.9, 0.11, 0.13, 2)
-    for k in range(4):
-        fin(-1.9, -1.15, 0.55, k * math.pi / 2 + math.pi / 4); fin(1.2, 1.6, 0.36, k * math.pi / 2 + math.pi / 4)
-    rm = bpy.data.meshes.new('combat_' + side); bm.to_mesh(rm); bm.free()
-    for m_ in (RED, YEL, DARK): rm.materials.append(m_)
-    rm.uv_layers.new(name='UV'); ob = bpy.data.objects.new('combat_' + side, rm); bpy.context.scene.collection.objects.link(ob)
-# the foot-peg stubs the rockets ride on (stay on the body)
-bm = bmesh.new()
-for sy in (1, -1):
-    g = bmesh.ops.create_cone(bm, cap_ends=True, segments=8, radius1=0.12, radius2=0.12, depth=0.7)
-    bmesh.ops.transform(bm, matrix=Matrix.Translation((0.5, sy * 4.05, AZ)) @ Matrix.Rotation(math.pi / 2, 4, 'X'), verts=g['verts'])
-pm = bpy.data.meshes.new('fr_pegs'); bm.to_mesh(pm); bm.free(); pm.materials.append(DARK); pm.uv_layers.new(name='UV')
-bpy.context.scene.collection.objects.link(bpy.data.objects.new('fr_pegs', pm))
-print('Com-Bat rockets: combat_L, combat_R; pegs')
+    for pk, AY in POS.items():
+        bm = bmesh.new()
+        def piece(g, mi):
+            for f in {f for v in g['verts'] for f in v.link_faces}: f.material_index = mi
+        def tube(x0, x1, r0, r1, mi, seg=10):
+            g = bmesh.ops.create_cone(bm, cap_ends=True, segments=seg, radius1=r0, radius2=r1, depth=x1 - x0)
+            bmesh.ops.transform(bm, matrix=Matrix.Translation(((x0 + x1) / 2, sy * AY, AZ)) @ Matrix.Rotation(math.pi / 2, 4, 'Y'), verts=g['verts']); piece(g, mi)
+        def fin(x0, x1, span, ang):
+            g = bmesh.ops.create_cube(bm, size=1)
+            M = Matrix.Translation(((x0 + x1) / 2, sy * AY, AZ)) @ Matrix.Rotation(ang, 4, 'X') @ Matrix.Translation((0, 0, span / 2)) @ Matrix.Diagonal((x1 - x0, 0.04, span, 1))
+            bmesh.ops.transform(bm, matrix=M, verts=g['verts']); piece(g, 0)
+        tube(-2.4, 1.75, 0.12, 0.12, 0); tube(1.75, X1, 0.12, 0.0, 0); tube(1.45, 1.65, 0.13, 0.13, 1); tube(X0, -2.4, 0.08, 0.1, 2)
+        for k in range(4):
+            fin(-1.95, -1.3, 0.42, k * math.pi / 2 + math.pi / 4); fin(-0.35, 0.15, 0.36, k * math.pi / 2 + math.pi / 4)
+        rm = bpy.data.meshes.new(f'combat_{side}_{pk}'); bm.to_mesh(rm); bm.free()
+        for m_ in (RED, YEL, DARK): rm.materials.append(m_)
+        rm.uv_layers.new(name='UV'); bpy.context.scene.collection.objects.link(bpy.data.objects.new(f'combat_{side}_{pk}', rm))
+        bm = bmesh.new()                                                     # the two rams, body side (y 3.2) to the rocket
+        for rx in (-0.95, 0.55):
+            L = AY - 0.12 - 3.2
+            g = bmesh.ops.create_cone(bm, cap_ends=True, segments=8, radius1=0.09, radius2=0.09, depth=L)
+            bmesh.ops.transform(bm, matrix=Matrix.Translation((rx, sy * (3.2 + L / 2), AZ)) @ Matrix.Rotation(math.pi / 2, 4, 'X'), verts=g['verts'])
+            g = bmesh.ops.create_cone(bm, cap_ends=True, segments=8, radius1=0.14, radius2=0.14, depth=0.35)
+            bmesh.ops.transform(bm, matrix=Matrix.Translation((rx, sy * 3.38, AZ)) @ Matrix.Rotation(math.pi / 2, 4, 'X'), verts=g['verts'])
+        am = bpy.data.meshes.new(f'fr_arm_{side}_{pk}'); bm.to_mesh(am); bm.free(); am.materials.append(BLUE); am.uv_layers.new(name='UV')
+        bpy.context.scene.collection.objects.link(bpy.data.objects.new(f'fr_arm_{side}_{pk}', am))
+print('Com-Bat rockets + rams: stowed / half / out, each side')
 bpy.ops.wm.save_as_mainfile(filepath=OUT, compress=True); print('SAVED', OUT)
