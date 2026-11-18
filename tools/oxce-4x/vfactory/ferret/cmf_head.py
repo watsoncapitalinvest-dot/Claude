@@ -3,7 +3,7 @@
 # usage: python3 cmf_head.py round.png projectiles.png out_stem [px_long]
 import sys, numpy as np
 from PIL import Image, ImageEnhance
-SRC, PAL, OUT = sys.argv[1:4]; PX = int(sys.argv[4]) if len(sys.argv) > 4 else 26
+SRC, PAL, OUT = sys.argv[1:4]; PX = int(sys.argv[4]) if len(sys.argv) > 4 else 5   # John 18 Nov 00:21: no bigger than the tube's opening (0.54 units = 4.8 px at 4x)
 r = Image.open(SRC).convert('RGBA'); r = r.crop(r.getbbox()); k = PX / r.width
 r = r.resize((PX, max(3, round(r.height * k))), Image.LANCZOS); a = r.getchannel('A')
 r = ImageEnhance.Brightness(r.convert('RGB')).enhance(1.6).convert('RGBA'); r.putalpha(a)

@@ -49,7 +49,7 @@ def fireball(c, x, y, t):                            # an HE burst: white-yellow
     blob(c, x - 3, y - 1 - s * 1.0, 4 + s * 1.4, (140, 132, 120), min(0.6, 0.2 * s + 0.15) * (1 - t / 14))
 _rp = os.environ.get('CMF_ROUND')
 if _rp:
-    ROUND = Image.open(_rp).convert('RGBA'); ROUND = ROUND.crop(ROUND.getbbox()); _k = float(os.environ.get('CMF_ROUND_PX', '15')) / ROUND.width
+    ROUND = Image.open(_rp).convert('RGBA'); ROUND = ROUND.crop(ROUND.getbbox()); _k = float(os.environ.get('CMF_ROUND_PX', '5')) / ROUND.width
     ROUND = ROUND.resize((max(1, round(ROUND.width * _k)), max(1, round(ROUND.height * _k))), Image.LANCZOS)
     from PIL import ImageEnhance; _a = ROUND.getchannel('A'); ROUND = ImageEnhance.Brightness(ROUND.convert('RGB')).enhance(1.6).convert('RGBA'); ROUND.putalpha(_a)
 else:
