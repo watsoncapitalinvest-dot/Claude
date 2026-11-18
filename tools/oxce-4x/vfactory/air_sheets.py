@@ -91,21 +91,21 @@ def death2(pic, anchor, n, pts):
     """John 18 Nov 02:15-02:23: shot down = his two marks go off one after the other (mark 1, then mark 2 two frames later), at the
     sizes he chose; the plane drops out from under them burning at both"""
     out = []; bw = pic.getbbox()[2] - pic.getbbox()[0]; W = 128 * n; ox, oy = W // 2, 112 * n
-    (x1, y1), (x2, y2) = _at(pic, anchor, pts[0]), _at(pic, anchor, pts[-1])
+    (x1, y1), (x2, y2) = _at(pic, anchor, pts[0]), _at(pic, anchor, pts[1] if len(pts) > 1 else pts[0])
     for f in range(8):
         drop = int(max(0, f - 2) ** 2 * 2.2 * n)
         c = cell(pic, anchor, n, dy=drop, dark=1 - max(0, f - 1) * 0.08, alpha=1 - max(0, f - 4) * 0.22)
         if f >= 1: fx(c, FIRE[min(7, 2 + f // 2)], ox + x1, oy + y1 + drop + bw * 0.03, bw * 0.14, bottom=True)
         if f >= 3 and len(pts) > 1: fx(c, FIRE[min(7, f)], ox + x2, oy + y2 + drop + bw * 0.03, bw * 0.16, bottom=True)
         boom(c, f, ox + x1, oy + y1, pts[0][2], bw)
-        if len(pts) > 1 and f >= 2: boom(c, min(7, round((f - 2) * 7 / 5)), ox + x2, oy + y2, pts[1][2], bw)
+        if f >= 2 and len(pts) > 1: boom(c, min(7, round((f - 2) * 7 / 5)), ox + x2, oy + y2, pts[1][2], bw)
         out.append(c)
     return out
 
 def direct(pic, anchor, n, pts):
-    """John 02:23: a direct hit (the instant-kill roll) = one big blast on mark 2; the plane drops out of it at once"""
+    """John 02:23 / 02:36: a direct (critical) hit = one big blast on his D mark (the third mark; 02:41); the plane drops out of it"""
     out = []; bw = pic.getbbox()[2] - pic.getbbox()[0]; W = 128 * n; ox, oy = W // 2, 112 * n
-    x2, y2 = _at(pic, anchor, pts[-1])
+    x2, y2 = _at(pic, anchor, pts[2] if len(pts) > 2 else pts[-1])
     for f in range(8):
         drop = int(f * f * 2.2 * n)
         c = cell(pic, anchor, n, dy=drop, dark=1 - f * 0.1, alpha=1 - max(0, f - 3) * 0.22)
