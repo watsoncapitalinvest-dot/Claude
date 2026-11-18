@@ -5545,10 +5545,10 @@ index 0000000..542761d
 +}
 diff --git a/src/Battlescape/BattleSim.cpp b/src/Battlescape/BattleSim.cpp
 new file mode 100644
-index 0000000..0045685
+index 0000000..38a46ac
 --- /dev/null
 +++ b/src/Battlescape/BattleSim.cpp
-@@ -0,0 +1,728 @@
+@@ -0,0 +1,742 @@
 +/*
 + * G.I. Joe BATTLE SIMULATOR - see BattleSim.h.
 + */
@@ -5920,7 +5920,7 @@ index 0000000..0045685
 +			camp.startDay = save->getDaysPassed();
 +			camp.lastProgress = save->getDaysPassed();
 +			for (auto *r : save->getDiscoveredResearch()) camp.researchKnown.insert(r->getName());
-+			tl(save, "CAMPAIGN starts: " + std::to_string(campaign()) + " days");
++			tl(save, "CAMPAIGN starts: " + std::to_string(campaign()) + " days (markers 2)");   // markers 2: BROADCAST and CARTEL FLIGHT lines (JOE LAB Checks)
 +		}
 +		gs->simSpeed(4);   // one hour a step: popups stop the clock on their own
 +		const int day = save->getDaysPassed();
@@ -6010,6 +6010,20 @@ index 0000000..0045685
 +					if (game->getMod()->isSpy(s->getRules()->getType()) && !s->isWounded() && !s->isAway() && !(s->getCraft() && s->getCraft()->getStatus() == "STR_OUT")) { spy = s; break; }
 +				if (spy && save->sendSpy(spy, base, op.type, op.days)) { tl(save, "SPY " + spy->getName() + " sent on " + op.type); camp.lastProgress = day; break; }
 +			}
++		}
++		// markers for JOE LAB's Checks tab: the day the broadcast went out, and each cartel flight taking off
++		{
++			static bool saidBroadcast = false;
++			if (!saidBroadcast && save->getCobraNet().count("broadcastDone")) { saidBroadcast = true; tl(save, "BROADCAST: Cobra Commander's broadcast has gone out"); }
++			static std::set<int> saidFlight;
++			for (auto *ufo : *save->getUfos())
++				if (ufo->getRules()->getType() == "STR_CARTEL_PLANE" && saidFlight.insert(ufo->getId()).second)
++				{
++					bool home = false;
++					for (auto *ab : *save->getAlienBases())
++						if (ab->getSiteType() == "STR_CARTEL_STASH_HOUSE" && ufo->getDestination() && ufo->getDestination()->getDistance(ab) < 0.01) home = true;
++					tl(save, std::string("CARTEL FLIGHT takes off") + (ufo->getDetected() ? "" : " (not detected)") + (home ? ", heading home" : ""));
++				}
 +		}
 +		// the cartel's flights: a player tails one home with an unarmed craft (an armed one would fight it)
 +		for (auto *ufo : *save->getUfos())

@@ -6,6 +6,8 @@ Runs on John's PC with no internet and no AI. Started by JOE_LAB.bat (py -3.13 j
 It never touches his saves or settings: the game plays in user_sim\\, and everything it records goes in lab\\.
 
 TABS
+  Checks      the fixes to the first two months, tested: plays 60-day campaigns and grades each one PASS / FAIL / NOT REACHED
+              against the list in joe_checks.py (the cartel flight, the tail, the tip, no Cobra before the broadcast ...).
   Campaign    the game plays a whole campaign by itself (OXCE_CAMPAIGNSIM): missions flown, battles fought by the AI on both
               sides, labs kept busy. Live: the day, battles, research, quiet days; the timeline, STALLs in red.
   Battles     New Battle missions one after another (the battle simulator): live turn / who is standing / pictures / results.
@@ -19,6 +21,8 @@ TABS
 """
 import os, sys, time, json, shutil, subprocess, threading, queue, glob, re, statistics, datetime
 import tkinter as tk
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import joe_checks
 from tkinter import ttk, messagebox
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -203,7 +207,7 @@ class Lab:
         ttk.Label(hdr, text='   testing, recording, simulating and design notes - on this PC, no internet, no AI', foreground=GREY).pack(side='left')
         ttk.Button(hdr, text='Open lab folder', command=lambda: (os.makedirs(LAB, exist_ok=True), open_path(LAB))).pack(side='right')
         self.nb = ttk.Notebook(root); self.nb.pack(fill='both', expand=True, padx=10, pady=(0, 10))
-        self.tab_campaign(); self.tab_battles(); self.tab_strategy(); self.tab_characters(); self.tab_runs(); self.tab_balance(); self.tab_notes()
+        self.tab_checks(); self.tab_campaign(); self.tab_battles(); self.tab_strategy(); self.tab_characters(); self.tab_runs(); self.tab_balance(); self.tab_notes()
         root.protocol('WM_DELETE_WINDOW', self.close)
         self.tick()
 
@@ -265,6 +269,104 @@ class Lab:
             w['text'].insert('end', l + '\n', colour(l)); w['text'].see('end')
         w['seen'] = len(lines)
 
+    # ------------------------------------------------------------------------------------------------------ CHECKS
+    VCOL = {'PASS': 'green', 'FAIL': 'red', 'NOT REACHED': 'grey', 'LOOK': 'amber'}
+    VMARK = {'PASS': 'PASS', 'FAIL': 'FAIL', 'NOT REACHED': '-', 'LOOK': 'look'}
+
+    def tab_checks(self):
+        p = self.page('  Checks  ')
+        w = self.checks = {'graded': []}            # graded: [(run folder, [(id, question, verdict, evidence)])]
+        w['go'], w['stop'], w['status'] = self.controls(p, 'checks', self.start_checks)
+        w['status'].configure(text='Each run is a new campaign. The dice differ, so a check one run never reaches, another will.')
+        o = ttk.Frame(p); o.pack(fill='x', pady=(0, 8))
+        w['days'], w['runs'] = tk.IntVar(value=60), tk.IntVar(value=3)
+        for lab, var, lo, hi in (('Days a run', w['days'], 20, 365), ('Runs', w['runs'], 1, 20)):
+            ttk.Label(o, text=lab).pack(side='left'); ttk.Spinbox(o, from_=lo, to=hi, width=5, textvariable=var).pack(side='left', padx=(4, 14))
+        ttk.Button(o, text='Grade the last runs again', command=self.regrade).pack(side='left', padx=(10, 0))
+        ttk.Button(o, text='Save the report', command=self.save_checks).pack(side='left', padx=6)
+        body = ttk.Frame(p); body.pack(fill='both', expand=True)
+        body.columnconfigure(0, weight=5); body.columnconfigure(1, weight=3); body.rowconfigure(0, weight=5); body.rowconfigure(1, weight=1)
+        t = ttk.Treeview(body, columns=('q', 'all'), show='headings', height=len(joe_checks.CHECKS))
+        for v, col in (('PASS', GREEN), ('FAIL', RED), ('NOT REACHED', GREY), ('LOOK', AMBER)): t.tag_configure(v, foreground=col)
+        t.grid(row=0, column=0, sticky='nsew', padx=(0, 8)); t.bind('<<TreeviewSelect>>', self.show_check)
+        w['tree'] = t
+        ev = ttk.Frame(body, style='Panel.TFrame', padding=8); ev.grid(row=0, column=1, sticky='nsew')
+        ttk.Label(ev, text='WHAT EACH RUN SHOWED  (click a check)', style='Dim.TLabel').pack(anchor='w')
+        w['ev'] = self.textbox(ev, 14); w['ev'].configure(wrap='word'); w['ev'].pack(fill='both', expand=True)
+        lf = ttk.Frame(body, style='Panel.TFrame', padding=8); lf.grid(row=1, column=0, sticky='nsew', padx=(0, 8), pady=(8, 0))
+        w['day'] = ttk.Label(lf, text='THIS RUN', style='Dim.TLabel'); w['day'].pack(anchor='w')
+        w['text'] = self.textbox(lf, 4); w['text'].pack(fill='both', expand=True)
+        ef = ttk.Frame(body, style='Panel.TFrame', padding=8); ef.grid(row=1, column=1, sticky='nsew', pady=(8, 0))
+        ttk.Label(ef, text='A CAMPAIGN RUN CANNOT SEE THESE: CHECK THEM BY EYE', style='Dim.TLabel').pack(anchor='w')
+        ttk.Label(ef, text='\n'.join('  - ' + x for x in joe_checks.BY_EYE), style='Panel.TLabel', justify='left').pack(anchor='w')
+        self.fill_checks()
+
+    def fill_checks(self):
+        """the grid: one row a check, one column a run, and the overall answer"""
+        w = self.checks; t = w['tree']; g = w['graded']
+        cols = ['q', 'all'] + [f'r{i}' for i in range(len(g))]
+        t.configure(columns=cols)
+        t.heading('q', text='Check'); t.column('q', width=420, minwidth=300, anchor='w', stretch=True)
+        t.heading('all', text='Overall'); t.column('all', width=90, anchor='w', stretch=False)
+        for i, (d, _) in enumerate(g):
+            t.heading(f'r{i}', text=f'Run {i + 1}'); t.column(f'r{i}', width=52, anchor='center', stretch=False)
+        t.delete(*t.get_children())
+        for n, (cid, q, _fn) in enumerate(joe_checks.CHECKS):
+            vs = [res[n][2] for _, res in g]
+            overall = ('FAIL' if 'FAIL' in vs else 'PASS' if 'PASS' in vs else 'LOOK' if 'LOOK' in vs else 'NOT REACHED') if vs else ''
+            t.insert('', 'end', iid=cid, values=[q, self.VMARK.get(overall, '')]
+                     + [self.VMARK[v] for v in vs], tags=(overall,) if overall else ())
+
+    def show_check(self, _e=None):
+        w = self.checks; sel = w['tree'].selection(); box = w['ev']; box.delete('1.0', 'end')
+        if not sel: return
+        n = [c[0] for c in joe_checks.CHECKS].index(sel[0])
+        box.insert('end', joe_checks.CHECKS[n][1] + '\n\n', 'gold')
+        for i, (d, res) in enumerate(w['graded']):
+            _, _, v, ev = res[n]
+            box.insert('end', f'Run {i + 1}  {v}\n', self.VCOL[v])
+            box.insert('end', f'   {ev}\n   ({os.path.basename(d)})\n\n', 'grey')
+
+    def grade_into(self, d):
+        res = joe_checks.grade(d)
+        open(os.path.join(d, 'checks.txt'), 'w', encoding='utf-8').write(joe_checks.report([d]) + '\n')
+        self.checks['graded'].append((d, res)); self.fill_checks()
+
+    def start_checks(self):
+        w = self.checks
+        try: days, n = int(w['days'].get()), int(w['runs'].get())
+        except (tk.TclError, ValueError): messagebox.showerror('Joe Lab', 'Numbers only, please.'); return
+        w['graded'] = []; self.fill_checks()
+        s = {'days': days, 'turns': 25, 'headstart': 0, 'joes': 'normal', 'cobra': 'normal'}
+        env = {'OXCE_CAMPAIGNSIM': str(days), 'OXCE_CAMPAIGNSIM_SCREENS': str(days), 'OXCE_BATTLESIM_TURNS': '25',
+               'OXCE_CAMPAIGNSIM_HEADSTART': '0', 'OXCE_BATTLESIM_JOES': 'normal', 'OXCE_BATTLESIM_COBRA': 'normal'}
+        self.launch('checks', [(s, env)] * n)
+
+    def regrade(self):
+        """grade the campaign runs already kept (the newest few), with the checks as they are now"""
+        w = self.checks
+        try: n = int(w['runs'].get())
+        except (tk.TclError, ValueError): n = 3
+        dirs = [m['dir'] for m in self.all_runs() if m.get('kind') in ('checks', 'campaign')][:n]
+        if not dirs: messagebox.showinfo('Joe Lab', 'No campaign runs kept yet. Press Start.'); return
+        w['graded'] = []
+        for d in reversed(dirs): self.grade_into(d)
+        w['status'].configure(text=f'Graded the {len(dirs)} newest campaign run(s) again.')
+
+    def save_checks(self):
+        g = self.checks['graded']
+        if not g: messagebox.showinfo('Joe Lab', 'Nothing graded yet.'); return
+        os.makedirs(LAB, exist_ok=True)
+        p = os.path.join(LAB, f'CHECKS_{now_tag()}.txt')
+        lines = ['JOE LAB CHECKS, ' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M'), '']
+        for n, (cid, q, _fn) in enumerate(joe_checks.CHECKS):
+            lines.append(q)
+            for i, (d, res) in enumerate(g): lines.append(f'   run {i + 1}: {res[n][2]:12} {res[n][3]}')
+            lines.append('')
+        lines += ['BY EYE (a campaign run cannot see these):'] + ['   ' + x for x in joe_checks.BY_EYE]
+        open(p, 'w', encoding='utf-8').write('\n'.join(lines) + '\n')
+        open_path(p)
+
     # ---------------------------------------------------------------------------------------------------- CAMPAIGN
     def tab_campaign(self):
         p = self.page('  Campaign  ')
@@ -307,7 +409,7 @@ class Lab:
 
     def tl_colour(self, l):
         return ('red' if 'STALL' in l or 'CRASH' in l or 'STUCK' in l or 'HANG' in l else 'green' if 'BATTLE WIN' in l
-                else 'amber' if 'BATTLE LOSS' in l else 'gold' if 'MISSION appears' in l or 'COBRA SITE' in l
+                else 'amber' if 'BATTLE LOSS' in l else 'gold' if 'MISSION appears' in l or 'COBRA SITE' in l or 'BROADCAST' in l or 'CARTEL FLIGHT' in l
                 else 'blue' if 'RESEARCHED' in l else 'grey' if 'RESEARCH starts' in l or 'SENT' in l else '')
 
     # ----------------------------------------------------------------------------------------------------- BATTLES
@@ -481,7 +583,7 @@ class Lab:
     def show_run(self, _e=None):
         d = self.sel_run(); box = self.runs['text']; box.delete('1.0', 'end')
         if not d: return
-        for f in ('result.txt', 'timeline.txt', 'battles.txt', 'events.txt', 'report.txt'):
+        for f in ('checks.txt', 'result.txt', 'timeline.txt', 'battles.txt', 'events.txt', 'report.txt'):
             txt = read(os.path.join(d, f))
             if txt:
                 box.insert('end', f'--- {f} ---\n', 'gold')
@@ -503,7 +605,7 @@ class Lab:
         lines = []
         for m in self.all_runs():
             if m.get('kind') == 'battles' and m.get('result'): lines.append(m['result'])
-            if m.get('kind') == 'campaign': lines += [l for l in read(os.path.join(m['dir'], 'battles.txt')).splitlines() if l.strip()]
+            if m.get('kind') in ('campaign', 'checks'): lines += [l for l in read(os.path.join(m['dir'], 'battles.txt')).splitlines() if l.strip()]
         return lines
 
     def compute_balance(self):
@@ -529,7 +631,7 @@ class Lab:
             b.insert('end', f'{m.replace("STR_", "")[:44]:44} {r["n"]:>6} {str(wr) + "%":>6} {med(r["turns"]):>7} {med(r["lost"]):>10} {med(r["kills"]):>11}\n', col)
         if not per: b.insert('end', '(no battles yet)\n', 'grey')
         # campaigns
-        camps = [m for m in self.all_runs() if m.get('kind') == 'campaign']
+        camps = [m for m in self.all_runs() if m.get('kind') in ('campaign', 'checks')]
         b.insert('end', f'\nCAMPAIGNS ({len(camps)})\n', 'gold')
         first = {}
         for m in camps:
@@ -569,7 +671,7 @@ class Lab:
     # ------------------------------------------------------------------------------------------------------- NOTES
     def tab_notes(self):
         p = self.page('  Notes  ')
-        w = self.notes = {}
+        w = self.notes = {'page': p}
         body = ttk.Frame(p); body.pack(fill='both', expand=True)
         body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=2); body.rowconfigure(0, weight=1)
         left = ttk.Frame(body); left.grid(row=0, column=0, sticky='nsew', padx=(0, 8))
@@ -607,7 +709,7 @@ class Lab:
         w = self.notes
         w['current'] = None; w['title'].set(''); w['tag'].set('balance'); w['text'].delete('1.0', 'end')
         w['run'].set(f'About run: {run}' if run else '')
-        self.nb.select(6)
+        self.nb.select(self.notes['page'])
 
     def note_for_run(self):
         d = self.sel_run()
@@ -662,6 +764,7 @@ class Lab:
                     w['text'].insert('end', f'RESULT: {msg[3]}' + (f'   ({msg[4]} errors in the log)' if msg[4] else '') + '\n',
                                      'green' if kind_of(msg[3]) != 'bad' else 'red'); w['text'].see('end')
                     self.load_runs()
+                    if kind == 'checks': self.grade_into(msg[2])
                 elif what == 'nomore': w['status'].configure(text='Every mission played.')
                 elif what == 'finished':
                     w['go'].configure(state='normal'); w['stop'].configure(state='disabled')
@@ -676,6 +779,11 @@ class Lab:
                 v = s.get(k, '-')
                 lab.configure(text=v if k != 'quiet_days' else v, foreground=RED if k == 'quiet_days' and v.isdigit() and int(v) >= 20 else lab.cget('foreground'))
             self.feed(c, c['dir'], 'timeline.txt', self.tl_colour); self.latest_pic(c, c['dir'])
+        ck = self.checks
+        if ck.get('dir') and self.jobs.get('checks') and self.jobs['checks'].is_alive():
+            s = self.status_file(ck['dir'])
+            ck['day'].configure(text=f'THIS RUN   day {s.get("day", "-")}   battles {s.get("battles", "-")}   run {len(ck["graded"]) + 1}')
+            self.feed(ck, ck['dir'], 'timeline.txt', self.tl_colour)
         bt = self.battles
         if bt.get('dir') and self.jobs.get('battles') and self.jobs['battles'].is_alive():
             s = self.status_file(bt['dir'])
