@@ -6,7 +6,18 @@ It plays the Joes too, using the same AI that plays Cobra. Each battle runs in a
 game crashes you lose one battle and the next one starts. Your saves and settings are never touched: it plays in
 user_sim\.
 
-HOW TO USE IT
+THE EASY WAY: SIM_APP.bat
+Put SIM_APP.bat, sim_app.py and Sim_Battles_4x.bat next to OpenXcom.exe, then double-click SIM_APP.bat. A window opens:
+  - Start / Stop. "Start at mission #" picks where to begin, and "only that one" plays just that mission.
+    "Joes pull out after turn" sets the turn limit.
+  - NOW PLAYING: the mission, the turn, whose turn it is, Joes / Cobra / civilians still standing, the battle time.
+  - LATEST PICTURE: the last screenshot the game took.
+  - WHAT HAPPENED: that battle's events as they happen (turns in gold, men going down in red).
+  - RESULTS: every battle so far (WIN green, LOSS amber, CRASH / HANG / STUCK red) with totals. Double-click a row to
+    open that battle's folder.
+It uses the Python your render machine already installed. No internet, no AI.
+
+HOW TO USE IT WITHOUT THE WINDOW (Sim_Battles_4x.bat)
 1. Put Sim_Battles_4x.bat next to OpenXcom.exe (C:\GI-Joe-Silent-Storm\GIJoe_XCOM_4x).
 2. Start the game once with Play_4x.bat, so this build's mod is unpacked.
 3. Double-click Sim_Battles_4x.bat. A game window opens and plays. Leave the window alone. A battle takes about
