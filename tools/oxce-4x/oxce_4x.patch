@@ -5512,7 +5512,7 @@ index 0000000..542761d
 +}
 diff --git a/src/Battlescape/BattleSim.cpp b/src/Battlescape/BattleSim.cpp
 new file mode 100644
-index 0000000..677bac2
+index 0000000..390e24d
 --- /dev/null
 +++ b/src/Battlescape/BattleSim.cpp
 @@ -0,0 +1,316 @@
@@ -5775,7 +5775,7 @@ index 0000000..677bac2
 +	if (auto *inv = dynamic_cast<InventoryState*>(top))
 +	{
 +		if (held < 1500 || presses) return;
-+		presses = 1; note("equipment screen: OK"); inv->btnOkClick(nullptr);
++		presses = 1; shot(game, "equipment"); note("equipment screen: OK"); inv->btnOkClick(nullptr);
 +		return;
 +	}
 +	if (auto *nt = dynamic_cast<NextTurnState*>(top))
@@ -5888,7 +5888,7 @@ index 0000000..6892937
 +}
 +}
 diff --git a/src/Battlescape/BattlescapeGame.cpp b/src/Battlescape/BattlescapeGame.cpp
-index b7e1111..4f5f92b 100644
+index b7e1111..2176fe2 100644
 --- a/src/Battlescape/BattlescapeGame.cpp
 +++ b/src/Battlescape/BattlescapeGame.cpp
 @@ -16,8 +16,16 @@
@@ -5929,7 +5929,35 @@ index b7e1111..4f5f92b 100644
  	}
  	else
  	{
-@@ -224,11 +239,16 @@ int BattlescapeGame::think()
+@@ -215,6 +230,27 @@ BattlescapeGame::~BattlescapeGame()
+ int BattlescapeGame::think()
+ {
+ 	int ret = -1;
++	// G.I. Joe (John 18 Nov 01:36 "After mission clear tu should not matter"): once every Cobra is down and the squad
++	// is searching the secured site, time units and energy no longer run out - each Joe is topped up while idle
++	if (_securedAnnounced && _states.empty())
++	{
++		bool topped = false;
++		for (auto *bu : *_save->getUnits())
++		{
++			if (bu->getFaction() != FACTION_PLAYER || bu->isOut()) continue;
++			if (bu->getTimeUnits() < bu->getBaseStats()->tu || bu->getEnergy() < bu->getBaseStats()->stamina)
++			{
++				bu->resetTimeUnitsAndEnergy();
++				topped = true;
++			}
++		}
++		if (topped)
++		{
++			static int logged = 0;
++			if (logged++ < 3) Log(LOG_INFO) << "[secure] time units and energy topped up (searching the secured site)";
++			_parentState->refreshJoeHudPublic();
++		}
++	}
+ 	// nothing is happening - see if we need some alien AI or units panicking or what have you
+ 	if (_states.empty())
+ 	{
+@@ -224,11 +260,16 @@ int BattlescapeGame::think()
  			_save->setUnitsFalling(false);
  			return ret;
  		}
@@ -5948,7 +5976,7 @@ index b7e1111..4f5f92b 100644
  			if (!_debugPlay)
  			{
  				if (_save->getSelectedUnit())
-@@ -336,6 +356,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
+@@ -336,6 +377,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
  		return;
  	}
  
@@ -5956,7 +5984,7 @@ index b7e1111..4f5f92b 100644
  	unit->setVisible(false); //Possible TODO: check number of player unit observers, then hide the unit if no one can see it. Should then be able to skip the next FOV call.
  
  	_save->getTileEngine()->calculateFOV(unit->getPosition(), 1, false); // might need this populate _visibleUnit for a newly-created alien.
-@@ -350,6 +371,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
+@@ -350,6 +392,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
  		unit->setAIModule(new AIModule(_save, unit, 0));
  		ai = unit->getAIModule();
  	}
@@ -5964,7 +5992,7 @@ index b7e1111..4f5f92b 100644
  	_AIActionCounter++;
  	if (_AIActionCounter == 1)
  	{
-@@ -421,6 +443,12 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
+@@ -421,6 +464,12 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
  		}
  	}
  
@@ -5977,7 +6005,7 @@ index b7e1111..4f5f92b 100644
  	if (action.type == BA_SNAPSHOT || action.type == BA_AUTOSHOT || action.type == BA_AIMEDSHOT || action.type == BA_THROW || action.type == BA_HIT || action.type == BA_MINDCONTROL || action.type == BA_USE || action.type == BA_PANIC || action.type == BA_LAUNCH)
  	{
  		ss.clear();
-@@ -508,8 +536,271 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
+@@ -508,8 +557,271 @@ bool BattlescapeGame::kneel(BattleUnit *bu)
  /**
   * Ends the turn.
   */
@@ -6249,7 +6277,7 @@ index b7e1111..4f5f92b 100644
  	_debugPlay = _save->getDebugMode() && _parentState->getGame()->isCtrlPressed() && (_save->getSide() != FACTION_NEUTRAL);
  	_currentAction.type = BA_NONE;
  	_currentAction.skillRules = nullptr;
-@@ -620,6 +911,7 @@ void BattlescapeGame::endTurn()
+@@ -620,6 +932,7 @@ void BattlescapeGame::endTurn()
  
  
  		_save->endTurn();
@@ -6257,7 +6285,7 @@ index b7e1111..4f5f92b 100644
  		t = _save->getTileEngine()->checkForTerrainExplosions();
  		if (t)
  		{
-@@ -678,7 +970,9 @@ void BattlescapeGame::endTurn()
+@@ -678,7 +991,9 @@ void BattlescapeGame::endTurn()
  		}
  	}
  
@@ -6268,7 +6296,7 @@ index b7e1111..4f5f92b 100644
  	{
  		showInfoBoxQueue();
  
-@@ -695,7 +989,7 @@ void BattlescapeGame::endTurn()
+@@ -695,7 +1010,7 @@ void BattlescapeGame::endTurn()
  	// objective type MUST_DESTROY was already handled above
  	bool killingAllAliensIsNotEnough = (_save->getVIPSurvivalPercentage() > 0 && _save->getVIPEscapeType() != ESCAPE_NONE);
  
@@ -6277,7 +6305,7 @@ index b7e1111..4f5f92b 100644
  
  	if ((_save->getSide() != FACTION_NEUTRAL || battleComplete)
  		&& _endTurnRequested)
-@@ -1915,6 +2209,13 @@ void BattlescapeGame::primaryAction(Position pos)
+@@ -1915,6 +2230,13 @@ void BattlescapeGame::primaryAction(Position pos)
  		}
  		else
  		{
@@ -6291,7 +6319,7 @@ index b7e1111..4f5f92b 100644
  			_currentAction.target = pos;
  			getMap()->setCursorType(CT_NONE);
  
-@@ -1985,6 +2286,14 @@ void BattlescapeGame::primaryAction(Position pos)
+@@ -1985,6 +2307,14 @@ void BattlescapeGame::primaryAction(Position pos)
  			{
  				_currentAction.sneak = _save->getSelectedUnit()->getArmor()->allowsSneaking(_save->getSelectedUnit()->isSmallUnit());
  			}
@@ -6306,7 +6334,7 @@ index b7e1111..4f5f92b 100644
  
  			// recalculate path after setting new move types
  			if (BAM_NORMAL != _currentAction.getMoveType())
-@@ -3141,6 +3450,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
+@@ -3141,6 +3471,11 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
  	{
  		return 0;
  	}
@@ -6318,7 +6346,7 @@ index b7e1111..4f5f92b 100644
  
  	// death trap?
  	Tile* deathTrapTile = nullptr;
-@@ -3209,10 +3523,12 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
+@@ -3209,10 +3544,12 @@ int BattlescapeGame::checkForProximityGrenades(BattleUnit *unit)
  				{
  					const RuleItem *ruleItem = item->getRules();
  					bool g = item->getGlow();
@@ -6331,7 +6359,7 @@ index b7e1111..4f5f92b 100644
  							Position p = t->getPosition().toVoxel() + Position(8, 8, t->getTerrainLevel());
  							statePushNext(new ExplosionBState(this, p, BattleActionAttack::GetBeforeShoot(BA_TRIGGER_PROXY_GRENADE, nullptr, item)));
  							exploded = true;
-@@ -3346,12 +3662,35 @@ std::list<BattleState*> BattlescapeGame::getStates()
+@@ -3346,12 +3683,35 @@ std::list<BattleState*> BattlescapeGame::getStates()
   * Ends the turn if auto-end battle is enabled
   * and all mission objectives are completed.
   */
@@ -7744,7 +7772,7 @@ index a0bc8b3..b073f80 100644
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..542e7f7 100644
+index 7cd4941..1d4fe17 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -1,3 +1,5 @@
@@ -7819,7 +7847,7 @@ index 7cd4941..542e7f7 100644
  	_btnKneel->onMouseIn((ActionHandler)&BattlescapeState::txtTooltipIn);
  	_btnKneel->onMouseOut((ActionHandler)&BattlescapeState::txtTooltipOut);
  	_btnKneel->allowToggleInversion();
-@@ -724,6 +737,750 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +737,762 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
@@ -7871,8 +7899,9 @@ index 7cd4941..542e7f7 100644
 +	HiUI::nativeKeyStyle(_btnEndTurn, 1);
 +	place(_btnStats, 36, 11, 54, 8);
 +	_txtName->setX(ox + 36); _txtName->setY(oy + 11); _txtName->setWidth(54); _txtName->setHeight(8);
-+	// clear of the squad strip's right-hand scroll key, which ends at 181
-+	_txtTooltip->setX(ox + 184); _txtTooltip->setY(oy + 1); _txtTooltip->setWidth(132); _txtTooltip->setHeight(8);
++	// John 18 Nov 01:34 "fix the amount of characters listed": the squad strip now runs the bar's whole width, so the
++	// tooltip moves up off the bar, just above its right end
++	_txtTooltip->setX(ox + 184); _txtTooltip->setY(oy - 9); _txtTooltip->setWidth(132); _txtTooltip->setHeight(8);
 +	_txtTooltip->setAlign(ALIGN_RIGHT);
 +
 +	// no place on the bar: shortcuts only
@@ -7890,9 +7919,9 @@ index 7cd4941..542e7f7 100644
 +		for (auto *n : *v) { n->setX(-400); n->setY(-400); }
 +
 +	// NEW PIECES
-+	for (int i = 0; i < 6; ++i)
++	for (int i = 0; i < 16; ++i)
 +	{
-+		_hudChip[i] = new InteractiveSurface(25, 6, ox + 26 + 26 * i, oy + 2);
++		_hudChip[i] = new InteractiveSurface(25, 6, ox + 26 + 26 * (i % 6), oy + 2);
 +		add(_hudChip[i]);
 +		_hudChip[i]->onMouseClick((ActionHandler)&BattlescapeState::hudChipClick);
 +	}
@@ -8234,12 +8263,15 @@ index 7cd4941..542e7f7 100644
 +		squad.push_back(bu);
 +		if (!bu->isOut() && bu->getTimeUnits() > 0 && bu->getFaction() == FACTION_PLAYER) ++canAct;
 +	}
-+	// THE WINDOW. With six or fewer Joes the strip is as it was. With more, two
-+	// scroll keys take the ends and the chips close up to make room; the window
-+	// still jumps to keep a newly selected Joe in view, but otherwise stays where
-+	// the player scrolled it.
++	// THE WINDOW (John 18 Nov 01:34 "fix the amount of characters listed on the hud bar"). The strip runs from after
++	// MENU to the bar's right end (design x 26..316, stretched like the rest of the bar), so up to 16 Joes show at
++	// once; the chips narrow to fit the squad. Past 16, two scroll keys take the ends and the window follows the
++	// selected Joe, otherwise staying where the player scrolled it.
 +	const int n = (int)squad.size();
-+	const bool scroll = n > 6;
++	const int MAXC = 16;
++	const bool scroll = n > MAXC;
++	const int K = std::max(1, std::min(n, MAXC));
++	_hudChips = K;
 +	if (u != _hudLastSel)
 +	{
 +		_hudLastSel = u;
@@ -8247,33 +8279,41 @@ index 7cd4941..542e7f7 100644
 +			if (squad[i] == u)
 +			{
 +				if (i < _hudFirst) _hudFirst = i;
-+				if (i >= _hudFirst + 6) _hudFirst = i - 5;
++				if (i >= _hudFirst + K) _hudFirst = i - K + 1;
 +			}
 +	}
-+	_hudFirst = scroll ? std::max(0, std::min(_hudFirst, n - 6)) : 0;
++	_hudFirst = scroll ? std::max(0, std::min(_hudFirst, n - K)) : 0;
 +	{
 +		const int ox = _hudContentX, oy = _icons->getY();
-+		for (int i = 0; i < 6; ++i)
++		const double x0 = scroll ? 34.0 : 26.0, x1 = scroll ? 308.0 : 316.0;
++		const double pitch = std::min(26.0, (x1 - x0) / K);
++		auto at = [&](double dx) { return ox + (int)std::lround(HiUI::hudStretchX(dx, ox)); };
++		for (int i = 0; i < MAXC; ++i)
 +		{
-+			_hudChip[i]->setX(ox + (scroll ? 34 + 23 * i : 26 + 26 * i));   // HUD v2: the MENU button comes first
-+			_hudChip[i]->setWidth(scroll ? 22 : 25);
++			const double a = x0 + pitch * i, b = a + pitch - 1;
++			_hudChip[i]->setX(at(a));
++			_hudChip[i]->setWidth(std::max(4, at(b) - at(a)));
 +			_hudChip[i]->setY(oy + 2);
 +		}
 +		for (int i = 0; i < 2; ++i)
 +		{
++			_hudScroll[i]->setX(at(i == 0 ? 26 : 309));
 +			_hudScroll[i]->setVisible(scroll);
-+			const bool can = i == 0 ? _hudFirst > 0 : _hudFirst + 6 < n;
++			const bool can = i == 0 ? _hudFirst > 0 : _hudFirst + K < n;
 +			HiUI::nativeKeyStyle(_hudScroll[i], can ? 0 : 3);
 +		}
 +	}
-+	for (int i = 0; i < 6; ++i)
++	for (int i = 0; i < MAXC; ++i)
 +	{
 +		const int si = _hudFirst + i;
-+		_hudChipUnit[i] = si < n ? squad[si] : nullptr;
++		_hudChipUnit[i] = (i < K && si < n) ? squad[si] : nullptr;
 +		_hudChip[i]->setVisible(_hudChipUnit[i] != nullptr);
 +		if (!_hudChipUnit[i]) continue;
 +		BattleUnit *bu = _hudChipUnit[i];
 +		std::string nm = bu->getName(_game->getLanguage());
++		// a vehicle's "(guns)" / "(rockets)" goes first, so "VAMP Mk II (rockets)" reads "VAMP Mk II", not "(rockets)"
++		const auto par = nm.find(" (");
++		if (par != std::string::npos && nm.size() > 12) nm = nm.substr(0, par);
 +		const auto sp = nm.find_last_of(' ');
 +		if (sp != std::string::npos && nm.size() > 12) nm = nm.substr(sp + 1);
 +		// CHIP STATES. Down (out of the fight) and captured (a Joe the enemy now
@@ -8357,7 +8397,7 @@ index 7cd4941..542e7f7 100644
 +void BattlescapeState::hudChipClick(Action *action)
 +{
 +	if (!allowButtons()) return;
-+	for (int i = 0; i < 6; ++i)
++	for (int i = 0; i < 16; ++i)
 +	{
 +		if (action->getSender() != _hudChip[i] || !_hudChipUnit[i]) continue;
 +		BattleUnit *bu = _hudChipUnit[i];
@@ -8570,7 +8610,7 @@ index 7cd4941..542e7f7 100644
  }
  
  
-@@ -732,9 +1489,11 @@ BattlescapeState::BattlescapeState() :
+@@ -732,9 +1501,11 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -8582,7 +8622,7 @@ index 7cd4941..542e7f7 100644
  
  	resetPalettes();
  }
-@@ -789,6 +1548,38 @@ void BattlescapeState::init()
+@@ -789,6 +1560,38 @@ void BattlescapeState::init()
  	_map->draw();
  	_battleGame->init();
  	updateSoldierInfo();
@@ -8621,7 +8661,7 @@ index 7cd4941..542e7f7 100644
  
  	switch (_save->getTUReserved())
  	{
-@@ -807,6 +1598,17 @@ void BattlescapeState::init()
+@@ -807,6 +1610,17 @@ void BattlescapeState::init()
  	}
  	if (_firstInit)
  	{
@@ -8639,7 +8679,7 @@ index 7cd4941..542e7f7 100644
  		// Set music
  		if (Options::oxcePlayBriefingMusicDuringEquipment)
  		{
-@@ -858,7 +1660,29 @@ void BattlescapeState::init()
+@@ -858,7 +1672,29 @@ void BattlescapeState::init()
   */
  void BattlescapeState::think()
  {
@@ -8669,7 +8709,7 @@ index 7cd4941..542e7f7 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1215,6 +2039,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1215,6 +2051,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -8690,7 +8730,7 @@ index 7cd4941..542e7f7 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -1466,6 +2304,12 @@ void BattlescapeState::btnEndTurnClick(Action *)
+@@ -1466,6 +2316,12 @@ void BattlescapeState::btnEndTurnClick(Action *)
  		_map->getCamera()->stopKeyScrolling();
  
  		_txtTooltip->setText("");
@@ -8703,7 +8743,7 @@ index 7cd4941..542e7f7 100644
  		_battleGame->requestEndTurn(false);
  	}
  }
-@@ -2172,7 +3016,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +3028,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -8712,7 +8752,7 @@ index 7cd4941..542e7f7 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +3236,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +3248,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -8720,7 +8760,7 @@ index 7cd4941..542e7f7 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -3577,13 +4422,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3577,13 +4434,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  	{
  		nextStage = ruleDeploy->getNextStage();
  	}
@@ -8750,7 +8790,7 @@ index 7cd4941..542e7f7 100644
  		bgen.nextStage();
  		_game->popState();
  		_game->pushState(new BriefingState(0, 0));
-@@ -3621,6 +4481,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4493,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -8763,7 +8803,7 @@ index 7cd4941..542e7f7 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +4918,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4930,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -8775,18 +8815,19 @@ index 7cd4941..542e7f7 100644
  	_map->getCamera()->jumpXY(dX/2, dY/2);
  
 diff --git a/src/Battlescape/BattlescapeState.h b/src/Battlescape/BattlescapeState.h
-index 746f3a4..4631d7c 100644
+index 746f3a4..573ad8e 100644
 --- a/src/Battlescape/BattlescapeState.h
 +++ b/src/Battlescape/BattlescapeState.h
-@@ -58,6 +58,48 @@ private:
+@@ -58,6 +58,49 @@ private:
  	InteractiveSurface *_btnStats;
  	BattlescapeButton *_btnReserveNone, *_btnReserveSnap, *_btnReserveAimed, *_btnReserveAuto, *_btnReserveKneel, *_btnZeroTUs;
  	InteractiveSurface *_btnLeftHandItem, *_btnRightHandItem;
 +	// G.I. Joe battle bar (BATTLE_HUD_SPEC_v1): painted by HiUI, these are its clickable pieces
 +	bool _joeHud = false;
 +	int _hudContentX = 0;
-+	InteractiveSurface *_hudChip[6] = {}, *_hudMode[2][3] = {}, *_hudCard[2] = {}, *_hudPortrait = nullptr;
-+	BattleUnit *_hudChipUnit[6] = {};
++	InteractiveSurface *_hudChip[16] = {}, *_hudMode[2][3] = {}, *_hudCard[2] = {}, *_hudPortrait = nullptr;
++	BattleUnit *_hudChipUnit[16] = {};
++	int _hudChips = 6;   // chips showing in the squad strip this refresh
 +	/// Squad-strip scroll keys, shown only when more than six Joes are on the field.
 +	InteractiveSurface *_hudScroll[2] = {};
 +	InteractiveSurface *_hudSig = nullptr; // G.I. Joe: the signature slot, CUFF for now
@@ -8827,7 +8868,7 @@ index 746f3a4..4631d7c 100644
  
  	static const int SPECIAL_BUTTONS_MAX = 3;
  	int _posSpecialActions[SPECIAL_BUTTONS_MAX];
-@@ -75,7 +117,10 @@ private:
+@@ -75,7 +118,10 @@ private:
  	std::vector<NumberText*> _numMedikitLeft, _numMedikitRight;
  	NumberText *_numTwoHandedIndicatorLeft, *_numTwoHandedIndicatorRight;
  	Uint8 _twoHandedRed, _twoHandedGreen;
@@ -8839,7 +8880,7 @@ index 746f3a4..4631d7c 100644
  	bool _manaBarVisible;
  	Timer *_animTimer, *_gameTimer;
  	SavedBattleGame *_save;
-@@ -111,6 +156,8 @@ private:
+@@ -111,6 +157,8 @@ private:
  	/// Shows the unit kneel state.
  	void toggleKneelButton(BattleUnit* unit);
  public:
@@ -9969,7 +10010,7 @@ index 642c538..68a1fc5 100644
  	void drawSelectedItem();
  	/// Gets the currently selected item.
 diff --git a/src/Battlescape/InventoryState.cpp b/src/Battlescape/InventoryState.cpp
-index cea8e65..90ec9a6 100644
+index cea8e65..cd4cab8 100644
 --- a/src/Battlescape/InventoryState.cpp
 +++ b/src/Battlescape/InventoryState.cpp
 @@ -17,6 +17,7 @@
@@ -9997,7 +10038,7 @@ index cea8e65..90ec9a6 100644
 +	{
 +		Surface::blit(s);
 +		// on the native page the figure is resampled whole, not block by block
-+		if (art && HiUI::nativeOn()) HiUI::spriteFit(art, getX(), getY(), getWidth(), getHeight(), getX(), getY(), getWidth(), getHeight(), 0.0);
++		if (art && HiUI::nativeOn()) HiUI::spriteFit(art, getX(), getY(), getWidth(), getHeight(), getX(), getY(), getWidth(), getHeight(), -1.0);
 +		else if (art && HiUI::enabled()) HiUI::sprite(art, getX(), getY(), getWidth(), getHeight());
 +	}
 +};
@@ -16222,10 +16263,10 @@ index 0000000..8277a64
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..b0e924c
+index 0000000..b248041
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3417 @@
+@@ -0,0 +1,3429 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -18091,8 +18132,18 @@ index 0000000..b0e924c
 +	const double kx = (double)w / im.w, ky = (double)h / im.h;          // twin pixels -> base pixels
 +	const double ow = (bb[2] - bb[0]) * kx, oh = (bb[3] - bb[1]) * ky;   // the object, in base pixels
 +	const double tw = std::max(1.0, boxW - 2 * inset), th = std::max(1.0, boxH - 2 * inset);
-+	const double s = std::min(1.0, std::min(tw / ow, th / oh));
-+	const double cx = boxX + boxW / 2.0, cy = boxY + boxH / 2.0;
++	// John 18 Nov 01:26: "they should all fill their space no more" - an item now grows to fill its compartment
++	// as well as shrinking to fit it (it was never enlarged, so small pictures sat lost in big boxes)
++	double s = std::min(tw / ow, th / oh);
++	double cx = boxX + boxW / 2.0, cy = boxY + boxH / 2.0;
++	if (inset < 0)
++	{
++		// G.I. Joe (BUILD-1, John 18 Nov 01:24 "hes not in the proper window"): a picture painted to its page (the
++		// inventory figure) keeps the place it was painted at - only items are centred in their compartment
++		s = 1.0;
++		cx = x + (bb[0] + bb[2]) / 2.0 * kx;
++		cy = y + (bb[1] + bb[3]) / 2.0 * ky;
++	}
 +	stretch(im, bb[0], bb[1], bb[2], bb[3],
 +		(int)DX(cx - ow * s / 2), (int)DY(cy - oh * s / 2), (int)DX(cx + ow * s / 2), (int)DY(cy + oh * s / 2));
 +}
@@ -18686,10 +18737,12 @@ index 0000000..b0e924c
 +				{
 +					const int rx = std::get<0>(n), byy = std::get<1>(n);
 +					const std::string v = std::to_string(std::get<2>(n));
-+					const int X0 = (int)DX(ox + rx - 14), Y0 = (int)DY(oy + byy - 7.5), X1 = (int)DX(ox + rx), Y1 = (int)DY(oy + byy);
++					// John 18 Nov 01:26 "the numbers on the items dont fit right": smaller, and inside the item's own
++					// compartment (bottom right, clear of the rim) instead of on the line between two
++					const int X0 = (int)DX(ox + rx - 11), Y0 = (int)DY(oy + byy - 6.6), X1 = (int)DX(ox + rx - 2.2), Y1 = (int)DY(oy + byy - 2.0);
 +					const Uint32 c = textColour(std::get<3>(n));
-+					setType(*f, v, X0 + 2, Y0 + 2, X1 + 2, Y1 + 2, 5.0 * k, 7.5 * k, 2, 2, 0x0A0B08, false);
-+					setType(*f, v, X0, Y0, X1, Y1, 5.0 * k, 7.5 * k, 2, 2, c, false);
++					setType(*f, v, X0 + 2, Y0 + 2, X1 + 2, Y1 + 2, 3.2 * k, 4.6 * k, 2, 2, 0x0A0B08, false);
++					setType(*f, v, X0, Y0, X1, Y1, 3.2 * k, 4.6 * k, 2, 2, c, false);
 +				}
 +			}
 +			return;
@@ -29889,10 +29942,22 @@ index 5cbe289..317df5d 100644
  	screenClick(0);
  }
 diff --git a/src/Menu/StartState.cpp b/src/Menu/StartState.cpp
-index 115d1ce..d9977dd 100644
+index 115d1ce..78cce48 100644
 --- a/src/Menu/StartState.cpp
 +++ b/src/Menu/StartState.cpp
-@@ -140,6 +140,9 @@ void StartState::init()
+@@ -93,6 +93,11 @@ StartState::StartState() : _anim(0)
+ 	// Hide UI
+ 	_game->getCursor()->setVisible(false);
+ 	_game->getFpsCounter()->setVisible(false);
++	// G.I. Joe (John 18 Nov 00:55 "The windows showing the xcom stuff when it opens drives me crazy"): no fake DOS
++	// boot text and no blinking prompt while loading - a black screen with the theme playing over it. A load
++	// ERROR still prints (addLine below is not gated). And X-COM's intro movie never plays (see below).
++	Options::oxceStartUpTextMode = 2;
++	_cursor->setVisible(false);
+ 
+ 	if (Options::reload)
+ 	{
+@@ -140,6 +145,9 @@ void StartState::init()
  		Mix_CloseAudio();
  		_game->initAudio();
  	}
@@ -29902,7 +29967,7 @@ index 115d1ce..d9977dd 100644
  
  	// Load the game data in a separate thread
  	_thread = SDL_CreateThread(load, (void*)_game);
-@@ -166,7 +169,7 @@ void StartState::think()
+@@ -166,7 +174,7 @@ void StartState::think()
  		addLine("ERROR: " + error);
  		addLine("");
  		addLine("More details here: " + CrossPlatform::getLogFileName());
@@ -29911,7 +29976,23 @@ index 115d1ce..d9977dd 100644
  		addLine("");
  		addLine("Press any key to continue.");
  		loading = LOADING_DONE;
-@@ -219,7 +222,7 @@ void StartState::animate()
+@@ -175,7 +183,7 @@ void StartState::think()
+ 		CrossPlatform::flashWindow();
+ 		Log(LOG_INFO) << "OpenXcom started successfully!";
+ 		_game->setState(new GoToMainMenuState(true));
+-		if (_oldMaster != Options::getActiveMaster() && Options::playIntro)
++		if (false && _oldMaster != Options::getActiveMaster() && Options::playIntro)   // G.I. Joe: never X-COM's intro
+ 		{
+ 			_game->pushState(new CutsceneState("intro"));
+ 		}
+@@ -213,13 +221,13 @@ void StartState::handle(Action *action)
+  */
+ void StartState::animate()
+ {
+-	_cursor->setVisible(!_cursor->getVisible());
++	if (loading == LOADING_DONE) _cursor->setVisible(!_cursor->getVisible());   // G.I. Joe: only under an error message
+ 	_anim++;
+ 
  	if (loading == LOADING_STARTED)
  	{
  		std::ostringstream ss;
@@ -29920,7 +30001,7 @@ index 115d1ce..d9977dd 100644
  		if (Options::reload)
  		{
  			if (Options::oxceStartUpTextMode < 2)
-@@ -243,7 +246,7 @@ void StartState::animate()
+@@ -243,7 +251,7 @@ void StartState::animate()
  				if (Options::oxceStartUpTextMode < 2)
  				{
  					addLine("");
