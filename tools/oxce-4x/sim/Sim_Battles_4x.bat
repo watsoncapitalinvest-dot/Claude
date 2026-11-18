@@ -45,7 +45,10 @@ set OXCE_BATTLESIM_JOES=normal
 set OXCE_BATTLESIM_COBRA=normal
 set OXCE_BATTLE_SCALE=4
 set OXCE_MAP_HIRES=4
-start "" /wait OpenXcom.exe -user "%~dp0user_sim" -cfg "%~dp0user_sim" -displayWidth 1280 -displayHeight 800 -fullscreen false -debug false
+set GAME=OpenXcom.exe
+set DATA=
+if exist "x64\OpenXcom.exe" ( set GAME=x64\OpenXcom.exe& set DATA=-data "%~dp0." )
+start "" /wait !GAME! !DATA! -user "%~dp0user_sim" -cfg "%~dp0user_sim" -displayWidth 1280 -displayHeight 800 -fullscreen false -debug false
 set CODE=!errorlevel!
 if exist "user_sim\openxcom.log" copy /y "user_sim\openxcom.log" "!D!\log.txt" >nul
 set R=

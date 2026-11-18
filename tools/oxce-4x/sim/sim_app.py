@@ -18,10 +18,14 @@ from tkinter import ttk, messagebox
 HERE = os.path.dirname(os.path.abspath(__file__))
 WIN = sys.platform.startswith('win')
 GAME = os.environ.get('SIM_GAME', os.path.join(HERE, 'OpenXcom.exe' if WIN else 'openxcom'))
+if WIN and 'SIM_GAME' not in os.environ and os.path.exists(os.path.join(HERE, 'x64', 'OpenXcom.exe')):
+    GAME = os.path.join(HERE, 'x64', 'OpenXcom.exe')   # the 64-bit game: no 4 GB memory ceiling
 USER = os.path.join(HERE, 'user')
 USER_SIM = os.environ.get('SIM_USER', os.path.join(HERE, 'user_sim'))
 OUT = os.path.join(HERE, 'sim_battles')
 EXTRA = os.environ.get('SIM_ARGS', '').split()          # the test rig adds its own (-data ...)
+if not EXTRA and os.path.basename(os.path.dirname(GAME)) == 'x64':
+    EXTRA = ['-data', HERE]
 
 INK, PAPER, PANEL, GOLD, RED, GREEN, AMBER, GREY = '#e8e4d8', '#14181c', '#1f262c', '#d8b45a', '#ff5a4a', '#5ec46a', '#e0a030', '#8a9198'
 FONT = ('Segoe UI', 10) if WIN else ('DejaVu Sans', 10)

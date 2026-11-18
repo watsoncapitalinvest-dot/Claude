@@ -31,7 +31,12 @@ for %%Z in (mod_update mod_update_2 mod_update_3 mod_update_4 mod_update_5 mod_u
 )
 set OXCE_BATTLE_SCALE=4
 set OXCE_MAP_HIRES=4
+rem The 64-bit game (x64\OpenXcom.exe, its own DLLs beside it) when it is there: no 4 GB memory ceiling (17 Nov crash).
+if exist "x64\OpenXcom.exe" goto play64
 start "" OpenXcom.exe -user "%~dp0user" -cfg "%~dp0user" -fullscreen true -displayWidth %W% -displayHeight %H% -battlescapeScale 6 -lazyLoadResources false -debug false
+exit /b 0
+:play64
+start "" "x64\OpenXcom.exe" -data "%~dp0." -user "%~dp0user" -cfg "%~dp0user" -fullscreen true -displayWidth %W% -displayHeight %H% -battlescapeScale 6 -lazyLoadResources false -debug false
 exit /b 0
 :missing
 echo Could not find the X-COM game files.
