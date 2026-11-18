@@ -210,13 +210,17 @@ const STOCKS = ['bullets', 'guns', 'missiles', 'vehicles', 'aircraft', 'cells'];
 const SPLIT_STYLES = ['absent', 'cautious', 'typical', 'aggressive'];
 const SPLIT_DEFAULTS = {
   runs: 300, months: 24, seed: 7, regions: 3, garrisons: 6, destroMonth: 11,
-  startFunds: 300, regionIncome: 230, producerUpkeep: 6, rebuildMonths: 3, rebuildCost: 200,
-  produce:  {bullets: 50,  guns: 12, missiles: 10, vehicles: 3,   aircraft: 3,   cells: 14},
-  unitCost: {bullets: 0.4, guns: 1.5, missiles: 3, vehicles: 12, aircraft: 16, cells: 2},
+  startFunds: 300, regionIncome: 300, producerUpkeep: 6, rebuildMonths: 3, rebuildCost: 200,
+  // manpower and quality (the Cobra thesis, John 17 Nov 20:33: more weapons than soldiers; more soldiers rather than better guns)
+  manpowerPriority: 0.9, startMen: 8, garrisonCap: 16, campRecruits: 6, recruitCost: 8, fundsReserve: 40,
+  menLostCobraBattle: 1, menLostJoeRaid: 3, tierCost: 150,
+  tierCap: {0: 0, 3: 1, 8: 2, 14: 3, 22: 4, 30: 5},
+  produce:  {bullets: 50,  guns: 24, missiles: 10, vehicles: 3,   aircraft: 3,   cells: 14},
+  unitCost: {bullets: 0.4, guns: 1.0, missiles: 3, vehicles: 12, aircraft: 16, cells: 2},
   upkeep:   {bullets: 3,   guns: 0.6, missiles: 0.5, vehicles: 0.1, aircraft: 0.1, cells: 0.8},   // per garrison per month
   battleNeed: {bullets: 10, guns: 2,  missiles: 3,   vehicles: 1,   aircraft: 1,   cells: 4},     // what one battle draws
   battleWants: {bullets: 1, guns: 1,  missiles: 0.5, vehicles: 0.25, aircraft: 0.15, cells: 0.4},   // chance a battle calls for it
-  startStock: {bullets: 120, guns: 40, missiles: 20, vehicles: 4, aircraft: 3, cells: 0},          // per region, at the hub
+  startStock: {bullets: 120, guns: 100, missiles: 20, vehicles: 4, aircraft: 3, cells: 0},          // per region, at the hub
   floor: 1, shipFraction: 0.5, ticksPerMonth: 3, cobraMissions: 2,
   postureWeight: 1.2, attackPlanBonus: 1.0, underAttackBonus: 1.0,
   vanSpot: 0.03, emergencyThreshold: 2, emergencyLoadBattles: 4, pullbackEmptyStocks: 2, pullbackMonths: 2, quietFactor: 0.3,
@@ -233,20 +237,23 @@ function splitRun(P, style, R, rec) {
   const st = P.styles[style], T = P.ticksPerMonth, NT = P.months * T;
   const regions = [];
   for (let r = 0; r < P.regions; r++) {
-    const g = []; for (let i = 0; i < P.garrisons; i++) g.push({stock: Object.fromEntries(STOCKS.map(k => [k, 0])), attacked: 0});
+    const g = []; for (let i = 0; i < P.garrisons; i++) g.push({stock: Object.fromEntries(STOCKS.map(k => [k, 0])), attacked: 0, men: P.startMen});
     regions.push({hub: Object.assign({}, P.startStock), garrisons: g, funds: P.startFunds,
       producers: Object.fromEntries(STOCKS.map(k => [k, {down: 0}])), quiet: 0, starvedMonths: 0, cool: {}, plan: -1,
-      emptyMonths: Object.fromEntries(STOCKS.map(k => [k, 0]))});
+      emptyMonths: Object.fromEntries(STOCKS.map(k => [k, 0])), tier: 0, tierFund: 0});
   }
   const L = {battles: 0, battlesBy: Object.fromEntries(STOCKS.map(k => [k, 0])), short: Object.fromEntries(STOCKS.map(k => [k, 0])),
     onFloor: 0, vans: 0, vansSpotted: 0, vansHit: 0, emergSent: 0, emergHit: 0, quietMonths: 0, producerRaids: 0, hubRaids: 0,
-    downMonths: 0, prodScale: 0, prodScaleN: 0, track: Object.fromEntries(STOCKS.map(k => [k, []]))};
+    downMonths: 0, prodScale: 0, prodScaleN: 0, emptyGarrison: 0, recruited: 0, behind: 0, behindN: 0, armed: 0, armedN: 0,
+    track: Object.assign(Object.fromEntries(STOCKS.map(k => [k, []])), {men: [], tier: [], cap: [], spare: []})};
+  const capAt = m => { let c = 0; for (const [mm, v] of Object.entries(P.tierCap)) if (m >= +mm) c = Math.max(c, v); return c; };
   const total = (reg, k) => reg.hub[k] + reg.garrisons.reduce((a, g) => a + g.stock[k], 0);
   const intransit = [], frames = [];
   let E = [], VANS = [];
   const ev = (kind, text, extra) => { if (rec) E.push(Object.assign({kind, text}, extra || {})); };
-  const battle = (reg, g) => {
-    L.battles++;
+  const battle = (reg, g, lost) => {
+    if (g.men <= 0) { L.emptyGarrison++; return; }
+    L.battles++; g.men = Math.max(0, g.men - lost);
     for (const k of STOCKS) {
       if (k === 'cells' && monthOf(curT) < P.destroMonth) continue;
       if (R() >= P.battleWants[k]) continue;
@@ -280,6 +287,17 @@ function splitRun(P, style, R, rec) {
         for (const k of running) { reg.hub[k] += Math.floor(P.produce[k] * scale); }
         reg.funds -= bill * scale; L.prodScale += scale; L.prodScaleN++;
         reg.funds = Math.max(0, reg.funds);
+        // what is left goes to men first and better guns second, by Cobra's priority (the thesis)
+        const spare = Math.max(0, reg.funds - P.fundsReserve);
+        let menBudget = spare * P.manpowerPriority; const qualBudget = spare - menBudget;
+        const room = reg.garrisons.reduce((a, g) => a + Math.max(0, P.garrisonCap - g.men), 0);
+        const recruits = Math.min(P.campRecruits, room, Math.floor(menBudget / P.recruitCost));
+        for (let i = 0; i < recruits; i++) { const g = reg.garrisons.reduce((a, b) => b.men < a.men ? b : a); g.men++; }
+        L.recruited += recruits; reg.funds -= recruits * P.recruitCost; menBudget -= recruits * P.recruitCost;
+        const toQuality = qualBudget + (room === 0 ? menBudget : 0);   // men at full strength: the money goes to quality
+        reg.tierFund += toQuality; reg.funds -= toQuality;
+        if (reg.tier < capAt(m) && reg.tierFund >= P.tierCost * (reg.tier + 1)) {
+          reg.tierFund -= P.tierCost * (reg.tier + 1); reg.tier++; ev('tier', `Region ${ri + 1}: Cobra issues better guns (tier ${reg.tier})`, {r: ri}); }
         // garrison upkeep
         for (const g of reg.garrisons) for (const k of STOCKS) g.stock[k] = Math.max(0, g.stock[k] - P.upkeep[k] * (k === 'cells' && m < P.destroMonth ? 0 : 1));
         reg.plan = R() < 0.5 ? Math.floor(R() * reg.garrisons.length) : -1;   // a site staging an attack this month
@@ -310,7 +328,7 @@ function splitRun(P, style, R, rec) {
         // Cobra's own missions draw stock (fewer while the region is quiet)
         const nm = P.cobraMissions * (reg.quiet > 0 ? P.quietFactor : 1);
         const k1 = Math.floor(nm) + (R() < nm % 1 ? 1 : 0);
-        for (let i = 0; i < k1; i++) battle(reg, reg.garrisons[Math.floor(R() * reg.garrisons.length)]);
+        for (let i = 0; i < k1; i++) battle(reg, reg.garrisons[Math.floor(R() * reg.garrisons.length)], P.menLostCobraBattle);
       }
     }
     if (t % T === 0) {
@@ -329,7 +347,7 @@ function splitRun(P, style, R, rec) {
         if (tgt === 'producer') { const k = live[Math.floor(R() * live.length)]; reg.producers[k].down = P.rebuildMonths; L.producerRaids++; ev('raidProducer', `Region ${ri + 1}: the Joes wreck the ${k} producer`, {r: ri, k}); }
         else if (tgt === 'missiles') { reg.producers.missiles.down = P.rebuildMonths; L.producerRaids++; ev('raidProducer', `Region ${ri + 1}: the Joes wreck the missile works`, {r: ri, k: 'missiles'}); }
         else if (tgt === 'hub') { for (const k of STOCKS) reg.hub[k] *= 0.2; L.hubRaids++; ev('raidHub', `Region ${ri + 1}: the Joes raid the hub and blow its stock`, {r: ri}); }
-        else { const gi = Math.floor(R() * reg.garrisons.length), g = reg.garrisons[gi]; g.attacked = 2; battle(reg, g); ev('raidGarrison', `Region ${ri + 1}: the Joes hit garrison ${gi + 1}`, {r: ri, g: gi}); }
+        else { const gi = Math.floor(R() * reg.garrisons.length), g = reg.garrisons[gi]; g.attacked = 2; battle(reg, g, P.menLostJoeRaid); ev('raidGarrison', `Region ${ri + 1}: the Joes hit garrison ${gi + 1}`, {r: ri, g: gi}); }
       }
     }
     if (t % T === T - 1) {
@@ -358,11 +376,16 @@ function splitRun(P, style, R, rec) {
         else reg.starvedMonths = 0;
       }
       for (const k of STOCKS) L.track[k].push(total(regions[0], k));
+      for (const reg of regions) { L.behind += capAt(m) - reg.tier; L.behindN++;
+        for (const g of reg.garrisons) if (g.men > 0) { L.armed += Math.min(1, g.stock.guns / g.men); L.armedN++; } }
+      const r0 = regions[0], men0 = r0.garrisons.reduce((a, g) => a + g.men, 0);
+      L.track.men.push(men0 / r0.garrisons.length); L.track.tier.push(r0.tier); L.track.cap.push(capAt(m));
+      L.track.spare.push(Math.max(0, total(r0, 'guns') - men0));
       if (rec) {
-        frames.push({m, events: E, vans: VANS, regions: regions.map(reg => ({funds: reg.funds, quiet: reg.quiet,
+        frames.push({m, events: E, vans: VANS, cap: capAt(m), regions: regions.map(reg => ({funds: reg.funds, quiet: reg.quiet, tier: reg.tier,
           hub: Object.fromEntries(STOCKS.map(k => [k, Math.floor(reg.hub[k])])),
           producers: Object.fromEntries(STOCKS.map(k => [k, k === 'cells' && m < P.destroMonth ? -1 : reg.producers[k].down])),
-          garrisons: reg.garrisons.map(g => { const o = {stock: Object.fromEntries(STOCKS.map(k => [k, Math.floor(g.stock[k])])), short: g.shortNow || [], attacked: g.attacked}; g.shortNow = []; return o; })}))});
+          garrisons: reg.garrisons.map(g => { const o = {stock: Object.fromEntries(STOCKS.map(k => [k, Math.floor(g.stock[k])])), short: g.shortNow || [], attacked: g.attacked, men: g.men}; g.shortNow = []; return o; })}))});
         E = []; VANS = [];
       }
     }
@@ -377,9 +400,12 @@ function split(P) {
     const sum = k => mean(Ls.map(l => l[k]));
     const shortPct = {}, wanted = {};
     for (const k of STOCKS) { const b = Ls.reduce((a, l) => a + l.battlesBy[k], 0), s = Ls.reduce((a, l) => a + l.short[k], 0); wanted[k] = b; shortPct[k] = b ? s * 100 / b : 0; }
-    const track = {}; for (const k of STOCKS) { track[k] = []; for (let m = 0; m < P.months; m++) track[k].push(median(Ls.map(l => l.track[k][m]))); }
+    const track = {}; for (const k of [...STOCKS, 'men', 'tier', 'cap', 'spare']) { track[k] = []; for (let m = 0; m < P.months; m++) track[k].push(k === 'tier' ? mean(Ls.map(l => l.track[k][m])) : median(Ls.map(l => l.track[k][m]))); }
     out[style] = {battles: sum('battles'), shortPct, onFloor: sum('onFloor'), vans: sum('vans'), vansSpotted: sum('vansSpotted'),
       vansHit: sum('vansHit'), emergSent: sum('emergSent'), emergHit: sum('emergHit'), quietMonths: sum('quietMonths'),
+      emptyGarrison: sum('emptyGarrison'), recruited: sum('recruited'), behind: mean(Ls.map(l => l.behind / l.behindN)),
+      armed: mean(Ls.map(l => l.armedN ? l.armed * 100 / l.armedN : 0)), menEnd: mean(Ls.map(l => l.track.men.at(-1))),
+      tierEnd: mean(Ls.map(l => l.track.tier.at(-1))), capEnd: Ls[0].track.cap.at(-1), spareEnd: median(Ls.map(l => l.track.spare.at(-1))),
       producerRaids: sum('producerRaids'), prodPct: mean(Ls.map(l => l.prodScaleN ? l.prodScale * 100 / l.prodScaleN : 0)), hubRaids: sum('hubRaids'), downMonths: sum('downMonths'), track};
   }
   return out;
@@ -394,8 +420,11 @@ const SPLIT_SCENARIOS = {
   'Strangle one region (all raids on region 1)': {strategy: 'strangle'},
   'Destro joins early (month 6)': {destroMonth: 6},
   'Destro joins late (month 16)': {destroMonth: 16},
-  'Poor Cobra (income 120)': {regionIncome: 120},
-  'Rich Cobra (income 350)': {regionIncome: 350},
+  'All-in on manpower (priority 0.99)': {manpowerPriority: 0.99},
+  'Even split, men and guns (priority 0.5)': {manpowerPriority: 0.5},
+  'Quality Cobra (priority 0.2, against the thesis)': {manpowerPriority: 0.2},
+  'Poor Cobra (income 200)': {regionIncome: 200},
+  'Rich Cobra (income 450)': {regionIncome: 450},
   'No emergency shipments': {emergencyLoadBattles: 0},
   'Hoarding hub (ships 25% a tick)': {shipFraction: 0.25},
   'One region only': {regions: 1},

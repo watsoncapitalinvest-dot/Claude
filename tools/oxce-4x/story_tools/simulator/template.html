@@ -114,6 +114,7 @@ const MODES = {
     groups: [
       ['Run', ['runs', 'months', 'seed', 'regions', 'garrisons', 'destroMonth']],
       ['Money', ['startFunds', 'regionIncome', 'producerUpkeep', 'rebuildMonths', 'rebuildCost']],
+      ['Men and guns (the thesis)', ['manpowerPriority', 'startMen', 'garrisonCap', 'campRecruits', 'recruitCost', 'fundsReserve', 'menLostCobraBattle', 'menLostJoeRaid', 'tierCost']],
       ['Distribution', ['shipFraction', 'ticksPerMonth', 'postureWeight', 'attackPlanBonus', 'underAttackBonus', 'vanSpot']],
       ['Fighting', ['cobraMissions', 'floor']],
       ['Death spiral', ['emergencyThreshold', 'emergencyLoadBattles', 'pullbackEmptyStocks', 'pullbackMonths', 'quietFactor']],
@@ -144,6 +145,10 @@ const LABEL = {
   emergencyThreshold: ['Emergency when region stock below', 'x one battle\'s need'], emergencyLoadBattles: ['Emergency load', 'battles\' worth; 0 = none'],
   pullbackEmptyStocks: ['Pull back when this many stocks empty', 'missiles, vehicles, aircraft'], pullbackMonths: ['Quiet for (months)', ''], quietFactor: ['Missions while quiet', 'x normal'],
   strategy: ['Player strategy', ''],
+  manpowerPriority: ['Cobra priority: men vs better guns', '1 = all spare money to men first; the thesis is 0.9'], startMen: ['Men per garrison at the start', ''],
+  garrisonCap: ['Most men a garrison holds', ''], campRecruits: ['Recruits a region can train a month', 'its training camp'], recruitCost: ['Cost per recruit', 'funds'],
+  fundsReserve: ['Cash Cobra keeps back', 'funds per region'], menLostCobraBattle: ['Men lost in a Cobra mission', ''], menLostJoeRaid: ['Men lost to a Joe raid', ''],
+  tierCost: ['Cost of the next gun tier', 'x the tier number, per region; the calendar still caps it'],
 };
 const STYLE_COL = {absent: 'var(--s1)', cautious: 'var(--s2)', typical: 'var(--s3)', aggressive: 'var(--s4)'};
 const STOCK_COL = {bullets: 'var(--k1)', guns: 'var(--k2)', missiles: 'var(--k3)', vehicles: 'var(--k4)', aircraft: 'var(--k5)', cells: 'var(--k6)'};
@@ -252,12 +257,19 @@ function showSplit(R, B, scen, ms) {
   h += `</table><h2>Supply war</h2><table><tr><th>Player style</th><th>Battles</th><th>Producer raids</th><th>Hub raids</th><th>Producer-months down</th><th>Vans</th><th>Vans spotted</th><th>Vans hit</th><th>Emergency loads (hit)</th><th>Quiet months</th><th>Production paid</th></tr>`;
   for (const s of S) { const r = R[s], o = b[s];
     h += `<tr><td><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</td><td>${f(r.battles)}</td><td>${f(r.producerRaids, 1)}</td><td>${f(r.hubRaids, 1)}</td><td>${f(r.downMonths, 1)}</td><td>${f(r.vans)}</td><td>${f(r.vansSpotted, 1)}</td><td>${f(r.vansHit, 1)}${delta(r.vansHit, o.vansHit, 1)}</td><td>${f(r.emergSent, 1)} (${f(r.emergHit, 1)})</td><td>${f(r.quietMonths, 1)}${delta(r.quietMonths, o.quietMonths, 1)}</td><td>${pct(r.prodPct)}</td></tr>`; }
-  h += `</table><h2>Region 1 stock over time (median)</h2><div class="cards">` +
+  h += `</table><h2>Men and guns (the thesis: more weapons than soldiers, more soldiers rather than better guns)</h2><table><tr><th>Player style</th><th>Men per garrison (end)</th><th>Gun tier (end) / calendar cap</th><th>Tiers behind the cap (avg)</th><th>Men with a rifle</th><th>Spare guns in region 1 (end)</th><th>Recruited</th></tr>`;
+  for (const s of S) { const r = R[s], o = b[s];
+    h += `<tr><td><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</td><td>${f(r.menEnd, 1)}${delta(r.menEnd, o.menEnd, 1)}</td><td>${f(r.tierEnd, 1)} / ${r.capEnd}${delta(r.tierEnd, o.tierEnd, 1)}</td><td>${f(r.behind, 2)}</td><td>${pct(r.armed)}</td><td>${f(r.spareEnd)}</td><td>${f(r.recruited)}</td></tr>`; }
+  h += `</table><div class="cards"><div class="card"><h3>Men per garrison, region 1 (median)</h3><canvas id="mm"></canvas></div><div class="card"><h3>Gun tier, region 1 (mean); dotted = calendar cap</h3><canvas id="mt"></canvas></div></div>
+    <div class="legend">${S.map(s => `<span><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</span>`).join('')}</div>`;
+  h += `<h2>Region 1 stock over time (median)</h2><div class="cards">` +
     S.map((s, i) => `<div class="card"><h3>${s}</h3><canvas id="s${i}"></canvas></div>`).join('') + `</div>
     <div class="legend">${K.map(k => `<span><span class="chip" style="background:${STOCK_COL[k]}"></span>${k}</span>`).join('')}</div>
-    <p class="note">Stock held across region 1: its hub plus every garrison. Bullets are drawn on their own scale-free line like the rest; switch a stock off by setting its production to 0.</p>`;
+    <p class="note">Stock held across region 1: its hub plus every garrison. Log scale, so bullets and aircraft fit on one chart.</p>`;
   document.getElementById('out').innerHTML = h;
   S.forEach((s, i) => line('s' + i, K.map(k => ({col: css(STOCK_COL[k]), data: R[s].track[k]})), '', true));
+  line('mm', S.map(s => ({col: css(STYLE_COL[s]), data: R[s].track.men})));
+  line('mt', [...S.map(s => ({col: css(STYLE_COL[s]), data: R[s].track.tier})), {col: '#93a1ad', data: R[S[0]].track.cap, dash: true}]);
   replayCard();
 }
 
@@ -273,7 +285,7 @@ function line(id, series, unit = '', log = false) {
   for (let j = 0; j <= 4; j++) { const v = log ? Math.pow(10, max * j / 4) - 1 : max * j / 4, y = Y(v);
     g.beginPath(); g.moveTo(pad.l, y); g.lineTo(W - pad.r, y); g.stroke(); g.textAlign = 'right'; g.fillText((v >= 100 ? v.toFixed(0) : v.toFixed(v >= 10 ? 0 : 1)) + unit, pad.l - 5, y + 4); }
   g.textAlign = 'center'; for (let i = 0; i < n; i += Math.max(1, Math.ceil(n / 9))) g.fillText(String(i), X(i), H - 6);
-  for (const s of series) { g.strokeStyle = s.col; g.lineWidth = 2; g.beginPath(); let on = false;
+  for (const s of series) { g.strokeStyle = s.col; g.lineWidth = 2; g.setLineDash(s.dash ? [3, 4] : []); g.beginPath(); let on = false;
     s.data.forEach((v, i) => { if (v == null) { on = false; return; } on ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)); on = true; }); g.stroke(); }
 }
 
@@ -378,7 +390,7 @@ function drawSplit(run, i) {
   const geo = r => { const x0 = 20 + r * (PW + gap); return {x0, prod: k => ({x: x0 + 30 + K.indexOf(k) * 48, y: 70}), hub: {x: x0 + PW / 2, y: 190}, gar: (j, n) => ({x: x0 + 30 + j * ((PW - 60) / Math.max(1, n - 1)), y: 330})}; };
   fr.regions.forEach((reg, r) => { const G = geo(r);
     g += `<rect x="${G.x0}" y="18" width="${PW}" height="${H - 36}" rx="8" fill="${reg.quiet > 0 ? '#1a1712' : '#141a20'}" stroke="#33404c"/>
-      <text x="${G.x0 + 12}" y="38" font-size="12.5" font-weight="700" fill="#e8ecef">Region ${r + 1}</text><text x="${G.x0 + PW - 12}" y="38" text-anchor="end" font-size="11.5" fill="#d8b45a">funds ${Math.round(reg.funds)}</text>`;
+      <text x="${G.x0 + 12}" y="38" font-size="12.5" font-weight="700" fill="#e8ecef">Region ${r + 1}</text><text x="${G.x0 + PW - 12}" y="38" text-anchor="end" font-size="11.5" fill="#d8b45a">funds ${Math.round(reg.funds)} &middot; gun tier ${reg.tier}/${fr.cap}</text>`;
     if (reg.quiet > 0) g += `<text x="${G.x0 + PW / 2}" y="${H - 30}" text-anchor="middle" font-size="12" font-weight="700" fill="#d8b45a">QUIET: COBRA HAS PULLED BACK</text>`;
     // producers -> hub
     for (const k of K) { const p = G.prod(k), down = reg.producers[k];
@@ -405,7 +417,7 @@ function drawSplit(run, i) {
       K.forEach((k, s) => { const has = gs.stock[k] >= need[k], cx = q.x - 12.5 + s * 5, cy = q.y + 22;
         const lock = k === 'cells' && reg.producers.cells === -1;
         g += `<circle cx="${cx}" cy="${cy}" r="2.1" fill="${has ? SC[k] : 'none'}" stroke="${lock ? '#333' : (has ? SC[k] : (gs.short.includes(k) ? '#d0453a' : '#555'))}" stroke-width="1"/>`; });
-      g += `<text x="${q.x}" y="${q.y + 4}" text-anchor="middle" font-size="10" fill="#93a1ad">G${j + 1}</text>`;
+      g += `<text x="${q.x}" y="${q.y + 4}" text-anchor="middle" font-size="10" fill="#93a1ad">G${j + 1}</text><text x="${q.x}" y="${q.y - 18}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${gs.men ? '#e8ecef' : '#d0453a'}">${gs.men} men</text>`;
     });
   });
   // emergency shipments between hubs
@@ -418,7 +430,7 @@ function drawSplit(run, i) {
   document.getElementById('rp-mon').textContent = 'Month ' + fr.m;
   const shorts = []; fr.regions.forEach((reg, r) => reg.garrisons.forEach((gs, j) => { if (gs.short.length) shorts.push(`<li>Region ${r + 1}, G${j + 1}: a battle found no ${gs.short.join(', no ')}</li>`); }));
   logList(fr.events.filter(e => e.kind !== 'van'), (fr.events.filter(e => e.kind === 'van').length ? `<li>${fr.events.filter(e => e.kind === 'van').length} supply van(s) ambushed</li>` : '') + shorts.join(''));
-  document.getElementById('rp-key').innerHTML = `<span>top row: producers (B G M V A C), red cross = wrecked, months to rebuild</span><span>circle: the region's hub, bars = its stock</span><span>bottom: garrisons; dots = which stocks it holds (filled = enough for a battle)</span><span>red border = a battle there found something missing</span><span>grey lines = this month's van deliveries, red cross = ambushed</span><span>dashed curve = emergency shipment</span><span>gold burst = Joe raid</span>`;
+  document.getElementById('rp-key').innerHTML = `<span>top row: producers (B G M V A C), red cross = wrecked, months to rebuild</span><span>circle: the region's hub, bars = its stock</span><span>bottom: garrisons; dots = which stocks it holds (filled = enough for a battle)</span><span>red border = a battle there found something missing</span><span>grey lines = this month's van deliveries, red cross = ambushed</span><span>dashed curve = emergency shipment</span><span>gold burst = Joe raid</span><span>men above each garrison; gun tier in the region header</span>`;
 }
 
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => { document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t)); mode = t.dataset.mode; stopPlay(); build(); });
