@@ -53,6 +53,12 @@ op('STR_OP_DEAD_AIR', 'Operation: Cobra Soundwaves',
    ["SCARLETT: Breaker's numbers put it in a county. A county is a lot of rooftops."],
    ["HAWK: Cobra was watching its relay. Scarlett walked into their camera. They know her face now."])
 
+# Cartel smuggling boats on the Gulf and Caribbean lanes (BUILD-1 item 3; John 18:50, B: contraband and money only, no story link)
+S['STR_CARTEL_BOAT'] = 'Fishing boat (unregistered)'
+S['STR_CARTEL_BOAT_FOUND_CONTRABAND'] = "The hold is full of fish on top and bales underneath. The crew had a story and nobody believed it. The cargo is ours: sell it on, or keep the guns that came with it."
+S['STR_CARTEL_BOAT_FOUND_CASH'] = "No drugs, no guns: a waterproof bag of cash in the engine room, and three men who suddenly can't speak English. The money goes to the war chest."
+S['STR_CARTEL_BOAT_FIGHT'] = "The crew went for the guns under the nets when the boarding party came over the rail. Clear the deck."
+S['STR_CARTEL_BOAT_CLEAN'] = "Fish, ice and a very angry captain. He'll be telling everyone in port about the Americans who wasted his morning."
 hdr = '# STORY: covert operations board text (gen_ops_text.py). Generated: edit the script, not this file.\n'
 body = yaml.dump({'extraStrings': [{'type': 'en-US', 'strings': S}, {'type': 'en-GB', 'strings': S}]},
                  allow_unicode=True, width=120, sort_keys=False)
