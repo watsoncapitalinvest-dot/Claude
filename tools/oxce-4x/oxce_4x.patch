@@ -5545,10 +5545,10 @@ index 0000000..542761d
 +}
 diff --git a/src/Battlescape/BattleSim.cpp b/src/Battlescape/BattleSim.cpp
 new file mode 100644
-index 0000000..47eac51
+index 0000000..d2b4009
 --- /dev/null
 +++ b/src/Battlescape/BattleSim.cpp
-@@ -0,0 +1,584 @@
+@@ -0,0 +1,601 @@
 +/*
 + * G.I. Joe BATTLE SIMULATOR - see BattleSim.h.
 + */
@@ -5602,6 +5602,7 @@ index 0000000..47eac51
 +#include "../Geoscape/UfoDetectedState.h"
 +#include "../Basescape/ResearchState.h"
 +#include <map>
++#include <sstream>
 +#include <set>
 +
 +#ifdef _WIN32
@@ -5870,6 +5871,7 @@ index 0000000..47eac51
 +				ResearchProject *p = active.front();
 +				for (auto *q : active) if (q->getRules()->getCost() < p->getRules()->getCost()) p = q;
 +				p->setAssigned(p->getAssigned() + free);
++				base->setScientists(base->getScientists() - free);   // assigned ones leave the free pool, as the research screen does
 +				continue;
 +			}
 +			if (base->getFreeLaboratories() <= 0) continue;
@@ -5884,6 +5886,7 @@ index 0000000..47eac51
 +			base->addResearch(proj);
 +			if (r->isHoldingNeededItem()) base->getStorageItems()->removeItem(r->getNeededItem(), 1);
 +			proj->setAssigned(free);
++			base->setScientists(base->getScientists() - free);
 +			tl(save, "RESEARCH starts " + r->getName());
 +		}
 +	}
@@ -5947,6 +5950,20 @@ index 0000000..47eac51
 +			camp.stallNoted = camp.lastProgress;
 +			tl(save, "STALL: nothing new for 30 days (no mission, site, research or battle)");
 +			shot(game, "stall_day" + std::to_string(day - camp.startDay));
++		}
++		// money: the monthly upkeep, base by base, whenever it changes (a 1.5 billion bill ended a 120-day run, 18 Nov)
++		{
++			static std::string lastUpkeep;
++			std::ostringstream up;
++			long long total = 0;
++			for (const auto *b : *save->getBases())
++			{
++				up << " | " << b->getName() << ": craft " << b->getCraftMaintenance() << ", people " << b->getPersonnelMaintenance()
++				   << ", rooms " << b->getFacilityMaintenance();
++				total += b->getMonthlyMaintenace();
++			}
++			const std::string s = "UPKEEP " + std::to_string(total) + " a month, funds " + std::to_string(save->getFunds()) + up.str();
++			if (up.str() != lastUpkeep) { lastUpkeep = up.str(); tl(save, s); }
 +		}
 +		// the status the hub shows
 +		if (SDL_GetTicks() - statusAt > 2000)
