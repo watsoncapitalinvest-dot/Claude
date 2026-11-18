@@ -568,7 +568,7 @@ const INTEL_DEFAULTS = {
           gear: {perMission: 3.0, pays: 0.075, send_pick: 0.2, send_little: 0},
           // places and people that carry key intel (John 23:06): a lab outpost's research files, a captured named villain
           lab: {perMission: 0.08, pays: 0.6, send_pick: 1, send_little: 1, key: 0.6, leads: 1},
-          villain: {perMission: 0.03, pays: 1, send_pick: 1, send_little: 1, key: 1, leads: 3}},
+          villain: {perMission: 0.06, pays: 1, send_pick: 1, send_little: 1, key: 1, leads: 3, from: 8}},   // Storm Shadow, Zartan: window 8-13
   // analysts: seats on Day 1, the share put on cases (the rest research), cases one analyst closes a month
   analystsStart: 10, analystShare: 0.5, casesPerAnalyst: 1,
   // what a hit is: a key clue (only once that clue is due), a lead to act on, or a name
@@ -628,7 +628,7 @@ function intelRun(P, style, policy, R, rec) {
     const missions = answered;
     let brought = 0, sent = 0;
     for (const src of INTEL_SOURCES) {
-      const n = roll(P.bring[src].perMission * missions) + (src === 'officer' ? carry : 0);
+      const n = (m < (P.bring[src].from || 0) ? 0 : roll(P.bring[src].perMission * missions)) + (src === 'officer' ? carry : 0);
       for (let i = 0; i < n; i++) { brought++;
         if (R() < send(src)) { sent++; L.opened++; queue.push({id: nextCase++, src, opened: m}); }
         else { L.notSent++; if (R() < P.bring[src].pays && R() < (P.bring[src].key ?? P.keyChance) && keys < INTEL_KEYS.length && due(keys)) L.missedKeys++; } } }
