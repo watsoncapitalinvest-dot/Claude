@@ -5545,10 +5545,10 @@ index 0000000..542761d
 +}
 diff --git a/src/Battlescape/BattleSim.cpp b/src/Battlescape/BattleSim.cpp
 new file mode 100644
-index 0000000..d2b4009
+index 0000000..57d9a98
 --- /dev/null
 +++ b/src/Battlescape/BattleSim.cpp
-@@ -0,0 +1,601 @@
+@@ -0,0 +1,676 @@
 +/*
 + * G.I. Joe BATTLE SIMULATOR - see BattleSim.h.
 + */
@@ -5601,6 +5601,12 @@ index 0000000..d2b4009
 +#include "../Geoscape/MissionDetectedState.h"
 +#include "../Geoscape/UfoDetectedState.h"
 +#include "../Basescape/ResearchState.h"
++#include "../Interface/Text.h"
++#include "../Savegame/Ufo.h"
++#include "../Mod/RuleUfo.h"
++#include "../Mod/RuleSoldier.h"
++#include "../Interface/TextButton.h"
++#include <typeinfo>
 +#include <map>
 +#include <sstream>
 +#include <set>
@@ -5878,7 +5884,10 @@ index 0000000..d2b4009
 +			std::vector<RuleResearch*> avail;
 +			save->getAvailableResearchProjects(avail, mod, base);
 +			if (avail.empty()) continue;
-+			std::sort(avail.begin(), avail.end(), [](RuleResearch *a, RuleResearch *b) { return a->getCost() < b->getCost(); });
++			// a player reads the clues first: anything that needs an item brought home, then the cheapest
++			std::sort(avail.begin(), avail.end(), [](RuleResearch *a, RuleResearch *b) {
++				if (a->needItem() != b->needItem()) return a->needItem();
++				return a->getCost() < b->getCost(); });
 +			RuleResearch *r = avail.front();
 +			int cost = r->getCost() * RNG::generate(50, 150) / 100;
 +			if (r->getCost() > 0) cost = std::max(1, cost);
@@ -5944,6 +5953,44 @@ index 0000000..d2b4009
 +			camp.sent[t] = c;
 +			tl(save, "SENT " + c->getRules()->getType() + " with " + std::to_string(c->getNumTotalSoldiers()) + " to " + targetName(t));
 +		}
++		// Scarlett's operations: a player sends a spy the day one opens (as the INTEL board offers it)
++		for (const auto &op : game->getMod()->getSpyOperations())
++		{
++			if (save->isSpyOpDone(op.type)) continue;
++			bool running = false;
++			for (const auto &m : save->getSpyMissions()) running = running || m.op == op.type;
++			if (running) continue;
++			bool open = op.requiresAny.empty();
++			for (const auto &r : op.requiresAny)
++				if (const RuleResearch *rr = game->getMod()->getResearch(r)) open = open || save->isResearched(rr);
++			if (!open) continue;
++			for (auto *base : *save->getBases())
++			{
++				Soldier *spy = nullptr;
++				for (auto *s : *base->getSoldiers())
++					if (game->getMod()->isSpy(s->getRules()->getType()) && !s->isWounded() && !s->isAway() && !(s->getCraft() && s->getCraft()->getStatus() == "STR_OUT")) { spy = s; break; }
++				if (spy && save->sendSpy(spy, base, op.type, op.days)) { tl(save, "SPY " + spy->getName() + " sent on " + op.type); camp.lastProgress = day; break; }
++			}
++		}
++		// the cartel's flights: a player tails one home with an unarmed craft (an armed one would fight it)
++		for (auto *ufo : *save->getUfos())
++		{
++			if (ufo->getRules()->getType() != "STR_CARTEL_PLANE" || !ufo->getDetected() || ufo->getStatus() != Ufo::FLYING || !ufo->getCraftFollowers().empty()) continue;
++			static std::set<int> logged;
++			Craft *tail = nullptr;
++			for (auto *base : *save->getBases())
++				for (auto *c : *base->getCrafts())
++					if (!tail && c->getStatus() == "STR_READY" && !c->getDestination() && c->getNumWeapons() == 0 && c->getRules()->getMaxSpeed() > ufo->getSpeed()) tail = c;
++			if (!tail)
++			{
++				if (logged.insert(ufo->getId()).second) tl(save, "CARTEL FLIGHT seen, no unarmed craft fast enough to tail it");
++				continue;
++			}
++			tail->setDestination(ufo);
++			tail->setStatus("STR_OUT");
++			tl(save, "TAIL the cartel flight with " + tail->getRules()->getType());
++			camp.lastProgress = day;
++		}
 +		// a stall: nothing new for 30 days
 +		if (day - camp.lastProgress >= 30 && camp.stallNoted != camp.lastProgress)
 +		{
@@ -5992,6 +6039,34 @@ index 0000000..d2b4009
 +		note("simulator: " + mission() + ", turn limit " + std::to_string(maxTurns()) + ", Joes " + (getenv("OXCE_BATTLESIM_JOES") ? getenv("OXCE_BATTLESIM_JOES") : "normal") + ", Cobra " + (getenv("OXCE_BATTLESIM_COBRA") ? getenv("OXCE_BATTLESIM_COBRA") : "normal")); }
 +	if (top != topSeen) { topSeen = top; topSince = SDL_GetTicks(); presses = 0; }
 +	const Uint32 held = SDL_GetTicks() - topSince;
++	// the campaign: every screen of the first OXCE_CAMPAIGNSIM_SCREENS days (default 60) is kept - its words in screens.txt and
++	// its picture - so the opening can be read end to end (John 18 Nov: "tighten up everything in the first 2 months")
++	if (campaign() > 0 && game->getSavedGame() && camp.begun && held > 700)
++	{
++		static std::set<const State*> kept;
++		static int nScreen = 0;
++		const int days = getenv("OXCE_CAMPAIGNSIM_SCREENS") ? atoi(getenv("OXCE_CAMPAIGNSIM_SCREENS")) : 60;
++		SavedGame *sv = game->getSavedGame();
++		const bool skip = dynamic_cast<GeoscapeState*>(top) || dynamic_cast<BattlescapeState*>(top) || dynamic_cast<InventoryState*>(top)
++			|| dynamic_cast<NextTurnState*>(top);
++		if (!skip && sv->getDaysPassed() - camp.startDay <= days && kept.insert(top).second)
++		{
++			++nScreen;
++			char tag[32]; snprintf(tag, sizeof(tag), "screen_%03d", nScreen);
++			std::ostringstream w;
++			w << "== " << tag << "  day " << (sv->getDaysPassed() - camp.startDay) << "  " << typeid(*top).name() << "\n";
++			for (auto *s : top->simSurfaces())
++			{
++				std::string txt;
++				if (auto *tx = dynamic_cast<Text*>(s)) txt = tx->getText();
++				else if (auto *tb = dynamic_cast<TextButton*>(s)) txt = "[" + tb->getText() + "]";
++				if (!txt.empty() && s->getVisible()) w << txt << "\n";
++			}
++			std::ofstream f(out("screens.txt"), std::ios::app);
++			f << w.str() << "\n";
++			shot(game, tag);
++		}
++	}
 +
 +	if (dynamic_cast<MainMenuState*>(top) && campaign() > 0)
 +	{
@@ -21119,6 +21194,19 @@ index fb85c53..7c515b8 100644
  	}
  }
  
+diff --git a/src/Engine/State.h b/src/Engine/State.h
+index 97e6bd4..0bda2f6 100644
+--- a/src/Engine/State.h
++++ b/src/Engine/State.h
+@@ -62,6 +62,8 @@ protected:
+ 	SDL_Color _palette[256];
+ 	Uint8 _cursorColor;
+ public:
++	/// the battle/campaign simulator reads a screen's words off its widgets (BattleSim, screens.txt)
++	const std::vector<Surface*> &simSurfaces() const { return _surfaces; }
+ 	/// Creates a new state linked to a game.
+ 	State();
+ 	/// Cleans up the state.
 diff --git a/src/Engine/Surface.cpp b/src/Engine/Surface.cpp
 index e2a62e9..4e9a6ed 100644
 --- a/src/Engine/Surface.cpp
