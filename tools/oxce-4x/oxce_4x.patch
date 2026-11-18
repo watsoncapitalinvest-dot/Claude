@@ -5545,7 +5545,7 @@ index 0000000..542761d
 +}
 diff --git a/src/Battlescape/BattleSim.cpp b/src/Battlescape/BattleSim.cpp
 new file mode 100644
-index 0000000..9bef7fd
+index 0000000..c84f83b
 --- /dev/null
 +++ b/src/Battlescape/BattleSim.cpp
 @@ -0,0 +1,716 @@
@@ -5889,9 +5889,9 @@ index 0000000..9bef7fd
 +			// a player reads the clues first: anything that needs an item brought home, then the cheapest
 +			// then the story's own steps (the cartel arc and the spine), then the cheapest
 +			auto rank = [](RuleResearch *r) {
-+				if (r->needItem()) return 2;
++				if (r->needItem()) return 1;
 +				static const char *story[] = { "STR_CARTEL_", "STR_ROBBERY", "STR_GETAWAY", "STR_BORDER_BANK", "STR_SLOW_MONEY", "STR_FACTORY_",
-+					"STR_INFORMANT", "STR_WHO_IS_COBRA", "STR_TRACE_", "STR_SPINE", "STR_LEAD_" };
++					"STR_INFORMANT_TIP", "STR_WHO_IS_COBRA", "STR_TRACE_", "STR_SPINE", "STR_LEAD_" };
 +				for (const char *s : story) if (r->getName().rfind(s, 0) == 0) return 1;
 +				return 0; };
 +			std::sort(avail.begin(), avail.end(), [&rank](RuleResearch *a, RuleResearch *b) {
@@ -9593,7 +9593,7 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..3052eac 100644
+index 0631f32..b32ad8c 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
 @@ -20,7 +20,11 @@
@@ -9957,6 +9957,15 @@ index 0631f32..3052eac 100644
  				&& playersSurvived > 0 && faction != FACTION_PLAYER && (!bunit->isOut() || bunit->isIgnored())
  				&& (bunit->isSurrendering() || battle->getChronoTrigger() == FORCE_WIN_SURRENDER))
  			{
+@@ -1795,7 +2013,7 @@ void DebriefingState::prepareDebriefing()
+ 		}
+ 		else if (target == "STR_ALIEN_BASE")
+ 		{
+-			_txtTitle->setText(tr("STR_ALIEN_BASE_DESTROYED"));
++			_txtTitle->setText(tr(dromeFight ? "STR_ALIEN_BASE_DESTROYED" : "STR_COBRA_SITE_DESTROYED"));   // G.I. Joe: "Terror Drome destroyed" only at the Drome
+ 		}
+ 		else
+ 		{
 @@ -1877,8 +2095,25 @@ void DebriefingState::prepareDebriefing()
  					}
  				}
@@ -9995,6 +10004,15 @@ index 0631f32..3052eac 100644
  		else if (target == "STR_BASE")
  		{
  			_txtTitle->setText(tr("STR_BASE_IS_LOST"));
+@@ -1906,7 +2145,7 @@ void DebriefingState::prepareDebriefing()
+ 		}
+ 		else if (target == "STR_ALIEN_BASE")
+ 		{
+-			_txtTitle->setText(tr("STR_ALIEN_BASE_STILL_INTACT"));
++			_txtTitle->setText(tr(dromeFight ? "STR_ALIEN_BASE_STILL_INTACT" : "STR_COBRA_SITE_STILL_INTACT"));
+ 		}
+ 		else
+ 		{
 @@ -2130,10 +2369,211 @@ void DebriefingState::prepareDebriefing()
  		}
  	}
@@ -27869,10 +27887,10 @@ index 0000000..3543fff
 +}
 diff --git a/src/Geoscape/IntelBoardState.cpp b/src/Geoscape/IntelBoardState.cpp
 new file mode 100644
-index 0000000..38b9e8f
+index 0000000..6be6443
 --- /dev/null
 +++ b/src/Geoscape/IntelBoardState.cpp
-@@ -0,0 +1,551 @@
+@@ -0,0 +1,554 @@
 +/*
 + * G.I. Joe: USA Defense. The INTEL board (see IntelBoardState.h).
 + * Sections: what just happened, open leads with how close each is, solved leads, Cobra sites
@@ -27882,6 +27900,7 @@ index 0000000..38b9e8f
 +#include "../Savegame/Ufo.h"
 +#include <algorithm>
 +#include <sstream>
++#include <set>
 +#include "../Engine/Game.h"
 +#include "../Engine/Action.h"
 +#include "../Engine/LocalizedText.h"
@@ -27953,6 +27972,7 @@ index 0000000..38b9e8f
 +	// what just happened, newest last, taken once
 +	std::ostringstream news;
 +	int shown = 0;
++	std::set<std::string> said;   // 18 Nov: three clues into one lead printed "New intel on: ..." three times and pushed the tip-off off the board
 +	for (const auto &n : save->takeLeadNews())
 +	{
 +		bool big = !n.empty() && n[0] == '!';
@@ -27970,7 +27990,8 @@ index 0000000..38b9e8f
 +		{
 +			line = id.compare(0, 4, "STR_") == 0 ? std::string(tr(id)) : id;   // Cobra alerts arrive already written
 +		}
-+		if (shown++ < 3)
++		if (!said.insert(line).second) continue;
++		if (shown++ < 4)
 +		{
 +			news << (shown > 1 ? "\n" : "") << line;
 +		}
