@@ -114,16 +114,102 @@ def direct(pic, anchor, n, pts):
         out.append(c)
     return out
 
+WATER = np.array([30, 92, 108], np.float32)
+def submerged(pic, drop, n):
+    """John 18 Nov 14:37 "when they sink their color should be affected as if going under water", 14:39 his photo of colours above
+    the surface, just below it and at depth: just under, reds go dark first, then greens; deep, everything turns blue-green and
+    dim. So: every hull pixel within `drop` of the hull's bottom outline (the waterline - the hulls are cut there) is under water;
+    each colour channel is absorbed by its own rate (red fastest, blue slowest), a blue-green water glow fills in, and the deepest
+    parts fade out. The part still above the water keeps its own colour."""
+    if drop <= 0: return pic
+    a = np.array(pic).astype(np.float32); al = a[..., 3] > 8
+    H = a.shape[0]; ys = np.arange(H)[:, None]
+    bottom = np.where(al.any(0), H - 1 - np.argmax(al[::-1], 0), -1)[None, :]       # lowest hull pixel in each column
+    depth = drop - (bottom - ys)                                                     # px under the water (> 0)
+    under = depth > 0
+    d = np.clip(depth / (10.0 * n), 0, None)[..., None]                              # depth in "metres" of the picture
+    absorb = np.exp(-np.array([1.6, 0.55, 0.22], np.float32) * (0.35 + d))           # R, G, B kept; a step at the surface itself
+    glow = np.array([18, 78, 104], np.float32) * (1 - np.exp(-0.9 * (0.35 + d)))     # the water's own blue-green fills in
+    out = a[..., :3] * absorb + glow
+    a[..., :3] = np.where(under[..., None], out, a[..., :3])
+    fade = np.clip(1 - depth / (36.0 * n), 0.05, 1); fade[~under] = 1
+    a[..., 3] *= fade
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), 'RGBA')
+
+def dived(pic, n, deep=0.0):
+    """a submarine dived (John 14:41 "this is a sub, so those colours should affect it when it's submerged, and when it sinks get
+    worse"): the whole hull just under the surface - only the top of the mast / periscope stays above - with the same per-channel
+    absorption as submerged(); `deep` (0 = periscope depth, 1+ = going down) adds depth everywhere, so a sinking sub gets worse"""
+    a = np.array(pic).astype(np.float32); al = a[..., 3] > 8
+    if not al.any(): return pic
+    ys = np.where(al.any(1))[0]; top, bot = ys[0], ys[-1]; hh = max(1, bot - top)
+    yy = np.arange(a.shape[0])[:, None].astype(np.float32)
+    cut = top + 0.10 * hh                                                           # above this line: the mast, still in the air
+    d = (np.clip((yy - cut) / hh, 0, None) * 0.9 + 0.25 + deep * 1.4)[..., None]
+    absorb = np.exp(-np.array([1.6, 0.55, 0.22], np.float32) * d)
+    glow = np.array([18, 78, 104], np.float32) * (1 - np.exp(-0.9 * d))
+    under = (yy > cut) & al
+    a[..., :3] = np.where(under[..., None], a[..., :3] * absorb + glow, a[..., :3])
+    fade = np.clip(0.92 - 0.25 * (yy - cut) / hh - deep * 0.45, 0.0, 1); fade = np.where(yy > cut, fade, max(0.0, 1 - deep * 1.2))
+    a[..., 3] *= fade
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), 'RGBA')
+
+def dived_death(pic, anchor, n):
+    """killed while dived: no fire under water - a dull flash, bubbles, and it goes deeper and darker until it is gone"""
+    out = []; bb = pic.getbbox(); bw = bb[2] - bb[0]; W = 128 * n; ox, oy = W // 2, 112 * n
+    cx = (bb[0] + bb[2]) / 2 - anchor[0]; cy = (bb[1] + bb[3]) / 2 - anchor[1]
+    for f in range(8):
+        c = cell(dived(pic, n, deep=f / 6.0), anchor, n, dy=int(f * 2.0 * n))
+        if f <= 3:                                                                   # the hit: a pale flash seen through the water
+            blob(c, ox + cx, oy + cy, bw * (0.10 + f * 0.05), (200, 235, 230), 0.55 - f * 0.12)
+        for k in range(5 + f):                                                       # bubbles rising off it
+            ang = k * 2.4 + f * 0.7; r = bw * (0.05 + 0.03 * (k % 4)); up = (f * 3 + k * 2) * n
+            blob(c, ox + cx + np.cos(ang) * r * 3, oy + cy - up * 0.6 + np.sin(ang) * r, 1.6 * n, (220, 240, 245), 0.6 - f * 0.06)
+        out.append(c)
+    return out
+
+def _foam(c, ox, oy, cx, cy, f, n, rr=6):
+    for k in range(6):
+        ang = k * 1.047 + f * 0.3; r = (rr + f * 2) * n * 0.6
+        blob(c, ox + cx + np.cos(ang) * r, oy + cy + 4 * n + np.sin(ang) * r * 0.5, 2.2 * n * 0.6, (225, 238, 240), 0.7 - max(0, f - 3) * 0.12)
+
+def sink2(pic, anchor, n, pts):
+    """boats, John 14:37 "yes" (hits like the planes): shot down = blast on mark 1, mark 2 two frames later, then it goes under"""
+    out = []; bb = pic.getbbox(); bw = bb[2] - bb[0]; W = 128 * n; ox, oy = W // 2, 112 * n
+    cx = (bb[0] + bb[2]) / 2 - anchor[0]; cy = (bb[1] + bb[3]) / 2 - anchor[1]
+    (x1, y1), (x2, y2) = _at(pic, anchor, pts[0]), _at(pic, anchor, pts[1] if len(pts) > 1 else pts[0])
+    for f in range(8):
+        drop = int(max(0, f - 2) * 3.2 * n)
+        c = cell(submerged(pic, drop, n), anchor, n, dy=drop, dark=1 - max(0, f - 1) * 0.05)
+        if f >= 3: _foam(c, ox, oy, cx, cy, f, n)
+        if f >= 1: fx(c, FIRE[min(7, 2 + f // 2)], ox + x1, oy + y1 + drop + bw * 0.03, bw * 0.14, bottom=True)
+        if f >= 3 and len(pts) > 1: fx(c, FIRE[min(7, f)], ox + x2, oy + y2 + drop + bw * 0.03, bw * 0.16, bottom=True)
+        boom(c, f, ox + x1, oy + y1, pts[0][2], bw)
+        if f >= 2 and len(pts) > 1: boom(c, min(7, round((f - 2) * 7 / 5)), ox + x2, oy + y2, pts[1][2], bw)
+        out.append(c)
+    return out
+
+def sink_direct(pic, anchor, n, pts):
+    """boats: a direct hit = one big blast on his D mark; it goes straight under"""
+    out = []; bb = pic.getbbox(); bw = bb[2] - bb[0]; W = 128 * n; ox, oy = W // 2, 112 * n
+    cx = (bb[0] + bb[2]) / 2 - anchor[0]; cy = (bb[1] + bb[3]) / 2 - anchor[1]
+    xd, yd = _at(pic, anchor, pts[2] if len(pts) > 2 else pts[-1])
+    for f in range(8):
+        drop = int(f * 4.2 * n)
+        c = cell(submerged(pic, drop, n), anchor, n, dy=drop, dark=1 - f * 0.05)
+        if f >= 2: _foam(c, ox, oy, cx, cy, f, n)
+        if f >= 1: fx(c, FIRE[min(7, 2 + f // 2)], ox + xd, oy + yd + drop + bw * 0.03, bw * 0.22, bottom=True)
+        boom(c, f, ox + xd, oy + yd, 'b', bw)
+        out.append(c)
+    return out
+
 def sink(pic, anchor, n):
     """8 frames, a boat sunk: the mod's big blast on the hull, then it settles into the water - lower, sea-tinted, darker, fading,
     still burning (the mod's fire frames) and leaving the mod's smoke, with a ring of foam where it goes under"""
     out = []; bb = pic.getbbox(); cx = (bb[0] + bb[2]) / 2 - anchor[0]; cy = (bb[1] + bb[3]) / 2 - anchor[1]; bw = bb[2] - bb[0]
     for f in range(8):
-        drop = int(f * 2.5 * n); p2 = pic
-        if f >= 3:
-            a = np.array(pic).astype(np.float32); k = min(0.7, (f - 2) * 0.14)
-            a[..., :3] = a[..., :3] * (1 - k) + np.array([34, 96, 110]) * k; p2 = Image.fromarray(a.astype(np.uint8), 'RGBA')
-        c = cell(p2, anchor, n, dy=drop, dark=1 - f * 0.06, alpha=1 - max(0, f - 3) * 0.22)
+        drop = int(f * 2.5 * n)
+        c = cell(submerged(pic, drop, n), anchor, n, dy=drop, dark=1 - f * 0.05)   # John 14:37: under-water colour, not a flat tint
         W = 128 * n; ox, oy = W // 2, 112 * n
         if f >= 3:                                           # foam where it goes under
             for k in range(6):
@@ -158,10 +244,34 @@ for name, spec in JOBS:
     clean = [fr('clean', h) for h in HEAD]
     dmg = [fr('damaged', h, stopped=True) for h in HEAD]
     per = 8 if n == 2 else 4
-    if mode != 'sea' and name in POINTS and n >= 3:     # frames 8-15 shot down (his marks), 16-23 direct hit (big blast on mark 2)
+    if mode == 'sub': dies = sink
+    if mode in ('sea', 'sub') and name in POINTS and n >= 3:     # boats with John's marks: 8-15 shot down, 16-23 direct hit
+        frames = clean + sink2(dmg[2], anchor, n, POINTS[name]) + sink_direct(dmg[2], anchor, n, POINTS[name])
+    elif mode != 'sea' and name in POINTS and n >= 3:     # frames 8-15 shot down (his marks), 16-23 direct hit (big blast on mark 2)
         frames = clean + death2(dmg[2], anchor, n, POINTS[name]) + direct(dmg[2], anchor, n, POINTS[name])
     else:
         frames = clean + (sum((dies(dmg[h], anchor, n) for h in range(8)), []) if n == 2 else dies(dmg[2], anchor, n))
+    if mode == 'sub':                                   # submarines: then the 8 headings DIVED, then killed while dived
+        frames = frames + [cell(dived(c_pic, n), anchor, n) for c_pic in [fr('clean', h) for h in HEAD]]
+        frames += sum((dived_death(dmg[h], anchor, n) for h in range(8)), []) if n == 2 else dived_death(dmg[2], anchor, n)
+    # John 14:45 "yes": the GAME plays the death facing the way the craft flew. It needs the 8 DAMAGED headings (appended last) and
+    # his marks in all 8 headings (vfactory/marks8/out/<name>.json, projected on the 3D model). air_<name>.json says where it all is.
+    idx = {'headings': [0, 8]}
+    if mode == 'sub':
+        idx['dived'] = [len(frames) - (64 if n == 2 else 8) - 8, 8]; idx['dived_death'] = [len(frames) - (64 if n == 2 else 8), 64 if n == 2 else 8]
+    if name in POINTS and n >= 3: idx['baked_shot_down'] = [8, 8]; idx['baked_direct_hit'] = [16, 8]
+    else: idx['baked_death'] = [8, 64 if n == 2 else 8]
+    idx['damaged_headings'] = [len(frames), 8]
+    frames = frames + [cell(dmg[h], anchor, n) for h in range(8)]
+    info = {'name': name, 'N': n, 'cell': [W, H], 'anchor_in_cell': [W // 2, 112 * n], 'per_row': per, 'frames': len(frames),
+            'kind': 'sub' if mode == 'sub' else ('boat' if mode == 'sea' else 'aircraft'), 'index': idx,
+            'heading_order': HEAD, 'rotor_sheet': bool(SPIN)}
+    mk = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'marks8', 'out', f'{name}.json')
+    if os.path.exists(mk):
+        M = json.load(open(mk))
+        info['marks'] = [{'which': ['first_hit', 'second_hit', 'direct_hit'][i], 'size': m['size'],
+                          'per_heading': [{'dx': p[0], 'dy': p[1], 'seen': p[2]} for p in m['headings']]} for i, m in enumerate(M['marks']) if 'headings' in m]
+    os.makedirs(os.path.join(MOD, 'Resources', 'VehiclesPrivate'), exist_ok=True); json.dump(info, open(os.path.join(MOD, 'Resources', 'VehiclesPrivate', f'air_{name}.json'), 'w'), indent=1)
     S = Image.new('RGBA', (per * W, -(-len(frames) // per) * H), (0, 0, 0, 0))
     for i, p in enumerate(frames):
         S.alpha_composite(p if p.size == (W, H) else cell(p, anchor, n), ((i % per) * W, (i // per) * H))
