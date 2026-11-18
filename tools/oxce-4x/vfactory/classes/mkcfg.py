@@ -72,8 +72,8 @@ c['gun_fx_scale'] = 1.3                                            # Gatlings: b
 c['preview']['script'] = [['move', 'NE', 2], ['gun', ['gatL', 'gatR']], ['turn', 'SE'], ['gun', ['gatL', 'gatR']], ['wait', 6]]; cf2['thunder_machine'] = c
 s, lim = fit(26.0, 16.02, 3, 2)   # Wolverine 2x3; missile turret, loaded
 W12 = [f'wrk{i:02d}' for i in range(1, 13)]; M12 = [f'mouth{i:02d}' for i in range(1, 13)]
-c = base('wolverine', s, 3, [2, 3], 'wolverine', {'m0': ['GJTURRET', 'wrk_fly'] + W12 + M12}, {'muzzle': [-3.55, 6.43, 14.73, 1, 0, 0]}, 'Joe',
-         R + f'Wolverine, class 2x3 (installed as size 3). Scale {s} (was 0.075; {lim} axis limits). Turret drawn loaded (12 missiles).\n')
+c = base('wolverine', s, 3, [2, 3], 'wolverine_v2', {'m0': ['GJTURRET', 'wrk_fly'] + W12 + M12}, {'muzzle': [-3.55, 6.43, 14.73, 1, 0, 0]}, 'Joe',
+         R + f'Wolverine, class 2x3 (installed as size 3). Scale {s} (was 0.075; {lim} axis limits). Turret drawn loaded (12 missiles).\nTOY PASS (17 Nov): toy green hull and pods, grey missiles, toy markings (vfactory/wolverine/).\n')
 c['turret'] = {'objs': ['GJTURRET'] + W12 + M12, 'pivot': [-7.47, 0.0, 7.48], 'muzzles': {'rack': [-3.55, 6.43, 14.73, 1, 0, 0]}, 'note': 'missile turret'}
 c['preview']['script'] = [['move', 'NE', 2], ['gun', ['rack']], ['tturn', 'SE'], ['tturn', 'NE'], ['wait', 6]]; cf2['wolverine'] = c
 s, lim = fit(33.01, 17.34, 5, 4)  # Mauler 4x5 (barrel included, as for the MOBAT)
