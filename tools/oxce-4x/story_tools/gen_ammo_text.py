@@ -91,7 +91,7 @@ S['STR_EVENT_FLAGG_HIT_DESCRIPTION'] = P.join([
     "HAWK: General Flagg was shot leaving the Pentagon twenty minutes ago. His car is pinned on a side street and the shooters are still there.",
     "He was on his way to sign the new supply contract. Somebody didn't want it signed. Get a team to Washington, now."])
 S['STR_FLAGG_RESCUE'] = 'Washington: Flagg Ambushed'
-S['STR_BRIEFING_FLAGG_RESCUE_TITLE'] = 'OPERATION: SHIELD'
+S['STR_BRIEFING_FLAGG_RESCUE_TITLE'] = 'OPERATION: RAISE THE FLAGG!'
 S['STR_BRIEFING_FLAGG_RESCUE'] = P.join([
     "HAWK: Flagg is down behind his car, hit and bleeding. His driver is dead. Cobra has the street.",
     "Reach him, keep him alive, and get him to the extraction point. Don't try to take him through the shooters. He can't run.",

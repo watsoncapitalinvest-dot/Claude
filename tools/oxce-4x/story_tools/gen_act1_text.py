@@ -25,7 +25,7 @@ S['STR_BRIEFING_ABANDONED_FACTORY'] = P.join([
     "Watch your feet. People who walk away from a place like that sometimes leave a present behind. And put somebody on the water tower.",
     "Get what you find back to the A.P.C. and get out. We go in, we read their mail, we leave.",
 ])
-S['STR_BRIEFING_COBRA_CELL_TITLE'] = 'OPERATION: FIRST CONTACT'
+S['STR_BRIEFING_COBRA_CELL_TITLE'] = 'OPERATION: IN THE COBRA\'S PIT'
 S['STR_BRIEFING_COBRA_CELL'] = P.join([
     "HAWK: Now we know what they call themselves. Breaker pulled Cobra Commander's message apart. It bounced through three relays, and the first one was sloppy. It leads to one building with a Cobra cell in it.",
     "Don't get excited. This is not their headquarters. A cell is a few rooms, a radio, and people who take orders. That's what we want: the people.",
@@ -41,12 +41,12 @@ S['STR_EVENT_CARTEL_FLIGHT_DESCRIPTION'] = P.join([
     "The flight the cartel boss gave us is in the air: a twin-engine cargo plane, running north without lights.",
     "HAWK: Don't shoot it down, and don't crowd it. It's slow enough for the A.P.C. to keep it in sight from the roads. Wherever it lands is where they keep their stock.",
 ])
-S['STR_OP_SCARLETT_STASH_HOUSE'] = 'Operation: Quiet Courier'
+S['STR_OP_SCARLETT_STASH_HOUSE'] = 'Operation: Spell of the Siren'
 S['STR_OP_SCARLETT_STASH_HOUSE_DESC'] = P.join([
     "Scarlett goes in alone, as a buyer, to the cartel's stash house. She'll bug a shipment or turn one of their couriers into our man. Either way we hear what they plan next.",
     "She'll be gone for days. Intel research slows while she's out, and if she's made, they'll hold her.",
 ])
-S['STR_BRIEFING_ARMORED_CAR_TITLE'] = 'OPERATION: PAYROLL'
+S['STR_BRIEFING_ARMORED_CAR_TITLE'] = 'OPERATION: MONEY TO BURN'
 S['STR_BRIEFING_ARMORED_CAR'] = P.join([
     "HAWK: The cartel lost a fortune at the ranch and they want it back fast. Scarlett's courier gave us the job: the SECURE-TRANS payroll car, hit at Sundown Gas on US-90.",
     "Six of them. Two loading the cash, the man running the crew at the getaway van, the rest covering. The deputies took one look and left. It's us or nobody.",
@@ -84,12 +84,12 @@ S['STR_BRIEF_1'] = "1982. Bombings on three continents, and nobody claims them. 
 S['STR_BRIEF_2'] = "Somewhere a man behind a mirrored mask has recorded a message to the world. He is waiting for the right day to send it."
 S['STR_BRIEF_3'] = "The Joes start with the one lead they have: a cartel on the Rio Grande carrying guns nobody can trace."
 S['STR_BRIEF_4'] = "Before first light, G.I. Joe goes in."
-S['STR_BRIEFING_CARTEL_SAFEHOUSE_TITLE'] = 'OPERATION: COLD TRAIL'
+S['STR_BRIEFING_CARTEL_SAFEHOUSE_TITLE'] = 'OPERATION: COLD SLITHER'
 S['STR_BRIEFING_CARTEL_SAFEHOUSE'] = P.join([
     "HAWK: They got away with the payroll. They didn't get away clean. The van was dumped two counties over, and the trail ends at a farmhouse they're using as a safehouse.",
     "The money's probably moved on. The paperwork usually doesn't. Bring me anything with a number on it.",
 ])
-S['STR_BRIEFING_STASH_HOUSE_RESCUE_TITLE'] = 'OPERATION: BUYER BEWARE'
+S['STR_BRIEFING_STASH_HOUSE_RESCUE_TITLE'] = 'OPERATION: CAPTIVES OF COBRA'
 S['STR_BRIEFING_STASH_HOUSE_RESCUE'] = P.join([
     "HAWK: Scarlett's cover is blown. The cartel are holding her at the stash house, and every day she's in there she's in more danger and we're more exposed.",
     "We go in now. Get her out first. Everything else is second.",
@@ -156,7 +156,7 @@ S['STR_EVENT_PROVING_GROUND_DESCRIPTION'] = P.join([
     "A Ranger sergeant in a balaclava inspects your new Training Room, says nothing for a full minute, then hands Hawk a sealed order.",
     "HAWK: Beach Head. The Army sent him to tell me whether my people are any good. He's offered to show us. On his range.",
 ])
-S['STR_BRIEFING_PROVING_GROUND_TITLE'] = 'OPERATION: PROVING GROUND'
+S['STR_BRIEFING_PROVING_GROUND_TITLE'] = 'OPERATION: LET\'S PLAY SOLDIER'
 S['STR_BRIEFING_PROVING_GROUND'] = P.join([
     "BEACH HEAD: Listen up, because I'm only saying this once. You think you're soldiers. I think you're tourists. Today we find out.",
     "My range. My men. Stun weapons only: nobody dies on my course, they just wish they had. Put my team on the ground, every last one, and you pass.",
@@ -230,7 +230,7 @@ S['STR_EVENT_COBRA_RETREATS_DESCRIPTION'] = P.join([
     "HAWK: They didn't lose a battle. They lost North America. Cobra doesn't quit, so they'll be somewhere else, rebuilding.",
     "Roadblock, that last crate we seized. Tell me what's stamped under the paint.",
 ])
-S['STR_BRIEFING_DROME_STRIKE_TITLE'] = 'OPERATION: HOLD THE LINE'
+S['STR_BRIEFING_DROME_STRIKE_TITLE'] = 'OPERATION: NIGHTMARE ASSAULT'
 S['STR_BRIEFING_DROME_STRIKE'] = P.join([
     "HAWK: Cobra's Terror Drome has sent everything it has at {BASE}. Troops, armour, aircraft overhead.",
     "Hold the base. Take prisoners if you can, pick up their weapons when it's over. I want to know who's been arming these people.",

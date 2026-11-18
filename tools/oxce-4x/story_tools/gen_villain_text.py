@@ -14,7 +14,7 @@ S['STR_EVENT_SS_WITNESS'] = 'A WITNESS WHO WANTS TO TALK'
 S['STR_EVENT_SS_WITNESS_DESCRIPTION'] = P.join([
     "SCARLETT: A Cobra bookkeeper walked into a sheriff's office last night and asked for us by name. He says he moved the money that paid for a training camp, and he can tell us where.",
     "He also says Cobra has made a deal with someone he calls 'the clan'. He was very frightened of the clan."])
-S['STR_BRIEFING_SS_ARRIVAL_TITLE'] = 'OPERATION: SILENT NIGHT'
+S['STR_BRIEFING_SS_ARRIVAL_TITLE'] = 'OPERATION: INTO YOUR TENT I WILL SILENTLY CREEP'
 S['STR_BRIEFING_SS_ARRIVAL'] = P.join([
     "HAWK: Our witness is in a motel off the interstate with two deputies and a lot of coffee. We move him at dawn. Until then he's ours to keep breathing.",
     "Cobra knows where he is. Whoever they send won't kick the door in. Expect one man, at night, and expect not to hear him.",
@@ -32,7 +32,7 @@ S['STR_EVENT_DREADNOKS_CONVOY'] = 'FUEL CONVOY OVERDUE'
 S['STR_EVENT_DREADNOKS_CONVOY_DESCRIPTION'] = P.join([
     "BREAKER: An Army fuel convoy went quiet on a swamp road in Florida two hours ago. Last call from the lead truck was 'bikers', then music, then nothing.",
     "SCARLETT: Florida State Police have it from a gas station clerk: a gang in leather, a swamp boat, and a man in a hood who paid for everything in new hundred-dollar bills."])
-S['STR_BRIEFING_DREADNOKS_ARRIVAL_TITLE'] = 'OPERATION: SWAMP RAT'
+S['STR_BRIEFING_DREADNOKS_ARRIVAL_TITLE'] = 'OPERATION: WHERE THE REPTILES ROAM'
 S['STR_BRIEFING_DREADNOKS_ARRIVAL'] = P.join([
     "HAWK: Somebody hired a motorcycle gang to steal ten thousand gallons of Army fuel. They're draining the trucks into barges at a bait shop on the water.",
     "They're loud, they're mean, and they don't run. Don't let that fool you into thinking they're stupid. The hooded one isn't with the gang. He's the one paying them.",
@@ -49,7 +49,7 @@ S['STR_EVENT_DESTRO_ARMS_FAIR'] = 'AN ARMS FAIR'
 S['STR_EVENT_DESTRO_ARMS_FAIR_DESCRIPTION'] = P.join([
     "SCARLETT: Every crate with the M.A.R.S. mark has pointed one way: a castle in Scotland and the family that has sold weapons out of it for four hundred years. Its head is called Destro.",
     "He's holding a private demonstration this week, by invitation. One of the invitations went to Cobra Commander. He accepted."])
-S['STR_BRIEFING_DESTRO_ARRIVAL_TITLE'] = 'OPERATION: TRADE FAIR'
+S['STR_BRIEFING_DESTRO_ARRIVAL_TITLE'] = 'OPERATION: RED ROCKET\'S GLARE'
 S['STR_BRIEFING_DESTRO_ARRIVAL'] = P.join([
     "HAWK: Remember the man in the steel mask on the footage? He's real, his name is Destro, and he's about to shake Cobra Commander's hand on his own firing range.",
     "If that handshake happens, Cobra stops buying M.A.R.S. weapons and starts getting them first. I'd rather it didn't.",
@@ -101,7 +101,7 @@ S['STR_EVENT_MINDBENDER_CLINIC'] = 'THE QUIET PATIENTS'
 S['STR_EVENT_MINDBENDER_CLINIC_DESCRIPTION'] = P.join([
     "DOC: Six people walked out of a private clinic in Arizona this month and went home. Their families say they came back polite, calm, and somebody else.",
     "Two of them have since driven trucks for a Cobra front company. Neither one remembers applying."])
-S['STR_BRIEFING_MINDBENDER_ARRIVAL_TITLE'] = 'OPERATION: SECOND OPINION'
+S['STR_BRIEFING_MINDBENDER_ARRIVAL_TITLE'] = 'OPERATION: MIND MENACE'
 S['STR_BRIEFING_MINDBENDER_ARRIVAL'] = P.join([
     "HAWK: The clinic belongs to a man who lost his medical licence twenty years ago. He's back, and Cobra is paying for his research.",
     "The patients aren't the enemy, even if they're holding rifles. Stun them if you can. Doc wants every one of them alive.",
@@ -118,7 +118,7 @@ S['STR_EVENT_SERPENTOR_TOMBS'] = 'GRAVE ROBBERS'
 S['STR_EVENT_SERPENTOR_TOMBS_DESCRIPTION'] = P.join([
     "SCARLETT: Somebody is robbing tombs. Napoleon's. Genghis Khan's, if anybody could find it. Every one of them a great conqueror.",
     "They don't take the gold. They take samples."])
-S['STR_BRIEFING_SERPENTOR_ARRIVAL_TITLE'] = 'OPERATION: LAST RELIC'
+S['STR_BRIEFING_SERPENTOR_ARRIVAL_TITLE'] = 'OPERATION: ARISE, SERPENTOR, ARISE!'
 S['STR_BRIEFING_SERPENTOR_ARRIVAL'] = P.join([
     "HAWK: Cobra has its list of dead conquerors almost complete. The last name on it is in a museum vault, and Cobra is going in tonight.",
     "Mindbender is building something out of all those samples. Every one we keep from him is a piece he doesn't get.",
