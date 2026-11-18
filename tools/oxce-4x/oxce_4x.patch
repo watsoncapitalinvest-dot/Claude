@@ -24521,7 +24521,7 @@ index 0000000..4143ad4
 +
 +}
 diff --git a/src/Geoscape/DogfightState.cpp b/src/Geoscape/DogfightState.cpp
-index e805e35..fc9ce5f 100644
+index e805e35..3eb1bff 100644
 --- a/src/Geoscape/DogfightState.cpp
 +++ b/src/Geoscape/DogfightState.cpp
 @@ -54,6 +54,7 @@
@@ -24544,6 +24544,33 @@ index e805e35..fc9ce5f 100644
  
  	_preview->setVisible(false);
  	_preview->onMouseClick((ActionHandler)&DogfightState::previewClick);
+@@ -527,7 +533,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool
+ 
+ 	// Create the minimized dogfight icon.
+ 	Surface *frame = set->getFrame(_craft->getSkinSprite());
+-	frame->blitNShade(_btnMinimizedIcon, 0, 0);
++	if (frame) frame->blitNShade(_btnMinimizedIcon, 0, 0);   // G.I. Joe: a craft drawn only on BASEBITS (the A.P.C.) has no INTICON frames
+ 	_btnMinimizedIcon->onMouseClick((ActionHandler)&DogfightState::btnMinimizedIconClick);
+ 	_btnMinimizedIcon->setVisible(false);
+ 
+@@ -592,7 +598,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool
+ 
+ 		// Draw icon
+ 		frame = set->getFrame(w->getRules()->getSprite() + 5);
+-		frame->blitNShade(weapon, 0, 0);
++		if (frame) frame->blitNShade(weapon, 0, 0);
+ 
+ 		// Just an equipment, it doesn't have any ammo (weapon) or range (tractor beam), skip!
+ 		if (w->getRules()->getAmmoMax() == 0 && w->getRules()->getTractorBeamPower() == 0)
+@@ -657,7 +663,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool
+ 
+ 	// Draw damage indicator.
+ 	frame = set->getFrame(_craft->getSkinSprite() + 11);
+-	frame->blitNShade(_craftSprite, 0, 0);
++	if (frame) frame->blitNShade(_craftSprite, 0, 0);
+ 
+ 	_craftDamageAnimTimer->onTimer((StateHandler)&DogfightState::animateCraftDamage);
+ 
 @@ -1469,7 +1475,7 @@ void DogfightState::update()
  		}
  
@@ -24773,7 +24800,7 @@ index e609d3c..fad706b 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..18d2b22 100644
+index 6b4e79d..7402099 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,15 @@
@@ -25609,7 +25636,22 @@ index 6b4e79d..18d2b22 100644
  				if (returnedToBase)
  				{
  					_game->getSavedGame()->stopHuntingXcomCraft(xcraft); // hiding in the base is good enough, obviously
-@@ -1422,7 +1986,9 @@ void GeoscapeState::time5Seconds()
+@@ -1276,6 +1840,14 @@ void GeoscapeState::time5Seconds()
+ 							continue;
+ 						}
+ 						// Can we actually fight it
++						// G.I. Joe: an unarmed craft on the cartel's flight is TAILING it (gijoe_cartel_arc.rul): it stays on it, it
++						// does not open a dogfight. (With the plane slowed to 180 kn the Day 1 A.P.C. caught it and crashed the game
++						// on its missing dogfight picture; 18 Nov.)
++						if (u->getRules()->getType() == "STR_CARTEL_PLANE" && xcraft->getNumWeapons() == 0)
++						{
++							++craftIt;
++							continue;
++						}
+ 						if (!xcraft->isInDogfight() && u->getSpeed() <= xcraft->getCraftStats().speedMax)
+ 						{
+ 							if (u->isHunterKiller())
+@@ -1422,7 +1994,9 @@ void GeoscapeState::time5Seconds()
  				{
  					if (b->isDiscovered())
  					{
@@ -25620,7 +25662,7 @@ index 6b4e79d..18d2b22 100644
  						{
  							int texture, shade;
  							_globe->getPolygonTextureAndShade(b->getLongitude(), b->getLatitude(), &texture, &shade);
-@@ -1454,6 +2020,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +2028,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -25656,7 +25698,7 @@ index 6b4e79d..18d2b22 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +2159,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +2167,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -25687,7 +25729,7 @@ index 6b4e79d..18d2b22 100644
  							}
  						}
  					}
-@@ -1752,7 +2363,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2371,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -25696,7 +25738,7 @@ index 6b4e79d..18d2b22 100644
  								}
  								else
  								{
-@@ -1858,6 +2469,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2477,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -25717,7 +25759,7 @@ index 6b4e79d..18d2b22 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2509,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2517,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -25730,7 +25772,7 @@ index 6b4e79d..18d2b22 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2104,6 +2735,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2104,6 +2743,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		detected = maskBitOr(detected, craft->detect(ufo, save, alreadyTracked));
  	}
  
@@ -25738,7 +25780,7 @@ index 6b4e79d..18d2b22 100644
  	if (!alreadyTracked)
  	{
  		if (maskTest(detected, DETECTION_RADAR))
-@@ -2126,8 +2758,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2126,8 +2766,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		{
  			ufo->setHyperDetected(true);
  		}
@@ -25759,7 +25801,7 @@ index 6b4e79d..18d2b22 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2788,142 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2796,142 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -25902,7 +25944,7 @@ index 6b4e79d..18d2b22 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +2970,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +2978,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -25992,7 +26034,7 @@ index 6b4e79d..18d2b22 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +3215,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +3223,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -26001,7 +26043,7 @@ index 6b4e79d..18d2b22 100644
  			}
  			else
  			{
-@@ -2389,12 +3251,314 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3259,314 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
@@ -26316,7 +26358,7 @@ index 6b4e79d..18d2b22 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3608,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3616,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -26339,7 +26381,7 @@ index 6b4e79d..18d2b22 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2776,6 +3949,7 @@ void GeoscapeState::time1Day()
+@@ -2776,6 +3957,7 @@ void GeoscapeState::time1Day()
  					{
  						chanceToDetect = 50 - (distance * 50 / facility->getRules()->getSightRange()); // dynamic 0-50% based on relative distance
  					}
@@ -26347,7 +26389,7 @@ index 6b4e79d..18d2b22 100644
  					if (RNG::percent(chanceToDetect))
  					{
  						alienBase->setDiscovered(true);
-@@ -2861,7 +4035,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +4043,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -26376,7 +26418,7 @@ index 6b4e79d..18d2b22 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +4155,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +4163,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -26407,7 +26449,7 @@ index 6b4e79d..18d2b22 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4341,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4349,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -26417,7 +26459,7 @@ index 6b4e79d..18d2b22 100644
  }
  
  /**
-@@ -3265,6 +4485,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4493,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -26433,7 +26475,7 @@ index 6b4e79d..18d2b22 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4571,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4579,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -26486,7 +26528,7 @@ index 6b4e79d..18d2b22 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4639,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4647,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -26738,7 +26780,7 @@ index 6b4e79d..18d2b22 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +6167,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +6175,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
