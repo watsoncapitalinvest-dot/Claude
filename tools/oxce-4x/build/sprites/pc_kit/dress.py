@@ -2,6 +2,8 @@
 #   python dress.py --blend M.blend --list                       -> prints JSON: materials, gear
 #   python dress.py --blend M.blend --spec SPEC.json --out O.blend
 #   python dress.py --blend M.blend --template MATERIAL --out guide.png   -> the skin with the model's seams drawn on
+#   python dress.py --blend M.blend --faceview front.png                   -> the face seen from the front (+ .json mapping)
+#   SPEC may also hold "face": {photo, photo_pts, model_pts, strength, cartoon, match} - see apply_face()
 # SPEC: {"skins": {"<material>": "C:/path/skin.png"}, "colours": {"<material>": [r,g,b] | null}, "gear": [...] | absent}
 #   colours null = back to the texture's own colours.  gear absent = leave gear as it is; [] = no gear.
 #   props_add: [{file, attach: head|face|chest|back|hip_l|hip_r|hand_r|hand_l, size, up, forward, side (cm), turn, tilt, roll (deg)}]
@@ -383,11 +385,129 @@ def template(mat_name, out_png):
     im.save(out_png)
 
 
+# ---------------- face from photo
+def face_tris():
+    """Front-facing head triangles of the skin: per triangle its UVs (texture pixels), rest-pose world points,
+    facing (how much it looks to the front, -Y), and the material that holds the face."""
+    rows = []
+    for o in body_meshes():
+        if any('hair' in (m.name.lower() if m else '') for m in o.data.materials[:1]) or 'hair' in o.name.lower(): continue
+        names = {vg.index: vg.name.replace('mixamorig:', '') for vg in o.vertex_groups}
+        if not o.data.uv_layers.active: continue
+        me = o.data; me.calc_loop_triangles(); uv = me.uv_layers.active.data; mw = o.matrix_world
+        nm = mw.to_3x3().normalized()
+        def dom(vi):
+            gs = me.vertices[vi].groups
+            return names.get(max(gs, key=lambda g: g.weight).group, '') if gs else ''
+        for t in me.loop_triangles:
+            if not all(dom(v) in ('Head', 'HeadTop_End') for v in t.vertices): continue
+            m = me.materials[t.material_index] if me.materials else None
+            if not m: continue
+            tex, _ = mat_nodes(m)
+            if not (tex and tex.image): continue
+            n = (nm @ t.normal).normalized(); facing = -n.y
+            if facing < 0.15: continue
+            rows.append((m.name, [uv[l].uv[:] for l in t.loops], [(mw @ me.vertices[v].co)[:] for v in t.vertices], facing))
+    if not rows: raise SystemExit('no front-facing head found on this model')
+    count = {}
+    for r in rows: count[r[0]] = count.get(r[0], 0) + 1
+    mat = max(count, key=count.get)
+    rows = [r for r in rows if r[0] == mat]
+    return mat, np.array([r[1] for r in rows]), np.array([r[2] for r in rows]), np.array([r[3] for r in rows])
+
+
+def face_texels(mat):
+    """Every skin texel on the front of the head: texel x,y, world x,z (and y for depth), facing."""
+    m = bpy.data.materials[mat]; tex, _ = mat_nodes(m); W, H = tex.image.size
+    _, UV, P, F = face_tris()
+    out = []
+    for uv, p, f in zip(UV, P, F):
+        t = np.c_[uv[:, 0] * W, (1 - uv[:, 1]) * H]               # texture pixel coords (row 0 = top)
+        x0, y0 = np.floor(t.min(0)).astype(int); x1, y1 = np.ceil(t.max(0)).astype(int)
+        xs, ys = np.meshgrid(np.arange(max(x0, 0), min(x1 + 1, W)), np.arange(max(y0, 0), min(y1 + 1, H)))
+        if xs.size == 0: continue
+        px = np.c_[xs.ravel() + 0.5, ys.ravel() + 0.5]
+        a, b, c = t; v0, v1 = b - a, c - a; d = v0[0] * v1[1] - v1[0] * v0[1]
+        if abs(d) < 1e-9: continue
+        r = px - a; l1 = (r[:, 0] * v1[1] - v1[0] * r[:, 1]) / d; l2 = (v0[0] * r[:, 1] - r[:, 0] * v0[1]) / d; l0 = 1 - l1 - l2
+        ins = (l0 >= -1e-3) & (l1 >= -1e-3) & (l2 >= -1e-3)
+        if not ins.any(): continue
+        w3 = np.c_[l0[ins], l1[ins], l2[ins]]; wp = w3 @ p
+        out.append(np.c_[xs.ravel()[ins], ys.ravel()[ins], wp[:, 0], wp[:, 2], wp[:, 1], np.full(ins.sum(), f)])
+    return tex, np.vstack(out)
+
+
+def faceview(out_png):
+    """The model's face seen from the front, built from the skin texels (so clicks map exactly to the texture)."""
+    from PIL import Image
+    mat, *_ = face_tris(); tex, T = face_texels(mat); W, H = tex.image.size
+    img = (np.array(tex.image.pixels[:]).reshape(H, W, 4)[::-1] * 255).clip(0, 255).astype(np.uint8)
+    x, z = T[:, 2], T[:, 3]; x0, x1, z0, z1 = x.min(), x.max(), z.min(), z.max()
+    size = 360; s = (x1 - x0) / size; h = int((z1 - z0) / s) + 1
+    view = np.zeros((h, size + 1, 4), np.uint8); depth = np.full((h, size + 1), 1e9)
+    u = ((x - x0) / s).astype(int); v = ((z1 - z) / s).astype(int)
+    order = np.argsort(-T[:, 4])                      # far first, near last wins (front is -Y = smaller y)
+    for i in order:
+        view[v[i], u[i], :3] = img[int(T[i, 1]), int(T[i, 0]), :3]; view[v[i], u[i], 3] = 255
+    im = Image.fromarray(view, 'RGBA')
+    from PIL import ImageFilter
+    filled = im
+    for k in (3, 5):                                   # close the speckle where the texture is spread thin
+        grown = filled.filter(ImageFilter.MaxFilter(k)); grown.alpha_composite(filled); filled = grown
+    filled.save(out_png)
+    json.dump({'material': mat, 'x0': float(x0), 'z1': float(z1), 's': float(s)}, open(out_png + '.json', 'w'))
+
+
+def cartoon(im, level):
+    from PIL import ImageFilter
+    if level <= 0: return im
+    k = {1: 3, 2: 5, 3: 7}.get(int(level), 5); n = {1: 24, 2: 16, 3: 10}.get(int(level), 16)
+    im = im.filter(ImageFilter.MedianFilter(k))
+    return im.quantize(colors=n, method=0).convert('RGB')
+
+
+def apply_face(f):
+    """f: {photo, photo_pts [[x,y]x3: left eye, right eye, mouth], model_pts [[x,z]x3 world], strength, cartoon,
+    match}. Maps the photo onto the face texels through the affine that takes model points to photo points."""
+    from PIL import Image
+    mat, *_ = face_tris(); tex, T = face_texels(mat); W, H = tex.image.size
+    img = np.array(tex.image.pixels[:]).reshape(H, W, 4)[::-1].copy()          # float 0..1, row 0 = top
+    photo = cartoon(Image.open(f['photo']).convert('RGB'), f.get('cartoon', 2))
+    ph = np.asarray(photo).astype(np.float32) / 255.0; PH, PW = ph.shape[:2]
+    Q = np.array(f['model_pts'], float); P = np.array(f['photo_pts'], float)
+    A = np.linalg.solve(np.c_[Q, np.ones(3)], P)                               # [x z 1] @ A = [px py]
+    eye_c = Q[:2].mean(0); mouth = Q[2]; ed = np.linalg.norm(Q[0] - Q[1]); em = np.linalg.norm(eye_c - mouth)
+    ctr = eye_c + (mouth - eye_c) * 0.45
+    rx, rz = ed * 1.05, em * 1.75
+    d = np.sqrt(((T[:, 2] - ctr[0]) / rx) ** 2 + ((T[:, 3] - ctr[1]) / rz) ** 2)
+    mask = np.clip((1.0 - d) / 0.35, 0, 1) * np.clip((T[:, 5] - 0.15) / 0.35, 0, 1)
+    uv = np.c_[T[:, 2], T[:, 3], np.ones(len(T))] @ A
+    ok = (uv[:, 0] >= 0) & (uv[:, 0] < PW - 1) & (uv[:, 1] >= 0) & (uv[:, 1] < PH - 1) & (mask > 0)
+    T, uv, mask = T[ok], uv[ok], mask[ok]
+    x0 = np.floor(uv[:, 0]).astype(int); y0 = np.floor(uv[:, 1]).astype(int); fx = uv[:, 0] - x0; fy = uv[:, 1] - y0
+    col = (ph[y0, x0] * ((1 - fx) * (1 - fy))[:, None] + ph[y0, x0 + 1] * (fx * (1 - fy))[:, None] +
+           ph[y0 + 1, x0] * ((1 - fx) * fy)[:, None] + ph[y0 + 1, x0 + 1] * (fx * fy)[:, None])
+    tx, ty = T[:, 0].astype(int), T[:, 1].astype(int)
+    old = img[ty, tx, :3]
+    # skin match: shift the photo's average toward the body's average over the same area
+    wsum = mask.sum() + 1e-6
+    shift = ((old * mask[:, None]).sum(0) - (col * mask[:, None]).sum(0)) / wsum
+    col = np.clip(col + shift * float(f.get('match', 0.6)), 0, 1)
+    a = (mask * float(f.get('strength', 0.9)))[:, None]
+    img[ty, tx, :3] = old * (1 - a) + col * a
+    new = bpy.data.images.new(tex.image.name.split('.')[0] + '_face', W, H, alpha=True)
+    new.pixels[:] = img[::-1].ravel(); new.pack(); tex.image = new
+    m = bpy.data.materials[mat]; m['face_from'] = os.path.basename(f['photo'])
+
+
 def gear_now():
     if 'gear_spec' in arm: return json.loads(arm['gear_spec'])
     kinds = sorted(set(o.get('gear_kind', 'unknown') for o in bpy.data.objects if is_gear(o)))
     return [[k] for k in kinds]
 
+
+if '--faceview' in sys.argv:
+    faceview(arg('--faceview')); print('DRESS_OK', arg('--faceview')); sys.exit(0)
 
 if '--template' in sys.argv:
     template(arg('--template'), arg('--out')); print('DRESS_OK', arg('--out')); sys.exit(0)
@@ -405,6 +525,7 @@ for name, rgb in spec.get('colours', {}).items():
     if not m: continue
     if rgb is None: clear_tint(m)
     else: set_tint(m, rgb)
+if spec.get('face'): apply_face(spec['face'])
 if 'gear' in spec: build_gear(spec['gear'])
 for n in spec.get('props_remove', []):
     o = bpy.data.objects.get(n)

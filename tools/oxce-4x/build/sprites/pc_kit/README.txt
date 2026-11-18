@@ -17,6 +17,10 @@ EDIT LOOK (pick a model, press Edit look…)
                         Colour…     recolour that part (keeps its shading)    Original = back to its own colours
                         Template…   saves the current skin with the part's seams drawn in magenta: give that
                                     to your graphics AI and ask it to paint inside the outlines
+  Face from photo…    pick a straight-on photo, then click 1 left eye, 2 right eye, 3 mouth on the photo AND the
+                      same three on the model's face. The photo is cartooned, lined up by those points and blended
+                      into the skin. Sliders: Strength, Cartoon look, Match body skin tone. Then Preview / Apply.
+                      At game size a face is a few pixels: hair, beard, glasses and skin tone show; fine detail won't.
   Built-in gear       bandana, cap, helmet, plate vest, sunglasses, gold chain - tick, pick a colour
   Gear files          + Add gear file… : a .glb .gltf .fbx or .obj (e.g. from your AI). Pick where it goes
                       (head, face, chest, back, hips, hands); it is sized to that part and moves with him.

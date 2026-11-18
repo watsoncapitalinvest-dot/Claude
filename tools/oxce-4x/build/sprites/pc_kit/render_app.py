@@ -367,7 +367,7 @@ class LookEditor:
     def __init__(self, app, name, blend, civ):
         self.app, self.name, self.blend, self.civ = app, name, blend, civ
         self.skins, self.colours, self.props_add, self.props_remove = {}, {}, [], []
-        self.gear_changed = False; self.img = None
+        self.gear_changed = False; self.img = None; self.face = None
         w = self.w = tk.Toplevel(app.root); w.title('Edit look - ' + name); w.configure(bg=BG); w.geometry('1320x780'); w.minsize(1200, 700)
         w.transient(app.root)
         self.status = ttk.Label(w, text='Reading the model…'); self.status.pack(anchor='w', padx=16, pady=(12, 0))
@@ -413,7 +413,10 @@ class LookEditor:
 
         # skins & colours
         sk = ttk.Frame(left, style='Panel.TFrame', padding=12); sk.pack(fill='x')
-        ttk.Label(sk, text='Skins and colours', style='H.TLabel').grid(row=0, column=0, columnspan=6, sticky='w', pady=(0, 6))
+        ttk.Label(sk, text='Skins and colours', style='H.TLabel').grid(row=0, column=0, columnspan=3, sticky='w', pady=(0, 6))
+        ttk.Button(sk, text='Face from photo…', command=self.face_photo).grid(row=0, column=3, columnspan=3, sticky='e', pady=(0, 6))
+        self.face_lbl = ttk.Label(sk, text='', style='Panel.TLabel', foreground=ACC)
+        self.face_lbl.grid(row=99, column=0, columnspan=6, sticky='w', pady=(6, 0))
         self.mat_lbl = {}
         base = self.name
         for r, m in enumerate([m for m in info['materials'] if m['image']], start=1):
@@ -501,6 +504,15 @@ class LookEditor:
                 lambda r: (self.busy(False, str(r) if isinstance(r, Exception) else
                                      'Template saved: %s - give it to the AI with the note: keep every part inside its magenta outlines' % f)))
 
+    def face_photo(self):
+        f = filedialog.askopenfilename(parent=self.w, title='A front-on photo of the face',
+                                       filetypes=[('Image', '*.png *.jpg *.jpeg *.bmp *.webp')])
+        if f: FaceDialog(self, f)
+
+    def set_face(self, face):
+        self.face = face
+        self.face_lbl.configure(text='Face from %s - press Preview to see it, Apply to keep it' % os.path.basename(face['photo']))
+
     def mark_gear(self): self.gear_changed = True
 
     def pick_gear_colour(self, k):
@@ -531,6 +543,7 @@ class LookEditor:
 
     def spec(self):
         sp = {'skins': self.skins, 'colours': self.colours, 'props_add': self.props_add, 'props_remove': self.props_remove}
+        if self.face: sp['face'] = self.face
         if self.gear_changed:
             sp['gear'] = []
             for k, _, _ in GEAR_KINDS:
@@ -579,7 +592,7 @@ class LookEditor:
         self.status.configure(text='Preview ready (top: standing, bottom: walking; three directions). Apply to keep it.')
 
     def apply(self):
-        if not (self.skins or self.colours or self.props_add or self.props_remove or self.gear_changed):
+        if not (self.skins or self.colours or self.props_add or self.props_remove or self.gear_changed or self.face):
             messagebox.showinfo('Edit look', 'Nothing changed yet.', parent=self.w); return
         if self.app.running() and current_model() == self.name:
             messagebox.showinfo('Edit look', 'He started rendering meanwhile - Stop the machine first.', parent=self.w); return
@@ -594,7 +607,7 @@ class LookEditor:
             self.busy(False)
             if isinstance(r, Exception): self.status.configure(text=str(r)); return
             M.log('look edited:', self.name, json.dumps(self.spec())[:300])
-            self.skins, self.colours, self.props_add, self.props_remove, self.gear_changed = {}, {}, [], [], False
+            self.skins, self.colours, self.props_add, self.props_remove, self.gear_changed, self.face = {}, {}, [], [], False, None
             self.status.configure(text='Applied. %s is queued and the machine re-renders him by itself (if it is running).' % self.name)
             self.bg(lambda: self.read(), self.reload)
         self.bg(work, done)
@@ -614,6 +627,73 @@ class LookEditor:
         M.log('look undone:', self.name, 'back to', os.path.basename(vs[-1]))
         self.status.configure(text='Back to the earlier version - he is queued to re-render.')
         self.bg(lambda: self.read(), self.reload)
+
+
+class FaceDialog:
+    """Six clicks: left eye, right eye, mouth on the photo and the same three on the model's face."""
+    LABELS = ['1 left eye', '2 right eye', '3 mouth']
+
+    def __init__(self, ed, photo):
+        from PIL import Image, ImageTk
+        self.ed, self.photo = ed, photo; self.pp, self.mp = [], []
+        w = self.w = tk.Toplevel(ed.w); w.title('Face from photo'); w.configure(bg=PANEL); w.transient(ed.w); w.geometry('1180x800')
+        top = ttk.Frame(w, style='Panel.TFrame', padding=(14, 10)); top.pack(fill='x')
+        ttk.Label(top, text='Click on BOTH pictures, in order: 1 the eye on the LEFT of the picture, 2 the eye on the RIGHT, '
+                  '3 the middle of the mouth.', style='Panel.TLabel').pack(anchor='w')
+        ttk.Label(top, text='Use a photo taken straight on, eyes level, nothing covering the face. Right-click clears that picture.',
+                  style='Panel.TLabel', foreground=DIM).pack(anchor='w')
+        mid = ttk.Frame(w, style='Panel.TFrame', padding=(14, 4)); mid.pack(fill='both', expand=True)
+        self.cv_p = tk.Canvas(mid, width=540, height=560, bg='#121418', highlightthickness=0); self.cv_p.pack(side='left', padx=(0, 10))
+        self.cv_m = tk.Canvas(mid, width=540, height=560, bg='#121418', highlightthickness=0); self.cv_m.pack(side='left')
+        im = Image.open(photo).convert('RGB'); self.ps = min(540 / im.width, 560 / im.height)
+        self.pimg = ImageTk.PhotoImage(im.resize((int(im.width * self.ps), int(im.height * self.ps)), Image.LANCZOS))
+        self.cv_p.create_image(0, 0, anchor='nw', image=self.pimg)
+        self.cv_m.create_text(270, 280, text='Reading the model’s face…', fill=DIM)
+        self.cv_p.bind('<Button-1>', lambda e: self.click(e, 'p')); self.cv_m.bind('<Button-1>', lambda e: self.click(e, 'm'))
+        self.cv_p.bind('<Button-3>', lambda e: self.clear('p')); self.cv_m.bind('<Button-3>', lambda e: self.clear('m'))
+        bot = ttk.Frame(w, style='Panel.TFrame', padding=14); bot.pack(fill='x')
+        self.vars = {}
+        for i, (k, label, lo, hi, d, res) in enumerate([('strength', 'Strength', 0.3, 1.0, 0.9, 0.05),
+                                                       ('cartoon', 'Cartoon look', 0, 3, 2, 1),
+                                                       ('match', 'Match body skin tone', 0, 1, 0.6, 0.05)]):
+            ttk.Label(bot, text=label, style='Panel.TLabel').grid(row=0, column=i * 2, sticky='e', padx=(0, 4))
+            v = tk.DoubleVar(value=d); self.vars[k] = v
+            tk.Scale(bot, variable=v, from_=lo, to=hi, resolution=res, orient='horizontal', length=180, bg=PANEL, fg=FG,
+                     highlightthickness=0, troughcolor='#2c3039').grid(row=0, column=i * 2 + 1, padx=(0, 16))
+        ttk.Button(bot, text='Use this face', style='Go.TButton', command=self.ok).grid(row=0, column=7, padx=(10, 6))
+        ttk.Button(bot, text='Cancel', command=w.destroy).grid(row=0, column=8)
+        self.msg = ttk.Label(bot, text='', style='Panel.TLabel', foreground=WARN); self.msg.grid(row=1, column=0, columnspan=9, sticky='w', pady=(6, 0))
+        self.fv = os.path.join(M.WORK, 'faceview_%s.png' % ed.name)
+        ed.bg(lambda: ed.dress(['--faceview', self.fv], 'faceview'), self.show_model)
+
+    def show_model(self, r):
+        from PIL import Image, ImageTk
+        if isinstance(r, Exception): self.cv_m.delete('all'); self.cv_m.create_text(270, 280, text=str(r), fill=BAD, width=500); return
+        self.meta = json.load(open(self.fv + '.json'))
+        im = Image.open(self.fv).convert('RGBA'); self.ms = min(540 / im.width, 560 / im.height)
+        bg = Image.new('RGBA', im.size, (18, 20, 24, 255)); bg.alpha_composite(im)
+        self.mimg = ImageTk.PhotoImage(bg.resize((int(im.width * self.ms), int(im.height * self.ms)), Image.LANCZOS))
+        self.cv_m.delete('all'); self.cv_m.create_image(0, 0, anchor='nw', image=self.mimg)
+
+    def click(self, e, which):
+        pts, cv = (self.pp, self.cv_p) if which == 'p' else (self.mp, self.cv_m)
+        if which == 'm' and not hasattr(self, 'meta'): return
+        if len(pts) >= 3: return
+        pts.append((e.x, e.y)); n = len(pts)
+        cv.create_oval(e.x - 6, e.y - 6, e.x + 6, e.y + 6, outline=ACC, width=2, tags='mark')
+        cv.create_text(e.x + 12, e.y - 12, text=self.LABELS[n - 1], fill=ACC, anchor='w', tags='mark', font=('Segoe UI', 10, 'bold'))
+
+    def clear(self, which):
+        (self.pp if which == 'p' else self.mp).clear(); (self.cv_p if which == 'p' else self.cv_m).delete('mark')
+
+    def ok(self):
+        if len(self.pp) < 3 or len(self.mp) < 3:
+            self.msg.configure(text='Three clicks on each picture: left eye, right eye, mouth.'); return
+        photo_pts = [[x / self.ps, y / self.ps] for x, y in self.pp]
+        m = self.meta; model_pts = [[m['x0'] + (x / self.ms) * m['s'], m['z1'] - (y / self.ms) * m['s']] for x, y in self.mp]
+        self.ed.set_face({'photo': self.photo, 'photo_pts': photo_pts, 'model_pts': model_pts,
+                          **{k: round(v.get(), 2) for k, v in self.vars.items()}})
+        self.w.destroy()
 
 
 class PropDialog:
