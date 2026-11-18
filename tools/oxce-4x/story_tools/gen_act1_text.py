@@ -69,7 +69,7 @@ S['STR_EVENT_RANCH_LOST_DESCRIPTION'] = P.join([
 # The opening briefing (front end, before the base is placed). Replaces BUILD's draft captions, which had Cobra
 # Commander broadcasting on day 1; in the approved story the broadcast comes on day 20-60 and the war opens on a cartel.
 S['STR_BRIEF_1'] = "1982. Bombings on three continents, and nobody claims them. General Hawk is given a team, and a hole in the ground to run it from: G.I. Joe."
-S['STR_BRIEF_2'] = "Somewhere a man in a blue hood has recorded a message to the world. He is waiting for the right day to send it."
+S['STR_BRIEF_2'] = "Somewhere a man behind a mirrored mask has recorded a message to the world. He is waiting for the right day to send it."
 S['STR_BRIEF_3'] = "The Joes start with the one lead they have: a cartel on the Rio Grande carrying guns nobody can trace."
 S['STR_BRIEF_4'] = "Before first light, G.I. Joe goes in."
 S['STR_BRIEFING_CARTEL_SAFEHOUSE_TITLE'] = 'OPERATION: COLD TRAIL'
