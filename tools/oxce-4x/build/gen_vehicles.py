@@ -35,9 +35,10 @@ V = {
  "triple_t":  dict(pack="triple_t", asset="triple_t", state="m2", side="joe", stores=["m1", "m0"], store_weapon="self", head="proj_triple_t_head0", name="Triple T", tu=64, hp=80, arm=(70, 55, 45, 40),
                   wpn=("Side-pod missiles", 100, 3, 2, None, (85, 50), None, 2, 0, "power_javelin_launch"), price=250000),
  "mobat":     dict(pack="mobat", asset="mobat", state="m0", side="joe", name="MOBAT", tu=56, hp=120, arm=(90, 75, 60, 60),
-                  wpn=("Main gun", 90, 1, 20, (55, 33), (85, 70), None, 0, 4, "m2x_50cal"), price=420000),
+                  wpn=("Main gun", 90, 1, 20, (55, 33), (85, 70), None, 0, 4, "m2x_50cal"), price=420000,
+                  turret_tu=3, cupola_weapon="STR_GJA_JOE_M_O_B_A_T_MACHINE_GUN_W", cupola_tu=1),   # John 22:01: the M2 cupola turns on its own, faster (180 = 4 TU; the turret 12)
  "wolverine": dict(pack="wolverine", asset="wolverine", state="m0", side="joe", name="Wolverine", tu=60, hp=100, arm=(80, 65, 50, 50),
-                  wpn=("Missile rack", 80, 3, 6, None, (85, 55), None, 1, 0, "power_javelin_launch"), price=380000, head="proj_wolverine_head0", turret_stores=12),  # its own missile flies full size (John 20:10 "can i see it shoot")
+                  wpn=("Missile rack", 80, 3, 6, None, (85, 55), None, 1, 0, "power_javelin_launch"), price=380000, head="proj_wolverine_head0", turret_stores=12, turret_tu=3),  # its own missile flies full size (John 20:10 "can i see it shoot")
  "mauler":    dict(pack="mauler", asset="mauler", state="m0", side="joe", name="Mauler M.B.T.", tu=50, hp=200, arm=(120, 100, 80, 80),
                   wpn=("Main gun", 110, 1, 20, (50, 35), (80, 70), None, 0, 4, "m2x_50cal"), price=600000),
  "stinger":   dict(pack="stinger", asset="stinger", state="m0", side="cobra", name="Cobra Stinger", tu=72, hp=50, arm=(35, 25, 20, 15),
@@ -97,6 +98,9 @@ def frame(base, man, look, h, state, turret=True):
         e = next(x for x in man["frames"] if x["look"] == look and x["heading"] == h and x.get("state") == state)
         tur = Image.open(os.path.join(base, "turret", f"{man['asset']}_turret_{look}_{h}.png")).convert("RGBA")
         ox, oy = e.get("turret_paste_offset", [0, 0]); pic.alpha_composite(tur, (int(ox), int(oy)))
+        if man.get("cupola"):                      # the cupola on the turret, both at this heading (VFACTORY cupola.py)
+            cu = Image.open(os.path.join(base, "cupola", f"{man['asset']}_cupola_{look}_{h}.png")).convert("RGBA")
+            cx, cy = man["cupola"]["offset_in_turret"][h]; pic.alpha_composite(cu, (int(ox + cx), int(oy + cy)))
     return pic
 
 def cellOf(pic, anchor, n, dy=0, dark=1.0, alpha=1.0):
@@ -132,9 +136,17 @@ def sheet(v, d):
         W, H = 128 * n, 160 * n
         per = 8 if n == 2 else 4
         ts_n = d.get("turret_stores", 0)            # missiles on the turret leave it one by one (engine: frame 8 + (fired - 1) * 8 + turret heading)
-        TS = Image.new("RGBA", (per * W, ((8 + 8 * ts_n) // per) * H), (0, 0, 0, 0))
-        for hd in range(8):
-            TS.alpha_composite(cellOf(tur[hd], anchor, n), ((hd % per) * W, (hd // per) * H))
+        cupola = bool(man.get("cupola"))
+        assert not (cupola and ts_n), "a cupola vehicle's turret frames 8-15 are the turret without it: no turret stores as well"
+        TS = Image.new("RGBA", (per * W, ((8 + 8 * (ts_n or cupola)) // per) * H), (0, 0, 0, 0))
+        for hd, h in enumerate(HEAD):
+            if cupola:                              # 0-7 the cupola fixed on the turret (an exe without the cupola code), 8-15 the turret alone
+                fixed = tur[hd].copy(); cu = Image.open(os.path.join(root, "cupola", f"{man['asset']}_cupola_clean_{h}.png")).convert("RGBA")
+                cx, cy = man["cupola"]["offset_in_turret"][h]; fixed.alpha_composite(cu, (int(cx), int(cy)))
+                TS.alpha_composite(cellOf(fixed, anchor, n), ((hd % per) * W, (hd // per) * H))
+                TS.alpha_composite(cellOf(tur[hd], anchor, n), (((8 + hd) % per) * W, ((8 + hd) // per) * H))
+            else:
+                TS.alpha_composite(cellOf(tur[hd], anchor, n), ((hd % per) * W, (hd // per) * H))
         for k in range(1, ts_n + 1):
             for hd, h in enumerate(HEAD):
                 fr = 8 + (k - 1) * 8 + hd
@@ -142,7 +154,15 @@ def sheet(v, d):
                 TS.alpha_composite(cellOf(im, anchor, n), ((fr % per) * W, (fr // per) * H))
         os.makedirs(OUT, exist_ok=True)
         TS.save(os.path.join(OUT, f"veh_{v}_turret_rgb.png")); quantize(TS).save(os.path.join(OUT, f"veh_{v}_turret.png"))
-        turret = (TS.size, offs)
+        cup = None
+        if man.get("cupola"):                       # a second turret riding on the turret, its own heading (VFACTORY cupola.py; John 17 Nov 22:01)
+            CS = Image.new("RGBA", (per * W, (8 // per) * H), (0, 0, 0, 0))
+            for hd, h in enumerate(HEAD):
+                im = Image.open(os.path.join(root, "cupola", f"{man['asset']}_cupola_clean_{h}.png")).convert("RGBA")
+                CS.alpha_composite(cellOf(im, anchor, n), ((hd % per) * W, (hd // per) * H))
+            CS.save(os.path.join(OUT, f"veh_{v}_cupola_rgb.png")); quantize(CS).save(os.path.join(OUT, f"veh_{v}_cupola.png"))
+            co = man["cupola"]["offset_in_turret"]; cup = (CS.size, [[int(round(co[h][0] / 4)), int(round(co[h][1] / 4))] for h in HEAD])
+        turret = (TS.size, offs, cup)
         standing = hull_only
     else:
         standing = clean
@@ -202,8 +222,9 @@ def previous(v):
     import yaml
     r = yaml.safe_load(open(os.path.join(MOD, "Ruleset", "gijoe_vehicles.rul")))
     sp = {e["type"]: e for e in r["extraSprites"]}; ar = {e["type"]: e for e in r["armors"]}[f"GJ_VEH_{v.upper()}_ARMOR"]
-    b = sp[f"VEH_{v.upper()}.PCK"]; t = sp.get(f"VEH_{v.upper()}_TURRET.PCK")
-    return ar["size"], (b["width"], b["height"]), ((t["width"], t["height"]), ar["gjTurretOffsets"]) if t else None
+    b = sp[f"VEH_{v.upper()}.PCK"]; t = sp.get(f"VEH_{v.upper()}_TURRET.PCK"); c = sp.get(f"VEH_{v.upper()}_CUPOLA.PCK")
+    cup = ((c["width"], c["height"]), ar["gjCupolaOffsets"]) if c else None
+    return ar["size"], (b["width"], b["height"]), ((t["width"], t["height"]), ar["gjTurretOffsets"], cup) if t else None
 for i, (v, d) in enumerate(V.items()):
     n, size, turret = sheet(v, d) if not ONLY or v in ONLY else previous(v)
     W, H = 128 * n, 160 * n
@@ -213,6 +234,9 @@ for i, (v, d) in enumerate(V.items()):
     if turret:
         L += [f"  - type: VEH_{v.upper()}_TURRET.PCK", f"    width: {turret[0][0]}", f"    height: {turret[0][1]}", f"    subX: {W}", f"    subY: {H}",
               "    files:", f"      0: Resources/VehiclesPrivate/veh_{v}_turret.png"]
+        if turret[2]:
+            L += [f"  - type: VEH_{v.upper()}_CUPOLA.PCK", f"    width: {turret[2][0][0]}", f"    height: {turret[2][0][1]}", f"    subX: {W}", f"    subY: {H}",
+                  "    files:", f"      0: Resources/VehiclesPrivate/veh_{v}_cupola.png"]
     T = f"STR_GJ_VEH_{v.upper()}"
     a = d["arm"]
     A += [f"  - type: GJ_VEH_{v.upper()}_ARMOR", f"    spriteSheet: VEH_{v.upper()}.PCK", "    drawingRoutine: 23", "    deathFrames: 8",
@@ -228,6 +252,12 @@ for i, (v, d) in enumerate(V.items()):
         A += [f"    gjStoreWeapon: {T}", f"    gjStoreStates: {d['turret_stores']}"]
     if turret:
         A += [f"    gjTurretSheet: VEH_{v.upper()}_TURRET.PCK", "    gjTurretOffsets: [" + ", ".join(f"[{o[0]}, {o[1]}]" for o in turret[1]) + "]"]
+        # turn costs (John 15 Nov 15:08, 17 Nov 22:01: a machine gun turns faster, for fewer TU, than a cannon or missile turret):
+        # TU per 45 degree step; stock OpenXcom charges 1 for any turret
+        if d.get("turret_tu"): A += [f"    gjTurretTurnTU: {d['turret_tu']}"]
+        if turret[2]:
+            A += [f"    gjCupolaSheet: VEH_{v.upper()}_CUPOLA.PCK", "    gjCupolaOffsets: [" + ", ".join(f"[{o[0]}, {o[1]}]" for o in turret[2][1]) + "]",
+                  f"    gjCupolaWeapon: {d['cupola_weapon']}", f"    gjCupolaTurnTU: {d.get('cupola_tu', 1)}"]
     U += [f"  - type: {T}", f"    race: {T}", f"    armor: GJ_VEH_{v.upper()}_ARMOR",
           f"    stats: {{tu: {d['tu']}, stamina: 100, health: {d['hp']}, bravery: 110, reactions: 30, firing: 65, throwing: 0, strength: 100, psiStrength: 100, psiSkill: 0, melee: 0}}",
           "    standHeight: 16", "    kneelHeight: 16", "    value: 20", "    deathSound: 23", "    moveSound: 14", "    energyRecovery: 50"]

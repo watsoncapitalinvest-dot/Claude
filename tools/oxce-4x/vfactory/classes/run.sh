@@ -12,6 +12,8 @@ if [ $V = stinger ]; then cd /home/claude/rt/veh && SHADE=detail LEVEL=1 python3
 if [ $V = triple_t ]; then cd /home/claude/rt/veh && SHADE=detail LEVEL=1 python3 /home/claude/rt/vamp2/full_launch.py $V /home/claude/vb/triple_t/triple_t/triple_t_clean.blend missile_R $SC $FT $P whole 0,0,0 5.5,-8.9,10.78 | tail -1; fi
 cd /tmp && python3 -I /home/claude/rt/gen/pkg.py $C | tail -1
 [ $T = 1 ] && python3 -I /home/claude/rt/gen/turret_pkg.py $C | tail -c 120
+CU=$(python3 -c "import json; print(1 if 'cupola' in json.load(open('$C')) else 0)")
+[ $CU = 1 ] && (cd /tmp && python3 -I /home/claude/repo/tools/oxce-4x/vfactory/classes/cupola.py $C ${OLD_TURRET:-} | tail -12)   # a second turret on the turret (John 17 Nov 22:01)
 python3 -I /home/claude/rt/gen/preview.py $C && python3 -I /home/claude/rt/gen/turntable.py $P $V 0 $P/${V}_turntable.gif 1.2
 [ $V = wolverine ] && (cd /tmp && python3 /home/claude/repo/tools/oxce-4x/vfactory/classes/turret_states.py $C wrk01,wrk02,wrk03,wrk04,wrk05,wrk06,wrk07,wrk08,wrk09,wrk10,wrk11,wrk12 | tail -1)
 echo DONE_$V
