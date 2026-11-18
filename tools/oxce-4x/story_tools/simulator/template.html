@@ -82,6 +82,7 @@ canvas { width: 100%; height: 230px; display: block; }
     <button class="tab on" data-mode="act1">Act 1 economy</button>
     <button class="tab" data-mode="split">Supply split (parked design)</button>
     <button class="tab" data-mode="world">Secret war (world)</button>
+    <button class="tab" data-mode="intel">Intel cases</button>
   </div>
 </header>
 <main>
@@ -139,6 +140,22 @@ MODES.world = {
              ['Player styles', SIM.WORLD_STYLES, ['ops', 'raids', 'captures', 'strikes', 'goodwill'],
               {ops: 'spy ops/mo', raids: 'US raids/mo', captures: 'captures/mo', strikes: 'strikes abroad/mo', goodwill: 'goodwill x'}]],
 };
+MODES.intel = {
+    title: 'Intel cases', defaults: SIM.INTEL_DEFAULTS, scenarios: SIM.INTEL_SCENARIOS, run: SIM.intel, styles: SIM.INTEL_STYLES,
+    intro: 'INTEL_CASES_v1: missions bring things home; at the debrief the player chooses what to send to Intel. Each item opens a case and waits for an analyst (one case a month each). Whether it pays depends on the source. A hit is a key Act 1 clue, a lead to raid, or a name for an intel Joe to chase. Leads age; whether Cobra really moved is hidden and likelier when it is alert. A missed key clue comes back by another road, late. Every run tries all three sending policies. Not modelled yet: disinformation, informants, the traffic scan.',
+    groups: [
+      ['Run', ['runs', 'months', 'seed']],
+      ['Analysts', ['analystsStart', 'analystShare', 'casesPerAnalyst']],
+      ['What a hit is', ['keyChance', 'leadChance', 'keyEarly', 'keyGrace']],
+      ['Field work (intel Joes)', ['joeJobsPerMonth', 'namePays', 'joeCaught', 'joeHeldMonths']],
+      ['Leads and old intel', ['staleAfter', 'moveQuiet', 'moveAlert', 'alertRaids', 'trapShare', 'raidCaptures']],
+    ],
+    tables: [['What a mission brings home', SIM.INTEL_SOURCES, ['perMission', 'pays', 'send_pick', 'send_little'],
+              {perMission: 'per mission', pays: 'pays (0-1)', send_pick: 'sent: pick', send_little: 'sent: little'}, true, 'bring.'],
+             ['Key clues: due month', ['keyDue'], ['0', '1', '2', '3', '4', '5'], {0: 'routes', 1: 'depot', 2: 'depot 2', 3: 'rumours', 4: 'Drome', 5: 'M.A.R.S.'}, true],
+             ['Player styles', SIM.INTEL_STYLES, ['missions', 'raids', 'seatsPerMonth', 'joeEvery'],
+              {missions: 'missions/mo', raids: 'raids/mo', seatsPerMonth: 'new seats/mo', joeEvery: 'new intel Joe every (mo)'}]],
+};
 const LABEL = {
   runs: ['Runs per player style', 'More runs = steadier numbers, slower.'], months: ['Months simulated', ''], seed: ['Random seed', 'Same seed + same numbers = same result.'],
   dromeCost: ['Terror Drome cost', 'funds'], donorStep: ['Backers\' money per month', 'added each month past the Drome month, cumulative'],
@@ -170,6 +187,12 @@ const LABEL = {
   importsPerMonth: ['M.A.R.S. cargoes a month', 'after the reveal'], importLoad: ['Laser cells per cargo', ''], importInterceptBase: ['Intercept chance', 'base'],
   importInterceptPerPaperwork: ['Intercept chance per paperwork found', 'intel pays'], importInterceptMax: ['Intercept chance at most', ''],
   cellsPerLaserMan: ['Cells to arm one man with a laser', ''], regrowAfterReveal: ['Cobra new sites a month after the reveal', 'per region'], findUnknownPerOp: ['Op finds a new site after the reveal', 'chance'],
+  analystsStart: ['Analyst seats on Day 1', 'the rooms\' seats'], analystShare: ['Share of analysts on cases', 'the rest do research'], casesPerAnalyst: ['Cases one analyst works a month', ''],
+  keyChance: ['A hit is the next key clue', 'chance, once that clue is due'], leadChance: ['A hit is a lead to raid', 'chance; the rest are names'],
+  keyEarly: ['A key clue can be found this early', 'months before it is due'], keyGrace: ['A missed key clue comes back after', 'months past due, by another road'],
+  joeJobsPerMonth: ['Names one intel Joe chases a month', ''], namePays: ['A name pays', 'chance; else a regular guy asleep'], joeCaught: ['Intel Joe caught on a job', 'chance'], joeHeldMonths: ['A caught Joe is out for (months)', ''],
+  staleAfter: ['Intel counts as old after (months)', 'the warning: time only'], moveQuiet: ['Cobra moves a site a month, quiet', 'hidden'], moveAlert: ['Cobra moves a site a month, alert', 'hidden'],
+  alertRaids: ['Cobra is alert after this many raids', 'in the last 2 months'], trapShare: ['A moved site is a trap', 'share; the rest are empty'], raidCaptures: ['A good raid takes an officer', 'chance; he is sent to Intel next month'],
   manpowerPriority: ['Cobra priority: men vs better guns', '1 = all spare money to men first; the thesis is 0.9'], startMen: ['Men per garrison at the start', ''],
   garrisonCap: ['Most men a garrison holds', ''], campRecruits: ['Recruits a region can train a month', 'its training camp'], recruitCost: ['Cost per recruit', 'funds'],
   fundsReserve: ['Cash Cobra keeps back', 'funds per region'], menLostCobraBattle: ['Men lost in a Cobra mission', ''], menLostJoeRaid: ['Men lost to a Joe raid', ''],
@@ -178,7 +201,7 @@ const LABEL = {
 const STYLE_COL = {absent: 'var(--s1)', cautious: 'var(--s2)', typical: 'var(--s3)', aggressive: 'var(--s4)'};
 const STOCK_COL = {bullets: 'var(--k1)', guns: 'var(--k2)', missiles: 'var(--k3)', vehicles: 'var(--k4)', aircraft: 'var(--k5)', cells: 'var(--k6)'};
 const VERSION_COL = {'A: Drome assault (finished)': '#5fb06a', 'A: Drome assault (unfinished)': '#9fd08a', 'B: network broken': '#4b8ed8', 'Drome strike': '#d0453a'};
-let mode = 'act1', params = {}, baseline = {act1: null, split: null};
+let mode = 'act1', params = {}, baseline = {act1: null, split: null, world: null, intel: null};
 const clone = o => JSON.parse(JSON.stringify(o));
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v.replace(/var\((--[^)]+)\)/, '$1')).trim() || v;
 
@@ -193,11 +216,12 @@ function build() {
     for (const k of keys) { const [lab, help] = LABEL[k] || [k, '']; h += `<div class="row"><span>${lab}${help ? `<small>${help}</small>` : ''}</span><input type="number" step="any" data-k="${k}"></div>`; }
     h += `</div></details>`;
   }
-  for (const [title, rows, cols, names, byStockRows] of M.tables) {
+  if (mode === 'intel') h += `<label class="f">Sending policy (for the map replay)</label><select id="policy">${SIM.INTEL_POLICIES.map(p => `<option value="${p}" ${p === 'pick' ? 'selected' : ''}>${{everything: 'Send everything', pick: 'Pick and choose', little: 'Send little'}[p]}</option>`).join('')}</select>`;
+  for (const [title, rows, cols, names, byStockRows, pre] of M.tables) {
     h += `<details><summary>${title}</summary><div><div class="grid" style="grid-template-columns: 74px repeat(${cols.length}, 1fr)"><span></span>` +
       cols.map(c => `<span class="h">${names ? names[c] : c}</span>`).join('');
     for (const r of rows) {
-      h += `<span>${r}</span>` + cols.map(c => `<input type="number" step="any" data-t="${byStockRows ? r + '.' + c : (title === 'Player styles' ? 'styles.' + r + '.' + c : r + '.' + c)}">`).join('');
+      h += `<span>${r}</span>` + cols.map(c => `<input type="number" step="any" data-t="${byStockRows ? (pre || '') + r + '.' + c : (title === 'Player styles' ? 'styles.' + r + '.' + c : r + '.' + c)}">`).join('');
     }
     h += `</div></div></details>`;
   }
@@ -232,7 +256,7 @@ function run() {
     const t0 = performance.now(), res = MODES[mode].run(clone(params)), ms = performance.now() - t0;
     const scen = document.getElementById('scen').value;
     if (!baseline[mode]) baseline[mode] = {res, scen};
-    ({act1: showAct1, split: showSplit, world: showWorld})[mode](res, baseline[mode], scen, ms);
+    ({act1: showAct1, split: showSplit, world: showWorld, intel: showIntel})[mode](res, baseline[mode], scen, ms);
   }, 30);
 }
 
@@ -328,9 +352,9 @@ function replayCard() {
     <p class="note">One campaign from the same numbers, month by month. The tables above are averages over many campaigns; this is what a single one looks like.</p>`;
   out.appendChild(box);
   const load = () => { stopPlay(); const st = document.getElementById('rp-style').value, n = +document.getElementById('rp-n').value || 1;
-    RP.run = ({act1: SIM.act1Replay, split: SIM.splitReplay, world: SIM.worldReplay})[mode](clone(params), st, n); RP.mode = mode; RP.slots = null;
+    RP.run = ({act1: SIM.act1Replay, split: SIM.splitReplay, world: SIM.worldReplay, intel: SIM.intelReplay})[mode](clone(params), st, n, (document.getElementById('policy') || {}).value); RP.mode = mode; RP.slots = null;
     const sl = document.getElementById('rp-m'); sl.max = RP.run.frames.length - 1; sl.value = 0; draw(); };
-  const draw = () => { const i = +document.getElementById('rp-m').value; ({act1: drawAct1, split: drawSplit, world: drawWorld})[RP.mode](RP.run, i); };
+  const draw = () => { const i = +document.getElementById('rp-m').value; ({act1: drawAct1, split: drawSplit, world: drawWorld, intel: drawIntel})[RP.mode](RP.run, i); };
   document.getElementById('rp-style').onchange = load; document.getElementById('rp-n').onchange = load;
   document.getElementById('rp-m').oninput = draw;
   document.getElementById('rp-play').onclick = () => { if (RP.timer) return stopPlay();
@@ -532,6 +556,67 @@ function drawWorld(run, i) {
   document.getElementById('rp-mon').textContent = 'Month ' + fr.m;
   logList(fr.events.filter(e => e.kind !== 'grow' || fr.events.length < 6));
   document.getElementById('rp-key').innerHTML = `<span>dashed grey circle = a Cobra site nobody knows about</span><span>solid blue = known to the Joes</span><span>gold ring = marked this month</span><span>green dashed arc = a covert op abroad; red cross = spy caught</span><span>gold dotted = captured paperwork pointing abroad</span><span>purple = M.A.R.S. cargo to Sierra Gordo; cross = intercepted</span><span>gold burst = a Joe strike abroad</span>`;
+}
+
+const POL_NAME = {everything: 'Send everything', pick: 'Pick and choose', little: 'Send little'};
+const POL_COL = {everything: '#d0453a', pick: '#5fb06a', little: '#4b8ed8'};
+function showIntel(R, B, scen, ms) {
+  const S = SIM.INTEL_STYLES, P = SIM.INTEL_POLICIES, b = B.res, same = B.res === R;
+  let h = `<h2>Intel cases &middot; ${scen}</h2><p class="note">${params.runs} campaigns per style and policy over ${params.months} months, ${ms.toFixed(0)} ms. ${same ? 'This run is the baseline.' : `Small numbers compare with the baseline run (${B.scen}).`}</p>`;
+  h += `<div class="warn">First-guess numbers (STORY, 17 Nov). Lead odds by source: officer ${pct(params.bring.officer.pays * 100)}, papers ${pct(params.bring.papers.pays * 100)}, gear ${pct(params.bring.gear.pays * 100, 1)}. Act 1 should end around months 10-13.</div>`;
+  h += `<h2>Story pace: when the six Act 1 key clues land</h2><table><tr><th>Sending</th><th>Player style</th><th>All six found (median month)</th>${SIM.INTEL_KEYS.map(k => `<th>${k}</th>`).join('')}<th>Came by another road</th><th>Key clues left in stores</th></tr>`;
+  for (const p of P) for (const s of S) { const r = R[p][s], o = b[p][s];
+    h += `<tr><td><span class="chip" style="background:${POL_COL[p]}"></span>${POL_NAME[p]}</td><td><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</td><td>${f(r.spineMed)}${delta(r.spineMed, o.spineMed, 0, true)}</td>${r.keyMed.map(x => `<td>${f(x)}</td>`).join('')}<td>${pct(r.roadPct)}</td><td>${f(r.missedKeys, 1)}</td></tr>`; }
+  h += `</table><p class="note">"Came by another road" = the player never found it; the fallback brought it late. "Key clues left in stores" = how many key clues were in things the player chose not to send (they came later instead).</p>`;
+  h += `<h2>Workload: analysts and intel Joes</h2><table><tr><th>Sending</th><th>Player style</th><th>Cases opened</th><th>Dead ends</th><th>Wait for an analyst (months)</th><th>Backlog at the end</th><th>Names chased</th><th>Names that paid</th><th>Intel Joes caught</th></tr>`;
+  for (const p of P) for (const s of S) { const r = R[p][s], o = b[p][s];
+    h += `<tr><td><span class="chip" style="background:${POL_COL[p]}"></span>${POL_NAME[p]}</td><td><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</td><td>${f(r.opened)}</td><td>${pct(r.deadPct)}</td><td>${f(r.wait, 1)}${delta(r.wait, o.wait, 1, true)}</td><td>${f(r.backlogEnd)}${delta(r.backlogEnd, o.backlogEnd, 0, true)}</td><td>${f(r.names, 1)}</td><td>${pct(r.namesPaidPct)}</td><td>${f(r.joesCaught, 1)}</td></tr>`; }
+  h += `</table><h2>Acting on leads</h2><table><tr><th>Sending</th><th>Player style</th><th>Leads raided</th><th>On old intel</th><th>Empty (Cobra moved)</th><th>Traps</th></tr>`;
+  for (const p of P) for (const s of S) { const r = R[p][s];
+    h += `<tr><td><span class="chip" style="background:${POL_COL[p]}"></span>${POL_NAME[p]}</td><td><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</td><td>${f(r.leadsActed, 1)}</td><td>${pct(r.oldPct)}</td><td>${pct(r.emptyPct)}</td><td>${pct(r.trapPct)}</td></tr>`; }
+  h += `</table><div class="cards">
+    <div class="card"><h3>Key clues found, typical player (median)</h3><canvas id="i1"></canvas></div>
+    <div class="card"><h3>Cases waiting for an analyst, typical player (median)</h3><canvas id="i2"></canvas></div>
+    <div class="card"><h3>Month all six key clues are in, typical player (share)</h3><canvas id="i3"></canvas></div>
+    <div class="card"><h3>Key clues found, pick and choose, by player style</h3><canvas id="i4"></canvas></div></div>
+    <div class="legend">${P.map(p => `<span><span class="chip" style="background:${POL_COL[p]}"></span>${POL_NAME[p]}</span>`).join('')} &nbsp; ${S.map(s => `<span><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</span>`).join('')}</div>`;
+  document.getElementById('out').innerHTML = h;
+  line('i1', P.map(p => ({col: POL_COL[p], data: R[p].typical.track.keys})));
+  line('i2', P.map(p => ({col: POL_COL[p], data: R[p].typical.track.backlog})));
+  line('i3', P.map(p => ({col: POL_COL[p], data: R[p].typical.hist.map(x => x * 100 / params.runs)})), '%');
+  line('i4', S.map(s => ({col: css(STYLE_COL[s]), data: R.pick[s].track.keys})));
+  replayCard();
+}
+function drawIntel(run, i) {
+  const fr = run.frames[i], W = 1100, H = 470, svg = document.getElementById('rp-svg');
+  const SRC = {officer: '#d8b45a', papers: '#e8ecef', gear: '#7d8a96'};
+  let g = `<rect width="${W}" height="${H}" fill="#0f1317"/>`;
+  // the Intel app: three panels
+  const panel = (x, w, t, sub) => `<rect x="${x}" y="20" width="${w}" height="${H - 40}" rx="8" fill="#141a20" stroke="#33404c"/><text x="${x + 12}" y="44" font-size="13" font-weight="700" fill="#e8ecef">${t}</text><text x="${x + 12}" y="62" font-size="11" fill="#93a1ad">${sub}</text>`;
+  g += panel(20, 330, 'Waiting for an analyst', `${fr.queue.length} cases`);
+  g += panel(370, 330, 'Worked this month', `${fr.seats} analysts on cases`);
+  g += panel(720, 360, 'The field', `${fr.joes} intel Joe${fr.joes === 1 ? '' : 's'} free${fr.held ? `, ${fr.held} caught` : ''} &middot; Cobra ${fr.alert ? 'ALERT' : 'quiet'} (hidden)`);
+  fr.queue.slice(0, 96).forEach((c, k) => { const x = 34 + (k % 12) * 26, y = 80 + Math.floor(k / 12) * 26;
+    g += `<rect x="${x}" y="${y}" width="20" height="20" rx="3" fill="none" stroke="${SRC[c.src]}" stroke-width="1.5" opacity="${Math.max(0.35, 1 - c.age * 0.12)}"/>`; });
+  if (fr.queue.length > 96) g += `<text x="34" y="${H - 34}" font-size="12" fill="#d0453a">+${fr.queue.length - 96} more waiting</text>`;
+  const OUT = {dead: ['#55606b', 'dead end'], key: ['#d8b45a', 'KEY CLUE'], lead: ['#5fb06a', 'lead'], name: ['#4b8ed8', 'name']};
+  fr.done.slice(0, 96).forEach((d, k) => { const x = 384 + (k % 12) * 26, y = 80 + Math.floor(k / 12) * 26, [col] = OUT[d.out];
+    g += `<rect x="${x}" y="${y}" width="20" height="20" rx="3" fill="${d.out === 'dead' ? 'none' : col}" stroke="${d.out === 'dead' ? '#55606b' : col}" stroke-width="1.5"/>`;
+    if (d.out === 'dead') g += `<path d="M${x + 4} ${y + 4}L${x + 16} ${y + 16}M${x + 16} ${y + 4}L${x + 4} ${y + 16}" stroke="#55606b" stroke-width="1.5"/>`;
+    g += `<rect x="${x}" y="${y + 17}" width="20" height="3" fill="${SRC[d.src]}"/>`; });
+  // the field: leads waiting with their age, names waiting, the key clue track
+  g += `<text x="734" y="96" font-size="12" fill="#e8ecef">Leads to raid (age in months; the warning is by time only)</text>`;
+  fr.leads.slice(0, 20).forEach((a, k) => { const x = 734 + (k % 10) * 33, y = 106 + Math.floor(k / 10) * 32, old = a >= params.staleAfter;
+    g += `<rect x="${x}" y="${y}" width="27" height="24" rx="3" fill="${old ? '#3a2a10' : '#1d3322'}" stroke="${old ? '#d8b45a' : '#5fb06a'}"/><text x="${x + 13.5}" y="${y + 16}" text-anchor="middle" font-size="11" fill="#e8ecef">${a}</text>`; });
+  g += `<text x="734" y="196" font-size="12" fill="#e8ecef">Names waiting for an intel Joe: ${fr.names}</text>`;
+  g += `<text x="734" y="236" font-size="12" font-weight="700" fill="#d8b45a">Act 1 key clues: ${fr.keys} of ${SIM.INTEL_KEYS.length}</text>`;
+  SIM.INTEL_KEYS.forEach((k, j) => { const y = 252 + j * 28, got = j < fr.keys, road = got && run.keyRoad[j] === 'road';
+    g += `<rect x="734" y="${y}" width="332" height="22" rx="4" fill="${got ? (road ? '#24303a' : '#3a3215') : '#11161b'}" stroke="${got ? (road ? '#93a1ad' : '#d8b45a') : '#33404c'}"/>
+      <text x="744" y="${y + 15}" font-size="11.5" fill="${got ? '#e8ecef' : '#55606b'}">${got ? k : '???'}</text>${got ? `<text x="1056" y="${y + 15}" text-anchor="end" font-size="11" fill="#93a1ad">month ${run.keyMonth[j]}${road ? ', late, by another road' : ''}</text>` : ''}`; });
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = g;
+  document.getElementById('rp-mon').textContent = 'Month ' + fr.m;
+  logList(fr.events);
+  document.getElementById('rp-key').innerHTML = `<span>box outline colour = source: gold officer, white papers, grey gear</span><span>waiting boxes fade as they age</span><span>worked: grey cross = dead end, gold = key clue, green = lead, blue = a name</span><span>lead boxes: green = fresh, gold = old (warned); whether Cobra moved is hidden</span><span>key clue bars: gold = found by the Joes, grey = came late by another road</span>`;
 }
 
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => { document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t)); mode = t.dataset.mode; stopPlay(); build(); });

@@ -550,8 +550,136 @@ const WORLD_SCENARIOS = {
 };
 function worldReplay(P, style, n) { const R = rng((P.seed * 7919 + n * 104729) >>> 0); return worldRun(P, style, R, true); }
 
+// ------------------------------------------------------------------ mode 4: intel cases (INTEL_CASES_v1)
+// Missions bring things home; at the debrief the player chooses what to send to Intel (the sending policy). Each item sent
+// opens a case and waits for an analyst; an analyst works one case a month. Whether a case pays depends on its source
+// (officer > papers > gear). A hit is a key story clue (the Act 1 chain), a lead to act on (a site or a delivery: a raid),
+// or a name (field work for an intel Joe; often a dead end). Leads age: the warning is by time only; whether Cobra really
+// moved is hidden and depends on how alert it is. A key clue the player misses comes back by another road, late.
+const INTEL_STYLES = ['absent', 'cautious', 'typical', 'aggressive'];
+const INTEL_POLICIES = ['everything', 'pick', 'little'];
+const INTEL_SOURCES = ['officer', 'papers', 'gear'];
+const INTEL_KEYS = ['Flight routes', 'A depot', 'The second depot', 'Drome rumours', 'Where the Drome is', 'M.A.R.S. markings'];
+const INTEL_DEFAULTS = {
+  runs: 400, months: 18, seed: 23,
+  // what one mission brings home (average count per mission)
+  bring: {officer: {perMission: 0.5, pays: 0.35, send_pick: 1, send_little: 1},
+          papers: {perMission: 0.8, pays: 0.20, send_pick: 1, send_little: 0.5},
+          gear: {perMission: 3.0, pays: 0.075, send_pick: 0.2, send_little: 0}},
+  // analysts: seats on Day 1, the share put on cases (the rest research), cases one analyst closes a month
+  analystsStart: 10, analystShare: 0.5, casesPerAnalyst: 1,
+  // what a hit is: a key clue (only once that clue is due), a lead to act on, or a name
+  keyChance: 0.35, leadChance: 0.4,
+  keyDue: [3, 5, 7, 9, 10, 12], keyEarly: 2, keyGrace: 3,           // a key can be found from due-early; it comes back by another road at due+grace
+  // field work on a name: an intel Joe, a few jobs a month
+  joeJobsPerMonth: 2, namePays: 0.3, joeCaught: 0.05, joeHeldMonths: 2,
+  // leads: acting on one is a raid; Cobra may have moved since (hidden)
+  staleAfter: 2, moveQuiet: 0.08, moveAlert: 0.3, alertRaids: 3, trapShare: 0.3, raidCaptures: 0.6,
+  styles: {
+    absent:     {missions: 0.5, raids: 0.5, seatsPerMonth: 0,    joeEvery: 0},
+    cautious:   {missions: 1.5, raids: 1,   seatsPerMonth: 0.25, joeEvery: 8},
+    typical:    {missions: 3,   raids: 2,   seatsPerMonth: 0.5,  joeEvery: 5},
+    aggressive: {missions: 4.5, raids: 3,   seatsPerMonth: 0.75, joeEvery: 4},
+  },
+};
+
+function intelRun(P, style, policy, R, rec) {
+  const st = P.styles[style];
+  const roll = x => Math.floor(x) + (R() < x % 1 ? 1 : 0);
+  let seats = P.analystsStart, joes = 1, held = [], keys = 0, nextCase = 1;
+  const queue = [], leads = [], names = [], keyMonth = Array(INTEL_KEYS.length).fill(null), keyRoad = Array(INTEL_KEYS.length).fill(null);
+  const raidHist = [];
+  const L = {opened: 0, worked: 0, dead: 0, hits: 0, byKeyRoad: 0, missedKeys: 0, notSent: 0, waitSum: 0,
+    leadsActed: 0, leadsOld: 0, empty: 0, traps: 0, good: 0, namesChased: 0, namesPaid: 0, joesCaught: 0, extraCaptures: 0,
+    track: {keys: [], backlog: [], seats: []}, frames: []};
+  const send = src => policy === 'everything' ? 1 : P.bring[src][policy === 'pick' ? 'send_pick' : 'send_little'];
+  let carry = 0;   // captures from raids on good leads, brought home next month
+  for (let m = 0; m < P.months; m++) {
+    const E = []; const ev = (kind, text, extra) => { if (rec) E.push(Object.assign({kind, text}, extra || {})); };
+    if (m > 0) seats += st.seatsPerMonth;
+    if (st.joeEvery && m > 0 && m % st.joeEvery === 0) { joes++; ev('joe', 'A new intel Joe joins Scarlett'); }
+    held = held.filter(h => { if (h <= m) { joes++; ev('joe', 'A held intel Joe is back'); return false; } return true; });
+    const due = k => m >= P.keyDue[k] - P.keyEarly;
+    const findKey = (how, src) => { if (keys >= INTEL_KEYS.length || !due(keys)) return false;
+      keyMonth[keys] = m; keyRoad[keys] = how; ev('key', `KEY CLUE: ${INTEL_KEYS[keys]} (${how === 'road' ? 'came back by another road' : 'from ' + src})`); keys++; return true; };
+    // the debrief: what the missions brought home, and what is sent to Intel
+    const missions = roll(st.missions);
+    let brought = 0, sent = 0;
+    for (const src of INTEL_SOURCES) {
+      const n = roll(P.bring[src].perMission * missions) + (src === 'officer' ? carry : 0);
+      for (let i = 0; i < n; i++) { brought++;
+        if (R() < send(src)) { sent++; L.opened++; queue.push({id: nextCase++, src, opened: m}); }
+        else { L.notSent++; if (R() < P.bring[src].pays && R() < P.keyChance && keys < INTEL_KEYS.length && due(keys)) L.missedKeys++; } } }
+    carry = 0;
+    if (missions) ev('debrief', `${missions} mission${missions > 1 ? 's' : ''}: ${brought} things brought home, ${sent} sent to Intel`);
+    // analysts work the queue, oldest first
+    const cap = Math.floor(seats * P.analystShare * P.casesPerAnalyst);
+    const work = queue.splice(0, cap), done = [];
+    for (const c of work) { L.worked++; L.waitSum += m - c.opened;
+      if (R() < P.bring[c.src].pays) { L.hits++;
+        if (R() < P.keyChance && findKey('case', c.src)) { done.push({c, out: 'key'}); continue; }
+        if (R() < P.leadChance / (1 - P.keyChance)) { leads.push({found: m}); done.push({c, out: 'lead'}); ev('lead', `Case ${c.id} (${c.src}): a delivery time or a site to hit`); }
+        else { names.push({found: m}); done.push({c, out: 'name'}); ev('name', `Case ${c.id} (${c.src}): a name, nobody on file`); } }
+      else { L.dead++; done.push({c, out: 'dead'}); } }
+    // field work: intel Joes chase names
+    const jobs = joes * P.joeJobsPerMonth;
+    for (let j = 0; j < jobs && names.length; j++) { names.shift(); L.namesChased++;
+      if (R() < P.joeCaught) { L.joesCaught++; joes--; held.push(m + P.joeHeldMonths); ev('caught', 'An intel Joe is caught chasing a name'); if (joes <= 0) break; continue; }
+      if (R() < P.namePays) { L.namesPaid++; if (!findKey('case', 'a name')) { leads.push({found: m}); ev('lead', 'A name pays: an address worth hitting'); } }
+      else ev('deadname', 'A name leads nowhere (a regular guy, asleep)'); }
+    // raids on leads, oldest first; Cobra may have moved (hidden, more likely when it is alert)
+    const alert = raidHist.slice(-2).reduce((a, b) => a + b, 0) >= P.alertRaids;
+    let raids = 0; const rc = roll(st.raids);
+    for (let i = 0; i < rc && leads.length; i++) { const ld = leads.shift(); raids++; L.leadsActed++;
+      const age = m - ld.found; if (age >= P.staleAfter) L.leadsOld++;
+      const moved = 1 - Math.pow(1 - (alert ? P.moveAlert : P.moveQuiet), age + 1);
+      if (R() < moved) { if (R() < P.trapShare) { L.traps++; ev('trap', `Raid on a ${age}-month-old lead: a trap`); } else { L.empty++; ev('empty', `Raid on a ${age}-month-old lead: empty, Cobra moved`); } }
+      else { L.good++; const c = roll(P.raidCaptures); carry += c; L.extraCaptures += c; ev('raid', `Raid on a ${age}-month-old lead pays${c ? ': an officer taken' : ''}`); } }
+    raidHist.push(raids + roll(st.raids * 0.5));   // the player's other raids count toward Cobra's alertness too
+    // a key clue the player missed comes back by another road
+    if (keys < INTEL_KEYS.length && m >= P.keyDue[keys] + P.keyGrace) { L.byKeyRoad++; findKey('road'); }
+    L.track.keys.push(keys); L.track.backlog.push(queue.length); L.track.seats.push(cap);
+    if (rec) L.frames.push({m, seats: cap, joes, held: held.length, queue: queue.map(c => ({id: c.id, src: c.src, age: m - c.opened})),
+      done: done.map(d => ({id: d.c.id, src: d.c.src, out: d.out})), leads: leads.map(l => m - l.found), names: names.length, keys, alert, events: E});
+  }
+  return Object.assign(L, {keyMonth, keyRoad, spineDone: keys >= INTEL_KEYS.length ? keyMonth.at(-1) : null});
+}
+
+function intel(P) {
+  const R = rng(P.seed), out = {};
+  for (const policy of INTEL_POLICIES) { out[policy] = {};
+    for (const style of INTEL_STYLES) {
+      const Ls = []; for (let i = 0; i < P.runs; i++) Ls.push(intelRun(P, style, policy, R));
+      const tr = k => { const res = []; for (let m = 0; m < P.months; m++) res.push(median(Ls.map(l => l.track[k][m]))); return res; };
+      const hist = Array(P.months).fill(0); for (const l of Ls) if (l.spineDone != null) hist[l.spineDone]++;
+      out[policy][style] = {spineMed: median(Ls.map(l => l.spineDone).filter(x => x != null)), spinePct: Ls.filter(l => l.spineDone != null).length * 100 / P.runs, hist,
+        keyMed: INTEL_KEYS.map((_, k) => median(Ls.map(l => l.keyMonth[k]).filter(x => x != null))),
+        roadPct: mean(Ls.map(l => l.byKeyRoad * 100 / INTEL_KEYS.length)), missedKeys: mean(Ls.map(l => l.missedKeys)),
+        opened: mean(Ls.map(l => l.opened)), deadPct: mean(Ls.map(l => l.worked ? l.dead * 100 / l.worked : 0)),
+        wait: mean(Ls.map(l => l.worked ? l.waitSum / l.worked : 0)), backlogEnd: mean(Ls.map(l => l.track.backlog.at(-1))),
+        backlogPeak: mean(Ls.map(l => Math.max(...l.track.backlog))), notSent: mean(Ls.map(l => l.notSent)),
+        leadsActed: mean(Ls.map(l => l.leadsActed)), oldPct: mean(Ls.map(l => l.leadsActed ? l.leadsOld * 100 / l.leadsActed : 0)),
+        emptyPct: mean(Ls.map(l => l.leadsActed ? l.empty * 100 / l.leadsActed : 0)), trapPct: mean(Ls.map(l => l.leadsActed ? l.traps * 100 / l.leadsActed : 0)),
+        names: mean(Ls.map(l => l.namesChased)), namesPaidPct: mean(Ls.map(l => l.namesChased ? l.namesPaid * 100 / l.namesChased : 0)), joesCaught: mean(Ls.map(l => l.joesCaught)),
+        track: {keys: tr('keys'), backlog: tr('backlog'), seats: tr('seats')}};
+    } }
+  return out;
+}
+const INTEL_SCENARIOS = {
+  'As designed (far less: 35 / 20 / 5-10%)': {},
+  'STORY\'s first odds (70 / 50 / 25%)': {bring: {officer: {perMission: 0.5, pays: 0.7, send_pick: 1, send_little: 1}, papers: {perMission: 0.8, pays: 0.5, send_pick: 1, send_little: 0.5}, gear: {perMission: 3, pays: 0.25, send_pick: 0.2, send_little: 0}}},
+  'All analysts on cases': {analystShare: 1},
+  'Few analysts on cases (a quarter)': {analystShare: 0.25},
+  'No fallback: a missed key clue never comes back': {keyGrace: 99},
+  'Slow fallback (6 months late)': {keyGrace: 6},
+  'Cobra moves fast (quiet 15%, alert 50% a month)': {moveQuiet: 0.15, moveAlert: 0.5},
+  'Names pay more often (50%)': {namePays: 0.5},
+  'Only Scarlett all Act 1': {styles: {absent: INTEL_DEFAULTS.styles.absent, cautious: Object.assign({}, INTEL_DEFAULTS.styles.cautious, {joeEvery: 0}), typical: Object.assign({}, INTEL_DEFAULTS.styles.typical, {joeEvery: 0}), aggressive: Object.assign({}, INTEL_DEFAULTS.styles.aggressive, {joeEvery: 0})}},
+};
+function intelReplay(P, style, n, policy) { const R = rng((P.seed * 7919 + n * 104729) >>> 0); return intelRun(P, style, policy || 'pick', R, true); }
+
 function act1Replay(P, style, n) { const R = rng((P.seed * 7919 + n * 104729) >>> 0); return act1Run(P, style, R, true); }
 function splitReplay(P, style, n) { const R = rng((P.seed * 7919 + n * 104729) >>> 0); return splitRun(P, style, R, true); }
-return {world, worldReplay, WORLD_DEFAULTS, WORLD_SCENARIOS, WORLD_STYLES, WORLD_REGIONS, LEAKS, NAMES, act1Replay, splitReplay, act1, split, ACT1_DEFAULTS, SPLIT_DEFAULTS, ACT1_SCENARIOS, SPLIT_SCENARIOS, ACT1_STYLES, SPLIT_STYLES, STOCKS};
+return {intel, intelReplay, INTEL_DEFAULTS, INTEL_SCENARIOS, INTEL_STYLES, INTEL_POLICIES, INTEL_SOURCES, INTEL_KEYS, world, worldReplay, WORLD_DEFAULTS, WORLD_SCENARIOS, WORLD_STYLES, WORLD_REGIONS, LEAKS, NAMES, act1Replay, splitReplay, act1, split, ACT1_DEFAULTS, SPLIT_DEFAULTS, ACT1_SCENARIOS, SPLIT_SCENARIOS, ACT1_STYLES, SPLIT_STYLES, STOCKS};
 })();
 if (typeof module !== 'undefined') module.exports = SIM;
