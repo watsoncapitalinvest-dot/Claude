@@ -145,7 +145,7 @@ out['missionScripts'] = [{'type': 'cobraFronts', 'executionOdds': 0}, {'type': '
 out['leads'] = [{'type': 'STR_LEAD_COBRA_CELL', 'revealSiteType': 'STR_COBRA_CELL'}]
 out['events'] = [
     {'name': 'STR_EVENT_COBRA_BROADCAST', 'description': 'STR_EVENT_COBRA_BROADCAST_DESCRIPTION',
-     'everyItemList': ['STR_BROADCAST_RECORDING'], 'timer': 60},
+     'everyItemList': ['STR_BROADCAST_RECORDING'], 'researchList': ['STR_COBRA_SHOWN'], 'timer': 60},
     {'name': 'STR_EVENT_FACTORY_REACTIVATED', 'description': 'STR_EVENT_FACTORY_REACTIVATED_DESCRIPTION',
      'cutscene': 'act1FactoryReopened', 'timer': 60},
     {'name': 'STR_EVENT_FACTORY_WRECKED', 'description': 'STR_CUT_FACTORY_B2', 'cutscene': 'act1FactoryWrecked', 'timer': 60},
@@ -157,7 +157,10 @@ out['events'] = [
     {'name': 'STR_EVENT_ACT1_CLOSE_STANDS', 'description': 'STR_CUT_CLOSE_B1', 'cutscene': 'act1CloseDromeStands', 'timer': 60},
 ]
 # the plans' own research plays the Drome cutscene with the stolen blueprints
-out['research'] = [{'name': 'STR_TERROR_DROME_PLANS', 'cutscene': 'act1DromePlans'}]
+out['research'] = [{'name': 'STR_TERROR_DROME_PLANS', 'cutscene': 'act1DromePlans'},
+                   # a mark, never researched by hand: set by the broadcast. Cobra's own missions (the convoy, the van
+                   # stops) wait for it (John 18 Nov 02:45 "Shouldn't be seeing cobra so early")
+                   {'name': 'STR_COBRA_SHOWN', 'cost': 1, 'points': 0, 'requiresBaseFunc': ['STR_STORY_NEVER']}]
 strs = {'STR_COBRA_CELL': 'Cobra Cell', 'STR_COBRA_CELL_SITE': 'Cobra Cell', 'STR_COBRA_BANK_JOB': 'Bank Job',
         'STR_COBRA_CELL_STRIKE': 'Cell Strike', 'STR_COBRA_CRIME_MISSION': 'Cobra Crime', 'STR_COBRA_CELL_STRIKE_MISSION': 'Cell Strike',
         'STR_EVENT_FACTORY_WRECKED': 'THE GATES ARE CHAINED', 'STR_COBRA_TERROR_DROME_BUILDING': 'Terror Drome (building)', 'STR_COBRA_DROME_STRIKE': 'Drome Strike',
