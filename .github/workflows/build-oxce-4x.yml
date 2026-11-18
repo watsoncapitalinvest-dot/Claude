@@ -31,6 +31,11 @@ jobs:
         run: |
           cd oxce/src
           msbuild OpenXcom.2010.sln /v:minimal /m /p:Configuration=Release /p:Platform=Win32 /p:PreferredToolArchitecture=x64
+      - name: Compile (x64 Release) - the 64-bit build has no 4 GB ceiling (John's 21:58 crash: 4004 of 4095 MB at battle start)
+        continue-on-error: true
+        run: |
+          cd oxce/src
+          msbuild OpenXcom.2010.sln /v:minimal /m /p:Configuration=Release /p:Platform=x64 /p:PreferredToolArchitecture=x64
       - name: Large address aware (a 32-bit exe gets 4 GB on 64-bit Windows instead of 2 GB; 4x full-colour sheets need it)
         shell: bash
         run: |
@@ -75,6 +80,13 @@ jobs:
         shell: bash
         run: |
           mkdir bin && cp out/OpenXcom.exe bin/
+          # the 64-bit build, if it compiled: exe + its own 64-bit DLLs in x64/ (they cannot share a folder with the 32-bit ones)
+          if [ -f oxce/bin/x64/Release/OpenXcom.exe ]; then
+            mkdir -p bin/x64 && cp oxce/bin/x64/Release/OpenXcom.exe bin/x64/ && cp oxce/bin/x64/*.dll bin/x64/ 2>/dev/null
+            echo "x64 build: $(ls bin/x64 | tr '\n' ' ')"
+          else
+            echo "no x64 build"; ls oxce/bin || true
+          fi
           cp mine/tools/oxce-4x/IF_IT_CRASHES.txt bin/ 2>/dev/null || true
           # Symbols travel with the exe or they are useless - dbghelp matches a .pdb to the
           # exact build that wrote it. But GitHub refuses any file over 100MB and the raw pdb
