@@ -38,6 +38,34 @@ def hit(x, y):
     o = world_at(x, y) + d * 100; r = sc.ray_cast(bpy.context.evaluated_depsgraph_get(), o, -d)
     return r[1] if r[0] else None
 clicks = json.load(open(JIN)); turn(2); inv = root.matrix_world.inverted(); out = {'frame': [FW, FH], 'anchor': [AX, AY], 'marks': []}
+if isinstance(clicks, dict) and 'auto' in clicks:
+    # John 14:58 "just try to match the explosion marks as best as possible, lock them into the model and it will turn with the model":
+    # VFACTORY places them on the hull itself (model +x = bow): 1 small on the deck aft, starboard; 2 regular on the deck forward, port;
+    # D big in the middle of the hull at deck height (not on a mast or periscope tip)
+    import numpy as np
+    V = np.array([(inv @ (o.matrix_world @ v.co))[:] for o in objs if not o.name.startswith('decal') for v in o.data.vertices])   # model (root-local) coords
+    lo, hi = V.min(0), V.max(0); L, Wd = hi[0] - lo[0], hi[1] - lo[1]; deck = lo[2] + 0.85 * (hi[2] - lo[2])   # only masts/periscopes stick above this
+    cx0, cy0 = (lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2
+    def top(x, y):                                                  # the hull's top surface under (x, y), never above the deck line;
+        for t in [i / 20 for i in range(21)]:                       # off the hull (fins, gaps) -> slide in toward the middle until it lands
+            xx, yy = x + (cx0 - x) * t, y + (cy0 - y) * t
+            o = root.matrix_world @ Vector((xx, yy, hi[2] + 50)); dn = (root.matrix_world.to_3x3() @ Vector((0, 0, -1))).normalized()
+            r = sc.ray_cast(bpy.context.evaluated_depsgraph_get(), o, dn)
+            if r[0]:
+                h = inv @ r[1]
+                if h.z <= deck: return h
+                # hit something tall (a mast): take the deck under it if the hull is there
+                r2 = sc.ray_cast(bpy.context.evaluated_depsgraph_get(), root.matrix_world @ Vector((xx, yy, deck)), dn)
+                if r2[0]: return inv @ r2[1]
+        return Vector((x, y, deck))
+    model = [(top(lo[0] + 0.22 * L, -0.28 * Wd), 's'), (top(lo[0] + 0.70 * L, 0.24 * Wd), 'r'), (top(cx0, cy0), 'b')]
+    for loc, size in model:
+        per = []
+        for k in range(8):
+            turn(k); w = root.matrix_world @ loc; p = px(w)
+            per.append([round(p.x - AX, 1), round(p.y - AY, 1), not sc.ray_cast(bpy.context.evaluated_depsgraph_get(), w + d * 0.05, d)[0]])
+        out['marks'].append({'size': size, 'model': [round(v, 3) for v in loc], 'placed_by': 'VFACTORY on the model (John 14:58)', 'headings': per})
+    json.dump(out, open(JOUT, 'w'), indent=1); print('MARKS8', JOUT, 'auto'); sys.exit(0)
 for (x, y, size) in clicks:
     turn(2); h = hit(x, y); miss = 0                                # back to heading E for every click
     if h is None:                                                   # clicked a hair off the model: nearest hit in a growing ring

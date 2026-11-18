@@ -24,19 +24,22 @@ CRAFT = {   # sheet name: (package dir, cfg, state)
  'night_landing': ('/home/claude/rt/veh/pkg/night_landing_airsea', 'nightlanding/cfg_cobra_airsea.json', 'm0'),
  'srv9': ('/home/claude/rt/veh/pkg/srv9_airsea', 'srv9/cfg_airsea.json', 'm0'),
  'killer_whale': ('/home/claude/rt/veh/pkg/killer_whale_airsea', 'whale/cfg_airsea.json', 'm0'),
+ 'night_landing_joe': ('/home/claude/rt/veh/pkg/night_landing_joe_airsea', 'nightlanding/cfg_joe_airsea.json', 'm0'),
+ 'sea_sled': ('/tmp/boats/sea_sled', 'seasled/cfg.json', 'm0'),
+ 'swamp_skier': ('/home/claude/rt/veh/pkg/swamp_skier_airsea', 'swampskier/cfg_airsea.json', 'm0'),
 }
 os.makedirs(os.path.join(HERE, 'out'), exist_ok=True)
 only = sys.argv[1:]
 for name, (root, cfgp, st) in CRAFT.items():
     if only and name not in only: continue
-    if name not in POINTS: print('NO MARKS YET', name); continue
+    auto = name not in POINTS
     man = json.load(open(os.path.join(root, 'manifest.json'))); cfg = json.load(open(os.path.join(V5, cfgp)))
     e = next(x for x in man['frames'] if x['look'] == 'damaged' and x['heading'] == 'E' and x.get('state', st) == st)
     pic = Image.open(os.path.join(root, e['file'])).convert('RGBA')
     ang = sorted([x for x in (man.get('spin') or []) if x['heading'] == 'E' and x.get('angle_deg') is not None], key=lambda x: x['angle_deg'])
     if ang: pic.alpha_composite(Image.open(os.path.join(root, ang[0]['file'])).convert('RGBA'))
     bb = pic.getbbox()
-    clicks = [[bb[0] + p[0] * (bb[2] - bb[0]), bb[1] + p[1] * (bb[3] - bb[1]), p[2]] for p in POINTS[name]]
+    clicks = {'auto': True} if auto else [[bb[0] + p[0] * (bb[2] - bb[0]), bb[1] + p[1] * (bb[3] - bb[1]), p[2]] for p in POINTS[name]]
     jin = f'/tmp/marks8_{name}_in.json'; json.dump(clicks, open(jin, 'w'))
     blend = next(os.path.join(root, f) for f in os.listdir(root) if f.endswith('_source.blend'))
     hide = cfg['states'].get(st, [])
