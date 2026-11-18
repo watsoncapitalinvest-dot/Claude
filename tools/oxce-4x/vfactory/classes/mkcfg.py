@@ -40,6 +40,8 @@ c = base('mobat', round(0.089 * 1.37, 5), 4, [3, 4], 'mobat', {'m0': ['GJTURRET'
 c['turret'] = {'objs': ['GJTURRET', 'GJBARREL01'], 'pivot': [0.0, 0.0, 6.662], 'muzzles': {'main': [16.032, 0.0, 8.08, 1, 0, 0]}, 'note': 'main gun turret turns on its own'}
 c['preview']['script'] = [['move', 'NE', 2], ['gun', ['main']], ['tturn', 'SE'], ['gun', ['main']], ['tturn', 'NE'], ['wait', 6]]
 cf['mobat'] = c
+for _c in cf.values():                                   # turret decals ride the turret layer: never on hull frames (17 Nov 20:32)
+    if 'turret' in _c: _c['states'] = {k: v + ['decal_t_*'] for k, v in _c['states'].items()}
 for k, v in cf.items(): json.dump(v, open(f'cfg_{k}.json', 'w'), indent=1)
 print({k: (v['scale'], v['foot_frame']) for k, v in cf.items()})
 
@@ -96,5 +98,7 @@ c['turret'] = {'objs': ['GJTURRET01'], 'pivot': [-4.27, 0.0, 13.42], 'muzzles': 
 c['launchers'] = [{'name': 'rkt', 'muzzles': ['rk1', 'rk2'], 'fx_scale': 0.25, 'from_tube': True}]
 c['preview']['script'] = [['move', 'NE', 2], ['missile', 'rk1', 'm0', 'rkt', 18.9], ['missile', 'rk2', 'm0', 'rkt', 18.9], ['wait', 6]]
 cf2['hiss_rack'] = c
+for _c in cf2.values():                                   # turret decals ride the turret layer: never on hull frames (17 Nov 20:32)
+    if 'turret' in _c: _c['states'] = {k: v + ['decal_t_*'] for k, v in _c['states'].items()}
 for k, v in cf2.items(): json.dump(v, open(f'cfg_{k}.json', 'w'), indent=1)
 print({k: (v['scale'], v['foot_frame']) for k, v in cf2.items()})
