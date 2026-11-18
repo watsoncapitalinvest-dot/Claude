@@ -5545,10 +5545,10 @@ index 0000000..542761d
 +}
 diff --git a/src/Battlescape/BattleSim.cpp b/src/Battlescape/BattleSim.cpp
 new file mode 100644
-index 0000000..9754d22
+index 0000000..9bef7fd
 --- /dev/null
 +++ b/src/Battlescape/BattleSim.cpp
-@@ -0,0 +1,687 @@
+@@ -0,0 +1,716 @@
 +/*
 + * G.I. Joe BATTLE SIMULATOR - see BattleSim.h.
 + */
@@ -5963,6 +5963,34 @@ index 0000000..9754d22
 +			tl(save, "SENT " + c->getRules()->getType() + " with " + std::to_string(c->getNumTotalSoldiers()) + " to " + targetName(t)
 +				+ " (fuel " + std::to_string(c->getFuel()) + "/" + std::to_string(c->getCraftStats().fuelMax) + ", " + std::to_string((int)(c->getDistance(t) * 3440)) + " nm, speed " + std::to_string(c->getCraftStats().speedMax) + ")");
 +		}
++		// RIG (OXCE_CAMPAIGNSIM_WHY=<topic>): once a day, why that topic is or is not on offer at the first base
++		if (const char *why = getenv("OXCE_CAMPAIGNSIM_WHY"))
++		{
++			static int whyDay = -1;
++			Base *base = save->getBases()->empty() ? nullptr : save->getBases()->front();
++			if (base && whyDay != day)
++			{
++				whyDay = day;
++				const Mod *mod = game->getMod();
++				std::vector<RuleResearch*> avail;
++				save->getAvailableResearchProjects(avail, mod, base);
++				const RuleResearch *w = mod->getResearch(why);
++				std::ostringstream s;
++				s << "WHY " << why << ": ";
++				if (!w) s << "no such topic";
++				else
++				{
++					const bool offered = std::find(avail.begin(), avail.end(), w) != avail.end();
++					s << (offered ? "OFFERED" : "not offered") << "; researched " << save->isResearched(w, false)
++					  << "; disabled " << save->isResearchRuleStatusDisabled(w->getName()) << "; deps " << save->isResearched(w->getDependencies(), false)
++					  << "; requires " << save->isResearched(w->getRequirements(), false) << "; unlocked by:";
++					for (auto *d : save->getDiscoveredResearch())
++						for (auto *u : d->getUnlocked()) if (u == w) s << " " << d->getName();
++					s << "; base funcs missing " << (~base->getProvidedBaseFunc({}) & w->getRequireBaseFunc()).any();
++				}
++				tl(save, s.str());
++			}
++		}
 +		// Scarlett's operations: a player sends a spy the day one opens (as the INTEL board offers it)
 +		for (const auto &op : game->getMod()->getSpyOperations())
 +		{
@@ -6093,6 +6121,7 @@ index 0000000..9754d22
 +		{
 +			base->setLongitude(255.0 * 3.14159265358979323846 / 180.0);   // 105 W, written as the globe stores it (0-360)
 +			base->setLatitude(-39.0 * 3.14159265358979323846 / 180.0);
++			for (auto *c : *base->getCrafts()) { c->setLongitude(base->getLongitude()); c->setLatitude(base->getLatitude()); }   // they sit at the base, as a placed base's do
 +		}
 +		if (base->getName().empty()) base->setName("The Pit");
 +		base->calculateServices(save);
@@ -31723,7 +31752,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..d05a3f4 100644
+index 1885346..e1afe14 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -31855,7 +31884,7 @@ index 1885346..d05a3f4 100644
  
  	Log(LOG_INFO) << "After load.";
  	// cross link rule objects
-@@ -2321,6 +2393,20 @@ void Mod::loadAll()
+@@ -2321,6 +2393,24 @@ void Mod::loadAll()
  	afterLoadHelper("units", this, _units, &Unit::afterLoad);
  	afterLoadHelper("soldiers", this, _soldiers, &RuleSoldier::afterLoad);
  	afterLoadHelper("facilities", this, _facilities, &RuleBaseFacility::afterLoad);
@@ -31870,13 +31899,17 @@ index 1885346..d05a3f4 100644
 +			else Log(LOG_WARNING) << "Department " << d.type << ": room " << room << " is not a facility";
 +		int n = 0;
 +		for (auto &r : _research)
-+			if (r.second->getLane() == d.type) { r.second->addRequiredBaseFunc(d.funcBit); ++n; }
++			if (r.second->getLane() == d.type) { if (d.roomGates) r.second->addRequiredBaseFunc(d.funcBit); ++n; }
++		// roomGates: false (INTEL, STORY FirstHour_Fixes2 item 8) had only reached the label: the topics still required the
++		// Computer Station's base function, which no Day 1 Pit has, so EVERY Intel topic - the ledger, the stencil, the flight
++		// route, the informant's tip, the bank trace - could never be started. The cartel arc ran on its backstop dates only
++		// (BUILD-1's 60-day run, 18 Nov).
 +		Log(LOG_INFO) << "Department " << d.type << ": " << d.rooms.size() << " rooms, " << n << " topics";
 +	}
  	afterLoadHelper("startingConditions", this, _startingConditions, &RuleStartingCondition::afterLoad);
  	afterLoadHelper("enviroEffects", this, _enviroEffects, &RuleEnviroEffects::afterLoad);
  	afterLoadHelper("commendations", this, _commendations, &RuleCommendations::afterLoad);
-@@ -2521,9 +2607,15 @@ void Mod::loadAll()
+@@ -2521,9 +2611,15 @@ void Mod::loadAll()
  void Mod::loadMod(const std::vector<FileMap::FileRecord> &rulesetFiles, ModScript &parsers)
  {
  	std::vector<FileMap::FileRecord> sortedRulesetFiles = rulesetFiles;
@@ -31893,7 +31926,7 @@ index 1885346..d05a3f4 100644
  	for (const auto& filerec : sortedRulesetFiles)
  	{
  		Log(LOG_VERBOSE) << "- " << filerec.fullpath;
-@@ -2839,6 +2931,22 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -2839,6 +2935,22 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  			rule->load(ruleReader, parsers, this);
  		}
  	}
@@ -31916,7 +31949,7 @@ index 1885346..d05a3f4 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3325,787 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3329,787 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -32704,7 +32737,7 @@ index 1885346..d05a3f4 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +4116,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +4120,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -32712,7 +32745,7 @@ index 1885346..d05a3f4 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4721,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4725,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -32738,7 +32771,7 @@ index 1885346..d05a3f4 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4978,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4982,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -32759,7 +32792,7 @@ index 1885346..d05a3f4 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6692,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6696,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -32779,7 +32812,7 @@ index 1885346..d05a3f4 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6715,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6719,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -32787,7 +32820,7 @@ index 1885346..d05a3f4 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6729,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6733,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
