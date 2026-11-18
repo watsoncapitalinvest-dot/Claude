@@ -5,7 +5,7 @@
   N == 2: 8 cells a row; 0-7 headings, 8 + heading * 8 + f the death per heading
 Death (8 frames): the damaged look, hit flash, fire and smoke, the jet dropping and darkening out of the picture.
 Writes <mod>/Resources/VehiclesPrivate/air_<name>_body.png (game palette) + _rgb.png: gitignored. NOT Resources/Units (public).
-python3 air_sheets.py <packages dir> <mod dir> name=package[:state] [...]"""
+python3 air_sheets.py <packages dir> <mod dir> name=package[:state[:sea]] [...]   (":sea" = sinks instead of falling)"""
 import json, os, sys
 import numpy as np
 from PIL import Image, ImageEnhance
@@ -55,8 +55,32 @@ def death(pic, anchor, n):
         out.append(c)
     return out
 
+def sink(pic, anchor, n):
+    """8 frames for a boat (sea battles): hit flash, fire, then settling into the water - lower, darker, sea-tinted, fading, with
+    smoke above and a ring of foam where it goes down"""
+    out = []; bb = pic.getbbox(); cx = (bb[0] + bb[2]) / 2 - anchor[0]; cy = (bb[1] + bb[3]) / 2 - anchor[1]
+    for f in range(8):
+        drop = int(f * 2.5 * n); p2 = pic
+        if f >= 3:                                           # the water takes it: tint toward sea blue-green
+            a = np.array(pic).astype(np.float32); k = min(0.7, (f - 2) * 0.14)
+            a[..., :3] = a[..., :3] * (1 - k) + np.array([34, 96, 110]) * k; p2 = Image.fromarray(a.astype(np.uint8), 'RGBA')
+        c = cell(p2, anchor, n, dy=drop, dark=1 - f * 0.06, alpha=1 - max(0, f - 3) * 0.22)
+        W = 128 * n; ox, oy = W // 2, 112 * n
+        if f == 0: blob(c, ox + cx, oy + cy, 9 * n, (255, 240, 200), 0.95); blob(c, ox + cx, oy + cy, 16 * n, (255, 150, 40), 0.7)
+        if 1 <= f <= 4: blob(c, ox + cx, oy + cy + drop, (5 + f) * n * 0.6, (255, 120, 30), 0.8 - f * 0.12)
+        for t in range(min(f, 5)):
+            blob(c, ox + cx + t * 3, oy + cy - 6 * n - t * 5 * n * 0.6, (4 + t * 2.5) * n * 0.6, (95, 90, 84), 0.5 - t * 0.08)
+        if f >= 3:                                           # foam where it goes under
+            for k in range(6):
+                ang = k * 1.047 + f * 0.3; r = (6 + f * 2) * n * 0.6
+                blob(c, ox + cx + np.cos(ang) * r, oy + cy + 4 * n + np.sin(ang) * r * 0.5, 2.2 * n * 0.6, (225, 238, 240), 0.7 - (f - 3) * 0.12)
+        out.append(c)
+    return out
+
 for name, spec in JOBS:
-    pk, st = (spec.split(':') + ['m0'])[:2]
+    pk, st, mode = (spec.split(':') + ['m0', 'air'])[:3]
+    if not st: st = 'm0'
+    dies = sink if mode == 'sea' else death
     root = os.path.join(PKG, pk); man = json.load(open(os.path.join(root, 'manifest.json')))
     n = max(man['footprint']); anchor = man['anchor']; W, H = 128 * n, 160 * n
     def fr(look, h):
@@ -69,7 +93,7 @@ for name, spec in JOBS:
     clean = [fr('clean', h) for h in HEAD]
     dmg = [fr('damaged', h) for h in HEAD]
     per = 8 if n == 2 else 4
-    frames = clean + (sum((death(dmg[h], anchor, n) for h in range(8)), []) if n == 2 else death(dmg[2], anchor, n))
+    frames = clean + (sum((dies(dmg[h], anchor, n) for h in range(8)), []) if n == 2 else dies(dmg[2], anchor, n))
     S = Image.new('RGBA', (per * W, -(-len(frames) // per) * H), (0, 0, 0, 0))
     for i, p in enumerate(frames):
         S.alpha_composite(p if p.size == (W, H) else cell(p, anchor, n), ((i % per) * W, (i // per) * H))
