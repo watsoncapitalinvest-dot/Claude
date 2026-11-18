@@ -3,10 +3,11 @@
 
     python3 build/install_apc_art.py
 
-Top view -> BASEBITS frame 200 (craft sprite 167 + 33): the truck parked in the Motor Pool on the
-base plan and on its equipment screen, 32x40 + the 192x240 twin. Sprite 167 is clear of the
-vanilla craft frames (33-37) and of the facility frames (100+). The craft's dogfight frames
-(INTICON 167 and 178) are never drawn: interceptions auto-resolve (SHORTCUTS #1).
+Top view -> BASEBITS frame 93 (craft sprite 60 + 33): the truck parked in the Motor Pool on the
+base plan and on its equipment screen, 32x40 + the 192x240 twin. Sprite 60 is clear of the
+vanilla craft frames (33-37) and of the facility frames (100-236). It was 167 -> 200 until 18 Nov, when the
+facility sheet took 200 for the pulse battery and the craft screen showed a slice of it. The craft's dogfight frames
+(INTICON 60 and 71) are never drawn: interceptions auto-resolve (SHORTCUTS #1).
 """
 import os
 import sys
@@ -17,7 +18,7 @@ sys.path.insert(0, HERE)
 from install_craft_art import hangar, RES  # same fit and basescape palette as the Tomahawk
 
 SRC = os.path.join(HERE, '..', 'art_briefs', 'returned', 'apc_cartoon')
-FRAME = 200
+FRAME = 93
 
 
 def main():
