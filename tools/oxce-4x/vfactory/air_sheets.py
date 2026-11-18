@@ -65,7 +65,7 @@ def death(pic, anchor, n):
         c = cell(pic, anchor, n, dy=drop, dark=1 - f * 0.08, alpha=1 - max(0, f - 3) * 0.2)
         W = 128 * n; ox, oy = W // 2, 112 * n
         if f >= 1: fx(c, FIRE[min(7, 2 + f // 2)], ox + cx, oy + cy + drop + bw * 0.05, bw * 0.28, bottom=True)
-        blast(c, f, ox + cx, oy + cy, bw * 0.75)
+        blast(c, f, ox + cx, oy + cy + bw * 0.06, bw * 0.75, base=True)   # John 02:10 "still pretty low": the ball stands on the jet and rises over it
         out.append(c)
     return out
 
