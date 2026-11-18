@@ -140,15 +140,23 @@ for name, spec in JOBS:
     dies = sink if mode == 'sea' else death
     root = os.path.join(PKG, pk); man = json.load(open(os.path.join(root, 'manifest.json')))
     n = max(man['footprint']); anchor = man['anchor']; W, H = 128 * n, 160 * n
-    def fr(look, h):
+    def fr(look, h, stopped=False):
         e = next(x for x in man['frames'] if x['look'] == look and x['heading'] == h and x.get('state', st) == st)
         pic = Image.open(os.path.join(root, e['file'])).convert('RGBA')
-        if man.get('spin'):                              # rotor blades are their own layer in the package (helicopters): one blade
-            sp = next((x for x in man['spin'] if x['heading'] == h), None)   # angle, frozen - the air fight has no rotor animation
-            if sp: pic.alpha_composite(Image.open(os.path.join(root, sp['file'])).convert('RGBA'))
+        if stopped and SPIN.get(h):                      # deaths: the rotor stops - one solid blade (the game's rotor layer is off)
+            pic.alpha_composite(SPIN[h][0][0] if SPIN[h][0] else SPIN[h][1])
         return pic
+    # John 18 Nov 11:06 "the airfight should absolutely have rotor animations", 11:14 look C3: rotors / props / fans are NOT in the body
+    # frames any more; they go to their own sheet air_<name>_rotor.png that the engine draws over the body and cycles.
+    SPIN = {}
+    for h in HEAD:
+        L = [x for x in (man.get('spin') or []) if x['heading'] == h]
+        if not L: continue
+        ang = [Image.open(os.path.join(root, x['file'])).convert('RGBA') for x in sorted([x for x in L if x.get('angle_deg') is not None], key=lambda x: x['angle_deg'])]
+        blur = next((Image.open(os.path.join(root, x['file'])).convert('RGBA') for x in L if x.get('angle_deg') is None), None)
+        SPIN[h] = (ang, blur)
     clean = [fr('clean', h) for h in HEAD]
-    dmg = [fr('damaged', h) for h in HEAD]
+    dmg = [fr('damaged', h, stopped=True) for h in HEAD]
     per = 8 if n == 2 else 4
     if mode != 'sea' and name in POINTS and n >= 3:     # frames 8-15 shot down (his marks), 16-23 direct hit (big blast on mark 2)
         frames = clean + death2(dmg[2], anchor, n, POINTS[name]) + direct(dmg[2], anchor, n, POINTS[name])
@@ -161,3 +169,17 @@ for name, spec in JOBS:
     S.save(os.path.join(D, f'air_{name}_body_rgb.png'))
     quantize(S).save(os.path.join(D, f'air_{name}_body.png'))
     print('AIR', name, 'N', n, 'frames', len(frames), 'sheet', S.size, 'from', pk, st)
+    if SPIN:                                             # the rotor sheet: one row per heading (N, NE ... NW), K frames a row
+        K = max(max(len(a), 1) for a, b in SPIN.values())  # each frame = the renderer's blur disc + the blade at that angle at 50%
+        R = Image.new('RGBA', (K * W, 8 * H), (0, 0, 0, 0))
+        for hi, h in enumerate(HEAD):
+            if h not in SPIN: continue
+            ang, blur = SPIN[h]
+            for k in range(K):
+                f = Image.new('RGBA', ang[0].size if ang else blur.size, (0, 0, 0, 0))
+                if blur: f.alpha_composite(blur)
+                if ang:
+                    b = ang[k % len(ang)].copy(); a_ = b.getchannel('A').point(lambda v: v // 2); b.putalpha(a_); f.alpha_composite(b)
+                R.alpha_composite(cell(f, anchor, n), (k * W, hi * H))
+        R.save(os.path.join(D, f'air_{name}_rotor_rgb.png')); quantize(R).save(os.path.join(D, f'air_{name}_rotor.png'))
+        print('ROTOR', name, K, 'frames a heading', R.size)
