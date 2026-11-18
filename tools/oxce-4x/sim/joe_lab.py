@@ -23,6 +23,7 @@ import os, sys, time, json, shutil, subprocess, threading, queue, glob, re, stat
 import tkinter as tk
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import joe_checks
+import joe_editor
 from tkinter import ttk, messagebox
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -207,7 +208,17 @@ class Lab:
         ttk.Label(hdr, text='   testing, recording, simulating and design notes - on this PC, no internet, no AI', foreground=GREY).pack(side='left')
         ttk.Button(hdr, text='Open lab folder', command=lambda: (os.makedirs(LAB, exist_ok=True), open_path(LAB))).pack(side='right')
         self.nb = ttk.Notebook(root); self.nb.pack(fill='both', expand=True, padx=10, pady=(0, 10))
+        # what the Rules Editor and My Play Style tabs use from here
+        self.MONO, self.GAME, self.USER_SIM, self.EXTRA, self.WIN = MONO, GAME, USER_SIM, EXTRA, WIN
+        self.open_path, self.prepare_user_sim = open_path, prepare_user_sim
+        rs = os.path.join('mods', 'GIJoe4x', 'Ruleset')
+        self.paths = {'ruleset': os.path.join(USER, rs), 'master': os.path.join(LAB, 'john_changes.rul'),
+                      'targets': [os.path.join(USER, rs, joe_editor.OVERRIDE), os.path.join(USER_SIM, rs, joe_editor.OVERRIDE)],
+                      'log': os.path.join(LAB, 'CHANGES_LOG.txt'), 'playlog': os.path.join(USER, 'playstyle.txt'),
+                      'profile': os.path.join(LAB, 'profile.txt')}
         self.tab_checks(); self.tab_campaign(); self.tab_battles(); self.tab_strategy(); self.tab_characters(); self.tab_runs(); self.tab_balance(); self.tab_notes()
+        self.editor = joe_editor.EditorTab(self, self.page('  Rules Editor  '), self.paths)
+        self.style = joe_editor.StyleTab(self, self.page('  My Play Style  '), self.paths)
         root.protocol('WM_DELETE_WINDOW', self.close)
         self.tick()
 
@@ -340,6 +351,7 @@ class Lab:
         s = {'days': days, 'turns': 25, 'headstart': 0, 'joes': 'normal', 'cobra': 'normal'}
         env = {'OXCE_CAMPAIGNSIM': str(days), 'OXCE_CAMPAIGNSIM_SCREENS': str(days), 'OXCE_BATTLESIM_TURNS': '25',
                'OXCE_CAMPAIGNSIM_HEADSTART': '0', 'OXCE_BATTLESIM_JOES': 'normal', 'OXCE_BATTLESIM_COBRA': 'normal'}
+        env.update(self.style.env()); s['plays_like_john'] = bool(self.style.env())
         self.launch('checks', [(s, env)] * n)
 
     def regrade(self):
@@ -405,6 +417,7 @@ class Lab:
         s = {'days': days, 'turns': turns, 'headstart': head, 'joes': w['joes'].get(), 'cobra': w['cobra'].get()}
         env = {'OXCE_CAMPAIGNSIM': str(days), 'OXCE_BATTLESIM_TURNS': str(turns), 'OXCE_CAMPAIGNSIM_HEADSTART': str(head),
                'OXCE_BATTLESIM_JOES': s['joes'], 'OXCE_BATTLESIM_COBRA': s['cobra']}
+        env.update(self.style.env()); s['plays_like_john'] = bool(self.style.env())
         self.launch('campaign', [(s, env)] * n)
 
     def tl_colour(self, l):
