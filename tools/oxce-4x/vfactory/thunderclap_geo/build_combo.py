@@ -6,7 +6,9 @@ python3 build_combo.py d_tractor.blend d_trailer.blend KIT_FILES out.blend [elev
 import bpy, bmesh, sys, os, math, tempfile, numpy as np
 from mathutils import Vector, Matrix
 from PIL import Image
-TR, TL, KD, OUT = sys.argv[1:5]; ELEV = float(sys.argv[5]) if len(sys.argv) > 5 else 22.0
+TR, TL, KD, OUT = sys.argv[1:5]; FIRE = os.environ.get('MODE') == 'fire'   # MODE=fire: parked firing position (legs down, long barrel, the two unhitched)
+ELEV = float(sys.argv[5]) if len(sys.argv) > 5 else (40.0 if FIRE else 22.0)
+GAP = 110.0 if FIRE else 0.0
 TMP = tempfile.mkdtemp()
 bpy.ops.wm.open_mainfile(filepath=TR)
 for o in list(bpy.data.objects):
@@ -14,11 +16,11 @@ for o in list(bpy.data.objects):
 # kit frame -> model frame: X = kitY, Y = -kitX, Z = kitZ + dz
 K2M = Matrix(((0, 1, 0, 0), (-1, 0, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)))
 for o in bpy.data.objects:
-    if o.type == 'MESH': o.data.transform(Matrix.Translation((300.5, -1.0, 0.0)))
+    if o.type == 'MESH': o.data.transform(Matrix.Translation((300.5 + GAP, -1.0, 0.0)))
 with bpy.data.libraries.load(TL) as (src, dst): dst.objects = [n for n in src.objects if n != 'fullfly']
 for o in dst.objects:
     bpy.context.scene.collection.objects.link(o)
-    if o.type == 'MESH': o.data = o.data.copy(); o.data.transform(Matrix.Translation((-286.25, 6.5, 0.0)))
+    if o.type == 'MESH': o.data = o.data.copy(); o.data.transform(Matrix.Translation((-286.25 - GAP, 6.5, 0.0)))
 PAL = {'olive': (60, 72, 60), 'olive_dk': (44, 54, 46), 'deck': (112, 122, 120), 'gun': (118, 126, 132), 'gun_dk': (78, 84, 90),
        'barrel': (196, 198, 196), 'tan': (214, 200, 170), 'orange': (244, 128, 28), 'legs': (122, 128, 136)}
 MAT = {}
@@ -41,7 +43,7 @@ def paint(o, rule, names):
     for n in names: o.data.materials.append(mat(n))
     idx = {n: i for i, n in enumerate(names)}
     for p in o.data.polygons: p.material_index = idx[rule(Vector(p.center), Vector(p.normal))]
-DZ = 3.0   # platform: front hitch sits 1.5 mm lower, rear 7.5 higher than the layout; split
+DZ = -1.5 if FIRE else 3.0   # fire: hull sits on the legs-down base's hub; platform: front hitch sits 1.5 mm lower, rear 7.5 higher than the layout; split
 # --- platform (kit coords while painting) ---
 pl = load('Platform', 'platform', 30000)
 def pl_rule(c, n):
@@ -52,13 +54,17 @@ def pl_rule(c, n):
     return 'deck'
 paint(pl, pl_rule, ['olive', 'deck', 'gun'])
 # --- legs-up base: plate under the pivot pin (pin bottom at kit z 24), legs folded up beside the hull ---
-bs = load('Platform_Base_-_Legs_Up', 'base'); bs.data.transform(Matrix.Translation((0, 0, 128.0)))
+if FIRE:
+    bs = load('Platform_Base_-_Legs_Down', 'base'); bs.data.transform(Matrix.Translation((0, 10.7, 224.5)))   # flat on the ground, hub under the pivot pin
+else:
+    bs = load('Platform_Base_-_Legs_Up', 'base'); bs.data.transform(Matrix.Translation((0, 0, 128.0)))
 paint(bs, lambda c, n: 'legs', ['legs'])
 # --- cannon (short = transport barrel), trunnion on the tower hole (kit Y 15.7, Z 140.7) ---
 PIV = Vector((0, 15.7, 140.7)); ROT = Matrix.Translation(PIV) @ Matrix.Rotation(math.radians(ELEV), 4, 'X') @ Matrix.Translation(-PIV)
-cn = load('Cannon_Short', 'cannon', 30000); cn.data.transform(Matrix.Translation((0, 0, -391.9)))
+cn = load('Cannon_Long' if FIRE else 'Cannon_Short', 'cannon', 30000); cn.data.transform(Matrix.Translation((0, 0, -117.8 if FIRE else -391.9)))
+BARREL_Y = 300 if FIRE else 220
 def cn_rule(c, n):
-    if c.y > 220: return 'barrel'
+    if c.y > BARREL_Y: return 'barrel'
     if c.z < 150: return 'gun_dk'          # elevation gear sector under the breech
     return 'gun'
 paint(cn, cn_rule, ['gun', 'gun_dk', 'barrel']); cn.data.transform(ROT)

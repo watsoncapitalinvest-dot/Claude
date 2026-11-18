@@ -8,3 +8,4 @@ mkdir -p $O/t6 $O/s6 $O/side
 ELEV=90 SHADE=detail FRAME=1024,1024,512,512 python3 -I $H/render_geo.py $B $O/t6 top clean 6 0.01306
 ELEV=90 SHADE=detail FRAME=640,640,320,320 python3 -I $H/render_geo.py $B $O/s6 strip clean 6 0.0076
 ELEV=0 SHADE=detail FRAME=1024,384,512,330 python3 -I $H/render_geo.py $B $O/side side clean 1 0.01250
+# Firing pose (John 19:37): MODE=fire -> legs down, long barrel 40 deg, the two unhitched. Scales: headings 0.004517, top 0.01024, strip 0.0056, side 0.0098 (FRAME=1024,448,512,400).
