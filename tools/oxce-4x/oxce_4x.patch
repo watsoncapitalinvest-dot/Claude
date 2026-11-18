@@ -22900,10 +22900,10 @@ index 0000000..e57d835
 +}
 diff --git a/src/Geoscape/CobraNetwork.cpp b/src/Geoscape/CobraNetwork.cpp
 new file mode 100644
-index 0000000..f02d24f
+index 0000000..d391806
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.cpp
-@@ -0,0 +1,878 @@
+@@ -0,0 +1,881 @@
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5. See CobraNetwork.h.
 + *
@@ -23761,6 +23761,9 @@ index 0000000..f02d24f
 +	const auto &r = game->getMod()->getCobraNetworkRules();
 +	if (!r.on || base->getSiteType().empty()) return 100;
 +	if (base->getSiteType() == CELL) return 0;   // cells are never spotted from the air
++	// before Cobra Commander's broadcast nobody is looking for Cobra: no site of the network turns up by chance
++	// (18 Nov: the month-end operatives roll found a front company on day 31, with the broadcast due on day 42)
++	if (base->getSiteType() != "STR_CARTEL_STASH_HOUSE" && !game->getSavedGame()->getCobraNet().count("broadcastDone")) return 0;
 +	// the Drome, finished or building, is found only through the spine (Terror Drome Plans), never by chance
 +	if (base->getSiteType().compare(0, 22, "STR_COBRA_TERROR_DROME") == 0) return 0;
 +	return pick(r.diffFind, diffIndex(game->getSavedGame()), 50);
@@ -24800,7 +24803,7 @@ index e609d3c..fad706b 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..7402099 100644
+index 6b4e79d..82ae694 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,15 @@
@@ -26418,7 +26421,18 @@ index 6b4e79d..7402099 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2960,6 +4163,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2894,7 +4097,9 @@ void GeoscapeState::time1Month()
+ 	{
+ 		for (auto* ab : *_game->getSavedGame()->getAlienBases())
+ 		{
+-			if (!ab->isDiscovered())
++			// G.I. Joe: the monthly operatives' find obeys the network's own find rate (cells and the Drome never,
++			// nothing before the broadcast, the cartel's stash house only by its lead)
++			if (!ab->isDiscovered() && CobraNetwork::findPercent(_game, ab) > 0 && ab->getSiteType() != "STR_CARTEL_STASH_HOUSE")
+ 			{
+ 				ab->setDiscovered(true);
+ 				popup(new AlienBaseState(ab, this));
+@@ -2960,6 +4165,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -26449,7 +26463,7 @@ index 6b4e79d..7402099 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4349,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4351,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -26459,7 +26473,7 @@ index 6b4e79d..7402099 100644
  }
  
  /**
-@@ -3265,6 +4493,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4495,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -26475,7 +26489,7 @@ index 6b4e79d..7402099 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4579,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4581,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -26528,7 +26542,7 @@ index 6b4e79d..7402099 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4647,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4649,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -26780,7 +26794,7 @@ index 6b4e79d..7402099 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +6175,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +6177,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
