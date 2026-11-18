@@ -148,13 +148,14 @@ MODES.intel = {
       ['Analysts', ['analystsStart', 'analystShare', 'casesPerAnalyst']],
       ['What a hit is', ['keyChance', 'leadChance', 'keyEarly', 'keyGrace']],
       ['Field work (intel Joes)', ['joeJobsPerMonth', 'namePays', 'joeCaught', 'joeHeldMonths']],
+      ['The shared squad', ['cobraMoves', 'cobraMovesGrowth', 'answerFirst']],
       ['Leads and old intel', ['staleAfter', 'moveQuiet', 'moveAlert', 'alertRaids', 'trapShare', 'raidCaptures']],
     ],
     tables: [['What a mission brings home', SIM.INTEL_SOURCES, ['perMission', 'pays', 'send_pick', 'send_little'],
               {perMission: 'per mission', pays: 'pays (0-1)', send_pick: 'sent: pick', send_little: 'sent: little'}, true, 'bring.'],
              ['Key clues: due month', ['keyDue'], ['0', '1', '2', '3', '4', '5'], {0: 'routes', 1: 'depot', 2: 'depot 2', 3: 'rumours', 4: 'Drome', 5: 'M.A.R.S.'}, true],
-             ['Player styles', SIM.INTEL_STYLES, ['missions', 'raids', 'seatsPerMonth', 'joeEvery'],
-              {missions: 'missions/mo', raids: 'raids/mo', seatsPerMonth: 'new seats/mo', joeEvery: 'new intel Joe every (mo)'}]],
+             ['Player styles', SIM.INTEL_STYLES, ['squad', 'seatsPerMonth', 'joeEvery'],
+              {squad: 'squad sorties/mo', seatsPerMonth: 'new seats/mo', joeEvery: 'new intel Joe every (mo)'}]],
 };
 const LABEL = {
   runs: ['Runs per player style', 'More runs = steadier numbers, slower.'], months: ['Months simulated', ''], seed: ['Random seed', 'Same seed + same numbers = same result.'],
@@ -191,6 +192,8 @@ const LABEL = {
   keyChance: ['A hit is the next key clue', 'chance, once that clue is due'], leadChance: ['A hit is a lead to raid', 'chance; the rest are names'],
   keyEarly: ['A key clue can be found this early', 'months before it is due'], keyGrace: ['A missed key clue comes back after', 'months past due, by another road'],
   joeJobsPerMonth: ['Names one intel Joe chases a month', ''], namePays: ['A name pays', 'chance; else a regular guy asleep'], joeCaught: ['Intel Joe caught on a job', 'chance'], joeHeldMonths: ['A caught Joe is out for (months)', ''],
+  cobraMoves: ['Cobra moves a month', 'terror, robberies, outpost attacks; busy and quiet months'], cobraMovesGrowth: ['Cobra moves added each month', ''],
+  answerFirst: ['Answer Cobra first', '1 = always; 0 = leads first while any wait'],
   staleAfter: ['Intel counts as old after (months)', 'the warning: time only'], moveQuiet: ['Cobra moves a site a month, quiet', 'hidden'], moveAlert: ['Cobra moves a site a month, alert', 'hidden'],
   alertRaids: ['Cobra is alert after this many raids', 'in the last 2 months'], trapShare: ['A moved site is a trap', 'share; the rest are empty'], raidCaptures: ['A good raid takes an officer', 'chance; he is sent to Intel next month'],
   manpowerPriority: ['Cobra priority: men vs better guns', '1 = all spare money to men first; the thesis is 0.9'], startMen: ['Men per garrison at the start', ''],
@@ -571,9 +574,9 @@ function showIntel(R, B, scen, ms) {
   h += `<h2>Workload: analysts and intel Joes</h2><table><tr><th>Sending</th><th>Player style</th><th>Cases opened</th><th>Dead ends</th><th>Wait for an analyst (months)</th><th>Backlog at the end</th><th>Names chased</th><th>Names that paid</th><th>Intel Joes caught</th></tr>`;
   for (const p of P) for (const s of S) { const r = R[p][s], o = b[p][s];
     h += `<tr><td><span class="chip" style="background:${POL_COL[p]}"></span>${POL_NAME[p]}</td><td><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</td><td>${f(r.opened)}</td><td>${pct(r.deadPct)}</td><td>${f(r.wait, 1)}${delta(r.wait, o.wait, 1, true)}</td><td>${f(r.backlogEnd)}${delta(r.backlogEnd, o.backlogEnd, 0, true)}</td><td>${f(r.names, 1)}</td><td>${pct(r.namesPaidPct)}</td><td>${f(r.joesCaught, 1)}</td></tr>`; }
-  h += `</table><h2>Acting on leads</h2><table><tr><th>Sending</th><th>Player style</th><th>Leads raided</th><th>On old intel</th><th>Empty (Cobra moved)</th><th>Traps</th></tr>`;
+  h += `</table><h2>The shared squad: answering Cobra or chasing leads</h2><table><tr><th>Sending</th><th>Player style</th><th>Cobra moves left unanswered</th><th>Leads raided</th><th>Leads still waiting at the end</th><th>On old intel</th><th>Empty (Cobra moved)</th><th>Traps</th></tr>`;
   for (const p of P) for (const s of S) { const r = R[p][s];
-    h += `<tr><td><span class="chip" style="background:${POL_COL[p]}"></span>${POL_NAME[p]}</td><td><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</td><td>${f(r.leadsActed, 1)}</td><td>${pct(r.oldPct)}</td><td>${pct(r.emptyPct)}</td><td>${pct(r.trapPct)}</td></tr>`; }
+    h += `<tr><td><span class="chip" style="background:${POL_COL[p]}"></span>${POL_NAME[p]}</td><td><span class="chip" style="background:${STYLE_COL[s]}"></span>${s}</td><td>${pct(r.unansweredPct)}</td><td>${f(r.leadsActed, 1)}</td><td>${f(r.leadsEnd, 1)}</td><td>${pct(r.oldPct)}${delta(r.oldPct, b[p][s].oldPct, 0)}</td><td>${pct(r.emptyPct)}</td><td>${pct(r.trapPct)}</td></tr>`; }
   h += `</table><div class="cards">
     <div class="card"><h3>Key clues found, typical player (median)</h3><canvas id="i1"></canvas></div>
     <div class="card"><h3>Cases waiting for an analyst, typical player (median)</h3><canvas id="i2"></canvas></div>
@@ -595,7 +598,7 @@ function drawIntel(run, i) {
   const panel = (x, w, t, sub) => `<rect x="${x}" y="20" width="${w}" height="${H - 40}" rx="8" fill="#141a20" stroke="#33404c"/><text x="${x + 12}" y="44" font-size="13" font-weight="700" fill="#e8ecef">${t}</text><text x="${x + 12}" y="62" font-size="11" fill="#93a1ad">${sub}</text>`;
   g += panel(20, 330, 'Waiting for an analyst', `${fr.queue.length} cases`);
   g += panel(370, 330, 'Worked this month', `${fr.seats} analysts on cases`);
-  g += panel(720, 360, 'The field', `${fr.joes} intel Joe${fr.joes === 1 ? '' : 's'} free${fr.held ? `, ${fr.held} caught` : ''} &middot; Cobra ${fr.alert ? 'ALERT' : 'quiet'} (hidden)`);
+  g += panel(720, 360, 'The field', `Cobra moves ${fr.moves}, answered ${fr.answered} &middot; ${fr.joes} intel Joe${fr.joes === 1 ? '' : 's'} free${fr.held ? `, ${fr.held} caught` : ''} &middot; Cobra ${fr.alert ? 'ALERT' : 'quiet'} (hidden)`);
   fr.queue.slice(0, 96).forEach((c, k) => { const x = 34 + (k % 12) * 26, y = 80 + Math.floor(k / 12) * 26;
     g += `<rect x="${x}" y="${y}" width="20" height="20" rx="3" fill="none" stroke="${SRC[c.src]}" stroke-width="1.5" opacity="${Math.max(0.35, 1 - c.age * 0.12)}"/>`; });
   if (fr.queue.length > 96) g += `<text x="34" y="${H - 34}" font-size="12" fill="#d0453a">+${fr.queue.length - 96} more waiting</text>`;

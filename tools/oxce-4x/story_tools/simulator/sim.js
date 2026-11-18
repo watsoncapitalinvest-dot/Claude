@@ -574,24 +574,28 @@ const INTEL_DEFAULTS = {
   // field work on a name: an intel Joe, a few jobs a month
   joeJobsPerMonth: 2, namePays: 0.3, joeCaught: 0.05, joeHeldMonths: 2,
   // leads: acting on one is a raid; Cobra may have moved since (hidden)
+  // the squad is shared (John 22:54, C): answering Cobra's own moves (terror, robberies, outpost defence) comes first, and
+  // lead raids get what is left; an answered move is a mission that brings things home
+  cobraMoves: 1.5, cobraMovesGrowth: 0.1, answerFirst: 1,
   staleAfter: 2, moveQuiet: 0.08, moveAlert: 0.3, alertRaids: 3, trapShare: 0.3, raidCaptures: 0.6,
   styles: {
-    absent:     {missions: 0.5, raids: 0.5, seatsPerMonth: 0,    joeEvery: 0},
-    cautious:   {missions: 1.5, raids: 1,   seatsPerMonth: 0.25, joeEvery: 8},
-    typical:    {missions: 3,   raids: 2,   seatsPerMonth: 0.5,  joeEvery: 5},
-    aggressive: {missions: 4.5, raids: 3,   seatsPerMonth: 0.75, joeEvery: 4},
+    absent:     {squad: 0.5, seatsPerMonth: 0,    joeEvery: 0},
+    cautious:   {squad: 1.5, seatsPerMonth: 0.25, joeEvery: 8},
+    typical:    {squad: 3,   seatsPerMonth: 0.5,  joeEvery: 5},
+    aggressive: {squad: 4.5, seatsPerMonth: 0.75, joeEvery: 4},
   },
 };
 
 function intelRun(P, style, policy, R, rec) {
   const st = P.styles[style];
   const roll = x => Math.floor(x) + (R() < x % 1 ? 1 : 0);
+  const pois = l => { let k = 0, p = Math.exp(-l), c = p; const u = R(); while (u > c && k < 50) { k++; p *= l / k; c += p; } return k; };
   let seats = P.analystsStart, joes = 1, held = [], keys = 0, nextCase = 1;
   const queue = [], leads = [], names = [], keyMonth = Array(INTEL_KEYS.length).fill(null), keyRoad = Array(INTEL_KEYS.length).fill(null);
   const raidHist = [];
-  const L = {opened: 0, worked: 0, dead: 0, hits: 0, byKeyRoad: 0, missedKeys: 0, notSent: 0, waitSum: 0,
+  const L = {moves: 0, answered: 0, unanswered: 0, opened: 0, worked: 0, dead: 0, hits: 0, byKeyRoad: 0, missedKeys: 0, notSent: 0, waitSum: 0,
     leadsActed: 0, leadsOld: 0, empty: 0, traps: 0, good: 0, namesChased: 0, namesPaid: 0, joesCaught: 0, extraCaptures: 0,
-    track: {keys: [], backlog: [], seats: []}, frames: []};
+    track: {keys: [], backlog: [], seats: [], leads: []}, frames: []};
   const send = src => policy === 'everything' ? 1 : P.bring[src][policy === 'pick' ? 'send_pick' : 'send_little'];
   let carry = 0;   // captures from raids on good leads, brought home next month
   for (let m = 0; m < P.months; m++) {
@@ -602,8 +606,13 @@ function intelRun(P, style, policy, R, rec) {
     const due = k => m >= P.keyDue[k] - P.keyEarly;
     const findKey = (how, src) => { if (keys >= INTEL_KEYS.length || !due(keys)) return false;
       keyMonth[keys] = m; keyRoad[keys] = how; ev('key', `KEY CLUE: ${INTEL_KEYS[keys]} (${how === 'road' ? 'came back by another road' : 'from ' + src})`); keys++; return true; };
+    // the squad: Cobra's moves first (if the player answers them first), then lead raids with what is left
+    let squad = roll(st.squad); const moves = pois(P.cobraMoves + P.cobraMovesGrowth * m); L.moves += moves;   // busy months and quiet months
+    const answered = Math.min(moves, R() < P.answerFirst ? squad : Math.max(0, squad - leads.length)); squad -= answered;
+    L.answered += answered; L.unanswered += moves - answered;
+    if (moves) ev('moves', `Cobra makes ${moves} move${moves > 1 ? 's' : ''}; the Joes answer ${answered}`);
     // the debrief: what the missions brought home, and what is sent to Intel
-    const missions = roll(st.missions);
+    const missions = answered;
     let brought = 0, sent = 0;
     for (const src of INTEL_SOURCES) {
       const n = roll(P.bring[src].perMission * missions) + (src === 'officer' ? carry : 0);
@@ -629,17 +638,18 @@ function intelRun(P, style, policy, R, rec) {
       else ev('deadname', 'A name leads nowhere (a regular guy, asleep)'); }
     // raids on leads, oldest first; Cobra may have moved (hidden, more likely when it is alert)
     const alert = raidHist.slice(-2).reduce((a, b) => a + b, 0) >= P.alertRaids;
-    let raids = 0; const rc = roll(st.raids);
+    let raids = 0; const rc = squad;
     for (let i = 0; i < rc && leads.length; i++) { const ld = leads.shift(); raids++; L.leadsActed++;
       const age = m - ld.found; if (age >= P.staleAfter) L.leadsOld++;
       const moved = 1 - Math.pow(1 - (alert ? P.moveAlert : P.moveQuiet), age + 1);
       if (R() < moved) { if (R() < P.trapShare) { L.traps++; ev('trap', `Raid on a ${age}-month-old lead: a trap`); } else { L.empty++; ev('empty', `Raid on a ${age}-month-old lead: empty, Cobra moved`); } }
       else { L.good++; const c = roll(P.raidCaptures); carry += c; L.extraCaptures += c; ev('raid', `Raid on a ${age}-month-old lead pays${c ? ': an officer taken' : ''}`); } }
-    raidHist.push(raids + roll(st.raids * 0.5));   // the player's other raids count toward Cobra's alertness too
+    raidHist.push(raids + answered);   // every fight counts toward Cobra's alertness
     // a key clue the player missed comes back by another road
     if (keys < INTEL_KEYS.length && m >= P.keyDue[keys] + P.keyGrace) { L.byKeyRoad++; findKey('road'); }
     L.track.keys.push(keys); L.track.backlog.push(queue.length); L.track.seats.push(cap);
-    if (rec) L.frames.push({m, seats: cap, joes, held: held.length, queue: queue.map(c => ({id: c.id, src: c.src, age: m - c.opened})),
+    L.track.leads.push(leads.length);
+    if (rec) L.frames.push({m, moves, answered, seats: cap, joes, held: held.length, queue: queue.map(c => ({id: c.id, src: c.src, age: m - c.opened})),
       done: done.map(d => ({id: d.c.id, src: d.c.src, out: d.out})), leads: leads.map(l => m - l.found), names: names.length, keys, alert, events: E});
   }
   return Object.assign(L, {keyMonth, keyRoad, spineDone: keys >= INTEL_KEYS.length ? keyMonth.at(-1) : null});
@@ -661,7 +671,8 @@ function intel(P) {
         leadsActed: mean(Ls.map(l => l.leadsActed)), oldPct: mean(Ls.map(l => l.leadsActed ? l.leadsOld * 100 / l.leadsActed : 0)),
         emptyPct: mean(Ls.map(l => l.leadsActed ? l.empty * 100 / l.leadsActed : 0)), trapPct: mean(Ls.map(l => l.leadsActed ? l.traps * 100 / l.leadsActed : 0)),
         names: mean(Ls.map(l => l.namesChased)), namesPaidPct: mean(Ls.map(l => l.namesChased ? l.namesPaid * 100 / l.namesChased : 0)), joesCaught: mean(Ls.map(l => l.joesCaught)),
-        track: {keys: tr('keys'), backlog: tr('backlog'), seats: tr('seats')}};
+        unansweredPct: mean(Ls.map(l => l.moves ? l.unanswered * 100 / l.moves : 0)), leadsEnd: mean(Ls.map(l => l.track.leads.at(-1))),
+        track: {keys: tr('keys'), backlog: tr('backlog'), seats: tr('seats'), leads: tr('leads')}};
     } }
   return out;
 }
@@ -675,6 +686,9 @@ const INTEL_SCENARIOS = {
   'Cobra moves fast (quiet 15%, alert 50% a month)': {moveQuiet: 0.15, moveAlert: 0.5},
   'Names pay more often (50%)': {namePays: 0.5},
   'Only Scarlett all Act 1': {styles: {absent: INTEL_DEFAULTS.styles.absent, cautious: Object.assign({}, INTEL_DEFAULTS.styles.cautious, {joeEvery: 0}), typical: Object.assign({}, INTEL_DEFAULTS.styles.typical, {joeEvery: 0}), aggressive: Object.assign({}, INTEL_DEFAULTS.styles.aggressive, {joeEvery: 0})}},
+  'Leads first: the player lets Cobra\'s moves go when he has leads': {answerFirst: 0},
+  'Busy Cobra (2.5 moves a month, growing)': {cobraMoves: 2.5},
+  'Quiet Cobra (0.8 moves a month)': {cobraMoves: 0.8, cobraMovesGrowth: 0.05},
 };
 function intelReplay(P, style, n, policy) { const R = rng((P.seed * 7919 + n * 104729) >>> 0); return intelRun(P, style, policy || 'pick', R, true); }
 
