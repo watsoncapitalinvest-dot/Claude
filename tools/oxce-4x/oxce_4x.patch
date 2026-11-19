@@ -8457,7 +8457,7 @@ index a0bc8b3..b073f80 100644
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..80bd70b 100644
+index 7cd4941..bcd59df 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -1,3 +1,5 @@
@@ -8540,7 +8540,7 @@ index 7cd4941..80bd70b 100644
  	_btnKneel->onMouseIn((ActionHandler)&BattlescapeState::txtTooltipIn);
  	_btnKneel->onMouseOut((ActionHandler)&BattlescapeState::txtTooltipOut);
  	_btnKneel->allowToggleInversion();
-@@ -724,6 +738,802 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +738,788 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
@@ -8671,9 +8671,11 @@ index 7cd4941..80bd70b 100644
 +	add(_hudMenuBtn);
 +	_hudMenuBtn->onMouseClick((ActionHandler)&BattlescapeState::hudMenuBtnClick);
 +	HiUI::nativeKey(_hudMenuBtn, "MENU", false);
-+	for (int i = 0; i < 14; ++i)
++	for (int i = 0; i < 16; ++i)
 +	{
-+		_hudMenu[i] = new InteractiveSurface(28, 8, 0, oy - 125 + 9 * i);
++		// John (STEALTH_SIGHT item 8): "that left menu needs to be bigger and more legible" - 44 x 11 keys 12 apart (were 28 x 8, 9 apart)
++		const int step = std::max(9, std::min(12, (oy - 6) / 16));   // as big as the room above the HUD allows, 12 at most
++		_hudMenu[i] = new InteractiveSurface(44, step - 1, 0, oy - 4 - step * 16 + step * i);
 +		add(_hudMenu[i]);
 +		_hudMenu[i]->onMouseClick((ActionHandler)&BattlescapeState::hudMenuClick);
 +		_hudMenu[i]->onMouseIn((ActionHandler)&BattlescapeState::hudOverIn);
@@ -8943,11 +8945,13 @@ index 7cd4941..80bd70b 100644
 +			_hudListPage->setVisible(false);
 +		}
 +		// the MENU
-+		static const char *MENU[14] = { "WALK", "KNEEL", "PRONE", "GROUND", "OVERWATCH", "DOORS", "UP", "DOWN", "CENTRE", "NEXT", "MAP", "GEAR", "STATS", "OPTIONS" };
++		static const char *MENU[16] = { "WALK", "KNEEL", "PRONE", "GROUND", "OVERWATCH", "DOORS", "LEVEL UP", "LEVEL DOWN", "CENTRE", "NEXT MAN", "MAP", "GEAR", "STATS", "OPTIONS", "DISTRACT", "HIDE BODY" };
 +		static const char *WALKS[3] = { "WALK", "RUN", "SNEAK" };
-+		static const char *ICON[14] = { "", "icon_kneel", "", "", "", "", "icon_level_up", "icon_level_down", "icon_center", "icon_next", "icon_map", "icon_gear", "", "icon_options" };
++		// the left menu reads as words (John: "bigger and more legible"); the icons were unreadable at this size
++		static const char *ICON[16] = { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" };
++		if (getenv("OXCE_HUD_MENU_OPEN")) _hudMenuOpen = true;   // RIG: screenshots of the left menu
 +		HiUI::nativeKeyStyle(_hudMenuBtn, _hudMenuOpen ? 1 : 0);
-+		for (int i = 0; i < 14; ++i)
++		for (int i = 0; i < 16; ++i)
 +		{
 +			_hudMenu[i]->setVisible(_hudMenuOpen);
 +			if (!_hudMenuOpen) continue;
@@ -9210,28 +9214,8 @@ index 7cd4941..80bd70b 100644
 +		case HE_ABORT: refreshJoeHud(); btnAbortClick(action); return;
 +		case HE_CUFF: refreshJoeHud(); hudSigClick(action); return;
 +		case HE_RELOAD: refreshJoeHud(); btnReloadClick(action); return;
-+		case HE_CONCEAL:
-+		{
-+			// the body leaves the map (no dragging); what he carried stays on the tile unless picked up first
-+			BattleItem *corpse = concealTarget(u);
-+			if (!corpse || !u->spendTimeUnits(u->getBaseStats()->tu / 2)) { warning("STR_NOT_ENOUGH_TIME_UNITS"); break; }
-+			BattleUnit *dead = corpse->getUnit();
-+			_save->removeItem(corpse);
-+			if (dead) dead->setTile(nullptr, _save);
-+			Log(LOG_INFO) << "[stealth] body concealed by " << u->getType();
-+			_battleGame->getMap()->draw();
-+			break;
-+		}
-+		case HE_DISTRACT:
-+		{
-+			// thrown at the tile the map cursor last pointed to, 12 tiles at most; only TU; the noise is where it lands
-+			Position at; _battleGame->getMap()->getSelectorPosition(&at);
-+			if (!_save->getTile(at) || Position::distance2d(at, u->getPosition()) > 12) { warning("STR_OUT_OF_RANGE"); break; }
-+			if (!u->spendTimeUnits(15)) { warning("STR_NOT_ENOUGH_TIME_UNITS"); break; }
-+			Stealth::noise(_save, at, 10, u, false);
-+			Log(LOG_INFO) << "[stealth] distraction thrown to " << at.x << "," << at.y << "," << at.z;
-+			break;
-+		}
++		case HE_CONCEAL: doConceal(u); break;
++		case HE_DISTRACT: doDistract(u); break;
 +		case HE_SPECIAL: // BUILD-2 specials
 +		{
 +			_battleGame->cancelCurrentAction();
@@ -9271,7 +9255,7 @@ index 7cd4941..80bd70b 100644
 +void BattlescapeState::hudMenuClick(Action *action)
 +{
 +	int i = 0;
-+	while (i < 14 && action->getSender() != _hudMenu[i]) ++i;
++	while (i < 16 && action->getSender() != _hudMenu[i]) ++i;
 +	switch (i)
 +	{
 +	case 0: _hudWalkMode = (_hudWalkMode + 1) % 3; _battleGame->setGjWalkMode(_hudWalkMode); break;
@@ -9284,6 +9268,8 @@ index 7cd4941..80bd70b 100644
 +	case 11: btnInventoryClick(action); return;
 +	case 12: btnStatsClick(action); return;
 +	case 13: btnHelpClick(action); return;
++	case 14: if (playableUnitSelected() && !_battleGame->isBusy()) doDistract(_save->getSelectedUnit()); break;
++	case 15: if (playableUnitSelected() && !_battleGame->isBusy()) doConceal(_save->getSelectedUnit()); break;
 +	default: return;   // PRONE, GO TO GROUND, OVERWATCH, DOORS: not built yet
 +	}
 +	refreshJoeHud();
@@ -9343,7 +9329,7 @@ index 7cd4941..80bd70b 100644
  }
  
  
-@@ -732,9 +1542,11 @@ BattlescapeState::BattlescapeState() :
+@@ -732,9 +1528,11 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -9355,7 +9341,7 @@ index 7cd4941..80bd70b 100644
  
  	resetPalettes();
  }
-@@ -789,6 +1601,38 @@ void BattlescapeState::init()
+@@ -789,6 +1587,38 @@ void BattlescapeState::init()
  	_map->draw();
  	_battleGame->init();
  	updateSoldierInfo();
@@ -9394,7 +9380,7 @@ index 7cd4941..80bd70b 100644
  
  	switch (_save->getTUReserved())
  	{
-@@ -807,6 +1651,17 @@ void BattlescapeState::init()
+@@ -807,6 +1637,17 @@ void BattlescapeState::init()
  	}
  	if (_firstInit)
  	{
@@ -9412,7 +9398,7 @@ index 7cd4941..80bd70b 100644
  		// Set music
  		if (Options::oxcePlayBriefingMusicDuringEquipment)
  		{
-@@ -858,7 +1713,29 @@ void BattlescapeState::init()
+@@ -858,7 +1699,29 @@ void BattlescapeState::init()
   */
  void BattlescapeState::think()
  {
@@ -9442,7 +9428,7 @@ index 7cd4941..80bd70b 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1215,6 +2092,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1215,6 +2078,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -9463,7 +9449,7 @@ index 7cd4941..80bd70b 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -1466,6 +2357,12 @@ void BattlescapeState::btnEndTurnClick(Action *)
+@@ -1466,6 +2343,12 @@ void BattlescapeState::btnEndTurnClick(Action *)
  		_map->getCamera()->stopKeyScrolling();
  
  		_txtTooltip->setText("");
@@ -9476,7 +9462,7 @@ index 7cd4941..80bd70b 100644
  		_battleGame->requestEndTurn(false);
  	}
  }
-@@ -2172,7 +3069,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +3055,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -9485,7 +9471,7 @@ index 7cd4941..80bd70b 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +3289,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +3275,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -9493,7 +9479,7 @@ index 7cd4941..80bd70b 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -3577,13 +4475,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3577,13 +4461,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  	{
  		nextStage = ruleDeploy->getNextStage();
  	}
@@ -9523,7 +9509,7 @@ index 7cd4941..80bd70b 100644
  		bgen.nextStage();
  		_game->popState();
  		_game->pushState(new BriefingState(0, 0));
-@@ -3621,6 +4534,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4520,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -9536,7 +9522,7 @@ index 7cd4941..80bd70b 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +4971,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4957,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -9547,7 +9533,7 @@ index 7cd4941..80bd70b 100644
  	_map->getCamera()->resize();
  	_map->getCamera()->jumpXY(dX/2, dY/2);
  
-@@ -4123,4 +5042,19 @@ bool BattlescapeState::isBusy() const
+@@ -4123,4 +5028,43 @@ bool BattlescapeState::isBusy() const
  	return (_map->getCursorType() == CT_NONE || _battleGame->isBusy());
  }
  
@@ -9566,12 +9552,36 @@ index 7cd4941..80bd70b 100644
 +	return nullptr;
 +}
 +
++/// STEALTH SIGHT item 12: the body leaves the map (no dragging); what he carried stays on the tile unless picked up first
++void BattlescapeState::doConceal(BattleUnit *u)
++{
++	BattleItem *corpse = concealTarget(u);
++	if (!corpse || !u->spendTimeUnits(u->getBaseStats()->tu / 2)) { warning("STR_NOT_ENOUGH_TIME_UNITS"); return; }
++	BattleUnit *dead = corpse->getUnit();
++	_save->removeItem(corpse);
++	if (dead) dead->setTile(nullptr, _save);
++	Log(LOG_INFO) << "[stealth] body concealed by " << u->getType();
++	_battleGame->getMap()->draw();
++	refreshJoeHud();
++}
++
++/// STEALTH SIGHT item 8: thrown at the tile the map cursor last pointed to, 12 tiles at most; only TU; noise where it lands
++void BattlescapeState::doDistract(BattleUnit *u)
++{
++	Position at; _battleGame->getMap()->getSelectorPosition(&at);
++	if (!_save->getTile(at) || Position::distance2d(at, u->getPosition()) > 12) { warning("STR_OUT_OF_RANGE"); return; }
++	if (!u->spendTimeUnits(15)) { warning("STR_NOT_ENOUGH_TIME_UNITS"); return; }
++	Stealth::noise(_save, at, 10, u, false);
++	Log(LOG_INFO) << "[stealth] distraction thrown to " << at.x << "," << at.y << "," << at.z;
++	refreshJoeHud();
++}
++
  }
 diff --git a/src/Battlescape/BattlescapeState.h b/src/Battlescape/BattlescapeState.h
-index 746f3a4..ad4e835 100644
+index 746f3a4..a0c08d8 100644
 --- a/src/Battlescape/BattlescapeState.h
 +++ b/src/Battlescape/BattlescapeState.h
-@@ -58,6 +58,50 @@ private:
+@@ -58,6 +58,52 @@ private:
  	InteractiveSurface *_btnStats;
  	BattlescapeButton *_btnReserveNone, *_btnReserveSnap, *_btnReserveAimed, *_btnReserveAuto, *_btnReserveKneel, *_btnZeroTUs;
  	InteractiveSurface *_btnLeftHandItem, *_btnRightHandItem;
@@ -9599,7 +9609,7 @@ index 746f3a4..ad4e835 100644
 +	void hudGroupClick(Action *action);
 +	void hudListClick(Action *action);
 +	// the MENU (the 14 general buttons up the left edge) and the hand cards' foot buttons
-+	InteractiveSurface *_hudMenuBtn = nullptr, *_hudMenu[14] = {}, *_hudFoot[2][4] = {};
++	InteractiveSurface *_hudMenuBtn = nullptr, *_hudMenu[16] = {}, *_hudFoot[2][4] = {};
 +	bool _hudMenuOpen = false;
 +	int _hudWalkMode = 0;   ///< 0 walk, 1 run, 2 sneak (sticky; Ctrl / Alt still override)
 +	void hudMenuBtnClick(Action *action);
@@ -9616,13 +9626,15 @@ index 746f3a4..ad4e835 100644
 +	/// G.I. Joe capture: cuff the surrendered Cobra man next to the selected Joe.
 +	void hudSigClick(Action *action);
 +	BattleItem *concealTarget(BattleUnit *u);
++	void doDistract(BattleUnit *u);
++	void doConceal(BattleUnit *u);
 +	BattleUnit *cuffTarget(BattleUnit *joe) const;
 +	void hudModeClick(Action *action);
 +	void hudCardClick(Action *action);
  
  	static const int SPECIAL_BUTTONS_MAX = 3;
  	int _posSpecialActions[SPECIAL_BUTTONS_MAX];
-@@ -75,7 +119,10 @@ private:
+@@ -75,7 +121,10 @@ private:
  	std::vector<NumberText*> _numMedikitLeft, _numMedikitRight;
  	NumberText *_numTwoHandedIndicatorLeft, *_numTwoHandedIndicatorRight;
  	Uint8 _twoHandedRed, _twoHandedGreen;
@@ -9634,7 +9646,7 @@ index 746f3a4..ad4e835 100644
  	bool _manaBarVisible;
  	Timer *_animTimer, *_gameTimer;
  	SavedBattleGame *_save;
-@@ -111,6 +158,8 @@ private:
+@@ -111,6 +160,8 @@ private:
  	/// Shows the unit kneel state.
  	void toggleKneelButton(BattleUnit* unit);
  public:
