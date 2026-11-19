@@ -208,8 +208,88 @@ net:{name:'Computer hack (Net, S. Tatham)',where:'missions',spec:'Comms & Tech',
    if(this.solved(s)){s.done=true;draw();checkNow();return;}if(s.moves<=0)msg('Traced. Cobra cuts the line: go around, carry the drive out.',false);draw();});},
  check(s){return s.done?'In. The files are copied. Choose: kill the cameras and turrets now, or plant a bug in Cobra\'s network (the Joes\' own mole).':null;},
  hint(s){s.moves+=6;}},
+// ---------------------------------------------------------------- 9 Interrogation (our own generator; INTERROGATION_PUZZLE_SOURCES_v1)
+interro:{name:'Interrogation',where:'papers (prisoners)',spec:'Covert Ops & Intel',line:'Who did it, and what he knows: ███',around:'Give the prisoners to the analysts: about 6 days, and no informant.',
+ SCEN:[
+  {deed:'drove the cartel trucks out',place:'the garage',known:'Two trucks left the garage at {T}. The driver knows the road they took.',ask:'Who drove the trucks?'},
+  {deed:'let the Cobra van through',place:'the gate',known:'A Cobra van came through the gate at {T}. Whoever opened it knows who was in it.',ask:'Who opened the gate?'},
+  {deed:'sent the radio message',place:'the radio room',known:'A message went out from the radio room at {T}. Whoever sent it knows who it went to.',ask:'Who sent the message?'},
+ ],
+ NAMES:['Ruiz','Ochoa','Mendez','Salas','Varela','Cortez','Ibarra','Fuentes','Lozano','Pineda','Rojas','Treviño'],
+ SLOTS:['10 at night','midnight','2 in the morning','4 in the morning'],
+ build(){const d=D();
+  for(let tries=0;tries<400;tries++){const p=this.make(d);if(p)return p;}
+  throw new Error('no unique interrogation');},
+ make(d){const sc=pick(this.SCEN);const nS=Math.min(5,2+Math.ceil(d/2)+(d>=4?1:0)),nT=d<=2?2:3;
+  const names=shuf(this.NAMES).slice(0,nS);const places=shuf(['the kitchen','the bunkhouse','the yard','the office','the storeroom','the porch'].slice(0,4)).concat([sc.place]);
+  const others=places.filter(p=>p!==sc.place);const tStar=ri(nT);const target=ri(nS);
+  // the truth
+  const loc=names.map((_,s)=>Array.from({length:nT},(_,t)=>s===target&&t===tStar?sc.place:pick(t===tStar?others:places)));
+  // nobody else at the deed place at the deed time (already), and keep groups small
+  const at=(t,p)=>names.map((_,s)=>s).filter(s=>loc[s][t]===p);
+  // statements: {by, t, kind:'self'|'with'|'alone'|'saw', p, who, lie}
+  const st=[];
+  for(let s=0;s<nS;s++)for(let t=0;t<nT;t++){
+   if(s===target&&t===tStar)continue;
+   const p=loc[s][t],mates=at(t,p).filter(x=>x!==s);
+   if(!mates.length)st.push({by:s,t,kind:'alone',p});else st.push({by:s,t,kind:'with',p,who:mates[0]});
+  }
+  // sightings: someone at a place sees someone passing another place nearby (the yard and the porch see everything outside)
+  for(let s=0;s<nS;s++)for(let t=0;t<nT;t++){if(s===target)continue;if(!['the yard','the porch','the gate'].includes(loc[s][t]))continue;
+   for(let o=0;o<nS;o++)if(o!==s&&['the yard','the gate','the porch'].includes(loc[o][t])&&loc[o][t]!==loc[s][t])st.push({by:s,t,kind:'saw',p:loc[o][t],who:o});}
+  // the lie at the deed time: claim to have been with someone, or alone somewhere someone else was
+  const cand=[];for(let o=0;o<nS;o++)if(o!==target)cand.push({by:target,t:tStar,kind:'with',p:loc[o][tStar],who:o,lie:true});
+  for(const p of others){if(at(tStar,p).length)cand.push({by:target,t:tStar,kind:'alone',p,lie:true});}
+  st.push(pick(cand));
+  // consistency of a set of statements, with one person allowed to lie and placed at the deed place
+  const consistent=(c,list)=>{const fix=names.map(()=>Array(nT).fill(null));const alone=[];const put=(s,t,p)=>{if(fix[s][t]&&fix[s][t]!==p)return false;fix[s][t]=p;return true;};
+   if(!put(c,tStar,sc.place))return false;
+   for(const x of list){if(x.by===c)continue;
+    if(!put(x.by,x.t,x.p))return false;
+    if(x.kind==='with'&&!put(x.who,x.t,x.p))return false;
+    if(x.kind==='saw'&&!put(x.who,x.t,x.p))return false;
+    if(x.kind==='alone')alone.push(x);}
+   for(const a of alone)for(let s=0;s<nS;s++)if(s!==a.by&&fix[s][a.t]===a.p)return false;
+   // the deed place at the deed time held only the doer
+   for(let s=0;s<nS;s++)if(s!==c&&fix[s][tStar]===sc.place)return false;
+   return true;};
+  const unique=list=>{const ok=names.map((_,c)=>consistent(c,list));return ok[target]&&ok.filter(Boolean).length===1;};
+  if(!unique(st))return null;
+  // trim: drop statements while it stays unique, harder = fewer left
+  let keep=st.slice();const order=shuf(keep.filter(x=>!x.lie));const drop=[0.15,0.3,0.45,0.6,0.7][d-1];
+  for(const x of order){if(R()>drop+0.25)continue;const trial=keep.filter(y=>y!==x);if(unique(trial))keep=trial;}
+  // red herring at higher tiers: someone else was at the deed place at another time, and says so
+  const asks=new Set(keep.map(x=>x.by+'|'+x.t));
+  return {sc,names,nT,tStar,target,stmts:keep,budget:asks.size+[6,5,4,3,2][d-1],asked:new Set(),heard:[],sel:[],accused:-1,flag:-1,log:[]};},
+ say(s,x){const n=s.names,T=this.SLOTS[x.t];const pl=x.p.replace(/^the /,'the ');
+  if(x.kind==='alone')return pick([`At ${T} I was in ${pl}. Alone. Nobody came in.`,`${T}? ${pl[0].toUpperCase()+pl.slice(1)}, on my own. I didn't see a soul.`]);
+  if(x.kind==='with')return pick([`At ${T} I was in ${pl} with ${n[x.who]}.`,`${T}, ${pl}. ${n[x.who]} was there too, ask him.`]);
+  return pick([`Around ${T} I saw ${n[x.who]} at ${pl}.`,`At ${T} ${n[x.who]} was out at ${pl}. I saw him.`]);},
+ contra(s,a,b){// do two heard statements conflict on their own?
+  const pos=x=>{const r=[[x.by,x.t,x.p]];if(x.kind!=='alone')r.push([x.who,x.t,x.p]);return r;};
+  for(const [p1,t1,l1] of pos(a))for(const [p2,t2,l2] of pos(b))if(p1===p2&&t1===t2&&l1!==l2)return true;
+  const al=(x,y)=>x.kind==='alone'&&pos(y).some(([p,t,l])=>p!==x.by&&t===x.t&&l===x.p);
+  return al(a,b)||al(b,a);},
+ render(s){const n=s.names;let h=`<div class="card">${esc(s.sc.known.replace('{T}',this.SLOTS[s.tStar]))}<br><b>${esc(s.sc.ask)}</b></div>`;
+  h+=`<p class="note">Questions left: <b>${s.budget-s.asked.size}</b>. Ask a prisoner where he was at a given hour. Tick two statements and Compare to see if they can both be true. Then accuse.</p>`;
+  h+=`<table><tr><th>Prisoner</th>${this.SLOTS.slice(0,s.nT).map(t=>`<th>${t}</th>`).join('')}<th></th></tr>`;
+  n.forEach((nm,i)=>{h+=`<tr><td>${esc(nm)}</td>`;for(let t=0;t<s.nT;t++){const k=i+'|'+t;h+=`<td>${s.asked.has(k)?'asked':`<button data-ask="${k}" ${s.asked.size>=s.budget||s.accused>=0?'disabled':''}>Ask</button>`}</td>`;}
+   h+=`<td><button data-acc="${i}" ${s.accused>=0?'disabled':''}>Accuse</button></td></tr>`;});
+  h+=`</table><h3 style="margin:14px 0 6px;font-size:13px;color:var(--mute)">WHAT THEY SAID</h3><div class="card" style="max-width:640px">`;
+  h+=s.heard.length?s.heard.map((x,j)=>`<label style="display:block;margin:3px 0"><input type="checkbox" data-sel="${j}" ${s.sel.includes(j)?'checked':''}> <b>${esc(n[x.by])}:</b> ${esc(x.text)}${s.flag===j?' <span style="color:#d8b45a">(he is sweating)</span>':''}</label>`).join(''):'Nothing yet.';
+  h+=`</div><div class="btns"><button id="cmp" ${s.sel.length===2?'':'disabled'}>Compare the two ticked</button></div><div class="card" id="ilog">${s.log.slice(-4).map(esc).join('<br>')||'—'}</div>`;return h;},
+ wire(s){const self=this;
+  document.querySelectorAll('[data-ask]').forEach(b=>b.onclick=()=>{const k=b.dataset.ask;s.asked.add(k);const [by,t]=k.split('|').map(Number);
+   const got=s.stmts.filter(x=>x.by===by&&x.t===t);if(!got.length)s.heard.push({by,t,kind:'none',text:`${['Same as I said.','I was asleep, I think.','I don\'t remember. Ask someone else.'][ri(3)]}`});
+   for(const x of got)s.heard.push(Object.assign({},x,{text:self.say(s,x)}));draw();});
+  document.querySelectorAll('[data-sel]').forEach(c=>c.onchange=()=>{const j=+c.dataset.sel;s.sel=c.checked?[...s.sel,j].slice(-2):s.sel.filter(x=>x!==j);draw();});
+  const cmp=$('cmp');if(cmp)cmp.onclick=()=>{const [a,b]=s.sel.map(j=>s.heard[j]);const bad=a.kind!=='none'&&b.kind!=='none'&&self.contra(s,a,b);
+   s.log.push(bad?`${s.names[a.by]} and ${s.names[b.by]} can't both be telling the truth.`:'Those two can both be true.');s.sel=[];draw();};
+  document.querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>{s.accused=+b.dataset.acc;if(s.accused===s.target){s.done=true;draw();checkNow();}else{draw();msg(`Wrong man. ${s.names[s.accused]} has nothing to give, and ${s.names[s.target]} has stopped talking. The analysts will have to dig it out the slow way.`,false);}});},
+ check(s){if(!s.done)return null;const lie=s.stmts.find(x=>x.lie);return `${s.names[s.target]} ${s.sc.deed} at ${this.SLOTS[s.tStar]}. His story about ${this.SLOTS[s.tStar]} was the lie ("${this.say(s,lie)}"). He talks: the case line fills, and he could be turned into an informant.`;},
+ hint(s){const j=s.heard.findIndex(x=>x.lie);if(j>=0)s.flag=j;else{const lie=s.stmts.find(x=>x.lie);s.log.push(`${s.names[lie.by]} keeps changing his story about ${this.SLOTS[lie.t]}.`);}}},
 };
-const ORDER=['cipher','manifest','photo','radio','keypad','bomb','safe','net'];
+const ORDER=['cipher','manifest','photo','radio','keypad','bomb','safe','net','interro'];
 function newPuzzle(seed){if(seed==null){seed=Math.floor(Math.random()*1e9);$('seed').value=seed;}R=rng(+seed);state=PUZ[cur].build();hintUsed=false;draw();msg('');}
 function draw(){const P=PUZ[cur];$('main').innerHTML=`<h2>${P.name}</h2><p class="sub">${P.where} · effective difficulty ${D()} of 5 · seed ${esc($('seed').value)}</p>${P.render(state)}
  <div class="btns"><button id="chk">Check</button><button id="hint" ${SPEC()&&!hintUsed?'':'disabled'}>Hint (${esc(P.spec)})</button><button id="around">Go around</button></div><div id="msg" class="msg"></div>`;
