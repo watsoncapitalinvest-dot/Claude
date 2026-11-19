@@ -18581,10 +18581,10 @@ index 0000000..8277a64
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..4ab1d1f
+index 0000000..111b119
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3548 @@
+@@ -0,0 +1,3590 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -19700,8 +19700,26 @@ index 0000000..4ab1d1f
 +	/// THE STANDARD'S BUTTON, in the cartoon finish John chose over the canvas's
 +	/// gradients: one flat steel tone, a dark ink outline, and one hard edge - a
 +	/// light lip on top and a shadow under it when up, the shadow on top when down.
++	// THE TABLET KIT (John 19 Nov, round 3 approved): a button that is not part of a
++	// painting is the kit's plate - khaki, or yellow for the main action - 9-sliced
++	// from Resources/UI/Tablet/buttons. Words on a plate are dark ink (keyInk).
++	const Img *tabletPlate(const char *name)
++	{
++		return piece(std::string("Tablet/buttons/") + name);
++	}
++	bool tabletOn() { return tabletPlate("button_normal") != nullptr; }
 +	void stdButton(int X0, int Y0, int X1, int Y1, bool down, Uint32 fill)
 +	{
++		const bool primary = fill == 0xE8B923 || fill == 0xC9A01C;
++		if ((fill == 0 || primary) && tabletOn())
++		{
++			const Img *art = tabletPlate(down ? "button_pressed" : primary ? "button_primary" : "button_normal");
++			if (art)
++			{
++				nine(*art, X0, Y0, X1, Y1, std::max(4, std::min((Y1 - Y0) * 2 / 5, art->h * 3 / 10)));
++				return;
++			}
++		}
 +		const double k = SK();
 +		const int t = std::max(1, (int)std::lround(k * 0.45)), e = std::max(1, (int)std::lround(k * 0.6));
 +		if (!fill) fill = down ? S_BUTTON_DOWN : S_BUTTON;
@@ -20804,7 +20822,15 @@ index 0000000..4ab1d1f
 +			}
 +		}
 +		else fillRect(X0, Y0, X1, Y1, rgb(22, 26, 24));
-+		const Img *fr = piece(win->getWidth() >= 260 || win->getHeight() >= 150 ? "window_frame" : "window_frame_small");
++		const bool full = win->getWidth() >= 260 || win->getHeight() >= 150;
++		const bool wholeScreen = win->getWidth() >= 310 && win->getHeight() >= 190;
++		// THE TABLET: a full-screen window's bezel is painted into its background
++		// (Tablet/bg/tablet_hi.png), so no rim of ours goes over it; a pop-up gets the
++		// kit's panel keyline as its rim
++		const Img *tp = tabletOn() ? piece(wholeScreen ? "Tablet/frames/frame_screen" : "Tablet/frames/panel_9slice") : nullptr;
++		if (tp && wholeScreen) { claim(r); return; }
++		if (tp) { nine(*tp, X0, Y0, X1, Y1, std::max(6, std::min(Y1 - Y0, X1 - X0) / 12), bit != bgImages.end() && bit->second.ok); claim(r); return; }
++		const Img *fr = piece(full ? "window_frame" : "window_frame_small");
 +		// the frame is a rim: its middle would cover the window's painted background
 +		if (fr) nine(*fr, X0, Y0, X1, Y1, std::max(6, (int)(fr->h * 0.06)), bit != bgImages.end() && bit->second.ok);
 +		else
@@ -20883,7 +20909,10 @@ index 0000000..4ab1d1f
 +		}
 +		else if (!bare && std_)
 +		{
-+			stdButton(X0 + m, Y0 + m, X1 - m, Y1 - m, down);
++			std::string lab = t ? t->getText() : std::string();
++			for (auto &c : lab) c = (char)toupper((unsigned char)c);
++			const bool primary = lab == "OK" || lab == "START" || lab == "START PROJECT";
++			stdButton(X0 + m, Y0 + m, X1 - m, Y1 - m, down, primary && !down ? 0xE8B923 : 0);
 +		}
 +		else if (!bare)
 +		{
@@ -20893,7 +20922,7 @@ index 0000000..4ab1d1f
 +			else panel(X0 + m, Y0 + m, X1 - m, Y1 - m, 5, rgb(62, 72, 62), rgb(46, 54, 47), rgb(112, 122, 106), 1);
 +		}
 +		claim(r);
-+		if (t && std_) nativeType(t, b->getX() + t->getX(), b->getY() + t->getY(), S_TEXT);
++		if (t && std_) nativeType(t, b->getX() + t->getX(), b->getY() + t->getY(), (!bare && tabletOn()) ? 0x17181C : S_TEXT);
 +		else if (t) glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r);
 +		return;
 +	}
@@ -20967,7 +20996,7 @@ index 0000000..4ab1d1f
 +		if (const TextButton *b = cb->getButtonWidget())
 +			if (const Text *t = b->getTextWidget())
 +			{
-+				if (face("label")) nativeType(t, b->getX() + t->getX(), b->getY() + t->getY(), S_TEXT);
++				if (face("label")) nativeType(t, b->getX() + t->getX(), b->getY() + t->getY(), tabletOn() ? 0x17181C : S_TEXT);
 +				else glyphs(t, b->getX() + t->getX(), b->getY() + t->getY(), r, rgb(236, 232, 214), false, r);
 +			}
 +		return;
@@ -20980,6 +21009,19 @@ index 0000000..4ab1d1f
 +		if (!clipBase(r)) return;
 +		claim(r);
 +		const int X0 = xs[r.x0], X1 = xs[r.x1], Y0 = ys[r.y0], Y1 = ys[r.y1];
++		const Img *trk = piece("Tablet/controls/scroll_track"), *thm = piece("Tablet/controls/scroll_thumb");
++		if (trk && thm)
++		{
++			const int w2 = std::max(4, std::min(X1 - X0, (X1 - X0) * 3 / 4)), cx2 = (X0 + X1) / 2;
++			nine(*trk, cx2 - w2 / 2, Y0, cx2 + w2 / 2, Y1, std::max(3, w2 / 2));
++			const SDL_Rect &t = sb->getThumbRect();
++			if (t.h > 0)
++			{
++				const int ty0 = ys[std::max(0, std::min(bh, sb->getY() + t.y))], ty1 = ys[std::max(0, std::min(bh, sb->getY() + t.y + t.h))];
++				nine(*thm, cx2 - w2 / 2, ty0, cx2 + w2 / 2, ty1, std::max(3, w2 / 2));
++			}
++			return;
++		}
 +		const int cx = (X0 + X1) / 2, tw = std::max(2, (X1 - X0) / 5);
 +		fillRect(X0, Y0, X1, Y1, rgb(20, 24, 26));
 +		fillRect(cx - tw / 2, Y0 + 2, cx + tw / 2 + 1, Y1 - 2, rgb(52, 60, 64));
