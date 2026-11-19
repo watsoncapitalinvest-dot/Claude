@@ -19253,10 +19253,10 @@ index 0000000..8277a64
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..fdc7b83
+index 0000000..a968ce8
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3622 @@
+@@ -0,0 +1,3638 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -19267,6 +19267,7 @@ index 0000000..fdc7b83
 +#include "../Interface/Window.h"
 +#include "../Battlescape/ActionMenuItem.h"
 +#include "../Interface/TextButton.h"
++#include <unordered_set>
 +#include "../Interface/Text.h"
 +#include "../Interface/ComboBox.h"
 +#include "../Interface/Slider.h"
@@ -20409,6 +20410,7 @@ index 0000000..fdc7b83
 +	// a widget kept in its pixel font, a widget forced into one face.
 +	std::unordered_map<const Surface*, Uint32> textInks;
 +	std::unordered_map<const Surface*, double> textScales;
++	std::unordered_set<const Surface*> paintedButtons;
 +	std::unordered_map<const Surface*, bool> pixelTexts;
 +	std::unordered_map<const Surface*, std::string> textFaces;
 +
@@ -21567,6 +21569,14 @@ index 0000000..fdc7b83
 +		// and what shows through is the panel painting. The art is kept when the
 +		// button is DOWN, because for the speed buttons that is the only indication
 +		// of which compression is running.
++		const bool painted = paintedButtons.count(b) > 0;
++		if (painted)
++		{
++			if (down) fillRect(X0 + m, Y0 + m, X1 - m, Y1 - m, 0x17181C, 60);
++			claim(r);
++			if (t && std_) nativeType(t, b->getX() + t->getX(), b->getY() + t->getY(), 0x17181C);
++			return;
++		}
 +		const bool bare = b->isGeoscapeButton() && !down;
 +		if (b->isGeoscapeButton() && down)
 +		{
@@ -22133,6 +22143,7 @@ index 0000000..fdc7b83
 +
 +void surfaceGone(const Surface *s)
 +{
++	paintedButtons.erase(s);
 +	// Everything here is keyed by pointer. A surface that was registered and then
 +	// freed - an intro slide - left its twin behind, and the next surface the
 +	// allocator put at that address inherited the picture: the geoscape's
@@ -22145,6 +22156,11 @@ index 0000000..fdc7b83
 +	textInks.erase(s); pixelTexts.erase(s); textFaces.erase(s);
 +	nativeForget(s);
 +	if (G.v.globe == s) globeForget(s);
++}
++
++void paintedButton(const Surface *button)
++{
++	if (enabled() && button) paintedButtons.insert(button);
 +}
 +
 +void place(Surface *s, int x, int y, int w, int h)
@@ -22881,10 +22897,10 @@ index 0000000..fdc7b83
 +}
 diff --git a/src/Engine/HiUI.h b/src/Engine/HiUI.h
 new file mode 100644
-index 0000000..1ff8bf0
+index 0000000..07384cb
 --- /dev/null
 +++ b/src/Engine/HiUI.h
-@@ -0,0 +1,244 @@
+@@ -0,0 +1,247 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: menus at screen resolution, in full colour.
@@ -23105,6 +23121,9 @@ index 0000000..1ff8bf0
 +	/// True when the tablet kit (Resources/UI/Tablet) is installed and the sharp layer is on:
 +	/// screens then take the round-3 tablet layouts (John 19 Nov).
 +	bool tablet();
++	/// This button's plate is painted into the screen's picture (tablet mockup): draw only its
++	/// words, in dark ink, and a tint while it is pressed.
++	void paintedButton(const Surface *button);
 +	/// Move and size a widget to its place on a tablet screen (base px).
 +	void place(Surface *s, int x, int y, int w, int h);
 +
@@ -31309,10 +31328,15 @@ index 4450282..feec737 100644
  	_lstCrafts->setSelectable(true);
  	_lstCrafts->setBackground(_window);
 diff --git a/src/Geoscape/MonthlyReportState.cpp b/src/Geoscape/MonthlyReportState.cpp
-index f1e9acc..618b326 100644
+index f1e9acc..9e1091b 100644
 --- a/src/Geoscape/MonthlyReportState.cpp
 +++ b/src/Geoscape/MonthlyReportState.cpp
-@@ -21,6 +21,7 @@
+@@ -17,10 +17,12 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "MonthlyReportState.h"
++#include "../Engine/HiUI.h"
+ #include <climits>
  #include <sstream>
  #include "../Engine/Game.h"
  #include "../Mod/Mod.h"
@@ -31320,7 +31344,49 @@ index f1e9acc..618b326 100644
  #include "../Engine/LocalizedText.h"
  #include "../Interface/TextButton.h"
  #include "../Interface/Window.h"
-@@ -456,7 +457,34 @@ void MonthlyReportState::calculateChanges()
+@@ -66,6 +68,24 @@ MonthlyReportState::MonthlyReportState(Globe *globe) : _gameOver(0), _ratingTota
+ 	_txtBonus = new Text(300, 9, 16, 48);
+ 	_txtDesc = new Text(280, 124, 16, 56);
+ 	_txtFailure = new Text(290, 160, 15, 10);
++	if (HiUI::tablet())
++	{
++		// THE TABLET (art/tablet_round3/MonthlyReportState.png, rectangles /6): a paper report with
++		// the bunker photo clipped to it; the figures and the Joint Chiefs' words are typed on the paper
++		HiUI::place(_txtTitle, 21, 19, 270, 17);
++		HiUI::textFace(_txtTitle, "label");
++		HiUI::place(_txtMonth, 28, 44, 140, 8);
++		HiUI::place(_txtRating, 28, 52, 140, 8);
++		HiUI::place(_txtIncome, 28, 60, 160, 8);
++		HiUI::place(_txtMaintenance, 28, 68, 140, 8);
++		HiUI::place(_txtBalance, 28, 76, 140, 8);
++		HiUI::place(_txtBonus, 28, 84, 160, 8);
++		HiUI::place(_txtDesc, 27, 94, 160, 58);
++		for (Text *t : { _txtMonth, _txtRating, _txtIncome, _txtMaintenance, _txtBalance, _txtBonus, _txtDesc })
++			HiUI::textInk(t, 0x17181C);
++		HiUI::place(_btnOk, 257, 166, 42, 8);
++		HiUI::place(_btnBigOk, 257, 166, 42, 8);
++	}
+ 
+ 	// Set palette
+ 	setInterface("monthlyReport");
+@@ -87,6 +107,7 @@ MonthlyReportState::MonthlyReportState(Globe *globe) : _gameOver(0), _ratingTota
+ 
+ 	// Set up objects
+ 	setWindowBackground(_window, "monthlyReport");
++	if (HiUI::tablet()) setWindowBackgroundImage(_window, "JOE_TAB_MONTHLYREPORTSTATE.SCR");
+ 
+ 	_btnOk->setText(tr("STR_OK"));
+ 	_btnOk->onMouseClick((ActionHandler)&MonthlyReportState::btnOkClick);
+@@ -216,7 +237,7 @@ MonthlyReportState::MonthlyReportState(Globe *globe) : _gameOver(0), _ratingTota
+ 	{
+ 		// vanilla view
+ 		_txtBonus->setVisible(false);
+-		_txtDesc->setY(_txtBonus->getY());
++		if (!HiUI::tablet()) _txtDesc->setY(_txtBonus->getY());   // the tablet's paper box is fixed
+ 	}
+ 
+ 	std::ostringstream ss3;
+@@ -456,7 +477,34 @@ void MonthlyReportState::calculateChanges()
  
  		// determine satisfaction level, sign pacts, adjust funding
  		// and update activity meters,
@@ -33593,10 +33659,18 @@ index d5e599e..f14b354 100644
  	void setHighContrast(bool contrast) override;
  	/// Handles the timers.
 diff --git a/src/Menu/MainMenuState.cpp b/src/Menu/MainMenuState.cpp
-index 543a45c..f9d8dfd 100644
+index 543a45c..025eec7 100644
 --- a/src/Menu/MainMenuState.cpp
 +++ b/src/Menu/MainMenuState.cpp
-@@ -29,12 +29,18 @@
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "MainMenuState.h"
++#include "../Engine/HiUI.h"
+ #include <sstream>
+ #include "../version.h"
+ #include "../Engine/Game.h"
+@@ -29,12 +30,18 @@
  #include "NewGameState.h"
  #include "NewBattleState.h"
  #include "ListLoadState.h"
@@ -33615,7 +33689,7 @@ index 543a45c..f9d8dfd 100644
  
  namespace OpenXcom
  {
-@@ -67,16 +73,18 @@ MainMenuState::MainMenuState(bool updateCheck)
+@@ -67,16 +74,18 @@ MainMenuState::MainMenuState(bool updateCheck)
  #endif
  
  	// Create objects
@@ -33644,7 +33718,23 @@ index 543a45c..f9d8dfd 100644
  
  	// Set palette
  	setInterface("mainMenu");
-@@ -233,15 +241,64 @@ MainMenuState::MainMenuState(bool updateCheck)
+@@ -96,6 +105,15 @@ MainMenuState::MainMenuState(bool updateCheck)
+ 
+ 	// Set up objects
+ 	setWindowBackground(_window, "mainMenu");
++	if (HiUI::tablet())
++	{
++		// THE TABLET (art/tablet_round3/MainMenuState.png, rectangles /6): the logo and the Joes round
++		// the map table are the picture; the six keys are painted on the right and the game writes on them
++		setWindowBackgroundImage(_window, "JOE_TAB_MAINMENUSTATE.SCR");
++		const int ys[6] = { 65, 81, 97, 113, 129, 146 };
++		TextButton *bs[6] = { _btnNewGame, _btnNewBattle, _btnLoad, _btnOptions, _btnMods, _btnQuit };
++		for (int i = 0; i < 6; ++i) { HiUI::place(bs[i], 225, ys[i], 72, i == 5 ? 14 : 13); HiUI::paintedButton(bs[i]); }
++	}
+ 
+ 	_btnNewGame->setText(tr("STR_NEW_GAME"));
+ 	_btnNewGame->onMouseClick((ActionHandler)&MainMenuState::btnNewGameClick);
+@@ -233,15 +251,64 @@ MainMenuState::MainMenuState(bool updateCheck)
  
  	_txtTitle->setAlign(ALIGN_CENTER);
  	_txtTitle->setBig();
@@ -34197,10 +34287,18 @@ index db4fe9c..f6ee3fb 100644
  
  }
 diff --git a/src/Menu/PauseState.cpp b/src/Menu/PauseState.cpp
-index 574144f..bc77025 100644
+index 574144f..28e87c9 100644
 --- a/src/Menu/PauseState.cpp
 +++ b/src/Menu/PauseState.cpp
-@@ -32,6 +32,7 @@
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "PauseState.h"
++#include "../Engine/HiUI.h"
+ #include "../Engine/Game.h"
+ #include "../Mod/Mod.h"
+ #include "../Interface/TextButton.h"
+@@ -32,6 +33,7 @@
  #include "../Savegame/SavedGame.h"
  #include "../Savegame/SavedBattleGame.h"
  #include "../Battlescape/BattlescapeGame.h"
@@ -34208,7 +34306,7 @@ index 574144f..bc77025 100644
  #include "../version.h"
  
  namespace OpenXcom
-@@ -63,6 +64,15 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
+@@ -63,8 +65,32 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
  	_btnAbandon = new TextButton(180, 18, x+18, 96);
  	_btnOptions = new TextButton(180, 18, x+18, 122);
  	_btnCancel = new TextButton(180, 18, x+18, 150);
@@ -34223,8 +34321,25 @@ index 574144f..bc77025 100644
 +	}
  	_txtTitle = new Text(206, 17, x+5, 32);
  	_txtVersion = new Text(216, 9, x, 11);
++	const bool tab = HiUI::tablet() && _origin != OPT_BATTLESCAPE;
++	if (tab)
++	{
++		// THE TABLET (art/tablet_round3/PauseState.png, rectangles /6): the radar-room picture, the
++		// five keys painted on the right - the game writes their words on the painted plates
++		delete _window;
++		_window = new Window(this, 320, 200, 0, 0, POPUP_BOTH);
++		HiUI::place(_txtTitle, 22, 17, 160, 17);
++		HiUI::textFace(_txtTitle, "stencil");
++		_txtTitle->setAlign(ALIGN_LEFT);
++		const int ys[5] = { 46, 67, 88, 109, 132 };
++		TextButton *bs[5] = { _btnLoad, _btnSave, _btnAbandon, _btnOptions, _btnCancel };
++		for (int i = 0; i < 5; ++i) { HiUI::place(bs[i], 205, ys[i], 82, i == 4 ? 15 : 13); HiUI::paintedButton(bs[i]); }
++		_txtVersion->setVisible(false);
++	}
  
-@@ -75,6 +85,7 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
+ 	// Set palette
+ 	setInterface("pauseMenu", false, _game->getSavedGame() ? _game->getSavedGame()->getSavedBattle() : 0);
+@@ -75,6 +101,7 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
  	add(_btnAbandon, "button", "pauseMenu");
  	add(_btnOptions, "button", "pauseMenu");
  	add(_btnCancel, "button", "pauseMenu");
@@ -34232,7 +34347,15 @@ index 574144f..bc77025 100644
  	add(_txtTitle, "text", "pauseMenu");
  	add(_txtVersion, "text", "pauseMenu");
  
-@@ -95,6 +106,12 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
+@@ -82,6 +109,7 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
+ 
+ 	// Set up objects
+ 	setWindowBackground(_window, "pauseMenu");
++	if (tab) setWindowBackgroundImage(_window, "JOE_TAB_PAUSESTATE.SCR");
+ 
+ 	_btnLoad->setText(tr("STR_LOAD_GAME"));
+ 	_btnLoad->onMouseClick((ActionHandler)&PauseState::btnLoadClick);
+@@ -95,6 +123,12 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
  	_btnOptions->setText(tr("STR_GAME_OPTIONS"));
  	_btnOptions->onMouseClick((ActionHandler)&PauseState::btnOptionsClick);
  
@@ -34245,7 +34368,13 @@ index 574144f..bc77025 100644
  	_btnCancel->setText(tr("STR_CANCEL_UC"));
  	_btnCancel->onMouseClick((ActionHandler)&PauseState::btnCancelClick);
  	_btnCancel->onKeyboardPress((ActionHandler)&PauseState::btnCancelClick, Options::keyCancel);
-@@ -116,7 +133,7 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
+@@ -111,12 +145,12 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
+ 		}
+ 	}
+ 
+-	_txtTitle->setAlign(ALIGN_CENTER);
++	_txtTitle->setAlign(tab ? ALIGN_LEFT : ALIGN_CENTER);
+ 	_txtTitle->setBig();
  	_txtTitle->setText(tr("STR_OPTIONS_UC"));
  
  	std::ostringstream title;
@@ -34254,7 +34383,7 @@ index 574144f..bc77025 100644
  	_txtVersion->setText(title.str());
  	_txtVersion->setAlign(ALIGN_CENTER);
  
-@@ -139,6 +156,10 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
+@@ -139,6 +173,10 @@ PauseState::PauseState(OptionsOrigin origin) : _origin(origin)
  		bool debugMode = _game->getSavedGame()->getSavedBattle()->getDebugMode();
  		bool busy = !_game->getSavedGame()->getSavedBattle()->getBattleGame()->getStates().empty();
  
@@ -34265,7 +34394,7 @@ index 574144f..bc77025 100644
  		if ((!playerTurn && !debugMode) || busy)
  		{
  			_btnSave->setVisible(false); // non-ironman + ironman
-@@ -159,6 +180,17 @@ PauseState::~PauseState()
+@@ -159,6 +197,17 @@ PauseState::~PauseState()
  
  }
  

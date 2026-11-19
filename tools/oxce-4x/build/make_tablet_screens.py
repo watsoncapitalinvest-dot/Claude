@@ -85,6 +85,17 @@ SPECS = {
         ('row', 1420, 245, 1760, 305, 1410),         # the funds figure (CURRENT FUNDS stays painted)
         ('copy', 620, 360, 1380, 452, 0, 100),       # first base plate -> a plain one like the others
     ]),
+    'PauseState': ([], [
+        ('row', 175, 125, 600, 225, 1000),                    # OPTIONS
+    ] + [('row', 1262, y0, 1705, y1, 1252) for (y0, y1) in [(280, 355), (406, 482), (533, 610), (660, 736), (800, 885)]]),
+    'MonthlyReportState': ([], [
+        ('row', 118, 118, 1300, 172, 1360),                   # title
+        ('row', 160, 250, 1150, 490, 1170),                   # the figures
+        ('row', 150, 545, 1120, 925, 1130),                   # the Joint Chiefs' words
+        ('row', 1530, 985, 1805, 1045, 1520),                 # OK
+    ]),
+    'MainMenuState': ([], [('row', 1368, y0, 1752, y1, 1362) for (y0, y1) in
+        [(397, 458), (492, 548), (590, 646), (687, 743), (783, 839), (886, 950)]]),
 }
 
 
