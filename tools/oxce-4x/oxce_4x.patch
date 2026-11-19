@@ -36503,10 +36503,18 @@ index b589b90..04411c1 100644
  	void setSpent (int spent);
  	/// get time cost of this ResearchProject
 diff --git a/src/Savegame/SavedBattleGame.cpp b/src/Savegame/SavedBattleGame.cpp
-index 240b22a..001cb64 100644
+index 240b22a..99e6894 100644
 --- a/src/Savegame/SavedBattleGame.cpp
 +++ b/src/Savegame/SavedBattleGame.cpp
-@@ -65,7 +65,7 @@ SavedBattleGame::SavedBattleGame(Mod *rule, Language *lang, bool isPreview) :
+@@ -23,6 +23,7 @@
+ #include "Base.h"
+ #include "Craft.h"
+ #include "SavedBattleGame.h"
++#include <cstdlib>
+ #include "SavedGame.h"
+ #include "Tile.h"
+ #include "HitLog.h"
+@@ -65,7 +66,7 @@ SavedBattleGame::SavedBattleGame(Mod *rule, Language *lang, bool isPreview) :
  	_isPreview(isPreview), _craftPos(), _craftZ(0), _craftForPreview(nullptr),
  	_battleState(0), _rule(rule), _mapsize_x(0), _mapsize_y(0), _mapsize_z(0), _selectedUnit(0), _undoUnit(nullptr),
  	_lastSelectedUnit(0), _pathfinding(0), _tileEngine(0),
@@ -36515,7 +36523,7 @@ index 240b22a..001cb64 100644
  	_globalShade(0), _side(FACTION_PLAYER), _turn(0), _bughuntMinTurn(20), _animFrame(0), _nameDisplay(false),
  	_debugMode(false), _bughuntMode(false), _aborted(false), _itemId(0),
  	_vipEscapeType(ESCAPE_NONE), _vipSurvivalPercentage(0), _vipsSaved(0), _vipsLost(0), _vipsWaitingOutside(0), _vipsSavedScore(0), _vipsLostScore(0), _vipsWaitingOutsideScore(0),
-@@ -164,7 +164,14 @@ void SavedBattleGame::load(const YAML::YamlNodeReader& node, Mod *mod, SavedGame
+@@ -164,7 +165,14 @@ void SavedBattleGame::load(const YAML::YamlNodeReader& node, Mod *mod, SavedGame
  	reader.tryRead("reinforcementsDeployment", _reinforcementsDeployment);
  	reader.tryRead("reinforcementsRace", _reinforcementsRace);
  	reader.tryRead("reinforcementsItemLevel", _reinforcementsItemLevel);
@@ -36530,7 +36538,7 @@ index 240b22a..001cb64 100644
  	reader.tryRead("reinforcementsBlocks", _reinforcementsBlocks);
  	reader.tryRead("flattenedMapTerrainNames", _flattenedMapTerrainNames);
  	reader.tryRead("flattenedMapBlockNames", _flattenedMapBlockNames);
-@@ -527,7 +534,11 @@ void SavedBattleGame::save(YAML::YamlNodeWriter writer) const
+@@ -527,7 +535,11 @@ void SavedBattleGame::save(YAML::YamlNodeWriter writer) const
  	writer.write("reinforcementsDeployment", _reinforcementsDeployment);
  	writer.write("reinforcementsRace", _reinforcementsRace);
  	writer.write("reinforcementsItemLevel", _reinforcementsItemLevel);
@@ -36542,7 +36550,18 @@ index 240b22a..001cb64 100644
  	writer.write("reinforcementsBlocks", _reinforcementsBlocks);
  	writer.write("flattenedMapTerrainNames", _flattenedMapTerrainNames);
  	writer.write("flattenedMapBlockNames", _flattenedMapBlockNames);
-@@ -2007,7 +2018,22 @@ BattleItem *SavedBattleGame::createItemForUnit(const RuleItem *rule, BattleUnit
+@@ -1534,7 +1546,9 @@ void SavedBattleGame::endTurn()
+ 
+ 	BattlescapeTally tally = _battleState->getBattleGame()->tallyUnits();
+ 
+-	if ((_turn > _cheatTurn / 2 && tally.liveAliens <= 2) || _turn > _cheatTurn)
++	// G.I. Joe (BRIEF_FOR_BUILD_NoCheatingCobra, John 21:13 "def put in all the new stealth stuff"): Cobra knows only what it saw,
++	// heard or was told. The stock "cheat turn" - after it the AI knows where every Joe is - never comes. OXCE_STOCK_CHEAT=1 = old.
++	if (getenv("OXCE_STOCK_CHEAT") && ((_turn > _cheatTurn / 2 && tally.liveAliens <= 2) || _turn > _cheatTurn))
+ 	{
+ 		_cheating = true;
+ 	}
+@@ -2007,7 +2021,22 @@ BattleItem *SavedBattleGame::createItemForUnit(const RuleItem *rule, BattleUnit
  	}
  
  	BattleItem *item = new BattleItem(rule, getCurrentItemId());
@@ -36566,7 +36585,7 @@ index 240b22a..001cb64 100644
  	{
  		delete item;
  		item = nullptr;
-@@ -2415,13 +2441,30 @@ void SavedBattleGame::prepareNewTurn()
+@@ -2415,13 +2444,30 @@ void SavedBattleGame::prepareNewTurn()
  					Position pos;
  					Pathfinding::directionToVector(dir, &pos);
  					Tile *t = getTile(tileOnFire->getPosition() + pos);
@@ -36599,7 +36618,7 @@ index 240b22a..001cb64 100644
  			}
  			// fire has burnt out
  			else
-@@ -2452,10 +2495,37 @@ void SavedBattleGame::prepareNewTurn()
+@@ -2452,10 +2498,37 @@ void SavedBattleGame::prepareNewTurn()
  						}
  					}
  				}
