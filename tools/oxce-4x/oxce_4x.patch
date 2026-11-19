@@ -22613,38 +22613,49 @@ index c6a1d25..730ad95 100644
  
  /**
 diff --git a/src/Engine/State.cpp b/src/Engine/State.cpp
-index fb85c53..8c46481 100644
+index fb85c53..61f0d62 100644
 --- a/src/Engine/State.cpp
 +++ b/src/Engine/State.cpp
-@@ -17,6 +17,12 @@
+@@ -17,6 +17,15 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "State.h"
 +#include "../Interface/Text.h"
++#ifdef __GNUC__
 +#include <cxxabi.h>
++#endif
 +#include <typeinfo>
 +#include <cstdio>
 +#include <cstdlib>
++#include <cstring>
 +#include "HiUI.h"
  #include <algorithm>
  #include <climits>
  #include "InteractiveSurface.h"
-@@ -282,8 +288,42 @@ void State::toggleScreen()
+@@ -282,8 +291,47 @@ void State::toggleScreen()
   * of states, so they can be created once while being
   * repeatedly switched back into focus).
   */
 +// G.I. Joe rig (OXCE_UI_DUMP=<folder>): every screen writes what is on it - each widget's kind, box on the 320x200 grid
 +// and its words - once per screen, for the UI layout brief (John 19 Nov 11:23 "a brief that specs where everything is on
 +// each screen").
++static std::string uiTypeName(const char *raw)
++{
++	std::string n = raw;
++#ifdef __GNUC__
++	int st = 0;
++	if (char *dm = abi::__cxa_demangle(raw, nullptr, nullptr, &st)) { if (st == 0) n = dm; free(dm); }
++#endif
++	for (const char *pre : { "class ", "struct " }) if (n.compare(0, strlen(pre), pre) == 0) n = n.substr(strlen(pre));
++	if (n.compare(0, 10, "OpenXcom::") == 0) n = n.substr(10);
++	return n;
++}
++
 +static void uiDump(const State *st, const std::vector<Surface*> &surfaces)
 +{
 +	const char *dir = getenv("OXCE_UI_DUMP");
 +	if (!dir) return;
-+	int status = 0;
-+	char *dm = abi::__cxa_demangle(typeid(*st).name(), nullptr, nullptr, &status);
-+	std::string name = (status == 0 && dm) ? dm : typeid(*st).name();
-+	free(dm);
-+	if (name.compare(0, 10, "OpenXcom::") == 0) name = name.substr(10);
++	const std::string name = uiTypeName(typeid(*st).name());
 +	const std::string path = std::string(dir) + "/" + name + ".txt";
 +	if (FILE *chk = fopen(path.c_str(), "r")) { fclose(chk); return; }
 +	FILE *f = fopen(path.c_str(), "w");
@@ -22652,10 +22663,7 @@ index fb85c53..8c46481 100644
 +	for (const Surface *w : surfaces)
 +	{
 +		if (!w || !w->getVisible()) continue;
-+		int ws = 0; char *wd = abi::__cxa_demangle(typeid(*w).name(), nullptr, nullptr, &ws);
-+		std::string kind = (ws == 0 && wd) ? wd : typeid(*w).name();
-+		free(wd);
-+		if (kind.compare(0, 10, "OpenXcom::") == 0) kind = kind.substr(10);
++		const std::string kind = uiTypeName(typeid(*w).name());
 +		std::string words;
 +		if (auto *t = dynamic_cast<const Text*>(w)) words = t->getText();
 +		else if (auto *b = dynamic_cast<const TextButton*>(w)) words = b->getText();
@@ -22672,7 +22680,7 @@ index fb85c53..8c46481 100644
  	_game->getScreen()->setPalette(_palette);
  	_game->getCursor()->setPalette(_palette);
  	_game->getCursor()->setColor(_cursorColor);
-@@ -370,7 +410,9 @@ void State::blit()
+@@ -370,7 +418,9 @@ void State::blit()
  {
  	for (auto* surface : _surfaces)
  	{
