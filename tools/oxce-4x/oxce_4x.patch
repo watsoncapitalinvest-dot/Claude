@@ -526,7 +526,7 @@ index 9b139ca..9262619 100644
  }
  
 diff --git a/src/Basescape/CraftInfoState.cpp b/src/Basescape/CraftInfoState.cpp
-index 2597a24..6da0a81 100644
+index 2597a24..70661ba 100644
 --- a/src/Basescape/CraftInfoState.cpp
 +++ b/src/Basescape/CraftInfoState.cpp
 @@ -17,6 +17,8 @@
@@ -566,7 +566,17 @@ index 2597a24..6da0a81 100644
  
  	for (int i = 0; i < _weaponNum; ++i)
  	{
-@@ -223,10 +230,13 @@ void CraftInfoState::init()
+@@ -211,7 +218,8 @@ CraftInfoState::CraftInfoState(Base *base, size_t craftId) : _base(base), _craft
+  */
+ CraftInfoState::~CraftInfoState()
+ {
+-
++	HiUI::nativePanel(_crew, nullptr);
++	HiUI::nativePanel(_equip, nullptr);
+ }
+ 
+ /**
+@@ -223,10 +231,13 @@ void CraftInfoState::init()
  	State::init();
  
  	_edtCraft->setText(_craft->getName(_game->getLanguage()));
@@ -580,7 +590,7 @@ index 2597a24..6da0a81 100644
  
  	std::ostringstream firlsLine;
  	firlsLine << tr("STR_DAMAGE_UC_").arg(Unicode::formatPercentage(_craft->getDamagePercentage()));
-@@ -269,6 +279,8 @@ void CraftInfoState::init()
+@@ -269,6 +280,8 @@ void CraftInfoState::init()
  	{
  		_crew->clear();
  		_equip->clear();
@@ -589,7 +599,7 @@ index 2597a24..6da0a81 100644
  
  		Surface *frame1 = texture->getFrame(38);
  
-@@ -290,6 +302,7 @@ void CraftInfoState::init()
+@@ -290,6 +303,7 @@ void CraftInfoState::init()
  					{
  						// vanilla
  						frame1->blitNShade(_crew, x, 0);
@@ -597,7 +607,7 @@ index 2597a24..6da0a81 100644
  					}
  					x += 10;
  				}
-@@ -314,6 +327,7 @@ void CraftInfoState::init()
+@@ -314,6 +328,7 @@ void CraftInfoState::init()
  				{
  					// vanilla
  					frame2->blitNShade(_equip, x, 0);
@@ -605,7 +615,7 @@ index 2597a24..6da0a81 100644
  				}
  				x += 10;
  			}
-@@ -390,6 +404,7 @@ void CraftInfoState::init()
+@@ -390,10 +405,52 @@ void CraftInfoState::init()
  				for (size_t i = 0; i < std::get<size_t>(pos); i += 4)
  				{
  					frame3->blitNShade(_equip, x, 0);
@@ -613,7 +623,52 @@ index 2597a24..6da0a81 100644
  					x += 10;
  				}
  			}
-@@ -673,6 +688,7 @@ void CraftInfoState::btnCraftIconClick(Action *action)
+ 		}
++		// G.I. Joe (John 19 Nov 10:23 "why can't the little men look like the actual men in the craft ... the equipment
++		// itself is kind of dumb anyway"): with the sharp screen up, the crew row shows each man aboard as himself (his
++		// equipment-screen figure, Resources/UI/Crew/<armour>.png, build/make_crew_cards.py) and the second row names the
++		// vehicles aboard and counts the kit, in words. A man whose armour has no card keeps the old icon.
++		if (HiUI::enabled())
++		{
++			_crew->clear(); _equip->clear();
++			HiUI::spriteInClear(_crew); HiUI::spriteInClear(_equip);
++			std::vector<std::string> cards;
++			for (const auto *soldier : *_base->getSoldiers())
++				if (soldier->getCraft() == _craft)
++				{
++					std::string a = soldier->getArmor()->getType();
++					for (auto &c : a) if (!isalnum((unsigned char)c) && c != '_') c = '_';
++					cards.push_back("Resources/UI/Crew/" + a + ".png");
++				}
++			std::ostringstream eq;
++			std::map<std::string, int> vehicles;
++			for (const auto *v : *_craft->getVehicles()) vehicles[tr(v->getRules()->getType())]++;
++			bool first = true;
++			for (const auto &v : vehicles) { eq << (first ? "" : ",  ") << v.first; if (v.second > 1) eq << " x" << v.second; first = false; }
++			const int kit = _craft->getItems()->getTotalQuantity();
++			if (kit > 0) eq << (first ? "" : "   |   ") << kit << (kit == 1 ? " item of kit" : " items of kit");
++			else if (first) eq << "no vehicles, no kit";
++			const std::string eqText = eq.str();
++			HiUI::nativePanel(_crew, [cards](double X0, double Y0, double k)
++			{
++				const double slot = std::min(13.0, 220.0 / std::max<size_t>(1, cards.size())) * k;
++				double x = X0;
++				for (const auto &c : cards)
++				{
++					if (!HiUI::Paint::image(c, x, Y0, x + 9 * k, Y0 + 18 * k))
++						HiUI::Paint::roundRect(x + 2 * k, Y0 + 4 * k, x + 7 * k, Y0 + 18 * k, 2 * k, 0x6FAE4A, 200);
++					x += slot;
++				}
++			});
++			HiUI::nativePanel(_equip, [eqText](double X0, double Y0, double k)
++			{
++				HiUI::Paint::text("label", eqText, X0, Y0, X0 + 220 * k, Y0 + 18 * k, 7 * k, 0, 1, 0xE9E6DC);
++			});
++		}
+ 	}
+ 	else
+ 	{
+@@ -673,6 +730,7 @@ void CraftInfoState::btnCraftIconClick(Action *action)
  		_sprite->clear();
  		SurfaceSet* texture = _game->getMod()->getSurfaceSet("BASEBITS.PCK");
  		texture->getFrame(_craft->getSkinSprite() + 33)->blitNShade(_sprite, 0, 0);
@@ -621,7 +676,7 @@ index 2597a24..6da0a81 100644
  	}
  }
  
-@@ -733,4 +749,41 @@ void CraftInfoState::edtCraftChange(Action *action)
+@@ -733,4 +791,41 @@ void CraftInfoState::edtCraftChange(Action *action)
  	}
  }
  
@@ -8662,7 +8717,7 @@ index a0bc8b3..b073f80 100644
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..9cb9d16 100644
+index 7cd4941..a7f9c92 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -1,3 +1,5 @@
@@ -8679,10 +8734,12 @@ index 7cd4941..9cb9d16 100644
  #include <algorithm>
  #include <sstream>
  #include <iomanip>
-@@ -24,6 +27,10 @@
+@@ -24,6 +27,12 @@
  #include "Map.h"
  #include "Camera.h"
  #include "BattlescapeState.h"
++#include "UnitTurnBState.h"
++#include "ProjectileFlyBState.h"
 +#include "BattleSim.h"
 +#include "VehicleSpecials.h"
 +#include "Stealth.h"
@@ -8690,7 +8747,7 @@ index 7cd4941..9cb9d16 100644
  #include "AbortMissionState.h"
  #include "TileEngine.h"
  #include "ActionMenuState.h"
-@@ -32,6 +39,7 @@
+@@ -32,6 +41,7 @@
  #include "InventoryState.h"
  #include "AlienInventoryState.h"
  #include "Pathfinding.h"
@@ -8698,7 +8755,7 @@ index 7cd4941..9cb9d16 100644
  #include "BattlescapeGame.h"
  #include "WarningMessage.h"
  #include "InfoboxState.h"
-@@ -69,6 +77,7 @@
+@@ -69,6 +79,7 @@
  #include "../Menu/SaveGameState.h"
  #include "../Mod/Mod.h"
  #include "../Mod/RuleItem.h"
@@ -8706,7 +8763,7 @@ index 7cd4941..9cb9d16 100644
  #include "../Mod/AlienDeployment.h"
  #include "../Mod/Armor.h"
  #include "../Mod/RuleUfo.h"
-@@ -88,6 +97,8 @@
+@@ -88,6 +99,8 @@
  #include "../Mod/RuleInventory.h"
  #include "../Mod/RuleSoldier.h"
  #include "../Mod/RuleVideo.h"
@@ -8715,7 +8772,7 @@ index 7cd4941..9cb9d16 100644
  
  namespace OpenXcom
  {
-@@ -137,7 +148,7 @@ BattlescapeState::BattlescapeState() :
+@@ -137,7 +150,7 @@ BattlescapeState::BattlescapeState() :
  
  	// Create the battlemap view
  	// the actual map height is the total height minus the height of the buttonbar
@@ -8724,7 +8781,7 @@ index 7cd4941..9cb9d16 100644
  
  	_numLayers = new NumberText(3, 5, x + 232, y + 6);
  	_rank = new Surface(26, 23, x + 107, y + 33);
-@@ -186,7 +197,10 @@ BattlescapeState::BattlescapeState() :
+@@ -186,7 +199,10 @@ BattlescapeState::BattlescapeState() :
  	const int visibleUnitY = _game->getMod()->getInterface("battlescape")->getElement("visibleUnits")->y;
  	for (int i = 0; i < VISIBLE_MAX; ++i)
  	{
@@ -8736,7 +8793,7 @@ index 7cd4941..9cb9d16 100644
  		_numVisibleUnit[i] = new NumberText(15, 12, _btnVisibleUnit[i]->getX() + 6 , _btnVisibleUnit[i]->getY() + 4);
  	}
  	_numVisibleUnit[9]->setX(_numVisibleUnit[9]->getX() - 2); // center number 10
-@@ -465,7 +479,7 @@ BattlescapeState::BattlescapeState() :
+@@ -465,7 +481,7 @@ BattlescapeState::BattlescapeState() :
  
  	_btnKneel->onMouseClick((ActionHandler)&BattlescapeState::btnKneelClick);
  	_btnKneel->onKeyboardPress((ActionHandler)&BattlescapeState::btnKneelClick, Options::keyBattleKneel);
@@ -8745,7 +8802,7 @@ index 7cd4941..9cb9d16 100644
  	_btnKneel->onMouseIn((ActionHandler)&BattlescapeState::txtTooltipIn);
  	_btnKneel->onMouseOut((ActionHandler)&BattlescapeState::txtTooltipOut);
  	_btnKneel->allowToggleInversion();
-@@ -724,6 +738,788 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +740,788 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
@@ -9534,7 +9591,7 @@ index 7cd4941..9cb9d16 100644
  }
  
  
-@@ -732,9 +1528,11 @@ BattlescapeState::BattlescapeState() :
+@@ -732,9 +1530,11 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -9546,7 +9603,7 @@ index 7cd4941..9cb9d16 100644
  
  	resetPalettes();
  }
-@@ -789,6 +1587,45 @@ void BattlescapeState::init()
+@@ -789,6 +1589,45 @@ void BattlescapeState::init()
  	_map->draw();
  	_battleGame->init();
  	updateSoldierInfo();
@@ -9592,7 +9649,7 @@ index 7cd4941..9cb9d16 100644
  
  	switch (_save->getTUReserved())
  	{
-@@ -807,6 +1644,17 @@ void BattlescapeState::init()
+@@ -807,6 +1646,17 @@ void BattlescapeState::init()
  	}
  	if (_firstInit)
  	{
@@ -9610,7 +9667,7 @@ index 7cd4941..9cb9d16 100644
  		// Set music
  		if (Options::oxcePlayBriefingMusicDuringEquipment)
  		{
-@@ -858,7 +1706,29 @@ void BattlescapeState::init()
+@@ -858,7 +1708,29 @@ void BattlescapeState::init()
   */
  void BattlescapeState::think()
  {
@@ -9640,7 +9697,7 @@ index 7cd4941..9cb9d16 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1215,6 +2085,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1215,6 +2087,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -9661,7 +9718,7 @@ index 7cd4941..9cb9d16 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -1466,6 +2350,12 @@ void BattlescapeState::btnEndTurnClick(Action *)
+@@ -1466,6 +2352,12 @@ void BattlescapeState::btnEndTurnClick(Action *)
  		_map->getCamera()->stopKeyScrolling();
  
  		_txtTooltip->setText("");
@@ -9674,7 +9731,7 @@ index 7cd4941..9cb9d16 100644
  		_battleGame->requestEndTurn(false);
  	}
  }
-@@ -2172,7 +3062,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +3064,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -9683,7 +9740,7 @@ index 7cd4941..9cb9d16 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +3282,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +3284,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -9691,7 +9748,7 @@ index 7cd4941..9cb9d16 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -3577,13 +4468,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3577,13 +4470,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  	{
  		nextStage = ruleDeploy->getNextStage();
  	}
@@ -9721,7 +9778,7 @@ index 7cd4941..9cb9d16 100644
  		bgen.nextStage();
  		_game->popState();
  		_game->pushState(new BriefingState(0, 0));
-@@ -3621,6 +4527,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4529,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -9734,7 +9791,7 @@ index 7cd4941..9cb9d16 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +4964,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4966,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -9745,7 +9802,7 @@ index 7cd4941..9cb9d16 100644
  	_map->getCamera()->resize();
  	_map->getCamera()->jumpXY(dX/2, dY/2);
  
-@@ -4123,4 +5035,43 @@ bool BattlescapeState::isBusy() const
+@@ -4123,4 +5037,59 @@ bool BattlescapeState::isBusy() const
  	return (_map->getCursorType() == CT_NONE || _battleGame->isBusy());
  }
  
@@ -9783,8 +9840,24 @@ index 7cd4941..9cb9d16 100644
 +	Position at; _battleGame->getMap()->getSelectorPosition(&at);
 +	if (!_save->getTile(at) || Position::distance2d(at, u->getPosition()) > 12) { warning("STR_OUT_OF_RANGE"); return; }
 +	if (!u->spendTimeUnits(15)) { warning("STR_NOT_ENOUGH_TIME_UNITS"); return; }
-+	Stealth::noise(_save, at, 10, u, false);
-+	Log(LOG_INFO) << "[stealth] distraction thrown to " << at.x << "," << at.y << "," << at.z;
++	// John 19 Nov 10:18: "Throw distraction should have you throw like a grenade but it's a rock and creates noise and a
++	// little dust instead of explode". The rock flies the grenade arc (ProjectileFlyBState); where it lands it makes the
++	// noise and a puff of dust and is gone (ProjectileFlyBState, STR_GJ_DISTRACTION_ROCK).
++	if (const RuleItem *rock = _game->getMod()->getItem("STR_GJ_DISTRACTION_ROCK"))
++	{
++		BattleItem *it = _save->createItemForTile(rock, u->getTile());
++		BattleAction a;
++		a.type = BA_THROW; a.actor = u; a.weapon = it; a.target = at;
++		a.cameraPosition = _battleGame->getMap()->getCamera()->getMapOffset();
++		_battleGame->statePushBack(new ProjectileFlyBState(_battleGame, a));
++		_battleGame->statePushFront(new UnitTurnBState(_battleGame, a));
++		Log(LOG_INFO) << "[stealth] distraction rock thrown at " << at.x << "," << at.y << "," << at.z;
++	}
++	else
++	{
++		Stealth::noise(_save, at, 10, u, false);
++		Log(LOG_INFO) << "[stealth] distraction thrown to " << at.x << "," << at.y << "," << at.z;
++	}
 +	refreshJoeHud();
 +}
 +
@@ -10900,7 +10973,7 @@ index c112ccb..3e91bbb 100644
  
  	/// Calculates the effects of the explosion.
 diff --git a/src/Battlescape/Inventory.cpp b/src/Battlescape/Inventory.cpp
-index 406077c..ca21900 100644
+index 406077c..62b895c 100644
 --- a/src/Battlescape/Inventory.cpp
 +++ b/src/Battlescape/Inventory.cpp
 @@ -17,6 +17,8 @@
@@ -10994,16 +11067,20 @@ index 406077c..ca21900 100644
  				}
  			}
  
-@@ -401,6 +421,8 @@ void Inventory::drawItems()
+@@ -401,6 +421,12 @@ void Inventory::drawItems()
  			y = (groundItem->getSlot()->getY() + groundItem->getSlotY() * RuleInventory::SLOT_H);
  			BattleItem::ScriptFill(&work, groundItem, save, BODYPART_ITEM_INVENTORY, _animFrame, 0);
  			work.executeBlit(frame, _items, x, y, 0);
 +			_hiItems.emplace_back(frame, x, y, frame->getWidth(), frame->getHeight());
-+			_hiBoxes.emplace_back(x, y, groundItem->getRules()->getInventoryWidth() * RuleInventory::SLOT_W, groundItem->getRules()->getInventoryHeight() * RuleInventory::SLOT_H);
++			// John 19 Nov 10:11 "the items in inventory on the lower row over hang": the ground's last row runs under the
++			// page's bottom rim, so an item there is fitted to what is left above the rim
++			const int rim = getHeight() - 5;
++			_hiBoxes.emplace_back(x, y, groundItem->getRules()->getInventoryWidth() * RuleInventory::SLOT_W,
++				std::max(4, std::min(groundItem->getRules()->getInventoryHeight() * RuleInventory::SLOT_H, rim - y)));
  
  			// grenade primer indicators
  			if (groundItem->getFuseTimer() >= 0 && groundItem->getRules()->getInventoryWidth() > 0)
-@@ -445,7 +467,8 @@ void Inventory::drawItems()
+@@ -445,7 +471,8 @@ void Inventory::drawItems()
  				_stackNumber->setValue(fatalWounds);
  				_stackNumber->draw();
  				_stackNumber->setColor(color2);
@@ -11013,7 +11090,7 @@ index 406077c..ca21900 100644
  			}
  
  			// item stacking
-@@ -460,7 +483,8 @@ void Inventory::drawItems()
+@@ -460,7 +487,8 @@ void Inventory::drawItems()
  				_stackNumber->setValue(_stackLevel[groundItem->getSlotX()][groundItem->getSlotY()]);
  				_stackNumber->draw();
  				_stackNumber->setColor(color);
@@ -11023,7 +11100,7 @@ index 406077c..ca21900 100644
  			}
  		}
  
-@@ -641,12 +665,40 @@ void Inventory::think()
+@@ -641,12 +669,40 @@ void Inventory::think()
  void Inventory::blit(SDL_Surface *surface)
  {
  	clear();
@@ -11109,7 +11186,7 @@ index 642c538..68a1fc5 100644
  	void drawSelectedItem();
  	/// Gets the currently selected item.
 diff --git a/src/Battlescape/InventoryState.cpp b/src/Battlescape/InventoryState.cpp
-index cea8e65..cd4cab8 100644
+index cea8e65..bd927c6 100644
 --- a/src/Battlescape/InventoryState.cpp
 +++ b/src/Battlescape/InventoryState.cpp
 @@ -17,6 +17,7 @@
@@ -11156,6 +11233,24 @@ index cea8e65..cd4cab8 100644
  	_txtPosition = new Text(70, 9, 65, 95);
  	_txtNameStatic = new Text(210, 17, 28, 6);
  	_txtName = new TextEdit(this, 210, 17, 28, 6);
+@@ -119,7 +140,7 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
+ 	_txtStatLine3 = new Text(70, 9, 245, 48);
+ 	_txtStatLine4 = new Text(70, 9, 245, 56);
+ 	_txtItem = new Text(160, 9, 128, 140);
+-	_txtAmmo = new Text(66, 24, 254, 64);
++	_txtAmmo = new Text(48, 24, 254, 64);   // G.I. Joe: inside the page's AMMO frame (John 19 Nov 10:11)
+ 	_btnOk = new BattlescapeButton(35, 22, 237, 1);
+ 	_btnPrev = new BattlescapeButton(23, 22, 273, 1);
+ 	_btnNext = new BattlescapeButton(23, 22, 297, 1);
+@@ -138,7 +159,7 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
+ 	{
+ 		_btnLinks = new BattlescapeButton(23, 22, 213, 1);
+ 	}
+-	_selAmmo = new Surface(RuleInventory::HAND_W * RuleInventory::SLOT_W, RuleInventory::HAND_H * RuleInventory::SLOT_H, 272, 88);
++	_selAmmo = new Surface(RuleInventory::HAND_W * RuleInventory::SLOT_W, RuleInventory::HAND_H * RuleInventory::SLOT_H, 262, 90);   // G.I. Joe: clear of COPY/PASTE
+ 	_inv = new Inventory(_game, 320, 200, 0, 0, _parent == 0);
+ 	_btnQuickSearch = new TextEdit(this, 40, 9, 244, 140);
+ 
 @@ -149,6 +170,40 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
  
  	// Set up objects
@@ -11252,7 +11347,7 @@ index cea8e65..cd4cab8 100644
  	}
  
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..2d3e45b 100644
+index 3665cd1..133a571 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
 @@ -17,6 +17,10 @@
@@ -11266,7 +11361,15 @@ index 3665cd1..2d3e45b 100644
  #include "Camera.h"
  #include "UnitSprite.h"
  #include "ItemSprite.h"
-@@ -52,6 +56,10 @@
+@@ -44,6 +48,7 @@
+ #include "../Mod/RuleItem.h"
+ #include "../Mod/RuleInterface.h"
+ #include "../Mod/MapDataSet.h"
++#include "BattlescapeGame.h"
+ #include "../Mod/MapData.h"
+ #include "../Mod/Armor.h"
+ #include "../Mod/RuleEnviroEffects.h"
+@@ -52,6 +57,10 @@
  #include "../Interface/NumberText.h"
  #include "../Interface/Text.h"
  #include "../fmath.h"
@@ -11277,7 +11380,7 @@ index 3665cd1..2d3e45b 100644
  
  
  /*
-@@ -133,7 +141,7 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
+@@ -133,7 +142,7 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
  	_borderBarColor = itf->border;
  
  	PathPreview previewSetting = Options::battleNewPreviewPath;
@@ -11286,7 +11389,7 @@ index 3665cd1..2d3e45b 100644
  	if (Options::traceAI)
  	{
  		// turn everything on because we want to see the markers.
-@@ -156,9 +164,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
+@@ -156,9 +165,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
  
  	_spriteWidth = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getWidth();
  	_spriteHeight = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getHeight();
@@ -11299,7 +11402,7 @@ index 3665cd1..2d3e45b 100644
  	_message->setTextColor(_messageColor);
  	_camera = new Camera(_spriteWidth, _spriteHeight, _save->getMapSizeX(), _save->getMapSizeY(), _save->getMapSizeZ(), this, visibleMapHeight);
  	_scrollMouseTimer = new Timer(SCROLL_INTERVAL);
-@@ -272,12 +281,13 @@ void Map::init()
+@@ -272,12 +282,13 @@ void Map::init()
  					   0, 0, 0, b, f, b, 0, 0, 0,
  					   0, 0, 0, 0, b, 0, 0, 0, 0 };
  
@@ -11317,7 +11420,7 @@ index 3665cd1..2d3e45b 100644
  	_arrow->unlock();
  
  	_projectile = 0;
-@@ -305,6 +315,233 @@ void Map::think()
+@@ -305,6 +316,262 @@ void Map::think()
  /**
   * Draws the whole map, part by part.
   */
@@ -11419,6 +11522,34 @@ index 3665cd1..2d3e45b 100644
 +}
 +
 +/// A ring on the floor around a tile, radius in tiles, as vector strokes (the iso ellipse a circle on the ground makes).
++/**
++ * John 19 Nov 10:20 "I still don't know how to open the case or where the case is": every container a Joe can open
++ * (gijoeContainerParts) that is still shut and that the squad has seen gets a gold ring on its tile, so the things worth
++ * searching stand out. Empty ones are marked too - you only learn what is inside by opening it (face it, right-click).
++ */
++void Map::drawSearchMarks()
++{
++	if (!_save || !_save->getBattleGame()) return;
++	const Mod *mod = _save->getBattleGame()->getMod();
++	const int z = _camera->getViewLevel();
++	for (int y = 0; y < _save->getMapSizeY(); ++y)
++		for (int x = 0; x < _save->getMapSizeX(); ++x)
++		{
++			Tile *t = _save->getTile(Position(x, y, z));
++			if (!t || !t->isDiscovered(O_FLOOR)) continue;
++			MapData *obj = t->getMapData(O_OBJECT);
++			if (!obj || obj->getAltMCD() <= 0) continue;
++			int part = -1, setId = -1;
++			t->getMapData(&part, &setId, O_OBJECT);
++			if (part < 0 || !mod->isGijoeContainer(obj->getDataset()->getName(), part)) continue;
++			Position sp;
++			_camera->convertMapToScreen(t->getPosition(), &sp);
++			sp += _camera->getMapOffset();
++			vecGroundRing(sp, 0.48, 0xE8B923, false, 0xC0);
++			vecGroundRing(sp, 0.30, 0xE8B923, true, 0x90);
++		}
++}
++
 +void Map::vecGroundRing(Position sp, double radTiles, Uint32 rgb, bool dashed, int alpha)
 +{
 +	const double hr = Screen::hiRes();
@@ -11472,6 +11603,7 @@ index 3665cd1..2d3e45b 100644
 +	for (auto *u : *_save->getUnits())
 +	{
 +		if (u->isOut() || u->getFaction() != FACTION_HOSTILE || !u->getVisible() || !u->getTile()) continue;
++		if (u->isHandsUp() || u->isCuffed()) continue;   // surrendered or cuffed: he is watching nothing (John 19 Nov 10:17)
 +		if (u->getPosition().z != _camera->getViewLevel()) continue;
 +		const int st = Stealth::state(_save, u);
 +		if (st == 1) continue;   // asleep: no cone
@@ -11551,16 +11683,17 @@ index 3665cd1..2d3e45b 100644
  void Map::draw()
  {
  	if (!_redraw)
-@@ -317,6 +554,8 @@ void Map::draw()
+@@ -317,6 +584,9 @@ void Map::draw()
  	// we use colour 15 because that actually corresponds to the colour we DO want in all variations of the xcom and tftd palettes.
  	// Note: un-hardcoded the color from 15 to ruleset value, default 15
  	_redraw = false;
 +	HiUI::vectorClear(HiUI::VEC_MAP);
 +	drawViewCones();   // STEALTH SIGHT: Cobra view cones (OXCE_NO_CONES=1 hides them)
++	drawSearchMarks();
  	ShaderDrawFunc(
  		[](Uint8& dest, Uint8 color)
  		{
-@@ -325,6 +564,7 @@ void Map::draw()
+@@ -325,6 +595,7 @@ void Map::draw()
  		ShaderSurface(this),
  		ShaderScalar<Uint8>(Palette::blockOffset(0) + _bgColor)
  	);
@@ -11568,7 +11701,7 @@ index 3665cd1..2d3e45b 100644
  
  	Tile *t;
  
-@@ -356,18 +596,84 @@ void Map::draw()
+@@ -356,18 +627,84 @@ void Map::draw()
  		}
  	}
  
@@ -11654,7 +11787,7 @@ index 3665cd1..2d3e45b 100644
  	if (_save->getSide() == FACTION_NEUTRAL)
  	{
  		_message->setProgressBarColor(_neutralBarColor, _borderBarColor);
-@@ -466,6 +772,29 @@ int getArrowBobForFrame(int frame)
+@@ -466,6 +803,29 @@ int getArrowBobForFrame(int frame)
  	return ArrowBobOffsets[frame % 8];
  }
  
@@ -11684,7 +11817,7 @@ index 3665cd1..2d3e45b 100644
  int getShadePulseForFrame(int shade, int frame)
  {
  	if (shade > 7) shade = 7;
-@@ -488,9 +817,9 @@ int getShadePulseForFrame(int shade, int frame)
+@@ -488,9 +848,9 @@ int getShadePulseForFrame(int shade, int frame)
   */
  void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position currTileScreenPosition, bool topLayer, BattleUnit* movingUnit)
  {
@@ -11697,7 +11830,7 @@ index 3665cd1..2d3e45b 100644
  
  	if (!unitTile)
  	{
-@@ -532,7 +861,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
+@@ -532,7 +892,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
  
  	unitOffset.x = unitTile->getPosition().x - bu->getPosition().x;
  	unitOffset.y = unitTile->getPosition().y - bu->getPosition().y;
@@ -11706,7 +11839,7 @@ index 3665cd1..2d3e45b 100644
  
  	bool moving = bu->getStatus() == STATUS_WALKING || bu->getStatus() == STATUS_FLYING;
  	int bonusWidth = moving ? 0 : tileFoorWidth;
-@@ -746,6 +1075,8 @@ void Map::drawTerrain(Surface *surface)
+@@ -746,6 +1106,8 @@ void Map::drawTerrain(Surface *surface)
  	int beginZ = 0, endZ = _save->getMapSizeZ() - 1;
  	Position mapPosition, screenPosition, bulletPositionScreen, movingUnitPosition;
  	int bulletLowX=16000, bulletLowY=16000, bulletLowZ=16000, bulletHighX=0, bulletHighY=0, bulletHighZ=0;
@@ -11715,7 +11848,7 @@ index 3665cd1..2d3e45b 100644
  	int dummy;
  	BattleUnit *movingUnit = _save->getTileEngine()->getMovingUnit();
  	int tileShade, tileColor, obstacleShade;
-@@ -777,6 +1108,31 @@ void Map::drawTerrain(Surface *surface)
+@@ -777,6 +1139,31 @@ void Map::drawTerrain(Surface *surface)
  			if (_projectile->getPosition(1-i).z > bulletHighZ)
  				bulletHighZ = _projectile->getPosition(1-i).z;
  		}
@@ -11747,7 +11880,7 @@ index 3665cd1..2d3e45b 100644
  		// divide by 16 to go from voxel to tile position
  		bulletLowX = bulletLowX / 16;
  		bulletLowY = bulletLowY / 16;
-@@ -940,15 +1296,15 @@ void Map::drawTerrain(Surface *surface)
+@@ -940,15 +1327,15 @@ void Map::drawTerrain(Surface *surface)
  					if (tmpSurface)
  					{
  						if (tile->getObstacle(O_FLOOR))
@@ -11767,7 +11900,7 @@ index 3665cd1..2d3e45b 100644
  					{
  						if (_camera->getViewLevel() == itZ)
  						{
-@@ -1001,9 +1357,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1001,9 +1388,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_WESTWALL, tile);
  							if (tile->getObstacle(O_WESTWALL))
@@ -11779,7 +11912,7 @@ index 3665cd1..2d3e45b 100644
  						}
  						// Draw north wall
  						tmpSurface = tile->getSprite(O_NORTHWALL);
-@@ -1011,9 +1367,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1011,9 +1398,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_NORTHWALL, tile);
  							if (tile->getObstacle(O_NORTHWALL))
@@ -11791,7 +11924,7 @@ index 3665cd1..2d3e45b 100644
  						}
  						// Draw object
  						tmpSurface = tile->getSprite(O_OBJECT);
-@@ -1022,18 +1378,19 @@ void Map::drawTerrain(Surface *surface)
+@@ -1022,18 +1409,19 @@ void Map::drawTerrain(Surface *surface)
  							if (tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -11814,7 +11947,7 @@ index 3665cd1..2d3e45b 100644
  								tileShade
  							);
  							if (_anyIndicator)
-@@ -1043,30 +1400,30 @@ void Map::drawTerrain(Surface *surface)
+@@ -1043,30 +1431,30 @@ void Map::drawTerrain(Surface *surface)
  								{
  									if (_burnIndicator && itemUnit->getFire() > 0)
  									{
@@ -11853,7 +11986,7 @@ index 3665cd1..2d3e45b 100644
  											tileShade);
  									}
  								}
-@@ -1134,7 +1491,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1134,7 +1522,7 @@ void Map::drawTerrain(Surface *surface)
  
  								for (int i = begin; i != end; i += direction)
  								{
@@ -11862,7 +11995,7 @@ index 3665cd1..2d3e45b 100644
  									if (tmpSurface)
  									{
  										Position voxelPos = _projectile->getPosition(1-i);
-@@ -1292,13 +1649,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1292,13 +1680,13 @@ void Map::drawTerrain(Surface *surface)
  							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(11);
  							if (tmpSurface)
  							{
@@ -11878,7 +12011,7 @@ index 3665cd1..2d3e45b 100644
  						}
  					}
  
-@@ -1310,9 +1667,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1310,9 +1698,9 @@ void Map::drawTerrain(Surface *surface)
  							if (!tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -11890,7 +12023,7 @@ index 3665cd1..2d3e45b 100644
  							}
  						}
  					}
-@@ -1335,8 +1692,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1335,8 +1723,13 @@ void Map::drawTerrain(Surface *surface)
  								else
  									frameNumber = 6; // red static crosshairs
  							}
@@ -11906,7 +12039,7 @@ index 3665cd1..2d3e45b 100644
  
  							// UFO extender accuracy: display adjusted accuracy value on crosshair in real-time.
  							if (_cursorType >= CT_AIM && _showInfoOnCursor && (_cursorType != CT_THROW || !Options::oxceDisableInfoOnThrowCursor))
-@@ -1528,14 +1890,18 @@ void Map::drawTerrain(Surface *surface)
+@@ -1528,14 +1921,18 @@ void Map::drawTerrain(Surface *surface)
  
  								_txtAccuracy->setText(ss.str());
  								_txtAccuracy->draw();
@@ -11928,7 +12061,7 @@ index 3665cd1..2d3e45b 100644
  						}
  						if (!_isAltPressed && _cursorType > CT_AIM && _camera->getViewLevel() == itZ)
  						{
-@@ -1551,7 +1917,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1551,7 +1948,7 @@ void Map::drawTerrain(Surface *surface)
  									_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::red - 1) - 1);
  									_txtAccuracy->setText("0%");
  									_txtAccuracy->draw();
@@ -11937,7 +12070,7 @@ index 3665cd1..2d3e45b 100644
  								}
  							}
  							if (!ignore)
-@@ -1582,7 +1948,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1582,7 +1979,7 @@ void Map::drawTerrain(Surface *surface)
  								_numWaypid->setValue(waypid);
  								_numWaypid->setBordered(true); // OXCE, not configurable
  								_numWaypid->draw();
@@ -11946,7 +12079,7 @@ index 3665cd1..2d3e45b 100644
  
  								waypXOff += waypid > 9 ? 10 : 6; // OXCE
  								if (waypXOff >= 26)
-@@ -1621,7 +1987,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1621,7 +2018,7 @@ void Map::drawTerrain(Surface *surface)
  						tile = _save->getTile(mapPosition);
  						if (!tile || !tile->isDiscovered(O_FLOOR) || tile->getPreview() == -1)
  							continue;
@@ -11955,7 +12088,7 @@ index 3665cd1..2d3e45b 100644
  						if (_previewSettingArrows)
  						{
  							if (itZ > 0 && tile->hasNoFloor(_save))
-@@ -1629,14 +1995,14 @@ void Map::drawTerrain(Surface *surface)
+@@ -1629,14 +2026,14 @@ void Map::drawTerrain(Surface *surface)
  								tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(23);
  								if (tmpSurface)
  								{
@@ -11972,7 +12105,7 @@ index 3665cd1..2d3e45b 100644
  							}
  						}
  
-@@ -1645,16 +2011,17 @@ void Map::drawTerrain(Surface *surface)
+@@ -1645,16 +2042,17 @@ void Map::drawTerrain(Surface *surface)
  							int off = tile->getTUMarker() > 9 ? 5 : 3;
  							int offE = tile->getEnergyMarker() > 9 ? 5 : 3;
  							int mcolor = _previewSettingArrows ? 0 : tile->getMarkerColor();
@@ -11993,7 +12126,7 @@ index 3665cd1..2d3e45b 100644
  								}
  							}
  							if (_previewSettingTu)
-@@ -1664,16 +2031,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1664,16 +2062,16 @@ void Map::drawTerrain(Surface *surface)
  								if (_previewSettingEnergy)
  								{
  									// TU
@@ -12013,7 +12146,7 @@ index 3665cd1..2d3e45b 100644
  								}
  							}
  							else if (_previewSettingEnergy)
-@@ -1681,7 +2048,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1681,7 +2079,7 @@ void Map::drawTerrain(Surface *surface)
  								// only Energy
  								_numWaypid->setValue(tile->getEnergyMarker());
  								_numWaypid->draw();
@@ -12022,7 +12155,7 @@ index 3665cd1..2d3e45b 100644
  							}
  						}
  					}
-@@ -1702,16 +2069,108 @@ void Map::drawTerrain(Surface *surface)
+@@ -1702,16 +2100,108 @@ void Map::drawTerrain(Surface *surface)
  		Position offset = calculateWalkingOffset(selectedUnit).ScreenOffset;
  		if (selectedUnit->isBigUnit())
  		{
@@ -12135,7 +12268,7 @@ index 3665cd1..2d3e45b 100644
  		}
  	}
  
-@@ -1732,26 +2191,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -1732,26 +2222,26 @@ void Map::drawTerrain(Surface *surface)
  				//calculateWalkingOffset(myUnit, &offset);
  				if (myUnit->isBigUnit())
  				{
@@ -12167,7 +12300,7 @@ index 3665cd1..2d3e45b 100644
  						0);
  				}
  				else if (customMarker)
-@@ -1760,7 +2219,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1760,7 +2250,7 @@ void Map::drawTerrain(Surface *surface)
  						surface,
  						_arrow,
  						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
@@ -12176,7 +12309,7 @@ index 3665cd1..2d3e45b 100644
  						0,
  						false,
  						_isTFTD ? ArrowColorsTFTD[myUnit->getCustomMarker() % 4] : ArrowColorsUFO[myUnit->getCustomMarker() % 4]);
-@@ -1779,11 +2238,11 @@ void Map::drawTerrain(Surface *surface)
+@@ -1779,11 +2269,11 @@ void Map::drawTerrain(Surface *surface)
  			{
  				_camera->convertMapToScreen(pos, &screenPosition);
  				screenPosition += _camera->getMapOffset();
@@ -12190,7 +12323,7 @@ index 3665cd1..2d3e45b 100644
  					0);
  			}
  		}
-@@ -1823,17 +2282,40 @@ void Map::drawTerrain(Surface *surface)
+@@ -1823,17 +2313,40 @@ void Map::drawTerrain(Surface *surface)
  				else if (explosion->isHit())
  				{
  					tmpSurface = _game->getMod()->getSurfaceSet("HIT.PCK")->getFrame(explosion->getCurrentFrame());
@@ -12233,7 +12366,7 @@ index 3665cd1..2d3e45b 100644
  	surface->unlock();
  }
  
-@@ -2023,7 +2505,7 @@ void Map::setSelectorPosition(int mx, int my)
+@@ -2023,7 +2536,7 @@ void Map::setSelectorPosition(int mx, int my)
  {
  	int oldX = _selectorX, oldY = _selectorY;
  
@@ -12242,7 +12375,7 @@ index 3665cd1..2d3e45b 100644
  
  	if (oldX != _selectorX || oldY != _selectorY)
  	{
-@@ -2207,16 +2689,25 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2207,16 +2720,25 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  	}
  	else if ((unit->getStatus() == STATUS_WALKING || unit->getStatus() == STATUS_FLYING))
  	{
@@ -12272,7 +12405,7 @@ index 3665cd1..2d3e45b 100644
  	}
  
  	result.NormalizedMovePhase = endphase == 16 ? phase : phase * 2;
-@@ -2266,7 +2757,17 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2266,7 +2788,17 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  	{
  		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
  	}
@@ -12290,7 +12423,7 @@ index 3665cd1..2d3e45b 100644
  	return result;
  }
  
-@@ -2327,10 +2828,19 @@ CursorType Map::getCursorType() const
+@@ -2327,10 +2859,19 @@ CursorType Map::getCursorType() const
   * Puts a projectile sprite on the map.
   * @param projectile Projectile to place.
   */
@@ -12311,7 +12444,7 @@ index 3665cd1..2d3e45b 100644
  	{
  		_launch = true;
  	}
-@@ -2506,9 +3016,10 @@ void Map::refreshSelectorPosition()
+@@ -2506,9 +3047,10 @@ void Map::refreshSelectorPosition()
  void Map::setHeight(int height)
  {
  	Surface::setHeight(height);
@@ -12325,7 +12458,7 @@ index 3665cd1..2d3e45b 100644
  }
  
  /**
-@@ -2519,7 +3030,7 @@ void Map::setWidth(int width)
+@@ -2519,7 +3061,7 @@ void Map::setWidth(int width)
  {
  	int dX = width - getWidth();
  	Surface::setWidth(width);
@@ -12335,7 +12468,7 @@ index 3665cd1..2d3e45b 100644
  
  /**
 diff --git a/src/Battlescape/Map.h b/src/Battlescape/Map.h
-index 0fdf2ca..a027de0 100644
+index 0fdf2ca..376044d 100644
 --- a/src/Battlescape/Map.h
 +++ b/src/Battlescape/Map.h
 @@ -52,6 +52,7 @@ struct UnitWalkingOffset
@@ -12367,7 +12500,7 @@ index 0fdf2ca..a027de0 100644
  	BattlescapeMessage *_message;
  	Camera *_camera;
  	int _visibleMapHeight;
-@@ -106,6 +114,13 @@ private:
+@@ -106,6 +114,15 @@ private:
  
  	void drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position tileScreenPosition, bool topLayer, BattleUnit* movingUnit = nullptr);
  	void drawTerrain(Surface *surface);
@@ -12375,13 +12508,15 @@ index 0fdf2ca..a027de0 100644
 +	void vecCursor(Position screenPosition, int kind, bool onUnit);
 +	/// G.I. Joe 4x: a ring on the floor, radius in tiles (noise ring, heard-something marker).
 +	void vecGroundRing(Position screenPosition, double radTiles, Uint32 rgb, bool dashed, int alpha = 0xE0);
++	/// G.I. Joe clue containers: a gold ring on every crate/safe/desk/footlocker a Joe can still open.
++	void drawSearchMarks();
 +	/// STEALTH SIGHT item 2: a guard's view cone on the ground (fan of faint lines; near band deeper; coloured edge)
 +	void vecGroundCone(Position screenPosition, double angle, double halfArc, double nearR, double farR, int level);
 +	void drawViewCones();
  	int getTerrainLevel(const Position& pos, int size) const;
  	int getWallShade(TilePart part, Tile* tileFrot);
  	int _iconHeight, _iconWidth, _messageColor;
-@@ -124,6 +139,8 @@ public:
+@@ -124,6 +141,8 @@ public:
  	void think() override;
  	/// Draws the surface.
  	void draw() override;
@@ -12390,7 +12525,7 @@ index 0fdf2ca..a027de0 100644
  	void refreshAIProgress(int progress);
  	/// Sets the palette.
  	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
-@@ -153,6 +170,8 @@ public:
+@@ -153,6 +172,8 @@ public:
  
  	/// Sets projectile.
  	void setProjectile(Projectile *projectile);
@@ -13565,7 +13700,7 @@ index a263ca2..e893825 100644
  	BattleItem *getItem() const;
  	/// Skips the bullet flight.
 diff --git a/src/Battlescape/ProjectileFlyBState.cpp b/src/Battlescape/ProjectileFlyBState.cpp
-index 529b7f2..9187986 100644
+index 529b7f2..7b0eee8 100644
 --- a/src/Battlescape/ProjectileFlyBState.cpp
 +++ b/src/Battlescape/ProjectileFlyBState.cpp
 @@ -16,8 +16,16 @@
@@ -13849,6 +13984,22 @@ index 529b7f2..9187986 100644
  	/// checks if a weapon has any more shots to fire.
  	auto noMoreShotsToShoot = [this]() { return !_action.weapon->haveNextShotsForAction(_action.type, _action.autoShotCounter) || !_action.weapon->getAmmoForAction(_action.type); };
  
+@@ -677,7 +848,14 @@ void ProjectileFlyBState::think()
+ 
+ 				_parent->getMod()->getSoundByDepth(_parent->getDepth(), Mod::ITEM_DROP)->play(-1, _parent->getMap()->getSoundAngle(pos));
+ 				const RuleItem *ruleItem = _action.weapon->getRules();
+-				if (_action.weapon->fuseThrowEvent())
++				if (ruleItem->getType() == "STR_GJ_DISTRACTION_ROCK")
++				{
++					// G.I. Joe DISTRACT: noise where it lands and a little dust, then the rock is gone
++					Stealth::noise(_parent->getSave(), pos, 10, _unit, false);
++					if (Tile *t = _parent->getSave()->getTile(pos)) t->addSmoke(2);
++					_parent->getSave()->removeItem(_action.weapon);
++				}
++				else if (_action.weapon->fuseThrowEvent())
+ 				{
+ 					if (ruleItem->getBattleType() == BT_GRENADE || ruleItem->getBattleType() == BT_PROXIMITYGRENADE)
+ 					{
 diff --git a/src/Battlescape/ProjectileFlyBState.h b/src/Battlescape/ProjectileFlyBState.h
 index 067c7b3..e9320c1 100644
 --- a/src/Battlescape/ProjectileFlyBState.h
@@ -13963,10 +14114,10 @@ index 0000000..a8e336b
 +}
 diff --git a/src/Battlescape/Stealth.cpp b/src/Battlescape/Stealth.cpp
 new file mode 100644
-index 0000000..c184ba5
+index 0000000..f299494
 --- /dev/null
 +++ b/src/Battlescape/Stealth.cpp
-@@ -0,0 +1,648 @@
+@@ -0,0 +1,654 @@
 +/*
 + * G.I. Joe: sound and stealth. See Stealth.h and claude/SOUND_STEALTH_DESIGN_v1.md.
 + */
@@ -14150,9 +14301,14 @@ index 0000000..c184ba5
 +}
 +bool asleep(const SavedBattleGame *save, const BattleUnit *u) { return on(save) && cobra(u) && state(save, u) == ASLEEP; }
 +bool unaware(const SavedBattleGame *save, const BattleUnit *u) { return on(save) && cobra(u) && state(save, u) != ALERT; }
-+float reactionFactor(const SavedBattleGame *save, const BattleUnit *u)
++float reactionFactor(const SavedBattleGame *save, const BattleUnit *u, const BattleUnit *mover)
 +{
-+	if (!on(save) || !cobra(u)) return 1.0f;
++	if (!on(save)) return 1.0f;
++	// John 19 Nov 10:11 "Why in my test did they raise alarm": a Joe on overwatch fired at a cartel man walking past
++	// on Cobra's turn and the shot raised the alarm. While the site is quiet the Joes HOLD FIRE: no reaction shot at
++	// a Cobra who is not alert. Once the alarm is up, or at a man who has gone red, they fire as before.
++	if (!cobra(u))
++		return (alarm(save) || !mover || !cobra(mover) || state(save, mover) == ALERT) ? 1.0f : 0.0f;
 +	const int s = state(save, u);
 +	// John 19 Nov 01:02 "They shoot at me immediately stealth is nothing even when they're blue": a guard who is not
 +	// ALERT gets no reaction shot at all. Seeing a Joe on the Joes' turn is still remembered (saw()), and on his own
@@ -14344,7 +14500,7 @@ index 0000000..c184ba5
 +		const auto *dt = a->getDamageType();
 +		const bool blast = dt && (dt->ResistType == DT_HE || dt->ResistType == DT_IN) || w->getArcingShot() || a->getArcingShot();
 +		if (blast) kind = "launcher";
-+		else if (w->getConfigAuto()->shots >= 5 || w->getWeight() >= 12 || (w->getAccuracyAimed() >= 110 && w->getConfigAuto()->shots <= 1)) kind = "heavy";
++		else if (w->isFixed() || w->getConfigAuto()->shots >= 5 || w->getWeight() >= 12 || (w->getAccuracyAimed() >= 110 && w->getConfigAuto()->shots <= 1)) kind = "heavy";
 +		else if (!w->isTwoHanded()) kind = "pistol";
 +		else kind = "rifle";
 +	}
@@ -14363,7 +14519,7 @@ index 0000000..c184ba5
 +		const auto *dt = a->getDamageType();
 +		const bool blast = dt && (dt->ResistType == DT_HE || dt->ResistType == DT_IN) || w->getArcingShot() || a->getArcingShot();
 +		if (blast) kind = "launcher";
-+		else if (w->getConfigAuto()->shots >= 5 || w->getWeight() >= 12 || (w->getAccuracyAimed() >= 110 && w->getConfigAuto()->shots <= 1)) kind = "heavy";
++		else if (w->isFixed() || w->getConfigAuto()->shots >= 5 || w->getWeight() >= 12 || (w->getAccuracyAimed() >= 110 && w->getConfigAuto()->shots <= 1)) kind = "heavy";
 +		else if (!w->isTwoHanded()) kind = "pistol";
 +		else kind = "rifle";
 +	}
@@ -14514,6 +14670,7 @@ index 0000000..c184ba5
 +		for (auto *u : *save->getUnits())
 +		{
 +			if (!cobra(u) || u->isOut()) continue;
++			if (u->isHandsUp() || u->isCuffed()) continue;   // surrendered: he watches and reports nothing
 +			const int s = state(save, u);
 +			if (s == ASLEEP) { u->setTimeUnits(0); continue; }
 +			if (s == ALERT && !alarm(save))
@@ -14594,7 +14751,7 @@ index 0000000..c184ba5
 +
 +void saw(SavedBattleGame *save, const BattleUnit *watcher, const BattleUnit *joe)
 +{
-+	if (!save || !watcher || !joe || watcher->getFaction() != FACTION_HOSTILE) return;
++	if (!save || !watcher || !joe || watcher->getFaction() != FACTION_HOSTILE || watcher->isHandsUp() || watcher->isCuffed()) return;   // a surrendered man raises nothing
 +	auto &k = knownBy[save];
 +	const int t = save->getTurn();
 +	k[{watcher->getId(), joe->getId()}] = t;
@@ -14617,7 +14774,7 @@ index 0000000..c184ba5
 +}
 diff --git a/src/Battlescape/Stealth.h b/src/Battlescape/Stealth.h
 new file mode 100644
-index 0000000..4033648
+index 0000000..ea9013a
 --- /dev/null
 +++ b/src/Battlescape/Stealth.h
 @@ -0,0 +1,92 @@
@@ -14662,7 +14819,7 @@ index 0000000..4033648
 +	/// asleep, on post, patrolling or wary: what a silent takedown works on
 +	bool unaware(const SavedBattleGame *save, const BattleUnit *u);
 +	/// reactions: 0 asleep, 0.7 on post / patrolling, 1 otherwise
-+	float reactionFactor(const SavedBattleGame *save, const BattleUnit *u);
++	float reactionFactor(const SavedBattleGame *save, const BattleUnit *u, const BattleUnit *mover = nullptr);
 +
 +	/// a noise of this radius (tiles) at this tile, made by this unit (may be null).
 +	/// loud = unsilenced gunfire or an explosion (it raises the alarm if a Cobra unit hears it)
@@ -14917,7 +15074,7 @@ index 0000000..ef5e326
 +
 +}
 diff --git a/src/Battlescape/TileEngine.cpp b/src/Battlescape/TileEngine.cpp
-index 6e68469..4fe1ed4 100644
+index 6e68469..7247a89 100644
 --- a/src/Battlescape/TileEngine.cpp
 +++ b/src/Battlescape/TileEngine.cpp
 @@ -16,9 +16,13 @@
@@ -14994,8 +15151,8 @@ index 6e68469..4fe1ed4 100644
  				!bu->isOutThresholdExceed() &&
  				// have any chances for reacting
 -				bu->getReactionScore() >= threshold &&
-+				bu->getReactionScore() * Stealth::reactionFactor(_save, bu) * VehicleSpecials::reactionFactor(_save, bu, unit) >= threshold
-+				&& Stealth::reactionFactor(_save, bu) * VehicleSpecials::reactionFactor(_save, bu, unit) > 0 &&
++				bu->getReactionScore() * Stealth::reactionFactor(_save, bu, unit) * VehicleSpecials::reactionFactor(_save, bu, unit) >= threshold
++				&& Stealth::reactionFactor(_save, bu, unit) * VehicleSpecials::reactionFactor(_save, bu, unit) > 0 &&
  				// not a friend
  				bu->getFaction() != _save->getSide() &&
  				// not a civilian, or a civilian shooting at bad non-ignored guys
@@ -15004,7 +15161,7 @@ index 6e68469..4fe1ed4 100644
  		nullptr,
  		BA_NONE,
 -		unit->getReactionScore(),
-+		unit->getReactionScore() * Stealth::reactionFactor(_save, unit) * VehicleSpecials::reactionFactor(_save, unit, target),   // G.I. Joe: on post -30%, asleep 0; specials
++		unit->getReactionScore() * Stealth::reactionFactor(_save, unit, target) * VehicleSpecials::reactionFactor(_save, unit, target),   // G.I. Joe: on post -30%, asleep 0; specials
  		0.0,
  		1,
  	};
@@ -26008,7 +26165,7 @@ index e609d3c..fad706b 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..61332d2 100644
+index 6b4e79d..c3220d4 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,19 @@
@@ -26349,7 +26506,7 @@ index 6b4e79d..61332d2 100644
  	_btnFunding->onMouseClick((ActionHandler)&GeoscapeState::btnFundingClick);
  	_btnFunding->onKeyboardPress((ActionHandler)&GeoscapeState::btnFundingClick, Options::keyGeoFunding);
  	_btnFunding->setGeoscapeButton(true);
-@@ -357,6 +514,16 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -357,6 +514,25 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btn1Day->onKeyboardPress((ActionHandler)&GeoscapeState::btnTimerClick, Options::keyGeoSpeed6);
  	_btn1Day->setGeoscapeButton(true);
  
@@ -26357,16 +26514,25 @@ index 6b4e79d..61332d2 100644
 +	// then "GO plus a slow button"): two time buttons, SLOW (5 minutes a tick) and GO (12 minutes a tick, a day in about
 +	// ten seconds). The clock still drops to its crawl by itself at every mission or event, so GO runs to the next thing.
 +	// The six stock speeds stay on the keyboard keys.
-+	for (TextButton *b : { _btn5Secs, _btn1Min, _btn1Hour, _btn1Day }) b->setVisible(false);
-+	_btn5Mins->setText(tr("STR_GJ_TIME_SLOW"));
-+	_btn30Mins->setText(tr("STR_GJ_TIME_GO"));
-+	_btn5Mins->setY(_btn5Mins->getY() - 12); _btn5Mins->setHeight(35);
-+	_btn30Mins->setY(_btn30Mins->getY() - 12); _btn30Mins->setHeight(35);
++	// John 19 Nov 10:11: "It's should be 3 buttons. Add an intermediate speed to what we have now" and "redesign the
++	// geoscape interface now with only 2 speed buttons": three full-width keys stacked where the six sat -
++	// SLOW (5 minutes a tick), STEADY (8 minutes, about 15 s a day) and GO (12 minutes, about 10 s a day).
++	for (TextButton *b : { _btn5Secs, _btn1Min, _btn1Day }) b->setVisible(false);
++	const int tx = _btn5Secs->getX(), tw = _btn1Min->getX() + _btn1Min->getWidth() - _btn5Secs->getX();
++	const int ty = _btn5Secs->getY();
++	TextButton *rows[3] = { _btn5Mins, _btn1Hour, _btn30Mins };
++	const char *names[3] = { "STR_GJ_TIME_SLOW", "STR_GJ_TIME_STEADY", "STR_GJ_TIME_GO" };
++	for (int r = 0; r < 3; ++r)
++	{
++		rows[r]->setX(tx); rows[r]->setWidth(tw);
++		rows[r]->setY(ty + r * 12); rows[r]->setHeight(11);
++		rows[r]->setText(tr(names[r]));
++	}
 +
  	_sideBottom->setGeoscapeButton(true);
  	_sideTop->setGeoscapeButton(true);
  
-@@ -387,6 +554,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -387,6 +563,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -26375,7 +26541,7 @@ index 6b4e79d..61332d2 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -403,6 +572,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -403,6 +581,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_txtMinSep->setText(":");
  
  	_txtWeekday->setAlign(ALIGN_CENTER);
@@ -26428,7 +26594,7 @@ index 6b4e79d..61332d2 100644
  
  	_txtDay->setAlign(ALIGN_CENTER);
  
-@@ -427,6 +642,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -427,6 +651,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  		_txtSec->setX(_txtSec->getX()-10);
  	}
  
@@ -26474,7 +26640,7 @@ index 6b4e79d..61332d2 100644
  	_gameTimer->onTimer((StateHandler)&GeoscapeState::timeAdvance);
  	_gameTimer->start();
  
-@@ -512,7 +766,9 @@ void GeoscapeState::blit()
+@@ -512,7 +775,9 @@ void GeoscapeState::blit()
  	State::blit();
  	for (auto* dfs : _dogfights)
  	{
@@ -26485,7 +26651,7 @@ index 6b4e79d..61332d2 100644
  	}
  }
  
-@@ -705,13 +961,141 @@ void GeoscapeState::handle(Action *action)
+@@ -705,13 +970,144 @@ void GeoscapeState::handle(Action *action)
   * Updates the timer display and resets the palette
   * since it's bound to change on other screens.
   */
@@ -26612,6 +26778,9 @@ index 6b4e79d..61332d2 100644
 +			if (o == "purchase") _game->pushState(new PurchaseState(b));
 +			else if (o == "research") _game->pushState(new ResearchTreeState(b));
 +			else if (o == "soldiers") _game->pushState(new SoldiersState(b));
++			else if (o.compare(0, 5, "done:") == 0)
++				if (const RuleResearch *rr = _game->getMod()->getResearch(o.substr(5), false))
++					_game->pushState(new ResearchCompleteState(rr, nullptr, rr, b));
 +		}
 +	}
 +	SeaNav::init(_game->getMod());
@@ -26627,7 +26796,7 @@ index 6b4e79d..61332d2 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -751,8 +1135,28 @@ void GeoscapeState::init()
+@@ -751,8 +1147,28 @@ void GeoscapeState::init()
  		_game->getSavedGame()->addMonth();
  		_game->getSavedGame()->increaseDaysPassed();
  		determineAlienMissions();
@@ -26656,7 +26825,7 @@ index 6b4e79d..61332d2 100644
  }
  
  /**
-@@ -835,6 +1239,10 @@ void GeoscapeState::timeDisplay()
+@@ -835,6 +1251,10 @@ void GeoscapeState::timeDisplay()
  	std::ostringstream ss5;
  	ss5 << _game->getSavedGame()->getTime()->getYear();
  	_txtYear->setText(ss5.str());
@@ -26667,7 +26836,7 @@ index 6b4e79d..61332d2 100644
  }
  
  /**
-@@ -847,6 +1255,179 @@ void GeoscapeState::timeDisplay()
+@@ -847,6 +1267,179 @@ void GeoscapeState::timeDisplay()
   * on 1 Day speed) or until an event occurs, since updating
   * the screen on each step would become cumbersomely slow.
   */
@@ -26847,7 +27016,7 @@ index 6b4e79d..61332d2 100644
  void GeoscapeState::timeAdvance()
  {
  	int timeSpan = 0;
-@@ -878,7 +1459,9 @@ void GeoscapeState::timeAdvance()
+@@ -878,11 +1471,13 @@ void GeoscapeState::timeAdvance()
  	}
  	else if (_timeSpeed == _btn30Mins)
  	{
@@ -26858,7 +27027,12 @@ index 6b4e79d..61332d2 100644
  	}
  	else if (_timeSpeed == _btn1Hour)
  	{
-@@ -1047,6 +1630,7 @@ void GeoscapeState::time5Seconds()
+-		timeSpan = 12 * 5 * 6 * 2;
++		timeSpan = 12 * 8;   // G.I. Joe STEADY: 8 minutes a tick
+ 	}
+ 	else if (_timeSpeed == _btn1Day)
+ 	{
+@@ -1047,6 +1642,7 @@ void GeoscapeState::time5Seconds()
  					continue;
  				}
  
@@ -26866,7 +27040,7 @@ index 6b4e79d..61332d2 100644
  				size_t count = _game->getSavedGame()->getMissionSites()->size();
  				AlienMission *mission = ufo->getMission();
  				bool detected = ufo->getDetected();
-@@ -1139,6 +1723,9 @@ void GeoscapeState::time5Seconds()
+@@ -1139,6 +1735,9 @@ void GeoscapeState::time5Seconds()
  		}
  	}
  
@@ -26876,7 +27050,7 @@ index 6b4e79d..61332d2 100644
  	// Handle craft logic
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -1233,6 +1820,13 @@ void GeoscapeState::time5Seconds()
+@@ -1233,6 +1832,13 @@ void GeoscapeState::time5Seconds()
  			if (!ufoIsAttacking)
  			{
  				bool returnedToBase = xcraft->think();
@@ -26890,7 +27064,7 @@ index 6b4e79d..61332d2 100644
  				if (returnedToBase)
  				{
  					_game->getSavedGame()->stopHuntingXcomCraft(xcraft); // hiding in the base is good enough, obviously
-@@ -1276,6 +1870,14 @@ void GeoscapeState::time5Seconds()
+@@ -1276,6 +1882,14 @@ void GeoscapeState::time5Seconds()
  							continue;
  						}
  						// Can we actually fight it
@@ -26905,7 +27079,7 @@ index 6b4e79d..61332d2 100644
  						if (!xcraft->isInDogfight() && u->getSpeed() <= xcraft->getCraftStats().speedMax)
  						{
  							if (u->isHunterKiller())
-@@ -1422,7 +2024,9 @@ void GeoscapeState::time5Seconds()
+@@ -1422,7 +2036,9 @@ void GeoscapeState::time5Seconds()
  				{
  					if (b->isDiscovered())
  					{
@@ -26916,7 +27090,7 @@ index 6b4e79d..61332d2 100644
  						{
  							int texture, shade;
  							_globe->getPolygonTextureAndShade(b->getLongitude(), b->getLatitude(), &texture, &shade);
-@@ -1454,6 +2058,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +2070,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -26952,7 +27126,7 @@ index 6b4e79d..61332d2 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +2197,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +2209,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -26983,7 +27157,7 @@ index 6b4e79d..61332d2 100644
  							}
  						}
  					}
-@@ -1752,7 +2401,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2413,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -26992,7 +27166,7 @@ index 6b4e79d..61332d2 100644
  								}
  								else
  								{
-@@ -1858,6 +2507,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2519,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -27013,7 +27187,7 @@ index 6b4e79d..61332d2 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2547,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2559,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -27026,7 +27200,7 @@ index 6b4e79d..61332d2 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2104,6 +2773,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2104,6 +2785,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		detected = maskBitOr(detected, craft->detect(ufo, save, alreadyTracked));
  	}
  
@@ -27034,7 +27208,7 @@ index 6b4e79d..61332d2 100644
  	if (!alreadyTracked)
  	{
  		if (maskTest(detected, DETECTION_RADAR))
-@@ -2126,8 +2796,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2126,8 +2808,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		{
  			ufo->setHyperDetected(true);
  		}
@@ -27055,7 +27229,7 @@ index 6b4e79d..61332d2 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2826,184 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2838,184 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -27240,7 +27414,7 @@ index 6b4e79d..61332d2 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +3050,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +3062,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -27330,7 +27504,7 @@ index 6b4e79d..61332d2 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +3295,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +3307,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -27339,7 +27513,7 @@ index 6b4e79d..61332d2 100644
  			}
  			else
  			{
-@@ -2389,12 +3331,336 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3343,336 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
@@ -27676,7 +27850,7 @@ index 6b4e79d..61332d2 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3710,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3722,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -27699,7 +27873,7 @@ index 6b4e79d..61332d2 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2776,6 +4051,7 @@ void GeoscapeState::time1Day()
+@@ -2776,6 +4063,7 @@ void GeoscapeState::time1Day()
  					{
  						chanceToDetect = 50 - (distance * 50 / facility->getRules()->getSightRange()); // dynamic 0-50% based on relative distance
  					}
@@ -27707,7 +27881,7 @@ index 6b4e79d..61332d2 100644
  					if (RNG::percent(chanceToDetect))
  					{
  						alienBase->setDiscovered(true);
-@@ -2861,7 +4137,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +4149,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -27736,7 +27910,7 @@ index 6b4e79d..61332d2 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2894,7 +4191,9 @@ void GeoscapeState::time1Month()
+@@ -2894,7 +4203,9 @@ void GeoscapeState::time1Month()
  	{
  		for (auto* ab : *_game->getSavedGame()->getAlienBases())
  		{
@@ -27747,7 +27921,7 @@ index 6b4e79d..61332d2 100644
  			{
  				ab->setDiscovered(true);
  				popup(new AlienBaseState(ab, this));
-@@ -2960,6 +4259,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +4271,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -27778,7 +27952,7 @@ index 6b4e79d..61332d2 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4445,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4457,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -27788,7 +27962,7 @@ index 6b4e79d..61332d2 100644
  }
  
  /**
-@@ -3265,6 +4589,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4601,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -27804,7 +27978,7 @@ index 6b4e79d..61332d2 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4675,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4687,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -27857,7 +28031,7 @@ index 6b4e79d..61332d2 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4743,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4755,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -28109,7 +28283,7 @@ index 6b4e79d..61332d2 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +6271,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +6283,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -28186,19 +28360,20 @@ index 5eaf857..c39022a 100644
  	void btnZoomOutRightClick(Action *action);
  	/// Blit method - renders the state and dogfights.
 diff --git a/src/Geoscape/Globe.cpp b/src/Geoscape/Globe.cpp
-index 5b17165..76b824e 100644
+index 5b17165..e3964ee 100644
 --- a/src/Geoscape/Globe.cpp
 +++ b/src/Geoscape/Globe.cpp
-@@ -17,6 +17,8 @@
+@@ -17,6 +17,9 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "Globe.h"
++#include <cstdlib>
 +#include "Shipping.h"
 +#include "../Engine/HiUI.h"
  #include "../fmath.h"
  #include "../Engine/Action.h"
  #include "../Engine/SurfaceSet.h"
-@@ -61,6 +63,11 @@ const double Globe::ROTATE_LONGITUDE = 0.10;
+@@ -61,6 +64,11 @@ const double Globe::ROTATE_LONGITUDE = 0.10;
  const double Globe::ROTATE_LATITUDE = 0.06;
  
  Uint8 Globe::OCEAN_COLOR;
@@ -28210,7 +28385,7 @@ index 5b17165..76b824e 100644
  bool Globe::OCEAN_SHADING;
  Uint8 Globe::COUNTRY_LABEL_COLOR;
  Uint8 Globe::LINE_COLOR;
-@@ -366,6 +373,7 @@ Globe::Globe(Game* game, int cenX, int cenY, int width, int height, int x, int y
+@@ -366,6 +374,7 @@ Globe::Globe(Game* game, int cenX, int cenY, int width, int height, int x, int y
   */
  Globe::~Globe()
  {
@@ -28218,7 +28393,7 @@ index 5b17165..76b824e 100644
  	delete _blinkTimer;
  	delete _rotTimer;
  	delete _countries;
-@@ -411,6 +419,20 @@ void Globe::polarToCart(double lon, double lat, double *x, double *y) const
+@@ -411,6 +420,20 @@ void Globe::polarToCart(double lon, double lat, double *x, double *y) const
   * @param lon Pointer to the output longitude.
   * @param lat Pointer to the output latitude.
   */
@@ -28239,7 +28414,7 @@ index 5b17165..76b824e 100644
  void Globe::cartToPolar(Sint16 x, Sint16 y, double *lon, double *lat) const
  {
  	// Orthographic projection
-@@ -966,12 +988,73 @@ void Globe::draw()
+@@ -966,12 +989,73 @@ void Globe::draw()
  	}
  	Surface::draw();
  	drawOcean();
@@ -28314,7 +28489,7 @@ index 5b17165..76b824e 100644
  }
  
  
-@@ -1092,6 +1175,26 @@ void Globe::drawShadow()
+@@ -1092,6 +1176,26 @@ void Globe::drawShadow()
  }
  
  
@@ -28341,7 +28516,7 @@ index 5b17165..76b824e 100644
  void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double x2, double y2, int shade)
  {
  	if (_clipper->LineClip(&x1,&y1,&x2,&y2) != 1) return; //empty line
-@@ -1161,9 +1264,82 @@ void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double
+@@ -1161,9 +1265,82 @@ void Globe::XuLine(Surface* surface, Surface* src, double x1, double y1, double
  /**
   * Draws the radar ranges of player bases, player craft, alien bases and UFO hunter-killers on the globe.
   */
@@ -28424,7 +28599,19 @@ index 5b17165..76b824e 100644
  
  	if (!Options::globeRadarLines)
  		return;
-@@ -1296,7 +1472,12 @@ void Globe::drawGlobeCircle(double lat, double lon, double radius, int segments,
+@@ -1184,7 +1361,10 @@ void Globe::drawRadars()
+ 		}
+ 	}
+ 
+-	if (_hover)
++	// G.I. Joe (John 19 Nov 10:11 "Why are there rings when you place your base in campaign"): stock X-COM draws one ring
++	// per radar facility type the base COULD build, round the cursor - a target of eleven circles that means nothing on
++	// day one. Not drawn; OXCE_BASE_RINGS=1 brings them back.
++	if (_hover && getenv("OXCE_BASE_RINGS"))
+ 	{
+ 		for (auto& facType : _game->getMod()->getBaseFacilitiesList())
+ 		{
+@@ -1296,7 +1476,12 @@ void Globe::drawGlobeCircle(double lat, double lon, double radius, int segments,
  			continue;
  		}
  		if (!pointBack(lon1,lat1) && i % frac == 0)
@@ -28438,7 +28625,7 @@ index 5b17165..76b824e 100644
  		x2=x; y2=y;
  		i++;
  	}
-@@ -1346,6 +1527,15 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
+@@ -1346,6 +1531,15 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
  
  		if (!pointBack(ln2, lt2)&&!pointBack(ln1, lt1))
  		{
@@ -28454,7 +28641,7 @@ index 5b17165..76b824e 100644
  			polarToCart(ln1,lt1,&x1,&y1);
  			polarToCart(ln2,lt2,&x2,&y2);
  			surface->drawLine(x1, y1, x2, y2, color);
-@@ -1358,9 +1548,153 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
+@@ -1358,9 +1552,153 @@ void Globe::drawVHLine(Surface *surface, double lon1, double lat1, double lon2,
   * Draws the details of the countries on the globe,
   * based on the current zoom level.
   */
@@ -28608,7 +28795,7 @@ index 5b17165..76b824e 100644
  
  	if (!Options::globeDetail)
  		return;
-@@ -1380,6 +1714,15 @@ void Globe::drawDetail()
+@@ -1380,6 +1718,15 @@ void Globe::drawDetail()
  				if (pointBack(polyline->getLongitude(j), polyline->getLatitude(j)) || pointBack(polyline->getLongitude(j + 1), polyline->getLatitude(j + 1)))
  					continue;
  
@@ -28624,7 +28811,7 @@ index 5b17165..76b824e 100644
  				// Convert coordinates
  				polarToCart(polyline->getLongitude(j), polyline->getLatitude(j), &x[0], &y[0]);
  				polarToCart(polyline->getLongitude(j + 1), polyline->getLatitude(j + 1), &x[1], &y[1]);
-@@ -1412,6 +1755,11 @@ void Globe::drawDetail()
+@@ -1412,6 +1759,11 @@ void Globe::drawDetail()
  
  			label->setX(x - 75);
  			label->setY(y);
@@ -28636,7 +28823,7 @@ index 5b17165..76b824e 100644
  			label->setText(_game->getLanguage()->getString(country->getRules()->getType()));
  			label->setColor(COUNTRY_LABEL_COLOR);
  			if (country->getRules()->getLabelColor() > 0)
-@@ -1446,6 +1794,11 @@ void Globe::drawDetail()
+@@ -1446,6 +1798,11 @@ void Globe::drawDetail()
  
  				label->setX(x - 60);
  				label->setY(y);
@@ -28648,7 +28835,7 @@ index 5b17165..76b824e 100644
  				label->setText(_game->getLanguage()->getString(rule->getType()));
  				label->setColor(COUNTRY_LABEL_COLOR);
  				if (rule->getLabelColor() > 0)
-@@ -1472,7 +1825,7 @@ void Globe::drawDetail()
+@@ -1472,7 +1829,7 @@ void Globe::drawDetail()
  		{
  			for (auto* city : *region->getRules()->getCities())
  			{
@@ -28657,7 +28844,7 @@ index 5b17165..76b824e 100644
  
  				// Don't draw if city is facing back
  				if (pointBack(city->getLongitude(), city->getLatitude()))
-@@ -1480,6 +1833,14 @@ void Globe::drawDetail()
+@@ -1480,6 +1837,14 @@ void Globe::drawDetail()
  
  				// Convert coordinates
  				polarToCart(city->getLongitude(), city->getLatitude(), &x, &y);
@@ -28672,7 +28859,7 @@ index 5b17165..76b824e 100644
  
  				label->setX(x - 50);
  				label->setY(y + 2);
-@@ -1495,11 +1856,46 @@ void Globe::drawDetail()
+@@ -1495,11 +1860,46 @@ void Globe::drawDetail()
  			polarToCart(xbase->getLongitude(), xbase->getLatitude(), &x, &y);
  			label->setX(x - 50);
  			label->setY(y + 2);
@@ -28719,7 +28906,7 @@ index 5b17165..76b824e 100644
  		delete label;
  	}
  
-@@ -1632,7 +2028,10 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
+@@ -1632,7 +2032,10 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
  
  		if (!pointBack(p1.lon, p1.lat) && !pointBack(p2.lon, p2.lat))
  		{
@@ -28731,7 +28918,7 @@ index 5b17165..76b824e 100644
  		}
  
  		p1 = p2;
-@@ -1641,6 +2040,94 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
+@@ -1641,6 +2044,94 @@ void Globe::drawPath(Surface *surface, double lon1, double lat1, double lon2, do
  	}
  }
  
@@ -28826,7 +29013,7 @@ index 5b17165..76b824e 100644
  /**
   * Draws the flight paths of player craft (and hunting UFOs) flying on the globe.
   */
-@@ -1756,6 +2243,39 @@ void Globe::drawTarget(Target *target, Surface *surface)
+@@ -1756,6 +2247,39 @@ void Globe::drawTarget(Target *target, Surface *surface)
  void Globe::drawMarkers()
  {
  	_markers->clear();
@@ -28866,7 +29053,7 @@ index 5b17165..76b824e 100644
  	_markers->lock();
  	// Draw the base markers
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -1805,7 +2325,19 @@ void Globe::drawMarkers()
+@@ -1805,7 +2329,19 @@ void Globe::drawMarkers()
   */
  void Globe::blit(SDL_Surface *surface)
  {
@@ -28886,7 +29073,7 @@ index 5b17165..76b824e 100644
  	_radars->blit(surface);
  	_countries->blit(surface);
  	_markers->blit(surface);
-@@ -2009,7 +2541,13 @@ void Globe::mouseClick(Action *action, State *state)
+@@ -2009,7 +2545,13 @@ void Globe::mouseClick(Action *action, State *state)
  	if (lat == lat && lon == lon)
  	{
  		InteractiveSurface::mouseClick(action, state);
@@ -30498,6 +30685,95 @@ index 0000000..900e327
 +	void tick(Game *game);
 +}
 +}
+diff --git a/src/Geoscape/ResearchCompleteState.cpp b/src/Geoscape/ResearchCompleteState.cpp
+index a6c74ef..d4f2070 100644
+--- a/src/Geoscape/ResearchCompleteState.cpp
++++ b/src/Geoscape/ResearchCompleteState.cpp
+@@ -26,6 +26,10 @@
+ #include "../Ufopaedia/Ufopaedia.h"
+ #include "../Engine/Options.h"
+ #include "../Savegame/Base.h"
++#include "../Engine/HiUI.h"
++#include "../Engine/Surface.h"
++#include "../Mod/RuleItem.h"
++#include <sstream>
+ 
+ namespace OpenXcom
+ {
+@@ -86,6 +90,50 @@ ResearchCompleteState::ResearchCompleteState(const RuleResearch *newResearch, co
+ 	{
+ 		_txtResearch->setText(tr(research->getName()));
+ 	}
++
++	// G.I. Joe (John 19 Nov 10:21 "The research success pages are xcom and have no images of what you researched no stats
++	// no facts"): with the sharp screen, the box shows the topic's picture (clean - it is done), its name under it, and
++	// the facts the rules hold: the department, what it cost, what it opened, and the numbers of the item when the topic is
++	// a weapon or a piece of kit. Everything is read from the rules; nothing is written for the occasion.
++	if (research && HiUI::enabled())
++	{
++		_txtTitle->setY(_txtTitle->getY() - 34);
++		_picture = new Surface(118, 66, 52 + _window->getX() - 45, 54 + _window->getY() - 30);
++		add(_picture);
++		_txtResearch->setSmall();
++		_txtResearch->setX(_picture->getX()); _txtResearch->setY(_picture->getY() + 68); _txtResearch->setWidth(118); _txtResearch->setHeight(20);
++		_txtFacts = new Text(96, 88, _picture->getX() + 124, _picture->getY());
++		add(_txtFacts, "text2", "geoResearchComplete");
++		_txtFacts->setWordWrap(true);
++		std::ostringstream f;
++		if (!research->getLane().empty()) f << "Department: " << research->getLane() << "\n";
++		f << "Effort: " << research->getCost() << " scientist-days\n";
++		size_t opened = research->getUnlocked().size() + research->getGetOneFree().size();
++		if (opened) f << "Opens: " << opened << (opened == 1 ? " new topic\n" : " new topics\n");
++		const RuleResearch *look = research->getLookup() ? research->getLookup() : research;
++		if (const RuleItem *it = _game->getMod()->getItem(look->getName()))
++		{
++			if (it->getPower() > 0) f << "Damage: " << it->getPower() << "\n";
++			if (it->getAccuracyAimed() > 0) f << "Aimed: " << it->getAccuracyAimed() << "%\n";
++			if (it->getAccuracySnap() > 0) f << "Snap: " << it->getAccuracySnap() << "%\n";
++			if (it->getWeight() > 0) f << "Weight: " << it->getWeight() << "\n";
++		}
++		_txtFacts->setText(f.str());
++		const std::string pic = "Resources/Research/" + research->getName() + ".png";
++		HiUI::nativePanel(_picture, [pic](double X0, double Y0, double k)
++		{
++			const double x1 = X0 + 118 * k, y1 = Y0 + 66 * k;
++			HiUI::Paint::rect(X0, Y0, x1, y1, 0x14181A);
++			if (!HiUI::Paint::picture(pic, X0, Y0, x1, y1, 1.0))
++				HiUI::Paint::text("label", "no picture yet", X0, Y0, x1, y1, 5 * k, 1, 1, 0x5C5A52);
++			HiUI::Paint::frame(X0, Y0, x1, y1, std::max(1.0, 0.4 * k), 0x3D464A);
++		});
++	}
++}
++
++ResearchCompleteState::~ResearchCompleteState()
++{
++	if (_picture) HiUI::nativePanel(_picture, nullptr);
+ }
+ 
+ /**
+diff --git a/src/Geoscape/ResearchCompleteState.h b/src/Geoscape/ResearchCompleteState.h
+index 75d8437..cd3bf74 100644
+--- a/src/Geoscape/ResearchCompleteState.h
++++ b/src/Geoscape/ResearchCompleteState.h
+@@ -26,6 +26,7 @@ class Game;
+ class Window;
+ class TextButton;
+ class Text;
++class Surface;
+ class Base;
+ class RuleResearch;
+ 
+@@ -36,7 +37,9 @@ class RuleResearch;
+ class ResearchCompleteState : public State
+ {
+ 	Window *_window;
+-	Text *_txtTitle, *_txtResearch, *_txtBase;
++	Text *_txtTitle, *_txtResearch, *_txtBase, *_txtFacts = nullptr;
++	Surface *_picture = nullptr;   // G.I. Joe: the topic's picture
++	~ResearchCompleteState();
+ 	TextButton *_btnReport, *_btnOk;
+ 	const RuleResearch * _research, * _bonus;
+ public:
 diff --git a/src/Geoscape/SeaNav.cpp b/src/Geoscape/SeaNav.cpp
 new file mode 100644
 index 0000000..a36136c
