@@ -1841,18 +1841,49 @@ index cafb429..778c73c 100644
  	_window = new Window(this, 128, 160, 192, 40, POPUP_NONE);
  	_txtHeader = new Text(118, 17, 197, 48);
 diff --git a/src/Basescape/PurchaseState.cpp b/src/Basescape/PurchaseState.cpp
-index cce8616..a9fbb98 100644
+index cce8616..39b547e 100644
 --- a/src/Basescape/PurchaseState.cpp
 +++ b/src/Basescape/PurchaseState.cpp
-@@ -16,6 +16,7 @@
+@@ -16,7 +16,10 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
 +#include "../Geoscape/Outposts.h"
  #include "PurchaseState.h"
++#include "../Savegame/Transfer.h"
++#include "../Savegame/Soldier.h"
  #include "ItemLocationsState.h"
  #include <sstream>
-@@ -1110,7 +1111,7 @@ void PurchaseState::increaseByValue(int change)
+ #include <climits>
+@@ -76,6 +79,18 @@ inline constexpr auto allOf(Functions... funcs)
+  * @param game Pointer to the core game.
+  * @param base Pointer to the base to get info from.
+  */
++bool PurchaseState::namedJoeOnBooks(const std::string &type) const
++{
++	for (Base *b : *_game->getSavedGame()->getBases())
++	{
++		for (const Soldier *so : *b->getSoldiers())
++			if (so->getRules()->getType() == type) return true;
++		for (Transfer *t : *b->getTransfers())
++			if (t->getType() == TRANSFER_SOLDIER && t->getSoldier() && t->getSoldier()->getRules()->getType() == type) return true;
++	}
++	return false;
++}
++
+ PurchaseState::PurchaseState(Base *base, CannotReequipState *parent) : _base(base), _parent(parent), _sel(0), _total(0), _pQty(0), _cQty(0), _iQty(0.0), _ammoColor(0)
+ {
+ 	_autoBuyDone = false;
+@@ -223,6 +238,8 @@ PurchaseState::PurchaseState(Base *base, CannotReequipState *parent) : _base(bas
+ 	for (auto& soldierType : _game->getMod()->getSoldiersList())
+ 	{
+ 		RuleSoldier *rule = _game->getMod()->getSoldier(soldierType);
++		// G.I. Joe: a named Joe is hired once (John 19 Nov 01:22 "Hire them"): no row once he is on the books anywhere
++		if (_game->getMod()->isGijoeUniqueSoldier(soldierType) && namedJoeOnBooks(soldierType)) continue;
+ 		if (craftAndSoldierFilter(rule))
+ 		{
+ 			TransferRow row = { TRANSFER_SOLDIER, rule, tr(rule->getType()), rule->getBuyCost(), _base->getSoldierCountAndSalary(rule->getType()).first, 0, 0, -4, 0, 0, 0 };
+@@ -1110,7 +1127,7 @@ void PurchaseState::increaseByValue(int change)
  			break;
  		case TRANSFER_CRAFT:
  			ruleC = (RuleCraft*)getRow().rule;
@@ -1861,7 +1892,16 @@ index cce8616..a9fbb98 100644
  			{
  				errorMessage = tr("STR_NO_FREE_HANGARS_FOR_PURCHASE");
  			}
-@@ -1196,7 +1197,7 @@ void PurchaseState::increaseByValue(int change)
+@@ -1171,6 +1188,8 @@ void PurchaseState::increaseByValue(int change)
+ 		case TRANSFER_SOLDIER:
+ 			{
+ 				RuleSoldier *ruleS = (RuleSoldier*)getRow().rule;
++				if (_game->getMod()->isGijoeUniqueSoldier(ruleS->getType()))
++					change = std::min(change, std::max(0, 1 - getRow().amount));   // one of him
+ 				if (ruleS->getMonthlyBuyLimit() > 0)
+ 				{
+ 					auto& soldierHireLimitLog = _game->getSavedGame()->getMonthlyPurchaseLimitLog();
+@@ -1196,7 +1215,7 @@ void PurchaseState::increaseByValue(int change)
  					int maxByLimit = std::max(0, ruleC->getMonthlyBuyLimit() - craftPurchaseLimitLog[ruleC->getType()] - getRow().amount);
  					change = std::min(maxByLimit, change);
  				}
@@ -1870,6 +1910,19 @@ index cce8616..a9fbb98 100644
  				change = std::min(maxByHangars, change);
  				_cQty += change;
  			}
+diff --git a/src/Basescape/PurchaseState.h b/src/Basescape/PurchaseState.h
+index a0e21c4..b4fdfa4 100644
+--- a/src/Basescape/PurchaseState.h
++++ b/src/Basescape/PurchaseState.h
+@@ -79,6 +79,8 @@ private:
+ public:
+ 	/// Creates the Purchase state.
+ 	PurchaseState(Base *base, CannotReequipState *parent = nullptr);
++	/// G.I. Joe: is this named Joe already on the books (any base, or on his way)?
++	bool namedJoeOnBooks(const std::string &type) const;
+ 	/// Cleans up the Purchase state.
+ 	~PurchaseState();
+ 	/// Resets state.
 diff --git a/src/Basescape/ResearchInfoState.cpp b/src/Basescape/ResearchInfoState.cpp
 index dd0f15f..9a3a00b 100644
 --- a/src/Basescape/ResearchInfoState.cpp
@@ -25955,7 +26008,7 @@ index e609d3c..fad706b 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..1e126c1 100644
+index 6b4e79d..61332d2 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,19 @@
@@ -26296,7 +26349,24 @@ index 6b4e79d..1e126c1 100644
  	_btnFunding->onMouseClick((ActionHandler)&GeoscapeState::btnFundingClick);
  	_btnFunding->onKeyboardPress((ActionHandler)&GeoscapeState::btnFundingClick, Options::keyGeoFunding);
  	_btnFunding->setGeoscapeButton(true);
-@@ -387,6 +544,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -357,6 +514,16 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+ 	_btn1Day->onKeyboardPress((ActionHandler)&GeoscapeState::btnTimerClick, Options::keyGeoSpeed6);
+ 	_btn1Day->setGeoscapeButton(true);
+ 
++	// G.I. Joe (John 19 Nov 01:24 "There's no point in anything but 1 day ... you don't want to skip so fast all the time";
++	// then "GO plus a slow button"): two time buttons, SLOW (5 minutes a tick) and GO (12 minutes a tick, a day in about
++	// ten seconds). The clock still drops to its crawl by itself at every mission or event, so GO runs to the next thing.
++	// The six stock speeds stay on the keyboard keys.
++	for (TextButton *b : { _btn5Secs, _btn1Min, _btn1Hour, _btn1Day }) b->setVisible(false);
++	_btn5Mins->setText(tr("STR_GJ_TIME_SLOW"));
++	_btn30Mins->setText(tr("STR_GJ_TIME_GO"));
++	_btn5Mins->setY(_btn5Mins->getY() - 12); _btn5Mins->setHeight(35);
++	_btn30Mins->setY(_btn30Mins->getY() - 12); _btn30Mins->setHeight(35);
++
+ 	_sideBottom->setGeoscapeButton(true);
+ 	_sideTop->setGeoscapeButton(true);
+ 
+@@ -387,6 +554,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -26305,7 +26375,7 @@ index 6b4e79d..1e126c1 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -403,6 +562,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -403,6 +572,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_txtMinSep->setText(":");
  
  	_txtWeekday->setAlign(ALIGN_CENTER);
@@ -26358,7 +26428,7 @@ index 6b4e79d..1e126c1 100644
  
  	_txtDay->setAlign(ALIGN_CENTER);
  
-@@ -427,6 +632,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -427,6 +642,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  		_txtSec->setX(_txtSec->getX()-10);
  	}
  
@@ -26404,7 +26474,7 @@ index 6b4e79d..1e126c1 100644
  	_gameTimer->onTimer((StateHandler)&GeoscapeState::timeAdvance);
  	_gameTimer->start();
  
-@@ -512,7 +756,9 @@ void GeoscapeState::blit()
+@@ -512,7 +766,9 @@ void GeoscapeState::blit()
  	State::blit();
  	for (auto* dfs : _dogfights)
  	{
@@ -26415,7 +26485,7 @@ index 6b4e79d..1e126c1 100644
  	}
  }
  
-@@ -705,13 +951,141 @@ void GeoscapeState::handle(Action *action)
+@@ -705,13 +961,141 @@ void GeoscapeState::handle(Action *action)
   * Updates the timer display and resets the palette
   * since it's bound to change on other screens.
   */
@@ -26557,7 +26627,7 @@ index 6b4e79d..1e126c1 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -751,8 +1125,28 @@ void GeoscapeState::init()
+@@ -751,8 +1135,28 @@ void GeoscapeState::init()
  		_game->getSavedGame()->addMonth();
  		_game->getSavedGame()->increaseDaysPassed();
  		determineAlienMissions();
@@ -26586,7 +26656,7 @@ index 6b4e79d..1e126c1 100644
  }
  
  /**
-@@ -835,6 +1229,10 @@ void GeoscapeState::timeDisplay()
+@@ -835,6 +1239,10 @@ void GeoscapeState::timeDisplay()
  	std::ostringstream ss5;
  	ss5 << _game->getSavedGame()->getTime()->getYear();
  	_txtYear->setText(ss5.str());
@@ -26597,7 +26667,7 @@ index 6b4e79d..1e126c1 100644
  }
  
  /**
-@@ -847,6 +1245,179 @@ void GeoscapeState::timeDisplay()
+@@ -847,6 +1255,179 @@ void GeoscapeState::timeDisplay()
   * on 1 Day speed) or until an event occurs, since updating
   * the screen on each step would become cumbersomely slow.
   */
@@ -26777,7 +26847,18 @@ index 6b4e79d..1e126c1 100644
  void GeoscapeState::timeAdvance()
  {
  	int timeSpan = 0;
-@@ -1047,6 +1618,7 @@ void GeoscapeState::time5Seconds()
+@@ -878,7 +1459,9 @@ void GeoscapeState::timeAdvance()
+ 	}
+ 	else if (_timeSpeed == _btn30Mins)
+ 	{
+-		timeSpan = 12 * 5 * 6;
++		// G.I. Joe GO: 12 minutes a tick, about ten seconds a day - fast enough to get to the next mission, slow enough
++		// to watch a truck, a ship or a plane cross the map (John 19 Nov 01:24)
++		timeSpan = 12 * 12;
+ 	}
+ 	else if (_timeSpeed == _btn1Hour)
+ 	{
+@@ -1047,6 +1630,7 @@ void GeoscapeState::time5Seconds()
  					continue;
  				}
  
@@ -26785,7 +26866,7 @@ index 6b4e79d..1e126c1 100644
  				size_t count = _game->getSavedGame()->getMissionSites()->size();
  				AlienMission *mission = ufo->getMission();
  				bool detected = ufo->getDetected();
-@@ -1139,6 +1711,9 @@ void GeoscapeState::time5Seconds()
+@@ -1139,6 +1723,9 @@ void GeoscapeState::time5Seconds()
  		}
  	}
  
@@ -26795,7 +26876,7 @@ index 6b4e79d..1e126c1 100644
  	// Handle craft logic
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -1233,6 +1808,13 @@ void GeoscapeState::time5Seconds()
+@@ -1233,6 +1820,13 @@ void GeoscapeState::time5Seconds()
  			if (!ufoIsAttacking)
  			{
  				bool returnedToBase = xcraft->think();
@@ -26809,7 +26890,7 @@ index 6b4e79d..1e126c1 100644
  				if (returnedToBase)
  				{
  					_game->getSavedGame()->stopHuntingXcomCraft(xcraft); // hiding in the base is good enough, obviously
-@@ -1276,6 +1858,14 @@ void GeoscapeState::time5Seconds()
+@@ -1276,6 +1870,14 @@ void GeoscapeState::time5Seconds()
  							continue;
  						}
  						// Can we actually fight it
@@ -26824,7 +26905,7 @@ index 6b4e79d..1e126c1 100644
  						if (!xcraft->isInDogfight() && u->getSpeed() <= xcraft->getCraftStats().speedMax)
  						{
  							if (u->isHunterKiller())
-@@ -1422,7 +2012,9 @@ void GeoscapeState::time5Seconds()
+@@ -1422,7 +2024,9 @@ void GeoscapeState::time5Seconds()
  				{
  					if (b->isDiscovered())
  					{
@@ -26835,7 +26916,7 @@ index 6b4e79d..1e126c1 100644
  						{
  							int texture, shade;
  							_globe->getPolygonTextureAndShade(b->getLongitude(), b->getLatitude(), &texture, &shade);
-@@ -1454,6 +2046,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +2058,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -26871,7 +26952,7 @@ index 6b4e79d..1e126c1 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +2185,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +2197,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -26902,7 +26983,7 @@ index 6b4e79d..1e126c1 100644
  							}
  						}
  					}
-@@ -1752,7 +2389,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2401,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -26911,7 +26992,7 @@ index 6b4e79d..1e126c1 100644
  								}
  								else
  								{
-@@ -1858,6 +2495,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2507,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -26932,7 +27013,7 @@ index 6b4e79d..1e126c1 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2535,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2547,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -26945,7 +27026,7 @@ index 6b4e79d..1e126c1 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2104,6 +2761,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2104,6 +2773,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		detected = maskBitOr(detected, craft->detect(ufo, save, alreadyTracked));
  	}
  
@@ -26953,7 +27034,7 @@ index 6b4e79d..1e126c1 100644
  	if (!alreadyTracked)
  	{
  		if (maskTest(detected, DETECTION_RADAR))
-@@ -2126,8 +2784,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2126,8 +2796,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		{
  			ufo->setHyperDetected(true);
  		}
@@ -26974,7 +27055,7 @@ index 6b4e79d..1e126c1 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2814,184 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2826,184 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -27159,7 +27240,7 @@ index 6b4e79d..1e126c1 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +3038,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +3050,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -27249,7 +27330,7 @@ index 6b4e79d..1e126c1 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +3283,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +3295,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -27258,7 +27339,7 @@ index 6b4e79d..1e126c1 100644
  			}
  			else
  			{
-@@ -2389,12 +3319,336 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3331,336 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
@@ -27595,7 +27676,7 @@ index 6b4e79d..1e126c1 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3698,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3710,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -27618,7 +27699,7 @@ index 6b4e79d..1e126c1 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2776,6 +4039,7 @@ void GeoscapeState::time1Day()
+@@ -2776,6 +4051,7 @@ void GeoscapeState::time1Day()
  					{
  						chanceToDetect = 50 - (distance * 50 / facility->getRules()->getSightRange()); // dynamic 0-50% based on relative distance
  					}
@@ -27626,7 +27707,7 @@ index 6b4e79d..1e126c1 100644
  					if (RNG::percent(chanceToDetect))
  					{
  						alienBase->setDiscovered(true);
-@@ -2861,7 +4125,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +4137,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -27655,7 +27736,7 @@ index 6b4e79d..1e126c1 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2894,7 +4179,9 @@ void GeoscapeState::time1Month()
+@@ -2894,7 +4191,9 @@ void GeoscapeState::time1Month()
  	{
  		for (auto* ab : *_game->getSavedGame()->getAlienBases())
  		{
@@ -27666,7 +27747,7 @@ index 6b4e79d..1e126c1 100644
  			{
  				ab->setDiscovered(true);
  				popup(new AlienBaseState(ab, this));
-@@ -2960,6 +4247,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +4259,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -27697,7 +27778,7 @@ index 6b4e79d..1e126c1 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4433,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4445,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -27707,7 +27788,7 @@ index 6b4e79d..1e126c1 100644
  }
  
  /**
-@@ -3265,6 +4577,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4589,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -27723,7 +27804,7 @@ index 6b4e79d..1e126c1 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4663,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4675,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -27776,7 +27857,7 @@ index 6b4e79d..1e126c1 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4731,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4743,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -28028,7 +28109,7 @@ index 6b4e79d..1e126c1 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +6259,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +6271,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -33477,7 +33558,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..cddcef1 100644
+index 1885346..3035e3a 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -33674,7 +33755,7 @@ index 1885346..cddcef1 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3329,808 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3329,811 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -33754,6 +33835,9 @@ index 1885346..cddcef1 100644
 +	//   gijoeContainerParts: {RANCH: [34, 37, 42, 45], BARNYRD: [12, 13, 14]}   # object parts a Joe can open (alt MCD = open)
 +	//   gijoeContainers: {STR_CARTEL_RANCH: [[31, 18, 1, STR_CARTEL_LEDGER], [41, 21, 0, STR_CRATE_SERIAL_PLATE]]}
 +	{
++		std::vector<std::string> uniq;
++		if (reader.tryRead("gijoeUniqueSoldiers", uniq))
++			for (auto &u : uniq) if (std::find(_gijoeUniqueSoldiers.begin(), _gijoeUniqueSoldiers.end(), u) == _gijoeUniqueSoldiers.end()) _gijoeUniqueSoldiers.push_back(u);
 +		std::map<std::string, std::vector<int> > parts;
 +		if (reader.tryRead("gijoeContainerParts", parts))
 +			for (auto &kv : parts) _gijoeContainerParts[kv.first] = kv.second;
@@ -34483,7 +34567,7 @@ index 1885346..cddcef1 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +4141,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +4144,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -34491,7 +34575,7 @@ index 1885346..cddcef1 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4746,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4749,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -34517,7 +34601,7 @@ index 1885346..cddcef1 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +5003,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +5006,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -34538,7 +34622,7 @@ index 1885346..cddcef1 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6717,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6720,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -34558,7 +34642,7 @@ index 1885346..cddcef1 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6740,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6743,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -34566,7 +34650,7 @@ index 1885346..cddcef1 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6754,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6757,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -34606,7 +34690,7 @@ index 1885346..cddcef1 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..91f0214 100644
+index 2242d13..50e13f9 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -34673,7 +34757,7 @@ index 2242d13..91f0214 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +363,528 @@ private:
+@@ -327,6 +363,529 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -35135,6 +35219,7 @@ index 2242d13..91f0214 100644
 +	CartelRules _cartel;
 +	/// G.I. Joe: a transport's battle map changes with its upgrades (the Tomahawk's door guns / missiles: MAPS' TOMCRAFT*)
 +	std::map<std::string, std::vector<std::string> > _gijoeBounties; ///< G.I. Joe: deployment -> items brought home on a win
++	std::vector<std::string> _gijoeUniqueSoldiers;                   ///< G.I. Joe: named Joes - one of each, ever, on the purchase screen
 +	std::map<std::string, std::vector<int> > _gijoeContainerParts;     ///< G.I. Joe: terrain -> object parts that open when searched
 +	std::map<std::string, std::vector<std::vector<std::string> > > _gijoeContainers; ///< G.I. Joe: deployment -> [x, y, z, item...]
 +	std::map<std::string, std::string> _gijoeEventsOnResearch; ///< G.I. Joe: topic known -> event spawned once
@@ -35202,7 +35287,7 @@ index 2242d13..91f0214 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1250,136 @@ public:
+@@ -692,6 +1251,137 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -35243,6 +35328,7 @@ index 2242d13..91f0214 100644
 +	const std::map<std::string, std::string> &getGijoeEventsOnResearch() const { return _gijoeEventsOnResearch; }
 +	double getWalk16Stride(int clip) const { return _walk16Stride[clip < 0 || clip > 3 ? 0 : clip]; }
 +	double getWalk16Pace() const { return _walk16Pace; }
++	bool isGijoeUniqueSoldier(const std::string &t) const { for (const auto &u : _gijoeUniqueSoldiers) if (u == t) return true; return false; }
 +	bool isGijoeContainer(const std::string &terrain, int part) const { auto i = _gijoeContainerParts.find(terrain); if (i == _gijoeContainerParts.end()) return false; for (int p : i->second) if (p == part) return true; return false; }
 +	const std::vector<std::vector<std::string> > *getGijoeContainers(const std::string &dep) const { auto i = _gijoeContainers.find(dep); return i == _gijoeContainers.end() ? nullptr : &i->second; }
 +	const std::vector<std::string> *getGijoeBounty(const std::string &dep) const { auto i = _gijoeBounties.find(dep); return i == _gijoeBounties.end() ? nullptr : &i->second; }
