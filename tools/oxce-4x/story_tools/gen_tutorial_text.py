@@ -83,7 +83,7 @@ T = {
 }
 for k, v in T.items():
     S['STR_TIP_' + k] = v
-S['STR_SKIP_TIPS'] = 'Turn off tips'
+# The skip button is STR_TIP_SKIP ('SKIP TIPS', gen_act1_text.py, the first air fight): one button turns off every tip.
 
 hdr = '# STORY: tutorial text (gen_tutorial_text.py). Generated: edit the script, not this file.\n'
 body = yaml.dump({'extraStrings': [{'type': 'en-US', 'strings': S}, {'type': 'en-GB', 'strings': S}]},
