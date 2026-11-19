@@ -17,7 +17,8 @@ as sharp at 1080 lines as at 2160 and no size is baked in.
                                     "code x y w h left top advance"   (atlas px)
 
 Faces (both SIL Open Font Licence; the licences ship beside them):
-    label    Oswald SemiBold - condensed military sans, for every label and readout
+    label    Barlow Condensed Bold - condensed military sans, for every label and
+             readout (John, 19 Nov: replaces Oswald SemiBold)
     stencil  Saira Stencil One - the console's key legends
 """
 import os
@@ -38,7 +39,7 @@ CHARS = [c for c in range(32, 127)] + sorted(EXTRA) + [c for c in range(160, 256
 def glyph(c):
     return EXTRA.get(c, chr(c))
 FACES = {
-    'label': ('Oswald[wght].ttf', 600),
+    'label': ('BarlowCondensed-Bold.ttf', None),
     'stencil': ('SairaStencilOne-Regular.ttf', None),
 }
 
