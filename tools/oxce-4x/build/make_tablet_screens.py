@@ -118,6 +118,8 @@ SPECS = {
     ]),
     'ResearchCompleteState': ([], []),
     'ManufactureInfoState': ([], []),
+    'CraftInfoState': ([], []),
+    'SoldierInfoState': ([], []),
 }
 
 
