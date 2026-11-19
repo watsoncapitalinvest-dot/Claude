@@ -19354,10 +19354,10 @@ index 0000000..8277a64
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..a968ce8
+index 0000000..d42b5b4
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3638 @@
+@@ -0,0 +1,3645 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -20481,7 +20481,12 @@ index 0000000..a968ce8
 +	{
 +		return piece(std::string("Tablet/buttons/") + name);
 +	}
-+	bool tabletOn() { return tabletPlate("button_normal") != nullptr; }
++	// Whether the tablet kit is installed. Decided ONCE, by the first screen that asks for its layout
++	// (HiUI::tablet(), always after the mod has loaded) - never from the draw code, because the loading
++	// screen draws while the loader thread is still filling the file map, and reading it from both
++	// threads corrupted the heap (crash at the next battle, John 19 Nov 15:16).
++	int tabletKnown = -1;
++	bool tabletOn() { return tabletKnown == 1; }
 +	void stdButton(int X0, int Y0, int X1, int Y1, bool down, Uint32 fill)
 +	{
 +		const bool primary = fill == 0xE8B923 || fill == 0xC9A01C;
@@ -21797,7 +21802,7 @@ index 0000000..a968ce8
 +		if (!clipBase(r)) return;
 +		claim(r);
 +		const int X0 = xs[r.x0], X1 = xs[r.x1], Y0 = ys[r.y0], Y1 = ys[r.y1];
-+		const Img *trk = piece("Tablet/controls/scroll_track"), *thm = piece("Tablet/controls/scroll_thumb");
++		const Img *trk = tabletOn() ? piece("Tablet/controls/scroll_track") : nullptr, *thm = tabletOn() ? piece("Tablet/controls/scroll_thumb") : nullptr;
 +		if (trk && thm)
 +		{
 +			const int w2 = std::max(4, std::min(X1 - X0, (X1 - X0) * 3 / 4)), cx2 = (X0 + X1) / 2;
@@ -22272,7 +22277,9 @@ index 0000000..a968ce8
 +
 +bool tablet()
 +{
-+	return enabled() && tabletOn();
++	if (!enabled()) return false;
++	if (tabletKnown < 0) tabletKnown = tabletPlate("button_normal") != nullptr ? 1 : 0;
++	return tabletOn();
 +}
 +
 +bool nativeOn()
