@@ -9782,7 +9782,7 @@ index a0bc8b3..b073f80 100644
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..a7f9c92 100644
+index 7cd4941..dfe5f18 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -1,3 +1,5 @@
@@ -10668,7 +10668,7 @@ index 7cd4941..a7f9c92 100644
  
  	resetPalettes();
  }
-@@ -789,6 +1589,45 @@ void BattlescapeState::init()
+@@ -789,6 +1589,60 @@ void BattlescapeState::init()
  	_map->draw();
  	_battleGame->init();
  	updateSoldierInfo();
@@ -10705,6 +10705,21 @@ index 7cd4941..a7f9c92 100644
 +			}
 +		}
 +	}
++	// G.I. Joe LANDING ZONES v1 (John 19 Nov 17:32 "I didn't get to choose where I start in the mission map", 17:35 go):
++	// once a battle, on turn 1 before anyone moves, the player clicks open ground and the squad comes in there.
++	// Right-click (or any action) keeps the start the map gave. Not at the Pit or on base defences.
++	{
++		static const void *offered = nullptr;
++		const std::string &mt = _save->getMissionType();
++		const bool home = mt.find("BASE_DEFENSE") != std::string::npos || mt.find("PIT") != std::string::npos || mt.find("TESTBED") != std::string::npos;
++		if (offered != (const void*)_save && _save->getTurn() == 1 && _save->getSide() == FACTION_PLAYER && !home)
++		{
++			offered = _save;
++			_gjEntry = true;
++			popup(new InfoboxState(tr("STR_GJ_CHOOSE_ENTRY")));
++			warningLongRaw(tr("STR_GJ_ENTRY_PROMPT"));
++		}
++	}
 +	// G.I. Joe rig: OXCE_CAM=x,y,z points the camera there whenever the battle screen comes back (screenshots)
 +	if (const char *cam = getenv("OXCE_CAM"))
 +	{
@@ -10714,7 +10729,7 @@ index 7cd4941..a7f9c92 100644
  
  	switch (_save->getTUReserved())
  	{
-@@ -807,6 +1646,17 @@ void BattlescapeState::init()
+@@ -807,6 +1661,17 @@ void BattlescapeState::init()
  	}
  	if (_firstInit)
  	{
@@ -10732,7 +10747,7 @@ index 7cd4941..a7f9c92 100644
  		// Set music
  		if (Options::oxcePlayBriefingMusicDuringEquipment)
  		{
-@@ -858,7 +1708,29 @@ void BattlescapeState::init()
+@@ -858,7 +1723,29 @@ void BattlescapeState::init()
   */
  void BattlescapeState::think()
  {
@@ -10762,7 +10777,24 @@ index 7cd4941..a7f9c92 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1215,6 +2087,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1094,6 +1981,16 @@ void BattlescapeState::mapClick(Action *action)
+ 		debug(ss.str());
+ 	}
+ 
++	if (_gjEntry && _save->getTile(pos) != 0)
++	{
++		if (_game->isRightClick(action, true)) { _gjEntry = false; warning("STR_GJ_ENTRY_KEPT"); return; }
++		if (_game->isLeftClick(action, true))
++		{
++			if (gjPlaceSquad(pos)) { _gjEntry = false; warning("STR_GJ_ENTRY_DONE"); }
++			else warning("STR_GJ_ENTRY_NO_ROOM");
++			return;
++		}
++	}
+ 	if (_save->getTile(pos) != 0) // don't allow to click into void
+ 	{
+ 		if (_game->isRightClick(action, true) && playableUnitSelected())
+@@ -1215,6 +2112,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -10783,7 +10815,7 @@ index 7cd4941..a7f9c92 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -1466,6 +2352,12 @@ void BattlescapeState::btnEndTurnClick(Action *)
+@@ -1466,6 +2377,12 @@ void BattlescapeState::btnEndTurnClick(Action *)
  		_map->getCamera()->stopKeyScrolling();
  
  		_txtTooltip->setText("");
@@ -10796,7 +10828,7 @@ index 7cd4941..a7f9c92 100644
  		_battleGame->requestEndTurn(false);
  	}
  }
-@@ -2172,7 +3064,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +3089,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -10805,7 +10837,7 @@ index 7cd4941..a7f9c92 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +3284,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +3309,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -10813,7 +10845,59 @@ index 7cd4941..a7f9c92 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -3577,13 +4470,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -2605,6 +3523,51 @@ void BattlescapeState::bugHuntMessage()
+ 	}
+ }
+ 
++/**
++ * G.I. Joe landing zones v1: stands the whole squad on the nearest free open ground around pos (same level),
++ * vehicles first. Nothing moves unless every unit finds a spot within 10 tiles.
++ */
++bool BattlescapeState::gjPlaceSquad(Position pos)
++{
++	std::vector<BattleUnit*> squad;
++	for (auto *bu : *_save->getUnits())
++		if (bu->getFaction() == FACTION_PLAYER && !bu->isOut() && bu->getTile()) squad.push_back(bu);
++	if (squad.empty()) return false;
++	std::stable_sort(squad.begin(), squad.end(), [](BattleUnit *a, BattleUnit *b) { return a->getArmor()->getSize() > b->getArmor()->getSize(); });
++	// candidate tiles nearest first, out to 10
++	std::vector<Position> cand;
++	for (int r = 0; r <= 10; ++r)
++		for (int dx = -r; dx <= r; ++dx)
++			for (int dy = -r; dy <= r; ++dy)
++				if (std::max(std::abs(dx), std::abs(dy)) == r) cand.push_back(pos + Position(dx, dy, 0));
++	std::stable_sort(cand.begin(), cand.end(), [&](const Position &a, const Position &b)
++		{ return (a.x - pos.x) * (a.x - pos.x) + (a.y - pos.y) * (a.y - pos.y) < (b.x - pos.x) * (b.x - pos.x) + (b.y - pos.y) * (b.y - pos.y); });
++	std::vector<Position> old;
++	for (auto *bu : squad) old.push_back(bu->getPosition());
++	// lift everyone off the map first so the squad can stand where it already stands
++	for (auto *bu : squad) bu->setTile(nullptr, _save);
++	bool ok = true;
++	for (auto *bu : squad)
++	{
++		bool placed = false;
++		for (const auto &c : cand)
++			if (_save->getTile(c) && _save->setUnitPosition(bu, c)) { placed = true; break; }
++		if (!placed) { ok = false; break; }
++	}
++	if (!ok)
++	{
++		for (auto *bu : squad) bu->setTile(nullptr, _save);
++		for (size_t i = 0; i < squad.size(); ++i) _save->setUnitPosition(squad[i], old[i]);
++		return false;
++	}
++	_save->getTileEngine()->calculateLighting(LL_UNITS);
++	_save->getTileEngine()->recalculateFOV();
++	_map->getCamera()->centerOnPosition(pos, true);
++	updateSoldierInfo();
++	Log(LOG_INFO) << "[landing] squad of " << squad.size() << " placed round " << pos;
++	return true;
++}
++
+ /**
+  * Shows a warning message.
+  * @param message Warning message.
+@@ -3577,13 +4540,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  	{
  		nextStage = ruleDeploy->getNextStage();
  	}
@@ -10843,7 +10927,7 @@ index 7cd4941..a7f9c92 100644
  		bgen.nextStage();
  		_game->popState();
  		_game->pushState(new BriefingState(0, 0));
-@@ -3621,6 +4529,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4599,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -10856,7 +10940,7 @@ index 7cd4941..a7f9c92 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +4966,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +5036,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -10867,7 +10951,7 @@ index 7cd4941..a7f9c92 100644
  	_map->getCamera()->resize();
  	_map->getCamera()->jumpXY(dX/2, dY/2);
  
-@@ -4123,4 +5037,59 @@ bool BattlescapeState::isBusy() const
+@@ -4123,4 +5107,59 @@ bool BattlescapeState::isBusy() const
  	return (_map->getCursorType() == CT_NONE || _battleGame->isBusy());
  }
  
@@ -10928,7 +11012,7 @@ index 7cd4941..a7f9c92 100644
 +
  }
 diff --git a/src/Battlescape/BattlescapeState.h b/src/Battlescape/BattlescapeState.h
-index 746f3a4..a0c08d8 100644
+index 746f3a4..222742a 100644
 --- a/src/Battlescape/BattlescapeState.h
 +++ b/src/Battlescape/BattlescapeState.h
 @@ -58,6 +58,52 @@ private:
@@ -10996,7 +11080,16 @@ index 746f3a4..a0c08d8 100644
  	bool _manaBarVisible;
  	Timer *_animTimer, *_gameTimer;
  	SavedBattleGame *_save;
-@@ -111,6 +160,8 @@ private:
+@@ -92,6 +141,8 @@ private:
+ 	int _totalMouseMoveX, _totalMouseMoveY;
+ 	bool _mouseMovedOverThreshold;
+ 	bool _mouseOverIcons;
++	bool _gjEntry = false;   // G.I. Joe landing zones v1: turn 1, the next click on open ground places the squad
++	bool gjPlaceSquad(Position pos);
+ 	std::string _currentTooltip;
+ 	Position _cursorPosition;
+ 	Uint8 _barHealthColor;
+@@ -111,6 +162,8 @@ private:
  	/// Shows the unit kneel state.
  	void toggleKneelButton(BattleUnit* unit);
  public:
