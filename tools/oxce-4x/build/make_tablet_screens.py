@@ -108,6 +108,14 @@ SPECS = {
         [('row', 570, round((c - 14) * 4 / 3), 1365, round((c + 14) * 4 / 3), 560)
          for c in (211, 258, 306, 354, 402, 449, 495, 541, 587, 633, 679)] +
         [('row', 768, 925, 1166, 1000, 762)]),
+    'ResearchInfoState': ([], [
+        ('row', 228, 138, 980, 222, 1000),                    # topic name
+        ('row', 1556, 318, 1650, 382, 1548),                  # scientists available
+        ('row', 1556, 430, 1650, 498, 1548),                  # laboratory space
+        ('row', 1480, 556, 1580, 624, 1462),                  # scientists allocated
+        ('row', 790, 845, 1075, 915, 765),                    # CANCEL
+        ('row', 1262, 845, 1640, 915, 1240),                  # START PROJECT
+    ]),
 }
 
 

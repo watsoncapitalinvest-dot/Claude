@@ -2467,7 +2467,7 @@ index a0e21c4..b4fdfa4 100644
  	~PurchaseState();
  	/// Resets state.
 diff --git a/src/Basescape/ResearchInfoState.cpp b/src/Basescape/ResearchInfoState.cpp
-index dd0f15f..9a3a00b 100644
+index dd0f15f..317e366 100644
 --- a/src/Basescape/ResearchInfoState.cpp
 +++ b/src/Basescape/ResearchInfoState.cpp
 @@ -33,6 +33,8 @@
@@ -2504,7 +2504,41 @@ index dd0f15f..9a3a00b 100644
  
  	touchComponentsAdd("button3", "allocateResearch", _window);
  
-@@ -168,6 +181,21 @@ void ResearchInfoState::buildUi()
+@@ -116,6 +129,33 @@ void ResearchInfoState::buildUi()
+ 
+ 	// Set up objects
+ 	setWindowBackground(_window, "allocateResearch");
++	_tab = HiUI::tablet();
++	if (_tab)
++	{
++		// THE TABLET (art/tablet_round3/ResearchInfoState.png, rectangles /6): the radio man and the
++		// clipped case file; the labels and keys are painted, the game writes the figures and the topic
++		HiUI::place(_window, 0, 0, 320, 200);
++		setWindowBackgroundImage(_window, "JOE_TAB_RESEARCHINFOSTATE.SCR");
++		HiUI::place(_txtTitle, 37, 22, 220, 17);
++		HiUI::textFace(_txtTitle, "stencil");
++		HiUI::place(_txtAvailableScientist, 253, 52, 28, 13);
++		HiUI::place(_txtAvailableSpace, 253, 71, 28, 13);
++		HiUI::place(_txtAllocatedScientist, 241, 92, 27, 12);
++		for (Text *t : { _txtAvailableScientist, _txtAvailableSpace })
++		{
++			t->setAlign(ALIGN_CENTER); t->setVerticalAlign(ALIGN_MIDDLE); t->setBig();
++			HiUI::textInk(t, 0x17181C);
++		}
++		_txtAllocatedScientist->setAlign(ALIGN_CENTER); _txtAllocatedScientist->setVerticalAlign(ALIGN_MIDDLE);
++		HiUI::textInk(_txtAllocatedScientist, 0xE9E6DC);
++		_txtMore->setVisible(false);
++		_txtLess->setVisible(false);
++		HiUI::place(_btnLess, 173, 114, 52, 13); HiUI::paintedButton(_btnLess);
++		HiUI::place(_btnMore, 232, 114, 51, 13); HiUI::paintedButton(_btnMore);
++		HiUI::place(_btnCancel, 120, 140, 70, 13); HiUI::paintedButton(_btnCancel);
++		HiUI::place(_btnOk, 200, 140, 83, 13); HiUI::paintedButton(_btnOk);
++		if (_picture) { _picture->setX(103); _picture->setY(74); }
++	}
+ 
+ 	touchComponentsConfigure();
+ 
+@@ -168,6 +208,21 @@ void ResearchInfoState::buildUi()
  	}
  	_btnCancel->onMouseClick((ActionHandler)&ResearchInfoState::btnCancelClick);
  
@@ -2526,7 +2560,7 @@ index dd0f15f..9a3a00b 100644
  	if (_rule)
  	{
  		// mark new/hidden as normal
-@@ -182,6 +210,7 @@ ResearchInfoState::~ResearchInfoState()
+@@ -182,6 +237,7 @@ ResearchInfoState::~ResearchInfoState()
  {
  	delete _timerLess;
  	delete _timerMore;
@@ -2534,8 +2568,23 @@ index dd0f15f..9a3a00b 100644
  }
  
  /**
+@@ -219,6 +275,14 @@ void ResearchInfoState::btnCancelClick(Action *)
+  */
+ void ResearchInfoState::setAssignedScientist()
+ {
++	if (_tab)
++	{
++		// the tablet paints the labels; only the figures are written
++		_txtAvailableScientist->setText(std::to_string(_base->getAvailableScientists()));
++		_txtAvailableSpace->setText(std::to_string(_base->getFreeLaboratories()));
++		_txtAllocatedScientist->setText(std::to_string(_project->getAssigned()));
++		return;
++	}
+ 	_txtAvailableScientist->setText(tr("STR_SCIENTISTS_AVAILABLE_UC").arg(_base->getAvailableScientists()));
+ 	_txtAvailableSpace->setText(tr("STR_LABORATORY_SPACE_AVAILABLE_UC").arg(_base->getFreeLaboratories()));
+ 	_txtAllocatedScientist->setText(tr("STR_SCIENTISTS_ALLOCATED").arg(_project->getAssigned()));
 diff --git a/src/Basescape/ResearchInfoState.h b/src/Basescape/ResearchInfoState.h
-index a0cc4c1..14c0695 100644
+index a0cc4c1..47b006c 100644
 --- a/src/Basescape/ResearchInfoState.h
 +++ b/src/Basescape/ResearchInfoState.h
 @@ -31,6 +31,7 @@ class ResearchProject;
@@ -2546,11 +2595,12 @@ index a0cc4c1..14c0695 100644
  
  /**
   * Window which allows changing of the number of assigned scientist to a project.
-@@ -50,6 +51,7 @@ private:
+@@ -50,6 +51,8 @@ private:
  	void buildUi();
  	Timer *_timerMore, *_timerLess;
  	InteractiveSurface *_surfaceScientists;
 +	Surface *_picture = nullptr;   // G.I. Joe: the topic's picture (RESEARCH_TREE_SCREEN_SPEC 1b)
++	bool _tab = false;   // the tablet layout (HiUI::tablet())
  public:
  	/// Creates the ResearchProject state.
  	ResearchInfoState(Base *base, RuleResearch *rule);
@@ -19354,10 +19404,10 @@ index 0000000..8277a64
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..d42b5b4
+index 0000000..8daec5f
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3645 @@
+@@ -0,0 +1,3651 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -21855,6 +21905,12 @@ index 0000000..d42b5b4
 +	{
 +		const ArrowShape sp = ab->getShape();
 +		R r = rectOf(ab);
++		if (paintedButtons.count(ab))
++		{
++			// its key is painted into the picture (INCREASE / DECREASE on the tablet): nothing to draw
++			if (clipBase(r)) claim(r);
++			return;
++		}
 +		if (sp == ARROW_NONE)
 +		{
 +			// a list's column SORT key (stores, soldiers...): X-COM's bare blue box until now
