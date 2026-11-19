@@ -10899,7 +10899,7 @@ index cea8e65..cd4cab8 100644
  	}
  
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..b02a2ca 100644
+index 3665cd1..8c128d3 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
 @@ -17,6 +17,10 @@
@@ -10964,7 +10964,7 @@ index 3665cd1..b02a2ca 100644
  	_arrow->unlock();
  
  	_projectile = 0;
-@@ -305,6 +315,121 @@ void Map::think()
+@@ -305,6 +315,170 @@ void Map::think()
  /**
   * Draws the whole map, part by part.
   */
@@ -11083,18 +11083,68 @@ index 3665cd1..b02a2ca 100644
 +	}
 +}
 +
++void Map::vecGroundCone(Position sp, double ang, double half, double nearR, double farR, int level)
++{
++	const double hr = Screen::hiRes();
++	const double s = _spriteWidth / 32.0 / hr;
++	const double cx = getX() + sp.x / hr + 16 * s, cy = getY() + sp.y / hr + 32 * s;
++	auto at = [&](double a, double r) { const double dx = r * std::cos(a), dy = r * std::sin(a);
++		return std::make_pair(cx + (dx - dy) * 16 * s, cy + (dx + dy) * 8 * s); };
++	const Uint32 blue = 0x2A6FD6, edge = level == 2 ? 0xFF2A3A : level == 1 ? 0xFFB020 : 0;
++	const int N = (int)(farR * 6);
++	for (int i = 0; i <= N; ++i)
++	{
++		const double a = ang - half + 2 * half * i / N;
++		const auto o = at(a, 0.4), n = at(a, nearR), f = at(a, farR);
++		HiUI::vectorLine(HiUI::VEC_MAP, o.first, o.second, n.first, n.second, (0x22u << 24) | blue, 6.0);   // near band, deeper
++		HiUI::vectorLine(HiUI::VEC_MAP, n.first, n.second, f.first, f.second, (0x0Cu << 24) | blue, 6.0);
++	}
++	if (edge)
++	{
++		auto line = [&](std::pair<double, double> p, std::pair<double, double> q) {
++			HiUI::vectorLine(HiUI::VEC_MAP, p.first, p.second, q.first, q.second, (0x30u << 24) | edge, 7.0);   // glow
++			HiUI::vectorLine(HiUI::VEC_MAP, p.first, p.second, q.first, q.second, (0xD0u << 24) | edge, 2.0); };
++		line(at(ang - half, 0.4), at(ang - half, farR));
++		line(at(ang + half, 0.4), at(ang + half, farR));
++		for (int i = 0; i < N; ++i) line(at(ang - half + 2 * half * i / N, farR), at(ang - half + 2 * half * (i + 1) / N, farR));
++	}
++}
++
++/// the cones of every Cobra guard the player can see, on the level being viewed (stealth missions only)
++void Map::drawViewCones()
++{
++	if (getenv("OXCE_CONE_LOG")) { static int n = 0; if (n++ < 20) Log(LOG_INFO) << "[cones] hiui " << HiUI::active() << " stealth " << Stealth::on(_save); }
++	if (!HiUI::active() || !Stealth::on(_save) || getenv("OXCE_NO_CONES")) return;
++	static const int vx[8] = { 0, 1, 1, 1, 0, -1, -1, -1 }, vy[8] = { -1, -1, 0, 1, 1, 1, 0, -1 };
++	for (auto *u : *_save->getUnits())
++	{
++		if (u->isOut() || u->getFaction() != FACTION_HOSTILE || !u->getVisible() || !u->getTile()) continue;
++		if (u->getPosition().z != _camera->getViewLevel()) continue;
++		const int st = Stealth::state(_save, u);
++		if (st == 1) continue;   // asleep: no cone
++		const int level = Stealth::alarm(_save) || st == 3 ? 2 : st == 2 ? 1 : 0;
++		const int d = u->getDirection() & 7;
++		Position sp;
++		_camera->convertMapToScreen(u->getPosition(), &sp);
++		sp += _camera->getMapOffset();
++		vecGroundCone(sp, std::atan2((double)vy[d], (double)vx[d]), 0.7854, 8.0, 14.0, level);
++		if (getenv("OXCE_CONE_LOG")) { static int m = 0; if (m++ < 20) Log(LOG_INFO) << "[cones] drew " << u->getType() << " level " << level << " at screen " << sp.x << "," << sp.y; }
++	}
++}
++
  void Map::draw()
  {
  	if (!_redraw)
-@@ -317,6 +442,7 @@ void Map::draw()
+@@ -317,6 +491,8 @@ void Map::draw()
  	// we use colour 15 because that actually corresponds to the colour we DO want in all variations of the xcom and tftd palettes.
  	// Note: un-hardcoded the color from 15 to ruleset value, default 15
  	_redraw = false;
 +	HiUI::vectorClear(HiUI::VEC_MAP);
++	drawViewCones();   // STEALTH SIGHT: Cobra view cones (OXCE_NO_CONES=1 hides them)
  	ShaderDrawFunc(
  		[](Uint8& dest, Uint8 color)
  		{
-@@ -325,6 +451,7 @@ void Map::draw()
+@@ -325,6 +501,7 @@ void Map::draw()
  		ShaderSurface(this),
  		ShaderScalar<Uint8>(Palette::blockOffset(0) + _bgColor)
  	);
@@ -11102,7 +11152,7 @@ index 3665cd1..b02a2ca 100644
  
  	Tile *t;
  
-@@ -356,18 +483,84 @@ void Map::draw()
+@@ -356,18 +533,84 @@ void Map::draw()
  		}
  	}
  
@@ -11188,7 +11238,7 @@ index 3665cd1..b02a2ca 100644
  	if (_save->getSide() == FACTION_NEUTRAL)
  	{
  		_message->setProgressBarColor(_neutralBarColor, _borderBarColor);
-@@ -466,6 +659,29 @@ int getArrowBobForFrame(int frame)
+@@ -466,6 +709,29 @@ int getArrowBobForFrame(int frame)
  	return ArrowBobOffsets[frame % 8];
  }
  
@@ -11218,7 +11268,7 @@ index 3665cd1..b02a2ca 100644
  int getShadePulseForFrame(int shade, int frame)
  {
  	if (shade > 7) shade = 7;
-@@ -488,9 +704,9 @@ int getShadePulseForFrame(int shade, int frame)
+@@ -488,9 +754,9 @@ int getShadePulseForFrame(int shade, int frame)
   */
  void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position currTileScreenPosition, bool topLayer, BattleUnit* movingUnit)
  {
@@ -11231,7 +11281,7 @@ index 3665cd1..b02a2ca 100644
  
  	if (!unitTile)
  	{
-@@ -532,7 +748,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
+@@ -532,7 +798,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
  
  	unitOffset.x = unitTile->getPosition().x - bu->getPosition().x;
  	unitOffset.y = unitTile->getPosition().y - bu->getPosition().y;
@@ -11240,7 +11290,7 @@ index 3665cd1..b02a2ca 100644
  
  	bool moving = bu->getStatus() == STATUS_WALKING || bu->getStatus() == STATUS_FLYING;
  	int bonusWidth = moving ? 0 : tileFoorWidth;
-@@ -746,6 +962,8 @@ void Map::drawTerrain(Surface *surface)
+@@ -746,6 +1012,8 @@ void Map::drawTerrain(Surface *surface)
  	int beginZ = 0, endZ = _save->getMapSizeZ() - 1;
  	Position mapPosition, screenPosition, bulletPositionScreen, movingUnitPosition;
  	int bulletLowX=16000, bulletLowY=16000, bulletLowZ=16000, bulletHighX=0, bulletHighY=0, bulletHighZ=0;
@@ -11249,7 +11299,7 @@ index 3665cd1..b02a2ca 100644
  	int dummy;
  	BattleUnit *movingUnit = _save->getTileEngine()->getMovingUnit();
  	int tileShade, tileColor, obstacleShade;
-@@ -777,6 +995,31 @@ void Map::drawTerrain(Surface *surface)
+@@ -777,6 +1045,31 @@ void Map::drawTerrain(Surface *surface)
  			if (_projectile->getPosition(1-i).z > bulletHighZ)
  				bulletHighZ = _projectile->getPosition(1-i).z;
  		}
@@ -11281,7 +11331,7 @@ index 3665cd1..b02a2ca 100644
  		// divide by 16 to go from voxel to tile position
  		bulletLowX = bulletLowX / 16;
  		bulletLowY = bulletLowY / 16;
-@@ -940,15 +1183,15 @@ void Map::drawTerrain(Surface *surface)
+@@ -940,15 +1233,15 @@ void Map::drawTerrain(Surface *surface)
  					if (tmpSurface)
  					{
  						if (tile->getObstacle(O_FLOOR))
@@ -11301,7 +11351,7 @@ index 3665cd1..b02a2ca 100644
  					{
  						if (_camera->getViewLevel() == itZ)
  						{
-@@ -1001,9 +1244,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1001,9 +1294,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_WESTWALL, tile);
  							if (tile->getObstacle(O_WESTWALL))
@@ -11313,7 +11363,7 @@ index 3665cd1..b02a2ca 100644
  						}
  						// Draw north wall
  						tmpSurface = tile->getSprite(O_NORTHWALL);
-@@ -1011,9 +1254,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1011,9 +1304,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_NORTHWALL, tile);
  							if (tile->getObstacle(O_NORTHWALL))
@@ -11325,7 +11375,7 @@ index 3665cd1..b02a2ca 100644
  						}
  						// Draw object
  						tmpSurface = tile->getSprite(O_OBJECT);
-@@ -1022,18 +1265,19 @@ void Map::drawTerrain(Surface *surface)
+@@ -1022,18 +1315,19 @@ void Map::drawTerrain(Surface *surface)
  							if (tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -11348,7 +11398,7 @@ index 3665cd1..b02a2ca 100644
  								tileShade
  							);
  							if (_anyIndicator)
-@@ -1043,30 +1287,30 @@ void Map::drawTerrain(Surface *surface)
+@@ -1043,30 +1337,30 @@ void Map::drawTerrain(Surface *surface)
  								{
  									if (_burnIndicator && itemUnit->getFire() > 0)
  									{
@@ -11387,7 +11437,7 @@ index 3665cd1..b02a2ca 100644
  											tileShade);
  									}
  								}
-@@ -1134,7 +1378,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1134,7 +1428,7 @@ void Map::drawTerrain(Surface *surface)
  
  								for (int i = begin; i != end; i += direction)
  								{
@@ -11396,7 +11446,7 @@ index 3665cd1..b02a2ca 100644
  									if (tmpSurface)
  									{
  										Position voxelPos = _projectile->getPosition(1-i);
-@@ -1292,13 +1536,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1292,13 +1586,13 @@ void Map::drawTerrain(Surface *surface)
  							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(11);
  							if (tmpSurface)
  							{
@@ -11412,7 +11462,7 @@ index 3665cd1..b02a2ca 100644
  						}
  					}
  
-@@ -1310,9 +1554,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1310,9 +1604,9 @@ void Map::drawTerrain(Surface *surface)
  							if (!tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -11424,7 +11474,7 @@ index 3665cd1..b02a2ca 100644
  							}
  						}
  					}
-@@ -1335,8 +1579,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1335,8 +1629,13 @@ void Map::drawTerrain(Surface *surface)
  								else
  									frameNumber = 6; // red static crosshairs
  							}
@@ -11440,7 +11490,7 @@ index 3665cd1..b02a2ca 100644
  
  							// UFO extender accuracy: display adjusted accuracy value on crosshair in real-time.
  							if (_cursorType >= CT_AIM && _showInfoOnCursor && (_cursorType != CT_THROW || !Options::oxceDisableInfoOnThrowCursor))
-@@ -1528,14 +1777,18 @@ void Map::drawTerrain(Surface *surface)
+@@ -1528,14 +1827,18 @@ void Map::drawTerrain(Surface *surface)
  
  								_txtAccuracy->setText(ss.str());
  								_txtAccuracy->draw();
@@ -11462,7 +11512,7 @@ index 3665cd1..b02a2ca 100644
  						}
  						if (!_isAltPressed && _cursorType > CT_AIM && _camera->getViewLevel() == itZ)
  						{
-@@ -1551,7 +1804,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1551,7 +1854,7 @@ void Map::drawTerrain(Surface *surface)
  									_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::red - 1) - 1);
  									_txtAccuracy->setText("0%");
  									_txtAccuracy->draw();
@@ -11471,7 +11521,7 @@ index 3665cd1..b02a2ca 100644
  								}
  							}
  							if (!ignore)
-@@ -1582,7 +1835,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1582,7 +1885,7 @@ void Map::drawTerrain(Surface *surface)
  								_numWaypid->setValue(waypid);
  								_numWaypid->setBordered(true); // OXCE, not configurable
  								_numWaypid->draw();
@@ -11480,7 +11530,7 @@ index 3665cd1..b02a2ca 100644
  
  								waypXOff += waypid > 9 ? 10 : 6; // OXCE
  								if (waypXOff >= 26)
-@@ -1621,7 +1874,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1621,7 +1924,7 @@ void Map::drawTerrain(Surface *surface)
  						tile = _save->getTile(mapPosition);
  						if (!tile || !tile->isDiscovered(O_FLOOR) || tile->getPreview() == -1)
  							continue;
@@ -11489,7 +11539,7 @@ index 3665cd1..b02a2ca 100644
  						if (_previewSettingArrows)
  						{
  							if (itZ > 0 && tile->hasNoFloor(_save))
-@@ -1629,14 +1882,14 @@ void Map::drawTerrain(Surface *surface)
+@@ -1629,14 +1932,14 @@ void Map::drawTerrain(Surface *surface)
  								tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(23);
  								if (tmpSurface)
  								{
@@ -11506,7 +11556,7 @@ index 3665cd1..b02a2ca 100644
  							}
  						}
  
-@@ -1645,16 +1898,17 @@ void Map::drawTerrain(Surface *surface)
+@@ -1645,16 +1948,17 @@ void Map::drawTerrain(Surface *surface)
  							int off = tile->getTUMarker() > 9 ? 5 : 3;
  							int offE = tile->getEnergyMarker() > 9 ? 5 : 3;
  							int mcolor = _previewSettingArrows ? 0 : tile->getMarkerColor();
@@ -11527,7 +11577,7 @@ index 3665cd1..b02a2ca 100644
  								}
  							}
  							if (_previewSettingTu)
-@@ -1664,16 +1918,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1664,16 +1968,16 @@ void Map::drawTerrain(Surface *surface)
  								if (_previewSettingEnergy)
  								{
  									// TU
@@ -11547,7 +11597,7 @@ index 3665cd1..b02a2ca 100644
  								}
  							}
  							else if (_previewSettingEnergy)
-@@ -1681,7 +1935,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1681,7 +1985,7 @@ void Map::drawTerrain(Surface *surface)
  								// only Energy
  								_numWaypid->setValue(tile->getEnergyMarker());
  								_numWaypid->draw();
@@ -11556,7 +11606,7 @@ index 3665cd1..b02a2ca 100644
  							}
  						}
  					}
-@@ -1702,16 +1956,108 @@ void Map::drawTerrain(Surface *surface)
+@@ -1702,16 +2006,108 @@ void Map::drawTerrain(Surface *surface)
  		Position offset = calculateWalkingOffset(selectedUnit).ScreenOffset;
  		if (selectedUnit->isBigUnit())
  		{
@@ -11669,7 +11719,7 @@ index 3665cd1..b02a2ca 100644
  		}
  	}
  
-@@ -1732,26 +2078,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -1732,26 +2128,26 @@ void Map::drawTerrain(Surface *surface)
  				//calculateWalkingOffset(myUnit, &offset);
  				if (myUnit->isBigUnit())
  				{
@@ -11701,7 +11751,7 @@ index 3665cd1..b02a2ca 100644
  						0);
  				}
  				else if (customMarker)
-@@ -1760,7 +2106,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1760,7 +2156,7 @@ void Map::drawTerrain(Surface *surface)
  						surface,
  						_arrow,
  						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
@@ -11710,7 +11760,7 @@ index 3665cd1..b02a2ca 100644
  						0,
  						false,
  						_isTFTD ? ArrowColorsTFTD[myUnit->getCustomMarker() % 4] : ArrowColorsUFO[myUnit->getCustomMarker() % 4]);
-@@ -1779,11 +2125,11 @@ void Map::drawTerrain(Surface *surface)
+@@ -1779,11 +2175,11 @@ void Map::drawTerrain(Surface *surface)
  			{
  				_camera->convertMapToScreen(pos, &screenPosition);
  				screenPosition += _camera->getMapOffset();
@@ -11724,7 +11774,7 @@ index 3665cd1..b02a2ca 100644
  					0);
  			}
  		}
-@@ -1823,17 +2169,40 @@ void Map::drawTerrain(Surface *surface)
+@@ -1823,17 +2219,40 @@ void Map::drawTerrain(Surface *surface)
  				else if (explosion->isHit())
  				{
  					tmpSurface = _game->getMod()->getSurfaceSet("HIT.PCK")->getFrame(explosion->getCurrentFrame());
@@ -11767,7 +11817,7 @@ index 3665cd1..b02a2ca 100644
  	surface->unlock();
  }
  
-@@ -2023,7 +2392,7 @@ void Map::setSelectorPosition(int mx, int my)
+@@ -2023,7 +2442,7 @@ void Map::setSelectorPosition(int mx, int my)
  {
  	int oldX = _selectorX, oldY = _selectorY;
  
@@ -11776,7 +11826,7 @@ index 3665cd1..b02a2ca 100644
  
  	if (oldX != _selectorX || oldY != _selectorY)
  	{
-@@ -2207,16 +2576,25 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2207,16 +2626,25 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  	}
  	else if ((unit->getStatus() == STATUS_WALKING || unit->getStatus() == STATUS_FLYING))
  	{
@@ -11806,7 +11856,7 @@ index 3665cd1..b02a2ca 100644
  	}
  
  	result.NormalizedMovePhase = endphase == 16 ? phase : phase * 2;
-@@ -2266,7 +2644,17 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2266,7 +2694,17 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  	{
  		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
  	}
@@ -11824,7 +11874,7 @@ index 3665cd1..b02a2ca 100644
  	return result;
  }
  
-@@ -2327,10 +2715,19 @@ CursorType Map::getCursorType() const
+@@ -2327,10 +2765,19 @@ CursorType Map::getCursorType() const
   * Puts a projectile sprite on the map.
   * @param projectile Projectile to place.
   */
@@ -11845,7 +11895,7 @@ index 3665cd1..b02a2ca 100644
  	{
  		_launch = true;
  	}
-@@ -2506,9 +2903,10 @@ void Map::refreshSelectorPosition()
+@@ -2506,9 +2953,10 @@ void Map::refreshSelectorPosition()
  void Map::setHeight(int height)
  {
  	Surface::setHeight(height);
@@ -11859,7 +11909,7 @@ index 3665cd1..b02a2ca 100644
  }
  
  /**
-@@ -2519,7 +2917,7 @@ void Map::setWidth(int width)
+@@ -2519,7 +2967,7 @@ void Map::setWidth(int width)
  {
  	int dX = width - getWidth();
  	Surface::setWidth(width);
@@ -11869,7 +11919,7 @@ index 3665cd1..b02a2ca 100644
  
  /**
 diff --git a/src/Battlescape/Map.h b/src/Battlescape/Map.h
-index 0fdf2ca..5c9b10e 100644
+index 0fdf2ca..a027de0 100644
 --- a/src/Battlescape/Map.h
 +++ b/src/Battlescape/Map.h
 @@ -52,6 +52,7 @@ struct UnitWalkingOffset
@@ -11901,7 +11951,7 @@ index 0fdf2ca..5c9b10e 100644
  	BattlescapeMessage *_message;
  	Camera *_camera;
  	int _visibleMapHeight;
-@@ -106,6 +114,10 @@ private:
+@@ -106,6 +114,13 @@ private:
  
  	void drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position tileScreenPosition, bool topLayer, BattleUnit* movingUnit = nullptr);
  	void drawTerrain(Surface *surface);
@@ -11909,10 +11959,13 @@ index 0fdf2ca..5c9b10e 100644
 +	void vecCursor(Position screenPosition, int kind, bool onUnit);
 +	/// G.I. Joe 4x: a ring on the floor, radius in tiles (noise ring, heard-something marker).
 +	void vecGroundRing(Position screenPosition, double radTiles, Uint32 rgb, bool dashed, int alpha = 0xE0);
++	/// STEALTH SIGHT item 2: a guard's view cone on the ground (fan of faint lines; near band deeper; coloured edge)
++	void vecGroundCone(Position screenPosition, double angle, double halfArc, double nearR, double farR, int level);
++	void drawViewCones();
  	int getTerrainLevel(const Position& pos, int size) const;
  	int getWallShade(TilePart part, Tile* tileFrot);
  	int _iconHeight, _iconWidth, _messageColor;
-@@ -124,6 +136,8 @@ public:
+@@ -124,6 +139,8 @@ public:
  	void think() override;
  	/// Draws the surface.
  	void draw() override;
@@ -11921,7 +11974,7 @@ index 0fdf2ca..5c9b10e 100644
  	void refreshAIProgress(int progress);
  	/// Sets the palette.
  	void setPalette(const SDL_Color *colors, int firstcolor = 0, int ncolors = 256) override;
-@@ -153,6 +167,8 @@ public:
+@@ -153,6 +170,8 @@ public:
  
  	/// Sets projectile.
  	void setProjectile(Projectile *projectile);
