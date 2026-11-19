@@ -18097,7 +18097,7 @@ index 1804fb9..7c50bf9 100644
  		init(_images.size() - 1, chars);
  	}
 diff --git a/src/Engine/Game.cpp b/src/Engine/Game.cpp
-index f353397..dff109f 100644
+index f353397..975c56d 100644
 --- a/src/Engine/Game.cpp
 +++ b/src/Engine/Game.cpp
 @@ -17,6 +17,12 @@
@@ -18141,7 +18141,7 @@ index f353397..dff109f 100644
  				_screen->clear();
  				std::list<State*>::iterator i = _states.end();
  				do
-@@ -363,8 +382,23 @@ void Game::run()
+@@ -363,8 +382,40 @@ void Game::run()
  					(*i)->blit();
  				}
  				_fpsCounter->blit(_screen->getSurface());
@@ -18150,6 +18150,23 @@ index f353397..dff109f 100644
 +				else _cursor->blit(_screen->getSurface());
 +				const double perfT1 = perf ? perfNow() : 0;
  				_screen->flip();
++				// G.I. Joe rig (OXCE_SHOT=<png> OXCE_SHOT_STATE=<screen code name>): once that screen has been on top for
++				// 90 frames, save a picture of it and quit - so another tool can look at any screen without a person
++				// (Show_Screen.bat). Its layout is dumped too when OXCE_UI_DUMP is set.
++				if (const char *shot = getenv("OXCE_SHOT"))
++				{
++					static const State *seen = nullptr; static int frames = 0;
++					const State *top = _states.empty() ? nullptr : _states.back();
++					if (top != seen) { seen = top; frames = 0; }
++					const char *want = getenv("OXCE_SHOT_STATE");
++					std::string nm = top ? typeid(*top).name() : "";
++					if (top && (!want || nm.find(want) != std::string::npos) && ++frames == 90)
++					{
++						_screen->screenshot(shot);
++						Log(LOG_INFO) << "[shot] " << shot;
++						quit();
++					}
++				}
 +				if (perf)
 +				{
 +					const double perfT2 = perfNow();
