@@ -42706,6 +42706,57 @@ index 1ad61f5..feccbe6 100644
  		default: ss << tr("STR_UNKNOWN"); break;
  	}
  	if (_showIds)
+diff --git a/src/Ufopaedia/UfopaediaStartState.cpp b/src/Ufopaedia/UfopaediaStartState.cpp
+index ac7e5b6..e376780 100644
+--- a/src/Ufopaedia/UfopaediaStartState.cpp
++++ b/src/Ufopaedia/UfopaediaStartState.cpp
+@@ -18,6 +18,7 @@
+  */
+ 
+ #include "UfopaediaStartState.h"
++#include "../Engine/HiUI.h"
+ #include "UfopaediaSelectState.h"
+ #include "../Engine/Game.h"
+ #include "../Engine/Action.h"
+@@ -44,6 +45,8 @@ namespace OpenXcom
+ 		int extraSpace = (_game->getScreen()->getDY() * 2) + 20; // upper extra + lower extra + 20 pixels from the original
+ 		int maxButtons = (extraSpace / SPACE_PER_BUTTON) + MAX_VANILLA_BUTTONS;
+ 		_maxButtons = std::min(_cats.size(), (size_t)maxButtons);
++		const bool tab = HiUI::tablet();
++		if (tab) _maxButtons = std::min(_cats.size(), (size_t)11);   // the tablet has eleven painted plates
+ 		maxButtons = (int)_maxButtons;
+ 
+ 		int buttonOffset = 0;
+@@ -104,9 +107,28 @@ namespace OpenXcom
+ 		centerAllSurfaces();
+ 
+ 		setWindowBackground(_window, "ufopaedia");
++		if (tab)
++		{
++			// THE TABLET (art/tablet_round3/UfopaediaStartState.png, rectangles /6): eleven painted plates
++			// between two stacks of files; the game writes the section names on the plates
++			HiUI::place(_window, 0, 0, 320, 200);
++			setWindowBackgroundImage(_window, "JOE_TAB_UFOPAEDIASTARTSTATE.SCR");
++			HiUI::place(_txtTitle, 30, 22, 150, 17);
++			HiUI::textFace(_txtTitle, "stencil");
++			const double cy[11] = { 46.9, 57.3, 68.0, 78.7, 89.3, 99.8, 110.0, 120.2, 130.4, 140.7, 150.9 };
++			for (size_t i = 0; i < _btnSections.size() && i < 11; ++i)
++			{
++				HiUI::place(_btnSections[i], 87, (int)(cy[i] - 4), 146, 8);
++				HiUI::paintedButton(_btnSections[i]);
++			}
++			HiUI::place(_btnOk, 123, 158, 76, 9);
++			HiUI::paintedButton(_btnOk);
++			_btnScrollUp->setX(240); _btnScrollUp->setY(42);
++			_btnScrollDown->setX(240); _btnScrollDown->setY(146);
++		}
+ 
+ 		_txtTitle->setBig();
+-		_txtTitle->setAlign(ALIGN_CENTER);
++		_txtTitle->setAlign(tab ? ALIGN_LEFT : ALIGN_CENTER);
+ 		_txtTitle->setText(tr("STR_UFOPAEDIA"));
+ 
+ 		_btnOk->setText(tr("STR_OK"));
 diff --git a/src/main.cpp b/src/main.cpp
 index 4fd8a1d..2d54f45 100644
 --- a/src/main.cpp
