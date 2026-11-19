@@ -48,14 +48,17 @@ for hn, k in H.items():
                     d.ellipse((sm[0] + ox - r, sm[1] + oy - r, sm[0] + ox + r, sm[1] + oy + r), fill=(215, 215, 210))
                 line(d, ox, oy, a, b, (238, 238, 232), 5); flash(d, ox, oy, a, 4)
             frame(f'm{m}', dr)
-    for n in range(1, 7):                                                                # SD-30 drums roll off the stern into the sea
-        for j in range(4):
-            def dr(d, ox, oy, n=n, j=j):
-                y0 = -7.6 + (n - 1) * 0.75; p = proj(k, (-17.5 - 3.0 * j, y0, 12.0 - 1.6 * j * j))
-                if j < 3:                                                                # the modelled SD-30 drum, rendered by the game's renderer, rolling
-                    sp = DRUM[hn].rotate(-35 * j, resample=Image.BICUBIC, expand=True); d._image.alpha_composite(sp, (int(p[0] + ox - sp.width / 2), int(p[1] + oy - sp.height / 2)))
+    P1 = (-16.99, -10.56, 9.0)                                                           # position 1 = the exit (John 20:49)
+    for n in range(1, 7):                                                                # SD-30: drum at 1 rolls out over the side, the rest roll down one place
+        for j in range(5):
+            def dr(d, ox, oy, j=j):
+                if j == 0: return
+                if j < 4:
+                    p = proj(k, (P1[0], P1[1] - 1.2 * j, P1[2] - 0.35 * j * j))
+                    sp = DRUM[hn].rotate(40 * j, resample=Image.BICUBIC, expand=True); d._image.alpha_composite(sp, (int(p[0] + ox - sp.width / 2), int(p[1] + oy - sp.height / 2)))
                 else:
-                    q = proj(k, (-27, y0, 0)); [d.ellipse((q[0] + ox - rr, q[1] + oy - rr / 2, q[0] + ox + rr, q[1] + oy + rr / 2), outline=(235, 245, 255), width=3) for rr in (18, 34)]
+                    q = proj(k, (P1[0], P1[1] - 6.5, 0)); [d.ellipse((q[0] + ox - rr, q[1] + oy - rr / 2, q[0] + ox + rr, q[1] + oy + rr / 2), outline=(235, 245, 255), width=3) for rr in (18, 34)]
                     d.line((q[0] + ox, q[1] + oy, q[0] + ox, q[1] + oy - 55), fill=(235, 245, 255), width=10)
-            frame(f'd{n}', dr)
+            frame(f'd{n}' if j else f'd{n-1}', dr)
+        frame(f'd{n}')                                                                   # the others have rolled down to fill position 1
 out[0].save(sys.argv[1], save_all=True, append_images=out[1:], duration=110, loop=0); print(len(out))
