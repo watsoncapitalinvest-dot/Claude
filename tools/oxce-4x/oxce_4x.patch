@@ -3031,7 +3031,7 @@ index 10a96c4..755c149 100644
  	void btnCancelClick(Action *action);
  	/// Handler for pressing an Increase arrow in the list.
 diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
-index db6727f..228c478 100644
+index db6727f..39fb784 100644
 --- a/src/Battlescape/AIModule.cpp
 +++ b/src/Battlescape/AIModule.cpp
 @@ -16,9 +16,16 @@
@@ -3479,7 +3479,7 @@ index db6727f..228c478 100644
  	_knownEnemies = countKnownTargets();
  	_visibleEnemies = selectNearestTarget();
  	_spottingEnemies = getSpottingUnits(_unit->getPosition());
-@@ -489,6 +898,350 @@ void AIModule::think(BattleAction *action)
+@@ -489,6 +898,352 @@ void AIModule::think(BattleAction *action)
  		return;
  	}
  
@@ -3497,7 +3497,9 @@ index db6727f..228c478 100644
 +		{
 +			if (Position::distance2d(look, _unit->getPosition()) <= 1)
 +			{
-+				Stealth::clearLook(_save, _unit);
++				Stealth::arrived(_save, _unit);   // search near, then back to his post
++				action->type = BA_NONE;
++				return;
 +			}
 +			else
 +			{
@@ -3512,7 +3514,7 @@ index db6727f..228c478 100644
 +					action->target = goal;
 +					return;
 +				}
-+				Stealth::clearLook(_save, _unit);
++				Stealth::arrived(_save, _unit);   // can't get there: the next spot, or home
 +			}
 +		}
 +	}
@@ -3830,7 +3832,7 @@ index db6727f..228c478 100644
  	if (action->weapon)
  	{
  		const RuleItem *rule = action->weapon->getRules();
-@@ -1395,6 +2148,12 @@ int AIModule::selectNearestTarget()
+@@ -1395,6 +2150,12 @@ int AIModule::selectNearestTarget()
  		{
  			tally++;
  			int dist = Position::distance2d(_unit->getPosition(), bu->getPosition());
@@ -3843,7 +3845,7 @@ index db6727f..228c478 100644
  			if (dist < _closestDist)
  			{
  				bool valid = false;
-@@ -2367,7 +3126,11 @@ void AIModule::wayPointAction()
+@@ -2367,7 +3128,11 @@ void AIModule::wayPointAction()
  		return;
  	}
  	_aggroTarget = 0;
@@ -3856,7 +3858,7 @@ index db6727f..228c478 100644
  	{
  		if (_aggroTarget != 0) break; // loop finished
  		if (!validTarget(bu, true, true))
-@@ -2386,6 +3149,7 @@ void AIModule::wayPointAction()
+@@ -2386,6 +3151,7 @@ void AIModule::wayPointAction()
  
  	if (_aggroTarget != 0)
  	{
@@ -3864,7 +3866,7 @@ index db6727f..228c478 100644
  		_attackAction.type = BA_LAUNCH;
  		_attackAction.updateTU();
  		if (!_attackAction.haveTU())
-@@ -2950,8 +3714,10 @@ AIAttackWeight AIModule::getTargetAttackWeight(BattleUnit* target) const
+@@ -2950,8 +3716,10 @@ AIAttackWeight AIModule::getTargetAttackWeight(BattleUnit* target) const
  		weight = target->getAITargetWeightAsFriendly(_save->getMod());
  	}
  	else if (
@@ -3877,7 +3879,7 @@ index db6727f..228c478 100644
  	{
  		// ignore units that we don't "know" about...
  		// ... unless we are a sniper and the spotters know about them
-@@ -2976,6 +3742,30 @@ AIAttackWeight AIModule::getTargetAttackWeight(BattleUnit* target) const
+@@ -2976,6 +3744,30 @@ AIAttackWeight AIModule::getTargetAttackWeight(BattleUnit* target) const
  		weight = target->getAITargetWeightAsNeutral(_save->getMod());
  	}
  
@@ -3908,7 +3910,7 @@ index db6727f..228c478 100644
  	weight = (AIAttackWeight)ModScript::scriptFunc2<ModScript::AiCalculateTargetWeight>(
  		_unit->getArmor(),
  		weight, weight,
-@@ -3114,7 +3904,9 @@ bool AIModule::getNodeOfBestEfficacy(BattleAction *action, int radius)
+@@ -3114,7 +3906,9 @@ bool AIModule::getNodeOfBestEfficacy(BattleAction *action, int radius)
  						if ((_unit->getFaction() == FACTION_HOSTILE && bu->getFaction() != FACTION_HOSTILE) ||
  							(_unit->getFaction() == FACTION_NEUTRAL && bu->getFaction() == FACTION_HOSTILE))
  						{
@@ -10899,7 +10901,7 @@ index cea8e65..cd4cab8 100644
  	}
  
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..f7780a2 100644
+index 3665cd1..e5e3567 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
 @@ -17,6 +17,10 @@
@@ -10964,7 +10966,7 @@ index 3665cd1..f7780a2 100644
  	_arrow->unlock();
  
  	_projectile = 0;
-@@ -305,6 +315,224 @@ void Map::think()
+@@ -305,6 +315,233 @@ void Map::think()
  /**
   * Draws the whole map, part by part.
   */
@@ -11124,6 +11126,15 @@ index 3665cd1..f7780a2 100644
 +		if (st == 1) continue;   // asleep: no cone
 +		const int level = Stealth::alarm(_save) || st == 3 ? 2 : st == 2 ? 1 : 0;
 +		const int d = u->getDirection() & 7;
++		{
++			const Position look = Stealth::lookTarget(_save, u);   // STEALTH SIGHT item 4: the spot he is going to check
++			if (look != TileEngine::invalid && look.z == _camera->getViewLevel())
++			{
++				Position lp; _camera->convertMapToScreen(look, &lp); lp += _camera->getMapOffset();
++				vecGroundRing(lp, 0.45, 0xFFB020, false, 0xD0);
++				vecGroundRing(lp, 0.25, 0xFFB020, true, 0xA0);
++			}
++		}
 +		Position sp;
 +		_camera->convertMapToScreen(u->getPosition(), &sp);
 +		sp += _camera->getMapOffset();
@@ -11136,7 +11147,7 @@ index 3665cd1..f7780a2 100644
 +			const bool darkNow = _save->getGlobalShade() > _save->getMod()->getMaxDarknessToSeeUnits();
 +			const double hr = Screen::hiRes(), sc = _spriteWidth / 32.0 / hr;
 +			// John 22:24 "10": drawn 10 tiles long (shorter if his eyesight is shorter, e.g. in the dark) so it reads on screen
-+			const double R = std::min(10, std::max(3, darkNow ? u->getMaxViewDistanceAtDark(nullptr) : u->getMaxViewDistanceAtDay(nullptr)));
++			const double R = std::min(Stealth::elite(u) ? 13 : 10, std::max(3, darkNow ? u->getMaxViewDistanceAtDark(nullptr) : u->getMaxViewDistanceAtDay(nullptr)));
 +			const double cx = getX() + sp.x / hr + 16 * sc, cy = getY() + sp.y / hr + 32 * sc;
 +			const std::string f = std::string("Resources/UI/Cones/cone_") + LV[level] + "_" + std::to_string(d) + ".png";
 +			// John 22:34 "Can they see through walls" - they cannot, so the cone shows only on tiles he can see: a sight line from
@@ -11189,7 +11200,7 @@ index 3665cd1..f7780a2 100644
  void Map::draw()
  {
  	if (!_redraw)
-@@ -317,6 +545,8 @@ void Map::draw()
+@@ -317,6 +554,8 @@ void Map::draw()
  	// we use colour 15 because that actually corresponds to the colour we DO want in all variations of the xcom and tftd palettes.
  	// Note: un-hardcoded the color from 15 to ruleset value, default 15
  	_redraw = false;
@@ -11198,7 +11209,7 @@ index 3665cd1..f7780a2 100644
  	ShaderDrawFunc(
  		[](Uint8& dest, Uint8 color)
  		{
-@@ -325,6 +555,7 @@ void Map::draw()
+@@ -325,6 +564,7 @@ void Map::draw()
  		ShaderSurface(this),
  		ShaderScalar<Uint8>(Palette::blockOffset(0) + _bgColor)
  	);
@@ -11206,7 +11217,7 @@ index 3665cd1..f7780a2 100644
  
  	Tile *t;
  
-@@ -356,18 +587,84 @@ void Map::draw()
+@@ -356,18 +596,84 @@ void Map::draw()
  		}
  	}
  
@@ -11292,7 +11303,7 @@ index 3665cd1..f7780a2 100644
  	if (_save->getSide() == FACTION_NEUTRAL)
  	{
  		_message->setProgressBarColor(_neutralBarColor, _borderBarColor);
-@@ -466,6 +763,29 @@ int getArrowBobForFrame(int frame)
+@@ -466,6 +772,29 @@ int getArrowBobForFrame(int frame)
  	return ArrowBobOffsets[frame % 8];
  }
  
@@ -11322,7 +11333,7 @@ index 3665cd1..f7780a2 100644
  int getShadePulseForFrame(int shade, int frame)
  {
  	if (shade > 7) shade = 7;
-@@ -488,9 +808,9 @@ int getShadePulseForFrame(int shade, int frame)
+@@ -488,9 +817,9 @@ int getShadePulseForFrame(int shade, int frame)
   */
  void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position currTileScreenPosition, bool topLayer, BattleUnit* movingUnit)
  {
@@ -11335,7 +11346,7 @@ index 3665cd1..f7780a2 100644
  
  	if (!unitTile)
  	{
-@@ -532,7 +852,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
+@@ -532,7 +861,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
  
  	unitOffset.x = unitTile->getPosition().x - bu->getPosition().x;
  	unitOffset.y = unitTile->getPosition().y - bu->getPosition().y;
@@ -11344,7 +11355,7 @@ index 3665cd1..f7780a2 100644
  
  	bool moving = bu->getStatus() == STATUS_WALKING || bu->getStatus() == STATUS_FLYING;
  	int bonusWidth = moving ? 0 : tileFoorWidth;
-@@ -746,6 +1066,8 @@ void Map::drawTerrain(Surface *surface)
+@@ -746,6 +1075,8 @@ void Map::drawTerrain(Surface *surface)
  	int beginZ = 0, endZ = _save->getMapSizeZ() - 1;
  	Position mapPosition, screenPosition, bulletPositionScreen, movingUnitPosition;
  	int bulletLowX=16000, bulletLowY=16000, bulletLowZ=16000, bulletHighX=0, bulletHighY=0, bulletHighZ=0;
@@ -11353,7 +11364,7 @@ index 3665cd1..f7780a2 100644
  	int dummy;
  	BattleUnit *movingUnit = _save->getTileEngine()->getMovingUnit();
  	int tileShade, tileColor, obstacleShade;
-@@ -777,6 +1099,31 @@ void Map::drawTerrain(Surface *surface)
+@@ -777,6 +1108,31 @@ void Map::drawTerrain(Surface *surface)
  			if (_projectile->getPosition(1-i).z > bulletHighZ)
  				bulletHighZ = _projectile->getPosition(1-i).z;
  		}
@@ -11385,7 +11396,7 @@ index 3665cd1..f7780a2 100644
  		// divide by 16 to go from voxel to tile position
  		bulletLowX = bulletLowX / 16;
  		bulletLowY = bulletLowY / 16;
-@@ -940,15 +1287,15 @@ void Map::drawTerrain(Surface *surface)
+@@ -940,15 +1296,15 @@ void Map::drawTerrain(Surface *surface)
  					if (tmpSurface)
  					{
  						if (tile->getObstacle(O_FLOOR))
@@ -11405,7 +11416,7 @@ index 3665cd1..f7780a2 100644
  					{
  						if (_camera->getViewLevel() == itZ)
  						{
-@@ -1001,9 +1348,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1001,9 +1357,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_WESTWALL, tile);
  							if (tile->getObstacle(O_WESTWALL))
@@ -11417,7 +11428,7 @@ index 3665cd1..f7780a2 100644
  						}
  						// Draw north wall
  						tmpSurface = tile->getSprite(O_NORTHWALL);
-@@ -1011,9 +1358,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1011,9 +1367,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_NORTHWALL, tile);
  							if (tile->getObstacle(O_NORTHWALL))
@@ -11429,7 +11440,7 @@ index 3665cd1..f7780a2 100644
  						}
  						// Draw object
  						tmpSurface = tile->getSprite(O_OBJECT);
-@@ -1022,18 +1369,19 @@ void Map::drawTerrain(Surface *surface)
+@@ -1022,18 +1378,19 @@ void Map::drawTerrain(Surface *surface)
  							if (tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -11452,7 +11463,7 @@ index 3665cd1..f7780a2 100644
  								tileShade
  							);
  							if (_anyIndicator)
-@@ -1043,30 +1391,30 @@ void Map::drawTerrain(Surface *surface)
+@@ -1043,30 +1400,30 @@ void Map::drawTerrain(Surface *surface)
  								{
  									if (_burnIndicator && itemUnit->getFire() > 0)
  									{
@@ -11491,7 +11502,7 @@ index 3665cd1..f7780a2 100644
  											tileShade);
  									}
  								}
-@@ -1134,7 +1482,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1134,7 +1491,7 @@ void Map::drawTerrain(Surface *surface)
  
  								for (int i = begin; i != end; i += direction)
  								{
@@ -11500,7 +11511,7 @@ index 3665cd1..f7780a2 100644
  									if (tmpSurface)
  									{
  										Position voxelPos = _projectile->getPosition(1-i);
-@@ -1292,13 +1640,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1292,13 +1649,13 @@ void Map::drawTerrain(Surface *surface)
  							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(11);
  							if (tmpSurface)
  							{
@@ -11516,7 +11527,7 @@ index 3665cd1..f7780a2 100644
  						}
  					}
  
-@@ -1310,9 +1658,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1310,9 +1667,9 @@ void Map::drawTerrain(Surface *surface)
  							if (!tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -11528,7 +11539,7 @@ index 3665cd1..f7780a2 100644
  							}
  						}
  					}
-@@ -1335,8 +1683,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1335,8 +1692,13 @@ void Map::drawTerrain(Surface *surface)
  								else
  									frameNumber = 6; // red static crosshairs
  							}
@@ -11544,7 +11555,7 @@ index 3665cd1..f7780a2 100644
  
  							// UFO extender accuracy: display adjusted accuracy value on crosshair in real-time.
  							if (_cursorType >= CT_AIM && _showInfoOnCursor && (_cursorType != CT_THROW || !Options::oxceDisableInfoOnThrowCursor))
-@@ -1528,14 +1881,18 @@ void Map::drawTerrain(Surface *surface)
+@@ -1528,14 +1890,18 @@ void Map::drawTerrain(Surface *surface)
  
  								_txtAccuracy->setText(ss.str());
  								_txtAccuracy->draw();
@@ -11566,7 +11577,7 @@ index 3665cd1..f7780a2 100644
  						}
  						if (!_isAltPressed && _cursorType > CT_AIM && _camera->getViewLevel() == itZ)
  						{
-@@ -1551,7 +1908,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1551,7 +1917,7 @@ void Map::drawTerrain(Surface *surface)
  									_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::red - 1) - 1);
  									_txtAccuracy->setText("0%");
  									_txtAccuracy->draw();
@@ -11575,7 +11586,7 @@ index 3665cd1..f7780a2 100644
  								}
  							}
  							if (!ignore)
-@@ -1582,7 +1939,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1582,7 +1948,7 @@ void Map::drawTerrain(Surface *surface)
  								_numWaypid->setValue(waypid);
  								_numWaypid->setBordered(true); // OXCE, not configurable
  								_numWaypid->draw();
@@ -11584,7 +11595,7 @@ index 3665cd1..f7780a2 100644
  
  								waypXOff += waypid > 9 ? 10 : 6; // OXCE
  								if (waypXOff >= 26)
-@@ -1621,7 +1978,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1621,7 +1987,7 @@ void Map::drawTerrain(Surface *surface)
  						tile = _save->getTile(mapPosition);
  						if (!tile || !tile->isDiscovered(O_FLOOR) || tile->getPreview() == -1)
  							continue;
@@ -11593,7 +11604,7 @@ index 3665cd1..f7780a2 100644
  						if (_previewSettingArrows)
  						{
  							if (itZ > 0 && tile->hasNoFloor(_save))
-@@ -1629,14 +1986,14 @@ void Map::drawTerrain(Surface *surface)
+@@ -1629,14 +1995,14 @@ void Map::drawTerrain(Surface *surface)
  								tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(23);
  								if (tmpSurface)
  								{
@@ -11610,7 +11621,7 @@ index 3665cd1..f7780a2 100644
  							}
  						}
  
-@@ -1645,16 +2002,17 @@ void Map::drawTerrain(Surface *surface)
+@@ -1645,16 +2011,17 @@ void Map::drawTerrain(Surface *surface)
  							int off = tile->getTUMarker() > 9 ? 5 : 3;
  							int offE = tile->getEnergyMarker() > 9 ? 5 : 3;
  							int mcolor = _previewSettingArrows ? 0 : tile->getMarkerColor();
@@ -11631,7 +11642,7 @@ index 3665cd1..f7780a2 100644
  								}
  							}
  							if (_previewSettingTu)
-@@ -1664,16 +2022,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1664,16 +2031,16 @@ void Map::drawTerrain(Surface *surface)
  								if (_previewSettingEnergy)
  								{
  									// TU
@@ -11651,7 +11662,7 @@ index 3665cd1..f7780a2 100644
  								}
  							}
  							else if (_previewSettingEnergy)
-@@ -1681,7 +2039,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1681,7 +2048,7 @@ void Map::drawTerrain(Surface *surface)
  								// only Energy
  								_numWaypid->setValue(tile->getEnergyMarker());
  								_numWaypid->draw();
@@ -11660,7 +11671,7 @@ index 3665cd1..f7780a2 100644
  							}
  						}
  					}
-@@ -1702,16 +2060,108 @@ void Map::drawTerrain(Surface *surface)
+@@ -1702,16 +2069,108 @@ void Map::drawTerrain(Surface *surface)
  		Position offset = calculateWalkingOffset(selectedUnit).ScreenOffset;
  		if (selectedUnit->isBigUnit())
  		{
@@ -11773,7 +11784,7 @@ index 3665cd1..f7780a2 100644
  		}
  	}
  
-@@ -1732,26 +2182,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -1732,26 +2191,26 @@ void Map::drawTerrain(Surface *surface)
  				//calculateWalkingOffset(myUnit, &offset);
  				if (myUnit->isBigUnit())
  				{
@@ -11805,7 +11816,7 @@ index 3665cd1..f7780a2 100644
  						0);
  				}
  				else if (customMarker)
-@@ -1760,7 +2210,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1760,7 +2219,7 @@ void Map::drawTerrain(Surface *surface)
  						surface,
  						_arrow,
  						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
@@ -11814,7 +11825,7 @@ index 3665cd1..f7780a2 100644
  						0,
  						false,
  						_isTFTD ? ArrowColorsTFTD[myUnit->getCustomMarker() % 4] : ArrowColorsUFO[myUnit->getCustomMarker() % 4]);
-@@ -1779,11 +2229,11 @@ void Map::drawTerrain(Surface *surface)
+@@ -1779,11 +2238,11 @@ void Map::drawTerrain(Surface *surface)
  			{
  				_camera->convertMapToScreen(pos, &screenPosition);
  				screenPosition += _camera->getMapOffset();
@@ -11828,7 +11839,7 @@ index 3665cd1..f7780a2 100644
  					0);
  			}
  		}
-@@ -1823,17 +2273,40 @@ void Map::drawTerrain(Surface *surface)
+@@ -1823,17 +2282,40 @@ void Map::drawTerrain(Surface *surface)
  				else if (explosion->isHit())
  				{
  					tmpSurface = _game->getMod()->getSurfaceSet("HIT.PCK")->getFrame(explosion->getCurrentFrame());
@@ -11871,7 +11882,7 @@ index 3665cd1..f7780a2 100644
  	surface->unlock();
  }
  
-@@ -2023,7 +2496,7 @@ void Map::setSelectorPosition(int mx, int my)
+@@ -2023,7 +2505,7 @@ void Map::setSelectorPosition(int mx, int my)
  {
  	int oldX = _selectorX, oldY = _selectorY;
  
@@ -11880,7 +11891,7 @@ index 3665cd1..f7780a2 100644
  
  	if (oldX != _selectorX || oldY != _selectorY)
  	{
-@@ -2207,16 +2680,25 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2207,16 +2689,25 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  	}
  	else if ((unit->getStatus() == STATUS_WALKING || unit->getStatus() == STATUS_FLYING))
  	{
@@ -11910,7 +11921,7 @@ index 3665cd1..f7780a2 100644
  	}
  
  	result.NormalizedMovePhase = endphase == 16 ? phase : phase * 2;
-@@ -2266,7 +2748,17 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2266,7 +2757,17 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  	{
  		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
  	}
@@ -11928,7 +11939,7 @@ index 3665cd1..f7780a2 100644
  	return result;
  }
  
-@@ -2327,10 +2819,19 @@ CursorType Map::getCursorType() const
+@@ -2327,10 +2828,19 @@ CursorType Map::getCursorType() const
   * Puts a projectile sprite on the map.
   * @param projectile Projectile to place.
   */
@@ -11949,7 +11960,7 @@ index 3665cd1..f7780a2 100644
  	{
  		_launch = true;
  	}
-@@ -2506,9 +3007,10 @@ void Map::refreshSelectorPosition()
+@@ -2506,9 +3016,10 @@ void Map::refreshSelectorPosition()
  void Map::setHeight(int height)
  {
  	Surface::setHeight(height);
@@ -11963,7 +11974,7 @@ index 3665cd1..f7780a2 100644
  }
  
  /**
-@@ -2519,7 +3021,7 @@ void Map::setWidth(int width)
+@@ -2519,7 +3030,7 @@ void Map::setWidth(int width)
  {
  	int dX = width - getWidth();
  	Surface::setWidth(width);
@@ -13598,10 +13609,10 @@ index 0000000..a8e336b
 +}
 diff --git a/src/Battlescape/Stealth.cpp b/src/Battlescape/Stealth.cpp
 new file mode 100644
-index 0000000..b69ac07
+index 0000000..f37fe3e
 --- /dev/null
 +++ b/src/Battlescape/Stealth.cpp
-@@ -0,0 +1,504 @@
+@@ -0,0 +1,545 @@
 +/*
 + * G.I. Joe: sound and stealth. See Stealth.h and claude/SOUND_STEALTH_DESIGN_v1.md.
 + */
@@ -13883,7 +13894,7 @@ index 0000000..b69ac07
 +		setState(save, u, ALERT);
 +		bool holds = false;
 +		for (auto *g : goers) if (Position::distance2d(g->getPosition(), u->getPosition()) <= r.pairRadius) holds = true;
-+		if (!holds) { goers.push_back(u); save->setVanStop(key("st:look:", u), pack(at) + 1); }
++		if (!holds) { goers.push_back(u); if (!save->getVanStop(key("st:home:", u))) save->setVanStop(key("st:home:", u), pack(u->getPosition()) + 1); save->setVanStop(key("st:ph:", u), 0); save->setVanStop(key("st:look:", u), pack(at) + 1); }
 +		// the shout: everyone near turns to face the noise
 +		for (auto *v : *save->getUnits())
 +		{
@@ -13999,6 +14010,45 @@ index 0000000..b69ac07
 +}
 +void clearLook(SavedBattleGame *save, const BattleUnit *u) { save->setVanStop(key("st:look:", u), 0); }
 +
++bool elite(const BattleUnit *u)
++{
++	if (!u) return false;
++	const std::string &t = u->getType();
++	for (const char *k : { "CRIMSON", "STORM_SHADOW", "BARONESS", "FIREFLY", "ZARTAN" })
++		if (t.find(k) != std::string::npos) return true;
++	return false;
++}
++
++void arrived(SavedBattleGame *save, BattleUnit *u)
++{
++	const int ph = save->getVanStop(key("st:ph:", u));
++	const int home = save->getVanStop(key("st:home:", u));
++	if (ph < 2)
++	{
++		// search outward: a tile 2-3 away, then another
++		for (int tries = 0; tries < 12; ++tries)
++		{
++			const Position p = u->getPosition() + Position(RNG::generate(-3, 3), RNG::generate(-3, 3), 0);
++			Tile *t = save->getTile(p);
++			if (!t || p == u->getPosition() || t->getUnit() || Position::distance2d(p, u->getPosition()) < 2) continue;
++			save->setVanStop(key("st:ph:", u), ph + 1);
++			save->setVanStop(key("st:look:", u), pack(p) + 1);
++			return;
++		}
++	}
++	if (ph < 3 && home && unpack(home - 1) != u->getPosition())
++	{
++		save->setVanStop(key("st:ph:", u), 3);
++		save->setVanStop(key("st:look:", u), home);   // back to his post
++		return;
++	}
++	// back on his spot: normal awareness
++	save->setVanStop(key("st:look:", u), 0);
++	save->setVanStop(key("st:ph:", u), 0);
++	save->setVanStop(key("st:home:", u), 0);
++	if (!alarm(save) && state(save, u) == WARY) { setState(save, u, ON_POST); Log(LOG_INFO) << "[stealth] " << u->getType() << " " << u->getId() << " back on post, nothing found"; }
++}
++
 +int markers(const SavedBattleGame *save) { return on(save) ? save->getVanStop("st:mkn") : 0; }
 +Position marker(const SavedBattleGame *save, int i) { return unpack(save->getVanStop("st:mk" + std::to_string(i))); }
 +
@@ -14028,7 +14078,7 @@ index 0000000..b69ac07
 +			{
 +				if (v->getOriginalFaction() == FACTION_PLAYER && !v->isOut())
 +				{
-+					const bool far = Position::distance2d(v->getPosition(), u->getPosition()) > 8;
++					const bool far = Position::distance2d(v->getPosition(), u->getPosition()) > (elite(u) ? 12 : 8);   // elites: one band further
 +					const bool dark = save->getGlobalShade() >= 10;
 +					const bool low = v->isKneeled();
 +					const int seenBefore = save->getVanStop(key("st:sj:", u));
@@ -14040,6 +14090,8 @@ index 0000000..b69ac07
 +							setState(save, u, WARY);
 +							save->setVanStop(key("st:sj:", u), v->getId() + 1);
 +							save->setVanStop(key("st:st:", u), save->getTurn());
++							if (!save->getVanStop(key("st:home:", u))) save->setVanStop(key("st:home:", u), pack(u->getPosition()) + 1);
++							save->setVanStop(key("st:ph:", u), 0);
 +							save->setVanStop(key("st:look:", u), pack(v->getPosition()) + 1);   // he walks to look where he saw something
 +							Log(LOG_INFO) << "[stealth] " << u->getType() << " " << u->getId() << " SUSPICIOUS" << (far ? " far" : "") << (dark ? " dark" : "") << (low ? " crouched" : "");
 +						}
@@ -14108,10 +14160,10 @@ index 0000000..b69ac07
 +}
 diff --git a/src/Battlescape/Stealth.h b/src/Battlescape/Stealth.h
 new file mode 100644
-index 0000000..db8cdba
+index 0000000..2de244a
 --- /dev/null
 +++ b/src/Battlescape/Stealth.h
-@@ -0,0 +1,79 @@
+@@ -0,0 +1,84 @@
 +#pragma once
 +/*
 + * G.I. Joe: sound and stealth (claude/SOUND_STEALTH_DESIGN_v1.md, approved by John 14 Nov 23:35).
@@ -14184,6 +14236,11 @@ index 0000000..db8cdba
 +	/// a Cobra unit heard something: the tile it should walk to look at, or invalid
 +	Position lookTarget(const SavedBattleGame *save, const BattleUnit *u);
 +	void clearLook(SavedBattleGame *save, const BattleUnit *u);
++	/// LOST CONTACT (STEALTH_SIGHT item 4): he reached the spot he was sent to (or cannot): with nothing there he searches
++	/// two tiles nearby, then walks back to his post and, back on it, is no longer suspicious.
++	void arrived(SavedBattleGame *save, BattleUnit *u);
++	/// STEALTH SIGHT item 3: the elites (Crimson Guard, Storm Shadow, the Baroness, Firefly, Zartan) see one band further
++	bool elite(const BattleUnit *u);
 +
 +	/// markers for noises the Joes heard but cannot see (this turn): count and tile
 +	int markers(const SavedBattleGame *save);
