@@ -10972,6 +10972,49 @@ index c112ccb..3e91bbb 100644
  	bool _areaOfEffect, _lowerWeapon, _hit, _psi;
  
  	/// Calculates the effects of the explosion.
+diff --git a/src/Battlescape/InfoboxState.cpp b/src/Battlescape/InfoboxState.cpp
+index 5bcb25d..a2756ba 100644
+--- a/src/Battlescape/InfoboxState.cpp
++++ b/src/Battlescape/InfoboxState.cpp
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "InfoboxState.h"
++#include "../Engine/HiUI.h"
+ #include "../Engine/Game.h"
+ #include "../Engine/Timer.h"
+ #include "../Interface/Text.h"
+@@ -67,6 +68,22 @@ InfoboxState::InfoboxState(const std::string &msg)
+ 		_text->setVisible(false);
+ 	}
+ 
++	// G.I. Joe (John 19 Nov 10:11 "Still xcom stuff showing up"): the grey X-COM box is replaced by the graphics AI's
++	// riveted plate (Resources/UI/battle_message_panel.png, 1200x360), the words in the house's yellow-white on it.
++	if (HiUI::enabled() && !msg.empty())
++	{
++		_frame->setHeight(80); _frame->setY(_frame->getY() + 21);
++		_text->setVisible(false);
++		const std::string m = msg;
++		HiUI::nativePanel(_frame, [m](double X0, double Y0, double k)
++		{
++			const double x1 = X0 + 261 * k, y1 = Y0 + 80 * k;
++			if (!HiUI::Paint::image("Resources/UI/battle_message_panel.png", X0, Y0, x1, y1))
++				HiUI::Paint::roundRect(X0, Y0, x1, y1, 4 * k, 0x232A2D);
++			HiUI::Paint::text("stencil", m, X0 + 14 * k, Y0 + 10 * k, x1 - 14 * k, y1 - 8 * k, 13 * k, 1, 1, 0xE9E6DC);
++		});
++	}
++
+ 	_timer = new Timer(delay);
+ 	_timer->onTimer((StateHandler)&InfoboxState::close);
+ 	_timer->start();
+@@ -78,6 +95,7 @@ InfoboxState::InfoboxState(const std::string &msg)
+ InfoboxState::~InfoboxState()
+ {
+ 	delete _timer;
++	HiUI::nativePanel(_frame, nullptr);
+ }
+ 
+ /**
 diff --git a/src/Battlescape/Inventory.cpp b/src/Battlescape/Inventory.cpp
 index 406077c..62b895c 100644
 --- a/src/Battlescape/Inventory.cpp
@@ -11347,7 +11390,7 @@ index cea8e65..bd927c6 100644
  	}
  
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..133a571 100644
+index 3665cd1..89b02a5 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
 @@ -17,6 +17,10 @@
@@ -11361,15 +11404,16 @@ index 3665cd1..133a571 100644
  #include "Camera.h"
  #include "UnitSprite.h"
  #include "ItemSprite.h"
-@@ -44,6 +48,7 @@
+@@ -44,6 +48,8 @@
  #include "../Mod/RuleItem.h"
  #include "../Mod/RuleInterface.h"
  #include "../Mod/MapDataSet.h"
 +#include "BattlescapeGame.h"
++#include "../Engine/FileMap.h"
  #include "../Mod/MapData.h"
  #include "../Mod/Armor.h"
  #include "../Mod/RuleEnviroEffects.h"
-@@ -52,6 +57,10 @@
+@@ -52,6 +58,10 @@
  #include "../Interface/NumberText.h"
  #include "../Interface/Text.h"
  #include "../fmath.h"
@@ -11380,7 +11424,7 @@ index 3665cd1..133a571 100644
  
  
  /*
-@@ -133,7 +142,7 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
+@@ -133,7 +143,7 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
  	_borderBarColor = itf->border;
  
  	PathPreview previewSetting = Options::battleNewPreviewPath;
@@ -11389,7 +11433,7 @@ index 3665cd1..133a571 100644
  	if (Options::traceAI)
  	{
  		// turn everything on because we want to see the markers.
-@@ -156,9 +165,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
+@@ -156,9 +166,10 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight)
  
  	_spriteWidth = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getWidth();
  	_spriteHeight = _game->getMod()->getSurfaceSet("BLANKS.PCK")->getFrame(0)->getHeight();
@@ -11402,7 +11446,7 @@ index 3665cd1..133a571 100644
  	_message->setTextColor(_messageColor);
  	_camera = new Camera(_spriteWidth, _spriteHeight, _save->getMapSizeX(), _save->getMapSizeY(), _save->getMapSizeZ(), this, visibleMapHeight);
  	_scrollMouseTimer = new Timer(SCROLL_INTERVAL);
-@@ -272,12 +282,13 @@ void Map::init()
+@@ -272,12 +283,13 @@ void Map::init()
  					   0, 0, 0, b, f, b, 0, 0, 0,
  					   0, 0, 0, 0, b, 0, 0, 0, 0 };
  
@@ -11420,7 +11464,7 @@ index 3665cd1..133a571 100644
  	_arrow->unlock();
  
  	_projectile = 0;
-@@ -305,6 +316,262 @@ void Map::think()
+@@ -305,6 +317,272 @@ void Map::think()
  /**
   * Draws the whole map, part by part.
   */
@@ -11545,8 +11589,18 @@ index 3665cd1..133a571 100644
 +			Position sp;
 +			_camera->convertMapToScreen(t->getPosition(), &sp);
 +			sp += _camera->getMapOffset();
-+			vecGroundRing(sp, 0.48, 0xE8B923, false, 0xC0);
-+			vecGroundRing(sp, 0.30, 0xE8B923, true, 0x90);
++			// the graphics AI's search mark (Resources/UI/search_mark.png, a 2:1 ground diamond) on the tile; the rings
++			// stay as the fallback if the picture is missing
++			const double hr = Screen::hiRes(), sc = _spriteWidth / 32.0 / hr;
++			const double cx = getX() + sp.x / hr + 16 * sc, cy = getY() + sp.y / hr + 32 * sc;
++			if (!FileMap::fileExists("Resources/UI/search_mark.png"))
++			{
++				vecGroundRing(sp, 0.48, 0xE8B923, false, 0xC0);
++				vecGroundRing(sp, 0.30, 0xE8B923, true, 0x90);
++			}
++			else
++				HiUI::vectorImage(HiUI::VEC_MAP, "Resources/UI/search_mark.png", cx - 16 * sc, cy - 8 * sc, cx + 16 * sc, cy + 8 * sc, 230,
++					getY() + getHeight() / hr * 0.785);
 +		}
 +}
 +
@@ -11683,7 +11737,7 @@ index 3665cd1..133a571 100644
  void Map::draw()
  {
  	if (!_redraw)
-@@ -317,6 +584,9 @@ void Map::draw()
+@@ -317,6 +595,9 @@ void Map::draw()
  	// we use colour 15 because that actually corresponds to the colour we DO want in all variations of the xcom and tftd palettes.
  	// Note: un-hardcoded the color from 15 to ruleset value, default 15
  	_redraw = false;
@@ -11693,7 +11747,7 @@ index 3665cd1..133a571 100644
  	ShaderDrawFunc(
  		[](Uint8& dest, Uint8 color)
  		{
-@@ -325,6 +595,7 @@ void Map::draw()
+@@ -325,6 +606,7 @@ void Map::draw()
  		ShaderSurface(this),
  		ShaderScalar<Uint8>(Palette::blockOffset(0) + _bgColor)
  	);
@@ -11701,7 +11755,7 @@ index 3665cd1..133a571 100644
  
  	Tile *t;
  
-@@ -356,18 +627,84 @@ void Map::draw()
+@@ -356,18 +638,84 @@ void Map::draw()
  		}
  	}
  
@@ -11787,7 +11841,7 @@ index 3665cd1..133a571 100644
  	if (_save->getSide() == FACTION_NEUTRAL)
  	{
  		_message->setProgressBarColor(_neutralBarColor, _borderBarColor);
-@@ -466,6 +803,29 @@ int getArrowBobForFrame(int frame)
+@@ -466,6 +814,29 @@ int getArrowBobForFrame(int frame)
  	return ArrowBobOffsets[frame % 8];
  }
  
@@ -11817,7 +11871,7 @@ index 3665cd1..133a571 100644
  int getShadePulseForFrame(int shade, int frame)
  {
  	if (shade > 7) shade = 7;
-@@ -488,9 +848,9 @@ int getShadePulseForFrame(int shade, int frame)
+@@ -488,9 +859,9 @@ int getShadePulseForFrame(int shade, int frame)
   */
  void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Position currTileScreenPosition, bool topLayer, BattleUnit* movingUnit)
  {
@@ -11830,7 +11884,7 @@ index 3665cd1..133a571 100644
  
  	if (!unitTile)
  	{
-@@ -532,7 +892,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
+@@ -532,7 +903,7 @@ void Map::drawUnit(UnitSprite &unitSprite, Tile *unitTile, Tile *currTile, Posit
  
  	unitOffset.x = unitTile->getPosition().x - bu->getPosition().x;
  	unitOffset.y = unitTile->getPosition().y - bu->getPosition().y;
@@ -11839,7 +11893,7 @@ index 3665cd1..133a571 100644
  
  	bool moving = bu->getStatus() == STATUS_WALKING || bu->getStatus() == STATUS_FLYING;
  	int bonusWidth = moving ? 0 : tileFoorWidth;
-@@ -746,6 +1106,8 @@ void Map::drawTerrain(Surface *surface)
+@@ -746,6 +1117,8 @@ void Map::drawTerrain(Surface *surface)
  	int beginZ = 0, endZ = _save->getMapSizeZ() - 1;
  	Position mapPosition, screenPosition, bulletPositionScreen, movingUnitPosition;
  	int bulletLowX=16000, bulletLowY=16000, bulletLowZ=16000, bulletHighX=0, bulletHighY=0, bulletHighZ=0;
@@ -11848,7 +11902,7 @@ index 3665cd1..133a571 100644
  	int dummy;
  	BattleUnit *movingUnit = _save->getTileEngine()->getMovingUnit();
  	int tileShade, tileColor, obstacleShade;
-@@ -777,6 +1139,31 @@ void Map::drawTerrain(Surface *surface)
+@@ -777,6 +1150,31 @@ void Map::drawTerrain(Surface *surface)
  			if (_projectile->getPosition(1-i).z > bulletHighZ)
  				bulletHighZ = _projectile->getPosition(1-i).z;
  		}
@@ -11880,7 +11934,7 @@ index 3665cd1..133a571 100644
  		// divide by 16 to go from voxel to tile position
  		bulletLowX = bulletLowX / 16;
  		bulletLowY = bulletLowY / 16;
-@@ -940,15 +1327,15 @@ void Map::drawTerrain(Surface *surface)
+@@ -940,15 +1338,15 @@ void Map::drawTerrain(Surface *surface)
  					if (tmpSurface)
  					{
  						if (tile->getObstacle(O_FLOOR))
@@ -11900,7 +11954,7 @@ index 3665cd1..133a571 100644
  					{
  						if (_camera->getViewLevel() == itZ)
  						{
-@@ -1001,9 +1388,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1001,9 +1399,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_WESTWALL, tile);
  							if (tile->getObstacle(O_WESTWALL))
@@ -11912,7 +11966,7 @@ index 3665cd1..133a571 100644
  						}
  						// Draw north wall
  						tmpSurface = tile->getSprite(O_NORTHWALL);
-@@ -1011,9 +1398,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1011,9 +1409,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_NORTHWALL, tile);
  							if (tile->getObstacle(O_NORTHWALL))
@@ -11924,7 +11978,7 @@ index 3665cd1..133a571 100644
  						}
  						// Draw object
  						tmpSurface = tile->getSprite(O_OBJECT);
-@@ -1022,18 +1409,19 @@ void Map::drawTerrain(Surface *surface)
+@@ -1022,18 +1420,19 @@ void Map::drawTerrain(Surface *surface)
  							if (tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -11947,7 +12001,7 @@ index 3665cd1..133a571 100644
  								tileShade
  							);
  							if (_anyIndicator)
-@@ -1043,30 +1431,30 @@ void Map::drawTerrain(Surface *surface)
+@@ -1043,30 +1442,30 @@ void Map::drawTerrain(Surface *surface)
  								{
  									if (_burnIndicator && itemUnit->getFire() > 0)
  									{
@@ -11986,7 +12040,7 @@ index 3665cd1..133a571 100644
  											tileShade);
  									}
  								}
-@@ -1134,7 +1522,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1134,7 +1533,7 @@ void Map::drawTerrain(Surface *surface)
  
  								for (int i = begin; i != end; i += direction)
  								{
@@ -11995,7 +12049,7 @@ index 3665cd1..133a571 100644
  									if (tmpSurface)
  									{
  										Position voxelPos = _projectile->getPosition(1-i);
-@@ -1292,13 +1680,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1292,13 +1691,13 @@ void Map::drawTerrain(Surface *surface)
  							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(11);
  							if (tmpSurface)
  							{
@@ -12011,7 +12065,7 @@ index 3665cd1..133a571 100644
  						}
  					}
  
-@@ -1310,9 +1698,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1310,9 +1709,9 @@ void Map::drawTerrain(Surface *surface)
  							if (!tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -12023,7 +12077,7 @@ index 3665cd1..133a571 100644
  							}
  						}
  					}
-@@ -1335,8 +1723,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1335,8 +1734,13 @@ void Map::drawTerrain(Surface *surface)
  								else
  									frameNumber = 6; // red static crosshairs
  							}
@@ -12039,7 +12093,7 @@ index 3665cd1..133a571 100644
  
  							// UFO extender accuracy: display adjusted accuracy value on crosshair in real-time.
  							if (_cursorType >= CT_AIM && _showInfoOnCursor && (_cursorType != CT_THROW || !Options::oxceDisableInfoOnThrowCursor))
-@@ -1528,14 +1921,18 @@ void Map::drawTerrain(Surface *surface)
+@@ -1528,14 +1932,18 @@ void Map::drawTerrain(Surface *surface)
  
  								_txtAccuracy->setText(ss.str());
  								_txtAccuracy->draw();
@@ -12061,7 +12115,7 @@ index 3665cd1..133a571 100644
  						}
  						if (!_isAltPressed && _cursorType > CT_AIM && _camera->getViewLevel() == itZ)
  						{
-@@ -1551,7 +1948,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1551,7 +1959,7 @@ void Map::drawTerrain(Surface *surface)
  									_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::red - 1) - 1);
  									_txtAccuracy->setText("0%");
  									_txtAccuracy->draw();
@@ -12070,7 +12124,7 @@ index 3665cd1..133a571 100644
  								}
  							}
  							if (!ignore)
-@@ -1582,7 +1979,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1582,7 +1990,7 @@ void Map::drawTerrain(Surface *surface)
  								_numWaypid->setValue(waypid);
  								_numWaypid->setBordered(true); // OXCE, not configurable
  								_numWaypid->draw();
@@ -12079,7 +12133,7 @@ index 3665cd1..133a571 100644
  
  								waypXOff += waypid > 9 ? 10 : 6; // OXCE
  								if (waypXOff >= 26)
-@@ -1621,7 +2018,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1621,7 +2029,7 @@ void Map::drawTerrain(Surface *surface)
  						tile = _save->getTile(mapPosition);
  						if (!tile || !tile->isDiscovered(O_FLOOR) || tile->getPreview() == -1)
  							continue;
@@ -12088,7 +12142,7 @@ index 3665cd1..133a571 100644
  						if (_previewSettingArrows)
  						{
  							if (itZ > 0 && tile->hasNoFloor(_save))
-@@ -1629,14 +2026,14 @@ void Map::drawTerrain(Surface *surface)
+@@ -1629,14 +2037,14 @@ void Map::drawTerrain(Surface *surface)
  								tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(23);
  								if (tmpSurface)
  								{
@@ -12105,7 +12159,7 @@ index 3665cd1..133a571 100644
  							}
  						}
  
-@@ -1645,16 +2042,17 @@ void Map::drawTerrain(Surface *surface)
+@@ -1645,16 +2053,17 @@ void Map::drawTerrain(Surface *surface)
  							int off = tile->getTUMarker() > 9 ? 5 : 3;
  							int offE = tile->getEnergyMarker() > 9 ? 5 : 3;
  							int mcolor = _previewSettingArrows ? 0 : tile->getMarkerColor();
@@ -12126,7 +12180,7 @@ index 3665cd1..133a571 100644
  								}
  							}
  							if (_previewSettingTu)
-@@ -1664,16 +2062,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1664,16 +2073,16 @@ void Map::drawTerrain(Surface *surface)
  								if (_previewSettingEnergy)
  								{
  									// TU
@@ -12146,7 +12200,7 @@ index 3665cd1..133a571 100644
  								}
  							}
  							else if (_previewSettingEnergy)
-@@ -1681,7 +2079,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1681,7 +2090,7 @@ void Map::drawTerrain(Surface *surface)
  								// only Energy
  								_numWaypid->setValue(tile->getEnergyMarker());
  								_numWaypid->draw();
@@ -12155,7 +12209,7 @@ index 3665cd1..133a571 100644
  							}
  						}
  					}
-@@ -1702,16 +2100,108 @@ void Map::drawTerrain(Surface *surface)
+@@ -1702,16 +2111,108 @@ void Map::drawTerrain(Surface *surface)
  		Position offset = calculateWalkingOffset(selectedUnit).ScreenOffset;
  		if (selectedUnit->isBigUnit())
  		{
@@ -12268,7 +12322,7 @@ index 3665cd1..133a571 100644
  		}
  	}
  
-@@ -1732,26 +2222,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -1732,26 +2233,26 @@ void Map::drawTerrain(Surface *surface)
  				//calculateWalkingOffset(myUnit, &offset);
  				if (myUnit->isBigUnit())
  				{
@@ -12300,7 +12354,7 @@ index 3665cd1..133a571 100644
  						0);
  				}
  				else if (customMarker)
-@@ -1760,7 +2250,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1760,7 +2261,7 @@ void Map::drawTerrain(Surface *surface)
  						surface,
  						_arrow,
  						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
@@ -12309,7 +12363,7 @@ index 3665cd1..133a571 100644
  						0,
  						false,
  						_isTFTD ? ArrowColorsTFTD[myUnit->getCustomMarker() % 4] : ArrowColorsUFO[myUnit->getCustomMarker() % 4]);
-@@ -1779,11 +2269,11 @@ void Map::drawTerrain(Surface *surface)
+@@ -1779,11 +2280,11 @@ void Map::drawTerrain(Surface *surface)
  			{
  				_camera->convertMapToScreen(pos, &screenPosition);
  				screenPosition += _camera->getMapOffset();
@@ -12323,7 +12377,7 @@ index 3665cd1..133a571 100644
  					0);
  			}
  		}
-@@ -1823,17 +2313,40 @@ void Map::drawTerrain(Surface *surface)
+@@ -1823,17 +2324,40 @@ void Map::drawTerrain(Surface *surface)
  				else if (explosion->isHit())
  				{
  					tmpSurface = _game->getMod()->getSurfaceSet("HIT.PCK")->getFrame(explosion->getCurrentFrame());
@@ -12366,7 +12420,7 @@ index 3665cd1..133a571 100644
  	surface->unlock();
  }
  
-@@ -2023,7 +2536,7 @@ void Map::setSelectorPosition(int mx, int my)
+@@ -2023,7 +2547,7 @@ void Map::setSelectorPosition(int mx, int my)
  {
  	int oldX = _selectorX, oldY = _selectorY;
  
@@ -12375,7 +12429,7 @@ index 3665cd1..133a571 100644
  
  	if (oldX != _selectorX || oldY != _selectorY)
  	{
-@@ -2207,16 +2720,25 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2207,16 +2731,25 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  	}
  	else if ((unit->getStatus() == STATUS_WALKING || unit->getStatus() == STATUS_FLYING))
  	{
@@ -12405,7 +12459,7 @@ index 3665cd1..133a571 100644
  	}
  
  	result.NormalizedMovePhase = endphase == 16 ? phase : phase * 2;
-@@ -2266,7 +2788,17 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2266,7 +2799,17 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  	{
  		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
  	}
@@ -12423,7 +12477,7 @@ index 3665cd1..133a571 100644
  	return result;
  }
  
-@@ -2327,10 +2859,19 @@ CursorType Map::getCursorType() const
+@@ -2327,10 +2870,19 @@ CursorType Map::getCursorType() const
   * Puts a projectile sprite on the map.
   * @param projectile Projectile to place.
   */
@@ -12444,7 +12498,7 @@ index 3665cd1..133a571 100644
  	{
  		_launch = true;
  	}
-@@ -2506,9 +3047,10 @@ void Map::refreshSelectorPosition()
+@@ -2506,9 +3058,10 @@ void Map::refreshSelectorPosition()
  void Map::setHeight(int height)
  {
  	Surface::setHeight(height);
@@ -12458,7 +12512,7 @@ index 3665cd1..133a571 100644
  }
  
  /**
-@@ -2519,7 +3061,7 @@ void Map::setWidth(int width)
+@@ -2519,7 +3072,7 @@ void Map::setWidth(int width)
  {
  	int dX = width - getWidth();
  	Surface::setWidth(width);
@@ -26165,10 +26219,10 @@ index e609d3c..fad706b 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..c3220d4 100644
+index 6b4e79d..0ee2a88 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
-@@ -16,7 +16,19 @@
+@@ -16,7 +16,25 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -26179,6 +26233,12 @@ index 6b4e79d..c3220d4 100644
 +#include "../Battlescape/AirFight.h"
 +#include "PlayStyle.h"
  #include "GeoscapeState.h"
++#include "../Basescape/ManufactureInfoState.h"
++#include "../Basescape/ResearchInfoState.h"
++#include "AllocateTrainingState.h"
++#include "../Basescape/StoresState.h"
++#include "../Basescape/CraftSoldiersState.h"
++#include "../Basescape/CraftEquipmentState.h"
 +#include "../Basescape/SoldiersState.h"
 +#include "../Basescape/ResearchTreeState.h"
 +#include "../Basescape/PurchaseState.h"
@@ -26188,7 +26248,7 @@ index 6b4e79d..c3220d4 100644
  #include <set>
  #include <sstream>
  #include <iomanip>
-@@ -35,6 +47,7 @@
+@@ -35,6 +53,7 @@
  #include "../Engine/Collections.h"
  #include "../Engine/Unicode.h"
  #include "Globe.h"
@@ -26196,7 +26256,7 @@ index 6b4e79d..c3220d4 100644
  #include "../Interface/ComboBox.h"
  #include "../Interface/Text.h"
  #include "../Interface/TextButton.h"
-@@ -48,12 +61,14 @@
+@@ -48,12 +67,14 @@
  #include "../Mod/RuleCraft.h"
  #include "../Savegame/Ufo.h"
  #include "../Mod/RuleUfo.h"
@@ -26211,7 +26271,7 @@ index 6b4e79d..c3220d4 100644
  #include "../Savegame/Soldier.h"
  #include "../Savegame/SoldierDiary.h"
  #include "../Menu/PauseState.h"
-@@ -69,6 +84,8 @@
+@@ -69,6 +90,8 @@
  #include "../Basescape/GlobalAlienContainmentState.h"
  #include "../Menu/CutsceneState.h"
  #include "../Menu/ErrorMessageState.h"
@@ -26220,7 +26280,7 @@ index 6b4e79d..c3220d4 100644
  #include "GraphsState.h"
  #include "FundingState.h"
  #include "ExtendedGeoscapeLinksState.h"
-@@ -80,6 +97,12 @@
+@@ -80,6 +103,12 @@
  #include "UfoLostState.h"
  #include "CraftPatrolState.h"
  #include "LowFuelState.h"
@@ -26233,7 +26293,7 @@ index 6b4e79d..c3220d4 100644
  #include "MultipleTargetsState.h"
  #include "ConfirmLandingState.h"
  #include "ItemsArrivingState.h"
-@@ -87,6 +110,7 @@
+@@ -87,6 +116,7 @@
  #include "DogfightErrorState.h"
  #include "DogfightExperienceState.h"
  #include "../Ufopaedia/Ufopaedia.h"
@@ -26241,7 +26301,7 @@ index 6b4e79d..c3220d4 100644
  #include "../Savegame/ResearchProject.h"
  #include "ResearchCompleteState.h"
  #include "../Mod/RuleResearch.h"
-@@ -103,6 +127,7 @@
+@@ -103,6 +133,7 @@
  #include "../Savegame/ItemContainer.h"
  #include "../Savegame/MissionSite.h"
  #include "../Savegame/AlienBase.h"
@@ -26249,7 +26309,7 @@ index 6b4e79d..c3220d4 100644
  #include "../Mod/RuleRegion.h"
  #include "MissionDetectedState.h"
  #include "AlienBaseState.h"
-@@ -157,41 +182,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -157,41 +188,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_bg->setX((_globe->getWidth() - _bg->getWidth()) / 2);
  	_bg->setY((_globe->getHeight() - _bg->getHeight()) / 2);
  
@@ -26433,7 +26493,7 @@ index 6b4e79d..c3220d4 100644
  
  	int slackingIndicatorOffset = _game->getMod()->getInterface("geoscape")->getElement("slackingIndicator")->custom;
  	_txtSlacking = new Text(59, 17, screenWidth - 61, screenHeight / 2 - 100 + slackingIndicatorOffset);
-@@ -207,6 +344,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -207,6 +350,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_dogfightTimer = new Timer(Options::dogfightSpeed);
  
  	_txtDebug = new Text(254, 32, 0, 0);
@@ -26441,7 +26501,7 @@ index 6b4e79d..c3220d4 100644
  	_cbxRegion = new ComboBox(this, 150, 16, 0, 36);
  	_cbxZone = new ComboBox(this, 48, 16, 154, 36);
  	_cbxArea = new ComboBox(this, 48, 16, 206, 36);
-@@ -251,6 +389,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -251,6 +395,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtMinSep, "text", "geoscape");
  	add(_txtSec, "text", "geoscape");
  	add(_txtWeekday, "text", "geoscape");
@@ -26452,7 +26512,7 @@ index 6b4e79d..c3220d4 100644
  	add(_txtDay, "text", "geoscape");
  	add(_txtMonth, "text", "geoscape");
  	add(_txtYear, "text", "geoscape");
-@@ -258,6 +400,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -258,6 +406,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtTraining, "trainingIndicator", "geoscape");
  
  	add(_txtDebug, "text", "geoscape");
@@ -26460,7 +26520,7 @@ index 6b4e79d..c3220d4 100644
  	add(_cbxRegion, "button", "geoscape");
  	add(_cbxZone, "button", "geoscape");
  	add(_cbxArea, "button", "geoscape");
-@@ -268,12 +411,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -268,12 +417,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	geobord->setX(_sidebar->getX() - geobord->getWidth() + _sidebar->getWidth());
  	geobord->setY(_sidebar->getY());
  	_sidebar->copy(geobord);
@@ -26488,7 +26548,7 @@ index 6b4e79d..c3220d4 100644
  	_btnIntercept->onMouseClick((ActionHandler)&GeoscapeState::btnInterceptClick);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnInterceptClick, Options::keyGeoIntercept);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnUfoTrackerClick, Options::keyGeoUfoTracker);
-@@ -292,7 +449,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -292,7 +455,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnBases->setGeoscapeButton(true);
  
  	_btnGraphs->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -26497,7 +26557,7 @@ index 6b4e79d..c3220d4 100644
  	_btnGraphs->onMouseClick((ActionHandler)&GeoscapeState::btnGraphsClick);
  	_btnGraphs->onKeyboardPress((ActionHandler)&GeoscapeState::btnGraphsClick, Options::keyGeoGraphs);
  	_btnGraphs->setGeoscapeButton(true);
-@@ -310,7 +467,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -310,7 +473,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnOptions->setGeoscapeButton(true);
  
  	_btnFunding->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -26506,7 +26566,7 @@ index 6b4e79d..c3220d4 100644
  	_btnFunding->onMouseClick((ActionHandler)&GeoscapeState::btnFundingClick);
  	_btnFunding->onKeyboardPress((ActionHandler)&GeoscapeState::btnFundingClick, Options::keyGeoFunding);
  	_btnFunding->setGeoscapeButton(true);
-@@ -357,6 +514,25 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -357,6 +520,25 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btn1Day->onKeyboardPress((ActionHandler)&GeoscapeState::btnTimerClick, Options::keyGeoSpeed6);
  	_btn1Day->setGeoscapeButton(true);
  
@@ -26532,7 +26592,7 @@ index 6b4e79d..c3220d4 100644
  	_sideBottom->setGeoscapeButton(true);
  	_sideTop->setGeoscapeButton(true);
  
-@@ -387,6 +563,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -387,6 +569,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -26541,7 +26601,7 @@ index 6b4e79d..c3220d4 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -403,6 +581,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -403,6 +587,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_txtMinSep->setText(":");
  
  	_txtWeekday->setAlign(ALIGN_CENTER);
@@ -26594,7 +26654,7 @@ index 6b4e79d..c3220d4 100644
  
  	_txtDay->setAlign(ALIGN_CENTER);
  
-@@ -427,6 +651,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -427,6 +657,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  		_txtSec->setX(_txtSec->getX()-10);
  	}
  
@@ -26640,7 +26700,7 @@ index 6b4e79d..c3220d4 100644
  	_gameTimer->onTimer((StateHandler)&GeoscapeState::timeAdvance);
  	_gameTimer->start();
  
-@@ -512,7 +775,9 @@ void GeoscapeState::blit()
+@@ -512,7 +781,9 @@ void GeoscapeState::blit()
  	State::blit();
  	for (auto* dfs : _dogfights)
  	{
@@ -26651,7 +26711,7 @@ index 6b4e79d..c3220d4 100644
  	}
  }
  
-@@ -705,13 +970,144 @@ void GeoscapeState::handle(Action *action)
+@@ -705,13 +976,153 @@ void GeoscapeState::handle(Action *action)
   * Updates the timer display and resets the palette
   * since it's bound to change on other screens.
   */
@@ -26778,6 +26838,15 @@ index 6b4e79d..c3220d4 100644
 +			if (o == "purchase") _game->pushState(new PurchaseState(b));
 +			else if (o == "research") _game->pushState(new ResearchTreeState(b));
 +			else if (o == "soldiers") _game->pushState(new SoldiersState(b));
++			else if (o == "sell") _game->pushState(new SellState(b, nullptr));
++			else if (o == "equip") _game->pushState(new CraftEquipmentState(b, 0));
++			else if (o == "crew") _game->pushState(new CraftSoldiersState(b, 0));
++			else if (o == "stores") _game->pushState(new StoresState(b));
++			else if (o == "training") _game->pushState(new AllocateTrainingState(b));
++			else if (o.compare(0, 4, "res:") == 0)
++				{ if (RuleResearch *rr = _game->getMod()->getResearch(o.substr(4), false)) _game->pushState(new ResearchInfoState(b, rr)); }
++			else if (o.compare(0, 4, "man:") == 0)
++				{ if (RuleManufacture *rm = _game->getMod()->getManufacture(o.substr(4), false)) _game->pushState(new ManufactureInfoState(b, rm)); }
 +			else if (o.compare(0, 5, "done:") == 0)
 +				if (const RuleResearch *rr = _game->getMod()->getResearch(o.substr(5), false))
 +					_game->pushState(new ResearchCompleteState(rr, nullptr, rr, b));
@@ -26796,7 +26865,7 @@ index 6b4e79d..c3220d4 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -751,8 +1147,28 @@ void GeoscapeState::init()
+@@ -751,8 +1162,28 @@ void GeoscapeState::init()
  		_game->getSavedGame()->addMonth();
  		_game->getSavedGame()->increaseDaysPassed();
  		determineAlienMissions();
@@ -26825,7 +26894,7 @@ index 6b4e79d..c3220d4 100644
  }
  
  /**
-@@ -835,6 +1251,10 @@ void GeoscapeState::timeDisplay()
+@@ -835,6 +1266,10 @@ void GeoscapeState::timeDisplay()
  	std::ostringstream ss5;
  	ss5 << _game->getSavedGame()->getTime()->getYear();
  	_txtYear->setText(ss5.str());
@@ -26836,7 +26905,7 @@ index 6b4e79d..c3220d4 100644
  }
  
  /**
-@@ -847,6 +1267,179 @@ void GeoscapeState::timeDisplay()
+@@ -847,6 +1282,179 @@ void GeoscapeState::timeDisplay()
   * on 1 Day speed) or until an event occurs, since updating
   * the screen on each step would become cumbersomely slow.
   */
@@ -27016,7 +27085,7 @@ index 6b4e79d..c3220d4 100644
  void GeoscapeState::timeAdvance()
  {
  	int timeSpan = 0;
-@@ -878,11 +1471,13 @@ void GeoscapeState::timeAdvance()
+@@ -878,11 +1486,13 @@ void GeoscapeState::timeAdvance()
  	}
  	else if (_timeSpeed == _btn30Mins)
  	{
@@ -27032,7 +27101,7 @@ index 6b4e79d..c3220d4 100644
  	}
  	else if (_timeSpeed == _btn1Day)
  	{
-@@ -1047,6 +1642,7 @@ void GeoscapeState::time5Seconds()
+@@ -1047,6 +1657,7 @@ void GeoscapeState::time5Seconds()
  					continue;
  				}
  
@@ -27040,7 +27109,7 @@ index 6b4e79d..c3220d4 100644
  				size_t count = _game->getSavedGame()->getMissionSites()->size();
  				AlienMission *mission = ufo->getMission();
  				bool detected = ufo->getDetected();
-@@ -1139,6 +1735,9 @@ void GeoscapeState::time5Seconds()
+@@ -1139,6 +1750,9 @@ void GeoscapeState::time5Seconds()
  		}
  	}
  
@@ -27050,7 +27119,7 @@ index 6b4e79d..c3220d4 100644
  	// Handle craft logic
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -1233,6 +1832,13 @@ void GeoscapeState::time5Seconds()
+@@ -1233,6 +1847,13 @@ void GeoscapeState::time5Seconds()
  			if (!ufoIsAttacking)
  			{
  				bool returnedToBase = xcraft->think();
@@ -27064,7 +27133,7 @@ index 6b4e79d..c3220d4 100644
  				if (returnedToBase)
  				{
  					_game->getSavedGame()->stopHuntingXcomCraft(xcraft); // hiding in the base is good enough, obviously
-@@ -1276,6 +1882,14 @@ void GeoscapeState::time5Seconds()
+@@ -1276,6 +1897,14 @@ void GeoscapeState::time5Seconds()
  							continue;
  						}
  						// Can we actually fight it
@@ -27079,7 +27148,7 @@ index 6b4e79d..c3220d4 100644
  						if (!xcraft->isInDogfight() && u->getSpeed() <= xcraft->getCraftStats().speedMax)
  						{
  							if (u->isHunterKiller())
-@@ -1422,7 +2036,9 @@ void GeoscapeState::time5Seconds()
+@@ -1422,7 +2051,9 @@ void GeoscapeState::time5Seconds()
  				{
  					if (b->isDiscovered())
  					{
@@ -27090,7 +27159,7 @@ index 6b4e79d..c3220d4 100644
  						{
  							int texture, shade;
  							_globe->getPolygonTextureAndShade(b->getLongitude(), b->getLatitude(), &texture, &shade);
-@@ -1454,6 +2070,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +2085,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -27126,7 +27195,7 @@ index 6b4e79d..c3220d4 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +2209,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +2224,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -27157,7 +27226,7 @@ index 6b4e79d..c3220d4 100644
  							}
  						}
  					}
-@@ -1752,7 +2413,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2428,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -27166,7 +27235,7 @@ index 6b4e79d..c3220d4 100644
  								}
  								else
  								{
-@@ -1858,6 +2519,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2534,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -27187,7 +27256,7 @@ index 6b4e79d..c3220d4 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2559,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2574,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -27200,7 +27269,7 @@ index 6b4e79d..c3220d4 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2104,6 +2785,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2104,6 +2800,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		detected = maskBitOr(detected, craft->detect(ufo, save, alreadyTracked));
  	}
  
@@ -27208,7 +27277,7 @@ index 6b4e79d..c3220d4 100644
  	if (!alreadyTracked)
  	{
  		if (maskTest(detected, DETECTION_RADAR))
-@@ -2126,8 +2808,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2126,8 +2823,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		{
  			ufo->setHyperDetected(true);
  		}
@@ -27229,7 +27298,7 @@ index 6b4e79d..c3220d4 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2838,184 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2853,184 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -27414,7 +27483,7 @@ index 6b4e79d..c3220d4 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +3062,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +3077,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -27504,7 +27573,7 @@ index 6b4e79d..c3220d4 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +3307,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +3322,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -27513,7 +27582,7 @@ index 6b4e79d..c3220d4 100644
  			}
  			else
  			{
-@@ -2389,12 +3343,336 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3358,336 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
@@ -27850,7 +27919,7 @@ index 6b4e79d..c3220d4 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3722,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3737,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -27873,7 +27942,7 @@ index 6b4e79d..c3220d4 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2776,6 +4063,7 @@ void GeoscapeState::time1Day()
+@@ -2776,6 +4078,7 @@ void GeoscapeState::time1Day()
  					{
  						chanceToDetect = 50 - (distance * 50 / facility->getRules()->getSightRange()); // dynamic 0-50% based on relative distance
  					}
@@ -27881,7 +27950,7 @@ index 6b4e79d..c3220d4 100644
  					if (RNG::percent(chanceToDetect))
  					{
  						alienBase->setDiscovered(true);
-@@ -2861,7 +4149,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +4164,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -27910,7 +27979,7 @@ index 6b4e79d..c3220d4 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2894,7 +4203,9 @@ void GeoscapeState::time1Month()
+@@ -2894,7 +4218,9 @@ void GeoscapeState::time1Month()
  	{
  		for (auto* ab : *_game->getSavedGame()->getAlienBases())
  		{
@@ -27921,7 +27990,7 @@ index 6b4e79d..c3220d4 100644
  			{
  				ab->setDiscovered(true);
  				popup(new AlienBaseState(ab, this));
-@@ -2960,6 +4271,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +4286,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -27952,7 +28021,7 @@ index 6b4e79d..c3220d4 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4457,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4472,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -27962,7 +28031,7 @@ index 6b4e79d..c3220d4 100644
  }
  
  /**
-@@ -3265,6 +4601,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4616,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -27978,7 +28047,7 @@ index 6b4e79d..c3220d4 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4687,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4702,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -28031,7 +28100,7 @@ index 6b4e79d..c3220d4 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4755,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4770,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -28283,7 +28352,7 @@ index 6b4e79d..c3220d4 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +6283,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +6298,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
