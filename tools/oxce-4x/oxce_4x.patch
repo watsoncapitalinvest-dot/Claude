@@ -5592,10 +5592,10 @@ index 0000000..542761d
 +}
 diff --git a/src/Battlescape/BattleSim.cpp b/src/Battlescape/BattleSim.cpp
 new file mode 100644
-index 0000000..2bac7f6
+index 0000000..2823ce6
 --- /dev/null
 +++ b/src/Battlescape/BattleSim.cpp
-@@ -0,0 +1,797 @@
+@@ -0,0 +1,806 @@
 +/*
 + * G.I. Joe BATTLE SIMULATOR - see BattleSim.h.
 + */
@@ -6357,6 +6357,15 @@ index 0000000..2bac7f6
 +			bs->btnEndTurnClick(nullptr);   // asks first: the OK below answers it
 +			return;
 +		}
++		// RIG (OXCE_BATTLESIM_HIDE=<turns>): the Joes keep still and end their turn for that many turns, so the guards stay
++		// unaware and the quiet-time stealth (jobs, shift changes, searching) can be watched
++		if (const char *h = getenv("OXCE_BATTLESIM_HIDE"))
++			if (sb->getTurn() <= atoi(h) && sb->getSide() == 0 && !bg->isBusy())
++			{
++				static int endedTurn = -1;
++				if (endedTurn != sb->getTurn()) { endedTurn = sb->getTurn(); note("hiding: the Joes end turn " + std::to_string(sb->getTurn())); bs->btnEndTurnClick(nullptr); }
++				return;
++			}
 +		if (!limitHit && sb->getTurn() > maxTurns() && sb->getSide() == 0 && !bg->isBusy())
 +		{
 +			limitHit = true; note("turn limit: the Joes pull out");
@@ -7105,10 +7114,10 @@ index 7af613c..53dbe26 100644
  	void resetAllEnemiesNeutralized() { _allEnemiesNeutralized = false; }
  };
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..6debf6f 100644
+index 1951ba7..98120b9 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
-@@ -16,10 +16,16 @@
+@@ -16,10 +16,18 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -7119,13 +7128,15 @@ index 1951ba7..6debf6f 100644
  #include <assert.h>
  #include <sstream>
  #include "BattlescapeGenerator.h"
++#include "../Savegame/Region.h"
++#include "../Mod/RuleRegion.h"
 +#include "Testbed.h"
 +#include "../Geoscape/AirRaid.h"
 +#include "../Basescape/PitPlace.h"
  #include "TileEngine.h"
  #include "Inventory.h"
  #include "AIModule.h"
-@@ -96,6 +102,207 @@ BattlescapeGenerator::~BattlescapeGenerator()
+@@ -96,6 +104,207 @@ BattlescapeGenerator::~BattlescapeGenerator()
  /**
   * Sets up all our various arrays and whatnot according to the size of the map.
   */
@@ -7333,7 +7344,7 @@ index 1951ba7..6debf6f 100644
  void BattlescapeGenerator::init(bool resetTerrain)
  {
  	_blocks.clear();
-@@ -236,6 +443,15 @@ void BattlescapeGenerator::setMissionSite(MissionSite *mission)
+@@ -236,6 +445,15 @@ void BattlescapeGenerator::setMissionSite(MissionSite *mission)
   */
  void BattlescapeGenerator::nextStage()
  {
@@ -7349,7 +7360,7 @@ index 1951ba7..6debf6f 100644
  	// check if the unit is available in the next stage
  	auto isUnitStillActive = [](const BattleUnit* u)
  	{
-@@ -540,6 +756,10 @@ void BattlescapeGenerator::nextStage()
+@@ -540,6 +758,10 @@ void BattlescapeGenerator::nextStage()
  	_save->setChronoTrigger(ruleDeploy->getChronoTrigger());
  	_save->setCheatTurn(ruleDeploy->getCheatTurn());
  	ruleDeploy->getDimensions(&_mapsize_x, &_mapsize_y, &_mapsize_z);
@@ -7360,7 +7371,7 @@ index 1951ba7..6debf6f 100644
  	size_t pick = RNG::generate(0, ruleDeploy->getTerrains().size() -1);
  	_terrain = _game->getMod()->getTerrain(ruleDeploy->getTerrains().at(pick), true);
  	setDepth(ruleDeploy, true);
-@@ -618,6 +838,7 @@ void BattlescapeGenerator::nextStage()
+@@ -618,6 +840,7 @@ void BattlescapeGenerator::nextStage()
  	}
  
  	generateMap(script, ruleDeploy->getCustomUfoName(), nullptr);
@@ -7368,7 +7379,7 @@ index 1951ba7..6debf6f 100644
  
  	setupObjectives(ruleDeploy);
  
-@@ -739,7 +960,36 @@ void BattlescapeGenerator::nextStage()
+@@ -739,7 +962,36 @@ void BattlescapeGenerator::nextStage()
  
  	size_t unitCount = _save->getUnits()->size();
  
@@ -7406,7 +7417,7 @@ index 1951ba7..6debf6f 100644
  
  	if (unitCount == _save->getUnits()->size())
  	{
-@@ -767,12 +1017,55 @@ void BattlescapeGenerator::nextStage()
+@@ -767,12 +1019,55 @@ void BattlescapeGenerator::nextStage()
   */
  void BattlescapeGenerator::run()
  {
@@ -7462,7 +7473,7 @@ index 1951ba7..6debf6f 100644
  
  	_save->setTurnLimit(ruleDeploy->getTurnLimit());
  	_save->setChronoTrigger(ruleDeploy->getChronoTrigger());
-@@ -829,9 +1122,9 @@ void BattlescapeGenerator::run()
+@@ -829,9 +1124,9 @@ void BattlescapeGenerator::run()
  		if (_game->getSavedGame()->getMonthsPassed() != -1)
  		{
  			month =
@@ -7474,7 +7485,7 @@ index 1951ba7..6debf6f 100644
  		}
  		else
  		{
-@@ -863,7 +1156,7 @@ void BattlescapeGenerator::run()
+@@ -863,7 +1158,7 @@ void BattlescapeGenerator::run()
  	if (isPreview && _craftRules)
  	{
  		// resize the map if needed
@@ -7483,7 +7494,7 @@ index 1951ba7..6debf6f 100644
  		{
  			if (dims->getSizeX() > _mapsize_x)
  			{
-@@ -883,7 +1176,29 @@ void BattlescapeGenerator::run()
+@@ -883,7 +1178,29 @@ void BattlescapeGenerator::run()
  	}
  	_save->setStartingCondition(startingCondition);
  
@@ -7513,7 +7524,7 @@ index 1951ba7..6debf6f 100644
  
  	if (isPreview && ruleDeploy->isHidden())
  	{
-@@ -897,13 +1212,13 @@ void BattlescapeGenerator::run()
+@@ -897,13 +1214,13 @@ void BattlescapeGenerator::run()
  	{
  		enviro = _game->getMod()->getEnviroEffects(_terrain->getEnviroEffects());
  	}
@@ -7529,7 +7540,7 @@ index 1951ba7..6debf6f 100644
  	{
  		deployCivilians(markCiviliansAsVIP, civilianSpawnNodeRank, ruleDeploy->getCivilians());
  		for (auto& pair : ruleDeploy->getCiviliansByType())
-@@ -914,18 +1229,18 @@ void BattlescapeGenerator::run()
+@@ -914,18 +1231,18 @@ void BattlescapeGenerator::run()
  
  	size_t unitCount = _save->getUnits()->size();
  
@@ -7551,7 +7562,7 @@ index 1951ba7..6debf6f 100644
  	{
  		deployCivilians(markCiviliansAsVIP, civilianSpawnNodeRank, ruleDeploy->getCivilians());
  		for (auto& pair : ruleDeploy->getCiviliansByType())
-@@ -959,6 +1274,212 @@ void BattlescapeGenerator::run()
+@@ -959,6 +1276,212 @@ void BattlescapeGenerator::run()
  	{
  		explodeOtherJunk();
  	}
@@ -7764,7 +7775,7 @@ index 1951ba7..6debf6f 100644
  }
  
  /**
-@@ -966,6 +1487,36 @@ void BattlescapeGenerator::run()
+@@ -966,6 +1489,36 @@ void BattlescapeGenerator::run()
   */
  void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondition, const RuleEnviroEffects* enviro)
  {
@@ -7801,7 +7812,7 @@ index 1951ba7..6debf6f 100644
  	bool isPreview = _save->isPreview();
  
  	_save->applyEnviroEffects(enviro);
-@@ -1345,6 +1896,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
+@@ -1345,6 +1898,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
  
  	// auto-equip soldiers (only soldiers without layout) and clean up moved items
  	autoEquip(*_save->getUnits(), _game->getMod(), &tempItemList, ground, _worldShade, _allowAutoLoadout, false);
@@ -7809,7 +7820,7 @@ index 1951ba7..6debf6f 100644
  }
  
  void BattlescapeGenerator::autoEquip(std::vector<BattleUnit*> units, Mod *mod, std::vector<BattleItem*> *craftInv,
-@@ -1433,7 +1985,17 @@ BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
+@@ -1433,7 +1987,17 @@ BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
  	{
  		if (!_save->isPreview())
  		{
@@ -7828,7 +7839,7 @@ index 1951ba7..6debf6f 100644
  			if (v->getRules()->getVehicleClipAmmo())
  			{
  				BattleItem *ammoItem = _save->createItemForUnit(v->getRules()->getVehicleClipAmmo(), unit);
-@@ -1448,6 +2010,40 @@ BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
+@@ -1448,6 +2012,40 @@ BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
  	return unit;
  }
  
@@ -7869,7 +7880,7 @@ index 1951ba7..6debf6f 100644
  /**
   * Adds a soldier to the game and places him on a free spawnpoint.
   * Spawnpoints are either tiles in case of an XCom craft that landed.
-@@ -1483,6 +2079,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1483,6 +2081,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  			setCustomCraftInventoryTile();
  
  			Node* node = _save->getSpawnNode(NR_XCOM, unit);
@@ -7902,7 +7913,7 @@ index 1951ba7..6debf6f 100644
  			if (node)
  			{
  				_save->setUnitPosition(unit, node->getPosition());
-@@ -1495,6 +2117,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1495,6 +2119,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  				_save->initUnit(unit);
  				return unit;
  			}
@@ -7930,7 +7941,7 @@ index 1951ba7..6debf6f 100644
  			else if (_save->getMissionType() != "STR_BASE_DEFENSE")
  			{
  				if (placeUnitNearFriend(unit))
-@@ -1669,6 +2312,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +2314,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -8020,7 +8031,7 @@ index 1951ba7..6debf6f 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +2422,68 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +2424,78 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -8045,6 +8056,16 @@ index 1951ba7..6debf6f 100644
 +		{
 +			garrison = _game->getSavedGame()->cobraGarrison(
 +				_game->getMod(), where->getLongitude(), where->getLatitude(), cobraSite);
++			// STEALTH SIGHT item 14: the region's Cobra readiness rides with the battle (Stealth::begin reads it), and the
++			// region itself, so the debrief can raise it if this one goes loud
++			if (Region *rg = _game->getSavedGame()->locateRegionQuiet(where->getLongitude(), where->getLatitude()))
++			{
++				auto &net = _game->getSavedGame()->getCobraNet();
++				auto it = net.find("ready:" + rg->getRules()->getType());
++				_save->setVanStop("st:ready", it == net.end() ? 0 : it->second);
++				_save->setVanStop("st:regionSet", 1);
++				_save->setRegionForStealth(rg->getRules()->getType());
++			}
 +		}
 +	}
 +
@@ -8089,7 +8110,7 @@ index 1951ba7..6debf6f 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2507,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2519,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -8106,7 +8127,7 @@ index 1951ba7..6debf6f 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2536,45 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2548,45 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -8154,7 +8175,7 @@ index 1951ba7..6debf6f 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -1824,7 +2656,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
+@@ -1824,7 +2668,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  		unit->getAIModule()->setStartNode(node);
  		unit->setRankInt(alienRank);
  		int dir = _save->getTileEngine()->faceWindow(node->getPosition());
@@ -8163,7 +8184,7 @@ index 1951ba7..6debf6f 100644
  		if (Position::distance2d(node->getPosition(), craft) <= 20 && RNG::percent(aliensFacingCraftOdds))
  			dir = unit->directionTo(craft);
  		if (dir != -1)
-@@ -1843,7 +2675,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
+@@ -1843,7 +2687,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  		{
  			unit->setRankInt(alienRank);
  			int dir = _save->getTileEngine()->faceWindow(unit->getPosition());
@@ -8172,7 +8193,7 @@ index 1951ba7..6debf6f 100644
  			if (Position::distance2d(unit->getPosition(), craft) <= 20 && RNG::percent(aliensFacingCraftOdds))
  				dir = unit->directionTo(craft);
  			if (dir != -1)
-@@ -2081,17 +2913,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,17 +2925,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -8203,7 +8224,7 @@ index 1951ba7..6debf6f 100644
  
  	mapblock->setSizeZ(sizez);
  
-@@ -2141,11 +2981,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2993,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -8217,7 +8238,7 @@ index 1951ba7..6debf6f 100644
  			if (terrainObjectID>0)
  			{
  				int mapDataSetID = mapDataSetOffset;
-@@ -2817,10 +3657,11 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2817,10 +3669,11 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  	// determine globe terrain from globe texture
  	_globeTerrain = _terrain;
@@ -8231,7 +8252,7 @@ index 1951ba7..6debf6f 100644
  		if (tmpTerrain)
  		{
  			_globeTerrain = tmpTerrain;
-@@ -2830,7 +3671,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2830,7 +3683,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  	// this mission type is "hard-coded" in terms of map layout
  	uint64_t seed = RNG::getSeed();
  	_baseTerrain = _terrain;
@@ -8242,7 +8263,7 @@ index 1951ba7..6debf6f 100644
  	{
  		if (_mod->getBaseDefenseMapFromLocation() == 1)
  		{
-@@ -3010,25 +3853,34 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3010,25 +3865,34 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  					break;
  				case MSC_ADDCRAFT:
@@ -8286,7 +8307,7 @@ index 1951ba7..6debf6f 100644
  								+ ") could not be placed on the map. You may try turning on 'save scumming' to work around this issue.");
  						}
  						if (craftPlaced)
-@@ -3062,12 +3914,12 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3062,12 +3926,12 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  								}
  							}
  
@@ -8301,7 +8322,7 @@ index 1951ba7..6debf6f 100644
  							success = true;
  						}
  					}
-@@ -3302,13 +4154,13 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3302,13 +4166,13 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  	if (craftMap)
  	{
@@ -8318,7 +8339,7 @@ index 1951ba7..6debf6f 100644
  		loadRMP(craftMap, _craftPos.x * 10, _craftPos.y * 10, _craftZ, Node::CRAFTSEGMENT);
  		for (int i = 0; i < craftMap->getSizeX() / 10; ++i)
  		{
-@@ -3365,6 +4217,7 @@ void BattlescapeGenerator::generateBaseMap()
+@@ -3365,6 +4229,7 @@ void BattlescapeGenerator::generateBaseMap()
  	// add modules based on the base's layout
  	for (const auto* fac : *_base->getFacilities())
  	{
@@ -8326,7 +8347,7 @@ index 1951ba7..6debf6f 100644
  		if (fac->isBuiltOrHadPreviousFacility())
  		{
  			int num = 0;
-@@ -4268,10 +5121,38 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
+@@ -4268,10 +5133,38 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
   * @param craftPos the position of the craft is stored here.
   * @return if the craft was placed or not.
   */
@@ -9787,7 +9808,7 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..b32ad8c 100644
+index 0631f32..6b047c8 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
 @@ -20,7 +20,11 @@
@@ -9833,7 +9854,26 @@ index 0631f32..b32ad8c 100644
  			statsY += 8;
  		}
  		if (ds->item == "STR_CIVILIANS_SAVED")
-@@ -987,6 +1000,17 @@ void DebriefingState::addStat(const std::string &name, int quantity, int score)
+@@ -511,6 +524,18 @@ void DebriefingState::init()
+ 	ss3 << total;
+ 	_lstTotal->addRow(2, tr("STR_TOTAL_UC").c_str(), ss3.str().c_str());
+ 
++	// STEALTH SIGHT item 14: a mission that started quiet and went loud puts the region's Cobra on edge a step (max 3)
++	if (SavedBattleGame *bt = _game->getSavedGame()->getSavedBattle())
++		if (bt->getVanStop("st:quiet") && bt->getVanStop("st:alarm") && !bt->getRegionForStealth().empty() && !bt->getVanStop("st:readyDone"))
++		{
++			bt->setVanStop("st:readyDone", 1);
++			auto &net = _game->getSavedGame()->getCobraNet();
++			int &lv = net["ready:" + bt->getRegionForStealth()];
++			lv = std::min(3, lv + 1);
++			net["readyDay:" + bt->getRegionForStealth()] = _game->getSavedGame()->getDaysPassed();
++			Log(LOG_INFO) << "[stealth] the alarm went up: Cobra readiness in " << bt->getRegionForStealth() << " now " << lv;
++			_game->getSavedGame()->addLeadNews("STR_COBRA_READINESS_UP|" + std::string(tr(bt->getRegionForStealth())) + " (" + std::to_string(lv) + "/3)");
++		}
+ 	// add the points to our activity score
+ 	if (_region)
+ 	{
+@@ -987,6 +1012,17 @@ void DebriefingState::addStat(const std::string &name, int quantity, int score)
   * Also calculates the soldiers experience, and possible promotions.
   * If aborted, only the things on the exit area are recovered.
   */
@@ -9851,7 +9891,7 @@ index 0631f32..b32ad8c 100644
  void DebriefingState::prepareDebriefing()
  {
  	for (auto& itemType : _game->getMod()->getItemsList())
-@@ -1026,8 +1050,62 @@ void DebriefingState::prepareDebriefing()
+@@ -1026,8 +1062,62 @@ void DebriefingState::prepareDebriefing()
  		}
  	}
  
@@ -9914,7 +9954,7 @@ index 0631f32..b32ad8c 100644
  	Craft *craft = 0;
  	Base *base = 0;
  	std::string target;
-@@ -1039,10 +1117,23 @@ void DebriefingState::prepareDebriefing()
+@@ -1039,10 +1129,23 @@ void DebriefingState::prepareDebriefing()
  	int playersMIA = 0;
  
  	_stats.push_back(new DebriefingStat("STR_ALIENS_KILLED", false));
@@ -9938,7 +9978,7 @@ index 0631f32..b32ad8c 100644
  
  	std::string missionCompleteText, missionFailedText;
  	std::string objectiveCompleteText, objectiveFailedText;
-@@ -1186,7 +1277,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1186,7 +1289,7 @@ void DebriefingState::prepareDebriefing()
  					break;
  				}
  			}
@@ -9947,7 +9987,7 @@ index 0631f32..b32ad8c 100644
  			{
  				_destroyBase = true;
  			}
-@@ -1198,7 +1289,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1198,7 +1301,7 @@ void DebriefingState::prepareDebriefing()
  			for (auto* fac : *base->getFacilities())
  			{
  				// this facility was demolished
@@ -9956,7 +9996,7 @@ index 0631f32..b32ad8c 100644
  				{
  					toBeDamaged.push_back(fac);
  				}
-@@ -1230,6 +1321,11 @@ void DebriefingState::prepareDebriefing()
+@@ -1230,6 +1333,11 @@ void DebriefingState::prepareDebriefing()
  				ms->setUfo(nullptr);
  			}
  			_missionStatistics->alienRace = ms->getAlienRace();
@@ -9968,7 +10008,7 @@ index 0631f32..b32ad8c 100644
  			delete ms;
  			save->getMissionSites()->erase(msIt);
  			break;
-@@ -1296,6 +1392,25 @@ void DebriefingState::prepareDebriefing()
+@@ -1296,6 +1404,25 @@ void DebriefingState::prepareDebriefing()
  			deadSoldiers++;
  		}
  	}
@@ -9994,7 +10034,7 @@ index 0631f32..b32ad8c 100644
  	// if all our men are unconscious, the aliens get to have their way with them.
  	if (playersUnconscious + playersMIA == playersSurvived)
  	{
-@@ -1304,7 +1419,11 @@ void DebriefingState::prepareDebriefing()
+@@ -1304,7 +1431,11 @@ void DebriefingState::prepareDebriefing()
  		{
  			if (bu->getOriginalFaction() == FACTION_PLAYER && bu->getStatus() != STATUS_DEAD)
  			{
@@ -10007,7 +10047,7 @@ index 0631f32..b32ad8c 100644
  				{
  					bu->instaKill();
  				}
-@@ -1395,6 +1514,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1395,6 +1526,7 @@ void DebriefingState::prepareDebriefing()
  		AlienBase* ab = (*abIt);
  		if (ab->isInBattlescape())
  		{
@@ -10015,7 +10055,7 @@ index 0631f32..b32ad8c 100644
  			_txtRecovery->setText(tr("STR_ALIEN_BASE_RECOVERY"));
  			bool destroyAlienBase = true;
  
-@@ -1417,6 +1537,13 @@ void DebriefingState::prepareDebriefing()
+@@ -1417,6 +1549,13 @@ void DebriefingState::prepareDebriefing()
  				{
  					addStat(objectiveCompleteText, 1, objectiveCompleteScore);
  				}
@@ -10029,7 +10069,7 @@ index 0631f32..b32ad8c 100644
  				save->clearLinksForAlienBase(ab, _game->getMod());
  				delete ab;
  				save->getAlienBases()->erase(abIt);
-@@ -1424,6 +1551,12 @@ void DebriefingState::prepareDebriefing()
+@@ -1424,6 +1563,12 @@ void DebriefingState::prepareDebriefing()
  			}
  			else
  			{
@@ -10042,7 +10082,7 @@ index 0631f32..b32ad8c 100644
  				ab->setInBattlescape(false);
  				break;
  			}
-@@ -1476,6 +1609,65 @@ void DebriefingState::prepareDebriefing()
+@@ -1476,6 +1621,65 @@ void DebriefingState::prepareDebriefing()
  	{
  		ignoreLivingCivilians = ruleDeploy->getIgnoreLivingCivilians();
  	}
@@ -10108,7 +10148,7 @@ index 0631f32..b32ad8c 100644
  	for (auto* bunit : *battle->getUnits())
  	{
  		UnitStatus status = bunit->getStatus();
-@@ -1483,6 +1675,31 @@ void DebriefingState::prepareDebriefing()
+@@ -1483,6 +1687,31 @@ void DebriefingState::prepareDebriefing()
  		UnitFaction oldFaction = bunit->getOriginalFaction();
  		Soldier *soldier = save->getSoldier(bunit->getId());
  
@@ -10140,7 +10180,7 @@ index 0631f32..b32ad8c 100644
  		if (!bunit->getTile())
  		{
  			Position pos = bunit->getPosition();
-@@ -1654,8 +1871,9 @@ void DebriefingState::prepareDebriefing()
+@@ -1654,8 +1883,9 @@ void DebriefingState::prepareDebriefing()
  					}
  				}
  			}
@@ -10151,7 +10191,7 @@ index 0631f32..b32ad8c 100644
  				&& playersSurvived > 0 && faction != FACTION_PLAYER && (!bunit->isOut() || bunit->isIgnored())
  				&& (bunit->isSurrendering() || battle->getChronoTrigger() == FORCE_WIN_SURRENDER))
  			{
-@@ -1795,7 +2013,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1795,7 +2025,7 @@ void DebriefingState::prepareDebriefing()
  		}
  		else if (target == "STR_ALIEN_BASE")
  		{
@@ -10160,7 +10200,7 @@ index 0631f32..b32ad8c 100644
  		}
  		else
  		{
-@@ -1877,8 +2095,25 @@ void DebriefingState::prepareDebriefing()
+@@ -1877,8 +2107,25 @@ void DebriefingState::prepareDebriefing()
  					}
  				}
  				// recover items from the floor
@@ -10187,7 +10227,7 @@ index 0631f32..b32ad8c 100644
  		}
  		else
  		{
-@@ -1895,6 +2130,10 @@ void DebriefingState::prepareDebriefing()
+@@ -1895,6 +2142,10 @@ void DebriefingState::prepareDebriefing()
  		{
  			_txtTitle->setText(tr("STR_CRAFT_IS_LOST"));
  		}
@@ -10198,7 +10238,7 @@ index 0631f32..b32ad8c 100644
  		else if (target == "STR_BASE")
  		{
  			_txtTitle->setText(tr("STR_BASE_IS_LOST"));
-@@ -1906,7 +2145,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1906,7 +2157,7 @@ void DebriefingState::prepareDebriefing()
  		}
  		else if (target == "STR_ALIEN_BASE")
  		{
@@ -10207,7 +10247,7 @@ index 0631f32..b32ad8c 100644
  		}
  		else
  		{
-@@ -2130,10 +2369,211 @@ void DebriefingState::prepareDebriefing()
+@@ -2130,10 +2381,211 @@ void DebriefingState::prepareDebriefing()
  		}
  	}
  
@@ -10419,7 +10459,7 @@ index 0631f32..b32ad8c 100644
  		// Unlock research defined in alien deployment, if the mission was a success
  		const RuleResearch *research = _game->getMod()->getResearch(ruleDeploy->getUnlockedResearchOnSuccess());
  		save->handleResearchUnlockedByMissions(research, _game->getMod(), ruleDeploy);
-@@ -2299,6 +2739,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
+@@ -2299,6 +2751,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
   */
  void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base, int quantity, bool considerTransformations)
  {
@@ -10431,7 +10471,7 @@ index 0631f32..b32ad8c 100644
  	if (!considerTransformations)
  	{
  		base->getStorageItems()->addItem(ruleItem, quantity);
-@@ -2707,6 +3152,20 @@ void DebriefingState::recoverAlien(BattleUnit *from, Base *base, Craft* craft)
+@@ -2707,6 +3164,20 @@ void DebriefingState::recoverAlien(BattleUnit *from, Base *base, Craft* craft)
  	}
  
  	bool killPrisonersAutomatically = base->getAvailableContainment(ruleLiveAlienItem->getPrisonType()) == 0;
@@ -13630,10 +13670,10 @@ index 0000000..a8e336b
 +}
 diff --git a/src/Battlescape/Stealth.cpp b/src/Battlescape/Stealth.cpp
 new file mode 100644
-index 0000000..7c020b5
+index 0000000..095a608
 --- /dev/null
 +++ b/src/Battlescape/Stealth.cpp
-@@ -0,0 +1,589 @@
+@@ -0,0 +1,591 @@
 +/*
 + * G.I. Joe: sound and stealth. See Stealth.h and claude/SOUND_STEALTH_DESIGN_v1.md.
 + */
@@ -13847,7 +13887,9 @@ index 0000000..7c020b5
 +	}
 +	save->setVanStop("st:quiet", 1);
 +	const bool night = save->getGlobalShade() >= 9;
-+	const int sleepPct = night ? r.sleepNight : r.sleepDay;
++	// regional readiness (item 14): each step a third fewer sleepers; from step 2 the men on post start suspicious
++	const int ready = std::min(3, save->getVanStop("st:ready"));
++	const int sleepPct = (night ? r.sleepNight : r.sleepDay) * (3 - ready) / 3;
 +	BattleUnit *radio = nullptr;
 +	int sleepers = 0, n = 0;
 +	for (auto *u : *save->getUnits())
@@ -13855,7 +13897,7 @@ index 0000000..7c020b5
 +		if (!cobra(u) || u->isOut()) continue;
 +		++n;
 +		const bool zz = RNG::percent(sleepPct);
-+		setState(save, u, zz ? ASLEEP : ON_POST);
++		setState(save, u, zz ? ASLEEP : (ready >= 2 ? WARY : ON_POST));
 +		if (zz) ++sleepers;
 +		{
 +			const int roll = RNG::generate(0, 99);
@@ -23554,10 +23596,10 @@ index 0000000..e57d835
 +}
 diff --git a/src/Geoscape/CobraNetwork.cpp b/src/Geoscape/CobraNetwork.cpp
 new file mode 100644
-index 0000000..6ed6319
+index 0000000..cf8402a
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.cpp
-@@ -0,0 +1,920 @@
+@@ -0,0 +1,933 @@
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5. See CobraNetwork.h.
 + *
@@ -24050,6 +24092,19 @@ index 0000000..6ed6319
 +		Log(LOG_INFO) << "[network] Act 1 closes: the Drome " << (stands ? "still stands" : "has fallen");
 +	}
 +
++	// STEALTH SIGHT item 14: readiness eases back a step every 30 quiet days (no loud mission in the region)
++	for (auto &kv : net)
++	{
++		if (kv.first.compare(0, 6, "ready:") != 0 || kv.second <= 0) continue;
++		const std::string rg = kv.first.substr(6);
++		int &since = net["readyDay:" + rg];
++		if (day - since >= 30)
++		{
++			--kv.second; since = day;
++			save->addLeadNews("STR_COBRA_READINESS_DOWN|" + std::string(game->getLanguage()->getString(rg)) + " (" + std::to_string(kv.second) + "/3)");
++			Log(LOG_INFO) << "[network] Cobra readiness in " << rg << " eases to " << kv.second;
++		}
++	}
 +	// 5a: Cobra Commander's broadcast on its own day
 +	if (!net.count("broadcastDone") && day >= net["broadcastDay"])
 +	{
@@ -37128,7 +37183,7 @@ index 240b22a..99e6894 100644
  	// prepare a list of tiles on fire/with smoke in them (smoke acts as fire intensity)
  	for (int i = 0; i < _mapsize_x * _mapsize_y * _mapsize_z; ++i)
 diff --git a/src/Savegame/SavedBattleGame.h b/src/Savegame/SavedBattleGame.h
-index 6c121c7..8fcf33f 100644
+index 6c121c7..d16e464 100644
 --- a/src/Savegame/SavedBattleGame.h
 +++ b/src/Savegame/SavedBattleGame.h
 @@ -75,6 +75,8 @@ private:
@@ -37185,8 +37240,26 @@ index 6c121c7..8fcf33f 100644
  	/// Gets the map blocks used for reinforcements.
  	std::vector< std::vector<int> > &getReinforcementsBlocks() { return _reinforcementsBlocks; }
  
+@@ -551,6 +574,9 @@ public:
+ 	void calculateModuleMap();
+ 	/// a shortcut to the geoscape save.
+ 	SavedGame *getGeoscapeSave() const;
++	/// G.I. Joe stealth: the region this battle is in (for regional readiness)
++	void setRegionForStealth(const std::string &r) { _stealthRegion = r; }
++	const std::string &getRegionForStealth() const { return _stealthRegion; }
+ 	/// get the depth of the battlescape game.
+ 	int getDepth() const;
+ 	/// set the depth of the battlescape game.
+@@ -668,6 +694,7 @@ public:
+ 	const HitLog *getHitLog() const;
+ 	/// Reset all the unit hit state flags.
+ 	void resetUnitHitStates();
++	std::string _stealthRegion;
+ };
+ 
+ }
 diff --git a/src/Savegame/SavedGame.cpp b/src/Savegame/SavedGame.cpp
-index 9ca9637..195307e 100644
+index 9ca9637..1a0a113 100644
 --- a/src/Savegame/SavedGame.cpp
 +++ b/src/Savegame/SavedGame.cpp
 @@ -21,11 +21,13 @@
@@ -37739,7 +37812,7 @@ index 9ca9637..195307e 100644
  }
  
  void SavedGame::addResearchDiaryEntry(ResearchDiaryEntry* entry)
-@@ -2579,132 +3013,1283 @@ void SavedGame::setWarned(bool warned)
+@@ -2579,128 +3013,1286 @@ void SavedGame::setWarned(bool warned)
   * @param lat The latitude.
   * @return Pointer to the region, or 0.
   */
@@ -37872,7 +37945,7 @@ index 9ca9637..195307e 100644
 +		if (rule->getGarrisonBonus() == 0 && rule->getGarrisonRankUnlock() < 0)
 +		{
 +			continue;
-+		}
+ 		}
 +		// A camp that only hardens Cobra's own compounds does nothing to a crash site.
 +		if (!cobraSite && !rule->getGarrisonAllMissions())
 +		{
@@ -37880,14 +37953,34 @@ index 9ca9637..195307e 100644
 +		}
 +		out.bonus += rule->getGarrisonBonus();
 +		campHere = true;
-+	}
+ 	}
+-	if (found)
 +	// Act 1 layer, answers (i): a Cobra site's garrison grows with the difficulty chosen at New Game (+0 / +1 / +2)
 +	if (cobraSite && mod->getCobraNetworkRules().on && !mod->getCobraNetworkRules().diffGarrison.empty())
-+	{
+ 	{
+-		return found;
 +		const auto &g = mod->getCobraNetworkRules().diffGarrison;
 +		out.bonus += g[std::min((size_t)std::max(0, (int)_difficulty), g.size() - 1)];
-+	}
-+
+ 	}
+-	//Log(LOG_DEBUG) << "Failed to find a country at location [" << lon << ", " << lat << "].";
+-	return 0;
+-}
++	// STEALTH SIGHT item 14: a region that has had loud missions keeps more men on duty (+1 a readiness step)
++	if (cobraSite)
++		if (Region *rg = locateRegionQuiet(lon, lat))
++		{
++			auto it = _cobraNet.find("ready:" + rg->getRules()->getType());
++			if (it != _cobraNet.end()) out.bonus += std::min(3, it->second);
++		}
+ 
+-/**
+- * Find the country containing this target.
+- * @param target The target to locate.
+- * @return Pointer to the country, or 0.
+- */
+-Country* SavedGame::locateCountry(const Target& target) const
+-{
+-	return locateCountry(target.getLongitude(), target.getLatitude());
 +	// And can it pay for them? John: "if the troops portion of that fails then cobra should have
 +	// less troops available. Even if they have the best guns." So the two resources fail in two
 +	// different ways on the same map and a player can tell which one he has cut: a region out of
@@ -37911,17 +38004,15 @@ index 9ca9637..195307e 100644
 +		if (underFlat || underKeep)
 +		{
 +			out.headcountPenalty = mod->getCobraStarvedHeadcount();
- 		}
- 	}
--	if (found)
++		}
++	}
 +
 +	// A camp lifts the cap entirely, so out.rankUnlock stays -1. With no camp standing, the cap
 +	// a camp WOULD have lifted is the one that applies. Tracked with its own flag rather than
 +	// inferred from the bonus, because a camp priced at garrisonBonus 0 is still a camp and
 +	// would otherwise have left its own region capped.
 +	if (!campHere)
- 	{
--		return found;
++	{
 +		for (const auto &siteType : mod->getCobraSitesList())
 +		{
 +			const RuleCobraSite *rule = mod->getCobraSite(siteType);
@@ -37932,19 +38023,7 @@ index 9ca9637..195307e 100644
 +				break;
 +			}
 +		}
- 	}
--	//Log(LOG_DEBUG) << "Failed to find a country at location [" << lon << ", " << lat << "].";
--	return 0;
--}
--
--/**
-- * Find the country containing this target.
-- * @param target The target to locate.
-- * @return Pointer to the country, or 0.
-- */
--Country* SavedGame::locateCountry(const Target& target) const
--{
--	return locateCountry(target.getLongitude(), target.getLatitude());
++	}
 +	return out;
  }
  
@@ -38049,10 +38128,6 @@ index 9ca9637..195307e 100644
 -			for (const auto& namepoolPair : filteredNames)
 -			{
 -				if (tmp <= namepoolPair.first->getGlobalWeight())
--				{
--					return namepoolPair.second;
--				}
--				tmp -= namepoolPair.first->getGlobalWeight();
 +	// Cobra can always establish its first income. Without this it starts with nothing, so
 +	// nothing is affordable, so it never earns and the economy never begins - the same deadlock
 +	// the ruleset used to dodge by leaving the earner ungated, now stated once where the
@@ -39114,14 +39189,10 @@ index 9ca9637..195307e 100644
 +			for (const auto& namepoolPair : filteredNames)
 +			{
 +				if (tmp <= namepoolPair.first->getGlobalWeight())
-+				{
-+					return namepoolPair.second;
-+				}
-+				tmp -= namepoolPair.first->getGlobalWeight();
- 			}
- 		}
- 	}
-@@ -2995,6 +4580,175 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
+ 				{
+ 					return namepoolPair.second;
+ 				}
+@@ -2995,6 +4587,175 @@ bool SavedGame::isUfoOnIgnoreList(int ufoId)
   * @param soldier Pointer to dead soldier.
   * @param cause Pointer to cause of death, NULL if missing in action.
   */
@@ -39297,7 +39368,7 @@ index 9ca9637..195307e 100644
  std::vector<Soldier*>::iterator SavedGame::killSoldier(bool resetArmor, Soldier *soldier, BattleUnitKills *cause)
  {
  	if (resetArmor)
-@@ -3328,6 +5082,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
+@@ -3328,6 +5089,16 @@ bool SavedGame::handleResearchUnlockedByMissions(const RuleResearch* research, c
  		}
  	}
  
