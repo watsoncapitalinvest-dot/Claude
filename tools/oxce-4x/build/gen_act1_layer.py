@@ -63,9 +63,9 @@ out['cobraNetwork'] = {
     'diffGarrison': [0, 0, 1, 2, 2],                                    # extra men at every Cobra site
     'crimePayout': 150, 'strikePayout': 80, 'cellGrowsAt': 300,
     'scannerHours': 12, 'tipoffDays': [2, 3], 'tipoffResearch': ['STR_INFORMANT_NETWORK', 'STR_SIGNALS_INTELLIGENCE_CENTER'],
-    'frontCrimes': ['STR_ARMORED_CAR_AMBUSH', 'STR_COBRA_CONVOY', 'STR_COBRA_VAN_STOP'],
+    'frontCrimes': ['STR_COBRA_ARMORED_CAR', 'STR_COBRA_CONVOY', 'STR_COBRA_VAN_STOP'],   # John 18 Nov 17:39: Cobra's own robbery, not the cartel's
     'cellCrimes': ['STR_COBRA_BANK_JOB', 'STR_COBRA_VAN_STOP'],
-    'crimeAlerts': {'STR_ARMORED_CAR_AMBUSH': 'ARMORED_CAR', 'STR_COBRA_CONVOY': 'CONVOY', 'STR_COBRA_VAN_STOP': 'VAN_STOP',
+    'crimeAlerts': {'STR_ARMORED_CAR_AMBUSH': 'ARMORED_CAR', 'STR_COBRA_ARMORED_CAR': 'ARMORED_CAR', 'STR_COBRA_CONVOY': 'CONVOY', 'STR_COBRA_VAN_STOP': 'VAN_STOP',
                     'STR_COBRA_BANK_JOB': 'BANK_ROBBERY'},
     'strikeTargets': ['POLICE,TOWN', 'GAS_STATION,GAS', 'SHOPPING_STREET,TOWN', 'BANK,BANK', 'SUBSTATION,TOWN'],
     'broadcastDays': [20, 60], 'factoryDays': [50, 60], 'factoryWarnDays': 7,
@@ -93,7 +93,7 @@ bank = {'type': 'STR_COBRA_BANK_JOB', 'data': [troopers(5, 7), dict(officer(), c
         'briefing': {'palette': 0, 'title': 'STR_MAP_BANK_ROBBERY', 'desc': 'STR_BRIEFING_COBRA_BANK_JOB'}}
 deps.append(bank)
 # the globe's INTERCEPT box for a crime reads as the scanner call it is (the stock title said 'COBRA CONVOY STOPPED' before anyone went)
-for t in ('STR_ARMORED_CAR_AMBUSH', 'STR_COBRA_CONVOY', 'STR_COBRA_VAN_STOP'):
+for t in ('STR_ARMORED_CAR_AMBUSH', 'STR_COBRA_ARMORED_CAR', 'STR_COBRA_CONVOY', 'STR_COBRA_VAN_STOP'):
     deps.append({'type': t, 'cobraPayoutFunds': 150, 'despawnPenalty': 20, 'alert': 'STR_ALERT_POLICE_SCANNER_TITLE'})
 MAPS = {'GAS': (['VSTOWN'], 'VSTOWN_SCRIPT', 50, 40, 3, 8), 'BANK': (['BANK1'], 'BANK1_SCRIPT', 50, 40, 3, 8),
         'TOWN': (['CITYDAY'], 'CITY_SCRIPT', 100, 100, 4, 16)}
