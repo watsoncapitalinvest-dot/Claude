@@ -13444,14 +13444,16 @@ index 0000000..a8e336b
 +}
 diff --git a/src/Battlescape/Stealth.cpp b/src/Battlescape/Stealth.cpp
 new file mode 100644
-index 0000000..c987cc6
+index 0000000..b69ac07
 --- /dev/null
 +++ b/src/Battlescape/Stealth.cpp
-@@ -0,0 +1,454 @@
+@@ -0,0 +1,504 @@
 +/*
 + * G.I. Joe: sound and stealth. See Stealth.h and claude/SOUND_STEALTH_DESIGN_v1.md.
 + */
 +#include "Stealth.h"
++#include <cstdlib>
++#include <vector>
 +#include <map>
 +#include <algorithm>
 +#include <cmath>
@@ -13502,27 +13504,75 @@ index 0000000..c987cc6
 +		if (asleep(save, u)) h *= 0.5f;
 +		return h;
 +	}
-+	/// the radius left after walls (halve each) and floors (quarter each) between two tiles
++	/// is this tile under a roof (the tile above has a floor)?
++	bool indoors(SavedBattleGame *save, Position p)
++	{
++		Tile *up = save->getTile(Position(p.x, p.y, p.z + 1));
++		return up && !up->hasNoFloor(save);
++	}
++	/// the radius left between two tiles. SOUND ROUND WALLS (STEALTH_SIGHT_v1 item 10, replaces "walls halve it"): sound
++	/// travels through open tiles only, so a fully enclosed space is silent on the other side; when walls stand on the
++	/// straight line but an opening (door, window, hole) lets it round, it carries about half as far; crossing between inside
++	/// and outside takes a further quarter off; each floor between takes three quarters off as before. A longer way round
++	/// shortens it in proportion. OXCE_STOCK_WALLS=1 = the old halving per wall.
 +	float carried(SavedBattleGame *save, Position from, Position to, float r)
 +	{
 +		const int dz = std::abs(from.z - to.z);
 +		for (int i = 0; i < dz && r >= 1; ++i) r /= 4.0f;
-+		// walk the line on the listener's level
-+		int x0 = from.x, y0 = from.y;
-+		const int x1 = to.x, y1 = to.y, z = to.z;
-+		const int dx = std::abs(x1 - x0), sx = x0 < x1 ? 1 : -1, dy = -std::abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
-+		int err = dx + dy, walls = 0;
-+		Tile *prev = save->getTile(Position(x0, y0, z));
-+		while ((x0 != x1 || y0 != y1) && r >= 1 && walls < 6)
++		if (r < 1) return 0;
++		const int z = to.z;
++		// the straight line: are there walls on it?
++		int walls = 0;
 +		{
-+			const int e2 = 2 * err;
-+			if (e2 >= dy) { err += dy; x0 += sx; }
-+			if (e2 <= dx) { err += dx; y0 += sy; }
-+			Tile *t = save->getTile(Position(x0, y0, z));
-+			if (prev && t && save->getTileEngine()->horizontalBlockage(prev, t, DT_NONE, true) > 0) { r /= 2.0f; ++walls; }
-+			prev = t;
++			int x0 = from.x, y0 = from.y;
++			const int x1 = to.x, y1 = to.y;
++			const int dx = std::abs(x1 - x0), sx = x0 < x1 ? 1 : -1, dy = -std::abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
++			int err = dx + dy;
++			Tile *prev = save->getTile(Position(x0, y0, z));
++			while ((x0 != x1 || y0 != y1) && walls < 6)
++			{
++				const int e2 = 2 * err;
++				if (e2 >= dy) { err += dy; x0 += sx; }
++				if (e2 <= dx) { err += dx; y0 += sy; }
++				Tile *t = save->getTile(Position(x0, y0, z));
++				if (prev && t && save->getTileEngine()->horizontalBlockage(prev, t, DT_NONE, true) > 0) ++walls;
++				prev = t;
++			}
 +		}
-+		return r;
++		if (getenv("OXCE_STOCK_WALLS")) { for (int i = 0; i < walls; ++i) r /= 2.0f; return r; }
++		const int straight = std::max(std::abs(to.x - from.x), std::abs(to.y - from.y));
++		if (walls == 0 && straight <= (int)r)
++			return indoors(save, from) != indoors(save, to) ? r * 0.75f : r;
++		// the way round: a flood through open tiles on the listener's level, out to the radius
++		const int R = (int)std::ceil(r);
++		std::map<std::pair<int, int>, int> dist;
++		std::vector<Position> q;
++		const Position start(from.x, from.y, z);
++		if (!save->getTile(start)) return 0;
++		dist[{start.x, start.y}] = 0; q.push_back(start);
++		int found = -1;
++		for (size_t h = 0; h < q.size() && found < 0; ++h)
++		{
++			const Position c = q[h];
++			const int d = dist[{c.x, c.y}];
++			if (d >= R) continue;
++			Tile *ct = save->getTile(c);
++			static const int ox[4] = { 1, -1, 0, 0 }, oy[4] = { 0, 0, 1, -1 };
++			for (int k = 0; k < 4; ++k)
++			{
++				const Position n(c.x + ox[k], c.y + oy[k], z);
++				Tile *nt = save->getTile(n);
++				if (!nt || dist.count({n.x, n.y})) continue;
++				if (save->getTileEngine()->horizontalBlockage(ct, nt, DT_NONE, true) > 0) continue;
++				dist[{n.x, n.y}] = d + 1;
++				if (n.x == to.x && n.y == to.y) { found = d + 1; break; }
++				q.push_back(n);
++			}
++		}
++		if (found < 0) return 0;   // enclosed: no way round within earshot
++		float out = r * (walls > 0 ? 0.5f : 1.0f) * std::min(1.0f, (float)std::max(1, straight) / (float)found);
++		if (indoors(save, from) != indoors(save, to)) out *= 0.75f;
++		return out;
 +	}
 +	int noiseOf(const SavedBattleGame *save, const char *k, int def)
 +	{
