@@ -8413,7 +8413,7 @@ index a0bc8b3..b073f80 100644
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..f74852b 100644
+index 7cd4941..80bd70b 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -1,3 +1,5 @@
@@ -8496,7 +8496,7 @@ index 7cd4941..f74852b 100644
  	_btnKneel->onMouseIn((ActionHandler)&BattlescapeState::txtTooltipIn);
  	_btnKneel->onMouseOut((ActionHandler)&BattlescapeState::txtTooltipOut);
  	_btnKneel->allowToggleInversion();
-@@ -724,6 +738,776 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +738,802 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
@@ -8810,6 +8810,10 @@ index 7cd4941..f74852b 100644
 +			{
 +				{ HudEntry e; e.kind = HE_CUFF; e.label = "CUFF"; e.usable = cuffTarget(u) != nullptr; e.why = "NOBODY TO CUFF"; lists[7].push_back(e); }
 +				{ HudEntry e; e.kind = HE_RELOAD; e.label = "RELOAD"; lists[7].push_back(e); }
++				// STEALTH SIGHT items 8 and 12 (John 21:13 "def put in all the new stealth stuff")
++				{ HudEntry e; e.kind = HE_DISTRACT; e.label = "THROW DISTRACTION"; e.usable = u->getTimeUnits() >= 15; e.why = "15 TU"; lists[7].push_back(e); }
++				{ HudEntry e; e.kind = HE_CONCEAL; e.label = "CONCEAL BODY"; e.usable = concealTarget(u) != nullptr && u->getTimeUnits() >= u->getBaseStats()->tu / 2;
++				  e.why = concealTarget(u) ? "HALF A TURN'S TU" : "NO BODY BESIDE HIM"; lists[7].push_back(e); }
 +				for (BattleItem *h : { u->getRightHandWeapon(), u->getLeftHandWeapon() })
 +				{
 +					if (!h) continue;
@@ -9162,6 +9166,28 @@ index 7cd4941..f74852b 100644
 +		case HE_ABORT: refreshJoeHud(); btnAbortClick(action); return;
 +		case HE_CUFF: refreshJoeHud(); hudSigClick(action); return;
 +		case HE_RELOAD: refreshJoeHud(); btnReloadClick(action); return;
++		case HE_CONCEAL:
++		{
++			// the body leaves the map (no dragging); what he carried stays on the tile unless picked up first
++			BattleItem *corpse = concealTarget(u);
++			if (!corpse || !u->spendTimeUnits(u->getBaseStats()->tu / 2)) { warning("STR_NOT_ENOUGH_TIME_UNITS"); break; }
++			BattleUnit *dead = corpse->getUnit();
++			_save->removeItem(corpse);
++			if (dead) dead->setTile(nullptr, _save);
++			Log(LOG_INFO) << "[stealth] body concealed by " << u->getType();
++			_battleGame->getMap()->draw();
++			break;
++		}
++		case HE_DISTRACT:
++		{
++			// thrown at the tile the map cursor last pointed to, 12 tiles at most; only TU; the noise is where it lands
++			Position at; _battleGame->getMap()->getSelectorPosition(&at);
++			if (!_save->getTile(at) || Position::distance2d(at, u->getPosition()) > 12) { warning("STR_OUT_OF_RANGE"); break; }
++			if (!u->spendTimeUnits(15)) { warning("STR_NOT_ENOUGH_TIME_UNITS"); break; }
++			Stealth::noise(_save, at, 10, u, false);
++			Log(LOG_INFO) << "[stealth] distraction thrown to " << at.x << "," << at.y << "," << at.z;
++			break;
++		}
 +		case HE_SPECIAL: // BUILD-2 specials
 +		{
 +			_battleGame->cancelCurrentAction();
@@ -9273,7 +9299,7 @@ index 7cd4941..f74852b 100644
  }
  
  
-@@ -732,9 +1516,11 @@ BattlescapeState::BattlescapeState() :
+@@ -732,9 +1542,11 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -9285,7 +9311,7 @@ index 7cd4941..f74852b 100644
  
  	resetPalettes();
  }
-@@ -789,6 +1575,38 @@ void BattlescapeState::init()
+@@ -789,6 +1601,38 @@ void BattlescapeState::init()
  	_map->draw();
  	_battleGame->init();
  	updateSoldierInfo();
@@ -9324,7 +9350,7 @@ index 7cd4941..f74852b 100644
  
  	switch (_save->getTUReserved())
  	{
-@@ -807,6 +1625,17 @@ void BattlescapeState::init()
+@@ -807,6 +1651,17 @@ void BattlescapeState::init()
  	}
  	if (_firstInit)
  	{
@@ -9342,7 +9368,7 @@ index 7cd4941..f74852b 100644
  		// Set music
  		if (Options::oxcePlayBriefingMusicDuringEquipment)
  		{
-@@ -858,7 +1687,29 @@ void BattlescapeState::init()
+@@ -858,7 +1713,29 @@ void BattlescapeState::init()
   */
  void BattlescapeState::think()
  {
@@ -9372,7 +9398,7 @@ index 7cd4941..f74852b 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1215,6 +2066,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1215,6 +2092,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -9393,7 +9419,7 @@ index 7cd4941..f74852b 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -1466,6 +2331,12 @@ void BattlescapeState::btnEndTurnClick(Action *)
+@@ -1466,6 +2357,12 @@ void BattlescapeState::btnEndTurnClick(Action *)
  		_map->getCamera()->stopKeyScrolling();
  
  		_txtTooltip->setText("");
@@ -9406,7 +9432,7 @@ index 7cd4941..f74852b 100644
  		_battleGame->requestEndTurn(false);
  	}
  }
-@@ -2172,7 +3043,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +3069,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -9415,7 +9441,7 @@ index 7cd4941..f74852b 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +3263,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +3289,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -9423,7 +9449,7 @@ index 7cd4941..f74852b 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -3577,13 +4449,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3577,13 +4475,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  	{
  		nextStage = ruleDeploy->getNextStage();
  	}
@@ -9453,7 +9479,7 @@ index 7cd4941..f74852b 100644
  		bgen.nextStage();
  		_game->popState();
  		_game->pushState(new BriefingState(0, 0));
-@@ -3621,6 +4508,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4534,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -9466,7 +9492,7 @@ index 7cd4941..f74852b 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +4945,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +4971,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -9477,11 +9503,31 @@ index 7cd4941..f74852b 100644
  	_map->getCamera()->resize();
  	_map->getCamera()->jumpXY(dX/2, dY/2);
  
+@@ -4123,4 +5042,19 @@ bool BattlescapeState::isBusy() const
+ 	return (_map->getCursorType() == CT_NONE || _battleGame->isBusy());
+ }
+ 
++/// a dead body lying on this man's tile or the next one (STEALTH SIGHT item 12: conceal body)
++BattleItem *BattlescapeState::concealTarget(BattleUnit *u)
++{
++	if (!u || !u->getTile()) return nullptr;
++	for (int dx = -1; dx <= 1; ++dx)
++		for (int dy = -1; dy <= 1; ++dy)
++		{
++			Tile *t = _save->getTile(u->getPosition() + Position(dx, dy, 0));
++			if (!t) continue;
++			for (auto *it : *t->getInventory())
++				if (it->getUnit() && it->getUnit()->getStatus() == STATUS_DEAD) return it;
++		}
++	return nullptr;
++}
++
+ }
 diff --git a/src/Battlescape/BattlescapeState.h b/src/Battlescape/BattlescapeState.h
-index 746f3a4..573ad8e 100644
+index 746f3a4..ad4e835 100644
 --- a/src/Battlescape/BattlescapeState.h
 +++ b/src/Battlescape/BattlescapeState.h
-@@ -58,6 +58,49 @@ private:
+@@ -58,6 +58,50 @@ private:
  	InteractiveSurface *_btnStats;
  	BattlescapeButton *_btnReserveNone, *_btnReserveSnap, *_btnReserveAimed, *_btnReserveAuto, *_btnReserveKneel, *_btnZeroTUs;
  	InteractiveSurface *_btnLeftHandItem, *_btnRightHandItem;
@@ -9501,7 +9547,7 @@ index 746f3a4..573ad8e 100644
 +	// HUD v2 (BATTLE_HUD_SPEC_v2, John 16 Nov 22:3x "Rest of HUD v2"): eight CHOICE buttons - GUNS, MISSILES, ARTY,
 +	// DROPS, SP. ROUNDS, SPECIALS, ORDERS, ACTIONS - whose choices line up in the armed-weapon spot, 6 a page.
 +	struct HudEntry { std::string label; int kind = 0; BattleItem *item = nullptr; bool usable = true; std::string why; std::string id; /* BUILD-2 specials */ };
-+	enum { HE_ARM = 0, HE_ABORT, HE_CUFF, HE_RELOAD, HE_PRIME, HE_MEDIKIT, HE_SPECIAL /* BUILD-2 specials */ };
++	enum { HE_ARM = 0, HE_ABORT, HE_CUFF, HE_RELOAD, HE_PRIME, HE_MEDIKIT, HE_SPECIAL /* BUILD-2 specials */, HE_CONCEAL, HE_DISTRACT };
 +	InteractiveSurface *_hudChoice[8] = {}, *_hudList[6] = {}, *_hudListPage = nullptr;
 +	std::vector<HudEntry> _hudEntries;
 +	int _hudOpenGroup = -1, _hudListFirst = 0;
@@ -9525,13 +9571,14 @@ index 746f3a4..573ad8e 100644
 +	void hudScrollClick(Action *action);
 +	/// G.I. Joe capture: cuff the surrendered Cobra man next to the selected Joe.
 +	void hudSigClick(Action *action);
++	BattleItem *concealTarget(BattleUnit *u);
 +	BattleUnit *cuffTarget(BattleUnit *joe) const;
 +	void hudModeClick(Action *action);
 +	void hudCardClick(Action *action);
  
  	static const int SPECIAL_BUTTONS_MAX = 3;
  	int _posSpecialActions[SPECIAL_BUTTONS_MAX];
-@@ -75,7 +118,10 @@ private:
+@@ -75,7 +119,10 @@ private:
  	std::vector<NumberText*> _numMedikitLeft, _numMedikitRight;
  	NumberText *_numTwoHandedIndicatorLeft, *_numTwoHandedIndicatorRight;
  	Uint8 _twoHandedRed, _twoHandedGreen;
@@ -9543,7 +9590,7 @@ index 746f3a4..573ad8e 100644
  	bool _manaBarVisible;
  	Timer *_animTimer, *_gameTimer;
  	SavedBattleGame *_save;
-@@ -111,6 +157,8 @@ private:
+@@ -111,6 +158,8 @@ private:
  	/// Shows the unit kneel state.
  	void toggleKneelButton(BattleUnit* unit);
  public:
