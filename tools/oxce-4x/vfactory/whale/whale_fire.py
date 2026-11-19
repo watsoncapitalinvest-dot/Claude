@@ -11,7 +11,8 @@ def proj(k, p):
 def turret_tip(cy, yaw, x=5.0, z=17.0):
     a = math.radians(yaw); px, py = -0.3, cy; dx, dy = x - px, 0
     return (px + dx * math.cos(a) - dy * math.sin(a), py + dx * math.sin(a) + dy * math.cos(a), z)
-H = {'E': 2, 'NE': 1}; out = []
+H = {'E': 2, 'NE': 1}
+DRUM = {h: (lambda im: im.crop(im.getbbox()))(Image.open(f'/tmp/drumr/drum_clean_{h}.png').convert('RGBA')) for h in H}; out = []
 for hn, k in H.items():
     L = lambda n: Image.open(f'/tmp/whpose/out/{n}_clean_{hn}.png').convert('RGBA')
     def frame(n, draw=None):
@@ -51,8 +52,8 @@ for hn, k in H.items():
         for j in range(4):
             def dr(d, ox, oy, n=n, j=j):
                 y0 = -7.6 + (n - 1) * 0.75; p = proj(k, (-17.5 - 3.0 * j, y0, 12.0 - 1.6 * j * j))
-                if j < 3:
-                    r = 15; d.rounded_rectangle((p[0] + ox - r, p[1] + oy - r * 0.75, p[0] + ox + r, p[1] + oy + r * 0.75), 8, fill=(30, 30, 32), outline=(80, 82, 80), width=2)
+                if j < 3:                                                                # the modelled SD-30 drum, rendered by the game's renderer, rolling
+                    sp = DRUM[hn].rotate(-35 * j, resample=Image.BICUBIC, expand=True); d._image.alpha_composite(sp, (int(p[0] + ox - sp.width / 2), int(p[1] + oy - sp.height / 2)))
                 else:
                     q = proj(k, (-27, y0, 0)); [d.ellipse((q[0] + ox - rr, q[1] + oy - rr / 2, q[0] + ox + rr, q[1] + oy + rr / 2), outline=(235, 245, 255), width=3) for rr in (18, 34)]
                     d.line((q[0] + ox, q[1] + oy, q[0] + ox, q[1] + oy - 55), fill=(235, 245, 255), width=10)
