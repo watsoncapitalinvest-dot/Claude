@@ -183,20 +183,21 @@ index 149e889..225926a 100644
  	BaseView(int width, int height, int x = 0, int y = 0);
  	/// Cleans up the base view.
 diff --git a/src/Basescape/BasescapeState.cpp b/src/Basescape/BasescapeState.cpp
-index 5d0467a..2e8001f 100644
+index 5d0467a..0fbd95c 100644
 --- a/src/Basescape/BasescapeState.cpp
 +++ b/src/Basescape/BasescapeState.cpp
-@@ -16,7 +16,9 @@
+@@ -16,7 +16,10 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
++#include "ResearchTreeState.h"   // John 19 Nov 00:42 "Dump those and show me the tree"
 +#include "../Geoscape/Outposts.h"
  #include "BasescapeState.h"
 +#include "../Engine/HiUI.h"
  #include "../Engine/Game.h"
  #include "../Mod/Mod.h"
  #include "../Engine/LocalizedText.h"
-@@ -26,6 +28,8 @@
+@@ -26,6 +29,8 @@
  #include "../Interface/Text.h"
  #include "../Interface/TextEdit.h"
  #include "BaseView.h"
@@ -205,7 +206,7 @@ index 5d0467a..2e8001f 100644
  #include "MiniBaseView.h"
  #include "../Savegame/SavedGame.h"
  #include "../Savegame/Base.h"
-@@ -71,8 +75,11 @@ namespace OpenXcom
+@@ -71,8 +76,11 @@ namespace OpenXcom
  BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(globe)
  {
  	// Create objects
@@ -217,7 +218,7 @@ index 5d0467a..2e8001f 100644
  	_mini = new MiniBaseView(128, 16, 192, 41);
  	_edtBase = new TextEdit(this, 127, 17, 193, 0);
  	_txtLocation = new Text(126, 9, 194, 16);
-@@ -92,7 +99,9 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+@@ -92,7 +100,9 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
  	// Set palette
  	setInterface("basescape");
  
@@ -227,7 +228,7 @@ index 5d0467a..2e8001f 100644
  	add(_mini, "miniBase", "basescape");
  	add(_txtFacility, "textTooltip", "basescape");
  	add(_edtBase, "text1", "basescape");
-@@ -112,6 +121,19 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+@@ -112,6 +122,19 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
  
  	centerAllSurfaces();
  
@@ -247,7 +248,7 @@ index 5d0467a..2e8001f 100644
  	// Set up objects
  	if (_globe)
  	{
-@@ -135,6 +157,11 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+@@ -135,6 +158,11 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
  	_view->onMouseClick((ActionHandler)&BasescapeState::viewMiddleClick, SDL_BUTTON_MIDDLE);
  	_view->onMouseOver((ActionHandler)&BasescapeState::viewMouseOver);
  	_view->onMouseOut((ActionHandler)&BasescapeState::viewMouseOut);
@@ -259,7 +260,7 @@ index 5d0467a..2e8001f 100644
  
  	_mini->setTexture(_game->getMod()->getSurfaceSet("BASEBITS.PCK"));
  	_mini->setBases(_game->getSavedGame()->getBases());
-@@ -195,6 +222,9 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+@@ -195,6 +223,9 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
   */
  BasescapeState::~BasescapeState()
  {
@@ -269,7 +270,7 @@ index 5d0467a..2e8001f 100644
  	// Clean up any temporary bases
  	bool exists = false;
  	for (const auto* xbase : *_game->getSavedGame()->getBases())
-@@ -221,6 +251,13 @@ void BasescapeState::init()
+@@ -221,6 +252,13 @@ void BasescapeState::init()
  
  	setBase(_base);
  	_view->setBase(_base);
@@ -283,7 +284,16 @@ index 5d0467a..2e8001f 100644
  	_mini->draw();
  	_edtBase->setText(_base->getName());
  
-@@ -393,10 +430,32 @@ void BasescapeState::btnGeoscapeClick(Action *)
+@@ -339,7 +377,7 @@ void BasescapeState::btnFacilitiesClick(Action *)
+  */
+ void BasescapeState::btnResearchClick(Action *)
+ {
+-	_game->pushState(new ResearchState(_base));
++	_game->pushState(new ResearchTreeState(_base));
+ }
+ 
+ /**
+@@ -393,10 +431,32 @@ void BasescapeState::btnGeoscapeClick(Action *)
   */
  void BasescapeState::viewLeftClick(Action *)
  {
@@ -318,7 +328,7 @@ index 5d0467a..2e8001f 100644
  		{
  			// Ctrl + left click on a base facility allows moving it
  			_game->pushState(new PlaceFacilityState(_base, fac->getRules(), fac));
-@@ -426,6 +485,12 @@ void BasescapeState::viewLeftClick(Action *)
+@@ -426,6 +486,12 @@ void BasescapeState::viewLeftClick(Action *)
  			}
  			int errorColor1 = _game->getMod()->getInterface("basescape")->getElement("errorMessage")->color;
  			int errorColor2 = _game->getMod()->getInterface("basescape")->getElement("errorPalette")->color;
@@ -331,6 +341,24 @@ index 5d0467a..2e8001f 100644
  			// Is facility in use?
  			if (BasePlacementErrors placementErrorCode = fac->inUse())
  			{
+@@ -494,7 +560,7 @@ void BasescapeState::viewRightClick(Action *)
+ 		{
+ 			case 1: _game->pushState(new ManageAlienContainmentState(_base, f->getRules()->getPrisonType(), OPT_GEOSCAPE)); break;
+ 			case 2: _game->pushState(new ManufactureState(_base)); break;
+-			case 3: _game->pushState(new ResearchState(_base)); break;
++			case 3: _game->pushState(new ResearchTreeState(_base)); break;
+ 			case 4: _game->pushState(new AllocateTrainingState(_base)); break;
+ 			case 5: if (Options::anytimePsiTraining) _game->pushState(new AllocatePsiTrainingState(_base)); break;
+ 			case 6: _game->pushState(new SoldiersState(_base)); break;
+@@ -545,7 +611,7 @@ void BasescapeState::viewRightClick(Action *)
+ 	}
+ 	else if (f->getRules()->getLaboratories() > 0)
+ 	{
+-		_game->pushState(new ResearchState(_base));
++		_game->pushState(new ResearchTreeState(_base));
+ 	}
+ 	else if (f->getRules()->getWorkshops() > 0)
+ 	{
 diff --git a/src/Basescape/BasescapeState.h b/src/Basescape/BasescapeState.h
 index 711b3d9..6dadbe9 100644
 --- a/src/Basescape/BasescapeState.h
@@ -671,6 +699,27 @@ index e1f9829..b77db0a 100644
  				{
  					const auto& facList = _fac->getRules()->getLeavesBehindOnSell();
  					if (facList.at(0)->getPlaceSound() != Mod::NO_SOUND)
+diff --git a/src/Basescape/GlobalResearchState.cpp b/src/Basescape/GlobalResearchState.cpp
+index 1b39dd9..c643e6e 100644
+--- a/src/Basescape/GlobalResearchState.cpp
++++ b/src/Basescape/GlobalResearchState.cpp
+@@ -16,6 +16,7 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "ResearchTreeState.h"   // John 19 Nov 00:42 "Dump those and show me the tree"
+ #include "GlobalResearchState.h"
+ #include <sstream>
+ #include "../Engine/Game.h"
+@@ -149,7 +150,7 @@ void GlobalResearchState::onSelectBase(Action *)
+ 		}
+ 
+ 		// open new window
+-		_game->pushState(new ResearchState(base));
++		_game->pushState(new ResearchTreeState(base));
+ 	}
+ }
+ 
 diff --git a/src/Basescape/ManufactureInfoState.cpp b/src/Basescape/ManufactureInfoState.cpp
 index 9c5710b..71ea832 100644
 --- a/src/Basescape/ManufactureInfoState.cpp
@@ -1910,7 +1959,7 @@ index a0cc4c1..14c0695 100644
  	/// Creates the ResearchProject state.
  	ResearchInfoState(Base *base, RuleResearch *rule);
 diff --git a/src/Basescape/ResearchState.cpp b/src/Basescape/ResearchState.cpp
-index a6004b9..76f9fd3 100644
+index a6004b9..7bf9b9d 100644
 --- a/src/Basescape/ResearchState.cpp
 +++ b/src/Basescape/ResearchState.cpp
 @@ -34,6 +34,8 @@
@@ -1955,7 +2004,17 @@ index a6004b9..76f9fd3 100644
  	_btnOk->setText(tr("STR_OK"));
  	_btnOk->onMouseClick((ActionHandler)&ResearchState::btnOkClick);
  	_btnOk->onKeyboardPress((ActionHandler)&ResearchState::btnOkClick, Options::keyCancel);
-@@ -370,4 +380,14 @@ void ResearchState::moveTopicDown(Action* action, unsigned int row, bool max)
+@@ -142,7 +152,8 @@ void ResearchState::btnOkClick(Action *)
+ void ResearchState::btnNewClick(Action *)
+ {
+ 	bool sortByCost = _game->isCtrlPressed() && _game->isAltPressed();
+-	_game->pushState(new NewResearchListState(_base, sortByCost));
++	_game->pushState(new ResearchTreeState(_base));   // the list is retired (John 19 Nov 00:42)
++	(void)sortByCost;
+ }
+ 
+ /**
+@@ -370,4 +381,14 @@ void ResearchState::moveTopicDown(Action* action, unsigned int row, bool max)
  	fillProjectList(_lstResearch->getScroll());
  }
  
@@ -1994,13 +2053,14 @@ index d41c550..d7148f6 100644
  	void btnNewClick(Action *action);
 diff --git a/src/Basescape/ResearchTreeState.cpp b/src/Basescape/ResearchTreeState.cpp
 new file mode 100644
-index 0000000..62a1ae0
+index 0000000..10c5d9f
 --- /dev/null
 +++ b/src/Basescape/ResearchTreeState.cpp
-@@ -0,0 +1,637 @@
+@@ -0,0 +1,647 @@
 +/*
 + * G.I. Joe: USA Defense. The research tree (see ResearchTreeState.h).
 + */
++#include "../Geoscape/DepartmentsState.h"
 +#include "ResearchTreeState.h"
 +#include <algorithm>
 +#include <climits>
@@ -2052,6 +2112,7 @@ index 0000000..62a1ae0
 +	_btnUp = new TextButton(18, 14, 92, 183);
 +	_btnDown = new TextButton(18, 14, 112, 183);
 +	_btnOk = new TextButton(86, 14, 232, 183);
++	_btnDepts = new TextButton(70, 14, 136, 183);   // the research screen's DEPTS, now the tree is the only way in
 +	setInterface("researchMenu");
 +	add(_window, "window", "researchMenu");
 +	add(_txtTitle, "text", "researchMenu");
@@ -2067,6 +2128,7 @@ index 0000000..62a1ae0
 +	add(_btnUp, "button", "researchMenu");
 +	add(_btnDown, "button", "researchMenu");
 +	add(_btnOk, "button", "researchMenu");
++	add(_btnDepts, "button", "researchMenu");
 +	centerAllSurfaces();
 +	setWindowBackground(_window, "researchMenu");
 +
@@ -2079,6 +2141,8 @@ index 0000000..62a1ae0
 +	_btnStart->onMouseClick((ActionHandler)&ResearchTreeState::btnStartClick);
 +	_btnOk->setText(tr("STR_OK"));
 +	_btnOk->onMouseClick((ActionHandler)&ResearchTreeState::btnOkClick);
++	_btnDepts->setText(tr("STR_DEPARTMENTS"));
++	_btnDepts->onMouseClick((ActionHandler)&ResearchTreeState::btnDeptsClick);
 +	_btnOk->onKeyboardPress((ActionHandler)&ResearchTreeState::btnOkClick, Options::keyCancel);
 +	_btnLeft->setText("<");
 +	_btnRight->setText(">");
@@ -2629,6 +2693,11 @@ index 0000000..62a1ae0
 +			if (p->getRules() == n.r) { _game->pushState(new ResearchInfoState(_base, p)); break; }
 +}
 +
++void ResearchTreeState::btnDeptsClick(Action *)
++{
++	_game->pushState(new DepartmentsState);
++}
++
 +void ResearchTreeState::btnOkClick(Action *)
 +{
 +	_game->popState();
@@ -2637,10 +2706,10 @@ index 0000000..62a1ae0
 +}
 diff --git a/src/Basescape/ResearchTreeState.h b/src/Basescape/ResearchTreeState.h
 new file mode 100644
-index 0000000..27e1078
+index 0000000..6d99b2a
 --- /dev/null
 +++ b/src/Basescape/ResearchTreeState.h
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,62 @@
 +#pragma once
 +/*
 + * G.I. Joe: USA Defense. The research TREE (claude/RESEARCH_TREE_SCREEN_SPEC.md, John 12 Nov 21:43:
@@ -2676,7 +2745,7 @@ index 0000000..27e1078
 +	Text *_txtTitle, *_txtInfo, *_txtName, *_txtBody;
 +	InteractiveSurface *_view;
 +	Surface *_lanes, *_info;
-+	TextButton *_btnStart, *_btnOk, *_btnLeft, *_btnRight, *_btnUp, *_btnDown;
++	TextButton *_btnStart, *_btnOk, *_btnDepts, *_btnLeft, *_btnRight, *_btnUp, *_btnDown;
 +	std::vector<Node> _nodes;
 +	std::vector<std::string> _laneTypes;
 +	std::vector<int> _laneTop, _laneRows; // first row and row count per lane
@@ -2697,6 +2766,7 @@ index 0000000..27e1078
 +	void viewClick(Action *action);
 +	void btnStartClick(Action *action);
 +	void btnOkClick(Action *action);
++	void btnDeptsClick(Action *action);
 +	void btnScroll(Action *action);
 +	void handleKey(Action *action);
 +};
@@ -29687,6 +29757,27 @@ index f1e9acc..618b326 100644
  		// and after they've made their decisions, calculate the difference, and add
  		// them to the appropriate lists.
  		_fundingDiff += country->getFunding().back() - country->getFunding().at(country->getFunding().size()-2);
+diff --git a/src/Geoscape/NewPossibleResearchState.cpp b/src/Geoscape/NewPossibleResearchState.cpp
+index 859a08f..4947ba5 100644
+--- a/src/Geoscape/NewPossibleResearchState.cpp
++++ b/src/Geoscape/NewPossibleResearchState.cpp
+@@ -16,6 +16,7 @@
+  * You should have received a copy of the GNU General Public License
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "../Basescape/ResearchTreeState.h"   // John 19 Nov 00:42 "Dump those and show me the tree"
+ #include <algorithm>
+ #include "NewPossibleResearchState.h"
+ #include "../Engine/Game.h"
+@@ -117,7 +118,7 @@ void NewPossibleResearchState::btnOkClick(Action *)
+ void NewPossibleResearchState::btnResearchClick(Action *)
+ {
+ 	_game->popState();
+-	_game->pushState (new ResearchState(_base));
++	_game->pushState (new ResearchTreeState(_base));
+ }
+ 
+ }
 diff --git a/src/Geoscape/Outposts.cpp b/src/Geoscape/Outposts.cpp
 new file mode 100644
 index 0000000..24f17d2
