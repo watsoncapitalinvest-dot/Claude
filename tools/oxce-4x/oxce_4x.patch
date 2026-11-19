@@ -3031,7 +3031,7 @@ index 10a96c4..755c149 100644
  	void btnCancelClick(Action *action);
  	/// Handler for pressing an Increase arrow in the list.
 diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
-index db6727f..16cb8f8 100644
+index db6727f..228c478 100644
 --- a/src/Battlescape/AIModule.cpp
 +++ b/src/Battlescape/AIModule.cpp
 @@ -16,9 +16,16 @@
@@ -3864,7 +3864,20 @@ index db6727f..16cb8f8 100644
  		_attackAction.type = BA_LAUNCH;
  		_attackAction.updateTU();
  		if (!_attackAction.haveTU())
-@@ -2976,6 +3740,30 @@ AIAttackWeight AIModule::getTargetAttackWeight(BattleUnit* target) const
+@@ -2950,8 +3714,10 @@ AIAttackWeight AIModule::getTargetAttackWeight(BattleUnit* target) const
+ 		weight = target->getAITargetWeightAsFriendly(_save->getMod());
+ 	}
+ 	else if (
+-		_intelligence < target->getTurnsSinceSpottedByFaction(_unit->getFaction()) &&
+-		(!_unit->isSniper() || !target->getTurnsLeftSpottedForSnipersByFaction(_unit->getFaction())))
++		(_unit->getFaction() == FACTION_HOSTILE && !getenv("OXCE_STOCK_CHEAT")
++			? !Stealth::knows(_save, _unit, target, _intelligence)
++			: (_intelligence < target->getTurnsSinceSpottedByFaction(_unit->getFaction()) &&
++			   (!_unit->isSniper() || !target->getTurnsLeftSpottedForSnipersByFaction(_unit->getFaction())))))
+ 	{
+ 		// ignore units that we don't "know" about...
+ 		// ... unless we are a sniper and the spotters know about them
+@@ -2976,6 +3742,30 @@ AIAttackWeight AIModule::getTargetAttackWeight(BattleUnit* target) const
  		weight = target->getAITargetWeightAsNeutral(_save->getMod());
  	}
  
@@ -3895,6 +3908,17 @@ index db6727f..16cb8f8 100644
  	weight = (AIAttackWeight)ModScript::scriptFunc2<ModScript::AiCalculateTargetWeight>(
  		_unit->getArmor(),
  		weight, weight,
+@@ -3114,7 +3904,9 @@ bool AIModule::getNodeOfBestEfficacy(BattleAction *action, int radius)
+ 						if ((_unit->getFaction() == FACTION_HOSTILE && bu->getFaction() != FACTION_HOSTILE) ||
+ 							(_unit->getFaction() == FACTION_NEUTRAL && bu->getFaction() == FACTION_HOSTILE))
+ 						{
+-							if (bu->getTurnsSinceSpottedByFaction(_unit->getFaction()) <= _intelligence)
++							if (_unit->getFaction() == FACTION_HOSTILE && !getenv("OXCE_STOCK_CHEAT")
++								? Stealth::knows(_save, _unit, bu, _intelligence)
++								: bu->getTurnsSinceSpottedByFaction(_unit->getFaction()) <= _intelligence)
+ 							{
+ 								nodePoints++;
+ 							}
 diff --git a/src/Battlescape/AIModule.h b/src/Battlescape/AIModule.h
 index ac26070..1777a06 100644
 --- a/src/Battlescape/AIModule.h
@@ -13420,14 +13444,15 @@ index 0000000..a8e336b
 +}
 diff --git a/src/Battlescape/Stealth.cpp b/src/Battlescape/Stealth.cpp
 new file mode 100644
-index 0000000..b965aad
+index 0000000..be8a0fd
 --- /dev/null
 +++ b/src/Battlescape/Stealth.cpp
-@@ -0,0 +1,405 @@
+@@ -0,0 +1,435 @@
 +/*
 + * G.I. Joe: sound and stealth. See Stealth.h and claude/SOUND_STEALTH_DESIGN_v1.md.
 + */
 +#include "Stealth.h"
++#include <map>
 +#include <algorithm>
 +#include <cmath>
 +#include "AirFight.h"
@@ -13827,14 +13852,43 @@ index 0000000..b965aad
 +	return msg;
 +}
 +
++
++namespace
++{
++	// per battle: (Cobra unit id, Joe id) -> the turn it last knew of him. Not saved with the game: a loaded battle starts
++	// with Cobra knowing nothing new (the stock per-faction counters still hold what the whole side saw).
++	std::map<const SavedBattleGame*, std::map<std::pair<int, int>, int>> knownBy;
++}
++
++void saw(SavedBattleGame *save, const BattleUnit *watcher, const BattleUnit *joe)
++{
++	if (!save || !watcher || !joe || watcher->getFaction() != FACTION_HOSTILE) return;
++	auto &k = knownBy[save];
++	const int t = save->getTurn();
++	k[{watcher->getId(), joe->getId()}] = t;
++	// the shout: comrades within 6 tiles of the one who saw him hear where he is
++	for (auto *u : *save->getUnits())
++		if (u != watcher && u->getFaction() == FACTION_HOSTILE && !u->isOut() && Position::distance2d(u->getPosition(), watcher->getPosition()) <= 6)
++			k[{u->getId(), joe->getId()}] = t;
++}
++
++bool knows(const SavedBattleGame *save, const BattleUnit *ai, const BattleUnit *joe, int turns)
++{
++	if (!save || !ai || !joe) return false;
++	if (ai->hasVisibleUnit(joe)) return true;
++	auto b = knownBy.find(save);
++	if (b == knownBy.end()) return false;
++	auto it = b->second.find({ai->getId(), joe->getId()});
++	return it != b->second.end() && save->getTurn() - it->second <= turns;
++}
 +}
 +}
 diff --git a/src/Battlescape/Stealth.h b/src/Battlescape/Stealth.h
 new file mode 100644
-index 0000000..32f6f30
+index 0000000..db8cdba
 --- /dev/null
 +++ b/src/Battlescape/Stealth.h
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,79 @@
 +#pragma once
 +/*
 + * G.I. Joe: sound and stealth (claude/SOUND_STEALTH_DESIGN_v1.md, approved by John 14 Nov 23:35).
@@ -13898,6 +13952,11 @@ index 0000000..32f6f30
 +	bool alarm(const SavedBattleGame *save);
 +	/// the battle started quiet and the alarm never went up: the quiet-mission rewards apply
 +	bool quietWin(const SavedBattleGame *save);
++	/// NO CHEATING COBRA (BRIEF_FOR_BUILD_NoCheatingCobra): each Cobra unit knows a Joe only if it saw him itself, or a comrade
++	/// within 6 tiles saw him that turn (the shout). The stock rule shares one sighting with the whole faction.
++	void saw(SavedBattleGame *save, const BattleUnit *watcher, const BattleUnit *joe);
++	/// does this Cobra unit know about this Joe (seen by it, or shouted to it, within `turns` turns)?
++	bool knows(const SavedBattleGame *save, const BattleUnit *ai, const BattleUnit *joe, int turns);
 +
 +	/// a Cobra unit heard something: the tile it should walk to look at, or invalid
 +	Position lookTarget(const SavedBattleGame *save, const BattleUnit *u);
@@ -14113,7 +14172,7 @@ index 0000000..ef5e326
 +
 +}
 diff --git a/src/Battlescape/TileEngine.cpp b/src/Battlescape/TileEngine.cpp
-index 6e68469..b1a00e8 100644
+index 6e68469..6d1a2e2 100644
 --- a/src/Battlescape/TileEngine.cpp
 +++ b/src/Battlescape/TileEngine.cpp
 @@ -16,9 +16,13 @@
@@ -14155,7 +14214,15 @@ index 6e68469..b1a00e8 100644
  
  	Position posSelf = unit->getPosition();
  	if (setupEventVisibilitySector(posSelf, eventPos, eventRadius))
-@@ -2501,6 +2514,11 @@ bool TileEngine::checkReactionFire(BattleUnit *unit, const BattleAction &origina
+@@ -1503,6 +1516,7 @@ bool TileEngine::calculateUnitsInFOV(BattleUnit* unit, const Position eventPos,
+ 							if (unit->getFaction() != bu->getFaction())
+ 							{
+ 								bu->setTurnsSinceSpottedByFaction(unit->getFaction(), 0);
++								Stealth::saw(_save, unit, bu);   // this Cobra unit (and the comrades in shouting range) know him
+ 								bu->setTurnsLeftSpottedForSnipersByFaction(
+ 									unit->getFaction(),
+ 									std::max(unit->getSpotterDuration(), bu->getTurnsLeftSpottedForSnipersByFaction(unit->getFaction()))
+@@ -2501,6 +2515,11 @@ bool TileEngine::checkReactionFire(BattleUnit *unit, const BattleAction &origina
  	{
  		return false;
  	}
@@ -14167,7 +14234,7 @@ index 6e68469..b1a00e8 100644
  
  	std::vector<ReactionScore> spotters = getSpottingUnits(unit);
  	bool result = false;
-@@ -2560,7 +2578,8 @@ std::vector<TileEngine::ReactionScore> TileEngine::getSpottingUnits(BattleUnit*
+@@ -2560,7 +2579,8 @@ std::vector<TileEngine::ReactionScore> TileEngine::getSpottingUnits(BattleUnit*
  				// not dying or not about to pass out
  				!bu->isOutThresholdExceed() &&
  				// have any chances for reacting
@@ -14177,7 +14244,7 @@ index 6e68469..b1a00e8 100644
  				// not a friend
  				bu->getFaction() != _save->getSide() &&
  				// not a civilian, or a civilian shooting at bad non-ignored guys
-@@ -2698,7 +2717,7 @@ TileEngine::ReactionScore TileEngine::determineReactionType(BattleUnit *unit, Ba
+@@ -2698,7 +2718,7 @@ TileEngine::ReactionScore TileEngine::determineReactionType(BattleUnit *unit, Ba
  		unit,
  		nullptr,
  		BA_NONE,
@@ -14186,7 +14253,7 @@ index 6e68469..b1a00e8 100644
  		0.0,
  		1,
  	};
-@@ -3145,7 +3164,12 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
+@@ -3145,7 +3165,12 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
  	const int healthOrig = target->getHealth();
  	const int stunLevelOrig = target->getStunlevel();
  
@@ -14199,7 +14266,7 @@ index 6e68469..b1a00e8 100644
  
  	const int healthDamage = healthOrig - target->getHealth();
  	const int stunDamage = target->getStunlevel() - stunLevelOrig;
-@@ -3217,6 +3241,97 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
+@@ -3217,6 +3242,97 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
   * @param unit The unit that caused the explosion.
   * @param clipOrWeapon clip or weapon causing the damage.
   */
@@ -14297,7 +14364,7 @@ index 6e68469..b1a00e8 100644
  void TileEngine::hit(BattleActionAttack attack, Position center, int power, const RuleDamageType *type, bool rangeAtack, int terrainMeleeTilePart)
  {
  	bool terrainChanged = false; //did the hit destroy a tile thereby changing line of sight?
-@@ -3262,10 +3377,41 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
+@@ -3262,10 +3378,41 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
  					_save->getModuleMap()[(center.x/16)/10][(center.y/16)/10].second--;
  				}
  			}
@@ -14339,7 +14406,7 @@ index 6e68469..b1a00e8 100644
  		}
  	}
  	else if (part == V_UNIT)
-@@ -3341,6 +3487,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3341,6 +3488,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  	{
  		power /= 2;
  	}
@@ -14350,7 +14417,7 @@ index 6e68469..b1a00e8 100644
  
  	int exHeight = Clamp(Options::battleExplosionHeight, 0, 3);
  	int vertdec = 1000; //default flat explosion
-@@ -3451,7 +3601,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3451,7 +3602,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  							_save->removeItem(bi);
  						}
  
@@ -14359,7 +14426,7 @@ index 6e68469..b1a00e8 100644
  					}
  				}
  
-@@ -3512,6 +3662,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3512,6 +3663,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  	// now detonate the tiles affected by explosion
  	if (type->ToTile > 0.0f)
  	{
@@ -14367,7 +14434,7 @@ index 6e68469..b1a00e8 100644
  		for (auto& pair : tilesAffected)
  		{
  			if (detonate(pair.first, pair.second))
-@@ -3523,7 +3674,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3523,7 +3675,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  			if (j)
  				applyGravity(j);
  		}
@@ -14377,7 +14444,7 @@ index 6e68469..b1a00e8 100644
  	calculateLighting(LL_AMBIENT, centetTile, maxRadius + 1, true); // roofs could have been destroyed and fires could have been started
  	calculateFOV(centetTile, maxRadius + 1, true, true);
  	if (attack.attacker && Position::distance2d(centetTile, attack.attacker->getPosition()) > maxRadius + 1)
-@@ -3622,7 +3775,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
+@@ -3622,7 +3776,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
  			}
  		}
  		// set tile on fire
@@ -14386,7 +14453,7 @@ index 6e68469..b1a00e8 100644
  		{
  			if (tiles[i]->getMapData(O_FLOOR) || tiles[i]->getMapData(O_OBJECT))
  			{
-@@ -4614,7 +4767,14 @@ VoxelType TileEngine::voxelCheck(Position voxel, BattleUnit *excludeUnit, bool e
+@@ -4614,7 +4768,14 @@ VoxelType TileEngine::voxelCheck(Position voxel, BattleUnit *excludeUnit, bool e
  				{
  					tilepos = tile->getPosition();
  					const static int parts[] = {1,0,3,2}; // Change order 0,1,2,3 -> 1,0,3,2  (read commit description)
@@ -14402,7 +14469,7 @@ index 6e68469..b1a00e8 100644
  				}
  				int idx = (unit->getLoftemps(part) * 16) + y;
  				if (_voxelData->at(idx) & (1 << x))
-@@ -5156,6 +5316,188 @@ Tile *TileEngine::applyGravity(Tile *t)
+@@ -5156,6 +5317,188 @@ Tile *TileEngine::applyGravity(Tile *t)
  	return rt;
  }
  
@@ -14591,7 +14658,7 @@ index 6e68469..b1a00e8 100644
  /**
   * Drop item on ground.
   */
-@@ -5837,6 +6179,55 @@ Position TileEngine::getOriginVoxel(BattleAction &action, Tile *tile)
+@@ -5837,6 +6180,55 @@ Position TileEngine::getOriginVoxel(BattleAction &action, Tile *tile)
  	Tile *tileAbove = _save->getTile(origin + Position(0,0,1));
  	Position originVoxel = Position(origin.x*16, origin.y*16, origin.z*24);
  
