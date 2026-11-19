@@ -30491,14 +30491,16 @@ index 0000000..3886f85
 +}
 diff --git a/src/Geoscape/Shipping.cpp b/src/Geoscape/Shipping.cpp
 new file mode 100644
-index 0000000..1ef4a1c
+index 0000000..aba682c
 --- /dev/null
 +++ b/src/Geoscape/Shipping.cpp
-@@ -0,0 +1,484 @@
+@@ -0,0 +1,538 @@
 +/*
 + * G.I. Joe: civilian shipping on the world map. See Shipping.h.
 + */
 +#include "Shipping.h"
++#include "../Mod/RuleItem.h"
++#include "../Savegame/ItemContainer.h"
 +#include <algorithm>
 +#include <cmath>
 +#include <sstream>
@@ -30693,6 +30695,18 @@ index 0000000..1ef4a1c
 +				ufo->gjRegion = region;
 +				Log(LOG_INFO) << "[shipping] Cobra " << (ownLine == 1 ? "own-line freighter" : "containers") << " tier " << tier
 +					<< " on " << lane.id << " (paid " << cost << ", funds " << funds << ")";
++			}
++		}
++		// a cartel boat among the honest traffic on the Gulf and Caribbean lanes, until the stash house falls
++		if (!ufo->gjCobra && SH.cartelShare > 0 && std::find(SH.cartelLanes.begin(), SH.cartelLanes.end(), lane.id) != SH.cartelLanes.end())
++		{
++			const RuleResearch *until = mod->getResearch(SH.cartelUntil);
++			if ((!until || !save->isResearched(until, false)) && RNG::generate(0.0, 1.0) < SH.cartelShare)
++			{
++				ufo->gjCobra = 3;
++				ufo->gjFlag = "";
++				ufo->gjName = game->getLanguage()->getString("STR_CARTEL_BOAT");
++				Log(LOG_INFO) << "[shipping] a cartel boat on " << lane.id;
 +			}
 +		}
 +		ufo->setDetected(true);   // shipping is public: every ship shows, nothing pops up
@@ -30947,6 +30961,46 @@ index 0000000..1ef4a1c
 +		// innocent: it stops, the hold is searched, nothing is found, and its flag country minds (12g)
 +		goodwill(save, ufo, -SH.searchInnocent, 0);
 +		return lang->getString("STR_SHIP_SEARCH_NOTHING").arg(name).arg(SH.searchInnocent);
++	}
++	if (ufo->gjCobra == 3)
++	{
++		// a cartel boat: contraband (sold, or the guns kept), a bag of cash, or the crew goes for the guns under the nets
++		Base *home = craft ? craft->getBase() : (save->getBases()->empty() ? nullptr : save->getBases()->front());
++		const int roll = RNG::generate(0, 99);
++		if (roll < SH.cartelContrabandPct)
++		{
++			if (home)
++			{
++				if (const RuleItem *c = mod->getItem(SH.cartelContraband)) home->getStorageItems()->addItem(c, 1);
++				if (RNG::percent(50)) if (const RuleItem *g = mod->getItem(SH.cartelGun)) home->getStorageItems()->addItem(g, 1);
++			}
++			ufo->gjCobra = 0; ufo->setDetected(false); ufo->setStatus(Ufo::DESTROYED);
++			return lang->getString("STR_CARTEL_BOAT_FOUND_CONTRABAND");
++		}
++		if (roll < SH.cartelContrabandPct + SH.cartelCashPct)
++		{
++			save->setFunds(save->getFunds() + SH.cartelCash);
++			ufo->gjCobra = 0; ufo->setDetected(false); ufo->setStatus(Ufo::DESTROYED);
++			return lang->getString("STR_CARTEL_BOAT_FOUND_CASH");
++		}
++		const RuleAlienMission *mrule = mod->getAlienMission(SH.boardMission);
++		AlienDeployment *dep = mod->getDeployment(SH.boardCartel);
++		if (mrule && dep)
++		{
++			MissionSite *ms = new MissionSite(mrule, dep, nullptr);
++			ms->setLongitude(ufo->getLongitude());
++			ms->setLatitude(ufo->getLatitude());
++			ms->setId(save->getId(dep->getMarkerName()));
++			ms->setSecondsRemaining(12 * 3600);
++			ms->setAlienRace("STR_CARTEL");
++			ms->setDetected(true);
++			save->getMissionSites()->push_back(ms);
++			if (craft) craft->setDestination(ms);
++			*boarding = true;
++			ufo->gjCobra = 0; ufo->setDetected(false); ufo->setStatus(Ufo::DESTROYED);
++			return lang->getString("STR_CARTEL_BOAT_FIGHT");
++		}
++		return lang->getString("STR_CARTEL_BOAT_FOUND_CONTRABAND");
 +	}
 +	if (ufo->gjCobra == 2 && ufo->gjCargo == 0)
 +	{
@@ -32899,7 +32953,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..50cc3f4 100644
+index 1885346..eb3fb9a 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -33096,7 +33150,7 @@ index 1885346..50cc3f4 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3329,792 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3329,797 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -33662,6 +33716,11 @@ index 1885346..50cc3f4 100644
 +		sh.tryRead("suspectedAt", _shipping.suspectedAt);
 +		sh.tryRead("confirmedAt", _shipping.confirmedAt);
 +		sh.tryRead("followMoneyResearch", _shipping.followMoneyResearch);
++		sh.tryRead("cartelLanes", _shipping.cartelLanes); sh.tryRead("cartelShare", _shipping.cartelShare);
++		sh.tryRead("cartelUntil", _shipping.cartelUntil); sh.tryRead("boardCartel", _shipping.boardCartel);
++		sh.tryRead("cartelContraband", _shipping.cartelContraband); sh.tryRead("cartelGun", _shipping.cartelGun);
++		sh.tryRead("cartelContrabandPct", _shipping.cartelContrabandPct); sh.tryRead("cartelCashPct", _shipping.cartelCashPct);
++		sh.tryRead("cartelCash", _shipping.cartelCash);
 +		if (const auto& ln = sh["lanes"])
 +		{
 +			_shipping.lanes.clear();
@@ -33889,7 +33948,7 @@ index 1885346..50cc3f4 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +4125,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +4130,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -33897,7 +33956,7 @@ index 1885346..50cc3f4 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4730,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4735,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -33923,7 +33982,7 @@ index 1885346..50cc3f4 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +4987,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +4992,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -33944,7 +34003,7 @@ index 1885346..50cc3f4 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6701,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6706,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -33964,7 +34023,7 @@ index 1885346..50cc3f4 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6724,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6729,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -33972,7 +34031,7 @@ index 1885346..50cc3f4 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6738,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6743,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -34012,7 +34071,7 @@ index 1885346..50cc3f4 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..f7ff0da 100644
+index 2242d13..a4b1a9a 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -34079,7 +34138,7 @@ index 2242d13..f7ff0da 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +363,520 @@ private:
+@@ -327,6 +363,526 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -34198,6 +34257,12 @@ index 2242d13..f7ff0da 100644
 +		std::map<std::string, int> intelResearch;
 +		int intelPerDay = 4, suspectedAt = 50, confirmedAt = 100;
 +		std::string followMoneyResearch = "STR_FOLLOW_THE_MONEY";
++		// CARTEL BOATS (STORY's item 3, John 18:50 B): contraband and money only, no story link
++		std::vector<std::string> cartelLanes;              // lane ids that carry them
++		double cartelShare = 0.0;                          // chance a ship spawned on one of those lanes is a cartel boat
++		std::string cartelUntil = "STR_CARTEL_STASH_HOUSE"; // none once this is researched (the stash house fallen)
++		std::string boardCartel = "STR_SHIP_SEARCH_CARTEL", cartelContraband = "STR_CARTEL_CONTRABAND", cartelGun = "STR_PISTOL";
++		int cartelContrabandPct = 50, cartelCashPct = 25, cartelCash = 30000;
 +	};
 +private:
 +	ShippingRules _shipping;
@@ -34600,7 +34665,7 @@ index 2242d13..f7ff0da 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1242,134 @@ public:
+@@ -692,6 +1248,134 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
@@ -40064,7 +40129,7 @@ index 25a05b6..2f11c86 100644
  	{
  	case LANDED:
 diff --git a/src/Savegame/Ufo.h b/src/Savegame/Ufo.h
-index a4ff21b..12a59de 100644
+index a4ff21b..5ce6585 100644
 --- a/src/Savegame/Ufo.h
 +++ b/src/Savegame/Ufo.h
 @@ -89,6 +89,16 @@ private:
@@ -40074,7 +40139,7 @@ index a4ff21b..12a59de 100644
 +	/// G.I. Joe civilian shipping (Geoscape/Shipping.cpp): -1 = not a merchant on a lane
 +	int gjLane = -1, gjLeg = 0;
 +	bool gjRev = false;
-+	int gjCobra = 0;        ///< 0 innocent, 1 Cobra's own line, 2 Cobra containers aboard an honest ship
++	int gjCobra = 0;        ///< 0 innocent, 1 Cobra's own line, 2 Cobra containers aboard an honest ship, 3 a cartel boat
 +	int gjCargo = 0;        ///< 0 Low, 1 Medium, 2 High
 +	std::string gjFlag;     ///< the flag country (a country type, may be empty)
 +	std::string gjRegion;   ///< the Cobra region that paid for the voyage
