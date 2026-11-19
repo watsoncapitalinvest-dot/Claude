@@ -30982,7 +30982,7 @@ index 665d922..160915e 100644
  	bool _debugInVisualStudio;
  	std::string _newVersion;
 diff --git a/src/Menu/NewBattleState.cpp b/src/Menu/NewBattleState.cpp
-index 52b6371..e8d9e85 100644
+index 52b6371..eb88eeb 100644
 --- a/src/Menu/NewBattleState.cpp
 +++ b/src/Menu/NewBattleState.cpp
 @@ -17,6 +17,8 @@
@@ -31005,12 +31005,37 @@ index 52b6371..e8d9e85 100644
  #include "../Battlescape/BattlescapeGenerator.h"
  #include "../Battlescape/BriefingState.h"
  #include "../Savegame/Ufo.h"
-@@ -230,7 +236,25 @@ NewBattleState::NewBattleState() :
+@@ -230,7 +236,50 @@ NewBattleState::NewBattleState() :
  			_missionTypes.erase(itr);
  		}
  	}
 -	_cbxMission->setOptions(_missionTypes, true);
-+	if (getenv("OXCE_NB_LIST")) for (size_t i = 0; i < _missionTypes.size(); ++i) Log(LOG_INFO) << "[nb] " << i << " " << _missionTypes[i];   // rig
++	// G.I. Joe (John 18 Nov 21:10 "organize the battle field maps ... and alphabatize it. too hard to find anything"): every mission
++	// gets a category, and the list runs category by category, A-Z inside each. The first matching rule wins.
++	auto category = [](const std::string &m) -> std::pair<int, std::string> {
++		static const std::vector<std::pair<std::vector<const char*>, const char*>> rules = {
++			{{"TEST", "PROVING", "SAMPLE"}, "Test & Training"},
++			{{"CELL_STRIKE", "BANK_JOB", "VAN_STOP", "CONVOY", "CRIME", "MONEY_RUN"}, "Crimes & Strikes"},
++			{{"CARTEL", "ARMORED_CAR", "ROBBERY", "ABANDONED_FACTORY"}, "Cartel"},
++			{{"PIT", "BASE_DEFENSE", "BASE_DEFENCE", "HQ_", "OUTPOST", "TTBP", "DROME_STRIKE"}, "Pit, Bases & Outposts"},
++			{{"AIR", "SEA", "SHIP", "BOARD", "FREIGHTER", "SUB_", "DOGFIGHT", "HIJACK", "SEARCH", "WHALE", "UNDERSEA", "CABLE", "CRASH"}, "Air & Sea"},
++			{{"HUNTER"}, "Cobra Hunters"},
++			{{"FRONT", "DEPOT", "FACTORY", "CELL", "DROME", "AIRSTRIP", "TRAINING_CAMP", "BROADCAST", "COBRA_"}, "Cobra Sites"},
++			{{"FLAGG", "CLUTCH", "BLUDD", "VILLAIN", "RESCUE", "OPERATION", "STORY", "SWAMP", "MOTEL", "OVERPASS", "THUNDERCLAP"}, "Story Ops"},
++			{{"EMMA", "SPRING", "CITY", "TOWN", "TERROR", "RIO_LINDO", "STREET"}, "Cities & Open Ground"},
++			{{"STR_MAP_"}, "Locations"},
++			{{"STR_ALIEN_", "SCOUT", "UFO", "MEDIUM_", "LARGE_", "SUPPLY", "HARVEST", "ABDUCT", "BATTLESHIP", "MARS_"}, "Stock X-COM"},
++		};
++		for (size_t i = 0; i < rules.size(); ++i)
++			for (const char *k : rules[i].first)
++				if (m.find(k) != std::string::npos) return { (int)i, rules[i].second };
++		return { (int)rules.size(), "Other" };
++	};
++	std::stable_sort(_missionTypes.begin(), _missionTypes.end(), [&](const std::string &a, const std::string &b) {
++		const auto ca = category(a), cb = category(b);
++		if (ca.first != cb.first) return ca.first < cb.first;
++		return std::string(tr(a)) < std::string(tr(b)); });
++	if (getenv("OXCE_NB_LIST")) for (size_t i = 0; i < _missionTypes.size(); ++i) Log(LOG_INFO) << "[nb] " << i << " " << category(_missionTypes[i]).second << ": " << _missionTypes[i];   // rig
 +	{
 +		// G.I. Joe: several deployments share a name (three STOP AND SEARCH, two Cobra Cell): tell them apart in the list
 +		std::vector<std::string> shown;
@@ -31025,14 +31050,14 @@ index 52b6371..e8d9e85 100644
 +				for (auto &ch : t) ch = (ch == '_') ? ' ' : (char)tolower(ch);
 +				s += " (" + t + ")";
 +			}
-+			shown.push_back(s);
++			shown.push_back(category(m).second + ":  " + s);
 +		}
 +		_cbxMission->setOptions(shown, false);
 +	}
  	_cbxMission->onChange((ActionHandler)&NewBattleState::cbxMissionChange);
  
  	for (auto& craftType : _game->getMod()->getCraftsList())
-@@ -398,6 +422,9 @@ void NewBattleState::load(const std::string &filename)
+@@ -398,6 +447,9 @@ void NewBattleState::load(const std::string &filename)
  		{
  			YAML::YamlRootNodeReader cfgReader(s);
  			_cbxMission->setSelected(std::min(cfgReader["mission"].readVal<size_t>(0), _missionTypes.size() - 1));
@@ -31042,7 +31067,7 @@ index 52b6371..e8d9e85 100644
  			cbxMissionChange(0);
  			_cbxCraft->setSelected(std::min(cfgReader["craft"].readVal<size_t>(0), _crafts.size() - 1));
  			_slrDarkness->setValue(cfgReader["darkness"].readVal<size_t>(0));
-@@ -528,15 +555,27 @@ void NewBattleState::initSave()
+@@ -528,15 +580,27 @@ void NewBattleState::initSave()
  	base->getCrafts()->push_back(_craft);
  
  	// Generate soldiers
@@ -31052,9 +31077,7 @@ index 52b6371..e8d9e85 100644
 -	for (int i = 0; i < 30; ++i)
 +	std::vector<std::string> gjNamed, gjGeneric;
 +	for (auto& st : mod->getSoldiersList())
- 	{
--		int randomType = RNG::generate(0, mod->getSoldiersList().size() - 1);
--		RuleSoldier* ruleSoldier = mod->getSoldier(mod->getSoldiersList().at(randomType), true);
++	{
 +		RuleSoldier* rs = mod->getSoldier(st, true);
 +		(rs->getBuyCost() == 0 ? gjNamed : gjGeneric).push_back(st);
 +	}
@@ -31062,7 +31085,9 @@ index 52b6371..e8d9e85 100644
 +	// Joes before the New-Battle-only types (Cobra's people, which need research nothing can do), so the craft fills with Joes
 +	std::stable_partition(gjNamed.begin(), gjNamed.end(), [&](const std::string& t) { return mod->getSoldier(t, true)->getRequirements().empty(); });
 +	for (int i = 0; i < 30 || i < (int)gjNamed.size(); ++i)
-+	{
+ 	{
+-		int randomType = RNG::generate(0, mod->getSoldiersList().size() - 1);
+-		RuleSoldier* ruleSoldier = mod->getSoldier(mod->getSoldiersList().at(randomType), true);
 +		bool gjIsNamed = i < (int)gjNamed.size();
 +		const std::string& gjType = gjIsNamed ? gjNamed[i] : gjGeneric[RNG::generate(0, (int)gjGeneric.size() - 1)];
 +		RuleSoldier* ruleSoldier = mod->getSoldier(gjType, true);
@@ -31074,7 +31099,7 @@ index 52b6371..e8d9e85 100644
  		{
  			if (RNG::percent(70))
  				continue;
-@@ -572,19 +611,76 @@ void NewBattleState::initSave()
+@@ -572,19 +636,76 @@ void NewBattleState::initSave()
  	}
  
  	// Generate items
@@ -31153,7 +31178,7 @@ index 52b6371..e8d9e85 100644
  
  	// Add research
  	save->makeAllResearchDiscovered(mod);
-@@ -597,12 +693,29 @@ void NewBattleState::initSave()
+@@ -597,12 +718,29 @@ void NewBattleState::initSave()
   * Starts the battle.
   * @param action Pointer to an action.
   */
@@ -31183,7 +31208,7 @@ index 52b6371..e8d9e85 100644
  	}
  	save();
  	if (_missionTypes[_cbxMission->getSelected()] != "STR_BASE_DEFENSE" && _craft->getNumTotalUnits() == 0)
-@@ -610,6 +723,50 @@ void NewBattleState::btnOkClick(Action *)
+@@ -610,6 +748,50 @@ void NewBattleState::btnOkClick(Action *)
  		return;
  	}
  
@@ -31234,7 +31259,7 @@ index 52b6371..e8d9e85 100644
  	SavedBattleGame *bgame = new SavedBattleGame(_game->getMod(), _game->getLanguage());
  	_game->getSavedGame()->setBattleGame(bgame);
  	bgame->setMissionType(_missionTypes[_cbxMission->getSelected()]);
-@@ -752,6 +909,11 @@ void NewBattleState::cbxMissionChange(Action *)
+@@ -752,6 +934,11 @@ void NewBattleState::cbxMissionChange(Action *)
  {
  	AlienDeployment *ruleDeploy = _game->getMod()->getDeployment(_missionTypes[_cbxMission->getSelected()]);
  	std::set<std::string> terrains;
