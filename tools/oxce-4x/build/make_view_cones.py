@@ -16,6 +16,19 @@ for state in ('unaware', 'suspicious', 'alert'):
     al = src[..., 3]; ys, xs = np.nonzero(al > 200)
     apx, apy = (xs.min() + xs.max()) / 2.0, float(ys.max())     # the apex: bottom centre of the wedge
     rimg = apy - ys.min()                                       # picture px from apex to the top of the arc
+    # John 19 Nov 00:31: "The trim on the normal alert for enemies is to thick. No outline until aware and still make it thinner
+    # and more transparent." The edge is every non-fill pixel away from the sigil in the middle: unaware loses it entirely;
+    # suspicious and alert keep only its solid core line (the soft glow goes) at about half strength.
+    r0, g0, b0 = src[..., 0], src[..., 1], src[..., 2]
+    fill0 = (r0 < 100) & (g0 < 100) & (b0 > 90)
+    YY, XX = np.mgrid[0:src.shape[0], 0:src.shape[1]]
+    sig = (XX - apx) ** 2 + (YY - (apy - rimg * 0.55)) ** 2 < (rimg * 0.14) ** 2
+    edge = ~fill0 & ~sig & (al > 0)
+    if state == 'unaware':
+        src[..., 3][edge] = 0
+    else:
+        src[..., 3][edge & (al < 210)] = 0
+        src[..., 3][edge] *= 0.5
     W, H = int(2 * R * 32 * K), int(2 * R * 16 * K)
     X, Y = np.meshgrid(np.arange(W) + 0.5, np.arange(H) + 0.5)
     sx, sy = (X - W / 2) / K, (Y - H / 2) / K                  # base px from the guard's floor centre
