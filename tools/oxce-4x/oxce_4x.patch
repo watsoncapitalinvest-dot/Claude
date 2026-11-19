@@ -1079,18 +1079,89 @@ index 1b39dd9..c643e6e 100644
  }
  
 diff --git a/src/Basescape/ManufactureInfoState.cpp b/src/Basescape/ManufactureInfoState.cpp
-index 9c5710b..71ea832 100644
+index 9c5710b..e4ad5f7 100644
 --- a/src/Basescape/ManufactureInfoState.cpp
 +++ b/src/Basescape/ManufactureInfoState.cpp
-@@ -16,6 +16,7 @@
+@@ -16,7 +16,9 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
 +#include "../Geoscape/Outposts.h"
  #include "ManufactureInfoState.h"
++#include "../Engine/HiUI.h"
  #include <algorithm>
  #include "../Interface/Window.h"
-@@ -521,7 +522,7 @@ void ManufactureInfoState::lessEngineerClick(Action *action)
+ #include "../Interface/TextButton.h"
+@@ -142,12 +144,59 @@ void ManufactureInfoState::buildUi()
+ 
+ 	// Set up objects
+ 	setWindowBackground(_window, "manufactureInfo");
++	if (HiUI::tablet())
++	{
++		// THE TABLET (art/tablet_clean/ManufactureInfoState_clean.png, the graphics AI's boxes /6): the
++		// workshop crew on the left, the item's picture, four figure rows, the two counters with painted keys
++		HiUI::place(_window, 0, 0, 320, 200);
++		setWindowBackgroundImage(_window, "JOE_TAB_MANUFACTUREINFOSTATE.SCR");
++		HiUI::place(_txtTitle, 32, 22, 150, 14);
++		HiUI::textFace(_txtTitle, "stencil");
++		HiUI::place(_txtAvailableEngineer, 124, 92, 103, 9);
++		HiUI::place(_txtAvailableSpace, 124, 105, 103, 9);
++		HiUI::place(_txtMonthlyProfit, 124, 117, 103, 9);
++		HiUI::place(_txtHoursPerUnit, 124, 129, 103, 9);
++		for (Text *t : { _txtAvailableEngineer, _txtAvailableSpace, _txtMonthlyProfit, _txtHoursPerUnit })
++		{
++			HiUI::textInk(t, 0x17181C); HiUI::textScale(t, 0.9);
++		}
++		HiUI::place(_txtAllocatedEngineer, 246, 45, 37, 15);
++		HiUI::place(_txtUnitToProduce, 246, 88, 37, 15);
++		for (Text *t : { _txtAllocatedEngineer, _txtUnitToProduce })
++		{
++			t->setAlign(ALIGN_CENTER); HiUI::textInk(t, 0x17181C); HiUI::textScale(t, 0.7);
++		}
++		HiUI::place(_txtAllocated, 255, 65, 19, 12);
++		HiUI::place(_txtTodo, 255, 107, 19, 12);
++		for (Text *t : { _txtAllocated, _txtTodo })
++		{
++			t->setAlign(ALIGN_CENTER); t->setVerticalAlign(ALIGN_MIDDLE); HiUI::textInk(t, 0x17181C);
++		}
++		HiUI::place(_btnEngineerDown, 240, 64, 12, 14); HiUI::paintedButton(_btnEngineerDown);
++		HiUI::place(_btnEngineerUp, 278, 64, 12, 14); HiUI::paintedButton(_btnEngineerUp);
++		HiUI::place(_btnUnitDown, 240, 106, 12, 14); HiUI::paintedButton(_btnUnitDown);
++		HiUI::place(_btnUnitUp, 278, 106, 12, 14); HiUI::paintedButton(_btnUnitUp);
++		_btnUnitInfinity->setVisible(false); _btnUnitMinimum->setVisible(false);
++		for (Text *t : { _txtEngineerUp, _txtEngineerDown, _txtUnitUp, _txtUnitDown }) t->setVisible(false);
++		HiUI::place(_btnStop, 126, 144, 78, 10); HiUI::paintedButton(_btnStop);
++		HiUI::place(_btnOk, 238, 144, 52, 10); HiUI::paintedButton(_btnOk);
++		HiUI::place(_btnSell, 14, 152, 48, 9);
++		HiUI::place(_btnFallback, 64, 152, 48, 9);
++		// the item's picture, when the research pictures have one by its name
++		_tabPic = new Surface(108, 42, 121, 45);
++		add(_tabPic);
++		const std::string pic = "Resources/Research/" + (_item ? _item->getName() : _production->getRules()->getName()) + ".png";
++		HiUI::nativePanel(_tabPic, [pic](double X0, double Y0, double k)
++		{
++			HiUI::Paint::picture(pic, X0, Y0, X0 + 108 * k, Y0 + 42 * k, 1.0);
++		});
++	}
+ 
+ 	touchComponentsConfigure();
+ 
+ 	_txtTitle->setText(tr(_item ? _item->getName() : _production->getRules()->getName()));
+ 	_txtTitle->setBig();
+-	_txtTitle->setAlign(ALIGN_CENTER);
++	_txtTitle->setAlign(HiUI::tablet() ? ALIGN_LEFT : ALIGN_CENTER);
+ 
+ 	_txtAllocatedEngineer->setText(tr("STR_ENGINEERS__ALLOCATED"));
+ 	_txtAllocatedEngineer->setBig();
+@@ -308,6 +357,7 @@ int ManufactureInfoState::getMonthlyNetFunds () const
+  */
+ ManufactureInfoState::~ManufactureInfoState()
+ {
++	if (_tabPic) HiUI::nativePanel(_tabPic, nullptr);
+ 	delete _timerMoreEngineer;
+ 	delete _timerLessEngineer;
+ 	delete _timerMoreUnit;
+@@ -521,7 +571,7 @@ void ManufactureInfoState::lessEngineerClick(Action *action)
  void ManufactureInfoState::moreUnit(int change)
  {
  	if (change <= 0) return;
@@ -1099,7 +1170,7 @@ index 9c5710b..71ea832 100644
  	{
  		_timerMoreUnit->stop();
  		_game->pushState(new ErrorMessageState(tr("STR_NO_FREE_HANGARS_FOR_CRAFT_PRODUCTION"), _palette, _game->getMod()->getInterface("basescape")->getElement("errorMessage")->color, "BACK17.SCR", _game->getMod()->getInterface("basescape")->getElement("errorPalette")->color));
-@@ -535,7 +536,7 @@ void ManufactureInfoState::moreUnit(int change)
+@@ -535,7 +585,7 @@ void ManufactureInfoState::moreUnit(int change)
  		}
  		change = std::min(INT_MAX - units, change);
  		if (_production->getRules()->getProducedCraft())
@@ -1108,6 +1179,18 @@ index 9c5710b..71ea832 100644
  		_production->setAmountTotal(units+change);
  		setAssignedEngineer();
  	}
+diff --git a/src/Basescape/ManufactureInfoState.h b/src/Basescape/ManufactureInfoState.h
+index b0ad195..6ae0205 100644
+--- a/src/Basescape/ManufactureInfoState.h
++++ b/src/Basescape/ManufactureInfoState.h
+@@ -41,6 +41,7 @@ class ManufactureInfoState : public TouchState
+ private:
+ 	Base * _base;
+ 	RuleManufacture * _item;
++	Surface *_tabPic = nullptr;   // the tablet's item picture
+ 	Production * _production;
+ 	Window * _window;
+ 	ArrowButton * _btnUnitInfinity, * _btnUnitMinimum;
 diff --git a/src/Basescape/ManufactureStartState.cpp b/src/Basescape/ManufactureStartState.cpp
 index a726c74..dc5cf6f 100644
 --- a/src/Basescape/ManufactureStartState.cpp
@@ -32074,7 +32157,7 @@ index 0000000..900e327
 +}
 +}
 diff --git a/src/Geoscape/ResearchCompleteState.cpp b/src/Geoscape/ResearchCompleteState.cpp
-index a6c74ef..ac858b4 100644
+index a6c74ef..45bebb6 100644
 --- a/src/Geoscape/ResearchCompleteState.cpp
 +++ b/src/Geoscape/ResearchCompleteState.cpp
 @@ -26,6 +26,10 @@
@@ -32088,7 +32171,7 @@ index a6c74ef..ac858b4 100644
  
  namespace OpenXcom
  {
-@@ -86,6 +90,53 @@ ResearchCompleteState::ResearchCompleteState(const RuleResearch *newResearch, co
+@@ -86,6 +90,73 @@ ResearchCompleteState::ResearchCompleteState(const RuleResearch *newResearch, co
  	{
  		_txtResearch->setText(tr(research->getName()));
  	}
@@ -32125,9 +32208,29 @@ index a6c74ef..ac858b4 100644
 +		}
 +		_txtFacts->setText(f.str());
 +		const std::string pic = "Resources/Research/" + research->getName() + ".png";
-+		HiUI::nativePanel(_picture, [pic](double X0, double Y0, double k)
++		if (HiUI::tablet())
 +		{
-+			const double x1 = X0 + 118 * k, y1 = Y0 + 66 * k;
++			// THE TABLET (art/tablet_clean/ResearchCompleteState_clean.png, the graphics AI's boxes /6): the
++			// lab scene, the topic's photo clipped to the board, its name and facts on the paper
++			HiUI::place(_window, 0, 0, 320, 200);
++			setWindowBackgroundImage(_window, "JOE_TAB_RESEARCHCOMPLETESTATE.SCR");
++			HiUI::place(_txtTitle, 31, 22, 184, 14);
++			HiUI::textFace(_txtTitle, "stencil");
++			_txtTitle->setAlign(ALIGN_LEFT);
++			_txtBase->setVisible(false);
++			HiUI::place(_picture, 99, 54, 72, 82);
++			HiUI::place(_txtResearch, 190, 53, 80, 11);
++			_txtResearch->setBig();
++			HiUI::textInk(_txtResearch, 0x17181C);
++			HiUI::place(_txtFacts, 180, 72, 98, 60);
++			HiUI::textInk(_txtFacts, 0x17181C);
++			HiUI::place(_btnOk, 131, 143, 37, 10); HiUI::paintedButton(_btnOk);
++			HiUI::place(_btnReport, 192, 143, 75, 10); HiUI::paintedButton(_btnReport);
++		}
++		const double pw = _picture->getWidth(), ph = _picture->getHeight();
++		HiUI::nativePanel(_picture, [pic, pw, ph](double X0, double Y0, double k)
++		{
++			const double x1 = X0 + pw * k, y1 = Y0 + ph * k;
 +			HiUI::Paint::rect(X0, Y0, x1, y1, 0x14181A);
 +			if (!HiUI::Paint::picture(pic, X0, Y0, x1, y1, 1.0))
 +				HiUI::Paint::text("label", "no picture yet", X0, Y0, x1, y1, 5 * k, 1, 1, 0x5C5A52);

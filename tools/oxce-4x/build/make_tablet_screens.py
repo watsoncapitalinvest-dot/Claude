@@ -116,6 +116,8 @@ SPECS = {
         ('row', 790, 845, 1075, 915, 765),                    # CANCEL
         ('row', 1262, 845, 1640, 915, 1240),                  # START PROJECT
     ]),
+    'ResearchCompleteState': ([], []),
+    'ManufactureInfoState': ([], []),
 }
 
 
@@ -142,8 +144,12 @@ def main(only):
     for st, (cats, ops) in SPECS.items():
         if only and st not in only:
             continue
-        a = np.asarray(Image.open(os.path.join(SRC, st + '.png')).convert('RGB'))
-        hi = Image.fromarray(cut(a, ops))
+        clean = os.path.join(ROOT, 'art', 'tablet_clean', st + '_clean.png')
+        if os.path.exists(clean) and not ops:
+            hi = Image.open(clean).convert('RGB')      # the graphics AI cut it already (its _boxes.txt beside it)
+        else:
+            a = np.asarray(Image.open(os.path.join(SRC, st + '.png')).convert('RGB'))
+            hi = Image.fromarray(cut(a, ops))
         hi.save(os.path.join(OUT, st + '_hi.png'))
         to_8bit(hi).save(os.path.join(OUT, st + '.png'))
         print(st, 'done')
