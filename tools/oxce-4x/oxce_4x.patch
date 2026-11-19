@@ -1,3 +1,104 @@
+diff --git a/src/Basescape/BaseInfoState.cpp b/src/Basescape/BaseInfoState.cpp
+index 4689b75..8f37dd3 100644
+--- a/src/Basescape/BaseInfoState.cpp
++++ b/src/Basescape/BaseInfoState.cpp
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "BaseInfoState.h"
++#include "../Engine/HiUI.h"
+ #include <sstream>
+ #include <cmath>
+ #include "../Engine/Game.h"
+@@ -165,6 +166,59 @@ BaseInfoState::BaseInfoState(Base *base, BasescapeState *state) : _base(base), _
+ 	}
+ 	ss << "BACK07.SCR";
+ 	_game->getMod()->getSurface(ss.str())->blitNShade(_bg, 0, 0);
++	if (HiUI::tablet())
++	{
++		// THE TABLET (art/tablet_round3/BaseInfoState.png, rectangles /6): eleven rows on the striped
++		// panel - name, the figures, a yellow bar - with the Pit's gate picture on the right. The
++		// section strips (PERSONNEL, SPACE, DEFENCE AND RADAR) are painted; the bars are drawn here.
++		Surface *tabBg = _game->getMod()->getSurface("JOE_TAB_BASEINFOSTATE.SCR");
++		tabBg->blitNShade(_bg, 0, 0);
++		HiUI::aliasImage(_bg, tabBg);
++		HiUI::place(_edtBase, 21, 18, 200, 17);
++		HiUI::place(_mini, 170, 26, 128, 16);
++		_txtPersonnel->setVisible(false);
++		_txtSpace->setVisible(false);
++		struct RowW { Text *n; Text *v; Bar *b; double cy; };
++		std::vector<RowW> rows = {
++			{ _txtSoldiers, _numSoldiers, _barSoldiers, 49.5 }, { _txtEngineers, _numEngineers, _barEngineers, 57.3 },
++			{ _txtScientists, _numScientists, _barScientists, 65.0 }, { _txtQuarters, _numQuarters, _barQuarters, 80.7 },
++			{ _txtStores, _numStores, _barStores, 88.4 }, { _txtLaboratories, _numLaboratories, _barLaboratories, 96.2 },
++			{ _txtWorkshops, _numWorkshops, _barWorkshops, 104.0 }, { _txtHangars, _numHangars, _barHangars, 111.8 },
++			{ _txtDefense, _numDefense, _barDefense, 127.3 }, { _txtShortRange, _numShortRange, _barShortRange, 135.1 },
++			{ _txtLongRange, _numLongRange, _barLongRange, 142.9 } };
++		if (Options::storageLimitsEnforced) { _txtContainment->setVisible(false); _numContainment->setVisible(false); _barContainment->setVisible(false); }
++		std::vector<std::pair<Bar*, double> > bars;
++		for (auto &r : rows)
++		{
++			const int y = (int)(r.cy - 4.5);
++			HiUI::place(r.n, 23, y, 75, 9);
++			HiUI::place(r.v, 101, y, 28, 9);
++			r.b->setVisible(false);
++			bars.push_back({ r.b, r.cy });
++			HiUI::textScale(r.n, 0.9); HiUI::textScale(r.v, 0.9);
++		}
++		HiUI::place(_btnOk, 118, 164, 43, 9);
++		HiUI::place(_btnTransfers, 164, 164, 43, 9);
++		HiUI::place(_btnStores, 210, 164, 43, 9);
++		HiUI::place(_btnMonthlyCosts, 257, 164, 42, 9);
++		_tabBars = new Surface(320, 200, 0, 0);
++		add(_tabBars);
++		HiUI::nativePanel(_tabBars, [bars](double X0, double Y0, double k)
++		{
++			for (const auto &b : bars)
++			{
++				const Bar *bar = b.first;
++				double f = 0;
++				if (bar->getValue() == bar->getMax()) f = bar->getValue() * bar->getScale() / 150.0;   // an absolute figure
++				else if (bar->getMax() > 0) f = bar->getValue() / bar->getMax();
++				f = std::max(0.0, std::min(1.0, f));
++				const double x0 = X0 + 131 * k, x1 = X0 + 199 * k, y0 = Y0 + (b.second - 1.1) * k, y1 = Y0 + (b.second + 1.1) * k;
++				HiUI::Paint::roundRect(x0, y0, x1, y1, 1.1 * k, 0x2A3033);
++				HiUI::Paint::frame(x0, y0, x1, y1, std::max(1.0, k * 0.2), 0x4A5054);
++				if (f > 0) HiUI::Paint::roundRect(x0, y0, x0 + (x1 - x0) * f, y1, 1.1 * k, 0xE8B923);
++			}
++		});
++	}
+ 
+ 	_mini->setTexture(_game->getMod()->getSurfaceSet("BASEBITS.PCK"));
+ 	_mini->setBases(_game->getSavedGame()->getBases());
+@@ -192,7 +246,7 @@ BaseInfoState::BaseInfoState(Base *base, BasescapeState *state) : _base(base), _
+ 	_btnMonthlyCosts->setText(tr("STR_MONTHLY_COSTS"));
+ 	_btnMonthlyCosts->onMouseClick((ActionHandler)&BaseInfoState::btnMonthlyCostsClick);
+ 
+-	_edtBase->setBig();
++	if (!HiUI::tablet()) _edtBase->setBig();
+ 	_edtBase->onChange((ActionHandler)&BaseInfoState::edtBaseChange);
+ 
+ 	_txtPersonnel->setText(tr("STR_PERSONNEL_AVAILABLE_PERSONNEL_TOTAL"));
+@@ -258,6 +312,7 @@ BaseInfoState::BaseInfoState(Base *base, BasescapeState *state) : _base(base), _
+  */
+ BaseInfoState::~BaseInfoState()
+ {
++	if (_tabBars) HiUI::nativePanel(_tabBars, nullptr);
+ 
+ }
+ 
+diff --git a/src/Basescape/BaseInfoState.h b/src/Basescape/BaseInfoState.h
+index 72edc51..85787b7 100644
+--- a/src/Basescape/BaseInfoState.h
++++ b/src/Basescape/BaseInfoState.h
+@@ -52,6 +52,7 @@ private:
+ 	Text *_numSoldiers, *_numEngineers, *_numScientists;
+ 	Bar *_barSoldiers, *_barEngineers, *_barScientists;
+ 
++	Surface *_tabBars = nullptr;   // the tablet's bars, painted natively
+ 	Text *_txtSpace, *_txtQuarters, *_txtStores, *_txtLaboratories, *_txtWorkshops, *_txtContainment, *_txtHangars;
+ 	Text *_numQuarters, *_numStores, *_numLaboratories, *_numWorkshops, *_numContainment, *_numHangars;
+ 	Bar *_barQuarters, *_barStores, *_barLaboratories, *_barWorkshops, *_barContainment, *_barHangars;
 diff --git a/src/Basescape/BaseView.cpp b/src/Basescape/BaseView.cpp
 index f822dab..67c7744 100644
 --- a/src/Basescape/BaseView.cpp
