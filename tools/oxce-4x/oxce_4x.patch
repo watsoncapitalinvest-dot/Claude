@@ -1821,6 +1821,94 @@ index cce8616..a9fbb98 100644
  				change = std::min(maxByHangars, change);
  				_cQty += change;
  			}
+diff --git a/src/Basescape/ResearchInfoState.cpp b/src/Basescape/ResearchInfoState.cpp
+index dd0f15f..9a3a00b 100644
+--- a/src/Basescape/ResearchInfoState.cpp
++++ b/src/Basescape/ResearchInfoState.cpp
+@@ -33,6 +33,8 @@
+ #include "../Interface/ArrowButton.h"
+ #include "../Engine/Timer.h"
+ #include "../Engine/RNG.h"
++#include "../Engine/HiUI.h"
++#include "../Engine/Surface.h"
+ #include <climits>
+ 
+ namespace OpenXcom
+@@ -89,6 +91,16 @@ void ResearchInfoState::buildUi()
+ 	_btnMore = new ArrowButton(ARROW_BIG_UP, 13, 14, 195, 100);
+ 	_btnLess = new ArrowButton(ARROW_BIG_DOWN, 13, 14, 195, 120);
+ 
++	// John 19 Nov 00:31 "I wanted previews for the research items": the topic's picture in the box you
++	// start it from, sharpening with the work exactly as on the tree (blocky until started, clean when done).
++	// The INCREASE / DECREASE words move right to make room; without the hi-res layer nothing changes.
++	if (HiUI::enabled())
++	{
++		_txtMore->setX(130); _txtMore->setWidth(62);
++		_txtLess->setX(130); _txtLess->setWidth(62);
++		_picture = new Surface(64, 36, 61, 99);
++	}
++
+ 	_surfaceScientists = new InteractiveSurface(230, 140, 45, 30);
+ 	_surfaceScientists->onMouseClick((ActionHandler)&ResearchInfoState::handleWheel, 0);
+ 
+@@ -109,6 +121,7 @@ void ResearchInfoState::buildUi()
+ 	add(_txtLess, "text", "allocateResearch");
+ 	add(_btnMore, "button1", "allocateResearch");
+ 	add(_btnLess, "button1", "allocateResearch");
++	if (_picture) add(_picture);
+ 
+ 	touchComponentsAdd("button3", "allocateResearch", _window);
+ 
+@@ -168,6 +181,21 @@ void ResearchInfoState::buildUi()
+ 	}
+ 	_btnCancel->onMouseClick((ActionHandler)&ResearchInfoState::btnCancelClick);
+ 
++	if (_picture)
++	{
++		const RuleResearch *rr = _project->getRules();
++		const ResearchProject *pj = _project;
++		HiUI::nativePanel(_picture, [rr, pj](double X0, double Y0, double k)
++		{
++			const double x1 = X0 + 64 * k, y1 = Y0 + 36 * k;
++			const double prog = pj->getCost() > 0 ? std::min(1.0, std::max(0.0, pj->getSpent() / (double)pj->getCost())) : 0.0;
++			HiUI::Paint::rect(X0, Y0, x1, y1, 0x14181A);
++			if (!HiUI::Paint::picture("Resources/Research/" + rr->getName() + ".png", X0, Y0, x1, y1, prog))
++				HiUI::Paint::text("label", "no picture yet", X0, Y0, x1, y1, 1.6 * k, 1, 1, 0x5C5A52);
++			HiUI::Paint::frame(X0, Y0, x1, y1, std::max(1.0, 0.25 * k), 0x3D464A);
++		});
++	}
++
+ 	if (_rule)
+ 	{
+ 		// mark new/hidden as normal
+@@ -182,6 +210,7 @@ ResearchInfoState::~ResearchInfoState()
+ {
+ 	delete _timerLess;
+ 	delete _timerMore;
++	if (_picture) HiUI::nativePanel(_picture, nullptr);
+ }
+ 
+ /**
+diff --git a/src/Basescape/ResearchInfoState.h b/src/Basescape/ResearchInfoState.h
+index a0cc4c1..14c0695 100644
+--- a/src/Basescape/ResearchInfoState.h
++++ b/src/Basescape/ResearchInfoState.h
+@@ -31,6 +31,7 @@ class ResearchProject;
+ class ArrowButton;
+ class Timer;
+ class InteractiveSurface;
++class Surface;
+ 
+ /**
+  * Window which allows changing of the number of assigned scientist to a project.
+@@ -50,6 +51,7 @@ private:
+ 	void buildUi();
+ 	Timer *_timerMore, *_timerLess;
+ 	InteractiveSurface *_surfaceScientists;
++	Surface *_picture = nullptr;   // G.I. Joe: the topic's picture (RESEARCH_TREE_SCREEN_SPEC 1b)
+ public:
+ 	/// Creates the ResearchProject state.
+ 	ResearchInfoState(Base *base, RuleResearch *rule);
 diff --git a/src/Basescape/ResearchState.cpp b/src/Basescape/ResearchState.cpp
 index a6004b9..76f9fd3 100644
 --- a/src/Basescape/ResearchState.cpp
@@ -9814,22 +9902,23 @@ index 5a59f27..3d4e17f 100644
  
  void Camera::stopKeyScrolling()
 diff --git a/src/Battlescape/DebriefingState.cpp b/src/Battlescape/DebriefingState.cpp
-index 0631f32..6b047c8 100644
+index 0631f32..4e844d7 100644
 --- a/src/Battlescape/DebriefingState.cpp
 +++ b/src/Battlescape/DebriefingState.cpp
-@@ -20,7 +20,11 @@
+@@ -20,7 +20,12 @@
  #include <functional>
  #include <climits>
  #include "TileEngine.h"
 +#include "Stealth.h"
  #include "DebriefingState.h"
++#include "../Geoscape/Tips.h"
 +#include "BattleSim.h"
 +#include "../Geoscape/CobraNetwork.h"
 +#include "../Geoscape/AirRaid.h"
  #include "CannotReequipState.h"
  #include "../Geoscape/GeoscapeEventState.h"
  #include "../Engine/Action.h"
-@@ -390,6 +394,15 @@ void DebriefingState::init()
+@@ -390,6 +395,15 @@ void DebriefingState::init()
  	_initDone = true;
  
  	prepareDebriefing();
@@ -9845,7 +9934,7 @@ index 0631f32..6b047c8 100644
  
  	for (const auto& sse : _soldierStats)
  	{
-@@ -477,12 +490,12 @@ void DebriefingState::init()
+@@ -477,12 +491,12 @@ void DebriefingState::init()
  		total += ds->score;
  		if (ds->recovery)
  		{
@@ -9860,7 +9949,7 @@ index 0631f32..6b047c8 100644
  			statsY += 8;
  		}
  		if (ds->item == "STR_CIVILIANS_SAVED")
-@@ -511,6 +524,18 @@ void DebriefingState::init()
+@@ -511,6 +525,19 @@ void DebriefingState::init()
  	ss3 << total;
  	_lstTotal->addRow(2, tr("STR_TOTAL_UC").c_str(), ss3.str().c_str());
  
@@ -9874,12 +9963,13 @@ index 0631f32..6b047c8 100644
 +			lv = std::min(3, lv + 1);
 +			net["readyDay:" + bt->getRegionForStealth()] = _game->getSavedGame()->getDaysPassed();
 +			Log(LOG_INFO) << "[stealth] the alarm went up: Cobra readiness in " << bt->getRegionForStealth() << " now " << lv;
++			Tips::geo(_game, "READINESS");
 +			_game->getSavedGame()->addLeadNews("STR_COBRA_READINESS_UP|" + std::string(tr(bt->getRegionForStealth())) + " (" + std::to_string(lv) + "/3)");
 +		}
  	// add the points to our activity score
  	if (_region)
  	{
-@@ -987,6 +1012,17 @@ void DebriefingState::addStat(const std::string &name, int quantity, int score)
+@@ -987,6 +1014,17 @@ void DebriefingState::addStat(const std::string &name, int quantity, int score)
   * Also calculates the soldiers experience, and possible promotions.
   * If aborted, only the things on the exit area are recovered.
   */
@@ -9897,7 +9987,7 @@ index 0631f32..6b047c8 100644
  void DebriefingState::prepareDebriefing()
  {
  	for (auto& itemType : _game->getMod()->getItemsList())
-@@ -1026,8 +1062,62 @@ void DebriefingState::prepareDebriefing()
+@@ -1026,8 +1064,62 @@ void DebriefingState::prepareDebriefing()
  		}
  	}
  
@@ -9960,7 +10050,7 @@ index 0631f32..6b047c8 100644
  	Craft *craft = 0;
  	Base *base = 0;
  	std::string target;
-@@ -1039,10 +1129,23 @@ void DebriefingState::prepareDebriefing()
+@@ -1039,10 +1131,23 @@ void DebriefingState::prepareDebriefing()
  	int playersMIA = 0;
  
  	_stats.push_back(new DebriefingStat("STR_ALIENS_KILLED", false));
@@ -9984,7 +10074,7 @@ index 0631f32..6b047c8 100644
  
  	std::string missionCompleteText, missionFailedText;
  	std::string objectiveCompleteText, objectiveFailedText;
-@@ -1186,7 +1289,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1186,7 +1291,7 @@ void DebriefingState::prepareDebriefing()
  					break;
  				}
  			}
@@ -9993,7 +10083,7 @@ index 0631f32..6b047c8 100644
  			{
  				_destroyBase = true;
  			}
-@@ -1198,7 +1301,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1198,7 +1303,7 @@ void DebriefingState::prepareDebriefing()
  			for (auto* fac : *base->getFacilities())
  			{
  				// this facility was demolished
@@ -10002,7 +10092,7 @@ index 0631f32..6b047c8 100644
  				{
  					toBeDamaged.push_back(fac);
  				}
-@@ -1230,6 +1333,11 @@ void DebriefingState::prepareDebriefing()
+@@ -1230,6 +1335,11 @@ void DebriefingState::prepareDebriefing()
  				ms->setUfo(nullptr);
  			}
  			_missionStatistics->alienRace = ms->getAlienRace();
@@ -10014,7 +10104,7 @@ index 0631f32..6b047c8 100644
  			delete ms;
  			save->getMissionSites()->erase(msIt);
  			break;
-@@ -1296,6 +1404,25 @@ void DebriefingState::prepareDebriefing()
+@@ -1296,6 +1406,25 @@ void DebriefingState::prepareDebriefing()
  			deadSoldiers++;
  		}
  	}
@@ -10040,7 +10130,7 @@ index 0631f32..6b047c8 100644
  	// if all our men are unconscious, the aliens get to have their way with them.
  	if (playersUnconscious + playersMIA == playersSurvived)
  	{
-@@ -1304,7 +1431,11 @@ void DebriefingState::prepareDebriefing()
+@@ -1304,7 +1433,11 @@ void DebriefingState::prepareDebriefing()
  		{
  			if (bu->getOriginalFaction() == FACTION_PLAYER && bu->getStatus() != STATUS_DEAD)
  			{
@@ -10053,7 +10143,7 @@ index 0631f32..6b047c8 100644
  				{
  					bu->instaKill();
  				}
-@@ -1395,6 +1526,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1395,6 +1528,7 @@ void DebriefingState::prepareDebriefing()
  		AlienBase* ab = (*abIt);
  		if (ab->isInBattlescape())
  		{
@@ -10061,7 +10151,7 @@ index 0631f32..6b047c8 100644
  			_txtRecovery->setText(tr("STR_ALIEN_BASE_RECOVERY"));
  			bool destroyAlienBase = true;
  
-@@ -1417,6 +1549,13 @@ void DebriefingState::prepareDebriefing()
+@@ -1417,6 +1551,13 @@ void DebriefingState::prepareDebriefing()
  				{
  					addStat(objectiveCompleteText, 1, objectiveCompleteScore);
  				}
@@ -10075,7 +10165,7 @@ index 0631f32..6b047c8 100644
  				save->clearLinksForAlienBase(ab, _game->getMod());
  				delete ab;
  				save->getAlienBases()->erase(abIt);
-@@ -1424,6 +1563,12 @@ void DebriefingState::prepareDebriefing()
+@@ -1424,6 +1565,12 @@ void DebriefingState::prepareDebriefing()
  			}
  			else
  			{
@@ -10088,7 +10178,7 @@ index 0631f32..6b047c8 100644
  				ab->setInBattlescape(false);
  				break;
  			}
-@@ -1476,6 +1621,65 @@ void DebriefingState::prepareDebriefing()
+@@ -1476,6 +1623,65 @@ void DebriefingState::prepareDebriefing()
  	{
  		ignoreLivingCivilians = ruleDeploy->getIgnoreLivingCivilians();
  	}
@@ -10154,7 +10244,7 @@ index 0631f32..6b047c8 100644
  	for (auto* bunit : *battle->getUnits())
  	{
  		UnitStatus status = bunit->getStatus();
-@@ -1483,6 +1687,31 @@ void DebriefingState::prepareDebriefing()
+@@ -1483,6 +1689,31 @@ void DebriefingState::prepareDebriefing()
  		UnitFaction oldFaction = bunit->getOriginalFaction();
  		Soldier *soldier = save->getSoldier(bunit->getId());
  
@@ -10186,7 +10276,7 @@ index 0631f32..6b047c8 100644
  		if (!bunit->getTile())
  		{
  			Position pos = bunit->getPosition();
-@@ -1654,8 +1883,9 @@ void DebriefingState::prepareDebriefing()
+@@ -1654,8 +1885,9 @@ void DebriefingState::prepareDebriefing()
  					}
  				}
  			}
@@ -10197,7 +10287,7 @@ index 0631f32..6b047c8 100644
  				&& playersSurvived > 0 && faction != FACTION_PLAYER && (!bunit->isOut() || bunit->isIgnored())
  				&& (bunit->isSurrendering() || battle->getChronoTrigger() == FORCE_WIN_SURRENDER))
  			{
-@@ -1795,7 +2025,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1795,7 +2027,7 @@ void DebriefingState::prepareDebriefing()
  		}
  		else if (target == "STR_ALIEN_BASE")
  		{
@@ -10206,7 +10296,7 @@ index 0631f32..6b047c8 100644
  		}
  		else
  		{
-@@ -1877,8 +2107,25 @@ void DebriefingState::prepareDebriefing()
+@@ -1877,8 +2109,25 @@ void DebriefingState::prepareDebriefing()
  					}
  				}
  				// recover items from the floor
@@ -10233,7 +10323,7 @@ index 0631f32..6b047c8 100644
  		}
  		else
  		{
-@@ -1895,6 +2142,10 @@ void DebriefingState::prepareDebriefing()
+@@ -1895,6 +2144,10 @@ void DebriefingState::prepareDebriefing()
  		{
  			_txtTitle->setText(tr("STR_CRAFT_IS_LOST"));
  		}
@@ -10244,7 +10334,7 @@ index 0631f32..6b047c8 100644
  		else if (target == "STR_BASE")
  		{
  			_txtTitle->setText(tr("STR_BASE_IS_LOST"));
-@@ -1906,7 +2157,7 @@ void DebriefingState::prepareDebriefing()
+@@ -1906,7 +2159,7 @@ void DebriefingState::prepareDebriefing()
  		}
  		else if (target == "STR_ALIEN_BASE")
  		{
@@ -10253,7 +10343,7 @@ index 0631f32..6b047c8 100644
  		}
  		else
  		{
-@@ -2130,10 +2381,211 @@ void DebriefingState::prepareDebriefing()
+@@ -2130,10 +2383,211 @@ void DebriefingState::prepareDebriefing()
  		}
  	}
  
@@ -10465,7 +10555,7 @@ index 0631f32..6b047c8 100644
  		// Unlock research defined in alien deployment, if the mission was a success
  		const RuleResearch *research = _game->getMod()->getResearch(ruleDeploy->getUnlockedResearchOnSuccess());
  		save->handleResearchUnlockedByMissions(research, _game->getMod(), ruleDeploy);
-@@ -2299,6 +2751,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
+@@ -2299,6 +2753,11 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
   */
  void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base, int quantity, bool considerTransformations)
  {
@@ -10477,7 +10567,7 @@ index 0631f32..6b047c8 100644
  	if (!considerTransformations)
  	{
  		base->getStorageItems()->addItem(ruleItem, quantity);
-@@ -2707,6 +3164,20 @@ void DebriefingState::recoverAlien(BattleUnit *from, Base *base, Craft* craft)
+@@ -2707,6 +3166,20 @@ void DebriefingState::recoverAlien(BattleUnit *from, Base *base, Craft* craft)
  	}
  
  	bool killPrisonersAutomatically = base->getAvailableContainment(ruleLiveAlienItem->getPrisonType()) == 0;
@@ -12116,13 +12206,14 @@ index 0fdf2ca..a027de0 100644
  	Projectile *getProjectile() const;
  	/// Sets follow projectile flag.
 diff --git a/src/Battlescape/NextTurnState.cpp b/src/Battlescape/NextTurnState.cpp
-index d12de83..dacff99 100644
+index d12de83..816fb37 100644
 --- a/src/Battlescape/NextTurnState.cpp
 +++ b/src/Battlescape/NextTurnState.cpp
-@@ -17,9 +17,13 @@
+@@ -17,9 +17,14 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "NextTurnState.h"
++#include "../Geoscape/Tips.h"
 +#include "Stealth.h"
 +#include "AirFight.h"
 +#include <algorithm>
@@ -12133,7 +12224,7 @@ index d12de83..dacff99 100644
  #include "../Engine/RNG.h"
  #include "../Engine/Screen.h"
  #include "../Mod/AlienRace.h"
-@@ -38,6 +42,11 @@
+@@ -38,6 +43,11 @@
  #include "../Engine/Action.h"
  #include "../Savegame/BattleUnit.h"
  #include "../Savegame/Node.h"
@@ -12145,7 +12236,7 @@ index d12de83..dacff99 100644
  #include "../Savegame/SavedBattleGame.h"
  #include "../Savegame/SavedGame.h"
  #include "../Savegame/HitLog.h"
-@@ -99,15 +108,19 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -99,15 +109,19 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  	// Create objects
  	int y = state->getMap()->getMessageY();
  
@@ -12171,7 +12262,7 @@ index d12de83..dacff99 100644
  	_bg = new Surface(_game->getScreen()->getWidth(), _game->getScreen()->getWidth(), 0, 0);
  
  	// Set palette
-@@ -156,11 +169,20 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -156,11 +170,20 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  	_window->setColor(Palette::blockOffset(0)-1);
  	_window->setHighContrast(true);
  	_window->setBackground(_game->getMod()->getSurface(_battleGame->getHiddenMovementBackground()));
@@ -12193,7 +12284,7 @@ index d12de83..dacff99 100644
  	_txtMessageReinforcements->setWordWrap(true);
  	_txtMessageReinforcements->setHighContrast(true);
  	_txtMessageReinforcements->setColor(_game->getMod()->getInterface("inventory")->getElement("weight")->color2); // red
-@@ -292,11 +314,24 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -292,11 +315,26 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  	}
  
  	std::string messageReinforcements;
@@ -12208,6 +12299,8 @@ index d12de83..dacff99 100644
 +		// G.I. Joe sound and stealth: sleepers, alerts settling, the alarm
 +		std::string st = Stealth::turnStart(_battleGame);
 +		if (!st.empty()) { std::string t = tr(st); messageVanStop = messageVanStop.empty() ? t : messageVanStop + " " + t; }
++		if (_battleGame->getSide() == FACTION_PLAYER)
++			for (const auto &tip : Tips::takeBattle()) { std::string t = tr(tip); messageVanStop = messageVanStop.empty() ? t : messageVanStop + "  TIP: " + t; }
 +	}
  	bool allowReinforcements = _battleGame->getSide() == FACTION_HOSTILE && _battleGame->getTurn() > 0;
  	if (_battleGame->getSide() == FACTION_PLAYER && _battleGame->getTurn() == 0)
@@ -12218,7 +12311,7 @@ index d12de83..dacff99 100644
  	if (allowReinforcements && !_battleGame->getBattleGame()->areAllEnemiesNeutralized())
  	{
  		bool showAlert = determineReinforcements();
-@@ -306,10 +341,17 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
+@@ -306,10 +344,17 @@ NextTurnState::NextTurnState(SavedBattleGame *battleGame, BattlescapeState *stat
  			_txtMessageReinforcements->setText(messageReinforcements);
  		}
  	}
@@ -12238,7 +12331,7 @@ index d12de83..dacff99 100644
  		_timer->onTimer((StateHandler)&NextTurnState::close);
  		_timer->start();
  	}
-@@ -547,7 +589,9 @@ void NextTurnState::close()
+@@ -547,7 +592,9 @@ void NextTurnState::close()
  
  	// not "escort the VIPs" missions, not the final mission and all aliens dead.
  	bool killingAllAliensIsNotEnough = _battleGame->getObjectiveType() == MUST_DESTROY || (_battleGame->getVIPSurvivalPercentage() > 0 && _battleGame->getVIPEscapeType() != ESCAPE_NONE);
@@ -12249,7 +12342,7 @@ index d12de83..dacff99 100644
  	{
  		_state->finishBattle(false, tally.liveSoldiers);
  	}
-@@ -612,7 +656,16 @@ bool NextTurnState::determineReinforcements()
+@@ -612,7 +659,16 @@ bool NextTurnState::determineReinforcements()
  			{
  				continue;
  			}
@@ -12267,7 +12360,7 @@ index d12de83..dacff99 100644
  			{
  				if (!_battleGame->allObjectivesDestroyed())
  				{
-@@ -855,6 +908,7 @@ bool NextTurnState::determineReinforcements()
+@@ -855,6 +911,7 @@ bool NextTurnState::determineReinforcements()
  		{
  			// remember success
  			_battleGame->getReinforcementsMemory()[wave.type] += 1;
@@ -12275,7 +12368,7 @@ index d12de83..dacff99 100644
  
  			if (!wave.briefing.title.empty())
  			{
-@@ -908,6 +962,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
+@@ -908,6 +965,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
  		quantity += RNG::generate(0, dd.dQty);
  		quantity += RNG::generate(0, dd.extraQty);
  
@@ -12294,7 +12387,7 @@ index d12de83..dacff99 100644
  		for (int i = 0; i < quantity; ++i)
  		{
  			std::string alienName = dd.customUnitType.empty() ? race->getMember(dd.alienRank) : dd.customUnitType;
-@@ -915,6 +981,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
+@@ -915,6 +984,18 @@ bool NextTurnState::deployReinforcements(const ReinforcementsData &wave)
  			bool civilian = dd.percentageOutsideUfo != 0; // small misuse of an unused attribute ;) pls don't kill me
  			BattleUnit* unit = addReinforcement(wave, rule, dd.alienRank, civilian);
  			size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(month).at(RNG::generate(0, 9)));
@@ -12313,7 +12406,7 @@ index d12de83..dacff99 100644
  			if (unit)
  			{
  				success = true;
-@@ -1140,4 +1218,429 @@ bool NextTurnState::placeReinforcementNearFriend(BattleUnit *unit)
+@@ -1140,4 +1221,429 @@ bool NextTurnState::placeReinforcementNearFriend(BattleUnit *unit)
  	return false;
  }
  
@@ -13676,14 +13769,15 @@ index 0000000..a8e336b
 +}
 diff --git a/src/Battlescape/Stealth.cpp b/src/Battlescape/Stealth.cpp
 new file mode 100644
-index 0000000..0ea0848
+index 0000000..8e70c9c
 --- /dev/null
 +++ b/src/Battlescape/Stealth.cpp
-@@ -0,0 +1,636 @@
+@@ -0,0 +1,642 @@
 +/*
 + * G.I. Joe: sound and stealth. See Stealth.h and claude/SOUND_STEALTH_DESIGN_v1.md.
 + */
 +#include "Stealth.h"
++#include "../Geoscape/Tips.h"
 +#include <cstdlib>
 +#include <vector>
 +#include <map>
@@ -13951,6 +14045,7 @@ index 0000000..0ea0848
 +	for (auto *u : *save->getUnits()) if (cobra(u) && !u->isOut()) setState(save, u, ALERT);
 +	burnClues(save);
 +	save->setVanStop("st:alarmNews", 1);
++	Tips::battle(save, "ALARM_UP");
 +	Log(LOG_INFO) << "[stealth] ALARM (" << why << ") turn " << save->getTurn();
 +	return true;
 +}
@@ -13971,6 +14066,7 @@ index 0000000..0ea0848
 +	if (!save->getVanStop("st:cspread")) save->setVanStop("st:cspread", save->getTurn() + 4);
 +	for (auto *u : *save->getUnits()) if (cobra(u) && !u->isOut() && save->getVanStop(key("st:cmp:", u)) == cmp) setState(save, u, ALERT);
 +	save->setVanStop("st:alarmNews", 1);
++	Tips::battle(save, "ALARM_SPREAD");
 +	Log(LOG_INFO) << "[stealth] ALARM in compound " << cmp << " (" << why << ") turn " << save->getTurn() << "; the site in 4 turns unless the radio man is down";
 +	return true;
 +}
@@ -14215,6 +14311,7 @@ index 0000000..0ea0848
 +				save->setVanStop(key("st:look:", p1), pack(bunk) + 1);
 +				++swaps;
 +			}
++			if (swaps) Tips::battle(save, "SHIFT_CHANGE");
 +			if (swaps) Log(LOG_INFO) << "[stealth] shift change, turn " << save->getTurn() << ": " << swaps << " swap(s)";
 +		}
 +		for (auto *u : *save->getUnits())
@@ -14251,11 +14348,13 @@ index 0000000..0ea0848
 +							if (!save->getVanStop(key("st:home:", u))) save->setVanStop(key("st:home:", u), pack(u->getPosition()) + 1);
 +							save->setVanStop(key("st:ph:", u), 0);
 +							save->setVanStop(key("st:look:", u), pack(v->getPosition()) + 1);   // he walks to look where he saw something
++							Tips::battle(save, "GUARD_AMBER");
 +							Log(LOG_INFO) << "[stealth] " << u->getType() << " " << u->getId() << " SUSPICIOUS" << (far ? " far" : "") << (dark ? " dark" : "") << (low ? " crouched" : "");
 +						}
 +						break;
 +					}
 +					setState(save, u, ALERT);
++					Tips::battle(save, "GUARD_RED");
 +					tryAlarmAt(save, "a Joe seen", u->getPosition());
 +					break;
 +				}
@@ -17360,7 +17459,7 @@ index ff6f452..2d8ea7d 100644
  	void think() override;
  	/// Fades the message.
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..080b975 100644
+index 839f803..6d1dded 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -35,6 +35,10 @@ set ( basescape_src
@@ -17374,12 +17473,13 @@ index 839f803..080b975 100644
    Basescape/PlaceLiftState.cpp
    Basescape/PlaceStartFacilityState.cpp
    Basescape/PurchaseState.cpp
-@@ -70,7 +74,16 @@ set ( basescape_src
+@@ -70,7 +74,17 @@ set ( basescape_src
  
  set ( battlescape_src
    Battlescape/AbortMissionState.cpp
 +  Battlescape/SecureAreaState.cpp
 +  Geoscape/PlayStyle.cpp
++  Geoscape/Tips.cpp
    Battlescape/ActionMenuItem.cpp
 +  Battlescape/AirFight.cpp
 +  Battlescape/Stealth.cpp
@@ -17391,7 +17491,7 @@ index 839f803..080b975 100644
    Battlescape/ActionMenuState.cpp
    Battlescape/AIModule.cpp
    Battlescape/AlienInventory.cpp
-@@ -172,6 +185,8 @@ set ( engine_src
+@@ -172,6 +186,8 @@ set ( engine_src
    Engine/Sound.cpp
    Engine/SoundSet.cpp
    Engine/State.cpp
@@ -17400,7 +17500,7 @@ index 839f803..080b975 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -201,9 +216,20 @@ set ( geoscape_src
+@@ -201,9 +217,20 @@ set ( geoscape_src
    Geoscape/DogfightState.cpp
    Geoscape/ExtendedGeoscapeLinksState.cpp
    Geoscape/FundingState.cpp
@@ -17421,7 +17521,7 @@ index 839f803..080b975 100644
    Geoscape/Globe.cpp
    Geoscape/GraphsState.cpp
    Geoscape/InterceptState.cpp
-@@ -331,6 +357,7 @@ set ( mod_src
+@@ -331,6 +358,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -17429,7 +17529,7 @@ index 839f803..080b975 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +383,7 @@ set ( savegame_src
+@@ -356,6 +384,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -17972,10 +18072,10 @@ index 0000000..8277a64
 +}
 diff --git a/src/Engine/HiUI.cpp b/src/Engine/HiUI.cpp
 new file mode 100644
-index 0000000..5b41cca
+index 0000000..4ab1d1f
 --- /dev/null
 +++ b/src/Engine/HiUI.cpp
-@@ -0,0 +1,3526 @@
+@@ -0,0 +1,3548 @@
 +#include "HiUI.h"
 +#include "HiColor.h"
 +#include "Surface.h"
@@ -17989,6 +18089,7 @@ index 0000000..5b41cca
 +#include "../Interface/Text.h"
 +#include "../Interface/ComboBox.h"
 +#include "../Interface/Slider.h"
++#include "../Interface/ScrollBar.h"
 +#include "../Interface/Frame.h"
 +#include "../Interface/ArrowButton.h"
 +#include "../Interface/Bar.h"
@@ -20362,6 +20463,27 @@ index 0000000..5b41cca
 +			}
 +		return;
 +	}
++	// John 19 Nov 00:31 "Xcom sliders still show up in menus in geoscape": a list's scroll bar in the house style - a slim
++	// dark track and a rounded light thumb, the same family as the sliders below
++	if (ScrollBar *sb = dynamic_cast<ScrollBar*>(w))
++	{
++		R r = rectOf(sb);
++		if (!clipBase(r)) return;
++		claim(r);
++		const int X0 = xs[r.x0], X1 = xs[r.x1], Y0 = ys[r.y0], Y1 = ys[r.y1];
++		const int cx = (X0 + X1) / 2, tw = std::max(2, (X1 - X0) / 5);
++		fillRect(X0, Y0, X1, Y1, rgb(20, 24, 26));
++		fillRect(cx - tw / 2, Y0 + 2, cx + tw / 2 + 1, Y1 - 2, rgb(52, 60, 64));
++		const SDL_Rect &t = sb->getThumbRect();
++		if (t.h > 0)
++		{
++			const int ty0 = ys[std::max(0, std::min(bh, sb->getY() + t.y))], ty1 = ys[std::max(0, std::min(bh, sb->getY() + t.y + t.h))];
++			const int kw = std::max(4, (X1 - X0) * 3 / 5);
++			fillRect(cx - kw / 2, ty0 + 1, cx + kw / 2 + 1, ty1 - 1, rgb(196, 190, 170));
++			fillRect(cx - kw / 2 + 1, ty0 + 2, cx + kw / 2, ty1 - 2, rgb(226, 220, 200));
++		}
++		return;
++	}
 +	if (Slider *sl = dynamic_cast<Slider*>(w))
 +	{
 +		R r = rectOf(sl);
@@ -21794,18 +21916,19 @@ index fdf4e89..e5e44b2 100644
  	static void pause();
  	/// Resumes all music.
 diff --git a/src/Engine/Options.cpp b/src/Engine/Options.cpp
-index 480f227..05dd573 100644
+index 480f227..170a9a1 100644
 --- a/src/Engine/Options.cpp
 +++ b/src/Engine/Options.cpp
-@@ -262,6 +262,7 @@ void createAdvancedOptionsOXC()
+@@ -262,6 +262,8 @@ void createAdvancedOptionsOXC()
  	_info.push_back(OptionInfo(OPTION_OXC, "battleExplosionHeight", &battleExplosionHeight, 0, "STR_BATTLEEXPLOSIONHEIGHT", "STR_BATTLESCAPE"));
  	_info.push_back(OptionInfo(OPTION_OXC, "battleAutoEnd", &battleAutoEnd, false, "STR_BATTLEAUTOEND", "STR_BATTLESCAPE"));
  	_info.push_back(OptionInfo(OPTION_OXC, "battleSmoothCamera", &battleSmoothCamera, false, "STR_BATTLESMOOTHCAMERA", "STR_BATTLESCAPE"));
++	_info.push_back(OptionInfo(OPTION_OXC, "gjTips", &gjTips, true, "STR_GJ_TIPS", "STR_GENERAL"));   // G.I. Joe one-time tips: on by default
 +	_info.push_back(OptionInfo(OPTION_OXC, "gjFastBattles", &gjFastBattles, true, "STR_GJ_FAST_BATTLES", "STR_BATTLESCAPE"));   // G.I. Joe (tonight's list): on by default
  	_info.push_back(OptionInfo(OPTION_OXC, "disableAutoEquip", &disableAutoEquip, false, "STR_DISABLEAUTOEQUIP", "STR_BATTLESCAPE"));
  #ifdef __MOBILE__
  	_info.push_back(OptionInfo(OPTION_OXC, "battleConfirmFireMode", &battleConfirmFireMode, true, "STR_BATTLECONFIRMFIREMODE", "STR_BATTLESCAPE"));
-@@ -307,6 +308,7 @@ void createControlsOXC()
+@@ -307,6 +309,7 @@ void createControlsOXC()
  	_info.push_back(OptionInfo(OPTION_OXC, "keyGeoFunding", &keyGeoFunding, SDLK_f, "STR_FUNDING_UC", "STR_GEOSCAPE"));
  	_info.push_back(OptionInfo(OPTION_OXC, "keyGeoToggleDetail", &keyGeoToggleDetail, SDLK_TAB, "STR_TOGGLE_COUNTRY_DETAIL", "STR_GEOSCAPE"));
  	_info.push_back(OptionInfo(OPTION_OXC, "keyGeoToggleRadar", &keyGeoToggleRadar, SDLK_r, "STR_TOGGLE_RADAR_RANGES", "STR_GEOSCAPE"));
@@ -21814,7 +21937,7 @@ index 480f227..05dd573 100644
  	_info.push_back(OptionInfo(OPTION_OXC, "keyBaseSelect2", &keyBaseSelect2, SDLK_2, "STR_SELECT_BASE_2", "STR_GEOSCAPE"));
  	_info.push_back(OptionInfo(OPTION_OXC, "keyBaseSelect3", &keyBaseSelect3, SDLK_3, "STR_SELECT_BASE_3", "STR_GEOSCAPE"));
 diff --git a/src/Engine/Options.inc.h b/src/Engine/Options.inc.h
-index a08796c..4497f50 100644
+index a08796c..a9a49e9 100644
 --- a/src/Engine/Options.inc.h
 +++ b/src/Engine/Options.inc.h
 @@ -26,7 +26,7 @@ OPT bool includePrimeStateInSavedLayout, anytimePsiTraining, weaponSelfDestructi
@@ -21826,10 +21949,11 @@ index a08796c..4497f50 100644
  	keyBaseSelect1, keyBaseSelect2, keyBaseSelect3, keyBaseSelect4, keyBaseSelect5, keyBaseSelect6, keyBaseSelect7, keyBaseSelect8;
  
  // Battlescape options
-@@ -185,4 +185,5 @@ OPT std::vector< std::pair<std::string, bool> > mods; // ordered list of availab
+@@ -185,4 +185,6 @@ OPT std::vector< std::pair<std::string, bool> > mods; // ordered list of availab
  OPT SoundFormat currentSound;
  
  OPT int battleXcomSpeedOrig;
++OPT bool gjTips;   // G.I. Joe one-time tips (BRIEF_FOR_BUILD_Tutorial item 4)
 +OPT bool gjFastBattles;   // G.I. Joe: snappier battles (BattlescapeGame::setStateInterval, Projectile)
  OPT int battleAlienSpeedOrig;
 diff --git a/src/Engine/Screen.cpp b/src/Engine/Screen.cpp
@@ -30491,14 +30615,15 @@ index 0000000..3886f85
 +}
 diff --git a/src/Geoscape/Shipping.cpp b/src/Geoscape/Shipping.cpp
 new file mode 100644
-index 0000000..aba682c
+index 0000000..c0a99a3
 --- /dev/null
 +++ b/src/Geoscape/Shipping.cpp
-@@ -0,0 +1,538 @@
+@@ -0,0 +1,540 @@
 +/*
 + * G.I. Joe: civilian shipping on the world map. See Shipping.h.
 + */
 +#include "Shipping.h"
++#include "Tips.h"
 +#include "../Mod/RuleItem.h"
 +#include "../Savegame/ItemContainer.h"
 +#include <algorithm>
@@ -30964,6 +31089,7 @@ index 0000000..aba682c
 +	}
 +	if (ufo->gjCobra == 3)
 +	{
++		Tips::geo(game, "CARTEL_BOAT");
 +		// a cartel boat: contraband (sold, or the guns kept), a bag of cash, or the crew goes for the guns under the nets
 +		Base *home = craft ? craft->getBase() : (save->getBases()->empty() ? nullptr : save->getBases()->front());
 +		const int roll = RNG::generate(0, 99);
@@ -31085,6 +31211,90 @@ index 0000000..78da07f
 +}
 +
 +}
+diff --git a/src/Geoscape/Tips.cpp b/src/Geoscape/Tips.cpp
+new file mode 100644
+index 0000000..849ab0c
+--- /dev/null
++++ b/src/Geoscape/Tips.cpp
+@@ -0,0 +1,51 @@
++#include "Tips.h"
++#include "../Engine/Game.h"
++#include "../Engine/Options.h"
++#include "../Engine/Language.h"
++#include "../Mod/Mod.h"
++#include "../Mod/RuleInterface.h"
++#include "../Savegame/SavedGame.h"
++#include "../Savegame/SavedBattleGame.h"
++#include "../Menu/ErrorMessageState.h"
++#include "../Engine/Logger.h"
++#include "../Engine/Palette.h"
++
++namespace OpenXcom
++{
++namespace Tips
++{
++namespace
++{
++	std::vector<std::string> pending;
++	bool want(SavedGame *g, const std::string &name)
++	{
++		if (!g || !Options::gjTips) return false;
++		auto &net = g->getCobraNet();
++		const std::string k = "tip:" + name;
++		if (net.count(k)) return false;
++		net[k] = 1;
++		Log(LOG_INFO) << "[tip] " << name;
++		return true;
++	}
++}
++
++void battle(SavedBattleGame *save, const std::string &name)
++{
++	if (save && want(save->getGeoscapeSave(), name)) pending.push_back("STR_TIP_" + name);
++}
++
++std::vector<std::string> takeBattle() { std::vector<std::string> v; v.swap(pending); return v; }
++
++void geo(Game *game, const std::string &name)
++{
++	if (!game || !want(game->getSavedGame(), name)) return;
++	const std::string k = "STR_TIP_" + name;
++	const std::string text = game->getLanguage()->getString(k);
++	if (text == k) return;   // a tip STORY has not written yet never fires
++	RuleInterface *ui = game->getMod()->getInterface("geoscape");
++	game->pushState(new ErrorMessageState(text, game->getMod()->getPalette("PAL_GEOSCAPE")->getColors(),
++		ui->getElement("errorMessage")->color, "BACK13.SCR", ui->getElement("errorPalette")->color));
++}
++
++}
++}
+diff --git a/src/Geoscape/Tips.h b/src/Geoscape/Tips.h
+new file mode 100644
+index 0000000..26b09a8
+--- /dev/null
++++ b/src/Geoscape/Tips.h
+@@ -0,0 +1,21 @@
++#pragma once
++#include <string>
++#include <vector>
++namespace OpenXcom
++{
++class Game; class SavedGame; class SavedBattleGame;
++/**
++ * ONE-TIME TIPS (BRIEF_FOR_BUILD_Tutorial item 4, TUTORIAL_v1): each STR_TIP_<NAME> shows the first time its thing appears,
++ * once per campaign (remembered in the save). Options > "G.I. Joe tips" turns them all off. Battle tips ride on the next
++ * turn screen; world-map tips are a popup.
++ */
++namespace Tips
++{
++	/// in battle: queued for the next turn screen
++	void battle(SavedBattleGame *save, const std::string &name);
++	/// the queued battle tips (as string ids), emptied
++	std::vector<std::string> takeBattle();
++	/// on the world map or in the base: a popup now
++	void geo(Game *game, const std::string &name);
++}
++}
 diff --git a/src/Interface/ArrowButton.h b/src/Interface/ArrowButton.h
 index 4b88688..f5c9b71 100644
 --- a/src/Interface/ArrowButton.h
@@ -31194,6 +31404,19 @@ index 45a5275..a0a1ba9 100644
  	if (_bg)
  	{
  		_track->copy(_bg);
+diff --git a/src/Interface/ScrollBar.h b/src/Interface/ScrollBar.h
+index 04879f1..5460fdc 100644
+--- a/src/Interface/ScrollBar.h
++++ b/src/Interface/ScrollBar.h
+@@ -56,6 +56,8 @@ public:
+ 	void setColor(Uint8 color) override;
+ 	/// Gets the scrollbar's color.
+ 	Uint8 getColor() const;
++	/// G.I. Joe HD skin: where the thumb is (widget pixels)
++	const SDL_Rect &getThumbRect() const { return _thumbRect; }
+ 	/// Sets the scrollbar's high contrast color setting.
+ 	void setHighContrast(bool contrast) override;
+ 	/// Sets the scrollbar's list.
 diff --git a/src/Interface/Slider.h b/src/Interface/Slider.h
 index fc79ef8..875b38b 100644
 --- a/src/Interface/Slider.h
@@ -31385,10 +31608,18 @@ index 1cef662..bfc8e7e 100644
  	void setWordWrap(bool wrap);
  	/// Sets the text edit's color invert setting.
 diff --git a/src/Interface/TextList.cpp b/src/Interface/TextList.cpp
-index 2b91ef2..89ded0a 100644
+index 2b91ef2..3c9d4e3 100644
 --- a/src/Interface/TextList.cpp
 +++ b/src/Interface/TextList.cpp
-@@ -1009,6 +1009,29 @@ void TextList::setScrolling(bool scrolling, int scrollPos)
+@@ -17,6 +17,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "TextList.h"
++#include "../Engine/HiUI.h"
+ #include <cstdarg>
+ #include <cmath>
+ #include <algorithm>
+@@ -1009,6 +1010,29 @@ void TextList::setScrolling(bool scrolling, int scrollPos)
  /**
   * Draws the text list and all the text contained within.
   */
@@ -31418,7 +31649,7 @@ index 2b91ef2..89ded0a 100644
  void TextList::draw()
  {
  	Surface::draw();
-@@ -1051,6 +1074,7 @@ void TextList::blit(SDL_Surface *surface)
+@@ -1051,6 +1075,7 @@ void TextList::blit(SDL_Surface *surface)
  		_selector->blit(surface);
  	}
  	Surface::blit(surface);
@@ -31426,7 +31657,7 @@ index 2b91ef2..89ded0a 100644
  	if (_visible && !_hidden)
  	{
  		if (_arrowPos != -1 && !_rows.empty())
-@@ -1071,6 +1095,8 @@ void TextList::blit(SDL_Surface *surface)
+@@ -1071,6 +1096,8 @@ void TextList::blit(SDL_Surface *surface)
  					// only blit arrows that belong to texts that have their first row on-screen
  					_arrowLeft[i]->blit(surface);
  					_arrowRight[i]->blit(surface);
@@ -31435,7 +31666,17 @@ index 2b91ef2..89ded0a 100644
  				}
  
  				if (!_texts[i].empty())
-@@ -1391,3 +1417,9 @@ void TextList::setIgnoreSeparators(bool ignoreSeparators)
+@@ -1086,6 +1113,9 @@ void TextList::blit(SDL_Surface *surface)
+ 		_up->blit(surface);
+ 		_down->blit(surface);
+ 		_scrollbar->blit(surface);
++		// the list draws its own scroll bar, so the hi-res layer never saw it and the X-COM bar showed through
++		// on every geoscape list (John 19 Nov 00:31); hand it over like ComboBox does its children
++		if (_scrollbar->getVisible()) HiUI::after(_scrollbar);
+ 	}
+ }
+ 
+@@ -1391,3 +1421,9 @@ void TextList::setIgnoreSeparators(bool ignoreSeparators)
  }
  
  }
@@ -35426,7 +35667,7 @@ index 6bef22e..8cc3b62 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..69f14e7 100644
+index 99f24ce..c6a0ffe 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
 @@ -377,6 +377,10 @@
@@ -35440,12 +35681,13 @@ index 99f24ce..69f14e7 100644
      <ClCompile Include="Basescape\PlaceLiftState.cpp" />
      <ClCompile Include="Basescape\ManufactureStartState.cpp" />
      <ClCompile Include="Basescape\PlaceStartFacilityState.cpp" />
-@@ -410,7 +414,16 @@
+@@ -410,7 +414,17 @@
      <ClCompile Include="Basescape\TransferItemsState.cpp" />
      <ClCompile Include="Basescape\TransfersState.cpp" />
      <ClCompile Include="Battlescape\AbortMissionState.cpp" />
 +    <ClCompile Include="Battlescape\SecureAreaState.cpp" />
 +    <ClCompile Include="Geoscape\PlayStyle.cpp" />
++    <ClCompile Include="Geoscape\Tips.cpp" />
      <ClCompile Include="Battlescape\ActionMenuItem.cpp" />
 +    <ClCompile Include="Battlescape\AirFight.cpp" />
 +    <ClCompile Include="Battlescape\Stealth.cpp" />
@@ -35457,7 +35699,7 @@ index 99f24ce..69f14e7 100644
      <ClCompile Include="Battlescape\ActionMenuState.cpp" />
      <ClCompile Include="Battlescape\AlienInventory.cpp" />
      <ClCompile Include="Battlescape\AlienInventoryState.cpp" />
-@@ -511,6 +524,8 @@
+@@ -511,6 +525,8 @@
      <ClCompile Include="Engine\Sound.cpp" />
      <ClCompile Include="Engine\SoundSet.cpp" />
      <ClCompile Include="Engine\State.cpp" />
@@ -35466,7 +35708,7 @@ index 99f24ce..69f14e7 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,10 +561,21 @@
+@@ -546,10 +562,21 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
@@ -35488,7 +35730,7 @@ index 99f24ce..69f14e7 100644
      <ClCompile Include="Geoscape\Globe.cpp" />
      <ClCompile Include="Geoscape\GraphsState.cpp" />
      <ClCompile Include="Geoscape\InterceptState.cpp" />
-@@ -673,6 +699,7 @@
+@@ -673,6 +700,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -35496,7 +35738,7 @@ index 99f24ce..69f14e7 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +709,7 @@
+@@ -682,6 +710,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -35504,7 +35746,7 @@ index 99f24ce..69f14e7 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -856,6 +884,10 @@
+@@ -856,6 +885,10 @@
      <ClInclude Include="Basescape\MonthlyCostsState.h" />
      <ClInclude Include="Basescape\NewResearchListState.h" />
      <ClInclude Include="Basescape\PlaceFacilityState.h" />
@@ -35515,7 +35757,7 @@ index 99f24ce..69f14e7 100644
      <ClInclude Include="Basescape\PlaceLiftState.h" />
      <ClInclude Include="Basescape\ManufactureStartState.h" />
      <ClInclude Include="Basescape\PlaceStartFacilityState.h" />
-@@ -890,6 +922,13 @@
+@@ -890,6 +923,13 @@
      <ClInclude Include="Basescape\TransfersState.h" />
      <ClInclude Include="Battlescape\AbortMissionState.h" />
      <ClInclude Include="Battlescape\ActionMenuItem.h" />
@@ -35529,7 +35771,7 @@ index 99f24ce..69f14e7 100644
      <ClInclude Include="Battlescape\ActionMenuState.h" />
      <ClInclude Include="Battlescape\AlienInventory.h" />
      <ClInclude Include="Battlescape\AlienInventoryState.h" />
-@@ -970,6 +1009,8 @@
+@@ -970,6 +1010,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -35538,7 +35780,7 @@ index 99f24ce..69f14e7 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1074,17 @@
+@@ -1033,6 +1075,17 @@
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
@@ -35556,7 +35798,7 @@ index 99f24ce..69f14e7 100644
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1042,6 +1094,7 @@
+@@ -1042,6 +1095,7 @@
      <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
      <ClInclude Include="Geoscape\ProductionCompleteState.h" />
      <ClInclude Include="Geoscape\GeoscapeState.h" />
@@ -35564,7 +35806,7 @@ index 99f24ce..69f14e7 100644
      <ClInclude Include="Geoscape\Globe.h" />
      <ClInclude Include="Geoscape\GraphsState.h" />
      <ClInclude Include="Geoscape\InterceptState.h" />
-@@ -1170,6 +1223,7 @@
+@@ -1170,6 +1224,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -35572,7 +35814,7 @@ index 99f24ce..69f14e7 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1233,7 @@
+@@ -1179,6 +1234,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
