@@ -3031,7 +3031,7 @@ index 10a96c4..755c149 100644
  	void btnCancelClick(Action *action);
  	/// Handler for pressing an Increase arrow in the list.
 diff --git a/src/Battlescape/AIModule.cpp b/src/Battlescape/AIModule.cpp
-index db6727f..39fb784 100644
+index db6727f..61f1a14 100644
 --- a/src/Battlescape/AIModule.cpp
 +++ b/src/Battlescape/AIModule.cpp
 @@ -16,9 +16,16 @@
@@ -3479,7 +3479,7 @@ index db6727f..39fb784 100644
  	_knownEnemies = countKnownTargets();
  	_visibleEnemies = selectNearestTarget();
  	_spottingEnemies = getSpottingUnits(_unit->getPosition());
-@@ -489,6 +898,352 @@ void AIModule::think(BattleAction *action)
+@@ -489,6 +898,373 @@ void AIModule::think(BattleAction *action)
  		return;
  	}
  
@@ -3516,6 +3516,27 @@ index db6727f..39fb784 100644
 +				}
 +				Stealth::arrived(_save, _unit);   // can't get there: the next spot, or home
 +			}
++		}
++	}
++
++	// STEALTH SIGHT item 5: a sentry, a sweeping sentry or a man off duty holds his spot while nothing is up (a patrol walks
++	// as the stock AI does); the sweeping sentry's view sways a step each turn
++	if (_unit->getFaction() == FACTION_HOSTILE && Stealth::on(_save) && !Stealth::alarm(_save) && _visibleEnemies == 0
++		&& Stealth::state(_save, _unit) == Stealth::ON_POST && Stealth::lookTarget(_save, _unit) == TileEngine::invalid)
++	{
++		const int j = Stealth::job(_save, _unit);
++		if (j != Stealth::PATROL)
++		{
++			if (j == Stealth::SWEEP && _unit->getTimeUnits() > 0)
++			{
++				static const int vx[8] = { 0, 1, 1, 1, 0, -1, -1, -1 }, vy[8] = { -1, -1, 0, 1, 1, 1, 0, -1 };
++				const int nd = (_unit->getDirection() + ((_save->getTurn() / 1) % 4 < 2 ? 1 : 7)) & 7;
++				_unit->lookAt(_unit->getPosition() + Position(vx[nd], vy[nd], 0));
++				while (_unit->getStatus() == STATUS_TURNING) _unit->turn();
++			}
++			action->type = BA_NONE;
++			_unit->setTimeUnits(0);   // he holds: no walking off
++			return;
 +		}
 +	}
 +
@@ -3832,7 +3853,7 @@ index db6727f..39fb784 100644
  	if (action->weapon)
  	{
  		const RuleItem *rule = action->weapon->getRules();
-@@ -1395,6 +2150,12 @@ int AIModule::selectNearestTarget()
+@@ -1395,6 +2171,12 @@ int AIModule::selectNearestTarget()
  		{
  			tally++;
  			int dist = Position::distance2d(_unit->getPosition(), bu->getPosition());
@@ -3845,7 +3866,7 @@ index db6727f..39fb784 100644
  			if (dist < _closestDist)
  			{
  				bool valid = false;
-@@ -2367,7 +3128,11 @@ void AIModule::wayPointAction()
+@@ -2367,7 +3149,11 @@ void AIModule::wayPointAction()
  		return;
  	}
  	_aggroTarget = 0;
@@ -3858,7 +3879,7 @@ index db6727f..39fb784 100644
  	{
  		if (_aggroTarget != 0) break; // loop finished
  		if (!validTarget(bu, true, true))
-@@ -2386,6 +3151,7 @@ void AIModule::wayPointAction()
+@@ -2386,6 +3172,7 @@ void AIModule::wayPointAction()
  
  	if (_aggroTarget != 0)
  	{
@@ -3866,7 +3887,7 @@ index db6727f..39fb784 100644
  		_attackAction.type = BA_LAUNCH;
  		_attackAction.updateTU();
  		if (!_attackAction.haveTU())
-@@ -2950,8 +3716,10 @@ AIAttackWeight AIModule::getTargetAttackWeight(BattleUnit* target) const
+@@ -2950,8 +3737,10 @@ AIAttackWeight AIModule::getTargetAttackWeight(BattleUnit* target) const
  		weight = target->getAITargetWeightAsFriendly(_save->getMod());
  	}
  	else if (
@@ -3879,7 +3900,7 @@ index db6727f..39fb784 100644
  	{
  		// ignore units that we don't "know" about...
  		// ... unless we are a sniper and the spotters know about them
-@@ -2976,6 +3744,30 @@ AIAttackWeight AIModule::getTargetAttackWeight(BattleUnit* target) const
+@@ -2976,6 +3765,30 @@ AIAttackWeight AIModule::getTargetAttackWeight(BattleUnit* target) const
  		weight = target->getAITargetWeightAsNeutral(_save->getMod());
  	}
  
@@ -3910,7 +3931,7 @@ index db6727f..39fb784 100644
  	weight = (AIAttackWeight)ModScript::scriptFunc2<ModScript::AiCalculateTargetWeight>(
  		_unit->getArmor(),
  		weight, weight,
-@@ -3114,7 +3906,9 @@ bool AIModule::getNodeOfBestEfficacy(BattleAction *action, int radius)
+@@ -3114,7 +3927,9 @@ bool AIModule::getNodeOfBestEfficacy(BattleAction *action, int radius)
  						if ((_unit->getFaction() == FACTION_HOSTILE && bu->getFaction() != FACTION_HOSTILE) ||
  							(_unit->getFaction() == FACTION_NEUTRAL && bu->getFaction() == FACTION_HOSTILE))
  						{
@@ -10901,7 +10922,7 @@ index cea8e65..cd4cab8 100644
  	}
  
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..e5e3567 100644
+index 3665cd1..2d3e45b 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
 @@ -17,6 +17,10 @@
@@ -11147,7 +11168,7 @@ index 3665cd1..e5e3567 100644
 +			const bool darkNow = _save->getGlobalShade() > _save->getMod()->getMaxDarknessToSeeUnits();
 +			const double hr = Screen::hiRes(), sc = _spriteWidth / 32.0 / hr;
 +			// John 22:24 "10": drawn 10 tiles long (shorter if his eyesight is shorter, e.g. in the dark) so it reads on screen
-+			const double R = std::min(Stealth::elite(u) ? 13 : 10, std::max(3, darkNow ? u->getMaxViewDistanceAtDark(nullptr) : u->getMaxViewDistanceAtDay(nullptr)));
++			const double R = (st == 0 && Stealth::job(_save, u) == Stealth::OFF_DUTY) ? 3.0 : std::min(Stealth::elite(u) ? 13 : 10, std::max(3, darkNow ? u->getMaxViewDistanceAtDark(nullptr) : u->getMaxViewDistanceAtDay(nullptr)));
 +			const double cx = getX() + sp.x / hr + 16 * sc, cy = getY() + sp.y / hr + 32 * sc;
 +			const std::string f = std::string("Resources/UI/Cones/cone_") + LV[level] + "_" + std::to_string(d) + ".png";
 +			// John 22:34 "Can they see through walls" - they cannot, so the cone shows only on tiles he can see: a sight line from
@@ -13609,10 +13630,10 @@ index 0000000..a8e336b
 +}
 diff --git a/src/Battlescape/Stealth.cpp b/src/Battlescape/Stealth.cpp
 new file mode 100644
-index 0000000..f37fe3e
+index 0000000..7c020b5
 --- /dev/null
 +++ b/src/Battlescape/Stealth.cpp
-@@ -0,0 +1,545 @@
+@@ -0,0 +1,589 @@
 +/*
 + * G.I. Joe: sound and stealth. See Stealth.h and claude/SOUND_STEALTH_DESIGN_v1.md.
 + */
@@ -13836,6 +13857,10 @@ index 0000000..f37fe3e
 +		const bool zz = RNG::percent(sleepPct);
 +		setState(save, u, zz ? ASLEEP : ON_POST);
 +		if (zz) ++sleepers;
++		{
++			const int roll = RNG::generate(0, 99);
++			save->setVanStop(key("st:job:", u), roll < 35 ? SENTRY : roll < 60 ? SWEEP : roll < 85 ? PATROL : OFF_DUTY);
++		}
 +		// the radio man: the senior man awake
 +		if (!zz && (!radio || seniority(u) < seniority(radio))) radio = u;
 +	}
@@ -14010,6 +14035,8 @@ index 0000000..f37fe3e
 +}
 +void clearLook(SavedBattleGame *save, const BattleUnit *u) { save->setVanStop(key("st:look:", u), 0); }
 +
++int job(const SavedBattleGame *save, const BattleUnit *u) { return save->getVanStop(key("st:job:", u), PATROL); }
++
 +bool elite(const BattleUnit *u)
 +{
 +	if (!u) return false;
@@ -14042,7 +14069,14 @@ index 0000000..f37fe3e
 +		save->setVanStop(key("st:look:", u), home);   // back to his post
 +		return;
 +	}
-+	// back on his spot: normal awareness
++	if (save->getVanStop(key("st:bed:", u)))
++	{
++		save->setVanStop(key("st:bed:", u), 0);
++		save->setVanStop(key("st:look:", u), 0); save->setVanStop(key("st:ph:", u), 0); save->setVanStop(key("st:home:", u), 0);
++		if (!alarm(save)) { setState(save, u, ASLEEP); Log(LOG_INFO) << "[stealth] " << u->getType() << " " << u->getId() << " off shift, asleep"; }
++		return;
++	}
++		// back on his spot: normal awareness
 +	save->setVanStop(key("st:look:", u), 0);
 +	save->setVanStop(key("st:ph:", u), 0);
 +	save->setVanStop(key("st:home:", u), 0);
@@ -14060,6 +14094,36 @@ index 0000000..f37fe3e
 +	if (save->getSide() == FACTION_HOSTILE)
 +	{
 +		save->setVanStop("st:mkn", 0);
++		// STEALTH SIGHT item 6: SHIFT CHANGE about every 8 turns while it is quiet. Each sleeper is paired with a guard on post:
++		// the sleeper gets up and walks to that post (and takes the job), the guard walks to the bunk and goes to sleep there.
++		if (save->getVanStop("st:quiet") && !alarm(save) && save->getTurn() > 1 && save->getTurn() % 8 == 0 && save->getVanStop("st:shift") != save->getTurn())
++		{
++			save->setVanStop("st:shift", save->getTurn());
++			std::vector<BattleUnit*> sleepers, posted;
++			for (auto *u : *save->getUnits())
++			{
++				if (!cobra(u) || u->isOut()) continue;
++				const int st = state(save, u);
++				if (st == ASLEEP) sleepers.push_back(u);
++				else if (st == ON_POST && !save->getVanStop(key("st:look:", u))) posted.push_back(u);
++			}
++			int swaps = 0;
++			for (size_t i = 0; i < sleepers.size() && i < posted.size(); ++i)
++			{
++				BattleUnit *s1 = sleepers[i], *p1 = posted[RNG::generate(0, (int)posted.size() - 1)];
++				if (save->getVanStop(key("st:bed:", p1))) continue;
++				const Position bunk = s1->getPosition(), post = p1->getPosition();
++				setState(save, s1, ON_POST);
++				save->setVanStop(key("st:job:", s1), job(save, p1));
++				save->setVanStop(key("st:home:", s1), pack(post) + 1); save->setVanStop(key("st:ph:", s1), 3);
++				save->setVanStop(key("st:look:", s1), pack(post) + 1);
++				save->setVanStop(key("st:bed:", p1), 1);
++				save->setVanStop(key("st:home:", p1), pack(bunk) + 1); save->setVanStop(key("st:ph:", p1), 3);
++				save->setVanStop(key("st:look:", p1), pack(bunk) + 1);
++				++swaps;
++			}
++			if (swaps) Log(LOG_INFO) << "[stealth] shift change, turn " << save->getTurn() << ": " << swaps << " swap(s)";
++		}
 +		for (auto *u : *save->getUnits())
 +		{
 +			if (!cobra(u) || u->isOut()) continue;
@@ -14078,6 +14142,7 @@ index 0000000..f37fe3e
 +			{
 +				if (v->getOriginalFaction() == FACTION_PLAYER && !v->isOut())
 +				{
++					if (s == ON_POST && job(save, u) == OFF_DUTY && Position::distance2d(v->getPosition(), u->getPosition()) > 3) continue;   // off duty: only close
 +					const bool far = Position::distance2d(v->getPosition(), u->getPosition()) > (elite(u) ? 12 : 8);   // elites: one band further
 +					const bool dark = save->getGlobalShade() >= 10;
 +					const bool low = v->isKneeled();
@@ -14160,10 +14225,10 @@ index 0000000..f37fe3e
 +}
 diff --git a/src/Battlescape/Stealth.h b/src/Battlescape/Stealth.h
 new file mode 100644
-index 0000000..2de244a
+index 0000000..7205915
 --- /dev/null
 +++ b/src/Battlescape/Stealth.h
-@@ -0,0 +1,84 @@
+@@ -0,0 +1,88 @@
 +#pragma once
 +/*
 + * G.I. Joe: sound and stealth (claude/SOUND_STEALTH_DESIGN_v1.md, approved by John 14 Nov 23:35).
@@ -14241,6 +14306,10 @@ index 0000000..2de244a
 +	void arrived(SavedBattleGame *save, BattleUnit *u);
 +	/// STEALTH SIGHT item 3: the elites (Crimson Guard, Storm Shadow, the Baroness, Firefly, Zartan) see one band further
 +	bool elite(const BattleUnit *u);
++	/// STEALTH SIGHT item 5: guard jobs. 0 sentry (holds his spot), 1 sweeping sentry (holds, his view sways), 2 patrol,
++	/// 3 off duty (holds, sees only close). Asleep is the state, not a job.
++	enum Job { SENTRY = 0, SWEEP = 1, PATROL = 2, OFF_DUTY = 3 };
++	int job(const SavedBattleGame *save, const BattleUnit *u);
 +
 +	/// markers for noises the Joes heard but cannot see (this turn): count and tile
 +	int markers(const SavedBattleGame *save);
