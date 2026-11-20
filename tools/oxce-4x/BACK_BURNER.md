@@ -449,6 +449,20 @@ H.I.S.S., which need the same thing in months 4-12. Not started.
 
 ## Broken
 
+### From John's log, 19 Nov 18:41-19:27 (exe 60ba314 era; no crash in 4 battles)
+
+- `STR_COBRA_CELL_SITE_ not found` (19:08): a cell site's name is built with an empty suffix, so
+  the raw id shows. Find where the site name is composed and give it the region/id it is missing.
+- Factory raid at 19:23 (`STR_COBRA_FACTORY`): `Trouble: no texture and no deployment terrain` -
+  the engine fell back to the first terrain, so that fight was on the wrong ground. The factory
+  site needs a terrain on its deployment (or the globe point under it needs a texture).
+- Missing strings: `STR_GJA_RACK`, city names `North Platte` and `Amarillo` (convoy/network
+  messages quote them raw), `STR_SMART_LEADER_ALIVE_CARTEL`,
+  `STR_CIVILIANS_KILLED_BY_XCOM_OPERATIVES_CARTEL` (cartel debriefing lines). STORY owns the
+  wording; BUILD can put placeholders in.
+- No `[landing]` line in any battle: either the entry pick was skipped or that exe predates it.
+  Recheck on the b4ee29b exe.
+
 ### WATCH: big maps (.MAP2), the first place to look if a battle will not load or runs out of memory
 
 Not broken yet; John 15:34 asked for the note instead of a guard. From 0193a43 a map can be a

@@ -96,11 +96,11 @@ def load_entry(path, key, name):
 #   3 months 15-22  pulse pistols     STR_PLASMA_PISTOL
 #   4 months 23-30  pulse rifles      STR_PLASMA_RIFLE
 #   5 months 31+    heavy pulse       STR_HEAVY_PLASMA
-# Knives are in the calendar's first band but there is no knife item yet.
+# Months 1-3 also carry a knife (STR_GJV_KNIFE, the villains' blade), as the calendar says.
 # Each rank keeps whatever extra its vanilla entry carried in the matching tier (a grenade, the
 # Viper Medic's stun launcher), by keying off the old three: old tier 0 -> new 3, 1 -> 4, 2 -> 5.
 EARLY = [
-    ['STR_PISTOL', 'STR_PISTOL_CLIP', 'STR_PISTOL_CLIP'],
+    ['STR_PISTOL', 'STR_PISTOL_CLIP', 'STR_PISTOL_CLIP', 'STR_GJV_KNIFE'],
     ['STR_RIFLE', 'STR_RIFLE_CLIP', 'STR_ALIEN_GRENADE', 'STR_RIFLE_CLIP'],
     ['STR_LASER_RIFLE', 'STR_ALIEN_GRENADE'],
 ]
