@@ -8439,7 +8439,7 @@ index 7af613c..53dbe26 100644
  	void resetAllEnemiesNeutralized() { _allEnemiesNeutralized = false; }
  };
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..98120b9 100644
+index 1951ba7..c246919 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -16,10 +16,18 @@
@@ -8461,7 +8461,14 @@ index 1951ba7..98120b9 100644
  #include "TileEngine.h"
  #include "Inventory.h"
  #include "AIModule.h"
-@@ -96,6 +104,207 @@ BattlescapeGenerator::~BattlescapeGenerator()
+@@ -90,12 +98,214 @@ BattlescapeGenerator::BattlescapeGenerator(Game *game) :
+  */
+ BattlescapeGenerator::~BattlescapeGenerator()
+ {
++	landingPick = -1;   // a pick is for one battle
+ 
+ }
+ 
  /**
   * Sets up all our various arrays and whatnot according to the size of the map.
   */
@@ -8669,7 +8676,7 @@ index 1951ba7..98120b9 100644
  void BattlescapeGenerator::init(bool resetTerrain)
  {
  	_blocks.clear();
-@@ -236,6 +445,15 @@ void BattlescapeGenerator::setMissionSite(MissionSite *mission)
+@@ -236,6 +446,15 @@ void BattlescapeGenerator::setMissionSite(MissionSite *mission)
   */
  void BattlescapeGenerator::nextStage()
  {
@@ -8685,7 +8692,7 @@ index 1951ba7..98120b9 100644
  	// check if the unit is available in the next stage
  	auto isUnitStillActive = [](const BattleUnit* u)
  	{
-@@ -540,6 +758,10 @@ void BattlescapeGenerator::nextStage()
+@@ -540,6 +759,10 @@ void BattlescapeGenerator::nextStage()
  	_save->setChronoTrigger(ruleDeploy->getChronoTrigger());
  	_save->setCheatTurn(ruleDeploy->getCheatTurn());
  	ruleDeploy->getDimensions(&_mapsize_x, &_mapsize_y, &_mapsize_z);
@@ -8696,7 +8703,7 @@ index 1951ba7..98120b9 100644
  	size_t pick = RNG::generate(0, ruleDeploy->getTerrains().size() -1);
  	_terrain = _game->getMod()->getTerrain(ruleDeploy->getTerrains().at(pick), true);
  	setDepth(ruleDeploy, true);
-@@ -618,6 +840,7 @@ void BattlescapeGenerator::nextStage()
+@@ -618,6 +841,7 @@ void BattlescapeGenerator::nextStage()
  	}
  
  	generateMap(script, ruleDeploy->getCustomUfoName(), nullptr);
@@ -8704,7 +8711,7 @@ index 1951ba7..98120b9 100644
  
  	setupObjectives(ruleDeploy);
  
-@@ -739,7 +962,36 @@ void BattlescapeGenerator::nextStage()
+@@ -739,7 +963,36 @@ void BattlescapeGenerator::nextStage()
  
  	size_t unitCount = _save->getUnits()->size();
  
@@ -8742,7 +8749,7 @@ index 1951ba7..98120b9 100644
  
  	if (unitCount == _save->getUnits()->size())
  	{
-@@ -767,12 +1019,55 @@ void BattlescapeGenerator::nextStage()
+@@ -767,12 +1020,55 @@ void BattlescapeGenerator::nextStage()
   */
  void BattlescapeGenerator::run()
  {
@@ -8798,7 +8805,7 @@ index 1951ba7..98120b9 100644
  
  	_save->setTurnLimit(ruleDeploy->getTurnLimit());
  	_save->setChronoTrigger(ruleDeploy->getChronoTrigger());
-@@ -829,9 +1124,9 @@ void BattlescapeGenerator::run()
+@@ -829,9 +1125,9 @@ void BattlescapeGenerator::run()
  		if (_game->getSavedGame()->getMonthsPassed() != -1)
  		{
  			month =
@@ -8810,7 +8817,7 @@ index 1951ba7..98120b9 100644
  		}
  		else
  		{
-@@ -863,7 +1158,7 @@ void BattlescapeGenerator::run()
+@@ -863,7 +1159,7 @@ void BattlescapeGenerator::run()
  	if (isPreview && _craftRules)
  	{
  		// resize the map if needed
@@ -8819,7 +8826,7 @@ index 1951ba7..98120b9 100644
  		{
  			if (dims->getSizeX() > _mapsize_x)
  			{
-@@ -883,7 +1178,29 @@ void BattlescapeGenerator::run()
+@@ -883,7 +1179,29 @@ void BattlescapeGenerator::run()
  	}
  	_save->setStartingCondition(startingCondition);
  
@@ -8849,7 +8856,7 @@ index 1951ba7..98120b9 100644
  
  	if (isPreview && ruleDeploy->isHidden())
  	{
-@@ -897,13 +1214,13 @@ void BattlescapeGenerator::run()
+@@ -897,13 +1215,13 @@ void BattlescapeGenerator::run()
  	{
  		enviro = _game->getMod()->getEnviroEffects(_terrain->getEnviroEffects());
  	}
@@ -8865,7 +8872,7 @@ index 1951ba7..98120b9 100644
  	{
  		deployCivilians(markCiviliansAsVIP, civilianSpawnNodeRank, ruleDeploy->getCivilians());
  		for (auto& pair : ruleDeploy->getCiviliansByType())
-@@ -914,18 +1231,18 @@ void BattlescapeGenerator::run()
+@@ -914,18 +1232,18 @@ void BattlescapeGenerator::run()
  
  	size_t unitCount = _save->getUnits()->size();
  
@@ -8887,7 +8894,7 @@ index 1951ba7..98120b9 100644
  	{
  		deployCivilians(markCiviliansAsVIP, civilianSpawnNodeRank, ruleDeploy->getCivilians());
  		for (auto& pair : ruleDeploy->getCiviliansByType())
-@@ -959,6 +1276,212 @@ void BattlescapeGenerator::run()
+@@ -959,6 +1277,212 @@ void BattlescapeGenerator::run()
  	{
  		explodeOtherJunk();
  	}
@@ -9100,7 +9107,7 @@ index 1951ba7..98120b9 100644
  }
  
  /**
-@@ -966,6 +1489,36 @@ void BattlescapeGenerator::run()
+@@ -966,6 +1490,36 @@ void BattlescapeGenerator::run()
   */
  void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondition, const RuleEnviroEffects* enviro)
  {
@@ -9137,7 +9144,7 @@ index 1951ba7..98120b9 100644
  	bool isPreview = _save->isPreview();
  
  	_save->applyEnviroEffects(enviro);
-@@ -1345,6 +1898,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
+@@ -1345,6 +1899,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
  
  	// auto-equip soldiers (only soldiers without layout) and clean up moved items
  	autoEquip(*_save->getUnits(), _game->getMod(), &tempItemList, ground, _worldShade, _allowAutoLoadout, false);
@@ -9145,7 +9152,7 @@ index 1951ba7..98120b9 100644
  }
  
  void BattlescapeGenerator::autoEquip(std::vector<BattleUnit*> units, Mod *mod, std::vector<BattleItem*> *craftInv,
-@@ -1433,7 +1987,17 @@ BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
+@@ -1433,7 +1988,17 @@ BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
  	{
  		if (!_save->isPreview())
  		{
@@ -9164,7 +9171,7 @@ index 1951ba7..98120b9 100644
  			if (v->getRules()->getVehicleClipAmmo())
  			{
  				BattleItem *ammoItem = _save->createItemForUnit(v->getRules()->getVehicleClipAmmo(), unit);
-@@ -1448,6 +2012,40 @@ BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
+@@ -1448,6 +2013,40 @@ BattleUnit *BattlescapeGenerator::addXCOMVehicle(Vehicle *v)
  	return unit;
  }
  
@@ -9205,7 +9212,7 @@ index 1951ba7..98120b9 100644
  /**
   * Adds a soldier to the game and places him on a free spawnpoint.
   * Spawnpoints are either tiles in case of an XCom craft that landed.
-@@ -1483,6 +2081,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1483,6 +2082,32 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  			setCustomCraftInventoryTile();
  
  			Node* node = _save->getSpawnNode(NR_XCOM, unit);
@@ -9238,7 +9245,7 @@ index 1951ba7..98120b9 100644
  			if (node)
  			{
  				_save->setUnitPosition(unit, node->getPosition());
-@@ -1495,6 +2119,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
+@@ -1495,6 +2120,27 @@ BattleUnit *BattlescapeGenerator::addXCOMUnit(BattleUnit *unit)
  				_save->initUnit(unit);
  				return unit;
  			}
@@ -9266,7 +9273,7 @@ index 1951ba7..98120b9 100644
  			else if (_save->getMissionType() != "STR_BASE_DEFENSE")
  			{
  				if (placeUnitNearFriend(unit))
-@@ -1669,6 +2314,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,6 +2315,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -9356,7 +9363,7 @@ index 1951ba7..98120b9 100644
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
  	// race defined by deployment if there is one.
-@@ -1696,8 +2424,78 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1696,8 +2425,78 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -9435,7 +9442,7 @@ index 1951ba7..98120b9 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2519,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2520,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -9452,7 +9459,7 @@ index 1951ba7..98120b9 100644
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2548,45 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2549,45 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -9500,7 +9507,7 @@ index 1951ba7..98120b9 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -1824,7 +2668,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
+@@ -1824,7 +2669,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  		unit->getAIModule()->setStartNode(node);
  		unit->setRankInt(alienRank);
  		int dir = _save->getTileEngine()->faceWindow(node->getPosition());
@@ -9509,7 +9516,7 @@ index 1951ba7..98120b9 100644
  		if (Position::distance2d(node->getPosition(), craft) <= 20 && RNG::percent(aliensFacingCraftOdds))
  			dir = unit->directionTo(craft);
  		if (dir != -1)
-@@ -1843,7 +2687,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
+@@ -1843,7 +2688,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  		{
  			unit->setRankInt(alienRank);
  			int dir = _save->getTileEngine()->faceWindow(unit->getPosition());
@@ -9518,7 +9525,7 @@ index 1951ba7..98120b9 100644
  			if (Position::distance2d(unit->getPosition(), craft) <= 20 && RNG::percent(aliensFacingCraftOdds))
  				dir = unit->directionTo(craft);
  			if (dir != -1)
-@@ -2081,17 +2925,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,17 +2926,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -9549,7 +9556,7 @@ index 1951ba7..98120b9 100644
  
  	mapblock->setSizeZ(sizez);
  
-@@ -2141,11 +2993,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +2994,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -9563,7 +9570,7 @@ index 1951ba7..98120b9 100644
  			if (terrainObjectID>0)
  			{
  				int mapDataSetID = mapDataSetOffset;
-@@ -2817,10 +3669,11 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2817,10 +3670,11 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  	// determine globe terrain from globe texture
  	_globeTerrain = _terrain;
@@ -9577,7 +9584,7 @@ index 1951ba7..98120b9 100644
  		if (tmpTerrain)
  		{
  			_globeTerrain = tmpTerrain;
-@@ -2830,7 +3683,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2830,7 +3684,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  	// this mission type is "hard-coded" in terms of map layout
  	uint64_t seed = RNG::getSeed();
  	_baseTerrain = _terrain;
@@ -9588,7 +9595,7 @@ index 1951ba7..98120b9 100644
  	{
  		if (_mod->getBaseDefenseMapFromLocation() == 1)
  		{
-@@ -3010,25 +3865,34 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3010,25 +3866,34 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  					break;
  				case MSC_ADDCRAFT:
@@ -9632,7 +9639,7 @@ index 1951ba7..98120b9 100644
  								+ ") could not be placed on the map. You may try turning on 'save scumming' to work around this issue.");
  						}
  						if (craftPlaced)
-@@ -3062,12 +3926,12 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3062,12 +3927,12 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  								}
  							}
  
@@ -9647,7 +9654,7 @@ index 1951ba7..98120b9 100644
  							success = true;
  						}
  					}
-@@ -3302,13 +4166,13 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3302,13 +4167,13 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  	if (craftMap)
  	{
@@ -9664,7 +9671,7 @@ index 1951ba7..98120b9 100644
  		loadRMP(craftMap, _craftPos.x * 10, _craftPos.y * 10, _craftZ, Node::CRAFTSEGMENT);
  		for (int i = 0; i < craftMap->getSizeX() / 10; ++i)
  		{
-@@ -3365,6 +4229,7 @@ void BattlescapeGenerator::generateBaseMap()
+@@ -3365,6 +4230,7 @@ void BattlescapeGenerator::generateBaseMap()
  	// add modules based on the base's layout
  	for (const auto* fac : *_base->getFacilities())
  	{
@@ -9672,7 +9679,26 @@ index 1951ba7..98120b9 100644
  		if (fac->isBuiltOrHadPreviousFacility())
  		{
  			int num = 0;
-@@ -4268,10 +5133,38 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
+@@ -4256,6 +5122,18 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
+ 		return false;
+ 	}
+ 	std::pair<int, int> selection = valid.at(RNG::generate(0, valid.size() - 1));
++	if (_pickingCraft && landingPick >= 0 && landingPick <= 8)
++	{
++		// the spot nearest the part of the map the player chose (corner, edge or middle)
++		const double tx = (landingPick % 3) / 2.0 * (wholeMap.w - sizeX), ty = (landingPick / 3) / 2.0 * (wholeMap.h - sizeY);
++		double best = 1e9;
++		for (const auto &v : valid)
++		{
++			const double d = (v.first - tx) * (v.first - tx) + (v.second - ty) * (v.second - ty);
++			if (d < best) { best = d; selection = v; }
++		}
++		Log(LOG_INFO) << "[landing] transport set down at block " << selection.first << "," << selection.second << " (pick " << landingPick << ")";
++	}
+ 	X = selection.first;
+ 	Y = selection.second;
+ 	return true;
+@@ -4268,14 +5146,47 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
   * @param craftPos the position of the craft is stored here.
   * @return if the craft was placed or not.
   */
@@ -9694,6 +9720,8 @@ index 1951ba7..98120b9 100644
 +	h = (h + 9) / 10 * 10;
 +}
 +
++int BattlescapeGenerator::landingPick = -1;
++
  bool BattlescapeGenerator::addCraft(MapBlock *craftMap, MapScript *command, SDL_Rect &craftPos, RuleTerrain *terrain)
  {
 -	craftPos.w = craftMap->getSizeX();
@@ -9713,8 +9741,15 @@ index 1951ba7..98120b9 100644
  	bool placed = false;
  	int x, y;
  
++	_pickingCraft = true;
++	if (landingPick < 0) if (const char *lz = getenv("OXCE_LZ")) landingPick = atoi(lz);   // rig: test a pick in New Battle
+ 	placed = selectPosition(command->getRects(), x, y, craftPos.w, craftPos.h);
++	_pickingCraft = false;
+ 	// if ok, allocate it
+ 	if (placed)
+ 	{
 diff --git a/src/Battlescape/BattlescapeGenerator.h b/src/Battlescape/BattlescapeGenerator.h
-index a0bc8b3..b073f80 100644
+index a0bc8b3..7c5f5cc 100644
 --- a/src/Battlescape/BattlescapeGenerator.h
 +++ b/src/Battlescape/BattlescapeGenerator.h
 @@ -54,12 +54,19 @@ class Position;
@@ -9781,6 +9816,17 @@ index a0bc8b3..b073f80 100644
  	/// Gets craft position.
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
+@@ -205,6 +231,10 @@ public:
+ 	/// Sets up the objectives for the map.
+ 	void setupObjectives(const AlienDeployment *ruleDeploy);
+ 	// Auto-equip a set of units
++	/// G.I. Joe landing zones: where the player asked the transport to set down, 0-8 = NW N NE W centre E SW S SE
++	/// of the map (-1 = the map script's own choice). Read and cleared by the next battle built.
++	static int landingPick;
++	bool _pickingCraft = false;
+ 	static void autoEquip(std::vector<BattleUnit*> units, Mod *mod, std::vector<BattleItem*> *craftInv,
+ 		RuleInventory *groundRuleInv, int worldShade, bool allowAutoLoadout, bool overrideEquipmentLayout);
+ };
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
 index 7cd4941..dfe5f18 100644
 --- a/src/Battlescape/BattlescapeState.cpp
@@ -15228,12 +15274,13 @@ index 067c7b3..e9320c1 100644
  	/// Creates a new ProjectileFly class
 diff --git a/src/Battlescape/SecureAreaState.cpp b/src/Battlescape/SecureAreaState.cpp
 new file mode 100644
-index 0000000..f6e3ede
+index 0000000..af38769
 --- /dev/null
 +++ b/src/Battlescape/SecureAreaState.cpp
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,71 @@
 +#include "SecureAreaState.h"
 +#include "../Engine/Game.h"
++#include "../Interface/Cursor.h"
 +#include "../Engine/Options.h"
 +#include "../Engine/Logger.h"
 +#include "../Engine/LocalizedText.h"
@@ -15278,6 +15325,15 @@ index 0000000..f6e3ede
 +	centerAllSurfaces();
 +}
 +
++/// John 19 Nov 18:54 "I can't make a selection when it asks to stay in the mission or leave. The mouse disappears":
++/// the box opens straight after the last Cobra falls, while the battle has the pointer hidden for the shot or the
++/// fall animation - so this box puts the pointer back itself.
++void SecureAreaState::init()
++{
++	State::init();
++	_game->getCursor()->setVisible(true);
++}
++
 +void SecureAreaState::btnContinueClick(Action *)
 +{
 +	Log(LOG_INFO) << "[secure] CONTINUE: the squad searches, END MISSION ends it";
@@ -15295,10 +15351,10 @@ index 0000000..f6e3ede
 +}
 diff --git a/src/Battlescape/SecureAreaState.h b/src/Battlescape/SecureAreaState.h
 new file mode 100644
-index 0000000..a8e336b
+index 0000000..84c2731
 --- /dev/null
 +++ b/src/Battlescape/SecureAreaState.h
-@@ -0,0 +1,25 @@
+@@ -0,0 +1,26 @@
 +#pragma once
 +#include "../Engine/State.h"
 +
@@ -15320,6 +15376,7 @@ index 0000000..a8e336b
 +	TextButton *_btnContinue, *_btnExfil;
 +public:
 +	SecureAreaState(BattlescapeState *state, BattlescapeGame *bg);
++	void init() override;
 +	void btnContinueClick(Action *action);
 +	void btnExfilClick(Action *action);
 +};
@@ -19106,7 +19163,7 @@ index ff6f452..2d8ea7d 100644
  	void think() override;
  	/// Fades the message.
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 839f803..6d1dded 100644
+index 839f803..5cb3be5 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -35,6 +35,10 @@ set ( basescape_src
@@ -19147,7 +19204,15 @@ index 839f803..6d1dded 100644
    Engine/Surface.cpp
    Engine/SurfaceSet.cpp
    Engine/Timer.cpp
-@@ -201,9 +217,20 @@ set ( geoscape_src
+@@ -192,6 +208,7 @@ set ( geoscape_src
+   Geoscape/ConfirmCydoniaState.cpp
+   Geoscape/ConfirmDestinationState.cpp
+   Geoscape/ConfirmLandingState.cpp
++  Geoscape/LandingPickState.cpp
+   Geoscape/ConfirmNewBaseState.cpp
+   Geoscape/CraftErrorState.cpp
+   Geoscape/CraftNotEnoughPilotsState.cpp
+@@ -201,9 +218,20 @@ set ( geoscape_src
    Geoscape/DogfightState.cpp
    Geoscape/ExtendedGeoscapeLinksState.cpp
    Geoscape/FundingState.cpp
@@ -19168,7 +19233,7 @@ index 839f803..6d1dded 100644
    Geoscape/Globe.cpp
    Geoscape/GraphsState.cpp
    Geoscape/InterceptState.cpp
-@@ -331,6 +358,7 @@ set ( mod_src
+@@ -331,6 +359,7 @@ set ( mod_src
    Mod/RuleMissionScript.cpp
    Mod/RuleMusic.cpp
    Mod/RuleRegion.cpp
@@ -19176,7 +19241,7 @@ index 839f803..6d1dded 100644
    Mod/RuleResearch.cpp
    Mod/RuleSkill.cpp
    Mod/RuleSoldier.cpp
-@@ -356,6 +384,7 @@ set ( savegame_src
+@@ -356,6 +385,7 @@ set ( savegame_src
    Savegame/AlienBase.cpp
    Savegame/AlienMission.cpp
    Savegame/AlienStrategy.cpp
@@ -26719,10 +26784,18 @@ index 2278d57..6fe30f4 100644
  		errorMessage = tr("STR_NO_FREE_HANGARS_FOR_TRANSFER");
  	}
 diff --git a/src/Geoscape/ConfirmLandingState.cpp b/src/Geoscape/ConfirmLandingState.cpp
-index d74a01d..1c71279 100644
+index d74a01d..c492706 100644
 --- a/src/Geoscape/ConfirmLandingState.cpp
 +++ b/src/Geoscape/ConfirmLandingState.cpp
-@@ -42,6 +42,7 @@
+@@ -18,6 +18,7 @@
+  */
+ #include "CraftErrorState.h"
+ #include "ConfirmLandingState.h"
++#include "LandingPickState.h"
+ #include <sstream>
+ #include "../Engine/Game.h"
+ #include "../Engine/LocalizedText.h"
+@@ -42,6 +43,7 @@
  #include "../Mod/AlienRace.h"
  #include "../Mod/Mod.h"
  #include "../Mod/Texture.h"
@@ -26730,7 +26803,7 @@ index d74a01d..1c71279 100644
  
  namespace OpenXcom
  {
-@@ -59,8 +60,13 @@ ConfirmLandingState::ConfirmLandingState(Craft *craft, Texture *missionTexture,
+@@ -59,8 +61,13 @@ ConfirmLandingState::ConfirmLandingState(Craft *craft, Texture *missionTexture,
  
  	// Create objects
  	_window = new Window(this, 216, 160, 20, 20, POPUP_BOTH);
@@ -26746,7 +26819,7 @@ index d74a01d..1c71279 100644
  	_txtMessage = new Text(206, 80, 25, 40);
  	_txtBegin = new Text(206, 17, 25, 130);
  	_sprite = new Surface(24, 24, 202, 30);
-@@ -71,6 +77,7 @@ ConfirmLandingState::ConfirmLandingState(Craft *craft, Texture *missionTexture,
+@@ -71,6 +78,7 @@ ConfirmLandingState::ConfirmLandingState(Craft *craft, Texture *missionTexture,
  	add(_window, "window", "confirmLanding");
  	add(_btnYes, "button", "confirmLanding");
  	add(_btnNo, "button", "confirmLanding");
@@ -26754,7 +26827,7 @@ index d74a01d..1c71279 100644
  	add(_txtMessage, "text", "confirmLanding");
  	add(_txtBegin, "text", "confirmLanding");
  	add(_sprite);
-@@ -93,6 +100,12 @@ ConfirmLandingState::ConfirmLandingState(Craft *craft, Texture *missionTexture,
+@@ -93,6 +101,12 @@ ConfirmLandingState::ConfirmLandingState(Craft *craft, Texture *missionTexture,
  		_btnNo->setText(tr("STR_NO"));
  	}
  	_btnNo->onMouseClick((ActionHandler)&ConfirmLandingState::btnNoClick);
@@ -26767,7 +26840,7 @@ index d74a01d..1c71279 100644
  	_btnNo->onKeyboardPress((ActionHandler)&ConfirmLandingState::btnNoClick, Options::keyCancel);
  	_btnNo->onKeyboardPress((ActionHandler)&ConfirmLandingState::togglePatrolButton, SDLK_LCTRL);
  	_btnNo->onKeyboardRelease((ActionHandler)&ConfirmLandingState::togglePatrolButton, SDLK_LCTRL);
-@@ -242,6 +255,7 @@ std::string ConfirmLandingState::checkStartingCondition()
+@@ -242,6 +256,7 @@ std::string ConfirmLandingState::checkStartingCondition()
   */
  void ConfirmLandingState::btnYesClick(Action *)
  {
@@ -26775,7 +26848,26 @@ index d74a01d..1c71279 100644
  	std::string message = checkStartingCondition();
  	if (!message.empty())
  	{
-@@ -310,6 +324,17 @@ void ConfirmLandingState::btnYesClick(Action *)
+@@ -251,6 +266,18 @@ void ConfirmLandingState::btnYesClick(Action *)
+ 		return;
+ 	}
+ 
++	// G.I. Joe LANDING ZONES (John 19 Nov 18:37 "shouldn't it make the apc or tomahawk appear?"): before the map is
++	// built, the player says which part of it the transport sets down in; the generator puts the craft there
++	if (_craft->getRules()->getAllowLanding() && _craft->getNumTotalUnits() > 0)
++	{
++		_game->pushState(new LandingPickState(this));
++		return;
++	}
++	startBattle();
++}
++
++void ConfirmLandingState::startBattle()
++{
+ 	_game->popState();
+ 	Ufo* u = dynamic_cast<Ufo*>(_craft->getDestination());
+ 	MissionSite* m = dynamic_cast<MissionSite*>(_craft->getDestination());
+@@ -310,6 +337,17 @@ void ConfirmLandingState::btnYesClick(Action *)
   * Returns the craft to base and closes the window.
   * @param action Pointer to an action.
   */
@@ -26794,7 +26886,7 @@ index d74a01d..1c71279 100644
  {
  	if (_game->isCtrlPressed())
 diff --git a/src/Geoscape/ConfirmLandingState.h b/src/Geoscape/ConfirmLandingState.h
-index e4c5a64..db0f66b 100644
+index e4c5a64..427e74b 100644
 --- a/src/Geoscape/ConfirmLandingState.h
 +++ b/src/Geoscape/ConfirmLandingState.h
 @@ -41,7 +41,7 @@ private:
@@ -26806,10 +26898,12 @@ index e4c5a64..db0f66b 100644
  	Surface *_sprite;
  	// Checks the starting condition
  	std::string checkStartingCondition();
-@@ -54,8 +54,12 @@ public:
+@@ -54,8 +54,14 @@ public:
  	void init() override;
  	/// Handler for clicking the Yes button.
  	void btnYesClick(Action *action);
++	/// G.I. Joe: builds the battle and goes in (what YES did; the landing picker calls it once the spot is chosen).
++	void startBattle();
 +	/// G.I. Joe CAMPAIGN SIMULATOR: the craft about to land.
 +	Craft *getCraft() const { return _craft; }
  	/// Handler for clicking the No button.
@@ -27723,10 +27817,10 @@ index e609d3c..fad706b 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..b4ee96a 100644
+index 6b4e79d..52c1e2f 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
-@@ -16,7 +16,33 @@
+@@ -16,7 +16,34 @@
   * You should have received a copy of the GNU General Public License
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
@@ -27737,6 +27831,7 @@ index 6b4e79d..b4ee96a 100644
 +#include "../Battlescape/AirFight.h"
 +#include "PlayStyle.h"
  #include "GeoscapeState.h"
++#include "LandingPickState.h"
 +#include "../Basescape/SoldierInfoState.h"
 +#include "../Basescape/BaseInfoState.h"
 +#include "../Basescape/TransferBaseState.h"
@@ -27760,7 +27855,7 @@ index 6b4e79d..b4ee96a 100644
  #include <set>
  #include <sstream>
  #include <iomanip>
-@@ -35,6 +61,7 @@
+@@ -35,6 +62,7 @@
  #include "../Engine/Collections.h"
  #include "../Engine/Unicode.h"
  #include "Globe.h"
@@ -27768,7 +27863,7 @@ index 6b4e79d..b4ee96a 100644
  #include "../Interface/ComboBox.h"
  #include "../Interface/Text.h"
  #include "../Interface/TextButton.h"
-@@ -48,12 +75,14 @@
+@@ -48,12 +76,14 @@
  #include "../Mod/RuleCraft.h"
  #include "../Savegame/Ufo.h"
  #include "../Mod/RuleUfo.h"
@@ -27783,7 +27878,7 @@ index 6b4e79d..b4ee96a 100644
  #include "../Savegame/Soldier.h"
  #include "../Savegame/SoldierDiary.h"
  #include "../Menu/PauseState.h"
-@@ -69,6 +98,8 @@
+@@ -69,6 +99,8 @@
  #include "../Basescape/GlobalAlienContainmentState.h"
  #include "../Menu/CutsceneState.h"
  #include "../Menu/ErrorMessageState.h"
@@ -27792,7 +27887,7 @@ index 6b4e79d..b4ee96a 100644
  #include "GraphsState.h"
  #include "FundingState.h"
  #include "ExtendedGeoscapeLinksState.h"
-@@ -80,6 +111,12 @@
+@@ -80,6 +112,12 @@
  #include "UfoLostState.h"
  #include "CraftPatrolState.h"
  #include "LowFuelState.h"
@@ -27805,7 +27900,7 @@ index 6b4e79d..b4ee96a 100644
  #include "MultipleTargetsState.h"
  #include "ConfirmLandingState.h"
  #include "ItemsArrivingState.h"
-@@ -87,6 +124,7 @@
+@@ -87,6 +125,7 @@
  #include "DogfightErrorState.h"
  #include "DogfightExperienceState.h"
  #include "../Ufopaedia/Ufopaedia.h"
@@ -27813,7 +27908,7 @@ index 6b4e79d..b4ee96a 100644
  #include "../Savegame/ResearchProject.h"
  #include "ResearchCompleteState.h"
  #include "../Mod/RuleResearch.h"
-@@ -103,6 +141,7 @@
+@@ -103,6 +142,7 @@
  #include "../Savegame/ItemContainer.h"
  #include "../Savegame/MissionSite.h"
  #include "../Savegame/AlienBase.h"
@@ -27821,7 +27916,7 @@ index 6b4e79d..b4ee96a 100644
  #include "../Mod/RuleRegion.h"
  #include "MissionDetectedState.h"
  #include "AlienBaseState.h"
-@@ -157,41 +196,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -157,41 +197,153 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_bg->setX((_globe->getWidth() - _bg->getWidth()) / 2);
  	_bg->setY((_globe->getHeight() - _bg->getHeight()) / 2);
  
@@ -28005,7 +28100,7 @@ index 6b4e79d..b4ee96a 100644
  
  	int slackingIndicatorOffset = _game->getMod()->getInterface("geoscape")->getElement("slackingIndicator")->custom;
  	_txtSlacking = new Text(59, 17, screenWidth - 61, screenHeight / 2 - 100 + slackingIndicatorOffset);
-@@ -207,6 +358,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -207,6 +359,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_dogfightTimer = new Timer(Options::dogfightSpeed);
  
  	_txtDebug = new Text(254, 32, 0, 0);
@@ -28013,7 +28108,7 @@ index 6b4e79d..b4ee96a 100644
  	_cbxRegion = new ComboBox(this, 150, 16, 0, 36);
  	_cbxZone = new ComboBox(this, 48, 16, 154, 36);
  	_cbxArea = new ComboBox(this, 48, 16, 206, 36);
-@@ -251,6 +403,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -251,6 +404,10 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtMinSep, "text", "geoscape");
  	add(_txtSec, "text", "geoscape");
  	add(_txtWeekday, "text", "geoscape");
@@ -28024,7 +28119,7 @@ index 6b4e79d..b4ee96a 100644
  	add(_txtDay, "text", "geoscape");
  	add(_txtMonth, "text", "geoscape");
  	add(_txtYear, "text", "geoscape");
-@@ -258,6 +414,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -258,6 +415,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	add(_txtTraining, "trainingIndicator", "geoscape");
  
  	add(_txtDebug, "text", "geoscape");
@@ -28032,7 +28127,7 @@ index 6b4e79d..b4ee96a 100644
  	add(_cbxRegion, "button", "geoscape");
  	add(_cbxZone, "button", "geoscape");
  	add(_cbxArea, "button", "geoscape");
-@@ -268,12 +425,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -268,12 +426,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	geobord->setX(_sidebar->getX() - geobord->getWidth() + _sidebar->getWidth());
  	geobord->setY(_sidebar->getY());
  	_sidebar->copy(geobord);
@@ -28060,7 +28155,7 @@ index 6b4e79d..b4ee96a 100644
  	_btnIntercept->onMouseClick((ActionHandler)&GeoscapeState::btnInterceptClick);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnInterceptClick, Options::keyGeoIntercept);
  	_btnIntercept->onKeyboardPress((ActionHandler)&GeoscapeState::btnUfoTrackerClick, Options::keyGeoUfoTracker);
-@@ -292,7 +463,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -292,7 +464,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnBases->setGeoscapeButton(true);
  
  	_btnGraphs->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -28069,7 +28164,7 @@ index 6b4e79d..b4ee96a 100644
  	_btnGraphs->onMouseClick((ActionHandler)&GeoscapeState::btnGraphsClick);
  	_btnGraphs->onKeyboardPress((ActionHandler)&GeoscapeState::btnGraphsClick, Options::keyGeoGraphs);
  	_btnGraphs->setGeoscapeButton(true);
-@@ -310,7 +481,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -310,7 +482,7 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnOptions->setGeoscapeButton(true);
  
  	_btnFunding->initText(_game->getMod()->getFont("FONT_GEO_BIG"), _game->getMod()->getFont("FONT_GEO_SMALL"), _game->getLanguage());
@@ -28078,7 +28173,7 @@ index 6b4e79d..b4ee96a 100644
  	_btnFunding->onMouseClick((ActionHandler)&GeoscapeState::btnFundingClick);
  	_btnFunding->onKeyboardPress((ActionHandler)&GeoscapeState::btnFundingClick, Options::keyGeoFunding);
  	_btnFunding->setGeoscapeButton(true);
-@@ -357,6 +528,27 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -357,6 +529,27 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btn1Day->onKeyboardPress((ActionHandler)&GeoscapeState::btnTimerClick, Options::keyGeoSpeed6);
  	_btn1Day->setGeoscapeButton(true);
  
@@ -28106,7 +28201,7 @@ index 6b4e79d..b4ee96a 100644
  	_sideBottom->setGeoscapeButton(true);
  	_sideTop->setGeoscapeButton(true);
  
-@@ -387,6 +579,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -387,6 +580,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, SDL_BUTTON_LEFT);
  	_btnZoomOut->onMouseClick((ActionHandler)&GeoscapeState::btnZoomOutRightClick, SDL_BUTTON_RIGHT);
  	_btnZoomOut->onKeyboardPress((ActionHandler)&GeoscapeState::btnZoomOutLeftClick, Options::keyGeoZoomOut);
@@ -28115,7 +28210,7 @@ index 6b4e79d..b4ee96a 100644
  
  	_txtFunds->setAlign(ALIGN_CENTER);
  	_txtFunds->setVisible(Options::showFundsOnGeoscape);
-@@ -403,6 +597,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -403,6 +598,52 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  	_txtMinSep->setText(":");
  
  	_txtWeekday->setAlign(ALIGN_CENTER);
@@ -28168,7 +28263,7 @@ index 6b4e79d..b4ee96a 100644
  
  	_txtDay->setAlign(ALIGN_CENTER);
  
-@@ -427,6 +667,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
+@@ -427,6 +668,45 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
  		_txtSec->setX(_txtSec->getX()-10);
  	}
  
@@ -28214,7 +28309,7 @@ index 6b4e79d..b4ee96a 100644
  	_gameTimer->onTimer((StateHandler)&GeoscapeState::timeAdvance);
  	_gameTimer->start();
  
-@@ -512,7 +791,9 @@ void GeoscapeState::blit()
+@@ -512,7 +792,9 @@ void GeoscapeState::blit()
  	State::blit();
  	for (auto* dfs : _dogfights)
  	{
@@ -28225,7 +28320,7 @@ index 6b4e79d..b4ee96a 100644
  	}
  }
  
-@@ -705,13 +986,169 @@ void GeoscapeState::handle(Action *action)
+@@ -705,13 +987,170 @@ void GeoscapeState::handle(Action *action)
   * Updates the timer display and resets the palette
   * since it's bound to change on other screens.
   */
@@ -28371,6 +28466,7 @@ index 6b4e79d..b4ee96a 100644
 +			else if (o == "soldier") _game->pushState(new SoldierInfoState(b, 0));
 +			else if (o == "equip") _game->pushState(new CraftEquipmentState(b, 0));
 +			else if (o == "crew") _game->pushState(new CraftSoldiersState(b, 0));
++			else if (o == "lzpick") _game->pushState(new LandingPickState(nullptr));
 +			else if (o == "stores") _game->pushState(new StoresState(b));
 +			else if (o == "training") _game->pushState(new AllocateTrainingState(b));
 +			else if (o.compare(0, 4, "res:") == 0)
@@ -28395,7 +28491,7 @@ index 6b4e79d..b4ee96a 100644
  	_globe->onMouseOver(0);
  	_globe->rotateStop();
  	_globe->setFocus(true);
-@@ -751,8 +1188,28 @@ void GeoscapeState::init()
+@@ -751,8 +1190,28 @@ void GeoscapeState::init()
  		_game->getSavedGame()->addMonth();
  		_game->getSavedGame()->increaseDaysPassed();
  		determineAlienMissions();
@@ -28424,7 +28520,7 @@ index 6b4e79d..b4ee96a 100644
  }
  
  /**
-@@ -835,6 +1292,10 @@ void GeoscapeState::timeDisplay()
+@@ -835,6 +1294,10 @@ void GeoscapeState::timeDisplay()
  	std::ostringstream ss5;
  	ss5 << _game->getSavedGame()->getTime()->getYear();
  	_txtYear->setText(ss5.str());
@@ -28435,7 +28531,7 @@ index 6b4e79d..b4ee96a 100644
  }
  
  /**
-@@ -847,6 +1308,179 @@ void GeoscapeState::timeDisplay()
+@@ -847,6 +1310,179 @@ void GeoscapeState::timeDisplay()
   * on 1 Day speed) or until an event occurs, since updating
   * the screen on each step would become cumbersomely slow.
   */
@@ -28615,7 +28711,7 @@ index 6b4e79d..b4ee96a 100644
  void GeoscapeState::timeAdvance()
  {
  	int timeSpan = 0;
-@@ -878,11 +1512,13 @@ void GeoscapeState::timeAdvance()
+@@ -878,11 +1514,13 @@ void GeoscapeState::timeAdvance()
  	}
  	else if (_timeSpeed == _btn30Mins)
  	{
@@ -28631,7 +28727,7 @@ index 6b4e79d..b4ee96a 100644
  	}
  	else if (_timeSpeed == _btn1Day)
  	{
-@@ -1047,6 +1683,7 @@ void GeoscapeState::time5Seconds()
+@@ -1047,6 +1685,7 @@ void GeoscapeState::time5Seconds()
  					continue;
  				}
  
@@ -28639,7 +28735,7 @@ index 6b4e79d..b4ee96a 100644
  				size_t count = _game->getSavedGame()->getMissionSites()->size();
  				AlienMission *mission = ufo->getMission();
  				bool detected = ufo->getDetected();
-@@ -1139,6 +1776,9 @@ void GeoscapeState::time5Seconds()
+@@ -1139,6 +1778,9 @@ void GeoscapeState::time5Seconds()
  		}
  	}
  
@@ -28649,7 +28745,7 @@ index 6b4e79d..b4ee96a 100644
  	// Handle craft logic
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -1233,6 +1873,13 @@ void GeoscapeState::time5Seconds()
+@@ -1233,6 +1875,13 @@ void GeoscapeState::time5Seconds()
  			if (!ufoIsAttacking)
  			{
  				bool returnedToBase = xcraft->think();
@@ -28663,7 +28759,7 @@ index 6b4e79d..b4ee96a 100644
  				if (returnedToBase)
  				{
  					_game->getSavedGame()->stopHuntingXcomCraft(xcraft); // hiding in the base is good enough, obviously
-@@ -1276,6 +1923,14 @@ void GeoscapeState::time5Seconds()
+@@ -1276,6 +1925,14 @@ void GeoscapeState::time5Seconds()
  							continue;
  						}
  						// Can we actually fight it
@@ -28678,7 +28774,7 @@ index 6b4e79d..b4ee96a 100644
  						if (!xcraft->isInDogfight() && u->getSpeed() <= xcraft->getCraftStats().speedMax)
  						{
  							if (u->isHunterKiller())
-@@ -1422,7 +2077,9 @@ void GeoscapeState::time5Seconds()
+@@ -1422,7 +2079,9 @@ void GeoscapeState::time5Seconds()
  				{
  					if (b->isDiscovered())
  					{
@@ -28689,7 +28785,7 @@ index 6b4e79d..b4ee96a 100644
  						{
  							int texture, shade;
  							_globe->getPolygonTextureAndShade(b->getLongitude(), b->getLatitude(), &texture, &shade);
-@@ -1454,6 +2111,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +2113,35 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -28725,7 +28821,7 @@ index 6b4e79d..b4ee96a 100644
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +2250,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +2252,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -28756,7 +28852,7 @@ index 6b4e79d..b4ee96a 100644
  							}
  						}
  					}
-@@ -1752,7 +2454,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2456,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -28765,7 +28861,7 @@ index 6b4e79d..b4ee96a 100644
  								}
  								else
  								{
-@@ -1858,6 +2560,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2562,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -28786,7 +28882,7 @@ index 6b4e79d..b4ee96a 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2600,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2602,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -28799,7 +28895,7 @@ index 6b4e79d..b4ee96a 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2104,6 +2826,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2104,6 +2828,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		detected = maskBitOr(detected, craft->detect(ufo, save, alreadyTracked));
  	}
  
@@ -28807,7 +28903,7 @@ index 6b4e79d..b4ee96a 100644
  	if (!alreadyTracked)
  	{
  		if (maskTest(detected, DETECTION_RADAR))
-@@ -2126,8 +2849,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2126,8 +2851,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		{
  			ufo->setHyperDetected(true);
  		}
@@ -28828,7 +28924,7 @@ index 6b4e79d..b4ee96a 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2879,187 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2881,187 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -29016,7 +29112,7 @@ index 6b4e79d..b4ee96a 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +3106,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +3108,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -29106,7 +29202,7 @@ index 6b4e79d..b4ee96a 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +3351,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +3353,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -29115,7 +29211,7 @@ index 6b4e79d..b4ee96a 100644
  			}
  			else
  			{
-@@ -2389,12 +3387,336 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3389,336 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
@@ -29452,7 +29548,7 @@ index 6b4e79d..b4ee96a 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3766,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3768,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -29475,7 +29571,7 @@ index 6b4e79d..b4ee96a 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2776,6 +4107,7 @@ void GeoscapeState::time1Day()
+@@ -2776,6 +4109,7 @@ void GeoscapeState::time1Day()
  					{
  						chanceToDetect = 50 - (distance * 50 / facility->getRules()->getSightRange()); // dynamic 0-50% based on relative distance
  					}
@@ -29483,7 +29579,7 @@ index 6b4e79d..b4ee96a 100644
  					if (RNG::percent(chanceToDetect))
  					{
  						alienBase->setDiscovered(true);
-@@ -2861,7 +4193,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +4195,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -29512,7 +29608,7 @@ index 6b4e79d..b4ee96a 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2894,7 +4247,9 @@ void GeoscapeState::time1Month()
+@@ -2894,7 +4249,9 @@ void GeoscapeState::time1Month()
  	{
  		for (auto* ab : *_game->getSavedGame()->getAlienBases())
  		{
@@ -29523,7 +29619,7 @@ index 6b4e79d..b4ee96a 100644
  			{
  				ab->setDiscovered(true);
  				popup(new AlienBaseState(ab, this));
-@@ -2908,6 +4263,15 @@ void GeoscapeState::time1Month()
+@@ -2908,6 +4265,15 @@ void GeoscapeState::time1Month()
   * Slows down the timer back to minimum speed,
   * for when important events occur.
   */
@@ -29539,7 +29635,7 @@ index 6b4e79d..b4ee96a 100644
  void GeoscapeState::timerReset()
  {
  	SDL_Event ev;
-@@ -2960,6 +4324,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +4326,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -29570,7 +29666,7 @@ index 6b4e79d..b4ee96a 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4510,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4512,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -29580,7 +29676,7 @@ index 6b4e79d..b4ee96a 100644
  }
  
  /**
-@@ -3265,6 +4654,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4656,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -29596,7 +29692,7 @@ index 6b4e79d..b4ee96a 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4740,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4742,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -29649,7 +29745,7 @@ index 6b4e79d..b4ee96a 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4808,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4810,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -29901,7 +29997,7 @@ index 6b4e79d..b4ee96a 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +6336,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +6338,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
@@ -31853,6 +31949,125 @@ index 4450282..feec737 100644
  	}
  	_lstCrafts->setSelectable(true);
  	_lstCrafts->setBackground(_window);
+diff --git a/src/Geoscape/LandingPickState.cpp b/src/Geoscape/LandingPickState.cpp
+new file mode 100644
+index 0000000..478ac0d
+--- /dev/null
++++ b/src/Geoscape/LandingPickState.cpp
+@@ -0,0 +1,75 @@
++#include "LandingPickState.h"
++#include "ConfirmLandingState.h"
++#include "../Engine/Game.h"
++#include "../Engine/Options.h"
++#include "../Engine/Action.h"
++#include "../Interface/Window.h"
++#include "../Interface/Text.h"
++#include "../Interface/TextButton.h"
++#include "../Battlescape/BattlescapeGenerator.h"
++#include "../Mod/Mod.h"
++
++namespace OpenXcom
++{
++
++LandingPickState::LandingPickState(ConfirmLandingState *confirm) : _confirm(confirm)
++{
++	_screen = false;
++	_window = new Window(this, 240, 176, 40, 12, POPUP_BOTH);
++	_txtTitle = new Text(220, 17, 50, 20);
++	_txtHelp = new Text(220, 18, 50, 36);
++	setInterface("confirmLanding");
++	add(_window, "window", "confirmLanding");
++	add(_txtTitle, "text", "confirmLanding");
++	add(_txtHelp, "text", "confirmLanding");
++
++	// a diamond, as the battle shows the map: area (x, y) of a 3 x 3 split sits at screen
++	// column (x - y) and row (x + y), so (0,0) is the top corner and (2,2) the bottom one
++	const char *names[9] = { "STR_GJ_LZ_TOP", "STR_GJ_LZ_UPPER_RIGHT", "STR_GJ_LZ_RIGHT", "STR_GJ_LZ_UPPER_LEFT", "STR_GJ_LZ_CENTRE",
++		"STR_GJ_LZ_LOWER_RIGHT", "STR_GJ_LZ_LEFT", "STR_GJ_LZ_LOWER_LEFT", "STR_GJ_LZ_BOTTOM" };
++	for (int i = 0; i < 9; ++i)
++	{
++		const int ax = i % 3, ay = i / 3;
++		const int cx = 160 + (ax - ay) * 34, cy = 64 + (ax + ay) * 19;
++		TextButton *b = new TextButton(64, 16, cx - 32, cy);
++		add(b, "button", "confirmLanding");
++		b->setText(tr(names[i]));
++		b->onMouseClick((ActionHandler)&LandingPickState::btnAreaClick);
++		_btnArea.push_back(b);
++	}
++	_btnPilot = new TextButton(220, 14, 50, 166);
++	add(_btnPilot, "button", "confirmLanding");
++	centerAllSurfaces();
++	setWindowBackground(_window, "confirmLanding");
++
++	_txtTitle->setBig();
++	_txtTitle->setAlign(ALIGN_CENTER);
++	_txtTitle->setText(tr("STR_GJ_LZ_TITLE"));
++	_txtHelp->setAlign(ALIGN_CENTER);
++	_txtHelp->setWordWrap(true);
++	_txtHelp->setText(tr("STR_GJ_LZ_HELP"));
++	_btnPilot->setText(tr("STR_GJ_LZ_PILOT"));
++	_btnPilot->onMouseClick((ActionHandler)&LandingPickState::btnPilotClick);
++	_btnPilot->onKeyboardPress((ActionHandler)&LandingPickState::btnPilotClick, Options::keyCancel);
++}
++
++void LandingPickState::go(int pick)
++{
++	BattlescapeGenerator::landingPick = pick;
++	ConfirmLandingState *c = _confirm;
++	_game->popState();     // this box
++	if (c) c->startBattle();      // closes the landing prompt and builds the battle
++}
++
++void LandingPickState::btnAreaClick(Action *action)
++{
++	for (size_t i = 0; i < _btnArea.size(); ++i)
++		if (action->getSender() == _btnArea[i]) { go((int)i); return; }
++}
++
++void LandingPickState::btnPilotClick(Action *)
++{
++	go(-1);
++}
++
++}
+diff --git a/src/Geoscape/LandingPickState.h b/src/Geoscape/LandingPickState.h
+new file mode 100644
+index 0000000..ae1c910
+--- /dev/null
++++ b/src/Geoscape/LandingPickState.h
+@@ -0,0 +1,32 @@
++#pragma once
++#include "../Engine/State.h"
++#include <vector>
++
++namespace OpenXcom
++{
++
++class Window;
++class Text;
++class TextButton;
++class ConfirmLandingState;
++
++/**
++ * G.I. Joe landing zones: before the battle map is built, the player picks which part of it the
++ * transport sets down in - nine areas laid out as the battle shows the map (a diamond: the top
++ * corner of the screen is the top of the map) - or leaves it to the pilot.
++ */
++class LandingPickState : public State
++{
++	ConfirmLandingState *_confirm;
++	Window *_window;
++	Text *_txtTitle, *_txtHelp;
++	std::vector<TextButton*> _btnArea;
++	TextButton *_btnPilot;
++	void go(int pick);
++public:
++	LandingPickState(ConfirmLandingState *confirm);
++	void btnAreaClick(Action *action);
++	void btnPilotClick(Action *action);
++};
++
++}
 diff --git a/src/Geoscape/MonthlyReportState.cpp b/src/Geoscape/MonthlyReportState.cpp
 index f1e9acc..9e1091b 100644
 --- a/src/Geoscape/MonthlyReportState.cpp
@@ -38209,7 +38424,7 @@ index 6bef22e..8cc3b62 100644
  	/// Gets if unit can be recovered as civilian.
  	bool isRecoverableAsCivilian() const { return _civilianRecoveryTypeName.empty() == false || _civilianRecoverySoldierType || _civilianRecoveryItemType; }
 diff --git a/src/OpenXcom.2010.vcxproj b/src/OpenXcom.2010.vcxproj
-index 99f24ce..c6a0ffe 100644
+index 99f24ce..e3291a5 100644
 --- a/src/OpenXcom.2010.vcxproj
 +++ b/src/OpenXcom.2010.vcxproj
 @@ -377,6 +377,10 @@
@@ -38250,7 +38465,15 @@ index 99f24ce..c6a0ffe 100644
      <ClCompile Include="Engine\Surface.cpp" />
      <ClCompile Include="Engine\SurfaceSet.cpp" />
      <ClCompile Include="Engine\Timer.cpp" />
-@@ -546,10 +562,21 @@
+@@ -535,6 +551,7 @@
+     <ClCompile Include="Geoscape\CraftErrorState.cpp" />
+     <ClCompile Include="Geoscape\ConfirmDestinationState.cpp" />
+     <ClCompile Include="Geoscape\ConfirmLandingState.cpp" />
++    <ClCompile Include="Geoscape\LandingPickState.cpp" />
+     <ClCompile Include="Geoscape\ConfirmNewBaseState.cpp" />
+     <ClCompile Include="Geoscape\CraftPatrolState.cpp" />
+     <ClCompile Include="Geoscape\DogfightState.cpp" />
+@@ -546,10 +563,21 @@
      <ClCompile Include="Geoscape\PsiTrainingState.cpp" />
      <ClCompile Include="Geoscape\ResearchCompleteState.cpp" />
      <ClCompile Include="Geoscape\FundingState.cpp" />
@@ -38272,7 +38495,7 @@ index 99f24ce..c6a0ffe 100644
      <ClCompile Include="Geoscape\Globe.cpp" />
      <ClCompile Include="Geoscape\GraphsState.cpp" />
      <ClCompile Include="Geoscape\InterceptState.cpp" />
-@@ -673,6 +700,7 @@
+@@ -673,6 +701,7 @@
      <ClCompile Include="Mod\RuleItem.cpp" />
      <ClCompile Include="Mod\RuleManufacture.cpp" />
      <ClCompile Include="Mod\RuleRegion.cpp" />
@@ -38280,7 +38503,7 @@ index 99f24ce..c6a0ffe 100644
      <ClCompile Include="Mod\RuleResearch.cpp" />
      <ClCompile Include="Mod\Mod.cpp" />
      <ClCompile Include="Mod\RuleSoldier.cpp" />
-@@ -682,6 +710,7 @@
+@@ -682,6 +711,7 @@
      <ClCompile Include="Mod\UfoTrajectory.cpp" />
      <ClCompile Include="Savegame\AlienBase.cpp" />
      <ClCompile Include="Savegame\AlienStrategy.cpp" />
@@ -38288,7 +38511,7 @@ index 99f24ce..c6a0ffe 100644
      <ClCompile Include="Savegame\AlienMission.cpp" />
      <ClCompile Include="Savegame\Base.cpp" />
      <ClCompile Include="Savegame\BaseFacility.cpp" />
-@@ -856,6 +885,10 @@
+@@ -856,6 +886,10 @@
      <ClInclude Include="Basescape\MonthlyCostsState.h" />
      <ClInclude Include="Basescape\NewResearchListState.h" />
      <ClInclude Include="Basescape\PlaceFacilityState.h" />
@@ -38299,7 +38522,7 @@ index 99f24ce..c6a0ffe 100644
      <ClInclude Include="Basescape\PlaceLiftState.h" />
      <ClInclude Include="Basescape\ManufactureStartState.h" />
      <ClInclude Include="Basescape\PlaceStartFacilityState.h" />
-@@ -890,6 +923,13 @@
+@@ -890,6 +924,13 @@
      <ClInclude Include="Basescape\TransfersState.h" />
      <ClInclude Include="Battlescape\AbortMissionState.h" />
      <ClInclude Include="Battlescape\ActionMenuItem.h" />
@@ -38313,7 +38536,7 @@ index 99f24ce..c6a0ffe 100644
      <ClInclude Include="Battlescape\ActionMenuState.h" />
      <ClInclude Include="Battlescape\AlienInventory.h" />
      <ClInclude Include="Battlescape\AlienInventoryState.h" />
-@@ -970,6 +1010,8 @@
+@@ -970,6 +1011,8 @@
      <ClInclude Include="Engine\GMCat.h" />
      <ClInclude Include="Engine\GraphSubset.h" />
      <ClInclude Include="Engine\HelperMeta.h" />
@@ -38322,7 +38545,12 @@ index 99f24ce..c6a0ffe 100644
      <ClInclude Include="Engine\InteractiveSurface.h" />
      <ClInclude Include="Engine\Language.h" />
      <ClInclude Include="Engine\LanguagePlurality.h" />
-@@ -1033,6 +1075,17 @@
+@@ -1029,10 +1072,22 @@
+     <ClInclude Include="Geoscape\CraftErrorState.h" />
+     <ClInclude Include="Geoscape\ConfirmDestinationState.h" />
+     <ClInclude Include="Geoscape\ConfirmLandingState.h" />
++    <ClInclude Include="Geoscape\LandingPickState.h" />
+     <ClInclude Include="Geoscape\ConfirmNewBaseState.h" />
      <ClInclude Include="Geoscape\CraftPatrolState.h" />
      <ClInclude Include="Geoscape\DogfightState.h" />
      <ClInclude Include="Geoscape\FundingState.h" />
@@ -38340,7 +38568,7 @@ index 99f24ce..c6a0ffe 100644
      <ClInclude Include="Geoscape\NewPossibleCraftState.h" />
      <ClInclude Include="Geoscape\NewPossibleFacilityState.h" />
      <ClInclude Include="Geoscape\NewPossiblePurchaseState.h" />
-@@ -1042,6 +1095,7 @@
+@@ -1042,6 +1097,7 @@
      <ClInclude Include="Geoscape\NewPossibleResearchState.h" />
      <ClInclude Include="Geoscape\ProductionCompleteState.h" />
      <ClInclude Include="Geoscape\GeoscapeState.h" />
@@ -38348,7 +38576,7 @@ index 99f24ce..c6a0ffe 100644
      <ClInclude Include="Geoscape\Globe.h" />
      <ClInclude Include="Geoscape\GraphsState.h" />
      <ClInclude Include="Geoscape\InterceptState.h" />
-@@ -1170,6 +1224,7 @@
+@@ -1170,6 +1226,7 @@
      <ClInclude Include="Mod\RuleItem.h" />
      <ClInclude Include="Mod\RuleManufacture.h" />
      <ClInclude Include="Mod\RuleRegion.h" />
@@ -38356,7 +38584,7 @@ index 99f24ce..c6a0ffe 100644
      <ClInclude Include="Mod\RuleResearch.h" />
      <ClInclude Include="Mod\Mod.h" />
      <ClInclude Include="Mod\RuleSoldier.h" />
-@@ -1179,6 +1234,7 @@
+@@ -1179,6 +1236,7 @@
      <ClInclude Include="Mod\UfoTrajectory.h" />
      <ClInclude Include="Savegame\AlienBase.h" />
      <ClInclude Include="Savegame\AlienStrategy.h" />
