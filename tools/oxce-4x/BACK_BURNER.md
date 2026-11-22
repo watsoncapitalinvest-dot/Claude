@@ -457,6 +457,15 @@ H.I.S.S., which need the same thing in months 4-12. Not started.
 - screen238/239: abandoned factory (cartel) - a black void of missing floor right of the office room. MAPS.
 - screen220: cartel ranch - a Joe standing in the fence line, black void past the map edge; HUD shows "?" with no unit.
 - screen223: Research Completed facts still off the paper rows (known).
+- Swept screen047-214 (16-19 Nov) on 22 Nov. Still open in them:
+  - EVERY Dossier article page (yellow lore pages, red facility pages, item/vehicle stat pages: s128, 152, 153, 172, 173, 194, 200-212) is X-COM: pixel font, rainbow-garbage frame. Biggest visual leftover.
+  - s214: an X-COM grey/purple window with a garbled strip picture, a 0 counter and a red OK (looks like the stock interception/dogfight window).
+  - s104/125/126/144/150: "Cartel Gunman has Panicked" - stock grey box (art brief BRIEF_FOR_GRAPHICS_AI_XcomLeftovers).
+  - s99/170: Graphs still X-COM (on the tablet list).
+  - s138: Tomahawk FUEL 0% on its craft screen.
+  - s202: Launch box header "WEAPONS/ CREW/MOBATS" runs into itself.
+  - s101: a green-framed box of blue static on the globe - not identified.
+  - s135/136/203: black void past the map edges (old bug list #5).
 - Crash 20 Nov 22:2x landing on a Cobra cell after the landing pick: FIXED 40d523c (null target in the terrain pick, from 788069a).
 
 ### From John's log, 19 Nov 18:41-19:27 (exe 60ba314 era; no crash in 4 battles)
