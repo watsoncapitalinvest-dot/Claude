@@ -449,6 +449,16 @@ H.I.S.S., which need the same thing in months 4-12. Not started.
 
 ## Broken
 
+### From John's screenshots 20 Nov (screen218-239), read 22 Nov
+
+- screen222: the A.P.C.'s craft screen shows a grenade-like sprite as the craft picture (A.P.C. craft sprite index again?). The Wolverine loaded on it - trailer rule works.
+- screen225-227: Dossier article (Cobra Stencil) still in the X-COM pixel font, and its frame is drawn as rainbow garbage round the edges.
+- screen236 (and 237): Skystriker craft picture drawn in broken pieces (same as the ranch planes).
+- screen238/239: abandoned factory (cartel) - a black void of missing floor right of the office room. MAPS.
+- screen220: cartel ranch - a Joe standing in the fence line, black void past the map edge; HUD shows "?" with no unit.
+- screen223: Research Completed facts still off the paper rows (known).
+- Crash 20 Nov 22:2x landing on a Cobra cell after the landing pick: FIXED 40d523c (null target in the terrain pick, from 788069a).
+
 ### From John's log, 19 Nov 18:41-19:27 (exe 60ba314 era; no crash in 4 battles)
 
 - `STR_COBRA_CELL_SITE_ not found` (19:08): a cell site's name is built with an empty suffix, so
