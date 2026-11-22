@@ -27500,7 +27500,7 @@ index 0000000..4143ad4
 +
 +}
 diff --git a/src/Geoscape/DogfightState.cpp b/src/Geoscape/DogfightState.cpp
-index e805e35..3eb1bff 100644
+index e805e35..ac4b937 100644
 --- a/src/Geoscape/DogfightState.cpp
 +++ b/src/Geoscape/DogfightState.cpp
 @@ -54,6 +54,7 @@
@@ -27511,7 +27511,33 @@ index e805e35..3eb1bff 100644
  
  namespace OpenXcom
  {
-@@ -471,6 +472,11 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool
+@@ -414,6 +415,25 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool
+ 	crop.getCrop()->h = _window->getHeight();
+ 	_window->drawRect(crop.getCrop(), 15);
+ 	crop.blit(_window);
++	// G.I. Joe: the X-COM interception window (grey-purple frame, its words baked into the picture: John's
++	// screen 214) is painted over on the tablet look - a dark kit panel, the stance keys as kit keys in words
++	if (HiUI::tablet())
++	{
++		const int ww = _window->getWidth(), wh = _window->getHeight();
++		HiUI::nativePanel(_window, [ww, wh](double X0, double Y0, double k)
++		{
++			const double x1 = X0 + ww * k, y1 = Y0 + wh * k;
++			HiUI::Paint::roundRect(X0, Y0, x1, y1, 2.5 * k, 0x5E6A2E);
++			HiUI::Paint::roundRect(X0 + 1.5 * k, Y0 + 1.5 * k, x1 - 1.5 * k, y1 - 1.5 * k, 2 * k, 0x1C2220);
++			HiUI::Paint::frame(X0 + 1.5 * k, Y0 + 1.5 * k, x1 - 1.5 * k, y1 - 1.5 * k, 0.4 * k, 0xB9A35A);
++		});
++		HiUI::nativeKey(_btnStandoff, tr("STR_GJ_DF_STANDOFF"), false);
++		HiUI::nativeKey(_btnCautious, tr("STR_GJ_DF_CAUTIOUS"), false);
++		HiUI::nativeKey(_btnStandard, tr("STR_GJ_DF_STANDARD"), false);
++		HiUI::nativeKey(_btnAggressive, tr("STR_GJ_DF_AGGRESSIVE"), false);
++		HiUI::nativeKey(_btnDisengage, tr("STR_GJ_DF_DISENGAGE"), false);
++		HiUI::nativeKey(_btnUfo, tr("STR_GJ_DF_LOOK"), false);
++	}
+ 
+ 	if (_ufoIsAttacking || _missileCraft)
+ 	{
+@@ -471,6 +491,11 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool
  	crop.setX(dogfightInterface->getElement("previewTop")->x);
  	crop.setY(dogfightInterface->getElement("previewTop")->h);
  	crop.blit(_preview);
@@ -27523,7 +27549,7 @@ index e805e35..3eb1bff 100644
  
  	_preview->setVisible(false);
  	_preview->onMouseClick((ActionHandler)&DogfightState::previewClick);
-@@ -527,7 +533,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool
+@@ -527,7 +552,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool
  
  	// Create the minimized dogfight icon.
  	Surface *frame = set->getFrame(_craft->getSkinSprite());
@@ -27532,7 +27558,7 @@ index e805e35..3eb1bff 100644
  	_btnMinimizedIcon->onMouseClick((ActionHandler)&DogfightState::btnMinimizedIconClick);
  	_btnMinimizedIcon->setVisible(false);
  
-@@ -592,7 +598,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool
+@@ -592,7 +617,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool
  
  		// Draw icon
  		frame = set->getFrame(w->getRules()->getSprite() + 5);
@@ -27541,7 +27567,7 @@ index e805e35..3eb1bff 100644
  
  		// Just an equipment, it doesn't have any ammo (weapon) or range (tractor beam), skip!
  		if (w->getRules()->getAmmoMax() == 0 && w->getRules()->getTractorBeamPower() == 0)
-@@ -657,7 +663,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool
+@@ -657,7 +682,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool
  
  	// Draw damage indicator.
  	frame = set->getFrame(_craft->getSkinSprite() + 11);
@@ -27550,7 +27576,7 @@ index e805e35..3eb1bff 100644
  
  	_craftDamageAnimTimer->onTimer((StateHandler)&DogfightState::animateCraftDamage);
  
-@@ -1469,7 +1475,7 @@ void DogfightState::update()
+@@ -1469,7 +1494,7 @@ void DogfightState::update()
  		}
  
  		// Handle UFO firing.
@@ -27559,7 +27585,7 @@ index e805e35..3eb1bff 100644
  		{
  			if (_ufo->getShootingAt() == 0)
  			{
-@@ -1638,7 +1644,7 @@ void DogfightState::update()
+@@ -1638,7 +1663,7 @@ void DogfightState::update()
  					// Difference from original: No retaliation until final UFO lands (Original: Is spawned).
  					if (!_game->getSavedGame()->findAlienMission(targetRegion, OBJECTIVE_RETALIATION, race))
  					{
@@ -27568,7 +27594,7 @@ index e805e35..3eb1bff 100644
  						std::string retalMission = retalWeights ? retalWeights->choose() : "";
  						const RuleAlienMission *rule = _game->getMod()->getAlienMission(retalMission, false);
  						if (!rule)
-@@ -2747,4 +2753,48 @@ void DogfightState::awardExperienceToPilots()
+@@ -2747,4 +2772,48 @@ void DogfightState::awardExperienceToPilots()
  	}
  }
  
