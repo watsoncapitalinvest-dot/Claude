@@ -120,6 +120,7 @@ SPECS = {
     'ManufactureInfoState': ([], []),
     'CraftInfoState': ([], []),
     'SoldierInfoState': ([], []),
+    'GraphsState': ([], []),
 }
 
 
