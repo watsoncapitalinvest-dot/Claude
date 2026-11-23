@@ -157,7 +157,17 @@ the fakes is what buys the ordering.
 Every whole-body sheet's death clip runs off row 160 in the facings that fall toward the camera (usually 0-3, 6, 7);
 Ace, Beach Head, the greenshirt pilot and Storm Shadow lose some in all eight. Worked around in the engine
 (`gjDeathFacing`): the fall and the body on the floor borrow the nearest facing that stays whole, so a man may turn
-as he drops. The real fix is re-rendering the death clip into a taller cell (bpy and the blends are in the rig).
+as he drops. 23 Nov: re-rendered for the 33 sheets whose blends are in the rig (`build/sprites/death_patch.py`: each
+facing takes whichever of three Mixamo deaths stays in the cell, what still overhangs is eased up over the fall).
+Still on the workaround: the 11 villains with no blend here (Baroness, Buzzer, cartel gunman, Cobra Commander,
+Destro, Firefly, Major Bludd, Ripper, Scrap-Iron, Storm Shadow, Torch).
+
+### The security gate (23 Nov, BUILD)
+
+A real door now (first non-UFO door in the map's own tile sets, set into the tile's north or west wall): Joes open
+it, Cobra cannot path through or open it and has to destroy it. Checked: placed in VIEW BASE, placed in the Pit's
+fallback stage of a Drome strike with an MG and a missile turret, several Cobra turns with no crash. Not seen: Cobra
+actually reaching a gate and shooting it down. It looks like whatever door the tile set has, not a gate.
 
 ### The Drome trail: placeholders STORY should replace (22 Nov, BUILD)
 
