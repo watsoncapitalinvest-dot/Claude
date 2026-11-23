@@ -152,6 +152,16 @@ the fakes is what buys the ordering.
 
 ## Owed
 
+### Act 1 finish, 23 Nov (BUILD)
+
+- Drome Defense Plans now do what STORY wrote ("climax part 2 easier"): with the plans read, the Drome assault starts
+  with the whole map known and a quarter fewer defenders. Built, not yet seen in a battle.
+- Money to a starving region flies in with a front company's cargo flights (was a van): shoot one of that front's
+  flights down that month and the money is lost. Van stop only if no front company stands. Built; neither strategy
+  run starved the region, so it has not fired yet.
+- Already there when checked: the M.A.R.S. convoy, sleeper cells, garrison size by difficulty, two of the three cell
+  forms (house, farmhouse). Owed by MAPS: the apartment-over-a-shop cell map and a proper plans-raid map.
+
 ### Death clips cut flat at the bottom of the cell (22 Nov, BUILD)
 
 Every whole-body sheet's death clip runs off row 160 in the facings that fall toward the camera (usually 0-3, 6, 7);

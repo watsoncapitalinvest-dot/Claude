@@ -9000,7 +9000,7 @@ index 7af613c..53dbe26 100644
  	void resetAllEnemiesNeutralized() { _allEnemiesNeutralized = false; }
  };
 diff --git a/src/Battlescape/BattlescapeGenerator.cpp b/src/Battlescape/BattlescapeGenerator.cpp
-index 1951ba7..2892a54 100644
+index 1951ba7..afc4e57 100644
 --- a/src/Battlescape/BattlescapeGenerator.cpp
 +++ b/src/Battlescape/BattlescapeGenerator.cpp
 @@ -16,10 +16,19 @@
@@ -9887,7 +9887,7 @@ index 1951ba7..2892a54 100644
  			else if (_save->getMissionType() != "STR_BASE_DEFENSE")
  			{
  				if (placeUnitNearFriend(unit))
-@@ -1669,6 +2333,89 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
+@@ -1669,8 +2333,107 @@ bool BattlescapeGenerator::canPlaceXCOMUnit(Tile *tile)
   * @param race Pointer to the alien race.
   * @param deployment Pointer to the deployment rules.
   */
@@ -9974,10 +9974,28 @@ index 1951ba7..2892a54 100644
 +	return rule;
 +}
 +
++/// G.I. Joe: is this the Terror Drome, with its Defense Plans read?
++bool BattlescapeGenerator::dromePlansRead(const AlienDeployment *deployment) const
++{
++	if (!deployment || deployment->getType() != "STR_COBRA_TERROR_DROME_SITE") return false;
++	const RuleResearch *rr = _mod->getResearch("STR_TERROR_DROME_PLANS", false);
++	return rr && _game->getSavedGame()->isResearched(rr, false);
++}
++
  void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  {
++	// G.I. Joe: the plans show the whole Drome, gun positions and all - the map starts known
++	if (dromePlansRead(deployment))
++	{
++		for (int i = 0; i < _save->getMapSizeXYZ(); ++i)
++			for (int part = 0; part < 3; ++part)
++				_save->getTile(i)->setDiscovered(true, (TilePart)part);
++		Log(LOG_INFO) << "[drome] the Defense Plans are read: the map is known and a quarter of the garrison is off duty";
++	}
  	// race defined by deployment if there is one.
-@@ -1696,8 +2443,78 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+ 	std::string tmpRace = deployment->getRace();
+ 	if (!tmpRace.empty() && _game->getSavedGame()->getMonthsPassed() > -1)
+@@ -1696,8 +2459,78 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  	// and reset memory at each stage
  	_save->getReinforcementsMemory().clear();
  
@@ -10056,7 +10074,7 @@ index 1951ba7..2892a54 100644
  		int quantity;
  
  		switch (_game->getSavedGame()->getDifficulty())
-@@ -1721,6 +2538,16 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1721,6 +2554,22 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  
  		quantity += _mod->isDemigod() ? dd.dQty : RNG::generate(0, dd.dQty); // maximium spawns for demigod
  		quantity += _mod->isDemigod() ? dd.extraQty : RNG::generate(0, dd.extraQty);
@@ -10070,10 +10088,16 @@ index 1951ba7..2892a54 100644
 +		{
 +			quantity = std::max(1, quantity - garrison.headcountPenalty);
 +		}
++		// G.I. Joe (STORY: the Defense Plans make "climax part 2 easier"): with the plans read, the Drome's garrison
++		// rota is known and the assault lands when a quarter of it is off duty
++		if (dromePlansRead(deployment) && quantity > 1)
++		{
++			quantity = std::max(1, (quantity * 3 + 3) / 4);
++		}
  
  		for (int i = 0; i < quantity; ++i)
  		{
-@@ -1740,9 +2567,45 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
+@@ -1740,9 +2589,45 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
  			{
  				outside = false;
  			}
@@ -10121,7 +10145,7 @@ index 1951ba7..2892a54 100644
  			if (unit)
  			{
  				_save->initUnit(unit, itemLevel);
-@@ -1824,7 +2687,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
+@@ -1824,7 +2709,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  		unit->getAIModule()->setStartNode(node);
  		unit->setRankInt(alienRank);
  		int dir = _save->getTileEngine()->faceWindow(node->getPosition());
@@ -10130,7 +10154,7 @@ index 1951ba7..2892a54 100644
  		if (Position::distance2d(node->getPosition(), craft) <= 20 && RNG::percent(aliensFacingCraftOdds))
  			dir = unit->directionTo(craft);
  		if (dir != -1)
-@@ -1843,7 +2706,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
+@@ -1843,7 +2728,7 @@ BattleUnit *BattlescapeGenerator::addAlien(Unit *rules, int alienRank, bool outs
  		{
  			unit->setRankInt(alienRank);
  			int dir = _save->getTileEngine()->faceWindow(unit->getPosition());
@@ -10139,7 +10163,7 @@ index 1951ba7..2892a54 100644
  			if (Position::distance2d(unit->getPosition(), craft) <= 20 && RNG::percent(aliensFacingCraftOdds))
  				dir = unit->directionTo(craft);
  			if (dir != -1)
-@@ -2081,17 +2944,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2081,17 +2966,25 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  	int sizex, sizey, sizez;
  	int x = xoff, y = yoff, z = zoff;
  	char size[3];
@@ -10170,7 +10194,7 @@ index 1951ba7..2892a54 100644
  
  	mapblock->setSizeZ(sizez);
  
-@@ -2141,11 +3012,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
+@@ -2141,11 +3034,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
  		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
  	}
  
@@ -10184,7 +10208,7 @@ index 1951ba7..2892a54 100644
  			if (terrainObjectID>0)
  			{
  				int mapDataSetID = mapDataSetOffset;
-@@ -2817,10 +3688,11 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2817,10 +3710,11 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  	// determine globe terrain from globe texture
  	_globeTerrain = _terrain;
@@ -10198,7 +10222,7 @@ index 1951ba7..2892a54 100644
  		if (tmpTerrain)
  		{
  			_globeTerrain = tmpTerrain;
-@@ -2830,7 +3702,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -2830,7 +3724,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  	// this mission type is "hard-coded" in terms of map layout
  	uint64_t seed = RNG::getSeed();
  	_baseTerrain = _terrain;
@@ -10209,7 +10233,7 @@ index 1951ba7..2892a54 100644
  	{
  		if (_mod->getBaseDefenseMapFromLocation() == 1)
  		{
-@@ -3010,25 +3884,34 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3010,25 +3906,34 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  					break;
  				case MSC_ADDCRAFT:
@@ -10253,7 +10277,7 @@ index 1951ba7..2892a54 100644
  								+ ") could not be placed on the map. You may try turning on 'save scumming' to work around this issue.");
  						}
  						if (craftPlaced)
-@@ -3062,12 +3945,12 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3062,12 +3967,12 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  								}
  							}
  
@@ -10268,7 +10292,7 @@ index 1951ba7..2892a54 100644
  							success = true;
  						}
  					}
-@@ -3302,13 +4185,13 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
+@@ -3302,13 +4207,13 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
  
  	if (craftMap)
  	{
@@ -10285,7 +10309,7 @@ index 1951ba7..2892a54 100644
  		loadRMP(craftMap, _craftPos.x * 10, _craftPos.y * 10, _craftZ, Node::CRAFTSEGMENT);
  		for (int i = 0; i < craftMap->getSizeX() / 10; ++i)
  		{
-@@ -3365,6 +4248,7 @@ void BattlescapeGenerator::generateBaseMap()
+@@ -3365,6 +4270,7 @@ void BattlescapeGenerator::generateBaseMap()
  	// add modules based on the base's layout
  	for (const auto* fac : *_base->getFacilities())
  	{
@@ -10293,7 +10317,7 @@ index 1951ba7..2892a54 100644
  		if (fac->isBuiltOrHadPreviousFacility())
  		{
  			int num = 0;
-@@ -4256,6 +5140,18 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
+@@ -4256,6 +5162,18 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
  		return false;
  	}
  	std::pair<int, int> selection = valid.at(RNG::generate(0, valid.size() - 1));
@@ -10312,7 +10336,7 @@ index 1951ba7..2892a54 100644
  	X = selection.first;
  	Y = selection.second;
  	return true;
-@@ -4268,14 +5164,47 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
+@@ -4268,14 +5186,47 @@ bool BattlescapeGenerator::selectPosition(const std::vector<SDL_Rect *> *rects,
   * @param craftPos the position of the craft is stored here.
   * @return if the craft was placed or not.
   */
@@ -10363,7 +10387,7 @@ index 1951ba7..2892a54 100644
  	if (placed)
  	{
 diff --git a/src/Battlescape/BattlescapeGenerator.h b/src/Battlescape/BattlescapeGenerator.h
-index a0bc8b3..7c5f5cc 100644
+index a0bc8b3..b36cc10 100644
 --- a/src/Battlescape/BattlescapeGenerator.h
 +++ b/src/Battlescape/BattlescapeGenerator.h
 @@ -54,12 +54,19 @@ class Position;
@@ -10386,16 +10410,17 @@ index a0bc8b3..7c5f5cc 100644
  	Ufo *_ufo;
  	Base *_base;
  	MissionSite *_mission;
-@@ -127,6 +134,8 @@ private:
+@@ -127,6 +134,9 @@ private:
  	bool canPlaceXCOMUnit(Tile *tile);
  	/// Deploys the aliens, according to the alien deployment rules.
  	void deployAliens(const AlienDeployment *deployment);
++	bool dromePlansRead(const AlienDeployment *deployment) const;
 +	/// Applies the escalation calendar to one unit, substituting or refusing it.
 +	const Unit *availableUnit(const Unit *rule, bool namedByMission, bool wellSupplied) const;
  	/// Spawns civilians on a terror mission.
  	void deployCivilians(bool markAsVIP, int nodeRank, int max, bool roundUp = false, const std::string &civilianType = "");
  	/// Finds a spot near a friend to spawn at.
-@@ -147,6 +156,14 @@ private:
+@@ -147,6 +157,14 @@ private:
  	bool selectPosition(const std::vector<SDL_Rect *> *rects, int &X, int &Y, int sizeX, int sizeY);
  	/// Generates a map from base modules.
  	void generateBaseMap();
@@ -10410,7 +10435,7 @@ index a0bc8b3..7c5f5cc 100644
  	/// Populates _verticalLevels vector according to a mapscript command and sorts them for use
  	bool populateVerticalLevels(MapScript *command);
  	/// Gets a terrain from a terrain name for a command or a vertical level
-@@ -190,10 +207,19 @@ public:
+@@ -190,10 +208,19 @@ public:
  	void setMissionSite(MissionSite* mission);
  	/// Sets the alien base
  	void setAlienBase(AlienBase* base);
@@ -10430,7 +10455,7 @@ index a0bc8b3..7c5f5cc 100644
  	/// Gets craft position.
  	SDL_Rect getCraftPos() const { return _craftPos; }
  	/// Gets craft elevation.
-@@ -205,6 +231,10 @@ public:
+@@ -205,6 +232,10 @@ public:
  	/// Sets up the objectives for the map.
  	void setupObjectives(const AlienDeployment *ruleDeploy);
  	// Auto-equip a set of units
@@ -26642,10 +26667,10 @@ index 0000000..e57d835
 +}
 diff --git a/src/Geoscape/CobraNetwork.cpp b/src/Geoscape/CobraNetwork.cpp
 new file mode 100644
-index 0000000..290fd07
+index 0000000..919d04f
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.cpp
-@@ -0,0 +1,942 @@
+@@ -0,0 +1,977 @@
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5. See CobraNetwork.h.
 + *
@@ -26732,7 +26757,19 @@ index 0000000..290fd07
 +	return std::acos(std::max(-1.0, std::min(1.0, c))) * EARTH_KM;
 +}
 +
++}
 +std::string siteKey(const AlienBase *b) { return b->getSiteType() + "#" + std::to_string(b->getId()); }
++
++void moneyFlightDown(SavedGame *save, const AlienBase *site)
++{
++	auto &net = save->getCobraNet();
++	auto it = net.find("moneyDue:" + siteKey(site));
++	if (it == net.end()) return;
++	Log(LOG_INFO) << "[network] the money flight went down with " << siteKey(site) << "'s cargo: " << it->second << " funds lost";
++	net.erase(it);
++}
++namespace
++{
 +
 +int diffIndex(const SavedGame *save) { return std::max(0, std::min(4, (int)save->getDifficulty())); }
 +
@@ -27266,20 +27303,43 @@ index 0000000..290fd07
 +			}
 +		}
 +		// piece 9, money to a starving region (ledger 1.7, Act1Fixes item 6): with fewer than 4 working sites in North
-+		// America, Cobra sends in 150 funds for each one missing. STAND-IN: it comes by road (the van stop), not by air,
-+		// until a cargo flight can be tracked from launch to landing; stop the van and the money never arrives.
++		// America, Cobra sends in 150 funds for each one missing. It flies in with a front company's cargo flights
++		// (23 Nov; was a van by road): shoot down any of that front's flights in the month and the money is lost with
++		// it (GeoscapeState, where shot-down flights land). What gets through is paid a month later. With no front
++		// company standing, it still comes by road, the van stop.
 +		{
++			for (auto it = net.begin(); it != net.end(); )
++			{
++				if (it->first.compare(0, 9, "moneyDue:") == 0)
++				{
++					save->getCobraEconomy().addFunds("STR_NORTH_AMERICA", it->second);
++					Log(LOG_INFO) << "[network] the money flight got through: " << it->second << " funds";
++					it = net.erase(it);
++				}
++				else ++it;
++			}
 +			int working = 0;
 +			for (auto *b : *save->getAlienBases())
 +				if (!b->getSiteType().empty() && b->getSiteType() != "STR_COBRA_TERROR_DROME_BUILDING" && b->getSiteType() != "STR_CARTEL_STASH_HOUSE") working++;
 +			if (working < 4 && save->getMonthsPassed() >= 1)
 +			{
-+				AlienBase *dest = nullptr;
-+				for (auto *b : *save->getAlienBases()) if (!b->getSiteType().empty() && b->getSiteType() != "STR_COBRA_TERROR_DROME_BUILDING") { dest = b; break; }
-+				if (dest)
-+					if (MissionSite *ms = spawnSite(game, "STR_COBRA_CRIME_MISSION", "STR_COBRA_VAN_STOP", dest, "money|" + siteKey(dest),
-+						"STR_ALERT_VAN_STOP", townOf(save, dest, towns(mod)), ""))
-+						net["mars:" + std::to_string(ms->getId())] = 150 * (4 - working);
++				const int amount = 150 * (4 - working);
++				AlienBase *front = nullptr;
++				for (auto *b : *save->getAlienBases()) if (b->getSiteType() == FRONT) { front = b; break; }
++				if (front)
++				{
++					net["moneyDue:" + siteKey(front)] = amount;
++					Log(LOG_INFO) << "[network] " << amount << " funds fly in with " << siteKey(front) << "'s cargo flights";
++				}
++				else
++				{
++					AlienBase *dest = nullptr;
++					for (auto *b : *save->getAlienBases()) if (!b->getSiteType().empty() && b->getSiteType() != "STR_COBRA_TERROR_DROME_BUILDING") { dest = b; break; }
++					if (dest)
++						if (MissionSite *ms = spawnSite(game, "STR_COBRA_CRIME_MISSION", "STR_COBRA_VAN_STOP", dest, "money|" + siteKey(dest),
++							"STR_ALERT_VAN_STOP", townOf(save, dest, towns(mod)), ""))
++							net["mars:" + std::to_string(ms->getId())] = amount;
++				}
 +			}
 +		}
 +	}
@@ -27590,10 +27650,10 @@ index 0000000..290fd07
 +} // namespace OpenXcom
 diff --git a/src/Geoscape/CobraNetwork.h b/src/Geoscape/CobraNetwork.h
 new file mode 100644
-index 0000000..8725d17
+index 0000000..e03b48c
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.h
-@@ -0,0 +1,48 @@
+@@ -0,0 +1,50 @@
 +#pragma once
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5 (BRIEF_FOR_BUILD_Act1Layer_Part1_Answers, approved by John 17 Nov 2026).
@@ -27616,6 +27676,8 @@ index 0000000..8725d17
 +
 +namespace CobraNetwork
 +{
++	/// A cargo flight from this site was shot down: any money flying in with it this month is lost.
++	void moneyFlightDown(SavedGame *save, const AlienBase *site);
 +	/// Plants the hidden starting network once, on the campaign's first day (needs the Pit placed).
 +	void plantStart(Game *game);
 +	/// The day's work: dates, crimes, cell strikes, cells growing into fronts.
@@ -28734,7 +28796,7 @@ index e609d3c..fad706b 100644
  	const Mod *mod = _game->getMod();
  	const RuleEvent &rule = _eventRule;
 diff --git a/src/Geoscape/GeoscapeState.cpp b/src/Geoscape/GeoscapeState.cpp
-index 6b4e79d..65cb1f7 100644
+index 6b4e79d..78a3d73 100644
 --- a/src/Geoscape/GeoscapeState.cpp
 +++ b/src/Geoscape/GeoscapeState.cpp
 @@ -16,7 +16,35 @@
@@ -29781,7 +29843,7 @@ index 6b4e79d..65cb1f7 100644
  						{
  							int texture, shade;
  							_globe->getPolygonTextureAndShade(b->getLongitude(), b->getLatitude(), &texture, &shade);
-@@ -1454,6 +2192,35 @@ void GeoscapeState::time5Seconds()
+@@ -1454,6 +2192,36 @@ void GeoscapeState::time5Seconds()
  		{
  			if (ufo->getStatus() == Ufo::DESTROYED)
  			{
@@ -29812,12 +29874,13 @@ index 6b4e79d..65cb1f7 100644
 +						{
 +							site->setShipmentsLost(site->getShipmentsLost() + 1);
 +						}
++						CobraNetwork::moneyFlightDown(_game->getSavedGame(), site);
 +					}
 +				}
  				Collections::deleteIf(_dogfights, _dogfights.size(),
  					[&](DogfightState* dogfight)
  					{
-@@ -1564,13 +2331,29 @@ void GeoscapeState::time10Minutes()
+@@ -1564,13 +2332,29 @@ void GeoscapeState::time10Minutes()
  				if (xcraft->getDestination() == 0 && xcraft->getCraftStats().sightRange > 0)
  				{
  					double range = Nautical(xcraft->getCraftStats().sightRange);
@@ -29848,7 +29911,7 @@ index 6b4e79d..65cb1f7 100644
  							}
  						}
  					}
-@@ -1752,7 +2535,7 @@ void GeoscapeState::baseHunting()
+@@ -1752,7 +2536,7 @@ void GeoscapeState::baseHunting()
  								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
  								if (!ab->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
  								{
@@ -29857,7 +29920,7 @@ index 6b4e79d..65cb1f7 100644
  								}
  								else
  								{
-@@ -1858,6 +2641,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1858,6 +2642,20 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
  	{
  		region->addActivityAlien(score);
  	}
@@ -29878,7 +29941,7 @@ index 6b4e79d..65cb1f7 100644
  	for (auto* country : *_game->getSavedGame()->getCountries())
  	{
  		if (country->getRules()->insideCountry(site->getLongitude(), site->getLatitude()))
-@@ -1884,6 +2681,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
+@@ -1884,6 +2682,12 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
   */
  void GeoscapeState::time30Minutes()
  {
@@ -29891,7 +29954,7 @@ index 6b4e79d..65cb1f7 100644
  	// Decrease mission countdowns
  	for (auto* am : _game->getSavedGame()->getAlienMissions())
  	{
-@@ -2104,6 +2907,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2104,6 +2908,7 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		detected = maskBitOr(detected, craft->detect(ufo, save, alreadyTracked));
  	}
  
@@ -29899,7 +29962,7 @@ index 6b4e79d..65cb1f7 100644
  	if (!alreadyTracked)
  	{
  		if (maskTest(detected, DETECTION_RADAR))
-@@ -2113,6 +2917,11 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2113,6 +2918,11 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  				ufo->setHyperDetected(true);
  			}
  			ufo->setDetected(true);
@@ -29911,7 +29974,7 @@ index 6b4e79d..65cb1f7 100644
  			// don't show if player said he doesn't want to see this UFO anymore
  			if (!_game->getSavedGame()->isUfoOnIgnoreList(ufo->getId()) && !ufo->getRules()->isNoAlert())
  			{
-@@ -2126,8 +2935,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2126,8 +2936,19 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
  		{
  			ufo->setHyperDetected(true);
  		}
@@ -29932,7 +29995,7 @@ index 6b4e79d..65cb1f7 100644
  		{
  			ufo->setDetected(false);
  			ufo->setHyperDetected(false);
-@@ -2145,6 +2965,187 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
+@@ -2145,6 +2966,187 @@ void GeoscapeState::ufoDetection(Ufo* ufo, const std::vector<Craft*>* activeCraf
   */
  void GeoscapeState::time1Hour()
  {
@@ -30120,7 +30183,7 @@ index 6b4e79d..65cb1f7 100644
  	// Handle craft maintenance
  	for (auto* xbase : *_game->getSavedGame()->getBases())
  	{
-@@ -2191,6 +3192,89 @@ void GeoscapeState::time1Hour()
+@@ -2191,6 +3193,89 @@ void GeoscapeState::time1Hour()
  		}
  	}
  
@@ -30210,7 +30273,7 @@ index 6b4e79d..65cb1f7 100644
  	// Handle transfers
  	bool window = false;
  	for (auto* xbase : *_game->getSavedGame()->getBases())
-@@ -2353,7 +3437,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2353,7 +3438,7 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  			mission->setId(_save.getId("ALIEN_MISSIONS"));
  			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
  			{
@@ -30219,7 +30282,7 @@ index 6b4e79d..65cb1f7 100644
  			}
  			else
  			{
-@@ -2389,12 +3473,336 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
+@@ -2389,12 +3474,336 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
   */
  void GeoscapeState::time1Day()
  {
@@ -30556,7 +30619,7 @@ index 6b4e79d..65cb1f7 100644
  	auto addResearchDiaryEntryForBase = [&](const RuleResearch* discoveredResearch, DiscoverySourceType sourceType, const Base* sourceBase, const RuleResearch* sourceResearch)
  	{
  		if (!saveGame->isResearched(discoveredResearch) && !saveGame->isResearchRuleStatusDisabled(discoveredResearch->getName()))
-@@ -2444,12 +3852,21 @@ void GeoscapeState::time1Day()
+@@ -2444,12 +3853,21 @@ void GeoscapeState::time1Day()
  			}
  		}
  
@@ -30579,7 +30642,7 @@ index 6b4e79d..65cb1f7 100644
  			{
  				finished.push_back(proj);
  			}
-@@ -2776,6 +4193,7 @@ void GeoscapeState::time1Day()
+@@ -2776,6 +4194,7 @@ void GeoscapeState::time1Day()
  					{
  						chanceToDetect = 50 - (distance * 50 / facility->getRules()->getSightRange()); // dynamic 0-50% based on relative distance
  					}
@@ -30587,7 +30650,7 @@ index 6b4e79d..65cb1f7 100644
  					if (RNG::percent(chanceToDetect))
  					{
  						alienBase->setDiscovered(true);
-@@ -2861,7 +4279,28 @@ void GeoscapeState::time1Month()
+@@ -2861,7 +4280,28 @@ void GeoscapeState::time1Month()
  {
  	_game->getSavedGame()->addMonth();
  
@@ -30616,7 +30679,7 @@ index 6b4e79d..65cb1f7 100644
  	determineAlienMissions();
  
  	// Handle Psi-Training and initiate a new retaliation mission, if applicable
-@@ -2894,7 +4333,9 @@ void GeoscapeState::time1Month()
+@@ -2894,7 +4334,9 @@ void GeoscapeState::time1Month()
  	{
  		for (auto* ab : *_game->getSavedGame()->getAlienBases())
  		{
@@ -30627,7 +30690,7 @@ index 6b4e79d..65cb1f7 100644
  			{
  				ab->setDiscovered(true);
  				popup(new AlienBaseState(ab, this));
-@@ -2908,6 +4349,15 @@ void GeoscapeState::time1Month()
+@@ -2908,6 +4350,15 @@ void GeoscapeState::time1Month()
   * Slows down the timer back to minimum speed,
   * for when important events occur.
   */
@@ -30643,7 +30706,7 @@ index 6b4e79d..65cb1f7 100644
  void GeoscapeState::timerReset()
  {
  	SDL_Event ev;
-@@ -2960,6 +4410,30 @@ void GeoscapeState::globeClick(Action *action)
+@@ -2960,6 +4411,30 @@ void GeoscapeState::globeClick(Action *action)
  		}
  	}
  
@@ -30674,7 +30737,7 @@ index 6b4e79d..65cb1f7 100644
  	if (_game->getSavedGame()->getDebugMode())
  	{
  		double lon, lat;
-@@ -3122,7 +4596,8 @@ void GeoscapeState::btnGraphsClick(Action *)
+@@ -3122,7 +4597,8 @@ void GeoscapeState::btnGraphsClick(Action *)
  	{
  		return;
  	}
@@ -30684,7 +30747,7 @@ index 6b4e79d..65cb1f7 100644
  }
  
  /**
-@@ -3265,6 +4740,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
+@@ -3265,6 +4741,15 @@ void GeoscapeState::btnZoomInRightClick(Action *)
   * Zooms out of the globe.
   * @param action Pointer to an action.
   */
@@ -30700,7 +30763,7 @@ index 6b4e79d..65cb1f7 100644
  void GeoscapeState::btnZoomOutLeftClick(Action *)
  {
  	_globe->zoomOut();
-@@ -3342,6 +4826,52 @@ void GeoscapeState::handleDogfights()
+@@ -3342,6 +4827,52 @@ void GeoscapeState::handleDogfights()
  		{
  			_globe->rotateStop();
  		}
@@ -30753,7 +30816,7 @@ index 6b4e79d..65cb1f7 100644
  		dfs->think();
  		if (dfs->dogfightEnded())
  		{
-@@ -3364,6 +4894,251 @@ void GeoscapeState::handleDogfights()
+@@ -3364,6 +4895,251 @@ void GeoscapeState::handleDogfights()
  	}
  }
  
@@ -31005,7 +31068,7 @@ index 6b4e79d..65cb1f7 100644
  /**
   * Goes through all active dogfight instances and tries to perform the same action.
   * @param button Action to perform.
-@@ -4647,11 +6422,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
+@@ -4647,11 +6423,11 @@ bool GeoscapeState::processCommand(RuleMissionScript *command)
  	// do i really need to comment this? shouldn't it be obvious what's happening here?
  	if (!command->hasRaceWeights())
  	{
