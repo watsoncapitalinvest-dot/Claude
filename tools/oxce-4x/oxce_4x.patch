@@ -31509,10 +31509,10 @@ index 6a6cf99..fd78692 100644
  	InteractiveSurface *_btnXcomCountry, *_btnUfoCountry;
 diff --git a/src/Geoscape/IntelBoardState.cpp b/src/Geoscape/IntelBoardState.cpp
 new file mode 100644
-index 0000000..faa7e6e
+index 0000000..306db57
 --- /dev/null
 +++ b/src/Geoscape/IntelBoardState.cpp
-@@ -0,0 +1,554 @@
+@@ -0,0 +1,610 @@
 +/*
 + * G.I. Joe: USA Defense. The INTEL board (see IntelBoardState.h).
 + * Sections: what just happened, open leads with how close each is, solved leads, Cobra sites
@@ -31524,6 +31524,8 @@ index 0000000..faa7e6e
 +#include <sstream>
 +#include <set>
 +#include "../Engine/Game.h"
++#include "../Engine/HiUI.h"
++#include "../Engine/Surface.h"
 +#include "../Engine/Action.h"
 +#include "../Engine/LocalizedText.h"
 +#include "../Engine/Options.h"
@@ -31626,6 +31628,42 @@ index 0000000..faa7e6e
 +	_lstBoard->setSelectable(true);
 +	_lstBoard->setBackground(_window);
 +	_lstBoard->onMouseClick((ActionHandler)&IntelBoardState::lstBoardClick);
++
++	if (HiUI::tablet())
++	{
++		// THE CORKBOARD (graphics AI, intel-board-and-covert-ops-build1.zip): the board on the briefing-room wall,
++		// the news and the files pinned to it on two dark index cards, the keys on the shelf under it
++		setWindowBackgroundImage(_window, "JOE_INTEL_BOARD.SCR");
++		HiUI::place(_txtTitle, 8, 2, 120, 14);
++		_txtTitle->setAlign(ALIGN_LEFT);
++		HiUI::textFace(_txtTitle, "stencil");
++		HiUI::textInk(_txtTitle, 0x17181C);
++		HiUI::place(_txtNews, 28, 38, 264, 22);
++		HiUI::textInk(_txtNews, 0xE8B923);
++		HiUI::place(_lstBoard, 28, 66, 264, 98);
++		auto card = [this](int x, int y, int w, int h)
++		{
++			Surface *c = new Surface(w, h, x, y);
++			add(c);
++			HiUI::place(c, x, y, w, h);
++			HiUI::nativePanel(c, [w, h](double X0, double Y0, double k)
++			{
++				HiUI::Paint::roundRect(X0, Y0, X0 + w * k, Y0 + h * k, 1.2 * k, 0x1A1E1C, 225);
++				HiUI::Paint::image("Resources/UI/Intel/pin_red.png", X0 + 3 * k, Y0 - 2.5 * k, X0 + 8 * k, Y0 + 2.5 * k);
++				HiUI::Paint::image("Resources/UI/Intel/pin_yellow.png", X0 + (w - 8) * k, Y0 - 2.5 * k, X0 + (w - 3) * k, Y0 + 2.5 * k);
++			});
++			return c;
++		};
++		// the cards go under the type: drawn first, so moved to the front of the surface list
++		Surface *c1 = card(24, 35, 272, 27), *c2 = card(24, 63, 272, 104);
++		_surfaces.erase(std::remove(_surfaces.begin(), _surfaces.end(), c1), _surfaces.end());
++		_surfaces.erase(std::remove(_surfaces.begin(), _surfaces.end(), c2), _surfaces.end());
++		_surfaces.insert(_surfaces.begin() + 1, c2);
++		_surfaces.insert(_surfaces.begin() + 1, c1);
++		HiUI::place(_btnOk, 24, 177, 64, 12);
++		HiUI::place(_btnGraphs, 94, 177, 64, 12);
++		HiUI::place(_btnCobra, 164, 177, 80, 12);
++	}
 +}
 +
 +void IntelBoardState::init()
@@ -32012,6 +32050,24 @@ index 0000000..faa7e6e
 +	_txtTitle->setBig();
 +	_txtTitle->setAlign(ALIGN_CENTER);
 +	_txtTitle->setText(tr(_op));
++	if (HiUI::tablet())
++	{
++		// the operation's own photograph (graphics AI, op_<name>.png), beside the words
++		std::string pic = _op;
++		if (pic.compare(0, 7, "STR_OP_") == 0) pic = pic.substr(7);
++		for (auto &ch : pic) ch = (char)tolower((unsigned char)ch);
++		pic = "Resources/UI/Intel/op_" + pic + ".png";
++		Surface *photo = new Surface(72, 48, 194, 50);
++		add(photo);
++		HiUI::place(photo, 194, 50, 72, 48);
++		HiUI::nativePanel(photo, [pic](double X0, double Y0, double k)
++		{
++			HiUI::Paint::rect(X0, Y0, X0 + 72 * k, Y0 + 48 * k, 0xE9E3D0);
++			if (!HiUI::Paint::image(pic, X0 + 1.5 * k, Y0 + 1.5 * k, X0 + 70.5 * k, Y0 + 46.5 * k))
++				HiUI::Paint::rect(X0 + 1.5 * k, Y0 + 1.5 * k, X0 + 70.5 * k, Y0 + 46.5 * k, 0x2A2E2C);
++		});
++		HiUI::place(_txtBody, 46, 50, 144, 48);
++	}
 +	std::ostringstream body;
 +	if (rule && !rule->desc.empty()) body << tr(rule->desc);
 +	body << "\n" << tr("STR_SPY_AWAY_DAYS").arg(rule ? rule->days : 5);
