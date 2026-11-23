@@ -284,7 +284,7 @@ index 149e889..225926a 100644
  	BaseView(int width, int height, int x = 0, int y = 0);
  	/// Cleans up the base view.
 diff --git a/src/Basescape/BasescapeState.cpp b/src/Basescape/BasescapeState.cpp
-index 5d0467a..0fbd95c 100644
+index 5d0467a..00e2bcd 100644
 --- a/src/Basescape/BasescapeState.cpp
 +++ b/src/Basescape/BasescapeState.cpp
 @@ -16,7 +16,10 @@
@@ -329,14 +329,41 @@ index 5d0467a..0fbd95c 100644
  	add(_mini, "miniBase", "basescape");
  	add(_txtFacility, "textTooltip", "basescape");
  	add(_edtBase, "text1", "basescape");
-@@ -112,6 +122,19 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+@@ -112,6 +122,46 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
  
  	centerAllSurfaces();
  
 +	// BUILT FROM SCRATCH AT DISPLAY RESOLUTION, as the equipment screen is: the
 +	// plate, the base plan, the base strip, the keys and all the type are drawn by
 +	// HiUI at the size they are shown. The 8-bit screen underneath still runs it.
-+	if (HiUI::enabled())
++	if (HiUI::tablet())
++	{
++		// THE TABLET (art/tablet_clean/BasescapeState_clean.png, the graphics AI's boxes /6): the Pit's plan on
++		// the grid at left under its floor tabs, the eleven keys on the painted plates at right, the base's
++		// name in the title strip and the other bases on the cliff picture
++		Surface *tabBg = _game->getMod()->getSurface("JOE_TAB_BASESCAPESTATE.SCR");
++		tabBg->blitNShade(_bg, 0, 0);
++		HiUI::aliasImage(_bg, tabBg);
++		HiUI::place(_view, 20, 53, 174, 114);
++		HiUI::place(_blue, 20, 53, 174, 114);
++		int i = 0;
++		for (TextButton *b : { _btnNewBase, _btnBaseInfo, _btnSoldiers, _btnCrafts, _btnFacilities, _btnResearch,
++			_btnManufacture, _btnTransfer, _btnPurchase, _btnSell, _btnGeoscape })
++		{
++			HiUI::place(b, 201, (322 + 62 * i) / 6, 97, 9);
++			HiUI::paintedButton(b);
++			++i;
++		}
++		HiUI::place(_edtBase, 22, 19, 96, 11);
++		HiUI::place(_txtLocation, 122, 20, 76, 9);
++		HiUI::place(_txtFunds, 200, 20, 96, 9);
++		_txtFunds->setAlign(ALIGN_RIGHT);
++		HiUI::place(_mini, 170, 33, 128, 16);
++		HiUI::place(_txtFacility, 22, 168, 172, 8);
++		for (Surface *t : std::initializer_list<Surface*>{ _txtFacility, _edtBase, _txtLocation, _txtFunds })
++			HiUI::nativeText(t);
++	}
++	else if (HiUI::enabled())
 +	{
 +		HiUI::nativeBackdrop(_bg, std::vector<SDL_Rect>{ SDL_Rect{ 192, 41, 128, 16 } });
 +		for (TextButton *b : { _btnNewBase, _btnBaseInfo, _btnSoldiers, _btnCrafts, _btnFacilities, _btnResearch,
@@ -349,7 +376,7 @@ index 5d0467a..0fbd95c 100644
  	// Set up objects
  	if (_globe)
  	{
-@@ -135,6 +158,11 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+@@ -135,6 +185,11 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
  	_view->onMouseClick((ActionHandler)&BasescapeState::viewMiddleClick, SDL_BUTTON_MIDDLE);
  	_view->onMouseOver((ActionHandler)&BasescapeState::viewMouseOver);
  	_view->onMouseOut((ActionHandler)&BasescapeState::viewMouseOut);
@@ -361,7 +388,7 @@ index 5d0467a..0fbd95c 100644
  
  	_mini->setTexture(_game->getMod()->getSurfaceSet("BASEBITS.PCK"));
  	_mini->setBases(_game->getSavedGame()->getBases());
-@@ -195,6 +223,9 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
+@@ -195,6 +250,9 @@ BasescapeState::BasescapeState(Base *base, Globe *globe) : _base(base), _globe(g
   */
  BasescapeState::~BasescapeState()
  {
@@ -371,7 +398,7 @@ index 5d0467a..0fbd95c 100644
  	// Clean up any temporary bases
  	bool exists = false;
  	for (const auto* xbase : *_game->getSavedGame()->getBases())
-@@ -221,6 +252,13 @@ void BasescapeState::init()
+@@ -221,6 +279,13 @@ void BasescapeState::init()
  
  	setBase(_base);
  	_view->setBase(_base);
@@ -385,7 +412,7 @@ index 5d0467a..0fbd95c 100644
  	_mini->draw();
  	_edtBase->setText(_base->getName());
  
-@@ -339,7 +377,7 @@ void BasescapeState::btnFacilitiesClick(Action *)
+@@ -339,7 +404,7 @@ void BasescapeState::btnFacilitiesClick(Action *)
   */
  void BasescapeState::btnResearchClick(Action *)
  {
@@ -394,7 +421,7 @@ index 5d0467a..0fbd95c 100644
  }
  
  /**
-@@ -393,10 +431,32 @@ void BasescapeState::btnGeoscapeClick(Action *)
+@@ -393,10 +458,32 @@ void BasescapeState::btnGeoscapeClick(Action *)
   */
  void BasescapeState::viewLeftClick(Action *)
  {
@@ -429,7 +456,7 @@ index 5d0467a..0fbd95c 100644
  		{
  			// Ctrl + left click on a base facility allows moving it
  			_game->pushState(new PlaceFacilityState(_base, fac->getRules(), fac));
-@@ -426,6 +486,12 @@ void BasescapeState::viewLeftClick(Action *)
+@@ -426,6 +513,12 @@ void BasescapeState::viewLeftClick(Action *)
  			}
  			int errorColor1 = _game->getMod()->getInterface("basescape")->getElement("errorMessage")->color;
  			int errorColor2 = _game->getMod()->getInterface("basescape")->getElement("errorPalette")->color;
@@ -442,7 +469,7 @@ index 5d0467a..0fbd95c 100644
  			// Is facility in use?
  			if (BasePlacementErrors placementErrorCode = fac->inUse())
  			{
-@@ -494,7 +560,7 @@ void BasescapeState::viewRightClick(Action *)
+@@ -494,7 +587,7 @@ void BasescapeState::viewRightClick(Action *)
  		{
  			case 1: _game->pushState(new ManageAlienContainmentState(_base, f->getRules()->getPrisonType(), OPT_GEOSCAPE)); break;
  			case 2: _game->pushState(new ManufactureState(_base)); break;
@@ -451,7 +478,7 @@ index 5d0467a..0fbd95c 100644
  			case 4: _game->pushState(new AllocateTrainingState(_base)); break;
  			case 5: if (Options::anytimePsiTraining) _game->pushState(new AllocatePsiTrainingState(_base)); break;
  			case 6: _game->pushState(new SoldiersState(_base)); break;
-@@ -545,7 +611,7 @@ void BasescapeState::viewRightClick(Action *)
+@@ -545,7 +638,7 @@ void BasescapeState::viewRightClick(Action *)
  	}
  	else if (f->getRules()->getLaboratories() > 0)
  	{
@@ -2833,10 +2860,10 @@ index d41c550..d7148f6 100644
  	void btnNewClick(Action *action);
 diff --git a/src/Basescape/ResearchTreeState.cpp b/src/Basescape/ResearchTreeState.cpp
 new file mode 100644
-index 0000000..418b3fd
+index 0000000..6cce045
 --- /dev/null
 +++ b/src/Basescape/ResearchTreeState.cpp
-@@ -0,0 +1,650 @@
+@@ -0,0 +1,677 @@
 +/*
 + * G.I. Joe: USA Defense. The research tree (see ResearchTreeState.h).
 + */
@@ -2872,27 +2899,32 @@ index 0000000..418b3fd
 +
 +namespace
 +{
-+const int VX = 52, VY = 18, VW = 176, VH = 162;   // the tree viewport (base px)
++int VX = 52, VY = 18, VW = 176, VH = 162;   // the tree viewport (base px); inside the tablet's bezel on the tablet look
++int IX = 231, BY = 183, LX = 2;             // the info column, the bottom keys' row, the lanes' column
 +const int CW = 40, CH = 13, PX = 48, PY = 16;      // card size and pitch (spec 216x80 / 288x104 at 1/6)
 +}
 +
 +ResearchTreeState::ResearchTreeState(Base *base) : _base(base)
 +{
++	// G.I. Joe: on the tablet look OUR tree (John 19 Nov 12:17: keep our tree, not the mockup's) sits inside the
++	// tablet's bezel, so everything steps in from the screen's edge
++	if (HiUI::tablet()) { VX = 58; VY = 23; VW = 166; VH = 148; IX = 227; BY = 174; LX = 7; }
++	else { VX = 52; VY = 18; VW = 176; VH = 162; IX = 231; BY = 183; LX = 2; }
 +	_window = new Window(this, 320, 200, 0, 0);
 +	_txtTitle = new Text(310, 13, 5, 3);
-+	_lanes = new Surface(50, VH, 2, VY);
++	_lanes = new Surface(50, VH, LX, VY);
 +	_view = new InteractiveSurface(VW, VH, VX, VY);
-+	_info = new Surface(88, 124, 231, VY);
-+	_txtName = new Text(86, 26, 232, VY);
-+	_txtInfo = new Text(86, 18, 232, VY + 28);
-+	_txtBody = new Text(86, 92, 232, VY + 48);
-+	_btnStart = new TextButton(86, 14, 232, 144);
-+	_btnLeft = new TextButton(18, 14, 52, 183);
-+	_btnRight = new TextButton(18, 14, 72, 183);
-+	_btnUp = new TextButton(18, 14, 92, 183);
-+	_btnDown = new TextButton(18, 14, 112, 183);
-+	_btnOk = new TextButton(86, 14, 232, 183);
-+	_btnDepts = new TextButton(70, 14, 136, 183);   // the research screen's DEPTS, now the tree is the only way in
++	_info = new Surface(88, 124, IX, VY);
++	_txtName = new Text(86, 26, IX + 1, VY);
++	_txtInfo = new Text(86, 18, IX + 1, VY + 28);
++	_txtBody = new Text(86, 92, IX + 1, VY + 48);
++	_btnStart = new TextButton(86, 14, IX + 1, VY + 126);
++	_btnLeft = new TextButton(18, 14, VX, BY);
++	_btnRight = new TextButton(18, 14, VX + 20, BY);
++	_btnUp = new TextButton(18, 14, VX + 40, BY);
++	_btnDown = new TextButton(18, 14, VX + 60, BY);
++	_btnOk = new TextButton(84, 12, IX + 1, BY);
++	_btnDepts = new TextButton(70, 14, VX + 84, BY);   // the research screen's DEPTS, now the tree is the only way in
 +	setInterface("researchMenu");
 +	add(_window, "window", "researchMenu");
 +	add(_txtTitle, "text", "researchMenu");
@@ -3019,6 +3051,28 @@ index 0000000..418b3fd
 +void ResearchTreeState::paintFrame(double X0, double Y0, double k)
 +{
 +	// ground, title bar, the info panel's column, the bottom bar
++	if (HiUI::tablet())
++	{
++		// the tablet itself, then the tree's panels on its screen (inside 6..314 x 6..189)
++		HiUI::Paint::image("Resources/UI/Tablet/bg/tablet_hi.png", X0, Y0, X0 + 320 * k, Y0 + 200 * k);
++		const double L = 6, R = 314, T = 6, B = 189;
++		HiUI::Paint::rect(X0 + L * k, Y0 + (T + 15) * k, X0 + R * k, Y0 + (T + 15.3) * k, C_OLIVE);
++		HiUI::Paint::rect(X0 + (IX - 2) * k, Y0 + (T + 15.3) * k, X0 + R * k, Y0 + (BY - 2) * k, C_PANEL);
++		HiUI::Paint::rect(X0 + L * k, Y0 + (BY - 2) * k, X0 + R * k, Y0 + (BY - 1.7) * k, C_OLIVE);
++		HiUI::Paint::text("stencil", tr("STR_RESEARCH"), X0 + (L + 4) * k, Y0 + (T + 1) * k, X0 + 100 * k, Y0 + (T + 13) * k, 6.5 * k, 0, 1, C_YELLOW);
++		auto stat = [&](double x, const std::string &label, const std::string &value)
++		{
++			HiUI::Paint::text("label", label, X0 + x * k, Y0 + (T + 1) * k, X0 + (x + 66) * k, Y0 + (T + 5) * k, 1.6 * k, 0, 1, C_GREY);
++			HiUI::Paint::text("label", value, X0 + x * k, Y0 + (T + 6) * k, X0 + (x + 66) * k, Y0 + (T + 13) * k, 3.2 * k, 0, 1, C_BONE);
++		};
++		std::ostringstream lab, sci;
++		lab << _base->getFreeLaboratories() << " of " << _base->getAvailableLaboratories() << " free";
++		sci << _base->getTotalScientists() << " / " << _base->getScientists() << " free";
++		stat(118, "LAB SPACE", lab.str());
++		stat(176, "SCIENTISTS", sci.str());
++		stat(240, "FUNDS", Unicode::formatFunding(_game->getSavedGame()->getFunds()));
++		return;
++	}
 +	HiUI::Paint::rect(X0, Y0, X0 + 320 * k, Y0 + 200 * k, C_GROUND);
 +	HiUI::Paint::rect(X0, Y0, X0 + 320 * k, Y0 + 16 * k, C_PANEL);
 +	HiUI::Paint::rect(X0, Y0 + 16 * k, X0 + 320 * k, Y0 + 16.3 * k, C_OLIVE);

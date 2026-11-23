@@ -121,6 +121,7 @@ SPECS = {
     'CraftInfoState': ([], []),
     'SoldierInfoState': ([], []),
     'GraphsState': ([], []),
+    'BasescapeState': ([], []),
 }
 
 
