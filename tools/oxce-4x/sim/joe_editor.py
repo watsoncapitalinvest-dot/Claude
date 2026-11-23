@@ -92,7 +92,26 @@ class Rules:
         self.strings = {}    # key -> text (en-US)
         self.singles = {}    # top-level blocks that are one mapping (cobraNetwork, ...)
         self.errors = []
-        files = sorted(glob.glob(os.path.join(ruleset_dir, '*.rul')), key=lambda p: os.path.basename(p))
+        # the stock X-COM rules first (the game loads them under every mod): <game>\standard\xcom1, four folders up
+        # from user\mods\GIJoe4x\Ruleset, so the M4 Carbine (stock STR_RIFLE) and the rest are here too
+        game = os.path.normpath(os.path.join(ruleset_dir, '..', '..', '..', '..'))
+        std = os.environ.get('JOE_STANDARD', os.path.join(game, 'standard', 'xcom1'))
+        lang = os.path.join(std, 'Language', 'en-US.yml')
+        if os.path.exists(lang):
+            try:
+                d = yaml.load(open(lang, encoding='utf-8', errors='replace'), Loader=L()) or {}
+                self.strings.update({str(k): str(v) for k, v in (d.get('en-US') or {}).items()})
+            except Exception as e:
+                self.errors.append(f'en-US.yml: {str(e).splitlines()[0]}')
+        mlang = os.path.join(ruleset_dir, '..', 'Language', 'en-US.yml')   # the mod's own names (M4 Carbine ...)
+        if os.path.exists(mlang):
+            try:
+                d = yaml.load(open(mlang, encoding='utf-8', errors='replace'), Loader=L()) or {}
+                self.strings.update({str(k): str(v) for k, v in (d.get('en-US') or {}).items()})
+            except Exception as e:
+                self.errors.append(f'mod en-US.yml: {str(e).splitlines()[0]}')
+        files = (sorted(glob.glob(os.path.join(std, '*.rul'))) if os.path.isdir(std) else []) \
+            + sorted(glob.glob(os.path.join(ruleset_dir, '*.rul')), key=lambda p: os.path.basename(p))
         for f in files:
             try:
                 doc = yaml.load(open(f, encoding='utf-8', errors='replace'), Loader=L()) or {}
@@ -276,6 +295,7 @@ class EditorTab:
         return v
 
     def save(self, new_entry=None, kind=None, ident=None):
+        if self.rules: self.changes = Changes(self.p['master'])
         if not self.cur and not new_entry: messagebox.showinfo('Joe Lab', 'Pick an entry first.'); return
         k, i = (kind, ident) if new_entry else self.cur
         v = new_entry if new_entry else self.parsed()
@@ -321,6 +341,7 @@ class EditorTab:
         self.search.set(new)
 
     def revert(self):
+        if self.rules: self.changes = Changes(self.p['master'])
         if not self.cur: return
         k, i = self.cur
         if not self.mine(k, i): messagebox.showinfo('Joe Lab', 'You have not changed this one.'); return

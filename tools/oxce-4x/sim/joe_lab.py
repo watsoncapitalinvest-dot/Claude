@@ -24,6 +24,7 @@ import tkinter as tk
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import joe_checks
 import joe_editor
+import joe_forms
 from tkinter import ttk, messagebox
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -219,6 +220,8 @@ class Lab:
         self.tab_checks(); self.tab_campaign(); self.tab_battles(); self.tab_strategy(); self.tab_characters(); self.tab_runs(); self.tab_balance(); self.tab_notes()
         self.editor = joe_editor.EditorTab(self, self.page('  Rules Editor  '), self.paths)
         self.style = joe_editor.StyleTab(self, self.page('  My Play Style  '), self.paths)
+        self.guns = joe_forms.GunsTab(self, self.page('  Guns  '), self.paths)
+        self.soldiers = joe_forms.SoldiersTab(self, self.page('  Soldiers  '), self.paths)
         root.protocol('WM_DELETE_WINDOW', self.close)
         self.tick()
 
