@@ -152,6 +152,17 @@ the fakes is what buys the ordering.
 
 ## Owed
 
+### The Drome trail: placeholders STORY should replace (22 Nov, BUILD)
+
+The 420-day strategy runs found the Drome was never found in any style: Depot Records and the Defense Plans were
+never handed out, and the Drome lead needed the Plans to find the Drome the Plans came from. Fixed with placeholders
+(`zz_gijoe_act1_drome_trail.rul` + CobraNetwork): depot raid bounty = Depot Records; Rumours alone solves the lead
+and finds the construction site; the construction-site raid is the plans raid (bounty = Plans). Owed to STORY:
+a real plans-raid mission if wanted, and the close cutscene says "the Drome burns" when only its site was hit
+(an aggressive player closes Act 1 in month 8 that way). Also: after Act 1 closes Cobra keeps starting new Dromes
+every month or two (purse keeps growing), which is Act 2's to decide.
+
+
 ### The Pit floors: what the 15 Nov pass left (PIT_FLOORS_v1)
 Built: six 3 x 2 blocks on the 6 x 6 grid (Surface + floors 1-5), a room only on its floor, no corridors
 needed, the Day 1 layout, Lab Bench 10 seats, the Surface cap 2/3/4, Research Lab and Manufacturing outpost
