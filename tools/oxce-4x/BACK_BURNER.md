@@ -152,6 +152,13 @@ the fakes is what buys the ordering.
 
 ## Owed
 
+### Death clips cut flat at the bottom of the cell (22 Nov, BUILD)
+
+Every whole-body sheet's death clip runs off row 160 in the facings that fall toward the camera (usually 0-3, 6, 7);
+Ace, Beach Head, the greenshirt pilot and Storm Shadow lose some in all eight. Worked around in the engine
+(`gjDeathFacing`): the fall and the body on the floor borrow the nearest facing that stays whole, so a man may turn
+as he drops. The real fix is re-rendering the death clip into a taller cell (bpy and the blends are in the rig).
+
 ### The Drome trail: placeholders STORY should replace (22 Nov, BUILD)
 
 The 420-day strategy runs found the Drome was never found in any style: Depot Records and the Defense Plans were

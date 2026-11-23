@@ -10348,7 +10348,7 @@ index a0bc8b3..7c5f5cc 100644
  		RuleInventory *groundRuleInv, int worldShade, bool allowAutoLoadout, bool overrideEquipmentLayout);
  };
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..0b32965 100644
+index 7cd4941..a018ab3 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -1,3 +1,5 @@
@@ -11237,7 +11237,7 @@ index 7cd4941..0b32965 100644
  
  	resetPalettes();
  }
-@@ -789,6 +1592,66 @@ void BattlescapeState::init()
+@@ -789,6 +1592,79 @@ void BattlescapeState::init()
  	_map->draw();
  	_battleGame->init();
  	updateSoldierInfo();
@@ -11295,6 +11295,19 @@ index 7cd4941..0b32965 100644
 +			warningLongRaw(tr("STR_GJ_ENTRY_PROMPT"));
 +		}
 +	}
++	// G.I. Joe rig: OXCE_KILL_TEST=<n> drops the first n Joes where they stand, once (to see the bodies on the floor)
++	if (const char *kt = getenv("OXCE_KILL_TEST"))
++	{
++		static const void *done = nullptr;
++		if (done != (const void*)_save && !_battleGame->isBusy())
++		{
++			done = _save;
++			int n = atoi(kt);
++			for (auto *u : *_save->getUnits())
++				if (n > 0 && u->getFaction() == FACTION_PLAYER && !u->isOut() && u->getArmor()->getSize() == 1) { u->setHealthDirect(0); --n; }
++			_battleGame->checkForCasualties(nullptr, BattleActionAttack{}, true);
++		}
++	}
 +	// G.I. Joe rig: OXCE_CAM=x,y,z points the camera there whenever the battle screen comes back (screenshots)
 +	if (const char *cam = getenv("OXCE_CAM"))
 +	{
@@ -11304,7 +11317,7 @@ index 7cd4941..0b32965 100644
  
  	switch (_save->getTUReserved())
  	{
-@@ -807,6 +1670,17 @@ void BattlescapeState::init()
+@@ -807,6 +1683,17 @@ void BattlescapeState::init()
  	}
  	if (_firstInit)
  	{
@@ -11322,7 +11335,7 @@ index 7cd4941..0b32965 100644
  		// Set music
  		if (Options::oxcePlayBriefingMusicDuringEquipment)
  		{
-@@ -858,7 +1732,29 @@ void BattlescapeState::init()
+@@ -858,7 +1745,29 @@ void BattlescapeState::init()
   */
  void BattlescapeState::think()
  {
@@ -11352,7 +11365,7 @@ index 7cd4941..0b32965 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1094,6 +1990,27 @@ void BattlescapeState::mapClick(Action *action)
+@@ -1094,6 +2003,27 @@ void BattlescapeState::mapClick(Action *action)
  		debug(ss.str());
  	}
  
@@ -11380,7 +11393,7 @@ index 7cd4941..0b32965 100644
  	if (_save->getTile(pos) != 0) // don't allow to click into void
  	{
  		if (_game->isRightClick(action, true) && playableUnitSelected())
-@@ -1215,6 +2132,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1215,6 +2145,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -11401,7 +11414,7 @@ index 7cd4941..0b32965 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -1466,6 +2397,12 @@ void BattlescapeState::btnEndTurnClick(Action *)
+@@ -1466,6 +2410,12 @@ void BattlescapeState::btnEndTurnClick(Action *)
  		_map->getCamera()->stopKeyScrolling();
  
  		_txtTooltip->setText("");
@@ -11414,7 +11427,7 @@ index 7cd4941..0b32965 100644
  		_battleGame->requestEndTurn(false);
  	}
  }
-@@ -2172,7 +3109,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +3122,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -11423,7 +11436,7 @@ index 7cd4941..0b32965 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +3329,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +3342,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -11431,7 +11444,7 @@ index 7cd4941..0b32965 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -2605,6 +3543,51 @@ void BattlescapeState::bugHuntMessage()
+@@ -2605,6 +3556,51 @@ void BattlescapeState::bugHuntMessage()
  	}
  }
  
@@ -11483,7 +11496,7 @@ index 7cd4941..0b32965 100644
  /**
   * Shows a warning message.
   * @param message Warning message.
-@@ -3511,6 +4494,21 @@ void BattlescapeState::popup(State *state)
+@@ -3511,6 +4507,21 @@ void BattlescapeState::popup(State *state)
  void BattlescapeState::finishBattle(bool abort, int inExitArea)
  {
  	bool isPreview = _save->isPreview();
@@ -11505,7 +11518,7 @@ index 7cd4941..0b32965 100644
  
  	while (!_game->isState(this))
  	{
-@@ -3577,13 +4575,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3577,13 +4588,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  	{
  		nextStage = ruleDeploy->getNextStage();
  	}
@@ -11535,7 +11548,7 @@ index 7cd4941..0b32965 100644
  		bgen.nextStage();
  		_game->popState();
  		_game->pushState(new BriefingState(0, 0));
-@@ -3621,6 +4634,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4647,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -11548,7 +11561,7 @@ index 7cd4941..0b32965 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +5071,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +5084,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -11559,7 +11572,7 @@ index 7cd4941..0b32965 100644
  	_map->getCamera()->resize();
  	_map->getCamera()->jumpXY(dX/2, dY/2);
  
-@@ -4123,4 +5142,59 @@ bool BattlescapeState::isBusy() const
+@@ -4123,4 +5155,59 @@ bool BattlescapeState::isBusy() const
  	return (_map->getCursorType() == CT_NONE || _battleGame->isBusy());
  }
  
@@ -13156,10 +13169,15 @@ index cea8e65..bd927c6 100644
  	}
  
 diff --git a/src/Battlescape/ItemSprite.cpp b/src/Battlescape/ItemSprite.cpp
-index 2d58c03..e0f4f4f 100644
+index 2d58c03..70bf8e2 100644
 --- a/src/Battlescape/ItemSprite.cpp
 +++ b/src/Battlescape/ItemSprite.cpp
-@@ -21,6 +21,10 @@
+@@ -17,10 +17,15 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "ItemSprite.h"
++#include "UnitSprite.h"
+ #include "../Mod/Mod.h"
  #include "../Savegame/BattleUnit.h"
  #include "../Savegame/BattleItem.h"
  #include "../Savegame/SavedBattleGame.h"
@@ -13170,7 +13188,7 @@ index 2d58c03..e0f4f4f 100644
  
  namespace OpenXcom
  {
-@@ -36,7 +40,8 @@ ItemSprite::ItemSprite(Surface* dest, const Mod* mod, const SavedBattleGame* sav
+@@ -36,7 +41,8 @@ ItemSprite::ItemSprite(Surface* dest, const Mod* mod, const SavedBattleGame* sav
  	_itemSurface(const_cast<Mod*>(mod)->getSurfaceSet("FLOOROB.PCK")),
  	_animationFrame(frame),
  	_dest(dest),
@@ -13180,7 +13198,7 @@ index 2d58c03..e0f4f4f 100644
  {
  
  }
-@@ -53,8 +58,33 @@ ItemSprite::~ItemSprite()
+@@ -53,8 +59,43 @@ ItemSprite::~ItemSprite()
   * Draws a item, using the drawing rules of the item or unit if it's corpse.
   * This function is called by Map, for each item on the screen.
   */
@@ -13197,9 +13215,19 @@ index 2d58c03..e0f4f4f 100644
 +	SurfaceSet *set = const_cast<Mod*>(_mod)->getSurfaceSet(u->getArmor()->getSpriteSheet(), false);
 +	if (!set) return nullptr;
 +	HiColor::ensureSheet(set);
-+	const int dir = u->getDirection() & 7;
++	const int dir = gjDeathFacing(set, u->getDirection());   // the facing his fall was played in
 +	const int frame = set->getTotalFrames() >= 896 ? 192 + dir * 8 + 7 : 4 * 64 + dir * 8 + 7;   // walk16: DEATH; else clip 4
 +	return set->getFrame(frame);
++}
++
++bool ItemSprite::drawBodyOver(const BattleItem *item, int x, int y, int shade, GraphSubset mask)
++{
++	const Surface *body = corpseBody(item);
++	if (!body) return false;
++	ScriptWorkerBlit work;
++	BattleItem::ScriptFill(&work, item, _save, BODYPART_ITEM_FLOOR, _animationFrame, shade);
++	work.executeBlit(body, _dest, x, y - 4, shade, mask);
++	return true;
 +}
 +
  void ItemSprite::draw(const BattleItem* item, int x, int y, int shade)
@@ -13214,7 +13242,7 @@ index 2d58c03..e0f4f4f 100644
  	const Surface* sprite = item->getFloorSprite(_itemSurface, _save, _animationFrame, shade);
  	if (sprite)
  	{
-@@ -69,7 +99,9 @@ void ItemSprite::draw(const BattleItem* item, int x, int y, int shade)
+@@ -69,7 +110,9 @@ void ItemSprite::draw(const BattleItem* item, int x, int y, int shade)
   */
  void ItemSprite::drawShadow(const BattleItem* item, int x, int y)
  {
@@ -13226,21 +13254,33 @@ index 2d58c03..e0f4f4f 100644
  	{
  		sprite->blitNShade(_dest, x, y, 16);
 diff --git a/src/Battlescape/ItemSprite.h b/src/Battlescape/ItemSprite.h
-index 26a44e6..db44bd4 100644
+index 26a44e6..599f6a9 100644
 --- a/src/Battlescape/ItemSprite.h
 +++ b/src/Battlescape/ItemSprite.h
-@@ -39,6 +39,9 @@ private:
+@@ -18,6 +18,7 @@
+  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ #include "../Engine/Surface.h"
++#include "../Engine/GraphSubset.h"
+ 
+ namespace OpenXcom
+ {
+@@ -39,6 +40,13 @@ private:
  	int _animationFrame;
  	Surface *_dest;
  	const SavedBattleGame *_save;
 +	const Mod *_mod;
 +	/// G.I. Joe: a fallen man is drawn off his own sheet
 +	const Surface *corpseBody(const BattleItem *item) const;
++public:
++	/// G.I. Joe: draws a body lying on a tile behind, over this tile's floor only (mask), so the floor in front does not cut it
++	bool drawBodyOver(const BattleItem *item, int x, int y, int shade, GraphSubset mask);
++private:
  
  
  public:
 diff --git a/src/Battlescape/Map.cpp b/src/Battlescape/Map.cpp
-index 3665cd1..89b02a5 100644
+index 3665cd1..54ef1e7 100644
 --- a/src/Battlescape/Map.cpp
 +++ b/src/Battlescape/Map.cpp
 @@ -17,6 +17,10 @@
@@ -13784,7 +13824,7 @@ index 3665cd1..89b02a5 100644
  		// divide by 16 to go from voxel to tile position
  		bulletLowX = bulletLowX / 16;
  		bulletLowY = bulletLowY / 16;
-@@ -940,15 +1338,15 @@ void Map::drawTerrain(Surface *surface)
+@@ -940,15 +1338,32 @@ void Map::drawTerrain(Surface *surface)
  					if (tmpSurface)
  					{
  						if (tile->getObstacle(O_FLOOR))
@@ -13793,6 +13833,23 @@ index 3665cd1..89b02a5 100644
  						else
 -							Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - tile->getYOffset(O_FLOOR), tileShade, false, _nvColor);
 +							Surface::blitRaw(surface, tmpSurface, screenPosition.x, screenPosition.y - (tile->getYOffset(O_FLOOR) * (_spriteWidth / 32)), tileShade, false, _nvColor);
++					}
++
++					// G.I. Joe: a man lying on a tile behind reaches over onto this one; this floor was just drawn over him, so
++					// draw him again on this floor's own band only (whatever stands on this tile is drawn after, in front)
++					{
++						const int k = _spriteWidth / 32;
++						constexpr static Position backBody[] = { Position(-1, 0, 0), Position(0, -1, 0), Position(-1, -1, 0) };
++						for (const auto &bp : backBody)
++						{
++							Tile *bt = _save->getTile(mapPosition + bp);
++							if (!bt || !bt->isDiscovered(O_FLOOR)) continue;
++							BattleItem *bi = bt->getTopItem();
++							if (!bi || Villains::hiddenItem(_save, bi)) continue;
++							const Position sp(screenPosition.x + (bp.x - bp.y) * 16 * k, screenPosition.y + (bp.x + bp.y) * 8 * k + bt->getTerrainLevel() * k, 0);
++							const GraphSubset band = GraphSubset(_spriteWidth, 20 * k).offset(screenPosition.x, screenPosition.y + 20 * k - tile->getTerrainLevel() * 0);
++							itemSprite.drawBodyOver(bi, sp.x, sp.y, tileShade, band);
++						}
  					}
  
  					auto* unit = tile->getUnit();
@@ -13804,7 +13861,7 @@ index 3665cd1..89b02a5 100644
  					{
  						if (_camera->getViewLevel() == itZ)
  						{
-@@ -1001,9 +1399,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1001,9 +1416,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_WESTWALL, tile);
  							if (tile->getObstacle(O_WESTWALL))
@@ -13816,7 +13873,7 @@ index 3665cd1..89b02a5 100644
  						}
  						// Draw north wall
  						tmpSurface = tile->getSprite(O_NORTHWALL);
-@@ -1011,9 +1409,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1011,9 +1426,9 @@ void Map::drawTerrain(Surface *surface)
  						{
  							int wallShade = getWallShade(O_NORTHWALL, tile);
  							if (tile->getObstacle(O_NORTHWALL))
@@ -13828,7 +13885,7 @@ index 3665cd1..89b02a5 100644
  						}
  						// Draw object
  						tmpSurface = tile->getSprite(O_OBJECT);
-@@ -1022,18 +1420,19 @@ void Map::drawTerrain(Surface *surface)
+@@ -1022,18 +1437,19 @@ void Map::drawTerrain(Surface *surface)
  							if (tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -13851,7 +13908,7 @@ index 3665cd1..89b02a5 100644
  								tileShade
  							);
  							if (_anyIndicator)
-@@ -1043,30 +1442,30 @@ void Map::drawTerrain(Surface *surface)
+@@ -1043,30 +1459,30 @@ void Map::drawTerrain(Surface *surface)
  								{
  									if (_burnIndicator && itemUnit->getFire() > 0)
  									{
@@ -13890,7 +13947,7 @@ index 3665cd1..89b02a5 100644
  											tileShade);
  									}
  								}
-@@ -1134,7 +1533,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1134,7 +1550,7 @@ void Map::drawTerrain(Surface *surface)
  
  								for (int i = begin; i != end; i += direction)
  								{
@@ -13899,7 +13956,7 @@ index 3665cd1..89b02a5 100644
  									if (tmpSurface)
  									{
  										Position voxelPos = _projectile->getPosition(1-i);
-@@ -1292,13 +1691,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1292,13 +1708,13 @@ void Map::drawTerrain(Surface *surface)
  							tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(11);
  							if (tmpSurface)
  							{
@@ -13915,7 +13972,7 @@ index 3665cd1..89b02a5 100644
  						}
  					}
  
-@@ -1310,9 +1709,9 @@ void Map::drawTerrain(Surface *surface)
+@@ -1310,9 +1726,9 @@ void Map::drawTerrain(Surface *surface)
  							if (!tile->isBackTileObject(O_OBJECT))
  							{
  								if (tile->getObstacle(O_OBJECT))
@@ -13927,7 +13984,7 @@ index 3665cd1..89b02a5 100644
  							}
  						}
  					}
-@@ -1335,8 +1734,13 @@ void Map::drawTerrain(Surface *surface)
+@@ -1335,8 +1751,13 @@ void Map::drawTerrain(Surface *surface)
  								else
  									frameNumber = 6; // red static crosshairs
  							}
@@ -13943,7 +14000,7 @@ index 3665cd1..89b02a5 100644
  
  							// UFO extender accuracy: display adjusted accuracy value on crosshair in real-time.
  							if (_cursorType >= CT_AIM && _showInfoOnCursor && (_cursorType != CT_THROW || !Options::oxceDisableInfoOnThrowCursor))
-@@ -1528,14 +1932,18 @@ void Map::drawTerrain(Surface *surface)
+@@ -1528,14 +1949,18 @@ void Map::drawTerrain(Surface *surface)
  
  								_txtAccuracy->setText(ss.str());
  								_txtAccuracy->draw();
@@ -13965,7 +14022,7 @@ index 3665cd1..89b02a5 100644
  						}
  						if (!_isAltPressed && _cursorType > CT_AIM && _camera->getViewLevel() == itZ)
  						{
-@@ -1551,7 +1959,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1551,7 +1976,7 @@ void Map::drawTerrain(Surface *surface)
  									_txtAccuracy->setColor(Palette::blockOffset(Pathfinding::red - 1) - 1);
  									_txtAccuracy->setText("0%");
  									_txtAccuracy->draw();
@@ -13974,7 +14031,7 @@ index 3665cd1..89b02a5 100644
  								}
  							}
  							if (!ignore)
-@@ -1582,7 +1990,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1582,7 +2007,7 @@ void Map::drawTerrain(Surface *surface)
  								_numWaypid->setValue(waypid);
  								_numWaypid->setBordered(true); // OXCE, not configurable
  								_numWaypid->draw();
@@ -13983,7 +14040,7 @@ index 3665cd1..89b02a5 100644
  
  								waypXOff += waypid > 9 ? 10 : 6; // OXCE
  								if (waypXOff >= 26)
-@@ -1621,7 +2029,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1621,7 +2046,7 @@ void Map::drawTerrain(Surface *surface)
  						tile = _save->getTile(mapPosition);
  						if (!tile || !tile->isDiscovered(O_FLOOR) || tile->getPreview() == -1)
  							continue;
@@ -13992,7 +14049,7 @@ index 3665cd1..89b02a5 100644
  						if (_previewSettingArrows)
  						{
  							if (itZ > 0 && tile->hasNoFloor(_save))
-@@ -1629,14 +2037,14 @@ void Map::drawTerrain(Surface *surface)
+@@ -1629,14 +2054,14 @@ void Map::drawTerrain(Surface *surface)
  								tmpSurface = _game->getMod()->getSurfaceSet("Pathfinding")->getFrame(23);
  								if (tmpSurface)
  								{
@@ -14009,7 +14066,7 @@ index 3665cd1..89b02a5 100644
  							}
  						}
  
-@@ -1645,16 +2053,17 @@ void Map::drawTerrain(Surface *surface)
+@@ -1645,16 +2070,17 @@ void Map::drawTerrain(Surface *surface)
  							int off = tile->getTUMarker() > 9 ? 5 : 3;
  							int offE = tile->getEnergyMarker() > 9 ? 5 : 3;
  							int mcolor = _previewSettingArrows ? 0 : tile->getMarkerColor();
@@ -14030,7 +14087,7 @@ index 3665cd1..89b02a5 100644
  								}
  							}
  							if (_previewSettingTu)
-@@ -1664,16 +2073,16 @@ void Map::drawTerrain(Surface *surface)
+@@ -1664,16 +2090,16 @@ void Map::drawTerrain(Surface *surface)
  								if (_previewSettingEnergy)
  								{
  									// TU
@@ -14050,7 +14107,7 @@ index 3665cd1..89b02a5 100644
  								}
  							}
  							else if (_previewSettingEnergy)
-@@ -1681,7 +2090,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1681,7 +2107,7 @@ void Map::drawTerrain(Surface *surface)
  								// only Energy
  								_numWaypid->setValue(tile->getEnergyMarker());
  								_numWaypid->draw();
@@ -14059,7 +14116,7 @@ index 3665cd1..89b02a5 100644
  							}
  						}
  					}
-@@ -1702,16 +2111,108 @@ void Map::drawTerrain(Surface *surface)
+@@ -1702,16 +2128,108 @@ void Map::drawTerrain(Surface *surface)
  		Position offset = calculateWalkingOffset(selectedUnit).ScreenOffset;
  		if (selectedUnit->isBigUnit())
  		{
@@ -14172,7 +14229,7 @@ index 3665cd1..89b02a5 100644
  		}
  	}
  
-@@ -1732,26 +2233,26 @@ void Map::drawTerrain(Surface *surface)
+@@ -1732,26 +2250,26 @@ void Map::drawTerrain(Surface *surface)
  				//calculateWalkingOffset(myUnit, &offset);
  				if (myUnit->isBigUnit())
  				{
@@ -14204,7 +14261,7 @@ index 3665cd1..89b02a5 100644
  						0);
  				}
  				else if (customMarker)
-@@ -1760,7 +2261,7 @@ void Map::drawTerrain(Surface *surface)
+@@ -1760,7 +2278,7 @@ void Map::drawTerrain(Surface *surface)
  						surface,
  						_arrow,
  						screenPosition.x + offset.x + (_spriteWidth / 2) - (_arrow->getWidth() / 2),
@@ -14213,7 +14270,7 @@ index 3665cd1..89b02a5 100644
  						0,
  						false,
  						_isTFTD ? ArrowColorsTFTD[myUnit->getCustomMarker() % 4] : ArrowColorsUFO[myUnit->getCustomMarker() % 4]);
-@@ -1779,11 +2280,11 @@ void Map::drawTerrain(Surface *surface)
+@@ -1779,11 +2297,11 @@ void Map::drawTerrain(Surface *surface)
  			{
  				_camera->convertMapToScreen(pos, &screenPosition);
  				screenPosition += _camera->getMapOffset();
@@ -14227,7 +14284,7 @@ index 3665cd1..89b02a5 100644
  					0);
  			}
  		}
-@@ -1823,17 +2324,40 @@ void Map::drawTerrain(Surface *surface)
+@@ -1823,17 +2341,40 @@ void Map::drawTerrain(Surface *surface)
  				else if (explosion->isHit())
  				{
  					tmpSurface = _game->getMod()->getSurfaceSet("HIT.PCK")->getFrame(explosion->getCurrentFrame());
@@ -14270,7 +14327,7 @@ index 3665cd1..89b02a5 100644
  	surface->unlock();
  }
  
-@@ -2023,7 +2547,7 @@ void Map::setSelectorPosition(int mx, int my)
+@@ -2023,7 +2564,7 @@ void Map::setSelectorPosition(int mx, int my)
  {
  	int oldX = _selectorX, oldY = _selectorY;
  
@@ -14279,7 +14336,7 @@ index 3665cd1..89b02a5 100644
  
  	if (oldX != _selectorX || oldY != _selectorY)
  	{
-@@ -2207,16 +2731,25 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2207,16 +2748,25 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  	}
  	else if ((unit->getStatus() == STATUS_WALKING || unit->getStatus() == STATUS_FLYING))
  	{
@@ -14309,7 +14366,7 @@ index 3665cd1..89b02a5 100644
  	}
  
  	result.NormalizedMovePhase = endphase == 16 ? phase : phase * 2;
-@@ -2266,7 +2799,17 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
+@@ -2266,7 +2816,17 @@ UnitWalkingOffset Map::calculateWalkingOffset(const BattleUnit *unit) const
  	{
  		result.TerrainLevelOffset = getTerrainLevel(unit->getPosition(), size);
  	}
@@ -14327,7 +14384,7 @@ index 3665cd1..89b02a5 100644
  	return result;
  }
  
-@@ -2327,10 +2870,19 @@ CursorType Map::getCursorType() const
+@@ -2327,10 +2887,19 @@ CursorType Map::getCursorType() const
   * Puts a projectile sprite on the map.
   * @param projectile Projectile to place.
   */
@@ -14348,7 +14405,7 @@ index 3665cd1..89b02a5 100644
  	{
  		_launch = true;
  	}
-@@ -2506,9 +3058,10 @@ void Map::refreshSelectorPosition()
+@@ -2506,9 +3075,10 @@ void Map::refreshSelectorPosition()
  void Map::setHeight(int height)
  {
  	Surface::setHeight(height);
@@ -14362,7 +14419,7 @@ index 3665cd1..89b02a5 100644
  }
  
  /**
-@@ -2519,7 +3072,7 @@ void Map::setWidth(int width)
+@@ -2519,7 +3089,7 @@ void Map::setWidth(int width)
  {
  	int dX = width - getWidth();
  	Surface::setWidth(width);
@@ -17681,13 +17738,16 @@ index 8497877..7b496ae 100644
  	/// Drop item on ground.
  	void itemDrop(Tile *t, BattleItem *item, bool updateLight);
 diff --git a/src/Battlescape/UnitSprite.cpp b/src/Battlescape/UnitSprite.cpp
-index 8fa87f8..154d852 100644
+index 8fa87f8..c503c5d 100644
 --- a/src/Battlescape/UnitSprite.cpp
 +++ b/src/Battlescape/UnitSprite.cpp
-@@ -17,6 +17,10 @@
+@@ -17,6 +17,13 @@
   * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
   */
  #include "UnitSprite.h"
++#include <array>
++#include <sstream>
++#include <map>
 +#include "../Engine/HiColor.h"
 +#include <map>
 +#include "../Engine/Logger.h"
@@ -17695,7 +17755,7 @@ index 8fa87f8..154d852 100644
  #include "../Engine/SurfaceSet.h"
  #include "../Mod/RuleItem.h"
  #include "../Mod/Armor.h"
-@@ -24,6 +28,7 @@
+@@ -24,6 +31,7 @@
  #include "../Savegame/BattleItem.h"
  #include "../Savegame/Soldier.h"
  #include "../Savegame/SavedBattleGame.h"
@@ -17703,7 +17763,7 @@ index 8fa87f8..154d852 100644
  #include "../Mod/RuleInventory.h"
  #include "../Mod/Mod.h"
  #include "../Engine/Exception.h"
-@@ -149,7 +154,7 @@ void UnitSprite::blitItem(Part& item)
+@@ -149,7 +157,7 @@ void UnitSprite::blitItem(Part& item)
  
  	_dest->lock();
  
@@ -17712,7 +17772,7 @@ index 8fa87f8..154d852 100644
  
  	_dest->unlock();
  }
-@@ -169,7 +174,7 @@ void UnitSprite::blitBody(Part& body)
+@@ -169,7 +177,7 @@ void UnitSprite::blitBody(Part& body)
  
  	_dest->lock();
  
@@ -17721,7 +17781,7 @@ index 8fa87f8..154d852 100644
  
  	_dest->unlock();
  }
-@@ -200,6 +205,7 @@ void UnitSprite::draw(const BattleUnit* unit, int part, int x, int y, int shade,
+@@ -200,6 +208,7 @@ void UnitSprite::draw(const BattleUnit* unit, int part, int x, int y, int shade,
  	_itemL = getIfVisible(_unit->getLeftHandWeapon());
  
  	_unitSurface = const_cast<Mod*>(_mod)->getSurfaceSet(armor->getSpriteSheet());
@@ -17729,7 +17789,7 @@ index 8fa87f8..154d852 100644
  
  	_drawingRoutine = armor->getDrawingRoutine();
  
-@@ -244,6 +250,7 @@ void UnitSprite::draw(const BattleUnit* unit, int part, int x, int y, int shade,
+@@ -244,6 +253,7 @@ void UnitSprite::draw(const BattleUnit* unit, int part, int x, int y, int shade,
  		&UnitSprite::drawRoutine20,
  		&UnitSprite::drawRoutine21,
  		&UnitSprite::drawRoutine3,
@@ -17737,7 +17797,7 @@ index 8fa87f8..154d852 100644
  	};
  	// Call the matching routine
  	(this->*(routines[_drawingRoutine]))();
-@@ -447,7 +454,16 @@ void UnitSprite::drawRoutine0()
+@@ -447,7 +457,16 @@ void UnitSprite::drawRoutine0()
  	if (_itemR)
  	{
  		// draw handob item
@@ -17755,7 +17815,7 @@ index 8fa87f8..154d852 100644
  		{
  			int dir = (unitDir + 2)%8;
  			selectItem(itemR, _itemR, dir);
-@@ -601,6 +617,16 @@ void UnitSprite::drawRoutine0()
+@@ -601,6 +620,16 @@ void UnitSprite::drawRoutine0()
  		rightArm.offX = (-6);
  	}
  
@@ -17772,7 +17832,7 @@ index 8fa87f8..154d852 100644
  	// blit order depends on unit direction, and whether we are holding a 2 handed weapon.
  	switch (unitDir)
  	{
-@@ -643,6 +669,264 @@ void UnitSprite::drawRoutine0()
+@@ -643,6 +672,306 @@ void UnitSprite::drawRoutine0()
  }
  
  
@@ -17825,10 +17885,50 @@ index 8fa87f8..154d852 100644
 + * held sprite, its centre put between the hands the render recorded for that
 + * exact frame - so any weapon sits in the hands, and follows them as he walks.
 + */
++int gjDeathFacing(const SurfaceSet *sheet, int dir)
++{
++	dir &= 7;
++	if (!sheet) return dir;
++	static std::map<const SurfaceSet*, std::array<int, 8>> cache;
++	auto it = cache.find(sheet);
++	if (it == cache.end())
++	{
++		const int base = sheet->getTotalFrames() >= 896 ? 192 : 256;
++		// how much of each facing's fall runs off the bottom row; the facings that lose least count as whole
++		// (most sheets have two that lose nothing; Ace, Beach Head, the pilot and Storm Shadow lose some in all eight)
++		int lost[8], least = 1 << 30;
++		for (int d = 0; d < 8; ++d)
++		{
++			lost[d] = 0;
++			for (int f = 4; f < 8; ++f)
++				if (const Surface *s = sheet->getFrame(base + d * 8 + f))
++					for (int x = 0; x < s->getWidth(); ++x)
++						if (s->getPixel(x, s->getHeight() - 1)) ++lost[d];
++			least = std::min(least, lost[d]);
++		}
++		bool whole[8];
++		for (int d = 0; d < 8; ++d) whole[d] = lost[d] <= least + least / 4;
++		std::array<int, 8> map;
++		for (int d = 0; d < 8; ++d)
++		{
++			map[d] = d;
++			for (int step = 0; step <= 4 && !whole[map[d]]; ++step)
++			{
++				if (whole[(d + step) & 7]) { map[d] = (d + step) & 7; break; }
++				if (whole[(d - step) & 7]) { map[d] = (d - step) & 7; break; }
++			}
++		}
++		it = cache.emplace(sheet, map).first;
++		std::ostringstream o; for (int d = 0; d < 8; ++d) o << (whole[d] ? 'w' : 'x') << map[d];
++		Log(LOG_INFO) << "[death facing] " << sheet->getTotalFrames() << " frames: " << o.str();
++	}
++	return it->second[dir];
++}
++
 +void UnitSprite::drawRoutineWhole()
 +{
 +	Part body{ BODYPART_TORSO }, itemR{ BODYPART_ITEM_RIGHTHAND }, itemL{ BODYPART_ITEM_LEFTHAND };
-+	const int dir = _unit->getDirection();
++	int dir = _unit->getDirection();   // G.I. Joe: not const - a death clip may borrow a facing (gjDeathFacing)
 +	const int N = _unit->getArmor()->getSize();
 +	if (N >= 2)
 +	{
@@ -17946,6 +18046,7 @@ index 8fa87f8..154d852 100644
 +		if (_unit->getStatus() == STATUS_COLLAPSING)
 +		{
 +			base = DEATH;
++			dir = gjDeathFacing(_unitSurface, dir);
 +			const int n = std::max(1, _unit->getArmor()->getDeathFrames());
 +			f = std::min(7, _unit->getFallingPhase() * 8 / n);
 +		}
@@ -17980,6 +18081,7 @@ index 8fa87f8..154d852 100644
 +	else if (_unit->getStatus() == STATUS_COLLAPSING)
 +	{
 +		clip = 4;
++		dir = gjDeathFacing(_unitSurface, dir);
 +		const int n = std::max(1, _unit->getArmor()->getDeathFrames());
 +		f = std::min(7, _unit->getFallingPhase() * 8 / n);
 +	}
@@ -18038,18 +18140,24 @@ index 8fa87f8..154d852 100644
   * Drawing routine for floaters.
   */
 diff --git a/src/Battlescape/UnitSprite.h b/src/Battlescape/UnitSprite.h
-index 599d9a2..bf0a51d 100644
+index 599d9a2..559578a 100644
 --- a/src/Battlescape/UnitSprite.h
 +++ b/src/Battlescape/UnitSprite.h
-@@ -35,6 +35,7 @@ class Mod;
+@@ -33,8 +33,13 @@ class Mod;
+  * A class that renders a specific unit, given its render rules
+  * combining the right frames from the surfaceset.
   */
++/// G.I. Joe: the facing a whole-body sheet's death clip is played in. Rendered falls toward the camera run off the
++/// bottom of the 160-row cell and come out cut flat; those facings borrow the nearest one whose fall stays whole.
++int gjDeathFacing(const SurfaceSet *sheet, int dir);
++
  class UnitSprite
  {
 +	int _w16Frame = 0;   ///< G.I. Joe: the frame chosen on a Walk16 sheet
  private:
  	struct Part
  	{
-@@ -97,6 +98,8 @@ private:
+@@ -97,6 +102,8 @@ private:
  	void drawRoutine20();
  	/// Drawing routine for xarquids.
  	void drawRoutine21();
