@@ -19,6 +19,18 @@ import make_weapon_sprites as mws    # noqa: E402
 src, kind = sys.argv[1], sys.argv[2]
 CW, CH, COLS, CLIPS = 128, 160, 16, 5
 OUT = os.path.normpath(os.path.join(HERE, '..', 'mod', 'Resources', 'Units'))
+if kind == 'gate':
+    # the security gate: six wall pictures in a row, GJ_GATE.PCK frames 0-2 north closed/open/wreck, 3-5 west
+    names = [f'gate_{w}_{s}' for w in ('north', 'west') for s in ('closed', 'open', 'wreck')]
+    pics = [Image.open(os.path.join(src, n + '.png')).convert('RGBA') for n in names]
+    for im in pics: assert im.size == (CW, CH)
+    sheet = Image.new('RGBA', (CW * 6, CH), (0, 0, 0, 0))
+    for i, im in enumerate(pics): sheet.paste(im, (i * CW, 0))
+    sheet.save(os.path.join(OUT, 'gj_def_gate_rgb.png'))
+    pal, legal, lp = mws.palette_and_legal()
+    a = np.asarray(sheet).copy(); a[..., 3] = np.where(a[..., 3] > 100, 255, 0)
+    mws.quantise(Image.fromarray(a, 'RGBA'), pal, legal, lp).save(os.path.join(OUT, 'gj_def_gate.png'))
+    print('wrote the gate', sheet.size); sys.exit(0)
 faces = [Image.open(os.path.join(src, f'{kind}_d{d}.png')).convert('RGBA') for d in range(8)]
 wreck = Image.open(os.path.join(src, f'{kind}_wreck.png')).convert('RGBA')
 for im in faces + [wreck]:
