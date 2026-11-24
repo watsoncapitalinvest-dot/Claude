@@ -16218,10 +16218,10 @@ index 0000000..84c2731
 +}
 diff --git a/src/Battlescape/Stealth.cpp b/src/Battlescape/Stealth.cpp
 new file mode 100644
-index 0000000..f299494
+index 0000000..780416b
 --- /dev/null
 +++ b/src/Battlescape/Stealth.cpp
-@@ -0,0 +1,654 @@
+@@ -0,0 +1,658 @@
 +/*
 + * G.I. Joe: sound and stealth. See Stealth.h and claude/SOUND_STEALTH_DESIGN_v1.md.
 + */
@@ -16411,8 +16411,12 @@ index 0000000..f299494
 +	// John 19 Nov 10:11 "Why in my test did they raise alarm": a Joe on overwatch fired at a cartel man walking past
 +	// on Cobra's turn and the shot raised the alarm. While the site is quiet the Joes HOLD FIRE: no reaction shot at
 +	// a Cobra who is not alert. Once the alarm is up, or at a man who has gone red, they fire as before.
++	// John 23 Nov 18:43 "my guys are shooting first and breaking the stealth": the 19 Nov rule still let them fire at any
++	// guard who had gone red - and a guard goes red on seeing a Joe at the start of his move, so the Joe's snap shot came
++	// first and the shot raised the alarm. Now, while the site is quiet, the Joes never fire on their own: the first shot
++	// is always the player's (or Cobra's). Once the alarm is up they react as before.
 +	if (!cobra(u))
-+		return (alarm(save) || !mover || !cobra(mover) || state(save, mover) == ALERT) ? 1.0f : 0.0f;
++		return (alarm(save) || !mover || u->getFaction() != FACTION_PLAYER) ? 1.0f : 0.0f;
 +	const int s = state(save, u);
 +	// John 19 Nov 01:02 "They shoot at me immediately stealth is nothing even when they're blue": a guard who is not
 +	// ALERT gets no reaction shot at all. Seeing a Joe on the Joes' turn is still remembered (saw()), and on his own
@@ -17178,7 +17182,7 @@ index 0000000..ef5e326
 +
 +}
 diff --git a/src/Battlescape/TileEngine.cpp b/src/Battlescape/TileEngine.cpp
-index 6e68469..7247a89 100644
+index 6e68469..98c35da 100644
 --- a/src/Battlescape/TileEngine.cpp
 +++ b/src/Battlescape/TileEngine.cpp
 @@ -16,9 +16,13 @@
@@ -17269,7 +17273,16 @@ index 6e68469..7247a89 100644
  		0.0,
  		1,
  	};
-@@ -3145,7 +3168,12 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
+@@ -2823,6 +2846,8 @@ bool TileEngine::tryReaction(ReactionScore *reaction, BattleUnit *target, const
+ 	{
+ 		return false;
+ 	}
++	if (action.actor->getFaction() == FACTION_PLAYER && Stealth::on(_save))
++		Log(LOG_INFO) << "[stealth] Joe reaction shot by " << action.actor->getId() << " at " << target->getId() << (Stealth::alarm(_save) ? " (alarm up)" : " (QUIET - should not happen)");
+ 
+ 	action.target = target->getPosition();
+ 	action.updateTU();
+@@ -3145,7 +3170,12 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
  	const int healthOrig = target->getHealth();
  	const int stunLevelOrig = target->getStunlevel();
  
@@ -17282,7 +17295,7 @@ index 6e68469..7247a89 100644
  
  	const int healthDamage = healthOrig - target->getHealth();
  	const int stunDamage = target->getStunlevel() - stunLevelOrig;
-@@ -3217,6 +3245,97 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
+@@ -3217,6 +3247,97 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
   * @param unit The unit that caused the explosion.
   * @param clipOrWeapon clip or weapon causing the damage.
   */
@@ -17380,7 +17393,7 @@ index 6e68469..7247a89 100644
  void TileEngine::hit(BattleActionAttack attack, Position center, int power, const RuleDamageType *type, bool rangeAtack, int terrainMeleeTilePart)
  {
  	bool terrainChanged = false; //did the hit destroy a tile thereby changing line of sight?
-@@ -3262,10 +3381,41 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
+@@ -3262,10 +3383,41 @@ void TileEngine::hit(BattleActionAttack attack, Position center, int power, cons
  					_save->getModuleMap()[(center.x/16)/10][(center.y/16)/10].second--;
  				}
  			}
@@ -17422,7 +17435,7 @@ index 6e68469..7247a89 100644
  		}
  	}
  	else if (part == V_UNIT)
-@@ -3341,6 +3491,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3341,6 +3493,10 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  	{
  		power /= 2;
  	}
@@ -17433,7 +17446,7 @@ index 6e68469..7247a89 100644
  
  	int exHeight = Clamp(Options::battleExplosionHeight, 0, 3);
  	int vertdec = 1000; //default flat explosion
-@@ -3451,7 +3605,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3451,7 +3607,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  							_save->removeItem(bi);
  						}
  
@@ -17442,7 +17455,7 @@ index 6e68469..7247a89 100644
  					}
  				}
  
-@@ -3512,6 +3666,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3512,6 +3668,7 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  	// now detonate the tiles affected by explosion
  	if (type->ToTile > 0.0f)
  	{
@@ -17450,7 +17463,7 @@ index 6e68469..7247a89 100644
  		for (auto& pair : tilesAffected)
  		{
  			if (detonate(pair.first, pair.second))
-@@ -3523,7 +3678,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
+@@ -3523,7 +3680,9 @@ void TileEngine::explode(BattleActionAttack attack, Position center, int power,
  			if (j)
  				applyGravity(j);
  		}
@@ -17460,7 +17473,7 @@ index 6e68469..7247a89 100644
  	calculateLighting(LL_AMBIENT, centetTile, maxRadius + 1, true); // roofs could have been destroyed and fires could have been started
  	calculateFOV(centetTile, maxRadius + 1, true, true);
  	if (attack.attacker && Position::distance2d(centetTile, attack.attacker->getPosition()) > maxRadius + 1)
-@@ -3622,7 +3779,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
+@@ -3622,7 +3781,7 @@ bool TileEngine::detonate(Tile* tile, int explosive)
  			}
  		}
  		// set tile on fire
@@ -17469,7 +17482,7 @@ index 6e68469..7247a89 100644
  		{
  			if (tiles[i]->getMapData(O_FLOOR) || tiles[i]->getMapData(O_OBJECT))
  			{
-@@ -4065,8 +4222,59 @@ int TileEngine::blockage(Tile *tile, const TilePart part, ItemDamageType type, i
+@@ -4065,8 +4224,59 @@ int TileEngine::blockage(Tile *tile, const TilePart part, ItemDamageType type, i
   *		  4 not enough TUs
   *		  5 would contravene fire reserve
   */
@@ -17529,7 +17542,7 @@ index 6e68469..7247a89 100644
  	int door = -1;
  	int TUCost = 0;
  	int size = unit->getArmor()->getSize();
-@@ -4614,7 +4822,14 @@ VoxelType TileEngine::voxelCheck(Position voxel, BattleUnit *excludeUnit, bool e
+@@ -4614,7 +4824,14 @@ VoxelType TileEngine::voxelCheck(Position voxel, BattleUnit *excludeUnit, bool e
  				{
  					tilepos = tile->getPosition();
  					const static int parts[] = {1,0,3,2}; // Change order 0,1,2,3 -> 1,0,3,2  (read commit description)
@@ -17545,7 +17558,7 @@ index 6e68469..7247a89 100644
  				}
  				int idx = (unit->getLoftemps(part) * 16) + y;
  				if (_voxelData->at(idx) & (1 << x))
-@@ -5156,6 +5371,188 @@ Tile *TileEngine::applyGravity(Tile *t)
+@@ -5156,6 +5373,188 @@ Tile *TileEngine::applyGravity(Tile *t)
  	return rt;
  }
  
@@ -17734,7 +17747,7 @@ index 6e68469..7247a89 100644
  /**
   * Drop item on ground.
   */
-@@ -5837,6 +6234,55 @@ Position TileEngine::getOriginVoxel(BattleAction &action, Tile *tile)
+@@ -5837,6 +6236,55 @@ Position TileEngine::getOriginVoxel(BattleAction &action, Tile *tile)
  	Tile *tileAbove = _save->getTile(origin + Position(0,0,1));
  	Position originVoxel = Position(origin.x*16, origin.y*16, origin.z*24);
  
@@ -26667,10 +26680,10 @@ index 0000000..e57d835
 +}
 diff --git a/src/Geoscape/CobraNetwork.cpp b/src/Geoscape/CobraNetwork.cpp
 new file mode 100644
-index 0000000..919d04f
+index 0000000..a4d9c01
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.cpp
-@@ -0,0 +1,977 @@
+@@ -0,0 +1,985 @@
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5. See CobraNetwork.h.
 + *
@@ -26759,6 +26772,14 @@ index 0000000..919d04f
 +
 +}
 +std::string siteKey(const AlienBase *b) { return b->getSiteType() + "#" + std::to_string(b->getId()); }
++
++/// G.I. Joe 23 Nov (John: "more cartel, more Cobra teasing"): Cobra builds from day 1, but nothing of it is OFFERED to the
++/// player until the broadcast has gone out AND the opening (cobraNetwork openDay, about month 3) is over.
++bool cobraOpen(const SavedGame *save, const Mod::CobraNetworkRules &r)
++{
++	const auto &net = const_cast<SavedGame*>(save)->getCobraNet();
++	return net.count("broadcastDone") && save->getDaysPassed() >= r.openDay;
++}
 +
 +void moneyFlightDown(SavedGame *save, const AlienBase *site)
 +{
@@ -27285,7 +27306,7 @@ index 0000000..919d04f
 +			AlienBase *dest = nullptr;
 +			for (auto *b : *save->getAlienBases()) if (b->getSiteType() == DEPOT) { dest = b; break; }
 +			if (!dest) for (auto *b : *save->getAlienBases()) if (b->getSiteType() == FRONT) { dest = b; break; }
-+			if (buy >= 40 && dest && !net.count("broadcastDone"))
++			if (buy >= 40 && dest && !cobraOpen(save, mod->getCobraNetworkRules()))
 +			{
 +				// John 18 Nov 02:45 "Shouldn't be seeing cobra so early": before the broadcast the guns arrive unseen
 +				save->getCobraEconomy().addFunds("STR_NORTH_AMERICA", -buy);
@@ -27378,7 +27399,7 @@ index 0000000..919d04f
 +				// "armored car" robbery before the cartel arc's own one (its step 4, tipped off by the informant, on US-90) and
 +				// far from the cartel's border. So before the broadcast the network does no jobs at all; the opening belongs to
 +				// the cartel arc. Cobra's jobs start the day after the broadcast.
-+				if (!net.count("broadcastDone"))
++				if (!cobraOpen(save, r))
 +					list.clear();
 +				if (!list.empty())
 +				{
@@ -27394,7 +27415,7 @@ index 0000000..919d04f
 +			}
 +		}
 +		// the cell strike, from month 2
-+		if (isCell && month >= r.strikeFirstMonth && net.count("broadcastDone") && (!net.count("scool:" + key) || net["scool:" + key] <= day))
++		if (isCell && month >= r.strikeFirstMonth && cobraOpen(save, r) && (!net.count("scool:" + key) || net["scool:" + key] <= day))
 +		{
 +			const double p = r.strikeChance / 100.0 * mult / 100.0 * bold / 100.0;
 +			if (RNG::generate(0, 99999) < (int)(p / 30.0 * 100000) && !r.strikeTargets.empty())
@@ -27412,7 +27433,7 @@ index 0000000..919d04f
 +	// The broadcast's follow-through (BUILD-1 18 Nov, John "1"): at 25% a site a month Cobra's first job came on average three
 +	// to four weeks after the broadcast (day 44 -> day 59 in the 60-day run), so the broadcast landed on nothing. Now one job
 +	// is pulled 2-4 days after it, from a front company if one is awake, else a cell; the daily rolls carry on after.
-+	if (net.count("broadcastDone") && !net.count("firstJobDone") && net.count("firstJobDay") && day >= net["firstJobDay"])
++	if (cobraOpen(save, game->getMod()->getCobraNetworkRules()) && !net.count("firstJobDone") && net.count("firstJobDay") && day >= net["firstJobDay"])
 +	{
 +		AlienBase *from = nullptr;
 +		for (int pass = 0; pass < 2 && !from; ++pass)
@@ -27626,7 +27647,7 @@ index 0000000..919d04f
 +	if (base->getSiteType() == CELL) return 0;   // cells are never spotted from the air
 +	// before Cobra Commander's broadcast nobody is looking for Cobra: no site of the network turns up by chance
 +	// (18 Nov: the month-end operatives roll found a front company on day 31, with the broadcast due on day 42)
-+	if (base->getSiteType() != "STR_CARTEL_STASH_HOUSE" && !game->getSavedGame()->getCobraNet().count("broadcastDone")) return 0;
++	if (base->getSiteType() != "STR_CARTEL_STASH_HOUSE" && !cobraOpen(game->getSavedGame(), r)) return 0;
 +	// the Drome, finished or building, is found only through the spine (Terror Drome Plans), never by chance
 +	if (base->getSiteType().compare(0, 22, "STR_COBRA_TERROR_DROME") == 0) return 0;
 +	return pick(r.diffFind, diffIndex(game->getSavedGame()), 50);
@@ -37243,7 +37264,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..3035e3a 100644
+index 1885346..8ce0704 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -37700,7 +37721,7 @@ index 1885346..3035e3a 100644
 +		cn.tryRead("scannerHours", n.scannerHours); cn.tryRead("tipoffDays", n.tipoffDays); cn.tryRead("tipoffResearch", n.tipoffResearch);
 +		cn.tryRead("frontCrimes", n.frontCrimes); cn.tryRead("cellCrimes", n.cellCrimes); cn.tryRead("strikeTargets", n.strikeTargets);
 +		cn.tryRead("crimeAlerts", n.crimeAlerts);
-+		cn.tryRead("broadcastDays", n.broadcastDays); cn.tryRead("firstJobDays", n.firstJobDays); cn.tryRead("factoryDays", n.factoryDays); cn.tryRead("factoryWarnDays", n.factoryWarnDays);
++		cn.tryRead("broadcastDays", n.broadcastDays); cn.tryRead("openDay", n.openDay); cn.tryRead("firstJobDays", n.firstJobDays); cn.tryRead("factoryDays", n.factoryDays); cn.tryRead("factoryWarnDays", n.factoryWarnDays);
 +		cn.tryRead("factoryLon", n.factoryLon); cn.tryRead("factoryLat", n.factoryLat);
 +		cn.tryRead("factoryWonResearch", n.factoryWonResearch); cn.tryRead("factoryScheduleResearch", n.factoryScheduleResearch);
 +	}
@@ -38375,7 +38396,7 @@ index 1885346..3035e3a 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..50e13f9 100644
+index 2242d13..e8f05eb 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -38442,7 +38463,7 @@ index 2242d13..50e13f9 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +363,529 @@ private:
+@@ -327,6 +363,530 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -38894,6 +38915,7 @@ index 2242d13..50e13f9 100644
 +		std::vector<std::string> tipoffResearch, frontCrimes, cellCrimes, strikeTargets;
 +		std::map<std::string, std::string> crimeAlerts;
 +		std::vector<int> broadcastDays, factoryDays, firstJobDays;
++		int openDay = 0;   // G.I. Joe 23 Nov: no Cobra job is offered to the player before this day (and the broadcast)
 +		int factoryWarnDays = 7;
 +		double factoryLon = -102.08, factoryLat = 31.99;
 +		std::string factoryWonResearch, factoryScheduleResearch;
@@ -38972,7 +38994,7 @@ index 2242d13..50e13f9 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1251,137 @@ public:
+@@ -692,6 +1252,137 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
