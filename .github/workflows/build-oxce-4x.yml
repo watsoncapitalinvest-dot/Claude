@@ -104,6 +104,15 @@ jobs:
           else
             echo "no pdb was built"
           fi
+          # the 64-bit build's symbols too: John plays x64, and its crash dumps are unreadable without them (23 Nov)
+          if [ -f oxce/bin/x64/Release/OpenXcom.pdb ]; then
+            7z a -mx=9 bin/x64/OpenXcom.pdb.zip oxce/bin/x64/Release/OpenXcom.pdb >/dev/null 2>&1 || true
+            sz=$(stat -c%s bin/x64/OpenXcom.pdb.zip 2>/dev/null || echo 0)
+            echo "x64 symbols zipped $sz"
+            if [ "$sz" -eq 0 ] || [ "$sz" -gt 95000000 ]; then rm -f bin/x64/OpenXcom.pdb.zip; echo "x64 symbols too large, dropped"; fi
+          else
+            echo "no x64 pdb"; find oxce -name "OpenXcom.pdb" 2>/dev/null | head
+          fi
           cd bin
           ls -la
           git init -q && git checkout -q -b claude/oxce-gijoe-4x-bin
