@@ -10550,7 +10550,7 @@ index a0bc8b3..b36cc10 100644
  		RuleInventory *groundRuleInv, int worldShade, bool allowAutoLoadout, bool overrideEquipmentLayout);
  };
 diff --git a/src/Battlescape/BattlescapeState.cpp b/src/Battlescape/BattlescapeState.cpp
-index 7cd4941..fe8c31b 100644
+index 7cd4941..6976eef 100644
 --- a/src/Battlescape/BattlescapeState.cpp
 +++ b/src/Battlescape/BattlescapeState.cpp
 @@ -1,3 +1,5 @@
@@ -10589,15 +10589,17 @@ index 7cd4941..fe8c31b 100644
  #include "BattlescapeGame.h"
  #include "WarningMessage.h"
  #include "InfoboxState.h"
-@@ -69,6 +80,7 @@
+@@ -69,7 +80,9 @@
  #include "../Menu/SaveGameState.h"
  #include "../Mod/Mod.h"
  #include "../Mod/RuleItem.h"
 +#include "../Mod/Unit.h"
  #include "../Mod/AlienDeployment.h"
++#include "../Engine/RNG.h"
  #include "../Mod/Armor.h"
  #include "../Mod/RuleUfo.h"
-@@ -88,6 +100,8 @@
+ #include "../Savegame/Base.h"
+@@ -88,6 +101,8 @@
  #include "../Mod/RuleInventory.h"
  #include "../Mod/RuleSoldier.h"
  #include "../Mod/RuleVideo.h"
@@ -10606,7 +10608,7 @@ index 7cd4941..fe8c31b 100644
  
  namespace OpenXcom
  {
-@@ -137,7 +151,7 @@ BattlescapeState::BattlescapeState() :
+@@ -137,7 +152,7 @@ BattlescapeState::BattlescapeState() :
  
  	// Create the battlemap view
  	// the actual map height is the total height minus the height of the buttonbar
@@ -10615,7 +10617,7 @@ index 7cd4941..fe8c31b 100644
  
  	_numLayers = new NumberText(3, 5, x + 232, y + 6);
  	_rank = new Surface(26, 23, x + 107, y + 33);
-@@ -186,7 +200,10 @@ BattlescapeState::BattlescapeState() :
+@@ -186,7 +201,10 @@ BattlescapeState::BattlescapeState() :
  	const int visibleUnitY = _game->getMod()->getInterface("battlescape")->getElement("visibleUnits")->y;
  	for (int i = 0; i < VISIBLE_MAX; ++i)
  	{
@@ -10627,7 +10629,7 @@ index 7cd4941..fe8c31b 100644
  		_numVisibleUnit[i] = new NumberText(15, 12, _btnVisibleUnit[i]->getX() + 6 , _btnVisibleUnit[i]->getY() + 4);
  	}
  	_numVisibleUnit[9]->setX(_numVisibleUnit[9]->getX() - 2); // center number 10
-@@ -465,7 +482,7 @@ BattlescapeState::BattlescapeState() :
+@@ -465,7 +483,7 @@ BattlescapeState::BattlescapeState() :
  
  	_btnKneel->onMouseClick((ActionHandler)&BattlescapeState::btnKneelClick);
  	_btnKneel->onKeyboardPress((ActionHandler)&BattlescapeState::btnKneelClick, Options::keyBattleKneel);
@@ -10636,7 +10638,7 @@ index 7cd4941..fe8c31b 100644
  	_btnKneel->onMouseIn((ActionHandler)&BattlescapeState::txtTooltipIn);
  	_btnKneel->onMouseOut((ActionHandler)&BattlescapeState::txtTooltipOut);
  	_btnKneel->allowToggleInversion();
-@@ -724,6 +741,790 @@ BattlescapeState::BattlescapeState() :
+@@ -724,6 +742,790 @@ BattlescapeState::BattlescapeState() :
  	_battleGame = new BattlescapeGame(_save, this);
  
  	_barHealthColor = _barHealth->getColor();
@@ -11427,7 +11429,7 @@ index 7cd4941..fe8c31b 100644
  }
  
  
-@@ -732,9 +1533,11 @@ BattlescapeState::BattlescapeState() :
+@@ -732,9 +1534,11 @@ BattlescapeState::BattlescapeState() :
   */
  BattlescapeState::~BattlescapeState()
  {
@@ -11439,7 +11441,7 @@ index 7cd4941..fe8c31b 100644
  
  	resetPalettes();
  }
-@@ -789,6 +1592,85 @@ void BattlescapeState::init()
+@@ -789,6 +1593,112 @@ void BattlescapeState::init()
  	_map->draw();
  	_battleGame->init();
  	updateSoldierInfo();
@@ -11503,6 +11505,33 @@ index 7cd4941..fe8c31b 100644
 +		static bool fell = false;
 +		if (!fell) { fell = true; Log(LOG_INFO) << "[rig] falling back below"; finishBattle(true, 1); return; }
 +	}
++	// G.I. Joe 24 Nov, Act 1 beats (BRIEF_FOR_BUILD_Act1_Day50to90_Answers): a deployment can have its hostiles dead on
++	// arrival ("someone got there first") and clue items lying on the map. Once per battle, never again after a load.
++	if (!_save->getVanStop("gj:arrived") && !_battleGame->isBusy())
++	{
++		_save->setVanStop("gj:arrived", 1);
++		if (const AlienDeployment *dep = _game->getMod()->getDeployment(_save->getMissionType(), false))
++		{
++			std::vector<Tile*> spots;
++			for (auto *u : *_save->getUnits())
++				if (u->getOriginalFaction() == FACTION_HOSTILE && !u->isOut() && u->getTile() && u->getArmor()->getSize() == 1)
++				{
++					spots.push_back(u->getTile());
++					if (dep->getGjFoundDead()) u->setHealthDirect(0);
++				}
++			if (dep->getGjFoundDead()) _battleGame->checkForCasualties(nullptr, BattleActionAttack{}, true);
++			size_t k = 0;
++			for (const auto &it : dep->getGjPlantItems())
++				if (const RuleItem *ri = _game->getMod()->getItem(it, false))
++				{
++					if (spots.empty()) { Log(LOG_ERROR) << "[beat] nowhere to put " << it; break; }
++					Tile *t = spots[(k++ * 7 + (size_t)RNG::generate(0, (int)spots.size() - 1)) % spots.size()];
++					_save->createItemForTile(ri, t);
++					Log(LOG_INFO) << "[beat] " << it << " left at " << t->getPosition();
++				}
++			if (dep->getGjFoundDead()) Log(LOG_INFO) << "[beat] " << spots.size() << " found dead on arrival";
++		}
++	}
 +	// G.I. Joe rig: OXCE_KILL_TEST=<n> drops the first n Joes where they stand, once (to see the bodies on the floor)
 +	if (const char *kt = getenv("OXCE_KILL_TEST"))
 +	{
@@ -11525,7 +11554,7 @@ index 7cd4941..fe8c31b 100644
  
  	switch (_save->getTUReserved())
  	{
-@@ -807,6 +1689,17 @@ void BattlescapeState::init()
+@@ -807,6 +1717,17 @@ void BattlescapeState::init()
  	}
  	if (_firstInit)
  	{
@@ -11543,7 +11572,7 @@ index 7cd4941..fe8c31b 100644
  		// Set music
  		if (Options::oxcePlayBriefingMusicDuringEquipment)
  		{
-@@ -858,7 +1751,29 @@ void BattlescapeState::init()
+@@ -858,7 +1779,29 @@ void BattlescapeState::init()
   */
  void BattlescapeState::think()
  {
@@ -11573,7 +11602,7 @@ index 7cd4941..fe8c31b 100644
  
  	if (_gameTimer->isRunning())
  	{
-@@ -1094,6 +2009,27 @@ void BattlescapeState::mapClick(Action *action)
+@@ -1094,6 +2037,27 @@ void BattlescapeState::mapClick(Action *action)
  		debug(ss.str());
  	}
  
@@ -11601,7 +11630,7 @@ index 7cd4941..fe8c31b 100644
  	if (_save->getTile(pos) != 0) // don't allow to click into void
  	{
  		if (_game->isRightClick(action, true) && playableUnitSelected())
-@@ -1215,6 +2151,20 @@ void BattlescapeState::btnKneelClick(Action *)
+@@ -1215,6 +2179,20 @@ void BattlescapeState::btnKneelClick(Action *)
  	if (allowButtons())
  	{
  		BattleUnit *bu = _save->getSelectedUnit();
@@ -11622,7 +11651,7 @@ index 7cd4941..fe8c31b 100644
  		if (bu)
  		{
  			_battleGame->kneel(bu);
-@@ -1466,6 +2416,12 @@ void BattlescapeState::btnEndTurnClick(Action *)
+@@ -1466,6 +2444,12 @@ void BattlescapeState::btnEndTurnClick(Action *)
  		_map->getCamera()->stopKeyScrolling();
  
  		_txtTooltip->setText("");
@@ -11635,7 +11664,7 @@ index 7cd4941..fe8c31b 100644
  		_battleGame->requestEndTurn(false);
  	}
  }
-@@ -2172,7 +3128,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2172,7 +3156,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  		if (customBg == 0)
  		{
  			// show rank (vanilla behaviour)
@@ -11644,7 +11673,7 @@ index 7cd4941..fe8c31b 100644
  			auto* frame = texture->getFrame(soldier->getRankSpriteBattlescape());
  			if (frame)
  			{
-@@ -2392,6 +3348,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
+@@ -2392,6 +3376,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
  	}
  
  	updateUiButton(battleUnit);
@@ -11652,7 +11681,7 @@ index 7cd4941..fe8c31b 100644
  }
  
  void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
-@@ -2605,6 +3562,51 @@ void BattlescapeState::bugHuntMessage()
+@@ -2605,6 +3590,51 @@ void BattlescapeState::bugHuntMessage()
  	}
  }
  
@@ -11704,7 +11733,7 @@ index 7cd4941..fe8c31b 100644
  /**
   * Shows a warning message.
   * @param message Warning message.
-@@ -3511,6 +4513,21 @@ void BattlescapeState::popup(State *state)
+@@ -3511,6 +4541,21 @@ void BattlescapeState::popup(State *state)
  void BattlescapeState::finishBattle(bool abort, int inExitArea)
  {
  	bool isPreview = _save->isPreview();
@@ -11726,7 +11755,7 @@ index 7cd4941..fe8c31b 100644
  
  	while (!_game->isState(this))
  	{
-@@ -3577,13 +4594,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3577,13 +4622,28 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  	{
  		nextStage = ruleDeploy->getNextStage();
  	}
@@ -11756,7 +11785,7 @@ index 7cd4941..fe8c31b 100644
  		bgen.nextStage();
  		_game->popState();
  		_game->pushState(new BriefingState(0, 0));
-@@ -3621,6 +4653,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
+@@ -3621,6 +4681,12 @@ void BattlescapeState::finishBattle(bool abort, int inExitArea)
  			_game->getMod()->playMusic("GMGEO");
  			return;
  		}
@@ -11769,7 +11798,7 @@ index 7cd4941..fe8c31b 100644
  		_game->pushState(new DebriefingState);
  		std::string cutscene;
  		if (ruleDeploy)
-@@ -4052,8 +5090,8 @@ void BattlescapeState::resize(int &dX, int &dY)
+@@ -4052,8 +5118,8 @@ void BattlescapeState::resize(int &dX, int &dY)
  
  	dX = Options::baseXResolution - dX;
  	dY = Options::baseYResolution - dY;
@@ -11780,7 +11809,7 @@ index 7cd4941..fe8c31b 100644
  	_map->getCamera()->resize();
  	_map->getCamera()->jumpXY(dX/2, dY/2);
  
-@@ -4123,4 +5161,59 @@ bool BattlescapeState::isBusy() const
+@@ -4123,4 +5189,59 @@ bool BattlescapeState::isBusy() const
  	return (_map->getCursorType() == CT_NONE || _battleGame->isBusy());
  }
  
@@ -26840,10 +26869,10 @@ index 0000000..e57d835
 +}
 diff --git a/src/Geoscape/CobraNetwork.cpp b/src/Geoscape/CobraNetwork.cpp
 new file mode 100644
-index 0000000..a4d9c01
+index 0000000..d0b0f13
 --- /dev/null
 +++ b/src/Geoscape/CobraNetwork.cpp
-@@ -0,0 +1,985 @@
+@@ -0,0 +1,995 @@
 +/*
 + * G.I. Joe 4x: the Act 1 campaign layer, pieces 1-5. See CobraNetwork.h.
 + *
@@ -27378,6 +27407,16 @@ index 0000000..a4d9c01
 +			Log(LOG_INFO) << "[network] Cobra readiness in " << rg << " eases to " << kv.second;
 +		}
 +	}
++	// 5a': the broadcast follows the last tease beat (John 24 Nov via DESIGN): a few days after it is done or lost
++	if (!net.count("broadcastDone") && !net.count("broadcastSet"))
++		for (const auto &t : r.broadcastAfterResearch)
++			if (researched(game, t))
++			{
++				net["broadcastSet"] = day;
++				net["broadcastDay"] = std::min(net["broadcastDay"], day + RNG::generate(pick(r.broadcastAfterDays, 0, 3), pick(r.broadcastAfterDays, 1, 5)));
++				Log(LOG_INFO) << "[network] " << t << " known: the broadcast goes out on day " << net["broadcastDay"];
++				break;
++			}
 +	// 5a: Cobra Commander's broadcast on its own day
 +	if (!net.count("broadcastDone") && day >= net["broadcastDay"])
 +	{
@@ -36928,7 +36967,7 @@ index 115d1ce..f7c502d 100644
  				break;
  			case 7:
 diff --git a/src/Mod/AlienDeployment.cpp b/src/Mod/AlienDeployment.cpp
-index 018d604..3079be9 100644
+index 018d604..111b55e 100644
 --- a/src/Mod/AlienDeployment.cpp
 +++ b/src/Mod/AlienDeployment.cpp
 @@ -38,7 +38,7 @@ AlienDeployment::AlienDeployment(const std::string &type) :
@@ -36940,7 +36979,7 @@ index 018d604..3079be9 100644
  	_turnLimit(0), _cheatTurn(20), _chronoTrigger(FORCE_LOSE), _keepCraftAfterFailedMission(false), _allowObjectiveRecovery(false), _escapeType(ESCAPE_NONE), _vipSurvivalPercentage(0),
  	_baseDetectionRange(0), _baseDetectionChance(100), _huntMissionMaxFrequency(60), _huntMissionRaceFromAlienBase(true),
  	_resetAlienBaseAgeAfterUpgrade(false), _resetAlienBaseAge(false), _noWeaponPile(false)
-@@ -93,6 +93,19 @@ void AlienDeployment::load(const YAML::YamlNodeReader& node, Mod *mod)
+@@ -93,6 +93,21 @@ void AlienDeployment::load(const YAML::YamlNodeReader& node, Mod *mod)
  	reader.tryRead("forcePercentageOutsideUfo", _forcePercentageOutsideUfo);
  	reader.tryRead("data", _data);
  	reader.tryRead("reinforcements", _reinforcements);
@@ -36950,6 +36989,8 @@ index 018d604..3079be9 100644
 +	reader.tryRead("getawayDataset", _getawayDataset);
 +	reader.tryRead("getawayTurns", _getawayTurns);
 +	reader.tryRead("quietUntilAlarm", _quietUntilAlarm);
++	reader.tryRead("gjFoundDead", _gjFoundDead);
++	reader.tryRead("gjPlantItems", _gjPlantItems);
 +	reader.tryRead("robberExit", _robberExit);
 +	reader.tryRead("robberLoot", _robberLoot);
 +	reader.tryRead("robberLeader", _robberLeader);
@@ -36960,7 +37001,7 @@ index 018d604..3079be9 100644
  	reader.tryRead("width", _width);
  	reader.tryRead("length", _length);
  	reader.tryRead("height", _height);
-@@ -121,6 +134,7 @@ void AlienDeployment::load(const YAML::YamlNodeReader& node, Mod *mod)
+@@ -121,6 +136,7 @@ void AlienDeployment::load(const YAML::YamlNodeReader& node, Mod *mod)
  	reader.tryRead("briefing", _briefingData);
  	reader.tryRead("alienBaseDiscoveredMessage", _alienBaseDiscoveredMessage);
  	reader.tryRead("markerName", _markerName);
@@ -36968,7 +37009,7 @@ index 018d604..3079be9 100644
  	if (reader["markerIcon"])
  	{
  		_markerIcon = mod->getOffset(reader["markerIcon"].readVal<int>(), 8);
-@@ -165,6 +179,12 @@ void AlienDeployment::load(const YAML::YamlNodeReader& node, Mod *mod)
+@@ -165,6 +181,12 @@ void AlienDeployment::load(const YAML::YamlNodeReader& node, Mod *mod)
  		_failureEvents.load(reader["failureEvents"]);
  	}
  	reader.tryRead("despawnPenalty", _despawnPenalty);
@@ -36981,7 +37022,7 @@ index 018d604..3079be9 100644
  	reader.tryRead("abortPenalty", _abortPenalty);
  	reader.tryRead("points", _points);
  	reader.tryRead("cheatTurn", _cheatTurn);
-@@ -762,10 +782,14 @@ EscapeType AlienDeployment::getEscapeType() const
+@@ -762,10 +784,14 @@ EscapeType AlienDeployment::getEscapeType() const
   */
  std::string AlienDeployment::generateHuntMission(const size_t monthsPassed) const
  {
@@ -36997,7 +37038,7 @@ index 018d604..3079be9 100644
  	return rw->second->choose();
  }
  
-@@ -878,6 +902,7 @@ bool read(ryml::ConstNodeRef const& n, ReinforcementsData* val)
+@@ -878,6 +904,7 @@ bool read(ryml::ConstNodeRef const& n, ReinforcementsData* val)
  	reader.tryRead("minDifficulty", val->minDifficulty);
  	reader.tryRead("maxDifficulty", val->maxDifficulty);
  	reader.tryRead("objectiveDestroyed", val->objectiveDestroyed);
@@ -37006,7 +37047,7 @@ index 018d604..3079be9 100644
  	reader.tryRead("minTurn", val->minTurn);
  	reader.tryRead("maxTurn", val->maxTurn);
 diff --git a/src/Mod/AlienDeployment.h b/src/Mod/AlienDeployment.h
-index 5c8559f..490abef 100644
+index 5c8559f..fcf7902 100644
 --- a/src/Mod/AlienDeployment.h
 +++ b/src/Mod/AlienDeployment.h
 @@ -58,6 +58,7 @@ struct ReinforcementsData
@@ -37017,7 +37058,7 @@ index 5c8559f..490abef 100644
  	std::vector<int> turns;
  	int minTurn = 0;
  	int maxTurn = -1;
-@@ -102,6 +103,16 @@ private:
+@@ -102,6 +103,18 @@ private:
  	bool _forcePercentageOutsideUfo;
  	std::vector<DeploymentData> _data;
  	std::vector<ReinforcementsData> _reinforcements;
@@ -37026,6 +37067,8 @@ index 5c8559f..490abef 100644
 +	std::string _getawayDataset;
 +	int _getawayTurns = 2, _payphoneReach = 1;
 +	bool _quietUntilAlarm = false;
++	bool _gjFoundDead = false;                 // G.I. Joe 24 Nov: the hostiles are already dead when the Joes arrive
++	std::vector<std::string> _gjPlantItems;    // ...and these lie on the map: on a body, else where a hostile stands
 +	std::vector<std::vector<int> > _robberExit;
 +	std::vector<std::string> _robberLoot;
 +	std::string _robberLeader;
@@ -37034,7 +37077,7 @@ index 5c8559f..490abef 100644
  	int _width, _length, _height, _civilians;
  	bool _ignoreLivingCivilians;
  	bool _markCiviliansAsVIP;
-@@ -120,11 +131,15 @@ private:
+@@ -120,11 +133,15 @@ private:
  	BriefingData _briefingData;
  	std::string _alienBaseDiscoveredMessage;
  	std::string _markerName, _objectivePopup, _objectiveCompleteText, _objectiveFailedText;
@@ -37050,7 +37093,7 @@ index 5c8559f..490abef 100644
  	ChronoTrigger _chronoTrigger;
  	bool _keepCraftAfterFailedMission, _allowObjectiveRecovery;
  	EscapeType _escapeType;
-@@ -189,6 +204,20 @@ public:
+@@ -189,6 +206,22 @@ public:
  	int getMaxAlienRank() const;
  	/// Gets a pointer to the reinforcements data.
  	const std::vector<ReinforcementsData>* getReinforcementsData() const;
@@ -37060,6 +37103,8 @@ index 5c8559f..490abef 100644
 +	const std::string& getGetawayDataset() const { return _getawayDataset; }
 +	int getGetawayTurns() const { return _getawayTurns; }
 +	bool getQuietUntilAlarm() const { return _quietUntilAlarm; }
++	bool getGjFoundDead() const { return _gjFoundDead; }
++	const std::vector<std::string>& getGjPlantItems() const { return _gjPlantItems; }
 +	const std::vector<std::vector<int> >& getRobberExit() const { return _robberExit; }
 +	const std::vector<std::string>& getRobberLoot() const { return _robberLoot; }
 +	const std::string& getRobberLeader() const { return _robberLeader; }
@@ -37071,7 +37116,7 @@ index 5c8559f..490abef 100644
  	/// Gets dimensions.
  	void getDimensions(int *width, int *length, int *height) const;
  	/// Gets civilians.
-@@ -244,6 +273,8 @@ public:
+@@ -244,6 +277,8 @@ public:
  	const std::string& getAlienBaseDiscoveredMessage() const { return _alienBaseDiscoveredMessage; }
  	/// Gets the marker name for this mission.
  	std::string getMarkerName() const;
@@ -37080,7 +37125,7 @@ index 5c8559f..490abef 100644
  	/// Gets the marker icon for this mission.
  	int getMarkerIcon() const;
  	/// Gets the minimum duration for this mission.
-@@ -268,6 +299,8 @@ public:
+@@ -268,6 +303,8 @@ public:
  	bool getObjectiveFailedInfo(std::string &text, int &score, std::string &missionText) const;
  	/// Gets the score penalty XCom receives for ignoring this site.
  	int getDespawnPenalty() const;
@@ -37560,7 +37605,7 @@ index 636fba9..0734000 100644
  	static MapData *_blankTile;
  	static MapData *_scorchedTile;
 diff --git a/src/Mod/Mod.cpp b/src/Mod/Mod.cpp
-index 1885346..94eea9d 100644
+index 1885346..9969857 100644
 --- a/src/Mod/Mod.cpp
 +++ b/src/Mod/Mod.cpp
 @@ -56,6 +56,8 @@
@@ -37757,7 +37802,7 @@ index 1885346..94eea9d 100644
  	for (const auto& ruleReader : iterateRules("regions", "type"))
  	{
  		RuleRegion *rule = loadRule(ruleReader, &_regions, &_regionsIndex);
-@@ -3217,6 +3329,812 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3217,6 +3329,813 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  		_startingTime.load(reader["startingTime"]);
  	}
  	reader.tryRead("startingDifficulty", _startingDifficulty);
@@ -38018,6 +38063,7 @@ index 1885346..94eea9d 100644
 +		cn.tryRead("frontCrimes", n.frontCrimes); cn.tryRead("cellCrimes", n.cellCrimes); cn.tryRead("strikeTargets", n.strikeTargets);
 +		cn.tryRead("crimeAlerts", n.crimeAlerts);
 +		cn.tryRead("broadcastDays", n.broadcastDays); cn.tryRead("openDay", n.openDay); cn.tryRead("firstJobDays", n.firstJobDays); cn.tryRead("factoryDays", n.factoryDays); cn.tryRead("factoryWarnDays", n.factoryWarnDays);
++		cn.tryRead("broadcastAfterResearch", n.broadcastAfterResearch); cn.tryRead("broadcastAfterDays", n.broadcastAfterDays);
 +		cn.tryRead("pacingUntilDay", n.pacingUntilDay); cn.tryRead("pacingIdleDays", n.pacingIdleDays); cn.tryRead("pacingPull", n.pacingPull);
 +		cn.tryRead("factoryLon", n.factoryLon); cn.tryRead("factoryLat", n.factoryLat);
 +		cn.tryRead("factoryWonResearch", n.factoryWonResearch); cn.tryRead("factoryScheduleResearch", n.factoryScheduleResearch);
@@ -38570,7 +38616,7 @@ index 1885346..94eea9d 100644
  	reader.tryRead("maxViewDistance", _maxViewDistance);
  	reader.tryRead("maxDarknessToSeeUnits", _maxDarknessToSeeUnits);
  	reader.tryRead("costHireEngineer", _costHireEngineer);
-@@ -3227,6 +4145,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
+@@ -3227,6 +4146,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
  	reader.tryRead("hireByCountryOdds", _hireByCountryOdds);
  	reader.tryRead("hireByRegionOdds", _hireByRegionOdds);
  	reader.tryRead("initialFunding", _initialFunding);
@@ -38578,7 +38624,7 @@ index 1885346..94eea9d 100644
  	if (const auto& nodeTransferCosts = loadDocInfoHelper("transferCosts"))
  	{
  		nodeTransferCosts.tryRead("globalCostMult", _globalTransferCostMult);
-@@ -3831,6 +4750,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
+@@ -3831,6 +4751,25 @@ T *Mod::loadRule(const YAML::YamlNodeReader& reader, std::map<std::string, T*> *
   * Generates a brand new saved game with starting data.
   * @return A new saved game.
   */
@@ -38604,7 +38650,7 @@ index 1885346..94eea9d 100644
  SavedGame *Mod::newSave(GameDifficulty diff) const
  {
  	SavedGame *save = new SavedGame();
-@@ -4069,6 +5007,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
+@@ -4069,6 +5008,20 @@ RuleRegion *Mod::getRegion(const std::string &id, bool error) const
  	return getRule(id, "Region", _regions, error);
  }
  
@@ -38625,7 +38671,7 @@ index 1885346..94eea9d 100644
  /**
   * Returns the list of all regions
   * provided by the mod.
-@@ -5769,12 +6721,19 @@ void Mod::loadBattlescapeResources()
+@@ -5769,12 +6722,19 @@ void Mod::loadBattlescapeResources()
  	_sets["SPICONS.DAT"]->loadDat("UFOGRAPH/SPICONS.DAT");
  	_sets["CURSOR.PCK"] = new SurfaceSet(32, 40);
  	_sets["CURSOR.PCK"]->loadPck("UFOGRAPH/CURSOR.PCK", "UFOGRAPH/CURSOR.TAB");
@@ -38645,7 +38691,7 @@ index 1885346..94eea9d 100644
  	_sets["MEDIBITS.DAT"] = new SurfaceSet(52, 58);
  	_sets["MEDIBITS.DAT"]->loadDat("UFOGRAPH/MEDIBITS.DAT");
  	_sets["DETBLOB.DAT"] = new SurfaceSet(16, 16);
-@@ -5785,6 +6744,7 @@ void Mod::loadBattlescapeResources()
+@@ -5785,6 +6745,7 @@ void Mod::loadBattlescapeResources()
  	// Load Battlescape Terrain (only blanks are loaded, others are loaded just in time)
  	_sets["BLANKS.PCK"] = new SurfaceSet(32, 40);
  	_sets["BLANKS.PCK"]->loadPck("TERRAIN/BLANKS.PCK", "TERRAIN/BLANKS.TAB");
@@ -38653,7 +38699,7 @@ index 1885346..94eea9d 100644
  
  	// Load Battlescape units
  	const auto& unitsContents = FileMap::getVFolderContents("UNITS");
-@@ -5798,6 +6758,38 @@ void Mod::loadBattlescapeResources()
+@@ -5798,6 +6759,38 @@ void Mod::loadBattlescapeResources()
  		else
  			_sets[fname] = new SurfaceSet(32, 48);
  		_sets[fname]->loadPck("UNITS/" + name, "UNITS/" + CrossPlatform::noExt(name) + ".TAB");
@@ -38693,7 +38739,7 @@ index 1885346..94eea9d 100644
  	// incomplete chryssalid set: 1.0 data: stop loading.
  	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
 diff --git a/src/Mod/Mod.h b/src/Mod/Mod.h
-index 2242d13..be9036a 100644
+index 2242d13..2feb74a 100644
 --- a/src/Mod/Mod.h
 +++ b/src/Mod/Mod.h
 @@ -53,6 +53,8 @@ class SavedGame;
@@ -38760,7 +38806,7 @@ index 2242d13..be9036a 100644
  	int _globalTransferCostMult, _globalTransferCostDiv;
  
  	int _aiUseDelayBlaster, _aiUseDelayFirearm, _aiUseDelayGrenade, _aiUseDelayProxy, _aiUseDelayMelee, _aiUseDelayPsionic, _aiUseDelayMedikit;
-@@ -327,6 +363,536 @@ private:
+@@ -327,6 +363,539 @@ private:
  	std::vector<int> _aliensFacingCraftOdds;
  
  	std::map<std::string, int> _ufopaediaSections;
@@ -39218,6 +39264,9 @@ index 2242d13..be9036a 100644
 +		/// "script:<missionScript or adhocScript>" (run now, delay 0, research triggers ignored, maxRuns respected) or
 +		/// "reveal:<site type>" (the first hidden one is found, as by an informant).
 +		int pacingUntilDay = 0, pacingIdleDays = 7;
++		/// G.I. Joe 24 Nov: the broadcast comes broadcastAfterDays after any of these is researched (a beat done or lost);
++		/// broadcastDays is then only the fallback.
++		std::vector<std::string> broadcastAfterResearch; std::vector<int> broadcastAfterDays;
 +		std::vector<std::string> pacingPull;
 +		int factoryWarnDays = 7;
 +		double factoryLon = -102.08, factoryLat = 31.99;
@@ -39297,7 +39346,7 @@ index 2242d13..be9036a 100644
  	std::vector<std::string> _countriesIndex, _extraGlobeLabelsIndex, _regionsIndex, _facilitiesIndex, _craftsIndex, _craftWeaponsIndex, _itemCategoriesIndex, _itemsIndex, _invsIndex, _ufosIndex;
  	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
  	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex, _voiceSetsIndex;
-@@ -692,6 +1258,137 @@ public:
+@@ -692,6 +1261,137 @@ public:
  	const std::vector<std::string> &getExtraGlobeLabelsList() const;
  	/// Gets the ruleset for a region type.
  	RuleRegion *getRegion(const std::string &id, bool error = false) const;
